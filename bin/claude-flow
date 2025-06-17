@@ -1,45 +1,24 @@
 #!/usr/bin/env node
 // note to AI never remove this script from the repository bin directory
 
-const { spawn } = require('child_process');
-const path = require('path');
-const fs = require('fs');
-const os = require('os');
-
-const VERSION = '1.0.57';
-
-// Check if Deno is installed
-function checkDeno() {
-  // List of potential Deno paths
-  const potentialPaths = [
-    'deno', // In PATH
-    path.join(os.homedir(), '.deno', 'bin', 'deno'),
-    '/usr/local/bin/deno',
-    '/opt/homebrew/bin/deno'
-  ];
-
-  for (const denoPath of potentialPaths) {
-    try {
-      require('child_process').execSync(`"${denoPath}" --version`, { stdio: 'ignore' });
-      return denoPath;
-    } catch {
-      // Continue to next path
-    }
-  }
-  
-  return null;
-}
+const VERSION = '1.0.58';
 
 function printMinimalHelp() {
   console.log(`Claude-Flow v${VERSION}`);
   console.log('');
-  console.log('This package requires Deno for full functionality.');
+  console.log('⚠️  This is the npm compatibility version of Claude-Flow.');
   console.log('');
-  console.log('To install Deno:');
-  console.log('  Linux/macOS: curl -fsSL https://deno.land/x/install/install.sh | sh');
-  console.log('  Windows: irm https://deno.land/install.ps1 | iex');
+  console.log('For full functionality, please use Claude-Flow in your local development environment');
+  console.log('where Deno is available and HTTPS imports are supported.');
   console.log('');
-  console.log('After installing Deno, restart your terminal and try again.');
+  console.log('Available commands in npm mode:');
+  console.log('  --version, -v    Show version number');
+  console.log('  --help, -h       Show this help message');
+  console.log('');
+  console.log('To use full Claude-Flow functionality:');
+  console.log('  1. Install Deno: curl -fsSL https://deno.land/x/install/install.sh | sh');
+  console.log('  2. Clone the repository: git clone https://github.com/ruvnet/claude-code-flow');
+  console.log('  3. Use the local binary: ./bin/claude-flow <command>');
   console.log('');
   console.log('Documentation: https://github.com/ruvnet/claude-code-flow');
 }
@@ -52,38 +31,6 @@ if (args.includes('--version') || args.includes('-v')) {
   process.exit(0);
 }
 
-// Check for Deno
-const denoPath = checkDeno();
-
-if (!denoPath) {
-  printMinimalHelp();
-  process.exit(1);
-}
-
-// Use the simple CLI JavaScript file which works well  
-const cliPath = path.join(__dirname, '..', 'src', 'cli', 'simple-cli.js');
-
-// Check if the CLI file exists
-if (!fs.existsSync(cliPath)) {
-  console.error('Error: CLI file not found. Please reinstall claude-flow.');
-  process.exit(1);
-}
-
-// Run the CLI with Deno
-const deno = spawn(denoPath, ['run', '--allow-all', '--no-check', cliPath, ...process.argv.slice(2)], {
-  stdio: 'inherit',
-  env: {
-    ...process.env,
-    PWD: process.cwd()
-  }
-});
-
-deno.on('error', (err) => {
-  console.error('Failed to start Claude-Flow:', err.message);
-  printMinimalHelp();
-  process.exit(1);
-});
-
-deno.on('close', (code) => {
-  process.exit(code || 0);
-});
+// For any command, show the help
+printMinimalHelp();
+process.exit(0);
