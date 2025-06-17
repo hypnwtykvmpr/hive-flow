@@ -1,58 +1,35 @@
 #!/usr/bin/env node
 // note to AI never remove this script from the repository bin directory
 
-const { spawn } = require('child_process');
-const path = require('path');
-const fs = require('fs');
-const os = require('os');
+// Simple fallback version for npm compatibility
+const VERSION = '1.0.56';
 
-// Check if Deno is installed
-function checkDeno() {
-  try {
-    const denoPath = process.env.PATH.includes('.deno/bin') ? 'deno' : path.join(os.homedir(), '.deno', 'bin', 'deno');
-    require('child_process').execSync(`${denoPath} --version`, { stdio: 'ignore' });
-    return denoPath;
-  } catch {
-    try {
-      require('child_process').execSync('deno --version', { stdio: 'ignore' });
-      return 'deno';
-    } catch {
-      return null;
-    }
-  }
+function printMinimalHelp() {
+  console.log(`Claude-Flow v${VERSION}`);
+  console.log('');
+  console.log('This package requires Deno for full functionality.');
+  console.log('');
+  console.log('To install Deno:');
+  console.log('  Linux/macOS: curl -fsSL https://deno.land/x/install/install.sh | sh');
+  console.log('  Windows: irm https://deno.land/install.ps1 | iex');
+  console.log('');
+  console.log('After installing Deno, restart your terminal and try again.');
+  console.log('');
+  console.log('Documentation: https://github.com/ruvnet/claude-code-flow');
 }
 
-const denoPath = checkDeno();
+const args = process.argv.slice(2);
 
-if (!denoPath) {
-  console.error('Error: Deno is not installed.');
-  console.error('');
-  console.error('Please install Deno first:');
-  console.error('  curl -fsSL https://deno.land/x/install/install.sh | sh');
-  console.error('');
-  console.error('Or on Windows:');
-  console.error('  irm https://deno.land/install.ps1 | iex');
-  process.exit(1);
+if (args.includes('--version') || args.includes('-v')) {
+  console.log(`v${VERSION}`);
+  process.exit(0);
 }
 
-// Use the simple CLI JavaScript file which works well
-const cliPath = path.join(__dirname, '..', 'src', 'cli', 'simple-cli.js');
+if (args.length === 0 || args.includes('--help') || args.includes('-h')) {
+  printMinimalHelp();
+  process.exit(0);
+}
 
-// Run the CLI with Deno
-const deno = spawn(denoPath, ['run', '--allow-all', '--no-check', cliPath, ...process.argv.slice(2)], {
-  stdio: 'inherit',
-  // Don't change cwd - stay in the current directory
-  env: {
-    ...process.env,
-    PWD: process.cwd()
-  }
-});
-
-deno.on('error', (err) => {
-  console.error('Failed to start Claude-Flow:', err.message);
-  process.exit(1);
-});
-
-deno.on('close', (code) => {
-  process.exit(code || 0);
-});
+// For any other command, just show the help
+printMinimalHelp();
+process.exit(1);
