@@ -1,36 +1,51 @@
-#!/usr/bin/env node
-// note to AI never remove this script from the repository bin directory
+#!/bin/sh
+# Claude-Flow Smart Dispatcher - Detects and uses the best available runtime
 
-const VERSION = '1.0.58';
+VERSION="1.0.58"
+SCRIPT_DIR=$(dirname "$0")
+ROOT_DIR=$(cd "$SCRIPT_DIR/.." && pwd)
 
-function printMinimalHelp() {
-  console.log(`Claude-Flow v${VERSION}`);
-  console.log('');
-  console.log('⚠️  This is the npm compatibility version of Claude-Flow.');
-  console.log('');
-  console.log('For full functionality, please use Claude-Flow in your local development environment');
-  console.log('where Deno is available and HTTPS imports are supported.');
-  console.log('');
-  console.log('Available commands in npm mode:');
-  console.log('  --version, -v    Show version number');
-  console.log('  --help, -h       Show this help message');
-  console.log('');
-  console.log('To use full Claude-Flow functionality:');
-  console.log('  1. Install Deno: curl -fsSL https://deno.land/x/install/install.sh | sh');
-  console.log('  2. Clone the repository: git clone https://github.com/ruvnet/claude-code-flow');
-  console.log('  3. Use the local binary: ./bin/claude-flow <command>');
-  console.log('');
-  console.log('Documentation: https://github.com/ruvnet/claude-code-flow');
-}
+# Quick version check
+for arg in "$@"; do
+  if [ "$arg" = "--version" ] || [ "$arg" = "-v" ]; then
+    echo "v$VERSION"
+    exit 0
+  fi
+done
 
-const args = process.argv.slice(2);
+# Try Deno first, but check if it actually works
+if command -v deno >/dev/null 2>&1 && [ -f "$ROOT_DIR/src/cli/main.ts" ]; then
+  # Test if Deno can actually run the main file
+  if deno check "$ROOT_DIR/src/cli/main.ts" >/dev/null 2>&1; then
+    # Use Deno for full functionality
+    exec deno run --allow-all "$ROOT_DIR/src/cli/main.ts" "$@"
+  fi
+fi
 
-// Handle version command
-if (args.includes('--version') || args.includes('-v')) {
-  console.log(`v${VERSION}`);
-  process.exit(0);
-}
-
-// For any command, show the help
-printMinimalHelp();
-process.exit(0);
+# Fall back to Node.js version
+if command -v tsx >/dev/null 2>&1 && [ -f "$ROOT_DIR/src/cli/simple-cli.ts" ]; then
+  # Use tsx for Node.js functionality
+  exec tsx "$ROOT_DIR/src/cli/simple-cli.ts" "$@"
+elif [ -f "$ROOT_DIR/src/cli/simple-cli.ts" ]; then
+  # Try to use npx tsx as fallback
+  exec npx tsx "$ROOT_DIR/src/cli/simple-cli.ts" "$@"
+else
+  # No runtime available, show help
+  echo "🧠 Claude-Flow v$VERSION - Advanced AI Agent Orchestration System"
+  echo ""
+  echo "⚠️  No compatible runtime found."
+  echo ""
+  echo "For full functionality (recommended):"
+  echo "  1. Install Deno: curl -fsSL https://deno.land/x/install/install.sh | sh"
+  echo "  2. Run: claude-flow <command>"
+  echo ""
+  echo "For Node.js compatibility mode:"
+  echo "  1. Install tsx: npm install -g tsx"
+  echo "  2. Run: claude-flow <command>"
+  echo ""
+  echo "Or use npx directly:"
+  echo "  npx tsx src/cli/simple-cli.ts <command>"
+  echo ""
+  echo "Documentation: https://github.com/ruvnet/claude-code-flow"
+  exit 1
+fi
