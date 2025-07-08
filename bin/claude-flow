@@ -1,11 +1,46 @@
 #!/bin/sh
 # Claude-Flow Smart Dispatcher - Detects and uses the best available runtime
 
-VERSION="1.0.71"
-SCRIPT_DIR=$(dirname "$0")
-ROOT_DIR=$(cd "$SCRIPT_DIR/.." && pwd)
+VERSION="2.0.0-alpha.27"
 
-# Quick version check
+# Determine the correct path based on how the script is invoked
+if [ -L "$0" ]; then
+  # Script is a symlink (npm global install)
+  REAL_PATH=$(readlink -f "$0" 2>/dev/null || readlink "$0")
+  SCRIPT_DIR=$(dirname "$REAL_PATH")
+else
+  # Script is executed directly
+  SCRIPT_DIR=$(dirname "$0")
+fi
+
+# Handle global npm installation vs local execution
+if [ -f "$SCRIPT_DIR/../src/cli/simple-cli.js" ]; then
+  # Local development or properly structured installation
+  ROOT_DIR=$(cd "$SCRIPT_DIR/.." && pwd)
+else
+  # Global npm installation - files might be in different location
+  # Try to find the module root
+  NODE_ROOT=$(npm root -g 2>/dev/null)
+  if [ -n "$NODE_ROOT" ] && [ -f "$NODE_ROOT/claude-flow/src/cli/simple-cli.js" ]; then
+    ROOT_DIR="$NODE_ROOT/claude-flow"
+  else
+    # Fallback to relative path
+    ROOT_DIR=$(cd "$SCRIPT_DIR/.." && pwd)
+  fi
+fi
+
+# Show help if no arguments provided
+if [ $# -eq 0 ]; then
+  set -- "--help"
+fi
+
+# Special handling for help command to ensure it passes through
+if [ "$1" = "help" ] || [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
+  # Let the actual CLI handle help display
+  :  # no-op, just pass through
+fi
+
+# Quick version check only - let the actual CLI handle help
 for arg in "$@"; do
   if [ "$arg" = "--version" ] || [ "$arg" = "-v" ]; then
     echo "v$VERSION"
@@ -13,18 +48,12 @@ for arg in "$@"; do
   fi
 done
 
-# Try Deno first, but check if it actually works
-if command -v deno >/dev/null 2>&1 && [ -f "$ROOT_DIR/src/cli/main.ts" ]; then
-  # Test if Deno can actually run the main file
-  if deno check "$ROOT_DIR/src/cli/main.ts" >/dev/null 2>&1; then
-    # Use Deno for full functionality
-    exec deno run --allow-all "$ROOT_DIR/src/cli/main.ts" "$@"
-  fi
-fi
-
-# Fall back to Node.js version
-if command -v tsx >/dev/null 2>&1 && [ -f "$ROOT_DIR/src/cli/simple-cli.ts" ]; then
-  # Use tsx for Node.js functionality
+# Use Node.js with TypeScript support
+if [ -f "$ROOT_DIR/src/cli/simple-cli.js" ]; then
+  # Use node for JavaScript version
+  exec node "$ROOT_DIR/src/cli/simple-cli.js" "$@"
+elif command -v tsx >/dev/null 2>&1 && [ -f "$ROOT_DIR/src/cli/simple-cli.ts" ]; then
+  # Use tsx for TypeScript functionality
   exec tsx "$ROOT_DIR/src/cli/simple-cli.ts" "$@"
 elif [ -f "$ROOT_DIR/src/cli/simple-cli.ts" ]; then
   # Try to use npx tsx as fallback
@@ -35,11 +64,7 @@ else
   echo ""
   echo "⚠️  No compatible runtime found."
   echo ""
-  echo "For full functionality (recommended):"
-  echo "  1. Install Deno: curl -fsSL https://deno.land/x/install/install.sh | sh"
-  echo "  2. Run: claude-flow <command>"
-  echo ""
-  echo "For Node.js compatibility mode:"
+  echo "To install and run:"
   echo "  1. Install tsx: npm install -g tsx"
   echo "  2. Run: claude-flow <command>"
   echo ""
