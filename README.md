@@ -3,7 +3,7 @@
 <div align="center">
 
 [![🌟 Star on GitHub](https://img.shields.io/github/stars/ruvnet/claude-flow?style=for-the-badge&logo=github&color=gold)](https://github.com/ruvnet/claude-flow)
-[![📦 Alpha Release](https://img.shields.io/npm/v/claude-flow/alpha?style=for-the-badge&logo=npm&color=orange&label=v2.0.0-alpha)](https://www.npmjs.com/package/claude-flow/v/alpha)
+[![📦 Alpha Release](https://img.shields.io/npm/v/claude-flow/alpha?style=for-the-badge&logo=npm&color=orange&label=v2.0.0-alpha.52)](https://www.npmjs.com/package/claude-flow/v/alpha)
 [![⚡ Claude Code](https://img.shields.io/badge/Claude%20Code-Optimized-green?style=for-the-badge&logo=anthropic)](https://github.com/ruvnet/claude-flow)
 [![🏛️ Agentics Foundation](https://img.shields.io/badge/Agentics-Foundation-crimson?style=for-the-badge&logo=openai)](https://discord.agentics.org)
 [![🐝 Hive-Mind](https://img.shields.io/badge/Hive--Mind-AI%20Coordination-purple?style=for-the-badge&logo=swarm)](https://github.com/ruvnet/claude-flow)
@@ -49,13 +49,13 @@ claude --dangerously-skip-permissions
 
 ```bash
 # 1. Initialize Claude Flow with enhanced MCP setup (auto-configures permissions!)
-npx --y claude-flow@alpha init --force
+npx claude-flow@alpha init --force
 
 # 2. Explore all revolutionary capabilities  
-npx --y claude-flow@alpha --help
+npx claude-flow@alpha --help
 
 # 3. Launch the interactive hive-mind wizard
-npx --y claude-flow@alpha hive-mind wizard
+npx claude-flow@alpha hive-mind wizard
 
 # 4. Build something amazing with AI coordination
 npx claude-flow@alpha hive-mind spawn "build me something amazing" --claude
@@ -365,29 +365,7 @@ npx claude-flow@alpha daa lifecycle-manage --agentId "agent-123" --action "scale
 - `security_scan`, `backup_create`, `restore_system`
 - `config_manage`, `features_detect`, `log_analysis`
 
-## 🐝 **Revolutionary Hive-Mind Intelligence**
-
-### **Queen-Led AI Coordination**
-Claude-Flow v2.0.0 introduces groundbreaking hive-mind architecture where a **Queen AI** coordinates specialized worker agents in perfect harmony.
-
-```bash
-# Deploy intelligent swarm coordination
-npx claude-flow@alpha swarm "Build a full-stack application" --strategy development --claude
-
-# Launch hive-mind with specific specializations
-npx claude-flow@alpha hive-mind spawn "Create microservices architecture" --agents 8 --claude
-```
-
-### **🤖 Intelligent Agent Types**
-- **👑 Queen Agent**: Master coordinator and decision maker
-- **🏗️ Architect Agents**: System design and technical architecture
-- **💻 Coder Agents**: Implementation and development
-- **🧪 Tester Agents**: Quality assurance and validation
-- **📊 Analyst Agents**: Data analysis and insights
-- **🔍 Researcher Agents**: Information gathering and analysis
-- **🛡️ Security Agents**: Security auditing and compliance
-- **🚀 DevOps Agents**: Deployment and infrastructure
-
+ 
 ---
 
 ## ⚡ **87 Advanced MCP Tools**
