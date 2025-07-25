@@ -223,21 +223,7 @@ export async function initCommand(subArgs, flags) {
       }
     }
 
-    // Create agent directories and copy all agent files
-    console.log('\n🤖 Setting up agent system...');
-    if (!initDryRun) {
-      await createAgentDirectories(workingDir, initDryRun);
-      const agentResult = await copyAgentFiles(workingDir, {
-        force: initForce,
-        dryRun: initDryRun
-      });
-      
-      if (agentResult.success) {
-        await validateAgentSystem(workingDir);
-      }
-    } else {
-      console.log('  [DRY RUN] Would create agent system with 64 specialized agents');
-    }
+    // Agent setup moved to end of function where execution is guaranteed
 
     // Directory structure is created by template copier
 
@@ -1296,6 +1282,25 @@ ${commands.map((cmd) => `- [${cmd}](./${cmd}.md)`).join('\n')}
       console.log('     claude mcp add claude-flow npx claude-flow@alpha mcp start');
       console.log('     claude mcp add ruv-swarm npx ruv-swarm@latest mcp start');
       console.log('\n  💡 MCP servers are defined in .mcp.json (project scope)');
+    }
+
+    // Create agent directories and copy all agent files
+    console.log('\n🤖 Setting up agent system...');
+    if (!dryRun) {
+      await createAgentDirectories(workingDir, dryRun);
+      const agentResult = await copyAgentFiles(workingDir, {
+        force: force,
+        dryRun: dryRun
+      });
+      
+      if (agentResult.success) {
+        await validateAgentSystem(workingDir);
+        console.log('✅ ✓ Agent system setup complete with 64 specialized agents');
+      } else {
+        console.log('⚠️  Agent system setup failed:', agentResult.error);
+      }
+    } else {
+      console.log('  [DRY RUN] Would create agent system with 64 specialized agents');
     }
 
     // Final instructions

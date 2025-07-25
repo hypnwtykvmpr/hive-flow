@@ -12,20 +12,41 @@ const __dirname = dirname(__filename);
 export async function copyAgentFiles(targetDir, options = {}) {
   const { force = false, dryRun = false } = options;
   
-  // Path to agent files in the installed package
-  const sourceAgentsDir = join(__dirname, '../../../../.claude/agents');
+  // Path to agent files - try multiple locations
+  const packageAgentsDir = join(__dirname, '../../../../.claude/agents'); // From npm package
+  const localAgentsDir = '/workspaces/claude-code-flow/.claude/agents';   // Local development
+  const cwdAgentsDir = join(process.cwd(), '.claude/agents');              // Current working directory
+  
+  let sourceAgentsDir;
+  
+  // Try local development first, then package, then cwd
+  try {
+    await fs.access(localAgentsDir);
+    sourceAgentsDir = localAgentsDir;
+    console.log('  📁 Using local development agent files');
+  } catch {
+    try {
+      await fs.access(packageAgentsDir);
+      sourceAgentsDir = packageAgentsDir;
+      console.log('  📁 Using packaged agent files');
+    } catch {
+      try {
+        await fs.access(cwdAgentsDir);
+        sourceAgentsDir = cwdAgentsDir;
+        console.log('  📁 Using current directory agent files');
+      } catch {
+        console.log('  ⚠️  No agent files found in any location');
+        return { success: false, error: 'Agent files not found' };
+      }
+    }
+  }
   const targetAgentsDir = join(targetDir, '.claude/agents');
   
   console.log('📁 Copying agent system files...');
+  console.log(`  📂 Source: ${sourceAgentsDir}`);
+  console.log(`  📂 Target: ${targetAgentsDir}`);
   
   try {
-    // Check if source agents directory exists
-    try {
-      await fs.access(sourceAgentsDir);
-    } catch (err) {
-      console.log('⚠️  Agent files not found in package, skipping agent system setup');
-      return { success: false, error: 'Agent files not found in package' };
-    }
     
     // Create target directory
     if (!dryRun) {
