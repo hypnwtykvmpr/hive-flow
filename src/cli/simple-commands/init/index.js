@@ -10,6 +10,7 @@ import { execSync } from 'child_process';
 import { promises as fs } from 'fs';
 import { copyTemplates } from './template-copier.js';
 import { copyRevisedTemplates, validateTemplatesExist } from './copy-revised-templates.js';
+import { copyAgentFiles, createAgentDirectories, validateAgentSystem } from './agent-copier.js';
 import { showInitHelp } from './help.js';
 import { batchInitCommand, batchInitFromConfig, validateBatchOptions } from './batch-init.js';
 import { ValidationSystem, runFullValidation } from './validation/index.js';
@@ -222,6 +223,8 @@ export async function initCommand(subArgs, flags) {
       }
     }
 
+    // Agent setup moved to end of function where execution is guaranteed
+
     // Directory structure is created by template copier
 
     // SPARC files are created by template copier when --sparc flag is used
@@ -348,6 +351,7 @@ export async function initCommand(subArgs, flags) {
       console.log('  ✅ Directory structure with memory/ and coordination/');
       console.log('  ✅ Local executable at ./claude-flow');
       console.log('  ✅ Persistence database at memory/claude-flow-data.json');
+      console.log('  ✅ Agent system with 64 specialized agents in .claude/agents/');
 
       if (initSparc) {
         const modeCount = selectedModes ? selectedModes.length : '20+';
@@ -1278,6 +1282,25 @@ ${commands.map((cmd) => `- [${cmd}](./${cmd}.md)`).join('\n')}
       console.log('     claude mcp add claude-flow npx claude-flow@alpha mcp start');
       console.log('     claude mcp add ruv-swarm npx ruv-swarm@latest mcp start');
       console.log('\n  💡 MCP servers are defined in .mcp.json (project scope)');
+    }
+
+    // Create agent directories and copy all agent files
+    console.log('\n🤖 Setting up agent system...');
+    if (!dryRun) {
+      await createAgentDirectories(workingDir, dryRun);
+      const agentResult = await copyAgentFiles(workingDir, {
+        force: force,
+        dryRun: dryRun
+      });
+      
+      if (agentResult.success) {
+        await validateAgentSystem(workingDir);
+        console.log('✅ ✓ Agent system setup complete with 64 specialized agents');
+      } else {
+        console.log('⚠️  Agent system setup failed:', agentResult.error);
+      }
+    } else {
+      console.log('  [DRY RUN] Would create agent system with 64 specialized agents');
     }
 
     // Final instructions
