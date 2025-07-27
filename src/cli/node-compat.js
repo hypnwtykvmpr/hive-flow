@@ -6,7 +6,7 @@
 import { readdir, stat, mkdir, readFile, writeFile, unlink, rmdir } from 'fs/promises';
 import { existsSync } from 'fs';
 import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import { dirname, join, normalize } from 'path';
 import process from 'process';
 import { spawn } from 'child_process';
 
@@ -163,7 +163,7 @@ export const getFilename = (importMetaUrl) => {
 // Check if this is the main module (Node.js equivalent of import.meta.main)
 export const isMainModule = (importMetaUrl) => {
   const __filename = fileURLToPath(importMetaUrl);
-  return process.argv[1] === __filename;
+  return normalize(process.argv[1]) === normalize(__filename);
 };
 
 // Helper to check file existence
