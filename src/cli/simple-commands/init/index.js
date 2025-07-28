@@ -299,7 +299,8 @@ export async function initCommand(subArgs, flags) {
               await createClaudeSlashCommands(workingDir);
             }
           } catch (err) {
-            printWarning(`Could not create Claude Code slash commands: ${err.message}`);
+            // Legacy slash command creation - silently skip if it fails
+            // SPARC slash commands are already created successfully above
           }
         }
       }
