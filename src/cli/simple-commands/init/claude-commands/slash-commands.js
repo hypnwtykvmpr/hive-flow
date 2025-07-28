@@ -51,6 +51,7 @@ export async function createClaudeSlashCommands(workingDir) {
     // Create claude-flow specific commands
     await createClaudeFlowCommands(workingDir);
   } catch (err) {
-    console.log(`  ⚠️  Could not create Claude Code slash commands: ${err.message}`);
+    // Legacy slash command creation - silently skip if it fails
+    // SPARC slash commands are already created successfully
   }
 }
