@@ -17,27 +17,22 @@ let loadError = null;
 /**
  * Try to load better-sqlite3 with comprehensive error handling
  */
-function tryLoadSQLite() {
+async function tryLoadSQLite() {
   try {
-    // Try ES module import
-    const module = import('better-sqlite3');
-    return module.then(m => {
-      Database = m.default;
+    // Try CommonJS require first (more reliable in Node.js)
+    const require = createRequire(import.meta.url);
+    Database = require('better-sqlite3');
+    sqliteAvailable = true;
+    return true;
+  } catch (requireErr) {
+    // Fallback to ES module import
+    try {
+      const module = await import('better-sqlite3');
+      Database = module.default;
       sqliteAvailable = true;
       return true;
-    }).catch(err => {
-      loadError = err;
-      return false;
-    });
-  } catch (err) {
-    // Fallback to CommonJS require
-    try {
-      const require = createRequire(import.meta.url);
-      Database = require('better-sqlite3');
-      sqliteAvailable = true;
-      return Promise.resolve(true);
-    } catch (requireErr) {
-      loadError = requireErr;
+    } catch (importErr) {
+      loadError = importErr;
       
       // Check for specific Windows errors
       if (requireErr.message.includes('was compiled against a different Node.js version') ||
@@ -72,7 +67,7 @@ function tryLoadSQLite() {
 `);
       }
       
-      return Promise.resolve(false);
+      return false;
     }
   }
 }
