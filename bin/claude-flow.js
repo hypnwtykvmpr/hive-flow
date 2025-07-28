@@ -11,7 +11,7 @@ import { existsSync } from 'fs';
 import { spawn } from 'child_process';
 import process from 'process';
 
-const VERSION = "2.0.0-alpha.73";
+const VERSION = "2.0.0-alpha.75";
 
 // Get script directory and root directory
 const __filename = fileURLToPath(import.meta.url);
