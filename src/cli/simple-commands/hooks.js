@@ -163,8 +163,23 @@ async function preTaskCommand(subArgs, flags) {
     }
 
     console.log(`\n🎯 TASK PREPARATION COMPLETE`);
+    
+    // Close the memory store to prevent hanging
+    if (memoryStore && memoryStore.close) {
+      memoryStore.close();
+    }
+    
+    // Ensure the process exits cleanly
+    process.exit(0);
   } catch (err) {
     printError(`Pre-task hook failed: ${err.message}`);
+    
+    // Close the memory store on error too
+    if (memoryStore && memoryStore.close) {
+      memoryStore.close();
+    }
+    
+    process.exit(1);
   }
 }
 
