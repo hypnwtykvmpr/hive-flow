@@ -925,8 +925,8 @@ To enable persistence, see: https://github.com/ruvnet/claude-code-flow/docs/wind
   /**
    * Get active sessions with process information
    */
-  getActiveSessionsWithProcessInfo() {
-    const sessions = this.getActiveSessions();
+  async getActiveSessionsWithProcessInfo() {
+    const sessions = await this.getActiveSessions();
 
     // Add process info to each session
     return sessions.map((session) => {
