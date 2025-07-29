@@ -304,6 +304,49 @@ export class MaestroSwarmCoordinator extends EventEmitter {
   }
   
   /**
+   * Review implemented tasks using native quality_reviewer agent
+   */
+  async reviewTasks(featureName: string): Promise<void> {
+    const state = this.maestroState.get(featureName);
+    if (!state) {
+      throw new SystemError(`No workflow state found for '${featureName}'`);
+    }
+    
+    const featurePath = join(this.specsDirectory, featureName);
+    const tasksPath = join(featurePath, 'tasks.md');
+    const tasksContent = await readFile(tasksPath, 'utf8');
+    
+    // Submit quality review task to native quality_reviewer agent
+    const reviewTask: TaskSubmitOptions = {
+      description: `Review implementation quality for ${featureName}`,
+      priority: 'high',
+      strategy: 'sequential',  // Sequential validation for consistency
+      requiredCapabilities: ['code_review' as AgentCapability, 'quality_assurance' as AgentCapability, 'testing' as AgentCapability],
+      metadata: {
+        maestroFeature: featureName,
+        maestroPhase: 'Quality Gates',
+        tasksContent,
+        steeringContext: await this.getSteeringContext()
+      }
+    };
+    
+    const task = await this.hiveMind.submitTask(reviewTask);
+    await this.waitForTaskCompletion(task.id, 300000); // 5 minutes
+    
+    // Update workflow state
+    state.currentPhase = 'Quality Gates' as WorkflowPhase;
+    state.lastActivity = new Date();
+    state.history.push({
+      phase: 'Quality Gates' as WorkflowPhase,
+      status: 'completed',
+      timestamp: new Date()
+    });
+    
+    this.logger.info(`Completed quality review for '${featureName}' using native quality_reviewer`);
+    this.eventBus.emit('maestro:quality_review_completed', { featureName });
+  }
+  
+  /**
    * Approve workflow phase with optional consensus
    */
   async approvePhase(featureName: string): Promise<void> {

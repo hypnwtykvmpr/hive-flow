@@ -139,6 +139,27 @@ maestroCommand.command('implement-task')
     }
   });
 
+maestroCommand.command('review-tasks')
+  .description('Review implemented tasks for quality assurance')
+  .argument('<feature-name>', 'Name of the feature')
+  .action(async (featureName: string) => {
+    try {
+      console.log(chalk.blue(`🔍 Reviewing tasks for ${featureName}...`));
+      
+      const bridge = await getCLIBridge();
+      const orchestrator = await bridge.initializeOrchestrator();
+      
+      await bridge.executeWithMonitoring('review_tasks', async () => {
+        await orchestrator.reviewTasks(featureName);
+      }, { featureName });
+      
+      console.log(chalk.green(`✅ Quality review completed for '${featureName}'`));
+      
+    } catch (error) {
+      handleError(error as Error, 'review-tasks');
+    }
+  });
+
 maestroCommand.command('approve-phase')
   .description('Approve current phase and progress to next')
   .argument('<feature-name>', 'Name of the feature')
