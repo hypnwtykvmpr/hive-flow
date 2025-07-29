@@ -2,9 +2,12 @@
 /**
  * GitHub API Integration Module
  * Provides authentication, rate limiting, and API wrappers for GitHub workflow commands
+ * 
+ * Enhanced with GitHub CLI Safety Wrapper for secure command execution
  */
 
 import { printSuccess, printError, printWarning, printInfo } from '../utils.js';
+import { githubCli, GitHubCliSafe } from '../../utils/github-cli-safety-wrapper.js';
 
 // GitHub API Configuration
 const GITHUB_API_BASE = 'https://api.github.com';
@@ -19,6 +22,14 @@ class GitHubAPIClient {
     this.lastRequestTime = 0;
     this.requestQueue = [];
     this.isProcessingQueue = false;
+    
+    // Initialize GitHub CLI safety wrapper
+    this.cliSafe = new GitHubCliSafe({
+      timeout: 60000,           // 1 minute timeout for CLI operations
+      maxRetries: 3,
+      enableRateLimit: true,
+      enableLogging: false      // Can be enabled for debugging
+    });
   }
 
   /**
@@ -457,6 +468,154 @@ class GitHubAPIClient {
     }
 
     return `${size.toFixed(2)} ${units[unitIndex]}`;
+  }
+
+  /**
+   * Safe GitHub CLI Methods
+   * These methods use the GitHubCliSafe wrapper for secure command execution
+   */
+
+  /**
+   * Create issue using GitHub CLI (safe alternative to createIssue API method)
+   * @param {Object} issueData - Issue data
+   * @returns {Promise<Object>} - CLI execution result
+   */
+  async createIssueCLI(issueData) {
+    try {
+      const result = await this.cliSafe.createIssue({
+        title: issueData.title,
+        body: issueData.body,
+        labels: issueData.labels || [],
+        assignees: issueData.assignees || []
+      });
+      
+      printSuccess(`Issue created via CLI: ${issueData.title}`);
+      return { success: true, data: result };
+    } catch (error) {
+      printError(`Failed to create issue via CLI: ${error.message}`);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Create PR using GitHub CLI (safe alternative to createPullRequest API method)
+   * @param {Object} prData - PR data
+   * @returns {Promise<Object>} - CLI execution result
+   */
+  async createPullRequestCLI(prData) {
+    try {
+      const result = await this.cliSafe.createPR({
+        title: prData.title,
+        body: prData.body,
+        base: prData.base || 'main',
+        head: prData.head,
+        draft: prData.draft || false
+      });
+      
+      printSuccess(`PR created via CLI: ${prData.title}`);
+      return { success: true, data: result };
+    } catch (error) {
+      printError(`Failed to create PR via CLI: ${error.message}`);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Add issue comment using GitHub CLI
+   * @param {number} issueNumber - Issue number
+   * @param {string} body - Comment body
+   * @returns {Promise<Object>} - CLI execution result
+   */
+  async addIssueCommentCLI(issueNumber, body) {
+    try {
+      const result = await this.cliSafe.addIssueComment(issueNumber, body);
+      printSuccess(`Comment added to issue #${issueNumber}`);
+      return { success: true, data: result };
+    } catch (error) {
+      printError(`Failed to add comment to issue #${issueNumber}: ${error.message}`);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Add PR comment using GitHub CLI
+   * @param {number} prNumber - PR number
+   * @param {string} body - Comment body
+   * @returns {Promise<Object>} - CLI execution result
+   */
+  async addPRCommentCLI(prNumber, body) {
+    try {
+      const result = await this.cliSafe.addPRComment(prNumber, body);
+      printSuccess(`Comment added to PR #${prNumber}`);
+      return { success: true, data: result };
+    } catch (error) {
+      printError(`Failed to add comment to PR #${prNumber}: ${error.message}`);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Create release using GitHub CLI
+   * @param {Object} releaseData - Release data
+   * @returns {Promise<Object>} - CLI execution result
+   */
+  async createReleaseCLI(releaseData) {
+    try {
+      const result = await this.cliSafe.createRelease({
+        tag: releaseData.tag_name,
+        title: releaseData.name,
+        body: releaseData.body,
+        prerelease: releaseData.prerelease || false,
+        draft: releaseData.draft || false
+      });
+      
+      printSuccess(`Release created via CLI: ${releaseData.tag_name}`);
+      return { success: true, data: result };
+    } catch (error) {
+      printError(`Failed to create release via CLI: ${error.message}`);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Check GitHub CLI authentication and availability
+   * @returns {Promise<boolean>} - True if CLI is ready to use
+   */
+  async checkCLIStatus() {
+    try {
+      const isAvailable = await this.cliSafe.checkGitHubCli();
+      if (!isAvailable) {
+        printWarning('GitHub CLI is not installed or not in PATH');
+        return false;
+      }
+
+      const isAuthenticated = await this.cliSafe.checkAuthentication();
+      if (!isAuthenticated) {
+        printWarning('GitHub CLI is not authenticated. Run: gh auth login');
+        return false;
+      }
+
+      printSuccess('GitHub CLI is ready for use');
+      return true;
+    } catch (error) {
+      printError(`GitHub CLI status check failed: ${error.message}`);
+      return false;
+    }
+  }
+
+  /**
+   * Get GitHub CLI wrapper statistics
+   * @returns {Object} - Usage statistics
+   */
+  getCLIStats() {
+    return this.cliSafe.getStats();
+  }
+
+  /**
+   * Cleanup CLI resources (call before shutdown)
+   */
+  async cleanupCLI() {
+    await this.cliSafe.cleanup();
   }
 }
 

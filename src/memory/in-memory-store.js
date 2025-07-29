@@ -3,6 +3,8 @@
  * Provides the same API as SQLite store but data is not persistent
  */
 
+import { sessionSerializer } from './enhanced-session-serializer.js';
+
 class InMemoryStore {
   constructor(options = {}) {
     this.options = options;
@@ -46,7 +48,7 @@ class InMemoryStore {
     const now = Date.now();
     const ttl = options.ttl || null;
     const expiresAt = ttl ? now + ttl * 1000 : null;
-    const valueStr = typeof value === 'string' ? value : JSON.stringify(value);
+    const valueStr = typeof value === 'string' ? value : sessionSerializer.serializer.serialize(value);
 
     const entry = {
       key,
@@ -92,9 +94,9 @@ class InMemoryStore {
     entry.accessedAt = Date.now();
     entry.accessCount++;
 
-    // Try to parse as JSON, fall back to raw string
+    // Try to deserialize, fall back to raw string
     try {
-      return JSON.parse(entry.value);
+      return sessionSerializer.serializer.deserialize(entry.value);
     } catch {
       return entry.value;
     }
@@ -194,7 +196,7 @@ class InMemoryStore {
 
   _tryParseJson(value) {
     try {
-      return JSON.parse(value);
+      return sessionSerializer.serializer.deserialize(value);
     } catch {
       return value;
     }

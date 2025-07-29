@@ -16,7 +16,7 @@ This release includes a fully implemented hooks system with CLI integration, pro
 - `claude-flow hooks session-end` - Cleanup sessions with metrics export
 - `claude-flow hooks session-restore` - Restore previous session state
 - `claude-flow hooks pre-search` - Optimize search operations
-- `claude-flow hooks notification` - Send coordination messages
+- `claude-flow hooks notify` - Send coordination messages
 - `claude-flow hooks performance` - Track performance metrics
 - `claude-flow hooks memory-sync` - Synchronize memory across agents
 - `claude-flow hooks telemetry` - Send telemetry events

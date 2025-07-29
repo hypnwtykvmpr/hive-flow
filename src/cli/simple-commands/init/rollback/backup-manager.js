@@ -2,7 +2,7 @@
 
 // Node.js compatible import
 import fs from 'fs';
-import { errors } from '../../node-compat.js';
+import { errors } from '../../../node-compat.js';
 
 // Polyfill for Deno's ensureDirSync
 function ensureDirSync(dirPath) {
