@@ -1,6 +1,6 @@
 {
   "name": "claude-flow",
-  "version": "2.0.0-alpha.77",
+  "version": "2.0.0-alpha.78",
   "description": "Enterprise-grade AI agent orchestration with ruv-swarm integration (Alpha Release)",
   "main": "cli.mjs",
   "bin": {
@@ -122,7 +122,8 @@
     "ora": "^7.0.1",
     "p-queue": "^8.1.0",
     "ruv-swarm": "^1.0.14",
-    "ws": "^8.18.3"
+    "ws": "^8.18.3",
+    "yaml": "^2.8.0"
   },
   "optionalDependencies": {
     "better-sqlite3": "^12.2.0",

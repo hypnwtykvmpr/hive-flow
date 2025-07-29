@@ -1,37 +1,56 @@
 /**
- * Central source of truth for agent types
- * This file ensures consistency across TypeScript types and runtime validation
+ * Agent Types - Dynamic loading from .claude/agents/ directory
+ * This file provides type-safe access to dynamically loaded agent definitions
  */
 
-export const AGENT_TYPES = {
-  COORDINATOR: 'coordinator',
-  RESEARCHER: 'researcher',
-  CODER: 'coder',
-  ANALYST: 'analyst',
-  ARCHITECT: 'architect',
-  TESTER: 'tester',
-  REVIEWER: 'reviewer',
-  OPTIMIZER: 'optimizer',
-  DOCUMENTER: 'documenter',
-  MONITOR: 'monitor',
-  SPECIALIST: 'specialist',
+import { getAvailableAgentTypes, isValidAgentType as validateAgentType } from '../agents/agent-loader.js';
+
+// Dynamic agent type - will be a string that matches available agents
+export type AgentType = string;
+
+// Legacy agent type mapping for backward compatibility
+export const LEGACY_AGENT_MAPPING = {
+  analyst: 'code-analyzer',
+  coordinator: 'task-orchestrator', 
+  optimizer: 'perf-analyzer',
+  documenter: 'api-docs',
+  monitor: 'performance-benchmarker',
+  specialist: 'system-architect',
+  architect: 'system-architect',
 } as const;
 
-export type AgentType = (typeof AGENT_TYPES)[keyof typeof AGENT_TYPES];
+/**
+ * Get all valid agent types dynamically
+ */
+export async function getValidAgentTypes(): Promise<string[]> {
+  return await getAvailableAgentTypes();
+}
 
-// Array of all valid agent types for runtime validation
-export const VALID_AGENT_TYPES = Object.values(AGENT_TYPES);
+/**
+ * Helper function to validate agent type
+ */
+export async function isValidAgentType(type: string): Promise<boolean> {
+  return await validateAgentType(type);
+}
 
-// JSON Schema for agent type validation
-export const AGENT_TYPE_SCHEMA = {
-  type: 'string',
-  enum: VALID_AGENT_TYPES,
-  description: 'Type of AI agent',
-};
+/**
+ * Resolve legacy agent types to current equivalents
+ */
+export function resolveLegacyAgentType(legacyType: string): string {
+  const mapped = LEGACY_AGENT_MAPPING[legacyType as keyof typeof LEGACY_AGENT_MAPPING];
+  return mapped || legacyType;
+}
 
-// Helper function to validate agent type
-export function isValidAgentType(type: string): type is AgentType {
-  return VALID_AGENT_TYPES.includes(type as AgentType);
+/**
+ * Create JSON Schema for agent type validation (async)
+ */
+export async function getAgentTypeSchema() {
+  const validTypes = await getValidAgentTypes();
+  return {
+    type: 'string',
+    enum: validTypes,
+    description: 'Type of specialized AI agent',
+  };
 }
 
 // Strategy types

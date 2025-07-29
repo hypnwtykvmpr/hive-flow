@@ -4,6 +4,7 @@
 
 import type { MCPTool, MCPContext, AgentProfile, Task, MemoryEntry } from '../utils/types.js';
 import type { ILogger } from '../core/logger.js';
+import { getAvailableAgentTypes, getAgentTypeSchema } from '../constants/agent-types.js';
 import type { Permissions } from './auth.js';
 
 export interface ClaudeFlowToolContext extends MCPContext {
@@ -11,10 +12,41 @@ export interface ClaudeFlowToolContext extends MCPContext {
 }
 
 /**
+ * Enhance tool schema with dynamic agent types
+ */
+async function enhanceToolWithAgentTypes(tool: MCPTool): Promise<MCPTool> {
+  const availableTypes = await getAvailableAgentTypes();
+  
+  // Clone the tool to avoid modifying the original
+  const enhancedTool = JSON.parse(JSON.stringify(tool));
+  
+  // Find and populate enum fields for agent types
+  function addEnumToAgentTypeFields(obj: any) {
+    if (typeof obj !== 'object' || obj === null) return;
+    
+    for (const [key, value] of Object.entries(obj)) {
+      if (typeof value === 'object' && value !== null) {
+        // Check if this is an agent type field
+        if (key === 'type' || key === 'filterByType' || key === 'assignToAgentType') {
+          const field = value as any;
+          if (field.type === 'string' && field.description?.includes('loaded dynamically from .claude/agents/')) {
+            field.enum = availableTypes;
+          }
+        }
+        addEnumToAgentTypeFields(value);
+      }
+    }
+  }
+  
+  addEnumToAgentTypeFields(enhancedTool.inputSchema);
+  return enhancedTool;
+}
+
+/**
  * Create all Claude-Flow specific MCP tools
  */
-export function createClaudeFlowTools(logger: ILogger): MCPTool[] {
-  return [
+export async function createClaudeFlowTools(logger: ILogger): Promise<MCPTool[]> {
+  const tools = [
     // Agent management tools
     createSpawnAgentTool(logger),
     createListAgentsTool(logger),
@@ -55,6 +87,13 @@ export function createClaudeFlowTools(logger: ILogger): MCPTool[] {
     createListTerminalsTool(logger),
     createCreateTerminalTool(logger),
   ];
+
+  // Enhance tools with dynamic agent types
+  const enhancedTools = await Promise.all(
+    tools.map(tool => enhanceToolWithAgentTypes(tool))
+  );
+
+  return enhancedTools;
 }
 
 function createSpawnAgentTool(logger: ILogger): MCPTool {
@@ -66,20 +105,8 @@ function createSpawnAgentTool(logger: ILogger): MCPTool {
       properties: {
         type: {
           type: 'string',
-          enum: [
-            'coordinator',
-            'researcher',
-            'coder',
-            'analyst',
-            'architect',
-            'tester',
-            'reviewer',
-            'optimizer',
-            'documenter',
-            'monitor',
-            'specialist',
-          ],
-          description: 'Type of agent to spawn',
+          // Note: enum will be populated dynamically at runtime
+          description: 'Type of specialized agent to spawn (loaded dynamically from .claude/agents/)',
         },
         name: {
           type: 'string',
@@ -161,20 +188,8 @@ function createListAgentsTool(logger: ILogger): MCPTool {
         },
         filterByType: {
           type: 'string',
-          enum: [
-            'coordinator',
-            'researcher',
-            'coder',
-            'analyst',
-            'architect',
-            'tester',
-            'reviewer',
-            'optimizer',
-            'documenter',
-            'monitor',
-            'specialist',
-          ],
-          description: 'Filter agents by type',
+          // Note: enum will be populated dynamically at runtime
+          description: 'Filter agents by type (loaded dynamically from .claude/agents/)',
         },
       },
     },
@@ -317,20 +332,8 @@ function createCreateTaskTool(logger: ILogger): MCPTool {
         },
         assignToAgentType: {
           type: 'string',
-          enum: [
-            'coordinator',
-            'researcher',
-            'coder',
-            'analyst',
-            'architect',
-            'tester',
-            'reviewer',
-            'optimizer',
-            'documenter',
-            'monitor',
-            'specialist',
-          ],
-          description: 'Type of agent to assign the task to',
+          // Note: enum will be populated dynamically at runtime
+          description: 'Type of specialized agent to assign the task to (loaded dynamically from .claude/agents/)',
         },
         input: {
           type: 'object',
