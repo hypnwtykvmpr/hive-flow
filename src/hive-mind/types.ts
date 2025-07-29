@@ -5,8 +5,8 @@
  */
 
 // Swarm types
-export type SwarmTopology = 'mesh' | 'hierarchical' | 'ring' | 'star';
-export type QueenMode = 'centralized' | 'distributed';
+export type SwarmTopology = 'mesh' | 'hierarchical' | 'ring' | 'star' | 'specs-driven';
+export type QueenMode = 'centralized' | 'distributed' | 'strategic';
 
 export interface HiveMindConfig {
   name: string;
@@ -16,8 +16,11 @@ export interface HiveMindConfig {
   memoryTTL: number;
   consensusThreshold: number;
   autoSpawn: boolean;
+  enableConsensus?: boolean;
+  enableMemory?: boolean;
+  enableCommunication?: boolean;
   enabledFeatures?: string[];
-  createdAt: Date;
+  createdAt?: Date;
 }
 
 // Agent types
@@ -32,7 +35,14 @@ export type AgentType =
   | 'optimizer'
   | 'documenter'
   | 'monitor'
-  | 'specialist';
+  | 'specialist'
+  // Maestro specs-driven agent types
+  | 'requirements_analyst'
+  | 'design_architect'
+  | 'task_planner'
+  | 'implementation_coder'
+  | 'quality_reviewer'
+  | 'steering_documenter';
 
 export type AgentStatus = 'idle' | 'busy' | 'active' | 'error' | 'offline';
 
@@ -50,8 +60,10 @@ export type AgentCapability =
   | 'performance_metrics'
   | 'bottleneck_detection'
   | 'system_design'
+  | 'architecture'
   | 'architecture_patterns'
   | 'integration_planning'
+  | 'technical_writing'
   | 'test_generation'
   | 'quality_assurance'
   | 'edge_case_detection'
@@ -69,7 +81,14 @@ export type AgentCapability =
   | 'alerting'
   | 'domain_expertise'
   | 'custom_capabilities'
-  | 'problem_solving';
+  | 'problem_solving'
+  // Maestro specs-driven capabilities
+  | 'requirements_analysis'
+  | 'user_story_creation'
+  | 'acceptance_criteria'
+  | 'specs_driven_design'
+  | 'workflow_orchestration'
+  | 'governance';
 
 export interface AgentConfig {
   id?: string;
@@ -84,6 +103,18 @@ export interface AgentSpawnOptions {
   name?: string;
   capabilities?: AgentCapability[];
   autoAssign?: boolean;
+  config?: Partial<AgentConfig>;
+  environment?: Partial<AgentEnvironment>;
+}
+
+export interface AgentEnvironment {
+  workingDirectory?: string;
+  environmentVariables?: Record<string, string>;
+  resourceLimits?: {
+    maxMemory?: number;
+    maxCpu?: number;
+    timeout?: number;
+  };
 }
 
 // Task types
@@ -246,6 +277,8 @@ export interface ConsensusProposal {
   proposal: any;
   requiredThreshold: number;
   deadline?: Date;
+  creator?: string;
+  metadata?: Record<string, any>;
 }
 
 export interface ConsensusVote {
