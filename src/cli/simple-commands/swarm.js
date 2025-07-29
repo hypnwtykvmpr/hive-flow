@@ -640,7 +640,7 @@ The swarm should be self-documenting - use memory_store to save all important in
       // Create a script to run the swarm without background flag
       const scriptContent = `#!/usr/bin/env -S deno run --allow-all
 import { swarmCommand } from "${import.meta.url}";
-import { Deno, cwd, exit, existsSync } from '../node-compat.js';
+import { cwd, exit, existsSync } from '../node-compat.js';
 import process from 'process';
 
 // Remove background flag to prevent recursion

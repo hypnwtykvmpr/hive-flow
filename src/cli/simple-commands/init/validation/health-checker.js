@@ -1,3 +1,4 @@
+import { promises as fs } from 'fs';
 // health-checker.js - System health checks for SPARC initialization
 
 export class HealthChecker {
@@ -108,7 +109,7 @@ export class HealthChecker {
         const templatePath = `${this.workingDir}/${template}`;
 
         try {
-          const content = await Deno.readTextFile(templatePath);
+          const content = await fs.readFile(templatePath, 'utf8');
           if (content.length < 50) {
             result.templates.corrupted.push(template);
           } else {
@@ -277,7 +278,7 @@ export class HealthChecker {
     try {
       // Check if mode exists in .roomodes
       const roomodesPath = `${this.workingDir}/.roomodes`;
-      const content = await Deno.readTextFile(roomodesPath);
+      const content = await fs.readFile(roomodesPath, 'utf8');
       const config = JSON.parse(content);
 
       return !!(config.modes && config.modes[mode]);
@@ -326,7 +327,7 @@ export class HealthChecker {
     try {
       // Compare .roomodes with slash commands
       const roomodesPath = `${this.workingDir}/.roomodes`;
-      const content = await Deno.readTextFile(roomodesPath);
+      const content = await fs.readFile(roomodesPath, 'utf8');
       const config = JSON.parse(content);
 
       if (config.modes) {
@@ -368,7 +369,7 @@ export class HealthChecker {
 
     try {
       const claudePath = `${this.workingDir}/CLAUDE.md`;
-      const content = await Deno.readTextFile(claudePath);
+      const content = await fs.readFile(claudePath, 'utf8');
 
       // Check if mentioned commands exist
       const mentionedCommands = ['claude-flow sparc', 'npm run build', 'npm run test'];
@@ -405,7 +406,7 @@ export class HealthChecker {
     try {
       // Check if memory structure matches documentation
       const memoryDataPath = `${this.workingDir}/memory/claude-flow-data.json`;
-      const data = JSON.parse(await Deno.readTextFile(memoryDataPath));
+      const data = JSON.parse(await fs.readFile(memoryDataPath, 'utf8'));
 
       // Basic structure validation
       if (!data.agents || !data.tasks) {

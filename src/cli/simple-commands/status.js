@@ -1,6 +1,7 @@
 // status.js - System status and monitoring commands
 import { printSuccess, printError, printWarning } from '../utils.js';
-import { Deno } from '../node-compat.js';
+import { promises as fs } from 'fs';
+// Removed Deno import from '../node-compat.js';
 
 export async function statusCommand(subArgs, flags) {
   const verbose = subArgs.includes('--verbose') || subArgs.includes('-v') || flags.verbose;
@@ -59,7 +60,7 @@ async function getSystemStatus(verbose = false) {
 async function getMemoryStats() {
   try {
     const memoryStore = './memory/memory-store.json';
-    const content = await Deno.readTextFile(memoryStore);
+    const content = await fs.readFile(memoryStore, 'utf8');
     const data = JSON.parse(content);
 
     let totalEntries = 0;

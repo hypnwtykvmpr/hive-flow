@@ -1,7 +1,8 @@
 // batch-manager.js - Batch configuration management utility
 import { printSuccess, printError, printInfo, printWarning } from '../utils.js';
+import { promises as fs } from 'fs';
 import { PROJECT_TEMPLATES, ENVIRONMENT_CONFIGS } from './init/batch-init.js';
-import { Deno, cwd, exit, existsSync } from '../node-compat.js';
+import { cwd, exit, existsSync } from '../node-compat.js';
 
 export async function batchManagerCommand(subArgs, flags) {
   const command = subArgs[0];
@@ -44,7 +45,7 @@ async function createBatchConfig(args, flags) {
   };
 
   try {
-    await Deno.writeTextFile(outputFile, JSON.stringify(config, null, 2));
+    await fs.writeFile(outputFile, JSON.stringify(config, null, 2, 'utf8'));
     printSuccess(`Created batch configuration template: ${outputFile}`);
     console.log('Edit the file to customize your batch initialization setup.');
   } catch (error) {
@@ -98,7 +99,7 @@ async function createInteractiveConfig(outputFile) {
   };
 
   try {
-    await Deno.writeTextFile(outputFile, JSON.stringify(config, null, 2));
+    await fs.writeFile(outputFile, JSON.stringify(config, null, 2, 'utf8'));
     printSuccess(`Created interactive batch configuration: ${outputFile}`);
     console.log('\nNext steps:');
     console.log('1. Edit the configuration file to match your needs');
@@ -119,7 +120,7 @@ async function validateBatchConfig(args, flags) {
   }
 
   try {
-    const content = await Deno.readTextFile(configFile);
+    const content = await fs.readFile(configFile, 'utf8');
     const config = JSON.parse(content);
 
     console.log(`📋 Validating batch configuration: ${configFile}`);
@@ -259,7 +260,7 @@ async function estimateBatchOperation(args, flags) {
   }
 
   try {
-    const content = await Deno.readTextFile(configFile);
+    const content = await fs.readFile(configFile, 'utf8');
     const config = JSON.parse(content);
 
     console.log('⏱️  Batch Operation Estimation');

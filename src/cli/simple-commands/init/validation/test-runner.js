@@ -1,6 +1,7 @@
 // test-runner.js - Test runner for validation and rollback systems
 
 import { ValidationSystem } from './index.js';
+import { promises as fs } from 'fs';
 import { RollbackSystem } from '../rollback/index.js';
 import { printSuccess, printError, printWarning } from '../../../utils.js';
 
@@ -410,9 +411,9 @@ export class ValidationTestRunner {
 
   async createTestFiles() {
     try {
-      await Deno.mkdir(`${this.workingDir}/test-temp`, { recursive: true });
-      await Deno.writeTextFile(`${this.workingDir}/test-temp/CLAUDE.md`, '# Test CLAUDE.md');
-      await Deno.writeTextFile(`${this.workingDir}/test-temp/memory-bank.md`, '# Test Memory Bank');
+      await fs.mkdir(`${this.workingDir}/test-temp`, { recursive: true });
+      await fs.writeFile(`${this.workingDir}/test-temp/CLAUDE.md`, '# Test CLAUDE.md', 'utf8');
+      await fs.writeFile(`${this.workingDir}/test-temp/memory-bank.md`, '# Test Memory Bank', 'utf8');
     } catch {
       // Test files creation failed - not critical for testing
     }
@@ -420,7 +421,7 @@ export class ValidationTestRunner {
 
   async cleanupTestFiles() {
     try {
-      await Deno.remove(`${this.workingDir}/test-temp`, { recursive: true });
+      await fs.unlink(`${this.workingDir}/test-temp`, { recursive: true });
     } catch {
       // Cleanup failed - not critical
     }
@@ -437,9 +438,8 @@ export class ValidationTestRunner {
         },
       };
 
-      await Deno.writeTextFile(
-        `${this.workingDir}/test-roomodes`,
-        JSON.stringify(testConfig, null, 2),
+      await fs.writeFile(
+        `${this.workingDir}/test-roomodes`, JSON.stringify(testConfig, null, 2, 'utf8'),
       );
     } catch {
       // Test config creation failed - not critical
@@ -448,7 +448,7 @@ export class ValidationTestRunner {
 
   async cleanupTestConfigs() {
     try {
-      await Deno.remove(`${this.workingDir}/test-roomodes`);
+      await fs.unlink(`${this.workingDir}/test-roomodes`);
     } catch {
       // Cleanup failed - not critical
     }
@@ -457,7 +457,7 @@ export class ValidationTestRunner {
   async createTestSparcConfig() {
     try {
       await this.createTestConfigs();
-      await Deno.mkdir(`${this.workingDir}/test-roo`, { recursive: true });
+      await fs.mkdir(`${this.workingDir}/test-roo`, { recursive: true });
     } catch {
       // Test SPARC config creation failed - not critical
     }
@@ -466,7 +466,7 @@ export class ValidationTestRunner {
   async cleanupTestSparcConfig() {
     try {
       await this.cleanupTestConfigs();
-      await Deno.remove(`${this.workingDir}/test-roo`, { recursive: true });
+      await fs.unlink(`${this.workingDir}/test-roo`, { recursive: true });
     } catch {
       // Cleanup failed - not critical
     }

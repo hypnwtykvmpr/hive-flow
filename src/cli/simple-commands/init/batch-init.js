@@ -1,6 +1,7 @@
 // batch-init.js - Batch initialization features with parallel processing
 import { printSuccess, printError, printWarning, printInfo } from '../../utils.js';
-import { Deno, cwd, exit, existsSync } from '../../node-compat.js';
+import { promises as fs } from 'fs';
+import { cwd, exit, existsSync } from '../../node-compat.js';
 import process from 'process';
 import {
   PerformanceMonitor,
@@ -329,7 +330,7 @@ async function initializeProject(projectPath, options = {}) {
       : `${currentDir}/${projectPath}`;
 
     // Create project directory
-    await Deno.mkdir(absoluteProjectPath, { recursive: true });
+    await fs.mkdir(absoluteProjectPath, { recursive: true });
 
     // Change to project directory
     const originalDir = cwd();
@@ -360,7 +361,7 @@ async function initializeProject(projectPath, options = {}) {
 
     // Create all directories in parallel
     await Promise.all(
-      directories.map((dir) => Deno.mkdir(dir, { recursive: true }).catch(() => {})),
+      directories.map((dir) => fs.mkdir(dir, { recursive: true }).catch(() => {})),
     );
 
     // Create configuration files in parallel
@@ -372,20 +373,20 @@ async function initializeProject(projectPath, options = {}) {
       : minimal
         ? createMinimalClaudeMd()
         : createFullClaudeMd();
-    fileCreationTasks.push(Deno.writeTextFile('CLAUDE.md', claudeMd));
+    fileCreationTasks.push(fs.writeFile('CLAUDE.md', claudeMd));
 
     // memory-bank.md
     const memoryBankMd = minimal ? createMinimalMemoryBankMd() : createFullMemoryBankMd();
-    fileCreationTasks.push(Deno.writeTextFile('memory-bank.md', memoryBankMd));
+    fileCreationTasks.push(fs.writeFile('memory-bank.md', memoryBankMd));
 
     // coordination.md
     const coordinationMd = minimal ? createMinimalCoordinationMd() : createFullCoordinationMd();
-    fileCreationTasks.push(Deno.writeTextFile('coordination.md', coordinationMd));
+    fileCreationTasks.push(fs.writeFile('coordination.md', coordinationMd));
 
     // README files
     fileCreationTasks.push(
-      Deno.writeTextFile('memory/agents/README.md', createAgentsReadme()),
-      Deno.writeTextFile('memory/sessions/README.md', createSessionsReadme()),
+      fs.writeFile('memory/agents/README.md', createAgentsReadme()),
+      fs.writeFile('memory/sessions/README.md', createSessionsReadme()),
     );
 
     // Persistence database
@@ -398,7 +399,7 @@ async function initializeProject(projectPath, options = {}) {
       lastUpdated: Date.now(),
     };
     fileCreationTasks.push(
-      Deno.writeTextFile('memory/claude-flow-data.json', JSON.stringify(initialData, null, 2)),
+      fs.writeFile('memory/claude-flow-data.json', JSON.stringify(initialData, null, 2)),
     );
 
     // Environment configuration
@@ -407,7 +408,7 @@ async function initializeProject(projectPath, options = {}) {
       const envContent = Object.entries(envConfig.config)
         .map(([key, value]) => `${key}=${value}`)
         .join('\n');
-      fileCreationTasks.push(Deno.writeTextFile('.env', envContent));
+      fileCreationTasks.push(fs.writeFile('.env', envContent));
     }
 
     // Template-specific files
@@ -424,7 +425,7 @@ async function initializeProject(projectPath, options = {}) {
             .replace(/{{PROJECT_DESCRIPTION}}/g, templateConfig.description)
             .replace(/{{ENVIRONMENT}}/g, environment);
 
-          fileCreationTasks.push(Deno.writeTextFile(filePath, fileContent));
+          fileCreationTasks.push(fs.writeFile(filePath, fileContent));
         }
       }
     }
@@ -595,7 +596,7 @@ export async function batchInitCommand(projects, options = {}) {
 // Parse batch initialization config from file
 export async function parseBatchConfig(configFile) {
   try {
-    const content = await Deno.readTextFile(configFile);
+    const content = await fs.readFile(configFile, 'utf8');
     return JSON.parse(content);
   } catch (error) {
     printError(`Failed to read batch config file: ${error.message}`);

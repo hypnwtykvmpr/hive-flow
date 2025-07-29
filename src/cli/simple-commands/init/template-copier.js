@@ -1,6 +1,6 @@
 // template-copier.js - Copy template files instead of generating them dynamically
 
-import { Deno, existsSync } from '../../node-compat.js';
+import { existsSync } from '../../node-compat.js';
 import { promises as fs } from 'fs';
 import { dirname, join, relative } from 'path';
 import { fileURLToPath } from 'url';

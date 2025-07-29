@@ -4,6 +4,7 @@
  */
 
 import { compat } from '../runtime-detector.js';
+import { promises as fs } from 'fs';
 
 export class WebUIValidator {
   constructor() {
@@ -64,11 +65,11 @@ export class WebUIValidator {
       try {
         await compat.safeCall(async () => {
           if (compat.runtime === 'deno') {
-            await Deno.writeTextFile('.webui-test', 'test');
-            await Deno.remove('.webui-test');
+            await fs.writeFile('.webui-test', 'test', 'utf8');
+            await fs.unlink('.webui-test');
           } else {
             const fs = await import('fs/promises');
-            await fs.writeFile('.webui-test', 'test');
+            await fs.writeFile('.webui-test', 'test', 'utf8');
             await fs.unlink('.webui-test');
           }
         });
