@@ -26,6 +26,15 @@ const AGENT_TYPES: AgentType[] = [
   'documenter',
   'monitor',
   'specialist',
+  'requirements_analyst',
+  'design_architect',
+  'system-architect',
+  'task_planner',
+  'task-planner',
+  'implementation_coder',
+  'developer',
+  'quality_reviewer',
+  'steering_documenter',
 ];
 
 const CAPABILITY_MAP: Record<AgentType, AgentCapability[]> = {
@@ -40,6 +49,15 @@ const CAPABILITY_MAP: Record<AgentType, AgentCapability[]> = {
   documenter: ['documentation_generation', 'api_docs', 'user_guides'],
   monitor: ['system_monitoring', 'health_checks', 'alerting'],
   specialist: ['domain_expertise', 'custom_capabilities', 'problem_solving'],
+  requirements_analyst: ['requirements_analysis', 'user_story_creation', 'acceptance_criteria'],
+  design_architect: ['system_design', 'architecture', 'specs_driven_design'],
+  'system-architect': ['system_design', 'architecture_patterns', 'integration_planning'],
+  task_planner: ['task_management', 'workflow_orchestration'],
+  'task-planner': ['task_management', 'workflow_orchestration'],
+  implementation_coder: ['code_generation', 'implementation', 'debugging'],
+  developer: ['code_generation', 'implementation', 'debugging'],
+  quality_reviewer: ['code_review', 'quality_assurance', 'testing'],
+  steering_documenter: ['documentation_generation', 'governance']
 };
 
 export const spawnCommand = new Command('spawn')

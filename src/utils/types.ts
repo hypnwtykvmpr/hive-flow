@@ -2,6 +2,64 @@
  * Core type definitions for Claude-Flow
  */
 
+// Configuration interface
+export interface Config {
+  env: 'development' | 'production' | 'test';
+  logLevel: 'debug' | 'info' | 'warn' | 'error';
+  enableMetrics?: boolean;
+  orchestrator?: {
+    dataDir?: string;
+    maxAgents?: number;
+    taskTimeout?: number;
+    persistSessions?: boolean;
+    shutdownTimeout?: number;
+    maxConcurrentAgents?: number;
+  };
+  logging?: LoggingConfig;
+  terminal?: {
+    shell?: string;
+    timeout?: number;
+    maxSessions?: number;
+  };
+  memory?: {
+    backend?: 'sqlite' | 'memory';
+    ttl?: number;
+    maxEntries?: number;
+  };
+  coordination?: {
+    enabled?: boolean;
+    maxConnections?: number;
+  };
+  mcp?: {
+    enabled?: boolean;
+    port?: number;
+  };
+  database?: {
+    url: string;
+    poolSize?: number;
+  };
+  redis?: {
+    url: string;
+    keyPrefix?: string;
+  };
+  api?: {
+    port: number;
+    host: string;
+    cors?: {
+      origin: string[];
+      credentials: boolean;
+    };
+  };
+  agents?: {
+    maxConcurrent: number;
+    timeout: number;
+  };
+  security?: {
+    jwtSecret: string;
+    encryptionKey: string;
+  };
+}
+
 // Logging configuration interface
 export interface LoggingConfig {
   level: 'debug' | 'info' | 'warn' | 'error';
@@ -46,9 +104,9 @@ export interface AgentProfile {
   name: string;
   type: 'coordinator' | 'researcher' | 'implementer' | 'analyst' | 'custom';
   capabilities: string[];
-  systemPrompt: string;
+  systemPrompt?: string;
   maxConcurrentTasks: number;
-  priority: number;
+  priority?: number;
   environment?: Record<string, string>;
   workingDirectory?: string;
   shell?: string;
