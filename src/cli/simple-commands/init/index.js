@@ -1070,7 +1070,7 @@ ${commands.map((cmd) => `- [${cmd}](./${cmd}.md)`).join('\n')}
     }
 
     // Create helper scripts
-    const helpers = ['setup-mcp.sh', 'quick-start.sh', 'github-setup.sh'];
+    const helpers = ['setup-mcp.sh', 'quick-start.sh', 'github-setup.sh', 'github-safe.js'];
     for (const helper of helpers) {
       if (!dryRun) {
         const content = createHelperScript(helper);
