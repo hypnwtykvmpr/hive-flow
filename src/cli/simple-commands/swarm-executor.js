@@ -2,9 +2,15 @@
  * Simple Swarm Executor - Provides basic swarm functionality without TypeScript dependencies
  */
 
-import { generateId } from '../../utils/helpers.js';
 import { promises as fs } from 'fs';
 import path from 'path';
+
+// Simple ID generator to avoid build dependencies
+function generateId(prefix = 'id') {
+  const timestamp = Date.now().toString(36);
+  const random = Math.random().toString(36).substring(2, 9);
+  return `${prefix}_${timestamp}_${random}`;
+}
 
 // Simple SwarmCoordinator implementation
 export class SwarmCoordinator {
@@ -244,5 +250,4 @@ export async function executeSwarm(objective, flags = {}) {
   }
 }
 
-// Export for use in swarm.js
-export { SwarmCoordinator, executeSwarm };
+// Exports are already declared inline above

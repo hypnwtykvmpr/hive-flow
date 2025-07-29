@@ -48,6 +48,10 @@ tests/results/
 tests/logs/
 *.lcov
 
+# Test outputs
+output/
+api-project/
+
 # OS
 .DS_Store
 Thumbs.db
