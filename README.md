@@ -45,8 +45,9 @@
 # 1. Install Claude Code globally
 npm install -g @anthropic-ai/claude-code
 
-# 2. Activate Claude Code with permissions
-claude --dangerously-skip-permissions
+# 2. (Optional) Skip permissions check for faster setup
+# Only use if you understand the security implications
+# claude --dangerously-skip-permissions
 ```
 
 💡 **Windows Note**: If you encounter SQLite errors, Claude Flow will automatically use in-memory storage. For persistent storage options, see our [Windows guide](https://github.com/ruvnet/claude-code-flow/blob/main/docs/windows-installation.md).
@@ -61,7 +62,7 @@ npx claude-flow@alpha init --force
 npx claude-flow@alpha --help
 
 # 3a. Quick AI coordination (recommended for most tasks)
-npx claude-flow@alpha swarm "build me a REST API" --claude
+npx claude-flow@alpha swarm "build me a REST API"
 
 # 3b. OR launch the full hive-mind system (for complex projects)
 npx claude-flow@alpha hive-mind wizard
@@ -269,7 +270,7 @@ Claude-Flow v2.0.0 introduces groundbreaking hive-mind architecture where a **Qu
 
 ```bash
 # Deploy intelligent swarm coordination
-npx claude-flow@alpha swarm "Build a full-stack application" --strategy development --claude
+npx claude-flow@alpha swarm "Build a full-stack application" --strategy development
 
 # Launch hive-mind with specific specializations
 npx claude-flow@alpha hive-mind spawn "Create microservices architecture" --agents 8 --claude
@@ -501,8 +502,7 @@ npx claude-flow@alpha workflow create --name "Development Pipeline" --parallel
 npx claude-flow@alpha hive-mind spawn "Build e-commerce platform with React, Node.js, and PostgreSQL" \
   --agents 10 \
   --strategy parallel \
-  --memory-namespace ecommerce \
-  --claude
+  --memory-namespace ecommerce
 
 # Monitor progress in real-time
 npx claude-flow@alpha swarm monitor --dashboard --real-time
@@ -514,8 +514,7 @@ npx claude-flow@alpha swarm monitor --dashboard --real-time
 npx claude-flow@alpha swarm "Research AI safety in autonomous systems" \
   --strategy research \
   --neural-patterns enabled \
-  --memory-compression high \
-  --claude
+  --memory-compression high
 
 # Analyze results with cognitive computing
 npx claude-flow@alpha cognitive analyze --target research-results
