@@ -31,15 +31,22 @@ export interface TaskId {
 export type AgentType =
   | 'coordinator' // Orchestrates and manages other agents
   | 'researcher' // Performs research and data gathering
-  | 'coder' // Writes and maintains code (was 'coder')
-  | 'analyst' // Analyzes data and generates insights (was 'analyst')
+  | 'coder' // Writes and maintains code
+  | 'analyst' // Analyzes data and generates insights
   | 'architect' // Designs system architecture and solutions
   | 'tester' // Tests and validates functionality
   | 'reviewer' // Reviews and validates work
   | 'optimizer' // Optimizes performance and efficiency
   | 'documenter' // Creates and maintains documentation
   | 'monitor' // Monitors system health and performance
-  | 'specialist'; // Domain-specific specialized agent
+  | 'specialist' // Domain-specific specialized agent
+  // Maestro-specific agent types
+  | 'design-architect' // UI/UX and component design
+  | 'system-architect' // System-level architecture design
+  | 'task-planner' // Project management and task breakdown
+  | 'developer' // Full-stack development and implementation
+  | 'requirements-engineer' // Requirements analysis and documentation
+  | 'steering-author'; // Governance and steering documentation
 
 export type AgentStatus =
   | 'initializing' // Agent is starting up
