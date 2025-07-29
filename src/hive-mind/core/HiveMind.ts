@@ -168,6 +168,15 @@ export class HiveMind extends EventEmitter {
         { type: 'coordinator', count: 1 },
         { type: 'specialist', count: 4 },
       ],
+      // Maestro specs-driven topology
+      'specs-driven': [
+        { type: 'requirements_analyst', count: 1 },
+        { type: 'design_architect', count: 2 },
+        { type: 'task_planner', count: 1 },
+        { type: 'implementation_coder', count: 2 },
+        { type: 'quality_reviewer', count: 1 },
+        { type: 'steering_documenter', count: 1 },
+      ],
     };
 
     const config = topologyConfigs[this.config.topology];
@@ -460,6 +469,13 @@ export class HiveMind extends EventEmitter {
       documenter: ['documentation_generation', 'api_docs', 'user_guides'],
       monitor: ['system_monitoring', 'health_checks', 'alerting'],
       specialist: ['domain_expertise', 'custom_capabilities', 'problem_solving'],
+      // Maestro specs-driven agent capabilities
+      requirements_analyst: ['requirements_analysis', 'user_story_creation', 'acceptance_criteria'],
+      design_architect: ['system_design', 'architecture', 'technical_writing', 'specs_driven_design'],
+      task_planner: ['task_management', 'workflow_orchestration', 'project_management'],
+      implementation_coder: ['code_generation', 'implementation', 'debugging', 'refactoring'],
+      quality_reviewer: ['code_review', 'quality_assurance', 'testing', 'standards_enforcement'],
+      steering_documenter: ['documentation_generation', 'governance', 'technical_writing'],
     };
 
     return capabilityMap[type] || [];
