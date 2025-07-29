@@ -1,6 +1,6 @@
 // process-ui.js - Simple process management UI in pure JavaScript
 import { printSuccess, printError, printWarning, printInfo } from '../utils.js';
-import { Deno, cwd, exit, existsSync } from '../node-compat.js';
+import { cwd, exit, existsSync } from '../node-compat.js';
 import process from 'process';
 
 // Simple color utilities
@@ -151,7 +151,7 @@ export class ProcessUI {
         this.running = false;
         console.clear();
         printSuccess('Goodbye!');
-        Deno.exit(0); // Exit immediately
+        process.exit(0); // Exit immediately
         break;
 
       case 'a':

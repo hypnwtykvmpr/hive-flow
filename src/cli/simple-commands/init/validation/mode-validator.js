@@ -1,3 +1,4 @@
+import { promises as fs } from 'fs';
 // mode-validator.js - SPARC mode functionality testing
 
 export class ModeValidator {
@@ -143,7 +144,7 @@ export class ModeValidator {
     try {
       // Try to get modes from .roomodes
       const roomodesPath = `${this.workingDir}/.roomodes`;
-      const content = await Deno.readTextFile(roomodesPath);
+      const content = await fs.readFile(roomodesPath, 'utf8');
       const config = JSON.parse(content);
 
       if (config.modes && typeof config.modes === 'object') {
@@ -210,7 +211,7 @@ export class ModeValidator {
     try {
       // Read .roomodes and validate mode config
       const roomodesPath = `${this.workingDir}/.roomodes`;
-      const content = await Deno.readTextFile(roomodesPath);
+      const content = await fs.readFile(roomodesPath, 'utf8');
       const config = JSON.parse(content);
 
       if (!config.modes || !config.modes[modeName]) {
@@ -355,7 +356,7 @@ export class ModeValidator {
 
     try {
       const workflowPath = `${this.workingDir}/.roo/workflows/${filename}`;
-      const content = await Deno.readTextFile(workflowPath);
+      const content = await fs.readFile(workflowPath, 'utf8');
 
       // Parse JSON
       const workflow = JSON.parse(content);
