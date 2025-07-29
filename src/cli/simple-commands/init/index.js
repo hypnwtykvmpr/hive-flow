@@ -299,7 +299,8 @@ export async function initCommand(subArgs, flags) {
               await createClaudeSlashCommands(workingDir);
             }
           } catch (err) {
-            printWarning(`Could not create Claude Code slash commands: ${err.message}`);
+            // Legacy slash command creation - silently skip if it fails
+            // SPARC slash commands are already created successfully above
           }
         }
       }
@@ -1069,7 +1070,7 @@ ${commands.map((cmd) => `- [${cmd}](./${cmd}.md)`).join('\n')}
     }
 
     // Create helper scripts
-    const helpers = ['setup-mcp.sh', 'quick-start.sh', 'github-setup.sh'];
+    const helpers = ['setup-mcp.sh', 'quick-start.sh', 'github-setup.sh', 'github-safe.js'];
     for (const helper of helpers) {
       if (!dryRun) {
         const content = createHelperScript(helper);
@@ -1308,17 +1309,20 @@ ${commands.map((cmd) => `- [${cmd}](./${cmd}.md)`).join('\n')}
     console.log('\n📚 Quick Start:');
     if (isClaudeCodeInstalled()) {
       console.log('1. View available commands: ls .claude/commands/');
-      console.log('2. Start a swarm: npx claude-flow swarm init');
-      console.log('3. Use MCP tools in Claude Code for enhanced coordination');
+      console.log('2. Start a swarm: npx claude-flow@alpha swarm "your objective" --claude');
+      console.log('3. Use hive-mind: npx claude-flow@alpha hive-mind spawn "command" --claude');
+      console.log('4. Use MCP tools in Claude Code for enhanced coordination');
     } else {
       console.log('1. Install Claude Code: npm install -g @anthropic-ai/claude-code');
       console.log('2. Add MCP servers (see instructions above)');
       console.log('3. View available commands: ls .claude/commands/');
-      console.log('4. Start a swarm: npx claude-flow swarm init');
+      console.log('4. Start a swarm: npx claude-flow@alpha swarm "your objective" --claude');
+      console.log('5. Use hive-mind: npx claude-flow@alpha hive-mind spawn "command" --claude');
     }
     console.log('\n💡 Tips:');
     console.log('• Check .claude/commands/ for detailed documentation');
     console.log('• Use --help with any command for options');
+    console.log('• Run commands with --claude flag for best Claude Code integration');
     console.log('• Enable GitHub integration with .claude/helpers/github-setup.sh');
   } catch (err) {
     printError(`Failed to initialize Claude Flow v2.0.0: ${err.message}`);
