@@ -12,7 +12,7 @@ export const MAIN_HELP = `
 
 🎯 ENTERPRISE FEATURES: Complete ruv-swarm integration with 87 MCP tools, neural networking, and production-ready infrastructure
 🐝 NEW: Pure Node.js implementation - No Deno dependency! TBench integration for AI agent benchmarking
-⚡ ALPHA 79: Headless mode support, improved stability, and comprehensive testing framework
+⚡ ALPHA 80: GitHub-enhanced init with automatic checkpoint releases, separated standard/GitHub modes
 
 USAGE:
   claude-flow <command> [options]
@@ -146,6 +146,7 @@ DESCRIPTION:
   Each mode handles specific aspects of repository management.
 
 MODES:
+  init                Initialize GitHub-enhanced checkpoint system (NEW!)
   gh-coordinator      GitHub workflow orchestration and CI/CD
   pr-manager          Pull request management with reviews
   issue-tracker       Issue management and project coordination
@@ -160,6 +161,7 @@ OPTIONS:
   --config <file>     Custom configuration file
 
 EXAMPLES:
+  claude-flow github init                                        # Initialize GitHub checkpoint hooks
   claude-flow github pr-manager "create feature PR with tests"
   claude-flow github gh-coordinator "setup CI/CD pipeline" --auto-approve
   claude-flow github release-manager "prepare v2.0.0 release"
