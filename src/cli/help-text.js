@@ -289,7 +289,11 @@ USAGE:
 
 DESCRIPTION:
   Initialize Claude Flow v2.0.0 in your project with full MCP integration.
-  By default creates enhanced setup with CLAUDE.md and .claude/commands.
+  By default creates standard setup with local Git checkpoints.
+  
+  TWO INITIALIZATION MODES:
+  • claude-flow init         Standard init with local Git checkpoints
+  • claude-flow github init  GitHub-enhanced with automatic releases (NEW!)
 
 OPTIONS:
   --force          Overwrite existing configuration
@@ -330,9 +334,10 @@ WHAT claude-flow init CREATES (DEFAULT):
   • Enterprise security features
 
 EXAMPLES:
-  npx claude-flow@2.0.0 init              # Default: Full v2.0.0 setup
-  claude-flow init                        # Initialize with enhanced features
+  npx claude-flow@alpha init              # Standard init with local checkpoints
+  npx claude-flow@alpha github init       # GitHub-enhanced init with releases
   claude-flow init --force                # Overwrite existing configuration
+  claude-flow github init --force         # Force GitHub mode (overwrite)
   claude-flow init --dry-run              # Preview what will be created
   claude-flow init --monitoring           # Initialize with token tracking
   claude-flow init --sparc                # SPARC enterprise setup
