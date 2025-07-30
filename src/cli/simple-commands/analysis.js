@@ -58,8 +58,8 @@ async function bottleneckDetectCommand(subArgs, flags) {
   console.log(`🎯 Target: ${target}`);
 
   try {
-    // Initialize metrics system if needed
-    await initializeMetrics();
+    // Initialize metrics system without starting monitoring
+    await initializeMetrics(false);
     
     // Get real bottleneck analysis
     const analysis = await getBottleneckAnalysis(scope, target);
@@ -129,8 +129,8 @@ async function performanceReportCommand(subArgs, flags) {
   console.log(`📋 Format: ${format}`);
 
   try {
-    // Initialize metrics system if needed
-    await initializeMetrics();
+    // Initialize metrics system without starting monitoring
+    await initializeMetrics(false);
     
     // Get real performance data
     const report = await getPerformanceReport(timeframe);

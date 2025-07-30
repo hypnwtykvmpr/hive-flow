@@ -31,16 +31,21 @@ let metricsCache = {
   }
 };
 
+// Store interval ID for cleanup
+let systemMonitoringInterval = null;
+
 // Initialize metrics system
-export async function initializeMetrics() {
+export async function initializeMetrics(startMonitoring = true) {
   try {
     await fs.mkdir(METRICS_DIR, { recursive: true });
     
     // Load existing metrics if available
     await loadMetricsFromDisk();
     
-    // Start system monitoring
-    startSystemMonitoring();
+    // Start system monitoring only if requested
+    if (startMonitoring) {
+      startSystemMonitoring();
+    }
     
     return true;
   } catch (err) {
@@ -330,8 +335,13 @@ export async function getBottleneckAnalysis(scope = 'system', target = 'all') {
 
 // System monitoring
 function startSystemMonitoring() {
+  // Clear any existing interval
+  if (systemMonitoringInterval) {
+    clearInterval(systemMonitoringInterval);
+  }
+  
   // Collect system metrics every 30 seconds
-  setInterval(async () => {
+  systemMonitoringInterval = setInterval(async () => {
     const metrics = await getSystemMetrics();
     
     // Store system metrics
@@ -355,6 +365,17 @@ function startSystemMonitoring() {
       // Ignore save errors
     }
   }, 30000);
+  
+  // Allow process to exit even with active interval
+  systemMonitoringInterval.unref();
+}
+
+// Stop system monitoring
+export function stopSystemMonitoring() {
+  if (systemMonitoringInterval) {
+    clearInterval(systemMonitoringInterval);
+    systemMonitoringInterval = null;
+  }
 }
 
 // Get current system metrics
@@ -405,6 +426,11 @@ async function fileExists(filepath) {
   } catch {
     return false;
   }
+}
+
+// Cleanup function for graceful shutdown
+export function cleanup() {
+  stopSystemMonitoring();
 }
 
 // Export metrics for reporting
