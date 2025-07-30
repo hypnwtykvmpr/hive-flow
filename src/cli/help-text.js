@@ -5,7 +5,7 @@
 
 import { HelpFormatter } from './help-formatter.js';
 
-export const VERSION = '2.0.0-alpha.79';
+export const VERSION = '2.0.0-alpha.80';
 
 export const MAIN_HELP = `
 🌊 Claude-Flow v${VERSION} - Enterprise-Grade AI Agent Orchestration Platform
@@ -39,6 +39,7 @@ USAGE:
 
 📋 CORE COMMANDS:
   init                     Initialize Claude Flow v2.0.0 (creates CLAUDE.md & .claude/commands)
+                          --monitoring enables token usage tracking
   start [--ui] [--swarm]   Start orchestration system
   swarm <objective>        Multi-agent swarm coordination
   agent <action>           Agent management (spawn, list, terminate)
@@ -50,7 +51,7 @@ USAGE:
 📋 SWARM INTELLIGENCE COMMANDS:
   training <command>       Neural pattern learning & model updates (3 commands)
   coordination <command>   Swarm & agent orchestration (3 commands)
-  analysis <command>       Performance & usage analytics (3 commands)
+  analysis <command>       Performance & token usage analytics (real tracking!)
   automation <command>     Intelligent agent & workflow management (3 commands)
   hooks <command>          Lifecycle event management (5 commands)
   migrate-hooks            Migrate settings.json to Claude Code 1.0.51+ format
@@ -331,6 +332,7 @@ EXAMPLES:
   claude-flow init                        # Initialize with enhanced features
   claude-flow init --force                # Overwrite existing configuration
   claude-flow init --dry-run              # Preview what will be created
+  claude-flow init --monitoring           # Initialize with token tracking
   claude-flow init --sparc                # SPARC enterprise setup
   claude-flow init --minimal              # Basic setup only
 `,
