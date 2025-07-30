@@ -9,16 +9,27 @@
 - **CSV export functionality** - Generate detailed usage reports for billing and analysis
 - **Optimization recommendations** - Get actionable suggestions to reduce costs
 
-### 📊 Enhanced Analytics Command
+### 📈 Real Performance Analytics (ALL Commands Now Real!)
+- **Performance Reports** - Track actual task execution, success rates, and timing
+- **Bottleneck Detection** - Identify real performance issues in your system
+- **Agent Performance Metrics** - Monitor each agent type's success rate and speed
+- **System Resource Monitoring** - Track CPU and memory usage
+- **Trend Analysis** - Compare performance across time periods
+- **Multiple Export Formats** - HTML, JSON, and CSV reports
+
+### 📊 Enhanced Analytics Commands (All Using Real Data!)
 ```bash
-# Analyze token usage with breakdown and cost analysis
+# Token usage analysis
 claude-flow analysis token-usage --breakdown --cost-analysis
-
-# Basic token usage
-claude-flow analysis token-usage
-
-# Filter by specific agent
 claude-flow analysis token-usage --agent developer --breakdown
+
+# Performance reports (NEW - Real metrics!)
+claude-flow analysis performance-report --timeframe 7d --format detailed
+claude-flow analysis performance-report --format html
+
+# Bottleneck detection (NEW - Real analysis!)
+claude-flow analysis bottleneck-detect --scope system
+claude-flow analysis bottleneck-detect --scope agent --target coordinator
 ```
 
 ### 🎯 Optional Monitoring Setup During Init

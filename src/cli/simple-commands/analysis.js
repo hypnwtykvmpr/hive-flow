@@ -9,6 +9,12 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import {
+  initializeMetrics,
+  getPerformanceReport,
+  getBottleneckAnalysis,
+  exportMetrics
+} from './performance-metrics.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -51,76 +57,65 @@ async function bottleneckDetectCommand(subArgs, flags) {
   console.log(`📊 Scope: ${scope}`);
   console.log(`🎯 Target: ${target}`);
 
-  // Check if ruv-swarm is available
-  const isAvailable = await checkRuvSwarmAvailable();
-  if (!isAvailable) {
-    printError('ruv-swarm is not available. Please install it with: npm install -g ruv-swarm');
-    return;
-  }
-
   try {
-    console.log(`\n🔍 Running real bottleneck detection with ruv-swarm...`);
+    // Initialize metrics system if needed
+    await initializeMetrics();
+    
+    // Get real bottleneck analysis
+    const analysis = await getBottleneckAnalysis(scope, target);
+    
+    printSuccess(`✅ Bottleneck analysis completed`);
 
-    // Use real ruv-swarm bottleneck detection
-    const analysisResult = await callRuvSwarmMCP('benchmark_run', {
-      type: 'bottleneck_detection',
-      scope: scope,
-      target: target,
-      timestamp: Date.now(),
+    console.log(`\n📊 BOTTLENECK ANALYSIS RESULTS:`);
+    
+    analysis.bottlenecks.forEach((bottleneck) => {
+      const icon =
+        bottleneck.severity === 'critical'
+          ? '🔴'
+          : bottleneck.severity === 'warning'
+            ? '🟡'
+            : '🟢';
+      console.log(
+        `  ${icon} ${bottleneck.severity.toUpperCase()}: ${bottleneck.component} (${bottleneck.metric})`,
+      );
+      
+      // Show details if available
+      if (bottleneck.details) {
+        bottleneck.details.forEach(detail => {
+          console.log(`      - ${detail.type || detail.id}: ${detail.duration}s`);
+        });
+      }
     });
 
-    if (analysisResult.success) {
-      printSuccess(`✅ Bottleneck analysis completed`);
-
-      console.log(`\n📊 BOTTLENECK ANALYSIS RESULTS:`);
-      const bottlenecks = analysisResult.bottlenecks || [
-        {
-          severity: 'critical',
-          component: 'Memory usage in agent spawn process',
-          metric: '85% utilization',
-        },
-        { severity: 'warning', component: 'Task queue processing', metric: '12s avg' },
-        { severity: 'good', component: 'Neural training pipeline', metric: 'optimal' },
-        { severity: 'good', component: 'Swarm coordination latency', metric: 'within limits' },
-      ];
-
-      bottlenecks.forEach((bottleneck) => {
-        const icon =
-          bottleneck.severity === 'critical'
-            ? '🔴'
-            : bottleneck.severity === 'warning'
-              ? '🟡'
-              : '🟢';
-        console.log(
-          `  ${icon} ${bottleneck.severity}: ${bottleneck.component} (${bottleneck.metric})`,
-        );
-      });
-
+    if (analysis.recommendations.length > 0) {
       console.log(`\n💡 RECOMMENDATIONS:`);
-      const recommendations = analysisResult.recommendations || [
-        'Implement agent pool to reduce spawn overhead',
-        'Optimize task queue with priority scheduling',
-        'Consider horizontal scaling for memory-intensive operations',
-      ];
-
-      recommendations.forEach((rec) => {
+      analysis.recommendations.forEach((rec) => {
         console.log(`  • ${rec}`);
       });
-
-      console.log(`\n📊 PERFORMANCE METRICS:`);
-      console.log(`  • Analysis duration: ${analysisResult.analysisDuration || 'N/A'}`);
-      console.log(`  • Confidence score: ${analysisResult.confidenceScore || 'N/A'}`);
-      console.log(`  • Issues detected: ${analysisResult.issuesDetected || 'N/A'}`);
-
-      console.log(
-        `\n📄 Detailed report saved to: ${analysisResult.reportPath || './analysis-reports/bottleneck-' + Date.now() + '.json'}`,
-      );
-    } else {
-      printError(`Bottleneck analysis failed: ${analysisResult.error || 'Unknown error'}`);
     }
+
+    console.log(`\n📊 PERFORMANCE METRICS:`);
+    console.log(`  • Analysis duration: ${analysis.analysisDuration.toFixed(2)}ms`);
+    console.log(`  • Confidence score: ${(analysis.confidenceScore * 100).toFixed(0)}%`);
+    console.log(`  • Issues detected: ${analysis.issuesDetected}`);
+
+    // Save detailed report
+    const reportPath = path.join(process.cwd(), 'analysis-reports', `bottleneck-${Date.now()}.json`);
+    await fs.mkdir(path.dirname(reportPath), { recursive: true });
+    await fs.writeFile(reportPath, JSON.stringify(analysis, null, 2));
+    
+    console.log(`\n📄 Detailed report saved to: ${reportPath}`);
+    
   } catch (err) {
     printError(`Bottleneck analysis failed: ${err.message}`);
-    console.log('Analysis request logged for future processing.');
+    console.log('\nFalling back to simulated analysis...');
+    
+    // Fallback to simulated data
+    console.log(`\n📊 BOTTLENECK ANALYSIS RESULTS (SIMULATED):`);
+    console.log(`  🔴 CRITICAL: Memory usage in agent spawn process (85% utilization)`);
+    console.log(`  🟡 WARNING: Task queue processing (12s avg)`);
+    console.log(`  🟢 GOOD: Neural training pipeline (optimal)`);
+    console.log(`  🟢 GOOD: Swarm coordination latency (within limits)`);
   }
 }
 
@@ -133,34 +128,66 @@ async function performanceReportCommand(subArgs, flags) {
   console.log(`⏰ Timeframe: ${timeframe}`);
   console.log(`📋 Format: ${format}`);
 
-  // Simulate report generation
-  await new Promise((resolve) => setTimeout(resolve, 1500));
+  try {
+    // Initialize metrics system if needed
+    await initializeMetrics();
+    
+    // Get real performance data
+    const report = await getPerformanceReport(timeframe);
+    
+    printSuccess(`✅ Performance report generated`);
 
-  printSuccess(`✅ Performance report generated`);
+    console.log(`\n📊 PERFORMANCE SUMMARY (${timeframe}):`);
+    console.log(`  🚀 Total tasks executed: ${report.summary.totalTasks}`);
+    console.log(`  ✅ Success rate: ${report.summary.successRate.toFixed(1)}%`);
+    console.log(`  ⏱️  Average execution time: ${report.summary.avgDuration.toFixed(1)}s`);
+    console.log(`  🤖 Agents spawned: ${report.summary.agentsSpawned}`);
+    console.log(`  💾 Memory efficiency: ${report.summary.memoryEfficiency.toFixed(0)}%`);
+    console.log(`  🧠 Neural learning events: ${report.summary.neuralEvents}`);
 
-  console.log(`\n📊 PERFORMANCE SUMMARY (${timeframe}):`);
-  console.log(`  🚀 Total tasks executed: 127`);
-  console.log(`  ✅ Success rate: 94.5%`);
-  console.log(`  ⏱️  Average execution time: 8.3s`);
-  console.log(`  🤖 Agents spawned: 23`);
-  console.log(`  💾 Memory efficiency: 78%`);
-  console.log(`  🧠 Neural learning events: 45`);
+    // Show trends if available
+    if (report.trends) {
+      console.log(`\n📈 TRENDS:`);
+      if (report.trends.successRateChange !== 0) {
+        const trend = report.trends.successRateChange > 0 ? 'improved' : 'decreased';
+        console.log(`  • Task success rate ${trend} ${Math.abs(report.trends.successRateChange).toFixed(1)}% vs previous period`);
+      }
+      if (report.trends.durationChange !== 0) {
+        const trend = report.trends.durationChange < 0 ? 'reduced' : 'increased';
+        console.log(`  • Average execution time ${trend} by ${Math.abs(report.trends.durationChange / 1000).toFixed(1)}s`);
+      }
+      if (report.trends.taskVolumeChange !== 0) {
+        const trend = report.trends.taskVolumeChange > 0 ? 'increased' : 'decreased';
+        const percent = Math.abs((report.trends.taskVolumeChange / report.summary.totalTasks) * 100).toFixed(0);
+        console.log(`  • Task volume ${trend} ${percent}%`);
+      }
+    }
 
-  console.log(`\n📈 TRENDS:`);
-  console.log(`  • Task success rate improved 12% vs previous period`);
-  console.log(`  • Average execution time reduced by 2.1s`);
-  console.log(`  • Agent utilization increased 15%`);
+    if (format === 'detailed' && report.agentMetrics) {
+      console.log(`\n📊 DETAILED METRICS:`);
+      console.log(`  Agent Performance:`);
+      Object.entries(report.agentMetrics).forEach(([type, metrics]) => {
+        console.log(`    - ${type} agents: ${metrics.successRate.toFixed(0)}% success, ${(metrics.avgDuration / 1000).toFixed(1)}s avg`);
+      });
+    }
 
-  if (format === 'detailed') {
-    console.log(`\n📊 DETAILED METRICS:`);
-    console.log(`  Agent Performance:`);
-    console.log(`    - Coordinator agents: 96% success, 6.2s avg`);
-    console.log(`    - Developer agents: 93% success, 11.1s avg`);
-    console.log(`    - Researcher agents: 97% success, 7.8s avg`);
-    console.log(`    - Analyzer agents: 92% success, 9.4s avg`);
+    // Export full report
+    const reportPath = await exportMetrics(format === 'json' ? 'json' : 'html');
+    console.log(`\n📄 Full report: ${reportPath}`);
+    
+  } catch (err) {
+    printError(`Failed to generate performance report: ${err.message}`);
+    printWarning('Showing simulated data as fallback...');
+    
+    // Fallback to simulated data
+    console.log(`\n📊 PERFORMANCE SUMMARY (${timeframe}) - SIMULATED:`);
+    console.log(`  🚀 Total tasks executed: 127`);
+    console.log(`  ✅ Success rate: 94.5%`);
+    console.log(`  ⏱️  Average execution time: 8.3s`);
+    console.log(`  🤖 Agents spawned: 23`);
+    console.log(`  💾 Memory efficiency: 78%`);
+    console.log(`  🧠 Neural learning events: 45`);
   }
-
-  console.log(`\n📄 Full report: ./analysis-reports/performance-${Date.now()}.html`);
 }
 
 async function tokenUsageCommand(subArgs, flags) {
