@@ -1169,6 +1169,440 @@ if ((command === 'issue' || command === 'pr') &&
   execSync(\`gh \${args.join(' ')}\`, { stdio: 'inherit' });
 }
 `,
+    'checkpoint-hooks.sh': `#!/bin/bash
+# Checkpoint hook functions for Claude settings.json
+
+# Function to handle pre-edit checkpoints
+pre_edit_checkpoint() {
+    local tool_input="$1"
+    local file=$(echo "$tool_input" | jq -r '.file_path // empty')
+    
+    if [ -n "$file" ]; then
+        local checkpoint_branch="checkpoint/pre-edit-$(date +%Y%m%d-%H%M%S)"
+        local current_branch=$(git branch --show-current)
+        
+        # Create checkpoint
+        git add -A
+        git stash push -m "Pre-edit checkpoint for $file" >/dev/null 2>&1
+        git branch "$checkpoint_branch"
+        
+        # Store metadata
+        mkdir -p .claude/checkpoints
+        cat > ".claude/checkpoints/$(date +%s).json" <<EOF
+{
+  "branch": "$checkpoint_branch",
+  "file": "$file",
+  "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "type": "pre-edit",
+  "original_branch": "$current_branch"
+}
+EOF
+        
+        # Restore working directory
+        git stash pop --quiet >/dev/null 2>&1 || true
+        
+        echo "✅ Created checkpoint: $checkpoint_branch for $file"
+    fi
+}
+
+# Function to handle post-edit checkpoints
+post_edit_checkpoint() {
+    local tool_input="$1"
+    local file=$(echo "$tool_input" | jq -r '.file_path // empty')
+    
+    if [ -n "$file" ] && [ -f "$file" ]; then
+        # Check if file was modified - first check if file is tracked
+        if ! git ls-files --error-unmatch "$file" >/dev/null 2>&1; then
+            # File is not tracked, add it first
+            git add "$file"
+        fi
+        
+        # Now check if there are changes
+        if git diff --cached --quiet "$file" 2>/dev/null && git diff --quiet "$file" 2>/dev/null; then
+            echo "ℹ️  No changes to checkpoint for $file"
+        else
+            local tag_name="checkpoint-$(date +%Y%m%d-%H%M%S)"
+            local current_branch=$(git branch --show-current)
+            
+            # Create commit
+            git add "$file"
+            if git commit -m "🔖 Checkpoint: Edit $file
+
+Automatic checkpoint created by Claude
+- File: $file
+- Branch: $current_branch
+- Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+[Auto-checkpoint]" --quiet; then
+                # Create tag only if commit succeeded
+                git tag -a "$tag_name" -m "Checkpoint after editing $file"
+                
+                # Store metadata
+                mkdir -p .claude/checkpoints
+                local diff_stats=$(git diff HEAD~1 --stat | tr '\\n' ' ' | sed 's/"/\\\\"/g')
+                cat > ".claude/checkpoints/$(date +%s).json" <<EOF
+{
+  "tag": "$tag_name",
+  "file": "$file",
+  "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "type": "post-edit",
+  "branch": "$current_branch",
+  "diff_summary": "$diff_stats"
+}
+EOF
+                
+                echo "✅ Created checkpoint: $tag_name for $file"
+            else
+                echo "ℹ️  No commit created (no changes or commit failed)"
+            fi
+        fi
+    fi
+}
+
+# Function to handle task checkpoints
+task_checkpoint() {
+    local user_prompt="$1"
+    local task=$(echo "$user_prompt" | head -c 100 | tr '\\n' ' ')
+    
+    if [ -n "$task" ]; then
+        local checkpoint_name="task-$(date +%Y%m%d-%H%M%S)"
+        
+        # Commit current state
+        git add -A
+        git commit -m "🔖 Task checkpoint: $task..." --quiet || true
+        
+        # No GitHub release in standard version
+        
+        # Store metadata
+        mkdir -p .claude/checkpoints
+        cat > ".claude/checkpoints/task-$(date +%s).json" <<EOF
+{
+  "checkpoint": "$checkpoint_name",
+  "task": "$task",
+  "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "commit": "$(git rev-parse HEAD)"
+}
+EOF
+        
+        echo "✅ Created task checkpoint: $checkpoint_name"
+    fi
+}
+
+# Function to handle session end
+session_end_checkpoint() {
+    local session_id="session-$(date +%Y%m%d-%H%M%S)"
+    local summary_file=".claude/checkpoints/summary-$session_id.md"
+    
+    mkdir -p .claude/checkpoints
+    
+    # Create summary
+    cat > "$summary_file" <<EOF
+# Session Summary - $(date +'%Y-%m-%d %H:%M:%S')
+
+## Checkpoints Created
+$(find .claude/checkpoints -name '*.json' -mtime -1 -exec basename {} \\; | sort)
+
+## Files Modified
+$(git diff --name-only $(git log --format=%H -n 1 --before="1 hour ago" 2>/dev/null) 2>/dev/null || echo "No files tracked")
+
+## Recent Commits
+$(git log --oneline -10 --grep="Checkpoint" || echo "No checkpoint commits")
+
+## Rollback Instructions
+To rollback to a specific checkpoint:
+\\\`\\\`\\\`bash
+# List all checkpoints
+git tag -l 'checkpoint-*' | sort -r
+
+# Rollback to a checkpoint
+git checkout checkpoint-YYYYMMDD-HHMMSS
+
+# Or reset to a checkpoint (destructive)
+git reset --hard checkpoint-YYYYMMDD-HHMMSS
+\\\`\\\`\\\`
+EOF
+    
+    # Create final checkpoint
+    git add -A
+    git commit -m "🏁 Session end checkpoint: $session_id" --quiet || true
+    git tag -a "session-end-$session_id" -m "End of Claude session"
+    
+    echo "✅ Session summary saved to: $summary_file"
+    echo "📌 Final checkpoint: session-end-$session_id"
+}
+
+# Main entry point
+case "$1" in
+    pre-edit)
+        pre_edit_checkpoint "$2"
+        ;;
+    post-edit)
+        post_edit_checkpoint "$2"
+        ;;
+    task)
+        task_checkpoint "$2"
+        ;;
+    session-end)
+        session_end_checkpoint
+        ;;
+    *)
+        echo "Usage: $0 {pre-edit|post-edit|task|session-end} [input]"
+        exit 1
+        ;;
+esac
+`,
+    'checkpoint-manager.sh': `#!/bin/bash
+# Claude Checkpoint Manager
+# Provides easy rollback and management of Claude Code checkpoints
+
+set -e
+
+# Colors
+RED='\\033[0;31m'
+GREEN='\\033[0;32m'
+YELLOW='\\033[1;33m'
+BLUE='\\033[0;34m'
+NC='\\033[0m' # No Color
+
+# Configuration
+CHECKPOINT_DIR=".claude/checkpoints"
+BACKUP_DIR=".claude/backups"
+
+# Help function
+show_help() {
+    cat << EOF
+Claude Checkpoint Manager
+========================
+
+Usage: $0 <command> [options]
+
+Commands:
+  list              List all checkpoints
+  show <id>         Show details of a specific checkpoint
+  rollback <id>     Rollback to a specific checkpoint
+  diff <id>         Show diff since checkpoint
+  clean             Clean old checkpoints (older than 7 days)
+  summary           Show session summary
+  
+Options:
+  --hard            For rollback: use git reset --hard (destructive)
+  --soft            For rollback: use git reset --soft (default)
+  --branch          For rollback: create new branch from checkpoint
+
+Examples:
+  $0 list
+  $0 show checkpoint-20240130-143022
+  $0 rollback checkpoint-20240130-143022 --branch
+  $0 diff session-end-session-20240130-150000
+EOF
+}
+
+# List all checkpoints
+function list_checkpoints() {
+    echo -e "\${BLUE}📋 Available Checkpoints:\${NC}"
+    echo ""
+    
+    # List checkpoint tags
+    echo -e "\${YELLOW}Git Tags:\${NC}"
+    local tags=$(git tag -l 'checkpoint-*' -l 'session-end-*' -l 'task-*' --sort=-creatordate | head -20)
+    if [ -n "$tags" ]; then
+        echo "$tags"
+    else
+        echo "No checkpoint tags found"
+    fi
+    
+    echo ""
+    
+    # List checkpoint branches
+    echo -e "\${YELLOW}Checkpoint Branches:\${NC}"
+    local branches=$(git branch -a | grep "checkpoint/" | sed 's/^[ *]*//')
+    if [ -n "$branches" ]; then
+        echo "$branches"
+    else
+        echo "No checkpoint branches found"
+    fi
+    
+    echo ""
+    
+    # List checkpoint files
+    if [ -d "$CHECKPOINT_DIR" ]; then
+        echo -e "\${YELLOW}Recent Checkpoint Files:\${NC}"
+        find "$CHECKPOINT_DIR" -name "*.json" -type f -printf "%T@ %p\\n" | \\
+            sort -rn | head -10 | cut -d' ' -f2- | xargs -I {} basename {}
+    fi
+}
+
+# Show checkpoint details
+function show_checkpoint() {
+    local checkpoint_id="$1"
+    
+    echo -e "\${BLUE}📍 Checkpoint Details: $checkpoint_id\${NC}"
+    echo ""
+    
+    # Check if it's a tag
+    if git tag -l "$checkpoint_id" | grep -q "$checkpoint_id"; then
+        echo -e "\${YELLOW}Type:\${NC} Git Tag"
+        echo -e "\${YELLOW}Commit:\${NC} $(git rev-list -n 1 "$checkpoint_id")"
+        echo -e "\${YELLOW}Date:\${NC} $(git log -1 --format=%ai "$checkpoint_id")"
+        echo -e "\${YELLOW}Message:\${NC}"
+        git log -1 --format=%B "$checkpoint_id" | sed 's/^/  /'
+        echo ""
+        echo -e "\${YELLOW}Files changed:\${NC}"
+        git diff-tree --no-commit-id --name-status -r "$checkpoint_id" | sed 's/^/  /'
+    # Check if it's a branch
+    elif git branch -a | grep -q "$checkpoint_id"; then
+        echo -e "\${YELLOW}Type:\${NC} Git Branch"
+        echo -e "\${YELLOW}Latest commit:\${NC}"
+        git log -1 --oneline "$checkpoint_id"
+    else
+        echo -e "\${RED}❌ Checkpoint not found: $checkpoint_id\${NC}"
+        exit 1
+    fi
+}
+
+# Rollback to checkpoint
+function rollback_checkpoint() {
+    local checkpoint_id="$1"
+    local mode="$2"
+    
+    echo -e "\${YELLOW}🔄 Rolling back to checkpoint: $checkpoint_id\${NC}"
+    echo ""
+    
+    # Verify checkpoint exists
+    if ! git tag -l "$checkpoint_id" | grep -q "$checkpoint_id" && \\
+       ! git branch -a | grep -q "$checkpoint_id"; then
+        echo -e "\${RED}❌ Checkpoint not found: $checkpoint_id\${NC}"
+        exit 1
+    fi
+    
+    # Create backup before rollback
+    local backup_name="backup-$(date +%Y%m%d-%H%M%S)"
+    echo "Creating backup: $backup_name"
+    git tag "$backup_name" -m "Backup before rollback to $checkpoint_id"
+    
+    case "$mode" in
+        "--hard")
+            echo -e "\${RED}⚠️  Performing hard reset (destructive)\${NC}"
+            git reset --hard "$checkpoint_id"
+            echo -e "\${GREEN}✅ Rolled back to $checkpoint_id (hard reset)\${NC}"
+            ;;
+        "--branch")
+            local branch_name="rollback-$checkpoint_id-$(date +%Y%m%d-%H%M%S)"
+            echo "Creating new branch: $branch_name"
+            git checkout -b "$branch_name" "$checkpoint_id"
+            echo -e "\${GREEN}✅ Created branch $branch_name from $checkpoint_id\${NC}"
+            ;;
+        "--stash"|*)
+            echo "Stashing current changes..."
+            git stash push -m "Stash before rollback to $checkpoint_id"
+            git reset --soft "$checkpoint_id"
+            echo -e "\${GREEN}✅ Rolled back to $checkpoint_id (soft reset)\${NC}"
+            echo "Your changes are stashed. Use 'git stash pop' to restore them."
+            ;;
+    esac
+}
+
+# Show diff since checkpoint
+function diff_checkpoint() {
+    local checkpoint_id="$1"
+    
+    echo -e "\${BLUE}📊 Changes since checkpoint: $checkpoint_id\${NC}"
+    echo ""
+    
+    if git tag -l "$checkpoint_id" | grep -q "$checkpoint_id"; then
+        git diff "$checkpoint_id"
+    elif git branch -a | grep -q "$checkpoint_id"; then
+        git diff "$checkpoint_id"
+    else
+        echo -e "\${RED}❌ Checkpoint not found: $checkpoint_id\${NC}"
+        exit 1
+    fi
+}
+
+# Clean old checkpoints
+function clean_checkpoints() {
+    local days=\${1:-7}
+    
+    echo -e "\${YELLOW}🧹 Cleaning checkpoints older than $days days...\${NC}"
+    echo ""
+    
+    # Clean old checkpoint files
+    if [ -d "$CHECKPOINT_DIR" ]; then
+        find "$CHECKPOINT_DIR" -name "*.json" -type f -mtime +$days -delete
+        echo "✅ Cleaned old checkpoint files"
+    fi
+    
+    # List old tags (but don't delete automatically)
+    echo ""
+    echo "Old checkpoint tags (manual deletion required):"
+    git tag -l 'checkpoint-*' --sort=-creatordate | tail -n +50 || echo "No old tags found"
+}
+
+# Show session summary
+function show_summary() {
+    echo -e "\${BLUE}📊 Session Summary\${NC}"
+    echo ""
+    
+    # Find most recent session summary
+    if [ -d "$CHECKPOINT_DIR" ]; then
+        local latest_summary=$(find "$CHECKPOINT_DIR" -name "summary-*.md" -type f -printf "%T@ %p\\n" | \\
+            sort -rn | head -1 | cut -d' ' -f2-)
+        
+        if [ -n "$latest_summary" ]; then
+            echo -e "\${YELLOW}Latest session summary:\${NC}"
+            cat "$latest_summary"
+        else
+            echo "No session summaries found"
+        fi
+    fi
+}
+
+# Main command handling
+case "$1" in
+    list)
+        list_checkpoints
+        ;;
+    show)
+        if [ -z "$2" ]; then
+            echo -e "\${RED}Error: Please specify a checkpoint ID\${NC}"
+            show_help
+            exit 1
+        fi
+        show_checkpoint "$2"
+        ;;
+    rollback)
+        if [ -z "$2" ]; then
+            echo -e "\${RED}Error: Please specify a checkpoint ID\${NC}"
+            show_help
+            exit 1
+        fi
+        rollback_checkpoint "$2" "$3"
+        ;;
+    diff)
+        if [ -z "$2" ]; then
+            echo -e "\${RED}Error: Please specify a checkpoint ID\${NC}"
+            show_help
+            exit 1
+        fi
+        diff_checkpoint "$2"
+        ;;
+    clean)
+        clean_checkpoints "$2"
+        ;;
+    summary)
+        show_summary
+        ;;
+    help|--help|-h)
+        show_help
+        ;;
+    *)
+        echo -e "\${RED}Error: Unknown command: $1\${NC}"
+        echo ""
+        show_help
+        exit 1
+        ;;
+esac
+`,
   };
 
   return scripts[name] || '';
@@ -1341,7 +1775,7 @@ function createEnhancedSettingsJsonFallback() {
         CLAUDE_FLOW_HOOKS_ENABLED: 'true',
         CLAUDE_FLOW_TELEMETRY_ENABLED: 'true',
         CLAUDE_FLOW_REMOTE_EXECUTION: 'true',
-        CLAUDE_FLOW_GITHUB_INTEGRATION: 'true',
+        CLAUDE_FLOW_CHECKPOINTS_ENABLED: 'true',
       },
       permissions: {
         allow: [
@@ -1356,11 +1790,15 @@ function createEnhancedSettingsJsonFallback() {
           'Bash(git commit *)',
           'Bash(git push)',
           'Bash(git config *)',
-          'Bash(gh *)',
+          'Bash(git tag *)',
+          'Bash(git branch *)',
+          'Bash(git checkout *)',
+          'Bash(git stash *)',
           'Bash(node *)',
           'Bash(which *)',
           'Bash(pwd)',
           'Bash(ls *)',
+          'Bash(jq *)',
         ],
         deny: ['Bash(rm -rf /)', 'Bash(curl * | bash)', 'Bash(wget * | sh)', 'Bash(eval *)'],
       },
@@ -1385,6 +1823,10 @@ function createEnhancedSettingsJsonFallback() {
                 command:
                   'cat | jq -r \'.tool_input.file_path // .tool_input.path // ""\' | xargs -I {} npx claude-flow@alpha hooks pre-edit --file "{}" --auto-assign-agents true --load-context true',
               },
+              {
+                type: 'command',
+                command: './.claude/helpers/standard-checkpoint-hooks.sh pre-edit "{{tool_input}}"',
+              },
             ],
           },
         ],
@@ -1407,6 +1849,20 @@ function createEnhancedSettingsJsonFallback() {
                 command:
                   'cat | jq -r \'.tool_input.file_path // .tool_input.path // ""\' | xargs -I {} npx claude-flow@alpha hooks post-edit --file "{}" --format true --update-memory true --train-neural true',
               },
+              {
+                type: 'command',
+                command: './.claude/helpers/standard-checkpoint-hooks.sh post-edit "{{tool_input}}"',
+              },
+            ],
+          },
+        ],
+        UserPromptSubmit: [
+          {
+            hooks: [
+              {
+                type: 'command',
+                command: './.claude/helpers/standard-checkpoint-hooks.sh task "{{user_prompt}}"',
+              },
             ],
           },
         ],
@@ -1417,6 +1873,10 @@ function createEnhancedSettingsJsonFallback() {
                 type: 'command',
                 command:
                   'npx claude-flow@alpha hooks session-end --generate-summary true --persist-state true --export-metrics true',
+              },
+              {
+                type: 'command',
+                command: './.claude/helpers/standard-checkpoint-hooks.sh session-end',
               },
             ],
           },
