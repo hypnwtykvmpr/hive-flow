@@ -1,6 +1,10 @@
-// Example JavaScript file
+// Example JavaScript file with additional features
 function greet(name) {
     console.log(`Hello, ${name}!`);
 }
 
-module.exports = { greet };
+function farewell(name) {
+    console.log(`Goodbye, ${name}!`);
+}
+
+module.exports = { greet, farewell };
