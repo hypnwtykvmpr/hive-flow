@@ -31,6 +31,10 @@ import {
   fixHookVariablesCommand,
   fixHookVariablesCommandConfig,
 } from './simple-commands/fix-hook-variables.js';
+import { 
+  initializePerformanceTracking,
+  trackCommandExecution 
+} from './simple-commands/performance-hooks.js';
 // Maestro commands integrated with clean implementation
 // Note: Maestro TypeScript commands now integrated directly in ./commands/maestro.ts
 // Note: TypeScript imports commented out for Node.js compatibility
@@ -720,7 +724,8 @@ export async function executeCommand(name, subArgs, flags) {
   }
 
   try {
-    await command.handler(subArgs, flags);
+    // Track command execution for performance metrics
+    await trackCommandExecution(name, command.handler, subArgs, flags);
   } catch (err) {
     throw new Error(`Command '${name}' failed: ${err.message}`);
   }
@@ -814,3 +819,9 @@ export function showAllCommands() {
 
 // Initialize the command registry
 registerCoreCommands();
+
+// Initialize performance tracking
+initializePerformanceTracking().catch(err => {
+  // Performance tracking is optional, don't fail if it errors
+  console.error('Failed to initialize performance tracking:', err.message);
+});
