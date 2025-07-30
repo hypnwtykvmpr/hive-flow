@@ -1196,7 +1196,7 @@ ${commands.map((cmd) => `- [${cmd}](./${cmd}.md)`).join('\n')}
     }
 
     // Create helper scripts
-    const helpers = ['setup-mcp.sh', 'quick-start.sh', 'github-setup.sh', 'github-safe.js'];
+    const helpers = ['setup-mcp.sh', 'quick-start.sh', 'github-setup.sh', 'github-safe.js', 'standard-checkpoint-hooks.sh', 'checkpoint-manager.sh'];
     for (const helper of helpers) {
       if (!dryRun) {
         const content = createHelperScript(helper);
@@ -1224,6 +1224,7 @@ ${commands.map((cmd) => `- [${cmd}](./${cmd}.md)`).join('\n')}
       'coordination/orchestration',
       '.swarm', // Add .swarm directory for shared memory
       '.hive-mind', // Add .hive-mind directory for hive-mind system
+      '.claude/checkpoints', // Add checkpoints directory for Git checkpoint system
     ];
 
     for (const dir of standardDirs) {
@@ -1455,6 +1456,8 @@ ${commands.map((cmd) => `- [${cmd}](./${cmd}.md)`).join('\n')}
     console.log('• Use --help with any command for options');
     console.log('• Run commands with --claude flag for best Claude Code integration');
     console.log('• Enable GitHub integration with .claude/helpers/github-setup.sh');
+    console.log('• Git checkpoints are automatically enabled in settings.json');
+    console.log('• Use .claude/helpers/checkpoint-manager.sh for easy rollback');
   } catch (err) {
     printError(`Failed to initialize Claude Flow v2.0.0: ${err.message}`);
   }

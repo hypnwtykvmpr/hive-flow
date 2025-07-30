@@ -830,6 +830,26 @@ Claude-Flow v2.0.0 Alpha automatically configures secure defaults:
 
 ---
 
+## 📚 **Additional Documentation**
+
+### Core Documentation
+- [Complete API Reference](docs/API.md) - Comprehensive API documentation
+- [CLI Commands Guide](docs/CLI.md) - All command-line options
+- [Architecture Overview](docs/ARCHITECTURE.md) - System design and internals
+- [Examples Directory](examples/) - Code examples and demos
+
+### New Features (v2.0.0)
+- [🔒 Git Checkpoint System](docs/GIT_CHECKPOINT_HOOKS.md) - Automatic Git checkpoints for Claude Code sessions
+- [📊 Real Performance Tracking](docs/REAL_PERFORMANCE_TRACKING.md) - Actual metrics collection and analysis
+- [🪟 Windows Installation](docs/windows-installation.md) - Special instructions for Windows users
+
+### Integration Guides
+- [MCP Server Setup](docs/mcp-setup.md) - Model Context Protocol configuration
+- [Claude Code Integration](docs/claude-code-integration.md) - Enhanced AI workflows
+- [GitHub Workflows](docs/github-workflows.md) - Repository automation
+
+---
+
 ## 📄 **License**
 
 MIT License - see [LICENSE](./LICENSE) for details.
