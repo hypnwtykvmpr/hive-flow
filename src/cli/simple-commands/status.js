@@ -19,7 +19,7 @@ export async function statusCommand(subArgs, flags) {
 async function getSystemStatus(verbose = false) {
   const status = {
     timestamp: Date.now(),
-    version: '2.0.0-alpha.79',
+    version: '2.0.0-alpha.80',
     orchestrator: {
       running: false,
       uptime: 0,

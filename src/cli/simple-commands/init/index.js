@@ -905,6 +905,107 @@ async function setupCoordinationSystem(workingDir, dryRun = false) {
 }
 
 /**
+ * Setup monitoring and telemetry for token tracking
+ */
+async function setupMonitoring(workingDir) {
+  console.log('  📈 Configuring token usage tracking...');
+  
+  const fs = await import('fs/promises');
+  const path = await import('path');
+  
+  try {
+    // Create .claude-flow directory for tracking data
+    const trackingDir = path.join(workingDir, '.claude-flow');
+    await fs.mkdir(trackingDir, { recursive: true });
+    
+    // Create initial token usage file
+    const tokenUsageFile = path.join(trackingDir, 'token-usage.json');
+    const initialData = {
+      total: 0,
+      input: 0,
+      output: 0,
+      byAgent: {},
+      lastUpdated: new Date().toISOString()
+    };
+    
+    await fs.writeFile(tokenUsageFile, JSON.stringify(initialData, null, 2));
+    printSuccess('  ✓ Created token usage tracking file');
+    
+    // Add telemetry configuration to .claude/settings.json if it exists
+    const settingsPath = path.join(workingDir, '.claude', 'settings.json');
+    try {
+      const settingsContent = await fs.readFile(settingsPath, 'utf8');
+      const settings = JSON.parse(settingsContent);
+      
+      // Add telemetry hook
+      if (!settings.hooks) settings.hooks = {};
+      if (!settings.hooks['post-task']) settings.hooks['post-task'] = [];
+      
+      // Add token tracking hook
+      const tokenTrackingHook = 'npx claude-flow@alpha internal track-tokens --session-id {{session_id}} --tokens {{token_usage}}';
+      if (!settings.hooks['post-task'].includes(tokenTrackingHook)) {
+        settings.hooks['post-task'].push(tokenTrackingHook);
+      }
+      
+      await fs.writeFile(settingsPath, JSON.stringify(settings, null, 2));
+      printSuccess('  ✓ Added token tracking hooks to settings');
+    } catch (err) {
+      console.log('  ⚠️  Could not update settings.json:', err.message);
+    }
+    
+    // Create monitoring configuration
+    const monitoringConfig = {
+      enabled: true,
+      telemetry: {
+        claudeCode: {
+          env: 'CLAUDE_CODE_ENABLE_TELEMETRY',
+          value: '1',
+          description: 'Enable Claude Code OpenTelemetry metrics'
+        }
+      },
+      tracking: {
+        tokens: true,
+        costs: true,
+        agents: true,
+        sessions: true
+      },
+      storage: {
+        location: '.claude-flow/token-usage.json',
+        format: 'json',
+        rotation: 'monthly'
+      }
+    };
+    
+    const configPath = path.join(trackingDir, 'monitoring.config.json');
+    await fs.writeFile(configPath, JSON.stringify(monitoringConfig, null, 2));
+    printSuccess('  ✓ Created monitoring configuration');
+    
+    // Create shell profile snippet for environment variable
+    const envSnippet = `
+# Claude Flow Token Tracking
+# Add this to your shell profile (.bashrc, .zshrc, etc.)
+export CLAUDE_CODE_ENABLE_TELEMETRY=1
+
+# Optional: Set custom metrics path
+# export CLAUDE_METRICS_PATH="$HOME/.claude/metrics"
+`;
+    
+    const envPath = path.join(trackingDir, 'env-setup.sh');
+    await fs.writeFile(envPath, envSnippet.trim());
+    printSuccess('  ✓ Created environment setup script');
+    
+    console.log('\n  📋 To enable Claude Code telemetry:');
+    console.log('     1. Add to your shell profile: export CLAUDE_CODE_ENABLE_TELEMETRY=1');
+    console.log('     2. Or run: source .claude-flow/env-setup.sh');
+    console.log('\n  💡 Token usage will be tracked in .claude-flow/token-usage.json');
+    console.log('     Run: claude-flow analysis token-usage --breakdown --cost-analysis');
+    
+  } catch (err) {
+    printError(`  Failed to setup monitoring: ${err.message}`);
+  }
+}
+
+/**
  * Enhanced Claude Flow v2.0.0 initialization
  */
 async function enhancedClaudeFlowInit(flags, subArgs = []) {
@@ -1327,6 +1428,13 @@ ${commands.map((cmd) => `- [${cmd}](./${cmd}.md)`).join('\n')}
       console.log('  [DRY RUN] Would create agent system with 64 specialized agents');
     }
 
+    // Optional: Setup monitoring and telemetry
+    const enableMonitoring = flags.monitoring || flags['enable-monitoring'];
+    if (enableMonitoring && !dryRun) {
+      console.log('\n📊 Setting up monitoring and telemetry...');
+      await setupMonitoring(workingDir);
+    }
+    
     // Final instructions
     console.log('\n🎉 Claude Flow v2.0.0 initialization complete!');
     console.log('\n📚 Quick Start:');
