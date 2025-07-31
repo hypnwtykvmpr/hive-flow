@@ -29,6 +29,22 @@ import { getMainHelp, getCommandHelp, getStandardizedCommandHelp } from './help-
 
 const VERSION = '2.0.0-alpha.83';
 
+// Legacy agent type mapping for backward compatibility
+const LEGACY_AGENT_MAPPING = {
+  analyst: 'code-analyzer',
+  coordinator: 'task-orchestrator', 
+  optimizer: 'perf-analyzer',
+  documenter: 'api-docs',
+  monitor: 'performance-benchmarker',
+  specialist: 'system-architect',
+  architect: 'system-architect',
+};
+
+// Resolve legacy agent types to current equivalents
+function resolveLegacyAgentType(legacyType) {
+  return LEGACY_AGENT_MAPPING[legacyType] || legacyType;
+}
+
 function printHelp(plain = false) {
   console.log(getMainHelp(plain));
 }
@@ -331,12 +347,13 @@ async function main() {
 
     case 'spawn':
       // Convenience alias for agent spawn
-      const spawnType = subArgs[0] || 'general';
+      const rawSpawnType = subArgs[0] || 'general';
+      const spawnType = resolveLegacyAgentType(rawSpawnType);
       const spawnName = flags.name || `agent-${Date.now()}`;
 
       printSuccess(`Spawning ${spawnType} agent: ${spawnName}`);
       console.log('🤖 Agent would be created with the following configuration:');
-      console.log(`   Type: ${spawnType}`);
+      console.log(`   Type: ${spawnType}${rawSpawnType !== spawnType ? ` (resolved from: ${rawSpawnType})` : ''}`);
       console.log(`   Name: ${spawnName}`);
       console.log('   Capabilities: Research, Analysis, Code Generation');
       console.log('   Status: Ready');
@@ -2349,7 +2366,8 @@ Shortcuts:
     const subCmd = args[0];
     switch (subCmd) {
       case 'spawn':
-        const type = args[1] || 'researcher';
+        const rawType = args[1] || 'researcher';
+        const type = resolveLegacyAgentType(rawType);
         const name = args[2] || `agent-${Date.now()}`;
         const agent = {
           id: `agent-${Date.now()}`,
