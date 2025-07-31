@@ -27,7 +27,7 @@ import process from 'process';
 import readline from 'readline';
 import { getMainHelp, getCommandHelp, getStandardizedCommandHelp } from './help-text.js';
 
-const VERSION = '2.0.0-alpha.81';
+const VERSION = '2.0.0-alpha.83';
 
 function printHelp(plain = false) {
   console.log(getMainHelp(plain));
@@ -51,7 +51,7 @@ function printLegacyHelp() {
 🌊 Claude-Flow v${VERSION} - Enterprise-Grade AI Agent Orchestration Platform
 
 🎯 ENTERPRISE FEATURES: Complete ruv-swarm integration with 90+ MCP tools, neural networking, and production-ready infrastructure
-⚡ ALPHA 81: Optimized for Claude Code 1.0.51+ with enhanced batch processing and concurrent execution
+⚡ ALPHA 83: Enhanced GitHub hooks with npx commands, improved checkpoint reliability, seamless CI/CD integration
 
 USAGE:
   claude-flow <command> [options]
