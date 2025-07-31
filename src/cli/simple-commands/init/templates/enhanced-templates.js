@@ -2052,11 +2052,11 @@ function createEnhancedSettingsJsonFallback() {
               {
                 type: 'command',
                 command:
-                  'npx claude-flow@alpha hooks session-end --generate-summary true --persist-state true --export-metrics true',
+                  '/usr/bin/env bash -c \'if command -v npx >/dev/null 2>&1; then npx claude-flow@alpha hooks session-end --generate-summary true --persist-state true --export-metrics true; else echo "⚠️  npx not available, skipping Claude Flow session-end hook"; fi\'',
               },
               {
                 type: 'command',
-                command: './.claude/helpers/standard-checkpoint-hooks.sh session-end',
+                command: '/usr/bin/env bash -c \'if [ -f ./.claude/helpers/standard-checkpoint-hooks.sh ]; then ./.claude/helpers/standard-checkpoint-hooks.sh session-end; else echo "⚠️  Checkpoint hooks not found"; fi\'',
               },
             ],
           },
