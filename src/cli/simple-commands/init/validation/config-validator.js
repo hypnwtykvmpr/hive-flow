@@ -1,3 +1,4 @@
+import { promises as fs } from 'fs';
 // config-validator.js - Configuration file validation
 
 export class ConfigValidator {
@@ -20,7 +21,7 @@ export class ConfigValidator {
 
     try {
       // Check if file exists
-      const stat = await Deno.stat(roomodesPath);
+      const stat = await fs.stat(roomodesPath);
       if (!stat.isFile) {
         result.success = false;
         result.errors.push('.roomodes exists but is not a file');
@@ -28,7 +29,7 @@ export class ConfigValidator {
       }
 
       // Read and parse JSON
-      const content = await Deno.readTextFile(roomodesPath);
+      const content = await fs.readFile(roomodesPath, 'utf8');
 
       try {
         const config = JSON.parse(content);
@@ -71,7 +72,7 @@ export class ConfigValidator {
     const claudeMdPath = `${this.workingDir}/CLAUDE.md`;
 
     try {
-      const content = await Deno.readTextFile(claudeMdPath);
+      const content = await fs.readFile(claudeMdPath, 'utf8');
       result.content = content;
 
       // Check for required sections
@@ -123,7 +124,7 @@ export class ConfigValidator {
     const memoryDataPath = `${this.workingDir}/memory/claude-flow-data.json`;
 
     try {
-      const content = await Deno.readTextFile(memoryDataPath);
+      const content = await fs.readFile(memoryDataPath, 'utf8');
 
       try {
         const data = JSON.parse(content);
@@ -162,7 +163,7 @@ export class ConfigValidator {
     const coordinationPath = `${this.workingDir}/coordination.md`;
 
     try {
-      const content = await Deno.readTextFile(coordinationPath);
+      const content = await fs.readFile(coordinationPath, 'utf8');
       result.content = content;
 
       // Check for required sections
@@ -203,7 +204,7 @@ export class ConfigValidator {
     const executablePath = `${this.workingDir}/claude-flow`;
 
     try {
-      const stat = await Deno.stat(executablePath);
+      const stat = await fs.stat(executablePath);
 
       if (!stat.isFile) {
         result.success = false;
@@ -220,7 +221,7 @@ export class ConfigValidator {
       }
 
       // Read and validate content
-      const content = await Deno.readTextFile(executablePath);
+      const content = await fs.readFile(executablePath, 'utf8');
 
       // Check for required elements
       if (content.includes('#!/usr/bin/env')) {

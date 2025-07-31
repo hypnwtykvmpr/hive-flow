@@ -220,7 +220,7 @@ export const RuntimeDetector = {
    */
   getEnv: (key) => {
     if (runtime === 'deno') {
-      return Deno.env.get(key);
+      return process.env[key];
     } else {
       return process.env[key];
     }
@@ -231,7 +231,7 @@ export const RuntimeDetector = {
    */
   setEnv: (key, value) => {
     if (runtime === 'deno') {
-      Deno.env.set(key, value);
+      process.env[key] = value;
     } else {
       process.env[key] = value;
     }

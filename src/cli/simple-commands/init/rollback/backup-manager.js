@@ -2,6 +2,7 @@
 
 // Node.js compatible import
 import fs from 'fs';
+import { errors } from '../../../node-compat.js';
 
 // Polyfill for Deno's ensureDirSync
 function ensureDirSync(dirPath) {
@@ -126,7 +127,7 @@ export class BackupManager {
 
       // Read manifest
       const manifestPath = `${backupPath}/manifest.json`;
-      const manifestContent = await Deno.readTextFile(manifestPath);
+      const manifestContent = await fs.readFile(manifestPath, 'utf8');
       const manifest = JSON.parse(manifestContent);
 
       // Restore files
@@ -174,8 +175,8 @@ export class BackupManager {
             const metadataPath = `${this.backupDir}/${entry.name}/metadata.json`;
             const manifestPath = `${this.backupDir}/${entry.name}/manifest.json`;
 
-            const metadata = JSON.parse(await Deno.readTextFile(metadataPath));
-            const manifest = JSON.parse(await Deno.readTextFile(manifestPath));
+            const metadata = JSON.parse(await fs.readFile(metadataPath, 'utf8'));
+            const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
 
             backups.push({
               id: entry.name,
@@ -295,7 +296,7 @@ export class BackupManager {
     try {
       await Deno.mkdir(this.backupDir, { recursive: true });
     } catch (error) {
-      if (!(error instanceof Deno.errors.AlreadyExists)) {
+      if (!(error instanceof errors.AlreadyExists)) {
         throw error;
       }
     }

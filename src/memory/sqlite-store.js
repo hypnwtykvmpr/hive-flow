@@ -8,6 +8,7 @@ import { promises as fs } from 'fs';
 import { fileURLToPath } from 'url';
 import os from 'os';
 import { createDatabase } from './sqlite-wrapper.js';
+import { sessionSerializer } from './enhanced-session-serializer.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -185,7 +186,7 @@ class SqliteMemoryStore {
     const metadata = options.metadata ? JSON.stringify(options.metadata) : null;
     const ttl = options.ttl || null;
     const expiresAt = ttl ? Math.floor(Date.now() / 1000) + ttl : null;
-    const valueStr = typeof value === 'string' ? value : JSON.stringify(value);
+    const valueStr = typeof value === 'string' ? value : sessionSerializer.serializer.serialize(value);
 
     try {
       const result = this.statements
@@ -218,9 +219,9 @@ class SqliteMemoryStore {
       // Update access stats
       this.statements.get('updateAccess').run(key, namespace);
 
-      // Try to parse as JSON, fall back to raw string
+      // Try to deserialize, fall back to raw string
       try {
-        return JSON.parse(row.value);
+        return sessionSerializer.serializer.deserialize(row.value);
       } catch {
         return row.value;
       }
@@ -307,7 +308,7 @@ class SqliteMemoryStore {
 
   _tryParseJson(value) {
     try {
-      return JSON.parse(value);
+      return sessionSerializer.serializer.deserialize(value);
     } catch {
       return value;
     }

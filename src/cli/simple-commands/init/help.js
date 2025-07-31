@@ -20,6 +20,7 @@ export function showInitHelp() {
   console.log('  --minimal, -m        Create minimal configuration files');
   console.log('  --modes <list>       Initialize only specific SPARC modes (comma-separated)');
   console.log('  --skip-mcp           Skip automatic MCP server setup in Claude Code');
+  console.log('  --monitoring         Enable token usage tracking and telemetry setup');
   console.log();
   console.log('Advanced Options:');
   console.log('  --enhanced, --safe   Enhanced initialization with validation and rollback');
@@ -42,6 +43,7 @@ export function showInitHelp() {
   console.log('  claude-flow init                    # ⭐ DEFAULT: Full Claude Flow v2.0.0 setup');
   console.log('  claude-flow init --force            # Overwrite existing configuration');
   console.log('  claude-flow init --dry-run          # Preview what will be created');
+  console.log('  claude-flow init --monitoring       # Initialize with token tracking enabled');
   console.log();
   console.log('🚀 STANDARD INITIALIZATION:');
   console.log('  npx claude-flow@latest init --sparc --force  # ⭐ RECOMMENDED: Optimized setup');

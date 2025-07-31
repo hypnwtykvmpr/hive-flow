@@ -9,6 +9,8 @@ import { readFile, writeFile } from 'fs/promises';
 import chalk from 'chalk';
 import { cwd } from '../../node-compat.js';
 import { createDatabase, isSQLiteAvailable, isWindows } from '../../../memory/sqlite-wrapper.js';
+import { sessionSerializer } from '../../../memory/enhanced-session-serializer.js';
+import { SerializationError, DeserializationError } from '../../../memory/advanced-serializer.js';
 
 export class HiveMindSessionManager {
   constructor(hiveMindDir = null) {
@@ -177,7 +179,7 @@ To enable persistence, see: https://github.com/ruvnet/claude-code-flow/docs/wind
         status: 'active',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        metadata: JSON.stringify(metadata),
+        metadata: sessionSerializer.serializeMetadata(metadata),
         parent_pid: process.pid,
         child_pids: '[]'
       };
@@ -189,7 +191,7 @@ To enable persistence, see: https://github.com/ruvnet/claude-code-flow/docs/wind
         VALUES (?, ?, ?, ?, ?, ?)
       `);
 
-      stmt.run(sessionId, swarmId, swarmName, objective, JSON.stringify(metadata), process.pid);
+      stmt.run(sessionId, swarmId, swarmName, objective, sessionSerializer.serializeMetadata(metadata), process.pid);
     }
 
     // Log session creation
@@ -217,7 +219,7 @@ To enable persistence, see: https://github.com/ruvnet/claude-code-flow/docs/wind
         id: checkpointId,
         session_id: sessionId,
         checkpoint_name: checkpointName,
-        checkpoint_data: JSON.stringify(checkpointData),
+        checkpoint_data: sessionSerializer.serializeCheckpointData(checkpointData),
         created_at: new Date().toISOString()
       };
       
@@ -229,7 +231,7 @@ To enable persistence, see: https://github.com/ruvnet/claude-code-flow/docs/wind
       // Update session data
       const session = this.memoryStore.sessions.get(sessionId);
       if (session) {
-        session.checkpoint_data = JSON.stringify(checkpointData);
+        session.checkpoint_data = sessionSerializer.serializeCheckpointData(checkpointData);
         session.updated_at = new Date().toISOString();
       }
     } else {
@@ -239,7 +241,7 @@ To enable persistence, see: https://github.com/ruvnet/claude-code-flow/docs/wind
         VALUES (?, ?, ?, ?)
       `);
 
-      stmt.run(checkpointId, sessionId, checkpointName, JSON.stringify(checkpointData));
+      stmt.run(checkpointId, sessionId, checkpointName, sessionSerializer.serializeCheckpointData(checkpointData));
 
       // Update session checkpoint data and timestamp
       const updateStmt = this.db.prepare(`
@@ -248,24 +250,20 @@ To enable persistence, see: https://github.com/ruvnet/claude-code-flow/docs/wind
         WHERE id = ?
       `);
 
-      updateStmt.run(JSON.stringify(checkpointData), sessionId);
+      updateStmt.run(sessionSerializer.serializeCheckpointData(checkpointData), sessionId);
     }
 
     // Save checkpoint file for backup
     const checkpointFile = path.join(this.sessionsDir, `${sessionId}-${checkpointName}.json`);
     await writeFile(
       checkpointFile,
-      JSON.stringify(
-        {
-          sessionId,
-          checkpointId,
-          checkpointName,
-          timestamp: new Date().toISOString(),
-          data: checkpointData,
-        },
-        null,
-        2,
-      ),
+      sessionSerializer.serializeSessionData({
+        sessionId,
+        checkpointId,
+        checkpointName,
+        timestamp: new Date().toISOString(),
+        data: checkpointData,
+      }),
     );
 
     await this.logSessionEvent(sessionId, 'info', `Checkpoint saved: ${checkpointName}`, null, {
@@ -288,8 +286,8 @@ To enable persistence, see: https://github.com/ruvnet/claude-code-flow/docs/wind
         if (session.status === 'active' || session.status === 'paused') {
           sessions.push({
             ...session,
-            metadata: session.metadata ? JSON.parse(session.metadata) : {},
-            checkpoint_data: session.checkpoint_data ? JSON.parse(session.checkpoint_data) : null,
+            metadata: session.metadata ? sessionSerializer.deserializeMetadata(session.metadata) : {},
+            checkpoint_data: session.checkpoint_data ? sessionSerializer.deserializeCheckpointData(session.checkpoint_data) : null,
             agent_count: 0, // Not tracked in memory mode
             task_count: 0,  // Not tracked in memory mode
             completed_tasks: 0, // Not tracked in memory mode
@@ -318,8 +316,8 @@ To enable persistence, see: https://github.com/ruvnet/claude-code-flow/docs/wind
       // Parse JSON fields
       return sessions.map((session) => ({
         ...session,
-        metadata: session.metadata ? JSON.parse(session.metadata) : {},
-        checkpoint_data: session.checkpoint_data ? JSON.parse(session.checkpoint_data) : null,
+        metadata: session.metadata ? sessionSerializer.deserializeMetadata(session.metadata) : {},
+        checkpoint_data: session.checkpoint_data ? sessionSerializer.deserializeCheckpointData(session.checkpoint_data) : null,
         completion_percentage:
           session.task_count > 0
             ? Math.round((session.completed_tasks / session.task_count) * 100)
@@ -344,8 +342,8 @@ To enable persistence, see: https://github.com/ruvnet/claude-code-flow/docs/wind
       // Return simplified session data for in-memory mode
       return {
         ...session,
-        metadata: session.metadata ? JSON.parse(session.metadata) : {},
-        checkpoint_data: session.checkpoint_data ? JSON.parse(session.checkpoint_data) : null,
+        metadata: session.metadata ? sessionSerializer.deserializeMetadata(session.metadata) : {},
+        checkpoint_data: session.checkpoint_data ? sessionSerializer.deserializeCheckpointData(session.checkpoint_data) : null,
         swarm: null, // Not available in memory mode
         agents: [], // Not available in memory mode
         tasks: [], // Not available in memory mode
@@ -427,14 +425,14 @@ To enable persistence, see: https://github.com/ruvnet/claude-code-flow/docs/wind
 
     return {
       ...session,
-      metadata: session.metadata ? JSON.parse(session.metadata) : {},
-      checkpoint_data: session.checkpoint_data ? JSON.parse(session.checkpoint_data) : null,
+      metadata: session.metadata ? sessionSerializer.deserializeMetadata(session.metadata) : {},
+      checkpoint_data: session.checkpoint_data ? sessionSerializer.deserializeCheckpointData(session.checkpoint_data) : null,
       swarm,
       agents,
       tasks,
       checkpoints: checkpoints.map((cp) => ({
         ...cp,
-        checkpoint_data: JSON.parse(cp.checkpoint_data),
+        checkpoint_data: sessionSerializer.deserializeCheckpointData(cp.checkpoint_data),
       })),
       recentLogs,
       statistics: {
@@ -605,7 +603,7 @@ To enable persistence, see: https://github.com/ruvnet/claude-code-flow/docs/wind
       const sessionData = this.getSession(session.id);
       const archiveFile = path.join(archiveDir, `${session.id}-archive.json`);
 
-      await writeFile(archiveFile, JSON.stringify(sessionData, null, 2));
+      await writeFile(archiveFile, sessionSerializer.serializeSessionData(sessionData));
 
       // Remove from database
       this.db.prepare('DELETE FROM session_logs WHERE session_id = ?').run(session.id);
@@ -632,7 +630,7 @@ To enable persistence, see: https://github.com/ruvnet/claude-code-flow/docs/wind
         log_level: logLevel,
         message,
         agent_id: agentId,
-        data: data ? JSON.stringify(data) : null
+        data: data ? sessionSerializer.serializeLogData(data) : null
       };
       
       if (!this.memoryStore.logs.has(sessionId)) {
@@ -646,7 +644,7 @@ To enable persistence, see: https://github.com/ruvnet/claude-code-flow/docs/wind
         VALUES (?, ?, ?, ?, ?)
       `);
 
-      stmt.run(sessionId, logLevel, message, agentId, data ? JSON.stringify(data) : null);
+      stmt.run(sessionId, logLevel, message, agentId, data ? sessionSerializer.serializeLogData(data) : null);
     }
   }
 
@@ -665,7 +663,7 @@ To enable persistence, see: https://github.com/ruvnet/claude-code-flow/docs/wind
 
     return logs.map((log) => ({
       ...log,
-      data: log.data ? JSON.parse(log.data) : null,
+      data: log.data ? sessionSerializer.deserializeLogData(log.data) : null,
     }));
   }
 
@@ -759,7 +757,7 @@ To enable persistence, see: https://github.com/ruvnet/claude-code-flow/docs/wind
 
     const exportFile = exportPath || path.join(this.sessionsDir, `${sessionId}-export.json`);
 
-    await writeFile(exportFile, JSON.stringify(session, null, 2));
+    await writeFile(exportFile, sessionSerializer.serializeSessionData(session));
 
     return exportFile;
   }
@@ -768,7 +766,7 @@ To enable persistence, see: https://github.com/ruvnet/claude-code-flow/docs/wind
    * Import session data
    */
   async importSession(importPath) {
-    const sessionData = JSON.parse(await readFile(importPath, 'utf8'));
+    const sessionData = sessionSerializer.deserializeSessionData(await readFile(importPath, 'utf8'));
 
     // Create new session with imported data
     const newSessionId = this.createSession(
@@ -794,7 +792,7 @@ To enable persistence, see: https://github.com/ruvnet/claude-code-flow/docs/wind
         log.log_level,
         log.message,
         log.agent_id,
-        log.data ? JSON.parse(log.data) : null,
+        log.data ? sessionSerializer.deserializeLogData(log.data) : null,
       );
     }
 
@@ -808,7 +806,7 @@ To enable persistence, see: https://github.com/ruvnet/claude-code-flow/docs/wind
     const session = this.db.prepare('SELECT child_pids FROM sessions WHERE id = ?').get(sessionId);
     if (!session) return false;
 
-    const childPids = session.child_pids ? JSON.parse(session.child_pids) : [];
+    const childPids = session.child_pids ? sessionSerializer.deserializeLogData(session.child_pids) : [];
     if (!childPids.includes(pid)) {
       childPids.push(pid);
     }
@@ -819,7 +817,7 @@ To enable persistence, see: https://github.com/ruvnet/claude-code-flow/docs/wind
       WHERE id = ?
     `);
 
-    stmt.run(JSON.stringify(childPids), sessionId);
+    stmt.run(sessionSerializer.serializeLogData(childPids), sessionId);
 
     this.logSessionEvent(sessionId, 'info', 'Child process added', null, { pid });
     return true;
@@ -832,7 +830,7 @@ To enable persistence, see: https://github.com/ruvnet/claude-code-flow/docs/wind
     const session = this.db.prepare('SELECT child_pids FROM sessions WHERE id = ?').get(sessionId);
     if (!session) return false;
 
-    const childPids = session.child_pids ? JSON.parse(session.child_pids) : [];
+    const childPids = session.child_pids ? sessionSerializer.deserializeLogData(session.child_pids) : [];
     const index = childPids.indexOf(pid);
     if (index > -1) {
       childPids.splice(index, 1);
@@ -844,7 +842,7 @@ To enable persistence, see: https://github.com/ruvnet/claude-code-flow/docs/wind
       WHERE id = ?
     `);
 
-    stmt.run(JSON.stringify(childPids), sessionId);
+    stmt.run(sessionSerializer.serializeLogData(childPids), sessionId);
 
     this.logSessionEvent(sessionId, 'info', 'Child process removed', null, { pid });
     return true;
@@ -860,12 +858,12 @@ To enable persistence, see: https://github.com/ruvnet/claude-code-flow/docs/wind
       // Use in-memory storage
       const session = this.memoryStore.sessions.get(sessionId);
       if (!session || !session.child_pids) return [];
-      return JSON.parse(session.child_pids);
+      return sessionSerializer.deserializeLogData(session.child_pids);
     } else {
       // Use SQLite
       const session = this.db.prepare('SELECT child_pids FROM sessions WHERE id = ?').get(sessionId);
       if (!session || !session.child_pids) return [];
-      return JSON.parse(session.child_pids);
+      return sessionSerializer.deserializeLogData(session.child_pids);
     }
   }
 
@@ -930,7 +928,7 @@ To enable persistence, see: https://github.com/ruvnet/claude-code-flow/docs/wind
 
     // Add process info to each session
     return sessions.map((session) => {
-      const childPids = session.child_pids ? JSON.parse(session.child_pids) : [];
+      const childPids = session.child_pids ? sessionSerializer.deserializeLogData(session.child_pids) : [];
       const aliveChildPids = [];
 
       // Check which child processes are still alive

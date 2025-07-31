@@ -42,7 +42,7 @@ export async function createOptimizedClaudeSlashCommands(workingDir, selectedMod
         const commandContent = createOptimizedSparcSlashCommand(mode);
 
         await fs.mkdir(join(workingDir, '.claude', 'commands', 'sparc'), { recursive: true });
-        await fs.writeFile(commandPath, commandContent);
+        await fs.writeFile(commandPath, commandContent, 'utf8');
         console.log(`  ✓ Created optimized slash command: /sparc-${mode.slug} (Batchtools enhanced)`);
       });
 
@@ -51,7 +51,7 @@ export async function createOptimizedClaudeSlashCommands(workingDir, selectedMod
 
       // Create main SPARC command with batchtools optimization
       const mainSparcCommand = createOptimizedMainSparcCommand(roomodes.customModes);
-      await fs.writeFile(join(workingDir, '.claude', 'commands', 'sparc.md'), mainSparcCommand);
+      await fs.writeFile(join(workingDir, '.claude', 'commands', 'sparc.md', 'utf8'), mainSparcCommand);
       console.log('  ✅ Created optimized main slash command: /sparc (Batchtools enhanced)');
 
       console.log(`  🎯 Total optimized commands created: ${modesToCreate.length + 5}`);
@@ -248,7 +248,7 @@ Chain operations with parallel execution at each stage:
 For detailed documentation, see: https://github.com/ruvnet/claude-code-flow/docs/batchtools.md
 `;
 
-  await Deno.writeTextFile(`${workingDir}/.claude/commands/batchtools.md`, batchtoolsCommand);
+  await fs.writeFile(`${workingDir}/.claude/commands/batchtools.md`, batchtoolsCommand, 'utf8');
   console.log('  ✓ Created slash command: /batchtools');
 
   // Performance monitoring command
@@ -346,6 +346,6 @@ Real-time performance monitoring and optimization tools for Claude-Flow operatio
 For comprehensive performance guides, see: https://github.com/ruvnet/claude-code-flow/docs/performance.md
 `;
 
-  await Deno.writeTextFile(`${workingDir}/.claude/commands/performance.md`, performanceCommand);
+  await fs.writeFile(`${workingDir}/.claude/commands/performance.md`, performanceCommand, 'utf8');
   console.log('  ✓ Created slash command: /performance');
 }

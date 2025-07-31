@@ -62,6 +62,14 @@ async function checkClaudeAvailable() {
 }
 
 const GITHUB_MODES = {
+  'init': {
+    description: 'Initialize GitHub-specific hooks and checkpoint system',
+    examples: [
+      'github init',
+      'github init --force',
+      'github init --checkpoints-only',
+    ],
+  },
   'gh-coordinator': {
     description: 'GitHub workflow orchestration and coordination',
     examples: [
@@ -157,6 +165,13 @@ export async function githubCommand(args, flags) {
   }
 
   const mode = args[0];
+  
+  // Handle init mode separately
+  if (mode === 'init') {
+    const { githubInitCommand } = await import('./github/init.js');
+    return await githubInitCommand(flags);
+  }
+  
   const objective = args.slice(1).join(' ').trim();
 
   if (!objective) {

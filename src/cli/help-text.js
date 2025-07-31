@@ -5,14 +5,14 @@
 
 import { HelpFormatter } from './help-formatter.js';
 
-export const VERSION = '2.0.0-alpha.78';
+export const VERSION = '2.0.0-alpha.80';
 
 export const MAIN_HELP = `
 🌊 Claude-Flow v${VERSION} - Enterprise-Grade AI Agent Orchestration Platform
 
 🎯 ENTERPRISE FEATURES: Complete ruv-swarm integration with 87 MCP tools, neural networking, and production-ready infrastructure
-🐝 NEW: Advanced Hive Mind System with Queen-led coordination, collective intelligence, and unlimited scaling
-⚡ ALPHA 78: Removed legacy Deno warnings, enhanced SPARC slash commands
+🐝 NEW: Pure Node.js implementation - No Deno dependency! TBench integration for AI agent benchmarking
+⚡ ALPHA 80: GitHub-enhanced init with automatic checkpoint releases, separated standard/GitHub modes
 
 USAGE:
   claude-flow <command> [options]
@@ -39,6 +39,7 @@ USAGE:
 
 📋 CORE COMMANDS:
   init                     Initialize Claude Flow v2.0.0 (creates CLAUDE.md & .claude/commands)
+                          --monitoring enables token usage tracking
   start [--ui] [--swarm]   Start orchestration system
   swarm <objective>        Multi-agent swarm coordination
   agent <action>           Agent management (spawn, list, terminate)
@@ -50,7 +51,7 @@ USAGE:
 📋 SWARM INTELLIGENCE COMMANDS:
   training <command>       Neural pattern learning & model updates (3 commands)
   coordination <command>   Swarm & agent orchestration (3 commands)
-  analysis <command>       Performance & usage analytics (3 commands)
+  analysis <command>       Performance & token usage analytics (real tracking!)
   automation <command>     Intelligent agent & workflow management (3 commands)
   hooks <command>          Lifecycle event management (5 commands)
   migrate-hooks            Migrate settings.json to Claude Code 1.0.51+ format
@@ -145,6 +146,7 @@ DESCRIPTION:
   Each mode handles specific aspects of repository management.
 
 MODES:
+  init                Initialize GitHub-enhanced checkpoint system (NEW!)
   gh-coordinator      GitHub workflow orchestration and CI/CD
   pr-manager          Pull request management with reviews
   issue-tracker       Issue management and project coordination
@@ -159,6 +161,7 @@ OPTIONS:
   --config <file>     Custom configuration file
 
 EXAMPLES:
+  claude-flow github init                                        # Initialize GitHub checkpoint hooks
   claude-flow github pr-manager "create feature PR with tests"
   claude-flow github gh-coordinator "setup CI/CD pipeline" --auto-approve
   claude-flow github release-manager "prepare v2.0.0 release"
@@ -286,7 +289,11 @@ USAGE:
 
 DESCRIPTION:
   Initialize Claude Flow v2.0.0 in your project with full MCP integration.
-  By default creates enhanced setup with CLAUDE.md and .claude/commands.
+  By default creates standard setup with local Git checkpoints.
+  
+  TWO INITIALIZATION MODES:
+  • claude-flow init         Standard init with local Git checkpoints
+  • claude-flow github init  GitHub-enhanced with automatic releases (NEW!)
 
 OPTIONS:
   --force          Overwrite existing configuration
@@ -327,10 +334,12 @@ WHAT claude-flow init CREATES (DEFAULT):
   • Enterprise security features
 
 EXAMPLES:
-  npx claude-flow@2.0.0 init              # Default: Full v2.0.0 setup
-  claude-flow init                        # Initialize with enhanced features
+  npx claude-flow@alpha init              # Standard init with local checkpoints
+  npx claude-flow@alpha github init       # GitHub-enhanced init with releases
   claude-flow init --force                # Overwrite existing configuration
+  claude-flow github init --force         # Force GitHub mode (overwrite)
   claude-flow init --dry-run              # Preview what will be created
+  claude-flow init --monitoring           # Initialize with token tracking
   claude-flow init --sparc                # SPARC enterprise setup
   claude-flow init --minimal              # Basic setup only
 `,

@@ -1,3 +1,4 @@
+import { promises as fs } from 'fs';
 // optimized-claude-flow-commands.js - Batchtools-optimized Claude-Flow specific slash commands
 
 // Create batchtools-optimized Claude-Flow specific commands
@@ -238,7 +239,7 @@ npx -y claude-flow@latest init --sparc --force
 For comprehensive documentation and optimization guides, see the resources above.
 `;
 
-  await Deno.writeTextFile(`${workingDir}/.claude/commands/claude-flow-help.md`, helpCommand);
+  await fs.writeFile(`${workingDir}/.claude/commands/claude-flow-help.md`, helpCommand, 'utf8');
   console.log('  ✓ Created optimized slash command: /claude-flow-help (Batchtools enhanced)');
 
   // Memory command with batchtools optimization
@@ -529,7 +530,7 @@ The memory system provides persistent storage for cross-session and cross-agent 
 For comprehensive memory system documentation and optimization guides, see: https://github.com/ruvnet/claude-code-flow/docs/memory-batchtools.md
 `;
 
-  await Deno.writeTextFile(`${workingDir}/.claude/commands/claude-flow-memory.md`, memoryCommand);
+  await fs.writeFile(`${workingDir}/.claude/commands/claude-flow-memory.md`, memoryCommand, 'utf8');
   console.log('  ✓ Created optimized slash command: /claude-flow-memory (Batchtools enhanced)');
 
   // Swarm command with batchtools optimization
@@ -870,6 +871,6 @@ Swarms automatically use distributed memory with parallel processing for collabo
 For detailed documentation and optimization guides, see: https://github.com/ruvnet/claude-code-flow/docs/swarm-batchtools.md
 `;
 
-  await Deno.writeTextFile(`${workingDir}/.claude/commands/claude-flow-swarm.md`, swarmCommand);
+  await fs.writeFile(`${workingDir}/.claude/commands/claude-flow-swarm.md`, swarmCommand, 'utf8');
   console.log('  ✓ Created optimized slash command: /claude-flow-swarm (Batchtools enhanced)');
 }

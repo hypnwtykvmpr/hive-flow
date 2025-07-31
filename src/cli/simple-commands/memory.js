@@ -1,6 +1,7 @@
 // memory.js - Memory management commands
 import { printSuccess, printError, printWarning } from '../utils.js';
-import { Deno, cwd, exit, existsSync } from '../node-compat.js';
+import { promises as fs } from 'fs';
+import { cwd, exit, existsSync } from '../node-compat.js';
 
 export async function memoryCommand(subArgs, flags) {
   const memorySubcommand = subArgs[0];
@@ -9,7 +10,7 @@ export async function memoryCommand(subArgs, flags) {
   // Helper to load memory data
   async function loadMemory() {
     try {
-      const content = await Deno.readTextFile(memoryStore);
+      const content = await fs.readFile(memoryStore, 'utf8');
       return JSON.parse(content);
     } catch {
       return {};
@@ -18,8 +19,8 @@ export async function memoryCommand(subArgs, flags) {
 
   // Helper to save memory data
   async function saveMemory(data) {
-    await Deno.mkdir('./memory', { recursive: true });
-    await Deno.writeTextFile(memoryStore, JSON.stringify(data, null, 2));
+    await fs.mkdir('./memory', { recursive: true });
+    await fs.writeFile(memoryStore, JSON.stringify(data, null, 2, 'utf8'));
   }
 
   switch (memorySubcommand) {
@@ -185,7 +186,7 @@ async function exportMemory(subArgs, loadMemory) {
       exportData = { [namespace]: data[namespace] || [] };
     }
 
-    await Deno.writeTextFile(filename, JSON.stringify(exportData, null, 2));
+    await fs.writeFile(filename, JSON.stringify(exportData, null, 2, 'utf8'));
     printSuccess(`Memory exported to ${filename}`);
 
     let totalEntries = 0;
@@ -209,7 +210,7 @@ async function importMemory(subArgs, saveMemory) {
   }
 
   try {
-    const importContent = await Deno.readTextFile(filename);
+    const importContent = await fs.readFile(filename, 'utf8');
     const importData = JSON.parse(importContent);
 
     // Load existing memory
@@ -301,7 +302,7 @@ function getNamespaceFromArgs(subArgs) {
 // Helper to load memory data (needed for import function)
 async function loadMemory() {
   try {
-    const content = await Deno.readTextFile('./memory/memory-store.json');
+    const content = await fs.readFile('./memory/memory-store.json', 'utf8');
     return JSON.parse(content);
   } catch {
     return {};
