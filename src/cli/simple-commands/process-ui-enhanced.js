@@ -1,4 +1,4 @@
-// process-ui-enhanced.js - Enhanced process management UI with multiple views
+// process-ui-enhanced.js - Enhanced process management UI with multiple views - v2.0.0-alpha.80
 import { printSuccess, printError, printWarning, printInfo } from '../utils.js';
 import { compat } from '../runtime-detector.js';
 import SwarmWebUIIntegration from './swarm-webui-integration.js';
@@ -112,7 +112,7 @@ export class EnhancedProcessUI {
     console.clear();
 
     // Show welcome
-    printSuccess('🧠 Claude-Flow Process Management UI v1.0.71');
+    printSuccess('🧠 Claude-Flow Process Management UI v2.0.0-alpha.80');
     console.log('─'.repeat(80));
     console.log();
 

@@ -1,6 +1,6 @@
 // template-copier.js - Copy template files instead of generating them dynamically
 
-import { Deno, existsSync } from '../../node-compat.js';
+import { existsSync } from '../../node-compat.js';
 import { promises as fs } from 'fs';
 import { dirname, join, relative } from 'path';
 import { fileURLToPath } from 'url';
@@ -311,7 +311,7 @@ async function copyHelperScripts(templatesDir, targetDir, options, results) {
       await fs.mkdir(helpersDir, { recursive: true });
     }
 
-    const helpers = ['setup-mcp.sh', 'quick-start.sh', 'github-setup.sh', 'github-safe.js'];
+    const helpers = ['setup-mcp.sh', 'quick-start.sh', 'github-setup.sh', 'github-safe.js', 'checkpoint-manager.sh', 'standard-checkpoint-hooks.sh'];
     const { createHelperScript } = await import('./templates/enhanced-templates.js');
     
     for (const helper of helpers) {

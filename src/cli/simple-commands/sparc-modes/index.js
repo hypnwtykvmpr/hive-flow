@@ -67,7 +67,7 @@ export function getModeOrchestration(modeSlug, taskDescription, memoryNamespace)
 export function createSparcPrompt(mode, taskDescription, memoryNamespace) {
   const orchestration = getModeOrchestration(mode.slug, taskDescription, memoryNamespace);
   // Get the actual working directory where the command was run from
-  const cwd = Deno.env.get('PWD') || Deno.cwd();
+  const cwd = process.env.PWD || process.cwd();
 
   return `# ${mode.name} - Task Execution
 

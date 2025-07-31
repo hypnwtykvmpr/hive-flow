@@ -1,3 +1,4 @@
+import { promises as fs } from 'fs';
 // post-init-validator.js - Post-initialization verification checks
 
 export class PostInitValidator {
@@ -30,7 +31,7 @@ export class PostInitValidator {
       const filePath = `${this.workingDir}/${file.path}`;
 
       try {
-        const stat = await Deno.stat(filePath);
+        const stat = await fs.stat(filePath);
 
         // Check if it exists and is a file
         if (!stat.isFile) {
@@ -62,7 +63,7 @@ export class PostInitValidator {
 
         // Try to read the file
         try {
-          await Deno.readTextFile(filePath);
+          await fs.readFile(filePath, 'utf8');
           result.files[file.path] = { status: 'ok', size: stat.size };
         } catch (readError) {
           result.success = false;
@@ -117,7 +118,7 @@ export class PostInitValidator {
       const dirPath = `${this.workingDir}/${dir}`;
 
       try {
-        const stat = await Deno.stat(dirPath);
+        const stat = await fs.stat(dirPath);
         if (!stat.isDirectory) {
           result.success = false;
           result.errors.push(`Expected directory but found file: ${dir}`);
@@ -135,7 +136,7 @@ export class PostInitValidator {
       const dirPath = `${this.workingDir}/${dir}`;
 
       try {
-        await Deno.stat(dirPath);
+        await fs.stat(dirPath);
       } catch {
         if (dir.includes('.roo') || dir.includes('sparc')) {
           result.warnings.push(`Optional SPARC directory missing: ${dir}`);
@@ -227,7 +228,7 @@ export class PostInitValidator {
       const itemPath = `${this.workingDir}/${item.path}`;
 
       try {
-        const stat = await Deno.stat(itemPath);
+        const stat = await fs.stat(itemPath);
         const actualMode = stat.mode & 0o777;
         const expectedMode = item.requiredMode;
 
@@ -265,7 +266,7 @@ export class PostInitValidator {
 
     for (const dir of expectedDirs) {
       try {
-        await Deno.stat(`${this.workingDir}/memory/${dir}`);
+        await fs.stat(`${this.workingDir}/memory/${dir}`);
         structure.dirs.push(dir);
       } catch {
         structure.valid = false;
@@ -274,7 +275,7 @@ export class PostInitValidator {
 
     for (const file of expectedFiles) {
       try {
-        await Deno.stat(`${this.workingDir}/memory/${file}`);
+        await fs.stat(`${this.workingDir}/memory/${file}`);
         structure.files.push(file);
       } catch {
         structure.valid = false;
@@ -294,7 +295,7 @@ export class PostInitValidator {
 
     for (const dir of expectedDirs) {
       try {
-        await Deno.stat(`${this.workingDir}/coordination/${dir}`);
+        await fs.stat(`${this.workingDir}/coordination/${dir}`);
         structure.dirs.push(dir);
       } catch {
         structure.valid = false;
@@ -315,7 +316,7 @@ export class PostInitValidator {
 
     for (const dir of expectedDirs) {
       try {
-        await Deno.stat(`${this.workingDir}/.claude/${dir}`);
+        await fs.stat(`${this.workingDir}/.claude/${dir}`);
         structure.dirs.push(dir);
       } catch {
         structure.valid = false;
@@ -325,7 +326,7 @@ export class PostInitValidator {
     // Check if there are any command files
     try {
       const entries = [];
-      for await (const entry of Deno.readDir(`${this.workingDir}/.claude/commands`)) {
+      for await (const entry of fs.readdir(`${this.workingDir}/.claude/commands`)) {
         if (entry.isFile && entry.name.endsWith('.js')) {
           entries.push(entry.name);
         }
@@ -341,7 +342,7 @@ export class PostInitValidator {
 
   async checkSparcExists() {
     try {
-      await Deno.stat(`${this.workingDir}/.roomodes`);
+      await fs.stat(`${this.workingDir}/.roomodes`);
       return true;
     } catch {
       return false;
@@ -358,7 +359,7 @@ export class PostInitValidator {
 
     // Check .roomodes file
     try {
-      const stat = await Deno.stat(`${this.workingDir}/.roomodes`);
+      const stat = await fs.stat(`${this.workingDir}/.roomodes`);
       structure.hasRoomodes = stat.isFile;
     } catch {
       structure.valid = false;
@@ -366,14 +367,14 @@ export class PostInitValidator {
 
     // Check .roo directory
     try {
-      const stat = await Deno.stat(`${this.workingDir}/.roo`);
+      const stat = await fs.stat(`${this.workingDir}/.roo`);
       structure.hasRooDir = stat.isDirectory;
 
       if (structure.hasRooDir) {
         const expectedDirs = ['templates', 'workflows', 'modes', 'configs'];
         for (const dir of expectedDirs) {
           try {
-            await Deno.stat(`${this.workingDir}/.roo/${dir}`);
+            await fs.stat(`${this.workingDir}/.roo/${dir}`);
             structure.dirs.push(dir);
           } catch {
             // Optional subdirectories

@@ -267,7 +267,7 @@ async function getSystemStatus(): Promise<any> {
   // For now, return mock data
   return {
     overall: 'healthy',
-    version: '1.0.0',
+    version: '2.0.0-alpha.80',
     uptime: 3600000,
     startTime: Date.now() - 3600000,
     components: {

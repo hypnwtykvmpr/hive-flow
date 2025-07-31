@@ -1,6 +1,10 @@
 // utils.js - Shared CLI utility functions
 
-import { Deno, existsSync } from './node-compat.js';
+import { existsSync } from './node-compat.js';
+import { promises as fs } from 'fs';
+import { spawn } from 'child_process';
+import { promisify } from 'util';
+import { chmod } from 'fs/promises';
 
 // Color formatting functions
 export function printSuccess(message) {
@@ -19,6 +23,11 @@ export function printInfo(message) {
   console.log(`ℹ️  ${message}`);
 }
 
+// Process exit function
+export function exit(code = 0) {
+  process.exit(code);
+}
+
 // Command validation helpers
 export function validateArgs(args, minLength, usage) {
   if (args.length < minLength) {
@@ -31,7 +40,7 @@ export function validateArgs(args, minLength, usage) {
 // File system helpers
 export async function ensureDirectory(path) {
   try {
-    await Deno.mkdir(path, { recursive: true });
+    await fs.mkdir(path, { recursive: true });
     return true;
   } catch (err) {
     if (err.code !== 'EEXIST') {
@@ -43,7 +52,7 @@ export async function ensureDirectory(path) {
 
 export async function fileExists(path) {
   try {
-    await Deno.stat(path);
+    await fs.stat(path);
     return true;
   } catch {
     return false;
@@ -53,7 +62,7 @@ export async function fileExists(path) {
 // JSON helpers
 export async function readJsonFile(path, defaultValue = {}) {
   try {
-    const content = await Deno.readTextFile(path);
+    const content = await fs.readFile(path, 'utf8');
     return JSON.parse(content);
   } catch {
     return defaultValue;
@@ -61,7 +70,7 @@ export async function readJsonFile(path, defaultValue = {}) {
 }
 
 export async function writeJsonFile(path, data) {
-  await Deno.writeTextFile(path, JSON.stringify(data, null, 2));
+  await fs.writeFile(path, JSON.stringify(data, null, 2), 'utf8');
 }
 
 // String helpers
@@ -121,64 +130,43 @@ export function parseFlags(args) {
 // Process execution helpers
 export async function runCommand(command, args = [], options = {}) {
   try {
-    // Check if we're in Node.js or Deno environment
-    if (typeof process !== 'undefined' && process.versions && process.versions.node) {
-      // Node.js environment
-      const { spawn } = await import('child_process');
-      const { promisify } = await import('util');
-
-      return new Promise((resolve) => {
-        const child = spawn(command, args, {
-          stdio: ['pipe', 'pipe', 'pipe'],
-          shell: true,
-          ...options,
-        });
-
-        let stdout = '';
-        let stderr = '';
-
-        child.stdout?.on('data', (data) => {
-          stdout += data.toString();
-        });
-
-        child.stderr?.on('data', (data) => {
-          stderr += data.toString();
-        });
-
-        child.on('close', (code) => {
-          resolve({
-            success: code === 0,
-            code: code || 0,
-            stdout: stdout,
-            stderr: stderr,
-          });
-        });
-
-        child.on('error', (err) => {
-          resolve({
-            success: false,
-            code: -1,
-            stdout: '',
-            stderr: err.message,
-          });
-        });
-      });
-    } else {
-      // Deno environment
-      const cmd = new Deno.Command(command, {
-        args,
+    // Node.js environment
+    return new Promise((resolve) => {
+      const child = spawn(command, args, {
+        stdio: ['pipe', 'pipe', 'pipe'],
+        shell: true,
         ...options,
       });
 
-      const result = await cmd.output();
+      let stdout = '';
+      let stderr = '';
 
-      return {
-        success: result.code === 0,
-        code: result.code,
-        stdout: new TextDecoder().decode(result.stdout),
-        stderr: new TextDecoder().decode(result.stderr),
-      };
-    }
+      child.stdout?.on('data', (data) => {
+        stdout += data.toString();
+      });
+
+      child.stderr?.on('data', (data) => {
+        stderr += data.toString();
+      });
+
+      child.on('close', (code) => {
+        resolve({
+          success: code === 0,
+          code: code || 0,
+          stdout: stdout,
+          stderr: stderr,
+        });
+      });
+
+      child.on('error', (err) => {
+        resolve({
+          success: false,
+          code: -1,
+          stdout: '',
+          stderr: err.message,
+        });
+      });
+    });
   } catch (err) {
     return {
       success: false,
@@ -209,7 +197,7 @@ export async function loadConfig(path = 'claude-flow.config.json') {
   };
 
   try {
-    const content = await Deno.readTextFile(path);
+    const content = await fs.readFile(path, 'utf8');
     return { ...defaultConfig, ...JSON.parse(content) };
   } catch {
     return defaultConfig;
@@ -238,11 +226,11 @@ export function chunk(array, size) {
 
 // Environment helpers
 export function getEnvVar(name, defaultValue = null) {
-  return Deno.env.get(name) ?? defaultValue;
+  return process.env[name] ?? defaultValue;
 }
 
 export function setEnvVar(name, value) {
-  Deno.env.set(name, value);
+  process.env[name] = value;
 }
 
 // Validation helpers
@@ -324,14 +312,14 @@ export async function callRuvSwarmMCP(tool, params = {}) {
 
     // Write messages to temp file
     const messages = JSON.stringify(initMessage) + '\n' + JSON.stringify(toolMessage);
-    await Deno.writeTextFile(tempFile, messages);
+    await fs.writeFile(tempFile, messages, 'utf8');
 
     // Create a script that feeds the file to the REAL ruv-swarm MCP server
     const script = `#!/bin/bash
 timeout 30s npx ruv-swarm mcp start --stdio < "${tempFile}" 2>/dev/null | tail -1
 `;
-    await Deno.writeTextFile(tempScript, script);
-    await Deno.chmod(tempScript, 0o755);
+    await fs.writeFile(tempScript, script, 'utf8');
+    await chmod(tempScript, 0o755);
 
     const result = await runCommand('bash', [tempScript], {
       stdout: 'piped',
@@ -340,8 +328,8 @@ timeout 30s npx ruv-swarm mcp start --stdio < "${tempFile}" 2>/dev/null | tail -
 
     // Clean up temp files
     try {
-      await Deno.remove(tempFile);
-      await Deno.remove(tempScript);
+      await fs.unlink(tempFile);
+      await fs.unlink(tempScript);
     } catch {
       // Ignore cleanup errors
     }
@@ -501,14 +489,14 @@ export async function callRuvSwarmDirectNeural(params = {}) {
     try {
       // Read the latest training file
       const neuralDir = '.ruv-swarm/neural';
-      const files = await Deno.readDir(neuralDir);
+      const files = await fs.readdir(neuralDir, { withFileTypes: true });
       let latestFile = null;
       let latestTime = 0;
 
       for await (const file of files) {
         if (file.name.startsWith(`training-${modelName}-`) && file.name.endsWith('.json')) {
           const filePath = `${neuralDir}/${file.name}`;
-          const stat = await Deno.stat(filePath);
+          const stat = await fs.stat(filePath);
           if (stat.mtime > latestTime) {
             latestTime = stat.mtime;
             latestFile = filePath;
@@ -517,7 +505,7 @@ export async function callRuvSwarmDirectNeural(params = {}) {
       }
 
       if (latestFile) {
-        const content = await Deno.readTextFile(latestFile);
+        const content = await fs.readFile(latestFile, 'utf8');
         const realResult = JSON.parse(content);
 
         return {

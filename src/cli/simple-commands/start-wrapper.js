@@ -1,6 +1,7 @@
 // start-wrapper.js - Wrapper to maintain backward compatibility with the new modular start command
 import { printSuccess, printError, printWarning, printInfo } from '../utils.js';
-import { Deno, cwd, exit, existsSync } from '../node-compat.js';
+import { promises as fs } from 'fs';
+import { cwd, exit, existsSync } from '../node-compat.js';
 import { compat } from '../runtime-detector.js';
 
 export async function startCommand(subArgs, flags) {
@@ -81,7 +82,7 @@ export async function startCommand(subArgs, flags) {
 
     for (const dir of requiredDirs) {
       try {
-        await Deno.stat(dir);
+        await fs.stat(dir);
       } catch {
         missingDirs.push(dir);
       }
@@ -137,10 +138,10 @@ export async function startCommand(subArgs, flags) {
       const pid = compat.terminal.getPid();
       await compat.safeCall(async () => {
         if (compat.runtime === 'deno') {
-          await Deno.writeTextFile('.claude-flow.pid', pid.toString());
+          await fs.writeFile('.claude-flow.pid', pid.toString(), 'utf8');
         } else {
           const fs = await import('fs/promises');
-          await fs.writeFile('.claude-flow.pid', pid.toString());
+          await fs.writeFile('.claude-flow.pid', pid.toString(), 'utf8');
         }
       });
       console.log(`Process ID: ${pid} (saved to .claude-flow.pid)`);
@@ -213,7 +214,7 @@ async function cleanup() {
   try {
     await compat.safeCall(async () => {
       if (compat.runtime === 'deno') {
-        await Deno.remove('.claude-flow.pid');
+        await fs.unlink('.claude-flow.pid');
       } else {
         const fs = await import('fs/promises');
         await fs.unlink('.claude-flow.pid');

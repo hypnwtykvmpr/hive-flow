@@ -1,3 +1,4 @@
+import { promises as fs } from 'fs';
 // state-tracker.js - Track initialization state and rollback points
 
 export class StateTracker {
@@ -423,7 +424,7 @@ export class StateTracker {
 
   async loadState() {
     try {
-      const content = await Deno.readTextFile(this.stateFile);
+      const content = await fs.readFile(this.stateFile, 'utf8');
       return JSON.parse(content);
     } catch {
       // Return default state if file doesn't exist or is invalid
@@ -445,7 +446,7 @@ export class StateTracker {
     state.lastActivity = Date.now();
     state.version = '1.0';
 
-    await Deno.writeTextFile(this.stateFile, JSON.stringify(state, null, 2));
+    await fs.writeFile(this.stateFile, JSON.stringify(state, null, 2, 'utf8'));
   }
 
   generateId() {

@@ -253,27 +253,8 @@ export class Command {
   }
 }
 
-// Export a Deno-like object for easier migration
-export const Deno = {
-  args,
-  cwd,
-  readDir,
-  stat: statFile,
-  readTextFile,
-  writeTextFile,
-  remove,
-  mkdir: mkdirAsync,
-  pid,
-  kill,
-  exit,
-  execPath,
-  errors,
-  build,
-  stdin,
-  stdout,
-  stderr,
-  env,
-  Command,
-};
+// Legacy exports for compatibility - to be removed
+// These functions are now available as direct imports
 
-export default Deno;
+// NOTE: Deno export has been removed in alpha.79
+// All Deno APIs have been replaced with native Node.js equivalents

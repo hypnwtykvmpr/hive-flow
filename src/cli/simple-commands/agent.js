@@ -1,5 +1,6 @@
 // agent.js - Agent management commands
 import { printSuccess, printError, printWarning } from '../utils.js';
+import { onAgentSpawn, onAgentAction } from './performance-hooks.js';
 
 export async function agentCommand(subArgs, flags) {
   const agentCmd = subArgs[0];
@@ -45,6 +46,7 @@ export async function agentCommand(subArgs, flags) {
 async function spawnAgent(subArgs, flags) {
   const agentType = subArgs[1] || 'general';
   const agentName = getFlag(subArgs, '--name') || flags.name || `agent-${Date.now()}`;
+  const agentId = `${agentType}-${Date.now()}`;
 
   printSuccess(`Spawning ${agentType} agent: ${agentName}`);
   console.log('🤖 Agent would be created with the following configuration:');
@@ -53,6 +55,9 @@ async function spawnAgent(subArgs, flags) {
   console.log('   Capabilities: Research, Analysis, Code Generation');
   console.log('   Status: Ready');
   console.log('\n📋 Note: Full agent spawning requires orchestrator to be running');
+  
+  // Track agent spawn for performance metrics
+  await onAgentSpawn(agentId, agentType, { name: agentName });
 }
 
 async function listAgents(subArgs, flags) {

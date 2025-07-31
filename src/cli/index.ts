@@ -27,7 +27,7 @@ import { startREPL } from './repl.js';
 import { CompletionGenerator } from './completion.js';
 
 // Version information
-const VERSION = '1.0.71';
+const VERSION = '2.0.0-alpha.80';
 const BUILD_DATE = new Date().toISOString().split('T')[0];
 
 // Main CLI command
