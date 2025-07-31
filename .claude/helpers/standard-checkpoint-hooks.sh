@@ -68,7 +68,7 @@ Automatic checkpoint created by Claude
                 
                 # Store metadata
                 mkdir -p .claude/checkpoints
-                local diff_stats=$(git diff HEAD~1 --stat | tr '\n' ' ' | sed 's/"/\\"/g')
+                local diff_stats=$(git diff HEAD~1 --stat | tr '\n' ' ' | sed 's/"/\"/g')
                 cat > ".claude/checkpoints/$(date +%s).json" <<EOF
 {
   "tag": "$tag_name",

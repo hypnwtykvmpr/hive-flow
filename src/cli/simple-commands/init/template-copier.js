@@ -311,7 +311,7 @@ async function copyHelperScripts(templatesDir, targetDir, options, results) {
       await fs.mkdir(helpersDir, { recursive: true });
     }
 
-    const helpers = ['setup-mcp.sh', 'quick-start.sh', 'github-setup.sh', 'github-safe.js'];
+    const helpers = ['setup-mcp.sh', 'quick-start.sh', 'github-setup.sh', 'github-safe.js', 'checkpoint-manager.sh', 'standard-checkpoint-hooks.sh'];
     const { createHelperScript } = await import('./templates/enhanced-templates.js');
     
     for (const helper of helpers) {
