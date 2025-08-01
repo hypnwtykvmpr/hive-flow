@@ -268,3 +268,6 @@ export const searchAgents = (query: string) => agentLoader.searchAgents(query);
 export const isValidAgentType = (name: string) => agentLoader.isValidAgentType(name);
 export const getAgentsByCategory = (category: string) => agentLoader.getAgentsByCategory(category);
 export const refreshAgents = () => agentLoader.refresh();
+
+// Export legacy mapping utilities
+export { resolveLegacyAgentType, LEGACY_AGENT_MAPPING };
