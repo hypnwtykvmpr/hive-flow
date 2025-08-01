@@ -189,7 +189,8 @@ class AgentLoader {
    */
   async getAgent(name: string): Promise<AgentDefinition | null> {
     await this.ensureLoaded();
-    return this.agentCache.get(name) || null;
+    // First try the original name, then try the legacy mapping
+    return this.agentCache.get(name) || this.agentCache.get(resolveLegacyAgentType(name)) || null;
   }
 
   /**
