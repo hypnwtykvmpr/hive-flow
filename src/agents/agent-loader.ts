@@ -184,7 +184,9 @@ class AgentLoader {
     const currentTypes = Array.from(this.agentCache.keys());
     const legacyTypes = Object.keys(LEGACY_AGENT_MAPPING);
     // Return both current types and legacy types, removing duplicates
-    return [...new Set([...currentTypes, ...legacyTypes])].sort();
+    const combined = [...currentTypes, ...legacyTypes];
+    const uniqueTypes = Array.from(new Set(combined));
+    return uniqueTypes.sort();
   }
 
   /**
