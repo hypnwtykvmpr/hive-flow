@@ -8,6 +8,24 @@ import { glob } from 'glob';
 import { resolve, dirname } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 
+// Legacy agent type mapping for backward compatibility
+const LEGACY_AGENT_MAPPING = {
+  analyst: 'code-analyzer',
+  coordinator: 'task-orchestrator', 
+  optimizer: 'perf-analyzer',
+  documenter: 'api-docs',
+  monitor: 'performance-benchmarker',
+  specialist: 'system-architect',
+  architect: 'system-architect',
+} as const;
+
+/**
+ * Resolve legacy agent types to current equivalents
+ */
+function resolveLegacyAgentType(legacyType: string): string {
+  return LEGACY_AGENT_MAPPING[legacyType as keyof typeof LEGACY_AGENT_MAPPING] || legacyType;
+}
+
 export interface AgentDefinition {
   name: string;
   type?: string;
