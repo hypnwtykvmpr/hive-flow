@@ -230,7 +230,8 @@ class AgentLoader {
    */
   async isValidAgentType(name: string): Promise<boolean> {
     await this.ensureLoaded();
-    return this.agentCache.has(name);
+    // First try the original name, then try the legacy mapping
+    return this.agentCache.has(name) || this.agentCache.has(resolveLegacyAgentType(name));
   }
 
   /**
