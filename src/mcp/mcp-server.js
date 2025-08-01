@@ -97,17 +97,26 @@ class ClaudeFlowMCPServer {
             type: {
               type: 'string',
               enum: [
+                // Legacy types (for backward compatibility)
                 'coordinator',
-                'researcher',
-                'coder',
                 'analyst',
-                'architect',
-                'tester',
-                'reviewer',
                 'optimizer',
                 'documenter',
                 'monitor',
                 'specialist',
+                'architect',
+                // Current types
+                'task-orchestrator',
+                'code-analyzer',
+                'perf-analyzer',
+                'api-docs',
+                'performance-benchmarker',
+                'system-architect',
+                // Core types
+                'researcher',
+                'coder',
+                'tester',
+                'reviewer',
               ],
             },
             name: { type: 'string' },
