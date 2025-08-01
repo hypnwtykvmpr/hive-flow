@@ -1090,11 +1090,12 @@ class ClaudeFlowMCPServer {
 
       case 'agent_spawn':
         const agentId = `agent_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+        const resolvedType = resolveLegacyAgentType(args.type);
         const agentData = {
           id: agentId,
           swarmId: args.swarmId || (await this.getActiveSwarmId()),
-          name: args.name || `${args.type}-${Date.now()}`,
-          type: args.type,
+          name: args.name || `${resolvedType}-${Date.now()}`,
+          type: resolvedType,
           status: 'active',
           capabilities: JSON.stringify(args.capabilities || []),
           metadata: JSON.stringify({
