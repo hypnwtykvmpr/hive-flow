@@ -458,14 +458,14 @@ If you need to do X operations, they should be in 1 message, not X messages
   mcp__claude-flow__swarm_init { topology: "mesh", maxAgents: 6 }
   mcp__claude-flow__agent_spawn { type: "researcher" }
   mcp__claude-flow__agent_spawn { type: "coder" }
-  mcp__claude-flow__agent_spawn { type: "analyst" }
+  mcp__claude-flow__agent_spawn { type: "code-analyzer" }
   mcp__claude-flow__agent_spawn { type: "tester" }
-  mcp__claude-flow__agent_spawn { type: "coordinator" }
+  mcp__claude-flow__agent_spawn { type: "task-orchestrator" }
 
   // Claude Code execution - ALL in parallel
   Task("You are researcher agent. MUST coordinate via hooks...")
   Task("You are coder agent. MUST coordinate via hooks...")
-  Task("You are analyst agent. MUST coordinate via hooks...")
+  Task("You are code-analyzer agent. MUST coordinate via hooks...")
   Task("You are tester agent. MUST coordinate via hooks...")
   TodoWrite { todos: [5-10 todos with all priorities and statuses] }
 
@@ -896,15 +896,15 @@ Message 1: [BatchTool]
   - mcp__claude-flow__swarm_init
   - mcp__claude-flow__agent_spawn (researcher)
   - mcp__claude-flow__agent_spawn (coder)
-  - mcp__claude-flow__agent_spawn (analyst)
+  - mcp__claude-flow__agent_spawn (code-analyzer)
   - mcp__claude-flow__agent_spawn (tester)
-  - mcp__claude-flow__agent_spawn (coordinator)
+  - mcp__claude-flow__agent_spawn (task-orchestrator)
 
 Message 2: [BatchTool - Claude Code execution]
   // Task agents with full coordination instructions
   - Task("You are researcher agent. MANDATORY: Run hooks pre-task, post-edit, post-task. Task: Research API patterns")
   - Task("You are coder agent. MANDATORY: Run hooks pre-task, post-edit, post-task. Task: Implement REST endpoints")
-  - Task("You are analyst agent. MANDATORY: Run hooks pre-task, post-edit, post-task. Task: Analyze performance")
+  - Task("You are code-analyzer agent. MANDATORY: Run hooks pre-task, post-edit, post-task. Task: Analyze performance")
   - Task("You are tester agent. MANDATORY: Run hooks pre-task, post-edit, post-task. Task: Write comprehensive tests")
 
   // TodoWrite with ALL todos batched
