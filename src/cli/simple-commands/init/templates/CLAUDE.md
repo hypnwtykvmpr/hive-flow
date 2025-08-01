@@ -804,7 +804,7 @@ See `.claude/commands/` for detailed documentation on all features.
 3. **Agent Type Distribution**: Balance agent types based on task:
    - Always include 1 task-orchestrator
    - For code-heavy tasks: more coders
-   - For design tasks: more architects/analysts
+   - For design tasks: more system-architects/code-analyzers
    - For quality tasks: more testers/reviewers
 
 **Example Auto-Decision Logic:**
