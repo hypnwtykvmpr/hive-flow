@@ -601,7 +601,7 @@ Once configured, Claude Flow MCP tools enhance Claude Code's coordination:
 - Tool: `mcp__claude-flow__agent_spawn`
 - Parameters: `{"type": "researcher", "name": "Literature Review"}`
 - Tool: `mcp__claude-flow__agent_spawn`
-- Parameters: `{"type": "analyst", "name": "Data Analysis"}`
+- Parameters: `{"type": "code-analyzer", "name": "Data Analysis"}`
 - Result: Different cognitive patterns for Claude Code to use
 
 **Step 3:** Coordinate research execution
@@ -634,7 +634,7 @@ Once configured, Claude Flow MCP tools enhance Claude Code's coordination:
 **Step 2:** Define development perspectives
 
 - Tool: `mcp__claude-flow__agent_spawn`
-- Parameters: `{"type": "architect", "name": "System Design"}`
+- Parameters: `{"type": "system-architect", "name": "System Design"}`
 - Result: Architectural thinking pattern for Claude Code
 
 **Step 3:** Coordinate implementation
