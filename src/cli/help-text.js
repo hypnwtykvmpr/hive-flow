@@ -5,7 +5,7 @@
 
 import { HelpFormatter } from './help-formatter.js';
 
-export const VERSION = '2.0.0-alpha.83';
+export const VERSION = '2.0.0-alpha.84';
 
 export const MAIN_HELP = `
 🌊 Claude-Flow v${VERSION} - Enterprise-Grade AI Agent Orchestration Platform
