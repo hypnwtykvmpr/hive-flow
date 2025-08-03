@@ -777,12 +777,6 @@ The swarm should be self-documenting - use memory_store to save all important in
         console.log('🚀 Launching Claude Code with Swarm Coordination');
         console.log('─'.repeat(60));
         
-        // Save prompt to file for reference
-        const promptFile = path.join(process.cwd(), '.claude-flow', `swarm-prompt-${Date.now()}.txt`);
-        await mkdirAsync(path.dirname(promptFile));
-        await writeTextFile(promptFile, swarmPrompt);
-        console.log(`\n✓ Swarm prompt saved to: ${promptFile}`);
-        
         // Pass the prompt directly as an argument to claude
         const claudeArgs = [swarmPrompt];
         
