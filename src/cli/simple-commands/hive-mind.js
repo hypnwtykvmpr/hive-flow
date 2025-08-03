@@ -1618,29 +1618,49 @@ async function searchMemories() {
 
     console.log(chalk.blue(`\n🔍 Searching for: "${searchTerm}"\n`));
 
-    const mcpWrapper = await getMcpWrapper();
-    const searchResult = await mcpWrapper.searchMemory('hive-mind', searchTerm);
+    // Search directly in hive.db collective_memory table
+    const dbPath = path.join(cwd(), '.hive-mind', 'hive.db');
+    const db = new Database(dbPath);
 
-    // Handle different possible response structures
-    let memories = [];
-    if (searchResult && Array.isArray(searchResult.results)) {
-      memories = searchResult.results;
-    } else if (searchResult && Array.isArray(searchResult)) {
-      memories = searchResult;
-    } else if (searchResult && searchResult.data && Array.isArray(searchResult.data)) {
-      memories = searchResult.data;
-    }
+    const searchPattern = `%${searchTerm}%`;
+    const memories = db
+      .prepare(
+        `
+        SELECT cm.*, s.name as swarm_name
+        FROM collective_memory cm
+        LEFT JOIN swarms s ON cm.swarm_id = s.id
+        WHERE cm.key LIKE ? OR cm.value LIKE ? OR cm.type LIKE ?
+        ORDER BY cm.created_at DESC
+        LIMIT 50
+      `,
+      )
+      .all(searchPattern, searchPattern, searchPattern);
+
+    db.close();
 
     if (!memories || memories.length === 0) {
       console.log(chalk.yellow('No memories found matching your search.'));
       return;
     }
 
+    console.log(chalk.gray(`Found ${memories.length} memories matching "${searchTerm}":\n`));
+
     memories.forEach((memory, index) => {
-      console.log(chalk.green(`${index + 1}. ${memory.key || `result-${index}`}`));
-      console.log(`   Category: ${memory.type || 'general'}`);
-      console.log(`   Created: ${new Date(memory.timestamp || Date.now()).toLocaleString()}`);
-      console.log(`   Value: ${JSON.stringify(memory.value || memory, null, 2)}`);
+      console.log(chalk.green(`${index + 1}. ${memory.key}`));
+      console.log(`   Swarm: ${memory.swarm_name || memory.swarm_id}`);
+      console.log(`   Type: ${memory.type || 'knowledge'}`);
+      console.log(`   Created: ${new Date(memory.created_at).toLocaleString()}`);
+      
+      // Parse and display value with highlighting
+      let displayValue = memory.value;
+      try {
+        const parsed = JSON.parse(memory.value);
+        displayValue = JSON.stringify(parsed, null, 2);
+      } catch {
+        // Keep as string
+      }
+      
+      console.log(`   Value: ${displayValue}`);
       console.log('');
     });
   } catch (error) {
