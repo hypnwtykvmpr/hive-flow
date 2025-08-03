@@ -79,7 +79,7 @@ USAGE:
 
 🎯 RECOMMENDED FOR NEW USERS:
   claude-flow hive-mind wizard     # Start here! Interactive guided setup
-  claude-flow init --sparc         # Initialize with SPARC methodology
+  claude-flow init                 # Initialize Claude Flow
   claude-flow help hive-mind       # Learn about Hive Mind features
 
 📚 Documentation: https://github.com/ruvnet/claude-flow
@@ -915,7 +915,7 @@ export function getMainHelp(plain = false) {
       },
     ],
     examples: [
-      'npx claude-flow@alpha init --sparc',
+      'npx claude-flow@alpha init',
       'claude-flow hive-mind wizard',
       'claude-flow swarm "Build REST API"',
       'claude-flow agent spawn researcher --name "Research Bot"',
