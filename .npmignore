@@ -73,6 +73,7 @@ reports/
 # Binary builds (we don't need prebuilt binaries for npm)
 bin/claude-flow-*
 bin/*.exe
+bin/claude-flow-node-pkg
 
 # Example and demo files
 examples/
