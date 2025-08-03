@@ -101,6 +101,8 @@ OPTIONS:
   --monitor            Real-time swarm monitoring
   --ui                 Interactive user interface
   --background         Run in background with progress tracking
+  --claude             Open Claude Code desktop app (when CLI not available)
+  --executor           Use built-in executor instead of Claude Code
   --analysis           Enable analysis/read-only mode (no code changes)
   --read-only          Enable read-only mode (alias for --analysis)
 
