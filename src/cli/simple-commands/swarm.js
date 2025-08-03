@@ -356,6 +356,42 @@ export async function swarmCommand(args, flags) {
     try {
       const { execSync, spawn } = await import('child_process');
 
+      // If --claude flag is used, try to open Claude Code desktop app
+      if (flags && flags.claude) {
+        console.log('🖥️  Opening Claude Code desktop app...');
+        
+        // Try to open Claude Code desktop app based on platform
+        try {
+          if (process.platform === 'darwin') {
+            // macOS
+            execSync('open -a "Claude" 2>/dev/null || open -a "Claude Code" 2>/dev/null', { stdio: 'ignore' });
+          } else if (process.platform === 'win32') {
+            // Windows
+            execSync('start "" "Claude.exe" 2>nul || start "" "Claude Code.exe" 2>nul', { stdio: 'ignore', shell: true });
+          } else {
+            // Linux
+            execSync('claude-code 2>/dev/null || xdg-open claude-code 2>/dev/null', { stdio: 'ignore' });
+          }
+          
+          console.log('✓ Attempting to open Claude Code desktop app');
+          console.log('\n📋 Copy this prompt into Claude Code:\n');
+          console.log('═'.repeat(80));
+          console.log(swarmPrompt);
+          console.log('═'.repeat(80));
+          
+          // Save prompt to file for easy access
+          const promptFile = path.join(process.cwd(), '.claude-flow', `swarm-prompt-${Date.now()}.txt`);
+          await mkdirAsync(path.dirname(promptFile));
+          await writeTextFile(promptFile, swarmPrompt);
+          console.log(`\n💾 Prompt saved to: ${promptFile}`);
+          return;
+        } catch (desktopError) {
+          console.log('⚠️  Could not open Claude Code desktop app automatically');
+          console.log('Please open Claude Code manually and paste the prompt above');
+          return;
+        }
+      }
+
       // Check if claude command exists
       let claudeAvailable = false;
       try {
