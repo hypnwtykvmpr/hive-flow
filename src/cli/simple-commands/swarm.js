@@ -359,13 +359,50 @@ export async function swarmCommand(args, flags) {
         execSync('which claude', { stdio: 'ignore' });
         claudeAvailable = true;
       } catch {
+        // If --claude flag is used, try to open Claude Code desktop app instead
+        if (flags && flags.claude) {
+          console.log('🖥️  Claude CLI not found, attempting to open Claude Code desktop app...');
+          
+          // Try to open Claude Code desktop app based on platform
+          try {
+            if (process.platform === 'darwin') {
+              // macOS
+              execSync('open -a "Claude" 2>/dev/null || open -a "Claude Code" 2>/dev/null', { stdio: 'ignore' });
+            } else if (process.platform === 'win32') {
+              // Windows
+              execSync('start "" "Claude.exe" 2>nul || start "" "Claude Code.exe" 2>nul', { stdio: 'ignore', shell: true });
+            } else {
+              // Linux
+              execSync('claude-code 2>/dev/null || xdg-open claude-code 2>/dev/null', { stdio: 'ignore' });
+            }
+            
+            console.log('✓ Attempting to open Claude Code desktop app');
+            console.log('\n📋 Copy this prompt into Claude Code:\n');
+            console.log('═'.repeat(80));
+            console.log(swarmPrompt);
+            console.log('═'.repeat(80));
+            
+            // Save prompt to file for easy access
+            const promptFile = path.join(process.cwd(), '.claude-flow', `swarm-prompt-${Date.now()}.txt`);
+            await mkdirAsync(path.dirname(promptFile));
+            await writeTextFile(promptFile, swarmPrompt);
+            console.log(`\n💾 Prompt saved to: ${promptFile}`);
+            return;
+          } catch (desktopError) {
+            console.log('⚠️  Could not open Claude Code desktop app automatically');
+            console.log('Please open Claude Code manually and paste the prompt above');
+            return;
+          }
+        }
+        
         console.log('⚠️  Claude Code CLI not found in PATH');
         console.log('Install it with: npm install -g @anthropic-ai/claude-code');
+        console.log('Or use --claude flag to open Claude Code desktop app');
         console.log('\nWould spawn Claude Code with swarm objective:');
         console.log(`📋 Objective: ${objective}`);
-        console.log(
-          '\nTo use the built-in executor instead: claude-flow swarm "objective" --executor',
-        );
+        console.log('\nOptions:');
+        console.log('  • Use --executor flag for built-in executor: claude-flow swarm "objective" --executor');
+        console.log('  • Use --claude flag to open desktop app: claude-flow swarm "objective" --claude');
         return;
       }
 
