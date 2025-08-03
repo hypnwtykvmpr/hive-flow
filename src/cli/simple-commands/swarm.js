@@ -777,13 +777,11 @@ The swarm should be self-documenting - use memory_store to save all important in
           claudeAvailable = false;
         }
         
-        if (claudeAvailable) {
-          // Claude is available, spawn it directly
-          console.log('🐝 Launching Claude Flow Swarm System...');
-          console.log(`📋 Objective: ${objective}`);
-          console.log(`🎯 Strategy: ${strategy}`);
-          console.log(`🏗️  Mode: ${mode}`);
-          console.log(`🤖 Max Agents: ${maxAgents}\n`);
+        console.log('🐝 Launching Claude Flow Swarm System...');
+        console.log(`📋 Objective: ${objective}`);
+        console.log(`🎯 Strategy: ${strategy}`);
+        console.log(`🏗️  Mode: ${mode}`);
+        console.log(`🤖 Max Agents: ${maxAgents}\n`);
         
         console.log('🚀 Launching Claude Code with Swarm Coordination');
         console.log('─'.repeat(60));
@@ -843,6 +841,21 @@ The swarm should be self-documenting - use memory_store to save all important in
           process.exit(code || 0);
         });
         
+        return;
+      } else {
+        // Claude CLI not available, provide instructions
+        console.log('⚠️  Claude CLI not found. Please install Claude Code:');
+        console.log('     https://claude.ai/download');
+        console.log('\n📋 Once installed, copy this prompt into Claude Code:\n');
+        console.log('═'.repeat(80));
+        console.log(swarmPrompt);
+        console.log('═'.repeat(80));
+        
+        // Save prompt to file for easy access
+        const promptFile = path.join(process.cwd(), '.claude-flow', `swarm-prompt-${Date.now()}.txt`);
+        await mkdirAsync(path.dirname(promptFile));
+        await writeTextFile(promptFile, swarmPrompt);
+        console.log(`\n💾 Prompt saved to: ${promptFile}`);
         return;
       }
 
