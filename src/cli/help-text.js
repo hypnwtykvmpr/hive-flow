@@ -30,7 +30,7 @@ USAGE:
   # 🐝 HIVE MIND QUICK START (NEW!):
   claude-flow hive-mind wizard          # Interactive setup wizard
   claude-flow hive-mind spawn "objective"  # Create intelligent swarm
-  claude-flow hive-mind "Build API" --claude  # Open Claude Code CLI
+  claude-flow hive-mind spawn "Build API" --claude  # Open Claude Code CLI
   
   # After setup, use without npx:
   claude-flow start --ui --swarm         # Start with swarm intelligence UI
