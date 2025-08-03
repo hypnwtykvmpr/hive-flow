@@ -210,6 +210,7 @@ OPTIONS:
   --verbose                  Enable detailed logging
   --dry-run                  Show configuration without executing
   --executor                 Use built-in executor instead of Claude Code
+  --claude                   Force open Claude Code desktop app (even without CLI)
   --output-format <format>   Output format: json, text (default: text)
   --output-file <path>       Save output to file instead of stdout
   --no-interactive           Run in non-interactive mode (auto-enabled with --output-format json)
@@ -1400,6 +1401,7 @@ OPTIONS:
   --verbose                  Enable detailed logging
   --dry-run                  Show configuration without executing
   --executor                 Use built-in executor instead of Claude Code
+  --claude                   Force open Claude Code desktop app (even without CLI)
   --output-format <format>   Output format: json, text (default: text)
   --output-file <path>       Save output to file instead of stdout
   --no-interactive           Run in non-interactive mode (auto-enabled with --output-format json)
