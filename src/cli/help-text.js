@@ -25,11 +25,12 @@ USAGE:
 
 🚀 QUICK START:
   # First time setup (creates CLAUDE.md & .claude/commands)
-  npx claude-flow@alpha init --sparc
+  npx claude-flow@alpha init
   
   # 🐝 HIVE MIND QUICK START (NEW!):
   claude-flow hive-mind wizard          # Interactive setup wizard
   claude-flow hive-mind spawn "objective"  # Create intelligent swarm
+  claude-flow hive-mind "Build API" --claude  # Open Claude Code CLI
   
   # After setup, use without npx:
   claude-flow start --ui --swarm         # Start with swarm intelligence UI
