@@ -156,7 +156,7 @@ EXAMPLES:
   claude-flow swarm "Develop user registration feature" --mode distributed
   claude-flow swarm "Optimize React app performance" --strategy optimization
   claude-flow swarm "Create microservice" --executor  # Use built-in executor
-  claude-flow swarm "Build API" --claude  # Open Claude Code desktop app
+  claude-flow swarm "Build API" --claude  # Open Claude Code CLI
   claude-flow swarm "Build API endpoints" --output-format json  # Get JSON output
   claude-flow swarm "Research AI trends" --output-format json --output-file results.json
 
@@ -165,7 +165,7 @@ DEFAULT BEHAVIOR:
   including memory coordination, agent management, and task orchestration.
   
   If Claude CLI is not available:
-  • Use --claude flag to open Claude Code desktop app
+  • Use --claude flag to open Claude Code CLI
   • Use --executor flag to run with the built-in executor
 
 STRATEGIES:
@@ -213,7 +213,7 @@ OPTIONS:
   --verbose                  Enable detailed logging
   --dry-run                  Show configuration without executing
   --executor                 Use built-in executor instead of Claude Code
-  --claude                   Force open Claude Code desktop app (even without CLI)
+  --claude                   Open Claude Code CLI
   --output-format <format>   Output format: json, text (default: text)
   --output-file <path>       Save output to file instead of stdout
   --no-interactive           Run in non-interactive mode (auto-enabled with --output-format json)
@@ -847,12 +847,12 @@ The swarm should be self-documenting - use memory_store to save all important in
       } catch {
         console.log('⚠️  Claude Code CLI not found in PATH');
         console.log('Install it with: npm install -g @anthropic-ai/claude-code');
-        console.log('Or use --claude flag to open Claude Code desktop app');
+        console.log('Or use --claude flag to open Claude Code CLI');
         console.log('\nWould spawn Claude Code with swarm objective:');
         console.log(`📋 Objective: ${objective}`);
         console.log('\nOptions:');
         console.log('  • Use --executor flag for built-in executor: claude-flow swarm "objective" --executor');
-        console.log('  • Use --claude flag to open desktop app: claude-flow swarm "objective" --claude');
+        console.log('  • Use --claude flag to open Claude Code CLI: claude-flow swarm "objective" --claude');
         return;
       }
 
@@ -896,7 +896,7 @@ The swarm should be self-documenting - use memory_store to save all important in
         
         console.log('🤖 Running in non-interactive mode with Claude CLI');
         console.log('📋 Command: claude [prompt] -p --output-format stream-json --verbose');
-        console.log('💡 Tip: Use --claude flag to open Claude Code desktop app instead');
+        console.log('💡 Tip: Use --claude flag to open Claude Code CLI instead');
       }
 
       // Spawn claude with the prompt as the first argument
@@ -1483,7 +1483,7 @@ OPTIONS:
   --verbose                  Enable detailed logging
   --dry-run                  Show configuration without executing
   --executor                 Use built-in executor instead of Claude Code
-  --claude                   Force open Claude Code desktop app (even without CLI)
+  --claude                   Open Claude Code CLI
   --output-format <format>   Output format: json, text (default: text)
   --output-file <path>       Save output to file instead of stdout
   --no-interactive           Run in non-interactive mode (auto-enabled with --output-format json)
