@@ -876,58 +876,7 @@ The swarm should be self-documenting - use memory_store to save all important in
       }
       console.log();
 
-      // swarmPrompt is already built above, just continue with the original code
-
-🎯 OBJECTIVE: ${objective}
-
-🐝 SWARM CONFIGURATION:
-- Strategy: ${strategy}
-- Mode: ${mode}
-- Max Agents: ${maxAgents}
-- Timeout: ${flags.timeout || 60} minutes
-- Parallel Execution: MANDATORY (Always use BatchTool)
-- Review Mode: ${flags.review || false}
-- Testing Mode: ${flags.testing || false}
-- Analysis Mode: ${isAnalysisMode ? 'ENABLED (Read-Only)' : 'DISABLED'}
-
-${
-  isAnalysisMode
-    ? `🔍 ANALYSIS MODE CONSTRAINTS:
-
-⚠️  READ-ONLY MODE ACTIVE - NO CODE MODIFICATIONS ALLOWED
-
-REQUIRED BEHAVIORS:
-1. ✅ READ files for analysis (Read tool)
-2. ✅ SEARCH codebases (Glob, Grep tools)
-3. ✅ ANALYZE code structure and patterns
-4. ✅ GENERATE reports and documentation
-5. ✅ CREATE analysis summaries
-6. ✅ STORE findings in memory for collaboration
-7. ✅ COMMUNICATE between agents about findings
-
-FORBIDDEN OPERATIONS:
-1. ❌ NEVER use Write tool to modify files
-2. ❌ NEVER use Edit or MultiEdit tools
-3. ❌ NEVER use Bash to run commands that modify files
-4. ❌ NEVER create new files or directories
-5. ❌ NEVER install packages or dependencies
-6. ❌ NEVER modify configuration files
-7. ❌ NEVER execute code that changes system state
-
-ALL AGENTS MUST OPERATE IN READ-ONLY MODE. Focus on:
-- Code analysis and understanding
-- Security vulnerability assessment
-- Performance bottleneck identification
-- Architecture documentation
-- Technical debt analysis
-- Dependency mapping
-- Testing strategy recommendations
-
-Generate comprehensive reports instead of making changes.
-
-`
-    : ''
-}🚨 CRITICAL: PARALLEL EXECUTION IS MANDATORY! 🚨
+      // Continue with the default swarm behavior if not using --claude flag
 
 📋 CLAUDE-FLOW SWARM BATCHTOOL INSTRUCTIONS
 
