@@ -111,6 +111,8 @@ EXAMPLES:
   claude-flow swarm "Research cloud architecture patterns" --strategy research
   claude-flow swarm "Optimize database queries" --max-agents 3 --parallel
   claude-flow swarm "Develop feature X" --strategy development --monitor --ui
+  claude-flow swarm "Build API" --claude  # Open Claude Code desktop app
+  claude-flow swarm "Create service" --executor  # Use built-in executor
   claude-flow swarm "Analyze codebase for security issues" --analysis
   claude-flow swarm "Review architecture patterns" --read-only --strategy research
 
