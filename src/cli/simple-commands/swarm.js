@@ -387,7 +387,17 @@ export async function swarmCommand(args, flags) {
           return;
         } catch (desktopError) {
           console.log('⚠️  Could not open Claude Code desktop app automatically');
-          console.log('Please open Claude Code manually and paste the prompt above');
+          console.log('Please open Claude Code manually and paste the prompt below');
+          console.log('\n📋 Copy this prompt into Claude Code:\n');
+          console.log('═'.repeat(80));
+          console.log(swarmPrompt);
+          console.log('═'.repeat(80));
+          
+          // Save prompt to file for easy access
+          const promptFile = path.join(process.cwd(), '.claude-flow', `swarm-prompt-${Date.now()}.txt`);
+          await mkdirAsync(path.dirname(promptFile));
+          await writeTextFile(promptFile, swarmPrompt);
+          console.log(`\n💾 Prompt saved to: ${promptFile}`);
           return;
         }
       }
