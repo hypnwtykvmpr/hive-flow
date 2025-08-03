@@ -73,7 +73,6 @@ USAGE:
 
 🔍 GET HELP:
   claude-flow --help                Show this help
-  claude-flow help <command>        Detailed command help
   claude-flow <command> --help      Detailed command help
 
 🎯 RECOMMENDED FOR NEW USERS:
