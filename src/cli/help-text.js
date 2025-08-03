@@ -12,9 +12,14 @@ export const MAIN_HELP = `
 
 🎯 ENTERPRISE FEATURES: Complete ruv-swarm integration with 90+ MCP tools, neural networking, and production-ready infrastructure
 🐝 NEW: Claude Code 1.0.51+ full compatibility with enhanced hooks and batch processing
-⚡ ALPHA 83: Enhanced GitHub hooks with npx commands, improved checkpoint reliability, seamless CI/CD integration
+⚡ ALPHA 84: Enhanced swarm --claude flag for direct Claude Code CLI integration
 
 USAGE:
+  npx claude-flow@alpha <command> [options]    # Run latest alpha version
+  npx claude-flow@alpha <command> --help       # Get detailed help for any command
+  npx claude-flow@alpha --help                 # Show this help
+  
+  # After local install:
   claude-flow <command> [options]
   claude-flow <command> --help    # Get detailed help for any command
 
