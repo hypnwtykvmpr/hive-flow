@@ -356,39 +356,17 @@ export async function swarmCommand(args, flags) {
     try {
       const { execSync, spawn } = await import('child_process');
 
-      // If --claude flag is used, try to open Claude Code desktop app
+      // If --claude flag is used, force Claude Code even if CLI not available
       if (flags && flags.claude) {
-        console.log('🖥️  Opening Claude Code desktop app...');
-        
-        // Try to open Claude Code desktop app based on platform
+        // Check if claude command exists
+        let claudeAvailable = false;
         try {
-          if (process.platform === 'darwin') {
-            // macOS
-            execSync('open -a "Claude" 2>/dev/null || open -a "Claude Code" 2>/dev/null', { stdio: 'ignore' });
-          } else if (process.platform === 'win32') {
-            // Windows
-            execSync('start "" "Claude.exe" 2>nul || start "" "Claude Code.exe" 2>nul', { stdio: 'ignore', shell: true });
-          } else {
-            // Linux
-            execSync('claude-code 2>/dev/null || xdg-open claude-code 2>/dev/null', { stdio: 'ignore' });
-          }
-          
-          console.log('✓ Attempting to open Claude Code desktop app');
-          console.log('\n📋 Copy this prompt into Claude Code:\n');
-          console.log('═'.repeat(80));
-          console.log(swarmPrompt);
-          console.log('═'.repeat(80));
-          
-          // Save prompt to file for easy access
-          const promptFile = path.join(process.cwd(), '.claude-flow', `swarm-prompt-${Date.now()}.txt`);
-          await mkdirAsync(path.dirname(promptFile));
-          await writeTextFile(promptFile, swarmPrompt);
-          console.log(`\n💾 Prompt saved to: ${promptFile}`);
-          return;
-        } catch (desktopError) {
-          console.log('⚠️  Could not open Claude Code desktop app automatically');
-          console.log('Please open Claude Code manually and paste the prompt below');
-          console.log('\n📋 Copy this prompt into Claude Code:\n');
+          execSync('which claude', { stdio: 'ignore' });
+          claudeAvailable = true;
+        } catch {
+          console.log('⚠️  Claude CLI not found. Please install Claude Code:');
+          console.log('     https://claude.ai/download');
+          console.log('\n📋 Once installed, copy this prompt into Claude Code:\n');
           console.log('═'.repeat(80));
           console.log(swarmPrompt);
           console.log('═'.repeat(80));
@@ -400,6 +378,73 @@ export async function swarmCommand(args, flags) {
           console.log(`\n💾 Prompt saved to: ${promptFile}`);
           return;
         }
+        
+        // Claude is available, spawn it directly
+        console.log('🐝 Launching Claude Flow Swarm System...');
+        console.log(`📋 Objective: ${objective}`);
+        console.log(`🎯 Strategy: ${strategy}`);
+        console.log(`🏗️  Mode: ${mode}`);
+        console.log(`🤖 Max Agents: ${maxAgents}\n`);
+        
+        console.log('🚀 Launching Claude Code with Swarm Coordination');
+        console.log('─'.repeat(60));
+        
+        // Save prompt to file for reference
+        const promptFile = path.join(process.cwd(), '.claude-flow', `swarm-prompt-${Date.now()}.txt`);
+        await mkdirAsync(path.dirname(promptFile));
+        await writeTextFile(promptFile, swarmPrompt);
+        console.log(`\n✓ Swarm prompt saved to: ${promptFile}`);
+        
+        // Pass the prompt directly as an argument to claude
+        const claudeArgs = [swarmPrompt];
+        
+        // Add auto-permission flag by default for swarm mode (unless explicitly disabled)
+        if (flags['dangerously-skip-permissions'] !== false && !flags['no-auto-permissions']) {
+          claudeArgs.push('--dangerously-skip-permissions');
+          console.log('🔓 Using --dangerously-skip-permissions by default for seamless swarm execution');
+        }
+        
+        // Spawn claude with the prompt as the first argument
+        const claudeProcess = spawn('claude', claudeArgs, {
+          stdio: 'inherit',
+          shell: false,
+        });
+        
+        console.log('\n✓ Claude Code launched with swarm coordination prompt!');
+        console.log('  The swarm coordinator will orchestrate all agent tasks');
+        console.log('  Use MCP tools for coordination and memory sharing');
+        console.log(`  Prompt file saved at: ${promptFile}`);
+        
+        console.log('\n💡 Pro Tips:');
+        console.log('─'.repeat(30));
+        console.log('• Use TodoWrite to track parallel tasks');
+        console.log('• Store results with mcp__claude-flow__memory_usage');
+        console.log('• Monitor progress with mcp__claude-flow__swarm_monitor');
+        console.log('• Check task status with mcp__claude-flow__task_status');
+        
+        // Set up clean termination
+        const cleanup = () => {
+          console.log('\n🛑 Shutting down swarm gracefully...');
+          if (claudeProcess && !claudeProcess.killed) {
+            claudeProcess.kill('SIGTERM');
+          }
+          process.exit(0);
+        };
+        
+        process.on('SIGINT', cleanup);
+        process.on('SIGTERM', cleanup);
+        
+        // Wait for claude to exit
+        claudeProcess.on('exit', (code) => {
+          if (code === 0) {
+            console.log('\n✓ Swarm execution completed successfully');
+          } else if (code !== null) {
+            console.log(`\n✗ Swarm execution exited with code ${code}`);
+          }
+          process.exit(code || 0);
+        });
+        
+        return;
       }
 
       // Check if claude command exists
