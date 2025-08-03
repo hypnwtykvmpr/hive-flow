@@ -161,10 +161,12 @@ EXAMPLES:
   claude-flow swarm "Research AI trends" --output-format json --output-file results.json
 
 DEFAULT BEHAVIOR:
-  Swarm now opens Claude Code by default with comprehensive MCP tool instructions
+  Swarm attempts to open Claude Code CLI with comprehensive MCP tool instructions
   including memory coordination, agent management, and task orchestration.
   
-  Use --executor flag to run with the built-in executor instead of Claude Code
+  If Claude CLI is not available:
+  • Use --claude flag to open Claude Code desktop app
+  • Use --executor flag to run with the built-in executor
 
 STRATEGIES:
   auto           Automatically determine best approach (default)
