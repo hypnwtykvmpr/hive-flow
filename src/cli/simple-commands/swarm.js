@@ -830,8 +830,6 @@ The swarm should be self-documenting - use memory_store to save all important in
           if (err.code === 'ENOENT') {
             console.error('\n❌ Claude Code CLI not found. Please install Claude Code:');
             console.error('   https://claude.ai/download');
-            console.error('\n📋 Swarm prompt saved to:', promptFile);
-            console.error('   You can copy the prompt from the file and paste it into Claude Code.');
           } else {
             console.error('\n❌ Failed to launch Claude Code:', err.message);
           }
