@@ -218,19 +218,24 @@ export class WorkflowExecutor {
       claudeArgs.push('--dangerously-skip-permissions');
       claudeArgs.push(prompt);
     } else {
-      // Interactive mode
+      // Interactive mode - pass prompt as argument to Claude
       claudeArgs.push(prompt);
     }
     
     // Log the command being executed (truncate long prompts)
     const displayPrompt = prompt.length > 100 ? prompt.substring(0, 100) + '...' : prompt;
     const flagsDisplay = this.options.nonInteractive ? 
-      (this.options.outputFormat === 'stream-json' ? '--print --output-format stream-json --verbose' : '--print') : '';
+      (this.options.outputFormat === 'stream-json' ? '--print --output-format stream-json --verbose --dangerously-skip-permissions' : '--print --dangerously-skip-permissions') : '';
     console.log(`    🤖 Spawning Claude for ${agent.name}: claude ${flagsDisplay} "${displayPrompt}"`);
+    
+    // Determine stdio configuration based on mode
+    const stdioConfig = this.options.nonInteractive ? 
+      ['inherit', 'pipe', 'pipe'] : // Non-interactive: pipe output for processing
+      ['inherit', 'inherit', 'inherit']; // Interactive: inherit all for normal Claude interaction
     
     // Spawn Claude process
     const claudeProcess = spawn('claude', claudeArgs, {
-      stdio: ['inherit', 'pipe', 'pipe'], // Pipe stdout/stderr for processing
+      stdio: stdioConfig,
       shell: false,
     });
     
