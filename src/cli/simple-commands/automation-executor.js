@@ -384,6 +384,23 @@ export class WorkflowExecutor {
         return event.type;
     }
   }
+  
+  /**
+   * Get icon for event type
+   */
+  getEventIcon(eventType) {
+    const icons = {
+      'tool_use': '🔧',
+      'message': '💬',
+      'completion': '✅',
+      'error': '❌',
+      'status': '📊',
+      'init': '🚀',
+      'thinking': '🤔',
+      'result': '📋'
+    };
+    return icons[eventType] || '📌';
+  }
 
   /**
    * Create task-specific Claude prompt
