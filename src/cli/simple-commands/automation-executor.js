@@ -239,7 +239,7 @@ export class WorkflowExecutor {
       shell: false,
     });
     
-    // Handle stdout with stream processor for better formatting
+    // Handle stdout with stream processor for better formatting (only in non-interactive mode)
     if (this.options.nonInteractive && this.options.outputFormat === 'stream-json' && claudeProcess.stdout) {
       // Import and use stream processor
       const { createStreamProcessor } = await import('./stream-processor.js');
@@ -257,7 +257,7 @@ export class WorkflowExecutor {
       // Pipe stdout through processor
       claudeProcess.stdout.pipe(streamProcessor);
       
-      // Handle stderr
+      // Handle stderr for non-interactive mode
       claudeProcess.stderr.on('data', (data) => {
         const message = data.toString().trim();
         if (message) {
