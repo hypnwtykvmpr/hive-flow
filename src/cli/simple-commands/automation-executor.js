@@ -136,6 +136,13 @@ export class WorkflowExecutor {
 
     console.log(`🤖 Initializing ${agents.length} Claude CLI instances...`);
     
+    // In non-interactive mode, agents are spawned per task instead
+    if (this.options.nonInteractive) {
+      console.log(`📌 Note: In non-interactive mode, Claude instances are spawned per task`);
+      console.log(`📋 Each task will launch its own Claude process with the specific prompt`);
+      return;
+    }
+    
     for (const agent of agents) {
       try {
         // Check if Claude CLI is available
