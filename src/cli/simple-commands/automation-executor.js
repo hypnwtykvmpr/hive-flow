@@ -221,7 +221,13 @@ export class WorkflowExecutor {
       let buffer = '';
       
       claudeProcess.stdout.on('data', (data) => {
-        buffer += data.toString();
+        const dataStr = data.toString();
+        buffer += dataStr;
+        
+        // Also log raw data for debugging
+        if (this.options.logLevel === 'debug') {
+          console.log(`[DEBUG] Raw stdout from ${agent.name}:`, dataStr);
+        }
         
         // Process complete JSON objects from the stream
         const lines = buffer.split('\n');
