@@ -265,6 +265,38 @@ export class StreamJsonProcessor extends Transform {
     }
     return `${seconds}s`;
   }
+
+  formatToolParams(input) {
+    if (!input || typeof input !== 'object' || Object.keys(input).length === 0) {
+      return '';
+    }
+    
+    // Format key parameters for display
+    const keys = Object.keys(input);
+    if (keys.length === 1) {
+      const key = keys[0];
+      const value = input[key];
+      if (typeof value === 'string' && value.length < 30) {
+        return `(${key}: "${value}")`;
+      } else if (typeof value === 'number' || typeof value === 'boolean') {
+        return `(${key}: ${value})`;
+      }
+    } else if (keys.length <= 3) {
+      const params = keys.map(key => {
+        const value = input[key];
+        if (typeof value === 'string' && value.length < 20) {
+          return `${key}: "${value}"`;
+        } else if (typeof value === 'number' || typeof value === 'boolean') {
+          return `${key}: ${value}`;
+        } else {
+          return `${key}: ...`;
+        }
+      }).join(', ');
+      return `(${params})`;
+    }
+    
+    return '(...)';
+  }
 }
 
 /**
