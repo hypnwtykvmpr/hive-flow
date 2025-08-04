@@ -625,8 +625,10 @@ Execute your role in the MLE-STAR workflow with full coordination and hook integ
       }
       
       // Show updated task board
-      console.log(`\n📊 Phase ${phaseIndex + 1} Complete:`);
-      this.displayTaskBoard(taskStatuses);
+      if (!concurrentDisplay) {
+        console.log(`\n📊 Phase ${phaseIndex + 1} Complete:`);
+        this.displayTaskBoard(taskStatuses);
+      }
       
       // Stop if fail-fast and we have failures
       if (workflow.settings?.failurePolicy === 'fail-fast' && failedTasks > 0) {
