@@ -192,7 +192,10 @@ export class WorkflowExecutor {
     if (this.options.nonInteractive) {
       // Use print mode with stream-json output for non-interactive execution
       claudeArgs.push('--print');
-      claudeArgs.push('--output-format', 'stream-json');
+      if (this.options.outputFormat === 'stream-json') {
+        claudeArgs.push('--output-format', 'stream-json');
+        claudeArgs.push('--verbose'); // Required for stream-json
+      }
       claudeArgs.push(prompt);
     } else {
       // Interactive mode
