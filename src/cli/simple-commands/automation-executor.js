@@ -638,7 +638,13 @@ Execute your role in the MLE-STAR workflow with full coordination and hook integ
    * Display task board showing current status
    */
   displayTaskBoard(taskStatuses, highlightTasks = []) {
-    console.log('\n┌─ Task Status Board ─────────────────────────────────────┐');
+    const frames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+    const frameIndex = Math.floor(Date.now() / 100) % frames.length;
+    const spinner = frames[frameIndex];
+    
+    console.log('\n╔═══════════════════════════════════════════════════════════════╗');
+    console.log('║                    🤖 CONCURRENT TASK STATUS                   ║');
+    console.log('╠═══════════════════════════════════════════════════════════════╣');
     
     // Group by status
     const statusGroups = {
@@ -652,37 +658,83 @@ Execute your role in the MLE-STAR workflow with full coordination and hook integ
       statusGroups[status.status].push({ taskId, ...status });
     });
     
-    // Show in-progress tasks
+    // Show in-progress tasks with animation
     if (statusGroups['in-progress'].length > 0) {
-      console.log('│ 🔄 IN PROGRESS:                                         │');
+      console.log(`║ ${spinner} RUNNING (${statusGroups['in-progress'].length} agents):                                      ║`);
       statusGroups['in-progress'].forEach(task => {
         const duration = task.startTime ? this.formatDuration(Date.now() - task.startTime) : '';
-        console.log(`│   • ${task.name.padEnd(35)} ${duration.padStart(10)} │`);
+        const progress = this.getProgressBar(Date.now() - task.startTime, 60000); // 1 min expected
+        const agentIcon = this.getAgentIcon(task.agent);
+        console.log(`║   ${agentIcon} ${task.name.padEnd(25)} ${progress} ${duration.padStart(8)} ║`);
       });
     }
     
     // Show completed tasks
     if (statusGroups['completed'].length > 0) {
-      console.log('│ ✅ COMPLETED:                                           │');
+      console.log(`║ ✅ COMPLETED (${statusGroups['completed'].length}):                                           ║`);
       statusGroups['completed'].forEach(task => {
-        console.log(`│   • ${task.name.padEnd(35)} ${task.summary.substring(0, 15).padStart(10)} │`);
+        const duration = task.endTime && task.startTime ? 
+          this.formatDuration(task.endTime - task.startTime) : '';
+        console.log(`║   ✓ ${task.name.padEnd(35)} ${duration.padStart(10)} ║`);
       });
     }
     
     // Show failed tasks
     if (statusGroups['failed'].length > 0) {
-      console.log('│ ❌ FAILED:                                              │');
+      console.log(`║ ❌ FAILED (${statusGroups['failed'].length}):                                              ║`);
       statusGroups['failed'].forEach(task => {
-        console.log(`│   • ${task.name.padEnd(35)} ${task.summary.substring(0, 15).padStart(10)} │`);
+        const errorMsg = (task.summary || '').substring(0, 25);
+        console.log(`║   ✗ ${task.name.padEnd(25)} ${errorMsg.padEnd(20)} ║`);
       });
     }
     
     // Show pending tasks count
     if (statusGroups['pending'].length > 0) {
-      console.log(`│ ⏳ PENDING: ${statusGroups['pending'].length} tasks waiting                             │`);
+      console.log(`║ ⏳ QUEUED: ${statusGroups['pending'].length} tasks waiting                                 ║`);
     }
     
-    console.log('└─────────────────────────────────────────────────────────┘');
+    // Summary stats
+    const total = taskStatuses.size;
+    const completed = statusGroups['completed'].length;
+    const failed = statusGroups['failed'].length;
+    const progress = total > 0 ? Math.floor((completed + failed) / total * 100) : 0;
+    
+    console.log('╠═══════════════════════════════════════════════════════════════╣');
+    console.log(`║ 📊 Progress: ${progress}% (${completed}/${total}) │ ⚡ Active: ${statusGroups['in-progress'].length} │ ❌ Failed: ${failed}  ║`);
+    console.log('╚═══════════════════════════════════════════════════════════════╝');
+  }
+  
+  /**
+   * Get progress bar visualization
+   */
+  getProgressBar(elapsed, expected) {
+    const progress = Math.min(elapsed / expected, 1);
+    const filled = Math.floor(progress * 10);
+    const empty = 10 - filled;
+    return '[' + '█'.repeat(filled) + '░'.repeat(empty) + ']';
+  }
+  
+  /**
+   * Get agent icon based on type
+   */
+  getAgentIcon(agentId) {
+    const icons = {
+      'search': '🔍',
+      'foundation': '🏗️',
+      'refinement': '🔧',
+      'ensemble': '🎯',
+      'validation': '✅',
+      'coordinator': '🎮',
+      'researcher': '🔬',
+      'coder': '💻',
+      'optimizer': '⚡',
+      'architect': '🏛️',
+      'tester': '🧪'
+    };
+    
+    // Extract agent type from ID
+    const type = agentId?.split('_')[0] || 'default';
+    return icons[type] || '🤖';
   }
 
   /**
