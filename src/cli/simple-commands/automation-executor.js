@@ -393,31 +393,83 @@ export class WorkflowExecutor {
   }
 
   /**
-   * Create task-specific Claude prompt
+   * Create task-specific Claude prompt with comprehensive MLE-STAR instructions
    */
   createTaskPrompt(task, agent, workflow) {
     // Use the claudePrompt from the task if available
     if (task.claudePrompt) {
       // Apply variable substitutions to the prompt
-      let prompt = task.claudePrompt;
+      let basePrompt = task.claudePrompt;
       const allVariables = { ...workflow.variables, ...task.input };
       
       for (const [key, value] of Object.entries(allVariables)) {
         const pattern = new RegExp(`\\$\\{${key}\\}`, 'g');
-        prompt = prompt.replace(pattern, value);
+        basePrompt = basePrompt.replace(pattern, value);
       }
       
-      // Add coordination instructions
-      return `${prompt}
+      // Create comprehensive task prompt with MLE-STAR methodology
+      return `🎯 MLE-STAR AGENT TASK EXECUTION
 
-COORDINATION REQUIREMENTS:
-- Session ID: ${this.sessionId}
-- Task ID: ${task.id}
-- Use hooks for coordination: npx claude-flow@alpha hooks [command]
-- Store results in memory: npx claude-flow@alpha memory store
-- This is an automated workflow execution - complete the task and exit when done`;
+You are the **${agent.name}** (${agent.type}) in a coordinated MLE-STAR automation workflow.
+
+📋 IMMEDIATE TASK:
+${basePrompt}
+
+🤖 AGENT ROLE & SPECIALIZATION:
+${this.getAgentRoleDescription(agent.type)}
+
+🎯 AGENT CAPABILITIES:
+${agent.config?.capabilities?.join(', ') || 'general automation'}
+
+🔬 MLE-STAR METHODOLOGY FOCUS:
+${this.getMethodologyGuidance(agent.type)}
+
+🔧 COORDINATION REQUIREMENTS:
+1. **HOOKS INTEGRATION** (CRITICAL):
+   - BEFORE starting: \`npx claude-flow@alpha hooks pre-task --description "${task.description}"\`
+   - AFTER each file operation: \`npx claude-flow@alpha hooks post-edit --file "[filepath]"\`
+   - WHEN complete: \`npx claude-flow@alpha hooks post-task --task-id "${task.id}"\`
+
+2. **MEMORY STORAGE** (CRITICAL):
+   - Store findings: \`npx claude-flow@alpha memory store "agent/${agent.id}/findings" "[your_findings]"\`
+   - Store results: \`npx claude-flow@alpha memory store "agent/${agent.id}/results" "[your_results]"\`
+   - Check other agents: \`npx claude-flow@alpha memory search "agent/*"\`
+
+3. **SESSION COORDINATION**:
+   - Session ID: ${this.sessionId}
+   - Execution ID: ${this.executionId}
+   - Task ID: ${task.id}
+   - Agent ID: ${agent.id}
+
+4. **WORKFLOW PIPELINE AWARENESS**:
+   - Your position: ${this.getAgentPositionInPipeline(agent.type)}
+   - Coordinate with: ${this.getCoordinationPartners(agent.type)}
+   - File naming: Use \`${agent.id}_[component].[ext]\` convention
+
+5. **OUTPUT REQUIREMENTS**:
+   - Use detailed progress reporting
+   - Document methodology decisions
+   - Provide clear deliverables
+   - Follow MLE-STAR best practices for your role
+
+🚀 EXECUTION INSTRUCTIONS:
+1. Start with hooks pre-task command
+2. Execute your specialized MLE-STAR role
+3. Store all findings and results in memory
+4. Coordinate with other agents as needed
+5. Complete with hooks post-task command
+6. Exit when task is fully complete
+
+🎯 SUCCESS CRITERIA:
+- Task objective completed according to MLE-STAR methodology
+- All coordination hooks executed successfully  
+- Results stored in memory for other agents
+- Clear documentation of approach and findings
+- Ready for next pipeline phase
+
+Begin execution now with the hooks pre-task command.`;
     } else {
-      // Fallback to agent prompt
+      // Fallback to full agent prompt
       return this.createAgentPrompt(agent);
     }
   }
