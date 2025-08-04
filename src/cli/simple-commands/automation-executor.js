@@ -59,6 +59,12 @@ export class WorkflowExecutor {
       
       if (this.options.nonInteractive) {
         console.log(`🖥️  Non-Interactive Mode: Enabled`);
+        if (this.options.outputFormat === 'stream-json') {
+          console.log();
+          console.log('🤖 Running in non-interactive mode with Claude CLI');
+          console.log('📋 Command: claude --print --output-format stream-json --verbose --dangerously-skip-permissions [prompt]');
+          console.log('💡 Each agent will show its stream-json output below');
+        }
       }
       
       console.log();
