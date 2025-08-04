@@ -38,7 +38,7 @@ export class ConcurrentDisplay {
    */
   start() {
     // Clear screen and hide cursor
-    console.log('\x1B[2J\x1B[H\x1B[?25l');
+    process.stdout.write('\x1B[2J\x1B[H\x1B[?25l');
     
     this.interval = setInterval(() => {
       this.render();
@@ -46,8 +46,14 @@ export class ConcurrentDisplay {
     
     // Restore cursor on exit
     process.on('exit', () => {
-      console.log('\x1B[?25h'); // Show cursor
+      process.stdout.write('\x1B[?25h'); // Show cursor
       this.stop();
+    });
+    
+    // Handle SIGINT/SIGTERM
+    process.on('SIGINT', () => {
+      this.stop();
+      process.exit(0);
     });
   }
 
@@ -59,7 +65,7 @@ export class ConcurrentDisplay {
       clearInterval(this.interval);
       this.interval = null;
     }
-    console.log('\x1B[?25h'); // Show cursor
+    process.stdout.write('\x1B[?25h'); // Show cursor
   }
 
   /**
@@ -122,9 +128,9 @@ export class ConcurrentDisplay {
    */
   renderHeader() {
     const width = this.options.maxWidth;
-    console.log('╔' + '═'.repeat(width - 2) + '╗');
-    console.log('║' + this.center('🤖 MLE-STAR CONCURRENT AGENT EXECUTION', width - 2) + '║');
-    console.log('╠' + '═'.repeat(width - 2) + '╣');
+    process.stdout.write('╔' + '═'.repeat(width - 2) + '╗\n');
+    process.stdout.write('║' + this.center('🤖 CONCURRENT AGENTS', width - 2) + '║\n');
+    process.stdout.write('╠' + '═'.repeat(width - 2) + '╣\n');
   }
 
   /**
@@ -132,7 +138,7 @@ export class ConcurrentDisplay {
    */
   renderAgentPanels(spinner) {
     const agentArray = Array.from(this.agents.values());
-    const columns = Math.min(3, agentArray.length); // Max 3 columns
+    const columns = Math.min(2, agentArray.length); // Max 2 columns for narrower display
     const columnWidth = Math.floor((this.options.maxWidth - 4) / columns) - 2;
     
     // Group agents by rows
@@ -154,7 +160,7 @@ export class ConcurrentDisplay {
       }
       
       line += ' ║';
-      console.log(line);
+      process.stdout.write(line + '\n');
       
       // Add separator between rows
       if (row < rows - 1) {
@@ -164,7 +170,7 @@ export class ConcurrentDisplay {
           if (col < columns - 1) separator += ' │ ';
         }
         separator += ' ║';
-        console.log(separator);
+        process.stdout.write(separator + '\n');
       }
     }
   }
@@ -229,13 +235,13 @@ export class ConcurrentDisplay {
     const failed = agents.filter(a => a.status === 'failed').length;
     const total = agents.length;
     
-    console.log('╠' + '═'.repeat(width - 2) + '╣');
+    process.stdout.write('╠' + '═'.repeat(width - 2) + '╣\n');
     
     const progress = total > 0 ? Math.floor((completed + failed) / total * 100) : 0;
-    const summary = `📊 Progress: ${progress}% (${completed}/${total}) │ ⚡ Active: ${active} │ ✅ Done: ${completed} │ ❌ Failed: ${failed}`;
-    console.log('║' + this.center(summary, width - 2) + '║');
+    const summary = `📊 ${progress}% │ ⚡${active} │ ✅${completed} │ ❌${failed}`;
+    process.stdout.write('║' + this.center(summary, width - 2) + '║\n');
     
-    console.log('╚' + '═'.repeat(width - 2) + '╝');
+    process.stdout.write('╚' + '═'.repeat(width - 2) + '╝\n');
   }
 
   /**
