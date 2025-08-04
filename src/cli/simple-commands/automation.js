@@ -283,7 +283,7 @@ async function runWorkflowCommand(subArgs, flags) {
     const executor = new WorkflowExecutor({
       enableClaude: options.claude || false,
       nonInteractive: options['non-interactive'] || options.nonInteractive || false,
-      outputFormat: options['output-format'] || 'text',
+      outputFormat: options['output-format'] || (options['non-interactive'] || options.nonInteractive ? 'stream-json' : 'text'),
       maxConcurrency: parseInt(options['max-concurrency']) || 3,
       timeout: parseInt(options.timeout) || 3600000,
       logLevel: options.verbose ? 'debug' : 'info'
