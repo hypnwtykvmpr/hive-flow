@@ -1,0 +1,76 @@
+{
+  "name": "Swarm Coordination Test",
+  "version": "1.0.0",
+  "description": "Test workflow for validating swarm coordination capabilities",
+  "swarm": {
+    "id": "swarm_1754322443980_n8tvpu2fz",
+    "topology": "hierarchical",
+    "maxAgents": 3,
+    "strategy": "balanced"
+  },
+  "agents": [
+    {
+      "id": "agent_1754322443993_ojp33k",
+      "type": "coordinator",
+      "name": "SwarmLead",
+      "capabilities": ["orchestration", "monitoring", "decision-making"]
+    },
+    {
+      "id": "agent_1754322444006_933weh",
+      "type": "researcher", 
+      "name": "DataAnalyst",
+      "capabilities": ["analysis", "documentation", "pattern-recognition"]
+    },
+    {
+      "id": "agent_1754322444016_mvd6sq",
+      "type": "coder",
+      "name": "Developer",
+      "capabilities": ["implementation", "testing", "optimization"]
+    }
+  ],
+  "workflow": {
+    "phases": [
+      {
+        "name": "Initialization",
+        "status": "completed",
+        "tasks": [
+          "Initialize swarm topology",
+          "Spawn coordinator agent",
+          "Spawn researcher agent",
+          "Spawn coder agent"
+        ]
+      },
+      {
+        "name": "Communication Test",
+        "status": "completed",
+        "tasks": [
+          "Test agent-to-agent messaging",
+          "Validate memory synchronization",
+          "Check collective memory access"
+        ]
+      },
+      {
+        "name": "Coordination Test",
+        "status": "in_progress",
+        "tasks": [
+          "Execute parallel task distribution",
+          "Monitor task dependencies",
+          "Validate result aggregation"
+        ]
+      }
+    ]
+  },
+  "metrics": {
+    "initialization_time": "73ms",
+    "agent_spawn_time": "23ms average",
+    "memory_operations": 5,
+    "coordination_efficiency": "pending"
+  },
+  "test_results": {
+    "swarm_initialization": "✅ Success",
+    "agent_spawning": "✅ Success (3/3 agents)",
+    "memory_storage": "✅ Success (5 items stored)",
+    "task_orchestration": "✅ Success (task created)",
+    "communication": "🔄 Testing in progress"
+  }
+}
