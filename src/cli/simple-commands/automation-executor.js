@@ -43,6 +43,7 @@ export class WorkflowExecutor {
     this.claudeInstances = new Map();
     this.results = new Map();
     this.errors = [];
+    this.currentWorkflow = null;
     
     // Hooks integration
     this.hooksEnabled = true;
