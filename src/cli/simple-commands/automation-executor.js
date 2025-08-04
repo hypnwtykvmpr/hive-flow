@@ -762,7 +762,9 @@ Execute your role in the MLE-STAR workflow with full coordination and hook integ
           });
           
           // Wait for task completion or timeout
-          const timeout = task.timeout || this.options.timeout || 60000;
+          // Use longer timeout for ML tasks
+          const baseTimeout = this.options.timeout || 60000;
+          const timeout = task.timeout || (task.type?.includes('ml') || task.type?.includes('model') ? baseTimeout * 2 : baseTimeout);
           
           const completionPromise = new Promise((resolve, reject) => {
             taskClaudeProcess.on('exit', (code) => {
