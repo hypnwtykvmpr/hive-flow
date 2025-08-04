@@ -782,7 +782,13 @@ Execute your role in the MLE-STAR workflow with full coordination and hook integ
         });
       }
       
-      console.log(`    🔄 Executing: ${task.description}`);
+      if (this.options.nonInteractive && this.options.outputFormat === 'stream-json') {
+        console.log(`\n● ${task.name || task.id} - Starting Execution`);
+        console.log(`  ⎿  ${task.description}`);
+        console.log(`  ⎿  Agent: ${task.assignTo}`);
+      } else {
+        console.log(`    🔄 Executing: ${task.description}`);
+      }
       
       // For demonstration/testing mode (when Claude integration is disabled)
       // we simulate successful task completion
