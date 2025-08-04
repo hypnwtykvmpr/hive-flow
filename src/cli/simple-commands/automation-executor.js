@@ -206,9 +206,9 @@ export class WorkflowExecutor {
   async spawnClaudeInstance(agent, prompt) {
     const claudeArgs = [];
     
-    // Add non-interactive flags if needed
+    // Add flags based on mode
     if (this.options.nonInteractive) {
-      // Use print mode with stream-json output for non-interactive execution
+      // Non-interactive mode: use --print with stream-json output
       claudeArgs.push('--print');
       if (this.options.outputFormat === 'stream-json') {
         claudeArgs.push('--output-format', 'stream-json');
@@ -216,11 +216,10 @@ export class WorkflowExecutor {
       }
       // Skip permissions for automated workflows
       claudeArgs.push('--dangerously-skip-permissions');
-      claudeArgs.push(prompt);
-    } else {
-      // Interactive mode - pass prompt as argument to Claude
-      claudeArgs.push(prompt);
     }
+    
+    // Always add the prompt as the final argument
+    claudeArgs.push(prompt);
     
     // Log the command being executed (truncate long prompts)
     const displayPrompt = prompt.length > 100 ? prompt.substring(0, 100) + '...' : prompt;
