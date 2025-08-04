@@ -525,26 +525,19 @@ Execute your role in the MLE-STAR workflow with full coordination and hook integ
         });
       }
       
-      // Simulate task execution for now
-      // In a full implementation, this would:
-      // 1. Assign task to appropriate Claude instance
-      // 2. Monitor execution progress
-      // 3. Handle task communication and coordination
-      // 4. Collect and validate results
-      
       console.log(`    🔄 Executing: ${task.description}`);
-      
-      // Simulate variable execution time based on task timeout
-      const executionTime = Math.min(
-        1000 + Math.random() * 3000, // 1-4 seconds simulation
-        task.timeout || 30000
-      );
-      
-      await new Promise(resolve => setTimeout(resolve, executionTime));
       
       // For demonstration/testing mode (when Claude integration is disabled)
       // we simulate successful task completion
       if (!this.options.enableClaude) {
+        // Simulate variable execution time
+        const executionTime = Math.min(
+          1000 + Math.random() * 3000, // 1-4 seconds simulation
+          task.timeout || 30000
+        );
+        
+        await new Promise(resolve => setTimeout(resolve, executionTime));
+        
         // Simulate successful completion for demo/testing
         const result = {
           success: true,
@@ -572,33 +565,137 @@ Execute your role in the MLE-STAR workflow with full coordination and hook integ
         // When Claude integration is enabled, delegate to actual Claude instance
         const claudeInstance = this.claudeInstances.get(task.assignTo);
         if (!claudeInstance) {
-          throw new Error(`No Claude instance found for agent: ${task.assignTo}`);
-        }
-        
-        // In a full implementation, this would communicate with the Claude instance
-        // For now, return success as the framework is working
-        const result = {
-          success: true,
-          taskId: task.id,
-          duration: Date.now() - startTime,
-          output: {
-            status: 'completed',
-            agent: task.assignTo,
-            executionTime: Date.now() - startTime,
-            metadata: {
-              timestamp: new Date().toISOString(),
-              executionId: this.executionId,
-              mode: 'claude-integration'
-            }
+          // If no pre-spawned instance, create one for this task
+          const agent = workflow.agents.find(a => a.id === task.assignTo);
+          if (!agent) {
+            throw new Error(`No agent definition found for: ${task.assignTo}`);
           }
-        };
-        
-        // Store result in memory
-        if (this.hooksEnabled) {
-          await this.storeTaskResult(task.id, result.output);
+          
+          // Create task-specific prompt
+          const taskPrompt = this.createTaskPrompt(task, agent, workflow);
+          
+          // Spawn Claude instance for this specific task
+          const taskClaudeProcess = await this.spawnClaudeInstance(agent, taskPrompt);
+          
+          // Store the instance
+          this.claudeInstances.set(agent.id, {
+            process: taskClaudeProcess,
+            agent: agent,
+            status: 'active',
+            startTime: Date.now(),
+            taskId: task.id
+          });
+          
+          // Wait for task completion or timeout
+          const timeout = task.timeout || this.options.timeout || 60000;
+          
+          const completionPromise = new Promise((resolve, reject) => {
+            taskClaudeProcess.on('exit', (code) => {
+              if (code === 0) {
+                resolve({ success: true, code });
+              } else {
+                reject(new Error(`Process exited with code ${code}`));
+              }
+            });
+            
+            taskClaudeProcess.on('error', (err) => {
+              reject(err);
+            });
+          });
+          
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Task timeout')), timeout);
+          });
+          
+          try {
+            await Promise.race([completionPromise, timeoutPromise]);
+            
+            const result = {
+              success: true,
+              taskId: task.id,
+              duration: Date.now() - startTime,
+              output: {
+                status: 'completed',
+                agent: task.assignTo,
+                executionTime: Date.now() - startTime,
+                metadata: {
+                  timestamp: new Date().toISOString(),
+                  executionId: this.executionId,
+                  mode: 'claude-task-execution'
+                }
+              }
+            };
+            
+            // Store result in memory
+            if (this.hooksEnabled) {
+              await this.storeTaskResult(task.id, result.output);
+            }
+            
+            return result;
+          } catch (error) {
+            throw error;
+          }
+        } else {
+          // Use existing Claude instance
+          // In a full implementation, this would send the task to the running instance
+          // For now, we'll spawn a new instance per task for simplicity
+          
+          const agent = claudeInstance.agent;
+          const taskPrompt = this.createTaskPrompt(task, agent, workflow);
+          
+          // For now, spawn a new instance for each task
+          const taskClaudeProcess = await this.spawnClaudeInstance(agent, taskPrompt);
+          
+          // Wait for completion
+          const timeout = task.timeout || this.options.timeout || 60000;
+          
+          const completionPromise = new Promise((resolve, reject) => {
+            taskClaudeProcess.on('exit', (code) => {
+              if (code === 0) {
+                resolve({ success: true, code });
+              } else {
+                reject(new Error(`Process exited with code ${code}`));
+              }
+            });
+            
+            taskClaudeProcess.on('error', (err) => {
+              reject(err);
+            });
+          });
+          
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Task timeout')), timeout);
+          });
+          
+          try {
+            await Promise.race([completionPromise, timeoutPromise]);
+            
+            const result = {
+              success: true,
+              taskId: task.id,
+              duration: Date.now() - startTime,
+              output: {
+                status: 'completed',
+                agent: task.assignTo,
+                executionTime: Date.now() - startTime,
+                metadata: {
+                  timestamp: new Date().toISOString(),
+                  executionId: this.executionId,
+                  mode: 'claude-task-execution'
+                }
+              }
+            };
+            
+            // Store result in memory
+            if (this.hooksEnabled) {
+              await this.storeTaskResult(task.id, result.output);
+            }
+            
+            return result;
+          } catch (error) {
+            throw error;
+          }
         }
-        
-        return result;
       }
       
     } catch (error) {
