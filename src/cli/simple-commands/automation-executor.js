@@ -243,7 +243,9 @@ export class WorkflowExecutor {
         this.getAgentIcon(agent.id),
         {
           verbose: this.options.logLevel === 'debug',
-          taskId: agent.taskId
+          taskId: agent.taskId,
+          agentId: agent.id,
+          display: this.concurrentDisplay
         }
       );
       
