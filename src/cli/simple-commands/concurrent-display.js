@@ -102,8 +102,8 @@ export class ConcurrentDisplay {
     this.spinnerIndex = (this.spinnerIndex + 1) % this.spinnerFrames.length;
     const spinner = this.spinnerFrames[this.spinnerIndex];
     
-    // Clear screen and reset cursor
-    process.stdout.write('\x1B[H\x1B[2J');
+    // Clear screen completely and move cursor to home position
+    process.stdout.write('\x1B[2J\x1B[H');
     
     // Header
     this.renderHeader();
