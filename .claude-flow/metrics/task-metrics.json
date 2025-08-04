@@ -1,26 +1,10 @@
 [
   {
-    "id": "cmd-automation-1754316158876",
-    "type": "automation",
+    "id": "cmd-hooks-1754316317701",
+    "type": "hooks",
     "success": true,
-    "duration": 0.9497729999999933,
-    "timestamp": 1754316158877,
-    "metadata": {}
-  },
-  {
-    "id": "cmd-automation-1754316169992",
-    "type": "automation",
-    "success": true,
-    "duration": 1003.936485,
-    "timestamp": 1754316170996,
-    "metadata": {}
-  },
-  {
-    "id": "cmd-automation-1754316181250",
-    "type": "automation",
-    "success": true,
-    "duration": 1504.720447,
-    "timestamp": 1754316182755,
+    "duration": 7.706360999999987,
+    "timestamp": 1754316317709,
     "metadata": {}
   }
 ]
