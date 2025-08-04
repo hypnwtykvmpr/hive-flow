@@ -283,20 +283,7 @@ export class WorkflowExecutor {
     
     // Handle process events
     claudeProcess.on('error', (error) => {
-      const errorMessage = `Claude instance error for ${agent.name}: ${error.message}`;
-      
-      if (this.options.outputFormat === 'stream-json') {
-        console.log(JSON.stringify({
-          type: 'process_error',
-          agent: agent.id,
-          name: agent.name,
-          error: error.message,
-          timestamp: new Date().toISOString()
-        }));
-      } else {
-        console.error(`❌ ${errorMessage}`);
-      }
-      
+      console.error(`❌ Claude instance error for ${agent.name}:`, error.message);
       this.errors.push({
         type: 'claude_instance_error',
         agent: agent.id,
@@ -311,20 +298,6 @@ export class WorkflowExecutor {
         instance.status = code === 0 ? 'completed' : 'failed';
         instance.exitCode = code;
         instance.endTime = Date.now();
-        
-        if (this.options.outputFormat === 'stream-json') {
-          console.log(JSON.stringify({
-            type: 'agent_complete',
-            agent: agent.id,
-            name: agent.name,
-            status: instance.status,
-            exitCode: code,
-            duration: instance.endTime - instance.startTime,
-            timestamp: new Date().toISOString()
-          }));
-        } else if (this.options.nonInteractive) {
-          console.log(`    ✅ [${agent.name}] Completed with exit code: ${code}`);
-        }
       }
     });
     
