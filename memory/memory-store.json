@@ -23,6 +23,54 @@
       "value": "MCP persistence working",
       "namespace": "default",
       "timestamp": 1752726326756
+    },
+    {
+      "key": "workflow/workflow-exec-1754319459673-96rujiytv/dataset_analysis",
+      "value": "{\"status\":\"completed\",\"agent\":\"foundation_agent\",\"executionTime\":5065,\"metadata\":{\"timestamp\":\"2025-08-04T14:57:49.366Z\",\"executionId\":\"workflow-exec-1754319459673-96rujiytv\"}}",
+      "namespace": "default",
+      "timestamp": 1754319470862
+    },
+    {
+      "key": "workflow/workflow-exec-1754319459673-96rujiytv/web_search_phase",
+      "value": "{\"status\":\"completed\",\"agent\":\"search_agent\",\"executionTime\":6587,\"metadata\":{\"timestamp\":\"2025-08-04T14:57:50.888Z\",\"executionId\":\"workflow-exec-1754319459673-96rujiytv\"}}",
+      "namespace": "default",
+      "timestamp": 1754319472410
+    },
+    {
+      "key": "workflow/workflow-exec-1754319459673-96rujiytv/foundation_building",
+      "value": "{\"status\":\"completed\",\"agent\":\"foundation_agent\",\"executionTime\":3349,\"metadata\":{\"timestamp\":\"2025-08-04T14:57:55.784Z\",\"executionId\":\"workflow-exec-1754319459673-96rujiytv\"}}",
+      "namespace": "default",
+      "timestamp": 1754319477373
+    },
+    {
+      "key": "workflow/workflow-exec-1754319459673-96rujiytv/ablation_analysis",
+      "value": "{\"status\":\"completed\",\"agent\":\"refinement_agent\",\"executionTime\":2681,\"metadata\":{\"timestamp\":\"2025-08-04T14:58:00.084Z\",\"executionId\":\"workflow-exec-1754319459673-96rujiytv\"}}",
+      "namespace": "default",
+      "timestamp": 1754319481897
+    },
+    {
+      "key": "workflow/workflow-exec-1754319459673-96rujiytv/targeted_refinement",
+      "value": "{\"status\":\"completed\",\"agent\":\"refinement_agent\",\"executionTime\":4085,\"metadata\":{\"timestamp\":\"2025-08-04T14:58:06.015Z\",\"executionId\":\"workflow-exec-1754319459673-96rujiytv\"}}",
+      "namespace": "default",
+      "timestamp": 1754319487590
+    },
+    {
+      "key": "workflow/workflow-exec-1754319459673-96rujiytv/ensemble_creation",
+      "value": "{\"status\":\"completed\",\"agent\":\"ensemble_agent\",\"executionTime\":3402,\"metadata\":{\"timestamp\":\"2025-08-04T14:58:11.023Z\",\"executionId\":\"workflow-exec-1754319459673-96rujiytv\"}}",
+      "namespace": "default",
+      "timestamp": 1754319492650
+    },
+    {
+      "key": "workflow/workflow-exec-1754319459673-96rujiytv/validation_and_debugging",
+      "value": "{\"status\":\"completed\",\"agent\":\"validation_agent\",\"executionTime\":2491,\"metadata\":{\"timestamp\":\"2025-08-04T14:58:15.170Z\",\"executionId\":\"workflow-exec-1754319459673-96rujiytv\"}}",
+      "namespace": "default",
+      "timestamp": 1754319496984
+    },
+    {
+      "key": "workflow/workflow-exec-1754319459673-96rujiytv/model_deployment_prep",
+      "value": "{\"status\":\"completed\",\"agent\":\"orchestrator\",\"executionTime\":2256,\"metadata\":{\"timestamp\":\"2025-08-04T14:58:19.273Z\",\"executionId\":\"workflow-exec-1754319459673-96rujiytv\"}}",
+      "namespace": "default",
+      "timestamp": 1754319500910
     }
   ]
 }
