@@ -358,7 +358,7 @@ async function mleStarCommand(subArgs, flags) {
     const executor = new WorkflowExecutor({
       enableClaude: options.claude !== false, // Default to true for MLE-STAR
       nonInteractive: options['non-interactive'] || options.nonInteractive || false,
-      outputFormat: options['output-format'] || 'text',
+      outputFormat: options['output-format'] || (options['non-interactive'] || options.nonInteractive ? 'stream-json' : 'text'),
       maxConcurrency: parseInt(options['max-agents']) || 6,
       timeout: parseInt(options.timeout) || 14400000, // 4 hours for ML workflows
       logLevel: options.verbose ? 'debug' : 'info'
