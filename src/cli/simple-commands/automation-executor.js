@@ -233,7 +233,8 @@ export class WorkflowExecutor {
     // Log the command being executed (truncate long prompts)
     const displayPrompt = prompt.length > 100 ? prompt.substring(0, 100) + '...' : prompt;
     const flagsDisplay = this.options.nonInteractive ? 
-      (this.options.outputFormat === 'stream-json' ? '--print --output-format stream-json --verbose --dangerously-skip-permissions' : '--print --dangerously-skip-permissions') : '';
+      (this.options.outputFormat === 'stream-json' ? '--print --output-format stream-json --verbose --dangerously-skip-permissions' : '--print --dangerously-skip-permissions') : 
+      '--dangerously-skip-permissions';
     console.log(`    🤖 Spawning Claude for ${agent.name}: claude ${flagsDisplay} "${displayPrompt}"`);
     
     // Determine stdio configuration based on mode
