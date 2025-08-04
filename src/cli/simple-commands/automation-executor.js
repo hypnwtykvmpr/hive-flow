@@ -211,13 +211,14 @@ export class WorkflowExecutor {
     console.log(`    🤖 Spawning Claude for ${agent.name}: claude ${flagsDisplay} "${displayPrompt}"`);
     
     // Spawn Claude process
+    // In non-interactive mode with stream-json, use inherit to see real-time output
     const claudeProcess = spawn('claude', claudeArgs, {
-      stdio: this.options.nonInteractive ? ['pipe', 'pipe', 'pipe'] : 'inherit',
+      stdio: 'inherit', // Always inherit to see Claude's output directly
       shell: false,
     });
     
-    // Handle stream-json output in non-interactive mode
-    if (this.options.nonInteractive && claudeProcess.stdout) {
+    // No need to manually handle stdout in non-interactive mode with inherit
+    if (false && this.options.nonInteractive && claudeProcess.stdout) {
       let buffer = '';
       
       claudeProcess.stdout.on('data', (data) => {
