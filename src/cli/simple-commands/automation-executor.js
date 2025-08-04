@@ -628,6 +628,36 @@ COORDINATION KEY POINTS:
   }
 
   /**
+   * Get agent position in MLE-STAR pipeline
+   */
+  getAgentPositionInPipeline(agentType) {
+    const positions = {
+      researcher: 'Phase 1: Search & Foundation Discovery (Parallel with Foundation)',
+      coder: 'Phase 1: Foundation Model Building (Parallel with Search)',
+      optimizer: 'Phase 2: Refinement & Optimization (Sequential, depends on Phase 1)',
+      analyst: 'Phase 3: Ensemble & Meta-Learning (Parallel with Validation)',
+      tester: 'Phase 3: Validation & Debugging (Parallel with Ensemble)',
+      coordinator: 'All Phases: Workflow Orchestration & Coordination'
+    };
+    return positions[agentType] || 'Specialized task execution';
+  }
+
+  /**
+   * Get coordination partners for agent type
+   */
+  getCoordinationPartners(agentType) {
+    const partners = {
+      researcher: 'Foundation Agent (parallel), Refinement Agent (handoff)',
+      coder: 'Search Agent (parallel), Refinement Agent (handoff)',
+      optimizer: 'Search & Foundation Agents (input), Ensemble & Validation Agents (handoff)',
+      analyst: 'Refinement Agent (input), Validation Agent (parallel)',
+      tester: 'All previous agents (validation), Ensemble Agent (parallel)',
+      coordinator: 'All agents (orchestration and monitoring)'
+    };
+    return partners[agentType] || 'Other workflow agents as needed';
+  }
+
+  /**
    * Get methodology guidance for agent type
    */
   getMethodologyGuidance(agentType) {
