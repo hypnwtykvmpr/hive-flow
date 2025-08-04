@@ -286,7 +286,9 @@ async function runWorkflowCommand(subArgs, flags) {
       outputFormat: options['output-format'] || (options['non-interactive'] || options.nonInteractive ? 'stream-json' : 'text'),
       maxConcurrency: parseInt(options['max-concurrency']) || 3,
       timeout: parseInt(options.timeout) || 3600000,
-      logLevel: options.verbose ? 'debug' : 'info'
+      logLevel: options.verbose ? 'debug' : 'info',
+      workflowName: workflowData.name,
+      workflowType: workflowData.type || (workflowData.name?.toLowerCase().includes('ml') ? 'ml' : 'general')
     });
     
     // Apply variable overrides if provided
@@ -361,7 +363,9 @@ async function mleStarCommand(subArgs, flags) {
       outputFormat: options['output-format'] || (options['non-interactive'] || options.nonInteractive ? 'stream-json' : 'text'),
       maxConcurrency: parseInt(options['max-agents']) || 6,
       timeout: parseInt(options.timeout) || 14400000, // 4 hours for ML workflows
-      logLevel: options.verbose ? 'debug' : 'info'
+      logLevel: options.verbose ? 'debug' : 'info',
+      workflowName: 'MLE-STAR Machine Learning Engineering Workflow',
+      workflowType: 'ml'
     });
     
     // Prepare MLE-STAR specific variables
