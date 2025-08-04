@@ -371,6 +371,12 @@
       "value": "{\"status\":\"completed\",\"agent\":\"test_agent\",\"executionTime\":38129,\"metadata\":{\"timestamp\":\"2025-08-04T20:15:37.141Z\",\"executionId\":\"workflow-exec-1754338494368-7gfirw0jz\",\"mode\":\"claude-task-execution\"}}",
       "namespace": "default",
       "timestamp": 1754338538710
+    },
+    {
+      "key": "workflow/workflow-exec-1754338471130-irgmv29tz/test_task",
+      "value": "{\"status\":\"completed\",\"agent\":\"test_agent\",\"executionTime\":75398,\"metadata\":{\"timestamp\":\"2025-08-04T20:15:51.156Z\",\"executionId\":\"workflow-exec-1754338471130-irgmv29tz\",\"mode\":\"claude-task-execution\"}}",
+      "namespace": "default",
+      "timestamp": 1754338552694
     }
   ]
 }
