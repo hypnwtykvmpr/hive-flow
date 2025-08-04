@@ -173,6 +173,48 @@
       "value": "{\"status\":\"completed\",\"agent\":\"test_agent\",\"executionTime\":1833,\"metadata\":{\"timestamp\":\"2025-08-04T15:46:33.077Z\",\"executionId\":\"workflow-exec-1754322383041-chxfntpiy\"}}",
       "namespace": "default",
       "timestamp": 1754322394586
+    },
+    {
+      "key": "workflow/workflow-exec-1754334182006-y4nh9x04l/dataset_analysis",
+      "value": "{\"status\":\"completed\",\"agent\":\"foundation_agent\",\"executionTime\":4620,\"metadata\":{\"timestamp\":\"2025-08-04T19:03:11.275Z\",\"executionId\":\"workflow-exec-1754334182006-y4nh9x04l\"}}",
+      "namespace": "default",
+      "timestamp": 1754334192822
+    },
+    {
+      "key": "workflow/workflow-exec-1754334182006-y4nh9x04l/foundation_building",
+      "value": "{\"status\":\"completed\",\"agent\":\"foundation_agent\",\"executionTime\":3443,\"metadata\":{\"timestamp\":\"2025-08-04T19:03:16.289Z\",\"executionId\":\"workflow-exec-1754334182006-y4nh9x04l\"}}",
+      "namespace": "default",
+      "timestamp": 1754334197804
+    },
+    {
+      "key": "workflow/workflow-exec-1754334182006-y4nh9x04l/ablation_analysis",
+      "value": "{\"status\":\"completed\",\"agent\":\"refinement_agent\",\"executionTime\":2768,\"metadata\":{\"timestamp\":\"2025-08-04T19:03:20.598Z\",\"executionId\":\"workflow-exec-1754334182006-y4nh9x04l\"}}",
+      "namespace": "default",
+      "timestamp": 1754334202146
+    },
+    {
+      "key": "workflow/workflow-exec-1754334182006-y4nh9x04l/targeted_refinement",
+      "value": "{\"status\":\"completed\",\"agent\":\"refinement_agent\",\"executionTime\":2941,\"metadata\":{\"timestamp\":\"2025-08-04T19:03:25.113Z\",\"executionId\":\"workflow-exec-1754334182006-y4nh9x04l\"}}",
+      "namespace": "default",
+      "timestamp": 1754334206600
+    },
+    {
+      "key": "workflow/workflow-exec-1754334182006-y4nh9x04l/ensemble_creation",
+      "value": "{\"status\":\"completed\",\"agent\":\"ensemble_agent\",\"executionTime\":3157,\"metadata\":{\"timestamp\":\"2025-08-04T19:03:29.783Z\",\"executionId\":\"workflow-exec-1754334182006-y4nh9x04l\"}}",
+      "namespace": "default",
+      "timestamp": 1754334211310
+    },
+    {
+      "key": "workflow/workflow-exec-1754334182006-y4nh9x04l/validation_and_debugging",
+      "value": "{\"status\":\"completed\",\"agent\":\"validation_agent\",\"executionTime\":2467,\"metadata\":{\"timestamp\":\"2025-08-04T19:03:33.804Z\",\"executionId\":\"workflow-exec-1754334182006-y4nh9x04l\"}}",
+      "namespace": "default",
+      "timestamp": 1754334215308
+    },
+    {
+      "key": "workflow/workflow-exec-1754334182006-y4nh9x04l/model_deployment_prep",
+      "value": "{\"status\":\"completed\",\"agent\":\"orchestrator\",\"executionTime\":2130,\"metadata\":{\"timestamp\":\"2025-08-04T19:03:37.465Z\",\"executionId\":\"workflow-exec-1754334182006-y4nh9x04l\"}}",
+      "namespace": "default",
+      "timestamp": 1754334218981
     }
   ]
 }
