@@ -234,61 +234,37 @@ export class WorkflowExecutor {
       shell: false,
     });
     
-    // No need to manually handle stdout in non-interactive mode with inherit
-    if (false && this.options.nonInteractive && claudeProcess.stdout) {
-      let buffer = '';
-      
-      claudeProcess.stdout.on('data', (data) => {
-        const dataStr = data.toString();
-        buffer += dataStr;
-        
-        // Also log raw data for debugging
-        if (this.options.logLevel === 'debug') {
-          console.log(`[DEBUG] Raw stdout from ${agent.name}:`, dataStr);
+    // Handle stdout with stream processor for better formatting
+    if (this.options.nonInteractive && this.options.outputFormat === 'stream-json' && claudeProcess.stdout) {
+      // Import and use stream processor
+      const { createStreamProcessor } = await import('./stream-processor.js');
+      const streamProcessor = createStreamProcessor(
+        agent.name,
+        this.getAgentIcon(agent.id),
+        {
+          verbose: this.options.logLevel === 'debug',
+          taskId: agent.taskId
         }
-        
-        // Process complete JSON objects from the stream
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || ''; // Keep incomplete line in buffer
-        
-        for (const line of lines) {
-          if (line.trim()) {
-            try {
-              const event = JSON.parse(line);
-              this.handleClaudeStreamEvent(agent, event);
-            } catch (error) {
-              // Not JSON, might be regular output
-              if (this.options.outputFormat === 'stream-json') {
-                console.log(JSON.stringify({
-                  type: 'agent_output',
-                  agent: agent.id,
-                  name: agent.name,
-                  message: line,
-                  timestamp: new Date().toISOString()
-                }));
-              } else {
-                console.log(`    [${agent.name}] ${line}`);
-              }
-            }
-          }
-        }
-      });
+      );
       
+      // Pipe stdout through processor
+      claudeProcess.stdout.pipe(streamProcessor);
+      
+      // Handle stderr
       claudeProcess.stderr.on('data', (data) => {
         const message = data.toString().trim();
         if (message) {
-          if (this.options.outputFormat === 'stream-json') {
-            console.log(JSON.stringify({
-              type: 'agent_error',
-              agent: agent.id,
-              name: agent.name,
-              error: message,
-              timestamp: new Date().toISOString()
-            }));
-          } else {
-            console.error(`    ❌ [${agent.name}] Error: ${message}`);
-          }
+          console.error(`    ❌ [${agent.name}] Error: ${message}`);
         }
+      });
+    } else if (this.options.outputFormat !== 'stream-json') {
+      // For non-stream-json output, show stdout directly
+      claudeProcess.stdout.on('data', (data) => {
+        console.log(data.toString().trimEnd());
+      });
+      
+      claudeProcess.stderr.on('data', (data) => {
+        console.error(data.toString().trimEnd());
       });
     }
     
