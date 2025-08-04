@@ -444,6 +444,8 @@ COMMANDS:
   auto-agent        Automatically spawn optimal agents based on task complexity
   smart-spawn       Intelligently spawn agents based on specific requirements
   workflow-select   Select and configure optimal workflows for project types
+  run-workflow      Execute workflows from JSON/YAML files with Claude integration
+  mle-star          Run MLE-STAR Machine Learning Engineering workflow (flagship)
 
 AUTO-AGENT OPTIONS:
   --task-complexity <level>  Task complexity level (default: medium)
