@@ -365,6 +365,12 @@
       "value": "{\"status\":\"completed\",\"agent\":\"foundation_agent\",\"executionTime\":3479,\"metadata\":{\"timestamp\":\"2025-08-04T19:16:47.706Z\",\"executionId\":\"workflow-exec-1754334990741-hhstzavj6\",\"mode\":\"claude-integration\"}}",
       "namespace": "default",
       "timestamp": 1754335009459
+    },
+    {
+      "key": "workflow/workflow-exec-1754338494368-7gfirw0jz/test_task",
+      "value": "{\"status\":\"completed\",\"agent\":\"test_agent\",\"executionTime\":38129,\"metadata\":{\"timestamp\":\"2025-08-04T20:15:37.141Z\",\"executionId\":\"workflow-exec-1754338494368-7gfirw0jz\",\"mode\":\"claude-task-execution\"}}",
+      "namespace": "default",
+      "timestamp": 1754338538710
     }
   ]
 }
