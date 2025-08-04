@@ -196,6 +196,8 @@ export class WorkflowExecutor {
         claudeArgs.push('--output-format', 'stream-json');
         claudeArgs.push('--verbose'); // Required for stream-json
       }
+      // Skip permissions for automated workflows
+      claudeArgs.push('--dangerously-skip-permissions');
       claudeArgs.push(prompt);
     } else {
       // Interactive mode
