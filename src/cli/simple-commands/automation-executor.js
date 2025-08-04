@@ -264,8 +264,8 @@ export class WorkflowExecutor {
           console.error(`    ❌ [${agent.name}] Error: ${message}`);
         }
       });
-    } else if (this.options.outputFormat !== 'stream-json') {
-      // For non-stream-json output, show stdout directly
+    } else if (this.options.nonInteractive && this.options.outputFormat !== 'stream-json') {
+      // For non-interactive non-stream-json output, show stdout directly
       claudeProcess.stdout.on('data', (data) => {
         console.log(data.toString().trimEnd());
       });
@@ -274,6 +274,7 @@ export class WorkflowExecutor {
         console.error(data.toString().trimEnd());
       });
     }
+    // Note: In interactive mode, stdio is inherited so Claude handles its own I/O
     
     // Handle process events
     claudeProcess.on('error', (error) => {
