@@ -190,17 +190,18 @@ export class WorkflowExecutor {
     
     // Add non-interactive flags if needed
     if (this.options.nonInteractive) {
-      // Use non-interactive mode with stream-json output
-      claudeArgs.push(prompt);
-      claudeArgs.push('--non-interactive');
+      // Use print mode with stream-json output for non-interactive execution
+      claudeArgs.push('--print');
       claudeArgs.push('--output-format', 'stream-json');
+      claudeArgs.push(prompt);
     } else {
       // Interactive mode
       claudeArgs.push(prompt);
     }
     
-    // Log the command being executed
-    console.log(`    🤖 Spawning Claude for ${agent.name}:`, `claude ${claudeArgs.join(' ')}`);
+    // Log the command being executed (truncate long prompts)
+    const displayPrompt = prompt.length > 100 ? prompt.substring(0, 100) + '...' : prompt;
+    console.log(`    🤖 Spawning Claude for ${agent.name}: claude ${this.options.nonInteractive ? '--print --output-format stream-json' : ''} "${displayPrompt}"`);
     
     // Spawn Claude process
     const claudeProcess = spawn('claude', claudeArgs, {
