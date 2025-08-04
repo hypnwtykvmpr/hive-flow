@@ -347,6 +347,12 @@
       "value": "{\"status\":\"completed\",\"agent\":\"orchestrator\",\"executionTime\":2173,\"metadata\":{\"timestamp\":\"2025-08-04T19:10:33.814Z\",\"executionId\":\"workflow-exec-1754334595795-qvovqqvie\",\"mode\":\"claude-integration\"}}",
       "namespace": "default",
       "timestamp": 1754334635306
+    },
+    {
+      "key": "workflow/workflow-exec-1754334990741-hhstzavj6/dataset_analysis",
+      "value": "{\"status\":\"completed\",\"agent\":\"foundation_agent\",\"executionTime\":4968,\"metadata\":{\"timestamp\":\"2025-08-04T19:16:40.400Z\",\"executionId\":\"workflow-exec-1754334990741-hhstzavj6\",\"mode\":\"claude-integration\"}}",
+      "namespace": "default",
+      "timestamp": 1754335002342
     }
   ]
 }
