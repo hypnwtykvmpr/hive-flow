@@ -1,0 +1,26 @@
+{
+  "name": "Test Timeout Workflow",
+  "description": "Simple workflow to test timeout handling",
+  "version": "1.0.0",
+  "type": "test",
+  "agents": [
+    {
+      "id": "test_agent",
+      "name": "Test Agent",
+      "type": "researcher",
+      "config": {
+        "capabilities": ["web-search", "analysis"]
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "id": "test_task",
+      "name": "Test Task",
+      "type": "analysis",
+      "description": "Test task that should run for a bit",
+      "assignTo": "test_agent",
+      "claudePrompt": "Count from 1 to 10 slowly, pausing 2 seconds between each number. Output each number as you count."
+    }
+  ]
+}
