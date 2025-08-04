@@ -139,53 +139,56 @@ export class WorkflowExecutor {
     if (!agents || agents.length === 0) {
       return;
     }
-
-    console.log(`🤖 Initializing ${agents.length} Claude CLI instances...`);
     
-    // In non-interactive mode, agents are spawned per task instead
-    if (this.options.nonInteractive) {
-      console.log(`📌 Note: In non-interactive mode, Claude instances are spawned per task`);
-      console.log(`📋 Each task will launch its own Claude process with the specific prompt`);
-      return;
+    // Check if Claude CLI is available
+    if (!await this.isClaudeAvailable()) {
+      throw new Error('Claude CLI not found. Please install Claude Code: https://claude.ai/code');
     }
-    
-    for (const agent of agents) {
+
+    if (this.options.nonInteractive) {
+      // Non-interactive mode: agents are spawned per task instead
+      console.log(`🤖 Non-interactive mode: Claude instances will be spawned per task`);
+      console.log(`📋 Each task will launch its own Claude process with specific prompts`);
+      return;
+    } else {
+      // Interactive mode: spawn single Claude instance with master coordination prompt
+      console.log(`🤖 Interactive mode: Initializing single Claude instance for workflow coordination...`);
+      
       try {
-        // Check if Claude CLI is available
-        if (!await this.isClaudeAvailable()) {
-          throw new Error('Claude CLI not found. Please install Claude Code: https://claude.ai/code');
-        }
+        // Create master coordination prompt for all agents and workflow
+        const masterPrompt = this.createMasterCoordinationPrompt(agents);
         
-        // Create agent-specific prompt
-        const agentPrompt = this.createAgentPrompt(agent);
+        // Spawn single Claude instance for workflow coordination
+        const claudeProcess = await this.spawnClaudeInstance({
+          id: 'master-coordinator',
+          name: 'Workflow Coordinator',
+          type: 'coordinator'
+        }, masterPrompt);
         
-        // Spawn Claude instance for this agent
-        const claudeProcess = await this.spawnClaudeInstance(agent, agentPrompt);
-        
-        this.claudeInstances.set(agent.id, {
+        // Store as master coordinator
+        this.claudeInstances.set('master-coordinator', {
           process: claudeProcess,
-          agent: agent,
+          agent: { id: 'master-coordinator', name: 'Workflow Coordinator', type: 'coordinator' },
           status: 'active',
-          startTime: Date.now()
+          startTime: Date.now(),
+          agents: agents // Store agent definitions for reference
         });
         
-        console.log(`  ✅ ${agent.name} (${agent.type}) - PID: ${claudeProcess.pid}`);
+        console.log(`  ✅ Master Workflow Coordinator (PID: ${claudeProcess.pid})`);
+        console.log(`  🎯 Coordinating ${agents.length} sub-agents via concurrent streams`);
+        console.log(`  📋 Agents: ${agents.map(a => a.name).join(', ')}`);
         
       } catch (error) {
-        console.error(`  ❌ Failed to initialize ${agent.name}: ${error.message}`);
+        console.error(`  ❌ Failed to initialize master coordinator: ${error.message}`);
         this.errors.push({
-          type: 'agent_initialization',
-          agent: agent.id,
+          type: 'master_coordinator_initialization',
           error: error.message,
           timestamp: new Date()
         });
       }
+      
+      console.log();
     }
-    
-    if (this.claudeInstances.size > 0) {
-      console.log(`✅ ${this.claudeInstances.size} Claude instances active`);
-    }
-    console.log();
   }
 
   /**
