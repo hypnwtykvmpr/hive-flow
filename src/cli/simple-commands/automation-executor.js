@@ -321,13 +321,26 @@ export class WorkflowExecutor {
    */
   handleClaudeStreamEvent(agent, event) {
     if (this.options.outputFormat === 'stream-json') {
-      // Forward the event with agent context
-      console.log(JSON.stringify({
-        ...event,
-        agent: agent.id,
-        agentName: agent.name,
-        workflowId: this.executionId
-      }));
+      // Create formatted JSON with summary
+      const formattedEvent = {
+        timestamp: new Date().toISOString(),
+        agent: {
+          id: agent.id,
+          name: agent.name,
+          type: agent.type
+        },
+        workflow: {
+          id: this.executionId,
+          phase: this.currentPhase || 'unknown'
+        },
+        event: {
+          type: event.type,
+          summary: this.getEventSummary(event),
+          ...event
+        }
+      };
+      
+      console.log(JSON.stringify(formattedEvent, null, 2));
     } else {
       // Format output for text mode
       switch (event.type) {
@@ -349,6 +362,26 @@ export class WorkflowExecutor {
             console.log(`    [${agent.name}] ${event.type}: ${JSON.stringify(event)}`);
           }
       }
+    }
+  }
+  
+  /**
+   * Get a brief summary of an event
+   */
+  getEventSummary(event) {
+    switch (event.type) {
+      case 'tool_use':
+        return `Using ${event.name} tool`;
+      case 'message':
+        return event.content?.substring(0, 100) + (event.content?.length > 100 ? '...' : '');
+      case 'completion':
+        return 'Task completed successfully';
+      case 'error':
+        return `Error: ${event.error}`;
+      case 'status':
+        return event.status || 'Status update';
+      default:
+        return event.type;
     }
   }
 
