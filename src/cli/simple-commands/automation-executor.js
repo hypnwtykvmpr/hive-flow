@@ -764,7 +764,16 @@ Execute your role in the MLE-STAR workflow with full coordination and hook integ
           // Wait for task completion or timeout
           // Use longer timeout for ML tasks
           const baseTimeout = this.options.timeout || 60000;
-          const timeout = task.timeout || (task.type?.includes('ml') || task.type?.includes('model') ? baseTimeout * 2 : baseTimeout);
+          const isMLTask = task.type?.toLowerCase().includes('ml') || 
+                          task.type?.toLowerCase().includes('model') ||
+                          task.type?.toLowerCase().includes('search') ||
+                          task.type?.toLowerCase().includes('analysis') ||
+                          this.options.workflowType === 'ml';
+          const timeout = task.timeout || (isMLTask ? Math.max(baseTimeout, 300000) : baseTimeout); // Min 5 minutes for ML tasks
+          
+          if (this.options.logLevel === 'debug' || this.options.verbose) {
+            console.log(`    ⏱️  Timeout: ${this.formatDuration(timeout)} (Base: ${this.formatDuration(baseTimeout)}, ML Task: ${isMLTask})`);
+          }
           
           const completionPromise = new Promise((resolve, reject) => {
             taskClaudeProcess.on('exit', (code) => {
