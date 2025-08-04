@@ -317,8 +317,16 @@ async function runWorkflowCommand(subArgs, flags) {
       });
     }
     
+    // Ensure process exits properly in non-interactive mode
+    if (options['non-interactive'] || options.nonInteractive) {
+      process.exit(result.success ? 0 : 1);
+    }
+    
   } catch (error) {
     printError(`Failed to execute workflow: ${error.message}`);
+    if (options['non-interactive'] || options.nonInteractive) {
+      process.exit(1);
+    }
   }
 }
 
