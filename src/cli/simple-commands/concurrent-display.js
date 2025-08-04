@@ -7,7 +7,7 @@ export class ConcurrentDisplay {
   constructor(agents = [], options = {}) {
     this.agents = new Map();
     this.options = {
-      maxWidth: process.stdout.columns || 120,
+      maxWidth: Math.min(process.stdout.columns || 80, 80), // Cap at 80 chars for better compatibility
       updateInterval: 100,
       showTools: true,
       showTimers: true,
