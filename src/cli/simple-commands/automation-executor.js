@@ -944,6 +944,67 @@ COORDINATION KEY POINTS:
         return result;
       } else {
         // When Claude integration is enabled, delegate to actual Claude instance
+        
+        // Check if we have a master coordinator (interactive mode)
+        const masterCoordinator = this.claudeInstances.get('master-coordinator');
+        if (masterCoordinator && !this.options.nonInteractive) {
+          // Interactive mode: All tasks are coordinated by the master coordinator
+          console.log(`    🎯 Task delegated to Master Coordinator: ${task.description}`);
+          
+          // In interactive mode, the master coordinator handles all tasks
+          // We just wait for the master coordinator process to complete
+          const completionPromise = new Promise((resolve, reject) => {
+            masterCoordinator.process.on('exit', (code) => {
+              if (code === 0) {
+                resolve({ success: true, code });
+              } else {
+                reject(new Error(`Master coordinator exited with code ${code}`));
+              }
+            });
+            
+            masterCoordinator.process.on('error', (err) => {
+              reject(err);
+            });
+          });
+          
+          // For interactive mode, we use a longer timeout since user interaction is involved
+          const timeout = Math.max(this.options.timeout, 1800000); // 30 minutes minimum for interactive
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Interactive session timeout')), timeout);
+          });
+          
+          try {
+            await Promise.race([completionPromise, timeoutPromise]);
+            
+            const result = {
+              success: true,
+              taskId: task.id,
+              duration: Date.now() - startTime,
+              output: {
+                status: 'completed',
+                agent: 'master-coordinator',
+                executionTime: Date.now() - startTime,
+                metadata: {
+                  timestamp: new Date().toISOString(),
+                  executionId: this.executionId,
+                  mode: 'interactive-coordination'
+                }
+              }
+            };
+            
+            // Store result in memory
+            if (this.hooksEnabled) {
+              await this.storeTaskResult(task.id, result.output);
+            }
+            
+            return result;
+            
+          } catch (error) {
+            throw new Error(`Task execution failed: ${error.message}`);
+          }
+        }
+        
+        // Non-interactive mode or no master coordinator: use individual Claude instances
         const claudeInstance = this.claudeInstances.get(task.assignTo);
         if (!claudeInstance) {
           // If no pre-spawned instance, create one for this task
