@@ -518,6 +518,19 @@ Execute your role in the MLE-STAR workflow with full coordination and hook integ
     let failedTasks = 0;
     const totalTasks = tasks.length;
     
+    // Task status tracking
+    const taskStatuses = new Map();
+    tasks.forEach(task => {
+      taskStatuses.set(task.id, {
+        name: task.name || task.id,
+        status: 'pending',
+        agent: task.assignTo,
+        startTime: null,
+        endTime: null,
+        summary: ''
+      });
+    });
+    
     // Create task execution plan based on dependencies
     const executionPlan = this.createExecutionPlan(tasks, dependencies);
     
@@ -526,20 +539,57 @@ Execute your role in the MLE-STAR workflow with full coordination and hook integ
     
     // Execute tasks phase by phase
     for (const [phaseIndex, phaseTasks] of executionPlan.entries()) {
-      console.log(`🔄 Phase ${phaseIndex + 1}: ${phaseTasks.map(t => t.name || t.id).join(', ')}`);
+      this.currentPhase = `Phase ${phaseIndex + 1}`;
+      console.log(`\n🔄 Phase ${phaseIndex + 1}: ${phaseTasks.length} concurrent tasks`);
+      
+      // Show task board
+      this.displayTaskBoard(taskStatuses, phaseTasks);
+      
+      // Mark tasks as in-progress
+      phaseTasks.forEach(task => {
+        const status = taskStatuses.get(task.id);
+        status.status = 'in-progress';
+        status.startTime = Date.now();
+      });
       
       // Execute tasks in this phase (potentially in parallel)
-      const phasePromises = phaseTasks.map(task => this.executeTask(task, workflow));
+      const phasePromises = phaseTasks.map(async (task) => {
+        const taskStatus = taskStatuses.get(task.id);
+        
+        try {
+          // Show task starting
+          console.log(`\n  🚀 Starting: ${task.name || task.id}`);
+          console.log(`     Agent: ${task.assignTo}`);
+          console.log(`     Description: ${task.description?.substring(0, 80)}...`);
+          
+          const result = await this.executeTask(task, workflow);
+          
+          taskStatus.status = result.success ? 'completed' : 'failed';
+          taskStatus.endTime = Date.now();
+          taskStatus.summary = result.success ? 
+            `✅ Completed in ${this.formatDuration(result.duration)}` :
+            `❌ Failed: ${result.error?.message || 'Unknown error'}`;
+          
+          return result;
+        } catch (error) {
+          taskStatus.status = 'failed';
+          taskStatus.endTime = Date.now();
+          taskStatus.summary = `❌ Error: ${error.message}`;
+          throw error;
+        }
+      });
+      
+      // Wait for all phase tasks to complete
       const phaseResults = await Promise.allSettled(phasePromises);
       
       // Process phase results
       for (const [taskIndex, result] of phaseResults.entries()) {
         const task = phaseTasks[taskIndex];
+        const taskStatus = taskStatuses.get(task.id);
         
         if (result.status === 'fulfilled' && result.value.success) {
           completedTasks++;
           this.results.set(task.id, result.value);
-          console.log(`  ✅ ${task.name || task.id}`);
         } else {
           failedTasks++;
           const error = result.status === 'rejected' ? result.reason : result.value.error;
@@ -549,23 +599,28 @@ Execute your role in the MLE-STAR workflow with full coordination and hook integ
             error: error.message || error,
             timestamp: new Date()
           });
-          console.log(`  ❌ ${task.name || task.id}: ${error.message || error}`);
           
           // Check if we should fail fast
           if (workflow.settings?.failurePolicy === 'fail-fast') {
-            console.log(`🛑 Failing fast due to task failure`);
+            console.log(`\n🛑 Failing fast due to task failure`);
             break;
           }
         }
       }
       
-      console.log();
+      // Show updated task board
+      console.log(`\n📊 Phase ${phaseIndex + 1} Complete:`);
+      this.displayTaskBoard(taskStatuses);
       
       // Stop if fail-fast and we have failures
       if (workflow.settings?.failurePolicy === 'fail-fast' && failedTasks > 0) {
         break;
       }
     }
+    
+    // Final summary
+    console.log(`\n📊 Final Workflow Summary:`);
+    this.displayTaskBoard(taskStatuses);
     
     return {
       success: failedTasks === 0,
@@ -577,6 +632,57 @@ Execute your role in the MLE-STAR workflow with full coordination and hook integ
       results: Object.fromEntries(this.results),
       errors: this.errors
     };
+  }
+  
+  /**
+   * Display task board showing current status
+   */
+  displayTaskBoard(taskStatuses, highlightTasks = []) {
+    console.log('\n┌─ Task Status Board ─────────────────────────────────────┐');
+    
+    // Group by status
+    const statusGroups = {
+      'in-progress': [],
+      'completed': [],
+      'failed': [],
+      'pending': []
+    };
+    
+    taskStatuses.forEach((status, taskId) => {
+      statusGroups[status.status].push({ taskId, ...status });
+    });
+    
+    // Show in-progress tasks
+    if (statusGroups['in-progress'].length > 0) {
+      console.log('│ 🔄 IN PROGRESS:                                         │');
+      statusGroups['in-progress'].forEach(task => {
+        const duration = task.startTime ? this.formatDuration(Date.now() - task.startTime) : '';
+        console.log(`│   • ${task.name.padEnd(35)} ${duration.padStart(10)} │`);
+      });
+    }
+    
+    // Show completed tasks
+    if (statusGroups['completed'].length > 0) {
+      console.log('│ ✅ COMPLETED:                                           │');
+      statusGroups['completed'].forEach(task => {
+        console.log(`│   • ${task.name.padEnd(35)} ${task.summary.substring(0, 15).padStart(10)} │`);
+      });
+    }
+    
+    // Show failed tasks
+    if (statusGroups['failed'].length > 0) {
+      console.log('│ ❌ FAILED:                                              │');
+      statusGroups['failed'].forEach(task => {
+        console.log(`│   • ${task.name.padEnd(35)} ${task.summary.substring(0, 15).padStart(10)} │`);
+      });
+    }
+    
+    // Show pending tasks count
+    if (statusGroups['pending'].length > 0) {
+      console.log(`│ ⏳ PENDING: ${statusGroups['pending'].length} tasks waiting                             │`);
+    }
+    
+    console.log('└─────────────────────────────────────────────────────────┘');
   }
 
   /**
