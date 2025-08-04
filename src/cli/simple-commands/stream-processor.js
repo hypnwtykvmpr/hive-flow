@@ -9,6 +9,7 @@ export class StreamJsonProcessor extends Transform {
   constructor(options = {}) {
     super({ objectMode: false });
     this.buffer = '';
+    this.agentId = options.agentId;
     this.agentName = options.agentName || 'Agent';
     this.agentIcon = options.agentIcon || '🤖';
     this.taskId = options.taskId || 'unknown';
@@ -16,6 +17,7 @@ export class StreamJsonProcessor extends Transform {
     this.eventCount = 0;
     this.lastUpdate = Date.now();
     this.options = options;
+    this.display = options.display; // Reference to concurrent display
   }
 
   _transform(chunk, encoding, callback) {
