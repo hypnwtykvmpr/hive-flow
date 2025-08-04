@@ -505,9 +505,13 @@ EXAMPLES:
 
 🎯 Automation benefits:
   • Optimal resource allocation
-  • Intelligent agent selection
+  • Intelligent agent selection  
   • Workflow optimization
   • Reduced manual configuration
   • Performance-based scaling
+  • Claude CLI integration for actual execution
+  • MLE-STAR methodology for ML engineering
+  • Non-interactive mode for CI/CD integration
+  • Comprehensive workflow templates
 `);
 }
