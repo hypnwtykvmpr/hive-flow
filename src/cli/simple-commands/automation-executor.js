@@ -222,9 +222,10 @@ export class WorkflowExecutor {
         claudeArgs.push('--output-format', 'stream-json');
         claudeArgs.push('--verbose'); // Required for stream-json
       }
-      // Skip permissions for automated workflows
-      claudeArgs.push('--dangerously-skip-permissions');
     }
+    
+    // Always skip permissions for automated workflows (both interactive and non-interactive)
+    claudeArgs.push('--dangerously-skip-permissions');
     
     // Always add the prompt as the final argument
     claudeArgs.push(prompt);
