@@ -440,8 +440,16 @@ async function mleStarCommand(subArgs, flags) {
       console.log('\n' + JSON.stringify(result, null, 2));
     }
     
+    // Ensure process exits properly in non-interactive mode
+    if (options['non-interactive'] || options.nonInteractive) {
+      process.exit(result.success ? 0 : 1);
+    }
+    
   } catch (error) {
     printError(`MLE-STAR execution failed: ${error.message}`);
+    if (options['non-interactive'] || options.nonInteractive) {
+      process.exit(1);
+    }
   }
 }
 
