@@ -311,6 +311,42 @@ export class WorkflowExecutor {
   }
 
   /**
+   * Handle Claude stream events
+   */
+  handleClaudeStreamEvent(agent, event) {
+    if (this.options.outputFormat === 'stream-json') {
+      // Forward the event with agent context
+      console.log(JSON.stringify({
+        ...event,
+        agent: agent.id,
+        agentName: agent.name,
+        workflowId: this.executionId
+      }));
+    } else {
+      // Format output for text mode
+      switch (event.type) {
+        case 'tool_use':
+          console.log(`    [${agent.name}] 🔧 Using tool: ${event.name}`);
+          break;
+        case 'message':
+          console.log(`    [${agent.name}] 💬 ${event.content}`);
+          break;
+        case 'completion':
+          console.log(`    [${agent.name}] ✅ Task completed`);
+          break;
+        case 'error':
+          console.error(`    [${agent.name}] ❌ Error: ${event.error}`);
+          break;
+        default:
+          // Log other events in debug mode
+          if (this.options.logLevel === 'debug') {
+            console.log(`    [${agent.name}] ${event.type}: ${JSON.stringify(event)}`);
+          }
+      }
+    }
+  }
+
+  /**
    * Create agent-specific Claude prompt
    */
   createAgentPrompt(agent) {
