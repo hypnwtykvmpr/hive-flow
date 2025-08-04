@@ -347,6 +347,36 @@ export class WorkflowExecutor {
   }
 
   /**
+   * Create task-specific Claude prompt
+   */
+  createTaskPrompt(task, agent, workflow) {
+    // Use the claudePrompt from the task if available
+    if (task.claudePrompt) {
+      // Apply variable substitutions to the prompt
+      let prompt = task.claudePrompt;
+      const allVariables = { ...workflow.variables, ...task.input };
+      
+      for (const [key, value] of Object.entries(allVariables)) {
+        const pattern = new RegExp(`\\$\\{${key}\\}`, 'g');
+        prompt = prompt.replace(pattern, value);
+      }
+      
+      // Add coordination instructions
+      return `${prompt}
+
+COORDINATION REQUIREMENTS:
+- Session ID: ${this.sessionId}
+- Task ID: ${task.id}
+- Use hooks for coordination: npx claude-flow@alpha hooks [command]
+- Store results in memory: npx claude-flow@alpha memory store
+- This is an automated workflow execution - complete the task and exit when done`;
+    } else {
+      // Fallback to agent prompt
+      return this.createAgentPrompt(agent);
+    }
+  }
+
+  /**
    * Create agent-specific Claude prompt
    */
   createAgentPrompt(agent) {
