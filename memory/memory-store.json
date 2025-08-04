@@ -71,6 +71,36 @@
       "value": "{\"status\":\"completed\",\"agent\":\"orchestrator\",\"executionTime\":2256,\"metadata\":{\"timestamp\":\"2025-08-04T14:58:19.273Z\",\"executionId\":\"workflow-exec-1754319459673-96rujiytv\"}}",
       "namespace": "default",
       "timestamp": 1754319500910
+    },
+    {
+      "key": "workflow/workflow-exec-1754319839721-454uw778d/dataset_analysis",
+      "value": "{\"status\":\"completed\",\"agent\":\"foundation_agent\",\"executionTime\":5208,\"metadata\":{\"timestamp\":\"2025-08-04T15:04:09.621Z\",\"executionId\":\"workflow-exec-1754319839721-454uw778d\"}}",
+      "namespace": "default",
+      "timestamp": 1754319851180
+    },
+    {
+      "key": "workflow/workflow-exec-1754319839721-454uw778d/web_search_phase",
+      "value": "{\"status\":\"completed\",\"agent\":\"search_agent\",\"executionTime\":6792,\"metadata\":{\"timestamp\":\"2025-08-04T15:04:11.205Z\",\"executionId\":\"workflow-exec-1754319839721-454uw778d\"}}",
+      "namespace": "default",
+      "timestamp": 1754319852719
+    },
+    {
+      "key": "agent/search_agent/status",
+      "value": "{\"agent\":\"search_agent\",\"status\":\"ready\",\"session\":\"automation-session-1754319839721-scewi2uw3\",\"workflow\":\"workflow-exec-1754319839721-454uw778d\",\"message\":\"Search agent initialized and ready. Previous search phase completed. Ready for new search tasks or handoff to foundation agent.\"}",
+      "namespace": "default",
+      "timestamp": 1754319943914
+    },
+    {
+      "key": "agent/refinement_agent/ablation_plan",
+      "value": "{\"phase\":\"ablation_analysis\",\"components\":[\"preprocessing\",\"feature_engineering\",\"model_architecture\",\"hyperparameters\"],\"strategy\":\"component_impact_ranking\",\"timestamp\":\"2025-08-04T15:05:33Z\"}",
+      "namespace": "default",
+      "timestamp": 1754319975290
+    },
+    {
+      "key": "agent/search_agent/handoff",
+      "value": "{\"from\":\"search_agent\",\"to\":\"foundation_agent\",\"workflow\":\"workflow-exec-1754319839721-454uw778d\",\"status\":\"ready_for_foundation_phase\",\"message\":\"Web search phase completed. Ready for foundation model building based on discovered approaches.\",\"timestamp\":\"2025-08-04T15:06:15.645Z\"}",
+      "namespace": "default",
+      "timestamp": 1754319988561
     }
   ]
 }
