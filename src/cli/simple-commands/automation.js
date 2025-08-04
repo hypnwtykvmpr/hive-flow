@@ -254,6 +254,185 @@ async function workflowSelectCommand(subArgs, flags) {
   console.log(`\n📄 Workflow template saved for project: ${projectType}`);
 }
 
+/**
+ * Execute a workflow from file - NEW IMPLEMENTATION
+ */
+async function runWorkflowCommand(subArgs, flags) {
+  const workflowFile = subArgs[1];
+  const options = flags;
+
+  if (!workflowFile) {
+    printError('Usage: automation run-workflow <workflow-file> [options]');
+    console.log('\nExample:');
+    console.log('  claude-flow automation run-workflow workflow.json --claude --non-interactive');
+    return;
+  }
+
+  if (!existsSync(workflowFile)) {
+    printError(`Workflow file not found: ${workflowFile}`);
+    return;
+  }
+
+  try {
+    console.log(`🔄 Loading workflow: ${workflowFile}`);
+    
+    // Load workflow definition
+    const workflowData = await loadWorkflowFromFile(workflowFile);
+    
+    // Create executor with options
+    const executor = new WorkflowExecutor({
+      enableClaude: options.claude || false,
+      nonInteractive: options['non-interactive'] || options.nonInteractive || false,
+      outputFormat: options['output-format'] || 'text',
+      maxConcurrency: parseInt(options['max-concurrency']) || 3,
+      timeout: parseInt(options.timeout) || 3600000,
+      logLevel: options.verbose ? 'debug' : 'info'
+    });
+    
+    // Apply variable overrides if provided
+    const variables = {};
+    if (options.variables) {
+      try {
+        Object.assign(variables, JSON.parse(options.variables));
+      } catch (error) {
+        printWarning(`Invalid variables JSON: ${error.message}`);
+      }
+    }
+    
+    // Execute workflow
+    const result = await executor.executeWorkflow(workflowData, variables);
+    
+    if (options['output-format'] === 'json') {
+      console.log(JSON.stringify(result, null, 2));
+    }
+    
+    printSuccess(`Workflow execution ${result.success ? 'completed' : 'failed'}`);
+    
+    if (!result.success && result.errors.length > 0) {
+      console.log('\n❌ Errors encountered:');
+      result.errors.forEach(error => {
+        console.log(`  • ${error.type}: ${error.error}`);
+      });
+    }
+    
+  } catch (error) {
+    printError(`Failed to execute workflow: ${error.message}`);
+  }
+}
+
+/**
+ * Run MLE-STAR workflow - NEW FLAGSHIP COMMAND
+ */
+async function mleStarCommand(subArgs, flags) {
+  const options = flags;
+  
+  console.log(`🧠 MLE-STAR: Machine Learning Engineering via Search and Targeted Refinement`);
+  console.log(`🎯 This is the flagship automation workflow for ML engineering tasks`);
+  console.log();
+  
+  try {
+    // Get the built-in MLE-STAR workflow
+    const workflowPath = getMLEStarWorkflowPath();
+    
+    if (!existsSync(workflowPath)) {
+      printError('MLE-STAR workflow template not found');
+      console.log('Please ensure the template is installed at:');
+      console.log(workflowPath);
+      return;
+    }
+    
+    // Load MLE-STAR workflow
+    const workflowData = await loadWorkflowFromFile(workflowPath);
+    
+    console.log(`📋 Workflow: ${workflowData.name}`);
+    console.log(`📄 Description: ${workflowData.description}`);
+    console.log(`🎓 Methodology: Search → Foundation → Refinement → Ensemble → Validation`);
+    console.log(`⏱️  Expected Runtime: ${workflowData.metadata.expected_runtime}`);
+    console.log();
+    
+    // Detect dataset if provided
+    const datasetPath = options.dataset || options.data || './data/dataset.csv';
+    const targetColumn = options.target || 'target';
+    
+    // Create executor with MLE-STAR optimized settings
+    const executor = new WorkflowExecutor({
+      enableClaude: options.claude !== false, // Default to true for MLE-STAR
+      nonInteractive: options['non-interactive'] || options.nonInteractive || false,
+      outputFormat: options['output-format'] || 'text',
+      maxConcurrency: parseInt(options['max-agents']) || 6,
+      timeout: parseInt(options.timeout) || 14400000, // 4 hours for ML workflows
+      logLevel: options.verbose ? 'debug' : 'info'
+    });
+    
+    // Prepare MLE-STAR specific variables
+    const variables = {
+      dataset_path: datasetPath,
+      target_column: targetColumn,
+      experiment_name: options.name || `mle-star-${Date.now()}`,
+      model_output_dir: options.output || './models/',
+      search_iterations: parseInt(options['search-iterations']) || 3,
+      refinement_iterations: parseInt(options['refinement-iterations']) || 5,
+      ...((options.variables && JSON.parse(options.variables)) || {})
+    };
+    
+    console.log(`📊 Configuration:`);
+    console.log(`  Dataset: ${variables.dataset_path}`);
+    console.log(`  Target: ${variables.target_column}`);
+    console.log(`  Output: ${variables.model_output_dir}`);
+    console.log(`  Claude Integration: ${executor.options.enableClaude ? 'Enabled' : 'Disabled'}`);
+    console.log();
+    
+    if (!options.claude && !options['no-claude-warning']) {
+      printWarning('MLE-STAR works best with Claude integration. Add --claude flag for full automation.');
+      console.log('Without Claude, this will simulate the workflow execution.');
+      console.log();
+    }
+    
+    // Execute MLE-STAR workflow
+    const result = await executor.executeWorkflow(workflowData, variables);
+    
+    if (result.success) {
+      console.log();
+      printSuccess('🎉 MLE-STAR workflow completed successfully!');
+      console.log(`📊 Results: ${result.completedTasks}/${result.totalTasks} tasks completed`);
+      console.log(`⏱️  Duration: ${executor.formatDuration(result.duration)}`);
+      console.log(`🆔 Execution ID: ${result.executionId}`);
+      
+      if (result.results && Object.keys(result.results).length > 0) {
+        console.log(`\n📈 Key Results:`);
+        Object.entries(result.results).forEach(([taskId, taskResult]) => {
+          if (taskResult.output?.status === 'completed') {
+            console.log(`  ✅ ${taskId}: Completed successfully`);
+          }
+        });
+      }
+      
+      console.log(`\n💡 Next Steps:`);
+      console.log(`  • Check models in: ${variables.model_output_dir}`);
+      console.log(`  • Review experiment: ${variables.experiment_name}`);
+      console.log(`  • Validate results with your test data`);
+      
+    } else {
+      printError('❌ MLE-STAR workflow failed');
+      console.log(`📊 Progress: ${result.completedTasks}/${result.totalTasks} tasks completed`);
+      
+      if (result.errors.length > 0) {
+        console.log('\n🔍 Errors:');
+        result.errors.forEach(error => {
+          console.log(`  • ${error.type}: ${error.error}`);
+        });
+      }
+    }
+    
+    if (options['output-format'] === 'json') {
+      console.log('\n' + JSON.stringify(result, null, 2));
+    }
+    
+  } catch (error) {
+    printError(`MLE-STAR execution failed: ${error.message}`);
+  }
+}
+
 function showAutomationHelp() {
   console.log(`
 🤖 Automation Commands - Intelligent Agent & Workflow Management
