@@ -204,7 +204,9 @@ export class WorkflowExecutor {
     
     // Log the command being executed (truncate long prompts)
     const displayPrompt = prompt.length > 100 ? prompt.substring(0, 100) + '...' : prompt;
-    console.log(`    🤖 Spawning Claude for ${agent.name}: claude ${this.options.nonInteractive ? '--print --output-format stream-json' : ''} "${displayPrompt}"`);
+    const flagsDisplay = this.options.nonInteractive ? 
+      (this.options.outputFormat === 'stream-json' ? '--print --output-format stream-json --verbose' : '--print') : '';
+    console.log(`    🤖 Spawning Claude for ${agent.name}: claude ${flagsDisplay} "${displayPrompt}"`);
     
     // Spawn Claude process
     const claudeProcess = spawn('claude', claudeArgs, {
