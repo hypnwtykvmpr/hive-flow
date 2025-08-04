@@ -463,6 +463,27 @@ WORKFLOW-SELECT OPTIONS:
   --priority <priority>     Optimization priority (default: balanced)
                            Options: speed, quality, cost, balanced
 
+RUN-WORKFLOW OPTIONS:
+  --claude                  Enable Claude CLI integration for actual execution
+  --non-interactive         Run in non-interactive mode (no prompts)
+  --output-format <format>  Output format (text, json)
+  --variables <json>        Override workflow variables (JSON format)
+  --max-concurrency <n>     Maximum concurrent tasks (default: 3)
+  --timeout <ms>            Execution timeout in milliseconds
+  --verbose                 Enable detailed logging
+
+MLE-STAR OPTIONS:
+  --claude                  Enable Claude CLI integration (recommended)
+  --dataset <path>          Path to dataset file (default: ./data/dataset.csv)
+  --target <column>         Target column name (default: target)
+  --output <dir>            Model output directory (default: ./models/)
+  --name <experiment>       Experiment name for tracking
+  --search-iterations <n>   Web search iterations (default: 3)
+  --refinement-iterations <n> Refinement cycles (default: 5)
+  --max-agents <n>          Maximum agents to spawn (default: 6)
+  --non-interactive         Run without user prompts
+  --no-claude-warning       Suppress Claude integration warnings
+
 EXAMPLES:
   # Auto-spawn for complex enterprise task
   claude-flow automation auto-agent --task-complexity enterprise --swarm-id swarm-123
@@ -473,8 +494,14 @@ EXAMPLES:
   # Select workflow for API project optimized for speed
   claude-flow automation workflow-select --project-type api --priority speed
 
-  # Auto-spawn for simple task
-  claude-flow automation auto-agent --task-complexity low
+  # Execute custom workflow with Claude integration
+  claude-flow automation run-workflow my-workflow.json --claude --non-interactive
+
+  # Run MLE-STAR ML engineering workflow (flagship command)
+  claude-flow automation mle-star --dataset data/train.csv --target price --claude
+
+  # MLE-STAR with custom configuration
+  claude-flow automation mle-star --dataset sales.csv --target revenue --output models/sales/ --name "sales-prediction" --search-iterations 5
 
 🎯 Automation benefits:
   • Optimal resource allocation
