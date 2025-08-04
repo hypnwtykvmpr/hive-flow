@@ -233,16 +233,14 @@ export class StreamJsonProcessor extends Transform {
   }
 
   updateProgress() {
-    const elapsed = this.formatDuration(Date.now() - this.startTime);
-    const spinner = this.getSpinner();
-    const progress = this.getProgressBar(Date.now() - this.startTime, 60000);
-    
-    process.stdout.write(`\r    ${spinner} ${this.agentName} ${progress} ${elapsed} | Events: ${this.eventCount}`);
+    // Don't show progress updates in interactive-style mode - events handle the display
   }
 
   showFinalStatus() {
     const elapsed = this.formatDuration(Date.now() - this.startTime);
-    console.log(`\n    📊 ${this.agentName} processed ${this.eventCount} events in ${elapsed}`);
+    console.log(`\n● 📊 ${this.agentName} - Final Status`);
+    console.log(`  ⎿  Events processed: ${this.eventCount}`);
+    console.log(`  ⎿  Total duration: ${elapsed}`);
   }
 
   getSpinner() {
