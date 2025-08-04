@@ -250,7 +250,7 @@ export class WorkflowExecutor {
           verbose: this.options.logLevel === 'debug',
           taskId: agent.taskId,
           agentId: agent.id,
-          display: this.concurrentDisplay
+          display: null // Interactive-style formatting instead of concurrent display
         }
       );
       
