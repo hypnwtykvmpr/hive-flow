@@ -401,6 +401,12 @@
       "value": "{\"computer_vision\":{\"primary\":\"CNNs, Vision Transformers\",\"tasks\":\"object detection, segmentation\",\"frameworks\":\"PyTorch, TensorFlow\"},\"nlp\":{\"primary\":\"Transformers (BERT, GPT)\",\"tasks\":\"text classification, sentiment analysis\",\"preprocessing\":\"tokenization, embeddings\"},\"tabular\":{\"primary\":\"Random Forest, XGBoost, LightGBM\",\"approach\":\"feature engineering critical\",\"validation\":\"k-fold CV\"},\"time_series\":{\"primary\":\"RNNs, LSTMs, Transformers\",\"considerations\":\"seasonality, trends\",\"validation\":\"time-based splits\"}}",
       "namespace": "default",
       "timestamp": 1754339335949
+    },
+    {
+      "key": "workflow/workflow-exec-1754345302090-ymuy1ubo4/task1",
+      "value": "{\"status\":\"completed\",\"agent\":\"search_agent\",\"executionTime\":127158,\"metadata\":{\"timestamp\":\"2025-08-04T22:10:33.930Z\",\"executionId\":\"workflow-exec-1754345302090-ymuy1ubo4\",\"mode\":\"claude-task-execution\"}}",
+      "namespace": "default",
+      "timestamp": 1754345435470
     }
   ]
 }
