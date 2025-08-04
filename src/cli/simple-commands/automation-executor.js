@@ -186,17 +186,21 @@ export class WorkflowExecutor {
    * Spawn a Claude CLI instance for an agent
    */
   async spawnClaudeInstance(agent, prompt) {
-    const claudeArgs = [prompt];
+    const claudeArgs = [];
     
     // Add non-interactive flags if needed
     if (this.options.nonInteractive) {
-      claudeArgs.push('-p'); // Print mode
+      // Use non-interactive mode with stream-json output
+      claudeArgs.push(prompt);
+      claudeArgs.push('--non-interactive');
       claudeArgs.push('--output-format', 'stream-json');
-      claudeArgs.push('--verbose');
+    } else {
+      // Interactive mode
+      claudeArgs.push(prompt);
     }
     
-    // Add auto-permissions for seamless execution
-    claudeArgs.push('--dangerously-skip-permissions');
+    // Log the command being executed
+    console.log(`    🤖 Spawning Claude for ${agent.name}:`, `claude ${claudeArgs.join(' ')}`);
     
     // Spawn Claude process
     const claudeProcess = spawn('claude', claudeArgs, {
@@ -204,9 +208,74 @@ export class WorkflowExecutor {
       shell: false,
     });
     
+    // Handle stream-json output in non-interactive mode
+    if (this.options.nonInteractive && claudeProcess.stdout) {
+      let buffer = '';
+      
+      claudeProcess.stdout.on('data', (data) => {
+        buffer += data.toString();
+        
+        // Process complete JSON objects from the stream
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || ''; // Keep incomplete line in buffer
+        
+        for (const line of lines) {
+          if (line.trim()) {
+            try {
+              const event = JSON.parse(line);
+              this.handleClaudeStreamEvent(agent, event);
+            } catch (error) {
+              // Not JSON, might be regular output
+              if (this.options.outputFormat === 'stream-json') {
+                console.log(JSON.stringify({
+                  type: 'agent_output',
+                  agent: agent.id,
+                  name: agent.name,
+                  message: line,
+                  timestamp: new Date().toISOString()
+                }));
+              } else {
+                console.log(`    [${agent.name}] ${line}`);
+              }
+            }
+          }
+        }
+      });
+      
+      claudeProcess.stderr.on('data', (data) => {
+        const message = data.toString().trim();
+        if (message) {
+          if (this.options.outputFormat === 'stream-json') {
+            console.log(JSON.stringify({
+              type: 'agent_error',
+              agent: agent.id,
+              name: agent.name,
+              error: message,
+              timestamp: new Date().toISOString()
+            }));
+          } else {
+            console.error(`    ❌ [${agent.name}] Error: ${message}`);
+          }
+        }
+      });
+    }
+    
     // Handle process events
     claudeProcess.on('error', (error) => {
-      console.error(`❌ Claude instance error for ${agent.name}:`, error.message);
+      const errorMessage = `Claude instance error for ${agent.name}: ${error.message}`;
+      
+      if (this.options.outputFormat === 'stream-json') {
+        console.log(JSON.stringify({
+          type: 'process_error',
+          agent: agent.id,
+          name: agent.name,
+          error: error.message,
+          timestamp: new Date().toISOString()
+        }));
+      } else {
+        console.error(`❌ ${errorMessage}`);
+      }
+      
       this.errors.push({
         type: 'claude_instance_error',
         agent: agent.id,
@@ -221,6 +290,20 @@ export class WorkflowExecutor {
         instance.status = code === 0 ? 'completed' : 'failed';
         instance.exitCode = code;
         instance.endTime = Date.now();
+        
+        if (this.options.outputFormat === 'stream-json') {
+          console.log(JSON.stringify({
+            type: 'agent_complete',
+            agent: agent.id,
+            name: agent.name,
+            status: instance.status,
+            exitCode: code,
+            duration: instance.endTime - instance.startTime,
+            timestamp: new Date().toISOString()
+          }));
+        } else if (this.options.nonInteractive) {
+          console.log(`    ✅ [${agent.name}] Completed with exit code: ${code}`);
+        }
       }
     });
     
