@@ -461,6 +461,117 @@ Execute your role in the MLE-STAR workflow with full coordination and hook integ
   }
 
   /**
+   * Create master coordination prompt for interactive mode
+   */
+  createMasterCoordinationPrompt(agents) {
+    const workflowData = this.currentWorkflow || { name: 'MLE-STAR Workflow', description: 'Machine Learning Engineering via Search and Targeted Refinement' };
+    
+    return `🚀 MLE-STAR WORKFLOW COORDINATION MASTER
+
+You are the MASTER COORDINATOR for a comprehensive MLE-STAR (Machine Learning Engineering via Search and Targeted Refinement) workflow. 
+
+📋 WORKFLOW: ${workflowData.name}
+🎯 DESCRIPTION: ${workflowData.description}
+🆔 EXECUTION ID: ${this.executionId}
+🔄 SESSION ID: ${this.sessionId}
+
+🤖 SUB-AGENTS TO COORDINATE (${agents.length} total):
+${agents.map((agent, index) => `
+${index + 1}. ${agent.name} (${agent.type})
+   🎯 Role: ${this.getAgentRoleDescription(agent.type)}
+   📋 Capabilities: ${agent.config?.capabilities?.join(', ') || 'general automation'}
+   🆔 ID: ${agent.id}`).join('')}
+
+🔧 CRITICAL: USE CONCURRENT STREAMS FOR PARALLEL EXECUTION
+
+You MUST coordinate these agents using Claude's concurrent execution capabilities:
+
+1. **USE TASK TOOL FOR CONCURRENT AGENTS**: 
+   For each sub-agent, use the Task tool to spawn them with detailed prompts:
+   
+   Task("You are ${agent.name}. ${detailed_role_prompt}", "${agent.id}", "agent-${agent.type}")
+
+2. **PARALLEL EXECUTION PATTERN**:
+   Execute multiple agents simultaneously using the Task tool in a single response:
+   
+   \`\`\`
+   Task("Detailed prompt for Search Agent...", "search_agent", "researcher")
+   Task("Detailed prompt for Foundation Agent...", "foundation_agent", "coder") 
+   Task("Detailed prompt for Refinement Agent...", "refinement_agent", "optimizer")
+   Task("Detailed prompt for Ensemble Agent...", "ensemble_agent", "analyst")
+   Task("Detailed prompt for Validation Agent...", "validation_agent", "tester")
+   \`\`\`
+
+3. **DETAILED SUB-AGENT PROMPTS**:
+   Each Task call should include comprehensive instructions:
+   - Specific MLE-STAR role and responsibilities
+   - Required actions and deliverables
+   - Coordination requirements with other agents
+   - Output format specifications
+   - Use of --output-format stream-json for progress tracking
+
+4. **COORDINATION WORKFLOW**:
+   Phase 1: Search & Foundation (parallel)
+   Phase 2: Refinement & Optimization (depends on Phase 1)
+   Phase 3: Ensemble & Validation (depends on Phase 2)
+
+5. **OUTPUT MANAGEMENT**:
+   Instruct each agent to use appropriate Claude CLI flags:
+   - Use --print --output-format stream-json --verbose for real-time progress
+   - Coordinate results through file system and memory
+
+🎯 YOUR MISSION:
+1. Launch all ${agents.length} sub-agents using concurrent Task calls
+2. Provide detailed, specific prompts for each agent's MLE-STAR role
+3. Coordinate the workflow execution phases
+4. Monitor progress and provide updates
+5. Synthesize final results
+
+METHODOLOGY PHASES:
+${this.getMasterMethodologyGuide()}
+
+🚀 BEGIN: Start by deploying all sub-agents with detailed prompts using the Task tool for concurrent execution. Each agent should receive comprehensive instructions for their specific MLE-STAR role.`;
+  }
+
+  /**
+   * Get agent role description for coordination
+   */
+  getAgentRoleDescription(agentType) {
+    const roles = {
+      researcher: 'Web Search & Foundation Discovery - Find state-of-the-art approaches',
+      coder: 'Model Implementation & Training Pipeline - Build foundation models',  
+      optimizer: 'Performance Tuning & Architecture Refinement - Optimize models',
+      analyst: 'Ensemble Methods & Meta-Learning - Combine multiple approaches',
+      tester: 'Validation & Debugging - Ensure quality and performance',
+      coordinator: 'Workflow Orchestration - Manage overall pipeline'
+    };
+    return roles[agentType] || 'Specialized automation task execution';
+  }
+
+  /**
+   * Get comprehensive methodology guide for master coordinator
+   */
+  getMasterMethodologyGuide() {
+    return `
+PHASE 1 - SEARCH & FOUNDATION (Parallel):
+🔬 Search Agent: Research ML approaches, algorithms, and best practices
+💻 Foundation Agent: Implement baseline models and training infrastructure
+
+PHASE 2 - REFINEMENT (Sequential, depends on Phase 1):
+⚡ Refinement Agent: Optimize models, tune hyperparameters, improve performance
+
+PHASE 3 - ENSEMBLE & VALIDATION (Parallel, depends on Phase 2):
+🏛️ Ensemble Agent: Combine models, implement voting/stacking strategies
+🧪 Validation Agent: Test, debug, validate performance, generate reports
+
+COORDINATION KEY POINTS:
+- Use shared file system for intermediate results
+- Maintain communication through progress updates
+- Each phase builds on previous phases
+- Final deliverable: Production-ready ML pipeline`;
+  }
+
+  /**
    * Get methodology guidance for agent type
    */
   getMethodologyGuidance(agentType) {
