@@ -31,6 +31,11 @@ export class WorkflowExecutor {
       ...options
     };
     
+    // Increase timeout for ML workflows
+    if (options.workflowType === 'ml' || options.workflowName?.toLowerCase().includes('mle')) {
+      this.options.timeout = 7200000; // 2 hours for ML workflows
+    }
+    
     // Execution state
     this.executionId = generateId('workflow-exec');
     this.startTime = Date.now();
