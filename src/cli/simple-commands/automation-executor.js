@@ -790,7 +790,9 @@ Execute your role in the MLE-STAR workflow with full coordination and hook integ
           });
           
           const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error('Task timeout')), timeout);
+            // Use a much longer timeout for ML tasks since Claude is actively working
+            const actualTimeout = isMLTask ? Math.max(timeout, 600000) : timeout; // 10 min minimum for ML
+            setTimeout(() => reject(new Error('Task timeout')), actualTimeout);
           });
           
           try {
@@ -861,7 +863,9 @@ Execute your role in the MLE-STAR workflow with full coordination and hook integ
           });
           
           const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error('Task timeout')), timeout);
+            // Use a much longer timeout for ML tasks since Claude is actively working
+            const actualTimeout = isMLTask ? Math.max(timeout, 600000) : timeout; // 10 min minimum for ML
+            setTimeout(() => reject(new Error('Task timeout')), actualTimeout);
           });
           
           try {
