@@ -215,6 +215,90 @@
       "value": "{\"status\":\"completed\",\"agent\":\"orchestrator\",\"executionTime\":2130,\"metadata\":{\"timestamp\":\"2025-08-04T19:03:37.465Z\",\"executionId\":\"workflow-exec-1754334182006-y4nh9x04l\"}}",
       "namespace": "default",
       "timestamp": 1754334218981
+    },
+    {
+      "key": "workflow/workflow-exec-1754334425325-abvo9wpgi/dataset_analysis",
+      "value": "{\"status\":\"completed\",\"agent\":\"foundation_agent\",\"executionTime\":5162,\"metadata\":{\"timestamp\":\"2025-08-04T19:07:15.164Z\",\"executionId\":\"workflow-exec-1754334425325-abvo9wpgi\",\"mode\":\"claude-integration\"}}",
+      "namespace": "default",
+      "timestamp": 1754334436726
+    },
+    {
+      "key": "workflow/workflow-exec-1754334425325-abvo9wpgi/web_search_phase",
+      "value": "{\"status\":\"completed\",\"agent\":\"search_agent\",\"executionTime\":6750,\"metadata\":{\"timestamp\":\"2025-08-04T19:07:16.752Z\",\"executionId\":\"workflow-exec-1754334425325-abvo9wpgi\",\"mode\":\"claude-integration\"}}",
+      "namespace": "default",
+      "timestamp": 1754334438295
+    },
+    {
+      "key": "workflow/workflow-exec-1754334425325-abvo9wpgi/foundation_building",
+      "value": "{\"status\":\"completed\",\"agent\":\"foundation_agent\",\"executionTime\":2669,\"metadata\":{\"timestamp\":\"2025-08-04T19:07:20.991Z\",\"executionId\":\"workflow-exec-1754334425325-abvo9wpgi\",\"mode\":\"claude-integration\"}}",
+      "namespace": "default",
+      "timestamp": 1754334442604
+    },
+    {
+      "key": "workflow/workflow-exec-1754334425325-abvo9wpgi/ablation_analysis",
+      "value": "{\"status\":\"completed\",\"agent\":\"refinement_agent\",\"executionTime\":2850,\"metadata\":{\"timestamp\":\"2025-08-04T19:07:25.486Z\",\"executionId\":\"workflow-exec-1754334425325-abvo9wpgi\",\"mode\":\"claude-integration\"}}",
+      "namespace": "default",
+      "timestamp": 1754334447284
+    },
+    {
+      "key": "workflow/workflow-exec-1754334425325-abvo9wpgi/targeted_refinement",
+      "value": "{\"status\":\"completed\",\"agent\":\"refinement_agent\",\"executionTime\":3317,\"metadata\":{\"timestamp\":\"2025-08-04T19:07:30.638Z\",\"executionId\":\"workflow-exec-1754334425325-abvo9wpgi\",\"mode\":\"claude-integration\"}}",
+      "namespace": "default",
+      "timestamp": 1754334452322
+    },
+    {
+      "key": "workflow/workflow-exec-1754334425325-abvo9wpgi/ensemble_creation",
+      "value": "{\"status\":\"completed\",\"agent\":\"ensemble_agent\",\"executionTime\":3446,\"metadata\":{\"timestamp\":\"2025-08-04T19:07:35.798Z\",\"executionId\":\"workflow-exec-1754334425325-abvo9wpgi\",\"mode\":\"claude-integration\"}}",
+      "namespace": "default",
+      "timestamp": 1754334457432
+    },
+    {
+      "key": "workflow/workflow-exec-1754334425325-abvo9wpgi/validation_and_debugging",
+      "value": "{\"status\":\"completed\",\"agent\":\"validation_agent\",\"executionTime\":2691,\"metadata\":{\"timestamp\":\"2025-08-04T19:07:40.154Z\",\"executionId\":\"workflow-exec-1754334425325-abvo9wpgi\",\"mode\":\"claude-integration\"}}",
+      "namespace": "default",
+      "timestamp": 1754334461994
+    },
+    {
+      "key": "workflow/workflow-exec-1754334425325-abvo9wpgi/model_deployment_prep",
+      "value": "{\"status\":\"completed\",\"agent\":\"orchestrator\",\"executionTime\":2326,\"metadata\":{\"timestamp\":\"2025-08-04T19:07:44.348Z\",\"executionId\":\"workflow-exec-1754334425325-abvo9wpgi\",\"mode\":\"claude-integration\"}}",
+      "namespace": "default",
+      "timestamp": 1754334465974
+    },
+    {
+      "key": "workflow/workflow-exec-1754334479550-s1a7u59ah/research-planning",
+      "value": "{\"status\":\"completed\",\"agent\":\"research-coordinator\",\"executionTime\":3399,\"metadata\":{\"timestamp\":\"2025-08-04T19:08:07.646Z\",\"executionId\":\"workflow-exec-1754334479550-s1a7u59ah\",\"mode\":\"simulation\"}}",
+      "namespace": "default",
+      "timestamp": 1754334489210
+    },
+    {
+      "key": "workflow/workflow-exec-1754334479550-s1a7u59ah/technical-research",
+      "value": "{\"status\":\"completed\",\"agent\":\"technical-researcher\",\"executionTime\":7951,\"metadata\":{\"timestamp\":\"2025-08-04T19:08:17.188Z\",\"executionId\":\"workflow-exec-1754334479550-s1a7u59ah\",\"mode\":\"simulation\"}}",
+      "namespace": "default",
+      "timestamp": 1754334498731
+    },
+    {
+      "key": "workflow/workflow-exec-1754334479550-s1a7u59ah/ethical-research",
+      "value": "{\"status\":\"completed\",\"agent\":\"ethics-researcher\",\"executionTime\":9521,\"metadata\":{\"timestamp\":\"2025-08-04T19:08:18.758Z\",\"executionId\":\"workflow-exec-1754334479550-s1a7u59ah\",\"mode\":\"simulation\"}}",
+      "namespace": "default",
+      "timestamp": 1754334500283
+    },
+    {
+      "key": "workflow/workflow-exec-1754334479550-s1a7u59ah/business-research",
+      "value": "{\"status\":\"completed\",\"agent\":\"business-analyst\",\"executionTime\":11074,\"metadata\":{\"timestamp\":\"2025-08-04T19:08:20.311Z\",\"executionId\":\"workflow-exec-1754334479550-s1a7u59ah\",\"mode\":\"simulation\"}}",
+      "namespace": "default",
+      "timestamp": 1754334501851
+    },
+    {
+      "key": "workflow/workflow-exec-1754334479550-s1a7u59ah/data-synthesis",
+      "value": "{\"status\":\"completed\",\"agent\":\"data-synthesizer\",\"executionTime\":3655,\"metadata\":{\"timestamp\":\"2025-08-04T19:08:25.533Z\",\"executionId\":\"workflow-exec-1754334479550-s1a7u59ah\",\"mode\":\"simulation\"}}",
+      "namespace": "default",
+      "timestamp": 1754334507045
+    },
+    {
+      "key": "workflow/workflow-exec-1754334479550-s1a7u59ah/report-generation",
+      "value": "{\"status\":\"completed\",\"agent\":\"research-coordinator\",\"executionTime\":3883,\"metadata\":{\"timestamp\":\"2025-08-04T19:08:30.956Z\",\"executionId\":\"workflow-exec-1754334479550-s1a7u59ah\",\"mode\":\"simulation\"}}",
+      "namespace": "default",
+      "timestamp": 1754334512495
     }
   ]
 }
