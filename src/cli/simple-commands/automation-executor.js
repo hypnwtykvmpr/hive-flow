@@ -210,8 +210,13 @@ export class WorkflowExecutor {
 
   /**
    * Spawn a Claude CLI instance for an agent
+   * @param {Object} agent - The agent configuration
+   * @param {string} prompt - The prompt for the agent
+   * @param {Object} options - Additional options
+   * @param {Stream} options.inputStream - Optional input stream from previous agent
+   * @param {boolean} options.enableChaining - Whether to enable stream-json chaining
    */
-  async spawnClaudeInstance(agent, prompt) {
+  async spawnClaudeInstance(agent, prompt, options = {}) {
     const claudeArgs = [];
     
     // Add flags based on mode
@@ -221,6 +226,11 @@ export class WorkflowExecutor {
       if (this.options.outputFormat === 'stream-json') {
         claudeArgs.push('--output-format', 'stream-json');
         claudeArgs.push('--verbose'); // Required for stream-json
+        
+        // Add input format if we're chaining from a previous agent
+        if (options.inputStream) {
+          claudeArgs.push('--input-format', 'stream-json');
+        }
       }
     }
     
@@ -233,13 +243,15 @@ export class WorkflowExecutor {
     // Log the command being executed (truncate long prompts)
     const displayPrompt = prompt.length > 100 ? prompt.substring(0, 100) + '...' : prompt;
     const flagsDisplay = this.options.nonInteractive ? 
-      (this.options.outputFormat === 'stream-json' ? '--print --output-format stream-json --verbose --dangerously-skip-permissions' : '--print --dangerously-skip-permissions') : 
+      (this.options.outputFormat === 'stream-json' ? 
+        (options.inputStream ? '--print --input-format stream-json --output-format stream-json --verbose --dangerously-skip-permissions' : '--print --output-format stream-json --verbose --dangerously-skip-permissions') : 
+        '--print --dangerously-skip-permissions') : 
       '--dangerously-skip-permissions';
     console.log(`    🤖 Spawning Claude for ${agent.name}: claude ${flagsDisplay} "${displayPrompt}"`);
     
-    // Determine stdio configuration based on mode
+    // Determine stdio configuration based on mode and chaining
     const stdioConfig = this.options.nonInteractive ? 
-      ['inherit', 'pipe', 'pipe'] : // Non-interactive: pipe output for processing
+      [options.inputStream ? 'pipe' : 'inherit', 'pipe', 'pipe'] : // Non-interactive: pipe for chaining
       ['inherit', 'inherit', 'inherit']; // Interactive: inherit all for normal Claude interaction
     
     // Spawn Claude process
@@ -247,6 +259,12 @@ export class WorkflowExecutor {
       stdio: stdioConfig,
       shell: false,
     });
+    
+    // If we have an input stream, pipe it to Claude's stdin
+    if (options.inputStream && claudeProcess.stdin) {
+      console.log(`    🔗 Chaining: Piping output from previous agent to ${agent.name}`);
+      options.inputStream.pipe(claudeProcess.stdin);
+    }
     
     // Handle stdout with stream processor for better formatting (only in non-interactive mode)
     if (this.options.nonInteractive && this.options.outputFormat === 'stream-json' && claudeProcess.stdout) {
