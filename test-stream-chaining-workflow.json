@@ -28,7 +28,7 @@
       "name": "Generate Initial Data",
       "type": "generation",
       "description": "Generate random numbers for testing",
-      "agentId": "generator",
+      "assignTo": "generator",
       "claudePrompt": "Generate a list of 3 random numbers between 1 and 100. Output them as a simple JSON array like [42, 67, 89]. Be concise."
     },
     {
