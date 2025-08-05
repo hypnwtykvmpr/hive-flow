@@ -2846,7 +2846,10 @@ Resume the hive mind operation with full context awareness and continue working 
 async function launchClaudeWithContext(prompt, flags, sessionId) {
   try {
     // ALWAYS save the prompt file first (fix for issue #330)
-    const promptFile = `hive-mind-resume-${Date.now()}.txt`;
+    // Ensure sessions directory exists
+    const sessionsDir = path.join('.hive-mind', 'sessions');
+    await mkdirAsync(sessionsDir, { recursive: true });
+    const promptFile = path.join(sessionsDir, `hive-mind-resume-${sessionId}-${Date.now()}.txt`);
     await writeFile(promptFile, prompt);
     console.log(chalk.green(`\n✓ Session context saved to: ${promptFile}`));
 
