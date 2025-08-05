@@ -2749,7 +2749,7 @@ Resume the hive mind operation and continue working towards the objective.`;
 /**
  * Launch Claude Code with context
  */
-async function launchClaudeWithContext(prompt, flags) {
+async function launchClaudeWithContext(prompt, flags, sessionId) {
   try {
     // ALWAYS save the prompt file first (fix for issue #330)
     const promptFile = `hive-mind-resume-${Date.now()}.txt`;
