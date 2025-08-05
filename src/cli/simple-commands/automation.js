@@ -366,9 +366,11 @@ async function mleStarCommand(subArgs, flags) {
     
     // Create executor with MLE-STAR optimized settings
     // IMPORTANT: Default to non-interactive mode to prevent multiple Claude spawns
-    const isNonInteractive = options['non-interactive'] !== undefined ? 
-      (options['non-interactive'] || options.nonInteractive) : 
-      true; // Default to true for MLE-STAR to avoid multiple interactive sessions
+    const isNonInteractive = options.interactive ? 
+      false : // If --interactive is explicitly set, use interactive mode
+      (options['non-interactive'] !== undefined ? 
+        (options['non-interactive'] || options.nonInteractive) : 
+        true); // Default to true for MLE-STAR to avoid multiple interactive sessions
     
     const executor = new WorkflowExecutor({
       enableClaude: options.claude !== false, // Default to true for MLE-STAR
