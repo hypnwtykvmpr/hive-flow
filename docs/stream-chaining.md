@@ -148,16 +148,118 @@ claude --print --input-format stream-json --output-format stream-json "Task 2" |
 claude --print --input-format stream-json "Task 3"
 ```
 
-## Limitations
+## ⚠️ Limitations
 
-1. Only works with `stream-json` output format
-2. Requires non-interactive mode
-3. Dependencies determine chaining order
-4. Currently chains from the last dependency if multiple exist
+* **Non-interactive only**: Doesn't work with interactive mode (`claude` without `-p`)
+* **Session management**: Must manage session IDs and termination guards externally
+* **JSON compliance**: Requires clean JSON compliance—poor error handling if malformed
+* **Single dependency**: Currently chains from the last dependency if multiple exist
+* **Linear flow**: No branching or conditional chaining yet
+
+## 🚀 Advanced Examples
+
+### Recursive Refinement Pipeline
+
+```bash
+# Initial generation
+echo "Generate a Python function to calculate fibonacci" | \
+claude -p --output-format stream-json | \
+# Code review and improvement
+claude -p --input-format stream-json --output-format stream-json \
+  "Review this code and suggest improvements" | \
+# Apply improvements
+claude -p --input-format stream-json \
+  "Apply the suggested improvements and finalize the code"
+```
+
+### Multi-Agent Data Pipeline
+
+```bash
+# Data analyst
+claude -p --output-format stream-json \
+  "Analyze the sales data in data/sales.csv" | \
+# Feature engineer  
+claude -p --input-format stream-json --output-format stream-json \
+  "Based on the analysis, create feature engineering code" | \
+# Model builder
+claude -p --input-format stream-json --output-format stream-json \
+  "Build a predictive model using the engineered features" | \
+# Report generator
+claude -p --input-format stream-json \
+  "Generate a comprehensive report of the entire analysis"
+```
+
+### Stream Processing with jq
+
+```bash
+# Extract only tool uses from the stream
+claude -p --output-format stream-json "Analyze system performance" | \
+jq -c 'select(.type == "tool_use")' | \
+claude -p --input-format stream-json \
+  "Summarize all the commands that were executed"
+```
+
+## 🛠️ Implementation Details
+
+### Stream Format Specification
+
+Each line in the stream is a complete JSON object (NDJSON format):
+
+```typescript
+interface StreamMessage {
+  type: 'init' | 'message' | 'tool_use' | 'tool_result' | 'result';
+  timestamp?: string;
+  session_id?: string;
+  role?: 'assistant' | 'user';
+  content?: Array<{
+    type: 'text' | 'tool_use';
+    text?: string;
+    name?: string;
+    input?: any;
+  }>;
+  output?: string;
+  status?: 'success' | 'error';
+  duration_ms?: number;
+}
+```
+
+### Process Spawning
+
+Claude Flow spawns processes with specific stdio configurations:
+
+```javascript
+const claudeProcess = spawn('claude', [
+  '-p',
+  '--output-format', 'stream-json',
+  '--input-format', 'stream-json',  // Added for dependent tasks
+  prompt
+], {
+  stdio: [inputStream ? 'pipe' : 'inherit', 'pipe', 'pipe']
+});
+
+// Pipe input stream if chaining
+if (inputStream && claudeProcess.stdin) {
+  inputStream.pipe(claudeProcess.stdin);
+}
+```
+
+## 🎯 Best Practices
+
+1. **Design for streaming**: Write prompts that acknowledge potential input streams
+2. **Handle errors gracefully**: Include error handling in your pipeline
+3. **Use session IDs**: Track sessions across chained agents
+4. **Monitor performance**: Stream chaining reduces latency but increases complexity
+5. **Test incrementally**: Build chains step by step, testing each link
+
+## 💡 Key Insight
+
+**Stream chaining** turns Claude from a stateless prompt executor into a programmable agent pipeline. It's how you move from chat to computation, enabling complex multi-agent workflows that maintain context and build upon each other's work in real-time.
 
 ## Future Enhancements
 
-- Support for multiple input streams (merge/join)
-- Conditional chaining based on output
-- Stream filtering and transformation
-- Parallel stream processing
+- Support for multiple input streams (merge/join operations)
+- Conditional chaining based on output content
+- Stream filtering and transformation middleware
+- Parallel stream processing with fan-out/fan-in patterns
+- Built-in retry and error recovery mechanisms
+- Stream replay and debugging tools
