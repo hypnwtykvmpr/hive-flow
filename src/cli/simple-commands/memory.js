@@ -28,11 +28,11 @@ export async function memoryCommand(subArgs, flags) {
 
   switch (memorySubcommand) {
     case 'store':
-      await storeMemory(subArgs, loadMemory, saveMemory);
+      await storeMemory(subArgs, loadMemory, saveMemory, namespace);
       break;
 
     case 'query':
-      await queryMemory(subArgs, loadMemory);
+      await queryMemory(subArgs, loadMemory, namespace);
       break;
 
     case 'stats':
@@ -40,7 +40,7 @@ export async function memoryCommand(subArgs, flags) {
       break;
 
     case 'export':
-      await exportMemory(subArgs, loadMemory);
+      await exportMemory(subArgs, loadMemory, namespace);
       break;
 
     case 'import':
@@ -48,7 +48,7 @@ export async function memoryCommand(subArgs, flags) {
       break;
 
     case 'clear':
-      await clearMemory(subArgs, saveMemory);
+      await clearMemory(subArgs, saveMemory, namespace);
       break;
 
     case 'list':
