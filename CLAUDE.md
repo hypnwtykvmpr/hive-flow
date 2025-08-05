@@ -205,3 +205,4 @@ TodoWrite { todos: [
 ---
 
 **Remember**: Claude Flow coordinates, Claude Code creates!
+- Never save working files, text/mds and tests to the root folder. 
