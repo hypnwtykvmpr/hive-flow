@@ -155,8 +155,10 @@ export class WorkflowExecutor {
 
     if (this.options.nonInteractive) {
       // Non-interactive mode: agents are spawned per task instead
-      console.log(`🤖 Non-interactive mode: Claude instances will be spawned per task`);
-      console.log(`📋 Each task will launch its own Claude process with specific prompts`);
+      if (this.options.logLevel !== 'quiet') {
+        console.log(`🤖 Non-interactive mode: Claude instances will be spawned per task`);
+        console.log(`📋 Each task will launch its own Claude process with specific prompts`);
+      }
       return;
     } else {
       // Interactive mode: spawn single Claude instance with master coordination prompt
