@@ -554,7 +554,7 @@ To enable persistence, see: https://github.com/ruvnet/claude-code-flow/docs/wind
   /**
    * Mark session as completed
    */
-  completeSession(sessionId) {
+  async completeSession(sessionId) {
     const stmt = this.db.prepare(`
       UPDATE sessions 
       SET status = 'completed', updated_at = CURRENT_TIMESTAMP, completion_percentage = 100
@@ -802,7 +802,7 @@ To enable persistence, see: https://github.com/ruvnet/claude-code-flow/docs/wind
   /**
    * Add a child process PID to session
    */
-  addChildPid(sessionId, pid) {
+  async addChildPid(sessionId, pid) {
     const session = this.db.prepare('SELECT child_pids FROM sessions WHERE id = ?').get(sessionId);
     if (!session) return false;
 
@@ -826,7 +826,7 @@ To enable persistence, see: https://github.com/ruvnet/claude-code-flow/docs/wind
   /**
    * Remove a child process PID from session
    */
-  removeChildPid(sessionId, pid) {
+  async removeChildPid(sessionId, pid) {
     const session = this.db.prepare('SELECT child_pids FROM sessions WHERE id = ?').get(sessionId);
     if (!session) return false;
 
@@ -953,7 +953,7 @@ To enable persistence, see: https://github.com/ruvnet/claude-code-flow/docs/wind
   /**
    * Clean up orphaned processes
    */
-  cleanupOrphanedProcesses() {
+  async cleanupOrphanedProcesses() {
     const sessions = this.db
       .prepare(
         `
@@ -971,7 +971,7 @@ To enable persistence, see: https://github.com/ruvnet/claude-code-flow/docs/wind
         process.kill(session.parent_pid, 0);
       } catch (err) {
         // Parent is dead, clean up session
-        this.stopSession(session.id);
+        await this.stopSession(session.id);
         cleanedCount++;
         await this.logSessionEvent(session.id, 'info', 'Orphaned session cleaned up');
       }
