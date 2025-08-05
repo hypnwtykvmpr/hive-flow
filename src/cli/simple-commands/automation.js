@@ -548,6 +548,9 @@ EXAMPLES:
   
   # MLE-STAR with interactive mode (single Claude coordinator)
   claude-flow automation mle-star --dataset data.csv --target label --claude --interactive
+  
+  # MLE-STAR with stream-json chaining (agents pipe outputs to each other)
+  claude-flow automation mle-star --dataset data.csv --target label --claude --output-format stream-json
 
 🎯 Automation benefits:
   • Optimal resource allocation
