@@ -1,0 +1,27 @@
+{
+  "name": "Stream Chaining Test Workflow",
+  "description": "Test workflow to verify stream chaining is working",
+  "type": "test",
+  "tasks": [
+    {
+      "id": "task1",
+      "name": "Generate Initial Data",
+      "assignTo": "generator",
+      "claudePrompt": "Generate a list of 3 random numbers between 1 and 100. Output them as a simple JSON array like [42, 67, 89]. Be concise."
+    },
+    {
+      "id": "task2",
+      "name": "Process Numbers",
+      "assignTo": "processor",
+      "depends": ["task1"],
+      "claudePrompt": "You are receiving numbers from the previous agent via stream-json. Double each number and output the results as a JSON array. Only output the array, nothing else."
+    },
+    {
+      "id": "task3",
+      "name": "Summarize Results",
+      "assignTo": "summarizer",
+      "depends": ["task2"],
+      "claudePrompt": "You are receiving doubled numbers from the previous agent via stream-json. Calculate their sum and output: 'The sum of the doubled numbers is: X'"
+    }
+  ]
+}
