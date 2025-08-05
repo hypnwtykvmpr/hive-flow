@@ -379,7 +379,7 @@ async function mleStarCommand(subArgs, flags) {
       outputFormat: options['output-format'] || (isNonInteractive ? 'stream-json' : 'text'),
       maxConcurrency: parseInt(options['max-agents']) || 6,
       timeout: parseInt(options.timeout) || 14400000, // 4 hours for ML workflows
-      logLevel: options.verbose ? 'debug' : 'info',
+      logLevel: options.quiet ? 'quiet' : (options.verbose ? 'debug' : 'info'),
       workflowName: 'MLE-STAR Machine Learning Engineering Workflow',
       workflowType: 'ml',
       enableChaining: options.chaining !== false // Default to true for stream-json chaining
