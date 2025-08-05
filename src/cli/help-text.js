@@ -5,14 +5,14 @@
 
 import { HelpFormatter } from './help-formatter.js';
 
-export const VERSION = '2.0.0-alpha.84';
+export const VERSION = '2.0.0-alpha.85';
 
 export const MAIN_HELP = `
 🌊 Claude-Flow v${VERSION} - Enterprise-Grade AI Agent Orchestration Platform
 
 🎯 ENTERPRISE FEATURES: Complete ruv-swarm integration with 90+ MCP tools, neural networking, and production-ready infrastructure
 🐝 NEW: Claude Code 1.0.51+ full compatibility with enhanced hooks and batch processing
-⚡ ALPHA 84: Enhanced swarm --claude flag for direct Claude Code CLI integration
+⚡ ALPHA 85: Advanced automation capabilities & stream-JSON chaining for multi-agent pipelines
 
 USAGE:
   npx claude-flow@alpha <command> [options]    # Run latest alpha version
@@ -70,6 +70,7 @@ USAGE:
   config <action>          System configuration
   mcp <action>             MCP server management
   batch <action>           Batch operations
+  stream-chain <workflow>  Stream-JSON chaining for multi-agent pipelines (NEW!)
 
 🔍 GET HELP:
   npx claude-flow@alpha --help                Show this help
