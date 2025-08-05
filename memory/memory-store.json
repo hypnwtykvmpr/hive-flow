@@ -425,6 +425,18 @@
       "value": "{\"status\":\"initialized\",\"timestamp\":\"2025-08-05T03:33:00Z\",\"session_id\":\"automation-session-1754364781767-dfu1es1r6\",\"execution_id\":\"workflow-exec-1754364781767-43bz1zram\",\"capabilities\":[\"web_search\",\"model_research\",\"approach_validation\"],\"phase\":\"search_phase\"}",
       "namespace": "default",
       "timestamp": 1754364842858
+    },
+    {
+      "key": "workflow/workflow-exec-1754364781767-43bz1zram/web_search_phase",
+      "value": "{\"status\":\"completed\",\"agent\":\"search_agent\",\"executionTime\":66164,\"metadata\":{\"timestamp\":\"2025-08-05T03:34:12.620Z\",\"executionId\":\"workflow-exec-1754364781767-43bz1zram\",\"mode\":\"claude-task-execution\"}}",
+      "namespace": "default",
+      "timestamp": 1754364854195
+    },
+    {
+      "key": "agent/foundation_agent/pipeline_status",
+      "value": "{\"status\": \"analyzing\", \"found_existing_pipeline\": true, \"path\": \"examples/ml_foundation/foundation_pipeline.py\", \"enhancements_planned\": [\"multi-dataset support\", \"advanced preprocessing\", \"automated hyperparameter tuning\", \"model interpretability\"]}",
+      "namespace": "default",
+      "timestamp": 1754364878309
     }
   ]
 }
