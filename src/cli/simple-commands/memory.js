@@ -6,6 +6,9 @@ import { cwd, exit, existsSync } from '../node-compat.js';
 export async function memoryCommand(subArgs, flags) {
   const memorySubcommand = subArgs[0];
   const memoryStore = './memory/memory-store.json';
+  
+  // Extract namespace from flags or subArgs
+  const namespace = flags?.namespace || flags?.ns || getNamespaceFromArgs(subArgs) || 'default';
 
   // Helper to load memory data
   async function loadMemory() {
