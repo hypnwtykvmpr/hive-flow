@@ -532,11 +532,14 @@ EXAMPLES:
   # Execute custom workflow with Claude integration
   claude-flow automation run-workflow my-workflow.json --claude --non-interactive
 
-  # Run MLE-STAR ML engineering workflow (flagship command)
+  # Run MLE-STAR ML engineering workflow (flagship command) - non-interactive by default
   claude-flow automation mle-star --dataset data/train.csv --target price --claude
 
   # MLE-STAR with custom configuration
   claude-flow automation mle-star --dataset sales.csv --target revenue --output models/sales/ --name "sales-prediction" --search-iterations 5
+  
+  # MLE-STAR with interactive mode (single Claude coordinator)
+  claude-flow automation mle-star --dataset data.csv --target label --claude --interactive
 
 🎯 Automation benefits:
   • Optimal resource allocation
