@@ -70,12 +70,37 @@ export class StreamJsonProcessor extends Transform {
       return;
     }
     
-    // Handle quiet mode - only show major milestones
+    // Handle quiet mode - show important actions and commands
     if (this.options.verbose === false && this.options.logLevel === 'quiet') {
       switch (event.type) {
         case 'system':
           if (event.subtype === 'init') {
             console.log(`🤖 ${this.agentName} - Started`);
+          }
+          break;
+        case 'assistant':
+          // In quiet mode, still show bash commands and key actions
+          if (event.message?.content?.length > 0) {
+            const content = event.message.content[0];
+            if (content.type === 'tool_use' && content.name === 'Bash' && content.input?.command) {
+              const command = content.input.command;
+              if (command.length > 60) {
+                console.log(`  🔧 ${command.substring(0, 57)}...`);
+              } else {
+                console.log(`  🔧 ${command}`);
+              }
+            } else if (content.type === 'tool_use' && ['WebSearch', 'Read', 'Write'].includes(content.name)) {
+              const toolName = content.name.replace(/([A-Z])/g, ' $1').trim();
+              if (content.input) {
+                const firstKey = Object.keys(content.input)[0];
+                const firstValue = content.input[firstKey];
+                if (typeof firstValue === 'string' && firstValue.length < 40) {
+                  console.log(`  🔧 ${toolName}: ${firstValue}`);
+                } else {
+                  console.log(`  🔧 ${toolName}`);
+                }
+              }
+            }
           }
           break;
         case 'result':
