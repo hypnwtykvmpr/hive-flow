@@ -1,22 +1,75 @@
 # Stream-JSON Chaining in Claude Flow
 
-## Overview
+## 🔁 Overview: Stream Chaining in Claude Code
+
+**Stream chaining** in Claude Code is the technique of connecting multiple `claude -p` (non-interactive) processes using real-time **JSON streams**, allowing you to build **modular, recursive, multi-agent pipelines**.
 
 Stream-JSON chaining enables Claude instances to pipe their outputs directly to other Claude instances, creating a seamless workflow where agents can build upon each other's work without intermediate storage.
 
-## How It Works
+## 🧱 How It Works
+
+### Core Claude Code Flags
+
+Claude Code supports two key flags that enable stream chaining:
+
+* `--output-format stream-json`: emits newline-delimited JSON (`NDJSON`) with every token, turn, and tool interaction
+* `--input-format stream-json`: accepts a stream of messages in NDJSON format, simulating a continuous conversation
+
+By combining them:
+
+```bash
+claude -p --output-format stream-json "First task" \
+  | claude -p --input-format stream-json --output-format stream-json "Process results" \
+  | claude -p --input-format stream-json "Final report"
+```
+
+Each agent processes input, emits structured responses, and hands them off to the next agent in the chain.
+
+### Automatic Chaining in Claude Flow
 
 When tasks have dependencies and stream-json output format is enabled, Claude Flow automatically:
 
-1. Captures the stdout from the first agent
-2. Pipes it directly to the stdin of the dependent agent
-3. Adds `--input-format stream-json` flag to the receiving agent
-4. Maintains the stream connection throughout execution
+1. Detects task dependencies from workflow definitions
+2. Captures the stdout stream from the dependency task
+3. Pipes it directly to stdin of the dependent task
+4. Adds `--input-format stream-json` flag to the receiving agent
+5. Maintains the stream connection throughout execution
 
-## Example Flow
+## 🔄 What You Can Do With Stream Chaining
 
-```
-Agent A (analyzer) → stdout (stream-json) → stdin → Agent B (processor) → stdout → stdin → Agent C (reporter)
+* **Subagent orchestration**: planner → executor → reviewer
+* **Recursive pipelines**: refinement loops, ablation agents, iterative optimization
+* **Live feedback systems**: feed Claude output into a scoring or mutation agent
+* **Task decomposition**: outer loop breaks work into subtasks, inner loop completes each
+* **Multi-stage analysis**: data analysis → feature engineering → model training → validation
+* **Complex workflows**: research → design → implementation → testing → documentation
+
+## 🧠 Key Features
+
+### Structured Message Types
+
+Stream-JSON format includes structured message types:
+- `init`: Session initialization
+- `message`: Assistant/user messages
+- `tool_use`: Tool invocations with parameters
+- `tool_result`: Tool execution results
+- `result`: Final task completion status
+
+### Advanced Control Options
+- Supports `--session` for session management
+- `--max-turns` for granular conversation control
+- Works seamlessly with shell scripts, `jq`, and Python SDKs
+- Can simulate multi-turn conversation without REPL
+- Preserves full context including reasoning and tool usage
+
+### Example Stream-JSON Output
+
+```json
+{"type":"init","session_id":"abc123","timestamp":"2024-01-01T00:00:00Z"}
+{"type":"message","role":"assistant","content":[{"type":"text","text":"Analyzing data..."}]}
+{"type":"tool_use","name":"Bash","input":{"command":"ls -la"}}
+{"type":"tool_result","output":"total 64\ndrwxr-xr-x  10 user  staff   320 Jan  1 00:00 ."}
+{"type":"result","status":"success","duration_ms":1234}
 ```
 
 ## Enabling Stream Chaining
