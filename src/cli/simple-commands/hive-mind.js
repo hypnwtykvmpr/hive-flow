@@ -2605,7 +2605,7 @@ async function resumeSession(args, flags) {
       const restoredPrompt = generateRestoredSessionPrompt(resumedSession);
 
       // Launch Claude Code with restored context
-      await launchClaudeWithContext(restoredPrompt, flags);
+      await launchClaudeWithContext(restoredPrompt, flags, sessionId);
     } else {
       console.log(
         '\n' +
