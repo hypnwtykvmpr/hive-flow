@@ -522,6 +522,9 @@ MLE-STAR OPTIONS:
   --max-agents <n>          Maximum agents to spawn (default: 6)
   --interactive             Use interactive mode with master coordinator (single Claude instance)
   --non-interactive         Force non-interactive mode (default for MLE-STAR)
+  --output-format <format>  Output format (stream-json enables chaining)
+  --chaining                Enable stream-json chaining between agents (default: true)
+  --no-chaining             Disable stream-json chaining
   --no-claude-warning       Suppress Claude integration warnings
 
 EXAMPLES:
