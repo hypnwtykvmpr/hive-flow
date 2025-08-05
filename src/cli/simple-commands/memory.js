@@ -97,17 +97,17 @@ async function storeMemory(subArgs, loadMemory, saveMemory, namespace) {
   }
 }
 
-async function queryMemory(subArgs, loadMemory) {
+async function queryMemory(subArgs, loadMemory, namespace) {
   const search = subArgs.slice(1).join(' ');
 
   if (!search) {
-    printError('Usage: memory query <search>');
+    printError('Usage: memory query <search> [--namespace <ns>]');
     return;
   }
 
   try {
     const data = await loadMemory();
-    const namespace = getNamespaceFromArgs(subArgs);
+    const searchNamespace = namespace === 'default' ? null : namespace;
     const results = [];
 
     for (const [ns, entries] of Object.entries(data)) {
