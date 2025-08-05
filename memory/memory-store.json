@@ -407,6 +407,12 @@
       "value": "{\"status\":\"completed\",\"agent\":\"search_agent\",\"executionTime\":127158,\"metadata\":{\"timestamp\":\"2025-08-04T22:10:33.930Z\",\"executionId\":\"workflow-exec-1754345302090-ymuy1ubo4\",\"mode\":\"claude-task-execution\"}}",
       "namespace": "default",
       "timestamp": 1754345435470
+    },
+    {
+      "key": "workflow/workflow-exec-1754361950472-upcle770p/dataset_analysis",
+      "value": "{\"status\":\"completed\",\"agent\":\"foundation_agent\",\"executionTime\":63905,\"metadata\":{\"timestamp\":\"2025-08-05T02:46:58.971Z\",\"executionId\":\"workflow-exec-1754361950472-upcle770p\",\"mode\":\"claude-task-execution\"}}",
+      "namespace": "default",
+      "timestamp": 1754362020451
     }
   ]
 }
