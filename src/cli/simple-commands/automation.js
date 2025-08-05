@@ -527,6 +527,8 @@ MLE-STAR OPTIONS:
   --chaining                Enable stream-json chaining between agents (default: true)
   --no-chaining             Disable stream-json chaining
   --no-claude-warning       Suppress Claude integration warnings
+  --quiet                   Minimal output (only show major progress milestones)
+  --verbose                 Detailed output with all agent activities
 
 EXAMPLES:
   # Auto-spawn for complex enterprise task
