@@ -48,13 +48,13 @@ import { ValidationSystem, runFullValidation } from './validation/index.js';
 import { RollbackSystem, createAtomicOperation } from './rollback/index.js';
 import {
   createEnhancedClaudeMd,
-  createOptimizedSparcClaudeMd,
   createEnhancedSettingsJson,
   createWrapperScript,
   createCommandDoc,
   createHelperScript,
   COMMAND_STRUCTURE,
 } from './templates/enhanced-templates.js';
+import { createOptimizedSparcClaudeMd } from './templates/claude-md.js';
 import { getIsolatedNpxEnv } from '../../../utils/npx-isolated-cache.js';
 import { updateGitignore, needsGitignoreUpdate } from './gitignore-updater.js';
 import {
