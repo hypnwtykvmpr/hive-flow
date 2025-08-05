@@ -628,6 +628,14 @@ To enable persistence, see: https://github.com/ruvnet/claude-code-flow/docs/wind
    * Archive old sessions
    */
   async archiveSessions(daysOld = 30) {
+    await this.ensureInitialized();
+    
+    if (this.isInMemory) {
+      // In-memory mode doesn't support archiving
+      console.warn('Session archiving not supported in in-memory mode');
+      return 0;
+    }
+    
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - daysOld);
 
