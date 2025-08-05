@@ -515,6 +515,12 @@
       "value": "Testing swarm namespace",
       "namespace": "default",
       "timestamp": 1754401946375
+    },
+    {
+      "key": "testkey2",
+      "value": "test value 2 in default",
+      "namespace": "default",
+      "timestamp": 1754403771773
     }
   ]
 }
