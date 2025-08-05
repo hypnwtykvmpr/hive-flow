@@ -511,7 +511,7 @@ To enable persistence, see: https://github.com/ruvnet/claude-code-flow/docs/wind
 
     // If session was stopped, log that we're restarting it
     if (session.status === 'stopped') {
-      this.logSessionEvent(
+      await this.logSessionEvent(
         sessionId,
         'info',
         `Restarting stopped session with original configuration`,
@@ -544,7 +544,7 @@ To enable persistence, see: https://github.com/ruvnet/claude-code-flow/docs/wind
       )
       .run(session.swarm_id);
 
-    this.logSessionEvent(sessionId, 'info', 'Session resumed', null, {
+    await this.logSessionEvent(sessionId, 'info', 'Session resumed', null, {
       pausedDuration: session.paused_at ? new Date() - new Date(session.paused_at) : null,
     });
 
@@ -564,7 +564,7 @@ To enable persistence, see: https://github.com/ruvnet/claude-code-flow/docs/wind
     const result = stmt.run(sessionId);
 
     if (result.changes > 0) {
-      this.logSessionEvent(sessionId, 'info', 'Session completed');
+      await this.logSessionEvent(sessionId, 'info', 'Session completed');
 
       // Update swarm status
       const session = this.db.prepare('SELECT swarm_id FROM sessions WHERE id = ?').get(sessionId);
@@ -600,7 +600,7 @@ To enable persistence, see: https://github.com/ruvnet/claude-code-flow/docs/wind
     }
 
     for (const session of sessionsToArchive) {
-      const sessionData = this.getSession(session.id);
+      const sessionData = await this.getSession(session.id);
       const archiveFile = path.join(archiveDir, `${session.id}-archive.json`);
 
       await writeFile(archiveFile, sessionSerializer.serializeSessionData(sessionData));
@@ -695,8 +695,8 @@ To enable persistence, see: https://github.com/ruvnet/claude-code-flow/docs/wind
   /**
    * Generate session summary
    */
-  generateSessionSummary(sessionId) {
-    const session = this.getSession(sessionId);
+  async generateSessionSummary(sessionId) {
+    const session = await this.getSession(sessionId);
 
     if (!session) {
       return null;
@@ -749,7 +749,7 @@ To enable persistence, see: https://github.com/ruvnet/claude-code-flow/docs/wind
    * Export session data
    */
   async exportSession(sessionId, exportPath = null) {
-    const session = this.getSession(sessionId);
+    const session = await this.getSession(sessionId);
 
     if (!session) {
       throw new Error(`Session ${sessionId} not found`);
@@ -787,7 +787,7 @@ To enable persistence, see: https://github.com/ruvnet/claude-code-flow/docs/wind
 
     // Import logs
     for (const log of sessionData.recentLogs || []) {
-      this.logSessionEvent(
+      await this.logSessionEvent(
         newSessionId,
         log.log_level,
         log.message,
@@ -819,7 +819,7 @@ To enable persistence, see: https://github.com/ruvnet/claude-code-flow/docs/wind
 
     stmt.run(sessionSerializer.serializeLogData(childPids), sessionId);
 
-    this.logSessionEvent(sessionId, 'info', 'Child process added', null, { pid });
+    await this.logSessionEvent(sessionId, 'info', 'Child process added', null, { pid });
     return true;
   }
 
@@ -844,7 +844,7 @@ To enable persistence, see: https://github.com/ruvnet/claude-code-flow/docs/wind
 
     stmt.run(sessionSerializer.serializeLogData(childPids), sessionId);
 
-    this.logSessionEvent(sessionId, 'info', 'Child process removed', null, { pid });
+    await this.logSessionEvent(sessionId, 'info', 'Child process removed', null, { pid });
     return true;
   }
 
@@ -973,7 +973,7 @@ To enable persistence, see: https://github.com/ruvnet/claude-code-flow/docs/wind
         // Parent is dead, clean up session
         this.stopSession(session.id);
         cleanedCount++;
-        this.logSessionEvent(session.id, 'info', 'Orphaned session cleaned up');
+        await this.logSessionEvent(session.id, 'info', 'Orphaned session cleaned up');
       }
     }
 
