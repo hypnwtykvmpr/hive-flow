@@ -1056,6 +1056,13 @@ To enable persistence, see: https://github.com/ruvnet/claude-code-flow/docs/wind
    * Clean up orphaned processes
    */
   async cleanupOrphanedProcesses() {
+    await this.ensureInitialized();
+    
+    if (this.isInMemory) {
+      // In-memory mode doesn't track orphaned processes
+      return 0;
+    }
+    
     const sessions = this.db
       .prepare(
         `
