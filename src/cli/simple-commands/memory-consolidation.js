@@ -270,9 +270,13 @@ export class MemoryConsolidator {
    * Convert JSON memory stores to SQLite
    */
   async convertJsonToSqlite(jsonFiles, dbPath) {
+    if (!sqlite3 || !sqliteOpen) {
+      throw new Error('SQLite modules not available. Install sqlite3 and sqlite packages.');
+    }
+    
     await fs.mkdir(path.dirname(dbPath), { recursive: true });
     
-    const db = await open({
+    const db = await sqliteOpen({
       filename: dbPath,
       driver: sqlite3.Database
     });
@@ -332,7 +336,11 @@ export class MemoryConsolidator {
    * Merge multiple SQLite databases
    */
   async mergeSqliteDatabases(dbFiles, targetDb) {
-    const db = await open({
+    if (!sqlite3 || !sqliteOpen) {
+      throw new Error('SQLite modules not available. Install sqlite3 and sqlite packages.');
+    }
+    
+    const db = await sqliteOpen({
       filename: targetDb,
       driver: sqlite3.Database
     });
@@ -383,7 +391,11 @@ export class MemoryConsolidator {
    * Optimize the unified database
    */
   async optimizeDatabase(dbPath) {
-    const db = await open({
+    if (!sqlite3 || !sqliteOpen) {
+      throw new Error('SQLite modules not available. Install sqlite3 and sqlite packages.');
+    }
+    
+    const db = await sqliteOpen({
       filename: dbPath,
       driver: sqlite3.Database
     });
@@ -479,6 +491,9 @@ export class MemoryConsolidator {
  * Memory consolidation command
  */
 export async function memoryConsolidationCommand(subArgs, flags) {
+  // Load SQLite modules if available
+  const sqliteAvailable = await loadSqliteModules();
+  
   const consolidator = new MemoryConsolidator();
   const action = subArgs[0];
   
@@ -555,6 +570,14 @@ async function createConsolidationPlan(consolidator) {
 }
 
 async function executeConsolidation(consolidator, flags) {
+  const sqliteAvailable = await loadSqliteModules();
+  
+  if (!sqliteAvailable) {
+    printError('SQLite modules not available.');
+    printInfo('Install required packages: npm install sqlite3 sqlite');
+    return;
+  }
+  
   const scanResults = await consolidator.scanMemoryLocations();
   
   if (scanResults.total === 0) {
