@@ -2770,6 +2770,11 @@ async function launchClaudeWithContext(prompt, flags, sessionId) {
     }
 
     if (claudeAvailable && !flags.dryRun) {
+      // Debug logging to track spawn calls
+      console.log(chalk.blue('\n🔍 Debug: About to spawn Claude Code process...'));
+      console.log(chalk.gray(`  Session ID: ${sessionId}`));
+      console.log(chalk.gray(`  Process ID: ${process.pid}`));
+      
       // Remove --print to allow interactive session (same as initial spawn)
       const claudeArgs = [prompt];
 
@@ -2784,11 +2789,15 @@ async function launchClaudeWithContext(prompt, flags, sessionId) {
         );
       }
 
+      console.log(chalk.blue('🔍 Debug: Spawning with args:'), claudeArgs.slice(0, 1).map(a => a.substring(0, 50) + '...'));
+      
       // Use 'inherit' for interactive session (same as initial spawn)
       const claudeProcess = childSpawn('claude', claudeArgs, {
         stdio: 'inherit',
         shell: false,
       });
+      
+      console.log(chalk.blue('🔍 Debug: Claude process spawned with PID:'), claudeProcess.pid);
 
       // Track child process PID in session (same as initial spawn)
       const sessionManager = new HiveMindSessionManager();
