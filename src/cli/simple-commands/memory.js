@@ -44,7 +44,7 @@ export async function memoryCommand(subArgs, flags) {
       break;
 
     case 'import':
-      await importMemory(subArgs, saveMemory);
+      await importMemory(subArgs, saveMemory, loadMemory);
       break;
 
     case 'clear':
@@ -110,7 +110,7 @@ async function queryMemory(subArgs, loadMemory, namespace) {
     const results = [];
 
     for (const [ns, entries] of Object.entries(data)) {
-      if (searchNamespace && ns !== searchNamespace) continue;
+      if (namespace && ns !== namespace) continue;
 
       for (const entry of entries) {
         if (entry.key.includes(search) || entry.value.includes(search)) {
@@ -201,7 +201,7 @@ async function exportMemory(subArgs, loadMemory, namespace) {
   }
 }
 
-async function importMemory(subArgs, saveMemory) {
+async function importMemory(subArgs, saveMemory, loadMemory) {
   const filename = subArgs[1];
 
   if (!filename) {
