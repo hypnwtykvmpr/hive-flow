@@ -2683,67 +2683,161 @@ async function stopSession(args, flags) {
  * Generate prompt for restored session
  */
 function generateRestoredSessionPrompt(session) {
-  const activeAgents = session.agents.filter((a) => a.status === 'active' || a.status === 'busy');
-  const pendingTasks = session.tasks.filter(
-    (t) => t.status === 'pending' || t.status === 'in_progress',
-  );
+  // Get all agents, not just active ones
+  const allAgents = session.agents || [];
+  const activeAgents = allAgents.filter((a) => a.status === 'active' || a.status === 'busy');
+  const idleAgents = allAgents.filter((a) => a.status === 'idle');
+  
+  // Get all tasks categorized by status
+  const allTasks = session.tasks || [];
+  const completedTasks = allTasks.filter((t) => t.status === 'completed');
+  const inProgressTasks = allTasks.filter((t) => t.status === 'in_progress');
+  const pendingTasks = allTasks.filter((t) => t.status === 'pending');
+  
+  // Calculate session duration
+  const sessionStart = new Date(session.created_at);
+  const sessionPaused = session.paused_at ? new Date(session.paused_at) : new Date();
+  const duration = Math.round((sessionPaused - sessionStart) / 1000 / 60); // minutes
+  
+  // Get more checkpoint history
+  const checkpointHistory = session.checkpoints || [];
+  
+  // Get more activity logs
+  const activityLogs = session.recentLogs || [];
+  
+  // Format agent details with their current tasks
+  const formatAgentDetails = (agents) => {
+    if (!agents.length) return 'No agents found';
+    return agents.map(agent => {
+      const agentTasks = allTasks.filter(t => t.agent_id === agent.id);
+      const currentTask = agentTasks.find(t => t.status === 'in_progress');
+      return `• ${agent.name} (${agent.type}) - ${agent.status}${currentTask ? `\n  └─ Working on: ${currentTask.description}` : ''}`;
+    }).join('\n');
+  };
+  
+  // Format task details with more information
+  const formatTaskDetails = (tasks, limit = 15) => {
+    if (!tasks.length) return 'No tasks found';
+    const displayTasks = tasks.slice(0, limit);
+    return displayTasks.map(task => {
+      const agent = allAgents.find(a => a.id === task.agent_id);
+      return `• [${task.priority?.toUpperCase() || 'NORMAL'}] ${task.description}${agent ? ` (Assigned to: ${agent.name})` : ''}${task.created_at ? ` - Created: ${new Date(task.created_at).toLocaleTimeString()}` : ''}`;
+    }).join('\n') + (tasks.length > limit ? `\n... and ${tasks.length - limit} more tasks` : '');
+  };
+  
+  // Format checkpoint details
+  const formatCheckpoints = (checkpoints, limit = 5) => {
+    if (!checkpoints.length) return 'No checkpoints found';
+    const displayCheckpoints = checkpoints.slice(0, limit);
+    return displayCheckpoints.map(cp => 
+      `• ${cp.checkpoint_name} - ${new Date(cp.created_at).toLocaleString()}`
+    ).join('\n');
+  };
+  
+  // Format activity logs with more detail
+  const formatActivityLogs = (logs, limit = 20) => {
+    if (!logs.length) return 'No activity logs found';
+    const displayLogs = logs.slice(0, limit);
+    return displayLogs.map(log => {
+      const timestamp = new Date(log.timestamp).toLocaleTimeString();
+      const agent = log.agent_id ? allAgents.find(a => a.id === log.agent_id) : null;
+      return `[${timestamp}] ${log.message}${agent ? ` (by ${agent.name})` : ''}${log.data ? ` - ${JSON.stringify(log.data)}` : ''}`;
+    }).join('\n');
+  };
+  
+  // Extract metadata if available
+  const metadata = session.metadata || {};
+  const metadataStr = Object.keys(metadata).length > 0 ? 
+    Object.entries(metadata).map(([k, v]) => `• ${k}: ${typeof v === 'object' ? JSON.stringify(v) : v}`).join('\n') : 
+    'No metadata available';
 
   return `🔄 RESUMING HIVE MIND SESSION
 ═══════════════════════════════════
 
-You are resuming a paused Hive Mind session with the following context:
+You are resuming a Hive Mind session with comprehensive context:
 
-SESSION DETAILS:
+📋 SESSION DETAILS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📌 Session ID: ${session.id}
+📌 Swarm ID: ${session.swarm_id}
 📌 Swarm Name: ${session.swarm_name}
 🎯 Objective: ${session.objective}
-📊 Progress: ${session.statistics.completionPercentage}% complete
-⏸️ Paused: ${new Date(session.paused_at).toLocaleString()}
+📊 Overall Progress: ${session.statistics.completionPercentage}% complete
+⏱️ Session Duration: ${duration} minutes
+📅 Created: ${new Date(session.created_at).toLocaleString()}
+⏸️ Paused: ${session.paused_at ? new Date(session.paused_at).toLocaleString() : 'N/A'}
 ▶️ Resumed: ${new Date().toLocaleString()}
+🔄 Status: ${session.status}
 
-CURRENT STATUS:
-• Total Agents: ${session.statistics.totalAgents}
-• Active Agents: ${session.statistics.activeAgents}
-• Completed Tasks: ${session.statistics.completedTasks}/${session.statistics.totalTasks}
-• Pending Tasks: ${pendingTasks.length}
+📊 TASK STATISTICS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• Total Tasks: ${session.statistics.totalTasks}
+• Completed: ${completedTasks.length} (${session.statistics.totalTasks > 0 ? Math.round((completedTasks.length / session.statistics.totalTasks) * 100) : 0}%)
+• In Progress: ${inProgressTasks.length}
+• Pending: ${pendingTasks.length}
 
-ACTIVE AGENTS:
-${activeAgents.map((agent) => `• ${agent.name} (${agent.type}) - ${agent.status}`).join('\n')}
+👥 SWARM COMPOSITION (${allAgents.length} agents):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Active Agents (${activeAgents.length}):
+${formatAgentDetails(activeAgents)}
 
-PENDING TASKS:
-${pendingTasks
-  .slice(0, 10)
-  .map((task) => `• [${task.priority}] ${task.description}`)
-  .join('\n')}
-${pendingTasks.length > 10 ? `... and ${pendingTasks.length - 10} more tasks` : ''}
+Idle Agents (${idleAgents.length}):
+${formatAgentDetails(idleAgents)}
 
-CHECKPOINT DATA:
+📝 COMPLETED TASKS (${completedTasks.length}):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${formatTaskDetails(completedTasks, 10)}
+
+🔄 IN-PROGRESS TASKS (${inProgressTasks.length}):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${formatTaskDetails(inProgressTasks)}
+
+⏳ PENDING TASKS (${pendingTasks.length}):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${formatTaskDetails(pendingTasks)}
+
+💾 CHECKPOINT HISTORY (${checkpointHistory.length} total):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${formatCheckpoints(checkpointHistory)}
+
+📊 SESSION METADATA:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${metadataStr}
+
+💾 LAST CHECKPOINT DATA:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ${session.checkpoint_data ? JSON.stringify(session.checkpoint_data, null, 2) : 'No checkpoint data available'}
 
-RECENT ACTIVITY:
-${session.recentLogs
-  .slice(0, 10)
-  .map((log) => `[${new Date(log.timestamp).toLocaleTimeString()}] ${log.message}`)
-  .join('\n')}
+📜 ACTIVITY LOG (Last ${Math.min(20, activityLogs.length)} entries):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${formatActivityLogs(activityLogs, 20)}
 
 🎯 RESUMPTION PROTOCOL:
-
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 1. **RESTORE CONTEXT**:
-   - Review the checkpoint data and recent activity
-   - Check collective memory for important decisions
-   - Verify agent status and reassign if needed
+   - Review all checkpoint data and activity history above
+   - Use mcp__claude-flow__memory_usage to retrieve collective memory
+   - Check agent statuses and reassign tasks if needed
+   - Verify all in-progress tasks are still valid
 
 2. **CONTINUE EXECUTION**:
-   - Resume pending tasks based on priority
-   - Maintain coordination with existing agents
-   - Update progress tracking regularly
+   - Resume in-progress tasks with their assigned agents
+   - Process pending tasks based on priority (CRITICAL > HIGH > NORMAL > LOW)
+   - Maintain agent coordination through memory sharing
+   - Update progress tracking after each task completion
 
-3. **COORDINATION**:
-   - Use mcp__claude-flow__memory_retrieve to access shared knowledge
-   - Continue using consensus mechanisms for decisions
-   - Maintain swarm communication protocols
+3. **COORDINATION REQUIREMENTS**:
+   - Use mcp__claude-flow__memory_usage for all cross-agent communication
+   - Apply consensus mechanisms for important decisions
+   - Maintain swarm topology: ${session.swarm?.topology || 'unknown'}
+   - Keep session checkpoint data updated regularly
 
-Resume the hive mind operation and continue working towards the objective.`;
+4. **MEMORY CONTEXT**:
+   - Session memory namespace: session-${session.id}
+   - Swarm memory namespace: swarm-${session.swarm_id}
+   - Use these namespaces to access historical decisions and context
+
+Resume the hive mind operation with full context awareness and continue working towards the objective.`;
 }
 
 /**
