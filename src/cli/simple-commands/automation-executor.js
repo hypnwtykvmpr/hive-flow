@@ -1122,8 +1122,25 @@ COORDINATION KEY POINTS:
           // Create task-specific prompt
           const taskPrompt = this.createTaskPrompt(task, agent, workflow);
           
+          // Check if we should chain from a previous task
+          let chainOptions = {};
+          if (this.enableChaining && this.options.outputFormat === 'stream-json' && task.depends?.length > 0) {
+            // Get the output stream from the last dependency
+            const lastDependency = task.depends[task.depends.length - 1];
+            const dependencyStream = this.taskOutputStreams.get(lastDependency);
+            if (dependencyStream) {
+              console.log(`    🔗 Enabling stream chaining from ${lastDependency} to ${task.id}`);
+              chainOptions.inputStream = dependencyStream;
+            }
+          }
+          
           // Spawn Claude instance for this specific task
-          const taskClaudeProcess = await this.spawnClaudeInstance(agent, taskPrompt);
+          const taskClaudeProcess = await this.spawnClaudeInstance(agent, taskPrompt, chainOptions);
+          
+          // Store the output stream for potential chaining
+          if (this.enableChaining && this.options.outputFormat === 'stream-json' && taskClaudeProcess.stdout) {
+            this.taskOutputStreams.set(task.id, taskClaudeProcess.stdout);
+          }
           
           // Store the instance
           this.claudeInstances.set(agent.id, {
