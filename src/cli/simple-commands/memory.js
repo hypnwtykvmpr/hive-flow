@@ -107,11 +107,10 @@ async function queryMemory(subArgs, loadMemory, namespace) {
 
   try {
     const data = await loadMemory();
-    const searchNamespace = namespace === 'default' ? null : namespace;
     const results = [];
 
     for (const [ns, entries] of Object.entries(data)) {
-      if (namespace && ns !== namespace) continue;
+      if (searchNamespace && ns !== searchNamespace) continue;
 
       for (const entry of entries) {
         if (entry.key.includes(search) || entry.value.includes(search)) {
