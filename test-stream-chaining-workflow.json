@@ -45,7 +45,7 @@
       "name": "Summarize Results",
       "type": "summarization",
       "description": "Calculate sum of doubled numbers",
-      "assignTo": "summarizer",
+      "agentId": "summarizer",
       "depends": ["task2"],
       "claudePrompt": "You are receiving doubled numbers from the previous agent via stream-json. Calculate their sum and output: 'The sum of the doubled numbers is: X'"
     }
