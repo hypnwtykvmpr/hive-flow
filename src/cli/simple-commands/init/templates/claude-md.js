@@ -476,10 +476,6 @@ import { createOptimizedSparcClaudeMd as optimizedTemplate } from './claude-md-o
 export async function createOptimizedSparcClaudeMd() {
   return optimizedTemplate();
 
-## 🚨 CRITICAL: CONCURRENT EXECUTION FOR ALL ACTIONS
-
-**ABSOLUTE RULE**: ALL operations MUST be concurrent/parallel in a single message:
-
 ### 🔴 MANDATORY CONCURRENT PATTERNS:
 1. **TodoWrite**: ALWAYS batch ALL todos in ONE call (5-10+ todos minimum)
 2. **Task tool**: ALWAYS spawn ALL agents in ONE message with full instructions
