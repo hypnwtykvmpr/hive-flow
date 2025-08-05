@@ -397,7 +397,14 @@ async function mleStarCommand(subArgs, flags) {
     console.log(`  Target: ${variables.target_column}`);
     console.log(`  Output: ${variables.model_output_dir}`);
     console.log(`  Claude Integration: ${executor.options.enableClaude ? 'Enabled' : 'Disabled'}`);
+    console.log(`  Execution Mode: ${isNonInteractive ? 'Non-interactive (default)' : 'Interactive'}`);
     console.log();
+    
+    if (isNonInteractive && options.claude !== false) {
+      console.log(`💡 Running in non-interactive mode: Each agent will execute independently`);
+      console.log(`   To use interactive mode instead, add --interactive flag`);
+      console.log();
+    }
     
     if (!options.claude && !options['no-claude-warning']) {
       printWarning('MLE-STAR works best with Claude integration. Add --claude flag for full automation.');
