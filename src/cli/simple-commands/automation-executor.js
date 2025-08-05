@@ -903,6 +903,15 @@ COORDINATION KEY POINTS:
    * Display task board showing current status
    */
   displayTaskBoard(taskStatuses, highlightTasks = []) {
+    // In quiet mode, just show simple progress
+    if (this.options.logLevel === 'quiet') {
+      const totalTasks = taskStatuses.size;
+      const completedTasks = Array.from(taskStatuses.values()).filter(s => s.status === 'completed').length;
+      const activeTasks = Array.from(taskStatuses.values()).filter(s => s.status === 'in-progress').length;
+      console.log(`📊 Progress: ${completedTasks}/${totalTasks} completed, ${activeTasks} active`);
+      return;
+    }
+    
     const frames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
     const frameIndex = Math.floor(Date.now() / 100) % frames.length;
     const spinner = frames[frameIndex];
