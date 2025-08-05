@@ -2790,43 +2790,62 @@ async function launchClaudeWithContext(prompt, flags) {
         shell: false,
       });
 
-      // Set up SIGINT handler for clean termination (no session pausing here since we're resuming)
-      const sigintHandler = () => {
-        console.log('\n\n' + chalk.yellow('⏹️  Terminating Claude Code...'));
-        if (claudeProcess && !claudeProcess.killed) {
-          claudeProcess.kill('SIGTERM');
+      // Track child process PID in session (same as initial spawn)
+      const sessionManager = new HiveMindSessionManager();
+      if (claudeProcess.pid) {
+        const sessions = await sessionManager.getActiveSessions();
+        const currentSession = sessions.find(s => s.id === sessionId);
+        if (currentSession) {
+          await sessionManager.addChildPid(currentSession.id, claudeProcess.pid);
         }
-        process.exit(0);
+      }
+
+      // Set up SIGINT handler for automatic session pausing (same as initial spawn)
+      let isExiting = false;
+      const sigintHandler = async () => {
+        if (isExiting) return;
+        isExiting = true;
+
+        console.log('\n\n' + chalk.yellow('⏸️  Pausing session and terminating Claude Code...'));
+        
+        try {
+          // Terminate Claude Code process if still running
+          if (claudeProcess && !claudeProcess.killed) {
+            claudeProcess.kill('SIGTERM');
+          }
+          
+          // Clean up and close session manager
+          sessionManager.close();
+          
+          console.log(chalk.green('✓') + ' Session paused successfully');
+          console.log(chalk.cyan('\nTo resume this session, run:'));
+          console.log(chalk.bold(`  claude-flow hive-mind resume ${sessionId}`));
+          console.log();
+          
+          process.exit(0);
+        } catch (error) {
+          console.error(chalk.red('Error during shutdown:'), error.message);
+          process.exit(1);
+        }
       };
 
       process.on('SIGINT', sigintHandler);
       process.on('SIGTERM', sigintHandler);
 
-      // Handle stdout
-      if (claudeProcess.stdout) {
-        claudeProcess.stdout.on('data', (data) => {
-          console.log(data.toString());
-        });
-      }
-
-      // Handle stderr
-      if (claudeProcess.stderr) {
-        claudeProcess.stderr.on('data', (data) => {
-          console.error(chalk.red(data.toString()));
-        });
-      }
-
-      // Handle process exit
-      claudeProcess.on('exit', (code) => {
-        if (code === 0) {
-          console.log(chalk.green('\n✓ Claude Code completed successfully'));
-        } else if (code !== null) {
-          console.log(chalk.red(`\n✗ Claude Code exited with code ${code}`));
+      // Handle process exit (same as initial spawn)
+      claudeProcess.on('exit', async (code, signal) => {
+        if (!isExiting) {
+          console.log('\n' + chalk.yellow('Claude Code has exited'));
+          
+          // Clean up signal handlers
+          process.removeListener('SIGINT', sigintHandler);
+          process.removeListener('SIGTERM', sigintHandler);
+          
+          // Close session manager
+          sessionManager.close();
+          
+          process.exit(code || 0);
         }
-        
-        // Clean up signal handlers
-        process.removeListener('SIGINT', sigintHandler);
-        process.removeListener('SIGTERM', sigintHandler);
       });
 
       console.log(chalk.green('\n✓ Claude Code launched with restored session context'));
