@@ -6,12 +6,16 @@
     {
       "id": "task1",
       "name": "Generate Initial Data",
+      "type": "generation",
+      "description": "Generate random numbers for testing",
       "assignTo": "generator",
       "claudePrompt": "Generate a list of 3 random numbers between 1 and 100. Output them as a simple JSON array like [42, 67, 89]. Be concise."
     },
     {
       "id": "task2",
       "name": "Process Numbers",
+      "type": "processing",
+      "description": "Double the numbers from previous task",
       "assignTo": "processor",
       "depends": ["task1"],
       "claudePrompt": "You are receiving numbers from the previous agent via stream-json. Double each number and output the results as a JSON array. Only output the array, nothing else."
@@ -19,6 +23,8 @@
     {
       "id": "task3",
       "name": "Summarize Results",
+      "type": "summarization",
+      "description": "Calculate sum of doubled numbers",
       "assignTo": "summarizer",
       "depends": ["task2"],
       "claudePrompt": "You are receiving doubled numbers from the previous agent via stream-json. Calculate their sum and output: 'The sum of the doubled numbers is: X'"
