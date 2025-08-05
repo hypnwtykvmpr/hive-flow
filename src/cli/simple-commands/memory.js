@@ -1,7 +1,8 @@
 // memory.js - Memory management commands
-import { printSuccess, printError, printWarning } from '../utils.js';
+import { printSuccess, printError, printWarning, printInfo } from '../utils.js';
 import { promises as fs } from 'fs';
 import { cwd, exit, existsSync } from '../node-compat.js';
+import { getUnifiedMemory } from '../../memory/unified-memory-manager.js';
 
 export async function memoryCommand(subArgs, flags) {
   const memorySubcommand = subArgs[0];
