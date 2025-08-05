@@ -473,6 +473,6 @@ For more information about SPARC methodology, see: https://github.com/ruvnet/cla
 import { createOptimizedSparcClaudeMd as optimizedTemplate } from './claude-md-optimized.js';
 
 // Create optimized SPARC CLAUDE.md with batchtools integration
-export async function createOptimizedSparcClaudeMd() {
+export function createOptimizedSparcClaudeMd() {
   return optimizedTemplate();
 }
