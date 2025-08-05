@@ -365,10 +365,15 @@ async function mleStarCommand(subArgs, flags) {
     const targetColumn = options.target || 'target';
     
     // Create executor with MLE-STAR optimized settings
+    // IMPORTANT: Default to non-interactive mode to prevent multiple Claude spawns
+    const isNonInteractive = options['non-interactive'] !== undefined ? 
+      (options['non-interactive'] || options.nonInteractive) : 
+      true; // Default to true for MLE-STAR to avoid multiple interactive sessions
+    
     const executor = new WorkflowExecutor({
       enableClaude: options.claude !== false, // Default to true for MLE-STAR
-      nonInteractive: options['non-interactive'] || options.nonInteractive || false,
-      outputFormat: options['output-format'] || (options['non-interactive'] || options.nonInteractive ? 'stream-json' : 'text'),
+      nonInteractive: isNonInteractive,
+      outputFormat: options['output-format'] || (isNonInteractive ? 'stream-json' : 'text'),
       maxConcurrency: parseInt(options['max-agents']) || 6,
       timeout: parseInt(options.timeout) || 14400000, // 4 hours for ML workflows
       logLevel: options.verbose ? 'debug' : 'info',
