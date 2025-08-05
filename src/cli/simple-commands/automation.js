@@ -587,6 +587,15 @@ EXAMPLES:
   
   # MLE-STAR with minimal output for CI/CD pipelines
   claude-flow automation mle-star --dataset data.csv --target label --claude --quiet
+  
+  # Custom workflow with stream chaining enabled
+  claude-flow automation run-workflow analysis-pipeline.json --claude --output-format stream-json
+  
+  # Disable chaining for independent task execution
+  claude-flow automation mle-star --dataset data.csv --target label --claude --no-chaining
+  
+  # View stream chaining in action with verbose output
+  claude-flow automation mle-star --dataset data.csv --target label --claude --verbose
 
 🎯 Automation benefits:
   • Optimal resource allocation
