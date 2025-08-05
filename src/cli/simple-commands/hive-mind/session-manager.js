@@ -584,27 +584,44 @@ To enable persistence, see: https://github.com/ruvnet/claude-code-flow/docs/wind
    * Mark session as completed
    */
   async completeSession(sessionId) {
-    const stmt = this.db.prepare(`
-      UPDATE sessions 
-      SET status = 'completed', updated_at = CURRENT_TIMESTAMP, completion_percentage = 100
-      WHERE id = ?
-    `);
-
-    const result = stmt.run(sessionId);
-
-    if (result.changes > 0) {
-      await this.logSessionEvent(sessionId, 'info', 'Session completed');
-
-      // Update swarm status
-      const session = this.db.prepare('SELECT swarm_id FROM sessions WHERE id = ?').get(sessionId);
+    await this.ensureInitialized();
+    
+    if (this.isInMemory) {
+      // Use in-memory storage
+      const session = this.memoryStore.sessions.get(sessionId);
       if (session) {
-        this.db
-          .prepare('UPDATE swarms SET status = ? WHERE id = ?')
-          .run('completed', session.swarm_id);
+        session.status = 'completed';
+        session.updated_at = new Date().toISOString();
+        session.completion_percentage = 100;
+        
+        await this.logSessionEvent(sessionId, 'info', 'Session completed');
+        return true;
       }
-    }
+      return false;
+    } else {
+      // Use SQLite
+      const stmt = this.db.prepare(`
+        UPDATE sessions 
+        SET status = 'completed', updated_at = CURRENT_TIMESTAMP, completion_percentage = 100
+        WHERE id = ?
+      `);
 
-    return result.changes > 0;
+      const result = stmt.run(sessionId);
+
+      if (result.changes > 0) {
+        await this.logSessionEvent(sessionId, 'info', 'Session completed');
+
+        // Update swarm status
+        const session = this.db.prepare('SELECT swarm_id FROM sessions WHERE id = ?').get(sessionId);
+        if (session) {
+          this.db
+            .prepare('UPDATE swarms SET status = ? WHERE id = ?')
+            .run('completed', session.swarm_id);
+        }
+      }
+
+      return result.changes > 0;
+    }
   }
 
   /**
