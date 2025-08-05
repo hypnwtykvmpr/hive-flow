@@ -288,7 +288,8 @@ async function runWorkflowCommand(subArgs, flags) {
       timeout: parseInt(options.timeout) || 3600000,
       logLevel: options.verbose ? 'debug' : 'info',
       workflowName: workflowData.name,
-      workflowType: workflowData.type || (workflowData.name?.toLowerCase().includes('ml') ? 'ml' : 'general')
+      workflowType: workflowData.type || (workflowData.name?.toLowerCase().includes('ml') ? 'ml' : 'general'),
+      enableChaining: options.chaining !== false // Default to true for stream-json chaining
     });
     
     // Apply variable overrides if provided
