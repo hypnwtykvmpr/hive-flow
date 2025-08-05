@@ -868,6 +868,24 @@ To enable persistence, see: https://github.com/ruvnet/claude-code-flow/docs/wind
    * Add a child process PID to session
    */
   async addChildPid(sessionId, pid) {
+    await this.ensureInitialized();
+    
+    if (this.isInMemory) {
+      // Use in-memory storage
+      const session = this.memoryStore.sessions.get(sessionId);
+      if (!session) return false;
+      
+      const childPids = session.child_pids ? sessionSerializer.deserializeLogData(session.child_pids) : [];
+      if (!childPids.includes(pid)) {
+        childPids.push(pid);
+      }
+      session.child_pids = sessionSerializer.serializeLogData(childPids);
+      session.updated_at = new Date().toISOString();
+      
+      await this.logSessionEvent(sessionId, 'info', 'Child process added', null, { pid });
+      return true;
+    }
+    
     const session = this.db.prepare('SELECT child_pids FROM sessions WHERE id = ?').get(sessionId);
     if (!session) return false;
 
@@ -892,6 +910,25 @@ To enable persistence, see: https://github.com/ruvnet/claude-code-flow/docs/wind
    * Remove a child process PID from session
    */
   async removeChildPid(sessionId, pid) {
+    await this.ensureInitialized();
+    
+    if (this.isInMemory) {
+      // Use in-memory storage
+      const session = this.memoryStore.sessions.get(sessionId);
+      if (!session) return false;
+      
+      const childPids = session.child_pids ? sessionSerializer.deserializeLogData(session.child_pids) : [];
+      const index = childPids.indexOf(pid);
+      if (index > -1) {
+        childPids.splice(index, 1);
+      }
+      session.child_pids = sessionSerializer.serializeLogData(childPids);
+      session.updated_at = new Date().toISOString();
+      
+      await this.logSessionEvent(sessionId, 'info', 'Child process removed', null, { pid });
+      return true;
+    }
+    
     const session = this.db.prepare('SELECT child_pids FROM sessions WHERE id = ?').get(sessionId);
     if (!session) return false;
 
