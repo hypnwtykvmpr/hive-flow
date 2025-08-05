@@ -111,6 +111,32 @@ First-time users should run: npx claude-flow@latest init --sparc`,
     ],
   });
 
+  commandRegistry.set('memory-consolidate', {
+    handler: memoryConsolidationCommand,
+    description: 'Consolidate fragmented memory stores into unified database',
+    usage: 'memory-consolidate <command> [options]',
+    examples: [
+      'memory-consolidate scan                # Scan for all memory stores',
+      'memory-consolidate plan                # Create consolidation plan',
+      'memory-consolidate execute --force     # Execute consolidation',
+      'memory-consolidate report              # Generate report',
+    ],
+    details: `
+Memory Consolidation Features:
+  • Discovers all memory storage locations (JSON & SQLite)
+  • Creates automatic backups before consolidation
+  • Merges all stores into unified SQLite database
+  • Optimizes with indices for better performance
+  • Maintains backward compatibility
+  
+Benefits:
+  • Single source of truth for all memory data
+  • Improved query performance with indices
+  • Reduced disk fragmentation
+  • Easier backup and restore
+  • Cross-session persistence`,
+  });
+
   commandRegistry.set('sparc', {
     handler: sparcCommand,
     description: 'SPARC development mode operations',
