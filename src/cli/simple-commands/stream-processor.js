@@ -70,6 +70,25 @@ export class StreamJsonProcessor extends Transform {
       return;
     }
     
+    // Handle quiet mode - only show major milestones
+    if (this.options.verbose === false && this.options.logLevel === 'quiet') {
+      switch (event.type) {
+        case 'system':
+          if (event.subtype === 'init') {
+            console.log(`🤖 ${this.agentName} - Started`);
+          }
+          break;
+        case 'result':
+          if (event.subtype === 'success') {
+            console.log(`✅ ${this.agentName} - Completed (${this.formatDuration(event.duration_ms)})`);
+          } else if (event.is_error) {
+            console.log(`❌ ${this.agentName} - Failed: ${event.error || 'Unknown error'}`);
+          }
+          break;
+      }
+      return;
+    }
+    
     // Use clean, concise formatting for non-interactive mode
     switch (event.type) {
       case 'system':
