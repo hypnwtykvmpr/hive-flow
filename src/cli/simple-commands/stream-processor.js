@@ -188,9 +188,9 @@ export class StreamJsonProcessor extends Transform {
 
   showFinalStatus() {
     const elapsed = this.formatDuration(Date.now() - this.startTime);
-    console.log(`\n● 📊 ${this.agentName} - Final Status`);
-    console.log(`  ⎿  Events processed: ${this.eventCount}`);
-    console.log(`  ⎿  Total duration: ${elapsed}`);
+    if (this.eventCount > 0) {
+      console.log(`\n📊 ${this.agentName} - Processed ${this.eventCount} events in ${elapsed}`);
+    }
   }
 
   getSpinner() {
