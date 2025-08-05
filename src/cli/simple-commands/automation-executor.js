@@ -45,6 +45,10 @@ export class WorkflowExecutor {
     this.errors = [];
     this.currentWorkflow = null;
     
+    // Stream chaining support
+    this.taskOutputStreams = new Map(); // Store output streams for chaining
+    this.enableChaining = options.enableChaining !== false; // Default to true
+    
     // Hooks integration
     this.hooksEnabled = true;
     this.sessionId = generateId('automation-session');
