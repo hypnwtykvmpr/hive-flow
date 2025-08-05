@@ -2770,7 +2770,8 @@ async function launchClaudeWithContext(prompt, flags) {
     }
 
     if (claudeAvailable && !flags.dryRun) {
-      const claudeArgs = [prompt, '--print'];
+      // Remove --print to allow interactive session (same as initial spawn)
+      const claudeArgs = [prompt];
 
       // Add --dangerously-skip-permissions by default for hive-mind operations
       // unless explicitly disabled with --no-auto-permissions
@@ -2783,9 +2784,9 @@ async function launchClaudeWithContext(prompt, flags) {
         );
       }
 
-      // Use 'pipe' instead of 'inherit' to prevent terminal conflicts
+      // Use 'inherit' for interactive session (same as initial spawn)
       const claudeProcess = childSpawn('claude', claudeArgs, {
-        stdio: 'pipe',
+        stdio: 'inherit',
         shell: false,
       });
 
