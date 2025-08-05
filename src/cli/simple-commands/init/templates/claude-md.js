@@ -475,8 +475,7 @@ import { createOptimizedSparcClaudeMd as optimizedTemplate } from './claude-md-o
 // Create optimized SPARC CLAUDE.md with batchtools integration
 export async function createOptimizedSparcClaudeMd() {
   return optimizedTemplate();
-
-### 🔴 MANDATORY CONCURRENT PATTERNS:
+}
 1. **TodoWrite**: ALWAYS batch ALL todos in ONE call (5-10+ todos minimum)
 2. **Task tool**: ALWAYS spawn ALL agents in ONE message with full instructions
 3. **File operations**: ALWAYS batch ALL reads/writes/edits in ONE message
