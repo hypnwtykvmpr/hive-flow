@@ -60,18 +60,17 @@ export async function memoryCommand(subArgs, flags) {
   }
 }
 
-async function storeMemory(subArgs, loadMemory, saveMemory) {
+async function storeMemory(subArgs, loadMemory, saveMemory, namespace) {
   const key = subArgs[1];
   const value = subArgs.slice(2).join(' ');
 
   if (!key || !value) {
-    printError('Usage: memory store <key> <value>');
+    printError('Usage: memory store <key> <value> [--namespace <ns>]');
     return;
   }
 
   try {
     const data = await loadMemory();
-    const namespace = getNamespaceFromArgs(subArgs) || 'default';
 
     if (!data[namespace]) {
       data[namespace] = [];
