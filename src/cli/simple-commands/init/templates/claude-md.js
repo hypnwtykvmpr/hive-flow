@@ -736,5 +736,5 @@ Message 4: Write "file.js"
 ---
 
 Remember: **Claude Flow coordinates, Claude Code creates!**
-\`;
+`;
 }
