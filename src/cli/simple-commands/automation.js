@@ -515,7 +515,8 @@ MLE-STAR OPTIONS:
   --search-iterations <n>   Web search iterations (default: 3)
   --refinement-iterations <n> Refinement cycles (default: 5)
   --max-agents <n>          Maximum agents to spawn (default: 6)
-  --non-interactive         Run without user prompts
+  --interactive             Use interactive mode with master coordinator (single Claude instance)
+  --non-interactive         Force non-interactive mode (default for MLE-STAR)
   --no-claude-warning       Suppress Claude integration warnings
 
 EXAMPLES:
