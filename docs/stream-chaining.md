@@ -264,15 +264,117 @@ if (inputStream && claudeProcess.stdin) {
 4. **Monitor performance**: Stream chaining reduces latency but increases complexity
 5. **Test incrementally**: Build chains step by step, testing each link
 
+## 🔍 Troubleshooting
+
+### Common Issues
+
+1. **"Unexpected end of JSON input"**
+   - Cause: Malformed JSON in the stream
+   - Fix: Ensure all agents output valid stream-json format
+
+2. **"No input received"**
+   - Cause: Dependency task failed or produced no output
+   - Fix: Check task execution logs, ensure dependency succeeded
+
+3. **"Context seems lost between agents"**
+   - Cause: Missing `--input-format stream-json` flag
+   - Fix: Verify Claude Flow is adding the flag (check with --verbose)
+
+4. **Performance degradation**
+   - Cause: Large context accumulation
+   - Fix: Use `--max-turns` to limit context size
+
+### Debugging Commands
+
+```bash
+# Debug stream output
+./claude-flow automation mle-star --dataset data.csv --target label --claude --verbose
+
+# Save stream for analysis
+./claude-flow automation run-workflow workflow.json --claude --output-format stream-json 2>&1 | tee debug.log
+
+# Validate stream format
+cat debug.log | jq -c 'select(.type)' | head -20
+```
+
+## 🌟 Real-World Workflow Examples
+
+### Software Development Pipeline
+
+```json
+{
+  "name": "Full-Stack Development Workflow",
+  "tasks": [
+    {
+      "id": "requirements",
+      "name": "Analyze Requirements",
+      "assignTo": "analyst",
+      "claudePrompt": "Analyze the requirements in docs/requirements.md"
+    },
+    {
+      "id": "design",
+      "name": "System Design",
+      "assignTo": "architect",
+      "depends": ["requirements"],
+      "claudePrompt": "Based on the requirements analysis, create a system design"
+    },
+    {
+      "id": "backend",
+      "name": "Backend Implementation",
+      "assignTo": "backend-dev",
+      "depends": ["design"],
+      "claudePrompt": "Implement the backend based on the system design"
+    },
+    {
+      "id": "frontend",
+      "name": "Frontend Implementation", 
+      "assignTo": "frontend-dev",
+      "depends": ["design"],
+      "claudePrompt": "Implement the frontend based on the system design"
+    },
+    {
+      "id": "integration",
+      "name": "Integration & Testing",
+      "assignTo": "tester",
+      "depends": ["backend", "frontend"],
+      "claudePrompt": "Integrate and test the complete application"
+    }
+  ]
+}
+```
+
+### Research Paper Analysis Pipeline
+
+```bash
+# Extract key findings
+claude -p --output-format stream-json \
+  "Extract key findings from the paper at papers/research.pdf" | \
+# Synthesize with existing knowledge
+claude -p --input-format stream-json --output-format stream-json \
+  "Compare these findings with current literature in the field" | \
+# Generate implementation ideas
+claude -p --input-format stream-json --output-format stream-json \
+  "Suggest practical implementations of these findings" | \
+# Create action plan
+claude -p --input-format stream-json \
+  "Create a detailed action plan for implementing these ideas"
+```
+
 ## 💡 Key Insight
 
 **Stream chaining** turns Claude from a stateless prompt executor into a programmable agent pipeline. It's how you move from chat to computation, enabling complex multi-agent workflows that maintain context and build upon each other's work in real-time.
 
-## Future Enhancements
+This technology fundamentally changes how we think about AI automation:
+- **From**: Sequential, isolated prompts with context loss
+- **To**: Continuous, connected workflows with full context preservation
 
-- Support for multiple input streams (merge/join operations)
-- Conditional chaining based on output content
-- Stream filtering and transformation middleware
-- Parallel stream processing with fan-out/fan-in patterns
-- Built-in retry and error recovery mechanisms
-- Stream replay and debugging tools
+## 🚧 Future Enhancements
+
+- **Multi-stream merge**: Support for multiple input streams (merge/join operations)
+- **Conditional routing**: Dynamic chaining based on output content
+- **Stream middleware**: Filtering and transformation between agents
+- **Parallel patterns**: Fan-out/fan-in for parallel processing
+- **Error recovery**: Built-in retry and fallback mechanisms
+- **Debug tools**: Stream replay and step-through debugging
+- **Visual monitoring**: Real-time visualization of stream flow
+- **Performance analytics**: Detailed metrics for each chain segment
