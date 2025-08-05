@@ -1048,10 +1048,10 @@ async function enhancedClaudeFlowInit(flags, subArgs = []) {
 
     // Create CLAUDE.md
     if (!dryRun) {
-      await fs.writeFile(`${workingDir}/CLAUDE.md`, createEnhancedClaudeMd(), 'utf8');
-      printSuccess('✓ Created CLAUDE.md (Claude Flow v2.0.0)');
+      await fs.writeFile(`${workingDir}/CLAUDE.md`, createOptimizedSparcClaudeMd(), 'utf8');
+      printSuccess('✓ Created CLAUDE.md (Claude Flow v2.0.0 - Optimized)');
     } else {
-      console.log('[DRY RUN] Would create CLAUDE.md (Claude Flow v2.0.0)');
+      console.log('[DRY RUN] Would create CLAUDE.md (Claude Flow v2.0.0 - Optimized)');
     }
 
     // Create .claude directory structure
