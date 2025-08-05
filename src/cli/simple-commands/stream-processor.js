@@ -112,9 +112,33 @@ export class StreamJsonProcessor extends Transform {
               }
             }
           } else if (content.type === 'tool_use') {
-            // Show tool use concisely
+            // Show tool use with actual command/input when available
             const toolName = content.name.replace(/([A-Z])/g, ' $1').trim();
-            console.log(`🔧 ${toolName}`);
+            
+            // For Bash tool, show the actual command
+            if (content.name === 'Bash' && content.input?.command) {
+              const command = content.input.command;
+              if (command.length > 80) {
+                console.log(`🔧 Bash: ${command.substring(0, 77)}...`);
+              } else {
+                console.log(`🔧 Bash: ${command}`);
+              }
+            }
+            // For other tools, show key parameters
+            else if (content.input && Object.keys(content.input).length > 0) {
+              const firstKey = Object.keys(content.input)[0];
+              const firstValue = content.input[firstKey];
+              
+              if (typeof firstValue === 'string' && firstValue.length < 60) {
+                console.log(`🔧 ${toolName}: ${firstValue}`);
+              } else if (typeof firstValue === 'string') {
+                console.log(`🔧 ${toolName}: ${firstValue.substring(0, 57)}...`);
+              } else {
+                console.log(`🔧 ${toolName}`);
+              }
+            } else {
+              console.log(`🔧 ${toolName}`);
+            }
           }
         }
         break;
