@@ -554,6 +554,9 @@ EXAMPLES:
   
   # MLE-STAR with stream-json chaining (agents pipe outputs to each other)
   claude-flow automation mle-star --dataset data.csv --target label --claude --output-format stream-json
+  
+  # MLE-STAR with minimal output for CI/CD pipelines
+  claude-flow automation mle-star --dataset data.csv --target label --claude --quiet
 
 🎯 Automation benefits:
   • Optimal resource allocation
