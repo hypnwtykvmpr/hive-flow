@@ -2772,8 +2772,15 @@ async function launchClaudeWithContext(prompt, flags) {
     if (claudeAvailable && !flags.dryRun) {
       const claudeArgs = [prompt, '--print'];
 
-      if (flags['dangerously-skip-permissions'] !== false && !flags['no-auto-permissions']) {
+      // Add --dangerously-skip-permissions by default for hive-mind operations
+      // unless explicitly disabled with --no-auto-permissions
+      if (!flags['no-auto-permissions']) {
         claudeArgs.push('--dangerously-skip-permissions');
+        console.log(
+          chalk.yellow(
+            '🔓 Using --dangerously-skip-permissions by default for seamless hive-mind execution',
+          ),
+        );
       }
 
       // Use 'pipe' instead of 'inherit' to prevent terminal conflicts
