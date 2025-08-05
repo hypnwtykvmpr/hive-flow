@@ -437,6 +437,36 @@
       "value": "{\"status\": \"analyzing\", \"found_existing_pipeline\": true, \"path\": \"examples/ml_foundation/foundation_pipeline.py\", \"enhancements_planned\": [\"multi-dataset support\", \"advanced preprocessing\", \"automated hyperparameter tuning\", \"model interpretability\"]}",
       "namespace": "default",
       "timestamp": 1754364878309
+    },
+    {
+      "key": "agent/search_agent/sota_ml_2025",
+      "value": "{\"xgboost\":\"Leading gradient boosting with 10x speed improvement, regularization for reduced overfitting\",\"vision_transformers\":{\"CSWin\":\"85.4% ImageNet accuracy, 53.9 box AP COCO\",\"advantages\":\"4x computational efficiency vs CNNs\",\"trends_2025\":\"Lightweight models for edge devices, 128x compression\"},\"llms\":{\"leaders\":{\"gpt4o\":\"Best all-rounder, multimodal real-time processing\",\"gemini_2_5_pro\":\"1M token context, 86.4 GPQA reasoning\",\"claude_3_opus\":\"72.5% SWE-bench coding, long context\",\"deepseek_r1\":\"Open-source frontier model competitor\"},\"market\":\"$5.03B to $13.52B by 2029, 28% CAGR\"},\"frameworks\":{\"pytorch\":\"Dynamic graphs, rapid prototyping, most popular\",\"tensorflow\":\"Production scalability, Google ecosystem\",\"scikit_learn\":\"Traditional ML, efficiency\"}}",
+      "namespace": "default",
+      "timestamp": 1754365068605
+    },
+    {
+      "key": "agent/search_agent/kaggle_winning_techniques_2025",
+      "value": "{\"ensemble_techniques\":{\"multi_level_stacking\":\"XGBoost+LightGBM+CatBoost base, NN meta-learner\",\"blending\":\"Different CV strategies (KFold, GroupKFold, TimeSeriesSplit)\",\"diversity\":\"Tree-based + linear + neural networks\"},\"feature_engineering\":{\"automated\":\"Featuretools, AutoFeat for generation\",\"volume\":\"2000+ features common in winners\",\"selection\":\"SHAP values, permutation importance\",\"domain_specific\":\"Business understanding critical\"},\"optimization\":{\"hyperparameter_tuning\":\"Optuna framework\",\"custom_objectives\":\"Competition-specific metrics\",\"gpu_acceleration\":\"Essential for large datasets\"},\"deep_learning\":{\"frameworks\":\"PyTorch dominates (90%+), TensorFlow/Keras secondary\",\"cv_architectures\":\"U-Net, ConvNeXt, EfficientNet most common\",\"hybrid_approaches\":\"Combining gradient boosting with deep learning\"}}",
+      "namespace": "default",
+      "timestamp": 1754365084097
+    },
+    {
+      "key": "agent/search_agent/competition_highlights_2024_2025",
+      "value": "{\"arc_prize_2024\":{\"participation\":\"1430 teams, 17789 entries\",\"sota_improvement\":\"33% to 55.5% on ARC-AGI-1\",\"winning_approach\":\"Grid tokenization to 1D sequences + LLM prediction\",\"prize_2025\":\"$100k increase, 85% threshold\"},\"aimo_progress_prize\":{\"winner\":\"Team Numina, $131k prize\",\"approach\":\"DeepSeek-Math-7B variants, supervised fine-tuning\",\"key_technique\":\"3 epochs, 2e-5 learning rate\",\"hardware\":\"4x L4 GPUs with 96GB total memory\"},\"market_stats\":{\"competitions_2024\":\"400+ competitions, $22M total prizes\",\"kaggle_users\":\"22M+ registered\",\"python_dominance\":\"63/65 winning solutions\"},\"emerging_trends\":{\"inference_scaling\":\"OpenAI o1/o3, DeepSeek R1\",\"quantization\":\"Critical for LLM competitions\",\"edge_deployment\":\"Vision transformers on mobile devices\"}}",
+      "namespace": "default",
+      "timestamp": 1754365101024
+    },
+    {
+      "key": "agent/search_agent/implementation_recommendations",
+      "value": "{\"model_selection\":{\"tabular_data\":\"Start with XGBoost/LightGBM, add neural networks for ensemble\",\"computer_vision\":\"Vision Transformers for SOTA, CNNs for efficiency\",\"nlp_tasks\":\"Fine-tune existing LLMs (Claude, GPT, Gemini)\",\"time_series\":\"Combine traditional methods with deep learning\"},\"best_practices\":{\"start_simple\":\"Baseline models first, increase complexity gradually\",\"cv_strategy\":\"Match competition evaluation metric\",\"feature_engineering\":\"Domain knowledge + automated generation\",\"ensemble_diversity\":\"Different preprocessing pipelines, random seeds\"},\"technical_stack\":{\"primary\":\"PyTorch for deep learning, scikit-learn for traditional ML\",\"boosting\":\"XGBoost, LightGBM, CatBoost\",\"optimization\":\"Optuna for hyperparameters, GPU acceleration\",\"validation\":\"Adversarial validation for temporal stability\"}}",
+      "namespace": "default",
+      "timestamp": 1754365115749
+    },
+    {
+      "key": "workflow/workflow-exec-1754364775057-khmjv079m/web_search_phase",
+      "value": "{\"status\":\"completed\",\"agent\":\"search_agent\",\"executionTime\":21415,\"metadata\":{\"timestamp\":\"2025-08-05T03:33:16Z\",\"findings\":{\"sota_models\":\"Comprehensive research on XGBoost, Vision Transformers, LLMs\",\"kaggle_techniques\":\"Multi-level stacking, 2000+ features, PyTorch dominance\",\"competition_stats\":\"400+ competitions 2024, $22M prizes, ARC Prize 55.5% SOTA\",\"recommendations\":\"Model selection guide, best practices, technical stack\"},\"stored_keys\":[\"agent/search_agent/sota_ml_2025\",\"agent/search_agent/kaggle_winning_techniques_2025\",\"agent/search_agent/competition_highlights_2024_2025\",\"agent/search_agent/implementation_recommendations\"]}}",
+      "namespace": "default",
+      "timestamp": 1754365130411
     }
   ]
 }
