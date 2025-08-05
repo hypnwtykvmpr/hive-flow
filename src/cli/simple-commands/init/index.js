@@ -48,6 +48,7 @@ import { ValidationSystem, runFullValidation } from './validation/index.js';
 import { RollbackSystem, createAtomicOperation } from './rollback/index.js';
 import {
   createEnhancedClaudeMd,
+  createOptimizedSparcClaudeMd,
   createEnhancedSettingsJson,
   createWrapperScript,
   createCommandDoc,
