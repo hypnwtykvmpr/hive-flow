@@ -2,6 +2,7 @@
 import process from 'process';
 import { initCommand } from './simple-commands/init/index.js';
 import { memoryCommand } from './simple-commands/memory.js';
+import { memoryConsolidationCommand } from './simple-commands/memory-consolidation.js';
 import { sparcCommand } from './simple-commands/sparc.js';
 import { agentCommand } from './simple-commands/agent.js';
 import { taskCommand } from './simple-commands/task.js';
