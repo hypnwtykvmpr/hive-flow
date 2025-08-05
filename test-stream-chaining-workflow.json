@@ -2,6 +2,26 @@
   "name": "Stream Chaining Test Workflow",
   "description": "Test workflow to verify stream chaining is working",
   "type": "test",
+  "agents": [
+    {
+      "id": "generator",
+      "name": "Number Generator",
+      "type": "developer",
+      "capabilities": ["generation"]
+    },
+    {
+      "id": "processor",
+      "name": "Number Processor",
+      "type": "developer",
+      "capabilities": ["processing"]
+    },
+    {
+      "id": "summarizer",
+      "name": "Result Summarizer",
+      "type": "developer",
+      "capabilities": ["analysis"]
+    }
+  ],
   "tasks": [
     {
       "id": "task1",
