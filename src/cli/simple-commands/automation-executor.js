@@ -798,7 +798,11 @@ COORDINATION KEY POINTS:
       
       // Show regular task board or update concurrent display
       if (!concurrentDisplay) {
-        console.log(`\n🔄 Phase ${phaseIndex + 1}: ${phaseTasks.length} concurrent tasks`);
+        if (this.options.logLevel === 'quiet') {
+          console.log(`\n🔄 Phase ${phaseIndex + 1}: Running ${phaseTasks.length} tasks`);
+        } else {
+          console.log(`\n🔄 Phase ${phaseIndex + 1}: ${phaseTasks.length} concurrent tasks`);
+        }
         this.displayTaskBoard(taskStatuses, phaseTasks);
       }
       
