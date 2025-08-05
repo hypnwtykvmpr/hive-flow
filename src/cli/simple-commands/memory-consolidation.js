@@ -3,8 +3,21 @@ import { printSuccess, printError, printWarning, printInfo } from '../utils.js';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { existsSync } from '../node-compat.js';
-import sqlite3 from 'sqlite3';
-import { open } from 'sqlite';
+// Dynamic imports for optional dependencies
+let sqlite3;
+let sqliteOpen;
+
+async function loadSqliteModules() {
+  try {
+    const sqlite3Module = await import('sqlite3');
+    sqlite3 = sqlite3Module.default;
+    const sqliteModule = await import('sqlite');
+    sqliteOpen = sqliteModule.open;
+    return true;
+  } catch (err) {
+    return false;
+  }
+}
 
 /**
  * Memory database consolidation strategy
