@@ -20,12 +20,13 @@ export class HiveMindSessionManager {
     this.db = null;
     this.isInMemory = false;
     this.memoryStore = null;
+    this.initializationPromise = null;
 
     // Ensure directories exist
     this.ensureDirectories();
 
-    // Initialize database connection
-    this.initializeDatabase();
+    // Initialize database connection (store promise for later)
+    this.initializationPromise = this.initializeDatabase();
   }
 
   /**
@@ -58,6 +59,11 @@ export class HiveMindSessionManager {
    * Ensure database is initialized before use
    */
   async ensureInitialized() {
+    if (this.initializationPromise) {
+      await this.initializationPromise;
+      this.initializationPromise = null;
+    }
+    
     if (this.db === null && !this.isInMemory) {
       await this.initializeDatabase();
     }
