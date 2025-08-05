@@ -250,6 +250,16 @@ async function clearMemory(subArgs, saveMemory, namespace) {
   }
 
   try {
+    // Helper to load memory data
+    async function loadMemory() {
+      try {
+        const content = await fs.readFile('./memory/memory-store.json', 'utf8');
+        return JSON.parse(content);
+      } catch {
+        return {};
+      }
+    }
+    
     const data = await loadMemory();
 
     if (!data[namespace]) {
