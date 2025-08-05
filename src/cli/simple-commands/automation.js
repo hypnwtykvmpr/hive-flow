@@ -401,10 +401,14 @@ async function mleStarCommand(subArgs, flags) {
     console.log(`  Output: ${variables.model_output_dir}`);
     console.log(`  Claude Integration: ${executor.options.enableClaude ? 'Enabled' : 'Disabled'}`);
     console.log(`  Execution Mode: ${isNonInteractive ? 'Non-interactive (default)' : 'Interactive'}`);
+    console.log(`  Stream Chaining: ${executor.options.enableChaining && executor.options.outputFormat === 'stream-json' ? 'Enabled' : 'Disabled'}`);
     console.log();
     
     if (isNonInteractive && options.claude !== false) {
       console.log(`💡 Running in non-interactive mode: Each agent will execute independently`);
+      if (executor.options.enableChaining && executor.options.outputFormat === 'stream-json') {
+        console.log(`🔗 Stream chaining enabled: Agent outputs will be piped to dependent agents`);
+      }
       console.log(`   To use interactive mode instead, add --interactive flag`);
       console.log();
     }
