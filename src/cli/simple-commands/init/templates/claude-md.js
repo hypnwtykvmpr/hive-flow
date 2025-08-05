@@ -469,9 +469,12 @@ For more information about SPARC methodology, see: https://github.com/ruvnet/cla
 `;
 }
 
+// Import optimized version
+import { createOptimizedSparcClaudeMd as optimizedTemplate } from './claude-md-optimized.js';
+
 // Create optimized SPARC CLAUDE.md with batchtools integration
 export async function createOptimizedSparcClaudeMd() {
-  return `# Claude Code Configuration - SPARC Development Environment (Batchtools Optimized)
+  return optimizedTemplate();
 
 ## 🚨 CRITICAL: CONCURRENT EXECUTION FOR ALL ACTIONS
 
