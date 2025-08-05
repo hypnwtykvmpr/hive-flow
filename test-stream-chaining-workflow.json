@@ -36,7 +36,7 @@
       "name": "Process Numbers",
       "type": "processing",
       "description": "Double the numbers from previous task",
-      "assignTo": "processor",
+      "agentId": "processor",
       "depends": ["task1"],
       "claudePrompt": "You are receiving numbers from the previous agent via stream-json. Double each number and output the results as a JSON array. Only output the array, nothing else."
     },
