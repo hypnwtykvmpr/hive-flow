@@ -114,122 +114,132 @@ npx claude-flow sparc run integration "integrate components" --parallel
 ```
 Run integration tests in parallel, generate documentation concurrently.
 
-## 🤖 Available Agents (54 Total)
+## 🤖 Complete Agent Reference (All 54 Agents)
 
 ### 🚀 Concurrent Agent Usage
 
-**CRITICAL**: Always spawn multiple agents concurrently using the Task tool in a single message.
+**CRITICAL**: Always spawn multiple agents concurrently using the Task tool in a single message with exact agent names as shown below.
 
-### 📋 Agent Quick Reference
+### 📋 All Available Agents by Category
 
-#### Core Development (5)
-| Agent | Purpose | Usage |
-|-------|---------|--------|
-| `coder` | Implementation specialist | Code generation |
-| `reviewer` | Code quality assurance | Review & validation |
-| `tester` | Test creation and validation | Test suites |
-| `planner` | Strategic planning | Task breakdown |
-| `researcher` | Information gathering | Research & analysis |
+#### Core Development Agents (5)
+- **`coder`** - Implementation specialist for writing clean, efficient code
+- **`reviewer`** - Code review and quality assurance specialist
+- **`tester`** - Comprehensive testing and quality assurance specialist
+- **`planner`** - Strategic planning and task orchestration agent
+- **`researcher`** - Deep research and information gathering specialist
 
-#### Swarm Coordination (5)
-| Agent | Purpose | Usage |
-|-------|---------|--------|
-| `hierarchical-coordinator` | Queen-led coordination | Complex hierarchies |
-| `mesh-coordinator` | Peer-to-peer networks | Distributed tasks |
-| `adaptive-coordinator` | Dynamic topology | Self-organizing |
-| `collective-intelligence-coordinator` | Hive-mind intelligence | Group decisions |
-| `swarm-memory-manager` | Distributed memory | State management |
+#### Swarm Coordination Agents (5)
+- **`hierarchical-coordinator`** - Queen-led hierarchical swarm coordination with specialized worker delegation
+- **`mesh-coordinator`** - Peer-to-peer mesh network swarm with distributed decision making and fault tolerance
+- **`adaptive-coordinator`** - Dynamic topology switching coordinator with self-organizing swarm patterns and real-time optimization
+- **`collective-intelligence-coordinator`** - Neural center orchestrating collective decision-making and shared intelligence
+- **`swarm-memory-manager`** - Distributed memory coordination and optimization specialist
 
-#### Consensus & Distributed (7)
-| Agent | Purpose | Usage |
-|-------|---------|--------|
-| `byzantine-coordinator` | Byzantine fault tolerance | Security |
-| `raft-manager` | Leader election protocols | Consensus |
-| `gossip-coordinator` | Epidemic dissemination | Distribution |
-| `consensus-builder` | Decision-making algorithms | Voting |
-| `crdt-synchronizer` | Conflict-free replication | Sync |
-| `quorum-manager` | Dynamic quorum management | Decisions |
-| `security-manager` | Cryptographic security | Protection |
+#### Consensus & Distributed Systems Agents (7)
+- **`byzantine-coordinator`** - Coordinates Byzantine fault-tolerant consensus protocols with malicious actor detection
+- **`raft-manager`** - Manages Raft consensus algorithm with leader election and log replication
+- **`gossip-coordinator`** - Coordinates gossip-based consensus protocols for scalable eventually consistent systems
+- **`consensus-builder`** - Byzantine fault-tolerant consensus and voting mechanism specialist
+- **`crdt-synchronizer`** - Implements Conflict-free Replicated Data Types for eventually consistent state synchronization
+- **`quorum-manager`** - Implements dynamic quorum adjustment and intelligent membership management
+- **`security-manager`** - Implements comprehensive security mechanisms for distributed consensus protocols
 
-#### Performance & Optimization (5)
-| Agent | Purpose | Usage |
-|-------|---------|--------|
-| `perf-analyzer` | Bottleneck identification | Analysis |
-| `performance-benchmarker` | Performance testing | Benchmarks |
-| `task-orchestrator` | Workflow optimization | Coordination |
-| `memory-coordinator` | Memory management | Resource handling |
-| `smart-agent` | Intelligent coordination | Automation |
+#### Performance & Optimization Agents (5)
+- **`perf-analyzer`** - Performance bottleneck analyzer for identifying and resolving workflow inefficiencies
+- **`performance-benchmarker`** - Implements comprehensive performance benchmarking for distributed consensus protocols
+- **`task-orchestrator`** - Central coordination agent for task decomposition, execution planning, and result synthesis
+- **`memory-coordinator`** - Manage persistent memory across sessions and facilitate cross-agent memory sharing
+- **`smart-agent`** - Intelligent agent coordination and dynamic spawning specialist
 
-#### GitHub & Repository (9)
-| Agent | Purpose | Usage |
-|-------|---------|--------|
-| `github-modes` | Comprehensive GitHub integration | All GitHub ops |
-| `pr-manager` | Pull request management | PR workflows |
-| `code-review-swarm` | Multi-agent code review | Reviews |
-| `issue-tracker` | Issue management | Tracking |
-| `release-manager` | Release coordination | Deployments |
-| `workflow-automation` | CI/CD automation | Pipelines |
-| `project-board-sync` | Project tracking | Boards |
-| `repo-architect` | Repository optimization | Structure |
-| `multi-repo-swarm` | Cross-repository coordination | Multi-repo |
+#### GitHub & Repository Management Agents (9)
+- **`github-modes`** - Comprehensive GitHub integration modes for workflow orchestration, PR management, and repository coordination with batch optimization
+- **`pr-manager`** - Complete pull request lifecycle management and GitHub workflow coordination
+- **`code-review-swarm`** - Deploy specialized AI agents to perform comprehensive, intelligent code reviews that go beyond traditional static analysis
+- **`issue-tracker`** - Intelligent issue management and project coordination with automated tracking, progress monitoring, and team coordination
+- **`release-manager`** - Automated release coordination and deployment with ruv-swarm orchestration for seamless version management, testing, and deployment across multiple packages
+- **`workflow-automation`** - GitHub Actions workflow automation agent that creates intelligent, self-organizing CI/CD pipelines with adaptive multi-agent coordination and automated optimization
+- **`project-board-sync`** - Synchronize AI swarms with GitHub Projects for visual task management, progress tracking, and team coordination
+- **`repo-architect`** - Repository structure optimization and multi-repo management with ruv-swarm coordination for scalable project architecture and development workflows
+- **`multi-repo-swarm`** - Cross-repository swarm orchestration for organization-wide automation and intelligent collaboration
 
-#### SPARC Methodology (6)
-| Agent | Purpose | Usage |
-|-------|---------|--------|
-| `sparc-coord` | SPARC orchestration | Methodology |
-| `sparc-coder` | TDD implementation | Test-driven |
-| `specification` | Requirements analysis | Specs |
-| `pseudocode` | Algorithm design | Logic |
-| `architecture` | System design | Structure |
-| `refinement` | Iterative improvement | Enhancement |
+#### SPARC Methodology Agents (6)
+- **`sparc-coord`** - SPARC methodology orchestrator for systematic development phase coordination
+- **`sparc-coder`** - Transform specifications into working code with TDD practices
+- **`specification`** - SPARC Specification phase specialist for requirements analysis
+- **`pseudocode`** - SPARC Pseudocode phase specialist for algorithm design
+- **`architecture`** - SPARC Architecture phase specialist for system design
+- **`refinement`** - SPARC Refinement phase specialist for iterative improvement
 
-#### Specialized Development (8)
-| Agent | Purpose | Usage |
-|-------|---------|--------|
-| `backend-dev` | API development | Backend |
-| `mobile-dev` | React Native development | Mobile |
-| `ml-developer` | Machine learning | AI/ML |
-| `cicd-engineer` | CI/CD pipelines | DevOps |
-| `api-docs` | OpenAPI documentation | Docs |
-| `system-architect` | High-level design | Architecture |
-| `code-analyzer` | Code quality analysis | Analysis |
-| `base-template-generator` | Boilerplate creation | Templates |
+#### Specialized Development Agents (8)
+- **`backend-dev`** - Specialized agent for backend API development, including REST and GraphQL endpoints
+- **`mobile-dev`** - Expert agent for React Native mobile application development across iOS and Android
+- **`ml-developer`** - Specialized agent for machine learning model development, training, and deployment
+- **`cicd-engineer`** - Specialized agent for GitHub Actions CI/CD pipeline creation and optimization
+- **`api-docs`** - Expert agent for creating and maintaining OpenAPI/Swagger documentation
+- **`system-architect`** - Expert agent for system architecture design, patterns, and high-level technical decisions
+- **`code-analyzer`** - Advanced code quality analysis agent for comprehensive code reviews and improvements
+- **`base-template-generator`** - Use this agent when you need to create foundational templates, boilerplate code, or starter configurations for new projects
 
-#### Testing & Validation (2)
-| Agent | Purpose | Usage |
-|-------|---------|--------|
-| `tdd-london-swarm` | Mock-driven TDD | London school |
-| `production-validator` | Real implementation validation | Production |
+#### Testing & Validation Agents (2)
+- **`tdd-london-swarm`** - TDD London School specialist for mock-driven development within swarm coordination
+- **`production-validator`** - Production validation specialist ensuring applications are fully implemented and deployment-ready
 
-#### Migration & Planning (2)
-| Agent | Purpose | Usage |
-|-------|---------|--------|
-| `migration-planner` | System migrations | Migrations |
-| `swarm-init` | Topology initialization | Setup |
+#### Migration & Planning Agents (2)
+- **`migration-planner`** - Comprehensive migration plan for converting commands to agent-based system
+- **`swarm-init`** - Swarm initialization and topology optimization specialist
 
-### 🎯 Concurrent Agent Patterns
+#### Special Purpose Agents (4)
+- **`general-purpose`** - General-purpose agent for researching complex questions, searching for code, and executing multi-step tasks
+- **`swarm-pr`** - Pull request swarm management agent that coordinates multi-agent code review, validation, and integration workflows
+- **`release-swarm`** - Orchestrate complex software releases using AI swarms that handle everything from changelog generation to multi-platform deployment
+- **`swarm-issue`** - GitHub issue-based swarm coordination agent that transforms issues into intelligent multi-agent tasks with automatic decomposition and progress tracking
+
+#### Repository & Sync Agents (1)
+- **`sync-coordinator`** - Multi-repository synchronization coordinator that manages version alignment, dependency synchronization, and cross-package integration
+
+### 🎯 Concurrent Agent Spawning Examples
 
 #### Full-Stack Development Swarm (8 agents)
-```bash
-Task("System architecture", "...", "system-architect")
-Task("Backend APIs", "...", "backend-dev")
-Task("Frontend mobile", "...", "mobile-dev")
-Task("Database design", "...", "coder")
-Task("API documentation", "...", "api-docs")
-Task("CI/CD pipeline", "...", "cicd-engineer")
-Task("Performance testing", "...", "performance-benchmarker")
-Task("Production validation", "...", "production-validator")
+```javascript
+Task("System architecture design", "Design microservices architecture", "system-architect")
+Task("Backend API development", "Build REST endpoints", "backend-dev")
+Task("Mobile app development", "Create React Native app", "mobile-dev")
+Task("Database implementation", "Design and implement database", "coder")
+Task("API documentation", "Generate OpenAPI docs", "api-docs")
+Task("CI/CD pipeline setup", "Configure GitHub Actions", "cicd-engineer")
+Task("Performance testing", "Benchmark all endpoints", "performance-benchmarker")
+Task("Production validation", "Validate deployment readiness", "production-validator")
 ```
 
 #### SPARC TDD Swarm (7 agents)
-```bash
-Task("Requirements spec", "...", "specification")
-Task("Algorithm design", "...", "pseudocode")
-Task("System architecture", "...", "architecture")
-Task("TDD implementation", "...", "sparc-coder")
-Task("London school tests", "...", "tdd-london-swarm")
-Task("Iterative refinement", "...", "refinement")
-Task("Production validation", "...", "production-validator")
+```javascript
+Task("Analyze requirements", "Extract user stories", "specification")
+Task("Design algorithms", "Create solution pseudocode", "pseudocode")
+Task("System architecture", "Design component structure", "architecture")
+Task("TDD implementation", "Write tests and code", "sparc-coder")
+Task("Mock-driven tests", "Create London school tests", "tdd-london-swarm")
+Task("Iterative refinement", "Optimize implementation", "refinement")
+Task("Production validation", "Ensure production ready", "production-validator")
+```
+
+#### GitHub Workflow Swarm (5 agents)
+```javascript
+Task("PR management", "Handle pull request lifecycle", "pr-manager")
+Task("Code review coordination", "Orchestrate multi-agent review", "code-review-swarm")
+Task("Issue management", "Track and triage issues", "issue-tracker")
+Task("Release coordination", "Manage version releases", "release-manager")
+Task("Workflow automation", "Setup CI/CD pipelines", "workflow-automation")
+```
+
+#### Distributed Systems Swarm (6 agents)
+```javascript
+Task("Byzantine consensus", "Implement fault tolerance", "byzantine-coordinator")
+Task("Raft consensus", "Setup leader election", "raft-manager")
+Task("Gossip protocols", "Configure epidemic dissemination", "gossip-coordinator")
+Task("CRDT sync", "Implement conflict-free replication", "crdt-synchronizer")
+Task("Security implementation", "Add cryptographic security", "security-manager")
+Task("Performance analysis", "Identify bottlenecks", "perf-analyzer")
 ```
 
 ### ⚡ Performance Optimization
