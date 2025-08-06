@@ -461,7 +461,8 @@ class RealClaudeFlowExecutor:
                 exit_code = process.wait(timeout=5)  # Give it 5 more seconds
             except subprocess.TimeoutExpired:
                 process.kill()
-                exit_code = -1
+                exit_code = -9  # SIGKILL
+                stderr_lines.append(f"Process timed out after {timeout_seconds} seconds and was killed")
             
             # Wait for threads to complete
             stdout_thread.join(timeout=1)
