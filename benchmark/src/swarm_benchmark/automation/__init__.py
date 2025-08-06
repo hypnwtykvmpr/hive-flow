@@ -13,50 +13,29 @@ Key Components:
 - DecisionEngine: Make autonomous decisions based on context and performance
 """
 
+from .models import BenchmarkTask, BenchmarkResult
+from .batch_processor import BatchProcessor, BatchConfig, BatchResult
+from .pipeline_manager import PipelineManager, Pipeline, PipelineStage, PipelineResult
+from .workflow_executor import WorkflowExecutor, WorkflowConfig, WorkflowResult
+from .resource_pool import ResourcePool, ResourceConfig, ResourceAllocation
 from .decision_engine import DecisionEngine, DecisionContext, DecisionResult
 
-# Import from existing implementation files - other agents will enhance these
-try:
-    from .batch_processor import BatchProcessor, BatchConfig, BatchResult
-except ImportError:
-    # Placeholder if not yet implemented
-    class BatchProcessor: pass
-    class BatchConfig: pass 
-    class BatchResult: pass
-
-try:
-    from .pipeline_manager import PipelineManager, Pipeline, PipelineStage
-except ImportError:
-    # Placeholder if not yet implemented
-    class PipelineManager: pass
-    class Pipeline: pass
-    class PipelineStage: pass
-
-try:
-    from .workflow_executor import WorkflowExecutor, WorkflowConfig, WorkflowResult
-except ImportError:
-    # Placeholder if not yet implemented  
-    class WorkflowExecutor: pass
-    class WorkflowConfig: pass
-    class WorkflowResult: pass
-
-try:
-    from .resource_pool import ResourcePool
-except ImportError:
-    # Placeholder if not yet implemented
-    class ResourcePool: pass
-
 __all__ = [
+    "BenchmarkTask",
+    "BenchmarkResult",
     "BatchProcessor",
     "BatchConfig", 
     "BatchResult",
     "PipelineManager",
     "Pipeline",
     "PipelineStage",
+    "PipelineResult",
     "WorkflowExecutor",
     "WorkflowConfig",
     "WorkflowResult",
     "ResourcePool",
+    "ResourceConfig",
+    "ResourceAllocation",
     "DecisionEngine",
     "DecisionContext",
     "DecisionResult"
