@@ -50,8 +50,8 @@
 - `npx claude-flow sparc modes` - List modes
 - `npx claude-flow sparc run <mode> "<task>"` - Execute mode
 - `npx claude-flow sparc tdd "<feature>"` - TDD workflow
-- `npx claude-flow sparc batch <modes> "<task>"` - Parallel modes
-- `npx claude-flow sparc pipeline "<task>"` - Full pipeline
+- `npx claude-flow sparc batch <modes> "<task>" ` - Parallel modes
+- `npx claude-flow sparc pipeline "<task>" --non-interactive` - Full pipeline
 
 ### Build:
 - `npm run build/test/lint/typecheck`
