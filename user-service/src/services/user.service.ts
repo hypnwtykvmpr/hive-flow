@@ -43,7 +43,7 @@ export class UserService {
     logger.info(`User created: ${user.id}`);
 
     // Remove password from response
-    const { password, ...userWithoutPassword } = user;
+    const { password: _, ...userWithoutPassword } = user;
     return userWithoutPassword;
   }
 
@@ -82,7 +82,7 @@ export class UserService {
     logger.info(`User logged in: ${user.id}`);
 
     // Remove password from response
-    const { password, ...userWithoutPassword } = user;
+    const { password: _, ...userWithoutPassword } = user;
 
     return {
       user: userWithoutPassword,
