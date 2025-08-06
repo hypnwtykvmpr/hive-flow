@@ -177,11 +177,11 @@ class RealBenchmarkEngine(BenchmarkEngine):
         )
         
         if use_swarm:
-            # Use swarm command - always non-interactive
+            # Use swarm command with executor for non-interactive mode
             command.extend(["swarm", task.objective])
             command.extend(["--strategy", task.strategy.value])
             command.extend(["--mode", task.mode.value])
-            command.extend(["--executor", "--analysis"])  # Always non-interactive with analysis mode
+            command.append("--executor")  # Use built-in executor for non-interactive
         else:
             # Determine command type based on task strategy
             # Map strategies to valid SPARC modes: spec, architect, tdd, integration, refactor
