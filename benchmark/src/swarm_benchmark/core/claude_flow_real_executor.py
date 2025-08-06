@@ -361,6 +361,10 @@ class RealClaudeFlowExecutor:
         # Add verbose for better output
         command.append("--verbose")
         
+        # Add non-interactive flag for automation
+        if self.force_non_interactive:
+            command.append("--non-interactive")
+        
         # Add file output if task contains a path
         if " in " in config.task:
             output_path = config.task.split(" in ")[-1].strip('"').strip("'")
