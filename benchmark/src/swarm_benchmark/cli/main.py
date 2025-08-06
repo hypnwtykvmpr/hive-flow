@@ -482,12 +482,14 @@ def hive_mind(ctx, task, queen_type, max_workers, consensus, timeout, monitor, o
             if result.errors:
                 error_msg = "; ".join(result.errors)
             elif result.exit_code == -9:
-                error_msg = f"Command timed out or was killed (exit code: {result.exit_code})"
+                error_msg = "Command timed out (requires Claude CLI for execution)"
+                click.echo(f"❌ Hive-mind benchmark failed: {error_msg}")
+                click.echo("💡 Tip: Hive-mind requires Claude CLI. Install with: npm install -g @anthropic-ai/claude-code")
+                click.echo("    Or use SPARC commands which work without Claude CLI:")
+                click.echo("    swarm-benchmark real sparc tdd \"Your task\"")
             elif result.exit_code != 0:
                 error_msg = f"Command failed with exit code: {result.exit_code}"
-            else:
-                error_msg = "Unknown error"
-            click.echo(f"❌ Hive-mind benchmark failed: {error_msg}")
+                click.echo(f"❌ Hive-mind benchmark failed: {error_msg}")
             if ctx.obj.get('verbose') and result.stderr_lines:
                 click.echo(f"Stderr: {' '.join(result.stderr_lines[:5])}")
             return 1
