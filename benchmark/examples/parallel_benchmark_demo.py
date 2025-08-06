@@ -3,7 +3,12 @@
 
 import asyncio
 import logging
+import sys
+from pathlib import Path
 from datetime import datetime
+
+# Add the src directory to Python path
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from swarm_benchmark.core import (
     OrchestrationManager,
