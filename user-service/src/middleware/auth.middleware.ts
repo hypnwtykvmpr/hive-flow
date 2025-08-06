@@ -1,8 +1,8 @@
+/// <reference path="../types/express.d.ts" />
 import { Request, Response, NextFunction } from 'express';
 import { userService } from '../services/user.service';
 import { UserRole } from '../types/user.types';
 import { AuthenticationError, AuthorizationError } from '../utils/errors';
-import '../types/express';
 
 export async function authenticate(
   req: Request,
