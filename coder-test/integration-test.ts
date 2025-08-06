@@ -5,17 +5,17 @@
 
 // Mock Claude Flow Client for testing
 class ClaudeFlowClient {
-  constructor(private config: any) {}
+  constructor(private _config: any) {}
   
-  async initSwarm(config: any): Promise<any> {
+  async initSwarm(_config: any): Promise<any> {
     return { swarmId: `swarm-${Date.now()}`, status: 'active' };
   }
   
-  async spawnAgent(config: any): Promise<any> {
+  async spawnAgent(_config: any): Promise<any> {
     return { agentId: `agent-${Date.now()}-${Math.random()}`, status: 'idle' };
   }
   
-  async orchestrateTask(task: any): Promise<any> {
+  async orchestrateTask(_task: any): Promise<any> {
     return { taskId: `task-${Date.now()}`, status: 'processing', progress: 0 };
   }
   
@@ -23,11 +23,11 @@ class ClaudeFlowClient {
     return { taskId, status: 'completed', progress: 100 };
   }
   
-  async storeMemory(data: any): Promise<void> {
+  async storeMemory(_data: any): Promise<void> {
     // Simulate memory storage
   }
   
-  async retrieveMemory(query: any): Promise<any> {
+  async retrieveMemory(_query: any): Promise<any> {
     return { 
       value: JSON.stringify({
         apiSchema: { endpoints: ['/auth/login', '/auth/register', '/auth/reset'], models: ['User', 'Session', 'Token'] },
@@ -36,11 +36,11 @@ class ClaudeFlowClient {
     };
   }
   
-  async getSwarmStatus(swarmId: string): Promise<any> {
-    return { swarmId, status: 'active', agents: 3 };
+  async getSwarmStatus(_swarmId: string): Promise<any> {
+    return { swarmId: _swarmId, status: 'active', agents: 3 };
   }
   
-  async getPerformanceMetrics(config: any): Promise<any> {
+  async getPerformanceMetrics(_config: any): Promise<any> {
     return {
       agents: { active: 3, idle: 1, busy: 2 },
       tasks: { completed: 42, failed: 2, pending: 5 },
@@ -52,7 +52,7 @@ class ClaudeFlowClient {
     return { agentId, performance: { cpu: 45, memory: 128, tasks: 15 } };
   }
   
-  async destroySwarm(swarmId: string): Promise<void> {
+  async destroySwarm(_swarmId: string): Promise<void> {
     // Simulate swarm destruction
   }
 }
@@ -335,17 +335,17 @@ export class CoderIntegrationTest {
 
 // Mock Claude Flow Client for testing
 class ClaudeFlowClient {
-  constructor(private config: any) {}
+  constructor(private _config: any) {}
   
-  async initSwarm(config: any): Promise<any> {
+  async initSwarm(_config: any): Promise<any> {
     return { swarmId: `swarm-${Date.now()}`, status: 'active' };
   }
   
-  async spawnAgent(config: any): Promise<any> {
+  async spawnAgent(_config: any): Promise<any> {
     return { agentId: `agent-${Date.now()}-${Math.random()}`, status: 'idle' };
   }
   
-  async orchestrateTask(task: any): Promise<any> {
+  async orchestrateTask(_task: any): Promise<any> {
     return { taskId: `task-${Date.now()}`, status: 'processing', progress: 0 };
   }
   
@@ -353,11 +353,11 @@ class ClaudeFlowClient {
     return { taskId, status: 'completed', progress: 100 };
   }
   
-  async storeMemory(data: any): Promise<void> {
+  async storeMemory(_data: any): Promise<void> {
     // Simulate memory storage
   }
   
-  async retrieveMemory(query: any): Promise<any> {
+  async retrieveMemory(_query: any): Promise<any> {
     return { 
       value: JSON.stringify({
         apiSchema: { endpoints: ['/auth/login', '/auth/register', '/auth/reset'], models: ['User', 'Session', 'Token'] },
@@ -366,11 +366,11 @@ class ClaudeFlowClient {
     };
   }
   
-  async getSwarmStatus(swarmId: string): Promise<any> {
-    return { swarmId, status: 'active', agents: 3 };
+  async getSwarmStatus(_swarmId: string): Promise<any> {
+    return { swarmId: _swarmId, status: 'active', agents: 3 };
   }
   
-  async getPerformanceMetrics(config: any): Promise<any> {
+  async getPerformanceMetrics(_config: any): Promise<any> {
     return {
       agents: { active: 3, idle: 1, busy: 2 },
       tasks: { completed: 42, failed: 2, pending: 5 },
@@ -382,7 +382,7 @@ class ClaudeFlowClient {
     return { agentId, performance: { cpu: 45, memory: 128, tasks: 15 } };
   }
   
-  async destroySwarm(swarmId: string): Promise<void> {
+  async destroySwarm(_swarmId: string): Promise<void> {
     // Simulate swarm destruction
   }
 }
