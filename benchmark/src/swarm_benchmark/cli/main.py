@@ -5,6 +5,7 @@ import asyncio
 import json
 from pathlib import Path
 from typing import Optional
+from datetime import datetime
 
 from swarm_benchmark import __version__
 from swarm_benchmark.core.models import StrategyType, CoordinationMode, BenchmarkConfig
