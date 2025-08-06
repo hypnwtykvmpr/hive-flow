@@ -39,5 +39,6 @@ __all__ = [
     "ResourceSpec",
     "DecisionEngine",
     "DecisionContext",
-    "DecisionResult"
+    "DecisionResult",
+    "DecisionType"
 ]
