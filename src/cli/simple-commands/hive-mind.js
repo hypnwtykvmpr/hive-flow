@@ -825,8 +825,8 @@ async function spawnSwarm(args, flags) {
     process.on('SIGTERM', sigintHandler);
 
     // Offer to spawn Claude Code instances with coordination instructions
-    // --claude flag forces interactive mode even if --non-interactive is set
-    if (flags.claude || (flags.spawn && !(flags['non-interactive'] || flags.nonInteractive))) {
+    // Spawn Claude if --claude or --spawn flag is set
+    if (flags.claude || flags.spawn) {
       await spawnClaudeCodeInstances(swarmId, hiveMind.config.name, objective, workers, flags);
     } else {
       console.log(
