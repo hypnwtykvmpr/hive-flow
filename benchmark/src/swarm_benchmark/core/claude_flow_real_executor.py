@@ -126,9 +126,9 @@ class HiveMindCommand:
 @dataclass
 class SparcCommand:
     """Configuration for SPARC commands."""
-    mode: str  # run, code, architect, etc.
+    mode: str  # spec, architect, tdd, integration, refactor, etc.
     task: str
-    memory_key: Optional[str] = None
+    output_format: Optional[str] = None  # markdown, json, yaml
     additional_flags: List[str] = None
     
     def __post_init__(self):
