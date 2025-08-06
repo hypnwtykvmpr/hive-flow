@@ -171,24 +171,25 @@ class RealBenchmarkEngine(BenchmarkEngine):
         command = []
         
         # Determine command type based on task
+        # Map strategies to valid SPARC modes: spec, architect, tdd, integration, refactor
         if task.strategy == StrategyType.RESEARCH:
-            command.extend(["sparc", "researcher", task.objective])
+            command.extend(["sparc", "spec", task.objective])
         elif task.strategy == StrategyType.DEVELOPMENT:
-            command.extend(["sparc", "coder", task.objective])
+            command.extend(["sparc", "tdd", task.objective])
         elif task.strategy == StrategyType.ANALYSIS:
-            command.extend(["sparc", "analyzer", task.objective])
+            command.extend(["sparc", "architect", task.objective])
         elif task.strategy == StrategyType.TESTING:
-            command.extend(["sparc", "tester", task.objective])
+            command.extend(["sparc", "integration", task.objective])
         elif task.strategy == StrategyType.OPTIMIZATION:
-            command.extend(["sparc", "optimizer", task.objective])
+            command.extend(["sparc", "refactor", task.objective])
         elif "swarm" in task.objective.lower():
             # Swarm command
             command.extend(["swarm", task.objective])
             command.extend(["--strategy", task.strategy.value])
             command.extend(["--mode", task.mode.value])
         else:
-            # Default sparc command
-            command.extend(["sparc", "orchestrator", task.objective])
+            # Default to sparc tdd for generic tasks
+            command.extend(["sparc", "tdd", task.objective])
         
         # Add common parameters
         if task.parameters.get("parallel"):
