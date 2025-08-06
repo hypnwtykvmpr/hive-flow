@@ -423,8 +423,8 @@ def sparc(ctx, mode, task, namespace, timeout, non_interactive, output_dir):
     
     # Execute real SPARC command
     try:
-        from ..core.claude_flow_real_executor import ClaudeFlowRealExecutor, SparcCommand
-        executor = ClaudeFlowRealExecutor()
+        from ..core.claude_flow_real_executor import RealClaudeFlowExecutor, SparcCommand
+        executor = RealClaudeFlowExecutor()
         
         # Create SPARC configuration
         config = SparcCommand(
