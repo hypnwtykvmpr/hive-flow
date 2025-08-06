@@ -1,18 +1,10 @@
 [
   {
-    "id": "cmd-hooks-1754442425604",
-    "type": "hooks",
-    "success": true,
-    "duration": 6.74548200000001,
-    "timestamp": 1754442425611,
-    "metadata": {}
-  },
-  {
-    "id": "cmd-sparc-1754443263641",
+    "id": "cmd-sparc-1754443386389",
     "type": "sparc",
     "success": true,
-    "duration": 5851.54049,
-    "timestamp": 1754443269492,
+    "duration": 4.414234000000022,
+    "timestamp": 1754443386394,
     "metadata": {}
   }
 ]
