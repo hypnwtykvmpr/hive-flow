@@ -7,7 +7,6 @@ import {
   PaginationOptions,
   UserFilter 
 } from '../types/user.types';
-import { logger } from '../utils/logger';
 
 export class UserController {
   async register(req: Request, res: Response, next: NextFunction): Promise<void> {
