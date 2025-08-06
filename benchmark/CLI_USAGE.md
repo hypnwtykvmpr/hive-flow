@@ -48,6 +48,25 @@ swarm-benchmark real swarm "Create microservice" --all-modes --parallel
 - `--output`: Output format (json, sqlite)
 - `--output-dir`: Output directory (default: ./reports)
 
+## Important Notes on Multi-Word Tasks
+
+When running commands with multi-word tasks from the shell, ensure proper quoting:
+
+```bash
+# CORRECT - Use quotes around the entire task
+swarm-benchmark real hive-mind "Design hello world" --max-workers 4
+
+# For complex tasks with special characters, use single quotes
+swarm-benchmark real swarm 'Build REST API with /users endpoint' --strategy development
+
+# Or use a Python script for reliability
+python -c "
+import subprocess
+subprocess.run(['swarm-benchmark', 'real', 'hive-mind', 
+                'Design hello world in ./hello-bench/', 
+                '--max-workers', '8'])"
+```
+
 ## Examples
 
 ### Simple Benchmark
