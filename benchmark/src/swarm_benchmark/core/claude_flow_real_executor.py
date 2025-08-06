@@ -311,8 +311,7 @@ class RealClaudeFlowExecutor:
         command = [
             self.claude_flow_path,
             "hive-mind",
-            config.action,
-            "--non-interactive"
+            config.action
         ]
         
         if config.task:
@@ -322,8 +321,12 @@ class RealClaudeFlowExecutor:
             command.extend(["--count", str(config.spawn_count)])
             command.extend(["--coordination", config.coordination_mode])
         
+        # Add executor flag for non-interactive mode
+        command.append("--executor")
+        
         # Add additional flags
-        command.extend(config.additional_flags)
+        if config.additional_flags:
+            command.extend(config.additional_flags)
         
         return self._execute_streaming_command(command, 300)  # 5 minute default timeout
     
