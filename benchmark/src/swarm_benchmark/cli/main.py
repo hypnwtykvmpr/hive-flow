@@ -16,8 +16,12 @@ from swarm_benchmark.core.real_benchmark_engine import RealBenchmarkEngine
 @click.version_option(version=__version__)
 @click.option('--verbose', '-v', is_flag=True, help='Enable verbose output')
 @click.option('--config', '-c', type=click.Path(exists=True), help='Configuration file path')
+@click.option('--real/--mock', default=False, help='Use real claude-flow execution')
+@click.option('--claude-flow-path', default='./claude-flow', help='Path to claude-flow')
+@click.option('--timeout', default=300, help='Command timeout in seconds')
+@click.option('--stream/--no-stream', default=True, help='Stream output')
 @click.pass_context
-def cli(ctx, verbose, config):
+def cli(ctx, verbose, config, real, claude_flow_path, timeout, stream):
     """Claude Flow Advanced Swarm Benchmarking Tool.
     
     A comprehensive Python-based benchmarking tool for agent swarms that interfaces 
@@ -26,6 +30,10 @@ def cli(ctx, verbose, config):
     ctx.ensure_object(dict)
     ctx.obj['verbose'] = verbose
     ctx.obj['config'] = config
+    ctx.obj['real'] = real
+    ctx.obj['claude_flow_path'] = claude_flow_path
+    ctx.obj['timeout'] = timeout
+    ctx.obj['stream'] = stream
 
 
 @cli.command()
