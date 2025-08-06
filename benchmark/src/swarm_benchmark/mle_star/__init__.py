@@ -1,47 +1,29 @@
 """
-MLE-STAR Ensemble Learning Integration Module.
+MLE-STAR Ensemble Integration Module
 
-This module provides MLE-STAR ensemble learning capabilities for the benchmark system,
-including multi-model coordination, voting strategies, and consensus mechanisms.
-
-Note: Implementation files will be provided by ML Developer agent.
+This module provides ensemble learning capabilities with multiple model coordination,
+voting strategies, consensus mechanisms, and performance tracking.
 """
 
-# Placeholder classes for module structure
-class MLEStarEnsembleExecutor:
-    """MLE-STAR ensemble executor - to be implemented by ML Developer."""
-    pass
-
-class VotingStrategy:
-    """Base voting strategy - to be implemented by ML Developer."""
-    pass
-
-class MajorityVoting:
-    """Majority voting strategy - to be implemented by ML Developer."""
-    pass
-
-class WeightedVoting:
-    """Weighted voting strategy - to be implemented by ML Developer."""
-    pass
-
-class StackingEnsemble:
-    """Stacking ensemble strategy - to be implemented by ML Developer."""
-    pass
-
-class ModelCoordinator:
-    """Model coordinator - to be implemented by ML Developer."""
-    pass
-
-class MLEStarPerformanceTracker:
-    """MLE-STAR performance tracker - to be implemented by ML Developer."""
-    pass
+from .ensemble_executor import MLEStarEnsembleExecutor
+from .voting_strategies import VotingStrategy, MajorityVoting, WeightedVoting, StackingEnsemble, BayesianAveraging
+from .model_coordinator import ModelCoordinator, ModelAgent
+from .performance_tracker import PerformanceTracker, EnsembleMetrics
+from .ml_scenarios import MLScenarios, BenchmarkScenario
 
 __all__ = [
-    "MLEStarEnsembleExecutor",
-    "VotingStrategy",
-    "MajorityVoting", 
-    "WeightedVoting",
-    "StackingEnsemble",
-    "ModelCoordinator",
-    "MLEStarPerformanceTracker",
+    'MLEStarEnsembleExecutor',
+    'VotingStrategy',
+    'MajorityVoting', 
+    'WeightedVoting',
+    'StackingEnsemble',
+    'BayesianAveraging',
+    'ModelCoordinator',
+    'ModelAgent',
+    'PerformanceTracker',
+    'EnsembleMetrics',
+    'MLScenarios',
+    'BenchmarkScenario'
 ]
+
+__version__ = '1.0.0'
