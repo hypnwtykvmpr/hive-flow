@@ -304,8 +304,8 @@ class RealClaudeFlowExecutor:
         if config.additional_flags:
             command.extend(config.additional_flags)
         
-        # Set a reasonable timeout (5 minutes)
-        timeout = min(config.timeout * 60, 300)
+        # Use the configured timeout (can be hours)
+        timeout = config.timeout * 60  # Convert minutes to seconds
         
         return self._execute_streaming_command(command, timeout)
     
@@ -344,8 +344,9 @@ class RealClaudeFlowExecutor:
         if config.additional_flags:
             command.extend(config.additional_flags)
         
-        # Use appropriate timeout
-        return self._execute_streaming_command(command, 300)  # 5 minute timeout
+        # Use a long timeout for benchmarks (default 6 hours)
+        timeout = 6 * 60 * 60  # 6 hours in seconds
+        return self._execute_streaming_command(command, timeout)
     
     def execute_sparc(self, config: SparcCommand) -> RealExecutionResult:
         """Execute a real SPARC command."""
@@ -373,8 +374,9 @@ class RealClaudeFlowExecutor:
         if config.additional_flags:
             command.extend(config.additional_flags)
         
-        # Execute with appropriate timeout
-        return self._execute_streaming_command(command, 300)  # 5 minutes for SPARC
+        # Use a long timeout for SPARC benchmarks (default 2 hours)
+        timeout = 2 * 60 * 60  # 2 hours in seconds
+        return self._execute_streaming_command(command, timeout)
     
     def _execute_streaming_command(self, command: List[str], timeout_seconds: int) -> RealExecutionResult:
         """Execute command and parse streaming output."""
