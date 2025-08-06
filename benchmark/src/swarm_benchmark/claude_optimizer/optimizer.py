@@ -626,3 +626,43 @@ class ClaudeMdOptimizer:
         )
         
         return min(1.0, max(0.0, total_score))
+    
+    def _optimize_swarm(self, config: Dict, target_value: Any) -> Dict:
+        """Optimize swarm coordination settings."""
+        optimized = config.copy()
+        
+        # Optimize topology based on use case
+        if config.get("use_case") in ["ml_pipeline", "testing_automation"]:
+            optimized["swarm_topology"] = "mesh"
+        elif config.get("use_case") in ["api_development", "documentation"]:
+            optimized["swarm_topology"] = "hierarchical"
+        
+        # Add coordination rules
+        if "critical_rules" not in optimized:
+            optimized["critical_rules"] = []
+        
+        optimized["critical_rules"].extend([
+            "Enable swarm memory synchronization",
+            "Use collective decision making",
+            "Implement agent load balancing"
+        ])
+        
+        return optimized
+    
+    def _optimize_tools(self, config: Dict, target_value: Any) -> Dict:
+        """Optimize tool selection and priorities."""
+        optimized = config.copy()
+        
+        # Set tool priorities based on use case
+        use_case = config.get("use_case", "")
+        
+        if use_case == "api_development":
+            optimized["tool_priorities"] = ["MultiEdit", "Edit", "Bash", "Grep"]
+        elif use_case == "ml_pipeline":
+            optimized["tool_priorities"] = ["MultiEdit", "Bash", "Edit", "Read"]
+        elif use_case == "performance_optimization":
+            optimized["tool_priorities"] = ["Bash", "MultiEdit", "Grep", "Edit"]
+        else:
+            optimized["tool_priorities"] = ["MultiEdit", "Edit", "Read", "Bash"]
+        
+        return optimized
