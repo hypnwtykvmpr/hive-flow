@@ -22,7 +22,23 @@ from swarm_benchmark.automation import (
     ResourcePool, ResourceConfig, ResourceSpec,
     DecisionEngine, DecisionContext, DecisionType
 )
-from swarm_benchmark.core.models import BenchmarkTask
+
+# Simple placeholder models for testing
+class BenchmarkTask:
+    def __init__(self, id, name, description, type, parameters):
+        self.id = id
+        self.name = name
+        self.description = description
+        self.type = type
+        self.parameters = parameters
+
+class BenchmarkResult:
+    def __init__(self, task_id, status, execution_time, metrics, timestamp):
+        self.task_id = task_id
+        self.status = status
+        self.execution_time = execution_time
+        self.metrics = metrics
+        self.timestamp = timestamp
 
 
 def create_test_tasks(count: int = 10) -> list:
