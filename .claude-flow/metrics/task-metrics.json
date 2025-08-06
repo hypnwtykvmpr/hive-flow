@@ -1,10 +1,10 @@
 [
   {
-    "id": "cmd-swarm-1754446384546",
-    "type": "swarm",
+    "id": "cmd-sparc-1754446452479",
+    "type": "sparc",
     "success": true,
-    "duration": 8.28857099999999,
-    "timestamp": 1754446384554,
+    "duration": 2.4250229999999817,
+    "timestamp": 1754446452481,
     "metadata": {}
   }
 ]
