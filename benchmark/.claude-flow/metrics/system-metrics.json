@@ -9,6 +9,7 @@
     "cpuCount": 16,
     "cpuLoad": 0.2725,
     "platform": "linux",
+<<<<<<< Updated upstream
     "uptime": 15185.94
   },
   {
@@ -34,5 +35,20 @@
     "cpuLoad": 0.26625,
     "platform": "linux",
     "uptime": 15246
+=======
+    "uptime": 13300.77
+  },
+  {
+    "timestamp": 1754445262184,
+    "memoryTotal": 67427545088,
+    "memoryUsed": 7953563648,
+    "memoryFree": 59473981440,
+    "memoryUsagePercent": 11.795718852910584,
+    "memoryEfficiency": 88.20428114708942,
+    "cpuCount": 16,
+    "cpuLoad": 0.135,
+    "platform": "linux",
+    "uptime": 13330.8
+>>>>>>> Stashed changes
   }
 ]
