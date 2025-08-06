@@ -434,11 +434,47 @@ def hive_mind(ctx, task, queen_type, max_workers, consensus, timeout, monitor, o
         result = executor.execute_hive_mind(config)
         
         if result.success:
-            click.echo(f"✅ Hive-mind benchmark completed!")
-            click.echo(f"📊 Results saved to: {output_dir}")
+            # Generate detailed report
+            click.echo(f"\n{'='*60}")
+            click.echo(f"✅ Hive-Mind Benchmark Completed!")
+            click.echo(f"{'='*60}")
+            
+            # Basic info
+            click.echo(f"📋 Task: {task}")
+            click.echo(f"👑 Queen Type: {queen_type.upper()}")
+            click.echo(f"👷 Max Workers: {max_workers}")
+            click.echo(f"🤝 Consensus: {consensus.upper()}")
+            
+            # Performance metrics
+            click.echo(f"\n📊 Performance Metrics:")
+            click.echo(f"  ⏱️  Execution Time: {result.duration:.2f}s")
+            click.echo(f"  🤖 Agents Spawned: {result.agents_spawned}")
+            click.echo(f"  ✅ Tasks Completed: {result.tasks_completed}")
+            if result.total_tokens > 0:
+                click.echo(f"  🔤 Total Tokens: {result.total_tokens}")
+                click.echo(f"    📥 Input: {result.input_tokens}")
+                click.echo(f"    📤 Output: {result.output_tokens}")
+            
+            # Save results
+            import json
+            from pathlib import Path
+            output_path = Path(output_dir)
+            output_path.mkdir(parents=True, exist_ok=True)
+            
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            results_file = output_path / f"hive_mind_{timestamp}.json"
+            
+            with open(results_file, 'w') as f:
+                json.dump(result.to_dict(), f, indent=2, default=str)
+            
+            click.echo(f"\n📁 Output Files:")
+            click.echo(f"  📄 Results: {results_file}")
+            
             if ctx.obj.get('verbose'):
-                click.echo(f"Execution time: {result.duration:.2f}s")
-                click.echo(f"Workers spawned: {result.agents_spawned}")
+                click.echo(f"\n🔍 Command Executed:")
+                click.echo(f"  {' '.join(result.command)}")
+            
+            click.echo(f"{'='*60}\n")
         else:
             error_msg = ""
             if result.errors:
