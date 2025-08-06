@@ -323,6 +323,130 @@ def swarm(ctx, objective, strategy, mode, sparc_mode, all_modes, max_agents, tim
     return 0
 
 
+@real.command('hive-mind')
+@click.argument('task')
+@click.option('--queen-type', 
+              type=click.Choice(['strategic', 'tactical', 'adaptive']),
+              default='strategic',
+              help='Queen coordinator type (default: strategic)')
+@click.option('--max-workers', type=int, default=8, help='Maximum worker agents (default: 8)')
+@click.option('--consensus', 
+              type=click.Choice(['majority', 'weighted', 'byzantine']),
+              default='majority',
+              help='Consensus algorithm (default: majority)')
+@click.option('--timeout', type=int, default=60, help='Timeout in minutes (default: 60)')
+@click.option('--monitor', is_flag=True, help='Enable monitoring')
+@click.option('--output-dir', type=click.Path(), default='./reports', 
+              help='Output directory (default: ./reports)')
+@click.pass_context
+def hive_mind(ctx, task, queen_type, max_workers, consensus, timeout, monitor, output_dir):
+    """Run real claude-flow hive-mind benchmarks.
+    
+    TASK: The task for the hive-mind to accomplish
+    
+    Examples:
+      swarm-benchmark real hive-mind "Design architecture" --max-workers 8
+      swarm-benchmark real hive-mind "Solve problem" --queen-type adaptive
+      swarm-benchmark real hive-mind "Build system" --consensus byzantine
+    """
+    if ctx.obj.get('verbose'):
+        click.echo(f"Running real hive-mind benchmark")
+        click.echo(f"Task: {task}")
+        click.echo(f"Queen Type: {queen_type}")
+        click.echo(f"Max Workers: {max_workers}")
+        click.echo(f"Consensus: {consensus}")
+    
+    # Execute real hive-mind command
+    try:
+        from ..core.claude_flow_real_executor import ClaudeFlowRealExecutor
+        executor = ClaudeFlowRealExecutor()
+        
+        result = executor.execute_hive_mind(
+            task=task,
+            queen_type=queen_type,
+            max_workers=max_workers,
+            consensus=consensus,
+            timeout=timeout * 60,
+            monitor=monitor
+        )
+        
+        if result.success:
+            click.echo(f"✅ Hive-mind benchmark completed!")
+            click.echo(f"📊 Results saved to: {output_dir}")
+            if ctx.obj.get('verbose'):
+                click.echo(f"Execution time: {result.duration:.2f}s")
+                click.echo(f"Workers spawned: {result.metrics.get('workers_spawned', 'N/A')}")
+        else:
+            click.echo(f"❌ Hive-mind benchmark failed: {result.error}")
+            return 1
+            
+    except Exception as e:
+        click.echo(f"❌ Error running hive-mind: {e}")
+        return 1
+    
+    return 0
+
+
+@real.command('sparc')
+@click.argument('mode', type=click.Choice(['coder', 'architect', 'tdd', 'reviewer', 'tester', 
+                                          'optimizer', 'documenter', 'debugger']))
+@click.argument('task')
+@click.option('--namespace', help='Memory namespace')
+@click.option('--timeout', type=int, default=60, help='Timeout in minutes (default: 60)')
+@click.option('--non-interactive', is_flag=True, default=True, help='Non-interactive mode (default: True)')
+@click.option('--output-dir', type=click.Path(), default='./reports', 
+              help='Output directory (default: ./reports)')
+@click.pass_context
+def sparc(ctx, mode, task, namespace, timeout, non_interactive, output_dir):
+    """Run real claude-flow SPARC mode benchmarks.
+    
+    MODE: The SPARC mode to use (coder, architect, tdd, etc.)
+    TASK: The task to accomplish
+    
+    Examples:
+      swarm-benchmark real sparc coder "Implement authentication"
+      swarm-benchmark real sparc architect "Design microservices"
+      swarm-benchmark real sparc tdd "Create test suite"
+      swarm-benchmark real sparc reviewer "Review codebase"
+    """
+    if ctx.obj.get('verbose'):
+        click.echo(f"Running real SPARC benchmark")
+        click.echo(f"Mode: {mode}")
+        click.echo(f"Task: {task}")
+        if namespace:
+            click.echo(f"Namespace: {namespace}")
+    
+    # Execute real SPARC command
+    try:
+        from ..core.claude_flow_real_executor import ClaudeFlowRealExecutor
+        executor = ClaudeFlowRealExecutor()
+        
+        result = executor.execute_sparc(
+            mode=mode,
+            task=task,
+            namespace=namespace,
+            timeout=timeout * 60,
+            non_interactive=non_interactive
+        )
+        
+        if result.success:
+            click.echo(f"✅ SPARC {mode} benchmark completed!")
+            click.echo(f"📊 Results saved to: {output_dir}")
+            if ctx.obj.get('verbose'):
+                click.echo(f"Execution time: {result.duration:.2f}s")
+                if result.total_tokens:
+                    click.echo(f"Tokens used: {result.total_tokens}")
+        else:
+            click.echo(f"❌ SPARC benchmark failed: {result.error}")
+            return 1
+            
+    except Exception as e:
+        click.echo(f"❌ Error running SPARC: {e}")
+        return 1
+    
+    return 0
+
+
 async def _run_benchmark(objective: str, config: BenchmarkConfig, use_real_metrics: bool = False) -> Optional[dict]:
     """Run a benchmark with the given objective and configuration."""
     # Choose engine based on metrics flag
