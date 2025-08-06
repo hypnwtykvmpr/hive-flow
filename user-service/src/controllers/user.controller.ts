@@ -133,8 +133,8 @@ export class UserController {
       };
       
       const filter: UserFilter = {
-        role: req.query.role as any,
-        status: req.query.status as any,
+        role: req.query.role as UserFilter['role'],
+        status: req.query.status as UserFilter['status'],
         emailVerified: req.query.emailVerified === 'true' ? true : 
                       req.query.emailVerified === 'false' ? false : undefined,
         search: req.query.search as string,
