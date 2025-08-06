@@ -322,9 +322,10 @@ class RealClaudeFlowExecutor:
                 "--non-interactive"  # CRITICAL: Add non-interactive flag
             ]
             
-            # Add the task/objective
+            # Add the task/objective as a single quoted argument
             if config.task:
-                command.append(config.task)
+                # Ensure the task is passed as a single argument with quotes
+                command.append(f'"{config.task}"')
             
             # Add spawn parameters
             command.extend(["--count", str(config.spawn_count)])
