@@ -422,8 +422,15 @@ class AsyncFileManager:
         try:
             Path(file_path).parent.mkdir(parents=True, exist_ok=True)
             
-            async with aiofiles.open(file_path, 'w') as f:
-                await f.write(content)
+            if AIOFILES_AVAILABLE and aiofiles:
+                async with aiofiles.open(file_path, 'w') as f:
+                    await f.write(content)
+            else:
+                # Fallback to synchronous write
+                with open(file_path, 'w') as f:
+                    f.write(content)
+                # Simulate async behavior
+                await asyncio.sleep(0.001)
                 
         except Exception as e:
             print(f"Error writing text to {file_path}: {e}")
