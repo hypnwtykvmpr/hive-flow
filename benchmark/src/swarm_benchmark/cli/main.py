@@ -839,8 +839,36 @@ def _display_benchmarks_table(benchmarks):
         click.echo("No benchmarks found.")
         return
     
-    # TODO: Implement table display
-    click.echo("Benchmark results (table format not yet implemented)")
+    from datetime import datetime
+    
+    # Header
+    click.echo("\n" + "="*100)
+    click.echo(f"{'ID':<40} {'Strategy':<12} {'Mode':<12} {'Duration':<10} {'Date':<20}")
+    click.echo("="*100)
+    
+    # Rows
+    for bench in benchmarks:
+        # Format timestamp
+        dt = datetime.fromtimestamp(bench['timestamp'])
+        date_str = dt.strftime('%Y-%m-%d %H:%M:%S')
+        
+        # Format duration
+        duration = bench.get('duration', 0)
+        if duration > 0:
+            duration_str = f"{duration:.1f}s"
+        else:
+            duration_str = "N/A"
+        
+        # Truncate ID if too long
+        bench_id = bench['id']
+        if len(bench_id) > 38:
+            bench_id = bench_id[:35] + "..."
+            
+        click.echo(f"{bench_id:<40} {bench['strategy']:<12} {bench['mode']:<12} {duration_str:<10} {date_str:<20}")
+    
+    click.echo("="*100)
+    click.echo(f"\nTotal: {len(benchmarks)} benchmark(s)")
+    click.echo("\nUse 'swarm-bench show <id>' to view details of a specific benchmark")
 
 
 def _display_benchmarks_csv(benchmarks):
