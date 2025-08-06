@@ -44,8 +44,7 @@ export class UserService {
     logger.info(`User created: ${user.id}`);
 
     // Remove password from response
-    const { password: _, ...userWithoutPassword } = user;
-    return userWithoutPassword;
+    return excludePassword(user);
   }
 
   async login(data: LoginDTO): Promise<AuthResponse> {
