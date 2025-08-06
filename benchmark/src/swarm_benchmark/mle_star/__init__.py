@@ -9,7 +9,7 @@ from .ensemble_executor import MLEStarEnsembleExecutor, MLEStarConfig
 from .voting_strategies import VotingStrategy, MajorityVoting, WeightedVoting, StackingEnsemble, BayesianAveraging
 from .model_coordinator import ModelCoordinator, ModelAgent
 from .performance_tracker import PerformanceTracker, EnsembleMetrics
-from .ml_scenarios import MLScenarios, BenchmarkScenario
+from .ml_scenarios import MLScenarios, BenchmarkScenario, ClassificationScenario, RegressionScenario
 
 __all__ = [
     'MLEStarEnsembleExecutor',
