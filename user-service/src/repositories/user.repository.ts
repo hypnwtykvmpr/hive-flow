@@ -115,8 +115,8 @@ class UserRepository {
     const sortBy = pagination.sortBy || 'createdAt';
     const sortOrder = pagination.sortOrder || 'desc';
     filteredUsers.sort((a, b) => {
-      const aVal = (a as any)[sortBy];
-      const bVal = (b as any)[sortBy];
+      const aVal = a[sortBy as keyof User];
+      const bVal = b[sortBy as keyof User];
       const comparison = aVal > bVal ? 1 : aVal < bVal ? -1 : 0;
       return sortOrder === 'asc' ? comparison : -comparison;
     });
