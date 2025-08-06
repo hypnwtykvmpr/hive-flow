@@ -17,7 +17,7 @@ import json
 import numpy as np
 
 # Import test data generators
-from swarm_benchmark.fixtures.test_data import TestDataGenerator
+from .fixtures.test_data import TestDataGenerator
 
 
 # Pytest configuration
