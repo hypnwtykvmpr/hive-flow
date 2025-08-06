@@ -80,9 +80,9 @@ class ClaudeMdOptimizer:
         }
         
         self.optimization_rules = {
-            "concurrency": self._optimize_concurrency,
-            "memory_usage": self._optimize_memory,
-            "token_efficiency": self._optimize_tokens,
+            "concurrency": self.rules_engine.optimize_for_concurrency,
+            "memory_usage": self.rules_engine.optimize_for_memory,
+            "token_efficiency": self.rules_engine.optimize_for_tokens,
             "swarm_coordination": self._optimize_swarm,
             "tool_selection": self._optimize_tools
         }
