@@ -113,7 +113,7 @@ def run(ctx, objective, strategy, mode, max_agents, max_tasks, timeout, task_tim
                 click.echo(f"📋 Summary: {result.get('summary', 'N/A')}")
                 
             # Display metrics if available
-            if 'metrics' in result and real_metrics:
+            if 'metrics' in result and use_real:
                 click.echo("\n📈 Performance Metrics:")
                 metrics = result['metrics']
                 click.echo(f"  • Wall clock time: {metrics.get('wall_clock_time', 0):.2f}s")
