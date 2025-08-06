@@ -272,3 +272,21 @@ class RealBenchmarkEngine(BenchmarkEngine):
             self.metrics_aggregator.stop_collection()
             
         return results
+    
+    def cleanup(self):
+        """Clean up resources used by the benchmark engine."""
+        try:
+            # Stop metrics collection if still running
+            if hasattr(self, 'metrics_aggregator'):
+                self.metrics_aggregator.stop_collection()
+            
+            # Clean up any process trackers
+            if hasattr(self, 'process_tracker'):
+                self.process_tracker.cleanup()
+                
+            # Any other cleanup needed
+            pass
+        except Exception as e:
+            # Log but don't raise - cleanup should be safe
+            import logging
+            logging.warning(f"Error during cleanup: {e}")
