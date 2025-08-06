@@ -137,7 +137,7 @@ export class UserService {
 
     logger.info(`User updated: ${id}`);
 
-    const { password, ...userWithoutPassword } = updatedUser;
+    const { password: _, ...userWithoutPassword } = updatedUser;
     return userWithoutPassword;
   }
 
@@ -185,7 +185,7 @@ export class UserService {
     
     return {
       ...result,
-      data: result.data.map(({ password, ...user }) => user),
+      data: result.data.map(({ password: _, ...user }) => user),
     };
   }
 
@@ -197,7 +197,13 @@ export class UserService {
     logger.info(`Email verified for user: ${userId}`);
   }
 
-  async getUserStats(): Promise<any> {
+  async getUserStats(): Promise<{
+    total: number;
+    active: number;
+    inactive: number;
+    verified: number;
+    unverified: number;
+  }> {
     const total = await userRepository.count();
     const active = await userRepository.count({ status: UserStatus.ACTIVE });
     const verified = await userRepository.count({ emailVerified: true });
