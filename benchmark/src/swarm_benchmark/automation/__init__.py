@@ -18,7 +18,7 @@ from .batch_processor import BatchProcessor, BatchConfig, BatchResult
 from .pipeline_manager import PipelineManager, Pipeline, PipelineStage, PipelineResult
 from .workflow_executor import WorkflowExecutor, WorkflowConfig, WorkflowResult
 from .resource_pool import ResourcePool, ResourceConfig, ResourceAllocation, ResourceSpec
-from .decision_engine import DecisionEngine, DecisionContext, DecisionResult
+from .decision_engine import DecisionEngine, DecisionContext, DecisionResult, DecisionType
 
 __all__ = [
     "BenchmarkTask",
