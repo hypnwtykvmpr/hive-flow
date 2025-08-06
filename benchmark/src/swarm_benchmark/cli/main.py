@@ -229,7 +229,14 @@ def serve(ctx, port, host):
     return 0
 
 
-@cli.command()
+@cli.group()
+@click.pass_context
+def real(ctx):
+    """Real claude-flow command execution and benchmarking."""
+    pass
+
+
+@real.command('swarm')
 @click.argument('objective')
 @click.option('--strategy', 
               type=click.Choice(['auto', 'research', 'development', 'analysis', 'testing', 'optimization', 'maintenance']),
@@ -255,7 +262,7 @@ def serve(ctx, port, host):
 @click.option('--name', help='Benchmark name')
 @click.option('--description', help='Benchmark description')
 @click.pass_context
-def real(ctx, objective, strategy, mode, sparc_mode, all_modes, max_agents, timeout, 
+def swarm(ctx, objective, strategy, mode, sparc_mode, all_modes, max_agents, timeout, 
          task_timeout, parallel, monitor, output_formats, output_dir, name, description):
     """Run real claude-flow benchmarks with actual command execution.
     
