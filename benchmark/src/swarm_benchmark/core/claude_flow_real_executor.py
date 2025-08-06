@@ -109,6 +109,7 @@ class SwarmCommand:
 
 
 @dataclass
+@dataclass
 class HiveMindCommand:
     """Configuration for hive-mind commands."""
     action: str
