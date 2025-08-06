@@ -768,24 +768,15 @@ The swarm should be self-documenting - use memory_store to save all important in
 
       // If --claude flag is used, force Claude Code even if CLI not available
       if (flags && flags.claude) {
-        // Check if we're in non-interactive mode FIRST
-        const isNonInteractive = flags['no-interactive'] || 
-                                 flags['non-interactive'] || 
-                                 flags['output-format'] === 'stream-json' ||
-                                 isHeadlessEnvironment();
+        // --claude flag means interactive mode, so don't apply non-interactive
+        console.log('🐝 Launching Claude Flow Swarm System...');
+        console.log(`📋 Objective: ${objective}`);
+        console.log(`🎯 Strategy: ${strategy}`);
+        console.log(`🏗️  Mode: ${mode}`);
+        console.log(`🤖 Max Agents: ${maxAgents}\n`);
         
-        if (!isNonInteractive) {
-          console.log('🐝 Launching Claude Flow Swarm System...');
-          console.log(`📋 Objective: ${objective}`);
-          console.log(`🎯 Strategy: ${strategy}`);
-          console.log(`🏗️  Mode: ${mode}`);
-          console.log(`🤖 Max Agents: ${maxAgents}\n`);
-          
-          console.log('🚀 Launching Claude Code with Swarm Coordination');
-          console.log('─'.repeat(60));
-        } else {
-          console.log('🤖 Running in non-interactive mode with Claude');
-        }
+        console.log('🚀 Launching Claude Code with Swarm Coordination');
+        console.log('─'.repeat(60));
         
         // Pass the prompt directly as an argument to claude
         const claudeArgs = [swarmPrompt];
@@ -793,17 +784,10 @@ The swarm should be self-documenting - use memory_store to save all important in
         // Add auto-permission flag by default for swarm mode (unless explicitly disabled)
         if (flags['dangerously-skip-permissions'] !== false && !flags['no-auto-permissions']) {
           claudeArgs.push('--dangerously-skip-permissions');
-          if (!isNonInteractive) {
-            console.log('🔓 Using --dangerously-skip-permissions by default for seamless swarm execution');
-          }
+          console.log('🔓 Using --dangerously-skip-permissions by default for seamless swarm execution');
         }
         
-        // Add non-interactive flags if needed
-        if (isNonInteractive) {
-          claudeArgs.push('-p'); // Print mode
-          claudeArgs.push('--output-format', 'stream-json'); // JSON streaming
-          claudeArgs.push('--verbose'); // Verbose output
-        }
+        // --claude flag means interactive mode, so don't add non-interactive flags
         
         // Spawn claude with the prompt as the first argument (exactly like hive-mind does)
         const claudeProcess = spawn('claude', claudeArgs, {
