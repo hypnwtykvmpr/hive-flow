@@ -3,7 +3,11 @@
 
 import asyncio
 import json
+import sys
 from pathlib import Path
+
+# Add the src directory to Python path
+sys.path.insert(0, str(Path(__file__).parent / "src"))
 from swarm_benchmark.core.benchmark_engine import BenchmarkEngine
 from swarm_benchmark.core.models import BenchmarkConfig, StrategyType, CoordinationMode
 
