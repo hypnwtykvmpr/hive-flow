@@ -280,8 +280,8 @@ class RealBenchmarkEngine(BenchmarkEngine):
             if hasattr(self, 'metrics_aggregator'):
                 self.metrics_aggregator.stop_collection()
             
-            # Clean up any process trackers
-            if hasattr(self, 'process_tracker'):
+            # Clean up any process trackers if they have cleanup method
+            if hasattr(self, 'process_tracker') and hasattr(self.process_tracker, 'cleanup'):
                 self.process_tracker.cleanup()
                 
             # Any other cleanup needed
