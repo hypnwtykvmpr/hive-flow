@@ -94,16 +94,14 @@ export class UserService {
     const user = await userRepository.findById(id);
     if (!user) return null;
 
-    const { password: _, ...userWithoutPassword } = user;
-    return userWithoutPassword;
+    return excludePassword(user);
   }
 
   async getUserByEmail(email: string): Promise<Omit<User, 'password'> | null> {
     const user = await userRepository.findByEmail(email);
     if (!user) return null;
 
-    const { password: _, ...userWithoutPassword } = user;
-    return userWithoutPassword;
+    return excludePassword(user);
   }
 
   async updateUser(id: string, data: UpdateUserDTO): Promise<Omit<User, 'password'>> {
