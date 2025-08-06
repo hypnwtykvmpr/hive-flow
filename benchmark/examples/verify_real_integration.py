@@ -46,17 +46,15 @@ class RealIntegrationVerifier:
         """Find the claude-flow executable."""
         # Common locations to check
         possible_paths = [
+            # Binary directories (priority)
+            Path("/workspaces/claude-code-flow/bin/claude-flow"),
+            Path(__file__).parent.parent.parent.parent / "bin" / "claude-flow",
+            
             # Project root
+            Path("/workspaces/claude-code-flow/claude-flow"),
             Path(__file__).parent.parent.parent.parent / "claude-flow",
             Path(__file__).parent.parent.parent / "claude-flow", 
             Path.cwd() / "claude-flow",
-            
-            # Binary directories
-            Path(__file__).parent.parent.parent.parent / "bin" / "claude-flow",
-            Path(__file__).parent.parent.parent / "bin" / "claude-flow",
-            
-            # Absolute path (if in workspace)
-            Path("/workspaces/claude-code-flow/claude-flow"),
             
             # Distribution directory
             Path(__file__).parent.parent.parent.parent / "dist" / "claude-flow",
