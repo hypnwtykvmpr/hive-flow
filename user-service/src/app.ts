@@ -5,7 +5,7 @@ import compression from 'compression';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import { config } from './config/config';
-import { logger, stream } from './utils/logger';
+import { stream } from './utils/logger';
 import userRoutes from './routes/user.routes';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware';
 
@@ -40,7 +40,7 @@ export function createApp(): Application {
   }
 
   // Health check endpoint
-  app.get('/health', (req, res) => {
+  app.get('/health', (_req, res) => {
     res.json({
       status: 'healthy',
       timestamp: new Date().toISOString(),
@@ -53,7 +53,7 @@ export function createApp(): Application {
   app.use('/api', userRoutes);
 
   // Documentation route
-  app.get('/api/docs', (req, res) => {
+  app.get('/api/docs', (_req, res) => {
     res.json({
       name: 'User Service API',
       version: '1.0.0',
