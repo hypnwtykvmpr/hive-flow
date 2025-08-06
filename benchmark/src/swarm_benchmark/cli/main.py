@@ -264,15 +264,15 @@ def real(ctx):
 @click.pass_context
 def swarm(ctx, objective, strategy, mode, sparc_mode, all_modes, max_agents, timeout, 
          task_timeout, parallel, monitor, output_formats, output_dir, name, description):
-    """Run real claude-flow benchmarks with actual command execution.
+    """Run real claude-flow swarm benchmarks with actual command execution.
     
     OBJECTIVE: The goal or task for claude-flow to accomplish
     
     Examples:
-      swarm-benchmark real "Build a REST API" --strategy development
-      swarm-benchmark real "Create a parser" --sparc-mode coder
-      swarm-benchmark real "Analyze code" --all-modes --parallel
-      swarm-benchmark real "Optimize performance" --mode distributed --monitor
+      swarm-benchmark real swarm "Build a REST API" --strategy development
+      swarm-benchmark real swarm "Create a parser" --sparc-mode coder
+      swarm-benchmark real swarm "Analyze code" --all-modes --parallel
+      swarm-benchmark real swarm "Optimize performance" --mode distributed --monitor
     """
     # Create benchmark configuration
     config = BenchmarkConfig(
