@@ -13,7 +13,7 @@ import time
 from typing import Dict, Any
 
 # Add the src directory to Python path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
+sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 from swarm_benchmark.mle_star import MLScenarios, MLEStarEnsembleExecutor, MLEStarConfig
 # Integration with existing benchmark system would use these imports when available
