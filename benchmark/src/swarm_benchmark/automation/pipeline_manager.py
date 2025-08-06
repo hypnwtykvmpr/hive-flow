@@ -16,7 +16,7 @@ from enum import Enum
 import networkx as nx
 from abc import ABC, abstractmethod
 
-from ..core.models import Benchmark
+from .models import BenchmarkTask, BenchmarkResult
 
 
 class PipelineStatus(Enum):
