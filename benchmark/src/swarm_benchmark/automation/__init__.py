@@ -53,13 +53,10 @@ __all__ = [
     "PipelineManager",
     "Pipeline",
     "PipelineStage",
-    "PipelineResult",
     "WorkflowExecutor",
     "WorkflowConfig",
     "WorkflowResult",
     "ResourcePool",
-    "ResourceConfig",
-    "ResourceAllocation",
     "DecisionEngine",
     "DecisionContext",
     "DecisionResult"
