@@ -768,8 +768,57 @@ async def _run_real_benchmark(objective: str, config: BenchmarkConfig,
 
 def _get_recent_benchmarks(filter_strategy=None, filter_mode=None, limit=10):
     """Get recent benchmark runs."""
-    # TODO: Implement database query
-    return []
+    import os
+    from pathlib import Path
+    import json
+    
+    # Look for benchmark files in the reports directory
+    reports_dir = Path('./reports')
+    if not reports_dir.exists():
+        return []
+    
+    benchmarks = []
+    
+    # Find all JSON files that look like benchmark results
+    for file_path in reports_dir.glob('*.json'):
+        # Skip metrics and process report files
+        if 'metrics_' in file_path.name or 'process_report_' in file_path.name:
+            continue
+            
+        try:
+            with open(file_path, 'r') as f:
+                data = json.load(f)
+                
+            # Extract benchmark info
+            benchmark_info = {
+                'id': file_path.stem,
+                'file': str(file_path),
+                'timestamp': file_path.stat().st_mtime,
+                'name': data.get('name', file_path.stem),
+                'strategy': data.get('strategy', 'unknown'),
+                'mode': data.get('mode', 'unknown'),
+                'objective': data.get('objective', data.get('description', 'N/A')),
+                'success': data.get('success', False),
+                'duration': data.get('duration', 0)
+            }
+            
+            # Apply filters if provided
+            if filter_strategy and benchmark_info['strategy'].lower() != filter_strategy.lower():
+                continue
+            if filter_mode and benchmark_info['mode'].lower() != filter_mode.lower():
+                continue
+                
+            benchmarks.append(benchmark_info)
+            
+        except Exception as e:
+            # Skip files that can't be parsed
+            continue
+    
+    # Sort by timestamp (most recent first)
+    benchmarks.sort(key=lambda x: x['timestamp'], reverse=True)
+    
+    # Limit results
+    return benchmarks[:limit]
 
 
 def _get_benchmark_details(benchmark_id: str):
