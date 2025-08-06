@@ -170,24 +170,38 @@ class RealBenchmarkEngine(BenchmarkEngine):
         """Convert a task to claude-flow command arguments."""
         command = []
         
-        # Determine command type based on task
-        # Map strategies to valid SPARC modes: spec, architect, tdd, integration, refactor
-        if task.strategy == StrategyType.RESEARCH:
-            command.extend(["sparc", "spec", task.objective])
-        elif task.strategy == StrategyType.DEVELOPMENT:
-            command.extend(["sparc", "tdd", task.objective])
-        elif task.strategy == StrategyType.ANALYSIS:
-            command.extend(["sparc", "architect", task.objective])
-        elif task.strategy == StrategyType.TESTING:
-            command.extend(["sparc", "integration", task.objective])
-        elif task.strategy == StrategyType.OPTIMIZATION:
-            command.extend(["sparc", "refactor", task.objective])
-        else:
-            # Use swarm command for all other tasks with executor flag
+        # Check if we should use swarm (based on config or task name)
+        use_swarm = (
+            task.parameters.get("use_swarm", False) or
+            "swarm" in task.name.lower() or
+            self.config.parameters.get("force_swarm", False)
+        )
+        
+        if use_swarm:
+            # Use swarm command with executor flag
             command.extend(["swarm", task.objective])
             command.extend(["--strategy", task.strategy.value])
             command.extend(["--mode", task.mode.value])
             command.append("--executor")  # Non-interactive mode
+        else:
+            # Determine command type based on task strategy
+            # Map strategies to valid SPARC modes: spec, architect, tdd, integration, refactor
+            if task.strategy == StrategyType.RESEARCH:
+                command.extend(["sparc", "spec", task.objective])
+            elif task.strategy == StrategyType.DEVELOPMENT:
+                command.extend(["sparc", "tdd", task.objective])
+            elif task.strategy == StrategyType.ANALYSIS:
+                command.extend(["sparc", "architect", task.objective])
+            elif task.strategy == StrategyType.TESTING:
+                command.extend(["sparc", "integration", task.objective])
+            elif task.strategy == StrategyType.OPTIMIZATION:
+                command.extend(["sparc", "refactor", task.objective])
+            else:
+                # Default to swarm for unknown strategies
+                command.extend(["swarm", task.objective])
+                command.extend(["--strategy", task.strategy.value])
+                command.extend(["--mode", task.mode.value])
+                command.append("--executor")  # Non-interactive mode
         
         # Add common parameters
         if task.parameters.get("parallel"):
