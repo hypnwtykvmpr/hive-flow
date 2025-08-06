@@ -423,16 +423,17 @@ def sparc(ctx, mode, task, namespace, timeout, non_interactive, output_dir):
     
     # Execute real SPARC command
     try:
-        from ..core.claude_flow_real_executor import ClaudeFlowRealExecutor
+        from ..core.claude_flow_real_executor import ClaudeFlowRealExecutor, SparcCommand
         executor = ClaudeFlowRealExecutor()
         
-        result = executor.execute_sparc(
+        # Create SPARC configuration
+        config = SparcCommand(
             mode=mode,
             task=task,
-            namespace=namespace,
-            timeout=timeout * 60,
-            non_interactive=non_interactive
+            memory_key=namespace
         )
+        
+        result = executor.execute_sparc(config)
         
         if result.success:
             click.echo(f"✅ SPARC {mode} benchmark completed!")
