@@ -17,7 +17,7 @@ import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import psutil
 
-from .models import BenchmarkTask, BenchmarkResult
+from ..core.models import Task as BenchmarkTask, Result as BenchmarkResult
 
 
 class BatchStatus(Enum):
