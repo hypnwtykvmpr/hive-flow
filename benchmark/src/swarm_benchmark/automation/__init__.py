@@ -34,8 +34,9 @@ __all__ = [
     "WorkflowConfig",
     "WorkflowResult",
     "ResourcePool",
-    "ResourceConfig",
+    "ResourceConfig", 
     "ResourceAllocation",
+    "ResourceSpec",
     "DecisionEngine",
     "DecisionContext",
     "DecisionResult"
