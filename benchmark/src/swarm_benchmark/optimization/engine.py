@@ -18,7 +18,13 @@ from typing import Dict, Any, Optional, List, Union
 from datetime import datetime, timedelta
 from pathlib import Path
 import weakref
-import aiofiles
+# Optional aiofiles import with fallback
+try:
+    import aiofiles
+    AIOFILES_AVAILABLE = True
+except ImportError:
+    aiofiles = None
+    AIOFILES_AVAILABLE = False
 
 
 class OptimizedExecutor:
