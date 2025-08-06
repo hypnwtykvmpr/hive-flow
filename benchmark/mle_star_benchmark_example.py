@@ -16,7 +16,8 @@ from typing import Dict, Any
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 
 from swarm_benchmark.mle_star import MLScenarios, MLEStarEnsembleExecutor, MLEStarConfig
-from swarm_benchmark.core.models import BenchmarkResult, ComprehensiveBenchmarkResult
+# Integration with existing benchmark system would use these imports when available
+# from swarm_benchmark.core.models import BenchmarkResult, ComprehensiveBenchmarkResult
 
 
 async def run_mle_star_benchmark_suite():
