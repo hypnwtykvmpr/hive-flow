@@ -6,5 +6,13 @@
     "duration": 4.414234000000022,
     "timestamp": 1754443386394,
     "metadata": {}
+  },
+  {
+    "id": "cmd-sparc-1754443415206",
+    "type": "sparc",
+    "success": true,
+    "duration": 4956.067975,
+    "timestamp": 1754443420162,
+    "metadata": {}
   }
 ]
