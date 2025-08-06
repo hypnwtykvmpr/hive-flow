@@ -608,12 +608,12 @@ def execute_hive_mind_spawn(task: str,
     return executor.execute_hive_mind(config)
 
 
-def execute_sparc_mode(mode: str, task: str, memory_key: Optional[str] = None) -> RealExecutionResult:
+def execute_sparc_mode(mode: str, task: str, output_format: Optional[str] = None) -> RealExecutionResult:
     """Execute a SPARC mode with real Claude Flow."""
     executor = RealClaudeFlowExecutor()
     config = SparcCommand(
         mode=mode,
         task=task,
-        memory_key=memory_key
+        output_format=output_format
     )
     return executor.execute_sparc(config)
