@@ -1,6 +1,7 @@
 """Main benchmark engine for orchestrating swarm tests."""
 
 import asyncio
+import logging
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 from pathlib import Path
@@ -9,6 +10,15 @@ from .models import Benchmark, Task, Result, BenchmarkConfig, TaskStatus, Strate
 from ..strategies import create_strategy
 from ..output.json_writer import JSONWriter
 from ..output.sqlite_manager import SQLiteManager
+
+# Import real executor for actual Claude Flow integration
+from .claude_flow_real_executor import (
+    RealClaudeFlowExecutor, 
+    SwarmCommand, 
+    RealExecutionResult
+)
+
+logger = logging.getLogger(__name__)
 
 
 class BenchmarkEngine:
