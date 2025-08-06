@@ -137,8 +137,7 @@ export class UserService {
 
     logger.info(`User updated: ${id}`);
 
-    const { password: _, ...userWithoutPassword } = updatedUser;
-    return userWithoutPassword;
+    return excludePassword(updatedUser);
   }
 
   async changePassword(id: string, oldPassword: string, newPassword: string): Promise<void> {
