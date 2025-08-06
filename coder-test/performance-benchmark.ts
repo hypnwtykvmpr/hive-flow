@@ -148,12 +148,12 @@ export class CoderBenchmark {
     this.printResults();
   }
 
-  private async processCode(code: string): Promise<void> {
+  private async processCode(_code: string): Promise<void> {
     // Simulate code processing
     await new Promise(resolve => setTimeout(resolve, Math.random() * 10));
   }
 
-  private async processTask(task: any): Promise<void> {
+  private async processTask(_task: any): Promise<void> {
     // Simulate task processing
     await new Promise(resolve => setTimeout(resolve, Math.random() * 5));
   }
@@ -164,18 +164,18 @@ export class CoderBenchmark {
     return code.replace('var', 'const').replace('function', 'const');
   }
 
-  private async generateTests(code: string): Promise<string[]> {
+  private async generateTests(_code: string): Promise<string[]> {
     // Simulate test generation
     await new Promise(resolve => setTimeout(resolve, Math.random() * 20));
     return ['test1', 'test2', 'test3'];
   }
 
-  private async storeMemory(key: string, data: any): Promise<void> {
+  private async storeMemory(_key: string, _data: any): Promise<void> {
     // Simulate memory storage
     await new Promise(resolve => setTimeout(resolve, Math.random() * 2));
   }
 
-  private async retrieveMemory(key: string): Promise<any> {
+  private async retrieveMemory(_key: string): Promise<any> {
     // Simulate memory retrieval
     await new Promise(resolve => setTimeout(resolve, Math.random() * 1));
     return {};
