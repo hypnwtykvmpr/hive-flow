@@ -56,11 +56,12 @@ class ClaudeFlowRealExecutor:
         # Check project locations
         base_path = Path(__file__).parent.parent.parent.parent
         locations = [
+            Path("/workspaces/claude-code-flow/bin/claude-flow"),
             base_path / "bin" / "claude-flow",
+            Path("/workspaces/claude-code-flow/claude-flow"),
             base_path / "claude-flow",
             base_path / "dist" / "claude-flow",
             Path.cwd() / "claude-flow",
-            Path("/workspaces/claude-code-flow/claude-flow"),
         ]
         
         for loc in locations:
