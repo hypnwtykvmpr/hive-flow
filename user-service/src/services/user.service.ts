@@ -184,7 +184,7 @@ export class UserService {
     
     return {
       ...result,
-      data: result.data.map(({ password: _, ...user }) => user),
+      data: result.data.map(user => excludePassword(user)),
     };
   }
 
