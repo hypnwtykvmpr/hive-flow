@@ -45,6 +45,7 @@ export interface UpdateUserDTO {
   avatar?: string;
   role?: UserRole;
   status?: UserStatus;
+  password?: string;
 }
 
 export interface LoginDTO {
