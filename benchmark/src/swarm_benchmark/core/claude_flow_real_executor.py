@@ -245,14 +245,17 @@ class RealClaudeFlowExecutor:
     
     def __init__(self, 
                  claude_flow_path: Optional[str] = None,
-                 working_dir: Optional[str] = None):
+                 working_dir: Optional[str] = None,
+                 force_non_interactive: bool = True):
         """
         Initialize the real executor.
         
         Args:
             claude_flow_path: Path to ./claude-flow executable
             working_dir: Working directory for execution
+            force_non_interactive: Always use non-interactive mode (default: True)
         """
+        self.force_non_interactive = force_non_interactive
         self.claude_flow_path = claude_flow_path or self._find_claude_flow()
         self.working_dir = Path(working_dir) if working_dir else Path.cwd()
         
