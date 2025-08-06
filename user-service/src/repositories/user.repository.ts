@@ -117,6 +117,7 @@ class UserRepository {
     filteredUsers.sort((a, b) => {
       const aVal = a[sortBy as keyof User];
       const bVal = b[sortBy as keyof User];
+      if (aVal === undefined || bVal === undefined) return 0;
       const comparison = aVal > bVal ? 1 : aVal < bVal ? -1 : 0;
       return sortOrder === 'asc' ? comparison : -comparison;
     });
