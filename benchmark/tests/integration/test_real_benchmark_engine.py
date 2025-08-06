@@ -11,7 +11,7 @@ from pathlib import Path
 from datetime import datetime
 
 # Add the benchmark source to Python path
-sys.path.insert(0, str(Path(__file__).parent / "src"))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from swarm_benchmark.core.real_benchmark_engine import RealBenchmarkEngine
 from swarm_benchmark.core.models import (
