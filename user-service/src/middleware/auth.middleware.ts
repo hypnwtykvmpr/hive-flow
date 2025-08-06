@@ -14,7 +14,7 @@ declare global {
 
 export async function authenticate(
   req: Request,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ): Promise<void> {
   try {
@@ -35,7 +35,7 @@ export async function authenticate(
 }
 
 export function authorize(...roles: UserRole[]) {
-  return (req: Request, res: Response, next: NextFunction): void => {
+  return (req: Request, _res: Response, next: NextFunction): void => {
     if (!req.user) {
       return next(new AuthenticationError('Not authenticated'));
     }
@@ -49,7 +49,7 @@ export function authorize(...roles: UserRole[]) {
 }
 
 export function authorizeOwner(userIdParam: string = 'id') {
-  return (req: Request, res: Response, next: NextFunction): void => {
+  return (req: Request, _res: Response, next: NextFunction): void => {
     if (!req.user) {
       return next(new AuthenticationError('Not authenticated'));
     }
