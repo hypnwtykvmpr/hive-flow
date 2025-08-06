@@ -285,13 +285,14 @@ class RealClaudeFlowExecutor:
         return "./claude-flow"
     
     def execute_swarm(self, config: SwarmCommand) -> RealExecutionResult:
-        """Execute a real swarm command."""
-        # Build real swarm command with --executor flag for non-interactive execution
+        """Execute a real swarm command (non-interactive by default)."""
+        # Build real swarm command - always non-interactive
         command = [
             self.claude_flow_path,
             "swarm",
             config.objective,
-            "--executor",  # Use built-in executor for non-interactive mode
+            "--executor",  # Always use built-in executor
+            "--analysis",  # Read-only mode for safety
             "--strategy", config.strategy,
             "--mode", config.mode,
             "--max-agents", str(config.max_agents)
@@ -307,7 +308,7 @@ class RealClaudeFlowExecutor:
         return self._execute_streaming_command(command, timeout)
     
     def execute_hive_mind(self, config: HiveMindCommand) -> RealExecutionResult:
-        """Execute a real hive-mind command."""
+        """Execute a real hive-mind command (non-interactive by default)."""
         command = [
             self.claude_flow_path,
             "hive-mind",
@@ -321,8 +322,8 @@ class RealClaudeFlowExecutor:
             command.extend(["--count", str(config.spawn_count)])
             command.extend(["--coordination", config.coordination_mode])
         
-        # Add executor flag for non-interactive mode
-        command.append("--executor")
+        # Always non-interactive
+        command.extend(["--executor", "--analysis"])
         
         # Add additional flags
         if config.additional_flags:
@@ -331,13 +332,14 @@ class RealClaudeFlowExecutor:
         return self._execute_streaming_command(command, 300)  # 5 minute default timeout
     
     def execute_sparc(self, config: SparcCommand) -> RealExecutionResult:
-        """Execute a real SPARC command."""
-        # Build real SPARC command
+        """Execute a real SPARC command (non-interactive by default)."""
+        # Build real SPARC command - always non-interactive
         command = [
             self.claude_flow_path,
             "sparc",
             config.mode,
-            config.task
+            config.task,
+            "--verbose"  # Add verbose for better output in non-interactive mode
         ]
         
         # Add output format if specified
