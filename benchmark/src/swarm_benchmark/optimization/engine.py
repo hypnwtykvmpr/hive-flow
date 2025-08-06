@@ -380,8 +380,15 @@ class AsyncFileManager:
             # Write file asynchronously
             json_str = json.dumps(data, indent=2 if pretty else None, default=str)
             
-            async with aiofiles.open(file_path, 'w') as f:
-                await f.write(json_str)
+            if AIOFILES_AVAILABLE and aiofiles:
+                async with aiofiles.open(file_path, 'w') as f:
+                    await f.write(json_str)
+            else:
+                # Fallback to synchronous write
+                with open(file_path, 'w') as f:
+                    f.write(json_str)
+                # Simulate async behavior
+                await asyncio.sleep(0.001)
                 
         except Exception as e:
             print(f"Error writing JSON to {file_path}: {e}")
