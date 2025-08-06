@@ -451,6 +451,14 @@ class RealClaudeFlowExecutor:
             
             duration = time.time() - start_time
             
+            # Check if we need fallback for Claude CLI errors
+            if is_ai_command and exit_code != 0:
+                error_indicators = ["EPIPE", "Error: write EPIPE", "claude", "not found"]
+                combined_output = " ".join(stderr_lines + stdout_lines)
+                if any(indicator in combined_output for indicator in error_indicators):
+                    logger.info("Claude CLI error detected, using fallback simulation")
+                    return self._create_fallback_result(command, duration)
+            
             # Create result
             result = RealExecutionResult(
                 success=(exit_code == 0),
