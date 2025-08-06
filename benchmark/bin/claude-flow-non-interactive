@@ -1,0 +1,44 @@
+#!/bin/bash
+# Claude Flow Non-Interactive Wrapper
+# Ensures all claude-flow commands run in non-interactive mode
+
+# Get the directory where this script is located
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+CLAUDE_FLOW_PATH="${SCRIPT_DIR}/../../claude-flow"
+
+# Check if claude-flow exists
+if [ ! -f "$CLAUDE_FLOW_PATH" ]; then
+    echo "❌ Error: claude-flow not found at $CLAUDE_FLOW_PATH"
+    exit 1
+fi
+
+# Parse command and add non-interactive flags
+COMMAND="$1"
+shift
+
+case "$COMMAND" in
+    "swarm")
+        # Always add non-interactive flags for swarm
+        exec "$CLAUDE_FLOW_PATH" swarm "$@" --executor --analysis
+        ;;
+    
+    "hive-mind")
+        # Always add non-interactive flags for hive-mind
+        exec "$CLAUDE_FLOW_PATH" hive-mind "$@" --executor --analysis
+        ;;
+    
+    "sparc")
+        # Add verbose flag for sparc
+        exec "$CLAUDE_FLOW_PATH" sparc "$@" --verbose
+        ;;
+    
+    "task")
+        # Add non-interactive flags for task
+        exec "$CLAUDE_FLOW_PATH" task "$@" --executor
+        ;;
+    
+    *)
+        # Pass through other commands with executor flag
+        exec "$CLAUDE_FLOW_PATH" "$COMMAND" "$@" --executor
+        ;;
+esac
