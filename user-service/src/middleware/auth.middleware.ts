@@ -1,16 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import { userService } from '../services/user.service';
-import { TokenPayload, UserRole } from '../types/user.types';
+import { UserRole } from '../types/user.types';
 import { AuthenticationError, AuthorizationError } from '../utils/errors';
-
-// Extend Express Request type
-declare global {
-  namespace Express {
-    interface Request {
-      user?: TokenPayload;
-    }
-  }
-}
+import '../types/express';
 
 export async function authenticate(
   req: Request,
