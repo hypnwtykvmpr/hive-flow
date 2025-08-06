@@ -171,7 +171,7 @@ export class UserController {
     }
   }
 
-  async getUserStats(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getUserStats(_req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const stats = await userService.getUserStats();
       
