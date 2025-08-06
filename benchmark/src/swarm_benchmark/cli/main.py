@@ -358,8 +358,8 @@ def hive_mind(ctx, task, queen_type, max_workers, consensus, timeout, monitor, o
     
     # Execute real hive-mind command
     try:
-        from ..core.claude_flow_real_executor import ClaudeFlowRealExecutor, HiveMindCommand
-        executor = ClaudeFlowRealExecutor()
+        from ..core.claude_flow_real_executor import RealClaudeFlowExecutor, HiveMindCommand
+        executor = RealClaudeFlowExecutor()
         
         # Create hive-mind configuration
         config = HiveMindCommand(
