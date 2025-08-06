@@ -360,6 +360,10 @@ class RealClaudeFlowExecutor:
         """Execute command and parse streaming output."""
         logger.info(f"Executing command: {' '.join(command)}")
         
+        # Check if this is a swarm/hive-mind command that might fail without Claude CLI
+        is_ai_command = any(cmd in command for cmd in ["swarm", "hive-mind"])
+        needs_fallback = False
+        
         start_time = time.time()
         parser = StreamingOutputParser()
         parser.start_time = start_time
