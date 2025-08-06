@@ -61,10 +61,9 @@ def cli(ctx, verbose, config, mock, claude_flow_path, timeout, stream):
               help='Output directory (default: ./reports)')
 @click.option('--name', help='Benchmark name')
 @click.option('--description', help='Benchmark description')
-@click.option('--real-metrics', is_flag=True, help='Use real metrics collection (default: False)')
 @click.pass_context
 def run(ctx, objective, strategy, mode, max_agents, max_tasks, timeout, task_timeout, 
-        max_retries, parallel, monitor, output_formats, output_dir, name, description, real_metrics):
+        max_retries, parallel, monitor, output_formats, output_dir, name, description):
     """Run a swarm benchmark with the specified objective.
     
     OBJECTIVE: The goal or task for the swarm to accomplish
@@ -93,16 +92,19 @@ def run(ctx, objective, strategy, mode, max_agents, max_tasks, timeout, task_tim
         verbose=ctx.obj.get('verbose', False)
     )
     
+    # Always use real execution by default unless --mock flag is set
+    use_real = ctx.obj.get('real', True)
+    
     if ctx.obj.get('verbose'):
         click.echo(f"Running benchmark: {config.name}")
         click.echo(f"Objective: {objective}")
         click.echo(f"Strategy: {strategy}")
         click.echo(f"Mode: {mode}")
-        click.echo(f"Real metrics: {'Enabled' if real_metrics else 'Disabled'}")
+        click.echo(f"Execution: {'Real claude-flow' if use_real else 'Mock'}")
     
     # Run the benchmark
     try:
-        result = asyncio.run(_run_benchmark(objective, config, real_metrics))
+        result = asyncio.run(_run_benchmark(objective, config, use_real))
         
         if result:
             click.echo(f"✅ Benchmark completed successfully!")
