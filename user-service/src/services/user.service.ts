@@ -82,7 +82,7 @@ export class UserService {
     logger.info(`User logged in: ${user.id}`);
 
     // Remove password from response
-    const { password: _, ...userWithoutPassword } = user;
+    const userWithoutPassword = excludePassword(user);
 
     return {
       user: userWithoutPassword,
