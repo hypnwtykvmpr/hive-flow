@@ -5,7 +5,9 @@
 
 // Mock Claude Flow Client for testing
 class ClaudeFlowClient {
-  constructor(private _config: any) {}
+  constructor(_config: any) {
+    // Config is available if needed
+  }
   
   async initSwarm(_config: any): Promise<any> {
     return { swarmId: `swarm-${Date.now()}`, status: 'active' };
