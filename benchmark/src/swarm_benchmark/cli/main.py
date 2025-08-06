@@ -288,7 +288,8 @@ def swarm(ctx, objective, strategy, mode, sparc_mode, all_modes, max_agents, tim
         monitoring=monitor,
         output_formats=list(output_formats) if output_formats else ['json'],
         output_directory=output_dir,
-        verbose=ctx.obj.get('verbose', False)
+        verbose=ctx.obj.get('verbose', False),
+        parameters={'force_swarm': True}  # Force use of swarm command
     )
     
     if ctx.obj.get('verbose'):
