@@ -24,12 +24,25 @@ logger = logging.getLogger(__name__)
 class BenchmarkEngine:
     """Main engine for running swarm benchmarks."""
     
-    def __init__(self, config: Optional[BenchmarkConfig] = None):
+    def __init__(self, config: Optional[BenchmarkConfig] = None, use_real_executor: bool = False):
         """Initialize the benchmark engine."""
         self.config = config or BenchmarkConfig()
         self.status = "READY"
         self.task_queue = []
         self.current_benchmark: Optional[Benchmark] = None
+        self.use_real_executor = use_real_executor
+        
+        # Initialize real executor if requested
+        if self.use_real_executor:
+            try:
+                self.real_executor = RealClaudeFlowExecutor()
+                logger.info("Real Claude Flow executor initialized")
+            except Exception as e:
+                logger.error(f"Failed to initialize real executor: {e}")
+                self.real_executor = None
+                self.use_real_executor = False
+        else:
+            self.real_executor = None
     
     def submit_task(self, task: Task) -> None:
         """Submit a task to the benchmark queue."""
