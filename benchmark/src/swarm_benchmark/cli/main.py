@@ -536,7 +536,7 @@ def sparc(ctx, mode, task, namespace, timeout, non_interactive, output_dir):
         config = SparcCommand(
             mode=mode,
             task=task,
-            memory_key=namespace
+            output_format="markdown" if not namespace else None
         )
         
         result = executor.execute_sparc(config)
