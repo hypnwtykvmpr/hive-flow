@@ -1,62 +1,23 @@
 """
-Non-Interactive Automation Module.
+Automation module for non-interactive batch processing and workflow management.
 
-This module provides batch processing, pipeline management, and autonomous workflow
-execution capabilities for running benchmarks without human intervention.
+This module provides comprehensive automation capabilities for the benchmark system,
+including batch processing, pipeline management, autonomous workflow execution,
+resource pooling, and intelligent decision-making.
+
+Key Components:
+- BatchProcessor: Process multiple tasks in parallel batches
+- PipelineManager: Manage complex multi-stage workflows
+- WorkflowExecutor: Execute autonomous workflows without human intervention
+- ResourcePool: Manage and allocate computational resources
+- DecisionEngine: Make autonomous decisions based on context and performance
 """
 
-# Placeholder classes for module structure - to be implemented by Backend Developer
-class BatchProcessor:
-    """Batch processor - to be implemented by Backend Developer."""
-    pass
-
-class BatchConfig:
-    """Batch configuration - to be implemented by Backend Developer."""
-    pass
-
-class BatchResult:
-    """Batch result - to be implemented by Backend Developer."""
-    pass
-
-class PipelineManager:
-    """Pipeline manager - to be implemented by Backend Developer."""
-    pass
-
-class Pipeline:
-    """Pipeline - to be implemented by Backend Developer."""
-    pass
-
-class PipelineStage:
-    """Pipeline stage - to be implemented by Backend Developer."""
-    pass
-
-class WorkflowExecutor:
-    """Workflow executor - to be implemented by Backend Developer."""
-    pass
-
-class WorkflowConfig:
-    """Workflow configuration - to be implemented by Backend Developer."""
-    pass
-
-class WorkflowResult:
-    """Workflow result - to be implemented by Backend Developer."""
-    pass
-
-class ResourcePool:
-    """Resource pool - to be implemented by Backend Developer."""
-    pass
-
-class ResourceManager:
-    """Resource manager - to be implemented by Backend Developer."""
-    pass
-
-class DecisionEngine:
-    """Decision engine - to be implemented by Backend Developer."""
-    pass
-
-class AutomationDecision:
-    """Automation decision - to be implemented by Backend Developer."""
-    pass
+from .batch_processor import BatchProcessor, BatchConfig, BatchResult
+from .pipeline_manager import PipelineManager, Pipeline, PipelineStage, PipelineResult
+from .workflow_executor import WorkflowExecutor, WorkflowConfig, WorkflowResult
+from .resource_pool import ResourcePool, ResourceConfig, ResourceAllocation
+from .decision_engine import DecisionEngine, DecisionContext, DecisionResult
 
 __all__ = [
     "BatchProcessor",
@@ -65,11 +26,14 @@ __all__ = [
     "PipelineManager",
     "Pipeline",
     "PipelineStage",
+    "PipelineResult",
     "WorkflowExecutor",
     "WorkflowConfig",
     "WorkflowResult",
     "ResourcePool",
-    "ResourceManager",
+    "ResourceConfig",
+    "ResourceAllocation",
     "DecisionEngine",
-    "AutomationDecision",
+    "DecisionContext",
+    "DecisionResult"
 ]
