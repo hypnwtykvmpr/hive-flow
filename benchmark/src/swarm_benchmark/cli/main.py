@@ -358,17 +358,22 @@ def hive_mind(ctx, task, queen_type, max_workers, consensus, timeout, monitor, o
     
     # Execute real hive-mind command
     try:
-        from ..core.claude_flow_real_executor import ClaudeFlowRealExecutor
+        from ..core.claude_flow_real_executor import ClaudeFlowRealExecutor, HiveMindCommand
         executor = ClaudeFlowRealExecutor()
         
-        result = executor.execute_hive_mind(
+        # Create hive-mind configuration
+        config = HiveMindCommand(
             task=task,
-            queen_type=queen_type,
-            max_workers=max_workers,
-            consensus=consensus,
-            timeout=timeout * 60,
-            monitor=monitor
+            action="spawn",
+            spawn_count=max_workers,
+            coordination_mode=consensus
         )
+        
+        # Add additional flags if needed
+        if monitor:
+            config.additional_flags.append("--monitor")
+        
+        result = executor.execute_hive_mind(config)
         
         if result.success:
             click.echo(f"✅ Hive-mind benchmark completed!")
