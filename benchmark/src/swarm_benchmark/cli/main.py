@@ -305,10 +305,68 @@ def swarm(ctx, objective, strategy, mode, sparc_mode, all_modes, max_agents, tim
         result = asyncio.run(_run_real_benchmark(objective, config, sparc_mode, all_modes))
         
         if result:
-            click.echo(f"✅ Real benchmark completed successfully!")
-            click.echo(f"📊 Results saved to: {output_dir}")
+            # Generate detailed report
+            click.echo(f"\n{'='*60}")
+            click.echo(f"✅ Real Benchmark Completed Successfully!")
+            click.echo(f"{'='*60}")
+            
+            # Basic info
+            click.echo(f"📋 Objective: {objective}")
+            click.echo(f"🎯 Strategy: {strategy.upper()}")
+            click.echo(f"🔄 Mode: {mode.upper()}")
+            
+            # Metrics if available
+            if 'metrics' in result:
+                metrics = result['metrics']
+                click.echo(f"\n📊 Performance Metrics:")
+                if 'wall_clock_time' in metrics:
+                    click.echo(f"  ⏱️  Execution Time: {metrics['wall_clock_time']:.2f}s")
+                if 'tasks_per_second' in metrics:
+                    click.echo(f"  ⚡ Tasks/Second: {metrics['tasks_per_second']:.2f}")
+                if 'success_rate' in metrics:
+                    click.echo(f"  ✓ Success Rate: {metrics['success_rate']:.1%}")
+                if 'peak_memory_mb' in metrics:
+                    click.echo(f"  💾 Peak Memory: {metrics['peak_memory_mb']:.1f} MB")
+                if 'average_cpu_percent' in metrics:
+                    click.echo(f"  🖥️  Avg CPU: {metrics['average_cpu_percent']:.1f}%")
+            
+            # File outputs
+            import os
+            from pathlib import Path
+            output_path = Path(output_dir)
+            output_path.mkdir(parents=True, exist_ok=True)
+            
+            benchmark_id = result.get('benchmark_id', 'latest')
+            
+            click.echo(f"\n📁 Output Files:")
+            
+            # Main results file
+            results_file = output_path / f"benchmark_{benchmark_id}.json"
+            click.echo(f"  📄 Results: {results_file}")
+            
+            # Save results
+            import json
+            with open(results_file, 'w') as f:
+                json.dump(result, f, indent=2, default=str)
+            
+            # Check for additional files
+            metrics_file = output_path / f"metrics_{benchmark_id}.json"
+            if metrics_file.exists():
+                click.echo(f"  📊 Metrics: {metrics_file}")
+            
+            process_file = output_path / f"process_report_{benchmark_id}.json"
+            if process_file.exists():
+                click.echo(f"  🔄 Process Report: {process_file}")
+            
+            # Summary
+            click.echo(f"\n📈 Summary:")
+            click.echo(f"  {result.get('summary', 'Benchmark completed successfully')}")
+            
             if ctx.obj.get('verbose'):
-                click.echo(f"📋 Summary: {result.get('summary', 'N/A')}")
+                click.echo(f"\n🔍 Detailed Results:")
+                click.echo(json.dumps(result.get('metrics', {}), indent=2, default=str))
+            
+            click.echo(f"{'='*60}\n")
         else:
             click.echo("❌ Real benchmark failed!")
             return 1
