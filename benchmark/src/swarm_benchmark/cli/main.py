@@ -232,10 +232,120 @@ def serve(ctx, port, host):
     return 0
 
 
+# Top-level commands for direct real execution
+@cli.command('swarm')
+@click.argument('objective')
+@click.option('--strategy', 
+              type=click.Choice(['auto', 'research', 'development', 'analysis', 'testing', 'optimization', 'maintenance']),
+              default='auto',
+              help='Execution strategy (default: auto)')
+@click.option('--mode',
+              type=click.Choice(['centralized', 'distributed', 'hierarchical', 'mesh', 'hybrid']),
+              default='centralized', 
+              help='Coordination mode (default: centralized)')
+@click.option('--sparc-mode',
+              help='Specific SPARC mode to test (e.g., coder, architect, reviewer)')
+@click.option('--all-modes', is_flag=True, help='Test all SPARC modes and swarm strategies')
+@click.option('--max-agents', type=int, default=5, help='Maximum agents (default: 5)')
+@click.option('--timeout', type=int, default=60, help='Timeout in minutes (default: 60)')
+@click.option('--task-timeout', type=int, default=300, help='Individual task timeout in seconds (default: 300)')
+@click.option('--parallel', is_flag=True, help='Enable parallel execution')
+@click.option('--monitor', is_flag=True, help='Enable monitoring')
+@click.option('--output', '-o', 'output_formats', multiple=True, 
+              type=click.Choice(['json', 'sqlite']),
+              help='Output formats (default: json)')
+@click.option('--output-dir', type=click.Path(), default='./reports', 
+              help='Output directory (default: ./reports)')
+@click.option('--name', help='Benchmark name')
+@click.option('--description', help='Benchmark description')
+@click.pass_context
+def swarm_cmd(ctx, objective, strategy, mode, sparc_mode, all_modes, max_agents, timeout, 
+         task_timeout, parallel, monitor, output_formats, output_dir, name, description):
+    """Run real claude-flow swarm benchmarks.
+    
+    OBJECTIVE: The goal or task for claude-flow to accomplish
+    
+    Examples:
+      swarm-bench swarm "Build a REST API" --strategy development
+      swarm-bench swarm "Create a parser" --sparc-mode coder
+      swarm-bench swarm "Analyze code" --all-modes --parallel
+      swarm-bench swarm "Optimize performance" --mode distributed --monitor
+    """
+    # Forward to the real swarm implementation
+    ctx.invoke(swarm, objective=objective, strategy=strategy, mode=mode, 
+               sparc_mode=sparc_mode, all_modes=all_modes, max_agents=max_agents,
+               timeout=timeout, task_timeout=task_timeout, parallel=parallel,
+               monitor=monitor, output_formats=output_formats, output_dir=output_dir,
+               name=name, description=description)
+
+
+@cli.command('hive-mind')
+@click.argument('task')
+@click.option('--queen-type', 
+              type=click.Choice(['strategic', 'tactical', 'adaptive']),
+              default='strategic',
+              help='Queen coordinator type (default: strategic)')
+@click.option('--max-workers', type=int, default=8, help='Maximum worker agents (default: 8)')
+@click.option('--consensus', 
+              type=click.Choice(['majority', 'weighted', 'byzantine']),
+              default='majority',
+              help='Consensus algorithm (default: majority)')
+@click.option('--timeout', type=int, default=60, help='Timeout in minutes (default: 60)')
+@click.option('--monitor', is_flag=True, help='Enable monitoring')
+@click.option('--output-dir', type=click.Path(), default='./reports', 
+              help='Output directory (default: ./reports)')
+@click.pass_context
+def hive_mind_cmd(ctx, task, queen_type, max_workers, consensus, timeout, monitor, output_dir):
+    """Run real claude-flow hive-mind benchmarks.
+    
+    TASK: The task for the hive-mind to accomplish
+    
+    Examples:
+      swarm-bench hive-mind "Design architecture" --max-workers 8
+      swarm-bench hive-mind "Solve problem" --queen-type adaptive
+      swarm-bench hive-mind "Build system" --consensus byzantine
+    """
+    # Forward to the real hive-mind implementation
+    ctx.invoke(hive_mind, task=task, queen_type=queen_type, max_workers=max_workers,
+               consensus=consensus, timeout=timeout, monitor=monitor, output_dir=output_dir)
+
+
+@cli.command('sparc')
+@click.argument('mode', type=click.Choice(['coder', 'architect', 'tdd', 'reviewer', 'tester', 
+                                          'optimizer', 'documenter', 'debugger']))
+@click.argument('task')
+@click.option('--namespace', help='Memory namespace')
+@click.option('--timeout', type=int, default=60, help='Timeout in minutes (default: 60)')
+@click.option('--non-interactive', is_flag=True, default=True, help='Non-interactive mode (default: True)')
+@click.option('--output-dir', type=click.Path(), default='./reports', 
+              help='Output directory (default: ./reports)')
+@click.pass_context
+def sparc_cmd(ctx, mode, task, namespace, timeout, non_interactive, output_dir):
+    """Run real claude-flow SPARC mode benchmarks.
+    
+    MODE: The SPARC mode to use (coder, architect, tdd, etc.)
+    TASK: The task to accomplish
+    
+    Examples:
+      swarm-bench sparc coder "Implement authentication"
+      swarm-bench sparc architect "Design microservices"
+      swarm-bench sparc tdd "Create test suite"
+      swarm-bench sparc reviewer "Review codebase"
+    """
+    # Forward to the real sparc implementation
+    ctx.invoke(sparc, mode=mode, task=task, namespace=namespace, 
+               timeout=timeout, non_interactive=non_interactive, output_dir=output_dir)
+
+
+# Keep the real group for backward compatibility but mark as deprecated
 @cli.group()
 @click.pass_context
 def real(ctx):
-    """Real claude-flow command execution and benchmarking."""
+    """[DEPRECATED] Use direct commands instead: swarm, hive-mind, sparc."""
+    click.echo("⚠️  The 'real' subcommand is deprecated. Use direct commands instead:")
+    click.echo("   swarm-bench swarm ...")
+    click.echo("   swarm-bench hive-mind ...")
+    click.echo("   swarm-bench sparc ...")
     pass
 
 
