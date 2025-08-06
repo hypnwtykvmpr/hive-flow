@@ -1,6 +1,5 @@
 import { userService } from '../../src/services/user.service';
-import { userRepository } from '../../src/repositories/user.repository';
-import { CreateUserDTO, UserRole, UserStatus } from '../../src/types/user.types';
+import { CreateUserDTO } from '../../src/types/user.types';
 import { AppError } from '../../src/utils/errors';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
