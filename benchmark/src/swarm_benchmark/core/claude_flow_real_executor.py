@@ -326,22 +326,22 @@ class RealClaudeFlowExecutor:
     
     def execute_sparc(self, config: SparcCommand) -> RealExecutionResult:
         """Execute a real SPARC command."""
+        # SPARC command format: claude-flow sparc <mode> "<task>"
         command = [
             self.claude_flow_path,
             "sparc",
-            "run",
             config.mode,
-            config.task,
-            "--non-interactive"
+            config.task
         ]
         
-        if config.memory_key:
-            command.extend(["--memory-key", config.memory_key])
+        # Add output format if needed
+        if config.output_format:
+            command.extend(["--format", config.output_format])
         
         # Add additional flags
         command.extend(config.additional_flags)
         
-        return self._execute_streaming_command(command, 300)  # 5 minute default timeout
+        return self._execute_streaming_command(command, 60)  # 1 minute timeout for sparc
     
     def _execute_streaming_command(self, command: List[str], timeout_seconds: int) -> RealExecutionResult:
         """Execute command and parse streaming output."""
