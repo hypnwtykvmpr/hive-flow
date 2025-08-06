@@ -19,7 +19,7 @@ from abc import ABC, abstractmethod
 import uuid
 import math
 
-from ..core.models import Benchmark
+from .models import BenchmarkTask, BenchmarkResult
 
 
 class DecisionType(Enum):
