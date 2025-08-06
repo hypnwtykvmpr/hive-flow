@@ -17,7 +17,10 @@ import json
 import numpy as np
 
 # Import test data generators
-from .fixtures.test_data import TestDataGenerator
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent))
+from fixtures.test_data import TestDataGenerator
 
 
 # Pytest configuration
