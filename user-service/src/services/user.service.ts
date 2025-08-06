@@ -77,7 +77,7 @@ export class UserService {
 
     const token = jwt.sign(tokenPayload, config.jwt.secret, {
       expiresIn: config.jwt.expiresIn,
-    });
+    } as jwt.SignOptions);
 
     logger.info(`User logged in: ${user.id}`);
 
