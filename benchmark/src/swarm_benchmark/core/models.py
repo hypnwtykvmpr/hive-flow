@@ -267,6 +267,7 @@ class BenchmarkConfig:
     output_formats: List[str] = field(default_factory=lambda: ["json"])
     output_directory: str = "./reports"
     verbose: bool = False
+    parameters: Dict[str, Any] = field(default_factory=dict)  # Additional parameters
 
 
 @dataclass
