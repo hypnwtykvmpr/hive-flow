@@ -426,10 +426,23 @@ async function spawnSwarmWizard() {
 async function spawnSwarm(args, flags) {
   const objective = args.join(' ').trim();
 
+  // Check for non-interactive mode FIRST
+  const isNonInteractive = flags['non-interactive'] || flags.nonInteractive;
+  
   if (!objective && !flags.wizard) {
-    console.error(chalk.red('Error: Please provide an objective or use --wizard flag'));
-    console.log('Example: claude-flow hive-mind spawn "Build REST API"');
+    if (isNonInteractive) {
+      console.error(chalk.red('Error: Objective required in non-interactive mode'));
+      console.log('Usage: claude-flow hive-mind spawn "Your objective" --non-interactive');
+    } else {
+      console.error(chalk.red('Error: Please provide an objective or use --wizard flag'));
+      console.log('Example: claude-flow hive-mind spawn "Build REST API"');
+    }
     return;
+  }
+  
+  // Log non-interactive mode status
+  if (isNonInteractive && flags.verbose) {
+    console.log(chalk.cyan('🤖 Running in non-interactive mode'));
   }
 
   // Validate parameters
