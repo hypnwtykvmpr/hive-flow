@@ -314,22 +314,16 @@ class RealClaudeFlowExecutor:
         """Execute a real hive-mind command with built-in executor (non-interactive)."""
         # For hive-mind, we need to handle the spawn command differently
         if config.action == "spawn":
-            # Hive-mind spawn expects: hive-mind spawn --non-interactive "objective"
+            # Build command list ensuring task stays as single argument
             command = [
                 self.claude_flow_path,
-                "hive-mind",
+                "hive-mind", 
                 "spawn",
-                "--non-interactive"  # CRITICAL: Add non-interactive flag
+                "--non-interactive",
+                config.task,  # Task is passed as single string argument
+                "--count", str(config.spawn_count),
+                "--coordination", config.coordination_mode
             ]
-            
-            # Add the task/objective as a single argument (subprocess handles quoting)
-            if config.task:
-                # Pass the task as-is, subprocess will handle it as a single argument
-                command.append(config.task)
-            
-            # Add spawn parameters
-            command.extend(["--count", str(config.spawn_count)])
-            command.extend(["--coordination", config.coordination_mode])
         else:
             # Other hive-mind commands
             command = [
