@@ -334,19 +334,21 @@ class RealClaudeFlowExecutor:
         return self._execute_streaming_command(command, 300)  # 5 minute default timeout
     
     def execute_sparc(self, config: SparcCommand) -> RealExecutionResult:
-        """Execute a real SPARC command (non-interactive by default)."""
-        # Build real SPARC command - always non-interactive
+        """Execute a real SPARC command."""
+        # Build real SPARC command
         command = [
             self.claude_flow_path,
             "sparc",
             config.mode,
-            config.task,
-            "--verbose"  # Add verbose for better output in non-interactive mode
+            config.task
         ]
         
         # Add output format if specified
         if config.output_format:
             command.extend(["--format", config.output_format])
+        
+        # Add verbose for better output
+        command.append("--verbose")
         
         # Add file output if task contains a path
         if " in " in config.task:
@@ -357,8 +359,8 @@ class RealClaudeFlowExecutor:
         if config.additional_flags:
             command.extend(config.additional_flags)
         
-        # Try with a shorter timeout for SPARC (2 minutes)
-        return self._execute_streaming_command(command, 120)
+        # Execute with appropriate timeout
+        return self._execute_streaming_command(command, 300)  # 5 minutes for SPARC
     
     def _execute_streaming_command(self, command: List[str], timeout_seconds: int) -> RealExecutionResult:
         """Execute command and parse streaming output."""
