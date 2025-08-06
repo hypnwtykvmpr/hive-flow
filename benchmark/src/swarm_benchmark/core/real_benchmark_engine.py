@@ -170,10 +170,9 @@ class RealBenchmarkEngine(BenchmarkEngine):
         """Convert a task to claude-flow command arguments."""
         command = []
         
-        # Check if we should use swarm (based on config or task name)
+        # Check if we should use swarm (based on config or task objective)
         use_swarm = (
             task.parameters.get("use_swarm", False) or
-            "swarm" in task.name.lower() or
             self.config.parameters.get("force_swarm", False)
         )
         
