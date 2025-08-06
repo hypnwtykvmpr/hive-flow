@@ -1481,7 +1481,16 @@ export async function hiveMindCommand(args, flags) {
       break;
 
     case 'spawn':
-      if (flags.wizard || subArgs.length === 0) {
+      // Check for non-interactive mode FIRST (like alpha.83)
+      if (flags['non-interactive'] || flags.nonInteractive) {
+        // In non-interactive mode, skip wizard and use defaults
+        if (subArgs.length === 0) {
+          console.error(chalk.red('Error: Objective required in non-interactive mode'));
+          console.log('Usage: claude-flow hive-mind spawn "Your objective" --non-interactive');
+          return;
+        }
+        await spawnSwarm(subArgs, flags);
+      } else if (flags.wizard || subArgs.length === 0) {
         await spawnSwarmWizard();
       } else {
         await spawnSwarm(subArgs, flags);
