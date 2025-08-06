@@ -333,60 +333,6 @@ export class CoderIntegrationTest {
   }
 }
 
-// Mock Claude Flow Client for testing
-class ClaudeFlowClient {
-  constructor(private _config: any) {}
-  
-  async initSwarm(_config: any): Promise<any> {
-    return { swarmId: `swarm-${Date.now()}`, status: 'active' };
-  }
-  
-  async spawnAgent(_config: any): Promise<any> {
-    return { agentId: `agent-${Date.now()}-${Math.random()}`, status: 'idle' };
-  }
-  
-  async orchestrateTask(_task: any): Promise<any> {
-    return { taskId: `task-${Date.now()}`, status: 'processing', progress: 0 };
-  }
-  
-  async getTaskStatus(taskId: string): Promise<any> {
-    return { taskId, status: 'completed', progress: 100 };
-  }
-  
-  async storeMemory(_data: any): Promise<void> {
-    // Simulate memory storage
-  }
-  
-  async retrieveMemory(_query: any): Promise<any> {
-    return { 
-      value: JSON.stringify({
-        apiSchema: { endpoints: ['/auth/login', '/auth/register', '/auth/reset'], models: ['User', 'Session', 'Token'] },
-        testCoverage: { unit: 85, integration: 70, e2e: 60 }
-      })
-    };
-  }
-  
-  async getSwarmStatus(_swarmId: string): Promise<any> {
-    return { swarmId: _swarmId, status: 'active', agents: 3 };
-  }
-  
-  async getPerformanceMetrics(_config: any): Promise<any> {
-    return {
-      agents: { active: 3, idle: 1, busy: 2 },
-      tasks: { completed: 42, failed: 2, pending: 5 },
-      memory: { used: 52428800, available: 104857600 }
-    };
-  }
-  
-  async getAgentMetrics(agentId: string): Promise<any> {
-    return { agentId, performance: { cpu: 45, memory: 128, tasks: 15 } };
-  }
-  
-  async destroySwarm(_swarmId: string): Promise<void> {
-    // Simulate swarm destruction
-  }
-}
-
 // Run tests if executed directly
 if (require.main === module) {
   const test = new CoderIntegrationTest();
