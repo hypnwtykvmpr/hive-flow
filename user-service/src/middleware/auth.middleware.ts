@@ -1,4 +1,3 @@
-/// <reference path="../types/express.d.ts" />
 import { Request, Response, NextFunction } from 'express';
 import { userService } from '../services/user.service';
 import { UserRole } from '../types/user.types';
