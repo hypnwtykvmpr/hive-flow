@@ -182,14 +182,12 @@ class RealBenchmarkEngine(BenchmarkEngine):
             command.extend(["sparc", "integration", task.objective])
         elif task.strategy == StrategyType.OPTIMIZATION:
             command.extend(["sparc", "refactor", task.objective])
-        elif "swarm" in task.objective.lower():
-            # Swarm command
+        else:
+            # Use swarm command for all other tasks with executor flag
             command.extend(["swarm", task.objective])
             command.extend(["--strategy", task.strategy.value])
             command.extend(["--mode", task.mode.value])
-        else:
-            # Default to sparc tdd for generic tasks
-            command.extend(["sparc", "tdd", task.objective])
+            command.append("--executor")  # Non-interactive mode
         
         # Add common parameters
         if task.parameters.get("parallel"):
