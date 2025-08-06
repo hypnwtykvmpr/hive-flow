@@ -289,16 +289,16 @@ class RealClaudeFlowExecutor:
     
     def execute_swarm(self, config: SwarmCommand) -> RealExecutionResult:
         """Execute a real swarm command with built-in executor (non-interactive)."""
-        # Build real swarm command with --non-interactive for non-interactive execution
+        # Build command: swarm "objective" --strategy S --mode M --max-agents N --executor --non-interactive
         command = [
             self.claude_flow_path,
             "swarm",
-            config.objective,
-            "--non-interactive",  # CRITICAL: Use non-interactive mode
-            "--executor",  # Use built-in executor
+            config.objective,  # Objective comes right after swarm
             "--strategy", config.strategy,
             "--mode", config.mode,
-            "--max-agents", str(config.max_agents)
+            "--max-agents", str(config.max_agents),
+            "--executor",  # Use built-in executor
+            "--non-interactive"  # Non-interactive flag at the end
         ]
         
         # Add additional flags
