@@ -302,7 +302,7 @@ class RealBenchmarkEngine:
         sparc_config = SparcCommand(
             mode=mode,
             task=task,
-            memory_key=memory_key
+            output_format="markdown" if not memory_key else None
         )
         
         # Execute the command
