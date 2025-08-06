@@ -12,7 +12,7 @@ import sys
 # Add benchmark source to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from swarm_benchmark.core.real_benchmark_engine import RealBenchmarkEngine, SystemMonitor
+from swarm_benchmark.core.real_benchmark_engine import RealBenchmarkEngine
 from swarm_benchmark.core.models import (
     BenchmarkConfig, Task, StrategyType, CoordinationMode
 )
