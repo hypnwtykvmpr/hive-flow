@@ -16,6 +16,7 @@ import { userRepository } from '../repositories/user.repository';
 import { config } from '../config/config';
 import { logger } from '../utils/logger';
 import { AppError } from '../utils/errors';
+import { excludePassword } from '../utils/helpers';
 
 export class UserService {
   async createUser(data: CreateUserDTO): Promise<Omit<User, 'password'>> {
