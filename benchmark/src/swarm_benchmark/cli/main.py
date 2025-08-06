@@ -642,7 +642,10 @@ async def _run_real_benchmark(objective: str, config: BenchmarkConfig,
         
         return result
     except Exception as e:
+        import traceback
         click.echo(f"Error in real benchmark execution: {e}")
+        if config.verbose:
+            click.echo(traceback.format_exc())
         return None
     finally:
         # Ensure cleanup
