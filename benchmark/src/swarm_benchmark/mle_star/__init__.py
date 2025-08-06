@@ -5,7 +5,7 @@ This module provides ensemble learning capabilities with multiple model coordina
 voting strategies, consensus mechanisms, and performance tracking.
 """
 
-from .ensemble_executor import MLEStarEnsembleExecutor
+from .ensemble_executor import MLEStarEnsembleExecutor, MLEStarConfig
 from .voting_strategies import VotingStrategy, MajorityVoting, WeightedVoting, StackingEnsemble, BayesianAveraging
 from .model_coordinator import ModelCoordinator, ModelAgent
 from .performance_tracker import PerformanceTracker, EnsembleMetrics
