@@ -124,26 +124,24 @@ Return ONLY the git diff patch in proper format."""
             simple_prompt = ' '.join(simple_prompt.split())  # Normalize whitespace
             
             # Build command as array for subprocess (avoids shell escaping issues)
+            # Always use swarm for now (hive-mind has database issues)
+            cmd_args = [
+                'npx', 'claude-flow@alpha', 'swarm',
+                simple_prompt
+            ]
+            
+            # Add strategy based on mode
             if self.config.mode == CoordinationMode.MESH:
-                # Use hive-mind for complex mesh coordination
-                cmd_args = [
-                    'npx', 'claude-flow@alpha', 'hive-mind', 'spawn',
-                    simple_prompt
-                ]
-                if self.config.max_agents:
-                    cmd_args.extend(['--agents', str(self.config.max_agents)])
-                cmd_args.append('--non-interactive')
-            else:
-                # Use swarm for other modes  
-                cmd_args = [
-                    'npx', 'claude-flow@alpha', 'swarm',
-                    simple_prompt
-                ]
-                if self.config.strategy:
-                    cmd_args.extend(['--strategy', self.config.strategy.value.lower()])
-                if self.config.max_agents:
-                    cmd_args.extend(['--agents', str(self.config.max_agents)])
-                cmd_args.append('--non-interactive')
+                cmd_args.extend(['--strategy', 'optimization'])
+            elif self.config.strategy:
+                cmd_args.extend(['--strategy', self.config.strategy.value.lower()])
+                
+            # Add agent count
+            if self.config.max_agents:
+                cmd_args.extend(['--agents', str(self.config.max_agents)])
+                
+            # Non-interactive must be last
+            cmd_args.append('--non-interactive')
             
             print(f"   📋 Executing: {' '.join(cmd_args[:5])}...")
             
