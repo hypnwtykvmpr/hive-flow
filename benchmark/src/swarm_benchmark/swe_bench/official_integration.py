@@ -157,11 +157,23 @@ Return ONLY the git diff patch in proper format."""
                 
                 # Extract patch from output
                 output = stdout.decode() if stdout else ""
+                error_output = stderr.decode() if stderr else ""
+                
+                # Log process result
+                print(f"   📊 Process exit code: {process.returncode}")
+                
+                if error_output and "error" in error_output.lower():
+                    print(f"   ⚠️ Stderr: {error_output[:200]}")
+                
                 patch = self._extract_patch(output)
+                
+                # If no patch in stdout, check stderr (sometimes output goes there)
+                if not patch and error_output:
+                    patch = self._extract_patch(error_output)
                 
                 # Store prediction
                 self.predictions[instance_id] = {
-                    "model_patch": patch,
+                    "model_patch": patch if patch else "",
                     "model_name_or_path": "claude-flow-swarm",
                     "instance_id": instance_id
                 }
@@ -171,9 +183,9 @@ Return ONLY the git diff patch in proper format."""
                 return {
                     "instance_id": instance_id,
                     "success": bool(patch),
-                    "patch": patch,
+                    "patch": patch if patch else "",
                     "duration": duration,
-                    "error": None
+                    "error": None if patch else "No patch generated"
                 }
                 
             except asyncio.TimeoutError:
