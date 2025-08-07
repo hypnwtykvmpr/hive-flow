@@ -1,4 +1,4 @@
-# 🌊 Claude-Flow v2.0.0 Alpha: Revolutionary AI Orchestration Platform
+# 🌊 Claude-Flow v2.0.0 Alpha: AI Orchestration Platform
 
 <div align="center">
 
