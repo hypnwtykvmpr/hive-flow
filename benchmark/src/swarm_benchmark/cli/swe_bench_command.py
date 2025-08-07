@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Optional
 
 from ..swe_bench import SWEBenchEngine
+from ..swe_bench.official_integration import OfficialSWEBenchEngine
 from ..core.models import BenchmarkConfig, StrategyType, CoordinationMode
 
 
