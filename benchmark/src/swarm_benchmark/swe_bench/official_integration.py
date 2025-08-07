@@ -304,6 +304,35 @@ Return ONLY the git diff patch in proper format."""
             print(f"   ⚠️ No patch found in content")
             
         return result
+    
+    def _find_generated_patch_files(self, instance_id: str) -> str:
+        """Look for generated patch files in the working directory."""
+        import glob
+        
+        # Look for patch files that might have been created
+        potential_patterns = [
+            f"*{instance_id}*.patch",
+            f"*{instance_id}*.diff",
+            "*.patch",
+            "*.diff",
+            f"astropy_fix/*.patch",  # Check the cloned repo directory
+            f"astropy_fix/*.diff"
+        ]
+        
+        for pattern in potential_patterns:
+            files = glob.glob(pattern)
+            if files:
+                # Read the first matching file
+                try:
+                    with open(files[0], 'r') as f:
+                        content = f.read()
+                        if 'diff' in content or '---' in content or '+++' in content:
+                            print(f"   ✅ Found patch file: {files[0]}")
+                            return content
+                except Exception as e:
+                    print(f"   ⚠️ Error reading patch file {files[0]}: {e}")
+        
+        return ""
         
     async def run_evaluation(
         self, 
