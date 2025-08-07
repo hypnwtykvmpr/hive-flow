@@ -21,6 +21,7 @@ except ImportError:
 
 from ..core.real_benchmark_engine import RealBenchmarkEngine
 from ..core.models import BenchmarkConfig, StrategyType, CoordinationMode
+from .prompt_builder import SWEBenchPromptBuilder, SWEBenchPromptConfig
 
 
 class OfficialSWEBenchEngine(RealBenchmarkEngine):
