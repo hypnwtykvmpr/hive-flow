@@ -197,23 +197,64 @@ Return ONLY the git diff patch in proper format."""
     def _extract_patch(self, output: str) -> str:
         """Extract git diff patch from Claude Flow output."""
         
-        # Look for diff markers
+        if not output:
+            return ""
+            
+        # Debug: log first part of output
+        print(f"   📝 Output length: {len(output)} chars")
+        if len(output) > 100:
+            print(f"   📝 Output preview: {output[:100]}...")
+        
+        # Look for various patch formats
         lines = output.split('\n')
         patch_lines = []
         in_patch = False
+        in_code_block = False
         
         for line in lines:
-            if line.startswith('diff --git') or line.startswith('---') or line.startswith('+++'):
+            # Check for code block with diff
+            if line.strip().startswith('```diff') or line.strip().startswith('```patch'):
+                in_code_block = True
+                continue
+            elif line.strip() == '```' and in_code_block:
+                in_code_block = False
+                if patch_lines:
+                    break
+                continue
+                
+            # Check for direct diff markers
+            if line.startswith('diff --git') or (line.startswith('---') and not in_patch):
                 in_patch = True
-                
-            if in_patch:
                 patch_lines.append(line)
-                
-            # Stop at end markers
-            if in_patch and (line.startswith('```') or line.startswith('END')):
-                break
-                
-        return '\n'.join(patch_lines) if patch_lines else ""
+            elif in_patch:
+                # Continue collecting patch lines
+                if line.startswith('```') or line.strip().startswith('END'):
+                    break
+                patch_lines.append(line)
+            elif in_code_block:
+                patch_lines.append(line)
+        
+        # If no patch found, look for any diff-like content
+        if not patch_lines:
+            for i, line in enumerate(lines):
+                if 'diff' in line.lower() and '--git' in line:
+                    # Found a diff, collect from here
+                    patch_lines = lines[i:]
+                    # Stop at first code block end or END marker
+                    for j, pline in enumerate(patch_lines):
+                        if pline.startswith('```') or pline.startswith('END'):
+                            patch_lines = patch_lines[:j]
+                            break
+                    break
+        
+        result = '\n'.join(patch_lines) if patch_lines else ""
+        
+        if result:
+            print(f"   ✅ Extracted patch: {len(result)} chars")
+        else:
+            print(f"   ⚠️ No patch found in output")
+            
+        return result
         
     async def run_evaluation(
         self, 
