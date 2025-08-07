@@ -41,7 +41,7 @@ class OfficialSWEBenchEngine(RealBenchmarkEngine):
             strategy=StrategyType.DEVELOPMENT,
             mode=CoordinationMode.MESH,  # Based on our optimization results
             max_agents=8,  # Optimal from our testing
-            task_timeout=300,  # 5 minutes per instance
+            task_timeout=600,  # 10 minutes per instance - SWE-bench tasks are complex
             output_directory="benchmark/swe-bench-official/results"
         )
         
