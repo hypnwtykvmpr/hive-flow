@@ -124,21 +124,23 @@ Return ONLY the git diff patch in proper format."""
             simple_prompt = ' '.join(simple_prompt.split())  # Normalize whitespace
             
             # Build command as array for subprocess (avoids shell escaping issues)
-            # Always use swarm for now (hive-mind has database issues)
+            # Use local claude-flow executable
+            claude_flow_path = './claude-flow'
+            
+            # Check if we're in benchmark directory
+            if Path.cwd().name == 'benchmark':
+                claude_flow_path = '../claude-flow'
+            
+            # Use hive-mind spawn with --claude flag for Claude Code generation
             cmd_args = [
-                'npx', 'claude-flow@alpha', 'swarm',
-                simple_prompt
+                claude_flow_path, 'hive-mind', 'spawn',
+                simple_prompt,
+                '--claude'  # Generate Claude Code spawn commands
             ]
             
-            # Add strategy based on mode
-            if self.config.mode == CoordinationMode.MESH:
-                cmd_args.extend(['--strategy', 'optimization'])
-            elif self.config.strategy:
-                cmd_args.extend(['--strategy', self.config.strategy.value.lower()])
-                
-            # Add agent count
+            # Add max workers for hive-mind
             if self.config.max_agents:
-                cmd_args.extend(['--agents', str(self.config.max_agents)])
+                cmd_args.extend(['--max-workers', str(self.config.max_agents)])
                 
             # Non-interactive must be last
             cmd_args.append('--non-interactive')
