@@ -112,38 +112,44 @@ Generate a git diff patch that fixes this issue. The patch should:
 Return ONLY the git diff patch in proper format."""
 
             # Execute with Claude Flow using optimal configuration
-            # Escape the task prompt for shell
-            escaped_prompt = task_prompt.replace('"', '\\"').replace('\n', ' ')
+            # Create a simpler, safer prompt
+            simple_prompt = (
+                f"Fix GitHub issue {instance_id} in {repo}. "
+                f"Problem: {problem[:200]}... "
+                f"Generate a git diff patch that resolves this issue."
+            )
             
-            # Build command with proper order - --non-interactive must be at the end
+            # Remove problematic characters
+            simple_prompt = simple_prompt.replace('"', "'").replace('\n', ' ').replace('\r', ' ')
+            simple_prompt = ' '.join(simple_prompt.split())  # Normalize whitespace
+            
+            # Build command as array for subprocess (avoids shell escaping issues)
             if self.config.mode == CoordinationMode.MESH:
                 # Use hive-mind for complex mesh coordination
-                cmd_parts = [
+                cmd_args = [
                     'npx', 'claude-flow@alpha', 'hive-mind', 'spawn',
-                    f'"{escaped_prompt}"'
+                    simple_prompt
                 ]
                 if self.config.max_agents:
-                    cmd_parts.extend(['--agents', str(self.config.max_agents)])
-                cmd_parts.append('--non-interactive')
-                cmd = ' '.join(cmd_parts)
+                    cmd_args.extend(['--agents', str(self.config.max_agents)])
+                cmd_args.append('--non-interactive')
             else:
                 # Use swarm for other modes  
-                cmd_parts = [
+                cmd_args = [
                     'npx', 'claude-flow@alpha', 'swarm',
-                    f'"{escaped_prompt}"'
+                    simple_prompt
                 ]
                 if self.config.strategy:
-                    cmd_parts.extend(['--strategy', self.config.strategy.value.lower()])
+                    cmd_args.extend(['--strategy', self.config.strategy.value.lower()])
                 if self.config.max_agents:
-                    cmd_parts.extend(['--agents', str(self.config.max_agents)])
-                cmd_parts.append('--non-interactive')
-                cmd = ' '.join(cmd_parts)
+                    cmd_args.extend(['--agents', str(self.config.max_agents)])
+                cmd_args.append('--non-interactive')
             
-            print(f"   📋 Executing: {cmd[:100]}...")
+            print(f"   📋 Executing: {' '.join(cmd_args[:5])}...")
             
-            # Run with timeout
-            process = await asyncio.create_subprocess_shell(
-                cmd,
+            # Run with timeout using exec (not shell) to avoid escaping issues
+            process = await asyncio.create_subprocess_exec(
+                *cmd_args,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
                 cwd=Path.cwd()
