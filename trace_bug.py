@@ -66,4 +66,4 @@ print("  output 3 depends on input 1 (via mapping output 3 -> model input 3)")
 print("So we expect:")
 expected = np.array([[True, False], [False, True], [True, False], [False, True]])
 print(expected)
-print("\nBut this IS what we're getting! So the bug must be different..."
+print("\nBut this IS what we're getting! So the bug must be different...")
