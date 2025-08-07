@@ -112,18 +112,23 @@ Generate a git diff patch that fixes this issue. The patch should:
 Return ONLY the git diff patch in proper format."""
 
             # Execute with Claude Flow using optimal configuration
-            cmd = [
-                "npx", "claude-flow@alpha",
-                "sparc", "run", "coder",
-                f'"{task_prompt}"',
-                "--mode", self.config.mode.value,
-                "--agents", str(self.config.max_agents),
-                "--non-interactive"
-            ]
+            # Use swarm or hive-mind based on complexity
+            if self.config.mode == CoordinationMode.MESH:
+                # Use hive-mind for complex mesh coordination
+                cmd = f"""npx claude-flow@alpha hive-mind spawn "{task_prompt}" --claude --non-interactive"""
+            else:
+                # Use swarm for other modes
+                cmd = f"""npx claude-flow@alpha swarm "{task_prompt}" --non-interactive --claude"""
+            
+            # Add configuration options
+            if self.config.max_agents:
+                cmd += f" --agents {self.config.max_agents}"
+            
+            print(f"   📋 Executing: {cmd[:100]}...")
             
             # Run with timeout
-            process = await asyncio.create_subprocess_exec(
-                *cmd,
+            process = await asyncio.create_subprocess_shell(
+                cmd,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
                 cwd=Path.cwd()
