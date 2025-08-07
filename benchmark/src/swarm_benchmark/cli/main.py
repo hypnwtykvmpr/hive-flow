@@ -11,6 +11,7 @@ from swarm_benchmark import __version__
 from swarm_benchmark.core.models import StrategyType, CoordinationMode, BenchmarkConfig
 from swarm_benchmark.core.benchmark_engine import BenchmarkEngine
 from swarm_benchmark.core.real_benchmark_engine import RealBenchmarkEngine
+from swarm_benchmark.cli.swe_bench_command import swe_bench
 
 
 @click.group()
@@ -336,6 +337,9 @@ def sparc_cmd(ctx, mode, task, namespace, timeout, non_interactive, output_dir):
     ctx.invoke(sparc, mode=mode, task=task, namespace=namespace, 
                timeout=timeout, non_interactive=non_interactive, output_dir=output_dir)
 
+
+# Add SWE-Bench command group
+cli.add_command(swe_bench)
 
 # Keep the real group for backward compatibility but mark as deprecated
 @cli.group()
