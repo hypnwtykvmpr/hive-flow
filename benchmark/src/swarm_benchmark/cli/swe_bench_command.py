@@ -126,6 +126,104 @@ def status(ctx, output):
         click.echo(f"   - Optimization Effective: {'✅' if imp.get('optimization_effective') else '❌'}")
 
 
+@swe_bench.command('official')
+@click.option('--lite', is_flag=True, default=True, help='Use SWE-bench-Lite (300 instances)')
+@click.option('--limit', '-l', type=int, help='Limit number of instances to evaluate')
+@click.option('--mode', '-m', type=click.Choice(['hierarchical', 'mesh', 'distributed', 'centralized']),
+              default='mesh', help='Coordination mode (default: mesh - optimal)')
+@click.option('--strategy', '-s', type=click.Choice(['development', 'optimization', 'testing', 'analysis']),
+              default='optimization', help='Strategy (default: optimization - optimal)')
+@click.option('--agents', '-a', type=int, default=8, help='Number of agents (default: 8 - optimal)')
+@click.option('--output', '-o', type=click.Path(), help='Output directory')
+@click.option('--validate', is_flag=True, help='Validate submission format only')
+@click.pass_context
+def official(ctx, lite, limit, mode, strategy, agents, output, validate):
+    """Run OFFICIAL SWE-bench evaluation with real dataset.
+    
+    This command uses the official SWE-bench dataset from Princeton
+    and generates predictions suitable for leaderboard submission.
+    
+    Examples:
+        # Run on first 10 instances of SWE-bench-Lite
+        swarm-bench swe-bench official --limit 10
+        
+        # Run full SWE-bench-Lite (300 instances)
+        swarm-bench swe-bench official
+        
+        # Validate existing predictions
+        swarm-bench swe-bench official --validate --output predictions.json
+    """
+    
+    # Create configuration with optimal settings
+    config = BenchmarkConfig(
+        name="Official-SWE-bench",
+        description="Official SWE-bench evaluation",
+        strategy=StrategyType[strategy.upper()],
+        mode=CoordinationMode[mode.upper()],
+        max_agents=agents,
+        output_directory=output or "benchmark/swe-bench-official/results"
+    )
+    
+    # Initialize official engine
+    engine = OfficialSWEBenchEngine(config)
+    
+    if validate:
+        # Just validate existing predictions
+        predictions_file = output or "benchmark/swe-bench-official/results/predictions.json"
+        click.echo(f"\n📋 Validating: {predictions_file}")
+        
+        is_valid = asyncio.run(engine.validate_submission(predictions_file))
+        
+        if is_valid:
+            click.echo("✅ Submission is valid and ready for upload!")
+            click.echo("\nTo submit to leaderboard:")
+            click.echo("1. Visit: https://www.swebench.com/submit")
+            click.echo(f"2. Upload: {predictions_file}")
+        else:
+            click.echo("❌ Submission has validation errors")
+        return
+    
+    # Run evaluation
+    click.echo(f"""
+╔══════════════════════════════════════════════════════════════╗
+║            Official SWE-bench Evaluation                      ║
+║                                                                ║
+║  Dataset: {'SWE-bench-Lite (300)' if lite else 'SWE-bench Full (2,294)'}{'                  ' if lite else '          '}║
+║  Mode: {mode:<20}                            ║
+║  Strategy: {strategy:<20}                        ║
+║  Agents: {agents:<20}                          ║
+╚══════════════════════════════════════════════════════════════╝
+""")
+    
+    if limit:
+        click.echo(f"⚠️ Limited to first {limit} instances for testing")
+    
+    click.confirm("Ready to start official evaluation?", abort=True)
+    
+    # Run the evaluation
+    results = asyncio.run(engine.run_evaluation(
+        instances_limit=limit,
+        use_lite=lite,
+        save_predictions=True
+    ))
+    
+    # Display results
+    if "error" not in results:
+        click.echo(f"\n✅ Evaluation Complete!")
+        click.echo(f"   Success Rate: {results['success_rate']:.1%}")
+        click.echo(f"   Instances: {results['instances_evaluated']}")
+        click.echo(f"   Avg Duration: {results['average_duration']:.1f}s")
+        
+        predictions_file = Path(config.output_directory) / "predictions.json"
+        click.echo(f"\n📤 Predictions ready for submission: {predictions_file}")
+        click.echo("\nNext steps:")
+        click.echo("1. Review predictions.json")
+        click.echo("2. Run validation: swarm-bench swe-bench official --validate")
+        click.echo("3. Submit to: https://www.swebench.com/submit")
+    else:
+        click.echo(f"❌ Evaluation failed: {results['error']}")
+
+
 @swe_bench.command()
 @click.option('--target-success', '-s', type=float, default=0.8, help='Target success rate')
 @click.option('--target-duration', '-d', type=float, default=15.0, help='Target average duration')
