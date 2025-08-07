@@ -145,8 +145,11 @@ Return ONLY the git diff patch in proper format."""
                 cmd_args.insert(-1, '--max-workers')
                 cmd_args.insert(-1, str(self.config.max_agents))
             
-            # Show the full command
-            print(f"   📋 Executing: {' '.join(cmd_args)}")
+            # Show the full command as it would appear in shell (with quotes)
+            cmd_display = f"{cmd_args[0]} {cmd_args[1]} {cmd_args[2]} \"{cmd_args[3]}\""
+            if len(cmd_args) > 4:
+                cmd_display += " " + " ".join(cmd_args[4:])
+            print(f"   📋 Executing: {cmd_display}")
             
             # Run with timeout using exec (not shell) to avoid escaping issues
             process = await asyncio.create_subprocess_exec(
