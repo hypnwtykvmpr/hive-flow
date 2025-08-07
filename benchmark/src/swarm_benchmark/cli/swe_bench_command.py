@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 from typing import Optional
 
+import time
 from ..swe_bench import SWEBenchEngine
 from ..swe_bench.official_integration import OfficialSWEBenchEngine
 from ..swe_bench.multi_mode_engine import MultiModeSWEBenchEngine, ClaudeFlowMode
