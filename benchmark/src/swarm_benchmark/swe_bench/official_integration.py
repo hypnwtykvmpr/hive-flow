@@ -182,6 +182,10 @@ Return ONLY the git diff patch in proper format."""
                 if not patch and error_output:
                     patch = self._extract_patch(error_output)
                 
+                # Also check for generated patch files in the working directory
+                if not patch:
+                    patch = self._find_generated_patch_files(instance_id)
+                
                 # Store prediction
                 self.predictions[instance_id] = {
                     "model_patch": patch if patch else "",
