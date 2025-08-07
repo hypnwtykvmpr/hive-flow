@@ -112,17 +112,24 @@ Generate a git diff patch that fixes this issue. The patch should:
 Return ONLY the git diff patch in proper format."""
 
             # Execute with Claude Flow using optimal configuration
+            # Escape the task prompt for shell
+            escaped_prompt = task_prompt.replace('"', '\\"').replace('\n', ' ')
+            
             # Use swarm or hive-mind based on complexity
             if self.config.mode == CoordinationMode.MESH:
                 # Use hive-mind for complex mesh coordination
-                cmd = f"""npx claude-flow@alpha hive-mind spawn "{task_prompt}" --claude --non-interactive"""
+                cmd = f'npx claude-flow@alpha hive-mind spawn "{escaped_prompt}" --claude --non-interactive'
             else:
-                # Use swarm for other modes
-                cmd = f"""npx claude-flow@alpha swarm "{task_prompt}" --non-interactive --claude"""
+                # Use swarm for other modes  
+                cmd = f'npx claude-flow@alpha swarm "{escaped_prompt}" --claude --non-interactive'
             
             # Add configuration options
             if self.config.max_agents:
                 cmd += f" --agents {self.config.max_agents}"
+            
+            # Add strategy for swarm
+            if self.config.mode != CoordinationMode.MESH:
+                cmd += f" --strategy {self.config.strategy.value.lower()}"
             
             print(f"   📋 Executing: {cmd[:100]}...")
             
