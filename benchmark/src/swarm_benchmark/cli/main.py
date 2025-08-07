@@ -11,6 +11,7 @@ from swarm_benchmark import __version__
 from swarm_benchmark.core.models import StrategyType, CoordinationMode, BenchmarkConfig
 from swarm_benchmark.core.benchmark_engine import BenchmarkEngine
 from swarm_benchmark.core.real_benchmark_engine import RealBenchmarkEngine
+from swarm_benchmark.cli.swe_bench_command import swe_bench
 
 
 @click.group()
