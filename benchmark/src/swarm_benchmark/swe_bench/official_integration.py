@@ -220,18 +220,49 @@ Return ONLY the git diff patch in proper format."""
             
         # Debug: log first part of output
         print(f"   📝 Output length: {len(output)} chars")
-        if len(output) > 100:
-            print(f"   📝 Output preview: {output[:100]}...")
         
-        # Look for various patch formats
-        lines = output.split('\n')
+        # Handle JSON stream output from claude-flow
+        patch_content = ""
+        
+        # First try to parse JSON lines
+        for line in output.split('\n'):
+            if not line.strip():
+                continue
+            try:
+                if line.startswith('{'):
+                    data = json.loads(line)
+                    # Look for content in various fields
+                    if data.get('type') == 'content' and data.get('text'):
+                        text = data['text']
+                        # Check if this contains a patch
+                        if 'diff --git' in text or '```diff' in text or '```patch' in text:
+                            patch_content += text + '\n'
+                    elif data.get('type') == 'tool_use' and data.get('name') in ['Write', 'Edit', 'MultiEdit']:
+                        # Tool use might contain patches
+                        if 'content' in data.get('input', {}):
+                            patch_content += data['input']['content'] + '\n'
+            except json.JSONDecodeError:
+                # Not JSON, treat as regular text
+                if 'diff --git' in line or line.startswith('---') or line.startswith('+++'):
+                    patch_content += line + '\n'
+        
+        # If we found JSON content with patches, extract them
+        if patch_content:
+            return self._extract_patch_from_text(patch_content)
+        
+        # Otherwise try to extract from raw output
+        return self._extract_patch_from_text(output)
+    
+    def _extract_patch_from_text(self, text: str) -> str:
+        """Extract patch from text content."""
+        lines = text.split('\n')
         patch_lines = []
         in_patch = False
         in_code_block = False
         
         for line in lines:
             # Check for code block with diff
-            if line.strip().startswith('```diff') or line.strip().startswith('```patch'):
+            if '```diff' in line or '```patch' in line:
                 in_code_block = True
                 continue
             elif line.strip() == '```' and in_code_block:
@@ -241,36 +272,27 @@ Return ONLY the git diff patch in proper format."""
                 continue
                 
             # Check for direct diff markers
-            if line.startswith('diff --git') or (line.startswith('---') and not in_patch):
+            if line.startswith('diff --git'):
                 in_patch = True
+                patch_lines.append(line)
+            elif line.startswith('---') or line.startswith('+++'):
+                if not in_patch:
+                    in_patch = True
                 patch_lines.append(line)
             elif in_patch:
                 # Continue collecting patch lines
-                if line.startswith('```') or line.strip().startswith('END'):
+                if line.startswith('```'):
                     break
                 patch_lines.append(line)
             elif in_code_block:
                 patch_lines.append(line)
-        
-        # If no patch found, look for any diff-like content
-        if not patch_lines:
-            for i, line in enumerate(lines):
-                if 'diff' in line.lower() and '--git' in line:
-                    # Found a diff, collect from here
-                    patch_lines = lines[i:]
-                    # Stop at first code block end or END marker
-                    for j, pline in enumerate(patch_lines):
-                        if pline.startswith('```') or pline.startswith('END'):
-                            patch_lines = patch_lines[:j]
-                            break
-                    break
         
         result = '\n'.join(patch_lines) if patch_lines else ""
         
         if result:
             print(f"   ✅ Extracted patch: {len(result)} chars")
         else:
-            print(f"   ⚠️ No patch found in output")
+            print(f"   ⚠️ No patch found in content")
             
         return result
         
