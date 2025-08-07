@@ -8,6 +8,7 @@ from typing import Optional
 
 from ..swe_bench import SWEBenchEngine
 from ..swe_bench.official_integration import OfficialSWEBenchEngine
+from ..swe_bench.multi_mode_engine import MultiModeSWEBenchEngine, ClaudeFlowMode
 from ..core.models import BenchmarkConfig, StrategyType, CoordinationMode
 
 
@@ -220,6 +221,99 @@ def official(ctx, lite, limit, mode, strategy, agents, output, validate):
         click.echo("1. Review predictions.json")
         click.echo("2. Run validation: swarm-bench swe-bench official --validate")
         click.echo("3. Submit to: https://www.swebench.com/submit")
+    else:
+        click.echo(f"❌ Evaluation failed: {results['error']}")
+
+
+@swe_bench.command('multi-mode')
+@click.option('--instances', '-i', type=int, default=1, help='Number of instances to test per mode')
+@click.option('--lite', is_flag=True, default=True, help='Use SWE-bench-Lite dataset')
+@click.option('--quick', is_flag=True, help='Quick test with fewer configurations')
+@click.option('--output', '-o', type=click.Path(), help='Output directory')
+@click.pass_context
+def multi_mode(ctx, instances, lite, quick, output):
+    """Test ALL claude-flow non-interactive modes on SWE-bench.
+    
+    This command benchmarks all available claude-flow execution modes:
+    - Swarm: Multiple strategies (auto, research, development, optimization, etc.)
+    - SPARC: All subcommands (coder, architect, tdd, reviewer, etc.)
+    - Hive-Mind: Various configurations (different worker counts, queen types)
+    
+    Examples:
+        # Quick test with 1 instance across all modes
+        swarm-bench swe-bench multi-mode --instances 1 --quick
+        
+        # Full test with 5 instances per mode
+        swarm-bench swe-bench multi-mode --instances 5
+        
+        # Test specific modes only
+        swarm-bench swe-bench multi-mode --instances 2
+    """
+    
+    click.echo("""
+╔══════════════════════════════════════════════════════════════╗
+║         Multi-Mode SWE-Bench Evaluation                       ║
+║     Testing All Claude-Flow Non-Interactive Modes             ║
+╚══════════════════════════════════════════════════════════════╝
+""")
+    
+    # Create configuration
+    config = BenchmarkConfig(
+        name="Multi-Mode-SWE-bench",
+        description="Multi-mode SWE-bench evaluation",
+        strategy=StrategyType.DEVELOPMENT,
+        mode=CoordinationMode.MESH,
+        max_agents=8,
+        output_directory=output or "benchmark/swe-bench-multi-mode/results"
+    )
+    
+    # Initialize multi-mode engine
+    engine = MultiModeSWEBenchEngine(config)
+    
+    # Select modes to test
+    if quick:
+        # Quick test with fewer modes
+        modes_to_test = [
+            ClaudeFlowMode("swarm", strategy="optimization", mode="mesh", agents=8,
+                          description="Swarm optimization (best performer)"),
+            ClaudeFlowMode("sparc", subcommand="coder", agents=5,
+                          description="SPARC coder mode"),
+            ClaudeFlowMode("hive-mind", agents=8,
+                          description="Hive-mind with 8 workers"),
+        ]
+        click.echo(f"⚡ Quick mode: Testing {len(modes_to_test)} configurations")
+    else:
+        # Test all modes
+        modes_to_test = None
+        click.echo(f"📊 Full mode: Testing {len(engine.CLAUDE_FLOW_MODES)} configurations")
+    
+    click.echo(f"📝 Instances per mode: {instances}")
+    click.echo(f"📦 Dataset: {'SWE-bench-Lite (300)' if lite else 'Full SWE-bench (2,294)'}")
+    
+    if not quick:
+        total_tests = len(engine.CLAUDE_FLOW_MODES) * instances
+        click.echo(f"\n⚠️ This will run {total_tests} tests total")
+        click.confirm("Ready to start multi-mode evaluation?", abort=True)
+    
+    # Run benchmark
+    results = asyncio.run(engine.benchmark_all_modes(
+        instances_limit=instances,
+        modes_to_test=modes_to_test
+    ))
+    
+    # Display results
+    if "error" not in results:
+        click.echo(f"\n✅ Multi-Mode Evaluation Complete!")
+        click.echo(f"   Modes tested: {results['modes_tested']}")
+        click.echo(f"   Total tests: {results['total_tests']}")
+        click.echo(f"\n🏆 Best Mode: {results['best_mode']}")
+        best = results['best_performance']
+        click.echo(f"   Success Rate: {best['success_rate']:.1%}")
+        click.echo(f"   Avg Duration: {best['avg_duration']:.1f}s")
+        click.echo(f"   Description: {best['description']}")
+        
+        report_path = Path(config.output_directory) / f"multi_mode_report_{int(time.time())}.json"
+        click.echo(f"\n📁 Full report: {report_path}")
     else:
         click.echo(f"❌ Evaluation failed: {results['error']}")
 
