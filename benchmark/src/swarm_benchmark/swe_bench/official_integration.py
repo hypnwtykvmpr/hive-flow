@@ -112,11 +112,19 @@ Generate a git diff patch that fixes this issue. The patch should:
 Return ONLY the git diff patch in proper format."""
 
             # Execute with Claude Flow using optimal configuration
-            # Create a simpler, safer prompt
+            # Create a comprehensive prompt with claude-flow context
             simple_prompt = (
-                f"Fix GitHub issue {instance_id} in {repo}. "
-                f"Problem: {problem[:200]}... "
-                f"Generate a git diff patch that resolves this issue."
+                f"You are running in claude-flow hive-mind mode with {self.config.max_agents} workers. "
+                f"Your task is to fix GitHub issue {instance_id} in repository {repo}. "
+                f"Base commit: {base_commit}. "
+                f"Problem description: {problem[:300]}... "
+                f"REQUIREMENTS: "
+                f"1. Analyze the bug and identify the root cause "
+                f"2. Create a fix that resolves the issue "
+                f"3. Output ONLY a valid git diff patch to stdout "
+                f"4. The patch must apply cleanly to the base commit "
+                f"5. Include the patch between ```diff and ``` markers "
+                f"Generate the git diff patch now."
             )
             
             # Remove problematic characters
