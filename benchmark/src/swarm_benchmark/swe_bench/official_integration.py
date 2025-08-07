@@ -115,21 +115,29 @@ Return ONLY the git diff patch in proper format."""
             # Escape the task prompt for shell
             escaped_prompt = task_prompt.replace('"', '\\"').replace('\n', ' ')
             
-            # Use swarm or hive-mind based on complexity
+            # Build command with proper order - --non-interactive must be at the end
             if self.config.mode == CoordinationMode.MESH:
                 # Use hive-mind for complex mesh coordination
-                cmd = f'npx claude-flow@alpha hive-mind spawn "{escaped_prompt}" --claude --non-interactive'
+                cmd_parts = [
+                    'npx', 'claude-flow@alpha', 'hive-mind', 'spawn',
+                    f'"{escaped_prompt}"'
+                ]
+                if self.config.max_agents:
+                    cmd_parts.extend(['--agents', str(self.config.max_agents)])
+                cmd_parts.append('--non-interactive')
+                cmd = ' '.join(cmd_parts)
             else:
                 # Use swarm for other modes  
-                cmd = f'npx claude-flow@alpha swarm "{escaped_prompt}" --claude --non-interactive'
-            
-            # Add configuration options
-            if self.config.max_agents:
-                cmd += f" --agents {self.config.max_agents}"
-            
-            # Add strategy for swarm
-            if self.config.mode != CoordinationMode.MESH:
-                cmd += f" --strategy {self.config.strategy.value.lower()}"
+                cmd_parts = [
+                    'npx', 'claude-flow@alpha', 'swarm',
+                    f'"{escaped_prompt}"'
+                ]
+                if self.config.strategy:
+                    cmd_parts.extend(['--strategy', self.config.strategy.value.lower()])
+                if self.config.max_agents:
+                    cmd_parts.extend(['--agents', str(self.config.max_agents)])
+                cmd_parts.append('--non-interactive')
+                cmd = ' '.join(cmd_parts)
             
             print(f"   📋 Executing: {cmd[:100]}...")
             
