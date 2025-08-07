@@ -74,5 +74,4 @@ print(f"  Small scale - dim: {bb_small_d.bolometric_flux}")
 print(f"  Equal? {np.isclose(bb_small_f.bolometric_flux.value, bb_small_d.bolometric_flux.value)}")
 
 print("\n" + "=" * 50)
-print("✅ All tests passed\! The fix works correctly.")
-EOF < /dev/null
+print("✅ All tests passed! The fix works correctly.")
