@@ -12,6 +12,7 @@ from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass
 
 from .official_integration import OfficialSWEBenchEngine
+from .prompt_builder import SWEBenchPromptBuilder, SWEBenchPromptConfig
 from ..core.models import BenchmarkConfig, StrategyType, CoordinationMode
 
 
