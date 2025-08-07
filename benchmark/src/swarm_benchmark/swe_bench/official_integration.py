@@ -131,16 +131,19 @@ Return ONLY the git diff patch in proper format."""
             if Path.cwd().name == 'benchmark':
                 claude_flow_path = '../claude-flow'
             
-            # Use hive-mind spawn with --claude flag for Claude Code generation
+            # Use swarm command (more stable than hive-mind in non-interactive)
             cmd_args = [
-                claude_flow_path, 'hive-mind', 'spawn',
+                claude_flow_path, 'swarm',
                 simple_prompt,
-                '--claude'  # Generate Claude Code spawn commands
+                '--strategy', self.config.strategy.value.lower()
             ]
             
-            # Add max workers for hive-mind
+            # Add mode
+            cmd_args.extend(['--mode', self.config.mode.value.lower()])
+            
+            # Add agent count
             if self.config.max_agents:
-                cmd_args.extend(['--max-workers', str(self.config.max_agents)])
+                cmd_args.extend(['--max-agents', str(self.config.max_agents)])
                 
             # Non-interactive must be last
             cmd_args.append('--non-interactive')
