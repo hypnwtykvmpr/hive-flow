@@ -151,16 +151,17 @@ class MultiModeSWEBenchEngine(OfficialSWEBenchEngine):
         start_time = time.time()
         
         try:
-            # Create simplified prompt (full version, not truncated)
-            simple_prompt = (
-                f"Fix GitHub issue {instance_id} in {repo}. "
-                f"Problem: {problem} "
-                f"Generate a git diff patch that resolves this issue."
+            # Build prompt using the prompt builder
+            prompt_config = SWEBenchPromptConfig(
+                mode=mode.command_type,
+                subcommand=mode.subcommand,
+                max_agents=mode.agents or 4,
+                include_validation=False,
+                output_format="patch"
             )
             
-            # Clean the prompt
-            simple_prompt = simple_prompt.replace('"', "'").replace('\n', ' ').replace('\r', ' ')
-            simple_prompt = ' '.join(simple_prompt.split())
+            prompt_builder = SWEBenchPromptBuilder(prompt_config)
+            simple_prompt = prompt_builder.build_prompt(instance)
             
             # Get claude-flow path
             claude_flow_path = './claude-flow'
