@@ -426,10 +426,23 @@ async function spawnSwarmWizard() {
 async function spawnSwarm(args, flags) {
   const objective = args.join(' ').trim();
 
+  // Check for non-interactive mode FIRST
+  const isNonInteractive = flags['non-interactive'] || flags.nonInteractive;
+  
   if (!objective && !flags.wizard) {
-    console.error(chalk.red('Error: Please provide an objective or use --wizard flag'));
-    console.log('Example: claude-flow hive-mind spawn "Build REST API"');
+    if (isNonInteractive) {
+      console.error(chalk.red('Error: Objective required in non-interactive mode'));
+      console.log('Usage: claude-flow hive-mind spawn "Your objective" --non-interactive');
+    } else {
+      console.error(chalk.red('Error: Please provide an objective or use --wizard flag'));
+      console.log('Example: claude-flow hive-mind spawn "Build REST API"');
+    }
     return;
+  }
+  
+  // Log non-interactive mode status
+  if (isNonInteractive && flags.verbose) {
+    console.log(chalk.cyan('🤖 Running in non-interactive mode'));
   }
 
   // Validate parameters
@@ -812,6 +825,7 @@ async function spawnSwarm(args, flags) {
     process.on('SIGTERM', sigintHandler);
 
     // Offer to spawn Claude Code instances with coordination instructions
+    // Spawn Claude if --claude or --spawn flag is set
     if (flags.claude || flags.spawn) {
       await spawnClaudeCodeInstances(swarmId, hiveMind.config.name, objective, workers, flags);
     } else {
@@ -1481,7 +1495,16 @@ export async function hiveMindCommand(args, flags) {
       break;
 
     case 'spawn':
-      if (flags.wizard || subArgs.length === 0) {
+      // Check for non-interactive mode FIRST (like alpha.83)
+      if (flags['non-interactive'] || flags.nonInteractive) {
+        // In non-interactive mode, skip wizard and use defaults
+        if (subArgs.length === 0) {
+          console.error(chalk.red('Error: Objective required in non-interactive mode'));
+          console.log('Usage: claude-flow hive-mind spawn "Your objective" --non-interactive');
+          return;
+        }
+        await spawnSwarm(subArgs, flags);
+      } else if (flags.wizard || subArgs.length === 0) {
         await spawnSwarmWizard();
       } else {
         await spawnSwarm(subArgs, flags);
@@ -1978,22 +2001,34 @@ async function spawnClaudeCodeInstances(swarmId, swarmName, objective, workers, 
       }
 
       if (claudeAvailable && !flags.dryRun) {
+        // Check if we should run in non-interactive mode
+        // Respect --non-interactive flag regardless of --claude
+        const isNonInteractive = flags['non-interactive'] || flags.nonInteractive;
+        
         // Pass the prompt directly as an argument to claude
-        // Remove --print to allow interactive session
         const claudeArgs = [hiveMindPrompt];
 
         // Add auto-permission flag by default for hive-mind mode (unless explicitly disabled)
         if (flags['dangerously-skip-permissions'] !== false && !flags['no-auto-permissions']) {
           claudeArgs.push('--dangerously-skip-permissions');
-          console.log(
-            chalk.yellow(
-              '🔓 Using --dangerously-skip-permissions by default for seamless hive-mind execution',
-            ),
-          );
+          if (!isNonInteractive) {
+            console.log(
+              chalk.yellow(
+                '🔓 Using --dangerously-skip-permissions by default for seamless hive-mind execution',
+              ),
+            );
+          }
+        }
+        
+        // Add non-interactive flags if needed
+        if (isNonInteractive) {
+          claudeArgs.push('-p'); // Print mode
+          claudeArgs.push('--output-format', 'stream-json'); // JSON streaming  
+          claudeArgs.push('--verbose'); // Verbose output
+          console.log(chalk.cyan('🤖 Running in non-interactive mode'));
         }
 
         // Spawn claude with the prompt as the first argument
-        // Use 'inherit' to allow interactive session
         const claudeProcess = childSpawn('claude', claudeArgs, {
           stdio: 'inherit',
           shell: false,
