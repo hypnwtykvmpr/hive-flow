@@ -768,6 +768,7 @@ The swarm should be self-documenting - use memory_store to save all important in
 
       // If --claude flag is used, force Claude Code even if CLI not available
       if (flags && flags.claude) {
+        // --claude flag means interactive mode, so don't apply non-interactive
         console.log('🐝 Launching Claude Flow Swarm System...');
         console.log(`📋 Objective: ${objective}`);
         console.log(`🎯 Strategy: ${strategy}`);
@@ -785,6 +786,8 @@ The swarm should be self-documenting - use memory_store to save all important in
           claudeArgs.push('--dangerously-skip-permissions');
           console.log('🔓 Using --dangerously-skip-permissions by default for seamless swarm execution');
         }
+        
+        // --claude flag means interactive mode, so don't add non-interactive flags
         
         // Spawn claude with the prompt as the first argument (exactly like hive-mind does)
         const claudeProcess = spawn('claude', claudeArgs, {
@@ -839,44 +842,59 @@ The swarm should be self-documenting - use memory_store to save all important in
         return;
       }
 
+      // Check if we're in non-interactive/headless mode FIRST (like alpha.83)
+      const isNonInteractive = flags['no-interactive'] || 
+                               flags['non-interactive'] || 
+                               flags['output-format'] === 'stream-json' ||
+                               isHeadlessEnvironment();
+      
       // Check if claude command exists
       let claudeAvailable = false;
       try {
         execSync('which claude', { stdio: 'ignore' });
         claudeAvailable = true;
       } catch {
-        console.log('⚠️  Claude Code CLI not found in PATH');
-        console.log('Install it with: npm install -g @anthropic-ai/claude-code');
-        console.log('Or use --claude flag to open Claude Code CLI');
-        console.log('\nWould spawn Claude Code with swarm objective:');
-        console.log(`📋 Objective: ${objective}`);
-        console.log('\nOptions:');
-        console.log('  • Use --executor flag for built-in executor: claude-flow swarm "objective" --executor');
-        console.log('  • Use --claude flag to open Claude Code CLI: claude-flow swarm "objective" --claude');
+        if (!isNonInteractive) {
+          console.log('⚠️  Claude Code CLI not found in PATH');
+          console.log('Install it with: npm install -g @anthropic-ai/claude-code');
+          console.log('Or use --claude flag to open Claude Code CLI');
+          console.log('\nWould spawn Claude Code with swarm objective:');
+          console.log(`📋 Objective: ${objective}`);
+          console.log('\nOptions:');
+          console.log('  • Use --executor flag for built-in executor: claude-flow swarm "objective" --executor');
+          console.log('  • Use --claude flag to open Claude Code CLI: claude-flow swarm "objective" --claude');
+        } else {
+          // In non-interactive mode, output JSON error
+          console.error(JSON.stringify({
+            error: 'Claude Code CLI not found',
+            message: 'Install with: npm install -g @anthropic-ai/claude-code',
+            fallback: 'Use --executor flag for built-in executor'
+          }));
+        }
         return;
       }
 
       // Claude is available, use it to run swarm
-      console.log('🐝 Launching Claude Flow Swarm System...');
-      console.log(`📋 Objective: ${objective}`);
-      console.log(`🎯 Strategy: ${flags.strategy || 'auto'}`);
-      console.log(`🏗️  Mode: ${flags.mode || 'centralized'}`);
-      console.log(`🤖 Max Agents: ${flags['max-agents'] || 5}`);
-      if (isAnalysisMode) {
-        console.log(`🔍 Analysis Mode: ENABLED (Read-Only - No Code Changes)`);
+      if (!isNonInteractive) {
+        console.log('🐝 Launching Claude Flow Swarm System...');
+        console.log(`📋 Objective: ${objective}`);
+        console.log(`🎯 Strategy: ${flags.strategy || 'auto'}`);
+        console.log(`🏗️  Mode: ${flags.mode || 'centralized'}`);
+        console.log(`🤖 Max Agents: ${flags['max-agents'] || 5}`);
+        if (isAnalysisMode) {
+          console.log(`🔍 Analysis Mode: ENABLED (Read-Only - No Code Changes)`);
+        }
+        console.log();
+      } else {
+        // Non-interactive mode output
+        console.log('🤖 Running in non-interactive mode with Claude');
+        console.log('📋 Command: claude [prompt] -p --output-format stream-json --verbose');
       }
-      console.log();
 
       // Continue with the default swarm behavior if not using --claude flag
 
       // Pass the prompt directly as an argument to claude
       const claudeArgs = [swarmPrompt];
-
-      // Check if we're in non-interactive/headless mode
-      const isNonInteractive = flags['no-interactive'] || 
-                               flags['non-interactive'] || 
-                               flags['output-format'] === 'stream-json' ||
-                               isHeadlessEnvironment();
 
       // Add auto-permission flag by default for swarm mode (unless explicitly disabled)
       if (flags['dangerously-skip-permissions'] !== false && !flags['no-auto-permissions']) {
@@ -893,10 +911,6 @@ The swarm should be self-documenting - use memory_store to save all important in
         claudeArgs.push('-p'); // Print mode
         claudeArgs.push('--output-format', 'stream-json'); // JSON streaming
         claudeArgs.push('--verbose'); // Verbose output
-        
-        console.log('🤖 Running in non-interactive mode with Claude CLI');
-        console.log('📋 Command: claude [prompt] -p --output-format stream-json --verbose');
-        console.log('💡 Tip: Use --claude flag to open Claude Code CLI instead');
       }
 
       // Spawn claude with the prompt as the first argument
