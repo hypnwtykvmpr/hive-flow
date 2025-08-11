@@ -1,10 +1,10 @@
 [
   {
-    "id": "cmd-training-1754921703849",
-    "type": "training",
+    "id": "cmd-hooks-1754922696901",
+    "type": "hooks",
     "success": true,
-    "duration": 0.9808500000000322,
-    "timestamp": 1754921703850,
+    "duration": 81.01494299999999,
+    "timestamp": 1754922696982,
     "metadata": {}
   }
 ]
