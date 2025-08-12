@@ -386,6 +386,10 @@ async function executeStreamStep(prompt, inputStream, isLast, flags = {}) {
     // Add the prompt
     args.push(prompt);
 
+    if (flags.verbose) {
+      console.log(`   Debug: Executing: claude ${args.join(' ')}`);
+    }
+
     // Spawn Claude process
     const claudeProcess = spawn('claude', args, {
       stdio: ['pipe', 'pipe', 'pipe']
