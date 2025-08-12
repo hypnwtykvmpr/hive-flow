@@ -66,14 +66,12 @@ export class RealTrainingPipeline {
           type: 'function',
           name: 'validateEmail',
           task: 'Create email validation function',
-          code: `
-function validateEmail(email) {
-  const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          code: `function validateEmail(email) {
+  const regex = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;
   return regex.test(email);
 }
 
-module.exports = { validateEmail };
-`,
+module.exports = { validateEmail };`,
           test: `
 const { validateEmail } = require('./index');
 
