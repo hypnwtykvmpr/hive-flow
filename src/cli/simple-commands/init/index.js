@@ -63,6 +63,10 @@ import {
   createMinimalClaudeMd,
 } from './templates/claude-md.js';
 import {
+  createVerificationClaudeMd,
+  createVerificationSettingsJson,
+} from './templates/verification-claude-md.js';
+import {
   createFullMemoryBankMd,
   createMinimalMemoryBankMd,
 } from './templates/memory-bank-md.js';
