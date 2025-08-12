@@ -59,6 +59,10 @@ export async function copyTemplates(targetDir, options = {}) {
 
     // Copy core files
     for (const file of coreFiles) {
+      // Skip files if requested
+      if (options.skipClaudeMd && file.destination === 'CLAUDE.md') continue;
+      if (options.skipSettings && file.destination.includes('settings')) continue;
+      
       const sourceFile = file.useVariant && existsSync(join(templatesDir, `${file.source}.${templateVariant}`)) 
         ? `${file.source}.${templateVariant}`
         : file.source;
