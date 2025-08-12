@@ -1,30 +1,10 @@
 {
   "conservative": {
-    "successRate": 0.49293257493559417,
-    "avgScore": 42.380617698316314,
-    "avgExecutionTime": 1842.2548815522728,
-    "uses": 21,
+    "successRate": 0.4994504370269918,
+    "avgScore": 42.344668832221075,
+    "avgExecutionTime": 1908.9657395895047,
+    "uses": 26,
     "trend": [
-      {
-        "score": 79.8878888888889,
-        "timestamp": "2025-08-12T16:41:35.241Z"
-      },
-      {
-        "score": 66.55455555555555,
-        "timestamp": "2025-08-12T16:41:35.246Z"
-      },
-      {
-        "score": 77.66666666666667,
-        "timestamp": "2025-08-12T16:41:37.860Z"
-      },
-      {
-        "score": 86.55455555555557,
-        "timestamp": "2025-08-12T16:41:37.865Z"
-      },
-      {
-        "score": 79.88888888888889,
-        "timestamp": "2025-08-12T16:41:37.870Z"
-      },
       {
         "score": 73.22222222222221,
         "timestamp": "2025-08-12T16:41:39.923Z"
@@ -93,38 +73,43 @@
         "score": 42.712,
         "timestamp": "2025-08-12T17:06:02.152Z",
         "real": true
+      },
+      {
+        "score": 42.519999999999996,
+        "timestamp": "2025-08-12T17:23:35.682Z",
+        "real": true
+      },
+      {
+        "score": 42.248000000000005,
+        "timestamp": "2025-08-12T17:23:44.878Z",
+        "real": true
+      },
+      {
+        "score": 42.232,
+        "timestamp": "2025-08-12T17:23:53.815Z",
+        "real": true
+      },
+      {
+        "score": 42.452,
+        "timestamp": "2025-08-12T17:24:02.944Z",
+        "real": true
+      },
+      {
+        "score": 42.312,
+        "timestamp": "2025-08-12T17:24:11.971Z",
+        "real": true
       }
     ],
-    "realExecutions": 9,
+    "realExecutions": 14,
     "improving": false,
-    "improvementRate": "-34.0"
+    "improvementRate": "-19.1"
   },
   "balanced": {
-    "successRate": 0.49461840248550715,
-    "avgScore": 42.48048040038282,
-    "avgExecutionTime": 1845.4329229534967,
-    "uses": 21,
+    "successRate": 0.49958152697727304,
+    "avgScore": 42.442743275933765,
+    "avgExecutionTime": 1886.635584088864,
+    "uses": 26,
     "trend": [
-      {
-        "score": 77.72222222222221,
-        "timestamp": "2025-08-12T16:41:35.241Z"
-      },
-      {
-        "score": 91.05455555555557,
-        "timestamp": "2025-08-12T16:41:35.246Z"
-      },
-      {
-        "score": 91.05455555555555,
-        "timestamp": "2025-08-12T16:41:37.860Z"
-      },
-      {
-        "score": 88.83333333333333,
-        "timestamp": "2025-08-12T16:41:37.865Z"
-      },
-      {
-        "score": 88.83333333333333,
-        "timestamp": "2025-08-12T16:41:37.870Z"
-      },
       {
         "score": 88.83233333333334,
         "timestamp": "2025-08-12T16:41:39.923Z"
@@ -193,38 +178,43 @@
         "score": 42.54,
         "timestamp": "2025-08-12T17:06:02.152Z",
         "real": true
+      },
+      {
+        "score": 42.448,
+        "timestamp": "2025-08-12T17:23:35.682Z",
+        "real": true
+      },
+      {
+        "score": 42.512,
+        "timestamp": "2025-08-12T17:23:44.878Z",
+        "real": true
+      },
+      {
+        "score": 42.76,
+        "timestamp": "2025-08-12T17:23:53.815Z",
+        "real": true
+      },
+      {
+        "score": 42.212,
+        "timestamp": "2025-08-12T17:24:02.944Z",
+        "real": true
+      },
+      {
+        "score": 42.444,
+        "timestamp": "2025-08-12T17:24:11.971Z",
+        "real": true
       }
     ],
-    "realExecutions": 9,
+    "realExecutions": 14,
     "improving": false,
-    "improvementRate": "-41.2"
+    "improvementRate": "-25.8"
   },
   "aggressive": {
-    "successRate": 0.4940248004001619,
-    "avgScore": 43.13075144432068,
-    "avgExecutionTime": 1658.0158140330532,
-    "uses": 21,
+    "successRate": 0.4995353684791166,
+    "avgScore": 43.30054035231038,
+    "avgExecutionTime": 1670.2540296992102,
+    "uses": 26,
     "trend": [
-      {
-        "score": 79.1111111111111,
-        "timestamp": "2025-08-12T16:41:35.241Z"
-      },
-      {
-        "score": 70.22222222222221,
-        "timestamp": "2025-08-12T16:41:35.246Z"
-      },
-      {
-        "score": 76.88888888888889,
-        "timestamp": "2025-08-12T16:41:37.860Z"
-      },
-      {
-        "score": 81.33333333333333,
-        "timestamp": "2025-08-12T16:41:37.865Z"
-      },
-      {
-        "score": 72.44344444444444,
-        "timestamp": "2025-08-12T16:41:37.870Z"
-      },
       {
         "score": 70.22122222222221,
         "timestamp": "2025-08-12T16:41:39.923Z"
@@ -293,10 +283,35 @@
         "score": 43.324,
         "timestamp": "2025-08-12T17:06:02.152Z",
         "real": true
+      },
+      {
+        "score": 43.248,
+        "timestamp": "2025-08-12T17:23:35.682Z",
+        "real": true
+      },
+      {
+        "score": 43.252,
+        "timestamp": "2025-08-12T17:23:44.878Z",
+        "real": true
+      },
+      {
+        "score": 43.376000000000005,
+        "timestamp": "2025-08-12T17:23:53.815Z",
+        "real": true
+      },
+      {
+        "score": 43.34,
+        "timestamp": "2025-08-12T17:24:02.944Z",
+        "real": true
+      },
+      {
+        "score": 43.3,
+        "timestamp": "2025-08-12T17:24:11.971Z",
+        "real": true
       }
     ],
-    "realExecutions": 9,
+    "realExecutions": 14,
     "improving": false,
-    "improvementRate": "-32.3"
+    "improvementRate": "-18.2"
   }
 }
