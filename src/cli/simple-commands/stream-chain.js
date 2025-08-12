@@ -448,6 +448,7 @@ async function executeStreamStep(prompt, inputStream, isLast, flags = {}) {
 
     // Handle timeout - fallback to mock mode if Claude CLI hangs
     const timeoutId = setTimeout(() => {
+      timedOut = true; // Mark as timed out
       claudeProcess.kill();
       console.log('⚠️  Claude CLI timed out, falling back to mock mode...');
       console.log('   Debug: Calling mockStreamStep with fallback...');
