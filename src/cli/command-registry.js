@@ -672,45 +672,39 @@ Verification-Training Integration:
   commandRegistry.set('train-pipeline', {
     handler: async (args, flags) => {
       try {
-        // Check if user wants real execution
-        if (flags.real || args.includes('--real')) {
-          const { realTrainingPipelineCommand } = await import('./simple-commands/training-pipeline-real.js');
-          return await realTrainingPipelineCommand(args.filter(a => a !== '--real'), flags);
-        }
-        const { trainingPipelineCommand } = await import('./simple-commands/training-pipeline.js');
-        return await trainingPipelineCommand(args, flags);
+        // Always use real execution - no more simulation
+        const { realTrainingPipelineCommand } = await import('./simple-commands/training-pipeline-real.js');
+        return await realTrainingPipelineCommand(args, flags);
       } catch (error) {
         console.error('❌ Error loading training-pipeline module:', error.message);
         console.log('Error details:', error);
       }
     },
-    description: '🚀 Automated training pipeline for continuous agent improvement',
+    description: '🚀 Real training pipeline with actual code execution and learning',
     usage: 'train-pipeline <command> [options]',
     examples: [
-      'train-pipeline run               # Run simulated training',
-      'train-pipeline run --real        # Run with REAL code execution',
+      'train-pipeline run               # Run training with real code',
       'train-pipeline run --complexity hard --iterations 5',
-      'train-pipeline generate          # Generate training tasks',
+      'train-pipeline generate          # Generate real training tasks',
       'train-pipeline validate          # Validate current performance',
-      'train-pipeline status            # Show pipeline status',
+      'train-pipeline status            # Show pipeline status with real metrics',
     ],
     details: `
-Training Pipeline Features:
-  • Generates real-world training tasks
-  • Tests different agent strategies
-  • Learns from performance results
-  • Validates improvements
-  • Applies optimizations to production
+Real Training Pipeline Features:
+  • Creates actual code files and tests
+  • Runs real npm test commands
+  • Learns from actual test results
+  • Validates improvements with real metrics
+  • Applies learned optimizations to production
   
 Pipeline Stages:
-  1. Generate training tasks (easy/medium/hard)
-  2. Execute with different strategies
-  3. Learn from results
-  4. Validate improvements
-  5. Apply to production
+  1. Generate real code tasks (easy/medium/hard)
+  2. Execute with different strategies using npm
+  3. Learn from real test results
+  4. Validate actual improvements
+  5. Apply to production configuration
   
 Options:
-  --real               Use REAL code execution instead of simulation
   --complexity <level> Task complexity (easy/medium/hard)
   --iterations <n>     Number of training iterations`,
   });
