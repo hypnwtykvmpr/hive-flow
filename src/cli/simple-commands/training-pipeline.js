@@ -253,10 +253,10 @@ describe('Sorting Algorithms', () => {
   }
 
   /**
-   * STAGE 2: Execute REAL Tasks with Different Strategies
+   * STAGE 2: Execute Tasks with Different Strategies
    * Actually runs npm install, tests, and measures real performance
    */
-  async executeRealTrainingRun(tasks, agentConfig = {}) {
+  async executeTrainingRun(tasks, agentConfig = {}) {
     const results = [];
     
     for (const task of tasks) {
