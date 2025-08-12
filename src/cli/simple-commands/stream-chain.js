@@ -390,24 +390,21 @@ async function executeStreamStep(prompt, inputStream, isLast, flags = {}) {
       console.log(`   Debug: Executing: claude ${args.join(' ')}`);
     }
 
-    // Try exec instead of spawn for better compatibility
+    // Use exec with built-in timeout for better reliability
     const command = `claude ${args.join(' ')}`;
     
     exec(command, { 
       timeout: stepTimeout,
       maxBuffer: 1024 * 1024 * 10 // 10MB buffer
     }, (error, stdout, stderr) => {
-      clearTimeout(timeoutId);
-      
-      if (timedOut) {
-        return; // Already handled by timeout
+      if (resolved) {
+        return; // Already resolved
       }
       
       const duration = Date.now() - startTime;
       
       if (error && error.code === 'TIMEOUT') {
         // Handle timeout via exec
-        timedOut = true;
         console.log('⚠️  Claude CLI timed out, falling back to mock mode...');
         mockStreamStep(prompt, inputStream, isLast, { ...flags, mock: true }, safeResolve, Date.now());
         return;
