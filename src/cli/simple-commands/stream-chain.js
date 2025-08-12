@@ -420,6 +420,13 @@ async function executeStreamStep(prompt, inputStream, isLast, flags = {}) {
 
     claudeProcess.on('close', (code) => {
       clearTimeout(timeoutId); // Clear timeout since process completed
+      
+      // Don't resolve if we already timed out and started mock fallback
+      if (timedOut) {
+        console.log('   Debug: Process closed after timeout, ignoring...');
+        return;
+      }
+      
       const duration = Date.now() - startTime;
       
       if (flags.verbose) {
