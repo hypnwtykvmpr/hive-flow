@@ -672,6 +672,11 @@ Verification-Training Integration:
   commandRegistry.set('train-pipeline', {
     handler: async (args, flags) => {
       try {
+        // Check if user wants real execution
+        if (flags.real || args.includes('--real')) {
+          const { realTrainingPipelineCommand } = await import('./simple-commands/training-pipeline-real.js');
+          return await realTrainingPipelineCommand(args.filter(a => a !== '--real'), flags);
+        }
         const { trainingPipelineCommand } = await import('./simple-commands/training-pipeline.js');
         return await trainingPipelineCommand(args, flags);
       } catch (error) {
@@ -682,7 +687,8 @@ Verification-Training Integration:
     description: '🚀 Automated training pipeline for continuous agent improvement',
     usage: 'train-pipeline <command> [options]',
     examples: [
-      'train-pipeline run               # Run full training pipeline',
+      'train-pipeline run               # Run simulated training',
+      'train-pipeline run --real        # Run with REAL code execution',
       'train-pipeline run --complexity hard --iterations 5',
       'train-pipeline generate          # Generate training tasks',
       'train-pipeline validate          # Validate current performance',
@@ -701,7 +707,12 @@ Pipeline Stages:
   2. Execute with different strategies
   3. Learn from results
   4. Validate improvements
-  5. Apply to production`,
+  5. Apply to production
+  
+Options:
+  --real               Use REAL code execution instead of simulation
+  --complexity <level> Task complexity (easy/medium/hard)
+  --iterations <n>     Number of training iterations`,
   });
 
   commandRegistry.set('hive', {
