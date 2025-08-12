@@ -847,9 +847,9 @@ export async function trainingPipelineCommand(args, flags) {
       break;
 
     default:
-      console.log('Usage: real-train-pipeline <command> [options]');
+      console.log('Usage: train-pipeline <command> [options]');
       console.log('\nCommands:');
-      console.log('  run       - Run real training pipeline');
+      console.log('  run       - Run training pipeline with real code');
       console.log('  status    - Show pipeline status');
       console.log('  validate  - Check current performance');
       console.log('\nOptions:');
