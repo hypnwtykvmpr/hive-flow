@@ -397,6 +397,7 @@ async function executeStreamStep(prompt, inputStream, isLast, flags = {}) {
     });
 
     claudeProcess.on('close', (code) => {
+      clearTimeout(timeoutId); // Clear timeout since process completed
       const duration = Date.now() - startTime;
       
       if (flags.verbose) {
