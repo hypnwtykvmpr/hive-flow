@@ -859,4 +859,4 @@ export async function trainingPipelineCommand(args, flags) {
   }
 }
 
-export default RealTrainingPipeline;
+export default TrainingPipeline;
