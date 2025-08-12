@@ -332,11 +332,11 @@ async function executeStreamStep(prompt, inputStream, isLast, flags = {}) {
   return new Promise((resolve) => {
     const startTime = Date.now();
     
-    // Check if claude CLI is available
-    const claudeAvailable = checkClaudeAvailable();
+    // Check if we should use mock mode
+    const useMock = flags.mock || !checkClaudeAvailable();
     
-    if (!claudeAvailable) {
-      // Mock implementation when claude CLI isn't available
+    if (useMock) {
+      // Mock implementation when claude CLI isn't available or mock flag is set
       return mockStreamStep(prompt, inputStream, isLast, flags, resolve, startTime);
     }
     
