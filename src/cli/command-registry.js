@@ -669,6 +669,41 @@ Verification-Training Integration:
   • Improves reliability through continuous learning`,
   });
 
+  commandRegistry.set('train-pipeline', {
+    handler: async (args, flags) => {
+      try {
+        const { trainingPipelineCommand } = await import('./simple-commands/training-pipeline.js');
+        return await trainingPipelineCommand(args, flags);
+      } catch (error) {
+        console.error('❌ Error loading training-pipeline module:', error.message);
+        console.log('Error details:', error);
+      }
+    },
+    description: '🚀 Automated training pipeline for continuous agent improvement',
+    usage: 'train-pipeline <command> [options]',
+    examples: [
+      'train-pipeline run               # Run full training pipeline',
+      'train-pipeline run --complexity hard --iterations 5',
+      'train-pipeline generate          # Generate training tasks',
+      'train-pipeline validate          # Validate current performance',
+      'train-pipeline status            # Show pipeline status',
+    ],
+    details: `
+Training Pipeline Features:
+  • Generates real-world training tasks
+  • Tests different agent strategies
+  • Learns from performance results
+  • Validates improvements
+  • Applies optimizations to production
+  
+Pipeline Stages:
+  1. Generate training tasks (easy/medium/hard)
+  2. Execute with different strategies
+  3. Learn from results
+  4. Validate improvements
+  5. Apply to production`,
+  });
+
   commandRegistry.set('hive', {
     handler: async (args, flags) => {
       try {
