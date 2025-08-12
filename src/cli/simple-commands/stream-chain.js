@@ -239,29 +239,140 @@ export async function streamChainCommand(args, flags) {
 
 function showHelp() {
   console.log(`
-🔗 Stream Chain Command - Claude Code Context Chaining
+NAME
+    claude-flow stream-chain - Connect multiple Claude instances via stream-json for chained workflows
+
+SYNOPSIS
+    claude-flow stream-chain <subcommand> [options]
 
 DESCRIPTION
-    Chain multiple Claude Code prompts with context preservation.
-    Each step receives the output from the previous step.
-
-USAGE
-    stream-chain <subcommand> [options]
+    Stream chaining enables multi-step Claude workflows where each step receives the full
+    output from the previous step, creating powerful agent pipelines with context preservation.
+    
+    Uses Claude Code's --output-format stream-json to capture structured responses and
+    chains them together by injecting previous outputs into subsequent prompts.
 
 SUBCOMMANDS
-    run <p1> <p2> [...]  Execute custom chain
-    demo                 Run demo chain
-    test                 Test chaining
-    help                 Show this help
+    run <prompt1> <prompt2> [...]
+        Execute a custom stream chain with your own prompts
+        Minimum 2 prompts required for chaining
+        Each prompt receives the output from the previous step
+        
+    demo
+        Run a 3-step demonstration chain:
+        1. Write a Python function to reverse a string
+        2. Add type hints to the function
+        3. Add a docstring to the function
+        
+    pipeline <type>
+        Execute predefined pipelines for common workflows:
+        
+        analysis     - Code analysis and improvement pipeline
+                      Analyze → Identify issues → Generate report
+                      
+        refactor     - Automated refactoring workflow
+                      Find refactoring opportunities → Create plan → Apply changes
+                      
+        test         - Comprehensive test generation
+                      Analyze coverage → Design test cases → Generate tests
+                      
+        optimize     - Performance optimization pipeline
+                      Profile code → Identify bottlenecks → Apply optimizations
+    
+    test
+        Test stream chain connection and context preservation
+        Verifies that output from step 1 is received by step 2
+        
+    help
+        Display this comprehensive help message
 
 OPTIONS
-    --verbose            Show detailed output
-    --timeout <seconds>  Timeout per step (default: 30)
+    --verbose
+        Show detailed execution information including:
+        - Full command lines being executed
+        - Content preview from each step
+        - Stream-json parsing details
+        
+    --timeout <seconds>
+        Maximum time per step in seconds (default: 30)
+        Prevents hanging on long-running operations
+        
+    --debug
+        Enable debug mode with full stream-json output
+        Shows raw JSON messages between steps
 
 EXAMPLES
-    stream-chain demo
-    stream-chain run "Write code" "Review it" "Improve it"
-    stream-chain test --verbose
+    # Run a custom 3-step code improvement chain
+    claude-flow stream-chain run "analyze this code" "suggest improvements" "implement the top 3"
+    
+    # Execute the demo chain to see stream chaining in action
+    claude-flow stream-chain demo
+    
+    # Run the analysis pipeline on your codebase
+    claude-flow stream-chain pipeline analysis
+    
+    # Test that stream chaining is working correctly
+    claude-flow stream-chain test --verbose
+    
+    # Custom refactoring workflow with extended timeout
+    claude-flow stream-chain run "find code smells" "prioritize fixes" "refactor" --timeout 60
+    
+    # Debug mode to see raw stream-json messages
+    claude-flow stream-chain demo --debug --verbose
+
+HOW IT WORKS
+    1. Step 1 executes with --output-format stream-json to capture structured output
+    2. The assistant's response is extracted from the stream-json format
+    3. Step 2 receives the previous output as context in its prompt
+    4. This continues for all steps in the chain
+    5. Each step has full context of all previous outputs
+
+STREAM-JSON FORMAT
+    Each step outputs newline-delimited JSON with message types:
+    {"type":"system","subtype":"init",...}     - Session initialization
+    {"type":"assistant","message":{...}}       - Claude's response
+    {"type":"tool_use","name":"...",...}       - Tool invocations
+    {"type":"result","status":"success",...}   - Completion status
+
+PERFORMANCE
+    - Latency: ~10-30s per step depending on complexity
+    - Context: 100% preservation between steps
+    - Parallel: Steps run sequentially to maintain context
+    - Timeout: Default 30s per step, configurable
+
+REQUIREMENTS
+    - Claude Code must be installed and available in PATH
+    - Valid Claude API configuration
+    - Sufficient API credits for multiple Claude calls
+
+TROUBLESHOOTING
+    "Command not found"
+    → Ensure Claude Code is installed: npm install -g @anthropic-ai/claude-code
+    
+    "Step timed out"
+    → Increase timeout with --timeout flag
+    → Check network connectivity
+    
+    "Context not preserved"
+    → Verify stream-json output with --verbose
+    → Check that all steps completed successfully
+    
+    "Invalid JSON"
+    → Use --debug to see raw output
+    → Report issue if stream format has changed
+
+SEE ALSO
+    claude-flow swarm        - Multi-agent coordination
+    claude-flow hive-mind    - Collective intelligence mode
+    claude-flow sparc        - SPARC development methodology
+    
+DOCUMENTATION
+    Full docs: ./claude-flow-wiki/Stream-Chain-Command.md
+    Stream spec: ./docs/stream-chaining.md
+    GitHub: https://github.com/ruvnet/claude-flow
+
+VERSION
+    Claude Flow Alpha 89 - Stream Chain v2.0.0
   `);
 }
 
