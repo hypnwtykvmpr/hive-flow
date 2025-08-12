@@ -248,7 +248,7 @@ describe('Sorting Algorithms', () => {
       });
     }
 
-    console.log(`📝 Generated ${realTasks.length} REAL ${complexity} training tasks`);
+    console.log(`📝 Generated ${realTasks.length} ${complexity} training tasks`);
     return realTasks;
   }
 
