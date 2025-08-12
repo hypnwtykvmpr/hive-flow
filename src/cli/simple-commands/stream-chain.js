@@ -372,10 +372,14 @@ async function executeStreamStep(prompt, inputStream, isLast, flags = {}) {
       args.push('--input-format', 'stream-json');
       // When input format is stream-json, output format must also be stream-json
       args.push('--output-format', 'stream-json');
+      // stream-json output requires --verbose
+      args.push('--verbose');
     } else {
       // Add output format unless it's the last step and user wants text
       if (!isLast || flags.json) {
         args.push('--output-format', 'stream-json');
+        // stream-json output requires --verbose
+        args.push('--verbose');
       }
     }
     
