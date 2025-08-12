@@ -14,6 +14,14 @@ export {
   initializeAgenticFlowHooks,
 } from '../services/agentic-flow-hooks/index.js';
 
+// Re-export verification system
+export {
+  verificationHookManager,
+  initializeVerificationSystem,
+  getVerificationSystemStatus,
+  shutdownVerificationSystem,
+} from '../verification/index.js';
+
 // Re-export modern types with compatibility aliases
 export type {
   AgenticHookContext as HookExecutionContext,
