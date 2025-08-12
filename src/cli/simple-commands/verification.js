@@ -268,6 +268,12 @@ export async function verificationCommand(args, flags) {
 
 // Truth command shortcut
 export async function truthCommand(args, flags) {
+  // Handle help flag
+  if (flags.help || args[0] === '--help' || args[0] === 'help') {
+    const { COMMAND_HELP } = await import('../help-text.js');
+    console.log(COMMAND_HELP.truth);
+    return;
+  }
   return verificationCommand(['truth', ...args], flags);
 }
 
