@@ -617,18 +617,13 @@ Target metrics:
 
   commandRegistry.set('pair', {
     handler: async (args, flags) => {
-      console.log('🤝 Pair Programming Mode');
-      console.log('');
-      console.log('The pair command enables collaborative development with:');
-      console.log('  • Real-time code review and validation');
-      console.log('  • Automated verification of changes');
-      console.log('  • Truth enforcement for all operations');
-      console.log('  • Integration testing on every change');
-      console.log('');
-      console.log('This feature integrates with the verification system to ensure');
-      console.log('all pair programming sessions maintain high quality standards.');
-      console.log('');
-      console.log('Coming soon in the next release!');
+      try {
+        const { pairCommand } = await import('./simple-commands/verification.js');
+        return await pairCommand(args, flags);
+      } catch (error) {
+        console.error('❌ Error loading verification module:', error.message);
+        console.log('Error details:', error);
+      }
     },
     description: '👥 Pair programming with verification',
     usage: 'pair [options]',
