@@ -305,17 +305,23 @@ describe('Sorting Algorithms', () => {
     const startTime = Date.now();
     const checks = {};
     
-    // Modify code based on strategy
+    // Save original code
+    const originalCode = await fs.readFile(path.join(task.projectDir, 'index.js'), 'utf8');
+    
+    // Modify code based on strategy (but more carefully!)
     if (strategy === 'aggressive') {
-      // Aggressive: Remove some validation
-      const code = await fs.readFile(path.join(task.projectDir, 'index.js'), 'utf8');
-      const aggressiveCode = code.replace(/if \(!.*?\)/g, '// Skipped validation');
+      // Aggressive: Skip some validation (but keep valid syntax)
+      const aggressiveCode = originalCode.replace(
+        /if \(!(\w+)\)/g, 
+        'if (false && !$1)'
+      );
       await fs.writeFile(path.join(task.projectDir, 'index.js'), aggressiveCode);
     } else if (strategy === 'conservative') {
-      // Conservative: Add extra validation
-      const code = await fs.readFile(path.join(task.projectDir, 'index.js'), 'utf8');
-      const conservativeCode = code.replace(/function (\w+)\(/, 
-        'function $1(...args) {\n  if (args.some(a => a === undefined)) throw new Error("Invalid args");\n  const [');
+      // Conservative: Add validation at the top of functions
+      const conservativeCode = originalCode.replace(
+        /function (\w+)\((.*?)\) {/g,
+        'function $1($2) {\n  // Extra validation for conservative strategy\n  if (arguments.length === 0) throw new Error("No arguments provided");'
+      );
       await fs.writeFile(path.join(task.projectDir, 'index.js'), conservativeCode);
     }
     // Balanced: Keep original code
