@@ -182,6 +182,10 @@ export async function initCommand(subArgs, flags) {
   const initDryRun = subArgs.includes('--dry-run') || subArgs.includes('-d') || flags.dryRun;
   const initOptimized = initSparc && initForce; // Use optimized templates when both flags are present
   const selectedModes = flags.modes ? flags.modes.split(',') : null; // Support selective mode initialization
+  
+  // Check for verification and pair programming flags
+  const initVerify = subArgs.includes('--verify') || flags.verify;
+  const initPair = subArgs.includes('--pair') || flags.pair;
 
   // Get the actual working directory (where the command was run from)
   // Use PWD environment variable which preserves the original directory
