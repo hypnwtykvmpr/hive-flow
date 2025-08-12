@@ -78,7 +78,8 @@ export async function copyTemplates(targetDir, options = {}) {
       const claudeDir = join(targetDir, '.claude');
       
       // Copy settings.json
-      const settingsSource = options.enhanced ? 'settings.json.enhanced' : 'settings.json';
+      const settingsSource = (options.verify || options.pair) ? 'settings.json.verification' :
+                             options.enhanced ? 'settings.json.enhanced' : 'settings.json';
       const settingsPath = join(templatesDir, settingsSource);
       const settingsDest = join(claudeDir, 'settings.json');
       
