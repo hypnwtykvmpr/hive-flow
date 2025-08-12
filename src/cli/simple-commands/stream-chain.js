@@ -36,53 +36,49 @@ function mockResponse(prompt) {
  */
 async function executeClaudeCommand(prompt, timeout = 20000, useStreamJson = false) {
   return new Promise((resolve) => {
-    // Build command arguments array for spawn
-    const args = ['-p'];
-    
-    if (useStreamJson) {
-      args.push('--output-format', 'stream-json', '--verbose');
+    // For testing, let's just test Claude CLI availability first
+    if (!checkClaudeAvailable()) {
+      console.log('⚠️  Claude CLI not available, using mock response...');
+      resolve(mockResponse(prompt));
+      return;
     }
     
-    // Add the prompt as final argument
-    args.push(prompt);
+    // Build command string exactly like we know works
+    let command;
+    if (useStreamJson) {
+      command = `claude -p --output-format stream-json --verbose "${prompt.replace(/"/g, '\\"')}"`;
+    } else {
+      command = `claude -p "${prompt.replace(/"/g, '\\"')}"`;
+    }
     
-    console.log(`🔄 Executing: claude ${args.map(arg => arg.includes(' ') ? `"${arg}"` : arg).join(' ')}`);
+    console.log(`🔄 Executing: ${command}`);
     
     const startTime = Date.now();
     
-    // Use spawn instead of exec to handle arguments properly
-    const claudeProcess = spawn('claude', args, {
-      stdio: ['pipe', 'pipe', 'pipe'],
-      env: process.env
-    });
-    
-    let stdout = '';
-    let stderr = '';
-    let processCompleted = false;
-    
-    claudeProcess.stdout.on('data', (data) => {
-      stdout += data.toString();
-    });
-    
-    claudeProcess.stderr.on('data', (data) => {
-      stderr += data.toString();
-    });
-    
-    claudeProcess.on('close', (code) => {
-      if (processCompleted) return;
-      processCompleted = true;
-      
+    // Use exec with shell=true for better compatibility
+    exec(command, { 
+      timeout,
+      maxBuffer: 1024 * 1024 * 10, // 10MB buffer
+      env: process.env,
+      shell: true // Ensure shell processing
+    }, (error, stdout, stderr) => {
       const duration = Date.now() - startTime;
       
-      if (code !== 0) {
-        console.error('Claude CLI error: Process exited with code', code);
-        if (stderr) {
-          console.error('stderr:', stderr);
+      if (error) {
+        if (error.code === 'TIMEOUT') {
+          console.log('⚠️  Claude CLI timed out, using mock response...');
+        } else {
+          console.error('Claude CLI error:', error.message);
+          if (stderr) {
+            console.error('stderr:', stderr);
+          }
         }
         resolve(mockResponse(prompt));
         return;
       }
       
+      // Real success case
+      console.log(`✅ Claude CLI executed successfully (${duration}ms)`);
       resolve({
         success: true,
         duration,
@@ -90,28 +86,6 @@ async function executeClaudeCommand(prompt, timeout = 20000, useStreamJson = fal
         stream: useStreamJson ? stdout : null,
         error: stderr ? stderr.trim() : null
       });
-    });
-    
-    claudeProcess.on('error', (error) => {
-      if (processCompleted) return;
-      processCompleted = true;
-      
-      console.error('Claude CLI spawn error:', error.message);
-      resolve(mockResponse(prompt));
-    });
-    
-    // Set timeout
-    const timeoutId = setTimeout(() => {
-      if (processCompleted) return;
-      processCompleted = true;
-      
-      console.log('⚠️  Claude CLI timed out, using mock response...');
-      claudeProcess.kill();
-      resolve(mockResponse(prompt));
-    }, timeout);
-    
-    claudeProcess.on('close', () => {
-      clearTimeout(timeoutId);
     });
   });
 }
