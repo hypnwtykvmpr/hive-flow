@@ -705,7 +705,7 @@ describe('Sorting Algorithms', () => {
       times[result.strategy].push(result.executionTime);
     }
 
-    let report = '📊 Real Training Pipeline Report\n';
+    let report = '📊 Training Pipeline Report\n';
     report += '━'.repeat(50) + '\n\n';
     
     for (const strategy of Object.keys(successRates)) {
