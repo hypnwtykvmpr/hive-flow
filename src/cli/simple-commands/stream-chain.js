@@ -390,7 +390,44 @@ async function executeStreamStep(prompt, inputStream, isLast, flags = {}) {
       console.log(`   Debug: Executing: claude ${args.join(' ')}`);
     }
 
-    // Spawn Claude process
+    // Try exec instead of spawn for better compatibility
+    const command = `claude ${args.join(' ')}`;
+    
+    exec(command, { 
+      timeout: stepTimeout,
+      maxBuffer: 1024 * 1024 * 10 // 10MB buffer
+    }, (error, stdout, stderr) => {
+      clearTimeout(timeoutId);
+      
+      if (timedOut) {
+        return; // Already handled by timeout
+      }
+      
+      const duration = Date.now() - startTime;
+      
+      if (error && error.code === 'TIMEOUT') {
+        // Handle timeout via exec
+        timedOut = true;
+        console.log('⚠️  Claude CLI timed out, falling back to mock mode...');
+        mockStreamStep(prompt, inputStream, isLast, { ...flags, mock: true }, safeResolve, Date.now());
+        return;
+      }
+      
+      if (flags.verbose && stderr) {
+        console.error('Error output:', stderr);
+      }
+      
+      safeResolve({
+        success: !error || error.code === 0,
+        duration,
+        output: stdout || '',
+        stream: (!isLast && stdout) ? stdout : null,
+        error: stderr || (error ? error.message : null)
+      });
+    });
+
+    // Keep the original spawn logic as backup (commented out)
+    /*
     const claudeProcess = spawn('claude', args, {
       stdio: ['pipe', 'pipe', 'pipe']
     });
