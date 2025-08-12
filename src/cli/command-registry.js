@@ -641,6 +641,34 @@ Pair programming features:
   • Quality gates`,
   });
 
+  commandRegistry.set('verify-train', {
+    handler: async (args, flags) => {
+      try {
+        const { verificationTrainingCommand } = await import('./simple-commands/verification-training-integration.js');
+        return await verificationTrainingCommand(args, flags);
+      } catch (error) {
+        console.error('❌ Error loading verification-training module:', error.message);
+        console.log('Error details:', error);
+      }
+    },
+    description: '🧠 Verification-Training integration for continuous improvement',
+    usage: 'verify-train <command> [options]',
+    examples: [
+      'verify-train status              # Show training status',
+      'verify-train feed                # Feed verification data to training',
+      'verify-train predict coder       # Predict verification outcome',
+      'verify-train recommend           # Get agent recommendations',
+      'verify-train train               # Trigger neural training',
+    ],
+    details: `
+Verification-Training Integration:
+  • Feeds verification results to training system
+  • Learns from agent performance over time
+  • Predicts verification outcomes
+  • Recommends best agents for tasks
+  • Improves reliability through continuous learning`,
+  });
+
   commandRegistry.set('hive', {
     handler: async (args, flags) => {
       try {
