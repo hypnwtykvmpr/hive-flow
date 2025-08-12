@@ -260,7 +260,7 @@ describe('Sorting Algorithms', () => {
     const results = [];
     
     for (const task of tasks) {
-      console.log(`\n🔄 Executing REAL task: ${task.task}`);
+      console.log(`\n🔄 Executing task: ${task.task}`);
       
       // Install dependencies (only once per task)
       try {
