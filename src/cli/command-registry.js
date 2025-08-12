@@ -673,8 +673,8 @@ Verification-Training Integration:
     handler: async (args, flags) => {
       try {
         // Always use real execution - no more simulation
-        const { realTrainingPipelineCommand } = await import('./simple-commands/training-pipeline-real.js');
-        return await realTrainingPipelineCommand(args, flags);
+        const { trainingPipelineCommand } = await import('./simple-commands/training-pipeline.js');
+        return await trainingPipelineCommand(args, flags);
       } catch (error) {
         console.error('❌ Error loading training-pipeline module:', error.message);
         console.log('Error details:', error);
