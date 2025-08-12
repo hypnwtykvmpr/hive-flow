@@ -893,10 +893,17 @@ The swarm should be self-documenting - use memory_store to save all important in
 
       // Continue with the default swarm behavior if not using --claude flag
 
-      // Pass the prompt directly as an argument to claude
-      const claudeArgs = [swarmPrompt];
+      // Build arguments in correct order: flags first, then prompt
+      const claudeArgs = [];
 
-      // Add auto-permission flag by default for swarm mode (unless explicitly disabled)
+      // Add non-interactive flags FIRST if needed
+      if (isNonInteractive) {
+        claudeArgs.push('-p'); // Print mode
+        claudeArgs.push('--output-format', 'stream-json'); // JSON streaming
+        claudeArgs.push('--verbose'); // Verbose output
+      }
+
+      // Add auto-permission flag BEFORE the prompt
       if (flags['dangerously-skip-permissions'] !== false && !flags['no-auto-permissions']) {
         claudeArgs.push('--dangerously-skip-permissions');
         if (!isNonInteractive) {
@@ -906,14 +913,10 @@ The swarm should be self-documenting - use memory_store to save all important in
         }
       }
 
-      // Add non-interactive flags if needed
-      if (isNonInteractive) {
-        claudeArgs.push('-p'); // Print mode
-        claudeArgs.push('--output-format', 'stream-json'); // JSON streaming
-        claudeArgs.push('--verbose'); // Verbose output
-      }
+      // Add the prompt as the LAST argument
+      claudeArgs.push(swarmPrompt);
 
-      // Spawn claude with the prompt as the first argument
+      // Spawn claude with properly ordered arguments
       const claudeProcess = spawn('claude', claudeArgs, {
         stdio: 'inherit',
         shell: false,
