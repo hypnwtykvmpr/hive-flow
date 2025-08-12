@@ -1,14 +1,10 @@
 {
   "conservative": {
-    "successRate": 0.48036826370998387,
-    "avgScore": 41.91682693976752,
-    "avgExecutionTime": 1846.9302265340914,
-    "uses": 19,
+    "successRate": 0.49293257493559417,
+    "avgScore": 42.380617698316314,
+    "avgExecutionTime": 1842.2548815522728,
+    "uses": 21,
     "trend": [
-      {
-        "score": 79.88688888888889,
-        "timestamp": "2025-08-12T16:41:35.236Z"
-      },
       {
         "score": 79.8878888888889,
         "timestamp": "2025-08-12T16:41:35.241Z"
@@ -87,22 +83,28 @@
         "score": 42.56,
         "timestamp": "2025-08-12T17:05:44.152Z",
         "real": true
+      },
+      {
+        "score": 42.524,
+        "timestamp": "2025-08-12T17:05:53.304Z",
+        "real": true
+      },
+      {
+        "score": 42.712,
+        "timestamp": "2025-08-12T17:06:02.152Z",
+        "real": true
       }
     ],
-    "realExecutions": 7,
+    "realExecutions": 9,
     "improving": false,
-    "improvementRate": "-38.0"
+    "improvementRate": "-34.0"
   },
   "balanced": {
-    "successRate": 0.4850511180152976,
-    "avgScore": 42.29466777884117,
-    "avgExecutionTime": 1830.6470082041576,
-    "uses": 19,
+    "successRate": 0.49461840248550715,
+    "avgScore": 42.48048040038282,
+    "avgExecutionTime": 1845.4329229534967,
+    "uses": 21,
     "trend": [
-      {
-        "score": 77.72222222222221,
-        "timestamp": "2025-08-12T16:41:35.236Z"
-      },
       {
         "score": 77.72222222222221,
         "timestamp": "2025-08-12T16:41:35.241Z"
@@ -181,22 +183,28 @@
         "score": 42.288,
         "timestamp": "2025-08-12T17:05:44.152Z",
         "real": true
+      },
+      {
+        "score": 42.66,
+        "timestamp": "2025-08-12T17:05:53.304Z",
+        "real": true
+      },
+      {
+        "score": 42.54,
+        "timestamp": "2025-08-12T17:06:02.152Z",
+        "real": true
       }
     ],
-    "realExecutions": 7,
+    "realExecutions": 9,
     "improving": false,
-    "improvementRate": "-44.7"
+    "improvementRate": "-41.2"
   },
   "aggressive": {
-    "successRate": 0.483402223333783,
-    "avgScore": 42.77653178977965,
-    "avgExecutionTime": 1641.1550389807035,
-    "uses": 19,
+    "successRate": 0.4940248004001619,
+    "avgScore": 43.13075144432068,
+    "avgExecutionTime": 1658.0158140330532,
+    "uses": 21,
     "trend": [
-      {
-        "score": 83.55455555555555,
-        "timestamp": "2025-08-12T16:41:35.236Z"
-      },
       {
         "score": 79.1111111111111,
         "timestamp": "2025-08-12T16:41:35.241Z"
@@ -275,10 +283,20 @@
         "score": 43.28,
         "timestamp": "2025-08-12T17:05:44.152Z",
         "real": true
+      },
+      {
+        "score": 43.34,
+        "timestamp": "2025-08-12T17:05:53.304Z",
+        "real": true
+      },
+      {
+        "score": 43.324,
+        "timestamp": "2025-08-12T17:06:02.152Z",
+        "real": true
       }
     ],
-    "realExecutions": 7,
+    "realExecutions": 9,
     "improving": false,
-    "improvementRate": "-36.6"
+    "improvementRate": "-32.3"
   }
 }
