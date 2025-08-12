@@ -331,13 +331,21 @@ async function runStreamChain(prompts, flags) {
 async function executeStreamStep(prompt, inputStream, isLast, flags = {}) {
   return new Promise((resolve) => {
     const startTime = Date.now();
+    let resolved = false; // Prevent double resolution
+    
+    const safeResolve = (result) => {
+      if (!resolved) {
+        resolved = true;
+        resolve(result);
+      }
+    };
     
     // Check if we should use mock mode
     const useMock = flags.mock || !checkClaudeAvailable();
     
     if (useMock) {
       // Mock implementation when claude CLI isn't available or mock flag is set
-      return mockStreamStep(prompt, inputStream, isLast, flags, resolve, startTime);
+      return mockStreamStep(prompt, inputStream, isLast, flags, safeResolve, startTime);
     }
     
     // Set a reasonable timeout for demo purposes (10 seconds per step)
