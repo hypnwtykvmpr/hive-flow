@@ -555,15 +555,15 @@ describe('Sorting Algorithms', () => {
       console.log(`\n📍 Iteration ${i}/${iterations}`);
       console.log('─'.repeat(40));
 
-      // Stage 1: Generate REAL tasks
-      const tasks = await this.generateRealTrainingTasks(complexity);
+      // Stage 1: Generate tasks
+      const tasks = await this.generateTrainingTasks(complexity);
 
-      // Stage 2: Execute with REAL code
-      const results = await this.executeRealTrainingRun(tasks);
+      // Stage 2: Execute with real code
+      const results = await this.executeTrainingRun(tasks);
       cumulativeResults = [...cumulativeResults, ...results];
 
-      // Stage 3: Learn from REAL results
-      const { profiles, recommendations } = await this.learnFromRealResults(results);
+      // Stage 3: Learn from results
+      const { profiles, recommendations } = await this.learnFromResults(results);
 
       // Show recommendations
       if (recommendations.length > 0) {
