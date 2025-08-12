@@ -1,0 +1,6 @@
+Session Test Marker
+Created: 2025-08-11 22:26 UTC
+Purpose: Test session persistence
+Background task running: bash_3 (python3 -m http.server 8080)
+
+This file is used to test if Claude remembers file context across sessions.
