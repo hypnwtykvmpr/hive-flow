@@ -9,6 +9,78 @@ import fs from 'fs/promises';
 import path from 'path';
 
 /**
+ * Check if claude CLI is available
+ */
+function checkClaudeAvailable() {
+  try {
+    execSync('which claude', { stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Mock stream step implementation when claude CLI isn't available
+ */
+function mockStreamStep(prompt, inputStream, isLast, flags, resolve, startTime) {
+  const duration = Date.now() - startTime;
+  
+  // Simulate processing time
+  setTimeout(() => {
+    const mockOutput = generateMockOutput(prompt, inputStream);
+    
+    if (flags.verbose) {
+      console.log('\n📝 Mock output generated (claude CLI not available)');
+      console.log('   Install claude CLI for real stream chaining');
+    }
+    
+    resolve({
+      success: true,
+      duration: duration + 500,
+      output: mockOutput.text,
+      stream: !isLast ? mockOutput.stream : null,
+      error: null
+    });
+  }, 500);
+}
+
+/**
+ * Generate mock output based on prompt
+ */
+function generateMockOutput(prompt, inputStream) {
+  const timestamp = new Date().toISOString();
+  
+  // Create mock stream-json output
+  const streamJson = JSON.stringify({
+    type: 'message',
+    role: 'assistant',
+    content: [{
+      type: 'text',
+      text: `Mock processing: ${prompt.slice(0, 50)}...`
+    }],
+    timestamp
+  });
+  
+  // Create mock text output
+  const text = `✅ Mock Step Completed
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Prompt: ${prompt.slice(0, 100)}...
+${inputStream ? 'Input: Received from previous step' : 'Input: None'}
+
+Note: This is a mock response. Install claude CLI for real execution:
+  npm install -g @anthropic-ai/claude-cli
+
+Or use with Claude Code:
+  claude -p --output-format stream-json "${prompt}"`;
+  
+  return {
+    text,
+    stream: streamJson
+  };
+}
+
+/**
  * Stream Chain command handler
  */
 export async function streamChainCommand(args, flags) {
