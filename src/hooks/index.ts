@@ -170,7 +170,17 @@ export function createHookEngine(config?: any) {
 export async function setupDefaultHooks(engine?: any) {
   console.warn('setupDefaultHooks is deprecated. Use agenticHookManager.register() to register specific hooks instead.');
   console.info('Consider migrating to agentic-flow-hooks for advanced pipeline management and neural integration.');
-  return 4; // Return count for backward compatibility
+  
+  // Initialize verification system as part of default setup
+  try {
+    const { initializeVerificationSystem } = await import('../verification/index.js');
+    await initializeVerificationSystem();
+    console.info('✅ Verification system initialized with default hooks');
+    return 9; // 4 legacy + 5 verification hooks
+  } catch (error) {
+    console.warn('Failed to initialize verification system:', error);
+    return 4; // Return legacy count for backward compatibility
+  }
 }
 
 // Migration notice for users
