@@ -1013,6 +1013,7 @@ export function showCommandHelp(name) {
     name: `claude-flow ${name}`,
     description: HelpFormatter.stripFormatting(command.description),
     usage: `claude-flow ${command.usage}`,
+    details: command.details, // Pass through the details section
   };
 
   // Parse examples
