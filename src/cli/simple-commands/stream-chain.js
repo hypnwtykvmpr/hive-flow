@@ -243,13 +243,13 @@ export async function streamChainCommand(args, flags) {
 
 function showHelp() {
   console.log(`
-NAME
+🔗 NAME
     claude-flow stream-chain - Connect multiple Claude instances via stream-json for chained workflows
 
-SYNOPSIS
+📋 SYNOPSIS
     claude-flow stream-chain <subcommand> [options]
 
-DESCRIPTION
+📝 DESCRIPTION
     Stream chaining enables multi-step Claude workflows where each step receives the full
     output from the previous step, creating powerful agent pipelines with context preservation.
     
