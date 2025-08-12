@@ -61,20 +61,10 @@ USAGE:
   github <mode>            GitHub workflow automation (6 modes)
   status                   System status and health
   
-🔍 VERIFICATION COMMANDS (ALPHA 89 - NEW!):
+🔍 VERIFICATION COMMANDS (NEW!):
   verify <subcommand>      Truth verification system (0.95 threshold)
-    init <mode>           Initialize verification (strict/moderate/development)
-    verify <task>         Run verification on specific task
-    status                Show verification system status
-    rollback              Trigger manual rollback to last good state
   truth                    View truth scores and reliability metrics
-    --report              Generate detailed truth score report
-    --analyze             Analyze failure patterns
-    --json                Output in JSON format
   pair [--start]           Collaborative development with real-time verification
-    --mode <type>         Set mode (strict/standard/development)
-    --threshold <n>       Custom accuracy threshold (0.0-1.0)
-    --verify              Enable verification during pairing
   
 📋 SWARM INTELLIGENCE COMMANDS:
   training <command>       Neural pattern learning & model updates (3 commands)
