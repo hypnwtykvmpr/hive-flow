@@ -398,6 +398,7 @@ async function executeStreamStep(prompt, inputStream, isLast, flags = {}) {
     let output = '';
     let streamOutput = '';
     let errorOutput = '';
+    let receivedResult = false;
 
     // Note: Input stream chaining disabled for now due to format complexity
     // Each step runs independently with just the prompt
@@ -408,6 +409,24 @@ async function executeStreamStep(prompt, inputStream, isLast, flags = {}) {
       output += chunk;
       if (!isLast) {
         streamOutput += chunk;
+      }
+      
+      // Check if we received a complete result in stream-json format
+      if (output.includes('"type":"result"') && !receivedResult) {
+        receivedResult = true;
+        // Give a short delay for any remaining output, then resolve
+        setTimeout(() => {
+          if (!resolved) {
+            clearTimeout(timeoutId);
+            safeResolve({
+              success: true,
+              duration: Date.now() - startTime,
+              output,
+              stream: streamOutput,
+              error: errorOutput
+            });
+          }
+        }, 1000);
       }
       
       // Show progress for verbose mode
