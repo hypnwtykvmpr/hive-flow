@@ -79,14 +79,14 @@ async function executeChainStep(prompt, inputData, isFirst, isLast, flags) {
     const args = ['-p'];
     
     // Add input format if we have previous output
+    // Note: --input-format stream-json requires --output-format stream-json
     if (!isFirst && inputData) {
       args.push('--input-format', 'stream-json');
-    }
-    
-    // Add output format if not last step
-    if (!isLast) {
       args.push('--output-format', 'stream-json');
-      // Verbose flag is required for stream-json output
+      args.push('--verbose');
+    } else if (!isLast) {
+      // Only output format for first/middle steps
+      args.push('--output-format', 'stream-json');
       args.push('--verbose');
     }
     
