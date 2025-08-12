@@ -13,7 +13,7 @@ export const MAIN_HELP = `
 
 🎯 ENTERPRISE FEATURES: Complete ruv-swarm integration with 90+ MCP tools, neural networking, and production-ready infrastructure
 🐝 NEW: Claude Code 1.0.51+ full compatibility with enhanced hooks and batch processing
-⚡ ALPHA 87: Centralized version management and async/await fixes
+⚡ ALPHA 89: Truth Verification System, Pair Programming, Non-interactive prompt fixes
 
 USAGE:
   npx claude-flow@alpha <command> [options]    # Run latest alpha version
