@@ -68,22 +68,24 @@ async function executeRealChain(prompts, flags = {}) {
 }
 
 /**
- * Filter stream-json to remove system messages and keep only user/assistant/result
+ * Transform stream-json output to create proper input for next step
+ * This converts the previous assistant's output into a user message for chaining
  */
-function filterStreamJson(rawOutput) {
+function transformStreamForChaining(rawOutput, nextPrompt) {
   const lines = rawOutput.split('\n').filter(line => line.trim());
-  const filtered = [];
+  const messages = [];
+  let assistantContent = '';
   
+  // Extract the assistant's response from the stream
   for (const line of lines) {
     try {
       const json = JSON.parse(line);
-      // Keep only message types that --input-format accepts
-      if (json.type === 'message' || json.type === 'tool_use' || json.type === 'tool_result' || json.type === 'result') {
-        // For messages, ensure they have user or assistant role
-        if (json.type === 'message' && json.role !== 'system') {
-          filtered.push(line);
-        } else if (json.type !== 'message') {
-          filtered.push(line);
+      if (json.type === 'message' && json.role === 'assistant' && json.content) {
+        // Extract text content from assistant messages
+        for (const content of json.content) {
+          if (content.type === 'text' && content.text) {
+            assistantContent += content.text + '\n';
+          }
         }
       }
     } catch (e) {
@@ -91,7 +93,29 @@ function filterStreamJson(rawOutput) {
     }
   }
   
-  return filtered.join('\n');
+  // Create a user message with the previous output and new prompt
+  if (assistantContent) {
+    const userMessage = {
+      type: 'message',
+      role: 'user',
+      content: [{
+        type: 'text',
+        text: `Previous step output:\n${assistantContent.trim()}\n\nNext step: ${nextPrompt}`
+      }]
+    };
+    return JSON.stringify(userMessage);
+  }
+  
+  // Fallback: just create a user message with the prompt
+  const fallbackMessage = {
+    type: 'message',
+    role: 'user',
+    content: [{
+      type: 'text',
+      text: nextPrompt
+    }]
+  };
+  return JSON.stringify(fallbackMessage);
 }
 
 /**
