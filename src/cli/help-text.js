@@ -56,6 +56,11 @@ USAGE:
   github <mode>            GitHub workflow automation (6 modes)
   status                   System status and health
   
+🔍 VERIFICATION COMMANDS (NEW!):
+  verify <subcommand>      Truth verification system (0.95 threshold)
+  truth                    View truth scores and reliability metrics
+  pair [--start]           Collaborative development with real-time verification
+  
 📋 SWARM INTELLIGENCE COMMANDS:
   training <command>       Neural pattern learning & model updates (3 commands)
   coordination <command>   Swarm & agent orchestration (3 commands)
