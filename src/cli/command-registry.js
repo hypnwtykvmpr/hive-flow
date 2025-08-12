@@ -618,27 +618,29 @@ Target metrics:
   commandRegistry.set('pair', {
     handler: async (args, flags) => {
       try {
-        const { pairCommand } = await import('./simple-commands/verification.js');
+        const pairCommand = (await import('./simple-commands/pair.js')).default;
         return await pairCommand(args, flags);
       } catch (error) {
-        console.error('❌ Error loading verification module:', error.message);
+        console.error('❌ Error loading pair module:', error.message);
         console.log('Error details:', error);
       }
     },
-    description: '👥 Pair programming with verification',
+    description: '👥 Interactive pair programming with AI assistance',
     usage: 'pair [options]',
     examples: [
-      'pair                             # Start pair programming mode',
-      'pair --verify                    # Enable real-time verification',
-      'pair --threshold 0.95            # Set quality threshold',
+      'pair --start                     # Start pair programming session',
+      'pair --start --mode driver       # You write, AI assists',
+      'pair --start --verify --test     # Enable verification and testing',
+      'pair --status                    # Show session status',
+      'pair --end                       # End current session',
     ],
     details: `
 Pair programming features:
-  • Real-time code review
-  • Automated verification
-  • Truth enforcement
-  • Integration testing
-  • Quality gates`,
+  • Three modes: driver, navigator, switch
+  • Real-time code assistance
+  • Optional verification and testing
+  • Session persistence
+  • Background execution support`,
   });
 
   commandRegistry.set('verify-train', {
