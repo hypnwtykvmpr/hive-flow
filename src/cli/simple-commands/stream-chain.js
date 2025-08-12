@@ -422,6 +422,59 @@ async function runTest(flags) {
   console.log('\n' + (success ? '✅ Test passed!' : '❌ Test failed'));
 }
 
+async function runPipeline(args, flags) {
+  const pipelineType = args[0];
+  
+  const pipelines = {
+    analysis: {
+      name: 'Code Analysis Pipeline',
+      prompts: [
+        "Analyze the current directory structure and identify the main components",
+        "Based on the analysis, identify potential improvements and issues",
+        "Generate a detailed report with actionable recommendations"
+      ]
+    },
+    refactor: {
+      name: 'Refactoring Workflow',
+      prompts: [
+        "Identify code that could benefit from refactoring in the current project",
+        "Create a prioritized refactoring plan with specific changes",
+        "Provide refactored code examples for the top 3 priorities"
+      ]
+    },
+    test: {
+      name: 'Test Generation Pipeline',
+      prompts: [
+        "Analyze the codebase and identify areas lacking test coverage",
+        "Design comprehensive test cases for the critical functions",
+        "Generate unit test implementations with assertions"
+      ]
+    },
+    optimize: {
+      name: 'Performance Optimization Pipeline',
+      prompts: [
+        "Profile the codebase and identify performance bottlenecks",
+        "Analyze the bottlenecks and suggest optimization strategies",
+        "Provide optimized implementations for the main issues"
+      ]
+    }
+  };
+  
+  if (!pipelineType || !pipelines[pipelineType]) {
+    console.error('❌ Invalid or missing pipeline type');
+    console.log('Available pipelines: ' + Object.keys(pipelines).join(', '));
+    console.log('Usage: claude-flow stream-chain pipeline <type>');
+    return;
+  }
+  
+  const pipeline = pipelines[pipelineType];
+  console.log(`🚀 Running ${pipeline.name}`);
+  console.log('━'.repeat(50));
+  
+  const results = await executeChain(pipeline.prompts, flags);
+  showSummary(results);
+}
+
 function showSummary(results) {
   console.log('\n' + '═'.repeat(50));
   console.log('📊 Summary');
