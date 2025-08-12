@@ -51,7 +51,6 @@ async function executeClaudeCommand(prompt, timeout = 20000, useStreamJson = fal
     const startTime = Date.now();
     
     // Use spawn instead of exec to handle arguments properly
-    const { spawn } = require('child_process');
     const claudeProcess = spawn('claude', args, {
       stdio: ['pipe', 'pipe', 'pipe'],
       env: process.env
