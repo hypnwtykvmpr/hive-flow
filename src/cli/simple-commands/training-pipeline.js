@@ -47,7 +47,7 @@ export class TrainingPipeline {
     // Load or create pipeline configuration
     await this.loadPipelineConfig();
     
-    console.log('🚀 Real Training Pipeline initialized');
+    console.log('🚀 Training Pipeline initialized');
     this.initialized = true;
   }
 
