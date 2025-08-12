@@ -229,6 +229,8 @@ export async function initCommand(subArgs, flags) {
       dryRun: initDryRun,
       force: initForce,
       selectedModes: selectedModes,
+      verify: initVerify,
+      pair: initPair,
     };
 
     // First try to copy revised templates from repository
