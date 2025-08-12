@@ -723,29 +723,42 @@ Options:
     usage: 'stream-chain <subcommand> [options]',
     examples: [
       'stream-chain run "analyze" "design" "implement"  # Custom chain',
-      'stream-chain demo                                 # Run demo chain',
+      'stream-chain demo                                 # Run demo chain', 
       'stream-chain pipeline analysis                    # Run analysis pipeline',
       'stream-chain test                                 # Test stream connection',
       'stream-chain help                                 # Show detailed help',
     ],
     details: `
-Stream Chaining Features:
-  • Connect multiple Claude instances in sequence
-  • Preserve full context between agents
-  • <100ms latency per handoff
-  • Support for custom and predefined pipelines
-  • Real-time streaming with no intermediate files
-  
-Available Pipelines:
-  • analysis - Code analysis pipeline
-  • refactor - Refactoring pipeline
-  • test - Test generation pipeline
-  • optimize - Performance optimization pipeline
-  
-Performance:
-  • Context preservation: 100%
-  • Memory usage: O(1) streaming
-  • End-to-end speed: 40-60% faster than file-based`,
+SUBCOMMANDS
+    run <p1> <p2> [...]  Execute custom chain (min 2 prompts)
+    demo                 Run 3-step demo chain
+    pipeline <type>      Run predefined pipeline (analysis/refactor/test/optimize)
+    test                 Test stream connection
+    help                 Show comprehensive documentation
+
+OPTIONS
+    --verbose            Show detailed execution info
+    --timeout <seconds>  Timeout per step (default: 30)
+    --debug              Enable debug mode
+
+STREAM CHAINING
+    Chains multiple Claude Code calls with context preservation:
+    • Step 1 outputs stream-json → Step 2 receives context → Step 3...
+    • 100% context preservation between steps
+    • Real execution with Claude Code (not simulated)
+
+PIPELINES
+    analysis  - Analyze → Identify issues → Generate report
+    refactor  - Find opportunities → Create plan → Apply changes
+    test      - Analyze coverage → Design cases → Generate tests
+    optimize  - Profile code → Find bottlenecks → Apply optimizations
+
+PERFORMANCE
+    • Latency: ~10-30s per step
+    • Context: Full preservation
+    • Streaming: No intermediate files
+
+For full documentation: stream-chain help`,
   });
 
   commandRegistry.set('hive', {
