@@ -161,15 +161,15 @@ async function executeChainStep(prompt, inputData, isFirst, isLast, flags) {
     // Pipe input data if available
     if (!isFirst && inputData) {
       try {
-        // Filter the input to remove system messages
-        const filteredInput = filterStreamJson(inputData);
+        // Transform the previous output into a proper user message for chaining
+        const transformedInput = transformStreamForChaining(inputData, prompt);
         
-        // Write the filtered output as input
-        claudeProcess.stdin.write(filteredInput);
+        // Write the transformed input
+        claudeProcess.stdin.write(transformedInput + '\n');
         claudeProcess.stdin.end();
         if (flags.verbose) {
-          console.log('   🔗 Piped filtered input from previous step');
-          console.log(`   Filtered ${inputData.split('\n').length} lines to ${filteredInput.split('\n').filter(l => l).length} lines`);
+          console.log('   🔗 Piped transformed input from previous step');
+          console.log(`   Transformed ${inputData.split('\n').length} lines into user message`);
         }
       } catch (error) {
         console.error('   Error piping input:', error.message);
