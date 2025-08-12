@@ -52,10 +52,10 @@ export class TrainingPipeline {
   }
 
   /**
-   * STAGE 1: Generate REAL Training Tasks
+   * STAGE 1: Generate Training Tasks
    * Creates actual code files that can be tested
    */
-  async generateRealTrainingTasks(complexity = 'medium') {
+  async generateTrainingTasks(complexity = 'medium') {
     const taskId = Date.now();
     const taskDir = path.join(this.realTasksDir, `task-${taskId}`);
     await fs.mkdir(taskDir, { recursive: true });
