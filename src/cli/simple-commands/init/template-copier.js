@@ -518,6 +518,10 @@ async function getTemplateContent(templatePath) {
       const { createEnhancedSettingsJson } = await import('./templates/enhanced-templates.js');
       return createEnhancedSettingsJson();
     },
+    'settings.json.verification': async () => {
+      const { createVerificationSettingsJson } = await import('./templates/verification-claude-md.js');
+      return createVerificationSettingsJson();
+    },
     'claude-flow-universal': async () => {
       return await fs.readFile(join(__dirname, 'templates', 'claude-flow-universal'), 'utf8');
     },
