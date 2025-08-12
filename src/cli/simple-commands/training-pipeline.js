@@ -393,11 +393,11 @@ describe('Sorting Algorithms', () => {
   }
 
   /**
-   * STAGE 3: Learn from REAL Results
+   * STAGE 3: Learn from Results
    * Updates profiles based on actual performance
    */
-  async learnFromRealResults(results) {
-    console.log('\n🧠 Learning from REAL results...');
+  async learnFromResults(results) {
+    console.log('\n🧠 Learning from results...');
     
     // Load current agent profiles
     let profiles = {};
