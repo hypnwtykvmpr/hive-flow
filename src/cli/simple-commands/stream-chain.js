@@ -369,8 +369,8 @@ async function executeStreamStep(prompt, inputStream, isLast, flags = {}) {
       return mockStreamStep(prompt, inputStream, isLast, flags, safeResolve, startTime);
     }
     
-    // Set a reasonable timeout for demo purposes (30 seconds default for real Claude CLI)
-    const stepTimeout = flags.timeout ? parseInt(flags.timeout) * 1000 : 30000;
+    // Set a reasonable timeout for real Claude CLI (45 seconds default)
+    const stepTimeout = flags.timeout ? parseInt(flags.timeout) * 1000 : 45000;
     
     // Build command arguments
     const args = ['-p'];
