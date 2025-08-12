@@ -572,6 +572,8 @@ Options:
   --verbose           Show detailed output
   --json             Keep JSON format for final output
   --timeout <sec>    Set timeout for each step
+  --mock             Force mock mode (default for demo)
+  --real             Attempt real Claude CLI execution
 
 Examples:
   stream-chain run "Analyze code" "Generate tests" "Run tests"
