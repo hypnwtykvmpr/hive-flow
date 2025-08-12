@@ -176,6 +176,127 @@ Steps:
 - **Memory**: O(1) constant via streaming
 - **Speed**: 40-60% faster than file-based approaches
 
+## Background Execution
+
+Stream chains can run in the background, allowing you to continue working while complex pipelines execute.
+
+### Background Mode Options
+
+#### Using Keyboard Shortcut
+When Claude suggests a stream-chain command, press `Ctrl+B` to run it in background:
+```bash
+# Claude suggests:
+claude-flow stream-chain pipeline analysis
+
+# Press Ctrl+B instead of Enter
+→ Command running in background with ID: bash_1
+```
+
+#### Using --background Flag
+```bash
+claude-flow stream-chain run \
+  "Analyze codebase" \
+  "Generate report" \
+  --background
+
+# Returns immediately with:
+→ Stream chain running in background with ID: bash_2
+```
+
+#### Using --bg Flag (shorthand)
+```bash
+claude-flow stream-chain demo --bg
+```
+
+### Monitoring Background Chains
+
+#### Check Status
+```bash
+claude-flow stream-chain monitor
+# Or use /bashes in interactive mode
+```
+
+Shows:
+- All running stream chains
+- Current step being executed
+- Progress through pipeline
+- Estimated time remaining
+
+#### View Output
+```bash
+# Check specific chain output
+claude-flow stream-chain output bash_1
+
+# Filter for errors
+claude-flow stream-chain output bash_1 --filter "error|failed"
+```
+
+#### Kill Background Chain
+```bash
+# Kill specific chain
+claude-flow stream-chain kill bash_1
+
+# Kill all chains
+claude-flow stream-chain kill --all
+```
+
+### Background Chain Management
+
+Background chains are tracked in `.claude-flow/stream-chains.json`:
+```json
+{
+  "stream_1755021020133": {
+    "command": "stream-chain pipeline analysis",
+    "pid": 12345,
+    "startTime": "2025-08-12T10:00:00Z",
+    "status": "running",
+    "currentStep": 2,
+    "totalSteps": 3
+  }
+}
+```
+
+### Practical Background Examples
+
+#### Long Analysis Pipeline
+```bash
+# Start analysis in background
+claude-flow stream-chain pipeline analysis --bg --verbose
+
+# Continue with other work
+claude-flow pair --start
+
+# Check analysis progress
+claude-flow stream-chain monitor
+
+# Get results when complete
+claude-flow stream-chain output stream_1755021020133
+```
+
+#### Parallel Pipelines
+```bash
+# Run multiple pipelines simultaneously
+claude-flow stream-chain pipeline test --bg
+claude-flow stream-chain pipeline optimize --bg
+claude-flow stream-chain pipeline refactor --bg
+
+# Monitor all
+claude-flow stream-chain monitor --watch
+```
+
+#### CI/CD Integration
+```bash
+# Non-blocking pipeline execution
+claude-flow stream-chain run \
+  "Lint code" \
+  "Run tests" \
+  "Build production" \
+  "Deploy to staging" \
+  --background \
+  --on-complete "notify-slack" \
+  --on-error "rollback"
+```
+
 ## Advanced Usage
 
 ### Extended Timeout
@@ -200,6 +321,15 @@ Shows:
 claude-flow stream-chain demo --debug --verbose
 ```
 Shows raw stream-json messages between steps.
+
+### Background with Monitoring
+```bash
+# Start in background with auto-monitoring
+claude-flow stream-chain pipeline analysis \
+  --background \
+  --monitor \
+  --alert-on-error
+```
 
 ## Integration
 
