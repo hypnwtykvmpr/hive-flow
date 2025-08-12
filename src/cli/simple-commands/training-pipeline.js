@@ -496,7 +496,7 @@ describe('Sorting Algorithms', () => {
     }
   }
 
-  generateRealRecommendations(strategyPerformance) {
+  generateRecommendations(strategyPerformance) {
     const recommendations = [];
 
     for (const [strategy, perf] of Object.entries(strategyPerformance)) {
