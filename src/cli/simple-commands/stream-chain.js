@@ -440,8 +440,20 @@ async function executeStreamStep(prompt, inputStream, isLast, flags = {}) {
     const timeoutId = setTimeout(() => {
       claudeProcess.kill();
       console.log('⚠️  Claude CLI timed out, falling back to mock mode...');
+      console.log('   Debug: Calling mockStreamStep with fallback...');
       // Fallback to mock implementation with a fresh start time
-      mockStreamStep(prompt, inputStream, isLast, { ...flags, mock: true }, safeResolve, Date.now());
+      try {
+        mockStreamStep(prompt, inputStream, isLast, { ...flags, mock: true }, safeResolve, Date.now());
+      } catch (error) {
+        console.error('   Debug: Error in timeout fallback:', error);
+        safeResolve({
+          success: false,
+          duration: Date.now() - startTime,
+          output: 'Timeout fallback failed',
+          stream: null,
+          error: error.message
+        });
+      }
     }, stepTimeout);
   });
 }
