@@ -11,8 +11,9 @@ import { exec } from 'child_process';
  */
 function checkClaudeAvailable() {
   try {
-    const { execSync } = await import('child_process');
-    execSync('which claude', { stdio: 'ignore' });
+    import('child_process').then(({ execSync }) => {
+      execSync('which claude', { stdio: 'ignore' });
+    });
     return true;
   } catch {
     return false;
