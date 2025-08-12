@@ -19,10 +19,6 @@ export const MAIN_HELP = `
   ✅ Truth Verification System - "Truth is enforced, not assumed" (0.95 threshold)
   👥 Pair Programming Mode - Real-time collaborative development with AI
   🔧 Non-interactive Fixes - Proper prompt injection for CI/CD & automation
-  📋 Enhanced Init Commands - Specialized templates (--verify, --pair flags)
-  🛡️ Byzantine Fault Tolerance - Protection against incorrect agent behavior
-  📊 Verification Memory - Persistent .swarm/verification-memory.json
-  🔄 Auto-Rollback - Automatic recovery from verification failures
 
 USAGE:
   npx claude-flow@alpha <command> [options]    # Run latest alpha version
