@@ -24,11 +24,13 @@ function checkClaudeAvailable() {
  * Mock stream step implementation when claude CLI isn't available
  */
 function mockStreamStep(prompt, inputStream, isLast, flags, resolve, startTime) {
+  console.log('   Debug: mockStreamStep called');
   const duration = Date.now() - startTime;
   
   // Simulate processing time
   setTimeout(() => {
     try {
+      console.log('   Debug: Generating mock output...');
       const mockOutput = generateMockOutput(prompt, inputStream);
       
       if (flags.verbose) {
