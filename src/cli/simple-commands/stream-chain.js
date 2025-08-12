@@ -28,20 +28,31 @@ function mockStreamStep(prompt, inputStream, isLast, flags, resolve, startTime) 
   
   // Simulate processing time
   setTimeout(() => {
-    const mockOutput = generateMockOutput(prompt, inputStream);
-    
-    if (flags.verbose) {
-      console.log('\n📝 Mock output generated (claude CLI not available)');
-      console.log('   Install claude CLI for real stream chaining');
+    try {
+      const mockOutput = generateMockOutput(prompt, inputStream);
+      
+      if (flags.verbose) {
+        console.log('\n📝 Mock output generated');
+        console.log('   Using mock implementation for demo');
+      }
+      
+      resolve({
+        success: true,
+        duration: duration + 500,
+        output: mockOutput.text,
+        stream: !isLast ? mockOutput.stream : null,
+        error: null
+      });
+    } catch (error) {
+      console.error('Mock step error:', error);
+      resolve({
+        success: false,
+        duration: duration + 500,
+        output: 'Mock error',
+        stream: null,
+        error: error.message
+      });
     }
-    
-    resolve({
-      success: true,
-      duration: duration + 500,
-      output: mockOutput.text,
-      stream: !isLast ? mockOutput.stream : null,
-      error: null
-    });
   }, 500);
 }
 
