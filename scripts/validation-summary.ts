@@ -400,7 +400,7 @@ class ProductionValidator {
 }
 
 // Run validation if script is executed directly
-if (require.main === module) {
+if (import.meta.url === `file://${process.argv[1]}`) {
   const validator = new ProductionValidator();
   validator.runAllValidations().catch(console.error);
 }
