@@ -585,11 +585,11 @@ Truth enforcement features:
   commandRegistry.set('truth', {
     handler: async (args, flags) => {
       try {
-        const { verificationCommand } = await import('./commands/verification.js');
-        return await verificationCommand({ subcommand: 'truth', ...flags });
+        const { truthCommand } = await import('./simple-commands/verification.js');
+        return await truthCommand(args, flags);
       } catch (error) {
         console.error('❌ Error loading verification module:', error.message);
-        console.log('Please ensure the verification module is properly built.');
+        console.log('Error details:', error);
       }
     },
     description: '🎯 Truth telemetry and accuracy scoring',
