@@ -410,6 +410,32 @@ export async function verificationCommand(args, flags) {
         }
       }
       
+      // Export to file with --export flag
+      if (flags.export) {
+        const exportPath = typeof flags.export === 'string' ? flags.export : `truth-report-${Date.now()}.json`;
+        const exportData = {
+          report,
+          filteredHistory,
+          metadata: {
+            exported: new Date().toISOString(),
+            filters: {
+              agent: flags.agent || null,
+              taskId: flags.taskId || null,
+              threshold: flags.threshold || null
+            },
+            command: 'truth',
+            version: '2.0.0-alpha.89'
+          }
+        };
+        
+        try {
+          await fs.writeFile(exportPath, JSON.stringify(exportData, null, 2));
+          console.log(`\n📁 Report exported to: ${exportPath}`);
+        } catch (error) {
+          console.error(`\n❌ Failed to export report: ${error.message}`);
+        }
+      }
+      
       // JSON output
       if (flags.json) {
         console.log('\n📄 JSON Output:');
