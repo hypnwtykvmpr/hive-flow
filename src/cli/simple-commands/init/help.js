@@ -60,6 +60,12 @@ export function showInitHelp() {
   console.log('  claude-flow init --dry-run --sparc          # Preview initialization');
   console.log('  claude-flow init --minimal                  # Minimal setup');
   console.log();
+  console.log('🔍 VERIFICATION & PAIR PROGRAMMING:');
+  console.log('  claude-flow init --verify                   # Truth Verification System setup');
+  console.log('  claude-flow init --pair                     # Pair Programming mode setup');
+  console.log('  claude-flow init --verify --pair            # Both verification and pairing');
+  console.log('  npx claude-flow@alpha init --verify --pair  # Complete verification setup');
+  console.log();
   console.log('🔄 VALIDATION & ROLLBACK:');
   console.log('  claude-flow init --validate                 # Validate existing setup');
   console.log('  claude-flow init --rollback --full          # Full system rollback');
