@@ -340,6 +340,9 @@ async function executeStreamStep(prompt, inputStream, isLast, flags = {}) {
       return mockStreamStep(prompt, inputStream, isLast, flags, resolve, startTime);
     }
     
+    // Set a reasonable timeout for demo purposes (10 seconds per step)
+    const stepTimeout = flags.timeout ? parseInt(flags.timeout) * 1000 : 10000;
+    
     // Build command arguments
     const args = ['-p'];
     
