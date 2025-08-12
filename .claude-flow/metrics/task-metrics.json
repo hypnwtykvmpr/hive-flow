@@ -1,10 +1,10 @@
 [
   {
-    "id": "cmd-batch-1755009277094",
-    "type": "batch",
+    "id": "cmd-swarm-1755009411533",
+    "type": "swarm",
     "success": true,
-    "duration": 7.344671000000062,
-    "timestamp": 1755009277101,
+    "duration": 8.808129000000037,
+    "timestamp": 1755009411542,
     "metadata": {}
   }
 ]
