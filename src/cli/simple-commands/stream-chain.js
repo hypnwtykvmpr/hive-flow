@@ -483,8 +483,8 @@ async function runDemoChain(flags) {
     console.log('   For real stream chaining, install Claude CLI:');
     console.log('   https://docs.anthropic.com/claude/docs/claude-cli\n');
   } else {
-    console.log('ℹ️  Claude CLI detected - using mock demo for reliability');
-    console.log('   Use --real flag to attempt real Claude CLI execution\n');
+    console.log('ℹ️  Claude CLI detected - using real stream chaining');
+    console.log('   Use --mock flag to use mock implementation instead\n');
   }
   
   console.log('This demo shows a 3-step analysis → design → implementation chain\n');
