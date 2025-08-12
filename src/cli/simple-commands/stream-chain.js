@@ -256,7 +256,7 @@ function showHelp() {
     Uses Claude Code's --output-format stream-json to capture structured responses and
     chains them together by injecting previous outputs into subsequent prompts.
 
-SUBCOMMANDS
+📚 SUBCOMMANDS
     run <prompt1> <prompt2> [...]
         Execute a custom stream chain with your own prompts
         Minimum 2 prompts required for chaining
