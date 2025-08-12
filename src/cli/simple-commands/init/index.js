@@ -141,9 +141,13 @@ export async function initCommand(subArgs, flags) {
     return;
   }
 
-  // Default to enhanced Claude Flow v2 init
-  // Use --basic flag for old behavior
-  if (!flags.basic && !flags.minimal && !flags.sparc) {
+  // Check for verification flags first
+  const hasVerificationFlags = subArgs.includes('--verify') || subArgs.includes('--pair') || 
+                               flags.verify || flags.pair;
+  
+  // Default to enhanced Claude Flow v2 init unless other modes are specified
+  // Use --basic flag for old behavior, or verification flags for verification mode
+  if (!flags.basic && !flags.minimal && !flags.sparc && !hasVerificationFlags) {
     return await enhancedClaudeFlowInit(flags, subArgs);
   }
 
