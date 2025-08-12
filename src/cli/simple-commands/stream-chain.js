@@ -231,6 +231,10 @@ export async function streamChainCommand(args, flags) {
       await runTest(flags);
       break;
       
+    case 'pipeline':
+      await runPipeline(args.slice(1), flags);
+      break;
+      
     default:
       console.error(`❌ Unknown subcommand: ${subcommand}`);
       showHelp();
