@@ -370,11 +370,13 @@ async function executeStreamStep(prompt, inputStream, isLast, flags = {}) {
     // Add input format if we have input stream
     if (inputStream) {
       args.push('--input-format', 'stream-json');
-    }
-    
-    // Add output format unless it's the last step and user wants text
-    if (!isLast || flags.json) {
+      // When input format is stream-json, output format must also be stream-json
       args.push('--output-format', 'stream-json');
+    } else {
+      // Add output format unless it's the last step and user wants text
+      if (!isLast || flags.json) {
+        args.push('--output-format', 'stream-json');
+      }
     }
     
     // Add the prompt
