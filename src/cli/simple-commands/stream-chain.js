@@ -290,7 +290,7 @@ function showHelp() {
     help
         Display this comprehensive help message
 
-OPTIONS
+⚙️  OPTIONS
     --verbose
         Show detailed execution information including:
         - Full command lines being executed
@@ -305,7 +305,7 @@ OPTIONS
         Enable debug mode with full stream-json output
         Shows raw JSON messages between steps
 
-EXAMPLES
+💡 EXAMPLES
     # Run a custom 3-step code improvement chain
     claude-flow stream-chain run "analyze this code" "suggest improvements" "implement the top 3"
     
@@ -324,32 +324,32 @@ EXAMPLES
     # Debug mode to see raw stream-json messages
     claude-flow stream-chain demo --debug --verbose
 
-HOW IT WORKS
+🔧 HOW IT WORKS
     1. Step 1 executes with --output-format stream-json to capture structured output
     2. The assistant's response is extracted from the stream-json format
     3. Step 2 receives the previous output as context in its prompt
     4. This continues for all steps in the chain
     5. Each step has full context of all previous outputs
 
-STREAM-JSON FORMAT
+📊 STREAM-JSON FORMAT
     Each step outputs newline-delimited JSON with message types:
     {"type":"system","subtype":"init",...}     - Session initialization
     {"type":"assistant","message":{...}}       - Claude's response
     {"type":"tool_use","name":"...",...}       - Tool invocations
     {"type":"result","status":"success",...}   - Completion status
 
-PERFORMANCE
+⚡ PERFORMANCE
     - Latency: ~10-30s per step depending on complexity
     - Context: 100% preservation between steps
     - Parallel: Steps run sequentially to maintain context
     - Timeout: Default 30s per step, configurable
 
-REQUIREMENTS
+📋 REQUIREMENTS
     - Claude Code must be installed and available in PATH
     - Valid Claude API configuration
     - Sufficient API credits for multiple Claude calls
 
-TROUBLESHOOTING
+🔍 TROUBLESHOOTING
     "Command not found"
     → Ensure Claude Code is installed: npm install -g @anthropic-ai/claude-code
     
@@ -365,17 +365,17 @@ TROUBLESHOOTING
     → Use --debug to see raw output
     → Report issue if stream format has changed
 
-SEE ALSO
+🔗 SEE ALSO
     claude-flow swarm        - Multi-agent coordination
     claude-flow hive-mind    - Collective intelligence mode
     claude-flow sparc        - SPARC development methodology
     
-DOCUMENTATION
+📖 DOCUMENTATION
     Full docs: ./claude-flow-wiki/Stream-Chain-Command.md
     Stream spec: ./docs/stream-chaining.md
     GitHub: https://github.com/ruvnet/claude-flow
 
-VERSION
+🏷️ VERSION
     Claude Flow Alpha 89 - Stream Chain v2.0.0
   `);
 }
