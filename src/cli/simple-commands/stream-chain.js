@@ -395,14 +395,8 @@ async function executeStreamStep(prompt, inputStream, isLast, flags = {}) {
     let streamOutput = '';
     let errorOutput = '';
 
-    // Pipe input if available
-    if (inputStream) {
-      // Convert string stream to actual stream
-      const readable = new Readable();
-      readable.push(inputStream);
-      readable.push(null);
-      readable.pipe(claudeProcess.stdin);
-    }
+    // Note: Input stream chaining disabled for now due to format complexity
+    // Each step runs independently with just the prompt
 
     // Capture output
     claudeProcess.stdout.on('data', (data) => {
