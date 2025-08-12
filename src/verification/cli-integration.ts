@@ -6,7 +6,8 @@
  */
 
 import { Logger } from '../core/logger.js';
-import { verificationHookManager, type VerificationConfig } from './hooks.js';
+import { verificationHookManager } from './hooks.js';
+import type { VerificationConfig } from './hooks.js';
 
 const logger = new Logger({
   level: 'info',
