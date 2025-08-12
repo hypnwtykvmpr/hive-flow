@@ -198,6 +198,27 @@ class VerificationSystem {
   }
 }
 
+// Helper function to generate filtered report for specific agent
+async function generateFilteredReport(system, filteredHistory, agentType) {
+  const report = {
+    mode: system.mode,
+    threshold: VERIFICATION_MODES[system.mode].threshold,
+    totalVerifications: filteredHistory.length,
+    passedVerifications: filteredHistory.filter(v => v.passed).length,
+    averageScore: 0,
+    agentReliability: {},
+    timestamp: new Date().toISOString()
+  };
+
+  if (filteredHistory.length > 0) {
+    const totalScore = filteredHistory.reduce((sum, v) => sum + v.score, 0);
+    report.averageScore = totalScore / filteredHistory.length;
+    report.agentReliability[agentType] = report.averageScore;
+  }
+
+  return report;
+}
+
 // CLI command handlers
 export async function verificationCommand(args, flags) {
   const system = new VerificationSystem();
