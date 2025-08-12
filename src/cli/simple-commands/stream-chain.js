@@ -718,9 +718,9 @@ RELATED COMMANDS
     pair             Pair programming mode
 
 DOCUMENTATION
-    Wiki:       https://github.com/ruvnet/claude-flow/wiki/Stream-Chain-Command
-    Examples:   https://github.com/ruvnet/claude-flow/docs/stream-examples.md
-    API:        https://github.com/ruvnet/claude-flow/docs/stream-api.md
+    Wiki:       ./claude-flow-wiki/Stream-Chain-Command.md
+    Examples:   ./docs/wiki/stream-chain-command.md
+    API:        ./docs/wiki/background-commands.md
 
 VERSION
     Claude Flow Alpha 89 - Stream Chain v1.2.0
