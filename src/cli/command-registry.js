@@ -729,36 +729,36 @@ Options:
       'stream-chain help                                 # Show detailed help',
     ],
     details: `
-SUBCOMMANDS
+📚 SUBCOMMANDS
     run <p1> <p2> [...]  Execute custom chain (min 2 prompts)
     demo                 Run 3-step demo chain
     pipeline <type>      Run predefined pipeline (analysis/refactor/test/optimize)
     test                 Test stream connection
     help                 Show comprehensive documentation
 
-OPTIONS
+⚙️  OPTIONS
     --verbose            Show detailed execution info
     --timeout <seconds>  Timeout per step (default: 30)
     --debug              Enable debug mode
 
-STREAM CHAINING
+🔄 STREAM CHAINING
     Chains multiple Claude Code calls with context preservation:
     • Step 1 outputs stream-json → Step 2 receives context → Step 3...
     • 100% context preservation between steps
     • Real execution with Claude Code (not simulated)
 
-PIPELINES
+🚀 PIPELINES
     analysis  - Analyze → Identify issues → Generate report
     refactor  - Find opportunities → Create plan → Apply changes
     test      - Analyze coverage → Design cases → Generate tests
     optimize  - Profile code → Find bottlenecks → Apply optimizations
 
-PERFORMANCE
+⚡ PERFORMANCE
     • Latency: ~10-30s per step
     • Context: Full preservation
     • Streaming: No intermediate files
 
-For full documentation: stream-chain help`,
+📖 For full documentation: stream-chain help`,
   });
 
   commandRegistry.set('hive', {
