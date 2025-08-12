@@ -4,16 +4,14 @@
  * Clean implementation focused on real Claude CLI execution
  */
 
-import { exec } from 'child_process';
+import { exec, execSync } from 'child_process';
 
 /**
  * Check if claude CLI is available
  */
 function checkClaudeAvailable() {
   try {
-    import('child_process').then(({ execSync }) => {
-      execSync('which claude', { stdio: 'ignore' });
-    });
+    execSync('which claude', { stdio: 'ignore' });
     return true;
   } catch {
     return false;
