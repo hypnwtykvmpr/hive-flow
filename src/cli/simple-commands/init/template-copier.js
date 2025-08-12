@@ -483,6 +483,10 @@ async function getTemplateContent(templatePath) {
       const { createEnhancedClaudeMd } = await import('./templates/enhanced-templates.js');
       return createEnhancedClaudeMd();
     },
+    'CLAUDE.md.verification': async () => {
+      const { createVerificationClaudeMd } = await import('./templates/verification-claude-md.js');
+      return createVerificationClaudeMd();
+    },
     'memory-bank.md': async () => {
       const { createFullMemoryBankMd } = await import('./templates/memory-bank-md.js');
       return createFullMemoryBankMd();
