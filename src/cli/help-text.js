@@ -695,59 +695,6 @@ EXAMPLES:
   • Performance-based scaling
 `,
 
-  verify: `
-🔍 VERIFY COMMAND - Truth Verification System
-
-USAGE:
-  claude-flow verify <subcommand> [options]
-
-DESCRIPTION:
-  Enforce verification and truth scoring across all multi-agent operations.
-  Implements mandatory verification with configurable thresholds and auto-rollback.
-
-SUBCOMMANDS:
-  init <mode>       Initialize verification system with mode
-  status            Show verification system status
-  verify <taskId>   Run verification on specific task
-  truth             Display truth scoring report
-  check <taskId>    Run verification checks
-  validate <taskId> Validate task results
-  config            Manage verification configuration
-  cleanup           Clean up old verification data
-  rollback <taskId> Trigger manual rollback
-
-MODES:
-  strict            0.95 threshold, auto-rollback enabled (production)
-  moderate          0.85 threshold, auto-rollback disabled (default)
-  development       0.75 threshold, for rapid prototyping
-
-OPTIONS:
-  --agent <type>    Agent type (coder, reviewer, tester, planner)
-  --threshold <n>   Custom truth threshold (0.0-1.0)
-  --force           Force operation
-  --verbose         Detailed output
-  --json            JSON output format
-
-EXAMPLES:
-  claude-flow verify init strict                  # Production mode
-  claude-flow verify status                       # Check system status
-  claude-flow verify verify task-123 --agent coder
-  claude-flow verify truth                        # View truth scores
-  claude-flow verify rollback task-456 --force
-
-VERIFICATION REQUIREMENTS BY AGENT:
-  coder:     compile, test, lint, typecheck
-  reviewer:  code-analysis, security-scan, performance-check
-  tester:    unit-tests, integration-tests, coverage-check
-  planner:   task-decomposition, dependency-check, feasibility
-`,
-
-  truth: `
-🎯 TRUTH COMMAND - Truth Telemetry and Accuracy Scoring
-
-USAGE:
-  claude-flow truth [options]
-
 DESCRIPTION:
   Display comprehensive truth scoring metrics and agent reliability.
   Shows system-wide verification accuracy and per-agent performance.
