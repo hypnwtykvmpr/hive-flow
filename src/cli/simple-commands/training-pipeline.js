@@ -840,7 +840,7 @@ export async function trainingPipelineCommand(args, flags) {
       // Validate current performance
       await pipeline.initialize();
       const metrics = await pipeline.captureMetrics();
-      console.log('\n📊 Current Real Performance:');
+      console.log('\n📊 Current Performance:');
       console.log(`   Success Rate: ${(metrics.successRate * 100).toFixed(1)}%`);
       console.log(`   Avg Execution Time: ${metrics.executionTime.toFixed(0)}ms`);
       console.log(`   Average Score: ${metrics.score.toFixed(2)}`);
