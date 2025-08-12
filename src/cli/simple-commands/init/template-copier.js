@@ -81,18 +81,23 @@ export async function copyTemplates(targetDir, options = {}) {
     if (options.enhanced || !options.minimal) {
       const claudeDir = join(targetDir, '.claude');
       
-      // Copy settings.json
-      const settingsSource = (options.verify || options.pair) ? 'settings.json.verification' :
-                             options.enhanced ? 'settings.json.enhanced' : 'settings.json';
-      const settingsPath = join(templatesDir, settingsSource);
-      const settingsDest = join(claudeDir, 'settings.json');
-      
-      if (!options.dryRun) {
+      // Copy settings.json unless skipped
+      if (!options.skipSettings) {
+        const settingsSource = (options.verify || options.pair) ? 'settings.json.verification' :
+                               options.enhanced ? 'settings.json.enhanced' : 'settings.json';
+        const settingsPath = join(templatesDir, settingsSource);
+        const settingsDest = join(claudeDir, 'settings.json');
+        
+        if (!options.dryRun) {
+          await fs.mkdir(claudeDir, { recursive: true });
+        }
+        
+        if (await copyFile(settingsPath, settingsDest, options)) {
+          results.copiedFiles.push('.claude/settings.json');
+        }
+      } else if (!options.dryRun) {
+        // Still create the directory even if skipping settings
         await fs.mkdir(claudeDir, { recursive: true });
-      }
-      
-      if (await copyFile(settingsPath, settingsDest, options)) {
-        results.copiedFiles.push('.claude/settings.json');
       }
 
       // Copy command templates
