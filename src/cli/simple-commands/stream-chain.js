@@ -260,6 +260,14 @@ async function executeStreamStep(prompt, inputStream, isLast, flags = {}) {
   return new Promise((resolve) => {
     const startTime = Date.now();
     
+    // Check if claude CLI is available
+    const claudeAvailable = checkClaudeAvailable();
+    
+    if (!claudeAvailable) {
+      // Mock implementation when claude CLI isn't available
+      return mockStreamStep(prompt, inputStream, isLast, flags, resolve, startTime);
+    }
+    
     // Build command arguments
     const args = ['-p'];
     
