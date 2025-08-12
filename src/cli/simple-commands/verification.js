@@ -279,6 +279,12 @@ export async function truthCommand(args, flags) {
 
 // Pair programming command
 export async function pairCommand(args, flags) {
+  // Handle help flag
+  if (flags.help || args[0] === '--help' || args[0] === 'help') {
+    const { COMMAND_HELP } = await import('../help-text.js');
+    console.log(COMMAND_HELP.pair);
+    return;
+  }
   console.log('\n👥 Pair Programming with Verification');
   console.log('━'.repeat(50));
   
