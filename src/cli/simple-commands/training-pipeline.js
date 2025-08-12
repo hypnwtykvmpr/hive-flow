@@ -773,8 +773,8 @@ describe('Sorting Algorithms', () => {
 /**
  * CLI Command Handler
  */
-export async function realTrainingPipelineCommand(args, flags) {
-  const pipeline = new RealTrainingPipeline();
+export async function trainingPipelineCommand(args, flags) {
+  const pipeline = new TrainingPipeline();
   const subcommand = args[0] || 'run';
 
   switch (subcommand) {
