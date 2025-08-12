@@ -460,6 +460,8 @@ Subcommands:
   demo                            Run a demonstration chain
   pipeline <type>                 Run a predefined pipeline
   test                           Test stream connection
+  monitor                         Monitor background stream chains
+  kill <process_id>              Kill a background stream chain
   help                           Show this help message
 
 Pipeline Types:
@@ -469,15 +471,24 @@ Pipeline Types:
   optimize   - Performance optimization pipeline
 
 Options:
+  --background, --bg  Run stream chain in background
   --verbose           Show detailed output
   --json             Keep JSON format for final output
   --timeout <sec>    Set timeout for each step
 
 Examples:
   stream-chain run "Analyze code" "Generate tests" "Run tests"
-  stream-chain demo
-  stream-chain pipeline analysis
+  stream-chain demo --background
+  stream-chain pipeline analysis --bg
+  stream-chain monitor
+  stream-chain kill stream_1234567890
   stream-chain test --verbose
+
+Background Execution:
+  • Use --background or --bg to run chains in background
+  • Monitor with: stream-chain monitor
+  • Kill with: stream-chain kill <process_id>
+  • Background chains persist across sessions
 
 Stream Format:
   Each Claude instance in the chain uses stream-json format
