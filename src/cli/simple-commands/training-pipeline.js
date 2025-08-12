@@ -532,9 +532,9 @@ describe('Sorting Algorithms', () => {
   }
 
   /**
-   * Full Real Training Pipeline Execution
+   * Full Training Pipeline Execution
    */
-  async runRealPipeline(options = {}) {
+  async runFullPipeline(options = {}) {
     const {
       complexity = 'medium',
       iterations = 3,
