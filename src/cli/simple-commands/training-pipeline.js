@@ -296,10 +296,10 @@ describe('Sorting Algorithms', () => {
   }
 
   /**
-   * Execute a REAL task with a specific strategy
+   * Execute a task with a specific strategy
    * Strategies affect how we modify and test the code
    */
-  async executeRealTaskWithStrategy(task, strategy) {
+  async executeTaskWithStrategy(task, strategy) {
     const startTime = Date.now();
     const checks = {};
     
