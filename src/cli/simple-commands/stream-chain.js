@@ -1,14 +1,13 @@
 #!/usr/bin/env node
 /**
- * Stream Chain Command - Real Claude CLI stream-json chaining
- * Implements proper stream-json format chaining as documented
+ * Stream Chain Command - Working implementation for Claude Code
+ * Uses stream-json output but regular prompt input for compatibility
  */
 
 import { spawn, execSync } from 'child_process';
-import { Readable } from 'stream';
 
 /**
- * Check if claude CLI is available
+ * Check if claude command is available
  */
 function checkClaudeAvailable() {
   try {
@@ -20,132 +19,55 @@ function checkClaudeAvailable() {
 }
 
 /**
- * Execute a chain of Claude instances with real stream-json piping
+ * Extract content from stream-json output
  */
-async function executeRealChain(prompts, flags = {}) {
-  const results = [];
-  let previousOutput = null;
+function extractContentFromStream(streamOutput) {
+  const lines = streamOutput.split('\n').filter(line => line.trim());
+  let content = '';
   
-  for (let i = 0; i < prompts.length; i++) {
-    const prompt = prompts[i];
-    const isFirst = i === 0;
-    const isLast = i === prompts.length - 1;
-    
-    console.log(`\n🔄 Step ${i + 1}/${prompts.length}: ${prompt.slice(0, 50)}...`);
-    
-    const result = await executeChainStep(
-      prompt, 
-      previousOutput, 
-      isFirst, 
-      isLast, 
-      flags
-    );
-    
-    results.push({
-      step: i + 1,
-      prompt: prompt.slice(0, 50),
-      success: result.success,
-      duration: result.duration
-    });
-    
-    if (!result.success) {
-      console.error(`❌ Step ${i + 1} failed`);
-      break;
-    }
-    
-    console.log(`✅ Step ${i + 1} completed (${result.duration}ms)`);
-    
-    // Store output for next step
-    if (!isLast && result.output) {
-      previousOutput = result.output;
-      if (flags.verbose) {
-        console.log(`   Output length: ${result.output.length} bytes`);
-      }
-    }
-  }
-  
-  return results;
-}
-
-/**
- * Transform stream-json output to create proper input for next step
- * This converts the previous assistant's output into a user message for chaining
- */
-function transformStreamForChaining(rawOutput, nextPrompt) {
-  const lines = rawOutput.split('\n').filter(line => line.trim());
-  const messages = [];
-  let assistantContent = '';
-  
-  // Extract the assistant's response from the stream
   for (const line of lines) {
     try {
       const json = JSON.parse(line);
-      if (json.type === 'message' && json.role === 'assistant' && json.content) {
-        // Extract text content from assistant messages
-        for (const content of json.content) {
-          if (content.type === 'text' && content.text) {
-            assistantContent += content.text + '\n';
+      if (json.type === 'assistant' && json.message && json.message.content) {
+        for (const item of json.message.content) {
+          if (item.type === 'text' && item.text) {
+            content += item.text;
           }
         }
       }
     } catch (e) {
-      // Skip invalid JSON lines
+      // Skip non-JSON lines
     }
   }
   
-  // Create a user message with the previous output and new prompt
-  if (assistantContent) {
-    const userMessage = {
-      type: 'message',
-      role: 'user',
-      content: [{
-        type: 'text',
-        text: `Previous step output:\n${assistantContent.trim()}\n\nNext step: ${nextPrompt}`
-      }]
-    };
-    return JSON.stringify(userMessage);
-  }
-  
-  // Fallback: just create a user message with the prompt
-  const fallbackMessage = {
-    type: 'message',
-    role: 'user',
-    content: [{
-      type: 'text',
-      text: nextPrompt
-    }]
-  };
-  return JSON.stringify(fallbackMessage);
+  return content.trim();
 }
 
 /**
- * Execute a single step in the chain with proper stream-json handling
+ * Execute a single step with context from previous step
  */
-async function executeChainStep(prompt, inputData, isFirst, isLast, flags) {
+async function executeStep(prompt, previousContent, stepNum, totalSteps, flags) {
   return new Promise((resolve) => {
     const startTime = Date.now();
     const timeout = (flags.timeout || 30) * 1000;
     
-    // Build command args following the spec from docs/stream-chaining.md
-    const args = ['-p'];
-    
-    // Add input format if we have previous output
-    // Note: --input-format stream-json requires --output-format stream-json
-    if (!isFirst && inputData) {
-      args.push('--input-format', 'stream-json');
-      args.push('--output-format', 'stream-json');
-      args.push('--verbose');
-    } else if (!isLast) {
-      // Only output format for first/middle steps
-      args.push('--output-format', 'stream-json');
-      args.push('--verbose');
+    // Build the full prompt with context
+    let fullPrompt = prompt;
+    if (previousContent) {
+      fullPrompt = `Previous step output:\n${previousContent}\n\nNext step: ${prompt}`;
     }
     
+    // Build command args
+    const args = ['-p'];
+    
+    // Always use stream-json output for parsing
+    args.push('--output-format', 'stream-json', '--verbose');
+    
     // Add the prompt
-    args.push(prompt);
+    args.push(fullPrompt);
     
     if (flags.verbose) {
-      console.log(`   Command: claude ${args.join(' ')}`);
+      console.log(`   Command: claude ${args[0]} ${args[1]} ${args[2]} "${args[4].slice(0, 50)}..."`);
     }
     
     // Spawn Claude process
@@ -156,28 +78,10 @@ async function executeChainStep(prompt, inputData, isFirst, isLast, flags) {
     
     let output = '';
     let stderr = '';
-    let processCompleted = false;
+    let completed = false;
     
-    // Pipe input data if available
-    if (!isFirst && inputData) {
-      try {
-        // Transform the previous output into a proper user message for chaining
-        const transformedInput = transformStreamForChaining(inputData, prompt);
-        
-        // Write the transformed input
-        claudeProcess.stdin.write(transformedInput + '\n');
-        claudeProcess.stdin.end();
-        if (flags.verbose) {
-          console.log('   🔗 Piped transformed input from previous step');
-          console.log(`   Transformed ${inputData.split('\n').length} lines into user message`);
-        }
-      } catch (error) {
-        console.error('   Error piping input:', error.message);
-      }
-    } else {
-      // No input, close stdin
-      claudeProcess.stdin.end();
-    }
+    // Close stdin since we're not piping input
+    claudeProcess.stdin.end();
     
     // Capture output
     claudeProcess.stdout.on('data', (chunk) => {
@@ -191,57 +95,61 @@ async function executeChainStep(prompt, inputData, isFirst, isLast, flags) {
     
     // Handle completion
     claudeProcess.on('close', (code) => {
-      if (processCompleted) return;
-      processCompleted = true;
+      if (completed) return;
+      completed = true;
       
       const duration = Date.now() - startTime;
       
       if (code !== 0) {
-        if (flags.verbose && stderr) {
-          console.error(`   stderr: ${stderr.slice(0, 500)}`);
+        console.error(`   Process exited with code ${code}`);
+        if (stderr && flags.verbose) {
+          console.error(`   stderr: ${stderr.slice(0, 200)}`);
         }
         resolve({
           success: false,
           duration,
-          output: null,
-          error: `Process exited with code ${code}`
+          content: null,
+          rawOutput: output
         });
         return;
       }
       
+      // Extract content from stream-json output
+      const content = extractContentFromStream(output);
+      
       resolve({
         success: true,
         duration,
-        output: output,
-        error: null
+        content,
+        rawOutput: output
       });
     });
     
     // Handle errors
     claudeProcess.on('error', (error) => {
-      if (processCompleted) return;
-      processCompleted = true;
+      if (completed) return;
+      completed = true;
       
       console.error('   Process error:', error.message);
       resolve({
         success: false,
         duration: Date.now() - startTime,
-        output: null,
-        error: error.message
+        content: null,
+        rawOutput: null
       });
     });
     
-    // Timeout handling
+    // Timeout
     setTimeout(() => {
-      if (!processCompleted) {
-        processCompleted = true;
+      if (!completed) {
+        completed = true;
         claudeProcess.kill('SIGTERM');
         console.log('   ⏱️  Step timed out');
         resolve({
           success: false,
           duration: timeout,
-          output: null,
-          error: 'Timeout'
+          content: null,
+          rawOutput: null
         });
       }
     }, timeout);
@@ -249,7 +157,52 @@ async function executeChainStep(prompt, inputData, isFirst, isLast, flags) {
 }
 
 /**
- * Main stream chain command
+ * Execute the chain
+ */
+async function executeChain(prompts, flags) {
+  const results = [];
+  let previousContent = null;
+  
+  for (let i = 0; i < prompts.length; i++) {
+    const prompt = prompts[i];
+    console.log(`\n🔄 Step ${i + 1}/${prompts.length}: ${prompt.slice(0, 50)}...`);
+    
+    const result = await executeStep(
+      prompt,
+      previousContent,
+      i + 1,
+      prompts.length,
+      flags
+    );
+    
+    results.push({
+      step: i + 1,
+      prompt: prompt.slice(0, 50),
+      success: result.success,
+      duration: result.duration,
+      content: result.content
+    });
+    
+    if (!result.success) {
+      console.error(`❌ Step ${i + 1} failed`);
+      break;
+    }
+    
+    console.log(`✅ Step ${i + 1} completed (${result.duration}ms)`);
+    
+    if (result.content) {
+      previousContent = result.content;
+      if (flags.verbose) {
+        console.log(`   Content: ${result.content.slice(0, 100)}...`);
+      }
+    }
+  }
+  
+  return results;
+}
+
+/**
+ * Main command
  */
 export async function streamChainCommand(args, flags) {
   const subcommand = args[0] || 'help';
@@ -259,13 +212,9 @@ export async function streamChainCommand(args, flags) {
     return;
   }
   
-  // Check Claude CLI availability
   if (!checkClaudeAvailable()) {
-    console.error('❌ Claude CLI not found');
-    console.log('\nPlease install Claude CLI to use real stream chaining:');
-    console.log('  npm install -g @anthropic-ai/claude-cli');
-    console.log('  Or use Claude Code: https://claude.ai/code');
-    console.log('\nFor documentation, see: docs/stream-chaining.md');
+    console.error('❌ Claude Code not found');
+    console.log('Please ensure Claude Code is installed and available');
     return;
   }
   
@@ -282,173 +231,85 @@ export async function streamChainCommand(args, flags) {
       await runTest(flags);
       break;
       
-    case 'pipeline':
-      await runPipeline(args.slice(1), flags);
-      break;
-      
     default:
       console.error(`❌ Unknown subcommand: ${subcommand}`);
       showHelp();
   }
 }
 
-/**
- * Show help
- */
 function showHelp() {
   console.log(`
-🔗 Stream Chain Command - Real Claude CLI Stream-JSON Chaining
+🔗 Stream Chain Command - Claude Code Context Chaining
 
 DESCRIPTION
-    Connect multiple Claude instances using stream-json format.
-    Each agent receives the full output from the previous agent,
-    enabling complex multi-agent workflows with context preservation.
+    Chain multiple Claude Code prompts with context preservation.
+    Each step receives the output from the previous step.
 
 USAGE
     stream-chain <subcommand> [options]
 
 SUBCOMMANDS
-    run <p1> <p2> [...]  Execute custom chain (min 2 prompts)
-    demo                 Run 3-step demo with real chaining
-    test                 Test stream connection
-    pipeline <type>      Run predefined pipeline
+    run <p1> <p2> [...]  Execute custom chain
+    demo                 Run demo chain
+    test                 Test chaining
     help                 Show this help
 
-PIPELINE TYPES
-    analysis    Analyze → Identify → Report
-    refactor    Identify → Plan → Implement
-    test        Coverage → Design → Generate
-    optimize    Profile → Identify → Optimize
-
 OPTIONS
-    --verbose            Show detailed execution info
+    --verbose            Show detailed output
     --timeout <seconds>  Timeout per step (default: 30)
 
 EXAMPLES
     stream-chain demo
-    stream-chain run "Analyze this" "Improve it" "Finalize"
-    stream-chain pipeline analysis --verbose
-    stream-chain test --timeout 10
-
-STREAM-JSON FORMAT
-    {"type":"init","session_id":"..."}
-    {"type":"message","role":"assistant","content":[...]}
-    {"type":"tool_use","name":"...","input":{...}}
-    {"type":"tool_result","output":"..."}
-    {"type":"result","status":"success"}
-
-DOCUMENTATION
-    Full docs: ./claude-flow-wiki/Stream-Chain-Command.md
-    Spec: ./docs/stream-chaining.md
+    stream-chain run "Write code" "Review it" "Improve it"
+    stream-chain test --verbose
   `);
 }
 
-/**
- * Run demo
- */
 async function runDemo(flags) {
-  console.log('🎭 Running Real Stream Chain Demo');
+  console.log('🎭 Running Stream Chain Demo');
   console.log('━'.repeat(50));
-  console.log('Demonstrating 3-step chain with context preservation\n');
   
   const prompts = [
     "Write a simple Python function to reverse a string",
-    "Review the code and suggest improvements",
-    "Apply the improvements and create the final version"
+    "Add type hints to the function",
+    "Add a docstring to the function"
   ];
   
-  console.log('📝 Chain:', prompts.map(p => p.slice(0, 30) + '...').join(' → '));
-  
-  const results = await executeRealChain(prompts, flags);
+  const results = await executeChain(prompts, flags);
   showSummary(results);
 }
 
-/**
- * Run custom chain
- */
 async function runCustom(prompts, flags) {
   if (prompts.length < 2) {
     console.error('❌ Need at least 2 prompts');
-    console.log('Usage: stream-chain run "prompt1" "prompt2"');
     return;
   }
   
-  console.log('🔗 Starting Custom Stream Chain');
+  console.log('🔗 Starting Custom Chain');
   console.log('━'.repeat(50));
-  console.log(`📝 Chain length: ${prompts.length} steps\n`);
   
-  const results = await executeRealChain(prompts, flags);
+  const results = await executeChain(prompts, flags);
   showSummary(results);
 }
 
-/**
- * Run test
- */
 async function runTest(flags) {
-  console.log('🧪 Testing Stream Connection');
+  console.log('🧪 Testing Stream Chain');
   console.log('━'.repeat(50));
   
   const prompts = [
-    "Say exactly: 'Test 1 OK'",
-    "If you received 'Test 1 OK', say 'Test 2 OK - Chain working'"
+    "Say exactly: 'Step 1 complete'",
+    "If the previous step said 'Step 1 complete', say 'Chain working!'"
   ];
   
-  const results = await executeRealChain(prompts, { ...flags, verbose: true });
+  const results = await executeChain(prompts, { ...flags, verbose: true });
   
-  console.log('\n📊 Test Results:');
-  const allPassed = results.every(r => r.success);
-  console.log(allPassed ? '✅ All tests passed!' : '❌ Some tests failed');
+  const success = results.every(r => r.success);
+  console.log('\n' + (success ? '✅ Test passed!' : '❌ Test failed'));
 }
 
-/**
- * Run pipeline
- */
-async function runPipeline(args, flags) {
-  const type = args[0] || 'analysis';
-  
-  const pipelines = {
-    analysis: [
-      "Analyze the current directory structure",
-      "Identify areas for improvement",
-      "Generate a detailed report"
-    ],
-    refactor: [
-      "Find code that needs refactoring",
-      "Create a refactoring plan",
-      "Show refactored examples"
-    ],
-    test: [
-      "Analyze test coverage",
-      "Design test cases",
-      "Generate test code"
-    ],
-    optimize: [
-      "Profile for bottlenecks",
-      "Identify optimizations",
-      "Provide optimized code"
-    ]
-  };
-  
-  const pipeline = pipelines[type];
-  if (!pipeline) {
-    console.error(`❌ Unknown pipeline: ${type}`);
-    console.log('Available:', Object.keys(pipelines).join(', '));
-    return;
-  }
-  
-  console.log(`🚀 Running ${type} pipeline`);
-  console.log('━'.repeat(50));
-  
-  const results = await executeRealChain(pipeline, flags);
-  showSummary(results);
-}
-
-/**
- * Show execution summary
- */
 function showSummary(results) {
   console.log('\n' + '═'.repeat(50));
-  console.log('📊 Chain Summary');
+  console.log('📊 Summary');
   console.log('═'.repeat(50));
   
   for (const r of results) {
@@ -460,11 +321,7 @@ function showSummary(results) {
   const success = results.filter(r => r.success).length;
   
   console.log(`\n⏱️  Total: ${total}ms`);
-  console.log(`📈 Success: ${success}/${results.length} steps`);
-  
-  if (success === results.length) {
-    console.log('🎉 Chain completed successfully!');
-  }
+  console.log(`📈 Success: ${success}/${results.length}`);
 }
 
 export default streamChainCommand;
