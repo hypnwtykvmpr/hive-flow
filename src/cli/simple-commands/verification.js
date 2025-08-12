@@ -227,6 +227,8 @@ export async function verificationCommand(args, flags) {
     case 'score':
       await system.loadMemory();
       const report = await system.generateTruthReport();
+      
+      // Basic report (always shown)
       console.log('\n📊 Truth Scoring Report');
       console.log('━'.repeat(50));
       console.log(`Mode: ${report.mode}`);
@@ -237,6 +239,74 @@ export async function verificationCommand(args, flags) {
       console.log('\n🤖 Agent Reliability:');
       for (const [agent, reliability] of Object.entries(report.agentReliability)) {
         console.log(`   ${agent}: ${(reliability * 100).toFixed(1)}%`);
+      }
+      
+      // Detailed report with --report flag
+      if (flags.report) {
+        console.log('\n📈 Detailed Verification Breakdown:');
+        console.log(`   Pass Rate: ${((report.passedVerifications / report.totalVerifications) * 100).toFixed(1)}%`);
+        console.log(`   Failure Rate: ${(((report.totalVerifications - report.passedVerifications) / report.totalVerifications) * 100).toFixed(1)}%`);
+        
+        // Show recent history
+        if (system.verificationHistory.length > 0) {
+          console.log('\n📜 Last 10 Verifications:');
+          const recent = system.verificationHistory.slice(-10);
+          for (const v of recent) {
+            const time = new Date(v.timestamp).toLocaleTimeString();
+            console.log(`   ${v.passed ? '✅' : '❌'} [${time}] ${v.taskId} (${v.agentType}): ${v.score.toFixed(3)}`);
+          }
+        }
+        
+        // Performance metrics
+        console.log('\n🎯 Target Metrics Comparison:');
+        console.log(`   Truth Accuracy: ${report.averageScore >= 0.95 ? '✅' : '❌'} ${(report.averageScore * 100).toFixed(1)}% (target: 95%)`);
+        console.log(`   Pass Rate: ${report.passedVerifications/report.totalVerifications >= 0.9 ? '✅' : '❌'} ${((report.passedVerifications/report.totalVerifications) * 100).toFixed(1)}% (target: 90%)`);
+      }
+      
+      // Failure analysis with --analyze flag
+      if (flags.analyze) {
+        console.log('\n🔍 Failure Pattern Analysis:');
+        
+        // Analyze failures by agent
+        const failures = system.verificationHistory.filter(v => !v.passed);
+        if (failures.length > 0) {
+          const failuresByAgent = {};
+          for (const f of failures) {
+            failuresByAgent[f.agentType] = (failuresByAgent[f.agentType] || 0) + 1;
+          }
+          
+          console.log('   Failures by Agent:');
+          for (const [agent, count] of Object.entries(failuresByAgent)) {
+            const percentage = (count / failures.length * 100).toFixed(1);
+            console.log(`   • ${agent}: ${count} failures (${percentage}%)`);
+          }
+          
+          // Common failure scores
+          const failureScores = failures.map(f => f.score);
+          const avgFailureScore = failureScores.reduce((a, b) => a + b, 0) / failureScores.length;
+          console.log(`\n   Average Failure Score: ${avgFailureScore.toFixed(3)}`);
+          console.log(`   Score Gap to Threshold: ${(report.threshold - avgFailureScore).toFixed(3)}`);
+          
+          // Recommendations
+          console.log('\n💡 Recommendations:');
+          if (avgFailureScore < 0.5) {
+            console.log('   • Critical: Major quality issues detected');
+            console.log('   • Consider switching to development mode for debugging');
+            console.log('   • Review agent configurations and requirements');
+          } else if (avgFailureScore < report.threshold) {
+            console.log('   • Moderate: Close to threshold but needs improvement');
+            console.log('   • Focus on failing agents: ' + Object.keys(failuresByAgent).join(', '));
+            console.log('   • Consider adjusting verification requirements');
+          }
+        } else {
+          console.log('   ✅ No failures detected!');
+        }
+      }
+      
+      // JSON output
+      if (flags.json) {
+        console.log('\n📄 JSON Output:');
+        console.log(JSON.stringify(report, null, 2));
       }
       break;
 
