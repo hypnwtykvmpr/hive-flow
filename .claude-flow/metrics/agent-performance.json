@@ -1,0 +1,25 @@
+{
+  "totalVerifications": 62,
+  "passedVerifications": 2,
+  "averageScore": 0.632258064516129,
+  "byAgent": {
+    "reviewer": {
+      "total": 2,
+      "passed": 2,
+      "avgScore": 0.85
+    },
+    "coder": {
+      "total": 60,
+      "passed": 0,
+      "avgScore": 0.625
+    }
+  },
+  "byHour": {
+    "15": {
+      "total": 62,
+      "avgScore": 0.632258064516129
+    }
+  },
+  "created": "2025-08-12T15:57:16.156Z",
+  "lastUpdated": "2025-08-12T15:57:23.425Z"
+}

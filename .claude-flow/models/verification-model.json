@@ -1,0 +1,32 @@
+{
+  "version": "1.0.0",
+  "created": "2025-08-12T15:57:16.156Z",
+  "agentReliability": {
+    "reviewer": 0.5665,
+    "coder": 0.6247753737125109
+  },
+  "patterns": {
+    "reviewer_success": {
+      "count": 2,
+      "avgScore": 0.85,
+      "checks": {
+        "undefined": {
+          "success": 6,
+          "failure": 0
+        }
+      }
+    },
+    "coder_failure": {
+      "count": 60,
+      "avgScore": 0.625,
+      "checks": {
+        "undefined": {
+          "success": 0,
+          "failure": 240
+        }
+      }
+    }
+  },
+  "checkWeights": {},
+  "lastUpdated": "2025-08-12T15:57:23.425Z"
+}

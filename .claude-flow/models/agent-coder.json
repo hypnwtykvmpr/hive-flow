@@ -1,0 +1,321 @@
+{
+  "agentType": "coder",
+  "totalTasks": 60,
+  "successfulTasks": 0,
+  "averageScore": 0.625,
+  "scoreHistory": [
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:34:03.880Z",
+      "passed": false
+    },
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:34:07.061Z",
+      "passed": false
+    },
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:34:15.369Z",
+      "passed": false
+    },
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:34:26.586Z",
+      "passed": false
+    },
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:34:35.902Z",
+      "passed": false
+    },
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:34:37.545Z",
+      "passed": false
+    },
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:34:45.633Z",
+      "passed": false
+    },
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:34:48.186Z",
+      "passed": false
+    },
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:34:52.643Z",
+      "passed": false
+    },
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:34:56.891Z",
+      "passed": false
+    },
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:34:59.469Z",
+      "passed": false
+    },
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:35:03.289Z",
+      "passed": false
+    },
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:35:03.365Z",
+      "passed": false
+    },
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:35:05.137Z",
+      "passed": false
+    },
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:35:09.175Z",
+      "passed": false
+    },
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:35:12.551Z",
+      "passed": false
+    },
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:35:12.686Z",
+      "passed": false
+    },
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:35:18.077Z",
+      "passed": false
+    },
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:35:18.195Z",
+      "passed": false
+    },
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:35:21.412Z",
+      "passed": false
+    },
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:35:23.169Z",
+      "passed": false
+    },
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:35:26.066Z",
+      "passed": false
+    },
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:35:28.953Z",
+      "passed": false
+    },
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:35:31.606Z",
+      "passed": false
+    },
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:35:34.727Z",
+      "passed": false
+    },
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:35:36.255Z",
+      "passed": false
+    },
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:35:39.356Z",
+      "passed": false
+    },
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:35:39.791Z",
+      "passed": false
+    },
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:35:39.796Z",
+      "passed": false
+    },
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:35:42.089Z",
+      "passed": false
+    },
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:34:03.880Z",
+      "passed": false
+    },
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:34:07.061Z",
+      "passed": false
+    },
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:34:15.369Z",
+      "passed": false
+    },
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:34:26.586Z",
+      "passed": false
+    },
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:34:35.902Z",
+      "passed": false
+    },
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:34:37.545Z",
+      "passed": false
+    },
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:34:45.633Z",
+      "passed": false
+    },
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:34:48.186Z",
+      "passed": false
+    },
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:34:52.643Z",
+      "passed": false
+    },
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:34:56.891Z",
+      "passed": false
+    },
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:34:59.469Z",
+      "passed": false
+    },
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:35:03.289Z",
+      "passed": false
+    },
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:35:03.365Z",
+      "passed": false
+    },
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:35:05.137Z",
+      "passed": false
+    },
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:35:09.175Z",
+      "passed": false
+    },
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:35:12.551Z",
+      "passed": false
+    },
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:35:12.686Z",
+      "passed": false
+    },
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:35:18.077Z",
+      "passed": false
+    },
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:35:18.195Z",
+      "passed": false
+    },
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:35:21.412Z",
+      "passed": false
+    },
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:35:23.169Z",
+      "passed": false
+    },
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:35:26.066Z",
+      "passed": false
+    },
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:35:28.953Z",
+      "passed": false
+    },
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:35:31.606Z",
+      "passed": false
+    },
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:35:34.727Z",
+      "passed": false
+    },
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:35:36.255Z",
+      "passed": false
+    },
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:35:39.356Z",
+      "passed": false
+    },
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:35:39.791Z",
+      "passed": false
+    },
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:35:39.796Z",
+      "passed": false
+    },
+    {
+      "score": 0.625,
+      "timestamp": "2025-08-12T14:35:42.089Z",
+      "passed": false
+    }
+  ],
+  "checkPerformance": {
+    "undefined": {
+      "total": 240,
+      "passed": 60,
+      "avgScore": 0.6249999999999986
+    }
+  },
+  "trend": {
+    "direction": "declining",
+    "change": 0,
+    "recentAverage": 0.625,
+    "previousAverage": 0.625
+  }
+}
