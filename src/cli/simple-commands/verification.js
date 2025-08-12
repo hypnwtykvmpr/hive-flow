@@ -441,12 +441,6 @@ export async function verificationCommand(args, flags) {
           console.error(`\n❌ Failed to export report: ${error.message}`);
         }
       }
-      
-      // JSON output
-      if (flags.json) {
-        console.log('\n📄 JSON Output:');
-        console.log(JSON.stringify(report, null, 2));
-      }
       break;
 
     case 'status':
