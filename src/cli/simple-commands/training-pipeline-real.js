@@ -365,6 +365,9 @@ describe('Sorting Algorithms', () => {
       };
     }
 
+    // Restore original code after testing
+    await fs.writeFile(path.join(task.projectDir, 'index.js'), originalCode);
+    
     // Calculate REAL performance metrics
     const executionTime = Date.now() - startTime;
     const successRate = Object.values(checks).filter(c => c.passed).length / Object.values(checks).length;
