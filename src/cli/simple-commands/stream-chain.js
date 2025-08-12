@@ -441,6 +441,9 @@ async function runDemoChain(flags) {
     console.log('⚠️  Warning: Claude CLI not found - using mock implementation');
     console.log('   For real stream chaining, install Claude CLI:');
     console.log('   https://docs.anthropic.com/claude/docs/claude-cli\n');
+  } else {
+    console.log('ℹ️  Claude CLI detected - attempting real stream chaining');
+    console.log('   Note: This requires Claude CLI to be properly configured\n');
   }
   
   console.log('This demo shows a 3-step analysis → design → implementation chain\n');
@@ -451,7 +454,13 @@ async function runDemoChain(flags) {
     "Implement the core functionality based on the design"
   ];
 
-  return runStreamChain(demoPrompts, flags);
+  // Force mock mode for demo if not explicitly requesting real mode
+  const demoFlags = { ...flags };
+  if (!flags.real) {
+    demoFlags.mock = true;
+  }
+
+  return runStreamChain(demoPrompts, demoFlags);
 }
 
 /**
