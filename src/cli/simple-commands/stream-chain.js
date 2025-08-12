@@ -42,7 +42,10 @@ async function executeClaudeCommand(prompt, timeout = 20000, useStreamJson = fal
       args.push('--output-format', 'stream-json', '--verbose');
     }
     
-    args.push(prompt);
+    // Properly quote the prompt to handle spaces and special characters
+    const quotedPrompt = `"${prompt.replace(/"/g, '\\"')}"`;
+    args.push(quotedPrompt);
+    
     const command = `claude ${args.join(' ')}`;
     
     console.log(`🔄 Executing: ${command}`);
@@ -51,7 +54,8 @@ async function executeClaudeCommand(prompt, timeout = 20000, useStreamJson = fal
     
     exec(command, { 
       timeout,
-      maxBuffer: 1024 * 1024 * 10 // 10MB buffer
+      maxBuffer: 1024 * 1024 * 10, // 10MB buffer
+      env: process.env // Pass through environment variables
     }, (error, stdout, stderr) => {
       const duration = Date.now() - startTime;
       
@@ -63,6 +67,9 @@ async function executeClaudeCommand(prompt, timeout = 20000, useStreamJson = fal
       
       if (error) {
         console.error('Claude CLI error:', error.message);
+        if (stderr) {
+          console.error('stderr:', stderr);
+        }
         resolve(mockResponse(prompt));
         return;
       }
