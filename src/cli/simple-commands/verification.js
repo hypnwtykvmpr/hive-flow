@@ -202,6 +202,13 @@ class VerificationSystem {
 export async function verificationCommand(args, flags) {
   const system = new VerificationSystem();
   const subcommand = args[0] || 'status';
+  
+  // Handle help flag
+  if (flags.help || subcommand === '--help' || subcommand === 'help') {
+    const { COMMAND_HELP } = await import('../help-text.js');
+    console.log(COMMAND_HELP.verify);
+    return;
+  }
 
   switch (subcommand) {
     case 'init':
