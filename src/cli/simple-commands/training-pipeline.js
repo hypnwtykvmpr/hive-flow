@@ -446,7 +446,7 @@ describe('Sorting Algorithms', () => {
     // Generate recommendations based on performance
     const recommendations = this.generateRecommendations(strategyPerformance);
     
-    console.log('\n📊 Real Learning Results:');
+    console.log('\n📊 Learning Results:');
     for (const [strategy, perf] of Object.entries(strategyPerformance)) {
       console.log(`   ${strategy}: Score ${perf.avgScore.toFixed(2)}, Success ${(perf.successRate * 100).toFixed(1)}%, Time ${perf.avgExecutionTime.toFixed(0)}ms`);
     }
