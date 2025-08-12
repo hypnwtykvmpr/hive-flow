@@ -606,6 +606,141 @@ EXAMPLES:
   • Performance-based scaling
 `,
 
+  verify: `
+🔍 VERIFY COMMAND - Truth Verification System
+
+USAGE:
+  claude-flow verify <subcommand> [options]
+
+DESCRIPTION:
+  Enforce verification and truth scoring across all multi-agent operations.
+  Implements mandatory verification with configurable thresholds and auto-rollback.
+
+SUBCOMMANDS:
+  init <mode>       Initialize verification system with mode
+  status            Show verification system status
+  verify <taskId>   Run verification on specific task
+  truth             Display truth scoring report
+  check <taskId>    Run verification checks
+  validate <taskId> Validate task results
+  config            Manage verification configuration
+  cleanup           Clean up old verification data
+  rollback <taskId> Trigger manual rollback
+
+MODES:
+  strict            0.95 threshold, auto-rollback enabled (production)
+  moderate          0.85 threshold, auto-rollback disabled (default)
+  development       0.75 threshold, for rapid prototyping
+
+OPTIONS:
+  --agent <type>    Agent type (coder, reviewer, tester, planner)
+  --threshold <n>   Custom truth threshold (0.0-1.0)
+  --force           Force operation
+  --verbose         Detailed output
+  --json            JSON output format
+
+EXAMPLES:
+  claude-flow verify init strict                  # Production mode
+  claude-flow verify status                       # Check system status
+  claude-flow verify verify task-123 --agent coder
+  claude-flow verify truth                        # View truth scores
+  claude-flow verify rollback task-456 --force
+
+VERIFICATION REQUIREMENTS BY AGENT:
+  coder:     compile, test, lint, typecheck
+  reviewer:  code-analysis, security-scan, performance-check
+  tester:    unit-tests, integration-tests, coverage-check
+  planner:   task-decomposition, dependency-check, feasibility
+`,
+
+  truth: `
+🎯 TRUTH COMMAND - Truth Telemetry and Accuracy Scoring
+
+USAGE:
+  claude-flow truth [options]
+
+DESCRIPTION:
+  Display comprehensive truth scoring metrics and agent reliability.
+  Shows system-wide verification accuracy and per-agent performance.
+
+OPTIONS:
+  --taskId <id>     Check truth for specific task
+  --agent <type>    Filter by agent type
+  --threshold <n>   Set minimum truth threshold
+  --report          Generate detailed report
+  --analyze         Analyze failure patterns
+  --json            JSON output format
+  --export <file>   Export metrics to file
+
+OUTPUT INCLUDES:
+  • Current verification mode and threshold
+  • Total verifications count
+  • Pass/fail statistics
+  • Average truth score (0.0-1.0)
+  • Per-agent reliability percentages
+  • Recent verification history
+
+EXAMPLES:
+  claude-flow truth                               # Basic truth scores
+  claude-flow truth --report                      # Detailed report
+  claude-flow truth --taskId task-123            # Specific task
+  claude-flow truth --agent coder --detailed     # Agent-specific
+  claude-flow truth --analyze                    # Failure analysis
+  claude-flow truth --export metrics.json        # Export data
+
+TARGET METRICS:
+  • Truth Accuracy Rate: >95%
+  • Integration Success: >90%
+  • Rollback Frequency: <5%
+  • Human Intervention: <10%
+`,
+
+  pair: `
+👥 PAIR COMMAND - Pair Programming with Verification
+
+USAGE:
+  claude-flow pair [options]
+
+DESCRIPTION:
+  Enable collaborative development between humans and AI with real-time
+  verification, continuous validation, and automated quality enforcement.
+
+OPTIONS:
+  --start           Start pair programming session
+  --mode <mode>     Verification mode (strict, standard, development)
+  --threshold <n>   Truth threshold (default: 0.95)
+  --verify          Enable real-time verification
+  --verbose         Detailed output
+  --monitor         Show real-time monitoring dashboard
+  --interval <ms>   Verification interval (default: 3000)
+
+MODES:
+  strict            0.95 threshold, auto-rollback, all checks
+  standard          0.85 threshold, optional rollback (default)
+  development       0.75 threshold, basic checks only
+
+FEATURES:
+  • Real-time code verification
+  • Continuous quality monitoring
+  • Automatic rollback on failures
+  • AI-powered suggestions
+  • Truth score tracking
+  • Performance metrics
+
+EXAMPLES:
+  claude-flow pair                                # Basic mode
+  claude-flow pair --start                        # Start session
+  claude-flow pair --start --mode strict         # Production quality
+  claude-flow pair --verify --threshold 0.90     # Custom threshold
+  claude-flow pair --monitor                     # With dashboard
+
+VERIFICATION CHECKS:
+  • Compilation (35% weight)
+  • Tests (25% weight)
+  • Linting (20% weight)
+  • Type safety (20% weight)
+`,
+
   hooks: `
 🔗 HOOKS COMMAND - Lifecycle Event Management
 
