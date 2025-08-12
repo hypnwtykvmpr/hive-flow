@@ -435,6 +435,14 @@ async function executeStreamStep(prompt, inputStream, isLast, flags = {}) {
 async function runDemoChain(flags) {
   console.log('🎭 Running Stream Chain Demo');
   console.log('━'.repeat(50));
+  
+  // Check if claude CLI is available
+  if (!checkClaudeAvailable()) {
+    console.log('⚠️  Warning: Claude CLI not found - using mock implementation');
+    console.log('   For real stream chaining, install Claude CLI:');
+    console.log('   https://docs.anthropic.com/claude/docs/claude-cli\n');
+  }
+  
   console.log('This demo shows a 3-step analysis → design → implementation chain\n');
 
   const demoPrompts = [
