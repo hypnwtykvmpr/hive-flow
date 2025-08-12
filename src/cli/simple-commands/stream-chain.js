@@ -345,6 +345,7 @@ async function executeStreamStep(prompt, inputStream, isLast, flags = {}) {
   return new Promise((resolve) => {
     const startTime = Date.now();
     let resolved = false; // Prevent double resolution
+    let timedOut = false; // Track if we timed out
     
     const safeResolve = (result) => {
       if (!resolved) {
