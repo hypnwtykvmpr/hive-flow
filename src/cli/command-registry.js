@@ -545,11 +545,11 @@ For more information: https://github.com/ruvnet/claude-flow/issues/166`,
   commandRegistry.set('verify', {
     handler: async (args, flags) => {
       try {
-        const { verificationCommand } = await import('./commands/verification.js');
-        return await verificationCommand({ subcommand: args[0] || 'status', ...flags });
+        const { verificationCommand } = await import('./simple-commands/verification.js');
+        return await verificationCommand(args, flags);
       } catch (error) {
         console.error('❌ Error loading verification module:', error.message);
-        console.log('Please ensure the verification module is properly built.');
+        console.log('Error details:', error);
       }
     },
     description: '🔍 Verification and truth enforcement system',
