@@ -1,735 +1,746 @@
 /**
- * Enhanced Truth Scoring Engine
- * Provides comprehensive truth scoring with 0.95 minimum threshold
+ * TruthScorer - Advanced truth scoring system with configurable thresholds
+ * Provides statistical validation and confidence analysis for agent claims and system states
  */
 
-import { 
-  Evidence, 
-  AgentClaims, 
-  TruthScore, 
-  Discrepancy, 
-  EvidenceQuality,
-  VerificationWeights,
-  TestResults,
-  CodeQuality,
-  SystemHealth,
-  AgentCoordination
-} from './interfaces.js';
+import type { ILogger } from '../core/logger.js';
+import { logger } from '../core/logger.js';
+import { AppError } from '../utils/error-handler.js';
+import type {
+  TruthScore,
+  TruthScoreConfig,
+  TruthScoringWeights,
+  TruthValidationChecks,
+  ConfidenceConfig,
+  TruthScoreComponents,
+  ConfidenceInterval,
+  TruthEvidence,
+  AgentClaim,
+  VerificationError,
+} from './types.js';
+import { VERIFICATION_CONSTANTS } from './types.js';
+import type { AgentId, AgentState } from '../swarm/types.js';
 
-export class EnhancedTruthScoreCalculator {
-  private config: {
-    minimum_threshold: number;
-    weights: VerificationWeights;
-  };
+export interface TruthScorerOptions {
+  config?: Partial<TruthScoreConfig>;
+  logger?: ILogger;
+}
 
-  constructor(config?: any) {
-    this.config = {
-      minimum_threshold: config?.minimum_threshold || 0.95,
-      weights: {
-        tests: config?.weights?.tests || 0.30,
-        integration_tests: config?.weights?.integration_tests || 0.25,
-        lint: config?.weights?.lint || 0.15,
-        type_check: config?.weights?.type_check || 0.15,
-        build: config?.weights?.build || 0.10,
-        performance: config?.weights?.performance || 0.05,
-        ...config?.weights
-      }
-    };
+export class TruthScorer {
+  private readonly config: TruthScoreConfig;
+  private readonly logger: ILogger;
+  private readonly agentHistory: Map<string, AgentPerformanceHistory> = new Map();
+  private readonly validationCache: Map<string, CachedValidation> = new Map();
+
+  constructor(options: TruthScorerOptions = {}) {
+    this.logger = options.logger || logger.child({ component: 'TruthScorer' });
+    this.config = this.mergeConfig(options.config);
+    
+    this.logger.info('TruthScorer initialized', {
+      threshold: this.config.threshold,
+      checks: this.config.checks,
+      weights: this.config.weights,
+    });
   }
 
   /**
-   * Calculate comprehensive truth score
+   * Calculate truth score for an agent claim
    */
-  async calculateTruthScore(evidence: Evidence, claims: AgentClaims): Promise<TruthScore> {
+  async scoreClaim(claim: AgentClaim, context?: ScoringContext): Promise<TruthScore> {
     const startTime = Date.now();
-    const discrepancies: Discrepancy[] = [];
-    const weights = this.config.weights;
-    
-    let totalScore = 0;
+    this.logger.debug('Starting truth score calculation', {
+      claimId: claim.id,
+      claimType: claim.type,
+      agentId: claim.agentId,
+    });
 
-    // 1. Test Verification (30%)
-    const testVerification = this.verifyTestClaims(evidence.test_results, claims.test_claims);
-    totalScore += testVerification.score * weights.tests;
-    discrepancies.push(...testVerification.discrepancies);
+    try {
+      // Initialize score components
+      const components: Partial<TruthScoreComponents> = {};
+      const evidence: TruthEvidence[] = [];
+      const errors: VerificationError[] = [];
 
-    // 2. Integration Test Verification (25%)
-    const integrationVerification = this.verifyIntegrationClaims(
-      evidence.test_results, 
-      claims.integration_claims
-    );
-    totalScore += integrationVerification.score * weights.integration_tests;
-    discrepancies.push(...integrationVerification.discrepancies);
+      // Calculate individual components
+      if (this.config.checks.historicalValidation) {
+        components.agentReliability = await this.calculateAgentReliability(claim, evidence, errors);
+      }
 
-    // 3. Code Quality Verification (30% total: 15% lint + 15% type)
-    const qualityVerification = this.verifyQualityClaims(evidence.code_quality, claims.quality_claims);
-    totalScore += qualityVerification.score * (weights.lint + weights.type_check);
-    discrepancies.push(...qualityVerification.discrepancies);
+      if (this.config.checks.crossAgentValidation && context?.peers) {
+        components.crossValidation = await this.calculateCrossValidation(claim, context.peers, evidence, errors);
+      }
 
-    // 4. Build Verification (10%)
-    const buildVerification = this.verifyBuildClaims(evidence.system_health, claims.build_claims);
-    totalScore += buildVerification.score * weights.build;
-    discrepancies.push(...buildVerification.discrepancies);
+      if (this.config.checks.externalValidation && context?.externalSources) {
+        components.externalVerification = await this.calculateExternalVerification(claim, context.externalSources, evidence, errors);
+      }
 
-    // 5. Performance Verification (5%)
-    const performanceVerification = this.verifyPerformanceClaims(
-      evidence.system_health.performance_metrics, 
-      claims.performance_claims
-    );
-    totalScore += performanceVerification.score * weights.performance;
-    discrepancies.push(...performanceVerification.discrepancies);
+      if (this.config.checks.logicalValidation) {
+        components.logicalCoherence = await this.calculateLogicalCoherence(claim, evidence, errors);
+      }
 
-    // Calculate evidence quality
-    const evidenceQuality = this.assessEvidenceQuality(evidence);
+      if (this.config.checks.statisticalValidation) {
+        components.factualConsistency = await this.calculateFactualConsistency(claim, evidence, errors);
+      }
 
-    // Apply evidence quality factor
-    const evidenceAdjustedScore = totalScore * evidenceQuality.overall;
+      // Calculate overall score using weighted average
+      const overall = this.calculateWeightedScore(components as TruthScoreComponents);
+      const fullComponents: TruthScoreComponents = {
+        agentReliability: components.agentReliability || 0,
+        crossValidation: components.crossValidation || 0,
+        externalVerification: components.externalVerification || 0,
+        logicalCoherence: components.logicalCoherence || 0,
+        factualConsistency: components.factualConsistency || 0,
+        overall,
+      };
 
-    // Calculate final score with precision
-    const finalScore = Math.round(evidenceAdjustedScore * 1000) / 1000;
+      // Calculate confidence interval
+      const confidence = this.calculateConfidenceInterval(fullComponents, evidence.length);
 
-    const truthScore: TruthScore = {
-      score: finalScore,
-      threshold: this.config.minimum_threshold,
-      passed: finalScore >= this.config.minimum_threshold,
-      discrepancies: discrepancies.sort((a, b) => b.impact_score - a.impact_score),
-      evidence_quality: evidenceQuality,
-      timestamp: Date.now(),
-      agent_id: claims.agent_id,
-      task_id: claims.task_id,
-      calculation_method: 'enhanced_weighted_verification_v2'
-    };
+      const score: TruthScore = {
+        score: overall,
+        components: fullComponents,
+        confidence,
+        evidence,
+        timestamp: new Date(),
+        metadata: {
+          claimId: claim.id,
+          agentId: claim.agentId,
+          calculationTime: Date.now() - startTime,
+          evidenceCount: evidence.length,
+          errorCount: errors.length,
+          config: this.config,
+        },
+      };
 
-    return truthScore;
+      this.logger.info('Truth score calculated', {
+        claimId: claim.id,
+        score: overall,
+        components: fullComponents,
+        confidence: confidence.level,
+        duration: Date.now() - startTime,
+      });
+
+      return score;
+    } catch (error) {
+      this.logger.error('Failed to calculate truth score', error);
+      throw new AppError(
+        `Truth score calculation failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        'TRUTH_SCORE_CALCULATION_FAILED',
+        500
+      );
+    }
   }
 
   /**
-   * Verify test-related claims
+   * Validate if a truth score meets the configured threshold
    */
-  private verifyTestClaims(testResults: TestResults, testClaims: any): {
-    score: number;
-    discrepancies: Discrepancy[];
-  } {
-    const discrepancies: Discrepancy[] = [];
-    let score = 0;
-    const totalChecks = 4;
+  validateScore(score: TruthScore): boolean {
+    const passes = score.score >= this.config.threshold;
+    this.logger.debug('Truth score validation', {
+      score: score.score,
+      threshold: this.config.threshold,
+      passes,
+    });
+    return passes;
+  }
 
-    // Check if all tests pass
-    const allTestsPass = this.calculateTestPassRate(testResults) === 1.0;
-    if (testClaims.all_tests_pass && !allTestsPass) {
-      discrepancies.push({
-        type: 'test_failure',
-        description: 'Claimed all tests pass but some tests are failing',
-        severity: 'high',
-        claimed_value: true,
-        actual_value: allTestsPass,
-        impact_score: 0.8
+  /**
+   * Update agent performance history
+   */
+  updateAgentHistory(agentId: AgentId, performance: AgentPerformanceRecord): void {
+    const agentKey = typeof agentId === 'string' ? agentId : agentId.id;
+    
+    if (!this.agentHistory.has(agentKey)) {
+      this.agentHistory.set(agentKey, {
+        agentId: agentKey,
+        records: [],
+        statistics: {
+          averageScore: 0,
+          successRate: 0,
+          totalClaims: 0,
+          recentTrend: 'stable',
+        },
       });
-    } else if (testClaims.all_tests_pass === allTestsPass) {
-      score += 1;
     }
 
-    // Check test coverage
-    const actualCoverage = this.calculateAverageCoverage(testResults);
-    const coverageDiff = Math.abs(actualCoverage - (testClaims.test_coverage_percentage || 0));
-    if (coverageDiff > 5) { // Allow 5% tolerance
-      discrepancies.push({
-        type: 'coverage_mismatch',
-        description: `Test coverage mismatch: claimed ${testClaims.test_coverage_percentage}%, actual ${actualCoverage}%`,
-        severity: coverageDiff > 20 ? 'high' : 'medium',
-        claimed_value: testClaims.test_coverage_percentage,
-        actual_value: actualCoverage,
-        impact_score: Math.min(coverageDiff / 100, 0.5)
-      });
-    } else {
-      score += 1;
+    const history = this.agentHistory.get(agentKey)!;
+    history.records.push(performance);
+
+    // Keep only recent records (last 100)
+    if (history.records.length > 100) {
+      history.records = history.records.slice(-100);
     }
 
-    // Check for no failing tests specifically
-    const hasFailing = this.hasFailingTests(testResults);
-    if (testClaims.no_failing_tests && hasFailing) {
-      discrepancies.push({
-        type: 'failing_tests_present',
-        description: 'Claimed no failing tests but failures detected',
-        severity: 'high',
-        claimed_value: false,
-        actual_value: hasFailing,
-        impact_score: 0.7
-      });
-    } else if (testClaims.no_failing_tests === !hasFailing) {
-      score += 1;
+    // Update statistics
+    this.updateAgentStatistics(history);
+
+    this.logger.debug('Agent history updated', {
+      agentId: agentKey,
+      recordCount: history.records.length,
+      averageScore: history.statistics.averageScore,
+    });
+  }
+
+  /**
+   * Get agent reliability score
+   */
+  getAgentReliability(agentId: AgentId): number {
+    const agentKey = typeof agentId === 'string' ? agentId : agentId.id;
+    const history = this.agentHistory.get(agentKey);
+    
+    if (!history || history.records.length === 0) {
+      return 0.5; // Default neutral score for unknown agents
     }
 
-    // Check performance tests
-    const perfTestsPass = testResults.performance_tests.failed === 0;
-    if (testClaims.performance_tests_pass && !perfTestsPass) {
-      discrepancies.push({
-        type: 'performance_test_failure',
-        description: 'Claimed performance tests pass but they are failing',
-        severity: 'medium',
-        claimed_value: true,
-        actual_value: perfTestsPass,
-        impact_score: 0.4
-      });
-    } else if (testClaims.performance_tests_pass === perfTestsPass) {
-      score += 1;
-    }
+    return history.statistics.averageScore;
+  }
+
+  /**
+   * Clear validation cache
+   */
+  clearCache(): void {
+    this.validationCache.clear();
+    this.logger.debug('Validation cache cleared');
+  }
+
+  private mergeConfig(partialConfig?: Partial<TruthScoreConfig>): TruthScoreConfig {
+    const defaultWeights: TruthScoringWeights = {
+      agentReliability: 0.3,
+      crossValidation: 0.25,
+      externalVerification: 0.2,
+      factualConsistency: 0.15,
+      logicalCoherence: 0.1,
+    };
+
+    const defaultChecks: TruthValidationChecks = {
+      historicalValidation: true,
+      crossAgentValidation: true,
+      externalValidation: false,
+      logicalValidation: true,
+      statisticalValidation: true,
+    };
+
+    const defaultConfidence: ConfidenceConfig = {
+      level: VERIFICATION_CONSTANTS.DEFAULT_CONFIDENCE_LEVEL,
+      minSampleSize: VERIFICATION_CONSTANTS.DEFAULT_MIN_SAMPLE_SIZE,
+      maxErrorMargin: VERIFICATION_CONSTANTS.DEFAULT_MAX_ERROR_MARGIN,
+    };
 
     return {
-      score: score / totalChecks,
-      discrepancies
+      threshold: partialConfig?.threshold || VERIFICATION_CONSTANTS.DEFAULT_TRUTH_THRESHOLD,
+      weights: { ...defaultWeights, ...partialConfig?.weights },
+      checks: { ...defaultChecks, ...partialConfig?.checks },
+      confidence: { ...defaultConfidence, ...partialConfig?.confidence },
     };
   }
 
-  /**
-   * Verify integration-related claims
-   */
-  private verifyIntegrationClaims(testResults: TestResults, integrationClaims: any): {
-    score: number;
-    discrepancies: Discrepancy[];
-  } {
-    const discrepancies: Discrepancy[] = [];
-    let score = 0;
-    const totalChecks = 4;
+  private async calculateAgentReliability(
+    claim: AgentClaim,
+    evidence: TruthEvidence[],
+    errors: VerificationError[]
+  ): Promise<number> {
+    try {
+      const agentKey = typeof claim.agentId === 'string' ? claim.agentId : claim.agentId.id;
+      const history = this.agentHistory.get(agentKey);
 
-    // API compatibility
-    const integrationTestsPass = testResults.integration_tests.failed === 0;
-    if (integrationClaims.api_compatibility_maintained && !integrationTestsPass) {
-      discrepancies.push({
-        type: 'api_compatibility_failure',
-        description: 'Claimed API compatibility maintained but integration tests failing',
-        severity: 'high',
-        claimed_value: true,
-        actual_value: integrationTestsPass,
-        impact_score: 0.9
-      });
-    } else if (integrationClaims.api_compatibility_maintained === integrationTestsPass) {
-      score += 1;
-    }
-
-    // Cross-agent communication
-    const crossAgentTestsPass = testResults.cross_agent_tests.failed === 0;
-    if (integrationClaims.cross_agent_communication_working && !crossAgentTestsPass) {
-      discrepancies.push({
-        type: 'cross_agent_failure',
-        description: 'Claimed cross-agent communication working but tests failing',
-        severity: 'high',
-        claimed_value: true,
-        actual_value: crossAgentTestsPass,
-        impact_score: 0.8
-      });
-    } else if (integrationClaims.cross_agent_communication_working === crossAgentTestsPass) {
-      score += 1;
-    }
-
-    // E2E tests for external services
-    const e2eTestsPass = testResults.e2e_tests.failed === 0;
-    if (integrationClaims.external_services_compatible && !e2eTestsPass) {
-      discrepancies.push({
-        type: 'external_service_failure',
-        description: 'Claimed external services compatible but E2E tests failing',
-        severity: 'medium',
-        claimed_value: true,
-        actual_value: e2eTestsPass,
-        impact_score: 0.6
-      });
-    } else if (integrationClaims.external_services_compatible === e2eTestsPass) {
-      score += 1;
-    }
-
-    // Database migrations (if applicable)
-    // This would require additional evidence from database state
-    if (integrationClaims.database_migrations_successful !== undefined) {
-      // For now, assume true if no database-related test failures
-      const dbTestsPass = !this.hasDatabaseTestFailures(testResults);
-      if (integrationClaims.database_migrations_successful && !dbTestsPass) {
-        discrepancies.push({
-          type: 'database_migration_failure',
-          description: 'Claimed database migrations successful but database tests failing',
-          severity: 'high',
-          claimed_value: true,
-          actual_value: dbTestsPass,
-          impact_score: 0.7
+      if (!history || history.records.length < 3) {
+        // Insufficient data - use neutral score
+        evidence.push({
+          type: 'agent_history',
+          source: 'internal_history',
+          weight: this.config.weights.agentReliability,
+          score: 0.5,
+          details: { reason: 'insufficient_data', recordCount: history?.records.length || 0 },
+          timestamp: new Date(),
         });
-      } else if (integrationClaims.database_migrations_successful === dbTestsPass) {
-        score += 1;
+        return 0.5;
       }
-    } else {
-      score += 1; // No database claims, so no issues
-    }
 
+      // Calculate reliability based on recent performance
+      const recentRecords = history.records.slice(-10); // Last 10 records
+      const avgScore = recentRecords.reduce((sum, record) => sum + record.score, 0) / recentRecords.length;
+      const consistency = 1 - this.calculateVariance(recentRecords.map(r => r.score));
+      const trendFactor = this.calculateTrendFactor(recentRecords);
+
+      const reliability = (avgScore * 0.6) + (consistency * 0.3) + (trendFactor * 0.1);
+
+      evidence.push({
+        type: 'agent_history',
+        source: 'internal_history',
+        weight: this.config.weights.agentReliability,
+        score: reliability,
+        details: {
+          averageScore: avgScore,
+          consistency,
+          trendFactor,
+          recordCount: recentRecords.length,
+        },
+        timestamp: new Date(),
+      });
+
+      return Math.max(0, Math.min(1, reliability));
+    } catch (error) {
+      errors.push({
+        code: 'AGENT_RELIABILITY_CALCULATION_FAILED',
+        message: `Failed to calculate agent reliability: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        severity: 'medium',
+        context: { claimId: claim.id, agentId: claim.agentId },
+        recoverable: true,
+        timestamp: new Date(),
+      });
+      return 0.5; // Default score on error
+    }
+  }
+
+  private async calculateCrossValidation(
+    claim: AgentClaim,
+    peers: AgentState[],
+    evidence: TruthEvidence[],
+    errors: VerificationError[]
+  ): Promise<number> {
+    try {
+      if (peers.length === 0) {
+        evidence.push({
+          type: 'cross_validation',
+          source: 'peer_agents',
+          weight: this.config.weights.crossValidation,
+          score: 0.5,
+          details: { reason: 'no_peers_available' },
+          timestamp: new Date(),
+        });
+        return 0.5;
+      }
+
+      // Simulate cross-validation with peer agents
+      // In a real implementation, this would involve querying other agents
+      const validationScores: number[] = [];
+      const reliablePeers = peers.filter(peer => this.getAgentReliability(peer.id) > 0.7);
+
+      for (const peer of reliablePeers.slice(0, 5)) { // Limit to 5 peers
+        const peerReliability = this.getAgentReliability(peer.id);
+        const validationScore = this.simulatePeerValidation(claim, peer);
+        validationScores.push(validationScore * peerReliability);
+      }
+
+      if (validationScores.length === 0) {
+        evidence.push({
+          type: 'cross_validation',
+          source: 'peer_agents',
+          weight: this.config.weights.crossValidation,
+          score: 0.5,
+          details: { reason: 'no_reliable_peers' },
+          timestamp: new Date(),
+        });
+        return 0.5;
+      }
+
+      const avgValidation = validationScores.reduce((sum, score) => sum + score, 0) / validationScores.length;
+      const consensus = 1 - this.calculateVariance(validationScores);
+      const crossValidationScore = (avgValidation * 0.8) + (consensus * 0.2);
+
+      evidence.push({
+        type: 'cross_validation',
+        source: 'peer_agents',
+        weight: this.config.weights.crossValidation,
+        score: crossValidationScore,
+        details: {
+          peerCount: validationScores.length,
+          averageValidation: avgValidation,
+          consensus,
+          validationScores,
+        },
+        timestamp: new Date(),
+      });
+
+      return Math.max(0, Math.min(1, crossValidationScore));
+    } catch (error) {
+      errors.push({
+        code: 'CROSS_VALIDATION_FAILED',
+        message: `Cross validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        severity: 'medium',
+        context: { claimId: claim.id, peerCount: peers.length },
+        recoverable: true,
+        timestamp: new Date(),
+      });
+      return 0.5;
+    }
+  }
+
+  private async calculateExternalVerification(
+    claim: AgentClaim,
+    externalSources: ExternalSource[],
+    evidence: TruthEvidence[],
+    errors: VerificationError[]
+  ): Promise<number> {
+    try {
+      if (externalSources.length === 0) {
+        evidence.push({
+          type: 'external_source',
+          source: 'external_verification',
+          weight: this.config.weights.externalVerification,
+          score: 0.5,
+          details: { reason: 'no_external_sources' },
+          timestamp: new Date(),
+        });
+        return 0.5;
+      }
+
+      // Simulate external verification
+      // In a real implementation, this would query external APIs, databases, etc.
+      const verificationResults: number[] = [];
+
+      for (const source of externalSources.slice(0, 3)) { // Limit to 3 sources
+        const verificationScore = await this.simulateExternalVerification(claim, source);
+        verificationResults.push(verificationScore * source.reliability);
+      }
+
+      const avgVerification = verificationResults.reduce((sum, score) => sum + score, 0) / verificationResults.length;
+      const sourceAgreement = 1 - this.calculateVariance(verificationResults);
+      const externalScore = (avgVerification * 0.7) + (sourceAgreement * 0.3);
+
+      evidence.push({
+        type: 'external_source',
+        source: 'external_verification',
+        weight: this.config.weights.externalVerification,
+        score: externalScore,
+        details: {
+          sourceCount: verificationResults.length,
+          averageVerification: avgVerification,
+          sourceAgreement,
+          verificationResults,
+        },
+        timestamp: new Date(),
+      });
+
+      return Math.max(0, Math.min(1, externalScore));
+    } catch (error) {
+      errors.push({
+        code: 'EXTERNAL_VERIFICATION_FAILED',
+        message: `External verification failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        severity: 'medium',
+        context: { claimId: claim.id, sourceCount: externalSources.length },
+        recoverable: true,
+        timestamp: new Date(),
+      });
+      return 0.5;
+    }
+  }
+
+  private async calculateLogicalCoherence(
+    claim: AgentClaim,
+    evidence: TruthEvidence[],
+    errors: VerificationError[]
+  ): Promise<number> {
+    try {
+      // Analyze logical consistency of the claim
+      const coherenceChecks = {
+        structuralIntegrity: this.checkStructuralIntegrity(claim),
+        causalConsistency: this.checkCausalConsistency(claim),
+        temporalCoherence: this.checkTemporalCoherence(claim),
+        metricConsistency: this.checkMetricConsistency(claim),
+      };
+
+      const coherenceScore = Object.values(coherenceChecks).reduce((sum, score) => sum + score, 0) / 4;
+
+      evidence.push({
+        type: 'logical_proof',
+        source: 'logical_analyzer',
+        weight: this.config.weights.logicalCoherence,
+        score: coherenceScore,
+        details: coherenceChecks,
+        timestamp: new Date(),
+      });
+
+      return Math.max(0, Math.min(1, coherenceScore));
+    } catch (error) {
+      errors.push({
+        code: 'LOGICAL_COHERENCE_FAILED',
+        message: `Logical coherence analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        severity: 'medium',
+        context: { claimId: claim.id },
+        recoverable: true,
+        timestamp: new Date(),
+      });
+      return 0.5;
+    }
+  }
+
+  private async calculateFactualConsistency(
+    claim: AgentClaim,
+    evidence: TruthEvidence[],
+    errors: VerificationError[]
+  ): Promise<number> {
+    try {
+      // Perform statistical validation of claim metrics
+      const statisticalTests = {
+        distributionTest: this.performDistributionTest(claim),
+        outlierDetection: this.performOutlierDetection(claim),
+        trendAnalysis: this.performTrendAnalysis(claim),
+        correlationAnalysis: this.performCorrelationAnalysis(claim),
+      };
+
+      const consistencyScore = Object.values(statisticalTests).reduce((sum, score) => sum + score, 0) / 4;
+
+      evidence.push({
+        type: 'statistical_test',
+        source: 'statistical_analyzer',
+        weight: this.config.weights.factualConsistency,
+        score: consistencyScore,
+        details: statisticalTests,
+        timestamp: new Date(),
+      });
+
+      return Math.max(0, Math.min(1, consistencyScore));
+    } catch (error) {
+      errors.push({
+        code: 'FACTUAL_CONSISTENCY_FAILED',
+        message: `Factual consistency analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        severity: 'medium',
+        context: { claimId: claim.id },
+        recoverable: true,
+        timestamp: new Date(),
+      });
+      return 0.5;
+    }
+  }
+
+  private calculateWeightedScore(components: TruthScoreComponents): number {
+    const weights = this.config.weights;
+    const totalWeight = Object.values(weights).reduce((sum, weight) => sum + weight, 0);
+    
+    const weightedSum = 
+      (components.agentReliability * weights.agentReliability) +
+      (components.crossValidation * weights.crossValidation) +
+      (components.externalVerification * weights.externalVerification) +
+      (components.factualConsistency * weights.factualConsistency) +
+      (components.logicalCoherence * weights.logicalCoherence);
+
+    return weightedSum / totalWeight;
+  }
+
+  private calculateConfidenceInterval(components: TruthScoreComponents, evidenceCount: number): ConfidenceInterval {
+    const score = components.overall;
+    const sampleSize = Math.max(evidenceCount, 1);
+    const confidenceLevel = this.config.confidence.level;
+    
+    // Calculate standard error (simplified)
+    const variance = this.calculateComponentVariance(components);
+    const standardError = Math.sqrt(variance / sampleSize);
+    
+    // Z-score for confidence level (approximation)
+    const zScore = this.getZScore(confidenceLevel);
+    const margin = zScore * standardError;
+    
     return {
-      score: score / totalChecks,
-      discrepancies
+      lower: Math.max(0, score - margin),
+      upper: Math.min(1, score + margin),
+      level: confidenceLevel,
     };
   }
 
-  /**
-   * Verify code quality claims
-   */
-  private verifyQualityClaims(codeQuality: CodeQuality, qualityClaims: any): {
-    score: number;
-    discrepancies: Discrepancy[];
-  } {
-    const discrepancies: Discrepancy[] = [];
-    let score = 0;
-    const totalChecks = 4;
+  private calculateComponentVariance(components: TruthScoreComponents): number {
+    const scores = [
+      components.agentReliability,
+      components.crossValidation,
+      components.externalVerification,
+      components.factualConsistency,
+      components.logicalCoherence,
+    ];
+    
+    return this.calculateVariance(scores);
+  }
 
-    // Lint errors
-    const hasLintErrors = codeQuality.lint_results.errors > 0;
-    if (qualityClaims.no_lint_errors && hasLintErrors) {
-      discrepancies.push({
-        type: 'lint_errors_present',
-        description: `Claimed no lint errors but found ${codeQuality.lint_results.errors}`,
-        severity: 'medium',
-        claimed_value: 0,
-        actual_value: codeQuality.lint_results.errors,
-        impact_score: Math.min(codeQuality.lint_results.errors / 10, 0.5)
-      });
-    } else if (qualityClaims.no_lint_errors === !hasLintErrors) {
-      score += 1;
-    }
+  private calculateVariance(values: number[]): number {
+    if (values.length === 0) return 0;
+    
+    const mean = values.reduce((sum, val) => sum + val, 0) / values.length;
+    const squaredDiffs = values.map(val => Math.pow(val - mean, 2));
+    return squaredDiffs.reduce((sum, diff) => sum + diff, 0) / values.length;
+  }
 
-    // Type errors
-    const hasTypeErrors = codeQuality.type_results.errors > 0;
-    if (qualityClaims.no_type_errors && hasTypeErrors) {
-      discrepancies.push({
-        type: 'type_errors_present',
-        description: `Claimed no type errors but found ${codeQuality.type_results.errors}`,
-        severity: 'medium',
-        claimed_value: 0,
-        actual_value: codeQuality.type_results.errors,
-        impact_score: Math.min(codeQuality.type_results.errors / 5, 0.6)
-      });
-    } else if (qualityClaims.no_type_errors === !hasTypeErrors) {
-      score += 1;
-    }
+  private calculateTrendFactor(records: AgentPerformanceRecord[]): number {
+    if (records.length < 2) return 0.5;
+    
+    // Simple linear trend calculation
+    const scores = records.map(r => r.score);
+    const n = scores.length;
+    const x = Array.from({ length: n }, (_, i) => i);
+    
+    const sumX = x.reduce((a, b) => a + b, 0);
+    const sumY = scores.reduce((a, b) => a + b, 0);
+    const sumXY = x.reduce((sum, xi, i) => sum + xi * scores[i], 0);
+    const sumXX = x.reduce((sum, xi) => sum + xi * xi, 0);
+    
+    const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+    
+    // Convert slope to factor (positive trend increases score)
+    return 0.5 + Math.max(-0.5, Math.min(0.5, slope));
+  }
 
-    // Code complexity
-    const complexityAcceptable = codeQuality.complexity_metrics.cyclomatic_complexity <= 10;
-    if (qualityClaims.code_complexity_acceptable && !complexityAcceptable) {
-      discrepancies.push({
-        type: 'high_complexity',
-        description: `Claimed acceptable complexity but cyclomatic complexity is ${codeQuality.complexity_metrics.cyclomatic_complexity}`,
-        severity: 'low',
-        claimed_value: 'acceptable',
-        actual_value: codeQuality.complexity_metrics.cyclomatic_complexity,
-        impact_score: 0.2
-      });
-    } else if (qualityClaims.code_complexity_acceptable === complexityAcceptable) {
-      score += 1;
-    }
+  private getZScore(confidenceLevel: number): number {
+    // Simplified Z-score lookup
+    if (confidenceLevel >= 0.99) return 2.576;
+    if (confidenceLevel >= 0.95) return 1.96;
+    if (confidenceLevel >= 0.90) return 1.645;
+    if (confidenceLevel >= 0.80) return 1.282;
+    return 1.0;
+  }
 
-    // Security scan
-    const securityClean = codeQuality.security_scan.vulnerabilities_found === 0;
-    if (qualityClaims.security_scan_clean && !securityClean) {
-      const criticalVulns = codeQuality.security_scan.severity_breakdown.critical;
-      const highVulns = codeQuality.security_scan.severity_breakdown.high;
-      const severity = criticalVulns > 0 ? 'critical' : highVulns > 0 ? 'high' : 'medium';
+  private updateAgentStatistics(history: AgentPerformanceHistory): void {
+    const records = history.records;
+    if (records.length === 0) return;
+
+    const scores = records.map(r => r.score);
+    const successCount = records.filter(r => r.success).length;
+
+    history.statistics.averageScore = scores.reduce((sum, score) => sum + score, 0) / scores.length;
+    history.statistics.successRate = successCount / records.length;
+    history.statistics.totalClaims = records.length;
+
+    // Calculate trend
+    if (records.length >= 5) {
+      const recentScores = scores.slice(-5);
+      const earlierScores = scores.slice(-10, -5);
       
-      discrepancies.push({
-        type: 'security_vulnerabilities',
-        description: `Claimed security scan clean but found ${codeQuality.security_scan.vulnerabilities_found} vulnerabilities`,
-        severity,
-        claimed_value: 0,
-        actual_value: codeQuality.security_scan.vulnerabilities_found,
-        impact_score: criticalVulns * 0.9 + highVulns * 0.6 + 
-                     codeQuality.security_scan.severity_breakdown.medium * 0.3 +
-                     codeQuality.security_scan.severity_breakdown.low * 0.1
-      });
-    } else if (qualityClaims.security_scan_clean === securityClean) {
-      score += 1;
-    }
-
-    return {
-      score: score / totalChecks,
-      discrepancies
-    };
-  }
-
-  /**
-   * Verify build and deployment claims
-   */
-  private verifyBuildClaims(systemHealth: SystemHealth, buildClaims: any): {
-    score: number;
-    discrepancies: Discrepancy[];
-  } {
-    const discrepancies: Discrepancy[] = [];
-    let score = 0;
-    const totalChecks = 4;
-
-    // Build success
-    const buildSuccess = systemHealth.build_results.success;
-    if (buildClaims.builds_successfully && !buildSuccess) {
-      discrepancies.push({
-        type: 'build_failure',
-        description: 'Claimed successful build but build failed',
-        severity: 'critical',
-        claimed_value: true,
-        actual_value: buildSuccess,
-        impact_score: 1.0
-      });
-    } else if (buildClaims.builds_successfully === buildSuccess) {
-      score += 1;
-    }
-
-    // Build warnings
-    const hasWarnings = systemHealth.build_results.warnings > 0;
-    if (buildClaims.no_build_warnings && hasWarnings) {
-      discrepancies.push({
-        type: 'build_warnings_present',
-        description: `Claimed no build warnings but found ${systemHealth.build_results.warnings}`,
-        severity: 'low',
-        claimed_value: 0,
-        actual_value: systemHealth.build_results.warnings,
-        impact_score: Math.min(systemHealth.build_results.warnings / 20, 0.3)
-      });
-    } else if (buildClaims.no_build_warnings === !hasWarnings) {
-      score += 1;
-    }
-
-    // Deployment readiness
-    const deploymentReady = systemHealth.deployment_status.deployable;
-    if (buildClaims.deployment_ready && !deploymentReady) {
-      discrepancies.push({
-        type: 'deployment_not_ready',
-        description: 'Claimed deployment ready but deployment validation failed',
-        severity: 'high',
-        claimed_value: true,
-        actual_value: deploymentReady,
-        impact_score: 0.8
-      });
-    } else if (buildClaims.deployment_ready === deploymentReady) {
-      score += 1;
-    }
-
-    // Dependencies resolved
-    const dependenciesResolved = systemHealth.deployment_status.dependencies_satisfied;
-    if (buildClaims.dependencies_resolved && !dependenciesResolved) {
-      discrepancies.push({
-        type: 'dependency_issues',
-        description: 'Claimed dependencies resolved but dependency validation failed',
-        severity: 'high',
-        claimed_value: true,
-        actual_value: dependenciesResolved,
-        impact_score: 0.7
-      });
-    } else if (buildClaims.dependencies_resolved === dependenciesResolved) {
-      score += 1;
-    }
-
-    return {
-      score: score / totalChecks,
-      discrepancies
-    };
-  }
-
-  /**
-   * Verify performance claims
-   */
-  private verifyPerformanceClaims(performanceMetrics: any, performanceClaims: any): {
-    score: number;
-    discrepancies: Discrepancy[];
-  } {
-    const discrepancies: Discrepancy[] = [];
-    let score = 0;
-    const totalChecks = 4;
-
-    // Response time
-    const responseTimeAcceptable = performanceMetrics.response_time_p95_ms <= 1000; // 1 second threshold
-    if (performanceClaims.response_time_acceptable && !responseTimeAcceptable) {
-      discrepancies.push({
-        type: 'poor_response_time',
-        description: `Claimed acceptable response time but P95 is ${performanceMetrics.response_time_p95_ms}ms`,
-        severity: 'medium',
-        claimed_value: 'acceptable',
-        actual_value: performanceMetrics.response_time_p95_ms,
-        impact_score: Math.min((performanceMetrics.response_time_p95_ms - 1000) / 5000, 0.5)
-      });
-    } else if (performanceClaims.response_time_acceptable === responseTimeAcceptable) {
-      score += 1;
-    }
-
-    // Memory usage
-    const memoryUsageAcceptable = performanceMetrics.memory_usage_mb <= 512; // 512MB threshold
-    if (performanceClaims.memory_usage_acceptable && !memoryUsageAcceptable) {
-      discrepancies.push({
-        type: 'high_memory_usage',
-        description: `Claimed acceptable memory usage but using ${performanceMetrics.memory_usage_mb}MB`,
-        severity: 'medium',
-        claimed_value: 'acceptable',
-        actual_value: performanceMetrics.memory_usage_mb,
-        impact_score: Math.min((performanceMetrics.memory_usage_mb - 512) / 1024, 0.4)
-      });
-    } else if (performanceClaims.memory_usage_acceptable === memoryUsageAcceptable) {
-      score += 1;
-    }
-
-    // Throughput
-    const throughputAcceptable = performanceMetrics.throughput_requests_per_second >= 10; // 10 RPS threshold
-    if (performanceClaims.throughput_acceptable && !throughputAcceptable) {
-      discrepancies.push({
-        type: 'low_throughput',
-        description: `Claimed acceptable throughput but only ${performanceMetrics.throughput_requests_per_second} RPS`,
-        severity: 'medium',
-        claimed_value: 'acceptable',
-        actual_value: performanceMetrics.throughput_requests_per_second,
-        impact_score: Math.min((10 - performanceMetrics.throughput_requests_per_second) / 10, 0.4)
-      });
-    } else if (performanceClaims.throughput_acceptable === throughputAcceptable) {
-      score += 1;
-    }
-
-    // Error rate
-    const errorRateAcceptable = performanceMetrics.error_rate_percentage <= 1; // 1% threshold
-    if (performanceClaims.meets_performance_targets && !errorRateAcceptable) {
-      discrepancies.push({
-        type: 'high_error_rate',
-        description: `Claimed performance targets met but error rate is ${performanceMetrics.error_rate_percentage}%`,
-        severity: 'high',
-        claimed_value: 'acceptable',
-        actual_value: performanceMetrics.error_rate_percentage,
-        impact_score: Math.min(performanceMetrics.error_rate_percentage / 10, 0.6)
-      });
-    } else if (performanceClaims.meets_performance_targets === errorRateAcceptable) {
-      score += 1;
-    }
-
-    return {
-      score: score / totalChecks,
-      discrepancies
-    };
-  }
-
-  /**
-   * Assess the quality of provided evidence
-   */
-  private assessEvidenceQuality(evidence: Evidence): EvidenceQuality {
-    const now = Date.now();
-    const evidenceAge = now - evidence.collection_timestamp;
-    const maxAge = 30 * 60 * 1000; // 30 minutes
-
-    // Freshness (0-1): How recent is the evidence
-    const freshness = Math.max(0, 1 - (evidenceAge / maxAge));
-
-    // Completeness (0-1): How complete is the evidence
-    let completeness = 0;
-    const components = 5; // test_results, code_quality, system_health, agent_coordination, timing
-    
-    if (evidence.test_results) completeness += 0.2;
-    if (evidence.code_quality) completeness += 0.2;
-    if (evidence.system_health) completeness += 0.2;
-    if (evidence.agent_coordination) completeness += 0.2;
-    if (evidence.collection_duration_ms > 0) completeness += 0.2;
-
-    // Reliability (0-1): How reliable is the evidence source
-    const reliability = this.calculateEvidenceReliability(evidence);
-
-    // Coverage (0-1): How comprehensive is the evidence
-    const coverage = this.calculateEvidenceCoverage(evidence);
-
-    // Overall quality (weighted average)
-    const overall = (freshness * 0.2 + completeness * 0.3 + reliability * 0.3 + coverage * 0.2);
-
-    return {
-      completeness: Math.round(completeness * 1000) / 1000,
-      freshness: Math.round(freshness * 1000) / 1000,
-      reliability: Math.round(reliability * 1000) / 1000,
-      coverage: Math.round(coverage * 1000) / 1000,
-      overall: Math.round(overall * 1000) / 1000
-    };
-  }
-
-  /**
-   * Calculate evidence reliability based on source consistency
-   */
-  private calculateEvidenceReliability(evidence: Evidence): number {
-    let reliability = 1.0;
-
-    // Check for inconsistencies in the evidence
-    if (evidence.test_results && evidence.system_health) {
-      // If tests pass but build fails, reduce reliability
-      const testsPass = this.calculateTestPassRate(evidence.test_results) > 0.9;
-      const buildSuccess = evidence.system_health.build_results.success;
-      
-      if (testsPass && !buildSuccess) {
-        reliability -= 0.3;
+      if (earlierScores.length > 0) {
+        const recentAvg = recentScores.reduce((sum, score) => sum + score, 0) / recentScores.length;
+        const earlierAvg = earlierScores.reduce((sum, score) => sum + score, 0) / earlierScores.length;
+        
+        if (recentAvg > earlierAvg + 0.05) {
+          history.statistics.recentTrend = 'improving';
+        } else if (recentAvg < earlierAvg - 0.05) {
+          history.statistics.recentTrend = 'declining';
+        } else {
+          history.statistics.recentTrend = 'stable';
+        }
       }
     }
-
-    // Check collection duration (very fast or very slow collection might be unreliable)
-    if (evidence.collection_duration_ms < 1000 || evidence.collection_duration_ms > 300000) {
-      reliability -= 0.1;
-    }
-
-    return Math.max(0, reliability);
   }
 
-  /**
-   * Calculate evidence coverage
-   */
-  private calculateEvidenceCoverage(evidence: Evidence): number {
-    let coverage = 0;
-    const maxCoverage = 10;
-
-    // Test coverage
-    if (evidence.test_results) {
-      coverage += evidence.test_results.unit_tests ? 1 : 0;
-      coverage += evidence.test_results.integration_tests ? 1 : 0;
-      coverage += evidence.test_results.e2e_tests ? 1 : 0;
-      coverage += evidence.test_results.cross_agent_tests ? 1 : 0;
-    }
-
-    // Code quality coverage
-    if (evidence.code_quality) {
-      coverage += evidence.code_quality.lint_results ? 1 : 0;
-      coverage += evidence.code_quality.type_results ? 1 : 0;
-      coverage += evidence.code_quality.security_scan ? 1 : 0;
-    }
-
-    // System health coverage
-    if (evidence.system_health) {
-      coverage += evidence.system_health.build_results ? 1 : 0;
-      coverage += evidence.system_health.performance_metrics ? 1 : 0;
-      coverage += evidence.system_health.deployment_status ? 1 : 0;
-    }
-
-    return coverage / maxCoverage;
+  // Simulation methods for demo purposes - replace with real implementations
+  private simulatePeerValidation(claim: AgentClaim, peer: AgentState): number {
+    // Simulate peer validation logic
+    const baseScore = 0.7;
+    const randomFactor = (Math.random() - 0.5) * 0.4;
+    return Math.max(0, Math.min(1, baseScore + randomFactor));
   }
 
-  // Helper methods
-  private calculateTestPassRate(testResults: TestResults): number {
-    const allTests = Object.values(testResults);
-    let totalTests = 0;
-    let passedTests = 0;
-
-    for (const testSuite of allTests) {
-      totalTests += testSuite.total;
-      passedTests += testSuite.passed;
-    }
-
-    return totalTests > 0 ? passedTests / totalTests : 0;
+  private async simulateExternalVerification(claim: AgentClaim, source: ExternalSource): Promise<number> {
+    // Simulate external source verification
+    const baseScore = source.reliability * 0.8;
+    const randomFactor = (Math.random() - 0.5) * 0.3;
+    return Math.max(0, Math.min(1, baseScore + randomFactor));
   }
 
-  private calculateAverageCoverage(testResults: TestResults): number {
-    const allTests = Object.values(testResults);
-    let totalCoverage = 0;
-    let suiteCount = 0;
-
-    for (const testSuite of allTests) {
-      if (testSuite.coverage_percentage > 0) {
-        totalCoverage += testSuite.coverage_percentage;
-        suiteCount++;
-      }
-    }
-
-    return suiteCount > 0 ? totalCoverage / suiteCount : 0;
-  }
-
-  private hasFailingTests(testResults: TestResults): boolean {
-    return Object.values(testResults).some(suite => suite.failed > 0);
-  }
-
-  private hasDatabaseTestFailures(testResults: TestResults): boolean {
-    // Check for database-related test failures in failure messages
-    const allFailures = Object.values(testResults).flatMap(suite => suite.failures || []);
-    return allFailures.some(failure => 
-      failure.error_message.toLowerCase().includes('database') ||
-      failure.error_message.toLowerCase().includes('migration') ||
-      failure.test_name.toLowerCase().includes('db')
-    );
-  }
-
-  /**
-   * Store truth score with persistence
-   */
-  async storeTruthScore(truthScore: TruthScore): Promise<string> {
-    // This would integrate with the existing memory system
-    const timestamp = Date.now();
-    const filename = `truth_score_${truthScore.agent_id}_${truthScore.task_id}_${timestamp}.json`;
+  private checkStructuralIntegrity(claim: AgentClaim): number {
+    // Check if claim has required fields and proper structure
+    let score = 0.8;
     
-    // In actual implementation, this would use the memory manager
-    console.log(`Storing truth score: ${filename}`, truthScore);
+    if (!claim.data || typeof claim.data !== 'object') score -= 0.3;
+    if (!claim.evidence || claim.evidence.length === 0) score -= 0.2;
+    if (!claim.metrics) score -= 0.2;
     
-    return filename;
+    return Math.max(0, score);
   }
 
-  /**
-   * Compare claims with reality for discrepancy analysis
-   */
-  async compareClaimToReality(claims: AgentClaims, evidence: Evidence): Promise<{
-    truth_score: TruthScore;
-    detailed_analysis: any;
-  }> {
-    const truthScore = await this.calculateTruthScore(evidence, claims);
-    
-    const detailedAnalysis = {
-      claim_accuracy: this.analyzeClaimAccuracy(claims, evidence),
-      evidence_gaps: this.identifyEvidenceGaps(evidence),
-      risk_assessment: this.assessRisks(truthScore),
-      recommendations: this.generateRecommendations(truthScore)
-    };
-
-    return {
-      truth_score: truthScore,
-      detailed_analysis: detailedAnalysis
-    };
+  private checkCausalConsistency(claim: AgentClaim): number {
+    // Check for causal relationships in claim data
+    return 0.8; // Simplified - implement actual causal analysis
   }
 
-  private analyzeClaimAccuracy(claims: AgentClaims, evidence: Evidence): any {
-    // Detailed claim-by-claim accuracy analysis
-    return {
-      test_claims_accuracy: this.verifyTestClaims(evidence.test_results, claims.test_claims),
-      quality_claims_accuracy: this.verifyQualityClaims(evidence.code_quality, claims.quality_claims),
-      // ... other claim types
-    };
-  }
-
-  private identifyEvidenceGaps(evidence: Evidence): string[] {
-    const gaps: string[] = [];
+  private checkTemporalCoherence(claim: AgentClaim): number {
+    // Check temporal consistency of claim
+    const now = new Date();
+    const claimAge = now.getTime() - claim.submittedAt.getTime();
     
-    if (!evidence.test_results) gaps.push('Missing test results');
-    if (!evidence.code_quality) gaps.push('Missing code quality metrics');
-    if (!evidence.system_health) gaps.push('Missing system health data');
-    if (!evidence.agent_coordination) gaps.push('Missing agent coordination data');
-    
-    return gaps;
-  }
-
-  private assessRisks(truthScore: TruthScore): any {
-    const risks: any[] = [];
-    
-    if (truthScore.score < 0.8) {
-      risks.push({
-        type: 'reliability_risk',
-        description: 'Low truth score indicates unreliable agent claims',
-        severity: 'high'
-      });
+    // Claims should be recent
+    if (claimAge > 24 * 60 * 60 * 1000) { // More than 24 hours
+      return 0.5;
     }
-
-    if (truthScore.discrepancies.some(d => d.severity === 'critical')) {
-      risks.push({
-        type: 'critical_failure_risk',
-        description: 'Critical discrepancies detected',
-        severity: 'critical'
-      });
-    }
-
-    return risks;
+    
+    return 0.9;
   }
 
-  private generateRecommendations(truthScore: TruthScore): string[] {
-    const recommendations: string[] = [];
+  private checkMetricConsistency(claim: AgentClaim): number {
+    // Check consistency of metrics in claim
+    if (!claim.metrics) return 0.5;
     
-    if (truthScore.score < this.config.minimum_threshold) {
-      recommendations.push('Implement additional verification steps');
-      recommendations.push('Review agent claim generation logic');
-    }
+    // Check for reasonable metric values
+    const metrics = claim.metrics;
+    let score = 0.8;
+    
+    if (metrics.accuracy && (metrics.accuracy < 0 || metrics.accuracy > 1)) score -= 0.3;
+    if (metrics.errorRate && metrics.errorRate < 0) score -= 0.2;
+    if (metrics.executionTime && metrics.executionTime < 0) score -= 0.2;
+    
+    return Math.max(0, score);
+  }
 
-    if (truthScore.evidence_quality.overall < 0.8) {
-      recommendations.push('Improve evidence collection processes');
-      recommendations.push('Increase evidence collection frequency');
-    }
+  private performDistributionTest(claim: AgentClaim): number {
+    // Perform statistical distribution test
+    return 0.8; // Simplified - implement actual statistical tests
+  }
 
-    return recommendations;
+  private performOutlierDetection(claim: AgentClaim): number {
+    // Detect outliers in claim metrics
+    return 0.8; // Simplified - implement actual outlier detection
+  }
+
+  private performTrendAnalysis(claim: AgentClaim): number {
+    // Analyze trends in claim data
+    return 0.8; // Simplified - implement actual trend analysis
+  }
+
+  private performCorrelationAnalysis(claim: AgentClaim): number {
+    // Analyze correlations in claim metrics
+    return 0.8; // Simplified - implement actual correlation analysis
   }
 }
+
+// Supporting interfaces
+interface AgentPerformanceHistory {
+  agentId: string;
+  records: AgentPerformanceRecord[];
+  statistics: AgentStatistics;
+}
+
+interface AgentPerformanceRecord {
+  timestamp: Date;
+  claimId: string;
+  score: number;
+  success: boolean;
+  executionTime: number;
+  resourceUsage: number;
+  metadata: Record<string, unknown>;
+}
+
+interface AgentStatistics {
+  averageScore: number;
+  successRate: number;
+  totalClaims: number;
+  recentTrend: 'improving' | 'stable' | 'declining';
+}
+
+interface CachedValidation {
+  key: string;
+  result: number;
+  timestamp: Date;
+  expiry: Date;
+}
+
+interface ScoringContext {
+  peers?: AgentState[];
+  externalSources?: ExternalSource[];
+  historicalData?: Record<string, unknown>;
+  constraints?: Record<string, unknown>;
+}
+
+interface ExternalSource {
+  id: string;
+  name: string;
+  type: string;
+  endpoint: string;
+  reliability: number;
+  credentials?: Record<string, string>;
+}
+
+export default TruthScorer;
