@@ -68,6 +68,33 @@ async function executeRealChain(prompts, flags = {}) {
 }
 
 /**
+ * Filter stream-json to remove system messages and keep only user/assistant/result
+ */
+function filterStreamJson(rawOutput) {
+  const lines = rawOutput.split('\n').filter(line => line.trim());
+  const filtered = [];
+  
+  for (const line of lines) {
+    try {
+      const json = JSON.parse(line);
+      // Keep only message types that --input-format accepts
+      if (json.type === 'message' || json.type === 'tool_use' || json.type === 'tool_result' || json.type === 'result') {
+        // For messages, ensure they have user or assistant role
+        if (json.type === 'message' && json.role !== 'system') {
+          filtered.push(line);
+        } else if (json.type !== 'message') {
+          filtered.push(line);
+        }
+      }
+    } catch (e) {
+      // Skip invalid JSON lines
+    }
+  }
+  
+  return filtered.join('\n');
+}
+
+/**
  * Execute a single step in the chain with proper stream-json handling
  */
 async function executeChainStep(prompt, inputData, isFirst, isLast, flags) {
@@ -110,11 +137,15 @@ async function executeChainStep(prompt, inputData, isFirst, isLast, flags) {
     // Pipe input data if available
     if (!isFirst && inputData) {
       try {
-        // Write the previous output as input
-        claudeProcess.stdin.write(inputData);
+        // Filter the input to remove system messages
+        const filteredInput = filterStreamJson(inputData);
+        
+        // Write the filtered output as input
+        claudeProcess.stdin.write(filteredInput);
         claudeProcess.stdin.end();
         if (flags.verbose) {
-          console.log('   🔗 Piped input from previous step');
+          console.log('   🔗 Piped filtered input from previous step');
+          console.log(`   Filtered ${inputData.split('\n').length} lines to ${filteredInput.split('\n').filter(l => l).length} lines`);
         }
       } catch (error) {
         console.error('   Error piping input:', error.message);
