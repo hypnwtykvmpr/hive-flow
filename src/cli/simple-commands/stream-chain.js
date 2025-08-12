@@ -42,11 +42,10 @@ async function executeClaudeCommand(prompt, timeout = 20000, useStreamJson = fal
       args.push('--output-format', 'stream-json', '--verbose');
     }
     
-    // Properly quote the prompt to handle spaces and special characters
-    const quotedPrompt = `"${prompt.replace(/"/g, '\\"')}"`;
-    args.push(quotedPrompt);
+    // Add the prompt as the last argument (exec will handle proper escaping)
+    args.push(prompt);
     
-    const command = `claude ${args.join(' ')}`;
+    const command = `claude ${args.slice(0, -1).join(' ')} "${prompt.replace(/"/g, '\\"')}"`;
     
     console.log(`🔄 Executing: ${command}`);
     
