@@ -258,6 +258,25 @@ export async function verificationCommand(args, flags) {
         }
       }
       
+      // Filter by taskId if specified
+      if (flags.taskId) {
+        filteredHistory = filteredHistory.filter(v => v.taskId === flags.taskId);
+        if (filteredHistory.length === 0) {
+          console.log(`\n⚠️ No verification history found for task: ${flags.taskId}`);
+          return;
+        }
+      }
+      
+      // Filter by threshold if specified
+      if (flags.threshold) {
+        const threshold = parseFloat(flags.threshold);
+        filteredHistory = filteredHistory.filter(v => v.score < threshold);
+        if (filteredHistory.length === 0) {
+          console.log(`\n✅ All verifications meet or exceed threshold: ${threshold}`);
+          return;
+        }
+      }
+      
       // Generate report (with filtered data if agent specified)
       const report = flags.agent ? 
         await generateFilteredReport(system, filteredHistory, flags.agent) :
