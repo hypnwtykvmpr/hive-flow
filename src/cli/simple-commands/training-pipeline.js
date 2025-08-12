@@ -443,8 +443,8 @@ describe('Sorting Algorithms', () => {
     // Save updated profiles
     await fs.writeFile(this.agentProfiles, JSON.stringify(profiles, null, 2));
 
-    // Generate recommendations based on REAL performance
-    const recommendations = this.generateRealRecommendations(strategyPerformance);
+    // Generate recommendations based on performance
+    const recommendations = this.generateRecommendations(strategyPerformance);
     
     console.log('\n📊 Real Learning Results:');
     for (const [strategy, perf] of Object.entries(strategyPerformance)) {
