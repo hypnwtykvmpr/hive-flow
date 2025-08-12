@@ -22,6 +22,11 @@ export function showInitHelp() {
   console.log('  --skip-mcp           Skip automatic MCP server setup in Claude Code');
   console.log('  --monitoring         Enable token usage tracking and telemetry setup');
   console.log();
+  console.log('Verification & Pair Programming:');
+  console.log('  --verify             Initialize with Truth Verification System enabled');
+  console.log('  --pair               Initialize with Pair Programming mode enabled');
+  console.log('                       (These options create verification-focused CLAUDE.md)');
+  console.log();
   console.log('Advanced Options:');
   console.log('  --enhanced, --safe   Enhanced initialization with validation and rollback');
   console.log('  --validate           Run validation checks only');
