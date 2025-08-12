@@ -282,7 +282,13 @@ export async function verificationCommand(args, flags) {
         await generateFilteredReport(system, filteredHistory, flags.agent) :
         await system.generateTruthReport();
       
-      // Basic report (always shown)
+      // JSON output only mode
+      if (flags.json) {
+        console.log(JSON.stringify(report, null, 2));
+        return;
+      }
+      
+      // Basic report (shown when not in JSON mode)
       console.log('\n📊 Truth Scoring Report' + (flags.agent ? ` - Agent: ${flags.agent}` : ''));
       console.log('━'.repeat(50));
       console.log(`Mode: ${report.mode || system.mode}`);
