@@ -226,19 +226,86 @@ export async function verificationCommand(args, flags) {
     case 'truth':
     case 'score':
       await system.loadMemory();
-      const report = await system.generateTruthReport();
+      
+      // Filter by agent if specified
+      let filteredHistory = system.verificationHistory;
+      if (flags.agent) {
+        filteredHistory = system.verificationHistory.filter(v => v.agentType === flags.agent);
+        if (filteredHistory.length === 0) {
+          console.log(`\n⚠️ No verification history found for agent: ${flags.agent}`);
+          return;
+        }
+      }
+      
+      // Generate report (with filtered data if agent specified)
+      const report = flags.agent ? 
+        await generateFilteredReport(system, filteredHistory, flags.agent) :
+        await system.generateTruthReport();
       
       // Basic report (always shown)
-      console.log('\n📊 Truth Scoring Report');
+      console.log('\n📊 Truth Scoring Report' + (flags.agent ? ` - Agent: ${flags.agent}` : ''));
       console.log('━'.repeat(50));
-      console.log(`Mode: ${report.mode}`);
-      console.log(`Threshold: ${report.threshold}`);
+      console.log(`Mode: ${report.mode || system.mode}`);
+      console.log(`Threshold: ${report.threshold || VERIFICATION_MODES[system.mode].threshold}`);
       console.log(`Total Verifications: ${report.totalVerifications}`);
       console.log(`Passed: ${report.passedVerifications}`);
       console.log(`Average Score: ${report.averageScore.toFixed(3)}`);
-      console.log('\n🤖 Agent Reliability:');
-      for (const [agent, reliability] of Object.entries(report.agentReliability)) {
-        console.log(`   ${agent}: ${(reliability * 100).toFixed(1)}%`);
+      
+      if (flags.agent) {
+        // Show detailed info for specific agent
+        console.log(`\n🤖 ${flags.agent} Agent Details:`);
+        console.log(`   Reliability: ${(report.agentReliability[flags.agent] * 100).toFixed(1)}%`);
+        console.log(`   Total Tasks: ${filteredHistory.length}`);
+        console.log(`   Passed: ${filteredHistory.filter(v => v.passed).length}`);
+        console.log(`   Failed: ${filteredHistory.filter(v => !v.passed).length}`);
+        
+        if (flags.detailed || flags.detail) {
+          console.log('\n📋 Verification History:');
+          const recentAgent = filteredHistory.slice(-10);
+          for (const v of recentAgent) {
+            const time = new Date(v.timestamp).toLocaleTimeString();
+            console.log(`   ${v.passed ? '✅' : '❌'} [${time}] ${v.taskId}: ${v.score.toFixed(3)}`);
+            if (v.results && flags.verbose) {
+              for (const [check, result] of Object.entries(v.results)) {
+                console.log(`      • ${check}: ${result.passed ? '✓' : '✗'} (${result.score.toFixed(2)})`);
+              }
+            }
+          }
+          
+          // Score distribution
+          const scores = filteredHistory.map(v => v.score);
+          const minScore = Math.min(...scores);
+          const maxScore = Math.max(...scores);
+          console.log('\n📊 Score Distribution:');
+          console.log(`   Min Score: ${minScore.toFixed(3)}`);
+          console.log(`   Max Score: ${maxScore.toFixed(3)}`);
+          console.log(`   Average: ${report.averageScore.toFixed(3)}`);
+          
+          // Performance trend
+          if (filteredHistory.length > 5) {
+            const recent5 = filteredHistory.slice(-5);
+            const older5 = filteredHistory.slice(-10, -5);
+            const recentAvg = recent5.reduce((sum, v) => sum + v.score, 0) / recent5.length;
+            const olderAvg = older5.length > 0 ? 
+              older5.reduce((sum, v) => sum + v.score, 0) / older5.length : 0;
+            
+            console.log('\n📈 Performance Trend:');
+            if (olderAvg > 0) {
+              const trend = recentAvg - olderAvg;
+              const trendSymbol = trend > 0 ? '↑' : trend < 0 ? '↓' : '→';
+              console.log(`   Recent Average: ${recentAvg.toFixed(3)} ${trendSymbol}`);
+              console.log(`   Previous Average: ${olderAvg.toFixed(3)}`);
+              console.log(`   Change: ${trend >= 0 ? '+' : ''}${(trend * 100).toFixed(1)}%`);
+            } else {
+              console.log(`   Recent Average: ${recentAvg.toFixed(3)}`);
+            }
+          }
+        }
+      } else {
+        console.log('\n🤖 Agent Reliability:');
+        for (const [agent, reliability] of Object.entries(report.agentReliability)) {
+          console.log(`   ${agent}: ${(reliability * 100).toFixed(1)}%`);
+        }
       }
       
       // Detailed report with --report flag
