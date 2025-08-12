@@ -63,15 +63,23 @@ function mockStreamStep(prompt, inputStream, isLast, flags, resolve, startTime) 
 function generateMockOutput(prompt, inputStream) {
   const timestamp = new Date().toISOString();
   
-  // Create mock stream-json output
+  // Create mock stream-json output in correct format
   const streamJson = JSON.stringify({
-    type: 'message',
-    role: 'assistant',
-    content: [{
-      type: 'text',
-      text: `Mock processing: ${prompt.slice(0, 50)}...`
-    }],
-    timestamp
+    type: 'assistant',
+    message: {
+      id: `msg_${Date.now()}`,
+      type: 'message',
+      role: 'assistant',
+      model: 'claude-mock',
+      content: [{
+        type: 'text',
+        text: `Mock processing: ${prompt.slice(0, 50)}...`
+      }],
+      stop_reason: null,
+      stop_sequence: null,
+      usage: { input_tokens: 5, output_tokens: 10 }
+    },
+    session_id: 'mock-session'
   });
   
   // Create mock text output
