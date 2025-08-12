@@ -4,7 +4,7 @@
  * Clean implementation focused on real Claude CLI execution
  */
 
-import { exec, execSync } from 'child_process';
+import { exec, execSync, spawn } from 'child_process';
 
 /**
  * Check if claude CLI is available
