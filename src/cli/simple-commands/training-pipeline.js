@@ -579,7 +579,7 @@ describe('Sorting Algorithms', () => {
         const validation = await this.validateImprovements(baselineMetrics, currentMetrics);
         
         if (validation.summary.overallImprovement) {
-          console.log('✅ Real improvement detected!');
+          console.log('✅ Improvement detected!');
         } else {
           console.log('⚠️  More training needed for significant improvement');
         }
