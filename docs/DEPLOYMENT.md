@@ -1647,26 +1647,106 @@ aws ecs create-service \
   --enable-logging
 ```
 
-### Google Cloud Platform
+### Google Cloud Platform Production
+
+#### GKE Deployment
+
+```bash
+#!/bin/bash
+# Deploy to Google Kubernetes Engine
+
+PROJECT_ID="your-project-id"
+CLUSTER_NAME="claude-flow-production"
+REGION="us-central1"
+
+# Create GKE cluster
+gcloud container clusters create $CLUSTER_NAME \
+  --project=$PROJECT_ID \
+  --region=$REGION \
+  --machine-type=e2-standard-4 \
+  --num-nodes=3 \
+  --min-nodes=3 \
+  --max-nodes=20 \
+  --enable-autoscaling \
+  --enable-autorepair \
+  --enable-autoupgrade \
+  --enable-network-policy \
+  --enable-ip-alias \
+  --disk-size=50GB \
+  --disk-type=pd-ssd \
+  --release-channel=stable
+
+# Get credentials
+gcloud container clusters get-credentials $CLUSTER_NAME --region=$REGION --project=$PROJECT_ID
+
+# Install ingress controller
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.8.2/deploy/static/provider/cloud/deploy.yaml
+
+# Deploy application
+kubectl create namespace claude-flow
+kubectl apply -f k8s/ -n claude-flow
+
+echo "GKE deployment completed!"
+```
+
+#### Cloud Run Deployment
+
+```yaml
+# cloud-run.yaml
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: claude-flow
+  annotations:
+    run.googleapis.com/ingress: all
+    run.googleapis.com/execution-environment: gen2
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/minScale: "3"
+        autoscaling.knative.dev/maxScale: "100"
+        run.googleapis.com/cpu-throttling: "false"
+        run.googleapis.com/memory: "4Gi"
+        run.googleapis.com/cpu: "2"
+    spec:
+      containerConcurrency: 100
+      containers:
+      - image: gcr.io/PROJECT_ID/claude-flow:2.0.0
+        ports:
+        - containerPort: 3000
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: CLAUDE_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: claude-flow-secrets
+              key: claude-api-key
+        resources:
+          limits:
+            cpu: "2"
+            memory: "4Gi"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        startupProbe:
+          httpGet:
+            path: /ready
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          failureThreshold: 30
+```
 
 ```bash
 # Deploy to Cloud Run
-gcloud run deploy claude-flow \
-  --image gcr.io/project-id/claude-flow:latest \
-  --platform managed \
-  --region us-central1 \
-  --allow-unauthenticated \
-  --set-env-vars="CLAUDE_API_KEY=$CLAUDE_API_KEY"
-
-# Deploy to App Engine
-gcloud app deploy app.yaml
-
-# Deploy to GKE
-gcloud container clusters create claude-flow-cluster \
-  --num-nodes=3 \
-  --zone=us-central1-a
-
-kubectl apply -f k8s/
+gcloud run services replace cloud-run.yaml \
+  --region=us-central1 \
+  --project=your-project-id
 ```
 
 ### Azure Deployment
