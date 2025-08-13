@@ -297,43 +297,53 @@ async function tokenUsageCommand(subArgs, flags) {
     
     printSuccess(`✅ Token usage analysis completed`);
 
-    // Display real token usage
-    console.log(`\n🔢 TOKEN USAGE SUMMARY:`);
-    console.log(`  📝 Total tokens consumed: ${tokenData.total.toLocaleString()}`);
-    console.log(`  📥 Input tokens: ${tokenData.input.toLocaleString()} (${((tokenData.input / tokenData.total) * 100).toFixed(1)}%)`);
-    console.log(`  📤 Output tokens: ${tokenData.output.toLocaleString()} (${((tokenData.output / tokenData.total) * 100).toFixed(1)}%)`);
-    
-    if (costAnalysis) {
-      const cost = calculateCost(tokenData);
-      console.log(`  💰 Estimated cost: $${cost.total.toFixed(2)}`);
-      console.log(`     Input cost: $${cost.input.toFixed(2)}`);
-      console.log(`     Output cost: $${cost.output.toFixed(2)}`);
+    // Check if we have any data
+    if (tokenData.total === 0) {
+      // Show instructions when no data available
+      await showSimulatedTokenUsage(breakdown, costAnalysis);
+      
+      // Still generate empty report for consistency
+      const reportPath = await generateTokenUsageReport(tokenData, agent);
+      console.log(`\n📄 Detailed usage log: ${reportPath}`);
+    } else {
+      // Display real token usage
+      console.log(`\n🔢 TOKEN USAGE SUMMARY:`);
+      console.log(`  📝 Total tokens consumed: ${tokenData.total.toLocaleString()}`);
+      console.log(`  📥 Input tokens: ${tokenData.input.toLocaleString()} (${((tokenData.input / tokenData.total) * 100).toFixed(1)}%)`);
+      console.log(`  📤 Output tokens: ${tokenData.output.toLocaleString()} (${((tokenData.output / tokenData.total) * 100).toFixed(1)}%)`);
+      
+      if (costAnalysis) {
+        const cost = calculateCost(tokenData);
+        console.log(`  💰 Estimated cost: $${cost.total.toFixed(2)}`);
+        console.log(`     Input cost: $${cost.input.toFixed(2)}`);
+        console.log(`     Output cost: $${cost.output.toFixed(2)}`);
+      }
+
+      if (breakdown && tokenData.byAgent) {
+        console.log(`\n📊 BREAKDOWN BY AGENT TYPE:`);
+        Object.entries(tokenData.byAgent).forEach(([agentType, usage]) => {
+          const percentage = ((usage / tokenData.total) * 100).toFixed(1);
+          const icon = getAgentIcon(agentType);
+          console.log(`  ${icon} ${agentType}: ${usage.toLocaleString()} tokens (${percentage}%)`);
+        });
+
+        console.log(`\n💡 OPTIMIZATION OPPORTUNITIES:`);
+        const opportunities = generateOptimizationSuggestions(tokenData);
+        opportunities.forEach(suggestion => {
+          console.log(`  • ${suggestion}`);
+        });
+      }
+
+      // Generate real CSV report
+      const reportPath = await generateTokenUsageReport(tokenData, agent);
+      console.log(`\n📄 Detailed usage log: ${reportPath}`);
     }
-
-    if (breakdown && tokenData.byAgent) {
-      console.log(`\n📊 BREAKDOWN BY AGENT TYPE:`);
-      Object.entries(tokenData.byAgent).forEach(([agentType, usage]) => {
-        const percentage = ((usage / tokenData.total) * 100).toFixed(1);
-        const icon = getAgentIcon(agentType);
-        console.log(`  ${icon} ${agentType}: ${usage.toLocaleString()} tokens (${percentage}%)`);
-      });
-
-      console.log(`\n💡 OPTIMIZATION OPPORTUNITIES:`);
-      const opportunities = generateOptimizationSuggestions(tokenData);
-      opportunities.forEach(suggestion => {
-        console.log(`  • ${suggestion}`);
-      });
-    }
-
-    // Generate real CSV report
-    const reportPath = await generateTokenUsageReport(tokenData, agent);
-    console.log(`\n📄 Detailed usage log: ${reportPath}`);
     
   } catch (err) {
     printError(`Failed to get real token usage: ${err.message}`);
-    printWarning('Falling back to simulated data...');
+    printWarning('Falling back to help instructions...');
     
-    // Fallback to simulated data
+    // Fallback to instructions
     await showSimulatedTokenUsage(breakdown, costAnalysis);
   }
 }
