@@ -1,10 +1,26 @@
 [
   {
-    "id": "cmd-swarm-1755111586281",
-    "type": "swarm",
+    "id": "cmd-analysis-1755111912291",
+    "type": "analysis",
     "success": true,
-    "duration": 5.588523999999978,
-    "timestamp": 1755111586287,
+    "duration": 0.9767319999999984,
+    "timestamp": 1755111912292,
+    "metadata": {}
+  },
+  {
+    "id": "cmd-analysis-1755111919406",
+    "type": "analysis",
+    "success": true,
+    "duration": 7.927526999999998,
+    "timestamp": 1755111919414,
+    "metadata": {}
+  },
+  {
+    "id": "cmd-analysis-1755111927017",
+    "type": "analysis",
+    "success": true,
+    "duration": 20.65226500000003,
+    "timestamp": 1755111927037,
     "metadata": {}
   }
 ]
