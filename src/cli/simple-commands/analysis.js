@@ -15,6 +15,14 @@ import {
   getBottleneckAnalysis,
   exportMetrics
 } from './performance-metrics.js';
+import {
+  getRealTokenUsage,
+  calculateCost,
+  generateOptimizationSuggestions,
+  generateTokenUsageReport,
+  getAgentIcon,
+  trackTokens
+} from './token-tracker.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
