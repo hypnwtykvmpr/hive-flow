@@ -1124,35 +1124,220 @@ jobs:
         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 ```
 
-### Deployment Commands
+### Terraform Infrastructure
 
-```bash
-# Create namespace
-kubectl create namespace claude-flow
+```hcl
+# infrastructure/main.tf
+terraform {
+  required_version = ">= 1.0"
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = "~> 2.20"
+    }
+  }
+  
+  backend "s3" {
+    bucket = "claude-flow-terraform-state"
+    key    = "production/terraform.tfstate"
+    region = "us-west-2"
+  }
+}
 
-# Apply configurations
-kubectl apply -f k8s/configmap.yaml
-kubectl apply -f k8s/secrets.yaml
-kubectl apply -f k8s/pvc.yaml
-kubectl apply -f k8s/deployment.yaml
-kubectl apply -f k8s/service.yaml
-kubectl apply -f k8s/hpa.yaml
+# EKS Cluster
+resource "aws_eks_cluster" "claude_flow" {
+  name     = "claude-flow-production"
+  role_arn = aws_iam_role.cluster.arn
+  version  = "1.28"
 
-# Check deployment status
-kubectl get pods -n claude-flow
-kubectl get svc -n claude-flow
+  vpc_config {
+    subnet_ids              = aws_subnet.private[*].id
+    endpoint_private_access = true
+    endpoint_public_access  = true
+    public_access_cidrs     = ["0.0.0.0/0"]
+  }
 
-# View logs
-kubectl logs -f deployment/claude-flow -n claude-flow
+  enabled_cluster_log_types = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
 
-# Scale deployment
-kubectl scale deployment/claude-flow --replicas=5 -n claude-flow
+  depends_on = [
+    aws_iam_role_policy_attachment.cluster_AmazonEKSClusterPolicy,
+  ]
+}
 
-# Update deployment
-kubectl set image deployment/claude-flow claude-flow=claudeflow/claude-flow:v2.0.1 -n claude-flow
+# Node Group
+resource "aws_eks_node_group" "claude_flow" {
+  cluster_name    = aws_eks_cluster.claude_flow.name
+  node_group_name = "claude-flow-nodes"
+  node_role_arn   = aws_iam_role.node_group.arn
+  subnet_ids      = aws_subnet.private[*].id
+  instance_types  = ["m5.large", "m5.xlarge"]
+  
+  scaling_config {
+    desired_size = 3
+    max_size     = 20
+    min_size     = 3
+  }
+  
+  update_config {
+    max_unavailable = 1
+  }
 
-# Delete deployment
-kubectl delete namespace claude-flow
+  depends_on = [
+    aws_iam_role_policy_attachment.node_group_AmazonEKSWorkerNodePolicy,
+    aws_iam_role_policy_attachment.node_group_AmazonEKS_CNI_Policy,
+    aws_iam_role_policy_attachment.node_group_AmazonEC2ContainerRegistryReadOnly,
+  ]
+}
+
+# RDS Instance
+resource "aws_db_instance" "claude_flow" {
+  identifier             = "claude-flow-production"
+  engine                 = "postgres"
+  engine_version         = "15"
+  instance_class         = "db.r5.large"
+  allocated_storage      = 100
+  max_allocated_storage  = 1000
+  
+  db_name  = "claude_flow"
+  username = "claude_flow"
+  password = var.db_password
+  
+  vpc_security_group_ids = [aws_security_group.rds.id]
+  db_subnet_group_name   = aws_db_subnet_group.claude_flow.name
+  
+  backup_retention_period = 30
+  backup_window          = "03:00-04:00"
+  maintenance_window     = "sun:04:00-sun:05:00"
+  
+  performance_insights_enabled = true
+  monitoring_interval         = 60
+  monitoring_role_arn        = aws_iam_role.rds_enhanced_monitoring.arn
+  
+  deletion_protection = true
+  skip_final_snapshot = false
+  final_snapshot_identifier = "claude-flow-final-snapshot"
+  
+  tags = {
+    Environment = "production"
+    Application = "claude-flow"
+  }
+}
+
+# ElastiCache Redis
+resource "aws_elasticache_replication_group" "claude_flow" {
+  replication_group_id         = "claude-flow-redis"
+  description                  = "Redis cluster for Claude Flow"
+  
+  node_type                    = "cache.r6g.large"
+  port                         = 6379
+  parameter_group_name         = "default.redis7"
+  
+  num_cache_clusters           = 3
+  automatic_failover_enabled   = true
+  multi_az_enabled            = true
+  
+  subnet_group_name           = aws_elasticache_subnet_group.claude_flow.name
+  security_group_ids          = [aws_security_group.redis.id]
+  
+  at_rest_encryption_enabled  = true
+  transit_encryption_enabled  = true
+  auth_token                  = var.redis_auth_token
+  
+  snapshot_retention_limit    = 7
+  snapshot_window            = "03:00-05:00"
+  
+  tags = {
+    Environment = "production"
+    Application = "claude-flow"
+  }
+}
+
+# Application Load Balancer
+resource "aws_lb" "claude_flow" {
+  name               = "claude-flow-alb"
+  internal           = false
+  load_balancer_type = "application"
+  security_groups    = [aws_security_group.alb.id]
+  subnets            = aws_subnet.public[*].id
+
+  enable_deletion_protection = true
+  enable_http2              = true
+
+  access_logs {
+    bucket  = aws_s3_bucket.alb_logs.bucket
+    prefix  = "alb-logs"
+    enabled = true
+  }
+}
+```
+
+---
+
+## Monitoring & Observability
+
+### Prometheus Configuration
+
+```yaml
+# monitoring/prometheus.yml
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'claude-flow-production'
+    environment: 'production'
+
+rule_files:
+  - "rules/*.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['alertmanager:9093']
+
+scrape_configs:
+  # Claude Flow application
+  - job_name: 'claude-flow'
+    kubernetes_sd_configs:
+      - role: pod
+        namespaces:
+          names: ['claude-flow']
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+        action: keep
+        regex: true
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+        action: replace
+        target_label: __metrics_path__
+        regex: (.+)
+      - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+        action: replace
+        regex: ([^:]+)(?::\d+)?;(\d+)
+        replacement: $1:$2
+        target_label: __address__
+
+  # Node Exporter
+  - job_name: 'node-exporter'
+    kubernetes_sd_configs:
+      - role: node
+    relabel_configs:
+      - source_labels: [__address__]
+        regex: '(.*):10250'
+        replacement: '${1}:9100'
+        target_label: __address__
+
+  # PostgreSQL
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+
+  # Redis
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
 ```
 
 ---
