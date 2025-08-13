@@ -490,27 +490,29 @@ async function generateTokenUsageReport(tokenData, agent) {
 }
 
 async function showSimulatedTokenUsage(breakdown, costAnalysis) {
-  // Existing simulated data as fallback
-  console.log(`\n🔢 TOKEN USAGE SUMMARY (Simulated):`);
-  console.log(`  📝 Total tokens consumed: 45,231`);
-  console.log(`  📥 Input tokens: 28,567 (63.2%)`);
-  console.log(`  📤 Output tokens: 16,664 (36.8%)`);
+  // Show honest message about no data instead of fake numbers
+  console.log(`\n🔢 TOKEN USAGE ANALYSIS:`);
+  console.log(`  ℹ️ No token usage data available yet.`);
+  console.log(`\n  Token tracking requires:`);
+  console.log(`  • Claude Code API calls to be made`);
+  console.log(`  • Commands run with --claude flag`);
+  console.log(`  • Or set CLAUDE_CODE_ENABLE_TELEMETRY=1`);
+  
+  console.log(`\n💡 To start tracking tokens:`);
+  console.log(`  1. Run: export CLAUDE_CODE_ENABLE_TELEMETRY=1`);
+  console.log(`  2. Use: ./claude-flow swarm "task" --claude`);
+  console.log(`  3. Check back after running Claude commands`);
   
   if (costAnalysis) {
-    console.log(`  💰 Estimated cost: $0.23`);
+    console.log(`\n💰 Cost analysis will be available once tokens are tracked.`);
+    console.log(`  Pricing: $15/1M input tokens, $75/1M output tokens (Claude 3 Opus)`);
   }
 
   if (breakdown) {
-    console.log(`\\n📊 BREAKDOWN BY AGENT TYPE:`);
-    console.log(`  🎯 Coordinator: 12,430 tokens (27.5%)`);
-    console.log(`  👨‍💻 Developer: 18,965 tokens (41.9%)`);
-    console.log(`  🔍 Researcher: 8,734 tokens (19.3%)`);
-    console.log(`  📊 Analyzer: 5,102 tokens (11.3%)`);
-
-    console.log(`\\n💡 OPTIMIZATION OPPORTUNITIES:`);
-    console.log(`  • Developer agents: Consider prompt optimization (-15% potential)`);
-    console.log(`  • Coordinator agents: Implement response caching (-8% potential)`);
+    console.log(`\n📊 Agent breakdown will show once agents use Claude Code.`);
+    console.log(`  Each agent type's token usage will be tracked separately.`);
   }
 
-  console.log(`\\n📄 Note: Enable CLAUDE_CODE_ENABLE_TELEMETRY=1 for real metrics`);
+  console.log(`\n📄 Reports will be generated once data is available.`);
+  console.log(`  Enable CLAUDE_CODE_ENABLE_TELEMETRY=1 for automatic tracking.`);
 }
