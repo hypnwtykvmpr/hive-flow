@@ -792,27 +792,22 @@ The swarm should be self-documenting - use memory_store to save all important in
         
         // --claude flag means interactive mode, so don't add non-interactive flags
         
-        // Spawn claude with telemetry tracking if enabled
-        const useWrapper = process.env.CLAUDE_CODE_ENABLE_TELEMETRY === '1';
+        // For --claude interactive mode, don't use the wrapper that interferes with stdio
+        // Just spawn Claude directly with telemetry environment variables
+        const claudeEnv = { ...process.env };
         
-        if (useWrapper) {
-          // Use telemetry wrapper to track tokens
-          const { runClaudeWithTelemetry } = await import('./claude-telemetry.js');
-          console.log(`📊 Telemetry enabled - tracking token usage...`);
-          
-          const result = await runClaudeWithTelemetry(claudeArgs, {
-            sessionId: `swarm-${Date.now()}`,
-            agentType: 'swarm-claude',
-          });
-          
-          console.log('\n✓ Claude Code session completed with telemetry!');
-          process.exit(result.code);
-        } else {
-          const claudeProcess = spawn('claude', claudeArgs, {
-            stdio: 'inherit',
-            shell: false,
-          });
+        if (process.env.CLAUDE_CODE_ENABLE_TELEMETRY === '1') {
+          console.log(`📊 Telemetry enabled - token usage will be tracked`);
+          // Set telemetry to file output instead of console to avoid interference
+          claudeEnv.OTEL_METRICS_EXPORTER = 'none';  // Disable console output
+          claudeEnv.OTEL_LOGS_EXPORTER = 'none';      // Disable console output
         }
+        
+        const claudeProcess = spawn('claude', claudeArgs, {
+          stdio: 'inherit',
+          shell: false,
+          env: claudeEnv
+        });
         
         console.log('\n✓ Claude Code launched with swarm coordination prompt!');
         console.log('  The swarm coordinator will orchestrate all agent tasks');
