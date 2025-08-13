@@ -92,256 +92,440 @@ https://registry.npmjs.org   # Package registry
 https://github.com           # Repository access
 ```
 
-### Minimum Requirements
-
-| Component | Minimum | Recommended |
-|-----------|---------|-------------|
-| Node.js | v20.0.0 | v20 LTS |
-| npm | v9.0.0 | Latest |
-| RAM | 2 GB | 8 GB |
-| CPU | 2 cores | 4+ cores |
-| Disk Space | 500 MB | 2 GB |
-| OS | Windows 10, macOS 10.15, Ubuntu 20.04 | Latest stable |
-
-### Operating System Specific
-
-#### Windows
-
-```powershell
-# Install Node.js via Chocolatey
-choco install nodejs
-
-# Or via Scoop
-scoop install nodejs
-
-# Install build tools (for native dependencies)
-npm install -g windows-build-tools
-
-# Special consideration for SQLite
-npm install -g better-sqlite3 --build-from-source
-```
-
-#### macOS
-
-```bash
-# Install via Homebrew
-brew install node
-
-# Install Xcode Command Line Tools
-xcode-select --install
-
-# Fix potential permissions
-sudo npm install -g claude-flow@alpha --unsafe-perm
-```
-
-#### Linux (Ubuntu/Debian)
-
-```bash
-# Install Node.js via NodeSource
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-sudo apt-get install -y nodejs
-
-# Install build essentials
-sudo apt-get install -y build-essential
-
-# Install SQLite dependencies
-sudo apt-get install -y libsqlite3-dev
-```
-
 ---
 
-## Configuration
+## Environment Variables
 
-### Initial Setup
-
-```bash
-# Interactive setup wizard
-claude-flow init
-
-# Force setup (non-interactive)
-claude-flow init --force
-
-# Custom configuration directory
-claude-flow init --config-dir ./my-config
-```
-
-### Configuration File Structure
-
-```json
-// .claude-flow/config.json
-{
-  "version": "2.0.0",
-  "orchestrator": {
-    "maxConcurrentAgents": 100,
-    "taskQueueSize": 1000,
-    "defaultTopology": "mesh",
-    "healthCheckInterval": 30000
-  },
-  "memory": {
-    "backend": "sqlite",
-    "dbPath": ".swarm/memory.db",
-    "cacheSizeMB": 256,
-    "compressionEnabled": true,
-    "ttlSeconds": 86400
-  },
-  "providers": {
-    "anthropic": {
-      "apiKey": "${CLAUDE_API_KEY}",
-      "model": "claude-3-sonnet-20240229",
-      "temperature": 0.7,
-      "maxTokens": 4000
-    },
-    "openai": {
-      "apiKey": "${OPENAI_API_KEY}",
-      "model": "gpt-4-turbo",
-      "temperature": 0.7
-    }
-  },
-  "api": {
-    "enabled": true,
-    "port": 3000,
-    "host": "0.0.0.0",
-    "cors": {
-      "enabled": true,
-      "origins": ["http://localhost:*"]
-    }
-  },
-  "logging": {
-    "level": "info",
-    "file": "claude-flow.log",
-    "maxSize": "10m",
-    "maxFiles": 5
-  },
-  "hooks": {
-    "enabled": true,
-    "preTask": true,
-    "postTask": true,
-    "sessionRestore": true
-  },
-  "swarm": {
-    "defaultAgents": 5,
-    "maxAgents": 50,
-    "autoScale": true,
-    "topology": "mesh"
-  }
-}
-```
-
-### MCP Server Configuration
-
-```json
-// .claude-flow/mcp-config.json
-{
-  "mcpServers": {
-    "claude-flow": {
-      "command": "npx",
-      "args": ["claude-flow@alpha", "mcp", "start"],
-      "env": {
-        "CLAUDE_FLOW_MCP_MODE": "server"
-      }
-    }
-  },
-  "globalShortcut": "cmd+shift+f"
-}
-```
-
----
-
-## Environment Setup
-
-### Environment Variables
+### Production Environment Configuration
 
 ```bash
-# Create .env file
-cat > .env << EOF
-# API Keys
-CLAUDE_API_KEY=your_claude_api_key
-OPENAI_API_KEY=your_openai_api_key
-GOOGLE_API_KEY=your_google_api_key
+# Create production environment file
+cat > .env.production << 'EOF'
+# === Core Configuration ===
+NODE_ENV=production
+PORT=3000
+HOST=0.0.0.0
 
-# Claude Flow Configuration
+# === API Keys ===
+CLAUDE_API_KEY=sk-ant-api03-...
+OPENAI_API_KEY=sk-...
+GITHUB_TOKEN=ghp_...
+
+# === Claude Flow Configuration ===
 CLAUDE_FLOW_DEBUG=false
 CLAUDE_FLOW_LOG_LEVEL=info
-CLAUDE_FLOW_DATA_DIR=./.claude-flow
-CLAUDE_FLOW_MEMORY_DIR=./.swarm
-CLAUDE_FLOW_PORT=3000
+CLAUDE_FLOW_DATA_DIR=/app/data
+CLAUDE_FLOW_MEMORY_DIR=/app/memory
+CLAUDE_FLOW_CONFIG_DIR=/app/config
 
-# Performance Settings
-CLAUDE_FLOW_MAX_AGENTS=50
-CLAUDE_FLOW_MAX_CONCURRENT_TASKS=10
-CLAUDE_FLOW_MEMORY_LIMIT=512
-CLAUDE_FLOW_CACHE_SIZE=256
+# === Performance Settings ===
+CLAUDE_FLOW_MAX_AGENTS=100
+CLAUDE_FLOW_MAX_CONCURRENT_TASKS=50
+CLAUDE_FLOW_MEMORY_LIMIT=2048
+CLAUDE_FLOW_CACHE_SIZE=512
+CLAUDE_FLOW_WORKER_THREADS=8
 
-# Feature Flags
+# === Database Configuration ===
+DATABASE_URL=postgresql://claude_flow:secure_password@postgres:5432/claude_flow
+REDIS_URL=redis://redis:6379/0
+CACHE_TTL=3600
+CONNECTION_POOL_SIZE=20
+
+# === Security ===
+JWT_SECRET=your-secure-jwt-secret-256-bits
+ENCRYPTION_KEY=your-encryption-key-256-bits
+ALLOWED_ORIGINS=https://yourdomain.com
+RATE_LIMIT_WINDOW=900000
+RATE_LIMIT_MAX=100
+
+# === Features ===
 CLAUDE_FLOW_ENABLE_HOOKS=true
 CLAUDE_FLOW_ENABLE_MCP=true
 CLAUDE_FLOW_ENABLE_SWARM=true
-CLAUDE_FLOW_ENABLE_NEURAL=true
+CLAUDE_FLOW_ENABLE_METRICS=true
+CLAUDE_FLOW_ENABLE_TRACING=true
 
-# Provider Settings
-CLAUDE_FLOW_DEFAULT_PROVIDER=anthropic
-CLAUDE_FLOW_DEFAULT_MODEL=claude-3-sonnet
-CLAUDE_FLOW_TEMPERATURE=0.7
-CLAUDE_FLOW_MAX_TOKENS=4000
+# === Monitoring ===
+PROMETHEUS_PORT=9090
+GRAFANA_ADMIN_PASSWORD=secure-password
+LOG_RETENTION_DAYS=30
+METRICS_RETENTION_DAYS=90
 
-# Security
-CLAUDE_FLOW_API_KEY=your_api_key_for_claude_flow
-CLAUDE_FLOW_JWT_SECRET=your_jwt_secret
-CLAUDE_FLOW_ENCRYPTION_KEY=your_encryption_key
+# === Cloud Provider (AWS Example) ===
+AWS_REGION=us-west-2
+AWS_ACCESS_KEY_ID=AKIA...
+AWS_SECRET_ACCESS_KEY=...
+S3_BUCKET=claude-flow-backups
+
+# === Notifications ===
+SLACK_WEBHOOK_URL=https://hooks.slack.com/...
+EMAIL_SMTP_HOST=smtp.sendgrid.net
+EMAIL_SMTP_PORT=587
+EMAIL_SMTP_USER=apikey
+EMAIL_SMTP_PASS=SG...
 EOF
-
-# Load environment variables
-source .env
-# Or on Windows
-set -a; source .env; set +a
 ```
 
-### Shell Configuration
-
-#### Bash/Zsh
+### Configuration Validation
 
 ```bash
-# Add to ~/.bashrc or ~/.zshrc
-export PATH="$PATH:$(npm config get prefix)/bin"
-alias cf="claude-flow"
-alias cfs="claude-flow swarm"
-alias cfh="claude-flow hive-mind"
-alias cfsparc="claude-flow sparc"
+# Validate environment configuration
+npx claude-flow@alpha config validate --env production
 
-# Claude Flow shortcuts
-cf-init() {
-  claude-flow init --force
-}
+# Test API connectivity
+npx claude-flow@alpha diagnostics --api-check
 
-cf-swarm() {
-  claude-flow swarm "$@" --agents 5
-}
-
-cf-hive() {
-  claude-flow hive-mind spawn "$@" --claude
-}
+# Verify database connection
+npx claude-flow@alpha diagnostics --db-check
 ```
 
-#### PowerShell
+---
 
-```powershell
-# Add to $PROFILE
-$env:PATH += ";$(npm config get prefix)"
-Set-Alias cf claude-flow
-Set-Alias cfs "claude-flow swarm"
-Set-Alias cfh "claude-flow hive-mind"
+## Docker Deployment
 
-function cf-init {
-  claude-flow init --force
-}
+### Production Docker Image
 
-function cf-swarm {
-  claude-flow swarm $args --agents 5
-}
+```dockerfile
+# Production Dockerfile
+FROM node:20-alpine AS base
 
-function cf-hive {
-  claude-flow hive-mind spawn $args --claude
-}
+# Install system dependencies
+RUN apk add --no-cache \
+    python3 \
+    make \
+    g++ \
+    sqlite \
+    postgresql-client \
+    redis \
+    curl \
+    jq
+
+# Create app directory
+WORKDIR /app
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S claude-flow -u 1001 -G nodejs
+
+# === Build Stage ===
+FROM base AS builder
+
+# Copy package files
+COPY package*.json ./
+COPY tsconfig*.json ./
+
+# Install dependencies
+RUN npm ci --only=production --no-audit --no-fund
+
+# Copy source code
+COPY src/ ./src/
+COPY *.js *.ts *.json ./
+
+# Build application
+RUN npm run build
+
+# === Production Stage ===
+FROM base AS production
+
+# Set environment
+ENV NODE_ENV=production \
+    CLAUDE_FLOW_DATA_DIR=/app/data \
+    CLAUDE_FLOW_MEMORY_DIR=/app/memory \
+    CLAUDE_FLOW_CONFIG_DIR=/app/config \
+    CLAUDE_FLOW_LOG_LEVEL=info
+
+# Copy built application
+COPY --from=builder --chown=claude-flow:nodejs /app/dist ./dist
+COPY --from=builder --chown=claude-flow:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=claude-flow:nodejs /app/package*.json ./
+
+# Create data directories
+RUN mkdir -p /app/data /app/memory /app/config /app/logs && \
+    chown -R claude-flow:nodejs /app
+
+# Copy entrypoint script
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+# Expose ports
+EXPOSE 3000 8080 9090
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:3000/health || exit 1
+
+# Switch to non-root user
+USER claude-flow:nodejs
+
+# Start application
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+CMD ["node", "dist/index.js"]
+```
+
+### Docker Entrypoint Script
+
+```bash
+#!/bin/sh
+# docker-entrypoint.sh
+
+set -e
+
+# Initialize configuration if not exists
+if [ ! -f "/app/config/config.json" ]; then
+    echo "Initializing Claude Flow configuration..."
+    npx claude-flow@alpha init --force --config-dir /app/config
+fi
+
+# Wait for database if DATABASE_URL is set
+if [ -n "$DATABASE_URL" ]; then
+    echo "Waiting for database to be ready..."
+    until pg_isready -d "$DATABASE_URL" > /dev/null 2>&1; do
+        echo "Database not ready, waiting..."
+        sleep 2
+    done
+    echo "Database is ready!"
+fi
+
+# Wait for Redis if REDIS_URL is set
+if [ -n "$REDIS_URL" ]; then
+    echo "Waiting for Redis to be ready..."
+    until redis-cli -u "$REDIS_URL" ping > /dev/null 2>&1; do
+        echo "Redis not ready, waiting..."
+        sleep 2
+    done
+    echo "Redis is ready!"
+fi
+
+# Run database migrations
+if [ "$NODE_ENV" = "production" ]; then
+    echo "Running database migrations..."
+    npx claude-flow@alpha db migrate
+fi
+
+# Start the application
+echo "Starting Claude Flow..."
+exec "$@"
+```
+
+### Production Docker Compose
+
+```yaml
+# docker-compose.production.yml
+version: '3.8'
+
+services:
+  # === Core Services ===
+  claude-flow:
+    image: claude-flow:2.0.0-production
+    container_name: claude-flow-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+      - "8080:8080"
+    environment:
+      NODE_ENV: production
+      CLAUDE_API_KEY: ${CLAUDE_API_KEY}
+      DATABASE_URL: postgresql://claude_flow:${DB_PASSWORD}@postgres:5432/claude_flow
+      REDIS_URL: redis://redis:6379/0
+      CLAUDE_FLOW_MAX_AGENTS: 100
+      CLAUDE_FLOW_MEMORY_LIMIT: 2048
+    volumes:
+      - claude-flow-data:/app/data
+      - claude-flow-memory:/app/memory
+      - claude-flow-config:/app/config
+      - claude-flow-logs:/app/logs
+    networks:
+      - claude-flow-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # === Database Services ===
+  postgres:
+    image: postgres:15-alpine
+    container_name: claude-flow-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: claude_flow
+      POSTGRES_USER: claude_flow
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_INITDB_ARGS: "--auth-host=md5"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    networks:
+      - claude-flow-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U claude_flow -d claude_flow"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: claude-flow-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - claude-flow-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # === Load Balancer ===
+  nginx:
+    image: nginx:alpine
+    container_name: claude-flow-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./ssl:/etc/nginx/ssl:ro
+      - nginx-cache:/var/cache/nginx
+    networks:
+      - claude-flow-net
+    depends_on:
+      - claude-flow
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # === Monitoring Stack ===
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: claude-flow-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    networks:
+      - claude-flow-net
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=90d'
+      - '--web.enable-lifecycle'
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: claude-flow-grafana
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+      GF_INSTALL_PLUGINS: grafana-clock-panel,grafana-simple-json-datasource
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+    networks:
+      - claude-flow-net
+
+  # === Backup Service ===
+  backup:
+    image: postgres:15-alpine
+    container_name: claude-flow-backup
+    restart: "no"
+    volumes:
+      - ./backups:/backups
+      - ./scripts/backup.sh:/backup.sh:ro
+    networks:
+      - claude-flow-net
+    environment:
+      DATABASE_URL: postgresql://claude_flow:${DB_PASSWORD}@postgres:5432/claude_flow
+    depends_on:
+      - postgres
+    profiles:
+      - backup
+
+volumes:
+  postgres-data:
+  redis-data:
+  prometheus-data:
+  grafana-data:
+  claude-flow-data:
+  claude-flow-memory:
+  claude-flow-config:
+  claude-flow-logs:
+  nginx-cache:
+
+networks:
+  claude-flow-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+```
+
+### Building and Deployment
+
+```bash
+# Build production image
+docker build -f Dockerfile.production -t claude-flow:2.0.0-production .
+
+# Tag for registry
+docker tag claude-flow:2.0.0-production your-registry.com/claude-flow:2.0.0
+
+# Push to registry
+docker push your-registry.com/claude-flow:2.0.0
+
+# Deploy with Docker Compose
+cp .env.production .env
+docker-compose -f docker-compose.production.yml up -d
+
+# View logs
+docker-compose -f docker-compose.production.yml logs -f claude-flow
+
+# Scale services
+docker-compose -f docker-compose.production.yml up -d --scale claude-flow=3
+
+# Health check
+curl -f http://localhost/health
+
+# Stop services
+docker-compose -f docker-compose.production.yml down
+```
+
+### Docker Registry Setup
+
+```bash
+# Setup private registry (optional)
+docker run -d -p 5000:5000 --name registry \
+  -v /opt/docker-registry:/var/lib/registry \
+  registry:2
+
+# Build and push to private registry
+docker build -t localhost:5000/claude-flow:2.0.0 .
+docker push localhost:5000/claude-flow:2.0.0
+
+# Pull from registry
+docker pull localhost:5000/claude-flow:2.0.0
 ```
 
 ---
