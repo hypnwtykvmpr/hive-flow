@@ -27,6 +27,82 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+async function setupTelemetry() {
+  console.log(`\n🔧 TELEMETRY SETUP FOR TOKEN TRACKING\n`);
+  console.log(`${'═'.repeat(60)}\n`);
+  
+  // Check current status
+  const currentValue = process.env.CLAUDE_CODE_ENABLE_TELEMETRY;
+  const isEnabled = currentValue === '1';
+  
+  console.log(`📊 Current Status: ${isEnabled ? '✅ ENABLED' : '❌ DISABLED'}`);
+  console.log(`   Environment Variable: CLAUDE_CODE_ENABLE_TELEMETRY=${currentValue || 'not set'}\n`);
+  
+  if (!isEnabled) {
+    // Set the environment variable for current session
+    process.env.CLAUDE_CODE_ENABLE_TELEMETRY = '1';
+    
+    console.log(`✅ Telemetry ENABLED for this session!\n`);
+    
+    // Create or update .env file
+    const envPath = path.join(process.cwd(), '.env');
+    let envContent = '';
+    
+    try {
+      envContent = await fs.readFile(envPath, 'utf-8');
+    } catch (err) {
+      // .env doesn't exist yet
+    }
+    
+    // Check if telemetry is already in .env
+    if (!envContent.includes('CLAUDE_CODE_ENABLE_TELEMETRY')) {
+      envContent += `\n# Enable token tracking for Claude API calls\nCLAUDE_CODE_ENABLE_TELEMETRY=1\n`;
+      
+      try {
+        await fs.writeFile(envPath, envContent);
+        console.log(`📝 Updated .env file with telemetry setting`);
+      } catch (err) {
+        console.log(`⚠️  Could not update .env file: ${err.message}`);
+      }
+    }
+    
+    // Also add to shell profile for persistence
+    console.log(`\n📌 To make this permanent, add to your shell profile:`);
+    console.log(`   ${'-'.repeat(50)}`);
+    console.log(`   echo 'export CLAUDE_CODE_ENABLE_TELEMETRY=1' >> ~/.bashrc`);
+    console.log(`   ${'-'.repeat(50)}\n`);
+  }
+  
+  // Initialize token tracking directory
+  const metricsDir = path.join(process.cwd(), '.claude-flow', 'metrics');
+  try {
+    await fs.mkdir(metricsDir, { recursive: true });
+    console.log(`📁 Token tracking directory: ${metricsDir}`);
+  } catch (err) {
+    // Directory already exists
+  }
+  
+  // Check for existing token data
+  const tokenFile = path.join(metricsDir, 'token-usage.json');
+  try {
+    const data = await fs.readFile(tokenFile, 'utf-8');
+    const tokenData = JSON.parse(data);
+    console.log(`\n📊 Existing token data found:`);
+    console.log(`   • Total tokens tracked: ${tokenData.totals?.total || 0}`);
+    console.log(`   • Sessions recorded: ${Object.keys(tokenData.sessions || {}).length}`);
+  } catch (err) {
+    console.log(`\n📊 No existing token data (will be created on first use)`);
+  }
+  
+  console.log(`\n🚀 NEXT STEPS:`);
+  console.log(`   1. Run Claude commands with --claude flag`);
+  console.log(`   2. Example: ./claude-flow swarm "analyze code" --claude`);
+  console.log(`   3. Check usage: ./claude-flow analysis token-usage --breakdown`);
+  
+  console.log(`\n${'═'.repeat(60)}`);
+  printSuccess(`Telemetry setup complete!`);
+}
+
 export async function analysisAction(subArgs, flags) {
   const subcommand = subArgs[0];
   const options = flags;
