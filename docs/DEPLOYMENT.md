@@ -1,17 +1,18 @@
-# 🚀 Claude-Flow Deployment & Setup Guide
+# 🚀 Claude-Flow Production Deployment Guide
 
 ## Table of Contents
 
 - [Quick Start](#quick-start)
-- [Installation Methods](#installation-methods)
 - [System Requirements](#system-requirements)
-- [Configuration](#configuration)
-- [Environment Setup](#environment-setup)
+- [Environment Variables](#environment-variables)
 - [Docker Deployment](#docker-deployment)
 - [Kubernetes Deployment](#kubernetes-deployment)
-- [Cloud Deployment](#cloud-deployment)
+- [CI/CD Pipeline](#cicd-pipeline)
+- [Monitoring & Observability](#monitoring--observability)
+- [Security Configuration](#security-configuration)
+- [Load Balancing](#load-balancing)
 - [Production Setup](#production-setup)
-- [Monitoring & Maintenance](#monitoring--maintenance)
+- [Cloud Deployment](#cloud-deployment)
 - [Troubleshooting](#troubleshooting)
 
 ---
