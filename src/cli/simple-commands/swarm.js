@@ -792,11 +792,27 @@ The swarm should be self-documenting - use memory_store to save all important in
         
         // --claude flag means interactive mode, so don't add non-interactive flags
         
-        // Spawn claude with properly ordered arguments
-        const claudeProcess = spawn('claude', claudeArgs, {
-          stdio: 'inherit',
-          shell: false,
-        });
+        // Spawn claude with telemetry tracking if enabled
+        const useWrapper = process.env.CLAUDE_CODE_ENABLE_TELEMETRY === '1';
+        
+        if (useWrapper) {
+          // Use telemetry wrapper to track tokens
+          const { runClaudeWithTelemetry } = await import('./claude-telemetry.js');
+          console.log(`📊 Telemetry enabled - tracking token usage...`);
+          
+          const result = await runClaudeWithTelemetry(claudeArgs, {
+            sessionId: `swarm-${Date.now()}`,
+            agentType: 'swarm-claude',
+          });
+          
+          console.log('\n✓ Claude Code session completed with telemetry!');
+          process.exit(result.code);
+        } else {
+          const claudeProcess = spawn('claude', claudeArgs, {
+            stdio: 'inherit',
+            shell: false,
+          });
+        }
         
         console.log('\n✓ Claude Code launched with swarm coordination prompt!');
         console.log('  The swarm coordinator will orchestrate all agent tasks');
