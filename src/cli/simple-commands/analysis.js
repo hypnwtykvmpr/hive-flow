@@ -129,6 +129,12 @@ export async function analysisAction(subArgs, flags) {
       case 'token-usage':
         await tokenUsageCommand(subArgs, flags);
         break;
+      case 'claude-monitor':
+        await claudeMonitorCommand(subArgs, flags);
+        break;
+      case 'claude-cost':
+        await claudeCostCommand(subArgs, flags);
+        break;
       default:
         printError(`Unknown analysis command: ${subcommand}`);
         showAnalysisHelp();
