@@ -19,15 +19,20 @@
 
 ## Quick Start
 
-### One-Line Installation
+### Production Installation
 
 ```bash
-# Using npm (recommended)
-npx claude-flow@alpha init --force && npx claude-flow@alpha swarm "hello world"
-
-# Global installation
+# Install from npm registry
 npm install -g claude-flow@alpha
-claude-flow init --force
+
+# Verify installation
+npx claude-flow@alpha --version
+
+# Initialize configuration
+npx claude-flow@alpha init --force
+
+# Test installation
+npx claude-flow@alpha swarm "test deployment" --agents 3
 ```
 
 ### Prerequisites Check
@@ -39,104 +44,53 @@ node --version
 # Check npm version (requires ≥9.0.0)
 npm --version
 
-# Install Claude Code (required)
-npm install -g @anthropic-ai/claude-code
+# Check system resources
+free -h  # Memory check
+df -h    # Disk space check
 
-# Verify installation
-claude-flow --version
-```
-
----
-
-## Installation Methods
-
-### Method 1: NPX (Recommended)
-
-```bash
-# Always uses latest version
-npx claude-flow@alpha [command]
-
-# Example commands
-npx claude-flow@alpha init
-npx claude-flow@alpha swarm "build API"
-npx claude-flow@alpha hive-mind spawn "project"
-```
-
-### Method 2: Global Installation
-
-```bash
-# Install globally
-npm install -g claude-flow@alpha
-
-# Verify installation
-claude-flow --version
-
-# Initialize configuration
-claude-flow init --force
-```
-
-### Method 3: Local Project Installation
-
-```bash
-# Create project directory
-mkdir my-project && cd my-project
-
-# Initialize package.json
-npm init -y
-
-# Install as dependency
-npm install claude-flow@alpha
-
-# Add to package.json scripts
-{
-  "scripts": {
-    "cf": "claude-flow",
-    "swarm": "claude-flow swarm",
-    "hive": "claude-flow hive-mind"
-  }
-}
-
-# Run via npm scripts
-npm run cf -- --help
-```
-
-### Method 4: From Source
-
-```bash
-# Clone repository
-git clone https://github.com/ruvnet/claude-flow.git
-cd claude-flow
-
-# Install dependencies
-npm install
-
-# Build from source
-npm run build
-
-# Link globally
-npm link
-
-# Verify
-claude-flow --version
-```
-
-### Method 5: Docker Container
-
-```bash
-# Pull official image
-docker pull claudeflow/claude-flow:alpha
-
-# Run container
-docker run -it \
-  -e CLAUDE_API_KEY=$CLAUDE_API_KEY \
-  -v $(pwd):/workspace \
-  claudeflow/claude-flow:alpha \
-  swarm "build application"
+# Install required tools
+apt-get update && apt-get install -y curl wget jq
 ```
 
 ---
 
 ## System Requirements
+
+### Production Requirements
+
+| Component | Minimum | Recommended | Enterprise |
+|-----------|---------|-------------|------------|
+| Node.js | v20.0.0 | v20 LTS | v20 LTS |
+| RAM | 4 GB | 8 GB | 16 GB |
+| CPU | 2 cores | 4 cores | 8+ cores |
+| Disk Space | 2 GB | 10 GB | 50 GB |
+| Network | 100 Mbps | 1 Gbps | 10 Gbps |
+| Uptime SLA | 99% | 99.9% | 99.99% |
+
+### Operating System Support
+
+- **Linux**: Ubuntu 20.04+, CentOS 8+, RHEL 8+, Amazon Linux 2
+- **Docker**: Alpine 3.18+, Ubuntu 22.04+
+- **Kubernetes**: 1.24+
+- **Cloud**: AWS, GCP, Azure, DigitalOcean
+
+### Network Requirements
+
+```bash
+# Required ports
+3000/tcp   # Main API server
+8080/tcp   # MCP server
+5432/tcp   # PostgreSQL (if used)
+6379/tcp   # Redis (if used)
+9090/tcp   # Prometheus metrics
+3001/tcp   # Grafana dashboard
+
+# Outbound connections
+https://api.anthropic.com    # Claude API
+https://api.openai.com       # OpenAI API (optional)
+https://registry.npmjs.org   # Package registry
+https://github.com           # Repository access
+```
 
 ### Minimum Requirements
 
