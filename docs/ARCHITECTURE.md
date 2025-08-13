@@ -547,18 +547,21 @@ class MetricsDecorator implements Agent {
 
 ### Core Technologies
 
-| Layer | Technology | Purpose |
-|-------|------------|---------|
-| Runtime | Node.js v20+ | JavaScript runtime |
-| Language | TypeScript 5.3+ | Type-safe development |
-| Framework | Custom | Lightweight, modular |
-| Database | SQLite | Embedded database |
-| Cache | In-memory | Fast data access |
-| Queue | Custom | Task queuing |
-| CLI | Commander.js | Command-line interface |
-| API | Express | REST API server |
-| WebSocket | ws | Real-time communication |
-| Testing | Jest | Unit & integration tests |
+| Layer | Technology | Version | Purpose |
+|-------|------------|---------|---------| 
+| Runtime | Node.js | v20.0.0+ | JavaScript runtime with ES2022+ features |
+| Language | TypeScript | v5.3.3 | Type-safe development with advanced generics |
+| Framework | Custom ESM | v2.0.0-alpha.88 | Lightweight, modular architecture |
+| Database | SQLite | v3.40+ | Embedded database with WAL mode |
+| Database Driver | better-sqlite3 | v12.2.0 | High-performance SQLite driver |
+| Cache | In-memory + TTL | Custom | Multi-tier caching with TTL support |
+| Queue | P-Queue | v8.1.0 | Advanced task queuing with priorities |
+| CLI | Commander.js | v11.1.0 | Command-line interface framework |
+| API | Express | v5.1.0 | REST API server with modern features |
+| WebSocket | ws | v8.18.3 | Real-time bi-directional communication |
+| Testing | Jest | v29.7.0 | Comprehensive testing framework |
+| Swarm Engine | ruv-swarm | v1.0.14 | Multi-agent coordination system |
+| MCP Protocol | @modelcontextprotocol/sdk | v1.0.4 | Model Context Protocol integration |
 
 ### Dependencies
 
