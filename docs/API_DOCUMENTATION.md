@@ -716,6 +716,6 @@ npx claude-flow@alpha --version
 
 *Intelligent AI Agent Orchestration*
 
-[🚀 Get Started](../README-NEW.md) | [🔧 Configure](./DEPLOYMENT.md) | [🤝 Contribute](../CONTRIBUTING.md)
+[🚀 Get Started](../README.md) | [🔧 Configure](./DEPLOYMENT.md) | [🤝 Contribute](../CONTRIBUTING.md)
 
 </div>

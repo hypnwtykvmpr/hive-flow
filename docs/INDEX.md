@@ -75,7 +75,7 @@ Complete automation toolkit covering file operations, system management, GitHub 
 ## 📚 Complete Documentation Suite
 
 ### 🏃‍♂️ Getting Started
-- **[README-NEW.md](../README-NEW.md)** - Complete project overview and quick start
+- **[README-NEW.md](../README.md)** - Complete project overview and quick start
 - **[DEPLOYMENT.md](DEPLOYMENT.md)** - Installation, setup, and production deployment
 - **System Requirements**: Node.js v20+, 2GB RAM minimum, 8GB recommended
 
@@ -254,8 +254,8 @@ npx claude-flow@alpha --agents 3 swarm "task description"
 ### 🎯 **By User Type**
 
 #### 👨‍💻 **Developers**
-1. [Quick Start Guide](../README-NEW.md#-quick-start) - Get up and running in 5 minutes
-2. [SPARC Development](../README-NEW.md#-sparc-development-environment) - Structured development methodology
+1. [Quick Start Guide](../README.md#-quick-start) - Get up and running in 5 minutes
+2. [SPARC Development](../README.md#-sparc-development-environment) - Structured development methodology
 3. [API Reference](API_DOCUMENTATION.md) - Complete endpoint documentation
 4. [Development Workflow](DEVELOPMENT_WORKFLOW.md) - Best practices and standards
 
@@ -267,15 +267,15 @@ npx claude-flow@alpha --agents 3 swarm "task description"
 
 #### 👑 **Technical Leaders**
 1. [System Architecture](ARCHITECTURE.md#system-overview) - High-level system design
-2. [Performance Metrics](../README-NEW.md#-performance-metrics) - Benchmarks and optimization
-3. [Swarm Intelligence](../README-NEW.md#-swarm-intelligence) - Distributed coordination strategies
+2. [Performance Metrics](../README.md#-performance-metrics) - Benchmarks and optimization
+3. [Swarm Intelligence](../README.md#-swarm-intelligence) - Distributed coordination strategies
 4. [Enterprise Features](DEPLOYMENT.md#production-setup) - Production-grade capabilities
 
 #### 🚀 **Product Managers**
-1. [Feature Overview](../README-NEW.md#-key-features) - Complete capability matrix
-2. [Use Cases](../README-NEW.md#-use-cases) - Real-world applications
-3. [Integration Capabilities](../README-NEW.md#-integration-capabilities) - Platform compatibility
-4. [Roadmap](../README-NEW.md#-roadmap) - Future development plans
+1. [Feature Overview](../README.md#-key-features) - Complete capability matrix
+2. [Use Cases](../README.md#-use-cases) - Real-world applications
+3. [Integration Capabilities](../README.md#-integration-capabilities) - Platform compatibility
+4. [Roadmap](../README.md#-roadmap) - Future development plans
 
 ### System Requirements
 
@@ -391,9 +391,9 @@ npx claude-flow@alpha analytics --export-metrics --format prometheus
 
 #### **Week 1: Fundamentals**
 1. **[Installation & Setup](DEPLOYMENT.md#installation-methods)** - Get Claude Flow running
-2. **[First Swarm Creation](../README-NEW.md#-quick-start)** - Build your first AI team  
-3. **[SPARC Methodology](../README-NEW.md#-sparc-development-environment)** - Learn structured development
-4. **[Basic Commands](../README-NEW.md#-essential-commands)** - Master core CLI operations
+2. **[First Swarm Creation](../README.md#-quick-start)** - Build your first AI team  
+3. **[SPARC Methodology](../README.md#-sparc-development-environment)** - Learn structured development
+4. **[Basic Commands](../README.md#-essential-commands)** - Master core CLI operations
 
 #### **Week 2: Advanced Features**
 1. **[Agent Coordination](ARCHITECTURE.md#agent-architecture)** - Understanding swarm intelligence
@@ -557,7 +557,7 @@ npx claude-flow@alpha init --force
 
 ### **🌟 Join Thousands of Developers Building with Claude Flow**
 
-[**🚀 Quick Start**](../README-NEW.md#-quick-start) • [**📚 Documentation**](../README-NEW.md) • [**💬 Community**](https://discord.gg/claude-flow) • [**🐛 Issues**](https://github.com/ruvnet/claude-flow/issues)
+[**🚀 Quick Start**](../README.md#-quick-start) • [**📚 Documentation**](../README.md) • [**💬 Community**](https://discord.gg/claude-flow) • [**🐛 Issues**](https://github.com/ruvnet/claude-flow/issues)
 
 ---
 

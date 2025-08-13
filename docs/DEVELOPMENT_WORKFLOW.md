@@ -1328,6 +1328,6 @@ npm update
 
 **Claude-Flow Development Workflow v2.0.0-alpha.88**
 
-[Back to README](../README-NEW.md) | [Contributing](../CONTRIBUTING.md) | [Code of Conduct](../CODE_OF_CONDUCT.md)
+[Back to README](../README.md) | [Contributing](../CONTRIBUTING.md) | [Code of Conduct](../CODE_OF_CONDUCT.md)
 
 </div>
