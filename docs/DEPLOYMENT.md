@@ -2055,77 +2055,101 @@ net.ipv4.tcp_fin_timeout = 30
 
 ## Troubleshooting
 
-### Common Issues
+### Production Issues
 
-#### Issue: Installation Fails
+#### Issue: Pod Crashes with OOMKilled
 
 ```bash
-# Clear npm cache
-npm cache clean --force
+# Check memory usage
+kubectl top pods -n claude-flow
 
-# Remove node_modules
-rm -rf node_modules package-lock.json
+# Increase memory limits
+kubectl patch deployment claude-flow -n claude-flow -p='{"spec":{"template":{"spec":{"containers":[{"name":"claude-flow","resources":{"limits":{"memory":"8Gi"}}}]}}}}'
 
-# Reinstall
-npm install
-
-# Use different registry
-npm install --registry https://registry.npmjs.org/
+# Enable memory profiling
+kubectl set env deployment/claude-flow NODE_OPTIONS="--max-old-space-size=6144" -n claude-flow
 ```
 
-#### Issue: SQLite Errors
+#### Issue: High Response Times
 
 ```bash
-# Rebuild SQLite
-npm rebuild better-sqlite3
+# Check pod resource usage
+kubectl describe pod -l app=claude-flow -n claude-flow
 
-# Install from source
-npm install better-sqlite3 --build-from-source
+# Scale up replicas
+kubectl scale deployment claude-flow --replicas=5 -n claude-flow
 
-# Use in-memory fallback
-export CLAUDE_FLOW_MEMORY_BACKEND=memory
+# Check database connections
+kubectl exec deployment/claude-flow -n claude-flow -- psql $DATABASE_URL -c "SELECT count(*) FROM pg_stat_activity;"
+
+# Optimize database queries
+kubectl exec deployment/claude-flow -n claude-flow -- npx claude-flow@alpha db optimize
 ```
 
-#### Issue: Permission Denied
+#### Issue: Database Connection Pool Exhaustion
 
 ```bash
-# Fix npm permissions
-sudo chown -R $(whoami) $(npm config get prefix)
+# Check current connections
+psql $DATABASE_URL -c "
+SELECT 
+    state,
+    count(*) as connections 
+FROM pg_stat_activity 
+GROUP BY state;"
 
-# Fix data directory permissions
-chmod -R 755 .claude-flow .swarm
+# Increase connection limits
+kubectl patch configmap claude-flow-config -n claude-flow -p='{"data":{"config.json":"{\"database\":{\"pool\":{\"max\":50,\"min\":10}}}"}}'
 
-# Run with elevated permissions (not recommended)
-sudo npm install -g claude-flow@alpha --unsafe-perm
+# Restart deployment
+kubectl rollout restart deployment/claude-flow -n claude-flow
 ```
 
-#### Issue: API Key Not Working
+#### Issue: Load Balancer Health Check Failures
 
 ```bash
-# Verify API key
-curl -H "Authorization: Bearer $CLAUDE_API_KEY" \
-  https://api.anthropic.com/v1/models
+# Check health endpoint
+kubectl exec deployment/claude-flow -n claude-flow -- curl -f http://localhost:3000/health
 
-# Check environment variable
-echo $CLAUDE_API_KEY
+# View detailed health status
+kubectl exec deployment/claude-flow -n claude-flow -- npx claude-flow@alpha diagnostics --health
 
-# Set directly in config
-claude-flow config set providers.anthropic.apiKey "your-key"
+# Check ingress configuration
+kubectl describe ingress claude-flow-ingress -n claude-flow
+
+# Test from outside cluster
+curl -H "Host: api.claude-flow.com" http://$(kubectl get svc ingress-nginx-controller -n ingress-nginx -o jsonpath='{.status.loadBalancer.ingress[0].ip}')/health
 ```
 
-#### Issue: Port Already in Use
+#### Issue: SSL Certificate Errors
 
 ```bash
-# Find process using port
-lsof -i :3000
-# or
-netstat -tulpn | grep 3000
+# Check certificate status
+kubectl get certificate claude-flow-tls -n claude-flow
 
-# Kill process
-kill -9 <PID>
+# Describe certificate for details
+kubectl describe certificate claude-flow-tls -n claude-flow
 
-# Use different port
-CLAUDE_FLOW_PORT=3001 claude-flow server
+# Check cert-manager logs
+kubectl logs deployment/cert-manager -n cert-manager
+
+# Force certificate renewal
+kubectl delete certificate claude-flow-tls -n claude-flow
+kubectl apply -f k8s/cert-issuer.yaml
+```
+
+#### Issue: High CPU Usage
+
+```bash
+# Check CPU metrics
+kubectl top pods -n claude-flow
+
+# Profile application
+kubectl exec deployment/claude-flow -n claude-flow -- node --prof /app/dist/index.js &
+# Let it run for a few minutes, then:
+kubectl exec deployment/claude-flow -n claude-flow -- node --prof-process isolate-*.log > profile.txt
+
+# Scale horizontally
+kubectl patch hpa claude-flow-hpa -n claude-flow -p='{"spec":{"minReplicas":5,"maxReplicas":30}}'
 ```
 
 ### Debug Mode
