@@ -400,6 +400,20 @@ TOKEN USAGE OPTIONS:
   --cost-analysis      Include cost projections and optimization
   --enable-telemetry   Enable token tracking for this session
 
+CLAUDE MONITOR OPTIONS:
+  --interval <ms>      Update interval in milliseconds (default: 5000)
+  
+  Usage: claude-flow analysis claude-monitor [session-id] [--interval 3000]
+  
+  Monitors a Claude session for real-time token usage updates.
+  Session ID defaults to 'current' if not specified.
+
+CLAUDE COST OPTIONS:
+  Usage: claude-flow analysis claude-cost
+  
+  Retrieves the current Claude session's token usage and cost estimate.
+  Works best when run during or immediately after a Claude session.
+
 EXAMPLES:
   # First-time setup for token tracking
   claude-flow analysis setup-telemetry
