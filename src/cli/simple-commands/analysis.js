@@ -427,6 +427,67 @@ EXAMPLES:
 
 // Helper functions for real token tracking are now imported from token-tracker.js
 
+async function claudeMonitorCommand(subArgs, flags) {
+  const sessionId = subArgs[1] || 'current';
+  const interval = flags.interval || 5000;
+  
+  console.log(`📊 Starting Claude session monitor...`);
+  console.log(`   Session ID: ${sessionId}`);
+  console.log(`   Update interval: ${interval / 1000}s`);
+  console.log(`   Press Ctrl+C to stop monitoring\n`);
+  
+  try {
+    // Import the telemetry module
+    const { monitorClaudeSession } = await import('./claude-telemetry.js');
+    
+    // Start monitoring
+    const stopMonitor = await monitorClaudeSession(sessionId, interval);
+    
+    // Handle graceful shutdown
+    process.on('SIGINT', () => {
+      stopMonitor();
+      process.exit(0);
+    });
+    
+    // Keep process running
+    await new Promise(() => {});
+  } catch (error) {
+    printError(`Failed to start Claude monitor: ${error.message}`);
+    console.log('\n💡 TIP: Make sure Claude is installed and accessible');
+  }
+}
+
+async function claudeCostCommand(subArgs, flags) {
+  console.log(`💰 Retrieving Claude session cost information...`);
+  
+  try {
+    // Import the telemetry module
+    const { extractCostCommand } = await import('./claude-telemetry.js');
+    
+    // Get cost data
+    const costData = await extractCostCommand();
+    
+    console.log('\n📊 Current Session Usage:');
+    console.log(`   Input Tokens:  ${costData.tokens.input || 0}`);
+    console.log(`   Output Tokens: ${costData.tokens.output || 0}`);
+    console.log(`   Total Tokens:  ${costData.tokens.total || 0}`);
+    
+    if (costData.costs.length > 0) {
+      console.log(`   Estimated Cost: $${costData.costs[0]}`);
+    }
+    
+    // Also show pricing info
+    console.log('\n💰 Claude 3 Pricing:');
+    console.log('   • Opus:   $15/1M input, $75/1M output');
+    console.log('   • Sonnet: $3/1M input, $15/1M output');
+    console.log('   • Haiku:  $0.25/1M input, $1.25/1M output');
+    
+  } catch (error) {
+    printError(`Failed to retrieve cost data: ${error.message}`);
+    console.log('\n💡 TIP: Run this while Claude is active or immediately after');
+  }
+}
+
 async function showSimulatedTokenUsage(breakdown, costAnalysis) {
   // Show honest message about no data instead of fake numbers
   console.log(`\n🔢 TOKEN USAGE ANALYSIS:`);
