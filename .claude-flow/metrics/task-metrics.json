@@ -1,10 +1,10 @@
 [
   {
-    "id": "cmd-stream-chain-1755108810461",
-    "type": "stream-chain",
+    "id": "cmd-swarm-1755111492994",
+    "type": "swarm",
     "success": true,
-    "duration": 8.064653000000021,
-    "timestamp": 1755108810469,
+    "duration": 8.382135000000005,
+    "timestamp": 1755111493002,
     "metadata": {}
   }
 ]
