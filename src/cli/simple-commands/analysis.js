@@ -310,20 +310,7 @@ EXAMPLES:
 `);
 }
 
-// Helper functions for real token tracking
-
-async function getRealTokenUsage(agent) {
-  // Check if Claude Code OpenTelemetry is configured
-  const isOTelEnabled = process.env.CLAUDE_CODE_ENABLE_TELEMETRY === '1';
-  
-  if (!isOTelEnabled) {
-    // Try to read from local metrics file if OTel is not enabled
-    return await getLocalTokenMetrics(agent);
-  }
-  
-  // Get metrics from OpenTelemetry
-  return await getOTelTokenMetrics(agent);
-}
+// Helper functions for real token tracking are now imported from token-tracker.js
 
 async function getLocalTokenMetrics(agent) {
   // Look for Claude Code metrics in standard locations
