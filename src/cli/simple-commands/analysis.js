@@ -36,6 +36,12 @@ export async function analysisAction(subArgs, flags) {
     return;
   }
 
+  // Handle telemetry setup
+  if (subcommand === 'setup-telemetry' || options['enable-telemetry']) {
+    await setupTelemetry();
+    if (subcommand === 'setup-telemetry') return;
+  }
+
   try {
     switch (subcommand) {
       case 'bottleneck-detect':
@@ -264,9 +270,23 @@ USAGE:
   claude-flow analysis <command> [options]
 
 COMMANDS:
+  setup-telemetry      Configure token tracking for Claude API calls
   bottleneck-detect    Detect performance bottlenecks in the system
   performance-report   Generate comprehensive performance reports
   token-usage          Analyze token consumption and costs
+
+GLOBAL OPTIONS:
+  --enable-telemetry   Enable token tracking for this session
+  --help, -h           Show this help message
+
+TELEMETRY SETUP:
+  claude-flow analysis setup-telemetry
+  
+  This command will:
+  • Set CLAUDE_CODE_ENABLE_TELEMETRY=1 in your environment
+  • Create .env file with telemetry settings
+  • Initialize token tracking directory
+  • Show current telemetry status
 
 BOTTLENECK DETECT OPTIONS:
   --scope <scope>      Analysis scope (default: system)
@@ -284,29 +304,32 @@ TOKEN USAGE OPTIONS:
   --agent <agent>      Filter by agent type or ID (default: all)
   --breakdown          Include detailed breakdown by agent type
   --cost-analysis      Include cost projections and optimization
+  --enable-telemetry   Enable token tracking for this session
 
 EXAMPLES:
+  # First-time setup for token tracking
+  claude-flow analysis setup-telemetry
+
+  # Token usage with telemetry enabled
+  claude-flow analysis token-usage --enable-telemetry --breakdown
+
   # Detect system-wide bottlenecks
   claude-flow analysis bottleneck-detect --scope system
-
-  # Agent-specific bottleneck analysis
-  claude-flow analysis bottleneck-detect --scope agent --target coordinator-1
 
   # Weekly performance report
   claude-flow analysis performance-report --timeframe 7d --format detailed
 
-  # Token usage with breakdown
+  # Token usage with full analysis
   claude-flow analysis token-usage --breakdown --cost-analysis
 
-  # Swarm-specific analysis
-  claude-flow analysis bottleneck-detect --scope swarm --target swarm-123
-
 🎯 Analysis helps with:
+  • Token usage tracking & cost management
   • Performance optimization
-  • Cost management
   • Resource allocation
   • Bottleneck identification
   • Trend analysis
+
+💡 TIP: Run 'analysis setup-telemetry' first to enable token tracking!
 `);
 }
 
@@ -316,26 +339,44 @@ async function showSimulatedTokenUsage(breakdown, costAnalysis) {
   // Show honest message about no data instead of fake numbers
   console.log(`\n🔢 TOKEN USAGE ANALYSIS:`);
   console.log(`  ℹ️ No token usage data available yet.`);
-  console.log(`\n  Token tracking requires:`);
-  console.log(`  • Claude Code API calls to be made`);
-  console.log(`  • Commands run with --claude flag`);
-  console.log(`  • Or set CLAUDE_CODE_ENABLE_TELEMETRY=1`);
   
-  console.log(`\n💡 To start tracking tokens:`);
-  console.log(`  1. Run: export CLAUDE_CODE_ENABLE_TELEMETRY=1`);
-  console.log(`  2. Use: ./claude-flow swarm "task" --claude`);
-  console.log(`  3. Check back after running Claude commands`);
+  console.log(`\n📋 QUICK SETUP - Choose one option:`);
+  console.log(`\n  Option 1: Enable Telemetry (Recommended)`);
+  console.log(`  ┌────────────────────────────────────────────────────────┐`);
+  console.log(`  │ ./claude-flow analysis setup-telemetry                │`);
+  console.log(`  └────────────────────────────────────────────────────────┘`);
+  
+  console.log(`\n  Option 2: Manual Environment Variable`);
+  console.log(`  ┌────────────────────────────────────────────────────────┐`);
+  console.log(`  │ export CLAUDE_CODE_ENABLE_TELEMETRY=1                 │`);
+  console.log(`  └────────────────────────────────────────────────────────┘`);
+  
+  console.log(`\n  Option 3: Use --enable-telemetry Flag`);
+  console.log(`  ┌────────────────────────────────────────────────────────┐`);
+  console.log(`  │ ./claude-flow analysis token-usage --enable-telemetry │`);
+  console.log(`  └────────────────────────────────────────────────────────┘`);
+  
+  console.log(`\n✅ AFTER SETUP:`);
+  console.log(`  1. Run Claude commands: ./claude-flow swarm "task" --claude`);
+  console.log(`  2. Token usage will be automatically tracked`);
+  console.log(`  3. Return here to see real metrics`);
   
   if (costAnalysis) {
-    console.log(`\n💰 Cost analysis will be available once tokens are tracked.`);
-    console.log(`  Pricing: $15/1M input tokens, $75/1M output tokens (Claude 3 Opus)`);
+    console.log(`\n💰 COST TRACKING:`);
+    console.log(`  • Claude 3 Opus: $15/1M input, $75/1M output tokens`);
+    console.log(`  • Claude 3 Sonnet: $3/1M input, $15/1M output tokens`);
+    console.log(`  • Claude 3 Haiku: $0.25/1M input, $1.25/1M output tokens`);
   }
 
   if (breakdown) {
-    console.log(`\n📊 Agent breakdown will show once agents use Claude Code.`);
-    console.log(`  Each agent type's token usage will be tracked separately.`);
+    console.log(`\n📊 AGENT BREAKDOWN:`);
+    console.log(`  • Each agent type's usage tracked separately`);
+    console.log(`  • Identifies high-consumption agents`);
+    console.log(`  • Provides optimization recommendations`);
   }
 
-  console.log(`\n📄 Reports will be generated once data is available.`);
-  console.log(`  Enable CLAUDE_CODE_ENABLE_TELEMETRY=1 for automatic tracking.`);
+  console.log(`\n❓ TROUBLESHOOTING:`);
+  console.log(`  • Check telemetry status: echo $CLAUDE_CODE_ENABLE_TELEMETRY`);
+  console.log(`  • View raw data: cat .claude-flow/metrics/token-usage.json`);
+  console.log(`  • Reset tracking: rm -rf .claude-flow/metrics/token-usage.json`);
 }
