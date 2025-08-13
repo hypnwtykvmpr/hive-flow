@@ -6,6 +6,8 @@
 - [Development Environment](#development-environment)
 - [Project Structure](#project-structure)
 - [Development Workflow](#development-workflow)
+- [SPARC Development](#sparc-development)
+- [Swarm Development](#swarm-development)
 - [Testing Strategy](#testing-strategy)
 - [Code Standards](#code-standards)
 - [CI/CD Pipeline](#cicd-pipeline)
@@ -20,13 +22,13 @@
 ### Prerequisites for Development
 
 ```bash
-# Required tools
+# Required tools (as per package.json engines)
 node --version  # v20.0.0 or higher
 npm --version   # v9.0.0 or higher
 git --version   # v2.30.0 or higher
 
 # Recommended tools
-pnpm --version  # Alternative package manager
+pnpm --version  # Preferred package manager (especially on Windows)
 docker --version  # For containerized development
 code --version  # VS Code for development
 ```
@@ -38,35 +40,49 @@ code --version  # VS Code for development
 git clone https://github.com/ruvnet/claude-flow.git
 cd claude-flow
 
-# Install dependencies
+# Install dependencies (use pnpm on Windows)
 npm install
-
-# Setup git hooks
-npm run prepare
-
-# Initialize development configuration
-npm run dev:init
+# OR on Windows:
+# pnpm install
 
 # Start development mode
 npm run dev
+
+# Build TypeScript
+npm run build:ts
+
+# Test the CLI binary
+chmod +x ./bin/claude-flow
+./bin/claude-flow --version
 ```
 
-### Development Scripts
+### Current Development Scripts (v2.0.0-alpha.88)
 
 ```json
 {
   "scripts": {
-    "dev": "tsx watch src/cli/main.ts",
-    "build": "npm run clean && tsc",
-    "clean": "rm -rf dist",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
-    "lint": "eslint src --ext .ts",
+    "dev": "tsx src/cli/main.ts",
+    "build": "npm run clean && npm run update-version && npm run build:esm && npm run build:cjs && npm run build:binary",
+    "build:esm": "tsc",
+    "build:cjs": "tsc -p tsconfig.cjs.json",
+    "build:ts": "npm run build:esm && npm run build:cjs",
+    "build:binary": "pkg dist/cli/main.js --targets node20-linux-x64,node20-macos-x64,node20-win-x64 --output bin/claude-flow",
+    "clean": "rm -rf dist dist-cjs",
+    "test": "NODE_OPTIONS='--experimental-vm-modules' jest --bail --maxWorkers=1 --forceExit",
+    "test:watch": "NODE_OPTIONS='--experimental-vm-modules' jest --watch",
+    "test:coverage": "NODE_OPTIONS='--experimental-vm-modules' jest --coverage",
+    "test:ci": "NODE_OPTIONS='--experimental-vm-modules' jest --ci --coverage --maxWorkers=2",
+    "test:unit": "NODE_OPTIONS='--experimental-vm-modules' jest src/__tests__/unit",
+    "test:integration": "NODE_OPTIONS='--experimental-vm-modules' jest src/__tests__/integration",
+    "test:e2e": "NODE_OPTIONS='--experimental-vm-modules' jest src/__tests__/e2e",
+    "test:performance": "NODE_OPTIONS='--experimental-vm-modules' jest src/__tests__/performance",
+    "test:comprehensive": "node scripts/test-comprehensive.js",
+    "lint": "eslint src --ext .ts --max-warnings 0",
     "format": "prettier --write 'src/**/*.{ts,js,json}'",
     "typecheck": "tsc --noEmit",
-    "prepare": "husky install",
-    "commit": "cz"
+    "typecheck:watch": "tsc --noEmit --watch",
+    "diagnostics": "node -e \"import('./dist/monitoring/diagnostics.js').then(m => m.DiagnosticManager.quickDiagnostic().then(console.log))\"",
+    "health-check": "node -e \"import('./dist/monitoring/health-check.js').then(m => new m.HealthCheckManager().performHealthCheck().then(console.log))\""
   }
 }
 ```
@@ -168,20 +184,35 @@ claude-flow/
 │   ├── api/               # REST API implementation
 │   ├── mcp/               # MCP protocol implementation
 │   ├── hooks/             # Hook system
+│   ├── monitoring/        # Health check and diagnostics
 │   ├── utils/             # Utility functions
 │   └── types/             # TypeScript type definitions
 ├── tests/                  # Test suites
 │   ├── unit/              # Unit tests
 │   ├── integration/       # Integration tests
 │   ├── e2e/               # End-to-end tests
-│   └── fixtures/          # Test fixtures and mocks
+│   └── performance/       # Performance tests
 ├── docs/                   # Documentation
-│   ├── api/               # API documentation
-│   ├── guides/            # User guides
-│   └── technical/         # Technical documentation
+│   ├── API_DOCUMENTATION.md
+│   ├── ARCHITECTURE.md
+│   ├── DEPLOYMENT.md
+│   └── INDEX.md
 ├── examples/               # Example code and tutorials
+│   ├── 01-basic-usage/
+│   ├── 02-advanced-patterns/
+│   ├── 03-swarm-orchestration/
+│   ├── 04-mcp-integration/
+│   ├── 05-swarm-apps/
+│   └── 06-tutorials/
 ├── scripts/                # Build and utility scripts
-├── config/                 # Configuration files
+├── .claude/                # Claude-specific configurations
+│   ├── agents/            # Agent definitions
+│   ├── checkpoints/       # Session checkpoints
+│   └── metrics/           # Performance metrics
+├── bin/                    # Binary executables
+│   ├── claude-flow        # Main CLI binary
+│   ├── claude-flow-swarm  # Swarm-specific binary
+│   └── claude-flow-ui     # UI binary
 └── .github/                # GitHub workflows and templates
 ```
 
@@ -232,18 +263,27 @@ main                # Production-ready code
 └── hotfix/*        # Emergency fixes
 ```
 
-#### Creating a Feature
+#### Creating a Feature with SPARC
 
 ```bash
 # Create feature branch
 git checkout -b feature/agent-improvements
 
-# Make changes
-npm run dev  # Start development mode
-# ... make your changes ...
+# Use SPARC for architecture
+npx claude-flow@alpha sparc run architect "Agent selection improvements"
 
-# Run tests
-npm test
+# Implement with TDD
+npx claude-flow@alpha sparc run tdd "Better agent selection algorithm"
+
+# Start development mode
+npm run dev
+
+# Run comprehensive tests
+npm run test:comprehensive
+npm run test:coverage
+
+# Security review
+npx claude-flow@alpha sparc run security-review "Review agent selection"
 
 # Commit changes
 git add .
@@ -252,7 +292,8 @@ git commit -m "feat: improve agent selection algorithm"
 # Push to remote
 git push origin feature/agent-improvements
 
-# Create pull request
+# Create pull request with swarm review
+npx claude-flow@alpha swarm spawn code-review-swarm
 gh pr create --title "Improve agent selection" --body "..."
 ```
 
@@ -310,13 +351,193 @@ Brief description of changes
 
 ---
 
+## SPARC Development
+
+### Available SPARC Modes (16 Total)
+
+```bash
+# List all available modes
+npx claude-flow@alpha sparc modes
+
+# Available modes:
+# 🏗️ architect              - System architecture design
+# 🧠 code                   - Auto-coding and implementation
+# 🧪 tdd                    - Test-driven development
+# 🪲 debug                  - Debugging and troubleshooting
+# 🛡️ security-review        - Security analysis
+# 📚 docs-writer            - Documentation generation
+# 🔗 integration            - System integration
+# 📈 post-deployment-monitoring-mode - Deployment monitoring
+# 🧹 refinement-optimization-mode - Code optimization
+# ❓ ask                     - Interactive Q&A
+# 🚀 devops                 - DevOps and deployment
+# 📘 tutorial               - SPARC tutorial mode
+# 🔐 supabase-admin         - Supabase administration
+# 📋 spec-pseudocode        - Specification writing
+# ♾️ mcp                    - MCP integration
+# ⚡️ sparc                  - SPARC orchestration
+```
+
+### Using SPARC Modes
+
+```bash
+# Single mode execution
+npx claude-flow@alpha sparc run architect "Design user authentication system"
+npx claude-flow@alpha sparc run tdd "Implement user login functionality"
+npx claude-flow@alpha sparc run security-review "Review API endpoints"
+
+# Batch mode execution (multiple modes)
+npx claude-flow@alpha sparc batch architect,tdd,security-review "Build secure API"
+
+# Full pipeline execution
+npx claude-flow@alpha sparc pipeline "Complete user management system"
+
+# TDD workflow
+npx claude-flow@alpha sparc tdd "User registration feature"
+```
+
+### SPARC Development Workflow
+
+```mermaid
+graph TD
+    A[Requirements] --> B[architect]
+    B --> C[spec-pseudocode]
+    C --> D[tdd]
+    D --> E[code]
+    E --> F[debug]
+    F --> G[security-review]
+    G --> H[integration]
+    H --> I[devops]
+    I --> J[post-deployment-monitoring-mode]
+    J --> K[docs-writer]
+```
+
+---
+
+## Swarm Development
+
+### Swarm Architecture
+
+```bash
+# Initialize swarm with different topologies
+npx claude-flow@alpha swarm init --topology mesh --max-agents 10
+npx claude-flow@alpha swarm init --topology hierarchical --max-agents 15
+npx claude-flow@alpha swarm init --topology adaptive --max-agents 8
+
+# Spawn specialized agents
+npx claude-flow@alpha swarm spawn coder
+npx claude-flow@alpha swarm spawn reviewer
+npx claude-flow@alpha swarm spawn tester
+npx claude-flow@alpha swarm spawn system-architect
+
+# Coordinate multi-agent tasks
+npx claude-flow@alpha swarm coordinate "Build full-stack application"
+```
+
+### Available Agent Types (54 Total)
+
+#### Core Development Agents
+```bash
+- coder                    # Implementation specialist
+- reviewer                 # Code quality reviewer
+- tester                   # Test creation and validation
+- planner                  # Strategic planning
+- researcher               # Information gathering
+- backend-dev              # API development
+- mobile-dev               # React Native/mobile
+- ml-developer             # Machine learning
+- system-architect         # High-level design
+- sparc-coder              # TDD implementation
+- production-validator     # Real environment validation
+```
+
+#### Swarm Coordination Agents
+```bash
+- hierarchical-coordinator     # Queen-led coordination
+- mesh-coordinator            # Peer-to-peer coordination
+- adaptive-coordinator        # Dynamic topology
+- collective-intelligence-coordinator  # Hive-mind
+- swarm-memory-manager       # Distributed memory
+- byzantine-coordinator      # Fault tolerance
+- raft-manager              # Leader election
+- consensus-builder         # Decision-making
+```
+
+#### GitHub Integration Agents
+```bash
+- github-modes              # Comprehensive integration
+- pr-manager                # Pull requests
+- code-review-swarm         # Multi-agent review
+- issue-tracker             # Issue management
+- release-manager           # Release coordination
+```
+
+### Swarm Patterns
+
+#### Full-Stack Development Swarm
+```javascript
+// Spawn 8-agent full-stack swarm
+const swarm = {
+  architecture: "system-architect",
+  backend: "backend-dev",
+  frontend: "mobile-dev",
+  database: "coder",
+  api_docs: "api-docs",
+  cicd: "cicd-engineer",
+  testing: "performance-benchmarker",
+  validation: "production-validator"
+};
+```
+
+#### Code Review Swarm
+```javascript
+// Multi-agent code review
+const reviewSwarm = {
+  security: "security-review",
+  performance: "perf-analyzer",
+  quality: "reviewer",
+  testing: "tester",
+  documentation: "docs-writer"
+};
+```
+
+---
+
 ## Testing Strategy
+
+### Current Test Configuration (Jest with ESM)
+
+```javascript
+// jest.config.js
+export default {
+  preset: 'ts-jest/presets/default-esm',
+  extensionsToTreatAsEsm: ['.ts'],
+  testEnvironment: 'node',
+  roots: ['<rootDir>/src', '<rootDir>/tests'],
+  testMatch: [
+    '<rootDir>/tests/**/*.test.ts',
+    '<rootDir>/src/**/*.test.ts'
+  ],
+  transform: {
+    '^.+\\.ts$': ['ts-jest', {
+      useESM: true,
+      tsconfig: {
+        module: 'es2022',
+        target: 'es2022'
+      }
+    }]
+  },
+  coverageDirectory: 'coverage',
+  coverageReporters: ['text', 'lcov', 'html'],
+  testTimeout: 30000
+};
+```
 
 ### Test Structure
 
 ```typescript
 // tests/unit/agents/coder.test.ts
-import { CoderAgent } from '../../../src/agents/specialized/coder';
+import { CoderAgent } from '../../../src/agents/specialized/coder.js';
 
 describe('CoderAgent', () => {
   let agent: CoderAgent;
@@ -347,60 +568,88 @@ describe('CoderAgent', () => {
 });
 ```
 
-### Test Categories
-
-#### Unit Tests
+### Current Test Commands
 
 ```bash
-# Run unit tests
-npm run test:unit
+# All tests with ESM support
+npm test  # NODE_OPTIONS='--experimental-vm-modules' jest --bail --maxWorkers=1 --forceExit
 
-# Run with coverage
-npm run test:unit:coverage
+# Specific test suites
+npm run test:unit          # Unit tests only
+npm run test:integration   # Integration tests
+npm run test:e2e           # End-to-end tests
+npm run test:performance   # Performance tests
+npm run test:cli           # CLI tests
 
-# Run specific test
-npm test -- agents/coder.test.ts
+# Coverage reports
+npm run test:coverage      # Generate coverage report
+npm run test:coverage:unit # Unit test coverage
+npm run test:ci           # CI-optimized tests
+
+# Advanced testing
+npm run test:comprehensive # Comprehensive test suite
+npm run test:debug        # Debug mode with inspect
+npm run test:watch        # Watch mode
+
+# Health and diagnostics
+npm run test:health       # System health tests
+npm run test:swarm        # Swarm coordination tests
+npm run test:benchmark    # Performance benchmarks
 ```
 
-#### Integration Tests
+#### Test Coverage Requirements
+
+Current coverage target: **80%** (as configured in CI/CD)
 
 ```bash
-# Run integration tests
-npm run test:integration
+# Generate detailed coverage report
+npm run test:coverage
 
-# Test API endpoints
-npm run test:api
+# Coverage by test type
+npm run test:coverage:unit        # Unit test coverage
+npm run test:coverage:integration # Integration coverage
+npm run test:coverage:e2e         # E2E coverage
 
-# Test database operations
-npm run test:db
+# View coverage report
+open coverage/lcov-report/index.html
 ```
 
-#### End-to-End Tests
+### Current Dependencies (v2.0.0-alpha.88)
 
-```bash
-# Run E2E tests
-npm run test:e2e
-
-# Run with UI
-npm run test:e2e:ui
-
-# Run specific scenario
-npm run test:e2e -- --grep "swarm coordination"
+#### Core Dependencies
+```json
+{
+  "@modelcontextprotocol/sdk": "^1.0.4",
+  "blessed": "^0.1.81",
+  "chalk": "^4.1.2",
+  "cli-table3": "^0.6.3",
+  "commander": "^11.1.0",
+  "cors": "^2.8.5",
+  "figlet": "^1.8.1",
+  "fs-extra": "^11.2.0",
+  "glob": "^11.0.3",
+  "inquirer": "^9.2.12",
+  "nanoid": "^5.0.4",
+  "ora": "^7.0.1",
+  "ruv-swarm": "^1.0.14",
+  "ws": "^8.18.3",
+  "yaml": "^2.8.0"
+}
 ```
 
-### Test Coverage Requirements
-
-```yaml
-# .github/codecov.yml
-coverage:
-  status:
-    project:
-      default:
-        target: 80%
-        threshold: 5%
-    patch:
-      default:
-        target: 90%
+#### Development Dependencies
+```json
+{
+  "@types/node": "^20.19.7",
+  "@typescript-eslint/eslint-plugin": "^6.21.0",
+  "@typescript-eslint/parser": "^6.21.0",
+  "eslint": "^8.57.1",
+  "jest": "^29.7.0",
+  "prettier": "^3.1.1",
+  "ts-jest": "^29.4.0",
+  "tsx": "^4.6.2",
+  "typescript": "^5.3.3"
+}
 ```
 
 ---
@@ -485,115 +734,157 @@ coverage:
 
 ## CI/CD Pipeline
 
-### GitHub Actions Workflow
+### Current GitHub Actions Workflows
+
+#### Main CI/CD Pipeline (.github/workflows/ci.yml)
 
 ```yaml
-# .github/workflows/ci.yml
-name: CI
+name: CI/CD Pipeline
 
 on:
   push:
-    branches: [main, develop]
+    branches: [ main, develop ]
   pull_request:
-    branches: [main, develop]
+    branches: [ main ]
+  schedule:
+    - cron: '0 2 * * *'  # Daily at 2 AM UTC
+
+env:
+  NODE_VERSION: '20'
 
 jobs:
-  lint:
+  security:
+    name: Security & Code Quality
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-      - run: npm ci
-      - run: npm run lint
-      - run: npm run typecheck
+      - name: Install dependencies
+        run: npm ci
+      - name: Run security audit
+        run: |
+          npm audit --audit-level=high
+          npm audit --production --audit-level=moderate
+      - name: Lint code
+        run: npm run lint
+      - name: Type check
+        run: npm run typecheck
 
+  test:
+    name: Test Suite
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Run all tests
+        run: npm test
+      - name: Generate coverage report
+        run: npm run test:coverage
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: coverage/
+
+  build:
+    name: Build & Package
+    runs-on: ubuntu-latest
+    needs: [security, test]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Build project
+        run: npm run build:ts
+      - name: Test CLI binary
+        run: |
+          chmod +x ./bin/claude-flow
+          ./bin/claude-flow --version
+```
+
+#### Test Workflow (.github/workflows/test.yml)
+
+```yaml
+name: Test Suite
+
+on:
+  push:
+    branches: [ main, develop, claude-flow-v2.0.0 ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
   test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [20, 21]
+        node-version: [18.x, 20.x]
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
-        with:
-          node-version: ${{ matrix.node-version }}
-          cache: 'npm'
-      - run: npm ci
-      - run: npm test -- --coverage
-      - uses: codecov/codecov-action@v3
-        with:
-          files: ./coverage/lcov.info
+    - name: Checkout code
+      uses: actions/checkout@v4
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+    - name: Install dependencies
+      run: npm ci
+    - name: Run linting
+      run: npm run lint
+    - name: Run all tests
+      run: npm test
+    - name: Generate coverage report
+      run: npm run test:coverage
 
-  build:
+  code-quality:
     runs-on: ubuntu-latest
-    needs: [lint, test]
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
-        with:
-          node-version: '20'
-          cache: 'npm'
-      - run: npm ci
-      - run: npm run build
-      - uses: actions/upload-artifact@v3
-        with:
-          name: dist
-          path: dist/
-
-  e2e:
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
-        with:
-          node-version: '20'
-          cache: 'npm'
-      - uses: actions/download-artifact@v3
-        with:
-          name: dist
-          path: dist/
-      - run: npm ci
-      - run: npm run test:e2e
+    - name: Checkout code
+      uses: actions/checkout@v4
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+    - name: Install dependencies
+      run: npm ci
+    - name: Check code formatting
+      run: |
+        npm run format
+        git diff --exit-code
+    - name: Run linting
+      run: npm run lint
 ```
 
-### Release Workflow
+### Release Process (Alpha)
 
-```yaml
-# .github/workflows/release.yml
-name: Release
+```bash
+# Current alpha release process
+npm run update-version
+npm run build
+npm test
+npm publish --tag alpha
 
-on:
-  push:
-    tags:
-      - 'v*'
-
-jobs:
-  release:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
-        with:
-          node-version: '20'
-          registry-url: 'https://registry.npmjs.org'
-      - run: npm ci
-      - run: npm run build
-      - run: npm test
-      - run: npm publish --tag alpha
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      - uses: softprops/action-gh-release@v1
-        with:
-          files: |
-            dist/**
-            README.md
-            CHANGELOG.md
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+# Version management
+npm version prerelease --preid=alpha  # 2.0.0-alpha.88 -> 2.0.0-alpha.89
 ```
 
 ---
@@ -618,25 +909,35 @@ git checkout main
 git merge upstream/main
 ```
 
-### Development Process
+### Development Process with SPARC and Swarm
 
 ```bash
 # 1. Create feature branch
 git checkout -b feature/your-feature
 
-# 2. Make changes and test
+# 2. Plan with SPARC architect
+npx claude-flow@alpha sparc run architect "Your feature description"
+
+# 3. Implement with TDD
+npx claude-flow@alpha sparc run tdd "Feature implementation"
+
+# 4. Make changes and test
 npm run dev
-npm test
+npm run test:comprehensive
 npm run lint
 
-# 3. Commit changes
+# 5. Security review
+npx claude-flow@alpha sparc run security-review "Review changes"
+
+# 6. Commit changes
 git add .
 git commit -m "feat: add amazing feature"
 
-# 4. Push to your fork
+# 7. Push to your fork
 git push origin feature/your-feature
 
-# 5. Create pull request
+# 8. Create pull request with swarm review
+npx claude-flow@alpha swarm spawn code-review-swarm
 gh pr create --repo ruvnet/claude-flow
 ```
 
@@ -662,23 +963,25 @@ gh pr create --repo ruvnet/claude-flow
 
 ## Release Process
 
-### Version Management
+### Current Version Management (Alpha Release)
 
 ```bash
-# Semantic versioning: MAJOR.MINOR.PATCH
+# Current version: 2.0.0-alpha.88
 
-# Patch release (bug fixes)
-npm version patch  # 2.0.0 -> 2.0.1
+# Alpha releases (current workflow)
+npm version prerelease --preid=alpha  # 2.0.0-alpha.88 -> 2.0.0-alpha.89
+npm run publish:alpha
 
-# Minor release (new features)
-npm version minor  # 2.0.0 -> 2.1.0
+# Future stable releases
+npm run publish:patch  # Bug fixes
+npm run publish:minor  # New features
+npm run publish:major  # Breaking changes
 
-# Major release (breaking changes)
-npm version major  # 2.0.0 -> 3.0.0
-
-# Pre-release versions
-npm version prerelease --preid=alpha  # 2.0.0 -> 2.0.1-alpha.0
-npm version prerelease --preid=beta   # 2.0.0 -> 2.0.1-beta.0
+# Available publish scripts
+npm run publish:alpha  # Alpha release
+npm run publish:major  # Major version bump
+npm run publish:minor  # Minor version bump
+npm run publish:patch  # Patch version bump
 ```
 
 ### Release Checklist
@@ -862,31 +1165,48 @@ export async function coordinate(
 
 ## Development Tools
 
-### Useful Scripts
+### Current Build System
 
 ```bash
-#!/bin/bash
-# scripts/dev-setup.sh
+# Multi-target build system
+npm run build              # Full build pipeline
+npm run build:esm          # ESM build
+npm run build:cjs          # CommonJS build
+npm run build:binary       # Binary executables
 
-# Setup development environment
-echo "Setting up Claude-Flow development environment..."
+# Binary targets (pkg)
+# - node20-linux-x64
+# - node20-macos-x64
+# - node20-win-x64
 
-# Install dependencies
-npm install
+# Available binaries
+./bin/claude-flow          # Main CLI
+./bin/claude-flow-swarm    # Swarm coordination
+./bin/claude-flow-ui       # UI interface
+./bin/claude-flow-dev      # Development mode
+```
 
-# Setup git hooks
-npx husky install
+### Health Monitoring and Diagnostics
 
-# Create local config
-cp .env.example .env
+```bash
+# System diagnostics
+npm run diagnostics
 
-# Initialize database
-npm run db:init
+# Health check
+npm run health-check
 
-# Run initial tests
-npm test
+# Performance monitoring
+npm run test:performance
+npm run test:benchmark
 
-echo "Development environment ready!"
+# Load testing
+npm run test:load
+
+# Docker testing
+npm run test:docker
+
+# NPX testing
+npm run test:npx
 ```
 
 ### Debug Utilities
@@ -1006,8 +1326,8 @@ npm update
 
 <div align="center">
 
-**Claude-Flow Development Workflow v2.0.0**
+**Claude-Flow Development Workflow v2.0.0-alpha.88**
 
-[Back to README](../README.md) | [Contributing](../CONTRIBUTING.md) | [Code of Conduct](../CODE_OF_CONDUCT.md)
+[Back to README](../README-NEW.md) | [Contributing](../CONTRIBUTING.md) | [Code of Conduct](../CODE_OF_CONDUCT.md)
 
 </div>
