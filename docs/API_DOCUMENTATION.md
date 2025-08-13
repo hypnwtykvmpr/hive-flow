@@ -1,1784 +1,721 @@
-# 🔗 Claude-Flow API Documentation
+# 🔗 Claude-Flow v2.0.0 API Documentation
 
 ## Table of Contents
 
 - [Overview](#overview)
 - [Authentication](#authentication)
-- [Base URL](#base-url)
-- [Rate Limiting](#rate-limiting)
+- [Command Syntax](#command-syntax)
+- [MCP Tools Reference](#mcp-tools-reference)
+  - [Claude-Flow Tools (87)](#claude-flow-tools)
+  - [Ruv-Swarm Tools (25)](#ruv-swarm-tools)
+- [Agent Types](#agent-types)
+- [WebSocket Integration](#websocket-integration)
+- [Command Examples](#command-examples)
 - [Error Handling](#error-handling)
-- [Core Endpoints](#core-endpoints)
-  - [Agent Management](#agent-management)
-  - [Task Management](#task-management)
-  - [Swarm Operations](#swarm-operations)
-  - [Memory Management](#memory-management)
-  - [System Management](#system-management)
-- [WebSocket Events](#websocket-events)
-- [MCP Protocol](#mcp-protocol)
-- [Code Examples](#code-examples)
+- [Best Practices](#best-practices)
 
 ---
 
 ## Overview
 
-The Claude-Flow API provides programmatic access to all orchestration capabilities, enabling integration with external systems and custom automation workflows.
+Claude-Flow v2.0.0 provides comprehensive AI agent orchestration with 112 MCP tools, 54+ specialized agent types, and advanced swarm intelligence capabilities. This documentation covers the complete API surface for programmatic access to all features.
 
-### API Design Principles
+### Key Features
 
-- **RESTful Architecture** - Standard HTTP methods and status codes
-- **JSON Format** - All requests and responses use JSON
-- **Idempotent Operations** - Safe retry mechanisms
-- **Pagination** - Efficient handling of large datasets
-- **Real-time Updates** - WebSocket support for live data
+- **112 MCP Tools** - 87 Claude-Flow + 25 Ruv-Swarm integration tools
+- **54+ Agent Types** - Specialized agents for every development need
+- **Swarm Intelligence** - Multi-topology coordination (hierarchical, mesh, ring, star)
+- **Neural Networks** - WASM-accelerated AI patterns and learning
+- **Memory System** - Persistent, distributed memory with compression
+- **Real-time Coordination** - WebSocket-based agent communication
+- **GitHub Integration** - Native CI/CD and repository management
+- **Auto-scaling** - Dynamic agent provisioning and resource management
 
 ## Authentication
 
-### API Key Authentication
+### CLI Authentication
 
-```http
-Authorization: Bearer YOUR_API_KEY
+```bash
+# Initialize with GitHub authentication (recommended)
+npx claude-flow@alpha github init
+
+# Or use API key
+export CLAUDE_FLOW_API_KEY="your-api-key"
+npx claude-flow@alpha config set --api-key $CLAUDE_FLOW_API_KEY
 ```
 
-### JWT Token Authentication
+### MCP Integration
 
 ```javascript
-// Request token
-POST /api/auth/token
-{
-  "username": "user@example.com",
-  "password": "secure_password"
-}
-
-// Response
-{
-  "token": "eyJhbGciOiJIUzI1NiIs...",
-  "expires_in": 3600,
-  "refresh_token": "..."
-}
-```
-
-### OAuth 2.0 Support
-
-```http
-GET /api/auth/oauth/authorize?
-  client_id=YOUR_CLIENT_ID&
-  redirect_uri=YOUR_REDIRECT_URI&
-  response_type=code&
-  scope=read write
-```
-
-## Base URL
-
-```
-Production: https://api.claude-flow.ai/v2
-Staging:    https://staging-api.claude-flow.ai/v2
-Local:      http://localhost:3000/api
-```
-
-## Rate Limiting
-
-| Tier | Requests/Minute | Requests/Hour | Burst Limit |
-|------|----------------|---------------|-------------|
-| Free | 60 | 1,000 | 100 |
-| Pro | 300 | 10,000 | 500 |
-| Enterprise | Unlimited | Unlimited | Custom |
-
-### Rate Limit Headers
-
-```http
-X-RateLimit-Limit: 60
-X-RateLimit-Remaining: 45
-X-RateLimit-Reset: 1640995200
-```
-
-## Error Handling
-
-### Error Response Format
-
-```json
-{
-  "error": {
-    "code": "RESOURCE_NOT_FOUND",
-    "message": "The requested agent was not found",
-    "details": {
-      "agent_id": "agent-123",
-      "timestamp": "2024-01-01T12:00:00Z"
-    }
-  },
-  "request_id": "req-abc123"
-}
-```
-
-### HTTP Status Codes
-
-| Code | Meaning |
-|------|---------|
-| 200 | Success |
-| 201 | Created |
-| 204 | No Content |
-| 400 | Bad Request |
-| 401 | Unauthorized |
-| 403 | Forbidden |
-| 404 | Not Found |
-| 429 | Rate Limited |
-| 500 | Internal Server Error |
-| 503 | Service Unavailable |
-
----
-
-## Core Endpoints
-
-## Agent Management
-
-### List All Agents
-
-```http
-GET /api/agents
-```
-
-**Query Parameters:**
-
-| Parameter | Type | Description | Default |
-|-----------|------|-------------|---------|
-| status | string | Filter by status (active, idle, terminated) | all |
-| type | string | Filter by agent type | all |
-| page | integer | Page number | 1 |
-| limit | integer | Items per page | 50 |
-| sort | string | Sort field (created_at, name, type) | created_at |
-| order | string | Sort order (asc, desc) | desc |
-
-**Response:**
-
-```json
-{
-  "agents": [
-    {
-      "id": "agent-001",
-      "name": "Coder-Alpha",
-      "type": "coder",
-      "status": "active",
-      "capabilities": ["code_generation", "refactoring", "debugging"],
-      "current_task": "task-123",
-      "metrics": {
-        "tasks_completed": 42,
-        "success_rate": 0.95,
-        "average_time": 120
-      },
-      "created_at": "2024-01-01T10:00:00Z",
-      "updated_at": "2024-01-01T12:00:00Z"
-    }
-  ],
-  "pagination": {
-    "page": 1,
-    "limit": 50,
-    "total": 150,
-    "pages": 3
-  }
-}
-```
-
-### Create New Agent
-
-```http
-POST /api/agents
-```
-
-**Request Body:**
-
-```json
-{
-  "type": "coder",
-  "name": "Coder-Beta",
-  "capabilities": ["code_generation", "testing"],
-  "config": {
-    "model": "claude-3-sonnet",
-    "temperature": 0.7,
-    "max_tokens": 4000
-  },
-  "metadata": {
-    "project": "api-v2",
-    "team": "backend"
-  }
-}
-```
-
-**Response:**
-
-```json
-{
-  "id": "agent-002",
-  "name": "Coder-Beta",
-  "type": "coder",
-  "status": "initializing",
-  "capabilities": ["code_generation", "testing"],
-  "config": {
-    "model": "claude-3-sonnet",
-    "temperature": 0.7,
-    "max_tokens": 4000
-  },
-  "created_at": "2024-01-01T13:00:00Z"
-}
-```
-
-### Get Agent Details
-
-```http
-GET /api/agents/{agent_id}
-```
-
-**Response:**
-
-```json
-{
-  "id": "agent-001",
-  "name": "Coder-Alpha",
-  "type": "coder",
-  "status": "active",
-  "capabilities": ["code_generation", "refactoring", "debugging"],
-  "current_task": {
-    "id": "task-123",
-    "description": "Implement user authentication",
-    "progress": 0.75
-  },
-  "history": [
-    {
-      "task_id": "task-122",
-      "completed_at": "2024-01-01T11:00:00Z",
-      "duration": 300,
-      "result": "success"
-    }
-  ],
-  "metrics": {
-    "tasks_completed": 42,
-    "success_rate": 0.95,
-    "average_time": 120,
-    "resource_usage": {
-      "cpu": 0.25,
-      "memory": 512
-    }
-  },
-  "config": {
-    "model": "claude-3-sonnet",
-    "temperature": 0.7
-  },
-  "created_at": "2024-01-01T10:00:00Z",
-  "updated_at": "2024-01-01T12:00:00Z"
-}
-```
-
-### Update Agent
-
-```http
-PUT /api/agents/{agent_id}
-```
-
-**Request Body:**
-
-```json
-{
-  "name": "Coder-Alpha-Updated",
-  "config": {
-    "temperature": 0.8,
-    "max_tokens": 5000
-  },
-  "metadata": {
-    "priority": "high"
-  }
-}
-```
-
-### Terminate Agent
-
-```http
-DELETE /api/agents/{agent_id}
-```
-
-**Response:**
-
-```json
-{
-  "message": "Agent terminated successfully",
-  "agent_id": "agent-001",
-  "final_status": "terminated",
-  "terminated_at": "2024-01-01T14:00:00Z"
-}
-```
-
-### Agent Health Check
-
-```http
-GET /api/agents/{agent_id}/health
-```
-
-**Response:**
-
-```json
-{
-  "agent_id": "agent-001",
-  "status": "healthy",
-  "checks": {
-    "memory": "ok",
-    "cpu": "ok",
-    "connectivity": "ok",
-    "task_queue": "ok"
-  },
-  "metrics": {
-    "uptime": 3600,
-    "memory_usage": 256,
-    "cpu_usage": 0.15,
-    "queue_size": 3
-  },
-  "last_heartbeat": "2024-01-01T14:00:00Z"
-}
-```
-
----
-
-## Task Management
-
-### List Tasks
-
-```http
-GET /api/tasks
-```
-
-**Query Parameters:**
-
-| Parameter | Type | Description | Default |
-|-----------|------|-------------|---------|
-| status | string | Filter by status (pending, running, completed, failed) | all |
-| agent_id | string | Filter by assigned agent | all |
-| priority | string | Filter by priority (low, medium, high, critical) | all |
-| page | integer | Page number | 1 |
-| limit | integer | Items per page | 50 |
-
-**Response:**
-
-```json
-{
-  "tasks": [
-    {
-      "id": "task-123",
-      "type": "code_generation",
-      "description": "Implement user authentication",
-      "status": "running",
-      "priority": "high",
-      "assigned_agent": "agent-001",
-      "progress": 0.75,
-      "created_at": "2024-01-01T10:00:00Z",
-      "started_at": "2024-01-01T10:05:00Z",
-      "estimated_completion": "2024-01-01T10:30:00Z"
-    }
-  ],
-  "pagination": {
-    "page": 1,
-    "limit": 50,
-    "total": 200,
-    "pages": 4
-  }
-}
-```
-
-### Create Task
-
-```http
-POST /api/tasks
-```
-
-**Request Body:**
-
-```json
-{
-  "type": "code_generation",
-  "description": "Create REST API endpoints for user management",
-  "priority": "high",
-  "requirements": {
-    "language": "typescript",
-    "framework": "express",
-    "features": ["CRUD operations", "validation", "authentication"]
-  },
-  "constraints": {
-    "deadline": "2024-01-02T00:00:00Z",
-    "max_agents": 3,
-    "budget": 100
-  },
-  "metadata": {
-    "project": "api-v2",
-    "sprint": "2024-Q1-S1"
-  }
-}
-```
-
-**Response:**
-
-```json
-{
-  "id": "task-124",
-  "type": "code_generation",
-  "description": "Create REST API endpoints for user management",
-  "status": "pending",
-  "priority": "high",
-  "created_at": "2024-01-01T14:00:00Z",
-  "estimated_duration": 1800,
-  "assigned_agents": []
-}
-```
-
-### Get Task Details
-
-```http
-GET /api/tasks/{task_id}
-```
-
-**Response:**
-
-```json
-{
-  "id": "task-123",
-  "type": "code_generation",
-  "description": "Implement user authentication",
-  "status": "completed",
-  "priority": "high",
-  "assigned_agent": "agent-001",
-  "progress": 1.0,
-  "result": {
-    "success": true,
-    "output": {
-      "files_created": ["auth.controller.ts", "auth.service.ts"],
-      "lines_of_code": 450,
-      "tests_created": 12
-    },
-    "artifacts": [
-      {
-        "type": "code",
-        "path": "/src/auth/auth.controller.ts",
-        "size": 2048
-      }
-    ]
-  },
-  "timeline": {
-    "created_at": "2024-01-01T10:00:00Z",
-    "queued_at": "2024-01-01T10:01:00Z",
-    "started_at": "2024-01-01T10:05:00Z",
-    "completed_at": "2024-01-01T10:25:00Z"
-  },
-  "metrics": {
-    "duration": 1200,
-    "cpu_time": 300,
-    "memory_peak": 512,
-    "api_calls": 5
-  }
-}
-```
-
-### Update Task
-
-```http
-PUT /api/tasks/{task_id}
-```
-
-**Request Body:**
-
-```json
-{
-  "priority": "critical",
-  "deadline": "2024-01-01T18:00:00Z",
-  "metadata": {
-    "escalated": true,
-    "reason": "customer request"
-  }
-}
-```
-
-### Cancel Task
-
-```http
-DELETE /api/tasks/{task_id}
-```
-
-**Response:**
-
-```json
-{
-  "message": "Task cancelled successfully",
-  "task_id": "task-123",
-  "status": "cancelled",
-  "cancelled_at": "2024-01-01T15:00:00Z",
-  "rollback_performed": true
-}
-```
-
-### Assign Task to Agent
-
-```http
-POST /api/tasks/{task_id}/assign
-```
-
-**Request Body:**
-
-```json
-{
-  "agent_id": "agent-002",
-  "priority_override": "critical",
-  "start_immediately": true
-}
-```
-
----
-
-## Swarm Operations
-
-### List Swarms
-
-```http
-GET /api/swarms
-```
-
-**Response:**
-
-```json
-{
-  "swarms": [
-    {
-      "id": "swarm-001",
-      "name": "API Development Swarm",
-      "topology": "hierarchical",
-      "status": "active",
-      "objective": "Build complete REST API",
-      "agents": [
-        {
-          "id": "agent-001",
-          "role": "coordinator"
-        },
-        {
-          "id": "agent-002",
-          "role": "worker"
-        }
-      ],
-      "progress": 0.65,
-      "created_at": "2024-01-01T09:00:00Z"
-    }
-  ]
-}
-```
-
-### Create Swarm
-
-```http
-POST /api/swarms
-```
-
-**Request Body:**
-
-```json
-{
-  "name": "Microservices Development",
-  "objective": "Build microservices architecture",
-  "topology": "mesh",
-  "config": {
-    "max_agents": 10,
-    "auto_scale": true,
-    "fault_tolerance": "high",
-    "communication_protocol": "async"
-  },
-  "initial_agents": [
-    {
-      "type": "architect",
-      "count": 1
-    },
-    {
-      "type": "backend-dev",
-      "count": 3
-    },
-    {
-      "type": "tester",
-      "count": 2
-    }
-  ],
-  "tasks": [
-    "Design system architecture",
-    "Implement user service",
-    "Implement order service",
-    "Create API gateway",
-    "Setup monitoring"
-  ]
-}
-```
-
-### Get Swarm Status
-
-```http
-GET /api/swarms/{swarm_id}/status
-```
-
-**Response:**
-
-```json
-{
-  "id": "swarm-001",
-  "status": "active",
-  "health": "healthy",
-  "topology": "mesh",
-  "agents": {
-    "total": 6,
-    "active": 5,
-    "idle": 1,
-    "failed": 0
-  },
-  "tasks": {
-    "total": 10,
-    "completed": 6,
-    "in_progress": 3,
-    "pending": 1
-  },
-  "progress": 0.65,
-  "performance": {
-    "throughput": 12.5,
-    "efficiency": 0.89,
-    "coordination_overhead": 0.12
-  },
-  "resource_usage": {
-    "cpu": 2.5,
-    "memory": 2048,
-    "network": 150
-  },
-  "last_update": "2024-01-01T15:00:00Z"
-}
-```
-
-### Control Swarm
-
-```http
-POST /api/swarms/{swarm_id}/control
-```
-
-**Request Body:**
-
-```json
-{
-  "action": "scale",
-  "parameters": {
-    "agent_type": "backend-dev",
-    "count": 2,
-    "operation": "add"
-  }
-}
-```
-
-**Available Actions:**
-
-- `pause` - Pause swarm execution
-- `resume` - Resume swarm execution
-- `scale` - Scale agents up or down
-- `optimize` - Optimize swarm topology
-- `rebalance` - Rebalance task distribution
-
-### Swarm Communication
-
-```http
-POST /api/swarms/{swarm_id}/broadcast
-```
-
-**Request Body:**
-
-```json
-{
-  "message": {
-    "type": "directive",
-    "content": "Switch to high-priority mode",
-    "target": "all",
-    "priority": "high"
-  }
-}
-```
-
----
-
-## Memory Management
-
-### Store Memory
-
-```http
-POST /api/memory
-```
-
-**Request Body:**
-
-```json
-{
-  "key": "project_context",
-  "value": {
-    "description": "E-commerce platform",
-    "tech_stack": ["Node.js", "React", "PostgreSQL"],
-    "requirements": ["scalability", "security", "performance"]
-  },
-  "namespace": "project-alpha",
-  "ttl": 86400,
-  "tags": ["context", "requirements"],
-  "access_level": "shared"
-}
-```
-
-### Retrieve Memory
-
-```http
-GET /api/memory/{key}
-```
-
-**Query Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| namespace | string | Memory namespace |
-| version | integer | Specific version |
-
-**Response:**
-
-```json
-{
-  "key": "project_context",
-  "value": {
-    "description": "E-commerce platform",
-    "tech_stack": ["Node.js", "React", "PostgreSQL"],
-    "requirements": ["scalability", "security", "performance"]
-  },
-  "namespace": "project-alpha",
-  "version": 3,
-  "created_at": "2024-01-01T10:00:00Z",
-  "updated_at": "2024-01-01T14:00:00Z",
-  "accessed_count": 15,
-  "tags": ["context", "requirements"]
-}
-```
-
-### Query Memory
-
-```http
-GET /api/memory/query
-```
-
-**Query Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| pattern | string | Search pattern |
-| namespace | string | Filter by namespace |
-| tags | array | Filter by tags |
-| limit | integer | Max results |
-
-**Response:**
-
-```json
-{
-  "results": [
-    {
-      "key": "api_design",
-      "namespace": "project-alpha",
-      "relevance": 0.95,
-      "snippet": "RESTful API design patterns...",
-      "tags": ["api", "design"]
-    }
-  ],
-  "total": 25,
-  "query_time": 15
-}
-```
-
-### Update Memory
-
-```http
-PUT /api/memory/{key}
-```
-
-**Request Body:**
-
-```json
-{
-  "value": {
-    "description": "Updated e-commerce platform",
-    "tech_stack": ["Node.js", "React", "PostgreSQL", "Redis"],
-    "requirements": ["scalability", "security", "performance", "caching"]
-  },
-  "merge": true,
-  "create_version": true
-}
-```
-
-### Delete Memory
-
-```http
-DELETE /api/memory/{key}
-```
-
-**Query Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| namespace | string | Memory namespace |
-| cascade | boolean | Delete related entries |
-
-### Memory Statistics
-
-```http
-GET /api/memory/stats
-```
-
-**Response:**
-
-```json
-{
-  "total_entries": 1250,
-  "namespaces": 15,
-  "size_bytes": 5242880,
-  "cache_hits": 8500,
-  "cache_misses": 1500,
-  "hit_rate": 0.85,
-  "top_namespaces": [
-    {
-      "name": "project-alpha",
-      "entries": 350,
-      "size": 1048576
-    }
-  ],
-  "memory_usage": {
-    "used": 5242880,
-    "limit": 268435456,
-    "percentage": 0.02
-  }
-}
-```
-
----
-
-## System Management
-
-### System Status
-
-```http
-GET /api/system/status
-```
-
-**Response:**
-
-```json
-{
-  "status": "operational",
-  "version": "2.0.0-alpha.88",
-  "uptime": 86400,
-  "components": {
-    "orchestrator": "healthy",
-    "memory": "healthy",
-    "mcp_server": "healthy",
-    "database": "healthy",
-    "cache": "healthy"
-  },
-  "metrics": {
-    "agents_active": 25,
-    "tasks_queued": 45,
-    "memory_usage": 0.45,
-    "cpu_usage": 0.65
-  },
-  "cluster": {
-    "nodes": 3,
-    "leader": "node-1",
-    "sync_status": "synchronized"
-  }
-}
-```
-
-### Health Check
-
-```http
-GET /api/health
-```
-
-**Response:**
-
-```json
-{
-  "status": "healthy",
-  "timestamp": "2024-01-01T15:00:00Z",
-  "checks": [
-    {
-      "name": "database",
-      "status": "pass",
-      "response_time": 5
-    },
-    {
-      "name": "memory",
-      "status": "pass",
-      "response_time": 2
-    },
-    {
-      "name": "orchestrator",
-      "status": "pass",
-      "response_time": 8
-    }
-  ]
-}
-```
-
-### System Configuration
-
-```http
-GET /api/system/config
-```
-
-**Response:**
-
-```json
-{
-  "orchestrator": {
-    "max_agents": 100,
-    "task_queue_size": 1000,
-    "default_topology": "mesh"
-  },
-  "memory": {
-    "backend": "sqlite",
-    "cache_size_mb": 256,
-    "compression": true
-  },
-  "security": {
-    "auth_enabled": true,
-    "rate_limiting": true,
-    "encryption": "AES-256"
-  },
-  "features": {
-    "swarm_intelligence": true,
-    "neural_patterns": true,
-    "mcp_integration": true
-  }
-}
-```
-
-### Performance Metrics
-
-```http
-GET /api/system/metrics
-```
-
-**Query Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| period | string | Time period (1h, 24h, 7d, 30d) |
-| resolution | string | Data resolution (1m, 5m, 1h) |
-
-**Response:**
-
-```json
-{
-  "period": "24h",
-  "resolution": "1h",
-  "metrics": {
-    "throughput": [
-      {
-        "timestamp": "2024-01-01T00:00:00Z",
-        "value": 125.5
-      }
-    ],
-    "latency": [
-      {
-        "timestamp": "2024-01-01T00:00:00Z",
-        "p50": 45,
-        "p95": 125,
-        "p99": 250
-      }
-    ],
-    "error_rate": [
-      {
-        "timestamp": "2024-01-01T00:00:00Z",
-        "value": 0.002
-      }
-    ],
-    "resource_usage": [
-      {
-        "timestamp": "2024-01-01T00:00:00Z",
-        "cpu": 0.65,
-        "memory": 0.45,
-        "disk": 0.30
-      }
-    ]
-  }
-}
-```
-
-### Generate Diagnostic Report
-
-```http
-POST /api/system/diagnostics
-```
-
-**Request Body:**
-
-```json
-{
-  "include": ["logs", "metrics", "config", "memory_dump"],
-  "time_range": {
-    "start": "2024-01-01T00:00:00Z",
-    "end": "2024-01-01T23:59:59Z"
-  },
-  "format": "json",
-  "compress": true
-}
-```
-
-**Response:**
-
-```json
-{
-  "report_id": "diag-20240101-150000",
-  "status": "generating",
-  "estimated_time": 30,
-  "download_url": "/api/system/diagnostics/diag-20240101-150000/download"
-}
-```
-
----
-
-## WebSocket Events
-
-### Connection
+// Add Claude-Flow as MCP server
+claude mcp add claude-flow npx claude-flow@alpha mcp start
+
+// Available MCP servers:
+// - claude-flow: 87 native tools
+// - ruv-swarm: 25 advanced coordination tools
+```
+
+### Token-based Access
+
+```bash
+# Generate session token
+npx claude-flow@alpha auth login
+
+# Use token in API calls
+curl -H "Authorization: Bearer $(npx claude-flow@alpha auth token)" \
+  https://api.claude-flow.ai/v2/agents
+```
+
+## Command Syntax
+
+### Correct Command Format
+
+**IMPORTANT**: Always use `npx claude-flow@alpha` (not `npx claude-flow`)
+
+```bash
+# ✅ CORRECT - Updated syntax
+npx claude-flow@alpha [command] [options]
+
+# ❌ OUTDATED - Do not use
+npx claude-flow [command] [options]
+```
+
+### Core Commands
+
+```bash
+# Swarm operations
+npx claude-flow@alpha coordination swarm-init --topology hierarchical
+npx claude-flow@alpha coordination agent-spawn --type coder
+npx claude-flow@alpha coordination task-orchestrate --task "Build API"
+
+# Memory operations
+npx claude-flow@alpha memory usage --action store --key project/context
+npx claude-flow@alpha memory search --pattern "authentication"
+
+# Performance analysis
+npx claude-flow@alpha performance report --timeframe 24h
+npx claude-flow@alpha bottleneck analyze --component swarm
+
+# GitHub integration
+npx claude-flow@alpha github repo-analyze --repo owner/repo
+npx claude-flow@alpha github pr-manage --action create
+```
+
+## MCP Tools Reference
+
+### Claude-Flow Tools (87 Total)
+
+#### 🐝 Swarm Coordination (12 tools)
+- `mcp__claude-flow__swarm_init` - Initialize swarm with topology
+- `mcp__claude-flow__agent_spawn` - Create specialized agents
+- `mcp__claude-flow__task_orchestrate` - Coordinate task execution
+- `mcp__claude-flow__swarm_status` - Monitor swarm health
+- `mcp__claude-flow__agent_list` - List active agents
+- `mcp__claude-flow__agent_metrics` - Agent performance data
+- `mcp__claude-flow__swarm_monitor` - Real-time monitoring
+- `mcp__claude-flow__topology_optimize` - Optimize coordination
+- `mcp__claude-flow__load_balance` - Balance agent workload
+- `mcp__claude-flow__coordination_sync` - Synchronize agents
+- `mcp__claude-flow__swarm_scale` - Scale agent count
+- `mcp__claude-flow__swarm_destroy` - Terminate swarm
+
+#### 🧠 Neural Network (15 tools)
+- `mcp__claude-flow__neural_status` - Neural system status
+- `mcp__claude-flow__neural_train` - Train AI patterns
+- `mcp__claude-flow__neural_predict` - Make AI predictions
+- `mcp__claude-flow__neural_patterns` - Cognitive patterns
+- `mcp__claude-flow__model_load` - Load AI models
+- `mcp__claude-flow__model_save` - Save trained models
+- `mcp__claude-flow__wasm_optimize` - WASM performance
+- `mcp__claude-flow__inference_run` - Run AI inference
+- `mcp__claude-flow__pattern_recognize` - Pattern detection
+- `mcp__claude-flow__cognitive_analyze` - Cognitive analysis
+- `mcp__claude-flow__learning_adapt` - Adaptive learning
+- `mcp__claude-flow__neural_compress` - Model compression
+- `mcp__claude-flow__ensemble_create` - Ensemble models
+- `mcp__claude-flow__transfer_learn` - Transfer learning
+- `mcp__claude-flow__neural_explain` - AI explainability
+
+#### 💾 Memory & Persistence (12 tools)
+- `mcp__claude-flow__memory_usage` - Store/retrieve data
+- `mcp__claude-flow__memory_search` - Search memory entries
+- `mcp__claude-flow__memory_persist` - Persistent storage
+- `mcp__claude-flow__memory_namespace` - Namespace management
+- `mcp__claude-flow__memory_backup` - Backup memory data
+- `mcp__claude-flow__memory_restore` - Restore from backup
+- `mcp__claude-flow__memory_compress` - Compress data
+- `mcp__claude-flow__memory_sync` - Synchronize memory
+- `mcp__claude-flow__cache_manage` - Cache operations
+- `mcp__claude-flow__state_snapshot` - State snapshots
+- `mcp__claude-flow__context_restore` - Context restoration
+- `mcp__claude-flow__memory_analytics` - Memory analytics
+
+#### 📊 Analysis & Monitoring (13 tools)
+- `mcp__claude-flow__performance_report` - Performance reports
+- `mcp__claude-flow__bottleneck_analyze` - Bottleneck detection
+- `mcp__claude-flow__task_status` - Task monitoring
+- `mcp__claude-flow__task_results` - Task results
+- `mcp__claude-flow__benchmark_run` - Run benchmarks
+- `mcp__claude-flow__metrics_collect` - Collect metrics
+- `mcp__claude-flow__trend_analysis` - Trend analysis
+- `mcp__claude-flow__cost_analysis` - Cost tracking
+- `mcp__claude-flow__quality_assess` - Quality assessment
+- `mcp__claude-flow__error_analysis` - Error analysis
+- `mcp__claude-flow__usage_stats` - Usage statistics
+- `mcp__claude-flow__health_check` - System health
+- `mcp__claude-flow__token_usage` - Token tracking
+
+#### 🔄 Workflow & Automation (11 tools)
+- `mcp__claude-flow__workflow_create` - Create workflows
+- `mcp__claude-flow__workflow_execute` - Execute workflows
+- `mcp__claude-flow__workflow_export` - Export workflows
+- `mcp__claude-flow__automation_setup` - Setup automation
+- `mcp__claude-flow__pipeline_create` - Create pipelines
+- `mcp__claude-flow__scheduler_manage` - Manage schedules
+- `mcp__claude-flow__trigger_setup` - Setup triggers
+- `mcp__claude-flow__workflow_template` - Workflow templates
+- `mcp__claude-flow__batch_process` - Batch processing
+- `mcp__claude-flow__parallel_execute` - Parallel execution
+- `mcp__claude-flow__sparc_mode` - SPARC workflows
+
+#### 🐙 GitHub Integration (8 tools)
+- `mcp__claude-flow__github_repo_analyze` - Repository analysis
+- `mcp__claude-flow__github_pr_manage` - Pull request management
+- `mcp__claude-flow__github_issue_track` - Issue tracking
+- `mcp__claude-flow__github_release_coord` - Release coordination
+- `mcp__claude-flow__github_workflow_auto` - Workflow automation
+- `mcp__claude-flow__github_code_review` - Code review
+- `mcp__claude-flow__github_sync_coord` - Sync coordination
+- `mcp__claude-flow__github_metrics` - GitHub metrics
+
+#### 🤖 DAA (Dynamic Agent Architecture) (8 tools)
+- `mcp__claude-flow__daa_agent_create` - Create dynamic agents
+- `mcp__claude-flow__daa_capability_match` - Match capabilities
+- `mcp__claude-flow__daa_resource_alloc` - Resource allocation
+- `mcp__claude-flow__daa_lifecycle_manage` - Lifecycle management
+- `mcp__claude-flow__daa_communication` - Agent communication
+- `mcp__claude-flow__daa_consensus` - Consensus algorithms
+- `mcp__claude-flow__daa_fault_tolerance` - Fault tolerance
+- `mcp__claude-flow__daa_optimization` - Agent optimization
+
+#### 🛠️ System & Utilities (8 tools)
+- `mcp__claude-flow__terminal_execute` - Terminal execution
+- `mcp__claude-flow__config_manage` - Configuration management
+- `mcp__claude-flow__features_detect` - Feature detection
+- `mcp__claude-flow__security_scan` - Security scanning
+- `mcp__claude-flow__backup_create` - Create backups
+- `mcp__claude-flow__restore_system` - System restoration
+- `mcp__claude-flow__log_analysis` - Log analysis
+- `mcp__claude-flow__diagnostic_run` - Run diagnostics
+
+### Ruv-Swarm Tools (25 Total)
+
+#### 🌊 Advanced Swarm Operations
+- `mcp__ruv-swarm__swarm_init` - Advanced swarm initialization
+- `mcp__ruv-swarm__swarm_status` - Detailed swarm status
+- `mcp__ruv-swarm__swarm_monitor` - Real-time monitoring
+- `mcp__ruv-swarm__agent_spawn` - Spawn ruv-swarm agents
+- `mcp__ruv-swarm__agent_list` - List ruv-swarm agents
+- `mcp__ruv-swarm__agent_metrics` - Agent performance metrics
+
+#### 🎯 Task Coordination
+- `mcp__ruv-swarm__task_orchestrate` - Advanced task orchestration
+- `mcp__ruv-swarm__task_status` - Task status monitoring
+- `mcp__ruv-swarm__task_results` - Retrieve task results
+
+#### 🧠 Neural Intelligence
+- `mcp__ruv-swarm__neural_status` - Neural system status
+- `mcp__ruv-swarm__neural_train` - Train neural models
+- `mcp__ruv-swarm__neural_patterns` - Cognitive patterns
+
+#### 💾 Memory Management
+- `mcp__ruv-swarm__memory_usage` - Memory operations
+
+#### ⚡ Performance
+- `mcp__ruv-swarm__benchmark_run` - Performance benchmarks
+- `mcp__ruv-swarm__features_detect` - Feature detection
+
+#### 🤖 Dynamic Agent Architecture (DAA)
+- `mcp__ruv-swarm__daa_init` - Initialize DAA
+- `mcp__ruv-swarm__daa_agent_create` - Create DAA agents
+- `mcp__ruv-swarm__daa_agent_adapt` - Adapt agent behavior
+- `mcp__ruv-swarm__daa_workflow_create` - Create DAA workflows
+- `mcp__ruv-swarm__daa_workflow_execute` - Execute DAA workflows
+- `mcp__ruv-swarm__daa_knowledge_share` - Share knowledge
+- `mcp__ruv-swarm__daa_learning_status` - Learning status
+- `mcp__ruv-swarm__daa_cognitive_pattern` - Cognitive patterns
+- `mcp__ruv-swarm__daa_meta_learning` - Meta-learning
+- `mcp__ruv-swarm__daa_performance_metrics` - Performance metrics
+
+## Agent Types
+
+### Core Development Agents
+| Agent | Type | Capabilities |
+|-------|------|-------------|
+| **coder** | Implementation | Code generation, refactoring, debugging |
+| **reviewer** | Quality Assurance | Code review, best practices, standards |
+| **tester** | Testing | Unit tests, integration tests, TDD |
+| **researcher** | Investigation | Research, analysis, documentation |
+| **planner** | Planning | Project planning, task breakdown |
+
+### Specialized Agents
+| Agent | Type | Capabilities |
+|-------|------|-------------|
+| **code-analyzer** | Analysis | Code quality, performance, security |
+| **system-architect** | Architecture | System design, patterns, scalability |
+| **backend-dev** | Development | API development, databases, services |
+| **mobile-dev** | Development | React Native, mobile platforms |
+| **ml-developer** | ML/AI | Machine learning, data science |
+| **api-docs** | Documentation | API documentation, OpenAPI specs |
+| **cicd-engineer** | DevOps | CI/CD pipelines, automation |
+| **performance-benchmarker** | Performance | Load testing, optimization |
+| **production-validator** | Validation | Production readiness, deployment |
+| **task-orchestrator** | Coordination | Task management, workflow coordination |
+
+### Swarm Coordination Agents
+| Agent | Type | Capabilities |
+|-------|------|-------------|
+| **hierarchical-coordinator** | Coordination | Queen-led hierarchical swarms |
+| **mesh-coordinator** | Coordination | Peer-to-peer mesh networks |
+| **adaptive-coordinator** | Coordination | Dynamic topology switching |
+| **collective-intelligence-coordinator** | Coordination | Hive-mind intelligence |
+| **swarm-memory-manager** | Memory | Distributed memory coordination |
+| **consensus-builder** | Consensus | Distributed decision making |
+
+### GitHub Integration Agents
+| Agent | Type | Capabilities |
+|-------|------|-------------|
+| **github-modes** | Integration | Comprehensive GitHub operations |
+| **pr-manager** | Pull Requests | PR creation, review, management |
+| **issue-tracker** | Issues | Issue management, tracking |
+| **release-manager** | Releases | Release coordination, automation |
+| **code-review-swarm** | Code Review | Multi-agent code review |
+| **repo-architect** | Repository | Repository structure, organization |
+| **workflow-automation** | Automation | GitHub Actions, CI/CD |
+| **sync-coordinator** | Synchronization | Multi-repo coordination |
+
+### Performance & Consensus Agents
+| Agent | Type | Capabilities |
+|-------|------|-------------|
+| **perf-analyzer** | Performance | Bottleneck identification, optimization |
+| **byzantine-coordinator** | Consensus | Byzantine fault tolerance |
+| **raft-manager** | Consensus | Raft consensus algorithm |
+| **gossip-coordinator** | Communication | Gossip protocol coordination |
+| **quorum-manager** | Consensus | Quorum-based decisions |
+| **crdt-synchronizer** | Synchronization | CRDT-based data sync |
+| **security-manager** | Security | Security validation, auditing |
+
+### SPARC Agents
+| Agent | Type | Capabilities |
+|-------|------|-------------|
+| **sparc-coder** | SPARC Implementation | TDD-driven development |
+| **sparc-coordinator** | SPARC Coordination | SPARC workflow management |
+
+## WebSocket Integration
+
+### Connection Setup
 
 ```javascript
 const ws = new WebSocket('wss://api.claude-flow.ai/v2/ws');
 
+// Authentication
 ws.on('open', () => {
-  // Authenticate
   ws.send(JSON.stringify({
     type: 'auth',
-    token: 'YOUR_API_TOKEN'
-  }));
-  
-  // Subscribe to events
-  ws.send(JSON.stringify({
-    type: 'subscribe',
-    channels: ['agents', 'tasks', 'swarms']
+    token: 'your-session-token'
   }));
 });
+
+// Subscribe to agent events
+ws.send(JSON.stringify({
+  type: 'subscribe',
+  channels: ['agents', 'swarms', 'tasks', 'memory']
+}));
 ```
 
 ### Event Types
 
 #### Agent Events
-
 ```javascript
+// Agent spawned
+{
+  "type": "agent.spawned",
+  "data": {
+    "agentId": "agent_123",
+    "type": "coder",
+    "name": "Backend Developer",
+    "status": "active"
+  }
+}
+
 // Agent status change
 {
   "type": "agent.status",
   "data": {
-    "agent_id": "agent-001",
-    "status": "active",
-    "previous_status": "idle",
-    "timestamp": "2024-01-01T15:00:00Z"
-  }
-}
-
-// Agent task assignment
-{
-  "type": "agent.task_assigned",
-  "data": {
-    "agent_id": "agent-001",
-    "task_id": "task-123",
-    "timestamp": "2024-01-01T15:00:00Z"
-  }
-}
-
-// Agent metrics update
-{
-  "type": "agent.metrics",
-  "data": {
-    "agent_id": "agent-001",
-    "metrics": {
-      "cpu": 0.45,
-      "memory": 512,
-      "tasks_completed": 43
-    },
-    "timestamp": "2024-01-01T15:00:00Z"
-  }
-}
-```
-
-#### Task Events
-
-```javascript
-// Task progress update
-{
-  "type": "task.progress",
-  "data": {
-    "task_id": "task-123",
-    "progress": 0.75,
-    "estimated_completion": "2024-01-01T15:30:00Z",
-    "timestamp": "2024-01-01T15:00:00Z"
-  }
-}
-
-// Task completed
-{
-  "type": "task.completed",
-  "data": {
-    "task_id": "task-123",
-    "result": "success",
-    "duration": 1200,
-    "timestamp": "2024-01-01T15:20:00Z"
-  }
-}
-
-// Task failed
-{
-  "type": "task.failed",
-  "data": {
-    "task_id": "task-123",
-    "error": "Timeout exceeded",
-    "retry_count": 2,
-    "timestamp": "2024-01-01T15:30:00Z"
+    "agentId": "agent_123",
+    "status": "busy",
+    "currentTask": "implement-auth",
+    "progress": 0.65
   }
 }
 ```
 
 #### Swarm Events
-
 ```javascript
-// Swarm topology change
+// Swarm coordination event
 {
-  "type": "swarm.topology_changed",
+  "type": "swarm.coordination",
   "data": {
-    "swarm_id": "swarm-001",
-    "topology": "mesh",
-    "previous_topology": "hierarchical",
-    "reason": "optimization",
-    "timestamp": "2024-01-01T15:00:00Z"
+    "swarmId": "swarm_456",
+    "topology": "hierarchical",
+    "agentCount": 8,
+    "efficiency": 0.94
   }
 }
 
-// Swarm agent joined
+// Task orchestration
 {
-  "type": "swarm.agent_joined",
+  "type": "swarm.task",
   "data": {
-    "swarm_id": "swarm-001",
-    "agent_id": "agent-003",
-    "role": "worker",
-    "timestamp": "2024-01-01T15:00:00Z"
-  }
-}
-
-// Swarm progress update
-{
-  "type": "swarm.progress",
-  "data": {
-    "swarm_id": "swarm-001",
-    "progress": 0.75,
-    "tasks_completed": 15,
-    "tasks_remaining": 5,
-    "timestamp": "2024-01-01T15:00:00Z"
+    "taskId": "task_789",
+    "assignedAgents": ["agent_123", "agent_456"],
+    "strategy": "parallel",
+    "progress": 0.45
   }
 }
 ```
 
-### Sending Commands via WebSocket
-
+#### Memory Events
 ```javascript
-// Execute command
-ws.send(JSON.stringify({
-  "type": "command",
-  "command": "agent.spawn",
-  "parameters": {
-    "type": "coder",
-    "name": "Coder-Gamma"
-  },
-  "request_id": "req-123"
-}));
-
-// Response
+// Memory synchronization
 {
-  "type": "command_response",
-  "request_id": "req-123",
-  "status": "success",
+  "type": "memory.sync",
   "data": {
-    "agent_id": "agent-003",
-    "status": "initializing"
+    "namespace": "project-alpha",
+    "entriesSync": 1247,
+    "compressionRatio": 0.65,
+    "latency": "12ms"
   }
 }
 ```
 
----
+## Command Examples
 
-## MCP Protocol
-
-### MCP Server Endpoints
-
-```http
-POST /mcp/v1/initialize
-POST /mcp/v1/tools/list
-POST /mcp/v1/tools/call
-POST /mcp/v1/resources/list
-POST /mcp/v1/resources/read
-POST /mcp/v1/prompts/list
-POST /mcp/v1/prompts/get
-```
-
-### Initialize MCP Session
-
-```http
-POST /mcp/v1/initialize
-```
-
-**Request:**
-
-```json
-{
-  "protocolVersion": "2024.11.5",
-  "capabilities": {
-    "tools": true,
-    "resources": true,
-    "prompts": true
-  },
-  "clientInfo": {
-    "name": "claude-code",
-    "version": "1.0.0"
-  }
-}
-```
-
-**Response:**
-
-```json
-{
-  "protocolVersion": "2024.11.5",
-  "capabilities": {
-    "tools": true,
-    "resources": true,
-    "prompts": true
-  },
-  "serverInfo": {
-    "name": "claude-flow-mcp",
-    "version": "2.0.0"
-  }
-}
-```
-
-### List Available Tools
-
-```http
-POST /mcp/v1/tools/list
-```
-
-**Response:**
-
-```json
-{
-  "tools": [
-    {
-      "name": "swarm_init",
-      "description": "Initialize a new swarm with specified topology",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "topology": {
-            "type": "string",
-            "enum": ["centralized", "distributed", "mesh", "hierarchical"]
-          },
-          "maxAgents": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 100
-          }
-        },
-        "required": ["topology"]
-      }
-    },
-    {
-      "name": "agent_spawn",
-      "description": "Create a new agent",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string"
-          },
-          "config": {
-            "type": "object"
-          }
-        },
-        "required": ["type"]
-      }
-    }
-  ]
-}
-```
-
-### Call MCP Tool
-
-```http
-POST /mcp/v1/tools/call
-```
-
-**Request:**
-
-```json
-{
-  "name": "swarm_init",
-  "arguments": {
-    "topology": "mesh",
-    "maxAgents": 10
-  }
-}
-```
-
-**Response:**
-
-```json
-{
-  "content": [
-    {
-      "type": "text",
-      "text": "Swarm initialized successfully with mesh topology"
-    }
-  ],
-  "metadata": {
-    "swarm_id": "swarm-002",
-    "topology": "mesh",
-    "max_agents": 10,
-    "created_at": "2024-01-01T16:00:00Z"
-  }
-}
-```
-
----
-
-## Code Examples
-
-### JavaScript/TypeScript
-
-```typescript
-import { ClaudeFlowClient } from 'claude-flow-sdk';
-
-// Initialize client
-const client = new ClaudeFlowClient({
-  apiKey: process.env.CLAUDE_FLOW_API_KEY,
-  baseUrl: 'https://api.claude-flow.ai/v2'
-});
-
-// Create and manage agents
-async function manageAgents() {
-  // Create a new agent
-  const agent = await client.agents.create({
-    type: 'coder',
-    name: 'TypeScript Expert',
-    capabilities: ['typescript', 'react', 'node']
-  });
-
-  // Get agent status
-  const status = await client.agents.getStatus(agent.id);
-  console.log(`Agent ${agent.name} is ${status.status}`);
-
-  // Assign task to agent
-  const task = await client.tasks.create({
-    type: 'code_generation',
-    description: 'Create user authentication module',
-    priority: 'high'
-  });
-
-  await client.tasks.assign(task.id, agent.id);
-
-  // Monitor progress
-  const progress = await client.tasks.getProgress(task.id);
-  console.log(`Task progress: ${progress.percentage}%`);
-}
-
-// Swarm operations
-async function swarmOperations() {
-  // Create a swarm
-  const swarm = await client.swarms.create({
-    name: 'API Development',
-    topology: 'hierarchical',
-    objective: 'Build REST API',
-    agents: [
-      { type: 'architect', count: 1 },
-      { type: 'backend-dev', count: 3 },
-      { type: 'tester', count: 2 }
-    ]
-  });
-
-  // Monitor swarm
-  const status = await client.swarms.getStatus(swarm.id);
-  console.log(`Swarm progress: ${status.progress * 100}%`);
-
-  // Scale swarm
-  await client.swarms.scale(swarm.id, {
-    agentType: 'backend-dev',
-    count: 2,
-    operation: 'add'
-  });
-}
-
-// Real-time monitoring with WebSocket
-function realTimeMonitoring() {
-  const ws = client.websocket();
-
-  ws.on('agent.status', (event) => {
-    console.log(`Agent ${event.agent_id} changed to ${event.status}`);
-  });
-
-  ws.on('task.completed', (event) => {
-    console.log(`Task ${event.task_id} completed`);
-  });
-
-  ws.subscribe(['agents', 'tasks', 'swarms']);
-}
-
-// Memory operations
-async function memoryOperations() {
-  // Store context
-  await client.memory.store('project_context', {
-    name: 'E-commerce Platform',
-    stack: ['Node.js', 'React', 'PostgreSQL'],
-    requirements: ['scalability', 'security']
-  }, {
-    namespace: 'project-alpha',
-    ttl: 86400
-  });
-
-  // Query memory
-  const results = await client.memory.query('authentication', {
-    namespace: 'project-alpha',
-    limit: 10
-  });
-
-  results.forEach(result => {
-    console.log(`Found: ${result.key} (relevance: ${result.relevance})`);
-  });
-}
-```
-
-### Python
-
-```python
-from claude_flow import ClaudeFlowClient
-import asyncio
-
-# Initialize client
-client = ClaudeFlowClient(
-    api_key="YOUR_API_KEY",
-    base_url="https://api.claude-flow.ai/v2"
-)
-
-async def main():
-    # Create an agent
-    agent = await client.agents.create(
-        type="coder",
-        name="Python Expert",
-        capabilities=["python", "django", "fastapi"]
-    )
-    
-    # Create and assign task
-    task = await client.tasks.create(
-        type="code_generation",
-        description="Create data processing pipeline",
-        priority="high"
-    )
-    
-    await client.tasks.assign(task.id, agent.id)
-    
-    # Wait for completion
-    while True:
-        status = await client.tasks.get_status(task.id)
-        if status.status in ["completed", "failed"]:
-            break
-        await asyncio.sleep(5)
-    
-    # Get results
-    result = await client.tasks.get_result(task.id)
-    print(f"Task completed: {result.success}")
-    
-    # Create a swarm for complex project
-    swarm = await client.swarms.create(
-        name="ML Pipeline Development",
-        topology="mesh",
-        agents=[
-            {"type": "ml-developer", "count": 2},
-            {"type": "data-engineer", "count": 2},
-            {"type": "tester", "count": 1}
-        ]
-    )
-    
-    # Monitor swarm progress
-    async for update in client.swarms.stream_progress(swarm.id):
-        print(f"Progress: {update.progress * 100:.1f}%")
-        if update.progress >= 1.0:
-            break
-
-# Run the async main function
-asyncio.run(main())
-```
-
-### cURL Examples
+### Complete Development Workflow
 
 ```bash
-# Create an agent
-curl -X POST https://api.claude-flow.ai/v2/api/agents \
-  -H "Authorization: Bearer YOUR_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "type": "coder",
-    "name": "API Developer",
-    "capabilities": ["rest-api", "graphql", "openapi"]
-  }'
+# 1. Initialize project with GitHub integration
+npx claude-flow@alpha github init
 
-# Create a task
-curl -X POST https://api.claude-flow.ai/v2/api/tasks \
-  -H "Authorization: Bearer YOUR_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "type": "code_generation",
-    "description": "Create user management API",
-    "priority": "high"
-  }'
+# 2. Set up swarm for development
+npx claude-flow@alpha coordination swarm-init \
+  --topology hierarchical \
+  --max-agents 8 \
+  --strategy adaptive
 
-# Query memory
-curl -G https://api.claude-flow.ai/v2/api/memory/query \
-  -H "Authorization: Bearer YOUR_API_KEY" \
-  --data-urlencode "pattern=authentication" \
-  --data-urlencode "namespace=project-alpha" \
-  --data-urlencode "limit=10"
+# 3. Spawn development team (concurrent)
+npx claude-flow@alpha coordination agent-spawn --type system-architect --name "Lead Architect"
+npx claude-flow@alpha coordination agent-spawn --type backend-dev --name "API Developer"
+npx claude-flow@alpha coordination agent-spawn --type coder --name "Frontend Dev"
+npx claude-flow@alpha coordination agent-spawn --type tester --name "QA Engineer"
+npx claude-flow@alpha coordination agent-spawn --type code-analyzer --name "Code Reviewer"
 
-# Get system status
-curl https://api.claude-flow.ai/v2/api/system/status \
-  -H "Authorization: Bearer YOUR_API_KEY"
+# 4. Store project context in memory
+npx claude-flow@alpha memory usage \
+  --action store \
+  --key "project/architecture" \
+  --value "Microservices with event sourcing and CQRS" \
+  --namespace "development" \
+  --ttl 86400
+
+# 5. Orchestrate development task
+npx claude-flow@alpha coordination task-orchestrate \
+  --task "Build complete REST API with authentication and testing" \
+  --strategy parallel \
+  --priority high
+
+# 6. Monitor swarm performance
+npx claude-flow@alpha coordination swarm-status
+npx claude-flow@alpha performance report --timeframe 24h --format detailed
+
+# 7. Analyze GitHub repository
+npx claude-flow@alpha github repo-analyze \
+  --repo "myorg/my-project" \
+  --analysis-type code_quality
+
+# 8. Create workflow for automation
+npx claude-flow@alpha workflow create \
+  --name "full-stack-pipeline" \
+  --steps '[
+    {"type": "swarm_init", "topology": "hierarchical"},
+    {"type": "agent_spawn", "agents": ["architect", "coder", "tester"]},
+    {"type": "task_orchestrate", "strategy": "parallel"},
+    {"type": "github_integration", "automate": true}
+  ]'
 ```
 
-### Go
+### Neural Network Training
 
-```go
-package main
+```bash
+# 1. Check neural system status
+npx claude-flow@alpha neural status
 
-import (
-    "context"
-    "fmt"
-    "log"
-    
-    cf "github.com/claude-flow/go-sdk"
-)
+# 2. Train coordination patterns
+npx claude-flow@alpha neural train \
+  --pattern-type coordination \
+  --training-data "./data/coordination-patterns.json" \
+  --epochs 100
 
-func main() {
-    // Initialize client
-    client := cf.NewClient(
-        cf.WithAPIKey("YOUR_API_KEY"),
-        cf.WithBaseURL("https://api.claude-flow.ai/v2"),
-    )
-    
-    ctx := context.Background()
-    
-    // Create an agent
-    agent, err := client.Agents.Create(ctx, &cf.CreateAgentRequest{
-        Type:         "coder",
-        Name:         "Go Expert",
-        Capabilities: []string{"go", "grpc", "microservices"},
-    })
-    if err != nil {
-        log.Fatal(err)
-    }
-    
-    fmt.Printf("Created agent: %s\n", agent.ID)
-    
-    // Create a task
-    task, err := client.Tasks.Create(ctx, &cf.CreateTaskRequest{
-        Type:        "code_generation",
-        Description: "Create gRPC service",
-        Priority:    "high",
-    })
-    if err != nil {
-        log.Fatal(err)
-    }
-    
-    // Assign task to agent
-    err = client.Tasks.Assign(ctx, task.ID, agent.ID)
-    if err != nil {
-        log.Fatal(err)
-    }
-    
-    // Monitor task progress
-    progress, err := client.Tasks.GetProgress(ctx, task.ID)
-    if err != nil {
-        log.Fatal(err)
-    }
-    
-    fmt.Printf("Task progress: %.0f%%\n", progress.Percentage*100)
+# 3. Make AI predictions
+npx claude-flow@alpha neural predict \
+  --model-id coordination_model_v1.2 \
+  --input "complex microservices architecture with event sourcing"
+
+# 4. Analyze cognitive patterns
+npx claude-flow@alpha neural patterns \
+  --pattern convergent \
+  --analysis detailed
+```
+
+### Memory and State Management
+
+```bash
+# 1. Store complex project data
+npx claude-flow@alpha memory usage \
+  --action store \
+  --key "decisions/architecture" \
+  --value '{
+    "pattern": "microservices",
+    "database": "postgres",
+    "auth": "jwt",
+    "caching": "redis"
+  }' \
+  --namespace "project-alpha" \
+  --ttl 604800
+
+# 2. Search for related information
+npx claude-flow@alpha memory search \
+  --pattern "microservices|architecture" \
+  --namespace "project-alpha" \
+  --limit 10
+
+# 3. Create memory backup
+npx claude-flow@alpha memory backup \
+  --namespace "project-alpha" \
+  --format compressed
+
+# 4. Analyze memory usage
+npx claude-flow@alpha memory analytics \
+  --timeframe 7d \
+  --include-compression-stats
+```
+
+### Performance Monitoring
+
+```bash
+# 1. Run comprehensive performance report
+npx claude-flow@alpha performance report \
+  --timeframe 24h \
+  --format detailed \
+  --include-recommendations
+
+# 2. Identify bottlenecks
+npx claude-flow@alpha bottleneck analyze \
+  --component swarm_coordination \
+  --metrics "response_time,throughput,error_rate" \
+  --severity all
+
+# 3. Optimize swarm topology
+npx claude-flow@alpha topology optimize \
+  --swarm-id "swarm_123" \
+  --target-efficiency 0.95
+
+# 4. Health check all systems
+npx claude-flow@alpha health-check \
+  --components '["swarm", "neural", "memory", "mcp"]' \
+  --detailed true
+```
+
+## Error Handling
+
+### Common Error Codes
+
+```bash
+# Agent spawn failure
+{
+  "error": "AGENT_SPAWN_FAILED",
+  "message": "Maximum agent limit reached",
+  "details": {
+    "currentAgents": 8,
+    "maxAgents": 8,
+    "swarmId": "swarm_123"
+  }
+}
+
+# Memory operation failure
+{
+  "error": "MEMORY_STORAGE_FULL",
+  "message": "Memory storage limit exceeded",
+  "details": {
+    "usedMemory": "512MB",
+    "maxMemory": "512MB",
+    "namespace": "project-alpha"
+  }
+}
+
+# Neural training failure
+{
+  "error": "NEURAL_TRAINING_FAILED",
+  "message": "Insufficient training data",
+  "details": {
+    "requiredSamples": 100,
+    "providedSamples": 45,
+    "patternType": "coordination"
+  }
 }
 ```
 
----
+### Error Recovery
 
-## API SDK Libraries
+```bash
+# Retry with backoff
+npx claude-flow@alpha coordination agent-spawn \
+  --type coder \
+  --retry-attempts 3 \
+  --retry-delay 1000
 
-### Official SDKs
+# Graceful degradation
+npx claude-flow@alpha coordination swarm-init \
+  --topology hierarchical \
+  --fallback-topology mesh \
+  --max-agents 8 \
+  --min-agents 3
 
-- **JavaScript/TypeScript**: `npm install claude-flow-sdk`
-- **Python**: `pip install claude-flow`
-- **Go**: `go get github.com/claude-flow/go-sdk`
-- **Ruby**: `gem install claude-flow`
-- **Java**: Maven/Gradle coordinates available
-
-### Community SDKs
-
-- **Rust**: `cargo add claude-flow`
-- **PHP**: `composer require claude-flow/sdk`
-- **C#/.NET**: NuGet package available
-- **Swift**: Swift Package Manager support
-
----
-
-## Rate Limiting & Quotas
-
-### Default Limits
-
-| Resource | Free Tier | Pro Tier | Enterprise |
-|----------|-----------|----------|------------|
-| API Requests/min | 60 | 300 | Unlimited |
-| Agents | 5 | 50 | Unlimited |
-| Tasks/hour | 100 | 1,000 | Unlimited |
-| Memory Storage | 100 MB | 10 GB | Unlimited |
-| WebSocket Connections | 1 | 10 | Unlimited |
-
-### Rate Limit Headers
-
-```http
-X-RateLimit-Limit: 60
-X-RateLimit-Remaining: 45
-X-RateLimit-Reset: 1640995200
-X-RateLimit-Resource: api-requests
+# Error notification
+npx claude-flow@alpha hooks post-edit \
+  --file "error.log" \
+  --memory-key "errors/$(date +%s)" \
+  --notify-on-failure true
 ```
-
-### Handling Rate Limits
-
-```javascript
-// Automatic retry with exponential backoff
-const response = await client.request({
-  maxRetries: 3,
-  retryDelay: 1000,
-  retryMultiplier: 2,
-  onRateLimit: (retryAfter) => {
-    console.log(`Rate limited. Retrying after ${retryAfter}ms`);
-  }
-});
-```
-
----
 
 ## Best Practices
 
-### 1. Efficient Pagination
+### 1. Efficient Agent Management
 
-```javascript
-// Use cursor-based pagination for large datasets
-let cursor = null;
-const allAgents = [];
+```bash
+# Always batch agent operations
+# ✅ Good - Single message with multiple spawns
+npx claude-flow@alpha coordination agent-spawn --type architect &
+npx claude-flow@alpha coordination agent-spawn --type coder &
+npx claude-flow@alpha coordination agent-spawn --type tester &
+wait
 
-do {
-  const response = await client.agents.list({
-    limit: 100,
-    cursor: cursor
-  });
-  
-  allAgents.push(...response.agents);
-  cursor = response.nextCursor;
-} while (cursor);
+# ❌ Bad - Sequential spawning
+npx claude-flow@alpha coordination agent-spawn --type architect
+npx claude-flow@alpha coordination agent-spawn --type coder
+npx claude-flow@alpha coordination agent-spawn --type tester
 ```
 
-### 2. Batch Operations
+### 2. Memory Management
 
-```javascript
-// Batch multiple operations for efficiency
-const batch = client.batch();
+```bash
+# Use namespaces effectively
+npx claude-flow@alpha memory usage \
+  --action store \
+  --key "config/database" \
+  --namespace "project-$(date +%Y%m%d)" \
+  --ttl 86400
 
-batch.add('createAgent1', client.agents.create, { type: 'coder' });
-batch.add('createAgent2', client.agents.create, { type: 'tester' });
-batch.add('createTask', client.tasks.create, { type: 'testing' });
-
-const results = await batch.execute();
+# Regular cleanup
+npx claude-flow@alpha memory compress \
+  --namespace "temporary" \
+  --threshold 0.8
 ```
 
-### 3. Error Handling
+### 3. Performance Optimization
 
-```javascript
-try {
-  const agent = await client.agents.create({ type: 'coder' });
-} catch (error) {
-  if (error.code === 'RATE_LIMITED') {
-    // Wait and retry
-    await sleep(error.retryAfter);
-    return retry();
-  } else if (error.code === 'INVALID_REQUEST') {
-    // Handle validation error
-    console.error('Validation failed:', error.details);
-  } else {
-    // Handle other errors
-    throw error;
-  }
-}
+```bash
+# Monitor before scaling
+npx claude-flow@alpha performance report --format summary
+npx claude-flow@alpha coordination swarm-scale --target-size 12
+
+# Use appropriate topologies
+# Complex tasks -> hierarchical
+# Collaborative work -> mesh
+# Sequential processing -> ring
+# Centralized control -> star
 ```
 
-### 4. WebSocket Reconnection
+### 4. Integration Patterns
 
-```javascript
-class ResilientWebSocket {
-  constructor(url, options) {
-    this.url = url;
-    this.options = options;
-    this.reconnectAttempts = 0;
-    this.connect();
-  }
-  
-  connect() {
-    this.ws = new WebSocket(this.url);
-    
-    this.ws.on('close', () => {
-      // Exponential backoff reconnection
-      const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000);
-      setTimeout(() => this.connect(), delay);
-      this.reconnectAttempts++;
-    });
-    
-    this.ws.on('open', () => {
-      this.reconnectAttempts = 0;
-      // Re-authenticate and resubscribe
-      this.authenticate();
-      this.resubscribe();
-    });
-  }
-}
+```bash
+# Hook integration for automation
+npx claude-flow@alpha hooks pre-task \
+  --description "Auto-spawn agents based on task complexity"
+
+npx claude-flow@alpha hooks post-edit \
+  --file "src/**/*.js" \
+  --memory-key "code-changes/$(date +%s)"
+
+# Workflow templates for reusability
+npx claude-flow@alpha workflow template \
+  --name "api-development" \
+  --export "./templates/api-dev-workflow.json"
+```
+
+### 5. Security and Access Control
+
+```bash
+# Secure authentication
+npx claude-flow@alpha github init --secure-mode
+npx claude-flow@alpha config set --api-key-encryption enabled
+
+# Resource limits
+npx claude-flow@alpha coordination swarm-init \
+  --max-agents 10 \
+  --memory-limit "1GB" \
+  --cpu-limit "4 cores"
+
+# Audit logging
+npx claude-flow@alpha log-analysis \
+  --include-security-events \
+  --format audit
 ```
 
 ---
 
 ## Support & Resources
 
-### Documentation
+### Documentation Links
+- [GitHub Repository](https://github.com/ruvnet/claude-flow)
+- [Integration Guide](./INTEGRATION_GUIDE.md)
+- [Agent System Documentation](./agent-system-documentation.md)
+- [MCP Tools Reference](./mcp-tools-reference.md)
 
-- [API Reference](https://docs.claude-flow.ai/api)
-- [SDK Documentation](https://docs.claude-flow.ai/sdks)
-- [Integration Guides](https://docs.claude-flow.ai/integrations)
-- [Best Practices](https://docs.claude-flow.ai/best-practices)
+### CLI Help
+```bash
+# Get help for any command
+npx claude-flow@alpha --help
+npx claude-flow@alpha coordination --help
+npx claude-flow@alpha github --help
 
-### Support Channels
+# Version information
+npx claude-flow@alpha --version
+```
 
-- **Email**: api-support@claude-flow.ai
+### Community
 - **Discord**: [Join our community](https://discord.gg/claude-flow)
 - **GitHub Issues**: [Report bugs](https://github.com/ruvnet/claude-flow/issues)
-- **Stack Overflow**: Tag `claude-flow`
-
-### API Status
-
-- **Status Page**: https://status.claude-flow.ai
-- **Uptime**: 99.9% SLA for Enterprise
-- **Maintenance Windows**: Announced 72 hours in advance
+- **Discussions**: [Feature requests](https://github.com/ruvnet/claude-flow/discussions)
 
 ---
 
 <div align="center">
 
-**Claude-Flow API v2.0.0**
+**Claude-Flow v2.0.0-alpha.59**
 
-[Back to Top](#-claude-flow-api-documentation)
+*Intelligent AI Agent Orchestration*
+
+[🚀 Get Started](../README-NEW.md) | [🔧 Configure](./DEPLOYMENT.md) | [🤝 Contribute](../CONTRIBUTING.md)
 
 </div>
