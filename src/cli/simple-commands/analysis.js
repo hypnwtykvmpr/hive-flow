@@ -366,6 +366,8 @@ COMMANDS:
   bottleneck-detect    Detect performance bottlenecks in the system
   performance-report   Generate comprehensive performance reports
   token-usage          Analyze token consumption and costs
+  claude-monitor       Monitor Claude session for real-time token usage
+  claude-cost          Get current Claude session cost and usage
 
 GLOBAL OPTIONS:
   --enable-telemetry   Enable token tracking for this session
