@@ -873,71 +873,255 @@ spec:
         periodSeconds: 60
 ```
 
-### ConfigMap
+#### Kubernetes Deployment Commands
 
-```yaml
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: claude-flow-config
-  namespace: default
-data:
-  config.json: |
-    {
-      "orchestrator": {
-        "maxConcurrentAgents": 100,
-        "taskQueueSize": 1000
-      },
-      "memory": {
-        "backend": "postgres",
-        "cacheSizeMB": 512
-      }
-    }
+```bash
+# Create namespace
+kubectl create namespace claude-flow
+
+# Apply RBAC
+kubectl apply -f k8s/namespace.yaml
+
+# Create secrets (encode values with base64)
+echo -n "your-claude-api-key" | base64
+kubectl create secret generic claude-flow-secrets \
+  --from-literal=claude-api-key="$(echo -n 'your-api-key' | base64)" \
+  --from-literal=database-url="$(echo -n 'postgresql://...' | base64)" \
+  --from-literal=jwt-secret="$(echo -n 'your-jwt-secret' | base64)" \
+  -n claude-flow
+
+# Apply configurations
+kubectl apply -f k8s/configmap.yaml
+kubectl apply -f k8s/pvc.yaml
+kubectl apply -f k8s/deployment.yaml
+kubectl apply -f k8s/service.yaml
+kubectl apply -f k8s/ingress.yaml
+kubectl apply -f k8s/hpa.yaml
+
+# Check deployment status
+kubectl get pods -n claude-flow -w
+kubectl get svc -n claude-flow
+kubectl get ingress -n claude-flow
+
+# View logs
+kubectl logs -f deployment/claude-flow -n claude-flow
+
+# Scale deployment manually
+kubectl scale deployment/claude-flow --replicas=5 -n claude-flow
+
+# Rolling update
+kubectl set image deployment/claude-flow claude-flow=your-registry.com/claude-flow:2.0.1 -n claude-flow
+kubectl rollout status deployment/claude-flow -n claude-flow
+
+# Rollback if needed
+kubectl rollout undo deployment/claude-flow -n claude-flow
+
+# Port forward for testing
+kubectl port-forward svc/claude-flow-service 3000:80 -n claude-flow
+
+# Delete deployment
+kubectl delete namespace claude-flow
 ```
 
-### Secrets
+---
+
+## CI/CD Pipeline
+
+### GitHub Actions Workflow
 
 ```yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: claude-flow-secrets
-  namespace: default
-type: Opaque
-data:
-  claude-api-key: <base64-encoded-api-key>
-  database-url: <base64-encoded-database-url>
-  jwt-secret: <base64-encoded-jwt-secret>
-```
+# .github/workflows/deploy.yml
+name: Deploy Claude Flow
 
-### Horizontal Pod Autoscaler
+on:
+  push:
+    branches: [main, staging, production]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
 
-```yaml
-apiVersion: autoscaling/v2
-kind: HorizontalPodAutoscaler
-metadata:
-  name: claude-flow-hpa
-  namespace: default
-spec:
-  scaleTargetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: claude-flow
-  minReplicas: 3
-  maxReplicas: 50
-  metrics:
-  - type: Resource
-    resource:
-      name: cpu
-      target:
-        type: Utilization
-        averageUtilization: 70
-  - type: Resource
-    resource:
-      name: memory
-      target:
-        type: Utilization
-        averageUtilization: 80
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [20]
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Run linting
+      run: npm run lint
+    
+    - name: Run type checking
+      run: npm run typecheck
+    
+    - name: Run tests
+      run: npm run test:coverage
+      env:
+        CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+    
+    - name: Upload coverage
+      uses: codecov/codecov-action@v3
+
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Run Snyk to check for vulnerabilities
+      uses: snyk/actions/node@master
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+    
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+
+  build:
+    needs: [test, security-scan]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image: ${{ steps.image.outputs.image }}
+      digest: ${{ steps.build.outputs.digest }}
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name: Login to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+          type=sha,prefix=sha-
+    
+    - name: Build and push
+      id: build
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile.production
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        platforms: linux/amd64,linux/arm64
+    
+    - name: Output image
+      id: image
+      run: |
+        echo "image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}" >> $GITHUB_OUTPUT
+
+  deploy-staging:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/staging'
+    environment: staging
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-west-2
+    
+    - name: Setup kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'v1.28.0'
+    
+    - name: Update kubeconfig
+      run: aws eks update-kubeconfig --region us-west-2 --name claude-flow-staging
+    
+    - name: Deploy to staging
+      run: |
+        kubectl set image deployment/claude-flow claude-flow=${{ needs.build.outputs.image }} -n claude-flow-staging
+        kubectl rollout status deployment/claude-flow -n claude-flow-staging --timeout=300s
+    
+    - name: Run smoke tests
+      run: |
+        kubectl port-forward svc/claude-flow-service 3000:80 -n claude-flow-staging &
+        sleep 10
+        curl -f http://localhost:3000/health || exit 1
+        npx claude-flow@alpha swarm "test deployment" --agents 1 || exit 1
+
+  deploy-production:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    environment: production
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-west-2
+    
+    - name: Setup kubectl
+      uses: azure/setup-kubectl@v3
+    
+    - name: Update kubeconfig
+      run: aws eks update-kubeconfig --region us-west-2 --name claude-flow-production
+    
+    - name: Deploy to production
+      run: |
+        # Blue-green deployment
+        kubectl patch deployment claude-flow -p '{"spec":{"template":{"spec":{"containers":[{"name":"claude-flow","image":"${{ needs.build.outputs.image }}"}]}}}}' -n claude-flow
+        kubectl rollout status deployment/claude-flow -n claude-flow --timeout=600s
+    
+    - name: Run production tests
+      run: |
+        # Wait for deployment to be ready
+        kubectl wait --for=condition=available --timeout=300s deployment/claude-flow -n claude-flow
+        
+        # Run health checks
+        EXTERNAL_IP=$(kubectl get svc claude-flow-lb -n claude-flow -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+        curl -f "https://$EXTERNAL_IP/health" || exit 1
+    
+    - name: Notify deployment
+      uses: 8398a7/action-slack@v3
+      with:
+        status: ${{ job.status }}
+        text: "Claude Flow ${{ github.ref_name }} deployed to production"
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 ```
 
 ### Deployment Commands
