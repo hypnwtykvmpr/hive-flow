@@ -792,16 +792,14 @@ The swarm should be self-documenting - use memory_store to save all important in
         
         // --claude flag means interactive mode, so don't add non-interactive flags
         
-        // For --claude interactive mode, don't use the wrapper that interferes with stdio
-        // Just spawn Claude directly with telemetry environment variables
+        // For --claude interactive mode, spawn Claude directly
+        // Temporarily disable telemetry to avoid console output interference
         const claudeEnv = { ...process.env };
         
-        if (process.env.CLAUDE_CODE_ENABLE_TELEMETRY === '1') {
-          console.log(`📊 Telemetry enabled - token usage will be tracked`);
-          // Set telemetry to file output instead of console to avoid interference
-          claudeEnv.OTEL_METRICS_EXPORTER = 'none';  // Disable console output
-          claudeEnv.OTEL_LOGS_EXPORTER = 'none';      // Disable console output
-        }
+        // Remove telemetry env vars to prevent console output
+        delete claudeEnv.CLAUDE_CODE_ENABLE_TELEMETRY;
+        delete claudeEnv.OTEL_METRICS_EXPORTER;
+        delete claudeEnv.OTEL_LOGS_EXPORTER;
         
         const claudeProcess = spawn('claude', claudeArgs, {
           stdio: 'inherit',
