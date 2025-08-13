@@ -147,10 +147,10 @@ class WorkingPairSession {
       console.log('  🔧 Fixing linting issues...');
       try {
         // First try auto-fix
-        const { stdout, stderr } = await execAsync('npm run lint -- --fix 2>&1 || true');
+        const { stdout, stderr } = await execAsync('(npm run lint -- --fix) 2>&1 || true');
         
         // Check if fixes were applied
-        const afterLint = await execAsync('npm run lint 2>&1 || true');
+        const afterLint = await execAsync('(npm run lint) 2>&1 || true');
         const stillHasErrors = afterLint.stdout.toLowerCase().includes('error');
         
         if (!stillHasErrors || afterLint.stdout.match(/error/gi)?.length < 
@@ -176,7 +176,7 @@ class WorkingPairSession {
     if (verificationResult.typeScore < 0.8) {
       console.log('  🔧 Analyzing TypeScript errors...');
       try {
-        const { stdout: tsErrors } = await execAsync('npm run typecheck 2>&1 || true');
+        const { stdout: tsErrors } = await execAsync('(npm run typecheck) 2>&1 || true');
         
         // Common auto-fixable TypeScript issues
         if (tsErrors.includes('Could not find a declaration file')) {
@@ -212,7 +212,7 @@ class WorkingPairSession {
       try {
         // Clear cache and rebuild
         await execAsync('rm -rf dist 2>&1 || true');
-        await execAsync('npm run build 2>&1 || true');
+        await execAsync('(npm run build) 2>&1 || true');
         console.log('    ✅ Cleared cache and rebuilt');
         fixResults.applied++;
         fixResults.fixes.push('Cache clear and rebuild');
