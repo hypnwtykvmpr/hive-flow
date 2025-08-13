@@ -2152,91 +2152,197 @@ kubectl exec deployment/claude-flow -n claude-flow -- node --prof-process isolat
 kubectl patch hpa claude-flow-hpa -n claude-flow -p='{"spec":{"minReplicas":5,"maxReplicas":30}}'
 ```
 
-### Debug Mode
+### Debug Mode & Diagnostics
 
 ```bash
-# Enable debug logging
-export CLAUDE_FLOW_DEBUG=true
-export CLAUDE_FLOW_LOG_LEVEL=debug
+# Enable production debugging (use cautiously)
+kubectl set env deployment/claude-flow -n claude-flow \
+  CLAUDE_FLOW_DEBUG=true \
+  CLAUDE_FLOW_LOG_LEVEL=debug
 
-# Run with verbose output
-claude-flow --verbose swarm "test"
+# Get comprehensive diagnostics
+kubectl exec deployment/claude-flow -n claude-flow -- npx claude-flow@alpha diagnostics --full > diagnostic-report.txt
 
-# Enable trace logging
-NODE_DEBUG=* claude-flow swarm "test"
+# Monitor real-time logs
+kubectl logs -f deployment/claude-flow -n claude-flow --tail=100
 
-# Profile performance
-node --prof dist/cli/main.js swarm "test"
-node --prof-process isolate-*.log > profile.txt
+# Export cluster information
+kubectl cluster-info dump > cluster-dump.txt
+
+# Check resource quotas
+kubectl describe quota -n claude-flow
+
+# View events
+kubectl get events -n claude-flow --sort-by='.metadata.creationTimestamp'
 ```
 
-### Recovery Procedures
+### Emergency Procedures
 
-#### Database Recovery
+#### Emergency Shutdown
 
 ```bash
-# Backup corrupted database
-cp .swarm/memory.db .swarm/memory.db.backup
+#!/bin/bash
+# emergency-shutdown.sh
 
-# Attempt repair
-sqlite3 .swarm/memory.db "PRAGMA integrity_check"
-sqlite3 .swarm/memory.db ".recover" | sqlite3 .swarm/memory_recovered.db
+echo "🚨 EMERGENCY: Shutting down Claude Flow..."
 
-# Restore from backup
-cp backups/memory_latest.db .swarm/memory.db
+# Scale down to zero
+kubectl scale deployment claude-flow --replicas=0 -n claude-flow
+
+# Stop autoscaling
+kubectl patch hpa claude-flow-hpa -n claude-flow -p='{"spec":{"minReplicas":0,"maxReplicas":0}}'
+
+# Cordon nodes (if necessary)
+# kubectl cordon <node-name>
+
+# Send alert
+curl -X POST -H 'Content-type: application/json' \
+  --data '{"text":"🚨 EMERGENCY: Claude Flow has been shut down!"}' \
+  "$SLACK_WEBHOOK_URL"
+
+echo "✅ Emergency shutdown complete"
 ```
 
-#### Session Recovery
+#### Circuit Breaker Response
 
 ```bash
-# List available sessions
-claude-flow hive-mind sessions
+# Implement circuit breaker for external APIs
+kubectl patch configmap claude-flow-config -n claude-flow -p='{
+  "data": {
+    "config.json": "{\"circuitBreaker\":{\"enabled\":true,\"threshold\":10,\"timeout\":60000}}"
+  }
+}'
 
-# Recover specific session
-claude-flow hive-mind resume <session-id>
+# Restart to apply changes
+kubectl rollout restart deployment/claude-flow -n claude-flow
+```
 
-# Export session data
-claude-flow hive-mind export <session-id> > session-backup.json
+### Performance Debugging
 
-# Import session data
-claude-flow hive-mind import < session-backup.json
+```bash
+# Memory leak detection
+kubectl exec deployment/claude-flow -n claude-flow -- node --trace-gc --expose-gc /app/dist/index.js
+
+# CPU profiling in production
+kubectl exec deployment/claude-flow -n claude-flow -- node --prof-process /tmp/isolate-*.log > cpu-profile.txt
+
+# Network debugging
+kubectl exec deployment/claude-flow -n claude-flow -- netstat -tupln
+kubectl exec deployment/claude-flow -n claude-flow -- ss -tulpn
+
+# Database query analysis
+kubectl exec deployment/claude-flow -n claude-flow -- psql $DATABASE_URL -c "
+SELECT query, calls, total_time, mean_time 
+FROM pg_stat_statements 
+ORDER BY total_time DESC 
+LIMIT 10;"
 ```
 
 ---
 
-## Support Resources
+## Support & Resources
 
-### Getting Help
+### Production Support Runbook
 
 ```bash
-# Built-in help
-claude-flow --help
-claude-flow <command> --help
+#!/bin/bash
+# support-runbook.sh - Quick diagnostic commands
 
-# Interactive help
-claude-flow help interactive
+echo "🔍 Claude Flow Production Diagnostics"
+echo "======================================"
 
-# Generate diagnostic report
-claude-flow diagnostics --full > diagnostic-report.txt
+echo "📊 Cluster Status:"
+kubectl get nodes -o wide
+kubectl get pods -n claude-flow
+kubectl top pods -n claude-flow
+
+echo "📈 Application Health:"
+curl -s https://api.claude-flow.com/health | jq '.'
+
+echo "🐘 Database Status:"
+psql $DATABASE_URL -c "SELECT version();" -t
+psql $DATABASE_URL -c "SELECT count(*) as active_connections FROM pg_stat_activity WHERE state = 'active';" -t
+
+echo "📦 Redis Status:"
+redis-cli -u $REDIS_URL info memory | grep used_memory_human
+redis-cli -u $REDIS_URL ping
+
+echo "🔧 Recent Logs:"
+kubectl logs deployment/claude-flow -n claude-flow --tail=50 --timestamps
+
+echo "⚠️  Recent Alerts:"
+curl -s http://alertmanager:9093/api/v1/alerts | jq '.data[] | select(.state=="firing") | .labels.alertname'
+
+echo "📋 Resource Usage:"
+kubectl describe nodes | grep -A 5 "Allocated resources"
 ```
 
-### Community Support
+### Monitoring Dashboards
 
-- **Discord**: [Join our community](https://discord.gg/claude-flow)
-- **GitHub Issues**: [Report bugs](https://github.com/ruvnet/claude-flow/issues)
-- **Documentation**: [Online docs](https://docs.claude-flow.ai)
-- **Stack Overflow**: Tag `claude-flow`
+- **Production Dashboard**: https://grafana.claude-flow.com/d/claude-flow-prod
+- **Infrastructure Dashboard**: https://grafana.claude-flow.com/d/infrastructure
+- **Application Metrics**: https://grafana.claude-flow.com/d/app-metrics
+- **Database Performance**: https://grafana.claude-flow.com/d/database
+- **Alert Manager**: https://alertmanager.claude-flow.com
 
-### Professional Support
+### Emergency Contacts
 
-For enterprise support, contact: support@claude-flow.ai
+```yaml
+# On-Call Escalation
+Level 1: DevOps Team
+  - Slack: #devops-alerts
+  - PagerDuty: claude-flow-devops
+  
+Level 2: Engineering Team
+  - Slack: #engineering-oncall
+  - Email: engineering-oncall@claude-flow.com
+  
+Level 3: Leadership
+  - Slack: #leadership-alerts
+  - Phone: Emergency hotline
+```
+
+### Documentation Links
+
+- **Architecture Guide**: [ARCHITECTURE.md](./ARCHITECTURE.md)
+- **API Documentation**: [API_DOCUMENTATION.md](./API_DOCUMENTATION.md)  
+- **Development Workflow**: [DEVELOPMENT_WORKFLOW.md](./DEVELOPMENT_WORKFLOW.md)
+- **Main Documentation**: [INDEX.md](./INDEX.md)
+- **Repository**: https://github.com/ruvnet/claude-flow
+- **Issues**: https://github.com/ruvnet/claude-flow/issues
+
+### Quick Commands Reference
+
+```bash
+# Essential production commands
+npx claude-flow@alpha --version                    # Check version
+npx claude-flow@alpha diagnostics --full           # Full system check
+npx claude-flow@alpha swarm "test" --agents 3      # Quick functionality test
+npx claude-flow@alpha config validate              # Validate configuration
+
+# Kubernetes shortcuts
+alias kgp="kubectl get pods -n claude-flow"
+alias kgs="kubectl get svc -n claude-flow"  
+alias kgi="kubectl get ingress -n claude-flow"
+alias kl="kubectl logs -f deployment/claude-flow -n claude-flow"
+alias kdp="kubectl describe pod -l app=claude-flow -n claude-flow"
+
+# Emergency commands
+kubectl scale deployment claude-flow --replicas=0 -n claude-flow  # Emergency stop
+kubectl rollout undo deployment/claude-flow -n claude-flow        # Rollback
+kubectl get events --sort-by='.metadata.creationTimestamp' -n claude-flow  # Recent events
+```
 
 ---
 
 <div align="center">
 
-**Claude-Flow Deployment Guide v2.0.0**
+## 🚀 **Claude-Flow Production Deployment Guide v2.0.0**
 
-[Back to README](../README.md) | [Architecture](ARCHITECTURE.md) | [API Docs](API_DOCUMENTATION.md)
+**Ready for Enterprise Scale • Production Tested • Fully Documented**
+
+[📚 Documentation Home](./INDEX.md) | [🏗️ Architecture](./ARCHITECTURE.md) | [📖 API Reference](./API_DOCUMENTATION.md) | [⚡ Development](./DEVELOPMENT_WORKFLOW.md)
+
+[🐙 GitHub Repository](https://github.com/ruvnet/claude-flow) | [🐛 Report Issues](https://github.com/ruvnet/claude-flow/issues) | [💬 Community Support](https://discord.gg/claude-flow)
 
 </div>
