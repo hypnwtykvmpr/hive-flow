@@ -1447,20 +1447,34 @@ ${commands.map((cmd) => `- [${cmd}](./${cmd}.md)`).join('\n')}
       await setupMonitoring(workingDir);
     }
     
-    // Final instructions
+    // Final instructions with hive-mind status
     console.log('\n🎉 Claude Flow v2.0.0 initialization complete!');
+    
+    // Display hive-mind status
+    const hiveMindStatus = getHiveMindStatus(workingDir);
+    console.log('\n🧠 Hive Mind System Status:');
+    console.log(`  Configuration: ${hiveMindStatus.configured ? '✅ Ready' : '❌ Missing'}`);
+    console.log(`  Database: ${hiveMindStatus.database === 'sqlite' ? '✅ SQLite' : hiveMindStatus.database === 'fallback' ? '⚠️ JSON Fallback' : '❌ Not initialized'}`);
+    console.log(`  Directory Structure: ${hiveMindStatus.directories ? '✅ Created' : '❌ Missing'}`);
+    
     console.log('\n📚 Quick Start:');
     if (isClaudeCodeInstalled()) {
       console.log('1. View available commands: ls .claude/commands/');
       console.log('2. Start a swarm: npx claude-flow@alpha swarm "your objective" --claude');
       console.log('3. Use hive-mind: npx claude-flow@alpha hive-mind spawn "command" --claude');
       console.log('4. Use MCP tools in Claude Code for enhanced coordination');
+      if (hiveMindStatus.configured) {
+        console.log('5. Initialize first swarm: npx claude-flow@alpha hive-mind init');
+      }
     } else {
       console.log('1. Install Claude Code: npm install -g @anthropic-ai/claude-code');
       console.log('2. Add MCP servers (see instructions above)');
       console.log('3. View available commands: ls .claude/commands/');
       console.log('4. Start a swarm: npx claude-flow@alpha swarm "your objective" --claude');
       console.log('5. Use hive-mind: npx claude-flow@alpha hive-mind spawn "command" --claude');
+      if (hiveMindStatus.configured) {
+        console.log('6. Initialize first swarm: npx claude-flow@alpha hive-mind init');
+      }
     }
     console.log('\n💡 Tips:');
     console.log('• Check .claude/commands/ for detailed documentation');
