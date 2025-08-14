@@ -1485,5 +1485,21 @@ ${commands.map((cmd) => `- [${cmd}](./${cmd}.md)`).join('\n')}
     console.log('• Use .claude/helpers/checkpoint-manager.sh for easy rollback');
   } catch (err) {
     printError(`Failed to initialize Claude Flow v2.0.0: ${err.message}`);
+    
+    // Attempt hive-mind rollback if it was partially initialized
+    try {
+      const hiveMindStatus = getHiveMindStatus(workingDir);
+      if (hiveMindStatus.directories || hiveMindStatus.configured) {
+        console.log('\n🔄 Attempting hive-mind system rollback...');
+        const rollbackResult = await rollbackHiveMindInit(workingDir);
+        if (rollbackResult.success) {
+          console.log('  ✅ Hive-mind rollback completed');
+        } else {
+          console.log(`  ⚠️  Hive-mind rollback failed: ${rollbackResult.error}`);
+        }
+      }
+    } catch (rollbackErr) {
+      console.log(`  ⚠️  Rollback error: ${rollbackErr.message}`);
+    }
   }
 }
