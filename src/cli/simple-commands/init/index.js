@@ -63,6 +63,10 @@ import {
   createMinimalClaudeMd,
 } from './templates/claude-md.js';
 import {
+  createVerificationClaudeMd,
+  createVerificationSettingsJson,
+} from './templates/verification-claude-md.js';
+import {
   createFullMemoryBankMd,
   createMinimalMemoryBankMd,
 } from './templates/memory-bank-md.js';
@@ -137,9 +141,13 @@ export async function initCommand(subArgs, flags) {
     return;
   }
 
-  // Default to enhanced Claude Flow v2 init
-  // Use --basic flag for old behavior
-  if (!flags.basic && !flags.minimal && !flags.sparc) {
+  // Check for verification flags first
+  const hasVerificationFlags = subArgs.includes('--verify') || subArgs.includes('--pair') || 
+                               flags.verify || flags.pair;
+  
+  // Default to enhanced Claude Flow v2 init unless other modes are specified
+  // Use --basic flag for old behavior, or verification flags for verification mode
+  if (!flags.basic && !flags.minimal && !flags.sparc && !hasVerificationFlags) {
     return await enhancedClaudeFlowInit(flags, subArgs);
   }
 
@@ -178,6 +186,10 @@ export async function initCommand(subArgs, flags) {
   const initDryRun = subArgs.includes('--dry-run') || subArgs.includes('-d') || flags.dryRun;
   const initOptimized = initSparc && initForce; // Use optimized templates when both flags are present
   const selectedModes = flags.modes ? flags.modes.split(',') : null; // Support selective mode initialization
+  
+  // Check for verification and pair programming flags
+  const initVerify = subArgs.includes('--verify') || flags.verify;
+  const initPair = subArgs.includes('--pair') || flags.pair;
 
   // Get the actual working directory (where the command was run from)
   // Use PWD environment variable which preserves the original directory
@@ -221,37 +233,76 @@ export async function initCommand(subArgs, flags) {
       dryRun: initDryRun,
       force: initForce,
       selectedModes: selectedModes,
+      verify: initVerify,
+      pair: initPair,
     };
 
-    // First try to copy revised templates from repository
-    const validation = validateTemplatesExist();
-    if (validation.valid) {
-      console.log('  📁 Copying revised template files...');
-      const revisedResults = await copyRevisedTemplates(workingDir, {
-        force: initForce,
-        dryRun: initDryRun,
-        verbose: true,
-        sparc: initSparc
+    // If verification flags are set, always use generated templates for CLAUDE.md and settings.json
+    if (initVerify || initPair) {
+      console.log('  📁 Creating verification-focused configuration...');
+      
+      // Create verification CLAUDE.md
+      if (!initDryRun) {
+        const { createVerificationClaudeMd, createVerificationSettingsJson } = await import('./templates/verification-claude-md.js');
+        await fs.writeFile(`${workingDir}/CLAUDE.md`, createVerificationClaudeMd(), 'utf8');
+        
+        // Create .claude directory and settings
+        await fs.mkdir(`${workingDir}/.claude`, { recursive: true });
+        await fs.writeFile(`${workingDir}/.claude/settings.json`, createVerificationSettingsJson(), 'utf8');
+        console.log('  ✅ Created verification-focused CLAUDE.md and settings.json');
+      } else {
+        console.log('  [DRY RUN] Would create verification-focused CLAUDE.md and settings.json');
+      }
+      
+      // Copy other template files from repository if available
+      const validation = validateTemplatesExist();
+      if (validation.valid) {
+        const revisedResults = await copyRevisedTemplates(workingDir, {
+          force: initForce,
+          dryRun: initDryRun,
+          verbose: false,
+          sparc: initSparc
+        });
+      }
+      
+      // Also create standard memory and coordination files
+      const copyResults = await copyTemplates(workingDir, {
+        ...templateOptions,
+        skipClaudeMd: true,  // Don't overwrite the verification CLAUDE.md
+        skipSettings: true   // Don't overwrite the verification settings.json
       });
+      
+    } else {
+      // Standard template copying logic
+      const validation = validateTemplatesExist();
+      if (validation.valid) {
+        console.log('  📁 Copying revised template files...');
+        const revisedResults = await copyRevisedTemplates(workingDir, {
+          force: initForce,
+          dryRun: initDryRun,
+          verbose: true,
+          sparc: initSparc
+        });
 
-      if (revisedResults.success) {
-        console.log(`  ✅ Copied ${revisedResults.copiedFiles.length} template files`);
-        if (revisedResults.skippedFiles.length > 0) {
-          console.log(`  ⏭️  Skipped ${revisedResults.skippedFiles.length} existing files`);
+        if (revisedResults.success) {
+          console.log(`  ✅ Copied ${revisedResults.copiedFiles.length} template files`);
+          if (revisedResults.skippedFiles.length > 0) {
+            console.log(`  ⏭️  Skipped ${revisedResults.skippedFiles.length} existing files`);
+          }
+        } else {
+          console.log('  ⚠️  Some template files could not be copied:');
+          revisedResults.errors.forEach(err => console.log(`    - ${err}`));
         }
       } else {
-        console.log('  ⚠️  Some template files could not be copied:');
-        revisedResults.errors.forEach(err => console.log(`    - ${err}`));
-      }
-    } else {
-      // Fall back to generated templates
-      console.log('  ⚠️  Revised templates not available, using generated templates');
-      const copyResults = await copyTemplates(workingDir, templateOptions);
+        // Fall back to generated templates
+        console.log('  ⚠️  Revised templates not available, using generated templates');
+        const copyResults = await copyTemplates(workingDir, templateOptions);
 
-      if (!copyResults.success) {
-        printError('Failed to copy templates:');
-        copyResults.errors.forEach(err => console.log(`  ❌ ${err}`));
-        return;
+        if (!copyResults.success) {
+          printError('Failed to copy templates:');
+          copyResults.errors.forEach(err => console.log(`  ❌ ${err}`));
+          return;
+        }
       }
     }
 
