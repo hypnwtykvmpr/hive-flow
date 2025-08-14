@@ -1,12 +1,16 @@
-# 🌊 Claude-Flow: Enterprise AI Agent Orchestration Platform
+# 🌊 Claude-Flow v2.0.0 Alpha: AI Orchestration Platform
 
 <div align="center">
 
-![Claude-Flow Banner](https://img.shields.io/badge/Claude--Flow-v2.0.0-blue?style=for-the-badge&logo=ai&logoColor=white)
-[![NPM Version](https://img.shields.io/npm/v/claude-flow/alpha?style=for-the-badge&logo=npm&color=orange&label=Alpha)](https://www.npmjs.com/package/claude-flow)
-[![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
-[![Build Status](https://img.shields.io/github/actions/workflow/status/ruvnet/claude-flow/ci.yml?style=for-the-badge)](https://github.com/ruvnet/claude-flow/actions)
-[![Coverage](https://img.shields.io/codecov/c/github/ruvnet/claude-flow?style=for-the-badge)](https://codecov.io/gh/ruvnet/claude-flow)
+[![🌟 Star on GitHub](https://img.shields.io/github/stars/ruvnet/claude-flow?style=for-the-badge&logo=github&color=gold)](https://github.com/ruvnet/claude-flow)
+[![📦 Alpha Release](https://img.shields.io/npm/v/claude-flow/alpha?style=for-the-badge&logo=npm&color=orange&label=v2.0.0-alpha.53)](https://www.npmjs.com/package/claude-flow/v/alpha)
+[![⚡ Claude Code](https://img.shields.io/badge/Claude%20Code-Optimized-green?style=for-the-badge&logo=anthropic)](https://github.com/ruvnet/claude-flow)
+[![🏛️ Agentics Foundation](https://img.shields.io/badge/Agentics-Foundation-crimson?style=for-the-badge&logo=openai)](https://discord.com/invite/dfxmpwkG2D)
+[![🐝 Hive-Mind](https://img.shields.io/badge/Hive--Mind-AI%20Coordination-purple?style=for-the-badge&logo=swarm)](https://github.com/ruvnet/claude-flow)
+[![🧠 Neural](https://img.shields.io/badge/Neural-87%20MCP%20Tools-blue?style=for-the-badge&logo=tensorflow)](https://github.com/ruvnet/claude-flow)
+[![🛡️ MIT License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge&logo=opensourceinitiative)](https://opensource.org/licenses/MIT)
+
+</div>
 
 **Enterprise-Grade AI Agent Orchestration with Swarm Intelligence**
 
@@ -26,9 +30,20 @@ Claude-Flow is a cutting-edge AI agent orchestration platform that revolutionize
 - **Swarm Intelligence** - Distributed decision-making with multiple coordination strategies
 - **87 MCP Tools** - Complete toolkit for automation and integration
 - **Enterprise-Ready** - Production-grade security, monitoring, and scalability
-- **84.8% SWE-Bench Score** - Industry-leading performance metrics
+
+
+
 
 ## 🚀 Quick Start
+
+```bash
+# 1. Install Claude Code globally
+npm install -g @anthropic-ai/claude-code
+
+# 2. (Optional) Skip permissions check for faster setup
+# Only use if you understand the security implications
+claude --dangerously-skip-permissions
+```
 
 ### Prerequisites
 
