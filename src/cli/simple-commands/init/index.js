@@ -488,6 +488,31 @@ export async function initCommand(subArgs, flags) {
         console.log('  • Monitor performance with real-time metrics');
       }
 
+      // Initialize hive-mind system for standard init
+      console.log('\n🧠 Initializing basic hive-mind system...');
+      try {
+        const hiveMindOptions = {
+          config: {
+            integration: {
+              claudeCode: { enabled: isClaudeCodeInstalled() },
+              mcpTools: { enabled: true }
+            },
+            monitoring: { enabled: false } // Basic setup for standard init
+          }
+        };
+        
+        const hiveMindResult = await initializeHiveMind(workingDir, hiveMindOptions, false);
+        
+        if (hiveMindResult.success) {
+          console.log('  ✅ Basic hive-mind system initialized');
+          console.log('  💡 Use "npx claude-flow@alpha hive-mind" for advanced features');
+        } else {
+          console.log(`  ⚠️  Hive-mind setup skipped: ${hiveMindResult.error}`);
+        }
+      } catch (err) {
+        console.log(`  ⚠️  Hive-mind setup skipped: ${err.message}`);
+      }
+
       // Check for Claude Code and set up MCP servers (always enabled by default)
       if (!initDryRun && isClaudeCodeInstalled()) {
         console.log('\n🔍 Claude Code CLI detected!');
