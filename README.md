@@ -47,7 +47,7 @@ npm install -g @anthropic-ai/claude-code
 
 # 2. (Optional) Skip permissions check for faster setup
 # Only use if you understand the security implications
-# claude --dangerously-skip-permissions
+ claude --dangerously-skip-permissions
 ```
 
 💡 **Windows Note**: If you encounter SQLite errors, Claude Flow will automatically use in-memory storage. For persistent storage options, see our [Windows guide](https://github.com/ruvnet/claude-code-flow/blob/main/docs/windows-installation.md).
