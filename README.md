@@ -61,7 +61,7 @@ npx claude-flow@alpha init --force
 npx claude-flow@alpha --help
 
 # 3a. Quick AI coordination (recommended for most tasks)
-npx claude-flow@alpha swarm "build me a REST API"
+npx claude-flow@alpha swarm "build me a REST API" --claude
 
 # 3b. OR launch the full hive-mind system (for complex projects)
 npx claude-flow@alpha hive-mind wizard
