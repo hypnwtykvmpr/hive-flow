@@ -1801,56 +1801,92 @@ class ClaudeFlowMCPServer {
         if (global.workflowManager) {
           return global.workflowManager.workflow_create(args);
         }
-        break;
+        return {
+          success: false,
+          error: 'Workflow manager not initialized',
+          timestamp: new Date().toISOString(),
+        };
         
       case 'workflow_execute':
         if (global.workflowManager) {
           return global.workflowManager.workflow_execute(args);
         }
-        break;
+        return {
+          success: false,
+          error: 'Workflow manager not initialized',
+          timestamp: new Date().toISOString(),
+        };
         
       case 'parallel_execute':
         if (global.workflowManager) {
           return global.workflowManager.parallel_execute(args);
         }
-        break;
+        return {
+          success: false,
+          error: 'Workflow manager not initialized',
+          timestamp: new Date().toISOString(),
+        };
         
       case 'batch_process':
         if (global.workflowManager) {
           return global.workflowManager.batch_process(args);
         }
-        break;
+        return {
+          success: false,
+          error: 'Workflow manager not initialized',
+          timestamp: new Date().toISOString(),
+        };
         
       case 'workflow_export':
         if (global.workflowManager) {
           return global.workflowManager.workflow_export(args);
         }
-        break;
+        return {
+          success: false,
+          error: 'Workflow manager not initialized',
+          timestamp: new Date().toISOString(),
+        };
         
       case 'workflow_template':
         if (global.workflowManager) {
           return global.workflowManager.workflow_template(args);
         }
-        break;
+        return {
+          success: false,
+          error: 'Workflow manager not initialized',
+          timestamp: new Date().toISOString(),
+        };
         
       // Performance Tools Implementation
       case 'performance_report':
         if (global.performanceMonitor) {
           return global.performanceMonitor.performance_report(args);
         }
-        break;
+        return {
+          success: false,
+          error: 'Performance monitor not initialized',
+          timestamp: new Date().toISOString(),
+        };
         
       case 'bottleneck_analyze':
         if (global.performanceMonitor) {
           return global.performanceMonitor.bottleneck_analyze(args);
         }
-        break;
+        return {
+          success: false,
+          error: 'Performance monitor not initialized',
+          timestamp: new Date().toISOString(),
+        };
         
       case 'memory_analytics':
         if (global.performanceMonitor) {
           return global.performanceMonitor.memory_analytics(args);
         }
-        break;
+        return {
+          success: false,
+          error: 'Performance monitor not initialized',
+          timestamp: new Date().toISOString(),
+        };
         
       default:
         return {
