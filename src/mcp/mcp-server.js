@@ -1139,6 +1139,14 @@ class ClaudeFlowMCPServer {
           );
         }
 
+        // Track spawned agent
+        if (global.agentTracker) {
+          global.agentTracker.trackAgent(agentId, {
+            ...agentData,
+            capabilities: args.capabilities || [],
+          });
+        }
+        
         return {
           success: true,
           agentId: agentId,
