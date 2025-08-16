@@ -92,7 +92,6 @@ class FormValidator {
     return result;
   }
 
-  validateField(fieldName, value, rules) {
     const errors = [];
     let isValid = true;
 
