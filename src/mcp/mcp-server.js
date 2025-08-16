@@ -1050,16 +1050,17 @@ class ClaudeFlowMCPServer {
     // Simulate tool execution based on the tool name
     switch (name) {
       case 'swarm_init':
+        const swarmId = `swarm_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        
         // Track swarm creation
         if (global.agentTracker) {
-          const swarmId = `swarm_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
           global.agentTracker.trackSwarm(swarmId, {
             topology: args.topology || 'mesh',
             maxAgents: args.maxAgents || 5,
             strategy: args.strategy || 'balanced',
           });
         }
-        const swarmId = `swarm_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        
         const swarmData = {
           id: swarmId,
           name: `Swarm-${new Date().toISOString().split('T')[0]}`,
