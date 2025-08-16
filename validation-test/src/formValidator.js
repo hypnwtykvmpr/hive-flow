@@ -6,6 +6,7 @@ class FormValidator {
     this.validator = new Validator();
     this.debounceTimer = null;
     this.debounceDelay = 0;
+    this._validateFieldSpy = null;
   }
 
   validate(formData, rules) {
@@ -92,6 +93,33 @@ class FormValidator {
     return result;
   }
 
+  validateField(fieldName, value, rules) {
+    // Handle debounce if enabled
+    if (this.debounceDelay > 0) {
+      if (this.debounceTimer) {
+        clearTimeout(this.debounceTimer);
+      }
+      
+      // Store the latest validation request
+      this._lastValidation = { fieldName, value, rules };
+      
+      // Don't perform validation immediately
+      this.debounceTimer = setTimeout(() => {
+        // Call the spy if it exists (for testing)
+        if (this._validateFieldSpy) {
+          this._validateFieldSpy(fieldName, value, rules);
+        }
+        this._performValidation(fieldName, value, rules);
+      }, this.debounceDelay);
+      
+      // Return placeholder result
+      return { isValid: true, errors: [] };
+    }
+    
+    return this._performValidation(fieldName, value, rules);
+  }
+
+  _performValidation(fieldName, value, rules) {
     const errors = [];
     let isValid = true;
 
@@ -176,33 +204,6 @@ class FormValidator {
   enableDebounce(delay) {
     this.debounceDelay = delay;
   }
-
-  validateField(fieldName, value, rules) {
-    // Add debounce support
-    if (this.debounceDelay > 0 && !this._validateFieldInternal) {
-      if (this.debounceTimer) {
-        clearTimeout(this.debounceTimer);
-      }
-      
-      // Store for later validation
-      this._pendingValidation = { fieldName, value, rules };
-      
-      this.debounceTimer = setTimeout(() => {
-        this._validateFieldInternal(fieldName, value, rules);
-      }, this.debounceDelay);
-      
-      return { isValid: true, errors: [] }; // Return temporary result
-    }
-    
-    return this._validateFieldCore(fieldName, value, rules);
-  }
-  
-  _validateFieldInternal(fieldName, value, rules) {
-    // This is called after debounce
-    return this._validateFieldCore(fieldName, value, rules);
-  }
-  
-  _validateFieldCore(fieldName, value, rules) {
 }
 
 module.exports = FormValidator;
