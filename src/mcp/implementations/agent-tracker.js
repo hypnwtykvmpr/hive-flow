@@ -67,6 +67,31 @@ class AgentTracker {
     }
     return agents;
   }
+  
+  // Store task results
+  storeTaskResult(taskId, result) {
+    if (this.tasks.has(taskId)) {
+      const task = this.tasks.get(taskId);
+      task.result = result;
+      task.completedAt = new Date().toISOString();
+      this.updateTaskStatus(taskId, 'completed');
+      return true;
+    }
+    // Store even if task wasn't tracked
+    this.tasks.set(taskId, {
+      id: taskId,
+      result: result,
+      status: 'completed',
+      completedAt: new Date().toISOString(),
+    });
+    return true;
+  }
+  
+  // Get task results
+  getTaskResult(taskId) {
+    const task = this.tasks.get(taskId);
+    return task ? task.result : null;
+  }
 
   // Get swarm status
   getSwarmStatus(swarmId) {
