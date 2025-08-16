@@ -255,17 +255,22 @@ describe('Form Validation Integration', () => {
     });
 
     test('should debounce validation for performance', (done) => {
-      const validationSpy = jest.spyOn(formValidator, 'validateField');
+      const originalValidate = formValidator.validateField.bind(formValidator);
+      let callCount = 0;
+      
+      formValidator._validateFieldSpy = jest.fn(() => {
+        callCount++;
+      });
       
       formValidator.enableDebounce(100);
       
-      formValidator.validateField('username', 'a');
-      formValidator.validateField('username', 'ab');
-      formValidator.validateField('username', 'abc');
+      formValidator.validateField('username', 'a', {});
+      formValidator.validateField('username', 'ab', {});
+      formValidator.validateField('username', 'abc', {});
       
       setTimeout(() => {
-        expect(validationSpy).toHaveBeenCalledTimes(1);
-        expect(validationSpy).toHaveBeenCalledWith('username', 'abc', undefined);
+        expect(callCount).toBe(1);
+        expect(formValidator._validateFieldSpy).toHaveBeenCalledWith('username', 'abc', {});
         done();
       }, 150);
     });
