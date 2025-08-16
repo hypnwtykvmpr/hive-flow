@@ -32,6 +32,16 @@ await import('./implementations/daa-tools.js').catch(() => {
   }
 });
 
+// Initialize Workflow and Performance managers
+await import('./implementations/workflow-tools.js').catch(() => {
+  // If ES module import fails, try require
+  try {
+    require('./implementations/workflow-tools');
+  } catch (e) {
+    console.log('Workflow tools not loaded');
+  }
+});
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
