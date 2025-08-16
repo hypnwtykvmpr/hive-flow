@@ -1098,14 +1098,6 @@ class ClaudeFlowMCPServer {
         };
 
       case 'agent_spawn':
-        // Track spawned agent
-        if (global.agentTracker && args.swarmId) {
-          global.agentTracker.trackAgent(result.agentId, {
-            ...args,
-            id: result.agentId,
-            status: 'active'
-          });
-        }
         const agentId = `agent_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
         const resolvedType = resolveLegacyAgentType(args.type);
         const agentData = {
