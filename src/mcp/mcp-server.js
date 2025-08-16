@@ -12,6 +12,16 @@ import { EnhancedMemory } from '../memory/enhanced-memory.js';
 // Use the same memory system that npx commands use - singleton instance
 import { memoryStore } from '../memory/fallback-store.js';
 
+// Initialize agent tracker
+await import('./implementations/agent-tracker.js').catch(() => {
+  // If ES module import fails, try require
+  try {
+    require('./implementations/agent-tracker');
+  } catch (e) {
+    console.log('Agent tracker not loaded');
+  }
+});
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
