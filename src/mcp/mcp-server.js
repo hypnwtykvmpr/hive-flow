@@ -1640,9 +1640,10 @@ class ClaudeFlowMCPServer {
         }
 
       case 'task_orchestrate':
+        const taskId = `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        
         // Track task creation
         if (global.agentTracker) {
-          const taskId = `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
           global.agentTracker.trackTask(taskId, {
             task: args.task,
             strategy: args.strategy || 'parallel',
@@ -1651,7 +1652,6 @@ class ClaudeFlowMCPServer {
             swarmId: args.swarmId,
           });
         }
-        const taskId = `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         const swarmIdForTask = args.swarmId || (await this.getActiveSwarmId());
         const taskData = {
           id: taskId,
