@@ -1796,6 +1796,62 @@ class ClaudeFlowMCPServer {
           timestamp: new Date().toISOString(),
         };
         
+      // Workflow Tools Implementation
+      case 'workflow_create':
+        if (global.workflowManager) {
+          return global.workflowManager.workflow_create(args);
+        }
+        break;
+        
+      case 'workflow_execute':
+        if (global.workflowManager) {
+          return global.workflowManager.workflow_execute(args);
+        }
+        break;
+        
+      case 'parallel_execute':
+        if (global.workflowManager) {
+          return global.workflowManager.parallel_execute(args);
+        }
+        break;
+        
+      case 'batch_process':
+        if (global.workflowManager) {
+          return global.workflowManager.batch_process(args);
+        }
+        break;
+        
+      case 'workflow_export':
+        if (global.workflowManager) {
+          return global.workflowManager.workflow_export(args);
+        }
+        break;
+        
+      case 'workflow_template':
+        if (global.workflowManager) {
+          return global.workflowManager.workflow_template(args);
+        }
+        break;
+        
+      // Performance Tools Implementation
+      case 'performance_report':
+        if (global.performanceMonitor) {
+          return global.performanceMonitor.performance_report(args);
+        }
+        break;
+        
+      case 'bottleneck_analyze':
+        if (global.performanceMonitor) {
+          return global.performanceMonitor.bottleneck_analyze(args);
+        }
+        break;
+        
+      case 'memory_analytics':
+        if (global.performanceMonitor) {
+          return global.performanceMonitor.memory_analytics(args);
+        }
+        break;
+        
       default:
         return {
           success: true,
