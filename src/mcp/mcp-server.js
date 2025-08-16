@@ -1406,6 +1406,22 @@ class ClaudeFlowMCPServer {
         };
 
       case 'agent_list':
+        // First check agent tracker for real-time data
+        if (global.agentTracker) {
+          const swarmId = args.swarmId || (await this.getActiveSwarmId());
+          const trackedAgents = global.agentTracker.getAgents(swarmId);
+          
+          if (trackedAgents.length > 0) {
+            return {
+              success: true,
+              swarmId: swarmId || 'dynamic',
+              agents: trackedAgents,
+              count: trackedAgents.length,
+              timestamp: new Date().toISOString(),
+            };
+          }
+        }
+        
         if (this.databaseManager) {
           try {
             const swarmId = args.swarmId || (await this.getActiveSwarmId());
