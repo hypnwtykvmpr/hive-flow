@@ -1506,6 +1506,29 @@ class ClaudeFlowMCPServer {
               timestamp: new Date().toISOString(),
             };
           }
+          
+          // Check agent tracker for real counts
+          if (global.agentTracker) {
+            const status = global.agentTracker.getSwarmStatus(swarmId);
+            if (status.agentCount > 0) {
+              const swarmDataRaw = await this.memoryStore.retrieve(`swarm:${swarmId}`, {
+                namespace: 'swarms',
+              });
+              const swarm = swarmDataRaw ? (typeof swarmDataRaw === 'string' ? JSON.parse(swarmDataRaw) : swarmDataRaw) : {};
+              
+              return {
+                success: true,
+                swarmId: swarmId,
+                topology: swarm.topology || 'mesh',
+                agentCount: status.agentCount,
+                activeAgents: status.activeAgents,
+                taskCount: status.taskCount,
+                pendingTasks: status.pendingTasks,
+                completedTasks: status.completedTasks,
+                timestamp: new Date().toISOString(),
+              };
+            }
+          }
 
           // Retrieve swarm data from memory store
           const swarmDataRaw = await this.memoryStore.retrieve(`swarm:${swarmId}`, {
