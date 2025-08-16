@@ -1,1 +1,10 @@
-[]
+[
+  {
+    "id": "cmd-hooks-1755356123149",
+    "type": "hooks",
+    "success": true,
+    "duration": 7.527128000000005,
+    "timestamp": 1755356123157,
+    "metadata": {}
+  }
+]
