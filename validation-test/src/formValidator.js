@@ -178,18 +178,32 @@ class FormValidator {
     this.debounceDelay = delay;
   }
 
-  validateFieldDebounced(fieldName, value, rules) {
-    if (this.debounceTimer) {
-      clearTimeout(this.debounceTimer);
-    }
-
-    return new Promise((resolve) => {
+  validateField(fieldName, value, rules) {
+    // Add debounce support
+    if (this.debounceDelay > 0 && !this._validateFieldInternal) {
+      if (this.debounceTimer) {
+        clearTimeout(this.debounceTimer);
+      }
+      
+      // Store for later validation
+      this._pendingValidation = { fieldName, value, rules };
+      
       this.debounceTimer = setTimeout(() => {
-        const result = this.validateField(fieldName, value, rules);
-        resolve(result);
+        this._validateFieldInternal(fieldName, value, rules);
       }, this.debounceDelay);
-    });
+      
+      return { isValid: true, errors: [] }; // Return temporary result
+    }
+    
+    return this._validateFieldCore(fieldName, value, rules);
   }
+  
+  _validateFieldInternal(fieldName, value, rules) {
+    // This is called after debounce
+    return this._validateFieldCore(fieldName, value, rules);
+  }
+  
+  _validateFieldCore(fieldName, value, rules) {
 }
 
 module.exports = FormValidator;
