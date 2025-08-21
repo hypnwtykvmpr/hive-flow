@@ -2339,12 +2339,30 @@ For the objective: "${objective}"
 5. Aggregate and synthesize all worker outputs
 6. Deliver comprehensive solution with consensus
 
-⚡ PARALLEL EXECUTION REMINDER:
-The Hive Mind operates with massive parallelism. Always batch operations:
-- Spawn ALL workers in one message
-- Create ALL initial tasks together
+⚡ CRITICAL: CONCURRENT EXECUTION WITH CLAUDE CODE'S TASK TOOL:
+
+The Hive Mind MUST use Claude Code's Task tool for actual agent execution:
+
+✅ CORRECT Pattern:
+[Single Message - All Agents Spawned Concurrently]:
+  Task("Researcher", "Research patterns and best practices...", "researcher")
+  Task("Coder", "Implement core features...", "coder")
+  Task("Tester", "Create comprehensive tests...", "tester")
+  Task("Analyst", "Analyze performance metrics...", "analyst")
+  TodoWrite { todos: [8-10 todos ALL in ONE call] }
+
+❌ WRONG Pattern:
+Message 1: Task("agent1", ...)
+Message 2: Task("agent2", ...)
+Message 3: TodoWrite { single todo }
+// This breaks parallel coordination!
+
+Remember:
+- Use Claude Code's Task tool to spawn ALL agents in ONE message
+- MCP tools are ONLY for coordination setup, not agent execution
+- Batch ALL TodoWrite operations (5-10+ todos minimum)
+- Execute ALL file operations concurrently
 - Store multiple memories simultaneously
-- Check all statuses in parallel
 
 🚀 BEGIN HIVE MIND EXECUTION:
 
