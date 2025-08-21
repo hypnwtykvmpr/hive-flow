@@ -588,7 +588,8 @@ This project uses SPARC (Specification, Pseudocode, Architecture, Refinement, Co
 
 ## 🎯 Claude Code vs MCP Tools
 
-### Claude Code Handles ALL:
+### Claude Code Handles ALL EXECUTION:
+- **Task tool**: Spawn and run agents concurrently for actual work
 - File operations (Read, Write, Edit, MultiEdit, Glob, Grep)
 - Code generation and programming
 - Bash commands and system operations
@@ -599,15 +600,16 @@ This project uses SPARC (Specification, Pseudocode, Architecture, Refinement, Co
 - Package management
 - Testing and debugging
 
-### MCP Tools ONLY:
-- Coordination and planning
+### MCP Tools ONLY COORDINATE:
+- Swarm initialization (topology setup)
+- Agent type definitions (coordination patterns)
+- Task orchestration (high-level planning)
 - Memory management
 - Neural features
 - Performance tracking
-- Swarm orchestration
 - GitHub integration
 
-**KEY**: MCP coordinates, Claude Code executes.
+**KEY**: MCP coordinates the strategy, Claude Code's Task tool executes with real agents.
 
 ## 🚀 Quick Setup
 
