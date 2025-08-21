@@ -2228,13 +2228,30 @@ ${workerTypes.map((type) => `• ${type}: ${workerGroups[type].length} agents`).
 
 As the Queen coordinator, you must:
 
-1. **INITIALIZE THE HIVE** (Single BatchTool Message):
-   [BatchTool]:
+1. **INITIALIZE THE HIVE** (CRITICAL: Use Claude Code's Task Tool for Agents):
+   
+   Step 1: Optional MCP Coordination Setup (Single Message):
+   [MCP Tools - Coordination Only]:
    ${workerTypes.map((type) => `   mcp__claude-flow__agent_spawn { "type": "${type}", "count": ${workerGroups[type].length} }`).join('\n')}
    mcp__claude-flow__memory_store { "key": "hive/objective", "value": "${objective}" }
    mcp__claude-flow__memory_store { "key": "hive/queen", "value": "${queenType}" }
    mcp__claude-flow__swarm_think { "topic": "initial_strategy" }
-   TodoWrite { "todos": [/* Create 5-10 high-level tasks */] }
+   
+   Step 2: REQUIRED - Spawn ACTUAL Agents with Claude Code's Task Tool (Single Message):
+   [Claude Code Task Tool - CONCURRENT Agent Execution]:
+   ${workerTypes.map((type) => `   Task("${type.charAt(0).toUpperCase() + type.slice(1)} Agent", "You are a ${type} in the hive. Coordinate via hooks. ${getWorkerTypeInstructions(type).split('\n')[0]}", "${type}")`).join('\n')}
+   
+   Step 3: Batch ALL Todos Together (Single TodoWrite Call):
+   TodoWrite { "todos": [
+     { "id": "1", "content": "Initialize hive mind collective", "status": "in_progress", "priority": "high" },
+     { "id": "2", "content": "Establish consensus protocols", "status": "pending", "priority": "high" },
+     { "id": "3", "content": "Distribute initial tasks to workers", "status": "pending", "priority": "high" },
+     { "id": "4", "content": "Set up collective memory", "status": "pending", "priority": "high" },
+     { "id": "5", "content": "Monitor worker health", "status": "pending", "priority": "medium" },
+     { "id": "6", "content": "Aggregate worker outputs", "status": "pending", "priority": "medium" },
+     { "id": "7", "content": "Learn from patterns", "status": "pending", "priority": "low" },
+     { "id": "8", "content": "Optimize performance", "status": "pending", "priority": "low" }
+   ] }
 
 2. **ESTABLISH COLLECTIVE INTELLIGENCE**:
    - Use consensus_vote for major decisions
