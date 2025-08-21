@@ -989,6 +989,9 @@ export const COMMAND_STRUCTURE = {
   optimization: ['topology-optimize', 'parallel-execute', 'cache-manage'],
   training: ['neural-train', 'pattern-learn', 'model-update'],
   workflows: ['workflow-create', 'workflow-execute', 'workflow-export'],
+  swarm: ['swarm', 'swarm-init', 'swarm-spawn', 'swarm-status', 'swarm-monitor', 'swarm-strategies', 'swarm-modes', 'swarm-background', 'swarm-analysis'],
+  'hive-mind': ['hive-mind', 'hive-mind-init', 'hive-mind-spawn', 'hive-mind-status', 'hive-mind-resume', 'hive-mind-stop', 'hive-mind-sessions', 'hive-mind-consensus', 'hive-mind-memory', 'hive-mind-metrics', 'hive-mind-wizard'],
+  agents: ['agent-types', 'agent-capabilities', 'agent-coordination', 'agent-spawning'],
 };
 
 // Helper script content
