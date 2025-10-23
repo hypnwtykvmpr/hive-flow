@@ -2,7 +2,17 @@
 
 ## Overview
 
-This tutorial introduces **Claude Flow Skills** - instruction modules that enhance Claude Code's capabilities with specialized knowledge for development, automation, testing, and team coordination.
+We’re shifting how Claude Flow evolves from here forward. This release marks the move from slash commands to a true skills-based system, our new foundation for intelligence, automation, and collaboration. Instead of memorizing /commands, you now just describe what you want. Claude reads the situation, identifies the right skills, and activates them automatically.
+
+The new Skill Builder is at the heart of this system. It lets you create modular instruction sets, small, well-defined units of capability that can be shared, versioned, and composed. Each skill is a self-contained block of context with metadata, description, and progressive disclosure. Claude scans these on startup, loads what’s relevant, and builds the workflow around your intent.
+
+We've included 25 practical skills across development, teamwork, and reasoning. SPARC Methodology guides structured feature building through five phases with TDD. Pair Programming enables driver/navigator modes with real-time quality checks. AgentDB provides persistent memory with 150x faster pattern retrieval and vector search. Swarm Orchestration coordinates parallel multi-agent work across mesh, hierarchical, and ring topologies. GitHub skills automate code reviews, releases, and multi-repo synchronization. Others handle performance optimization, truth scoring, and adaptive learning patterns.
+
+There are GitHub skills that manage reviews, automate releases, and synchronize projects. Others focus on performance, quality verification, and adaptive learning through ReasoningBank.
+
+In practice, this means no memorization. Skills scan your request, match intent to capability, and load only what's needed. Say "Build a login feature with tests" and SPARC activates. Say "Find similar code" and vector search loads. Each skill brings specialized context on-demand, keeping your workflow clean and focused.
+
+This is the direction forward: modular, intelligent, and adaptive. Skills turn Claude Flow from a set of commands into a living system that learns how you work and grows with you.
 
 ## 🔄 What Changed: From Slash Commands to Skills
 
