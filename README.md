@@ -353,29 +353,42 @@ npx claude-flow@alpha memory query "microservices patterns" --reasoningbank
 
 ## 📚 **Documentation**
 
-### **Core Documentation**
-- **[Skills Tutorial](./docs/skills-tutorial.md)** - Complete guide to 25 Claude Flow skills with natural language invocation
+### **📖 Core Documentation**
+- **[Documentation Hub](./docs/)** - Complete documentation index with organized structure
+- **[Skills Tutorial](./docs/guides/skills-tutorial.md)** - Complete guide to 25 Claude Flow skills with natural language invocation
 - **[Installation Guide](./docs/INSTALLATION.md)** - Setup instructions
-- **[AgentDB Integration](./docs/agentdb/)** - 🆕 96x-164x faster vector search (PR #830)
-  - [Production Readiness Guide](./docs/agentdb/PRODUCTION_READINESS.md)
-  - [Implementation Summary](./docs/agentdb/SWARM_IMPLEMENTATION_COMPLETE.md)
-  - [Integration Plan](./docs/AGENTDB_INTEGRATION_PLAN.md)
 - **[Memory System Guide](./docs/MEMORY-SYSTEM.md)** - ReasoningBank + AgentDB hybrid
 - **[MCP Tools Reference](./docs/MCP-TOOLS.md)** - Complete tool catalog
 - **[Agent System](./docs/AGENT-SYSTEM.md)** - All 64 agents
 
-### **Release Notes**
-- **[v2.7.0-alpha.10](./docs/RELEASE-NOTES-v2.7.0-alpha.10.md)** - Semantic search fix
-- **[v2.7.0-alpha.9](./docs/RELEASE-NOTES-v2.7.0-alpha.9.md)** - Process cleanup
+### **🚀 Release Notes & Changelogs**
+- **[v2.7.1](./docs/releases/v2.7.1/)** - Current stable release with critical fixes
+- **[v2.7.0-alpha.10](./docs/releases/v2.7.0-alpha.10/)** - Semantic search fix
+- **[v2.7.0-alpha.9](./docs/releases/v2.7.0-alpha.9/)** - Process cleanup
 - **[Changelog](./CHANGELOG.md)** - Full version history
 
-### **Advanced Topics**
+### **🧠 AgentDB Integration (96x-164x Performance Boost)**
+- **[AgentDB Documentation](./docs/agentdb/)** - 🆕 Complete AgentDB v1.3.9 integration docs
+  - [Production Readiness Guide](./docs/agentdb/PRODUCTION_READINESS.md) - Deployment guide
+  - [Implementation Complete](./docs/agentdb/SWARM_IMPLEMENTATION_COMPLETE.md) - 3-agent swarm details (180 tests)
+  - [Backward Compatibility](./docs/agentdb/BACKWARD_COMPATIBILITY_GUARANTEE.md) - 100% compatibility guarantee
+  - [Integration Plan](./docs/agentdb/AGENTDB_INTEGRATION_PLAN.md) - Planning and design
+  - [Optimization Report](./docs/agentdb/OPTIMIZATION_REPORT.md) - Performance analysis
+
+### **⚡ Performance & Quality**
+- **[Performance Documentation](./docs/performance/)** - Optimization guides and benchmarks
+  - [JSON Improvements](./docs/performance/PERFORMANCE-JSON-IMPROVEMENTS.md) - JSON optimization results
+  - [Metrics Guide](./docs/performance/PERFORMANCE-METRICS-GUIDE.md) - Performance tracking
+- **[Bug Fixes](./docs/fixes/)** - Bug fix documentation and patches
+- **[Validation Reports](./docs/validation/)** - Test reports and verification results
+
+### **🛠️ Advanced Topics**
 - **[Neural Module](./docs/NEURAL-MODULE.md)** - SAFLA self-learning
 - **[Goal Module](./docs/GOAL-MODULE.md)** - GOAP intelligent planning
 - **[Hive-Mind Intelligence](./docs/HIVE-MIND.md)** - Queen-led coordination
 - **[GitHub Integration](./docs/GITHUB-INTEGRATION.md)** - Repository automation
 
-### **Configuration**
+### **⚙️ Configuration & Setup**
 - **[CLAUDE.md Templates](./docs/CLAUDE-MD-TEMPLATES.md)** - Project configs
 - **[SPARC Methodology](./docs/SPARC.md)** - TDD patterns
 - **[Windows Installation](./docs/windows-installation.md)** - Windows setup
