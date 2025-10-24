@@ -6,21 +6,21 @@ await import('./implementations/agent-tracker.js').catch(()=>{
     try {
         require('./implementations/agent-tracker');
     } catch (e) {
-        console.log('Agent tracker not loaded');
+        console.error('Agent tracker not loaded');
     }
 });
 await import('./implementations/daa-tools.js').catch(()=>{
     try {
         require('./implementations/daa-tools');
     } catch (e) {
-        console.log('DAA manager not loaded');
+        console.error('DAA manager not loaded');
     }
 });
 await import('./implementations/workflow-tools.js').catch(()=>{
     try {
         require('./implementations/workflow-tools');
     } catch (e) {
-        console.log('Workflow tools not loaded');
+        console.error('Workflow tools not loaded');
     }
 });
 const __filename = fileURLToPath(import.meta.url);
@@ -3066,7 +3066,7 @@ let ClaudeFlowMCPServer = class ClaudeFlowMCPServer {
 async function startMCPServer() {
     const server = new ClaudeFlowMCPServer();
     console.error(`[${new Date().toISOString()}] INFO [claude-flow-mcp] (${server.sessionId}) Claude-Flow MCP server starting in stdio mode`);
-    console.error({
+    console.error(JSON.stringify({
         arch: process.arch,
         mode: 'mcp-stdio',
         nodeVersion: process.version,
@@ -3075,7 +3075,7 @@ async function startMCPServer() {
         protocol: 'stdio',
         sessionId: server.sessionId,
         version: server.version
-    });
+    }));
     console.log(JSON.stringify({
         jsonrpc: '2.0',
         method: 'server.initialized',

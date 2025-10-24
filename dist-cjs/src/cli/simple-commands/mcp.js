@@ -43,14 +43,6 @@ async function startMcpServer(subArgs, flags) {
     const stdio = subArgs.includes('--stdio') || flags.stdio || true;
     isStdioMode = stdio;
     if (stdio) {
-        success('Starting Claude Flow MCP server in stdio mode...');
-        if (autoOrchestrator) {
-            log('🚀 Auto-starting orchestrator...');
-            log('🧠 Neural network capabilities: ENABLED');
-            log('🔧 WASM SIMD optimization: ACTIVE');
-            log('📊 Performance monitoring: ENABLED');
-            log('🐝 Swarm coordination: READY');
-        }
         try {
             const { fileURLToPath } = await import('url');
             const path = await import('path');
