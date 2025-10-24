@@ -1,17 +1,21 @@
 # Agentic-Flow Integration
 
 **Integration Status**: ✅ Active & Released
-**Latest Version**: v1.7.1 (All Advanced Features Complete!)
-**npm Package**: https://www.npmjs.com/package/agentic-flow/v/1.7.1
+**Latest Version**: v1.7.4 (Export Issues RESOLVED!)
+**npm Package**: https://www.npmjs.com/package/agentic-flow/v/1.7.4
 **Integration Type**: npm dependency
 **Backwards Compatibility**: 100% guaranteed
+
+🎉 **v1.7.4 Update**: Export configuration issue from v1.7.1 is now FIXED! All advanced features (HybridReasoningBank, AdvancedMemorySystem) are now accessible via standard imports. See [v1.7.4 Verification Report](./VERIFICATION-v1.7.4.md) for details.
 
 ---
 
 ## 📚 Documentation
 
 ### Release Information
-- **[v1.7.1 Release Notes](./RELEASE-v1.7.1.md)** - 🆕 **LATEST** - All advanced features complete!
+- **[v1.7.4 Verification Report](./VERIFICATION-v1.7.4.md)** - 🆕 **LATEST** - Export fix verified, production ready!
+- **[v1.7.1 Release Notes](./RELEASE-v1.7.1.md)** - All advanced features complete
+- **[v1.7.1 Integration Test](./INTEGRATION-TEST-v1.7.1.md)** - ⚠️ Export issues (RESOLVED in v1.7.4)
 - **[v1.7.0 Release Notes](./RELEASE-v1.7.0.md)** - Initial release with AgentDB integration
 - **[Migration Guide v1.7.0](./MIGRATION_v1.7.0.md)** - Upgrade guide from v1.6.x
 
