@@ -1,6 +1,17 @@
 // mcp.js - MCP server management commands
 import { printSuccess, printError, printWarning } from '../utils.js';
 
+// Module-level state to track stdio mode
+let isStdioMode = false;
+
+// Smart logging helpers that respect stdio mode
+// In stdio mode: route to stderr to keep stdout clean for JSON-RPC
+// In HTTP mode: route to stdout for normal behavior
+const log = (...args) => (isStdioMode ? console.error(...args) : console.log(...args));
+const success = (msg) => (isStdioMode ? console.error(`✅ ${msg}`) : printSuccess(msg));
+const error = (msg) => (isStdioMode ? console.error(`❌ ${msg}`) : printError(msg));
+const warning = (msg) => (isStdioMode ? console.error(`⚠️  ${msg}`) : printWarning(msg));
+
 export async function mcpCommand(subArgs, flags) {
   const mcpCmd = subArgs[0];
 
