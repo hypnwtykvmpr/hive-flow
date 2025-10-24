@@ -1,7 +1,8 @@
 # Agentic-Flow Integration
 
-**Integration Status**: ✅ Active
-**Package Version**: v1.7.0 (Latest)
+**Integration Status**: ✅ Active & Released
+**Package Version**: v1.7.0 (Published to npm)
+**npm Package**: https://www.npmjs.com/package/agentic-flow/v/1.7.0
 **Integration Type**: npm dependency
 **Backwards Compatibility**: 100% guaranteed
 
@@ -59,32 +60,38 @@ const patterns = await rb.retrievePatterns('authentication', { k: 5 });
 
 ---
 
-## 🎯 What's New in v1.7.0
+## 🎯 What's in v1.7.0
 
-### Major Features
+### ✅ Working Features (Released)
 
-1. **AgentDB Integration**
-   - 29 MCP tools for Claude Desktop
-   - 116x-141x faster performance
-   - 56% memory reduction
-   - 400KB bundle size reduction
+1. **AgentDB v1.3.9 Integration**
+   - ✅ Proper npm dependency (no embedded code)
+   - ✅ 29 MCP tools for Claude Desktop
+   - ✅ 400KB bundle size reduction
+   - ✅ Cleaner architecture
 
-2. **Hybrid ReasoningBank**
-   - 10x faster WASM-accelerated search
-   - Smart backend selection
-   - Query caching (90%+ hit rate)
+2. **SharedMemoryPool**
+   - ✅ 56% memory reduction (800MB → 350MB)
+   - ✅ Single SQLite connection shared
+   - ✅ Single embedding model
+   - ✅ LRU caching
 
-3. **Advanced Memory System**
-   - Auto-consolidation (patterns → skills)
-   - Episodic replay (learn from failures)
-   - Causal "what-if" analysis
-   - Skill composition
+3. **Basic HybridReasoningBank**
+   - ✅ Pattern storage and retrieval
+   - ✅ Persistent SQLite backend
+   - ✅ Smart backend selection
 
-4. **Shared Memory Pool**
-   - Single SQLite connection
-   - Shared embedding model
-   - LRU caching
-   - 56% memory savings
+4. **AdvancedMemorySystem**
+   - ✅ Auto-consolidation (patterns → skills)
+   - ✅ Basic pattern learning
+
+### ⏳ Coming in v1.7.1
+
+- **WASM Acceleration**: 116x faster similarity computation
+- **Full CausalRecall**: Advanced causal reasoning
+- **What-if Analysis**: Evidence-based decisions
+- **Skill Composition**: Intelligent skill combining
+- **141x Batch Operations**: Full AgentDB performance
 
 See [RELEASE-v1.7.0.md](./RELEASE-v1.7.0.md) for complete details.
 
@@ -92,13 +99,13 @@ See [RELEASE-v1.7.0.md](./RELEASE-v1.7.0.md) for complete details.
 
 ## 📊 Performance Benefits
 
-| Metric | Before | After | Improvement |
-|--------|--------|-------|-------------|
-| **Bundle Size** | 5.2MB | 4.8MB | **-7.7%** |
-| **Memory (4 agents)** | 800MB | 350MB | **-56%** |
-| **Vector Search** | 580ms | 5ms | **116x** |
-| **Batch Insert** | 14.1s | 100ms | **141x** |
-| **Cold Start** | 3.5s | 1.2s | **-65%** |
+| Metric | Before | v1.7.0 | Status |
+|--------|--------|--------|--------|
+| **Bundle Size** | 5.2MB | 4.8MB | ✅ **-7.7%** |
+| **Memory (4 agents)** | 800MB | 350MB | ✅ **-56%** |
+| **Cold Start** | 3.5s | 1.2s | ✅ **-65%** |
+| **Vector Search** | 580ms | TBD | ⏳ v1.7.1 (116x target) |
+| **Batch Insert** | 14.1s | TBD | ⏳ v1.7.1 (141x target) |
 
 ---
 

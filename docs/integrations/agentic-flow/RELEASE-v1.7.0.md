@@ -1,7 +1,8 @@
 # agentic-flow v1.7.0 - AgentDB Integration & Memory Optimization
 
 **Release Date**: 2025-01-24
-**Status**: ✅ Ready for Release
+**Status**: ✅ **RELEASED** - Available on npm
+**npm Package**: https://www.npmjs.com/package/agentic-flow/v/1.7.0
 **Backwards Compatibility**: 100% Compatible
 
 ---
@@ -17,16 +18,16 @@
 - ✅ **Automatic Updates**: Get AgentDB improvements automatically
 
 #### 2. Hybrid ReasoningBank
-- ✅ **10x Faster**: WASM-accelerated similarity computation
+- ✅ **Basic Implementation**: Pattern storage and retrieval working
 - ✅ **Persistent Storage**: SQLite backend with frontier memory features
-- ✅ **Smart Backend Selection**: Automatic WASM/TypeScript switching
-- ✅ **Query Caching**: 90%+ hit rate on repeated queries
+- ✅ **Smart Backend Selection**: Automatic backend switching
+- ⏳ **WASM Acceleration**: Deferred to v1.7.1 (116x speedup coming soon)
 
 #### 3. Advanced Memory System
 - ✅ **Auto-Consolidation**: Patterns automatically promoted to skills
-- ✅ **Episodic Replay**: Learn from past failures
-- ✅ **Causal Analysis**: "What-if" reasoning with evidence
-- ✅ **Skill Composition**: Combine learned skills intelligently
+- ✅ **Basic Pattern Learning**: Pattern storage and retrieval working
+- ⏳ **Causal Analysis**: Full "what-if" reasoning deferred to v1.7.1
+- ⏳ **Skill Composition**: Advanced features coming in v1.7.1
 
 #### 4. Shared Memory Pool
 - ✅ **56% Memory Reduction**: 800MB → 350MB for 4 agents
@@ -40,29 +41,27 @@
 
 ### Before vs After Benchmarks
 
-| Metric | v1.6.4 | v1.7.0 | Improvement |
-|--------|--------|--------|-------------|
-| **Bundle Size** | 5.2MB | 4.8MB | **-400KB (-7.7%)** |
-| **Memory (4 agents)** | ~800MB | ~350MB | **-450MB (-56%)** |
-| **Vector Search** | 580ms | 5ms | **116x faster** |
-| **Batch Insert (1K)** | 14.1s | 100ms | **141x faster** |
-| **Cold Start** | 3.5s | 1.2s | **-2.3s (-65%)** |
-| **Pattern Retrieval** | N/A | 8ms | **150x faster** |
+| Metric | v1.6.4 | v1.7.0 | Improvement | Notes |
+|--------|--------|--------|-------------|-------|
+| **Bundle Size** | 5.2MB | 4.8MB | **-400KB (-7.7%)** | ✅ Achieved |
+| **Memory (4 agents)** | ~800MB | ~350MB | **-450MB (-56%)** | ✅ Achieved |
+| **Vector Search** | 580ms | TBD | **Target: 116x** | ⏳ v1.7.1 (WASM) |
+| **Batch Insert (1K)** | 14.1s | TBD | **Target: 141x** | ⏳ v1.7.1 (AgentDB) |
+| **Cold Start** | 3.5s | 1.2s | **-2.3s (-65%)** | ✅ Achieved |
+| **Pattern Retrieval** | N/A | Working | **Functional** | ✅ Basic ops |
 
 ### Real-World Impact
 
-**Scenario**: 4 concurrent agents running 1000 tasks each
+**v1.7.0 Achievements**:
+- ✅ **56% Memory Reduction**: 800MB → 350MB (SharedMemoryPool working)
+- ✅ **400KB Bundle Reduction**: Cleaner dependencies, faster installs
+- ✅ **AgentDB Integration**: Proper npm dependency, 29 MCP tools
+- ✅ **100% Backwards Compatible**: All existing code works unchanged
 
-- **Before v1.7.0**:
-  - Memory: 800MB
-  - Search: 580ms × 4000 = 38 minutes
-  - Total Time: ~40 minutes
-
-- **After v1.7.0**:
-  - Memory: 350MB (saves ~450MB)
-  - Search: 5ms × 4000 = 20 seconds
-  - Total Time: ~25 seconds
-  - **Result**: 96x faster, 56% less memory
+**Coming in v1.7.1**:
+- ⏳ **116x-141x Search Performance**: WASM-accelerated operations
+- ⏳ **Advanced Causal Reasoning**: What-if analysis and skill composition
+- ⏳ **Full CausalRecall**: Complete integration with AgentDB features
 
 ---
 
@@ -264,12 +263,38 @@ npm run bench:batch -- --count 1000
 
 ---
 
+## 🎯 What's Working in v1.7.0
+
+### ✅ Fully Functional
+- **AgentDB v1.3.9 Integration**: Proper npm dependency, no embedded code
+- **SharedMemoryPool**: 56% memory reduction for multi-agent systems
+- **Basic HybridReasoningBank**: Pattern storage and retrieval
+- **AdvancedMemorySystem**: Auto-consolidation of patterns to skills
+- **29 MCP Tools**: Full Claude Desktop integration
+- **100% Backwards Compatibility**: All existing code works unchanged
+
+### ⏳ Coming in v1.7.1
+- **WASM Acceleration**: 116x faster similarity computation
+- **Full CausalRecall**: Advanced causal reasoning features
+- **What-if Analysis**: Evidence-based decision support
+- **Skill Composition**: Intelligent combination of learned skills
+- **Complete AgentDB Integration**: Full frontier memory features
+
+### 📦 Package Information
+- **npm Package**: https://www.npmjs.com/package/agentic-flow/v/1.7.0
+- **Size**: 1.6 MB tarball, 5.6 MB unpacked
+- **Files**: 656 files included
+- **GitHub Release**: https://github.com/ruvnet/agentic-flow/releases/tag/v1.7.0
+- **Git Commit**: `04a5018` (mcp-dev branch)
+
+---
+
 ## 📖 Documentation
 
 - **Integration Plan**: [AgentDB Integration Plan](../../agentdb/AGENTDB_INTEGRATION_PLAN.md)
 - **Migration Guide**: [MIGRATION_v1.7.0.md](./MIGRATION_v1.7.0.md)
 - **Changelog**: [CHANGELOG.md](https://github.com/ruvnet/agentic-flow/blob/main/CHANGELOG.md)
-- **GitHub Issue**: https://github.com/ruvnet/agentic-flow/issues/34
+- **GitHub Issue #34**: https://github.com/ruvnet/agentic-flow/issues/34
 
 ---
 
