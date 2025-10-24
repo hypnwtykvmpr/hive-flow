@@ -63,16 +63,9 @@ async function startMcpServer(subArgs, flags) {
   isStdioMode = stdio;
 
   if (stdio) {
-    // Start MCP server in stdio mode (like ruv-swarm)
-    success('Starting Claude Flow MCP server in stdio mode...');
-
-    if (autoOrchestrator) {
-      log('🚀 Auto-starting orchestrator...');
-      log('🧠 Neural network capabilities: ENABLED');
-      log('🔧 WASM SIMD optimization: ACTIVE');
-      log('📊 Performance monitoring: ENABLED');
-      log('🐝 Swarm coordination: READY');
-    }
+    // In stdio mode, don't output ANY messages before spawning the server
+    // The MCP server will handle all output (stderr for logs, stdout for JSON-RPC)
+    // Any output here would corrupt the JSON-RPC protocol stream
 
     // Import and start the MCP server
     try {

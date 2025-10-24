@@ -4,15 +4,15 @@
 
 set -e
 
-echo "🐳 Testing claude-flow@2.7.6 MCP stdio mode in Docker..."
+echo "🐳 Testing claude-flow@2.7.7 MCP stdio mode in Docker..."
 echo ""
 
 # Create a temporary Dockerfile
 cat > /tmp/Dockerfile.claude-flow-test <<'EOF'
 FROM node:20-alpine
 
-# Install claude-flow@2.7.6
-RUN npm install -g claude-flow@2.7.6
+# Install claude-flow@2.7.7
+RUN npm install -g claude-flow@2.7.7
 
 # Create test script
 RUN echo '#!/bin/sh' > /test-stdio.sh && \
