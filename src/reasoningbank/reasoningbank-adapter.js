@@ -95,7 +95,12 @@ export async function initializeReasoningBank() {
  * - confidence -> confidence score
  */
 export async function storeMemory(key, value, options = {}) {
-  await ensureInitialized();
+  const initialized = await ensureInitialized();
+
+  // If initialization failed, throw with clear message
+  if (!initialized) {
+    throw new Error('ReasoningBank not available (better-sqlite3 missing). Use JSON mode instead.');
+  }
 
   try {
     const memoryId = options.id || uuidv4();
@@ -159,7 +164,12 @@ export async function queryMemories(searchQuery, options = {}) {
     return cached;
   }
 
-  await ensureInitialized();
+  const initialized = await ensureInitialized();
+
+  // If initialization failed, return empty results
+  if (!initialized) {
+    return [];
+  }
   const limit = options.limit || 10;
   // Accept both 'namespace' and 'domain' for compatibility
   const namespace = options.namespace || options.domain || 'default';
@@ -247,7 +257,12 @@ export async function queryMemories(searchQuery, options = {}) {
  * List all memories (using Node.js backend database query)
  */
 export async function listMemories(options = {}) {
-  await ensureInitialized();
+  const initialized = await ensureInitialized();
+
+  // If initialization failed, return empty list
+  if (!initialized) {
+    return [];
+  }
   const limit = options.limit || 10;
   const namespace = options.namespace;
 
@@ -284,7 +299,18 @@ export async function listMemories(options = {}) {
  * Get ReasoningBank statistics (Node.js backend)
  */
 export async function getStatus() {
-  await ensureInitialized();
+  const initialized = await ensureInitialized();
+
+  // If initialization failed, return error status
+  if (!initialized) {
+    return {
+      total_memories: 0,
+      total_categories: 0,
+      storage_backend: 'Unavailable',
+      error: 'ReasoningBank initialization failed (better-sqlite3 not available)',
+      fallback_available: true
+    };
+  }
 
   try {
     const db = ReasoningBank.db.getDb();
