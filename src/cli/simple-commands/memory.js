@@ -418,7 +418,21 @@ async function detectMemoryMode(flags, subArgs) {
   // Not initialized yet - try to auto-initialize on first use
   try {
     const { initializeReasoningBank } = await import('../../reasoningbank/reasoningbank-adapter.js');
-    await initializeReasoningBank();
+    const initialized = await initializeReasoningBank();
+
+    // Check if initialization succeeded (returns true) or failed (returns false)
+    if (!initialized) {
+      // Initialization failed but didn't throw - fall back to JSON
+      const isNpx = process.env.npm_config_user_agent?.includes('npx') ||
+                    process.cwd().includes('_npx');
+      if (isNpx) {
+        console.log('\n✅ Automatically using JSON fallback for this command\n');
+      } else {
+        printWarning(`⚠️  SQLite unavailable, using JSON fallback`);
+      }
+      return 'basic';
+    }
+
     printInfo('🗄️  Initialized SQLite backend (.swarm/memory.db)');
     return 'reasoningbank';
   } catch (error) {
