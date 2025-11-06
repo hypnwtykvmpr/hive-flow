@@ -894,6 +894,9 @@ function showMemoryHelp() {
   console.log('Options:');
   console.log('  --namespace <ns>       Specify namespace for operations');
   console.log('  --ns <ns>              Short form of --namespace');
+  console.log('  --limit <n>            Limit number of results (default: 10)');
+  console.log('  --sort <field>         Sort results by: recent, oldest, key, value');
+  console.log('  --format <type>        Export format: json, yaml');
   console.log('  --redact               🔒 Enable API key redaction (security feature)');
   console.log('  --secure               Alias for --redact');
   console.log();
@@ -918,7 +921,9 @@ function showMemoryHelp() {
   console.log('  # ReasoningBank mode (AI-powered, opt-in)');
   console.log('  memory init --reasoningbank  # One-time setup');
   console.log('  memory store api_pattern "Always use env vars" --reasoningbank');
-  console.log('  memory query "API configuration" --reasoningbank  # Semantic search!');
+  console.log('  memory query "API configuration" --reasoningbank --limit 5  # Semantic search!');
+  console.log('  memory list --reasoningbank --sort recent --limit 20');
+  console.log('  memory export backup.json --format json --reasoningbank');
   console.log('  memory status --reasoningbank  # Show AI metrics');
   console.log();
   console.log('  # Auto-detect mode (smart selection)');
@@ -934,4 +939,14 @@ function showMemoryHelp() {
   console.log('  • JSON fallback: Always available, fast, simple key-value storage');
   console.log('  • Initialize ReasoningBank once: "memory init --reasoningbank"');
   console.log('  • Always use --redact when storing API keys or secrets!');
+  console.log();
+  console.log('🚀 Semantic Search (NEW in v2.7.25):');
+  console.log('  NPX Mode:              Uses hash-based embeddings (text similarity)');
+  console.log('                         • Fast, offline, zero dependencies');
+  console.log('                         • Good for exact/partial text matching');
+  console.log('  Local Install:         Uses transformer embeddings (semantic AI)');
+  console.log('                         • Finds conceptually related content');
+  console.log('                         • 384-dimensional vectors (Xenova/all-MiniLM-L6-v2)');
+  console.log('                         • Install: npm install -g claude-flow@alpha');
+  console.log('  Both modes work perfectly - choose based on your needs!');
 }
