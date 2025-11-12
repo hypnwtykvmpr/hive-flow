@@ -6,6 +6,7 @@ export class SchemaValidator {
     ajv;
     schemaCache = new Map();
     cacheTTL = 3600000;
+    MAX_CACHE_SIZE = 1000;
     constructor(logger){
         this.logger = logger;
         this.ajv = new Ajv({
@@ -95,6 +96,16 @@ export class SchemaValidator {
         }
         try {
             const validate = this.ajv.compile(schema);
+            if (this.schemaCache.size >= this.MAX_CACHE_SIZE) {
+                const oldest = Array.from(this.schemaCache.entries()).sort((a, b)=>a[1].timestamp - b[1].timestamp)[0];
+                if (oldest) {
+                    this.schemaCache.delete(oldest[0]);
+                    this.logger.debug('Evicted oldest schema from cache', {
+                        cacheSize: this.schemaCache.size,
+                        maxSize: this.MAX_CACHE_SIZE
+                    });
+                }
+            }
             this.schemaCache.set(schemaKey, {
                 schema,
                 validate,

@@ -45,6 +45,10 @@ export class MCPAsyncJobManager extends EventEmitter {
         if (this.jobs.size >= this.config.maxJobs) {
             throw new Error('Job queue full. Please try again later.');
         }
+        const existingJob = Array.from(this.jobs.values()).find((j)=>j.request_id === request.request_id && (j.status === 'queued' || j.status === 'running'));
+        if (existingJob) {
+            throw new Error(`Duplicate request_id: ${request.request_id}. Job already submitted.`);
+        }
         const job = {
             request_id: request.request_id,
             job_id: uuidv4(),
@@ -127,6 +131,9 @@ export class MCPAsyncJobManager extends EventEmitter {
         if (job.status === 'success' || job.status === 'error') {
             return false;
         }
+        if (job.abortController) {
+            job.abortController.abort();
+        }
         job.status = 'cancelled';
         job.completed_at = new Date();
         await this.persistence.save(job);
@@ -142,6 +149,7 @@ export class MCPAsyncJobManager extends EventEmitter {
     async executeJob(job, executor) {
         job.status = 'running';
         job.started_at = new Date();
+        job.abortController = new AbortController();
         await this.persistence.save(job);
         this.emit('job:started', job.job_id);
         this.logger.info('Job started', {
@@ -158,6 +166,9 @@ export class MCPAsyncJobManager extends EventEmitter {
                     }));
                 this.emit('job:progress', job.job_id, job.progress, message);
             };
+            if (job.abortController.signal.aborted) {
+                throw new Error('Job cancelled before execution');
+            }
             const result = await executor(job.arguments, onProgress);
             job.status = 'success';
             job.result = result;
