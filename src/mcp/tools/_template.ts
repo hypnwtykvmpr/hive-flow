@@ -17,36 +17,52 @@ import type { ILogger } from '../../interfaces/logger.js';
 /**
  * Input interface for this tool
  * Define strongly-typed input parameters
+ *
+ * REPLACE: Rename ToolTemplateInput to match your tool name (e.g., AgentSpawnInput)
  */
-interface [ToolName]Input {
+interface ToolTemplateInput {
   // Define input properties with types
   // Example:
   // name: string;
   // config?: Record<string, unknown>;
+
+  // PLACEHOLDER: Add your input properties here
+  exampleProperty?: string;
 }
 
 /**
  * Result interface for this tool
  * Define strongly-typed return value
+ *
+ * REPLACE: Rename ToolTemplateResult to match your tool name (e.g., AgentSpawnResult)
  */
-interface [ToolName]Result {
+interface ToolTemplateResult {
   success: boolean;
   // Define result properties
   // Example:
   // resourceId: string;
   // status: string;
+
+  // PLACEHOLDER: Add your result properties here
+  message?: string;
 }
 
 /**
- * Create [Tool Description] tool
+ * Create tool template
+ *
+ * REPLACE: Update function name to match your tool (e.g., createAgentSpawnTool)
+ * REPLACE: Update JSDoc description
  *
  * @param logger - Logger instance for structured logging
  * @returns MCPTool definition
  */
-export function create[ToolName]Tool(logger: ILogger): MCPTool {
+export function createToolTemplateTool(logger: ILogger): MCPTool {
   return {
-    name: '[namespace]/[toolname]',
-    description: '[Detailed description of what this tool does and when to use it]',
+    // REPLACE: Update name to match your tool (e.g., 'agents/spawn')
+    name: 'category/toolname',
+
+    // REPLACE: Update description with detailed information about your tool
+    description: 'Template for creating new MCP tools with progressive disclosure. Copy and customize this file.',
 
     inputSchema: {
       type: 'object',
@@ -65,8 +81,10 @@ export function create[ToolName]Tool(logger: ILogger): MCPTool {
 
     // Optional: Metadata for progressive disclosure
     metadata: {
-      category: '[category]', // agents, tasks, memory, system, etc.
-      tags: ['tag1', 'tag2'], // Searchable tags
+      // REPLACE: Update category to match your tool's purpose
+      category: 'system', // agents, tasks, memory, system, etc.
+      // REPLACE: Add relevant searchable tags
+      tags: ['template', 'example'], // Searchable tags
       examples: [
         {
           description: 'Example usage scenario',
@@ -91,17 +109,17 @@ export function create[ToolName]Tool(logger: ILogger): MCPTool {
     handler: async (
       input: any,
       context?: ClaudeFlowToolContext
-    ): Promise<[ToolName]Result> => {
+    ): Promise<ToolTemplateResult> => {
       // Validate context availability
       if (!context?.orchestrator) {
         throw new Error('Orchestrator not available in tool context');
       }
 
       // Cast input to typed interface
-      const validatedInput = input as [ToolName]Input;
+      const validatedInput = input as ToolTemplateInput;
 
-      // Log tool invocation
-      logger.info('[namespace]/[toolname] invoked', {
+      // REPLACE: Update log message to match your tool
+      logger.info('category/toolname invoked', {
         input: validatedInput,
         sessionId: context.sessionId,
       });
@@ -144,10 +162,13 @@ export function create[ToolName]Tool(logger: ILogger): MCPTool {
 /**
  * Export lightweight metadata for tool discovery
  * This is loaded without executing the full tool definition
+ *
+ * REPLACE: Update all fields to match your tool
  */
 export const toolMetadata = {
-  name: '[namespace]/[toolname]',
-  description: '[Brief one-line description]',
-  category: '[category]',
+  name: 'category/toolname',
+  description: 'Brief one-line description of the tool',
+  category: 'system',
   detailLevel: 'standard' as const,
+  tags: ['template', 'example'],
 };

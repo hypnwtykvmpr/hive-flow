@@ -17,10 +17,39 @@ import { DynamicToolLoader } from './tools/loader.js';
 import { createSearchToolsTool } from './tools/system/search.js';
 import { logger } from '../core/logger.js';
 import type { MCPTool } from '../utils/types.js';
-import type { McpSdkServerConfigWithInstance } from '@anthropic-ai/claude-code/sdk.d.ts';
-import { tool, createSdkMcpServer } from '@anthropic-ai/claude-code/sdk';
-import { z } from 'zod';
 import { join } from 'path';
+
+// Conditional SDK imports (optional dependency)
+// These will be lazily loaded when needed
+let sdkCache: any = null;
+let sdkLoadAttempted = false;
+
+async function getSDK() {
+  if (sdkLoadAttempted) {
+    return sdkCache;
+  }
+
+  sdkLoadAttempted = true;
+
+  try {
+    const sdk = await import('@anthropic-ai/claude-code/sdk');
+    const zodModule = await import('zod');
+    sdkCache = {
+      tool: sdk.tool,
+      createSdkMcpServer: sdk.createSdkMcpServer,
+      z: zodModule.z,
+    };
+    logger.info('Claude Code SDK loaded successfully');
+  } catch (error) {
+    logger.info('Claude Code SDK not available, operating without SDK integration');
+    sdkCache = null;
+  }
+
+  return sdkCache;
+}
+
+// Type placeholder for SDK config
+export type McpSdkServerConfigWithInstance = any;
 
 export interface ProgressiveToolRegistryConfig {
   enableInProcess: boolean;
@@ -160,17 +189,25 @@ export class ProgressiveToolRegistry {
       throw new Error('In-process server not initialized');
     }
 
+    // Try to load SDK
+    const sdk = await getSDK();
+
+    if (!sdk) {
+      logger.info('SDK not available, skipping SDK server creation');
+      return;
+    }
+
     // Create SDK tools for discovered tools
     const stats = this.toolLoader.getStats();
     const allToolNames = this.toolLoader.getAllToolNames();
 
     // Create SDK tools with lazy loading
     const sdkTools = allToolNames.map(toolName => {
-      return this.createLazySdkTool(toolName);
+      return this.createLazySdkTool(toolName, sdk);
     });
 
     // Create SDK MCP server
-    this.sdkServer = createSdkMcpServer({
+    this.sdkServer = sdk.createSdkMcpServer({
       name: 'claude-flow',
       version: '2.7.32',
       tools: sdkTools,
@@ -186,7 +223,7 @@ export class ProgressiveToolRegistry {
    * Create SDK tool wrapper with lazy loading
    * Tool is only fully loaded when invoked
    */
-  private createLazySdkTool(toolName: string): any {
+  private createLazySdkTool(toolName: string, sdk: any): any {
     // Get lightweight metadata
     const metadata = this.toolLoader.getToolMetadata(toolName);
 
@@ -196,10 +233,10 @@ export class ProgressiveToolRegistry {
     }
 
     // Create a minimal Zod schema (will be replaced on first call)
-    const zodSchema = z.object({}).passthrough();
+    const zodSchema = sdk.z.object({}).passthrough();
 
     // Create SDK tool with lazy loading
-    return tool(
+    return sdk.tool(
       toolName,
       metadata.description,
       zodSchema,
