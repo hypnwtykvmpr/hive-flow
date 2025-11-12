@@ -69,7 +69,14 @@ export class MCP2025Server {
     version: MCPVersion;
     capabilities: MCPCapability[];
     isLegacy: boolean;
+    createdAt: number;
+    lastAccess: number;
   }> = new Map();
+
+  // Session management constants
+  private readonly MAX_SESSIONS = 10000;
+  private readonly SESSION_TTL = 3600000; // 1 hour
+  private sessionCleanupInterval?: NodeJS.Timeout;
 
   constructor(
     private config: MCP2025ServerConfig,
@@ -107,6 +114,12 @@ export class MCP2025Server {
 
     // Initialize tool registry
     await this.toolRegistry.initialize();
+
+    // Start session cleanup interval
+    this.sessionCleanupInterval = setInterval(
+      () => this.cleanupExpiredSessions(),
+      300000 // Every 5 minutes
+    );
 
     // Initialize async job manager if enabled
     if (this.config.async.enabled) {
@@ -166,12 +179,28 @@ export class MCP2025Server {
       throw new Error(`Version negotiation failed: ${negotiation.error}`);
     }
 
+    // Enforce session limit
+    if (this.sessions.size >= this.MAX_SESSIONS) {
+      // Remove oldest session
+      const oldestSession = Array.from(this.sessions.entries())
+        .sort((a, b) => a[1].createdAt - b[1].createdAt)[0];
+      if (oldestSession) {
+        this.sessions.delete(oldestSession[0]);
+        this.logger.warn('Session limit reached, removed oldest session', {
+          removedSessionId: oldestSession[0],
+        });
+      }
+    }
+
     // Store session info
+    const now = Date.now();
     this.sessions.set(sessionId, {
       clientId: handshake.client_id || 'unknown',
       version: negotiation.agreed_version,
       capabilities: negotiation.agreed_capabilities,
       isLegacy,
+      createdAt: now,
+      lastAccess: now,
     });
 
     // Create server handshake response
@@ -207,6 +236,11 @@ export class MCP2025Server {
     sessionId: string
   ): Promise<MCPJobHandle | MCPJobResult | any> {
     const session = this.sessions.get(sessionId);
+
+    // Update last access time
+    if (session) {
+      session.lastAccess = Date.now();
+    }
 
     // Handle legacy request format
     if (session?.isLegacy) {
@@ -426,10 +460,35 @@ export class MCP2025Server {
   }
 
   /**
+   * Cleanup expired sessions
+   */
+  private cleanupExpiredSessions(): void {
+    const now = Date.now();
+    let cleaned = 0;
+
+    for (const [sessionId, session] of this.sessions.entries()) {
+      // Remove if last access was more than TTL ago
+      if (now - session.lastAccess > this.SESSION_TTL) {
+        this.sessions.delete(sessionId);
+        cleaned++;
+      }
+    }
+
+    if (cleaned > 0) {
+      this.logger.info('Cleaned up expired sessions', { count: cleaned });
+    }
+  }
+
+  /**
    * Cleanup resources
    */
   async cleanup(): Promise<void> {
     this.logger.info('Cleaning up MCP 2025-11 server');
+
+    // Stop session cleanup interval
+    if (this.sessionCleanupInterval) {
+      clearInterval(this.sessionCleanupInterval);
+    }
 
     // Unregister from registry
     if (this.registryClient) {
@@ -439,6 +498,9 @@ export class MCP2025Server {
     // Clear caches
     this.schemaValidator.clearCache();
     await this.toolRegistry.cleanup();
+
+    // Clear sessions
+    this.sessions.clear();
 
     this.logger.info('Cleanup complete');
   }

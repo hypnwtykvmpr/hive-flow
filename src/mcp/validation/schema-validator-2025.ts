@@ -45,6 +45,7 @@ export class SchemaValidator {
   private ajv: Ajv;
   private schemaCache: Map<string, CachedSchema> = new Map();
   private cacheTTL = 3600000; // 1 hour
+  private readonly MAX_CACHE_SIZE = 1000; // Maximum cached schemas
 
   constructor(private logger: ILogger) {
     this.ajv = new Ajv({
@@ -155,6 +156,20 @@ export class SchemaValidator {
     // Compile new validator
     try {
       const validate = this.ajv.compile(schema);
+
+      // Enforce cache size limit (LRU eviction - remove oldest entry)
+      if (this.schemaCache.size >= this.MAX_CACHE_SIZE) {
+        const oldest = Array.from(this.schemaCache.entries())
+          .sort((a, b) => a[1].timestamp - b[1].timestamp)[0];
+
+        if (oldest) {
+          this.schemaCache.delete(oldest[0]);
+          this.logger.debug('Evicted oldest schema from cache', {
+            cacheSize: this.schemaCache.size,
+            maxSize: this.MAX_CACHE_SIZE,
+          });
+        }
+      }
 
       // Cache for future use
       this.schemaCache.set(schemaKey, {

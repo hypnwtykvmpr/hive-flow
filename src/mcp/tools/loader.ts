@@ -9,7 +9,7 @@
  */
 
 import { promises as fs } from 'fs';
-import { join, dirname, extname } from 'path';
+import { join, dirname, extname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import type { MCPTool } from '../types.js';
 import type { ILogger } from '../../interfaces/logger.js';
@@ -72,14 +72,27 @@ export class DynamicToolLoader {
     let loadedMetadata = 0;
 
     try {
+      // Resolve tools directory to absolute path
+      const resolvedToolsDir = resolve(this.toolsDir);
+
       // Get all subdirectories (categories)
-      const entries = await fs.readdir(this.toolsDir, { withFileTypes: true });
+      const entries = await fs.readdir(resolvedToolsDir, { withFileTypes: true });
       const categories = entries.filter(e => e.isDirectory() && !e.name.startsWith('_'));
 
       // Scan each category
       for (const categoryEntry of categories) {
         const category = categoryEntry.name;
-        const categoryPath = join(this.toolsDir, category);
+        const categoryPath = resolve(resolvedToolsDir, category);
+
+        // Prevent path traversal - ensure category is within tools directory
+        if (!categoryPath.startsWith(resolvedToolsDir)) {
+          this.logger.warn('Skipping category outside tools directory', {
+            category,
+            categoryPath,
+            toolsDir: resolvedToolsDir,
+          });
+          continue;
+        }
 
         try {
           // Get tool files in category
@@ -92,7 +105,17 @@ export class DynamicToolLoader {
           // Load metadata from each file
           for (const toolFile of validToolFiles) {
             scannedFiles++;
-            const toolPath = join(categoryPath, toolFile);
+            const toolPath = resolve(categoryPath, toolFile);
+
+            // Prevent path traversal - ensure tool file is within category
+            if (!toolPath.startsWith(categoryPath)) {
+              this.logger.warn('Skipping tool file outside category directory', {
+                toolFile,
+                toolPath,
+                categoryPath,
+              });
+              continue;
+            }
 
             try {
               // Dynamic import to load metadata only
