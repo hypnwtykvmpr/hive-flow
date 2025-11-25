@@ -259,7 +259,7 @@ jobs:
 
           # Test if the target can build (strict error checking)
           echo "Installing dependencies..."
-          npm ci
+          npm ci --legacy-peer-deps
 
           echo "Testing build..."
           npm run build:ts
