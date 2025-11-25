@@ -63,7 +63,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --legacy-peer-deps
 
       - name: Initialize truth scoring database
         run: |
@@ -107,7 +107,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --legacy-peer-deps
 
       - name: Download session config
         uses: actions/download-artifact@v4
@@ -218,7 +218,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --legacy-peer-deps
 
       - name: Download session config
         uses: actions/download-artifact@v4
@@ -306,7 +306,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --legacy-peer-deps
 
       - name: Download session config
         uses: actions/download-artifact@v4
@@ -319,13 +319,13 @@ jobs:
           echo "⚡ Running baseline performance tests..."
           
           git checkout ${{ needs.truth-scoring-setup.outputs.baseline-ref }}
-          npm ci
+          npm ci --legacy-peer-deps
           
           # Run performance benchmarks for baseline
           timeout 300s npm run test:performance > truth-scoring-data/baseline-performance.log 2>&1 || true
           
           git checkout ${{ github.sha }}
-          npm ci
+          npm ci --legacy-peer-deps
 
       - name: Run current performance tests
         run: |
