@@ -110,10 +110,21 @@ jobs:
 
   # Build and package
   build:
-    name: Build & Package
-    runs-on: ubuntu-latest
+    name: Build & Package (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
     needs: [security, test]
-    
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            platform: linux
+          - os: macos-latest
+            platform: darwin
+          - os: windows-latest
+            platform: win32
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -129,23 +140,30 @@ jobs:
 
       - name: Build project
         run: |
-          echo "Building project..."
+          echo "Building project for ${{ matrix.platform }}..."
           npm run build:ts
 
-      - name: Test CLI binary
+      - name: Test CLI binary (Unix)
+        if: runner.os != 'Windows'
         run: |
           chmod +x ./bin/claude-flow
           ./bin/claude-flow --version
+
+      - name: Test CLI binary (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          node bin/claude-flow --version
 
       - name: Package build
         run: |
           npm pack
           ls -la *.tgz
+        shell: bash
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: build-artifacts
+          name: build-artifacts-${{ matrix.platform }}
           path: |
             dist/
             bin/
@@ -157,20 +175,35 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Download build artifacts
+      - name: Download Linux build
         uses: actions/download-artifact@v4
         with:
-          name: build-artifacts
+          name: build-artifacts-linux
+          path: dist-linux/
+
+      - name: Download macOS build
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts-darwin
+          path: dist-darwin/
+
+      - name: Download Windows build
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts-win32
+          path: dist-windows/
 
       - name: Prepare for deployment
         run: |
           echo "✅ Ready for deployment"
           echo "Version: $(node -p "require('./package.json').version")"
+          echo "Platform builds:"
+          ls -la dist-*/
 
   # Final status check
   status:
