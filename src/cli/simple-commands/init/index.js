@@ -1652,7 +1652,6 @@ ${commands.map((cmd) => `- [${cmd}](./${cmd}.md)`).join('\n')}
       }
 
       // Initialize comprehensive hive-mind system
-      console.log('\n🧠 Initializing Hive Mind System...');
       try {
         const hiveMindOptions = {
           config: {
