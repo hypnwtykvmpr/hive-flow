@@ -1321,7 +1321,6 @@ ${commands.map((cmd)=>`- [${cmd}](./${cmd}.md)`).join('\n')}
                 console.log(`  ⚠️  Could not initialize memory system: ${err.message}`);
                 console.log('     Memory will be initialized on first use');
             }
-            console.log('\n🧠 Initializing Hive Mind System...');
             try {
                 const hiveMindOptions = {
                     config: {
