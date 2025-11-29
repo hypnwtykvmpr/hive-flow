@@ -24,8 +24,26 @@ import {
   nonInteractiveSelect,
 } from '../utils/safe-interactive.js';
 
-// Import SQLite for persistence
-import Database from 'better-sqlite3';
+// Import SQLite for persistence - dynamically loaded to handle missing bindings
+let Database = null;
+let sqliteAvailable = false;
+
+// Try to load better-sqlite3, but don't fail if bindings aren't available
+async function loadSqlite() {
+  if (Database !== null) return sqliteAvailable;
+  try {
+    const sqlite = await import('better-sqlite3');
+    Database = sqlite.default;
+    // Test if bindings work by creating a temp in-memory database
+    const testDb = new Database(':memory:');
+    testDb.close();
+    sqliteAvailable = true;
+  } catch (err) {
+    sqliteAvailable = false;
+    Database = null;
+  }
+  return sqliteAvailable;
+}
 
 // Import help formatter
 import { HelpFormatter } from '../help-formatter.js';
@@ -126,6 +144,38 @@ async function initHiveMind(flags) {
     const hiveMindDir = path.join(cwd(), '.hive-mind');
     if (!existsSync(hiveMindDir)) {
       mkdirSync(hiveMindDir, { recursive: true });
+    }
+
+    // Check SQLite availability
+    const hasSqlite = await loadSqlite();
+
+    if (!hasSqlite) {
+      // Fall back to JSON-based initialization
+      spinner.text = 'Initializing Hive Mind with JSON fallback...';
+
+      const fallbackPath = path.join(hiveMindDir, 'memory.json');
+      const fallbackData = {
+        metadata: {
+          type: 'fallback',
+          initialized: new Date().toISOString(),
+          version: '2.0.0',
+          warning: 'Using JSON fallback - SQLite bindings not available'
+        },
+        swarms: [],
+        agents: [],
+        tasks: [],
+        collective_memory: [],
+        consensus_votes: [],
+        messages: []
+      };
+
+      await writeFile(fallbackPath, JSON.stringify(fallbackData, null, 2), 'utf8');
+
+      spinner.succeed('Hive Mind initialized with JSON fallback');
+      console.log(chalk.yellow('\n⚠️  Note: SQLite native bindings not available'));
+      console.log(chalk.gray('   Using JSON fallback for data persistence'));
+      console.log(chalk.gray('   For full SQLite features, install locally: npm install claude-flow'));
+      return;
     }
 
     // Initialize SQLite database
@@ -917,9 +967,70 @@ function getAgentCapabilities(type) {
  */
 async function showStatus(flags) {
   try {
-    const dbPath = path.join(cwd(), '.hive-mind', 'hive.db');
+    const hiveMindDir = path.join(cwd(), '.hive-mind');
+    const dbPath = path.join(hiveMindDir, 'hive.db');
+    const fallbackPath = path.join(hiveMindDir, 'memory.json');
+
+    // Check if hive-mind is initialized at all
+    if (!existsSync(hiveMindDir)) {
+      console.error(chalk.red('Error: Hive Mind not initialized'));
+      console.log('Run "claude-flow hive-mind init" first');
+      return;
+    }
+
+    // Check SQLite availability
+    const hasSqlite = await loadSqlite();
+
+    // If SQLite database exists but bindings aren't available
+    if (existsSync(dbPath) && !hasSqlite) {
+      console.log(chalk.yellow('⚠️  SQLite native bindings not available'));
+      console.log(chalk.gray('   This is normal when using npx or remote execution'));
+      console.log('');
+
+      // Try to show basic status from fallback JSON
+      if (existsSync(fallbackPath)) {
+        try {
+          const fallbackData = JSON.parse(await readFile(fallbackPath, 'utf8'));
+          console.log(chalk.bold('🐝 Hive Mind Status (from fallback memory)'));
+          console.log(chalk.cyan('  Database:'), chalk.yellow('JSON fallback'));
+          console.log(chalk.cyan('  Swarms:'), fallbackData.swarms?.length || 0);
+          console.log(chalk.cyan('  Agents:'), fallbackData.agents?.length || 0);
+          console.log('');
+          console.log(chalk.gray('💡 For full SQLite features, install locally:'));
+          console.log(chalk.gray('   npm install claude-flow'));
+          return;
+        } catch {
+          // Fallback file exists but couldn't be read
+        }
+      }
+
+      // Show minimal status
+      console.log(chalk.bold('🐝 Hive Mind Status'));
+      console.log(chalk.cyan('  Initialized:'), chalk.green('Yes'));
+      console.log(chalk.cyan('  Database:'), chalk.yellow('SQLite (unavailable in npx mode)'));
+      console.log('');
+      console.log(chalk.gray('💡 For full functionality, install locally:'));
+      console.log(chalk.gray('   npm install claude-flow'));
+      return;
+    }
 
     if (!existsSync(dbPath)) {
+      // Check for fallback JSON database
+      if (existsSync(fallbackPath)) {
+        try {
+          const fallbackData = JSON.parse(await readFile(fallbackPath, 'utf8'));
+          console.log(chalk.bold('🐝 Hive Mind Status (JSON fallback mode)'));
+          console.log(chalk.cyan('  Database:'), chalk.yellow('JSON fallback'));
+          console.log(chalk.cyan('  Swarms:'), fallbackData.swarms?.length || 0);
+          console.log(chalk.cyan('  Agents:'), fallbackData.agents?.length || 0);
+          console.log(chalk.cyan('  Tasks:'), fallbackData.tasks?.length || 0);
+          return;
+        } catch {
+          console.error(chalk.red('Error: Hive Mind not initialized'));
+          console.log('Run "claude-flow hive-mind init" first');
+          return;
+        }
+      }
       console.error(chalk.red('Error: Hive Mind not initialized'));
       console.log('Run "claude-flow hive-mind init" first');
       return;
