@@ -384,10 +384,9 @@ async function detectMemoryMode(flags, subArgs) {
         printInfo('🗄️  Initialized SQLite backend (.swarm/memory.db)');
         return 'reasoningbank';
     } catch (error) {
-        const isSqliteError = error.message?.includes('BetterSqlite3') || error.message?.includes('better-sqlite3') || error.message?.includes('could not run migrations') || error.message?.includes('ReasoningBank initialization failed');
-        const isNpx = process.env.npm_config_user_agent?.includes('npx') || process.cwd().includes('_npx');
-        if (isSqliteError && isNpx) {
-            console.log('\n✅ Automatically using JSON fallback for this command\n');
+        const isNativeBindingError = error.message?.includes('BetterSqlite3') || error.message?.includes('better-sqlite3') || error.message?.includes('hnswlib') || error.message?.includes('bindings') || error.message?.includes('could not run migrations') || error.message?.includes('ReasoningBank initialization failed') || error.message?.includes('Could not locate the bindings file');
+        const isNpx = process.env.npm_config_user_agent?.includes('npx') || process.cwd().includes('_npx') || process.argv[1]?.includes('npx');
+        if (isNativeBindingError) {
             return 'basic';
         } else {
             printWarning(`⚠️  SQLite unavailable, using JSON fallback`);
@@ -407,7 +406,30 @@ async function isReasoningBankInitialized() {
 }
 async function handleReasoningBankCommand(command, subArgs, flags) {
     const initialized = await isReasoningBankInitialized();
-    const { initializeReasoningBank, storeMemory, queryMemories, listMemories, getStatus, checkReasoningBankTables, migrateReasoningBank, cleanup } = await import('../../reasoningbank/reasoningbank-adapter.js');
+    let adapterModule;
+    try {
+        adapterModule = await import('../../reasoningbank/reasoningbank-adapter.js');
+    } catch (error) {
+        const isNativeBindingError = error.message?.includes('bindings') || error.message?.includes('hnswlib') || error.message?.includes('better-sqlite3') || error.message?.includes('Could not locate');
+        if (isNativeBindingError) {
+            console.log('⚠️  ReasoningBank unavailable (native bindings not found)');
+            console.log('   Using basic JSON memory instead');
+            console.log('   💡 For full features, install locally: npm install claude-flow\n');
+            if (command === 'status' || command === 'stats') {
+                await showMemoryStats(async ()=>{
+                    try {
+                        const content = await fs.readFile('./memory/memory-store.json', 'utf8');
+                        return JSON.parse(content);
+                    } catch  {
+                        return {};
+                    }
+                }, 'basic');
+            }
+            return;
+        }
+        throw error;
+    }
+    const { initializeReasoningBank, storeMemory, queryMemories, listMemories, getStatus, checkReasoningBankTables, migrateReasoningBank, cleanup } = adapterModule;
     if (command === 'init') {
         const dbPath = '.swarm/memory.db';
         if (initialized) {
