@@ -305,6 +305,12 @@ export async function initializeCollectiveMemoryDatabase(workingDir, dryRun = fa
     let Database;
     try {
       Database = (await import('better-sqlite3')).default;
+      // Test if the native binding is available by trying to create a test instance
+      const testPath = path.join(workingDir, '.hive-mind', 'test-binding.db');
+      const testDb = new Database(testPath);
+      testDb.close();
+      // Clean up test file
+      try { await fs.unlink(testPath); } catch { /* ignore */ }
     } catch (err) {
       console.log('    ⚠️  better-sqlite3 not available, using fallback memory database');
       return await createFallbackMemoryDatabase(workingDir);

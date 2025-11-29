@@ -13,7 +13,8 @@ export async function copyAgentFiles(targetDir, options = {}) {
   const { force = false, dryRun = false } = options;
   
   // Path to agent files - try multiple locations
-  const packageAgentsDir = join(__dirname, '../../../../.claude/agents'); // From npm package
+  // From bin/init/, go up to project root: ../../.claude/agents
+  const packageAgentsDir = join(__dirname, '../../.claude/agents'); // From npm package
   const localAgentsDir = '/workspaces/claude-code-flow/.claude/agents';   // Local development
   const cwdAgentsDir = join(process.cwd(), '.claude/agents');              // Current working directory
   
@@ -190,7 +191,8 @@ export async function copyCommandFiles(targetDir, options = {}) {
   const { force = false, dryRun = false } = options;
   
   // Path to command files - try multiple locations
-  const packageCommandsDir = join(__dirname, '../../../../.claude/commands'); // From npm package
+  // From bin/init/, go up to project root: ../../.claude/commands
+  const packageCommandsDir = join(__dirname, '../../.claude/commands'); // From npm package
   const localCommandsDir = '/workspaces/claude-code-flow/.claude/commands';   // Local development
   const cwdCommandsDir = join(process.cwd(), '.claude/commands');              // Current working directory
   
