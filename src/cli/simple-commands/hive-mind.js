@@ -32,15 +32,26 @@ let sqliteAvailable = false;
 async function loadSqlite() {
   if (Database !== null) return sqliteAvailable;
   try {
-    const sqlite = await import('better-sqlite3');
-    Database = sqlite.default;
+    // Try createRequire first for CommonJS modules (better-sqlite3 is CommonJS)
+    const { createRequire } = await import('module');
+    const require = createRequire(import.meta.url);
+    Database = require('better-sqlite3');
     // Test if bindings work by creating a temp in-memory database
     const testDb = new Database(':memory:');
     testDb.close();
     sqliteAvailable = true;
-  } catch (err) {
-    sqliteAvailable = false;
-    Database = null;
+  } catch (requireErr) {
+    // Fallback to dynamic import if createRequire fails
+    try {
+      const sqlite = await import('better-sqlite3');
+      Database = sqlite.default || sqlite;
+      const testDb = new Database(':memory:');
+      testDb.close();
+      sqliteAvailable = true;
+    } catch (err) {
+      sqliteAvailable = false;
+      Database = null;
+    }
   }
   return sqliteAvailable;
 }
@@ -516,6 +527,16 @@ async function spawnSwarmWizard() {
  * Spawn a hive mind swarm
  */
 async function spawnSwarm(args, flags) {
+  // Load SQLite before using Database constructor
+  const hasSqlite = await loadSqlite();
+  if (!hasSqlite) {
+    console.error(chalk.red('Error: SQLite is required for hive-mind spawn'));
+    console.log(chalk.yellow('Please ensure better-sqlite3 is properly installed:'));
+    console.log(chalk.gray('  npm install better-sqlite3'));
+    console.log(chalk.gray('  # or for ARM64/M1: npm rebuild better-sqlite3'));
+    return;
+  }
+
   const objective = args.join(' ').trim();
 
   // Check for non-interactive mode FIRST
@@ -1167,6 +1188,12 @@ async function showStatus(flags) {
  * Show consensus decisions
  */
 async function showConsensus(flags) {
+  // Load SQLite before using Database constructor
+  const hasSqlite = await loadSqlite();
+  if (!hasSqlite) {
+    console.error(chalk.red('Error: SQLite is required for this command'));
+    return;
+  }
   try {
     const dbPath = path.join(cwd(), '.hive-mind', 'hive.db');
     const db = new Database(dbPath);
@@ -1261,6 +1288,12 @@ async function showConsensus(flags) {
  * Show performance metrics
  */
 async function showMetrics(flags) {
+  // Load SQLite before using Database constructor
+  const hasSqlite = await loadSqlite();
+  if (!hasSqlite) {
+    console.error(chalk.red('Error: SQLite is required for this command'));
+    return;
+  }
   try {
     const dbPath = path.join(cwd(), '.hive-mind', 'hive.db');
     const db = new Database(dbPath);
@@ -1722,6 +1755,12 @@ export async function hiveMindCommand(args, flags) {
  * List all memories in the collective memory store
  */
 async function listMemories() {
+  // Load SQLite before using Database constructor
+  const hasSqlite = await loadSqlite();
+  if (!hasSqlite) {
+    console.error(chalk.red('Error: SQLite is required for this command'));
+    return;
+  }
   try {
     console.log(chalk.blue('\n📋 Collective Memory Store\n'));
 
@@ -1791,6 +1830,12 @@ async function listMemories() {
  * Search memories by keyword
  */
 async function searchMemories() {
+  // Load SQLite before using Database constructor
+  const hasSqlite = await loadSqlite();
+  if (!hasSqlite) {
+    console.error(chalk.red('Error: SQLite is required for this command'));
+    return;
+  }
   try {
     const { searchTerm } = await inquirer.prompt([
       {
