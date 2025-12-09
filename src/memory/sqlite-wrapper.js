@@ -1,9 +1,11 @@
 /**
  * SQLite Wrapper with Windows Fallback Support
  * Provides graceful fallback when better-sqlite3 fails to load
+ * Includes auto-rebuild for NODE_MODULE_VERSION mismatches
  */
 
 import { createRequire } from 'module';
+import { execSync } from 'child_process';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -13,6 +15,37 @@ const __dirname = path.dirname(__filename);
 let Database = null;
 let sqliteAvailable = false;
 let loadError = null;
+let rebuildAttempted = false;
+
+/**
+ * Attempt to rebuild better-sqlite3 for the current Node.js version
+ */
+function tryRebuildBetterSqlite3() {
+  if (rebuildAttempted) return false;
+  rebuildAttempted = true;
+
+  try {
+    // Find the better-sqlite3 module path
+    const require = createRequire(import.meta.url);
+    const betterSqlite3Path = path.dirname(require.resolve('better-sqlite3/package.json'));
+
+    console.warn(`\n🔧 Attempting to rebuild better-sqlite3 for Node.js ${process.version}...`);
+
+    // Run npm rebuild in the better-sqlite3 directory
+    execSync('npm rebuild', {
+      cwd: betterSqlite3Path,
+      stdio: ['pipe', 'pipe', 'pipe'],
+      timeout: 120000 // 2 minute timeout
+    });
+
+    console.warn(`✅ Rebuild successful! Retrying SQLite load...\n`);
+    return true;
+  } catch (err) {
+    console.warn(`⚠️  Auto-rebuild failed: ${err.message}`);
+    console.warn(`   You may need build tools installed (python, make, g++)\n`);
+    return false;
+  }
+}
 
 /**
  * Try to load better-sqlite3 with comprehensive error handling
@@ -42,6 +75,24 @@ async function tryLoadSQLite() {
         importErr.message?.includes('was compiled against a different Node.js version');
 
       if (isVersionMismatch) {
+        // Try auto-rebuild first
+        if (!rebuildAttempted && tryRebuildBetterSqlite3()) {
+          // Rebuild succeeded, try loading again
+          try {
+            const require = createRequire(import.meta.url);
+            // Clear the require cache to pick up rebuilt module
+            const modulePath = require.resolve('better-sqlite3');
+            delete require.cache[modulePath];
+            Database = require('better-sqlite3');
+            sqliteAvailable = true;
+            loadError = null;
+            return true;
+          } catch (retryErr) {
+            // Rebuild succeeded but load still failed
+            loadError = retryErr;
+          }
+        }
+
         // Extract version info for helpful message
         const errorMsg = requireErr.message || importErr.message || '';
         const compiledMatch = errorMsg.match(/NODE_MODULE_VERSION (\d+)/);
@@ -65,18 +116,16 @@ async function tryLoadSQLite() {
 ║                                                                              ║
 ║  The better-sqlite3 module was compiled for a different Node.js version.    ║${versionInfo}
 ║                                                                              ║
+║  Auto-rebuild was attempted but SQLite is still unavailable.                 ║
 ║  Claude Flow will continue with JSON fallback storage (still works fine).   ║
 ║                                                                              ║
-║  To fix this and use SQLite:                                                 ║
+║  To manually fix this and use SQLite:                                        ║
 ║                                                                              ║
-║  Option 1 - Rebuild the module:                                              ║
-║  > npm rebuild better-sqlite3                                                ║
+║  Option 1 - Global install (recommended):                                    ║
+║  > npm install -g claude-flow@alpha                                          ║
 ║                                                                              ║
-║  Option 2 - Clear npx cache (if using npx):                                  ║
-║  > rm -rf ~/.npm/_npx/ && npx claude-flow@alpha ...                         ║
-║                                                                              ║
-║  Option 3 - Reinstall dependencies:                                         ║
-║  > rm -rf node_modules && npm install                                        ║
+║  Option 2 - Clear npx cache:                                                 ║
+║  > rm -rf ~/.npm/_npx/ && npx claude-flow@alpha ...                          ║
 ║                                                                              ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 `);
