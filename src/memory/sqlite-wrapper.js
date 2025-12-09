@@ -200,16 +200,48 @@ export function getLoadError() {
  */
 export async function createDatabase(dbPath) {
   const DB = await getSQLiteDatabase();
-  
+
   if (!DB) {
     throw new Error('SQLite is not available. Use fallback storage instead.');
   }
-  
+
   try {
     return new DB(dbPath);
   } catch (err) {
+    // Check for NODE_MODULE_VERSION mismatch at instantiation time
+    const isVersionMismatch =
+      err.message?.includes('NODE_MODULE_VERSION') ||
+      err.message?.includes('was compiled against a different Node.js version') ||
+      err.code === 'ERR_DLOPEN_FAILED';
+
+    if (isVersionMismatch && !rebuildAttempted) {
+      // Try auto-rebuild
+      if (tryRebuildBetterSqlite3()) {
+        // Rebuild succeeded, try again
+        try {
+          const require = createRequire(import.meta.url);
+          // Clear require cache
+          const modulePath = require.resolve('better-sqlite3');
+          delete require.cache[modulePath];
+          // Also clear any cached .node files
+          Object.keys(require.cache).forEach(key => {
+            if (key.includes('better_sqlite3.node') || key.includes('better-sqlite3')) {
+              delete require.cache[key];
+            }
+          });
+          // Re-require and instantiate
+          const NewDB = require('better-sqlite3');
+          Database = NewDB;
+          return new NewDB(dbPath);
+        } catch (retryErr) {
+          // Rebuild didn't help
+          throw err;
+        }
+      }
+    }
+
     // Additional Windows-specific error handling
-    if (err.message.includes('EPERM') || err.message.includes('access denied')) {
+    if (err.message?.includes('EPERM') || err.message?.includes('access denied')) {
       throw new Error(`Cannot create database at ${dbPath}. Permission denied. Try using a different directory or running with administrator privileges.`);
     }
     throw err;
