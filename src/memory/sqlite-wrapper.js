@@ -33,35 +33,79 @@ async function tryLoadSQLite() {
       return true;
     } catch (importErr) {
       loadError = importErr;
-      
-      // Check for specific Windows errors
-      if (requireErr.message.includes('was compiled against a different Node.js version') ||
-          requireErr.message.includes('Could not locate the bindings file') ||
-          requireErr.message.includes('The specified module could not be found') ||
-          requireErr.code === 'MODULE_NOT_FOUND') {
-        
+
+      // Check for NODE_MODULE_VERSION mismatch (different Node.js ABI)
+      const isVersionMismatch =
+        requireErr.message?.includes('NODE_MODULE_VERSION') ||
+        importErr.message?.includes('NODE_MODULE_VERSION') ||
+        requireErr.message?.includes('was compiled against a different Node.js version') ||
+        importErr.message?.includes('was compiled against a different Node.js version');
+
+      if (isVersionMismatch) {
+        // Extract version info for helpful message
+        const errorMsg = requireErr.message || importErr.message || '';
+        const compiledMatch = errorMsg.match(/NODE_MODULE_VERSION (\d+)/);
+        const requiredMatch = errorMsg.match(/requires\s+NODE_MODULE_VERSION (\d+)/);
+
+        const nodeVersionMap = {
+          '108': '18.x', '115': '20.x', '120': '21.x', '127': '22.x', '131': '23.x'
+        };
+
+        let versionInfo = '';
+        if (compiledMatch && requiredMatch) {
+          const compiled = nodeVersionMap[compiledMatch[1]] || `ABI ${compiledMatch[1]}`;
+          const required = nodeVersionMap[requiredMatch[1]] || `ABI ${requiredMatch[1]}`;
+          versionInfo = `\n║  Module compiled for Node.js ${compiled}, running Node.js ${required}`.padEnd(79) + '║';
+        }
+
         console.warn(`
 ╔══════════════════════════════════════════════════════════════════════════════╗
-║                     Windows SQLite Installation Issue                         ║
+║              Native Module Version Mismatch (NODE_MODULE_VERSION)            ║
+╠══════════════════════════════════════════════════════════════════════════════╣
+║                                                                              ║
+║  The better-sqlite3 module was compiled for a different Node.js version.    ║${versionInfo}
+║                                                                              ║
+║  Claude Flow will continue with JSON fallback storage (still works fine).   ║
+║                                                                              ║
+║  To fix this and use SQLite:                                                 ║
+║                                                                              ║
+║  Option 1 - Rebuild the module:                                              ║
+║  > npm rebuild better-sqlite3                                                ║
+║                                                                              ║
+║  Option 2 - Clear npx cache (if using npx):                                  ║
+║  > rm -rf ~/.npm/_npx/ && npx claude-flow@alpha ...                         ║
+║                                                                              ║
+║  Option 3 - Reinstall dependencies:                                         ║
+║  > rm -rf node_modules && npm install                                        ║
+║                                                                              ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+`);
+        return false;
+      }
+
+      // Check for other Windows/installation errors
+      if (requireErr.message?.includes('Could not locate the bindings file') ||
+          requireErr.message?.includes('The specified module could not be found') ||
+          requireErr.code === 'MODULE_NOT_FOUND') {
+
+        console.warn(`
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                     SQLite Native Module Installation Issue                   ║
 ╠══════════════════════════════════════════════════════════════════════════════╣
 ║                                                                              ║
 ║  The native SQLite module failed to load. This is common on Windows when    ║
-║  using 'npx' or when node-gyp build tools are not available.               ║
+║  using 'npx' or when node-gyp build tools are not available.                ║
 ║                                                                              ║
-║  Claude Flow will continue with in-memory storage (non-persistent).         ║
+║  Claude Flow will continue with JSON fallback storage (still works fine).   ║
 ║                                                                              ║
-║  To enable persistent storage on Windows:                                    ║
+║  To enable SQLite storage:                                                   ║
 ║                                                                              ║
-║  Option 1 - Install Windows Build Tools:                                    ║
-║  > npm install --global windows-build-tools                                 ║
-║  > npm install claude-flow@alpha                                           ║
+║  Option 1 - Install Build Tools (Windows):                                   ║
+║  > npm install --global windows-build-tools                                  ║
+║  > npm install claude-flow@alpha                                             ║
 ║                                                                              ║
-║  Option 2 - Use Pre-built Binaries:                                        ║
-║  > npm config set python python3                                           ║
-║  > npm install claude-flow@alpha --build-from-source=false                 ║
-║                                                                              ║
-║  Option 3 - Use WSL (Windows Subsystem for Linux):                         ║
-║  Install WSL and run Claude Flow inside a Linux environment                 ║
+║  Option 2 - Use WSL (Windows Subsystem for Linux):                           ║
+║  Install WSL and run Claude Flow inside a Linux environment                  ║
 ║                                                                              ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 `);

@@ -6,15 +6,45 @@ import {
   checkRuvSwarmAvailable,
 } from '../utils.js';
 import { SqliteMemoryStore } from '../../memory/sqlite-store.js';
+import { InMemoryStore } from '../../memory/in-memory-store.js';
 
 // Initialize memory store
 let memoryStore = null;
+let storeInitFailed = false;
 
 async function getMemoryStore() {
-  if (!memoryStore) {
+  if (memoryStore) return memoryStore;
+
+  // If we already failed, return a working in-memory store
+  if (storeInitFailed) {
+    if (!memoryStore) {
+      memoryStore = new InMemoryStore();
+      await memoryStore.initialize();
+    }
+    return memoryStore;
+  }
+
+  try {
     memoryStore = new SqliteMemoryStore();
     await memoryStore.initialize();
+  } catch (err) {
+    // Check if it's a native module error (NODE_MODULE_VERSION mismatch)
+    const isNativeModuleError =
+      err.message?.includes('NODE_MODULE_VERSION') ||
+      err.message?.includes('was compiled against a different Node.js version') ||
+      err.message?.includes('better-sqlite3') ||
+      err.message?.includes('SQLite is not available');
+
+    if (isNativeModuleError) {
+      printWarning(`SQLite unavailable, using in-memory storage for hooks (data won't persist)`);
+      storeInitFailed = true;
+      memoryStore = new InMemoryStore();
+      await memoryStore.initialize();
+    } else {
+      throw err;
+    }
   }
+
   return memoryStore;
 }
 
