@@ -20,11 +20,13 @@ class InMemoryStore {
     this.data.set('default', new Map());
 
     // Start cleanup interval for expired entries
+    // Use unref() so the interval doesn't prevent process exit
     this.cleanupInterval = setInterval(() => {
       this.cleanup().catch((err) =>
         console.error(`[${new Date().toISOString()}] ERROR [in-memory-store] Cleanup failed:`, err),
       );
     }, 60000); // Run cleanup every minute
+    this.cleanupInterval.unref(); // Don't keep process alive just for cleanup
 
     this.isInitialized = true;
     console.error(
