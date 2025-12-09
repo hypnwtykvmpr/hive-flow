@@ -6,6 +6,33 @@ export function isNpmCacheError(error) {
     const errorStr = error?.message || String(error);
     return errorStr.includes('ENOTEMPTY') && (errorStr.includes('npm') || errorStr.includes('npx') || errorStr.includes('_npx')) || errorStr.includes('better-sqlite3');
 }
+export function isNativeModuleVersionError(error) {
+    const errorStr = error?.message || String(error);
+    return errorStr.includes('NODE_MODULE_VERSION') || errorStr.includes('was compiled against a different Node.js version') || errorStr.includes('re-compiling or re-installing the module');
+}
+export function getNativeModuleRecoveryMessage(error) {
+    const errorStr = error?.message || String(error);
+    const compiledMatch = errorStr.match(/NODE_MODULE_VERSION (\d+)/);
+    const requiredMatch = errorStr.match(/requires\s+NODE_MODULE_VERSION (\d+)/);
+    let message = '⚠️  Native module version mismatch detected.\n';
+    if (compiledMatch && requiredMatch) {
+        const nodeVersionMap = {
+            '108': '18.x',
+            '115': '20.x',
+            '120': '21.x',
+            '127': '22.x',
+            '131': '23.x'
+        };
+        const compiled = nodeVersionMap[compiledMatch[1]] || `ABI ${compiledMatch[1]}`;
+        const required = nodeVersionMap[requiredMatch[1]] || `ABI ${requiredMatch[1]}`;
+        message += `   Module was compiled for Node.js ${compiled}, but running Node.js ${required}.\n`;
+    }
+    message += '\n   To fix this, try one of:\n';
+    message += '   1. npm rebuild better-sqlite3\n';
+    message += '   2. rm -rf node_modules && npm install\n';
+    message += '   3. npx cache: rm -rf ~/.npm/_npx/ && run command again\n';
+    return message;
+}
 export function isWSL() {
     if (process.platform !== 'linux') {
         return false;
@@ -203,6 +230,8 @@ export async function recoverInitErrors(error) {
 }
 export const errorRecovery = {
     isNpmCacheError,
+    isNativeModuleVersionError,
+    getNativeModuleRecoveryMessage,
     isWSL,
     cleanNpmCache,
     retryWithRecovery,

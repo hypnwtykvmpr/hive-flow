@@ -1,5 +1,15 @@
 import * as fs from 'fs-extra';
 import * as path from 'path';
+import { isNativeModuleVersionError, getNativeModuleRecoveryMessage } from '../utils/error-recovery.js';
+export class NativeModuleError extends Error {
+    originalError;
+    isNativeModuleError = true;
+    constructor(message, originalError){
+        super(message);
+        this.name = 'NativeModuleError';
+        this.originalError = originalError;
+    }
+}
 export class DatabaseManager {
     provider;
     dbType;
@@ -21,11 +31,14 @@ export class DatabaseManager {
             return new SQLiteProvider(this.dbPath);
         } catch (error) {
             const errorMsg = error instanceof Error ? error.message : String(error);
-            if (errorMsg.includes('ENOTEMPTY') || errorMsg.includes('better-sqlite3')) {
+            if (error instanceof NativeModuleError || isNativeModuleVersionError(error)) {
+                console.warn('\n' + (error instanceof NativeModuleError ? error.message : getNativeModuleRecoveryMessage(error)));
+                console.warn('   Falling back to JSON storage (no data loss, just slower).\n');
+            } else if (errorMsg.includes('ENOTEMPTY') || errorMsg.includes('better-sqlite3')) {
                 console.warn('⚠️  SQLite initialization failed due to npm cache error');
                 console.warn('   Will attempt automatic recovery during initialize()');
             } else {
-                console.warn('SQLite not available, falling back to JSON storage:', error);
+                console.warn('SQLite not available, falling back to JSON storage:', errorMsg);
             }
             this.provider = new JSONProvider(this.dbPath.replace('.sqlite', '.json'));
             this.dbType = 'json';
@@ -128,6 +141,10 @@ let SQLiteProvider = class SQLiteProvider {
             const Database = require('better-sqlite3');
             this.db = new Database(dbPath);
         } catch (error) {
+            if (isNativeModuleVersionError(error)) {
+                const recoveryMsg = getNativeModuleRecoveryMessage(error);
+                throw new NativeModuleError(recoveryMsg, error);
+            }
             throw new Error('better-sqlite3 not available. Install with: npm install better-sqlite3');
         }
     }
