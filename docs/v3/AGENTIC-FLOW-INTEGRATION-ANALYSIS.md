@@ -1108,6 +1108,39 @@ export function registerIntelligenceHooks(hookManager: AgenticHookManager) {
 
 ---
 
+## 15. AgentDB Alpha Integration
+
+See companion document: **[LEARNING-OPTIMIZED-PLAN.md](./LEARNING-OPTIMIZED-PLAN.md)**
+
+### 15.1 agentdb@2.0.0-alpha.3.1 Key Features
+
+| Controller | Purpose | Integration Priority |
+|------------|---------|---------------------|
+| `LearningSystem` | 9 RL algorithms | HIGH |
+| `ReflexionMemory` | Self-improvement loops | HIGH |
+| `SkillLibrary` | Pattern storage | HIGH |
+| `CausalMemoryGraph` | Cause-effect reasoning | MEDIUM |
+| `NightlyLearner` | Automated discovery | MEDIUM |
+| `AttentionService` | FlashAttention | HIGH |
+| `HNSWIndex` | 150x faster search | HIGH |
+
+### 15.2 Combined Learning Tools (28 Total)
+
+**agentic-flow (19 hooks)**: Intelligence bridge, SONA trajectory, pattern storage
+**agentdb (9 learning)**: RL sessions, reflexion, skills, causal discovery
+
+### 15.3 Optimized Learning Pipeline
+
+```
+Pre-Task → Pattern Retrieval + Skill Lookup + Causal Query
+During   → SONA Trajectory + Experience Recording
+Post-Task → Pattern Storage + Skill Evolution + Causal Discovery
+Nightly  → FlashAttention Consolidation + A/B Experiments + Transfer Learning
+```
+
+---
+
 *Deep review completed: 2026-01-03*
 *agentic-flow version analyzed: 2.0.1-alpha.50*
+*agentdb version analyzed: 2.0.0-alpha.3.1*
 *Claude-Flow version: 2.7.47*
