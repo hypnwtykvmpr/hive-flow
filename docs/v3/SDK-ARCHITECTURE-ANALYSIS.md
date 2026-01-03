@@ -2374,6 +2374,433 @@ This modular architecture enables:
 
 ---
 
-*Document Version: 1.0.0*
+## 13. Background Worker System
+
+### 13.1 Overview
+
+The agentic-flow worker system provides **non-blocking background workers** triggered by keywords in prompts. Workers run silently, depositing results into memory for later retrieval.
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                         User Prompt                                  │
+│           "ultralearn the authentication system"                     │
+└─────────────────────────────────┬───────────────────────────────────┘
+                                  │
+                                  ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                    TriggerDetector (<5ms)                            │
+│                    - Regex keyword matching                          │
+│                    - Topic extraction                                │
+│                    - Cooldown management                             │
+└─────────────────────────────────┬───────────────────────────────────┘
+                                  │
+                                  ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                   WorkerDispatchService                              │
+│  ┌─────────────┬─────────────┬─────────────┬─────────────────────┐ │
+│  │  Registry   │  Governor   │  RuVector   │  Worker Factory     │ │
+│  │  (CRUD)     │  (Limits)   │ (Learning)  │  (Custom Workers)   │ │
+│  └─────────────┴─────────────┴─────────────┴─────────────────────┘ │
+└─────────────────────────────────┬───────────────────────────────────┘
+                                  │
+                                  ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                    Consolidated Phase System                         │
+│  ┌─────────────────────────────────────────────────────────────────┐│
+│  │ file-discovery → pattern-extraction → embedding → vector-store  ││
+│  │ security-analysis → complexity-analysis → dependency-discovery  ││
+│  │ api-discovery → todo-extraction → summarization                 ││
+│  └─────────────────────────────────────────────────────────────────┘│
+└─────────────────────────────────┬───────────────────────────────────┘
+                                  │
+                                  ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                    Memory Deposits                                   │
+│                    ultralearn/{topic}/{phase} → ReasoningBank        │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### 13.2 Built-in Workers (12 Types)
+
+| Worker | Keyword | Priority | Timeout | Description |
+|--------|---------|----------|---------|-------------|
+| `ultralearn` | ultralearn | high | 5min | Deep research swarm for codebase learning |
+| `optimize` | optimize | medium | 3min | Performance analyzer and cache optimizer |
+| `consolidate` | consolidate | low | 2min | Memory compaction and pattern extraction |
+| `predict` | predict | medium | 1min | Pre-fetch likely files based on patterns |
+| `audit` | audit | high | 5min | Security and code quality scan |
+| `map` | map | medium | 4min | Build full dependency graph |
+| `preload` | preload | low | 30s | Pre-fetch context for faster access |
+| `deepdive` | deepdive | high | 10min | Traces call paths 5+ levels deep |
+| `document` | document | low | 3min | Generate documentation for patterns |
+| `refactor` | refactor | medium | 3min | Identify refactoring opportunities |
+| `benchmark` | benchmark | medium | 5min | Run performance benchmarks silently |
+| `testgaps` | testgaps | medium | 3min | Find untested code paths |
+
+### 13.3 Core Components
+
+#### TriggerDetector
+
+Fast keyword detection with <5ms target latency:
+
+```typescript
+import { TriggerDetector, getTriggerDetector } from 'agentic-flow/workers';
+
+const detector = getTriggerDetector();
+
+// Detect triggers in prompt
+const triggers = detector.detect('ultralearn the auth system');
+// [{ keyword: 'ultralearn', topic: 'auth system', config: {...} }]
+
+// Fast boolean check
+if (detector.hasTriggers(prompt)) {
+  // Contains worker triggers
+}
+
+// Cooldown management
+detector.isOnCooldown('ultralearn');  // Check cooldown
+detector.clearCooldown('ultralearn'); // Clear for testing
+```
+
+#### WorkerDispatchService
+
+Main dispatcher with RuVector integration:
+
+```typescript
+import { getWorkerDispatchService } from 'agentic-flow/workers';
+
+const dispatcher = getWorkerDispatchService();
+
+// Dispatch single worker
+const workerId = await dispatcher.dispatch('ultralearn', 'auth', sessionId);
+
+// Dispatch from prompt (parallel by default)
+const { triggers, workerIds } = await dispatcher.dispatchFromPrompt(
+  'ultralearn auth and audit security',
+  sessionId,
+  { parallel: true }
+);
+
+// Monitor worker
+dispatcher.on('worker:progress', ({ workerId, progress, phase }) => {
+  console.log(`${workerId}: ${phase} (${progress}%)`);
+});
+
+dispatcher.on('worker:complete', ({ workerId, results, duration }) => {
+  console.log(`Completed in ${duration}ms`);
+});
+
+// Get status
+const status = dispatcher.getStatus(workerId);
+const active = dispatcher.getActiveWorkers(sessionId);
+
+// Cancel worker
+dispatcher.cancel(workerId);
+
+// Wait for completion
+const result = await dispatcher.awaitCompletion(workerId, 60000);
+```
+
+#### Consolidated Phase System
+
+Unified phase execution with SIMD-accelerated operations:
+
+```typescript
+// Available phases
+const PHASES = [
+  'file-discovery',      // Glob file search
+  'pattern-extraction',  // Extract functions, classes, imports
+  'embedding-generation',// ONNX SIMD-accelerated embeddings
+  'vector-storage',      // Store in HNSW index
+  'security-analysis',   // Scan for secrets, XSS, injection
+  'complexity-analysis', // Cyclomatic complexity
+  'dependency-discovery',// Import/require analysis
+  'api-discovery',       // REST/GraphQL endpoint detection
+  'todo-extraction',     // TODO/FIXME/HACK extraction
+  'summarization'        // Aggregate results
+];
+
+// Run unified pipeline
+import { runUnifiedPipeline } from 'agentic-flow/workers';
+
+const result = await runUnifiedPipeline(
+  workerContext,
+  ['file-discovery', 'pattern-extraction', 'security-analysis'],
+  { patterns: ['**/*.ts'], maxFiles: 100 }
+);
+```
+
+#### Worker-Agent Integration
+
+Links workers to optimal agents based on performance:
+
+```typescript
+import { workerAgentIntegration } from 'agentic-flow/workers';
+
+// Get recommended agents for trigger
+const { primary, fallback, phases } =
+  workerAgentIntegration.getRecommendedAgents('ultralearn');
+// primary: ['researcher', 'coder']
+// fallback: ['planner']
+
+// Select best agent based on performance history
+const { agent, confidence, reasoning } =
+  workerAgentIntegration.selectBestAgent('audit');
+// agent: 'security-analyst'
+// confidence: 0.85
+// reasoning: 'Selected based on 42 executions with 95% success'
+
+// Record feedback for learning
+workerAgentIntegration.recordFeedback(
+  'audit', 'security-analyst',
+  true,  // success
+  250,   // latencyMs
+  0.92   // qualityScore
+);
+
+// Agent capability mapping
+const AGENT_CAPABILITIES = {
+  'researcher': ['ultralearn', 'deepdive', 'map'],
+  'coder': ['optimize', 'refactor'],
+  'tester': ['testgaps', 'audit'],
+  'security-analyst': ['audit', 'deepdive'],
+  'performance-analyzer': ['benchmark', 'optimize'],
+  'documenter': ['document']
+};
+```
+
+### 13.4 Custom Workers
+
+Define custom workers via YAML config:
+
+```yaml
+# workers.yaml or .agentic-flow/workers.yaml
+version: '1.0'
+
+workers:
+  - name: my-scanner
+    description: Custom code scanner
+    triggers: ['scan-my', 'myscan']
+    priority: medium
+    timeout: 120000
+    phases:
+      - type: file-discovery
+        options:
+          patterns: ['**/*.ts', '**/*.tsx']
+          maxFiles: 200
+      - type: pattern-extraction
+      - type: security-analysis
+      - type: summarization
+    capabilities:
+      onnxEmbeddings: true
+      vectorDb: true
+      sonaLearning: true
+    output:
+      format: detailed
+      includeSamples: true
+      maxSamples: 20
+
+settings:
+  defaultCapabilities:
+    progressEvents: true
+  maxConcurrent: 3
+```
+
+#### Custom Worker Factory
+
+```typescript
+import { createCustomWorker, createFromPreset } from 'agentic-flow/workers';
+
+// From definition
+const worker = createCustomWorker({
+  name: 'my-worker',
+  phases: [
+    { type: 'file-discovery' },
+    { type: 'security-analysis' }
+  ]
+});
+
+// From preset
+const preset = createFromPreset('security-scanner', {
+  name: 'enhanced-scanner',
+  timeout: 180000
+});
+
+// Register with manager
+import { customWorkerManager } from 'agentic-flow/workers';
+
+customWorkerManager.register(worker);
+customWorkerManager.registerPreset('code-analyzer');
+await customWorkerManager.loadFromConfig('./workers.yaml');
+
+// Execute
+const result = await customWorkerManager.execute('my-scanner', context);
+```
+
+### 13.5 Benchmark System
+
+Performance testing for worker operations:
+
+```typescript
+import { workerBenchmarks, runBenchmarks } from 'agentic-flow/workers';
+
+// Run full suite
+const suite = await runBenchmarks();
+
+// Individual benchmarks
+await workerBenchmarks.benchmarkTriggerDetection(1000);  // Target: p95 <5ms
+await workerBenchmarks.benchmarkRegistryOperations(500); // Target: p95 <10ms
+await workerBenchmarks.benchmarkAgentSelection(1000);    // Target: p95 <1ms
+await workerBenchmarks.benchmarkModelCache(100);         // Target: p95 <0.5ms
+await workerBenchmarks.benchmarkConcurrentWorkers(10);   // Target: <1s total
+await workerBenchmarks.benchmarkMemoryKeyGeneration(5000); // Target: p95 <0.1ms
+
+// Results
+console.log(suite.summary);
+// {
+//   totalTests: 6,
+//   passed: 6,
+//   failed: 0,
+//   avgLatencyMs: 0.42,
+//   totalDurationMs: 1250,
+//   peakMemoryMB: 12.5
+// }
+```
+
+### 13.6 RuVector Integration
+
+Workers integrate with RuVector for learning:
+
+```typescript
+import { getRuVectorWorkerIntegration } from 'agentic-flow/workers';
+
+const ruvector = getRuVectorWorkerIntegration();
+await ruvector.initialize();
+
+// During worker execution:
+// 1. Start trajectory tracking
+const trajectoryId = await ruvector.startTrajectory(
+  workerId, trigger, topic
+);
+
+// 2. Record phase steps
+await ruvector.recordStep(trajectoryId, 'file-discovery', {
+  duration: 150,
+  memoryDeposits: 5,
+  successRate: 1.0
+});
+
+// 3. Complete with learning
+const learningResult = await ruvector.completeTrajectory(
+  trajectoryId,
+  workerResults
+);
+// {
+//   qualityScore: 0.85,
+//   patternsLearned: 3,
+//   sonaAdaptation: true
+// }
+
+// 4. Find patterns for future runs
+const patterns = await ruvector.findPatterns(topic, 5);
+```
+
+### 13.7 @claude-flow/workers Package
+
+Claude-Flow v3 workers package specification:
+
+```typescript
+// @claude-flow/workers
+// Dependencies: @claude-flow/core (optional peer)
+// SDK: agentic-flow/workers
+
+export interface WorkersConfig {
+  enabled: string[];           // Which workers to enable
+  customConfig?: string;       // Path to workers.yaml
+  maxConcurrent?: number;      // Max parallel workers
+  defaultTimeout?: number;     // Default timeout
+}
+
+// Exports
+export {
+  // Core
+  WorkerDispatchService,
+  getWorkerDispatchService,
+
+  // Detection
+  TriggerDetector,
+  getTriggerDetector,
+  TRIGGER_CONFIGS,
+
+  // Registry
+  WorkerRegistry,
+  getWorkerRegistry,
+
+  // Resource Management
+  ResourceGovernor,
+  getResourceGovernor,
+
+  // Custom Workers
+  CustomWorkerManager,
+  customWorkerManager,
+  createCustomWorker,
+  createFromPreset,
+
+  // Agent Integration
+  WorkerAgentIntegration,
+  workerAgentIntegration,
+  getAgentForTrigger,
+  recordAgentPerformance,
+
+  // Phases
+  runUnifiedPipeline,
+  listUnifiedPhases,
+  registerUnifiedPhase,
+
+  // Benchmarks
+  WorkerBenchmarks,
+  workerBenchmarks,
+  runBenchmarks,
+
+  // RuVector
+  RuVectorWorkerIntegration,
+  getRuVectorWorkerIntegration
+};
+```
+
+### 13.8 Integration with v3 Hooks
+
+Workers can be triggered from Claude Code hooks:
+
+```typescript
+import { HooksModule } from '@claude-flow/hooks';
+import { WorkersModule } from '@claude-flow/workers';
+
+const core = new ClaudeFlowCore();
+core.register(new HooksModule());
+core.register(new WorkersModule());
+
+// Hook triggers worker on keyword detection
+core.on('hook:triggered', async ({ hookId, event, data }) => {
+  if (hookId === 'route' && data.prompt) {
+    const workersModule = core.getModule<WorkersModule>('workers');
+    await workersModule.dispatchFromPrompt(data.prompt, data.sessionId);
+  }
+});
+
+// Worker results available to learning
+core.on('worker:complete', async ({ workerId, results }) => {
+  const learningModule = core.getModule<LearningModule>('learning');
+  await learningModule.train({
+    type: 'worker-result',
+    data: results,
+    quality: results.success ? 0.9 : 0.3
+  });
+});
+```
+
+---
+
+*Document Version: 1.1.0*
 *Last Updated: 2026-01-03*
 *Based on: agentic-flow@2.0.1-alpha.50, ruvector@0.1.95*
