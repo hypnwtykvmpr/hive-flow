@@ -1231,6 +1231,1052 @@ core.register(new SwarmModule());
 // Swarm → Attention: coordination uses attention mechanisms
 ```
 
+### 11.9 Shared Types Package
+
+#### @claude-flow/types
+
+**Purpose:** Zero-runtime TypeScript definitions shared across all packages.
+
+```typescript
+// Package: @claude-flow/types
+// Size: ~20KB (types only, no runtime)
+// Dependencies: None
+
+// Core interfaces
+export interface ClaudeFlowModule {
+  id: string;
+  version: string;
+  initialize(core?: ClaudeFlowCore): Promise<void>;
+  shutdown(): Promise<void>;
+}
+
+export interface EventBus {
+  emit<T extends keyof ModuleEvents>(event: T, data: ModuleEvents[T]): void;
+  on<T extends keyof ModuleEvents>(event: T, handler: (data: ModuleEvents[T]) => void): void;
+  off<T extends keyof ModuleEvents>(event: T, handler: (data: ModuleEvents[T]) => void): void;
+}
+
+// Agent types
+export interface AgentDefinition {
+  id: string;
+  type: AgentType;
+  capabilities: string[];
+  systemPrompt: string;
+  tools?: Tool[];
+  config?: AgentConfig;
+}
+
+export type AgentType =
+  | 'coder' | 'reviewer' | 'tester' | 'planner' | 'researcher'
+  | 'hierarchical-coordinator' | 'mesh-coordinator'
+  | 'byzantine' | 'raft' | 'gossip' | 'quorum'
+  | string; // Allow custom types
+
+// Learning types
+export interface TrainingPattern {
+  id?: string;
+  embedding: Float32Array | number[];
+  hiddenStates: Float32Array | number[];
+  attention: Float32Array | number[];
+  quality: number;
+  context?: Record<string, string>;
+  timestamp?: number;
+}
+
+export type RLAlgorithm =
+  | 'Q-Learning' | 'SARSA' | 'DQN' | 'A2C' | 'PPO'
+  | 'Actor-Critic' | 'Decision-Transformer' | 'TD3' | 'SAC';
+
+// Swarm types
+export type SwarmTopology = 'mesh' | 'hierarchical' | 'ring' | 'star' | 'adaptive';
+export type TransportProtocol = 'quic' | 'http2' | 'websocket' | 'auto';
+
+// Memory types
+export interface MemoryPattern {
+  key: string;
+  value: any;
+  embedding?: number[];
+  metadata?: Record<string, any>;
+  timestamp: number;
+  quality?: number;
+}
+
+// Hook types
+export type ClaudeCodeEvent =
+  | 'PreToolUse' | 'PostToolUse'
+  | 'TaskStart' | 'TaskEnd'
+  | 'SessionStart' | 'SessionEnd'
+  | 'UserRequest' | 'AgentResponse';
+
+export interface HookResult {
+  success: boolean;
+  data?: any;
+  error?: Error;
+  metrics?: HookMetrics;
+}
+```
+
+---
+
+### 11.10 Monorepo Management
+
+#### Tool Selection: pnpm Workspaces + Turborepo
+
+```
+claude-flow/
+├── package.json              # Root workspace config
+├── pnpm-workspace.yaml       # pnpm workspace definition
+├── turbo.json                # Turborepo pipeline config
+├── packages/
+│   ├── core/
+│   │   ├── package.json
+│   │   ├── src/
+│   │   └── tsconfig.json
+│   ├── hooks/
+│   ├── learning/
+│   ├── swarm/
+│   ├── memory/
+│   ├── agents/
+│   ├── mcp/
+│   ├── neural/
+│   ├── attention/
+│   ├── vector/
+│   ├── cli/
+│   └── types/               # Shared types
+└── apps/
+    └── docs/                # Documentation site
+```
+
+#### pnpm-workspace.yaml
+```yaml
+packages:
+  - 'packages/*'
+  - 'apps/*'
+```
+
+#### turbo.json
+```json
+{
+  "$schema": "https://turbo.build/schema.json",
+  "pipeline": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**"]
+    },
+    "test": {
+      "dependsOn": ["build"],
+      "outputs": ["coverage/**"]
+    },
+    "lint": {
+      "outputs": []
+    },
+    "typecheck": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    }
+  }
+}
+```
+
+#### Publishing Workflow
+```bash
+# Version all changed packages
+pnpm changeset version
+
+# Build all packages in dependency order
+pnpm turbo build
+
+# Publish to npm
+pnpm changeset publish
+```
+
+#### Benefits
+- **pnpm**: Fast installs, strict dependencies, disk efficient
+- **Turborepo**: Parallel builds, caching, change detection
+- **Changesets**: Coordinated versioning and changelogs
+
+---
+
+### 11.11 Testing Strategy
+
+#### Per-Package Testing
+
+```typescript
+// packages/hooks/src/__tests__/dispatcher.test.ts
+import { createHookDispatcher } from '../dispatcher';
+
+describe('HookDispatcher', () => {
+  it('should register and trigger hooks', async () => {
+    const dispatcher = createHookDispatcher();
+    const mockHook = jest.fn().mockResolvedValue({ success: true });
+
+    dispatcher.register('PreToolUse', mockHook);
+    await dispatcher.trigger('PreToolUse', { tool: 'Edit' });
+
+    expect(mockHook).toHaveBeenCalledWith({ tool: 'Edit' });
+  });
+});
+```
+
+#### Integration Testing
+
+```typescript
+// packages/integration-tests/core-hooks.test.ts
+import { ClaudeFlowCore } from '@claude-flow/core';
+import { HooksModule } from '@claude-flow/hooks';
+import { LearningModule } from '@claude-flow/learning';
+
+describe('Core + Hooks + Learning Integration', () => {
+  let core: ClaudeFlowCore;
+
+  beforeEach(async () => {
+    core = new ClaudeFlowCore();
+    core.register(new HooksModule());
+    core.register(new LearningModule({ profile: 'realtime' }));
+    await core.initialize();
+  });
+
+  it('should trigger learning on hook completion', async () => {
+    const learningModule = core.getModule<LearningModule>('learning');
+    const trainSpy = jest.spyOn(learningModule, 'train');
+
+    core.emit('hook:completed', {
+      hookId: 'postEdit',
+      result: { task: 'fix bug', success: true }
+    });
+
+    await new Promise(r => setTimeout(r, 100));
+    expect(trainSpy).toHaveBeenCalled();
+  });
+});
+```
+
+#### Mock Implementations
+
+```typescript
+// packages/hooks/src/__mocks__/learning.ts
+export const createMockLearningEngine = () => ({
+  train: jest.fn().mockResolvedValue({ patternId: 'mock-123' }),
+  query: jest.fn().mockResolvedValue([]),
+  forceLearn: jest.fn().mockResolvedValue({ improved: true })
+});
+```
+
+#### Test Configuration
+
+```json
+// turbo.json test pipeline
+{
+  "test": {
+    "dependsOn": ["build"],
+    "outputs": ["coverage/**"],
+    "env": ["CI", "NODE_ENV"]
+  },
+  "test:unit": {
+    "dependsOn": ["build"],
+    "outputs": ["coverage/unit/**"]
+  },
+  "test:integration": {
+    "dependsOn": ["^build"],
+    "outputs": ["coverage/integration/**"]
+  },
+  "test:e2e": {
+    "dependsOn": ["^build"],
+    "outputs": ["coverage/e2e/**"]
+  }
+}
+```
+
+---
+
+### 11.12 Error Handling & Recovery
+
+#### Cross-Module Error Propagation
+
+```typescript
+// @claude-flow/core error types
+export class ClaudeFlowError extends Error {
+  constructor(
+    message: string,
+    public code: ErrorCode,
+    public module: string,
+    public recoverable: boolean = true,
+    public cause?: Error
+  ) {
+    super(message);
+    this.name = 'ClaudeFlowError';
+  }
+}
+
+export enum ErrorCode {
+  // Core errors (1xxx)
+  MODULE_NOT_FOUND = 1001,
+  MODULE_INIT_FAILED = 1002,
+  EVENT_HANDLER_FAILED = 1003,
+
+  // Hook errors (2xxx)
+  HOOK_TIMEOUT = 2001,
+  HOOK_VALIDATION_FAILED = 2002,
+
+  // Learning errors (3xxx)
+  TRAINING_FAILED = 3001,
+  PATTERN_NOT_FOUND = 3002,
+  ALGORITHM_UNAVAILABLE = 3003,
+
+  // Swarm errors (4xxx)
+  AGENT_SPAWN_FAILED = 4001,
+  COORDINATION_TIMEOUT = 4002,
+  TRANSPORT_UNAVAILABLE = 4003,
+
+  // Memory errors (5xxx)
+  STORAGE_FULL = 5001,
+  RETRIEVAL_FAILED = 5002
+}
+```
+
+#### Graceful Degradation
+
+```typescript
+// @claude-flow/core graceful degradation
+class ClaudeFlowCore {
+  async safeGetModule<T>(id: string): Promise<T | null> {
+    try {
+      return this.getModule<T>(id) ?? null;
+    } catch (error) {
+      this.emit('error:module', { id, error, degraded: true });
+      return null;
+    }
+  }
+
+  // Feature detection for optional modules
+  hasModule(id: string): boolean {
+    return this.modules.has(id);
+  }
+
+  // Run with fallback
+  async withFallback<T>(
+    primary: () => Promise<T>,
+    fallback: () => Promise<T>,
+    errorCodes: ErrorCode[]
+  ): Promise<T> {
+    try {
+      return await primary();
+    } catch (error) {
+      if (error instanceof ClaudeFlowError && errorCodes.includes(error.code)) {
+        this.emit('error:fallback', { error, using: 'fallback' });
+        return await fallback();
+      }
+      throw error;
+    }
+  }
+}
+```
+
+#### Circuit Breaker Pattern
+
+```typescript
+// @claude-flow/core circuit breaker
+interface CircuitBreakerConfig {
+  failureThreshold: number;  // Failures before opening
+  resetTimeout: number;      // Ms before half-open
+  monitorWindow: number;     // Ms to track failures
+}
+
+class CircuitBreaker {
+  private state: 'closed' | 'open' | 'half-open' = 'closed';
+  private failures: number = 0;
+  private lastFailure: number = 0;
+
+  async execute<T>(operation: () => Promise<T>): Promise<T> {
+    if (this.state === 'open') {
+      if (Date.now() - this.lastFailure > this.config.resetTimeout) {
+        this.state = 'half-open';
+      } else {
+        throw new ClaudeFlowError('Circuit open', ErrorCode.MODULE_INIT_FAILED, 'circuit', true);
+      }
+    }
+
+    try {
+      const result = await operation();
+      this.onSuccess();
+      return result;
+    } catch (error) {
+      this.onFailure();
+      throw error;
+    }
+  }
+}
+```
+
+---
+
+### 11.13 Security Model
+
+#### API Key Management
+
+```typescript
+// @claude-flow/core secrets
+interface SecretsConfig {
+  provider: 'env' | 'keychain' | 'vault';
+  keyPrefix?: string;
+}
+
+class SecretsManager {
+  // Never log or expose secrets
+  async get(key: string): Promise<string | undefined> {
+    switch (this.config.provider) {
+      case 'env':
+        return process.env[`${this.config.keyPrefix}${key}`];
+      case 'keychain':
+        return this.getFromKeychain(key);
+      case 'vault':
+        return this.getFromVault(key);
+    }
+  }
+
+  // Validate secrets exist before operations
+  async validate(required: string[]): Promise<boolean> {
+    for (const key of required) {
+      if (!(await this.get(key))) {
+        throw new ClaudeFlowError(
+          `Missing required secret: ${key}`,
+          ErrorCode.MODULE_INIT_FAILED,
+          'secrets',
+          false
+        );
+      }
+    }
+    return true;
+  }
+}
+```
+
+#### Agent Sandboxing
+
+```typescript
+// @claude-flow/agents sandboxing
+interface SandboxConfig {
+  maxMemoryMB: number;
+  maxCpuPercent: number;
+  allowedPaths: string[];
+  networkAccess: 'none' | 'local' | 'restricted' | 'full';
+  timeout: number;
+}
+
+const DEFAULT_SANDBOX: SandboxConfig = {
+  maxMemoryMB: 512,
+  maxCpuPercent: 50,
+  allowedPaths: [process.cwd()],
+  networkAccess: 'restricted',
+  timeout: 30000
+};
+```
+
+#### PII Handling
+
+```typescript
+// @claude-flow/memory PII scrubbing (from agentic-flow)
+import { scrubPII, containsPII } from 'agentic-flow/reasoningbank';
+
+class SecureMemoryStore {
+  async store(key: string, data: any, options?: StoreOptions): Promise<void> {
+    // Always scrub PII before storage
+    const scrubbed = options?.allowPII ? data : scrubPII(data);
+
+    if (containsPII(data) && !options?.allowPII) {
+      this.emit('security:pii-scrubbed', { key, fieldsRemoved: true });
+    }
+
+    await this.backend.store(key, scrubbed);
+  }
+}
+```
+
+#### Audit Logging
+
+```typescript
+// @claude-flow/core audit
+interface AuditEvent {
+  timestamp: number;
+  module: string;
+  action: string;
+  actor: string;  // Agent ID or 'user'
+  resource?: string;
+  outcome: 'success' | 'failure' | 'denied';
+  metadata?: Record<string, any>;
+}
+
+class AuditLogger {
+  log(event: AuditEvent): void {
+    // Structured logging for compliance
+    console.log(JSON.stringify({
+      ...event,
+      _type: 'audit',
+      _version: '1.0'
+    }));
+  }
+}
+```
+
+---
+
+### 11.14 Telemetry & Observability
+
+#### OpenTelemetry Integration
+
+```typescript
+// @claude-flow/core telemetry
+import { trace, metrics, context } from '@opentelemetry/api';
+
+class Telemetry {
+  private tracer = trace.getTracer('@claude-flow/core');
+  private meter = metrics.getMeter('@claude-flow/core');
+
+  // Counters
+  private hookCounter = this.meter.createCounter('claude_flow.hooks.total');
+  private learningCounter = this.meter.createCounter('claude_flow.learning.patterns');
+  private swarmGauge = this.meter.createUpDownCounter('claude_flow.swarm.agents');
+
+  // Histograms
+  private latencyHistogram = this.meter.createHistogram('claude_flow.operation.latency', {
+    unit: 'ms',
+    description: 'Operation latency'
+  });
+
+  // Tracing
+  async traceOperation<T>(name: string, operation: () => Promise<T>): Promise<T> {
+    return this.tracer.startActiveSpan(name, async (span) => {
+      try {
+        const result = await operation();
+        span.setStatus({ code: SpanStatusCode.OK });
+        return result;
+      } catch (error) {
+        span.setStatus({ code: SpanStatusCode.ERROR, message: error.message });
+        throw error;
+      } finally {
+        span.end();
+      }
+    });
+  }
+}
+```
+
+#### Claude Code Compatible Metrics
+
+```typescript
+// Export format compatible with Claude Code telemetry
+interface ClaudeCodeMetrics {
+  // Session metrics
+  session_id: string;
+  session_duration_ms: number;
+
+  // Tool usage
+  tools_invoked: Record<string, number>;
+  tool_success_rate: number;
+
+  // Learning metrics (Claude-Flow specific)
+  patterns_learned: number;
+  learning_cycles: number;
+  avg_pattern_quality: number;
+
+  // Swarm metrics (Claude-Flow specific)
+  agents_spawned: number;
+  tasks_completed: number;
+  consensus_rounds: number;
+
+  // Performance
+  avg_hook_latency_ms: number;
+  avg_learning_latency_ms: number;
+}
+```
+
+#### Distributed Tracing
+
+```typescript
+// Cross-agent tracing
+class SwarmTracer {
+  // Propagate trace context to spawned agents
+  async spawnWithTrace(agentConfig: AgentConfig): Promise<Agent> {
+    const span = this.tracer.startSpan('swarm.spawn');
+
+    // Inject trace context into agent
+    const traceContext = {};
+    propagation.inject(context.active(), traceContext);
+
+    const agent = await this.swarm.spawn({
+      ...agentConfig,
+      metadata: {
+        ...agentConfig.metadata,
+        _trace: traceContext
+      }
+    });
+
+    span.setAttribute('agent.id', agent.id);
+    span.setAttribute('agent.type', agentConfig.type);
+    span.end();
+
+    return agent;
+  }
+}
+```
+
+---
+
+### 11.15 Migration Path (v2 → v3)
+
+#### Breaking Changes
+
+| v2 API | v3 API | Migration |
+|--------|--------|-----------|
+| `require('claude-flow')` | `import { ClaudeFlowCore } from '@claude-flow/core'` | ESM only |
+| `claudeFlow.init()` | `new ClaudeFlowCore()` | Constructor-based |
+| `claudeFlow.swarm.create()` | `import { createSwarm } from '@claude-flow/swarm'` | Modular import |
+| `claudeFlow.memory.store()` | `memoryModule.store()` | Module instance |
+| Callbacks | Promises/async-await | All async |
+
+#### Automatic Migration (Codemod)
+
+```bash
+# Install migration tool
+npx @claude-flow/migrate
+
+# Analyze codebase
+npx @claude-flow/migrate analyze ./src
+
+# Apply migrations
+npx @claude-flow/migrate run ./src --dry-run
+npx @claude-flow/migrate run ./src
+```
+
+#### Codemod Transforms
+
+```typescript
+// transforms/imports.ts
+export default function transformer(file, api) {
+  const j = api.jscodeshift;
+  const root = j(file.source);
+
+  // Transform: require('claude-flow') → import
+  root.find(j.CallExpression, {
+    callee: { name: 'require' },
+    arguments: [{ value: 'claude-flow' }]
+  }).replaceWith(() =>
+    j.importDeclaration(
+      [j.importSpecifier(j.identifier('ClaudeFlowCore'))],
+      j.literal('@claude-flow/core')
+    )
+  );
+
+  return root.toSource();
+}
+```
+
+#### Compatibility Shim (Temporary)
+
+```typescript
+// @claude-flow/compat - Temporary v2 compatibility
+import { ClaudeFlowCore } from '@claude-flow/core';
+import { HooksModule } from '@claude-flow/hooks';
+import { SwarmModule } from '@claude-flow/swarm';
+import { MemoryModule } from '@claude-flow/memory';
+
+// v2-style API
+export function createClaudeFlow(config?: any) {
+  console.warn('[@claude-flow/compat] Deprecated: Migrate to v3 modular imports');
+
+  const core = new ClaudeFlowCore();
+
+  return {
+    init: async () => {
+      core.register(new HooksModule());
+      core.register(new SwarmModule());
+      core.register(new MemoryModule());
+      await core.initialize();
+    },
+    swarm: {
+      create: (opts: any) => core.getModule('swarm').createSwarm(opts)
+    },
+    memory: {
+      store: (k: string, v: any) => core.getModule('memory').store(k, v)
+    }
+  };
+}
+```
+
+#### Deprecation Timeline
+
+| Version | Date | Status |
+|---------|------|--------|
+| v2.x | Current | Maintained (security only) |
+| v3.0 | Release | v2 compat shim included |
+| v3.1 | +3 months | Deprecation warnings |
+| v3.2 | +6 months | Compat shim removed |
+
+---
+
+### 11.16 Plugin & Extension System
+
+#### Plugin Interface
+
+```typescript
+// @claude-flow/core plugin system
+interface ClaudeFlowPlugin {
+  name: string;
+  version: string;
+
+  // Lifecycle hooks
+  onCoreInit?(core: ClaudeFlowCore): Promise<void>;
+  onModuleRegister?(module: ClaudeFlowModule): void;
+  onEvent?(event: string, data: any): void;
+  onShutdown?(): Promise<void>;
+
+  // Extension points
+  hooks?: HookDefinition[];
+  agents?: AgentDefinition[];
+  tools?: ToolDefinition[];
+}
+
+// Register plugin
+core.use(myPlugin);
+```
+
+#### Custom Hook Registration
+
+```typescript
+// Third-party hook example
+const securityPlugin: ClaudeFlowPlugin = {
+  name: 'security-scanner',
+  version: '1.0.0',
+
+  hooks: [{
+    id: 'security-scan',
+    event: 'PreToolUse',
+    priority: 100,  // Run before other hooks
+    handler: async (ctx) => {
+      if (ctx.tool === 'Bash') {
+        const result = await scanCommand(ctx.args.command);
+        if (result.dangerous) {
+          return { block: true, reason: result.reason };
+        }
+      }
+      return { allow: true };
+    }
+  }]
+};
+```
+
+#### Custom Agent Types
+
+```typescript
+// Third-party agent
+const customAgent: AgentDefinition = {
+  id: 'my-custom-agent',
+  type: 'custom-analyzer',
+  capabilities: ['analyze', 'report'],
+  systemPrompt: `You are a specialized analyzer...`,
+  tools: [customTool1, customTool2]
+};
+
+// Register via plugin
+const analyzerPlugin: ClaudeFlowPlugin = {
+  name: 'custom-analyzer',
+  version: '1.0.0',
+  agents: [customAgent]
+};
+
+core.use(analyzerPlugin);
+```
+
+#### Extension Discovery
+
+```bash
+# Install community extension
+npm install @community/claude-flow-security
+
+# Auto-discovered via naming convention
+# @*/claude-flow-* or claude-flow-plugin-*
+```
+
+---
+
+### 11.17 Configuration Cascade
+
+#### Configuration Sources (Priority Order)
+
+1. **Programmatic** (highest) - `core.configure({ ... })`
+2. **CLI flags** - `--swarm-topology=mesh`
+3. **Environment variables** - `CLAUDE_FLOW_SWARM_TOPOLOGY=mesh`
+4. **Project config** - `.claude-flow.json` or `claude-flow.config.js`
+5. **User config** - `~/.claude-flow/config.json`
+6. **Defaults** (lowest) - Built-in defaults
+
+#### Configuration File
+
+```json
+// .claude-flow.json
+{
+  "$schema": "https://claude-flow.dev/schema.json",
+  "version": "3.0",
+
+  "core": {
+    "telemetry": true,
+    "debug": false
+  },
+
+  "hooks": {
+    "enabled": ["preEdit", "postEdit", "route"],
+    "timeout": 5000
+  },
+
+  "learning": {
+    "algorithm": "PPO",
+    "profile": "balanced",
+    "autoLearn": true
+  },
+
+  "swarm": {
+    "topology": "adaptive",
+    "maxAgents": 10,
+    "transport": "auto"
+  },
+
+  "memory": {
+    "backend": "hybrid",
+    "path": ".claude-flow/memory",
+    "consolidationInterval": 3600000
+  }
+}
+```
+
+#### Environment Variable Mapping
+
+```bash
+# Pattern: CLAUDE_FLOW_<MODULE>_<OPTION>
+CLAUDE_FLOW_LEARNING_ALGORITHM=PPO
+CLAUDE_FLOW_SWARM_TOPOLOGY=mesh
+CLAUDE_FLOW_MEMORY_BACKEND=sqlite
+CLAUDE_FLOW_HOOKS_TIMEOUT=10000
+```
+
+#### Configuration API
+
+```typescript
+// @claude-flow/core configuration
+class ConfigManager {
+  // Load from all sources
+  async load(): Promise<ResolvedConfig> {
+    const sources = await Promise.all([
+      this.loadDefaults(),
+      this.loadUserConfig(),
+      this.loadProjectConfig(),
+      this.loadEnvVars(),
+      this.loadCliFlags()
+    ]);
+
+    return this.merge(sources);
+  }
+
+  // Get with dot notation
+  get<T>(path: string): T {
+    return get(this.resolved, path);
+  }
+
+  // Watch for changes
+  onChange(path: string, handler: (value: any) => void): void {
+    this.watchers.set(path, handler);
+  }
+}
+```
+
+---
+
+### 11.18 Build & CI/CD Pipeline
+
+#### GitHub Actions Workflow
+
+```yaml
+# .github/workflows/ci.yml
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm turbo build
+      - run: pnpm turbo test
+      - run: pnpm turbo lint
+      - run: pnpm turbo typecheck
+
+  publish:
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm turbo build
+
+      # Changesets handles versioning and publishing
+      - name: Create Release PR or Publish
+        uses: changesets/action@v1
+        with:
+          publish: pnpm changeset publish
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+```
+
+#### Release Process
+
+```bash
+# 1. Create changeset for changes
+pnpm changeset
+# Select changed packages, write changelog entry
+
+# 2. Version packages (CI does this on merge)
+pnpm changeset version
+
+# 3. Publish (CI does this automatically)
+pnpm changeset publish
+```
+
+#### Canary Releases
+
+```yaml
+# .github/workflows/canary.yml
+name: Canary Release
+
+on:
+  push:
+    branches: [develop]
+
+jobs:
+  canary:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v2
+      - uses: actions/setup-node@v4
+
+      - run: pnpm install
+      - run: pnpm turbo build
+
+      - name: Publish Canary
+        run: |
+          pnpm changeset version --snapshot canary
+          pnpm changeset publish --tag canary
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+```
+
+---
+
+### 11.19 Offline & Degraded Mode
+
+#### Feature Detection
+
+```typescript
+// @claude-flow/core feature detection
+class FeatureDetector {
+  async detect(): Promise<AvailableFeatures> {
+    return {
+      // Network features
+      network: await this.checkNetwork(),
+      quic: await this.checkQuic(),
+
+      // Native features
+      nativeBindings: await this.checkNative(),
+      wasm: await this.checkWasm(),
+
+      // Optional dependencies
+      onnx: await this.checkOnnx(),
+      sqlite: await this.checkSqlite()
+    };
+  }
+
+  async checkNetwork(): Promise<boolean> {
+    try {
+      await fetch('https://api.anthropic.com/health', { method: 'HEAD' });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+}
+```
+
+#### Offline Fallbacks
+
+| Feature | Online | Offline Fallback |
+|---------|--------|------------------|
+| Embeddings | OpenAI API | ONNX local model |
+| Vector search | Remote DB | Local SQLite |
+| Learning | Cloud training | Local SONA |
+| Swarm | QUIC transport | Local process |
+| Agent routing | API-based | Pattern cache |
+
+#### Degraded Mode Configuration
+
+```typescript
+// @claude-flow/core degraded mode
+interface DegradedModeConfig {
+  // What to do when network unavailable
+  offline: {
+    allowLocalOnly: boolean;
+    cachePatterns: boolean;
+    queueRemoteOps: boolean;
+  };
+
+  // What to do when native bindings fail
+  nativeFailure: {
+    fallbackToWasm: boolean;
+    fallbackToJs: boolean;
+  };
+
+  // What to do when optional modules missing
+  missingModules: {
+    continueWithoutLearning: boolean;
+    continueWithoutSwarm: boolean;
+  };
+}
+
+const DEFAULT_DEGRADED: DegradedModeConfig = {
+  offline: {
+    allowLocalOnly: true,
+    cachePatterns: true,
+    queueRemoteOps: true
+  },
+  nativeFailure: {
+    fallbackToWasm: true,
+    fallbackToJs: true
+  },
+  missingModules: {
+    continueWithoutLearning: true,
+    continueWithoutSwarm: true
+  }
+};
+```
+
 ---
 
 ## 12. Conclusion
