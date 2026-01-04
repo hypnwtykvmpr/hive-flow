@@ -192,10 +192,18 @@ if [[ "$MEMORY_REDUCTION" == "0%" ]]; then
   MEMORY_COLOR="${DIM}"
 fi
 
-# Format agent count with padding
+# Format agent count with padding and activity indicator
 AGENT_DISPLAY=$(printf "%2d" "$AGENTS_ACTIVE")
 
-OUTPUT="${OUTPUT}\n${BRIGHT_YELLOW}🤖 Swarm Agents${RESET}    [${AGENTS_COLOR}${AGENT_DISPLAY}${RESET}/${BRIGHT_WHITE}${AGENTS_TARGET}${RESET}]      ${SECURITY_ICON} ${SECURITY_COLOR}CVE ${CVES_FIXED}${RESET}/${BRIGHT_WHITE}${SECURITY_CVES}${RESET}    ${MEMORY_COLOR}💾 ${MEMORY_REDUCTION}${RESET}"
+# Add activity indicator when processes are running
+ACTIVITY_INDICATOR=""
+if [ "$ACTIVE_PROCESSES" -gt 0 ]; then
+  ACTIVITY_INDICATOR="${BRIGHT_GREEN}◉${RESET} "  # Active indicator
+else
+  ACTIVITY_INDICATOR="${DIM}○${RESET} "  # Inactive indicator
+fi
+
+OUTPUT="${OUTPUT}\n${BRIGHT_YELLOW}🤖 Swarm Agents${RESET}    ${ACTIVITY_INDICATOR}[${AGENTS_COLOR}${AGENT_DISPLAY}${RESET}/${BRIGHT_WHITE}${AGENTS_TARGET}${RESET}]      ${SECURITY_ICON} ${SECURITY_COLOR}CVE ${CVES_FIXED}${RESET}/${BRIGHT_WHITE}${SECURITY_CVES}${RESET}    ${MEMORY_COLOR}💾 ${MEMORY_REDUCTION}${RESET}"
 
 # Line 3: V3 Architecture Components with better alignment
 DDD_COLOR="${BRIGHT_GREEN}"
