@@ -555,7 +555,8 @@ export class HybridBackend extends EventEmitter implements IMemoryBackend {
    */
   private async autoRoute(query: MemoryQuery): Promise<MemoryEntry[]> {
     // If has embedding or content, use semantic search (AgentDB)
-    if (query.embedding || (query.content && this.config.embeddingGenerator)) {
+    const hasEmbeddingGenerator = typeof this.config.embeddingGenerator === 'function';
+    if (query.embedding || (query.content && hasEmbeddingGenerator)) {
       this.stats.agentdbQueries++;
       return this.agentdb.query(query);
     }
