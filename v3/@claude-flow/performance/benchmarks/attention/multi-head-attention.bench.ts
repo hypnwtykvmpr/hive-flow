@@ -7,7 +7,7 @@
  * configurations and parallelization strategies.
  */
 
-import { benchmark, BenchmarkRunner, formatTime, formatBytes } from '../framework/benchmark.js';
+import { benchmark, BenchmarkRunner, formatTime, formatBytes } from '../../src/framework/benchmark.js';
 
 // ============================================================================
 // Multi-Head Attention Types
