@@ -16,7 +16,6 @@ import {
   DotProductAttention,
   MultiHeadAttention,
   LinearAttention,
-  benchmarkAttention,
 } from '@ruvector/attention';
 
 // ============================================================================
