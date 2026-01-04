@@ -158,6 +158,20 @@ export {
   type TaskSpec,
 } from './coordination/task-orchestrator.js';
 
+/**
+ * @deprecated SwarmHub is a compatibility layer. Use UnifiedSwarmCoordinator directly.
+ *
+ * Migration:
+ * ```typescript
+ * // OLD:
+ * import { createSwarmHub } from '@claude-flow/swarm';
+ * const hub = createSwarmHub();
+ *
+ * // NEW:
+ * import { createUnifiedSwarmCoordinator } from '@claude-flow/swarm';
+ * const coordinator = createUnifiedSwarmCoordinator();
+ * ```
+ */
 export {
   SwarmHub,
   createSwarmHub,
