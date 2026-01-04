@@ -163,6 +163,11 @@ export class AgentDBBackend extends EventEmitter implements IMemoryBackend {
   async initialize(): Promise<void> {
     if (this.initialized) return;
 
+    // Try to import AgentDB
+    await ensureAgentDBImport();
+
+    this.available = AgentDB !== undefined;
+
     if (!this.available) {
       console.warn('AgentDB not available, using fallback in-memory storage');
       this.initialized = true;
