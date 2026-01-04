@@ -14,7 +14,6 @@
 import {
   FlashAttention,
   DotProductAttention,
-  computeFlashAttentionAsync,
   type BenchmarkResult as AttentionBenchmarkResult,
   type ArrayInput,
 } from '@ruvector/attention';
