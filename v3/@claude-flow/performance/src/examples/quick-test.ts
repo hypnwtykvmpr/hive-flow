@@ -26,15 +26,7 @@ async function quickTest() {
     const result = flash.compute(query, keys, values);
     console.log(`  Result: Float32Array[${result.length}]`);
 
-    // Test 2: Native benchmark function
-    console.log('\n✓ Test 2: Native benchmark function');
-    const benchmarks = benchmarkAttention(128, 50, 100);
-    console.log(`  Benchmarks run: ${benchmarks.length}`);
-    benchmarks.forEach(b => {
-      console.log(`  - ${b.name}: ${b.averageTimeMs.toFixed(3)}ms`);
-    });
-
-    // Test 3: V3 optimizer
+    // Test 2: V3 optimizer
     console.log('\n✓ Test 3: V3 FlashAttentionOptimizer');
     const optimizer = createFlashAttentionOptimizer(128);
     const output = await optimizer.optimize({
