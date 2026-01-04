@@ -452,13 +452,13 @@ describe('CLI', () => {
       };
 
       const mainCommand: Command = {
-        name: 'main',
+        name: 'maincmd',
         description: 'Main command',
         subcommands: [subcommand]
       };
 
       cli['parser'].registerCommand(mainCommand);
-      await cli.run(['main', 'sub']);
+      await cli.run(['maincmd', 'sub']);
 
       expect(subcommandExecuted).toBe(true);
     });
@@ -477,13 +477,13 @@ describe('CLI', () => {
       };
 
       const mainCommand: Command = {
-        name: 'main',
+        name: 'mainalias',
         description: 'Main command',
         subcommands: [subcommand]
       };
 
       cli['parser'].registerCommand(mainCommand);
-      await cli.run(['main', 'ls']);
+      await cli.run(['mainalias', 'ls']);
 
       expect(executed).toBe(true);
     });
