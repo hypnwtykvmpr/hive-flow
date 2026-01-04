@@ -5,13 +5,13 @@
  */
 
 // Agent fixtures
-export * from './agents';
+export * from './agents.js';
 
 // Task fixtures
-export * from './tasks';
+export * from './tasks.js';
 
 // Memory entry fixtures
-export * from './memory-entries';
+export * from './memory-entries.js';
 
 // Configuration fixtures
-export * from './configurations';
+export * from './configurations.js';
