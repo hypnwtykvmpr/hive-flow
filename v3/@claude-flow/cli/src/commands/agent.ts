@@ -83,7 +83,6 @@ const spawnCommand: Command = {
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     let agentType = ctx.flags.type as string;
     let agentName = ctx.flags.name as string;
-    const task = ctx.flags.task as string;
 
     // Interactive mode if type not specified
     if (!agentType && ctx.interactive) {
@@ -105,43 +104,62 @@ const spawnCommand: Command = {
 
     output.printInfo(`Spawning ${agentType} agent: ${output.highlight(agentName)}`);
 
-    // Simulate agent creation
-    const agentConfig = {
-      id: `agent-${Date.now()}`,
-      type: agentType,
-      name: agentName,
-      provider: ctx.flags.provider || 'anthropic',
-      model: ctx.flags.model,
-      status: 'initializing',
-      createdAt: new Date().toISOString(),
-      task: task || null,
-      capabilities: getAgentCapabilities(agentType)
-    };
+    try {
+      // Call MCP tool to spawn agent
+      const result = await callMCPTool<{
+        agentId: string;
+        agentType: string;
+        status: string;
+        createdAt: string;
+      }>('agent/spawn', {
+        agentType,
+        id: agentName,
+        config: {
+          provider: ctx.flags.provider || 'anthropic',
+          model: ctx.flags.model,
+          task: ctx.flags.task,
+          timeout: ctx.flags.timeout,
+          autoTools: ctx.flags.autoTools,
+        },
+        priority: 'normal',
+        metadata: {
+          name: agentName,
+          capabilities: getAgentCapabilities(agentType),
+        },
+      });
 
-    output.writeln();
-    output.printTable({
-      columns: [
-        { key: 'property', header: 'Property', width: 15 },
-        { key: 'value', header: 'Value', width: 40 }
-      ],
-      data: [
-        { property: 'ID', value: agentConfig.id },
-        { property: 'Type', value: agentConfig.type },
-        { property: 'Name', value: agentConfig.name },
-        { property: 'Provider', value: agentConfig.provider },
-        { property: 'Status', value: agentConfig.status },
-        { property: 'Capabilities', value: agentConfig.capabilities.join(', ') }
-      ]
-    });
+      output.writeln();
+      output.printTable({
+        columns: [
+          { key: 'property', header: 'Property', width: 15 },
+          { key: 'value', header: 'Value', width: 40 }
+        ],
+        data: [
+          { property: 'ID', value: result.agentId },
+          { property: 'Type', value: result.agentType },
+          { property: 'Name', value: agentName },
+          { property: 'Status', value: result.status },
+          { property: 'Created', value: result.createdAt },
+          { property: 'Capabilities', value: getAgentCapabilities(agentType).join(', ') }
+        ]
+      });
 
-    output.writeln();
-    output.printSuccess(`Agent ${agentName} spawned successfully`);
+      output.writeln();
+      output.printSuccess(`Agent ${agentName} spawned successfully`);
 
-    if (ctx.flags.format === 'json') {
-      output.printJson(agentConfig);
+      if (ctx.flags.format === 'json') {
+        output.printJson(result);
+      }
+
+      return { success: true, data: result };
+    } catch (error) {
+      if (error instanceof MCPClientError) {
+        output.printError(`Failed to spawn agent: ${error.message}`);
+      } else {
+        output.printError(`Unexpected error: ${String(error)}`);
+      }
+      return { success: false, exitCode: 1 };
     }
-
-    return { success: true, data: agentConfig };
   }
 };
 
