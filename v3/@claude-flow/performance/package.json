@@ -15,6 +15,10 @@
     "bench:startup": "vitest bench benchmarks/startup/",
     "build": "tsc"
   },
+  "dependencies": {
+    "@ruvector/attention": "latest",
+    "@ruvector/sona": "latest"
+  },
   "devDependencies": {
     "vitest": "^1.0.0"
   }
