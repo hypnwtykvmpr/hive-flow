@@ -11,6 +11,8 @@
  * - Swarm Tools: swarm/init, swarm/status, swarm/scale
  * - Memory Tools: memory/store, memory/search, memory/list
  * - Config Tools: config/load, config/save, config/validate
+ * - Hooks Tools: hooks/pre-edit, hooks/post-edit, hooks/pre-command, hooks/post-command,
+ *                hooks/route, hooks/explain, hooks/pretrain, hooks/metrics, hooks/list
  */
 
 import { MCPTool } from '../types.js';
