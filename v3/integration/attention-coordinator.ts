@@ -492,6 +492,13 @@ export class AttentionCoordinator extends EventEmitter {
     // This is a no-op in the simplified implementation
   }
 
+  /**
+   * Perform attention computation
+   *
+   * ADR-001: For sequences longer than 512 tokens, delegates to
+   * agentic-flow's native Flash Attention for 2.49x-7.47x speedup
+   * and 50-75% memory reduction.
+   */
   private async performAttention(params: {
     query: number[] | Float32Array;
     key: number[] | Float32Array;
@@ -500,12 +507,52 @@ export class AttentionCoordinator extends EventEmitter {
   }): Promise<number[]> {
     const { query, key, value, mask } = params;
 
-    // Simplified attention computation
-    // In production, this would delegate to agentic-flow's native implementations
-
     const qArray = Array.isArray(query) ? query : Array.from(query);
     const kArray = Array.isArray(key) ? key : Array.from(key);
     const vArray = Array.isArray(value) ? value : Array.from(value);
+
+    // Calculate sequence length for delegation decision
+    const sequenceLength = qArray.length;
+
+    // ADR-001: Delegate to agentic-flow for long sequences
+    // Flash Attention provides 2.49x-7.47x speedup for sequences > 512 tokens
+    if (
+      this.isDelegationEnabled() &&
+      this.agenticFlowAttention &&
+      sequenceLength > DELEGATION_SEQUENCE_THRESHOLD
+    ) {
+      try {
+        const result = await this.agenticFlowAttention.compute({
+          query: qArray,
+          key: kArray,
+          value: vArray,
+          mask,
+          mechanism: this.config.mechanism,
+        });
+
+        this.emit('attention-delegated', {
+          sequenceLength,
+          mechanism: result.mechanism,
+          latencyMs: result.latencyMs,
+          target: 'agentic-flow',
+        });
+
+        return result.output;
+      } catch (error) {
+        // Log delegation failure and fall back to local implementation
+        this.emit('delegation-failed', {
+          method: 'performAttention',
+          sequenceLength,
+          error: (error as Error).message,
+          fallback: 'local',
+        });
+        // Continue with local implementation below
+      }
+    }
+
+    // Local implementation (fallback or for short sequences)
+    // For short sequences, local JS implementation is sufficient
+    // and avoids overhead of cross-boundary calls
 
     // Compute attention scores (Q * K^T)
     let score = this.dotProduct(qArray, kArray);
@@ -523,7 +570,8 @@ export class AttentionCoordinator extends EventEmitter {
     switch (this.config.mechanism) {
       case 'flash':
         // Flash attention optimization: fused operations
-        // In production, this uses optimized CUDA/native kernels
+        // For short sequences, the JS implementation is used
+        // Native Flash Attention is used via delegation for longer sequences
         break;
       case 'linear':
         // Linear attention: O(n) instead of O(n^2)
