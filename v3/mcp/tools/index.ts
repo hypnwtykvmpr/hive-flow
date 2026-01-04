@@ -59,6 +59,20 @@ export {
   configTools,
 } from './config-tools.js';
 
+// Hooks tools
+export {
+  preEditTool,
+  postEditTool,
+  preCommandTool,
+  postCommandTool,
+  routeTool,
+  explainTool,
+  pretrainTool,
+  metricsTool,
+  listHooksTool,
+  hooksTools,
+} from './hooks-tools.js';
+
 // ============================================================================
 // Tool Registry
 // ============================================================================
