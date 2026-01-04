@@ -75,7 +75,7 @@ update_activity_metrics() {
 
     # Update active agents in metrics
     if [ -f "$UPDATE_SCRIPT" ]; then
-        "$UPDATE_SCRIPT" agents "$agent_count" >/dev/null 2>&1
+        "$UPDATE_SCRIPT" agent "$agent_count" >/dev/null 2>&1
     fi
 
     # Update integration status based on activity
