@@ -598,7 +598,7 @@ export class PluginLoader {
    */
   private startHealthChecks(): void {
     this.healthCheckIntervalId = setInterval(async () => {
-      for (const [name, info] of this.registry.getAllPlugins().entries()) {
+      for (const [name, info] of Array.from(this.registry.getAllPlugins().entries())) {
         if (info.state === 'initialized' && info.plugin.healthCheck) {
           try {
             const healthy = await info.plugin.healthCheck();
