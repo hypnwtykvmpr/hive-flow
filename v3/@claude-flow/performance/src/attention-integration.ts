@@ -267,6 +267,13 @@ export class FlashAttentionOptimizer {
   getMetrics(): PerformanceMetrics {
     const avgSpeedup = this.getSpeedup();
 
+    // Calculate memory savings
+    const baselineMemory = this.metrics.totalBaselineMemory;
+    const optimizedMemory = this.metrics.totalOptimizedMemory;
+    const memorySaved = Math.max(0, baselineMemory - optimizedMemory);
+    const memorySavedPercent =
+      baselineMemory > 0 ? (memorySaved / baselineMemory) * 100 : 0;
+
     return {
       totalOperations: this.metrics.operations,
       averageSpeedup: avgSpeedup,
@@ -275,11 +282,17 @@ export class FlashAttentionOptimizer {
         this.metrics.operations > 0
           ? this.metrics.totalExecutionTime / this.metrics.operations
           : 0,
-      totalMemorySavedBytes: 0, // TODO: Implement memory tracking
+      totalMemorySavedBytes: memorySaved,
       successRate:
         this.metrics.operations > 0
           ? (this.metrics.successfulOperations / this.metrics.operations) * 100
           : 0,
+      // Memory tracking metrics
+      baselineMemoryBytes: baselineMemory,
+      optimizedMemoryBytes: optimizedMemory,
+      memorySavedBytes: memorySaved,
+      memorySavedPercent: memorySavedPercent,
+      peakMemoryBytes: this.metrics.peakMemory,
     };
   }
 
