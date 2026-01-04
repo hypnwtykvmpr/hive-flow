@@ -254,7 +254,7 @@ export class AttentionBenchmarkRunner {
 
     // Measure Flash Attention memory
     const flashMemoryBefore = this.getMemoryUsage();
-    const flashAttention = new FlashAttention(dimension);
+    const flashAttention = new FlashAttention(dimension, 64); // Add blockSize
     flashAttention.compute(query, keys, values);
     const flashMemoryAfter = this.getMemoryUsage();
     const flashMemoryBytes = flashMemoryAfter - flashMemoryBefore;
