@@ -593,11 +593,32 @@ export class AgentDBBackend extends EventEmitter implements IMemoryBackend {
    * Store entry in AgentDB
    */
   private async storeInAgentDB(entry: MemoryEntry): Promise<void> {
-    if (!this.agentdb?.database) return;
+    if (!this.agentdb) return;
 
-    const db = this.agentdb.database;
+    // Try to use agentdb's native store method if available
+    try {
+      if (typeof this.agentdb.store === 'function') {
+        await this.agentdb.store(entry.id, {
+          key: entry.key,
+          content: entry.content,
+          embedding: entry.embedding,
+          type: entry.type,
+          namespace: entry.namespace,
+          tags: entry.tags,
+          metadata: entry.metadata,
+        });
+        return;
+      }
 
-    await db.run(
+      // Fallback: use database directly if available
+      const db = this.agentdb.database;
+      if (!db || typeof db.run !== 'function') {
+        // No compatible database interface - skip agentdb storage
+        // Entry is already stored in-memory
+        return;
+      }
+
+      await db.run(
       `
       INSERT OR REPLACE INTO memory_entries
       (id, key, content, embedding, type, namespace, tags, metadata, owner_id,
