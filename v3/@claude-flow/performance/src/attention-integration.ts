@@ -1,0 +1,308 @@
+/**
+ * @claude-flow/performance - Flash Attention Integration
+ *
+ * Integrates @ruvector/attention Flash Attention capabilities into V3 performance module.
+ * Provides optimized attention mechanisms with 2.49x-7.47x speedup targets.
+ *
+ * Features:
+ * - Flash Attention for memory-efficient processing
+ * - Automatic runtime selection (NAPI/WASM/JS)
+ * - Performance benchmarking and metrics
+ * - Speedup tracking and validation
+ */
+
+import {
+  FlashAttention,
+  DotProductAttention,
+  benchmarkAttention,
+  computeFlashAttentionAsync,
+  type BenchmarkResult as AttentionBenchmarkResult,
+  type ArrayInput,
+} from '@ruvector/attention';
+
+// ============================================================================
+// Types
+// ============================================================================
+
+export interface AttentionInput {
+  query: Float32Array | number[];
+  keys: Float32Array[] | number[][];
+  values: Float32Array[] | number[][];
+  dim?: number;
+  blockSize?: number;
+}
+
+export interface AttentionOutput {
+  result: Float32Array;
+  runtime: 'napi' | 'wasm' | 'js';
+  executionTimeMs: number;
+  memoryUsageBytes?: number;
+}
+
+export interface BenchmarkResult {
+  flashAttention: {
+    averageTimeMs: number;
+    opsPerSecond: number;
+    memoryUsageBytes?: number;
+  };
+  baseline: {
+    averageTimeMs: number;
+    opsPerSecond: number;
+    memoryUsageBytes?: number;
+  };
+  speedup: number;
+  meetsTarget: boolean; // true if speedup >= 2.49x
+  timestamp: Date;
+}
+
+export interface PerformanceMetrics {
+  totalOperations: number;
+  averageSpeedup: number;
+  peakSpeedup: number;
+  averageExecutionTimeMs: number;
+  totalMemorySavedBytes: number;
+  successRate: number; // % of operations meeting target
+}
+
+// ============================================================================
+// Flash Attention Optimizer
+// ============================================================================
+
+export class FlashAttentionOptimizer {
+  private flashAttention: FlashAttention;
+  private baselineAttention: DotProductAttention;
+  private metrics: {
+    operations: number;
+    totalSpeedup: number;
+    peakSpeedup: number;
+    totalExecutionTime: number;
+    successfulOperations: number;
+  };
+
+  constructor(
+    private readonly dim: number = 512,
+    private readonly blockSize: number = 64
+  ) {
+    this.flashAttention = new FlashAttention(dim, blockSize);
+    this.baselineAttention = new DotProductAttention(dim);
+    this.metrics = {
+      operations: 0,
+      totalSpeedup: 0,
+      peakSpeedup: 0,
+      totalExecutionTime: 0,
+      successfulOperations: 0,
+    };
+  }
+
+  /**
+   * Optimize attention computation using Flash Attention
+   * @param input - Query, keys, and values for attention computation
+   * @returns Optimized attention output with performance metrics
+   */
+  async optimize(input: AttentionInput): Promise<AttentionOutput> {
+    const startTime = performance.now();
+    const startMemory = this.getMemoryUsage();
+
+    // Convert inputs if needed
+    const query = this.ensureFloat32Array(input.query);
+    const keys = input.keys.map(k => this.ensureFloat32Array(k));
+    const values = input.values.map(v => this.ensureFloat32Array(v));
+
+    // Use async Flash Attention for best performance
+    const result = await computeFlashAttentionAsync(query, keys, values);
+
+    const executionTimeMs = performance.now() - startTime;
+    const endMemory = this.getMemoryUsage();
+    const memoryUsageBytes = endMemory - startMemory;
+
+    // Update metrics
+    this.metrics.operations++;
+    this.metrics.totalExecutionTime += executionTimeMs;
+
+    return {
+      result,
+      runtime: this.detectRuntime(),
+      executionTimeMs,
+      memoryUsageBytes: memoryUsageBytes > 0 ? memoryUsageBytes : undefined,
+    };
+  }
+
+  /**
+   * Benchmark Flash Attention vs baseline attention
+   * @returns Comprehensive benchmark results with speedup metrics
+   */
+  async benchmark(): Promise<BenchmarkResult> {
+    const dim = this.dim;
+    const numKeys = 100;
+    const iterations = 1000;
+
+    // Run native benchmark
+    const results = benchmarkAttention(dim, numKeys, iterations);
+
+    // Find flash and baseline results
+    const flashResult = results.find(r => r.name.toLowerCase().includes('flash'));
+    const baselineResult = results.find(r => r.name.toLowerCase().includes('dot') || r.name.toLowerCase().includes('product'));
+
+    if (!flashResult || !baselineResult) {
+      throw new Error('Benchmark results incomplete - missing flash or baseline');
+    }
+
+    const speedup = baselineResult.averageTimeMs / flashResult.averageTimeMs;
+    const meetsTarget = speedup >= 2.49; // Minimum target: 2.49x
+
+    // Update peak speedup
+    if (speedup > this.metrics.peakSpeedup) {
+      this.metrics.peakSpeedup = speedup;
+    }
+
+    this.metrics.totalSpeedup += speedup;
+    if (meetsTarget) {
+      this.metrics.successfulOperations++;
+    }
+
+    return {
+      flashAttention: {
+        averageTimeMs: flashResult.averageTimeMs,
+        opsPerSecond: flashResult.opsPerSecond,
+        memoryUsageBytes: flashResult.memoryUsageBytes,
+      },
+      baseline: {
+        averageTimeMs: baselineResult.averageTimeMs,
+        opsPerSecond: baselineResult.opsPerSecond,
+        memoryUsageBytes: baselineResult.memoryUsageBytes,
+      },
+      speedup,
+      meetsTarget,
+      timestamp: new Date(),
+    };
+  }
+
+  /**
+   * Get current speedup factor from accumulated metrics
+   * @returns Average speedup factor across all operations
+   */
+  getSpeedup(): number {
+    if (this.metrics.operations === 0) {
+      return 0;
+    }
+    return this.metrics.totalSpeedup / this.metrics.operations;
+  }
+
+  /**
+   * Get comprehensive performance metrics
+   * @returns Detailed performance statistics
+   */
+  getMetrics(): PerformanceMetrics {
+    const avgSpeedup = this.getSpeedup();
+
+    return {
+      totalOperations: this.metrics.operations,
+      averageSpeedup: avgSpeedup,
+      peakSpeedup: this.metrics.peakSpeedup,
+      averageExecutionTimeMs:
+        this.metrics.operations > 0
+          ? this.metrics.totalExecutionTime / this.metrics.operations
+          : 0,
+      totalMemorySavedBytes: 0, // TODO: Implement memory tracking
+      successRate:
+        this.metrics.operations > 0
+          ? (this.metrics.successfulOperations / this.metrics.operations) * 100
+          : 0,
+    };
+  }
+
+  /**
+   * Reset all metrics
+   */
+  resetMetrics(): void {
+    this.metrics = {
+      operations: 0,
+      totalSpeedup: 0,
+      peakSpeedup: 0,
+      totalExecutionTime: 0,
+      successfulOperations: 0,
+    };
+  }
+
+  /**
+   * Ensure input is Float32Array for optimal performance
+   */
+  private ensureFloat32Array(input: ArrayInput): Float32Array {
+    if (input instanceof Float32Array) {
+      return input;
+    }
+    return new Float32Array(input);
+  }
+
+  /**
+   * Detect which runtime is being used
+   */
+  private detectRuntime(): 'napi' | 'wasm' | 'js' {
+    // Check if NAPI bindings are available
+    try {
+      // @ts-expect-error - Checking for NAPI runtime
+      if (process.versions.napi) {
+        return 'napi';
+      }
+    } catch {
+      // Not in Node.js environment
+    }
+
+    // Check for WebAssembly support
+    if (typeof WebAssembly !== 'undefined') {
+      return 'wasm';
+    }
+
+    // Fallback to pure JS
+    return 'js';
+  }
+
+  /**
+   * Get current memory usage in bytes
+   */
+  private getMemoryUsage(): number {
+    if (typeof process !== 'undefined' && process.memoryUsage) {
+      return process.memoryUsage().heapUsed;
+    }
+    return 0;
+  }
+}
+
+// ============================================================================
+// Convenience Factory Functions
+// ============================================================================
+
+/**
+ * Create a Flash Attention optimizer with default settings
+ * @param dim - Dimension of attention vectors (default: 512)
+ * @param blockSize - Block size for Flash Attention (default: 64)
+ * @returns Configured FlashAttentionOptimizer instance
+ */
+export function createFlashAttentionOptimizer(
+  dim: number = 512,
+  blockSize: number = 64
+): FlashAttentionOptimizer {
+  return new FlashAttentionOptimizer(dim, blockSize);
+}
+
+/**
+ * Quick benchmark of Flash Attention performance
+ * @param dim - Dimension to test (default: 512)
+ * @returns Benchmark results with speedup metrics
+ */
+export async function quickBenchmark(dim: number = 512): Promise<BenchmarkResult> {
+  const optimizer = createFlashAttentionOptimizer(dim);
+  return optimizer.benchmark();
+}
+
+// ============================================================================
+// Exports
+// ============================================================================
+
+export {
+  FlashAttention,
+  DotProductAttention,
+  benchmarkAttention,
+  computeFlashAttentionAsync,
+  type AttentionBenchmarkResult,
+};
