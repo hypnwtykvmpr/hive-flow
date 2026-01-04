@@ -330,7 +330,9 @@ export class MCPServerManager extends EventEmitter {
    */
   private async startHttpServer(): Promise<void> {
     // Dynamically import the MCP server
-    const { MCPServer, createMCPServer } = await import('../../../mcp/server.js');
+    // Note: Path is relative to the compiled output location
+    const mcpServerPath = path.resolve(__dirname, '../../../mcp/server.js');
+    const { MCPServer, createMCPServer } = await import(mcpServerPath);
 
     const logger = {
       debug: (msg: string, data?: unknown) => this.emit('log', { level: 'debug', msg, data }),
