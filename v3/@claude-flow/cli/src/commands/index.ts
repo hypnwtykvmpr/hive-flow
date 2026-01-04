@@ -10,6 +10,7 @@ import { memoryCommand } from './memory.js';
 import { mcpCommand } from './mcp.js';
 import { configCommand } from './config.js';
 import { migrateCommand } from './migrate.js';
+import { hooksCommand } from './hooks.js';
 
 // Export all commands
 export { agentCommand } from './agent.js';
@@ -18,6 +19,7 @@ export { memoryCommand } from './memory.js';
 export { mcpCommand } from './mcp.js';
 export { configCommand } from './config.js';
 export { migrateCommand } from './migrate.js';
+export { hooksCommand } from './hooks.js';
 
 /**
  * All available commands
@@ -28,7 +30,8 @@ export const commands: Command[] = [
   memoryCommand,
   mcpCommand,
   configCommand,
-  migrateCommand
+  migrateCommand,
+  hooksCommand
 ];
 
 /**
