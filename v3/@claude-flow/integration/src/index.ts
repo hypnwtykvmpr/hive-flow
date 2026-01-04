@@ -72,6 +72,19 @@ export {
   getDefaultFeatureFlagManager,
 } from './feature-flags.js';
 
+// ===== Agent Integration (ADR-001) =====
+export {
+  AgenticFlowAgent,
+  createAgenticFlowAgent,
+} from './agentic-flow-agent.js';
+
+export {
+  AgentAdapter,
+  createAgentAdapter,
+  getDefaultAgentAdapter,
+  resetDefaultAgentAdapter,
+} from './agent-adapter.js';
+
 // ===== Types =====
 export type {
   // SONA Types
