@@ -24,7 +24,7 @@ import type {
   IAgentConfig,
   AgentStatus,
   AgentType,
-} from '@claude-flow/shared/core/interfaces/agent.interface.js';
+} from '@claude-flow/shared';
 
 /**
  * Interface for agentic-flow Agent (external package)
