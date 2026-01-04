@@ -107,6 +107,7 @@ export type {
 export {
   ReasoningBank,
   createReasoningBank,
+  createInitializedReasoningBank,
 } from './reasoning-bank.js';
 
 export type {
