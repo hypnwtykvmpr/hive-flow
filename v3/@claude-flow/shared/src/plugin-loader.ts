@@ -455,8 +455,8 @@ export class PluginLoader {
     }
 
     // Build dependency links
-    for (const [name, node] of graph.entries()) {
-      for (const dep of node.dependencies) {
+    for (const [name, node] of Array.from(graph.entries())) {
+      for (const dep of Array.from(node.dependencies)) {
         const depNode = graph.get(dep);
         if (depNode) {
           depNode.dependents.add(name);
