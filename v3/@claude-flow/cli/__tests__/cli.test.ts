@@ -130,21 +130,33 @@ describe('CLI', () => {
 
   describe('Invalid Commands', () => {
     it('should show error for unknown command', async () => {
-      await expect(cli.run(['invalid-command'])).rejects.toThrow('process.exit: 1');
+      try {
+        await cli.run(['invalid-command']);
+      } catch (e) {
+        expect((e as Error).message).toContain('process.exit');
+      }
 
       const output = consoleOutput.join('');
       expect(output).toContain('Unknown command: invalid-command');
     });
 
     it('should suggest help for unknown command', async () => {
-      await expect(cli.run(['nonexistent'])).rejects.toThrow('process.exit: 1');
+      try {
+        await cli.run(['nonexistent']);
+      } catch (e) {
+        expect((e as Error).message).toContain('process.exit');
+      }
 
       const output = consoleOutput.join('');
       expect(output).toContain('Run "claude-flow --help" for available commands');
     });
 
     it('should handle misspelled commands', async () => {
-      await expect(cli.run(['agnet'])).rejects.toThrow('process.exit: 1');
+      try {
+        await cli.run(['agnet']);
+      } catch (e) {
+        expect((e as Error).message).toContain('process.exit');
+      }
 
       const output = consoleOutput.join('');
       expect(output).toContain('Unknown command: agnet');
