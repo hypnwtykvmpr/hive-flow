@@ -565,7 +565,7 @@ export class PluginLoader {
 
       const node = graph.get(name);
       if (node) {
-        for (const dep of node.dependencies) {
+        for (const dep of Array.from(node.dependencies)) {
           visit(dep, [...path, name]);
         }
       }
@@ -573,7 +573,7 @@ export class PluginLoader {
       stack.delete(name);
     };
 
-    for (const name of graph.keys()) {
+    for (const name of Array.from(graph.keys())) {
       visit(name, []);
     }
   }
