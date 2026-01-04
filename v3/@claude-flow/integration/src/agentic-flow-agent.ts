@@ -21,13 +21,93 @@
  */
 
 import { EventEmitter } from 'events';
-import type {
-  IAgent,
-  IAgentConfig,
-  IAgentSession,
-  AgentStatus,
-  AgentType,
-} from '../../shared/src/core/interfaces/agent.interface.js';
+
+/**
+ * Agent status in the system
+ */
+export type AgentStatus = 'spawning' | 'active' | 'idle' | 'busy' | 'error' | 'terminated';
+
+/**
+ * Agent type classification
+ */
+export type AgentType =
+  | 'coder'
+  | 'reviewer'
+  | 'tester'
+  | 'researcher'
+  | 'planner'
+  | 'architect'
+  | 'coordinator'
+  | 'security'
+  | 'performance'
+  | 'custom';
+
+/**
+ * Core agent configuration interface
+ */
+export interface IAgentConfig {
+  readonly id: string;
+  readonly name: string;
+  readonly type: AgentType | string;
+  capabilities: string[];
+  maxConcurrentTasks: number;
+  priority: number;
+  timeout?: number;
+  retryPolicy?: {
+    maxRetries: number;
+    backoffMs: number;
+    backoffMultiplier: number;
+  };
+  resources?: {
+    maxMemoryMb?: number;
+    maxCpuPercent?: number;
+  };
+  metadata?: Record<string, unknown>;
+}
+
+/**
+ * Core agent entity interface
+ */
+export interface IAgent {
+  readonly id: string;
+  readonly name: string;
+  readonly type: AgentType | string;
+  readonly config: IAgentConfig;
+  readonly createdAt: Date;
+  status: AgentStatus;
+  currentTaskCount: number;
+  lastActivity: Date;
+  sessionId?: string;
+  terminalId?: string;
+  memoryBankId?: string;
+  metrics?: {
+    tasksCompleted: number;
+    tasksFailed: number;
+    avgTaskDuration: number;
+    errorCount: number;
+    uptime: number;
+  };
+  health?: {
+    status: 'healthy' | 'degraded' | 'unhealthy';
+    lastCheck: Date;
+    issues?: string[];
+  };
+}
+
+/**
+ * Agent session interface (not used in this implementation)
+ */
+export interface IAgentSession {
+  readonly id: string;
+  readonly agentId: string;
+  readonly startTime: Date;
+  status: 'active' | 'idle' | 'terminated';
+  terminalId: string;
+  memoryBankId: string;
+  lastActivity: Date;
+  endTime?: Date;
+  metadata?: Record<string, unknown>;
+}
 
 /**
  * Task interface for agent execution
