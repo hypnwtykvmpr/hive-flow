@@ -154,13 +154,7 @@ export class AgentDBBackend extends EventEmitter implements IMemoryBackend {
   constructor(config: AgentDBBackendConfig = {}) {
     super();
     this.config = { ...DEFAULT_CONFIG, ...config };
-    this.available = AgentDB !== undefined;
-
-    if (!this.available) {
-      console.warn(
-        'AgentDB not available. Install agentdb@2.0.0-alpha.3.4 for vector search support.'
-      );
-    }
+    this.available = false; // Will be set during initialization
   }
 
   /**
