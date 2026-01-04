@@ -1,0 +1,575 @@
+/**
+ * V3 MCP Memory Tools
+ *
+ * MCP tools for memory operations:
+ * - memory/store - Store memory entry
+ * - memory/search - Search memories (semantic + keyword)
+ * - memory/list - List memory entries
+ *
+ * Implements ADR-005: MCP-First API Design
+ * Implements ADR-006: Unified Memory Service (AgentDB integration)
+ */
+
+import { z } from 'zod';
+import { MCPTool, ToolContext } from '../types.js';
+
+// ============================================================================
+// Input Schemas
+// ============================================================================
+
+const storeMemorySchema = z.object({
+  content: z.string().min(1).describe('Memory content to store'),
+  type: z.enum(['episodic', 'semantic', 'procedural', 'working'])
+    .default('episodic')
+    .describe('Type of memory'),
+  category: z.string().optional().describe('Memory category (e.g., code, documentation, conversation)'),
+  tags: z.array(z.string()).optional().describe('Tags for categorization'),
+  metadata: z.record(z.unknown()).optional().describe('Additional metadata'),
+  importance: z.number().min(0).max(1).optional()
+    .describe('Importance score (0-1)'),
+  ttl: z.number().int().positive().optional()
+    .describe('Time-to-live in milliseconds (optional, for temporary memories)'),
+});
+
+const searchMemorySchema = z.object({
+  query: z.string().min(1).describe('Search query (semantic or keyword)'),
+  searchType: z.enum(['semantic', 'keyword', 'hybrid'])
+    .default('hybrid')
+    .describe('Type of search to perform'),
+  type: z.enum(['episodic', 'semantic', 'procedural', 'working', 'all'])
+    .default('all')
+    .describe('Filter by memory type'),
+  category: z.string().optional().describe('Filter by category'),
+  tags: z.array(z.string()).optional().describe('Filter by tags (AND logic)'),
+  limit: z.number().int().positive().max(1000).default(10)
+    .describe('Maximum number of results'),
+  minRelevance: z.number().min(0).max(1).optional()
+    .describe('Minimum relevance score (0-1)'),
+  includeMetadata: z.boolean().default(true)
+    .describe('Include metadata in results'),
+});
+
+const listMemorySchema = z.object({
+  type: z.enum(['episodic', 'semantic', 'procedural', 'working', 'all'])
+    .default('all')
+    .describe('Filter by memory type'),
+  category: z.string().optional().describe('Filter by category'),
+  tags: z.array(z.string()).optional().describe('Filter by tags'),
+  sortBy: z.enum(['created', 'accessed', 'importance', 'relevance'])
+    .default('created')
+    .describe('Sort order'),
+  sortOrder: z.enum(['asc', 'desc']).default('desc')
+    .describe('Sort direction'),
+  limit: z.number().int().positive().max(1000).default(50)
+    .describe('Maximum number of results'),
+  offset: z.number().int().nonnegative().default(0)
+    .describe('Offset for pagination'),
+  includeMetadata: z.boolean().default(true)
+    .describe('Include metadata in results'),
+});
+
+// ============================================================================
+// Type Definitions
+// ============================================================================
+
+interface Memory {
+  id: string;
+  content: string;
+  type: 'episodic' | 'semantic' | 'procedural' | 'working';
+  category?: string;
+  tags?: string[];
+  importance?: number;
+  createdAt: string;
+  accessedAt?: string;
+  accessCount?: number;
+  metadata?: Record<string, unknown>;
+}
+
+interface SearchResult extends Memory {
+  relevance: number;
+  highlights?: string[];
+}
+
+interface StoreMemoryResult {
+  id: string;
+  stored: boolean;
+  storedAt: string;
+}
+
+interface SearchMemoryResult {
+  results: SearchResult[];
+  total: number;
+  query: string;
+  searchType: string;
+  executionTime: number;
+}
+
+interface ListMemoryResult {
+  memories: Memory[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+// ============================================================================
+// Tool Handlers
+// ============================================================================
+
+/**
+ * Store memory entry
+ */
+async function handleStoreMemory(
+  input: z.infer<typeof storeMemorySchema>,
+  context?: ToolContext
+): Promise<StoreMemoryResult> {
+  // TODO: Integrate with actual memory service/AgentDB when available
+  // For now, return stub response
+
+  const id = `mem-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  const storedAt = new Date().toISOString();
+
+  // Stub implementation - will be replaced with AgentDB integration
+  const result: StoreMemoryResult = {
+    id,
+    stored: true,
+    storedAt,
+  };
+
+  // TODO: Call actual memory service
+  // const memoryService = context?.resourceManager?.memoryService;
+  // if (memoryService) {
+  //   await memoryService.store({
+  //     content: input.content,
+  //     type: input.type,
+  //     category: input.category,
+  //     tags: input.tags,
+  //     metadata: input.metadata,
+  //     importance: input.importance,
+  //     ttl: input.ttl,
+  //   });
+  // }
+
+  return result;
+}
+
+/**
+ * Search memories (semantic + keyword)
+ */
+async function handleSearchMemory(
+  input: z.infer<typeof searchMemorySchema>,
+  context?: ToolContext
+): Promise<SearchMemoryResult> {
+  // TODO: Integrate with actual memory service/AgentDB when available
+  // For now, return stub response
+
+  const startTime = performance.now();
+
+  // Stub implementation - will be replaced with AgentDB integration
+  const results: SearchResult[] = [
+    {
+      id: 'mem-example-1',
+      content: 'Example memory content matching the query',
+      type: 'episodic',
+      category: 'code',
+      tags: ['implementation', 'typescript'],
+      importance: 0.8,
+      createdAt: new Date(Date.now() - 3600000).toISOString(),
+      accessedAt: new Date().toISOString(),
+      accessCount: 5,
+      relevance: 0.92,
+      highlights: ['matching the query'],
+    },
+    {
+      id: 'mem-example-2',
+      content: 'Another relevant memory entry',
+      type: 'semantic',
+      category: 'documentation',
+      tags: ['api', 'reference'],
+      importance: 0.6,
+      createdAt: new Date(Date.now() - 7200000).toISOString(),
+      accessedAt: new Date(Date.now() - 600000).toISOString(),
+      accessCount: 12,
+      relevance: 0.85,
+      highlights: ['relevant memory'],
+    },
+  ];
+
+  // Apply filters
+  let filtered = results;
+  if (input.type !== 'all') {
+    filtered = filtered.filter(m => m.type === input.type);
+  }
+  if (input.category) {
+    filtered = filtered.filter(m => m.category === input.category);
+  }
+  if (input.tags && input.tags.length > 0) {
+    filtered = filtered.filter(m =>
+      input.tags!.every(tag => m.tags?.includes(tag))
+    );
+  }
+  if (input.minRelevance !== undefined) {
+    filtered = filtered.filter(m => m.relevance >= input.minRelevance!);
+  }
+
+  // Apply limit
+  const limited = filtered.slice(0, input.limit);
+
+  // Remove metadata if not requested
+  if (!input.includeMetadata) {
+    limited.forEach(m => delete m.metadata);
+  }
+
+  const executionTime = performance.now() - startTime;
+
+  // TODO: Call actual memory service with AgentDB
+  // const memoryService = context?.resourceManager?.memoryService;
+  // if (memoryService) {
+  //   const results = await memoryService.search({
+  //     query: input.query,
+  //     searchType: input.searchType,
+  //     type: input.type,
+  //     category: input.category,
+  //     tags: input.tags,
+  //     limit: input.limit,
+  //     minRelevance: input.minRelevance,
+  //   });
+  //   return results;
+  // }
+
+  return {
+    results: limited,
+    total: filtered.length,
+    query: input.query,
+    searchType: input.searchType,
+    executionTime,
+  };
+}
+
+/**
+ * List memory entries
+ */
+async function handleListMemory(
+  input: z.infer<typeof listMemorySchema>,
+  context?: ToolContext
+): Promise<ListMemoryResult> {
+  // TODO: Integrate with actual memory service/AgentDB when available
+  // For now, return stub response
+
+  // Stub implementation - will be replaced with AgentDB integration
+  const memories: Memory[] = [
+    {
+      id: 'mem-example-1',
+      content: 'Example memory content 1',
+      type: 'episodic',
+      category: 'code',
+      tags: ['implementation', 'typescript'],
+      importance: 0.8,
+      createdAt: new Date(Date.now() - 3600000).toISOString(),
+      accessedAt: new Date().toISOString(),
+      accessCount: 5,
+    },
+    {
+      id: 'mem-example-2',
+      content: 'Example memory content 2',
+      type: 'semantic',
+      category: 'documentation',
+      tags: ['api', 'reference'],
+      importance: 0.6,
+      createdAt: new Date(Date.now() - 7200000).toISOString(),
+      accessedAt: new Date(Date.now() - 600000).toISOString(),
+      accessCount: 12,
+    },
+    {
+      id: 'mem-example-3',
+      content: 'Example memory content 3',
+      type: 'procedural',
+      category: 'workflow',
+      tags: ['deployment', 'cicd'],
+      importance: 0.9,
+      createdAt: new Date(Date.now() - 10800000).toISOString(),
+      accessedAt: new Date(Date.now() - 300000).toISOString(),
+      accessCount: 8,
+    },
+  ];
+
+  // Apply filters
+  let filtered = memories;
+  if (input.type !== 'all') {
+    filtered = filtered.filter(m => m.type === input.type);
+  }
+  if (input.category) {
+    filtered = filtered.filter(m => m.category === input.category);
+  }
+  if (input.tags && input.tags.length > 0) {
+    filtered = filtered.filter(m =>
+      input.tags!.every(tag => m.tags?.includes(tag))
+    );
+  }
+
+  // Apply sorting
+  const sorted = [...filtered].sort((a, b) => {
+    let aVal: number | string;
+    let bVal: number | string;
+
+    switch (input.sortBy) {
+      case 'created':
+        aVal = new Date(a.createdAt).getTime();
+        bVal = new Date(b.createdAt).getTime();
+        break;
+      case 'accessed':
+        aVal = a.accessedAt ? new Date(a.accessedAt).getTime() : 0;
+        bVal = b.accessedAt ? new Date(b.accessedAt).getTime() : 0;
+        break;
+      case 'importance':
+        aVal = a.importance || 0;
+        bVal = b.importance || 0;
+        break;
+      default:
+        aVal = 0;
+        bVal = 0;
+    }
+
+    if (input.sortOrder === 'asc') {
+      return aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
+    } else {
+      return aVal > bVal ? -1 : aVal < bVal ? 1 : 0;
+    }
+  });
+
+  // Apply pagination
+  const paginated = sorted.slice(input.offset, input.offset + input.limit);
+
+  // Remove metadata if not requested
+  if (!input.includeMetadata) {
+    paginated.forEach(m => delete m.metadata);
+  }
+
+  // TODO: Call actual memory service with AgentDB
+  // const memoryService = context?.resourceManager?.memoryService;
+  // if (memoryService) {
+  //   const memories = await memoryService.list({
+  //     type: input.type,
+  //     category: input.category,
+  //     tags: input.tags,
+  //     sortBy: input.sortBy,
+  //     sortOrder: input.sortOrder,
+  //     limit: input.limit,
+  //     offset: input.offset,
+  //   });
+  //   return memories;
+  // }
+
+  return {
+    memories: paginated,
+    total: filtered.length,
+    limit: input.limit,
+    offset: input.offset,
+  };
+}
+
+// ============================================================================
+// Tool Definitions
+// ============================================================================
+
+/**
+ * memory/store tool
+ */
+export const storeMemoryTool: MCPTool = {
+  name: 'memory/store',
+  description: 'Store a memory entry with specified type, category, and metadata',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      content: {
+        type: 'string',
+        description: 'Memory content to store',
+        minLength: 1,
+      },
+      type: {
+        type: 'string',
+        enum: ['episodic', 'semantic', 'procedural', 'working'],
+        description: 'Type of memory',
+        default: 'episodic',
+      },
+      category: {
+        type: 'string',
+        description: 'Memory category (e.g., code, documentation, conversation)',
+      },
+      tags: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Tags for categorization',
+      },
+      metadata: {
+        type: 'object',
+        description: 'Additional metadata',
+        additionalProperties: true,
+      },
+      importance: {
+        type: 'number',
+        description: 'Importance score (0-1)',
+        minimum: 0,
+        maximum: 1,
+      },
+      ttl: {
+        type: 'number',
+        description: 'Time-to-live in milliseconds',
+        minimum: 1,
+      },
+    },
+    required: ['content'],
+  },
+  handler: async (input, context) => {
+    const validated = storeMemorySchema.parse(input);
+    return handleStoreMemory(validated, context);
+  },
+  category: 'memory',
+  tags: ['memory', 'storage', 'agentdb'],
+  version: '1.0.0',
+};
+
+/**
+ * memory/search tool
+ */
+export const searchMemoryTool: MCPTool = {
+  name: 'memory/search',
+  description: 'Search memories using semantic and keyword search with filtering',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      query: {
+        type: 'string',
+        description: 'Search query (semantic or keyword)',
+        minLength: 1,
+      },
+      searchType: {
+        type: 'string',
+        enum: ['semantic', 'keyword', 'hybrid'],
+        description: 'Type of search to perform',
+        default: 'hybrid',
+      },
+      type: {
+        type: 'string',
+        enum: ['episodic', 'semantic', 'procedural', 'working', 'all'],
+        description: 'Filter by memory type',
+        default: 'all',
+      },
+      category: {
+        type: 'string',
+        description: 'Filter by category',
+      },
+      tags: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Filter by tags (AND logic)',
+      },
+      limit: {
+        type: 'number',
+        description: 'Maximum number of results',
+        minimum: 1,
+        maximum: 1000,
+        default: 10,
+      },
+      minRelevance: {
+        type: 'number',
+        description: 'Minimum relevance score (0-1)',
+        minimum: 0,
+        maximum: 1,
+      },
+      includeMetadata: {
+        type: 'boolean',
+        description: 'Include metadata in results',
+        default: true,
+      },
+    },
+    required: ['query'],
+  },
+  handler: async (input, context) => {
+    const validated = searchMemorySchema.parse(input);
+    return handleSearchMemory(validated, context);
+  },
+  category: 'memory',
+  tags: ['memory', 'search', 'agentdb', 'semantic'],
+  version: '1.0.0',
+  cacheable: true,
+  cacheTTL: 5000,
+};
+
+/**
+ * memory/list tool
+ */
+export const listMemoryTool: MCPTool = {
+  name: 'memory/list',
+  description: 'List memory entries with filtering, sorting, and pagination',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      type: {
+        type: 'string',
+        enum: ['episodic', 'semantic', 'procedural', 'working', 'all'],
+        description: 'Filter by memory type',
+        default: 'all',
+      },
+      category: {
+        type: 'string',
+        description: 'Filter by category',
+      },
+      tags: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Filter by tags',
+      },
+      sortBy: {
+        type: 'string',
+        enum: ['created', 'accessed', 'importance', 'relevance'],
+        description: 'Sort order',
+        default: 'created',
+      },
+      sortOrder: {
+        type: 'string',
+        enum: ['asc', 'desc'],
+        description: 'Sort direction',
+        default: 'desc',
+      },
+      limit: {
+        type: 'number',
+        description: 'Maximum number of results',
+        minimum: 1,
+        maximum: 1000,
+        default: 50,
+      },
+      offset: {
+        type: 'number',
+        description: 'Offset for pagination',
+        minimum: 0,
+        default: 0,
+      },
+      includeMetadata: {
+        type: 'boolean',
+        description: 'Include metadata in results',
+        default: true,
+      },
+    },
+  },
+  handler: async (input, context) => {
+    const validated = listMemorySchema.parse(input);
+    return handleListMemory(validated, context);
+  },
+  category: 'memory',
+  tags: ['memory', 'list', 'agentdb'],
+  version: '1.0.0',
+  cacheable: true,
+  cacheTTL: 3000,
+};
+
+// ============================================================================
+// Exports
+// ============================================================================
+
+export const memoryTools: MCPTool[] = [
+  storeMemoryTool,
+  searchMemoryTool,
+  listMemoryTool,
+];
+
+export default memoryTools;
