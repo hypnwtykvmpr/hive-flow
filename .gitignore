@@ -112,38 +112,9 @@ test-reports/
 
 
 
-# Removed Windows wrapper files per user request
-hive-mind-prompt-*.txt
-
-
-# Removed Windows wrapper files per user request
-hive-mind-prompt-*.txt
-
-
-# Removed Windows wrapper files per user request
-hive-mind-prompt-*.txt
-
-
-# Removed Windows wrapper files per user request
-hive-mind-prompt-*.txt
-
-
-# Removed Windows wrapper files per user request
-hive-mind-prompt-*.txt
-
-
-# Removed Windows wrapper files per user request
+# Removed Windows wrapper files
 hive-mind-prompt-*.txt
 ./claude/checkpoints/
-
-
-# Removed Windows wrapper files per user request
-hive-mind-prompt-*.txt
-.research/
-
-
-# Removed Windows wrapper files per user request
-hive-mind-prompt-*.txt
 
 # SPARC/Roo files (not used)
 .roo/
