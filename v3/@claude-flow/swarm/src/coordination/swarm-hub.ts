@@ -468,6 +468,20 @@ export class SwarmHub implements ISwarmHub {
   }
 
   // ==========================================================================
+  // Coordinator Access (ADR-003)
+  // ==========================================================================
+
+  /**
+   * Get the underlying UnifiedSwarmCoordinator for direct access.
+   * This is the canonical coordination engine as per ADR-003.
+   *
+   * Use this to access advanced features not exposed by the SwarmHub facade.
+   */
+  getCoordinator(): UnifiedSwarmCoordinator {
+    return this.coordinator;
+  }
+
+  // ==========================================================================
   // Private Helpers
   // ==========================================================================
 
