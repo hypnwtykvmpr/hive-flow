@@ -76,7 +76,7 @@ export class AttentionBenchmarkRunner {
   /**
    * Run comprehensive benchmark suite across multiple dimensions
    */
-  async runComprehensiveSuite(): Promise<SuiteResult> {
+  runComprehensiveSuite(): SuiteResult {
     const benchmarks: ComparisonBenchmark[] = [];
 
     // Test configurations: [dimension, numKeys, iterations]
@@ -89,7 +89,7 @@ export class AttentionBenchmarkRunner {
     ];
 
     for (const [dim, numKeys, iterations] of configs) {
-      const benchmark = await this.runComparison(dim, numKeys, iterations);
+      const benchmark = this.runComparison(dim, numKeys, iterations);
       benchmarks.push(benchmark);
     }
 
@@ -99,7 +99,7 @@ export class AttentionBenchmarkRunner {
   /**
    * Run benchmark comparing Flash Attention vs baseline
    */
-  async runComparison(
+  runComparison(
     dimension: number,
     numKeys: number = 100,
     iterations: number = 1000
