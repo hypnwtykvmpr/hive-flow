@@ -135,10 +135,44 @@ export class AttentionCoordinator extends EventEmitter {
   private cache: Map<string, AttentionResult> = new Map();
   private maxCacheSize: number = 1000;
 
+  /**
+   * Reference to agentic-flow Attention for delegation (ADR-001)
+   * When set, performAttention delegates to native Flash Attention
+   */
+  private agenticFlowAttention: AgenticFlowAttentionReference | null = null;
+
+  /**
+   * Indicates if delegation to agentic-flow is active
+   */
+  private delegationEnabled: boolean = false;
+
   constructor(config: Partial<AttentionConfiguration> = {}) {
     super();
     this.config = this.mergeConfig(config);
     this.metrics = this.initializeMetrics();
+  }
+
+  /**
+   * Set reference to agentic-flow Attention for delegation
+   *
+   * This implements ADR-001: Adopt agentic-flow as Core Foundation
+   * When a reference is provided, attention computation for sequences
+   * longer than 512 tokens delegates to agentic-flow's optimized
+   * Flash Attention implementation for 2.49x-7.47x speedup.
+   *
+   * @param attentionRef - The agentic-flow Attention interface reference
+   */
+  setAgenticFlowReference(attentionRef: AgenticFlowAttentionReference): void {
+    this.agenticFlowAttention = attentionRef;
+    this.delegationEnabled = true;
+    this.emit('delegation-enabled', { target: 'agentic-flow' });
+  }
+
+  /**
+   * Check if delegation to agentic-flow is enabled
+   */
+  isDelegationEnabled(): boolean {
+    return this.delegationEnabled && this.agenticFlowAttention !== null;
   }
 
   /**
