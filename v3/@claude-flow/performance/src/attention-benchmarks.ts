@@ -174,14 +174,14 @@ export class AttentionBenchmarkRunner {
   /**
    * Run memory profiling benchmark
    */
-  async runMemoryProfile(
+  runMemoryProfile(
     dimensions: number[] = [128, 256, 512, 768, 1024]
-  ): Promise<MemoryProfile[]> {
+  ): MemoryProfile[] {
     const profiles: MemoryProfile[] = [];
 
     for (const dim of dimensions) {
       const numKeys = Math.min(200, dim / 2);
-      const profile = await this.profileMemory(dim, numKeys);
+      const profile = this.profileMemory(dim, numKeys);
       profiles.push(profile);
     }
 
@@ -191,7 +191,7 @@ export class AttentionBenchmarkRunner {
   /**
    * Run stress test with increasing load
    */
-  async runStressTest(): Promise<ComparisonBenchmark[]> {
+  runStressTest(): ComparisonBenchmark[] {
     const results: ComparisonBenchmark[] = [];
 
     // Progressively increase load
