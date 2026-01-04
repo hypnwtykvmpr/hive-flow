@@ -173,86 +173,88 @@ async function handleSearchMemory(
   input: z.infer<typeof searchMemorySchema>,
   context?: ToolContext
 ): Promise<SearchMemoryResult> {
-  // TODO: Integrate with actual memory service/AgentDB when available
-  // For now, return stub response
-
   const startTime = performance.now();
 
-  // Stub implementation - will be replaced with AgentDB integration
-  const results: SearchResult[] = [
-    {
-      id: 'mem-example-1',
-      content: 'Example memory content matching the query',
-      type: 'episodic',
-      category: 'code',
-      tags: ['implementation', 'typescript'],
-      importance: 0.8,
-      createdAt: new Date(Date.now() - 3600000).toISOString(),
-      accessedAt: new Date().toISOString(),
-      accessCount: 5,
-      relevance: 0.92,
-      highlights: ['matching the query'],
-    },
-    {
-      id: 'mem-example-2',
-      content: 'Another relevant memory entry',
-      type: 'semantic',
-      category: 'documentation',
-      tags: ['api', 'reference'],
-      importance: 0.6,
-      createdAt: new Date(Date.now() - 7200000).toISOString(),
-      accessedAt: new Date(Date.now() - 600000).toISOString(),
-      accessCount: 12,
-      relevance: 0.85,
-      highlights: ['relevant memory'],
-    },
-  ];
+  // Try to use memory service if available
+  const resourceManager = context?.resourceManager as any;
+  if (resourceManager?.memoryService) {
+    try {
+      const { UnifiedMemoryService } = await import('@claude-flow/memory');
+      const memoryService = resourceManager.memoryService as UnifiedMemoryService;
 
-  // Apply filters
-  let filtered = results;
-  if (input.type !== 'all') {
-    filtered = filtered.filter(m => m.type === input.type);
-  }
-  if (input.category) {
-    filtered = filtered.filter(m => m.category === input.category);
-  }
-  if (input.tags && input.tags.length > 0) {
-    filtered = filtered.filter(m =>
-      input.tags!.every(tag => m.tags?.includes(tag))
-    );
-  }
-  if (input.minRelevance !== undefined) {
-    filtered = filtered.filter(m => m.relevance >= input.minRelevance!);
+      let searchResults: any[];
+
+      if (input.searchType === 'semantic' || input.searchType === 'hybrid') {
+        // Perform semantic search
+        searchResults = await memoryService.semanticSearch(
+          input.query,
+          input.limit,
+          input.minRelevance
+        );
+      } else {
+        // Perform keyword search via query
+        const entries = await memoryService.query({
+          type: input.searchType === 'keyword' ? 'keyword' : 'hybrid',
+          keyword: input.query,
+          limit: input.limit,
+          namespace: input.category,
+        });
+
+        searchResults = entries.map(e => ({
+          entry: e,
+          score: 1.0, // Keyword match doesn't have a score
+          distance: 0,
+        }));
+      }
+
+      // Convert to SearchResult format
+      let results: SearchResult[] = searchResults.map(r => ({
+        id: r.entry.id,
+        content: r.entry.content,
+        type: r.entry.type,
+        category: r.entry.namespace,
+        tags: r.entry.tags,
+        importance: r.entry.metadata.importance as number,
+        createdAt: r.entry.createdAt.toISOString(),
+        accessedAt: r.entry.lastAccessedAt?.toISOString(),
+        accessCount: r.entry.accessCount,
+        relevance: r.score || (1 - r.distance),
+        metadata: input.includeMetadata ? r.entry.metadata : undefined,
+      }));
+
+      // Apply filters
+      if (input.type !== 'all') {
+        results = results.filter(m => m.type === input.type);
+      }
+      if (input.tags && input.tags.length > 0) {
+        results = results.filter(m =>
+          input.tags!.every(tag => m.tags?.includes(tag))
+        );
+      }
+      if (input.minRelevance !== undefined) {
+        results = results.filter(m => m.relevance >= input.minRelevance!);
+      }
+
+      const executionTime = performance.now() - startTime;
+
+      return {
+        results: results.slice(0, input.limit),
+        total: results.length,
+        query: input.query,
+        searchType: input.searchType,
+        executionTime,
+      };
+    } catch (error) {
+      console.error('Failed to search memory via memory service:', error);
+      // Fall through to simple implementation
+    }
   }
 
-  // Apply limit
-  const limited = filtered.slice(0, input.limit);
-
-  // Remove metadata if not requested
-  if (!input.includeMetadata) {
-    limited.forEach(m => delete m.metadata);
-  }
-
+  // Simple implementation when no memory service is available
   const executionTime = performance.now() - startTime;
-
-  // TODO: Call actual memory service with AgentDB
-  // const memoryService = context?.resourceManager?.memoryService;
-  // if (memoryService) {
-  //   const results = await memoryService.search({
-  //     query: input.query,
-  //     searchType: input.searchType,
-  //     type: input.type,
-  //     category: input.category,
-  //     tags: input.tags,
-  //     limit: input.limit,
-  //     minRelevance: input.minRelevance,
-  //   });
-  //   return results;
-  // }
-
   return {
-    results: limited,
-    total: filtered.length,
+    results: [],
+    total: 0,
     query: input.query,
     searchType: input.searchType,
     executionTime,
