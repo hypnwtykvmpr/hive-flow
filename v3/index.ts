@@ -19,6 +19,14 @@
  * - Memory Reduction: 50-75%
  * - Code Reduction: <5,000 lines (vs 15,000+)
  * - Startup Time: <500ms
+ *
+ * V3 Core Architecture (Decomposed Orchestrator):
+ * - task-manager.ts (~200 lines) - Task lifecycle management
+ * - session-manager.ts (~200 lines) - Session handling
+ * - health-monitor.ts (~150 lines) - Agent health checks
+ * - lifecycle-manager.ts (~150 lines) - Agent spawn/terminate
+ * - event-coordinator.ts (~100 lines) - Event routing
+ * - event-bus.ts (~230 lines) - Pub/sub event system
  */
 
 // =============================================================================
