@@ -1083,6 +1083,476 @@ export class UnifiedSwarmCoordinator extends EventEmitter implements IUnifiedSwa
   getAgentPool(type: AgentType): AgentPool | undefined {
     return this.agentPools.get(type);
   }
+
+  // =============================================================================
+  // DOMAIN-BASED TASK ROUTING (15-Agent Hierarchy Support)
+  // =============================================================================
+
+  /**
+   * Assign a task to a specific domain
+   * Routes the task to the most suitable agent within that domain
+   */
+  async assignTaskToDomain(taskId: string, domain: AgentDomain): Promise<string | undefined> {
+    const startTime = performance.now();
+    const task = this.state.tasks.get(taskId);
+
+    if (!task) {
+      throw new Error(`Task ${taskId} not found`);
+    }
+
+    const pool = this.domainPools.get(domain);
+    if (!pool) {
+      throw new Error(`Domain pool ${domain} not found`);
+    }
+
+    // Try to acquire an agent from the domain pool
+    const agent = await pool.acquire();
+    if (!agent) {
+      // Add to domain queue if no agents available
+      const queue = this.domainTaskQueues.get(domain) || [];
+      queue.push(taskId);
+      this.domainTaskQueues.set(domain, queue);
+      task.status = 'queued';
+
+      this.emitEvent('task.queued', {
+        taskId,
+        domain,
+        queuePosition: queue.length,
+        reason: 'no_available_agents'
+      });
+
+      return undefined;
+    }
+
+    // Update task
+    task.status = 'assigned';
+    task.assignedTo = agent.id;
+    task.startedAt = new Date();
+
+    // Track assignment
+    const assignment: TaskAssignment = {
+      taskId,
+      domain,
+      agentId: agent.id.id,
+      priority: task.priority,
+      assignedAt: new Date(),
+    };
+    this.taskAssignments.set(taskId, assignment);
+
+    // Notify agent via message bus
+    await this.messageBus.send({
+      type: 'task_assign',
+      from: this.state.id.id,
+      to: agent.id.id,
+      payload: { taskId, task, domain },
+      priority: this.mapTaskPriorityToMessagePriority(task.priority),
+      requiresAck: true,
+      ttlMs: this.config.taskTimeoutMs,
+    });
+
+    const duration = performance.now() - startTime;
+    this.recordCoordinationLatency(duration);
+
+    this.emitEvent('task.assigned', {
+      taskId,
+      agentId: agent.id.id,
+      domain,
+      assignmentDurationMs: duration,
+    });
+
+    return agent.id.id;
+  }
+
+  /**
+   * Get all agents belonging to a specific domain
+   */
+  getAgentsByDomain(domain: AgentDomain): AgentState[] {
+    const agents: AgentState[] = [];
+    for (const [agentId, agentDomain] of this.agentDomainMap) {
+      if (agentDomain === domain) {
+        const agent = this.state.agents.get(agentId);
+        if (agent) {
+          agents.push(agent);
+        }
+      }
+    }
+    return agents;
+  }
+
+  /**
+   * Execute multiple tasks in parallel across different domains
+   * This is the key method for achieving >85% agent utilization
+   */
+  async executeParallel(tasks: Array<{
+    task: Omit<TaskDefinition, 'id' | 'status' | 'createdAt'>;
+    domain: AgentDomain;
+  }>): Promise<ParallelExecutionResult[]> {
+    const startTime = performance.now();
+    const executionPromises: Promise<ParallelExecutionResult>[] = [];
+
+    // Submit all tasks first
+    const taskIds: Array<{ taskId: string; domain: AgentDomain }> = [];
+    for (const { task, domain } of tasks) {
+      const taskId = await this.submitTask(task);
+      taskIds.push({ taskId, domain });
+    }
+
+    // Execute all tasks in parallel across domains
+    for (const { taskId, domain } of taskIds) {
+      const promise = this.executeTaskInDomain(taskId, domain);
+      executionPromises.push(promise);
+    }
+
+    // Wait for all tasks to complete (with individual error handling)
+    const settledResults = await Promise.allSettled(executionPromises);
+
+    const results: ParallelExecutionResult[] = [];
+    for (let i = 0; i < settledResults.length; i++) {
+      const result = settledResults[i];
+      const { taskId, domain } = taskIds[i];
+
+      if (result.status === 'fulfilled') {
+        results.push(result.value);
+      } else {
+        results.push({
+          taskId,
+          domain,
+          success: false,
+          error: result.reason instanceof Error ? result.reason : new Error(String(result.reason)),
+          durationMs: performance.now() - startTime,
+        });
+      }
+    }
+
+    this.emitEvent('parallel.execution.completed', {
+      totalTasks: tasks.length,
+      successful: results.filter(r => r.success).length,
+      failed: results.filter(r => !r.success).length,
+      totalDurationMs: performance.now() - startTime,
+    });
+
+    return results;
+  }
+
+  private async executeTaskInDomain(taskId: string, domain: AgentDomain): Promise<ParallelExecutionResult> {
+    const startTime = performance.now();
+
+    try {
+      // Assign to domain
+      const agentId = await this.assignTaskToDomain(taskId, domain);
+      if (!agentId) {
+        // Task was queued, wait for it to be assigned and complete
+        return await this.waitForQueuedTask(taskId, domain, startTime);
+      }
+
+      // Wait for completion
+      const result = await this.waitForTaskCompletion(taskId, this.config.taskTimeoutMs);
+
+      return {
+        taskId,
+        domain,
+        success: result.status === 'completed',
+        result: result.output,
+        durationMs: performance.now() - startTime,
+      };
+    } catch (error) {
+      return {
+        taskId,
+        domain,
+        success: false,
+        error: error instanceof Error ? error : new Error(String(error)),
+        durationMs: performance.now() - startTime,
+      };
+    }
+  }
+
+  private async waitForQueuedTask(
+    taskId: string,
+    domain: AgentDomain,
+    startTime: number
+  ): Promise<ParallelExecutionResult> {
+    return new Promise((resolve) => {
+      const checkInterval = setInterval(() => {
+        const task = this.state.tasks.get(taskId);
+        if (!task) {
+          clearInterval(checkInterval);
+          resolve({
+            taskId,
+            domain,
+            success: false,
+            error: new Error(`Task ${taskId} not found`),
+            durationMs: performance.now() - startTime,
+          });
+          return;
+        }
+
+        if (task.status === 'completed') {
+          clearInterval(checkInterval);
+          resolve({
+            taskId,
+            domain,
+            success: true,
+            result: task.output,
+            durationMs: performance.now() - startTime,
+          });
+        } else if (task.status === 'failed' || task.status === 'cancelled' || task.status === 'timeout') {
+          clearInterval(checkInterval);
+          resolve({
+            taskId,
+            domain,
+            success: false,
+            error: new Error(`Task ${task.status}`),
+            durationMs: performance.now() - startTime,
+          });
+        }
+      }, 100);
+
+      // Timeout after configured duration
+      setTimeout(() => {
+        clearInterval(checkInterval);
+        const task = this.state.tasks.get(taskId);
+        if (task && task.status !== 'completed') {
+          task.status = 'timeout';
+        }
+        resolve({
+          taskId,
+          domain,
+          success: false,
+          error: new Error('Task timed out'),
+          durationMs: performance.now() - startTime,
+        });
+      }, this.config.taskTimeoutMs);
+    });
+  }
+
+  private async waitForTaskCompletion(taskId: string, timeoutMs: number): Promise<TaskDefinition> {
+    return new Promise((resolve, reject) => {
+      const checkInterval = setInterval(() => {
+        const task = this.state.tasks.get(taskId);
+        if (!task) {
+          clearInterval(checkInterval);
+          reject(new Error(`Task ${taskId} not found`));
+          return;
+        }
+
+        if (task.status === 'completed' || task.status === 'failed' || task.status === 'cancelled') {
+          clearInterval(checkInterval);
+          resolve(task);
+        }
+      }, 100);
+
+      setTimeout(() => {
+        clearInterval(checkInterval);
+        const task = this.state.tasks.get(taskId);
+        if (task) {
+          task.status = 'timeout';
+          task.completedAt = new Date();
+          resolve(task);
+        } else {
+          reject(new Error(`Task ${taskId} timed out`));
+        }
+      }, timeoutMs);
+    });
+  }
+
+  /**
+   * Get the current status of all domains
+   */
+  getStatus(): {
+    swarmId: SwarmId;
+    status: SwarmStatus;
+    topology: TopologyType;
+    domains: DomainStatus[];
+    metrics: CoordinatorMetrics;
+  } {
+    const domains: DomainStatus[] = [];
+
+    for (const [domain, config] of this.domainConfigs) {
+      const pool = this.domainPools.get(domain);
+      const stats = pool?.getPoolStats();
+      const queue = this.domainTaskQueues.get(domain) || [];
+
+      const completedTasks = Array.from(this.taskAssignments.values())
+        .filter(a => a.domain === domain)
+        .map(a => this.state.tasks.get(a.taskId))
+        .filter(t => t?.status === 'completed')
+        .length;
+
+      domains.push({
+        name: domain,
+        agentCount: stats?.total ?? 0,
+        availableAgents: stats?.available ?? 0,
+        busyAgents: stats?.busy ?? 0,
+        tasksQueued: queue.length,
+        tasksCompleted: completedTasks,
+      });
+    }
+
+    return {
+      swarmId: this.state.id,
+      status: this.state.status,
+      topology: this.config.topology.type,
+      domains,
+      metrics: this.getMetrics(),
+    };
+  }
+
+  /**
+   * Register an agent and automatically assign it to the appropriate domain
+   * based on its agent number (1-15)
+   */
+  async registerAgentWithDomain(
+    agentData: Omit<AgentState, 'id'>,
+    agentNumber: number
+  ): Promise<{ agentId: string; domain: AgentDomain }> {
+    // First register the agent normally
+    const agentId = await this.registerAgent(agentData);
+
+    // Determine domain based on agent number
+    const domain = this.getAgentDomain(agentNumber);
+
+    // Add to domain tracking
+    this.agentDomainMap.set(agentId, domain);
+
+    // Add to domain pool
+    const pool = this.domainPools.get(domain);
+    const agent = this.state.agents.get(agentId);
+    if (pool && agent) {
+      await pool.add(agent);
+    }
+
+    this.emitEvent('agent.domain_assigned', {
+      agentId,
+      agentNumber,
+      domain,
+    });
+
+    return { agentId, domain };
+  }
+
+  /**
+   * Get the domain for a given agent number (1-15)
+   */
+  getAgentDomain(agentNumber: number): AgentDomain {
+    for (const [domain, config] of this.domainConfigs) {
+      if (config.agentNumbers.includes(agentNumber)) {
+        return domain;
+      }
+    }
+    return 'core'; // Default to core domain
+  }
+
+  /**
+   * Spawn the full 15-agent hierarchy
+   * Returns a map of agent numbers to their IDs and domains
+   */
+  async spawnFullHierarchy(): Promise<Map<number, { agentId: string; domain: AgentDomain }>> {
+    const results = new Map<number, { agentId: string; domain: AgentDomain }>();
+
+    for (const [domain, config] of this.domainConfigs) {
+      for (const agentNumber of config.agentNumbers) {
+        const agentType = this.domainToAgentType(domain);
+
+        const agentData: Omit<AgentState, 'id'> = {
+          name: `${domain}-agent-${agentNumber}`,
+          type: agentType,
+          status: 'idle',
+          capabilities: this.createDomainCapabilities(domain),
+          metrics: this.createDefaultAgentMetrics(),
+          workload: 0,
+          health: 1.0,
+          lastHeartbeat: new Date(),
+          topologyRole: domain === 'queen' ? 'queen' : 'worker',
+          connections: [],
+        };
+
+        const result = await this.registerAgentWithDomain(agentData, agentNumber);
+        results.set(agentNumber, result);
+      }
+    }
+
+    this.emitEvent('hierarchy.spawned', {
+      totalAgents: results.size,
+      domains: Array.from(this.domainConfigs.keys()),
+    });
+
+    return results;
+  }
+
+  private createDomainCapabilities(domain: AgentDomain): AgentCapabilities {
+    const domainConfig = this.domainConfigs.get(domain);
+    const capabilities = domainConfig?.capabilities || [];
+
+    return {
+      codeGeneration: domain === 'core' || domain === 'integration',
+      codeReview: domain === 'security' || domain === 'core',
+      testing: domain === 'support' || domain === 'security',
+      documentation: true,
+      research: true,
+      analysis: true,
+      coordination: domain === 'queen',
+      languages: ['typescript', 'javascript', 'python'],
+      frameworks: ['node', 'react', 'vitest'],
+      domains: capabilities,
+      tools: ['git', 'npm', 'editor', 'claude'],
+      maxConcurrentTasks: domain === 'queen' ? 1 : 3,
+      maxMemoryUsage: 512 * 1024 * 1024,
+      maxExecutionTime: SWARM_CONSTANTS.DEFAULT_TASK_TIMEOUT_MS,
+      reliability: 0.95,
+      speed: 1.0,
+      quality: 0.9,
+    };
+  }
+
+  private createDefaultAgentMetrics(): AgentMetrics {
+    return {
+      tasksCompleted: 0,
+      tasksFailed: 0,
+      averageExecutionTime: 0,
+      successRate: 1.0,
+      cpuUsage: 0,
+      memoryUsage: 0,
+      messagesProcessed: 0,
+      lastActivity: new Date(),
+      responseTime: 0,
+      health: 1.0,
+    };
+  }
+
+  /**
+   * Get the domain pool for a specific domain
+   */
+  getDomainPool(domain: AgentDomain): AgentPool | undefined {
+    return this.domainPools.get(domain);
+  }
+
+  /**
+   * Get all domain configurations
+   */
+  getDomainConfigs(): Map<AgentDomain, DomainConfig> {
+    return new Map(this.domainConfigs);
+  }
+
+  /**
+   * Release an agent back to its domain pool after task completion
+   */
+  async releaseAgentToDomain(agentId: string): Promise<void> {
+    const domain = this.agentDomainMap.get(agentId);
+    if (!domain) return;
+
+    const pool = this.domainPools.get(domain);
+    if (pool) {
+      await pool.release(agentId);
+    }
+
+    // Check if there are queued tasks for this domain
+    const queue = this.domainTaskQueues.get(domain) || [];
+    if (queue.length > 0) {
+      const nextTaskId = queue.shift()!;
+      this.domainTaskQueues.set(domain, queue);
+      await this.assignTaskToDomain(nextTaskId, domain);
+    }
+  }
 }
 
 export function createUnifiedSwarmCoordinator(
