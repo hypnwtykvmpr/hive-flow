@@ -378,8 +378,8 @@ export class SONALearningEngine {
    * Calculate quality score for trajectory
    */
   private calculateQuality(trajectory: Trajectory): number {
-    if (trajectory.quality !== undefined) {
-      return trajectory.quality;
+    if (trajectory.qualityScore !== undefined) {
+      return trajectory.qualityScore;
     }
 
     // Calculate from steps
