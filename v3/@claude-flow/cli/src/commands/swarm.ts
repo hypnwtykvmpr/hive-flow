@@ -74,7 +74,7 @@ const initCommand: Command = {
 
     // V3 mode enables hierarchical-mesh hybrid
     if (v3Mode) {
-      topology = 'hybrid';
+      topology = 'hierarchical-mesh';
       output.printInfo('V3 Mode: Using hierarchical-mesh topology with 15-agent coordination');
     }
 
@@ -90,54 +90,78 @@ const initCommand: Command = {
     output.writeln();
     output.printInfo('Initializing swarm...');
 
-    const swarmConfig = {
-      id: `swarm-${Date.now().toString(36)}`,
-      topology,
-      maxAgents,
-      autoScale: ctx.flags.autoScale ?? true,
-      strategy: ctx.flags.strategy || 'development',
-      status: 'initializing',
-      createdAt: new Date().toISOString(),
-      v3Mode,
-      coordinationEngine: v3Mode ? 'unified-swarm-coordinator' : 'standard'
-    };
+    try {
+      // Call MCP tool to initialize swarm
+      const result = await callMCPTool<{
+        swarmId: string;
+        topology: string;
+        initializedAt: string;
+        config: {
+          topology: string;
+          maxAgents: number;
+          currentAgents: number;
+          communicationProtocol?: string;
+          autoScaling?: boolean;
+        };
+      }>('swarm/init', {
+        topology: topology as 'hierarchical' | 'mesh' | 'adaptive' | 'collective' | 'hierarchical-mesh',
+        maxAgents,
+        config: {
+          communicationProtocol: 'message-bus',
+          consensusMechanism: 'majority',
+          failureHandling: 'retry',
+          loadBalancing: true,
+          autoScaling: ctx.flags.autoScale ?? true,
+        },
+        metadata: {
+          v3Mode,
+          strategy: ctx.flags.strategy || 'development',
+        },
+      });
 
-    // Simulate initialization
-    output.writeln(output.dim('  Creating coordination topology...'));
-    output.writeln(output.dim('  Initializing memory namespace...'));
-    output.writeln(output.dim('  Setting up communication channels...'));
+      // Simulate initialization output
+      output.writeln(output.dim('  Creating coordination topology...'));
+      output.writeln(output.dim('  Initializing memory namespace...'));
+      output.writeln(output.dim('  Setting up communication channels...'));
 
-    if (v3Mode) {
-      output.writeln(output.dim('  Enabling Flash Attention (2.49x-7.47x speedup)...'));
-      output.writeln(output.dim('  Configuring AgentDB integration (150x faster)...'));
-      output.writeln(output.dim('  Initializing SONA learning system...'));
+      if (v3Mode) {
+        output.writeln(output.dim('  Enabling Flash Attention (2.49x-7.47x speedup)...'));
+        output.writeln(output.dim('  Configuring AgentDB integration (150x faster)...'));
+        output.writeln(output.dim('  Initializing SONA learning system...'));
+      }
+
+      output.writeln();
+      output.printTable({
+        columns: [
+          { key: 'property', header: 'Property', width: 20 },
+          { key: 'value', header: 'Value', width: 35 }
+        ],
+        data: [
+          { property: 'Swarm ID', value: result.swarmId },
+          { property: 'Topology', value: result.topology },
+          { property: 'Max Agents', value: result.config.maxAgents },
+          { property: 'Auto Scale', value: result.config.autoScaling ? 'Enabled' : 'Disabled' },
+          { property: 'Protocol', value: result.config.communicationProtocol || 'N/A' },
+          { property: 'V3 Mode', value: v3Mode ? 'Enabled' : 'Disabled' }
+        ]
+      });
+
+      output.writeln();
+      output.printSuccess('Swarm initialized successfully');
+
+      if (ctx.flags.format === 'json') {
+        output.printJson(result);
+      }
+
+      return { success: true, data: result };
+    } catch (error) {
+      if (error instanceof MCPClientError) {
+        output.printError(`Failed to initialize swarm: ${error.message}`);
+      } else {
+        output.printError(`Unexpected error: ${String(error)}`);
+      }
+      return { success: false, exitCode: 1 };
     }
-
-    output.writeln();
-    output.printTable({
-      columns: [
-        { key: 'property', header: 'Property', width: 20 },
-        { key: 'value', header: 'Value', width: 35 }
-      ],
-      data: [
-        { property: 'Swarm ID', value: swarmConfig.id },
-        { property: 'Topology', value: swarmConfig.topology },
-        { property: 'Max Agents', value: swarmConfig.maxAgents },
-        { property: 'Auto Scale', value: swarmConfig.autoScale ? 'Enabled' : 'Disabled' },
-        { property: 'Strategy', value: swarmConfig.strategy },
-        { property: 'V3 Mode', value: swarmConfig.v3Mode ? 'Enabled' : 'Disabled' },
-        { property: 'Coordination Engine', value: swarmConfig.coordinationEngine }
-      ]
-    });
-
-    output.writeln();
-    output.printSuccess('Swarm initialized successfully');
-
-    if (ctx.flags.format === 'json') {
-      output.printJson(swarmConfig);
-    }
-
-    return { success: true, data: swarmConfig };
   }
 };
 
