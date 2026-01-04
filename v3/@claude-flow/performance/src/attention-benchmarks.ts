@@ -431,9 +431,9 @@ Within Range:    ${validation.meetsMaximum ? 'YES ✓' : 'NO ✗'}
 /**
  * Run and display comprehensive benchmark suite
  */
-export async function runAndDisplaySuite(): Promise<SuiteResult> {
+export function runAndDisplaySuite(): SuiteResult {
   const runner = new AttentionBenchmarkRunner();
-  const suite = await runner.runComprehensiveSuite();
+  const suite = runner.runComprehensiveSuite();
 
   console.log(formatSuiteReport(suite));
 
