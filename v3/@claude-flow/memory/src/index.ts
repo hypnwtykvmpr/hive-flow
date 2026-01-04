@@ -105,6 +105,7 @@ export {
 // ===== Core Components =====
 export { AgentDBAdapter, AgentDBAdapterConfig } from './agentdb-adapter.js';
 export { SQLiteBackend, SQLiteBackendConfig } from './sqlite-backend.js';
+export { SqlJsBackend, SqlJsBackendConfig } from './sqljs-backend.js';
 export {
   HybridBackend,
   HybridBackendConfig,
@@ -116,6 +117,13 @@ export { HNSWIndex } from './hnsw-index.js';
 export { CacheManager, TieredCacheManager } from './cache-manager.js';
 export { QueryBuilder, query, QueryTemplates, SortDirection, SortField } from './query-builder.js';
 export { MemoryMigrator, createMigrator, migrateMultipleSources } from './migration.js';
+export {
+  createDatabase,
+  getPlatformInfo,
+  getAvailableProviders,
+  DatabaseProvider,
+  DatabaseOptions,
+} from './database-provider.js';
 
 // ===== Unified Memory Service =====
 import { EventEmitter } from 'node:events';
