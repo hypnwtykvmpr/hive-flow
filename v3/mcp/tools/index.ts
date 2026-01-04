@@ -99,6 +99,7 @@ export function getAllTools(): MCPTool[] {
     ...swarmTools,
     ...memoryTools,
     ...configTools,
+    ...hooksTools,
   ];
 }
 
