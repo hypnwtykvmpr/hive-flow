@@ -2,7 +2,7 @@
   "name": "@claude-flow/memory",
   "version": "3.0.0-alpha.1",
   "type": "module",
-  "description": "Memory module - AgentDB unification, HNSW indexing, vector search",
+  "description": "Memory module - AgentDB unification, HNSW indexing, vector search, hybrid SQLite+AgentDB backend (ADR-009)",
   "main": "src/index.ts",
   "types": "src/index.ts",
   "exports": {
@@ -14,7 +14,11 @@
     "bench": "vitest bench",
     "build": "tsc"
   },
+  "dependencies": {
+    "better-sqlite3": "^11.0.0"
+  },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.11",
     "vitest": "^1.0.0"
   }
 }
