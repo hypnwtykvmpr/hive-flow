@@ -253,56 +253,53 @@ async function handleAgentStatus(
   input: z.infer<typeof agentStatusSchema>,
   context?: ToolContext
 ): Promise<AgentStatus> {
-  // TODO: Integrate with actual agent manager when available
-  // For now, return stub response
+  // Try to use swarmCoordinator if available
+  if (context?.swarmCoordinator) {
+    try {
+      const { UnifiedSwarmCoordinator } = await import('@claude-flow/swarm');
+      const coordinator = context.swarmCoordinator as InstanceType<typeof UnifiedSwarmCoordinator>;
 
-  // Stub implementation - will be replaced with actual agent manager integration
-  const status: AgentStatus = {
-    id: input.agentId,
-    agentType: 'coder',
-    status: 'active',
-    createdAt: new Date(Date.now() - 3600000).toISOString(),
-    lastActivityAt: new Date().toISOString(),
-    config: { maxConcurrentTasks: 5 },
-    metadata: { version: '3.0.0' },
-  };
+      // Get agent status
+      const agentState = await coordinator.getAgentStatus(input.agentId);
 
-  if (input.includeMetrics) {
-    status.metrics = {
-      tasksCompleted: 42,
-      tasksInProgress: 2,
-      tasksFailed: 3,
-      averageExecutionTime: 1234.56,
-      uptime: 3600000,
-    };
+      const status: AgentStatus = {
+        id: agentState.id,
+        agentType: agentState.type,
+        status: agentState.status === 'active' ? 'active' :
+                agentState.status === 'idle' ? 'idle' : 'terminated',
+        createdAt: agentState.createdAt.toISOString(),
+        lastActivityAt: agentState.lastActivityAt?.toISOString(),
+        config: agentState.config,
+        metadata: agentState.metadata,
+      };
+
+      if (input.includeMetrics) {
+        status.metrics = {
+          tasksCompleted: agentState.metrics?.tasksCompleted || 0,
+          tasksInProgress: agentState.metrics?.tasksInProgress || 0,
+          tasksFailed: agentState.metrics?.tasksFailed || 0,
+          averageExecutionTime: agentState.metrics?.averageExecutionTime || 0,
+          uptime: agentState.metrics?.uptime || 0,
+        };
+      }
+
+      if (input.includeHistory) {
+        status.history = (agentState.history || []).map(h => ({
+          timestamp: h.timestamp.toISOString(),
+          event: h.event,
+          details: h.details,
+        }));
+      }
+
+      return status;
+    } catch (error) {
+      // Fall through to simple implementation if coordinator fails
+      console.error('Failed to get agent status via coordinator:', error);
+    }
   }
 
-  if (input.includeHistory) {
-    status.history = [
-      {
-        timestamp: new Date(Date.now() - 300000).toISOString(),
-        event: 'task_completed',
-        details: { taskId: 'task-123' },
-      },
-      {
-        timestamp: new Date(Date.now() - 600000).toISOString(),
-        event: 'task_started',
-        details: { taskId: 'task-123' },
-      },
-    ];
-  }
-
-  // TODO: Call actual agent manager
-  // const agentManager = context?.agentManager as AgentManager;
-  // if (agentManager) {
-  //   const status = await agentManager.getAgentStatus(input.agentId, {
-  //     includeMetrics: input.includeMetrics,
-  //     includeHistory: input.includeHistory,
-  //   });
-  //   return status;
-  // }
-
-  return status;
+  // Simple implementation when no coordinator is available - return error status
+  throw new Error(`Agent not found: ${input.agentId}`);
 }
 
 // ============================================================================
