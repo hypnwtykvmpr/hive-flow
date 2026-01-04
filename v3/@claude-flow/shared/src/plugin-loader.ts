@@ -526,7 +526,7 @@ export class PluginLoader {
 
     for (let depth = 0; depth <= maxDepth; depth++) {
       const level: ClaudeFlowPlugin[] = [];
-      for (const node of graph.values()) {
+      for (const node of Array.from(graph.values())) {
         if (node.depth === depth) {
           level.push(node.plugin);
         }
