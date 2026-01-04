@@ -449,7 +449,7 @@ export class PluginRegistry {
    * Unregister CLI commands from a plugin
    */
   unregisterPluginCLICommands(pluginName: string): void {
-    for (const [name, entry] of this.cliCommands.entries()) {
+    for (const [name, entry] of Array.from(this.cliCommands.entries())) {
       if (entry.plugin === pluginName) {
         this.cliCommands.delete(name);
       }
