@@ -163,23 +163,54 @@ export class FlashAttentionOptimizer {
       }
     }
 
+    // Force garbage collection if available for accurate memory measurement
+    this.forceGC();
+
+    // Measure baseline memory usage
+    const baselineMemoryBefore = this.getMemoryUsage();
+    let baselinePeakMemory = baselineMemoryBefore;
+
+    // Benchmark baseline (DotProduct) - run first to establish baseline memory
+    const baselineStart = performance.now();
+    for (let i = 0; i < iterations; i++) {
+      this.baselineAttention.computeRaw(query, keys, values);
+      // Sample memory periodically (every 100 iterations to reduce overhead)
+      if (i % 100 === 0) {
+        const currentMemory = this.getMemoryUsage();
+        if (currentMemory > baselinePeakMemory) {
+          baselinePeakMemory = currentMemory;
+        }
+      }
+    }
+    const baselineEnd = performance.now();
+    const baselineMemoryAfter = this.getMemoryUsage();
+    const baselineTimeMs = baselineEnd - baselineStart;
+    const baselineAvgMs = baselineTimeMs / iterations;
+    const baselineMemoryUsed = Math.max(0, baselinePeakMemory - baselineMemoryBefore);
+
+    // Force garbage collection before Flash Attention benchmark
+    this.forceGC();
+
+    // Measure Flash Attention memory usage
+    const flashMemoryBefore = this.getMemoryUsage();
+    let flashPeakMemory = flashMemoryBefore;
+
     // Benchmark Flash Attention
     const flashStart = performance.now();
     for (let i = 0; i < iterations; i++) {
       this.flashAttention.computeRaw(query, keys, values);
+      // Sample memory periodically
+      if (i % 100 === 0) {
+        const currentMemory = this.getMemoryUsage();
+        if (currentMemory > flashPeakMemory) {
+          flashPeakMemory = currentMemory;
+        }
+      }
     }
     const flashEnd = performance.now();
     const flashTimeMs = flashEnd - flashStart;
     const flashAvgMs = flashTimeMs / iterations;
-
-    // Benchmark baseline (DotProduct)
-    const baselineStart = performance.now();
-    for (let i = 0; i < iterations; i++) {
-      this.baselineAttention.computeRaw(query, keys, values);
-    }
-    const baselineEnd = performance.now();
-    const baselineTimeMs = baselineEnd - baselineStart;
-    const baselineAvgMs = baselineTimeMs / iterations;
+    const flashMemoryUsed = Math.max(0, flashPeakMemory - flashMemoryBefore);
 
     const speedup = baselineAvgMs / flashAvgMs;
     const meetsTarget = speedup >= 2.49; // Minimum target: 2.49x
@@ -187,6 +218,13 @@ export class FlashAttentionOptimizer {
     // Update peak speedup
     if (speedup > this.metrics.peakSpeedup) {
       this.metrics.peakSpeedup = speedup;
+    }
+
+    // Update memory tracking metrics
+    this.metrics.totalBaselineMemory += baselineMemoryUsed;
+    this.metrics.totalOptimizedMemory += flashMemoryUsed;
+    if (flashPeakMemory > this.metrics.peakMemory) {
+      this.metrics.peakMemory = flashPeakMemory;
     }
 
     this.metrics.totalSpeedup += speedup;
@@ -198,12 +236,12 @@ export class FlashAttentionOptimizer {
       flashAttention: {
         averageTimeMs: flashAvgMs,
         opsPerSecond: 1000 / flashAvgMs,
-        memoryUsageBytes: undefined,
+        memoryUsageBytes: flashMemoryUsed,
       },
       baseline: {
         averageTimeMs: baselineAvgMs,
         opsPerSecond: 1000 / baselineAvgMs,
-        memoryUsageBytes: undefined,
+        memoryUsageBytes: baselineMemoryUsed,
       },
       speedup,
       meetsTarget,
