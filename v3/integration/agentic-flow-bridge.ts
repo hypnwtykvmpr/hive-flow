@@ -28,6 +28,46 @@ import { AttentionCoordinator } from './attention-coordinator.js';
 import { SDKBridge } from './sdk-bridge.js';
 
 /**
+ * Interface for agentic-flow core module (dynamically loaded)
+ * This represents the external agentic-flow@alpha package API
+ */
+interface AgenticFlowSONAInterface {
+  setMode(mode: string): Promise<void>;
+  storePattern(params: unknown): Promise<string>;
+  findPatterns(query: string, options?: unknown): Promise<unknown[]>;
+  getStats(): Promise<unknown>;
+}
+
+interface AgenticFlowAttentionInterface {
+  compute(params: unknown): Promise<unknown>;
+  setMechanism(mechanism: string): Promise<void>;
+  getMetrics(): Promise<unknown>;
+}
+
+interface AgenticFlowAgentDBInterface {
+  search(query: number[], options?: unknown): Promise<unknown[]>;
+  insert(vector: number[], metadata?: unknown): Promise<string>;
+  enableCrossAgentSharing(options?: unknown): Promise<void>;
+}
+
+/**
+ * Core interface for agentic-flow@alpha package
+ * Used for deep integration and code deduplication per ADR-001
+ */
+export interface AgenticFlowCore {
+  sona: AgenticFlowSONAInterface;
+  attention: AgenticFlowAttentionInterface;
+  agentdb: AgenticFlowAgentDBInterface;
+  version: string;
+  isConnected: boolean;
+}
+
+/**
+ * Factory function type for creating agentic-flow instance
+ */
+type AgenticFlowFactory = (config: unknown) => Promise<AgenticFlowCore>;
+
+/**
  * AgenticFlowBridge - Core integration class for agentic-flow@alpha
  *
  * This class serves as the main entry point for all agentic-flow integration,
