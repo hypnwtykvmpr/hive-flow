@@ -1,6 +1,10 @@
 /**
  * @claude-flow/swarm
- * V3 Unified Swarm Coordination Module
+ * V3 Unified Swarm Coordination Module (ADR-003)
+ *
+ * ADR-003 IMPLEMENTATION:
+ * This module provides ONE CANONICAL coordination engine: UnifiedSwarmCoordinator
+ * SwarmHub is maintained ONLY as a compatibility layer for existing code.
  *
  * Provides 15-agent hierarchical mesh coordination with consensus algorithms.
  *
@@ -16,7 +20,7 @@
  * - Consensus: <100ms
  * - Message throughput: 1000+ msgs/sec
  *
- * Usage:
+ * Recommended Usage:
  * ```typescript
  * import { createUnifiedSwarmCoordinator } from '@claude-flow/swarm';
  *
