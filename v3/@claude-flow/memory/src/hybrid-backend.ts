@@ -25,7 +25,7 @@ import {
   QueryType,
 } from './types.js';
 import { SQLiteBackend, SQLiteBackendConfig } from './sqlite-backend.js';
-import { AgentDBAdapter, AgentDBAdapterConfig } from './agentdb-adapter.js';
+import { AgentDBBackend, AgentDBBackendConfig } from './agentdb-backend.js';
 
 /**
  * Configuration for HybridBackend
