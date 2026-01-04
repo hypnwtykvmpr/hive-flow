@@ -268,116 +268,93 @@ async function handleListMemory(
   input: z.infer<typeof listMemorySchema>,
   context?: ToolContext
 ): Promise<ListMemoryResult> {
-  // TODO: Integrate with actual memory service/AgentDB when available
-  // For now, return stub response
+  // Try to use memory service if available
+  const resourceManager = context?.resourceManager as any;
+  if (resourceManager?.memoryService) {
+    try {
+      const { UnifiedMemoryService } = await import('@claude-flow/memory');
+      const memoryService = resourceManager.memoryService as UnifiedMemoryService;
 
-  // Stub implementation - will be replaced with AgentDB integration
-  const memories: Memory[] = [
-    {
-      id: 'mem-example-1',
-      content: 'Example memory content 1',
-      type: 'episodic',
-      category: 'code',
-      tags: ['implementation', 'typescript'],
-      importance: 0.8,
-      createdAt: new Date(Date.now() - 3600000).toISOString(),
-      accessedAt: new Date().toISOString(),
-      accessCount: 5,
-    },
-    {
-      id: 'mem-example-2',
-      content: 'Example memory content 2',
-      type: 'semantic',
-      category: 'documentation',
-      tags: ['api', 'reference'],
-      importance: 0.6,
-      createdAt: new Date(Date.now() - 7200000).toISOString(),
-      accessedAt: new Date(Date.now() - 600000).toISOString(),
-      accessCount: 12,
-    },
-    {
-      id: 'mem-example-3',
-      content: 'Example memory content 3',
-      type: 'procedural',
-      category: 'workflow',
-      tags: ['deployment', 'cicd'],
-      importance: 0.9,
-      createdAt: new Date(Date.now() - 10800000).toISOString(),
-      accessedAt: new Date(Date.now() - 300000).toISOString(),
-      accessCount: 8,
-    },
-  ];
+      // Query all entries
+      const entries = await memoryService.query({
+        type: input.type === 'all' ? 'hybrid' : ('keyword' as any),
+        limit: 10000, // Get all for filtering
+        namespace: input.category,
+      });
 
-  // Apply filters
-  let filtered = memories;
-  if (input.type !== 'all') {
-    filtered = filtered.filter(m => m.type === input.type);
-  }
-  if (input.category) {
-    filtered = filtered.filter(m => m.category === input.category);
-  }
-  if (input.tags && input.tags.length > 0) {
-    filtered = filtered.filter(m =>
-      input.tags!.every(tag => m.tags?.includes(tag))
-    );
-  }
+      // Convert to Memory format
+      let memories: Memory[] = entries.map(e => ({
+        id: e.id,
+        content: e.content,
+        type: e.type,
+        category: e.namespace,
+        tags: e.tags,
+        importance: e.metadata.importance as number,
+        createdAt: e.createdAt.toISOString(),
+        accessedAt: e.lastAccessedAt?.toISOString(),
+        accessCount: e.accessCount,
+        metadata: input.includeMetadata ? e.metadata : undefined,
+      }));
 
-  // Apply sorting
-  const sorted = [...filtered].sort((a, b) => {
-    let aVal: number | string;
-    let bVal: number | string;
+      // Apply filters
+      if (input.type !== 'all') {
+        memories = memories.filter(m => m.type === input.type);
+      }
+      if (input.tags && input.tags.length > 0) {
+        memories = memories.filter(m =>
+          input.tags!.every(tag => m.tags?.includes(tag))
+        );
+      }
 
-    switch (input.sortBy) {
-      case 'created':
-        aVal = new Date(a.createdAt).getTime();
-        bVal = new Date(b.createdAt).getTime();
-        break;
-      case 'accessed':
-        aVal = a.accessedAt ? new Date(a.accessedAt).getTime() : 0;
-        bVal = b.accessedAt ? new Date(b.accessedAt).getTime() : 0;
-        break;
-      case 'importance':
-        aVal = a.importance || 0;
-        bVal = b.importance || 0;
-        break;
-      default:
-        aVal = 0;
-        bVal = 0;
+      // Apply sorting
+      const sorted = [...memories].sort((a, b) => {
+        let aVal: number | string;
+        let bVal: number | string;
+
+        switch (input.sortBy) {
+          case 'created':
+            aVal = new Date(a.createdAt).getTime();
+            bVal = new Date(b.createdAt).getTime();
+            break;
+          case 'accessed':
+            aVal = a.accessedAt ? new Date(a.accessedAt).getTime() : 0;
+            bVal = b.accessedAt ? new Date(b.accessedAt).getTime() : 0;
+            break;
+          case 'importance':
+            aVal = a.importance || 0;
+            bVal = b.importance || 0;
+            break;
+          default:
+            aVal = 0;
+            bVal = 0;
+        }
+
+        if (input.sortOrder === 'asc') {
+          return aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
+        } else {
+          return aVal > bVal ? -1 : aVal < bVal ? 1 : 0;
+        }
+      });
+
+      // Apply pagination
+      const paginated = sorted.slice(input.offset, input.offset + input.limit);
+
+      return {
+        memories: paginated,
+        total: sorted.length,
+        limit: input.limit,
+        offset: input.offset,
+      };
+    } catch (error) {
+      console.error('Failed to list memory via memory service:', error);
+      // Fall through to simple implementation
     }
-
-    if (input.sortOrder === 'asc') {
-      return aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
-    } else {
-      return aVal > bVal ? -1 : aVal < bVal ? 1 : 0;
-    }
-  });
-
-  // Apply pagination
-  const paginated = sorted.slice(input.offset, input.offset + input.limit);
-
-  // Remove metadata if not requested
-  if (!input.includeMetadata) {
-    paginated.forEach(m => delete m.metadata);
   }
 
-  // TODO: Call actual memory service with AgentDB
-  // const memoryService = context?.resourceManager?.memoryService;
-  // if (memoryService) {
-  //   const memories = await memoryService.list({
-  //     type: input.type,
-  //     category: input.category,
-  //     tags: input.tags,
-  //     sortBy: input.sortBy,
-  //     sortOrder: input.sortOrder,
-  //     limit: input.limit,
-  //     offset: input.offset,
-  //   });
-  //   return memories;
-  // }
-
+  // Simple implementation when no memory service is available
   return {
-    memories: paginated,
-    total: filtered.length,
+    memories: [],
+    total: 0,
     limit: input.limit,
     offset: input.offset,
   };
