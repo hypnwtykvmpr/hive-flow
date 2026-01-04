@@ -451,6 +451,11 @@ describe('UnifiedSwarmCoordinator', () => {
         connections: [],
       });
 
+      // Wait for metrics to update
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      const metrics = coordinator.getMetrics();
+      expect(metrics.activeAgents).toBeGreaterThan(0);
       expect(coordinator.isHealthy()).toBe(true);
     });
   });
