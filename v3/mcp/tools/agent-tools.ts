@@ -152,56 +152,56 @@ async function handleListAgents(
   input: z.infer<typeof listAgentsSchema>,
   context?: ToolContext
 ): Promise<ListAgentsResult> {
-  // TODO: Integrate with actual agent manager when available
-  // For now, return stub response
+  // Try to use swarmCoordinator if available
+  if (context?.swarmCoordinator) {
+    try {
+      const { UnifiedSwarmCoordinator } = await import('@claude-flow/swarm');
+      const coordinator = context.swarmCoordinator as InstanceType<typeof UnifiedSwarmCoordinator>;
 
-  // Stub implementation - will be replaced with actual agent manager integration
-  const agents: AgentInfo[] = [
-    {
-      id: 'agent-example-1',
-      agentType: 'coder',
-      status: 'active',
-      createdAt: new Date(Date.now() - 3600000).toISOString(),
-      lastActivityAt: new Date().toISOString(),
-    },
-    {
-      id: 'agent-example-2',
-      agentType: 'reviewer',
-      status: 'idle',
-      createdAt: new Date(Date.now() - 7200000).toISOString(),
-      lastActivityAt: new Date(Date.now() - 600000).toISOString(),
-    },
-  ];
+      // Get swarm status
+      const status = await coordinator.getStatus();
 
-  // Apply filters
-  let filtered = agents;
-  if (input.status && input.status !== 'all') {
-    filtered = filtered.filter(a => a.status === input.status);
+      // Convert swarm agents to AgentInfo format
+      let agents: AgentInfo[] = status.agents.map(agent => ({
+        id: agent.id,
+        agentType: agent.type,
+        status: agent.status === 'active' ? 'active' :
+                agent.status === 'idle' ? 'idle' : 'terminated',
+        createdAt: agent.createdAt.toISOString(),
+        lastActivityAt: agent.lastActivityAt?.toISOString(),
+        config: agent.config,
+        metadata: agent.metadata,
+      }));
+
+      // Apply filters
+      if (input.status && input.status !== 'all') {
+        agents = agents.filter(a => a.status === input.status);
+      }
+      if (input.agentType) {
+        agents = agents.filter(a => a.agentType === input.agentType);
+      }
+
+      // Apply pagination
+      const offset = input.offset || 0;
+      const limit = input.limit || agents.length;
+      const paginated = agents.slice(offset, offset + limit);
+
+      return {
+        agents: paginated,
+        total: agents.length,
+        limit: input.limit,
+        offset: input.offset,
+      };
+    } catch (error) {
+      // Fall through to simple implementation if coordinator fails
+      console.error('Failed to list agents via coordinator:', error);
+    }
   }
-  if (input.agentType) {
-    filtered = filtered.filter(a => a.agentType === input.agentType);
-  }
 
-  // Apply pagination
-  const offset = input.offset || 0;
-  const limit = input.limit || filtered.length;
-  const paginated = filtered.slice(offset, offset + limit);
-
-  // TODO: Call actual agent manager
-  // const agentManager = context?.agentManager as AgentManager;
-  // if (agentManager) {
-  //   const agents = await agentManager.listAgents({
-  //     status: input.status,
-  //     agentType: input.agentType,
-  //     limit: input.limit,
-  //     offset: input.offset,
-  //   });
-  //   return agents;
-  // }
-
+  // Simple implementation when no coordinator is available
   return {
-    agents: paginated,
-    total: filtered.length,
+    agents: [],
+    total: 0,
     limit: input.limit,
     offset: input.offset,
   };
