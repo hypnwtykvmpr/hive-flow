@@ -98,7 +98,7 @@ export class FlashAttentionOptimizer {
    * @param input - Query, keys, and values for attention computation
    * @returns Optimized attention output with performance metrics
    */
-  async optimize(input: AttentionInput): Promise<AttentionOutput> {
+  optimize(input: AttentionInput): AttentionOutput {
     const startTime = performance.now();
     const startMemory = this.getMemoryUsage();
 
@@ -107,8 +107,8 @@ export class FlashAttentionOptimizer {
     const keys = input.keys.map(k => this.ensureFloat32Array(k));
     const values = input.values.map(v => this.ensureFloat32Array(v));
 
-    // Use async Flash Attention for best performance
-    const result = await computeFlashAttentionAsync(query, keys, values);
+    // Use synchronous Flash Attention with raw Float32Arrays
+    const result = this.flashAttention.computeRaw(query, keys, values);
 
     const executionTimeMs = performance.now() - startTime;
     const endMemory = this.getMemoryUsage();
