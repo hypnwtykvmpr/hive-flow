@@ -377,7 +377,7 @@ export class HybridBackend extends EventEmitter implements IMemoryBackend {
     const searchResults = await this.agentdb.search(embedding, {
       k: query.k || 10,
       threshold: query.threshold || this.config.semanticThreshold,
-      filters: query.filters,
+      filters: query.filters as MemoryQuery | undefined,
     });
 
     return searchResults.map((r) => r.entry);
