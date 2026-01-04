@@ -7,7 +7,7 @@
  * capability loading, and ready state achievement.
  */
 
-import { benchmark, BenchmarkRunner, formatTime, meetsTarget } from '../framework/benchmark.js';
+import { benchmark, BenchmarkRunner, formatTime, meetsTarget } from '../../src/framework/benchmark.js';
 
 // ============================================================================
 // Simulated Agent Types
