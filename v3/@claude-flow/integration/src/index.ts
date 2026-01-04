@@ -126,6 +126,13 @@ export type {
 
 // ===== Agent Integration Types =====
 export type {
+  // Core agent interfaces
+  IAgent,
+  IAgentConfig,
+  IAgentSession,
+  AgentStatus,
+  AgentType,
+  // Task and execution
   Task,
   TaskResult,
   Message,
