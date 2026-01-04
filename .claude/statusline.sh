@@ -90,15 +90,24 @@ fi
 # Count active agentic-flow processes
 ACTIVE_PROCESSES=$(ps aux 2>/dev/null | grep -E "(agentic-flow|claude-flow)" | grep -v grep | wc -l)
 
-# Detect running swarm agents dynamically
-if [ "$ACTIVE_PROCESSES" -gt 0 ]; then
-  # Update active agents count from real processes
-  # Each agentic-flow process might represent an agent or coordination process
+# Check for real-time activity data from swarm monitor
+SWARM_ACTIVITY=".claude-flow/metrics/swarm-activity.json"
+if [ -f "$SWARM_ACTIVITY" ]; then
+  # Use accurate data from swarm monitor if available
+  DYNAMIC_AGENTS=$(jq -r '.swarm.agent_count // 0' "$SWARM_ACTIVITY" 2>/dev/null || echo "0")
+  SWARM_IS_ACTIVE=$(jq -r '.swarm.active // false' "$SWARM_ACTIVITY" 2>/dev/null || echo "false")
+
+  # Override with real-time data if swarm is active
+  if [ "$SWARM_IS_ACTIVE" = "true" ] && [ "$DYNAMIC_AGENTS" -gt 0 ]; then
+    AGENTS_ACTIVE="$DYNAMIC_AGENTS"
+    INTEGRATION_STATUS="●"
+  fi
+elif [ "$ACTIVE_PROCESSES" -gt 0 ]; then
+  # Fallback to heuristic if no swarm monitor data
   DYNAMIC_AGENTS=$(ps aux 2>/dev/null | grep -E "agentic-flow.*agent" | grep -v grep | wc -l)
 
   # If we have agentic-flow processes but no specific agents, use a heuristic
   if [ "$DYNAMIC_AGENTS" -eq 0 ] && [ "$ACTIVE_PROCESSES" -gt 0 ]; then
-    # Assume some processes are coordination/management, others are agents
     DYNAMIC_AGENTS=$((ACTIVE_PROCESSES / 2))
     if [ "$DYNAMIC_AGENTS" -eq 0 ] && [ "$ACTIVE_PROCESSES" -gt 0 ]; then
       DYNAMIC_AGENTS=1
@@ -107,8 +116,6 @@ if [ "$ACTIVE_PROCESSES" -gt 0 ]; then
 
   # Override static value with dynamic detection
   AGENTS_ACTIVE="$DYNAMIC_AGENTS"
-
-  # Update integration status to show active when processes are running
   INTEGRATION_STATUS="●"
 fi
 
