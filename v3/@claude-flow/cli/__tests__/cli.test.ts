@@ -180,6 +180,7 @@ describe('CLI', () => {
 
   describe('Argument Parsing', () => {
     it('should parse long flags', async () => {
+      consoleOutput = [];
       let flagsPassed = false;
       const mockCommand: Command = {
         name: 'testparse',
