@@ -28,6 +28,38 @@ import type {
 } from './types.js';
 
 /**
+ * Interface for agentic-flow Attention reference (for delegation)
+ * This allows the coordinator to delegate to agentic-flow when available
+ */
+interface AgenticFlowAttentionReference {
+  compute(params: {
+    query: number[] | Float32Array;
+    key: number[] | Float32Array;
+    value: number[] | Float32Array;
+    mask?: boolean[];
+    mechanism?: string;
+  }): Promise<{
+    output: number[];
+    latencyMs: number;
+    memoryBytes: number;
+    mechanism: string;
+  }>;
+  setMechanism(mechanism: string): Promise<void>;
+  getMetrics(): Promise<{
+    avgLatencyMs: number;
+    throughputTps: number;
+    memoryEfficiency: number;
+    speedupFactor: number;
+  }>;
+}
+
+/**
+ * Threshold for delegating to native attention (tokens)
+ * Sequences longer than this benefit most from Flash Attention optimization
+ */
+const DELEGATION_SEQUENCE_THRESHOLD = 512;
+
+/**
  * Mechanism-specific performance characteristics
  */
 const MECHANISM_PROFILES: Record<AttentionMechanism, {
