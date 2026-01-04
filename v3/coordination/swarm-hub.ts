@@ -1,6 +1,26 @@
 /**
- * V3 Swarm Hub
- * Central coordination hub for the 15-agent hierarchical mesh swarm
+ * V3 Swarm Hub - DUPLICATE FILE (DEPRECATED)
+ *
+ * ⚠️ DEPRECATION WARNING:
+ * This file is a DUPLICATE and should NOT be used.
+ * Use the canonical implementation at:
+ * /workspaces/claude-flow/v3/@claude-flow/swarm/src/coordination/swarm-hub.ts
+ *
+ * ADR-003 Decision:
+ * - ONE canonical coordination engine: UnifiedSwarmCoordinator
+ * - ONE SwarmHub compatibility layer: @claude-flow/swarm/coordination/swarm-hub.ts
+ * - This duplicate file is marked for removal
+ *
+ * Migration:
+ * ```typescript
+ * // CORRECT IMPORT:
+ * import { createUnifiedSwarmCoordinator } from '@claude-flow/swarm';
+ * const coordinator = createUnifiedSwarmCoordinator();
+ *
+ * // OR use compatibility layer:
+ * import { createSwarmHub } from '@claude-flow/swarm';
+ * const hub = createSwarmHub();
+ * ```
  *
  * Based on ADR-001 (agentic-flow integration), ADR-003 (Single Coordination Engine),
  * and the 15-Agent Swarm Architecture
