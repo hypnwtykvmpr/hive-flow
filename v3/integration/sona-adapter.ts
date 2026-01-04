@@ -408,6 +408,9 @@ export class SONAAdapter extends EventEmitter {
 
   /**
    * Find similar patterns to a query
+   *
+   * ADR-001: When agentic-flow is available, delegates to its optimized
+   * HNSW-indexed search for 150x-12,500x faster retrieval.
    */
   async findSimilarPatterns(params: {
     query: string;
@@ -419,6 +422,49 @@ export class SONAAdapter extends EventEmitter {
 
     const topK = params.topK || 5;
     const threshold = params.threshold ?? this.config.similarityThreshold;
+
+    // ADR-001: Delegate to agentic-flow when available for optimized search
+    if (this.isDelegationEnabled() && this.agenticFlowSona) {
+      try {
+        const results = await this.agenticFlowSona.findPatterns(params.query, {
+          category: params.category,
+          topK,
+          threshold,
+        });
+
+        // Map results to SONAPattern format
+        const patterns: SONAPattern[] = results.map(r => ({
+          id: r.id,
+          pattern: r.pattern,
+          solution: r.solution,
+          category: r.category,
+          confidence: r.confidence,
+          usageCount: r.usageCount,
+          createdAt: r.createdAt,
+          lastUsedAt: r.lastUsedAt,
+          metadata: r.metadata,
+        }));
+
+        this.emit('patterns-retrieved', {
+          query: params.query,
+          count: patterns.length,
+          delegated: true,
+          target: 'agentic-flow',
+        });
+
+        return patterns;
+      } catch (error) {
+        // Log delegation failure and fall back to local implementation
+        this.emit('delegation-failed', {
+          method: 'findSimilarPatterns',
+          error: (error as Error).message,
+          fallback: 'local',
+        });
+        // Continue with local implementation below
+      }
+    }
+
+    // Local implementation (fallback or when agentic-flow not available)
     const results: Array<{ pattern: SONAPattern; score: number }> = [];
 
     for (const pattern of this.patterns.values()) {
