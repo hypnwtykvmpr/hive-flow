@@ -114,10 +114,43 @@ export class SONAAdapter extends EventEmitter {
   private consolidationTimer: NodeJS.Timeout | null = null;
   private learningCycleCount: number = 0;
 
+  /**
+   * Reference to agentic-flow SONA for delegation (ADR-001)
+   * When set, methods delegate to agentic-flow instead of local implementation
+   */
+  private agenticFlowSona: AgenticFlowSONAReference | null = null;
+
+  /**
+   * Indicates if delegation to agentic-flow is active
+   */
+  private delegationEnabled: boolean = false;
+
   constructor(config: Partial<SONAConfiguration> = {}) {
     super();
     this.config = this.mergeConfig(config);
     this.stats = this.initializeStats();
+  }
+
+  /**
+   * Set reference to agentic-flow SONA for delegation
+   *
+   * This implements ADR-001: Adopt agentic-flow as Core Foundation
+   * When a reference is provided, pattern storage and retrieval
+   * delegate to agentic-flow's optimized implementations.
+   *
+   * @param sonaRef - The agentic-flow SONA interface reference
+   */
+  setAgenticFlowReference(sonaRef: AgenticFlowSONAReference): void {
+    this.agenticFlowSona = sonaRef;
+    this.delegationEnabled = true;
+    this.emit('delegation-enabled', { target: 'agentic-flow' });
+  }
+
+  /**
+   * Check if delegation to agentic-flow is enabled
+   */
+  isDelegationEnabled(): boolean {
+    return this.delegationEnabled && this.agenticFlowSona !== null;
   }
 
   /**
