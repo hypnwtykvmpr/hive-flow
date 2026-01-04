@@ -190,59 +190,71 @@ const listCommand: Command = {
     }
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
-    // Simulated agent data
-    const agents = [
-      { id: 'agent-001', name: 'coder-main', type: 'coder', status: 'active', tasks: 3, uptime: '2h 15m' },
-      { id: 'agent-002', name: 'researcher-1', type: 'researcher', status: 'active', tasks: 1, uptime: '45m' },
-      { id: 'agent-003', name: 'tester-qa', type: 'tester', status: 'idle', tasks: 0, uptime: '1h 30m' },
-      { id: 'agent-004', name: 'reviewer-sec', type: 'reviewer', status: 'active', tasks: 2, uptime: '3h' }
-    ];
+    try {
+      // Call MCP tool to list agents
+      const result = await callMCPTool<{
+        agents: Array<{
+          id: string;
+          agentType: string;
+          status: 'active' | 'idle' | 'terminated';
+          createdAt: string;
+          lastActivityAt?: string;
+        }>;
+        total: number;
+      }>('agent/list', {
+        status: ctx.flags.all ? 'all' : ctx.flags.status || undefined,
+        agentType: ctx.flags.type || undefined,
+        limit: 100,
+      });
 
-    // Apply filters
-    let filtered = agents;
+      if (ctx.flags.format === 'json') {
+        output.printJson(result);
+        return { success: true, data: result };
+      }
 
-    if (ctx.flags.type) {
-      filtered = filtered.filter(a => a.type === ctx.flags.type);
+      output.writeln();
+      output.writeln(output.bold('Active Agents'));
+      output.writeln();
+
+      if (result.agents.length === 0) {
+        output.printInfo('No agents found matching criteria');
+        return { success: true, data: result };
+      }
+
+      // Format for display
+      const displayAgents = result.agents.map(agent => ({
+        id: agent.id,
+        type: agent.agentType,
+        status: agent.status,
+        created: new Date(agent.createdAt).toLocaleTimeString(),
+        lastActivity: agent.lastActivityAt
+          ? new Date(agent.lastActivityAt).toLocaleTimeString()
+          : 'N/A',
+      }));
+
+      output.printTable({
+        columns: [
+          { key: 'id', header: 'ID', width: 20 },
+          { key: 'type', header: 'Type', width: 15 },
+          { key: 'status', header: 'Status', width: 12, format: formatStatus },
+          { key: 'created', header: 'Created', width: 12 },
+          { key: 'lastActivity', header: 'Last Activity', width: 12 }
+        ],
+        data: displayAgents
+      });
+
+      output.writeln();
+      output.printInfo(`Total: ${result.total} agents`);
+
+      return { success: true, data: result };
+    } catch (error) {
+      if (error instanceof MCPClientError) {
+        output.printError(`Failed to list agents: ${error.message}`);
+      } else {
+        output.printError(`Unexpected error: ${String(error)}`);
+      }
+      return { success: false, exitCode: 1 };
     }
-
-    if (ctx.flags.status) {
-      filtered = filtered.filter(a => a.status === ctx.flags.status);
-    }
-
-    if (!ctx.flags.all) {
-      filtered = filtered.filter(a => a.status !== 'inactive');
-    }
-
-    if (ctx.flags.format === 'json') {
-      output.printJson(filtered);
-      return { success: true, data: filtered };
-    }
-
-    output.writeln();
-    output.writeln(output.bold('Active Agents'));
-    output.writeln();
-
-    if (filtered.length === 0) {
-      output.printInfo('No agents found matching criteria');
-      return { success: true, data: [] };
-    }
-
-    output.printTable({
-      columns: [
-        { key: 'id', header: 'ID', width: 12 },
-        { key: 'name', header: 'Name', width: 15 },
-        { key: 'type', header: 'Type', width: 12 },
-        { key: 'status', header: 'Status', width: 10, format: formatStatus },
-        { key: 'tasks', header: 'Tasks', width: 8, align: 'right' },
-        { key: 'uptime', header: 'Uptime', width: 10 }
-      ],
-      data: filtered
-    });
-
-    output.writeln();
-    output.printInfo(`Total: ${filtered.length} agents`);
-
-    return { success: true, data: filtered };
   }
 };
 
