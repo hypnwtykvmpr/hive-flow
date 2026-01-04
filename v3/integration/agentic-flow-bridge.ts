@@ -149,6 +149,10 @@ export class AgenticFlowBridge extends EventEmitter {
       this.runtimeInfo = await this.detectRuntime();
       this.logDebug('Runtime detected', this.runtimeInfo);
 
+      // ADR-001: Attempt to load agentic-flow@alpha dynamically
+      // This enables deep integration and code deduplication
+      await this.connectToAgenticFlow();
+
       // Initialize SDK bridge first (required for version negotiation)
       this.sdk = new SDKBridge({
         targetVersion: 'alpha',
@@ -161,15 +165,23 @@ export class AgenticFlowBridge extends EventEmitter {
       this.updateComponentHealth('sdk', 'healthy');
 
       // Initialize SONA adapter if enabled
+      // Pass agentic-flow reference for delegation when available
       if (this.config.features.enableSONA) {
         this.sona = new SONAAdapter(this.config.sona);
+        if (this.agenticFlowCore) {
+          this.sona.setAgenticFlowReference(this.agenticFlowCore.sona);
+        }
         await this.sona.initialize();
         this.updateComponentHealth('sona', 'healthy');
       }
 
       // Initialize Attention coordinator if enabled
+      // Pass agentic-flow reference for delegation when available
       if (this.config.features.enableFlashAttention) {
         this.attention = new AttentionCoordinator(this.config.attention);
+        if (this.agenticFlowCore) {
+          this.attention.setAgenticFlowReference(this.agenticFlowCore.attention);
+        }
         await this.attention.initialize();
         this.updateComponentHealth('attention', 'healthy');
       }
@@ -179,13 +191,75 @@ export class AgenticFlowBridge extends EventEmitter {
       const duration = Date.now() - startTime;
       this.emit('initialized', {
         duration,
-        components: this.getConnectedComponents()
+        components: this.getConnectedComponents(),
+        agenticFlowConnected: this.agenticFlowAvailable,
       });
 
       this.logDebug(`Initialization complete in ${duration}ms`);
     } catch (error) {
       this.emit('initialization-failed', { error });
       throw this.wrapError(error as Error, 'INITIALIZATION_FAILED', 'bridge');
+    }
+  }
+
+  /**
+   * Connect to agentic-flow@alpha package dynamically
+   *
+   * This implements ADR-001: Adopt agentic-flow as Core Foundation
+   * When agentic-flow is available, components delegate to it for:
+   * - SONA learning (eliminating duplicate pattern storage)
+   * - Flash Attention (using native optimized implementations)
+   * - AgentDB (leveraging 150x-12,500x faster HNSW search)
+   *
+   * If agentic-flow is not installed, falls back to local implementations
+   * to maintain backward compatibility.
+   */
+  private async connectToAgenticFlow(): Promise<void> {
+    try {
+      // Dynamic import to handle optional dependency
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const agenticFlowModule = await import('agentic-flow').catch(() => null);
+
+      if (agenticFlowModule && typeof agenticFlowModule.createAgenticFlow === 'function') {
+        const factory = agenticFlowModule.createAgenticFlow as AgenticFlowFactory;
+
+        this.agenticFlowCore = await factory({
+          sona: this.config.sona,
+          attention: this.config.attention,
+          agentdb: this.config.agentdb,
+        });
+
+        this.agenticFlowAvailable = true;
+        this.updateComponentHealth('agentic-flow', 'healthy');
+
+        this.emit('agentic-flow:connected', {
+          version: this.agenticFlowCore.version,
+          features: {
+            sona: true,
+            attention: true,
+            agentdb: true,
+          },
+        });
+
+        this.logDebug('Connected to agentic-flow', {
+          version: this.agenticFlowCore.version,
+        });
+      } else {
+        // Package not found or doesn't export expected factory
+        this.agenticFlowAvailable = false;
+        this.emit('agentic-flow:fallback', {
+          reason: 'package not found or incompatible',
+        });
+        this.logDebug('agentic-flow not available, using local implementations');
+      }
+    } catch (error) {
+      // Fallback to local implementation if agentic-flow fails to load
+      this.agenticFlowAvailable = false;
+      this.emit('agentic-flow:fallback', {
+        reason: 'initialization error',
+        error: (error as Error).message,
+      });
+      this.logDebug('agentic-flow initialization failed, using fallback', error);
     }
   }
 
