@@ -336,5 +336,17 @@ export * from './prompt.js';
 // Commands (internal use)
 export * from './commands/index.js';
 
+// MCP Server management
+export {
+  MCPServerManager,
+  createMCPServerManager,
+  getServerManager,
+  startMCPServer,
+  stopMCPServer,
+  getMCPServerStatus,
+  type MCPServerOptions,
+  type MCPServerStatus,
+} from './mcp-server.js';
+
 // Default export
 export default CLI;
