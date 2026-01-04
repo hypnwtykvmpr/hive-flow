@@ -101,12 +101,29 @@ export interface ISwarmHub {
 }
 
 // =============================================================================
-// Swarm Hub Implementation
+// Swarm Hub Implementation - COMPATIBILITY LAYER
 // =============================================================================
 
+/**
+ * @deprecated Use UnifiedSwarmCoordinator directly instead.
+ * This class is maintained for backward compatibility only.
+ *
+ * Migration guide:
+ * ```typescript
+ * // OLD:
+ * const hub = createSwarmHub();
+ * await hub.initialize();
+ *
+ * // NEW:
+ * const coordinator = createUnifiedSwarmCoordinator();
+ * await coordinator.initialize();
+ * ```
+ */
 export class SwarmHub implements ISwarmHub {
-  private initialized: boolean = false;
-  private config: SwarmConfig;
+  // Core coordinator - ALL operations delegate to this
+  private coordinator: UnifiedSwarmCoordinator;
+
+  // Compatibility layer state
   private eventBus: IEventBus;
   private agentRegistry: IAgentRegistry;
   private taskOrchestrator: ITaskOrchestrator;
@@ -122,7 +139,9 @@ export class SwarmHub implements ISwarmHub {
     this.agentRegistry = createAgentRegistry(this.eventBus);
     this.taskOrchestrator = createTaskOrchestrator(this.eventBus, this.agentRegistry);
     this.phases = this.createPhaseDefinitions();
-    this.config = this.getDefaultConfig();
+
+    // Initialize the canonical coordinator
+    this.coordinator = createUnifiedSwarmCoordinator(this.convertToCoordinatorConfig());
   }
 
   // ==========================================================================
