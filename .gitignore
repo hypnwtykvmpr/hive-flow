@@ -125,12 +125,11 @@ hive-mind-prompt-*.txt
 .mcp.json
 claude-flow.config.json
 
-# Dot folders to ignore (except .claude, .git, .github, .githooks)
+# Dot folders to ignore (except .claude, .claude-plugin, .git, .github, .githooks)
 .swarm/
 .hive-mind/
 .claude-flow/
 .agentic-flow/
-.claude-plugin/
 .research/
 .roo/
 
