@@ -160,11 +160,11 @@ claude-flow.config.json
 /coordination/
 # Exclude @claude-flow module directories from ignore patterns
 !v3/@claude-flow/
-memory/claude-flow-data.json
-memory/sessions/*
-!memory/sessions/README.md
-memory/agents/*
-!memory/agents/README.md
+/memory/claude-flow-data.json
+/memory/sessions/*
+!/memory/sessions/README.md
+/memory/agents/*
+!/memory/agents/README.md
 coordination/memory_bank/*
 coordination/subtasks/*
 coordination/orchestration/*
