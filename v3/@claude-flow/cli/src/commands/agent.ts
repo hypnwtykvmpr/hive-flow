@@ -396,16 +396,39 @@ const stopCommand: Command = {
 
     output.printInfo(`Stopping agent ${agentId}...`);
 
-    // Simulate stop process
-    if (!force) {
-      output.writeln(output.dim('  Completing current task...'));
-      output.writeln(output.dim('  Saving state...'));
-      output.writeln(output.dim('  Releasing resources...'));
+    try {
+      // Call MCP tool to terminate agent
+      const result = await callMCPTool<{
+        agentId: string;
+        terminated: boolean;
+        terminatedAt: string;
+      }>('agent/terminate', {
+        agentId,
+        graceful: !force,
+        reason: 'Stopped by user via CLI',
+      });
+
+      if (!force) {
+        output.writeln(output.dim('  Completing current task...'));
+        output.writeln(output.dim('  Saving state...'));
+        output.writeln(output.dim('  Releasing resources...'));
+      }
+
+      output.printSuccess(`Agent ${agentId} stopped successfully`);
+
+      if (ctx.flags.format === 'json') {
+        output.printJson(result);
+      }
+
+      return { success: true, data: result };
+    } catch (error) {
+      if (error instanceof MCPClientError) {
+        output.printError(`Failed to stop agent: ${error.message}`);
+      } else {
+        output.printError(`Unexpected error: ${String(error)}`);
+      }
+      return { success: false, exitCode: 1 };
     }
-
-    output.printSuccess(`Agent ${agentId} stopped successfully`);
-
-    return { success: true, data: { id: agentId, stopped: true, force } };
   }
 };
 
