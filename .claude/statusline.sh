@@ -2,9 +2,19 @@
 # Claude Flow V3 Development Status Line
 # Shows DDD architecture progress, security status, and performance targets
 
-V3_METRICS=".claude-flow/metrics/v3-progress.json"
-SECURITY_AUDIT=".claude-flow/security/audit-status.json"
-PERFORMANCE_METRICS=".claude-flow/metrics/performance.json"
+# Read Claude Code JSON input from stdin (if available)
+CLAUDE_INPUT=$(cat 2>/dev/null || echo "{}")
+
+# Get project directory from Claude Code input or use current directory
+PROJECT_DIR=$(echo "$CLAUDE_INPUT" | jq -r '.workspace.project_dir // ""' 2>/dev/null)
+if [ -z "$PROJECT_DIR" ] || [ "$PROJECT_DIR" = "null" ]; then
+  PROJECT_DIR=$(pwd)
+fi
+
+# File paths relative to project directory
+V3_METRICS="${PROJECT_DIR}/.claude-flow/metrics/v3-progress.json"
+SECURITY_AUDIT="${PROJECT_DIR}/.claude-flow/security/audit-status.json"
+PERFORMANCE_METRICS="${PROJECT_DIR}/.claude-flow/metrics/performance.json"
 
 # ANSI Color Codes
 RED='\033[0;31m'
