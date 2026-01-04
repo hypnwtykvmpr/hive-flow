@@ -531,7 +531,7 @@ export class PluginRegistry {
    * Unregister memory backends from a plugin
    */
   unregisterPluginMemoryBackends(pluginName: string): void {
-    for (const [name, entry] of this.memoryBackends.entries()) {
+    for (const [name, entry] of Array.from(this.memoryBackends.entries())) {
       if (entry.plugin === pluginName) {
         this.memoryBackends.delete(name);
       }
