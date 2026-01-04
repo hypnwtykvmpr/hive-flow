@@ -104,6 +104,14 @@ export {
 
 // ===== Core Components =====
 export { AgentDBAdapter, AgentDBAdapterConfig } from './agentdb-adapter.js';
+export { SQLiteBackend, SQLiteBackendConfig } from './sqlite-backend.js';
+export {
+  HybridBackend,
+  HybridBackendConfig,
+  StructuredQuery,
+  SemanticQuery,
+  HybridQuery,
+} from './hybrid-backend.js';
 export { HNSWIndex } from './hnsw-index.js';
 export { CacheManager, TieredCacheManager } from './cache-manager.js';
 export { QueryBuilder, query, QueryTemplates, SortDirection, SortField } from './query-builder.js';
