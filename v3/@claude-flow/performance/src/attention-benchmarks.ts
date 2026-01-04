@@ -205,7 +205,7 @@ export class AttentionBenchmarkRunner {
 
     for (const [dim, numKeys, iterations] of stressConfigs) {
       try {
-        const benchmark = await this.runComparison(dim, numKeys, iterations);
+        const benchmark = this.runComparison(dim, numKeys, iterations);
         results.push(benchmark);
       } catch (error) {
         console.error(`Stress test failed at ${numKeys} keys:`, error);
@@ -219,7 +219,7 @@ export class AttentionBenchmarkRunner {
   /**
    * Validate V3 performance targets (2.49x-7.47x speedup)
    */
-  async validateV3Targets(): Promise<{
+  validateV3Targets(): {
     meetsMinimum: boolean;
     meetsMaximum: boolean;
     actualSpeedup: number;
