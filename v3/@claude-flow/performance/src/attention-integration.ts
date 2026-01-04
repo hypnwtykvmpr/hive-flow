@@ -353,6 +353,120 @@ export class FlashAttentionOptimizer {
     }
     return 0;
   }
+
+  /**
+   * Force garbage collection if available (requires --expose-gc flag)
+   * This helps get more accurate memory measurements
+   */
+  private forceGC(): void {
+    if (typeof global !== 'undefined' && typeof (global as any).gc === 'function') {
+      (global as any).gc();
+    }
+  }
+
+  /**
+   * Benchmark memory usage across multiple dimensions
+   * Validates the 50-75% memory reduction target
+   * @param dimensions - Array of dimensions to test (default: [128, 256, 512, 1024])
+   * @returns Memory profiling results for each dimension
+   */
+  benchmarkMemory(
+    dimensions: number[] = [128, 256, 512, 1024]
+  ): {
+    dimension: number;
+    baselineMemoryBytes: number;
+    optimizedMemoryBytes: number;
+    memorySavedBytes: number;
+    memorySavedPercent: number;
+    meetsTarget: boolean; // true if 50-75% reduction achieved
+  }[] {
+    const results: {
+      dimension: number;
+      baselineMemoryBytes: number;
+      optimizedMemoryBytes: number;
+      memorySavedBytes: number;
+      memorySavedPercent: number;
+      meetsTarget: boolean;
+    }[] = [];
+
+    for (const dim of dimensions) {
+      const numKeys = 100;
+      const iterations = 100; // Fewer iterations for memory profiling
+
+      // Create test data
+      const query = new Float32Array(dim);
+      const keys = Array.from({ length: numKeys }, () => new Float32Array(dim));
+      const values = Array.from({ length: numKeys }, () => new Float32Array(dim));
+
+      // Fill with random data
+      for (let i = 0; i < dim; i++) {
+        query[i] = Math.random();
+      }
+      for (let i = 0; i < numKeys; i++) {
+        for (let j = 0; j < dim; j++) {
+          keys[i][j] = Math.random();
+          values[i][j] = Math.random();
+        }
+      }
+
+      // Create temporary instances for this dimension
+      const flashAttention = new FlashAttention(dim, this.blockSize);
+      const baselineAttention = new DotProductAttention(dim);
+
+      // Measure baseline memory
+      this.forceGC();
+      const baselineMemBefore = this.getMemoryUsage();
+      let baselinePeak = baselineMemBefore;
+
+      for (let i = 0; i < iterations; i++) {
+        baselineAttention.computeRaw(query, keys, values);
+        if (i % 10 === 0) {
+          const curr = this.getMemoryUsage();
+          if (curr > baselinePeak) baselinePeak = curr;
+        }
+      }
+      const baselineMemoryUsed = Math.max(0, baselinePeak - baselineMemBefore);
+
+      // Measure Flash Attention memory
+      this.forceGC();
+      const flashMemBefore = this.getMemoryUsage();
+      let flashPeak = flashMemBefore;
+
+      for (let i = 0; i < iterations; i++) {
+        flashAttention.computeRaw(query, keys, values);
+        if (i % 10 === 0) {
+          const curr = this.getMemoryUsage();
+          if (curr > flashPeak) flashPeak = curr;
+        }
+      }
+      const flashMemoryUsed = Math.max(0, flashPeak - flashMemBefore);
+
+      const memorySaved = Math.max(0, baselineMemoryUsed - flashMemoryUsed);
+      const memorySavedPercent =
+        baselineMemoryUsed > 0 ? (memorySaved / baselineMemoryUsed) * 100 : 0;
+
+      // Target: 50-75% memory reduction
+      const meetsTarget = memorySavedPercent >= 50 && memorySavedPercent <= 100;
+
+      results.push({
+        dimension: dim,
+        baselineMemoryBytes: baselineMemoryUsed,
+        optimizedMemoryBytes: flashMemoryUsed,
+        memorySavedBytes: memorySaved,
+        memorySavedPercent: memorySavedPercent,
+        meetsTarget: meetsTarget,
+      });
+
+      // Update global metrics
+      this.metrics.totalBaselineMemory += baselineMemoryUsed;
+      this.metrics.totalOptimizedMemory += flashMemoryUsed;
+      if (flashPeak > this.metrics.peakMemory) {
+        this.metrics.peakMemory = flashPeak;
+      }
+    }
+
+    return results;
+  }
 }
 
 // ============================================================================
