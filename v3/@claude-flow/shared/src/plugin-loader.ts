@@ -584,7 +584,7 @@ export class PluginLoader {
   private findDependents(pluginName: string): string[] {
     const dependents: string[] = [];
 
-    for (const [name, info] of this.registry.getAllPlugins().entries()) {
+    for (const [name, info] of Array.from(this.registry.getAllPlugins().entries())) {
       if (info.plugin.dependencies?.includes(pluginName)) {
         dependents.push(name);
       }
