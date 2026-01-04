@@ -31,7 +31,7 @@ describe('CLI', () => {
     // Mock process.exit to prevent actual exits
     processExitMock = vi.spyOn(process, 'exit').mockImplementation((code?: string | number | null | undefined) => {
       throw new Error(`process.exit: ${code}`);
-    });
+    }) as unknown as ReturnType<typeof vi.spyOn>;
 
     // Create CLI instance (non-interactive for testing)
     cli = new CLI({ interactive: false });
