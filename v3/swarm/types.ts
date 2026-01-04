@@ -350,18 +350,22 @@ export type SwarmEventType =
   | 'agent.left'
   | 'agent.status_changed'
   | 'agent.heartbeat'
+  | 'agent.domain_assigned'
   | 'task.created'
   | 'task.assigned'
   | 'task.started'
   | 'task.completed'
   | 'task.failed'
+  | 'task.queued'
   | 'topology.updated'
   | 'topology.rebalanced'
   | 'consensus.proposed'
   | 'consensus.achieved'
   | 'consensus.failed'
   | 'message.sent'
-  | 'message.received';
+  | 'message.received'
+  | 'parallel.execution.completed'
+  | 'hierarchy.spawned';
 
 export interface SwarmEvent {
   id: string;
