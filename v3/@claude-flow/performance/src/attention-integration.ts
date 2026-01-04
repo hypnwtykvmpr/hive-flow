@@ -14,7 +14,6 @@
 import {
   FlashAttention,
   DotProductAttention,
-  benchmarkAttention,
   computeFlashAttentionAsync,
   type BenchmarkResult as AttentionBenchmarkResult,
   type ArrayInput,
