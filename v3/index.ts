@@ -258,6 +258,7 @@ export const V3_INFO = {
 
 import type { ISwarmHub } from './coordination/swarm-hub';
 import type { SwarmConfig } from './shared/types';
+import { V3_PERFORMANCE_TARGETS as PERF_TARGETS } from './shared/types';
 
 export default {
   // Quick start
@@ -269,5 +270,5 @@ export default {
   info: V3_INFO,
 
   // Performance targets
-  performanceTargets: V3_PERFORMANCE_TARGETS
+  performanceTargets: PERF_TARGETS
 };
