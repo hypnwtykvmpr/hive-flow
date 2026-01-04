@@ -153,9 +153,16 @@ hive-mind-prompt-*.txt
 .claude/settings.local.json
 .mcp.json
 claude-flow.config.json
+
+# Dot folders to ignore (except .claude, .git, .github, .githooks)
 .swarm/
 .hive-mind/
 .claude-flow/
+.agentic-flow/
+.claude-plugin/
+.research/
+.roo/
+
 /memory/
 /coordination/
 # Exclude @claude-flow module directories from ignore patterns
