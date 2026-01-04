@@ -135,6 +135,34 @@ if [ "$MCP_ACTIVE" -gt 0 ]; then
   INTEGRATION_STATUS="●"
 fi
 
+# Get context window usage from Claude Code input
+CONTEXT_PCT=0
+CONTEXT_COLOR="${DIM}"
+if [ "$CLAUDE_INPUT" != "{}" ]; then
+  CURRENT_USAGE=$(echo "$CLAUDE_INPUT" | jq '.context_window.current_usage // null' 2>/dev/null)
+
+  if [ "$CURRENT_USAGE" != "null" ] && [ "$CURRENT_USAGE" != "" ]; then
+    CONTEXT_SIZE=$(echo "$CLAUDE_INPUT" | jq '.context_window.context_window_size // 200000' 2>/dev/null)
+    INPUT_TOKENS=$(echo "$CURRENT_USAGE" | jq '.input_tokens // 0' 2>/dev/null)
+    CACHE_CREATE=$(echo "$CURRENT_USAGE" | jq '.cache_creation_input_tokens // 0' 2>/dev/null)
+    CACHE_READ=$(echo "$CURRENT_USAGE" | jq '.cache_read_input_tokens // 0' 2>/dev/null)
+
+    TOTAL_TOKENS=$((INPUT_TOKENS + CACHE_CREATE + CACHE_READ))
+    if [ "$CONTEXT_SIZE" -gt 0 ]; then
+      CONTEXT_PCT=$((TOTAL_TOKENS * 100 / CONTEXT_SIZE))
+    fi
+
+    # Color based on usage
+    if [ "$CONTEXT_PCT" -lt 50 ]; then
+      CONTEXT_COLOR="${BRIGHT_GREEN}"
+    elif [ "$CONTEXT_PCT" -lt 75 ]; then
+      CONTEXT_COLOR="${BRIGHT_YELLOW}"
+    else
+      CONTEXT_COLOR="${BRIGHT_RED}"
+    fi
+  fi
+fi
+
 # Colorful domain status indicators
 COMPLETED_DOMAIN="${BRIGHT_GREEN}●${RESET}"
 PENDING_DOMAIN="${DIM}○${RESET}"
