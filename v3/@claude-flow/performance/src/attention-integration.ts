@@ -323,7 +323,6 @@ export async function quickBenchmark(dim: number = 512): Promise<BenchmarkResult
 export {
   FlashAttention,
   DotProductAttention,
-  benchmarkAttention,
   computeFlashAttentionAsync,
   type AttentionBenchmarkResult,
 };
