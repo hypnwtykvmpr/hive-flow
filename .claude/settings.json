@@ -200,6 +200,11 @@
             "type": "command",
             "timeout": 4000,
             "command": ".claude/helpers/update-v3-progress.sh status > .claude-flow/last-session-status.txt 2>/dev/null || true"
+          },
+          {
+            "type": "command",
+            "timeout": 2000,
+            "command": ".claude/helpers/daemon-manager.sh stop 2>/dev/null || true"
           }
         ]
       }
