@@ -393,9 +393,9 @@ export class AgentAdapter extends EventEmitter {
    */
   getAllAgents(): AgenticFlowAgent[] {
     const agents: AgenticFlowAgent[] = [];
-    for (const agent of this.agentMap.values()) {
+    this.agentMap.forEach((agent) => {
       agents.push(agent);
-    }
+    });
     return agents;
   }
 
