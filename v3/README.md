@@ -1,11 +1,46 @@
 # Claude Flow v3 Documentation
 
-This directory contains all documentation for the Claude Flow v3 implementation.
+This directory contains all documentation for the Claude Flow v3 implementation, including the new **cross-platform helper automation system**.
+
+## 🆕 V3 Helper System
+
+The `helpers/` directory contains a comprehensive **cross-platform automation system** for claude-flow v3 development:
+
+### 🛠️ Key Features
+- **Cross-Platform Support**: Linux, macOS, and Windows PowerShell
+- **Progress Tracking**: Real-time development metrics and visualization
+- **Auto-Checkpointing**: Git-based development session management
+- **GitHub Integration**: Automated PR management and issue tracking
+- **Customizable Hooks**: Pre/post tool execution automation
+- **Configuration Validation**: Environment setup verification
+
+### 🚀 Quick Start
+```bash
+# Linux/macOS
+./v3/helpers/claude-flow-v3.sh init
+./v3/helpers/claude-flow-v3.sh status
+./v3/helpers/claude-flow-v3.sh update domain 3
+
+# Windows (PowerShell)
+.\v3\helpers\claude-flow-v3.ps1 init
+.\v3\helpers\claude-flow-v3.ps1 status
+.\v3\helpers\claude-flow-v3.ps1 update domain 3
+```
+
+See [helpers/README.md](helpers/README.md) for complete documentation.
 
 ## Directory Structure
 
 ```
 v3/
+├── helpers/                    # 🆕 Cross-platform helper automation system
+│   ├── README.md              # Complete helper system documentation
+│   ├── claude-flow-v3.sh      # Master helper (Linux/macOS)
+│   ├── claude-flow-v3.ps1     # Master helper (Windows)
+│   └── templates/             # Helper script templates
+│       ├── progress-manager.*  # Progress tracking helpers
+│       ├── status-display.*   # Status visualization helpers
+│       └── config-validator.* # Configuration validation helpers
 └── implementation/
     ├── planning/          # Master plans and optimization strategies
     ├── architecture/      # SDK analysis and system architecture
@@ -18,6 +53,10 @@ v3/
 ```
 
 ## Documentation Index
+
+### 🆕 Helper System
+- [helpers/README.md](helpers/README.md) - Complete cross-platform helper documentation
+- Helper templates for progress tracking, status display, and validation
 
 ### Planning
 - [CLAUDE-FLOW-V3-MASTER-PLAN.md](implementation/planning/CLAUDE-FLOW-V3-MASTER-PLAN.md) - Comprehensive v3 implementation master plan
@@ -59,8 +98,26 @@ v3/
 - [DEPLOYMENT-PLAN.md](implementation/swarm-plans/DEPLOYMENT-PLAN.md) - Release and deployment strategy
 - [GITHUB-ISSUE-TRACKING.md](implementation/swarm-plans/GITHUB-ISSUE-TRACKING.md) - Issue tracking with agent replies
 
-## Quick Start
+## 🚀 V3 Quick Start
 
-1. Start with [v3-assessment.md](implementation/architecture/v3-assessment.md) for current state understanding
-2. Review [CLAUDE-FLOW-V3-MASTER-PLAN.md](implementation/planning/CLAUDE-FLOW-V3-MASTER-PLAN.md) for the implementation vision
-3. Follow [v3-migration-roadmap.md](implementation/migration/v3-migration-roadmap.md) for implementation steps
+1. **Set up helpers**: `./v3/helpers/claude-flow-v3.sh init` (or `.ps1` on Windows)
+2. **Check status**: `./v3/helpers/claude-flow-v3.sh status`
+3. **Understand current state**: [v3-assessment.md](implementation/architecture/v3-assessment.md)
+4. **Review implementation vision**: [CLAUDE-FLOW-V3-MASTER-PLAN.md](implementation/planning/CLAUDE-FLOW-V3-MASTER-PLAN.md)
+5. **Follow implementation steps**: [v3-migration-roadmap.md](implementation/migration/v3-migration-roadmap.md)
+
+## 🔧 V3 Development Workflow
+
+With the helper system, V3 development includes automated:
+
+- **Progress Tracking**: Real-time domain/agent/performance metrics
+- **Checkpointing**: Auto-commit with development milestones
+- **Validation**: Environment and configuration verification
+- **GitHub Integration**: PR management and issue tracking
+- **Cross-Platform Support**: Unified experience on Linux, macOS, Windows
+
+See [helpers/README.md](helpers/README.md) for complete automation capabilities.
+
+---
+
+*Claude Flow V3 - Enhanced with cross-platform automation and development helpers*
