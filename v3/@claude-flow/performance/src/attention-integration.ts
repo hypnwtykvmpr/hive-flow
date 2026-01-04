@@ -240,8 +240,7 @@ export class FlashAttentionOptimizer {
   private detectRuntime(): 'napi' | 'wasm' | 'js' {
     // Check if NAPI bindings are available
     try {
-      // @ts-expect-error - Checking for NAPI runtime
-      if (process.versions.napi) {
+      if (typeof process !== 'undefined' && process.versions && 'napi' in process.versions) {
         return 'napi';
       }
     } catch {
@@ -249,7 +248,7 @@ export class FlashAttentionOptimizer {
     }
 
     // Check for WebAssembly support
-    if (typeof WebAssembly !== 'undefined') {
+    if (typeof globalThis !== 'undefined' && 'WebAssembly' in globalThis) {
       return 'wasm';
     }
 
