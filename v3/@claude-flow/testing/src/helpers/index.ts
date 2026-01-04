@@ -38,7 +38,7 @@ export {
   type SwarmMessage,
   type SwarmTask,
   type SwarmTaskResult,
-} from './swarm-instance';
+} from './swarm-instance.js';
 
 // Custom assertions
 export {
