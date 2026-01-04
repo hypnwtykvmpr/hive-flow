@@ -322,6 +322,5 @@ export function quickBenchmark(dim: number = 512): BenchmarkResult {
 export {
   FlashAttention,
   DotProductAttention,
-  computeFlashAttentionAsync,
   type AttentionBenchmarkResult,
 };
