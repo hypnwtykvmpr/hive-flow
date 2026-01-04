@@ -224,9 +224,9 @@ export class AttentionBenchmarkRunner {
     meetsMaximum: boolean;
     actualSpeedup: number;
     target: { min: number; max: number };
-  }> {
+  } {
     const optimizer = createFlashAttentionOptimizer(512);
-    const result = await optimizer.benchmark();
+    const result = optimizer.benchmark();
 
     return {
       meetsMinimum: result.speedup >= 2.49,
@@ -239,7 +239,7 @@ export class AttentionBenchmarkRunner {
   /**
    * Profile memory usage for a specific configuration
    */
-  private async profileMemory(
+  private profileMemory(
     dimension: number,
     numKeys: number
   ): Promise<MemoryProfile> {
