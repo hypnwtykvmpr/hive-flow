@@ -197,113 +197,100 @@ async function handleSwarmStatus(
   input: z.infer<typeof swarmStatusSchema>,
   context?: ToolContext
 ): Promise<SwarmStatusResult> {
-  // TODO: Integrate with actual swarm coordinator when available
-  // For now, return stub response
+  // Try to use swarmCoordinator if available
+  if (context?.swarmCoordinator) {
+    try {
+      const { UnifiedSwarmCoordinator } = await import('@claude-flow/swarm');
+      const coordinator = context.swarmCoordinator as InstanceType<typeof UnifiedSwarmCoordinator>;
 
-  const swarmId = 'swarm-current';
-  const config: SwarmConfig = {
-    topology: 'hierarchical-mesh',
-    maxAgents: 15,
-    currentAgents: 5,
-    communicationProtocol: 'message-bus',
-    consensusMechanism: 'majority',
-    failureHandling: 'retry',
-    loadBalancing: true,
-    autoScaling: true,
-  };
+      // Get swarm status
+      const status = await coordinator.getStatus();
+      const metrics = await coordinator.getMetrics();
 
-  const result: SwarmStatusResult = {
-    swarmId,
-    status: 'active',
-    config,
+      const config: SwarmConfig = {
+        topology: status.topology.type as any,
+        maxAgents: status.topology.maxAgents,
+        currentAgents: status.agents.length,
+        communicationProtocol: 'message-bus',
+        consensusMechanism: status.consensus?.algorithm === 'raft' ? 'weighted' :
+                           status.consensus?.algorithm === 'byzantine' ? 'unanimous' : 'majority',
+        failureHandling: 'retry',
+        loadBalancing: true,
+        autoScaling: status.state === 'scaling',
+      };
+
+      const result: SwarmStatusResult = {
+        swarmId: status.swarmId,
+        status: status.state === 'ready' ? 'active' :
+                status.state === 'scaling' ? 'scaling' :
+                status.state === 'degraded' ? 'degraded' :
+                status.state === 'initializing' ? 'initializing' : 'stopped',
+        config,
+        lastActivityAt: new Date().toISOString(),
+      };
+
+      if (input.includeAgents) {
+        result.agents = status.agents.map(agent => ({
+          id: agent.id,
+          type: agent.type,
+          status: agent.status === 'active' ? 'active' :
+                  agent.status === 'idle' ? 'idle' :
+                  agent.status === 'busy' ? 'busy' : 'error',
+          role: agent.role,
+          connections: agent.connections,
+        }));
+      }
+
+      if (input.includeMetrics) {
+        result.metrics = {
+          totalTasks: metrics.totalTasks,
+          completedTasks: metrics.completedTasks,
+          failedTasks: metrics.failedTasks,
+          inProgressTasks: metrics.activeTasks,
+          averageTaskDuration: metrics.averageTaskDuration,
+          throughput: metrics.throughput,
+          efficiency: metrics.successRate,
+          uptime: Date.now() - status.createdAt.getTime(),
+        };
+      }
+
+      if (input.includeTopology) {
+        const topologyState = status.topology;
+        result.topology = {
+          nodes: status.agents.map(agent => ({
+            id: agent.id,
+            type: agent.type,
+            role: agent.role,
+          })),
+          edges: topologyState.edges || [],
+          depth: topologyState.depth,
+          fanout: topologyState.fanout,
+        };
+      }
+
+      return result;
+    } catch (error) {
+      // Fall through to simple implementation if coordinator fails
+      console.error('Failed to get swarm status via coordinator:', error);
+    }
+  }
+
+  // Simple implementation when no coordinator is available
+  return {
+    swarmId: 'swarm-not-initialized',
+    status: 'stopped',
+    config: {
+      topology: 'hierarchical-mesh',
+      maxAgents: 15,
+      currentAgents: 0,
+      communicationProtocol: 'message-bus',
+      consensusMechanism: 'majority',
+      failureHandling: 'retry',
+      loadBalancing: true,
+      autoScaling: true,
+    },
     lastActivityAt: new Date().toISOString(),
   };
-
-  if (input.includeAgents) {
-    result.agents = [
-      {
-        id: 'agent-coordinator-1',
-        type: 'queen-coordinator',
-        status: 'active',
-        role: 'coordinator',
-        connections: ['agent-security-1', 'agent-core-1', 'agent-integration-1'],
-      },
-      {
-        id: 'agent-security-1',
-        type: 'security-architect',
-        status: 'busy',
-        role: 'specialist',
-        connections: ['agent-coordinator-1'],
-      },
-      {
-        id: 'agent-core-1',
-        type: 'core-architect',
-        status: 'active',
-        role: 'worker',
-        connections: ['agent-coordinator-1'],
-      },
-      {
-        id: 'agent-integration-1',
-        type: 'integration-architect',
-        status: 'idle',
-        role: 'worker',
-        connections: ['agent-coordinator-1'],
-      },
-      {
-        id: 'agent-performance-1',
-        type: 'performance-engineer',
-        status: 'active',
-        role: 'specialist',
-        connections: ['agent-coordinator-1'],
-      },
-    ];
-  }
-
-  if (input.includeMetrics) {
-    result.metrics = {
-      totalTasks: 150,
-      completedTasks: 120,
-      failedTasks: 5,
-      inProgressTasks: 25,
-      averageTaskDuration: 2345.67,
-      throughput: 0.85,
-      efficiency: 0.92,
-      uptime: 7200000,
-    };
-  }
-
-  if (input.includeTopology) {
-    result.topology = {
-      nodes: [
-        { id: 'agent-coordinator-1', type: 'queen-coordinator', role: 'coordinator' },
-        { id: 'agent-security-1', type: 'security-architect', role: 'specialist' },
-        { id: 'agent-core-1', type: 'core-architect', role: 'worker' },
-        { id: 'agent-integration-1', type: 'integration-architect', role: 'worker' },
-        { id: 'agent-performance-1', type: 'performance-engineer', role: 'specialist' },
-      ],
-      edges: [
-        { from: 'agent-coordinator-1', to: 'agent-security-1', weight: 1.0 },
-        { from: 'agent-coordinator-1', to: 'agent-core-1', weight: 0.8 },
-        { from: 'agent-coordinator-1', to: 'agent-integration-1', weight: 0.9 },
-        { from: 'agent-coordinator-1', to: 'agent-performance-1', weight: 0.7 },
-      ],
-      depth: 2,
-      fanout: 4,
-    };
-  }
-
-  // TODO: Call actual swarm coordinator
-  // const swarmCoordinator = context?.swarmCoordinator as SwarmCoordinator;
-  // if (swarmCoordinator) {
-  //   const status = await swarmCoordinator.getStatus({
-  //     includeAgents: input.includeAgents,
-  //     includeMetrics: input.includeMetrics,
-  //     includeTopology: input.includeTopology,
-  //   });
-  //   return status;
-  // }
-
-  return result;
 }
 
 /**
