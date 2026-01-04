@@ -6,6 +6,7 @@
 import type { Command, CommandContext, CommandResult } from '../types.js';
 import { output } from '../output.js';
 import { select, confirm, input } from '../prompt.js';
+import { callMCPTool, MCPClientError } from '../mcp-client.js';
 
 // Available agent types with descriptions
 const AGENT_TYPES = [
