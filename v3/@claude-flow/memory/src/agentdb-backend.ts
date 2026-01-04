@@ -592,6 +592,9 @@ export class AgentDBBackend extends EventEmitter implements IMemoryBackend {
     );
     await db.run('CREATE INDEX IF NOT EXISTS idx_key ON memory_entries(key)');
     await db.run('CREATE INDEX IF NOT EXISTS idx_type ON memory_entries(type)');
+    } catch {
+      // Schema creation failed - using in-memory only
+    }
   }
 
   /**
