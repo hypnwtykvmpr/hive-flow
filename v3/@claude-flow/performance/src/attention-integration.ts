@@ -311,7 +311,7 @@ export function createFlashAttentionOptimizer(
  * @param dim - Dimension to test (default: 512)
  * @returns Benchmark results with speedup metrics
  */
-export async function quickBenchmark(dim: number = 512): Promise<BenchmarkResult> {
+export function quickBenchmark(dim: number = 512): BenchmarkResult {
   const optimizer = createFlashAttentionOptimizer(dim);
   return optimizer.benchmark();
 }
