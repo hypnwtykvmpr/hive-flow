@@ -451,8 +451,8 @@ describe('UnifiedSwarmCoordinator', () => {
         connections: [],
       });
 
-      // Wait for metrics to update
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Wait for health check interval (2000ms configured in beforeEach)
+      await new Promise(resolve => setTimeout(resolve, 2500));
 
       const metrics = coordinator.getMetrics();
       expect(metrics.activeAgents).toBeGreaterThan(0);
