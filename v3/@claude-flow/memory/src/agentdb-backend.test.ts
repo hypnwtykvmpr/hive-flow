@@ -76,13 +76,14 @@ describe('AgentDBBackend', () => {
       });
 
       await backend.store(entry);
+      const originalVersion = entry.version;
 
       const updated = await backend.update(entry.id, {
         content: 'Updated content',
       });
 
       expect(updated?.content).toBe('Updated content');
-      expect(updated?.version).toBe(entry.version + 1);
+      expect(updated?.version).toBe(originalVersion + 1);
     });
 
     it('should delete entries', async () => {
