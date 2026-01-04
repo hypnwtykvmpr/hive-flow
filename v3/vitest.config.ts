@@ -73,7 +73,7 @@ export default defineConfig({
     hookTimeout: 10000,
 
     // Reporter configuration
-    reporters: ['default', 'html'],
+    reporters: ['default'],
 
     // Parallel execution
     pool: 'threads',
