@@ -169,8 +169,9 @@ export class AgentAdapter extends EventEmitter {
   async shutdown(): Promise<void> {
     // Shutdown all managed agents
     const shutdownPromises: Promise<void>[] = [];
+    const agents = this.getAllAgents();
 
-    for (const agent of this.agentMap.values()) {
+    for (const agent of agents) {
       shutdownPromises.push(agent.shutdown());
     }
 
