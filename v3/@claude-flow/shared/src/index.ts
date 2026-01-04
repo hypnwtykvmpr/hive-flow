@@ -8,8 +8,11 @@
 // Types - Shared type definitions
 export * from './types.js';
 
-// Events - Event bus and event sourcing
+// Events - Event bus and event sourcing (existing)
 export * from './events.js';
+
+// Event Sourcing - ADR-007 (Event Sourcing for State Changes)
+export * from './events/index.js';
 
 // Plugin System - ADR-004 (Plugin-Based Architecture)
 export * from './plugin-interface.js';
