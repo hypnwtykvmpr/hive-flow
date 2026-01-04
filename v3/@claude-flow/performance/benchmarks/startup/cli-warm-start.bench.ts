@@ -7,7 +7,7 @@
  * and configuration is pre-loaded.
  */
 
-import { benchmark, BenchmarkRunner, formatTime, meetsTarget } from '../framework/benchmark.js';
+import { benchmark, BenchmarkRunner, formatTime, meetsTarget } from '../../src/framework/benchmark.js';
 
 // ============================================================================
 // Simulated Components
