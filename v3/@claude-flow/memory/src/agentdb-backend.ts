@@ -646,6 +646,9 @@ export class AgentDBBackend extends EventEmitter implements IMemoryBackend {
         entry.lastAccessedAt,
       ]
     );
+    } catch {
+      // AgentDB storage failed - entry is already in-memory
+    }
 
     // Add to vector index if HNSW is available
     if (entry.embedding && HNSWIndex) {
