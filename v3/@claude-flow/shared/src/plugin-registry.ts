@@ -294,7 +294,7 @@ export class PluginRegistry {
    * Unregister task types from a plugin
    */
   unregisterPluginTaskTypes(pluginName: string): void {
-    for (const [type, entry] of this.taskTypes.entries()) {
+    for (const [type, entry] of Array.from(this.taskTypes.entries())) {
       if (entry.plugin === pluginName) {
         this.taskTypes.delete(type);
       }
