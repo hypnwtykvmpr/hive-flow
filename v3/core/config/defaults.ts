@@ -133,7 +133,7 @@ export const defaultSystemConfig: SystemConfig = {
   orchestrator: defaultOrchestratorConfig,
   memory: defaultMemoryConfig,
   mcp: defaultMCPServerConfig,
-  swarm: defaultSwarmConfig,
+  swarm: defaultSwarmConfigCore,
 };
 
 /**
