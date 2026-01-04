@@ -214,29 +214,36 @@ async function handleTerminateAgent(
   input: z.infer<typeof terminateAgentSchema>,
   context?: ToolContext
 ): Promise<TerminateAgentResult> {
-  // TODO: Integrate with actual agent manager when available
-  // For now, return stub response
-
   const terminatedAt = new Date().toISOString();
 
-  // Stub implementation - will be replaced with actual agent manager integration
-  const result: TerminateAgentResult = {
+  // Try to use swarmCoordinator if available
+  if (context?.swarmCoordinator) {
+    try {
+      const { UnifiedSwarmCoordinator } = await import('@claude-flow/swarm');
+      const coordinator = context.swarmCoordinator as InstanceType<typeof UnifiedSwarmCoordinator>;
+
+      // Terminate agent
+      await coordinator.terminateAgent(input.agentId);
+
+      return {
+        agentId: input.agentId,
+        terminated: true,
+        terminatedAt,
+        reason: input.reason,
+      };
+    } catch (error) {
+      // Fall through to simple implementation if coordinator fails
+      console.error('Failed to terminate agent via coordinator:', error);
+    }
+  }
+
+  // Simple implementation when no coordinator is available
+  return {
     agentId: input.agentId,
-    terminated: true,
+    terminated: false,
     terminatedAt,
     reason: input.reason,
   };
-
-  // TODO: Call actual agent manager
-  // const agentManager = context?.agentManager as AgentManager;
-  // if (agentManager) {
-  //   await agentManager.terminateAgent(input.agentId, {
-  //     graceful: input.graceful,
-  //     reason: input.reason,
-  //   });
-  // }
-
-  return result;
 }
 
 /**
