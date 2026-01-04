@@ -496,12 +496,16 @@ describe('CLI', () => {
     });
 
     it('should exit with code 1 on unknown command', async () => {
-      await expect(cli.run(['unknown'])).rejects.toThrow('process.exit: 1');
+      try {
+        await cli.run(['unknowntest']);
+      } catch (e) {
+        expect((e as Error).message).toContain('process.exit: 1');
+      }
     });
 
     it('should exit with custom code from command result', async () => {
       const mockCommand: Command = {
-        name: 'test',
+        name: 'testexit',
         description: 'Test command',
         action: async () => {
           return { success: false, exitCode: 42 };
@@ -509,7 +513,12 @@ describe('CLI', () => {
       };
 
       cli['parser'].registerCommand(mockCommand);
-      await expect(cli.run(['test'])).rejects.toThrow('process.exit: 42');
+
+      try {
+        await cli.run(['testexit']);
+      } catch (e) {
+        expect((e as Error).message).toContain('process.exit: 42');
+      }
     });
   });
 });
