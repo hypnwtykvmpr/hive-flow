@@ -284,76 +284,71 @@ const statusCommand: Command = {
       return { success: false, exitCode: 1 };
     }
 
-    // Simulated detailed status
-    const status = {
-      id: agentId,
-      name: 'coder-main',
-      type: 'coder',
-      status: 'active',
-      provider: 'anthropic',
-      model: 'claude-3-5-sonnet-20241022',
-      createdAt: new Date(Date.now() - 3600000).toISOString(),
-      lastActivity: new Date().toISOString(),
-      metrics: {
-        tasksCompleted: 15,
-        tokensUsed: 45230,
-        avgResponseTime: '1.2s',
-        successRate: '98.5%'
-      },
-      currentTask: {
-        id: 'task-123',
-        description: 'Implementing user authentication module',
-        progress: 65
-      },
-      memory: {
-        contextSize: '12.5 KB',
-        storedPatterns: 8,
-        cacheHitRate: '87%'
+    try {
+      // Call MCP tool to get agent status
+      const status = await callMCPTool<{
+        id: string;
+        agentType: string;
+        status: 'active' | 'idle' | 'terminated';
+        createdAt: string;
+        lastActivityAt?: string;
+        config?: Record<string, unknown>;
+        metrics?: {
+          tasksCompleted: number;
+          tasksInProgress: number;
+          tasksFailed: number;
+          averageExecutionTime: number;
+          uptime: number;
+        };
+      }>('agent/status', {
+        agentId,
+        includeMetrics: true,
+        includeHistory: false,
+      });
+
+      if (ctx.flags.format === 'json') {
+        output.printJson(status);
+        return { success: true, data: status };
       }
-    };
 
-    if (ctx.flags.format === 'json') {
-      output.printJson(status);
-      return { success: true, data: status };
-    }
-
-    output.writeln();
-    output.printBox(
-      [
-        `Type: ${status.type}`,
-        `Status: ${formatStatus(status.status)}`,
-        `Provider: ${status.provider}`,
-        `Model: ${status.model}`,
-        `Created: ${status.createdAt}`,
-        `Last Activity: ${status.lastActivity}`
-      ].join('\n'),
-      `Agent: ${status.name} (${status.id})`
-    );
-
-    output.writeln();
-    output.writeln(output.bold('Metrics'));
-    output.printTable({
-      columns: [
-        { key: 'metric', header: 'Metric', width: 20 },
-        { key: 'value', header: 'Value', width: 15, align: 'right' }
-      ],
-      data: [
-        { metric: 'Tasks Completed', value: status.metrics.tasksCompleted },
-        { metric: 'Tokens Used', value: status.metrics.tokensUsed.toLocaleString() },
-        { metric: 'Avg Response Time', value: status.metrics.avgResponseTime },
-        { metric: 'Success Rate', value: status.metrics.successRate }
-      ]
-    });
-
-    if (status.currentTask) {
       output.writeln();
-      output.writeln(output.bold('Current Task'));
-      output.writeln(`  ID: ${status.currentTask.id}`);
-      output.writeln(`  Description: ${status.currentTask.description}`);
-      output.writeln(`  Progress: ${output.progressBar(status.currentTask.progress, 100, 30)}`);
-    }
+      output.printBox(
+        [
+          `Type: ${status.agentType}`,
+          `Status: ${formatStatus(status.status)}`,
+          `Created: ${new Date(status.createdAt).toLocaleString()}`,
+          `Last Activity: ${status.lastActivityAt ? new Date(status.lastActivityAt).toLocaleString() : 'N/A'}`
+        ].join('\n'),
+        `Agent: ${status.id}`
+      );
 
-    return { success: true, data: status };
+      if (status.metrics) {
+        output.writeln();
+        output.writeln(output.bold('Metrics'));
+        output.printTable({
+          columns: [
+            { key: 'metric', header: 'Metric', width: 25 },
+            { key: 'value', header: 'Value', width: 15, align: 'right' }
+          ],
+          data: [
+            { metric: 'Tasks Completed', value: status.metrics.tasksCompleted },
+            { metric: 'Tasks In Progress', value: status.metrics.tasksInProgress },
+            { metric: 'Tasks Failed', value: status.metrics.tasksFailed },
+            { metric: 'Avg Execution Time', value: `${status.metrics.averageExecutionTime.toFixed(2)}ms` },
+            { metric: 'Uptime', value: `${(status.metrics.uptime / 1000 / 60).toFixed(1)}m` }
+          ]
+        });
+      }
+
+      return { success: true, data: status };
+    } catch (error) {
+      if (error instanceof MCPClientError) {
+        output.printError(`Failed to get agent status: ${error.message}`);
+      } else {
+        output.printError(`Unexpected error: ${String(error)}`);
+      }
+      return { success: false, exitCode: 1 };
+    }
   }
 };
 
