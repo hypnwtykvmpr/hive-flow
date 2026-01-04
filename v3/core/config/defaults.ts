@@ -37,9 +37,9 @@ export const defaultTaskConfig: Partial<TaskConfig> = {
 };
 
 /**
- * Default swarm configuration
+ * Default swarm configuration (core version)
  */
-export const defaultSwarmConfig: SwarmConfig = {
+export const defaultSwarmConfigCore: SwarmConfig = {
   topology: 'hierarchical-mesh',
   maxAgents: 20,
   autoScale: {
