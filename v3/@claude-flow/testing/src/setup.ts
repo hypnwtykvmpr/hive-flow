@@ -10,9 +10,9 @@ import { vi, beforeEach, afterEach, expect } from 'vitest';
 
 // Re-export commonly used testing utilities
 export { vi, expect } from 'vitest';
-export { createMock, createDeepMock, createSpyMock } from './helpers/create-mock';
-export { createTestApplication } from './helpers/test-application';
-export { createSwarmTestInstance } from './helpers/swarm-instance';
+export { createMock, createDeepMock, createSpyMock } from './helpers/create-mock.js';
+export { createTestApplication } from './helpers/test-application.js';
+export { createSwarmTestInstance } from './helpers/swarm-instance.js';
 
 // Custom matchers for London School testing
 expect.extend({
