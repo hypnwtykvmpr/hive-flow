@@ -56,4 +56,4 @@ export {
   assertNoSensitiveDataLogged,
   assertPerformanceTarget,
   type ContractDefinition,
-} from './assertions';
+} from './assertions.js';
