@@ -172,6 +172,11 @@
         "hooks": [
           {
             "type": "command",
+            "timeout": 3000,
+            "command": ".claude/helpers/daemon-manager.sh start 3 5 2>/dev/null || true"
+          },
+          {
+            "type": "command",
             "timeout": 5000,
             "command": "npx agentic-flow@alpha hooks intelligence stats --json --v3-mode --load-v3-patterns 2>/dev/null || true"
           }
