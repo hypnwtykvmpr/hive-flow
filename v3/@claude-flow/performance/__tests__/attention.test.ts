@@ -298,8 +298,13 @@ describe('FlashAttentionOptimizer', () => {
 
   describe('resetMetrics()', () => {
     it('should reset all metrics to zero', () => {
-      // Generate some metrics
-      optimizer.benchmark();
+      // Generate some metrics via optimize (which increments operations)
+      const input: AttentionInput = {
+        query: new Float32Array(512).fill(0.5),
+        keys: [new Float32Array(512).fill(0.3)],
+        values: [new Float32Array(512).fill(0.2)],
+      };
+      optimizer.optimize(input);
       expect(optimizer.getMetrics().totalOperations).toBeGreaterThan(0);
 
       // Reset
