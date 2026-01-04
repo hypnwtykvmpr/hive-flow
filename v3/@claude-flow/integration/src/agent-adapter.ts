@@ -18,13 +18,17 @@
  */
 
 import { EventEmitter } from 'events';
-import { AgenticFlowAgent, AgentConfig, Task, TaskResult, Message } from './agentic-flow-agent.js';
-import type {
+import {
+  AgenticFlowAgent,
+  AgentConfig,
+  Task,
+  TaskResult,
+  Message,
   IAgent,
   IAgentConfig,
   AgentStatus,
   AgentType,
-} from '../../shared/src/core/interfaces/agent.interface.js';
+} from './agentic-flow-agent.js';
 
 /**
  * Interface for agentic-flow Agent (external package)
