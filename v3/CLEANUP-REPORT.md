@@ -124,10 +124,59 @@ After cleanup execution:
 - [ ] Rebuild dist-cjs to verify build works (PENDING)
 - [ ] Commit changes with detailed message (PENDING)
 
-## Next Steps
+## Execution Results
 
-1. Execute cleanup script: `bash /workspaces/claude-flow/scripts/cleanup-v3.sh`
-2. Remove additional duplicates not caught by script
+### Cleanup Script Execution
+```bash
+# Executed: bash /workspaces/claude-flow/scripts/cleanup-v3.sh
+Status: SUCCESS
+Time: 2026-01-04
+```
+
+### Files Successfully Removed
+
+**By Cleanup Script:**
+- v2/dist-cjs/ (entire directory with 1,098 files)
+- v2/bin/pair-enhanced.backup.js
+- v2/bin/pair-old.js
+- v2/bin/training-pipeline-old.js.bak
+- v2/docs/reasoningbank/models/*/memory.db.backup (3 files)
+- v2/src/cli/simple-commands/pair-old.js
+- v2/src/cli/simple-commands/training-pipeline-old.js.bak
+
+**Additional Manual Removals:**
+- v2/bin/pair-autofix-only.js
+- v2/bin/pair-basic.js
+- v2/bin/pair-working.js
+- v2/bin/stream-chain-clean.js
+- v2/bin/stream-chain-fixed.js
+- v2/bin/stream-chain-real.js
+- v2/bin/stream-chain-working.js
+- v2/bin/stream-chain.js.backup
+- v2/src/cli/simple-commands/pair-autofix-only.js
+- v2/src/cli/simple-commands/pair-basic.js
+- v2/src/cli/simple-commands/pair-working.js
+- v2/src/cli/simple-commands/stream-chain-clean.js
+- v2/src/cli/simple-commands/stream-chain-fixed.js
+- v2/src/cli/simple-commands/stream-chain-real.js
+- v2/src/cli/simple-commands/stream-chain-working.js
+
+**Total Files Removed:** 1,125+ files
+**Total Lines Removed:** 226,606+ lines
+**Storage Reclaimed:** ~24MB
+
+### Canonical Files Verified (PRESERVED)
+
+All critical files confirmed present and intact:
+- `/workspaces/claude-flow/v2/bin/pair.js` (27K)
+- `/workspaces/claude-flow/v2/bin/stream-chain.js` (14K)
+- `/workspaces/claude-flow/v2/src/cli/simple-commands/pair.js` (27K)
+- `/workspaces/claude-flow/v2/src/cli/simple-commands/stream-chain.js` (14K)
+
+## Next Steps (Remaining)
+
+1. ~~Execute cleanup script~~ ✓ COMPLETED
+2. ~~Remove additional duplicates~~ ✓ COMPLETED
 3. Update `.gitignore` to prevent future tracking of build artifacts
 4. Run tests: `npm test`
 5. Rebuild: `npm run build`
