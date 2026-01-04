@@ -26,6 +26,40 @@ import type {
 } from './types.js';
 
 /**
+ * Interface for agentic-flow SONA reference (for delegation)
+ * This allows the adapter to delegate to agentic-flow when available
+ */
+interface AgenticFlowSONAReference {
+  setMode(mode: string): Promise<void>;
+  storePattern(params: {
+    pattern: string;
+    solution: string;
+    category: string;
+    confidence: number;
+    metadata?: Record<string, unknown>;
+  }): Promise<string>;
+  findPatterns(query: string, options?: {
+    category?: string;
+    topK?: number;
+    threshold?: number;
+  }): Promise<Array<{
+    id: string;
+    pattern: string;
+    solution: string;
+    category: string;
+    confidence: number;
+    usageCount: number;
+    createdAt: number;
+    lastUsedAt: number;
+    metadata: Record<string, unknown>;
+  }>>;
+  getStats(): Promise<unknown>;
+  beginTrajectory?(params: unknown): Promise<string>;
+  recordStep?(params: unknown): Promise<void>;
+  endTrajectory?(params: unknown): Promise<unknown>;
+}
+
+/**
  * Mode-specific configurations for SONA learning
  */
 const MODE_CONFIGS: Record<SONALearningMode, Partial<SONAConfiguration>> = {
