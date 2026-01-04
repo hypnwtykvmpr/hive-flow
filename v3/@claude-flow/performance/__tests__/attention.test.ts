@@ -69,7 +69,7 @@ describe('FlashAttentionOptimizer', () => {
     });
 
     it('should optimize attention with number array inputs', () => {
-      const dim = 128;
+      const dim = 512; // Match optimizer dimension
       const input: AttentionInput = {
         query: Array(dim).fill(0.5),
         keys: [Array(dim).fill(0.3), Array(dim).fill(0.7)],
