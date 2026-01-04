@@ -7,7 +7,7 @@
  * and optimization strategies.
  */
 
-import { benchmark, BenchmarkRunner, formatTime, formatBytes } from '../framework/benchmark.js';
+import { benchmark, BenchmarkRunner, formatTime, formatBytes } from '../../src/framework/benchmark.js';
 
 // ============================================================================
 // Memory Tracking
