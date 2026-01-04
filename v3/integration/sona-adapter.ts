@@ -335,6 +335,10 @@ export class SONAAdapter extends EventEmitter {
 
   /**
    * Store a learned pattern
+   *
+   * ADR-001: When agentic-flow is available, delegates to its optimized
+   * pattern storage which uses AgentDB with HNSW indexing for
+   * 150x-12,500x faster similarity search.
    */
   async storePattern(params: {
     pattern: string;
@@ -345,6 +349,37 @@ export class SONAAdapter extends EventEmitter {
   }): Promise<string> {
     this.ensureInitialized();
 
+    // ADR-001: Delegate to agentic-flow when available
+    if (this.isDelegationEnabled() && this.agenticFlowSona) {
+      try {
+        const patternId = await this.agenticFlowSona.storePattern({
+          pattern: params.pattern,
+          solution: params.solution,
+          category: params.category,
+          confidence: Math.max(0, Math.min(1, params.confidence)),
+          metadata: params.metadata,
+        });
+
+        this.stats.totalPatterns++;
+        this.emit('pattern-stored', {
+          patternId,
+          delegated: true,
+          target: 'agentic-flow',
+        });
+
+        return patternId;
+      } catch (error) {
+        // Log delegation failure and fall back to local implementation
+        this.emit('delegation-failed', {
+          method: 'storePattern',
+          error: (error as Error).message,
+          fallback: 'local',
+        });
+        // Continue with local implementation below
+      }
+    }
+
+    // Local implementation (fallback or when agentic-flow not available)
     const patternId = this.generateId('pat');
     const storedPattern: SONAPattern = {
       id: patternId,
