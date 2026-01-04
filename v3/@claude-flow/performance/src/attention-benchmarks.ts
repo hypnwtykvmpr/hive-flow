@@ -103,7 +103,7 @@ export class AttentionBenchmarkRunner {
     dimension: number,
     numKeys: number = 100,
     iterations: number = 1000
-  ): Promise<ComparisonBenchmark> {
+  ): ComparisonBenchmark {
     // Create Flash and baseline attention mechanisms
     const flash = new FlashAttention(dimension, 64);
     const baseline = new DotProductAttention(dimension);
