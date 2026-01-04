@@ -1,7 +1,19 @@
 /**
- * Claude-Flow V3 Main Entry Point
+ * Claude Flow V3 - Modular AI Agent Coordination System
  *
- * Complete reimagining of Claude-Flow based on 10 ADRs:
+ * This is the main entry point that re-exports all @claude-flow modules.
+ * Each module can also be imported directly for tree-shaking.
+ *
+ * @example
+ * // Import everything
+ * import * as claudeFlow from '@claude-flow/v3';
+ *
+ * // Or import specific modules
+ * import { UnifiedSwarmCoordinator } from '@claude-flow/swarm';
+ * import { PasswordHasher } from '@claude-flow/security';
+ * import { HNSWIndex } from '@claude-flow/memory';
+ *
+ * Complete reimagining based on 10 ADRs:
  * - ADR-001: Adopt agentic-flow as core foundation
  * - ADR-002: Domain-Driven Design structure
  * - ADR-003: Single coordination engine
@@ -20,14 +32,96 @@
  * - Code Reduction: <5,000 lines (vs 15,000+)
  * - Startup Time: <500ms
  *
- * V3 Core Architecture (Decomposed Orchestrator):
- * - task-manager.ts (~200 lines) - Task lifecycle management
- * - session-manager.ts (~200 lines) - Session handling
- * - health-monitor.ts (~150 lines) - Agent health checks
- * - lifecycle-manager.ts (~150 lines) - Agent spawn/terminate
- * - event-coordinator.ts (~100 lines) - Event routing
- * - event-bus.ts (~230 lines) - Pub/sub event system
+ * @module @claude-flow/v3
+ * @version 3.0.0-alpha.1
  */
+
+// =============================================================================
+// @claude-flow Module Exports (New Modular Architecture)
+// =============================================================================
+
+/**
+ * Security module - CVE fixes, input validation, credential management
+ * @see {@link @claude-flow/security}
+ */
+export * as security from './@claude-flow/security/src/index.js';
+
+/**
+ * Memory module - AgentDB, HNSW indexing, vector search
+ * @see {@link @claude-flow/memory}
+ */
+export * as memory from './@claude-flow/memory/src/index.js';
+
+/**
+ * Swarm module - 15-agent coordination, hierarchical mesh, consensus
+ * @see {@link @claude-flow/swarm}
+ */
+export * as swarm from './@claude-flow/swarm/src/index.js';
+
+/**
+ * Integration module - agentic-flow@alpha integration, ADR-001 compliance
+ * @see {@link @claude-flow/integration}
+ */
+export * as integration from './@claude-flow/integration/src/index.js';
+
+/**
+ * Shared module - common types, events, utilities, core interfaces
+ * @see {@link @claude-flow/shared}
+ */
+export * as shared from './@claude-flow/shared/src/index.js';
+
+/**
+ * CLI module - Command parsing, prompts, output formatting
+ * @see {@link @claude-flow/cli}
+ */
+export * as cli from './@claude-flow/cli/src/index.js';
+
+/**
+ * Neural module - SONA learning, neural modes
+ * @see {@link @claude-flow/neural}
+ */
+export * as neural from './@claude-flow/neural/src/index.js';
+
+/**
+ * Performance module - Benchmarking, Flash Attention validation
+ * @see {@link @claude-flow/performance}
+ */
+export * as performance from './@claude-flow/performance/src/index.js';
+
+/**
+ * Testing module - TDD London School framework, test utilities
+ * @see {@link @claude-flow/testing}
+ */
+export * as testing from './@claude-flow/testing/src/index.js';
+
+/**
+ * Deployment module - Release management, CI/CD
+ * @see {@link @claude-flow/deployment}
+ */
+export * as deployment from './@claude-flow/deployment/src/index.js';
+
+// =============================================================================
+// Module List for Dynamic Loading
+// =============================================================================
+
+export const MODULES = [
+  '@claude-flow/shared',
+  '@claude-flow/security',
+  '@claude-flow/memory',
+  '@claude-flow/swarm',
+  '@claude-flow/integration',
+  '@claude-flow/cli',
+  '@claude-flow/neural',
+  '@claude-flow/performance',
+  '@claude-flow/testing',
+  '@claude-flow/deployment',
+] as const;
+
+export type ModuleName = (typeof MODULES)[number];
+
+// =============================================================================
+// Legacy Compatibility Layer (Gradual Migration Support)
+// =============================================================================
 
 // =============================================================================
 // V3 Core Architecture (Decomposed Orchestrator)
