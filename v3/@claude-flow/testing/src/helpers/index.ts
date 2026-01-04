@@ -14,7 +14,7 @@ export {
   createSequenceMock,
   InteractionRecorder,
   type MockedInterface,
-} from './create-mock';
+} from './create-mock.js';
 
 // Test application builder
 export {
