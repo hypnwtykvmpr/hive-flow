@@ -64,6 +64,15 @@ export {
   createUnifiedSwarmCoordinator,
 } from './unified-coordinator.js';
 
+// Domain types for 15-agent hierarchy
+export type {
+  AgentDomain,
+  DomainConfig,
+  TaskAssignment,
+  ParallelExecutionResult,
+  DomainStatus,
+} from './unified-coordinator.js';
+
 // Core components
 export {
   TopologyManager,
