@@ -926,7 +926,7 @@ const buildAgentsCommand: Command = {
         columns: [
           { key: 'type', header: 'Agent Type', width: 20 },
           { key: 'configFile', header: 'Config File', width: 30 },
-          { key: 'capabilities', header: 'Capabilities', width: 10, align: 'right', format: (v) => Array.isArray(v) ? v.length : 0 }
+          { key: 'capabilities', header: 'Capabilities', width: 10, align: 'right', format: (v) => String(Array.isArray(v) ? v.length : 0) }
         ],
         data: result.agents
       });
