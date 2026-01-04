@@ -669,14 +669,41 @@ export class AgentDBBackend extends EventEmitter implements IMemoryBackend {
    * Get entry from AgentDB
    */
   private async getFromAgentDB(id: string): Promise<MemoryEntry | null> {
-    if (!this.agentdb?.database) return null;
+    if (!this.agentdb) return null;
 
-    const db = this.agentdb.database;
-    const row = await db.get('SELECT * FROM memory_entries WHERE id = ?', [id]);
+    try {
+      // Try native get method first
+      if (typeof this.agentdb.get === 'function') {
+        const data = await this.agentdb.get(id);
+        if (data) return this.dataToEntry(id, data);
+      }
 
-    if (!row) return null;
+      // Fallback to database
+      const db = this.agentdb.database;
+      if (!db || typeof db.get !== 'function') return null;
 
-    return this.rowToEntry(row);
+      const row = await db.get('SELECT * FROM memory_entries WHERE id = ?', [id]);
+      if (!row) return null;
+      return this.rowToEntry(row);
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Convert agentdb data to MemoryEntry
+   */
+  private dataToEntry(id: string, data: any): MemoryEntry {
+    return createDefaultEntry({
+      id,
+      key: data.key || id,
+      content: data.content || '',
+      embedding: data.embedding,
+      type: data.type || 'general',
+      namespace: data.namespace || this.config.namespace,
+      tags: data.tags || [],
+      metadata: data.metadata || {},
+    });
   }
 
   /**
