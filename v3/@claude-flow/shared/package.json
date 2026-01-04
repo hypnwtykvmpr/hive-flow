@@ -9,7 +9,8 @@
     ".": "./src/index.ts",
     "./types": "./src/types/index.ts",
     "./core": "./src/core/index.ts",
-    "./events": "./src/events/index.ts"
+    "./events": "./src/events/index.ts",
+    "./hooks": "./src/hooks/index.ts"
   },
   "scripts": {
     "test": "vitest run",
