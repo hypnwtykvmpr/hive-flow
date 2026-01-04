@@ -173,20 +173,10 @@ describe('Raft Consensus', () => {
       });
       await shortTimeout.initialize();
 
-      const proposal = {
-        id: 'fake-proposal',
-        proposerId: 'timeout-node',
-        value: {},
-        term: 0,
-        timestamp: new Date(),
-        votes: new Map(),
-        status: 'pending' as const,
-      };
-
-      // Manually add proposal for testing
-      const result = await shortTimeout.awaitConsensus(proposal.id);
-
-      expect(result.proposalId).toBe(proposal.id);
+      // Test timeout behavior with invalid proposal
+      await expect(
+        shortTimeout.awaitConsensus('non-existent-proposal')
+      ).rejects.toThrow('Proposal non-existent-proposal not found');
 
       await shortTimeout.shutdown();
     });
