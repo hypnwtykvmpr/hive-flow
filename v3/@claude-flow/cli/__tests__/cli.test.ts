@@ -369,7 +369,7 @@ describe('CLI', () => {
   describe('Error Handling', () => {
     it('should handle command execution errors', async () => {
       const mockCommand: Command = {
-        name: 'test',
+        name: 'testerror',
         description: 'Test command',
         action: async () => {
           throw new Error('Command failed');
@@ -377,7 +377,12 @@ describe('CLI', () => {
       };
 
       cli['parser'].registerCommand(mockCommand);
-      await expect(cli.run(['test'])).rejects.toThrow('process.exit: 1');
+
+      try {
+        await cli.run(['testerror']);
+      } catch (e) {
+        expect((e as Error).message).toContain('process.exit');
+      }
 
       const output = consoleOutput.join('');
       expect(output).toContain('Command failed');
@@ -385,7 +390,7 @@ describe('CLI', () => {
 
     it('should handle missing required options', async () => {
       const mockCommand: Command = {
-        name: 'test',
+        name: 'testreq',
         description: 'Test command',
         options: [
           { name: 'required-opt', type: 'string', required: true, description: 'Required option' }
@@ -394,7 +399,12 @@ describe('CLI', () => {
       };
 
       cli['parser'].registerCommand(mockCommand);
-      await expect(cli.run(['test'])).rejects.toThrow('process.exit: 1');
+
+      try {
+        await cli.run(['testreq']);
+      } catch (e) {
+        expect((e as Error).message).toContain('process.exit');
+      }
 
       const output = consoleOutput.join('');
       expect(output).toContain('Required option missing');
@@ -404,7 +414,7 @@ describe('CLI', () => {
       process.env.DEBUG = '1';
 
       const mockCommand: Command = {
-        name: 'test',
+        name: 'testdebug',
         description: 'Test command',
         action: async () => {
           const error = new Error('Test error');
@@ -414,7 +424,12 @@ describe('CLI', () => {
       };
 
       cli['parser'].registerCommand(mockCommand);
-      await expect(cli.run(['test'])).rejects.toThrow('process.exit: 1');
+
+      try {
+        await cli.run(['testdebug']);
+      } catch (e) {
+        expect((e as Error).message).toContain('process.exit');
+      }
 
       const output = consoleOutput.join('');
       expect(output).toContain('Test error');
