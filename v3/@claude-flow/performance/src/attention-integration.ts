@@ -136,18 +136,41 @@ export class FlashAttentionOptimizer {
     const numKeys = 100;
     const iterations = 1000;
 
-    // Run native benchmark
-    const results = benchmarkAttention(dim, numKeys, iterations);
+    // Create test data
+    const query = new Float32Array(dim);
+    const keys = Array.from({ length: numKeys }, () => new Float32Array(dim));
+    const values = Array.from({ length: numKeys }, () => new Float32Array(dim));
 
-    // Find flash and baseline results
-    const flashResult = results.find(r => r.name.toLowerCase().includes('flash'));
-    const baselineResult = results.find(r => r.name.toLowerCase().includes('dot') || r.name.toLowerCase().includes('product'));
-
-    if (!flashResult || !baselineResult) {
-      throw new Error('Benchmark results incomplete - missing flash or baseline');
+    // Fill with random data
+    for (let i = 0; i < dim; i++) {
+      query[i] = Math.random();
+    }
+    for (let i = 0; i < numKeys; i++) {
+      for (let j = 0; j < dim; j++) {
+        keys[i][j] = Math.random();
+        values[i][j] = Math.random();
+      }
     }
 
-    const speedup = baselineResult.averageTimeMs / flashResult.averageTimeMs;
+    // Benchmark Flash Attention
+    const flashStart = performance.now();
+    for (let i = 0; i < iterations; i++) {
+      this.flashAttention.computeRaw(query, keys, values);
+    }
+    const flashEnd = performance.now();
+    const flashTimeMs = flashEnd - flashStart;
+    const flashAvgMs = flashTimeMs / iterations;
+
+    // Benchmark baseline (DotProduct)
+    const baselineStart = performance.now();
+    for (let i = 0; i < iterations; i++) {
+      this.baselineAttention.computeRaw(query, keys, values);
+    }
+    const baselineEnd = performance.now();
+    const baselineTimeMs = baselineEnd - baselineStart;
+    const baselineAvgMs = baselineTimeMs / iterations;
+
+    const speedup = baselineAvgMs / flashAvgMs;
     const meetsTarget = speedup >= 2.49; // Minimum target: 2.49x
 
     // Update peak speedup
@@ -162,14 +185,14 @@ export class FlashAttentionOptimizer {
 
     return {
       flashAttention: {
-        averageTimeMs: flashResult.averageTimeMs,
-        opsPerSecond: flashResult.opsPerSecond,
-        memoryUsageBytes: flashResult.memoryUsageBytes,
+        averageTimeMs: flashAvgMs,
+        opsPerSecond: 1000 / flashAvgMs,
+        memoryUsageBytes: undefined,
       },
       baseline: {
-        averageTimeMs: baselineResult.averageTimeMs,
-        opsPerSecond: baselineResult.opsPerSecond,
-        memoryUsageBytes: baselineResult.memoryUsageBytes,
+        averageTimeMs: baselineAvgMs,
+        opsPerSecond: 1000 / baselineAvgMs,
+        memoryUsageBytes: undefined,
       },
       speedup,
       meetsTarget,
