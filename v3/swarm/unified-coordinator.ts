@@ -1,11 +1,19 @@
 /**
  * V3 Unified Swarm Coordinator
  * Consolidates SwarmCoordinator, HiveMind, Maestro, and AgentManager into a single system
+ * Supports the 15-agent hierarchical mesh structure with domain-based task routing
  *
  * Performance Targets:
  * - Agent coordination: <100ms for 15 agents
  * - Consensus: <100ms
  * - Message throughput: 1000+ msgs/sec
+ *
+ * Agent Hierarchy:
+ * - Queen (Agent 1): Top-level coordinator
+ * - Security Domain (Agents 2-4): security-architect, security-auditor, test-architect
+ * - Core Domain (Agents 5-9): core-architect, type-modernization, memory-specialist, swarm-specialist, mcp-optimizer
+ * - Integration Domain (Agents 10-12): integration-architect, cli-modernizer, neural-integrator
+ * - Support Domain (Agents 13-15): test-architect, performance-engineer, deployment-engineer
  */
 
 import { EventEmitter } from 'events';
@@ -16,6 +24,8 @@ import {
   AgentState,
   AgentType,
   AgentStatus,
+  AgentCapabilities,
+  AgentMetrics,
   TaskDefinition,
   TaskType,
   TaskStatus,
@@ -40,6 +50,88 @@ import { TopologyManager, createTopologyManager } from './topology-manager.js';
 import { MessageBus, createMessageBus } from './message-bus.js';
 import { AgentPool, createAgentPool } from './agent-pool.js';
 import { ConsensusEngine, createConsensusEngine } from './consensus/index.js';
+
+// =============================================================================
+// Domain Types for 15-Agent Hierarchy
+// =============================================================================
+
+export type AgentDomain = 'queen' | 'security' | 'core' | 'integration' | 'support';
+
+export interface DomainConfig {
+  name: AgentDomain;
+  agentNumbers: number[];
+  priority: number;
+  capabilities: string[];
+  description: string;
+}
+
+export interface TaskAssignment {
+  taskId: string;
+  domain: AgentDomain;
+  agentId: string;
+  priority: TaskPriority;
+  assignedAt: Date;
+}
+
+export interface ParallelExecutionResult {
+  taskId: string;
+  domain: AgentDomain;
+  success: boolean;
+  result?: unknown;
+  error?: Error;
+  durationMs: number;
+}
+
+export interface DomainStatus {
+  name: AgentDomain;
+  agentCount: number;
+  availableAgents: number;
+  busyAgents: number;
+  tasksQueued: number;
+  tasksCompleted: number;
+}
+
+// =============================================================================
+// 15-Agent Domain Configuration
+// =============================================================================
+
+const DOMAIN_CONFIGS: DomainConfig[] = [
+  {
+    name: 'queen',
+    agentNumbers: [1],
+    priority: 0,
+    capabilities: ['coordination', 'planning', 'oversight', 'consensus'],
+    description: 'Top-level swarm coordination and orchestration',
+  },
+  {
+    name: 'security',
+    agentNumbers: [2, 3, 4],
+    priority: 1,
+    capabilities: ['security-architecture', 'cve-remediation', 'security-testing', 'threat-modeling'],
+    description: 'Security architecture, CVE fixes, and security testing',
+  },
+  {
+    name: 'core',
+    agentNumbers: [5, 6, 7, 8, 9],
+    priority: 2,
+    capabilities: ['ddd-design', 'type-modernization', 'memory-unification', 'swarm-coordination', 'mcp-optimization'],
+    description: 'Core architecture, DDD, memory unification, and MCP optimization',
+  },
+  {
+    name: 'integration',
+    agentNumbers: [10, 11, 12],
+    priority: 3,
+    capabilities: ['agentic-flow-integration', 'cli-modernization', 'neural-integration', 'hooks-system'],
+    description: 'agentic-flow integration, CLI modernization, and neural features',
+  },
+  {
+    name: 'support',
+    agentNumbers: [13, 14, 15],
+    priority: 4,
+    capabilities: ['tdd-testing', 'performance-benchmarking', 'deployment', 'release-management'],
+    description: 'Testing, performance optimization, and deployment',
+  },
+];
 
 export class UnifiedSwarmCoordinator extends EventEmitter implements IUnifiedSwarmCoordinator {
   private config: CoordinatorConfig;
