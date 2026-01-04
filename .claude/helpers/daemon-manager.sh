@@ -78,7 +78,7 @@ start_swarm_monitor() {
 
 # Start the metrics update daemon
 start_metrics_daemon() {
-    local interval="${1:-5}"
+    local interval="${1:-30}"  # Default 30 seconds for V3 sync
 
     if is_running "$METRICS_DAEMON_PID"; then
         log "Metrics daemon already running (PID: $(cat "$METRICS_DAEMON_PID"))"
@@ -87,30 +87,14 @@ start_metrics_daemon() {
 
     log "Starting metrics daemon (interval: ${interval}s)..."
 
-    # Create inline metrics updater
+    # Run initial sync
+    "$SCRIPT_DIR/sync-v3-metrics.sh" > /dev/null 2>&1
+
+    # Create metrics updater that syncs V3 implementation state
     (
         while true; do
-            # Update timestamp
-            local now=$(date -Iseconds)
-
-            # Check for domain directories
-            local domains_completed=0
-            [ -d "$PROJECT_ROOT/src/domains/task-management" ] && ((domains_completed++))
-            [ -d "$PROJECT_ROOT/src/domains/session-management" ] && ((domains_completed++))
-            [ -d "$PROJECT_ROOT/src/domains/health-monitoring" ] && ((domains_completed++))
-            [ -d "$PROJECT_ROOT/src/domains/lifecycle-management" ] && ((domains_completed++))
-            [ -d "$PROJECT_ROOT/src/domains/event-coordination" ] && ((domains_completed++))
-
-            # Update v3-progress with domain count if changed
-            if [ -f "$METRICS_DIR/v3-progress.json" ]; then
-                local current=$(jq -r '.domains.completed // 0' "$METRICS_DIR/v3-progress.json" 2>/dev/null)
-                if [ "$current" != "$domains_completed" ]; then
-                    jq ".domains.completed = $domains_completed | .lastUpdate = \"$now\"" \
-                        "$METRICS_DIR/v3-progress.json" > "$METRICS_DIR/v3-progress.json.tmp" && \
-                        mv "$METRICS_DIR/v3-progress.json.tmp" "$METRICS_DIR/v3-progress.json"
-                fi
-            fi
-
+            # Sync V3 metrics from actual implementation
+            "$SCRIPT_DIR/sync-v3-metrics.sh" > /dev/null 2>&1
             sleep "$interval"
         done
     ) &
