@@ -306,6 +306,9 @@ export class FlashAttentionOptimizer {
       peakSpeedup: 0,
       totalExecutionTime: 0,
       successfulOperations: 0,
+      totalBaselineMemory: 0,
+      totalOptimizedMemory: 0,
+      peakMemory: 0,
     };
   }
 
