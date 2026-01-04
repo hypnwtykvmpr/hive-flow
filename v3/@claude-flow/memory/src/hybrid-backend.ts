@@ -177,9 +177,9 @@ export class HybridBackend extends EventEmitter implements IMemoryBackend {
     });
 
     // Initialize AgentDB backend
-    this.agentdb = new AgentDBAdapter({
+    this.agentdb = new AgentDBBackend({
       ...this.config.agentdb,
-      defaultNamespace: this.config.defaultNamespace,
+      namespace: this.config.defaultNamespace,
       embeddingGenerator: this.config.embeddingGenerator,
     });
 
