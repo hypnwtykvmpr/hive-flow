@@ -1,28 +1,32 @@
 {
-  "name": "@claude-flow/v3",
+  "name": "@claude-flow/v3-monorepo",
   "version": "3.0.0-alpha.1",
+  "private": true,
   "type": "module",
-  "description": "V3 Claude Flow - Next Generation Security & Performance",
-  "main": "index.ts",
+  "description": "Claude Flow V3 - Modular AI Agent Coordination System",
+  "workspaces": [
+    "@claude-flow/*"
+  ],
   "scripts": {
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
-    "test:security": "vitest run __tests__/unit/security/",
-    "typecheck": "tsc --noEmit"
-  },
-  "dependencies": {
-    "bcrypt": "^5.1.1",
-    "zod": "^3.22.0"
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "test:security": "pnpm --filter @claude-flow/security test",
+    "test:memory": "pnpm --filter @claude-flow/memory test",
+    "test:swarm": "pnpm --filter @claude-flow/swarm test",
+    "bench": "pnpm --filter @claude-flow/performance bench",
+    "bench:attention": "pnpm --filter @claude-flow/performance bench:attention",
+    "typecheck": "pnpm -r typecheck",
+    "clean": "rm -rf node_modules @claude-flow/*/node_modules"
   },
   "devDependencies": {
-    "@types/bcrypt": "^5.0.2",
     "@types/node": "^20.0.0",
     "typescript": "^5.3.0",
     "vitest": "^1.0.0",
     "@vitest/coverage-v8": "^1.0.0"
   },
   "engines": {
-    "node": ">=20.0.0"
-  }
+    "node": ">=20.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "packageManager": "pnpm@8.15.0"
 }
