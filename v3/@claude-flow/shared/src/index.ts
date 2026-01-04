@@ -22,3 +22,6 @@ export * from './plugin-registry.js';
 // Re-export from submodules for convenience
 export * from './types/index.js';
 export * from './core/index.js';
+
+// Hooks System - Extensible hook points for tool execution and lifecycle events
+export * from './hooks/index.js';
