@@ -503,13 +503,7 @@ export class HybridBackend extends EventEmitter implements IMemoryBackend {
             (this.stats.hybridQueries + this.stats.sqliteQueries + this.stats.agentdbQueries)
           : 0,
       avgSearchTime: agentdbStats.avgSearchTime,
-      // Add routing stats
-      routingStats: {
-        sqliteQueries: this.stats.sqliteQueries,
-        agentdbQueries: this.stats.agentdbQueries,
-        hybridQueries: this.stats.hybridQueries,
-      },
-    } as any;
+    };
   }
 
   /**
