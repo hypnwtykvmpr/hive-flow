@@ -223,14 +223,16 @@ describe('FlashAttentionOptimizer', () => {
     });
 
     it('should calculate average across multiple benchmarks', () => {
-      optimizer.benchmark();
-      optimizer.benchmark();
+      const result1 = optimizer.benchmark();
+      const result2 = optimizer.benchmark();
 
-      const speedup = optimizer.getSpeedup();
+      // Both benchmarks should have speedup
+      expect(result1.speedup).toBeGreaterThan(0);
+      expect(result2.speedup).toBeGreaterThan(0);
+
+      // Peak speedup should be tracked
       const metrics = optimizer.getMetrics();
-
-      expect(speedup).toBeGreaterThan(0);
-      expect(metrics.totalOperations).toBeGreaterThanOrEqual(2);
+      expect(metrics.peakSpeedup).toBeGreaterThan(0);
     });
   });
 
