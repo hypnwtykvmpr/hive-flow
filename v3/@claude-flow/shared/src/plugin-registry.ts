@@ -225,7 +225,7 @@ export class PluginRegistry {
    * Unregister agent types from a plugin
    */
   unregisterPluginAgentTypes(pluginName: string): void {
-    for (const [type, entry] of this.agentTypes.entries()) {
+    for (const [type, entry] of Array.from(this.agentTypes.entries())) {
       if (entry.plugin === pluginName) {
         this.agentTypes.delete(type);
       }
