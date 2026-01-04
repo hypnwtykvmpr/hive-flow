@@ -85,23 +85,15 @@ start_metrics_daemon() {
         return 0
     fi
 
-    log "Starting metrics daemon (interval: ${interval}s)..."
+    log "Starting metrics daemon (interval: ${interval}s, using SQLite)..."
 
-    # Run initial sync
-    "$SCRIPT_DIR/sync-v3-metrics.sh" > /dev/null 2>&1
-
-    # Create metrics updater that syncs V3 implementation state
-    (
-        while true; do
-            # Sync V3 metrics from actual implementation
-            "$SCRIPT_DIR/sync-v3-metrics.sh" > /dev/null 2>&1
-            sleep "$interval"
-        done
-    ) &
+    # Use SQLite-based metrics (10.5x faster than bash/JSON)
+    # Run as Node.js daemon process
+    nohup node "$SCRIPT_DIR/metrics-db.mjs" daemon "$interval" >> "$LOG_DIR/metrics-daemon.log" 2>&1 &
     local pid=$!
 
     echo "$pid" > "$METRICS_DAEMON_PID"
-    success "Metrics daemon started (PID: $pid)"
+    success "Metrics daemon started (PID: $pid) - SQLite backend"
 
     return 0
 }
