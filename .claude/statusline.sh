@@ -86,6 +86,38 @@ if [ -f "package.json" ]; then
   fi
 fi
 
+# REAL-TIME SWARM DETECTION
+# Count active agentic-flow processes
+ACTIVE_PROCESSES=$(ps aux 2>/dev/null | grep -E "(agentic-flow|claude-flow)" | grep -v grep | wc -l)
+
+# Detect running swarm agents dynamically
+if [ "$ACTIVE_PROCESSES" -gt 0 ]; then
+  # Update active agents count from real processes
+  # Each agentic-flow process might represent an agent or coordination process
+  DYNAMIC_AGENTS=$(ps aux 2>/dev/null | grep -E "agentic-flow.*agent" | grep -v grep | wc -l)
+
+  # If we have agentic-flow processes but no specific agents, use a heuristic
+  if [ "$DYNAMIC_AGENTS" -eq 0 ] && [ "$ACTIVE_PROCESSES" -gt 0 ]; then
+    # Assume some processes are coordination/management, others are agents
+    DYNAMIC_AGENTS=$((ACTIVE_PROCESSES / 2))
+    if [ "$DYNAMIC_AGENTS" -eq 0 ] && [ "$ACTIVE_PROCESSES" -gt 0 ]; then
+      DYNAMIC_AGENTS=1
+    fi
+  fi
+
+  # Override static value with dynamic detection
+  AGENTS_ACTIVE="$DYNAMIC_AGENTS"
+
+  # Update integration status to show active when processes are running
+  INTEGRATION_STATUS="●"
+fi
+
+# Check for MCP server processes
+MCP_ACTIVE=$(ps aux 2>/dev/null | grep -E "mcp.*start" | grep -v grep | wc -l)
+if [ "$MCP_ACTIVE" -gt 0 ]; then
+  INTEGRATION_STATUS="●"
+fi
+
 # Colorful domain status indicators
 COMPLETED_DOMAIN="${BRIGHT_GREEN}●${RESET}"
 PENDING_DOMAIN="${DIM}○${RESET}"
