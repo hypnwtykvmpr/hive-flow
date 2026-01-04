@@ -256,37 +256,56 @@ async function handleSaveConfig(
   input: z.infer<typeof saveConfigSchema>,
   context?: ToolContext
 ): Promise<SaveConfigResult> {
-  // TODO: Integrate with actual config service when available
-  // For now, return stub response
-
   const path = input.path || './claude-flow.config.json';
   const savedAt = new Date().toISOString();
-  const backupPath = input.createBackup
-    ? `${path}.backup.${Date.now()}`
-    : undefined;
+  let backupPath: string | undefined;
 
-  // Stub implementation - will be replaced with actual config service
-  const result: SaveConfigResult = {
-    saved: true,
-    path,
-    scope: input.scope,
-    savedAt,
-    backupPath,
-  };
+  try {
+    const fs = await import('fs/promises');
 
-  // TODO: Call actual config service
-  // const configService = context?.resourceManager?.configService;
-  // if (configService) {
-  //   await configService.save({
-  //     config: input.config,
-  //     path: input.path,
-  //     scope: input.scope,
-  //     merge: input.merge,
-  //     createBackup: input.createBackup,
-  //   });
-  // }
+    // Create backup if requested
+    if (input.createBackup) {
+      try {
+        const existingContent = await fs.readFile(path, 'utf-8');
+        backupPath = `${path}.backup.${Date.now()}`;
+        await fs.writeFile(backupPath, existingContent, 'utf-8');
+      } catch (error: any) {
+        // Ignore if file doesn't exist
+        if (error.code !== 'ENOENT') {
+          console.error('Failed to create backup:', error);
+        }
+      }
+    }
 
-  return result;
+    // Merge with existing if requested
+    let configToSave = input.config;
+    if (input.merge) {
+      try {
+        const existingContent = await fs.readFile(path, 'utf-8');
+        const existingConfig = JSON.parse(existingContent);
+        configToSave = { ...existingConfig, ...input.config };
+      } catch (error: any) {
+        // If file doesn't exist, just save new config
+        if (error.code !== 'ENOENT') {
+          console.error('Failed to load existing config for merge:', error);
+        }
+      }
+    }
+
+    // Save the configuration
+    await fs.writeFile(path, JSON.stringify(configToSave, null, 2), 'utf-8');
+
+    return {
+      saved: true,
+      path,
+      scope: input.scope,
+      savedAt,
+      backupPath,
+    };
+  } catch (error) {
+    console.error('Failed to save config:', error);
+    throw new Error(`Failed to save configuration: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
 }
 
 /**
