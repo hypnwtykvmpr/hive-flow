@@ -487,7 +487,7 @@ export class PluginLoader {
       if (!node) return 0;
 
       let maxDepth = 0;
-      for (const dep of node.dependencies) {
+      for (const dep of Array.from(node.dependencies)) {
         maxDepth = Math.max(maxDepth, visit(dep) + 1);
       }
 
@@ -495,7 +495,7 @@ export class PluginLoader {
       return maxDepth;
     };
 
-    for (const name of graph.keys()) {
+    for (const name of Array.from(graph.keys())) {
       visit(name);
     }
   }
