@@ -11,6 +11,11 @@ export * from './types.js';
 // Events - Event bus and event sourcing
 export * from './events.js';
 
+// Plugin System - ADR-004 (Plugin-Based Architecture)
+export * from './plugin-interface.js';
+export * from './plugin-loader.js';
+export * from './plugin-registry.js';
+
 // Re-export from submodules for convenience
 export * from './types/index.js';
 export * from './core/index.js';
