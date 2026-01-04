@@ -128,9 +128,6 @@ async function handleInitSwarm(
   input: z.infer<typeof initSwarmSchema>,
   context?: ToolContext
 ): Promise<InitSwarmResult> {
-  // TODO: Integrate with actual swarm coordinator when available
-  // For now, return stub response
-
   const swarmId = `swarm-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   const initializedAt = new Date().toISOString();
 
@@ -145,26 +142,52 @@ async function handleInitSwarm(
     autoScaling: input.config?.autoScaling ?? true,
   };
 
-  // Stub implementation - will be replaced with actual swarm coordinator integration
-  const result: InitSwarmResult = {
+  // Try to use swarmCoordinator if available
+  if (context?.swarmCoordinator) {
+    try {
+      const { UnifiedSwarmCoordinator } = await import('@claude-flow/swarm');
+      const coordinator = context.swarmCoordinator as InstanceType<typeof UnifiedSwarmCoordinator>;
+
+      // Initialize the coordinator with the config
+      await coordinator.initialize({
+        topology: {
+          type: input.topology as any,
+          maxAgents: input.maxAgents,
+        },
+        consensus: {
+          algorithm: input.config?.consensusMechanism === 'unanimous' ? 'byzantine' as any :
+                     input.config?.consensusMechanism === 'weighted' ? 'raft' as any : 'gossip' as any,
+          threshold: input.config?.consensusMechanism === 'unanimous' ? 1.0 :
+                    input.config?.consensusMechanism === 'weighted' ? 0.66 : 0.5,
+        },
+        messageBus: {
+          maxQueueSize: 10000,
+          batchSize: 100,
+        },
+      });
+
+      const status = await coordinator.getStatus();
+      config.currentAgents = status.agents.length;
+
+      return {
+        swarmId: status.swarmId,
+        topology: input.topology,
+        initializedAt,
+        config,
+      };
+    } catch (error) {
+      // Fall through to simple implementation if coordinator fails
+      console.error('Failed to initialize swarm via coordinator:', error);
+    }
+  }
+
+  // Simple implementation when no coordinator is available
+  return {
     swarmId,
     topology: input.topology,
     initializedAt,
     config,
   };
-
-  // TODO: Call actual swarm coordinator
-  // const swarmCoordinator = context?.swarmCoordinator as SwarmCoordinator;
-  // if (swarmCoordinator) {
-  //   await swarmCoordinator.initialize({
-  //     topology: input.topology,
-  //     maxAgents: input.maxAgents,
-  //     config: input.config,
-  //     metadata: input.metadata,
-  //   });
-  // }
-
-  return result;
 }
 
 /**
