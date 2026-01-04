@@ -242,7 +242,7 @@ export class AttentionBenchmarkRunner {
   private profileMemory(
     dimension: number,
     numKeys: number
-  ): Promise<MemoryProfile> {
+  ): MemoryProfile {
     // Create test data
     const query = new Float32Array(dimension).fill(1);
     const keys = Array.from({ length: numKeys }, () =>
