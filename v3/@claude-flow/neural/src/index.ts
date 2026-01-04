@@ -184,6 +184,7 @@ export type {
 import { SONAManager, createSONAManager } from './sona-manager.js';
 import { ReasoningBank, createReasoningBank } from './reasoning-bank.js';
 import { PatternLearner, createPatternLearner } from './pattern-learner.js';
+import { SONALearningEngine, createSONALearningEngine } from './sona-integration.js';
 import type { SONAMode, NeuralEventListener } from './types.js';
 
 /**
