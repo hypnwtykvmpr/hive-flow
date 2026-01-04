@@ -104,6 +104,7 @@ export {
 
 // ===== Core Components =====
 export { AgentDBAdapter, AgentDBAdapterConfig } from './agentdb-adapter.js';
+export { AgentDBBackend, AgentDBBackendConfig } from './agentdb-backend.js';
 export { SQLiteBackend, SQLiteBackendConfig } from './sqlite-backend.js';
 export { SqlJsBackend, SqlJsBackendConfig } from './sqljs-backend.js';
 export {
