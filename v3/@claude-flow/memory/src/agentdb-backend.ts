@@ -36,13 +36,23 @@ let AgentDB: any;
 let HNSWIndex: any;
 let isHnswlibAvailable: (() => Promise<boolean>) | undefined;
 
-try {
-  const agentdbModule = await import('agentdb');
-  AgentDB = agentdbModule.AgentDB || agentdbModule.default;
-  HNSWIndex = agentdbModule.HNSWIndex;
-  isHnswlibAvailable = agentdbModule.isHnswlibAvailable;
-} catch (error) {
-  console.warn('AgentDB not available, AgentDBBackend will not be functional:', error);
+// Dynamically import agentdb (handled at runtime)
+let agentdbImportPromise: Promise<void> | undefined;
+
+function ensureAgentDBImport(): Promise<void> {
+  if (!agentdbImportPromise) {
+    agentdbImportPromise = (async () => {
+      try {
+        const agentdbModule = await import('agentdb');
+        AgentDB = agentdbModule.AgentDB || agentdbModule.default;
+        HNSWIndex = agentdbModule.HNSWIndex;
+        isHnswlibAvailable = agentdbModule.isHnswlibAvailable;
+      } catch (error) {
+        // AgentDB not available - will use fallback
+      }
+    })();
+  }
+  return agentdbImportPromise;
 }
 
 // ===== Configuration =====
