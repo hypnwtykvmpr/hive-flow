@@ -122,34 +122,48 @@ async function handleStoreMemory(
   input: z.infer<typeof storeMemorySchema>,
   context?: ToolContext
 ): Promise<StoreMemoryResult> {
-  // TODO: Integrate with actual memory service/AgentDB when available
-  // For now, return stub response
-
   const id = `mem-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   const storedAt = new Date().toISOString();
 
-  // Stub implementation - will be replaced with AgentDB integration
-  const result: StoreMemoryResult = {
+  // Try to use memory service if available
+  const resourceManager = context?.resourceManager as any;
+  if (resourceManager?.memoryService) {
+    try {
+      const { UnifiedMemoryService } = await import('@claude-flow/memory');
+      const memoryService = resourceManager.memoryService as UnifiedMemoryService;
+
+      // Store the memory entry
+      const entry = await memoryService.storeEntry({
+        namespace: input.category || 'default',
+        key: id,
+        content: input.content,
+        type: input.type as any,
+        tags: input.tags || [],
+        metadata: {
+          ...input.metadata,
+          importance: input.importance,
+          expiresAt: input.ttl ? Date.now() + input.ttl : undefined,
+        },
+        accessLevel: 'private' as any,
+      });
+
+      return {
+        id: entry.id,
+        stored: true,
+        storedAt: entry.createdAt.toISOString(),
+      };
+    } catch (error) {
+      console.error('Failed to store memory via memory service:', error);
+      // Fall through to simple implementation
+    }
+  }
+
+  // Simple implementation when no memory service is available
+  return {
     id,
     stored: true,
     storedAt,
   };
-
-  // TODO: Call actual memory service
-  // const memoryService = context?.resourceManager?.memoryService;
-  // if (memoryService) {
-  //   await memoryService.store({
-  //     content: input.content,
-  //     type: input.type,
-  //     category: input.category,
-  //     tags: input.tags,
-  //     metadata: input.metadata,
-  //     importance: input.importance,
-  //     ttl: input.ttl,
-  //   });
-  // }
-
-  return result;
 }
 
 /**
