@@ -16,12 +16,6 @@
     "v3:security": "npm run security:audit"
   },
   "dependencies": {
-    "agentic-flow": "alpha",
-    "@claude-flow/security": "^3.0.0-alpha.1",
-    "@claude-flow/memory": "^3.0.0-alpha.1",
-    "@claude-flow/integration": "^3.0.0-alpha.1",
-    "@claude-flow/performance": "^3.0.0-alpha.1",
-    "@claude-flow/swarm": "^3.0.0-alpha.1"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
