@@ -341,7 +341,8 @@ describe('HybridBackend - ADR-009', () => {
       const stats = await backend.getStats();
       expect(stats.totalEntries).toBeGreaterThanOrEqual(5);
       expect(stats.entriesByNamespace['stats']).toBe(5);
-      expect(stats.routingStats).toBeDefined();
+      expect(stats.hnswStats).toBeDefined();
+      expect(stats.cacheStats).toBeDefined();
     });
   });
 
