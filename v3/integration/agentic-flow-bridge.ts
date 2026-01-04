@@ -89,6 +89,18 @@ export class AgenticFlowBridge extends EventEmitter {
   private runtimeInfo: RuntimeInfo | null = null;
   private initializationPromise: Promise<void> | null = null;
 
+  /**
+   * Reference to the agentic-flow@alpha core instance
+   * When available, components delegate to this instead of local implementations
+   * This follows ADR-001: Adopt agentic-flow as Core Foundation
+   */
+  private agenticFlowCore: AgenticFlowCore | null = null;
+
+  /**
+   * Indicates whether agentic-flow is available for delegation
+   */
+  private agenticFlowAvailable: boolean = false;
+
   constructor(config: Partial<IntegrationConfig> = {}) {
     super();
     this.config = this.mergeConfig(config);
