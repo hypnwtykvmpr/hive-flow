@@ -27,7 +27,7 @@ import type {
   IAgentSession,
   AgentStatus,
   AgentType,
-} from '@claude-flow/shared';
+} from '../../shared/src/core/interfaces/agent.interface.js';
 
 /**
  * Task interface for agent execution
