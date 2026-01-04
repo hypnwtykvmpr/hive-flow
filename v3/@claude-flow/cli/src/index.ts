@@ -256,9 +256,37 @@ export class CLI {
    * Load configuration file
    */
   private async loadConfig(configPath?: string): Promise<V3Config | undefined> {
-    // TODO: Implement actual config loading
-    // For now, return undefined
-    return undefined;
+    try {
+      // Import config utilities
+      const { loadConfig: loadSystemConfig } = await import('@claude-flow/shared/core/config');
+      const { systemConfigToV3Config } = await import('./config-adapter.js');
+
+      // Load configuration
+      const loaded = await loadSystemConfig({
+        file: configPath,
+        paths: configPath ? undefined : [process.cwd()],
+      });
+
+      // Convert to V3Config format
+      const v3Config = systemConfigToV3Config(loaded.config);
+
+      // Log warnings if any
+      if (loaded.warnings && loaded.warnings.length > 0) {
+        for (const warning of loaded.warnings) {
+          this.output.printWarning(warning);
+        }
+      }
+
+      return v3Config;
+    } catch (error) {
+      // Config loading is optional - don't fail if it doesn't exist
+      if (process.env.DEBUG) {
+        this.output.writeln(
+          this.output.dim(`Config loading failed: ${(error as Error).message}`)
+        );
+      }
+      return undefined;
+    }
   }
 
   /**
