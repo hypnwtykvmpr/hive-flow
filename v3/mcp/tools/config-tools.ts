@@ -315,9 +315,6 @@ async function handleValidateConfig(
   input: z.infer<typeof validateConfigSchema>,
   context?: ToolContext
 ): Promise<ValidateConfigResult> {
-  // TODO: Integrate with actual config service when available
-  // For now, return stub response with basic validation
-
   const issues: ValidationIssue[] = [];
 
   // Stub validation logic
