@@ -786,7 +786,8 @@ const pretrainCommand: Command = {
 
       // Simulate multi-step process
       for (const step of steps) {
-        spinner.text = `${step.name}: ${step.desc}`;
+        spinner.stop();
+        spinner.start(`${step.name}: ${step.desc}`);
         await new Promise(resolve => setTimeout(resolve, 800));
       }
 
