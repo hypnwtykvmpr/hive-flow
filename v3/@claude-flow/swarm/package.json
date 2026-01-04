@@ -1,0 +1,22 @@
+{
+  "name": "@claude-flow/swarm",
+  "version": "3.0.0-alpha.1",
+  "type": "module",
+  "description": "Swarm module - 15-agent coordination, hierarchical mesh, consensus",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@claude-flow/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "vitest": "^1.0.0"
+  }
+}
