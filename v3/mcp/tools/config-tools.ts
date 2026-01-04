@@ -210,18 +210,29 @@ async function handleLoadConfig(
   input: z.infer<typeof loadConfigSchema>,
   context?: ToolContext
 ): Promise<LoadConfigResult> {
-  // TODO: Integrate with actual config service when available
-  // For now, return stub response
-
   const path = input.path || './claude-flow.config.json';
   const loadedAt = new Date().toISOString();
 
-  // Stub implementation - will be replaced with actual config service
   let config: Configuration = { ...DEFAULT_CONFIG };
 
-  if (input.merge) {
-    // Simulate loading and merging with defaults
-    config = { ...DEFAULT_CONFIG, ...config };
+  // Try to load from filesystem
+  try {
+    const fs = await import('fs/promises');
+    const fileContent = await fs.readFile(path, 'utf-8');
+    const loadedConfig = JSON.parse(fileContent) as Configuration;
+
+    if (input.merge) {
+      // Merge with defaults
+      config = { ...DEFAULT_CONFIG, ...loadedConfig };
+    } else {
+      config = loadedConfig;
+    }
+  } catch (error: any) {
+    // If file doesn't exist, use defaults
+    if (error.code !== 'ENOENT') {
+      console.error('Failed to load config:', error);
+    }
+    // Continue with default config
   }
 
   const result: LoadConfigResult = {
@@ -234,17 +245,6 @@ async function handleLoadConfig(
   if (input.includeDefaults) {
     result.defaults = DEFAULT_CONFIG;
   }
-
-  // TODO: Call actual config service
-  // const configService = context?.resourceManager?.configService;
-  // if (configService) {
-  //   const config = await configService.load({
-  //     path: input.path,
-  //     scope: input.scope,
-  //     merge: input.merge,
-  //   });
-  //   return config;
-  // }
 
   return result;
 }
