@@ -429,17 +429,6 @@ async function handleValidateConfig(
     result.fixedConfig = fixedConfig;
   }
 
-  // TODO: Call actual config service
-  // const configService = context?.resourceManager?.configService;
-  // if (configService) {
-  //   const validation = await configService.validate({
-  //     config: input.config,
-  //     strict: input.strict,
-  //     fixIssues: input.fixIssues,
-  //   });
-  //   return validation;
-  // }
-
   return result;
 }
 
