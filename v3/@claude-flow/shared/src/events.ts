@@ -10,7 +10,7 @@ import {
   EventHandler,
   SwarmEvent,
   AgentId
-} from './types';
+} from './types.js';
 
 // =============================================================================
 // Event Bus Interface
