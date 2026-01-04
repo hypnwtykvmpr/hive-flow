@@ -16,6 +16,8 @@
     "v3:security": "npm run security:audit"
   },
   "dependencies": {
+    "bcrypt": "^5.1.1",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
