@@ -350,8 +350,9 @@ describe('HybridBackend - ADR-009', () => {
     it('should report healthy status for both backends', async () => {
       const health = await backend.healthCheck();
       expect(health.status).toBe('healthy');
-      expect(health.components.sqlite?.status).toBe('healthy');
-      expect(health.components.agentdb?.status).toBe('healthy');
+      expect(health.components.storage.status).toBe('healthy');
+      expect(health.components.index.status).toBe('healthy');
+      expect(health.components.cache.status).toBe('healthy');
     });
   });
 
