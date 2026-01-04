@@ -30,7 +30,221 @@
  */
 
 // =============================================================================
-// Core Exports
+// V3 Core Architecture (Decomposed Orchestrator)
+// =============================================================================
+
+// Core Interfaces
+export type {
+  // Task interfaces
+  ITask,
+  ITaskCreate,
+  ITaskResult,
+  ITaskManager,
+  ITaskQueue,
+  TaskManagerMetrics,
+
+  // Agent interfaces
+  IAgent,
+  IAgentConfig,
+  IAgentSession,
+  IAgentPool,
+  IAgentLifecycleManager,
+  IAgentRegistry,
+  IAgentCapability,
+
+  // Event interfaces
+  IEvent,
+  IEventCreate,
+  IEventBus as IEventBusCore,
+  IEventHandler,
+  IEventSubscription,
+  IEventFilter,
+  IEventStore,
+  IEventCoordinator,
+
+  // Memory interfaces
+  IMemoryEntry,
+  IMemoryEntryCreate,
+  IMemoryBackend,
+  IVectorMemoryBackend,
+  IMemoryBank,
+  IMemoryManager,
+  IPatternStorage,
+  IVectorSearchParams,
+  IVectorSearchResult,
+
+  // Coordinator interfaces
+  ISwarmConfig,
+  ISwarmState,
+  ICoordinator,
+  ICoordinationManager,
+  IHealthMonitor,
+  IMetricsCollector,
+  IHealthStatus,
+  IComponentHealth,
+  IOrchestratorMetrics,
+} from './core/interfaces/index.js';
+
+export { SystemEventTypes } from './core/interfaces/event.interface.js';
+
+// Orchestrator Components
+export {
+  // Task management
+  TaskManager,
+  TaskQueue,
+
+  // Session management
+  SessionManager,
+  type ISessionManager,
+  type SessionManagerConfig,
+  type SessionPersistence,
+
+  // Health monitoring
+  HealthMonitor,
+  type HealthMonitorConfig,
+  type HealthCheckFn,
+
+  // Lifecycle management
+  LifecycleManager,
+  AgentPool,
+  type LifecycleManagerConfig,
+
+  // Event coordination
+  EventCoordinator,
+
+  // Factory function
+  createOrchestrator,
+  defaultOrchestratorConfig,
+  type OrchestratorConfig,
+  type OrchestratorComponents,
+} from './core/orchestrator/index.js';
+
+// Event Bus
+export { EventBus as EventBusCore, createEventBus } from './core/event-bus.js';
+
+// Configuration
+export {
+  // Schemas
+  AgentConfigSchema,
+  TaskConfigSchema,
+  SwarmConfigSchema,
+  MemoryConfigSchema,
+  MCPServerConfigSchema,
+  OrchestratorConfigSchema,
+  SystemConfigSchema,
+
+  // Validation
+  validateAgentConfig,
+  validateTaskConfig,
+  validateSwarmConfig,
+  validateMemoryConfig,
+  validateMCPServerConfig,
+  validateOrchestratorConfig,
+  validateSystemConfig,
+  ConfigValidator,
+  type ValidationResult,
+  type ValidationError,
+
+  // Defaults
+  defaultAgentConfig,
+  defaultTaskConfig,
+  defaultSwarmConfigCore,
+  defaultMemoryConfig,
+  defaultMCPServerConfig,
+  defaultSystemConfig,
+  agentTypePresets,
+  mergeWithDefaults,
+
+  // Loader
+  ConfigLoader,
+  loadConfig,
+  type LoadedConfig,
+  type ConfigSource,
+} from './core/config/index.js';
+
+// V3 Extended Types
+export type {
+  // Agent types
+  AgentProfile,
+  AgentPermissions,
+  AgentSpawnOptions,
+  AgentSpawnResult,
+  AgentTerminationOptions,
+  AgentTerminationResult,
+  AgentHealthCheckResult,
+  AgentBatchResult,
+  AgentEventPayloads,
+
+  // Task types
+  TaskInput,
+  TaskMetadata as TaskMetadataExtended,
+  TaskExecutionContext,
+  TaskExecutionResult,
+  TaskArtifact,
+  TaskQueueConfig,
+  TaskAssignmentConfig,
+  TaskRetryPolicy,
+  TaskFilter,
+  TaskSortOptions,
+  TaskQueryOptions,
+  TaskEventPayloads,
+
+  // Swarm types
+  SwarmInitOptions,
+  SwarmInitResult,
+  SwarmScaleOptions,
+  SwarmScaleResult,
+  SwarmMessage,
+  ConsensusRequest,
+  ConsensusResponse,
+  DistributedLock,
+  LockAcquisitionResult,
+  DeadlockDetectionResult,
+  SwarmMetrics as SwarmMetricsExtended,
+  SwarmEventPayloads,
+
+  // Memory types
+  MemoryBackendConfig,
+  MemoryStoreOptions,
+  MemoryRetrieveOptions,
+  MemoryListOptions,
+  MemorySearchOptions,
+  MemoryBatchOperation,
+  MemoryBatchResult,
+  MemoryStats,
+  MemoryBankStats,
+  LearnedPattern,
+  PatternSearchResult,
+  MemoryEventPayloads,
+  CacheConfig,
+  VectorIndexConfig,
+  FlashAttentionConfig,
+
+  // MCP types
+  MCPTool,
+  MCPToolHandler,
+  MCPToolResult,
+  MCPContent,
+  MCPServerConfig as MCPServerConfigExtended,
+  MCPTransportConfig,
+  MCPResource,
+  MCPPrompt,
+  MCPCapabilities,
+  MCPRequest,
+  MCPResponse,
+  MCPError,
+  MCPEventPayloads,
+  MCPServerStatus,
+} from './types/index.js';
+
+export {
+  priorityToNumber,
+  numberToPriority,
+  TopologyPresets,
+} from './types/index.js';
+
+// =============================================================================
+// Legacy/Shared Exports (Preserved for Backward Compatibility)
 // =============================================================================
 
 // Shared Types
