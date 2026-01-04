@@ -84,6 +84,23 @@ export {
 } from './modes/index.js';
 
 // =============================================================================
+// SONA Integration (@ruvector/sona)
+// =============================================================================
+
+export {
+  SONALearningEngine,
+  createSONALearningEngine,
+} from './sona-integration.js';
+
+export type {
+  Context,
+  AdaptedBehavior,
+  SONAStats,
+  JsLearnedPattern,
+  JsSonaConfig,
+} from './sona-integration.js';
+
+// =============================================================================
 // ReasoningBank
 // =============================================================================
 
