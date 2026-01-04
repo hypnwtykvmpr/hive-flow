@@ -1,0 +1,18 @@
+{
+  "name": "@claude-flow/neural",
+  "version": "3.0.0-alpha.1",
+  "type": "module",
+  "description": "Neural module - SONA learning integration, neural modes",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@claude-flow/memory": "workspace:*"
+  }
+}
