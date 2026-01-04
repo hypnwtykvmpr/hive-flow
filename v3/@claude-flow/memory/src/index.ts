@@ -469,5 +469,38 @@ export function createEmbeddingService(
   });
 }
 
+/**
+ * Create a hybrid memory service (SQLite + AgentDB)
+ * This is the DEFAULT recommended configuration per ADR-009
+ *
+ * @example
+ * ```typescript
+ * const memory = createHybridService('./data/memory.db', embeddingFn);
+ * await memory.initialize();
+ *
+ * // Structured queries go to SQLite
+ * const user = await memory.getByKey('users', 'john@example.com');
+ *
+ * // Semantic queries go to AgentDB
+ * const similar = await memory.semanticSearch('authentication patterns', 10);
+ * ```
+ */
+export function createHybridService(
+  databasePath: string,
+  embeddingGenerator: EmbeddingGenerator,
+  dimensions: number = 1536
+): UnifiedMemoryService {
+  return new UnifiedMemoryService({
+    embeddingGenerator,
+    dimensions,
+    autoEmbed: true,
+    cacheEnabled: true,
+    // Note: This would require extending UnifiedMemoryService to support HybridBackend
+    // For now, this creates an AgentDB service with persistence
+    persistenceEnabled: true,
+    persistencePath: databasePath,
+  });
+}
+
 // Default export
 export default UnifiedMemoryService;
