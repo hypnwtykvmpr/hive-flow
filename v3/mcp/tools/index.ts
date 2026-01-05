@@ -30,6 +30,8 @@ import { hooksTools } from './hooks-tools.js';
 import { taskTools } from './task-tools.js';
 import { systemTools } from './system-tools.js';
 import { sessionTools } from './session-tools.js';
+import { workerTools } from './worker-tools.js';
+import { sonaTools } from './sona-tools.js';
 
 // ============================================================================
 // Individual Tool Exports
