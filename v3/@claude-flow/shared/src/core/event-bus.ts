@@ -11,6 +11,14 @@ import type {
   IEventSubscription,
   IEventFilter,
 } from './interfaces/event.interface.js';
+import { randomBytes } from 'crypto';
+
+// Secure event ID generation
+function generateSecureEventId(): string {
+  const timestamp = Date.now().toString(36);
+  const random = randomBytes(12).toString('hex');
+  return `evt_${timestamp}_${random}`;
+}
 
 /**
  * Event subscription implementation
