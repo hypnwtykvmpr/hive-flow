@@ -17,7 +17,12 @@
     "AGENTIC_FLOW_HNSW_ENABLED": "true",
     "AGENTIC_FLOW_MOE_ATTENTION": "true",
     "AGENTIC_FLOW_MULTI_ALGORITHM_RL": "true",
-    "AGENTIC_FLOW_COMPRESSION_ENABLED": "true"
+    "AGENTIC_FLOW_COMPRESSION_ENABLED": "true",
+    "AGENTIC_FLOW_SWARM_COMM_ENABLED": "true",
+    "AGENTIC_FLOW_AGENT_NAME": "claude-code",
+    "AGENTIC_FLOW_PATTERN_BROADCAST_THRESHOLD": "0.7",
+    "AGENTIC_FLOW_CONSENSUS_TIMEOUT": "30000",
+    "AGENTIC_FLOW_AUTO_BROADCAST_PATTERNS": "true"
   },
   "permissions": {
     "allowedTools": [
@@ -89,6 +94,11 @@
             "type": "command",
             "timeout": 2000,
             "command": ".claude/helpers/guidance-hooks.sh route \"$TOOL_INPUT_prompt\""
+          },
+          {
+            "type": "command",
+            "timeout": 3000,
+            "command": ".claude/helpers/swarm-hooks.sh pre-task \"$TOOL_INPUT_prompt\" 2>/dev/null || true"
           }
         ]
       }
@@ -144,6 +154,11 @@
           },
           {
             "type": "command",
+            "timeout": 3000,
+            "command": ".claude/helpers/swarm-hooks.sh post-task \"$TOOL_INPUT_prompt\" true 2>/dev/null || true"
+          },
+          {
+            "type": "command",
             "timeout": 4000,
             "command": ".claude/helpers/checkpoint-manager.sh agent-checkpoint \"Task completed: $TOOL_INPUT_prompt\" 2>/dev/null || true"
           }
@@ -184,6 +199,11 @@
             "type": "command",
             "timeout": 8000,
             "command": ".claude/helpers/learning-hooks.sh session-start 2>/dev/null || true"
+          },
+          {
+            "type": "command",
+            "timeout": 3000,
+            "command": ".claude/helpers/swarm-hooks.sh agents 2>/dev/null || true"
           },
           {
             "type": "command",
@@ -270,6 +290,7 @@
       "v3QuickStatus": ".claude/helpers/v3-quick-status.sh",
       "v3CheckpointManager": ".claude/helpers/checkpoint-manager.sh",
       "v3SwarmMonitor": ".claude/helpers/swarm-monitor.sh",
+      "v3SwarmHooks": ".claude/helpers/swarm-hooks.sh",
       "v3Master": ".claude/helpers/v3.sh"
     }
   },
@@ -282,7 +303,17 @@
     "swarm": {
       "totalAgents": 15,
       "topology": "hierarchical-mesh",
-      "coordination": "queen-led"
+      "coordination": "queen-led",
+      "communication": {
+        "enabled": true,
+        "messaging": true,
+        "patternBroadcast": true,
+        "consensus": true,
+        "taskHandoff": true,
+        "autoPatternShare": true,
+        "patternThreshold": 0.7,
+        "consensusTimeout": 30000
+      }
     },
     "performance": {
       "flashAttentionTarget": "2.49x-7.47x",
