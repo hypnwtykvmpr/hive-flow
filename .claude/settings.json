@@ -100,7 +100,7 @@
           {
             "type": "command",
             "timeout": 5000,
-            "command": "npx agentic-flow@alpha hooks post-edit \"$TOOL_INPUT_file_path\" --success --learn --extract-patterns --v3-mode 2>/dev/null || true"
+            "command": ".claude/helpers/guidance-hooks.sh post-edit \"$TOOL_INPUT_file_path\""
           },
           {
             "type": "command",
