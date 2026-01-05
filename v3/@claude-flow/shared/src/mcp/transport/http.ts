@@ -378,17 +378,28 @@ export class HttpTransport extends EventEmitter implements ITransport {
     this.httpRequests++;
     this.messagesReceived++;
 
-    // Validate authentication if enabled
-    if (this.config.auth?.enabled) {
+    // Validate authentication (ALWAYS check, not just when explicitly enabled)
+    // SECURITY: Auth should be opt-out, not opt-in
+    const requiresAuth = this.config.auth?.enabled !== false; // Default to requiring auth
+
+    if (requiresAuth && this.config.auth) {
       const authResult = this.validateAuth(req);
       if (!authResult.valid) {
+        this.logger.warn('Authentication failed', {
+          ip: req.ip,
+          path: req.path,
+          error: authResult.error,
+        });
         res.status(401).json({
           jsonrpc: '2.0',
           id: null,
-          error: { code: -32001, message: authResult.error || 'Unauthorized' },
+          error: { code: -32001, message: 'Unauthorized' },
         });
         return;
       }
+    } else if (requiresAuth && !this.config.auth) {
+      // No auth configured but auth is required - warn and continue (development mode)
+      this.logger.warn('No authentication configured - running in development mode');
     }
 
     const message = req.body;
