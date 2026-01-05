@@ -45,35 +45,17 @@ const daemonCommand: Command = {
     },
   ],
   examples: [
-    'claude-flow process daemon --action start',
-    'claude-flow process daemon --action stop',
-    'claude-flow process daemon --action restart --port 3850',
-    'claude-flow process daemon --action status',
+    { command: 'claude-flow process daemon --action start', description: 'Start the daemon' },
+    { command: 'claude-flow process daemon --action stop', description: 'Stop the daemon' },
+    { command: 'claude-flow process daemon --action restart --port 3850', description: 'Restart on different port' },
+    { command: 'claude-flow process daemon --action status', description: 'Check daemon status' },
   ],
-  handler: async (ctx: CommandContext): Promise<CommandResult> => {
+  action: async (ctx: CommandContext): Promise<CommandResult> => {
     const action = (ctx.flags?.action as string) || 'status';
     const port = (ctx.flags?.port as number) || 3847;
     const pidFile = (ctx.flags?.['pid-file'] as string) || '.claude-flow/daemon.pid';
     const logFile = (ctx.flags?.['log-file'] as string) || '.claude-flow/daemon.log';
     const detach = ctx.flags?.detach !== false;
-
-    ctx.logger?.info(`Process daemon: ${action}`);
-
-    // Check if MCP tools available
-    if (ctx.mcp?.callTool) {
-      try {
-        const result = await ctx.mcp.callTool('process_daemon', {
-          action,
-          port,
-          pidFile,
-          logFile,
-          detach,
-        });
-        return { success: true, data: result };
-      } catch (error) {
-        // Fall through to simulated output
-      }
-    }
 
     // Simulated daemon management
     const daemonState = {
@@ -181,35 +163,16 @@ const monitorCommand: Command = {
     },
   ],
   examples: [
-    'claude-flow process monitor',
-    'claude-flow process monitor --watch --interval 5',
-    'claude-flow process monitor --components agents,memory,tasks',
-    'claude-flow process monitor --format json',
+    { command: 'claude-flow process monitor', description: 'Show process dashboard' },
+    { command: 'claude-flow process monitor --watch --interval 5', description: 'Watch mode' },
+    { command: 'claude-flow process monitor --components agents,memory,tasks', description: 'Monitor specific components' },
+    { command: 'claude-flow process monitor --format json', description: 'JSON output' },
   ],
-  handler: async (ctx: CommandContext): Promise<CommandResult> => {
+  action: async (ctx: CommandContext): Promise<CommandResult> => {
     const interval = (ctx.flags?.interval as number) || 2;
     const format = (ctx.flags?.format as string) || 'dashboard';
-    const components = (ctx.flags?.components as string) || 'all';
     const watch = ctx.flags?.watch === true;
     const alerts = ctx.flags?.alerts !== false;
-
-    ctx.logger?.info('Process monitor');
-
-    // Check if MCP tools available
-    if (ctx.mcp?.callTool) {
-      try {
-        const result = await ctx.mcp.callTool('process_monitor', {
-          interval,
-          format,
-          components,
-          watch,
-          alerts,
-        });
-        return { success: true, data: result };
-      } catch (error) {
-        // Fall through to simulated output
-      }
-    }
 
     // Simulated monitoring data
     const metrics = {
@@ -361,33 +324,16 @@ const workersCommand: Command = {
     },
   ],
   examples: [
-    'claude-flow process workers --action list',
-    'claude-flow process workers --action spawn --type task --count 3',
-    'claude-flow process workers --action kill --id worker-123',
-    'claude-flow process workers --action scale --type memory --count 5',
+    { command: 'claude-flow process workers --action list', description: 'List all workers' },
+    { command: 'claude-flow process workers --action spawn --type task --count 3', description: 'Spawn task workers' },
+    { command: 'claude-flow process workers --action kill --id worker-123', description: 'Kill specific worker' },
+    { command: 'claude-flow process workers --action scale --type memory --count 5', description: 'Scale memory workers' },
   ],
-  handler: async (ctx: CommandContext): Promise<CommandResult> => {
+  action: async (ctx: CommandContext): Promise<CommandResult> => {
     const action = (ctx.flags?.action as string) || 'list';
     const type = ctx.flags?.type as string;
     const count = (ctx.flags?.count as number) || 1;
     const id = ctx.flags?.id as string;
-
-    ctx.logger?.info(`Process workers: ${action}`);
-
-    // Check if MCP tools available
-    if (ctx.mcp?.callTool) {
-      try {
-        const result = await ctx.mcp.callTool('process_workers', {
-          action,
-          type,
-          count,
-          id,
-        });
-        return { success: true, data: result };
-      } catch (error) {
-        // Fall through to simulated output
-      }
-    }
 
     // Simulated worker data
     const workers = [
@@ -414,7 +360,7 @@ const workersCommand: Command = {
       case 'spawn':
         if (!type) {
           console.log('\n❌ Worker type required. Use --type <task|memory|coordinator|neural>');
-          return { success: false, error: 'Worker type required' };
+          return { success: false, message: 'Worker type required' };
         }
         console.log(`\n🚀 Spawning ${count} ${type} worker(s)...\n`);
         for (let i = 0; i < count; i++) {
@@ -427,7 +373,7 @@ const workersCommand: Command = {
       case 'kill':
         if (!id) {
           console.log('\n❌ Worker ID required. Use --id <worker-id>');
-          return { success: false, error: 'Worker ID required' };
+          return { success: false, message: 'Worker ID required' };
         }
         console.log(`\n🛑 Killing worker: ${id}...\n`);
         console.log('  ✅ Worker terminated');
@@ -437,7 +383,7 @@ const workersCommand: Command = {
       case 'scale':
         if (!type) {
           console.log('\n❌ Worker type required. Use --type <task|memory|coordinator|neural>');
-          return { success: false, error: 'Worker type required' };
+          return { success: false, message: 'Worker type required' };
         }
         const current = workers.filter(w => w.type === type).length;
         console.log(`\n📊 Scaling ${type} workers: ${current} → ${count}\n`);
@@ -484,21 +430,19 @@ const signalsCommand: Command = {
     },
   ],
   examples: [
-    'claude-flow process signals --target daemon --signal graceful-shutdown',
-    'claude-flow process signals --target workers --signal pause',
-    'claude-flow process signals --target all --signal reload-config',
+    { command: 'claude-flow process signals --target daemon --signal graceful-shutdown', description: 'Graceful shutdown' },
+    { command: 'claude-flow process signals --target workers --signal pause', description: 'Pause workers' },
+    { command: 'claude-flow process signals --target all --signal reload-config', description: 'Reload all configs' },
   ],
-  handler: async (ctx: CommandContext): Promise<CommandResult> => {
+  action: async (ctx: CommandContext): Promise<CommandResult> => {
     const target = ctx.flags?.target as string;
     const signal = (ctx.flags?.signal as string) || 'graceful-shutdown';
     const timeout = (ctx.flags?.timeout as number) || 30;
 
     if (!target) {
       console.log('\n❌ Target required. Use --target <daemon|workers|all|process-id>');
-      return { success: false, error: 'Target required' };
+      return { success: false, message: 'Target required' };
     }
-
-    ctx.logger?.info(`Process signal: ${signal} -> ${target}`);
 
     console.log(`\n📡 Sending signal: ${signal}\n`);
     console.log(`  Target: ${target}`);
@@ -565,20 +509,18 @@ const logsCommand: Command = {
     },
   ],
   examples: [
-    'claude-flow process logs',
-    'claude-flow process logs --source daemon --tail 100',
-    'claude-flow process logs --follow --level error',
-    'claude-flow process logs --since 1h --grep "error"',
+    { command: 'claude-flow process logs', description: 'Show recent logs' },
+    { command: 'claude-flow process logs --source daemon --tail 100', description: 'Daemon logs' },
+    { command: 'claude-flow process logs --follow --level error', description: 'Follow error logs' },
+    { command: 'claude-flow process logs --since 1h --grep "error"', description: 'Search logs' },
   ],
-  handler: async (ctx: CommandContext): Promise<CommandResult> => {
+  action: async (ctx: CommandContext): Promise<CommandResult> => {
     const source = (ctx.flags?.source as string) || 'all';
     const tail = (ctx.flags?.tail as number) || 50;
     const follow = ctx.flags?.follow === true;
     const level = (ctx.flags?.level as string) || 'info';
     const since = ctx.flags?.since as string;
     const grep = ctx.flags?.grep as string;
-
-    ctx.logger?.info(`Process logs: ${source}`);
 
     console.log(`\n📜 Process Logs (${source})\n`);
     console.log(`  Level: ${level}+ | Lines: ${tail}${since ? ` | Since: ${since}` : ''}${grep ? ` | Filter: ${grep}` : ''}`);
@@ -643,18 +585,18 @@ export const processCommand: Command = {
   options: [
     {
       name: 'help',
+      short: 'h',
       type: 'boolean',
       description: 'Show help for process command',
-      alias: 'h',
     },
   ],
   examples: [
-    'claude-flow process daemon --action start',
-    'claude-flow process monitor --watch',
-    'claude-flow process workers --action list',
-    'claude-flow process logs --follow',
+    { command: 'claude-flow process daemon --action start', description: 'Start daemon' },
+    { command: 'claude-flow process monitor --watch', description: 'Watch processes' },
+    { command: 'claude-flow process workers --action list', description: 'List workers' },
+    { command: 'claude-flow process logs --follow', description: 'Follow logs' },
   ],
-  handler: async (ctx: CommandContext): Promise<CommandResult> => {
+  action: async (_ctx: CommandContext): Promise<CommandResult> => {
     // Show help if no subcommand
     console.log('\n🔧 Process Management\n');
     console.log('Manage background processes, daemons, and workers.\n');
