@@ -15,9 +15,11 @@ export {
   type StatuslineConfig,
   type MCPConfig,
   type RuntimeConfig,
+  type PlatformInfo,
   DEFAULT_INIT_OPTIONS,
   MINIMAL_INIT_OPTIONS,
   FULL_INIT_OPTIONS,
+  detectPlatform,
 } from './types.js';
 
 // Generators
@@ -44,6 +46,9 @@ export {
   generateAgentRouter,
   generateMemoryHelper,
   generateHelpers,
+  generateWindowsDaemonManager,
+  generateWindowsBatchWrapper,
+  generateCrossPlatformSessionManager,
 } from './helpers-generator.js';
 
 // Main executor
