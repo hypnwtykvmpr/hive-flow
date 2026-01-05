@@ -1,6 +1,13 @@
 # @claude-flow/swarm
 
-V3 Unified Swarm Coordination Module implementing ADR-003: Single Coordination Engine
+[![npm version](https://img.shields.io/npm/v/@claude-flow/swarm.svg)](https://www.npmjs.com/package/@claude-flow/swarm)
+[![npm downloads](https://img.shields.io/npm/dm/@claude-flow/swarm.svg)](https://www.npmjs.com/package/@claude-flow/swarm)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
+[![ADR-003](https://img.shields.io/badge/ADR--003-Compliant-green.svg)](https://github.com/ruvnet/claude-flow)
+[![Agents](https://img.shields.io/badge/Agents-15--Agent%20Hierarchy-orange.svg)](https://github.com/ruvnet/claude-flow)
+
+> V3 Unified Swarm Coordination Module implementing ADR-003: Single Coordination Engine
 
 ## Architecture (ADR-003)
 
