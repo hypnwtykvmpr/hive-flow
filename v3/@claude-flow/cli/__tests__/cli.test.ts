@@ -404,8 +404,9 @@ describe('CLI', () => {
         expect((e as Error).message).toContain('process.exit');
       }
 
-      const output = consoleOutput.join('');
-      expect(output).toContain('Command failed');
+      // Error messages go to stderr, so check both stdout and stderr
+      const allOutput = [...consoleOutput, ...consoleErrorOutput].join('');
+      expect(allOutput).toContain('Command failed');
     });
 
     it('should handle missing required options', async () => {
