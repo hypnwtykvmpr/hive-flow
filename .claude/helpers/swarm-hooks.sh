@@ -431,14 +431,20 @@ initiate_handoff() {
 
   # Parse context or use defaults - ensure valid JSON
   local context
-  if command -v jq &>/dev/null && echo "$context_json" | jq -e . >/dev/null 2>&1; then
-    context=$(echo "$context_json" | jq -c '{
+  if command -v jq &>/dev/null && [ -n "$context_json" ] && [ "$context_json" != "{}" ]; then
+    # Try to parse and merge with defaults
+    context=$(jq -c '{
       filesModified: (.filesModified // []),
       patternsUsed: (.patternsUsed // []),
       decisions: (.decisions // []),
       blockers: (.blockers // []),
       nextSteps: (.nextSteps // [])
-    }')
+    }' <<< "$context_json" 2>/dev/null)
+
+    # If parsing failed, use defaults
+    if [ -z "$context" ] || [ "$context" = "null" ]; then
+      context='{"filesModified":[],"patternsUsed":[],"decisions":[],"blockers":[],"nextSteps":[]}'
+    fi
   else
     context='{"filesModified":[],"patternsUsed":[],"decisions":[],"blockers":[],"nextSteps":[]}'
   fi

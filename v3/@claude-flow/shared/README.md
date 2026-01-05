@@ -306,15 +306,17 @@ export * from './types/mcp.types';
 
 This package is a dependency of all other @claude-flow modules:
 
-- [@claude-flow/cli](../cli)
-- [@claude-flow/security](../security)
-- [@claude-flow/memory](../memory)
-- [@claude-flow/neural](../neural)
-- [@claude-flow/performance](../performance)
-- [@claude-flow/swarm](../swarm)
-- [@claude-flow/integration](../integration)
-- [@claude-flow/testing](../testing)
-- [@claude-flow/deployment](../deployment)
+- [@claude-flow/cli](../cli) - CLI module
+- [@claude-flow/security](../security) - Security & validation
+- [@claude-flow/memory](../memory) - AgentDB & HNSW indexing
+- [@claude-flow/neural](../neural) - SONA learning & RL algorithms
+- [@claude-flow/performance](../performance) - Benchmarking & optimization
+- [@claude-flow/swarm](../swarm) - 15-agent coordination
+- [@claude-flow/integration](../integration) - agentic-flow@alpha bridge
+- [@claude-flow/testing](../testing) - TDD framework & fixtures
+- [@claude-flow/deployment](../deployment) - Release management
+- [@claude-flow/embeddings](../embeddings) - Embedding service
+- [@claude-flow/hooks](../hooks) - Hooks system
 
 ## License
 
