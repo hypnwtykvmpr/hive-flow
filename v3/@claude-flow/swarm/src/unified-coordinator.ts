@@ -1559,6 +1559,283 @@ export class UnifiedSwarmCoordinator extends EventEmitter implements IUnifiedSwa
       await this.assignTaskToDomain(nextTaskId, domain);
     }
   }
+
+  // =============================================================================
+  // MCP-Compatible API Methods (agentic-flow@alpha compatibility)
+  // =============================================================================
+
+  /**
+   * Spawn a new agent (MCP-compatible alias for registerAgent)
+   * Compatible with agentic-flow@alpha's agent spawn API
+   *
+   * @param options - Agent spawn options
+   * @returns Spawned agent ID and details
+   */
+  async spawnAgent(options: {
+    type: AgentType;
+    name?: string;
+    capabilities?: string[];
+    domain?: AgentDomain;
+    agentNumber?: number;
+    metadata?: Record<string, unknown>;
+  }): Promise<{
+    agentId: string;
+    domain: AgentDomain;
+    status: AgentStatus;
+    spawned: boolean;
+  }> {
+    const startTime = performance.now();
+
+    // Create agent data from options
+    const agentData: Omit<AgentState, 'id'> = {
+      name: options.name || `${options.type}-agent-${this.agentCounter + 1}`,
+      type: options.type,
+      status: 'idle',
+      capabilities: this.createCapabilitiesFromList(options.capabilities || []),
+      metrics: this.createDefaultAgentMetrics(),
+      workload: 0,
+      health: 1.0,
+      lastHeartbeat: new Date(),
+      topologyRole: options.type === 'queen' ? 'queen' : 'worker',
+      connections: [],
+      metadata: options.metadata,
+    };
+
+    // Determine domain and agent number
+    let domain: AgentDomain;
+    let agentId: string;
+
+    if (options.agentNumber) {
+      // Use provided agent number to determine domain
+      const result = await this.registerAgentWithDomain(agentData, options.agentNumber);
+      agentId = result.agentId;
+      domain = result.domain;
+    } else if (options.domain) {
+      // Use provided domain, assign next available number in that domain
+      const config = this.domainConfigs.get(options.domain);
+      const existingAgents = Array.from(this.agentDomainMap.entries())
+        .filter(([, d]) => d === options.domain)
+        .length;
+      const nextNumber = config?.agentNumbers[existingAgents] || config?.agentNumbers[0] || 1;
+      const result = await this.registerAgentWithDomain(agentData, nextNumber);
+      agentId = result.agentId;
+      domain = result.domain;
+    } else {
+      // Auto-assign to most appropriate domain based on type
+      domain = this.agentTypeToDomain(options.type);
+      agentId = await this.registerAgent(agentData);
+      this.agentDomainMap.set(agentId, domain);
+    }
+
+    const duration = performance.now() - startTime;
+
+    this.emitEvent('agent.spawned', {
+      agentId,
+      type: options.type,
+      domain,
+      durationMs: duration,
+    });
+
+    return {
+      agentId,
+      domain,
+      status: 'idle',
+      spawned: true,
+    };
+  }
+
+  /**
+   * Terminate an agent (MCP-compatible alias for unregisterAgent)
+   * Compatible with agentic-flow@alpha's agent terminate API
+   *
+   * @param agentId - Agent ID to terminate
+   * @param options - Termination options
+   * @returns Termination result
+   */
+  async terminateAgent(
+    agentId: string,
+    options?: {
+      force?: boolean;
+      reason?: string;
+      gracePeriodMs?: number;
+    }
+  ): Promise<{
+    terminated: boolean;
+    agentId: string;
+    reason?: string;
+    tasksReassigned?: number;
+  }> {
+    const agent = this.state.agents.get(agentId);
+    if (!agent) {
+      return {
+        terminated: false,
+        agentId,
+        reason: 'Agent not found',
+      };
+    }
+
+    // If agent has active tasks and not forcing, wait or reassign
+    let tasksReassigned = 0;
+    if (agent.currentTask && !options?.force) {
+      const gracePeriodMs = options?.gracePeriodMs || 5000;
+
+      // Wait for grace period or force terminate
+      const task = agent.currentTask;
+      await new Promise(resolve => setTimeout(resolve, gracePeriodMs));
+
+      // Check if task still running
+      const currentAgent = this.state.agents.get(agentId);
+      if (currentAgent?.currentTask?.id === task.id) {
+        // Reassign the task
+        await this.cancelTask(task.id);
+        tasksReassigned = 1;
+      }
+    }
+
+    // Remove from domain tracking
+    this.agentDomainMap.delete(agentId);
+
+    // Unregister the agent
+    await this.unregisterAgent(agentId);
+
+    this.emitEvent('agent.terminated', {
+      agentId,
+      reason: options?.reason || 'manual termination',
+      tasksReassigned,
+    });
+
+    return {
+      terminated: true,
+      agentId,
+      reason: options?.reason || 'manual termination',
+      tasksReassigned,
+    };
+  }
+
+  /**
+   * Get agent status by ID (MCP-compatible)
+   */
+  async getAgentStatus(agentId: string): Promise<{
+    found: boolean;
+    agentId: string;
+    status?: AgentStatus;
+    domain?: AgentDomain;
+    workload?: number;
+    health?: number;
+    currentTask?: string;
+    metrics?: AgentMetrics;
+  }> {
+    const agent = this.state.agents.get(agentId);
+    if (!agent) {
+      return { found: false, agentId };
+    }
+
+    const domain = this.agentDomainMap.get(agentId);
+
+    return {
+      found: true,
+      agentId,
+      status: agent.status,
+      domain,
+      workload: agent.workload,
+      health: agent.health,
+      currentTask: agent.currentTask?.id,
+      metrics: agent.metrics,
+    };
+  }
+
+  /**
+   * List all agents with optional filters (MCP-compatible)
+   */
+  listAgents(filters?: {
+    status?: AgentStatus;
+    domain?: AgentDomain;
+    type?: AgentType;
+    available?: boolean;
+  }): Array<{
+    agentId: string;
+    name: string;
+    type: AgentType;
+    status: AgentStatus;
+    domain?: AgentDomain;
+    workload: number;
+    health: number;
+  }> {
+    let agents = this.getAllAgents();
+
+    if (filters?.status) {
+      agents = agents.filter(a => a.status === filters.status);
+    }
+    if (filters?.type) {
+      agents = agents.filter(a => a.type === filters.type);
+    }
+    if (filters?.available) {
+      agents = agents.filter(a => a.status === 'idle');
+    }
+    if (filters?.domain) {
+      agents = agents.filter(a => {
+        const domain = this.agentDomainMap.get(a.id.id);
+        return domain === filters.domain;
+      });
+    }
+
+    return agents.map(a => ({
+      agentId: a.id.id,
+      name: a.name,
+      type: a.type,
+      status: a.status,
+      domain: this.agentDomainMap.get(a.id.id),
+      workload: a.workload,
+      health: a.health,
+    }));
+  }
+
+  // =============================================================================
+  // Helper Methods for MCP API
+  // =============================================================================
+
+  private createCapabilitiesFromList(capabilities: string[]): AgentCapabilities {
+    return {
+      codeGeneration: capabilities.includes('code-generation'),
+      codeReview: capabilities.includes('code-review'),
+      testing: capabilities.includes('testing'),
+      documentation: capabilities.includes('documentation'),
+      research: capabilities.includes('research'),
+      analysis: capabilities.includes('analysis'),
+      coordination: capabilities.includes('coordination'),
+      languages: ['typescript', 'javascript', 'python'],
+      frameworks: ['node', 'react', 'vitest'],
+      domains: capabilities,
+      tools: ['git', 'npm', 'editor', 'claude'],
+      maxConcurrentTasks: 3,
+      maxMemoryUsage: 512 * 1024 * 1024,
+      maxExecutionTime: SWARM_CONSTANTS.DEFAULT_TASK_TIMEOUT_MS,
+      reliability: 0.95,
+      speed: 1.0,
+      quality: 0.9,
+    };
+  }
+
+  private agentTypeToDomain(type: AgentType): AgentDomain {
+    const typeMapping: Record<string, AgentDomain> = {
+      queen: 'queen',
+      coordinator: 'queen',
+      security: 'security',
+      architect: 'core',
+      coder: 'core',
+      developer: 'core',
+      tester: 'support',
+      reviewer: 'security',
+      researcher: 'integration',
+      analyst: 'core',
+      optimizer: 'support',
+      documenter: 'support',
+      monitor: 'support',
+      specialist: 'core',
+      worker: 'core',
+    };
+    return typeMapping[type as string] || 'core';
+  }
 }
 
 export function createUnifiedSwarmCoordinator(
