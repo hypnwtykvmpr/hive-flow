@@ -463,13 +463,18 @@ export class TopologyManager extends EventEmitter implements ITopologyManager {
   }
 
   private async rebalanceHierarchical(): Promise<void> {
-    const queen = this.state.nodes.find(n => n.role === 'queen');
+    // O(1) queen lookup
+    let queen = this.queenNode;
     if (!queen) {
       // Elect a queen if missing
       if (this.state.nodes.length > 0) {
-        this.state.nodes[0].role = 'queen';
+        const newQueen = this.state.nodes[0]!;
+        newQueen.role = 'queen';
+        this.addToRoleIndex(newQueen);
+        queen = newQueen;
+      } else {
+        return;
       }
-      return;
     }
 
     // Ensure all workers are connected to queen
