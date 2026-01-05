@@ -172,7 +172,7 @@
           {
             "type": "command",
             "timeout": 5000,
-            "command": "npx agentic-flow@alpha hooks post-edit \"$TOOL_INPUT_file_path\" --success false 2>/dev/null || true"
+            "command": "npx agentic-flow@alpha hooks post-edit \"$TOOL_INPUT_file_path\" --fail 2>/dev/null || true"
           }
         ]
       },
