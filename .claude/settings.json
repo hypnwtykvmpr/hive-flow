@@ -250,7 +250,7 @@
           {
             "type": "command",
             "timeout": 4000,
-            "command": ".claude/helpers/guidance-hooks.sh user-prompt \"$USER_PROMPT\""
+            "command": "/workspaces/claude-flow/.claude/helpers/guidance-hooks.sh user-prompt \"$USER_PROMPT\""
           }
         ]
       }
