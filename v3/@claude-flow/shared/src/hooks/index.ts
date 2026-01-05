@@ -77,3 +77,55 @@ export {
   HookExecutor,
   createHookExecutor,
 } from './executor.js';
+
+// Export task hooks
+export {
+  TaskHooksManager,
+  createTaskHooksManager,
+} from './task-hooks.js';
+
+export type {
+  PreTaskHookResult,
+  PostTaskHookResult,
+  AgentSuggestion,
+  TaskPattern,
+  TaskOutcome,
+  LearningUpdate,
+} from './task-hooks.js';
+
+// Export session hooks
+export {
+  SessionHooksManager,
+  createSessionHooksManager,
+  InMemorySessionStorage,
+} from './session-hooks.js';
+
+export type {
+  SessionState,
+  SessionEndHookResult,
+  SessionRestoreHookResult,
+  SessionSummary,
+  SessionStorage,
+} from './session-hooks.js';
+
+// Export safety hooks
+export {
+  BashSafetyHook,
+  createBashSafetyHook,
+  FileOrganizationHook,
+  createFileOrganizationHook,
+  GitCommitHook,
+  createGitCommitHook,
+} from './safety/index.js';
+
+export type {
+  BashSafetyResult,
+  CommandRisk,
+  FileOrganizationResult,
+  FormatterRecommendation,
+  LinterRecommendation,
+  OrganizationIssue,
+  GitCommitResult,
+  CommitType,
+  CommitValidationIssue,
+} from './safety/index.js';
