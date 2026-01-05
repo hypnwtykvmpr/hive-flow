@@ -134,7 +134,7 @@ export class EventBus implements IEventBus {
 
   private createEvent<T>(type: string, payload: T, options?: Partial<IEventCreate<T>>): IEvent<T> {
     return {
-      id: `evt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: generateSecureEventId(),
       type,
       timestamp: new Date(),
       source: options?.source ?? 'event-bus',
