@@ -417,17 +417,20 @@ describe('Task Tools', () => {
     });
 
     it('should remove dependencies', async () => {
+      // Use a context without orchestrator to test simple implementation
+      const simpleContext: ToolContext = { sessionId: 'test-session' };
+
       const createResult = await createTaskTool.handler({
         type: 'code',
         description: 'Task with dependencies',
         dependencies: ['task-1', 'task-2', 'task-3'],
-      }, mockContext);
+      }, simpleContext);
 
       const result = await taskDependenciesTool.handler({
         taskId: createResult.taskId,
         action: 'remove',
         dependencies: ['task-2'],
-      }, mockContext);
+      }, simpleContext);
 
       expect(result.action).toBe('remove');
       expect(result.dependencies).not.toContain('task-2');
