@@ -7,6 +7,8 @@ set -e
 CHECKPOINT_DIR=".claude-flow/checkpoints"
 METRICS_DIR=".claude-flow/metrics"
 AUTO_COMMIT_ENABLED=true
+AUTO_PUSH_ENABLED=true
+PUSH_BATCH_SIZE=5  # Push after this many commits
 MIN_CHANGES_THRESHOLD=1
 
 # Color codes
