@@ -261,7 +261,7 @@ const wizardCommand: Command = {
 
         // Hooks selection
         if (options.components.settings) {
-          const hooks = await multiselect({
+          const hooks = await multiSelect({
             message: 'Select hooks to enable:',
             options: [
               { value: 'preToolUse', label: 'PreToolUse', hint: 'Before tool execution', selected: true },
