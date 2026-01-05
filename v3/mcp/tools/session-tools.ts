@@ -534,7 +534,7 @@ async function handleListSessions(
   const sessions: SessionSummary[] = [];
 
   // Collect sessions from store
-  for (const [id, data] of sessionStore) {
+  for (const [id, data] of Array.from(sessionStore.entries())) {
     sessions.push({
       id,
       name: data.name,
