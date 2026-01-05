@@ -233,6 +233,41 @@ export {
 } from './coordination/swarm-hub.js';
 
 // =============================================================================
+// Worker Dispatch (agentic-flow@alpha compatible)
+// =============================================================================
+
+export {
+  WorkerDispatchService,
+  getWorkerDispatchService,
+  type WorkerTrigger,
+  type WorkerStatus,
+  type WorkerPriority,
+  type TriggerConfig,
+  type WorkerInstance,
+  type WorkerResult,
+  type WorkerDispatchOptions,
+  type TriggerDetectionResult,
+  type WorkerStats,
+} from './workers/worker-dispatch.js';
+
+// =============================================================================
+// Attention Coordinator (Flash/MoE/GraphRoPE)
+// =============================================================================
+
+export {
+  AttentionCoordinator,
+  createAttentionCoordinator,
+  type AttentionType,
+  type AttentionConfig,
+  type AttentionResult,
+  type ExpertConfig,
+  type ExpertSelection,
+  type MoEResult,
+  type PositionalConfig,
+  type PositionalResult,
+} from './attention-coordinator.js';
+
+// =============================================================================
 // Default Export
 // =============================================================================
 
