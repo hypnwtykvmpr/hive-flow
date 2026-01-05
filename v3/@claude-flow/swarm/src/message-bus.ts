@@ -371,7 +371,7 @@ export class MessageBus extends EventEmitter implements IMessageBus {
 
     // Initialize queue for this agent
     if (!this.queues.has(agentId)) {
-      this.queues.set(agentId, []);
+      this.queues.set(agentId, new PriorityMessageQueue());
     }
 
     this.emit('subscription.added', { agentId });
