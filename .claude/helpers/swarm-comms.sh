@@ -252,25 +252,22 @@ vote_async() {
 # =============================================================================
 
 get_comms_stats() {
-  local queued=$(ls "$QUEUE_DIR"/*.json 2>/dev/null | wc -l || echo "0")
-  local batched=$(ls "$BATCH_DIR"/*.batch 2>/dev/null | wc -l || echo "0")
-  local patterns=$(ls "$SWARM_DIR/patterns"/*.json 2>/dev/null | wc -l || echo "0")
-  local consensus=$(ls "$SWARM_DIR/consensus"/*.json 2>/dev/null | wc -l || echo "0")
+  local queued=$(ls "$QUEUE_DIR"/*.json 2>/dev/null | wc -l | tr -d '[:space:]')
+  queued=${queued:-0}
+  local batched=$(ls "$BATCH_DIR"/*.batch 2>/dev/null | wc -l | tr -d '[:space:]')
+  batched=${batched:-0}
+  local patterns=$(ls "$SWARM_DIR/patterns"/*.json 2>/dev/null | wc -l | tr -d '[:space:]')
+  patterns=${patterns:-0}
+  local consensus=$(ls "$SWARM_DIR/consensus"/*.json 2>/dev/null | wc -l | tr -d '[:space:]')
+  consensus=${consensus:-0}
 
   local pool_active=0
   if [ -f "$POOL_FILE" ]; then
-    pool_active=$(jq '.activeConnections // 0' "$POOL_FILE" 2>/dev/null || echo "0")
+    pool_active=$(jq '.activeConnections // 0' "$POOL_FILE" 2>/dev/null | tr -d '[:space:]')
+    pool_active=${pool_active:-0}
   fi
 
-  cat << EOF
-{
-  "queue": {"pending": $queued},
-  "batch": {"pending": $batched},
-  "patterns": {"active": $patterns},
-  "consensus": {"active": $consensus},
-  "pool": {"connections": $pool_active}
-}
-EOF
+  echo "{\"queue\":$queued,\"batch\":$batched,\"patterns\":$patterns,\"consensus\":$consensus,\"pool\":$pool_active}"
 }
 
 # =============================================================================
