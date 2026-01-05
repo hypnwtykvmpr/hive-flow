@@ -1127,12 +1127,17 @@ export function createWorkerManager(projectRoot?: string): WorkerManager {
   const root = projectRoot || process.cwd();
   const manager = new WorkerManager(root);
 
-  // Register built-in workers
+  // Register all built-in workers
   manager.register('performance', createPerformanceWorker(root));
   manager.register('health', createHealthWorker(root));
   manager.register('swarm', createSwarmWorker(root));
   manager.register('git', createGitWorker(root));
   manager.register('learning', createLearningWorker(root));
+  manager.register('adr', createADRWorker(root));
+  manager.register('ddd', createDDDWorker(root));
+  manager.register('security', createSecurityWorker(root));
+  manager.register('patterns', createPatternsWorker(root));
+  manager.register('cache', createCacheWorker(root));
 
   return manager;
 }
