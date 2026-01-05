@@ -483,7 +483,7 @@ export class ReasoningBank extends EventEmitter {
   getStats(): {
     shortTermCount: number;
     longTermCount: number;
-    metrics: typeof this.metrics;
+    metrics: ReasoningBankMetrics;
     avgSearchTime: number;
   } {
     return {

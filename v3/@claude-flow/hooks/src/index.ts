@@ -16,6 +16,24 @@
 // Types
 export * from './types.js';
 
+// ReasoningBank - Vector-based pattern learning
+export {
+  ReasoningBank,
+  reasoningBank,
+  type GuidancePattern,
+  type GuidanceResult,
+  type RoutingResult,
+  type ReasoningBankConfig,
+  type ReasoningBankMetrics,
+} from './reasoningbank/index.js';
+
+// Guidance Provider - Claude-visible output generation
+export {
+  GuidanceProvider,
+  guidanceProvider,
+  type ClaudeHookOutput,
+} from './reasoningbank/guidance-provider.js';
+
 // Registry
 export {
   HookRegistry,
