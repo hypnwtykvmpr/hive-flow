@@ -21,6 +21,8 @@ export default defineConfig({
     include: [
       '__tests__/**/*.test.ts',
       '__tests__/**/*.spec.ts',
+      '@claude-flow/**/__tests__/**/*.test.ts',
+      '@claude-flow/**/__tests__/**/*.spec.ts',
     ],
 
     // Exclude patterns

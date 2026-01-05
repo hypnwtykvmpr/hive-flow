@@ -95,6 +95,13 @@ const FILE_TYPE_DIRECTORIES: Array<{
   /** Whether to block root writes */
   blockRoot: boolean;
 }> = [
+  // Test files (MUST come before source files - more specific patterns first)
+  { pattern: /\.test\.(ts|tsx|js|jsx)$/, directories: ['tests/', '__tests__/', 'test/'], type: 'test file', blockRoot: true },
+  { pattern: /\.spec\.(ts|tsx|js|jsx)$/, directories: ['tests/', '__tests__/', 'test/', 'spec/'], type: 'spec file', blockRoot: true },
+  { pattern: /_test\.go$/, directories: ['tests/', 'test/'], type: 'Go test file', blockRoot: true },
+  { pattern: /test_.*\.py$/, directories: ['tests/', 'test/'], type: 'Python test file', blockRoot: true },
+  { pattern: /.*_test\.py$/, directories: ['tests/', 'test/'], type: 'Python test file', blockRoot: true },
+
   // Source files
   { pattern: /\.(ts|tsx)$/, directories: ['src/', 'lib/'], type: 'TypeScript source', blockRoot: true },
   { pattern: /\.(js|jsx|mjs|cjs)$/, directories: ['src/', 'lib/', 'dist/'], type: 'JavaScript source', blockRoot: true },
@@ -108,13 +115,6 @@ const FILE_TYPE_DIRECTORIES: Array<{
   { pattern: /\.cpp?$/, directories: ['src/'], type: 'C/C++ source', blockRoot: true },
   { pattern: /\.swift$/, directories: ['Sources/'], type: 'Swift source', blockRoot: true },
   { pattern: /\.kt$/, directories: ['src/main/kotlin/', 'src/'], type: 'Kotlin source', blockRoot: true },
-
-  // Test files
-  { pattern: /\.test\.(ts|tsx|js|jsx)$/, directories: ['tests/', '__tests__/', 'test/'], type: 'test file', blockRoot: true },
-  { pattern: /\.spec\.(ts|tsx|js|jsx)$/, directories: ['tests/', '__tests__/', 'test/', 'spec/'], type: 'spec file', blockRoot: true },
-  { pattern: /_test\.go$/, directories: ['tests/', 'test/'], type: 'Go test file', blockRoot: true },
-  { pattern: /test_.*\.py$/, directories: ['tests/', 'test/'], type: 'Python test file', blockRoot: true },
-  { pattern: /.*_test\.py$/, directories: ['tests/', 'test/'], type: 'Python test file', blockRoot: true },
 
   // Config files (usually allowed at root)
   { pattern: /\.(json|yaml|yml|toml)$/, directories: ['config/', './', 'configs/'], type: 'config file', blockRoot: false },

@@ -295,6 +295,9 @@ export class GitCommitHook {
     if (commitType && !this.hasConventionalPrefix(subject)) {
       modifiedMessage = `${commitType}: ${this.lowercaseFirstLetter(subject)}`;
       suggestions.push(`Added conventional commit prefix: ${commitType}`);
+    } else if (!commitType && this.config.requireConventional && !this.hasConventionalPrefix(subject)) {
+      // No type detected but conventional commits are required - suggest adding a prefix
+      suggestions.push('Consider adding a conventional commit prefix (feat:, fix:, docs:, etc.)');
     }
 
     // Validate subject length
@@ -386,16 +389,58 @@ export class GitCommitHook {
       return prefixMatch[1] as CommitType;
     }
 
-    // Detect based on keywords
-    for (const pattern of COMMIT_TYPE_PATTERNS) {
-      for (const keyword of pattern.keywords) {
-        if (lowerMessage.includes(keyword)) {
-          return pattern.type;
-        }
+    // Score each commit type based on keyword matches
+    // More specific/unique keywords get higher weight
+    const scores: Map<CommitType, number> = new Map();
+
+    // High-priority patterns (check these first as they're more specific)
+    const priorityPatterns: Array<{ pattern: RegExp; type: CommitType; weight: number }> = [
+      // Test patterns - high priority because "add tests" should be 'test' not 'feat'
+      { pattern: /\b(test|tests|spec|specs|unittest|unit test|testing)\b/i, type: 'test', weight: 3 },
+      // Docs patterns
+      { pattern: /\b(doc|docs|documentation|readme|comment|comments)\b/i, type: 'docs', weight: 3 },
+      // Revert patterns
+      { pattern: /\b(revert|rollback|undo)\b/i, type: 'revert', weight: 3 },
+      // Fix patterns (bug-specific)
+      { pattern: /\b(fix|bug|bugfix|resolve|patch|hotfix)\b/i, type: 'fix', weight: 2 },
+      // CI patterns
+      { pattern: /\b(ci|github action|workflow|pipeline|travis|jenkins|circleci)\b/i, type: 'ci', weight: 3 },
+      // Build patterns
+      { pattern: /\b(build|webpack|rollup|vite|esbuild|bundler|package\.json)\b/i, type: 'build', weight: 2 },
+      // Perf patterns
+      { pattern: /\b(perf|performance|optimize|speed|faster|slow)\b/i, type: 'perf', weight: 2 },
+      // Refactor patterns
+      { pattern: /\b(refactor|restructure|reorganize|extract|simplify|clean)\b/i, type: 'refactor', weight: 2 },
+      // Style patterns
+      { pattern: /\b(style|format|lint|whitespace|prettier|eslint)\b/i, type: 'style', weight: 2 },
+      // Chore patterns - specifically for dependencies
+      { pattern: /\b(dependency|dependencies|deps|bump|upgrade version)\b/i, type: 'chore', weight: 2 },
+      // Generic update is lower priority (could be chore or other)
+      { pattern: /\b(update)\b/i, type: 'chore', weight: 1 },
+      // Feat patterns (generic add/create/implement)
+      { pattern: /\b(add|implement|create|introduce|new feature)\b/i, type: 'feat', weight: 1 },
+    ];
+
+    // Calculate scores for each pattern
+    for (const { pattern, type, weight } of priorityPatterns) {
+      if (pattern.test(lowerMessage)) {
+        const currentScore = scores.get(type) || 0;
+        scores.set(type, currentScore + weight);
       }
     }
 
-    return undefined;
+    // Find highest scoring type
+    let maxScore = 0;
+    let detectedType: CommitType | undefined;
+
+    for (const [type, score] of scores) {
+      if (score > maxScore) {
+        maxScore = score;
+        detectedType = type;
+      }
+    }
+
+    return detectedType;
   }
 
   /**
