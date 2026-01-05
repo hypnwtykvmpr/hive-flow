@@ -15,6 +15,14 @@ import type {
 } from '../interfaces/task.interface.js';
 import type { IEventBus, SystemEventType } from '../interfaces/event.interface.js';
 import { SystemEventTypes } from '../interfaces/event.interface.js';
+import { randomBytes } from 'crypto';
+
+// Secure task ID generation
+function generateSecureTaskId(): string {
+  const timestamp = Date.now().toString(36);
+  const random = randomBytes(12).toString('hex');
+  return `task_${timestamp}_${random}`;
+}
 
 /**
  * Priority queue implementation for tasks
