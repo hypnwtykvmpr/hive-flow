@@ -381,4 +381,6 @@ export default {
   taskTools,
   systemTools,
   sessionTools,
+  workerTools,
+  sonaTools,
 };
