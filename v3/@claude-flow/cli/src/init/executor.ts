@@ -541,9 +541,14 @@ neural/
 /**
  * Find source directory for skills/commands/agents
  */
-function findSourceDir(type: 'skills' | 'commands' | 'agents'): string | null {
+function findSourceDir(type: 'skills' | 'commands' | 'agents', sourceBaseDir?: string): string | null {
   // Build list of possible paths to check
   const possiblePaths: string[] = [];
+
+  // If explicit source base directory is provided, use it first
+  if (sourceBaseDir) {
+    possiblePaths.push(path.join(sourceBaseDir, '.claude', type));
+  }
 
   // From dist/src/init -> go up to project root
   // __dirname is typically /path/to/v3/@claude-flow/cli/dist/src/init
