@@ -145,7 +145,7 @@
           {
             "type": "command",
             "timeout": 2000,
-            "command": "npx agentic-flow@alpha hooks metrics --agent-performance --swarm-efficiency 2>/dev/null || true"
+            "command": "npx agentic-flow@alpha hooks metrics 2>/dev/null || true"
           },
           {
             "type": "command",
