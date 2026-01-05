@@ -127,6 +127,9 @@ export class TopologyManager extends EventEmitter implements ITopologyManager {
     this.state.nodes = this.state.nodes.filter(n => n.agentId !== agentId);
     this.nodeIndex.delete(agentId);
 
+    // Update role index
+    this.removeFromRoleIndex(node);
+
     // Remove all edges connected to this node
     this.state.edges = this.state.edges.filter(
       e => e.from !== agentId && e.to !== agentId
