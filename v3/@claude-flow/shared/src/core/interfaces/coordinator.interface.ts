@@ -311,3 +311,53 @@ export interface IOrchestratorMetrics {
   cpuUsage: NodeJS.CpuUsage;
   timestamp: Date;
 }
+
+/**
+ * Main orchestrator interface - facade for all orchestration capabilities
+ */
+export interface IOrchestrator {
+  /**
+   * Initialize the orchestrator
+   */
+  initialize(): Promise<void>;
+
+  /**
+   * Shutdown the orchestrator
+   */
+  shutdown(): Promise<void>;
+
+  /**
+   * Get health status
+   */
+  getHealthStatus(): Promise<IHealthStatus>;
+
+  /**
+   * Get orchestrator metrics
+   */
+  getMetrics(): Promise<IOrchestratorMetrics>;
+
+  /**
+   * Spawn a new agent
+   */
+  spawnAgent(config: IAgentConfig): Promise<IAgent>;
+
+  /**
+   * Terminate an agent
+   */
+  terminateAgent(agentId: string, reason?: string): Promise<void>;
+
+  /**
+   * Submit a task
+   */
+  submitTask(task: ITask): Promise<ITaskResult>;
+
+  /**
+   * Get task by ID
+   */
+  getTask(taskId: string): Promise<ITask | undefined>;
+
+  /**
+   * Cancel a task
+   */
+  cancelTask(taskId: string): Promise<void>;
+}

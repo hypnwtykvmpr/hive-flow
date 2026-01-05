@@ -166,11 +166,23 @@ export const SystemConfigSchema = z.object({
 
 /**
  * Export schema types
+ * Using z.output to get post-default types (fields with defaults are required in output)
  */
-export type AgentConfig = z.infer<typeof AgentConfigSchema>;
-export type TaskConfig = z.infer<typeof TaskConfigSchema>;
-export type SwarmConfig = z.infer<typeof SwarmConfigSchema>;
-export type MemoryConfig = z.infer<typeof MemoryConfigSchema>;
-export type MCPServerConfig = z.infer<typeof MCPServerConfigSchema>;
-export type OrchestratorConfig = z.infer<typeof OrchestratorConfigSchema>;
-export type SystemConfig = z.infer<typeof SystemConfigSchema>;
+export type AgentConfig = z.output<typeof AgentConfigSchema>;
+export type TaskConfig = z.output<typeof TaskConfigSchema>;
+export type SwarmConfig = z.output<typeof SwarmConfigSchema>;
+export type MemoryConfig = z.output<typeof MemoryConfigSchema>;
+export type MCPServerConfig = z.output<typeof MCPServerConfigSchema>;
+export type OrchestratorConfig = z.output<typeof OrchestratorConfigSchema>;
+export type SystemConfig = z.output<typeof SystemConfigSchema>;
+
+/**
+ * Input types (for validation before defaults are applied)
+ */
+export type AgentConfigInput = z.input<typeof AgentConfigSchema>;
+export type TaskConfigInput = z.input<typeof TaskConfigSchema>;
+export type SwarmConfigInput = z.input<typeof SwarmConfigSchema>;
+export type MemoryConfigInput = z.input<typeof MemoryConfigSchema>;
+export type MCPServerConfigInput = z.input<typeof MCPServerConfigSchema>;
+export type OrchestratorConfigInput = z.input<typeof OrchestratorConfigSchema>;
+export type SystemConfigInput = z.input<typeof SystemConfigSchema>;

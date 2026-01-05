@@ -14,17 +14,19 @@
  */
 
 import { EventEmitter } from 'events';
+import {
+  UsageMetric,
+  BillingEventType,
+} from './types.js';
 import type {
   MeteringConfig,
   IMeteringEngine,
   IBillingStorage,
   UsageRecord,
-  UsageMetric,
   ResourceLimits,
   QuotaCheckResult,
   UsageSummary,
   BillingEvent,
-  BillingEventType,
   BillingEventListener,
 } from './types.js';
 

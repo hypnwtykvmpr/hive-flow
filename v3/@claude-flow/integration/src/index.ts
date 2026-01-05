@@ -278,7 +278,6 @@ export {
 export {
   MultiModelRouter,
   createMultiModelRouter,
-  getDefaultMultiModelRouter,
 } from './multi-model-router.js';
 
 export type {
@@ -287,12 +286,10 @@ export type {
   ProviderConfig,
   RoutingRule,
   RoutingMode,
-  CacheConfig,
-  BudgetConfig,
-  MultiModelRouterConfig,
-  RouteRequest,
-  RouteResult,
-  RouterStats,
+  RouterConfig as MultiModelRouterConfig,
+  RoutingRequest as RouteRequest,
+  RoutingResult as RouteResult,
+  CostTracker as RouterStats,
 } from './multi-model-router.js';
 
 // ===== Quick Start Utilities =====
@@ -310,6 +307,8 @@ export async function quickStart(options?: {
 }> {
   const { AgenticFlowBridge } = await import('./agentic-flow-bridge.js');
   const { FeatureFlagManager } = await import('./feature-flags.js');
+  type SONAAdapterType = import('./sona-adapter.js').SONAAdapter;
+  type AttentionCoordinatorType = import('./attention-coordinator.js').AttentionCoordinator;
 
   const mode = options?.mode || 'standard';
   const flags = FeatureFlagManager.fromProfile(mode);
@@ -321,8 +320,8 @@ export async function quickStart(options?: {
 
   await bridge.initialize();
 
-  let sona = null;
-  let attention = null;
+  let sona: SONAAdapterType | null = null;
+  let attention: AttentionCoordinatorType | null = null;
 
   if (flags.enableSONA) {
     sona = await bridge.getSONAAdapter();

@@ -847,7 +847,8 @@ export class SwarmAdapter extends EventEmitter {
 
   private async connectToAgenticFlow(): Promise<void> {
     try {
-      const agenticFlowModule = await import('agentic-flow').catch(() => null);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const agenticFlowModule: any = await import('agentic-flow').catch(() => null);
 
       if (
         agenticFlowModule &&

@@ -527,7 +527,7 @@ export const QueryTemplates = {
     limit: number = 100
   ): MemoryQuery {
     const builder = query()
-      .updatedBefore(Date.now() - staleThresholdMs)
+      .updatedBetween(0, Date.now() - staleThresholdMs)
       .sortBy('lastAccessedAt', 'asc')
       .limit(limit);
 

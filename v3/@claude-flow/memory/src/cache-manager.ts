@@ -436,7 +436,7 @@ export class TieredCacheManager<T = MemoryEntry> extends EventEmitter {
 
     if (l2Options) {
       this.l2Loader = l2Options.loader;
-      this.l2Writer = l2Options.writer;
+      this.l2Writer = l2Options.writer ?? null;
     }
 
     // Forward L1 events

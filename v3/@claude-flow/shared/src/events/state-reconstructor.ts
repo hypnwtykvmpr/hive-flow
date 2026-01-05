@@ -7,7 +7,8 @@
  * @module v3/shared/events/state-reconstructor
  */
 
-import { EventStore, DomainEvent, Snapshot } from './event-store.js';
+import { EventStore, type EventSnapshot } from './event-store.js';
+import type { DomainEvent } from './domain-events.js';
 
 /**
  * Aggregate root interface
@@ -133,7 +134,7 @@ export class StateReconstructor {
   /**
    * Apply snapshot to aggregate
    */
-  private applySnapshot(aggregate: AggregateRoot, snapshot: Snapshot): void {
+  private applySnapshot(aggregate: AggregateRoot, snapshot: EventSnapshot): void {
     // Type assertion for aggregate that has restoreFromSnapshot
     const restorable = aggregate as AggregateRoot & {
       restoreFromSnapshot?(state: unknown): void;
@@ -151,7 +152,7 @@ export class StateReconstructor {
    * Create snapshot for aggregate
    */
   private async createSnapshot(aggregate: AggregateRoot): Promise<void> {
-    const snapshot: Snapshot = {
+    const snapshot: EventSnapshot = {
       aggregateId: aggregate.id,
       aggregateType: this.getAggregateType(aggregate),
       version: aggregate.version,

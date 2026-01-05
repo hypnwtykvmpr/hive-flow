@@ -9,30 +9,18 @@
  * @module v3/shared/resilience
  */
 
-export {
-  retry,
-  RetryOptions,
-  RetryError,
-  type RetryResult,
-} from './retry.js';
+// Retry
+export { retry, RetryError } from './retry.js';
+export type { RetryOptions, RetryResult } from './retry.js';
 
-export {
-  CircuitBreaker,
-  CircuitBreakerOptions,
-  CircuitBreakerState,
-  type CircuitBreakerStats,
-} from './circuit-breaker.js';
+// Circuit Breaker
+export { CircuitBreaker } from './circuit-breaker.js';
+export type { CircuitBreakerOptions, CircuitBreakerStats } from './circuit-breaker.js';
 
-export {
-  RateLimiter,
-  RateLimiterOptions,
-  SlidingWindowRateLimiter,
-  TokenBucketRateLimiter,
-  type RateLimitResult,
-} from './rate-limiter.js';
+// Rate Limiter
+export { SlidingWindowRateLimiter, TokenBucketRateLimiter } from './rate-limiter.js';
+export type { RateLimiter, RateLimiterOptions, RateLimitResult } from './rate-limiter.js';
 
-export {
-  Bulkhead,
-  BulkheadOptions,
-  type BulkheadStats,
-} from './bulkhead.js';
+// Bulkhead
+export { Bulkhead } from './bulkhead.js';
+export type { BulkheadOptions, BulkheadStats } from './bulkhead.js';

@@ -124,7 +124,7 @@ export class FederationHub extends EventEmitter implements IFederationHub {
   };
 
   private syncDurations: number[] = [];
-  private listeners: Set<FederationEventListener> = new Set();
+  private eventListeners: Set<FederationEventListener> = new Set();
 
   constructor(config: FederationHubConfig, logger?: ILogger) {
     super();
@@ -381,11 +381,11 @@ export class FederationHub extends EventEmitter implements IFederationHub {
 
   // Event handling
   addEventListener(listener: FederationEventListener): void {
-    this.listeners.add(listener);
+    this.eventListeners.add(listener);
   }
 
   removeEventListener(listener: FederationEventListener): void {
-    this.listeners.delete(listener);
+    this.eventListeners.delete(listener);
   }
 
   // ============================================================================
@@ -516,7 +516,7 @@ export class FederationHub extends EventEmitter implements IFederationHub {
   }
 
   private emitEvent(event: FederationEvent): void {
-    for (const listener of this.listeners) {
+    for (const listener of this.eventListeners) {
       try {
         listener(event);
       } catch (error) {

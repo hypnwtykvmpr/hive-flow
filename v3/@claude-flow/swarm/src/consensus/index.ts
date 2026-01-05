@@ -18,7 +18,7 @@ import { ByzantineConsensus, createByzantineConsensus, ByzantineConfig } from '.
 import { GossipConsensus, createGossipConsensus, GossipConfig } from './gossip.js';
 
 export { RaftConsensus, ByzantineConsensus, GossipConsensus };
-export { RaftConfig, ByzantineConfig, GossipConfig };
+export type { RaftConfig, ByzantineConfig, GossipConfig };
 
 type ConsensusImplementation = RaftConsensus | ByzantineConsensus | GossipConsensus;
 
