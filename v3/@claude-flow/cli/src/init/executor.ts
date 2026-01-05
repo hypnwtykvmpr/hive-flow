@@ -382,7 +382,7 @@ async function copyAgents(
   }
 
   // Find source agents directory
-  const sourceAgentsDir = findSourceDir('agents');
+  const sourceAgentsDir = findSourceDir('agents', options.sourceBaseDir);
   if (!sourceAgentsDir) {
     result.errors.push('Could not find source agents directory');
     return;
