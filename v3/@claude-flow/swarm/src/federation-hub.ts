@@ -472,11 +472,13 @@ export class FederationHub extends EventEmitter {
     };
 
     this.ephemeralAgents.set(agentId, agent);
+    this.addAgentToIndexes(agent);
 
     // Simulate spawn (in real implementation, this would call the swarm coordinator)
     setTimeout(() => {
       const a = this.ephemeralAgents.get(agentId);
       if (a && a.status === 'spawning') {
+        this.updateAgentStatusIndex(a, 'spawning');
         a.status = 'active';
         this.emitEvent('agent_spawned', targetSwarmId, agentId);
       }
