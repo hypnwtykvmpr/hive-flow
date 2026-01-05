@@ -83,7 +83,7 @@
           {
             "type": "command",
             "timeout": 3000,
-            "command": ".claude/helpers/guidance-hooks.sh pre-command \"$TOOL_INPUT_command\""
+            "command": "/workspaces/claude-flow/.claude/helpers/guidance-hooks.sh pre-command \"$TOOL_INPUT_command\""
           }
         ]
       },
