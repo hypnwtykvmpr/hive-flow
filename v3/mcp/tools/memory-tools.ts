@@ -122,7 +122,9 @@ async function handleStoreMemory(
   input: z.infer<typeof storeMemorySchema>,
   context?: ToolContext
 ): Promise<StoreMemoryResult> {
-  const id = `mem-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  // Secure memory ID generation
+  const { randomBytes } = await import('crypto');
+  const id = `mem-${Date.now().toString(36)}-${randomBytes(12).toString('hex')}`;
   const storedAt = new Date().toISOString();
 
   // Try to use memory service if available
