@@ -94,14 +94,14 @@ auto_commit() {
     return 0
   fi
 
-  # Check if there are changes to commit
-  if git diff --quiet && git diff --cached --quiet; then
+  # Add all changes first (including untracked)
+  git add -A >/dev/null 2>&1 || true
+
+  # Check if there are changes to commit (after staging)
+  if git diff --cached --quiet; then
     log_info "No changes to commit"
     return 0
   fi
-
-  # Add all changes
-  git add . >/dev/null 2>&1 || true
 
   # Create commit with enhanced message
   local enhanced_message="$message
