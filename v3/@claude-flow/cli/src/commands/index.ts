@@ -11,6 +11,9 @@ import { mcpCommand } from './mcp.js';
 import { configCommand } from './config.js';
 import { migrateCommand } from './migrate.js';
 import { hooksCommand } from './hooks.js';
+import { workflowCommand } from './workflow.js';
+import { hiveMindCommand } from './hive-mind.js';
+import { processCommand } from './process.js';
 // P1 Commands
 import { initCommand } from './init.js';
 import { startCommand } from './start.js';
@@ -26,6 +29,9 @@ export { mcpCommand } from './mcp.js';
 export { configCommand } from './config.js';
 export { migrateCommand } from './migrate.js';
 export { hooksCommand } from './hooks.js';
+export { workflowCommand } from './workflow.js';
+export { hiveMindCommand } from './hive-mind.js';
+export { processCommand } from './process.js';
 // P1 Commands
 export { initCommand } from './init.js';
 export { startCommand } from './start.js';
@@ -50,7 +56,10 @@ export const commands: Command[] = [
   mcpCommand,
   configCommand,
   migrateCommand,
-  hooksCommand
+  hooksCommand,
+  workflowCommand,
+  hiveMindCommand,
+  processCommand
 ];
 
 /**

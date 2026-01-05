@@ -520,11 +520,362 @@ const metricsCommand: Command = {
   }
 };
 
+// Agent pool subcommand
+const poolCommand: Command = {
+  name: 'pool',
+  description: 'Manage agent pool for scaling',
+  options: [
+    {
+      name: 'size',
+      short: 's',
+      description: 'Pool size',
+      type: 'number'
+    },
+    {
+      name: 'min',
+      description: 'Minimum pool size',
+      type: 'number',
+      default: 1
+    },
+    {
+      name: 'max',
+      description: 'Maximum pool size',
+      type: 'number',
+      default: 10
+    },
+    {
+      name: 'auto-scale',
+      short: 'a',
+      description: 'Enable auto-scaling',
+      type: 'boolean',
+      default: true
+    }
+  ],
+  examples: [
+    { command: 'claude-flow agent pool --size 5', description: 'Set pool size' },
+    { command: 'claude-flow agent pool --min 2 --max 15', description: 'Configure auto-scaling' }
+  ],
+  action: async (ctx: CommandContext): Promise<CommandResult> => {
+    try {
+      const result = await callMCPTool<{
+        poolId: string;
+        currentSize: number;
+        minSize: number;
+        maxSize: number;
+        autoScale: boolean;
+        utilization: number;
+        agents: Array<{ id: string; type: string; status: string }>;
+      }>('agent/pool', {
+        size: ctx.flags.size,
+        min: ctx.flags.min,
+        max: ctx.flags.max,
+        autoScale: ctx.flags.autoScale ?? true,
+      });
+
+      if (ctx.flags.format === 'json') {
+        output.printJson(result);
+        return { success: true, data: result };
+      }
+
+      output.writeln();
+      output.printBox(
+        [
+          `Pool ID: ${result.poolId}`,
+          `Current Size: ${result.currentSize}`,
+          `Min/Max: ${result.minSize}/${result.maxSize}`,
+          `Auto-Scale: ${result.autoScale ? 'Yes' : 'No'}`,
+          `Utilization: ${(result.utilization * 100).toFixed(1)}%`
+        ].join('\n'),
+        'Agent Pool'
+      );
+
+      if (result.agents.length > 0) {
+        output.writeln();
+        output.writeln(output.bold('Pool Agents'));
+        output.printTable({
+          columns: [
+            { key: 'id', header: 'ID', width: 20 },
+            { key: 'type', header: 'Type', width: 15 },
+            { key: 'status', header: 'Status', width: 12, format: formatStatus }
+          ],
+          data: result.agents
+        });
+      }
+
+      return { success: true, data: result };
+    } catch (error) {
+      if (error instanceof MCPClientError) {
+        output.printError(`Pool error: ${error.message}`);
+      } else {
+        output.printError(`Unexpected error: ${String(error)}`);
+      }
+      return { success: false, exitCode: 1 };
+    }
+  }
+};
+
+// Agent health subcommand
+const healthCommand: Command = {
+  name: 'health',
+  description: 'Show agent health and metrics',
+  options: [
+    {
+      name: 'id',
+      short: 'i',
+      description: 'Agent ID (all if not specified)',
+      type: 'string'
+    },
+    {
+      name: 'detailed',
+      short: 'd',
+      description: 'Show detailed health metrics',
+      type: 'boolean',
+      default: false
+    },
+    {
+      name: 'watch',
+      short: 'w',
+      description: 'Watch mode (refresh every 5s)',
+      type: 'boolean',
+      default: false
+    }
+  ],
+  examples: [
+    { command: 'claude-flow agent health', description: 'Show all agents health' },
+    { command: 'claude-flow agent health -i agent-001 -d', description: 'Detailed health for specific agent' }
+  ],
+  action: async (ctx: CommandContext): Promise<CommandResult> => {
+    const agentId = ctx.args[0] || ctx.flags.id as string;
+    const detailed = ctx.flags.detailed as boolean;
+
+    try {
+      const result = await callMCPTool<{
+        agents: Array<{
+          id: string;
+          type: string;
+          health: 'healthy' | 'degraded' | 'unhealthy';
+          uptime: number;
+          memory: { used: number; limit: number };
+          cpu: number;
+          tasks: { active: number; queued: number; completed: number; failed: number };
+          latency: { avg: number; p99: number };
+          errors: { count: number; lastError?: string };
+        }>;
+        overall: {
+          healthy: number;
+          degraded: number;
+          unhealthy: number;
+          avgCpu: number;
+          avgMemory: number;
+        };
+      }>('agent/health', {
+        agentId,
+        detailed,
+      });
+
+      if (ctx.flags.format === 'json') {
+        output.printJson(result);
+        return { success: true, data: result };
+      }
+
+      output.writeln();
+      output.writeln(output.bold('Agent Health'));
+      output.writeln();
+
+      // Overall summary
+      output.printBox(
+        [
+          `Healthy: ${output.success(String(result.overall.healthy))}`,
+          `Degraded: ${output.warning(String(result.overall.degraded))}`,
+          `Unhealthy: ${output.error(String(result.overall.unhealthy))}`,
+          `Avg CPU: ${result.overall.avgCpu.toFixed(1)}%`,
+          `Avg Memory: ${(result.overall.avgMemory * 100).toFixed(1)}%`
+        ].join('  |  '),
+        'Overall Status'
+      );
+
+      output.writeln();
+      output.printTable({
+        columns: [
+          { key: 'id', header: 'Agent ID', width: 18 },
+          { key: 'type', header: 'Type', width: 12 },
+          { key: 'health', header: 'Health', width: 10, format: formatHealthStatus },
+          { key: 'cpu', header: 'CPU %', width: 8, align: 'right', format: (v) => `${Number(v).toFixed(1)}%` },
+          { key: 'memory', header: 'Memory', width: 10, align: 'right', format: (v: unknown) => {
+            const mem = v as { used: number; limit: number };
+            return `${(mem.used / mem.limit * 100).toFixed(0)}%`;
+          }},
+          { key: 'tasks', header: 'Tasks', width: 12, align: 'right', format: (v: unknown) => {
+            const t = v as { active: number; completed: number };
+            return `${t.active}/${t.completed}`;
+          }}
+        ],
+        data: result.agents
+      });
+
+      if (detailed && result.agents.length > 0) {
+        output.writeln();
+        output.writeln(output.bold('Detailed Metrics'));
+        for (const agent of result.agents) {
+          output.writeln();
+          output.writeln(output.highlight(agent.id));
+          output.printList([
+            `Uptime: ${(agent.uptime / 1000 / 60).toFixed(1)} min`,
+            `Latency: avg ${agent.latency.avg.toFixed(1)}ms, p99 ${agent.latency.p99.toFixed(1)}ms`,
+            `Tasks: ${agent.tasks.completed} completed, ${agent.tasks.failed} failed, ${agent.tasks.queued} queued`,
+            `Errors: ${agent.errors.count}${agent.errors.lastError ? ` (${agent.errors.lastError})` : ''}`
+          ]);
+        }
+      }
+
+      return { success: true, data: result };
+    } catch (error) {
+      if (error instanceof MCPClientError) {
+        output.printError(`Health check error: ${error.message}`);
+      } else {
+        output.printError(`Unexpected error: ${String(error)}`);
+      }
+      return { success: false, exitCode: 1 };
+    }
+  }
+};
+
+// Agent logs subcommand
+const logsCommand: Command = {
+  name: 'logs',
+  description: 'Show agent activity logs',
+  options: [
+    {
+      name: 'id',
+      short: 'i',
+      description: 'Agent ID',
+      type: 'string'
+    },
+    {
+      name: 'tail',
+      short: 'n',
+      description: 'Number of recent entries',
+      type: 'number',
+      default: 50
+    },
+    {
+      name: 'level',
+      short: 'l',
+      description: 'Minimum log level',
+      type: 'string',
+      choices: ['debug', 'info', 'warn', 'error'],
+      default: 'info'
+    },
+    {
+      name: 'follow',
+      short: 'f',
+      description: 'Follow log output',
+      type: 'boolean',
+      default: false
+    },
+    {
+      name: 'since',
+      description: 'Show logs since (e.g., "1h", "30m")',
+      type: 'string'
+    }
+  ],
+  examples: [
+    { command: 'claude-flow agent logs -i agent-001', description: 'Show agent logs' },
+    { command: 'claude-flow agent logs -i agent-001 -f', description: 'Follow agent logs' },
+    { command: 'claude-flow agent logs -l error --since 1h', description: 'Show errors from last hour' }
+  ],
+  action: async (ctx: CommandContext): Promise<CommandResult> => {
+    const agentId = ctx.args[0] || ctx.flags.id as string;
+    const tail = ctx.flags.tail as number;
+    const level = ctx.flags.level as string;
+
+    if (!agentId) {
+      output.printError('Agent ID is required. Use --id or -i');
+      return { success: false, exitCode: 1 };
+    }
+
+    try {
+      const result = await callMCPTool<{
+        agentId: string;
+        entries: Array<{
+          timestamp: string;
+          level: 'debug' | 'info' | 'warn' | 'error';
+          message: string;
+          context?: Record<string, unknown>;
+        }>;
+        total: number;
+      }>('agent/logs', {
+        agentId,
+        tail,
+        level,
+        since: ctx.flags.since,
+      });
+
+      if (ctx.flags.format === 'json') {
+        output.printJson(result);
+        return { success: true, data: result };
+      }
+
+      output.writeln();
+      output.writeln(output.bold(`Logs for ${agentId}`));
+      output.writeln(output.dim(`Showing ${result.entries.length} of ${result.total} entries`));
+      output.writeln();
+
+      for (const entry of result.entries) {
+        const time = new Date(entry.timestamp).toLocaleTimeString();
+        const levelStr = formatLogLevel(entry.level);
+        output.writeln(`${output.dim(time)} ${levelStr} ${entry.message}`);
+        if (entry.context && Object.keys(entry.context).length > 0) {
+          output.writeln(output.dim(`  ${JSON.stringify(entry.context)}`));
+        }
+      }
+
+      return { success: true, data: result };
+    } catch (error) {
+      if (error instanceof MCPClientError) {
+        output.printError(`Logs error: ${error.message}`);
+      } else {
+        output.printError(`Unexpected error: ${String(error)}`);
+      }
+      return { success: false, exitCode: 1 };
+    }
+  }
+};
+
+function formatHealthStatus(health: unknown): string {
+  const h = String(health);
+  switch (h) {
+    case 'healthy':
+      return output.success(h);
+    case 'degraded':
+      return output.warning(h);
+    case 'unhealthy':
+      return output.error(h);
+    default:
+      return h;
+  }
+}
+
+function formatLogLevel(level: string): string {
+  switch (level) {
+    case 'debug':
+      return output.dim('[DEBUG]');
+    case 'info':
+      return '[INFO] ';
+    case 'warn':
+      return output.warning('[WARN] ');
+    case 'error':
+      return output.error('[ERROR]');
+    default:
+      return `[${level.toUpperCase()}]`;
+  }
+}
+
 // Main agent command
 export const agentCommand: Command = {
   name: 'agent',
   description: 'Agent management commands',
-  subcommands: [spawnCommand, listCommand, statusCommand, stopCommand, metricsCommand],
+  subcommands: [spawnCommand, listCommand, statusCommand, stopCommand, metricsCommand, poolCommand, healthCommand, logsCommand],
   options: [],
   examples: [
     { command: 'claude-flow agent spawn -t coder', description: 'Spawn a coder agent' },
