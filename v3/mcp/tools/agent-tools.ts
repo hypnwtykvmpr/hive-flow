@@ -244,7 +244,7 @@ async function handleListAgents(
       };
     } catch (error) {
       // Fall through to simple implementation if coordinator fails
-      console.error('Failed to list agents via coordinator:', error);
+      console.error('Failed to list agents via coordinator:', sanitizeErrorForLogging(error));
     }
   }
 
