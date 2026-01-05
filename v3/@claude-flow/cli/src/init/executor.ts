@@ -5,7 +5,8 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import type { InitOptions, InitResult } from './types.js';
+import type { InitOptions, InitResult, PlatformInfo } from './types.js';
+import { detectPlatform } from './types.js';
 import { generateSettingsJson } from './settings-generator.js';
 import { generateMCPJson } from './mcp-generator.js';
 import { generateStatuslineScript, generateStatuslineHook } from './statusline-generator.js';
@@ -117,8 +118,12 @@ const DIRECTORIES = {
  * Execute initialization
  */
 export async function executeInit(options: InitOptions): Promise<InitResult> {
+  // Detect platform
+  const platform = detectPlatform();
+
   const result: InitResult = {
     success: true,
+    platform,
     created: {
       directories: [],
       files: [],
