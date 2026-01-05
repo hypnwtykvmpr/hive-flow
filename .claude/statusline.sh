@@ -156,6 +156,18 @@ if [ "$MCP_ACTIVE" -gt 0 ]; then
   INTEGRATION_STATUS="●"
 fi
 
+# Count running sub-agents (Task tool spawned agents)
+SUBAGENT_COUNT=$(ps aux 2>/dev/null | grep -E "claude.*Task\|subagent\|agent_spawn" | grep -v grep | wc -l | tr -d '[:space:]')
+SUBAGENT_COUNT=${SUBAGENT_COUNT:-0}
+
+# Get swarm communication stats
+SWARM_COMMS="${PROJECT_DIR}/.claude/helpers/swarm-comms.sh"
+QUEUE_PENDING=0
+if [ -x "$SWARM_COMMS" ]; then
+  COMMS_STATS=$("$SWARM_COMMS" stats 2>/dev/null || echo '{"queue":0}')
+  QUEUE_PENDING=$(echo "$COMMS_STATS" | jq -r '.queue // 0' 2>/dev/null || echo "0")
+fi
+
 # Get context window usage from Claude Code input
 CONTEXT_PCT=0
 CONTEXT_COLOR="${DIM}"
