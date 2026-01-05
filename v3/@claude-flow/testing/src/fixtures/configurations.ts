@@ -156,10 +156,10 @@ export const securityConfigs: Record<string, SecurityConfig> = {
       maxPathLength: 512,
     },
     execution: {
-      shell: true,
+      shell: false, // Security: Always disable shell to prevent injection
       timeout: 60000,
       allowedCommands: ['npm', 'npx', 'node', 'git', 'yarn', 'pnpm'],
-      blockedCommands: ['rm -rf /', 'format c:'],
+      blockedCommands: ['rm', 'rmdir', 'del', 'format', 'dd', 'chmod', 'chown', 'sudo', 'su'],
     },
     hashing: {
       algorithm: 'bcrypt',
