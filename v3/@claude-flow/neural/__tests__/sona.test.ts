@@ -19,36 +19,44 @@ import {
 } from '../src/sona-integration.js';
 import type { Trajectory, SONAMode, SONAModeConfig } from '../src/types.js';
 
+// Create a reusable mock engine factory
+function createMockEngine() {
+  let enabled = true;
+  return {
+    beginTrajectory: vi.fn().mockReturnValue(1),
+    addTrajectoryStep: vi.fn(),
+    addTrajectoryContext: vi.fn(),
+    endTrajectory: vi.fn(),
+    flush: vi.fn(),
+    applyMicroLora: vi.fn((arr: number[]) => arr),
+    findPatterns: vi.fn().mockReturnValue([
+      {
+        patternType: 'test-pattern',
+        avgQuality: 0.85,
+        embedding: new Float32Array(768),
+        usageCount: 5,
+      },
+    ]),
+    forceLearn: vi.fn().mockReturnValue('Learning complete'),
+    tick: vi.fn().mockReturnValue(null),
+    getStats: vi.fn().mockReturnValue(JSON.stringify({
+      total_trajectories: 10,
+      patterns_learned: 5,
+      avg_quality: 0.75,
+    })),
+    isEnabled: vi.fn(() => enabled),
+    setEnabled: vi.fn((value: boolean) => { enabled = value; }),
+  };
+}
+
 // Mock @ruvector/sona
-vi.mock('@ruvector/sona', () => ({
-  SonaEngine: {
-    withConfig: vi.fn().mockReturnValue({
-      beginTrajectory: vi.fn().mockReturnValue(1),
-      addTrajectoryStep: vi.fn(),
-      addTrajectoryContext: vi.fn(),
-      endTrajectory: vi.fn(),
-      flush: vi.fn(),
-      applyMicroLora: vi.fn((arr) => arr),
-      findPatterns: vi.fn().mockReturnValue([
-        {
-          patternType: 'test-pattern',
-          avgQuality: 0.85,
-          embedding: new Float32Array(768),
-          usageCount: 5,
-        },
-      ]),
-      forceLearn: vi.fn().mockReturnValue('Learning complete'),
-      tick: vi.fn().mockReturnValue(null),
-      getStats: vi.fn().mockReturnValue(JSON.stringify({
-        total_trajectories: 10,
-        patterns_learned: 5,
-        avg_quality: 0.75,
-      })),
-      isEnabled: vi.fn().mockReturnValue(true),
-      setEnabled: vi.fn(),
-    }),
-  },
-}));
+vi.mock('@ruvector/sona', () => {
+  return {
+    SonaEngine: {
+      withConfig: vi.fn(() => createMockEngine()),
+    },
+  };
+});
 
 describe('SONALearningEngine', () => {
   let engine: SONALearningEngine;
