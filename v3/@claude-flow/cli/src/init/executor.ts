@@ -278,7 +278,7 @@ async function copySkills(
   }
 
   // Find source skills directory
-  const sourceSkillsDir = findSourceDir('skills');
+  const sourceSkillsDir = findSourceDir('skills', options.sourceBaseDir);
   if (!sourceSkillsDir) {
     result.errors.push('Could not find source skills directory');
     return;
