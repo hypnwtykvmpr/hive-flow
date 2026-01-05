@@ -453,6 +453,42 @@ Pattern Management:
   stats                     Get learning statistics
   export                    Export all patterns
 
+Swarm Communication:
+  swarm-send <to> <content> [type] [priority]
+                            Send message to agent (* for broadcast)
+  swarm-messages [limit] [type]
+                            Get messages for this agent
+  swarm-broadcast <content> Broadcast context to all agents
+
+Pattern Broadcasting:
+  swarm-pattern-broadcast <strategy> [domain]
+                            Store and broadcast a pattern to swarm
+  swarm-patterns [domain] [minQuality]
+                            List recent pattern broadcasts
+  swarm-import-pattern <broadcastId>
+                            Import a broadcast pattern locally
+
+Consensus Guidance:
+  swarm-consensus <question> <options> [timeout]
+                            Initiate consensus (options: comma-separated)
+  swarm-vote <consensusId> <vote>
+                            Vote on a consensus request
+  swarm-consensus-status [consensusId]
+                            Get consensus status/guidance
+
+Task Handoff:
+  swarm-handoff <toAgent> <description> [contextJson]
+                            Initiate task handoff to another agent
+  swarm-accept-handoff <handoffId>
+                            Accept a pending handoff
+  swarm-complete-handoff <handoffId> [resultJson]
+                            Mark handoff as completed
+  swarm-handoffs            List pending handoffs
+
+Swarm Status:
+  swarm-agents              List registered agents
+  swarm-stats               Get swarm communication statistics
+
 Exit Codes:
   0 - Success (stdout added as context for Claude)
   2 - Block (stderr shown to Claude as reason)
@@ -473,6 +509,15 @@ Examples:
 
   # Store a learned pattern
   npx @claude-flow/hooks store "Use dependency injection for testability" architecture
+
+  # Broadcast pattern to swarm
+  npx @claude-flow/hooks swarm-pattern-broadcast "Use HNSW for 150x faster search" memory
+
+  # Initiate consensus
+  npx @claude-flow/hooks swarm-consensus "Which auth method?" "JWT,OAuth2,Session"
+
+  # Hand off task
+  npx @claude-flow/hooks swarm-handoff security-auditor "Review auth implementation"
 `);
 }
 
