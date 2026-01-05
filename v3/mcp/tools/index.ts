@@ -114,6 +114,24 @@ export {
   sessionTools,
 } from './session-tools.js';
 
+// Worker tools (agentic-flow@alpha compatible)
+export {
+  dispatchWorkerTool,
+  workerStatusTool,
+  cancelWorkerTool,
+  triggersTool,
+  detectTriggersTool,
+  workerResultsTool,
+  workerStatsTool,
+  workerContextTool,
+  workerTools,
+} from './worker-tools.js';
+
+// SONA tools (Self-Optimizing Neural Architecture)
+export {
+  sonaTools,
+} from './sona-tools.js';
+
 // ============================================================================
 // Tool Registry
 // ============================================================================
