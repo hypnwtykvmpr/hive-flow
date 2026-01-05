@@ -13,6 +13,10 @@
  * - Config Tools: config/load, config/save, config/validate
  * - Hooks Tools: hooks/pre-edit, hooks/post-edit, hooks/pre-command, hooks/post-command,
  *                hooks/route, hooks/explain, hooks/pretrain, hooks/metrics, hooks/list
+ * - Task Tools: tasks/create, tasks/list, tasks/status, tasks/cancel,
+ *               tasks/assign, tasks/update, tasks/dependencies, tasks/results
+ * - System Tools: system/status, system/metrics, system/health, system/info
+ * - Session Tools: session/save, session/restore, session/list
  */
 
 import { MCPTool } from '../types.js';
@@ -23,6 +27,9 @@ import { swarmTools } from './swarm-tools.js';
 import { memoryTools } from './memory-tools.js';
 import { configTools } from './config-tools.js';
 import { hooksTools } from './hooks-tools.js';
+import { taskTools } from './task-tools.js';
+import { systemTools } from './system-tools.js';
+import { sessionTools } from './session-tools.js';
 
 // ============================================================================
 // Individual Tool Exports
