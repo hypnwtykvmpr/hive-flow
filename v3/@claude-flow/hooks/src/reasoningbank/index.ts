@@ -789,6 +789,3 @@ class EmbeddingService {
 
 // Export singleton instance
 export const reasoningBank = new ReasoningBank();
-
-// Export types
-export type { ReasoningBankConfig };
