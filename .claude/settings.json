@@ -230,7 +230,7 @@
           {
             "type": "command",
             "timeout": 4000,
-            "command": "npx agentic-flow@alpha hooks route \"$USER_PROMPT\" --json --v3-agents --swarm-coordination --confidence-threshold 0.8 2>/dev/null || true"
+            "command": ".claude/helpers/guidance-hooks.sh user-prompt \"$USER_PROMPT\""
           }
         ]
       }
