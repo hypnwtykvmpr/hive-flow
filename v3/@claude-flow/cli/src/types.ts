@@ -192,6 +192,8 @@ export interface SelectOption<T = string> {
   label: string;
   hint?: string;
   disabled?: boolean;
+  /** For multiselect: whether this option is selected by default */
+  selected?: boolean;
 }
 
 export interface SelectPromptOptions<T = string> {

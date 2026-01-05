@@ -309,7 +309,8 @@ class PromptManager {
     // Initialize selection state
     const selected = new Set<number>();
     for (let i = 0; i < choices.length; i++) {
-      if (defaultValues.includes(choices[i].value)) {
+      // Check both default array and individual selected property
+      if (defaultValues.includes(choices[i].value) || choices[i].selected) {
         selected.add(i);
       }
     }

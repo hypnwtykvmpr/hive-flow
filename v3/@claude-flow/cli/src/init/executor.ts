@@ -542,16 +542,45 @@ neural/
  * Find source directory for skills/commands/agents
  */
 function findSourceDir(type: 'skills' | 'commands' | 'agents'): string | null {
-  const possiblePaths = [
-    // Installed package
-    path.join(__dirname, '..', '..', '..', '..', '..', '.claude', type),
-    // Plugin directory
-    path.join(__dirname, '..', '..', '..', '..', '..', 'plugin', type),
-    // V2 directory for agents
-    path.join(__dirname, '..', '..', '..', '..', '..', 'v2', '.claude', type),
-    // Root .claude directory
+  // Build list of possible paths to check
+  const possiblePaths: string[] = [];
+
+  // From dist/src/init -> go up to project root
+  // __dirname is typically /path/to/v3/@claude-flow/cli/dist/src/init
+  const distPath = __dirname;
+
+  // Try to find the project root by looking for .claude directory
+  let currentDir = distPath;
+  for (let i = 0; i < 10; i++) {
+    const parentDir = path.dirname(currentDir);
+    const dotClaudePath = path.join(parentDir, '.claude', type);
+    if (fs.existsSync(dotClaudePath)) {
+      possiblePaths.push(dotClaudePath);
+    }
+    currentDir = parentDir;
+  }
+
+  // Also check relative to process.cwd() for development
+  const cwdBased = [
+    path.join(process.cwd(), '.claude', type),
     path.join(process.cwd(), '..', '.claude', type),
+    path.join(process.cwd(), '..', '..', '.claude', type),
   ];
+  possiblePaths.push(...cwdBased);
+
+  // Check v2 directory for agents
+  if (type === 'agents') {
+    possiblePaths.push(
+      path.join(process.cwd(), 'v2', '.claude', type),
+      path.join(process.cwd(), '..', 'v2', '.claude', type),
+    );
+  }
+
+  // Plugin directory
+  possiblePaths.push(
+    path.join(process.cwd(), 'plugin', type),
+    path.join(process.cwd(), '..', 'plugin', type),
+  );
 
   for (const p of possiblePaths) {
     if (fs.existsSync(p)) {
