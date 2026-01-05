@@ -16,7 +16,6 @@ V3 represents a complete architectural overhaul:
 - **150x-12,500x faster search** with HNSW indexing
 - **2.49x-7.47x Flash Attention speedup**
 - **50-75% memory reduction**
-- **<5,000 lines of code** (vs 15,000+ in v2)
 
 ## Features
 
