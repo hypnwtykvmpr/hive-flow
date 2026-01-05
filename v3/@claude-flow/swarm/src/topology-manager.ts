@@ -549,6 +549,58 @@ export class TopologyManager extends EventEmitter implements ITopologyManager {
     }
   }
 
+  // ===== ROLE INDEX METHODS (O(1) lookups) =====
+
+  /**
+   * Add node to role index
+   */
+  private addToRoleIndex(node: TopologyNode): void {
+    let roleSet = this.roleIndex.get(node.role);
+    if (!roleSet) {
+      roleSet = new Set();
+      this.roleIndex.set(node.role, roleSet);
+    }
+    roleSet.add(node.agentId);
+
+    // Cache queen/coordinator for O(1) access
+    if (node.role === 'queen') {
+      this.queenNode = node;
+    } else if (node.role === 'coordinator') {
+      this.coordinatorNode = node;
+    }
+  }
+
+  /**
+   * Remove node from role index
+   */
+  private removeFromRoleIndex(node: TopologyNode): void {
+    const roleSet = this.roleIndex.get(node.role);
+    if (roleSet) {
+      roleSet.delete(node.agentId);
+    }
+
+    // Clear cached queen/coordinator
+    if (node.role === 'queen' && this.queenNode?.agentId === node.agentId) {
+      this.queenNode = null;
+    } else if (node.role === 'coordinator' && this.coordinatorNode?.agentId === node.agentId) {
+      this.coordinatorNode = null;
+    }
+  }
+
+  /**
+   * Get queen node with O(1) lookup
+   */
+  getQueen(): TopologyNode | undefined {
+    return this.queenNode ?? undefined;
+  }
+
+  /**
+   * Get coordinator node with O(1) lookup
+   */
+  getCoordinator(): TopologyNode | undefined {
+    return this.coordinatorNode ?? undefined;
+  }
+
   // ===== UTILITY METHODS =====
 
   getNode(agentId: string): TopologyNode | undefined {
@@ -556,7 +608,16 @@ export class TopologyManager extends EventEmitter implements ITopologyManager {
   }
 
   getNodesByRole(role: TopologyNode['role']): TopologyNode[] {
-    return this.state.nodes.filter(n => n.role === role);
+    // Use role index for O(1) id lookup, then O(k) node retrieval where k = nodes with role
+    const roleSet = this.roleIndex.get(role);
+    if (!roleSet) return [];
+
+    const nodes: TopologyNode[] = [];
+    for (const agentId of roleSet) {
+      const node = this.nodeIndex.get(agentId);
+      if (node) nodes.push(node);
+    }
+    return nodes;
   }
 
   getActiveNodes(): TopologyNode[] {
