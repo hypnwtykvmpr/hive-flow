@@ -241,7 +241,7 @@ const wizardCommand: Command = {
 
         // Skills selection
         if (options.components.skills) {
-          const skillSets = await multiselect({
+          const skillSets = await multiSelect({
             message: 'Select skill sets:',
             options: [
               { value: 'core', label: 'Core', hint: 'Swarm, memory, SPARC skills', selected: true },
