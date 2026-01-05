@@ -145,6 +145,121 @@ export type {
   AgentConversionResult,
 } from './agent-adapter.js';
 
+// ===== Swarm Adapter (agentic-flow pattern alignment) =====
+export {
+  SwarmAdapter,
+  createSwarmAdapter,
+  getDefaultSwarmAdapter,
+  resetDefaultSwarmAdapter,
+} from './swarm-adapter.js';
+
+export type {
+  // agentic-flow pattern types
+  AgenticFlowTopology,
+  AgenticFlowAttentionMechanism,
+  AgenticFlowAgentOutput,
+  AgenticFlowSpecializedAgent,
+  AgenticFlowExpertRoute,
+  AgenticFlowAttentionResult,
+  GraphRoPEContext,
+  // V3 Swarm types
+  V3TopologyType,
+  V3AgentDomain,
+  V3AgentState,
+  V3TaskDefinition,
+  // Adapter types
+  SwarmAdapterConfig,
+} from './swarm-adapter.js';
+
+// ===== Worker Patterns (ADR-001 Integration) =====
+export {
+  WorkerBase,
+  createWorker,
+} from './worker-base.js';
+
+export type {
+  WorkerConfig,
+  WorkerType,
+  WorkerMemoryConfig,
+  WorkerCoordinationConfig,
+  WorkerProviderConfig,
+  AgentOutput,
+  WorkerArtifact,
+  WorkerMetrics,
+  WorkerHealth,
+} from './worker-base.js';
+
+// ===== Specialized Worker =====
+export {
+  SpecializedWorker,
+  createSpecializedWorker,
+  createFrontendWorker,
+  createBackendWorker,
+  createTestingWorker,
+} from './specialized-worker.js';
+
+export type {
+  SpecializedWorkerConfig,
+  DomainSpecialization,
+  DomainHandlers,
+  TaskMatchResult,
+} from './specialized-worker.js';
+
+// ===== Long-Running Worker =====
+export {
+  LongRunningWorker,
+  createLongRunningWorker,
+  createCheckpointStorage,
+} from './long-running-worker.js';
+
+export type {
+  LongRunningWorkerConfig,
+  Checkpoint,
+  CheckpointState,
+  CheckpointStorage,
+  ExecutionPhase,
+  ProgressUpdate,
+} from './long-running-worker.js';
+
+// ===== Worker Pool =====
+export {
+  WorkerPool,
+  createWorkerPool,
+  createAndInitializeWorkerPool,
+} from './worker-pool.js';
+
+export type {
+  WorkerPoolConfig,
+  RoutingStrategy,
+  LoadBalancingStrategy,
+  RoutingResult,
+  PoolStats,
+  SpawnOptions,
+} from './worker-pool.js';
+
+// ===== Provider Adapter =====
+export {
+  ProviderAdapter,
+  createProviderAdapter,
+  createDefaultProviders,
+} from './provider-adapter.js';
+
+export type {
+  Provider,
+  ProviderType,
+  ProviderCapability,
+  ProviderStatus,
+  ModelInfo,
+  RateLimits,
+  CostInfo,
+  ProviderRequirements,
+  ProviderSelectionResult,
+  ExecutionOptions,
+  ExecutionResult,
+  ProviderMetrics,
+  ProviderAdapterConfig,
+} from './provider-adapter.js';
+
 // ===== Default Configurations =====
 export {
   DEFAULT_SONA_CONFIG,
@@ -302,11 +417,23 @@ export const METADATA = {
     'Trajectory Tracking',
     'Feature Flags',
     'SDK Compatibility Layer',
+    'Worker Patterns (agentic-flow aligned)',
+    'Specialized Workers (16 domains)',
+    'Long-Running Workers (checkpoint support)',
+    'Worker Pool (intelligent routing)',
+    'Provider Adapter (multi-model support)',
   ],
   performance: {
     flashAttentionSpeedup: '2.49x-7.47x',
     agentDBSearchSpeedup: '150x-12,500x',
     sonaAdaptationLatency: '<0.05ms',
     memoryReduction: '50-75%',
+  },
+  workerPatterns: {
+    baseWorker: 'WorkerBase with embeddings and load management',
+    specializedWorker: '16 domain specializations with intelligent routing',
+    longRunningWorker: 'Checkpoint-based execution with auto-resume',
+    workerPool: 'Dynamic scaling with hybrid routing strategy',
+    providerAdapter: 'Multi-provider support with failover and cost tracking',
   },
 };

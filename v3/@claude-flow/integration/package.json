@@ -14,7 +14,7 @@
     "build": "tsc"
   },
   "peerDependencies": {
-    "agentic-flow": "^0.1.0"
+    "agentic-flow": "^2.0.0-alpha"
   },
   "devDependencies": {
     "vitest": "^1.0.0"
