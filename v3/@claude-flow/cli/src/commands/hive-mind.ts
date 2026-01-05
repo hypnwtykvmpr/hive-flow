@@ -341,7 +341,7 @@ const statusCommand: Command = {
           { key: 'id', header: 'ID', width: 20 },
           { key: 'type', header: 'Type', width: 12 },
           { key: 'status', header: 'Status', width: 10, format: formatAgentStatus },
-          { key: 'currentTask', header: 'Current Task', width: 20, format: (v) => v || '-' },
+          { key: 'currentTask', header: 'Current Task', width: 20, format: (v: unknown) => String(v || '-') },
           { key: 'tasksCompleted', header: 'Completed', width: 10, align: 'right' }
         ],
         data: result.workers

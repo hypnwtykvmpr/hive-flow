@@ -85,6 +85,17 @@ export interface ReasoningBankConfig {
   dbPath: string;
 }
 
+/**
+ * ReasoningBank metrics
+ */
+export interface ReasoningBankMetrics {
+  patternsStored: number;
+  patternsRetrieved: number;
+  searchCount: number;
+  totalSearchTime: number;
+  promotions: number;
+}
+
 const DEFAULT_CONFIG: ReasoningBankConfig = {
   dimensions: 384,
   hnswM: 16,
@@ -170,7 +181,7 @@ export class ReasoningBank extends EventEmitter {
   private longTermPatterns: Map<string, GuidancePattern> = new Map();
 
   // Metrics
-  private metrics = {
+  private metrics: ReasoningBankMetrics = {
     patternsStored: 0,
     patternsRetrieved: 0,
     searchCount: 0,
@@ -191,11 +202,8 @@ export class ReasoningBank extends EventEmitter {
     if (this.initialized) return;
 
     try {
-      // Dynamic import to avoid circular deps
-      const { AgentDBAdapter } = await import('../../memory/agentdb-adapter.js').catch(() => {
-        // Fallback to relative path in hooks package
-        return import('@claude-flow/memory');
-      });
+      // Import from @claude-flow/memory
+      const { AgentDBAdapter } = await import('@claude-flow/memory');
 
       this.agentDB = new AgentDBAdapter({
         dimensions: this.config.dimensions,
