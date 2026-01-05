@@ -23,6 +23,8 @@ export default defineConfig({
       '__tests__/**/*.spec.ts',
       '@claude-flow/**/__tests__/**/*.test.ts',
       '@claude-flow/**/__tests__/**/*.spec.ts',
+      'mcp/__tests__/**/*.test.ts',
+      'mcp/__tests__/**/*.spec.ts',
     ],
 
     // Exclude patterns
