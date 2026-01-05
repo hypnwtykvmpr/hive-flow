@@ -200,7 +200,10 @@ create_checkpoint() {
     "session-end")
       log_info "Creating session-end checkpoint"
       create_checkpoint_metadata "$checkpoint_type" "$message"
-      auto_commit "checkpoint: session completed - $message"
+      FORCE_PUSH=true auto_commit "checkpoint: session completed - $message"
+
+      # Force push any remaining commits at session end
+      FORCE_PUSH=true auto_push
 
       # Generate session summary
       if [ -f "$METRICS_DIR/v3-progress.json" ]; then
