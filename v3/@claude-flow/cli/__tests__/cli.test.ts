@@ -202,15 +202,19 @@ describe('CLI', () => {
       const mockCommand: Command = {
         name: 'testshort',
         description: 'Test command',
+        options: [
+          { name: 'debug', short: 'd', type: 'boolean', description: 'Debug mode' }
+        ],
         action: async (ctx) => {
-          expect(ctx.flags.v).toBe(true);
+          // -d is mapped to 'debug' via the command options
+          expect(ctx.flags.debug).toBe(true);
           flagsPassed = true;
           return { success: true };
         }
       };
 
       cli['parser'].registerCommand(mockCommand);
-      await cli.run(['testshort', '-v']);
+      await cli.run(['testshort', '-d']);
       expect(flagsPassed).toBe(true);
     });
 
