@@ -188,23 +188,51 @@ const sessionStore = new Map<string, SessionData>();
 // ============================================================================
 
 /**
- * Calculate simple checksum for session data
+ * Calculate secure checksum for session data using SHA-256
  */
 function calculateChecksum(data: string): string {
-  let hash = 0;
-  for (let i = 0; i < data.length; i++) {
-    const char = data.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash; // Convert to 32bit integer
-  }
-  return Math.abs(hash).toString(16);
+  return createHash('sha256').update(data).digest('hex');
 }
 
 /**
- * Get session file path
+ * Validate session ID to prevent path traversal attacks
+ * Only allows alphanumeric characters, hyphens, and underscores
+ */
+function validateSessionId(sessionId: string): boolean {
+  // Must be non-empty and match safe pattern
+  const safePattern = /^[a-zA-Z0-9_-]+$/;
+  if (!sessionId || !safePattern.test(sessionId)) {
+    return false;
+  }
+  // Additional checks for path traversal patterns
+  if (sessionId.includes('..') || sessionId.includes('/') || sessionId.includes('\\')) {
+    return false;
+  }
+  // Limit length to prevent excessive file names
+  if (sessionId.length > 128) {
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Get session file path with security validation
  */
 function getSessionPath(sessionId: string): string {
-  return path.join(process.cwd(), DEFAULT_SESSION_DIR, `${sessionId}.json`);
+  if (!validateSessionId(sessionId)) {
+    throw new Error('Invalid session ID: must contain only alphanumeric characters, hyphens, and underscores');
+  }
+  const sessionDir = path.join(process.cwd(), DEFAULT_SESSION_DIR);
+  const sessionPath = path.join(sessionDir, `${sessionId}.json`);
+
+  // Ensure the resolved path is within the session directory (defense in depth)
+  const resolvedPath = path.resolve(sessionPath);
+  const resolvedDir = path.resolve(sessionDir);
+  if (!resolvedPath.startsWith(resolvedDir + path.sep)) {
+    throw new Error('Invalid session ID: path traversal detected');
+  }
+
+  return sessionPath;
 }
 
 /**
