@@ -684,7 +684,7 @@ case "${1:-help}" in
 
   # Task handoff
   "handoff")
-    initiate_handoff "${2:-}" "${3:-}" "${4:-{}}"
+    initiate_handoff "${2:-}" "${3:-}" "${4:-}"
     ;;
   "accept-handoff")
     accept_handoff "${2:-}"
