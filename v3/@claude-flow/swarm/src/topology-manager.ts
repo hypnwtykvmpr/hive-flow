@@ -489,12 +489,17 @@ export class TopologyManager extends EventEmitter implements ITopologyManager {
   }
 
   private async rebalanceCentralized(): Promise<void> {
-    const coordinator = this.state.nodes.find(n => n.role === 'coordinator');
+    // O(1) coordinator lookup
+    let coordinator = this.coordinatorNode;
     if (!coordinator) {
       if (this.state.nodes.length > 0) {
-        this.state.nodes[0].role = 'coordinator';
+        const newCoord = this.state.nodes[0]!;
+        newCoord.role = 'coordinator';
+        this.addToRoleIndex(newCoord);
+        coordinator = newCoord;
+      } else {
+        return;
       }
-      return;
     }
 
     // Ensure all nodes are connected to coordinator
