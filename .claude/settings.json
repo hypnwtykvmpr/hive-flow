@@ -182,7 +182,7 @@
           {
             "type": "command",
             "timeout": 3000,
-            "command": "npx agentic-flow@alpha hooks post-command \"$TOOL_INPUT_command\" --fail --error \"$ERROR_MESSAGE\" --learn-failure --suggest-fix 2>/dev/null || true"
+            "command": "npx agentic-flow@alpha hooks post-command \"$TOOL_INPUT_command\" -c 1 2>/dev/null || true"
           }
         ]
       }
