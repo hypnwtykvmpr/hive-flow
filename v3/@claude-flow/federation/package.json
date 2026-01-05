@@ -1,0 +1,51 @@
+{
+  "name": "@claude-flow/federation",
+  "version": "3.0.0-alpha.1",
+  "description": "V3 Federation - Multi-cluster coordination, vector clock sync, ephemeral agents",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint src --ext .ts",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "federation",
+    "multi-cluster",
+    "vector-clock",
+    "sync",
+    "distributed",
+    "multi-tenant",
+    "claude-flow",
+    "v3"
+  ],
+  "author": "Claude Flow Team",
+  "license": "MIT",
+  "dependencies": {
+    "@claude-flow/transport": "^3.0.0-alpha.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.0",
+    "vitest": "^1.0.0",
+    "@types/node": "^20.10.0"
+  },
+  "peerDependencies": {
+    "@claude-flow/shared": "^3.0.0-alpha.1"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
