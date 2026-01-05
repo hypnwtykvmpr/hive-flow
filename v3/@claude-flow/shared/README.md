@@ -56,14 +56,17 @@ eventBus.on('task.completed', (event) => {
 ## Package Exports
 
 ```typescript
-// Main entry
+// Main entry (recommended - includes all modules)
 import { ... } from '@claude-flow/shared';
 
-// Submodule exports
-import { ... } from '@claude-flow/shared/types';
-import { ... } from '@claude-flow/shared/core';
-import { ... } from '@claude-flow/shared/events';
-import { ... } from '@claude-flow/shared/hooks';
+// Submodule exports (for tree-shaking or specific imports)
+import { ... } from '@claude-flow/shared/types';      // Type definitions
+import { ... } from '@claude-flow/shared/core';       // Config, interfaces, orchestrator
+import { ... } from '@claude-flow/shared/events';     // Event sourcing (ADR-007)
+import { ... } from '@claude-flow/shared/hooks';      // Hooks system
+import { ... } from '@claude-flow/shared/mcp';        // MCP server infrastructure
+import { ... } from '@claude-flow/shared/security';   // Security utilities
+import { ... } from '@claude-flow/shared/resilience'; // Retry, circuit breaker, rate limiter
 ```
 
 ## API Reference
@@ -225,35 +228,38 @@ const result = await hooks.execute('task', context, async (ctx) => {
 
 ```typescript
 import {
-  MCPServer,
-  ConnectionPool,
-  ToolRegistry,
-  SessionManager
+  createMCPServer,
+  createToolRegistry,
+  createConnectionPool,
+  createSessionManager,
+  defineTool,
+  quickStart,
 } from '@claude-flow/shared/mcp';
 
-// Create MCP server
-const server = new MCPServer({
+// Quick start - simplest way to create an MCP server
+const server = await quickStart({
   transport: 'stdio',
-  tools: toolRegistry.getAll()
+  name: 'My MCP Server',
 });
 
 // Tool registry
-const registry = new ToolRegistry();
-registry.register({
+const registry = createToolRegistry();
+registry.register(defineTool({
   name: 'swarm_init',
   description: 'Initialize a swarm',
-  handler: async (params) => { ... }
-});
+  inputSchema: { type: 'object', properties: { topology: { type: 'string' } } },
+  handler: async (params) => ({ result: 'initialized' }),
+}));
 
 // Connection pool
-const pool = new ConnectionPool({
+const pool = createConnectionPool({
   maxConnections: 10,
-  timeout: 30000
+  acquireTimeoutMs: 30000,
 });
 
 // Session manager
-const sessions = new SessionManager();
-const session = await sessions.create({ userId: 'user-1' });
+const sessions = createSessionManager({ timeoutMs: 3600000 });
+const session = await sessions.create({ clientInfo: { name: 'client' } });
 ```
 
 ### Health Monitor

@@ -461,11 +461,27 @@ EOF
 
   update_stat "handoffsInitiated"
 
-  # Send handoff notification
-  send_message "$to_agent" "Task handoff: $description" "handoff" "high" >/dev/null
+  # Send handoff notification (inline, don't call function which exits)
+  local msg_id="msg_$(date +%s)_$(head -c 4 /dev/urandom | xxd -p)"
+  local msg_file="$MESSAGES_DIR/$msg_id.json"
+  cat > "$msg_file" << MSGEOF
+{
+  "id": "$msg_id",
+  "from": "$AGENT_ID",
+  "fromName": "$AGENT_NAME",
+  "to": "$to_agent",
+  "type": "handoff",
+  "content": "Task handoff: $description",
+  "priority": "high",
+  "timestamp": $timestamp,
+  "read": false,
+  "handoffId": "$ho_id"
+}
+MSGEOF
+  update_stat "messagesSent"
 
   cat << EOF
-{"handoffId":"$ho_id","toAgent":"$to_agent","description":$(echo "$description" | jq -Rs .),"status":"pending"}
+{"handoffId":"$ho_id","toAgent":"$to_agent","description":$desc_escaped,"status":"pending","context":$context}
 EOF
 
   exit 0
