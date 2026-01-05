@@ -192,20 +192,22 @@ export class AgentPool extends EventEmitter implements IAgentPool {
     }
 
     if (delta > 0) {
-      // Scale up
+      // Scale up - create agents in parallel
       const targetSize = Math.min(
         this.pooledAgents.size + delta,
         this.config.maxSize
       );
       const toCreate = targetSize - this.pooledAgents.size;
 
-      for (let i = 0; i < toCreate; i++) {
-        await this.createPooledAgent();
-      }
+      const createPromises = Array.from(
+        { length: toCreate },
+        () => this.createPooledAgent()
+      );
+      await Promise.all(createPromises);
 
       this.emit('pool.scaled_up', { added: toCreate });
     } else if (delta < 0) {
-      // Scale down
+      // Scale down - remove agents in parallel
       const targetSize = Math.max(
         this.pooledAgents.size + delta,
         this.config.minSize
@@ -218,12 +220,10 @@ export class AgentPool extends EventEmitter implements IAgentPool {
         .filter(p => p !== undefined)
         .sort((a, b) => a.lastUsed.getTime() - b.lastUsed.getTime());
 
-      for (let i = 0; i < toRemove && sortedAvailable.length > 0; i++) {
-        const pooled = sortedAvailable.shift()!;
-        await this.remove(pooled.agent.id.id);
-      }
+      const agentsToRemove = sortedAvailable.slice(0, toRemove);
+      await Promise.all(agentsToRemove.map(pooled => this.remove(pooled.agent.id.id)));
 
-      this.emit('pool.scaled_down', { removed: toRemove });
+      this.emit('pool.scaled_down', { removed: agentsToRemove.length });
     }
 
     this.lastScaleOperation = now;
