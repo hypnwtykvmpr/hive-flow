@@ -143,6 +143,9 @@ export class AgentDBBackend extends EventEmitter implements IMemoryBackend {
   private namespaceIndex: Map<string, Set<string>> = new Map();
   private keyIndex: Map<string, string> = new Map();
 
+  // O(1) reverse lookup for numeric ID -> string ID (fixes O(n) linear scan)
+  private numericToStringIdMap: Map<number, string> = new Map();
+
   // Performance tracking
   private stats = {
     queryCount: 0,
