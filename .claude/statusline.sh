@@ -265,8 +265,8 @@ if [ "$AGENTS_ACTIVE" -eq 0 ]; then
   AGENTS_COLOR="${RED}"
 fi
 
-MEMORY_COLOR="${BRIGHT_GREEN}"
-if [[ "$MEMORY_REDUCTION" == "0%" ]]; then
+MEMORY_COLOR="${BRIGHT_CYAN}"
+if [[ "$MEMORY_DISPLAY" == "--" ]]; then
   MEMORY_COLOR="${DIM}"
 fi
 
