@@ -34,10 +34,14 @@ export class MessageBus extends EventEmitter implements IMessageBus {
   private subscriptions: Map<string, Subscription> = new Map();
   private pendingAcks: Map<string, { message: Message; timeout: NodeJS.Timeout }> = new Map();
   private processingInterval?: NodeJS.Timeout;
+  private statsInterval?: NodeJS.Timeout;
   private messageCounter: number = 0;
   private stats: MessageBusStats;
   private startTime: Date = new Date();
+  // Circular buffer for message history (max 60 entries for 60 seconds)
   private messageHistory: { timestamp: number; count: number }[] = [];
+  private messageHistoryIndex: number = 0;
+  private static readonly MAX_HISTORY_SIZE = 60;
 
   constructor(config: Partial<MessageBusConfig> = {}) {
     super();
