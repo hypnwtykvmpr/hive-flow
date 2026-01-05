@@ -893,8 +893,12 @@ export class FederationHub extends EventEmitter {
   private cleanupExpiredAgents(): void {
     const now = new Date();
 
-    for (const agent of this.ephemeralAgents.values()) {
-      if (agent.status === 'active' && now > agent.expiresAt) {
+    // Use status index to only check active agents - O(k) instead of O(n)
+    const activeIds = this.getAgentIdsByStatus('active');
+    for (const agentId of activeIds) {
+      const agent = this.ephemeralAgents.get(agentId);
+      if (agent && now > agent.expiresAt) {
+        this.updateAgentStatusIndex(agent, 'active');
         agent.status = 'terminated';
         agent.completedAt = now;
         agent.error = new Error('Agent TTL expired');
@@ -903,11 +907,13 @@ export class FederationHub extends EventEmitter {
       }
     }
 
-    // Clean up old terminated agents (keep for 5 minutes after termination)
+    // Clean up old terminated agents using index - O(k)
     const cleanupThreshold = 5 * 60 * 1000;
-    for (const [id, agent] of this.ephemeralAgents.entries()) {
+    const terminatedIds = this.getAgentIdsByStatus('terminated');
+    for (const agentId of terminatedIds) {
+      const agent = this.ephemeralAgents.get(agentId);
       if (
-        agent.status === 'terminated' &&
+        agent &&
         agent.completedAt &&
         now.getTime() - agent.completedAt.getTime() > cleanupThreshold
       ) {
