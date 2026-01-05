@@ -420,7 +420,8 @@ describe('QueenCoordinator', () => {
 
     it('should decompose complex coding tasks', async () => {
       const task = createMockTask('task_4', 'coding', 'high');
-      task.description = 'Implement a complex feature with multiple components that requires careful design and extensive testing across multiple modules';
+      // A very long description triggers decomposition (>200 chars)
+      task.description = 'Implement a complex feature with multiple components that requires careful design and extensive testing across multiple modules. This task involves creating new API endpoints, database schemas, service layers, and comprehensive unit tests for the entire feature set. Additional requirements include proper error handling, logging, and performance optimization considerations.';
 
       const analysis = await queen.analyzeTask(task);
 
