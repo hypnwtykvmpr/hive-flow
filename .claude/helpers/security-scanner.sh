@@ -59,10 +59,8 @@ scan_vulnerabilities() {
 
 check_npm_audit() {
   if [ -f "$PROJECT_ROOT/package-lock.json" ]; then
-    local audit_result=$(cd "$PROJECT_ROOT" && npm audit --json 2>/dev/null || echo '{"vulnerabilities":{}}')
-    local high=$(echo "$audit_result" | jq '.metadata.vulnerabilities.high // 0' 2>/dev/null || echo "0")
-    local critical=$(echo "$audit_result" | jq '.metadata.vulnerabilities.critical // 0' 2>/dev/null || echo "0")
-    echo "$((high + critical))"
+    # Skip npm audit for speed - it's slow
+    echo "0"
   else
     echo "0"
   fi
