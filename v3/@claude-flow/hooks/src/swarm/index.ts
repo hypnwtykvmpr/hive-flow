@@ -260,8 +260,9 @@ export class SwarmCommunication extends EventEmitter {
     if (options.type) {
       messages = messages.filter(m => m.type === options.type);
     }
-    if (options.since) {
-      messages = messages.filter(m => m.timestamp > options.since);
+    if (options.since !== undefined) {
+      const sinceTime = options.since;
+      messages = messages.filter(m => m.timestamp > sinceTime);
     }
 
     messages.sort((a, b) => {
@@ -374,14 +375,16 @@ export class SwarmCommunication extends EventEmitter {
   } = {}): PatternBroadcast[] {
     let broadcasts = Array.from(this.broadcasts.values());
 
-    if (options.since) {
-      broadcasts = broadcasts.filter(b => b.broadcastTime > options.since);
+    if (options.since !== undefined) {
+      const sinceTime = options.since;
+      broadcasts = broadcasts.filter(b => b.broadcastTime > sinceTime);
     }
     if (options.domain) {
       broadcasts = broadcasts.filter(b => b.pattern.domain === options.domain);
     }
-    if (options.minQuality) {
-      broadcasts = broadcasts.filter(b => b.pattern.quality >= options.minQuality);
+    if (options.minQuality !== undefined) {
+      const minQ = options.minQuality;
+      broadcasts = broadcasts.filter(b => b.pattern.quality >= minQ);
     }
 
     return broadcasts.sort((a, b) => b.broadcastTime - a.broadcastTime);
@@ -797,7 +800,15 @@ export class SwarmCommunication extends EventEmitter {
   getStats(): {
     agentId: string;
     agentCount: number;
-    metrics: typeof this.metrics;
+    metrics: {
+      messagesSent: number;
+      messagesReceived: number;
+      patternsBroadcast: number;
+      consensusInitiated: number;
+      consensusResolved: number;
+      handoffsInitiated: number;
+      handoffsCompleted: number;
+    };
     pendingMessages: number;
     pendingHandoffs: number;
     pendingConsensus: number;
