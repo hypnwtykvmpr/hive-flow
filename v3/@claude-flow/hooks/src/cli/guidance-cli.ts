@@ -132,6 +132,287 @@ async function main(): Promise<void> {
         break;
       }
 
+      // ========================================
+      // Swarm Communication Commands
+      // ========================================
+
+      case 'swarm-send': {
+        const to = args[1] || '*';
+        const content = args[2] || '';
+        await swarmComm.initialize();
+        const msg = await swarmComm.sendMessage(to, content, {
+          type: args[3] as any || 'context',
+          priority: args[4] as any || 'normal',
+        });
+        console.log(JSON.stringify(msg));
+        process.exit(0);
+        break;
+      }
+
+      case 'swarm-messages': {
+        await swarmComm.initialize();
+        const messages = swarmComm.getMessages({
+          limit: parseInt(args[1] || '10'),
+          type: args[2] as any,
+        });
+        console.log(JSON.stringify({
+          count: messages.length,
+          messages: messages.map(m => ({
+            id: m.id,
+            from: m.from,
+            type: m.type,
+            content: m.content.substring(0, 100),
+            priority: m.priority,
+            timestamp: new Date(m.timestamp).toISOString(),
+          })),
+        }));
+        process.exit(0);
+        break;
+      }
+
+      case 'swarm-broadcast': {
+        const content = args[1] || '';
+        await swarmComm.initialize();
+        const msg = await swarmComm.broadcastContext(content);
+        console.log(JSON.stringify({
+          id: msg.id,
+          to: msg.to,
+          broadcast: true,
+          timestamp: new Date(msg.timestamp).toISOString(),
+        }));
+        process.exit(0);
+        break;
+      }
+
+      case 'swarm-pattern-broadcast': {
+        const strategy = args[1] || '';
+        const domain = args[2] || 'general';
+        await swarmComm.initialize();
+
+        // Store pattern first
+        const stored = await reasoningBank.storePattern(strategy, domain);
+        const patterns = await reasoningBank.searchPatterns(stored.id, 1);
+
+        if (patterns.length > 0) {
+          const broadcast = await swarmComm.broadcastPattern(patterns[0].pattern);
+          console.log(JSON.stringify({
+            broadcastId: broadcast.id,
+            patternId: stored.id,
+            strategy: patterns[0].pattern.strategy,
+            domain: patterns[0].pattern.domain,
+            recipients: broadcast.recipients.length,
+          }));
+        } else {
+          console.log(JSON.stringify({ error: 'Pattern not found after storage' }));
+        }
+        process.exit(0);
+        break;
+      }
+
+      case 'swarm-patterns': {
+        await swarmComm.initialize();
+        const broadcasts = swarmComm.getPatternBroadcasts({
+          domain: args[1],
+          minQuality: args[2] ? parseFloat(args[2]) : undefined,
+        });
+        console.log(JSON.stringify({
+          count: broadcasts.length,
+          broadcasts: broadcasts.map(b => ({
+            id: b.id,
+            source: b.sourceAgent,
+            strategy: b.pattern.strategy,
+            domain: b.pattern.domain,
+            quality: b.pattern.quality,
+            acknowledgments: b.acknowledgments.length,
+          })),
+        }));
+        process.exit(0);
+        break;
+      }
+
+      case 'swarm-import-pattern': {
+        const broadcastId = args[1] || '';
+        await swarmComm.initialize();
+        const success = await swarmComm.importBroadcastPattern(broadcastId);
+        console.log(JSON.stringify({ broadcastId, imported: success }));
+        process.exit(success ? 0 : 1);
+        break;
+      }
+
+      case 'swarm-consensus': {
+        const question = args[1] || '';
+        const optionsStr = args[2] || '';
+        const timeout = args[3] ? parseInt(args[3]) : undefined;
+
+        const options = optionsStr.split(',').map(o => o.trim()).filter(Boolean);
+        if (options.length < 2) {
+          console.error('Error: Consensus requires at least 2 options (comma-separated)');
+          process.exit(1);
+        }
+
+        await swarmComm.initialize();
+        const consensus = await swarmComm.initiateConsensus(question, options, timeout);
+        console.log(JSON.stringify({
+          consensusId: consensus.id,
+          question: consensus.question,
+          options: consensus.options,
+          deadline: new Date(consensus.deadline).toISOString(),
+          status: consensus.status,
+        }));
+        process.exit(0);
+        break;
+      }
+
+      case 'swarm-vote': {
+        const consensusId = args[1] || '';
+        const vote = args[2] || '';
+        await swarmComm.initialize();
+        const success = swarmComm.voteConsensus(consensusId, vote);
+        console.log(JSON.stringify({ consensusId, vote, accepted: success }));
+        process.exit(success ? 0 : 1);
+        break;
+      }
+
+      case 'swarm-consensus-status': {
+        const consensusId = args[1] || '';
+        await swarmComm.initialize();
+
+        if (consensusId) {
+          const consensus = swarmComm.getConsensus(consensusId);
+          if (consensus) {
+            console.log(swarmComm.generateConsensusGuidance(consensusId));
+          } else {
+            console.error(`Consensus ${consensusId} not found`);
+            process.exit(1);
+          }
+        } else {
+          const pending = swarmComm.getPendingConsensus();
+          console.log(JSON.stringify({
+            pendingCount: pending.length,
+            requests: pending.map(r => ({
+              id: r.id,
+              question: r.question,
+              votes: r.votes.size,
+              deadline: new Date(r.deadline).toISOString(),
+            })),
+          }));
+        }
+        process.exit(0);
+        break;
+      }
+
+      case 'swarm-handoff': {
+        const toAgent = args[1] || '';
+        const description = args[2] || '';
+        const contextJson = args[3];
+
+        let context = {
+          filesModified: [] as string[],
+          patternsUsed: [] as string[],
+          decisions: [] as string[],
+          blockers: [] as string[],
+          nextSteps: [] as string[],
+        };
+
+        if (contextJson) {
+          try {
+            context = { ...context, ...JSON.parse(contextJson) };
+          } catch {
+            console.error('Error: Invalid context JSON');
+            process.exit(1);
+          }
+        }
+
+        await swarmComm.initialize();
+        const handoff = await swarmComm.initiateHandoff(toAgent, description, context);
+        console.log(JSON.stringify({
+          handoffId: handoff.id,
+          toAgent: handoff.toAgent,
+          description: handoff.description,
+          status: handoff.status,
+        }));
+        process.exit(0);
+        break;
+      }
+
+      case 'swarm-accept-handoff': {
+        const handoffId = args[1] || '';
+        await swarmComm.initialize();
+        const success = swarmComm.acceptHandoff(handoffId);
+
+        if (success) {
+          console.log(swarmComm.generateHandoffContext(handoffId));
+        } else {
+          console.error(`Failed to accept handoff ${handoffId}`);
+        }
+        process.exit(success ? 0 : 1);
+        break;
+      }
+
+      case 'swarm-complete-handoff': {
+        const handoffId = args[1] || '';
+        const resultJson = args[2];
+
+        let result: Record<string, unknown> | undefined;
+        if (resultJson) {
+          try {
+            result = JSON.parse(resultJson);
+          } catch {
+            console.error('Error: Invalid result JSON');
+            process.exit(1);
+          }
+        }
+
+        await swarmComm.initialize();
+        const success = swarmComm.completeHandoff(handoffId, result);
+        console.log(JSON.stringify({ handoffId, completed: success }));
+        process.exit(success ? 0 : 1);
+        break;
+      }
+
+      case 'swarm-handoffs': {
+        await swarmComm.initialize();
+        const handoffs = swarmComm.getPendingHandoffs();
+        console.log(JSON.stringify({
+          pendingCount: handoffs.length,
+          handoffs: handoffs.map(h => ({
+            id: h.id,
+            from: h.fromAgent,
+            description: h.description,
+            status: h.status,
+            timestamp: new Date(h.timestamp).toISOString(),
+          })),
+        }));
+        process.exit(0);
+        break;
+      }
+
+      case 'swarm-agents': {
+        await swarmComm.initialize();
+        const agents = swarmComm.getAgents();
+        console.log(JSON.stringify({
+          count: agents.length,
+          agents: agents.map(a => ({
+            id: a.id,
+            name: a.name,
+            status: a.status,
+            patternsShared: a.patternsShared,
+            handoffsReceived: a.handoffsReceived,
+            handoffsCompleted: a.handoffsCompleted,
+          })),
+        }));
+        process.exit(0);
+        break;
+      }
+
+      case 'swarm-stats': {
+        await swarmComm.initialize();
+        const stats = swarmComm.getStats();
+        console.log(JSON.stringify(stats, null, 2));
+        process.exit(0);
+        break;
+      }
+
       case 'help':
       case '--help':
       case '-h':
