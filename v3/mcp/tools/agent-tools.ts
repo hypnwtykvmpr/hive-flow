@@ -179,7 +179,8 @@ async function handleSpawnAgent(
       };
     } catch (error) {
       // Fall through to simple implementation if coordinator fails
-      console.error('Failed to spawn agent via coordinator:', error);
+      // Use secure logging to prevent sensitive information disclosure
+      console.error('Failed to spawn agent via coordinator:', sanitizeErrorForLogging(error));
     }
   }
 
