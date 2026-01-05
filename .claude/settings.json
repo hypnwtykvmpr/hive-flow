@@ -130,7 +130,7 @@
           {
             "type": "command",
             "timeout": 3000,
-            "command": "npx agentic-flow@alpha hooks post-command \"$TOOL_INPUT_command\" --success --learn --performance-metrics --v3-mode 2>/dev/null || true"
+            "command": "npx agentic-flow@alpha hooks post-command \"$TOOL_INPUT_command\" -c 0 2>/dev/null || true"
           },
           {
             "type": "command",
