@@ -29,6 +29,14 @@
     "./mcp": {
       "types": "./dist/mcp/index.d.ts",
       "import": "./dist/mcp/index.js"
+    },
+    "./reasoningbank": {
+      "types": "./dist/reasoningbank/index.d.ts",
+      "import": "./dist/reasoningbank/index.js"
+    },
+    "./guidance": {
+      "types": "./dist/reasoningbank/guidance-provider.d.ts",
+      "import": "./dist/reasoningbank/guidance-provider.js"
     }
   },
   "files": [
