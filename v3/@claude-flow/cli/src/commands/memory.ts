@@ -566,11 +566,473 @@ const configureCommand: Command = {
   }
 };
 
+// Cleanup command
+const cleanupCommand: Command = {
+  name: 'cleanup',
+  description: 'Clean up stale and expired memory entries',
+  options: [
+    {
+      name: 'dry-run',
+      short: 'd',
+      description: 'Show what would be deleted',
+      type: 'boolean',
+      default: false
+    },
+    {
+      name: 'older-than',
+      short: 'o',
+      description: 'Delete entries older than (e.g., "7d", "30d")',
+      type: 'string'
+    },
+    {
+      name: 'expired-only',
+      short: 'e',
+      description: 'Only delete expired TTL entries',
+      type: 'boolean',
+      default: false
+    },
+    {
+      name: 'low-quality',
+      short: 'l',
+      description: 'Delete low quality patterns (threshold)',
+      type: 'number'
+    },
+    {
+      name: 'namespace',
+      short: 'n',
+      description: 'Clean specific namespace only',
+      type: 'string'
+    },
+    {
+      name: 'force',
+      short: 'f',
+      description: 'Skip confirmation',
+      type: 'boolean',
+      default: false
+    }
+  ],
+  examples: [
+    { command: 'claude-flow memory cleanup --dry-run', description: 'Preview cleanup' },
+    { command: 'claude-flow memory cleanup --older-than 30d', description: 'Delete entries older than 30 days' },
+    { command: 'claude-flow memory cleanup --expired-only', description: 'Clean expired entries' }
+  ],
+  action: async (ctx: CommandContext): Promise<CommandResult> => {
+    const dryRun = ctx.flags.dryRun as boolean;
+    const force = ctx.flags.force as boolean;
+
+    if (dryRun) {
+      output.writeln(output.warning('DRY RUN - No changes will be made'));
+    }
+
+    output.printInfo('Analyzing memory for cleanup...');
+
+    try {
+      const result = await callMCPTool<{
+        dryRun: boolean;
+        candidates: {
+          expired: number;
+          stale: number;
+          lowQuality: number;
+          total: number;
+        };
+        deleted: {
+          entries: number;
+          vectors: number;
+          patterns: number;
+        };
+        freed: {
+          bytes: number;
+          formatted: string;
+        };
+        duration: number;
+      }>('memory/cleanup', {
+        dryRun,
+        olderThan: ctx.flags.olderThan,
+        expiredOnly: ctx.flags.expiredOnly,
+        lowQualityThreshold: ctx.flags.lowQuality,
+        namespace: ctx.flags.namespace,
+      });
+
+      if (ctx.flags.format === 'json') {
+        output.printJson(result);
+        return { success: true, data: result };
+      }
+
+      output.writeln();
+      output.writeln(output.bold('Cleanup Analysis'));
+      output.printTable({
+        columns: [
+          { key: 'category', header: 'Category', width: 20 },
+          { key: 'count', header: 'Count', width: 15, align: 'right' }
+        ],
+        data: [
+          { category: 'Expired (TTL)', count: result.candidates.expired },
+          { category: 'Stale (unused)', count: result.candidates.stale },
+          { category: 'Low Quality', count: result.candidates.lowQuality },
+          { category: output.bold('Total'), count: output.bold(String(result.candidates.total)) }
+        ]
+      });
+
+      if (!dryRun && result.candidates.total > 0 && !force) {
+        const confirmed = await confirm({
+          message: `Delete ${result.candidates.total} entries (${result.freed.formatted})?`,
+          default: false
+        });
+
+        if (!confirmed) {
+          output.printInfo('Cleanup cancelled');
+          return { success: true, data: result };
+        }
+      }
+
+      if (!dryRun) {
+        output.writeln();
+        output.printSuccess(`Cleaned ${result.deleted.entries} entries`);
+        output.printList([
+          `Vectors removed: ${result.deleted.vectors}`,
+          `Patterns removed: ${result.deleted.patterns}`,
+          `Space freed: ${result.freed.formatted}`,
+          `Duration: ${result.duration}ms`
+        ]);
+      }
+
+      return { success: true, data: result };
+    } catch (error) {
+      if (error instanceof MCPClientError) {
+        output.printError(`Cleanup error: ${error.message}`);
+      } else {
+        output.printError(`Unexpected error: ${String(error)}`);
+      }
+      return { success: false, exitCode: 1 };
+    }
+  }
+};
+
+// Compress command
+const compressCommand: Command = {
+  name: 'compress',
+  description: 'Compress and optimize memory storage',
+  options: [
+    {
+      name: 'level',
+      short: 'l',
+      description: 'Compression level (fast, balanced, max)',
+      type: 'string',
+      choices: ['fast', 'balanced', 'max'],
+      default: 'balanced'
+    },
+    {
+      name: 'target',
+      short: 't',
+      description: 'Target (vectors, text, patterns, all)',
+      type: 'string',
+      choices: ['vectors', 'text', 'patterns', 'all'],
+      default: 'all'
+    },
+    {
+      name: 'quantize',
+      short: 'q',
+      description: 'Enable vector quantization (reduces memory 4-32x)',
+      type: 'boolean',
+      default: false
+    },
+    {
+      name: 'bits',
+      description: 'Quantization bits (4, 8, 16)',
+      type: 'number',
+      default: 8
+    },
+    {
+      name: 'rebuild-index',
+      short: 'r',
+      description: 'Rebuild HNSW index after compression',
+      type: 'boolean',
+      default: true
+    }
+  ],
+  examples: [
+    { command: 'claude-flow memory compress', description: 'Balanced compression' },
+    { command: 'claude-flow memory compress --quantize --bits 4', description: '4-bit quantization (32x reduction)' },
+    { command: 'claude-flow memory compress -l max -t vectors', description: 'Max compression on vectors' }
+  ],
+  action: async (ctx: CommandContext): Promise<CommandResult> => {
+    const level = ctx.flags.level as string || 'balanced';
+    const target = ctx.flags.target as string || 'all';
+    const quantize = ctx.flags.quantize as boolean;
+    const bits = ctx.flags.bits as number || 8;
+    const rebuildIndex = ctx.flags.rebuildIndex as boolean ?? true;
+
+    output.writeln();
+    output.writeln(output.bold('Memory Compression'));
+    output.writeln(output.dim(`Level: ${level}, Target: ${target}, Quantize: ${quantize ? `${bits}-bit` : 'no'}`));
+    output.writeln();
+
+    const spinner = output.createSpinner({ text: 'Analyzing current storage...', spinner: 'dots' });
+    spinner.start();
+
+    try {
+      const result = await callMCPTool<{
+        before: {
+          totalSize: string;
+          vectorsSize: string;
+          textSize: string;
+          patternsSize: string;
+          indexSize: string;
+        };
+        after: {
+          totalSize: string;
+          vectorsSize: string;
+          textSize: string;
+          patternsSize: string;
+          indexSize: string;
+        };
+        compression: {
+          ratio: number;
+          bytesSaved: number;
+          formattedSaved: string;
+          quantizationApplied: boolean;
+          indexRebuilt: boolean;
+        };
+        performance: {
+          searchLatencyBefore: number;
+          searchLatencyAfter: number;
+          searchSpeedup: string;
+        };
+        duration: number;
+      }>('memory/compress', {
+        level,
+        target,
+        quantize,
+        bits,
+        rebuildIndex,
+      });
+
+      spinner.succeed('Compression complete');
+
+      if (ctx.flags.format === 'json') {
+        output.printJson(result);
+        return { success: true, data: result };
+      }
+
+      output.writeln();
+      output.writeln(output.bold('Storage Comparison'));
+      output.printTable({
+        columns: [
+          { key: 'category', header: 'Category', width: 15 },
+          { key: 'before', header: 'Before', width: 12, align: 'right' },
+          { key: 'after', header: 'After', width: 12, align: 'right' },
+          { key: 'saved', header: 'Saved', width: 12, align: 'right' }
+        ],
+        data: [
+          { category: 'Vectors', before: result.before.vectorsSize, after: result.after.vectorsSize, saved: '-' },
+          { category: 'Text', before: result.before.textSize, after: result.after.textSize, saved: '-' },
+          { category: 'Patterns', before: result.before.patternsSize, after: result.after.patternsSize, saved: '-' },
+          { category: 'Index', before: result.before.indexSize, after: result.after.indexSize, saved: '-' },
+          { category: output.bold('Total'), before: result.before.totalSize, after: result.after.totalSize, saved: output.success(result.compression.formattedSaved) }
+        ]
+      });
+
+      output.writeln();
+      output.printBox(
+        [
+          `Compression Ratio: ${result.compression.ratio.toFixed(2)}x`,
+          `Space Saved: ${result.compression.formattedSaved}`,
+          `Quantization: ${result.compression.quantizationApplied ? `Yes (${bits}-bit)` : 'No'}`,
+          `Index Rebuilt: ${result.compression.indexRebuilt ? 'Yes' : 'No'}`,
+          `Duration: ${(result.duration / 1000).toFixed(1)}s`
+        ].join('\n'),
+        'Results'
+      );
+
+      if (result.performance) {
+        output.writeln();
+        output.writeln(output.bold('Performance Impact'));
+        output.printList([
+          `Search latency: ${result.performance.searchLatencyBefore.toFixed(2)}ms → ${result.performance.searchLatencyAfter.toFixed(2)}ms`,
+          `Speedup: ${output.success(result.performance.searchSpeedup)}`
+        ]);
+      }
+
+      return { success: true, data: result };
+    } catch (error) {
+      spinner.fail('Compression failed');
+      if (error instanceof MCPClientError) {
+        output.printError(`Compression error: ${error.message}`);
+      } else {
+        output.printError(`Unexpected error: ${String(error)}`);
+      }
+      return { success: false, exitCode: 1 };
+    }
+  }
+};
+
+// Export command
+const exportCommand: Command = {
+  name: 'export',
+  description: 'Export memory to file',
+  options: [
+    {
+      name: 'output',
+      short: 'o',
+      description: 'Output file path',
+      type: 'string',
+      required: true
+    },
+    {
+      name: 'format',
+      short: 'f',
+      description: 'Export format (json, csv, binary)',
+      type: 'string',
+      choices: ['json', 'csv', 'binary'],
+      default: 'json'
+    },
+    {
+      name: 'namespace',
+      short: 'n',
+      description: 'Export specific namespace',
+      type: 'string'
+    },
+    {
+      name: 'include-vectors',
+      description: 'Include vector embeddings',
+      type: 'boolean',
+      default: true
+    }
+  ],
+  examples: [
+    { command: 'claude-flow memory export -o ./backup.json', description: 'Export all to JSON' },
+    { command: 'claude-flow memory export -o ./data.csv -f csv', description: 'Export to CSV' }
+  ],
+  action: async (ctx: CommandContext): Promise<CommandResult> => {
+    const outputPath = ctx.flags.output as string;
+    const format = ctx.flags.format as string || 'json';
+
+    if (!outputPath) {
+      output.printError('Output path is required. Use --output or -o');
+      return { success: false, exitCode: 1 };
+    }
+
+    output.printInfo(`Exporting memory to ${outputPath}...`);
+
+    try {
+      const result = await callMCPTool<{
+        outputPath: string;
+        format: string;
+        exported: {
+          entries: number;
+          vectors: number;
+          patterns: number;
+        };
+        fileSize: string;
+      }>('memory/export', {
+        outputPath,
+        format,
+        namespace: ctx.flags.namespace,
+        includeVectors: ctx.flags.includeVectors ?? true,
+      });
+
+      output.printSuccess(`Exported to ${result.outputPath}`);
+      output.printList([
+        `Entries: ${result.exported.entries}`,
+        `Vectors: ${result.exported.vectors}`,
+        `Patterns: ${result.exported.patterns}`,
+        `File size: ${result.fileSize}`
+      ]);
+
+      return { success: true, data: result };
+    } catch (error) {
+      if (error instanceof MCPClientError) {
+        output.printError(`Export error: ${error.message}`);
+      } else {
+        output.printError(`Unexpected error: ${String(error)}`);
+      }
+      return { success: false, exitCode: 1 };
+    }
+  }
+};
+
+// Import command
+const importCommand: Command = {
+  name: 'import',
+  description: 'Import memory from file',
+  options: [
+    {
+      name: 'input',
+      short: 'i',
+      description: 'Input file path',
+      type: 'string',
+      required: true
+    },
+    {
+      name: 'merge',
+      short: 'm',
+      description: 'Merge with existing (skip duplicates)',
+      type: 'boolean',
+      default: true
+    },
+    {
+      name: 'namespace',
+      short: 'n',
+      description: 'Import into specific namespace',
+      type: 'string'
+    }
+  ],
+  examples: [
+    { command: 'claude-flow memory import -i ./backup.json', description: 'Import from file' },
+    { command: 'claude-flow memory import -i ./data.json -n archive', description: 'Import to namespace' }
+  ],
+  action: async (ctx: CommandContext): Promise<CommandResult> => {
+    const inputPath = ctx.flags.input as string || ctx.args[0];
+
+    if (!inputPath) {
+      output.printError('Input path is required. Use --input or -i');
+      return { success: false, exitCode: 1 };
+    }
+
+    output.printInfo(`Importing memory from ${inputPath}...`);
+
+    try {
+      const result = await callMCPTool<{
+        inputPath: string;
+        imported: {
+          entries: number;
+          vectors: number;
+          patterns: number;
+        };
+        skipped: number;
+        duration: number;
+      }>('memory/import', {
+        inputPath,
+        merge: ctx.flags.merge ?? true,
+        namespace: ctx.flags.namespace,
+      });
+
+      output.printSuccess(`Imported from ${result.inputPath}`);
+      output.printList([
+        `Entries: ${result.imported.entries}`,
+        `Vectors: ${result.imported.vectors}`,
+        `Patterns: ${result.imported.patterns}`,
+        `Skipped (duplicates): ${result.skipped}`,
+        `Duration: ${result.duration}ms`
+      ]);
+
+      return { success: true, data: result };
+    } catch (error) {
+      if (error instanceof MCPClientError) {
+        output.printError(`Import error: ${error.message}`);
+      } else {
+        output.printError(`Unexpected error: ${String(error)}`);
+      }
+      return { success: false, exitCode: 1 };
+    }
+  }
+};
+
 // Main memory command
 export const memoryCommand: Command = {
   name: 'memory',
   description: 'Memory management commands',
-  subcommands: [storeCommand, retrieveCommand, searchCommand, listCommand, deleteCommand, statsCommand, configureCommand],
+  subcommands: [storeCommand, retrieveCommand, searchCommand, listCommand, deleteCommand, statsCommand, configureCommand, cleanupCommand, compressCommand, exportCommand, importCommand],
   options: [],
   examples: [
     { command: 'claude-flow memory store -k "key" -v "value"', description: 'Store data' },
