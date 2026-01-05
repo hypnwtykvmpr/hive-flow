@@ -283,19 +283,24 @@ export class ReasoningBank extends EventEmitter {
    * Load optional dependencies
    */
   private async loadDependencies(): Promise<void> {
-    try {
-      const memoryModule = await import('@claude-flow/memory');
+    // Try to load optional peer dependencies at runtime
+    const dynamicImport = async (moduleName: string): Promise<any> => {
+      try {
+        return await import(/* webpackIgnore: true */ moduleName);
+      } catch {
+        return null;
+      }
+    };
+
+    const memoryModule = await dynamicImport('@claude-flow/memory');
+    if (memoryModule) {
       AgentDBAdapter = memoryModule.AgentDBAdapter;
       HNSWIndex = memoryModule.HNSWIndex;
-    } catch {
-      // Dependencies not available
     }
 
-    try {
-      const embeddingsModule = await import('@claude-flow/embeddings');
+    const embeddingsModule = await dynamicImport('@claude-flow/embeddings');
+    if (embeddingsModule) {
       EmbeddingServiceImpl = embeddingsModule.createEmbeddingService;
-    } catch {
-      // Embeddings not available
     }
   }
 
