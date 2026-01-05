@@ -80,8 +80,13 @@ export class MessageBus extends EventEmitter implements IMessageBus {
       this.processingInterval = undefined;
     }
 
+    if (this.statsInterval) {
+      clearInterval(this.statsInterval);
+      this.statsInterval = undefined;
+    }
+
     // Clear all pending acks
-    for (const [messageId, pending] of this.pendingAcks) {
+    for (const [, pending] of this.pendingAcks) {
       clearTimeout(pending.timeout);
     }
     this.pendingAcks.clear();
@@ -89,6 +94,7 @@ export class MessageBus extends EventEmitter implements IMessageBus {
     // Clear all queues
     this.queues.clear();
     this.subscriptions.clear();
+    this.messageHistory = [];
 
     this.emit('shutdown');
   }
