@@ -38,15 +38,15 @@ run_worker() {
 }
 
 run_all_workers() {
-  log "Running all workers..."
+  log "Running all workers (non-blocking)..."
 
   for worker_def in "${WORKERS[@]}"; do
     IFS=':' read -r name script interval <<< "$worker_def"
     run_worker "$name" "$script"
   done
 
-  wait
-  log "All workers completed"
+  # Don't wait - truly non-blocking
+  log "All workers spawned"
 }
 
 run_daemon() {
