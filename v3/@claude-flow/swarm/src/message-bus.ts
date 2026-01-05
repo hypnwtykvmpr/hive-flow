@@ -572,8 +572,10 @@ export class MessageBus extends EventEmitter implements IMessageBus {
     const now = Date.now();
     const messages: Message[] = [];
 
+    // O(1) per dequeue operation
     while (queue.length > 0) {
-      const entry = queue.shift()!;
+      const entry = queue.dequeue();
+      if (!entry) break;
       if (now - entry.message.timestamp.getTime() <= entry.message.ttlMs) {
         messages.push(entry.message);
       }
