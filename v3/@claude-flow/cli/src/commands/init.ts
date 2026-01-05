@@ -5,7 +5,7 @@
 
 import type { Command, CommandContext, CommandResult } from '../types.js';
 import { output } from '../output.js';
-import { confirm, select, multiselect, input } from '../prompt.js';
+import { confirm, select, multiSelect, input } from '../prompt.js';
 import * as fs from 'fs';
 import * as path from 'path';
 import {
