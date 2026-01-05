@@ -438,16 +438,19 @@ describe('Task Tools', () => {
     });
 
     it('should list dependencies', async () => {
+      // Use a context without orchestrator to test simple implementation
+      const simpleContext: ToolContext = { sessionId: 'test-session' };
+
       const createResult = await createTaskTool.handler({
         type: 'code',
         description: 'Task with dependencies',
         dependencies: ['task-1', 'task-2'],
-      }, mockContext);
+      }, simpleContext);
 
       const result = await taskDependenciesTool.handler({
         taskId: createResult.taskId,
         action: 'list',
-      }, mockContext);
+      }, simpleContext);
 
       expect(result.action).toBe('list');
       expect(result.dependencies).toHaveLength(2);
