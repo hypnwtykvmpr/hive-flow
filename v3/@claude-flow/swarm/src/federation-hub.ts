@@ -208,6 +208,16 @@ export class FederationHub extends EventEmitter {
     totalAgentLifespanMs: number;
   };
 
+  // ============================================================================
+  // Secondary Indexes for O(1) Lookups (Performance Optimization)
+  // ============================================================================
+
+  /** Index: swarmId -> Set of agentIds */
+  private agentsBySwarm: Map<SwarmId, Set<EphemeralAgentId>> = new Map();
+
+  /** Index: status -> Set of agentIds */
+  private agentsByStatus: Map<EphemeralAgent['status'], Set<EphemeralAgentId>> = new Map();
+
   constructor(config?: FederationConfig) {
     super();
     this.config = { ...DEFAULT_CONFIG, ...config };
