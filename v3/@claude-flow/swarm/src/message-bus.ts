@@ -422,7 +422,9 @@ export class MessageBus extends EventEmitter implements IMessageBus {
       const batch: MessageQueueEntry[] = [];
 
       for (let i = 0; i < batchSize && queue.length > 0; i++) {
-        const entry = queue.shift()!;
+        // O(1) dequeue from highest priority queue
+        const entry = queue.dequeue();
+        if (!entry) break;
 
         // Check TTL
         if (now - entry.message.timestamp.getTime() > entry.message.ttlMs) {
