@@ -329,7 +329,7 @@ async function copyCommands(
   }
 
   // Find source commands directory
-  const sourceCommandsDir = findSourceDir('commands');
+  const sourceCommandsDir = findSourceDir('commands', options.sourceBaseDir);
   if (!sourceCommandsDir) {
     result.errors.push('Could not find source commands directory');
     return;
