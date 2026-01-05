@@ -771,7 +771,7 @@ async function handleTaskDependencies(
   switch (input.action) {
     case 'add':
       if (input.dependencies) {
-        task.dependencies = [...new Set([...task.dependencies, ...input.dependencies])];
+        task.dependencies = Array.from(new Set([...task.dependencies, ...input.dependencies]));
         task.updatedAt = updatedAt;
       }
       break;
