@@ -32,6 +32,7 @@ import { systemTools } from './system-tools.js';
 import { sessionTools } from './session-tools.js';
 import { workerTools } from './worker-tools.js';
 import { sonaTools } from './sona-tools.js';
+import { federationTools } from './federation-tools.js';
 
 // ============================================================================
 // Individual Tool Exports
