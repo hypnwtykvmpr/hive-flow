@@ -474,25 +474,45 @@ export class AgentAdapter extends EventEmitter {
    * Map agentic-flow agent type to Claude Flow AgentType
    */
   private mapAgentType(type: string, warnings: string[]): AgentType | string {
+    // Known valid agent types that pass through directly
+    const validTypes: AgentType[] = [
+      'coder',
+      'reviewer',
+      'tester',
+      'researcher',
+      'planner',
+      'architect',
+      'coordinator',
+      'security',
+      'performance',
+      'custom',
+    ];
+
+    const lowercaseType = type.toLowerCase();
+
+    // If it's already a valid type, pass through
+    if (validTypes.includes(lowercaseType as AgentType)) {
+      return lowercaseType as AgentType;
+    }
+
+    // Map alternative names to valid types
     const typeMap: Record<string, AgentType> = {
       'code-generator': 'coder',
       'code-reviewer': 'reviewer',
-      'tester': 'tester',
       'research': 'researcher',
       'planning': 'planner',
       'architecture': 'architect',
       'coordination': 'coordinator',
-      'security': 'security',
-      'performance': 'performance',
     };
 
-    const mapped = typeMap[type.toLowerCase()];
-    if (!mapped) {
-      warnings.push(`Unknown agent type '${type}', using as-is`);
-      return type;
+    const mapped = typeMap[lowercaseType];
+    if (mapped) {
+      return mapped;
     }
 
-    return mapped;
+    // Unknown type - generate warning and use as-is
+    warnings.push(`Unknown agent type '${type}', using as-is`);
+    return type;
   }
 
   /**
