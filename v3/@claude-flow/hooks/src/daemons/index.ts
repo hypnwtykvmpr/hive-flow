@@ -497,7 +497,12 @@ export class HooksLearningDaemon {
   getStats(): {
     patternsLearned: number;
     routingAccuracy: number;
-    consolidationStats: typeof this.consolidationStats;
+    consolidationStats: {
+      totalRuns: number;
+      patternsPromoted: number;
+      patternsPruned: number;
+      duplicatesRemoved: number;
+    };
     lastConsolidation: Date | null;
   } {
     return {
