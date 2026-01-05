@@ -103,7 +103,7 @@ export class TaskManager implements ITaskManager {
 
   async createTask(params: ITaskCreate): Promise<ITask> {
     const task: ITask = {
-      id: `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: generateSecureTaskId(),
       type: params.type,
       description: params.description,
       priority: params.priority ?? 50,
