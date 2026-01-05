@@ -241,6 +241,11 @@
         "hooks": [
           {
             "type": "command",
+            "timeout": 8000,
+            "command": ".claude/helpers/learning-hooks.sh session-end 2>/dev/null || true"
+          },
+          {
+            "type": "command",
             "timeout": 5000,
             "command": "npx agentic-flow@alpha hooks metrics --session --final-consolidation --export-learned-patterns 2>/dev/null || true"
           }
