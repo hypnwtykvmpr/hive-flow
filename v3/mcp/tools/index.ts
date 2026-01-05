@@ -178,6 +178,7 @@ export function getAllTools(): MCPTool[] {
     ...sessionTools,
     ...workerTools,
     ...sonaTools,
+    ...federationTools,
   ];
 }
 
