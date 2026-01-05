@@ -94,6 +94,18 @@ export {
   type OfficialHookOutput,
 } from './bridge/official-hooks-bridge.js';
 
+// Swarm Communication
+export {
+  SwarmCommunication,
+  swarmComm,
+  type SwarmMessage,
+  type PatternBroadcast,
+  type ConsensusRequest,
+  type TaskHandoff,
+  type SwarmAgentState,
+  type SwarmConfig,
+} from './swarm/index.js';
+
 // Version
 export const VERSION = '3.0.0-alpha.1';
 
