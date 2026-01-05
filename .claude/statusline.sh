@@ -92,9 +92,21 @@ fi
 # Check performance metrics
 if [ -f "$PERFORMANCE_METRICS" ]; then
   PERF_CURRENT=$(jq -r '.flashAttention.speedup // "1.0x"' "$PERFORMANCE_METRICS" 2>/dev/null || echo "1.0x")
-  MEMORY_REDUCTION=$(jq -r '.memory.reduction // "0%"' "$PERFORMANCE_METRICS" 2>/dev/null || echo "0%")
+fi
+
+# Calculate REAL memory usage (system memory used by node/agentic processes)
+MEMORY_DISPLAY=""
+NODE_MEM=$(ps aux 2>/dev/null | grep -E "(node|agentic|claude)" | grep -v grep | awk '{sum += $6} END {print int(sum/1024)}')
+if [ -n "$NODE_MEM" ] && [ "$NODE_MEM" -gt 0 ]; then
+  MEMORY_DISPLAY="${NODE_MEM}MB"
 else
-  MEMORY_REDUCTION="0%"
+  # Fallback: show v3 codebase line count as progress indicator
+  V3_LINES=$(find "${PROJECT_DIR}/v3" -name "*.ts" -type f 2>/dev/null | xargs wc -l 2>/dev/null | tail -1 | awk '{print $1}')
+  if [ -n "$V3_LINES" ] && [ "$V3_LINES" -gt 0 ]; then
+    MEMORY_DISPLAY="${V3_LINES}L"
+  else
+    MEMORY_DISPLAY="--"
+  fi
 fi
 
 # Check agentic-flow@alpha integration status
