@@ -268,6 +268,30 @@ export {
 } from './attention-coordinator.js';
 
 // =============================================================================
+// Federation Hub (Ephemeral Agent Coordination)
+// =============================================================================
+
+export {
+  FederationHub,
+  createFederationHub,
+  getDefaultFederationHub,
+  resetDefaultFederationHub,
+  type FederationId,
+  type SwarmId as FederationSwarmId,
+  type EphemeralAgentId,
+  type FederationConfig,
+  type SwarmRegistration,
+  type EphemeralAgent,
+  type SpawnEphemeralOptions,
+  type SpawnResult,
+  type FederationMessage,
+  type ConsensusProposal,
+  type FederationStats,
+  type FederationEvent,
+  type FederationEventType,
+} from './federation-hub.js';
+
+// =============================================================================
 // Default Export
 // =============================================================================
 
