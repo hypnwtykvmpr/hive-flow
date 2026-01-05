@@ -22,6 +22,198 @@ interface MessageQueueEntry {
   lastAttemptAt?: Date;
 }
 
+// ============================================================================
+// High-Performance Deque Implementation
+// O(1) push/pop from both ends using circular buffer
+// ============================================================================
+
+class Deque<T> {
+  private buffer: (T | undefined)[];
+  private head: number = 0;
+  private tail: number = 0;
+  private count: number = 0;
+  private capacity: number;
+
+  constructor(initialCapacity: number = 16) {
+    this.capacity = initialCapacity;
+    this.buffer = new Array(this.capacity);
+  }
+
+  get length(): number {
+    return this.count;
+  }
+
+  private grow(): void {
+    const newCapacity = this.capacity * 2;
+    const newBuffer = new Array(newCapacity);
+
+    // Copy elements in order
+    for (let i = 0; i < this.count; i++) {
+      newBuffer[i] = this.buffer[(this.head + i) % this.capacity];
+    }
+
+    this.buffer = newBuffer;
+    this.head = 0;
+    this.tail = this.count;
+    this.capacity = newCapacity;
+  }
+
+  pushBack(item: T): void {
+    if (this.count === this.capacity) {
+      this.grow();
+    }
+    this.buffer[this.tail] = item;
+    this.tail = (this.tail + 1) % this.capacity;
+    this.count++;
+  }
+
+  popFront(): T | undefined {
+    if (this.count === 0) {
+      return undefined;
+    }
+    const item = this.buffer[this.head];
+    this.buffer[this.head] = undefined; // Help GC
+    this.head = (this.head + 1) % this.capacity;
+    this.count--;
+    return item;
+  }
+
+  peekFront(): T | undefined {
+    if (this.count === 0) {
+      return undefined;
+    }
+    return this.buffer[this.head];
+  }
+
+  clear(): void {
+    this.buffer = new Array(this.capacity);
+    this.head = 0;
+    this.tail = 0;
+    this.count = 0;
+  }
+
+  // Find and remove first matching element - O(n) but rarely used
+  findAndRemove(predicate: (item: T) => boolean): T | undefined {
+    for (let i = 0; i < this.count; i++) {
+      const idx = (this.head + i) % this.capacity;
+      const item = this.buffer[idx];
+      if (item !== undefined && predicate(item)) {
+        // Shift remaining elements (O(n) but acceptable for rare operations)
+        for (let j = i; j < this.count - 1; j++) {
+          const currentIdx = (this.head + j) % this.capacity;
+          const nextIdx = (this.head + j + 1) % this.capacity;
+          this.buffer[currentIdx] = this.buffer[nextIdx];
+        }
+        this.tail = (this.tail - 1 + this.capacity) % this.capacity;
+        this.buffer[this.tail] = undefined;
+        this.count--;
+        return item;
+      }
+    }
+    return undefined;
+  }
+
+  find(predicate: (item: T) => boolean): T | undefined {
+    for (let i = 0; i < this.count; i++) {
+      const idx = (this.head + i) % this.capacity;
+      const item = this.buffer[idx];
+      if (item !== undefined && predicate(item)) {
+        return item;
+      }
+    }
+    return undefined;
+  }
+
+  *[Symbol.iterator](): Iterator<T> {
+    for (let i = 0; i < this.count; i++) {
+      const item = this.buffer[(this.head + i) % this.capacity];
+      if (item !== undefined) {
+        yield item;
+      }
+    }
+  }
+}
+
+// ============================================================================
+// Priority Queue using 4-Level Deques
+// O(1) insert, O(1) dequeue (vs O(n) for sorted array)
+// ============================================================================
+
+type Priority = 'urgent' | 'high' | 'normal' | 'low';
+const PRIORITY_ORDER: Priority[] = ['urgent', 'high', 'normal', 'low'];
+
+class PriorityMessageQueue {
+  private queues: Map<Priority, Deque<MessageQueueEntry>> = new Map();
+  private totalCount: number = 0;
+
+  constructor() {
+    for (const priority of PRIORITY_ORDER) {
+      this.queues.set(priority, new Deque<MessageQueueEntry>());
+    }
+  }
+
+  get length(): number {
+    return this.totalCount;
+  }
+
+  enqueue(entry: MessageQueueEntry): void {
+    const priority = entry.message.priority;
+    const queue = this.queues.get(priority)!;
+    queue.pushBack(entry);
+    this.totalCount++;
+  }
+
+  dequeue(): MessageQueueEntry | undefined {
+    // Dequeue from highest priority non-empty queue
+    for (const priority of PRIORITY_ORDER) {
+      const queue = this.queues.get(priority)!;
+      if (queue.length > 0) {
+        this.totalCount--;
+        return queue.popFront();
+      }
+    }
+    return undefined;
+  }
+
+  // Find and remove first low/normal priority entry for overflow handling
+  removeLowestPriority(): MessageQueueEntry | undefined {
+    // Check low priority first, then normal
+    for (const priority of ['low', 'normal'] as Priority[]) {
+      const queue = this.queues.get(priority)!;
+      if (queue.length > 0) {
+        this.totalCount--;
+        return queue.popFront();
+      }
+    }
+    // Fall back to any queue
+    for (const priority of PRIORITY_ORDER) {
+      const queue = this.queues.get(priority)!;
+      if (queue.length > 0) {
+        this.totalCount--;
+        return queue.popFront();
+      }
+    }
+    return undefined;
+  }
+
+  clear(): void {
+    for (const queue of this.queues.values()) {
+      queue.clear();
+    }
+    this.totalCount = 0;
+  }
+
+  find(predicate: (entry: MessageQueueEntry) => boolean): MessageQueueEntry | undefined {
+    for (const queue of this.queues.values()) {
+      const found = queue.find(predicate);
+      if (found) {
+        return found;
+      }
+    }
+    return undefined;
+  }
+}
+
 interface Subscription {
   agentId: string;
   callback: (message: Message) => void;
