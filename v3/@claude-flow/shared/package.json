@@ -10,7 +10,10 @@
     "./types": "./src/types/index.ts",
     "./core": "./src/core/index.ts",
     "./events": "./src/events/index.ts",
-    "./hooks": "./src/hooks/index.ts"
+    "./hooks": "./src/hooks/index.ts",
+    "./mcp": "./src/mcp/index.ts",
+    "./security": "./src/security/index.ts",
+    "./resilience": "./src/resilience/index.ts"
   },
   "scripts": {
     "test": "vitest run",
