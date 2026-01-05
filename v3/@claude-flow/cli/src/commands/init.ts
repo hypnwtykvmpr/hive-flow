@@ -1,315 +1,54 @@
 /**
  * V3 CLI Init Command
- * Project initialization for Claude Flow
+ * Comprehensive initialization for Claude Flow with Claude Code integration
  */
 
 import type { Command, CommandContext, CommandResult } from '../types.js';
 import { output } from '../output.js';
-import { confirm, select, input } from '../prompt.js';
+import { confirm, select, multiselect, input } from '../prompt.js';
 import * as fs from 'fs';
 import * as path from 'path';
-
-// Default configuration template
-const DEFAULT_CONFIG = {
-  version: '3.0.0',
-  agents: {
-    defaultType: 'coder',
-    autoSpawn: false,
-    maxConcurrent: 5,
-    timeout: 300,
-    providers: [
-      {
-        name: 'anthropic',
-        enabled: true,
-        priority: 1,
-        model: 'claude-sonnet-4-20250514'
-      }
-    ]
-  },
-  swarm: {
-    topology: 'hierarchical-mesh',
-    maxAgents: 15,
-    autoScale: true,
-    coordinationStrategy: 'consensus',
-    healthCheckInterval: 30000
-  },
-  memory: {
-    backend: 'hybrid',
-    persistPath: '.claude-flow/data',
-    cacheSize: 100,
-    enableHNSW: true,
-    vectorDimension: 1536
-  },
-  mcp: {
-    serverHost: 'localhost',
-    serverPort: 3000,
-    autoStart: false,
-    transportType: 'stdio',
-    tools: ['agent', 'swarm', 'memory', 'task']
-  },
-  cli: {
-    colorOutput: true,
-    interactive: true,
-    verbosity: 'normal',
-    outputFormat: 'text',
-    progressStyle: 'spinner'
-  },
-  hooks: {
-    enabled: true,
-    autoExecute: true,
-    hooks: []
-  }
-};
-
-// Minimal configuration template
-const MINIMAL_CONFIG = {
-  version: '3.0.0',
-  agents: {
-    defaultType: 'coder',
-    maxConcurrent: 3
-  },
-  swarm: {
-    topology: 'mesh',
-    maxAgents: 5
-  },
-  memory: {
-    backend: 'memory'
-  }
-};
-
-// Flow Nexus enhanced configuration
-const FLOW_NEXUS_CONFIG = {
-  ...DEFAULT_CONFIG,
-  flowNexus: {
-    enabled: true,
-    sandbox: {
-      provider: 'e2b',
-      timeout: 300000
-    },
-    neural: {
-      trainingEnabled: true,
-      modelPath: '.claude-flow/neural'
-    },
-    distributed: {
-      enabled: true,
-      coordinationMode: 'quic'
-    }
-  },
-  swarm: {
-    ...DEFAULT_CONFIG.swarm,
-    topology: 'hierarchical-mesh',
-    maxAgents: 50,
-    autoScale: true
-  }
-};
-
-// Default agent definitions
-const DEFAULT_AGENTS = [
-  {
-    id: 'coder',
-    name: 'Coder Agent',
-    description: 'Code development with neural patterns',
-    capabilities: ['code-generation', 'refactoring', 'debugging', 'testing'],
-    model: 'claude-sonnet-4-20250514'
-  },
-  {
-    id: 'researcher',
-    name: 'Researcher Agent',
-    description: 'Research with web access and data analysis',
-    capabilities: ['web-search', 'data-analysis', 'summarization', 'citation'],
-    model: 'claude-sonnet-4-20250514'
-  },
-  {
-    id: 'tester',
-    name: 'Tester Agent',
-    description: 'Comprehensive testing with automation',
-    capabilities: ['unit-testing', 'integration-testing', 'coverage-analysis', 'automation'],
-    model: 'claude-sonnet-4-20250514'
-  },
-  {
-    id: 'reviewer',
-    name: 'Reviewer Agent',
-    description: 'Code review with security and quality checks',
-    capabilities: ['code-review', 'security-audit', 'quality-check', 'documentation'],
-    model: 'claude-sonnet-4-20250514'
-  },
-  {
-    id: 'architect',
-    name: 'Architect Agent',
-    description: 'System design with enterprise patterns',
-    capabilities: ['system-design', 'pattern-analysis', 'scalability', 'documentation'],
-    model: 'claude-sonnet-4-20250514'
-  }
-];
-
-// Directory structure to create
-const DIRECTORY_STRUCTURE = [
-  '.claude-flow',
-  '.claude-flow/agents',
-  '.claude-flow/data',
-  '.claude-flow/logs',
-  '.claude-flow/hooks',
-  '.claude-flow/workflows',
-  '.claude-flow/sessions'
-];
+import {
+  executeInit,
+  DEFAULT_INIT_OPTIONS,
+  MINIMAL_INIT_OPTIONS,
+  FULL_INIT_OPTIONS,
+  type InitOptions,
+} from '../init/index.js';
 
 // Check if project is already initialized
-function isInitialized(cwd: string): boolean {
-  const configPath = path.join(cwd, '.claude-flow', 'config.yaml');
-  return fs.existsSync(configPath);
-}
-
-// Create directory structure
-function createDirectories(cwd: string): void {
-  for (const dir of DIRECTORY_STRUCTURE) {
-    const dirPath = path.join(cwd, dir);
-    if (!fs.existsSync(dirPath)) {
-      fs.mkdirSync(dirPath, { recursive: true });
-    }
-  }
-}
-
-// Write YAML config (simple YAML serialization)
-function toYaml(obj: unknown, indent: number = 0): string {
-  const spaces = '  '.repeat(indent);
-  let result = '';
-
-  if (obj === null || obj === undefined) {
-    return 'null';
-  }
-
-  if (typeof obj === 'boolean' || typeof obj === 'number') {
-    return String(obj);
-  }
-
-  if (typeof obj === 'string') {
-    // Quote strings that might be interpreted as other types
-    if (obj.includes(':') || obj.includes('#') || obj.includes('\n') ||
-        obj === 'true' || obj === 'false' || !isNaN(Number(obj))) {
-      return `"${obj.replace(/"/g, '\\"')}"`;
-    }
-    return obj;
-  }
-
-  if (Array.isArray(obj)) {
-    if (obj.length === 0) return '[]';
-    result = '\n';
-    for (const item of obj) {
-      if (typeof item === 'object' && item !== null) {
-        result += `${spaces}- `;
-        const lines = toYaml(item, indent + 1).split('\n');
-        result += lines[0] + '\n';
-        for (let i = 1; i < lines.length; i++) {
-          if (lines[i].trim()) {
-            result += `${spaces}  ${lines[i]}\n`;
-          }
-        }
-      } else {
-        result += `${spaces}- ${toYaml(item, indent + 1)}\n`;
-      }
-    }
-    return result.trimEnd();
-  }
-
-  if (typeof obj === 'object') {
-    const entries = Object.entries(obj);
-    if (entries.length === 0) return '{}';
-    result = indent === 0 ? '' : '\n';
-    for (const [key, value] of entries) {
-      const valueStr = toYaml(value, indent + 1);
-      if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-        result += `${spaces}${key}:${valueStr}\n`;
-      } else if (Array.isArray(value)) {
-        result += `${spaces}${key}:${valueStr}\n`;
-      } else {
-        result += `${spaces}${key}: ${valueStr}\n`;
-      }
-    }
-    return result.trimEnd();
-  }
-
-  return String(obj);
-}
-
-// Write config file
-function writeConfig(cwd: string, config: unknown): void {
-  const configPath = path.join(cwd, '.claude-flow', 'config.yaml');
-  const content = `# Claude Flow V3 Configuration\n# Generated at: ${new Date().toISOString()}\n\n${toYaml(config)}`;
-  fs.writeFileSync(configPath, content, 'utf-8');
-}
-
-// Write agent definitions
-function writeAgents(cwd: string, agents: typeof DEFAULT_AGENTS): void {
-  const agentsPath = path.join(cwd, '.claude-flow', 'agents');
-
-  for (const agent of agents) {
-    const agentFile = path.join(agentsPath, `${agent.id}.yaml`);
-    const content = `# ${agent.name}\n# ${agent.description}\n\n${toYaml(agent)}`;
-    fs.writeFileSync(agentFile, content, 'utf-8');
-  }
-}
-
-// Write gitignore for .claude-flow
-function writeGitignore(cwd: string): void {
-  const gitignorePath = path.join(cwd, '.claude-flow', '.gitignore');
-  const content = `# Claude Flow local files
-data/
-logs/
-sessions/
-*.log
-*.tmp
-
-# Keep config and agents
-!config.yaml
-!agents/
-`;
-  fs.writeFileSync(gitignorePath, content, 'utf-8');
-}
-
-// Write sample hook
-function writeSampleHook(cwd: string): void {
-  const hookPath = path.join(cwd, '.claude-flow', 'hooks', 'pre-task.js');
-  const content = `/**
- * Sample Pre-Task Hook
- * This hook runs before each task execution
- */
-
-module.exports = async function preTaskHook(context) {
-  const { task, agent, config } = context;
-
-  // Log task start
-  console.log(\`[Hook] Starting task: \${task.id}\`);
-
-  // You can modify the task or add metadata
+function isInitialized(cwd: string): { claude: boolean; claudeFlow: boolean } {
+  const claudePath = path.join(cwd, '.claude', 'settings.json');
+  const claudeFlowPath = path.join(cwd, '.claude-flow', 'config.yaml');
   return {
-    ...context,
-    metadata: {
-      ...context.metadata,
-      hookExecuted: true,
-      timestamp: new Date().toISOString()
-    }
+    claude: fs.existsSync(claudePath),
+    claudeFlow: fs.existsSync(claudeFlowPath),
   };
-};
-`;
-  fs.writeFileSync(hookPath, content, 'utf-8');
 }
 
 // Init subcommand (default)
 const initAction = async (ctx: CommandContext): Promise<CommandResult> => {
   const force = ctx.flags.force as boolean;
   const minimal = ctx.flags.minimal as boolean;
-  const flowNexus = ctx.flags['flow-nexus'] as boolean;
+  const full = ctx.flags.full as boolean;
+  const skipClaude = ctx.flags['skip-claude'] as boolean;
+  const onlyClaude = ctx.flags['only-claude'] as boolean;
   const cwd = ctx.cwd;
 
   // Check if already initialized
-  if (isInitialized(cwd) && !force) {
-    output.printWarning('Claude Flow is already initialized in this directory');
+  const initialized = isInitialized(cwd);
+  const hasExisting = initialized.claude || initialized.claudeFlow;
+
+  if (hasExisting && !force) {
+    output.printWarning('Claude Flow appears to be already initialized');
+    if (initialized.claude) output.printInfo('  Found: .claude/settings.json');
+    if (initialized.claudeFlow) output.printInfo('  Found: .claude-flow/config.yaml');
     output.printInfo('Use --force to reinitialize');
 
     if (ctx.interactive) {
       const proceed = await confirm({
         message: 'Do you want to reinitialize? This will overwrite existing configuration.',
-        default: false
+        default: false,
       });
 
       if (!proceed) {
@@ -324,102 +63,113 @@ const initAction = async (ctx: CommandContext): Promise<CommandResult> => {
   output.writeln(output.bold('Initializing Claude Flow V3'));
   output.writeln();
 
+  // Build init options based on flags
+  let options: InitOptions;
+
+  if (minimal) {
+    options = { ...MINIMAL_INIT_OPTIONS, targetDir: cwd, force };
+  } else if (full) {
+    options = { ...FULL_INIT_OPTIONS, targetDir: cwd, force };
+  } else {
+    options = { ...DEFAULT_INIT_OPTIONS, targetDir: cwd, force };
+  }
+
+  // Handle --skip-claude and --only-claude flags
+  if (skipClaude) {
+    options.components.settings = false;
+    options.components.skills = false;
+    options.components.commands = false;
+    options.components.agents = false;
+    options.components.helpers = false;
+    options.components.statusline = false;
+    options.components.mcp = false;
+  }
+
+  if (onlyClaude) {
+    options.components.runtime = false;
+  }
+
   // Create spinner
-  const spinner = output.createSpinner({ text: 'Creating directory structure...' });
+  const spinner = output.createSpinner({ text: 'Initializing...' });
   spinner.start();
 
   try {
-    // Create directories
-    createDirectories(cwd);
-    spinner.succeed('Directory structure created');
+    // Execute initialization
+    const result = await executeInit(options);
 
-    // Select configuration type
-    let config: typeof DEFAULT_CONFIG | typeof MINIMAL_CONFIG | typeof FLOW_NEXUS_CONFIG;
-    let configType: string;
-
-    if (flowNexus) {
-      config = FLOW_NEXUS_CONFIG;
-      configType = 'Flow Nexus';
-    } else if (minimal) {
-      config = MINIMAL_CONFIG;
-      configType = 'Minimal';
-    } else if (ctx.interactive) {
-      configType = await select({
-        message: 'Select configuration type:',
-        options: [
-          { value: 'default', label: 'Default', hint: 'Full configuration with all features' },
-          { value: 'minimal', label: 'Minimal', hint: 'Lightweight configuration for quick start' },
-          { value: 'flow-nexus', label: 'Flow Nexus', hint: 'Enhanced configuration with Flow Nexus features' }
-        ]
-      });
-
-      config = configType === 'minimal' ? MINIMAL_CONFIG :
-               configType === 'flow-nexus' ? FLOW_NEXUS_CONFIG : DEFAULT_CONFIG;
-    } else {
-      config = DEFAULT_CONFIG;
-      configType = 'Default';
+    if (!result.success) {
+      spinner.fail('Initialization failed');
+      for (const error of result.errors) {
+        output.printError(error);
+      }
+      return { success: false, exitCode: 1 };
     }
 
-    // Write configuration
-    spinner.setText('Writing configuration...');
-    spinner.start();
-    writeConfig(cwd, config);
-    spinner.succeed(`Configuration written (${configType})`);
+    spinner.succeed('Claude Flow V3 initialized successfully!');
+    output.writeln();
 
-    // Write agent definitions (unless minimal)
-    if (!minimal) {
-      spinner.setText('Creating agent definitions...');
-      spinner.start();
-      writeAgents(cwd, DEFAULT_AGENTS);
-      spinner.succeed(`Created ${DEFAULT_AGENTS.length} agent definitions`);
+    // Display summary
+    const summary: string[] = [];
+
+    if (result.created.directories.length > 0) {
+      summary.push(`Directories: ${result.created.directories.length} created`);
     }
 
-    // Write gitignore
-    spinner.setText('Creating .gitignore...');
-    spinner.start();
-    writeGitignore(cwd);
-    spinner.succeed('Created .gitignore');
-
-    // Write sample hook (unless minimal)
-    if (!minimal) {
-      spinner.setText('Creating sample hook...');
-      spinner.start();
-      writeSampleHook(cwd);
-      spinner.succeed('Created sample hook');
+    if (result.created.files.length > 0) {
+      summary.push(`Files: ${result.created.files.length} created`);
     }
 
-    // Success message
-    output.writeln();
-    output.printSuccess('Claude Flow V3 initialized successfully!');
+    if (result.skipped.length > 0) {
+      summary.push(`Skipped: ${result.skipped.length} (already exist)`);
+    }
+
+    output.printBox(summary.join('\n'), 'Summary');
     output.writeln();
 
-    output.printBox(
-      [
-        `Configuration: .claude-flow/config.yaml`,
-        `Agents:        .claude-flow/agents/`,
-        `Data:          .claude-flow/data/`,
-        `Hooks:         .claude-flow/hooks/`,
-        `Sessions:      .claude-flow/sessions/`
-      ].join('\n'),
-      'Project Structure'
-    );
+    // Show what was created
+    if (options.components.settings || options.components.skills || options.components.commands || options.components.agents) {
+      output.printBox(
+        [
+          options.components.settings ? `Settings:    .claude/settings.json` : '',
+          options.components.skills ? `Skills:      .claude/skills/ (${result.summary.skillsCount} skills)` : '',
+          options.components.commands ? `Commands:    .claude/commands/ (${result.summary.commandsCount} commands)` : '',
+          options.components.agents ? `Agents:      .claude/agents/ (${result.summary.agentsCount} agents)` : '',
+          options.components.helpers ? `Helpers:     .claude/helpers/` : '',
+          options.components.mcp ? `MCP:         .mcp.json` : '',
+        ].filter(Boolean).join('\n'),
+        'Claude Code Integration'
+      );
+      output.writeln();
+    }
 
-    output.writeln();
+    if (options.components.runtime) {
+      output.printBox(
+        [
+          `Config:      .claude-flow/config.yaml`,
+          `Data:        .claude-flow/data/`,
+          `Logs:        .claude-flow/logs/`,
+          `Sessions:    .claude-flow/sessions/`,
+        ].join('\n'),
+        'V3 Runtime'
+      );
+      output.writeln();
+    }
+
+    // Hooks summary
+    if (result.summary.hooksEnabled > 0) {
+      output.printInfo(`Hooks: ${result.summary.hooksEnabled} hook types enabled in settings.json`);
+      output.writeln();
+    }
+
+    // Next steps
     output.writeln(output.bold('Next steps:'));
     output.printList([
       `Run ${output.highlight('claude-flow start')} to start the orchestration system`,
       `Run ${output.highlight('claude-flow agent spawn -t coder')} to spawn an agent`,
       `Run ${output.highlight('claude-flow swarm init')} to initialize a swarm`,
-      `Edit ${output.highlight('.claude-flow/config.yaml')} to customize settings`
-    ]);
-
-    const result = {
-      initialized: true,
-      configType,
-      directories: DIRECTORY_STRUCTURE,
-      agents: minimal ? [] : DEFAULT_AGENTS.map(a => a.id),
-      configPath: path.join(cwd, '.claude-flow', 'config.yaml')
-    };
+      options.components.settings ? `Review ${output.highlight('.claude/settings.json')} for hook configurations` : '',
+      options.components.runtime ? `Edit ${output.highlight('.claude-flow/config.yaml')} to customize settings` : '',
+    ].filter(Boolean));
 
     if (ctx.flags.format === 'json') {
       output.printJson(result);
@@ -436,42 +186,126 @@ const initAction = async (ctx: CommandContext): Promise<CommandResult> => {
 // Wizard subcommand for interactive setup
 const wizardCommand: Command = {
   name: 'wizard',
-  description: 'Interactive setup wizard',
+  description: 'Interactive setup wizard for comprehensive configuration',
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     output.writeln();
     output.writeln(output.bold('Claude Flow V3 Setup Wizard'));
-    output.writeln(output.dim('Answer a few questions to configure your project'));
+    output.writeln(output.dim('Answer questions to configure your project'));
     output.writeln();
 
     try {
-      // Project name
-      const projectName = await input({
-        message: 'Project name:',
-        default: path.basename(ctx.cwd),
-        validate: (v) => v.length > 0 || 'Project name is required'
+      // Start with base options
+      const options: InitOptions = { ...DEFAULT_INIT_OPTIONS, targetDir: ctx.cwd };
+
+      // Configuration preset
+      const preset = await select({
+        message: 'Select configuration preset:',
+        options: [
+          { value: 'default', label: 'Default', hint: 'Recommended settings for most projects' },
+          { value: 'minimal', label: 'Minimal', hint: 'Core features only' },
+          { value: 'full', label: 'Full', hint: 'All features enabled' },
+          { value: 'custom', label: 'Custom', hint: 'Choose each component' },
+        ],
       });
 
-      // Swarm topology
+      if (preset === 'minimal') {
+        Object.assign(options, MINIMAL_INIT_OPTIONS);
+        options.targetDir = ctx.cwd;
+      } else if (preset === 'full') {
+        Object.assign(options, FULL_INIT_OPTIONS);
+        options.targetDir = ctx.cwd;
+      } else if (preset === 'custom') {
+        // Component selection
+        const components = await multiselect({
+          message: 'Select components to initialize:',
+          options: [
+            { value: 'settings', label: 'settings.json', hint: 'Claude Code hooks configuration', selected: true },
+            { value: 'skills', label: 'Skills', hint: 'Claude Code skills in .claude/skills/', selected: true },
+            { value: 'commands', label: 'Commands', hint: 'Claude Code commands in .claude/commands/', selected: true },
+            { value: 'agents', label: 'Agents', hint: 'Agent definitions in .claude/agents/', selected: true },
+            { value: 'helpers', label: 'Helpers', hint: 'Utility scripts in .claude/helpers/', selected: true },
+            { value: 'statusline', label: 'Statusline', hint: 'Shell statusline integration', selected: false },
+            { value: 'mcp', label: 'MCP', hint: '.mcp.json for MCP server configuration', selected: true },
+            { value: 'runtime', label: 'Runtime', hint: '.claude-flow/ directory for V3 runtime', selected: true },
+          ],
+        });
+
+        options.components.settings = components.includes('settings');
+        options.components.skills = components.includes('skills');
+        options.components.commands = components.includes('commands');
+        options.components.agents = components.includes('agents');
+        options.components.helpers = components.includes('helpers');
+        options.components.statusline = components.includes('statusline');
+        options.components.mcp = components.includes('mcp');
+        options.components.runtime = components.includes('runtime');
+
+        // Skills selection
+        if (options.components.skills) {
+          const skillSets = await multiselect({
+            message: 'Select skill sets:',
+            options: [
+              { value: 'core', label: 'Core', hint: 'Swarm, memory, SPARC skills', selected: true },
+              { value: 'agentdb', label: 'AgentDB', hint: 'Vector database skills', selected: true },
+              { value: 'github', label: 'GitHub', hint: 'GitHub integration skills', selected: true },
+              { value: 'flowNexus', label: 'Flow Nexus', hint: 'Cloud platform skills', selected: false },
+              { value: 'v3', label: 'V3', hint: 'V3 implementation skills', selected: true },
+            ],
+          });
+
+          options.skills.core = skillSets.includes('core');
+          options.skills.agentdb = skillSets.includes('agentdb');
+          options.skills.github = skillSets.includes('github');
+          options.skills.flowNexus = skillSets.includes('flowNexus');
+          options.skills.v3 = skillSets.includes('v3');
+        }
+
+        // Hooks selection
+        if (options.components.settings) {
+          const hooks = await multiselect({
+            message: 'Select hooks to enable:',
+            options: [
+              { value: 'preToolUse', label: 'PreToolUse', hint: 'Before tool execution', selected: true },
+              { value: 'postToolUse', label: 'PostToolUse', hint: 'After tool execution', selected: true },
+              { value: 'userPromptSubmit', label: 'UserPromptSubmit', hint: 'Task routing', selected: true },
+              { value: 'sessionStart', label: 'SessionStart', hint: 'Session initialization', selected: true },
+              { value: 'stop', label: 'Stop', hint: 'Task completion evaluation', selected: true },
+              { value: 'notification', label: 'Notification', hint: 'Swarm notifications', selected: true },
+              { value: 'permissionRequest', label: 'PermissionRequest', hint: 'Auto-allow claude-flow tools', selected: true },
+            ],
+          });
+
+          options.hooks.preToolUse = hooks.includes('preToolUse');
+          options.hooks.postToolUse = hooks.includes('postToolUse');
+          options.hooks.userPromptSubmit = hooks.includes('userPromptSubmit');
+          options.hooks.sessionStart = hooks.includes('sessionStart');
+          options.hooks.stop = hooks.includes('stop');
+          options.hooks.notification = hooks.includes('notification');
+          options.hooks.permissionRequest = hooks.includes('permissionRequest');
+        }
+      }
+
+      // Swarm topology (for all presets)
       const topology = await select({
         message: 'Select swarm topology:',
         options: [
           { value: 'hierarchical-mesh', label: 'Hierarchical Mesh', hint: 'Best for complex projects (recommended)' },
           { value: 'mesh', label: 'Mesh', hint: 'Peer-to-peer coordination' },
           { value: 'hierarchical', label: 'Hierarchical', hint: 'Tree-based coordination' },
-          { value: 'ring', label: 'Ring', hint: 'Sequential coordination' },
-          { value: 'star', label: 'Star', hint: 'Hub-based coordination' }
-        ]
+          { value: 'adaptive', label: 'Adaptive', hint: 'Dynamic topology switching' },
+        ],
       });
+      options.runtime.topology = topology as InitOptions['runtime']['topology'];
 
       // Max agents
       const maxAgents = await input({
         message: 'Maximum concurrent agents:',
-        default: '15',
+        default: String(options.runtime.maxAgents),
         validate: (v) => {
           const n = parseInt(v);
           return (!isNaN(n) && n > 0 && n <= 50) || 'Enter a number between 1 and 50';
-        }
+        },
       });
+      options.runtime.maxAgents = parseInt(maxAgents);
 
       // Memory backend
       const memoryBackend = await select({
@@ -480,84 +314,66 @@ const wizardCommand: Command = {
           { value: 'hybrid', label: 'Hybrid', hint: 'SQLite + AgentDB (recommended)' },
           { value: 'agentdb', label: 'AgentDB', hint: '150x faster vector search' },
           { value: 'sqlite', label: 'SQLite', hint: 'Standard SQL storage' },
-          { value: 'memory', label: 'In-Memory', hint: 'Fast but non-persistent' }
-        ]
+          { value: 'memory', label: 'In-Memory', hint: 'Fast but non-persistent' },
+        ],
       });
+      options.runtime.memoryBackend = memoryBackend as InitOptions['runtime']['memoryBackend'];
 
-      // Enable hooks
-      const enableHooks = await confirm({
-        message: 'Enable hooks system for learning?',
-        default: true
-      });
-
-      // Enable MCP auto-start
-      const autoStartMCP = await confirm({
-        message: 'Auto-start MCP server?',
-        default: false
-      });
-
-      // Build custom configuration
-      const customConfig = {
-        ...DEFAULT_CONFIG,
-        projectName,
-        swarm: {
-          ...DEFAULT_CONFIG.swarm,
-          topology,
-          maxAgents: parseInt(maxAgents)
-        },
-        memory: {
-          ...DEFAULT_CONFIG.memory,
-          backend: memoryBackend
-        },
-        hooks: {
-          ...DEFAULT_CONFIG.hooks,
-          enabled: enableHooks
-        },
-        mcp: {
-          ...DEFAULT_CONFIG.mcp,
-          autoStart: autoStartMCP
-        }
-      };
-
-      // Create structure and write config
-      createDirectories(ctx.cwd);
-      writeConfig(ctx.cwd, customConfig);
-      writeAgents(ctx.cwd, DEFAULT_AGENTS);
-      writeGitignore(ctx.cwd);
-      if (enableHooks) {
-        writeSampleHook(ctx.cwd);
+      // HNSW indexing
+      if (memoryBackend === 'agentdb' || memoryBackend === 'hybrid') {
+        const enableHNSW = await confirm({
+          message: 'Enable HNSW indexing for faster vector search?',
+          default: true,
+        });
+        options.runtime.enableHNSW = enableHNSW;
       }
 
+      // Neural learning
+      const enableNeural = await confirm({
+        message: 'Enable neural pattern learning?',
+        default: options.runtime.enableNeural,
+      });
+      options.runtime.enableNeural = enableNeural;
+
+      // Execute initialization
       output.writeln();
-      output.printSuccess('Setup complete!');
+      const spinner = output.createSpinner({ text: 'Initializing...' });
+      spinner.start();
+
+      const result = await executeInit(options);
+
+      if (!result.success) {
+        spinner.fail('Initialization failed');
+        for (const error of result.errors) {
+          output.printError(error);
+        }
+        return { success: false, exitCode: 1 };
+      }
+
+      spinner.succeed('Setup complete!');
       output.writeln();
 
+      // Summary table
       output.printTable({
         columns: [
           { key: 'setting', header: 'Setting', width: 20 },
-          { key: 'value', header: 'Value', width: 30 }
+          { key: 'value', header: 'Value', width: 40 },
         ],
         data: [
-          { setting: 'Project', value: projectName },
-          { setting: 'Topology', value: topology },
-          { setting: 'Max Agents', value: maxAgents },
-          { setting: 'Memory Backend', value: memoryBackend },
-          { setting: 'Hooks', value: enableHooks ? 'Enabled' : 'Disabled' },
-          { setting: 'MCP Auto-start', value: autoStartMCP ? 'Yes' : 'No' }
-        ]
+          { setting: 'Preset', value: preset },
+          { setting: 'Topology', value: options.runtime.topology },
+          { setting: 'Max Agents', value: String(options.runtime.maxAgents) },
+          { setting: 'Memory Backend', value: options.runtime.memoryBackend },
+          { setting: 'HNSW Indexing', value: options.runtime.enableHNSW ? 'Enabled' : 'Disabled' },
+          { setting: 'Neural Learning', value: options.runtime.enableNeural ? 'Enabled' : 'Disabled' },
+          { setting: 'Skills', value: `${result.summary.skillsCount} installed` },
+          { setting: 'Commands', value: `${result.summary.commandsCount} installed` },
+          { setting: 'Agents', value: `${result.summary.agentsCount} installed` },
+          { setting: 'Hooks', value: `${result.summary.hooksEnabled} enabled` },
+        ],
       });
 
-      return {
-        success: true,
-        data: {
-          projectName,
-          topology,
-          maxAgents: parseInt(maxAgents),
-          memoryBackend,
-          enableHooks,
-          autoStartMCP
-        }
-      };
+      return { success: true, data: result };
     } catch (error) {
       if (error instanceof Error && error.message === 'User cancelled') {
         output.printInfo('Setup cancelled');
@@ -565,7 +381,7 @@ const wizardCommand: Command = {
       }
       throw error;
     }
-  }
+  },
 };
 
 // Check subcommand
@@ -574,60 +390,202 @@ const checkCommand: Command = {
   description: 'Check if Claude Flow is initialized',
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     const initialized = isInitialized(ctx.cwd);
-    const configPath = path.join(ctx.cwd, '.claude-flow', 'config.yaml');
+
+    const result = {
+      initialized: initialized.claude || initialized.claudeFlow,
+      claude: initialized.claude,
+      claudeFlow: initialized.claudeFlow,
+      paths: {
+        claudeSettings: initialized.claude ? path.join(ctx.cwd, '.claude', 'settings.json') : null,
+        claudeFlowConfig: initialized.claudeFlow ? path.join(ctx.cwd, '.claude-flow', 'config.yaml') : null,
+      },
+    };
 
     if (ctx.flags.format === 'json') {
-      output.printJson({ initialized, configPath: initialized ? configPath : null });
-      return { success: true, data: { initialized } };
+      output.printJson(result);
+      return { success: true, data: result };
     }
 
-    if (initialized) {
-      output.printSuccess(`Claude Flow is initialized`);
-      output.printInfo(`Config: ${configPath}`);
+    if (result.initialized) {
+      output.printSuccess('Claude Flow is initialized');
+      if (initialized.claude) {
+        output.printInfo(`  Claude Code: .claude/settings.json`);
+      }
+      if (initialized.claudeFlow) {
+        output.printInfo(`  V3 Runtime: .claude-flow/config.yaml`);
+      }
     } else {
       output.printWarning('Claude Flow is not initialized in this directory');
       output.printInfo('Run "claude-flow init" to initialize');
     }
 
-    return { success: true, data: { initialized } };
-  }
+    return { success: true, data: result };
+  },
+};
+
+// Skills subcommand
+const skillsCommand: Command = {
+  name: 'skills',
+  description: 'Initialize only skills',
+  options: [
+    { name: 'all', description: 'Install all skills', type: 'boolean', default: false },
+    { name: 'core', description: 'Install core skills', type: 'boolean', default: true },
+    { name: 'agentdb', description: 'Install AgentDB skills', type: 'boolean', default: false },
+    { name: 'github', description: 'Install GitHub skills', type: 'boolean', default: false },
+    { name: 'v3', description: 'Install V3 skills', type: 'boolean', default: false },
+  ],
+  action: async (ctx: CommandContext): Promise<CommandResult> => {
+    const options: InitOptions = {
+      ...MINIMAL_INIT_OPTIONS,
+      targetDir: ctx.cwd,
+      force: ctx.flags.force as boolean,
+      components: {
+        settings: false,
+        skills: true,
+        commands: false,
+        agents: false,
+        helpers: false,
+        statusline: false,
+        mcp: false,
+        runtime: false,
+      },
+      skills: {
+        all: ctx.flags.all as boolean,
+        core: ctx.flags.core as boolean,
+        agentdb: ctx.flags.agentdb as boolean,
+        github: ctx.flags.github as boolean,
+        flowNexus: false,
+        v3: ctx.flags.v3 as boolean,
+      },
+    };
+
+    const spinner = output.createSpinner({ text: 'Installing skills...' });
+    spinner.start();
+
+    const result = await executeInit(options);
+
+    if (result.success) {
+      spinner.succeed(`Installed ${result.summary.skillsCount} skills`);
+    } else {
+      spinner.fail('Failed to install skills');
+      for (const error of result.errors) {
+        output.printError(error);
+      }
+    }
+
+    return { success: result.success, data: result };
+  },
+};
+
+// Hooks subcommand
+const hooksCommand: Command = {
+  name: 'hooks',
+  description: 'Initialize only hooks configuration',
+  options: [
+    { name: 'all', description: 'Enable all hooks', type: 'boolean', default: true },
+    { name: 'minimal', description: 'Enable only essential hooks', type: 'boolean', default: false },
+  ],
+  action: async (ctx: CommandContext): Promise<CommandResult> => {
+    const minimal = ctx.flags.minimal as boolean;
+
+    const options: InitOptions = {
+      ...DEFAULT_INIT_OPTIONS,
+      targetDir: ctx.cwd,
+      force: ctx.flags.force as boolean,
+      components: {
+        settings: true,
+        skills: false,
+        commands: false,
+        agents: false,
+        helpers: false,
+        statusline: false,
+        mcp: false,
+        runtime: false,
+      },
+      hooks: minimal
+        ? {
+            preToolUse: true,
+            postToolUse: true,
+            userPromptSubmit: false,
+            sessionStart: false,
+            stop: false,
+            notification: false,
+            permissionRequest: true,
+            timeout: 5000,
+            continueOnError: true,
+          }
+        : DEFAULT_INIT_OPTIONS.hooks,
+    };
+
+    const spinner = output.createSpinner({ text: 'Creating hooks configuration...' });
+    spinner.start();
+
+    const result = await executeInit(options);
+
+    if (result.success) {
+      spinner.succeed(`Created settings.json with ${result.summary.hooksEnabled} hooks enabled`);
+    } else {
+      spinner.fail('Failed to create hooks configuration');
+      for (const error of result.errors) {
+        output.printError(error);
+      }
+    }
+
+    return { success: result.success, data: result };
+  },
 };
 
 // Main init command
 export const initCommand: Command = {
   name: 'init',
   description: 'Initialize Claude Flow in the current directory',
-  subcommands: [wizardCommand, checkCommand],
+  subcommands: [wizardCommand, checkCommand, skillsCommand, hooksCommand],
   options: [
     {
       name: 'force',
       short: 'f',
       description: 'Overwrite existing configuration',
       type: 'boolean',
-      default: false
+      default: false,
     },
     {
       name: 'minimal',
       short: 'm',
       description: 'Create minimal configuration',
       type: 'boolean',
-      default: false
+      default: false,
     },
     {
-      name: 'flow-nexus',
-      description: 'Initialize with Flow Nexus features',
+      name: 'full',
+      description: 'Create full configuration with all components',
       type: 'boolean',
-      default: false
-    }
+      default: false,
+    },
+    {
+      name: 'skip-claude',
+      description: 'Skip .claude/ directory creation (runtime only)',
+      type: 'boolean',
+      default: false,
+    },
+    {
+      name: 'only-claude',
+      description: 'Only create .claude/ directory (skip runtime)',
+      type: 'boolean',
+      default: false,
+    },
   ],
   examples: [
     { command: 'claude-flow init', description: 'Initialize with default configuration' },
     { command: 'claude-flow init --minimal', description: 'Initialize with minimal configuration' },
-    { command: 'claude-flow init --flow-nexus', description: 'Initialize with Flow Nexus features' },
+    { command: 'claude-flow init --full', description: 'Initialize with all components' },
     { command: 'claude-flow init --force', description: 'Reinitialize and overwrite existing config' },
-    { command: 'claude-flow init wizard', description: 'Interactive setup wizard' }
+    { command: 'claude-flow init --only-claude', description: 'Only create Claude Code integration' },
+    { command: 'claude-flow init --skip-claude', description: 'Only create V3 runtime' },
+    { command: 'claude-flow init wizard', description: 'Interactive setup wizard' },
+    { command: 'claude-flow init skills --all', description: 'Install all available skills' },
+    { command: 'claude-flow init hooks --minimal', description: 'Create minimal hooks configuration' },
   ],
-  action: initAction
+  action: initAction,
 };
 
 export default initCommand;

@@ -1,0 +1,50 @@
+/**
+ * V3 Init Module
+ * Comprehensive initialization system for Claude Code integration
+ */
+
+// Types
+export {
+  type InitOptions,
+  type InitComponents,
+  type InitResult,
+  type HooksConfig,
+  type SkillsConfig,
+  type CommandsConfig,
+  type AgentsConfig,
+  type StatuslineConfig,
+  type MCPConfig,
+  type RuntimeConfig,
+  DEFAULT_INIT_OPTIONS,
+  MINIMAL_INIT_OPTIONS,
+  FULL_INIT_OPTIONS,
+} from './types.js';
+
+// Generators
+export {
+  generateSettings,
+  generateSettingsJson,
+} from './settings-generator.js';
+
+export {
+  generateMCPConfig,
+  generateMCPJson,
+  generateMCPCommands,
+} from './mcp-generator.js';
+
+export {
+  generateStatuslineScript,
+  generateStatuslineHook,
+} from './statusline-generator.js';
+
+export {
+  generatePreCommitHook,
+  generatePostCommitHook,
+  generateSessionManager,
+  generateAgentRouter,
+  generateMemoryHelper,
+  generateHelpers,
+} from './helpers-generator.js';
+
+// Main executor
+export { executeInit, default } from './executor.js';
