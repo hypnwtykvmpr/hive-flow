@@ -119,22 +119,32 @@ const progress = new Progress({ total: 100 });
 ### Interactive Prompts
 
 ```typescript
-import { prompt } from '@claude-flow/cli';
+import { text, select, confirm, input, multiSelect } from '@claude-flow/cli';
 
 // Text input
-const name = await prompt.text('Enter your name:');
+const name = await text('Enter your name:');
 
-// Selection
-const choice = await prompt.select('Choose option:', ['A', 'B', 'C']);
+// Selection (with options array)
+const choice = await select({
+  message: 'Choose option:',
+  options: [
+    { label: 'Option A', value: 'A' },
+    { label: 'Option B', value: 'B' },
+    { label: 'Option C', value: 'C' },
+  ]
+});
 
 // Confirmation
-const confirmed = await prompt.confirm('Continue?');
+const confirmed = await confirm({ message: 'Continue?' });
 
-// Password (hidden input)
-const password = await prompt.password('Enter password:');
+// General input
+const response = await input({ message: 'Enter value:', default: 'default' });
 
 // Multi-select
-const selections = await prompt.multiSelect('Select features:', features);
+const selections = await multiSelect({
+  message: 'Select features:',
+  options: features.map(f => ({ label: f.name, value: f.id }))
+});
 ```
 
 ## Global Options
