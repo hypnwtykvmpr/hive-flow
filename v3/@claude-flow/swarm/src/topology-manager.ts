@@ -92,6 +92,9 @@ export class TopologyManager extends EventEmitter implements ITopologyManager {
     this.nodeIndex.set(agentId, node);
     this.state.nodes.push(node);
 
+    // Update role index for O(1) role-based lookups
+    this.addToRoleIndex(node);
+
     // Initialize adjacency list
     this.adjacencyList.set(agentId, new Set(connections));
 
