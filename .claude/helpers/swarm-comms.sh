@@ -51,7 +51,8 @@ process_queue() {
 
   # Process by priority (0=critical first)
   for priority in 0 1 2 3; do
-    for msg_file in "$QUEUE_DIR"/${priority}_*.json 2>/dev/null; do
+    shopt -s nullglob
+    for msg_file in "$QUEUE_DIR"/${priority}_*.json; do
       [ -f "$msg_file" ] || continue
 
       # Process message
