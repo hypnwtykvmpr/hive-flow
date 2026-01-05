@@ -196,18 +196,18 @@ export class TopologyManager extends EventEmitter implements ITopologyManager {
       throw new Error('No nodes available for leader election');
     }
 
-    // For hierarchical topology, the queen is the leader
+    // For hierarchical topology, the queen is the leader (O(1) lookup)
     if (this.config.type === 'hierarchical') {
-      const queen = this.state.nodes.find(n => n.role === 'queen');
+      const queen = this.queenNode;
       if (queen) {
         this.state.leader = queen.agentId;
         return queen.agentId;
       }
     }
 
-    // For centralized topology, the coordinator is the leader
+    // For centralized topology, the coordinator is the leader (O(1) lookup)
     if (this.config.type === 'centralized') {
-      const coordinator = this.state.nodes.find(n => n.role === 'coordinator');
+      const coordinator = this.coordinatorNode;
       if (coordinator) {
         this.state.leader = coordinator.agentId;
         return coordinator.agentId;
