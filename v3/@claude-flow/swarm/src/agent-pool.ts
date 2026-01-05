@@ -52,10 +52,12 @@ export class AgentPool extends EventEmitter implements IAgentPool {
       this.config = { ...this.config, ...config };
     }
 
-    // Start with minimum pool size
-    for (let i = 0; i < this.config.minSize; i++) {
-      await this.createPooledAgent();
-    }
+    // Start with minimum pool size - create agents in parallel
+    const createPromises = Array.from(
+      { length: this.config.minSize },
+      () => this.createPooledAgent()
+    );
+    await Promise.all(createPromises);
 
     // Start health checks
     this.startHealthChecks();
