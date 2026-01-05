@@ -102,7 +102,8 @@ const DANGEROUS_PATTERNS: Array<{
     block: true,
   },
   {
-    pattern: /:\(\)\{\s*:\|:&\s*\};:/,
+    // Fork bomb patterns - various formats (with flexible spacing)
+    pattern: /:\s*\(\s*\)\s*\{\s*:\s*\|\s*:\s*&\s*\}\s*;\s*:|bomb\s*\(\)|while\s+true.*fork/,
     type: 'resource',
     severity: 'critical',
     description: 'Fork bomb detected',
@@ -273,40 +274,69 @@ const DEPENDENCY_CHECKS: Array<{
 ];
 
 /**
- * Safe alternatives for dangerous commands
+ * Safe alternatives for dangerous commands (with patterns for matching)
  */
-const SAFE_ALTERNATIVES: Record<string, string[]> = {
-  'rm -rf': [
-    'rm -ri (interactive mode)',
-    'trash-cli (move to trash instead)',
-    'mv to backup directory first',
-  ],
-  'rm -rf *': [
-    'rm -ri * (interactive mode)',
-    'find . -maxdepth 1 -type f -delete (only files)',
-    'git clean -fd (for git repositories)',
-  ],
-  'kill -9': [
-    'kill (graceful termination first)',
-    'kill -15 (SIGTERM)',
-    'systemctl stop (for services)',
-  ],
-  'curl | bash': [
-    'Download script first, review, then execute',
-    'Use package managers when available',
-    'Verify script hash before execution',
-  ],
-  'git push --force': [
-    'git push --force-with-lease (safer)',
-    'Create backup branch first',
-    'git push --force-if-includes',
-  ],
-  'git reset --hard': [
-    'git stash (save changes first)',
-    'git reset --soft (keep changes staged)',
-    'Create backup branch first',
-  ],
-};
+const SAFE_ALTERNATIVES: Array<{
+  pattern: RegExp;
+  alternatives: string[];
+}> = [
+  {
+    pattern: /rm\s+-rf\s+\*/,
+    alternatives: [
+      'rm -ri * (interactive mode)',
+      'find . -maxdepth 1 -type f -delete (only files)',
+      'git clean -fd (for git repositories)',
+    ],
+  },
+  {
+    pattern: /rm\s+-rf/,
+    alternatives: [
+      'rm -ri (interactive mode)',
+      'trash-cli (move to trash instead)',
+      'mv to backup directory first',
+    ],
+  },
+  {
+    pattern: /kill\s+-9/,
+    alternatives: [
+      'kill (graceful termination first)',
+      'kill -15 (SIGTERM)',
+      'systemctl stop (for services)',
+    ],
+  },
+  {
+    pattern: /curl.*\|\s*(bash|sh|zsh)/,
+    alternatives: [
+      'Download script first, review, then execute',
+      'Use package managers when available',
+      'Verify script hash before execution',
+    ],
+  },
+  {
+    pattern: /wget.*\|\s*(bash|sh|zsh)/,
+    alternatives: [
+      'Download script first, review, then execute',
+      'Use package managers when available',
+      'Verify script hash before execution',
+    ],
+  },
+  {
+    pattern: /git\s+push.*--force/,
+    alternatives: [
+      'git push --force-with-lease (safer)',
+      'Create backup branch first',
+      'git push --force-if-includes',
+    ],
+  },
+  {
+    pattern: /git\s+reset\s+--hard/,
+    alternatives: [
+      'git stash (save changes first)',
+      'git reset --soft (keep changes staged)',
+      'Create backup branch first',
+    ],
+  },
+];
 
 /**
  * Bash Safety Hook Manager
@@ -376,9 +406,9 @@ export class BashSafetyHook {
           blockReason = pattern.description;
         }
 
-        // Find safe alternatives
-        for (const [dangerous, alternatives] of Object.entries(SAFE_ALTERNATIVES)) {
-          if (command.includes(dangerous)) {
+        // Find safe alternatives using pattern matching
+        for (const { pattern: altPattern, alternatives } of SAFE_ALTERNATIVES) {
+          if (altPattern.test(command)) {
             safeAlternatives = alternatives;
             break;
           }
