@@ -1221,8 +1221,19 @@ export class ReasoningBank {
   }
 
   private inferDomain(memory: DistilledMemory): string {
+    // First check if we have the trajectory directly in our store
     const trajectory = this.trajectories.get(memory.trajectoryId);
-    return trajectory?.domain || 'general';
+    if (trajectory?.domain) {
+      return trajectory.domain;
+    }
+
+    // Check if the memory entry has the trajectory with domain info
+    const memoryEntry = this.memories.get(memory.memoryId);
+    if (memoryEntry?.trajectory?.domain) {
+      return memoryEntry.trajectory.domain;
+    }
+
+    return 'general';
   }
 
   private determineEvolutionType(
