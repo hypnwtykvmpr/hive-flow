@@ -99,6 +99,60 @@ export type {
 } from './unified-coordinator.js';
 
 // =============================================================================
+// Queen Coordinator (Hive-Mind Central Orchestrator)
+// =============================================================================
+
+export {
+  QueenCoordinator,
+  createQueenCoordinator,
+} from './queen-coordinator.js';
+
+// Queen Coordinator types
+export type {
+  // Configuration
+  QueenCoordinatorConfig,
+
+  // Task Analysis
+  TaskAnalysis,
+  SubTask,
+  MatchedPattern,
+  ResourceRequirements,
+
+  // Delegation
+  DelegationPlan,
+  AgentAssignment,
+  ParallelAssignment,
+  ExecutionStrategy,
+  AgentScore,
+
+  // Health Monitoring
+  HealthReport,
+  DomainHealthStatus,
+  AgentHealthEntry,
+  Bottleneck,
+  HealthAlert,
+  HealthMetrics,
+
+  // Consensus
+  Decision,
+  DecisionType,
+  ConsensusType,
+
+  // Learning
+  TaskResult,
+  TaskMetrics,
+
+  // Interfaces
+  ISwarmCoordinator,
+  INeuralLearningSystem,
+  IMemoryService,
+  PatternMatchResult,
+  MemoryRetrievalResult,
+  SearchResultEntry,
+  MemoryStoreEntry,
+} from './queen-coordinator.js';
+
+// =============================================================================
 // Topology Manager
 // =============================================================================
 
