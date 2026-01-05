@@ -87,23 +87,24 @@ function loadEnvConfig(): Partial<SystemConfig> {
 
   // Memory type
   if (process.env.CLAUDE_FLOW_MEMORY_TYPE) {
-    const memoryType = process.env.CLAUDE_FLOW_MEMORY_TYPE as SystemConfig['memory']['type'];
+    const memoryType = process.env.CLAUDE_FLOW_MEMORY_TYPE as NonNullable<SystemConfig['memory']>['type'];
     if (['sqlite', 'agentdb', 'hybrid', 'redis', 'memory'].includes(memoryType)) {
       config.memory = {
-        ...defaultSystemConfig.memory,
+        ...(defaultSystemConfig.memory ?? { type: 'hybrid' }),
         type: memoryType,
       };
     }
   }
 
   // MCP transport
+  const defaultMcp = defaultSystemConfig.mcp ?? { name: 'claude-flow', version: '3.0.0', transport: { type: 'stdio' as const } };
   if (process.env.CLAUDE_FLOW_MCP_TRANSPORT) {
     const transport = process.env.CLAUDE_FLOW_MCP_TRANSPORT as 'stdio' | 'http' | 'websocket';
     if (['stdio', 'http', 'websocket'].includes(transport)) {
       config.mcp = {
-        ...defaultSystemConfig.mcp,
+        ...defaultMcp,
         transport: {
-          ...defaultSystemConfig.mcp.transport,
+          ...defaultMcp.transport,
           type: transport,
         },
       };
@@ -113,21 +114,22 @@ function loadEnvConfig(): Partial<SystemConfig> {
   if (process.env.CLAUDE_FLOW_MCP_PORT) {
     config.mcp = {
       ...config.mcp,
-      ...defaultSystemConfig.mcp,
+      ...defaultMcp,
       transport: {
         ...config.mcp?.transport,
-        ...defaultSystemConfig.mcp.transport,
+        ...defaultMcp.transport,
         port: parseInt(process.env.CLAUDE_FLOW_MCP_PORT, 10),
       },
     };
   }
 
   // Swarm topology
+  const defaultSwarm = defaultSystemConfig.swarm ?? { topology: 'hierarchical-mesh' as const, maxAgents: 20 };
   if (process.env.CLAUDE_FLOW_SWARM_TOPOLOGY) {
-    const topology = process.env.CLAUDE_FLOW_SWARM_TOPOLOGY as SystemConfig['swarm']['topology'];
+    const topology = process.env.CLAUDE_FLOW_SWARM_TOPOLOGY as NonNullable<SystemConfig['swarm']>['topology'];
     if (['hierarchical', 'mesh', 'ring', 'star', 'adaptive', 'hierarchical-mesh'].includes(topology)) {
       config.swarm = {
-        ...defaultSystemConfig.swarm,
+        ...defaultSwarm,
         topology,
       };
     }

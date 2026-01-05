@@ -29,8 +29,7 @@ describe('HybridBackend - ADR-009', () => {
         verbose: false,
       },
       agentdb: {
-        dimensions: 128,
-        cacheEnabled: true,
+        vectorDimension: 128,
       },
       embeddingGenerator: mockEmbedding,
       dualWrite: true,

@@ -10,12 +10,14 @@
   },
   "scripts": {
     "build": "tsc",
+    "test": "vitest run",
     "release": "semantic-release"
   },
   "dependencies": {
     "@claude-flow/shared": "workspace:*"
   },
   "devDependencies": {
-    "semantic-release": "^22.0.0"
+    "semantic-release": "^22.0.0",
+    "vitest": "^1.6.0"
   }
 }

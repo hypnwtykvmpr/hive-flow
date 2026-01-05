@@ -169,7 +169,9 @@ export class AgenticFlowBridge extends EventEmitter {
       if (this.config.features.enableSONA) {
         this.sona = new SONAAdapter(this.config.sona);
         if (this.agenticFlowCore) {
-          this.sona.setAgenticFlowReference(this.agenticFlowCore.sona);
+          // Type cast: agentic-flow runtime API is compatible but typed as `unknown`
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          this.sona.setAgenticFlowReference(this.agenticFlowCore.sona as any);
         }
         await this.sona.initialize();
         this.updateComponentHealth('sona', 'healthy');
@@ -180,7 +182,9 @@ export class AgenticFlowBridge extends EventEmitter {
       if (this.config.features.enableFlashAttention) {
         this.attention = new AttentionCoordinator(this.config.attention);
         if (this.agenticFlowCore) {
-          this.attention.setAgenticFlowReference(this.agenticFlowCore.attention);
+          // Type cast: agentic-flow runtime API is compatible but typed as `unknown`
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          this.attention.setAgenticFlowReference(this.agenticFlowCore.attention as any);
         }
         await this.attention.initialize();
         this.updateComponentHealth('attention', 'healthy');
@@ -218,10 +222,10 @@ export class AgenticFlowBridge extends EventEmitter {
     try {
       // Dynamic import to handle optional dependency
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const agenticFlowModule = await import('agentic-flow').catch(() => null);
+      const agenticFlowModule: any = await import('agentic-flow').catch(() => null);
 
       if (agenticFlowModule && typeof agenticFlowModule.createAgenticFlow === 'function') {
-        const factory = agenticFlowModule.createAgenticFlow as AgenticFlowFactory;
+        const factory: AgenticFlowFactory = agenticFlowModule.createAgenticFlow;
 
         this.agenticFlowCore = await factory({
           sona: this.config.sona,

@@ -6,9 +6,9 @@
  * Enables modular extension points for agents, tasks, MCP tools, CLI commands, and memory backends
  */
 
-import type { IEventBus } from '../../../core/interfaces/event.interface.js';
-import type { IAgentConfig } from '../../../core/interfaces/agent.interface.js';
-import type { MCPTool } from '../../../types/mcp.types.js';
+import type { IEventBus } from './core/interfaces/event.interface.js';
+import type { IAgentConfig } from './core/interfaces/agent.interface.js';
+import type { MCPTool } from './types/mcp.types.js';
 
 /**
  * Logger interface for plugin context

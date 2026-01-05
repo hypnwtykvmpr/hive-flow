@@ -3,7 +3,7 @@
  * Validation logic using Zod schemas
  */
 
-import type { ZodError, ZodSchema } from 'zod';
+import { z, type ZodError } from 'zod';
 import {
   AgentConfigSchema,
   TaskConfigSchema,
@@ -52,21 +52,27 @@ function zodErrorToValidationErrors(error: ZodError): ValidationError[] {
 
 /**
  * Generic validation function
+ * Uses parse + try/catch to get output types with defaults applied
  */
-function validate<T>(schema: ZodSchema<T>, data: unknown): ValidationResult<T> {
-  const result = schema.safeParse(data);
-
-  if (result.success) {
+function validate<TInput, TOutput>(
+  schema: z.ZodType<TOutput, z.ZodTypeDef, TInput>,
+  data: unknown
+): ValidationResult<TOutput> {
+  try {
+    const parsed = schema.parse(data);
     return {
       success: true,
-      data: result.data,
+      data: parsed,
     };
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return {
+        success: false,
+        errors: zodErrorToValidationErrors(error),
+      };
+    }
+    throw error;
   }
-
-  return {
-    success: false,
-    errors: zodErrorToValidationErrors(result.error),
-  };
 }
 
 /**
@@ -125,7 +131,11 @@ export class ConfigValidator {
   /**
    * Validate and throw on error
    */
-  static validateOrThrow<T>(schema: ZodSchema<T>, data: unknown, configName: string): T {
+  static validateOrThrow<TInput, TOutput>(
+    schema: z.ZodType<TOutput, z.ZodTypeDef, TInput>,
+    data: unknown,
+    configName: string
+  ): TOutput {
     const result = validate(schema, data);
 
     if (!result.success) {
@@ -190,7 +200,10 @@ export class ConfigValidator {
   /**
    * Check if data matches schema
    */
-  static isValid<T>(schema: ZodSchema<T>, data: unknown): boolean {
+  static isValid<TInput, TOutput>(
+    schema: z.ZodType<TOutput, z.ZodTypeDef, TInput>,
+    data: unknown
+  ): boolean {
     return validate(schema, data).success;
   }
 }

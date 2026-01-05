@@ -709,16 +709,26 @@ export class AgentDBBackend extends EventEmitter implements IMemoryBackend {
    * Convert agentdb data to MemoryEntry
    */
   private dataToEntry(id: string, data: any): MemoryEntry {
-    return createDefaultEntry({
+    const now = Date.now();
+    return {
       id,
       key: data.key || id,
       content: data.content || '',
       embedding: data.embedding,
-      type: data.type || 'general',
+      type: data.type || 'semantic',
       namespace: data.namespace || this.config.namespace,
       tags: data.tags || [],
       metadata: data.metadata || {},
-    });
+      ownerId: data.ownerId,
+      accessLevel: data.accessLevel || 'private',
+      createdAt: data.createdAt || now,
+      updatedAt: data.updatedAt || now,
+      expiresAt: data.expiresAt,
+      version: data.version || 1,
+      references: data.references || [],
+      accessCount: data.accessCount || 0,
+      lastAccessedAt: data.lastAccessedAt || now,
+    };
   }
 
   /**

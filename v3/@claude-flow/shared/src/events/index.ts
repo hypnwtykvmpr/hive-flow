@@ -10,8 +10,8 @@
  * @module v3/shared/events
  */
 
-// Domain Events
-export {
+// Domain Event Types
+export type {
   DomainEvent,
   AllDomainEvents,
   AgentSpawnedEvent,
@@ -37,6 +37,10 @@ export {
   SwarmPhaseChangedEvent,
   SwarmMilestoneReachedEvent,
   SwarmErrorEvent,
+} from './domain-events.js';
+
+// Domain Event Factory Functions
+export {
   createAgentSpawnedEvent,
   createAgentStartedEvent,
   createAgentStoppedEvent,
@@ -54,8 +58,8 @@ export {
 } from './domain-events.js';
 
 // Event Store
-export {
-  EventStore,
+export { EventStore } from './event-store.js';
+export type {
   EventStoreConfig,
   EventFilter,
   EventSnapshot,
@@ -66,10 +70,12 @@ export {
 export {
   Projection,
   AgentStateProjection,
-  AgentProjectionState,
   TaskHistoryProjection,
-  TaskProjectionState,
   MemoryIndexProjection,
+} from './projections.js';
+export type {
+  AgentProjectionState,
+  TaskProjectionState,
   MemoryProjectionState,
 } from './projections.js';
 

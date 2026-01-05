@@ -23,18 +23,19 @@ export * from './lifecycle-manager.js';
 export * from './event-coordinator.js';
 
 /**
- * Orchestrator configuration
+ * Orchestrator facade configuration
+ * (Note: For schema-validated config, use OrchestratorConfig from config/schema.ts)
  */
-export interface OrchestratorConfig {
+export interface OrchestratorFacadeConfig {
   session: SessionManagerConfig;
   health: HealthMonitorConfig;
   lifecycle: LifecycleManagerConfig;
 }
 
 /**
- * Default orchestrator configuration
+ * Default orchestrator facade configuration
  */
-export const defaultOrchestratorConfig: OrchestratorConfig = {
+export const defaultOrchestratorFacadeConfig: OrchestratorFacadeConfig = {
   session: {
     persistSessions: true,
     dataDir: './data',
@@ -57,11 +58,11 @@ export const defaultOrchestratorConfig: OrchestratorConfig = {
 /**
  * Create orchestrator components
  */
-export function createOrchestrator(config: Partial<OrchestratorConfig> = {}) {
-  const mergedConfig: OrchestratorConfig = {
-    session: { ...defaultOrchestratorConfig.session, ...config.session },
-    health: { ...defaultOrchestratorConfig.health, ...config.health },
-    lifecycle: { ...defaultOrchestratorConfig.lifecycle, ...config.lifecycle },
+export function createOrchestrator(config: Partial<OrchestratorFacadeConfig> = {}) {
+  const mergedConfig: OrchestratorFacadeConfig = {
+    session: { ...defaultOrchestratorFacadeConfig.session, ...config.session },
+    health: { ...defaultOrchestratorFacadeConfig.health, ...config.health },
+    lifecycle: { ...defaultOrchestratorFacadeConfig.lifecycle, ...config.lifecycle },
   };
 
   const eventBus = new EventBus();

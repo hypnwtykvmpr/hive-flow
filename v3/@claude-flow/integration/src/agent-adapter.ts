@@ -442,9 +442,10 @@ export class AgentAdapter extends EventEmitter {
   private async connectToAgenticFlow(): Promise<void> {
     try {
       // Dynamic import to handle optional dependency
-      const agenticFlowModule = await import('agentic-flow').catch(() => null);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const agenticFlowModule: any = await import('agentic-flow').catch(() => null);
 
-      if (agenticFlowModule && agenticFlowModule.createAgenticFlow) {
+      if (agenticFlowModule && typeof agenticFlowModule.createAgenticFlow === 'function') {
         this.agenticFlowCore = await agenticFlowModule.createAgenticFlow({});
 
         this.emit('agentic-flow-connected', {

@@ -584,8 +584,8 @@ export class MemoryMigrator extends EventEmitter {
             // Parse common types
             if (value === 'true') value = true;
             else if (value === 'false') value = false;
-            else if (/^\d+$/.test(value as string)) value = parseInt(value as string, 10);
-            else if (value.startsWith('[') && value.endsWith(']')) {
+            else if (typeof value === 'string' && /^\d+$/.test(value)) value = parseInt(value, 10);
+            else if (typeof value === 'string' && value.startsWith('[') && value.endsWith(']')) {
               try {
                 value = JSON.parse(value.replace(/'/g, '"'));
               } catch {

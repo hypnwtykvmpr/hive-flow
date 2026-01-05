@@ -400,13 +400,12 @@ export class FeatureFlagManager extends EventEmitter {
       },
     };
 
-    const base = Object.fromEntries(
-      Object.entries(FEATURE_FLAG_DEFINITIONS).map(
-        ([flag, info]) => [flag, info.defaultValue]
-      )
-    ) as FeatureFlags;
+    const base: Record<string, boolean> = {};
+    for (const [flag, info] of Object.entries(FEATURE_FLAG_DEFINITIONS)) {
+      base[flag] = info.defaultValue;
+    }
 
-    return { ...base, ...profiles[profile] };
+    return { ...base, ...profiles[profile] } as FeatureFlags;
   }
 
   // ===== Private Methods =====

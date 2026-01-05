@@ -57,6 +57,15 @@ if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   GIT_BRANCH=$(git branch --show-current 2>/dev/null || echo "")
 fi
 
+# Get GitHub username (try gh CLI first, fallback to git config)
+GH_USER=""
+if command -v gh >/dev/null 2>&1; then
+  GH_USER=$(gh api user --jq '.login' 2>/dev/null || echo "")
+fi
+if [ -z "$GH_USER" ]; then
+  GH_USER=$(git config user.name 2>/dev/null || echo "user")
+fi
+
 # Check V3 domain implementation progress
 if [ -f "$V3_METRICS" ]; then
   DOMAINS_COMPLETED=$(jq -r '.domains.completed // 0' "$V3_METRICS" 2>/dev/null || echo "0")
@@ -207,7 +216,7 @@ OUTPUT=""
 
 # Header Line: V3 Project + Branch + Integration Status
 OUTPUT="${BOLD}${BRIGHT_PURPLE}▊ Claude Flow V3 ${RESET}"
-OUTPUT="${OUTPUT}${INTEGRATION_COLOR}${INTEGRATION_STATUS} ${BRIGHT_CYAN}agentic-flow@alpha${RESET}"
+OUTPUT="${OUTPUT}${INTEGRATION_COLOR}${INTEGRATION_STATUS} ${BRIGHT_CYAN}rUv${RESET}"
 if [ -n "$GIT_BRANCH" ]; then
   OUTPUT="${OUTPUT}  ${DIM}│${RESET}  ${BRIGHT_BLUE}⎇ ${GIT_BRANCH}${RESET}"
 fi
