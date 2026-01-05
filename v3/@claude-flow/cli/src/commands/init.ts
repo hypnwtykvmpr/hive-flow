@@ -216,7 +216,7 @@ const wizardCommand: Command = {
         options.targetDir = ctx.cwd;
       } else if (preset === 'custom') {
         // Component selection
-        const components = await multiselect({
+        const components = await multiSelect({
           message: 'Select components to initialize:',
           options: [
             { value: 'settings', label: 'settings.json', hint: 'Claude Code hooks configuration', selected: true },
