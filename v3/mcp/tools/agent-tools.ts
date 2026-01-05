@@ -11,7 +11,15 @@
  */
 
 import { z } from 'zod';
+import { randomBytes } from 'crypto';
 import { MCPTool, ToolContext } from '../types.js';
+
+// Secure ID generation helper
+function generateSecureAgentId(): string {
+  const timestamp = Date.now().toString(36);
+  const random = randomBytes(12).toString('hex');
+  return `agent-${timestamp}-${random}`;
+}
 
 // ============================================================================
 // Input Schemas
