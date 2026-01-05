@@ -206,7 +206,7 @@ class HNSWIndex {
       ? queryEmbedding
       : new Float32Array(queryEmbedding);
 
-    if (this.vectors.size === 0) return [];
+    if (this.vectors.size === 0) return { results: [], searchTimeMs: 0 };
 
     const startTime = performance.now();
 
