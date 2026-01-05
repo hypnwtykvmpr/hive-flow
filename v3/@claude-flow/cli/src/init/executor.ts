@@ -451,24 +451,57 @@ async function writeStatusline(
   options: InitOptions,
   result: InitResult
 ): Promise<void> {
+  const claudeDir = path.join(targetDir, '.claude');
   const helpersDir = path.join(targetDir, '.claude', 'helpers');
 
-  const statuslineScript = generateStatuslineScript(options);
-  const statuslineHook = generateStatuslineHook(options);
+  // Try to copy existing advanced statusline files from source
+  const sourceBaseDir = options.sourceBaseDir;
+  const advancedStatuslineFiles = [
+    { src: 'statusline.sh', dest: 'statusline.sh', dir: claudeDir },
+    { src: 'statusline.mjs', dest: 'statusline.mjs', dir: claudeDir },
+  ];
 
-  const files: Record<string, string> = {
-    'statusline.js': statuslineScript,
-    'statusline-hook.sh': statuslineHook,
-  };
+  let copiedAdvanced = false;
+  if (sourceBaseDir) {
+    for (const file of advancedStatuslineFiles) {
+      const sourcePath = path.join(sourceBaseDir, '.claude', file.src);
+      const destPath = path.join(file.dir, file.dest);
 
-  for (const [name, content] of Object.entries(files)) {
-    const filePath = path.join(helpersDir, name);
+      if (fs.existsSync(sourcePath)) {
+        if (!fs.existsSync(destPath) || options.force) {
+          fs.copyFileSync(sourcePath, destPath);
+          // Make shell scripts executable
+          if (file.src.endsWith('.sh')) {
+            fs.chmodSync(destPath, '755');
+          }
+          result.created.files.push(`.claude/${file.dest}`);
+          copiedAdvanced = true;
+        } else {
+          result.skipped.push(`.claude/${file.dest}`);
+        }
+      }
+    }
+  }
 
-    if (!fs.existsSync(filePath) || options.force) {
-      fs.writeFileSync(filePath, content, 'utf-8');
-      result.created.files.push(`.claude/helpers/${name}`);
-    } else {
-      result.skipped.push(`.claude/helpers/${name}`);
+  // Fall back to generating simple statusline if advanced files not available
+  if (!copiedAdvanced) {
+    const statuslineScript = generateStatuslineScript(options);
+    const statuslineHook = generateStatuslineHook(options);
+
+    const files: Record<string, string> = {
+      'statusline.js': statuslineScript,
+      'statusline-hook.sh': statuslineHook,
+    };
+
+    for (const [name, content] of Object.entries(files)) {
+      const filePath = path.join(helpersDir, name);
+
+      if (!fs.existsSync(filePath) || options.force) {
+        fs.writeFileSync(filePath, content, 'utf-8');
+        result.created.files.push(`.claude/helpers/${name}`);
+      } else {
+        result.skipped.push(`.claude/helpers/${name}`);
+      }
     }
   }
 }
