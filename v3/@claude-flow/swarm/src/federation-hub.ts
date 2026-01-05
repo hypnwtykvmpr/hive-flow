@@ -229,6 +229,71 @@ export class FederationHub extends EventEmitter {
       failedAgents: 0,
       totalAgentLifespanMs: 0,
     };
+
+    // Initialize status index sets
+    this.agentsByStatus.set('spawning', new Set());
+    this.agentsByStatus.set('active', new Set());
+    this.agentsByStatus.set('completing', new Set());
+    this.agentsByStatus.set('terminated', new Set());
+  }
+
+  // ==========================================================================
+  // Index Maintenance Helpers
+  // ==========================================================================
+
+  /**
+   * Add agent to indexes - O(1)
+   */
+  private addAgentToIndexes(agent: EphemeralAgent): void {
+    // Add to swarm index
+    if (!this.agentsBySwarm.has(agent.swarmId)) {
+      this.agentsBySwarm.set(agent.swarmId, new Set());
+    }
+    this.agentsBySwarm.get(agent.swarmId)!.add(agent.id);
+
+    // Add to status index
+    this.agentsByStatus.get(agent.status)!.add(agent.id);
+  }
+
+  /**
+   * Remove agent from indexes - O(1)
+   */
+  private removeAgentFromIndexes(agent: EphemeralAgent): void {
+    // Remove from swarm index
+    const swarmSet = this.agentsBySwarm.get(agent.swarmId);
+    if (swarmSet) {
+      swarmSet.delete(agent.id);
+      if (swarmSet.size === 0) {
+        this.agentsBySwarm.delete(agent.swarmId);
+      }
+    }
+
+    // Remove from status index
+    this.agentsByStatus.get(agent.status)?.delete(agent.id);
+  }
+
+  /**
+   * Update agent status in index - O(1)
+   */
+  private updateAgentStatusIndex(agent: EphemeralAgent, oldStatus: EphemeralAgent['status']): void {
+    this.agentsByStatus.get(oldStatus)?.delete(agent.id);
+    this.agentsByStatus.get(agent.status)!.add(agent.id);
+  }
+
+  /**
+   * Get agents by swarm using index - O(k) where k is agents in swarm
+   */
+  private getAgentIdsBySwarm(swarmId: SwarmId): EphemeralAgentId[] {
+    const agentIds = this.agentsBySwarm.get(swarmId);
+    return agentIds ? Array.from(agentIds) : [];
+  }
+
+  /**
+   * Get agents by status using index - O(k) where k is agents with status
+   */
+  private getAgentIdsByStatus(status: EphemeralAgent['status']): EphemeralAgentId[] {
+    const agentIds = this.agentsByStatus.get(status);
+    return agentIds ? Array.from(agentIds) : [];
   }
 
   // ==========================================================================
