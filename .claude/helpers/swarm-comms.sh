@@ -115,7 +115,8 @@ batch_flush() {
 
 # Flush all pending batches
 batch_flush_all() {
-  for batch_file in "$BATCH_DIR"/*.batch 2>/dev/null; do
+  shopt -s nullglob
+  for batch_file in "$BATCH_DIR"/*.batch; do
     [ -f "$batch_file" ] || continue
     local agent_id=$(basename "$batch_file" .batch)
     batch_flush "$agent_id"
