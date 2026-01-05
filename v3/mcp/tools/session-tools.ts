@@ -10,7 +10,7 @@
  */
 
 import { z } from 'zod';
-import { randomBytes } from 'crypto';
+import { randomBytes, createHash } from 'crypto';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { MCPTool, ToolContext } from '../types.js';
