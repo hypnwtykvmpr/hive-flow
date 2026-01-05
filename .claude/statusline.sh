@@ -184,6 +184,41 @@ if [ "$CLAUDE_INPUT" != "{}" ]; then
   fi
 fi
 
+# Calculate Intelligence Score based on learning patterns and training
+INTEL_SCORE=0
+INTEL_COLOR="${DIM}"
+PATTERNS_DB="${PROJECT_DIR}/.claude-flow/learning/patterns.db"
+LEARNING_METRICS="${PROJECT_DIR}/.claude-flow/metrics/learning.json"
+
+# Base intelligence from pattern count
+if [ -f "$PATTERNS_DB" ] && command -v sqlite3 &>/dev/null; then
+  SHORT_PATTERNS=$(sqlite3 "$PATTERNS_DB" "SELECT COUNT(*) FROM short_term_patterns" 2>/dev/null || echo "0")
+  LONG_PATTERNS=$(sqlite3 "$PATTERNS_DB" "SELECT COUNT(*) FROM long_term_patterns" 2>/dev/null || echo "0")
+  AVG_QUALITY=$(sqlite3 "$PATTERNS_DB" "SELECT COALESCE(AVG(quality), 0) FROM short_term_patterns" 2>/dev/null || echo "0")
+
+  # Score: patterns contribute up to 60%, quality contributes up to 40%
+  PATTERN_SCORE=$((SHORT_PATTERNS + LONG_PATTERNS * 2))
+  if [ "$PATTERN_SCORE" -gt 100 ]; then PATTERN_SCORE=100; fi
+  QUALITY_SCORE=$(echo "$AVG_QUALITY * 40" | bc 2>/dev/null | cut -d. -f1 || echo "0")
+  INTEL_SCORE=$((PATTERN_SCORE * 60 / 100 + QUALITY_SCORE))
+  if [ "$INTEL_SCORE" -gt 100 ]; then INTEL_SCORE=100; fi
+elif [ -f "$LEARNING_METRICS" ]; then
+  # Fallback to learning metrics JSON
+  ROUTING_ACC=$(jq -r '.routing.accuracy // 0' "$LEARNING_METRICS" 2>/dev/null | cut -d. -f1 || echo "0")
+  INTEL_SCORE=$((ROUTING_ACC))
+fi
+
+# Color based on intelligence level
+if [ "$INTEL_SCORE" -lt 25 ]; then
+  INTEL_COLOR="${DIM}"
+elif [ "$INTEL_SCORE" -lt 50 ]; then
+  INTEL_COLOR="${YELLOW}"
+elif [ "$INTEL_SCORE" -lt 75 ]; then
+  INTEL_COLOR="${BRIGHT_CYAN}"
+else
+  INTEL_COLOR="${BRIGHT_GREEN}"
+fi
+
 # Colorful domain status indicators
 COMPLETED_DOMAIN="${BRIGHT_GREEN}●${RESET}"
 PENDING_DOMAIN="${DIM}○${RESET}"
