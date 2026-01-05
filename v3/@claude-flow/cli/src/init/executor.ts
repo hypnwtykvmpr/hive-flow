@@ -1,0 +1,624 @@
+/**
+ * Init Executor
+ * Main execution logic for V3 initialization
+ */
+
+import * as fs from 'fs';
+import * as path from 'path';
+import type { InitOptions, InitResult } from './types.js';
+import { generateSettingsJson } from './settings-generator.js';
+import { generateMCPJson } from './mcp-generator.js';
+import { generateStatuslineScript, generateStatuslineHook } from './statusline-generator.js';
+import {
+  generatePreCommitHook,
+  generatePostCommitHook,
+  generateSessionManager,
+  generateAgentRouter,
+  generateMemoryHelper,
+} from './helpers-generator.js';
+
+/**
+ * Skills to copy based on configuration
+ */
+const SKILLS_MAP: Record<string, string[]> = {
+  core: [
+    'swarm-orchestration',
+    'swarm-advanced',
+    'sparc-methodology',
+    'hooks-automation',
+    'pair-programming',
+    'verification-quality',
+    'stream-chain',
+    'skill-builder',
+  ],
+  agentdb: [
+    'agentdb-advanced',
+    'agentdb-learning',
+    'agentdb-memory-patterns',
+    'agentdb-optimization',
+    'agentdb-vector-search',
+    'reasoningbank-agentdb',
+    'reasoningbank-intelligence',
+  ],
+  github: [
+    'github-code-review',
+    'github-multi-repo',
+    'github-project-management',
+    'github-release-management',
+    'github-workflow-automation',
+  ],
+  flowNexus: [
+    'flow-nexus-neural',
+    'flow-nexus-platform',
+    'flow-nexus-swarm',
+  ],
+  v3: [
+    'v3-cli-modernization',
+    'v3-core-implementation',
+    'v3-ddd-architecture',
+    'v3-integration-deep',
+    'v3-mcp-optimization',
+    'v3-memory-unification',
+    'v3-performance-optimization',
+    'v3-security-overhaul',
+    'v3-swarm-coordination',
+  ],
+};
+
+/**
+ * Commands to copy based on configuration
+ */
+const COMMANDS_MAP: Record<string, string[]> = {
+  core: ['claude-flow-help.md', 'claude-flow-swarm.md', 'claude-flow-memory.md'],
+  analysis: ['analysis'],
+  automation: ['automation'],
+  github: ['github'],
+  hooks: ['hooks'],
+  monitoring: ['monitoring'],
+  optimization: ['optimization'],
+  sparc: ['sparc'],
+};
+
+/**
+ * Agents to copy based on configuration
+ */
+const AGENTS_MAP: Record<string, string[]> = {
+  core: ['core'],
+  consensus: ['consensus'],
+  github: ['github'],
+  hiveMind: ['hive-mind'],
+  sparc: ['sparc'],
+  swarm: ['swarm'],
+};
+
+/**
+ * Directory structure to create
+ */
+const DIRECTORIES = {
+  claude: [
+    '.claude',
+    '.claude/skills',
+    '.claude/commands',
+    '.claude/agents',
+    '.claude/helpers',
+  ],
+  runtime: [
+    '.claude-flow',
+    '.claude-flow/data',
+    '.claude-flow/logs',
+    '.claude-flow/sessions',
+    '.claude-flow/hooks',
+    '.claude-flow/agents',
+    '.claude-flow/workflows',
+  ],
+};
+
+/**
+ * Execute initialization
+ */
+export async function executeInit(options: InitOptions): Promise<InitResult> {
+  const result: InitResult = {
+    success: true,
+    created: {
+      directories: [],
+      files: [],
+    },
+    skipped: [],
+    errors: [],
+    summary: {
+      skillsCount: 0,
+      commandsCount: 0,
+      agentsCount: 0,
+      hooksEnabled: 0,
+    },
+  };
+
+  const targetDir = options.targetDir;
+
+  try {
+    // Create directory structure
+    await createDirectories(targetDir, options, result);
+
+    // Generate and write settings.json
+    if (options.components.settings) {
+      await writeSettings(targetDir, options, result);
+    }
+
+    // Generate and write .mcp.json
+    if (options.components.mcp) {
+      await writeMCPConfig(targetDir, options, result);
+    }
+
+    // Copy skills
+    if (options.components.skills) {
+      await copySkills(targetDir, options, result);
+    }
+
+    // Copy commands
+    if (options.components.commands) {
+      await copyCommands(targetDir, options, result);
+    }
+
+    // Copy agents
+    if (options.components.agents) {
+      await copyAgents(targetDir, options, result);
+    }
+
+    // Generate helpers
+    if (options.components.helpers) {
+      await writeHelpers(targetDir, options, result);
+    }
+
+    // Generate statusline
+    if (options.components.statusline) {
+      await writeStatusline(targetDir, options, result);
+    }
+
+    // Generate runtime config
+    if (options.components.runtime) {
+      await writeRuntimeConfig(targetDir, options, result);
+    }
+
+    // Count enabled hooks
+    result.summary.hooksEnabled = countEnabledHooks(options);
+
+  } catch (error) {
+    result.success = false;
+    result.errors.push(error instanceof Error ? error.message : String(error));
+  }
+
+  return result;
+}
+
+/**
+ * Create directory structure
+ */
+async function createDirectories(
+  targetDir: string,
+  options: InitOptions,
+  result: InitResult
+): Promise<void> {
+  const dirs = [
+    ...DIRECTORIES.claude,
+    ...(options.components.runtime ? DIRECTORIES.runtime : []),
+  ];
+
+  for (const dir of dirs) {
+    const fullPath = path.join(targetDir, dir);
+    if (!fs.existsSync(fullPath)) {
+      fs.mkdirSync(fullPath, { recursive: true });
+      result.created.directories.push(dir);
+    }
+  }
+}
+
+/**
+ * Write settings.json
+ */
+async function writeSettings(
+  targetDir: string,
+  options: InitOptions,
+  result: InitResult
+): Promise<void> {
+  const settingsPath = path.join(targetDir, '.claude', 'settings.json');
+
+  if (fs.existsSync(settingsPath) && !options.force) {
+    result.skipped.push('.claude/settings.json');
+    return;
+  }
+
+  const content = generateSettingsJson(options);
+  fs.writeFileSync(settingsPath, content, 'utf-8');
+  result.created.files.push('.claude/settings.json');
+}
+
+/**
+ * Write .mcp.json
+ */
+async function writeMCPConfig(
+  targetDir: string,
+  options: InitOptions,
+  result: InitResult
+): Promise<void> {
+  const mcpPath = path.join(targetDir, '.mcp.json');
+
+  if (fs.existsSync(mcpPath) && !options.force) {
+    result.skipped.push('.mcp.json');
+    return;
+  }
+
+  const content = generateMCPJson(options);
+  fs.writeFileSync(mcpPath, content, 'utf-8');
+  result.created.files.push('.mcp.json');
+}
+
+/**
+ * Copy skills from source
+ */
+async function copySkills(
+  targetDir: string,
+  options: InitOptions,
+  result: InitResult
+): Promise<void> {
+  const skillsConfig = options.skills;
+  const targetSkillsDir = path.join(targetDir, '.claude', 'skills');
+
+  // Determine which skills to copy
+  const skillsToCopy: string[] = [];
+
+  if (skillsConfig.all) {
+    // Copy all available skills
+    Object.values(SKILLS_MAP).forEach(skills => skillsToCopy.push(...skills));
+  } else {
+    if (skillsConfig.core) skillsToCopy.push(...SKILLS_MAP.core);
+    if (skillsConfig.agentdb) skillsToCopy.push(...SKILLS_MAP.agentdb);
+    if (skillsConfig.github) skillsToCopy.push(...SKILLS_MAP.github);
+    if (skillsConfig.flowNexus) skillsToCopy.push(...SKILLS_MAP.flowNexus);
+    if (skillsConfig.v3) skillsToCopy.push(...SKILLS_MAP.v3);
+  }
+
+  // Find source skills directory
+  const sourceSkillsDir = findSourceDir('skills');
+  if (!sourceSkillsDir) {
+    result.errors.push('Could not find source skills directory');
+    return;
+  }
+
+  // Copy each skill
+  for (const skillName of [...new Set(skillsToCopy)]) {
+    const sourcePath = path.join(sourceSkillsDir, skillName);
+    const targetPath = path.join(targetSkillsDir, skillName);
+
+    if (fs.existsSync(sourcePath)) {
+      if (!fs.existsSync(targetPath) || options.force) {
+        copyDirRecursive(sourcePath, targetPath);
+        result.created.files.push(`.claude/skills/${skillName}`);
+        result.summary.skillsCount++;
+      } else {
+        result.skipped.push(`.claude/skills/${skillName}`);
+      }
+    }
+  }
+}
+
+/**
+ * Copy commands from source
+ */
+async function copyCommands(
+  targetDir: string,
+  options: InitOptions,
+  result: InitResult
+): Promise<void> {
+  const commandsConfig = options.commands;
+  const targetCommandsDir = path.join(targetDir, '.claude', 'commands');
+
+  // Determine which commands to copy
+  const commandsToCopy: string[] = [];
+
+  if (commandsConfig.all) {
+    Object.values(COMMANDS_MAP).forEach(cmds => commandsToCopy.push(...cmds));
+  } else {
+    if (commandsConfig.core) commandsToCopy.push(...COMMANDS_MAP.core);
+    if (commandsConfig.analysis) commandsToCopy.push(...COMMANDS_MAP.analysis);
+    if (commandsConfig.automation) commandsToCopy.push(...COMMANDS_MAP.automation);
+    if (commandsConfig.github) commandsToCopy.push(...COMMANDS_MAP.github);
+    if (commandsConfig.hooks) commandsToCopy.push(...COMMANDS_MAP.hooks);
+    if (commandsConfig.monitoring) commandsToCopy.push(...COMMANDS_MAP.monitoring);
+    if (commandsConfig.optimization) commandsToCopy.push(...COMMANDS_MAP.optimization);
+    if (commandsConfig.sparc) commandsToCopy.push(...COMMANDS_MAP.sparc);
+  }
+
+  // Find source commands directory
+  const sourceCommandsDir = findSourceDir('commands');
+  if (!sourceCommandsDir) {
+    result.errors.push('Could not find source commands directory');
+    return;
+  }
+
+  // Copy each command/directory
+  for (const cmdName of [...new Set(commandsToCopy)]) {
+    const sourcePath = path.join(sourceCommandsDir, cmdName);
+    const targetPath = path.join(targetCommandsDir, cmdName);
+
+    if (fs.existsSync(sourcePath)) {
+      if (!fs.existsSync(targetPath) || options.force) {
+        if (fs.statSync(sourcePath).isDirectory()) {
+          copyDirRecursive(sourcePath, targetPath);
+        } else {
+          fs.copyFileSync(sourcePath, targetPath);
+        }
+        result.created.files.push(`.claude/commands/${cmdName}`);
+        result.summary.commandsCount++;
+      } else {
+        result.skipped.push(`.claude/commands/${cmdName}`);
+      }
+    }
+  }
+}
+
+/**
+ * Copy agents from source
+ */
+async function copyAgents(
+  targetDir: string,
+  options: InitOptions,
+  result: InitResult
+): Promise<void> {
+  const agentsConfig = options.agents;
+  const targetAgentsDir = path.join(targetDir, '.claude', 'agents');
+
+  // Determine which agents to copy
+  const agentsToCopy: string[] = [];
+
+  if (agentsConfig.all) {
+    Object.values(AGENTS_MAP).forEach(agents => agentsToCopy.push(...agents));
+  } else {
+    if (agentsConfig.core) agentsToCopy.push(...AGENTS_MAP.core);
+    if (agentsConfig.consensus) agentsToCopy.push(...AGENTS_MAP.consensus);
+    if (agentsConfig.github) agentsToCopy.push(...AGENTS_MAP.github);
+    if (agentsConfig.hiveMind) agentsToCopy.push(...AGENTS_MAP.hiveMind);
+    if (agentsConfig.sparc) agentsToCopy.push(...AGENTS_MAP.sparc);
+    if (agentsConfig.swarm) agentsToCopy.push(...AGENTS_MAP.swarm);
+  }
+
+  // Find source agents directory
+  const sourceAgentsDir = findSourceDir('agents');
+  if (!sourceAgentsDir) {
+    result.errors.push('Could not find source agents directory');
+    return;
+  }
+
+  // Copy each agent category
+  for (const agentCategory of [...new Set(agentsToCopy)]) {
+    const sourcePath = path.join(sourceAgentsDir, agentCategory);
+    const targetPath = path.join(targetAgentsDir, agentCategory);
+
+    if (fs.existsSync(sourcePath)) {
+      if (!fs.existsSync(targetPath) || options.force) {
+        copyDirRecursive(sourcePath, targetPath);
+        // Count agent files
+        const agentFiles = countFiles(sourcePath, '.md');
+        result.summary.agentsCount += agentFiles;
+        result.created.files.push(`.claude/agents/${agentCategory}`);
+      } else {
+        result.skipped.push(`.claude/agents/${agentCategory}`);
+      }
+    }
+  }
+}
+
+/**
+ * Write helper scripts
+ */
+async function writeHelpers(
+  targetDir: string,
+  options: InitOptions,
+  result: InitResult
+): Promise<void> {
+  const helpersDir = path.join(targetDir, '.claude', 'helpers');
+
+  const helpers: Record<string, string> = {
+    'pre-commit': generatePreCommitHook(),
+    'post-commit': generatePostCommitHook(),
+    'session.js': generateSessionManager(),
+    'router.js': generateAgentRouter(),
+    'memory.js': generateMemoryHelper(),
+  };
+
+  for (const [name, content] of Object.entries(helpers)) {
+    const filePath = path.join(helpersDir, name);
+
+    if (!fs.existsSync(filePath) || options.force) {
+      fs.writeFileSync(filePath, content, 'utf-8');
+
+      // Make shell scripts executable
+      if (!name.endsWith('.js')) {
+        fs.chmodSync(filePath, '755');
+      }
+
+      result.created.files.push(`.claude/helpers/${name}`);
+    } else {
+      result.skipped.push(`.claude/helpers/${name}`);
+    }
+  }
+}
+
+/**
+ * Write statusline configuration
+ */
+async function writeStatusline(
+  targetDir: string,
+  options: InitOptions,
+  result: InitResult
+): Promise<void> {
+  const helpersDir = path.join(targetDir, '.claude', 'helpers');
+
+  const statuslineScript = generateStatuslineScript(options);
+  const statuslineHook = generateStatuslineHook(options);
+
+  const files: Record<string, string> = {
+    'statusline.js': statuslineScript,
+    'statusline-hook.sh': statuslineHook,
+  };
+
+  for (const [name, content] of Object.entries(files)) {
+    const filePath = path.join(helpersDir, name);
+
+    if (!fs.existsSync(filePath) || options.force) {
+      fs.writeFileSync(filePath, content, 'utf-8');
+      result.created.files.push(`.claude/helpers/${name}`);
+    } else {
+      result.skipped.push(`.claude/helpers/${name}`);
+    }
+  }
+}
+
+/**
+ * Write runtime configuration (.claude-flow/)
+ */
+async function writeRuntimeConfig(
+  targetDir: string,
+  options: InitOptions,
+  result: InitResult
+): Promise<void> {
+  const configPath = path.join(targetDir, '.claude-flow', 'config.yaml');
+
+  if (fs.existsSync(configPath) && !options.force) {
+    result.skipped.push('.claude-flow/config.yaml');
+    return;
+  }
+
+  const config = `# Claude Flow V3 Runtime Configuration
+# Generated: ${new Date().toISOString()}
+
+version: "3.0.0"
+
+swarm:
+  topology: ${options.runtime.topology}
+  maxAgents: ${options.runtime.maxAgents}
+  autoScale: true
+  coordinationStrategy: consensus
+
+memory:
+  backend: ${options.runtime.memoryBackend}
+  enableHNSW: ${options.runtime.enableHNSW}
+  persistPath: .claude-flow/data
+  cacheSize: 100
+
+neural:
+  enabled: ${options.runtime.enableNeural}
+  modelPath: .claude-flow/neural
+
+hooks:
+  enabled: true
+  autoExecute: true
+
+mcp:
+  autoStart: ${options.mcp.autoStart}
+  port: ${options.mcp.port}
+`;
+
+  fs.writeFileSync(configPath, config, 'utf-8');
+  result.created.files.push('.claude-flow/config.yaml');
+
+  // Write .gitignore
+  const gitignorePath = path.join(targetDir, '.claude-flow', '.gitignore');
+  const gitignore = `# Claude Flow runtime files
+data/
+logs/
+sessions/
+neural/
+*.log
+*.tmp
+`;
+
+  if (!fs.existsSync(gitignorePath) || options.force) {
+    fs.writeFileSync(gitignorePath, gitignore, 'utf-8');
+    result.created.files.push('.claude-flow/.gitignore');
+  }
+}
+
+/**
+ * Find source directory for skills/commands/agents
+ */
+function findSourceDir(type: 'skills' | 'commands' | 'agents'): string | null {
+  const possiblePaths = [
+    // Installed package
+    path.join(__dirname, '..', '..', '..', '..', '..', '.claude', type),
+    // Plugin directory
+    path.join(__dirname, '..', '..', '..', '..', '..', 'plugin', type),
+    // V2 directory for agents
+    path.join(__dirname, '..', '..', '..', '..', '..', 'v2', '.claude', type),
+    // Root .claude directory
+    path.join(process.cwd(), '..', '.claude', type),
+  ];
+
+  for (const p of possiblePaths) {
+    if (fs.existsSync(p)) {
+      return p;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Copy directory recursively
+ */
+function copyDirRecursive(src: string, dest: string): void {
+  fs.mkdirSync(dest, { recursive: true });
+
+  const entries = fs.readdirSync(src, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const srcPath = path.join(src, entry.name);
+    const destPath = path.join(dest, entry.name);
+
+    if (entry.isDirectory()) {
+      copyDirRecursive(srcPath, destPath);
+    } else {
+      fs.copyFileSync(srcPath, destPath);
+    }
+  }
+}
+
+/**
+ * Count files with extension in directory
+ */
+function countFiles(dir: string, ext: string): number {
+  let count = 0;
+
+  const entries = fs.readdirSync(dir, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const fullPath = path.join(dir, entry.name);
+
+    if (entry.isDirectory()) {
+      count += countFiles(fullPath, ext);
+    } else if (entry.name.endsWith(ext)) {
+      count++;
+    }
+  }
+
+  return count;
+}
+
+/**
+ * Count enabled hooks
+ */
+function countEnabledHooks(options: InitOptions): number {
+  const hooks = options.hooks;
+  let count = 0;
+
+  if (hooks.preToolUse) count++;
+  if (hooks.postToolUse) count++;
+  if (hooks.userPromptSubmit) count++;
+  if (hooks.sessionStart) count++;
+  if (hooks.stop) count++;
+  if (hooks.notification) count++;
+  if (hooks.permissionRequest) count++;
+
+  return count;
+}
+
+export default executeInit;
