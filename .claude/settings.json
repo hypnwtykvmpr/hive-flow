@@ -188,7 +188,7 @@
           {
             "type": "command",
             "timeout": 5000,
-            "command": "npx agentic-flow@alpha hooks intelligence stats --json --v3-mode --load-v3-patterns 2>/dev/null || true"
+            "command": ".claude/helpers/guidance-hooks.sh session-context"
           }
         ]
       }
