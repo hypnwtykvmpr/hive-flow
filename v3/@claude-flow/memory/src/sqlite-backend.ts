@@ -336,11 +336,21 @@ export class SQLiteBackend extends EventEmitter implements IMemoryBackend {
       params.push(Date.now());
     }
 
-    // Tag filtering (requires JSON parsing)
+    // Tag filtering (safe parameterized query)
     if (query.tags && query.tags.length > 0) {
+      // Validate tags before using in query
       for (const tag of query.tags) {
-        sql += ` AND json_each.value = '${tag}' AND json_each.key IN (SELECT key FROM json_each(tags))`;
+        if (typeof tag !== 'string' || !/^[a-zA-Z0-9_\-.:]+$/.test(tag)) {
+          throw new Error(`Invalid tag format: ${tag}`);
+        }
       }
+      // Use parameterized query with JSON functions
+      const tagPlaceholders = query.tags.map(() => '?').join(', ');
+      sql += ` AND EXISTS (
+        SELECT 1 FROM json_each(tags) AS t
+        WHERE t.value IN (${tagPlaceholders})
+      )`;
+      params.push(...query.tags);
     }
 
     // Pagination
