@@ -155,6 +155,7 @@ export interface MCPCapabilities {
   prompts?: {
     listChanged: boolean;
   };
+  sampling?: Record<string, unknown>;
   experimental?: Record<string, unknown>;
 }
 

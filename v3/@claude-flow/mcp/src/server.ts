@@ -31,6 +31,8 @@ import { ResourceRegistry, createResourceRegistry } from './resource-registry.js
 import { PromptRegistry, createPromptRegistry } from './prompt-registry.js';
 import { TaskManager, createTaskManager } from './task-manager.js';
 import { createTransport, TransportManager, createTransportManager } from './transport/index.js';
+import { RateLimiter, createRateLimiter, type RateLimitConfig } from './rate-limiter.js';
+import { SamplingManager, createSamplingManager, type SamplingConfig, type LLMProvider } from './sampling.js';
 
 const DEFAULT_CONFIG: Partial<MCPServerConfig> = {
   name: 'Claude-Flow MCP Server V3',
@@ -71,6 +73,8 @@ export class MCPServer extends EventEmitter implements IMCPServer {
   private readonly taskManager: TaskManager;
   private readonly connectionPool?: ConnectionPool;
   private readonly transportManager: TransportManager;
+  private readonly rateLimiter: RateLimiter;
+  private readonly samplingManager: SamplingManager;
   private transport?: ITransport;
   private running = false;
   private startTime?: Date;
@@ -91,11 +95,12 @@ export class MCPServer extends EventEmitter implements IMCPServer {
   };
 
   // Full MCP 2025-11-25 capabilities
-  private readonly capabilities: MCPCapabilities = {
+  private capabilities: MCPCapabilities = {
     logging: { level: 'info' },
     tools: { listChanged: true },
     resources: { listChanged: true, subscribe: true },
     prompts: { listChanged: true },
+    sampling: {},
   };
 
   private requestStats = {
@@ -130,6 +135,12 @@ export class MCPServer extends EventEmitter implements IMCPServer {
       taskTimeout: 300000,
     });
     this.transportManager = createTransportManager(logger);
+    this.rateLimiter = createRateLimiter(logger, {
+      requestsPerSecond: 100,
+      burstSize: 200,
+      perSessionLimit: 50,
+    });
+    this.samplingManager = createSamplingManager(logger);
 
     if (this.config.connectionPool) {
       this.connectionPool = createConnectionPool(
@@ -161,6 +172,27 @@ export class MCPServer extends EventEmitter implements IMCPServer {
    */
   getTaskManager(): TaskManager {
     return this.taskManager;
+  }
+
+  /**
+   * Get rate limiter for configuration
+   */
+  getRateLimiter(): RateLimiter {
+    return this.rateLimiter;
+  }
+
+  /**
+   * Get sampling manager for LLM provider registration
+   */
+  getSamplingManager(): SamplingManager {
+    return this.samplingManager;
+  }
+
+  /**
+   * Register an LLM provider for sampling
+   */
+  registerLLMProvider(provider: LLMProvider, isDefault: boolean = false): void {
+    this.samplingManager.registerProvider(provider, isDefault);
   }
 
   async start(): Promise<void> {
@@ -235,6 +267,7 @@ export class MCPServer extends EventEmitter implements IMCPServer {
       this.sessionManager.clearAll();
       this.taskManager.destroy();
       this.resourceSubscriptions.clear();
+      this.rateLimiter.destroy();
 
       if (this.connectionPool) {
         await this.connectionPool.clear();
@@ -353,6 +386,25 @@ export class MCPServer extends EventEmitter implements IMCPServer {
       id: request.id,
       method: request.method,
     });
+
+    // Rate limiting check (skip for initialize)
+    if (request.method !== 'initialize') {
+      const sessionId = this.currentSession?.id;
+      const rateLimitResult = this.rateLimiter.check(sessionId);
+      if (!rateLimitResult.allowed) {
+        this.requestStats.failed++;
+        return {
+          jsonrpc: '2.0',
+          id: request.id,
+          error: {
+            code: -32000,
+            message: 'Rate limit exceeded',
+            data: { retryAfter: rateLimitResult.retryAfter },
+          },
+        };
+      }
+      this.rateLimiter.consume(sessionId);
+    }
 
     try {
       if (request.method === 'initialize') {
@@ -492,6 +544,10 @@ export class MCPServer extends EventEmitter implements IMCPServer {
       // Logging (MCP 2025-11-25)
       case 'logging/setLevel':
         return this.handleLoggingSetLevel(request);
+
+      // Sampling (MCP 2025-11-25)
+      case 'sampling/createMessage':
+        return this.handleSamplingCreateMessage(request);
 
       // Utility
       case 'ping':
@@ -870,6 +926,75 @@ export class MCPServer extends EventEmitter implements IMCPServer {
       id: request.id,
       result: { success: true },
     };
+  }
+
+  // ============================================================================
+  // Sampling Handler (MCP 2025-11-25)
+  // ============================================================================
+
+  private async handleSamplingCreateMessage(request: MCPRequest): Promise<MCPResponse> {
+    const params = request.params as {
+      messages: Array<{ role: string; content: { type: string; text?: string } }>;
+      maxTokens: number;
+      systemPrompt?: string;
+      modelPreferences?: { hints?: Array<{ name?: string }>; intelligencePriority?: number; speedPriority?: number; costPriority?: number };
+      includeContext?: string;
+      temperature?: number;
+      stopSequences?: string[];
+      metadata?: Record<string, unknown>;
+    } | undefined;
+
+    if (!params?.messages || !params?.maxTokens) {
+      return this.createErrorResponse(
+        request.id,
+        ErrorCodes.INVALID_PARAMS,
+        'messages and maxTokens are required'
+      );
+    }
+
+    // Check if sampling is available
+    const available = await this.samplingManager.isAvailable();
+    if (!available) {
+      return this.createErrorResponse(
+        request.id,
+        ErrorCodes.INTERNAL_ERROR,
+        'No LLM provider available for sampling'
+      );
+    }
+
+    try {
+      const result = await this.samplingManager.createMessage(
+        {
+          messages: params.messages.map((m) => ({
+            role: m.role as 'user' | 'assistant',
+            content: m.content as any,
+          })),
+          maxTokens: params.maxTokens,
+          systemPrompt: params.systemPrompt,
+          modelPreferences: params.modelPreferences,
+          includeContext: params.includeContext as 'none' | 'thisServer' | 'allServers' | undefined,
+          temperature: params.temperature,
+          stopSequences: params.stopSequences,
+          metadata: params.metadata,
+        },
+        {
+          sessionId: this.currentSession?.id || 'unknown',
+          serverId: this.serverInfo.name,
+        }
+      );
+
+      return {
+        jsonrpc: '2.0',
+        id: request.id,
+        result,
+      };
+    } catch (error) {
+      return this.createErrorResponse(
+        request.id,
+        ErrorCodes.INTERNAL_ERROR,
+        error instanceof Error ? error.message : 'Sampling failed'
+      );
+    }
   }
 
   // ============================================================================

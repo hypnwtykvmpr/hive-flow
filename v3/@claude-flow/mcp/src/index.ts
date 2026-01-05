@@ -141,6 +141,47 @@ export type { PromptHandler, PromptDefinition, PromptRegistryOptions } from './p
 export { TaskManager, createTaskManager } from './task-manager.js';
 export type { TaskExecutor, TaskManagerOptions } from './task-manager.js';
 
+// Schema Validator
+export {
+  validateSchema,
+  formatValidationErrors,
+  createValidator,
+} from './schema-validator.js';
+export type { ValidationError, ValidationResult } from './schema-validator.js';
+
+// Rate Limiter
+export {
+  RateLimiter,
+  createRateLimiter,
+  rateLimitMiddleware,
+} from './rate-limiter.js';
+export type { RateLimitConfig, RateLimitResult } from './rate-limiter.js';
+
+// Sampling (Server-initiated LLM)
+export {
+  SamplingManager,
+  createSamplingManager,
+  createMockProvider,
+  createAnthropicProvider,
+} from './sampling.js';
+export type { LLMProvider, SamplingConfig, SamplingContext } from './sampling.js';
+
+// OAuth 2.1
+export {
+  OAuthManager,
+  createOAuthManager,
+  oauthMiddleware,
+  InMemoryTokenStorage,
+  createGitHubOAuthConfig,
+  createGoogleOAuthConfig,
+} from './oauth.js';
+export type {
+  OAuthConfig,
+  OAuthTokens,
+  TokenStorage,
+  AuthorizationRequest,
+} from './oauth.js';
+
 // Transport layer
 export {
   createTransport,
