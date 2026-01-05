@@ -231,6 +231,9 @@ export class AgentDBBackend extends EventEmitter implements IMemoryBackend {
     // Store in-memory for quick access
     this.entries.set(entry.id, entry);
 
+    // Register ID mapping for O(1) reverse lookup
+    this.registerIdMapping(entry.id);
+
     // Update indexes
     this.updateIndexes(entry);
 
