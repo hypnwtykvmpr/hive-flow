@@ -178,8 +178,8 @@ export class SwarmCommunication extends EventEmitter {
       handoffsCompleted: 0,
     });
 
-    // Start cleanup interval
-    setInterval(() => this.cleanup(), 60000);
+    // Start cleanup interval (store reference to clear on shutdown)
+    this.cleanupTimer = setInterval(() => this.cleanup(), 60000);
 
     // Listen for pattern storage to auto-broadcast
     if (this.config.autoBroadcastPatterns) {
