@@ -113,7 +113,7 @@ async function handleSpawnAgent(
   input: z.infer<typeof spawnAgentSchema>,
   context?: ToolContext
 ): Promise<SpawnAgentResult> {
-  const agentId = input.id || `agent-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  const agentId = input.id || generateSecureAgentId();
   const createdAt = new Date().toISOString();
 
   // Try to use swarmCoordinator if available
