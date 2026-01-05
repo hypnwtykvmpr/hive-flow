@@ -443,6 +443,7 @@ export const METADATA = {
     'Long-Running Workers (checkpoint support)',
     'Worker Pool (intelligent routing)',
     'Provider Adapter (multi-model support)',
+    'Multi-Model Router (cost optimization)',
   ],
   performance: {
     flashAttentionSpeedup: '2.49x-7.47x',
