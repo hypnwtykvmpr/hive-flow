@@ -63,6 +63,19 @@ export {
   type MCPTool,
 } from './mcp/index.js';
 
+// Official Claude Code Hooks Bridge
+export {
+  OfficialHooksBridge,
+  V3_TO_OFFICIAL_HOOK_MAP,
+  V3_TOOL_MATCHERS,
+  processOfficialHookInput,
+  outputOfficialHookResult,
+  executeWithBridge,
+  type OfficialHookEvent,
+  type OfficialHookInput,
+  type OfficialHookOutput,
+} from './bridge/official-hooks-bridge.js';
+
 // Version
 export const VERSION = '3.0.0-alpha.1';
 
