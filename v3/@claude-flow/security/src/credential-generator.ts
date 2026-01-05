@@ -144,7 +144,8 @@ export class CredentialGenerator {
   }
 
   /**
-   * Generates a cryptographically secure random string.
+   * Generates a cryptographically secure random string using rejection sampling
+   * to eliminate modulo bias.
    *
    * @param length - Length of the string to generate
    * @param charset - Character set to use
@@ -152,12 +153,28 @@ export class CredentialGenerator {
    */
   private generateSecureString(length: number, charset: string): string {
     const charsetLength = charset.length;
-    const randomBuffer = randomBytes(length);
     const result = new Array(length);
 
-    for (let i = 0; i < length; i++) {
-      // Use modulo with rejection sampling to avoid bias
-      result[i] = charset[randomBuffer[i] % charsetLength];
+    // Calculate rejection threshold to eliminate modulo bias
+    // For a byte (0-255), we reject values >= (256 - (256 % charsetLength))
+    // This ensures uniform distribution over charset indices
+    const maxValidValue = 256 - (256 % charsetLength);
+
+    let i = 0;
+    while (i < length) {
+      // Generate more random bytes than needed to reduce iterations
+      const randomBuffer = randomBytes(Math.max(length - i, 16));
+
+      for (let j = 0; j < randomBuffer.length && i < length; j++) {
+        const randomValue = randomBuffer[j];
+
+        // Rejection sampling: only accept values below threshold
+        if (randomValue < maxValidValue) {
+          result[i] = charset[randomValue % charsetLength];
+          i++;
+        }
+        // Values >= maxValidValue are rejected to avoid bias
+      }
     }
 
     return result.join('');
