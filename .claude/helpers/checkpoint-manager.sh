@@ -114,8 +114,46 @@ Co-Authored-By: Claude Sonnet 4 <noreply@anthropic.com>"
   if git commit -m "$enhanced_message" >/dev/null 2>&1; then
     local commit_hash=$(git rev-parse HEAD)
     log_success "Auto-commit created: ${commit_hash:0:7}"
+
+    # Check if we should auto-push
+    auto_push
   else
     log_info "No changes to commit or commit failed"
+  fi
+}
+
+# Auto-push changes to remote
+auto_push() {
+  if [ "$AUTO_PUSH_ENABLED" != "true" ]; then
+    return 0
+  fi
+
+  # Get current branch
+  local branch=$(git branch --show-current 2>/dev/null)
+  if [ -z "$branch" ]; then
+    log_warning "Could not determine current branch"
+    return 0
+  fi
+
+  # Check if branch has upstream
+  if ! git rev-parse --abbrev-ref "@{u}" >/dev/null 2>&1; then
+    log_info "No upstream configured for branch $branch"
+    return 0
+  fi
+
+  # Count commits ahead of remote
+  local commits_ahead=$(git rev-list --count "@{u}..HEAD" 2>/dev/null || echo 0)
+
+  # Push if we have enough commits or on session-end
+  if [ "$commits_ahead" -ge "$PUSH_BATCH_SIZE" ] || [ "$FORCE_PUSH" = "true" ]; then
+    log_info "Pushing $commits_ahead commits to origin/$branch..."
+    if git push origin "$branch" >/dev/null 2>&1; then
+      log_success "Pushed $commits_ahead commits to origin/$branch"
+    else
+      log_warning "Push failed - will retry on next checkpoint"
+    fi
+  else
+    log_info "Commits ahead: $commits_ahead (push at $PUSH_BATCH_SIZE)"
   fi
 }
 
