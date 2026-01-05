@@ -344,7 +344,7 @@ async function handleAgentStatus(
       return status;
     } catch (error) {
       // Fall through to simple implementation if coordinator fails
-      console.error('Failed to get agent status via coordinator:', error);
+      console.error('Failed to get agent status via coordinator:', sanitizeErrorForLogging(error));
     }
   }
 
