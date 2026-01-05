@@ -38,7 +38,9 @@
   ],
   "bin": {
     "hooks-daemon": "./bin/hooks-daemon.js",
-    "statusline": "./bin/statusline.js"
+    "statusline": "./bin/statusline.js",
+    "claude-flow-hooks": "./dist/cli/guidance-cli.js",
+    "guidance": "./dist/cli/guidance-cli.js"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
