@@ -330,7 +330,7 @@ export class TopologyManager extends EventEmitter implements ITopologyManager {
   }
 
   private hasQueen(): boolean {
-    return this.state.nodes.some(n => n.role === 'queen');
+    return this.queenNode !== null; // O(1) check using cached queen
   }
 
   private calculateInitialConnections(agentId: string, role: TopologyNode['role']): string[] {
