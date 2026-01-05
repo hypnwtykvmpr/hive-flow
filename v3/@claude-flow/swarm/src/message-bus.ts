@@ -222,7 +222,7 @@ interface Subscription {
 
 export class MessageBus extends EventEmitter implements IMessageBus {
   private config: MessageBusConfig;
-  private queues: Map<string, MessageQueueEntry[]> = new Map();
+  private queues: Map<string, PriorityMessageQueue> = new Map();
   private subscriptions: Map<string, Subscription> = new Map();
   private pendingAcks: Map<string, { message: Message; timeout: NodeJS.Timeout }> = new Map();
   private processingInterval?: NodeJS.Timeout;
