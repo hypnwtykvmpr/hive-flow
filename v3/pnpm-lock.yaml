@@ -96,6 +96,9 @@ importers:
 
   '@claude-flow/hooks':
     dependencies:
+      '@claude-flow/memory':
+        specifier: workspace:*
+        version: link:../memory
       '@claude-flow/neural':
         specifier: workspace:*
         version: link:../neural
