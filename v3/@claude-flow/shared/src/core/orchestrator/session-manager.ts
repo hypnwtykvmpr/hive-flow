@@ -10,6 +10,14 @@ import { SystemEventTypes } from '../interfaces/event.interface.js';
 import type { AgentProfile } from '../../types/agent.types.js';
 import { mkdir, writeFile, readFile } from 'fs/promises';
 import { join, dirname } from 'path';
+import { randomBytes } from 'crypto';
+
+// Secure session ID generation
+function generateSecureSessionId(): string {
+  const timestamp = Date.now().toString(36);
+  const random = randomBytes(12).toString('hex');
+  return `session_${timestamp}_${random}`;
+}
 
 /**
  * Session persistence structure
