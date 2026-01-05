@@ -142,6 +142,7 @@ export class SwarmCommunication extends EventEmitter {
   private handoffs: Map<string, TaskHandoff> = new Map();
   private agents: Map<string, SwarmAgentState> = new Map();
   private initialized = false;
+  private cleanupTimer?: NodeJS.Timeout;
 
   // Metrics
   private metrics = {

@@ -268,6 +268,23 @@ case "$1" in
     fi
     ;;
 
+  "push")
+    check_git_repo
+    FORCE_PUSH=true auto_push
+    ;;
+
+  "config")
+    echo -e "${BLUE}📋 Checkpoint Configuration${RESET}"
+    echo "============================"
+    echo "AUTO_COMMIT_ENABLED: $AUTO_COMMIT_ENABLED"
+    echo "AUTO_PUSH_ENABLED: $AUTO_PUSH_ENABLED"
+    echo "PUSH_BATCH_SIZE: $PUSH_BATCH_SIZE"
+    echo "MIN_CHANGES_THRESHOLD: $MIN_CHANGES_THRESHOLD"
+    echo ""
+    local commits_ahead=$(git rev-list --count "@{u}..HEAD" 2>/dev/null || echo 0)
+    echo "Commits ahead of remote: $commits_ahead"
+    ;;
+
   *)
     echo "V3 Checkpoint Manager"
     echo "===================="
