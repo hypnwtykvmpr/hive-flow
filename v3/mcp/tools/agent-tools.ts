@@ -22,11 +22,51 @@ function generateSecureAgentId(): string {
 }
 
 // ============================================================================
+// Agent Type Validation (Security: Restrict to known agent types)
+// ============================================================================
+
+/**
+ * Known agent types - validates against allowed agent types to prevent
+ * arbitrary code execution or unexpected behavior from unknown types.
+ */
+const ALLOWED_AGENT_TYPES = [
+  // Core Development
+  'coder', 'reviewer', 'tester', 'planner', 'researcher',
+  // Swarm Coordination
+  'hierarchical-coordinator', 'mesh-coordinator', 'adaptive-coordinator',
+  'collective-intelligence-coordinator', 'swarm-memory-manager',
+  // Consensus & Distributed
+  'byzantine-coordinator', 'raft-manager', 'gossip-coordinator',
+  'consensus-builder', 'crdt-synchronizer', 'quorum-manager', 'security-manager',
+  // Performance & Optimization
+  'perf-analyzer', 'performance-benchmarker', 'task-orchestrator',
+  'memory-coordinator', 'smart-agent',
+  // SPARC Methodology
+  'sparc-coord', 'sparc-coder', 'specification', 'pseudocode',
+  'architecture', 'refinement',
+  // Specialized Development
+  'backend-dev', 'frontend-dev', 'mobile-dev', 'ml-developer',
+  'cicd-engineer', 'api-docs', 'system-architect', 'code-analyzer',
+  // V3 Specialized
+  'queen-coordinator', 'security-architect', 'security-auditor',
+  'memory-specialist', 'swarm-specialist', 'integration-architect',
+  'performance-engineer', 'core-architect', 'test-architect', 'project-coordinator',
+] as const;
+
+type AgentType = typeof ALLOWED_AGENT_TYPES[number];
+
+const agentTypeSchema = z.enum(ALLOWED_AGENT_TYPES).or(
+  z.string().regex(/^[a-zA-Z][a-zA-Z0-9_-]*$/,
+    'Agent type must start with a letter and contain only alphanumeric characters, hyphens, and underscores'
+  ).max(64, 'Agent type must not exceed 64 characters')
+);
+
+// ============================================================================
 // Input Schemas
 // ============================================================================
 
 const spawnAgentSchema = z.object({
-  agentType: z.string().describe('Type of agent to spawn (e.g., coder, reviewer, tester)'),
+  agentType: agentTypeSchema.describe('Type of agent to spawn'),
   id: z.string().optional().describe('Optional agent ID (auto-generated if not provided)'),
   config: z.record(z.unknown()).optional().describe('Agent-specific configuration'),
   priority: z.enum(['low', 'normal', 'high', 'critical']).default('normal'),
