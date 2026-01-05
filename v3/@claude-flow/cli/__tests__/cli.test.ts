@@ -427,8 +427,9 @@ describe('CLI', () => {
         expect((e as Error).message).toContain('process.exit');
       }
 
-      const output = consoleOutput.join('');
-      expect(output).toContain('Required option missing');
+      // Error messages go to stderr, so check both stdout and stderr
+      const allOutput = [...consoleOutput, ...consoleErrorOutput].join('');
+      expect(allOutput).toContain('Required option missing');
     });
 
     it('should show debug info when DEBUG env var is set', async () => {
