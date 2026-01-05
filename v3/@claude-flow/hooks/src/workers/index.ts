@@ -1005,6 +1005,120 @@ async function countLines(dir: string, ext: string): Promise<number> {
   return total;
 }
 
+async function searchDDDPatterns(srcPath: string): Promise<Record<string, number>> {
+  const patterns = {
+    entities: 0,
+    valueObjects: 0,
+    aggregates: 0,
+    repositories: 0,
+    services: 0,
+    domainEvents: 0,
+  };
+
+  try {
+    const files = await collectFiles(srcPath, '.ts');
+
+    for (const file of files) {
+      const content = await fs.readFile(file, 'utf-8');
+
+      // Count DDD patterns
+      if (/class\s+\w+Entity\b/g.test(content) || /interface\s+\w+Entity\b/g.test(content)) {
+        patterns.entities++;
+      }
+      if (/class\s+\w+(VO|ValueObject)\b/g.test(content) || /type\s+\w+VO\s*=/g.test(content)) {
+        patterns.valueObjects++;
+      }
+      if (/class\s+\w+Aggregate\b/g.test(content) || /AggregateRoot/g.test(content)) {
+        patterns.aggregates++;
+      }
+      if (/class\s+\w+Repository\b/g.test(content) || /interface\s+I\w+Repository\b/g.test(content)) {
+        patterns.repositories++;
+      }
+      if (/class\s+\w+Service\b/g.test(content) || /interface\s+I\w+Service\b/g.test(content)) {
+        patterns.services++;
+      }
+      if (/class\s+\w+Event\b/g.test(content) || /DomainEvent/g.test(content)) {
+        patterns.domainEvents++;
+      }
+    }
+  } catch {
+    // Ignore errors
+  }
+
+  return patterns;
+}
+
+async function collectFiles(dir: string, ext: string): Promise<string[]> {
+  const files: string[] = [];
+
+  try {
+    const entries = await fs.readdir(dir, { withFileTypes: true });
+
+    for (const entry of entries) {
+      const fullPath = path.join(dir, entry.name);
+
+      if (entry.isDirectory() && !entry.name.startsWith('.') && entry.name !== 'node_modules') {
+        const subFiles = await collectFiles(fullPath, ext);
+        files.push(...subFiles);
+      } else if (entry.isFile() && entry.name.endsWith(ext)) {
+        files.push(fullPath);
+      }
+    }
+  } catch {
+    // Directory doesn't exist
+  }
+
+  return files;
+}
+
+async function scanDirectoryForPatterns(
+  dir: string,
+  secretPatterns: RegExp[],
+  vulnPatterns: RegExp[]
+): Promise<{ secrets: number; vulnerabilities: number }> {
+  let secrets = 0;
+  let vulnerabilities = 0;
+
+  try {
+    const files = await collectFiles(dir, '.ts');
+    files.push(...await collectFiles(dir, '.js'));
+
+    for (const file of files) {
+      // Skip test files and node_modules
+      if (file.includes('node_modules') || file.includes('.test.') || file.includes('.spec.')) {
+        continue;
+      }
+
+      const content = await fs.readFile(file, 'utf-8');
+
+      for (const pattern of secretPatterns) {
+        const matches = content.match(pattern);
+        if (matches) {
+          secrets += matches.length;
+        }
+      }
+
+      for (const pattern of vulnPatterns) {
+        const matches = content.match(pattern);
+        if (matches) {
+          vulnerabilities += matches.length;
+        }
+      }
+    }
+  } catch {
+    // Ignore errors
+  }
+
+  return { secrets, vulnerabilities };
+}
+
+function calculateAvgQuality(patterns: Array<{ quality?: number }>): number {
+  if (patterns.length === 0) return 0;
+
+  const sum = patterns.reduce((acc, p) => acc + (p.quality ?? 0), 0);
+  return Math.round((sum / patterns.length) * 100) / 100;
+}
+
 // ============================================================================
 // Factory
 // ============================================================================
