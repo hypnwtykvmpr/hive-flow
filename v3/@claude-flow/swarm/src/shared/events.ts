@@ -232,12 +232,12 @@ export function agentErrorEvent(agentId: AgentId, error: Error): SwarmEvent {
 }
 
 // Task Events
-export function taskCreatedEvent(taskId: string, type: string, title: string): SwarmEvent {
-  return createEvent('task:created', 'swarm', { taskId, type, title });
+export function taskCreatedEvent(taskId: string, spec: { type: string; title: string }): SwarmEvent {
+  return createEvent('task:created', 'swarm', { taskId, type: spec.type, title: spec.title });
 }
 
-export function taskQueuedEvent(taskId: string, priority: string): SwarmEvent {
-  return createEvent('task:queued', 'swarm', { taskId, priority });
+export function taskQueuedEvent(taskId: string, position: number): SwarmEvent {
+  return createEvent('task:queued', 'swarm', { taskId, position });
 }
 
 export function taskAssignedEvent(taskId: string, agentId: AgentId): SwarmEvent {
@@ -260,17 +260,17 @@ export function taskFailedEvent(taskId: string, error: Error): SwarmEvent {
   });
 }
 
-export function taskBlockedEvent(taskId: string, blockedBy: string[]): SwarmEvent {
-  return createEvent('task:blocked', 'swarm', { taskId, blockedBy });
+export function taskBlockedEvent(taskId: string, reason: string, blockingTask: string): SwarmEvent {
+  return createEvent('task:blocked', 'swarm', { taskId, reason, blockingTask });
 }
 
 // Swarm Events
-export function swarmInitializedEvent(config: unknown): SwarmEvent {
-  return createEvent('swarm:initialized', 'swarm', { config });
+export function swarmInitializedEvent(source: string, config: unknown): SwarmEvent {
+  return createEvent('swarm:initialized', source, { config });
 }
 
-export function swarmPhaseChangedEvent(previousPhase: string, newPhase: string): SwarmEvent {
-  return createEvent('swarm:phase-changed', 'swarm', { previousPhase, newPhase });
+export function swarmPhaseChangedEvent(source: string, previousPhase: string, newPhase: string): SwarmEvent {
+  return createEvent('swarm:phase-changed', source, { previousPhase, newPhase });
 }
 
 export function swarmMilestoneReachedEvent(milestoneId: string, name: string): SwarmEvent {
