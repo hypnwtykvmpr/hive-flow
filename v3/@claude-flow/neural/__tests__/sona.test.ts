@@ -307,10 +307,26 @@ describe('SONALearningEngine', () => {
 
     it('should handle adaptation with no patterns found', async () => {
       const { SonaEngine } = await import('@ruvector/sona');
-      vi.mocked(SonaEngine.withConfig).mockReturnValueOnce({
-        ...vi.mocked(SonaEngine.withConfig)(),
+      // Create a complete mock with findPatterns returning empty array
+      const emptyPatternsEngine = {
+        beginTrajectory: vi.fn().mockReturnValue(1),
+        addTrajectoryStep: vi.fn(),
+        addTrajectoryContext: vi.fn(),
+        endTrajectory: vi.fn(),
+        flush: vi.fn(),
+        applyMicroLora: vi.fn((arr: number[]) => arr),
         findPatterns: vi.fn().mockReturnValue([]),
-      } as any);
+        forceLearn: vi.fn().mockReturnValue('Learning complete'),
+        tick: vi.fn().mockReturnValue(null),
+        getStats: vi.fn().mockReturnValue(JSON.stringify({
+          total_trajectories: 0,
+          patterns_learned: 0,
+          avg_quality: 0,
+        })),
+        isEnabled: vi.fn().mockReturnValue(true),
+        setEnabled: vi.fn(),
+      };
+      vi.mocked(SonaEngine.withConfig).mockReturnValueOnce(emptyPatternsEngine as any);
 
       const freshEngine = new SONALearningEngine('balanced', modeConfig);
       const context: Context = {
