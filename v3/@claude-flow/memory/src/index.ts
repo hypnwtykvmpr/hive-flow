@@ -103,12 +103,16 @@ export {
 } from './types.js';
 
 // ===== Core Components =====
-export { AgentDBAdapter, AgentDBAdapterConfig } from './agentdb-adapter.js';
-export { AgentDBBackend, AgentDBBackendConfig } from './agentdb-backend.js';
-export { SQLiteBackend, SQLiteBackendConfig } from './sqlite-backend.js';
-export { SqlJsBackend, SqlJsBackendConfig } from './sqljs-backend.js';
-export {
-  HybridBackend,
+export { AgentDBAdapter } from './agentdb-adapter.js';
+export type { AgentDBAdapterConfig } from './agentdb-adapter.js';
+export { AgentDBBackend } from './agentdb-backend.js';
+export type { AgentDBBackendConfig } from './agentdb-backend.js';
+export { SQLiteBackend } from './sqlite-backend.js';
+export type { SQLiteBackendConfig } from './sqlite-backend.js';
+export { SqlJsBackend } from './sqljs-backend.js';
+export type { SqlJsBackendConfig } from './sqljs-backend.js';
+export { HybridBackend } from './hybrid-backend.js';
+export type {
   HybridBackendConfig,
   StructuredQuery,
   SemanticQuery,
@@ -116,15 +120,11 @@ export {
 } from './hybrid-backend.js';
 export { HNSWIndex } from './hnsw-index.js';
 export { CacheManager, TieredCacheManager } from './cache-manager.js';
-export { QueryBuilder, query, QueryTemplates, SortDirection, SortField } from './query-builder.js';
+export { QueryBuilder, query, QueryTemplates } from './query-builder.js';
+export type { SortDirection, SortField } from './query-builder.js';
 export { MemoryMigrator, createMigrator, migrateMultipleSources } from './migration.js';
-export {
-  createDatabase,
-  getPlatformInfo,
-  getAvailableProviders,
-  DatabaseProvider,
-  DatabaseOptions,
-} from './database-provider.js';
+export { createDatabase, getPlatformInfo, getAvailableProviders } from './database-provider.js';
+export type { DatabaseProvider, DatabaseOptions } from './database-provider.js';
 
 // ===== Unified Memory Service =====
 import { EventEmitter } from 'node:events';
