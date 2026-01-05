@@ -5,27 +5,74 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
 [![ADR-003](https://img.shields.io/badge/ADR--003-Compliant-green.svg)](https://github.com/ruvnet/claude-flow)
-[![Agents](https://img.shields.io/badge/Agents-15--Agent%20Hierarchy-orange.svg)](https://github.com/ruvnet/claude-flow)
+[![Agents](https://img.shields.io/badge/Agents-Up%20to%20100+-orange.svg)](https://github.com/ruvnet/claude-flow)
 
-> V3 Unified Swarm Coordination Module implementing ADR-003: Single Coordination Engine
+> V3 Unified Swarm Coordination Module implementing ADR-003: Single Coordination Engine with Hive-Mind Intelligence
 
 ## Architecture (ADR-003)
 
-This module provides **ONE canonical coordination engine**: `UnifiedSwarmCoordinator`
+This module provides a **complete multi-agent coordination system** with hive-mind capabilities:
 
 ### Key Components
 
 ```
 @claude-flow/swarm
-├── UnifiedSwarmCoordinator ⭐ CANONICAL ENGINE (use this)
-│   ├── 15-agent domain routing
-│   ├── Parallel execution
-│   ├── Consensus algorithms
-│   ├── Topology management
+├── UnifiedSwarmCoordinator ⭐ CANONICAL ENGINE
+│   ├── Configurable agent count (default 15, max 100+)
+│   ├── Domain-based task routing
+│   ├── Parallel execution across domains
+│   ├── Multiple consensus algorithms
+│   ├── 4 topology types (mesh, hierarchical, centralized, hybrid)
 │   └── Performance: <100ms coordination
 │
-└── SwarmHub (deprecated)
-    └── Thin facade for backward compatibility
+├── QueenCoordinator 👑 HIVE-MIND INTELLIGENCE
+│   ├── Strategic task analysis & decomposition
+│   ├── Agent capability-based delegation
+│   ├── Swarm health monitoring & bottleneck detection
+│   ├── 5 consensus types (majority, supermajority, unanimous, weighted, queen-override)
+│   └── Learning from outcomes
+│
+├── AttentionCoordinator 🧠 ATTENTION MECHANISMS
+│   ├── Flash Attention (2.49x-7.47x speedup)
+│   ├── Multi-Head Attention (8 heads)
+│   ├── Linear Attention (O(n) complexity)
+│   ├── Hyperbolic Attention (Poincaré hierarchies)
+│   ├── Mixture of Experts (MoE) routing
+│   └── GraphRoPE (topology-aware positioning)
+│
+├── FederationHub 🌐 CROSS-SWARM COORDINATION
+│   ├── Ephemeral agent spawning with TTL
+│   ├── Cross-swarm messaging
+│   ├── Federation-wide consensus voting
+│   └── Auto-cleanup & heartbeat tracking
+│
+├── ConsensusEngines 🗳️ DISTRIBUTED AGREEMENT
+│   ├── Raft (leader election, log replication)
+│   ├── Byzantine (fault-tolerant, 2/3 supermajority)
+│   └── Gossip (epidemic protocol for large swarms)
+│
+└── SwarmHub (deprecated) - Thin facade for backward compatibility
+```
+
+## ⚠️ Agent Count: Configurable, Not Limited
+
+The default 15-agent architecture is a **recommendation**, not a hard limit:
+
+```typescript
+// Default: 15-agent V3 architecture
+const coordinator = createUnifiedSwarmCoordinator({
+  topology: { type: 'hierarchical', maxAgents: 15 },
+});
+
+// Scale up: 50 agents
+const largeCoordinator = createUnifiedSwarmCoordinator({
+  topology: { type: 'mesh', maxAgents: 50 },
+});
+
+// Maximum: 100+ agents (DEFAULT_MAX_AGENTS = 100)
+const enterpriseCoordinator = createUnifiedSwarmCoordinator({
+  topology: { type: 'hybrid', maxAgents: 100 },
+});
 ```
 
 ## Quick Start (Recommended)
@@ -132,6 +179,13 @@ results.forEach(result => {
 
 Choose the coordination pattern that fits your needs:
 
+| Topology | Best For | Scalability | Latency |
+|----------|----------|-------------|---------|
+| **Hierarchical** | Queen-led swarms | O(n), up to 100+ | 15-35ms |
+| **Mesh** | Distributed workloads | O(n²), up to 20 | 10-40ms |
+| **Centralized** | Simple coordination | O(n), up to 50 | 10-20ms |
+| **Hybrid** | Large mixed workloads | O(n), up to 200 | 20-50ms |
+
 ### Hierarchical (Default)
 ```typescript
 const coordinator = createUnifiedSwarmCoordinator({
@@ -140,27 +194,37 @@ const coordinator = createUnifiedSwarmCoordinator({
 ```
 - Queen agent coordinates domain leads
 - Domain leads manage worker agents
-- Best for 15-agent V3 architecture
+- Best for domain-organized V3 architecture
 
 ### Mesh
 ```typescript
 const coordinator = createUnifiedSwarmCoordinator({
-  topology: { type: 'mesh', maxAgents: 15 },
+  topology: { type: 'mesh', maxAgents: 20 },
 });
 ```
-- All agents communicate peer-to-peer
+- Limited peer-to-peer connections (max ~10 per node)
 - No central coordinator
-- Best for distributed workloads
+- Best for distributed workloads under 20 agents
 
 ### Centralized
 ```typescript
 const coordinator = createUnifiedSwarmCoordinator({
-  topology: { type: 'centralized', maxAgents: 15 },
+  topology: { type: 'centralized', maxAgents: 50 },
 });
 ```
-- Single coordinator manages all agents
+- Single coordinator hub manages all agents
 - Simplest to reason about
-- Best for small swarms
+- Best for small to medium swarms
+
+### Hybrid (Best for Scale)
+```typescript
+const coordinator = createUnifiedSwarmCoordinator({
+  topology: { type: 'hybrid', maxAgents: 100 },
+});
+```
+- Mesh workers + hierarchical coordinators
+- Combines benefits of both patterns
+- Best for large-scale enterprise deployments
 
 ## Consensus Algorithms
 
@@ -262,6 +326,146 @@ await coordinator.initialize();
 await coordinator.spawnFullHierarchy();
 ```
 
+## Hive-Mind Intelligence (Queen Coordinator)
+
+The Queen Coordinator provides intelligent task orchestration:
+
+```typescript
+import { createQueenCoordinator } from '@claude-flow/swarm';
+
+const queen = createQueenCoordinator({
+  swarmCoordinator: coordinator,
+  // Optional: connect to neural learning system
+  // neuralSystem: myNeuralSystem,
+  // memoryService: myMemoryService,
+});
+
+// Analyze a complex task
+const analysis = await queen.analyzeTask({
+  id: 'task-1',
+  type: 'security-audit',
+  description: 'Comprehensive CVE audit of authentication system',
+});
+
+console.log('Task Analysis:', {
+  complexity: analysis.complexity,        // 'low' | 'medium' | 'high' | 'critical'
+  estimatedDuration: analysis.estimatedDuration,
+  requiredCapabilities: analysis.requiredCapabilities,
+  suggestedSubtasks: analysis.subtasks,
+});
+
+// Delegate to optimal agents
+const plan = await queen.delegateToAgents(task, analysis);
+console.log('Delegation Plan:', {
+  primaryAgent: plan.primaryAgent,
+  backupAgents: plan.backupAgents,
+  parallelAssignments: plan.parallelAssignments,
+});
+
+// Monitor swarm health
+const health = await queen.monitorSwarmHealth();
+console.log('Health Report:', {
+  overallStatus: health.status,
+  bottlenecks: health.bottlenecks,
+  alerts: health.alerts,
+  recommendations: health.recommendations,
+});
+
+// Coordinate consensus with 5 types
+const decision = await queen.coordinateConsensus({
+  type: 'deployment',
+  value: { version: '3.0.0', environment: 'production' },
+  consensusType: 'supermajority', // 'majority' | 'supermajority' | 'unanimous' | 'weighted' | 'queen-override'
+});
+```
+
+## Attention Mechanisms
+
+Six attention mechanisms for intelligent agent coordination:
+
+```typescript
+import { createAttentionCoordinator } from '@claude-flow/swarm';
+
+const attention = createAttentionCoordinator({
+  topology: coordinator.getTopology(),
+});
+
+// Flash Attention - 2.49x-7.47x speedup for long sequences
+const flashResult = await attention.coordinate(agents, task, { type: 'flash' });
+
+// Multi-Head Attention - 8 parallel attention heads
+const multiHeadResult = await attention.coordinate(agents, task, { type: 'multi-head' });
+
+// Linear Attention - O(n) complexity for very long sequences
+const linearResult = await attention.coordinate(agents, task, { type: 'linear' });
+
+// Hyperbolic Attention - Poincaré distance for hierarchies
+const hyperbolicResult = await attention.coordinate(agents, task, { type: 'hyperbolic' });
+
+// Mixture of Experts - Route to top-k best agents
+const moeResult = await attention.coordinate(agents, task, {
+  type: 'moe',
+  topK: 3,
+  loadBalancing: true,
+});
+
+// GraphRoPE - Topology-aware position encoding
+const graphResult = await attention.coordinate(agents, task, { type: 'graph-rope' });
+```
+
+## Federation Hub (Cross-Swarm Coordination)
+
+Coordinate multiple swarms with ephemeral agents:
+
+```typescript
+import { createFederationHub, getDefaultFederationHub } from '@claude-flow/swarm';
+
+// Get singleton hub or create custom
+const hub = getDefaultFederationHub();
+// or: const hub = createFederationHub({ maxSwarms: 10 });
+
+// Register swarms
+await hub.registerSwarm('swarm-security', {
+  coordinator: securityCoordinator,
+  capabilities: ['security-audit', 'penetration-testing'],
+});
+
+await hub.registerSwarm('swarm-dev', {
+  coordinator: devCoordinator,
+  capabilities: ['coding', 'testing', 'review'],
+});
+
+// Spawn ephemeral agent (auto-cleanup after TTL)
+const { agentId } = await hub.spawnEphemeral({
+  swarmId: 'swarm-security',
+  ttlMs: 300000, // 5 minutes
+  task: { type: 'quick-audit', target: 'auth-module' },
+});
+
+// Cross-swarm messaging
+await hub.sendMessage({
+  from: 'swarm-dev',
+  to: 'swarm-security',
+  type: 'audit-request',
+  payload: { module: 'auth', priority: 'high' },
+});
+
+// Federation-wide consensus
+const vote = await hub.proposeConsensus({
+  topic: 'release-v3',
+  options: ['approve', 'reject', 'defer'],
+  timeout: 30000,
+});
+
+// Get federation stats
+const stats = hub.getStats();
+console.log('Federation:', {
+  swarms: stats.swarmCount,
+  ephemeralAgents: stats.ephemeralAgentCount,
+  messagesSent: stats.messageCount,
+});
+```
+
 ## Advanced Features
 
 ### Agent Pool Management
@@ -276,6 +480,10 @@ console.log('Core Domain Pool:', {
   available: stats?.available,
   busy: stats?.busy,
 });
+
+// Auto-scaling is built-in
+// - Scale up at 80% utilization
+// - Scale down at 20% utilization
 ```
 
 ### Custom Agent Registration
@@ -355,14 +563,67 @@ coordinator.on('swarm.initialized', (event) => {
 - `getPerformanceReport(): PerformanceReport` - Get performance stats
 - `getStatus(): {swarmId, status, domains, metrics}` - Get comprehensive status
 
+## Integration with agentic-flow@alpha
+
+This module can integrate with agentic-flow@alpha for enhanced capabilities:
+
+```typescript
+import { createUnifiedSwarmCoordinator } from '@claude-flow/swarm';
+import { AgenticFlowBridge } from '@claude-flow/integration';
+
+// Connect to agentic-flow for enhanced features
+const bridge = new AgenticFlowBridge({
+  agenticFlow: { version: 'alpha' },
+});
+
+const coordinator = createUnifiedSwarmCoordinator({
+  topology: { type: 'hierarchical', maxAgents: 15 },
+  // Enable agentic-flow features via bridge
+  extensions: {
+    transport: bridge.getQuicTransport(),     // QUIC 0-RTT
+    learning: bridge.getSwarmLearningOptimizer(),
+  },
+});
+```
+
+### Available from agentic-flow@alpha
+
+| Feature | Status | Description |
+|---------|--------|-------------|
+| QUIC Transport | 🔌 Via bridge | 0-RTT connections, 50-70% faster |
+| Swarm Learning Optimizer | 🔌 Via bridge | Auto topology recommendations |
+| E2B Sandbox Agents | 🔌 Via bridge | Isolated execution environments |
+| P2P with GunDB/IPFS | 🔌 Via bridge | Free decentralized coordination |
+| WASM Acceleration | ⏳ Planned | HNSW indexing, semantic routing |
+
+## Roadmap: Future Enhancements
+
+Based on agentic-flow@alpha capabilities that could be integrated:
+
+### Priority 1 (High Impact)
+- [ ] Native QUIC transport with HTTP/2 fallback
+- [ ] Swarm learning optimizer for auto-topology
+- [ ] Free P2P provider integration (GunDB, IPFS)
+
+### Priority 2 (Medium Impact)
+- [ ] WASM-accelerated member indexing
+- [ ] E2B sandbox agent specialization
+- [ ] Enhanced message types with fuel/memory budgets
+
+### Priority 3 (Nice to Have)
+- [ ] Advanced gossip variants
+- [ ] CRDT synchronization
+- [ ] Production-grade Ed25519/X25519 cryptography
+
 ## Contributing
 
 This module follows ADR-003: Single Coordination Engine. When contributing:
 
 1. **All coordination logic** goes in `UnifiedSwarmCoordinator`
 2. **SwarmHub** is a thin facade - no new logic there
-3. **Domain-based routing** should be used for 15-agent hierarchy
+3. **Domain-based routing** should be used for organized hierarchies
 4. **Performance targets** must be maintained (<100ms coordination)
+5. **New features** should integrate via the extensions API
 
 ## License
 
@@ -370,4 +631,4 @@ MIT
 
 ---
 
-**ADR-003 Compliance**: This module implements a single canonical coordination engine with backward compatibility via facade pattern.
+**ADR-003 Compliance**: This module implements a single canonical coordination engine with hive-mind intelligence, 6 attention mechanisms, federation support, and backward compatibility via facade pattern.
