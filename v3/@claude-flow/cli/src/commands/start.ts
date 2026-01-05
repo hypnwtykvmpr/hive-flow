@@ -49,9 +49,9 @@ function parseSimpleYaml(content: string): Record<string, unknown> {
       value = false;
     } else if (value === 'null') {
       value = null;
-    } else if (!isNaN(Number(value)) && value !== '') {
+    } else if (!isNaN(Number(value as string)) && value !== '') {
       value = Number(value);
-    } else if (value.startsWith('"') && value.endsWith('"')) {
+    } else if (typeof value === 'string' && value.startsWith('"') && value.endsWith('"')) {
       value = value.slice(1, -1);
     }
 
