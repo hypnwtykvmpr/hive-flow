@@ -343,20 +343,18 @@ export class TopologyManager extends EventEmitter implements ITopologyManager {
         return existingNodes.slice(0, maxMeshConnections);
 
       case 'hierarchical':
-        // Workers connect to queen, queen connects to workers
+        // Workers connect to queen, queen connects to workers (O(1) lookup)
         if (role === 'queen' || existingNodes.length === 0) {
           return existingNodes;
         }
-        const queen = this.state.nodes.find(n => n.role === 'queen');
-        return queen ? [queen.agentId] : [];
+        return this.queenNode ? [this.queenNode.agentId] : [];
 
       case 'centralized':
-        // All nodes connect to coordinator
+        // All nodes connect to coordinator (O(1) lookup)
         if (role === 'coordinator' || existingNodes.length === 0) {
           return existingNodes;
         }
-        const coordinator = this.state.nodes.find(n => n.role === 'coordinator');
-        return coordinator ? [coordinator.agentId] : [];
+        return this.coordinatorNode ? [this.coordinatorNode.agentId] : [];
 
       case 'hybrid':
         // Mix of mesh and hierarchical
