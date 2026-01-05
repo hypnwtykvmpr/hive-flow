@@ -26,3 +26,6 @@ export * from './core/index.js';
 
 // Hooks System - Extensible hook points for tool execution and lifecycle events
 export * from './hooks/index.js';
+
+// Security Utilities - Secure random generation, input validation
+export * from './security/index.js';
