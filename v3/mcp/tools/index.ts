@@ -133,6 +133,19 @@ export {
   sonaTools,
 } from './sona-tools.js';
 
+// Federation tools (Ephemeral Agent Coordination)
+export {
+  federationStatusTool,
+  spawnEphemeralTool,
+  terminateEphemeralTool,
+  listEphemeralTool,
+  registerSwarmTool,
+  broadcastTool,
+  proposeTool,
+  voteTool,
+  federationTools,
+} from './federation-tools.js';
+
 // ============================================================================
 // Tool Registry
 // ============================================================================
