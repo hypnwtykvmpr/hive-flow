@@ -106,6 +106,32 @@ export {
   type SwarmConfig,
 } from './swarm/index.js';
 
+// Workers - Cross-platform background workers
+export {
+  WorkerManager,
+  WorkerPriority,
+  WORKER_CONFIGS,
+  createWorkerManager,
+  workerManager,
+  // Worker factories
+  createPerformanceWorker,
+  createHealthWorker,
+  createSwarmWorker,
+  createGitWorker,
+  createLearningWorker,
+  createADRWorker,
+  createDDDWorker,
+  createSecurityWorker,
+  createPatternsWorker,
+  createCacheWorker,
+  // Types
+  type WorkerConfig,
+  type WorkerResult,
+  type WorkerMetrics,
+  type WorkerManagerStatus,
+  type WorkerHandler,
+} from './workers/index.js';
+
 // Version
 export const VERSION = '3.0.0-alpha.1';
 
