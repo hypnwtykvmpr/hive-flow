@@ -396,16 +396,19 @@ describe('Task Tools', () => {
     });
 
     it('should add dependencies', async () => {
+      // Use a context without orchestrator to test simple implementation
+      const simpleContext: ToolContext = { sessionId: 'test-session' };
+
       const createResult = await createTaskTool.handler({
         type: 'code',
         description: 'Task with dependencies',
-      }, mockContext);
+      }, simpleContext);
 
       const result = await taskDependenciesTool.handler({
         taskId: createResult.taskId,
         action: 'add',
         dependencies: ['task-1', 'task-2'],
-      }, mockContext);
+      }, simpleContext);
 
       expect(result).toBeDefined();
       expect(result.action).toBe('add');
