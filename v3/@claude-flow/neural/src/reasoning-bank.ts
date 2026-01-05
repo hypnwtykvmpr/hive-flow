@@ -911,7 +911,9 @@ export class ReasoningBank {
     }
 
     const denom = Math.sqrt(normA) * Math.sqrt(normB);
-    return denom > 0 ? dot / denom : 0;
+    // Clamp to [0, 1] to handle floating point precision issues
+    const similarity = denom > 0 ? dot / denom : 0;
+    return Math.max(0, Math.min(1, similarity));
   }
 
   private computeContentSimilarity(query: string, content: string): number {
