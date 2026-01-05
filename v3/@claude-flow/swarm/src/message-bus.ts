@@ -342,48 +342,24 @@ export class MessageBus extends EventEmitter implements IMessageBus {
 
   private addToQueue(agentId: string, message: Message): void {
     if (!this.queues.has(agentId)) {
-      this.queues.set(agentId, []);
+      this.queues.set(agentId, new PriorityMessageQueue());
     }
 
     const queue = this.queues.get(agentId)!;
 
-    // Check queue size limit
+    // Check queue size limit - O(1) removal of lowest priority
     if (queue.length >= this.config.maxQueueSize) {
-      // Drop oldest low-priority messages
-      const lowPriorityIdx = queue.findIndex(e =>
-        e.message.priority === 'low' || e.message.priority === 'normal'
-      );
-      if (lowPriorityIdx !== -1) {
-        queue.splice(lowPriorityIdx, 1);
-      } else {
-        // Queue full with high priority messages, drop oldest
-        queue.shift();
-      }
+      queue.removeLowestPriority();
     }
 
-    // Insert by priority (urgent first)
-    const priorityOrder: Record<Message['priority'], number> = {
-      urgent: 0,
-      high: 1,
-      normal: 2,
-      low: 3,
-    };
-
-    const insertIdx = queue.findIndex(
-      e => priorityOrder[e.message.priority] > priorityOrder[message.priority]
-    );
-
+    // O(1) priority-aware insertion
     const entry: MessageQueueEntry = {
       message,
       attempts: 0,
       enqueuedAt: new Date(),
     };
 
-    if (insertIdx === -1) {
-      queue.push(entry);
-    } else {
-      queue.splice(insertIdx, 0, entry);
-    }
+    queue.enqueue(entry);
   }
 
   subscribe(agentId: string, callback: (message: Message) => void, filter?: MessageType[]): void {
