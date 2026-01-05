@@ -169,6 +169,8 @@ export interface RuntimeConfig {
 export interface InitOptions {
   /** Target directory */
   targetDir: string;
+  /** Source base directory for skills/commands/agents (optional) */
+  sourceBaseDir?: string;
   /** Force overwrite existing files */
   force: boolean;
   /** Run in interactive mode */
