@@ -195,6 +195,29 @@ export class SwarmCommunication extends EventEmitter {
     this.emit('initialized', { agentId: this.config.agentId });
   }
 
+  /**
+   * Shutdown swarm communication and cleanup resources
+   */
+  async shutdown(): Promise<void> {
+    if (!this.initialized) return;
+
+    // Clear cleanup timer to prevent memory leaks
+    if (this.cleanupTimer) {
+      clearInterval(this.cleanupTimer);
+      this.cleanupTimer = undefined;
+    }
+
+    // Clear all maps
+    this.messages.clear();
+    this.broadcasts.clear();
+    this.consensusRequests.clear();
+    this.handoffs.clear();
+    this.agents.clear();
+
+    this.initialized = false;
+    this.emit('shutdown', { agentId: this.config.agentId });
+  }
+
   // ============================================================================
   // Agent-to-Agent Messaging
   // ============================================================================

@@ -281,7 +281,7 @@ case "$1" in
     echo "PUSH_BATCH_SIZE: $PUSH_BATCH_SIZE"
     echo "MIN_CHANGES_THRESHOLD: $MIN_CHANGES_THRESHOLD"
     echo ""
-    local commits_ahead=$(git rev-list --count "@{u}..HEAD" 2>/dev/null || echo 0)
+    commits_ahead=$(git rev-list --count "@{u}..HEAD" 2>/dev/null || echo 0)
     echo "Commits ahead of remote: $commits_ahead"
     ;;
 
