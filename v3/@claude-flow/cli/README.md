@@ -27,7 +27,7 @@ npm install @claude-flow/cli
 ## Quick Start
 
 ```typescript
-import { CommandParser, Output, prompt } from '@claude-flow/cli';
+import { CommandParser, OutputFormatter, text, select, confirm } from '@claude-flow/cli';
 
 // Create a parser instance
 const parser = new CommandParser();
@@ -56,9 +56,9 @@ parser.registerCommand({
 const result = parser.parse(process.argv.slice(2));
 
 // Output formatting
-const output = new Output();
-output.success('Swarm initialized successfully!');
-output.table([
+const output = new OutputFormatter();
+output.printSuccess('Swarm initialized successfully!');
+output.printTable([
   { agent: 'queen', status: 'running' },
   { agent: 'worker-1', status: 'idle' }
 ]);
@@ -87,25 +87,33 @@ const commands = parser.getAllCommands(): Command[];
 ### Output Formatting
 
 ```typescript
-import { Output } from '@claude-flow/cli';
+import { OutputFormatter, output } from '@claude-flow/cli';
 
-const output = new Output({ color: true, format: 'text' });
+// Use the singleton instance
+output.printSuccess('Operation completed');
+output.printError('Something went wrong');
+output.printWarning('Proceed with caution');
+output.printInfo('FYI: This is informational');
 
-// Message types
-output.success('Operation completed');
-output.error('Something went wrong');
-output.warning('Proceed with caution');
-output.info('FYI: This is informational');
-output.debug('Debug details');
+// Or create a custom formatter
+const formatter = new OutputFormatter({ color: true });
+
+// Color methods
+formatter.success('Green text');
+formatter.error('Red text');
+formatter.warning('Yellow text');
+formatter.bold('Bold text');
+formatter.dim('Dimmed text');
 
 // Structured output
-output.table(data, columns);
-output.json(object);
-output.list(items);
+output.printTable(data, columns);
+output.printJson(object);
+output.printList(items);
 
-// Progress indication
-output.spinner('Loading...');
-output.progress(current, total);
+// Progress indication (via Progress and Spinner classes)
+import { Progress, Spinner } from '@claude-flow/cli';
+const spinner = new Spinner('Loading...');
+const progress = new Progress({ total: 100 });
 ```
 
 ### Interactive Prompts
