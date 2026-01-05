@@ -74,7 +74,9 @@ export class CLI {
 
       // Find and execute command
       const commandName = commandPath[0];
-      const command = getCommand(commandName);
+      // First check the parser's registry (for dynamically registered commands)
+      // Then fall back to the static registry
+      const command = this.parser.getCommand(commandName) || getCommand(commandName);
 
       if (!command) {
         this.output.printError(`Unknown command: ${commandName}`);
