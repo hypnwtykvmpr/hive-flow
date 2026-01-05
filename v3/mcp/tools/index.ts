@@ -398,4 +398,5 @@ export default {
   sessionTools,
   workerTools,
   sonaTools,
+  federationTools,
 };
