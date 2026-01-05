@@ -393,7 +393,8 @@ describe('PPO Algorithm', () => {
 
     const result = ppo.update();
 
-    expect(result.policyLoss).toBeGreaterThanOrEqual(0);
+    // Policy loss can be negative in PPO (we minimize -surrogate_objective)
+    expect(typeof result.policyLoss).toBe('number');
     expect(result.valueLoss).toBeGreaterThanOrEqual(0);
     expect(result.entropy).toBeGreaterThanOrEqual(0);
   });
