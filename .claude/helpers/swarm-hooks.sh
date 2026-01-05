@@ -429,14 +429,21 @@ initiate_handoff() {
   local ho_id="ho_$(date +%s)_$(head -c 4 /dev/urandom | xxd -p)"
   local timestamp=$(date +%s)
 
-  # Parse context or use defaults
-  local context=$(echo "$context_json" | jq -c '. + {
-    filesModified: (.filesModified // []),
-    patternsUsed: (.patternsUsed // []),
-    decisions: (.decisions // []),
-    blockers: (.blockers // []),
-    nextSteps: (.nextSteps // [])
-  }' 2>/dev/null || echo '{"filesModified":[],"patternsUsed":[],"decisions":[],"blockers":[],"nextSteps":[]}')
+  # Parse context or use defaults - ensure valid JSON
+  local context
+  if command -v jq &>/dev/null && echo "$context_json" | jq -e . >/dev/null 2>&1; then
+    context=$(echo "$context_json" | jq -c '{
+      filesModified: (.filesModified // []),
+      patternsUsed: (.patternsUsed // []),
+      decisions: (.decisions // []),
+      blockers: (.blockers // []),
+      nextSteps: (.nextSteps // [])
+    }')
+  else
+    context='{"filesModified":[],"patternsUsed":[],"decisions":[],"blockers":[],"nextSteps":[]}'
+  fi
+
+  local desc_escaped=$(echo -n "$description" | jq -Rs .)
 
   local ho_file="$HANDOFFS_DIR/$ho_id.json"
   cat > "$ho_file" << EOF
@@ -445,7 +452,7 @@ initiate_handoff() {
   "fromAgent": "$AGENT_ID",
   "fromAgentName": "$AGENT_NAME",
   "toAgent": "$to_agent",
-  "description": $(echo "$description" | jq -Rs .),
+  "description": $desc_escaped,
   "context": $context,
   "status": "pending",
   "timestamp": $timestamp
