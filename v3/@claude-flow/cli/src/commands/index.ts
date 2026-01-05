@@ -11,6 +11,12 @@ import { mcpCommand } from './mcp.js';
 import { configCommand } from './config.js';
 import { migrateCommand } from './migrate.js';
 import { hooksCommand } from './hooks.js';
+// P1 Commands
+import { initCommand } from './init.js';
+import { startCommand } from './start.js';
+import { statusCommand } from './status.js';
+import { taskCommand } from './task.js';
+import { sessionCommand } from './session.js';
 
 // Export all commands
 export { agentCommand } from './agent.js';
@@ -20,11 +26,24 @@ export { mcpCommand } from './mcp.js';
 export { configCommand } from './config.js';
 export { migrateCommand } from './migrate.js';
 export { hooksCommand } from './hooks.js';
+// P1 Commands
+export { initCommand } from './init.js';
+export { startCommand } from './start.js';
+export { statusCommand } from './status.js';
+export { taskCommand } from './task.js';
+export { sessionCommand } from './session.js';
 
 /**
  * All available commands
  */
 export const commands: Command[] = [
+  // P1 Core Commands
+  initCommand,
+  startCommand,
+  statusCommand,
+  taskCommand,
+  sessionCommand,
+  // Original Commands
   agentCommand,
   swarmCommand,
   memoryCommand,
