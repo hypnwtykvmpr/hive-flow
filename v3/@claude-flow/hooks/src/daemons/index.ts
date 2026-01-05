@@ -405,12 +405,20 @@ export class SwarmMonitorDaemon {
 }
 
 /**
- * Hooks Learning Daemon - consolidates learned patterns
+ * Hooks Learning Daemon - consolidates learned patterns using ReasoningBank
  */
 export class HooksLearningDaemon {
   private manager: DaemonManager;
   private patternsLearned = 0;
   private routingAccuracy = 0;
+  private reasoningBank: any = null;
+  private lastConsolidation: Date | null = null;
+  private consolidationStats = {
+    totalRuns: 0,
+    patternsPromoted: 0,
+    patternsPruned: 0,
+    duplicatesRemoved: 0,
+  };
 
   constructor(manager?: DaemonManager) {
     this.manager = manager ?? new DaemonManager();
@@ -430,6 +438,15 @@ export class HooksLearningDaemon {
    * Start learning consolidation
    */
   async start(): Promise<void> {
+    // Lazy load ReasoningBank to avoid circular dependencies
+    try {
+      const { reasoningBank } = await import('../reasoningbank/index.js');
+      this.reasoningBank = reasoningBank;
+      await this.reasoningBank.initialize();
+    } catch (error) {
+      console.warn('[HooksLearningDaemon] ReasoningBank not available:', error);
+    }
+
     await this.manager.start('hooks-learning');
   }
 
@@ -441,22 +458,53 @@ export class HooksLearningDaemon {
   }
 
   /**
-   * Consolidate learned patterns
+   * Consolidate learned patterns using ReasoningBank
    */
   private async consolidate(): Promise<void> {
-    // In a real implementation, this would:
-    // - Prune low-quality trajectories
-    // - Merge similar patterns
-    // - Optimize HNSW index
+    if (!this.reasoningBank) {
+      return;
+    }
+
+    try {
+      const result = await this.reasoningBank.consolidate();
+
+      // Update stats
+      this.consolidationStats.totalRuns++;
+      this.consolidationStats.patternsPromoted += result.patternsPromoted;
+      this.consolidationStats.patternsPruned += result.patternsPruned;
+      this.consolidationStats.duplicatesRemoved += result.duplicatesRemoved;
+      this.lastConsolidation = new Date();
+
+      // Update pattern count from ReasoningBank stats
+      const stats = this.reasoningBank.getStats();
+      this.patternsLearned = stats.shortTermCount + stats.longTermCount;
+
+      // Emit consolidation event
+      if (result.patternsPromoted > 0 || result.patternsPruned > 0) {
+        console.log(
+          `[HooksLearningDaemon] Consolidated: ${result.patternsPromoted} promoted, ` +
+          `${result.patternsPruned} pruned, ${result.duplicatesRemoved} deduped`
+        );
+      }
+    } catch (error) {
+      console.error('[HooksLearningDaemon] Consolidation failed:', error);
+    }
   }
 
   /**
    * Get learning stats
    */
-  getStats(): { patternsLearned: number; routingAccuracy: number } {
+  getStats(): {
+    patternsLearned: number;
+    routingAccuracy: number;
+    consolidationStats: typeof this.consolidationStats;
+    lastConsolidation: Date | null;
+  } {
     return {
       patternsLearned: this.patternsLearned,
       routingAccuracy: this.routingAccuracy,
+      consolidationStats: { ...this.consolidationStats },
+      lastConsolidation: this.lastConsolidation,
     };
   }
 
@@ -472,6 +520,23 @@ export class HooksLearningDaemon {
    */
   updateRoutingAccuracy(accuracy: number): void {
     this.routingAccuracy = accuracy;
+  }
+
+  /**
+   * Get ReasoningBank stats (if available)
+   */
+  getReasoningBankStats(): any {
+    if (!this.reasoningBank) {
+      return null;
+    }
+    return this.reasoningBank.getStats();
+  }
+
+  /**
+   * Force immediate consolidation
+   */
+  async forceConsolidate(): Promise<void> {
+    await this.consolidate();
   }
 }
 
