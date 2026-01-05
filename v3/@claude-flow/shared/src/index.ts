@@ -29,3 +29,6 @@ export * from './hooks/index.js';
 
 // Security Utilities - Secure random generation, input validation
 export * from './security/index.js';
+
+// Resilience Patterns - Retry, circuit breaker, rate limiting
+export * from './resilience/index.js';
