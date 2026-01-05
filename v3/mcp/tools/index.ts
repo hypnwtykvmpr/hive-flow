@@ -82,6 +82,36 @@ export {
   hooksTools,
 } from './hooks-tools.js';
 
+// Task tools
+export {
+  createTaskTool,
+  listTasksTool,
+  taskStatusTool,
+  cancelTaskTool,
+  assignTaskTool,
+  updateTaskTool,
+  taskDependenciesTool,
+  taskResultsTool,
+  taskTools,
+} from './task-tools.js';
+
+// System tools
+export {
+  systemStatusTool,
+  systemMetricsTool,
+  systemHealthTool,
+  systemInfoTool,
+  systemTools,
+} from './system-tools.js';
+
+// Session tools
+export {
+  saveSessionTool,
+  restoreSessionTool,
+  listSessionsTool,
+  sessionTools,
+} from './session-tools.js';
+
 // ============================================================================
 // Tool Registry
 // ============================================================================
