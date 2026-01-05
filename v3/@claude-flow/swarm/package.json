@@ -2,7 +2,7 @@
   "name": "@claude-flow/swarm",
   "version": "3.0.0-alpha.1",
   "type": "module",
-  "description": "Swarm module - 15-agent coordination, hierarchical mesh, consensus",
+  "description": "Standalone swarm coordination - up to 100+ agents, 4 topologies, hive-mind, consensus",
   "main": "src/index.ts",
   "types": "src/index.ts",
   "exports": {
@@ -13,10 +13,17 @@
     "test": "vitest run",
     "build": "tsc"
   },
-  "dependencies": {
-    "@claude-flow/shared": "workspace:*"
-  },
+  "dependencies": {},
   "devDependencies": {
     "vitest": "^1.0.0"
-  }
+  },
+  "keywords": [
+    "swarm",
+    "multi-agent",
+    "coordination",
+    "consensus",
+    "hive-mind",
+    "distributed",
+    "ai-agents"
+  ]
 }
