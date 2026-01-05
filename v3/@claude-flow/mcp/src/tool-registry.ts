@@ -14,6 +14,7 @@ import type {
   ToolRegistrationOptions,
   ILogger,
 } from './types.js';
+import { validateSchema, formatValidationErrors } from './schema-validator.js';
 
 interface ToolMetadata {
   tool: MCPTool;
@@ -279,6 +280,22 @@ export class ToolRegistry extends EventEmitter {
         content: [{ type: 'text', text: `Tool not found: ${name}` }],
         isError: true,
       };
+    }
+
+    // Validate input against schema (security feature)
+    if (metadata.tool.inputSchema) {
+      const validation = validateSchema(input, metadata.tool.inputSchema);
+      if (!validation.valid) {
+        const errorMsg = formatValidationErrors(validation.errors);
+        this.logger.warn('Tool input validation failed', {
+          name,
+          errors: validation.errors,
+        });
+        return {
+          content: [{ type: 'text', text: `Invalid input: ${errorMsg}` }],
+          isError: true,
+        };
+      }
     }
 
     const execContext: ToolContext = {
