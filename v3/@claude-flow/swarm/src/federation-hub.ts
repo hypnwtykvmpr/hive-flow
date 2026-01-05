@@ -332,16 +332,21 @@ export class FederationHub extends EventEmitter {
       clearInterval(this.cleanupInterval);
     }
 
-    // Terminate all ephemeral agents
-    for (const agent of this.ephemeralAgents.values()) {
-      if (agent.status === 'active' || agent.status === 'spawning') {
-        await this.terminateAgent(agent.id);
-      }
-    }
+    // Terminate all active ephemeral agents using index - O(k) where k = active + spawning
+    const activeIds = this.getAgentIdsByStatus('active');
+    const spawningIds = this.getAgentIdsByStatus('spawning');
+    const toTerminate = [...activeIds, ...spawningIds];
 
+    await Promise.all(toTerminate.map(id => this.terminateAgent(id)));
+
+    // Clear all data structures and indexes
     this.swarms.clear();
     this.ephemeralAgents.clear();
     this.proposals.clear();
+    this.agentsBySwarm.clear();
+    for (const status of this.agentsByStatus.values()) {
+      status.clear();
+    }
   }
 
   // ==========================================================================
