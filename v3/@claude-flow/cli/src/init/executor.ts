@@ -416,7 +416,38 @@ async function writeHelpers(
   result: InitResult
 ): Promise<void> {
   const helpersDir = path.join(targetDir, '.claude', 'helpers');
+  const sourceBaseDir = options.sourceBaseDir;
 
+  // Try to copy existing helpers from source first
+  if (sourceBaseDir) {
+    const sourceHelpersDir = path.join(sourceBaseDir, '.claude', 'helpers');
+    if (fs.existsSync(sourceHelpersDir)) {
+      const helperFiles = fs.readdirSync(sourceHelpersDir);
+      for (const file of helperFiles) {
+        const sourcePath = path.join(sourceHelpersDir, file);
+        const destPath = path.join(helpersDir, file);
+
+        // Skip directories and only copy files
+        if (!fs.statSync(sourcePath).isFile()) continue;
+
+        if (!fs.existsSync(destPath) || options.force) {
+          fs.copyFileSync(sourcePath, destPath);
+
+          // Make shell scripts executable
+          if (file.endsWith('.sh')) {
+            fs.chmodSync(destPath, '755');
+          }
+
+          result.created.files.push(`.claude/helpers/${file}`);
+        } else {
+          result.skipped.push(`.claude/helpers/${file}`);
+        }
+      }
+      return; // Skip generating if we copied from source
+    }
+  }
+
+  // Fall back to generating helpers if source not available
   const helpers: Record<string, string> = {
     'pre-commit': generatePreCommitHook(),
     'post-commit': generatePostCommitHook(),
