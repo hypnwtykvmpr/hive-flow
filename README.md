@@ -668,7 +668,7 @@ export CLAUDE_FLOW_MEMORY_PATH="./data"
 | `CLAUDE_FLOW_MEMORY_PATH` | Directory for persistent memory storage | `./data` |
 | `CLAUDE_FLOW_SECURITY_MODE` | Security level (`strict`, `standard`, `permissive`) | `standard` |
 | `CLAUDE_FLOW_LOG_LEVEL` | Logging verbosity (`debug`, `info`, `warn`, `error`) | `info` |
-| `CLAUDE_FLOW_MAX_AGENTS` | Maximum concurrent agents | `15` |
+| `CLAUDE_FLOW_MAX_AGENTS` | Default concurrent agent limit (increase for more parallelism) | `15` |
 | `CLAUDE_FLOW_TOPOLOGY` | Default swarm topology | `hierarchical` |
 | `CLAUDE_FLOW_HNSW_M` | HNSW index M parameter (connectivity) | `16` |
 | `CLAUDE_FLOW_HNSW_EF` | HNSW search ef parameter (accuracy) | `200` |
