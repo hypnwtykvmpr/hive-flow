@@ -94,7 +94,7 @@ npx claude-flow --list
 
 | Capability | Description | Metrics |
 |------------|-------------|---------|
-| **54+ Specialized Agents** | Purpose-built AI agents for development, testing, security, and operations | 10 agent categories, 15 concurrent |
+| **54+ Specialized Agents** | Purpose-built AI agents for development, testing, security, and operations | 10 categories, unlimited concurrent |
 | **Multi-Topology Swarms** | Hierarchical, mesh, ring, star, and adaptive coordination patterns | 2.8-4.4x speed improvement |
 | **Self-Learning Hooks** | ReasoningBank pattern learning with HNSW vector search | 150x faster retrieval |
 | **MCP Integration** | Native Claude Code support via Model Context Protocol | 27+ tools available |
