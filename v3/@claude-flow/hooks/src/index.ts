@@ -110,7 +110,9 @@ export {
 export {
   WorkerManager,
   WorkerPriority,
+  AlertSeverity,
   WORKER_CONFIGS,
+  DEFAULT_THRESHOLDS,
   createWorkerManager,
   workerManager,
   // Worker factories
@@ -130,7 +132,41 @@ export {
   type WorkerMetrics,
   type WorkerManagerStatus,
   type WorkerHandler,
+  type WorkerAlert,
+  type AlertThreshold,
+  type PersistedWorkerState,
+  type HistoricalMetric,
+  type StatuslineData,
 } from './workers/index.js';
+
+// Workers - MCP Tools
+export {
+  workerMCPTools,
+  createWorkerToolHandler,
+  workerRunTool,
+  workerStatusTool,
+  workerAlertsTool,
+  workerHistoryTool,
+  workerStatuslineTool,
+  workerRunAllTool,
+  workerStartTool,
+  workerStopTool,
+  type MCPToolDefinition,
+  type MCPToolResult,
+} from './workers/mcp-tools.js';
+
+// Workers - Session Integration
+export {
+  onSessionStart,
+  onSessionEnd,
+  formatSessionStartOutput,
+  generateShellHook,
+  getGlobalManager,
+  setGlobalManager,
+  initializeGlobalManager,
+  type SessionHookConfig,
+  type SessionHookResult,
+} from './workers/session-hook.js';
 
 // Version
 export const VERSION = '3.0.0-alpha.1';
