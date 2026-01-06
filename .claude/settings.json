@@ -208,7 +208,7 @@
           {
             "type": "command",
             "timeout": 5000,
-            "command": ".claude/helpers/guidance-hooks.sh session-context"
+            "command": ".claude/helpers/guidance-hooks.sh session-context 2>/dev/null || true"
           }
         ]
       }
