@@ -64,22 +64,24 @@ export interface RegistryStats {
 // Default Implementations
 // ============================================================================
 
-class DefaultEventBus extends EventEmitter implements IEventBus {
-  emit(event: string, data?: unknown): boolean {
-    return super.emit(event, data);
+class DefaultEventBus implements IEventBus {
+  private emitter = new EventEmitter();
+
+  emit(event: string, data?: unknown): void {
+    this.emitter.emit(event, data);
   }
 
   on(event: string, handler: (data?: unknown) => void | Promise<void>): () => void {
-    super.on(event, handler);
+    this.emitter.on(event, handler);
     return () => this.off(event, handler);
   }
 
   off(event: string, handler: (data?: unknown) => void | Promise<void>): void {
-    super.off(event, handler);
+    this.emitter.off(event, handler);
   }
 
   once(event: string, handler: (data?: unknown) => void | Promise<void>): () => void {
-    super.once(event, handler);
+    this.emitter.once(event, handler);
     return () => this.off(event, handler);
   }
 }
