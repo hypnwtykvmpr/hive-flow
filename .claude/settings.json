@@ -193,7 +193,7 @@
           {
             "type": "command",
             "timeout": 3000,
-            "command": ".claude/helpers/daemon-manager.sh start 3 5 2>/dev/null || true"
+            "command": "/workspaces/claude-flow/.claude/helpers/daemon-manager.sh start 3 5 2>/dev/null || true"
           },
           {
             "type": "command",
