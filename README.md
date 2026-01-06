@@ -258,6 +258,37 @@ npx claude-flow --list
 | **ReasoningBankPlugin** | Vector-backed pattern storage with HNSW | 150x faster search |
 | **AgentConfigGeneratorPlugin** | Generates optimized agent configurations | From pretrain data |
 
+### Background Workers (12 Auto-Triggered)
+
+Workers run automatically in the background based on context, or can be dispatched manually via MCP tools.
+
+| Worker | Trigger | Purpose | Auto-Triggers On |
+|--------|---------|---------|------------------|
+| **UltraLearn** | `ultralearn` | Deep knowledge acquisition from codebase | New project, major refactors |
+| **Optimize** | `optimize` | Performance optimization suggestions | Slow operations detected |
+| **Consolidate** | `consolidate` | Memory pattern consolidation | Session end, memory threshold |
+| **Predict** | `predict` | Predictive resource preloading | Usage patterns detected |
+| **Audit** | `audit` | Security vulnerability analysis | Security-related file changes |
+| **Map** | `map` | Codebase structure mapping | New directories, large changes |
+| **Preload** | `preload` | Resource and dependency preloading | Project initialization |
+| **DeepDive** | `deepdive` | Deep code analysis and understanding | Complex file edits |
+| **Document** | `document` | Auto-documentation generation | New functions/classes created |
+| **Refactor** | `refactor` | Refactoring opportunity detection | Code smell patterns |
+| **Benchmark** | `benchmark` | Performance benchmarking | Performance-critical changes |
+| **TestGaps** | `testgaps` | Test coverage gap analysis | Code changes without tests |
+
+**Worker Commands:**
+```bash
+# Dispatch a worker manually
+npx claude-flow worker dispatch --trigger audit --context "./src"
+
+# Check worker status
+npx claude-flow worker status
+
+# View completed results
+npx claude-flow worker results --limit 10
+```
+
 ### LLM Providers (`@claude-flow/providers`)
 
 | Provider | Models | Features | Cost |
