@@ -234,7 +234,7 @@
           {
             "type": "command",
             "timeout": 4000,
-            "command": ".claude/helpers/update-v3-progress.sh status > .claude-flow/last-session-status.txt 2>/dev/null || true"
+            "command": "/workspaces/claude-flow/.claude/helpers/update-v3-progress.sh status > /workspaces/claude-flow/.claude-flow/last-session-status.txt 2>/dev/null || true"
           },
           {
             "type": "command",
