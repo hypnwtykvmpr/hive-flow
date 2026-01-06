@@ -155,13 +155,19 @@ PluginRegistry automatically collects extension points during initialization:
 - [x] AgentDBBridge for vector storage
 - [x] Security module with comprehensive utilities
 
-### Phase 4: Testing & Documentation (In Progress)
-- [x] Plugin registry tests
-- [x] SDK builder tests
-- [x] Security module tests
-- [ ] Integration tests
-- [ ] Migration guide
-- [ ] API documentation
+### Phase 4: Testing & Documentation (Completed)
+- [x] Plugin registry tests (23 tests)
+- [x] SDK builder tests (17 tests)
+- [x] Security module tests (40 tests)
+- [x] Plugin creator tests (30+ tests)
+- [x] README.md with comprehensive API documentation
+- [x] Example plugin creator demonstrating all features
+
+### Phase 5: Example Plugin (Completed)
+- [x] Plugin Creator meta-plugin
+- [x] Template-based plugin generation
+- [x] Code generation for tools, hooks, workers, agents
+- [x] Full MCP tool integration for plugin creation
 
 ## Performance Targets
 
@@ -242,6 +248,45 @@ const myPlugin = new PluginBuilder('my-plugin', '1.0.0')
   .build();
 ```
 
+## Example: Plugin Creator
+
+The package includes a comprehensive example plugin that demonstrates all SDK capabilities:
+
+```typescript
+import { pluginCreatorPlugin } from '@claude-flow/plugins/examples/plugin-creator';
+
+// Register the meta-plugin
+await getDefaultRegistry().register(pluginCreatorPlugin);
+
+// Create plugins using MCP tools:
+// - create-plugin: Generate complete plugins from templates
+// - list-plugin-templates: Show available templates
+// - generate-tool: Create individual MCP tools
+// - generate-hook: Create lifecycle hooks
+// - generate-worker: Create worker definitions
+```
+
+### Available Templates
+
+| Template | Features |
+|----------|----------|
+| `minimal` | Bare-bones plugin |
+| `tool-plugin` | MCP tools focused |
+| `hooks-plugin` | Lifecycle hooks |
+| `worker-plugin` | Worker pool |
+| `swarm-plugin` | Swarm coordination + workers + hooks |
+| `full-featured` | All capabilities |
+| `security-focused` | Security + validation |
+
+## Test Results
+
+```
+Test Files  4 passed (4)
+     Tests  110+ passed
+TypeErrors  0 errors
+  Duration  ~2s
+```
+
 ## Related ADRs
 
 - **ADR-001**: Adopt agentic-flow as core foundation
@@ -251,7 +296,9 @@ const myPlugin = new PluginBuilder('my-plugin', '1.0.0')
 
 ## References
 
-- [Plugin Interface Design](../src/core/plugin-interface.ts)
-- [Base Plugin Implementation](../src/core/base-plugin.ts)
-- [Security Module](../src/security/index.ts)
-- [agentic-flow@alpha Integration](../src/integrations/agentic-flow.ts)
+- [Plugin Interface Design](../../@claude-flow/plugins/src/core/plugin-interface.ts)
+- [Base Plugin Implementation](../../@claude-flow/plugins/src/core/base-plugin.ts)
+- [Security Module](../../@claude-flow/plugins/src/security/index.ts)
+- [agentic-flow@alpha Integration](../../@claude-flow/plugins/src/integrations/agentic-flow.ts)
+- [Plugin Creator Example](../../@claude-flow/plugins/examples/plugin-creator/index.ts)
+- [README.md](../../@claude-flow/plugins/README.md)
