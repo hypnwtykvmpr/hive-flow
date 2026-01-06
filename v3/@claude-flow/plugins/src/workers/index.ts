@@ -110,7 +110,7 @@ export class WorkerInstance extends EventEmitter implements IWorkerInstance {
     this.id = id;
     this.definition = definition;
     this.startTime = Date.now();
-    this.lastActivityTime = Date.now();
+    this._lastActivityTime = Date.now();
     this._metrics = this.initMetrics();
   }
 
@@ -147,7 +147,7 @@ export class WorkerInstance extends EventEmitter implements IWorkerInstance {
 
     this._status = 'busy';
     this._currentTask = task;
-    this.lastActivityTime = Date.now();
+    this._lastActivityTime = Date.now();
     const startTime = Date.now();
 
     try {
