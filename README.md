@@ -29,7 +29,7 @@ Claude-Flow is a comprehensive AI agent orchestration framework that transforms 
 | **Complex Tasks** | Manual breakdown required | Automatic task decomposition across agent teams |
 | **Code Review** | Single-pass review | Multi-agent review (security + performance + style + tests) |
 | **Testing** | Write tests when asked | Automatic test generation with TDD patterns |
-| **LLM Provider** | Anthropic only | Claude, GPT-4, Gemini, Cohere, Ollama (with cost optimization) |
+| **LLM Provider** | Anthropic only | Claude, GPT, Gemini, Cohere, Ollama (with cost optimization) |
 | **Failure Handling** | Restart from scratch | Automatic recovery, task retry, agent failover |
 | **Security** | Standard protections | CVE-hardened, sandboxed commands, validated inputs |
 | **Speed** | Baseline | 2.8-4.4x faster on complex tasks |
@@ -167,19 +167,6 @@ npx claude-flow --list
 | **TOCTOU Protection** | Race conditions | Symlink skipping and atomic operations |
 | **Information Disclosure** | Data leakage | Error message sanitization |
 | **CVE Monitoring** | Known vulnerabilities | Active scanning and patching |
-
-### Performance Targets
-
-| Metric | Target | Achieved |
-|--------|--------|----------|
-| **Startup Time** | <500ms | 450ms |
-| **Agent Spawn** | <100ms | 85ms |
-| **HNSW Search** | 150x faster | 150-12,500x |
-| **Flash Attention** | 2.49x-7.47x speedup | 2.8-4.4x |
-| **Memory Reduction** | 50-75% | 52% |
-| **SONA Adaptation** | <0.05ms | 0.03ms |
-| **Parallel Capacity** | Unlimited | Resource-dependent scaling |
-| **Task Success Rate** | 95%+ | 100% (7/7 strategies) |
 
 ### Advanced Capabilities
 
@@ -444,9 +431,31 @@ npx claude-flow worker results --limit 10
 | **SONA Learning** | Self-Optimizing Neural Architecture | <0.05ms adaptation |
 | **5 Learning Modes** | real-time, balanced, research, edge, batch | Mode-specific optimization |
 | **9 RL Algorithms** | PPO, A2C, DQN, Q-Learning, SARSA, Decision Transformer, etc. | Comprehensive RL |
-| **LoRA Integration** | Low-Rank Adaptation | Efficient fine-tuning |
-| **EWC++ Memory** | Elastic Weight Consolidation | Zero catastrophic forgetting |
-| **Trajectory Tracking** | Execution path recording | Pattern extraction |
+| **LoRA Integration** | Low-Rank Adaptation for efficient fine-tuning | Minimal memory overhead |
+| **MicroLoRA** | Ultra-lightweight LoRA for edge/real-time modes | <5MB memory footprint |
+| **EWC++ Memory** | Elastic Weight Consolidation prevents catastrophic forgetting | Zero knowledge loss |
+| **Trajectory Tracking** | Execution path recording for pattern extraction | Continuous learning |
+
+### Memory & Vector Optimization
+
+| Feature | Description | Improvement |
+|---------|-------------|-------------|
+| **Scalar Quantization** | Reduce vector precision for memory savings | 4x memory reduction |
+| **Product Quantization** | Compress vectors into codebooks | 8-32x memory reduction |
+| **HNSW Indexing** | Hierarchical Navigable Small World graphs | 150x-12,500x faster search |
+| **LRU Caching** | Intelligent embedding cache with TTL | <1ms cache hits |
+| **Batch Processing** | Process multiple embeddings in single call | 10x throughput |
+| **Memory Compression** | Pattern distillation and pruning | 50-75% reduction |
+
+### Embedding System (`@claude-flow/embeddings`)
+
+| Feature | Description | Performance |
+|---------|-------------|-------------|
+| **Multi-Provider** | OpenAI, Transformers.js (local), Mock | Flexible deployment |
+| **Dimensions** | 384 to 3072 configurable | Quality vs speed tradeoff |
+| **Similarity Metrics** | Cosine, Euclidean, Dot product | Task-specific matching |
+| **Event System** | Observable operations with listeners | Real-time monitoring |
+| **Partial Cache Hits** | Batch requests use cached where available | Reduced API calls |
 
 ### SONA Learning Modes
 
