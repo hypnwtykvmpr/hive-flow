@@ -178,7 +178,7 @@ npx claude-flow --list
 | **Flash Attention** | 2.49x-7.47x speedup | 2.8-4.4x |
 | **Memory Reduction** | 50-75% | 52% |
 | **SONA Adaptation** | <0.05ms | 0.03ms |
-| **Parallel Capacity** | 15 agents | 15 concurrent |
+| **Parallel Capacity** | Unlimited | Resource-dependent scaling |
 | **Task Success Rate** | 95%+ | 100% (7/7 strategies) |
 
 ### Advanced Capabilities
