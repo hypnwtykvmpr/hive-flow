@@ -806,8 +806,8 @@ npx claude-flow@v3alpha hooks metrics
 npx claude-flow init --mode basic
 
 # V3 (new)
-npx claude-flow init
-npx claude-flow hooks pretrain  # Bootstrap learning
+npx claude-flow@v3alpha init
+npx claude-flow@v3alpha hooks pretrain  # Bootstrap learning
 ```
 
 ### API Changes
