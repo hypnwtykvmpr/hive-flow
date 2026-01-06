@@ -621,7 +621,7 @@ v3/
 | Average task duration | 0.15-0.30 seconds |
 | Memory usage per agent | 128-320 MB |
 | CPU utilization | 15-30% per agent |
-| Parallel agent capacity | Up to 15 concurrent |
+| Parallel agent capacity | Unlimited (resource-dependent) |
 
 ### Topology Performance
 
