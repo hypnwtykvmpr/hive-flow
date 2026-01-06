@@ -164,7 +164,7 @@ export class HookRegistry extends EventEmitter {
 
         // Pass modified data to next hook
         if (result.modified && result.data !== undefined) {
-          context.data = result.data;
+          (context as { data: unknown }).data = result.data;
         }
       }
     }
