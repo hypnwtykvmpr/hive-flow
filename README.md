@@ -38,7 +38,7 @@ Claude-Flow is a comprehensive AI agent orchestration framework that transforms 
 
 - **54+ Specialized Agents** - Ready-to-use AI agents for coding, code review, testing, security audits, documentation, and DevOps tasks. Each agent is optimized for its specific role.
 
-- **Coordinated Agent Teams** - Run up to 15 agents simultaneously in organized swarms. Agents communicate, share context, and divide work automatically using patterns like hierarchical (boss/worker) or mesh (peer-to-peer).
+- **Coordinated Agent Teams** - Run unlimited agents simultaneously in organized swarms. Agents can spawn sub-workers, communicate, share context, and divide work automatically using patterns like hierarchical (queen/workers) or mesh (peer-to-peer).
 
 - **Learns From Your Workflow** - The system remembers what works. Successful patterns are stored and reused, routing similar tasks to the best-performing agents. Gets smarter over time.
 
