@@ -1,4 +1,4 @@
-# Claude Code Configuration - Agentic Flow
+# Claude Code Configuration - SPARC Development Environment
 
 ## 🚨 CRITICAL: CONCURRENT EXECUTION & FILE MANAGEMENT
 
@@ -45,33 +45,46 @@
 - `/scripts` - Utility scripts
 - `/examples` - Example code
 
-## 🚀 Quick Start
+## Project Overview
 
-```bash
-# Start MCP server for Claude Code integration
-npx agentic-flow@alpha mcp start
+This project uses SPARC (Specification, Pseudocode, Architecture, Refinement, Completion) methodology with Claude-Flow orchestration for systematic Test-Driven Development.
 
-# Run an agent directly
-npx agentic-flow@alpha --agent coder --task "Your task here"
+## SPARC Commands
 
-# List available agents
-npx agentic-flow@alpha --list
-```
+### Core Commands
+- `npx claude-flow sparc modes` - List available modes
+- `npx claude-flow sparc run <mode> "<task>"` - Execute specific mode
+- `npx claude-flow sparc tdd "<feature>"` - Run complete TDD workflow
+- `npx claude-flow sparc info <mode>` - Get mode details
 
-## 🚀 Available Agents (54+ Total)
+### Batchtools Commands
+- `npx claude-flow sparc batch <modes> "<task>"` - Parallel execution
+- `npx claude-flow sparc pipeline "<task>"` - Full pipeline processing
+- `npx claude-flow sparc concurrent <mode> "<tasks-file>"` - Multi-task processing
 
-### 🆕 V3 Specialized Swarm Agents
-**15-Agent Concurrent Implementation:**
-- `queen-coordinator` - V3 orchestration & GitHub issue management
-- `security-architect` - Security architecture & threat modeling
-- `security-auditor` - CVE remediation & security testing
-- `memory-specialist` - AgentDB unification (150x-12,500x faster)
-- `swarm-specialist` - Unified coordination engine
-- `integration-architect` - agentic-flow@alpha deep integration
-- `performance-engineer` - 2.49x-7.47x optimization targets
-- `core-architect` - Domain-driven design restructure
-- `test-architect` - TDD London School methodology
-- `project-coordinator` - Cross-domain coordination
+### Build Commands
+- `npm run build` - Build project
+- `npm run test` - Run tests
+- `npm run lint` - Linting
+- `npm run typecheck` - Type checking
+
+## SPARC Workflow Phases
+
+1. **Specification** - Requirements analysis (`sparc run spec-pseudocode`)
+2. **Pseudocode** - Algorithm design (`sparc run spec-pseudocode`)
+3. **Architecture** - System design (`sparc run architect`)
+4. **Refinement** - TDD implementation (`sparc tdd`)
+5. **Completion** - Integration (`sparc run integration`)
+
+## Code Style & Best Practices
+
+- **Modular Design**: Files under 500 lines
+- **Environment Safety**: Never hardcode secrets
+- **Test-First**: Write tests before implementation
+- **Clean Architecture**: Separate concerns
+- **Documentation**: Keep updated
+
+## 🚀 Available Agents (54 Total)
 
 ### Core Development
 `coder`, `reviewer`, `tester`, `planner`, `researcher`
@@ -93,6 +106,12 @@ npx agentic-flow@alpha --list
 
 ### Specialized Development
 `backend-dev`, `mobile-dev`, `ml-developer`, `cicd-engineer`, `api-docs`, `system-architect`, `code-analyzer`, `base-template-generator`
+
+### Testing & Validation
+`tdd-london-swarm`, `production-validator`
+
+### Migration & Planning
+`migration-planner`, `swarm-init`
 
 ## 🎯 Claude Code vs MCP Tools
 
@@ -119,6 +138,15 @@ npx agentic-flow@alpha --list
 
 **KEY**: MCP coordinates the strategy, Claude Code's Task tool executes with real agents.
 
+## 🚀 Quick Setup
+
+```bash
+# Add MCP servers (Claude Flow required, others optional)
+claude mcp add claude-flow npx claude-flow@alpha mcp start
+claude mcp add ruv-swarm npx ruv-swarm mcp start  # Optional: Enhanced coordination
+claude mcp add flow-nexus npx flow-nexus@latest mcp start  # Optional: Cloud features
+```
+
 ## MCP Tool Categories
 
 ### Coordination
@@ -133,49 +161,127 @@ npx agentic-flow@alpha --list
 ### GitHub Integration
 `github_swarm`, `repo_analyze`, `pr_enhance`, `issue_triage`, `code_review`
 
-## 🧠 Self-Learning Hooks System
+### System
+`benchmark_run`, `features_detect`, `swarm_monitor`
 
-### Available Hooks Commands:
-```bash
-# Before editing - get context and agent suggestions
-npx agentic-flow@alpha hooks pre-edit <filePath>
+### Flow-Nexus MCP Tools (Optional Advanced Features)
+Flow-Nexus extends MCP capabilities with 70+ cloud-based orchestration tools:
 
-# After editing - record outcome for learning
-npx agentic-flow@alpha hooks post-edit <filePath> --success true
+**Key MCP Tool Categories:**
+- **Swarm & Agents**: `swarm_init`, `swarm_scale`, `agent_spawn`, `task_orchestrate`
+- **Sandboxes**: `sandbox_create`, `sandbox_execute`, `sandbox_upload` (cloud execution)
+- **Templates**: `template_list`, `template_deploy` (pre-built project templates)
+- **Neural AI**: `neural_train`, `neural_patterns`, `seraphina_chat` (AI assistant)
+- **GitHub**: `github_repo_analyze`, `github_pr_manage` (repository management)
+- **Real-time**: `execution_stream_subscribe`, `realtime_subscribe` (live monitoring)
+- **Storage**: `storage_upload`, `storage_list` (cloud file management)
 
-# Before commands - assess risk
-npx agentic-flow@alpha hooks pre-command "<command>"
+**Authentication Required:**
+- Register: `mcp__flow-nexus__user_register` or `npx flow-nexus@latest register`
+- Login: `mcp__flow-nexus__user_login` or `npx flow-nexus@latest login`
+- Access 70+ specialized MCP tools for advanced orchestration
 
-# After commands - record outcome
-npx agentic-flow@alpha hooks post-command "<command>" --success true
+## 🚀 Agent Execution Flow with Claude Code
 
-# Route task to optimal agent using learned patterns
-npx agentic-flow@alpha hooks route "<task description>"
+### The Correct Pattern:
 
-# Explain routing decision with transparency
-npx agentic-flow@alpha hooks explain "<task description>"
+1. **Optional**: Use MCP tools to set up coordination topology
+2. **REQUIRED**: Use Claude Code's Task tool to spawn agents that do actual work
+3. **REQUIRED**: Each agent runs hooks for coordination
+4. **REQUIRED**: Batch all operations in single messages
 
-# Bootstrap intelligence from repository
-npx agentic-flow@alpha hooks pretrain
+### Example Full-Stack Development:
 
-# Generate optimized agent configs from pretrain data
-npx agentic-flow@alpha hooks build-agents
-
-# View learning metrics dashboard
-npx agentic-flow@alpha hooks metrics
-
-# Transfer patterns from another project
-npx agentic-flow@alpha hooks transfer <sourceProject>
-
-# RuVector intelligence (SONA, MoE, HNSW 150x faster)
-npx agentic-flow@alpha hooks intelligence
+```javascript
+// Single message with all agent spawning via Claude Code's Task tool
+[Parallel Agent Execution]:
+  Task("Backend Developer", "Build REST API with Express. Use hooks for coordination.", "backend-dev")
+  Task("Frontend Developer", "Create React UI. Coordinate with backend via memory.", "coder")
+  Task("Database Architect", "Design PostgreSQL schema. Store schema in memory.", "code-analyzer")
+  Task("Test Engineer", "Write Jest tests. Check memory for API contracts.", "tester")
+  Task("DevOps Engineer", "Setup Docker and CI/CD. Document in memory.", "cicd-engineer")
+  Task("Security Auditor", "Review authentication. Report findings via hooks.", "reviewer")
+  
+  // All todos batched together
+  TodoWrite { todos: [...8-10 todos...] }
+  
+  // All file operations together
+  Write "backend/server.js"
+  Write "frontend/App.jsx"
+  Write "database/schema.sql"
 ```
 
-### Pretraining System (4-Step Pipeline):
-1. **RETRIEVE** - Top-k memory injection with MMR diversity
-2. **JUDGE** - LLM-as-judge trajectory evaluation
-3. **DISTILL** - Extract strategy memories from trajectories
-4. **CONSOLIDATE** - Dedup, detect contradictions, prune old patterns
+## 📋 Agent Coordination Protocol
+
+### Every Agent Spawned via Task Tool MUST:
+
+**1️⃣ BEFORE Work:**
+```bash
+npx claude-flow@alpha hooks pre-task --description "[task]"
+npx claude-flow@alpha hooks session-restore --session-id "swarm-[id]"
+```
+
+**2️⃣ DURING Work:**
+```bash
+npx claude-flow@alpha hooks post-edit --file "[file]" --memory-key "swarm/[agent]/[step]"
+npx claude-flow@alpha hooks notify --message "[what was done]"
+```
+
+**3️⃣ AFTER Work:**
+```bash
+npx claude-flow@alpha hooks post-task --task-id "[task]"
+npx claude-flow@alpha hooks session-end --export-metrics true
+```
+
+## 🎯 Concurrent Execution Examples
+
+### ✅ CORRECT WORKFLOW: MCP Coordinates, Claude Code Executes
+
+```javascript
+// Step 1: MCP tools set up coordination (optional, for complex tasks)
+[Single Message - Coordination Setup]:
+  mcp__claude-flow__swarm_init { topology: "mesh", maxAgents: 6 }
+  mcp__claude-flow__agent_spawn { type: "researcher" }
+  mcp__claude-flow__agent_spawn { type: "coder" }
+  mcp__claude-flow__agent_spawn { type: "tester" }
+
+// Step 2: Claude Code Task tool spawns ACTUAL agents that do the work
+[Single Message - Parallel Agent Execution]:
+  // Claude Code's Task tool spawns real agents concurrently
+  Task("Research agent", "Analyze API requirements and best practices. Check memory for prior decisions.", "researcher")
+  Task("Coder agent", "Implement REST endpoints with authentication. Coordinate via hooks.", "coder")
+  Task("Database agent", "Design and implement database schema. Store decisions in memory.", "code-analyzer")
+  Task("Tester agent", "Create comprehensive test suite with 90% coverage.", "tester")
+  Task("Reviewer agent", "Review code quality and security. Document findings.", "reviewer")
+  
+  // Batch ALL todos in ONE call
+  TodoWrite { todos: [
+    {id: "1", content: "Research API patterns", status: "in_progress", priority: "high"},
+    {id: "2", content: "Design database schema", status: "in_progress", priority: "high"},
+    {id: "3", content: "Implement authentication", status: "pending", priority: "high"},
+    {id: "4", content: "Build REST endpoints", status: "pending", priority: "high"},
+    {id: "5", content: "Write unit tests", status: "pending", priority: "medium"},
+    {id: "6", content: "Integration tests", status: "pending", priority: "medium"},
+    {id: "7", content: "API documentation", status: "pending", priority: "low"},
+    {id: "8", content: "Performance optimization", status: "pending", priority: "low"}
+  ]}
+  
+  // Parallel file operations
+  Bash "mkdir -p app/{src,tests,docs,config}"
+  Write "app/package.json"
+  Write "app/src/server.js"
+  Write "app/tests/server.test.js"
+  Write "app/docs/API.md"
+```
+
+### ❌ WRONG (Multiple Messages):
+```javascript
+Message 1: mcp__claude-flow__swarm_init
+Message 2: Task("agent 1")
+Message 3: TodoWrite { todos: [single todo] }
+Message 4: Write "file.js"
+// This breaks parallel coordination!
+```
 
 ## Performance Benefits
 
@@ -183,6 +289,29 @@ npx agentic-flow@alpha hooks intelligence
 - **32.3% token reduction**
 - **2.8-4.4x speed improvement**
 - **27+ neural models**
+
+## Hooks Integration
+
+### Pre-Operation
+- Auto-assign agents by file type
+- Validate commands for safety
+- Prepare resources automatically
+- Optimize topology by complexity
+- Cache searches
+
+### Post-Operation
+- Auto-format code
+- Train neural patterns
+- Update memory
+- Analyze performance
+- Track token usage
+
+### Session Management
+- Generate summaries
+- Persist state
+- Track metrics
+- Restore context
+- Export workflows
 
 ## Advanced Features (v2.0.0)
 
@@ -195,495 +324,25 @@ npx agentic-flow@alpha hooks intelligence
 - 💾 Cross-Session Memory
 - 🔗 GitHub Integration
 
-## 🆚 V3 Development Guide
-
-### 🎯 V3 Implementation Strategy
-
-**Based on 10 Architecture Decision Records (ADRs):**
-- **ADR-001**: Adopt agentic-flow as core foundation (eliminate 10,000+ duplicate lines)
-- **ADR-002**: Domain-Driven Design structure (bounded contexts)
-- **ADR-003**: Single coordination engine (unified SwarmCoordinator)
-- **ADR-004**: Plugin-based architecture (microkernel pattern)
-- **ADR-005**: MCP-first API design (consistent interfaces)
-- **ADR-006**: Unified memory service (AgentDB integration)
-- **ADR-007**: Event sourcing for state changes (audit trail)
-- **ADR-008**: Vitest over Jest (10x faster testing)
-- **ADR-009**: Hybrid memory backend default (SQLite + AgentDB)
-- **ADR-010**: Remove Deno support (Node.js 20+ focus)
-
-### 🛠️ V3 Agent Usage Patterns
-
-**15-Agent Concurrent Swarm Commands:**
-```bash
-# Initialize v3 swarm (hierarchical mesh)
-npx agentic-flow@alpha hooks init --v3-mode
-
-# Spawn Queen Coordinator (manages all 15 agents)
-npx agentic-flow@alpha agent spawn queen-coordinator --id 1
-
-# Security Domain (Critical Priority - Agents #2-4)
-npx agentic-flow@alpha agent spawn security-architect --id 2 &
-npx agentic-flow@alpha agent spawn security-auditor --cve-focus &
-npx agentic-flow@alpha agent spawn test-architect --security-tdd &
-
-# Core Domain (Agents #5-9)
-npx agentic-flow@alpha agent spawn core-architect --ddd-patterns &
-npx agentic-flow@alpha agent spawn memory-specialist --agentdb-integration &
-npx agentic-flow@alpha agent spawn swarm-specialist --unified-coordinator &
-
-# Integration & Performance (Agents #10-15)
-npx agentic-flow@alpha agent spawn integration-architect --agentic-flow-alpha &
-npx agentic-flow@alpha agent spawn performance-engineer --2.49x-target &
-
-# Wait for all agents to complete phase
-wait
-```
-
-### 📊 V3 Performance Targets
-- **Flash Attention**: 2.49x-7.47x speedup
-- **AgentDB Search**: 150x-12,500x improvement
-- **Memory Reduction**: 50-75%
-- **Code Reduction**: <5,000 lines (vs 15,000+)
-- **Startup Time**: <500ms
-- **SONA Learning**: <0.05ms adaptation
-
-### 🏗️ V3 Domain Structure
-```
-src/
-├── agent-lifecycle/      # Bounded Context 1
-│   ├── domain/          # Business logic
-│   ├── application/     # Use cases
-│   ├── infrastructure/  # Persistence
-│   └── api/            # CLI, MCP interfaces
-├── task-execution/      # Bounded Context 2
-├── memory-management/   # Bounded Context 3
-├── coordination/        # Bounded Context 4
-├── shared-kernel/       # Shared utilities
-└── infrastructure/      # Cross-cutting concerns
-```
-
-### 🔧 V3 Development Commands
-```bash
-# V3-specific agent builds
-npx agentic-flow@alpha hooks build-agents --focus "v3-implementation"
-
-# Security-first approach
-npx agentic-flow@alpha hooks build-agents --focus "security"
-
-# Performance optimization
-npx agentic-flow@alpha hooks build-agents --focus "performance"
-
-# Route tasks to optimal v3 agents
-npx agentic-flow@alpha hooks route "Implement unified memory service for v3"
-
-# Monitor v3 swarm performance
-npx agentic-flow@alpha hooks metrics --v3-dashboard
-```
-
-## 🏗️ V3 Module Constellation Architecture
-
-### **Modular Design Philosophy**
-V3 implements a **constellation of @claude-flow modules** in `/v3/module-names/` for maximum flexibility, security, and cross-platform compatibility.
-
-### **Module Structure**
-```
-v3/
-├── @claude-flow/security/          # Security module (CVE fixes, patterns)
-├── @claude-flow/memory/            # AgentDB unification module
-├── @claude-flow/integration/       # agentic-flow@alpha integration
-├── @claude-flow/performance/       # Optimization & benchmarking
-├── @claude-flow/swarm/             # 15-agent coordination
-├── @claude-flow/cli/               # CLI modernization
-├── @claude-flow/neural/            # SONA learning integration
-├── @claude-flow/testing/           # TDD London School framework
-├── @claude-flow/deployment/        # Release & CI/CD
-└── @claude-flow/shared/            # Shared utilities & types
-```
-
-### **Cross-Platform Module Commands**
-
-#### **Windows (PowerShell/CMD)**
-```powershell
-# Security module
-npx @claude-flow/security@latest audit --platform windows
-npm run security:scan --if-present
-
-# Memory module
-npx @claude-flow/memory@latest unify --backend agentdb
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-
-# Integration module
-npx @claude-flow/integration@latest --agentic-flow-version alpha
-$env:CLAUDE_FLOW_MODE = "integration"
-```
-
-#### **macOS (Bash/Zsh)**
-```bash
-# Security module
-npx @claude-flow/security@latest audit --platform darwin
-export CLAUDE_FLOW_SECURITY_MODE="strict"
-
-# Memory module
-npx @claude-flow/memory@latest unify --backend agentdb
-export CLAUDE_FLOW_MEMORY_PATH="./data"
-
-# Integration module
-npx @claude-flow/integration@latest --agentic-flow-version alpha
-export CLAUDE_FLOW_MODE="integration"
-```
-
-#### **Linux (Bash)**
-```bash
-# Security module
-npx @claude-flow/security@latest audit --platform linux
-export CLAUDE_FLOW_SECURITY_MODE="strict"
-
-# Memory module
-npx @claude-flow/memory@latest unify --backend agentdb
-export CLAUDE_FLOW_MEMORY_PATH="./data"
-
-# Performance module
-npx @claude-flow/performance@latest benchmark --target "2.49x-7.47x"
-ulimit -n 65536  # Increase file descriptor limit
-```
-
-### **Module Installation & Usage**
-
-#### **Individual Module Installation**
-```bash
-# Install specific modules
-npm install @claude-flow/security@latest
-npm install @claude-flow/memory@latest
-npm install @claude-flow/integration@latest
-
-# Or install all v3 modules
-npm install @claude-flow/v3-complete@latest
-```
-
-#### **Module Composition**
-```typescript
-// v3/main.ts - Module orchestration
-import { SecurityModule } from '@claude-flow/security';
-import { MemoryModule } from '@claude-flow/memory';
-import { IntegrationModule } from '@claude-flow/integration';
-import { PerformanceModule } from '@claude-flow/performance';
-import { SwarmModule } from '@claude-flow/swarm';
-
-class V3ClaudeFlow {
-  constructor() {
-    this.security = new SecurityModule({ strict: true });
-    this.memory = new MemoryModule({ backend: 'agentdb' });
-    this.integration = new IntegrationModule({
-      agentic: { version: 'alpha' }
-    });
-    this.performance = new PerformanceModule({
-      targets: { flashAttention: '2.49x-7.47x' }
-    });
-    this.swarm = new SwarmModule({
-      topology: 'hierarchical-mesh',
-      agents: 15
-    });
-  }
-
-  async initialize(): Promise<void> {
-    // Initialize in dependency order
-    await this.security.initialize();
-    await this.memory.initialize();
-    await this.integration.initialize();
-    await this.performance.initialize();
-    await this.swarm.initialize();
-  }
-}
-```
-
-## 🛡️ V3 Security Guidelines
-
-### **Security-First Development**
-```bash
-# Pre-commit security checks (all platforms)
-npm run security:pre-commit
-npx @claude-flow/security audit --strict
-
-# CVE scanning
-npm audit --audit-level high
-npx @claude-flow/security cve-scan --fix-critical
-```
-
-### **Environment-Specific Security**
-
-#### **Windows Security**
-```powershell
-# Enable Windows Defender scanning
-Add-MpPreference -ExclusionPath ".\node_modules" -Force
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-
-# Windows-specific security checks
-npx @claude-flow/security@latest --platform windows --check-acl
-Get-Acl -Path ".\v3" | Format-List
-```
-
-#### **macOS Security**
-```bash
-# macOS keychain integration
-security add-generic-password -a claude-flow -s claude-flow-v3 -w
-export CLAUDE_FLOW_KEYCHAIN="claude-flow-v3"
-
-# macOS-specific security
-npx @claude-flow/security@latest --platform darwin --check-gatekeeper
-codesign --verify --deep ./v3/
-```
-
-#### **Linux Security**
-```bash
-# SELinux/AppArmor compatibility
-npx @claude-flow/security@latest --platform linux --check-selinux
-sestatus # Check SELinux status
-
-# File permissions security
-chmod 750 ./v3/
-chown -R $USER:$USER ./v3/
-```
-
-### **Secure Module Configuration**
-```typescript
-// v3/config/security.ts
-export const securityConfig = {
-  // Input validation
-  validation: {
-    maxInputSize: 10000,
-    allowedChars: /^[a-zA-Z0-9._\-\s]+$/,
-    sanitizeHtml: true
-  },
-
-  // Path security
-  paths: {
-    allowedDirectories: ['./v3/', './src/', './tests/'],
-    blockedPatterns: ['../', '~/', '/etc/', '/tmp/'],
-    maxPathLength: 255
-  },
-
-  // Command execution
-  execution: {
-    shell: false,
-    timeout: 30000,
-    allowedCommands: ['npm', 'npx', 'node', 'git'],
-    blockedCommands: ['rm', 'del', 'format', 'dd']
-  },
-
-  // Network security
-  network: {
-    allowedHosts: ['api.anthropic.com', 'github.com'],
-    requireHttps: true,
-    timeoutMs: 10000
-  },
-
-  // Memory security
-  memory: {
-    maxHeapSize: '2GB',
-    enableGC: true,
-    clearSensitiveData: true
-  }
-};
-```
-
-### **Credential Management**
-```bash
-# Environment-specific credential setup
-## Windows
-setx CLAUDE_FLOW_API_KEY "your-secure-key"
-setx CLAUDE_FLOW_ENV "production"
-
-## macOS/Linux
-export CLAUDE_FLOW_API_KEY="your-secure-key"
-export CLAUDE_FLOW_ENV="production"
-
-# Secure credential validation
-npx @claude-flow/security validate-credentials --env production
-```
-
-## 🌍 Multi-Environment Support
-
-### **Platform Detection & Adaptation**
-```typescript
-// v3/utils/platform.ts
-export class PlatformAdapter {
-  static detect(): 'windows' | 'darwin' | 'linux' {
-    return process.platform as any;
-  }
-
-  static getCommands() {
-    switch (this.detect()) {
-      case 'windows':
-        return {
-          shell: 'powershell.exe',
-          npm: 'npm.cmd',
-          npx: 'npx.cmd'
-        };
-      case 'darwin':
-      case 'linux':
-        return {
-          shell: '/bin/bash',
-          npm: 'npm',
-          npx: 'npx'
-        };
-    }
-  }
-
-  static getPaths() {
-    const platform = this.detect();
-    return {
-      home: platform === 'windows' ? process.env.USERPROFILE : process.env.HOME,
-      sep: platform === 'windows' ? '\\' : '/',
-      config: platform === 'windows'
-        ? path.join(process.env.APPDATA!, 'claude-flow')
-        : path.join(process.env.HOME!, '.claude-flow')
-    };
-  }
-}
-```
-
-### **Cross-Platform Module Scripts**
-```json
-// package.json - Cross-platform scripts
-{
-  "scripts": {
-    "v3:security": "npx @claude-flow/security audit",
-    "v3:security:win": "powershell -Command \"npx @claude-flow/security audit --platform windows\"",
-    "v3:security:unix": "npx @claude-flow/security audit --platform $(uname -s | tr '[:upper:]' '[:lower:]')",
-
-    "v3:memory": "npx @claude-flow/memory unify --backend agentdb",
-    "v3:memory:win": "set CLAUDE_FLOW_MEMORY_PATH=.\\data && npm run v3:memory",
-    "v3:memory:unix": "CLAUDE_FLOW_MEMORY_PATH=./data npm run v3:memory",
-
-    "v3:performance": "npx @claude-flow/performance benchmark",
-    "v3:performance:win": "powershell -Command \"npx @claude-flow/performance benchmark --platform windows\"",
-    "v3:performance:unix": "npx @claude-flow/performance benchmark --platform $(uname)",
-
-    "v3:swarm": "npx @claude-flow/swarm coordinate --agents 15",
-    "v3:integration": "npx @claude-flow/integration --agentic-flow-version alpha",
-
-    "v3:full-stack": "npm-run-all --parallel v3:security v3:memory v3:integration v3:performance"
-  }
-}
-```
-
-### **Environment-Specific Configuration**
-```typescript
-// v3/config/environment.ts
-export class EnvironmentConfig {
-  static getConfig() {
-    const platform = process.platform;
-    const env = process.env.NODE_ENV || 'development';
-
-    const baseConfig = {
-      security: { strict: env === 'production' },
-      memory: { backend: 'agentdb' },
-      performance: { targets: { flashAttention: '2.49x-7.47x' } }
-    };
-
-    const platformConfig = {
-      win32: {
-        paths: { separator: '\\', config: process.env.APPDATA },
-        commands: { shell: 'powershell.exe' },
-        security: { useWindowsACL: true }
-      },
-      darwin: {
-        paths: { separator: '/', config: '~/.claude-flow' },
-        commands: { shell: '/bin/bash' },
-        security: { useKeychain: true }
-      },
-      linux: {
-        paths: { separator: '/', config: '~/.claude-flow' },
-        commands: { shell: '/bin/bash' },
-        security: { useSELinux: true }
-      }
-    };
-
-    return {
-      ...baseConfig,
-      platform: platformConfig[platform] || platformConfig.linux
-    };
-  }
-}
-```
-
-## 📦 V3 Module Development Workflow
-
-### **Module Development Commands**
-```bash
-# Create new v3 module
-npx @claude-flow/cli create-module --name "@claude-flow/my-module"
-
-# Test module across platforms
-npm run test:cross-platform
-npm run test:windows    # Windows-specific tests
-npm run test:darwin     # macOS-specific tests
-npm run test:linux      # Linux-specific tests
-
-# Build and publish module
-npm run build:multi-platform
-npm publish --tag v3-latest
-```
-
-### **Module Testing Framework**
-```typescript
-// v3/testing/cross-platform.test.ts
-describe('V3 Cross-Platform Compatibility', () => {
-  test('should work on Windows', async () => {
-    if (process.platform !== 'win32') return;
-
-    const result = await executeModule('@claude-flow/security', {
-      platform: 'windows'
-    });
-
-    expect(result.success).toBe(true);
-    expect(result.windowsSpecific).toBeDefined();
-  });
-
-  test('should work on macOS', async () => {
-    if (process.platform !== 'darwin') return;
-
-    const result = await executeModule('@claude-flow/security', {
-      platform: 'darwin'
-    });
-
-    expect(result.success).toBe(true);
-    expect(result.keychainIntegration).toBe(true);
-  });
-
-  test('should work on Linux', async () => {
-    if (process.platform !== 'linux') return;
-
-    const result = await executeModule('@claude-flow/security', {
-      platform: 'linux'
-    });
-
-    expect(result.success).toBe(true);
-    expect(result.linuxSpecific).toBeDefined();
-  });
-});
-```
-
-## Code Style & Best Practices
-
-- **Domain-Driven Design**: Clear bounded contexts (ADR-002)
-- **Modular Design**: Files under 500 lines
-- **Security-First**: Address CVE-1, CVE-2, CVE-3 immediately
-- **agentic-flow Integration**: Build on, don't duplicate (ADR-001)
-- **Event Sourcing**: Critical state changes for audit (ADR-007)
-- **TDD London School**: Mock-first approach
-- **Performance Conscious**: Target 2.49x-7.47x improvements
-- **Environment Safety**: Never hardcode secrets
-- **Documentation**: Keep updated with ADR decisions
+## Integration Tips
+
+1. Start with basic swarm init
+2. Scale agents gradually
+3. Use memory for context
+4. Monitor progress regularly
+5. Train patterns from success
+6. Enable hooks automation
+7. Use GitHub tools first
 
 ## Support
 
-- Documentation: https://github.com/ruvnet/agentic-flow
-- Issues: https://github.com/ruvnet/agentic-flow/issues
+- Documentation: https://github.com/ruvnet/claude-flow
+- Issues: https://github.com/ruvnet/claude-flow/issues
+- Flow-Nexus Platform: https://flow-nexus.ruv.io (registration required for cloud features)
 
 ---
 
-Remember: **Agentic Flow coordinates, Claude Code creates!**
+Remember: **Claude Flow coordinates, Claude Code creates!**
 
 # important-instruction-reminders
 Do what has been asked; nothing more, nothing less.
@@ -691,4 +350,3 @@ NEVER create files unless they're absolutely necessary for achieving your goal.
 ALWAYS prefer editing an existing file to creating a new one.
 NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
 Never save working files, text/mds and tests to the root folder.
-Always wait for concurrent tasks/agents to complete before gather all the findings, don't frequently check.
