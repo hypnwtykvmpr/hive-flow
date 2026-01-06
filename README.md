@@ -21,7 +21,6 @@ Multi-agent AI orchestration framework for Claude Code with swarm coordination, 
 
 - **Node.js 18+** (LTS recommended)
 - **npm 9+** or equivalent package manager
-- **Windows users**: See [Windows Installation Guide](./docs/windows-installation.md)
 
 **IMPORTANT**: Claude Code must be installed first:
 
@@ -223,6 +222,196 @@ npx claude-flow --list
 | **MCPToolOptimizerPlugin** | Optimizes MCP tool selection | Context-aware suggestions |
 | **ReasoningBankPlugin** | Vector-backed pattern storage with HNSW | 150x faster search |
 | **AgentConfigGeneratorPlugin** | Generates optimized agent configurations | From pretrain data |
+
+### LLM Providers (`@claude-flow/providers`)
+
+| Provider | Models | Features | Cost |
+|----------|--------|----------|------|
+| **Anthropic** | Claude 3.5 Sonnet, Claude 3 Opus, Claude 3 Haiku | Native, streaming, tool calling | $3-15/1M tokens |
+| **OpenAI** | GPT-4o, GPT-4 Turbo, GPT-3.5, o1-preview, o3-mini | Function calling, vision | $0.50-60/1M tokens |
+| **Google** | Gemini 2.0 Flash, Gemini 1.5 Pro/Flash | Multimodal, long context | $0.075-7/1M tokens |
+| **Cohere** | Command R+, Command R, Command Light | RAG optimized | $0.50-15/1M tokens |
+| **Ollama** | Llama 3.2, Mistral, CodeLlama, DeepSeek | Local, free, offline | Free |
+| **RuVector** | Custom models via @ruvector/ruvllm | WASM optimized | Custom |
+
+### Provider Load Balancing
+
+| Strategy | Description | Best For |
+|----------|-------------|----------|
+| `round-robin` | Rotate through providers sequentially | Even distribution |
+| `least-loaded` | Use provider with lowest current load | High throughput |
+| `latency-based` | Use fastest responding provider | Low latency |
+| `cost-based` | Use cheapest provider that meets requirements | Cost optimization (85%+ savings) |
+
+### Embedding Providers (`@claude-flow/embeddings`)
+
+| Provider | Models | Dimensions | Latency | Cost |
+|----------|--------|------------|---------|------|
+| **OpenAI** | text-embedding-3-small/large, ada-002 | 1536-3072 | ~50-100ms | $0.02-0.13/1M tokens |
+| **Transformers.js** | all-MiniLM-L6-v2, all-mpnet-base-v2, bge-small | 384-768 | ~20-50ms | Free (local) |
+| **Mock** | Deterministic hash-based | Configurable | <1ms | Free |
+
+### Embedding Features
+
+| Feature | Description | Performance |
+|---------|-------------|-------------|
+| **LRU Caching** | Intelligent cache with hit rate tracking | <1ms cache hits |
+| **Batch Processing** | Efficient batch embedding with partial cache | 10 items <500ms |
+| **Similarity Functions** | Cosine, Euclidean, Dot product | Optimized math |
+| **Event System** | Observable operations with listeners | Real-time monitoring |
+
+### Consensus Strategies (`@claude-flow/swarm`)
+
+| Strategy | Algorithm | Fault Tolerance | Latency | Best For |
+|----------|-----------|-----------------|---------|----------|
+| **Byzantine (PBFT)** | Practical Byzantine Fault Tolerance | f < n/3 faulty nodes | ~100ms | Adversarial environments |
+| **Raft** | Leader-based log replication | f < n/2 failures | ~50ms | Strong consistency |
+| **Gossip** | Epidemic protocol dissemination | High partition tolerance | ~200ms | Eventually consistent |
+| **CRDT** | Conflict-free Replicated Data Types | Strong eventual consistency | ~10ms | Concurrent updates |
+| **Quorum** | Configurable read/write quorums | Flexible | ~75ms | Tunable consistency |
+
+### CLI Commands (`@claude-flow/cli`)
+
+| Command | Subcommands | Description |
+|---------|-------------|-------------|
+| `init` | 4 | Project initialization (wizard, check, skills, hooks) |
+| `agent` | 8 | Agent lifecycle (spawn, list, status, stop, metrics, pool, health, logs) |
+| `swarm` | 6 | Swarm coordination (init, start, status, stop, scale, coordinate) |
+| `memory` | 11 | Memory operations (store, retrieve, search, list, delete, stats, configure, cleanup, compress, export, import) |
+| `mcp` | 9 | MCP server (start, stop, status, health, restart, tools, toggle, exec, logs) |
+| `task` | 6 | Task management (create, list, status, cancel, assign, retry) |
+| `session` | 7 | Session management (list, save, restore, delete, export, import, current) |
+| `config` | 7 | Configuration (init, get, set, providers, reset, export, import) |
+| `status` | 3 | System status with watch mode (agents, tasks, memory) |
+| `workflow` | 6 | Workflow execution (run, validate, list, status, stop, template) |
+| `hooks` | 16 | Self-learning hooks (pre/post-edit, pre/post-command, route, explain, pretrain, metrics, etc.) |
+| `hive-mind` | 6 | Queen-led coordination (init, spawn, status, task, optimize-memory, shutdown) |
+| `migrate` | 5 | V2→V3 migration (status, run, verify, rollback, breaking) |
+
+### Testing Framework (`@claude-flow/testing`)
+
+| Component | Description | Features |
+|-----------|-------------|----------|
+| **London School TDD** | Behavior verification with mocks | Mock-first, interaction testing |
+| **Vitest Integration** | ADR-008 compliant test runner | 10x faster than Jest |
+| **Fixture Library** | Pre-defined test data | Agents, memory, swarm, MCP |
+| **Mock Factory** | Application and service mocks | Auto-reset, state tracking |
+| **Async Utilities** | waitFor, retry, withTimeout | Reliable async testing |
+| **Performance Assertions** | V3 target validation | Speedup, memory, latency checks |
+
+### Testing Fixtures
+
+| Fixture Type | Contents | Use Case |
+|--------------|----------|----------|
+| `agentConfigs` | 15 V3 agent configurations | Agent testing |
+| `memoryEntries` | Patterns, rules, embeddings | Memory testing |
+| `swarmConfigs` | V3 default, minimal, mesh, hierarchical | Swarm testing |
+| `mcpTools` | 27+ tool definitions | MCP testing |
+
+### Deployment & CI/CD (`@claude-flow/deployment`)
+
+| Feature | Description | Automation |
+|---------|-------------|------------|
+| **Version Bumping** | major, minor, patch, prerelease | Automatic semver |
+| **Changelog Generation** | Conventional commits parsing | Auto-generated |
+| **Git Integration** | Tagging, committing | Automatic |
+| **NPM Publishing** | alpha, beta, rc, latest tags | Tag-based |
+| **Validation** | Lint, test, build, dependency checks | Pre-release |
+| **Dry Run Mode** | Test releases without changes | Safe testing |
+
+### Release Channels
+
+| Channel | Version Format | Purpose |
+|---------|---------------|---------|
+| `alpha` | 1.0.0-alpha.1 | Early development |
+| `beta` | 1.0.0-beta.1 | Feature complete, testing |
+| `rc` | 1.0.0-rc.1 | Release candidate |
+| `latest` | 1.0.0 | Stable production |
+
+### Integration (`@claude-flow/integration`)
+
+| Component | Description | Performance |
+|-----------|-------------|-------------|
+| **AgenticFlowBridge** | agentic-flow@alpha integration | ADR-001 compliant |
+| **SONA Adapter** | Learning system integration | <0.05ms adaptation |
+| **Flash Attention** | Attention mechanism coordinator | 2.49x-7.47x speedup |
+| **SDK Bridge** | Version negotiation, API compatibility | Auto-detection |
+| **Feature Flags** | Dynamic feature management | 9 configurable flags |
+| **Runtime Detection** | NAPI, WASM, JS auto-selection | Optimal performance |
+
+### Integration Runtimes
+
+| Runtime | Performance | Requirements |
+|---------|-------------|--------------|
+| **NAPI** | Optimal | Native bindings, x64 |
+| **WASM** | Good | WebAssembly support |
+| **JS** | Fallback | Always available |
+
+### Performance Benchmarking (`@claude-flow/performance`)
+
+| Capability | Description | Output |
+|------------|-------------|--------|
+| **Statistical Analysis** | Mean, median, P95, P99, stddev | Comprehensive metrics |
+| **Memory Tracking** | Heap, RSS, external, array buffers | Resource monitoring |
+| **Auto-Calibration** | Automatic iteration adjustment | Statistical significance |
+| **Regression Detection** | Baseline comparison | Change detection |
+| **V3 Target Validation** | Built-in performance targets | Pass/fail checking |
+
+### V3 Benchmark Targets
+
+| Category | Benchmark | Target |
+|----------|-----------|--------|
+| **Startup** | CLI cold start | <500ms |
+| **Startup** | MCP server init | <400ms |
+| **Startup** | Agent spawn | <200ms |
+| **Memory** | Vector search | <1ms |
+| **Memory** | HNSW indexing | <10ms |
+| **Memory** | Memory write | <5ms |
+| **Swarm** | Agent coordination | <50ms |
+| **Swarm** | Consensus latency | <100ms |
+| **Neural** | SONA adaptation | <0.05ms |
+
+### Neural & SONA (`@claude-flow/neural`)
+
+| Feature | Description | Performance |
+|---------|-------------|-------------|
+| **SONA Learning** | Self-Optimizing Neural Architecture | <0.05ms adaptation |
+| **5 Learning Modes** | real-time, balanced, research, edge, batch | Mode-specific optimization |
+| **9 RL Algorithms** | PPO, A2C, DQN, Q-Learning, SARSA, Decision Transformer, etc. | Comprehensive RL |
+| **LoRA Integration** | Low-Rank Adaptation | Efficient fine-tuning |
+| **EWC++ Memory** | Elastic Weight Consolidation | Zero catastrophic forgetting |
+| **Trajectory Tracking** | Execution path recording | Pattern extraction |
+
+### SONA Learning Modes
+
+| Mode | Adaptation | Quality | Memory | Use Case |
+|------|------------|---------|--------|----------|
+| `real-time` | <0.5ms | 70%+ | 25MB | Production, low-latency |
+| `balanced` | <18ms | 75%+ | 50MB | General purpose |
+| `research` | <100ms | 95%+ | 100MB | Deep exploration |
+| `edge` | <1ms | 80%+ | 5MB | Resource-constrained |
+| `batch` | <50ms | 85%+ | 75MB | High-throughput |
+
+### RL Algorithms
+
+| Algorithm | Type | Best For |
+|-----------|------|----------|
+| **PPO** | Policy Gradient | Stable continuous learning |
+| **A2C** | Actor-Critic | Balanced exploration/exploitation |
+| **DQN** | Value-based | Discrete action spaces |
+| **Q-Learning** | Tabular | Simple state spaces |
+| **SARSA** | On-policy | Online learning |
+| **Decision Transformer** | Sequence modeling | Long-horizon planning |
+
+### Hive-Mind Coordination
+
+| Feature | Description | Capability |
+|---------|-------------|------------|
+| **Queen-Led Topology** | Hierarchical command structure | 15 concurrent agents |
+| **Byzantine Consensus** | Fault-tolerant agreement | f < n/3 tolerance |
+| **Collective Memory** | Shared pattern storage | Distillation, compression |
+| **Specialist Spawning** | Domain-specific agents | Security, performance, etc. |
+| **Adaptive Topology** | Dynamic structure changes | Load-based optimization |
 
 ---
 
