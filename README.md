@@ -193,7 +193,7 @@ npx claude-flow --list
 | **Self-Healing Workflows** | Automatic error recovery and task retry | High availability |
 | **Cross-Session Memory** | Persistent pattern storage across sessions | Continuous learning |
 | **Event Sourcing** | Complete audit trail with replay capability | Debugging and compliance |
-| **Background Workers** | 10 specialized workers with auto-scheduling | Automated maintenance |
+| **Background Workers** | 12 auto-triggered workers for analysis and optimization | Automated maintenance |
 | **GitHub Integration** | PR management, issue triage, code review automation | Repository workflow |
 
 ### Plugin System (`@claude-flow/plugins`)
