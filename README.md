@@ -625,18 +625,6 @@ export CLAUDE_FLOW_MEMORY_PATH="./data"
 
 ---
 
-## Security
-
-- **Input Validation** - All inputs validated at boundaries
-- **Path Traversal Prevention** - Safe path handling with blocked patterns
-- **Command Injection Protection** - Allowlisted commands only, shell metacharacter blocking
-- **Prototype Pollution Prevention** - Safe JSON parsing
-- **CVE Remediation** - Active security monitoring and patching
-- **TOCTOU Protection** - Symlink skipping to prevent race conditions
-- **Information Disclosure Prevention** - Error message sanitization
-
----
-
 ## Environment Variables
 
 | Variable | Description | Default |
