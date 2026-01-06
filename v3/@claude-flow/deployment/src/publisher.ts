@@ -3,7 +3,7 @@
  * Handles npm package publishing with tag support
  */
 
-import { execSync } from 'child_process';
+import { execSync, execFileSync } from 'child_process';
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import type { PublishOptions, PublishResult, PackageInfo } from './types.js';
@@ -116,7 +116,7 @@ export class Publisher {
    */
   async checkVersionExists(packageName: string, version: string): Promise<boolean> {
     try {
-      const output = this.execCommand(`npm view ${packageName}@${version} version`, true);
+      const output = this.execNpmCommand(['view', `${packageName}@${version}`, 'version'], true);
       return output.trim() === version;
     } catch {
       return false;
@@ -128,7 +128,7 @@ export class Publisher {
    */
   async getLatestVersion(packageName: string, tag = 'latest'): Promise<string | null> {
     try {
-      const output = this.execCommand(`npm view ${packageName}@${tag} version`, true);
+      const output = this.execNpmCommand(['view', `${packageName}@${tag}`, 'version'], true);
       return output.trim();
     } catch {
       return null;
@@ -140,7 +140,7 @@ export class Publisher {
    */
   async getPackageInfo(packageName: string): Promise<PackageInfo | null> {
     try {
-      const output = this.execCommand(`npm view ${packageName} --json`, true);
+      const output = this.execNpmCommand(['view', packageName, '--json'], true);
       return JSON.parse(output);
     } catch {
       return null;
@@ -152,7 +152,7 @@ export class Publisher {
    */
   async verifyAuth(): Promise<boolean> {
     try {
-      const output = this.execCommand('npm whoami', true);
+      const output = this.execNpmCommand(['whoami'], true);
       return output.trim().length > 0;
     } catch {
       return false;
@@ -164,7 +164,7 @@ export class Publisher {
    */
   async getRegistry(): Promise<string> {
     try {
-      const output = this.execCommand('npm config get registry', true);
+      const output = this.execNpmCommand(['config', 'get', 'registry'], true);
       return output.trim();
     } catch {
       return 'https://registry.npmjs.org/';
@@ -190,9 +190,42 @@ export class Publisher {
   }
 
   /**
-   * Execute command
+   * Execute npm command safely using execFileSync
+   */
+  private execNpmCommand(args: string[], returnOutput = false): string {
+    try {
+      // Validate args don't contain shell metacharacters
+      for (const arg of args) {
+        if (/[;&|`$()<>]/.test(arg)) {
+          throw new Error(`Invalid argument: contains shell metacharacters`);
+        }
+      }
+      const output = execFileSync('npm', args, {
+        cwd: this.cwd,
+        encoding: 'utf-8',
+        shell: false,
+        stdio: returnOutput ? ['pipe', 'pipe', 'pipe'] : 'inherit'
+      });
+      return returnOutput ? output : '';
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Execute command (for build scripts only - validated)
    */
   private execCommand(cmd: string, returnOutput = false): string {
+    // Only allow npm/npx build commands for safety
+    const allowedPrefixes = ['npm run ', 'npm ', 'npx ', 'pnpm ', 'yarn '];
+    const isAllowed = allowedPrefixes.some(prefix => cmd.startsWith(prefix));
+    if (!isAllowed) {
+      throw new Error(`Disallowed command: only npm/npx/pnpm/yarn commands are permitted`);
+    }
+    // Validate no dangerous shell metacharacters
+    if (/[;&|`$()<>]/.test(cmd)) {
+      throw new Error(`Invalid command: contains shell metacharacters`);
+    }
     try {
       const output = execSync(cmd, {
         cwd: this.cwd,
@@ -201,9 +234,6 @@ export class Publisher {
       });
       return returnOutput ? output : '';
     } catch (error) {
-      if (returnOutput && error instanceof Error) {
-        throw error;
-      }
       throw error;
     }
   }
