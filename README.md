@@ -116,14 +116,14 @@ npx claude-flow --list
 
 ### Swarm Topologies
 
-| Topology | Agents | Best For | Execution Time | Memory |
-|----------|--------|----------|----------------|--------|
-| **Hierarchical** | 6-15 | Structured tasks, clear authority chains | 0.20s | 256 MB |
-| **Mesh** | 4-10 | Collaborative work, high redundancy | 0.15s | 192 MB |
-| **Ring** | 3-8 | Sequential processing pipelines | 0.12s | 128 MB |
-| **Star** | 5-12 | Centralized control, spoke workers | 0.14s | 180 MB |
-| **Hybrid (Hierarchical-Mesh)** | 7-15 | Complex multi-domain tasks | 0.18s | 320 MB |
-| **Adaptive** | 2-15 | Dynamic workloads, auto-scaling | Variable | Dynamic |
+| Topology | Recommended Agents | Best For | Execution Time | Memory/Agent |
+|----------|-------------------|----------|----------------|--------------|
+| **Hierarchical** | 6+ | Structured tasks, clear authority chains | 0.20s | 256 MB |
+| **Mesh** | 4+ | Collaborative work, high redundancy | 0.15s | 192 MB |
+| **Ring** | 3+ | Sequential processing pipelines | 0.12s | 128 MB |
+| **Star** | 5+ | Centralized control, spoke workers | 0.14s | 180 MB |
+| **Hybrid (Hierarchical-Mesh)** | 7+ | Complex multi-domain tasks | 0.18s | 320 MB |
+| **Adaptive** | 2+ | Dynamic workloads, auto-scaling | Variable | Dynamic |
 
 ### Self-Learning & Intelligence
 
