@@ -442,7 +442,7 @@ npx claude-flow --list
 
 | Feature | Description | Capability |
 |---------|-------------|------------|
-| **Queen-Led Topology** | Hierarchical command structure | 15 concurrent agents |
+| **Queen-Led Topology** | Hierarchical command structure | Unlimited agents + sub-workers |
 | **Byzantine Consensus** | Fault-tolerant agreement | f < n/3 tolerance |
 | **Collective Memory** | Shared pattern storage | Distillation, compression |
 | **Specialist Spawning** | Domain-specific agents | Security, performance, etc. |
