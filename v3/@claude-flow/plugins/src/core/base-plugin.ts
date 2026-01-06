@@ -386,31 +386,31 @@ class SimplePlugin extends BasePlugin {
     }
   }
 
-  override registerAgentTypes(): AgentTypeDefinition[] | undefined {
-    return this._config.agentTypes;
+  override registerAgentTypes(): AgentTypeDefinition[] {
+    return this._config.agentTypes ?? [];
   }
 
-  override registerTaskTypes(): TaskTypeDefinition[] | undefined {
-    return this._config.taskTypes;
+  override registerTaskTypes(): TaskTypeDefinition[] {
+    return this._config.taskTypes ?? [];
   }
 
-  override registerMCPTools(): MCPToolDefinition[] | undefined {
-    return this._config.mcpTools;
+  override registerMCPTools(): MCPToolDefinition[] {
+    return this._config.mcpTools ?? [];
   }
 
-  override registerCLICommands(): CLICommandDefinition[] | undefined {
-    return this._config.cliCommands;
+  override registerCLICommands(): CLICommandDefinition[] {
+    return this._config.cliCommands ?? [];
   }
 
-  override registerHooks(): HookDefinition[] | undefined {
-    return this._config.hooks;
+  override registerHooks(): HookDefinition[] {
+    return this._config.hooks ?? [];
   }
 
-  override registerWorkers(): WorkerDefinition[] | undefined {
-    return this._config.workers;
+  override registerWorkers(): WorkerDefinition[] {
+    return this._config.workers ?? [];
   }
 
-  override registerProviders(): LLMProviderDefinition[] | undefined {
-    return this._config.providers;
+  override registerProviders(): LLMProviderDefinition[] {
+    return this._config.providers ?? [];
   }
 }
