@@ -276,7 +276,7 @@ export async function loadPlugin(
  * });
  * ```
  */
-export async function initializePlugins(options?: {
+export async function initializePlugins(_options?: {
   coreVersion?: string;
   dataDir?: string;
 }): Promise<void> {
