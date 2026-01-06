@@ -586,13 +586,13 @@ npx claude-flow@v3alpha worker results --limit 10
 
 | Use Case | Command |
 |----------|---------|
-| Code review | `npx claude-flow --agent reviewer --task "Review PR #123"` |
-| Test generation | `npx claude-flow --agent tester --task "Write tests for auth module"` |
-| Security audit | `npx claude-flow --agent security-architect --task "Audit for vulnerabilities"` |
-| Multi-agent swarm | `npx claude-flow swarm init --topology hierarchical` |
-| Route task | `npx claude-flow hooks route "Optimize database queries"` |
-| Performance analysis | `npx claude-flow --agent perf-analyzer --task "Profile API endpoints"` |
-| GitHub PR management | `npx claude-flow --agent pr-manager --task "Review open PRs"` |
+| Code review | `npx claude-flow@v3alpha --agent reviewer --task "Review PR #123"` |
+| Test generation | `npx claude-flow@v3alpha --agent tester --task "Write tests for auth module"` |
+| Security audit | `npx claude-flow@v3alpha --agent security-architect --task "Audit for vulnerabilities"` |
+| Multi-agent swarm | `npx claude-flow@v3alpha swarm init --topology hierarchical` |
+| Route task | `npx claude-flow@v3alpha hooks route "Optimize database queries"` |
+| Performance analysis | `npx claude-flow@v3alpha --agent perf-analyzer --task "Profile API endpoints"` |
+| GitHub PR management | `npx claude-flow@v3alpha --agent pr-manager --task "Review open PRs"` |
 
 ---
 
