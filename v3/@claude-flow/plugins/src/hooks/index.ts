@@ -552,6 +552,8 @@ export class HookFactory {
               cache.delete(k);
             }
           }
+          // Store result with TTL
+          cache.set(key, { value: context.data, expires: now + ttlMs });
         }
 
         return { success: true };
