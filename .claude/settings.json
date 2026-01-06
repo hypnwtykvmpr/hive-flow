@@ -1,344 +1,115 @@
 {
-  "model": "claude-opus-4-5-20251101",
-  "customInstructions": "Follow the project's CLAUDE.md guidelines. Use concurrent execution for all operations. Prioritize v3 implementation with security-first development, 15-agent swarm coordination, phased performance optimization, and cross-platform helper automation. Leverage Opus 4.5's advanced reasoning for complex architectural decisions and system optimization.",
   "env": {
-    "AGENTIC_FLOW_INTELLIGENCE": "true",
-    "AGENTIC_FLOW_LEARNING_RATE": "0.05",
-    "AGENTIC_FLOW_EPSILON": "0.1",
-    "AGENTIC_FLOW_MEMORY_BACKEND": "agentdb",
-    "AGENTIC_FLOW_V3_MODE": "true",
-    "AGENTIC_FLOW_SWARM_SIZE": "15",
-    "AGENTIC_FLOW_TOPOLOGY": "hierarchical",
-    "AGENTIC_FLOW_SECURITY_FIRST": "true",
-    "AGENTIC_FLOW_PERFORMANCE_TIER": "standard",
-    "AGENTIC_FLOW_LEARNING_TIER": "standard",
-    "AGENTIC_FLOW_PRETRAIN_ENABLED": "true",
-    "AGENTIC_FLOW_SONA_ENABLED": "true",
-    "AGENTIC_FLOW_HNSW_ENABLED": "true",
-    "AGENTIC_FLOW_MOE_ATTENTION": "true",
-    "AGENTIC_FLOW_MULTI_ALGORITHM_RL": "true",
-    "AGENTIC_FLOW_COMPRESSION_ENABLED": "true",
-    "AGENTIC_FLOW_SWARM_COMM_ENABLED": "true",
-    "AGENTIC_FLOW_AGENT_NAME": "claude-code",
-    "AGENTIC_FLOW_PATTERN_BROADCAST_THRESHOLD": "0.7",
-    "AGENTIC_FLOW_CONSENSUS_TIMEOUT": "30000",
-    "AGENTIC_FLOW_AUTO_BROADCAST_PATTERNS": "true"
+    "CLAUDE_FLOW_AUTO_COMMIT": "false",
+    "CLAUDE_FLOW_AUTO_PUSH": "false",
+    "CLAUDE_FLOW_HOOKS_ENABLED": "true",
+    "CLAUDE_FLOW_TELEMETRY_ENABLED": "true",
+    "CLAUDE_FLOW_REMOTE_EXECUTION": "true",
+    "CLAUDE_FLOW_CHECKPOINTS_ENABLED": "true"
   },
   "permissions": {
-    "allowedTools": [
-      "Read",
-      "Write",
-      "Edit",
-      "Bash",
-      "Glob",
-      "Grep",
-      "Task",
-      "WebFetch",
-      "WebSearch",
-      "TodoWrite",
-      "LSP",
-      "NotebookEdit"
-    ],
-    "deniedTools": [],
     "allow": [
-      "Bash(npx:*)",
-      "Bash(agentic-flow:*)",
-      "Bash(npm run:*)",
-      "mcp__agentic-flow",
-      "mcp__claude-flow",
-      "mcp__ruv-swarm"
+      "Bash(npx claude-flow:*)",
+      "Bash(npm run lint)",
+      "Bash(npm run test:*)",
+      "Bash(npm test:*)",
+      "Bash(git status)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push)",
+      "Bash(git config:*)",
+      "Bash(git tag:*)",
+      "Bash(git branch:*)",
+      "Bash(git checkout:*)",
+      "Bash(git stash:*)",
+      "Bash(jq:*)",
+      "Bash(node:*)",
+      "Bash(which:*)",
+      "Bash(pwd)",
+      "Bash(ls:*)"
+    ],
+    "deny": [
+      "Bash(rm -rf /)"
     ]
-  },
-  "checkpointManager": {
-    "enabled": true,
-    "autoCommit": true,
-    "commitMessage": "checkpoint: V3 development progress",
-    "frequency": "after-significant-change",
-    "includeMetrics": true
-  },
-  "githubIntegration": {
-    "enabled": true,
-    "features": {
-      "autoCommit": true,
-      "prTracking": true,
-      "issueManagement": true,
-      "progressReporting": true
-    }
   },
   "hooks": {
     "PreToolUse": [
-      {
-        "matcher": "Edit|Write|MultiEdit",
-        "hooks": [
-          {
-            "type": "command",
-            "timeout": 5000,
-            "command": "/workspaces/claude-flow/.claude/helpers/guidance-hooks.sh pre-edit \"$TOOL_INPUT_file_path\" 2>/dev/null || true"
-          }
-        ]
-      },
       {
         "matcher": "Bash",
         "hooks": [
           {
             "type": "command",
-            "timeout": 3000,
-            "command": "/workspaces/claude-flow/.claude/helpers/guidance-hooks.sh pre-command \"$TOOL_INPUT_command\" 2>/dev/null || true"
+            "command": "cat | jq -r '.tool_input.command // empty' | tr '\\n' '\\0' | xargs -0 -I {} npx claude-flow@alpha hooks pre-command --command '{}' --validate-safety true --prepare-resources true"
           }
         ]
       },
       {
-        "matcher": "Task",
+        "matcher": "Write|Edit|MultiEdit",
         "hooks": [
           {
             "type": "command",
-            "timeout": 2000,
-            "command": "/workspaces/claude-flow/.claude/helpers/guidance-hooks.sh route \"$TOOL_INPUT_prompt\" 2>/dev/null || true"
-          },
-          {
-            "type": "command",
-            "timeout": 3000,
-            "command": "/workspaces/claude-flow/.claude/helpers/swarm-hooks.sh pre-task \"$TOOL_INPUT_prompt\" 2>/dev/null || true"
+            "command": "cat | jq -r '.tool_input.file_path // .tool_input.path // empty' | tr '\\n' '\\0' | xargs -0 -I {} npx claude-flow@alpha hooks pre-edit --file '{}' --auto-assign-agents true --load-context true"
           }
         ]
       }
     ],
     "PostToolUse": [
       {
-        "matcher": "Edit|Write|MultiEdit",
-        "hooks": [
-          {
-            "type": "command",
-            "timeout": 5000,
-            "command": "/workspaces/claude-flow/.claude/helpers/guidance-hooks.sh post-edit \"$TOOL_INPUT_file_path\" 2>/dev/null || true"
-          },
-          {
-            "type": "command",
-            "timeout": 4000,
-            "command": "/workspaces/claude-flow/.claude/helpers/learning-hooks.sh store \"Edit: $TOOL_INPUT_file_path\" code 0.7 2>/dev/null || true"
-          },
-          {
-            "type": "command",
-            "timeout": 3000,
-            "command": "/workspaces/claude-flow/.claude/helpers/checkpoint-manager.sh auto-checkpoint \"File edit: $TOOL_INPUT_file_path\" 2>/dev/null || true"
-          }
-        ]
-      },
-      {
         "matcher": "Bash",
         "hooks": [
           {
             "type": "command",
-            "timeout": 3000,
-            "command": "npx agentic-flow@alpha hooks post-command \"$TOOL_INPUT_command\" -c 0 2>/dev/null || true"
-          },
-          {
-            "type": "command",
-            "timeout": 2000,
-            "command": "/workspaces/claude-flow/.claude/helpers/swarm-monitor.sh check 2>/dev/null || true"
+            "command": "cat | jq -r '.tool_input.command // empty' | tr '\\n' '\\0' | xargs -0 -I {} npx claude-flow@alpha hooks post-command --command '{}' --track-metrics true --store-results true"
           }
         ]
       },
       {
-        "matcher": "Task",
+        "matcher": "Write|Edit|MultiEdit",
         "hooks": [
           {
             "type": "command",
-            "timeout": 2000,
-            "command": "npx agentic-flow@alpha hooks metrics 2>/dev/null || true"
-          },
-          {
-            "type": "command",
-            "timeout": 3000,
-            "command": "/workspaces/claude-flow/.claude/helpers/swarm-monitor.sh check 2>/dev/null || true"
-          },
-          {
-            "type": "command",
-            "timeout": 3000,
-            "command": "/workspaces/claude-flow/.claude/helpers/swarm-hooks.sh post-task \"$TOOL_INPUT_prompt\" true 2>/dev/null || true"
-          },
-          {
-            "type": "command",
-            "timeout": 4000,
-            "command": "/workspaces/claude-flow/.claude/helpers/checkpoint-manager.sh agent-checkpoint \"Task completed: $TOOL_INPUT_prompt\" 2>/dev/null || true"
+            "command": "cat | jq -r '.tool_input.file_path // .tool_input.path // empty' | tr '\\n' '\\0' | xargs -0 -I {} npx claude-flow@alpha hooks post-edit --file '{}' --format true --update-memory true"
           }
         ]
       }
     ],
-    "PostToolUseFailure": [
+    "PreCompact": [
       {
-        "matcher": "Edit|Write|MultiEdit",
+        "matcher": "manual",
         "hooks": [
           {
             "type": "command",
-            "timeout": 5000,
-            "command": "npx agentic-flow@alpha hooks post-edit \"$TOOL_INPUT_file_path\" --fail 2>/dev/null || true"
+            "command": "/bin/bash -c 'INPUT=$(cat); CUSTOM=$(echo \"$INPUT\" | jq -r \".custom_instructions // \\\"\\\"\"); echo \"🔄 PreCompact Guidance:\"; echo \"📋 IMPORTANT: Review CLAUDE.md in project root for:\"; echo \"   • 54 available agents and concurrent usage patterns\"; echo \"   • Swarm coordination strategies (hierarchical, mesh, adaptive)\"; echo \"   • SPARC methodology workflows with batchtools optimization\"; echo \"   • Critical concurrent execution rules (GOLDEN RULE: 1 MESSAGE = ALL OPERATIONS)\"; if [ -n \"$CUSTOM\" ]; then echo \"🎯 Custom compact instructions: $CUSTOM\"; fi; echo \"✅ Ready for compact operation\"'"
           }
         ]
       },
       {
-        "matcher": "Bash",
+        "matcher": "auto",
         "hooks": [
           {
             "type": "command",
-            "timeout": 3000,
-            "command": "npx agentic-flow@alpha hooks post-command \"$TOOL_INPUT_command\" -c 1 2>/dev/null || true"
-          }
-        ]
-      }
-    ],
-    "SessionStart": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "timeout": 3000,
-            "command": "/workspaces/claude-flow/.claude/helpers/daemon-manager.sh start 3 5 2>/dev/null || true"
-          },
-          {
-            "type": "command",
-            "timeout": 8000,
-            "command": "/workspaces/claude-flow/.claude/helpers/learning-hooks.sh session-start 2>/dev/null || true"
-          },
-          {
-            "type": "command",
-            "timeout": 3000,
-            "command": "/workspaces/claude-flow/.claude/helpers/swarm-hooks.sh agents 2>/dev/null || true"
-          },
-          {
-            "type": "command",
-            "timeout": 5000,
-            "command": "/workspaces/claude-flow/.claude/helpers/guidance-hooks.sh session-context 2>/dev/null || true"
-          }
-        ]
-      }
-    ],
-    "SessionEnd": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "timeout": 10000,
-            "command": "/workspaces/claude-flow/.claude/helpers/learning-hooks.sh session-end 2>/dev/null || true"
-          },
-          {
-            "type": "command",
-            "timeout": 8000,
-            "command": "npx agentic-flow@alpha hooks metrics --json 2>/dev/null || true"
-          },
-          {
-            "type": "command",
-            "timeout": 6000,
-            "command": "/workspaces/claude-flow/.claude/helpers/checkpoint-manager.sh session-end \"V3 development session completed\" 2>/dev/null || true"
-          },
-          {
-            "type": "command",
-            "timeout": 4000,
-            "command": "/workspaces/claude-flow/.claude/helpers/update-v3-progress.sh status > /workspaces/claude-flow/.claude-flow/last-session-status.txt 2>/dev/null || true"
-          },
-          {
-            "type": "command",
-            "timeout": 2000,
-            "command": "/workspaces/claude-flow/.claude/helpers/daemon-manager.sh stop 2>/dev/null || true"
-          }
-        ]
-      }
-    ],
-    "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "timeout": 4000,
-            "command": "/workspaces/claude-flow/.claude/helpers/guidance-hooks.sh user-prompt \"$USER_PROMPT\" 2>/dev/null || true"
+            "command": "/bin/bash -c 'echo \"🔄 Auto-Compact Guidance (Context Window Full):\"; echo \"📋 CRITICAL: Before compacting, ensure you understand:\"; echo \"   • All 54 agents available in .claude/agents/ directory\"; echo \"   • Concurrent execution patterns from CLAUDE.md\"; echo \"   • Batchtools optimization for 300% performance gains\"; echo \"   • Swarm coordination strategies for complex tasks\"; echo \"⚡ Apply GOLDEN RULE: Always batch operations in single messages\"; echo \"✅ Auto-compact proceeding with full agent context\"'"
           }
         ]
       }
     ],
     "Stop": [
       {
-        "matcher": ".*",
         "hooks": [
           {
             "type": "command",
-            "timeout": 8000,
-            "command": "/workspaces/claude-flow/.claude/helpers/learning-hooks.sh session-end 2>/dev/null || true"
-          },
-          {
-            "type": "command",
-            "timeout": 5000,
-            "command": "npx agentic-flow@alpha hooks metrics --json 2>/dev/null || true"
+            "command": "npx claude-flow@alpha hooks session-end --generate-summary true --persist-state true --export-metrics true"
           }
         ]
       }
     ]
   },
-  "agents": {
-    "source": ".claude/agents",
-    "customAgents": []
-  },
-  "skills": {
-    "source": ".claude/commands",
-    "enabled": true
-  },
-  "helpers": {
-    "directory": ".claude/helpers",
-    "enabled": true,
-    "scripts": {
-      "v3ProgressUpdater": ".claude/helpers/update-v3-progress.sh",
-      "v3ConfigValidator": ".claude/helpers/validate-v3-config.sh",
-      "v3QuickStatus": ".claude/helpers/v3-quick-status.sh",
-      "v3CheckpointManager": ".claude/helpers/checkpoint-manager.sh",
-      "v3SwarmMonitor": ".claude/helpers/swarm-monitor.sh",
-      "v3SwarmHooks": ".claude/helpers/swarm-hooks.sh",
-      "v3Master": ".claude/helpers/v3.sh"
-    }
-  },
-  "v3Configuration": {
-    "domains": {
-      "total": 5,
-      "names": ["task-management", "session-management", "health-monitoring", "lifecycle-management", "event-coordination"],
-      "sourceDir": "src/domains"
-    },
-    "swarm": {
-      "totalAgents": 15,
-      "topology": "hierarchical-mesh",
-      "coordination": "queen-led",
-      "communication": {
-        "enabled": true,
-        "messaging": true,
-        "patternBroadcast": true,
-        "consensus": true,
-        "taskHandoff": true,
-        "autoPatternShare": true,
-        "patternThreshold": 0.7,
-        "consensusTimeout": 30000
-      }
-    },
-    "performance": {
-      "flashAttentionTarget": "2.49x-7.47x",
-      "memoryReductionTarget": "50-75%",
-      "searchImprovementTarget": "150x-12,500x",
-      "codebaseReductionTarget": "10,000+ lines"
-    },
-    "security": {
-      "criticalCves": 3,
-      "securityFirst": true,
-      "auditRequired": true
-    }
-  },
+  "includeCoAuthoredBy": true,
+  "enabledMcpjsonServers": ["claude-flow", "ruv-swarm"],
   "statusLine": {
     "type": "command",
-    "command": "/workspaces/claude-flow/.claude/statusline.sh"
-  },
-  "mcpServers": {
-    "claude-flow": {
-      "command": "npx",
-      "args": [
-        "agentic-flow@alpha",
-        "mcp",
-        "start"
-      ]
-    }
+    "command": ".claude/statusline-command.sh"
   }
 }
