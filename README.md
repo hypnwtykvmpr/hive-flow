@@ -792,11 +792,11 @@ cp -r ./data ./data-backup-v2
 npm install claude-flow@latest
 
 # 3. Run migration
-npx claude-flow migrate --from v2
+npx claude-flow@v3alpha migrate --from v2
 
 # 4. Verify installation
-npx claude-flow --version
-npx claude-flow hooks metrics
+npx claude-flow@v3alpha --version
+npx claude-flow@v3alpha hooks metrics
 ```
 
 ### Configuration Changes
