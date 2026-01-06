@@ -413,6 +413,113 @@ npx claude-flow --list
 | **Specialist Spawning** | Domain-specific agents | Security, performance, etc. |
 | **Adaptive Topology** | Dynamic structure changes | Load-based optimization |
 
+### agentic-flow@alpha Integration
+
+| Feature | Description | Benefit |
+|---------|-------------|---------|
+| **ADR-001 Compliance** | Build on agentic-flow, don't duplicate | Eliminates 10,000+ duplicate lines |
+| **Core Foundation** | Use agentic-flow as the base layer | Unified architecture |
+| **SONA Integration** | Seamless learning system connection | <0.05ms adaptation |
+| **Flash Attention** | Optimized attention mechanisms | 2.49x-7.47x speedup |
+| **AgentDB Bridge** | Vector storage integration | 150x-12,500x faster search |
+| **Feature Flags** | Dynamic capability management | 9 configurable features |
+| **Runtime Detection** | NAPI/WASM/JS auto-selection | Optimal performance per platform |
+| **Graceful Fallback** | Works with or without agentic-flow | Always functional |
+
+### MCP Server (`@claude-flow/mcp`)
+
+| Feature | Description | Spec |
+|---------|-------------|------|
+| **MCP 2025-11-25** | Full specification compliance | Latest MCP standard |
+| **Multiple Transports** | stdio, HTTP, WebSocket, in-process | Flexible connectivity |
+| **Resources** | list, read, subscribe with caching | Dynamic content |
+| **Prompts** | Templates with arguments and embedding | Reusable prompts |
+| **Tasks** | Async operations with progress/cancel | Long-running ops |
+| **Tool Registry** | O(1) lookup, <10ms registration | Fast tool access |
+| **Connection Pooling** | Max 10 connections, configurable | Resource management |
+| **Session Management** | Timeout handling, authentication | Secure sessions |
+
+### MCP Methods
+
+| Method | Description |
+|--------|-------------|
+| `initialize` | Initialize connection |
+| `tools/list` | List available tools |
+| `tools/call` | Execute a tool |
+| `resources/list` | List resources with pagination |
+| `resources/read` | Read resource content |
+| `resources/subscribe` | Subscribe to updates |
+| `prompts/list` | List prompts with pagination |
+| `prompts/get` | Get prompt with arguments |
+| `tasks/status` | Get task status |
+| `tasks/cancel` | Cancel running task |
+| `completion/complete` | Auto-complete arguments |
+
+### Security Module (`@claude-flow/security`)
+
+| Feature | CVE/Issue | Description |
+|---------|-----------|-------------|
+| **Password Hashing** | CVE-2 | Secure bcrypt with 12+ rounds |
+| **Credential Generation** | CVE-3 | Cryptographically secure API keys |
+| **Safe Command Execution** | HIGH-1 | Allowlist-based command execution |
+| **Path Validation** | HIGH-2 | Path traversal and symlink protection |
+| **Input Validation** | General | Zod-based schema validation |
+| **Token Generation** | General | HMAC-signed secure tokens |
+| **HTML Sanitization** | XSS | Script and injection prevention |
+
+### Security Validation Schemas
+
+| Schema | Purpose |
+|--------|---------|
+| `SafeStringSchema` | Basic safe string with length limits |
+| `IdentifierSchema` | Alphanumeric identifiers |
+| `FilenameSchema` | Safe filenames |
+| `EmailSchema` | Email addresses |
+| `PasswordSchema` | Secure passwords (8-72 chars) |
+| `UUIDSchema` | UUID v4 format |
+| `HttpsUrlSchema` | HTTPS URLs only |
+| `SpawnAgentSchema` | Agent spawn requests |
+| `TaskInputSchema` | Task definitions |
+
+### Architecture Decision Records (ADRs)
+
+| ADR | Title | Impact |
+|-----|-------|--------|
+| **ADR-001** | Adopt agentic-flow as core foundation | Eliminates 10,000+ duplicate lines |
+| **ADR-002** | Domain-Driven Design structure | Bounded contexts, clean separation |
+| **ADR-003** | Single coordination engine | Unified SwarmCoordinator |
+| **ADR-004** | Plugin-based architecture | Microkernel pattern |
+| **ADR-005** | MCP-first API design | Consistent interfaces |
+| **ADR-006** | Unified memory service | AgentDB integration |
+| **ADR-007** | Event sourcing for state | Complete audit trail |
+| **ADR-008** | Vitest over Jest | 10x faster testing |
+| **ADR-009** | Hybrid memory backend | SQLite + AgentDB default |
+| **ADR-010** | Remove Deno support | Node.js 20+ focus |
+
+### Hooks System (`@claude-flow/hooks`)
+
+| Component | Description | Performance |
+|-----------|-------------|-------------|
+| **ReasoningBank** | Pattern storage with HNSW indexing | 150x faster retrieval |
+| **GuidanceProvider** | Context-aware development guidance | Real-time suggestions |
+| **PatternLearning** | Automatic strategy extraction | Continuous improvement |
+| **QualityTracking** | Success/failure rate per pattern | Performance metrics |
+| **DomainDetection** | Auto-categorization of patterns | Security, testing, etc. |
+| **AgentRouting** | Task-to-agent optimization | Historical performance |
+| **Consolidation** | Prune low-quality, promote high-quality | Memory optimization |
+
+### Hook Lifecycle Events
+
+| Phase | Hooks | Purpose |
+|-------|-------|---------|
+| **Pre-Edit** | `pre-edit` | Context gathering, security checks |
+| **Post-Edit** | `post-edit` | Outcome recording, pattern learning |
+| **Pre-Command** | `pre-command` | Risk assessment, validation |
+| **Post-Command** | `post-command` | Success/failure tracking |
+| **Pre-Task** | `pre-task` | Setup, resource allocation |
+| **Post-Task** | `post-task` | Cleanup, learning |
+| **Session** | `session-end`, `session-restore` | State management |
+
 ---
 
 ## Self-Learning & Self-Optimization
