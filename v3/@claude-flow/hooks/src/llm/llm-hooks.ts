@@ -378,9 +378,12 @@ export async function postLLMCallHook(
     payload: {
       ...payload,
       metrics: {
-        ...metrics,
+        requestStart: metrics?.requestStart ?? Date.now(),
         responseEnd: Date.now(),
         latency,
+        cacheHit: metrics?.cacheHit,
+        tokenEstimate: metrics?.tokenEstimate,
+        costEstimate: metrics?.costEstimate,
       },
     },
     sideEffects,
