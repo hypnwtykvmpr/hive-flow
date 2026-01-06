@@ -29,7 +29,7 @@ Claude-Flow is a comprehensive AI agent orchestration framework that transforms 
 | **Learning** | Static behavior, no adaptation | SONA self-learning with <0.05ms adaptation, improves over time |
 | **Task Routing** | You decide which agent to use | Intelligent routing based on learned patterns (89% accuracy) |
 | **Complex Tasks** | Manual breakdown required | Automatic decomposition across 5 domains (Security, Core, Integration, Support) |
-| **Background Work** | Nothing runs automatically | 12 auto-triggered workers (audit, optimize, test gaps, document, etc.) |
+| **Background Workers** | Nothing runs automatically | 12 context-triggered workers auto-dispatch on file changes, patterns, sessions |
 | **LLM Provider** | Anthropic only | 6 providers with automatic failover and cost-based routing (85% savings) |
 | **Security** | Standard protections | CVE-hardened with bcrypt, input validation, path traversal prevention |
 | **Performance** | Baseline | 2.8-4.4x faster tasks, 4-32x memory reduction via quantization |
@@ -71,19 +71,19 @@ claude --dangerously-skip-permissions
 
 ```bash
 # Install claude-flow
-npm install claude-flow@latest
+npm install claude-flow@v3alpha
 
 # Initialize in your project
-npx claude-flow init
+npx claude-flow@v3alpha init
 
 # Start MCP server for Claude Code integration
-npx claude-flow mcp start
+npx claude-flow@v3alpha mcp start
 
 # Run a task with agents
-npx claude-flow --agent coder --task "Implement user authentication"
+npx claude-flow@v3alpha --agent coder --task "Implement user authentication"
 
 # List available agents
-npx claude-flow --list
+npx claude-flow@v3alpha --list
 ```
 
 ---
