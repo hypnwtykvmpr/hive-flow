@@ -270,7 +270,7 @@ Workers run automatically in the background based on context, or can be dispatch
 npx claude-flow@v3alpha worker dispatch --trigger audit --context "./src"
 
 # Check worker status
-npx claude-flow worker status
+npx claude-flow@v3alpha worker status
 
 # View completed results
 npx claude-flow worker results --limit 10
