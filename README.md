@@ -560,25 +560,6 @@ npx claude-flow hooks intelligence
 
 ---
 
-## MCP Tools
-
-### Coordination
-`swarm_init`, `agent_spawn`, `task_orchestrate`
-
-### Monitoring
-`swarm_status`, `agent_list`, `agent_metrics`, `task_status`, `task_results`
-
-### Memory & Neural
-`memory_usage`, `neural_status`, `neural_train`, `neural_patterns`
-
-### GitHub Integration
-`github_swarm`, `repo_analyze`, `pr_enhance`, `issue_triage`, `code_review`
-
-### Worker Tools (V3)
-`worker/run`, `worker/status`, `worker/alerts`, `worker/history`, `worker/statusline`, `worker/run-all`, `worker/start`, `worker/stop`
-
----
-
 ## Architecture
 
 ### V3 Module Structure
