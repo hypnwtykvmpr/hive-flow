@@ -160,7 +160,7 @@
           {
             "type": "command",
             "timeout": 4000,
-            "command": ".claude/helpers/checkpoint-manager.sh agent-checkpoint \"Task completed: $TOOL_INPUT_prompt\" 2>/dev/null || true"
+            "command": "/workspaces/claude-flow/.claude/helpers/checkpoint-manager.sh agent-checkpoint \"Task completed: $TOOL_INPUT_prompt\" 2>/dev/null || true"
           }
         ]
       }
