@@ -32,22 +32,17 @@ Claude-Flow is a comprehensive AI agent orchestration framework that transforms 
 
 ### Key Capabilities
 
-- **54+ Specialized Agents** - Purpose-built for coding, testing, security, DevOps, and more
-- **Multi-Topology Swarms** - Hierarchical, mesh, ring, star, and adaptive coordination
-- **Self-Learning Hooks** - ReasoningBank pattern learning with automatic optimization
-- **Multi-Provider LLM** - Anthropic, OpenAI, Google, Cohere, Ollama with cost-based routing
-- **MCP Integration** - Native Claude Code support via Model Context Protocol
-- **Enterprise Security** - Input validation, path protection, command sandboxing
+- **54+ Specialized Agents** - Ready-to-use AI agents for coding, code review, testing, security audits, documentation, and DevOps tasks. Each agent is optimized for its specific role.
 
-### Performance Highlights
+- **Coordinated Agent Teams** - Run up to 15 agents simultaneously in organized swarms. Agents communicate, share context, and divide work automatically using patterns like hierarchical (boss/worker) or mesh (peer-to-peer).
 
-| Metric | Achievement |
-|--------|-------------|
-| Concurrent Agents | 15 parallel execution |
-| Search Performance | 150x-12,500x faster (HNSW) |
-| Task Speed | 2.8-4.4x improvement |
-| Memory Reduction | 50-75% |
-| SONA Adaptation | <0.05ms |
+- **Learns From Your Workflow** - The system remembers what works. Successful patterns are stored and reused, routing similar tasks to the best-performing agents. Gets smarter over time.
+
+- **Works With Any LLM** - Switch between Claude, GPT-4, Gemini, Cohere, or local models like Llama. Automatic failover if one provider is unavailable. Smart routing picks the cheapest option that meets quality requirements.
+
+- **Plugs Into Claude Code** - Native integration via MCP (Model Context Protocol). Use claude-flow commands directly in your Claude Code sessions with full tool access.
+
+- **Production-Ready Security** - Built-in protection against common vulnerabilities: input validation, path traversal prevention, command injection blocking, and safe credential handling.
 
 ---
 
