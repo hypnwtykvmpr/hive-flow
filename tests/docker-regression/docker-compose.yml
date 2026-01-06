@@ -26,11 +26,8 @@ services:
       - CLAUDE_FLOW_EMBEDDING_DIM=384
       - CI=true
       - TEST_REPORT_PATH=/app/reports
-      - MCP_SERVER_HOST=mcp-server
+      - MCP_SERVER_HOST=localhost
       - MCP_SERVER_PORT=3000
-    depends_on:
-      mcp-server:
-        condition: service_healthy
     networks:
       - claude-flow-test
     command: ["bash", "/app/tests/docker-regression/scripts/run-all-tests.sh"]
