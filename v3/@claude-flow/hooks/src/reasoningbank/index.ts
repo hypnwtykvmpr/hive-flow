@@ -974,10 +974,14 @@ class FallbackEmbeddingService implements IEmbeddingService {
 
     // Try agentic-flow ONNX embeddings first
     try {
-      const { execSync } = await import('child_process');
-      const result = execSync(
-        `npx agentic-flow@alpha embeddings generate "${text.replace(/"/g, '\\"').slice(0, 500)}" --format json 2>/dev/null`,
-        { encoding: 'utf-8', timeout: 10000 }
+      const { execFileSync } = await import('child_process');
+      // Use execFileSync with shell: false to prevent command injection
+      // Pass text as argument array to avoid shell interpolation
+      const safeText = text.slice(0, 500).replace(/[\x00-\x1f]/g, ''); // Remove control chars
+      const result = execFileSync(
+        'npx',
+        ['agentic-flow@alpha', 'embeddings', 'generate', safeText, '--format', 'json'],
+        { encoding: 'utf-8', timeout: 10000, shell: false, stdio: ['pipe', 'pipe', 'pipe'] }
       );
       const parsed = JSON.parse(result);
       const embedding = new Float32Array(parsed.embedding || parsed);
