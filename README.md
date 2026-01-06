@@ -600,37 +600,37 @@ npx claude-flow@v3alpha worker results --limit 10
 
 ```bash
 # Before editing - get context and agent suggestions
-npx claude-flow hooks pre-edit <filePath>
+npx claude-flow@v3alpha hooks pre-edit <filePath>
 
 # After editing - record outcome for learning
-npx claude-flow hooks post-edit <filePath> --success true
+npx claude-flow@v3alpha hooks post-edit <filePath> --success true
 
 # Before commands - assess risk
-npx claude-flow hooks pre-command "<command>"
+npx claude-flow@v3alpha hooks pre-command "<command>"
 
 # After commands - record outcome
-npx claude-flow hooks post-command "<command>" --success true
+npx claude-flow@v3alpha hooks post-command "<command>" --success true
 
 # Route task to optimal agent using learned patterns
-npx claude-flow hooks route "<task description>"
+npx claude-flow@v3alpha hooks route "<task description>"
 
 # Explain routing decision with transparency
-npx claude-flow hooks explain "<task description>"
+npx claude-flow@v3alpha hooks explain "<task description>"
 
 # Bootstrap intelligence from repository
-npx claude-flow hooks pretrain
+npx claude-flow@v3alpha hooks pretrain
 
 # Generate optimized agent configs from pretrain data
-npx claude-flow hooks build-agents
+npx claude-flow@v3alpha hooks build-agents
 
 # View learning metrics dashboard
-npx claude-flow hooks metrics
+npx claude-flow@v3alpha hooks metrics
 
 # Transfer patterns from another project
-npx claude-flow hooks transfer <sourceProject>
+npx claude-flow@v3alpha hooks transfer <sourceProject>
 
 # RuVector intelligence (SONA, MoE, HNSW)
-npx claude-flow hooks intelligence
+npx claude-flow@v3alpha hooks intelligence
 ```
 
 ---
