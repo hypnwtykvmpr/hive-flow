@@ -155,7 +155,7 @@
           {
             "type": "command",
             "timeout": 3000,
-            "command": ".claude/helpers/swarm-hooks.sh post-task \"$TOOL_INPUT_prompt\" true 2>/dev/null || true"
+            "command": "/workspaces/claude-flow/.claude/helpers/swarm-hooks.sh post-task \"$TOOL_INPUT_prompt\" true 2>/dev/null || true"
           },
           {
             "type": "command",
