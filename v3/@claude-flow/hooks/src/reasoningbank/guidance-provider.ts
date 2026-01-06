@@ -38,7 +38,7 @@ const DANGEROUS_COMMANDS = [
   'rm -rf',
   'drop database',
   'truncate',
-  '--force.*push',
+  'push.*--force|--force.*push',
   'reset --hard',
   'format c:',
 ];
