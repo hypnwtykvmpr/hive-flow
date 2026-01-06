@@ -24,7 +24,7 @@ Claude-Flow is a comprehensive AI agent orchestration framework that transforms 
 | Capability | Claude Code Alone | Claude Code + Claude-Flow |
 |------------|-------------------|---------------------------|
 | **Agents** | 1 general-purpose agent | 54+ specialized agents (coder, tester, reviewer, security, DevOps...) |
-| **Parallelism** | Sequential tasks only | 15 agents working simultaneously |
+| **Parallelism** | Sequential tasks only | Unlimited concurrent agents + sub-workers (configurable) |
 | **Memory** | Forgets between sessions | Remembers patterns, learns what works, improves over time |
 | **Complex Tasks** | Manual breakdown required | Automatic task decomposition across agent teams |
 | **Code Review** | Single-pass review | Multi-agent review (security + performance + style + tests) |
