@@ -10,27 +10,27 @@
  * - MCP tools
  */
 
-import type {
-  PluginMetadata,
-  PluginContext,
-  PluginConfig,
-  ILogger,
-  IEventBus,
-  ServiceContainer,
-  AgentTypeDefinition,
-  TaskTypeDefinition,
-  MCPToolDefinition,
-  CLICommandDefinition,
-  MemoryBackendFactory,
-  HookDefinition,
+import {
   HookEvent,
   HookPriority,
-  HookHandler,
-  WorkerDefinition,
-  WorkerType,
-  LLMProviderDefinition,
-  HealthCheckResult,
-  JSONSchema,
+  type PluginMetadata,
+  type PluginContext,
+  type PluginConfig,
+  type ILogger,
+  type IEventBus,
+  type ServiceContainer,
+  type AgentTypeDefinition,
+  type TaskTypeDefinition,
+  type MCPToolDefinition,
+  type CLICommandDefinition,
+  type MemoryBackendFactory,
+  type HookDefinition,
+  type HookHandler,
+  type WorkerDefinition,
+  type WorkerType,
+  type LLMProviderDefinition,
+  type HealthCheckResult,
+  type JSONSchema,
 } from '../types/index.js';
 import { BasePlugin, createSimplePlugin } from '../core/base-plugin.js';
 import type { IPlugin, PluginFactory } from '../core/plugin-interface.js';
