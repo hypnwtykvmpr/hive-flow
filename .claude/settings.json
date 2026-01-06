@@ -120,7 +120,7 @@
           {
             "type": "command",
             "timeout": 3000,
-            "command": ".claude/helpers/checkpoint-manager.sh auto-checkpoint \"File edit: $TOOL_INPUT_file_path\" 2>/dev/null || true"
+            "command": "/workspaces/claude-flow/.claude/helpers/checkpoint-manager.sh auto-checkpoint \"File edit: $TOOL_INPUT_file_path\" 2>/dev/null || true"
           }
         ]
       },
