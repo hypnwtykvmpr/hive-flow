@@ -742,9 +742,9 @@ export CLAUDE_FLOW_MAX_AGENTS=5
 **Pattern search returning no results**
 ```bash
 # Verify patterns are stored
-npx claude-flow hooks metrics
+npx claude-flow@v3alpha hooks metrics
 # Re-run pretraining if empty
-npx claude-flow hooks pretrain
+npx claude-flow@v3alpha hooks pretrain
 ```
 
 **Windows path issues**
