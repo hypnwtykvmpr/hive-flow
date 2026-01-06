@@ -273,7 +273,7 @@ npx claude-flow@v3alpha worker dispatch --trigger audit --context "./src"
 npx claude-flow@v3alpha worker status
 
 # View completed results
-npx claude-flow worker results --limit 10
+npx claude-flow@v3alpha worker results --limit 10
 ```
 
 ### LLM Providers (`@claude-flow/providers`)
