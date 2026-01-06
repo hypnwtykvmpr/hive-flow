@@ -138,6 +138,147 @@ This project uses SPARC (Specification, Pseudocode, Architecture, Refinement, Co
 
 **KEY**: MCP coordinates the strategy, Claude Code's Task tool executes with real agents.
 
+## 🤖 AUTOMATIC SWARM ORCHESTRATION
+
+**Claude Code MUST automatically invoke swarm orchestration for complex tasks.**
+
+### 🚨 CRITICAL: MCP + Task Tool in SAME Message
+
+**When user says "spawn swarm" or requests complex work, Claude Code MUST in ONE message:**
+1. Call MCP tools to initialize coordination
+2. **IMMEDIATELY** call Task tool to spawn REAL working agents
+3. Both MCP and Task calls must be in the SAME response
+
+**MCP alone does NOT execute work - Task tool agents do the actual work!**
+
+### Auto-Start Swarm Protocol
+
+When Claude Code detects a complex task (multi-file, new feature, or refactoring), it MUST:
+
+```javascript
+// 🚨 ALL OF THIS IN ONE SINGLE MESSAGE - MCP + Task + TodoWrite together!
+[Single Message - Complete Swarm Spawn]:
+
+  // MCP: Initialize coordination topology
+  mcp__claude-flow__swarm_init { topology: "hierarchical-mesh", maxAgents: 15, strategy: "adaptive" }
+  mcp__claude-flow__agent_spawn { type: "coordinator", name: "queen" }
+  mcp__claude-flow__task_orchestrate { task: "[user's task]", strategy: "adaptive", priority: "high" }
+  mcp__claude-flow__memory_usage { action: "store", namespace: "swarm", key: "session", value: "..." }
+
+  // Task Tool: Spawn REAL working agents (THIS IS REQUIRED!)
+  Task("Coordinator", "Orchestrate the swarm, manage agent coordination...", "hierarchical-coordinator")
+  Task("Architect", "Design system architecture, document decisions...", "system-architect")
+  Task("Researcher", "Analyze requirements, research patterns...", "researcher")
+  Task("Coder", "Implement core features following architecture...", "coder")
+  Task("Tester", "Create comprehensive test suite...", "tester")
+  Task("Reviewer", "Review code quality and security...", "reviewer")
+
+  // TodoWrite: Track all tasks
+  TodoWrite { todos: [
+    {content: "Initialize swarm coordination", status: "completed", activeForm: "Initializing"},
+    {content: "Research requirements", status: "in_progress", activeForm: "Researching"},
+    {content: "Design architecture", status: "in_progress", activeForm: "Designing"},
+    {content: "Implement solution", status: "pending", activeForm: "Implementing"},
+    {content: "Write tests", status: "pending", activeForm: "Testing"},
+    {content: "Review code", status: "pending", activeForm: "Reviewing"}
+  ]}
+```
+
+**❌ WRONG - MCP only (no actual work happens):**
+```javascript
+// This ONLY sets up coordination - no agents actually work!
+mcp__claude-flow__swarm_init { ... }
+mcp__claude-flow__agent_spawn { ... }
+// Missing Task tool calls = nothing executes!
+```
+
+**✅ CORRECT - MCP + Task tool together:**
+```javascript
+// Same message: coordination + execution
+mcp__claude-flow__swarm_init { ... }
+Task("Agent1", "Do actual work...", "agent-type")
+Task("Agent2", "Do actual work...", "agent-type")
+```
+
+### Agent Routing by Task Type
+
+| Task Type | Primary Agents | Support Agents |
+|-----------|---------------|----------------|
+| Bug Fix | `coder`, `tester` | `reviewer` |
+| New Feature | `architect`, `coder`, `tester` | `researcher`, `reviewer` |
+| Refactoring | `code-analyzer`, `coder` | `tester`, `reviewer` |
+| Performance | `perf-analyzer`, `coder` | `tester` |
+| Security | `security-manager`, `reviewer` | `coder`, `tester` |
+| Documentation | `api-docs`, `researcher` | `reviewer` |
+| Full-Stack | `backend-dev`, `coder`, `tester` | `architect`, `reviewer`, `cicd-engineer` |
+
+### Task Complexity Detection
+
+**Auto-invoke swarm when:**
+- Task involves 3+ files
+- Task is a new feature or module
+- Task requires architectural decisions
+- Task involves multiple concerns (API + DB + UI)
+- User requests "comprehensive" or "full" implementation
+
+**Skip swarm for:**
+- Single file edits
+- Simple bug fixes (1-2 line changes)
+- Documentation updates
+- Configuration changes
+
+### Settings Configuration
+
+Claude Code should ensure proper settings via hooks:
+
+```bash
+# Auto-configure on session start
+npx claude-flow@alpha hooks session-start --auto-configure
+npx claude-flow@alpha memory store --key "session/config" --value '{"topology":"hierarchical-mesh","maxAgents":15}'
+```
+
+### Swarm Lifecycle Management
+
+**Session Start (automatic):**
+```javascript
+[Auto-Init on Complex Task]:
+  // Check task complexity
+  mcp__claude-flow__features_detect { component: "task-analyzer" }
+
+  // Initialize if complex
+  mcp__claude-flow__swarm_init { topology: "hierarchical-mesh" }
+  mcp__claude-flow__memory_usage { action: "store", key: "session/active", value: "true" }
+
+  // Spawn initial agents
+  Task("Coordinator", "Manage swarm coordination...", "hierarchical-coordinator")
+```
+
+**Task Execution (automatic):**
+```javascript
+[During Task - Memory Coordination]:
+  // Store decisions in shared memory
+  mcp__claude-flow__memory_usage { action: "store", key: "task/decisions", value: "[decisions]" }
+
+  // Track progress
+  mcp__claude-flow__task_status { taskId: "[current-task]" }
+
+  // Neural learning from patterns
+  mcp__claude-flow__neural_patterns { action: "learn", operation: "[what was done]", outcome: "[result]" }
+```
+
+**Session End (automatic):**
+```javascript
+[Auto-Cleanup]:
+  // Persist learnings
+  mcp__claude-flow__memory_persist { sessionId: "[session-id]" }
+
+  // Export metrics
+  mcp__claude-flow__swarm_status { verbose: true }
+
+  // Train neural patterns
+  mcp__claude-flow__neural_train { pattern_type: "coordination", training_data: "[session-summary]" }
+```
+
 ## 🚀 Quick Setup
 
 ```bash
@@ -290,23 +431,105 @@ Message 4: Write "file.js"
 - **2.8-4.4x speed improvement**
 - **27+ neural models**
 
-## Hooks Integration
+## 🪝 V3 Hooks System (26 Hooks)
 
-### Pre-Operation
+Claude Flow V3 provides 26 hooks for comprehensive agent coordination and self-learning.
+
+### Hook Categories
+
+| Category | Hooks | Purpose |
+|----------|-------|---------|
+| **Core** | `pre-edit`, `post-edit`, `pre-command`, `post-command`, `pre-task`, `post-task` | Tool lifecycle |
+| **Routing** | `route`, `metrics`, `list` | Task analysis |
+| **Intelligence** | `explain`, `pretrain`, `build-agents`, `transfer`, `init` | Neural learning |
+| **Session** | `session-start`, `session-end`, `session-restore`, `notify` | Context management |
+| **Learning** | `trajectory-start`, `trajectory-step`, `trajectory-end` | Reinforcement learning |
+| **Patterns** | `pattern-store`, `pattern-search`, `stats`, `learn`, `attention` | Memory & search |
+
+### Essential Hook Commands
+
+```bash
+# Core hooks for tool coordination
+npx claude-flow@alpha hooks pre-task --description "[task]"
+npx claude-flow@alpha hooks post-task --task-id "[id]" --success true
+npx claude-flow@alpha hooks post-edit --file "[file]" --train-patterns
+
+# Session management
+npx claude-flow@alpha hooks session-start --session-id "[id]"
+npx claude-flow@alpha hooks session-end --export-metrics true --persist-patterns
+npx claude-flow@alpha hooks session-restore --session-id "[id]"
+
+# Intelligence routing
+npx claude-flow@alpha hooks route --task "[task]" --include-explanation
+npx claude-flow@alpha hooks explain --topic "[topic]" --depth comprehensive
+
+# Neural learning (RuVector Intelligence)
+npx claude-flow@alpha hooks pretrain --model-type moe --epochs 10
+npx claude-flow@alpha hooks build-agents --agent-types coder,tester --config-format yaml
+
+# Trajectory learning (reinforcement)
+npx claude-flow@alpha hooks intelligence trajectory-start --session "[session]"
+npx claude-flow@alpha hooks intelligence trajectory-step --action "[action]" --reward "[reward]"
+npx claude-flow@alpha hooks intelligence trajectory-end --verdict success
+
+# Pattern storage (HNSW-indexed, 150x faster)
+npx claude-flow@alpha hooks intelligence pattern-store --pattern "[pattern]" --embedding "[json]"
+npx claude-flow@alpha hooks intelligence pattern-search --query "[query]" --limit 10
+
+# Learning stats & attention
+npx claude-flow@alpha hooks intelligence stats
+npx claude-flow@alpha hooks intelligence attention --focus "[task]"
+```
+
+### Intelligence System (RuVector)
+
+V3 includes the RuVector Intelligence System with:
+- **SONA**: Self-Optimizing Neural Architecture
+- **MoE**: Mixture of Experts for specialized routing
+- **HNSW**: 150x faster pattern search (vs brute force)
+- **EWC++**: Elastic Weight Consolidation (prevents catastrophic forgetting)
+- **Flash Attention**: 2.49x-7.47x speedup
+
+The 4-step intelligence pipeline:
+1. **RETRIEVE** - Fetch relevant patterns via HNSW indexing
+2. **JUDGE** - Evaluate with verdicts (success/failure/partial)
+3. **DISTILL** - Extract key learnings via LoRA fine-tuning
+4. **CONSOLIDATE** - Prevent forgetting via EWC++
+
+### Agent Coordination Protocol
+
+Every agent spawned via Task tool should use hooks:
+
+```javascript
+// In agent prompt instructions
+Task("Coder", `
+  BEFORE starting: npx claude-flow@alpha hooks pre-task --description "Implement feature X"
+
+  DURING work:
+  - After each file edit: npx claude-flow@alpha hooks post-edit --file "[file]"
+  - To notify others: npx claude-flow@alpha hooks notify --message "[update]"
+
+  AFTER completing: npx claude-flow@alpha hooks post-task --success true
+`, "coder")
+```
+
+### Hooks Integration
+
+#### Pre-Operation
 - Auto-assign agents by file type
 - Validate commands for safety
 - Prepare resources automatically
 - Optimize topology by complexity
 - Cache searches
 
-### Post-Operation
+#### Post-Operation
 - Auto-format code
 - Train neural patterns
 - Update memory
 - Analyze performance
 - Track token usage
 
-### Session Management
+#### Session Management
 - Generate summaries
 - Persist state
 - Track metrics

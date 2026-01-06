@@ -23,6 +23,12 @@ import { createServer, Server } from 'http';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as os from 'os';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+// ESM-compatible __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 /**
  * MCP Server configuration

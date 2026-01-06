@@ -10,6 +10,16 @@ export interface MCPToolInputSchema {
   required?: string[];
 }
 
+export interface MCPToolResult {
+  content: Array<{
+    type: 'text' | 'image' | 'resource';
+    text?: string;
+    data?: string;
+    mimeType?: string;
+  }>;
+  isError?: boolean;
+}
+
 export interface MCPTool {
   name: string;
   description: string;
@@ -19,5 +29,5 @@ export interface MCPTool {
   version?: string;
   cacheable?: boolean;
   cacheTTL?: number;
-  handler: (input: Record<string, unknown>, context?: Record<string, unknown>) => Promise<unknown>;
+  handler: (input: Record<string, unknown>, context?: Record<string, unknown>) => Promise<MCPToolResult | unknown>;
 }

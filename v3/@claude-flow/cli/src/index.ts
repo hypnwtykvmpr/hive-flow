@@ -3,12 +3,29 @@
  * Modernized CLI for Claude Flow V3
  */
 
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import type { Command, CommandContext, CommandResult, V3Config, CLIError } from './types.js';
 import { CommandParser, commandParser } from './parser.js';
 import { OutputFormatter, output } from './output.js';
 import { commands, commandRegistry, getCommand } from './commands/index.js';
 
-export const VERSION = '3.0.0-alpha.1';
+// Read version from package.json at runtime
+function getPackageVersion(): string {
+  try {
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = dirname(__filename);
+    // Navigate from dist/src to package root
+    const pkgPath = join(__dirname, '..', '..', 'package.json');
+    const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
+    return pkg.version || '3.0.0';
+  } catch {
+    return '3.0.0';
+  }
+}
+
+export const VERSION = getPackageVersion();
 
 export interface CLIOptions {
   name?: string;
@@ -84,10 +101,11 @@ export class CLI {
         process.exit(1);
       }
 
-      // Handle subcommand
+      // Handle subcommand (supports nested subcommands)
       let targetCommand = command;
       let subcommandArgs = positional;
 
+      // Process command path (e.g., ['hooks', 'worker', 'list'])
       if (commandPath.length > 1 && command.subcommands) {
         const subcommandName = commandPath[1];
         const subcommand = command.subcommands.find(
@@ -96,8 +114,19 @@ export class CLI {
 
         if (subcommand) {
           targetCommand = subcommand;
-          // Remove subcommand from args
           subcommandArgs = positional.slice(1);
+
+          // Check for nested subcommand (level 2)
+          if (commandPath.length > 2 && subcommand.subcommands) {
+            const nestedName = commandPath[2];
+            const nestedSubcommand = subcommand.subcommands.find(
+              sc => sc.name === nestedName || sc.aliases?.includes(nestedName)
+            );
+            if (nestedSubcommand) {
+              targetCommand = nestedSubcommand;
+              subcommandArgs = positional.slice(2);
+            }
+          }
         }
       } else if (positional.length > 0 && command.subcommands) {
         // Check if first positional is a subcommand
@@ -109,6 +138,18 @@ export class CLI {
         if (subcommand) {
           targetCommand = subcommand;
           subcommandArgs = positional.slice(1);
+
+          // Check for nested subcommand (level 2 from positional)
+          if (subcommandArgs.length > 0 && subcommand.subcommands) {
+            const nestedName = subcommandArgs[0];
+            const nestedSubcommand = subcommand.subcommands.find(
+              sc => sc.name === nestedName || sc.aliases?.includes(nestedName)
+            );
+            if (nestedSubcommand) {
+              targetCommand = nestedSubcommand;
+              subcommandArgs = subcommandArgs.slice(1);
+            }
+          }
         }
       }
 

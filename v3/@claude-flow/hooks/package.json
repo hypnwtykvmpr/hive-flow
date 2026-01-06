@@ -1,41 +1,41 @@
 {
   "name": "@claude-flow/hooks",
-  "version": "3.0.0-alpha.1",
+  "version": "3.0.0-alpha.2",
   "description": "V3 Hooks System - Event-driven lifecycle hooks with ReasoningBank learning integration",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
+      "types": "./dist/index.d.js",
       "import": "./dist/index.js"
     },
     "./registry": {
-      "types": "./dist/registry/index.d.ts",
+      "types": "./dist/registry/index.d.js",
       "import": "./dist/registry/index.js"
     },
     "./executor": {
-      "types": "./dist/executor/index.d.ts",
+      "types": "./dist/executor/index.d.js",
       "import": "./dist/executor/index.js"
     },
     "./daemons": {
-      "types": "./dist/daemons/index.d.ts",
+      "types": "./dist/daemons/index.d.js",
       "import": "./dist/daemons/index.js"
     },
     "./statusline": {
-      "types": "./dist/statusline/index.d.ts",
+      "types": "./dist/statusline/index.d.js",
       "import": "./dist/statusline/index.js"
     },
     "./mcp": {
-      "types": "./dist/mcp/index.d.ts",
+      "types": "./dist/mcp/index.d.js",
       "import": "./dist/mcp/index.js"
     },
     "./reasoningbank": {
-      "types": "./dist/reasoningbank/index.d.ts",
+      "types": "./dist/reasoningbank/index.d.js",
       "import": "./dist/reasoningbank/index.js"
     },
     "./guidance": {
-      "types": "./dist/reasoningbank/guidance-provider.d.ts",
+      "types": "./dist/reasoningbank/guidance-provider.d.js",
       "import": "./dist/reasoningbank/guidance-provider.js"
     }
   },
@@ -60,11 +60,13 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@claude-flow/shared": "workspace:*",
-    "@claude-flow/neural": "workspace:*",
-    "@claude-flow/memory": "workspace:*",
-    "better-sqlite3": "^11.0.0",
+    "@claude-flow/shared": "^3.0.0-alpha.1",
+    "@claude-flow/neural": "^3.0.0-alpha.2",
+    "@claude-flow/memory": "^3.0.0-alpha.2",
     "zod": "^3.23.0"
+  },
+  "optionalDependencies": {
+    "better-sqlite3": "^11.0.0"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.11",
@@ -73,7 +75,7 @@
     "vitest": "^2.0.0"
   },
   "peerDependencies": {
-    "@claude-flow/shared": "workspace:*"
+    "@claude-flow/shared": "^3.0.0-alpha.1"
   },
   "engines": {
     "node": ">=20.0.0"
@@ -93,5 +95,9 @@
     "type": "git",
     "url": "https://github.com/ruvnet/claude-flow.git",
     "directory": "v3/@claude-flow/hooks"
+  },
+  "publishConfig": {
+    "access": "public",
+    "tag": "v3alpha"
   }
 }

@@ -51,5 +51,10 @@ export {
   generateCrossPlatformSessionManager,
 } from './helpers-generator.js';
 
+export {
+  generateClaudeMd,
+  generateMinimalClaudeMd,
+} from './claudemd-generator.js';
+
 // Main executor
 export { executeInit, default } from './executor.js';

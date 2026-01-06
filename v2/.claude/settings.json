@@ -28,14 +28,47 @@
       "Bash(node:*)",
       "Bash(which:*)",
       "Bash(pwd)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "mcp__claude-flow__*",
+      "mcp__ruv-swarm__*",
+      "mcp__flow-nexus__*"
     ],
     "deny": [
       "Bash(rm -rf /)"
     ]
   },
   "hooks": {
+    "UserPromptSubmit": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx claude-flow@alpha hooks route-task --auto-swarm true --detect-complexity true"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx claude-flow@alpha hooks session-start --auto-configure true --restore-context true"
+          }
+        ]
+      }
+    ],
     "PreToolUse": [
+      {
+        "matcher": "Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cat | jq -r '.tool_input.prompt // empty' | tr '\\n' '\\0' | xargs -0 -I {} npx claude-flow@alpha hooks pre-task --description '{}' --coordinate-swarm true"
+          }
+        ]
+      },
       {
         "matcher": "Bash",
         "hooks": [
@@ -56,6 +89,15 @@
       }
     ],
     "PostToolUse": [
+      {
+        "matcher": "Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cat | jq -r '{agent: .tool_input.subagent_type, description: .tool_input.description} | @json' | xargs -I {} npx claude-flow@alpha hooks post-task --agent-data '{}' --update-swarm-status true --train-patterns true"
+          }
+        ]
+      },
       {
         "matcher": "Bash",
         "hooks": [
@@ -110,6 +152,6 @@
   "enabledMcpjsonServers": ["claude-flow", "ruv-swarm"],
   "statusLine": {
     "type": "command",
-    "command": ".claude/statusline-command.sh"
+    "command": ".claude/statusline.sh"
   }
 }

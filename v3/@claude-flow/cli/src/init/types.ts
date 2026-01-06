@@ -3,6 +3,9 @@
  * Configuration options for initializing Claude Code integration
  */
 
+import os from 'os';
+import path from 'path';
+
 /**
  * Components that can be initialized
  */
@@ -23,6 +26,8 @@ export interface InitComponents {
   mcp: boolean;
   /** Create .claude-flow/ directory (V3 runtime) */
   runtime: boolean;
+  /** Create CLAUDE.md with swarm guidance */
+  claudeMd: boolean;
 }
 
 /**
@@ -185,9 +190,6 @@ export interface PlatformInfo {
  * Detect current platform
  */
 export function detectPlatform(): PlatformInfo {
-  const os = require('os');
-  const path = require('path');
-
   const platform = os.platform();
   const arch = os.arch();
   const homeDir = os.homedir();
@@ -269,6 +271,7 @@ export const DEFAULT_INIT_OPTIONS: InitOptions = {
     statusline: true,
     mcp: true,
     runtime: true,
+    claudeMd: true,
   },
   hooks: {
     preToolUse: true,
@@ -348,6 +351,7 @@ export const MINIMAL_INIT_OPTIONS: InitOptions = {
     statusline: false,
     mcp: true,
     runtime: true,
+    claudeMd: true,
   },
   hooks: {
     ...DEFAULT_INIT_OPTIONS.hooks,
@@ -395,6 +399,7 @@ export const FULL_INIT_OPTIONS: InitOptions = {
     statusline: true,
     mcp: true,
     runtime: true,
+    claudeMd: true,
   },
   skills: {
     core: true,

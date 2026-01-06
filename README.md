@@ -54,8 +54,8 @@ Claude-Flow is a comprehensive AI agent orchestration framework that transforms 
 
 ### Prerequisites
 
-- **Node.js 18+** (LTS recommended)
-- **npm 9+** or equivalent package manager
+- **Node.js 18+** or **Bun 1.0+** (Bun is faster)
+- **npm 9+** / **pnpm** / **bun** package manager
 
 **IMPORTANT**: Claude Code must be installed first:
 
@@ -70,11 +70,13 @@ claude --dangerously-skip-permissions
 ### Installation
 
 ```bash
-# Install claude-flow
+# With npm/npx (Node.js)
 npm install claude-flow@v3alpha
-
-# Initialize in your project
 npx claude-flow@v3alpha init
+
+# With Bun (faster)
+bun add claude-flow@v3alpha
+bunx claude-flow@v3alpha init
 
 # Start MCP server for Claude Code integration
 npx claude-flow@v3alpha mcp start
@@ -154,7 +156,7 @@ npx claude-flow@v3alpha --list
 | **Memory & Neural** | `memory_usage`, `neural_status`, `neural_train`, `neural_patterns` | Memory operations and learning |
 | **GitHub** | `github_swarm`, `repo_analyze`, `pr_enhance`, `issue_triage`, `code_review` | Repository integration |
 | **Workers** | `worker/run`, `worker/status`, `worker/alerts`, `worker/history` | Background task management |
-| **Hooks** | `hooks/pre-edit`, `hooks/post-edit`, `hooks/route`, `hooks/pretrain` | Lifecycle hooks |
+| **Hooks** | `hooks/pre-*`, `hooks/post-*`, `hooks/route`, `hooks/session-*`, `hooks/intelligence/*`, `hooks/worker/*` | 31 lifecycle hooks |
 
 ### Security Features
 
@@ -337,7 +339,7 @@ npx claude-flow@v3alpha worker results --limit 10
 | `config` | 7 | Configuration (init, get, set, providers, reset, export, import) |
 | `status` | 3 | System status with watch mode (agents, tasks, memory) |
 | `workflow` | 6 | Workflow execution (run, validate, list, status, stop, template) |
-| `hooks` | 16 | Self-learning hooks (pre/post-edit, pre/post-command, route, explain, pretrain, metrics, etc.) |
+| `hooks` | 31 | Self-learning hooks (pre/post-edit, pre/post-command, route, explain, pretrain, session-*, intelligence/*, worker/*) |
 | `hive-mind` | 6 | Queen-led coordination (init, spawn, status, task, optimize-memory, shutdown) |
 | `migrate` | 5 | V2→V3 migration (status, run, verify, rollback, breaking) |
 
@@ -580,6 +582,137 @@ npx claude-flow@v3alpha worker results --limit 10
 | **Post-Task** | `post-task` | Cleanup, learning |
 | **Session** | `session-end`, `session-restore` | State management |
 
+### V3 Statusline (`@claude-flow/hooks`)
+
+Real-time development status display for Claude Code integration showing DDD progress, swarm activity, security status, and system metrics.
+
+**Output Format:**
+```
+▊ Claude Flow V3 ● ruvnet  │  ⎇ v3  │  Opus 4.5
+─────────────────────────────────────────────────────
+🏗️  DDD Domains    [●●●●●]  5/5    ⚡ 1.0x → 2.49x-7.47x
+🤖 Swarm  ◉ [58/15]  👥 0    🟢 CVE 3/3    💾 22282MB    📂  47%    🧠  10%
+🔧 Architecture    DDD ● 98%  │  Security ●CLEAN  │  Memory ●AgentDB  │  Integration ●
+```
+
+| Indicator | Description | Values |
+|-----------|-------------|--------|
+| `▊ Claude Flow V3` | Project header | Always shown |
+| `● ruvnet` | GitHub user (via `gh` CLI) | Dynamic |
+| `⎇ v3` | Current git branch | Dynamic |
+| `Opus 4.5` | Claude model name | From Claude Code |
+| `[●●●●●]` | DDD domain progress bar | 0-5 domains |
+| `⚡ 1.0x → 2.49x-7.47x` | Performance speedup target | Current → Target |
+| `◉/○` | Swarm coordination status | Active/Inactive |
+| `[58/15]` | Active agents / max agents | Process count |
+| `👥 0` | Sub-agents spawned | Task tool agents |
+| `🟢 CVE 3/3` | Security CVE remediation | Fixed/Total |
+| `💾 22282MB` | Memory usage (Node.js processes) | Real-time |
+| `📂 47%` | Context window usage | From Claude Code |
+| `🧠 10%` | Intelligence score (patterns learned) | 0-100% |
+| `DDD ● 98%` | Domain-Driven Design progress | Percentage |
+| `Security ●CLEAN` | Security audit status | CLEAN/PENDING/FAILED |
+| `Memory ●AgentDB` | Memory backend in use | AgentDB/SQLite/Hybrid |
+| `Integration ●` | agentic-flow integration status | Active/Inactive |
+
+**Usage:**
+```bash
+# V3 statusline (Node.js)
+node v3/@claude-flow/hooks/bin/statusline.js
+
+# JSON output for scripting
+node v3/@claude-flow/hooks/bin/statusline.js --json
+
+# Compact JSON (single line)
+node v3/@claude-flow/hooks/bin/statusline.js --compact
+
+# Help
+node v3/@claude-flow/hooks/bin/statusline.js --help
+```
+
+**Claude Code Integration:**
+
+Add to `.claude/settings.json`:
+```json
+{
+  "statusLine": {
+    "type": "command",
+    "command": "node v3/@claude-flow/hooks/bin/statusline.js"
+  }
+}
+```
+
+**Data Sources:**
+- `.claude-flow/metrics/v3-progress.json` - DDD domain progress
+- `.claude-flow/metrics/swarm-activity.json` - Active agent counts
+- `.claude-flow/security/audit-status.json` - CVE remediation status
+- `.claude-flow/learning/patterns.db` - Intelligence score (pattern count)
+- Process detection via `ps aux` - Real-time memory and agent counts
+- Git branch via `git branch --show-current`
+- GitHub user via `gh api user`
+
+### Background Daemons
+
+Automated background workers for continuous monitoring and metrics collection.
+
+| Daemon | Interval | Purpose | Output |
+|--------|----------|---------|--------|
+| **Swarm Monitor** | 3s | Process detection, agent counting | `swarm-activity.json` |
+| **Metrics Daemon** | 30s | V3 progress sync, SQLite metrics | `metrics.db` |
+
+**Commands:**
+```bash
+# Start all daemons
+.claude/helpers/daemon-manager.sh start 3 5
+
+# Check daemon status
+.claude/helpers/daemon-manager.sh status
+
+# Stop all daemons
+.claude/helpers/daemon-manager.sh stop
+```
+
+**Daemon Status Output:**
+```
+═══════════════════════════════════════════════════
+       Claude Flow V3 Daemon Status
+═══════════════════════════════════════════════════
+
+  ● Swarm Monitor    RUNNING (PID: 23383)
+  ● Metrics Daemon   RUNNING (PID: 2855)
+  ○ MCP Server       NOT DETECTED
+  ○ Agentic Flow     IDLE
+
+───────────────────────────────────────────────────
+  Last Update: 2026-01-06T15:13:04+00:00
+  Active Agents: 0
+═══════════════════════════════════════════════════
+```
+
+### Worker Manager (7 Scheduled Workers)
+
+| Worker | Interval | Purpose |
+|--------|----------|---------|
+| `perf` | 5 min | Performance benchmarks |
+| `health` | 5 min | Disk, memory, CPU monitoring |
+| `patterns` | 15 min | Pattern dedup & pruning |
+| `ddd` | 10 min | DDD progress tracking |
+| `adr` | 15 min | ADR compliance checking |
+| `security` | 30 min | Security vulnerability scans |
+| `learning` | 30 min | Learning pattern optimization |
+
+**Commands:**
+```bash
+# Start worker manager
+.claude/helpers/worker-manager.sh start 60
+
+# Force run all workers immediately
+.claude/helpers/worker-manager.sh force
+
+# Check worker status
+.claude/helpers/worker-manager.sh status
+```
+
 ---
 
 ## Use Cases
@@ -596,41 +729,106 @@ npx claude-flow@v3alpha worker results --limit 10
 
 ---
 
-## Self-Learning Hooks Commands
+## Self-Learning Hooks Commands (26 Hooks)
 
+### Core Tool Lifecycle Hooks
 ```bash
-# Before editing - get context and agent suggestions
+# Before/after file editing
 npx claude-flow@v3alpha hooks pre-edit <filePath>
+npx claude-flow@v3alpha hooks post-edit <filePath> --success true --train-patterns
 
-# After editing - record outcome for learning
-npx claude-flow@v3alpha hooks post-edit <filePath> --success true
-
-# Before commands - assess risk
+# Before/after commands
 npx claude-flow@v3alpha hooks pre-command "<command>"
-
-# After commands - record outcome
 npx claude-flow@v3alpha hooks post-command "<command>" --success true
 
+# Before/after tasks
+npx claude-flow@v3alpha hooks pre-task --description "<task>"
+npx claude-flow@v3alpha hooks post-task --task-id "<id>" --success true
+```
+
+### Intelligence & Routing Hooks
+```bash
 # Route task to optimal agent using learned patterns
-npx claude-flow@v3alpha hooks route "<task description>"
+npx claude-flow@v3alpha hooks route "<task description>" --include-explanation
 
 # Explain routing decision with transparency
-npx claude-flow@v3alpha hooks explain "<task description>"
+npx claude-flow@v3alpha hooks explain "<topic>" --depth comprehensive
 
 # Bootstrap intelligence from repository
-npx claude-flow@v3alpha hooks pretrain
+npx claude-flow@v3alpha hooks pretrain --model-type moe --epochs 10
 
 # Generate optimized agent configs from pretrain data
-npx claude-flow@v3alpha hooks build-agents
-
-# View learning metrics dashboard
-npx claude-flow@v3alpha hooks metrics
+npx claude-flow@v3alpha hooks build-agents --agent-types coder,tester --config-format yaml
 
 # Transfer patterns from another project
 npx claude-flow@v3alpha hooks transfer <sourceProject>
 
-# RuVector intelligence (SONA, MoE, HNSW)
+# Initialize hooks system
+npx claude-flow@v3alpha hooks init
+
+# View learning metrics dashboard
+npx claude-flow@v3alpha hooks metrics
+
+# List all registered hooks
+npx claude-flow@v3alpha hooks list
+```
+
+### Session Management Hooks
+```bash
+# Start session with context loading
+npx claude-flow@v3alpha hooks session-start --session-id "<id>" --load-context
+
+# End session with persistence
+npx claude-flow@v3alpha hooks session-end --export-metrics true --persist-patterns
+
+# Restore previous session context
+npx claude-flow@v3alpha hooks session-restore --session-id "<id>"
+
+# Send notifications to swarm
+npx claude-flow@v3alpha hooks notify --message "<message>" --swarm-status
+```
+
+### RuVector Intelligence Hooks (Reinforcement Learning)
+```bash
+# Trajectory-based learning (4-step pipeline: RETRIEVE, JUDGE, DISTILL, CONSOLIDATE)
+npx claude-flow@v3alpha hooks intelligence trajectory-start --session "<session>"
+npx claude-flow@v3alpha hooks intelligence trajectory-step --action "<action>" --reward 0.9
+npx claude-flow@v3alpha hooks intelligence trajectory-end --verdict success
+
+# Pattern storage with HNSW indexing (150x faster search)
+npx claude-flow@v3alpha hooks intelligence pattern-store --pattern "<pattern>" --embedding "[...]"
+npx claude-flow@v3alpha hooks intelligence pattern-search --query "<query>" --limit 10
+
+# Learning stats and attention focus
+npx claude-flow@v3alpha hooks intelligence stats
+npx claude-flow@v3alpha hooks intelligence learn --experience '{"type":"success"}'
+npx claude-flow@v3alpha hooks intelligence attention --focus "<task>"
+
+# Full intelligence system (SONA, MoE, HNSW, EWC++, Flash Attention)
 npx claude-flow@v3alpha hooks intelligence
+npx claude-flow@v3alpha hooks intelligence reset --confirm
+
+# ═══════════════════════════════════════════════════════════════
+# Background Worker Commands (12 workers for analysis/optimization)
+# ═══════════════════════════════════════════════════════════════
+
+# List all available workers
+npx claude-flow@v3alpha hooks worker list
+
+# Detect triggers from prompt text
+npx claude-flow@v3alpha hooks worker detect --prompt "optimize performance"
+
+# Auto-dispatch workers when triggers match (confidence ≥0.6)
+npx claude-flow@v3alpha hooks worker detect --prompt "deep dive into auth" --auto-dispatch --min-confidence 0.6
+
+# Manually dispatch a worker (ultralearn, optimize, audit, map, deepdive, document, refactor, benchmark, testgaps, etc.)
+npx claude-flow@v3alpha hooks worker dispatch --trigger refactor --context "auth module"
+
+# Check worker status
+npx claude-flow@v3alpha hooks worker status
+
+# Cancel a running worker
+npx claude-flow@v3alpha hooks worker cancel --id worker_refactor_1_abc123
 ```
 
 ---

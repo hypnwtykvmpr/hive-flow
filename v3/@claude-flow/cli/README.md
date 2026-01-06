@@ -6,21 +6,21 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-20+-green.svg)](https://nodejs.org/)
 [![Commands](https://img.shields.io/badge/Commands-14+-orange.svg)](https://github.com/ruvnet/claude-flow)
-[![Subcommands](https://img.shields.io/badge/Subcommands-87+-purple.svg)](https://github.com/ruvnet/claude-flow)
+[![Subcommands](https://img.shields.io/badge/Subcommands-92+-purple.svg)](https://github.com/ruvnet/claude-flow)
 
-> Modern CLI module for Claude Flow V3 - comprehensive command-line interface with 14 commands, 87+ subcommands, interactive prompts, self-learning hooks, hive-mind coordination, and beautiful output formatting.
+> Modern CLI module for Claude Flow V3 - comprehensive command-line interface with 14 commands, 92+ subcommands, interactive prompts, self-learning hooks, background workers, hive-mind coordination, and beautiful output formatting.
 
 ## Features
 
 ### Core Capabilities
 - **14 Main Commands** - Complete CLI coverage for all Claude Flow operations
-- **87+ Subcommands** - Fine-grained control over every aspect of the system
+- **92+ Subcommands** - Fine-grained control over every aspect of the system
 - **Advanced Argument Parsing** - Full support for flags, options, subcommands, and positional arguments
 - **Interactive Prompts** - Rich interactive mode with confirmations, selections, and input validation
 - **Beautiful Output** - Colored output, tables, progress bars, spinners, and multiple formats (text, JSON, table)
 
 ### V3-Specific Features
-- **Self-Learning Hooks** - 16 hook subcommands with pattern learning and neural integration
+- **Self-Learning Hooks** - 17 hook subcommands + 12 background workers with pattern learning and neural integration
 - **Hive-Mind Coordination** - Queen-led Byzantine fault-tolerant multi-agent consensus
 - **15-Agent Swarm** - V3 hierarchical mesh coordination with domain specialization
 - **AgentDB Integration** - 150x-12,500x faster vector search with HNSW indexing
@@ -84,7 +84,7 @@ claude-flow status --watch
 | `status` | 3 | System status monitoring with watch mode |
 | `start` | 3 | Service startup and quick launch |
 | `workflow` | 6 | Workflow execution and template management |
-| `hooks` | 16 | Self-learning hooks with neural pattern recognition |
+| `hooks` | 17 | Self-learning hooks with neural pattern recognition + 12 background workers |
 | `hive-mind` | 6 | Queen-led consensus-based multi-agent coordination |
 | `migrate` | 5 | V2 to V3 migration with rollback support |
 
@@ -698,7 +698,7 @@ claude-flow workflow template create --from deploy-standard
 
 ### `hooks` - Self-Learning Hooks
 
-Advanced self-learning hooks with 16 subcommands for neural pattern recognition.
+Advanced self-learning hooks with 17 subcommands for neural pattern recognition and background worker management.
 
 ```bash
 claude-flow hooks <subcommand> [options]
@@ -724,6 +724,7 @@ claude-flow hooks <subcommand> [options]
 | `transfer` | Transfer patterns from another project |
 | `list` | List all registered hooks |
 | `intelligence` | RuVector intelligence (SONA, MoE, HNSW) |
+| `worker` | Background worker management (12 workers) |
 
 #### Learning Pipeline
 
@@ -767,6 +768,59 @@ claude-flow hooks transfer ../other-project
 # View intelligence status (SONA, MoE, HNSW)
 claude-flow hooks intelligence
 ```
+
+#### Worker Subcommands
+
+The `hooks worker` command manages 12 background workers for analysis and optimization tasks.
+
+| Worker | Priority | Est. Time | Description |
+|--------|----------|-----------|-------------|
+| `ultralearn` | normal | 60s | Deep knowledge acquisition and learning |
+| `optimize` | high | 30s | Performance optimization and tuning |
+| `consolidate` | low | 20s | Memory consolidation and cleanup |
+| `predict` | normal | 15s | Predictive preloading and anticipation |
+| `audit` | critical | 45s | Security analysis and vulnerability scanning |
+| `map` | normal | 30s | Codebase mapping and architecture analysis |
+| `preload` | low | 10s | Resource preloading and cache warming |
+| `deepdive` | normal | 60s | Deep code analysis and examination |
+| `document` | normal | 45s | Auto-documentation generation |
+| `refactor` | normal | 30s | Code refactoring suggestions |
+| `benchmark` | normal | 60s | Performance benchmarking |
+| `testgaps` | normal | 30s | Test coverage analysis |
+
+##### Worker Commands
+
+```bash
+# List all available workers
+claude-flow hooks worker list
+
+# Detect triggers from prompt text
+claude-flow hooks worker detect --prompt "optimize performance"
+
+# Auto-dispatch workers when triggers match (min confidence 0.6)
+claude-flow hooks worker detect --prompt "deep dive into auth" --auto-dispatch --min-confidence 0.6
+
+# Manually dispatch a worker
+claude-flow hooks worker dispatch --trigger refactor --context "auth module"
+
+# Check worker status
+claude-flow hooks worker status
+
+# Cancel a running worker
+claude-flow hooks worker cancel --id worker_refactor_1_abc123
+```
+
+##### Performance Targets
+
+| Metric | Target |
+|--------|--------|
+| Trigger detection | <5ms |
+| Worker spawn | <50ms |
+| Max concurrent | 10 |
+
+##### UserPromptSubmit Integration
+
+Workers are automatically triggered via the `UserPromptSubmit` hook when prompt patterns match worker triggers with confidence ≥0.6.
 
 ---
 

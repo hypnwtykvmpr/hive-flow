@@ -3,10 +3,10 @@
   "version": "3.0.0-alpha.1",
   "type": "module",
   "description": "Deployment module - Release management, CI/CD, versioning",
-  "main": "src/index.ts",
-  "types": "src/index.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./dist/index.js"
   },
   "scripts": {
     "build": "tsc",
@@ -14,10 +14,14 @@
     "release": "semantic-release"
   },
   "dependencies": {
-    "@claude-flow/shared": "workspace:*"
+    "@claude-flow/shared": "^3.0.0-alpha.1"
   },
   "devDependencies": {
     "semantic-release": "^22.0.0",
     "vitest": "^1.6.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "tag": "v3alpha"
   }
 }
