@@ -524,7 +524,7 @@ export class HookFactory {
     }
   ): HookDefinition {
     const cache = new Map<string, { value: unknown; expires: number }>();
-    const ttl = options.ttlMs ?? 60000;
+    const ttlMs = options.ttlMs ?? 60000;
     const maxSize = options.maxSize ?? 100;
 
     return new HookBuilder(event)
