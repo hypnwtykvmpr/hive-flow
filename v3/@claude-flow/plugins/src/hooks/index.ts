@@ -424,7 +424,7 @@ export class HookFactory {
    */
   static createTimer(
     event: HookEvent,
-    onComplete: (duration: number, context: HookContext) => void
+    _onComplete: (duration: number, context: HookContext) => void
   ): HookDefinition {
     return new HookBuilder(event)
       .withName(`${event}-timer`)
