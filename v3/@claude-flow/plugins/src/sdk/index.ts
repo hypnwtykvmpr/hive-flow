@@ -398,7 +398,7 @@ export class HookBuilder {
   private event: HookEvent;
   private name?: string;
   private description?: string;
-  private priority: HookPriority = HookPriority.Normal;
+  private priority: HookPriority = HookPriorityValues.Normal;
   private async: boolean = true;
   private handler?: HookHandler;
 
