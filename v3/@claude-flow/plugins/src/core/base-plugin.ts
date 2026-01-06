@@ -362,7 +362,7 @@ export interface SimplePluginConfig {
  * });
  * ```
  */
-export function createSimplePlugin(config: SimplePluginConfig): IPlugin {
+export function createSimplePlugin(config: SimplePluginConfig): BasePlugin {
   return new SimplePlugin(config);
 }
 
