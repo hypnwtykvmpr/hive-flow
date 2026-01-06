@@ -356,7 +356,7 @@ export class AgenticFlowBridge extends EventEmitter {
 
   private async executeTask(
     taskId: string,
-    options: TaskOrchestrationOptions,
+    _options: TaskOrchestrationOptions,
     timeout: number
   ): Promise<void> {
     // Placeholder for actual task execution
