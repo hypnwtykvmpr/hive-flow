@@ -11,7 +11,6 @@
 import { EventEmitter } from 'events';
 import type {
   AgentTypeDefinition,
-  TaskTypeDefinition,
   WorkerDefinition,
   ILogger,
   IEventBus,
