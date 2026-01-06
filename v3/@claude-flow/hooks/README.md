@@ -15,9 +15,10 @@ The `@claude-flow/hooks` package provides a comprehensive hooks system for inter
 - 🎣 **Hook Registry** - Priority-based hook registration with filtering and management
 - ⚡ **Hook Executor** - Timeout handling, error recovery, and result aggregation
 - 🤖 **Background Daemons** - Metrics collection, swarm monitoring, pattern learning
+- 👷 **Background Workers** - 12 specialized workers for analysis, optimization, and automation
 - 📊 **Statusline Integration** - Real-time status display for Claude Code
 - 🧠 **ReasoningBank Learning** - Intelligent task routing based on learned patterns
-- 🔧 **MCP Tools** - 8 MCP tools for programmatic hooks access
+- 🔧 **MCP Tools** - 13 MCP tools for programmatic hooks access
 - 🔄 **V2 Compatibility** - Backward compatible with V2 hook commands
 
 ## Installation
@@ -194,6 +195,76 @@ statusline --help
 | `Low` | 10 | Logging, metrics |
 | `Background` | 1 | Async operations, runs last |
 
+## Background Workers
+
+The hooks system includes 12 specialized background workers that can be triggered automatically or manually dispatched.
+
+### Available Workers
+
+| Worker | Priority | Est. Time | Description |
+|--------|----------|-----------|-------------|
+| `ultralearn` | normal | 60s | Deep knowledge acquisition and learning |
+| `optimize` | high | 30s | Performance optimization and tuning |
+| `consolidate` | low | 20s | Memory consolidation and cleanup |
+| `predict` | normal | 15s | Predictive preloading and anticipation |
+| `audit` | critical | 45s | Security analysis and vulnerability scanning |
+| `map` | normal | 30s | Codebase mapping and architecture analysis |
+| `preload` | low | 10s | Resource preloading and cache warming |
+| `deepdive` | normal | 60s | Deep code analysis and examination |
+| `document` | normal | 45s | Auto-documentation generation |
+| `refactor` | normal | 30s | Code refactoring suggestions |
+| `benchmark` | normal | 60s | Performance benchmarking |
+| `testgaps` | normal | 30s | Test coverage analysis |
+
+### Worker CLI Commands
+
+```bash
+# List all available workers
+claude-flow hooks worker list
+
+# Detect triggers from prompt text
+claude-flow hooks worker detect --prompt "optimize performance"
+
+# Auto-dispatch when triggers match (confidence ≥0.6)
+claude-flow hooks worker detect --prompt "deep dive into auth" --auto-dispatch --min-confidence 0.6
+
+# Manually dispatch a worker
+claude-flow hooks worker dispatch --trigger refactor --context "auth module"
+
+# Check worker status
+claude-flow hooks worker status
+
+# Cancel a running worker
+claude-flow hooks worker cancel --id worker_refactor_1_abc123
+```
+
+### Performance Targets
+
+| Metric | Target |
+|--------|--------|
+| Trigger detection | <5ms |
+| Worker spawn | <50ms |
+| Max concurrent | 10 |
+
+### UserPromptSubmit Integration
+
+Workers are automatically triggered via the `UserPromptSubmit` hook when prompt patterns match worker triggers with confidence ≥0.6. Add this to your Claude settings:
+
+```json
+{
+  "hooks": {
+    "UserPromptSubmit": [{
+      "matcher": ".*",
+      "hooks": [{
+        "type": "command",
+        "timeout": 6000,
+        "command": "claude-flow hooks worker detect --prompt \"$USER_PROMPT\" --auto-dispatch --min-confidence 0.6"
+      }]
+    }]
+  }
+}
+```
+
 ## MCP Tools
 
 | Tool | Description |
@@ -206,6 +277,11 @@ statusline --help
 | `hooks/post-command` | Record command outcome |
 | `hooks/daemon-status` | Get daemon status |
 | `hooks/statusline` | Get statusline data |
+| `hooks/worker-list` | List all 12 background workers |
+| `hooks/worker-dispatch` | Dispatch a worker by trigger type |
+| `hooks/worker-status` | Get status of running workers |
+| `hooks/worker-detect` | Detect worker triggers from prompt text |
+| `hooks/worker-cancel` | Cancel a running worker |
 
 ## API Reference
 

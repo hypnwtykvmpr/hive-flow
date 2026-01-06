@@ -4,6 +4,7 @@
  */
 
 import type { InitOptions } from './types.js';
+import { generateStatuslineScript, generateStatuslineHook } from './statusline-generator.js';
 
 /**
  * Generate pre-commit hook script
@@ -619,7 +620,6 @@ export function generateHelpers(options: InitOptions): Record<string, string> {
   }
 
   if (options.components.statusline) {
-    const { generateStatuslineScript, generateStatuslineHook } = require('./statusline-generator.js');
     helpers['statusline.js'] = generateStatuslineScript(options);
     helpers['statusline-hook.sh'] = generateStatuslineHook(options);
   }

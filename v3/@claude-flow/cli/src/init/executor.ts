@@ -5,6 +5,12 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+// ESM-compatible __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 import type { InitOptions, InitResult, PlatformInfo } from './types.js';
 import { detectPlatform } from './types.js';
 import { generateSettingsJson } from './settings-generator.js';
@@ -17,6 +23,7 @@ import {
   generateAgentRouter,
   generateMemoryHelper,
 } from './helpers-generator.js';
+import { generateClaudeMd, generateMinimalClaudeMd } from './claudemd-generator.js';
 
 /**
  * Skills to copy based on configuration
@@ -182,6 +189,11 @@ export async function executeInit(options: InitOptions): Promise<InitResult> {
     // Generate runtime config
     if (options.components.runtime) {
       await writeRuntimeConfig(targetDir, options, result);
+    }
+
+    // Generate CLAUDE.md
+    if (options.components.claudeMd) {
+      await writeClaudeMd(targetDir, options, result);
     }
 
     // Count enabled hooks
@@ -605,6 +617,29 @@ neural/
     fs.writeFileSync(gitignorePath, gitignore, 'utf-8');
     result.created.files.push('.claude-flow/.gitignore');
   }
+}
+
+/**
+ * Write CLAUDE.md with swarm guidance
+ */
+async function writeClaudeMd(
+  targetDir: string,
+  options: InitOptions,
+  result: InitResult
+): Promise<void> {
+  const claudeMdPath = path.join(targetDir, 'CLAUDE.md');
+
+  if (fs.existsSync(claudeMdPath) && !options.force) {
+    result.skipped.push('CLAUDE.md');
+    return;
+  }
+
+  // Use minimal version for minimal init, full version otherwise
+  const isMinimal = !options.components.commands && !options.components.agents;
+  const content = isMinimal ? generateMinimalClaudeMd(options) : generateClaudeMd(options);
+
+  fs.writeFileSync(claudeMdPath, content, 'utf-8');
+  result.created.files.push('CLAUDE.md');
 }
 
 /**

@@ -160,7 +160,7 @@ export class CommandParser {
         // This is a command
         result.command.push(arg);
 
-        // Check for subcommand
+        // Check for subcommand (level 1)
         const cmd = this.commands.get(arg);
         if (cmd?.subcommands && i + 1 < args.length) {
           const nextArg = args[i + 1];
@@ -168,6 +168,26 @@ export class CommandParser {
           if (subCmd) {
             result.command.push(nextArg);
             i++;
+
+            // Check for nested subcommand (level 2)
+            if (subCmd.subcommands && i + 1 < args.length) {
+              const nestedArg = args[i + 1];
+              const nestedCmd = subCmd.subcommands.find(sc => sc.name === nestedArg || sc.aliases?.includes(nestedArg));
+              if (nestedCmd) {
+                result.command.push(nestedArg);
+                i++;
+
+                // Check for deeply nested subcommand (level 3)
+                if (nestedCmd.subcommands && i + 1 < args.length) {
+                  const deepArg = args[i + 1];
+                  const deepCmd = nestedCmd.subcommands.find(sc => sc.name === deepArg || sc.aliases?.includes(deepArg));
+                  if (deepCmd) {
+                    result.command.push(deepArg);
+                    i++;
+                  }
+                }
+              }
+            }
           }
         }
       } else {

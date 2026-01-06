@@ -5,7 +5,7 @@
  * Claude Flow V3 Command Line Interface
  */
 
-import { CLI } from '../src/index.js';
+import { CLI } from '../dist/src/index.js';
 
 const cli = new CLI();
 cli.run().catch((error) => {

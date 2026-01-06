@@ -92,10 +92,10 @@ export default defineConfig({
     // Globals for easier testing
     globals: true,
 
-    // Type checking
+    // Type checking disabled - it.each syntax not supported in type testing
+    // Use separate `npm run typecheck` for type validation
     typecheck: {
-      enabled: true,
-      include: ['**/*.test.ts'],
+      enabled: false,
     },
   },
 
