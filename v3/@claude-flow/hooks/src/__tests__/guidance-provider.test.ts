@@ -131,7 +131,8 @@ describe('GuidanceProvider', () => {
         const result = await provider.generatePreEditGuidance('config/production.ts');
 
         expect(result.hookSpecificOutput?.permissionDecision).toBe('ask');
-        expect(result.hookSpecificOutput?.permissionDecisionReason).toContain('production');
+        // Note: WARNED_PATTERNS checks 'prod' first, which matches 'production'
+        expect(result.hookSpecificOutput?.permissionDecisionReason).toContain('prod');
       });
 
       it('should warn about prod files', async () => {
