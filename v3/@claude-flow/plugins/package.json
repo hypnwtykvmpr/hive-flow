@@ -25,6 +25,14 @@
     "./providers": {
       "types": "./dist/providers/index.d.ts",
       "import": "./dist/providers/index.js"
+    },
+    "./examples/ruvector": {
+      "types": "./dist/examples/ruvector-plugins/index.d.ts",
+      "import": "./dist/examples/ruvector-plugins/index.js"
+    },
+    "./examples/plugin-creator": {
+      "types": "./dist/examples/plugin-creator/index.d.ts",
+      "import": "./dist/examples/plugin-creator/index.js"
     }
   },
   "scripts": {
@@ -39,11 +47,15 @@
   },
   "peerDependencies": {
     "@claude-flow/hooks": "^3.0.0-alpha.1",
-    "@claude-flow/memory": "^3.0.0-alpha.1"
+    "@claude-flow/memory": "^3.0.0-alpha.1",
+    "@ruvector/wasm": "^0.1.0",
+    "@ruvector/learning-wasm": "^0.1.0"
   },
   "peerDependenciesMeta": {
     "@claude-flow/hooks": { "optional": true },
-    "@claude-flow/memory": { "optional": true }
+    "@claude-flow/memory": { "optional": true },
+    "@ruvector/wasm": { "optional": true },
+    "@ruvector/learning-wasm": { "optional": true }
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
@@ -58,7 +70,12 @@
     "hooks",
     "agentic-flow",
     "agentdb",
-    "ai-agents"
+    "ai-agents",
+    "ruvector",
+    "hnsw",
+    "vector-search",
+    "lora",
+    "neural-adaptation"
   ],
   "author": "Claude Flow Team",
   "license": "MIT",
