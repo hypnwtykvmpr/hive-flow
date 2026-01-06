@@ -728,7 +728,7 @@ lsof -i :3000
 # Kill existing process
 kill -9 <PID>
 # Restart MCP server
-npx claude-flow mcp start
+npx claude-flow@v3alpha mcp start
 ```
 
 **Agent spawn failures**
