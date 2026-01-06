@@ -103,7 +103,7 @@ export class WorkerInstance extends EventEmitter implements IWorkerInstance {
   private _currentTask?: WorkerTask;
   private _metrics: WorkerMetrics;
   private readonly startTime: number;
-  private lastActivityTime: number;
+  private _lastActivityTime: number;
 
   constructor(id: string, definition: WorkerDefinition) {
     super();
