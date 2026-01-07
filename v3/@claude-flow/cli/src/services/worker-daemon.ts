@@ -703,19 +703,105 @@ export class WorkerDaemon extends EventEmitter {
     return result;
   }
 
-  private async runPredictWorker(): Promise<unknown> {
+  /**
+   * Local predict worker (fallback when headless unavailable)
+   */
+  private async runPredictWorkerLocal(): Promise<unknown> {
     return {
       timestamp: new Date().toISOString(),
+      mode: 'local',
       predictions: [],
       preloaded: [],
+      note: 'Install Claude Code CLI for AI-powered predictions',
     };
   }
 
-  private async runDocumentWorker(): Promise<unknown> {
+  /**
+   * Local document worker (fallback when headless unavailable)
+   */
+  private async runDocumentWorkerLocal(): Promise<unknown> {
     return {
       timestamp: new Date().toISOString(),
+      mode: 'local',
       filesDocumented: 0,
       suggestedDocs: [],
+      note: 'Install Claude Code CLI for AI-powered documentation generation',
+    };
+  }
+
+  /**
+   * Local ultralearn worker (fallback when headless unavailable)
+   */
+  private async runUltralearnWorkerLocal(): Promise<unknown> {
+    return {
+      timestamp: new Date().toISOString(),
+      mode: 'local',
+      patternsLearned: 0,
+      insightsGained: [],
+      note: 'Install Claude Code CLI for AI-powered deep learning',
+    };
+  }
+
+  /**
+   * Local refactor worker (fallback when headless unavailable)
+   */
+  private async runRefactorWorkerLocal(): Promise<unknown> {
+    return {
+      timestamp: new Date().toISOString(),
+      mode: 'local',
+      suggestions: [],
+      duplicatesFound: 0,
+      note: 'Install Claude Code CLI for AI-powered refactoring suggestions',
+    };
+  }
+
+  /**
+   * Local deepdive worker (fallback when headless unavailable)
+   */
+  private async runDeepdiveWorkerLocal(): Promise<unknown> {
+    return {
+      timestamp: new Date().toISOString(),
+      mode: 'local',
+      analysisDepth: 'shallow',
+      findings: [],
+      note: 'Install Claude Code CLI for AI-powered deep code analysis',
+    };
+  }
+
+  /**
+   * Local benchmark worker
+   */
+  private async runBenchmarkWorkerLocal(): Promise<unknown> {
+    const benchmarkFile = join(this.projectRoot, '.claude-flow', 'metrics', 'benchmark.json');
+    const metricsDir = join(this.projectRoot, '.claude-flow', 'metrics');
+
+    if (!existsSync(metricsDir)) {
+      mkdirSync(metricsDir, { recursive: true });
+    }
+
+    const result = {
+      timestamp: new Date().toISOString(),
+      mode: 'local',
+      benchmarks: {
+        memoryUsage: process.memoryUsage(),
+        cpuUsage: process.cpuUsage(),
+        uptime: process.uptime(),
+      },
+    };
+
+    writeFileSync(benchmarkFile, JSON.stringify(result, null, 2));
+    return result;
+  }
+
+  /**
+   * Local preload worker
+   */
+  private async runPreloadWorkerLocal(): Promise<unknown> {
+    return {
+      timestamp: new Date().toISOString(),
+      mode: 'local',
+      resourcesPreloaded: 0,
+      cacheStatus: 'active',
     };
   }
 
