@@ -138,44 +138,54 @@ async function startBackgroundDaemon(projectRoot: string, quiet: boolean): Promi
   // dist/src/commands -> dist/src -> dist -> package root -> bin/cli.js
   const cliPath = join(__dirname, '..', '..', '..', 'bin', 'cli.js');
 
-  // Open log file for daemon output
-  const logFd = fs.openSync(logFile, 'a');
-
   // Verify CLI path exists
   if (!fs.existsSync(cliPath)) {
-    fs.closeSync(logFd);
     output.printError(`CLI not found at: ${cliPath}`);
     return { success: false, exitCode: 1 };
   }
 
-  // Spawn detached child process running daemon in foreground mode
-  const child = spawn(
-    process.execPath,
-    [cliPath, 'daemon', 'start', '--foreground', '--quiet'],
-    {
-      cwd: projectRoot,
-      detached: true,
-      stdio: ['ignore', logFd, logFd],
-      env: { ...process.env, CLAUDE_FLOW_DAEMON: '1' },
-    }
-  );
+  // Use shell to spawn daemon with proper output redirection
+  // This ensures the log file stays open even after parent exits
+  const shellCmd = `"${process.execPath}" "${cliPath}" daemon start --foreground --quiet >> "${logFile}" 2>&1 & echo $!`;
 
-  // Unref so parent can exit
-  child.unref();
+  const child = spawn('sh', ['-c', shellCmd], {
+    cwd: projectRoot,
+    detached: true,
+    stdio: ['ignore', 'pipe', 'ignore'],
+    env: { ...process.env, CLAUDE_FLOW_DAEMON: '1' },
+  });
 
-  // Save PID
-  fs.writeFileSync(pidFile, String(child.pid));
+  // Wait for the PID to be echoed back
+  return new Promise((resolve) => {
+    let pidStr = '';
+    child.stdout?.on('data', (data: Buffer) => {
+      pidStr += data.toString();
+    });
 
-  // Note: Do NOT close logFd here - it would kill the child's stdout/stderr
-  // The fd will be automatically closed when this process exits
+    child.on('close', () => {
+      const pid = parseInt(pidStr.trim(), 10);
 
-  if (!quiet) {
-    output.printSuccess(`Daemon started in background (PID: ${child.pid})`);
-    output.printInfo(`Logs: ${logFile}`);
-    output.printInfo(`Stop with: claude-flow daemon stop`);
-  }
+      if (isNaN(pid) || pid <= 0) {
+        output.printError('Failed to get daemon PID');
+        resolve({ success: false, exitCode: 1 });
+        return;
+      }
 
-  return { success: true };
+      // Save PID
+      fs.writeFileSync(pidFile, String(pid));
+
+      if (!quiet) {
+        output.printSuccess(`Daemon started in background (PID: ${pid})`);
+        output.printInfo(`Logs: ${logFile}`);
+        output.printInfo(`Stop with: claude-flow daemon stop`);
+      }
+
+      resolve({ success: true });
+    });
+
+    // Unref so parent can exit immediately
+    child.unref();
+  });
 }
 
 // Stop daemon subcommand
