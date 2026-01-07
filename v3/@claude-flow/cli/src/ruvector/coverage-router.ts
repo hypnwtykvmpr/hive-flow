@@ -271,3 +271,284 @@ export class CoverageRouter {
 export function createCoverageRouter(config?: Partial<CoverageRouterConfig>): CoverageRouter {
   return new CoverageRouter(config);
 }
+
+// ============================================================================
+// Additional Exports for MCP Tools (coverage-tools.ts)
+// ============================================================================
+
+/**
+ * Coverage suggestion result
+ */
+export interface CoverageSuggestResult {
+  path: string;
+  suggestions: Array<{
+    file: string;
+    currentCoverage: number;
+    targetCoverage: number;
+    gap: number;
+    priority: number;
+    suggestedTests: string[];
+  }>;
+  totalGap: number;
+  estimatedEffort: number;
+}
+
+/**
+ * Coverage gaps result
+ */
+export interface CoverageGapsResult {
+  totalGaps: number;
+  gaps: Array<{
+    file: string;
+    currentCoverage: number;
+    targetCoverage: number;
+    gap: number;
+    priority: number;
+    suggestedAgent: string;
+  }>;
+  byAgent: Record<string, string[]>;
+  summary: string;
+}
+
+/**
+ * Coverage route options
+ */
+export interface CoverageRouteOptions {
+  projectRoot?: string;
+  threshold?: number;
+  useRuvector?: boolean;
+}
+
+/**
+ * Coverage suggest options
+ */
+export interface CoverageSuggestOptions extends CoverageRouteOptions {
+  limit?: number;
+}
+
+/**
+ * Coverage gaps options
+ */
+export interface CoverageGapsOptions extends CoverageRouteOptions {
+  groupByAgent?: boolean;
+}
+
+/**
+ * Route a task based on coverage analysis
+ */
+export async function coverageRoute(
+  task: string,
+  options: CoverageRouteOptions = {}
+): Promise<CoverageRouteResult> {
+  const router = new CoverageRouter({
+    targetCoverage: options.threshold || 80,
+  });
+
+  // Try to load coverage data
+  const coverage = await loadProjectCoverage(options.projectRoot);
+  if (!coverage) {
+    return {
+      action: 'skip',
+      priority: 1,
+      targetFiles: [],
+      testTypes: ['unit'],
+      gaps: [],
+      estimatedEffort: 0,
+      impactScore: 0,
+    };
+  }
+
+  return router.route(coverage);
+}
+
+/**
+ * Suggest coverage improvements for a path
+ */
+export async function coverageSuggest(
+  path: string,
+  options: CoverageSuggestOptions = {}
+): Promise<CoverageSuggestResult> {
+  const limit = options.limit || 20;
+  const threshold = options.threshold || 80;
+
+  const coverage = await loadProjectCoverage(options.projectRoot);
+  if (!coverage) {
+    return {
+      path,
+      suggestions: [],
+      totalGap: 0,
+      estimatedEffort: 0,
+    };
+  }
+
+  // Filter files matching the path
+  const matchingFiles = coverage.byFile.filter(f => f.path.includes(path));
+  const belowThreshold = matchingFiles.filter(f => f.lineCoverage < threshold);
+
+  const suggestions = belowThreshold
+    .map(f => ({
+      file: f.path,
+      currentCoverage: f.lineCoverage,
+      targetCoverage: threshold,
+      gap: threshold - f.lineCoverage,
+      priority: calculateFilePriority(f.path, f.lineCoverage, threshold),
+      suggestedTests: suggestTestsForFile(f),
+    }))
+    .sort((a, b) => b.priority - a.priority)
+    .slice(0, limit);
+
+  const totalGap = suggestions.reduce((sum, s) => sum + s.gap, 0);
+  const estimatedEffort = totalGap * 0.1; // Rough estimate: 0.1 hours per % gap
+
+  return { path, suggestions, totalGap, estimatedEffort };
+}
+
+/**
+ * List all coverage gaps with agent assignments
+ */
+export async function coverageGaps(
+  options: CoverageGapsOptions = {}
+): Promise<CoverageGapsResult> {
+  const threshold = options.threshold || 80;
+  const groupByAgent = options.groupByAgent !== false;
+
+  const coverage = await loadProjectCoverage(options.projectRoot);
+  if (!coverage) {
+    return {
+      totalGaps: 0,
+      gaps: [],
+      byAgent: {},
+      summary: 'No coverage data found',
+    };
+  }
+
+  const belowThreshold = coverage.byFile.filter(f => f.lineCoverage < threshold);
+
+  const gaps = belowThreshold.map(f => ({
+    file: f.path,
+    currentCoverage: f.lineCoverage,
+    targetCoverage: threshold,
+    gap: threshold - f.lineCoverage,
+    priority: calculateFilePriority(f.path, f.lineCoverage, threshold),
+    suggestedAgent: suggestAgentForFile(f.path),
+  }));
+
+  const byAgent: Record<string, string[]> = {};
+  if (groupByAgent) {
+    for (const gap of gaps) {
+      if (!byAgent[gap.suggestedAgent]) {
+        byAgent[gap.suggestedAgent] = [];
+      }
+      byAgent[gap.suggestedAgent].push(gap.file);
+    }
+  }
+
+  return {
+    totalGaps: gaps.length,
+    gaps,
+    byAgent,
+    summary: `${gaps.length} files below ${threshold}% coverage threshold`,
+  };
+}
+
+/**
+ * Load project coverage data (stub - implement based on project setup)
+ */
+async function loadProjectCoverage(projectRoot?: string): Promise<CoverageReport | null> {
+  const { existsSync, readFileSync } = require('fs');
+  const { join } = require('path');
+
+  const root = projectRoot || process.cwd();
+
+  // Try common coverage locations
+  const coveragePaths = [
+    join(root, 'coverage', 'coverage-final.json'),
+    join(root, 'coverage', 'lcov.info'),
+    join(root, '.nyc_output', 'coverage.json'),
+    join(root, 'coverage.json'),
+  ];
+
+  for (const coveragePath of coveragePaths) {
+    if (existsSync(coveragePath)) {
+      try {
+        const content = readFileSync(coveragePath, 'utf-8');
+        const router = new CoverageRouter();
+
+        if (coveragePath.endsWith('.json')) {
+          return router.parseCoverage(JSON.parse(content), 'istanbul');
+        } else if (coveragePath.endsWith('.info')) {
+          return router.parseCoverage(content, 'lcov');
+        }
+      } catch {
+        // Continue to next path
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Calculate priority for a file based on path and coverage
+ */
+function calculateFilePriority(path: string, coverage: number, threshold: number): number {
+  let priority = 5;
+
+  // Gap-based priority
+  const gap = threshold - coverage;
+  if (gap > 50) priority += 3;
+  else if (gap > 30) priority += 2;
+  else if (gap > 15) priority += 1;
+
+  // Path-based priority
+  const lowerPath = path.toLowerCase();
+  if (/core|main|index/.test(lowerPath)) priority += 2;
+  if (/auth|security|payment/.test(lowerPath)) priority += 3;
+  if (/api|service|controller/.test(lowerPath)) priority += 1;
+  if (/util|helper/.test(lowerPath)) priority -= 1;
+  if (/test|spec|mock/.test(lowerPath)) priority -= 2;
+
+  return Math.max(1, Math.min(10, priority));
+}
+
+/**
+ * Suggest tests for a file based on its coverage
+ */
+function suggestTestsForFile(file: FileCoverage): string[] {
+  const suggestions: string[] = [];
+
+  if (file.uncoveredLines.length > 10) {
+    suggestions.push('Add unit tests for uncovered code paths');
+  }
+  if (file.branchCoverage < 50) {
+    suggestions.push('Add branch coverage tests (if/else paths)');
+  }
+  if (file.functionCoverage < 80) {
+    suggestions.push('Add tests for untested functions');
+  }
+
+  const lowerPath = file.path.toLowerCase();
+  if (/api|endpoint|route|handler/.test(lowerPath)) {
+    suggestions.push('Add integration tests for API endpoints');
+  }
+  if (/component|view|ui/.test(lowerPath)) {
+    suggestions.push('Add component tests with user interactions');
+  }
+
+  return suggestions.slice(0, 3);
+}
+
+/**
+ * Suggest an agent type for a file
+ */
+function suggestAgentForFile(path: string): string {
+  const lowerPath = path.toLowerCase();
+
+  if (/api|endpoint|route|controller/.test(lowerPath)) return 'api-tester';
+  if (/component|view|ui|page/.test(lowerPath)) return 'ui-tester';
+  if (/service|repository|model/.test(lowerPath)) return 'unit-tester';
+  if (/integration|e2e/.test(lowerPath)) return 'e2e-tester';
+  if (/util|helper|lib/.test(lowerPath)) return 'unit-tester';
+
+  return 'tester';
+}
