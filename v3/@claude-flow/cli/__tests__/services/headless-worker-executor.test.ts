@@ -1058,7 +1058,7 @@ describe('HeadlessWorkerExecutor', () => {
           'bad-timeout': {
             enabled: true,
             prompt: 'Test',
-            timeout: 0, // Invalid timeout
+            timeout: -100, // Negative timeout is invalid
           },
         },
       });
