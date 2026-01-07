@@ -3,20 +3,23 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
+
+// Import directly from modules to avoid heavy dependencies
 import {
-  // Core service
   MockEmbeddingService,
   cosineSimilarity,
   euclideanDistance,
   dotProduct,
   computeSimilarity,
+} from '../src/embedding-service.js';
 
-  // Chunking
+import {
   chunkText,
   estimateTokens,
   reconstructFromChunks,
+} from '../src/chunking.js';
 
-  // Normalization
+import {
   l2Normalize,
   l1Normalize,
   minMaxNormalize,
@@ -24,15 +27,16 @@ import {
   normalize,
   l2Norm,
   isNormalized,
+} from '../src/normalization.js';
 
-  // Hyperbolic
+import {
   euclideanToPoincare,
   poincareToEuclidean,
   hyperbolicDistance,
   mobiusAdd,
   isInPoincareBall,
   batchEuclideanToPoincare,
-} from '../src/index.js';
+} from '../src/hyperbolic.js';
 
 // =============================================================================
 // Mock Embedding Service Tests
