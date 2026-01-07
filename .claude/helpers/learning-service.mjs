@@ -769,7 +769,7 @@ class LearningService {
     );
 
     // Add to long-term index
-    this.longTermIndex.add(`lt_${patternId}`, new Float32Array(row.embedding.buffer));
+    this.longTermIndex.add(`lt_${patternId}`, this._bufferToFloat32Array(row.embedding));
 
     // Remove from short-term
     this.db.prepare('DELETE FROM short_term_patterns WHERE id = ?').run(patternId);
