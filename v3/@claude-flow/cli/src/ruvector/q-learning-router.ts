@@ -78,6 +78,48 @@ interface QEntry {
   qValues: Float32Array;
   visits: number;
   lastUpdate: number;
+  /** Eligibility trace for TD(lambda) */
+  eligibility?: Float32Array;
+}
+
+/**
+ * Experience tuple for replay buffer
+ */
+interface Experience {
+  stateKey: string;
+  actionIdx: number;
+  reward: number;
+  nextStateKey: string | null;
+  timestamp: number;
+  priority: number;
+}
+
+/**
+ * Cache entry for route decisions
+ */
+interface CacheEntry {
+  decision: RouteDecision;
+  timestamp: number;
+  hits: number;
+}
+
+/**
+ * Persisted model structure
+ */
+interface PersistedModel {
+  version: string;
+  config: Partial<QLearningRouterConfig>;
+  qTable: Record<string, { qValues: number[]; visits: number }>;
+  stats: {
+    stepCount: number;
+    updateCount: number;
+    avgTDError: number;
+    epsilon: number;
+  };
+  metadata: {
+    savedAt: string;
+    totalExperiences: number;
+  };
 }
 
 /**
@@ -89,8 +131,17 @@ const DEFAULT_CONFIG: QLearningRouterConfig = {
   explorationInitial: 1.0,
   explorationFinal: 0.01,
   explorationDecay: 10000,
+  explorationDecayType: 'exponential',
   maxStates: 10000,
   numActions: 8,
+  replayBufferSize: 1000,
+  replayBatchSize: 32,
+  enableReplay: true,
+  cacheSize: 256,
+  cacheTTL: 300000,
+  modelPath: '.swarm/q-learning-model.json',
+  autoSaveInterval: 100,
+  stateSpaceDim: 64,
 };
 
 /**
