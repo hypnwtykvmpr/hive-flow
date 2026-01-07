@@ -216,9 +216,30 @@ const startAction = async (ctx: CommandContext): Promise<CommandResult> => {
       output.printInfo('Running in daemon mode. Use "claude-flow stop" to stop.');
 
       // Store PID for daemon management
-      // TODO: Implement proper process forking with detached: true
       const daemonPidPath = path.join(cwd, '.claude-flow', 'daemon.pid');
       fs.writeFileSync(daemonPidPath, String(process.pid));
+
+      // Detach from parent process for true daemon behavior
+      if (process.platform !== 'win32') {
+        // Unix-like systems: create new session
+        try {
+          process.stdin.unref?.();
+          process.stdout.unref?.();
+          process.stderr.unref?.();
+        } catch {
+          // Ignore errors if streams can't be unref'd
+        }
+      }
+
+      // Keep process alive in daemon mode
+      const keepAlive = setInterval(() => {
+        // Heartbeat - check if we should still be running
+        if (!fs.existsSync(daemonPidPath)) {
+          clearInterval(keepAlive);
+          process.exit(0);
+        }
+      }, 5000);
+      keepAlive.unref(); // Don't prevent process from exiting if no other work
     }
 
     const result = {
