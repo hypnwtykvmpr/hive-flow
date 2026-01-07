@@ -52,13 +52,10 @@ async function checkNodeVersion(): Promise<HealthCheck> {
   }
 }
 
-// Check npm version (async with promisified exec)
+// Check npm version (async with proper env inheritance)
 async function checkNpmVersion(): Promise<HealthCheck> {
   try {
-    const { promisify } = require('util');
-    const execAsync = promisify(require('child_process').exec);
-    const { stdout } = await execAsync('npm --version', { encoding: 'utf8', timeout: 5000 });
-    const version = stdout.trim();
+    const version = await runCommand('npm --version');
     const major = parseInt(version.split('.')[0], 10);
     if (major >= 9) {
       return { name: 'npm Version', status: 'pass', message: `v${version}` };
