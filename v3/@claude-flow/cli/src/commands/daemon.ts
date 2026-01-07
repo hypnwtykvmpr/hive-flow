@@ -6,9 +6,9 @@
 import type { Command, CommandContext, CommandResult } from '../types.js';
 import { output } from '../output.js';
 import { WorkerDaemon, getDaemon, startDaemon, stopDaemon, type WorkerType } from '../services/worker-daemon.js';
-import { spawn } from 'child_process';
+import { spawn, execFile } from 'child_process';
 import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import { dirname, join, resolve, isAbsolute } from 'path';
 import * as fs from 'fs';
 
 // Start daemon subcommand
