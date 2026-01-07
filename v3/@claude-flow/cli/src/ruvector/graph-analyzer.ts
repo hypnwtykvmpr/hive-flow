@@ -1237,7 +1237,4 @@ export {
   loadRuVector,
   fallbackMinCut,
   fallbackLouvain,
-  // Cache utilities
-  clearGraphCaches,
-  getGraphCacheStats,
 };
