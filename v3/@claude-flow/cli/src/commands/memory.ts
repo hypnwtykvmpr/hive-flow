@@ -30,8 +30,8 @@ const storeCommand: Command = {
     },
     {
       name: 'value',
-      short: 'v',
-      description: 'Value to store',
+      // Note: No short flag - global -v is reserved for verbose
+      description: 'Value to store (use --value)',
       type: 'string'
     },
     {

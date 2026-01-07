@@ -30,6 +30,9 @@ import { pluginsCommand } from './plugins.js';
 import { deploymentCommand } from './deployment.js';
 import { claimsCommand } from './claims.js';
 import { embeddingsCommand } from './embeddings.js';
+// P0 Commands
+import { completionsCommand } from './completions.js';
+import { doctorCommand } from './doctor.js';
 
 // Export all commands
 export { agentCommand } from './agent.js';
@@ -58,6 +61,9 @@ export { pluginsCommand } from './plugins.js';
 export { deploymentCommand } from './deployment.js';
 export { claimsCommand } from './claims.js';
 export { embeddingsCommand } from './embeddings.js';
+// P0 Commands
+export { completionsCommand } from './completions.js';
+export { doctorCommand } from './doctor.js';
 
 /**
  * All available commands
@@ -90,6 +96,9 @@ export const commands: Command[] = [
   deploymentCommand,
   claimsCommand,
   embeddingsCommand,
+  // P0 Commands
+  completionsCommand,
+  doctorCommand,
 ];
 
 /**
