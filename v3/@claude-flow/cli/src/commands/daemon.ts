@@ -219,37 +219,27 @@ async function startBackgroundDaemon(projectRoot: string, quiet: boolean): Promi
     env: { ...process.env, CLAUDE_FLOW_DAEMON: '1' },
   });
 
-  // Wait for the PID to be echoed back
-  return new Promise((resolve) => {
-    let pidStr = '';
-    child.stdout?.on('data', (data: Buffer) => {
-      pidStr += data.toString();
-    });
+  // Get PID from spawned process directly (no shell echo needed)
+  const pid = child.pid;
 
-    child.on('close', () => {
-      const pid = parseInt(pidStr.trim(), 10);
+  if (!pid || pid <= 0) {
+    output.printError('Failed to get daemon PID');
+    return { success: false, exitCode: 1 };
+  }
 
-      if (isNaN(pid) || pid <= 0) {
-        output.printError('Failed to get daemon PID');
-        resolve({ success: false, exitCode: 1 });
-        return;
-      }
+  // Save PID
+  fs.writeFileSync(pidFile, String(pid));
 
-      // Save PID
-      fs.writeFileSync(pidFile, String(pid));
+  if (!quiet) {
+    output.printSuccess(`Daemon started in background (PID: ${pid})`);
+    output.printInfo(`Logs: ${logFile}`);
+    output.printInfo(`Stop with: claude-flow daemon stop`);
+  }
 
-      if (!quiet) {
-        output.printSuccess(`Daemon started in background (PID: ${pid})`);
-        output.printInfo(`Logs: ${logFile}`);
-        output.printInfo(`Stop with: claude-flow daemon stop`);
-      }
+  // Unref so parent can exit immediately
+  child.unref();
 
-      resolve({ success: true });
-    });
-
-    // Unref so parent can exit immediately
-    child.unref();
-  });
+  return { success: true };
 }
 
 // Stop daemon subcommand
