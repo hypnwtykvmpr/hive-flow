@@ -283,6 +283,12 @@ service.removeEventListener(listener);
 | **Transformers.js** | ~230ms | Good | Free | Yes |
 | **Mock** | <1ms | N/A | Free | Yes |
 
+### Agentic-Flow (Recommended)
+
+| Model | Dimensions | Speed | Best For |
+|-------|------------|-------|----------|
+| `default` | 384 | 3ms | General purpose, fastest |
+
 ### OpenAI Models
 
 | Model | Dimensions | Max Tokens | Best For |
