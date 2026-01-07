@@ -361,10 +361,34 @@ const diffCache = new Map<string, { files: DiffFile[]; timestamp: number }>();
 const CACHE_TTL_MS = 5000; // 5 seconds - short TTL since diffs change frequently
 
 /**
+ * Validate git ref to prevent command injection
+ * Only allows safe characters: alphanumeric, -, _, /, ., ~, ^
+ */
+function validateGitRef(ref: string): void {
+  // Block shell metacharacters and dangerous patterns
+  if (!/^[a-zA-Z0-9_\-./~^@]+$/.test(ref)) {
+    throw new Error(`Invalid git ref: contains unsafe characters`);
+  }
+  // Block multiple dots (path traversal)
+  if (ref.includes('..') && !ref.match(/^[a-zA-Z0-9_\-]+\.\.\.?[a-zA-Z0-9_\-]+$/)) {
+    if (!/^\w+\.\.[.\w]+$/.test(ref)) {
+      throw new Error(`Invalid git ref: suspicious pattern`);
+    }
+  }
+  // Max length check
+  if (ref.length > 256) {
+    throw new Error(`Invalid git ref: too long`);
+  }
+}
+
+/**
  * Get git diff statistics using SINGLE combined command (optimized)
  * Replaces two separate git commands with one
  */
 export function getGitDiffNumstat(ref: string = 'HEAD'): DiffFile[] {
+  // SECURITY: Validate git ref to prevent command injection
+  validateGitRef(ref);
+
   // Check cache first
   const cacheKey = `numstat:${ref}`;
   const cached = diffCache.get(cacheKey);
@@ -372,14 +396,19 @@ export function getGitDiffNumstat(ref: string = 'HEAD'): DiffFile[] {
     return cached.files;
   }
 
-  const { execSync } = require('child_process');
+  const { execFileSync } = require('child_process');
   try {
-    // OPTIMIZATION: Single combined command instead of two separate calls
-    // Uses --diff-filter to get status and --numstat in one pass
-    const output = execSync(
-      `git diff --numstat --diff-filter=ACDMRTUXB ${ref} && echo "---STATUS---" && git diff --name-status ${ref}`,
-      { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024 } // 10MB buffer for large diffs
-    );
+    // SECURITY: Use execFileSync with args array instead of shell string
+    // This prevents command injection via the ref parameter
+    const numstatOutput = execFileSync('git', [
+      'diff', '--numstat', '--diff-filter=ACDMRTUXB', ref
+    ], { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024 });
+
+    const statusOutput = execFileSync('git', [
+      'diff', '--name-status', ref
+    ], { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024 });
+
+    const output = numstatOutput + '---STATUS---' + statusOutput;
 
     const [numstatPart, statusPart] = output.split('---STATUS---');
 
