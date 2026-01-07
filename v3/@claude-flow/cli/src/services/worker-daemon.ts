@@ -678,7 +678,10 @@ export class WorkerDaemon extends EventEmitter {
     return result;
   }
 
-  private async runTestGapsWorker(): Promise<unknown> {
+  /**
+   * Local testgaps worker (fallback when headless unavailable)
+   */
+  private async runTestGapsWorkerLocal(): Promise<unknown> {
     // Check for test coverage gaps
     const testGapsFile = join(this.projectRoot, '.claude-flow', 'metrics', 'test-gaps.json');
     const metricsDir = join(this.projectRoot, '.claude-flow', 'metrics');
@@ -689,9 +692,11 @@ export class WorkerDaemon extends EventEmitter {
 
     const result = {
       timestamp: new Date().toISOString(),
+      mode: 'local',
       hasTestDir: existsSync(join(this.projectRoot, 'tests')) || existsSync(join(this.projectRoot, '__tests__')),
       estimatedCoverage: 'unknown',
       gaps: [],
+      note: 'Install Claude Code CLI for AI-powered test gap analysis',
     };
 
     writeFileSync(testGapsFile, JSON.stringify(result, null, 2));
