@@ -5,10 +5,10 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-20+-green.svg)](https://nodejs.org/)
-[![Commands](https://img.shields.io/badge/Commands-14+-orange.svg)](https://github.com/ruvnet/claude-flow)
-[![Subcommands](https://img.shields.io/badge/Subcommands-92+-purple.svg)](https://github.com/ruvnet/claude-flow)
+[![Commands](https://img.shields.io/badge/Commands-24-orange.svg)](https://github.com/ruvnet/claude-flow)
+[![Subcommands](https://img.shields.io/badge/Subcommands-130+-purple.svg)](https://github.com/ruvnet/claude-flow)
 
-> Modern CLI module for Claude Flow V3 - comprehensive command-line interface with 14 commands, 92+ subcommands, interactive prompts, self-learning hooks, background workers, hive-mind coordination, and beautiful output formatting.
+> Modern CLI module for Claude Flow V3 - comprehensive command-line interface with 24 commands, 130+ subcommands, interactive prompts, self-learning hooks, background workers, hive-mind coordination, and beautiful output formatting.
 
 ## Features
 
