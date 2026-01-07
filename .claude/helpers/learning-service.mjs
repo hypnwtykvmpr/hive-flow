@@ -972,6 +972,31 @@ class LearningService {
       this.db = null;
     }
   }
+
+  // Helper: Safely convert SQLite Buffer to Float32Array
+  // Handles byte alignment issues that cause "byte length should be multiple of 4"
+  _bufferToFloat32Array(buffer) {
+    if (!buffer) return null;
+
+    // If it's already a Float32Array, return it
+    if (buffer instanceof Float32Array) return buffer;
+
+    // Get the expected number of floats based on embedding dimension
+    const numFloats = this.config?.embedding?.dimension || CONFIG.embedding.dimension;
+    const expectedBytes = numFloats * 4;
+
+    // Create a properly aligned Uint8Array copy
+    const uint8 = new Uint8Array(expectedBytes);
+    const sourceLength = Math.min(buffer.length, expectedBytes);
+
+    // Copy bytes from Buffer to Uint8Array
+    for (let i = 0; i < sourceLength; i++) {
+      uint8[i] = buffer[i];
+    }
+
+    // Create Float32Array from the aligned buffer
+    return new Float32Array(uint8.buffer);
+  }
 }
 
 // =============================================================================
