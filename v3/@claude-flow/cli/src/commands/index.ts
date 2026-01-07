@@ -21,6 +21,15 @@ import { statusCommand } from './status.js';
 import { taskCommand } from './task.js';
 import { sessionCommand } from './session.js';
 import { daemonCommand } from './daemon.js';
+// V3 Advanced Commands
+import { neuralCommand } from './neural.js';
+import { securityCommand } from './security.js';
+import { performanceCommand } from './performance.js';
+import { providersCommand } from './providers.js';
+import { pluginsCommand } from './plugins.js';
+import { deploymentCommand } from './deployment.js';
+import { claimsCommand } from './claims.js';
+import { embeddingsCommand } from './embeddings.js';
 
 // Export all commands
 export { agentCommand } from './agent.js';

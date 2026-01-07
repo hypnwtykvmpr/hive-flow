@@ -845,6 +845,8 @@ export interface AutoEmbeddingConfig {
   provider: EmbeddingProvider | 'auto';
   /** Fallback provider if primary fails */
   fallback?: EmbeddingProvider;
+  /** Auto-install agentic-flow if not available (default: true for 'auto' provider) */
+  autoInstall?: boolean;
   /** Model ID for agentic-flow */
   modelId?: string;
   /** Model name for transformers */
