@@ -524,23 +524,53 @@ export class WorkerDaemon extends EventEmitter {
    * Run the actual worker logic
    */
   private async runWorkerLogic(workerConfig: WorkerConfig): Promise<unknown> {
+    // Check if this is a headless worker type and headless execution is available
+    if (isHeadlessWorker(workerConfig.type) && this.headlessAvailable && this.headlessExecutor) {
+      try {
+        this.log('info', `Running ${workerConfig.type} in headless mode (Claude Code AI)`);
+        const result = await this.headlessExecutor.execute(workerConfig.type as HeadlessWorkerType);
+        return {
+          mode: 'headless',
+          ...result,
+        };
+      } catch (error) {
+        this.log('warn', `Headless execution failed for ${workerConfig.type}, falling back to local mode`);
+        this.emit('headless:fallback', {
+          type: workerConfig.type,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        // Fall through to local execution
+      }
+    }
+
+    // Local execution (fallback or for non-headless workers)
     switch (workerConfig.type) {
       case 'map':
         return this.runMapWorker();
       case 'audit':
-        return this.runAuditWorker();
+        return this.runAuditWorkerLocal();
       case 'optimize':
-        return this.runOptimizeWorker();
+        return this.runOptimizeWorkerLocal();
       case 'consolidate':
         return this.runConsolidateWorker();
       case 'testgaps':
-        return this.runTestGapsWorker();
+        return this.runTestGapsWorkerLocal();
       case 'predict':
-        return this.runPredictWorker();
+        return this.runPredictWorkerLocal();
       case 'document':
-        return this.runDocumentWorker();
+        return this.runDocumentWorkerLocal();
+      case 'ultralearn':
+        return this.runUltralearnWorkerLocal();
+      case 'refactor':
+        return this.runRefactorWorkerLocal();
+      case 'deepdive':
+        return this.runDeepdiveWorkerLocal();
+      case 'benchmark':
+        return this.runBenchmarkWorkerLocal();
+      case 'preload':
+        return this.runPreloadWorkerLocal();
       default:
-        return { status: 'unknown worker type' };
+        return { status: 'unknown worker type', mode: 'local' };
     }
   }
 
