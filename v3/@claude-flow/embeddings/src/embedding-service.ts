@@ -569,13 +569,18 @@ export class AgenticFlowEmbeddingService extends BaseEmbeddingService {
   private async initialize(): Promise<void> {
     if (this.initialized) return;
 
+    let lastError: Error | null = null;
+
     const createEmbedder = async (modulePath: string): Promise<boolean> => {
       try {
         // Use file:// protocol for absolute paths
         const importPath = modulePath.startsWith('/') ? `file://${modulePath}` : modulePath;
         const module = await import(/* webpackIgnore: true */ importPath);
         const getOptimizedEmbedder = module.getOptimizedEmbedder || module.default?.getOptimizedEmbedder;
-        if (!getOptimizedEmbedder) return false;
+        if (!getOptimizedEmbedder) {
+          lastError = new Error(`Module loaded but getOptimizedEmbedder not found`);
+          return false;
+        }
 
         this.embedder = getOptimizedEmbedder({
           modelId: this.modelId,
@@ -587,7 +592,8 @@ export class AgenticFlowEmbeddingService extends BaseEmbeddingService {
         await this.embedder.init();
         this.initialized = true;
         return true;
-      } catch {
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
         return false;
       }
     };
@@ -627,8 +633,9 @@ export class AgenticFlowEmbeddingService extends BaseEmbeddingService {
       }
     }
 
+    const errorDetail = lastError ? ` Last error: ${lastError.message}` : '';
     throw new Error(
-      `Failed to initialize agentic-flow embeddings. ` +
+      `Failed to initialize agentic-flow embeddings.${errorDetail} ` +
       `Ensure agentic-flow is installed and ONNX model is downloaded: ` +
       `npx agentic-flow@alpha embeddings init`
     );
