@@ -30,14 +30,17 @@ const startCommand: Command = {
     const quiet = ctx.flags.quiet as boolean;
     const foreground = ctx.flags.foreground as boolean;
     const projectRoot = process.cwd();
+    const isDaemonProcess = process.env.CLAUDE_FLOW_DAEMON === '1';
 
-    // Check if background daemon already running
-    const bgPid = getBackgroundDaemonPid(projectRoot);
-    if (bgPid && isProcessRunning(bgPid)) {
-      if (!quiet) {
-        output.printWarning(`Daemon already running in background (PID: ${bgPid})`);
+    // Check if background daemon already running (skip if we ARE the daemon process)
+    if (!isDaemonProcess) {
+      const bgPid = getBackgroundDaemonPid(projectRoot);
+      if (bgPid && isProcessRunning(bgPid)) {
+        if (!quiet) {
+          output.printWarning(`Daemon already running in background (PID: ${bgPid})`);
+        }
+        return { success: true };
       }
-      return { success: true };
     }
 
     // Background mode (default): fork a detached process

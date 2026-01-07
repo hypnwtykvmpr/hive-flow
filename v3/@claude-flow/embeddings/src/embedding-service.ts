@@ -571,7 +571,9 @@ export class AgenticFlowEmbeddingService extends BaseEmbeddingService {
 
     const createEmbedder = async (modulePath: string): Promise<boolean> => {
       try {
-        const module = await import(/* webpackIgnore: true */ modulePath);
+        // Use file:// protocol for absolute paths
+        const importPath = modulePath.startsWith('/') ? `file://${modulePath}` : modulePath;
+        const module = await import(/* webpackIgnore: true */ importPath);
         const getOptimizedEmbedder = module.getOptimizedEmbedder || module.default?.getOptimizedEmbedder;
         if (!getOptimizedEmbedder) return false;
 
@@ -593,21 +595,30 @@ export class AgenticFlowEmbeddingService extends BaseEmbeddingService {
     // Build list of possible module paths to try
     const possiblePaths: string[] = [];
 
-    // Try standard package import path
-    const packagePath = 'agentic-flow/dist/embeddings/optimized-embedder.js';
-    possiblePaths.push(packagePath);
-
     // Try node_modules resolution from different locations
     try {
       const path = await import('path');
+      const { existsSync } = await import('fs');
       const cwd = process.cwd();
-      possiblePaths.push(
+
+      // Prioritize absolute paths that exist
+      const absolutePaths = [
         path.join(cwd, 'node_modules/agentic-flow/dist/embeddings/optimized-embedder.js'),
         path.join(cwd, '../node_modules/agentic-flow/dist/embeddings/optimized-embedder.js'),
-      );
+        '/workspaces/claude-flow/node_modules/agentic-flow/dist/embeddings/optimized-embedder.js',
+      ];
+
+      for (const p of absolutePaths) {
+        if (existsSync(p)) {
+          possiblePaths.push(p);
+        }
+      }
     } catch {
-      // path module not available, skip
+      // fs/path module not available, fallback to package import
     }
+
+    // Try standard package import path as fallback
+    possiblePaths.push('agentic-flow/dist/embeddings/optimized-embedder.js');
 
     // Try each path
     for (const modulePath of possiblePaths) {
