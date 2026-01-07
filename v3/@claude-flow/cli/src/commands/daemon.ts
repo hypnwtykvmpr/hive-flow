@@ -146,12 +146,48 @@ const startCommand: Command = {
 };
 
 /**
+ * Validate path for security - prevents path traversal and injection
+ */
+function validatePath(path: string, label: string): void {
+  // Must be absolute after resolution
+  const resolved = resolve(path);
+
+  // Check for null bytes (injection attack)
+  if (path.includes('\0')) {
+    throw new Error(`${label} contains null bytes`);
+  }
+
+  // Check for shell metacharacters in path components
+  if (/[;&|`$<>]/.test(path)) {
+    throw new Error(`${label} contains shell metacharacters`);
+  }
+
+  // Prevent path traversal outside expected directories
+  if (!resolved.includes('.claude-flow') && !resolved.includes('bin')) {
+    // Allow only paths within project structure
+    const cwd = process.cwd();
+    if (!resolved.startsWith(cwd)) {
+      throw new Error(`${label} escapes project directory`);
+    }
+  }
+}
+
+/**
  * Start daemon as a detached background process
  */
 async function startBackgroundDaemon(projectRoot: string, quiet: boolean): Promise<CommandResult> {
-  const stateDir = join(projectRoot, '.claude-flow');
+  // Validate and resolve project root
+  const resolvedRoot = resolve(projectRoot);
+  validatePath(resolvedRoot, 'Project root');
+
+  const stateDir = join(resolvedRoot, '.claude-flow');
   const pidFile = join(stateDir, 'daemon.pid');
   const logFile = join(stateDir, 'daemon.log');
+
+  // Validate all paths
+  validatePath(stateDir, 'State directory');
+  validatePath(pidFile, 'PID file');
+  validatePath(logFile, 'Log file');
 
   // Ensure state directory exists
   if (!fs.existsSync(stateDir)) {
@@ -162,7 +198,8 @@ async function startBackgroundDaemon(projectRoot: string, quiet: boolean): Promi
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = dirname(__filename);
   // dist/src/commands -> dist/src -> dist -> package root -> bin/cli.js
-  const cliPath = join(__dirname, '..', '..', '..', 'bin', 'cli.js');
+  const cliPath = resolve(join(__dirname, '..', '..', '..', 'bin', 'cli.js'));
+  validatePath(cliPath, 'CLI path');
 
   // Verify CLI path exists
   if (!fs.existsSync(cliPath)) {
@@ -170,14 +207,15 @@ async function startBackgroundDaemon(projectRoot: string, quiet: boolean): Promi
     return { success: false, exitCode: 1 };
   }
 
-  // Use shell to spawn daemon with proper output redirection
-  // This ensures the log file stays open even after parent exits
-  const shellCmd = `"${process.execPath}" "${cliPath}" daemon start --foreground --quiet >> "${logFile}" 2>&1 & echo $!`;
-
-  const child = spawn('sh', ['-c', shellCmd], {
-    cwd: projectRoot,
+  // Use spawn with explicit arguments instead of shell string interpolation
+  // This prevents command injection via paths
+  const child = spawn(process.execPath, [
+    cliPath,
+    'daemon', 'start', '--foreground', '--quiet'
+  ], {
+    cwd: resolvedRoot,
     detached: true,
-    stdio: ['ignore', 'pipe', 'ignore'],
+    stdio: ['ignore', fs.openSync(logFile, 'a'), fs.openSync(logFile, 'a')],
     env: { ...process.env, CLAUDE_FLOW_DAEMON: '1' },
   });
 
