@@ -82,7 +82,7 @@ const installCommand: Command = {
 
     const steps = ['Downloading package', 'Verifying integrity', 'Installing dependencies', 'Registering hooks'];
     for (const step of steps) {
-      spinner.text = step + '...';
+      spinner.setText(step + '...');
       await new Promise(r => setTimeout(r, 300));
     }
 
@@ -246,7 +246,7 @@ const createCommand: Command = {
 
     const files = ['package.json', 'src/index.ts', 'src/hooks.ts', 'README.md', 'tsconfig.json'];
     for (const file of files) {
-      spinner.text = `Creating ${file}...`;
+      spinner.setText(`Creating ${file}...`);
       await new Promise(r => setTimeout(r, 150));
     }
 

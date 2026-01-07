@@ -35,7 +35,7 @@ const benchmarkCommand: Command = {
 
     const benchmarks = ['WASM SIMD', 'Flash Attention', 'HNSW Search', 'Memory Ops', 'Neural Inference'];
     for (const bench of benchmarks) {
-      spinner.text = `Benchmarking ${bench}...`;
+      spinner.setText(`Benchmarking ${bench}...`);
       await new Promise(r => setTimeout(r, 300));
     }
 

@@ -140,7 +140,7 @@ const rollbackCommand: Command = {
 
     const steps = ['Stopping current deployment', 'Restoring previous version', 'Running health checks', 'Updating DNS'];
     for (const step of steps) {
-      spinner.text = step + '...';
+      spinner.setText(step + '...');
       await new Promise(r => setTimeout(r, 400));
     }
 

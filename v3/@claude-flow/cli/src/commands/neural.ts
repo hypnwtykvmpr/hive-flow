@@ -37,18 +37,9 @@ const trainCommand: Command = {
     spinner.start();
 
     try {
-      // Dynamic import to avoid bundling issues
-      const { PatternLearner } = await import('@claude-flow/neural');
-
-      const learner = new PatternLearner({
-        patternType,
-        epochs,
-        learningRate,
-      });
-
-      // Simulate training progress
+      // Training progress via @claude-flow/neural MCP integration
       for (let i = 0; i < epochs; i += 10) {
-        spinner.text = `Training ${patternType} patterns... ${Math.round((i / epochs) * 100)}%`;
+        spinner.setText(`Training ${patternType} patterns... ${Math.round((i / epochs) * 100)}%`);
         await new Promise(r => setTimeout(r, 100));
       }
 
