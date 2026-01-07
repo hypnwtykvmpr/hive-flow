@@ -3146,6 +3146,7 @@ export const hooksCommand: Command = {
       `${output.highlight('transfer')}        - Transfer patterns from another project`,
       `${output.highlight('list')}            - List all registered hooks`,
       `${output.highlight('worker')}          - Background worker management (12 workers)`,
+      `${output.highlight('progress')}        - Check V3 implementation progress`,
       `${output.highlight('coverage-route')}  - Route tasks based on coverage gaps (ruvector)`,
       `${output.highlight('coverage-suggest')}- Suggest coverage improvements`,
       `${output.highlight('coverage-gaps')}   - List all coverage gaps with agents`
