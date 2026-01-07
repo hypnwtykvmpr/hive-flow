@@ -1,6 +1,6 @@
 {
   "name": "@claude-flow/embeddings",
-  "version": "3.0.0-alpha.7",
+  "version": "3.0.0",
   "description": "V3 Embedding Service - OpenAI, Transformers.js, Agentic-Flow (ONNX), and Mock providers",
   "type": "module",
   "main": "./dist/index.js",
@@ -43,7 +43,7 @@
   },
   "peerDependencies": {
     "@claude-flow/shared": "^3.0.0-alpha.1",
-    "agentic-flow": "^1.0.0"
+    "agentic-flow": "^2.0.0"
   },
   "peerDependenciesMeta": {
     "agentic-flow": {
