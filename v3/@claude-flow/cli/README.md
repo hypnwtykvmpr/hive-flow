@@ -1337,7 +1337,7 @@ claude-flow completions powershell >> $PROFILE
 
 #### Completion Features
 
-- All 26 top-level commands
+- All 29 top-level commands
 - Full subcommand completion for each command
 - Flag and option completion
 - Dynamic suggestions based on context
