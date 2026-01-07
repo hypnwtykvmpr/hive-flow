@@ -225,9 +225,9 @@ const handoffCommand: Command = {
   description: 'Request handoff to another agent/user',
   options: [
     { name: 'issue', short: 'i', type: 'string', description: 'Issue ID' },
-    { name: 'to', description: 'Target (agent:type:id or user:id:name)', type: 'string', required: true },
+    { name: 'to', description: 'Target (agent:type:id or user:id:name)', type: 'string' },
     { name: 'from', description: 'Current owner', type: 'string' },
-    { name: 'reason', short: 'r', type: 'string', default: 'Handoff requested' },
+    { name: 'reason', short: 'r', type: 'string', description: 'Handoff reason', default: 'Handoff requested' },
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     const issueId = (ctx.flags.issue || ctx.args[0]) as string;
