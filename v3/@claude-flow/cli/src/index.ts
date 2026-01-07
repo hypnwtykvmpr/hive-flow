@@ -96,6 +96,17 @@ export class CLI {
         this.output.printDebug(`CWD: ${process.cwd()}`);
       }
 
+      // Handle lazy-loaded commands that weren't recognized by the parser
+      // If commandPath is empty but positional has a command name, check if it's lazy-loadable
+      if (commandPath.length === 0 && positional.length > 0 && !positional[0].startsWith('-')) {
+        const potentialCommand = positional[0];
+        if (hasCommand(potentialCommand)) {
+          // This is a lazy-loaded command, treat it as the command
+          commandPath.push(potentialCommand);
+          positional.shift();
+        }
+      }
+
       // No command - show help or suggest correction
       if (commandPath.length === 0 || flags.help || flags.h) {
         if (commandPath.length > 0) {
@@ -105,7 +116,7 @@ export class CLI {
           // First positional looks like an attempted command - suggest correction
           const attemptedCommand = positional[0];
           this.output.printError(`Unknown command: ${attemptedCommand}`);
-          const availableCommands = Array.from(new Set(commands.map(c => c.name)));
+          const availableCommands = Array.from(new Set([...commands.map(c => c.name), ...getCommandNames()]));
           const { message } = suggestCommand(attemptedCommand, availableCommands);
           this.output.writeln(this.output.dim(`  ${message}`));
           process.exit(1);
