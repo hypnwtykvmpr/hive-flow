@@ -315,11 +315,22 @@ export class QLearningRouter {
 
   /**
    * Route a task based on its context
+   * Uses LRU cache for repeated task patterns
    */
   route(taskContext: string, explore: boolean = true): RouteDecision {
-    const stateKey = this.hashState(taskContext);
+    const stateKey = this.hashStateOptimized(taskContext);
 
-    // Check if we should explore
+    // Check cache first (only for exploitation, not exploration)
+    if (!explore) {
+      const cached = this.getCachedRoute(stateKey);
+      if (cached) {
+        this.cacheHits++;
+        return cached;
+      }
+      this.cacheMisses++;
+    }
+
+    // Check if we should explore using decayed epsilon
     const shouldExplore = explore && Math.random() < this.epsilon;
 
     let actionIdx: number;
@@ -344,13 +355,72 @@ export class QLearningRouter {
       .sort((a, b) => b.score - a.score)
       .slice(1, 4); // Top 3 alternatives
 
-    return {
+    const decision: RouteDecision = {
       route: ROUTE_NAMES[actionIdx] || 'coder',
       confidence,
       qValues,
       explored: shouldExplore,
       alternatives,
     };
+
+    // Cache the decision for exploitation queries
+    if (!shouldExplore) {
+      this.cacheRoute(stateKey, decision);
+    }
+
+    return decision;
+  }
+
+  /**
+   * Get cached route decision (LRU cache)
+   */
+  private getCachedRoute(stateKey: string): RouteDecision | null {
+    const entry = this.routeCache.get(stateKey);
+    if (!entry) {
+      return null;
+    }
+
+    // Check TTL
+    if (Date.now() - entry.timestamp > this.config.cacheTTL) {
+      this.routeCache.delete(stateKey);
+      this.cacheOrder = this.cacheOrder.filter(k => k !== stateKey);
+      return null;
+    }
+
+    // Update LRU order
+    this.cacheOrder = this.cacheOrder.filter(k => k !== stateKey);
+    this.cacheOrder.push(stateKey);
+    entry.hits++;
+
+    return entry.decision;
+  }
+
+  /**
+   * Cache a route decision (LRU eviction)
+   */
+  private cacheRoute(stateKey: string, decision: RouteDecision): void {
+    // Evict oldest if cache is full
+    while (this.routeCache.size >= this.config.cacheSize && this.cacheOrder.length > 0) {
+      const oldest = this.cacheOrder.shift();
+      if (oldest) {
+        this.routeCache.delete(oldest);
+      }
+    }
+
+    this.routeCache.set(stateKey, {
+      decision,
+      timestamp: Date.now(),
+      hits: 0,
+    });
+    this.cacheOrder.push(stateKey);
+  }
+
+  /**
+   * Invalidate cache (call after significant Q-table updates)
+   */
+  invalidateCache(): void {
+    this.routeCache.clear();
+    this.cacheOrder = [];
   }
 
   /**
