@@ -9,7 +9,26 @@ import type { Command, CommandContext, CommandResult } from '../types.js';
 import { output } from '../output.js';
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
-import { execSync } from 'child_process';
+import { execSync, exec } from 'child_process';
+import { promisify } from 'util';
+
+// Promisified exec with proper shell and env inheritance for cross-platform support
+const execAsync = promisify(exec);
+
+/**
+ * Execute command asynchronously with proper environment inheritance
+ * Critical for Windows where PATH may not be inherited properly
+ */
+async function runCommand(command: string, timeoutMs: number = 5000): Promise<string> {
+  const { stdout } = await execAsync(command, {
+    encoding: 'utf8',
+    timeout: timeoutMs,
+    shell: true, // Use shell for proper PATH resolution
+    env: { ...process.env }, // Explicitly inherit full environment
+    windowsHide: true, // Hide window on Windows
+  });
+  return stdout.trim();
+}
 
 interface HealthCheck {
   name: string;
