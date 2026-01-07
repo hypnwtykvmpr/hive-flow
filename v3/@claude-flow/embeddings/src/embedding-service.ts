@@ -569,65 +569,58 @@ export class AgenticFlowEmbeddingService extends BaseEmbeddingService {
   private async initialize(): Promise<void> {
     if (this.initialized) return;
 
-    try {
-      // Try to import from agentic-flow package
-      const { getOptimizedEmbedder } = await import('agentic-flow/dist/embeddings/optimized-embedder.js');
-
-      this.embedder = getOptimizedEmbedder({
-        modelId: this.modelId,
-        dimension: this.dimensions,
-        cacheSize: this.embedderCacheSize,
-        modelDir: this.modelDir,
-        autoDownload: this.autoDownload,
-      });
-
-      await this.embedder.init();
-      this.initialized = true;
-    } catch (error) {
-      // Fallback: try node_modules path resolution
+    const createEmbedder = async (modulePath: string): Promise<boolean> => {
       try {
-        const path = await import('path');
-        const { fileURLToPath } = await import('url');
-        const __dirname = path.dirname(fileURLToPath(import.meta.url));
+        const module = await import(/* webpackIgnore: true */ modulePath);
+        const getOptimizedEmbedder = module.getOptimizedEmbedder || module.default?.getOptimizedEmbedder;
+        if (!getOptimizedEmbedder) return false;
 
-        // Look for agentic-flow in parent node_modules
-        const possiblePaths = [
-          path.resolve(__dirname, '../../../../node_modules/agentic-flow/dist/embeddings/optimized-embedder.js'),
-          path.resolve(__dirname, '../../../../../node_modules/agentic-flow/dist/embeddings/optimized-embedder.js'),
-          path.resolve(process.cwd(), 'node_modules/agentic-flow/dist/embeddings/optimized-embedder.js'),
-        ];
+        this.embedder = getOptimizedEmbedder({
+          modelId: this.modelId,
+          dimension: this.dimensions,
+          cacheSize: this.embedderCacheSize,
+          modelDir: this.modelDir,
+          autoDownload: this.autoDownload,
+        });
+        await this.embedder.init();
+        this.initialized = true;
+        return true;
+      } catch {
+        return false;
+      }
+    };
 
-        let loaded = false;
-        for (const modulePath of possiblePaths) {
-          try {
-            const { getOptimizedEmbedder } = await import(modulePath);
-            this.embedder = getOptimizedEmbedder({
-              modelId: this.modelId,
-              dimension: this.dimensions,
-              cacheSize: this.embedderCacheSize,
-              modelDir: this.modelDir,
-              autoDownload: this.autoDownload,
-            });
-            await this.embedder.init();
-            this.initialized = true;
-            loaded = true;
-            break;
-          } catch {
-            continue;
-          }
-        }
+    // Build list of possible module paths to try
+    const possiblePaths: string[] = [];
 
-        if (!loaded) {
-          throw new Error('Could not find agentic-flow embeddings module');
-        }
-      } catch (fallbackError) {
-        throw new Error(
-          `Failed to initialize agentic-flow embeddings: ${error}. ` +
-          `Ensure agentic-flow is installed and ONNX model is downloaded: ` +
-          `npx agentic-flow@alpha embeddings init`
-        );
+    // Try standard package import path
+    const packagePath = 'agentic-flow/dist/embeddings/optimized-embedder.js';
+    possiblePaths.push(packagePath);
+
+    // Try node_modules resolution from different locations
+    try {
+      const path = await import('path');
+      const cwd = process.cwd();
+      possiblePaths.push(
+        path.join(cwd, 'node_modules/agentic-flow/dist/embeddings/optimized-embedder.js'),
+        path.join(cwd, '../node_modules/agentic-flow/dist/embeddings/optimized-embedder.js'),
+      );
+    } catch {
+      // path module not available, skip
+    }
+
+    // Try each path
+    for (const modulePath of possiblePaths) {
+      if (await createEmbedder(modulePath)) {
+        return;
       }
     }
+
+    throw new Error(
+      `Failed to initialize agentic-flow embeddings. ` +
+      `Ensure agentic-flow is installed and ONNX model is downloaded: ` +
+      `npx agentic-flow@alpha embeddings init`
+    );
   }
 
   async embed(text: string): Promise<EmbeddingResult> {
