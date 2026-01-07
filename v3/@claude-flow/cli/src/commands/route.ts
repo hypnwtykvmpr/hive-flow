@@ -202,7 +202,7 @@ const routeTaskCommand: Command = {
           `Task: ${taskDescription}`,
           ``,
           `Agent: ${output.highlight(agent.name)} (${result.route})`,
-          `Confidence: ${confidenceColor(`${(result.confidence * 100).toFixed(1)}%`)}`,
+          `Confidence: ${confidenceColor(`${(confidence * 100).toFixed(1)}%`)}`,
           `Q-Value: ${Math.max(...result.qValues).toFixed(3)}`,
           `Exploration: ${result.explored ? output.warning('Yes') : 'No'}`,
           ``,
