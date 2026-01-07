@@ -408,33 +408,38 @@ function camelCase(str: string): string {
 }
 
 function getEventEnumName(event: HookEvent): string {
+  // Mapping from HookEvent enum values to their TypeScript enum names
   const mapping: Record<string, string> = {
-    'session:start': 'SessionStart',
-    'session:end': 'SessionEnd',
-    'agent:pre-spawn': 'PreAgentSpawn',
-    'agent:post-spawn': 'PostAgentSpawn',
-    'agent:pre-terminate': 'PreAgentTerminate',
-    'agent:post-terminate': 'PostAgentTerminate',
-    'task:pre-execute': 'PreTaskExecute',
-    'task:post-complete': 'PostTaskComplete',
-    'task:error': 'TaskError',
-    'tool:pre-call': 'PreToolCall',
-    'tool:post-call': 'PostToolCall',
-    'memory:pre-store': 'PreMemoryStore',
-    'memory:post-store': 'PostMemoryStore',
-    'memory:pre-retrieve': 'PreMemoryRetrieve',
-    'memory:post-retrieve': 'PostMemoryRetrieve',
-    'swarm:initialized': 'SwarmInitialized',
-    'swarm:shutdown': 'SwarmShutdown',
-    'swarm:consensus-reached': 'ConsensusReached',
-    'file:pre-read': 'PreFileRead',
-    'file:post-read': 'PostFileRead',
-    'file:pre-write': 'PreFileWrite',
-    'file:post-write': 'PostFileWrite',
-    'command:pre-execute': 'PreCommand',
-    'command:post-execute': 'PostCommand',
-    'learning:pattern-learned': 'PatternLearned',
-    'learning:pattern-applied': 'PatternApplied',
+    // Tool lifecycle (from types/index.ts HookEvent enum)
+    'hook:pre-tool-use': 'PreToolUse',
+    'hook:post-tool-use': 'PostToolUse',
+    // Session lifecycle
+    'hook:session-start': 'SessionStart',
+    'hook:session-end': 'SessionEnd',
+    'hook:session-restore': 'SessionRestore',
+    // Task execution
+    'hook:pre-task-execute': 'PreTaskExecute',
+    'hook:post-task-complete': 'PostTaskComplete',
+    'hook:task-failed': 'TaskFailed',
+    // File operations
+    'hook:pre-file-write': 'PreFileWrite',
+    'hook:post-file-write': 'PostFileWrite',
+    'hook:pre-file-delete': 'PreFileDelete',
+    // Command execution
+    'hook:pre-command': 'PreCommand',
+    'hook:post-command': 'PostCommand',
+    // Agent operations
+    'hook:agent-spawned': 'AgentSpawned',
+    'hook:agent-terminated': 'AgentTerminated',
+    // Memory operations
+    'hook:pre-memory-store': 'PreMemoryStore',
+    'hook:post-memory-store': 'PostMemoryStore',
+    // Learning
+    'hook:pattern-detected': 'PatternDetected',
+    'hook:strategy-updated': 'StrategyUpdated',
+    // Plugin lifecycle
+    'hook:plugin-loaded': 'PluginLoaded',
+    'hook:plugin-unloaded': 'PluginUnloaded',
   };
   return mapping[event] ?? event;
 }
