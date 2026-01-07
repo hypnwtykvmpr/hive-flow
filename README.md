@@ -777,6 +777,8 @@ Shell-based daemons for monitoring (Linux/macOS only):
 | Route task | `npx claude-flow@v3alpha hooks route "Optimize database queries"` |
 | Performance analysis | `npx claude-flow@v3alpha --agent perf-analyzer --task "Profile API endpoints"` |
 | GitHub PR management | `npx claude-flow@v3alpha --agent pr-manager --task "Review open PRs"` |
+| Check V3 progress | `npx claude-flow@v3alpha progress --detailed` |
+| Sync progress metrics | `npx claude-flow@v3alpha progress sync` |
 
 ---
 
