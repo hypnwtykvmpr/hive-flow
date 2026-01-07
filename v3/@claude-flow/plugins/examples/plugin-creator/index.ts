@@ -594,16 +594,16 @@ export const pluginCreatorPlugin = new PluginBuilder('plugin-creator', '1.0.0')
   ])
   .withHooks([
     // Hook: Log plugin creation
-    new HookBuilder(HookEvent.PostToolCall)
+    new HookBuilder(HookEvent.PostToolUse)
       .withName('plugin-creator-logger')
       .withDescription('Log plugin creation events')
       .withPriority(HookPriority.Low)
-      .when((ctx) => {
+      .withHandler(async (ctx) => {
         const data = ctx.data as { toolName?: string } | undefined;
-        return data?.toolName === 'create-plugin';
-      })
-      .handle(async (ctx) => {
-        console.log('[Plugin Creator] Plugin created:', ctx.data);
+        // Only log if this is from the create-plugin tool
+        if (data?.toolName === 'create-plugin') {
+          console.log('[Plugin Creator] Plugin created:', ctx.data);
+        }
         return { success: true };
       })
       .build(),
