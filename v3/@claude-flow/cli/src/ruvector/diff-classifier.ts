@@ -584,11 +584,21 @@ export function assessOverallRisk(files: DiffFile[], fileRisks: FileRisk[]): Ove
   return { overall, score: Math.min(100, Math.round(weightedScore)), breakdown };
 }
 
+// Singleton classifier instance for reuse
+let classifierInstance: DiffClassifier | null = null;
+
+function getClassifier(): DiffClassifier {
+  if (!classifierInstance) {
+    classifierInstance = new DiffClassifier();
+  }
+  return classifierInstance;
+}
+
 /**
- * Classify a diff based on files
+ * Classify a diff based on files (uses singleton classifier)
  */
 export function classifyDiff(files: DiffFile[]): DiffClassification {
-  const classifier = new DiffClassifier();
+  const classifier = getClassifier();
   const fileDiffs: FileDiff[] = files.map(f => ({
     path: f.path,
     hunks: [],
