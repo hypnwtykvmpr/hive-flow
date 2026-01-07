@@ -755,8 +755,9 @@ export class HeadlessWorkerExecutor extends EventEmitter {
   cancelAll(): number {
     let cancelled = 0;
 
-    // Cancel active processes
-    for (const [executionId, entry] of this.processPool) {
+    // Cancel active processes (convert to array to avoid iterator issues)
+    const entries = Array.from(this.processPool.entries());
+    for (const [executionId, entry] of entries) {
       clearTimeout(entry.timeout);
       entry.process.kill('SIGTERM');
       this.emit('cancelled', { executionId });
