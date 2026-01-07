@@ -16,6 +16,40 @@ import { readFile, readdir, stat } from 'fs/promises';
 import { join, relative, extname, dirname, basename } from 'path';
 
 // ============================================================================
+// Caching for Performance
+// ============================================================================
+
+/**
+ * Cache for dependency graphs (5 minute TTL)
+ */
+const graphCache = new Map<string, { graph: DependencyGraph; timestamp: number }>();
+const GRAPH_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+/**
+ * Cache for analysis results (2 minute TTL)
+ */
+const analysisResultCache = new Map<string, { result: GraphAnalysisResult; timestamp: number }>();
+const ANALYSIS_CACHE_TTL_MS = 2 * 60 * 1000; // 2 minutes
+
+/**
+ * Clear all graph caches
+ */
+export function clearGraphCaches(): void {
+  graphCache.clear();
+  analysisResultCache.clear();
+}
+
+/**
+ * Get cache statistics
+ */
+export function getGraphCacheStats(): { graphCacheSize: number; analysisCacheSize: number } {
+  return {
+    graphCacheSize: graphCache.size,
+    analysisCacheSize: analysisResultCache.size,
+  };
+}
+
+// ============================================================================
 // Types
 // ============================================================================
 
