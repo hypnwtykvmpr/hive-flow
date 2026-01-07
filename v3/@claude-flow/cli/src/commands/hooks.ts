@@ -3021,11 +3021,10 @@ const progressHookCommand: Command = {
 
       return { success: true, data: result };
     } catch (error) {
-      spinner.fail('Progress check failed');
       if (error instanceof MCPClientError) {
-        output.printError(`Error: ${error.message}`);
+        output.printError(`Progress check failed: ${error.message}`);
       } else {
-        output.printError(`Unexpected error: ${String(error)}`);
+        output.printError(`Progress check failed: ${String(error)}`);
       }
       return { success: false, exitCode: 1 };
     }
