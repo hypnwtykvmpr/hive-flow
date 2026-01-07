@@ -255,7 +255,8 @@ async function syncMetrics() {
   if (existsSync(modulesDir)) {
     const entries = readdirSync(modulesDir, { withFileTypes: true });
     for (const entry of entries) {
-      if (entry.isDirectory()) {
+      // Skip hidden directories (like .agentic-flow, .claude-flow)
+      if (entry.isDirectory() && !entry.name.startsWith('.')) {
         const moduleDir = join(modulesDir, entry.name);
         const { files, lines } = countFilesAndLines(moduleDir);
         const progress = calculateModuleProgress(moduleDir);
