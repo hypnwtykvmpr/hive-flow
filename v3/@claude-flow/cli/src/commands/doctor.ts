@@ -283,9 +283,16 @@ export const doctorCommand: Command = {
       default: false
     },
     {
+      name: 'install',
+      short: 'i',
+      description: 'Auto-install missing dependencies (Claude Code CLI)',
+      type: 'boolean',
+      default: false
+    },
+    {
       name: 'component',
       short: 'c',
-      description: 'Check specific component (node, config, daemon, memory, api, git, mcp)',
+      description: 'Check specific component (node, config, daemon, memory, api, git, mcp, claude)',
       type: 'string'
     },
     {
@@ -299,10 +306,12 @@ export const doctorCommand: Command = {
   examples: [
     { command: 'claude-flow doctor', description: 'Run full health check' },
     { command: 'claude-flow doctor --fix', description: 'Show fixes for issues' },
-    { command: 'claude-flow doctor -c daemon', description: 'Check specific component' }
+    { command: 'claude-flow doctor --install', description: 'Auto-install missing dependencies' },
+    { command: 'claude-flow doctor -c claude', description: 'Check Claude Code CLI only' }
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     const showFix = ctx.flags.fix as boolean;
+    const autoInstall = ctx.flags.install as boolean;
     const component = ctx.flags.component as string;
     const verbose = ctx.flags.verbose as boolean;
 
@@ -315,6 +324,7 @@ export const doctorCommand: Command = {
     const allChecks: (() => Promise<HealthCheck>)[] = [
       checkNodeVersion,
       checkNpmVersion,
+      checkClaudeCode,
       checkGit,
       checkGitRepo,
       checkConfigFile,
@@ -329,6 +339,7 @@ export const doctorCommand: Command = {
     const componentMap: Record<string, () => Promise<HealthCheck>> = {
       'node': checkNodeVersion,
       'npm': checkNpmVersion,
+      'claude': checkClaudeCode,
       'config': checkConfigFile,
       'daemon': checkDaemonStatus,
       'memory': checkMemoryDatabase,
