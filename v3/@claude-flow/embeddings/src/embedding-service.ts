@@ -777,7 +777,20 @@ export class AgenticFlowEmbeddingService extends BaseEmbeddingService {
 // ============================================================================
 
 /**
- * Create embedding service based on configuration
+ * Check if agentic-flow is available
+ */
+async function isAgenticFlowAvailable(): Promise<boolean> {
+  try {
+    await import('agentic-flow/embeddings');
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Create embedding service based on configuration (sync version)
+ * Note: For 'auto' provider or smart fallback, use createEmbeddingServiceAsync
  */
 export function createEmbeddingService(config: EmbeddingConfig): IEmbeddingService {
   switch (config.provider) {
@@ -792,6 +805,142 @@ export function createEmbeddingService(config: EmbeddingConfig): IEmbeddingServi
     default:
       console.warn(`Unknown provider, using mock`);
       return new MockEmbeddingService({ provider: 'mock', dimensions: 384 });
+  }
+}
+
+/**
+ * Extended config with auto provider option
+ */
+export interface AutoEmbeddingConfig {
+  /** Provider: 'auto' will pick best available (agentic-flow > transformers > mock) */
+  provider: EmbeddingProvider | 'auto';
+  /** Fallback provider if primary fails */
+  fallback?: EmbeddingProvider;
+  /** Model ID for agentic-flow */
+  modelId?: string;
+  /** Model name for transformers */
+  model?: string;
+  /** Dimensions */
+  dimensions?: number;
+  /** Cache size */
+  cacheSize?: number;
+  /** OpenAI API key (required for openai provider) */
+  apiKey?: string;
+}
+
+/**
+ * Create embedding service with automatic provider detection and fallback
+ *
+ * Features:
+ * - 'auto' provider picks best available: agentic-flow > transformers > mock
+ * - Automatic fallback if primary provider fails to initialize
+ * - Pre-validates provider availability before returning
+ *
+ * @example
+ * // Auto-select best provider
+ * const service = await createEmbeddingServiceAsync({ provider: 'auto' });
+ *
+ * // Try agentic-flow, fallback to transformers
+ * const service = await createEmbeddingServiceAsync({
+ *   provider: 'agentic-flow',
+ *   fallback: 'transformers'
+ * });
+ */
+export async function createEmbeddingServiceAsync(
+  config: AutoEmbeddingConfig
+): Promise<IEmbeddingService> {
+  const { provider, fallback, ...rest } = config;
+
+  // Auto provider selection
+  if (provider === 'auto') {
+    // Try agentic-flow first (fastest, ONNX-based)
+    if (await isAgenticFlowAvailable()) {
+      try {
+        const service = new AgenticFlowEmbeddingService({
+          provider: 'agentic-flow',
+          modelId: rest.modelId ?? 'all-MiniLM-L6-v2',
+          dimensions: rest.dimensions ?? 384,
+          cacheSize: rest.cacheSize,
+        });
+        // Validate it can initialize
+        await service.embed('test');
+        return service;
+      } catch {
+        // Fall through to next option
+      }
+    }
+
+    // Try transformers (good quality, built-in)
+    try {
+      const service = new TransformersEmbeddingService({
+        provider: 'transformers',
+        model: rest.model ?? 'Xenova/all-MiniLM-L6-v2',
+        cacheSize: rest.cacheSize,
+      });
+      // Validate it can initialize
+      await service.embed('test');
+      return service;
+    } catch {
+      // Fall through to mock
+    }
+
+    // Fallback to mock (always works)
+    console.warn('[embeddings] Using mock provider - install agentic-flow or @xenova/transformers for real embeddings');
+    return new MockEmbeddingService({
+      dimensions: rest.dimensions ?? 384,
+      cacheSize: rest.cacheSize,
+    });
+  }
+
+  // Specific provider with optional fallback
+  const createPrimary = (): IEmbeddingService => {
+    switch (provider) {
+      case 'agentic-flow':
+        return new AgenticFlowEmbeddingService({
+          provider: 'agentic-flow',
+          modelId: rest.modelId ?? 'all-MiniLM-L6-v2',
+          dimensions: rest.dimensions ?? 384,
+          cacheSize: rest.cacheSize,
+        });
+      case 'transformers':
+        return new TransformersEmbeddingService({
+          provider: 'transformers',
+          model: rest.model ?? 'Xenova/all-MiniLM-L6-v2',
+          cacheSize: rest.cacheSize,
+        });
+      case 'openai':
+        if (!rest.apiKey) throw new Error('OpenAI provider requires apiKey');
+        return new OpenAIEmbeddingService({
+          provider: 'openai',
+          apiKey: rest.apiKey,
+          dimensions: rest.dimensions,
+          cacheSize: rest.cacheSize,
+        });
+      case 'mock':
+        return new MockEmbeddingService({
+          dimensions: rest.dimensions ?? 384,
+          cacheSize: rest.cacheSize,
+        });
+      default:
+        throw new Error(`Unknown provider: ${provider}`);
+    }
+  };
+
+  const primary = createPrimary();
+
+  // Try to validate primary provider
+  try {
+    await primary.embed('test');
+    return primary;
+  } catch (error) {
+    if (!fallback) {
+      throw error;
+    }
+
+    // Try fallback
+    console.warn(`[embeddings] Primary provider '${provider}' failed, using fallback '${fallback}'`);
+    const fallbackConfig: AutoEmbeddingConfig = { ...rest, provider: fallback };
+    return createEmbeddingServiceAsync(fallbackConfig);
   }
 }
 
