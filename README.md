@@ -653,7 +653,60 @@ Add to `.claude/settings.json`:
 
 ### Background Daemons
 
-Automated background workers for continuous monitoring and metrics collection.
+#### V3 Node.js Worker Daemon (Recommended)
+
+Cross-platform TypeScript-based daemon service with auto-scheduling:
+
+| Worker | Interval | Priority | Description |
+|--------|----------|----------|-------------|
+| `map` | 5min | normal | Codebase structure mapping |
+| `audit` | 10min | critical | Security vulnerability scanning |
+| `optimize` | 15min | high | Performance optimization |
+| `consolidate` | 30min | low | Memory consolidation |
+| `testgaps` | 20min | normal | Test coverage analysis |
+
+**Commands:**
+```bash
+# Start daemon (auto-runs on SessionStart hooks)
+npx claude-flow@v3alpha daemon start
+
+# Check status with worker history
+npx claude-flow@v3alpha daemon status
+
+# Manually trigger a worker
+npx claude-flow@v3alpha daemon trigger map
+
+# Enable/disable workers
+npx claude-flow@v3alpha daemon enable map audit optimize
+
+# Stop daemon
+npx claude-flow@v3alpha daemon stop
+```
+
+**Daemon Status Output:**
+```
++-- Worker Daemon ---+
+| Status: ● RUNNING  |
+| PID: 12345         |
+| Workers Enabled: 5 |
+| Max Concurrent: 3  |
++--------------------+
+
+Worker Status
++-------------+----+----------+------+---------+----------+----------+
+| Worker      | On | Status   | Runs | Success | Last Run | Next Run |
++-------------+----+----------+------+---------+----------+----------+
+| map         | ✓  | idle     | 12   | 100%    | 2m ago   | in 3m    |
+| audit       | ✓  | idle     | 6    | 100%    | 5m ago   | in 5m    |
+| optimize    | ✓  | running  | 4    | 100%    | now      | -        |
+| consolidate | ✓  | idle     | 2    | 100%    | 15m ago  | in 15m   |
+| testgaps    | ✓  | idle     | 3    | 100%    | 8m ago   | in 12m   |
++-------------+----+----------+------+---------+----------+----------+
+```
+
+#### Legacy Shell Daemons (V2)
+
+Shell-based daemons for monitoring (Linux/macOS only):
 
 | Daemon | Interval | Purpose | Output |
 |--------|----------|---------|--------|
@@ -670,23 +723,6 @@ Automated background workers for continuous monitoring and metrics collection.
 
 # Stop all daemons
 .claude/helpers/daemon-manager.sh stop
-```
-
-**Daemon Status Output:**
-```
-═══════════════════════════════════════════════════
-       Claude Flow V3 Daemon Status
-═══════════════════════════════════════════════════
-
-  ● Swarm Monitor    RUNNING (PID: 23383)
-  ● Metrics Daemon   RUNNING (PID: 2855)
-  ○ MCP Server       NOT DETECTED
-  ○ Agentic Flow     IDLE
-
-───────────────────────────────────────────────────
-  Last Update: 2026-01-06T15:13:04+00:00
-  Active Agents: 0
-═══════════════════════════════════════════════════
 ```
 
 ### Worker Manager (7 Scheduled Workers)

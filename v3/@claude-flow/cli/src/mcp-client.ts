@@ -18,6 +18,8 @@ import { configTools } from './mcp-tools/config-tools.js';
 import { hooksTools } from './mcp-tools/hooks-tools.js';
 import { taskTools } from './mcp-tools/task-tools.js';
 import { sessionTools } from './mcp-tools/session-tools.js';
+import { hiveMindTools } from './mcp-tools/hive-mind-tools.js';
+import { workflowTools } from './mcp-tools/workflow-tools.js';
 
 /**
  * MCP Tool Registry
@@ -33,7 +35,17 @@ function registerTools(tools: MCPTool[]): void {
 }
 
 // Initialize registry with all available tools
-registerTools([...agentTools, ...swarmTools, ...memoryTools, ...configTools, ...hooksTools, ...taskTools, ...sessionTools]);
+registerTools([
+  ...agentTools,
+  ...swarmTools,
+  ...memoryTools,
+  ...configTools,
+  ...hooksTools,
+  ...taskTools,
+  ...sessionTools,
+  ...hiveMindTools,
+  ...workflowTools,
+]);
 
 /**
  * MCP Client Error

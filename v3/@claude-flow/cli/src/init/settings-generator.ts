@@ -50,6 +50,10 @@ export function generateSettings(options: InitOptions): object {
     neural: {
       enabled: options.runtime.enableNeural,
     },
+    daemon: {
+      autoStart: true,
+      workers: ['map', 'audit', 'optimize', 'consolidate', 'testgaps'],
+    },
   };
 
   return settings;
@@ -70,7 +74,7 @@ function generateHooksConfig(config: HooksConfig): object {
         hooks: [
           {
             type: 'command',
-            command: 'npx @claude-flow/cli hooks pre-edit --file "$TOOL_INPUT_file_path" --intelligence',
+            command: 'npx claude-flow@v3alpha hooks pre-edit --file "$TOOL_INPUT_file_path" --intelligence',
             timeout: config.timeout,
             continueOnError: config.continueOnError,
           },
@@ -82,7 +86,7 @@ function generateHooksConfig(config: HooksConfig): object {
         hooks: [
           {
             type: 'command',
-            command: 'npx @claude-flow/cli hooks pre-command --command "$TOOL_INPUT_command"',
+            command: 'npx claude-flow@v3alpha hooks pre-command --command "$TOOL_INPUT_command"',
             timeout: config.timeout,
             continueOnError: config.continueOnError,
           },
@@ -94,7 +98,7 @@ function generateHooksConfig(config: HooksConfig): object {
         hooks: [
           {
             type: 'command',
-            command: 'npx @claude-flow/cli hooks pre-task --task-id "task-$(date +%s)" --description "$TOOL_INPUT_prompt"',
+            command: 'npx claude-flow@v3alpha hooks pre-task --task-id "task-$(date +%s)" --description "$TOOL_INPUT_prompt"',
             timeout: config.timeout,
             continueOnError: config.continueOnError,
           },
@@ -106,7 +110,7 @@ function generateHooksConfig(config: HooksConfig): object {
         hooks: [
           {
             type: 'command',
-            command: 'npx @claude-flow/cli hooks pre-search --pattern "$TOOL_INPUT_pattern"',
+            command: 'npx claude-flow@v3alpha hooks pre-search --pattern "$TOOL_INPUT_pattern"',
             timeout: 2000,
             continueOnError: true,
           },
@@ -124,7 +128,7 @@ function generateHooksConfig(config: HooksConfig): object {
         hooks: [
           {
             type: 'command',
-            command: 'npx @claude-flow/cli hooks post-edit --file "$TOOL_INPUT_file_path" --success "$TOOL_SUCCESS" --train-patterns',
+            command: 'npx claude-flow@v3alpha hooks post-edit --file "$TOOL_INPUT_file_path" --success "$TOOL_SUCCESS" --train-patterns',
             timeout: config.timeout,
             continueOnError: config.continueOnError,
           },
@@ -136,7 +140,7 @@ function generateHooksConfig(config: HooksConfig): object {
         hooks: [
           {
             type: 'command',
-            command: 'npx @claude-flow/cli hooks post-command --command "$TOOL_INPUT_command" --success "$TOOL_SUCCESS" --exit-code "$TOOL_EXIT_CODE"',
+            command: 'npx claude-flow@v3alpha hooks post-command --command "$TOOL_INPUT_command" --success "$TOOL_SUCCESS" --exit-code "$TOOL_EXIT_CODE"',
             timeout: config.timeout,
             continueOnError: config.continueOnError,
           },
@@ -148,7 +152,7 @@ function generateHooksConfig(config: HooksConfig): object {
         hooks: [
           {
             type: 'command',
-            command: 'npx @claude-flow/cli hooks post-task --agent-id "$TOOL_RESULT_agent_id" --success "$TOOL_SUCCESS" --analyze',
+            command: 'npx claude-flow@v3alpha hooks post-task --agent-id "$TOOL_RESULT_agent_id" --success "$TOOL_SUCCESS" --analyze',
             timeout: config.timeout,
             continueOnError: config.continueOnError,
           },
@@ -160,7 +164,7 @@ function generateHooksConfig(config: HooksConfig): object {
         hooks: [
           {
             type: 'command',
-            command: 'npx @claude-flow/cli hooks post-search --cache-results',
+            command: 'npx claude-flow@v3alpha hooks post-search --cache-results',
             timeout: 2000,
             continueOnError: true,
           },
@@ -176,7 +180,7 @@ function generateHooksConfig(config: HooksConfig): object {
         hooks: [
           {
             type: 'command',
-            command: 'npx @claude-flow/cli hooks route --task "$PROMPT" --intelligence --include-explanation',
+            command: 'npx claude-flow@v3alpha hooks route --task "$PROMPT" --intelligence --include-explanation',
             timeout: config.timeout,
             continueOnError: config.continueOnError,
           },
@@ -185,14 +189,20 @@ function generateHooksConfig(config: HooksConfig): object {
     ];
   }
 
-  // SessionStart for context loading
+  // SessionStart for context loading and daemon auto-start
   if (config.sessionStart) {
     hooks.SessionStart = [
       {
         hooks: [
           {
             type: 'command',
-            command: 'npx @claude-flow/cli hooks session-start --session-id "$SESSION_ID" --load-context',
+            command: 'npx claude-flow@v3alpha daemon start --quiet 2>/dev/null || true',
+            timeout: 5000,
+            continueOnError: true,
+          },
+          {
+            type: 'command',
+            command: 'npx claude-flow@v3alpha hooks session-start --session-id "$SESSION_ID" --load-context',
             timeout: 10000,
             continueOnError: true,
           },
@@ -227,7 +237,7 @@ Respond with {"decision": "stop"} if complete, or {"decision": "continue", "reas
         hooks: [
           {
             type: 'command',
-            command: 'npx @claude-flow/cli hooks notify --message "$NOTIFICATION_MESSAGE" --swarm-status',
+            command: 'npx claude-flow@v3alpha hooks notify --message "$NOTIFICATION_MESSAGE" --swarm-status',
             timeout: 3000,
             continueOnError: true,
           },

@@ -325,17 +325,19 @@ const statusCommand: Command = {
       if (status.metrics) {
         output.writeln();
         output.writeln(output.bold('Metrics'));
+        const avgExecTime = status.metrics.averageExecutionTime ?? 0;
+        const uptime = status.metrics.uptime ?? 0;
         output.printTable({
           columns: [
             { key: 'metric', header: 'Metric', width: 25 },
             { key: 'value', header: 'Value', width: 15, align: 'right' }
           ],
           data: [
-            { metric: 'Tasks Completed', value: status.metrics.tasksCompleted },
-            { metric: 'Tasks In Progress', value: status.metrics.tasksInProgress },
-            { metric: 'Tasks Failed', value: status.metrics.tasksFailed },
-            { metric: 'Avg Execution Time', value: `${status.metrics.averageExecutionTime.toFixed(2)}ms` },
-            { metric: 'Uptime', value: `${(status.metrics.uptime / 1000 / 60).toFixed(1)}m` }
+            { metric: 'Tasks Completed', value: status.metrics.tasksCompleted ?? 0 },
+            { metric: 'Tasks In Progress', value: status.metrics.tasksInProgress ?? 0 },
+            { metric: 'Tasks Failed', value: status.metrics.tasksFailed ?? 0 },
+            { metric: 'Avg Execution Time', value: `${avgExecTime.toFixed(2)}ms` },
+            { metric: 'Uptime', value: `${(uptime / 1000 / 60).toFixed(1)}m` }
           ]
         });
       }
@@ -578,18 +580,20 @@ const poolCommand: Command = {
       }
 
       output.writeln();
+      const utilization = result.utilization ?? 0;
       output.printBox(
         [
-          `Pool ID: ${result.poolId}`,
-          `Current Size: ${result.currentSize}`,
-          `Min/Max: ${result.minSize}/${result.maxSize}`,
+          `Pool ID: ${result.poolId ?? 'default'}`,
+          `Current Size: ${result.currentSize ?? 0}`,
+          `Min/Max: ${result.minSize ?? 0}/${result.maxSize ?? 100}`,
           `Auto-Scale: ${result.autoScale ? 'Yes' : 'No'}`,
-          `Utilization: ${(result.utilization * 100).toFixed(1)}%`
+          `Utilization: ${(utilization * 100).toFixed(1)}%`
         ].join('\n'),
         'Agent Pool'
       );
 
-      if (result.agents.length > 0) {
+      const agents = result.agents ?? [];
+      if (agents.length > 0) {
         output.writeln();
         output.writeln(output.bold('Pool Agents'));
         output.printTable({
@@ -598,7 +602,7 @@ const poolCommand: Command = {
             { key: 'type', header: 'Type', width: 15 },
             { key: 'status', header: 'Status', width: 12, format: formatStatus }
           ],
-          data: result.agents
+          data: agents
         });
       }
 
@@ -682,48 +686,58 @@ const healthCommand: Command = {
       output.writeln(output.bold('Agent Health'));
       output.writeln();
 
-      // Overall summary
+      // Overall summary with null checks
+      const overall = result.overall ?? { healthy: 0, degraded: 0, unhealthy: 0, avgCpu: 0, avgMemory: 0 };
+      const avgCpu = overall.avgCpu ?? 0;
+      const avgMemory = overall.avgMemory ?? 0;
       output.printBox(
         [
-          `Healthy: ${output.success(String(result.overall.healthy))}`,
-          `Degraded: ${output.warning(String(result.overall.degraded))}`,
-          `Unhealthy: ${output.error(String(result.overall.unhealthy))}`,
-          `Avg CPU: ${result.overall.avgCpu.toFixed(1)}%`,
-          `Avg Memory: ${(result.overall.avgMemory * 100).toFixed(1)}%`
+          `Healthy: ${output.success(String(overall.healthy ?? 0))}`,
+          `Degraded: ${output.warning(String(overall.degraded ?? 0))}`,
+          `Unhealthy: ${output.error(String(overall.unhealthy ?? 0))}`,
+          `Avg CPU: ${avgCpu.toFixed(1)}%`,
+          `Avg Memory: ${(avgMemory * 100).toFixed(1)}%`
         ].join('  |  '),
         'Overall Status'
       );
 
+      const healthAgents = result.agents ?? [];
       output.writeln();
       output.printTable({
         columns: [
           { key: 'id', header: 'Agent ID', width: 18 },
           { key: 'type', header: 'Type', width: 12 },
           { key: 'health', header: 'Health', width: 10, format: formatHealthStatus },
-          { key: 'cpu', header: 'CPU %', width: 8, align: 'right', format: (v) => `${Number(v).toFixed(1)}%` },
+          { key: 'cpu', header: 'CPU %', width: 8, align: 'right', format: (v) => `${Number(v ?? 0).toFixed(1)}%` },
           { key: 'memory', header: 'Memory', width: 10, align: 'right', format: (v: unknown) => {
-            const mem = v as { used: number; limit: number };
+            const mem = v as { used: number; limit: number } | undefined;
+            if (!mem) return '0%';
             return `${(mem.used / mem.limit * 100).toFixed(0)}%`;
           }},
           { key: 'tasks', header: 'Tasks', width: 12, align: 'right', format: (v: unknown) => {
-            const t = v as { active: number; completed: number };
-            return `${t.active}/${t.completed}`;
+            const t = v as { active: number; completed: number } | undefined;
+            if (!t) return '0/0';
+            return `${t.active ?? 0}/${t.completed ?? 0}`;
           }}
         ],
-        data: result.agents
+        data: healthAgents
       });
 
-      if (detailed && result.agents.length > 0) {
+      if (detailed && healthAgents.length > 0) {
         output.writeln();
         output.writeln(output.bold('Detailed Metrics'));
-        for (const agent of result.agents) {
+        for (const agent of healthAgents) {
           output.writeln();
           output.writeln(output.highlight(agent.id));
+          const uptime = agent.uptime ?? 0;
+          const latency = agent.latency ?? { avg: 0, p99: 0 };
+          const tasks = agent.tasks ?? { completed: 0, failed: 0, queued: 0 };
+          const errors = agent.errors ?? { count: 0 };
           output.printList([
-            `Uptime: ${(agent.uptime / 1000 / 60).toFixed(1)} min`,
-            `Latency: avg ${agent.latency.avg.toFixed(1)}ms, p99 ${agent.latency.p99.toFixed(1)}ms`,
-            `Tasks: ${agent.tasks.completed} completed, ${agent.tasks.failed} failed, ${agent.tasks.queued} queued`,
-            `Errors: ${agent.errors.count}${agent.errors.lastError ? ` (${agent.errors.lastError})` : ''}`
+            `Uptime: ${(uptime / 1000 / 60).toFixed(1)} min`,
+            `Latency: avg ${(latency.avg ?? 0).toFixed(1)}ms, p99 ${(latency.p99 ?? 0).toFixed(1)}ms`,
+            `Tasks: ${tasks.completed ?? 0} completed, ${tasks.failed ?? 0} failed, ${tasks.queued ?? 0} queued`,
+            `Errors: ${errors.count ?? 0}${errors.lastError ? ` (${errors.lastError})` : ''}`
           ]);
         }
       }
