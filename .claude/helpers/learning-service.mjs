@@ -822,8 +822,8 @@ class LearningService {
     for (let i = 0; i < longTermPatterns.length; i++) {
       for (let j = i + 1; j < longTermPatterns.length; j++) {
         const sim = this._cosineSimilarity(
-          new Float32Array(longTermPatterns[i].embedding.buffer),
-          new Float32Array(longTermPatterns[j].embedding.buffer)
+          this._bufferToFloat32Array(longTermPatterns[i].embedding),
+          this._bufferToFloat32Array(longTermPatterns[j].embedding)
         );
 
         if (sim > CONFIG.patterns.dedupThreshold) {
