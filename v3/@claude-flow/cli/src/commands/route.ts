@@ -192,11 +192,12 @@ const routeTaskCommand: Command = {
         output.writeln();
 
         const confidence = result.confidence ?? 0;
+        // Use bound methods to preserve `this` context when calling output methods
         const confidenceColor = confidence >= 0.7
-          ? output.success
+          ? (text: string) => output.success(text)
           : confidence >= 0.4
-            ? output.warning
-            : output.error;
+            ? (text: string) => output.warning(text)
+            : (text: string) => output.error(text);
 
         const qValues = result.qValues || [0];
         const maxQValue = Math.max(...qValues);
