@@ -20,11 +20,14 @@ const startCommand: Command = {
     { name: 'quiet', short: 'q', type: 'boolean', description: 'Suppress output' },
     { name: 'background', short: 'b', type: 'boolean', description: 'Run daemon in background (detached process)', default: true },
     { name: 'foreground', short: 'f', type: 'boolean', description: 'Run daemon in foreground (blocks terminal)' },
+    { name: 'headless', type: 'boolean', description: 'Enable headless worker execution (E2B sandbox)' },
+    { name: 'sandbox', type: 'string', description: 'Default sandbox mode for headless workers', choices: ['strict', 'permissive', 'disabled'] },
   ],
   examples: [
     { command: 'claude-flow daemon start', description: 'Start daemon in background (default)' },
     { command: 'claude-flow daemon start --foreground', description: 'Start in foreground (blocks terminal)' },
     { command: 'claude-flow daemon start -w map,audit,optimize', description: 'Start with specific workers' },
+    { command: 'claude-flow daemon start --headless --sandbox strict', description: 'Start with headless workers in strict sandbox' },
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     const quiet = ctx.flags.quiet as boolean;
