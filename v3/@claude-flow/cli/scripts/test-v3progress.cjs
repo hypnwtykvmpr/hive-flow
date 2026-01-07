@@ -33,7 +33,11 @@ console.log('Packages:', packages, packageDirs);
 // - mcp: tools ARE the application layer
 // - shared: cross-cutting concerns by design
 // - testing: test utilities
-const utilityPackages = ['cli', 'hooks', 'mcp', 'shared', 'testing', 'agents', 'integration'];
+// Utility/service packages follow DDD differently - their services ARE the application layer
+const utilityPackages = [
+  'cli', 'hooks', 'mcp', 'shared', 'testing', 'agents', 'integration',
+  'embeddings', 'deployment', 'performance', 'plugins', 'providers'
+];
 let packagesWithDDD = 0;
 let explicitDDD = 0;
 for (const pkg of packageDirs) {
