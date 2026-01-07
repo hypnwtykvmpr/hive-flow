@@ -6,17 +6,25 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
 [![Performance](https://img.shields.io/badge/Performance-<5ms-brightgreen.svg)](https://github.com/ruvnet/claude-flow)
 
-> High-performance embedding generation module for Claude Flow V3 - multi-provider support with auto-install, LRU caching, batch processing, and similarity computation.
+> High-performance embedding generation module for Claude Flow V3 - multi-provider support with persistent caching, document chunking, normalization, hyperbolic embeddings, and neural substrate integration.
 
 ## Features
 
+### Core Embedding
 - **Multiple Providers** - Agentic-Flow (ONNX), OpenAI, Transformers.js, and Mock
 - **Auto-Install** - Automatically installs agentic-flow when using `provider: 'auto'`
 - **Smart Fallback** - Graceful fallback chain: agentic-flow → transformers → mock
-- **LRU Caching** - Intelligent caching with configurable size and hit rate tracking
+- **LRU + Disk Caching** - In-memory LRU + SQLite persistent cache with TTL
 - **Batch Processing** - Efficient batch embedding with partial cache hits
 - **Similarity Functions** - Cosine, Euclidean, and dot product metrics
 - **75x Faster** - Agentic-flow ONNX is 75x faster than Transformers.js
+
+### Advanced Features (New in v3.0.0-alpha.11)
+- **Document Chunking** - Character, sentence, paragraph, and token-based chunking with overlap
+- **Multiple Normalization** - L2, L1, min-max, and z-score normalization
+- **Hyperbolic Embeddings** - Poincaré ball model for hierarchical representations
+- **Neural Substrate** - Semantic drift detection, memory physics, swarm coordination
+- **Persistent Cache** - SQLite-backed disk cache with LRU eviction and TTL
 
 ## Installation
 
