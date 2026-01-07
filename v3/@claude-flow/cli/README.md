@@ -87,6 +87,16 @@ claude-flow status --watch
 | `hooks` | 17 | Self-learning hooks with neural pattern recognition + 12 background workers |
 | `hive-mind` | 6 | Queen-led consensus-based multi-agent coordination |
 | `migrate` | 5 | V2 to V3 migration with rollback support |
+| `process` | 4 | Background process management and monitoring |
+| `daemon` | 5 | Node.js worker daemon (start, stop, status, trigger, enable) |
+| `neural` | 5 | Neural pattern training (train, status, patterns, predict, optimize) |
+| `security` | 6 | Security scanning (scan, audit, cve, threats, validate, report) |
+| `performance` | 5 | Performance profiling (benchmark, profile, metrics, optimize, report) |
+| `providers` | 5 | AI providers (list, add, remove, test, configure) |
+| `plugins` | 5 | Plugin management (list, install, uninstall, enable, disable) |
+| `deployment` | 5 | Deployment management (deploy, rollback, status, environments, release) |
+| `embeddings` | 4 | Vector embeddings (embed, batch, search, init) - 75x faster with agentic-flow |
+| `claims` | 4 | Claims-based authorization (check, grant, revoke, list) |
 
 ---
 
