@@ -1948,8 +1948,8 @@ export function createV3ProgressWorker(projectRoot: string): WorkerHandler {
     const cliProgress = Math.min(100, (cliCommands / 28) * 100);
     const mcpProgress = Math.min(100, (mcpTools / 100) * 100); // 100 is target baseline
     const hooksProgress = Math.min(100, (hooksSubcommands / 20) * 100);
-    const pkgProgress = Math.min(100, (packages / 16) * 100);
-    const dddProgress = Math.min(100, (packagesWithDDD / 16) * 100);
+    const pkgProgress = Math.min(100, (packages / 17) * 100); // 17 packages in v3
+    const dddProgress = Math.min(100, (packagesWithDDD / packages) * 100); // DDD relative to actual packages
 
     const overallProgress = Math.round(
       (cliProgress * 0.25) +
