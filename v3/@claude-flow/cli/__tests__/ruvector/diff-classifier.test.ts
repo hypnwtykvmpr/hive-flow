@@ -448,3 +448,241 @@ describe('createDiffClassifier', () => {
     expect(classifier).toBeInstanceOf(DiffClassifier);
   });
 });
+
+describe('DiffClassifier Advanced Scenarios', () => {
+  let classifier: DiffClassifier;
+
+  beforeEach(() => {
+    classifier = new DiffClassifier();
+  });
+
+  afterEach(() => {
+    classifier.clearCache();
+  });
+
+  describe('complex diff patterns', () => {
+    it('should handle large diffs with many files', () => {
+      let diff = '';
+      for (let i = 0; i < 20; i++) {
+        diff += `diff --git a/src/module${i}/index.ts b/src/module${i}/index.ts
+--- a/src/module${i}/index.ts
++++ b/src/module${i}/index.ts
+@@ -1,5 +1,10 @@
++// New comment
+ export function module${i}() {
+-  return 'old';
++  return 'new';
++}
++
++export function helper${i}() {
++  return 'helper';
+ }
+`;
+      }
+
+      const files = classifier.parseDiff(diff);
+      expect(files.length).toBe(20);
+
+      const analysis = classifier.classify(files);
+      expect(analysis.stats.filesChanged).toBe(20);
+    });
+
+    it('should handle renamed files', () => {
+      const diff = `diff --git a/old-name.ts b/new-name.ts
+similarity index 95%
+rename from old-name.ts
+rename to new-name.ts
+--- a/old-name.ts
++++ b/new-name.ts
+@@ -1,3 +1,3 @@
+-export const oldName = 'old';
++export const newName = 'new';
+`;
+      const files = classifier.parseDiff(diff);
+      expect(files.length).toBe(1);
+      expect(files[0].path).toBe('new-name.ts');
+    });
+
+    it('should handle deleted files', () => {
+      const diff = `diff --git a/deleted.ts b/deleted.ts
+deleted file mode 100644
+--- a/deleted.ts
++++ /dev/null
+@@ -1,5 +0,0 @@
+-export function deleted() {
+-  return 'gone';
+-}
+-
+-export const constant = 'value';
+`;
+      const files = classifier.parseDiff(diff);
+      expect(files.length).toBe(1);
+      expect(files[0].deletions).toBeGreaterThan(0);
+    });
+
+    it('should handle new files', () => {
+      const diff = `diff --git a/new-file.ts b/new-file.ts
+new file mode 100644
+--- /dev/null
++++ b/new-file.ts
+@@ -0,0 +1,10 @@
++export class NewFeature {
++  constructor() {
++    this.init();
++  }
++
++  init() {
++    console.log('initialized');
++  }
++}
++
+`;
+      const files = classifier.parseDiff(diff);
+      expect(files.length).toBe(1);
+      expect(files[0].additions).toBeGreaterThan(0);
+      expect(files[0].deletions).toBe(0);
+    });
+  });
+
+  describe('classification refinement', () => {
+    it('should detect performance changes', () => {
+      const diff = `diff --git a/src/cache.ts b/src/cache.ts
+--- a/src/cache.ts
++++ b/src/cache.ts
+@@ -1,8 +1,15 @@
++import { LRUCache } from 'lru-cache';
++
++const cache = new LRUCache({ max: 1000 });
++
+ export function getData(key: string) {
+-  return fetchFromDatabase(key);
++  const cached = cache.get(key);
++  if (cached) return cached;
++
++  const data = fetchFromDatabase(key);
++  cache.set(key, data);
++  return data;
+ }
+`;
+      const files = classifier.parseDiff(diff);
+      expect(files[0].classification.secondary).toBeDefined();
+    });
+
+    it('should detect dependency updates', () => {
+      const diff = `diff --git a/package.json b/package.json
+--- a/package.json
++++ b/package.json
+@@ -5,7 +5,7 @@
+   "dependencies": {
+-    "express": "^4.17.0",
++    "express": "^4.18.0",
+     "lodash": "^4.17.21"
+   }
+ }
+`;
+      const files = classifier.parseDiff(diff);
+      expect(files[0].classification.primary).toBe('config');
+    });
+
+    it('should detect breaking changes', () => {
+      const diff = `diff --git a/src/api/v2/index.ts b/src/api/v2/index.ts
+--- a/src/api/v2/index.ts
++++ b/src/api/v2/index.ts
+@@ -1,10 +1,15 @@
+-export interface UserResponse {
+-  id: number;
++export interface UserResponse {
++  id: string; // BREAKING: changed from number to string
+   name: string;
++  email: string; // BREAKING: new required field
+ }
+
+-export function getUser(id: number): UserResponse {
++export function getUser(id: string): UserResponse {
+   // ...
+ }
+`;
+      const files = classifier.parseDiff(diff);
+      expect(files[0].classification.riskFactors.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('conventional commit message parsing', () => {
+    it('should parse conventional commits with scope', () => {
+      expect(classifier.classifyCommitMessage('feat(auth): add OAuth2 support')).toBe('feature');
+      expect(classifier.classifyCommitMessage('fix(api): resolve null pointer')).toBe('bugfix');
+      expect(classifier.classifyCommitMessage('docs(readme): update installation')).toBe('docs');
+    });
+
+    it('should parse breaking change markers', () => {
+      expect(classifier.classifyCommitMessage('feat!: remove deprecated API')).toBe('feature');
+      expect(classifier.classifyCommitMessage('BREAKING CHANGE: new auth flow')).toBe('feature');
+    });
+
+    it('should handle mixed case', () => {
+      expect(classifier.classifyCommitMessage('FIX: Critical bug')).toBe('bugfix');
+      expect(classifier.classifyCommitMessage('Feature: New dashboard')).toBe('feature');
+    });
+  });
+
+  describe('security detection', () => {
+    it('should flag crypto-related changes', () => {
+      const diff = `diff --git a/src/crypto/encrypt.ts b/src/crypto/encrypt.ts
+--- a/src/crypto/encrypt.ts
++++ b/src/crypto/encrypt.ts
+@@ -1,5 +1,10 @@
++import { randomBytes, createCipheriv } from 'crypto';
++
+ export function encrypt(data: string) {
+-  return btoa(data);
++  const iv = randomBytes(16);
++  const cipher = createCipheriv('aes-256-gcm', key, iv);
++  return cipher.update(data, 'utf8', 'hex');
+ }
+`;
+      const files = classifier.parseDiff(diff);
+      expect(files[0].classification.riskFactors.some(r => r.toLowerCase().includes('security'))).toBe(true);
+    });
+
+    it('should flag password-related changes', () => {
+      const diff = `diff --git a/src/auth/password.ts b/src/auth/password.ts
+--- a/src/auth/password.ts
++++ b/src/auth/password.ts
+@@ -1,5 +1,8 @@
++import bcrypt from 'bcrypt';
++
+ export async function hashPassword(password: string) {
+-  return password;
++  const salt = await bcrypt.genSalt(12);
++  return bcrypt.hash(password, salt);
+ }
+`;
+      const files = classifier.parseDiff(diff);
+      expect(files[0].classification.impactLevel).toBe('critical');
+    });
+  });
+
+  describe('test file handling', () => {
+    it('should properly classify test file changes', () => {
+      const diff = `diff --git a/src/__tests__/user.test.ts b/src/__tests__/user.test.ts
+--- a/src/__tests__/user.test.ts
++++ b/src/__tests__/user.test.ts
+@@ -1,10 +1,20 @@
+ describe('UserService', () => {
++  describe('createUser', () => {
++    it('should create user with valid data', () => {
++      // test implementation
++    });
++
++    it('should throw on invalid email', () => {
++      // test implementation
++    });
++  });
+ });
+`;
+      const files = classifier.parseDiff(diff);
+      expect(files[0].classification.primary).toBe('test');
+      expect(files[0].classification.impactLevel).toBe('low');
+    });
+  });
+});
