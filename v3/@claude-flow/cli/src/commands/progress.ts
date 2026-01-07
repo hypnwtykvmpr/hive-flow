@@ -142,10 +142,10 @@ const summaryCommand: Command = {
   name: 'summary',
   description: 'Show human-readable summary',
   action: async (ctx: CommandContext): Promise<CommandResult> => {
-    const spinner = output.createSpinner();
+    const spinner = output.createSpinner({ text: 'Getting progress summary...' });
 
     try {
-      spinner.start('Getting progress summary...');
+      spinner.start();
       const result = await callMCPTool<{ summary: string }>('progress/summary', {});
       spinner.stop();
 
