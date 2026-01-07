@@ -68,6 +68,15 @@ claude-flow swarm init --v3-mode
 # Search memory
 claude-flow memory search -q "authentication patterns"
 
+# Route task to optimal agent (Q-Learning)
+claude-flow route task "Implement OAuth2 authentication"
+
+# Analyze code complexity
+claude-flow analyze complexity ./src
+
+# Claim an issue
+claude-flow issues claim ISSUE-123
+
 # Check system status
 claude-flow status --watch
 ```
