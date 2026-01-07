@@ -102,10 +102,10 @@ const syncCommand: Command = {
   name: 'sync',
   description: 'Calculate and persist progress',
   action: async (ctx: CommandContext): Promise<CommandResult> => {
-    const spinner = output.createSpinner();
+    const spinner = output.createSpinner({ text: 'Syncing progress...' });
 
     try {
-      spinner.start('Syncing progress...');
+      spinner.start();
       const result = await callMCPTool<{
         progress: number;
         message: string;
