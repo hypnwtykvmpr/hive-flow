@@ -438,14 +438,19 @@ export class WebSocketTransport extends EventEmitter implements ITransport {
   }
 
   /**
-   * Parse incoming message
+   * Parse incoming message with error handling
    */
   private parseMessage(data: RawData): any {
-    if (this.config.enableBinaryMode && Buffer.isBuffer(data)) {
-      // Could implement binary protocol here
+    try {
+      if (this.config.enableBinaryMode && Buffer.isBuffer(data)) {
+        // Could implement binary protocol here
+        return JSON.parse(data.toString());
+      }
       return JSON.parse(data.toString());
+    } catch (error) {
+      // Wrap JSON parse errors with more context
+      throw new Error(`JSON parse error: ${error instanceof Error ? error.message : String(error)}`);
     }
-    return JSON.parse(data.toString());
   }
 
   /**
