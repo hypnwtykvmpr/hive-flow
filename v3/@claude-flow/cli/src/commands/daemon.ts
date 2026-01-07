@@ -422,6 +422,9 @@ const statusCommand: Command = {
 
       const workerData = status.config.workers.map(w => {
         const state = status.workers.get(w.type);
+        // Check for headless mode from worker config or state
+        const isHeadless = (w as any).headless || (state as any)?.headless || false;
+        const sandboxMode = (w as any).sandbox || (state as any)?.sandbox || null;
         return {
           type: w.enabled ? output.highlight(w.type) : output.dim(w.type),
           enabled: w.enabled ? output.success('✓') : output.dim('○'),
@@ -431,19 +434,29 @@ const statusCommand: Command = {
           success: state ? `${Math.round((state.successCount / Math.max(state.runCount, 1)) * 100)}%` : '-',
           lastRun: state?.lastRun ? formatTimeAgo(state.lastRun) : output.dim('never'),
           nextRun: state?.nextRun && w.enabled ? formatTimeUntil(state.nextRun) : output.dim('-'),
+          mode: isHeadless ? output.highlight('headless') : output.dim('local'),
+          sandbox: isHeadless ? (sandboxMode || 'strict') : output.dim('-'),
         };
       });
 
+      // Build columns based on --show-modes flag
+      const baseColumns = [
+        { key: 'type', header: 'Worker', width: 12 },
+        { key: 'enabled', header: 'On', width: 4 },
+        { key: 'status', header: 'Status', width: 10 },
+        { key: 'runs', header: 'Runs', width: 6 },
+        { key: 'success', header: 'Success', width: 8 },
+        { key: 'lastRun', header: 'Last Run', width: 12 },
+        { key: 'nextRun', header: 'Next Run', width: 12 },
+      ];
+
+      const modeColumns = showModes ? [
+        { key: 'mode', header: 'Mode', width: 10 },
+        { key: 'sandbox', header: 'Sandbox', width: 12 },
+      ] : [];
+
       output.printTable({
-        columns: [
-          { key: 'type', header: 'Worker', width: 12 },
-          { key: 'enabled', header: 'On', width: 4 },
-          { key: 'status', header: 'Status', width: 10 },
-          { key: 'runs', header: 'Runs', width: 6 },
-          { key: 'success', header: 'Success', width: 8 },
-          { key: 'lastRun', header: 'Last Run', width: 12 },
-          { key: 'nextRun', header: 'Next Run', width: 12 },
-        ],
+        columns: [...baseColumns, ...modeColumns],
         data: workerData,
       });
 
