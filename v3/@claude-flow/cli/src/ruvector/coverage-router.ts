@@ -1,985 +1,273 @@
 /**
- * Coverage-Aware Routing for @claude-flow/cli
- *
- * Integrates with ruvector's hooks_coverage_route and hooks_coverage_suggest
- * to route tasks to agents based on test coverage gaps.
- *
- * Supports coverage formats:
- * - lcov (lcov.info)
- * - istanbul (coverage-summary.json, coverage-final.json)
- * - c8 (coverage/coverage-summary.json)
+ * Coverage Router for Test Routing
  */
 
-import { existsSync, readFileSync, readdirSync, statSync } from 'fs';
-import { join, resolve, relative, dirname, basename, extname } from 'path';
+export interface CoverageRouterConfig {
+  minCoverage: number;
+  targetCoverage: number;
+  incremental: boolean;
+  coverageTypes: ('line' | 'branch' | 'function' | 'statement')[];
+}
 
-// ============================================================================
-// Types
-// ============================================================================
-
-export interface CoverageData {
-  /** File path relative to project root */
-  filePath: string;
-  /** Line coverage percentage (0-100) */
+export interface FileCoverage {
+  path: string;
   lineCoverage: number;
-  /** Branch coverage percentage (0-100) */
   branchCoverage: number;
-  /** Function coverage percentage (0-100) */
   functionCoverage: number;
-  /** Statement coverage percentage (0-100) */
   statementCoverage: number;
-  /** Uncovered line numbers */
   uncoveredLines: number[];
-  /** Uncovered branch locations */
-  uncoveredBranches: UncoveredBranch[];
-  /** Uncovered function names */
-  uncoveredFunctions: string[];
-  /** Total lines in file */
   totalLines: number;
-  /** Lines that are covered */
   coveredLines: number;
 }
 
-export interface UncoveredBranch {
-  line: number;
-  column?: number;
-  type: 'if' | 'else' | 'case' | 'ternary' | 'logical' | 'unknown';
-}
-
-export interface CoverageSummary {
-  totalFiles: number;
-  overallLineCoverage: number;
-  overallBranchCoverage: number;
-  overallFunctionCoverage: number;
-  overallStatementCoverage: number;
-  filesBelowThreshold: number;
-  coverageThreshold: number;
-}
-
-export interface CoverageGap {
-  filePath: string;
-  coveragePercent: number;
-  gapType: 'critical' | 'high' | 'medium' | 'low';
-  complexity: number;
-  priority: number;
-  suggestedAgents: string[];
-  uncoveredLines: number[];
-  reason: string;
+export interface CoverageReport {
+  overall: number;
+  byType: { line: number; branch: number; function: number; statement: number };
+  byFile: FileCoverage[];
+  lowestCoverage: FileCoverage[];
+  highestCoverage: FileCoverage[];
+  uncoveredCritical: string[];
+  timestamp: number;
 }
 
 export interface CoverageRouteResult {
-  success: boolean;
-  task: string;
-  coverageAware: boolean;
-  gaps: CoverageGap[];
-  routing: {
-    primaryAgent: string;
-    confidence: number;
-    reason: string;
-    coverageImpact: string;
-  };
-  suggestions: string[];
-  metrics: {
-    filesAnalyzed: number;
-    totalGaps: number;
-    criticalGaps: number;
-    avgCoverage: number;
-  };
+  action: 'add-tests' | 'review-coverage' | 'skip' | 'prioritize';
+  priority: number;
+  targetFiles: string[];
+  testTypes: ('unit' | 'integration' | 'e2e')[];
+  gaps: Array<{ file: string; currentCoverage: number; targetCoverage: number; gap: number; suggestedTests: string[] }>;
+  estimatedEffort: number;
+  impactScore: number;
 }
 
-export interface CoverageSuggestResult {
-  success: boolean;
-  path: string;
-  suggestions: CoverageGap[];
-  summary: CoverageSummary;
-  prioritizedFiles: string[];
-  ruvectorAvailable: boolean;
-}
-
-export interface CoverageGapsResult {
-  success: boolean;
-  gaps: CoverageGap[];
-  summary: CoverageSummary;
-  agentAssignments: Record<string, string[]>;
-  ruvectorAvailable: boolean;
-}
-
-// ============================================================================
-// RuVector Integration (Graceful Fallback)
-// ============================================================================
-
-let ruvectorAvailable: boolean | null = null;
-
-interface RuVectorModule {
-  hooks_coverage_route?: (task: string, coverageData: CoverageData[]) => Promise<unknown>;
-  hooks_coverage_suggest?: (path: string, coverageData: CoverageData[]) => Promise<unknown>;
-}
-
-/**
- * Check if ruvector is available
- */
-async function checkRuvectorAvailable(): Promise<boolean> {
-  if (ruvectorAvailable !== null) {
-    return ruvectorAvailable;
-  }
-
-  try {
-    // Try to dynamically import ruvector
-    const ruvector = await import('ruvector').catch(() => null) as RuVectorModule | null;
-    ruvectorAvailable = ruvector !== null &&
-      typeof ruvector.hooks_coverage_route === 'function' &&
-      typeof ruvector.hooks_coverage_suggest === 'function';
-  } catch {
-    ruvectorAvailable = false;
-  }
-
-  return ruvectorAvailable;
-}
-
-/**
- * Call ruvector's hooks_coverage_route if available
- */
-async function callRuvectorRoute(
-  task: string,
-  coverageData: CoverageData[]
-): Promise<unknown | null> {
-  if (!(await checkRuvectorAvailable())) {
-    return null;
-  }
-
-  try {
-    const ruvector = await import('ruvector') as RuVectorModule;
-    if (ruvector.hooks_coverage_route) {
-      return await ruvector.hooks_coverage_route(task, coverageData);
-    }
-  } catch {
-    // Graceful fallback
-  }
-  return null;
-}
-
-/**
- * Call ruvector's hooks_coverage_suggest if available
- */
-async function callRuvectorSuggest(
-  path: string,
-  coverageData: CoverageData[]
-): Promise<unknown | null> {
-  if (!(await checkRuvectorAvailable())) {
-    return null;
-  }
-
-  try {
-    const ruvector = await import('ruvector') as RuVectorModule;
-    if (ruvector.hooks_coverage_suggest) {
-      return await ruvector.hooks_coverage_suggest(path, coverageData);
-    }
-  } catch {
-    // Graceful fallback
-  }
-  return null;
-}
-
-// ============================================================================
-// Coverage Report Parsing
-// ============================================================================
-
-/**
- * Find coverage report files in project
- */
-export function findCoverageReports(projectRoot: string): {
-  type: 'lcov' | 'istanbul' | 'c8' | 'unknown';
-  path: string;
-}[] {
-  const reports: { type: 'lcov' | 'istanbul' | 'c8' | 'unknown'; path: string }[] = [];
-  const coverageDir = join(projectRoot, 'coverage');
-
-  // Check for lcov.info
-  const lcovPaths = [
-    join(projectRoot, 'coverage', 'lcov.info'),
-    join(projectRoot, 'lcov.info'),
-    join(projectRoot, 'coverage', 'lcov-report', 'lcov.info'),
-  ];
-
-  for (const lcovPath of lcovPaths) {
-    if (existsSync(lcovPath)) {
-      reports.push({ type: 'lcov', path: lcovPath });
-    }
-  }
-
-  // Check for istanbul/c8 coverage-summary.json
-  const summaryPaths = [
-    join(coverageDir, 'coverage-summary.json'),
-    join(coverageDir, 'coverage-final.json'),
-    join(projectRoot, '.nyc_output', 'coverage-summary.json'),
-  ];
-
-  for (const summaryPath of summaryPaths) {
-    if (existsSync(summaryPath)) {
-      const type = summaryPath.includes('.nyc_output') ? 'istanbul' : 'c8';
-      reports.push({ type, path: summaryPath });
-    }
-  }
-
-  return reports;
-}
-
-/**
- * Parse LCOV format coverage report
- */
-export function parseLcov(lcovContent: string): CoverageData[] {
-  const files: CoverageData[] = [];
-  const records = lcovContent.split('end_of_record');
-
-  for (const record of records) {
-    if (!record.trim()) continue;
-
-    const lines = record.split('\n').map(l => l.trim()).filter(Boolean);
-    const sfLine = lines.find(l => l.startsWith('SF:'));
-    if (!sfLine) continue;
-
-    const filePath = sfLine.substring(3);
-    const data: CoverageData = {
-      filePath,
-      lineCoverage: 0,
-      branchCoverage: 0,
-      functionCoverage: 0,
-      statementCoverage: 0,
-      uncoveredLines: [],
-      uncoveredBranches: [],
-      uncoveredFunctions: [],
-      totalLines: 0,
-      coveredLines: 0,
-    };
-
-    let linesFound = 0;
-    let linesHit = 0;
-    let branchesFound = 0;
-    let branchesHit = 0;
-    let functionsFound = 0;
-    let functionsHit = 0;
-
-    for (const line of lines) {
-      // Line coverage: DA:line_number,hit_count
-      if (line.startsWith('DA:')) {
-        const [lineNum, hitCount] = line.substring(3).split(',').map(Number);
-        linesFound++;
-        if (hitCount > 0) {
-          linesHit++;
-        } else {
-          data.uncoveredLines.push(lineNum);
-        }
-      }
-
-      // Branch coverage: BRDA:line_number,block_number,branch_number,hit_count
-      if (line.startsWith('BRDA:')) {
-        const parts = line.substring(5).split(',');
-        const lineNum = parseInt(parts[0], 10);
-        const hitCount = parts[3] === '-' ? 0 : parseInt(parts[3], 10);
-        branchesFound++;
-        if (hitCount > 0) {
-          branchesHit++;
-        } else {
-          data.uncoveredBranches.push({
-            line: lineNum,
-            type: 'unknown',
-          });
-        }
-      }
-
-      // Function coverage: FNDA:hit_count,function_name
-      if (line.startsWith('FNDA:')) {
-        const [hitCount, funcName] = line.substring(5).split(',');
-        functionsFound++;
-        if (parseInt(hitCount, 10) > 0) {
-          functionsHit++;
-        } else {
-          data.uncoveredFunctions.push(funcName);
-        }
-      }
-
-      // Summary lines
-      if (line.startsWith('LF:')) {
-        data.totalLines = parseInt(line.substring(3), 10);
-      }
-      if (line.startsWith('LH:')) {
-        data.coveredLines = parseInt(line.substring(3), 10);
-      }
-    }
-
-    // Calculate percentages
-    data.lineCoverage = linesFound > 0 ? (linesHit / linesFound) * 100 : 100;
-    data.branchCoverage = branchesFound > 0 ? (branchesHit / branchesFound) * 100 : 100;
-    data.functionCoverage = functionsFound > 0 ? (functionsHit / functionsFound) * 100 : 100;
-    data.statementCoverage = data.lineCoverage; // Often equivalent in LCOV
-
-    files.push(data);
-  }
-
-  return files;
-}
-
-/**
- * Parse Istanbul/C8 JSON format coverage report
- */
-export function parseIstanbulJson(jsonContent: string): CoverageData[] {
-  const files: CoverageData[] = [];
-
-  try {
-    const coverage = JSON.parse(jsonContent) as Record<string, {
-      path?: string;
-      s?: Record<string, number>;
-      b?: Record<string, number[]>;
-      f?: Record<string, number>;
-      statementMap?: Record<string, { start: { line: number } }>;
-      branchMap?: Record<string, { line: number; type?: string }>;
-      fnMap?: Record<string, { name: string }>;
-      // Summary format
-      lines?: { total: number; covered: number; pct: number };
-      statements?: { total: number; covered: number; pct: number };
-      functions?: { total: number; covered: number; pct: number };
-      branches?: { total: number; covered: number; pct: number };
-    }>;
-
-    for (const [filePath, fileData] of Object.entries(coverage)) {
-      // Skip 'total' entry in summary format
-      if (filePath === 'total') continue;
-
-      const data: CoverageData = {
-        filePath: fileData.path || filePath,
-        lineCoverage: 0,
-        branchCoverage: 0,
-        functionCoverage: 0,
-        statementCoverage: 0,
-        uncoveredLines: [],
-        uncoveredBranches: [],
-        uncoveredFunctions: [],
-        totalLines: 0,
-        coveredLines: 0,
-      };
-
-      // Handle summary format
-      if (fileData.lines && typeof fileData.lines.pct === 'number') {
-        data.lineCoverage = fileData.lines.pct;
-        data.statementCoverage = fileData.statements?.pct ?? fileData.lines.pct;
-        data.branchCoverage = fileData.branches?.pct ?? 100;
-        data.functionCoverage = fileData.functions?.pct ?? 100;
-        data.totalLines = fileData.lines.total;
-        data.coveredLines = fileData.lines.covered;
-        files.push(data);
-        continue;
-      }
-
-      // Handle detailed format
-      if (fileData.s && fileData.statementMap) {
-        let statementsTotal = 0;
-        let statementsCovered = 0;
-
-        for (const [stmtId, hitCount] of Object.entries(fileData.s)) {
-          statementsTotal++;
-          if (hitCount > 0) {
-            statementsCovered++;
-          } else {
-            const stmtInfo = fileData.statementMap[stmtId];
-            if (stmtInfo?.start?.line) {
-              data.uncoveredLines.push(stmtInfo.start.line);
-            }
-          }
-        }
-
-        data.statementCoverage = statementsTotal > 0
-          ? (statementsCovered / statementsTotal) * 100
-          : 100;
-        data.lineCoverage = data.statementCoverage;
-        data.totalLines = statementsTotal;
-        data.coveredLines = statementsCovered;
-      }
-
-      // Handle branch coverage
-      if (fileData.b && fileData.branchMap) {
-        let branchesTotal = 0;
-        let branchesCovered = 0;
-
-        for (const [branchId, hits] of Object.entries(fileData.b)) {
-          for (const hitCount of hits) {
-            branchesTotal++;
-            if (hitCount > 0) {
-              branchesCovered++;
-            } else {
-              const branchInfo = fileData.branchMap[branchId];
-              if (branchInfo) {
-                data.uncoveredBranches.push({
-                  line: branchInfo.line,
-                  type: (branchInfo.type || 'unknown') as UncoveredBranch['type'],
-                });
-              }
-            }
-          }
-        }
-
-        data.branchCoverage = branchesTotal > 0
-          ? (branchesCovered / branchesTotal) * 100
-          : 100;
-      }
-
-      // Handle function coverage
-      if (fileData.f && fileData.fnMap) {
-        let functionsTotal = 0;
-        let functionsCovered = 0;
-
-        for (const [fnId, hitCount] of Object.entries(fileData.f)) {
-          functionsTotal++;
-          if (hitCount > 0) {
-            functionsCovered++;
-          } else {
-            const fnInfo = fileData.fnMap[fnId];
-            if (fnInfo?.name) {
-              data.uncoveredFunctions.push(fnInfo.name);
-            }
-          }
-        }
-
-        data.functionCoverage = functionsTotal > 0
-          ? (functionsCovered / functionsTotal) * 100
-          : 100;
-      }
-
-      // Deduplicate uncovered lines
-      data.uncoveredLines = Array.from(new Set(data.uncoveredLines)).sort((a, b) => a - b);
-
-      files.push(data);
-    }
-  } catch {
-    // Return empty array on parse error
-  }
-
-  return files;
-}
-
-/**
- * Load and parse coverage data from project
- */
-export async function loadCoverageData(projectRoot: string): Promise<{
-  data: CoverageData[];
-  format: 'lcov' | 'istanbul' | 'c8' | 'none';
-  reportPath: string | null;
-}> {
-  const reports = findCoverageReports(projectRoot);
-
-  if (reports.length === 0) {
-    return { data: [], format: 'none', reportPath: null };
-  }
-
-  // Prefer lcov format for most detailed data
-  const lcovReport = reports.find(r => r.type === 'lcov');
-  if (lcovReport) {
-    const content = readFileSync(lcovReport.path, 'utf-8');
-    return {
-      data: parseLcov(content),
-      format: 'lcov',
-      reportPath: lcovReport.path,
-    };
-  }
-
-  // Fall back to istanbul/c8 JSON
-  const jsonReport = reports.find(r => r.type === 'istanbul' || r.type === 'c8');
-  if (jsonReport) {
-    const content = readFileSync(jsonReport.path, 'utf-8');
-    return {
-      data: parseIstanbulJson(content),
-      format: jsonReport.type,
-      reportPath: jsonReport.path,
-    };
-  }
-
-  return { data: [], format: 'none', reportPath: null };
-}
-
-// ============================================================================
-// Coverage Analysis
-// ============================================================================
-
-/**
- * Calculate file complexity based on size and structure
- */
-function calculateComplexity(filePath: string, projectRoot: string): number {
-  const fullPath = resolve(projectRoot, filePath);
-
-  try {
-    if (!existsSync(fullPath)) return 1;
-
-    const content = readFileSync(fullPath, 'utf-8');
-    const lines = content.split('\n');
-    const lineCount = lines.length;
-
-    // Basic complexity heuristics
-    let complexity = 1;
-
-    // Line count factor
-    if (lineCount > 500) complexity += 3;
-    else if (lineCount > 200) complexity += 2;
-    else if (lineCount > 100) complexity += 1;
-
-    // Control flow complexity (simple estimation)
-    const controlFlowKeywords = content.match(
-      /\b(if|else|switch|case|for|while|do|try|catch|throw)\b/g
-    );
-    if (controlFlowKeywords) {
-      complexity += Math.min(5, Math.floor(controlFlowKeywords.length / 10));
-    }
-
-    // Class/function count
-    const declarations = content.match(
-      /\b(class|function|const\s+\w+\s*=\s*(async\s+)?\(|=>\s*{)/g
-    );
-    if (declarations) {
-      complexity += Math.min(3, Math.floor(declarations.length / 5));
-    }
-
-    return Math.min(10, complexity);
-  } catch {
-    return 1;
-  }
-}
-
-/**
- * Determine gap type based on coverage percentage
- */
-function determineGapType(coverage: number): 'critical' | 'high' | 'medium' | 'low' {
-  if (coverage < 20) return 'critical';
-  if (coverage < 50) return 'high';
-  if (coverage < 70) return 'medium';
-  return 'low';
-}
-
-/**
- * Suggest agents based on file type and coverage gap
- */
-function suggestAgentsForFile(
-  filePath: string,
-  coverageData: CoverageData,
-  gapType: 'critical' | 'high' | 'medium' | 'low'
-): string[] {
-  const ext = extname(filePath).toLowerCase();
-  const fileName = basename(filePath).toLowerCase();
-  const agents: string[] = [];
-
-  // Test files need tester primarily
-  if (fileName.includes('.test.') || fileName.includes('.spec.')) {
-    agents.push('tester', 'reviewer');
-    return agents;
-  }
-
-  // Based on file extension
-  const extAgentMap: Record<string, string[]> = {
-    '.ts': ['coder', 'tester', 'reviewer'],
-    '.tsx': ['coder', 'tester', 'reviewer'],
-    '.js': ['coder', 'tester'],
-    '.jsx': ['coder', 'tester'],
-    '.py': ['coder', 'tester', 'ml-developer'],
-    '.go': ['coder', 'tester'],
-    '.rs': ['coder', 'tester', 'performance-engineer'],
-  };
-
-  // Based on directory/file purpose
-  if (filePath.includes('/api/') || filePath.includes('/routes/')) {
-    agents.push('coder', 'tester', 'security-architect');
-  } else if (filePath.includes('/auth/') || filePath.includes('security')) {
-    agents.push('security-architect', 'tester', 'coder');
-  } else if (filePath.includes('/utils/') || filePath.includes('/helpers/')) {
-    agents.push('coder', 'tester');
-  } else if (filePath.includes('/services/')) {
-    agents.push('coder', 'tester', 'architect');
-  } else {
-    agents.push(...(extAgentMap[ext] || ['coder', 'tester']));
-  }
-
-  // For critical gaps, add reviewer
-  if (gapType === 'critical' && !agents.includes('reviewer')) {
-    agents.push('reviewer');
-  }
-
-  // For uncovered branches, add architect for complex logic
-  if (coverageData.uncoveredBranches.length > 5) {
-    if (!agents.includes('architect')) {
-      agents.push('architect');
-    }
-  }
-
-  return Array.from(new Set(agents)).slice(0, 4);
-}
-
-/**
- * Calculate priority score for coverage gap
- */
-function calculatePriority(
-  coverageData: CoverageData,
-  complexity: number,
-  gapType: 'critical' | 'high' | 'medium' | 'low'
-): number {
-  // Base priority from gap type
-  const gapPriority: Record<string, number> = {
-    critical: 100,
-    high: 75,
-    medium: 50,
-    low: 25,
-  };
-
-  let priority = gapPriority[gapType];
-
-  // Add complexity factor (0-30 points)
-  priority += complexity * 3;
-
-  // Add uncovered lines factor (0-20 points)
-  const uncoveredRatio = coverageData.uncoveredLines.length / Math.max(1, coverageData.totalLines);
-  priority += Math.min(20, uncoveredRatio * 50);
-
-  // Add branch coverage factor (0-15 points)
-  if (coverageData.branchCoverage < 50) {
-    priority += 15;
-  } else if (coverageData.branchCoverage < 75) {
-    priority += 8;
-  }
-
-  // Important file patterns get boost
-  const fileName = basename(coverageData.filePath);
-  if (fileName.includes('service') || fileName.includes('controller')) {
-    priority += 10;
-  }
-  if (fileName.includes('auth') || fileName.includes('security')) {
-    priority += 15;
-  }
-
-  return Math.min(200, priority);
-}
-
-/**
- * Analyze coverage and identify gaps
- */
-export function analyzeCoverageGaps(
-  coverageData: CoverageData[],
-  projectRoot: string,
-  threshold: number = 80
-): CoverageGap[] {
-  const gaps: CoverageGap[] = [];
-
-  for (const data of coverageData) {
-    const avgCoverage = (
-      data.lineCoverage +
-      data.branchCoverage +
-      data.functionCoverage +
-      data.statementCoverage
-    ) / 4;
-
-    if (avgCoverage >= threshold) continue;
-
-    const gapType = determineGapType(avgCoverage);
-    const complexity = calculateComplexity(data.filePath, projectRoot);
-    const suggestedAgents = suggestAgentsForFile(data.filePath, data, gapType);
-    const priority = calculatePriority(data, complexity, gapType);
-
-    // Generate reason
-    const reasons: string[] = [];
-    if (data.lineCoverage < threshold) {
-      reasons.push(`line coverage ${data.lineCoverage.toFixed(1)}%`);
-    }
-    if (data.branchCoverage < threshold) {
-      reasons.push(`branch coverage ${data.branchCoverage.toFixed(1)}%`);
-    }
-    if (data.uncoveredFunctions.length > 0) {
-      reasons.push(`${data.uncoveredFunctions.length} uncovered functions`);
-    }
-
-    gaps.push({
-      filePath: data.filePath,
-      coveragePercent: avgCoverage,
-      gapType,
-      complexity,
-      priority,
-      suggestedAgents,
-      uncoveredLines: data.uncoveredLines.slice(0, 20), // Limit for output
-      reason: reasons.join(', ') || 'Below threshold',
-    });
-  }
-
-  // Sort by priority (descending)
-  return gaps.sort((a, b) => b.priority - a.priority);
-}
-
-/**
- * Generate coverage summary
- */
-export function generateCoverageSummary(
-  coverageData: CoverageData[],
-  threshold: number = 80
-): CoverageSummary {
-  if (coverageData.length === 0) {
-    return {
-      totalFiles: 0,
-      overallLineCoverage: 0,
-      overallBranchCoverage: 0,
-      overallFunctionCoverage: 0,
-      overallStatementCoverage: 0,
-      filesBelowThreshold: 0,
-      coverageThreshold: threshold,
-    };
-  }
-
-  const totals = coverageData.reduce(
-    (acc, data) => {
-      acc.line += data.lineCoverage;
-      acc.branch += data.branchCoverage;
-      acc.function += data.functionCoverage;
-      acc.statement += data.statementCoverage;
-      return acc;
-    },
-    { line: 0, branch: 0, function: 0, statement: 0 }
-  );
-
-  const fileCount = coverageData.length;
-  const avgLine = totals.line / fileCount;
-  const avgBranch = totals.branch / fileCount;
-  const avgFunction = totals.function / fileCount;
-  const avgStatement = totals.statement / fileCount;
-
-  const belowThreshold = coverageData.filter(d => {
-    const avg = (d.lineCoverage + d.branchCoverage + d.functionCoverage + d.statementCoverage) / 4;
-    return avg < threshold;
-  }).length;
-
-  return {
-    totalFiles: fileCount,
-    overallLineCoverage: avgLine,
-    overallBranchCoverage: avgBranch,
-    overallFunctionCoverage: avgFunction,
-    overallStatementCoverage: avgStatement,
-    filesBelowThreshold: belowThreshold,
-    coverageThreshold: threshold,
-  };
-}
-
-// ============================================================================
-// Main API Functions
-// ============================================================================
-
-/**
- * Route a task with coverage awareness
- *
- * CLI Usage:
- *   claude-flow route "fix bug" --coverage-aware
- */
-export async function coverageRoute(
-  task: string,
-  options: {
-    projectRoot?: string;
-    threshold?: number;
-    useRuvector?: boolean;
-  } = {}
-): Promise<CoverageRouteResult> {
-  const projectRoot = options.projectRoot || process.cwd();
-  const threshold = options.threshold ?? 80;
-  const useRuvector = options.useRuvector !== false;
-
-  // Load coverage data
-  const { data: coverageData, format, reportPath } = await loadCoverageData(projectRoot);
-
-  // Analyze gaps
-  const gaps = coverageData.length > 0
-    ? analyzeCoverageGaps(coverageData, projectRoot, threshold)
-    : [];
-
-  // Try ruvector integration if available
-  if (useRuvector && coverageData.length > 0) {
-    const ruvectorResult = await callRuvectorRoute(task, coverageData);
-    if (ruvectorResult && typeof ruvectorResult === 'object') {
-      // Merge ruvector insights if available
-      // (ruvector provides more sophisticated ML-based routing)
-    }
-  }
-
-  // Determine primary agent based on task + coverage
-  const taskLower = task.toLowerCase();
-  let primaryAgent = 'coder';
-  let confidence = 0.75;
-  let reason = 'Default routing based on task analysis';
-  let coverageImpact = 'No coverage data available';
-
-  if (gaps.length > 0) {
-    // Find most relevant gap for task
-    const criticalGaps = gaps.filter(g => g.gapType === 'critical' || g.gapType === 'high');
-
-    if (criticalGaps.length > 0) {
-      primaryAgent = criticalGaps[0].suggestedAgents[0] || 'tester';
-      confidence = 0.85;
-      reason = `Critical coverage gap in ${criticalGaps[0].filePath}`;
-      coverageImpact = `${criticalGaps.length} high-priority files need attention`;
-    }
-
-    // Override based on task keywords
-    if (taskLower.includes('test') || taskLower.includes('coverage')) {
-      primaryAgent = 'tester';
-      confidence = 0.9;
-      reason = 'Task explicitly mentions testing/coverage';
-    } else if (taskLower.includes('security') || taskLower.includes('auth')) {
-      primaryAgent = 'security-architect';
-      confidence = 0.88;
-      reason = 'Security-related task detected';
-    }
-  }
-
-  // Generate suggestions
-  const suggestions: string[] = [];
-  if (format === 'none') {
-    suggestions.push('Run tests with coverage to enable coverage-aware routing');
-    suggestions.push('Supported formats: lcov, istanbul (c8), nyc');
-  } else {
-    if (gaps.length === 0) {
-      suggestions.push('All files meet coverage threshold');
-    } else {
-      suggestions.push(`Focus on ${gaps.slice(0, 3).map(g => basename(g.filePath)).join(', ')}`);
-      if (gaps.some(g => g.gapType === 'critical')) {
-        suggestions.push('Critical coverage gaps detected - prioritize testing');
-      }
-    }
-  }
-
-  const summary = generateCoverageSummary(coverageData, threshold);
-
-  return {
-    success: true,
-    task,
-    coverageAware: format !== 'none',
-    gaps: gaps.slice(0, 10), // Limit output
-    routing: {
-      primaryAgent,
-      confidence,
-      reason,
-      coverageImpact,
-    },
-    suggestions,
-    metrics: {
-      filesAnalyzed: coverageData.length,
-      totalGaps: gaps.length,
-      criticalGaps: gaps.filter(g => g.gapType === 'critical').length,
-      avgCoverage: summary.overallLineCoverage,
-    },
-  };
-}
-
-/**
- * Suggest coverage improvements for a path
- *
- * CLI Usage:
- *   claude-flow route --coverage-suggest src/
- */
-export async function coverageSuggest(
-  path: string,
-  options: {
-    projectRoot?: string;
-    threshold?: number;
-    useRuvector?: boolean;
-    limit?: number;
-  } = {}
-): Promise<CoverageSuggestResult> {
-  const projectRoot = options.projectRoot || process.cwd();
-  const threshold = options.threshold ?? 80;
-  const useRuvector = options.useRuvector !== false;
-  const limit = options.limit ?? 20;
-
-  // Load coverage data
-  const { data: coverageData, format } = await loadCoverageData(projectRoot);
-
-  // Filter to requested path
-  const normalizedPath = path.startsWith('/') ? path : join(projectRoot, path);
-  const relativePath = relative(projectRoot, normalizedPath);
-
-  const filteredData = coverageData.filter(d => {
-    const filePath = d.filePath.replace(/^\.?\//, '');
-    return filePath.startsWith(relativePath) || filePath.includes(path);
-  });
-
-  // Analyze gaps
-  const gaps = analyzeCoverageGaps(filteredData, projectRoot, threshold);
-
-  // Try ruvector integration
-  const ruvectorAvail = useRuvector ? await checkRuvectorAvailable() : false;
-  if (ruvectorAvail && filteredData.length > 0) {
-    await callRuvectorSuggest(path, filteredData);
-  }
-
-  const summary = generateCoverageSummary(filteredData, threshold);
-
-  return {
-    success: true,
-    path,
-    suggestions: gaps.slice(0, limit),
-    summary,
-    prioritizedFiles: gaps.slice(0, 10).map(g => g.filePath),
-    ruvectorAvailable: ruvectorAvail,
-  };
-}
-
-/**
- * Get all coverage gaps in project
- *
- * CLI Usage:
- *   claude-flow route --coverage-gaps
- */
-export async function coverageGaps(
-  options: {
-    projectRoot?: string;
-    threshold?: number;
-    useRuvector?: boolean;
-    groupByAgent?: boolean;
-  } = {}
-): Promise<CoverageGapsResult> {
-  const projectRoot = options.projectRoot || process.cwd();
-  const threshold = options.threshold ?? 80;
-  const useRuvector = options.useRuvector !== false;
-  const groupByAgent = options.groupByAgent ?? true;
-
-  // Load coverage data
-  const { data: coverageData } = await loadCoverageData(projectRoot);
-
-  // Analyze all gaps
-  const gaps = analyzeCoverageGaps(coverageData, projectRoot, threshold);
-
-  // Group by suggested agent
-  const agentAssignments: Record<string, string[]> = {};
-  if (groupByAgent) {
-    for (const gap of gaps) {
-      const primaryAgent = gap.suggestedAgents[0] || 'tester';
-      if (!agentAssignments[primaryAgent]) {
-        agentAssignments[primaryAgent] = [];
-      }
-      agentAssignments[primaryAgent].push(gap.filePath);
-    }
-  }
-
-  const summary = generateCoverageSummary(coverageData, threshold);
-  const ruvectorAvail = useRuvector ? await checkRuvectorAvailable() : false;
-
-  return {
-    success: true,
-    gaps,
-    summary,
-    agentAssignments,
-    ruvectorAvailable: ruvectorAvail,
-  };
-}
-
-// ============================================================================
-// Export
-// ============================================================================
-
-export default {
-  coverageRoute,
-  coverageSuggest,
-  coverageGaps,
-  loadCoverageData,
-  analyzeCoverageGaps,
-  generateCoverageSummary,
-  parseLcov,
-  parseIstanbulJson,
-  findCoverageReports,
+const DEFAULT_CONFIG: CoverageRouterConfig = {
+  minCoverage: 70,
+  targetCoverage: 85,
+  incremental: true,
+  coverageTypes: ['line', 'branch', 'function', 'statement'],
 };
+
+export class CoverageRouter {
+  private config: CoverageRouterConfig;
+  private ruvectorEngine: unknown = null;
+  private useNative = false;
+  private coverageHistory: CoverageReport[] = [];
+
+  constructor(config: Partial<CoverageRouterConfig> = {}) {
+    this.config = { ...DEFAULT_CONFIG, ...config };
+  }
+
+  async initialize(): Promise<void> {
+    try {
+      const ruvector = await import('@ruvector/coverage');
+      this.ruvectorEngine = (ruvector as any).createCoverageRouter?.(this.config);
+      this.useNative = !!this.ruvectorEngine;
+    } catch { this.useNative = false; }
+  }
+
+  parseCoverage(data: unknown, format: 'lcov' | 'istanbul' | 'cobertura' | 'json' = 'json'): CoverageReport {
+    switch (format) {
+      case 'lcov': return this.parseLcov(data as string);
+      case 'istanbul': return this.parseIstanbul(data as Record<string, unknown>);
+      case 'cobertura': return this.parseCobertura(data as string);
+      default: return this.parseJson(data as Record<string, unknown>);
+    }
+  }
+
+  route(coverage: CoverageReport, changedFiles?: string[]): CoverageRouteResult {
+    const gaps = this.calculateGaps(coverage);
+    const targetFiles = this.prioritizeFiles(coverage, changedFiles);
+    const action = this.determineAction(coverage, gaps);
+    const priority = this.calculatePriority(coverage, changedFiles);
+    const testTypes = this.recommendTestTypes(gaps);
+    const estimatedEffort = this.estimateEffort(gaps);
+    const impactScore = this.calculateImpact(coverage, targetFiles);
+    return { action, priority, targetFiles, testTypes, gaps, estimatedEffort, impactScore };
+  }
+
+  getTrend(): { direction: 'up' | 'down' | 'stable'; change: number } {
+    if (this.coverageHistory.length < 2) return { direction: 'stable', change: 0 };
+    const recent = this.coverageHistory[this.coverageHistory.length - 1];
+    const previous = this.coverageHistory[this.coverageHistory.length - 2];
+    const change = recent.overall - previous.overall;
+    return { direction: change > 0.5 ? 'up' : change < -0.5 ? 'down' : 'stable', change };
+  }
+
+  addToHistory(report: CoverageReport): void {
+    this.coverageHistory.push(report);
+    if (this.coverageHistory.length > 10) this.coverageHistory.shift();
+  }
+
+  getStats(): Record<string, number | boolean> {
+    return { useNative: this.useNative, historySize: this.coverageHistory.length, minCoverage: this.config.minCoverage, targetCoverage: this.config.targetCoverage };
+  }
+
+  private parseLcov(data: string): CoverageReport {
+    const files: FileCoverage[] = [];
+    let currentFile: Partial<FileCoverage> | null = null;
+    const lines = data.split('\n');
+    for (const line of lines) {
+      if (line.startsWith('SF:')) {
+        if (currentFile?.path) files.push(this.finalizeFileCoverage(currentFile));
+        currentFile = { path: line.substring(3), uncoveredLines: [], totalLines: 0, coveredLines: 0 };
+      } else if (line.startsWith('LF:')) { if (currentFile) currentFile.totalLines = parseInt(line.substring(3), 10); }
+      else if (line.startsWith('LH:')) { if (currentFile) currentFile.coveredLines = parseInt(line.substring(3), 10); }
+      else if (line.startsWith('DA:')) { const [lineNum, hits] = line.substring(3).split(',').map(Number); if (currentFile && hits === 0) currentFile.uncoveredLines?.push(lineNum); }
+      else if (line === 'end_of_record') { if (currentFile?.path) files.push(this.finalizeFileCoverage(currentFile)); currentFile = null; }
+    }
+    return this.buildReport(files);
+  }
+
+  private parseIstanbul(data: Record<string, unknown>): CoverageReport {
+    const files: FileCoverage[] = [];
+    for (const [path, coverage] of Object.entries(data)) {
+      const cov = coverage as Record<string, unknown>;
+      const statements = cov.s as Record<string, number>;
+      const functions = cov.f as Record<string, number>;
+      const branches = cov.b as Record<string, number[]>;
+      const statementCovered = Object.values(statements).filter(v => v > 0).length;
+      const statementTotal = Object.values(statements).length;
+      const functionCovered = Object.values(functions).filter(v => v > 0).length;
+      const functionTotal = Object.values(functions).length;
+      const branchCovered = Object.values(branches).flat().filter(v => v > 0).length;
+      const branchTotal = Object.values(branches).flat().length;
+      files.push({
+        path, lineCoverage: statementTotal > 0 ? (statementCovered / statementTotal) * 100 : 100,
+        branchCoverage: branchTotal > 0 ? (branchCovered / branchTotal) * 100 : 100,
+        functionCoverage: functionTotal > 0 ? (functionCovered / functionTotal) * 100 : 100,
+        statementCoverage: statementTotal > 0 ? (statementCovered / statementTotal) * 100 : 100,
+        uncoveredLines: [], totalLines: statementTotal, coveredLines: statementCovered,
+      });
+    }
+    return this.buildReport(files);
+  }
+
+  private parseCobertura(data: string): CoverageReport {
+    const files: FileCoverage[] = [];
+    const classMatches = data.matchAll(/<class[^>]*filename="([^"]+)"[^>]*line-rate="([^"]+)"[^>]*branch-rate="([^"]+)"[^>]*>/g);
+    for (const match of classMatches) {
+      files.push({
+        path: match[1], lineCoverage: parseFloat(match[2]) * 100, branchCoverage: parseFloat(match[3]) * 100,
+        functionCoverage: parseFloat(match[2]) * 100, statementCoverage: parseFloat(match[2]) * 100,
+        uncoveredLines: [], totalLines: 0, coveredLines: 0,
+      });
+    }
+    return this.buildReport(files);
+  }
+
+  private parseJson(data: Record<string, unknown>): CoverageReport {
+    if (Array.isArray(data)) return this.buildReport(data as FileCoverage[]);
+    const files: FileCoverage[] = [];
+    for (const [path, coverage] of Object.entries(data)) {
+      const cov = coverage as Partial<FileCoverage>;
+      files.push({
+        path, lineCoverage: cov.lineCoverage || 0, branchCoverage: cov.branchCoverage || 0,
+        functionCoverage: cov.functionCoverage || 0, statementCoverage: cov.statementCoverage || 0,
+        uncoveredLines: cov.uncoveredLines || [], totalLines: cov.totalLines || 0, coveredLines: cov.coveredLines || 0,
+      });
+    }
+    return this.buildReport(files);
+  }
+
+  private finalizeFileCoverage(partial: Partial<FileCoverage>): FileCoverage {
+    const lineCoverage = partial.totalLines && partial.totalLines > 0 ? (partial.coveredLines || 0) / partial.totalLines * 100 : 100;
+    return { path: partial.path || 'unknown', lineCoverage, branchCoverage: lineCoverage, functionCoverage: lineCoverage, statementCoverage: lineCoverage, uncoveredLines: partial.uncoveredLines || [], totalLines: partial.totalLines || 0, coveredLines: partial.coveredLines || 0 };
+  }
+
+  private buildReport(files: FileCoverage[]): CoverageReport {
+    const totalLines = files.reduce((sum, f) => sum + f.totalLines, 0);
+    const coveredLines = files.reduce((sum, f) => sum + f.coveredLines, 0);
+    const overall = totalLines > 0 ? (coveredLines / totalLines) * 100 : 100;
+    const avgLine = files.length > 0 ? files.reduce((sum, f) => sum + f.lineCoverage, 0) / files.length : 100;
+    const avgBranch = files.length > 0 ? files.reduce((sum, f) => sum + f.branchCoverage, 0) / files.length : 100;
+    const avgFunction = files.length > 0 ? files.reduce((sum, f) => sum + f.functionCoverage, 0) / files.length : 100;
+    const avgStatement = files.length > 0 ? files.reduce((sum, f) => sum + f.statementCoverage, 0) / files.length : 100;
+    const sortedByLine = [...files].sort((a, b) => a.lineCoverage - b.lineCoverage);
+    return { overall, byType: { line: avgLine, branch: avgBranch, function: avgFunction, statement: avgStatement }, byFile: files, lowestCoverage: sortedByLine.slice(0, 5), highestCoverage: sortedByLine.slice(-5).reverse(), uncoveredCritical: this.findCriticalUncovered(files), timestamp: Date.now() };
+  }
+
+  private findCriticalUncovered(files: FileCoverage[]): string[] {
+    const critical: string[] = [];
+    const criticalPatterns = [/auth/, /security/, /payment/, /core/, /main/, /index/];
+    for (const file of files) {
+      if (file.lineCoverage < this.config.minCoverage) {
+        for (const pattern of criticalPatterns) { if (pattern.test(file.path)) { critical.push(file.path); break; } }
+      }
+    }
+    return critical.slice(0, 10);
+  }
+
+  private calculateGaps(coverage: CoverageReport): CoverageRouteResult['gaps'] {
+    const gaps: CoverageRouteResult['gaps'] = [];
+    for (const file of coverage.byFile) {
+      if (file.lineCoverage < this.config.targetCoverage) {
+        const gap = this.config.targetCoverage - file.lineCoverage;
+        gaps.push({ file: file.path, currentCoverage: file.lineCoverage, targetCoverage: this.config.targetCoverage, gap, suggestedTests: this.suggestTests(file) });
+      }
+    }
+    return gaps.sort((a, b) => b.gap - a.gap).slice(0, 10);
+  }
+
+  private suggestTests(file: FileCoverage): string[] {
+    const suggestions: string[] = [];
+    if (file.uncoveredLines.length > 10) suggestions.push('Add unit tests for uncovered code paths');
+    if (file.branchCoverage < 50) suggestions.push('Add branch coverage tests (if/else paths)');
+    if (file.functionCoverage < 80) suggestions.push('Add tests for untested functions');
+    if (/api|endpoint|route|handler/.test(file.path)) suggestions.push('Add integration tests for API endpoints');
+    return suggestions.slice(0, 3);
+  }
+
+  private prioritizeFiles(coverage: CoverageReport, changedFiles?: string[]): string[] {
+    let targetFiles = coverage.lowestCoverage.map(f => f.path);
+    if (changedFiles && changedFiles.length > 0) {
+      const changedWithLowCoverage = coverage.byFile.filter(f => changedFiles.some(cf => f.path.includes(cf))).filter(f => f.lineCoverage < this.config.targetCoverage).map(f => f.path);
+      targetFiles = [...new Set([...changedWithLowCoverage, ...targetFiles])];
+    }
+    return targetFiles.slice(0, 10);
+  }
+
+  private determineAction(coverage: CoverageReport, gaps: CoverageRouteResult['gaps']): CoverageRouteResult['action'] {
+    if (coverage.overall < this.config.minCoverage) return 'prioritize';
+    if (gaps.length > 5) return 'add-tests';
+    if (coverage.overall < this.config.targetCoverage) return 'review-coverage';
+    return 'skip';
+  }
+
+  private calculatePriority(coverage: CoverageReport, changedFiles?: string[]): number {
+    let priority = 5;
+    if (coverage.overall < 50) priority += 4; else if (coverage.overall < 70) priority += 2; else if (coverage.overall < 85) priority += 1;
+    priority += Math.min(3, coverage.uncoveredCritical.length);
+    if (changedFiles && changedFiles.length > 0) {
+      const changedLowCoverage = coverage.byFile.filter(f => changedFiles.some(cf => f.path.includes(cf))).filter(f => f.lineCoverage < this.config.minCoverage);
+      priority += Math.min(2, changedLowCoverage.length);
+    }
+    return Math.min(10, priority);
+  }
+
+  private recommendTestTypes(gaps: CoverageRouteResult['gaps']): CoverageRouteResult['testTypes'] {
+    const types: Set<'unit' | 'integration' | 'e2e'> = new Set(['unit']);
+    for (const gap of gaps) {
+      if (/api|endpoint|route|handler|service/.test(gap.file)) types.add('integration');
+      if (/page|component|view|ui/.test(gap.file)) types.add('e2e');
+    }
+    return Array.from(types);
+  }
+
+  private estimateEffort(gaps: CoverageRouteResult['gaps']): number {
+    let effort = 0;
+    for (const gap of gaps) effort += (gap.gap / 10) * 0.5;
+    return Math.round(effort * 10) / 10;
+  }
+
+  private calculateImpact(coverage: CoverageReport, targetFiles: string[]): number {
+    const potentialGain = targetFiles.reduce((sum, file) => {
+      const fileCov = coverage.byFile.find(f => f.path === file);
+      return fileCov ? sum + (this.config.targetCoverage - fileCov.lineCoverage) : sum;
+    }, 0);
+    return Math.min(100, Math.round(potentialGain / targetFiles.length || 0));
+  }
+}
+
+export function createCoverageRouter(config?: Partial<CoverageRouterConfig>): CoverageRouter {
+  return new CoverageRouter(config);
+}
