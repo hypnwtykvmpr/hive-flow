@@ -153,6 +153,64 @@ export class WorkerDaemon extends EventEmitter {
 
     // Initialize worker states
     this.initializeWorkerStates();
+
+    // Initialize headless executor (async, non-blocking)
+    this.initHeadlessExecutor().catch((err) => {
+      this.log('warn', `Headless executor init failed: ${err}`);
+    });
+  }
+
+  /**
+   * Initialize headless executor if Claude Code is available
+   */
+  private async initHeadlessExecutor(): Promise<void> {
+    try {
+      this.headlessExecutor = new HeadlessWorkerExecutor(this.projectRoot, {
+        maxConcurrent: this.config.maxConcurrent,
+      });
+
+      this.headlessAvailable = await this.headlessExecutor.isAvailable();
+
+      if (this.headlessAvailable) {
+        this.log('info', 'Claude Code headless mode available - AI workers enabled');
+
+        // Forward headless executor events
+        this.headlessExecutor.on('execution:start', (data) => {
+          this.emit('headless:start', data);
+        });
+
+        this.headlessExecutor.on('execution:complete', (data) => {
+          this.emit('headless:complete', data);
+        });
+
+        this.headlessExecutor.on('execution:error', (data) => {
+          this.emit('headless:error', data);
+        });
+
+        this.headlessExecutor.on('output', (data) => {
+          this.emit('headless:output', data);
+        });
+      } else {
+        this.log('info', 'Claude Code not found - AI workers will run in local fallback mode');
+      }
+    } catch (error) {
+      this.log('warn', `Failed to initialize headless executor: ${error}`);
+      this.headlessAvailable = false;
+    }
+  }
+
+  /**
+   * Check if headless execution is available
+   */
+  isHeadlessAvailable(): boolean {
+    return this.headlessAvailable;
+  }
+
+  /**
+   * Get headless executor instance
+   */
+  getHeadlessExecutor(): HeadlessWorkerExecutor | null {
+    return this.headlessExecutor;
   }
 
   /**
