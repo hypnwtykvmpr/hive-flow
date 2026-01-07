@@ -4,7 +4,7 @@
 [![npm downloads](https://img.shields.io/npm/dm/@claude-flow/embeddings.svg)](https://www.npmjs.com/package/@claude-flow/embeddings)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
-[![Performance](https://img.shields.io/badge/Performance-<100ms-brightgreen.svg)](https://github.com/ruvnet/claude-flow)
+[![Performance](https://img.shields.io/badge/Performance-<5ms-brightgreen.svg)](https://github.com/ruvnet/claude-flow)
 
 > High-performance embedding generation module for Claude Flow V3 - multi-provider support with auto-install, LRU caching, batch processing, and similarity computation.
 
