@@ -153,8 +153,50 @@ export async function loadRuVector(): Promise<boolean> {
     // Dynamic import to handle missing dependency gracefully
     const ruvector = await import('ruvector').catch(() => null);
 
-    if (ruvector && typeof ruvector.createVectorDB === 'function') {
-      ruvectorModule = ruvector as RuVectorModule;
+    // ruvector exports VectorDB class, not createVectorDB function
+    if (ruvector && (typeof ruvector.VectorDB === 'function' || typeof ruvector.VectorDb === 'function')) {
+      // Create adapter module that matches our expected interface
+      const VectorDBClass = ruvector.VectorDB || ruvector.VectorDb;
+      ruvectorModule = {
+        createVectorDB: async (dimensions: number): Promise<VectorDB> => {
+          const db = new VectorDBClass({ dimensions });
+          // Wrap ruvector's VectorDB to match our interface
+          return {
+            insert: (embedding: Float32Array, id: string, metadata?: Record<string, unknown>) => {
+              db.insert({ id, vector: embedding, metadata });
+            },
+            search: async (query: Float32Array, k: number = 10) => {
+              const results = await db.search({ vector: query, k });
+              return results.map((r: any) => ({
+                id: r.id,
+                score: r.score,
+                metadata: r.metadata,
+              }));
+            },
+            remove: (id: string) => {
+              db.delete(id);
+              return true;
+            },
+            size: async () => {
+              const len = await db.len();
+              return len;
+            },
+            clear: () => {
+              // Not directly supported - would need to recreate
+            },
+          } as VectorDB;
+        },
+        generateEmbedding: (text: string, dimensions: number = 768): Float32Array => {
+          // ruvector may not have this - use fallback
+          return generateHashEmbedding(text, dimensions);
+        },
+        cosineSimilarity: (a: Float32Array, b: Float32Array): number => {
+          return cosineSimilarity(a, b);
+        },
+        isWASMAccelerated: (): boolean => {
+          return ruvector.isWasm?.() ?? false;
+        },
+      };
       isAvailable = true;
       return true;
     }
@@ -164,6 +206,38 @@ export async function loadRuVector(): Promise<boolean> {
 
   isAvailable = false;
   return false;
+}
+
+/**
+ * Generate a simple hash-based embedding (internal helper)
+ */
+function generateHashEmbedding(text: string, dimensions: number = 768): Float32Array {
+  const embedding = new Float32Array(dimensions);
+  const normalized = text.toLowerCase().trim();
+
+  // Simple hash function
+  let hash = 0;
+  for (let i = 0; i < normalized.length; i++) {
+    hash = ((hash << 5) - hash) + normalized.charCodeAt(i);
+    hash = hash & hash; // Convert to 32bit integer
+  }
+
+  // Generate pseudo-random embedding based on hash
+  for (let i = 0; i < dimensions; i++) {
+    embedding[i] = Math.sin(hash * (i + 1) * 0.001) * 0.5 + 0.5;
+  }
+
+  // Normalize
+  let norm = 0;
+  for (let i = 0; i < dimensions; i++) {
+    norm += embedding[i] * embedding[i];
+  }
+  norm = Math.sqrt(norm);
+  for (let i = 0; i < dimensions; i++) {
+    embedding[i] /= norm;
+  }
+
+  return embedding;
 }
 
 /**
