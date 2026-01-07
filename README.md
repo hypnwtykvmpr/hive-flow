@@ -345,6 +345,15 @@ npx claude-flow@v3alpha worker results --limit 10
 | `hooks` | 31 | Self-learning hooks (pre/post-edit, pre/post-command, route, explain, pretrain, session-*, intelligence/*, worker/*) |
 | `hive-mind` | 6 | Queen-led coordination (init, spawn, status, task, optimize-memory, shutdown) |
 | `migrate` | 5 | V2→V3 migration (status, run, verify, rollback, breaking) |
+| `neural` | 5 | Neural pattern training (train, status, patterns, predict, optimize) |
+| `security` | 6 | Security scanning (scan, audit, cve, threats, validate, report) |
+| `performance` | 5 | Performance profiling (benchmark, profile, metrics, optimize, report) |
+| `providers` | 5 | AI providers (list, add, remove, test, configure) |
+| `plugins` | 5 | Plugin management (list, install, uninstall, enable, disable) |
+| `deployment` | 5 | Deployment management (deploy, rollback, status, environments, release) |
+| `embeddings` | 4 | Vector embeddings (embed, batch, search, init) |
+| `daemon` | 5 | Background workers (start, stop, status, trigger, enable) |
+| `claims` | 4 | Authorization (check, grant, revoke, list) |
 
 ### Testing Framework (`@claude-flow/testing`)
 
