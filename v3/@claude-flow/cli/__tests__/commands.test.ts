@@ -72,6 +72,71 @@ vi.mock('../src/mcp-client.js', () => ({
       };
     }
 
+    // Memory tool mocks
+    if (toolName === 'memory/store') {
+      return {
+        success: true,
+        key: input.key,
+        totalEntries: 42
+      };
+    }
+
+    if (toolName === 'memory/retrieve') {
+      return {
+        key: input.key,
+        value: 'mock-value-for-' + input.key,
+        found: true,
+        storedAt: '2024-01-01T00:00:00Z',
+        accessCount: 5,
+        metadata: { tags: ['test'], size: 100 }
+      };
+    }
+
+    if (toolName === 'memory/search') {
+      return {
+        query: input.query,
+        results: [
+          { key: 'result-1', value: 'auth pattern 1', score: 0.95, storedAt: '2024-01-01T00:00:00Z' },
+          { key: 'result-2', value: 'auth pattern 2', score: 0.85, storedAt: '2024-01-01T00:01:00Z' }
+        ],
+        total: 2,
+        searchTime: '0.5ms'
+      };
+    }
+
+    if (toolName === 'memory/list') {
+      return {
+        entries: [
+          { key: 'entry-1', storedAt: '2024-01-01T00:00:00Z', accessCount: 10, preview: 'test value 1' },
+          { key: 'entry-2', storedAt: '2024-01-01T00:01:00Z', accessCount: 5, preview: 'test value 2' }
+        ],
+        total: 2,
+        limit: input.limit || 20,
+        offset: input.offset || 0
+      };
+    }
+
+    if (toolName === 'memory/delete') {
+      return {
+        success: true,
+        key: input.key,
+        deleted: true,
+        remainingEntries: 41
+      };
+    }
+
+    if (toolName === 'memory/stats') {
+      return {
+        totalEntries: 42,
+        totalSize: '1.2 MB',
+        version: '3.0.0-alpha',
+        backend: 'hybrid',
+        location: './data/memory',
+        oldestEntry: '2024-01-01T00:00:00Z',
+        newestEntry: '2024-01-07T00:00:00Z'
+      };
+    }
+
     return {};
   }),
   MCPClientError: class MCPClientError extends Error {
