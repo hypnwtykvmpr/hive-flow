@@ -880,12 +880,19 @@ export interface AutoEmbeddingConfig {
 export async function createEmbeddingServiceAsync(
   config: AutoEmbeddingConfig
 ): Promise<IEmbeddingService> {
-  const { provider, fallback, ...rest } = config;
+  const { provider, fallback, autoInstall = true, ...rest } = config;
 
   // Auto provider selection
   if (provider === 'auto') {
     // Try agentic-flow first (fastest, ONNX-based)
-    if (await isAgenticFlowAvailable()) {
+    let agenticFlowAvailable = await isAgenticFlowAvailable();
+
+    // Auto-install if not available and autoInstall is enabled
+    if (!agenticFlowAvailable && autoInstall) {
+      agenticFlowAvailable = await autoInstallAgenticFlow();
+    }
+
+    if (agenticFlowAvailable) {
       try {
         const service = new AgenticFlowEmbeddingService({
           provider: 'agentic-flow',

@@ -49,6 +49,15 @@ export { statusCommand } from './status.js';
 export { taskCommand } from './task.js';
 export { sessionCommand } from './session.js';
 export { daemonCommand } from './daemon.js';
+// V3 Advanced Commands
+export { neuralCommand } from './neural.js';
+export { securityCommand } from './security.js';
+export { performanceCommand } from './performance.js';
+export { providersCommand } from './providers.js';
+export { pluginsCommand } from './plugins.js';
+export { deploymentCommand } from './deployment.js';
+export { claimsCommand } from './claims.js';
+export { embeddingsCommand } from './embeddings.js';
 
 /**
  * All available commands
@@ -71,7 +80,16 @@ export const commands: Command[] = [
   workflowCommand,
   hiveMindCommand,
   processCommand,
-  daemonCommand
+  daemonCommand,
+  // V3 Advanced Commands
+  neuralCommand,
+  securityCommand,
+  performanceCommand,
+  providersCommand,
+  pluginsCommand,
+  deploymentCommand,
+  claimsCommand,
+  embeddingsCommand,
 ];
 
 /**
