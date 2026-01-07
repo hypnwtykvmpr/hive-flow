@@ -16,11 +16,11 @@
 // ============================================================================
 
 export interface VectorDB {
-  insert(embedding: Float32Array, id: string, metadata?: Record<string, unknown>): void;
-  search(query: Float32Array, k?: number): Array<{ id: string; score: number; metadata?: Record<string, unknown> }>;
-  remove(id: string): boolean;
-  size(): number;
-  clear(): void;
+  insert(embedding: Float32Array, id: string, metadata?: Record<string, unknown>): void | Promise<void>;
+  search(query: Float32Array, k?: number): Array<{ id: string; score: number; metadata?: Record<string, unknown> }> | Promise<Array<{ id: string; score: number; metadata?: Record<string, unknown> }>>;
+  remove(id: string): boolean | Promise<boolean>;
+  size(): number | Promise<number>;
+  clear(): void | Promise<void>;
 }
 
 export interface RuVectorModule {
