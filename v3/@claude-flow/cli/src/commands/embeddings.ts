@@ -2,11 +2,28 @@
  * V3 CLI Embeddings Command
  * Vector embeddings, semantic search, similarity operations
  *
+ * Features:
+ * - Multiple providers: OpenAI, Transformers.js, Agentic-Flow, Mock
+ * - Document chunking with overlap
+ * - L2/L1/minmax/zscore normalization
+ * - Hyperbolic embeddings (Poincaré ball)
+ * - Neural substrate integration
+ * - Persistent SQLite cache
+ *
  * Created with ❤️ by ruv.io
  */
 
 import type { Command, CommandContext, CommandResult } from '../types.js';
 import { output } from '../output.js';
+
+// Dynamic imports for embeddings package
+async function getEmbeddings() {
+  try {
+    return await import('@claude-flow/embeddings');
+  } catch {
+    return null;
+  }
+}
 
 // Generate subcommand
 const generateCommand: Command = {
