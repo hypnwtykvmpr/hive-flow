@@ -344,14 +344,20 @@ export class ReleaseManager {
   }
 
   /**
-   * Execute command
+   * Execute command safely with validation
+   * Only allows git commands from the allowlist
    */
   private execCommand(cmd: string, returnOutput = false): string {
+    // Validate command against allowlist
+    validateCommand(cmd);
+
     try {
       const output = execSync(cmd, {
         cwd: this.cwd,
         encoding: 'utf-8',
-        stdio: returnOutput ? 'pipe' : 'inherit'
+        stdio: returnOutput ? 'pipe' : 'inherit',
+        timeout: 30000, // 30 second timeout
+        maxBuffer: 10 * 1024 * 1024, // 10MB buffer limit
       });
       return returnOutput ? output : '';
     } catch (error) {
