@@ -18,11 +18,12 @@ const cmdFiles = fs.readdirSync(commandsPath);
 const cliCommands = cmdFiles.filter(f => f.endsWith('.ts') && f !== 'index.ts').length;
 console.log('CLI Commands:', cliCommands);
 
-// Count @claude-flow packages
+// Count @claude-flow packages (excluding hidden directories)
 const packagesPath = path.join(v3Path, '@claude-flow');
 const dirs = fs.readdirSync(packagesPath, { withFileTypes: true });
-const packages = dirs.filter(d => d.isDirectory()).length;
-const packageDirs = dirs.filter(d => d.isDirectory()).map(d => d.name);
+const allPackageDirs = dirs.filter(d => d.isDirectory()).map(d => d.name);
+const packageDirs = allPackageDirs.filter(d => !d.startsWith('.'));
+const packages = packageDirs.length;
 console.log('Packages:', packages, packageDirs);
 
 // Count DDD layers
