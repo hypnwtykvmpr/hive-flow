@@ -109,6 +109,8 @@ export const commands: Command[] = [
   doctorCommand,
   // Analysis Commands
   analyzeCommand,
+  // Q-Learning Routing Commands
+  routeCommand,
 ];
 
 /**

@@ -13,25 +13,65 @@
 
 import type { Command, CommandContext, CommandResult } from '../types.js';
 import { output } from '../output.js';
+import {
+  createQLearningRouter,
+  isRuvectorAvailable,
+  type QLearningRouter,
+  type RouteDecision,
+} from '../ruvector/index.js';
 
 // ============================================================================
-// Helper Functions (avoid top-level await)
+// Agent Type Definitions
 // ============================================================================
 
-async function getRouterModule() {
-  try {
-    return await import('../ruvector/q-learning-router.js');
-  } catch {
-    return null;
-  }
+interface AgentType {
+  id: string;
+  name: string;
+  description: string;
+  capabilities: string[];
+  priority: number;
 }
 
-async function getRuVectorModule() {
-  try {
-    return await import('../ruvector/index.js');
-  } catch {
-    return null;
+/**
+ * Available agent types for routing
+ */
+const AGENT_TYPES: AgentType[] = [
+  { id: 'coder', name: 'Coder', description: 'Implements features and writes code', capabilities: ['coding', 'implementation', 'refactoring'], priority: 1 },
+  { id: 'tester', name: 'Tester', description: 'Creates tests and validates functionality', capabilities: ['testing', 'validation', 'quality'], priority: 2 },
+  { id: 'reviewer', name: 'Reviewer', description: 'Reviews code quality and security', capabilities: ['review', 'security', 'best-practices'], priority: 3 },
+  { id: 'architect', name: 'Architect', description: 'Designs system architecture', capabilities: ['design', 'architecture', 'planning'], priority: 4 },
+  { id: 'researcher', name: 'Researcher', description: 'Researches requirements and patterns', capabilities: ['research', 'analysis', 'documentation'], priority: 5 },
+  { id: 'optimizer', name: 'Optimizer', description: 'Optimizes performance and efficiency', capabilities: ['optimization', 'performance', 'profiling'], priority: 6 },
+  { id: 'debugger', name: 'Debugger', description: 'Debugs issues and fixes bugs', capabilities: ['debugging', 'troubleshooting', 'fixing'], priority: 7 },
+  { id: 'documenter', name: 'Documenter', description: 'Creates and updates documentation', capabilities: ['documentation', 'writing', 'explaining'], priority: 8 },
+];
+
+// ============================================================================
+// Router Singleton
+// ============================================================================
+
+let routerInstance: QLearningRouter | null = null;
+let routerInitialized = false;
+
+/**
+ * Get or create the router instance
+ */
+async function getRouter(): Promise<QLearningRouter> {
+  if (!routerInstance) {
+    routerInstance = createQLearningRouter();
   }
+  if (!routerInitialized) {
+    await routerInstance.initialize();
+    routerInitialized = true;
+  }
+  return routerInstance;
+}
+
+/**
+ * Get agent type by route name
+ */
+function getAgentType(route: string): AgentType | undefined {
+  return AGENT_TYPES.find(a => a.id === route);
 }
 
 // ============================================================================
@@ -87,26 +127,20 @@ const routeTaskCommand: Command = {
       return { success: false, exitCode: 1 };
     }
 
-    const routerModule = await getRouterModule();
-    if (!routerModule) {
-      output.printError('Router module not available');
-      return { success: false, exitCode: 1 };
-    }
-
     const spinner = output.createSpinner({ text: 'Analyzing task...', spinner: 'dots' });
     spinner.start();
 
     try {
       if (forceAgent) {
         // Bypass Q-Learning, use specified agent
-        const agents = await routerModule.listAgentTypes();
-        const agent = agents.find(a => a.id === forceAgent || a.name.toLowerCase() === forceAgent.toLowerCase());
+        const agent = getAgentType(forceAgent) ||
+          AGENT_TYPES.find(a => a.name.toLowerCase() === forceAgent.toLowerCase());
 
         if (!agent) {
           spinner.fail(`Agent "${forceAgent}" not found`);
           output.writeln();
           output.writeln('Available agents:');
-          output.printList(agents.map(a => `${output.highlight(a.id)} - ${a.description}`));
+          output.printList(AGENT_TYPES.map(a => `${output.highlight(a.id)} - ${a.description}`));
           return { success: false, exitCode: 1 };
         }
 
@@ -134,23 +168,24 @@ const routeTaskCommand: Command = {
       }
 
       // Use Q-Learning routing
-      const result = await routerModule.routeTask(taskDescription, useExploration);
+      const router = await getRouter();
+      const result: RouteDecision = router.route(taskDescription, useExploration);
+      const agent = getAgentType(result.route) || AGENT_TYPES[0];
 
-      spinner.succeed(`Routed to ${result.agentType.name}`);
+      spinner.succeed(`Routed to ${agent.name}`);
 
       if (jsonOutput) {
         output.printJson({
           task: taskDescription,
-          agentId: result.agentId,
-          agentName: result.agentType.name,
+          agentId: result.route,
+          agentName: agent.name,
           confidence: result.confidence,
-          qValue: result.qValue,
-          explorationUsed: result.explorationUsed,
+          qValues: result.qValues,
+          explored: result.explored,
           alternatives: result.alternatives.map(a => ({
-            agentId: a.agentId,
-            agentName: a.agentType.name,
-            confidence: a.confidence,
-            qValue: a.qValue,
+            agentId: a.route,
+            agentName: getAgentType(a.route)?.name || a.route,
+            score: a.score,
           })),
         });
       } else {
@@ -165,13 +200,13 @@ const routeTaskCommand: Command = {
         output.printBox([
           `Task: ${taskDescription}`,
           ``,
-          `Agent: ${output.highlight(result.agentType.name)} (${result.agentId})`,
+          `Agent: ${output.highlight(agent.name)} (${result.route})`,
           `Confidence: ${confidenceColor(`${(result.confidence * 100).toFixed(1)}%`)}`,
-          `Q-Value: ${result.qValue.toFixed(3)}`,
-          `Exploration: ${result.explorationUsed ? output.warning('Yes') : 'No'}`,
+          `Q-Value: ${Math.max(...result.qValues).toFixed(3)}`,
+          `Exploration: ${result.explored ? output.warning('Yes') : 'No'}`,
           ``,
-          `Description: ${result.agentType.description}`,
-          `Capabilities: ${result.agentType.capabilities.join(', ')}`,
+          `Description: ${agent.description}`,
+          `Capabilities: ${agent.capabilities.join(', ')}`,
         ].join('\n'), 'Q-Learning Routing');
 
         if (result.alternatives.length > 0) {
@@ -180,19 +215,17 @@ const routeTaskCommand: Command = {
           output.printTable({
             columns: [
               { key: 'agent', header: 'Agent', width: 20 },
-              { key: 'confidence', header: 'Confidence', width: 12, align: 'right' },
-              { key: 'qValue', header: 'Q-Value', width: 10, align: 'right' },
+              { key: 'score', header: 'Score', width: 12, align: 'right' },
             ],
             data: result.alternatives.map(a => ({
-              agent: a.agentType.name,
-              confidence: `${(a.confidence * 100).toFixed(1)}%`,
-              qValue: a.qValue.toFixed(3),
+              agent: getAgentType(a.route)?.name || a.route,
+              score: a.score.toFixed(3),
             })),
           });
         }
       }
 
-      return { success: true, data: result };
+      return { success: true, data: { agentId: result.route, result } };
     } catch (error) {
       spinner.fail('Routing failed');
       output.printError(error instanceof Error ? error.message : String(error));
@@ -225,17 +258,9 @@ const listAgentsCommand: Command = {
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     const jsonOutput = ctx.flags.json as boolean;
 
-    const routerModule = await getRouterModule();
-    if (!routerModule) {
-      output.printError('Router module not available');
-      return { success: false, exitCode: 1 };
-    }
-
     try {
-      const agents = await routerModule.listAgentTypes();
-
       if (jsonOutput) {
-        output.printJson(agents);
+        output.printJson(AGENT_TYPES);
       } else {
         output.writeln();
         output.writeln(output.bold('Available Agent Types'));
@@ -244,12 +269,12 @@ const listAgentsCommand: Command = {
 
         output.printTable({
           columns: [
-            { key: 'id', header: 'ID', width: 20 },
-            { key: 'name', header: 'Name', width: 20 },
+            { key: 'id', header: 'ID', width: 15 },
+            { key: 'name', header: 'Name', width: 15 },
             { key: 'priority', header: 'Priority', width: 10, align: 'right' },
-            { key: 'description', header: 'Description', width: 40 },
+            { key: 'description', header: 'Description', width: 45 },
           ],
-          data: agents.map(a => ({
+          data: AGENT_TYPES.map(a => ({
             id: output.highlight(a.id),
             name: a.name,
             priority: String(a.priority),
@@ -258,10 +283,10 @@ const listAgentsCommand: Command = {
         });
 
         output.writeln();
-        output.writeln(output.dim(`Total: ${agents.length} agent types`));
+        output.writeln(output.dim(`Total: ${AGENT_TYPES.length} agent types`));
       }
 
-      return { success: true, data: agents };
+      return { success: true, data: AGENT_TYPES };
     } catch (error) {
       output.printError(error instanceof Error ? error.message : String(error));
       return { success: false, exitCode: 1 };
@@ -291,20 +316,15 @@ const statsCommand: Command = {
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     const jsonOutput = ctx.flags.json as boolean;
 
-    const routerModule = await getRouterModule();
-    const ruvectorModule = await getRuVectorModule();
-
-    if (!routerModule) {
-      output.printError('Router module not available');
-      return { success: false, exitCode: 1 };
-    }
-
     try {
-      const stats = await routerModule.getRouterStats();
-      const ruvectorStatus = ruvectorModule?.getStatus?.() ?? {
-        available: false,
-        wasmAccelerated: false,
-        backend: 'fallback',
+      const router = await getRouter();
+      const stats = router.getStats();
+      const ruvectorAvailable = await isRuvectorAvailable();
+
+      const ruvectorStatus = {
+        available: ruvectorAvailable,
+        wasmAccelerated: stats.useNative === 1,
+        backend: stats.useNative === 1 ? 'ruvector-native' : 'fallback',
       };
 
       if (jsonOutput) {
@@ -320,37 +340,14 @@ const statsCommand: Command = {
             { key: 'value', header: 'Value', width: 20, align: 'right' },
           ],
           data: [
-            { metric: 'Total Routes', value: String(stats.totalRoutes) },
-            { metric: 'Successful Routes', value: String(stats.successfulRoutes) },
-            { metric: 'Success Rate', value: stats.totalRoutes > 0
-              ? `${((stats.successfulRoutes / stats.totalRoutes) * 100).toFixed(1)}%`
-              : 'N/A' },
-            { metric: 'Avg Confidence', value: `${(stats.avgConfidence * 100).toFixed(1)}%` },
-            { metric: 'Avg Execution Time', value: `${stats.avgExecutionTime.toFixed(0)}ms` },
+            { metric: 'Update Count', value: String(stats.updateCount) },
             { metric: 'Q-Table Size', value: String(stats.qTableSize) },
-            { metric: 'Epsilon', value: stats.epsilon.toFixed(3) },
-            { metric: 'Backend', value: stats.backend },
+            { metric: 'Step Count', value: String(stats.stepCount) },
+            { metric: 'Epsilon', value: stats.epsilon.toFixed(4) },
+            { metric: 'Avg TD Error', value: stats.avgTDError.toFixed(4) },
+            { metric: 'Native Backend', value: stats.useNative === 1 ? 'Yes' : 'No' },
           ],
         });
-
-        if (Object.keys(stats.agentUsage).length > 0) {
-          output.writeln();
-          output.writeln(output.bold('Agent Usage'));
-          output.printTable({
-            columns: [
-              { key: 'agent', header: 'Agent', width: 20 },
-              { key: 'count', header: 'Routes', width: 10, align: 'right' },
-              { key: 'percentage', header: '%', width: 10, align: 'right' },
-            ],
-            data: Object.entries(stats.agentUsage)
-              .sort((a, b) => b[1] - a[1])
-              .map(([agent, count]) => ({
-                agent,
-                count: String(count),
-                percentage: `${((count / stats.totalRoutes) * 100).toFixed(1)}%`,
-              })),
-          });
-        }
 
         output.writeln();
         output.writeln(output.bold('RuVector Status'));
@@ -378,9 +375,9 @@ const feedbackCommand: Command = {
   description: 'Provide feedback on a routing decision',
   options: [
     {
-      name: 'task-id',
+      name: 'task',
       short: 't',
-      description: 'Task identifier',
+      description: 'Task description (context for learning)',
       type: 'string',
       required: true,
     },
@@ -392,68 +389,59 @@ const feedbackCommand: Command = {
       required: true,
     },
     {
-      name: 'success',
-      short: 's',
-      description: 'Whether the routing was successful',
-      type: 'boolean',
-      default: true,
-    },
-    {
-      name: 'quality',
-      short: 'q',
-      description: 'Quality score (0-1)',
+      name: 'reward',
+      short: 'r',
+      description: 'Reward value (-1 to 1, where 1 is best)',
       type: 'number',
       default: 0.8,
     },
     {
-      name: 'time',
-      description: 'Execution time in milliseconds',
-      type: 'number',
-      default: 1000,
+      name: 'next-task',
+      short: 'n',
+      description: 'Next task description (for multi-step learning)',
+      type: 'string',
     },
   ],
   examples: [
-    { command: 'claude-flow route feedback -t "auth-impl" -a coder -s true -q 0.9', description: 'Positive feedback' },
-    { command: 'claude-flow route feedback -t "test-write" -a tester -s false', description: 'Negative feedback' },
+    { command: 'claude-flow route feedback -t "implement auth" -a coder -r 0.9', description: 'Positive feedback' },
+    { command: 'claude-flow route feedback -t "write tests" -a tester -r -0.5', description: 'Negative feedback' },
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
-    const taskId = ctx.flags['task-id'] as string;
+    const taskDescription = ctx.flags.task as string;
     const agentId = ctx.flags.agent as string;
-    const success = ctx.flags.success as boolean;
-    const quality = ctx.flags.quality as number;
-    const executionTime = ctx.flags.time as number;
+    const reward = ctx.flags.reward as number;
+    const nextTask = ctx.flags['next-task'] as string | undefined;
 
-    if (!taskId || !agentId) {
-      output.printError('Task ID and agent are required');
+    if (!taskDescription || !agentId) {
+      output.printError('Task description and agent are required');
       return { success: false, exitCode: 1 };
     }
 
-    const routerModule = await getRouterModule();
-    if (!routerModule) {
-      output.printError('Router module not available');
+    // Validate agent
+    const agent = getAgentType(agentId);
+    if (!agent) {
+      output.printError(`Unknown agent: ${agentId}`);
+      output.writeln('Available agents:');
+      output.printList(AGENT_TYPES.map(a => a.id));
       return { success: false, exitCode: 1 };
     }
 
     try {
-      await routerModule.provideFeedback({
-        taskId,
-        agentId,
-        success,
-        quality: Math.max(0, Math.min(1, quality)),
-        executionTimeMs: executionTime,
-      });
+      const router = await getRouter();
+      const clampedReward = Math.max(-1, Math.min(1, reward));
+      const tdError = router.update(taskDescription, agentId, clampedReward, nextTask);
 
-      output.printSuccess(`Feedback recorded for task "${taskId}"`);
+      output.printSuccess(`Feedback recorded for agent "${agent.name}"`);
       output.writeln();
       output.printBox([
-        `Task: ${taskId}`,
-        `Agent: ${agentId}`,
-        `Success: ${success ? output.success('Yes') : output.error('No')}`,
-        `Quality: ${(quality * 100).toFixed(0)}%`,
-        `Time: ${executionTime}ms`,
-      ].join('\n'), 'Feedback Recorded');
+        `Task: ${taskDescription}`,
+        `Agent: ${agent.name} (${agentId})`,
+        `Reward: ${clampedReward >= 0 ? output.success(clampedReward.toFixed(2)) : output.error(clampedReward.toFixed(2))}`,
+        `TD Error: ${Math.abs(tdError).toFixed(4)}`,
+        nextTask ? `Next Task: ${nextTask}` : '',
+      ].filter(Boolean).join('\n'), 'Feedback Recorded');
 
-      return { success: true };
+      return { success: true, data: { tdError } };
     } catch (error) {
       output.printError(error instanceof Error ? error.message : String(error));
       return { success: false, exitCode: 1 };
@@ -490,16 +478,94 @@ const resetCommand: Command = {
       return { success: false, exitCode: 1 };
     }
 
-    const routerModule = await getRouterModule();
-    if (!routerModule) {
-      output.printError('Router module not available');
+    try {
+      const router = await getRouter();
+      router.reset();
+      output.printSuccess('Q-Learning router state has been reset');
+      return { success: true };
+    } catch (error) {
+      output.printError(error instanceof Error ? error.message : String(error));
+      return { success: false, exitCode: 1 };
+    }
+  },
+};
+
+// ============================================================================
+// Export/Import Subcommands
+// ============================================================================
+
+const exportCommand: Command = {
+  name: 'export',
+  description: 'Export Q-table for persistence',
+  options: [
+    {
+      name: 'file',
+      short: 'f',
+      description: 'Output file path (outputs to stdout if not specified)',
+      type: 'string',
+    },
+  ],
+  examples: [
+    { command: 'claude-flow route export', description: 'Export Q-table to stdout' },
+    { command: 'claude-flow route export -f qtable.json', description: 'Export to file' },
+  ],
+  action: async (ctx: CommandContext): Promise<CommandResult> => {
+    const filePath = ctx.flags.file as string | undefined;
+
+    try {
+      const router = await getRouter();
+      const data = router.export();
+
+      if (filePath) {
+        const fs = await import('node:fs/promises');
+        await fs.writeFile(filePath, JSON.stringify(data, null, 2));
+        output.printSuccess(`Q-table exported to ${filePath}`);
+      } else {
+        output.printJson(data);
+      }
+
+      return { success: true, data };
+    } catch (error) {
+      output.printError(error instanceof Error ? error.message : String(error));
+      return { success: false, exitCode: 1 };
+    }
+  },
+};
+
+const importCommand: Command = {
+  name: 'import',
+  description: 'Import Q-table from file',
+  options: [
+    {
+      name: 'file',
+      short: 'f',
+      description: 'Input file path',
+      type: 'string',
+      required: true,
+    },
+  ],
+  examples: [
+    { command: 'claude-flow route import -f qtable.json', description: 'Import Q-table from file' },
+  ],
+  action: async (ctx: CommandContext): Promise<CommandResult> => {
+    const filePath = ctx.flags.file as string;
+
+    if (!filePath) {
+      output.printError('File path is required');
       return { success: false, exitCode: 1 };
     }
 
     try {
-      const router = await routerModule.getRouter();
-      router.reset();
-      output.printSuccess('Q-Learning router state has been reset');
+      const fs = await import('node:fs/promises');
+      const content = await fs.readFile(filePath, 'utf-8');
+      const data = JSON.parse(content);
+
+      const router = await getRouter();
+      router.import(data);
+
+      output.printSuccess(`Q-table imported from ${filePath}`);
+      output.writeln(output.dim(`Loaded ${Object.keys(data).length} state entries`));
+
       return { success: true };
     } catch (error) {
       output.printError(error instanceof Error ? error.message : String(error));
@@ -515,7 +581,15 @@ const resetCommand: Command = {
 export const routeCommand: Command = {
   name: 'route',
   description: 'Intelligent task-to-agent routing using Q-Learning',
-  subcommands: [routeTaskCommand, listAgentsCommand, statsCommand, feedbackCommand, resetCommand],
+  subcommands: [
+    routeTaskCommand,
+    listAgentsCommand,
+    statsCommand,
+    feedbackCommand,
+    resetCommand,
+    exportCommand,
+    importCommand,
+  ],
   options: [
     {
       name: 'q-learning',
@@ -540,8 +614,10 @@ export const routeCommand: Command = {
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     // If task description provided directly, route it
-    if (ctx.args.length > 0) {
-      return routeTaskCommand.action!(ctx);
+    if (ctx.args.length > 0 && routeTaskCommand.action) {
+      const result = await routeTaskCommand.action(ctx);
+      if (result) return result;
+      return { success: true };
     }
 
     // Show help
@@ -561,12 +637,14 @@ export const routeCommand: Command = {
       `${output.highlight('stats')}        - Show router statistics`,
       `${output.highlight('feedback')}     - Provide routing feedback`,
       `${output.highlight('reset')}        - Reset router state`,
+      `${output.highlight('export')}       - Export Q-table`,
+      `${output.highlight('import')}       - Import Q-table`,
     ]);
     output.writeln();
 
     output.writeln(output.bold('How It Works:'));
     output.printList([
-      'Analyzes task description using semantic embeddings',
+      'Analyzes task description using hash-based state encoding',
       'Uses Q-Learning to learn from routing outcomes',
       'Epsilon-greedy exploration for continuous improvement',
       'Provides confidence scores and alternatives',
@@ -574,13 +652,12 @@ export const routeCommand: Command = {
     output.writeln();
 
     // Show quick status
-    const ruvectorModule = await getRuVectorModule();
-    const status = ruvectorModule?.getStatus?.() ?? { available: false, backend: 'fallback' };
+    const ruvectorAvailable = await isRuvectorAvailable();
 
     output.writeln(output.bold('Backend Status:'));
     output.printList([
-      `RuVector: ${status.available ? output.success('Available') : output.warning('Fallback mode')}`,
-      `Backend: ${status.backend}`,
+      `RuVector: ${ruvectorAvailable ? output.success('Available') : output.warning('Fallback mode')}`,
+      `Backend: ${ruvectorAvailable ? 'ruvector-native' : 'JavaScript fallback'}`,
     ]);
     output.writeln();
 

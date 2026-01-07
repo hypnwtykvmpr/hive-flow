@@ -13,9 +13,43 @@
 
 export { QLearningRouter, createQLearningRouter, type QLearningRouterConfig, type RouteDecision } from './q-learning-router.js';
 export { ASTAnalyzer, createASTAnalyzer, type ASTAnalysis, type ASTNode, type ASTAnalyzerConfig } from './ast-analyzer.js';
-export { DiffClassifier, createDiffClassifier, type DiffClassification, type DiffHunk, type DiffClassifierConfig } from './diff-classifier.js';
-export { CoverageRouter, createCoverageRouter, type CoverageReport, type CoverageRouteResult, type CoverageRouterConfig } from './coverage-router.js';
-export { GraphAnalyzer, createGraphAnalyzer, type GraphBoundary, type DependencyGraph, type GraphAnalyzerConfig } from './graph-analyzer.js';
+export {
+  DiffClassifier,
+  createDiffClassifier,
+  type DiffClassification,
+  type DiffHunk,
+  type DiffChange,
+  type FileDiff,
+  type DiffAnalysis,
+  type DiffClassifierConfig,
+} from './diff-classifier.js';
+export {
+  CoverageRouter,
+  createCoverageRouter,
+  type CoverageRouterConfig,
+  type FileCoverage,
+  type CoverageReport,
+  type CoverageRouteResult,
+} from './coverage-router.js';
+export { coverageRouterTools, hooksCoverageRoute, hooksCoverageSuggest, hooksCoverageGaps } from './coverage-tools.js';
+export {
+  buildDependencyGraph,
+  analyzeGraph,
+  analyzeMinCutBoundaries,
+  analyzeModuleCommunities,
+  detectCircularDependencies,
+  exportToDot,
+  loadRuVector,
+  fallbackMinCut,
+  fallbackLouvain,
+  type GraphNode,
+  type GraphEdge,
+  type DependencyGraph,
+  type MinCutBoundary,
+  type ModuleCommunity,
+  type CircularDependency,
+  type GraphAnalysisResult,
+} from './graph-analyzer.js';
 
 /**
  * Check if ruvector packages are available

@@ -2515,7 +2515,7 @@ const coverageRouteCommand: Command = {
       return { success: false, exitCode: 1 };
     }
 
-    const spinner = output.createSpinner('Analyzing coverage and routing task...');
+    const spinner = output.createSpinner({ text: 'Analyzing coverage and routing task...' });
     spinner.start();
 
     try {
@@ -2655,7 +2655,7 @@ const coverageSuggestCommand: Command = {
       return { success: false, exitCode: 1 };
     }
 
-    const spinner = output.createSpinner(`Analyzing coverage for ${path}...`);
+    const spinner = output.createSpinner({ text: `Analyzing coverage for ${path}...` });
     spinner.start();
 
     try {
@@ -2777,7 +2777,7 @@ const coverageGapsCommand: Command = {
     const groupByAgent = ctx.flags['group-by-agent'] !== false;
     const criticalOnly = ctx.flags['critical-only'] as boolean || false;
 
-    const spinner = output.createSpinner('Analyzing project coverage gaps...');
+    const spinner = output.createSpinner({ text: 'Analyzing project coverage gaps...' });
     spinner.start();
 
     try {

@@ -136,12 +136,17 @@ async function loadRuVector(): Promise<IRuVectorGraph | null> {
   if (ruVectorLoadAttempted) return ruVectorGraph;
   ruVectorLoadAttempted = true;
 
+  // Use dynamic module names to bypass TypeScript static analysis
+  // These modules are optional and may not be installed
+  const ruvectorModule = 'ruvector';
+  const wasmModule = '@ruvector/wasm';
+
   try {
     // Try to load ruvector's graph module
-    // @ts-expect-error - ruvector types may not be available
-    const ruvector = await import('ruvector');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ruvector: any = await import(/* webpackIgnore: true */ ruvectorModule).catch(() => null);
 
-    if (ruvector.hooks_graph_mincut && ruvector.hooks_graph_cluster) {
+    if (ruvector && typeof ruvector.hooks_graph_mincut === 'function' && typeof ruvector.hooks_graph_cluster === 'function') {
       ruVectorGraph = {
         mincut: (nodes, edges) => ruvector.hooks_graph_mincut(nodes, edges),
         louvain: (nodes, edges) => ruvector.hooks_graph_cluster(nodes, edges),
@@ -151,10 +156,10 @@ async function loadRuVector(): Promise<IRuVectorGraph | null> {
   } catch {
     // Try alternative import paths
     try {
-      // @ts-expect-error - @ruvector/wasm types may not be available
-      const wasmModule = await import('@ruvector/wasm');
-      if (wasmModule.GraphAnalyzer) {
-        const analyzer = new wasmModule.GraphAnalyzer();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const wasm: any = await import(/* webpackIgnore: true */ wasmModule).catch(() => null);
+      if (wasm && wasm.GraphAnalyzer) {
+        const analyzer = new wasm.GraphAnalyzer();
         ruVectorGraph = {
           mincut: (nodes, edges) => analyzer.mincut(nodes, edges),
           louvain: (nodes, edges) => analyzer.louvain(nodes, edges),
@@ -176,7 +181,7 @@ async function loadRuVector(): Promise<IRuVectorGraph | null> {
 /**
  * Extract imports from TypeScript/JavaScript file
  */
-function extractImports(content: string, filePath: string): Array<{ path: string; type: GraphEdge['type'] }> {
+function extractImports(content: string, _filePath: string): Array<{ path: string; type: GraphEdge['type'] }> {
   const imports: Array<{ path: string; type: GraphEdge['type'] }> = [];
 
   // ES6 import statements
@@ -459,8 +464,8 @@ function estimateComplexity(content: string): number {
 // ============================================================================
 
 /**
- * Karger's MinCut algorithm (fallback when ruvector not available)
- * Randomized algorithm that finds minimum cut with high probability
+ * Stoer-Wagner MinCut algorithm (fallback when ruvector not available)
+ * Finds minimum cut with deterministic result
  */
 function fallbackMinCut(
   nodes: string[],
@@ -479,9 +484,6 @@ function fallbackMinCut(
       cutEdges: [],
     };
   }
-
-  // Use Stoer-Wagner for deterministic result (simplified version)
-  // This is a simplified MinCut that finds cuts using maximum adjacency ordering
 
   // Build adjacency map with weights
   const adj = new Map<string, Map<string, number>>();
@@ -514,9 +516,9 @@ function fallbackMinCut(
       let maxNode = '';
       let maxConn = -1;
 
-      for (const node of remaining) {
+      for (const node of Array.from(remaining)) {
         let conn = 0;
-        for (const inNode of inSet) {
+        for (const inNode of Array.from(inSet)) {
           conn += adj.get(node)?.get(inNode) || 0;
         }
         if (conn > maxConn) {
@@ -536,7 +538,7 @@ function fallbackMinCut(
       let cutValue = 0;
       const cutEdges: Array<[string, string]> = [];
 
-      for (const inNode of inSet) {
+      for (const inNode of Array.from(inSet)) {
         const weight = adj.get(lastNode)?.get(inNode) || 0;
         if (weight > 0) {
           cutValue += weight;
@@ -631,7 +633,7 @@ function fallbackLouvain(
   const degree = new Map<string, number>();
   for (const node of nodes) {
     let d = 0;
-    for (const [, w] of adj.get(node)!) {
+    for (const [, w] of Array.from(adj.get(node)!.entries())) {
       d += w;
     }
     degree.set(node, d);
@@ -654,7 +656,7 @@ function fallbackLouvain(
       // Calculate modularity gain for moving to each neighbor's community
       const communityWeights = new Map<number, number>();
 
-      for (const [neighbor, weight] of nodeAdj) {
+      for (const [neighbor, weight] of Array.from(nodeAdj.entries())) {
         const neighborCommunity = community.get(neighbor)!;
         communityWeights.set(
           neighborCommunity,
@@ -664,14 +666,14 @@ function fallbackLouvain(
 
       // Calculate community totals
       const communityTotal = new Map<number, number>();
-      for (const [n, c] of community) {
+      for (const [n, c] of Array.from(community.entries())) {
         communityTotal.set(c, (communityTotal.get(c) || 0) + (degree.get(n) || 0));
       }
 
       let bestCommunity = currentCommunity;
       let bestGain = 0;
 
-      for (const [targetCommunity, edgeWeight] of communityWeights) {
+      for (const [targetCommunity, edgeWeight] of Array.from(communityWeights.entries())) {
         if (targetCommunity === currentCommunity) continue;
 
         // Calculate modularity gain
@@ -698,7 +700,7 @@ function fallbackLouvain(
 
   // Collect communities
   const communityMembers = new Map<number, string[]>();
-  for (const [node, comm] of community) {
+  for (const [node, comm] of Array.from(community.entries())) {
     if (!communityMembers.has(comm)) {
       communityMembers.set(comm, []);
     }
@@ -708,7 +710,7 @@ function fallbackLouvain(
   // Renumber communities
   const communities: Array<{ id: number; members: string[] }> = [];
   let id = 0;
-  for (const [, members] of communityMembers) {
+  for (const members of Array.from(communityMembers.values())) {
     communities.push({ id: id++, members });
   }
 
@@ -743,7 +745,7 @@ export function detectCircularDependencies(graph: DependencyGraph): CircularDepe
 
   // Build adjacency list
   const adjList = new Map<string, string[]>();
-  for (const node of graph.nodes.keys()) {
+  for (const node of Array.from(graph.nodes.keys())) {
     adjList.set(node, []);
   }
   for (const edge of graph.edges) {
@@ -781,7 +783,7 @@ export function detectCircularDependencies(graph: DependencyGraph): CircularDepe
     path.pop();
   }
 
-  for (const node of graph.nodes.keys()) {
+  for (const node of Array.from(graph.nodes.keys())) {
     if (!visited.has(node)) {
       dfs(node);
     }
@@ -790,7 +792,7 @@ export function detectCircularDependencies(graph: DependencyGraph): CircularDepe
   return cycles;
 }
 
-function getCycleSeverity(cycle: string[], graph: DependencyGraph): 'low' | 'medium' | 'high' {
+function getCycleSeverity(cycle: string[], _graph: DependencyGraph): 'low' | 'medium' | 'high' {
   // High severity if cycle involves many files or core modules
   if (cycle.length > 5) return 'high';
   if (cycle.some(n => n.includes('index') || n.includes('core'))) return 'high';
@@ -884,14 +886,16 @@ export async function analyzeMinCutBoundaries(
   return boundaries;
 }
 
-function generateBoundarySuggestion(partition1: string[], partition2: string[], graph: DependencyGraph): string {
+function generateBoundarySuggestion(partition1: string[], partition2: string[], _graph: DependencyGraph): string {
   // Analyze the partitions to suggest organization
-  const p1Dirs = new Set(partition1.map(p => dirname(p)).filter(d => d !== '.'));
-  const p2Dirs = new Set(partition2.map(p => dirname(p)).filter(d => d !== '.'));
+  const p1Dirs = partition1.map(p => dirname(p)).filter(d => d !== '.');
+  const p2Dirs = partition2.map(p => dirname(p)).filter(d => d !== '.');
+  const p1DirsSet = new Set(p1Dirs);
+  const p2DirsSet = new Set(p2Dirs);
 
-  if (p1Dirs.size === 1 && p2Dirs.size === 1) {
-    const dir1 = Array.from(p1Dirs)[0];
-    const dir2 = Array.from(p2Dirs)[0];
+  if (p1DirsSet.size === 1 && p2DirsSet.size === 1) {
+    const dir1 = p1Dirs[0];
+    const dir2 = p2Dirs[0];
     return `Natural boundary detected between ${dir1}/ and ${dir2}/. These could be separate packages.`;
   }
 
@@ -990,7 +994,7 @@ export async function analyzeGraph(
   const edgeCount = graph.edges.length;
 
   const degrees = new Map<string, number>();
-  for (const node of graph.nodes.keys()) {
+  for (const node of Array.from(graph.nodes.keys())) {
     degrees.set(node, 0);
   }
   for (const edge of graph.edges) {
@@ -1019,7 +1023,7 @@ export async function analyzeGraph(
     }
   }
 
-  for (const node of graph.nodes.keys()) {
+  for (const node of Array.from(graph.nodes.keys())) {
     if (!visited.has(node)) {
       componentCount++;
       dfs(node);
@@ -1105,7 +1109,7 @@ export function exportToDot(
 
   // Output nodes
   lines.push('  // Nodes');
-  for (const [id, node] of graph.nodes) {
+  for (const [id, node] of Array.from(graph.nodes.entries())) {
     const attrs: string[] = [];
 
     if (options.includeLabels !== false) {
