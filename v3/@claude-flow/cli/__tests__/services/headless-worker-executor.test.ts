@@ -846,10 +846,15 @@ describe('HeadlessWorkerExecutor', () => {
         prompt: 'Analyze',
       };
 
+      // Add error handler to prevent unhandled error event
+      const errorHandler = vi.fn();
+      executor.on('error', errorHandler);
+
       const result = await executor.execute(config);
 
       expect(result.success).toBe(false);
       expect(result.error).toContain('not available');
+      expect(errorHandler).toHaveBeenCalled();
     });
 
     it('should emit error event for execution failures', async () => {
@@ -865,10 +870,10 @@ describe('HeadlessWorkerExecutor', () => {
       const errorHandler = vi.fn();
       executor.on('error', errorHandler);
 
-      setTimeout(() => {
+      setImmediate(() => {
         mockChildProcess.stderr?.emit('data', Buffer.from('Critical error'));
         mockChildProcess.emit('close', 1);
-      }, 10);
+      });
 
       await executor.execute(config);
 
@@ -885,6 +890,9 @@ describe('HeadlessWorkerExecutor', () => {
         workerType: 'map',
         prompt: 'Analyze',
       };
+
+      // Add error handler to prevent unhandled error event
+      executor.on('error', () => {});
 
       const result = await executor.execute(config);
 
