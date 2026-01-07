@@ -376,10 +376,12 @@ const statusCommand: Command = {
   description: 'Show daemon and worker status',
   options: [
     { name: 'verbose', short: 'v', type: 'boolean', description: 'Show detailed worker statistics' },
+    { name: 'show-modes', type: 'boolean', description: 'Show worker execution modes (local/headless) and sandbox settings' },
   ],
   examples: [
     { command: 'claude-flow daemon status', description: 'Show daemon status' },
     { command: 'claude-flow daemon status -v', description: 'Show detailed status' },
+    { command: 'claude-flow daemon status --show-modes', description: 'Show worker execution modes' },
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     const verbose = ctx.flags.verbose as boolean;
