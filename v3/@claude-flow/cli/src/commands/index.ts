@@ -176,10 +176,11 @@ export const commands: Command[] = [
 
 /**
  * Command registry map for quick lookup
+ * Supports both sync (core commands) and async (lazy-loaded) commands
  */
 export const commandRegistry = new Map<string, Command>();
 
-// Register all commands and their aliases
+// Register core commands and their aliases
 for (const cmd of commands) {
   commandRegistry.set(cmd.name, cmd);
   if (cmd.aliases) {
@@ -190,24 +191,46 @@ for (const cmd of commands) {
 }
 
 /**
- * Get command by name
+ * Get command by name (sync for core commands, returns undefined for lazy commands)
+ * Use getCommandAsync for lazy-loaded commands
  */
 export function getCommand(name: string): Command | undefined {
-  return commandRegistry.get(name);
+  return loadedCommands.get(name) || commandRegistry.get(name);
 }
 
 /**
- * Check if command exists
+ * Get command by name (async - supports lazy loading)
+ */
+export async function getCommandAsync(name: string): Promise<Command | undefined> {
+  // Check already-loaded commands first
+  const cached = loadedCommands.get(name);
+  if (cached) return cached;
+
+  // Check sync registry
+  const synced = commandRegistry.get(name);
+  if (synced) return synced;
+
+  // Try lazy loading
+  return loadCommand(name);
+}
+
+/**
+ * Check if command exists (sync check for core commands)
  */
 export function hasCommand(name: string): boolean {
-  return commandRegistry.has(name);
+  return loadedCommands.has(name) || commandRegistry.has(name) || name in commandLoaders;
 }
 
 /**
- * Get all command names (including aliases)
+ * Get all command names (including aliases and lazy-loadable)
  */
 export function getCommandNames(): string[] {
-  return Array.from(commandRegistry.keys());
+  const names = new Set([
+    ...Array.from(commandRegistry.keys()),
+    ...Array.from(loadedCommands.keys()),
+    ...Object.keys(commandLoaders),
+  ]);
+  return Array.from(names);
 }
 
 /**
@@ -218,10 +241,39 @@ export function getUniqueCommands(): Command[] {
 }
 
 /**
+ * Load all commands (populates lazy-loaded commands)
+ * Use this when you need all commands available synchronously
+ */
+export async function loadAllCommands(): Promise<Command[]> {
+  const allCommands: Command[] = [...commands];
+
+  for (const name of Object.keys(commandLoaders)) {
+    if (!loadedCommands.has(name)) {
+      const cmd = await loadCommand(name);
+      if (cmd && !allCommands.includes(cmd)) {
+        allCommands.push(cmd);
+      }
+    }
+  }
+
+  return allCommands;
+}
+
+/**
  * Setup commands in a CLI instance
  */
 export function setupCommands(cli: { command: (cmd: Command) => void }): void {
   for (const cmd of commands) {
+    cli.command(cmd);
+  }
+}
+
+/**
+ * Setup all commands including lazy-loaded (async)
+ */
+export async function setupAllCommands(cli: { command: (cmd: Command) => void }): Promise<void> {
+  const allCommands = await loadAllCommands();
+  for (const cmd of allCommands) {
     cli.command(cmd);
   }
 }
