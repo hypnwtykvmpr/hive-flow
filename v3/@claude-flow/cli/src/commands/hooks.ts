@@ -2921,11 +2921,10 @@ const progressHookCommand: Command = {
     const sync = ctx.flags.sync as boolean;
     const summary = ctx.flags.summary as boolean;
 
-    const spinner = output.createSpinner();
-
     try {
       if (summary) {
-        spinner.start('Getting progress summary...');
+        const spinner = output.createSpinner({ text: 'Getting progress summary...' });
+        spinner.start();
         const result = await callMCPTool<{ summary: string }>('progress/summary', {});
         spinner.stop();
 
@@ -2940,7 +2939,8 @@ const progressHookCommand: Command = {
       }
 
       if (sync) {
-        spinner.start('Syncing progress...');
+        const spinner = output.createSpinner({ text: 'Syncing progress...' });
+        spinner.start();
         const result = await callMCPTool<{
           progress: number;
           message: string;
@@ -2962,7 +2962,8 @@ const progressHookCommand: Command = {
       }
 
       // Default: check progress
-      spinner.start('Checking V3 progress...');
+      const spinner = output.createSpinner({ text: 'Checking V3 progress...' });
+      spinner.start();
       const result = await callMCPTool<{
         progress?: number;
         overall?: number;
