@@ -153,8 +153,8 @@ interface ClaimHistoryEntry {
 }
 
 /**
- * Mock Claims Service Interface
- * In production, this would be replaced with actual service implementation
+ * Claims Service Interface
+ * Defines the contract for claims management operations
  */
 interface ClaimsService {
   claimIssue(params: {

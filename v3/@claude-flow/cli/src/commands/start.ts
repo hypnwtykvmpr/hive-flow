@@ -215,8 +215,8 @@ const startAction = async (ctx: CommandContext): Promise<CommandResult> => {
       output.writeln();
       output.printInfo('Running in daemon mode. Use "claude-flow stop" to stop.');
 
-      // In a real implementation, this would fork a background process
-      // For now, we simulate daemon behavior
+      // Store PID for daemon management
+      // TODO: Implement proper process forking with detached: true
       const daemonPidPath = path.join(cwd, '.claude-flow', 'daemon.pid');
       fs.writeFileSync(daemonPidPath, String(process.pid));
     }

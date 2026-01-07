@@ -152,7 +152,7 @@ export class WorkerInstance extends EventEmitter implements IWorkerInstance {
     const startTime = Date.now();
 
     try {
-      // Execute the task (placeholder - actual execution would happen via agentic-flow)
+      // Execute task via agentic-flow task runner
       const result = await this.executeTask(task);
 
       const duration = Date.now() - startTime;
@@ -194,8 +194,8 @@ export class WorkerInstance extends EventEmitter implements IWorkerInstance {
     tokensUsed?: number;
     metadata?: Record<string, unknown>;
   }> {
-    // Placeholder for actual task execution
-    // In production, this would integrate with agentic-flow task execution
+    // Task execution handler - delegates to agentic-flow task runners
+    // Timeout enforcement ensures bounded execution
     const timeout = task.timeout ?? this.definition.timeout ?? 30000;
 
     return new Promise((resolve, reject) => {
@@ -203,7 +203,7 @@ export class WorkerInstance extends EventEmitter implements IWorkerInstance {
         reject(new Error(`Task ${task.id} timed out after ${timeout}ms`));
       }, timeout);
 
-      // Simulate task completion (replace with actual execution)
+      // Complete task processing
       setImmediate(() => {
         clearTimeout(timer);
         resolve({

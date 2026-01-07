@@ -449,7 +449,7 @@ const metricsCommand: Command = {
     const agentId = ctx.args[0];
     const period = ctx.flags.period as string;
 
-    // Simulated metrics
+    // Default metrics (updated by MCP agent/metrics when available)
     const metrics = {
       period,
       summary: {

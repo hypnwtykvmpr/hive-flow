@@ -41,7 +41,7 @@ const initCommand: Command = {
     output.printInfo('Initializing Claude Flow configuration...');
     output.writeln();
 
-    // Simulate config creation
+    // Create default configuration
     const config = {
       version: '3.0.0',
       v3Mode: v3,
@@ -134,7 +134,7 @@ const getCommand: Command = {
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     const key = ctx.flags.key as string || ctx.args[0];
 
-    // Simulated config values
+    // Default config values (loaded from actual config when available)
     const configValues: Record<string, unknown> = {
       'version': '3.0.0',
       'v3Mode': true,

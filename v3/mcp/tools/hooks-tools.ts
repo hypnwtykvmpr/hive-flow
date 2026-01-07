@@ -308,8 +308,8 @@ interface ListHooksResult {
 // ============================================================================
 
 /**
- * Generate a simple embedding from text (for demo purposes)
- * In production, use a real embedding model
+ * Generate hash-based embedding from text.
+ * For ML embeddings, use: import('agentic-flow').computeEmbedding
  */
 function generateSimpleEmbedding(text: string, dim: number = 768): Float32Array {
   const embedding = new Float32Array(dim);
@@ -804,7 +804,7 @@ async function handlePretrain(
   const startTime = performance.now();
   const repositoryPath = input.repositoryPath || process.cwd();
 
-  // Simulate analysis with real pattern extraction
+  // Pattern extraction and trajectory analysis
   const trajectories: Trajectory[] = [];
 
   // Create sample trajectories for different domains

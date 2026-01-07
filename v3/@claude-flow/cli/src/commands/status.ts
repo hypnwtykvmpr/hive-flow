@@ -8,9 +8,40 @@ import { output } from '../output.js';
 import { callMCPTool, MCPClientError } from '../mcp-client.js';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as os from 'os';
 
 // Status refresh interval (ms)
 const DEFAULT_WATCH_INTERVAL = 2000;
+
+// Track CPU usage over time
+let lastCpuUsage: { user: number; system: number } | null = null;
+let lastCpuTime = Date.now();
+
+// Get real process CPU usage percentage
+function getProcessCpuUsage(): number {
+  const cpuUsage = process.cpuUsage(lastCpuUsage ? { user: lastCpuUsage.user, system: lastCpuUsage.system } : undefined);
+  const now = Date.now();
+  const elapsed = now - lastCpuTime;
+
+  // Calculate percentage (cpuUsage is in microseconds)
+  const totalCpu = (cpuUsage.user + cpuUsage.system) / 1000; // Convert to ms
+  const percentage = elapsed > 0 ? (totalCpu / elapsed) * 100 : 0;
+
+  // Update for next call
+  lastCpuUsage = cpuUsage;
+  lastCpuTime = now;
+
+  return Math.min(100, Math.max(0, percentage));
+}
+
+// Get real process memory usage percentage
+function getProcessMemoryUsage(): number {
+  const memoryUsage = process.memoryUsage();
+  const totalMemory = os.totalmem();
+  const usedMemory = memoryUsage.heapUsed + memoryUsage.external;
+
+  return (usedMemory / totalMemory) * 100;
+}
 
 // Check if project is initialized
 function isInitialized(cwd: string): boolean {
@@ -147,8 +178,8 @@ async function getSystemStatus(): Promise<{
       },
       tasks: taskStatus,
       performance: {
-        cpuUsage: Math.random() * 30 + 10, // Simulated
-        memoryUsage: Math.random() * 40 + 20, // Simulated
+        cpuUsage: getProcessCpuUsage(),
+        memoryUsage: getProcessMemoryUsage(),
         flashAttention: '2.8x speedup',
         searchSpeed: '150x faster'
       }

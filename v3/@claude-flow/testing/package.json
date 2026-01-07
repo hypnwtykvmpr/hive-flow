@@ -1,6 +1,6 @@
 {
   "name": "@claude-flow/testing",
-  "version": "3.0.0-alpha.2",
+  "version": "3.0.0-alpha.6",
   "type": "module",
   "description": "Testing module - TDD London School framework, test utilities, fixtures, and mock services for V3 Claude-Flow",
   "main": "dist/index.js",

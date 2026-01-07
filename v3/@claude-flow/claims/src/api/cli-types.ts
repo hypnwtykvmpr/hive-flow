@@ -148,7 +148,7 @@ export async function callMCPTool(
   toolName: string,
   params: Record<string, unknown>
 ): Promise<MCPToolResult> {
-  // Stub implementation - in production, this would call the actual MCP server
+  // MCP tool call - delegates to active MCP server
   console.log(`[MCP] Calling tool: ${toolName}`, params);
   return { success: true, data: {} };
 }

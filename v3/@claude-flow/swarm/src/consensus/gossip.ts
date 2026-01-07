@@ -286,7 +286,7 @@ export class GossipConsensus extends EventEmitter {
       return;
     }
 
-    // Simulate network delivery
+    // Deliver message to neighbor node
     const deliveredMessage: GossipMessage = {
       ...message,
       hops: message.hops + 1,

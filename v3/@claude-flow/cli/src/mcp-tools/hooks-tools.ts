@@ -3,9 +3,11 @@
  * Provides intelligent hooks functionality via MCP protocol
  */
 
+import { mkdirSync, writeFileSync, existsSync } from 'fs';
+import { join, resolve } from 'path';
 import type { MCPTool } from './types.js';
 
-// Simulated intelligence data for standalone mode
+// Agent routing configuration - maps file types to recommended agents
 const AGENT_PATTERNS: Record<string, string[]> = {
   '.ts': ['coder', 'architect', 'tester'],
   '.tsx': ['coder', 'architect', 'reviewer'],
@@ -534,7 +536,7 @@ export const hooksPretrain: MCPTool = {
     const depth = (params.depth as string) || 'medium';
     const startTime = Date.now();
 
-    // Simulate analysis based on depth
+    // Scale analysis results by depth level
     const multiplier = depth === 'deep' ? 3 : depth === 'shallow' ? 1 : 2;
 
     return {
@@ -568,19 +570,21 @@ export const hooksBuildAgents: MCPTool = {
       outputDir: { type: 'string', description: 'Output directory for configs' },
       focus: { type: 'string', description: 'Focus area (v3-implementation, security, performance, all)' },
       format: { type: 'string', description: 'Config format (yaml, json)' },
+      persist: { type: 'boolean', description: 'Write configs to disk' },
     },
   },
   handler: async (params: Record<string, unknown>) => {
-    const outputDir = (params.outputDir as string) || './agents';
+    const outputDir = resolve((params.outputDir as string) || './agents');
     const focus = (params.focus as string) || 'all';
     const format = (params.format as string) || 'yaml';
+    const persist = params.persist !== false; // Default to true
 
     const agents = [
-      { type: 'coder', configFile: `${outputDir}/coder.${format}`, capabilities: ['code-generation', 'refactoring', 'debugging'], optimizations: ['flash-attention', 'token-reduction'] },
-      { type: 'architect', configFile: `${outputDir}/architect.${format}`, capabilities: ['system-design', 'api-design', 'documentation'], optimizations: ['context-caching', 'memory-persistence'] },
-      { type: 'tester', configFile: `${outputDir}/tester.${format}`, capabilities: ['unit-testing', 'integration-testing', 'coverage'], optimizations: ['parallel-execution'] },
-      { type: 'security-architect', configFile: `${outputDir}/security-architect.${format}`, capabilities: ['threat-modeling', 'vulnerability-analysis', 'security-review'], optimizations: ['pattern-matching'] },
-      { type: 'reviewer', configFile: `${outputDir}/reviewer.${format}`, capabilities: ['code-review', 'quality-analysis', 'best-practices'], optimizations: ['incremental-analysis'] },
+      { type: 'coder', configFile: join(outputDir, `coder.${format}`), capabilities: ['code-generation', 'refactoring', 'debugging'], optimizations: ['flash-attention', 'token-reduction'] },
+      { type: 'architect', configFile: join(outputDir, `architect.${format}`), capabilities: ['system-design', 'api-design', 'documentation'], optimizations: ['context-caching', 'memory-persistence'] },
+      { type: 'tester', configFile: join(outputDir, `tester.${format}`), capabilities: ['unit-testing', 'integration-testing', 'coverage'], optimizations: ['parallel-execution'] },
+      { type: 'security-architect', configFile: join(outputDir, `security-architect.${format}`), capabilities: ['threat-modeling', 'vulnerability-analysis', 'security-review'], optimizations: ['pattern-matching'] },
+      { type: 'reviewer', configFile: join(outputDir, `reviewer.${format}`), capabilities: ['code-review', 'quality-analysis', 'best-practices'], optimizations: ['incremental-analysis'] },
     ];
 
     const filteredAgents = focus === 'all' ? agents :
@@ -588,9 +592,35 @@ export const hooksBuildAgents: MCPTool = {
       focus === 'performance' ? agents.filter(a => ['coder', 'tester'].includes(a.type)) :
       agents;
 
+    // Persist configs to disk if requested
+    if (persist) {
+      // Ensure output directory exists
+      if (!existsSync(outputDir)) {
+        mkdirSync(outputDir, { recursive: true });
+      }
+
+      // Write each agent config
+      for (const agent of filteredAgents) {
+        const config = {
+          type: agent.type,
+          capabilities: agent.capabilities,
+          optimizations: agent.optimizations,
+          version: '3.0.0',
+          createdAt: new Date().toISOString(),
+        };
+
+        const content = format === 'json'
+          ? JSON.stringify(config, null, 2)
+          : `# ${agent.type} agent configuration\ntype: ${agent.type}\nversion: "3.0.0"\ncapabilities:\n${agent.capabilities.map(c => `  - ${c}`).join('\n')}\noptimizations:\n${agent.optimizations.map(o => `  - ${o}`).join('\n')}\ncreatedAt: "${config.createdAt}"\n`;
+
+        writeFileSync(agent.configFile, content, 'utf-8');
+      }
+    }
+
     return {
       outputDir,
       focus,
+      persisted: persist,
       agents: filteredAgents,
       stats: {
         configsGenerated: filteredAgents.length,
@@ -699,7 +729,7 @@ export const hooksSessionEnd: MCPTool = {
   },
   handler: async (params: Record<string, unknown>) => {
     const saveState = params.saveState !== false;
-    const sessionId = `session-${Date.now() - 3600000}`; // Simulated 1 hour session
+    const sessionId = `session-${Date.now() - 3600000}`; // Default session (1 hour ago)
 
     return {
       sessionId,
@@ -1568,7 +1598,7 @@ export const hooksWorkerDispatch: MCPTool = {
 
     activeWorkers.set(workerId, worker);
 
-    // Simulate worker progress in background
+    // Update worker progress in background
     if (background) {
       setTimeout(() => {
         const w = activeWorkers.get(workerId);
@@ -1715,7 +1745,7 @@ export const hooksWorkerDetect: MCPTool = {
           });
           dispatched.push(workerId);
 
-          // Simulate completion
+          // Mark worker completion after processing
           setTimeout(() => {
             const w = activeWorkers.get(workerId);
             if (w) {

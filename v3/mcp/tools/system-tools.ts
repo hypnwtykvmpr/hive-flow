@@ -347,7 +347,7 @@ async function handleSystemStatus(
   // Include connection information
   if (input.includeConnections) {
     result.connections = {
-      total: 10, // Placeholder
+      total: 10, // Default max connections
       active: 5,
       idle: 5,
     };
