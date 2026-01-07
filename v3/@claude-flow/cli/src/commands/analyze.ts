@@ -190,24 +190,24 @@ const diffCommand: Command = {
         });
 
         // Security concerns
-        if (result.risk.breakdown.securityConcerns.length > 0) {
+        if (risk.breakdown.securityConcerns.length > 0) {
           output.writeln();
           output.writeln(output.bold(output.warning('Security Concerns')));
-          output.printList(result.risk.breakdown.securityConcerns.map(c => output.warning(c)));
+          output.printList(risk.breakdown.securityConcerns.map(c => output.warning(c)));
         }
 
         // Breaking changes
-        if (result.risk.breakdown.breakingChanges.length > 0) {
+        if (risk.breakdown.breakingChanges.length > 0) {
           output.writeln();
           output.writeln(output.bold(output.error('Potential Breaking Changes')));
-          output.printList(result.risk.breakdown.breakingChanges.map(c => output.error(c)));
+          output.printList(risk.breakdown.breakingChanges.map(c => output.error(c)));
         }
 
         // High risk files
-        if (result.risk.breakdown.highRiskFiles.length > 0) {
+        if (risk.breakdown.highRiskFiles.length > 0) {
           output.writeln();
           output.writeln(output.bold('High Risk Files'));
-          output.printList(result.risk.breakdown.highRiskFiles.map(f => output.warning(f)));
+          output.printList(risk.breakdown.highRiskFiles.map(f => output.warning(f)));
         }
       }
 
