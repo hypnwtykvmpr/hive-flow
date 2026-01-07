@@ -1190,6 +1190,9 @@ The CLI is optimized for V3 performance targets:
 - [@claude-flow/mcp](../mcp) - MCP server implementation
 - [@claude-flow/hooks](../hooks) - Self-learning hooks system
 - [@claude-flow/neural](../neural) - SONA neural learning
+- [@claude-flow/embeddings](../embeddings) - Vector embeddings (75x faster with agentic-flow)
+- [@claude-flow/security](../security) - CVE remediation & security patterns
+- [@claude-flow/providers](../providers) - Multi-LLM provider system
 
 ## License
 
