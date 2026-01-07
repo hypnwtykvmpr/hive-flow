@@ -16,6 +16,7 @@ export * from './embedding-service.js';
 // Re-export commonly used items at top level
 export {
   createEmbeddingService,
+  createEmbeddingServiceAsync,
   getEmbedding,
   cosineSimilarity,
   euclideanDistance,
@@ -26,6 +27,8 @@ export {
   MockEmbeddingService,
   AgenticFlowEmbeddingService,
 } from './embedding-service.js';
+
+export type { AutoEmbeddingConfig } from './embedding-service.js';
 
 export type {
   EmbeddingProvider,
