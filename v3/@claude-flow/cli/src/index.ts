@@ -1,6 +1,8 @@
 /**
  * V3 CLI Main Entry Point
  * Modernized CLI for Claude Flow V3
+ *
+ * Created with ❤️ by ruv.io
  */
 
 import { readFileSync } from 'fs';
@@ -266,6 +268,8 @@ export class CLI {
     this.output.writeln();
 
     this.output.writeln(this.output.dim('Run "claude-flow <command> --help" for command help'));
+    this.output.writeln();
+    this.output.writeln(this.output.dim('Created with ❤️ by ruv.io'));
     this.output.writeln();
   }
 
