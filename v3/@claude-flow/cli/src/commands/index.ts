@@ -74,6 +74,8 @@ export { doctorCommand } from './doctor.js';
 export { analyzeCommand } from './analyze.js';
 // Q-Learning Routing Commands
 export { routeCommand } from './route.js';
+// Progress Commands
+export { progressCommand } from './progress.js';
 
 /**
  * All available commands
