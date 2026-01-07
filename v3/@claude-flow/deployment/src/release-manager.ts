@@ -3,9 +3,38 @@
  * Handles version bumping, changelog generation, and git tagging
  */
 
-import { execSync } from 'child_process';
+import { execSync, execFileSync } from 'child_process';
 import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { join } from 'path';
+
+/**
+ * Allowed git commands for security - prevents command injection
+ */
+const ALLOWED_GIT_COMMANDS = [
+  'git status --porcelain',
+  'git rev-parse HEAD',
+  'git log',
+  'git tag',
+  'git add',
+  'git commit',
+  'git describe',
+];
+
+/**
+ * Validate command against allowlist to prevent command injection
+ */
+function validateCommand(cmd: string): void {
+  // Check for shell metacharacters
+  if (/[;&|`$()<>]/.test(cmd)) {
+    throw new Error(`Invalid command: contains shell metacharacters`);
+  }
+
+  // Must start with an allowed command prefix
+  const isAllowed = ALLOWED_GIT_COMMANDS.some(prefix => cmd.startsWith(prefix));
+  if (!isAllowed) {
+    throw new Error(`Command not allowed: ${cmd.split(' ')[0]}`);
+  }
+}
 import type {
   ReleaseOptions,
   ReleaseResult,
