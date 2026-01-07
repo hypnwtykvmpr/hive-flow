@@ -483,6 +483,29 @@ export class HttpTransport extends EventEmitter implements ITransport {
   }
 
   /**
+   * Timing-safe token comparison to prevent timing attacks
+   */
+  private timingSafeTokenCompare(a: string, b: string): boolean {
+    try {
+      const bufA = Buffer.from(a, 'utf-8');
+      const bufB = Buffer.from(b, 'utf-8');
+
+      // Lengths must match for timingSafeEqual
+      if (bufA.length !== bufB.length) {
+        // Still do comparison to maintain constant time
+        const padded = Buffer.alloc(bufA.length);
+        bufB.copy(padded, 0, 0, Math.min(bufB.length, bufA.length));
+        timingSafeEqual(bufA, padded);
+        return false;
+      }
+
+      return timingSafeEqual(bufA, bufB);
+    } catch {
+      return false;
+    }
+  }
+
+  /**
    * Validate authentication
    */
   private validateAuth(req: Request): { valid: boolean; error?: string } {
@@ -500,7 +523,11 @@ export class HttpTransport extends EventEmitter implements ITransport {
     const token = tokenMatch[1];
 
     if (this.config.auth?.tokens?.length) {
-      if (!this.config.auth.tokens.includes(token)) {
+      // Use timing-safe comparison to prevent timing attacks
+      const isValidToken = this.config.auth.tokens.some(
+        validToken => this.timingSafeTokenCompare(token, validToken)
+      );
+      if (!isValidToken) {
         return { valid: false, error: 'Invalid token' };
       }
     }
