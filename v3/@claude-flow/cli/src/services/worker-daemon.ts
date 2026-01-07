@@ -117,6 +117,10 @@ export class WorkerDaemon extends EventEmitter {
   private runningWorkers: Set<WorkerType> = new Set(); // Track concurrent workers
   private pendingWorkers: WorkerType[] = []; // Queue for deferred workers
 
+  // Headless execution support
+  private headlessExecutor: HeadlessWorkerExecutor | null = null;
+  private headlessAvailable: boolean = false;
+
   constructor(projectRoot: string, config?: Partial<DaemonConfig>) {
     super();
     this.projectRoot = projectRoot;
