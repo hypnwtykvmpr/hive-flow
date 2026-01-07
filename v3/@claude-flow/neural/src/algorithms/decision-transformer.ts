@@ -213,7 +213,7 @@ export class DecisionTransformer {
 
       // Decrease return-to-go by estimated reward
       if (i > 0) {
-        returnToGo -= 0.1; // Placeholder for actual reward
+        returnToGo -= 0.1; // Default reward decrement for inference
       }
     }
 

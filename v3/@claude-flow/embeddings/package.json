@@ -1,6 +1,6 @@
 {
   "name": "@claude-flow/embeddings",
-  "version": "3.0.0-alpha.1",
+  "version": "3.0.0-alpha.6",
   "description": "V3 Embedding Service - OpenAI, Transformers.js, and Mock providers",
   "type": "module",
   "main": "./dist/index.js",

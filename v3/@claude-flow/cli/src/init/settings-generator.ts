@@ -70,7 +70,7 @@ function generateHooksConfig(config: HooksConfig): object {
         hooks: [
           {
             type: 'command',
-            command: 'npx @claude-flow/cli hooks pre-edit --file "$TOOL_INPUT_file_path"',
+            command: 'npx @claude-flow/cli hooks pre-edit --file "$TOOL_INPUT_file_path" --intelligence',
             timeout: config.timeout,
             continueOnError: config.continueOnError,
           },
@@ -94,7 +94,7 @@ function generateHooksConfig(config: HooksConfig): object {
         hooks: [
           {
             type: 'command',
-            command: 'npx @claude-flow/cli hooks pre-task --description "$TOOL_INPUT_prompt"',
+            command: 'npx @claude-flow/cli hooks pre-task --task-id "task-$(date +%s)" --description "$TOOL_INPUT_prompt"',
             timeout: config.timeout,
             continueOnError: config.continueOnError,
           },
@@ -176,7 +176,7 @@ function generateHooksConfig(config: HooksConfig): object {
         hooks: [
           {
             type: 'command',
-            command: 'npx @claude-flow/cli hooks route --task "$PROMPT" --include-explanation',
+            command: 'npx @claude-flow/cli hooks route --task "$PROMPT" --intelligence --include-explanation',
             timeout: config.timeout,
             continueOnError: config.continueOnError,
           },

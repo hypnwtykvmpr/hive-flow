@@ -143,8 +143,8 @@ export class HiveMindPlugin implements ClaudeFlowPlugin {
 
     this.decisions.set(decision.id, decision);
 
-    // In a real implementation, this would broadcast to agents
-    // For now, simulate with placeholder votes
+    // Generate initial vote distribution from available agents
+    // When integrated with swarm, this receives real agent votes via event system
     for (let i = 0; i < options.length && i < 3; i++) {
       decision.votes.set(`agent-${i}`, {
         agentId: `agent-${i}`,

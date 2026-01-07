@@ -16,6 +16,8 @@ import { swarmTools } from './mcp-tools/swarm-tools.js';
 import { memoryTools } from './mcp-tools/memory-tools.js';
 import { configTools } from './mcp-tools/config-tools.js';
 import { hooksTools } from './mcp-tools/hooks-tools.js';
+import { taskTools } from './mcp-tools/task-tools.js';
+import { sessionTools } from './mcp-tools/session-tools.js';
 
 /**
  * MCP Tool Registry
@@ -31,7 +33,7 @@ function registerTools(tools: MCPTool[]): void {
 }
 
 // Initialize registry with all available tools
-registerTools([...agentTools, ...swarmTools, ...memoryTools, ...configTools, ...hooksTools]);
+registerTools([...agentTools, ...swarmTools, ...memoryTools, ...configTools, ...hooksTools, ...taskTools, ...sessionTools]);
 
 /**
  * MCP Client Error

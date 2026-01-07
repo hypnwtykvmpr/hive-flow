@@ -295,7 +295,7 @@ export function createMockProvider(name: string = 'mock'): LLMProvider {
   return {
     name,
     async createMessage(request: CreateMessageRequest): Promise<CreateMessageResult> {
-      // Simulate processing time
+      // Mock provider response delay
       await new Promise((r) => setTimeout(r, 100));
 
       return {

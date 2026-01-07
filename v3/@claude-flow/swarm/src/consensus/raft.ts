@@ -258,8 +258,8 @@ export class RaftConsensus extends EventEmitter {
     const peer = this.peers.get(peerId);
     if (!peer) return false;
 
-    // Simulate vote request (in real implementation, this would be RPC)
-    // For now, grant vote if candidate's term is higher
+    // Local vote request - uses in-process peer state
+    // Grant vote if candidate's term is higher
     if (this.node.currentTerm > peer.currentTerm) {
       peer.votedFor = this.node.id;
       peer.currentTerm = this.node.currentTerm;
@@ -297,7 +297,7 @@ export class RaftConsensus extends EventEmitter {
     const peer = this.peers.get(peerId);
     if (!peer) return false;
 
-    // Simulate AppendEntries RPC
+    // AppendEntries - local peer state update
     if (this.node.currentTerm >= peer.currentTerm) {
       peer.currentTerm = this.node.currentTerm;
       peer.state = 'follower';

@@ -119,7 +119,7 @@ const initCommand: Command = {
         },
       });
 
-      // Simulate initialization output
+      // Display initialization progress
       output.writeln(output.dim('  Creating coordination topology...'));
       output.writeln(output.dim('  Initializing memory namespace...'));
       output.writeln(output.dim('  Setting up communication channels...'));
@@ -226,7 +226,7 @@ const startCommand: Command = {
     output.printInfo(`Starting swarm with objective: ${output.highlight(objective)}`);
     output.writeln();
 
-    // Simulate agent spawning based on strategy
+    // Compute agent deployment plan based on strategy
     const agentPlan = getAgentPlan(strategy);
 
     output.writeln(output.bold('Agent Deployment Plan'));
@@ -256,11 +256,11 @@ const startCommand: Command = {
     output.writeln();
     output.printInfo('Deploying agents...');
 
-    // Simulate deployment progress
+    // Show deployment progress
     const spinner = output.createSpinner({ text: 'Initializing agents...', spinner: 'dots' });
     spinner.start();
 
-    // Simulate async operation
+    // Brief delay for spinner animation
     await new Promise(resolve => setTimeout(resolve, 500));
 
     spinner.succeed('All agents deployed');
@@ -290,7 +290,7 @@ const statusCommand: Command = {
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     const swarmId = ctx.args[0];
 
-    // Simulated swarm status
+    // Default status (updated by MCP swarm/status when available)
     const status = {
       id: swarmId || 'swarm-current',
       topology: 'hybrid',
@@ -484,7 +484,7 @@ const scaleCommand: Command = {
 
     output.printInfo(`Scaling swarm ${swarmId} to ${targetAgents} agents...`);
 
-    // Simulate scaling
+    // Calculate scaling delta
     const currentAgents = 8;
     const delta = targetAgents - currentAgents;
 

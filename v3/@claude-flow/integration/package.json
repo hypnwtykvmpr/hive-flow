@@ -1,6 +1,6 @@
 {
   "name": "@claude-flow/integration",
-  "version": "3.0.0-alpha.1",
+  "version": "3.0.0-alpha.6",
   "type": "module",
   "description": "Integration module - agentic-flow@alpha deep integration, ADR-001 compliance",
   "main": "dist/index.js",

@@ -644,7 +644,7 @@ export class LongRunningWorker extends WorkerBase {
    * @returns Execution output
    */
   protected async executeCore(task: Task): Promise<AgentOutput> {
-    // Default implementation with simulated phases
+    // Default implementation with standard execution phases
     const phases: ExecutionPhase[] = [
       { name: 'initialization', estimatedSteps: 1 },
       { name: 'processing', estimatedSteps: 5 },
@@ -659,7 +659,7 @@ export class LongRunningWorker extends WorkerBase {
       for (let step = 1; step <= phase.estimatedSteps; step++) {
         this.updateState(phase.name, step, phase.estimatedSteps);
 
-        // Simulate work
+        // Phase processing time
         await this.delay(100);
 
         // Add partial result

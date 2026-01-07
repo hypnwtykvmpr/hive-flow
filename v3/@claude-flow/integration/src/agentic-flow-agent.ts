@@ -723,7 +723,7 @@ export class AgenticFlowAgent extends EventEmitter implements IAgent {
     }
 
     // Additional local initialization can be added here
-    await this.delay(10); // Simulate initialization
+    await this.delay(10); // Allow async initialization to complete
   }
 
   /**
@@ -735,7 +735,7 @@ export class AgenticFlowAgent extends EventEmitter implements IAgent {
     this.currentTaskCount = 0;
 
     // Additional local cleanup can be added here
-    await this.delay(10); // Simulate shutdown
+    await this.delay(10); // Allow async cleanup to complete
   }
 
   /**
@@ -743,7 +743,7 @@ export class AgenticFlowAgent extends EventEmitter implements IAgent {
    * Override this method in subclasses for specific agent behavior
    */
   protected async localExecuteTask(task: Task): Promise<unknown> {
-    // Simulate minimal processing time to ensure measurable duration
+    // Minimal processing delay for timing metrics
     await this.delay(1);
 
     // This is a basic implementation that should be overridden by subclasses

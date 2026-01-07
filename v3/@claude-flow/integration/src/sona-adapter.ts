@@ -473,7 +473,7 @@ export class SONAAdapter extends EventEmitter {
         continue;
       }
 
-      // Calculate similarity (simplified - in production use embeddings)
+      // Calculate text similarity (for vector embeddings, use HNSW index)
       const score = this.calculateSimilarity(params.query, pattern.pattern);
 
       if (score >= threshold) {

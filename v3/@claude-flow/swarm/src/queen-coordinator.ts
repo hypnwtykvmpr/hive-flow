@@ -1013,11 +1013,12 @@ export class QueenCoordinator extends EventEmitter {
   }
 
   /**
-   * Create a simple embedding from text (placeholder)
+   * Create a simple embedding from text using hash-based approach.
+   * For higher quality embeddings, integrate agentic-flow's computeEmbedding.
    */
   private createSimpleEmbedding(text: string): Float32Array {
-    // Simple hash-based embedding for demonstration
-    // In production, this would use a real embedding model
+    // Hash-based embedding - lightweight and fast for local similarity matching
+    // For production ML embeddings, use: import('agentic-flow').computeEmbedding
     const embedding = new Float32Array(768);
     const words = text.toLowerCase().split(/\s+/);
 

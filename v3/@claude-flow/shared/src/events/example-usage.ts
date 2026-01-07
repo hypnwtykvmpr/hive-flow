@@ -110,7 +110,7 @@ async function main() {
     createAgentTaskAssignedEvent('agent-2', 'task-1', Date.now())
   );
 
-  // Simulate some work...
+  // Example: Async work gap between task start and completion
   await new Promise((resolve) => setTimeout(resolve, 100));
 
   await eventStore.append(

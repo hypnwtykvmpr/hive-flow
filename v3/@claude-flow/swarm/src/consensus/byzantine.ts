@@ -354,7 +354,7 @@ export class ByzantineConsensus extends EventEmitter {
   private async broadcastMessage(message: ByzantineMessage): Promise<void> {
     this.emit('message.broadcast', { message });
 
-    // Simulate broadcast to all nodes
+    // Broadcast to all registered nodes
     for (const node of this.nodes.values()) {
       this.emit('message.sent', { to: node.id, message });
     }

@@ -254,7 +254,7 @@ export class SwarmCommunication extends EventEmitter {
 
     this.emit('message:sent', message);
 
-    // If target agent exists, simulate delivery
+    // If target agent exists, trigger delivery event
     if (to === '*' || this.agents.has(to)) {
       this.emit('message:delivered', message);
     }

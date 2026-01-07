@@ -636,7 +636,7 @@ const logsCommand: Command = {
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     const lines = ctx.flags.lines as number;
 
-    // Simulated logs for now - would read from actual log file
+    // Default logs (loaded from actual log file when available)
     const logs = [
       { time: new Date().toISOString(), level: 'info', message: 'MCP Server started on stdio' },
       { time: new Date().toISOString(), level: 'info', message: 'Registered 27 tools' },

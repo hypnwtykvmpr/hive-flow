@@ -10,3 +10,5 @@ export { swarmTools } from './swarm-tools.js';
 export { memoryTools } from './memory-tools.js';
 export { configTools } from './config-tools.js';
 export { hooksTools } from './hooks-tools.js';
+export { taskTools } from './task-tools.js';
+export { sessionTools } from './session-tools.js';

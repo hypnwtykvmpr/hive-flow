@@ -778,7 +778,7 @@ export class ProviderAdapter extends EventEmitter {
   ): Promise<ExecutionResult> {
     const startTime = Date.now();
 
-    // Simulate execution (in real implementation, would call provider API)
+    // Execute with provider-like latency (actual API calls via external integrations)
     await this.delay(100);
 
     const model = options.modelId

@@ -94,7 +94,7 @@ export function setupLearningHooks() {
 
       console.log(`📚 Searching for similar edits to ${filePath}...`);
 
-      // Simulated ReasoningBank search
+      // Example ReasoningBank search results (replace with actual agentic-flow call)
       const similarEdits = [
         { task: `Edit ${filePath}`, reward: 0.92, critique: 'Good test coverage' },
         { task: `Edit ${filePath}`, reward: 0.88, critique: 'Could improve error handling' },
@@ -130,7 +130,7 @@ export function setupLearningHooks() {
 
       console.log(`💾 Storing edit pattern for ${filePath} (success: ${success})`);
 
-      // Simulated ReasoningBank storage
+      // Example ReasoningBank storage (replace with actual agentic-flow call)
       const pattern = {
         task: `Edit ${filePath}`,
         reward: success ? 0.9 : 0.3,
@@ -474,7 +474,7 @@ export async function runDemo() {
 
   const preToolResult = await perfExecutor.execute(HookEvent.PreToolUse, toolContext);
 
-  // Simulate tool execution
+  // Brief delay representing tool execution time
   await new Promise(resolve => setTimeout(resolve, 100));
 
   await perfExecutor.execute(HookEvent.PostToolUse, {

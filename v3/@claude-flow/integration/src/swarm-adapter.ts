@@ -885,8 +885,8 @@ export class SwarmAdapter extends EventEmitter {
   }
 
   private generateAgentEmbedding(agent: V3AgentState): number[] {
-    // Generate a simple embedding from agent properties
-    // In production, this would use a proper embedding model
+    // Generate hash-based embedding from agent properties
+    // For ML embeddings, use: import('agentic-flow').computeEmbedding
     const embedding = new Array(128).fill(0);
 
     // Encode agent type

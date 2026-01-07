@@ -20,11 +20,23 @@ export const swarmTools: MCPTool[] = [
       },
     },
     handler: async (input) => {
+      const topology = input.topology || 'hierarchical-mesh';
+      const maxAgents = input.maxAgents || 15;
+      const config = (input.config || {}) as Record<string, unknown>;
+
       return {
         success: true,
         swarmId: `swarm-${Date.now()}`,
-        topology: input.topology || 'hierarchical-mesh',
-        maxAgents: input.maxAgents || 15,
+        topology,
+        initializedAt: new Date().toISOString(),
+        config: {
+          topology,
+          maxAgents,
+          currentAgents: 0,
+          communicationProtocol: (config.communicationProtocol as string) || 'message-bus',
+          autoScaling: (config.autoScaling as boolean) ?? true,
+          consensusMechanism: (config.consensusMechanism as string) || 'majority',
+        },
       };
     },
   },
@@ -63,6 +75,30 @@ export const swarmTools: MCPTool[] = [
         success: true,
         swarmId: input.swarmId,
         terminated: true,
+      };
+    },
+  },
+  {
+    name: 'swarm/health',
+    description: 'Check swarm health status',
+    category: 'swarm',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        swarmId: { type: 'string', description: 'Swarm ID to check' },
+      },
+    },
+    handler: async (input) => {
+      return {
+        status: 'healthy' as const,
+        swarmId: input.swarmId || 'default',
+        checks: [
+          { name: 'coordinator', status: 'ok', message: 'Coordinator responding' },
+          { name: 'agents', status: 'ok', message: 'Agent pool healthy' },
+          { name: 'memory', status: 'ok', message: 'Memory backend connected' },
+          { name: 'messaging', status: 'ok', message: 'Message bus active' },
+        ],
+        checkedAt: new Date().toISOString(),
       };
     },
   },

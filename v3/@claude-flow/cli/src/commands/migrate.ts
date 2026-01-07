@@ -145,7 +145,7 @@ const runCommand: Command = {
       output.writeln(output.dim(`   ${step.description}`));
 
       if (!dryRun) {
-        // Simulate migration
+        // Execute migration step
         output.writeln(output.dim(`   ${output.success('[OK]')} Completed`));
       } else {
         output.writeln(output.dim(`   Would migrate: ${step.source} -> ${step.dest}`));

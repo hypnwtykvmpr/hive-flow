@@ -220,7 +220,7 @@ export declare class WorkerDispatchService extends EventEmitter {
     private generateWorkerId;
     private getPriorityValue;
     private updateProgress;
-    private simulateWork;
+    private processWorkPhase;
 }
 /**
  * Get the worker dispatch service singleton

@@ -105,26 +105,39 @@ const storeCommand: Command = {
       output.writeln(output.dim('  Indexing with HNSW (M=16, ef=200)...'));
     }
 
-    output.writeln();
-    output.printTable({
-      columns: [
-        { key: 'property', header: 'Property', width: 15 },
-        { key: 'val', header: 'Value', width: 40 }
-      ],
-      data: [
-        { property: 'Key', val: key },
-        { property: 'Namespace', val: namespace },
-        { property: 'Size', val: `${storeData.size} bytes` },
-        { property: 'TTL', val: ttl ? `${ttl}s` : 'None' },
-        { property: 'Tags', val: tags.length > 0 ? tags.join(', ') : 'None' },
-        { property: 'Vector', val: asVector ? 'Yes' : 'No' }
-      ]
-    });
+    // Call MCP memory/store tool for real persistence
+    try {
+      const result = await callMCPTool('memory/store', {
+        key,
+        value,
+        metadata: { namespace, tags, ttl, asVector, size: storeData.size }
+      });
 
-    output.writeln();
-    output.printSuccess('Data stored successfully');
+      output.writeln();
+      output.printTable({
+        columns: [
+          { key: 'property', header: 'Property', width: 15 },
+          { key: 'val', header: 'Value', width: 40 }
+        ],
+        data: [
+          { property: 'Key', val: key },
+          { property: 'Namespace', val: namespace },
+          { property: 'Size', val: `${storeData.size} bytes` },
+          { property: 'TTL', val: ttl ? `${ttl}s` : 'None' },
+          { property: 'Tags', val: tags.length > 0 ? tags.join(', ') : 'None' },
+          { property: 'Vector', val: asVector ? 'Yes' : 'No' },
+          { property: 'Total Entries', val: String((result as { totalEntries?: number }).totalEntries || 1) }
+        ]
+      });
 
-    return { success: true, data: storeData };
+      output.writeln();
+      output.printSuccess('Data stored successfully');
+
+      return { success: true, data: { ...storeData, ...(result as Record<string, unknown>) } };
+    } catch (error) {
+      output.printError(`Failed to store: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return { success: false, exitCode: 1 };
+    }
   }
 };
 
@@ -157,41 +170,62 @@ const retrieveCommand: Command = {
       return { success: false, exitCode: 1 };
     }
 
-    // Simulated retrieval
-    const data = {
-      key,
-      namespace,
-      value: 'JWT implementation with refresh tokens and secure storage',
-      metadata: {
-        storedAt: '2024-01-04T10:30:00Z',
-        accessCount: 15,
-        lastAccessed: new Date().toISOString(),
-        size: 56,
-        tags: ['auth', 'security', 'api']
+    // Call MCP memory/retrieve tool for real data
+    try {
+      const result = await callMCPTool('memory/retrieve', { key }) as {
+        key: string;
+        value: unknown;
+        metadata?: Record<string, unknown>;
+        storedAt?: string;
+        accessCount?: number;
+        found: boolean;
+      };
+
+      if (!result.found) {
+        output.printWarning(`Key not found: ${key}`);
+        return { success: false, exitCode: 1, data: { key, found: false } };
       }
-    };
 
-    if (ctx.flags.format === 'json') {
-      output.printJson(data);
+      const data = {
+        key: result.key,
+        namespace,
+        value: result.value,
+        metadata: {
+          storedAt: result.storedAt || 'Unknown',
+          accessCount: result.accessCount || 0,
+          lastAccessed: new Date().toISOString(),
+          ...(result.metadata || {})
+        }
+      };
+
+      if (ctx.flags.format === 'json') {
+        output.printJson(data);
+        return { success: true, data };
+      }
+
+      const metaTags = (result.metadata?.tags as string[]) || [];
+      const metaSize = (result.metadata?.size as number) || String(data.value).length;
+
+      output.writeln();
+      output.printBox(
+        [
+          `Namespace: ${namespace}`,
+          `Key: ${data.key}`,
+          `Size: ${metaSize} bytes`,
+          `Access Count: ${data.metadata.accessCount}`,
+          `Tags: ${metaTags.length > 0 ? metaTags.join(', ') : 'None'}`,
+          '',
+          output.bold('Value:'),
+          typeof data.value === 'string' ? data.value : JSON.stringify(data.value, null, 2)
+        ].join('\n'),
+        'Memory Entry'
+      );
+
       return { success: true, data };
+    } catch (error) {
+      output.printError(`Failed to retrieve: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return { success: false, exitCode: 1 };
     }
-
-    output.writeln();
-    output.printBox(
-      [
-        `Namespace: ${data.namespace}`,
-        `Key: ${data.key}`,
-        `Size: ${data.metadata.size} bytes`,
-        `Access Count: ${data.metadata.accessCount}`,
-        `Tags: ${data.metadata.tags.join(', ')}`,
-        '',
-        output.bold('Value:'),
-        data.value
-      ].join('\n'),
-      'Memory Entry'
-    );
-
-    return { success: true, data };
   }
 };
 
@@ -254,37 +288,56 @@ const searchCommand: Command = {
     output.printInfo(`Searching: "${query}" (${searchType})`);
     output.writeln();
 
-    // Simulated search results
-    const results = [
-      { key: 'auth/jwt-impl', score: 0.95, namespace: 'patterns', preview: 'JWT implementation with RS256...' },
-      { key: 'auth/session', score: 0.88, namespace: 'patterns', preview: 'Session-based auth with Redis...' },
-      { key: 'security/tokens', score: 0.82, namespace: 'security', preview: 'Token management strategies...' },
-      { key: 'api/middleware', score: 0.76, namespace: 'code', preview: 'Auth middleware implementation...' }
-    ].filter(r => r.score >= threshold).slice(0, limit);
+    // Call MCP memory/search tool for real results
+    try {
+      const searchResult = await callMCPTool('memory/search', { query, limit }) as {
+        query: string;
+        results: Array<{ key: string; value: unknown; score: number; storedAt: string }>;
+        total: number;
+        searchTime: string;
+      };
 
-    if (ctx.flags.format === 'json') {
-      output.printJson({ query, searchType, results });
+      const results = searchResult.results.map(r => ({
+        key: r.key,
+        score: r.score,
+        namespace: namespace || 'default',
+        preview: typeof r.value === 'string'
+          ? r.value.substring(0, 40) + (r.value.length > 40 ? '...' : '')
+          : JSON.stringify(r.value).substring(0, 40)
+      }));
+
+      if (ctx.flags.format === 'json') {
+        output.printJson({ query, searchType, results, searchTime: searchResult.searchTime });
+        return { success: true, data: results };
+      }
+
+      // Performance stats
+      output.writeln(output.dim(`  Search time: ${searchResult.searchTime}`));
+      output.writeln();
+
+      if (results.length === 0) {
+        output.printWarning('No results found');
+        return { success: true, data: [] };
+      }
+
+      output.printTable({
+        columns: [
+          { key: 'key', header: 'Key', width: 20 },
+          { key: 'score', header: 'Score', width: 8, align: 'right', format: (v) => Number(v).toFixed(2) },
+          { key: 'namespace', header: 'Namespace', width: 12 },
+          { key: 'preview', header: 'Preview', width: 35 }
+        ],
+        data: results
+      });
+
+      output.writeln();
+      output.printInfo(`Found ${results.length} results`);
+
       return { success: true, data: results };
+    } catch (error) {
+      output.printError(`Search failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return { success: false, exitCode: 1 };
     }
-
-    // Performance stats
-    output.writeln(output.dim(`  HNSW search: ${Math.random() * 2 + 0.5 | 0}.${Math.random() * 100 | 0}ms (150x faster than linear)`));
-    output.writeln();
-
-    output.printTable({
-      columns: [
-        { key: 'key', header: 'Key', width: 20 },
-        { key: 'score', header: 'Score', width: 8, align: 'right', format: (v) => Number(v).toFixed(2) },
-        { key: 'namespace', header: 'Namespace', width: 12 },
-        { key: 'preview', header: 'Preview', width: 35 }
-      ],
-      data: results
-    });
-
-    output.writeln();
-    output.printInfo(`Found ${results.length} results`);
-
-    return { success: true, data: results };
   }
 };
 
@@ -318,41 +371,76 @@ const listCommand: Command = {
     const namespace = ctx.flags.namespace as string;
     const limit = ctx.flags.limit as number;
 
-    // Simulated entries
-    const entries = [
-      { key: 'auth/jwt-impl', namespace: 'patterns', size: '2.1 KB', tags: ['auth'], updated: '2h ago' },
-      { key: 'auth/session', namespace: 'patterns', size: '1.4 KB', tags: ['auth'], updated: '3h ago' },
-      { key: 'api/routes', namespace: 'code', size: '856 B', tags: ['api'], updated: '1d ago' },
-      { key: 'db/schema', namespace: 'code', size: '3.2 KB', tags: ['db'], updated: '2d ago' },
-      { key: 'patterns/singleton', namespace: 'patterns', size: '512 B', tags: ['design'], updated: '5d ago' }
-    ].filter(e => !namespace || e.namespace === namespace).slice(0, limit);
+    // Call MCP memory/list tool for real entries
+    try {
+      const listResult = await callMCPTool('memory/list', { limit, offset: 0 }) as {
+        entries: Array<{ key: string; storedAt: string; accessCount: number; preview: string }>;
+        total: number;
+        limit: number;
+        offset: number;
+      };
 
-    if (ctx.flags.format === 'json') {
-      output.printJson(entries);
+      // Format entries for display
+      const entries = listResult.entries.map(e => ({
+        key: e.key,
+        namespace: namespace || 'default',
+        size: e.preview.length + ' B',
+        accessCount: e.accessCount,
+        updated: formatRelativeTime(e.storedAt)
+      }));
+
+      if (ctx.flags.format === 'json') {
+        output.printJson(entries);
+        return { success: true, data: entries };
+      }
+
+      output.writeln();
+      output.writeln(output.bold('Memory Entries'));
+      output.writeln();
+
+      if (entries.length === 0) {
+        output.printWarning('No entries found');
+        return { success: true, data: [] };
+      }
+
+      output.printTable({
+        columns: [
+          { key: 'key', header: 'Key', width: 25 },
+          { key: 'namespace', header: 'Namespace', width: 12 },
+          { key: 'size', header: 'Size', width: 10, align: 'right' },
+          { key: 'accessCount', header: 'Accessed', width: 10, align: 'right' },
+          { key: 'updated', header: 'Updated', width: 12 }
+        ],
+        data: entries
+      });
+
+      output.writeln();
+      output.printInfo(`Showing ${entries.length} of ${listResult.total} entries`);
+
       return { success: true, data: entries };
+    } catch (error) {
+      output.printError(`Failed to list: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return { success: false, exitCode: 1 };
     }
-
-    output.writeln();
-    output.writeln(output.bold('Memory Entries'));
-    output.writeln();
-
-    output.printTable({
-      columns: [
-        { key: 'key', header: 'Key', width: 25 },
-        { key: 'namespace', header: 'Namespace', width: 12 },
-        { key: 'size', header: 'Size', width: 10, align: 'right' },
-        { key: 'tags', header: 'Tags', width: 12 },
-        { key: 'updated', header: 'Updated', width: 10 }
-      ],
-      data: entries
-    });
-
-    output.writeln();
-    output.printInfo(`Showing ${entries.length} entries`);
-
-    return { success: true, data: entries };
   }
 };
+
+// Helper function to format relative time
+function formatRelativeTime(isoDate: string): string {
+  const now = Date.now();
+  const date = new Date(isoDate).getTime();
+  const diff = now - date;
+
+  const seconds = Math.floor(diff / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+
+  if (days > 0) return `${days}d ago`;
+  if (hours > 0) return `${hours}h ago`;
+  if (minutes > 0) return `${minutes}m ago`;
+  return 'just now';
+}
 
 // Delete command
 const deleteCommand: Command = {
@@ -389,10 +477,27 @@ const deleteCommand: Command = {
       }
     }
 
-    output.printInfo(`Deleting ${key}...`);
-    output.printSuccess(`Deleted ${key}`);
+    // Call MCP memory/delete tool
+    try {
+      const result = await callMCPTool('memory/delete', { key }) as {
+        success: boolean;
+        key: string;
+        deleted: boolean;
+        remainingEntries: number;
+      };
 
-    return { success: true, data: { key, deleted: true } };
+      if (result.deleted) {
+        output.printSuccess(`Deleted ${key}`);
+        output.printInfo(`Remaining entries: ${result.remainingEntries}`);
+      } else {
+        output.printWarning(`Key not found: ${key}`);
+      }
+
+      return { success: result.deleted, data: result };
+    } catch (error) {
+      output.printError(`Failed to delete: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return { success: false, exitCode: 1 };
+    }
   }
 };
 
@@ -401,86 +506,79 @@ const statsCommand: Command = {
   name: 'stats',
   description: 'Show memory statistics',
   action: async (ctx: CommandContext): Promise<CommandResult> => {
-    const stats = {
-      backend: 'hybrid',
-      entries: {
-        total: 1234,
-        vectors: 567,
-        text: 667
-      },
-      storage: {
-        total: '45.6 MB',
-        vectors: '32.1 MB',
-        metadata: '13.5 MB'
-      },
-      performance: {
-        avgSearchTime: '1.2ms',
-        hnswIndexSize: '28.4 MB',
-        cacheHitRate: '87.3%',
-        vectorDimension: 1536
-      },
-      namespaces: [
-        { name: 'patterns', entries: 234, size: '8.2 MB' },
-        { name: 'code', entries: 456, size: '15.4 MB' },
-        { name: 'security', entries: 123, size: '4.1 MB' },
-        { name: 'default', entries: 421, size: '17.9 MB' }
-      ]
-    };
+    // Call MCP memory/stats tool for real statistics
+    try {
+      const statsResult = await callMCPTool('memory/stats', {}) as {
+        totalEntries: number;
+        totalSize: string;
+        version: string;
+        backend: string;
+        location: string;
+        oldestEntry: string | null;
+        newestEntry: string | null;
+      };
 
-    if (ctx.flags.format === 'json') {
-      output.printJson(stats);
+      const stats = {
+        backend: statsResult.backend,
+        entries: {
+          total: statsResult.totalEntries,
+          vectors: 0, // Would need vector backend support
+          text: statsResult.totalEntries
+        },
+        storage: {
+          total: statsResult.totalSize,
+          location: statsResult.location
+        },
+        version: statsResult.version,
+        oldestEntry: statsResult.oldestEntry,
+        newestEntry: statsResult.newestEntry
+      };
+
+      if (ctx.flags.format === 'json') {
+        output.printJson(stats);
+        return { success: true, data: stats };
+      }
+
+      output.writeln();
+      output.writeln(output.bold('Memory Statistics'));
+      output.writeln();
+
+      output.writeln(output.bold('Overview'));
+      output.printTable({
+        columns: [
+          { key: 'metric', header: 'Metric', width: 20 },
+          { key: 'value', header: 'Value', width: 30, align: 'right' }
+        ],
+        data: [
+          { metric: 'Backend', value: stats.backend },
+          { metric: 'Version', value: stats.version },
+          { metric: 'Total Entries', value: stats.entries.total.toLocaleString() },
+          { metric: 'Total Storage', value: stats.storage.total },
+          { metric: 'Location', value: stats.storage.location }
+        ]
+      });
+
+      output.writeln();
+      output.writeln(output.bold('Timeline'));
+      output.printTable({
+        columns: [
+          { key: 'metric', header: 'Metric', width: 20 },
+          { key: 'value', header: 'Value', width: 30, align: 'right' }
+        ],
+        data: [
+          { metric: 'Oldest Entry', value: stats.oldestEntry || 'N/A' },
+          { metric: 'Newest Entry', value: stats.newestEntry || 'N/A' }
+        ]
+      });
+
+      output.writeln();
+      output.printInfo('V3 Performance: 150x-12,500x faster search with HNSW indexing');
+
       return { success: true, data: stats };
+    } catch (error) {
+      output.printError(`Failed to get stats: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return { success: false, exitCode: 1 };
     }
-
-    output.writeln();
-    output.writeln(output.bold('Memory Statistics'));
-    output.writeln();
-
-    output.writeln(output.bold('Overview'));
-    output.printTable({
-      columns: [
-        { key: 'metric', header: 'Metric', width: 20 },
-        { key: 'value', header: 'Value', width: 15, align: 'right' }
-      ],
-      data: [
-        { metric: 'Backend', value: stats.backend },
-        { metric: 'Total Entries', value: stats.entries.total.toLocaleString() },
-        { metric: 'Vector Entries', value: stats.entries.vectors.toLocaleString() },
-        { metric: 'Text Entries', value: stats.entries.text.toLocaleString() },
-        { metric: 'Total Storage', value: stats.storage.total }
-      ]
-    });
-
-    output.writeln();
-    output.writeln(output.bold('Performance (AgentDB)'));
-    output.printTable({
-      columns: [
-        { key: 'metric', header: 'Metric', width: 20 },
-        { key: 'value', header: 'Value', width: 15, align: 'right' }
-      ],
-      data: [
-        { metric: 'Avg Search Time', value: stats.performance.avgSearchTime },
-        { metric: 'HNSW Index Size', value: stats.performance.hnswIndexSize },
-        { metric: 'Cache Hit Rate', value: stats.performance.cacheHitRate },
-        { metric: 'Vector Dimension', value: stats.performance.vectorDimension }
-      ]
-    });
-
-    output.writeln();
-    output.writeln(output.bold('Namespaces'));
-    output.printTable({
-      columns: [
-        { key: 'name', header: 'Name', width: 15 },
-        { key: 'entries', header: 'Entries', width: 10, align: 'right' },
-        { key: 'size', header: 'Size', width: 12, align: 'right' }
-      ],
-      data: stats.namespaces
-    });
-
-    output.writeln();
-    output.printInfo('V3 Performance: 150x-12,500x faster search with HNSW indexing');
-
-    return { success: true, data: stats };
   }
 };
 
