@@ -782,7 +782,7 @@ Shell-based daemons for monitoring (Linux/macOS only):
 
 ---
 
-## Self-Learning Hooks Commands (26 Hooks)
+## Self-Learning Hooks Commands (27 Hooks)
 
 ### Core Tool Lifecycle Hooks
 ```bash
