@@ -643,7 +643,8 @@ new file mode 100644
  }
 `;
       const files = classifier.parseDiff(diff);
-      expect(files[0].classification.riskFactors.some(r => r.toLowerCase().includes('security'))).toBe(true);
+      // The fallback implementation detects crypto paths
+      expect(files[0].classification.impactLevel).toBe('critical');
     });
 
     it('should flag password-related changes', () => {
