@@ -349,6 +349,25 @@ export class WebSocketTransport extends EventEmitter implements ITransport {
     client.messageCount++;
     this.messagesReceived++;
 
+    // Enforce message size limit before parsing (defense in depth)
+    const maxSize = this.config.maxMessageSize || DEFAULT_MAX_MESSAGE_SIZE;
+    const dataSize = Buffer.isBuffer(data) ? data.length : Buffer.byteLength(data.toString());
+
+    if (dataSize > maxSize) {
+      this.logger.warn('Message exceeds size limit', {
+        clientId: client.id,
+        size: dataSize,
+        maxSize,
+      });
+      this.errors++;
+      client.ws.send(this.serializeMessage({
+        jsonrpc: '2.0',
+        id: null,
+        error: { code: -32600, message: `Message too large (${dataSize} bytes, max ${maxSize})` },
+      } as MCPResponse));
+      return;
+    }
+
     try {
       const message = this.parseMessage(data);
 
