@@ -484,10 +484,49 @@ export async function coverageGaps(
 }
 
 /**
+ * Validate and normalize path to prevent directory traversal
+ * Returns null if path is invalid or attempts traversal
+ */
+function validateProjectPath(inputPath: string | undefined): string | null {
+  const { resolve, normalize, isAbsolute } = require('path');
+
+  // Default to cwd if not provided
+  const basePath = inputPath || process.cwd();
+
+  // Normalize and resolve the path
+  const normalizedPath = normalize(basePath);
+  const resolvedPath = isAbsolute(normalizedPath) ? normalizedPath : resolve(process.cwd(), normalizedPath);
+
+  // Check for path traversal attempts
+  if (normalizedPath.includes('..') && !resolvedPath.startsWith(process.cwd())) {
+    // Only allow .. if it resolves within or above cwd
+    // For safety, reject any path with .. that goes outside project
+    return null;
+  }
+
+  // Additional validation: no null bytes or control characters
+  if (/[\x00-\x1f]/.test(resolvedPath)) {
+    return null;
+  }
+
+  // Limit path length to prevent DoS
+  if (resolvedPath.length > 4096) {
+    return null;
+  }
+
+  return resolvedPath;
+}
+
+/**
  * Load project coverage data (async with caching)
  */
 async function loadProjectCoverage(projectRoot?: string, skipCache?: boolean): Promise<CoverageReport | null> {
-  const root = projectRoot || process.cwd();
+  // Validate and normalize the project root path
+  const root = validateProjectPath(projectRoot);
+  if (!root) {
+    // Invalid path detected, return null safely
+    return null;
+  }
 
   // Check cache first
   if (!skipCache) {
@@ -499,17 +538,25 @@ async function loadProjectCoverage(projectRoot?: string, skipCache?: boolean): P
 
   const { existsSync } = require('fs');
   const { readFile } = require('fs/promises');
-  const { join } = require('path');
+  const { join, normalize } = require('path');
 
-  // Try common coverage locations
-  const coveragePaths = [
-    join(root, 'coverage', 'coverage-final.json'),
-    join(root, 'coverage', 'lcov.info'),
-    join(root, '.nyc_output', 'coverage.json'),
-    join(root, 'coverage.json'),
+  // Try common coverage locations (all relative to validated root)
+  const coverageLocations = [
+    ['coverage', 'coverage-final.json'],
+    ['coverage', 'lcov.info'],
+    ['.nyc_output', 'coverage.json'],
+    ['coverage.json'],
   ];
 
-  for (const coveragePath of coveragePaths) {
+  for (const pathParts of coverageLocations) {
+    // Join and normalize to prevent traversal in coverage paths
+    const coveragePath = normalize(join(root, ...pathParts));
+
+    // Ensure the coverage path is still within or under root
+    if (!coveragePath.startsWith(root)) {
+      continue;
+    }
+
     if (existsSync(coveragePath)) {
       try {
         // Use async file read for non-blocking I/O
