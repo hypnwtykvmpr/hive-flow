@@ -172,22 +172,12 @@
             "timeout": 4000,
             "command": "/workspaces/claude-flow/.claude/helpers/learning-hooks.sh store \"Edit: $TOOL_INPUT_file_path\" code 0.7 2>/dev/null || true"
           },
-          {
-            "type": "command",
-            "timeout": 3000,
-            "command": "/workspaces/claude-flow/.claude/helpers/checkpoint-manager.sh auto-checkpoint \"File edit: $TOOL_INPUT_file_path\" 2>/dev/null || true"
-          },
-          {
+                    {
             "type": "command",
             "timeout": 4000,
             "command": "node /workspaces/claude-flow/v3/@claude-flow/cli/bin/cli.js hooks post-edit --file \"$TOOL_INPUT_file_path\" --train-patterns true --memory-key \"edit/$TOOL_INPUT_file_path\" 2>/dev/null || true"
           },
-          {
-            "type": "command",
-            "timeout": 8000,
-            "command": "/workspaces/claude-flow/.claude/helpers/standard-checkpoint-hooks.sh post-edit \"$TOOL_INPUT_file_path\" 2>/dev/null || true"
-          },
-          {
+                    {
             "type": "command",
             "timeout": 10000,
             "command": "/workspaces/claude-flow/.claude/helpers/auto-commit.sh batch 'Checkpoint: File edits' 2>/dev/null || true"
