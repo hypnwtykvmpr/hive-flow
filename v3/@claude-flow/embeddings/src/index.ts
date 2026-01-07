@@ -4,6 +4,7 @@
  * Production embedding service aligned with agentic-flow@alpha:
  * - OpenAI provider (text-embedding-3-small/large)
  * - Transformers.js provider (local ONNX models)
+ * - Agentic-flow provider (optimized ONNX with SIMD)
  * - Mock provider (development/testing)
  *
  * @module @claude-flow/embeddings
@@ -23,6 +24,7 @@ export {
   OpenAIEmbeddingService,
   TransformersEmbeddingService,
   MockEmbeddingService,
+  AgenticFlowEmbeddingService,
 } from './embedding-service.js';
 
 export type {
@@ -31,6 +33,7 @@ export type {
   OpenAIEmbeddingConfig,
   TransformersEmbeddingConfig,
   MockEmbeddingConfig,
+  AgenticFlowEmbeddingConfig,
   EmbeddingResult,
   BatchEmbeddingResult,
   IEmbeddingService,
