@@ -1,7 +1,8 @@
 /**
- * SQLite-backed Persistent Cache for Embeddings
+ * SQLite-backed Persistent Cache for Embeddings (sql.js)
  *
  * Features:
+ * - Cross-platform support (pure JavaScript/WASM, no native compilation)
  * - Disk persistence across sessions
  * - LRU eviction with configurable max size
  * - Automatic schema creation
@@ -9,21 +10,35 @@
  * - Lazy initialization (no startup cost if not used)
  */
 
-import { existsSync, mkdirSync } from 'fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { dirname } from 'path';
 
-// SQLite types (dynamically imported)
-type Database = {
-  prepare(sql: string): Statement;
-  exec(sql: string): void;
+// sql.js types
+interface SqlJsDatabase {
+  run(sql: string, params?: unknown[]): void;
+  exec(sql: string): QueryExecResult[];
+  prepare(sql: string): SqlJsStatement;
+  export(): Uint8Array;
   close(): void;
-};
+}
 
-type Statement = {
-  run(...params: unknown[]): { changes: number };
-  get(...params: unknown[]): unknown;
-  all(...params: unknown[]): unknown[];
-};
+interface SqlJsStatement {
+  bind(params?: unknown[]): boolean;
+  step(): boolean;
+  get(): unknown[];
+  getAsObject(): Record<string, unknown>;
+  free(): void;
+  run(params?: unknown[]): void;
+}
+
+interface QueryExecResult {
+  columns: string[];
+  values: unknown[][];
+}
+
+interface SqlJsStatic {
+  Database: new (data?: ArrayLike<number>) => SqlJsDatabase;
+}
 
 /**
  * Configuration for persistent cache
@@ -37,6 +52,8 @@ export interface PersistentCacheConfig {
   ttlMs?: number;
   /** Enable compression for large embeddings */
   compress?: boolean;
+  /** Auto-save interval in ms (default: 30000) */
+  autoSaveInterval?: number;
 }
 
 /**
@@ -52,22 +69,27 @@ export interface PersistentCacheStats {
 }
 
 /**
- * SQLite-backed persistent embedding cache
+ * SQLite-backed persistent embedding cache using sql.js (pure JS/WASM)
  */
 export class PersistentEmbeddingCache {
-  private db: Database | null = null;
+  private db: SqlJsDatabase | null = null;
+  private SQL: SqlJsStatic | null = null;
   private initialized = false;
+  private dirty = false;
   private hits = 0;
   private misses = 0;
+  private autoSaveTimer: ReturnType<typeof setInterval> | null = null;
 
   private readonly dbPath: string;
   private readonly maxSize: number;
   private readonly ttlMs: number;
+  private readonly autoSaveInterval: number;
 
   constructor(config: PersistentCacheConfig) {
     this.dbPath = config.dbPath;
     this.maxSize = config.maxSize ?? 10000;
     this.ttlMs = config.ttlMs ?? 7 * 24 * 60 * 60 * 1000; // 7 days
+    this.autoSaveInterval = config.autoSaveInterval ?? 30000; // 30 seconds
   }
 
   /**
@@ -77,8 +99,11 @@ export class PersistentEmbeddingCache {
     if (this.initialized) return;
 
     try {
-      // Dynamically import better-sqlite3
-      const BetterSqlite3 = (await import('better-sqlite3')).default;
+      // Dynamically import sql.js
+      const initSqlJs = (await import('sql.js')).default;
+
+      // Initialize sql.js (loads WASM)
+      this.SQL = await initSqlJs();
 
       // Ensure directory exists
       const dir = dirname(this.dbPath);
@@ -86,10 +111,16 @@ export class PersistentEmbeddingCache {
         mkdirSync(dir, { recursive: true });
       }
 
-      this.db = new BetterSqlite3(this.dbPath) as unknown as Database;
+      // Load existing database or create new
+      if (existsSync(this.dbPath)) {
+        const fileBuffer = readFileSync(this.dbPath);
+        this.db = new this.SQL.Database(fileBuffer);
+      } else {
+        this.db = new this.SQL.Database();
+      }
 
       // Create schema
-      this.db.exec(`
+      this.db.run(`
         CREATE TABLE IF NOT EXISTS embeddings (
           key TEXT PRIMARY KEY,
           embedding BLOB NOT NULL,
@@ -97,21 +128,65 @@ export class PersistentEmbeddingCache {
           created_at INTEGER NOT NULL,
           accessed_at INTEGER NOT NULL,
           access_count INTEGER DEFAULT 1
-        );
-
-        CREATE INDEX IF NOT EXISTS idx_accessed_at ON embeddings(accessed_at);
-        CREATE INDEX IF NOT EXISTS idx_created_at ON embeddings(created_at);
+        )
       `);
+      this.db.run('CREATE INDEX IF NOT EXISTS idx_accessed_at ON embeddings(accessed_at)');
+      this.db.run('CREATE INDEX IF NOT EXISTS idx_created_at ON embeddings(created_at)');
 
       // Clean expired entries on startup
       this.cleanExpired();
 
+      // Save after initialization to persist schema
+      this.saveToFile();
+
+      // Start auto-save timer
+      this.startAutoSave();
+
       this.initialized = true;
     } catch (error) {
-      // If better-sqlite3 not available, fall back gracefully
-      console.warn('[persistent-cache] SQLite not available, cache disabled:',
+      // If sql.js not available, fall back gracefully
+      console.warn('[persistent-cache] sql.js not available, cache disabled:',
         error instanceof Error ? error.message : error);
       this.initialized = true; // Mark as initialized to prevent retry
+    }
+  }
+
+  /**
+   * Start auto-save timer
+   */
+  private startAutoSave(): void {
+    if (this.autoSaveTimer) return;
+
+    this.autoSaveTimer = setInterval(() => {
+      if (this.dirty && this.db) {
+        this.saveToFile();
+      }
+    }, this.autoSaveInterval);
+  }
+
+  /**
+   * Stop auto-save timer
+   */
+  private stopAutoSave(): void {
+    if (this.autoSaveTimer) {
+      clearInterval(this.autoSaveTimer);
+      this.autoSaveTimer = null;
+    }
+  }
+
+  /**
+   * Save database to file
+   */
+  private saveToFile(): void {
+    if (!this.db) return;
+
+    try {
+      const data = this.db.export();
+      const buffer = Buffer.from(data);
+      writeFileSync(this.dbPath, buffer);
+      this.dirty = false;
+    } catch (error) {
+      console.error('[persistent-cache] Save error:', error);
     }
   }
 
@@ -129,21 +204,20 @@ export class PersistentEmbeddingCache {
   }
 
   /**
-   * Serialize Float32Array to Buffer
+   * Serialize Float32Array to Uint8Array for sql.js
    */
-  private serializeEmbedding(embedding: Float32Array): Buffer {
-    return Buffer.from(embedding.buffer, embedding.byteOffset, embedding.byteLength);
+  private serializeEmbedding(embedding: Float32Array): Uint8Array {
+    return new Uint8Array(embedding.buffer, embedding.byteOffset, embedding.byteLength);
   }
 
   /**
-   * Deserialize Buffer to Float32Array
+   * Deserialize Uint8Array to Float32Array
    */
-  private deserializeEmbedding(buffer: Buffer, dimensions: number): Float32Array {
-    const arrayBuffer = buffer.buffer.slice(
-      buffer.byteOffset,
-      buffer.byteOffset + buffer.byteLength
-    );
-    return new Float32Array(arrayBuffer);
+  private deserializeEmbedding(data: Uint8Array, dimensions: number): Float32Array {
+    const buffer = new ArrayBuffer(data.length);
+    const view = new Uint8Array(buffer);
+    view.set(data);
+    return new Float32Array(buffer);
   }
 
   /**
@@ -160,30 +234,41 @@ export class PersistentEmbeddingCache {
     const now = Date.now();
 
     try {
-      const row = this.db.prepare(`
+      const stmt = this.db.prepare(`
         SELECT embedding, dimensions, created_at
         FROM embeddings
         WHERE key = ?
-      `).get(key) as { embedding: Buffer; dimensions: number; created_at: number } | undefined;
+      `);
+      stmt.bind([key]);
 
-      if (!row) {
+      if (!stmt.step()) {
+        stmt.free();
         this.misses++;
         return null;
       }
 
+      const row = stmt.getAsObject() as {
+        embedding: Uint8Array;
+        dimensions: number;
+        created_at: number;
+      };
+      stmt.free();
+
       // Check TTL
       if (now - row.created_at > this.ttlMs) {
-        this.db.prepare('DELETE FROM embeddings WHERE key = ?').run(key);
+        this.db.run('DELETE FROM embeddings WHERE key = ?', [key]);
+        this.dirty = true;
         this.misses++;
         return null;
       }
 
       // Update access time and count
-      this.db.prepare(`
+      this.db.run(`
         UPDATE embeddings
         SET accessed_at = ?, access_count = access_count + 1
         WHERE key = ?
-      `).run(now, key);
+      `, [now, key]);
+      this.dirty = true;
 
       this.hits++;
       return this.deserializeEmbedding(row.embedding, row.dimensions);
@@ -203,18 +288,18 @@ export class PersistentEmbeddingCache {
 
     const key = this.hashKey(text);
     const now = Date.now();
-    const buffer = this.serializeEmbedding(embedding);
+    const data = this.serializeEmbedding(embedding);
 
     try {
-      // Upsert entry
-      this.db.prepare(`
-        INSERT INTO embeddings (key, embedding, dimensions, created_at, accessed_at, access_count)
-        VALUES (?, ?, ?, ?, ?, 1)
-        ON CONFLICT(key) DO UPDATE SET
-          embedding = excluded.embedding,
-          accessed_at = excluded.accessed_at,
-          access_count = access_count + 1
-      `).run(key, buffer, embedding.length, now, now);
+      // Upsert entry using INSERT OR REPLACE
+      this.db.run(`
+        INSERT OR REPLACE INTO embeddings
+        (key, embedding, dimensions, created_at, accessed_at, access_count)
+        VALUES (?, ?, ?, ?, ?,
+          COALESCE((SELECT access_count + 1 FROM embeddings WHERE key = ?), 1)
+        )
+      `, [key, data, embedding.length, now, now, key]);
+      this.dirty = true;
 
       // Check size and evict if needed
       await this.evictIfNeeded();
@@ -229,18 +314,20 @@ export class PersistentEmbeddingCache {
   private async evictIfNeeded(): Promise<void> {
     if (!this.db) return;
 
-    const count = (this.db.prepare('SELECT COUNT(*) as count FROM embeddings').get() as { count: number }).count;
+    const result = this.db.exec('SELECT COUNT(*) as count FROM embeddings');
+    const count = result[0]?.values[0]?.[0] as number ?? 0;
 
     if (count > this.maxSize) {
       const toDelete = count - this.maxSize + Math.floor(this.maxSize * 0.1); // Delete 10% extra
-      this.db.prepare(`
+      this.db.run(`
         DELETE FROM embeddings
         WHERE key IN (
           SELECT key FROM embeddings
           ORDER BY accessed_at ASC
           LIMIT ?
         )
-      `).run(toDelete);
+      `, [toDelete]);
+      this.dirty = true;
     }
   }
 
@@ -251,7 +338,8 @@ export class PersistentEmbeddingCache {
     if (!this.db) return;
 
     const cutoff = Date.now() - this.ttlMs;
-    this.db.prepare('DELETE FROM embeddings WHERE created_at < ?').run(cutoff);
+    this.db.run('DELETE FROM embeddings WHERE created_at < ?', [cutoff]);
+    this.dirty = true;
   }
 
   /**
@@ -270,8 +358,18 @@ export class PersistentEmbeddingCache {
     };
 
     if (this.db) {
-      const row = this.db.prepare('SELECT COUNT(*) as count FROM embeddings').get() as { count: number };
-      stats.size = row.count;
+      const result = this.db.exec('SELECT COUNT(*) as count FROM embeddings');
+      stats.size = result[0]?.values[0]?.[0] as number ?? 0;
+
+      // Get file size if exists
+      if (existsSync(this.dbPath)) {
+        try {
+          const buffer = readFileSync(this.dbPath);
+          stats.dbSizeBytes = buffer.length;
+        } catch {
+          // Ignore
+        }
+      }
     }
 
     return stats;
@@ -284,29 +382,49 @@ export class PersistentEmbeddingCache {
     await this.ensureInitialized();
     if (!this.db) return;
 
-    this.db.exec('DELETE FROM embeddings');
+    this.db.run('DELETE FROM embeddings');
+    this.dirty = true;
     this.hits = 0;
     this.misses = 0;
+    this.saveToFile();
+  }
+
+  /**
+   * Force save to disk
+   */
+  async flush(): Promise<void> {
+    await this.ensureInitialized();
+    if (this.db && this.dirty) {
+      this.saveToFile();
+    }
   }
 
   /**
    * Close database connection
    */
   async close(): Promise<void> {
+    this.stopAutoSave();
+
     if (this.db) {
+      // Save before closing
+      if (this.dirty) {
+        this.saveToFile();
+      }
       this.db.close();
       this.db = null;
+      this.SQL = null;
       this.initialized = false;
     }
   }
 }
 
 /**
- * Check if persistent cache is available (better-sqlite3 installed)
+ * Check if persistent cache is available (sql.js installed)
  */
 export async function isPersistentCacheAvailable(): Promise<boolean> {
   try {
-    await import('better-sqlite3');
+    const initSqlJs = (await import('sql.js')).default;
+    await initSqlJs();
     return true;
   } catch {
     return false;
