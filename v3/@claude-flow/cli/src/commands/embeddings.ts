@@ -624,18 +624,33 @@ export const embeddingsCommand: Command = {
   name: 'embeddings',
   description: 'Vector embeddings, semantic search, similarity operations',
   aliases: ['embed'],
-  subcommands: [generateCommand, searchCommand, compareCommand, collectionsCommand, indexCommand, providersCommand],
+  subcommands: [
+    generateCommand,
+    searchCommand,
+    compareCommand,
+    collectionsCommand,
+    indexCommand,
+    providersCommand,
+    chunkCommand,
+    normalizeCommand,
+    hyperbolicCommand,
+    neuralCommand,
+    modelsCommand,
+    cacheCommand,
+  ],
   examples: [
     { command: 'claude-flow embeddings generate -t "Hello"', description: 'Generate embedding' },
     { command: 'claude-flow embeddings search -q "error handling"', description: 'Semantic search' },
-    { command: 'claude-flow embed providers', description: 'List providers (alias)' },
+    { command: 'claude-flow embeddings chunk -t "Long doc..."', description: 'Chunk document' },
+    { command: 'claude-flow embeddings hyperbolic -a convert', description: 'Hyperbolic space' },
+    { command: 'claude-flow embed neural -f drift', description: 'Neural substrate' },
   ],
   action: async (): Promise<CommandResult> => {
     output.writeln();
     output.writeln(output.bold('Claude Flow Embeddings'));
     output.writeln(output.dim('Vector embeddings and semantic search'));
     output.writeln();
-    output.writeln('Subcommands:');
+    output.writeln('Core Commands:');
     output.printList([
       'generate    - Generate embeddings for text',
       'search      - Semantic similarity search',
@@ -645,11 +660,22 @@ export const embeddingsCommand: Command = {
       'providers   - List available providers',
     ]);
     output.writeln();
+    output.writeln('Advanced Features:');
+    output.printList([
+      'chunk       - Document chunking with overlap',
+      'normalize   - L2/L1/minmax/zscore normalization',
+      'hyperbolic  - Poincaré ball embeddings',
+      'neural      - Neural substrate (drift, memory, swarm)',
+      'models      - List/download ONNX models',
+      'cache       - Manage persistent SQLite cache',
+    ]);
+    output.writeln();
     output.writeln('Performance:');
     output.printList([
       'HNSW indexing: 150x-12,500x faster search',
-      'WASM SIMD: Optimized local inference',
-      'Multiple providers: OpenAI, Transformers.js, Agentic Flow',
+      'Agentic Flow: 75x faster than Transformers.js (~3ms)',
+      'Persistent cache: SQLite-backed, survives restarts',
+      'Hyperbolic: Better hierarchical representation',
     ]);
     output.writeln();
     output.writeln(output.dim('Created with ❤️ by ruv.io'));
