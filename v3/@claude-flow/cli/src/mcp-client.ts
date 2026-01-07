@@ -48,6 +48,7 @@ registerTools([
   ...hiveMindTools,
   ...workflowTools,
   ...analyzeTools,
+  ...progressTools,
 ]);
 
 /**
