@@ -48,6 +48,9 @@ export {
   coverageRoute,
   coverageSuggest,
   coverageGaps,
+  // Cache utilities (NEW)
+  clearCoverageCache,
+  getCoverageCacheStats,
   // Types
   type CoverageRouterConfig,
   type FileCoverage,
