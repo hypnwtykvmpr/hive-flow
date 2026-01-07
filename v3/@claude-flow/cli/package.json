@@ -1,6 +1,6 @@
 {
   "name": "@claude-flow/cli",
-  "version": "3.0.0-alpha.9",
+  "version": "3.0.0-alpha.10",
   "type": "module",
   "description": "CLI module - command parsing, prompts, output formatting",
   "main": "dist/index.js",
@@ -13,7 +13,9 @@
   },
   "scripts": {
     "build": "tsc",
-    "test": "vitest run"
+    "test": "vitest run",
+    "release": "npm version prerelease --preid=alpha && npm run publish:all",
+    "publish:all": "./scripts/publish.sh"
   },
   "devDependencies": {
     "vitest": "^2.0.0",
@@ -24,6 +26,6 @@
   },
   "publishConfig": {
     "access": "public",
-    "tag": "v3alpha"
+    "tag": "alpha"
   }
 }

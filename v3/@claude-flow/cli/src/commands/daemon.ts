@@ -50,6 +50,29 @@ const startCommand: Command = {
 
     // Foreground mode: run in current process (blocks terminal)
     try {
+      const stateDir = join(projectRoot, '.claude-flow');
+      const pidFile = join(stateDir, 'daemon.pid');
+
+      // Ensure state directory exists
+      if (!fs.existsSync(stateDir)) {
+        fs.mkdirSync(stateDir, { recursive: true });
+      }
+
+      // Write PID file for foreground mode
+      fs.writeFileSync(pidFile, String(process.pid));
+
+      // Clean up PID file on exit
+      const cleanup = () => {
+        try {
+          if (fs.existsSync(pidFile)) {
+            fs.unlinkSync(pidFile);
+          }
+        } catch { /* ignore */ }
+      };
+      process.on('exit', cleanup);
+      process.on('SIGINT', () => { cleanup(); process.exit(0); });
+      process.on('SIGTERM', () => { cleanup(); process.exit(0); });
+
       if (!quiet) {
         const spinner = output.createSpinner({ text: 'Starting worker daemon...', spinner: 'dots' });
         spinner.start();
