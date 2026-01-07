@@ -420,3 +420,233 @@ describe('createASTAnalyzer', () => {
     expect(analyzer).toBeInstanceOf(ASTAnalyzer);
   });
 });
+
+describe('ASTAnalyzer Advanced Scenarios', () => {
+  let analyzer: ASTAnalyzer;
+
+  beforeEach(() => {
+    analyzer = new ASTAnalyzer();
+  });
+
+  afterEach(() => {
+    analyzer.clearCache();
+  });
+
+  describe('TypeScript-specific features', () => {
+    it('should extract interfaces', () => {
+      const code = `
+interface User {
+  id: string;
+  name: string;
+  email?: string;
+}
+
+interface Admin extends User {
+  role: 'admin';
+  permissions: string[];
+}
+`;
+      const analysis = analyzer.analyze(code, 'interfaces.ts');
+      expect(analysis.exports).toContain('User');
+      expect(analysis.exports).toContain('Admin');
+    });
+
+    it('should extract type aliases', () => {
+      const code = `
+type UserId = string;
+type UserRole = 'admin' | 'user' | 'guest';
+type UserWithRole = User & { role: UserRole };
+
+export type { UserId, UserRole, UserWithRole };
+`;
+      const analysis = analyzer.analyze(code, 'types.ts');
+      expect(analysis.exports.length).toBeGreaterThan(0);
+    });
+
+    it('should extract generic types', () => {
+      const code = `
+export function identity<T>(value: T): T {
+  return value;
+}
+
+export class Container<T> {
+  private value: T;
+  constructor(value: T) {
+    this.value = value;
+  }
+  getValue(): T {
+    return this.value;
+  }
+}
+`;
+      const analysis = analyzer.analyze(code, 'generics.ts');
+      expect(analysis.functions.some(f => f.name === 'identity')).toBe(true);
+      expect(analysis.classes.some(c => c.name === 'Container')).toBe(true);
+    });
+
+    it('should extract decorators', () => {
+      const code = `
+@Injectable()
+export class UserService {
+  @Inject('config')
+  private config: Config;
+
+  @Get('/users')
+  async getUsers(): Promise<User[]> {
+    return [];
+  }
+}
+`;
+      const analysis = analyzer.analyze(code, 'service.ts');
+      expect(analysis.classes.some(c => c.name === 'UserService')).toBe(true);
+    });
+
+    it('should handle async/await functions', () => {
+      const code = `
+export async function fetchUser(id: string): Promise<User> {
+  const response = await fetch(\`/api/users/\${id}\`);
+  return response.json();
+}
+
+export const asyncArrow = async () => {
+  return await Promise.resolve('done');
+};
+`;
+      const analysis = analyzer.analyze(code, 'async.ts');
+      expect(analysis.functions.some(f => f.name === 'fetchUser')).toBe(true);
+      expect(analysis.functions.some(f => f.name === 'asyncArrow')).toBe(true);
+    });
+  });
+
+  describe('JavaScript analysis edge cases', () => {
+    it('should handle CommonJS require', () => {
+      const code = `
+const fs = require('fs');
+const { join } = require('path');
+const utils = require('./utils');
+
+module.exports = { processFile };
+
+function processFile(path) {
+  return fs.readFileSync(path);
+}
+`;
+      const analysis = analyzer.analyze(code, 'cjs.js');
+      expect(analysis.imports).toContain('fs');
+      expect(analysis.imports).toContain('path');
+      expect(analysis.imports).toContain('./utils');
+    });
+
+    it('should handle mixed import styles', () => {
+      const code = `
+import defaultExport from 'module1';
+import { named1, named2 } from 'module2';
+import * as namespace from 'module3';
+import 'side-effect-module';
+export { defaultExport, named1 };
+`;
+      const analysis = analyzer.analyze(code, 'mixed.js');
+      expect(analysis.imports).toContain('module1');
+      expect(analysis.imports).toContain('module2');
+      expect(analysis.imports).toContain('module3');
+      expect(analysis.imports).toContain('side-effect-module');
+    });
+  });
+
+  describe('complexity edge cases', () => {
+    it('should calculate high complexity for deeply nested code', () => {
+      const deeplyNested = `
+function deepNest() {
+  if (a) {
+    if (b) {
+      if (c) {
+        if (d) {
+          while (e) {
+            for (let i = 0; i < 10; i++) {
+              try {
+                switch (f) {
+                  case 1: break;
+                  case 2: break;
+                  default: throw new Error();
+                }
+              } catch (err) {
+                console.error(err);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+`;
+      const analysis = analyzer.analyze(deeplyNested, 'nested.ts');
+      expect(analysis.complexity.cognitive).toBeGreaterThan(5);
+      expect(analysis.complexity.cyclomatic).toBeGreaterThan(5);
+    });
+
+    it('should calculate low complexity for simple code', () => {
+      const simple = `
+const x = 1;
+const y = 2;
+const z = x + y;
+export { x, y, z };
+`;
+      const analysis = analyzer.analyze(simple, 'simple.ts');
+      expect(analysis.complexity.cyclomatic).toBeLessThanOrEqual(2);
+    });
+  });
+
+  describe('method extraction', () => {
+    it('should extract class methods with parameters', () => {
+      const code = `
+export class Calculator {
+  add(a: number, b: number): number {
+    return a + b;
+  }
+
+  subtract(a: number, b: number): number {
+    return a - b;
+  }
+
+  private multiply(a: number, b: number): number {
+    return a * b;
+  }
+
+  static divide(a: number, b: number): number {
+    return a / b;
+  }
+}
+`;
+      const analysis = analyzer.analyze(code, 'calculator.ts');
+      expect(analysis.classes.some(c => c.name === 'Calculator')).toBe(true);
+      const calcClass = analysis.classes.find(c => c.name === 'Calculator');
+      expect(calcClass?.methods?.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('symbol extraction from different constructs', () => {
+    it('should extract exported constants', () => {
+      const code = `
+export const API_URL = 'https://api.example.com';
+export const MAX_RETRIES = 3;
+export const DEFAULT_CONFIG = { timeout: 5000 };
+`;
+      const analysis = analyzer.analyze(code, 'constants.ts');
+      expect(analysis.exports).toContain('API_URL');
+      expect(analysis.exports).toContain('MAX_RETRIES');
+      expect(analysis.exports).toContain('DEFAULT_CONFIG');
+    });
+
+    it('should extract re-exports', () => {
+      const code = `
+export { foo } from './foo';
+export { bar as baz } from './bar';
+export * from './utils';
+export * as helpers from './helpers';
+`;
+      const analysis = analyzer.analyze(code, 'reexports.ts');
+      expect(analysis.imports.length).toBeGreaterThan(0);
+    });
+  });
+});
