@@ -683,20 +683,42 @@ export const hooksTransfer: MCPTool = {
   },
 };
 
-// Session start hook
+// Session start hook - auto-starts daemon
 export const hooksSessionStart: MCPTool = {
   name: 'hooks/session-start',
-  description: 'Initialize a new session',
+  description: 'Initialize a new session and auto-start daemon',
   inputSchema: {
     type: 'object',
     properties: {
       sessionId: { type: 'string', description: 'Optional session ID' },
       restoreLatest: { type: 'boolean', description: 'Restore latest session state' },
+      startDaemon: { type: 'boolean', description: 'Auto-start worker daemon (default: true)' },
     },
   },
   handler: async (params: Record<string, unknown>) => {
     const sessionId = (params.sessionId as string) || `session-${Date.now()}`;
     const restoreLatest = params.restoreLatest as boolean;
+    const shouldStartDaemon = params.startDaemon !== false;
+
+    // Auto-start daemon if enabled
+    let daemonStatus: { started: boolean; pid?: number; error?: string } = { started: false };
+    if (shouldStartDaemon) {
+      try {
+        // Dynamic import to avoid circular dependencies
+        const { startDaemon } = await import('../services/worker-daemon.js');
+        const daemon = await startDaemon(process.cwd());
+        const status = daemon.getStatus();
+        daemonStatus = {
+          started: true,
+          pid: status.pid,
+        };
+      } catch (error) {
+        daemonStatus = {
+          started: false,
+          error: error instanceof Error ? error.message : String(error),
+        };
+      }
+    }
 
     return {
       sessionId,
@@ -706,7 +728,9 @@ export const hooksSessionStart: MCPTool = {
         intelligenceEnabled: true,
         hooksEnabled: true,
         memoryPersistence: true,
+        daemonEnabled: shouldStartDaemon,
       },
+      daemon: daemonStatus,
       previousSession: restoreLatest ? {
         id: `session-${Date.now() - 86400000}`,
         tasksRestored: 3,
@@ -716,25 +740,40 @@ export const hooksSessionStart: MCPTool = {
   },
 };
 
-// Session end hook
+// Session end hook - stops daemon
 export const hooksSessionEnd: MCPTool = {
   name: 'hooks/session-end',
-  description: 'End current session and persist state',
+  description: 'End current session, stop daemon, and persist state',
   inputSchema: {
     type: 'object',
     properties: {
       saveState: { type: 'boolean', description: 'Save session state' },
       exportMetrics: { type: 'boolean', description: 'Export session metrics' },
+      stopDaemon: { type: 'boolean', description: 'Stop worker daemon (default: true)' },
     },
   },
   handler: async (params: Record<string, unknown>) => {
     const saveState = params.saveState !== false;
+    const shouldStopDaemon = params.stopDaemon !== false;
     const sessionId = `session-${Date.now() - 3600000}`; // Default session (1 hour ago)
+
+    // Stop daemon if enabled
+    let daemonStopped = false;
+    if (shouldStopDaemon) {
+      try {
+        const { stopDaemon } = await import('../services/worker-daemon.js');
+        await stopDaemon();
+        daemonStopped = true;
+      } catch {
+        // Daemon may not be running
+      }
+    }
 
     return {
       sessionId,
       duration: 3600000, // 1 hour in ms
       statePath: saveState ? `.claude/sessions/${sessionId}.json` : undefined,
+      daemon: { stopped: daemonStopped },
       summary: {
         tasksExecuted: 12,
         tasksSucceeded: 10,

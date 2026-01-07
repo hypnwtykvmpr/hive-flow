@@ -174,7 +174,9 @@ export const taskTools: MCPTool[] = [
 
       // Apply filters
       if (input.status) {
-        tasks = tasks.filter(t => t.status === input.status);
+        // Support comma-separated status values
+        const statuses = (input.status as string).split(',').map(s => s.trim());
+        tasks = tasks.filter(t => statuses.includes(t.status));
       }
       if (input.type) {
         tasks = tasks.filter(t => t.type === input.type);

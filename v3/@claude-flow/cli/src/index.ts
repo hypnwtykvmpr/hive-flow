@@ -106,6 +106,7 @@ export class CLI {
       let subcommandArgs = positional;
 
       // Process command path (e.g., ['hooks', 'worker', 'list'])
+      // Note: When parser includes subcommand in commandPath, positional already excludes it
       if (commandPath.length > 1 && command.subcommands) {
         const subcommandName = commandPath[1];
         const subcommand = command.subcommands.find(
@@ -114,7 +115,8 @@ export class CLI {
 
         if (subcommand) {
           targetCommand = subcommand;
-          subcommandArgs = positional.slice(1);
+          // Parser already extracted subcommand from positional, so use as-is
+          subcommandArgs = positional;
 
           // Check for nested subcommand (level 2)
           if (commandPath.length > 2 && subcommand.subcommands) {
@@ -124,7 +126,8 @@ export class CLI {
             );
             if (nestedSubcommand) {
               targetCommand = nestedSubcommand;
-              subcommandArgs = positional.slice(2);
+              // Parser already extracted nested subcommand too
+              subcommandArgs = positional;
             }
           }
         }
