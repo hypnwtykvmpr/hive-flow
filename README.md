@@ -884,6 +884,24 @@ npx claude-flow@v3alpha hooks worker status
 npx claude-flow@v3alpha hooks worker cancel --id worker_refactor_1_abc123
 ```
 
+### Progress Tracking Hooks
+```bash
+# Check V3 implementation progress
+npx claude-flow@v3alpha hooks progress
+
+# Detailed breakdown by category (CLI, MCP, Hooks, Packages, DDD)
+npx claude-flow@v3alpha hooks progress --detailed
+
+# Sync progress and persist to file
+npx claude-flow@v3alpha hooks progress --sync
+
+# Get human-readable summary
+npx claude-flow@v3alpha hooks progress --summary
+
+# JSON output for scripting
+npx claude-flow@v3alpha progress --json
+```
+
 ---
 
 ## Architecture
