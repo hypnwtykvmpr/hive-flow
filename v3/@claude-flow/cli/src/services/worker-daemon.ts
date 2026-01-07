@@ -601,7 +601,10 @@ export class WorkerDaemon extends EventEmitter {
     return map;
   }
 
-  private async runAuditWorker(): Promise<unknown> {
+  /**
+   * Local audit worker (fallback when headless unavailable)
+   */
+  private async runAuditWorkerLocal(): Promise<unknown> {
     // Basic security checks
     const auditFile = join(this.projectRoot, '.claude-flow', 'metrics', 'security-audit.json');
     const metricsDir = join(this.projectRoot, '.claude-flow', 'metrics');
@@ -612,6 +615,7 @@ export class WorkerDaemon extends EventEmitter {
 
     const audit = {
       timestamp: new Date().toISOString(),
+      mode: 'local',
       checks: {
         envFilesProtected: !existsSync(join(this.projectRoot, '.env.local')),
         gitIgnoreExists: existsSync(join(this.projectRoot, '.gitignore')),
@@ -619,6 +623,7 @@ export class WorkerDaemon extends EventEmitter {
       },
       riskLevel: 'low',
       recommendations: [],
+      note: 'Install Claude Code CLI for AI-powered security analysis',
     };
 
     writeFileSync(auditFile, JSON.stringify(audit, null, 2));
