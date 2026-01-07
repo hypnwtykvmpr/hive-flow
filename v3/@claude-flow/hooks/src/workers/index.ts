@@ -24,7 +24,7 @@ const FILE_CACHE_TTL = 30_000; // 30 seconds
 // Allowed worker names for input validation
 const ALLOWED_WORKERS = new Set([
   'performance', 'health', 'security', 'adr', 'ddd',
-  'patterns', 'learning', 'cache', 'git', 'swarm'
+  'patterns', 'learning', 'cache', 'git', 'swarm', 'v3progress'
 ]);
 
 // ============================================================================
