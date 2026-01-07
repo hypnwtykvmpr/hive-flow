@@ -599,9 +599,13 @@ export class QLearningRouter {
   }
 
   /**
-   * Get statistics
+   * Get statistics including cache and replay buffer metrics
    */
   getStats(): Record<string, number> {
+    const cacheHitRate = this.cacheHits + this.cacheMisses > 0
+      ? this.cacheHits / (this.cacheHits + this.cacheMisses)
+      : 0;
+
     return {
       updateCount: this.updateCount,
       qTableSize: this.qTable.size,
@@ -609,6 +613,16 @@ export class QLearningRouter {
       avgTDError: this.avgTDError,
       stepCount: this.stepCount,
       useNative: this.useNative ? 1 : 0,
+      // Cache metrics
+      cacheSize: this.routeCache.size,
+      cacheHits: this.cacheHits,
+      cacheMisses: this.cacheMisses,
+      cacheHitRate,
+      // Replay buffer metrics
+      replayBufferSize: this.replayBuffer.length,
+      totalExperiences: this.totalExperiences,
+      // Feature hash cache
+      featureHashCacheSize: this.featureHashCache.size,
     };
   }
 
