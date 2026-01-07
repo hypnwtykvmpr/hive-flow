@@ -401,6 +401,245 @@ const queryResult = await embeddings.embed('Search query');
 const results = await index.search(new Float32Array(queryResult.embedding), 5);
 ```
 
+## Document Chunking
+
+Split long documents into overlapping chunks for embedding:
+
+```typescript
+import { chunkText, estimateTokens, reconstructFromChunks } from '@claude-flow/embeddings';
+
+// Chunk by sentence (default)
+const result = chunkText(longDocument, {
+  maxChunkSize: 512,
+  overlap: 50,
+  strategy: 'sentence',  // 'character' | 'sentence' | 'paragraph' | 'token'
+  minChunkSize: 100,
+});
+
+console.log('Chunks:', result.totalChunks);
+result.chunks.forEach((chunk, i) => {
+  console.log(`Chunk ${i}: ${chunk.length} chars, ~${chunk.tokenCount} tokens`);
+});
+
+// Estimate tokens
+const tokens = estimateTokens('Hello world');  // ~3 tokens
+
+// Reconstruct (approximate)
+const reconstructed = reconstructFromChunks(result.chunks);
+```
+
+## Normalization
+
+Normalize embeddings for consistent similarity computation:
+
+```typescript
+import {
+  l2Normalize,    // Unit vector (Euclidean norm = 1)
+  l1Normalize,    // Manhattan norm = 1
+  minMaxNormalize, // Values in [0, 1]
+  zScoreNormalize, // Mean 0, std 1
+  normalize,       // Generic with type option
+  l2Norm,
+  isNormalized,
+} from '@claude-flow/embeddings';
+
+const embedding = new Float32Array([3, 4, 0]);
+
+// L2 normalize (most common for cosine similarity)
+const l2 = l2Normalize(embedding);  // [0.6, 0.8, 0]
+console.log('L2 norm:', l2Norm(l2));  // 1.0
+
+// Check if already normalized
+console.log(isNormalized(l2));  // true
+console.log(isNormalized(embedding));  // false
+
+// Generic normalize with type
+const normalized = normalize(embedding, { type: 'l2' });
+```
+
+## Hyperbolic Embeddings (Poincaré Ball)
+
+Transform embeddings to hyperbolic space for better hierarchical representation:
+
+```typescript
+import {
+  euclideanToPoincare,
+  poincareToEuclidean,
+  hyperbolicDistance,
+  mobiusAdd,
+  isInPoincareBall,
+  batchEuclideanToPoincare,
+  hyperbolicCentroid,
+} from '@claude-flow/embeddings';
+
+// Convert Euclidean embedding to Poincaré ball
+const euclidean = new Float32Array([0.5, 0.3, 0.2]);
+const poincare = euclideanToPoincare(euclidean);
+
+// Check if point is in the ball
+console.log(isInPoincareBall(poincare));  // true
+
+// Round-trip conversion
+const back = poincareToEuclidean(poincare);
+
+// Hyperbolic distance (geodesic in Poincaré ball)
+const a = euclideanToPoincare(new Float32Array([0.1, 0.2, 0.1]));
+const b = euclideanToPoincare(new Float32Array([0.3, 0.1, 0.2]));
+const dist = hyperbolicDistance(a, b);
+
+// Möbius addition (hyperbolic "plus")
+const sum = mobiusAdd(a, b);
+
+// Batch conversion
+const embeddings = [vec1, vec2, vec3];
+const hyperbolic = batchEuclideanToPoincare(embeddings);
+
+// Hyperbolic centroid (Fréchet mean)
+const centroid = hyperbolicCentroid(hyperbolic);
+```
+
+### Why Hyperbolic?
+
+Hyperbolic space has natural properties for representing hierarchical data:
+- **Exponential growth** - Tree-like structures fit naturally
+- **Better hierarchy** - Parent-child relationships preserved
+- **Lower distortion** - Taxonomies represented with less error
+
+## Neural Substrate Integration
+
+Access agentic-flow's neural features for advanced embedding operations:
+
+```typescript
+import {
+  NeuralEmbeddingService,
+  createNeuralService,
+  isNeuralAvailable,
+  listEmbeddingModels,
+  downloadEmbeddingModel,
+} from '@claude-flow/embeddings';
+
+// Check if neural features are available
+const available = await isNeuralAvailable();
+
+// Create neural service
+const neural = createNeuralService({ dimension: 384 });
+await neural.init();
+
+if (neural.isAvailable()) {
+  // Semantic drift detection
+  await neural.setDriftBaseline('Initial context about the topic');
+  const drift = await neural.detectDrift('New input to check for drift');
+  console.log('Drift:', drift?.trend);  // 'stable' | 'drifting' | 'accelerating'
+
+  // Memory with interference detection
+  const stored = await neural.storeMemory('mem-1', 'Important information');
+  console.log('Interference:', stored?.interference);
+
+  // Recall by similarity
+  const memories = await neural.recallMemories('query', 5);
+
+  // Swarm coordination
+  await neural.addSwarmAgent('agent-1', 'researcher');
+  const coordination = await neural.coordinateSwarm('Analyze this task');
+
+  // Coherence checking
+  await neural.calibrateCoherence(['good output 1', 'good output 2']);
+  const coherence = await neural.checkCoherence('Output to check');
+
+  // Health status
+  const health = neural.health();
+  console.log('Memory count:', health?.memoryCount);
+}
+
+// List available ONNX models
+const models = await listEmbeddingModels();
+console.log(models);
+// [{ id: 'all-MiniLM-L6-v2', dimension: 384, size: '23MB', ... }]
+
+// Download model
+const path = await downloadEmbeddingModel('all-MiniLM-L6-v2', '.models');
+```
+
+## Persistent Disk Cache
+
+SQLite-backed persistent cache for embeddings:
+
+```typescript
+import { PersistentEmbeddingCache, isPersistentCacheAvailable } from '@claude-flow/embeddings';
+
+// Check if SQLite is available
+const hasSQLite = await isPersistentCacheAvailable();
+
+// Create persistent cache
+const cache = new PersistentEmbeddingCache({
+  dbPath: './embeddings.db',  // SQLite database path
+  maxSize: 10000,             // Max entries before LRU eviction
+  ttlMs: 7 * 24 * 60 * 60 * 1000,  // 7 day TTL
+});
+
+// Initialize
+await cache.init();
+
+// Store embedding
+await cache.set('my text', new Float32Array([0.1, 0.2, 0.3]));
+
+// Retrieve
+const embedding = await cache.get('my text');
+
+// Get stats
+const stats = await cache.getStats();
+console.log('Cache stats:', {
+  size: stats.totalEntries,
+  hitRate: stats.hitRate,
+  avgLatency: stats.avgLatencyMs,
+});
+
+// Close when done
+await cache.close();
+```
+
+### Enable in Embedding Service
+
+```typescript
+const service = createEmbeddingService({
+  provider: 'openai',
+  apiKey: process.env.OPENAI_API_KEY!,
+  persistentCache: {
+    enabled: true,
+    dbPath: './cache/embeddings.db',
+    maxSize: 50000,
+    ttlMs: 30 * 24 * 60 * 60 * 1000,  // 30 days
+  },
+  normalization: 'l2',  // Auto-normalize embeddings
+});
+```
+
+## CLI Commands (New)
+
+```bash
+# Document chunking
+claude-flow embeddings chunk document.txt --strategy sentence --max-size 512
+
+# Normalize embedding file
+claude-flow embeddings normalize embeddings.json --type l2 -o normalized.json
+
+# Convert to hyperbolic
+claude-flow embeddings hyperbolic embeddings.json -o poincare.json
+
+# Neural operations
+claude-flow embeddings neural drift --baseline "context" --input "check this"
+claude-flow embeddings neural store --id mem-1 --content "data"
+claude-flow embeddings neural recall "query" --top-k 5
+
+# List/download models
+claude-flow embeddings models list
+claude-flow embeddings models download all-MiniLM-L6-v2
+
+# Cache management
+claude-flow embeddings cache stats
+claude-flow embeddings cache clear --older-than 7d
+```
+
 ## Related Packages
 
 - [@claude-flow/memory](../memory) - HNSW indexing and vector storage
