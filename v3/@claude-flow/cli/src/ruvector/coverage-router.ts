@@ -484,13 +484,22 @@ export async function coverageGaps(
 }
 
 /**
- * Load project coverage data (stub - implement based on project setup)
+ * Load project coverage data (async with caching)
  */
-async function loadProjectCoverage(projectRoot?: string): Promise<CoverageReport | null> {
-  const { existsSync, readFileSync } = require('fs');
-  const { join } = require('path');
-
+async function loadProjectCoverage(projectRoot?: string, skipCache?: boolean): Promise<CoverageReport | null> {
   const root = projectRoot || process.cwd();
+
+  // Check cache first
+  if (!skipCache) {
+    const cached = coverageDataCache.get(root);
+    if (cached && Date.now() - cached.timestamp < COVERAGE_CACHE_TTL_MS) {
+      return cached.report;
+    }
+  }
+
+  const { existsSync } = require('fs');
+  const { readFile } = require('fs/promises');
+  const { join } = require('path');
 
   // Try common coverage locations
   const coveragePaths = [
@@ -503,13 +512,21 @@ async function loadProjectCoverage(projectRoot?: string): Promise<CoverageReport
   for (const coveragePath of coveragePaths) {
     if (existsSync(coveragePath)) {
       try {
-        const content = readFileSync(coveragePath, 'utf-8');
+        // Use async file read for non-blocking I/O
+        const content = await readFile(coveragePath, 'utf-8');
         const router = new CoverageRouter();
+        let report: CoverageReport | null = null;
 
         if (coveragePath.endsWith('.json')) {
-          return router.parseCoverage(JSON.parse(content), 'istanbul');
+          report = router.parseCoverage(JSON.parse(content), 'istanbul');
         } else if (coveragePath.endsWith('.info')) {
-          return router.parseCoverage(content, 'lcov');
+          report = router.parseCoverage(content, 'lcov');
+        }
+
+        // Cache the result
+        if (report) {
+          coverageDataCache.set(root, { report, timestamp: Date.now() });
+          return report;
         }
       } catch {
         // Continue to next path
