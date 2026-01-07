@@ -209,8 +209,12 @@ export function mobiusAdd(
     throw new Error('Vectors must have same dimension');
   }
 
-  const normASq = a.reduce((sum, v) => sum + v * v, 0);
-  const normBSq = b.reduce((sum, v) => sum + v * v, 0);
+  let normASq = 0;
+  let normBSq = 0;
+  for (let i = 0; i < a.length; i++) {
+    normASq += a[i] * a[i];
+    normBSq += b[i] * b[i];
+  }
 
   // <a, b>
   let dotAB = 0;
