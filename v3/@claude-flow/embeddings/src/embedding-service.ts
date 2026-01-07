@@ -569,7 +569,7 @@ export class AgenticFlowEmbeddingService extends BaseEmbeddingService {
   private async initialize(): Promise<void> {
     if (this.initialized) return;
 
-    let lastError: Error | null = null;
+    let lastError: Error | undefined;
 
     const createEmbedder = async (modulePath: string): Promise<boolean> => {
       try {
