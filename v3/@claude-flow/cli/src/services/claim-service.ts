@@ -754,6 +754,53 @@ const DEFAULT_GITHUB_CONFIG: GitHubSyncConfig = {
   commentOnRelease: true,
 };
 
+// ============================================================================
+// Input Validation (Security)
+// ============================================================================
+
+/**
+ * Validate GitHub repository format (owner/repo)
+ * Prevents command injection via malicious repo names
+ */
+function isValidRepo(repo: string): boolean {
+  // owner/repo format: alphanumeric, hyphens, underscores, dots
+  return /^[\w.-]+\/[\w.-]+$/.test(repo) && repo.length <= 100;
+}
+
+/**
+ * Validate issue number (positive integer)
+ */
+function isValidIssueNumber(num: number): boolean {
+  return Number.isInteger(num) && num > 0 && num < 1000000000;
+}
+
+/**
+ * Validate claimant name (GitHub username format)
+ * Prevents command injection via malicious usernames
+ */
+function isValidClaimantName(name: string): boolean {
+  // GitHub usernames: alphanumeric, hyphens, max 39 chars
+  return /^[\w-]+$/.test(name) && name.length >= 1 && name.length <= 39;
+}
+
+/**
+ * Validate label name
+ * Prevents command injection via malicious label names
+ */
+function isValidLabel(label: string): boolean {
+  // Labels: alphanumeric, hyphens, underscores, spaces, max 50 chars
+  return /^[\w\s-]+$/.test(label) && label.length >= 1 && label.length <= 50;
+}
+
+/**
+ * Sanitize error messages to prevent information disclosure
+ */
+function sanitizeError(error: Error): string {
+  const msg = error.message || 'Unknown error';
+  // Remove paths and sensitive details
+  return msg.replace(/\/[\w./-]+/g, '[path]').substring(0, 200);
+}
+
 export class GitHubSync {
   private config: GitHubSyncConfig;
   private claimService: ClaimService;
@@ -768,7 +815,7 @@ export class GitHubSync {
    */
   isGhAvailable(): boolean {
     try {
-      execSync('gh --version', { stdio: 'ignore' });
+      execFileSync('gh', ['--version'], { stdio: 'ignore' });
       return true;
     } catch {
       return false;
@@ -779,11 +826,14 @@ export class GitHubSync {
    * Get the current repository from git remote
    */
   getRepo(): string | null {
-    if (this.config.repo) return this.config.repo;
+    if (this.config.repo) {
+      return isValidRepo(this.config.repo) ? this.config.repo : null;
+    }
     try {
-      const remote = execSync('git remote get-url origin', { encoding: 'utf-8' }).trim();
-      const match = remote.match(/github\.com[/:]([\w-]+\/[\w-]+)/);
-      return match ? match[1].replace('.git', '') : null;
+      const remote = execFileSync('git', ['remote', 'get-url', 'origin'], { encoding: 'utf-8' }).trim();
+      const match = remote.match(/github\.com[/:]([\w.-]+\/[\w.-]+)/);
+      const repo = match ? match[1].replace('.git', '') : null;
+      return repo && isValidRepo(repo) ? repo : null;
     } catch {
       return null;
     }
@@ -805,11 +855,20 @@ export class GitHubSync {
       return { success: false, synced: 0, errors: ['Could not determine GitHub repository'] };
     }
 
+    // Validate state parameter (whitelist)
+    const validStates = ['open', 'closed', 'all'];
+    if (!validStates.includes(state)) {
+      return { success: false, synced: 0, errors: ['Invalid state parameter'] };
+    }
+
     try {
-      const issuesJson = execSync(
-        `gh issue list --repo ${repo} --state ${state} --json number,title,body,state,labels,assignees,url,createdAt,updatedAt --limit 100`,
-        { encoding: 'utf-8' }
-      );
+      const issuesJson = execFileSync('gh', [
+        'issue', 'list',
+        '--repo', repo,
+        '--state', state,
+        '--json', 'number,title,body,state,labels,assignees,url,createdAt,updatedAt',
+        '--limit', '100'
+      ], { encoding: 'utf-8' });
       const rawIssues = JSON.parse(issuesJson);
 
       for (const raw of rawIssues) {
@@ -828,7 +887,7 @@ export class GitHubSync {
 
       return { success: true, synced: issues.length, errors, issues };
     } catch (error) {
-      errors.push(`Failed to fetch issues: ${(error as Error).message}`);
+      errors.push(`Failed to fetch issues: ${sanitizeError(error as Error)}`);
       return { success: false, synced: 0, errors };
     }
   }
@@ -847,16 +906,30 @@ export class GitHubSync {
       return { success: false, synced: 0, errors: ['GitHub CLI (gh) not installed'] };
     }
 
+    // Validate issue number
+    if (!isValidIssueNumber(issueNumber)) {
+      return { success: false, synced: 0, errors: ['Invalid issue number'] };
+    }
+
     const repo = this.getRepo();
     if (!repo) {
       return { success: false, synced: 0, errors: ['Could not determine repository'] };
+    }
+
+    // Validate claim label
+    if (!isValidLabel(this.config.claimLabel)) {
+      return { success: false, synced: 0, errors: ['Invalid claim label configuration'] };
     }
 
     try {
       // Add claim label
       if (this.config.syncLabels) {
         try {
-          execSync(`gh issue edit ${issueNumber} --repo ${repo} --add-label "${this.config.claimLabel}"`, { stdio: 'ignore' });
+          execFileSync('gh', [
+            'issue', 'edit', String(issueNumber),
+            '--repo', repo,
+            '--add-label', this.config.claimLabel
+          ], { stdio: 'ignore' });
         } catch {
           errors.push('Failed to add claim label (label may not exist)');
         }
@@ -864,19 +937,33 @@ export class GitHubSync {
 
       // Auto-assign if human claimant
       if (this.config.autoAssign && claimant.type === 'human') {
-        try {
-          execSync(`gh issue edit ${issueNumber} --repo ${repo} --add-assignee "${claimant.name}"`, { stdio: 'ignore' });
-        } catch {
-          errors.push('Failed to assign issue');
+        if (!isValidClaimantName(claimant.name)) {
+          errors.push('Invalid claimant name format');
+        } else {
+          try {
+            execFileSync('gh', [
+              'issue', 'edit', String(issueNumber),
+              '--repo', repo,
+              '--add-assignee', claimant.name
+            ], { stdio: 'ignore' });
+          } catch {
+            errors.push('Failed to assign issue');
+          }
         }
       }
 
       // Add comment
       if (this.config.commentOnClaim) {
-        const claimantStr = claimant.type === 'human' ? `@${claimant.name}` : `Agent: ${claimant.agentType}`;
+        const claimantStr = claimant.type === 'human'
+          ? `@${claimant.name.replace(/[^a-zA-Z0-9_-]/g, '')}`
+          : `Agent: ${(claimant.agentType || 'unknown').replace(/[^a-zA-Z0-9_-]/g, '')}`;
         const comment = `🤖 **Issue claimed** by ${claimantStr}\n\n_Coordinated by Claude Flow V3_`;
         try {
-          execSync(`gh issue comment ${issueNumber} --repo ${repo} --body "${comment.replace(/"/g, '\\"')}"`, { stdio: 'ignore' });
+          execFileSync('gh', [
+            'issue', 'comment', String(issueNumber),
+            '--repo', repo,
+            '--body', comment
+          ], { stdio: 'ignore' });
         } catch {
           errors.push('Failed to add comment');
         }
@@ -884,7 +971,7 @@ export class GitHubSync {
 
       return { success: errors.length === 0, synced: 1, errors };
     } catch (error) {
-      errors.push(`GitHub sync failed: ${(error as Error).message}`);
+      errors.push(`GitHub sync failed: ${sanitizeError(error as Error)}`);
       return { success: false, synced: 0, errors };
     }
   }
@@ -903,16 +990,30 @@ export class GitHubSync {
       return { success: false, synced: 0, errors: ['GitHub CLI (gh) not installed'] };
     }
 
+    // Validate issue number
+    if (!isValidIssueNumber(issueNumber)) {
+      return { success: false, synced: 0, errors: ['Invalid issue number'] };
+    }
+
     const repo = this.getRepo();
     if (!repo) {
       return { success: false, synced: 0, errors: ['Could not determine repository'] };
+    }
+
+    // Validate claim label
+    if (!isValidLabel(this.config.claimLabel)) {
+      return { success: false, synced: 0, errors: ['Invalid claim label configuration'] };
     }
 
     try {
       // Remove claim label
       if (this.config.syncLabels) {
         try {
-          execSync(`gh issue edit ${issueNumber} --repo ${repo} --remove-label "${this.config.claimLabel}"`, { stdio: 'ignore' });
+          execFileSync('gh', [
+            'issue', 'edit', String(issueNumber),
+            '--repo', repo,
+            '--remove-label', this.config.claimLabel
+          ], { stdio: 'ignore' });
         } catch {
           // Label might not exist
         }
@@ -920,19 +1021,31 @@ export class GitHubSync {
 
       // Remove assignee if human claimant
       if (this.config.autoAssign && claimant.type === 'human') {
-        try {
-          execSync(`gh issue edit ${issueNumber} --repo ${repo} --remove-assignee "${claimant.name}"`, { stdio: 'ignore' });
-        } catch {
-          errors.push('Failed to remove assignee');
+        if (isValidClaimantName(claimant.name)) {
+          try {
+            execFileSync('gh', [
+              'issue', 'edit', String(issueNumber),
+              '--repo', repo,
+              '--remove-assignee', claimant.name
+            ], { stdio: 'ignore' });
+          } catch {
+            errors.push('Failed to remove assignee');
+          }
         }
       }
 
       // Add release comment
       if (this.config.commentOnRelease) {
-        const claimantStr = claimant.type === 'human' ? `@${claimant.name}` : `Agent: ${claimant.agentType}`;
+        const claimantStr = claimant.type === 'human'
+          ? `@${claimant.name.replace(/[^a-zA-Z0-9_-]/g, '')}`
+          : `Agent: ${(claimant.agentType || 'unknown').replace(/[^a-zA-Z0-9_-]/g, '')}`;
         const comment = `🔓 **Issue released** by ${claimantStr}\n\n_This issue is now available for others to claim._`;
         try {
-          execSync(`gh issue comment ${issueNumber} --repo ${repo} --body "${comment.replace(/"/g, '\\"')}"`, { stdio: 'ignore' });
+          execFileSync('gh', [
+            'issue', 'comment', String(issueNumber),
+            '--repo', repo,
+            '--body', comment
+          ], { stdio: 'ignore' });
         } catch {
           errors.push('Failed to add release comment');
         }
@@ -940,7 +1053,7 @@ export class GitHubSync {
 
       return { success: errors.length === 0, synced: 1, errors };
     } catch (error) {
-      errors.push(`GitHub release sync failed: ${(error as Error).message}`);
+      errors.push(`GitHub release sync failed: ${sanitizeError(error as Error)}`);
       return { success: false, synced: 0, errors };
     }
   }
