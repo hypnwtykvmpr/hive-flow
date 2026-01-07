@@ -198,19 +198,24 @@ const routeTaskCommand: Command = {
             ? output.warning
             : output.error;
 
+        const qValues = result.qValues || [0];
+        const maxQValue = Math.max(...qValues);
+        const capabilities = agent.capabilities || [];
+        const alternatives = result.alternatives || [];
+
         output.printBox([
           `Task: ${taskDescription}`,
           ``,
           `Agent: ${output.highlight(agent.name)} (${result.route})`,
           `Confidence: ${confidenceColor(`${(confidence * 100).toFixed(1)}%`)}`,
-          `Q-Value: ${Math.max(...result.qValues).toFixed(3)}`,
+          `Q-Value: ${maxQValue.toFixed(3)}`,
           `Exploration: ${result.explored ? output.warning('Yes') : 'No'}`,
           ``,
           `Description: ${agent.description}`,
-          `Capabilities: ${agent.capabilities.join(', ')}`,
+          `Capabilities: ${capabilities.join(', ')}`,
         ].join('\n'), 'Q-Learning Routing');
 
-        if (result.alternatives.length > 0) {
+        if (alternatives.length > 0) {
           output.writeln();
           output.writeln(output.bold('Alternatives:'));
           output.printTable({
@@ -218,9 +223,9 @@ const routeTaskCommand: Command = {
               { key: 'agent', header: 'Agent', width: 20 },
               { key: 'score', header: 'Score', width: 12, align: 'right' },
             ],
-            data: result.alternatives.map(a => ({
+            data: alternatives.map(a => ({
               agent: getAgentType(a.route)?.name || a.route,
-              score: a.score.toFixed(3),
+              score: (a.score ?? 0).toFixed(3),
             })),
           });
         }
