@@ -456,11 +456,12 @@ npx claude-flow@v3alpha worker results --limit 10
 
 | Feature | Description | Performance |
 |---------|-------------|-------------|
-| **Multi-Provider** | OpenAI, Transformers.js (local), Mock | Flexible deployment |
+| **Multi-Provider** | Agentic-Flow (ONNX), OpenAI, Transformers.js, Mock | 4 providers |
+| **Auto-Install** | `createEmbeddingServiceAsync({ provider: 'auto' })` | Zero config |
+| **75x Faster** | Agentic-flow ONNX SIMD vs Transformers.js | 3ms vs 230ms |
 | **Dimensions** | 384 to 3072 configurable | Quality vs speed tradeoff |
 | **Similarity Metrics** | Cosine, Euclidean, Dot product | Task-specific matching |
-| **Event System** | Observable operations with listeners | Real-time monitoring |
-| **Partial Cache Hits** | Batch requests use cached where available | Reduced API calls |
+| **LRU Caching** | Batch requests use cached where available | <1ms cache hits |
 
 ### SONA Learning Modes
 
