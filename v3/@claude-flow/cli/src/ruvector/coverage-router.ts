@@ -1,6 +1,35 @@
 /**
  * Coverage Router for Test Routing
+ *
+ * Optimizations:
+ * - Async file I/O for non-blocking coverage loading
+ * - TTL-based caching of coverage data
+ * - Singleton router instance
  */
+
+// ============================================================================
+// Caching for Performance
+// ============================================================================
+
+/**
+ * Cache for coverage data (1 minute TTL)
+ */
+const coverageDataCache = new Map<string, { report: CoverageReport; timestamp: number }>();
+const COVERAGE_CACHE_TTL_MS = 60 * 1000; // 1 minute
+
+/**
+ * Clear coverage cache
+ */
+export function clearCoverageCache(): void {
+  coverageDataCache.clear();
+}
+
+/**
+ * Get coverage cache stats
+ */
+export function getCoverageCacheStats(): { size: number } {
+  return { size: coverageDataCache.size };
+}
 
 export interface CoverageRouterConfig {
   minCoverage: number;
