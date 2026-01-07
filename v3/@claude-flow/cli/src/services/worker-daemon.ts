@@ -70,19 +70,32 @@ interface DaemonConfig {
   logDir: string;
   stateFile: string;
   maxConcurrent: number;
+  workerTimeoutMs: number;
+  resourceThresholds: {
+    maxCpuLoad: number;
+    minFreeMemoryPercent: number;
+  };
   workers: WorkerConfig[];
 }
 
-// Default worker configurations with intervals
-const DEFAULT_WORKERS: WorkerConfig[] = [
-  { type: 'map', intervalMs: 5 * 60 * 1000, priority: 'normal', description: 'Codebase mapping', enabled: true },
-  { type: 'audit', intervalMs: 10 * 60 * 1000, priority: 'critical', description: 'Security analysis', enabled: true },
-  { type: 'optimize', intervalMs: 15 * 60 * 1000, priority: 'high', description: 'Performance optimization', enabled: true },
-  { type: 'consolidate', intervalMs: 30 * 60 * 1000, priority: 'low', description: 'Memory consolidation', enabled: true },
-  { type: 'testgaps', intervalMs: 20 * 60 * 1000, priority: 'normal', description: 'Test coverage analysis', enabled: true },
-  { type: 'predict', intervalMs: 2 * 60 * 1000, priority: 'low', description: 'Predictive preloading', enabled: false },
-  { type: 'document', intervalMs: 60 * 60 * 1000, priority: 'low', description: 'Auto-documentation', enabled: false },
+// Worker configuration with staggered offsets to prevent overlap
+interface WorkerConfigInternal extends WorkerConfig {
+  offsetMs: number; // Stagger start time
+}
+
+// Default worker configurations with improved intervals (P0 fix: map 5min -> 15min)
+const DEFAULT_WORKERS: WorkerConfigInternal[] = [
+  { type: 'map', intervalMs: 15 * 60 * 1000, offsetMs: 0, priority: 'normal', description: 'Codebase mapping', enabled: true },
+  { type: 'audit', intervalMs: 10 * 60 * 1000, offsetMs: 2 * 60 * 1000, priority: 'critical', description: 'Security analysis', enabled: true },
+  { type: 'optimize', intervalMs: 15 * 60 * 1000, offsetMs: 4 * 60 * 1000, priority: 'high', description: 'Performance optimization', enabled: true },
+  { type: 'consolidate', intervalMs: 30 * 60 * 1000, offsetMs: 6 * 60 * 1000, priority: 'low', description: 'Memory consolidation', enabled: true },
+  { type: 'testgaps', intervalMs: 20 * 60 * 1000, offsetMs: 8 * 60 * 1000, priority: 'normal', description: 'Test coverage analysis', enabled: true },
+  { type: 'predict', intervalMs: 10 * 60 * 1000, offsetMs: 0, priority: 'low', description: 'Predictive preloading', enabled: false },
+  { type: 'document', intervalMs: 60 * 60 * 1000, offsetMs: 0, priority: 'low', description: 'Auto-documentation', enabled: false },
 ];
+
+// Worker timeout (5 minutes max per worker)
+const DEFAULT_WORKER_TIMEOUT_MS = 5 * 60 * 1000;
 
 /**
  * Worker Daemon - Manages background workers with Node.js
@@ -94,6 +107,8 @@ export class WorkerDaemon extends EventEmitter {
   private running = false;
   private startedAt?: Date;
   private projectRoot: string;
+  private runningWorkers: Set<WorkerType> = new Set(); // Track concurrent workers
+  private pendingWorkers: WorkerType[] = []; // Queue for deferred workers
 
   constructor(projectRoot: string, config?: Partial<DaemonConfig>) {
     super();
@@ -102,12 +117,20 @@ export class WorkerDaemon extends EventEmitter {
     const claudeFlowDir = join(projectRoot, '.claude-flow');
 
     this.config = {
-      autoStart: config?.autoStart ?? true,
+      autoStart: config?.autoStart ?? false, // P1 fix: Default to false for explicit consent
       logDir: config?.logDir ?? join(claudeFlowDir, 'logs'),
       stateFile: config?.stateFile ?? join(claudeFlowDir, 'daemon-state.json'),
-      maxConcurrent: config?.maxConcurrent ?? 3,
+      maxConcurrent: config?.maxConcurrent ?? 2, // P0 fix: Limit concurrent workers
+      workerTimeoutMs: config?.workerTimeoutMs ?? DEFAULT_WORKER_TIMEOUT_MS,
+      resourceThresholds: config?.resourceThresholds ?? {
+        maxCpuLoad: 2.0,
+        minFreeMemoryPercent: 20,
+      },
       workers: config?.workers ?? DEFAULT_WORKERS,
     };
+
+    // Setup graceful shutdown handlers
+    this.setupShutdownHandlers();
 
     // Ensure directories exist
     if (!existsSync(claudeFlowDir)) {
@@ -119,6 +142,53 @@ export class WorkerDaemon extends EventEmitter {
 
     // Initialize worker states
     this.initializeWorkerStates();
+  }
+
+  /**
+   * Setup graceful shutdown handlers
+   */
+  private setupShutdownHandlers(): void {
+    const shutdown = async () => {
+      this.log('info', 'Received shutdown signal, stopping daemon...');
+      await this.stop();
+      process.exit(0);
+    };
+
+    process.on('SIGTERM', shutdown);
+    process.on('SIGINT', shutdown);
+    process.on('SIGHUP', shutdown);
+  }
+
+  /**
+   * Check if system resources allow worker execution
+   */
+  private async canRunWorker(): Promise<{ allowed: boolean; reason?: string }> {
+    const os = await import('os');
+    const cpuLoad = os.loadavg()[0];
+    const totalMem = os.totalmem();
+    const freeMem = os.freemem();
+    const freePercent = (freeMem / totalMem) * 100;
+
+    if (cpuLoad > this.config.resourceThresholds.maxCpuLoad) {
+      return { allowed: false, reason: `CPU load too high: ${cpuLoad.toFixed(2)}` };
+    }
+    if (freePercent < this.config.resourceThresholds.minFreeMemoryPercent) {
+      return { allowed: false, reason: `Memory too low: ${freePercent.toFixed(1)}% free` };
+    }
+    return { allowed: true };
+  }
+
+  /**
+   * Process pending workers queue
+   */
+  private async processPendingWorkers(): Promise<void> {
+    while (this.pendingWorkers.length > 0 && this.runningWorkers.size < this.config.maxConcurrent) {
+      const workerType = this.pendingWorkers.shift()!;
+      const workerConfig = this.config.workers.find(w => w.type === workerType);
+      if (workerConfig) {
+        await this.executeWorkerWithConcurrencyControl(workerConfig);
+      }
+    }
   }
 
   private initializeWorkerStates(): void {
@@ -222,16 +292,18 @@ export class WorkerDaemon extends EventEmitter {
   }
 
   /**
-   * Schedule a worker to run at intervals
+   * Schedule a worker to run at intervals with staggered start
    */
   private scheduleWorker(workerConfig: WorkerConfig): void {
     const state = this.workers.get(workerConfig.type)!;
+    const internalConfig = workerConfig as WorkerConfigInternal;
+    const staggerOffset = internalConfig.offsetMs || 0;
 
-    // Calculate initial delay (run immediately if never run, otherwise respect interval)
-    let initialDelay = 0;
+    // Calculate initial delay with stagger offset
+    let initialDelay = staggerOffset;
     if (state.lastRun) {
       const timeSinceLastRun = Date.now() - state.lastRun.getTime();
-      initialDelay = Math.max(0, workerConfig.intervalMs - timeSinceLastRun);
+      initialDelay = Math.max(staggerOffset, workerConfig.intervalMs - timeSinceLastRun);
     }
 
     state.nextRun = new Date(Date.now() + initialDelay);
@@ -239,7 +311,8 @@ export class WorkerDaemon extends EventEmitter {
     const runAndReschedule = async () => {
       if (!this.running) return;
 
-      await this.executeWorker(workerConfig);
+      // Use concurrency-controlled execution (P0 fix)
+      await this.executeWorkerWithConcurrencyControl(workerConfig);
 
       // Reschedule
       if (this.running) {
@@ -249,7 +322,7 @@ export class WorkerDaemon extends EventEmitter {
       }
     };
 
-    // Schedule first run
+    // Schedule first run with stagger offset
     const timer = setTimeout(runAndReschedule, initialDelay);
     this.timers.set(workerConfig.type, timer);
 
@@ -257,20 +330,50 @@ export class WorkerDaemon extends EventEmitter {
   }
 
   /**
-   * Execute a worker
+   * Execute a worker with concurrency control (P0 fix)
+   */
+  private async executeWorkerWithConcurrencyControl(workerConfig: WorkerConfig): Promise<WorkerResult | null> {
+    // Check concurrency limit
+    if (this.runningWorkers.size >= this.config.maxConcurrent) {
+      this.log('info', `Worker ${workerConfig.type} deferred: max concurrent (${this.config.maxConcurrent}) reached`);
+      this.pendingWorkers.push(workerConfig.type);
+      this.emit('worker:deferred', { type: workerConfig.type, reason: 'max_concurrent' });
+      return null;
+    }
+
+    // Check resource availability
+    const resourceCheck = await this.canRunWorker();
+    if (!resourceCheck.allowed) {
+      this.log('info', `Worker ${workerConfig.type} deferred: ${resourceCheck.reason}`);
+      this.pendingWorkers.push(workerConfig.type);
+      this.emit('worker:deferred', { type: workerConfig.type, reason: resourceCheck.reason });
+      return null;
+    }
+
+    return this.executeWorker(workerConfig);
+  }
+
+  /**
+   * Execute a worker with timeout protection
    */
   private async executeWorker(workerConfig: WorkerConfig): Promise<WorkerResult> {
     const state = this.workers.get(workerConfig.type)!;
     const workerId = `${workerConfig.type}_${Date.now()}`;
     const startTime = Date.now();
 
+    // Track running worker
+    this.runningWorkers.add(workerConfig.type);
     state.isRunning = true;
     this.emit('worker:start', { workerId, type: workerConfig.type });
-    this.log('info', `Starting worker: ${workerConfig.type}`);
+    this.log('info', `Starting worker: ${workerConfig.type} (${this.runningWorkers.size}/${this.config.maxConcurrent} concurrent)`);
 
     try {
-      // Execute worker logic
-      const output = await this.runWorkerLogic(workerConfig);
+      // Execute worker logic with timeout (P1 fix)
+      const output = await this.runWithTimeout(
+        () => this.runWorkerLogic(workerConfig),
+        this.config.workerTimeoutMs,
+        `Worker ${workerConfig.type} timed out after ${this.config.workerTimeoutMs / 1000}s`
+      );
       const durationMs = Date.now() - startTime;
 
       // Update state
@@ -316,7 +419,36 @@ export class WorkerDaemon extends EventEmitter {
       this.saveState();
 
       return result;
+    } finally {
+      // Remove from running set and process queue
+      this.runningWorkers.delete(workerConfig.type);
+      this.processPendingWorkers();
     }
+  }
+
+  /**
+   * Run a function with timeout (P1 fix)
+   */
+  private async runWithTimeout<T>(
+    fn: () => Promise<T>,
+    timeoutMs: number,
+    timeoutMessage: string
+  ): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        reject(new Error(timeoutMessage));
+      }, timeoutMs);
+
+      fn()
+        .then((result) => {
+          clearTimeout(timer);
+          resolve(result);
+        })
+        .catch((error) => {
+          clearTimeout(timer);
+          reject(error);
+        });
+    });
   }
 
   /**
