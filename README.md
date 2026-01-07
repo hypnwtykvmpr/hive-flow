@@ -343,7 +343,7 @@ npx claude-flow@v3alpha worker results --limit 10
 | `config` | 7 | Configuration (init, get, set, providers, reset, export, import) |
 | `status` | 3 | System status with watch mode (agents, tasks, memory) |
 | `workflow` | 6 | Workflow execution (run, validate, list, status, stop, template) |
-| `hooks` | 31 | Self-learning hooks (pre/post-edit, pre/post-command, route, explain, pretrain, session-*, intelligence/*, worker/*) |
+| `hooks` | 32 | Self-learning hooks (pre/post-edit, pre/post-command, route, explain, pretrain, session-*, intelligence/*, worker/*, progress) |
 | `hive-mind` | 6 | Queen-led coordination (init, spawn, status, task, optimize-memory, shutdown) |
 | `migrate` | 5 | V2→V3 migration (status, run, verify, rollback, breaking) |
 | `neural` | 5 | Neural pattern training (train, status, patterns, predict, optimize) |
