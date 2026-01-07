@@ -169,8 +169,12 @@ export function hyperbolicDistance(
   }
 
   // ||a||^2 and ||b||^2
-  const normASq = a.reduce((sum, v) => sum + v * v, 0);
-  const normBSq = b.reduce((sum, v) => sum + v * v, 0);
+  let normASq = 0;
+  let normBSq = 0;
+  for (let i = 0; i < a.length; i++) {
+    normASq += a[i] * a[i];
+    normBSq += b[i] * b[i];
+  }
 
   // Poincaré distance formula:
   // d(a, b) = (1/sqrt(c)) * arcosh(1 + 2c * ||a-b||^2 / ((1 - c*||a||^2)(1 - c*||b||^2)))
