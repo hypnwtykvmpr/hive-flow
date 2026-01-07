@@ -16,20 +16,43 @@ export { ASTAnalyzer, createASTAnalyzer, type ASTAnalysis, type ASTNode, type AS
 export {
   DiffClassifier,
   createDiffClassifier,
+  // MCP tool exports
+  analyzeDiff,
+  assessFileRisk,
+  assessOverallRisk,
+  classifyDiff,
+  suggestReviewers,
+  getGitDiffNumstat,
+  // Types
   type DiffClassification,
   type DiffHunk,
   type DiffChange,
   type FileDiff,
   type DiffAnalysis,
   type DiffClassifierConfig,
+  type DiffFile,
+  type RiskLevel,
+  type FileRisk,
+  type OverallRisk,
+  type DiffAnalysisResult,
 } from './diff-classifier.js';
 export {
   CoverageRouter,
   createCoverageRouter,
+  // MCP tool exports
+  coverageRoute,
+  coverageSuggest,
+  coverageGaps,
+  // Types
   type CoverageRouterConfig,
   type FileCoverage,
   type CoverageReport,
   type CoverageRouteResult,
+  type CoverageSuggestResult,
+  type CoverageGapsResult,
+  type CoverageRouteOptions,
+  type CoverageSuggestOptions,
+  type CoverageGapsOptions,
 } from './coverage-router.js';
 export { coverageRouterTools, hooksCoverageRoute, hooksCoverageSuggest, hooksCoverageGaps } from './coverage-tools.js';
 export {
