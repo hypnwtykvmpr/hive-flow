@@ -384,6 +384,28 @@ export const doctorCommand: Command = {
       }
     }
 
+    // Auto-install missing dependencies if requested
+    if (autoInstall) {
+      const claudeCodeResult = results.find(r => r.name === 'Claude Code CLI');
+      if (claudeCodeResult && claudeCodeResult.status !== 'pass') {
+        const installed = await installClaudeCode();
+        if (installed) {
+          // Re-check Claude Code after installation
+          const newCheck = await checkClaudeCode();
+          const idx = results.findIndex(r => r.name === 'Claude Code CLI');
+          if (idx !== -1) {
+            results[idx] = newCheck;
+            // Update fixes list
+            const fixIdx = fixes.findIndex(f => f.startsWith('Claude Code CLI:'));
+            if (fixIdx !== -1 && newCheck.status === 'pass') {
+              fixes.splice(fixIdx, 1);
+            }
+          }
+          output.writeln(formatCheck(newCheck));
+        }
+      }
+    }
+
     // Summary
     const passed = results.filter(r => r.status === 'pass').length;
     const warnings = results.filter(r => r.status === 'warn').length;
