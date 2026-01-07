@@ -44,6 +44,11 @@ export interface WebSocketTransportConfig {
 }
 
 /**
+ * Default max message size (10MB)
+ */
+const DEFAULT_MAX_MESSAGE_SIZE = 10 * 1024 * 1024;
+
+/**
  * Client connection info
  */
 interface ClientConnection {
