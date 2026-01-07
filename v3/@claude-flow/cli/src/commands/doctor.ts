@@ -213,14 +213,16 @@ async function checkDiskSpace(): Promise<HealthCheck> {
   }
 }
 
-// Check TypeScript/build
+// Check TypeScript/build (async)
 async function checkBuildTools(): Promise<HealthCheck> {
   try {
-    // Use stdio: 'pipe' for cross-platform stderr suppression (works on Windows)
-    const tscVersion = execSync('npx tsc --version', {
+    const { promisify } = require('util');
+    const execAsync = promisify(require('child_process').exec);
+    const { stdout } = await execAsync('npx tsc --version', {
       encoding: 'utf8',
-      stdio: ['pipe', 'pipe', 'pipe'] // Suppress stderr on all platforms
-    }).trim();
+      timeout: 10000 // tsc can be slow
+    });
+    const tscVersion = stdout.trim();
     if (!tscVersion || tscVersion.includes('not found')) {
       return { name: 'TypeScript', status: 'warn', message: 'Not installed locally', fix: 'npm install -D typescript' };
     }
@@ -230,13 +232,16 @@ async function checkBuildTools(): Promise<HealthCheck> {
   }
 }
 
-// Check Claude Code CLI
+// Check Claude Code CLI (async)
 async function checkClaudeCode(): Promise<HealthCheck> {
   try {
-    const version = execSync('claude --version', {
+    const { promisify } = require('util');
+    const execAsync = promisify(require('child_process').exec);
+    const { stdout } = await execAsync('claude --version', {
       encoding: 'utf8',
-      stdio: ['pipe', 'pipe', 'pipe']
-    }).trim();
+      timeout: 5000
+    });
+    const version = stdout.trim();
     // Parse version from output like "claude 1.0.0" or "Claude Code v1.0.0"
     const versionMatch = version.match(/v?(\d+\.\d+\.\d+)/);
     const versionStr = versionMatch ? `v${versionMatch[1]}` : version;
