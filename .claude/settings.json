@@ -175,7 +175,7 @@
                     {
             "type": "command",
             "timeout": 4000,
-            "command": "node /workspaces/claude-flow/v3/@claude-flow/cli/bin/cli.js hooks post-edit --file \"$TOOL_INPUT_file_path\" --train-patterns true --memory-key \"edit/$TOOL_INPUT_file_path\" 2>/dev/null || true"
+            "command": "node /workspaces/claude-flow/v3/@claude-flow/cli/bin/cli.js hooks post-edit --file \"$TOOL_INPUT_file_path\" --success true --train-patterns true --memory-key \"edit/$TOOL_INPUT_file_path\" 2>/dev/null || true"
           },
                     {
             "type": "command",
