@@ -13,32 +13,10 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { dirname } from 'path';
 
-// sql.js types
-interface SqlJsDatabase {
-  run(sql: string, params?: unknown[]): void;
-  exec(sql: string): QueryExecResult[];
-  prepare(sql: string): SqlJsStatement;
-  export(): Uint8Array;
-  close(): void;
-}
-
-interface SqlJsStatement {
-  bind(params?: unknown[]): boolean;
-  step(): boolean;
-  get(): unknown[];
-  getAsObject(): Record<string, unknown>;
-  free(): void;
-  run(params?: unknown[]): void;
-}
-
-interface QueryExecResult {
-  columns: string[];
-  values: unknown[][];
-}
-
-interface SqlJsStatic {
-  Database: new (data?: ArrayLike<number>) => SqlJsDatabase;
-}
+// Use 'any' for sql.js types to avoid complex typing issues
+// sql.js has its own types but they don't always match perfectly
+type SqlJsDatabase = any;
+type SqlJsStatic = any;
 
 /**
  * Configuration for persistent cache
