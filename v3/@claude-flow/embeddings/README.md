@@ -318,7 +318,9 @@ import type {
   EmbeddingConfig,
   OpenAIEmbeddingConfig,
   TransformersEmbeddingConfig,
+  AgenticFlowEmbeddingConfig,
   MockEmbeddingConfig,
+  AutoEmbeddingConfig,
 
   // Result types
   EmbeddingResult,
