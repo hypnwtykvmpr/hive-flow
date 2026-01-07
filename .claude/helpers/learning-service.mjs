@@ -909,14 +909,20 @@ class LearningService {
     this.shortTermIndex = new HNSWIndex(CONFIG);
     const shortTermPatterns = this.db.prepare('SELECT id, embedding FROM short_term_patterns').all();
     for (const row of shortTermPatterns) {
-      this.shortTermIndex.add(row.id, new Float32Array(row.embedding.buffer));
+      const embedding = this._bufferToFloat32Array(row.embedding);
+      if (embedding) {
+        this.shortTermIndex.add(row.id, embedding);
+      }
     }
 
     // Load long-term patterns
     this.longTermIndex = new HNSWIndex(CONFIG);
     const longTermPatterns = this.db.prepare('SELECT id, embedding FROM long_term_patterns').all();
     for (const row of longTermPatterns) {
-      this.longTermIndex.add(row.id, new Float32Array(row.embedding.buffer));
+      const embedding = this._bufferToFloat32Array(row.embedding);
+      if (embedding) {
+        this.longTermIndex.add(row.id, embedding);
+      }
     }
   }
 
