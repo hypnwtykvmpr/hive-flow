@@ -22,6 +22,25 @@
 export type EmbeddingProvider = 'openai' | 'transformers' | 'mock' | 'agentic-flow';
 
 /**
+ * Normalization type for embeddings
+ */
+export type NormalizationType = 'l2' | 'l1' | 'minmax' | 'zscore' | 'none';
+
+/**
+ * Persistent cache configuration
+ */
+export interface PersistentCacheConfig {
+  /** Enable persistent disk cache (requires better-sqlite3) */
+  enabled: boolean;
+  /** Path to SQLite database file (default: .cache/embeddings.db) */
+  dbPath?: string;
+  /** Maximum entries in persistent cache (default: 10000) */
+  maxSize?: number;
+  /** TTL in milliseconds (default: 7 days) */
+  ttlMs?: number;
+}
+
+/**
  * Base configuration for all providers
  */
 export interface EmbeddingBaseConfig {
@@ -36,6 +55,12 @@ export interface EmbeddingBaseConfig {
 
   /** Enable caching */
   enableCache?: boolean;
+
+  /** Normalization type (default: 'none' - most providers pre-normalize) */
+  normalization?: NormalizationType;
+
+  /** Persistent disk cache configuration */
+  persistentCache?: PersistentCacheConfig;
 }
 
 /**
