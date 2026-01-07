@@ -96,11 +96,19 @@ export class CLI {
         this.output.printDebug(`CWD: ${process.cwd()}`);
       }
 
-      // No command - show help
+      // No command - show help or suggest correction
       if (commandPath.length === 0 || flags.help || flags.h) {
         if (commandPath.length > 0) {
           // Show command-specific help
           this.showCommandHelp(commandPath[0]);
+        } else if (positional.length > 0 && !positional[0].startsWith('-')) {
+          // First positional looks like an attempted command - suggest correction
+          const attemptedCommand = positional[0];
+          this.output.printError(`Unknown command: ${attemptedCommand}`);
+          const availableCommands = Array.from(new Set(commands.map(c => c.name)));
+          const { message } = suggestCommand(attemptedCommand, availableCommands);
+          this.output.writeln(this.output.dim(`  ${message}`));
+          process.exit(1);
         } else {
           this.showHelp();
         }
