@@ -178,7 +178,7 @@ const ${camelCase(event)}Hook = new HookBuilder(HookEvent.${getEventEnumName(eve
   .withName('${event}-handler')
   .withDescription('Handler for ${event} event')
   .withPriority(HookPriority.Normal)
-  .handle(async (ctx) => {
+  .withHandler(async (ctx) => {
     console.log('Hook triggered: ${event}', ctx.data);
     return { success: true };
   })
