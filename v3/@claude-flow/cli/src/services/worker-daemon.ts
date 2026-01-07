@@ -13,6 +13,13 @@
 import { EventEmitter } from 'events';
 import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'fs';
 import { join } from 'path';
+import {
+  HeadlessWorkerExecutor,
+  HEADLESS_WORKERS,
+  isHeadlessWorker,
+  type HeadlessWorkerType,
+  type HeadlessExecutionResult,
+} from './headless-worker-executor.js';
 
 // Worker types matching hooks-tools.ts
 export type WorkerType =
