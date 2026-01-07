@@ -116,7 +116,7 @@ const startCommand: Command = {
       transport,
       host,
       port,
-      tools: tools === 'all' ? 'all' : tools.split(','),
+      tools: !tools || tools === 'all' ? 'all' : tools.split(','),
       daemonize: daemon,
     };
 
