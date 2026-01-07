@@ -63,16 +63,25 @@ const listCommand: Command = {
     output.writeln();
 
     const rows = claims.map(c => ({
-      Issue: c.issueId,
-      Claimant: c.claimant.type === 'human'
+      issue: c.issueId,
+      claimant: c.claimant.type === 'human'
         ? `👤 ${c.claimant.name}`
         : `🤖 ${c.claimant.agentType}`,
-      Status: formatStatus(c.status),
-      Progress: `${c.progress}%`,
-      Since: formatDuration(Date.now() - c.claimedAt.getTime()),
+      status: formatStatus(c.status),
+      progress: `${c.progress}%`,
+      since: formatDuration(Date.now() - c.claimedAt.getTime()),
     }));
 
-    output.printTable(rows);
+    output.printTable({
+      columns: [
+        { key: 'issue', header: 'Issue', width: 12 },
+        { key: 'claimant', header: 'Claimant', width: 18 },
+        { key: 'status', header: 'Status', width: 20 },
+        { key: 'progress', header: 'Progress', width: 10 },
+        { key: 'since', header: 'Since', width: 10 },
+      ],
+      data: rows,
+    });
 
     if (ctx.flags.format === 'json') {
       output.printJson(claims);
