@@ -100,7 +100,7 @@ export class CLI {
       if (commandPath.length === 0 || flags.help || flags.h) {
         if (commandPath.length > 0) {
           // Show command-specific help
-          this.showCommandHelp(commandPath[0]);
+          await this.showCommandHelp(commandPath[0]);
         } else if (positional.length > 0 && !positional[0].startsWith('-')) {
           // First positional looks like an attempted command - suggest correction
           const attemptedCommand = positional[0];
