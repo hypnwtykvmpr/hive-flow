@@ -159,7 +159,36 @@ const ROUTE_NAMES = [
 ];
 
 /**
+ * Task feature keywords for state representation
+ */
+const FEATURE_KEYWORDS = [
+  // Code-related
+  'implement', 'code', 'write', 'create', 'build', 'develop',
+  // Testing-related
+  'test', 'spec', 'coverage', 'unit', 'integration', 'e2e',
+  // Review-related
+  'review', 'check', 'audit', 'analyze', 'inspect',
+  // Architecture-related
+  'architect', 'design', 'structure', 'pattern', 'system',
+  // Research-related
+  'research', 'investigate', 'explore', 'find', 'search',
+  // Optimization-related
+  'optimize', 'performance', 'speed', 'memory', 'improve',
+  // Debug-related
+  'debug', 'fix', 'bug', 'error', 'issue', 'problem',
+  // Documentation-related
+  'document', 'docs', 'readme', 'comment', 'explain',
+];
+
+/**
  * Q-Learning Router for intelligent task routing
+ *
+ * Optimized with:
+ * - LRU cache for repeated task patterns
+ * - Feature hashing for efficient state space
+ * - Exponential epsilon decay
+ * - Prioritized experience replay
+ * - Model persistence
  */
 export class QLearningRouter {
   private config: QLearningRouterConfig;
@@ -170,6 +199,20 @@ export class QLearningRouter {
   private avgTDError = 0;
   private ruvectorEngine: unknown = null;
   private useNative = false;
+
+  // Experience replay buffer (circular buffer)
+  private replayBuffer: Experience[] = [];
+  private replayBufferIdx = 0;
+  private totalExperiences = 0;
+
+  // LRU cache for route decisions
+  private routeCache: Map<string, CacheEntry> = new Map();
+  private cacheOrder: string[] = [];
+  private cacheHits = 0;
+  private cacheMisses = 0;
+
+  // Feature hash cache for state representation
+  private featureHashCache: Map<string, Float32Array> = new Map();
 
   constructor(config: Partial<QLearningRouterConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
