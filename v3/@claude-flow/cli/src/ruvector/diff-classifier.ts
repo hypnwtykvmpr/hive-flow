@@ -643,16 +643,36 @@ export function suggestReviewers(files: DiffFile[], fileRisks: FileRisk[]): stri
   return Array.from(reviewers).slice(0, 5);
 }
 
+// Analysis result cache
+const analysisCache = new Map<string, { result: DiffAnalysisResult; timestamp: number }>();
+const ANALYSIS_CACHE_TTL_MS = 3000; // 3 seconds
+
 /**
- * Analyze a diff with full analysis
+ * Analyze a diff with full analysis (optimized with caching)
  */
 export async function analyzeDiff(options: {
   ref?: string;
   useRuVector?: boolean;
+  skipCache?: boolean;
 }): Promise<DiffAnalysisResult> {
   const ref = options.ref || 'HEAD';
-  const files = getGitDiffNumstat(ref);
-  const fileRisks = files.map(assessFileRisk);
+
+  // Check analysis cache (unless skipCache is true)
+  if (!options.skipCache) {
+    const cached = analysisCache.get(ref);
+    if (cached && Date.now() - cached.timestamp < ANALYSIS_CACHE_TTL_MS) {
+      return cached.result;
+    }
+  }
+
+  // Use async git diff for non-blocking operation
+  const files = await getGitDiffNumstatAsync(ref);
+
+  // Parallel file risk assessment for large diffs
+  const fileRisks = files.length > 20
+    ? await Promise.all(files.map(f => Promise.resolve(assessFileRisk(f))))
+    : files.map(assessFileRisk);
+
   const risk = assessOverallRisk(files, fileRisks);
   const classification = classifyDiff(files);
   const recommendedReviewers = suggestReviewers(files, fileRisks);
@@ -660,7 +680,7 @@ export async function analyzeDiff(options: {
   const totalAdditions = files.reduce((sum, f) => sum + f.additions, 0);
   const totalDeletions = files.reduce((sum, f) => sum + f.deletions, 0);
 
-  return {
+  const result: DiffAnalysisResult = {
     ref,
     timestamp: Date.now(),
     files,
@@ -670,4 +690,57 @@ export async function analyzeDiff(options: {
     fileRisks,
     recommendedReviewers,
   };
+
+  // Cache the result
+  analysisCache.set(ref, { result, timestamp: Date.now() });
+
+  return result;
+}
+
+/**
+ * Synchronous version of analyzeDiff for backward compatibility
+ */
+export function analyzeDiffSync(options: {
+  ref?: string;
+  useRuVector?: boolean;
+}): DiffAnalysisResult {
+  const ref = options.ref || 'HEAD';
+
+  // Check analysis cache
+  const cached = analysisCache.get(ref);
+  if (cached && Date.now() - cached.timestamp < ANALYSIS_CACHE_TTL_MS) {
+    return cached.result;
+  }
+
+  const files = getGitDiffNumstat(ref);
+  const fileRisks = files.map(assessFileRisk);
+  const risk = assessOverallRisk(files, fileRisks);
+  const classification = classifyDiff(files);
+  const recommendedReviewers = suggestReviewers(files, fileRisks);
+
+  const totalAdditions = files.reduce((sum, f) => sum + f.additions, 0);
+  const totalDeletions = files.reduce((sum, f) => sum + f.deletions, 0);
+
+  const result: DiffAnalysisResult = {
+    ref,
+    timestamp: Date.now(),
+    files,
+    risk,
+    classification,
+    summary: `${files.length} files changed (+${totalAdditions}/-${totalDeletions}), ${risk.overall} risk`,
+    fileRisks,
+    recommendedReviewers,
+  };
+
+  analysisCache.set(ref, { result, timestamp: Date.now() });
+  return result;
+}
+
+/**
+ * Clear all diff-related caches
+ */
+export function clearAllDiffCaches(): void {
+  diffCache.clear();
+  analysisCache.clear();
+  classifierInstance?.clearCache();
 }
