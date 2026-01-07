@@ -14,12 +14,8 @@ export default defineConfig({
     clearMocks: true,
     restoreMocks: true,
     testTimeout: 10000,
-    // Run in single thread to avoid memory issues
-    pool: 'forks',
-    poolOptions: {
-      forks: {
-        singleFork: true,
-      },
-    },
+    // Run inline to avoid worker memory issues
+    fileParallelism: false,
+    maxConcurrency: 1,
   },
 });
