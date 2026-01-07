@@ -27,7 +27,11 @@ import type {
   EmbeddingEventListener,
   SimilarityMetric,
   SimilarityResult,
+  NormalizationType,
+  PersistentCacheConfig,
 } from './types.js';
+import { normalize } from './normalization.js';
+import { PersistentEmbeddingCache } from './persistent-cache.js';
 
 // ============================================================================
 // LRU Cache Implementation
