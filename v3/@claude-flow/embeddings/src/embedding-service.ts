@@ -633,7 +633,7 @@ export class AgenticFlowEmbeddingService extends BaseEmbeddingService {
       }
     }
 
-    const errorDetail = lastError ? ` Last error: ${lastError.message}` : '';
+    const errorDetail = lastError?.message ? ` Last error: ${lastError.message}` : '';
     throw new Error(
       `Failed to initialize agentic-flow embeddings.${errorDetail} ` +
       `Ensure agentic-flow is installed and ONNX model is downloaded: ` +
