@@ -508,10 +508,12 @@ const triggerCommand: Command = {
   description: 'Manually trigger a specific worker',
   options: [
     { name: 'worker', short: 'w', type: 'string', description: 'Worker type to trigger', required: true },
+    { name: 'headless', type: 'boolean', description: 'Run triggered worker in headless mode (E2B sandbox)' },
   ],
   examples: [
     { command: 'claude-flow daemon trigger -w map', description: 'Trigger the map worker' },
     { command: 'claude-flow daemon trigger -w audit', description: 'Trigger security audit' },
+    { command: 'claude-flow daemon trigger -w audit --headless', description: 'Trigger audit in headless sandbox' },
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     const workerType = ctx.flags.worker as WorkerType;
