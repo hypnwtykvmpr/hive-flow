@@ -93,12 +93,40 @@ export interface MockEmbeddingConfig extends EmbeddingBaseConfig {
 }
 
 /**
+ * Agentic-flow provider configuration
+ * Uses optimized ONNX embeddings with:
+ * - Float32Array with flattened matrices
+ * - 256-entry LRU cache with FNV-1a hash
+ * - SIMD-friendly loop unrolling (4x)
+ * - Pre-allocated buffers (no GC pressure)
+ */
+export interface AgenticFlowEmbeddingConfig extends EmbeddingBaseConfig {
+  provider: 'agentic-flow';
+
+  /** Model ID (default: all-MiniLM-L6-v2) */
+  modelId?: string;
+
+  /** Embedding dimensions (default: 384) */
+  dimensions?: number;
+
+  /** Internal cache size for embedder (default: 256) */
+  embedderCacheSize?: number;
+
+  /** Model directory path */
+  modelDir?: string;
+
+  /** Auto-download model if not present */
+  autoDownload?: boolean;
+}
+
+/**
  * Union of all provider configs
  */
 export type EmbeddingConfig =
   | OpenAIEmbeddingConfig
   | TransformersEmbeddingConfig
-  | MockEmbeddingConfig;
+  | MockEmbeddingConfig
+  | AgenticFlowEmbeddingConfig;
 
 // ============================================================================
 // Result Types
