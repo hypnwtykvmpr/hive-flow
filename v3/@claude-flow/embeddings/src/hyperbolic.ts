@@ -288,7 +288,11 @@ export function hyperbolicCentroid(
     throw new Error('Need at least one point');
   }
   if (points.length === 1) {
-    return new Float32Array(points[0]);
+    const arr = new Float32Array(points[0].length);
+    for (let i = 0; i < points[0].length; i++) {
+      arr[i] = points[0][i];
+    }
+    return arr;
   }
 
   const { epsilon } = { ...DEFAULT_CONFIG, ...config };
