@@ -16,6 +16,11 @@ export function generateSettings(options: InitOptions): object {
     settings.hooks = generateHooksConfig(options.hooks);
   }
 
+  // Add statusLine configuration if enabled
+  if (options.statusline.enabled) {
+    settings.statusLine = generateStatusLineConfig(options);
+  }
+
   // Add permissions
   settings.permissions = {
     // Auto-allow claude-flow MCP tools
@@ -57,6 +62,26 @@ export function generateSettings(options: InitOptions): object {
   };
 
   return settings;
+}
+
+/**
+ * Generate statusLine configuration for Claude Code
+ * This configures the Claude Code status bar to show V3 metrics
+ */
+function generateStatusLineConfig(options: InitOptions): object {
+  const config = options.statusline;
+
+  // Build the command that generates the statusline
+  const statuslineCommand = 'npx @claude-flow/hooks statusline 2>/dev/null || node .claude/helpers/statusline.js 2>/dev/null || echo "▊ V3"';
+
+  return {
+    // Command to execute for statusline content
+    command: statuslineCommand,
+    // Refresh interval in milliseconds (5 seconds default)
+    refreshMs: config.refreshInterval,
+    // Enable the statusline
+    enabled: config.enabled,
+  };
 }
 
 /**
