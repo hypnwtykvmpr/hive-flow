@@ -103,15 +103,54 @@ class LRUCache<K, V> {
 abstract class BaseEmbeddingService extends EventEmitter implements IEmbeddingService {
   abstract readonly provider: EmbeddingProvider;
   protected cache: LRUCache<string, Float32Array>;
+  protected persistentCache: PersistentEmbeddingCache | null = null;
   protected embeddingListeners: Set<EmbeddingEventListener> = new Set();
+  protected normalizationType: NormalizationType;
 
   constructor(protected readonly config: EmbeddingConfig) {
     super();
     this.cache = new LRUCache(config.cacheSize ?? 1000);
+    this.normalizationType = config.normalization ?? 'none';
+
+    // Initialize persistent cache if configured
+    if (config.persistentCache?.enabled) {
+      const pcConfig: PersistentCacheConfig = config.persistentCache;
+      this.persistentCache = new PersistentEmbeddingCache({
+        dbPath: pcConfig.dbPath ?? '.cache/embeddings.db',
+        maxSize: pcConfig.maxSize ?? 10000,
+        ttlMs: pcConfig.ttlMs,
+      });
+    }
   }
 
   abstract embed(text: string): Promise<EmbeddingResult>;
   abstract embedBatch(texts: string[]): Promise<BatchEmbeddingResult>;
+
+  /**
+   * Apply normalization to embedding if configured
+   */
+  protected applyNormalization(embedding: Float32Array): Float32Array {
+    if (this.normalizationType === 'none') {
+      return embedding;
+    }
+    return normalize(embedding, { type: this.normalizationType });
+  }
+
+  /**
+   * Check persistent cache for embedding
+   */
+  protected async checkPersistentCache(text: string): Promise<Float32Array | null> {
+    if (!this.persistentCache) return null;
+    return this.persistentCache.get(text);
+  }
+
+  /**
+   * Store embedding in persistent cache
+   */
+  protected async storePersistentCache(text: string, embedding: Float32Array): Promise<void> {
+    if (!this.persistentCache) return;
+    await this.persistentCache.set(text, embedding);
+  }
 
   protected emitEvent(event: EmbeddingEvent): void {
     for (const listener of this.embeddingListeners) {
