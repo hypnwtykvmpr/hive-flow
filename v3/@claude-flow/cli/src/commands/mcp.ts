@@ -97,7 +97,7 @@ const startCommand: Command = {
     const port = ctx.flags.port as number;
     const host = ctx.flags.host as string;
     const transport = ctx.flags.transport as 'stdio' | 'http' | 'websocket';
-    const tools = ctx.flags.tools as string;
+    const tools = (ctx.flags.tools as string) || 'all';
     const daemon = ctx.flags.daemon as boolean;
 
     output.writeln();
