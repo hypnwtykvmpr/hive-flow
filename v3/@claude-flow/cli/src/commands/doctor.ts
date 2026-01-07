@@ -221,6 +221,47 @@ async function checkBuildTools(): Promise<HealthCheck> {
   }
 }
 
+// Check Claude Code CLI
+async function checkClaudeCode(): Promise<HealthCheck> {
+  try {
+    const version = execSync('claude --version', {
+      encoding: 'utf8',
+      stdio: ['pipe', 'pipe', 'pipe']
+    }).trim();
+    // Parse version from output like "claude 1.0.0" or "Claude Code v1.0.0"
+    const versionMatch = version.match(/v?(\d+\.\d+\.\d+)/);
+    const versionStr = versionMatch ? `v${versionMatch[1]}` : version;
+    return { name: 'Claude Code CLI', status: 'pass', message: versionStr };
+  } catch {
+    return {
+      name: 'Claude Code CLI',
+      status: 'warn',
+      message: 'Not installed',
+      fix: 'npm install -g @anthropic-ai/claude-code'
+    };
+  }
+}
+
+// Install Claude Code CLI
+async function installClaudeCode(): Promise<boolean> {
+  try {
+    output.writeln();
+    output.writeln(output.bold('Installing Claude Code CLI...'));
+    execSync('npm install -g @anthropic-ai/claude-code', {
+      encoding: 'utf8',
+      stdio: 'inherit'
+    });
+    output.writeln(output.success('Claude Code CLI installed successfully!'));
+    return true;
+  } catch (error) {
+    output.writeln(output.error('Failed to install Claude Code CLI'));
+    if (error instanceof Error) {
+      output.writeln(output.dim(error.message));
+    }
+    return false;
+  }
+}
+
 // Format health check result
 function formatCheck(check: HealthCheck): string {
   const icon = check.status === 'pass' ? output.success('✓') :
