@@ -300,8 +300,8 @@ export const a = b;
 export const b = 'b';
 `);
 
-      const graph = await buildDependencyGraph(testDir);
-      const analysis = await analyzeGraph(graph);
+      // analyzeGraph expects a rootDir string, not a DependencyGraph
+      const analysis = await analyzeGraph(testDir);
       const dot = exportToDot(analysis);
 
       expect(dot).toContain('digraph');
@@ -311,8 +311,8 @@ export const b = 'b';
     });
 
     it('should handle empty graph', async () => {
-      const graph = await buildDependencyGraph(testDir);
-      const analysis = await analyzeGraph(graph);
+      // analyzeGraph expects a rootDir string, not a DependencyGraph
+      const analysis = await analyzeGraph(testDir);
       const dot = exportToDot(analysis);
 
       expect(dot).toContain('digraph');
@@ -321,9 +321,30 @@ export const b = 'b';
     it('should accept custom options', async () => {
       await writeFile(join(testDir, 'a.ts'), `export const a = 1;`);
 
-      const graph = await buildDependencyGraph(testDir);
-      const analysis = await analyzeGraph(graph);
+      // analyzeGraph expects a rootDir string, not a DependencyGraph
+      const analysis = await analyzeGraph(testDir);
       const dot = exportToDot(analysis, { includeLabels: true });
+
+      expect(dot).toContain('digraph');
+    });
+
+    it('should colorByCommunity when option is enabled', async () => {
+      await writeFile(join(testDir, 'a.ts'), `export const a = 1;`);
+      await writeFile(join(testDir, 'b.ts'), `import { a } from './a'; export const b = a;`);
+
+      const analysis = await analyzeGraph(testDir);
+      const dot = exportToDot(analysis, { colorByCommunity: true });
+
+      expect(dot).toContain('digraph');
+    });
+
+    it('should highlightCycles when option is enabled', async () => {
+      // Create circular dependency
+      await writeFile(join(testDir, 'x.ts'), `import { y } from './y'; export const x = y;`);
+      await writeFile(join(testDir, 'y.ts'), `import { x } from './x'; export const y = x;`);
+
+      const analysis = await analyzeGraph(testDir);
+      const dot = exportToDot(analysis, { highlightCycles: true });
 
       expect(dot).toContain('digraph');
     });
