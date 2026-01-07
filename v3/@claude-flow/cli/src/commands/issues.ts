@@ -115,7 +115,7 @@ const claimCommand: Command = {
     },
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
-    const issueId = (ctx.flags.issue || ctx.positional[0]) as string;
+    const issueId = (ctx.flags.issue || ctx.args[0]) as string;
     const agentStr = ctx.flags.agent as string | undefined;
     const userStr = ctx.flags.user as string | undefined;
 
@@ -180,7 +180,7 @@ const releaseCommand: Command = {
     },
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
-    const issueId = (ctx.flags.issue || ctx.positional[0]) as string;
+    const issueId = (ctx.flags.issue || ctx.args[0]) as string;
     const agentStr = ctx.flags.agent as string | undefined;
     const userStr = ctx.flags.user as string | undefined;
 
@@ -230,7 +230,7 @@ const handoffCommand: Command = {
     { name: 'reason', short: 'r', type: 'string', default: 'Handoff requested' },
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
-    const issueId = (ctx.flags.issue || ctx.positional[0]) as string;
+    const issueId = (ctx.flags.issue || ctx.args[0]) as string;
     const toStr = ctx.flags.to as string;
     const fromStr = ctx.flags.from as string;
     const reason = ctx.flags.reason as string;
@@ -283,7 +283,7 @@ const statusCommand: Command = {
     { name: 'note', short: 'n', type: 'string', description: 'Status note' },
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
-    const issueId = (ctx.flags.issue || ctx.positional[0]) as string;
+    const issueId = (ctx.flags.issue || ctx.args[0]) as string;
 
     if (!issueId) {
       output.printError('Issue ID is required');
@@ -370,7 +370,7 @@ const stealCommand: Command = {
     { name: 'agent', short: 'a', type: 'string', description: 'Steal as agent', required: true },
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
-    const issueId = (ctx.flags.issue || ctx.positional[0]) as string;
+    const issueId = (ctx.flags.issue || ctx.args[0]) as string;
     const agentStr = ctx.flags.agent as string;
 
     if (!issueId) {
