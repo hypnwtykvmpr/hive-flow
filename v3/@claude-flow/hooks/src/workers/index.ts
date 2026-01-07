@@ -2054,6 +2054,7 @@ export function createWorkerManager(projectRoot?: string): WorkerManager {
   manager.register('security', createSecurityWorker(root));
   manager.register('patterns', createPatternsWorker(root));
   manager.register('cache', createCacheWorker(root));
+  manager.register('v3progress', createV3ProgressWorker(root));
 
   return manager;
 }
