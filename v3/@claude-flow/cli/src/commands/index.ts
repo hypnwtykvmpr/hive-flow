@@ -37,6 +37,8 @@ import { doctorCommand } from './doctor.js';
 import { analyzeCommand } from './analyze.js';
 // Q-Learning Routing Commands
 import { routeCommand } from './route.js';
+// Progress Commands
+import { progressCommand } from './progress.js';
 
 // Export all commands
 export { agentCommand } from './agent.js';
