@@ -102,6 +102,9 @@ claude-flow status --watch
 | `deployment` | 5 | Deployment management (deploy, rollback, status, environments, release) |
 | `embeddings` | 4 | Vector embeddings (embed, batch, search, init) - 75x faster with agentic-flow |
 | `claims` | 4 | Claims-based authorization (check, grant, revoke, list) |
+| `issues` | 10 | Collaborative issue claims with work stealing (ADR-016) |
+| `route` | 7 | Q-Learning agent routing with reinforcement learning |
+| `analyze` | 11 | Code analysis (AST, diff, complexity, boundaries, dependencies) |
 | `doctor` | 1 | System diagnostics with health checks and suggested fixes |
 | `completions` | 4 | Shell completions for bash, zsh, fish, and PowerShell |
 
