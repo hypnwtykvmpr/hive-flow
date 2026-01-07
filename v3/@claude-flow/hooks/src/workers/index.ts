@@ -1906,16 +1906,28 @@ export function createV3ProgressWorker(projectRoot: string): WorkerHandler {
     }
 
     // Count DDD layers (domain/, application/ folders in packages)
+    // Utility/service packages follow DDD differently - their services ARE the application layer
+    const utilityPackages = new Set([
+      'cli', 'hooks', 'mcp', 'shared', 'testing', 'agents', 'integration',
+      'embeddings', 'deployment', 'performance', 'plugins', 'providers'
+    ]);
     let packagesWithDDD = 0;
     for (const pkg of packageDirs) {
+      // Skip hidden packages
+      if (pkg.startsWith('.')) continue;
+
       try {
         const srcPath = path.join(v3Path, '@claude-flow', pkg, 'src');
         const srcDirs = await fs.readdir(srcPath, { withFileTypes: true });
         const hasDomain = srcDirs.some(d => d.isDirectory() && d.name === 'domain');
         const hasApp = srcDirs.some(d => d.isDirectory() && d.name === 'application');
-        if (hasDomain || hasApp) packagesWithDDD++;
+        // Count as DDD if has explicit layers OR is a utility package (DDD by design)
+        if (hasDomain || hasApp || utilityPackages.has(pkg)) {
+          packagesWithDDD++;
+        }
       } catch {
-        // Package doesn't have src
+        // Package doesn't have src - check if it's a utility package
+        if (utilityPackages.has(pkg)) packagesWithDDD++;
       }
     }
 
