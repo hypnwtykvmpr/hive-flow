@@ -278,7 +278,7 @@ const statusCommand: Command = {
   description: 'Update claim status',
   options: [
     { name: 'issue', short: 'i', type: 'string', description: 'Issue ID' },
-    { name: 'set', short: 's', type: 'string', choices: ['active', 'paused', 'blocked', 'completed'] },
+    { name: 'set', short: 's', type: 'string', description: 'New status', choices: ['active', 'paused', 'blocked', 'completed'] },
     { name: 'progress', short: 'p', type: 'number', description: 'Progress (0-100)' },
     { name: 'note', short: 'n', type: 'string', description: 'Status note' },
   ],
