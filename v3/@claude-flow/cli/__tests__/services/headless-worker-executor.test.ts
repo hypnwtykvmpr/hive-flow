@@ -528,10 +528,14 @@ describe('HeadlessWorkerExecutor', () => {
         prompt: 'Map codebase',
       };
 
-      setTimeout(() => {
+      // Add error handler to prevent unhandled error
+      executor.on('error', () => {});
+
+      // Use setImmediate to ensure the event is emitted after execute starts
+      setImmediate(() => {
         mockChildProcess.stderr?.emit('data', Buffer.from('Fatal error'));
         mockChildProcess.emit('close', 1);
-      }, 10);
+      });
 
       const result = await executor.execute(config);
 
