@@ -12,6 +12,18 @@
     ".": {
       "types": "./dist/src/index.d.ts",
       "import": "./dist/src/index.js"
+    },
+    "./ruvector": {
+      "types": "./dist/src/ruvector/index.d.ts",
+      "import": "./dist/src/ruvector/index.js"
+    },
+    "./ruvector/*": {
+      "types": "./dist/src/ruvector/*.d.ts",
+      "import": "./dist/src/ruvector/*.js"
+    },
+    "./mcp-tools": {
+      "types": "./dist/src/mcp-tools/index.d.ts",
+      "import": "./dist/src/mcp-tools/index.js"
     }
   },
   "files": [
