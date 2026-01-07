@@ -464,7 +464,7 @@ export async function buildDependencyGraph(
     }
   }
 
-  return {
+  const graph: DependencyGraph = {
     nodes,
     edges: normalizedEdges,
     metadata: {
@@ -474,6 +474,11 @@ export async function buildDependencyGraph(
       buildTime: Date.now() - startTime,
     },
   };
+
+  // Cache the result
+  graphCache.set(cacheKey, { graph, timestamp: Date.now() });
+
+  return graph;
 }
 
 /**
