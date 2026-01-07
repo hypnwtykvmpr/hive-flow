@@ -15,6 +15,7 @@
  */
 
 import { EventEmitter } from 'events';
+import Ajv from 'ajv';
 import {
   MCPTool,
   JSONSchema,
@@ -24,6 +25,9 @@ import {
   ToolRegistrationOptions,
   ILogger,
 } from './types.js';
+
+// Schema validator instance (singleton for performance)
+const ajv = new Ajv({ allErrors: true, strict: false });
 
 /**
  * Tool metadata for enhanced lookup
