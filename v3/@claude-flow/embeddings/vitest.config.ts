@@ -14,8 +14,13 @@ export default defineConfig({
     clearMocks: true,
     restoreMocks: true,
     testTimeout: 10000,
-    // Run inline to avoid worker memory issues
-    fileParallelism: false,
-    maxConcurrency: 1,
+    // Use forks with execArgv to pass memory to child process
+    pool: 'forks',
+    poolOptions: {
+      forks: {
+        singleFork: true,
+        execArgv: ['--max-old-space-size=8192'],
+      },
+    },
   },
 });
