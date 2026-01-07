@@ -157,6 +157,7 @@ npx claude-flow@v3alpha --list
 | **GitHub** | `github_swarm`, `repo_analyze`, `pr_enhance`, `issue_triage`, `code_review` | Repository integration |
 | **Workers** | `worker/run`, `worker/status`, `worker/alerts`, `worker/history` | Background task management |
 | **Hooks** | `hooks/pre-*`, `hooks/post-*`, `hooks/route`, `hooks/session-*`, `hooks/intelligence/*`, `hooks/worker/*` | 31 lifecycle hooks |
+| **Progress** | `progress/check`, `progress/sync`, `progress/summary`, `progress/watch` | V3 implementation tracking |
 
 ### Security Features
 
