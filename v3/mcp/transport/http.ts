@@ -13,6 +13,7 @@
  */
 
 import { EventEmitter } from 'events';
+import { timingSafeEqual } from 'crypto';
 import express, { Express, Request, Response, NextFunction } from 'express';
 import { createServer, Server } from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
