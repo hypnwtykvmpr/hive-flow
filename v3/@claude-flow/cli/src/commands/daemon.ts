@@ -385,6 +385,7 @@ const statusCommand: Command = {
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     const verbose = ctx.flags.verbose as boolean;
+    const showModes = ctx.flags['show-modes'] as boolean;
     const projectRoot = process.cwd();
 
     try {
