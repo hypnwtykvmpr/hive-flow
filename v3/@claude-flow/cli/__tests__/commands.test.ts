@@ -636,7 +636,8 @@ describe('Memory Commands', () => {
       expect(result.success).toBe(true);
       expect(result.data).toHaveProperty('entries');
       expect(result.data).toHaveProperty('storage');
-      expect(result.data).toHaveProperty('performance');
+      expect(result.data).toHaveProperty('backend');
+      expect(result.data).toHaveProperty('version');
     });
   });
 
