@@ -293,8 +293,12 @@ export class CLI {
   /**
    * Show command-specific help
    */
-  private showCommandHelp(commandName: string): void {
-    const command = getCommand(commandName);
+  private async showCommandHelp(commandName: string): Promise<void> {
+    // Try sync first, then lazy load
+    let command = getCommand(commandName);
+    if (!command && hasCommand(commandName)) {
+      command = await getCommandAsync(commandName);
+    }
 
     if (!command) {
       this.output.printError(`Unknown command: ${commandName}`);
