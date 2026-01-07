@@ -643,7 +643,8 @@ new file mode 100644
  }
 `;
       const files = classifier.parseDiff(diff);
-      // The fallback implementation detects crypto paths
+      // The fallback implementation classifies based on file patterns, not content analysis
+      // crypto/ path doesn't have a specific pattern, so it falls back to default impact
       expect(files[0].classification.impactLevel).toBe('critical');
     });
 
