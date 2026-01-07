@@ -411,7 +411,7 @@ function logMapAt(
 export function batchEuclideanToPoincare(
   embeddings: Array<Float32Array | number[]>,
   config: HyperbolicConfig = {}
-): Array<Float32Array<ArrayBuffer>> {
+): Float32Array[] {
   return embeddings.map(e => euclideanToPoincare(e, config));
 }
 
