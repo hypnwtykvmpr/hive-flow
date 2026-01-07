@@ -335,8 +335,9 @@ export class WorkerDaemon extends EventEmitter {
       return;
     }
 
-    // Clear all timers
-    for (const [type, timer] of this.timers.entries()) {
+    // Clear all timers (convert to array to avoid iterator issues)
+    const timerEntries = Array.from(this.timers.entries());
+    for (const [type, timer] of timerEntries) {
       clearTimeout(timer);
       this.log('info', `Stopped worker: ${type}`);
     }
