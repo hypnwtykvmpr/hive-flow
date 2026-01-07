@@ -191,9 +191,10 @@ const routeTaskCommand: Command = {
       } else {
         output.writeln();
 
-        const confidenceColor = result.confidence >= 0.7
+        const confidence = result.confidence ?? 0;
+        const confidenceColor = confidence >= 0.7
           ? output.success
-          : result.confidence >= 0.4
+          : confidence >= 0.4
             ? output.warning
             : output.error;
 
