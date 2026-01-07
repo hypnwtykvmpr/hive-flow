@@ -201,16 +201,14 @@ async function checkMcpServers(): Promise<HealthCheck> {
   return { name: 'MCP Servers', status: 'warn', message: 'No MCP config found', fix: 'claude mcp add claude-flow npx @claude-flow/cli@v3alpha mcp start' };
 }
 
-// Check disk space (async)
+// Check disk space (async with proper env inheritance)
 async function checkDiskSpace(): Promise<HealthCheck> {
   try {
     if (process.platform === 'win32') {
       return { name: 'Disk Space', status: 'pass', message: 'Check skipped on Windows' };
     }
-    const { promisify } = require('util');
-    const execAsync = promisify(require('child_process').exec);
-    const { stdout } = await execAsync('df -h . | tail -1', { encoding: 'utf8', timeout: 5000 });
-    const parts = stdout.split(/\s+/);
+    const output_str = await runCommand('df -h . | tail -1');
+    const parts = output_str.split(/\s+/);
     const available = parts[3];
     const usePercent = parseInt(parts[4]?.replace('%', '') || '0', 10);
 
