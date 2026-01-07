@@ -32,10 +32,10 @@ const checkCommand: Command = {
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     const detailed = ctx.flags.detailed as boolean;
-    const spinner = output.createSpinner();
+    const spinner = output.createSpinner({ text: 'Checking V3 progress...' });
 
     try {
-      spinner.start('Checking V3 progress...');
+      spinner.start();
       const result = await callMCPTool<{
         progress?: number;
         overall?: number;
