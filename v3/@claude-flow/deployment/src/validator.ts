@@ -257,14 +257,39 @@ export class Validator {
   }
 
   /**
-   * Execute command
+   * Allowed commands for security validation
+   */
+  private static readonly ALLOWED_COMMAND_PREFIXES = [
+    'npm run ',
+    'npm ',
+    'npx ',
+    'git ',
+  ];
+
+  /**
+   * Execute command safely with validation
    */
   private execCommand(cmd: string, returnOutput = false): string {
+    // Validate: check for shell metacharacters
+    if (/[;&|`$()<>]/.test(cmd)) {
+      throw new Error(`Invalid command: contains shell metacharacters`);
+    }
+
+    // Validate: must start with allowed prefix
+    const isAllowed = Validator.ALLOWED_COMMAND_PREFIXES.some(
+      prefix => cmd.startsWith(prefix)
+    );
+    if (!isAllowed) {
+      throw new Error(`Command not allowed: ${cmd.split(' ')[0]}`);
+    }
+
     try {
       const output = execSync(cmd, {
         cwd: this.cwd,
         encoding: 'utf-8',
-        stdio: returnOutput ? 'pipe' : 'inherit'
+        stdio: returnOutput ? 'pipe' : 'inherit',
+        timeout: 60000, // 60 second timeout for builds
+        maxBuffer: 50 * 1024 * 1024, // 50MB buffer for build output
       });
       return returnOutput ? output : '';
     } catch (error) {
