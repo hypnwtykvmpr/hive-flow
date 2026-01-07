@@ -38,7 +38,7 @@ const scanCommand: Command = {
     // Simulate scan phases
     const phases = ['Analyzing code patterns', 'Checking dependencies', 'CVE database lookup', 'Generating report'];
     for (const phase of phases) {
-      spinner.text = phase + '...';
+      spinner.setText(phase + '...');
       await new Promise(r => setTimeout(r, 400));
     }
 
