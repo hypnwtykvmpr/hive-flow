@@ -1026,7 +1026,7 @@ function findCommonPrefix(strings: string[]): string {
 }
 
 /**
- * Full graph analysis
+ * Full graph analysis (with caching)
  */
 export async function analyzeGraph(
   rootDir: string,
@@ -1034,9 +1034,19 @@ export async function analyzeGraph(
     includeBoundaries?: boolean;
     includeModules?: boolean;
     numPartitions?: number;
+    skipCache?: boolean;
   } = {}
 ): Promise<GraphAnalysisResult> {
-  const graph = await buildDependencyGraph(rootDir);
+  // Check cache first
+  const cacheKey = `analysis:${rootDir}:${JSON.stringify(options)}`;
+  if (!options.skipCache) {
+    const cached = analysisResultCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < ANALYSIS_CACHE_TTL_MS) {
+      return cached.result;
+    }
+  }
+
+  const graph = await buildDependencyGraph(rootDir, { skipCache: options.skipCache });
 
   // Calculate statistics
   const nodeCount = graph.nodes.size;
