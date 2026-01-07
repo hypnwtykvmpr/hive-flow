@@ -330,7 +330,7 @@ export function hyperbolicCentroid(
     for (let i = 0; i < dim; i++) {
       gradient[i] /= points.length;
     }
-    centroid = expMapAt(centroid, gradient, config);
+    centroid = expMapAt(centroid as Float32Array, gradient, config) as Float32Array;
   }
 
   return centroid;
