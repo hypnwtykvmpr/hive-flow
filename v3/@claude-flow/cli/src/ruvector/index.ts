@@ -18,11 +18,16 @@ export {
   createDiffClassifier,
   // MCP tool exports
   analyzeDiff,
+  analyzeDiffSync,
   assessFileRisk,
   assessOverallRisk,
   classifyDiff,
   suggestReviewers,
   getGitDiffNumstat,
+  getGitDiffNumstatAsync,
+  // Cache control
+  clearDiffCache,
+  clearAllDiffCaches,
   // Types
   type DiffClassification,
   type DiffHunk,
