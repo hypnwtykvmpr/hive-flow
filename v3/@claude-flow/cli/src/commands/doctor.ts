@@ -207,13 +207,17 @@ async function checkDiskSpace(): Promise<HealthCheck> {
 // Check TypeScript/build
 async function checkBuildTools(): Promise<HealthCheck> {
   try {
-    const tscVersion = execSync('npx tsc --version 2>/dev/null || echo "not found"', { encoding: 'utf8' }).trim();
-    if (tscVersion.includes('not found')) {
+    // Use stdio: 'pipe' for cross-platform stderr suppression (works on Windows)
+    const tscVersion = execSync('npx tsc --version', {
+      encoding: 'utf8',
+      stdio: ['pipe', 'pipe', 'pipe'] // Suppress stderr on all platforms
+    }).trim();
+    if (!tscVersion || tscVersion.includes('not found')) {
       return { name: 'TypeScript', status: 'warn', message: 'Not installed locally', fix: 'npm install -D typescript' };
     }
     return { name: 'TypeScript', status: 'pass', message: tscVersion.replace('Version ', 'v') };
   } catch {
-    return { name: 'TypeScript', status: 'warn', message: 'Unable to check' };
+    return { name: 'TypeScript', status: 'warn', message: 'Not installed locally', fix: 'npm install -D typescript' };
   }
 }
 
