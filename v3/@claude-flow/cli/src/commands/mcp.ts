@@ -154,7 +154,7 @@ const startCommand: Command = {
           { property: 'Transport', value: transport },
           { property: 'Host', value: host },
           { property: 'Port', value: port },
-          { property: 'Tools', value: tools === 'all' ? '27 enabled' : `${tools.split(',').length} enabled` },
+          { property: 'Tools', value: !tools || tools === 'all' ? '27 enabled' : `${tools.split(',').length} enabled` },
           { property: 'Status', value: output.success('Running') }
         ]
       });
