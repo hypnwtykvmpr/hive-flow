@@ -181,11 +181,11 @@ const diffCommand: Command = {
             { key: 'value', header: 'Value', width: 30 },
           ],
           data: [
-            { metric: 'Overall Risk', value: getRiskDisplay(result.risk.overall) },
-            { metric: 'Risk Score', value: `${result.risk.score}/100` },
-            { metric: 'Files Changed', value: result.risk.breakdown.fileCount },
-            { metric: 'Total Lines Changed', value: result.risk.breakdown.totalChanges },
-            { metric: 'Test Coverage', value: result.risk.breakdown.testCoverage },
+            { metric: 'Overall Risk', value: getRiskDisplay(risk.overall) },
+            { metric: 'Risk Score', value: `${risk.score}/100` },
+            { metric: 'Files Changed', value: risk.breakdown.fileCount },
+            { metric: 'Total Lines Changed', value: risk.breakdown.totalChanges },
+            { metric: 'Test Coverage', value: risk.breakdown.testCoverage },
           ],
         });
 
