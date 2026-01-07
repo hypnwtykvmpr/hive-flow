@@ -622,6 +622,7 @@ export const daemonCommand: Command = {
   options: [],
   examples: [
     { command: 'claude-flow daemon start', description: 'Start the daemon' },
+    { command: 'claude-flow daemon start --headless', description: 'Start with headless workers (E2B sandbox)' },
     { command: 'claude-flow daemon status', description: 'Check daemon status' },
     { command: 'claude-flow daemon stop', description: 'Stop the daemon' },
     { command: 'claude-flow daemon trigger -w audit', description: 'Run security audit' },
@@ -632,6 +633,10 @@ export const daemonCommand: Command = {
     output.writeln();
     output.writeln('Node.js-based background worker system that auto-runs like shell daemons.');
     output.writeln('Manages 12 specialized workers for continuous optimization and monitoring.');
+    output.writeln();
+    output.writeln(output.bold('Headless Mode'));
+    output.writeln('Workers can run in headless mode using E2B sandboxes for isolated execution.');
+    output.writeln('Use --headless flag with start/trigger commands. Sandbox modes: strict, permissive, disabled.');
     output.writeln();
 
     output.writeln(output.bold('Available Workers'));
