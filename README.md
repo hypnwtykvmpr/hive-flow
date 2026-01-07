@@ -1110,7 +1110,7 @@ npx claude-flow@v3alpha hooks pretrain  # Bootstrap learning
 | `@claude-flow/integration` | agentic-flow@alpha integration | [Source](./v3/@claude-flow/integration/) |
 | `@claude-flow/performance` | Benchmarking & optimization | [Source](./v3/@claude-flow/performance/) |
 | `@claude-flow/deployment` | Release & CI/CD | [Source](./v3/@claude-flow/deployment/) |
-| `@claude-flow/shared` | Shared utilities & types | [Source](./v3/@claude-flow/shared/) |
+| `@claude-flow/shared` | Shared utilities, types & V3ProgressService | [Source](./v3/@claude-flow/shared/) |
 
 ### Additional Resources
 
