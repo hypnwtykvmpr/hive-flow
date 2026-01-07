@@ -11,7 +11,8 @@ import { dirname, join } from 'path';
 import type { Command, CommandContext, CommandResult, V3Config, CLIError } from './types.js';
 import { CommandParser, commandParser } from './parser.js';
 import { OutputFormatter, output } from './output.js';
-import { commands, commandRegistry, getCommand } from './commands/index.js';
+import { commands, commandRegistry, getCommand, getCommandNames } from './commands/index.js';
+import { suggestCommand } from './suggest.js';
 
 // Read version from package.json at runtime
 function getPackageVersion(): string {
@@ -114,7 +115,10 @@ export class CLI {
 
       if (!command) {
         this.output.printError(`Unknown command: ${commandName}`);
-        this.output.writeln(`Run "${this.name} --help" for available commands`);
+        // Smart suggestions
+        const availableCommands = Array.from(new Set(commands.map(c => c.name)));
+        const { message } = suggestCommand(commandName, availableCommands);
+        this.output.writeln(this.output.dim(`  ${message}`));
         process.exit(1);
       }
 
