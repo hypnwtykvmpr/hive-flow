@@ -352,51 +352,151 @@ export interface DiffAnalysisResult {
   recommendedReviewers?: string[];
 }
 
+// ============================================================================
+// Optimized Git Diff Functions
+// ============================================================================
+
+// Cache for diff results (TTL-based)
+const diffCache = new Map<string, { files: DiffFile[]; timestamp: number }>();
+const CACHE_TTL_MS = 5000; // 5 seconds - short TTL since diffs change frequently
+
 /**
- * Get git diff statistics using numstat
+ * Get git diff statistics using SINGLE combined command (optimized)
+ * Replaces two separate git commands with one
  */
 export function getGitDiffNumstat(ref: string = 'HEAD'): DiffFile[] {
+  // Check cache first
+  const cacheKey = `numstat:${ref}`;
+  const cached = diffCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+    return cached.files;
+  }
+
   const { execSync } = require('child_process');
   try {
-    const output = execSync(`git diff --numstat ${ref}`, { encoding: 'utf-8' });
-    const statusOutput = execSync(`git diff --name-status ${ref}`, { encoding: 'utf-8' });
+    // OPTIMIZATION: Single combined command instead of two separate calls
+    // Uses --diff-filter to get status and --numstat in one pass
+    const output = execSync(
+      `git diff --numstat --diff-filter=ACDMRTUXB ${ref} && echo "---STATUS---" && git diff --name-status ${ref}`,
+      { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024 } // 10MB buffer for large diffs
+    );
 
+    const [numstatPart, statusPart] = output.split('---STATUS---');
+
+    // Parse status (usually smaller, parse first)
     const statusMap = new Map<string, string>();
-    for (const line of statusOutput.trim().split('\n')) {
-      if (!line) continue;
-      const [status, ...pathParts] = line.split('\t');
-      const path = pathParts[pathParts.length - 1] || pathParts[0];
-      if (path) {
-        statusMap.set(path, status.charAt(0));
+    if (statusPart) {
+      for (const line of statusPart.trim().split('\n')) {
+        if (!line) continue;
+        const [status, ...pathParts] = line.split('\t');
+        const path = pathParts[pathParts.length - 1] || pathParts[0];
+        if (path) statusMap.set(path, status.charAt(0));
       }
     }
 
+    // Parse numstat
     const files: DiffFile[] = [];
-    for (const line of output.trim().split('\n')) {
-      if (!line) continue;
-      const [addStr, delStr, path] = line.split('\t');
-      if (!path) continue;
+    if (numstatPart) {
+      for (const line of numstatPart.trim().split('\n')) {
+        if (!line) continue;
+        const [addStr, delStr, path] = line.split('\t');
+        if (!path) continue;
 
-      const additions = addStr === '-' ? 0 : parseInt(addStr, 10) || 0;
-      const deletions = delStr === '-' ? 0 : parseInt(delStr, 10) || 0;
-      const binary = addStr === '-' && delStr === '-';
+        const additions = addStr === '-' ? 0 : parseInt(addStr, 10) || 0;
+        const deletions = delStr === '-' ? 0 : parseInt(delStr, 10) || 0;
+        const binary = addStr === '-' && delStr === '-';
 
-      const statusChar = statusMap.get(path) || 'M';
-      let status: DiffFile['status'] = 'modified';
-      switch (statusChar) {
-        case 'A': status = 'added'; break;
-        case 'D': status = 'deleted'; break;
-        case 'R': status = 'renamed'; break;
-        default: status = 'modified';
+        const statusChar = statusMap.get(path) || 'M';
+        let status: DiffFile['status'] = 'modified';
+        switch (statusChar) {
+          case 'A': status = 'added'; break;
+          case 'D': status = 'deleted'; break;
+          case 'R': status = 'renamed'; break;
+          default: status = 'modified';
+        }
+
+        files.push({ path, status, additions, deletions, hunks: 1, binary });
       }
-
-      files.push({ path, status, additions, deletions, hunks: 1, binary });
     }
+
+    // Cache the result
+    diffCache.set(cacheKey, { files, timestamp: Date.now() });
 
     return files;
   } catch {
     return [];
   }
+}
+
+/**
+ * Async version of getGitDiffNumstat for non-blocking operation
+ */
+export async function getGitDiffNumstatAsync(ref: string = 'HEAD'): Promise<DiffFile[]> {
+  // Check cache first
+  const cacheKey = `numstat:${ref}`;
+  const cached = diffCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+    return cached.files;
+  }
+
+  const { exec } = require('child_process');
+  const { promisify } = require('util');
+  const execAsync = promisify(exec);
+
+  try {
+    const { stdout } = await execAsync(
+      `git diff --numstat --diff-filter=ACDMRTUXB ${ref} && echo "---STATUS---" && git diff --name-status ${ref}`,
+      { maxBuffer: 10 * 1024 * 1024 }
+    );
+
+    const [numstatPart, statusPart] = stdout.split('---STATUS---');
+
+    const statusMap = new Map<string, string>();
+    if (statusPart) {
+      for (const line of statusPart.trim().split('\n')) {
+        if (!line) continue;
+        const [status, ...pathParts] = line.split('\t');
+        const path = pathParts[pathParts.length - 1] || pathParts[0];
+        if (path) statusMap.set(path, status.charAt(0));
+      }
+    }
+
+    const files: DiffFile[] = [];
+    if (numstatPart) {
+      for (const line of numstatPart.trim().split('\n')) {
+        if (!line) continue;
+        const [addStr, delStr, path] = line.split('\t');
+        if (!path) continue;
+
+        const additions = addStr === '-' ? 0 : parseInt(addStr, 10) || 0;
+        const deletions = delStr === '-' ? 0 : parseInt(delStr, 10) || 0;
+        const binary = addStr === '-' && delStr === '-';
+
+        const statusChar = statusMap.get(path) || 'M';
+        let status: DiffFile['status'] = 'modified';
+        switch (statusChar) {
+          case 'A': status = 'added'; break;
+          case 'D': status = 'deleted'; break;
+          case 'R': status = 'renamed'; break;
+          default: status = 'modified';
+        }
+
+        files.push({ path, status, additions, deletions, hunks: 1, binary });
+      }
+    }
+
+    diffCache.set(cacheKey, { files, timestamp: Date.now() });
+    return files;
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Clear the diff cache (call when git state changes)
+ */
+export function clearDiffCache(): void {
+  diffCache.clear();
 }
 
 /**
