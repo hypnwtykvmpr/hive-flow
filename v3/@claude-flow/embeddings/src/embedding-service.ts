@@ -582,13 +582,17 @@ export class AgenticFlowEmbeddingService extends BaseEmbeddingService {
           return false;
         }
 
-        this.embedder = getOptimizedEmbedder({
+        // Only include defined values to not override defaults
+        const embedderConfig: Record<string, unknown> = {
           modelId: this.modelId,
           dimension: this.dimensions,
           cacheSize: this.embedderCacheSize,
-          modelDir: this.modelDir,
           autoDownload: this.autoDownload,
-        });
+        };
+        if (this.modelDir !== undefined) {
+          embedderConfig.modelDir = this.modelDir;
+        }
+        this.embedder = getOptimizedEmbedder(embedderConfig);
         await this.embedder.init();
         this.initialized = true;
         return true;
