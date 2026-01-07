@@ -308,7 +308,8 @@ export function hyperbolicCentroid(
   for (let i = 0; i < dim; i++) {
     centroid[i] /= points.length;
   }
-  centroid = euclideanToPoincare(centroid, config);
+  const projected = euclideanToPoincare(centroid, config);
+  centroid = projected;
 
   // Iterative refinement using Karcher mean algorithm
   for (let iter = 0; iter < maxIter; iter++) {
