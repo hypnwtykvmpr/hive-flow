@@ -630,7 +630,10 @@ export class WorkerDaemon extends EventEmitter {
     return audit;
   }
 
-  private async runOptimizeWorker(): Promise<unknown> {
+  /**
+   * Local optimize worker (fallback when headless unavailable)
+   */
+  private async runOptimizeWorkerLocal(): Promise<unknown> {
     // Update performance metrics
     const optimizeFile = join(this.projectRoot, '.claude-flow', 'metrics', 'performance.json');
     const metricsDir = join(this.projectRoot, '.claude-flow', 'metrics');
@@ -641,12 +644,14 @@ export class WorkerDaemon extends EventEmitter {
 
     const perf = {
       timestamp: new Date().toISOString(),
+      mode: 'local',
       memoryUsage: process.memoryUsage(),
       uptime: process.uptime(),
       optimizations: {
         cacheHitRate: 0.78,
         avgResponseTime: 45,
       },
+      note: 'Install Claude Code CLI for AI-powered optimization suggestions',
     };
 
     writeFileSync(optimizeFile, JSON.stringify(perf, null, 2));
