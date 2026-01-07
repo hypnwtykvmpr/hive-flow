@@ -322,3 +322,149 @@ describe('createQLearningRouter', () => {
     expect(router).toBeInstanceOf(QLearningRouter);
   });
 });
+
+describe('QLearningRouter Advanced Scenarios', () => {
+  let router: QLearningRouter;
+
+  beforeEach(() => {
+    router = new QLearningRouter();
+  });
+
+  afterEach(() => {
+    router.reset();
+  });
+
+  describe('learning behavior', () => {
+    it('should learn from positive reinforcement', () => {
+      // Train specific patterns
+      for (let i = 0; i < 50; i++) {
+        router.update('write unit tests', 'tester', 10.0);
+        router.update('implement feature', 'coder', 10.0);
+        router.update('review code quality', 'reviewer', 10.0);
+      }
+
+      // Verify learned associations (with exploration disabled)
+      const testDecision = router.route('write unit tests', false);
+      expect(testDecision.route).toBe('tester');
+
+      const codeDecision = router.route('implement feature', false);
+      expect(codeDecision.route).toBe('coder');
+
+      const reviewDecision = router.route('review code quality', false);
+      expect(reviewDecision.route).toBe('reviewer');
+    });
+
+    it('should learn from negative reinforcement', () => {
+      // Initially train with positive reward
+      router.update('bug fix', 'coder', 10.0);
+
+      // Then add negative reward for tester
+      for (let i = 0; i < 20; i++) {
+        router.update('bug fix', 'tester', -5.0);
+      }
+
+      const decision = router.route('bug fix', false);
+      // Should avoid tester after negative reinforcement
+      expect(decision.route).not.toBe('tester');
+    });
+
+    it('should balance exploration and exploitation', () => {
+      // With default epsilon=1.0, should explore more
+      const highExplorRouter = new QLearningRouter({ explorationInitial: 1.0 });
+      const explorations = Array.from({ length: 100 }, () =>
+        highExplorRouter.route('test task').explored
+      );
+      const explorationRate = explorations.filter(Boolean).length / 100;
+      expect(explorationRate).toBeGreaterThan(0.5);
+
+      // With low epsilon, should exploit more
+      const lowExplorRouter = new QLearningRouter({ explorationInitial: 0.0 });
+      lowExplorRouter.update('task', 'coder', 100.0);
+      const exploitations = Array.from({ length: 100 }, () =>
+        lowExplorRouter.route('task', false).explored
+      );
+      const exploitationRate = exploitations.filter(e => !e).length / 100;
+      expect(exploitationRate).toBe(1);
+    });
+  });
+
+  describe('context hashing', () => {
+    it('should generate consistent hashes for same context', () => {
+      router.update('context A', 'coder', 5.0);
+      const decision1 = router.route('context A', false);
+      const decision2 = router.route('context A', false);
+
+      // Q-values should be the same for same context
+      expect(decision1.qValues).toEqual(decision2.qValues);
+    });
+
+    it('should generate different hashes for different contexts', () => {
+      router.update('context A', 'coder', 10.0);
+      router.update('context B', 'tester', 10.0);
+
+      const decisionA = router.route('context A', false);
+      const decisionB = router.route('context B', false);
+
+      // Different contexts should have different Q-value distributions
+      expect(decisionA.route).not.toBe(decisionB.route);
+    });
+  });
+
+  describe('gamma discount factor', () => {
+    it('should value immediate rewards more with low gamma', () => {
+      const lowGammaRouter = new QLearningRouter({ gamma: 0.1 });
+
+      // Update with next state
+      lowGammaRouter.update('current', 'coder', 10.0, 'next');
+      lowGammaRouter.update('next', 'tester', 10.0);
+
+      const stats = lowGammaRouter.getStats();
+      expect(stats.qTableSize).toBe(2);
+    });
+
+    it('should propagate value further with high gamma', () => {
+      const highGammaRouter = new QLearningRouter({ gamma: 0.99 });
+
+      highGammaRouter.update('state1', 'coder', 1.0, 'state2');
+      highGammaRouter.update('state2', 'tester', 100.0);
+
+      const decision = highGammaRouter.route('state1', false);
+      expect(decision.qValues.some(v => v > 0)).toBe(true);
+    });
+  });
+
+  describe('concurrent updates', () => {
+    it('should handle rapid sequential updates', () => {
+      for (let i = 0; i < 1000; i++) {
+        router.update(`task_${i % 10}`, 'coder', Math.random() * 10);
+      }
+
+      expect(router.getStats().updateCount).toBe(1000);
+      expect(router.getStats().qTableSize).toBe(10);
+    });
+  });
+
+  describe('state persistence', () => {
+    it('should export and import complete state', () => {
+      // Build up some state
+      router.update('task1', 'coder', 10.0);
+      router.update('task2', 'tester', 8.0);
+      router.update('task3', 'reviewer', 6.0);
+
+      const originalStats = router.getStats();
+      const exported = router.export();
+
+      // Create new router and import
+      const newRouter = new QLearningRouter();
+      newRouter.import(exported);
+
+      const newStats = newRouter.getStats();
+      expect(newStats.qTableSize).toBe(originalStats.qTableSize);
+
+      // Verify decisions are consistent
+      const origDecision = router.route('task1', false);
+      const newDecision = newRouter.route('task1', false);
+      expect(origDecision.qValues).toEqual(newDecision.qValues);
+    });
+  });
+});
