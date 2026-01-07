@@ -166,8 +166,8 @@ async function startBackgroundDaemon(projectRoot: string, quiet: boolean): Promi
   // Save PID
   fs.writeFileSync(pidFile, String(child.pid));
 
-  // Close log file descriptor in parent
-  fs.closeSync(logFd);
+  // Note: Do NOT close logFd here - it would kill the child's stdout/stderr
+  // The fd will be automatically closed when this process exits
 
   if (!quiet) {
     output.printSuccess(`Daemon started in background (PID: ${child.pid})`);
