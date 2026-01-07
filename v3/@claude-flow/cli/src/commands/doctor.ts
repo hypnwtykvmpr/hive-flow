@@ -21,13 +21,13 @@ const execAsync = promisify(exec);
  */
 async function runCommand(command: string, timeoutMs: number = 5000): Promise<string> {
   const { stdout } = await execAsync(command, {
-    encoding: 'utf8',
+    encoding: 'utf8' as BufferEncoding,
     timeout: timeoutMs,
-    shell: true, // Use shell for proper PATH resolution
+    shell: process.platform === 'win32' ? 'cmd.exe' : '/bin/sh', // Use proper shell per platform
     env: { ...process.env }, // Explicitly inherit full environment
     windowsHide: true, // Hide window on Windows
   });
-  return stdout.trim();
+  return (stdout as string).trim();
 }
 
 interface HealthCheck {
