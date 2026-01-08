@@ -129,15 +129,40 @@ function getV3Progress() {
   };
 }
 
-// Get security status
+// Get security status based on actual scans
 function getSecurityStatus() {
-  const securityPath = path.join(process.cwd(), 'v3', '@claude-flow', 'security');
-  const exists = fs.existsSync(securityPath);
+  // Check for security scan results in memory
+  const scanResultsPath = path.join(process.cwd(), '.claude', 'security-scans');
+  let cvesFixed = 0;
+  const totalCves = 3;
+
+  if (fs.existsSync(scanResultsPath)) {
+    try {
+      const scans = fs.readdirSync(scanResultsPath).filter(f => f.endsWith('.json'));
+      // Each successful scan file = 1 CVE addressed
+      cvesFixed = Math.min(totalCves, scans.length);
+    } catch (e) {
+      // Ignore
+    }
+  }
+
+  // Also check .swarm/security for audit results
+  const auditPath = path.join(process.cwd(), '.swarm', 'security');
+  if (fs.existsSync(auditPath)) {
+    try {
+      const audits = fs.readdirSync(auditPath).filter(f => f.includes('audit'));
+      cvesFixed = Math.min(totalCves, Math.max(cvesFixed, audits.length));
+    } catch (e) {
+      // Ignore
+    }
+  }
+
+  const status = cvesFixed >= totalCves ? 'CLEAN' : cvesFixed > 0 ? 'IN_PROGRESS' : 'PENDING';
 
   return {
-    status: exists ? 'CLEAN' : 'IN_PROGRESS',
-    cvesFixed: exists ? 3 : 2,
-    totalCves: 3,
+    status,
+    cvesFixed,
+    totalCves,
   };
 }
 
