@@ -448,6 +448,55 @@ async function copyAgents(
 }
 
 /**
+ * Find source helpers directory
+ */
+function findSourceHelpersDir(sourceBaseDir?: string): string | null {
+  const possiblePaths: string[] = [];
+
+  // If explicit source base directory is provided, check it first
+  if (sourceBaseDir) {
+    possiblePaths.push(path.join(sourceBaseDir, '.claude', 'helpers'));
+  }
+
+  // IMPORTANT: Check the package's own .claude/helpers directory
+  // This is the primary path when running as an npm package
+  // __dirname is typically /path/to/node_modules/@claude-flow/cli/dist/src/init
+  // We need to go up 4 levels to reach the package root
+  const packageRoot = path.resolve(__dirname, '..', '..', '..', '..');
+  const packageHelpers = path.join(packageRoot, '.claude', 'helpers');
+  if (fs.existsSync(packageHelpers)) {
+    possiblePaths.unshift(packageHelpers); // Add to beginning (highest priority)
+  }
+
+  // From dist/src/init -> go up to project root
+  let currentDir = __dirname;
+  for (let i = 0; i < 10; i++) {
+    const parentDir = path.dirname(currentDir);
+    const helpersPath = path.join(parentDir, '.claude', 'helpers');
+    if (fs.existsSync(helpersPath)) {
+      possiblePaths.push(helpersPath);
+    }
+    currentDir = parentDir;
+  }
+
+  // Also check relative to process.cwd() for development
+  const cwdBased = [
+    path.join(process.cwd(), '.claude', 'helpers'),
+    path.join(process.cwd(), '..', '.claude', 'helpers'),
+    path.join(process.cwd(), '..', '..', '.claude', 'helpers'),
+  ];
+  possiblePaths.push(...cwdBased);
+
+  for (const p of possiblePaths) {
+    if (fs.existsSync(p)) {
+      return p;
+    }
+  }
+
+  return null;
+}
+
+/**
  * Write helper scripts
  */
 async function writeHelpers(
@@ -456,33 +505,38 @@ async function writeHelpers(
   result: InitResult
 ): Promise<void> {
   const helpersDir = path.join(targetDir, '.claude', 'helpers');
-  const sourceBaseDir = options.sourceBaseDir;
+
+  // Find source helpers directory (works for npm package and local dev)
+  const sourceHelpersDir = findSourceHelpersDir(options.sourceBaseDir);
 
   // Try to copy existing helpers from source first
-  if (sourceBaseDir) {
-    const sourceHelpersDir = path.join(sourceBaseDir, '.claude', 'helpers');
-    if (fs.existsSync(sourceHelpersDir)) {
-      const helperFiles = fs.readdirSync(sourceHelpersDir);
-      for (const file of helperFiles) {
-        const sourcePath = path.join(sourceHelpersDir, file);
-        const destPath = path.join(helpersDir, file);
+  if (sourceHelpersDir && fs.existsSync(sourceHelpersDir)) {
+    const helperFiles = fs.readdirSync(sourceHelpersDir);
+    let copiedCount = 0;
 
-        // Skip directories and only copy files
-        if (!fs.statSync(sourcePath).isFile()) continue;
+    for (const file of helperFiles) {
+      const sourcePath = path.join(sourceHelpersDir, file);
+      const destPath = path.join(helpersDir, file);
 
-        if (!fs.existsSync(destPath) || options.force) {
-          fs.copyFileSync(sourcePath, destPath);
+      // Skip directories and only copy files
+      if (!fs.statSync(sourcePath).isFile()) continue;
 
-          // Make shell scripts executable
-          if (file.endsWith('.sh')) {
-            fs.chmodSync(destPath, '755');
-          }
+      if (!fs.existsSync(destPath) || options.force) {
+        fs.copyFileSync(sourcePath, destPath);
 
-          result.created.files.push(`.claude/helpers/${file}`);
-        } else {
-          result.skipped.push(`.claude/helpers/${file}`);
+        // Make shell scripts and mjs files executable
+        if (file.endsWith('.sh') || file.endsWith('.mjs')) {
+          fs.chmodSync(destPath, '755');
         }
+
+        result.created.files.push(`.claude/helpers/${file}`);
+        copiedCount++;
+      } else {
+        result.skipped.push(`.claude/helpers/${file}`);
       }
+    }
+
+    if (copiedCount > 0) {
       return; // Skip generating if we copied from source
     }
   }
