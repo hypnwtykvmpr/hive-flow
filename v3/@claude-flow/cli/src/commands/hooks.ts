@@ -1105,6 +1105,9 @@ const metricsCommand: Command = {
   }
 };
 
+// Pattern Store command (imported from transfer-store.ts)
+// storeCommand is imported at the top
+
 // Transfer from project subcommand
 const transferFromProjectCommand: Command = {
   name: 'from-project',
