@@ -75,30 +75,37 @@ export {
   quickPublish,
 } from './publish.js';
 
+// Import types for the class
+import type { PatternRegistry, SearchOptions, SearchResult, DownloadOptions, DownloadResult, PublishOptions, PublishResult, PatternEntry, PatternCategory, KnownRegistry, StoreConfig } from './types.js';
+import type { CFPFormat } from '../types.js';
+
 /**
  * Pattern Store - High-level API
  */
 export class PatternStore {
-  private discovery: import('./discovery.js').PatternDiscovery;
-  private downloader: import('./download.js').PatternDownloader;
-  private publisher: import('./publish.js').PatternPublisher;
+  private discovery: PatternDiscovery | null = null;
+  private downloader: PatternDownloader | null = null;
+  private publisher: PatternPublisher | null = null;
   private registry: PatternRegistry | null = null;
+  private config: Partial<StoreConfig>;
 
-  constructor(config: Partial<import('./types.js').StoreConfig> = {}) {
-    // Lazy imports to avoid circular dependencies
-    const { PatternDiscovery } = require('./discovery.js');
-    const { PatternDownloader } = require('./download.js');
-    const { PatternPublisher } = require('./publish.js');
-
-    this.discovery = new PatternDiscovery(config);
-    this.downloader = new PatternDownloader(config);
-    this.publisher = new PatternPublisher(config);
+  constructor(config: Partial<StoreConfig> = {}) {
+    this.config = config;
   }
 
   /**
    * Initialize store and load registry
    */
   async initialize(registryName?: string): Promise<boolean> {
+    // Dynamic imports to avoid ESM/CommonJS issues
+    const { PatternDiscovery } = await import('./discovery.js');
+    const { PatternDownloader } = await import('./download.js');
+    const { PatternPublisher } = await import('./publish.js');
+
+    this.discovery = new PatternDiscovery(this.config);
+    this.downloader = new PatternDownloader(this.config);
+    this.publisher = new PatternPublisher(this.config);
+
     const result = await this.discovery.discoverRegistry(registryName);
     if (result.success && result.registry) {
       this.registry = result.registry;
@@ -110,18 +117,17 @@ export class PatternStore {
   /**
    * Search patterns
    */
-  search(options: import('./types.js').SearchOptions = {}): import('./types.js').SearchResult {
+  search(options: SearchOptions = {}): SearchResult {
     if (!this.registry) {
       throw new Error('Store not initialized. Call initialize() first.');
     }
-    const { searchPatterns } = require('./search.js');
     return searchPatterns(this.registry, options);
   }
 
   /**
    * Get pattern by ID
    */
-  getPattern(patternId: string): import('./types.js').PatternEntry | undefined {
+  getPattern(patternId: string): PatternEntry | undefined {
     if (!this.registry) {
       throw new Error('Store not initialized. Call initialize() first.');
     }
@@ -133,11 +139,14 @@ export class PatternStore {
    */
   async download(
     patternId: string,
-    options: import('./types.js').DownloadOptions = {}
-  ): Promise<import('./types.js').DownloadResult> {
+    options: DownloadOptions = {}
+  ): Promise<DownloadResult> {
     const pattern = this.getPattern(patternId);
     if (!pattern) {
       throw new Error(`Pattern not found: ${patternId}`);
+    }
+    if (!this.downloader) {
+      throw new Error('Store not initialized. Call initialize() first.');
     }
     return this.downloader.downloadPattern(pattern, options);
   }
@@ -146,43 +155,43 @@ export class PatternStore {
    * Publish pattern
    */
   async publish(
-    cfp: import('../types.js').CFPFormat,
-    options: import('./types.js').PublishOptions
-  ): Promise<import('./types.js').PublishResult> {
+    cfp: CFPFormat,
+    options: PublishOptions
+  ): Promise<PublishResult> {
+    if (!this.publisher) {
+      throw new Error('Store not initialized. Call initialize() first.');
+    }
     return this.publisher.publishPattern(cfp, options);
   }
 
   /**
    * Get featured patterns
    */
-  getFeatured(): import('./types.js').PatternEntry[] {
+  getFeatured(): PatternEntry[] {
     if (!this.registry) return [];
-    const { getFeaturedPatterns } = require('./search.js');
     return getFeaturedPatterns(this.registry);
   }
 
   /**
    * Get trending patterns
    */
-  getTrending(): import('./types.js').PatternEntry[] {
+  getTrending(): PatternEntry[] {
     if (!this.registry) return [];
-    const { getTrendingPatterns } = require('./search.js');
     return getTrendingPatterns(this.registry);
   }
 
   /**
    * Get newest patterns
    */
-  getNewest(): import('./types.js').PatternEntry[] {
+  getNewest(): PatternEntry[] {
     if (!this.registry) return [];
-    const { getNewestPatterns } = require('./search.js');
     return getNewestPatterns(this.registry);
   }
 
   /**
    * Get categories
    */
-  getCategories(): import('./types.js').PatternCategory[] {
+  getCategories(): PatternCategory[] {
     if (!this.registry) return [];
     return this.registry.categories;
   }
@@ -190,7 +199,8 @@ export class PatternStore {
   /**
    * Get available registries
    */
-  getRegistries(): import('./types.js').KnownRegistry[] {
+  getRegistries(): KnownRegistry[] {
+    if (!this.discovery) return [];
     return this.discovery.listRegistries();
   }
 
@@ -198,7 +208,9 @@ export class PatternStore {
    * Refresh registry
    */
   async refresh(): Promise<boolean> {
-    this.discovery.clearCache();
+    if (this.discovery) {
+      this.discovery.clearCache();
+    }
     return this.initialize();
   }
 
@@ -227,10 +239,7 @@ export class PatternStore {
  * Create pattern store instance
  */
 export function createPatternStore(
-  config?: Partial<import('./types.js').StoreConfig>
+  config?: Partial<StoreConfig>
 ): PatternStore {
   return new PatternStore(config);
 }
-
-// Import PatternRegistry type for the class
-import type { PatternRegistry } from './types.js';
