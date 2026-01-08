@@ -43,7 +43,7 @@ export function generateSettings(options: InitOptions): object {
     enabled: true,
     modelPreferences: {
       default: 'claude-opus-4-5-20251101',
-      routing: 'claude-opus-4-5-20251101',
+      routing: 'claude-3-5-haiku-20241022',
     },
     swarm: {
       topology: options.runtime.topology,
