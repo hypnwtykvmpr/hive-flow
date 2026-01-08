@@ -653,6 +653,8 @@ export const initCommand: Command = {
   ],
   examples: [
     { command: 'claude-flow init', description: 'Initialize with default configuration' },
+    { command: 'claude-flow init --start-all', description: 'Initialize and start daemon, memory, swarm' },
+    { command: 'claude-flow init --start-daemon', description: 'Initialize and start daemon only' },
     { command: 'claude-flow init --minimal', description: 'Initialize with minimal configuration' },
     { command: 'claude-flow init --full', description: 'Initialize with all components' },
     { command: 'claude-flow init --force', description: 'Reinitialize and overwrite existing config' },
