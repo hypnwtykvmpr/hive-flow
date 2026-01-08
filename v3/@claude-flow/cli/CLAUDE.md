@@ -24,7 +24,7 @@ When the user requests a complex task (multi-file changes, feature implementatio
 ```javascript
 // STEP 1: Initialize swarm coordination via MCP (in parallel with agent spawning)
 mcp__claude-flow__swarm_init({
-  topology: "hierarchical-mesh",
+  topology: "hierarchical",
   maxAgents: 15,
   strategy: "adaptive"
 })
@@ -117,9 +117,9 @@ mcp__claude-flow__memory_usage({
 ## Project Configuration
 
 This project is configured with Claude Flow V3:
-- **Topology**: hierarchical-mesh
+- **Topology**: hierarchical
 - **Max Agents**: 15
-- **Memory Backend**: hybrid
+- **Memory Backend**: hybrid (SQLite + AgentDB)
 - **HNSW Indexing**: Enabled (150x-12,500x faster)
 - **Neural Learning**: Enabled (SONA)
 
@@ -138,6 +138,7 @@ This project is configured with Claude Flow V3:
 | `session` | 7 | Session state management and persistence |
 | `config` | 7 | Configuration management and provider setup |
 | `status` | 3 | System status monitoring with watch mode |
+| `start` | 3 | Service startup and quick launch |
 | `workflow` | 6 | Workflow execution and template management |
 | `hooks` | 17 | Self-learning hooks + 12 background workers |
 | `hive-mind` | 6 | Queen-led Byzantine fault-tolerant consensus |
@@ -156,6 +157,7 @@ This project is configured with Claude Flow V3:
 | `embeddings` | 4 | Vector embeddings (embed, batch, search, init) - 75x faster with agentic-flow |
 | `claims` | 4 | Claims-based authorization (check, grant, revoke, list) |
 | `migrate` | 5 | V2 to V3 migration with rollback support |
+| `process` | 4 | Background process management |
 | `doctor` | 1 | System diagnostics with health checks |
 | `completions` | 4 | Shell completions (bash, zsh, fish, powershell) |
 
