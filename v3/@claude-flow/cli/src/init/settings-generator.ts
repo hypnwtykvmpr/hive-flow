@@ -33,12 +33,9 @@ export function generateSettings(options: InitOptions): object {
     deny: [],
   };
 
-  // Add model preferences for V3
-  settings.model = {
-    default: 'claude-sonnet-4-20250514',
-    // Use Haiku for quick routing decisions
-    routing: 'claude-haiku',
-  };
+  // Note: Claude Code expects 'model' to be a string, not an object
+  // Model preferences are stored in claudeFlow settings instead
+  // settings.model = 'claude-sonnet-4-20250514'; // Uncomment if you want to set a default model
 
   // Add V3-specific settings
   settings.claudeFlow = {
