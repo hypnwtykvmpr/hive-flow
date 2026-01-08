@@ -19,15 +19,18 @@ hooks:
   pre: |
     echo "💻 Coder agent implementing: $TASK"
 
-    # 1. Learn from past similar implementations (ReasoningBank)
-    SIMILAR_PATTERNS=$(npx claude-flow memory search-patterns "$TASK" --k=5 --min-reward=0.8)
+    # V3: Initialize task with hooks system
+    npx claude-flow@v3alpha hooks pre-task --description "$TASK"
+
+    # 1. Learn from past similar implementations (ReasoningBank + HNSW 150x-12,500x faster)
+    SIMILAR_PATTERNS=$(npx claude-flow@v3alpha memory search --query "$TASK" --limit 5 --min-score 0.8 --use-hnsw)
     if [ -n "$SIMILAR_PATTERNS" ]; then
-      echo "📚 Found similar successful code patterns"
-      npx claude-flow memory get-pattern-stats "$TASK" --k=5
+      echo "📚 Found similar successful code patterns (HNSW-indexed)"
+      npx claude-flow@v3alpha hooks intelligence --action pattern-search --query "$TASK" --k 5
     fi
 
-    # 2. Learn from past failures
-    FAILURES=$(npx claude-flow memory search-patterns "$TASK" --only-failures --k=3)
+    # 2. Learn from past failures (EWC++ prevents forgetting)
+    FAILURES=$(npx claude-flow@v3alpha memory search --query "$TASK failures" --limit 3 --failures-only)
     if [ -n "$FAILURES" ]; then
       echo "⚠️  Avoiding past mistakes from failed implementations"
     fi
@@ -37,11 +40,10 @@ hooks:
       echo "⚠️  Remember: Write tests first (TDD)"
     fi
 
-    # 3. Store task start
-    npx claude-flow memory store-pattern \
+    # 3. Store task start via hooks
+    npx claude-flow@v3alpha hooks intelligence --action trajectory-start \
       --session-id "coder-$(date +%s)" \
-      --task "$TASK" \
-      --status "started"
+      --task "$TASK"
 
   post: |
     echo "✨ Implementation complete"
@@ -56,23 +58,30 @@ hooks:
     REWARD=$(echo "scale=2; $TESTS_PASSED / 100" | bc)
     SUCCESS=$([[ $TESTS_PASSED -gt 0 ]] && echo "true" || echo "false")
 
-    # 2. Store learning pattern for future improvement
-    npx claude-flow memory store-pattern \
+    # 2. Store learning pattern via V3 hooks (with EWC++ consolidation)
+    npx claude-flow@v3alpha hooks intelligence --action pattern-store \
       --session-id "coder-$(date +%s)" \
       --task "$TASK" \
       --output "Implementation completed" \
       --reward "$REWARD" \
       --success "$SUCCESS" \
-      --critique "Self-assessment: Code quality and test coverage"
+      --consolidate-ewc true
 
-    # 3. Train neural patterns on successful high-quality code
+    # 3. Complete task hook
+    npx claude-flow@v3alpha hooks post-task --task-id "coder-$(date +%s)" --success "$SUCCESS"
+
+    # 4. Train neural patterns on successful high-quality code (SONA <0.05ms adaptation)
     if [ "$SUCCESS" = "true" ] && [ "$TESTS_PASSED" -gt 90 ]; then
       echo "🧠 Training neural pattern from successful implementation"
-      npx claude-flow neural train \
+      npx claude-flow@v3alpha neural train \
         --pattern-type "coordination" \
         --training-data "code-implementation" \
-        --epochs 50
+        --epochs 50 \
+        --use-sona
     fi
+
+    # 5. Trigger consolidate worker to prevent catastrophic forgetting
+    npx claude-flow@v3alpha hooks worker dispatch --trigger consolidate
 ---
 
 # Code Implementation Agent
