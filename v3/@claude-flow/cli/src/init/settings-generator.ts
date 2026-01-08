@@ -76,6 +76,8 @@ function generateStatusLineConfig(options: InitOptions): object {
   const statuslineCommand = 'npx @claude-flow/hooks statusline 2>/dev/null || node .claude/helpers/statusline.js 2>/dev/null || echo "▊ V3"';
 
   return {
+    // Type must be "command" for Claude Code validation
+    type: 'command',
     // Command to execute for statusline content
     command: statuslineCommand,
     // Refresh interval in milliseconds (5 seconds default)
