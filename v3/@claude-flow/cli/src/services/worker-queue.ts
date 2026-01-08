@@ -312,8 +312,23 @@ export class WorkerQueue extends EventEmitter {
       timeoutMs?: number;
     }
   ): Promise<string> {
-    const taskId = `task-${Date.now()}-${randomUUID().slice(0, 8)}`;
+    // Initialize if needed
+    if (!this.initialized) {
+      await this.initialize();
+    }
+
+    // Validate worker type
+    if (!workerType || typeof workerType !== 'string') {
+      throw new Error('Invalid worker type');
+    }
+
+    // Validate priority
     const priority = options?.priority || 'normal';
+    if (!['critical', 'high', 'normal', 'low'].includes(priority)) {
+      throw new Error(`Invalid priority: ${priority}`);
+    }
+
+    const taskId = `task-${Date.now()}-${randomUUID().slice(0, 8)}`;
 
     const task: QueueTask = {
       id: taskId,
