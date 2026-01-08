@@ -190,9 +190,8 @@ export function getPluginTagCloud(registry: PluginRegistry): Map<string, number>
   }
 
   // Sort by count descending
-  return new Map(
-    [...tagCounts.entries()].sort((a, b) => b[1] - a[1])
-  );
+  const sortedEntries = Array.from(tagCounts.entries()).sort((a, b) => b[1] - a[1]);
+  return new Map(sortedEntries);
 }
 
 /**
