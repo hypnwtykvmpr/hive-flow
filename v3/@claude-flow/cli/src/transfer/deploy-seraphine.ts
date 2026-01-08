@@ -1,17 +1,21 @@
-#!/usr/bin/env npx ts-node
+#!/usr/bin/env npx tsx
 /**
  * Deploy Seraphine Genesis Model
  * Exports and uploads the first Claude Flow pattern model to IPFS
  *
  * Usage:
- *   npx ts-node deploy-seraphine.ts
- *   npx ts-node deploy-seraphine.ts --output ./patterns/
- *   npx ts-node deploy-seraphine.ts --to-ipfs
- *   npx ts-node deploy-seraphine.ts --to-ipfs --anonymize strict
+ *   npx tsx deploy-seraphine.ts
+ *   npx tsx deploy-seraphine.ts --output ./patterns/
+ *   npx tsx deploy-seraphine.ts --to-ipfs
+ *   npx tsx deploy-seraphine.ts --to-ipfs --anonymize strict
  */
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 import { createSeraphineGenesis, getSeraphineInfo } from './models/seraphine.js';
 import { exportPatterns } from './export.js';
 import { serializeToJson, validateCFP } from './serialization/cfp.js';
