@@ -169,28 +169,28 @@ This project is configured with Claude Flow V3:
 
 \`\`\`bash
 # Initialize project
-npx claude-flow@v3alpha init --wizard
+npx @claude-flow/cli@latest init --wizard
 
 # Start daemon with background workers
-npx claude-flow@v3alpha daemon start
+npx @claude-flow/cli@latest daemon start
 
 # Spawn an agent
-npx claude-flow@v3alpha agent spawn -t coder --name my-coder
+npx @claude-flow/cli@latest agent spawn -t coder --name my-coder
 
 # Initialize swarm
-npx claude-flow@v3alpha swarm init --v3-mode
+npx @claude-flow/cli@latest swarm init --v3-mode
 
 # Search memory (HNSW-indexed)
-npx claude-flow@v3alpha memory search -q "authentication patterns"
+npx @claude-flow/cli@latest memory search -q "authentication patterns"
 
 # System diagnostics
-npx claude-flow@v3alpha doctor --fix
+npx @claude-flow/cli@latest doctor --fix
 
 # Security scan
-npx claude-flow@v3alpha security scan --depth full
+npx @claude-flow/cli@latest security scan --depth full
 
 # Performance benchmark
-npx claude-flow@v3alpha performance benchmark --suite all
+npx @claude-flow/cli@latest performance benchmark --suite all
 \`\`\`
 
 ## 🚀 Available Agents (60+ Types)
@@ -254,27 +254,27 @@ npx claude-flow@v3alpha performance benchmark --suite all
 
 \`\`\`bash
 # Core hooks
-npx claude-flow@v3alpha hooks pre-task --description "[task]"
-npx claude-flow@v3alpha hooks post-task --task-id "[id]" --success true
-npx claude-flow@v3alpha hooks post-edit --file "[file]" --train-patterns
+npx @claude-flow/cli@latest hooks pre-task --description "[task]"
+npx @claude-flow/cli@latest hooks post-task --task-id "[id]" --success true
+npx @claude-flow/cli@latest hooks post-edit --file "[file]" --train-patterns
 
 # Session management
-npx claude-flow@v3alpha hooks session-start --session-id "[id]"
-npx claude-flow@v3alpha hooks session-end --export-metrics true
-npx claude-flow@v3alpha hooks session-restore --session-id "[id]"
+npx @claude-flow/cli@latest hooks session-start --session-id "[id]"
+npx @claude-flow/cli@latest hooks session-end --export-metrics true
+npx @claude-flow/cli@latest hooks session-restore --session-id "[id]"
 
 # Intelligence routing
-npx claude-flow@v3alpha hooks route --task "[task]"
-npx claude-flow@v3alpha hooks explain --topic "[topic]"
+npx @claude-flow/cli@latest hooks route --task "[task]"
+npx @claude-flow/cli@latest hooks explain --topic "[topic]"
 
 # Neural learning
-npx claude-flow@v3alpha hooks pretrain --model-type moe --epochs 10
-npx claude-flow@v3alpha hooks build-agents --agent-types coder,tester
+npx @claude-flow/cli@latest hooks pretrain --model-type moe --epochs 10
+npx @claude-flow/cli@latest hooks build-agents --agent-types coder,tester
 
 # Background workers
-npx claude-flow@v3alpha hooks worker list
-npx claude-flow@v3alpha hooks worker dispatch --trigger audit
-npx claude-flow@v3alpha hooks worker status
+npx @claude-flow/cli@latest hooks worker list
+npx @claude-flow/cli@latest hooks worker dispatch --trigger audit
+npx @claude-flow/cli@latest hooks worker status
 \`\`\`
 
 ## 🧠 Intelligence System (RuVector)
@@ -352,7 +352,7 @@ CLAUDE_FLOW_MEMORY_PATH=./data/memory
 
 ## 🔍 Doctor Health Checks
 
-Run \`npx claude-flow@v3alpha doctor\` to check:
+Run \`npx @claude-flow/cli@latest doctor\` to check:
 - Node.js version (20+)
 - npm version (9+)
 - Git installation
@@ -368,15 +368,15 @@ Run \`npx claude-flow@v3alpha doctor\` to check:
 
 \`\`\`bash
 # Add MCP servers
-claude mcp add claude-flow npx claude-flow@v3alpha mcp start
+claude mcp add claude-flow npx @claude-flow/cli@latest mcp start
 claude mcp add ruv-swarm npx ruv-swarm mcp start  # Optional
 claude mcp add flow-nexus npx flow-nexus@latest mcp start  # Optional
 
 # Start daemon
-npx claude-flow@v3alpha daemon start
+npx @claude-flow/cli@latest daemon start
 
 # Run doctor
-npx claude-flow@v3alpha doctor --fix
+npx @claude-flow/cli@latest doctor --fix
 \`\`\`
 
 ## 🎯 Claude Code vs MCP Tools
@@ -452,22 +452,22 @@ Task("Tester", "Write tests...", "tester")
 
 \`\`\`bash
 # Core
-npx claude-flow@v3alpha init --wizard
-npx claude-flow@v3alpha agent spawn -t coder
-npx claude-flow@v3alpha swarm init --v3-mode
-npx claude-flow@v3alpha memory search -q "query"
+npx @claude-flow/cli@latest init --wizard
+npx @claude-flow/cli@latest agent spawn -t coder
+npx @claude-flow/cli@latest swarm init --v3-mode
+npx @claude-flow/cli@latest memory search -q "query"
 
 # Advanced
-npx claude-flow@v3alpha daemon start
-npx claude-flow@v3alpha doctor --fix
-npx claude-flow@v3alpha security scan
-npx claude-flow@v3alpha performance benchmark
+npx @claude-flow/cli@latest daemon start
+npx @claude-flow/cli@latest doctor --fix
+npx @claude-flow/cli@latest security scan
+npx @claude-flow/cli@latest performance benchmark
 \`\`\`
 
 ## MCP Setup
 
 \`\`\`bash
-claude mcp add claude-flow npx claude-flow@v3alpha mcp start
+claude mcp add claude-flow npx @claude-flow/cli@latest mcp start
 \`\`\`
 
 ---
