@@ -227,13 +227,15 @@ function generateHooksConfig(config: HooksConfig): object {
         hooks: [
           {
             type: 'command',
+            // Start daemon quietly in background
             command: 'npx claude-flow@v3alpha daemon start --quiet 2>/dev/null || true',
             timeout: 5000,
             continueOnError: true,
           },
           {
             type: 'command',
-            command: 'npx claude-flow@v3alpha hooks session-start --session-id "$SESSION_ID" --load-context',
+            // Restore previous session context if available
+            command: '[ -n "$SESSION_ID" ] && npx claude-flow@v3alpha hooks session-restore --session-id "$SESSION_ID" 2>/dev/null || true',
             timeout: 10000,
             continueOnError: true,
           },
