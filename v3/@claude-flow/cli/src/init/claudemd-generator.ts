@@ -379,7 +379,7 @@ npx @claude-flow/cli@latest daemon start
 npx @claude-flow/cli@latest doctor --fix
 \`\`\`
 
-## 🎯 Claude Code vs MCP Tools
+## 🎯 Claude Code vs CLI Tools
 
 ### Claude Code Handles ALL EXECUTION:
 - **Task tool**: Spawn and run agents concurrently
@@ -389,15 +389,15 @@ npx @claude-flow/cli@latest doctor --fix
 - TodoWrite and task management
 - Git operations
 
-### MCP Tools ONLY COORDINATE:
-- Swarm initialization (topology setup)
-- Agent type definitions
-- Task orchestration
-- Memory management
-- Neural features
-- Performance tracking
+### CLI Tools Handle Coordination (via Bash):
+- **Swarm init**: \`npx @claude-flow/cli@latest swarm init --topology <type>\`
+- **Swarm status**: \`npx @claude-flow/cli@latest swarm status\`
+- **Agent spawn**: \`npx @claude-flow/cli@latest agent spawn -t <type> --name <name>\`
+- **Memory store**: \`npx @claude-flow/cli@latest memory store --namespace <ns> --key <k> --value <v>\`
+- **Memory search**: \`npx @claude-flow/cli@latest memory search -q "<query>"\`
+- **Hooks**: \`npx @claude-flow/cli@latest hooks <hook-name> [options]\`
 
-**KEY**: MCP coordinates the strategy, Claude Code's Task tool executes with real agents.
+**KEY**: CLI coordinates the strategy via Bash, Claude Code's Task tool executes with real agents.
 
 ## Support
 
