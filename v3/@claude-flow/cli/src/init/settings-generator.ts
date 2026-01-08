@@ -225,12 +225,7 @@ function generateHooksConfig(config: HooksConfig): object {
         hooks: [
           {
             type: 'prompt',
-            prompt: `Evaluate task completion. Consider:
-1. Were all requested changes made?
-2. Did builds/tests pass?
-3. Is follow-up work needed?
-
-Respond with {"ok": true} if complete and ready to stop, or {"ok": false, "reason": "..."} if more work is needed.`,
+            prompt: `Was the user's immediate request completed? Only evaluate what was explicitly asked. Respond {"ok": true} if done, or {"ok": false, "reason": "..."} only if the specific request failed.`,
           },
         ],
       },
