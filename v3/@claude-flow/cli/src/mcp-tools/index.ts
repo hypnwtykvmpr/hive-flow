@@ -17,3 +17,4 @@ export { workflowTools } from './workflow-tools.js';
 export { coverageRouterTools } from '../ruvector/coverage-tools.js';
 export { analyzeTools } from './analyze-tools.js';
 export { progressTools } from './progress-tools.js';
+export { transferTools } from './transfer-tools.js';
