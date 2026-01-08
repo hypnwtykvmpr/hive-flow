@@ -1105,9 +1105,10 @@ const metricsCommand: Command = {
   }
 };
 
-// Transfer subcommand
-const transferCommand: Command = {
-  name: 'transfer',
+// Transfer from project subcommand
+const transferFromProjectCommand: Command = {
+  name: 'from-project',
+  aliases: ['project'],
   description: 'Transfer patterns from another project',
   options: [
     {
@@ -1132,8 +1133,8 @@ const transferCommand: Command = {
     }
   ],
   examples: [
-    { command: 'claude-flow hooks transfer -s ../old-project', description: 'Transfer all patterns' },
-    { command: 'claude-flow hooks transfer -s ../prod --filter security -m 0.9', description: 'Transfer high-confidence security patterns' }
+    { command: 'claude-flow hooks transfer from-project -s ../old-project', description: 'Transfer all patterns' },
+    { command: 'claude-flow hooks transfer from-project -s ../prod --filter security -m 0.9', description: 'Transfer high-confidence security patterns' }
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     const sourcePath = ctx.args[0] || ctx.flags.source as string;
