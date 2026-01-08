@@ -383,6 +383,9 @@ export const MINIMAL_INIT_OPTIONS: InitOptions = {
     hiveMind: false,
     sparc: false,
     swarm: false,
+    v3: false,
+    optimization: false,
+    testing: false,
     all: false,
   },
   runtime: {
