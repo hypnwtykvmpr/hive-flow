@@ -313,12 +313,17 @@ export class ContainerWorkerPool extends EventEmitter {
    * Shutdown the pool
    */
   async shutdown(): Promise<void> {
+    if (this.isShuttingDown) return;
+    this.isShuttingDown = true;
+
     // Stop timers
     if (this.healthCheckTimer) {
       clearInterval(this.healthCheckTimer);
+      this.healthCheckTimer = undefined;
     }
     if (this.idleCheckTimer) {
       clearInterval(this.idleCheckTimer);
+      this.idleCheckTimer = undefined;
     }
 
     // Reject queued tasks
@@ -327,12 +332,21 @@ export class ContainerWorkerPool extends EventEmitter {
     }
     this.taskQueue = [];
 
-    // Terminate all containers
+    // Terminate all containers with timeout
     const terminatePromises: Promise<void>[] = [];
     for (const [id] of this.containers) {
-      terminatePromises.push(this.terminateContainer(id));
+      terminatePromises.push(
+        this.terminateContainer(id).catch(() => {
+          // Ignore errors during shutdown
+        })
+      );
     }
-    await Promise.all(terminatePromises);
+
+    // Wait for all containers with 30s timeout
+    await Promise.race([
+      Promise.all(terminatePromises),
+      new Promise<void>(resolve => setTimeout(resolve, 30000)),
+    ]);
 
     this.initialized = false;
     this.emit('shutdown', {});
