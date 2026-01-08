@@ -63,6 +63,19 @@ TodoWrite({ todos: [
 Bash("npx @claude-flow/cli@latest memory store --namespace swarm --key current-session --value '{\\"task\\": \\"[user task]\\", \\"agents\\": 6}'")
 \`\`\`
 
+### ⏸️ Post-Swarm Protocol
+
+**After spawning a swarm, Claude Code MUST:**
+
+1. **WAIT** - Do not continuously check status. Let agents complete their work.
+2. **REVIEW** - When agents return, review all results before proceeding.
+3. **CONFIRM** - Verify implementation matches requirements.
+4. **UPDATE ADRs** - Document architectural decisions in \`/docs/adr/\`.
+5. **UPDATE DDD** - Ensure domain models reflect changes.
+6. **SECURITY CHECK** - Run \`npx @claude-flow/cli@latest security scan\` before finalizing.
+
+**NEVER continuously poll swarm status. Trust the agents to complete and report back.**
+
 ### 📋 Agent Routing by Task Type
 
 | Task Type | Required Agents | Topology |
