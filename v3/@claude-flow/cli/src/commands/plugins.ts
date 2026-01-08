@@ -19,45 +19,139 @@ import {
   type PluginSearchOptions,
 } from '../plugins/store/index.js';
 
-// List subcommand
+// List subcommand - Now uses IPFS-based registry
 const listCommand: Command = {
   name: 'list',
-  description: 'List installed and available plugins',
+  description: 'List installed and available plugins from IPFS registry',
   options: [
     { name: 'installed', short: 'i', type: 'boolean', description: 'Show only installed plugins' },
     { name: 'available', short: 'a', type: 'boolean', description: 'Show available plugins from registry' },
     { name: 'category', short: 'c', type: 'string', description: 'Filter by category' },
+    { name: 'type', short: 't', type: 'string', description: 'Filter by plugin type' },
+    { name: 'official', short: 'o', type: 'boolean', description: 'Show only official plugins' },
+    { name: 'featured', short: 'f', type: 'boolean', description: 'Show featured plugins' },
+    { name: 'registry', short: 'r', type: 'string', description: 'Registry to use (default: claude-flow-official)' },
   ],
   examples: [
-    { command: 'claude-flow plugins list', description: 'List all plugins' },
+    { command: 'claude-flow plugins list', description: 'List all plugins from registry' },
     { command: 'claude-flow plugins list --installed', description: 'List installed only' },
+    { command: 'claude-flow plugins list --official', description: 'List official plugins' },
+    { command: 'claude-flow plugins list --category security', description: 'List security plugins' },
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     const installedOnly = ctx.flags.installed as boolean;
+    const category = ctx.flags.category as string;
+    const type = ctx.flags.type as string;
+    const official = ctx.flags.official as boolean;
+    const featured = ctx.flags.featured as boolean;
+    const registryName = ctx.flags.registry as string;
 
-    output.writeln();
-    output.writeln(output.bold(installedOnly ? 'Installed Plugins' : 'All Plugins'));
-    output.writeln(output.dim('─'.repeat(60)));
+    // For installed-only, use local data (placeholder)
+    if (installedOnly) {
+      output.writeln();
+      output.writeln(output.bold('Installed Plugins'));
+      output.writeln(output.dim('─'.repeat(60)));
 
-    output.printTable({
-      columns: [
-        { key: 'name', header: 'Plugin', width: 22 },
-        { key: 'version', header: 'Version', width: 10 },
-        { key: 'category', header: 'Category', width: 15 },
-        { key: 'status', header: 'Status', width: 12 },
-      ],
-      data: [
-        { name: '@claude-flow/neural', version: '3.0.0', category: 'AI/ML', status: output.success('Active') },
-        { name: '@claude-flow/security', version: '3.0.0', category: 'Security', status: output.success('Active') },
-        { name: '@claude-flow/performance', version: '3.0.0', category: 'DevOps', status: output.success('Active') },
-        { name: '@claude-flow/embeddings', version: '3.0.0', category: 'AI/ML', status: output.success('Active') },
-        { name: '@claude-flow/claims', version: '3.0.0', category: 'Auth', status: output.success('Active') },
-        { name: 'community-analytics', version: '1.2.0', category: 'Analytics', status: output.dim('Available') },
-        { name: 'custom-agents', version: '2.0.1', category: 'Agents', status: output.dim('Available') },
-      ],
-    });
+      // TODO: Read from local installed plugins manifest
+      output.printTable({
+        columns: [
+          { key: 'name', header: 'Plugin', width: 24 },
+          { key: 'version', header: 'Version', width: 10 },
+          { key: 'type', header: 'Type', width: 12 },
+          { key: 'status', header: 'Status', width: 10 },
+        ],
+        data: [
+          { name: '@claude-flow/neural', version: '3.0.0', type: 'core', status: output.success('Active') },
+          { name: '@claude-flow/security', version: '3.0.0', type: 'command', status: output.success('Active') },
+          { name: '@claude-flow/embeddings', version: '3.0.0', type: 'core', status: output.success('Active') },
+        ],
+      });
 
-    return { success: true };
+      return { success: true };
+    }
+
+    // Discover registry via IPFS
+    const spinner = output.createSpinner({ text: 'Discovering plugin registry via IPNS...', spinner: 'dots' });
+    spinner.start();
+
+    try {
+      const discovery = createPluginDiscoveryService();
+      const result = await discovery.discoverRegistry(registryName);
+
+      if (!result.success || !result.registry) {
+        spinner.fail('Failed to discover registry');
+        output.printError(result.error || 'Unknown error');
+        return { success: false, exitCode: 1 };
+      }
+
+      spinner.succeed(`Registry discovered: ${result.registry.totalPlugins} plugins available`);
+
+      output.writeln();
+
+      // Build search options
+      const searchOptions: PluginSearchOptions = {
+        category,
+        type: type as any,
+        sortBy: 'downloads',
+        sortOrder: 'desc',
+      };
+
+      let plugins: PluginEntry[];
+      let title: string;
+
+      if (official) {
+        plugins = getOfficialPlugins(result.registry);
+        title = 'Official Plugins';
+      } else if (featured) {
+        plugins = getFeaturedPlugins(result.registry);
+        title = 'Featured Plugins';
+      } else {
+        const searchResult = searchPlugins(result.registry, searchOptions);
+        plugins = searchResult.plugins;
+        title = category ? `${category} Plugins` : 'Available Plugins';
+      }
+
+      output.writeln(output.bold(title));
+      output.writeln(output.dim('─'.repeat(70)));
+
+      if (ctx.flags.format === 'json') {
+        output.printJson(plugins);
+        return { success: true, data: plugins };
+      }
+
+      output.printTable({
+        columns: [
+          { key: 'name', header: 'Plugin', width: 24 },
+          { key: 'version', header: 'Version', width: 10 },
+          { key: 'type', header: 'Type', width: 12 },
+          { key: 'downloads', header: 'Downloads', width: 12, align: 'right' },
+          { key: 'rating', header: 'Rating', width: 8, align: 'right' },
+          { key: 'trust', header: 'Trust', width: 10 },
+        ],
+        data: plugins.map(p => ({
+          name: p.name,
+          version: p.version,
+          type: p.type,
+          downloads: p.downloads.toLocaleString(),
+          rating: `${p.rating.toFixed(1)}★`,
+          trust: p.trustLevel === 'official' ? output.success('Official') :
+                 p.trustLevel === 'verified' ? output.highlight('Verified') :
+                 p.verified ? output.dim('Community') : output.dim('Unverified'),
+        })),
+      });
+
+      output.writeln();
+      output.writeln(output.dim(`Source: ${result.source}${result.fromCache ? ' (cached)' : ''}`));
+      if (result.cid) {
+        output.writeln(output.dim(`Registry CID: ${result.cid.slice(0, 30)}...`));
+      }
+
+      return { success: true, data: plugins };
+    } catch (error) {
+      spinner.fail('Failed to fetch registry');
+      output.printError(`Error: ${String(error)}`);
+      return { success: false, exitCode: 1 };
+    }
   },
 };
 
