@@ -75,12 +75,18 @@ export {
   quickPublish,
 } from './publish.js';
 
-// Import types for the class
+// Import classes and functions for PatternStore
 import type { PatternRegistry, SearchOptions, SearchResult, DownloadOptions, DownloadResult, PublishOptions, PublishResult, PatternEntry, PatternCategory, KnownRegistry, StoreConfig } from './types.js';
 import type { CFPFormat } from '../types.js';
 import { PatternDiscovery } from './discovery.js';
 import { PatternDownloader } from './download.js';
 import { PatternPublisher } from './publish.js';
+import {
+  searchPatterns as doSearchPatterns,
+  getFeaturedPatterns as doGetFeaturedPatterns,
+  getTrendingPatterns as doGetTrendingPatterns,
+  getNewestPatterns as doGetNewestPatterns,
+} from './search.js';
 
 /**
  * Pattern Store - High-level API
