@@ -144,7 +144,7 @@ function generateHooksConfig(config: HooksConfig): object {
         hooks: [
           {
             type: 'command',
-            command: 'npx claude-flow@v3alpha hooks post-edit --file "$TOOL_INPUT_file_path" --success "$TOOL_SUCCESS" --train-patterns',
+            command: 'if [ -n "$TOOL_INPUT_file_path" ]; then npx claude-flow@v3alpha hooks post-edit -f "$TOOL_INPUT_file_path" -s "${TOOL_SUCCESS:-true}" 2>/dev/null; fi; exit 0',
             timeout: config.timeout,
             continueOnError: config.continueOnError,
           },
@@ -156,7 +156,7 @@ function generateHooksConfig(config: HooksConfig): object {
         hooks: [
           {
             type: 'command',
-            command: 'npx claude-flow@v3alpha hooks post-command --command "$TOOL_INPUT_command" --success "$TOOL_SUCCESS" --exit-code "$TOOL_EXIT_CODE"',
+            command: 'if [ -n "$TOOL_INPUT_command" ]; then npx claude-flow@v3alpha hooks post-command -c "$TOOL_INPUT_command" -s "${TOOL_SUCCESS:-true}" 2>/dev/null; fi; exit 0',
             timeout: config.timeout,
             continueOnError: config.continueOnError,
           },
@@ -168,22 +168,9 @@ function generateHooksConfig(config: HooksConfig): object {
         hooks: [
           {
             type: 'command',
-            command: 'npx claude-flow@v3alpha hooks post-task --agent-id "$TOOL_RESULT_agent_id" --success "$TOOL_SUCCESS" --analyze',
+            command: 'if [ -n "$TOOL_RESULT_agent_id" ]; then npx claude-flow@v3alpha hooks post-task --agent-id "$TOOL_RESULT_agent_id" -s "${TOOL_SUCCESS:-true}" 2>/dev/null; fi; exit 0',
             timeout: config.timeout,
             continueOnError: config.continueOnError,
-          },
-        ],
-      },
-      // Search caching - use memory store for pattern caching
-      {
-        matcher: '^(Grep|Glob)$',
-        hooks: [
-          {
-            type: 'command',
-            // Cache search patterns in memory for reuse
-            command: '[ -n "$TOOL_INPUT_pattern" ] && npx claude-flow@v3alpha memory store -k "search:$TOOL_INPUT_pattern" -v "$TOOL_SUCCESS" -n cache --ttl 3600 2>/dev/null || true',
-            timeout: 2000,
-            continueOnError: true,
           },
         ],
       },
