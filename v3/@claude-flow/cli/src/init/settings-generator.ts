@@ -144,7 +144,7 @@ function generateHooksConfig(config: HooksConfig): object {
         hooks: [
           {
             type: 'command',
-            command: 'if [ -n "$TOOL_INPUT_file_path" ]; then npx claude-flow@v3alpha hooks post-edit -f "$TOOL_INPUT_file_path" -s "${TOOL_SUCCESS:-true}" 2>/dev/null; fi; exit 0',
+            command: 'if [ -n "$TOOL_INPUT_file_path" ]; then npx claude-flow@v3alpha hooks post-edit --file "$TOOL_INPUT_file_path" --success "${TOOL_SUCCESS:-true}" 2>/dev/null; fi; exit 0',
             timeout: config.timeout,
             continueOnError: config.continueOnError,
           },
@@ -156,7 +156,7 @@ function generateHooksConfig(config: HooksConfig): object {
         hooks: [
           {
             type: 'command',
-            command: 'if [ -n "$TOOL_INPUT_command" ]; then npx claude-flow@v3alpha hooks post-command -c "$TOOL_INPUT_command" -s "${TOOL_SUCCESS:-true}" 2>/dev/null; fi; exit 0',
+            command: 'if [ -n "$TOOL_INPUT_command" ]; then npx claude-flow@v3alpha hooks post-command --command "$TOOL_INPUT_command" --success "${TOOL_SUCCESS:-true}" 2>/dev/null; fi; exit 0',
             timeout: config.timeout,
             continueOnError: config.continueOnError,
           },
@@ -168,7 +168,7 @@ function generateHooksConfig(config: HooksConfig): object {
         hooks: [
           {
             type: 'command',
-            command: 'if [ -n "$TOOL_RESULT_agent_id" ]; then npx claude-flow@v3alpha hooks post-task --agent-id "$TOOL_RESULT_agent_id" -s "${TOOL_SUCCESS:-true}" 2>/dev/null; fi; exit 0',
+            command: 'if [ -n "$TOOL_RESULT_agent_id" ]; then npx claude-flow@v3alpha hooks post-task --task-id "$TOOL_RESULT_agent_id" --success "${TOOL_SUCCESS:-true}" 2>/dev/null; fi; exit 0',
             timeout: config.timeout,
             continueOnError: config.continueOnError,
           },
