@@ -179,7 +179,7 @@ function generateHooksConfig(config: HooksConfig): object {
     ];
   }
 
-  // PostToolUse hooks - cross-platform via npx
+  // PostToolUse hooks - cross-platform via npx with defensive guards
   if (config.postToolUse) {
     hooks.PostToolUse = [
       // File edit hooks with neural pattern training
@@ -188,33 +188,33 @@ function generateHooksConfig(config: HooksConfig): object {
         hooks: [
           {
             type: 'command',
-            command: 'npx @claude-flow/cli@latest hooks post-edit --file "$TOOL_INPUT_file_path" --success "$TOOL_SUCCESS" --train-patterns',
+            command: '[ -n "$TOOL_INPUT_file_path" ] && npx @claude-flow/cli@latest hooks post-edit --file "$TOOL_INPUT_file_path" --success "${TOOL_SUCCESS:-true}" 2>/dev/null || true',
             timeout: config.timeout,
-            continueOnError: config.continueOnError,
+            continueOnError: true,
           },
         ],
       },
-      // Bash command hooks with metrics and exit code tracking
+      // Bash command hooks with metrics tracking
       {
         matcher: '^Bash$',
         hooks: [
           {
             type: 'command',
-            command: 'npx @claude-flow/cli@latest hooks post-command --command "$TOOL_INPUT_command" --success "$TOOL_SUCCESS" --exit-code "$TOOL_EXIT_CODE" --track-metrics',
+            command: '[ -n "$TOOL_INPUT_command" ] && npx @claude-flow/cli@latest hooks post-command --command "$TOOL_INPUT_command" --success "${TOOL_SUCCESS:-true}" 2>/dev/null || true',
             timeout: config.timeout,
-            continueOnError: config.continueOnError,
+            continueOnError: true,
           },
         ],
       },
-      // Task completion hooks with analysis - use task-id not agent-id
+      // Task completion hooks - use task-id
       {
         matcher: '^Task$',
         hooks: [
           {
             type: 'command',
-            command: 'npx @claude-flow/cli@latest hooks post-task --task-id "$TOOL_RESULT_agent_id" --success "$TOOL_SUCCESS"',
+            command: '[ -n "$TOOL_RESULT_agent_id" ] && npx @claude-flow/cli@latest hooks post-task --task-id "$TOOL_RESULT_agent_id" --success "${TOOL_SUCCESS:-true}" 2>/dev/null || true',
             timeout: config.timeout,
-            continueOnError: config.continueOnError,
+            continueOnError: true,
           },
         ],
       },
