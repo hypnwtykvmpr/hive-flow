@@ -230,7 +230,7 @@ function generateHooksConfig(config: HooksConfig): object {
 2. Did builds/tests pass?
 3. Is follow-up work needed?
 
-Respond with {"decision": "stop"} if complete, or {"decision": "continue", "reason": "..."} if more work is needed.`,
+Respond with {"ok": true} if complete and ready to stop, or {"ok": false, "reason": "..."} if more work is needed.`,
           },
         ],
       },
