@@ -102,7 +102,7 @@ function generateHooksConfig(config: HooksConfig): object {
         hooks: [
           {
             type: 'command',
-            command: 'if [ -n "$TOOL_INPUT_file_path" ]; then npx claude-flow@v3alpha hooks pre-edit -f "$TOOL_INPUT_file_path" 2>/dev/null; fi; exit 0',
+            command: 'if [ -n "$TOOL_INPUT_file_path" ]; then npx claude-flow@v3alpha hooks pre-edit --file "$TOOL_INPUT_file_path" 2>/dev/null; fi; exit 0',
             timeout: config.timeout,
             continueOnError: config.continueOnError,
           },
@@ -114,7 +114,7 @@ function generateHooksConfig(config: HooksConfig): object {
         hooks: [
           {
             type: 'command',
-            command: 'if [ -n "$TOOL_INPUT_command" ]; then npx claude-flow@v3alpha hooks pre-command -c "$TOOL_INPUT_command" 2>/dev/null; fi; exit 0',
+            command: 'if [ -n "$TOOL_INPUT_command" ]; then npx claude-flow@v3alpha hooks pre-command --command "$TOOL_INPUT_command" 2>/dev/null; fi; exit 0',
             timeout: config.timeout,
             continueOnError: config.continueOnError,
           },
@@ -126,7 +126,7 @@ function generateHooksConfig(config: HooksConfig): object {
         hooks: [
           {
             type: 'command',
-            command: 'if [ -n "$TOOL_INPUT_prompt" ]; then npx claude-flow@v3alpha hooks pre-task -d "$TOOL_INPUT_prompt" 2>/dev/null; fi; exit 0',
+            command: 'if [ -n "$TOOL_INPUT_prompt" ]; then npx claude-flow@v3alpha hooks pre-task --task-id "task-$(date +%s)" --description "$TOOL_INPUT_prompt" 2>/dev/null; fi; exit 0',
             timeout: config.timeout,
             continueOnError: config.continueOnError,
           },
