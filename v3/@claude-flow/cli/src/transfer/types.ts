@@ -19,7 +19,7 @@ export type ImportStrategy = 'replace' | 'merge' | 'append';
 export type ConflictResolution = 'highest-confidence' | 'newest' | 'oldest' | 'keep-local' | 'keep-remote';
 
 // Trust levels
-export type TrustLevel = 'verified' | 'community' | 'unverified' | 'untrusted';
+export type TrustLevel = 'official' | 'verified' | 'community' | 'unverified' | 'untrusted';
 
 // Pinning services
 export type PinningService = 'pinata' | 'web3storage' | 'infura' | 'custom';
