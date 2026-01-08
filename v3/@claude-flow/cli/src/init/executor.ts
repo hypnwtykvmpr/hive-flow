@@ -414,6 +414,10 @@ async function copyAgents(
     if (agentsConfig.hiveMind) agentsToCopy.push(...AGENTS_MAP.hiveMind);
     if (agentsConfig.sparc) agentsToCopy.push(...AGENTS_MAP.sparc);
     if (agentsConfig.swarm) agentsToCopy.push(...AGENTS_MAP.swarm);
+    // V3-specific agent categories
+    if (agentsConfig.v3) agentsToCopy.push(...(AGENTS_MAP.v3 || []));
+    if (agentsConfig.optimization) agentsToCopy.push(...(AGENTS_MAP.optimization || []));
+    if (agentsConfig.testing) agentsToCopy.push(...(AGENTS_MAP.testing || []));
   }
 
   // Find source agents directory
