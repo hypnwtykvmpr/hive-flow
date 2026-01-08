@@ -148,10 +148,24 @@ class InMemoryStore {
   private queues: Map<string, string[]> = new Map();
   private workers: Map<string, WorkerRegistration> = new Map();
   private results: Map<string, { result: HeadlessExecutionResult; expiresAt: number }> = new Map();
+  private cleanupTimer?: NodeJS.Timeout;
 
-  constructor() {
-    // Clean up expired results periodically
-    setInterval(() => this.cleanupExpired(), 60000);
+  /**
+   * Start cleanup timer (called after initialization)
+   */
+  startCleanup(): void {
+    if (this.cleanupTimer) return;
+    this.cleanupTimer = setInterval(() => this.cleanupExpired(), 60000);
+  }
+
+  /**
+   * Stop cleanup timer
+   */
+  stopCleanup(): void {
+    if (this.cleanupTimer) {
+      clearInterval(this.cleanupTimer);
+      this.cleanupTimer = undefined;
+    }
   }
 
   // Task operations
