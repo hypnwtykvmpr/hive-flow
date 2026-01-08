@@ -7,6 +7,7 @@
   "types": "dist/src/index.d.ts",
   "sideEffects": false,
   "bin": {
+    "cli": "./bin/cli.js",
     "claude-flow": "./bin/cli.js",
     "claude-flow-mcp": "./bin/mcp-server.js"
   },
