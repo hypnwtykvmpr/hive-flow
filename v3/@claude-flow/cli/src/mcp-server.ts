@@ -280,55 +280,215 @@ export class MCPServerManager extends EventEmitter {
   }
 
   /**
-   * Start stdio server process
+   * Start stdio server in-process
+   * Handles stdin/stdout directly like V2 implementation
    */
   private async startStdioServer(): Promise<void> {
-    // Resolve server script path relative to this file
-    const serverScript = path.resolve(
-      __dirname,
-      '../../../mcp/server-entry.ts'
+    // Import the tool registry
+    const { listMCPTools, callMCPTool, hasTool } = await import('./mcp-client.js');
+
+    const VERSION = '3.0.0';
+    const sessionId = `mcp-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
+
+    // Log to stderr to not corrupt stdout
+    console.error(
+      `[${new Date().toISOString()}] INFO [claude-flow-mcp] (${sessionId}) Starting in stdio mode`
     );
+    console.error(JSON.stringify({
+      arch: process.arch,
+      mode: 'mcp-stdio',
+      nodeVersion: process.version,
+      pid: process.pid,
+      platform: process.platform,
+      protocol: 'stdio',
+      sessionId,
+      version: VERSION,
+    }));
 
-    // Check if tsx is available
-    const command = 'npx';
-    const args = [
-      'tsx',
-      serverScript,
-      '--transport', this.options.transport,
-      '--host', this.options.host,
-      '--port', String(this.options.port),
-    ];
-
-    if (this.options.tools !== 'all') {
-      args.push('--tools', this.options.tools.join(','));
-    }
-
-    this.process = spawn(command, args, {
-      stdio: this.options.daemonize ? 'ignore' : ['pipe', 'pipe', 'pipe'],
-      detached: this.options.daemonize,
-      env: {
-        ...process.env,
-        NODE_ENV: process.env.NODE_ENV || 'production',
-        MCP_SERVER_MODE: 'true',
+    // Send server initialization notification
+    console.log(JSON.stringify({
+      jsonrpc: '2.0',
+      method: 'server.initialized',
+      params: {
+        serverInfo: {
+          name: 'claude-flow',
+          version: VERSION,
+          capabilities: {
+            tools: { listChanged: true },
+            resources: { subscribe: true, listChanged: true },
+          },
+        },
       },
+    }));
+
+    // Handle stdin messages
+    let buffer = '';
+
+    process.stdin.on('data', async (chunk) => {
+      buffer += chunk.toString();
+
+      // Process complete JSON messages
+      let lines = buffer.split('\n');
+      buffer = lines.pop() || ''; // Keep incomplete line in buffer
+
+      for (const line of lines) {
+        if (line.trim()) {
+          try {
+            const message = JSON.parse(line);
+            const response = await this.handleMCPMessage(message, sessionId);
+            if (response) {
+              console.log(JSON.stringify(response));
+            }
+          } catch (error) {
+            console.error(
+              `[${new Date().toISOString()}] ERROR [claude-flow-mcp] Failed to parse message:`,
+              error instanceof Error ? error.message : String(error)
+            );
+          }
+        }
+      }
     });
 
-    if (this.options.daemonize) {
-      this.process.unref();
+    process.stdin.on('end', () => {
+      console.error(
+        `[${new Date().toISOString()}] INFO [claude-flow-mcp] (${sessionId}) stdin closed, shutting down...`
+      );
+      process.exit(0);
+    });
+
+    // Handle process termination
+    process.on('SIGINT', () => {
+      console.error(
+        `[${new Date().toISOString()}] INFO [claude-flow-mcp] (${sessionId}) Received SIGINT, shutting down...`
+      );
+      process.exit(0);
+    });
+
+    process.on('SIGTERM', () => {
+      console.error(
+        `[${new Date().toISOString()}] INFO [claude-flow-mcp] (${sessionId}) Received SIGTERM, shutting down...`
+      );
+      process.exit(0);
+    });
+
+    // Mark as ready immediately for stdio
+    this.emit('ready');
+  }
+
+  /**
+   * Handle incoming MCP message
+   */
+  private async handleMCPMessage(
+    message: { jsonrpc: string; id?: string | number; method?: string; params?: unknown },
+    sessionId: string
+  ): Promise<{ jsonrpc: string; id?: string | number; result?: unknown; error?: { code: number; message: string } } | null> {
+    const { listMCPTools, callMCPTool, hasTool } = await import('./mcp-client.js');
+
+    if (!message.method) {
+      return {
+        jsonrpc: '2.0',
+        id: message.id,
+        error: { code: -32600, message: 'Invalid Request: missing method' },
+      };
     }
 
-    // Handle process events
-    this.process.on('error', (error) => {
-      this.emit('error', error);
-    });
+    const params = (message.params || {}) as Record<string, unknown>;
 
-    this.process.on('exit', (code, signal) => {
-      this.emit('exit', { code, signal });
-      this.process = undefined;
-    });
+    try {
+      switch (message.method) {
+        case 'initialize':
+          return {
+            jsonrpc: '2.0',
+            id: message.id,
+            result: {
+              protocolVersion: '2024-11-05',
+              serverInfo: { name: 'claude-flow', version: '3.0.0' },
+              capabilities: {
+                tools: { listChanged: true },
+                resources: { subscribe: true, listChanged: true },
+              },
+            },
+          };
 
-    // Wait for server to be ready
-    await this.waitForReady();
+        case 'tools/list':
+          const tools = listMCPTools();
+          return {
+            jsonrpc: '2.0',
+            id: message.id,
+            result: {
+              tools: tools.map(tool => ({
+                name: tool.name,
+                description: tool.description,
+                inputSchema: tool.inputSchema,
+              })),
+            },
+          };
+
+        case 'tools/call':
+          const toolName = params.name as string;
+          const toolParams = (params.arguments || {}) as Record<string, unknown>;
+
+          if (!hasTool(toolName)) {
+            return {
+              jsonrpc: '2.0',
+              id: message.id,
+              error: { code: -32601, message: `Tool not found: ${toolName}` },
+            };
+          }
+
+          try {
+            const result = await callMCPTool(toolName, toolParams, { sessionId });
+            return {
+              jsonrpc: '2.0',
+              id: message.id,
+              result: { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] },
+            };
+          } catch (error) {
+            return {
+              jsonrpc: '2.0',
+              id: message.id,
+              error: {
+                code: -32603,
+                message: error instanceof Error ? error.message : 'Tool execution failed',
+              },
+            };
+          }
+
+        case 'notifications/initialized':
+          // Client notification - no response needed
+          console.error(
+            `[${new Date().toISOString()}] INFO [claude-flow-mcp] (${sessionId}) Client initialized`
+          );
+          return null;
+
+        case 'ping':
+          return {
+            jsonrpc: '2.0',
+            id: message.id,
+            result: {},
+          };
+
+        default:
+          return {
+            jsonrpc: '2.0',
+            id: message.id,
+            error: { code: -32601, message: `Method not found: ${message.method}` },
+          };
+      }
+    } catch (error) {
+      console.error(
+        `[${new Date().toISOString()}] ERROR [claude-flow-mcp] Error handling ${message.method}:`,
+        error
+      );
+      return {
+        jsonrpc: '2.0',
+        id: message.id,
+        error: {
+          code: -32603,
+          message: error instanceof Error ? error.message : 'Internal error',
+        },
+      };
+    }
   }
 
   /**
