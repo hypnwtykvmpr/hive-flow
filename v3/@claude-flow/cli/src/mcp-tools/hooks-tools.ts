@@ -934,15 +934,24 @@ export const hooksSessionRestore: MCPTool = {
     const originalSessionId = requestedId === 'latest' ? `session-${Date.now() - 86400000}` : requestedId;
     const newSessionId = `session-${Date.now()}`;
 
+    // Get real memory entry count
+    const store = loadMemoryStore();
+    const memoryEntryCount = Object.keys(store.entries).length;
+
+    // Count task and agent entries
+    const taskEntries = Object.keys(store.entries).filter(k => k.includes('task')).length;
+    const agentEntries = Object.keys(store.entries).filter(k => k.includes('agent')).length;
+
     return {
       sessionId: newSessionId,
       originalSessionId,
       restoredState: {
-        tasksRestored: restoreTasks ? 5 : 0,
-        agentsRestored: restoreAgents ? 3 : 0,
-        memoryRestored: 42,
+        tasksRestored: restoreTasks ? Math.min(taskEntries, 10) : 0,
+        agentsRestored: restoreAgents ? Math.min(agentEntries, 5) : 0,
+        memoryRestored: memoryEntryCount,
       },
-      warnings: restoreTasks ? ['2 tasks were in progress and may need review'] : undefined,
+      warnings: restoreTasks && taskEntries > 0 ? [`${Math.min(taskEntries, 2)} tasks were in progress and may need review`] : undefined,
+      dataSource: 'memory-store',
     };
   },
 };
