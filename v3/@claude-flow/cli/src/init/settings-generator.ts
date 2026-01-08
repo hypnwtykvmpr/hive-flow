@@ -287,7 +287,7 @@ Default to {"ok": true} when uncertain.`,
         hooks: [
           {
             type: 'command',
-            command: 'npx @claude-flow/cli@latest hooks notify --message "$NOTIFICATION_MESSAGE" --swarm-status',
+            command: 'npx @claude-flow/cli@latest memory store --namespace notifications --key "notify-$(date +%s)" --value "$NOTIFICATION_MESSAGE"',
             timeout: 3000,
             continueOnError: true,
           },
