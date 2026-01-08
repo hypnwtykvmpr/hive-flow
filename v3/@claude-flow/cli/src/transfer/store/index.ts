@@ -178,7 +178,7 @@ export class PatternStore {
    */
   getFeatured(): PatternEntry[] {
     if (!this.registry) return [];
-    return getFeaturedPatterns(this.registry);
+    return doGetFeaturedPatterns(this.registry);
   }
 
   /**
@@ -186,7 +186,7 @@ export class PatternStore {
    */
   getTrending(): PatternEntry[] {
     if (!this.registry) return [];
-    return getTrendingPatterns(this.registry);
+    return doGetTrendingPatterns(this.registry);
   }
 
   /**
@@ -194,7 +194,7 @@ export class PatternStore {
    */
   getNewest(): PatternEntry[] {
     if (!this.registry) return [];
-    return getNewestPatterns(this.registry);
+    return doGetNewestPatterns(this.registry);
   }
 
   /**
