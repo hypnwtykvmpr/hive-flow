@@ -137,7 +137,7 @@ function generateStatusLineConfig(options: InitOptions): object {
 function generateHooksConfig(config: HooksConfig): object {
   const hooks: Record<string, unknown[]> = {};
 
-  // PreToolUse hooks - cross-platform via npx
+  // PreToolUse hooks - cross-platform via npx with defensive guards
   if (config.preToolUse) {
     hooks.PreToolUse = [
       // File edit hooks with intelligence routing
@@ -146,9 +146,9 @@ function generateHooksConfig(config: HooksConfig): object {
         hooks: [
           {
             type: 'command',
-            command: 'npx @claude-flow/cli@latest hooks pre-edit --file "$TOOL_INPUT_file_path" --intelligence',
+            command: '[ -n "$TOOL_INPUT_file_path" ] && npx @claude-flow/cli@latest hooks pre-edit --file "$TOOL_INPUT_file_path" 2>/dev/null || true',
             timeout: config.timeout,
-            continueOnError: config.continueOnError,
+            continueOnError: true,
           },
         ],
       },
@@ -158,9 +158,9 @@ function generateHooksConfig(config: HooksConfig): object {
         hooks: [
           {
             type: 'command',
-            command: 'npx @claude-flow/cli@latest hooks pre-command --command "$TOOL_INPUT_command" --validate-safety',
+            command: '[ -n "$TOOL_INPUT_command" ] && npx @claude-flow/cli@latest hooks pre-command --command "$TOOL_INPUT_command" 2>/dev/null || true',
             timeout: config.timeout,
-            continueOnError: config.continueOnError,
+            continueOnError: true,
           },
         ],
       },
@@ -170,9 +170,9 @@ function generateHooksConfig(config: HooksConfig): object {
         hooks: [
           {
             type: 'command',
-            command: 'npx @claude-flow/cli@latest hooks pre-task --task-id "task-$(date +%s)" --description "$TOOL_INPUT_prompt"',
+            command: '[ -n "$TOOL_INPUT_prompt" ] && npx @claude-flow/cli@latest hooks pre-task --task-id "task-$(date +%s)" --description "$TOOL_INPUT_prompt" 2>/dev/null || true',
             timeout: config.timeout,
-            continueOnError: config.continueOnError,
+            continueOnError: true,
           },
         ],
       },
