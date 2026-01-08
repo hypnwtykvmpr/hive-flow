@@ -436,7 +436,7 @@ export function generateMinimalClaudeMd(options: InitOptions): string {
 
 1. **Batch Operations**: All related operations in ONE message
 2. **Task Tool**: Use Claude Code's Task tool for agent execution
-3. **MCP Tools**: Only for coordination, not execution
+3. **CLI Tools**: Use via Bash for coordination (swarm, memory, hooks)
 4. **File Organization**: Never save to root folder
 
 ## Agent Execution Pattern
