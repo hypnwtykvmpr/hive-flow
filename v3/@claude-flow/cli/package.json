@@ -38,6 +38,8 @@
   "scripts": {
     "build": "tsc",
     "test": "vitest run",
+    "test:plugin-store": "npx tsx src/plugins/tests/standalone-test.ts",
+    "test:pattern-store": "npx tsx src/transfer/store/tests/standalone-test.ts",
     "release": "npm version prerelease --preid=alpha && npm run publish:all",
     "publish:all": "./scripts/publish.sh"
   },
