@@ -206,26 +206,14 @@ function generateHooksConfig(config: HooksConfig): object {
           },
         ],
       },
-      // Task completion hooks with analysis
+      // Task completion hooks with analysis - use task-id not agent-id
       {
         matcher: '^Task$',
         hooks: [
           {
             type: 'command',
-            command: 'npx @claude-flow/cli@latest hooks post-task --agent-id "$TOOL_RESULT_agent_id" --success "$TOOL_SUCCESS" --analyze',
+            command: 'npx @claude-flow/cli@latest hooks post-task --task-id "$TOOL_RESULT_agent_id" --success "$TOOL_SUCCESS"',
             timeout: config.timeout,
-            continueOnError: config.continueOnError,
-          },
-        ],
-      },
-      // Search result caching for HNSW optimization
-      {
-        matcher: '^(Grep|Glob)$',
-        hooks: [
-          {
-            type: 'command',
-            command: 'npx @claude-flow/cli@latest hooks post-search --cache-results',
-            timeout: 2000,
             continueOnError: config.continueOnError,
           },
         ],
