@@ -667,11 +667,12 @@ export class ContainerWorkerPool extends EventEmitter {
       if (container.state === 'terminated') continue;
 
       try {
-        // Check if container is running
-        const output = execSync(`docker inspect -f '{{.State.Running}}' ${container.name}`, {
-          encoding: 'utf-8',
-          stdio: 'pipe',
-        }).trim();
+        // Check if container is running (async)
+        const { stdout } = await execAsync(
+          `docker inspect -f '{{.State.Running}}' ${container.name}`,
+          { timeout: 10000 }
+        );
+        const output = stdout.trim();
 
         if (output !== 'true') {
           container.healthCheckFailures++;
