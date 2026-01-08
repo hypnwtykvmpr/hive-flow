@@ -97,6 +97,24 @@ const AGENTS_MAP: Record<string, string[]> = {
   hiveMind: ['hive-mind'],
   sparc: ['sparc'],
   swarm: ['swarm'],
+  // V3-specific agents
+  v3: ['v3'],
+  optimization: ['optimization'],
+  templates: ['templates'],
+  testing: ['testing'],
+  sublinear: ['sublinear'],
+  flowNexus: ['flow-nexus'],
+  analysis: ['analysis'],
+  architecture: ['architecture'],
+  development: ['development'],
+  devops: ['devops'],
+  documentation: ['documentation'],
+  specialized: ['specialized'],
+  goal: ['goal'],
+  sona: ['sona'],
+  payments: ['payments'],
+  data: ['data'],
+  custom: ['custom'],
 };
 
 /**
