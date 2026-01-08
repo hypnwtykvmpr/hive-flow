@@ -19,54 +19,63 @@ hooks:
   pre: |
     echo "🎯 Planning agent activated for: $TASK"
 
-    # 1. Learn from similar past plans (ReasoningBank)
-    SIMILAR_PLANS=$(npx claude-flow memory search-patterns "$TASK" --k=5 --min-reward=0.8)
+    # V3: Initialize task with hooks system
+    npx claude-flow@v3alpha hooks pre-task --description "$TASK"
+
+    # 1. Learn from similar past plans (ReasoningBank + HNSW 150x-12,500x faster)
+    SIMILAR_PLANS=$(npx claude-flow@v3alpha memory search --query "$TASK" --limit 5 --min-score 0.8 --use-hnsw)
     if [ -n "$SIMILAR_PLANS" ]; then
-      echo "📚 Found similar successful planning patterns"
-      npx claude-flow memory get-pattern-stats "$TASK" --k=5
+      echo "📚 Found similar successful planning patterns (HNSW-indexed)"
+      npx claude-flow@v3alpha hooks intelligence --action pattern-search --query "$TASK" --k 5
     fi
 
-    # 2. Learn from failed plans
-    FAILED_PLANS=$(npx claude-flow memory search-patterns "$TASK" --only-failures --k=3)
+    # 2. Learn from failed plans (EWC++ protected)
+    FAILED_PLANS=$(npx claude-flow@v3alpha memory search --query "$TASK failures" --limit 3 --failures-only --use-hnsw)
     if [ -n "$FAILED_PLANS" ]; then
       echo "⚠️  Learning from past planning failures"
     fi
 
-    memory_store "planner_start_$(date +%s)" "Started planning: $TASK"
+    npx claude-flow@v3alpha memory store --key "planner_start_$(date +%s)" --value "Started planning: $TASK"
 
-    # 3. Store task start
-    npx claude-flow memory store-pattern \
+    # 3. Store task start via hooks
+    npx claude-flow@v3alpha hooks intelligence --action trajectory-start \
       --session-id "planner-$(date +%s)" \
-      --task "$TASK" \
-      --status "started"
+      --task "$TASK"
 
   post: |
     echo "✅ Planning complete"
-    memory_store "planner_end_$(date +%s)" "Completed planning: $TASK"
+    npx claude-flow@v3alpha memory store --key "planner_end_$(date +%s)" --value "Completed planning: $TASK"
 
     # 1. Calculate planning quality metrics
-    TASKS_COUNT=$(memory_search "planner_task_*" | wc -l)
-    AGENTS_ALLOCATED=$(memory_search "planner_agent_*" | wc -l)
+    TASKS_COUNT=$(npx claude-flow@v3alpha memory search --query "planner_task" --count-only || echo "0")
+    AGENTS_ALLOCATED=$(npx claude-flow@v3alpha memory search --query "planner_agent" --count-only || echo "0")
     REWARD=$(echo "scale=2; ($TASKS_COUNT + $AGENTS_ALLOCATED) / 30" | bc)
     SUCCESS=$([[ $TASKS_COUNT -gt 3 ]] && echo "true" || echo "false")
 
-    # 2. Store learning pattern
-    npx claude-flow memory store-pattern \
+    # 2. Store learning pattern via V3 hooks (with EWC++ consolidation)
+    npx claude-flow@v3alpha hooks intelligence --action pattern-store \
       --session-id "planner-$(date +%s)" \
       --task "$TASK" \
       --output "Plan: $TASKS_COUNT tasks, $AGENTS_ALLOCATED agents" \
       --reward "$REWARD" \
       --success "$SUCCESS" \
-      --critique "Planning thoroughness and efficiency assessment"
+      --consolidate-ewc true
 
-    # 3. Train on comprehensive plans
+    # 3. Complete task hook
+    npx claude-flow@v3alpha hooks post-task --task-id "planner-$(date +%s)" --success "$SUCCESS"
+
+    # 4. Train on comprehensive plans (SONA <0.05ms adaptation)
     if [ "$SUCCESS" = "true" ] && [ "$TASKS_COUNT" -gt 10 ]; then
       echo "🧠 Training neural pattern from comprehensive plan"
-      npx claude-flow neural train \
+      npx claude-flow@v3alpha neural train \
         --pattern-type "coordination" \
         --training-data "task-planning" \
-        --epochs 50
+        --epochs 50 \
+        --use-sona
     fi
+
+    # 5. Trigger map worker for codebase analysis
+    npx claude-flow@v3alpha hooks worker dispatch --trigger map
 ---
 
 # Strategic Planning Agent
