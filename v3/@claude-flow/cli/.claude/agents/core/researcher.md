@@ -19,48 +19,57 @@ hooks:
   pre: |
     echo "🔍 Research agent investigating: $TASK"
 
-    # 1. Learn from past similar research tasks (ReasoningBank)
-    SIMILAR_RESEARCH=$(npx claude-flow memory search-patterns "$TASK" --k=5 --min-reward=0.8)
+    # V3: Initialize task with hooks system
+    npx claude-flow@v3alpha hooks pre-task --description "$TASK"
+
+    # 1. Learn from past similar research tasks (ReasoningBank + HNSW 150x-12,500x faster)
+    SIMILAR_RESEARCH=$(npx claude-flow@v3alpha memory search --query "$TASK" --limit 5 --min-score 0.8 --use-hnsw)
     if [ -n "$SIMILAR_RESEARCH" ]; then
-      echo "📚 Found similar successful research patterns"
-      npx claude-flow memory get-pattern-stats "$TASK" --k=5
+      echo "📚 Found similar successful research patterns (HNSW-indexed)"
+      npx claude-flow@v3alpha hooks intelligence --action pattern-search --query "$TASK" --k 5
     fi
 
-    # 2. Store research context
-    memory_store "research_context_$(date +%s)" "$TASK"
+    # 2. Store research context via memory
+    npx claude-flow@v3alpha memory store --key "research_context_$(date +%s)" --value "$TASK"
 
-    # 3. Store task start
-    npx claude-flow memory store-pattern \
+    # 3. Store task start via hooks
+    npx claude-flow@v3alpha hooks intelligence --action trajectory-start \
       --session-id "researcher-$(date +%s)" \
-      --task "$TASK" \
-      --status "started"
+      --task "$TASK"
 
   post: |
     echo "📊 Research findings documented"
-    memory_search "research_*" | head -5
+    npx claude-flow@v3alpha memory search --query "research" --limit 5
 
     # 1. Calculate research quality metrics
-    FINDINGS_COUNT=$(memory_search "research_*" | wc -l)
+    FINDINGS_COUNT=$(npx claude-flow@v3alpha memory search --query "research" --count-only || echo "0")
     REWARD=$(echo "scale=2; $FINDINGS_COUNT / 20" | bc)
     SUCCESS=$([[ $FINDINGS_COUNT -gt 5 ]] && echo "true" || echo "false")
 
-    # 2. Store learning pattern for future research
-    npx claude-flow memory store-pattern \
+    # 2. Store learning pattern via V3 hooks (with EWC++ consolidation)
+    npx claude-flow@v3alpha hooks intelligence --action pattern-store \
       --session-id "researcher-$(date +%s)" \
       --task "$TASK" \
       --output "Research completed with $FINDINGS_COUNT findings" \
       --reward "$REWARD" \
       --success "$SUCCESS" \
-      --critique "Research depth and accuracy assessment"
+      --consolidate-ewc true
 
-    # 3. Train neural patterns on comprehensive research
+    # 3. Complete task hook
+    npx claude-flow@v3alpha hooks post-task --task-id "researcher-$(date +%s)" --success "$SUCCESS"
+
+    # 4. Train neural patterns on comprehensive research (SONA <0.05ms adaptation)
     if [ "$SUCCESS" = "true" ] && [ "$FINDINGS_COUNT" -gt 15 ]; then
       echo "🧠 Training neural pattern from comprehensive research"
-      npx claude-flow neural train \
+      npx claude-flow@v3alpha neural train \
         --pattern-type "coordination" \
         --training-data "research-findings" \
-        --epochs 50
+        --epochs 50 \
+        --use-sona
     fi
+
+    # 5. Trigger deepdive worker for extended analysis
+    npx claude-flow@v3alpha hooks worker dispatch --trigger deepdive
 ---
 
 # Research and Analysis Agent
