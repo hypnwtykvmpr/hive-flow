@@ -147,7 +147,7 @@ function generateHooksConfig(config: HooksConfig): object {
     ];
   }
 
-  // PostToolUse hooks
+  // PostToolUse hooks - using cross-platform Node.js helpers
   if (config.postToolUse) {
     hooks.PostToolUse = [
       // File edit hooks with neural pattern training
@@ -156,7 +156,7 @@ function generateHooksConfig(config: HooksConfig): object {
         hooks: [
           {
             type: 'command',
-            command: 'npx @claude-flow/cli@latest hooks post-edit --file "$TOOL_INPUT_file_path" --success "$TOOL_SUCCESS" --train-patterns 2>/dev/null || true',
+            command: 'node .claude/helpers/hooks.mjs post-edit --file "$TOOL_INPUT_file_path" --success "$TOOL_SUCCESS" --train-patterns',
             timeout: config.timeout,
             continueOnError: config.continueOnError,
           },
@@ -168,7 +168,7 @@ function generateHooksConfig(config: HooksConfig): object {
         hooks: [
           {
             type: 'command',
-            command: 'npx @claude-flow/cli@latest hooks post-command --command "$TOOL_INPUT_command" --success "$TOOL_SUCCESS" --exit-code "$TOOL_EXIT_CODE" --track-metrics 2>/dev/null || true',
+            command: 'node .claude/helpers/hooks.mjs post-command --command "$TOOL_INPUT_command" --success "$TOOL_SUCCESS" --exit-code "$TOOL_EXIT_CODE" --track-metrics',
             timeout: config.timeout,
             continueOnError: config.continueOnError,
           },
@@ -180,7 +180,7 @@ function generateHooksConfig(config: HooksConfig): object {
         hooks: [
           {
             type: 'command',
-            command: 'npx @claude-flow/cli@latest hooks post-task --agent-id "$TOOL_RESULT_agent_id" --success "$TOOL_SUCCESS" --analyze 2>/dev/null || true',
+            command: 'node .claude/helpers/hooks.mjs post-task --agent-id "$TOOL_RESULT_agent_id" --success "$TOOL_SUCCESS" --analyze',
             timeout: config.timeout,
             continueOnError: config.continueOnError,
           },
@@ -192,7 +192,7 @@ function generateHooksConfig(config: HooksConfig): object {
         hooks: [
           {
             type: 'command',
-            command: 'npx @claude-flow/cli@latest hooks post-search --cache-results 2>/dev/null || true',
+            command: 'node .claude/helpers/hooks.mjs post-search --cache-results',
             timeout: 2000,
             continueOnError: config.continueOnError,
           },
@@ -208,8 +208,7 @@ function generateHooksConfig(config: HooksConfig): object {
         hooks: [
           {
             type: 'command',
-            // Only run route if PROMPT is non-empty; use shell test to skip gracefully
-            command: '[ -n "$PROMPT" ] && npx claude-flow@v3alpha hooks route --task "$PROMPT" --intelligence || true',
+            command: 'node .claude/helpers/hooks.mjs route --task "$PROMPT" --intelligence --include-explanation',
             timeout: config.timeout,
             continueOnError: config.continueOnError,
           },
@@ -225,15 +224,13 @@ function generateHooksConfig(config: HooksConfig): object {
         hooks: [
           {
             type: 'command',
-            // Start daemon quietly in background
-            command: 'npx claude-flow@v3alpha daemon start --quiet 2>/dev/null || true',
+            command: 'node .claude/helpers/hooks.mjs daemon-start --quiet',
             timeout: 5000,
             continueOnError: true,
           },
           {
             type: 'command',
-            // Restore previous session context if available
-            command: '[ -n "$SESSION_ID" ] && npx claude-flow@v3alpha hooks session-restore --session-id "$SESSION_ID" 2>/dev/null || true',
+            command: 'node .claude/helpers/hooks.mjs session-start --session-id "$SESSION_ID" --load-context',
             timeout: 10000,
             continueOnError: true,
           },
@@ -270,8 +267,7 @@ Default to {"ok": true} when uncertain.`,
         hooks: [
           {
             type: 'command',
-            // Store notification in memory for agents to see
-            command: '[ -n "$NOTIFICATION_MESSAGE" ] && npx claude-flow@v3alpha memory store --key "notify:$(date +%s)" --value "$NOTIFICATION_MESSAGE" --namespace notifications --ttl 300 2>/dev/null || true',
+            command: 'node .claude/helpers/hooks.mjs notify --message "$NOTIFICATION_MESSAGE" --swarm-status',
             timeout: 3000,
             continueOnError: true,
           },
