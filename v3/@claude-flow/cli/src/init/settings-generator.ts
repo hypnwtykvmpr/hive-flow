@@ -117,7 +117,9 @@ function generateStatusLineConfig(options: InitOptions): object {
   const config = options.statusline;
 
   // Build the command that generates the statusline
-  const statuslineCommand = 'npx @claude-flow/hooks statusline 2>/dev/null || node .claude/helpers/statusline.js 2>/dev/null || echo "▊ V3"';
+  // Uses npx @claude-flow/cli@latest (or @alpha) to run the hooks statusline command
+  // Falls back to local helper script or simple "V3" if CLI not available
+  const statuslineCommand = 'npx @claude-flow/cli@latest hooks statusline --compact 2>/dev/null || node .claude/helpers/statusline.js 2>/dev/null || echo "▊ Claude Flow V3"';
 
   return {
     // Type must be "command" for Claude Code validation
