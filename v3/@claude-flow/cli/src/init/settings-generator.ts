@@ -263,14 +263,15 @@ Respond with {"decision": "stop"} if complete, or {"decision": "continue", "reas
     ];
   }
 
-  // Notification hooks
+  // Notification hooks - store notifications in memory for swarm awareness
   if (config.notification) {
     hooks.Notification = [
       {
         hooks: [
           {
             type: 'command',
-            command: 'npx claude-flow@v3alpha hooks notify --message "$NOTIFICATION_MESSAGE" --swarm-status',
+            // Store notification in memory for agents to see
+            command: '[ -n "$NOTIFICATION_MESSAGE" ] && npx claude-flow@v3alpha memory store -k "notify:$(date +%s)" -v "$NOTIFICATION_MESSAGE" -n notifications --ttl 300 2>/dev/null || true',
             timeout: 3000,
             continueOnError: true,
           },
