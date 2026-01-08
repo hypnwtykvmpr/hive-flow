@@ -316,6 +316,9 @@ export const DEFAULT_INIT_OPTIONS: InitOptions = {
     hiveMind: true,
     sparc: true,
     swarm: true,
+    v3: true,
+    optimization: true,
+    testing: true,
     all: false,
   },
   statusline: {
