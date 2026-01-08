@@ -393,10 +393,80 @@ export function getIPNSURL(name: string, gateway: string = 'https://w3s.link'): 
 }
 
 /**
+ * Upload to a local/custom IPFS node
+ * Connect to your own IPFS daemon via HTTP API
+ */
+async function uploadToLocalIPFS(
+  content: Buffer,
+  options: IPFSUploadOptions
+): Promise<IPFSUploadResult> {
+  const apiUrl = process.env.IPFS_API_URL || 'http://localhost:5001';
+  const name = options.name || 'pattern.cfp.json';
+
+  console.log(`[IPFS] Uploading ${content.length} bytes to ${apiUrl}...`);
+
+  const boundary = '----IPFSBoundary' + crypto.randomBytes(16).toString('hex');
+  const body = Buffer.concat([
+    Buffer.from(`--${boundary}\r\n`),
+    Buffer.from(`Content-Disposition: form-data; name="file"; filename="${name}"\r\n`),
+    Buffer.from(`Content-Type: application/json\r\n\r\n`),
+    content,
+    Buffer.from(`\r\n--${boundary}--\r\n`),
+  ]);
+
+  const response = await fetch(`${apiUrl}/api/v0/add?pin=${options.pin !== false}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': `multipart/form-data; boundary=${boundary}`,
+    },
+    body,
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Local IPFS upload failed: ${response.status} ${error}`);
+  }
+
+  const result = await response.json() as { Hash: string; Size: string; Name: string };
+  const cid = result.Hash;
+
+  // Try to get external gateway URL if configured
+  const gatewayUrl = process.env.IPFS_GATEWAY_URL || options.gateway || 'https://ipfs.io';
+
+  console.log(`[IPFS] Upload complete!`);
+  console.log(`[IPFS] CID: ${cid}`);
+
+  return {
+    cid,
+    size: content.length,
+    gateway: gatewayUrl,
+    pinnedAt: options.pin !== false ? new Date().toISOString() : undefined,
+    url: `${gatewayUrl}/ipfs/${cid}`,
+  };
+}
+
+/**
+ * Check if local IPFS node is available
+ */
+async function checkLocalIPFSNode(): Promise<boolean> {
+  const apiUrl = process.env.IPFS_API_URL || 'http://localhost:5001';
+
+  try {
+    const response = await fetch(`${apiUrl}/api/v0/id`, {
+      method: 'POST',
+      signal: AbortSignal.timeout(2000),
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Check if real IPFS credentials are available
  */
 export function hasIPFSCredentials(): boolean {
-  return !!(getWeb3StorageToken() || process.env.PINATA_API_KEY);
+  return !!(getWeb3StorageToken() || process.env.PINATA_API_KEY || process.env.IPFS_API_URL);
 }
 
 /**
