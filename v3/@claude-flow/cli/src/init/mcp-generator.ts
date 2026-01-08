@@ -16,7 +16,7 @@ export function generateMCPConfig(options: InitOptions): object {
   if (config.claudeFlow) {
     mcpServers['claude-flow'] = {
       command: 'npx',
-      args: ['@claude-flow/cli', 'mcp', 'start'],
+      args: ['@claude-flow/cli@latest', 'mcp', 'start'],
       env: {
         CLAUDE_FLOW_MODE: 'v3',
         CLAUDE_FLOW_HOOKS_ENABLED: 'true',
