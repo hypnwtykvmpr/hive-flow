@@ -354,8 +354,8 @@ Run `npx @claude-flow/cli@latest doctor` to check:
 ## 🚀 Quick Setup
 
 ```bash
-# Add MCP servers (use claude-flow-mcp for clean stdio protocol)
-claude mcp add claude-flow -- npx -y -p @claude-flow/cli@latest claude-flow-mcp
+# Add MCP servers (auto-detects MCP mode when stdin is piped)
+claude mcp add claude-flow -- npx -y @claude-flow/cli@alpha
 claude mcp add ruv-swarm -- npx -y ruv-swarm mcp start  # Optional
 claude mcp add flow-nexus -- npx -y flow-nexus@latest mcp start  # Optional
 
