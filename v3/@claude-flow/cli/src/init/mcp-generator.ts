@@ -1,9 +1,43 @@
 /**
  * MCP Configuration Generator
  * Creates .mcp.json for Claude Code MCP server integration
+ * Handles cross-platform compatibility (Windows requires cmd /c wrapper)
  */
 
 import type { InitOptions, MCPConfig } from './types.js';
+
+/**
+ * Check if running on Windows
+ */
+function isWindows(): boolean {
+  return process.platform === 'win32';
+}
+
+/**
+ * Generate platform-specific MCP server entry
+ * Windows requires 'cmd /c' wrapper to execute npx commands
+ */
+function createMCPServerEntry(
+  npxArgs: string[],
+  env: Record<string, string>,
+  additionalProps: Record<string, unknown> = {}
+): object {
+  if (isWindows()) {
+    return {
+      command: 'cmd',
+      args: ['/c', 'npx', ...npxArgs],
+      env,
+      ...additionalProps,
+    };
+  }
+
+  return {
+    command: 'npx',
+    args: npxArgs,
+    env,
+    ...additionalProps,
+  };
+}
 
 /**
  * Generate MCP configuration
@@ -14,39 +48,35 @@ export function generateMCPConfig(options: InitOptions): object {
 
   // Claude Flow MCP server (core)
   if (config.claudeFlow) {
-    mcpServers['claude-flow'] = {
-      command: 'npx',
-      args: ['@claude-flow/cli@latest', 'mcp', 'start'],
-      env: {
+    mcpServers['claude-flow'] = createMCPServerEntry(
+      ['@claude-flow/cli@latest', 'mcp', 'start'],
+      {
         CLAUDE_FLOW_MODE: 'v3',
         CLAUDE_FLOW_HOOKS_ENABLED: 'true',
         CLAUDE_FLOW_TOPOLOGY: options.runtime.topology,
         CLAUDE_FLOW_MAX_AGENTS: String(options.runtime.maxAgents),
         CLAUDE_FLOW_MEMORY_BACKEND: options.runtime.memoryBackend,
       },
-      autoStart: config.autoStart,
-    };
+      { autoStart: config.autoStart }
+    );
   }
 
   // Ruv-Swarm MCP server (enhanced coordination)
   if (config.ruvSwarm) {
-    mcpServers['ruv-swarm'] = {
-      command: 'npx',
-      args: ['ruv-swarm', 'mcp', 'start'],
-      env: {},
-      optional: true,
-    };
+    mcpServers['ruv-swarm'] = createMCPServerEntry(
+      ['ruv-swarm', 'mcp', 'start'],
+      {},
+      { optional: true }
+    );
   }
 
   // Flow Nexus MCP server (cloud features)
   if (config.flowNexus) {
-    mcpServers['flow-nexus'] = {
-      command: 'npx',
-      args: ['flow-nexus@latest', 'mcp', 'start'],
-      env: {},
-      optional: true,
-      requiresAuth: true,
-    };
+    mcpServers['flow-nexus'] = createMCPServerEntry(
+      ['flow-nexus@latest', 'mcp', 'start'],
+      {},
+      { optional: true, requiresAuth: true }
+    );
   }
 
   return { mcpServers };
