@@ -244,13 +244,13 @@ function generateHooksConfig(config: HooksConfig): object {
         hooks: [
           {
             type: 'command',
-            command: 'npx @claude-flow/cli@latest daemon start --quiet',
+            command: 'npx @claude-flow/cli@latest daemon start --quiet 2>/dev/null || true',
             timeout: 5000,
             continueOnError: true,
           },
           {
             type: 'command',
-            command: 'npx @claude-flow/cli@latest hooks session-restore --session-id "$SESSION_ID"',
+            command: '[ -n "$SESSION_ID" ] && npx @claude-flow/cli@latest hooks session-restore --session-id "$SESSION_ID" 2>/dev/null || true',
             timeout: 10000,
             continueOnError: true,
           },
