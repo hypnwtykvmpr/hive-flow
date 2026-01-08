@@ -551,8 +551,25 @@ NEVER create files unless they're absolutely necessary for achieving your goal.
 ALWAYS prefer editing an existing file to creating a new one.
 NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
 Never save working files, text/mds and tests to the root folder.
-After spawning a swarm, WAIT for agents to complete - don't continuously check status.
-After swarm completes: review results, confirm, update ADRs/DDD, run security scan.
+
+## 🚨 SWARM EXECUTION RULES (CRITICAL)
+1. **SPAWN IN BACKGROUND**: Use \`run_in_background: true\` for all agent Task calls
+2. **SPAWN ALL AT ONCE**: Put ALL agent Task calls in ONE message for parallel execution
+3. **TELL USER**: After spawning, list what each agent is doing (use emojis for clarity)
+4. **STOP AND WAIT**: After spawning, STOP - do NOT add more tool calls or check status
+5. **NO POLLING**: Never poll TaskOutput or check swarm status - trust agents to return
+6. **SYNTHESIZE**: When agent results arrive, review ALL results before proceeding
+7. **NO CONFIRMATION**: Don't ask "should I check?" - just wait for results
+
+Example spawn message:
+\`\`\`
+"I've launched 4 agents in background:
+- 🔍 Researcher: [task]
+- 💻 Coder: [task]
+- 🧪 Tester: [task]
+- 👀 Reviewer: [task]
+Working in parallel - I'll synthesize when they complete."
+\`\`\`
 `;
 }
 
