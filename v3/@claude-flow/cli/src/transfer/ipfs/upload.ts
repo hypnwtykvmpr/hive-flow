@@ -228,7 +228,7 @@ export async function uploadToIPFS(
     }
   }
 
-  if (web3Token || pinningService === 'web3.storage') {
+  if (web3Token || pinningService === 'web3storage') {
     try {
       return await uploadToWeb3Storage(content, options);
     } catch (error) {
@@ -279,7 +279,7 @@ export async function pinContent(
   const pinataKey = process.env.PINATA_API_KEY;
 
   // Real pinning with Pinata
-  if (pinataKey && options.service !== 'web3.storage') {
+  if (pinataKey && options.service !== 'web3storage') {
     try {
       const pinataSecret = process.env.PINATA_API_SECRET;
       const response = await fetch('https://api.pinata.cloud/pinning/pinByHash', {
@@ -403,7 +403,7 @@ export function hasIPFSCredentials(): boolean {
  * Get IPFS service status
  */
 export function getIPFSServiceStatus(): {
-  service: 'web3.storage' | 'pinata' | 'demo';
+  service: 'web3storage' | 'pinata' | 'demo';
   configured: boolean;
   message: string;
 } {
@@ -412,7 +412,7 @@ export function getIPFSServiceStatus(): {
 
   if (web3Token) {
     return {
-      service: 'web3.storage',
+      service: 'web3storage',
       configured: true,
       message: 'Web3.storage configured - real IPFS uploads enabled',
     };
