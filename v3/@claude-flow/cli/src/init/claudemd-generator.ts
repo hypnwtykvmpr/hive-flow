@@ -32,49 +32,84 @@ export function generateClaudeMd(options: InitOptions): string {
 
 **CLI coordinates, Task tool agents do the actual work!**
 
-### 🔄 Auto-Start Swarm Protocol
+### 🔄 Auto-Start Swarm Protocol (Background Execution)
 
-When the user requests a complex task (multi-file changes, feature implementation, refactoring), **immediately execute this pattern in a SINGLE message:**
+When the user requests a complex task, **spawn agents in background and WAIT for completion:**
 
-\`\`\`bash
-# STEP 1: Initialize swarm coordination via CLI tool (in parallel with agent spawning)
-Bash("npx @claude-flow/cli@latest swarm init --topology ${topology} --max-agents ${maxAgents} --strategy adaptive")
+\`\`\`javascript
+// STEP 1: Initialize swarm coordination
+Bash("npx @claude-flow/cli@latest swarm init --topology ${topology} --max-agents ${maxAgents}")
 
-# STEP 2: Spawn agents concurrently using Claude Code's Task tool
-# ALL Task calls MUST be in the SAME message for parallel execution
-Task("Coordinator", "You are the swarm coordinator. Initialize session, coordinate other agents via memory. Run: npx @claude-flow/cli@latest hooks session-start", "hierarchical-coordinator")
-Task("Researcher", "Analyze requirements and existing code patterns. Store findings in memory via hooks.", "researcher")
-Task("Architect", "Design implementation approach based on research. Document decisions in memory.", "system-architect")
-Task("Coder", "Implement the solution following architect's design. Coordinate via hooks.", "coder")
-Task("Tester", "Write tests for the implementation. Report coverage via hooks.", "tester")
-Task("Reviewer", "Review code quality and security. Document findings.", "reviewer")
+// STEP 2: Spawn ALL agents IN BACKGROUND in a SINGLE message
+// Use run_in_background: true so agents work concurrently
+Task({
+  prompt: "Research requirements, analyze codebase patterns, store findings in memory",
+  subagent_type: "researcher",
+  description: "Research phase",
+  run_in_background: true  // ← CRITICAL: Run in background
+})
+Task({
+  prompt: "Design architecture based on research. Document decisions.",
+  subagent_type: "system-architect",
+  description: "Architecture phase",
+  run_in_background: true
+})
+Task({
+  prompt: "Implement the solution following the design. Write clean code.",
+  subagent_type: "coder",
+  description: "Implementation phase",
+  run_in_background: true
+})
+Task({
+  prompt: "Write comprehensive tests for the implementation.",
+  subagent_type: "tester",
+  description: "Testing phase",
+  run_in_background: true
+})
+Task({
+  prompt: "Review code quality, security, and best practices.",
+  subagent_type: "reviewer",
+  description: "Review phase",
+  run_in_background: true
+})
 
-# STEP 3: Batch all todos
-TodoWrite({ todos: [
-  {content: "Initialize swarm coordination", status: "in_progress", activeForm: "Initializing swarm"},
-  {content: "Research and analyze requirements", status: "in_progress", activeForm: "Researching requirements"},
-  {content: "Design architecture", status: "pending", activeForm: "Designing architecture"},
-  {content: "Implement solution", status: "pending", activeForm: "Implementing solution"},
-  {content: "Write tests", status: "pending", activeForm: "Writing tests"},
-  {content: "Review and finalize", status: "pending", activeForm: "Reviewing code"}
-]})
-
-# STEP 4: Store swarm state in memory via CLI
-Bash("npx @claude-flow/cli@latest memory store --namespace swarm --key current-session --value '{\\"task\\": \\"[user task]\\", \\"agents\\": 6}'")
+// STEP 3: WAIT - Tell user agents are working, then STOP
+// Say: "I've spawned 5 agents to work on this in parallel. They'll report back when done."
+// DO NOT check status repeatedly. Just wait for user or agent responses.
 \`\`\`
 
-### ⏸️ Post-Swarm Protocol
+### ⏸️ CRITICAL: Spawn and Wait Pattern
 
-**After spawning a swarm, Claude Code MUST:**
+**After spawning background agents:**
 
-1. **WAIT** - Do not continuously check status. Let agents complete their work.
-2. **REVIEW** - When agents return, review all results before proceeding.
-3. **CONFIRM** - Verify implementation matches requirements.
-4. **UPDATE ADRs** - Document architectural decisions in \`/docs/adr/\`.
-5. **UPDATE DDD** - Ensure domain models reflect changes.
-6. **SECURITY CHECK** - Run \`npx @claude-flow/cli@latest security scan\` before finalizing.
+1. **TELL USER** - "I've spawned X agents working in parallel on: [list tasks]"
+2. **STOP** - Do not continue with more tool calls
+3. **WAIT** - Let the background agents complete their work
+4. **RESPOND** - When agents return results, review and synthesize
 
-**NEVER continuously poll swarm status. Trust the agents to complete and report back.**
+**Example response after spawning:**
+\`\`\`
+I've launched 5 concurrent agents to work on this:
+- 🔍 Researcher: Analyzing requirements and codebase
+- 🏗️ Architect: Designing the implementation approach
+- 💻 Coder: Implementing the solution
+- 🧪 Tester: Writing tests
+- 👀 Reviewer: Code review and security check
+
+They're working in parallel. I'll synthesize their results when they complete.
+\`\`\`
+
+### 🚫 DO NOT:
+- Continuously check swarm status
+- Poll TaskOutput repeatedly
+- Add more tool calls after spawning
+- Ask "should I check on the agents?"
+
+### ✅ DO:
+- Spawn all agents in ONE message
+- Tell user what's happening
+- Wait for agent results to arrive
+- Synthesize results when they return
 
 ## 🧠 AUTO-LEARNING PROTOCOL
 
