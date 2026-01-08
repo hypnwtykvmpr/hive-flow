@@ -395,6 +395,41 @@ Features:
 | CLI Startup | <500ms |
 | SONA Adaptation | <0.05ms |
 
+## 📊 Performance Optimization Protocol
+
+### Automatic Performance Tracking
+\`\`\`bash
+# After any significant operation, track metrics
+Bash("npx @claude-flow/cli@latest hooks post-command --command '[operation]' --track-metrics true")
+
+# Periodically run benchmarks (every major feature)
+Bash("npx @claude-flow/cli@latest performance benchmark --suite all")
+
+# Analyze bottlenecks when performance degrades
+Bash("npx @claude-flow/cli@latest performance profile --target '[component]'")
+\`\`\`
+
+### Session Persistence (Cross-Conversation Learning)
+\`\`\`bash
+# At session start - restore previous context
+Bash("npx @claude-flow/cli@latest session restore --latest")
+
+# At session end - persist learned patterns
+Bash("npx @claude-flow/cli@latest hooks session-end --generate-summary true --persist-state true --export-metrics true")
+\`\`\`
+
+### Neural Pattern Training
+\`\`\`bash
+# Train on successful code patterns
+Bash("npx @claude-flow/cli@latest neural train --pattern-type coordination --epochs 10")
+
+# Predict optimal approach for new tasks
+Bash("npx @claude-flow/cli@latest neural predict --input '[task description]'")
+
+# View learned patterns
+Bash("npx @claude-flow/cli@latest neural patterns --list")
+\`\`\`
+
 ## 🔧 Environment Variables
 
 \`\`\`bash
