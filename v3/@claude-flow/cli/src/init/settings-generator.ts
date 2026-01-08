@@ -41,6 +41,10 @@ export function generateSettings(options: InitOptions): object {
   settings.claudeFlow = {
     version: '3.0.0',
     enabled: true,
+    modelPreferences: {
+      default: 'claude-sonnet-4-20250514',
+      routing: 'claude-haiku',
+    },
     swarm: {
       topology: options.runtime.topology,
       maxAgents: options.runtime.maxAgents,
