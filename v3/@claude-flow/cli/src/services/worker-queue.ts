@@ -494,10 +494,22 @@ export class WorkerQueue extends EventEmitter {
     workerTypes: HeadlessWorkerType[],
     options?: { maxConcurrent?: number; hostname?: string; containerId?: string }
   ): Promise<string> {
+    // Initialize if needed
+    if (!this.initialized) {
+      await this.initialize();
+    }
+
+    // Validate worker types
+    if (!Array.isArray(workerTypes) || workerTypes.length === 0) {
+      throw new Error('Worker types must be a non-empty array');
+    }
+
+    this.maxConcurrent = options?.maxConcurrent || 1;
+
     const registration: WorkerRegistration = {
       workerId: this.workerId,
       workerTypes,
-      maxConcurrent: options?.maxConcurrent || 1,
+      maxConcurrent: this.maxConcurrent,
       currentTasks: 0,
       lastHeartbeat: new Date(),
       registeredAt: new Date(),
