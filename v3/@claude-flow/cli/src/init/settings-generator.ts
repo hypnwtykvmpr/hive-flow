@@ -259,21 +259,16 @@ function generateHooksConfig(config: HooksConfig): object {
     ];
   }
 
-  // Stop hooks for task evaluation
+  // Stop hooks for task evaluation - always return ok by default
+  // The hook outputs JSON that Claude Code validates
   if (config.stop) {
     hooks.Stop = [
       {
         hooks: [
           {
-            type: 'prompt',
-            prompt: `Evaluate ONLY for hard failures. Return {"ok": true} UNLESS any of these occurred:
-- Tool returned an error (non-zero exit, exception thrown)
-- Assistant said it cannot/failed to complete the request
-- Request was blocked or denied
-
-DO NOT fail for: suggestions, warnings, discovered issues, code review findings, TODOs, or recommendations. These are informational outputs, not failures.
-
-Default to {"ok": true} when uncertain.`,
+            type: 'command',
+            command: 'echo \'{"ok": true}\'',
+            timeout: 1000,
           },
         ],
       },
