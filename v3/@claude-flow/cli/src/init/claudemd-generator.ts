@@ -36,24 +36,20 @@ export function generateClaudeMd(options: InitOptions): string {
 
 When the user requests a complex task (multi-file changes, feature implementation, refactoring), **immediately execute this pattern in a SINGLE message:**
 
-\`\`\`javascript
-// STEP 1: Initialize swarm coordination via MCP (in parallel with agent spawning)
-mcp__claude-flow__swarm_init({
-  topology: "${topology}",
-  maxAgents: ${maxAgents},
-  strategy: "adaptive"
-})
+\`\`\`bash
+# STEP 1: Initialize swarm coordination via CLI tool (in parallel with agent spawning)
+Bash("npx @claude-flow/cli@latest swarm init --topology ${topology} --max-agents ${maxAgents} --strategy adaptive")
 
-// STEP 2: Spawn agents concurrently using Claude Code's Task tool
-// ALL Task calls MUST be in the SAME message for parallel execution
-Task("Coordinator", "You are the swarm coordinator. Initialize session, coordinate other agents via memory. Run: npx claude-flow@v3alpha hooks session-start", "hierarchical-coordinator")
+# STEP 2: Spawn agents concurrently using Claude Code's Task tool
+# ALL Task calls MUST be in the SAME message for parallel execution
+Task("Coordinator", "You are the swarm coordinator. Initialize session, coordinate other agents via memory. Run: npx @claude-flow/cli@latest hooks session-start", "hierarchical-coordinator")
 Task("Researcher", "Analyze requirements and existing code patterns. Store findings in memory via hooks.", "researcher")
 Task("Architect", "Design implementation approach based on research. Document decisions in memory.", "system-architect")
 Task("Coder", "Implement the solution following architect's design. Coordinate via hooks.", "coder")
 Task("Tester", "Write tests for the implementation. Report coverage via hooks.", "tester")
 Task("Reviewer", "Review code quality and security. Document findings.", "reviewer")
 
-// STEP 3: Batch all todos
+# STEP 3: Batch all todos
 TodoWrite({ todos: [
   {content: "Initialize swarm coordination", status: "in_progress", activeForm: "Initializing swarm"},
   {content: "Research and analyze requirements", status: "in_progress", activeForm: "Researching requirements"},
@@ -63,13 +59,8 @@ TodoWrite({ todos: [
   {content: "Review and finalize", status: "pending", activeForm: "Reviewing code"}
 ]})
 
-// STEP 4: Store swarm state in memory
-mcp__claude-flow__memory_usage({
-  action: "store",
-  namespace: "swarm",
-  key: "current-session",
-  value: JSON.stringify({task: "[user's task]", agents: 6, startedAt: new Date().toISOString()})
-})
+# STEP 4: Store swarm state in memory via CLI
+Bash("npx @claude-flow/cli@latest memory store --namespace swarm --key current-session --value '{\\"task\\": \\"[user task]\\", \\"agents\\": 6}'")
 \`\`\`
 
 ### 📋 Agent Routing by Task Type
