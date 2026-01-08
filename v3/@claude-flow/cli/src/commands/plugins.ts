@@ -1,12 +1,23 @@
 /**
  * V3 CLI Plugins Command
  * Plugin management, installation, and lifecycle
+ * Now uses IPFS-based decentralized registry for discovery
  *
  * Created with ❤️ by ruv.io
  */
 
 import type { Command, CommandContext, CommandResult } from '../types.js';
 import { output } from '../output.js';
+import {
+  createPluginDiscoveryService,
+  searchPlugins,
+  getPluginSearchSuggestions,
+  getFeaturedPlugins,
+  getTrendingPlugins,
+  getOfficialPlugins,
+  type PluginEntry,
+  type PluginSearchOptions,
+} from '../plugins/store/index.js';
 
 // List subcommand
 const listCommand: Command = {
