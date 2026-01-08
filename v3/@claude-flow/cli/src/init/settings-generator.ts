@@ -250,7 +250,7 @@ function generateHooksConfig(config: HooksConfig): object {
           },
           {
             type: 'command',
-            command: 'npx @claude-flow/cli@latest hooks session-start --session-id "$SESSION_ID" --load-context',
+            command: 'npx @claude-flow/cli@latest hooks session-restore --session-id "$SESSION_ID"',
             timeout: 10000,
             continueOnError: true,
           },
