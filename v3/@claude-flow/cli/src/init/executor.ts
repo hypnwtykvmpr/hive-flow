@@ -569,6 +569,44 @@ async function writeHelpers(
 }
 
 /**
+ * Find source .claude directory for statusline files
+ */
+function findSourceClaudeDir(sourceBaseDir?: string): string | null {
+  const possiblePaths: string[] = [];
+
+  // If explicit source base directory is provided, check it first
+  if (sourceBaseDir) {
+    possiblePaths.push(path.join(sourceBaseDir, '.claude'));
+  }
+
+  // IMPORTANT: Check the package's own .claude directory
+  const packageRoot = path.resolve(__dirname, '..', '..', '..', '..');
+  const packageClaude = path.join(packageRoot, '.claude');
+  if (fs.existsSync(packageClaude)) {
+    possiblePaths.unshift(packageClaude); // Add to beginning (highest priority)
+  }
+
+  // From dist/src/init -> go up to project root
+  let currentDir = __dirname;
+  for (let i = 0; i < 10; i++) {
+    const parentDir = path.dirname(currentDir);
+    const claudePath = path.join(parentDir, '.claude');
+    if (fs.existsSync(claudePath)) {
+      possiblePaths.push(claudePath);
+    }
+    currentDir = parentDir;
+  }
+
+  for (const p of possiblePaths) {
+    if (fs.existsSync(p)) {
+      return p;
+    }
+  }
+
+  return null;
+}
+
+/**
  * Write statusline configuration
  */
 async function writeStatusline(
@@ -579,24 +617,26 @@ async function writeStatusline(
   const claudeDir = path.join(targetDir, '.claude');
   const helpersDir = path.join(targetDir, '.claude', 'helpers');
 
+  // Find source .claude directory (works for npm package and local dev)
+  const sourceClaudeDir = findSourceClaudeDir(options.sourceBaseDir);
+
   // Try to copy existing advanced statusline files from source
-  const sourceBaseDir = options.sourceBaseDir;
   const advancedStatuslineFiles = [
     { src: 'statusline.sh', dest: 'statusline.sh', dir: claudeDir },
     { src: 'statusline.mjs', dest: 'statusline.mjs', dir: claudeDir },
   ];
 
   let copiedAdvanced = false;
-  if (sourceBaseDir) {
+  if (sourceClaudeDir) {
     for (const file of advancedStatuslineFiles) {
-      const sourcePath = path.join(sourceBaseDir, '.claude', file.src);
+      const sourcePath = path.join(sourceClaudeDir, file.src);
       const destPath = path.join(file.dir, file.dest);
 
       if (fs.existsSync(sourcePath)) {
         if (!fs.existsSync(destPath) || options.force) {
           fs.copyFileSync(sourcePath, destPath);
-          // Make shell scripts executable
-          if (file.src.endsWith('.sh')) {
+          // Make shell scripts and mjs executable
+          if (file.src.endsWith('.sh') || file.src.endsWith('.mjs')) {
             fs.chmodSync(destPath, '755');
           }
           result.created.files.push(`.claude/${file.dest}`);
