@@ -636,6 +636,7 @@ export class WorkerQueue extends EventEmitter {
    * Shutdown the queue gracefully
    */
   async shutdown(): Promise<void> {
+    if (this.isShuttingDown) return;
     this.isShuttingDown = true;
 
     // Wait for processing tasks to complete (with timeout)
@@ -651,7 +652,11 @@ export class WorkerQueue extends EventEmitter {
       await this.fail(taskId, 'Worker shutdown', false);
     }
 
+    // Stop store cleanup
+    this.store.stopCleanup();
+
     await this.unregisterWorker();
+    this.initialized = false;
     this.emit('shutdown', {});
   }
 
