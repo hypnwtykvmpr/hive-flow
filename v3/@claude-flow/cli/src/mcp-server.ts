@@ -530,6 +530,11 @@ export class MCPServerManager extends EventEmitter {
    * Wait for server to be ready
    */
   private async waitForReady(timeout = 10000): Promise<void> {
+    // For stdio transport, we're ready immediately (in-process)
+    if (this.options.transport === 'stdio') {
+      return;
+    }
+
     const startTime = Date.now();
 
     while (Date.now() - startTime < timeout) {
@@ -538,11 +543,6 @@ export class MCPServerManager extends EventEmitter {
         return;
       }
       await this.sleep(100);
-    }
-
-    // For stdio, just check if process is running
-    if (this.options.transport === 'stdio' && this.process && !this.process.killed) {
-      return;
     }
 
     throw new Error('Server failed to start within timeout');
