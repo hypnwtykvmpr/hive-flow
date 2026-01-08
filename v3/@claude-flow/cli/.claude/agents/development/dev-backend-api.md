@@ -1,5 +1,6 @@
 ---
 name: "backend-dev"
+description: "Specialized agent for backend API development with self-learning and pattern recognition"
 color: "blue"
 type: "development"
 version: "2.0.0-alpha"
