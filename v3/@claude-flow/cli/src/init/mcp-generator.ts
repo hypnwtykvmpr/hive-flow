@@ -92,22 +92,42 @@ export function generateMCPJson(options: InitOptions): string {
 
 /**
  * Generate MCP server add commands for manual setup
+ * Windows uses 'cmd /c' wrapper for npx execution
  */
 export function generateMCPCommands(options: InitOptions): string[] {
   const commands: string[] = [];
   const config = options.mcp;
 
+  // Windows requires different command format
+  const prefix = isWindows() ? 'cmd /c ' : '';
+
   if (config.claudeFlow) {
-    commands.push('claude mcp add claude-flow -- npx @claude-flow/cli@latest mcp start');
+    commands.push(`claude mcp add claude-flow -- ${prefix}npx @claude-flow/cli@latest mcp start`);
   }
 
   if (config.ruvSwarm) {
-    commands.push('claude mcp add ruv-swarm -- npx ruv-swarm mcp start');
+    commands.push(`claude mcp add ruv-swarm -- ${prefix}npx ruv-swarm mcp start`);
   }
 
   if (config.flowNexus) {
-    commands.push('claude mcp add flow-nexus -- npx flow-nexus@latest mcp start');
+    commands.push(`claude mcp add flow-nexus -- ${prefix}npx flow-nexus@latest mcp start`);
   }
 
   return commands;
+}
+
+/**
+ * Get platform-specific setup instructions
+ */
+export function getPlatformInstructions(): { platform: string; note: string } {
+  if (isWindows()) {
+    return {
+      platform: 'Windows',
+      note: 'MCP configuration uses cmd /c wrapper for npx compatibility.',
+    };
+  }
+  return {
+    platform: process.platform === 'darwin' ? 'macOS' : 'Linux',
+    note: 'MCP configuration uses native npx execution.',
+  };
 }
