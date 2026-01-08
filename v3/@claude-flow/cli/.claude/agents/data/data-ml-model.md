@@ -1,5 +1,6 @@
 ---
 name: "ml-developer"
+description: "ML developer with self-learning hyperparameter optimization and pattern recognition"
 color: "purple"
 type: "data"
 version: "2.0.0-alpha"
