@@ -68,7 +68,7 @@ export function generateMCPCommands(options: InitOptions): string[] {
   const config = options.mcp;
 
   if (config.claudeFlow) {
-    commands.push('claude mcp add claude-flow -- npx @claude-flow/cli mcp start');
+    commands.push('claude mcp add claude-flow -- npx @claude-flow/cli@latest mcp start');
   }
 
   if (config.ruvSwarm) {
