@@ -102,7 +102,7 @@ function generateHooksConfig(config: HooksConfig): object {
         hooks: [
           {
             type: 'command',
-            command: 'npx claude-flow@v3alpha hooks pre-edit --file "$TOOL_INPUT_file_path" --intelligence',
+            command: 'if [ -n "$TOOL_INPUT_file_path" ]; then npx claude-flow@v3alpha hooks pre-edit -f "$TOOL_INPUT_file_path" 2>/dev/null; fi; exit 0',
             timeout: config.timeout,
             continueOnError: config.continueOnError,
           },
@@ -114,7 +114,7 @@ function generateHooksConfig(config: HooksConfig): object {
         hooks: [
           {
             type: 'command',
-            command: 'npx claude-flow@v3alpha hooks pre-command --command "$TOOL_INPUT_command"',
+            command: 'if [ -n "$TOOL_INPUT_command" ]; then npx claude-flow@v3alpha hooks pre-command -c "$TOOL_INPUT_command" 2>/dev/null; fi; exit 0',
             timeout: config.timeout,
             continueOnError: config.continueOnError,
           },
@@ -126,25 +126,12 @@ function generateHooksConfig(config: HooksConfig): object {
         hooks: [
           {
             type: 'command',
-            command: 'npx claude-flow@v3alpha hooks pre-task --task-id "task-$(date +%s)" --description "$TOOL_INPUT_prompt"',
+            command: 'if [ -n "$TOOL_INPUT_prompt" ]; then npx claude-flow@v3alpha hooks pre-task -d "$TOOL_INPUT_prompt" 2>/dev/null; fi; exit 0',
             timeout: config.timeout,
             continueOnError: config.continueOnError,
           },
         ],
       },
-      // Search hooks - lightweight, no-op for now (search caching handled in post)
-      // Uncomment when pre-search command is implemented
-      // {
-      //   matcher: '^(Grep|Glob|Read)$',
-      //   hooks: [
-      //     {
-      //       type: 'command',
-      //       command: 'npx claude-flow@v3alpha hooks pre-search --pattern "$TOOL_INPUT_pattern"',
-      //       timeout: 2000,
-      //       continueOnError: true,
-      //     },
-      //   ],
-      // },
     ];
   }
 
