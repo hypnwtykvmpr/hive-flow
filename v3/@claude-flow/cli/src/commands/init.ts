@@ -163,15 +163,74 @@ const initAction = async (ctx: CommandContext): Promise<CommandResult> => {
       output.writeln();
     }
 
-    // Next steps
-    output.writeln(output.bold('Next steps:'));
-    output.printList([
-      `Run ${output.highlight('claude-flow start')} to start the orchestration system`,
-      `Run ${output.highlight('claude-flow agent spawn -t coder')} to spawn an agent`,
-      `Run ${output.highlight('claude-flow swarm init')} to initialize a swarm`,
-      options.components.settings ? `Review ${output.highlight('.claude/settings.json')} for hook configurations` : '',
-      options.components.runtime ? `Edit ${output.highlight('.claude-flow/config.yaml')} to customize settings` : '',
-    ].filter(Boolean));
+    // Handle --start-all or --start-daemon
+    const startAll = ctx.flags['start-all'] || ctx.flags.startAll;
+    const startDaemon = ctx.flags['start-daemon'] || ctx.flags.startDaemon || startAll;
+
+    if (startDaemon || startAll) {
+      output.writeln();
+      output.printInfo('Starting services...');
+
+      const { execSync } = await import('child_process');
+
+      // Initialize memory database
+      if (startAll) {
+        try {
+          output.writeln(output.dim('  Initializing memory database...'));
+          execSync('npx @claude-flow/cli@latest memory init 2>/dev/null', {
+            stdio: 'pipe',
+            cwd: ctx.cwd,
+            timeout: 30000
+          });
+          output.writeln(output.success('  ✓ Memory initialized'));
+        } catch {
+          output.writeln(output.dim('  Memory database already exists'));
+        }
+      }
+
+      // Start daemon
+      if (startDaemon) {
+        try {
+          output.writeln(output.dim('  Starting daemon...'));
+          execSync('npx @claude-flow/cli@latest daemon start 2>/dev/null &', {
+            stdio: 'pipe',
+            cwd: ctx.cwd,
+            timeout: 10000
+          });
+          output.writeln(output.success('  ✓ Daemon started'));
+        } catch {
+          output.writeln(output.warning('  Daemon may already be running'));
+        }
+      }
+
+      // Initialize swarm
+      if (startAll) {
+        try {
+          output.writeln(output.dim('  Initializing swarm...'));
+          execSync('npx @claude-flow/cli@latest swarm init --topology hierarchical 2>/dev/null', {
+            stdio: 'pipe',
+            cwd: ctx.cwd,
+            timeout: 30000
+          });
+          output.writeln(output.success('  ✓ Swarm initialized'));
+        } catch {
+          output.writeln(output.dim('  Swarm initialization skipped'));
+        }
+      }
+
+      output.writeln();
+      output.printSuccess('All services started');
+    } else {
+      // Next steps (only if not auto-starting)
+      output.writeln(output.bold('Next steps:'));
+      output.printList([
+        `Run ${output.highlight('claude-flow daemon start')} to start background workers`,
+        `Run ${output.highlight('claude-flow memory init')} to initialize memory database`,
+        `Run ${output.highlight('claude-flow swarm init')} to initialize a swarm`,
+        `Or use ${output.highlight('claude-flow init --start-all')} to do all of the above`,
+        options.components.settings ? `Review ${output.highlight('.claude/settings.json')} for hook configurations` : '',
+      ].filter(Boolean));
+    }
 
     if (ctx.flags.format === 'json') {
       output.printJson(result);
