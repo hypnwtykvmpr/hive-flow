@@ -67,12 +67,12 @@ export class PatternPublisher {
 
       // Step 5: Upload to IPFS
       console.log(`[Publish] Uploading to IPFS...`);
-      const uploadResult = await uploadToIPFS(
-        contentBuffer,
-        `${options.name}.cfp.json`
-      );
+      const uploadResult = await uploadToIPFS(contentBuffer, {
+        name: `${options.name}.cfp.json`,
+        pin: true,
+      });
 
-      if (!uploadResult.success || !uploadResult.cid) {
+      if (!uploadResult.cid) {
         return {
           success: false,
           patternId: '',
