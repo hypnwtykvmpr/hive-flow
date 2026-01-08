@@ -58,7 +58,51 @@ export function generateSettings(options: InitOptions): object {
     },
     daemon: {
       autoStart: true,
-      workers: ['map', 'audit', 'optimize', 'consolidate', 'testgaps'],
+      workers: [
+        'map',           // Codebase mapping
+        'audit',         // Security auditing (critical priority)
+        'optimize',      // Performance optimization (high priority)
+        'consolidate',   // Memory consolidation
+        'testgaps',      // Test coverage gaps
+        'ultralearn',    // Deep knowledge acquisition
+        'deepdive',      // Deep code analysis
+        'document',      // Auto-documentation for ADRs
+        'refactor',      // Refactoring suggestions (DDD alignment)
+        'benchmark',     // Performance benchmarking
+      ],
+      schedules: {
+        audit: { interval: '1h', priority: 'critical' },
+        optimize: { interval: '30m', priority: 'high' },
+        consolidate: { interval: '2h', priority: 'low' },
+        document: { interval: '1h', priority: 'normal', triggers: ['adr-update', 'api-change'] },
+        deepdive: { interval: '4h', priority: 'normal', triggers: ['complex-change'] },
+        ultralearn: { interval: '1h', priority: 'normal' },
+      },
+    },
+    learning: {
+      enabled: true,
+      autoTrain: true,
+      patterns: ['coordination', 'optimization', 'prediction'],
+      retention: {
+        shortTerm: '24h',
+        longTerm: '30d',
+      },
+    },
+    adr: {
+      autoGenerate: true,
+      directory: '/docs/adr',
+      template: 'madr',
+    },
+    ddd: {
+      trackDomains: true,
+      validateBoundedContexts: true,
+      directory: '/docs/ddd',
+    },
+    security: {
+      autoScan: true,
+      scanOnEdit: true,
+      cveCheck: true,
+      threatModel: true,
     },
   };
 
