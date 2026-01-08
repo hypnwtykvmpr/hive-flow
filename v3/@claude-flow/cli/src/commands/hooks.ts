@@ -1231,6 +1231,43 @@ const transferFromProjectCommand: Command = {
   }
 };
 
+// Parent transfer command combining all transfer methods
+const transferCommand: Command = {
+  name: 'transfer',
+  description: 'Transfer patterns and plugins via IPFS-based decentralized registry',
+  subcommands: [storeCommand, transferFromProjectCommand],
+  examples: [
+    { command: 'claude-flow hooks transfer store list', description: 'List patterns from registry' },
+    { command: 'claude-flow hooks transfer store search -q routing', description: 'Search patterns' },
+    { command: 'claude-flow hooks transfer store download -p seraphine-genesis', description: 'Download pattern' },
+    { command: 'claude-flow hooks transfer store publish', description: 'Publish pattern to registry' },
+    { command: 'claude-flow hooks transfer from-project -s ../other-project', description: 'Transfer from project' },
+  ],
+  action: async (): Promise<CommandResult> => {
+    output.writeln();
+    output.writeln(output.bold('Pattern Transfer System'));
+    output.writeln(output.dim('Decentralized pattern sharing via IPFS'));
+    output.writeln();
+    output.writeln('Subcommands:');
+    output.printList([
+      `${output.highlight('store')}        - Pattern marketplace (list, search, download, publish)`,
+      `${output.highlight('from-project')} - Transfer patterns from another project`,
+    ]);
+    output.writeln();
+    output.writeln(output.bold('IPFS-Based Features:'));
+    output.printList([
+      'Decentralized registry via IPNS for discoverability',
+      'Content-addressed storage for integrity',
+      'Ed25519 signatures for verification',
+      'Anonymization levels: minimal, standard, strict, paranoid',
+      'Trust levels: unverified, community, verified, official',
+    ]);
+    output.writeln();
+    output.writeln('Run "claude-flow hooks transfer <subcommand> --help" for details');
+    return { success: true };
+  }
+};
+
 // List subcommand
 const listCommand: Command = {
   name: 'list',
