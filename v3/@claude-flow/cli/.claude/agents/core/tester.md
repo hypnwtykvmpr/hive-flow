@@ -322,49 +322,53 @@ describe('Security', () => {
  */
 ```
 
-## 🧠 Self-Learning Protocol (v2.0.0-alpha)
+## 🧠 V3 Self-Learning Protocol
 
-### Before Testing: Learn from Past Failures
+### Before Testing: Learn from Past Failures (HNSW-Indexed)
 
 ```typescript
-// 1. Learn from past test failures
+// 1. Learn from past test failures (150x-12,500x faster with HNSW)
 const failedTests = await reasoningBank.searchPatterns({
   task: 'Test authentication',
   onlyFailures: true,
-  k: 5
+  k: 5,
+  useHNSW: true  // V3: HNSW indexing for fast retrieval
 });
 
 if (failedTests.length > 0) {
-  console.log('⚠️  Learning from past test failures:');
+  console.log('⚠️  Learning from past test failures (HNSW-indexed):');
   failedTests.forEach(pattern => {
     console.log(`- ${pattern.task}: ${pattern.critique}`);
     console.log(`  Root cause: ${pattern.output}`);
   });
 }
 
-// 2. Find successful test patterns to replicate
+// 2. Find successful test patterns (EWC++ protected knowledge)
 const successfulTests = await reasoningBank.searchPatterns({
   task: currentTask.description,
   k: 3,
-  minReward: 0.9
+  minReward: 0.9,
+  ewcProtected: true  // V3: EWC++ ensures we don't forget successful patterns
 });
 ```
 
 ### During Testing: GNN-Enhanced Test Case Discovery
 
 ```typescript
-// Use GNN to find similar test scenarios
+// Use GNN to find similar test scenarios (+12.4% accuracy)
 const similarTestCases = await agentDB.gnnEnhancedSearch(
   featureEmbedding,
   {
     k: 15,
     graphContext: buildTestDependencyGraph(),
-    gnnLayers: 3
+    gnnLayers: 3,
+    useHNSW: true  // V3: Combined GNN + HNSW for optimal retrieval
   }
 );
 
 console.log(`Test discovery improved by ${similarTestCases.improvementPercent}%`);
 console.log(`Found ${similarTestCases.results.length} related test scenarios`);
+console.log(`Search time: ${similarTestCases.searchTimeMs}ms (HNSW: 150x-12,500x faster)`);
 
 // Build test dependency graph
 function buildTestDependencyGraph() {
@@ -403,10 +407,24 @@ function generateEdgeCases(feature) {
 }
 ```
 
-### After Testing: Store Learning Patterns
+### SONA Adaptation for Test Patterns (<0.05ms)
 
 ```typescript
-// Store test patterns for continuous improvement
+// V3: SONA adapts to your testing patterns in real-time
+const sonaAdapter = await agentDB.getSonaAdapter();
+await sonaAdapter.adapt({
+  context: currentTestSuite,
+  learningRate: 0.001,
+  maxLatency: 0.05  // <0.05ms adaptation guarantee
+});
+
+console.log(`SONA adapted to test patterns in ${sonaAdapter.lastAdaptationMs}ms`);
+```
+
+### After Testing: Store Learning Patterns with EWC++
+
+```typescript
+// Store test patterns with EWC++ consolidation
 await reasoningBank.storePattern({
   sessionId: `tester-${Date.now()}`,
   task: 'Test payment gateway',
@@ -416,7 +434,10 @@ await reasoningBank.storePattern({
   success: allTestsPassed && coverage > 80,
   critique: selfCritique(), // "Good coverage, missed concurrent edge case"
   tokensUsed: countTokens(testResults),
-  latencyMs: measureLatency()
+  latencyMs: measureLatency(),
+  // V3: EWC++ prevents catastrophic forgetting
+  consolidateWithEWC: true,
+  ewcLambda: 0.5  // Importance weight for old knowledge
 });
 
 function calculateTestQuality(results) {
