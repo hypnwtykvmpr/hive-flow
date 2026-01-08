@@ -578,32 +578,58 @@ export class WorkerQueue extends EventEmitter {
    */
   async start(
     workerTypes: HeadlessWorkerType[],
-    handler: (task: QueueTask) => Promise<HeadlessExecutionResult>
+    handler: (task: QueueTask) => Promise<HeadlessExecutionResult>,
+    options?: { maxConcurrent?: number }
   ): Promise<void> {
-    await this.registerWorker(workerTypes);
+    await this.registerWorker(workerTypes, { maxConcurrent: options?.maxConcurrent });
 
     const processLoop = async () => {
       while (!this.isShuttingDown) {
-        const task = await this.dequeue(workerTypes);
-
-        if (task) {
-          try {
-            const result = await handler(task);
-            await this.complete(task.id, result);
-          } catch (error) {
-            await this.fail(task.id, error instanceof Error ? error.message : String(error));
+        try {
+          // Respect concurrency limit
+          if (this.processingTasks.size >= this.maxConcurrent) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+            continue;
           }
-        } else {
-          // No task available, wait before polling again
-          await new Promise(resolve => setTimeout(resolve, 1000));
+
+          const task = await this.dequeue(workerTypes);
+
+          if (task) {
+            // Process task without blocking the loop (allows concurrency)
+            this.processTask(task, handler).catch(error => {
+              this.emit('error', { taskId: task.id, error: String(error) });
+            });
+          } else {
+            // No task available, wait before polling again
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        } catch (error) {
+          this.emit('error', { error: error instanceof Error ? error.message : String(error) });
+          // Wait before retrying to avoid tight error loop
+          await new Promise(resolve => setTimeout(resolve, 5000));
         }
       }
     };
 
     // Start processing
     processLoop().catch(error => {
-      this.emit('error', { error: error.message });
+      this.emit('error', { error: error instanceof Error ? error.message : String(error) });
     });
+  }
+
+  /**
+   * Process a single task
+   */
+  private async processTask(
+    task: QueueTask,
+    handler: (task: QueueTask) => Promise<HeadlessExecutionResult>
+  ): Promise<void> {
+    try {
+      const result = await handler(task);
+      await this.complete(task.id, result);
+    } catch (error) {
+      await this.fail(task.id, error instanceof Error ? error.message : String(error));
+    }
   }
 
   /**
