@@ -413,9 +413,10 @@ async function copyAgents(
     if (fs.existsSync(sourcePath)) {
       if (!fs.existsSync(targetPath) || options.force) {
         copyDirRecursive(sourcePath, targetPath);
-        // Count agent files
-        const agentFiles = countFiles(sourcePath, '.md');
-        result.summary.agentsCount += agentFiles;
+        // Count agent files (.yaml and .md)
+        const yamlFiles = countFiles(sourcePath, '.yaml');
+        const mdFiles = countFiles(sourcePath, '.md');
+        result.summary.agentsCount += yamlFiles + mdFiles;
         result.created.files.push(`.claude/agents/${agentCategory}`);
       } else {
         result.skipped.push(`.claude/agents/${agentCategory}`);
