@@ -22,7 +22,7 @@ export type ConflictResolution = 'highest-confidence' | 'newest' | 'oldest' | 'k
 export type TrustLevel = 'official' | 'verified' | 'community' | 'unverified' | 'untrusted';
 
 // Pinning services
-export type PinningService = 'pinata' | 'web3storage' | 'infura' | 'custom';
+export type PinningService = 'local' | 'pinata' | 'web3storage' | 'infura' | 'custom';
 
 /**
  * Pattern metadata
