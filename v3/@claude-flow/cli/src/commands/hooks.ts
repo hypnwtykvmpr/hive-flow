@@ -7,6 +7,7 @@ import type { Command, CommandContext, CommandResult } from '../types.js';
 import { output } from '../output.js';
 import { select, confirm, input } from '../prompt.js';
 import { callMCPTool, MCPClientError } from '../mcp-client.js';
+import { storeCommand } from './transfer-store.js';
 
 // Hook types
 const HOOK_TYPES = [
