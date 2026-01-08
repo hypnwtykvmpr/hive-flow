@@ -130,7 +130,7 @@ export class PatternStore {
     if (!this.registry) {
       throw new Error('Store not initialized. Call initialize() first.');
     }
-    return searchPatterns(this.registry, options);
+    return doSearchPatterns(this.registry, options);
   }
 
   /**
