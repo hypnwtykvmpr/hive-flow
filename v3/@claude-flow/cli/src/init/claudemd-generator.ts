@@ -467,11 +467,11 @@ npx @claude-flow/cli@latest performance benchmark
 ## MCP Setup
 
 \`\`\`bash
-claude mcp add claude-flow npx @claude-flow/cli@latest mcp start
+claude mcp add claude-flow -- npx -y @claude-flow/cli@latest
 \`\`\`
 
 ---
-Remember: **Claude Flow coordinates, Claude Code creates!**
+Remember: **Claude Flow CLI coordinates, Claude Code Task tool creates!**
 `;
 }
 
