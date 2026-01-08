@@ -17,10 +17,13 @@
  */
 
 import { EventEmitter } from 'events';
-import { spawn, execSync, type ChildProcess } from 'child_process';
-import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'fs';
+import { spawn, exec, type ChildProcess } from 'child_process';
+import { promisify } from 'util';
+import { existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import type { HeadlessWorkerType, HeadlessExecutionResult, SandboxMode } from './headless-worker-executor.js';
+
+const execAsync = promisify(exec);
 
 // ============================================
 // Type Definitions
