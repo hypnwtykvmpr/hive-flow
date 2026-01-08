@@ -228,9 +228,9 @@ function generateHooksConfig(config: HooksConfig): object {
         hooks: [
           {
             type: 'command',
-            command: 'npx @claude-flow/cli@latest hooks route --task "$PROMPT" --intelligence --include-explanation',
+            command: '[ -n "$PROMPT" ] && npx @claude-flow/cli@latest hooks route --task "$PROMPT" || true',
             timeout: config.timeout,
-            continueOnError: config.continueOnError,
+            continueOnError: true,
           },
         ],
       },
