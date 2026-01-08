@@ -441,38 +441,8 @@ const statusCommand: Command = {
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     const swarmId = ctx.args[0];
 
-    // Default status (updated by MCP swarm/status when available)
-    const status = {
-      id: swarmId || 'swarm-current',
-      topology: 'hybrid',
-      status: 'running',
-      objective: 'Build enterprise REST API with authentication',
-      strategy: 'development',
-      agents: {
-        total: 15,
-        active: 12,
-        idle: 2,
-        completed: 1
-      },
-      progress: 65,
-      tasks: {
-        total: 45,
-        completed: 29,
-        inProgress: 12,
-        pending: 4
-      },
-      metrics: {
-        tokensUsed: 234567,
-        avgResponseTime: '1.8s',
-        successRate: '97.2%',
-        elapsedTime: '45m 23s'
-      },
-      coordination: {
-        consensusRounds: 8,
-        messagesSent: 1234,
-        conflictsResolved: 3
-      }
-    };
+    // Get dynamic status from actual swarm state files
+    const status = getSwarmStatus(swarmId);
 
     if (ctx.flags.format === 'json') {
       output.printJson(status);
@@ -480,6 +450,18 @@ const statusCommand: Command = {
     }
 
     output.writeln();
+
+    // Show different message if no active swarm
+    if (!status.hasActiveSwarm) {
+      output.writeln(output.warning('No active swarm'));
+      output.writeln();
+      output.writeln(output.dim('Start a swarm with:'));
+      output.writeln(output.dim('  npx @claude-flow/cli@latest swarm init'));
+      output.writeln(output.dim('  npx @claude-flow/cli@latest swarm start'));
+      output.writeln();
+      return { success: true, data: status };
+    }
+
     output.writeln(output.bold(`Swarm Status: ${status.id}`));
     output.writeln();
 
