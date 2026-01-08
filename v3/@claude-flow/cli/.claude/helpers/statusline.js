@@ -186,7 +186,7 @@ function getSwarmStatus() {
   };
 }
 
-// Get system metrics
+// Get system metrics (all dynamic, no hardcoded values)
 function getSystemMetrics() {
   let memoryMB = 0;
   let subAgents = 0;
@@ -199,10 +199,27 @@ function getSystemMetrics() {
     memoryMB = Math.floor(process.memoryUsage().heapUsed / 1024 / 1024);
   }
 
+  // Get learning stats for intelligence %
+  const learning = getLearningStats();
+
+  // Intelligence % based on learned patterns (0 patterns = 0%, 1000+ = 100%)
+  const intelligencePct = Math.min(100, Math.floor((learning.patterns / 10) * 1));
+
+  // Context % based on session history (0 sessions = 0%, grows with usage)
+  const contextPct = Math.min(100, Math.floor(learning.sessions * 5));
+
+  // Count active sub-agents from process list
+  try {
+    const agents = execSync('ps aux 2>/dev/null | grep -c "claude-flow.*agent" || echo "0"', { encoding: 'utf-8' });
+    subAgents = Math.max(0, parseInt(agents.trim()) - 1);
+  } catch (e) {
+    // Ignore
+  }
+
   return {
     memoryMB,
-    contextPct: 56, // Would need Claude Code input
-    intelligencePct: 30,
+    contextPct,
+    intelligencePct,
     subAgents,
   };
 }
