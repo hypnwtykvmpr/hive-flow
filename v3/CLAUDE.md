@@ -354,16 +354,16 @@ Run `npx claude-flow@v3alpha doctor` to check:
 ## 🚀 Quick Setup
 
 ```bash
-# Add MCP servers
-claude mcp add claude-flow npx claude-flow@v3alpha mcp start
-claude mcp add ruv-swarm npx ruv-swarm mcp start  # Optional
-claude mcp add flow-nexus npx flow-nexus@latest mcp start  # Optional
+# Add MCP servers (use claude-flow-mcp for clean stdio protocol)
+claude mcp add claude-flow -- npx -y @claude-flow/cli@latest claude-flow-mcp
+claude mcp add ruv-swarm -- npx -y ruv-swarm mcp start  # Optional
+claude mcp add flow-nexus -- npx -y flow-nexus@latest mcp start  # Optional
 
 # Start daemon
-npx claude-flow@v3alpha daemon start
+npx @claude-flow/cli@latest daemon start
 
 # Run doctor
-npx claude-flow@v3alpha doctor --fix
+npx @claude-flow/cli@latest doctor --fix
 ```
 
 ## 🎯 Claude Code vs CLI Tools
