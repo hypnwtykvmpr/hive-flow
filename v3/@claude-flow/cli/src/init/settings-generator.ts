@@ -287,7 +287,7 @@ Default to {"ok": true} when uncertain.`,
         hooks: [
           {
             type: 'command',
-            command: 'npx @claude-flow/cli@latest memory store --namespace notifications --key "notify-$(date +%s)" --value "$NOTIFICATION_MESSAGE"',
+            command: '[ -n "$NOTIFICATION_MESSAGE" ] && npx @claude-flow/cli@latest memory store --namespace notifications --key "notify-$(date +%s)" --value "$NOTIFICATION_MESSAGE" 2>/dev/null || true',
             timeout: 3000,
             continueOnError: true,
           },
