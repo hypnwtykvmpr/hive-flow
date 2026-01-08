@@ -490,12 +490,23 @@ export function hasIPFSCredentials(): boolean {
  * Get IPFS service status
  */
 export function getIPFSServiceStatus(): {
-  service: 'web3storage' | 'pinata' | 'demo';
+  service: 'local' | 'web3storage' | 'pinata' | 'demo';
   configured: boolean;
   message: string;
+  apiUrl?: string;
 } {
+  const localIPFS = process.env.IPFS_API_URL;
   const web3Token = getWeb3StorageToken();
   const pinataKey = process.env.PINATA_API_KEY;
+
+  if (localIPFS) {
+    return {
+      service: 'local',
+      configured: true,
+      message: `Local IPFS node configured at ${localIPFS} - FREE uploads enabled`,
+      apiUrl: localIPFS,
+    };
+  }
 
   if (web3Token) {
     return {
@@ -516,6 +527,14 @@ export function getIPFSServiceStatus(): {
   return {
     service: 'demo',
     configured: false,
-    message: 'No IPFS credentials - using demo mode (deterministic CIDs)',
+    message: 'No IPFS credentials - using demo mode. Options:\n' +
+             '  1. IPFS_API_URL=http://YOUR_NODE:5001 (FREE - your own node)\n' +
+             '  2. WEB3_STORAGE_TOKEN (free 5GB at web3.storage)\n' +
+             '  3. PINATA_API_KEY (free 1GB at pinata.cloud)',
   };
 }
+
+/**
+ * Export the local IPFS check for external use
+ */
+export { checkLocalIPFSNode };
