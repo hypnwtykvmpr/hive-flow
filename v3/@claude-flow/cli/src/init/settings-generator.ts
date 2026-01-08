@@ -132,18 +132,19 @@ function generateHooksConfig(config: HooksConfig): object {
           },
         ],
       },
-      // Search hooks
-      {
-        matcher: '^(Grep|Glob|Read)$',
-        hooks: [
-          {
-            type: 'command',
-            command: 'npx claude-flow@v3alpha hooks pre-search --pattern "$TOOL_INPUT_pattern"',
-            timeout: 2000,
-            continueOnError: true,
-          },
-        ],
-      },
+      // Search hooks - lightweight, no-op for now (search caching handled in post)
+      // Uncomment when pre-search command is implemented
+      // {
+      //   matcher: '^(Grep|Glob|Read)$',
+      //   hooks: [
+      //     {
+      //       type: 'command',
+      //       command: 'npx claude-flow@v3alpha hooks pre-search --pattern "$TOOL_INPUT_pattern"',
+      //       timeout: 2000,
+      //       continueOnError: true,
+      //     },
+      //   ],
+      // },
     ];
   }
 
