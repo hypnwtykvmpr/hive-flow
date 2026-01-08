@@ -96,25 +96,25 @@ function generateHooksConfig(config: HooksConfig): object {
   // PreToolUse hooks
   if (config.preToolUse) {
     hooks.PreToolUse = [
-      // File edit hooks
+      // File edit hooks with intelligence routing
       {
         matcher: '^(Write|Edit|MultiEdit)$',
         hooks: [
           {
             type: 'command',
-            command: 'if [ -n "$TOOL_INPUT_file_path" ]; then npx claude-flow@v3alpha hooks pre-edit --file "$TOOL_INPUT_file_path" 2>/dev/null; fi; exit 0',
+            command: 'npx @claude-flow/cli@latest hooks pre-edit --file "$TOOL_INPUT_file_path" --intelligence 2>/dev/null || true',
             timeout: config.timeout,
             continueOnError: config.continueOnError,
           },
         ],
       },
-      // Bash command hooks
+      // Bash command hooks with safety validation
       {
         matcher: '^Bash$',
         hooks: [
           {
             type: 'command',
-            command: 'if [ -n "$TOOL_INPUT_command" ]; then npx claude-flow@v3alpha hooks pre-command --command "$TOOL_INPUT_command" 2>/dev/null; fi; exit 0',
+            command: 'npx @claude-flow/cli@latest hooks pre-command --command "$TOOL_INPUT_command" --validate-safety 2>/dev/null || true',
             timeout: config.timeout,
             continueOnError: config.continueOnError,
           },
@@ -126,8 +126,20 @@ function generateHooksConfig(config: HooksConfig): object {
         hooks: [
           {
             type: 'command',
-            command: 'if [ -n "$TOOL_INPUT_prompt" ]; then npx claude-flow@v3alpha hooks pre-task --task-id "task-$(date +%s)" --description "$TOOL_INPUT_prompt" 2>/dev/null; fi; exit 0',
+            command: 'npx @claude-flow/cli@latest hooks pre-task --task-id "task-$(date +%s)" --description "$TOOL_INPUT_prompt" 2>/dev/null || true',
             timeout: config.timeout,
+            continueOnError: config.continueOnError,
+          },
+        ],
+      },
+      // Search hooks for pattern caching
+      {
+        matcher: '^(Grep|Glob|Read)$',
+        hooks: [
+          {
+            type: 'command',
+            command: 'npx @claude-flow/cli@latest hooks pre-search --pattern "$TOOL_INPUT_pattern" 2>/dev/null || true',
+            timeout: 2000,
             continueOnError: config.continueOnError,
           },
         ],
