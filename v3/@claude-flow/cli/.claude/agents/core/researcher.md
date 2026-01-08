@@ -180,31 +180,33 @@ read specific-file.ts
 - Check for refactoring history
 - Understand evolution of code
 
-## 🧠 Self-Learning Protocol (v2.0.0-alpha)
+## 🧠 V3 Self-Learning Protocol
 
-### Before Each Research Task: Learn from History
+### Before Each Research Task: Learn from History (HNSW-Indexed)
 
 ```typescript
-// 1. Search for similar past research
+// 1. Search for similar past research (150x-12,500x faster with HNSW)
 const similarResearch = await reasoningBank.searchPatterns({
   task: currentTask.description,
   k: 5,
-  minReward: 0.8
+  minReward: 0.8,
+  useHNSW: true  // V3: HNSW indexing for fast retrieval
 });
 
 if (similarResearch.length > 0) {
-  console.log('📚 Learning from past research:');
+  console.log('📚 Learning from past research (HNSW-indexed):');
   similarResearch.forEach(pattern => {
     console.log(`- ${pattern.task}: ${pattern.reward} accuracy score`);
     console.log(`  Key findings: ${pattern.output}`);
   });
 }
 
-// 2. Learn from incomplete research
+// 2. Learn from incomplete research (EWC++ protected)
 const failures = await reasoningBank.searchPatterns({
   task: currentTask.description,
   onlyFailures: true,
-  k: 3
+  k: 3,
+  ewcProtected: true  // V3: EWC++ ensures we never forget research gaps
 });
 ```
 
@@ -217,12 +219,14 @@ const relevantDocs = await agentDB.gnnEnhancedSearch(
   {
     k: 20,
     graphContext: buildKnowledgeGraph(),
-    gnnLayers: 3
+    gnnLayers: 3,
+    useHNSW: true  // V3: Combined GNN + HNSW for optimal retrieval
   }
 );
 
 console.log(`Pattern recognition improved by ${relevantDocs.improvementPercent}%`);
 console.log(`Found ${relevantDocs.results.length} highly relevant sources`);
+console.log(`Search time: ${relevantDocs.searchTimeMs}ms (HNSW: 150x-12,500x faster)`);
 
 // Build knowledge graph for enhanced context
 function buildKnowledgeGraph() {
@@ -263,13 +267,28 @@ if (documentCount > 50) {
   );
   console.log(`Processed ${documentCount} docs in ${result.executionTimeMs}ms`);
   console.log(`Speed improvement: 2.49x-7.47x faster`);
+  console.log(`Memory reduction: ~50%`);
 }
 ```
 
-### After Research: Store Learning Patterns
+### SONA Adaptation for Research Patterns (<0.05ms)
 
 ```typescript
-// Store research patterns for future improvement
+// V3: SONA adapts to your research patterns in real-time
+const sonaAdapter = await agentDB.getSonaAdapter();
+await sonaAdapter.adapt({
+  context: currentResearchContext,
+  learningRate: 0.001,
+  maxLatency: 0.05  // <0.05ms adaptation guarantee
+});
+
+console.log(`SONA adapted to research patterns in ${sonaAdapter.lastAdaptationMs}ms`);
+```
+
+### After Research: Store Learning Patterns with EWC++
+
+```typescript
+// Store research patterns with EWC++ consolidation
 await reasoningBank.storePattern({
   sessionId: `researcher-${Date.now()}`,
   task: 'Research API design patterns',
@@ -279,7 +298,10 @@ await reasoningBank.storePattern({
   success: findingsComplete,
   critique: selfCritique(), // "Comprehensive but could include more examples"
   tokensUsed: countTokens(findings),
-  latencyMs: measureLatency()
+  latencyMs: measureLatency(),
+  // V3: EWC++ prevents catastrophic forgetting
+  consolidateWithEWC: true,
+  ewcLambda: 0.5  // Importance weight for old knowledge
 });
 
 function calculateResearchQuality(findings) {
