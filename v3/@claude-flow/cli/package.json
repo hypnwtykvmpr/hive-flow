@@ -7,7 +7,8 @@
   "types": "dist/src/index.d.ts",
   "sideEffects": false,
   "bin": {
-    "claude-flow": "./bin/cli.js"
+    "claude-flow": "./bin/cli.js",
+    "claude-flow-mcp": "./bin/mcp-server.js"
   },
   "exports": {
     ".": {
