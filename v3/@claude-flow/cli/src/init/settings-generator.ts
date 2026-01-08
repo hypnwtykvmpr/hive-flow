@@ -164,26 +164,14 @@ function generateHooksConfig(config: HooksConfig): object {
           },
         ],
       },
-      // Task/Agent hooks
+      // Task/Agent hooks - require task-id for tracking
       {
         matcher: '^Task$',
         hooks: [
           {
             type: 'command',
-            command: 'npx @claude-flow/cli@latest hooks pre-task --description "$TOOL_INPUT_prompt"',
+            command: 'npx @claude-flow/cli@latest hooks pre-task --task-id "task-$(date +%s)" --description "$TOOL_INPUT_prompt"',
             timeout: config.timeout,
-            continueOnError: config.continueOnError,
-          },
-        ],
-      },
-      // Search hooks for pattern caching
-      {
-        matcher: '^(Grep|Glob|Read)$',
-        hooks: [
-          {
-            type: 'command',
-            command: 'npx @claude-flow/cli@latest hooks pre-search --pattern "$TOOL_INPUT_pattern"',
-            timeout: 2000,
             continueOnError: config.continueOnError,
           },
         ],
