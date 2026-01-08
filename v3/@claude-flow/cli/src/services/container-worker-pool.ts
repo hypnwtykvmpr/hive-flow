@@ -156,6 +156,8 @@ export class ContainerWorkerPool extends EventEmitter {
   private idleCheckTimer?: NodeJS.Timeout;
   private dockerAvailable: boolean | null = null;
   private initialized = false;
+  private isShuttingDown = false;
+  private exitHandlersRegistered = false;
 
   constructor(projectRoot: string, config?: Partial<ContainerPoolConfig>) {
     super();
