@@ -187,13 +187,14 @@ function generateHooksConfig(config: HooksConfig): object {
           },
         ],
       },
-      // Search caching
+      // Search caching - use memory store for pattern caching
       {
         matcher: '^(Grep|Glob)$',
         hooks: [
           {
             type: 'command',
-            command: 'npx claude-flow@v3alpha hooks post-search --cache-results',
+            // Cache search patterns in memory for reuse
+            command: '[ -n "$TOOL_INPUT_pattern" ] && npx claude-flow@v3alpha memory store -k "search:$TOOL_INPUT_pattern" -v "$TOOL_SUCCESS" -n cache --ttl 3600 2>/dev/null || true',
             timeout: 2000,
             continueOnError: true,
           },
