@@ -1,6 +1,6 @@
 {
   "name": "@claude-flow/cli",
-  "version": "3.0.0-alpha.43",
+  "version": "3.0.0-alpha.44",
   "type": "module",
   "description": "CLI module - command parsing, prompts, output formatting",
   "main": "dist/src/index.js",
