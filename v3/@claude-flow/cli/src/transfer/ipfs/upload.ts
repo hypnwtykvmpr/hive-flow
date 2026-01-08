@@ -199,9 +199,10 @@ async function uploadToPinata(
 /**
  * Upload content to IPFS
  *
- * Supports:
- * - web3.storage (WEB3_STORAGE_TOKEN)
- * - Pinata (PINATA_API_KEY + PINATA_API_SECRET)
+ * Supports (in order of preference):
+ * - Local/Custom IPFS node (IPFS_API_URL) - FREE, your own node
+ * - web3.storage (WEB3_STORAGE_TOKEN) - Free 5GB tier
+ * - Pinata (PINATA_API_KEY + PINATA_API_SECRET) - Free 1GB tier
  * - Demo mode (generates deterministic CIDs when no credentials)
  */
 export async function uploadToIPFS(
@@ -215,11 +216,26 @@ export async function uploadToIPFS(
     name = 'pattern',
   } = options;
 
-  // Try real IPFS services first
+  // Check environment variables
+  const localIPFS = process.env.IPFS_API_URL;
   const web3Token = getWeb3StorageToken();
   const pinataKey = process.env.PINATA_API_KEY;
 
-  // Determine which service to use
+  // 1. Try local/custom IPFS node first (FREE - your own node)
+  if (localIPFS || pinningService === 'local') {
+    try {
+      const isAvailable = await checkLocalIPFSNode();
+      if (isAvailable) {
+        return await uploadToLocalIPFS(content, options);
+      } else {
+        console.warn(`[IPFS] Local node at ${localIPFS || 'localhost:5001'} not available`);
+      }
+    } catch (error) {
+      console.warn(`[IPFS] Local IPFS upload failed: ${error}`);
+    }
+  }
+
+  // 2. Try Pinata
   if (pinningService === 'pinata' || (pinataKey && !web3Token)) {
     try {
       return await uploadToPinata(content, options);
@@ -228,6 +244,7 @@ export async function uploadToIPFS(
     }
   }
 
+  // 3. Try Web3.storage
   if (web3Token || pinningService === 'web3storage') {
     try {
       return await uploadToWeb3Storage(content, options);
