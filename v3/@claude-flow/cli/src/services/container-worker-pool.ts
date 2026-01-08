@@ -426,14 +426,12 @@ export class ContainerWorkerPool extends EventEmitter {
       // Add image and entrypoint to keep container running
       args.push(this.config.image, 'tail', '-f', '/dev/null');
 
-      // Create the container
-      const output = execSync(`docker ${args.join(' ')}`, {
-        encoding: 'utf-8',
-        stdio: 'pipe',
-      }).trim();
+      // Create the container (async)
+      const { stdout } = await execAsync(`docker ${args.join(' ')}`, { timeout: 60000 });
+      const containerId = stdout.trim();
 
       containerInfo.state = 'ready';
-      this.emit('containerCreated', { id, name, containerId: output });
+      this.emit('containerCreated', { id, name, containerId });
 
       return containerInfo;
     } catch (error) {
