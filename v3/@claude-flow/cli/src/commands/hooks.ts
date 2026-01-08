@@ -3370,6 +3370,7 @@ export const hooksCommand: Command = {
     intelligenceCommand,
     workerCommand,
     progressHookCommand,
+    statuslineCommand,
     // Coverage-aware routing commands
     coverageRouteCommand,
     coverageSuggestCommand,
