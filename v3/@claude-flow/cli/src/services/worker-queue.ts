@@ -276,12 +276,24 @@ export class WorkerQueue extends EventEmitter {
   private heartbeatTimer?: NodeJS.Timeout;
   private processingTasks: Set<string> = new Set();
   private isShuttingDown = false;
+  private maxConcurrent = 1;
+  private initialized = false;
 
   constructor(config?: Partial<WorkerQueueConfig>) {
     super();
     this.config = { ...DEFAULT_CONFIG, ...config };
     this.store = new InMemoryStore();
     this.workerId = `worker-${randomUUID().slice(0, 8)}`;
+  }
+
+  /**
+   * Initialize the queue (starts cleanup timers)
+   */
+  async initialize(): Promise<void> {
+    if (this.initialized) return;
+    this.store.startCleanup();
+    this.initialized = true;
+    this.emit('initialized', { workerId: this.workerId });
   }
 
   // ============================================
