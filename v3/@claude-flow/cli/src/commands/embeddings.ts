@@ -25,23 +25,24 @@ async function getEmbeddings() {
   }
 }
 
-// Generate subcommand
+// Generate subcommand - REAL implementation
 const generateCommand: Command = {
   name: 'generate',
   description: 'Generate embeddings for text',
   options: [
     { name: 'text', short: 't', type: 'string', description: 'Text to embed', required: true },
-    { name: 'provider', short: 'p', type: 'string', description: 'Provider: openai, transformers, agentic-flow, mock', default: 'agentic-flow' },
+    { name: 'provider', short: 'p', type: 'string', description: 'Provider: openai, transformers, agentic-flow, local', default: 'local' },
     { name: 'model', short: 'm', type: 'string', description: 'Model to use' },
-    { name: 'output', short: 'o', type: 'string', description: 'Output format: json, array, base64', default: 'json' },
+    { name: 'output', short: 'o', type: 'string', description: 'Output format: json, array, preview', default: 'preview' },
   ],
   examples: [
     { command: 'claude-flow embeddings generate -t "Hello world"', description: 'Generate embedding' },
-    { command: 'claude-flow embeddings generate -t "Test" -p openai', description: 'Use OpenAI' },
+    { command: 'claude-flow embeddings generate -t "Test" -o json', description: 'Output as JSON' },
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     const text = ctx.flags.text as string;
-    const provider = ctx.flags.provider as string || 'agentic-flow';
+    const provider = ctx.flags.provider as string || 'local';
+    const outputFormat = ctx.flags.output as string || 'preview';
 
     if (!text) {
       output.printError('Text is required');
@@ -54,24 +55,55 @@ const generateCommand: Command = {
 
     const spinner = output.createSpinner({ text: `Generating with ${provider}...`, spinner: 'dots' });
     spinner.start();
-    await new Promise(r => setTimeout(r, 400));
-    spinner.succeed('Embedding generated');
 
-    // Simulated embedding preview
-    const embedding = Array.from({ length: 8 }, () => (Math.random() * 2 - 1).toFixed(6));
+    try {
+      // Use real embedding generator
+      const { generateEmbedding, loadEmbeddingModel } = await import('../memory/memory-initializer.js');
 
-    output.writeln();
-    output.printBox([
-      `Provider: ${provider}`,
-      `Model: ${provider === 'openai' ? 'text-embedding-3-small' : 'all-MiniLM-L6-v2'}`,
-      `Dimensions: 384`,
-      `Text: "${text.substring(0, 40)}${text.length > 40 ? '...' : ''}"`,
-      ``,
-      `Vector preview:`,
-      `[${embedding.join(', ')}, ...]`,
-    ].join('\n'), 'Result');
+      const startTime = Date.now();
+      const modelInfo = await loadEmbeddingModel({ verbose: false });
+      const result = await generateEmbedding(text);
+      const duration = Date.now() - startTime;
 
-    return { success: true };
+      spinner.succeed(`Embedding generated in ${duration}ms`);
+
+      if (outputFormat === 'json') {
+        output.printJson({
+          text: text.substring(0, 100),
+          embedding: result.embedding,
+          dimensions: result.dimensions,
+          model: result.model,
+          duration
+        });
+        return { success: true, data: result };
+      }
+
+      if (outputFormat === 'array') {
+        output.writeln(JSON.stringify(result.embedding));
+        return { success: true, data: result };
+      }
+
+      // Preview format (default)
+      const preview = result.embedding.slice(0, 8).map(v => v.toFixed(6));
+
+      output.writeln();
+      output.printBox([
+        `Provider: ${provider}`,
+        `Model: ${result.model} (${modelInfo.modelName})`,
+        `Dimensions: ${result.dimensions}`,
+        `Text: "${text.substring(0, 40)}${text.length > 40 ? '...' : ''}"`,
+        `Generation time: ${duration}ms`,
+        ``,
+        `Vector preview (first 8 of ${result.dimensions}):`,
+        `[${preview.join(', ')}, ...]`,
+      ].join('\n'), 'Result');
+
+      return { success: true, data: result };
+    } catch (error) {
+      spinner.fail('Embedding generation failed');
+      output.printError(error instanceof Error ? error.message : String(error));
+      return { success: false, exitCode: 1 };
+    }
   },
 };
 
