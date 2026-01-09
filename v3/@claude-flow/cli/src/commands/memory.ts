@@ -373,27 +373,29 @@ const listCommand: Command = {
     const namespace = ctx.flags.namespace as string;
     const limit = ctx.flags.limit as number;
 
-    // Call MCP memory/list tool for real entries
+    // Use sql.js directly for consistent data access
     try {
-      const listResult = await callMCPTool('memory/list', { limit, offset: 0 }) as {
-        entries: Array<{ key: string; storedAt: string; accessCount: number; preview: string }>;
-        total: number;
-        limit: number;
-        offset: number;
-      };
+      const { listEntries } = await import('../memory/memory-initializer.js');
+      const listResult = await listEntries({ namespace, limit, offset: 0 });
+
+      if (!listResult.success) {
+        output.printError(`Failed to list: ${listResult.error}`);
+        return { success: false, exitCode: 1 };
+      }
 
       // Format entries for display
       const entries = listResult.entries.map(e => ({
         key: e.key,
-        namespace: namespace || 'default',
-        size: e.preview.length + ' B',
+        namespace: e.namespace,
+        size: e.size + ' B',
+        vector: e.hasEmbedding ? '✓' : '-',
         accessCount: e.accessCount,
-        updated: formatRelativeTime(e.storedAt)
+        updated: formatRelativeTime(e.updatedAt)
       }));
 
       if (ctx.flags.format === 'json') {
-        output.printJson(entries);
-        return { success: true, data: entries };
+        output.printJson(listResult.entries);
+        return { success: true, data: listResult.entries };
       }
 
       output.writeln();
@@ -402,6 +404,7 @@ const listCommand: Command = {
 
       if (entries.length === 0) {
         output.printWarning('No entries found');
+        output.printInfo('Store data: claude-flow memory store -k "key" --value "data"');
         return { success: true, data: [] };
       }
 
@@ -410,6 +413,7 @@ const listCommand: Command = {
           { key: 'key', header: 'Key', width: 25 },
           { key: 'namespace', header: 'Namespace', width: 12 },
           { key: 'size', header: 'Size', width: 10, align: 'right' },
+          { key: 'vector', header: 'Vector', width: 8, align: 'center' },
           { key: 'accessCount', header: 'Accessed', width: 10, align: 'right' },
           { key: 'updated', header: 'Updated', width: 12 }
         ],
@@ -419,7 +423,7 @@ const listCommand: Command = {
       output.writeln();
       output.printInfo(`Showing ${entries.length} of ${listResult.total} entries`);
 
-      return { success: true, data: entries };
+      return { success: true, data: listResult.entries };
     } catch (error) {
       output.printError(`Failed to list: ${error instanceof Error ? error.message : 'Unknown error'}`);
       return { success: false, exitCode: 1 };
