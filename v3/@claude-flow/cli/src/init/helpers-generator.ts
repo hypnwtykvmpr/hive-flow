@@ -620,7 +620,7 @@ export function generateHelpers(options: InitOptions): Record<string, string> {
   }
 
   if (options.components.statusline) {
-    helpers['statusline.js'] = generateStatuslineScript(options);
+    helpers['statusline.cjs'] = generateStatuslineScript(options);  // .cjs for ES module compatibility
     helpers['statusline-hook.sh'] = generateStatuslineHook(options);
   }
 
