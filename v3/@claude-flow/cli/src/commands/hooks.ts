@@ -3402,7 +3402,8 @@ const routeTaskCommand: Command = {
     // Silently handle v2-specific flags that don't exist in v3
     // --auto-swarm, --detect-complexity are ignored but don't fail
     if (routeCommand.action) {
-      return routeCommand.action(ctx);
+      const result = await routeCommand.action(ctx);
+      return result || { success: true };
     }
     return { success: true };
   }
