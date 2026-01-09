@@ -352,44 +352,123 @@ const compareCommand: Command = {
   },
 };
 
-// Collections subcommand
+// Collections subcommand - REAL implementation using sql.js
 const collectionsCommand: Command = {
   name: 'collections',
-  description: 'Manage embedding collections',
+  description: 'Manage embedding collections (namespaces)',
   options: [
-    { name: 'action', short: 'a', type: 'string', description: 'Action: list, create, delete, stats', default: 'list' },
-    { name: 'name', short: 'n', type: 'string', description: 'Collection name' },
+    { name: 'action', short: 'a', type: 'string', description: 'Action: list, stats', default: 'list' },
+    { name: 'name', short: 'n', type: 'string', description: 'Namespace name' },
+    { name: 'db-path', type: 'string', description: 'Database path', default: '.swarm/memory.db' },
   ],
   examples: [
     { command: 'claude-flow embeddings collections', description: 'List collections' },
-    { command: 'claude-flow embeddings collections -a create -n my-docs', description: 'Create collection' },
+    { command: 'claude-flow embeddings collections -a stats', description: 'Show detailed stats' },
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     const action = ctx.flags.action as string || 'list';
+    const dbPath = ctx.flags['db-path'] as string || '.swarm/memory.db';
 
     output.writeln();
-    output.writeln(output.bold('Embedding Collections'));
+    output.writeln(output.bold('Embedding Collections (Namespaces)'));
     output.writeln(output.dim('─'.repeat(60)));
 
-    output.printTable({
-      columns: [
-        { key: 'name', header: 'Collection', width: 20 },
-        { key: 'vectors', header: 'Vectors', width: 12 },
-        { key: 'dimensions', header: 'Dims', width: 8 },
-        { key: 'index', header: 'Index', width: 10 },
-        { key: 'size', header: 'Size', width: 12 },
-      ],
-      data: [
-        { name: 'default', vectors: '12,847', dimensions: '384', index: 'HNSW', size: '45.2 MB' },
-        { name: 'patterns', vectors: '3,421', dimensions: '384', index: 'HNSW', size: '12.1 MB' },
-        { name: 'documents', vectors: '89,234', dimensions: '1536', index: 'HNSW', size: '523 MB' },
-        { name: 'code-snippets', vectors: '24,567', dimensions: '384', index: 'Flat', size: '8.9 MB' },
-      ],
-    });
+    try {
+      const fs = await import('fs');
+      const path = await import('path');
+      const fullDbPath = path.resolve(process.cwd(), dbPath);
 
-    return { success: true };
+      // Check if database exists
+      if (!fs.existsSync(fullDbPath)) {
+        output.printWarning('No database found');
+        output.printInfo('Run: claude-flow memory init');
+        output.writeln();
+        output.writeln(output.dim('No collections yet - initialize memory first'));
+        return { success: true, data: [] };
+      }
+
+      // Load sql.js and query real data
+      const initSqlJs = (await import('sql.js')).default;
+      const SQL = await initSqlJs();
+
+      const fileBuffer = fs.readFileSync(fullDbPath);
+      const db = new SQL.Database(fileBuffer);
+
+      // Get collection stats from database
+      const statsQuery = db.exec(`
+        SELECT
+          namespace,
+          COUNT(*) as total_entries,
+          SUM(CASE WHEN embedding IS NOT NULL THEN 1 ELSE 0 END) as with_embeddings,
+          AVG(embedding_dimensions) as avg_dimensions,
+          SUM(LENGTH(content)) as total_content_size
+        FROM memory_entries
+        WHERE status = 'active'
+        GROUP BY namespace
+        ORDER BY total_entries DESC
+      `);
+
+      // Get vector index info
+      const indexQuery = db.exec(`SELECT name, dimensions, hnsw_m FROM vector_indexes`);
+
+      const collections: { name: string; vectors: string; total: string; dimensions: string; index: string; size: string }[] = [];
+
+      if (statsQuery[0]?.values) {
+        for (const row of statsQuery[0].values) {
+          const [namespace, total, withEmbeddings, avgDims, contentSize] = row as [string, number, number, number, number];
+
+          collections.push({
+            name: namespace || 'default',
+            vectors: withEmbeddings.toLocaleString(),
+            total: total.toLocaleString(),
+            dimensions: avgDims ? Math.round(avgDims).toString() : '-',
+            index: withEmbeddings > 0 ? 'HNSW' : 'None',
+            size: formatBytes(contentSize || 0)
+          });
+        }
+      }
+
+      db.close();
+
+      if (collections.length === 0) {
+        output.printWarning('No collections found');
+        output.writeln();
+        output.writeln(output.dim('Store some data first:'));
+        output.writeln(output.highlight('  claude-flow memory store -k "key" --value "data"'));
+        return { success: true, data: [] };
+      }
+
+      output.printTable({
+        columns: [
+          { key: 'name', header: 'Namespace', width: 18 },
+          { key: 'total', header: 'Entries', width: 10 },
+          { key: 'vectors', header: 'Vectors', width: 10 },
+          { key: 'dimensions', header: 'Dims', width: 8 },
+          { key: 'index', header: 'Index', width: 8 },
+          { key: 'size', header: 'Size', width: 10 },
+        ],
+        data: collections,
+      });
+
+      output.writeln();
+      output.writeln(output.dim(`Database: ${fullDbPath}`));
+
+      return { success: true, data: collections };
+    } catch (error) {
+      output.printError(error instanceof Error ? error.message : String(error));
+      return { success: false, exitCode: 1 };
+    }
   },
 };
+
+// Helper: Format bytes to human readable
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+}
 
 // Index subcommand
 const indexCommand: Command = {
