@@ -116,10 +116,10 @@ They're working in parallel. I'll synthesize their results when they complete.
 ### Before Starting Any Task
 \`\`\`bash
 # 1. Search memory for relevant patterns from past successes
-Bash("npx @claude-flow/cli@latest memory search -q '[task keywords]' --namespace patterns")
+Bash("npx @claude-flow/cli@latest memory search --query '[task keywords]' --namespace patterns")
 
 # 2. Check if similar task was done before
-Bash("npx @claude-flow/cli@latest memory search -q '[task type]' --namespace tasks")
+Bash("npx @claude-flow/cli@latest memory search --query '[task type]' --namespace tasks")
 
 # 3. Load learned optimizations
 Bash("npx @claude-flow/cli@latest hooks route --task '[task description]'")
@@ -283,7 +283,7 @@ npx @claude-flow/cli@latest agent spawn -t coder --name my-coder
 npx @claude-flow/cli@latest swarm init --v3-mode
 
 # Search memory (HNSW-indexed)
-npx @claude-flow/cli@latest memory search -q "authentication patterns"
+npx @claude-flow/cli@latest memory search --query "authentication patterns"
 
 # System diagnostics
 npx @claude-flow/cli@latest doctor --fix
@@ -696,7 +696,7 @@ Task("Tester", "Write tests...", "tester")
 npx @claude-flow/cli@latest init --wizard
 npx @claude-flow/cli@latest agent spawn -t coder
 npx @claude-flow/cli@latest swarm init --v3-mode
-npx @claude-flow/cli@latest memory search -q "query"
+npx @claude-flow/cli@latest memory search --query "query"
 
 # Advanced
 npx @claude-flow/cli@latest daemon start
