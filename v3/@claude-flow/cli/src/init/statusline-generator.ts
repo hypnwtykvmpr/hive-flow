@@ -354,7 +354,7 @@ export function generateStatuslineHook(options: InitOptions): string {
 
 # Function to get statusline
 claude_flow_statusline() {
-  local statusline_script="\${CLAUDE_FLOW_DIR:-.claude}/helpers/statusline.js"
+  local statusline_script="\${CLAUDE_FLOW_DIR:-.claude}/helpers/statusline.cjs"
   if [ -f "$statusline_script" ]; then
     node "$statusline_script" 2>/dev/null || echo ""
   fi
