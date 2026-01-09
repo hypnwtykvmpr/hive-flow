@@ -3434,7 +3434,8 @@ const sessionStartCommand: Command = {
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     // Map to session-restore for backward compatibility
     if (sessionRestoreCommand.action) {
-      return sessionRestoreCommand.action(ctx);
+      const result = await sessionRestoreCommand.action(ctx);
+      return result || { success: true };
     }
     return { success: true };
   }
