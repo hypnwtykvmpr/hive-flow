@@ -654,7 +654,7 @@ async function writeStatusline(
     const statuslineHook = generateStatuslineHook(options);
 
     const files: Record<string, string> = {
-      'statusline.js': statuslineScript,
+      'statusline.cjs': statuslineScript,  // .cjs for ES module project compatibility
       'statusline-hook.sh': statuslineHook,
     };
 
