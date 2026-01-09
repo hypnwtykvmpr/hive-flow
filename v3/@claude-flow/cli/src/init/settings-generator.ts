@@ -120,7 +120,7 @@ function generateStatusLineConfig(options: InitOptions): object {
   // Uses npx @claude-flow/cli@latest (or @alpha) to run the hooks statusline command
   // Falls back to local helper script or simple "V3" if CLI not available
   // Default: full multi-line statusline with progress bars, metrics, and architecture status
-  const statuslineCommand = 'npx @claude-flow/cli@latest hooks statusline 2>/dev/null || node .claude/helpers/statusline.js 2>/dev/null || echo "▊ Claude Flow V3"';
+  const statuslineCommand = 'npx @claude-flow/cli@latest hooks statusline 2>/dev/null || node .claude/helpers/statusline.cjs 2>/dev/null || echo "▊ Claude Flow V3"';
 
   return {
     // Type must be "command" for Claude Code validation
