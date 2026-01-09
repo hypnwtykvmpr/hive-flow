@@ -1129,14 +1129,14 @@ const importCommand: Command = {
 // Init subcommand - initialize memory database using sql.js
 const initMemoryCommand: Command = {
   name: 'init',
-  description: 'Initialize memory database with sql.js (WASM SQLite)',
+  description: 'Initialize memory database with sql.js (WASM SQLite) - includes vector embeddings, pattern learning, temporal decay',
   options: [
     {
       name: 'backend',
       short: 'b',
-      description: 'Backend type: sqlite (default), hybrid, or agentdb',
+      description: 'Backend type: hybrid (default), sqlite, or agentdb',
       type: 'string',
-      default: 'sqlite'
+      default: 'hybrid'
     },
     {
       name: 'path',
@@ -1150,207 +1150,120 @@ const initMemoryCommand: Command = {
       description: 'Overwrite existing database',
       type: 'boolean',
       default: false
+    },
+    {
+      name: 'verbose',
+      description: 'Show detailed initialization output',
+      type: 'boolean',
+      default: false
     }
   ],
   examples: [
-    { command: 'claude-flow memory init', description: 'Initialize default SQLite database' },
-    { command: 'claude-flow memory init -b hybrid', description: 'Initialize hybrid backend' },
-    { command: 'claude-flow memory init -p ./data/memory.db', description: 'Custom path' }
+    { command: 'claude-flow memory init', description: 'Initialize hybrid backend with all features' },
+    { command: 'claude-flow memory init -b agentdb', description: 'Initialize AgentDB backend' },
+    { command: 'claude-flow memory init -p ./data/memory.db --force', description: 'Reinitialize at custom path' }
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
-    const backend = (ctx.flags.backend as string) || 'sqlite';
+    const backend = (ctx.flags.backend as string) || 'hybrid';
     const customPath = ctx.flags.path as string;
     const force = ctx.flags.force as boolean;
+    const verbose = ctx.flags.verbose as boolean;
 
-    const fs = await import('fs');
-    const path = await import('path');
+    output.writeln();
+    output.writeln(output.bold('Initializing Memory Database'));
+    output.writeln(output.dim('─'.repeat(45)));
 
-    // Determine database paths
-    const swarmDir = path.join(process.cwd(), '.swarm');
-    const claudeDir = path.join(process.cwd(), '.claude');
-
-    const dbPath = customPath || path.join(swarmDir, 'memory.db');
-    const dbDir = path.dirname(dbPath);
-
-    // Check if already exists
-    if (fs.existsSync(dbPath) && !force) {
-      output.printWarning(`Memory database already exists at ${dbPath}`);
-      output.printInfo('Use --force to reinitialize');
-      return { success: false, exitCode: 1 };
-    }
-
-    output.printInfo(`Initializing ${backend} memory backend...`);
+    const spinner = output.createSpinner({ text: 'Initializing...', spinner: 'dots' });
+    spinner.start();
 
     try {
-      // Create directories
-      if (!fs.existsSync(dbDir)) {
-        fs.mkdirSync(dbDir, { recursive: true });
-        output.writeln(output.dim(`  Created directory: ${dbDir}`));
+      // Import the memory initializer
+      const { initializeMemoryDatabase } = await import('../memory/memory-initializer.js');
+
+      const result = await initializeMemoryDatabase({
+        backend,
+        dbPath: customPath,
+        force,
+        verbose
+      });
+
+      if (!result.success) {
+        spinner.fail('Initialization failed');
+        output.printError(result.error || 'Unknown error');
+        return { success: false, exitCode: 1 };
       }
 
-      // Initialize database using sql.js (WASM SQLite)
-      output.writeln(output.dim('  Using sql.js (WASM SQLite - cross-platform, no native compilation)'));
+      spinner.succeed('Memory database initialized');
+      output.writeln();
 
-      // Create basic schema
-      const schema = `
--- Claude Flow V3 Memory Database
--- Backend: ${backend}
--- Created: ${new Date().toISOString()}
+      // Show features enabled
+      output.printBox([
+        `Backend:           ${result.backend}`,
+        `Schema Version:    ${result.schemaVersion}`,
+        `Database Path:     ${result.dbPath}`,
+        '',
+        `Vector Embeddings: ${result.features.vectorEmbeddings ? output.success('Enabled') : output.dim('Disabled')}`,
+        `Pattern Learning:  ${result.features.patternLearning ? output.success('Enabled') : output.dim('Disabled')}`,
+        `Temporal Decay:    ${result.features.temporalDecay ? output.success('Enabled') : output.dim('Disabled')}`,
+        `HNSW Indexing:     ${result.features.hnswIndexing ? output.success('Enabled') : output.dim('Disabled')}`,
+        `Migration Tracking: ${result.features.migrationTracking ? output.success('Enabled') : output.dim('Disabled')}`
+      ].join('\n'), 'Configuration');
 
--- Core memory entries
-CREATE TABLE IF NOT EXISTS memory_entries (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  key TEXT NOT NULL UNIQUE,
-  value TEXT NOT NULL,
-  namespace TEXT DEFAULT 'default',
-  type TEXT DEFAULT 'text',
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  expires_at DATETIME,
-  metadata TEXT
-);
+      output.writeln();
 
--- Vector embeddings for semantic search
-CREATE TABLE IF NOT EXISTS vectors (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  entry_id INTEGER REFERENCES memory_entries(id),
-  embedding BLOB NOT NULL,
-  dimension INTEGER NOT NULL,
-  model TEXT DEFAULT 'local',
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-
--- Patterns for learning
-CREATE TABLE IF NOT EXISTS patterns (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  pattern_type TEXT NOT NULL,
-  pattern_data TEXT NOT NULL,
-  confidence REAL DEFAULT 0.5,
-  usage_count INTEGER DEFAULT 0,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  last_used_at DATETIME
-);
-
--- Sessions for context persistence
-CREATE TABLE IF NOT EXISTS sessions (
-  id TEXT PRIMARY KEY,
-  state TEXT NOT NULL,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-
--- Learning trajectories
-CREATE TABLE IF NOT EXISTS trajectories (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  session_id TEXT,
-  action TEXT NOT NULL,
-  outcome TEXT,
-  reward REAL DEFAULT 0,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-
--- Indexes for performance
-CREATE INDEX IF NOT EXISTS idx_memory_namespace ON memory_entries(namespace);
-CREATE INDEX IF NOT EXISTS idx_memory_key ON memory_entries(key);
-CREATE INDEX IF NOT EXISTS idx_patterns_type ON patterns(pattern_type);
-CREATE INDEX IF NOT EXISTS idx_trajectories_session ON trajectories(session_id);
-
--- Metadata table
-CREATE TABLE IF NOT EXISTS metadata (
-  key TEXT PRIMARY KEY,
-  value TEXT NOT NULL
-);
-
-INSERT OR REPLACE INTO metadata (key, value) VALUES
-  ('version', '3.0.0'),
-  ('backend', '${backend}'),
-  ('created_at', '${new Date().toISOString()}'),
-  ('sql_js', 'true');
-`;
-
-      // Write schema to temp file for initialization
-      const schemaPath = path.join(dbDir, 'schema.sql');
-      fs.writeFileSync(schemaPath, schema);
-
-      // Create empty database file (sql.js will initialize it on first use)
-      if (force && fs.existsSync(dbPath)) {
-        fs.unlinkSync(dbPath);
+      // Show tables created
+      if (verbose && result.tablesCreated.length > 0) {
+        output.printTable({
+          columns: [
+            { key: 'table', header: 'Table', width: 25 },
+            { key: 'purpose', header: 'Purpose', width: 35 }
+          ],
+          data: [
+            { table: 'memory_entries', purpose: 'Core memory storage with embeddings' },
+            { table: 'patterns', purpose: 'Learned patterns with confidence scores' },
+            { table: 'pattern_history', purpose: 'Pattern versioning and evolution' },
+            { table: 'trajectories', purpose: 'SONA learning trajectories' },
+            { table: 'trajectory_steps', purpose: 'Individual trajectory steps' },
+            { table: 'migration_state', purpose: 'Migration progress tracking' },
+            { table: 'sessions', purpose: 'Context persistence' },
+            { table: 'vector_indexes', purpose: 'HNSW index configuration' },
+            { table: 'metadata', purpose: 'System metadata' }
+          ]
+        });
+        output.writeln();
       }
 
-      // Write minimal SQLite header to create valid empty database
-      // sql.js will properly initialize the schema on first connection
-      const sqliteHeader = Buffer.from([
-        0x53, 0x51, 0x4C, 0x69, 0x74, 0x65, 0x20, 0x66, 0x6F, 0x72, 0x6D, 0x61, 0x74, 0x20, 0x33, 0x00, // "SQLite format 3\0"
-        0x10, 0x00, // page size: 4096 bytes
-        0x01, // file format write version
-        0x01, // file format read version
-        0x00, // reserved space
-        0x40, // max embedded payload fraction
-        0x20, // min embedded payload fraction
-        0x20, // leaf payload fraction
-        0x00, 0x00, 0x00, 0x01, // file change counter
-        0x00, 0x00, 0x00, 0x01, // database size in pages
-        0x00, 0x00, 0x00, 0x00, // first freelist trunk page
-        0x00, 0x00, 0x00, 0x00, // total freelist pages
-        0x00, 0x00, 0x00, 0x01, // schema cookie
-        0x00, 0x00, 0x00, 0x04, // schema format number
-        0x00, 0x00, 0x00, 0x00, // default page cache size
-        0x00, 0x00, 0x00, 0x00, // largest root btree page
-        0x00, 0x00, 0x00, 0x01, // text encoding (1=UTF-8)
-        0x00, 0x00, 0x00, 0x00, // user version
-        0x00, 0x00, 0x00, 0x00, // incremental vacuum mode
-        0x00, 0x00, 0x00, 0x00, // application id
-        ...Array(20).fill(0x00), // reserved for expansion
-        0x00, 0x00, 0x00, 0x01, // version-valid-for number
-        0x00, 0x2E, 0x32, 0x8F, // SQLite version number (3.46.1)
+      // Show next steps
+      output.writeln(output.bold('Next Steps:'));
+      output.printList([
+        `Store data: ${output.highlight('claude-flow memory store -k "key" --value "data"')}`,
+        `Search: ${output.highlight('claude-flow memory search -q "query"')}`,
+        `Train patterns: ${output.highlight('claude-flow neural train -p coordination')}`,
+        `View stats: ${output.highlight('claude-flow memory stats')}`
       ]);
 
-      // Pad to 4096 bytes (one page)
-      const page = Buffer.alloc(4096, 0);
-      sqliteHeader.copy(page);
-      fs.writeFileSync(dbPath, page);
-
-      // Also create in .claude directory for compatibility
+      // Also sync to .claude directory
+      const fs = await import('fs');
+      const path = await import('path');
+      const claudeDir = path.join(process.cwd(), '.claude');
       const claudeDbPath = path.join(claudeDir, 'memory.db');
+
       if (!fs.existsSync(claudeDir)) {
         fs.mkdirSync(claudeDir, { recursive: true });
       }
-      if (!fs.existsSync(claudeDbPath)) {
-        fs.copyFileSync(dbPath, claudeDbPath);
-        output.writeln(output.dim(`  Synced to: ${claudeDbPath}`));
+
+      if (fs.existsSync(result.dbPath) && (!fs.existsSync(claudeDbPath) || force)) {
+        fs.copyFileSync(result.dbPath, claudeDbPath);
+        output.writeln();
+        output.writeln(output.dim(`Synced to: ${claudeDbPath}`));
       }
-
-      output.writeln();
-      output.printSuccess('Memory database initialized');
-      output.writeln();
-
-      output.printTable({
-        columns: [
-          { key: 'property', header: 'Property', width: 15 },
-          { key: 'value', header: 'Value', width: 40 }
-        ],
-        data: [
-          { property: 'Backend', value: backend },
-          { property: 'Path', value: dbPath },
-          { property: 'Engine', value: 'sql.js (WASM SQLite)' },
-          { property: 'Schema', value: schemaPath },
-          { property: 'Tables', value: '6 (memory_entries, vectors, patterns, sessions, trajectories, metadata)' }
-        ]
-      });
-
-      output.writeln();
-      output.printInfo('Ready for use. Store data with: claude-flow memory store -k "key" --value "data"');
 
       return {
         success: true,
-        data: {
-          backend,
-          path: dbPath,
-          schemaPath,
-          engine: 'sql.js'
-        }
+        data: result
       };
     } catch (error) {
+      spinner.fail('Initialization failed');
       output.printError(`Failed to initialize memory: ${error instanceof Error ? error.message : String(error)}`);
       return { success: false, exitCode: 1 };
     }
