@@ -3412,7 +3412,7 @@ const sessionStartCommand: Command = {
   name: 'session-start',
   description: '(DEPRECATED: Use "session-restore" instead) Start/restore session',
   options: [
-    ...sessionRestoreCommand.options || [],
+    ...(sessionRestoreCommand.options || []),
     // V2-compatible options that are silently ignored
     {
       name: 'auto-configure',
@@ -3432,7 +3432,10 @@ const sessionStartCommand: Command = {
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     // Map to session-restore for backward compatibility
-    return sessionRestoreCommand.action(ctx);
+    if (sessionRestoreCommand.action) {
+      return sessionRestoreCommand.action(ctx);
+    }
+    return { success: true };
   }
 };
 
