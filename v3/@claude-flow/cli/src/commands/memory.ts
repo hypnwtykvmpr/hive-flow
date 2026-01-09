@@ -284,10 +284,10 @@ const searchCommand: Command = {
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     const query = ctx.flags.query as string || ctx.args[0];
-    const namespace = ctx.flags.namespace as string;
-    const limit = ctx.flags.limit as number;
-    const threshold = ctx.flags.threshold as number;
-    const searchType = ctx.flags.type as string;
+    const namespace = ctx.flags.namespace as string || 'all';
+    const limit = ctx.flags.limit as number || 10;
+    const threshold = ctx.flags.threshold as number || 0.3;
+    const searchType = ctx.flags.type as string || 'semantic';
 
     if (!query) {
       output.printError('Query is required. Use --query or -q');
@@ -297,35 +297,41 @@ const searchCommand: Command = {
     output.printInfo(`Searching: "${query}" (${searchType})`);
     output.writeln();
 
-    // Call MCP memory/search tool for real results
+    // Use direct sql.js search with vector similarity
     try {
-      const searchResult = await callMCPTool('memory/search', { query, limit }) as {
-        query: string;
-        results: Array<{ key: string; value: unknown; score: number; storedAt: string }>;
-        total: number;
-        searchTime: string;
-      };
+      const { searchEntries } = await import('../memory/memory-initializer.js');
+
+      const searchResult = await searchEntries({
+        query,
+        namespace,
+        limit,
+        threshold
+      });
+
+      if (!searchResult.success) {
+        output.printError(searchResult.error || 'Search failed');
+        return { success: false, exitCode: 1 };
+      }
 
       const results = searchResult.results.map(r => ({
         key: r.key,
         score: r.score,
-        namespace: namespace || 'default',
-        preview: typeof r.value === 'string'
-          ? r.value.substring(0, 40) + (r.value.length > 40 ? '...' : '')
-          : JSON.stringify(r.value).substring(0, 40)
+        namespace: r.namespace,
+        preview: r.content
       }));
 
       if (ctx.flags.format === 'json') {
-        output.printJson({ query, searchType, results, searchTime: searchResult.searchTime });
+        output.printJson({ query, searchType, results, searchTime: `${searchResult.searchTime}ms` });
         return { success: true, data: results };
       }
 
       // Performance stats
-      output.writeln(output.dim(`  Search time: ${searchResult.searchTime}`));
+      output.writeln(output.dim(`  Search time: ${searchResult.searchTime}ms`));
       output.writeln();
 
       if (results.length === 0) {
         output.printWarning('No results found');
+        output.writeln(output.dim('Try: claude-flow memory store -k "key" --value "data"'));
         return { success: true, data: [] };
       }
 
