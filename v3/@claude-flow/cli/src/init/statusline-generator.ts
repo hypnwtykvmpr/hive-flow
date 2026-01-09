@@ -17,7 +17,7 @@ import type { InitOptions, StatuslineConfig } from './types.js';
 export function generateStatuslineScript(options: InitOptions): string {
   const config = options.statusline;
 
-  // Use .cjs extension for CommonJS compatibility OR inline ES module syntax
+  // Generate CommonJS script - use .cjs extension for ES module project compatibility
   return `#!/usr/bin/env node
 /**
  * Claude Flow V3 Statusline Generator
@@ -25,16 +25,13 @@ export function generateStatuslineScript(options: InitOptions): string {
  *
  * Usage: node statusline.cjs [--json] [--compact]
  *
- * Note: Uses .cjs extension for CommonJS compatibility with ES module projects
+ * IMPORTANT: This file uses .cjs extension to work in ES module projects.
+ * The require() syntax is intentional for CommonJS compatibility.
  */
 
-import { existsSync, statSync, readdirSync } from 'fs';
-import { join } from 'path';
-import { execSync } from 'child_process';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = join(__filename, '..');
+/* eslint-disable @typescript-eslint/no-var-requires */
+const fs = require('fs');
+const path = require('path');
 
 // Configuration
 const CONFIG = {
