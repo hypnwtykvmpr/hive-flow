@@ -3401,7 +3401,10 @@ const routeTaskCommand: Command = {
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     // Silently handle v2-specific flags that don't exist in v3
     // --auto-swarm, --detect-complexity are ignored but don't fail
-    return routeCommand.action(ctx);
+    if (routeCommand.action) {
+      return routeCommand.action(ctx);
+    }
+    return { success: true };
   }
 };
 
