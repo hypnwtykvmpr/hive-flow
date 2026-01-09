@@ -1220,7 +1220,7 @@ const initMemoryCommand: Command = {
         if (embeddingResult.success) {
           embeddingSpinner.succeed(`Embedding model loaded: ${embeddingResult.modelName} (${embeddingResult.dimensions}-dim, ${embeddingResult.loadTime}ms)`);
         } else {
-          embeddingSpinner.warn(`Embedding model: ${embeddingResult.error || 'Using fallback'}`);
+          embeddingSpinner.stop(output.warning(`Embedding model: ${embeddingResult.error || 'Using fallback'}`));
         }
       }
 
