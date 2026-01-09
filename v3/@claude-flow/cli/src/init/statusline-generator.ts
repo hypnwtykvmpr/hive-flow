@@ -368,7 +368,7 @@ claude_flow_statusline() {
 
 # For starship (add to starship.toml)
 # [custom.claude_flow]
-# command = "node .claude/helpers/statusline.js 2>/dev/null"
-# when = "test -f .claude/helpers/statusline.js"
+# command = "node .claude/helpers/statusline.cjs 2>/dev/null"
+# when = "test -f .claude/helpers/statusline.cjs"
 `;
 }
