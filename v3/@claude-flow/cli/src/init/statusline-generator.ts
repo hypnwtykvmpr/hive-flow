@@ -17,17 +17,24 @@ import type { InitOptions, StatuslineConfig } from './types.js';
 export function generateStatuslineScript(options: InitOptions): string {
   const config = options.statusline;
 
+  // Use .cjs extension for CommonJS compatibility OR inline ES module syntax
   return `#!/usr/bin/env node
 /**
  * Claude Flow V3 Statusline Generator
  * Displays real-time V3 implementation progress and system status
  *
- * Usage: node statusline.js [--json] [--compact]
+ * Usage: node statusline.cjs [--json] [--compact]
+ *
+ * Note: Uses .cjs extension for CommonJS compatibility with ES module projects
  */
 
-const fs = require('fs');
-const path = require('path');
-const { execSync } = require('child_process');
+import { existsSync, statSync, readdirSync } from 'fs';
+import { join } from 'path';
+import { execSync } from 'child_process';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = join(__filename, '..');
 
 // Configuration
 const CONFIG = {
