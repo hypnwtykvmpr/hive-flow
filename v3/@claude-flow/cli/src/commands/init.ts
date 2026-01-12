@@ -650,6 +650,19 @@ export const initCommand: Command = {
       type: 'boolean',
       default: false,
     },
+    {
+      name: 'with-embeddings',
+      description: 'Initialize ONNX embedding subsystem with hyperbolic support',
+      type: 'boolean',
+      default: false,
+    },
+    {
+      name: 'embedding-model',
+      description: 'ONNX embedding model to use',
+      type: 'string',
+      default: 'all-MiniLM-L6-v2',
+      choices: ['all-MiniLM-L6-v2', 'all-mpnet-base-v2'],
+    },
   ],
   examples: [
     { command: 'claude-flow init', description: 'Initialize with default configuration' },
