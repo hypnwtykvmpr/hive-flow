@@ -1455,6 +1455,8 @@ export const embeddingsCommand: Command = {
     neuralCommand,
     modelsCommand,
     cacheCommand,
+    warmupCommand,
+    benchmarkCommand,
   ],
   examples: [
     { command: 'claude-flow embeddings init', description: 'Initialize ONNX embedding system' },
