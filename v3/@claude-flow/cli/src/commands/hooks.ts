@@ -833,12 +833,18 @@ const pretrainCommand: Command = {
           strategiesLearned: number;
           trajectoriesEvaluated: number;
           contradictionsResolved: number;
+          documentsIndexed?: number;
+          embeddingsGenerated?: number;
+          hyperbolicProjections?: number;
         };
         duration: number;
       }>('hooks/pretrain', {
-        path,
+        path: repoPath,
         depth,
         skipCache: ctx.flags.skipCache || false,
+        withEmbeddings,
+        embeddingModel,
+        fileTypes: fileTypes.split(',').map((t: string) => t.trim()),
       });
 
       spinner.succeed('Pretraining completed');
@@ -849,23 +855,40 @@ const pretrainCommand: Command = {
       }
 
       output.writeln();
+
+      // Base stats
+      const tableData = [
+        { metric: 'Files Analyzed', value: result.stats.filesAnalyzed },
+        { metric: 'Patterns Extracted', value: result.stats.patternsExtracted },
+        { metric: 'Strategies Learned', value: result.stats.strategiesLearned },
+        { metric: 'Trajectories Evaluated', value: result.stats.trajectoriesEvaluated },
+        { metric: 'Contradictions Resolved', value: result.stats.contradictionsResolved },
+      ];
+
+      // Add embedding stats if available
+      if (withEmbeddings && result.stats.documentsIndexed !== undefined) {
+        tableData.push(
+          { metric: 'Documents Indexed', value: result.stats.documentsIndexed },
+          { metric: 'Embeddings Generated', value: result.stats.embeddingsGenerated || 0 },
+          { metric: 'Hyperbolic Projections', value: result.stats.hyperbolicProjections || 0 }
+        );
+      }
+
+      tableData.push({ metric: 'Duration', value: `${(result.duration / 1000).toFixed(1)}s` });
+
       output.printTable({
         columns: [
           { key: 'metric', header: 'Metric', width: 30 },
           { key: 'value', header: 'Value', width: 15, align: 'right' }
         ],
-        data: [
-          { metric: 'Files Analyzed', value: result.stats.filesAnalyzed },
-          { metric: 'Patterns Extracted', value: result.stats.patternsExtracted },
-          { metric: 'Strategies Learned', value: result.stats.strategiesLearned },
-          { metric: 'Trajectories Evaluated', value: result.stats.trajectoriesEvaluated },
-          { metric: 'Contradictions Resolved', value: result.stats.contradictionsResolved },
-          { metric: 'Duration', value: `${(result.duration / 1000).toFixed(1)}s` }
-        ]
+        data: tableData
       });
 
       output.writeln();
       output.printSuccess('Repository intelligence bootstrapped successfully');
+      if (withEmbeddings) {
+        output.writeln(output.dim('  Semantic search enabled: Use "embeddings search -q <query>" to search'));
+      }
       output.writeln(output.dim('  Next step: Run "claude-flow hooks build-agents" to generate optimized configs'));
 
       return { success: true, data: result };
