@@ -332,12 +332,24 @@ export class CommandParser {
       }
     }
 
-    // Add boolean flags from all commands
+    // Add boolean flags from all commands and subcommands
     for (const cmd of this.commands.values()) {
       if (cmd.options) {
         for (const opt of cmd.options) {
           if (opt.type === 'boolean') {
             flags.add(this.normalizeKey(opt.name));
+          }
+        }
+      }
+      // Also include subcommands' boolean flags
+      if (cmd.subcommands) {
+        for (const sub of cmd.subcommands) {
+          if (sub.options) {
+            for (const opt of sub.options) {
+              if (opt.type === 'boolean') {
+                flags.add(this.normalizeKey(opt.name));
+              }
+            }
           }
         }
       }
