@@ -1010,6 +1010,7 @@ export const embeddingsCommand: Command = {
   description: 'Vector embeddings, semantic search, similarity operations',
   aliases: ['embed'],
   subcommands: [
+    initCommand,
     generateCommand,
     searchCommand,
     compareCommand,
