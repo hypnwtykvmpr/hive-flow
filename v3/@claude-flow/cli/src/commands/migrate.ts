@@ -14,6 +14,7 @@ const MIGRATION_TARGETS = [
   { value: 'agents', label: 'Agent Configs', hint: 'Migrate agent configurations' },
   { value: 'hooks', label: 'Hooks', hint: 'Migrate hook definitions' },
   { value: 'workflows', label: 'Workflows', hint: 'Migrate workflow definitions' },
+  { value: 'embeddings', label: 'Embeddings', hint: 'Migrate to ONNX with hyperbolic support' },
   { value: 'all', label: 'All', hint: 'Full migration' }
 ];
 
