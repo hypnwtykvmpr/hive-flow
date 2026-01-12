@@ -236,14 +236,15 @@ Bash("npx @claude-flow/cli@latest hooks worker dispatch --trigger optimize")
 - \`/scripts\` - Utility scripts
 - \`/examples\` - Example code
 
-## Project Configuration
+## Project Config (Anti-Drift Defaults)
 
-This project is configured with Claude Flow V3:
-- **Topology**: ${topology}
-- **Max Agents**: ${maxAgents}
-- **Memory Backend**: ${memoryBackend}
-- **HNSW Indexing**: ${options.runtime.enableHNSW ? 'Enabled (150x-12,500x faster)' : 'Disabled'}
-- **Neural Learning**: ${options.runtime.enableNeural ? 'Enabled (SONA)' : 'Disabled'}
+- **Topology**: hierarchical (prevents drift)
+- **Max Agents**: 8 (smaller = less drift)
+- **Strategy**: specialized (clear roles)
+- **Consensus**: raft
+- **Memory**: ${memoryBackend}
+- **HNSW**: ${options.runtime.enableHNSW ? 'Enabled' : 'Disabled'}
+- **Neural**: ${options.runtime.enableNeural ? 'Enabled' : 'Disabled'}
 
 ## 🚀 V3 CLI Commands (26 Commands, 140+ Subcommands)
 
