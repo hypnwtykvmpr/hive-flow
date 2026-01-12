@@ -109,7 +109,7 @@ claude-flow status --watch
 | `providers` | 5 | AI providers (list, add, remove, test, configure) |
 | `plugins` | 5 | Plugin management (list, install, uninstall, enable, disable) |
 | `deployment` | 5 | Deployment management (deploy, rollback, status, environments, release) |
-| `embeddings` | 4 | Vector embeddings (embed, batch, search, init) - 75x faster with agentic-flow |
+| `embeddings` | 13 | Vector embeddings with ONNX models, hyperbolic space, and neural substrate |
 | `claims` | 4 | Claims-based authorization (check, grant, revoke, list) |
 | `issues` | 10 | Collaborative issue claims with work stealing (ADR-016) |
 | `route` | 7 | Q-Learning agent routing with reinforcement learning |
