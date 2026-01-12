@@ -3514,6 +3514,107 @@ const postBashCommand: Command = {
   action: postCommandCommand.action
 };
 
+// Token Optimizer command - integrates agentic-flow Agent Booster
+const tokenOptimizeCommand: Command = {
+  name: 'token-optimize',
+  description: 'Token optimization via agentic-flow Agent Booster (30-50% savings)',
+  options: [
+    { name: 'query', short: 'q', type: 'string', description: 'Query for compact context retrieval' },
+    { name: 'agents', short: 'a', type: 'number', description: 'Agent count for optimal config', default: '6' },
+    { name: 'report', short: 'r', type: 'boolean', description: 'Generate optimization report' },
+    { name: 'stats', short: 's', type: 'boolean', description: 'Show token savings statistics' },
+  ],
+  examples: [
+    { command: 'claude-flow hooks token-optimize --stats', description: 'Show token savings stats' },
+    { command: 'claude-flow hooks token-optimize -q "auth patterns"', description: 'Get compact context' },
+    { command: 'claude-flow hooks token-optimize -a 8 --report', description: 'Config for 8 agents + report' },
+  ],
+  action: async (ctx: CommandContext): Promise<CommandResult> => {
+    const query = ctx.flags['query'] as string;
+    const agentCount = parseInt(ctx.flags['agents'] as string || '6', 10);
+    const showReport = ctx.flags['report'] as boolean;
+    const showStats = ctx.flags['stats'] as boolean;
+
+    const spinner = output.createSpinner({ text: 'Loading TokenOptimizer...', spinner: 'dots' });
+    spinner.start();
+
+    try {
+      // Dynamic import of TokenOptimizer
+      const { getTokenOptimizer } = await import('@claude-flow/integration');
+      const optimizer = await getTokenOptimizer();
+
+      spinner.succeed('TokenOptimizer loaded');
+      output.writeln();
+
+      // Get anti-drift config
+      const config = optimizer.getOptimalConfig(agentCount);
+      output.printBox([
+        output.bold('Anti-Drift Swarm Config'),
+        '',
+        `Agents: ${output.highlight(String(agentCount))}`,
+        `Topology: ${output.highlight(config.topology)}`,
+        `Batch Size: ${output.highlight(String(config.batchSize))}`,
+        `Cache: ${output.highlight(config.cacheSizeMB + 'MB')}`,
+        `Success Rate: ${output.highlight((config.expectedSuccessRate * 100) + '%')}`,
+      ]);
+
+      // If query provided, get compact context
+      if (query) {
+        output.writeln();
+        output.printInfo(`Retrieving compact context for: "${query}"`);
+        const ctx = await optimizer.getCompactContext(query);
+        output.writeln(`  Memories found: ${ctx.memories.length}`);
+        output.writeln(`  Tokens saved: ${output.success(String(ctx.tokensSaved))}`);
+        if (ctx.compactPrompt) {
+          output.writeln(`  Compact prompt (${ctx.compactPrompt.length} chars)`);
+        }
+      }
+
+      // Show stats
+      if (showStats || showReport) {
+        output.writeln();
+        const stats = optimizer.getStats();
+        output.printTable({
+          columns: [
+            { key: 'metric', header: 'Metric', width: 25 },
+            { key: 'value', header: 'Value', width: 20 },
+          ],
+          data: [
+            { metric: 'Tokens Saved', value: stats.totalTokensSaved.toLocaleString() },
+            { metric: 'Edits Optimized', value: String(stats.editsOptimized) },
+            { metric: 'Cache Hit Rate', value: stats.cacheHitRate },
+            { metric: 'Memories Retrieved', value: String(stats.memoriesRetrieved) },
+            { metric: 'Est. Monthly Savings', value: stats.estimatedMonthlySavings },
+            { metric: 'Agentic-Flow Active', value: stats.agenticFlowAvailable ? '✓' : '✗' },
+          ],
+        });
+      }
+
+      // Full report
+      if (showReport) {
+        output.writeln();
+        output.writeln(optimizer.generateReport());
+      }
+
+      return { success: true, data: { config, stats: optimizer.getStats() } };
+    } catch (error) {
+      spinner.fail('TokenOptimizer failed');
+      const err = error as Error;
+      output.printError(`Error: ${err.message}`);
+
+      // Fallback info
+      output.writeln();
+      output.printInfo('Fallback anti-drift config:');
+      output.writeln('  topology: hierarchical');
+      output.writeln('  maxAgents: 8');
+      output.writeln('  strategy: specialized');
+      output.writeln('  batchSize: 4');
+
+      return { success: false, exitCode: 1 };
+    }
+  }
+};
+
 // Main hooks command
 export const hooksCommand: Command = {
   name: 'hooks',
