@@ -1025,6 +1025,8 @@ export const embeddingsCommand: Command = {
     cacheCommand,
   ],
   examples: [
+    { command: 'claude-flow embeddings init', description: 'Initialize ONNX embedding system' },
+    { command: 'claude-flow embeddings init --model all-mpnet-base-v2', description: 'Init with larger model' },
     { command: 'claude-flow embeddings generate -t "Hello"', description: 'Generate embedding' },
     { command: 'claude-flow embeddings search -q "error handling"', description: 'Semantic search' },
     { command: 'claude-flow embeddings chunk -t "Long doc..."', description: 'Chunk document' },
