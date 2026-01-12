@@ -144,6 +144,7 @@ export { mcpCommand } from './mcp.js';
 export { hooksCommand } from './hooks.js';
 export { daemonCommand } from './daemon.js';
 export { doctorCommand } from './doctor.js';
+export { embeddingsCommand } from './embeddings.js';
 
 // Lazy-loaded command re-exports (for backwards compatibility, but async-only)
 export async function getConfigCommand() { return loadCommand('config'); }
