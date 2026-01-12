@@ -584,7 +584,7 @@ const initCommand: Command = {
       }
 
       // Write embeddings config
-      spinner.text = 'Writing configuration...';
+      spinner.setText('Writing configuration...');
       const dimension = model.includes('mpnet') ? 768 : 384;
       const config = {
         model,
