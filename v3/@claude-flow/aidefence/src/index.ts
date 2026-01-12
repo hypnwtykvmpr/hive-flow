@@ -69,7 +69,7 @@ export interface AIDefenceConfig {
   /** Enable self-learning from detections */
   enableLearning?: boolean;
   /** Custom vector store (defaults to in-memory, use AgentDB for production) */
-  vectorStore?: import('./domain/services/threat-learning-service.js').VectorStore;
+  vectorStore?: VectorStore;
   /** Minimum confidence threshold for threats */
   confidenceThreshold?: number;
   /** Enable PII detection */
