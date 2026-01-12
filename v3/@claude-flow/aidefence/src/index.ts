@@ -29,31 +29,38 @@
  */
 
 // Domain entities
-export {
+export type {
   Threat,
   ThreatType,
   ThreatSeverity,
   ThreatDetectionResult,
   BehavioralAnalysisResult,
   PolicyVerificationResult,
-  createThreat,
 } from './domain/entities/threat.js';
 
-// Domain services
-export {
-  ThreatDetectionService,
-  createThreatDetectionService,
-} from './domain/services/threat-detection-service.js';
+export { createThreat } from './domain/entities/threat.js';
 
-export {
-  ThreatLearningService,
-  createThreatLearningService,
+// Domain services
+export { ThreatDetectionService, createThreatDetectionService } from './domain/services/threat-detection-service.js';
+
+export type {
   LearnedThreatPattern,
   MitigationStrategy,
   LearningTrajectory,
   VectorStore,
+} from './domain/services/threat-learning-service.js';
+
+export {
+  ThreatLearningService,
+  createThreatLearningService,
   InMemoryVectorStore,
 } from './domain/services/threat-learning-service.js';
+
+// Import for internal use
+import { createThreatDetectionService } from './domain/services/threat-detection-service.js';
+import { createThreatLearningService } from './domain/services/threat-learning-service.js';
+import type { ThreatDetectionResult, ThreatType, Threat } from './domain/entities/threat.js';
+import type { LearnedThreatPattern, MitigationStrategy, VectorStore } from './domain/services/threat-learning-service.js';
 
 /**
  * Configuration for AIDefence
