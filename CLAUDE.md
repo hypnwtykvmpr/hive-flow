@@ -17,16 +17,45 @@
 
 **MCP alone does NOT execute work - Task tool agents do the actual work!**
 
+### 🛡️ Anti-Drift Coding Swarm (PREFERRED DEFAULT)
+
+**To prevent goal drift, context drift, and agent desynchronization, ALWAYS use this configuration for coding swarms:**
+
+```javascript
+mcp__ruv-swarm__swarm_init({
+  topology: "hierarchical",  // Single coordinator enforces alignment
+  maxAgents: 8,              // Smaller team = less drift surface
+  strategy: "specialized"    // Clear roles reduce ambiguity
+})
+```
+
+**Why This Prevents Drift:**
+| Choice | Anti-Drift Benefit |
+|--------|-------------------|
+| **hierarchical** | Coordinator validates each output against goal, catches divergence early |
+| **maxAgents: 6-8** | Fewer agents = less coordination overhead, easier alignment |
+| **specialized** | Clear boundaries - each agent knows exactly what to do, no overlap |
+
+**Consensus for Hive-Mind:** Use `raft` (leader maintains authoritative state)
+
+**Additional Anti-Drift Measures:**
+- Frequent checkpoints via `post-task` hooks
+- Shared memory namespace for all agents
+- Short task cycles with verification gates
+
+---
+
 ### 🔄 Auto-Start Swarm Protocol
 
 When the user requests a complex task (multi-file changes, feature implementation, refactoring), **immediately execute this pattern in a SINGLE message:**
 
 ```javascript
 // STEP 1: Initialize swarm coordination via MCP (in parallel with agent spawning)
-mcp__claude-flow__swarm_init({
+// USE ANTI-DRIFT CONFIG: hierarchical + specialized + small team
+mcp__ruv-swarm__swarm_init({
   topology: "hierarchical",
-  maxAgents: 15,
-  strategy: "adaptive"
+  maxAgents: 8,
+  strategy: "specialized"
 })
 
 // STEP 2: Spawn agents concurrently using Claude Code's Task tool
