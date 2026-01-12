@@ -915,7 +915,7 @@ const hyperbolicCommand: Command = {
           output.writeln(output.success('Hyperbolic centroid (Fréchet mean):'));
           output.writeln();
           output.writeln(`Input vectors: ${vectors.length}`);
-          output.writeln(`Centroid: [${centroid.slice(0, 6).map(v => v.toFixed(4)).join(', ')}${centroid.length > 6 ? ', ...' : ''}]`);
+          output.writeln(`Centroid: [${centroid.slice(0, 6).map((v: number) => v.toFixed(4)).join(', ')}${centroid.length > 6 ? ', ...' : ''}]`);
           return { success: true, data: { centroid } };
         }
 
