@@ -476,6 +476,15 @@ export const FULL_INIT_OPTIONS: InitOptions = {
     autoStart: false,
     port: 3000,
   },
+  embeddings: {
+    enabled: true,
+    model: 'all-MiniLM-L6-v2',
+    hyperbolic: true,
+    curvature: -1.0,
+    predownload: true,  // Pre-download for full init
+    cacheSize: 256,
+    neuralSubstrate: true,
+  },
 };
 
 /**
