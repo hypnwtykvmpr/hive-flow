@@ -127,7 +127,7 @@ export interface AIDefence {
    */
   getBestMitigation(
     threatType: ThreatType
-  ): Promise<import('./domain/services/threat-learning-service.js').MitigationStrategy | null>;
+  ): Promise<MitigationStrategy | null>;
 
   /**
    * Start a learning trajectory session
