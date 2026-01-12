@@ -3643,6 +3643,8 @@ export const hooksCommand: Command = {
     coverageRouteCommand,
     coverageSuggestCommand,
     coverageGapsCommand,
+    // Token optimization
+    tokenOptimizeCommand,
     // Backward-compatible aliases for v2
     routeTaskCommand,
     sessionStartCommand,
