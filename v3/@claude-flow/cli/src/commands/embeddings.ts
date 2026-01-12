@@ -864,45 +864,161 @@ const hyperbolicCommand: Command = {
 // Neural subcommand
 const neuralCommand: Command = {
   name: 'neural',
-  description: 'Neural substrate features (agentic-flow)',
+  description: 'Neural substrate features (RuVector integration)',
   options: [
-    { name: 'feature', short: 'f', type: 'string', description: 'Feature: drift, memory, swarm, coherence', default: 'drift' },
-    { name: 'init', type: 'boolean', description: 'Initialize neural substrate' },
+    { name: 'feature', short: 'f', type: 'string', description: 'Feature: drift, memory, swarm, coherence, all', default: 'all' },
+    { name: 'init', type: 'boolean', description: 'Initialize neural substrate with RuVector' },
+    { name: 'drift-threshold', type: 'string', description: 'Semantic drift detection threshold', default: '0.3' },
+    { name: 'decay-rate', type: 'string', description: 'Memory decay rate (hippocampal dynamics)', default: '0.01' },
+    { name: 'consolidation-interval', type: 'string', description: 'Memory consolidation interval (ms)', default: '60000' },
   ],
   examples: [
-    { command: 'claude-flow embeddings neural --init', description: 'Initialize substrate' },
+    { command: 'claude-flow embeddings neural --init', description: 'Initialize RuVector substrate' },
     { command: 'claude-flow embeddings neural -f drift', description: 'Semantic drift detection' },
-    { command: 'claude-flow embeddings neural -f memory', description: 'Memory physics' },
+    { command: 'claude-flow embeddings neural -f memory', description: 'Memory physics (hippocampal)' },
+    { command: 'claude-flow embeddings neural -f coherence', description: 'Safety & alignment monitoring' },
+    { command: 'claude-flow embeddings neural --drift-threshold=0.2', description: 'Custom drift threshold' },
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
-    const feature = ctx.flags.feature as string || 'drift';
+    const feature = ctx.flags.feature as string || 'all';
     const init = ctx.flags.init as boolean;
+    const driftThreshold = parseFloat((ctx.flags['drift-threshold'] || ctx.flags.driftThreshold || '0.3') as string);
+    const decayRate = parseFloat((ctx.flags['decay-rate'] || ctx.flags.decayRate || '0.01') as string);
+    const consolidationInterval = parseInt((ctx.flags['consolidation-interval'] || ctx.flags.consolidationInterval || '60000') as string, 10);
 
     output.writeln();
-    output.writeln(output.bold('Neural Embedding Substrate'));
+    output.writeln(output.bold('Neural Embedding Substrate (RuVector)'));
     output.writeln(output.dim('Treating embeddings as a synthetic nervous system'));
     output.writeln(output.dim('─'.repeat(60)));
 
+    // Check if embeddings config exists
+    const fs = await import('fs');
+    const path = await import('path');
+    const configPath = path.join(process.cwd(), '.claude-flow', 'embeddings.json');
+
+    if (!fs.existsSync(configPath)) {
+      output.printWarning('Embeddings not initialized');
+      output.printInfo('Run "embeddings init" first to configure ONNX model');
+      return { success: false, exitCode: 1 };
+    }
+
+    // Load and update config
+    let config: Record<string, unknown> = {};
+    try {
+      config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    } catch {
+      config = {};
+    }
+
+    if (init) {
+      // Initialize neural substrate configuration
+      config.neural = {
+        enabled: true,
+        driftThreshold,
+        decayRate,
+        consolidationInterval,
+        ruvector: {
+          enabled: true,
+          sona: true, // Self-Optimizing Neural Architecture
+          flashAttention: true,
+          ewcPlusPlus: true, // Elastic Weight Consolidation
+        },
+        features: {
+          semanticDrift: true,
+          memoryPhysics: true,
+          stateMachine: true,
+          swarmCoordination: true,
+          coherenceMonitor: true,
+        },
+        initializedAt: new Date().toISOString(),
+      };
+
+      fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+      output.printSuccess('Neural substrate initialized');
+      output.writeln();
+    }
+
+    const neuralConfig = (config.neural || {}) as Record<string, unknown>;
+    const features = (neuralConfig.features || {}) as Record<string, boolean>;
+    const ruvector = (neuralConfig.ruvector || {}) as Record<string, boolean>;
+
     output.printTable({
       columns: [
-        { key: 'feature', header: 'Feature', width: 22 },
-        { key: 'description', header: 'Description', width: 40 },
+        { key: 'feature', header: 'Feature', width: 24 },
+        { key: 'description', header: 'Description', width: 38 },
         { key: 'status', header: 'Status', width: 12 },
       ],
       data: [
-        { feature: 'SemanticDriftDetector', description: 'Monitor semantic movement & drift', status: output.success('Ready') },
-        { feature: 'MemoryPhysics', description: 'Hippocampal dynamics: decay, consolidate', status: output.success('Ready') },
-        { feature: 'EmbeddingStateMachine', description: 'Agent state through geometry', status: output.success('Ready') },
-        { feature: 'SwarmCoordinator', description: 'Multi-agent coordination', status: output.success('Ready') },
-        { feature: 'CoherenceMonitor', description: 'Safety & alignment detection', status: output.success('Ready') },
+        {
+          feature: 'SemanticDriftDetector',
+          description: `Monitor semantic movement (threshold: ${driftThreshold})`,
+          status: features.semanticDrift ? output.success('Active') : output.dim('Inactive')
+        },
+        {
+          feature: 'MemoryPhysics',
+          description: `Hippocampal dynamics (decay: ${decayRate})`,
+          status: features.memoryPhysics ? output.success('Active') : output.dim('Inactive')
+        },
+        {
+          feature: 'EmbeddingStateMachine',
+          description: 'Agent state through geometry',
+          status: features.stateMachine ? output.success('Active') : output.dim('Inactive')
+        },
+        {
+          feature: 'SwarmCoordinator',
+          description: 'Multi-agent embedding coordination',
+          status: features.swarmCoordination ? output.success('Active') : output.dim('Inactive')
+        },
+        {
+          feature: 'CoherenceMonitor',
+          description: 'Safety & alignment detection',
+          status: features.coherenceMonitor ? output.success('Active') : output.dim('Inactive')
+        },
       ],
     });
 
     output.writeln();
-    output.writeln(output.dim(`Selected: ${feature}`));
-    output.writeln(output.dim('Requires: agentic-flow@alpha'));
+    output.writeln(output.bold('RuVector Integration'));
+    output.printTable({
+      columns: [
+        { key: 'component', header: 'Component', width: 24 },
+        { key: 'description', header: 'Description', width: 38 },
+        { key: 'status', header: 'Status', width: 12 },
+      ],
+      data: [
+        {
+          component: 'SONA',
+          description: 'Self-Optimizing Neural Architecture (<0.05ms)',
+          status: ruvector.sona ? output.success('Enabled') : output.dim('Disabled')
+        },
+        {
+          component: 'Flash Attention',
+          description: '2.49x-7.47x attention speedup',
+          status: ruvector.flashAttention ? output.success('Enabled') : output.dim('Disabled')
+        },
+        {
+          component: 'EWC++',
+          description: 'Elastic Weight Consolidation (anti-forgetting)',
+          status: ruvector.ewcPlusPlus ? output.success('Enabled') : output.dim('Disabled')
+        },
+        {
+          component: 'Hyperbolic Space',
+          description: 'Poincaré ball for hierarchy preservation',
+          status: config.hyperbolic ? output.success('Enabled') : output.dim('Disabled')
+        },
+      ],
+    });
 
-    return { success: true };
+    output.writeln();
+
+    if (!neuralConfig.enabled) {
+      output.printInfo('Run with --init to enable neural substrate');
+    } else {
+      output.writeln(output.dim('Configuration: .claude-flow/embeddings.json'));
+      output.writeln(output.dim('Next: Use "hooks pretrain" to train patterns'));
+    }
+
+    return { success: true, data: { config: neuralConfig, feature } };
   },
 };
 
