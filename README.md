@@ -352,7 +352,7 @@ npx claude-flow@v3alpha worker results --limit 10
 | `providers` | 5 | AI providers (list, add, remove, test, configure) |
 | `plugins` | 5 | Plugin management (list, install, uninstall, enable, disable) |
 | `deployment` | 5 | Deployment management (deploy, rollback, status, environments, release) |
-| `embeddings` | 4 | Vector embeddings (embed, batch, search, init) |
+| `embeddings` | 13 | Vector embeddings with ONNX, hyperbolic space, neural substrate |
 | `daemon` | 5 | Background workers (start, stop, status, trigger, enable) |
 | `progress` | 4 | V3 implementation progress (check, sync, summary, watch) |
 | `claims` | 4 | Authorization (check, grant, revoke, list) |
