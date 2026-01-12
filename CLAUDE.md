@@ -86,19 +86,19 @@ mcp__claude-flow__memory_usage({
 })
 ```
 
-### 📋 Agent Routing by Task Type (Anti-Drift Optimized)
+### 📋 Agent Routing (Anti-Drift)
 
-| Task Type | Required Agents | Topology | Strategy |
-|-----------|-----------------|----------|----------|
-| Bug Fix | coordinator, researcher, coder, tester | hierarchical | specialized |
-| New Feature | coordinator, architect, coder, tester, reviewer | hierarchical | specialized |
-| Refactoring | coordinator, architect, coder, reviewer | hierarchical | specialized |
-| Performance | coordinator, researcher, performance-engineer, coder | hierarchical | specialized |
-| Security Audit | coordinator, security-architect, security-auditor, reviewer | hierarchical | specialized |
-| Memory Optimization | coordinator, memory-specialist, performance-engineer | hierarchical | specialized |
-| Documentation | researcher, api-docs | mesh | balanced |
+| Code | Task | Agents |
+|------|------|--------|
+| 1 | Bug Fix | coordinator, researcher, coder, tester |
+| 3 | Feature | coordinator, architect, coder, tester, reviewer |
+| 5 | Refactor | coordinator, architect, coder, reviewer |
+| 7 | Performance | coordinator, perf-engineer, coder |
+| 9 | Security | coordinator, security-architect, auditor |
+| 11 | Memory | coordinator, memory-specialist, perf-engineer |
+| 13 | Docs | researcher, api-docs |
 
-**Note:** All coding tasks use hierarchical + specialized to prevent drift. Mesh is only for read-only/research tasks.
+**Codes 1-11: hierarchical/specialized (anti-drift). Code 13: mesh/balanced**
 
 ### 🎯 Task Complexity Detection
 
