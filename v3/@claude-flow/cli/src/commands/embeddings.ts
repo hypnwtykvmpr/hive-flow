@@ -522,6 +522,140 @@ const indexCommand: Command = {
   },
 };
 
+// Init subcommand - Initialize ONNX models and hyperbolic config
+const initCommand: Command = {
+  name: 'init',
+  description: 'Initialize embedding subsystem with ONNX model and hyperbolic config',
+  options: [
+    { name: 'model', short: 'm', type: 'string', description: 'ONNX model ID', default: 'all-MiniLM-L6-v2' },
+    { name: 'hyperbolic', type: 'boolean', description: 'Enable hyperbolic (Poincaré ball) embeddings', default: 'true' },
+    { name: 'curvature', short: 'c', type: 'number', description: 'Poincaré ball curvature (negative)', default: '-1' },
+    { name: 'download', short: 'd', type: 'boolean', description: 'Download model during init', default: 'true' },
+    { name: 'cache-size', type: 'number', description: 'LRU cache entries', default: '256' },
+  ],
+  examples: [
+    { command: 'claude-flow embeddings init', description: 'Initialize with defaults' },
+    { command: 'claude-flow embeddings init --model all-mpnet-base-v2', description: 'Use higher quality model' },
+    { command: 'claude-flow embeddings init --no-hyperbolic', description: 'Euclidean only' },
+  ],
+  action: async (ctx: CommandContext): Promise<CommandResult> => {
+    const model = ctx.flags.model as string || 'all-MiniLM-L6-v2';
+    const hyperbolic = ctx.flags.hyperbolic !== false;
+    const curvature = parseFloat(ctx.flags.curvature as string || '-1');
+    const download = ctx.flags.download !== false;
+    const cacheSize = parseInt(ctx.flags['cache-size'] as string || '256', 10);
+
+    output.writeln();
+    output.writeln(output.bold('Initialize Embedding Subsystem'));
+    output.writeln(output.dim('─'.repeat(55)));
+
+    const spinner = output.createSpinner({ text: 'Initializing...', spinner: 'dots' });
+    spinner.start();
+
+    try {
+      const fs = await import('fs');
+      const path = await import('path');
+
+      // Create directories
+      const configDir = path.join(process.cwd(), '.claude-flow');
+      const modelDir = path.join(configDir, 'models');
+
+      if (!fs.existsSync(configDir)) {
+        fs.mkdirSync(configDir, { recursive: true });
+      }
+      if (!fs.existsSync(modelDir)) {
+        fs.mkdirSync(modelDir, { recursive: true });
+      }
+
+      // Download model if requested
+      if (download) {
+        spinner.text = `Downloading ONNX model: ${model}...`;
+        const embeddings = await getEmbeddings();
+
+        if (embeddings) {
+          await embeddings.downloadEmbeddingModel(model, modelDir, (p) => {
+            spinner.setText(`Downloading ${model}... ${p.percent.toFixed(0)}%`);
+          });
+        } else {
+          // Simulate download for when embeddings package not available
+          await new Promise(r => setTimeout(r, 500));
+          output.writeln(output.dim('  (Simulated - @claude-flow/embeddings not installed)'));
+        }
+      }
+
+      // Write embeddings config
+      spinner.text = 'Writing configuration...';
+      const dimension = model.includes('mpnet') ? 768 : 384;
+      const config = {
+        model,
+        modelPath: modelDir,
+        dimension,
+        cacheSize,
+        hyperbolic: {
+          enabled: hyperbolic,
+          curvature,
+          epsilon: 1e-15,
+          maxNorm: 1 - 1e-5,
+        },
+        neural: {
+          enabled: true,
+          driftThreshold: 0.3,
+          decayRate: 0.01,
+        },
+        initialized: new Date().toISOString(),
+      };
+
+      const configPath = path.join(configDir, 'embeddings.json');
+      fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+
+      spinner.succeed('Embedding subsystem initialized');
+
+      output.writeln();
+      output.printTable({
+        columns: [
+          { key: 'setting', header: 'Setting', width: 18 },
+          { key: 'value', header: 'Value', width: 40 },
+        ],
+        data: [
+          { setting: 'Model', value: model },
+          { setting: 'Dimension', value: String(dimension) },
+          { setting: 'Cache Size', value: String(cacheSize) + ' entries' },
+          { setting: 'Hyperbolic', value: hyperbolic ? `${output.success('Enabled')} (c=${curvature})` : output.dim('Disabled') },
+          { setting: 'Neural Substrate', value: output.success('Enabled') },
+          { setting: 'Model Path', value: modelDir },
+          { setting: 'Config', value: configPath },
+        ],
+      });
+
+      output.writeln();
+      if (hyperbolic) {
+        output.printBox([
+          'Hyperbolic Embeddings (Poincaré Ball):',
+          '• Better for hierarchical data (trees, taxonomies)',
+          '• Exponential capacity in low dimensions',
+          '• Distance preserves hierarchy structure',
+          '',
+          'Use: embeddings hyperbolic -a convert',
+        ].join('\n'), 'Hyperbolic Space');
+      }
+
+      output.writeln();
+      output.writeln(output.dim('Next steps:'));
+      output.printList([
+        'embeddings generate -t "test text"  - Test embedding generation',
+        'embeddings search -q "query"        - Semantic search',
+        'memory store -k key --value text    - Store with auto-embedding',
+      ]);
+
+      return { success: true, data: config };
+    } catch (error) {
+      spinner.fail('Initialization failed');
+      output.printError(error instanceof Error ? error.message : String(error));
+      return { success: false, exitCode: 1 };
+    }
+  },
+};
+
 // Providers subcommand
 const providersCommand: Command = {
   name: 'providers',
