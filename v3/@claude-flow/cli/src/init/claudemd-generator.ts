@@ -32,13 +32,26 @@ export function generateClaudeMd(options: InitOptions): string {
 
 **CLI coordinates, Task tool agents do the actual work!**
 
+### 🛡️ Anti-Drift Config (PREFERRED)
+
+**Use this to prevent agent drift:**
+\`\`\`bash
+npx @claude-flow/cli@latest swarm init --topology hierarchical --max-agents 8 --strategy specialized
+\`\`\`
+- **hierarchical**: Coordinator catches divergence
+- **max-agents 6-8**: Smaller team = less drift
+- **specialized**: Clear roles, no overlap
+- **consensus**: raft (leader maintains state)
+
+---
+
 ### 🔄 Auto-Start Swarm Protocol (Background Execution)
 
 When the user requests a complex task, **spawn agents in background and WAIT for completion:**
 
 \`\`\`javascript
-// STEP 1: Initialize swarm coordination
-Bash("npx @claude-flow/cli@latest swarm init --topology ${topology} --max-agents ${maxAgents}")
+// STEP 1: Initialize swarm coordination (anti-drift config)
+Bash("npx @claude-flow/cli@latest swarm init --topology hierarchical --max-agents 8 --strategy specialized")
 
 // STEP 2: Spawn ALL agents IN BACKGROUND in a SINGLE message
 // Use run_in_background: true so agents work concurrently
