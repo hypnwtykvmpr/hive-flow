@@ -3539,24 +3539,28 @@ const tokenOptimizeCommand: Command = {
     spinner.start();
 
     try {
-      // Dynamic import of TokenOptimizer
-      const { getTokenOptimizer } = await import('@claude-flow/integration');
-      const optimizer = await getTokenOptimizer();
+      // Dynamic import of TokenOptimizer from source (until dist is built)
+      const mod = await import('../../@claude-flow/integration/src/token-optimizer.js').catch(() => null);
+
+      if (!mod) {
+        throw new Error('TokenOptimizer module not found');
+      }
+
+      const optimizer = await mod.getTokenOptimizer();
 
       spinner.succeed('TokenOptimizer loaded');
       output.writeln();
 
       // Get anti-drift config
       const config = optimizer.getOptimalConfig(agentCount);
-      output.printBox([
-        output.bold('Anti-Drift Swarm Config'),
-        '',
-        `Agents: ${output.highlight(String(agentCount))}`,
-        `Topology: ${output.highlight(config.topology)}`,
-        `Batch Size: ${output.highlight(String(config.batchSize))}`,
-        `Cache: ${output.highlight(config.cacheSizeMB + 'MB')}`,
-        `Success Rate: ${output.highlight((config.expectedSuccessRate * 100) + '%')}`,
-      ]);
+      output.printBox(
+        `Anti-Drift Swarm Config\n\n` +
+        `Agents: ${agentCount}\n` +
+        `Topology: ${config.topology}\n` +
+        `Batch Size: ${config.batchSize}\n` +
+        `Cache: ${config.cacheSizeMB}MB\n` +
+        `Success Rate: ${(config.expectedSuccessRate * 100)}%`
+      );
 
       // If query provided, get compact context
       if (query) {
