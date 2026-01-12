@@ -178,17 +178,18 @@ Bash("npx @claude-flow/cli@latest hooks worker dispatch --trigger optimize")
 - Finding a performance fix (store the optimization)
 - Discovering a security issue (store the vulnerability pattern)
 
-### 📋 Agent Routing by Task Type
+### 📋 Agent Routing (Anti-Drift)
 
-| Task Type | Required Agents | Topology |
-|-----------|-----------------|----------|
-| Bug Fix | researcher, coder, tester | mesh |
-| New Feature | coordinator, architect, coder, tester, reviewer | hierarchical |
-| Refactoring | architect, coder, reviewer | mesh |
-| Performance | researcher, performance-engineer, coder | hierarchical |
-| Security Audit | security-architect, security-auditor, reviewer | hierarchical |
-| Memory Optimization | memory-specialist, performance-engineer | mesh |
-| Documentation | researcher, api-docs | mesh |
+| Task | Agents | Config |
+|------|--------|--------|
+| Bug Fix | coordinator, researcher, coder, tester | hierarchical/specialized |
+| Feature | coordinator, architect, coder, tester, reviewer | hierarchical/specialized |
+| Refactor | coordinator, architect, coder, reviewer | hierarchical/specialized |
+| Performance | coordinator, perf-engineer, coder | hierarchical/specialized |
+| Security | coordinator, security-architect, auditor | hierarchical/specialized |
+| Docs | researcher, api-docs | mesh/balanced |
+
+**All coding tasks: hierarchical + specialized to prevent drift**
 
 ### 🎯 Task Complexity Detection
 
