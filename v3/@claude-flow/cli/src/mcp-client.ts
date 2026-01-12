@@ -50,6 +50,7 @@ registerTools([
   ...workflowTools,
   ...analyzeTools,
   ...progressTools,
+  ...embeddingsTools,
 ]);
 
 /**
