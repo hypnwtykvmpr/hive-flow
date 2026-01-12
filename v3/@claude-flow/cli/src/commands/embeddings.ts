@@ -833,31 +833,100 @@ const hyperbolicCommand: Command = {
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     const action = ctx.flags.action as string || 'convert';
+    const curvature = parseFloat(ctx.flags.curvature as string || '-1');
+    const inputJson = ctx.flags.input as string;
 
     output.writeln();
     output.writeln(output.bold('Hyperbolic Embeddings'));
     output.writeln(output.dim('Poincaré Ball Model'));
     output.writeln(output.dim('─'.repeat(50)));
 
-    output.printBox([
-      'Hyperbolic embeddings excel at:',
-      '• Hierarchical data representation',
-      '• Tree-like structure preservation',
-      '• Low-dimensional hierarchy encoding',
-      '',
-      'Operations available:',
-      '• euclideanToPoincare - Project to ball',
-      '• poincareToEuclidean - Project back',
-      '• hyperbolicDistance - Geodesic distance',
-      '• mobiusAdd - Hyperbolic addition',
-      '• hyperbolicCentroid - Fréchet mean',
-    ].join('\n'), 'Hyperbolic Geometry');
+    // Try to import hyperbolic functions from embeddings package
+    try {
+      const hyperbolic = await import('@claude-flow/embeddings').then(m => m).catch(() => null);
 
-    output.writeln();
-    output.writeln(output.dim(`Action: ${action}`));
-    output.writeln(output.dim('Use for hierarchical taxonomies, org charts, file systems'));
+      if (!hyperbolic || !hyperbolic.euclideanToPoincare) {
+        output.printWarning('@claude-flow/embeddings hyperbolic module not available');
+        output.printInfo('Install with: npm install @claude-flow/embeddings');
+        return { success: false, exitCode: 1 };
+      }
 
-    return { success: true };
+      if (!inputJson) {
+        // Show help if no input
+        output.printBox([
+          'Hyperbolic embeddings excel at:',
+          '• Hierarchical data representation',
+          '• Tree-like structure preservation',
+          '• Low-dimensional hierarchy encoding',
+          '',
+          'Actions: convert, distance, centroid',
+          '',
+          'Examples:',
+          '  -a convert -i "[0.5, 0.3, 0.1]"',
+          '  -a distance -i "[[0.1,0.2],[0.3,0.4]]"',
+        ].join('\n'), 'Hyperbolic Geometry');
+        return { success: true };
+      }
+
+      // Parse input vector(s)
+      let input: number[] | number[][];
+      try {
+        input = JSON.parse(inputJson);
+      } catch {
+        output.printError('Invalid JSON input. Use format: "[0.5, 0.3]" or "[[0.1,0.2],[0.3,0.4]]"');
+        return { success: false, exitCode: 1 };
+      }
+
+      switch (action) {
+        case 'convert': {
+          const vec = Array.isArray(input[0]) ? input[0] as number[] : input as number[];
+          const result = hyperbolic.euclideanToPoincare(vec, { curvature });
+          output.writeln(output.success('Euclidean → Poincaré conversion:'));
+          output.writeln();
+          output.writeln(`Input (Euclidean):  [${vec.slice(0, 6).map(v => v.toFixed(4)).join(', ')}${vec.length > 6 ? ', ...' : ''}]`);
+          output.writeln(`Output (Poincaré):  [${result.slice(0, 6).map(v => v.toFixed(4)).join(', ')}${result.length > 6 ? ', ...' : ''}]`);
+          output.writeln(`Curvature: ${curvature}`);
+          output.writeln(`Norm: ${Math.sqrt(result.reduce((s, v) => s + v * v, 0)).toFixed(6)} (must be < 1)`);
+          return { success: true, data: { result } };
+        }
+
+        case 'distance': {
+          if (!Array.isArray(input[0]) || input.length < 2) {
+            output.printError('Distance requires two vectors: "[[v1],[v2]]"');
+            return { success: false, exitCode: 1 };
+          }
+          const [v1, v2] = input as number[][];
+          const dist = hyperbolic.hyperbolicDistance(v1, v2, { curvature });
+          output.writeln(output.success('Hyperbolic (geodesic) distance:'));
+          output.writeln();
+          output.writeln(`Vector 1: [${v1.slice(0, 4).map(v => v.toFixed(4)).join(', ')}...]`);
+          output.writeln(`Vector 2: [${v2.slice(0, 4).map(v => v.toFixed(4)).join(', ')}...]`);
+          output.writeln(`Distance: ${dist.toFixed(6)}`);
+          return { success: true, data: { distance: dist } };
+        }
+
+        case 'centroid': {
+          if (!Array.isArray(input[0])) {
+            output.printError('Centroid requires multiple vectors: "[[v1],[v2],...]"');
+            return { success: false, exitCode: 1 };
+          }
+          const vectors = input as number[][];
+          const centroid = hyperbolic.hyperbolicCentroid(vectors, { curvature });
+          output.writeln(output.success('Hyperbolic centroid (Fréchet mean):'));
+          output.writeln();
+          output.writeln(`Input vectors: ${vectors.length}`);
+          output.writeln(`Centroid: [${centroid.slice(0, 6).map(v => v.toFixed(4)).join(', ')}${centroid.length > 6 ? ', ...' : ''}]`);
+          return { success: true, data: { centroid } };
+        }
+
+        default:
+          output.printError(`Unknown action: ${action}. Use: convert, distance, centroid`);
+          return { success: false, exitCode: 1 };
+      }
+    } catch (error) {
+      output.printError(`Hyperbolic operation failed: ${(error as Error).message}`);
+      return { success: false, exitCode: 1 };
+    }
   },
 };
 
