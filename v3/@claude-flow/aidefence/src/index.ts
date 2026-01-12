@@ -297,7 +297,7 @@ export function calculateSecurityConsensus(
 ): {
   consensus: 'safe' | 'threat' | 'uncertain';
   confidence: number;
-  criticalThreats: import('./domain/entities/threat.js').Threat[];
+  criticalThreats: Threat[];
 } {
   if (assessments.length === 0) {
     return { consensus: 'uncertain', confidence: 0, criticalThreats: [] };
@@ -312,7 +312,7 @@ export function calculateSecurityConsensus(
 
   // Calculate weighted threat score
   let threatScore = 0;
-  const allThreats: import('./domain/entities/threat.js').Threat[] = [];
+  const allThreats: Threat[] = [];
 
   for (const assessment of normalized) {
     if (!assessment.threatAssessment.safe) {
