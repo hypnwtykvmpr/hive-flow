@@ -290,7 +290,7 @@ const defendCommand: Command = {
       createAIDefence = aidefence.createAIDefence;
     } catch {
       output.error('AIDefence package not installed. Run: npm install @claude-flow/aidefence');
-      return { success: false, error: 'AIDefence not available' };
+      return { success: false, message: 'AIDefence not available' };
     }
 
     const defender = createAIDefence({ enableLearning });
