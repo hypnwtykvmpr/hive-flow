@@ -625,7 +625,6 @@ const initCommand: Command = {
         initialized: new Date().toISOString(),
       };
 
-      const configPath = path.join(configDir, 'embeddings.json');
       fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
 
       spinner.succeed('Embedding subsystem initialized');
