@@ -15,6 +15,7 @@ export {
   type StatuslineConfig,
   type MCPConfig,
   type RuntimeConfig,
+  type EmbeddingsConfig,
   type PlatformInfo,
   DEFAULT_INIT_OPTIONS,
   MINIMAL_INIT_OPTIONS,
