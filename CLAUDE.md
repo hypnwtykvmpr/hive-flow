@@ -145,9 +145,11 @@ mcp__claude-flow__memory_usage({
 
 ## Project Configuration
 
-This project is configured with Claude Flow V3:
-- **Topology**: hierarchical
-- **Max Agents**: 15
+This project is configured with Claude Flow V3 (Anti-Drift Defaults):
+- **Topology**: hierarchical (prevents drift via central coordination)
+- **Max Agents**: 8 (smaller team = less drift)
+- **Strategy**: specialized (clear roles, no overlap)
+- **Consensus**: raft (leader maintains authoritative state)
 - **Memory Backend**: hybrid (SQLite + AgentDB)
 - **HNSW Indexing**: Enabled (150x-12,500x faster)
 - **Neural Learning**: Enabled (SONA)
