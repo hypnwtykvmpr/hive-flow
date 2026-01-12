@@ -3547,7 +3547,8 @@ const tokenOptimizeCommand: Command = {
       memoriesRetrieved: 0,
     };
     let agenticFlowAvailable = false;
-    let reasoningBank: { retrieveMemories?: (q: string, opts: unknown) => Promise<unknown[]>; formatMemoriesForPrompt?: (m: unknown[]) => string } | null = null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let reasoningBank: any = null;
 
     try {
       // Check if agentic-flow is available
@@ -3556,7 +3557,7 @@ const tokenOptimizeCommand: Command = {
         agenticFlowAvailable = true;
         // Try to load ReasoningBank
         const rb = await import('agentic-flow/reasoningbank').catch(() => null);
-        if (rb && rb.retrieveMemories) {
+        if (rb && typeof rb.retrieveMemories === 'function') {
           reasoningBank = rb;
         }
       }
