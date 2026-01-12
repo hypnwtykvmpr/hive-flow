@@ -279,6 +279,8 @@ export interface InitOptions {
   mcp: MCPConfig;
   /** Runtime configuration */
   runtime: RuntimeConfig;
+  /** Embeddings configuration */
+  embeddings: EmbeddingsConfig;
 }
 
 /**
