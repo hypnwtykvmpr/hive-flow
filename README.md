@@ -468,11 +468,24 @@ npx claude-flow@v3alpha worker results --limit 10
 | Feature | Description | Performance |
 |---------|-------------|-------------|
 | **Multi-Provider** | Agentic-Flow (ONNX), OpenAI, Transformers.js, Mock | 4 providers |
-| **Auto-Install** | `createEmbeddingServiceAsync({ provider: 'auto' })` | Zero config |
+| **Auto-Install** | `claude-flow embeddings init` or `createEmbeddingServiceAsync()` | Zero config |
 | **75x Faster** | Agentic-flow ONNX SIMD vs Transformers.js | 3ms vs 230ms |
+| **Hyperbolic Space** | Poincaré ball model for hierarchical data | Exponential capacity |
 | **Dimensions** | 384 to 3072 configurable | Quality vs speed tradeoff |
-| **Similarity Metrics** | Cosine, Euclidean, Dot product | Task-specific matching |
-| **LRU Caching** | Batch requests use cached where available | <1ms cache hits |
+| **Similarity Metrics** | Cosine, Euclidean, Dot product, Hyperbolic distance | Task-specific matching |
+| **Neural Substrate** | Drift detection, memory physics, swarm coordination | agentic-flow integration |
+| **LRU + SQLite Cache** | Persistent cross-session caching | <1ms cache hits |
+
+```bash
+# Initialize ONNX embeddings with hyperbolic config
+claude-flow embeddings init
+
+# Use larger model for higher quality
+claude-flow embeddings init --model all-mpnet-base-v2
+
+# Semantic search
+claude-flow embeddings search -q "authentication patterns"
+```
 
 ### SONA Learning Modes
 
