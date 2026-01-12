@@ -668,8 +668,7 @@ const initCommand: Command = {
 
       return { success: true, data: config };
     } catch (error) {
-      spinner.fail('Initialization failed');
-      output.printError(error instanceof Error ? error.message : String(error));
+      output.printError('Initialization failed: ' + (error instanceof Error ? error.message : String(error)));
       return { success: false, exitCode: 1 };
     }
   },
