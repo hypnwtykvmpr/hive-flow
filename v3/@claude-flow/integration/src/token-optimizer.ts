@@ -67,22 +67,23 @@ export class TokenOptimizer extends EventEmitter {
       if (af) {
         this.agenticFlowAvailable = true;
 
-        // Load ReasoningBank from dist path
-        const rb = await safeImport<any>('agentic-flow/dist/reasoningbank/index.js');
+        // Load ReasoningBank (exported path)
+        const rb = await safeImport<any>('agentic-flow/reasoningbank');
         if (rb && rb.retrieveMemories) {
           this.reasoningBank = rb;
         }
 
-        // Load Agent Booster from dist path
-        const ab = await safeImport<any>('agentic-flow/dist/optimizations/agent-booster-migration.js');
-        if (ab && ab.agentBoosterMigration) {
-          this.agentBooster = ab.agentBoosterMigration;
+        // Load Agent Booster (exported path)
+        const ab = await safeImport<any>('agentic-flow/agent-booster');
+        if (ab) {
+          // Agent booster may export different API
+          this.agentBooster = ab.agentBooster || ab.AgentBooster || ab;
         }
 
-        // Load Config Tuning from dist path
-        const ct = await safeImport<any>('agentic-flow/dist/optimizations/configuration-tuning.js');
-        if (ct && ct.configTuning) {
-          this.configTuning = ct.configTuning;
+        // Config tuning is part of main module or agent-booster
+        // Use our fallback with anti-drift defaults
+        if (af.configTuning) {
+          this.configTuning = af.configTuning;
         }
       }
     } catch {

@@ -22,5 +22,8 @@
   "publishConfig": {
     "access": "public",
     "tag": "v3alpha"
+  },
+  "optionalDependencies": {
+    "agent-booster": "^0.2.2"
   }
 }
