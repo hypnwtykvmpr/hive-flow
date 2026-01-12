@@ -110,6 +110,7 @@ import { mcpCommand } from './mcp.js';
 import { hooksCommand } from './hooks.js';
 import { daemonCommand } from './daemon.js';
 import { doctorCommand } from './doctor.js';
+import { embeddingsCommand } from './embeddings.js';
 
 // Pre-populate cache with core commands
 loadedCommands.set('init', initCommand);
