@@ -219,20 +219,33 @@ export class TokenOptimizer extends EventEmitter {
    * 95% hit rate = 95% fewer embedding API calls
    */
   async cachedLookup<T>(key: string, generator: () => Promise<T>): Promise<T> {
-    if (!this.configTuning) {
-      return generator();
+    // Use local cache if configTuning not available
+    const cacheEntry = this.localCache.get(key);
+    if (cacheEntry && Date.now() - cacheEntry.timestamp < 300000) { // 5 min TTL
+      this.stats.cacheHits++;
+      this.stats.totalTokensSaved += 100;
+      return cacheEntry.data as T;
     }
 
-    const cached = await this.configTuning.cacheGet<T>(key);
-    if (cached) {
-      this.stats.cacheHits++;
-      this.stats.totalTokensSaved += 100; // Embedding call saved
-      return cached;
+    if (this.configTuning) {
+      const cached = await this.configTuning.cacheGet(key);
+      if (cached) {
+        this.stats.cacheHits++;
+        this.stats.totalTokensSaved += 100;
+        return cached as T;
+      }
     }
 
     this.stats.cacheMisses++;
     const result = await generator();
-    await this.configTuning.cacheSet(key, result);
+
+    // Store in local cache
+    this.localCache.set(key, { data: result, timestamp: Date.now() });
+
+    if (this.configTuning) {
+      await this.configTuning.cacheSet(key, result);
+    }
+
     return result;
   }
 
