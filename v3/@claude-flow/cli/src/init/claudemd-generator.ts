@@ -318,6 +318,12 @@ npx @claude-flow/cli@latest performance benchmark --suite all
 ### V3 Specialized Agents
 \`security-architect\`, \`security-auditor\`, \`memory-specialist\`, \`performance-engineer\`
 
+### 🔐 @claude-flow/security
+CVE remediation, input validation, path security:
+- \`InputValidator\` - Zod validation
+- \`PathValidator\` - Traversal prevention
+- \`SafeExecutor\` - Injection protection
+
 ### Swarm Coordination
 \`hierarchical-coordinator\`, \`mesh-coordinator\`, \`adaptive-coordinator\`, \`collective-intelligence-coordinator\`, \`swarm-memory-manager\`
 
