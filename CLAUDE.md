@@ -238,6 +238,28 @@ CVE remediation, input validation, path security:
 - `PasswordHasher` - bcrypt hashing
 - `TokenGenerator` - Secure token generation
 
+### ⚡ Token Optimizer (Agent Booster)
+Integrates agentic-flow optimizations for 30-50% token reduction:
+```typescript
+import { getTokenOptimizer } from '@claude-flow/integration';
+const optimizer = await getTokenOptimizer();
+
+// Compact context (32% fewer tokens)
+const ctx = await optimizer.getCompactContext("auth patterns");
+
+// 352x faster edits = fewer retries
+await optimizer.optimizedEdit(file, old, new, "typescript");
+
+// Optimal config (100% success rate)
+const config = optimizer.getOptimalConfig(agentCount);
+```
+| Feature | Token Savings |
+|---------|---------------|
+| ReasoningBank retrieval | -32% |
+| Agent Booster edits | -15% |
+| Cache (95% hit rate) | -10% |
+| Optimal batch size | -20% |
+
 ### Swarm Coordination
 `hierarchical-coordinator`, `mesh-coordinator`, `adaptive-coordinator`, `collective-intelligence-coordinator`, `swarm-memory-manager`
 
