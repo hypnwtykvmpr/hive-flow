@@ -1,6 +1,6 @@
 {
   "name": "@claude-flow/integration",
-  "version": "3.0.0-alpha.7",
+  "version": "3.0.0",
   "type": "module",
   "description": "Integration module - agentic-flow@alpha deep integration, ADR-001 compliance, TokenOptimizer",
   "main": "dist/index.js",
@@ -41,8 +41,14 @@
       "TokenOptimizer": {
         "description": "Token reduction via agentic-flow Agent Booster integration",
         "savings": "30-50%",
-        "features": ["ReasoningBank", "cache", "anti-drift-config"],
-        "requires": ["agentic-flow"]
+        "features": [
+          "ReasoningBank",
+          "cache",
+          "anti-drift-config"
+        ],
+        "requires": [
+          "agentic-flow"
+        ]
       }
     }
   }

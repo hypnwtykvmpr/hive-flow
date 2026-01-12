@@ -297,12 +297,24 @@ export class CommandParser {
       }
     }
 
-    // Add aliases from all commands
+    // Add aliases from all commands and subcommands
     for (const cmd of this.commands.values()) {
       if (cmd.options) {
         for (const opt of cmd.options) {
           if (opt.short) {
             aliases[opt.short] = opt.name;
+          }
+        }
+      }
+      // Also include subcommands' options
+      if (cmd.subcommands) {
+        for (const sub of cmd.subcommands) {
+          if (sub.options) {
+            for (const opt of sub.options) {
+              if (opt.short) {
+                aliases[opt.short] = opt.name;
+              }
+            }
           }
         }
       }
