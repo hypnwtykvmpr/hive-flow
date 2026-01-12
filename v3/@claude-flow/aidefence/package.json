@@ -1,7 +1,7 @@
 {
   "name": "@claude-flow/aidefence",
   "version": "3.0.0-alpha.1",
-  "description": "AI Manipulation Defense System integration for Claude Flow V3",
+  "description": "AI Manipulation Defense System with self-learning and vector search integration",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -18,21 +18,20 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@claude-flow/core": "workspace:*",
-    "@claude-flow/security": "workspace:*"
+    "agentdb": "^2.0.0-alpha.3"
   },
   "devDependencies": {
+    "@types/node": "^20.10.0",
     "typescript": "^5.3.3",
     "vitest": "^1.1.0"
-  },
-  "peerDependencies": {
-    "agentdb": "^2.0.0-alpha.3"
   },
   "keywords": [
     "ai-security",
     "prompt-injection",
     "threat-detection",
-    "claude-flow"
+    "claude-flow",
+    "vector-search",
+    "self-learning"
   ],
   "author": "rUv",
   "license": "MIT"
