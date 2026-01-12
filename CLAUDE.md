@@ -230,6 +230,14 @@ npx claude-flow@v3alpha performance benchmark --suite all
 ### V3 Specialized Agents
 `security-architect`, `security-auditor`, `memory-specialist`, `performance-engineer`
 
+### 🔐 @claude-flow/security Module
+CVE remediation, input validation, path security:
+- `InputValidator` - Zod-based validation at boundaries
+- `PathValidator` - Path traversal prevention
+- `SafeExecutor` - Command injection protection
+- `PasswordHasher` - bcrypt hashing
+- `TokenGenerator` - Secure token generation
+
 ### Swarm Coordination
 `hierarchical-coordinator`, `mesh-coordinator`, `adaptive-coordinator`, `collective-intelligence-coordinator`, `swarm-memory-manager`
 
