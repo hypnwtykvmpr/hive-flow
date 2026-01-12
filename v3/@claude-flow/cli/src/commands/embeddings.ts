@@ -569,7 +569,7 @@ const initCommand: Command = {
 
       // Download model if requested
       if (download) {
-        spinner.text = `Downloading ONNX model: ${model}...`;
+        spinner.setText(`Downloading ONNX model: ${model}...`);
         const embeddings = await getEmbeddings();
 
         if (embeddings) {
