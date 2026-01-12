@@ -737,7 +737,7 @@ const explainCommand: Command = {
 // Pretrain subcommand
 const pretrainCommand: Command = {
   name: 'pretrain',
-  description: 'Bootstrap intelligence from repository (4-step pipeline)',
+  description: 'Bootstrap intelligence from repository (4-step pipeline + embeddings)',
   options: [
     {
       name: 'path',
@@ -759,11 +759,32 @@ const pretrainCommand: Command = {
       description: 'Skip cached analysis',
       type: 'boolean',
       default: false
+    },
+    {
+      name: 'with-embeddings',
+      description: 'Index documents for semantic search during pretraining',
+      type: 'boolean',
+      default: true
+    },
+    {
+      name: 'embedding-model',
+      description: 'ONNX embedding model',
+      type: 'string',
+      default: 'all-MiniLM-L6-v2',
+      choices: ['all-MiniLM-L6-v2', 'all-mpnet-base-v2']
+    },
+    {
+      name: 'file-types',
+      description: 'File extensions to index (comma-separated)',
+      type: 'string',
+      default: 'ts,js,py,md,json'
     }
   ],
   examples: [
-    { command: 'claude-flow hooks pretrain', description: 'Pretrain from current repository' },
-    { command: 'claude-flow hooks pretrain -p ../my-project --depth deep', description: 'Deep analysis of specific project' }
+    { command: 'claude-flow hooks pretrain', description: 'Pretrain with embeddings indexing' },
+    { command: 'claude-flow hooks pretrain -p ../my-project --depth deep', description: 'Deep analysis of specific project' },
+    { command: 'claude-flow hooks pretrain --no-with-embeddings', description: 'Skip embedding indexing' },
+    { command: 'claude-flow hooks pretrain --file-types ts,tsx,js', description: 'Index only TypeScript/JS files' }
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     const path = ctx.flags.path as string || '.';
