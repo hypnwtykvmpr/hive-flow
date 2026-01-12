@@ -102,7 +102,7 @@ export interface AIDefence {
   searchSimilarThreats(
     query: string,
     options?: { k?: number; minSimilarity?: number }
-  ): Promise<import('./domain/services/threat-learning-service.js').LearnedThreatPattern[]>;
+  ): Promise<LearnedThreatPattern[]>;
 
   /**
    * Learn from a detection result (ReasoningBank pattern)
