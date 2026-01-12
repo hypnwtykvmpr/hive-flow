@@ -280,6 +280,12 @@ export {
   createMultiModelRouter,
 } from './multi-model-router.js';
 
+// ===== Token Optimizer (Agent Booster Integration) =====
+export {
+  TokenOptimizer,
+  getTokenOptimizer,
+} from './token-optimizer.js';
+
 export type {
   ProviderType as RouterProviderType,
   ModelConfig,
