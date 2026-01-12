@@ -425,6 +425,23 @@ const wizardCommand: Command = {
       });
       options.runtime.enableNeural = enableNeural;
 
+      // Embeddings configuration
+      const enableEmbeddings = await confirm({
+        message: 'Enable ONNX embedding system with hyperbolic support?',
+        default: true,
+      });
+
+      let embeddingModel = 'all-MiniLM-L6-v2';
+      if (enableEmbeddings) {
+        embeddingModel = await select({
+          message: 'Select embedding model:',
+          options: [
+            { value: 'all-MiniLM-L6-v2', label: 'MiniLM L6 (384d)', hint: 'Fast, good quality (recommended)' },
+            { value: 'all-mpnet-base-v2', label: 'MPNet Base (768d)', hint: 'Higher quality, more memory' },
+          ],
+        });
+      }
+
       // Execute initialization
       output.writeln();
       const spinner = output.createSpinner({ text: 'Initializing...' });
