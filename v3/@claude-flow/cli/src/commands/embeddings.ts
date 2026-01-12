@@ -1040,6 +1040,7 @@ export const embeddingsCommand: Command = {
     output.writeln();
     output.writeln('Core Commands:');
     output.printList([
+      'init        - Initialize ONNX models and hyperbolic config',
       'generate    - Generate embeddings for text',
       'search      - Semantic similarity search',
       'compare     - Compare similarity between texts',
