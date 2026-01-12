@@ -185,6 +185,7 @@ export const commands: Command[] = [
   hooksCommand,
   daemonCommand,
   doctorCommand,
+  embeddingsCommand,
 ];
 
 /**
