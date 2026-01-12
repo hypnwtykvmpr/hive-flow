@@ -125,6 +125,7 @@ loadedCommands.set('mcp', mcpCommand);
 loadedCommands.set('hooks', hooksCommand);
 loadedCommands.set('daemon', daemonCommand);
 loadedCommands.set('doctor', doctorCommand);
+loadedCommands.set('embeddings', embeddingsCommand);
 
 // =============================================================================
 // Exports (maintain backwards compatibility)
