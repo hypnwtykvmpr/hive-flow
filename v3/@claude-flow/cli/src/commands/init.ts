@@ -674,6 +674,8 @@ export const initCommand: Command = {
     { command: 'claude-flow init --only-claude', description: 'Only create Claude Code integration' },
     { command: 'claude-flow init --skip-claude', description: 'Only create V3 runtime' },
     { command: 'claude-flow init wizard', description: 'Interactive setup wizard' },
+    { command: 'claude-flow init --with-embeddings', description: 'Initialize with ONNX embeddings' },
+    { command: 'claude-flow init --with-embeddings --embedding-model all-mpnet-base-v2', description: 'Use larger embedding model' },
     { command: 'claude-flow init skills --all', description: 'Install all available skills' },
     { command: 'claude-flow init hooks --minimal', description: 'Create minimal hooks configuration' },
   ],
