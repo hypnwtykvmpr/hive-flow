@@ -426,6 +426,15 @@ export const MINIMAL_INIT_OPTIONS: InitOptions = {
     enableHNSW: false,
     enableNeural: false,
   },
+  embeddings: {
+    enabled: false,
+    model: 'all-MiniLM-L6-v2',
+    hyperbolic: false,
+    curvature: -1.0,
+    predownload: false,
+    cacheSize: 128,
+    neuralSubstrate: false,
+  },
 };
 
 /**
