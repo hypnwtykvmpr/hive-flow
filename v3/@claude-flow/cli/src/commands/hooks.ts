@@ -3546,7 +3546,6 @@ const tokenOptimizeCommand: Command = {
       cacheMisses: 0,
       memoriesRetrieved: 0,
     };
-    const localCache = new Map<string, { data: unknown; timestamp: number }>();
     let agenticFlowAvailable = false;
     let reasoningBank: { retrieveMemories?: (q: string, opts: unknown) => Promise<unknown[]>; formatMemoriesForPrompt?: (m: unknown[]) => string } | null = null;
 
