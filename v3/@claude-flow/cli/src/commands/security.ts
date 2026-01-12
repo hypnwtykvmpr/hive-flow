@@ -431,6 +431,7 @@ export const securityCommand: Command = {
       'threats  - Threat modeling (STRIDE, DREAD, PASTA)',
       'audit    - Security audit logging and compliance',
       'secrets  - Detect and manage secrets in codebase',
+      'defend   - AI manipulation defense (prompt injection, jailbreaks, PII)',
     ]);
     output.writeln();
     output.writeln('Use --help with subcommands for more info');
