@@ -236,6 +236,82 @@ async function checkBuildTools(): Promise<HealthCheck> {
   }
 }
 
+// Check for stale npx cache (version freshness)
+async function checkVersionFreshness(): Promise<HealthCheck> {
+  try {
+    // Get current CLI version
+    const packageJsonPath = new URL('../package.json', import.meta.url).pathname;
+    let currentVersion = '0.0.0';
+
+    try {
+      const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8'));
+      currentVersion = packageJson.version || '0.0.0';
+    } catch {
+      // Try alternative approach - check if we can get version from module
+      try {
+        currentVersion = await runCommand('npx @claude-flow/cli@latest --version 2>/dev/null | head -1', 3000);
+        currentVersion = currentVersion.replace(/[^0-9.-]/g, '').trim() || '0.0.0';
+      } catch {
+        currentVersion = '0.0.0';
+      }
+    }
+
+    // Check if running via npx (look for _npx in process path or argv)
+    const isNpx = process.argv[1]?.includes('_npx') ||
+                  process.env.npm_execpath?.includes('npx') ||
+                  process.cwd().includes('_npx');
+
+    // Query npm for latest version
+    let latestVersion = currentVersion;
+    try {
+      const npmInfo = await runCommand('npm view @claude-flow/cli version 2>/dev/null', 5000);
+      latestVersion = npmInfo.trim();
+    } catch {
+      // Can't reach npm registry - skip check
+      return {
+        name: 'Version Freshness',
+        status: 'warn',
+        message: `v${currentVersion} (cannot check registry)`
+      };
+    }
+
+    // Compare versions
+    const current = currentVersion.split('-')[0].split('.').map(n => parseInt(n, 10) || 0);
+    const latest = latestVersion.split('-')[0].split('.').map(n => parseInt(n, 10) || 0);
+
+    const isOutdated = (
+      latest[0] > current[0] ||
+      (latest[0] === current[0] && latest[1] > current[1]) ||
+      (latest[0] === current[0] && latest[1] === current[1] && latest[2] > current[2])
+    );
+
+    if (isOutdated) {
+      const fix = isNpx
+        ? 'rm -rf ~/.npm/_npx/* && npx -y @claude-flow/cli@latest'
+        : 'npm update @claude-flow/cli';
+
+      return {
+        name: 'Version Freshness',
+        status: 'warn',
+        message: `v${currentVersion} (latest: v${latestVersion})${isNpx ? ' [npx cache stale]' : ''}`,
+        fix
+      };
+    }
+
+    return {
+      name: 'Version Freshness',
+      status: 'pass',
+      message: `v${currentVersion} (up to date)`
+    };
+  } catch (error) {
+    return {
+      name: 'Version Freshness',
+      status: 'warn',
+      message: 'Unable to check version freshness'
+    };
+  }
+}
+
 // Check Claude Code CLI (async with proper env inheritance)
 async function checkClaudeCode(): Promise<HealthCheck> {
   try {
