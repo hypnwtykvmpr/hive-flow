@@ -268,17 +268,20 @@ const cveCommand: Command = {
         `  - https://github.com/advisories`,
       ].join('\n'), 'CVE Details');
     } else {
+      output.writeln(output.warning('⚠ No real CVE database configured. Showing example data.'));
+      output.writeln(output.dim('Run "npm audit" or "claude-flow security scan" for real vulnerability detection.'));
+      output.writeln();
       output.printTable({
         columns: [
-          { key: 'id', header: 'CVE ID', width: 18 },
+          { key: 'id', header: 'CVE ID (Example)', width: 22 },
           { key: 'severity', header: 'Severity', width: 12 },
           { key: 'package', header: 'Package', width: 20 },
           { key: 'status', header: 'Status', width: 15 },
         ],
         data: [
-          { id: 'CVE-2024-1234', severity: output.error('CRITICAL'), package: 'lodash@4.17.20', status: output.warning('Unfixed') },
-          { id: 'CVE-2024-5678', severity: output.warning('HIGH'), package: 'axios@0.21.0', status: output.success('Fixed') },
-          { id: 'CVE-2024-9012', severity: output.info('MEDIUM'), package: 'express@4.17.0', status: output.success('Fixed') },
+          { id: 'CVE-YYYY-NNNN', severity: output.error('CRITICAL'), package: 'example-pkg@1.0.0', status: output.warning('Example') },
+          { id: 'CVE-YYYY-NNNN', severity: output.warning('HIGH'), package: 'example-pkg@2.0.0', status: output.success('Example') },
+          { id: 'CVE-YYYY-NNNN', severity: output.info('MEDIUM'), package: 'example-pkg@3.0.0', status: output.success('Example') },
         ],
       });
     }
