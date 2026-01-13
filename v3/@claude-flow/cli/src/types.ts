@@ -101,7 +101,7 @@ export interface ProviderConfig {
 }
 
 export interface SwarmConfig {
-  topology: 'hierarchical' | 'mesh' | 'ring' | 'star' | 'hybrid';
+  topology: 'hierarchical' | 'mesh' | 'ring' | 'star' | 'hybrid' | 'hierarchical-mesh';
   maxAgents: number;
   autoScale: boolean;
   coordinationStrategy: 'consensus' | 'leader' | 'distributed';
