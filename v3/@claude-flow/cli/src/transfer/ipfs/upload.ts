@@ -253,10 +253,13 @@ export async function uploadToIPFS(
     }
   }
 
-  // Fall back to demo mode
-  console.log(`[IPFS] No IPFS credentials found, using demo mode`);
-  console.log(`[IPFS] Set WEB3_STORAGE_TOKEN or PINATA_API_KEY for real uploads`);
-  console.log(`[IPFS] Get free token at: https://web3.storage`);
+  // Fall back to demo mode - WARN user prominently
+  console.warn(`⚠ [IPFS] DEMO MODE - No IPFS credentials configured`);
+  console.warn(`⚠ [IPFS] Content will NOT be uploaded to decentralized storage`);
+  console.warn(`⚠ [IPFS] To enable real uploads, configure one of:`);
+  console.warn(`⚠ [IPFS]   - IPFS_API_URL=http://YOUR_NODE:5001 (FREE - your own node)`);
+  console.warn(`⚠ [IPFS]   - WEB3_STORAGE_TOKEN (free 5GB at web3.storage)`);
+  console.warn(`⚠ [IPFS]   - PINATA_API_KEY + PINATA_SECRET_KEY (free tier available)`);
 
   const cid = generateDemoCID(content);
   const size = content.length;
