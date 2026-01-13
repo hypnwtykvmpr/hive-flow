@@ -134,16 +134,14 @@ Examples:
 async function runWorker(workerType: HeadlessWorkerType, timeout: number): Promise<void> {
   console.log(`[Headless] Starting worker: ${workerType}`);
 
-  const executor = new HeadlessWorkerExecutor({
+  const executor = new HeadlessWorkerExecutor(process.cwd(), {
     maxConcurrent: 1,
-    defaultTimeout: timeout,
-    workingDirectory: process.cwd(),
-    sandboxMode: 'permissive'
+    defaultTimeoutMs: timeout
   });
 
   try {
     const result = await executor.execute(workerType, {
-      timeout,
+      timeoutMs: timeout,
       model: 'sonnet',
       sandbox: 'permissive'
     });
@@ -159,7 +157,7 @@ async function runWorker(workerType: HeadlessWorkerType, timeout: number): Promi
       process.exit(1);
     }
   } finally {
-    await executor.shutdown();
+    // executor doesn't have shutdown, just let it be garbage collected
   }
 }
 
