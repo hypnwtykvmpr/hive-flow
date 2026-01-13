@@ -24,6 +24,16 @@ import { analyzeTools } from './mcp-tools/analyze-tools.js';
 import { progressTools } from './mcp-tools/progress-tools.js';
 import { embeddingsTools } from './mcp-tools/embeddings-tools.js';
 import { claimsTools } from './mcp-tools/claims-tools.js';
+import { securityTools } from './mcp-tools/security-tools.js';
+import { transferTools } from './mcp-tools/transfer-tools.js';
+// V2 Compatibility tools
+import { systemTools } from './mcp-tools/system-tools.js';
+import { terminalTools } from './mcp-tools/terminal-tools.js';
+import { neuralTools } from './mcp-tools/neural-tools.js';
+import { performanceTools } from './mcp-tools/performance-tools.js';
+import { githubTools } from './mcp-tools/github-tools.js';
+import { daaTools } from './mcp-tools/daa-tools.js';
+import { coordinationTools } from './mcp-tools/coordination-tools.js';
 
 /**
  * MCP Tool Registry
