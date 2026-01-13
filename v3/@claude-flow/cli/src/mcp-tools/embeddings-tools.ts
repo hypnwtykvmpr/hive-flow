@@ -457,7 +457,8 @@ export const embeddingsTools: MCPTool[] = [
       // Try to search using real memory search
       try {
         const { searchEntries } = await import('../memory/memory-initializer.js');
-        const searchResults = await searchEntries(query, {
+        const searchResult = await searchEntries({
+          query,
           limit: topK,
           threshold,
           namespace: namespace || 'default'
@@ -468,10 +469,10 @@ export const embeddingsTools: MCPTool[] = [
         return {
           success: true,
           query,
-          results: searchResults.map((r: { key: string; content: string; similarity: number; namespace: string }) => ({
+          results: searchResult.results.map((r) => ({
             key: r.key,
             content: r.content?.substring(0, 100),
-            similarity: r.similarity,
+            similarity: r.score,
             namespace: r.namespace
           })),
           metadata: {
@@ -481,7 +482,7 @@ export const embeddingsTools: MCPTool[] = [
             namespace: namespace || 'default',
             searchTime: `${searchTime}ms`,
             indexType: config.hyperbolic.enabled ? 'HNSW (hyperbolic)' : 'HNSW (euclidean)',
-            resultCount: searchResults.length
+            resultCount: searchResult.results.length
           },
         };
       } catch {
