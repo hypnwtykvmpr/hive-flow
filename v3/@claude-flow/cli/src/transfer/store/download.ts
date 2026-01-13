@@ -151,41 +151,121 @@ export class PatternDownloader {
   }
 
   /**
-   * Fetch content from IPFS gateway
+   * Fetch content from IPFS gateway or GCS
    */
   private async fetchFromIPFS(
     cid: string,
     onProgress?: DownloadProgressCallback
   ): Promise<Buffer | null> {
+    // Check if this is a GCS URI
+    if (cid.startsWith('gs://')) {
+      return this.fetchFromGCS(cid, onProgress);
+    }
+
     const url = `${this.config.gateway}/ipfs/${cid}`;
     console.log(`[Download] Fetching: ${url}`);
 
     try {
-      // In production: Actual HTTP fetch with progress
-      // For demo: Generate mock content
-      const mockContent = this.generateMockContent(cid);
+      // Real HTTP fetch with progress
+      const response = await fetch(url);
 
-      // Simulate progress
-      if (onProgress) {
-        const totalBytes = mockContent.length;
+      if (!response.ok) {
+        console.error(`[Download] HTTP ${response.status}: ${response.statusText}`);
+        return null;
+      }
+
+      const contentLength = parseInt(response.headers.get('content-length') || '0', 10);
+
+      // Stream the response for progress tracking
+      if (response.body && onProgress && contentLength > 0) {
+        const reader = response.body.getReader();
+        const chunks: Uint8Array[] = [];
         let downloaded = 0;
-        const chunkSize = Math.ceil(totalBytes / 10);
 
-        for (let i = 0; i < 10; i++) {
-          downloaded = Math.min(downloaded + chunkSize, totalBytes);
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          chunks.push(value);
+          downloaded += value.length;
           onProgress({
             bytesDownloaded: downloaded,
-            totalBytes,
-            percentage: Math.round((downloaded / totalBytes) * 100),
+            totalBytes: contentLength,
+            percentage: Math.round((downloaded / contentLength) * 100),
           });
-          // Small delay to simulate network
-          await new Promise(resolve => setTimeout(resolve, 50));
+        }
+
+        const buffer = Buffer.concat(chunks.map(c => Buffer.from(c)));
+        console.log(`[Download] Downloaded ${buffer.length} bytes from IPFS gateway`);
+        return buffer;
+      }
+
+      // Fallback for responses without content-length or progress
+      const arrayBuffer = await response.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      console.log(`[Download] Downloaded ${buffer.length} bytes from IPFS gateway`);
+      return buffer;
+    } catch (error) {
+      console.error(`[Download] Fetch failed:`, error);
+
+      // Try alternative gateways
+      const alternativeGateways = [
+        'https://ipfs.io',
+        'https://cloudflare-ipfs.com',
+        'https://dweb.link',
+        'https://gateway.pinata.cloud',
+      ];
+
+      for (const gateway of alternativeGateways) {
+        if (gateway === this.config.gateway) continue;
+        try {
+          console.log(`[Download] Trying alternative gateway: ${gateway}`);
+          const altResponse = await fetch(`${gateway}/ipfs/${cid}`);
+          if (altResponse.ok) {
+            const arrayBuffer = await altResponse.arrayBuffer();
+            const buffer = Buffer.from(arrayBuffer);
+            console.log(`[Download] Downloaded ${buffer.length} bytes from ${gateway}`);
+            return buffer;
+          }
+        } catch {
+          // Continue to next gateway
         }
       }
 
-      return mockContent;
+      return null;
+    }
+  }
+
+  /**
+   * Fetch content from Google Cloud Storage
+   */
+  private async fetchFromGCS(
+    uri: string,
+    onProgress?: DownloadProgressCallback
+  ): Promise<Buffer | null> {
+    console.log(`[Download] Fetching from GCS: ${uri}`);
+
+    try {
+      const { downloadFromGCS, hasGCSCredentials } = await import('../storage/gcs.js');
+
+      if (!hasGCSCredentials()) {
+        console.error(`[Download] GCS not configured`);
+        return null;
+      }
+
+      const buffer = await downloadFromGCS(uri);
+
+      if (buffer && onProgress) {
+        onProgress({
+          bytesDownloaded: buffer.length,
+          totalBytes: buffer.length,
+          percentage: 100,
+        });
+      }
+
+      return buffer;
     } catch (error) {
-      console.error(`[Download] Fetch failed:`, error);
+      console.error(`[Download] GCS fetch failed:`, error);
       return null;
     }
   }
