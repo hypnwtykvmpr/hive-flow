@@ -702,9 +702,13 @@ export function generateMinimalClaudeMd(options: InitOptions): string {
 
 ## Anti-Drift Config (PREFERRED)
 \`\`\`bash
+# Small teams (6-8 agents)
 npx @claude-flow/cli@latest swarm init --topology hierarchical --max-agents 8 --strategy specialized
+
+# Large teams (10-15 agents)
+npx @claude-flow/cli@latest swarm init --topology hierarchical-mesh --max-agents 15 --strategy specialized
 \`\`\`
-- hierarchical + specialized + 6-8 agents + raft consensus
+**Valid topologies:** hierarchical, hierarchical-mesh, mesh, ring, star, hybrid
 
 ## Quick Reference
 
