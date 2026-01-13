@@ -107,7 +107,7 @@ export const coordinationTools: MCPTool[] = [
       type: 'object',
       properties: {
         action: { type: 'string', enum: ['get', 'set', 'optimize'], description: 'Action to perform' },
-        type: { type: 'string', enum: ['mesh', 'hierarchical', 'ring', 'star', 'hybrid'], description: 'Topology type' },
+        type: { type: 'string', enum: ['mesh', 'hierarchical', 'ring', 'star', 'hybrid', 'hierarchical-mesh'], description: 'Topology type' },
         maxNodes: { type: 'number', description: 'Maximum nodes' },
         redundancy: { type: 'number', description: 'Redundancy level' },
         consensusAlgorithm: { type: 'string', enum: ['raft', 'byzantine', 'gossip', 'crdt'], description: 'Consensus algorithm' },
