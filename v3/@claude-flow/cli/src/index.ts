@@ -492,6 +492,7 @@ export {
   getSonaCoordinator,
   getReasoningBank,
   clearIntelligence,
+  benchmarkAdaptation,
   type SonaConfig,
   type TrajectoryStep,
   type Pattern,
