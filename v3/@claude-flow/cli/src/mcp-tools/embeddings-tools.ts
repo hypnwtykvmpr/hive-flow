@@ -357,8 +357,11 @@ export const embeddingsTools: MCPTool[] = [
       const text2 = input.text2 as string;
       const metric = (input.metric as string) || 'cosine';
 
-      const emb1 = generateMockEmbedding(text1, config.dimension);
-      const emb2 = generateMockEmbedding(text2, config.dimension);
+      // Generate real ONNX embeddings for both texts
+      const [emb1, emb2] = await Promise.all([
+        generateRealEmbedding(text1, config.dimension),
+        generateRealEmbedding(text2, config.dimension)
+      ]);
 
       let similarity: number;
       let distance: number;
