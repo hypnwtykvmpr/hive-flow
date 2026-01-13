@@ -154,14 +154,15 @@ export function v3ConfigToSystemConfig(v3Config: V3Config): Partial<SystemConfig
  */
 function normalizeTopology(
   topology: string | undefined
-): 'hierarchical' | 'mesh' | 'ring' | 'star' | 'hybrid' {
+): 'hierarchical' | 'mesh' | 'ring' | 'star' | 'hybrid' | 'hierarchical-mesh' {
   switch (topology) {
     case 'hierarchical':
     case 'mesh':
     case 'ring':
     case 'star':
-      return topology;
+    case 'hybrid':
     case 'hierarchical-mesh':
+      return topology;
     case 'adaptive':
       return 'hybrid';
     default:
@@ -173,7 +174,7 @@ function normalizeTopology(
  * Denormalize topology from V3Config to SystemConfig
  */
 function denormalizeTopology(
-  topology: 'hierarchical' | 'mesh' | 'ring' | 'star' | 'hybrid'
+  topology: 'hierarchical' | 'mesh' | 'ring' | 'star' | 'hybrid' | 'hierarchical-mesh'
 ): 'hierarchical' | 'mesh' | 'ring' | 'star' | 'adaptive' | 'hierarchical-mesh' {
   if (topology === 'hybrid') {
     return 'hierarchical-mesh';
