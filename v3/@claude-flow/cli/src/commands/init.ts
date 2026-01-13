@@ -639,7 +639,6 @@ const hooksCommand: Command = {
             sessionStart: false,
             stop: false,
             notification: false,
-            permissionRequest: true,
             timeout: 5000,
             continueOnError: true,
           }
