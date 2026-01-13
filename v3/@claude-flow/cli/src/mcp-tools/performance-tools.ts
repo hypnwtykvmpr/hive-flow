@@ -142,9 +142,11 @@ export const performanceTools: MCPTool[] = [
 
       if (format === 'summary') {
         return {
+          _real: true,
           status: 'healthy',
           cpu: `${currentMetrics.cpu.usage.toFixed(1)}%`,
           memory: `${currentMetrics.memory.used}MB / ${currentMetrics.memory.total}MB`,
+          heap: `${currentMetrics.memory.heap}MB`,
           latency: `${currentMetrics.latency.avg.toFixed(0)}ms avg`,
           throughput: `${currentMetrics.throughput.operations} ops/s`,
           errorRate: `${(currentMetrics.errors.rate * 100).toFixed(2)}%`,
