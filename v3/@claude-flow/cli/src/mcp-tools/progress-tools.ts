@@ -11,11 +11,13 @@ import { existsSync, readdirSync, readFileSync, writeFileSync, mkdirSync, statSy
 import { join, basename, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
-// Get project root
+// Get project root - handles both src and dist paths
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const PROJECT_ROOT = join(__dirname, '../../../../..');
-const V3_DIR = join(PROJECT_ROOT, 'v3');
+// From dist/src/mcp-tools or src/mcp-tools, go up to @claude-flow/cli, then to @claude-flow, then to v3
+const CLI_ROOT = join(__dirname, '../../..');
+const V3_DIR = existsSync(join(CLI_ROOT, '..', 'memory')) ? join(CLI_ROOT, '..') : join(CLI_ROOT, '../..');
+const PROJECT_ROOT = join(V3_DIR, '..');
 
 // Utility/service packages follow DDD differently - their services ARE the application layer
 const UTILITY_PACKAGES = new Set([
