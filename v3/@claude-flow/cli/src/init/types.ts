@@ -32,6 +32,8 @@ export interface InitComponents {
 
 /**
  * Hook configuration options
+ * Valid hook types: PreToolUse, PostToolUse, Notification, UserPromptSubmit,
+ * SessionStart, SessionEnd, Stop, SubagentStop, PreCompact
  */
 export interface HooksConfig {
   /** Enable PreToolUse hooks */
@@ -46,8 +48,6 @@ export interface HooksConfig {
   stop: boolean;
   /** Enable Notification hooks */
   notification: boolean;
-  /** Enable PermissionRequest auto-allow for claude-flow */
-  permissionRequest: boolean;
   /** Hook timeout in milliseconds */
   timeout: number;
   /** Continue on hook error */
