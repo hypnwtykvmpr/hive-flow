@@ -2,6 +2,11 @@
  * Performance MCP Tools for CLI
  *
  * V2 Compatibility - Performance monitoring and optimization tools
+ *
+ * ⚠️ IMPORTANT: Most metrics are ILLUSTRATIVE.
+ * - Some real process metrics via process.memoryUsage()
+ * - Benchmarks are simulated for demonstration
+ * - For production profiling, use real profiling tools
  */
 
 import type { MCPTool } from './types.js';
