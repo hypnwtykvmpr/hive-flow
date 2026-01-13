@@ -570,48 +570,88 @@ export const embeddingsTools: MCPTool[] = [
           };
 
         case 'drift':
-          return {
-            success: true,
-            action: 'drift',
-            status: {
-              semanticDrift: {
-                enabled: config.neural.features?.semanticDrift ?? false,
-                threshold: config.neural.driftThreshold,
-                currentDrift: 0.12,
-                status: 'stable',
+          // Get real drift metrics if available
+          try {
+            const { getIntelligenceStats } = await import('../memory/intelligence.js');
+            const stats = getIntelligenceStats();
+            return {
+              success: true,
+              action: 'drift',
+              status: {
+                semanticDrift: {
+                  enabled: config.neural.features?.semanticDrift ?? false,
+                  threshold: config.neural.driftThreshold,
+                  patternsTracked: stats.patternsLearned,
+                  status: stats.patternsLearned > 0 ? 'tracking' : 'no patterns',
+                },
               },
-            },
-            message: 'Semantic drift within acceptable bounds',
-          };
+              message: stats.patternsLearned > 0
+                ? `Tracking ${stats.patternsLearned} patterns for drift`
+                : 'No patterns stored yet - drift detection inactive',
+            };
+          } catch {
+            return {
+              success: true,
+              action: 'drift',
+              status: { semanticDrift: { enabled: false, reason: 'Intelligence module unavailable' } },
+            };
+          }
 
         case 'consolidate':
-          return {
-            success: true,
-            action: 'consolidate',
-            status: {
-              memoryPhysics: {
-                enabled: config.neural.features?.memoryPhysics ?? false,
-                decayRate: config.neural.decayRate,
-                consolidatedPatterns: 0,
-                prunedPatterns: 0,
+          // Get real consolidation metrics
+          try {
+            const { getIntelligenceStats } = await import('../memory/intelligence.js');
+            const stats = getIntelligenceStats();
+            return {
+              success: true,
+              action: 'consolidate',
+              status: {
+                memoryPhysics: {
+                  enabled: config.neural.features?.memoryPhysics ?? false,
+                  decayRate: config.neural.decayRate,
+                  patternsStored: stats.reasoningBankSize,
+                  trajectoriesRecorded: stats.trajectoriesRecorded,
+                },
               },
-            },
-            message: 'Memory consolidation completed',
-          };
+              message: `ReasoningBank: ${stats.reasoningBankSize} patterns, ${stats.trajectoriesRecorded} trajectories`,
+            };
+          } catch {
+            return {
+              success: true,
+              action: 'consolidate',
+              status: { memoryPhysics: { enabled: false, reason: 'Intelligence module unavailable' } },
+            };
+          }
 
         case 'adapt':
-          return {
-            success: true,
-            action: 'adapt',
-            status: {
-              sona: {
-                enabled: config.neural.ruvector?.sona ?? false,
-                adaptationTime: '0.042ms',
-                currentMode: 'balanced',
+          // Get real SONA adaptation metrics
+          try {
+            const { benchmarkAdaptation, initializeIntelligence } = await import('../memory/intelligence.js');
+            await initializeIntelligence();
+            const benchmark = benchmarkAdaptation(100);
+            return {
+              success: true,
+              action: 'adapt',
+              status: {
+                sona: {
+                  enabled: true,
+                  adaptationTime: `${(benchmark.avgMs * 1000).toFixed(2)}μs`,
+                  targetMet: benchmark.targetMet,
+                  minTime: `${(benchmark.minMs * 1000).toFixed(2)}μs`,
+                  maxTime: `${(benchmark.maxMs * 1000).toFixed(2)}μs`,
+                },
               },
-            },
-            message: 'SONA adaptation cycle completed',
-          };
+              message: benchmark.targetMet
+                ? `SONA adaptation: ${(benchmark.avgMs * 1000).toFixed(2)}μs (target <50μs met)`
+                : `SONA adaptation: ${(benchmark.avgMs * 1000).toFixed(2)}μs (target not met)`,
+            };
+          } catch {
+            return {
+              success: true,
+              action: 'adapt',
+              status: { sona: { enabled: false, reason: 'Intelligence module unavailable' } },
+            };
+          }
 
         default: // status
           return {
