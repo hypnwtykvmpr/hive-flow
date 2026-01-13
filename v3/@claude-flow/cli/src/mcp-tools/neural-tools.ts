@@ -96,9 +96,50 @@ function saveNeuralStore(store: NeuralStore): void {
   writeFileSync(getNeuralPath(), JSON.stringify(store, null, 2), 'utf-8');
 }
 
-// Generate random embedding for demo
-function generateEmbedding(dims: number = 384): number[] {
+// Generate embedding - uses real embeddings if available, falls back to hash-based
+async function generateEmbedding(text?: string, dims: number = 384): Promise<number[]> {
+  // If real embeddings available and text provided, use them
+  if (realEmbeddings && text) {
+    try {
+      return await realEmbeddings.embed(text);
+    } catch {
+      // Fall back to hash-based
+    }
+  }
+
+  // Hash-based deterministic embedding (better than pure random for consistency)
+  if (text) {
+    const hash = text.split('').reduce((acc, char, i) => {
+      return acc + char.charCodeAt(0) * (i + 1);
+    }, 0);
+
+    // Use hash to seed a deterministic embedding
+    const embedding: number[] = [];
+    let seed = hash;
+    for (let i = 0; i < dims; i++) {
+      // Simple LCG random with seed
+      seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+      embedding.push((seed / 0x7fffffff) * 2 - 1);
+    }
+    return embedding;
+  }
+
+  // Pure random fallback
   return Array.from({ length: dims }, () => Math.random() * 2 - 1);
+}
+
+// Cosine similarity for pattern search
+function cosineSimilarity(a: number[], b: number[]): number {
+  if (a.length !== b.length) return 0;
+  let dotProduct = 0;
+  let normA = 0;
+  let normB = 0;
+  for (let i = 0; i < a.length; i++) {
+    dotProduct += a[i] * b[i];
+    normA += a[i] * a[i];
+    normB += b[i] * b[i];
+  }
+  return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB) || 1);
 }
 
 export const neuralTools: MCPTool[] = [
