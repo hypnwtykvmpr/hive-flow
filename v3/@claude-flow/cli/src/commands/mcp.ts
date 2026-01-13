@@ -107,6 +107,7 @@ const startCommand: Command = {
     const transport = ctx.flags.transport as 'stdio' | 'http' | 'websocket';
     const tools = (ctx.flags.tools as string) || 'all';
     const daemon = ctx.flags.daemon as boolean;
+    const force = ctx.flags.force as boolean;
 
     output.writeln();
     output.printInfo('Starting MCP Server...');
@@ -115,20 +116,26 @@ const startCommand: Command = {
     // Check if already running
     const existingStatus = await getMCPServerStatus();
     if (existingStatus.running) {
-      // Verify the server is actually healthy/responsive
-      const manager = getServerManager();
-      const health = await manager.checkHealth();
+      // For stdio transport, always force restart since we can't health check it
+      // For other transports, check health unless --force is specified
+      const shouldForceRestart = force || transport === 'stdio';
 
-      if (health.healthy) {
-        output.printWarning(`MCP Server already running (PID: ${existingStatus.pid})`);
-        output.writeln(output.dim('Use "claude-flow mcp stop" to stop the server first'));
-        return { success: false, exitCode: 1 };
+      if (!shouldForceRestart) {
+        // Verify the server is actually healthy/responsive
+        const manager = getServerManager();
+        const health = await manager.checkHealth();
+
+        if (health.healthy) {
+          output.printWarning(`MCP Server already running (PID: ${existingStatus.pid})`);
+          output.writeln(output.dim('Use "claude-flow mcp stop" to stop the server first, or use --force'));
+          return { success: false, exitCode: 1 };
+        }
       }
 
-      // Server exists but is unresponsive - auto-recover
-      output.printWarning(`MCP Server (PID: ${existingStatus.pid}) is unresponsive - auto-recovering...`);
+      // Force restart or unresponsive - auto-recover
+      output.printWarning(`MCP Server (PID: ${existingStatus.pid}) - restarting...`);
       try {
-        // Force kill the stale process
+        // Force kill the existing process
         if (existingStatus.pid) {
           try {
             process.kill(existingStatus.pid, 'SIGKILL');
@@ -136,8 +143,9 @@ const startCommand: Command = {
             // Process may already be dead
           }
         }
+        const manager = getServerManager();
         await manager.stop();
-        output.writeln(output.dim('  Cleaned up stale server'));
+        output.writeln(output.dim('  Cleaned up existing server'));
       } catch {
         // Continue anyway - the stop/cleanup may partially fail
       }
