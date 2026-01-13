@@ -361,53 +361,7 @@ export class PatternDownloader {
     }
   }
 
-  /**
-   * Generate mock content for demo
-   */
-  private generateMockContent(cid: string): Buffer {
-    const mockCFP: CFPFormat = {
-      magic: 'CFP1',
-      version: '1.0.0',
-      createdAt: new Date().toISOString(),
-      generatedBy: 'claude-flow@3.0.0',
-      metadata: {
-        id: cid,
-        name: 'downloaded-pattern',
-        description: 'A downloaded pattern from IPFS',
-        author: { id: 'unknown', verified: false },
-        license: 'MIT',
-        tags: ['downloaded'],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-      anonymization: {
-        level: 'standard',
-        appliedTransforms: [],
-        piiRedacted: false,
-        pathsStripped: false,
-        timestampsGeneralized: false,
-        checksum: crypto.createHash('sha256').update(cid).digest('hex'),
-      },
-      patterns: {
-        routing: [],
-        complexity: [],
-        coverage: [],
-        trajectory: [],
-        custom: [],
-      },
-      statistics: {
-        totalPatterns: 0,
-        avgConfidence: 0,
-        patternTypes: {},
-        timeRange: {
-          start: new Date().toISOString(),
-          end: new Date().toISOString(),
-        },
-      },
-    };
-
-    return Buffer.from(JSON.stringify(mockCFP, null, 2));
-  }
+  // NOTE: generateMockContent removed - using real HTTP fetch from IPFS gateways or GCS
 
   /**
    * Clear download cache
