@@ -267,5 +267,4 @@ export function Retryable(
   };
 }
 
-export { RetryStrategy };
 export default withRetry;
