@@ -255,6 +255,26 @@ async function checkVersionFreshness(): Promise<HealthCheck> {
         join(process.cwd(), 'node_modules/@claude-flow/cli/package.json')
       ];
 
+      // Also search in npx cache directories (Linux/macOS)
+      const homeDir = process.env.HOME || process.env.USERPROFILE || '';
+      if (homeDir) {
+        // Check common npx cache locations
+        try {
+          const npxCacheDir = join(homeDir, '.npm', '_npx');
+          if (existsSync(npxCacheDir)) {
+            const cacheEntries = require('fs').readdirSync(npxCacheDir);
+            for (const entry of cacheEntries) {
+              const npxPkgPath = join(npxCacheDir, entry, 'node_modules', '@claude-flow', 'cli', 'package.json');
+              if (existsSync(npxPkgPath)) {
+                possiblePaths.push(npxPkgPath);
+              }
+            }
+          }
+        } catch {
+          // Ignore errors scanning npx cache
+        }
+      }
+
       for (const pkgPath of possiblePaths) {
         try {
           if (existsSync(pkgPath)) {
