@@ -154,18 +154,36 @@ export const performanceTools: MCPTool[] = [
         };
       }
 
+      // Calculate trends from history
+      const history = store.metrics.slice(-10);
+      const cpuTrend = history.length >= 2
+        ? (history[history.length - 1].cpu.usage > history[0].cpu.usage ? 'increasing' : 'stable')
+        : 'stable';
+      const memTrend = history.length >= 2
+        ? (history[history.length - 1].memory.used > history[0].memory.used ? 'increasing' : 'stable')
+        : 'stable';
+
       return {
+        _real: true,
         current: currentMetrics,
-        history: store.metrics.slice(-10),
-        trends: {
-          cpu: 'stable',
-          memory: 'stable',
-          latency: 'improving',
+        history,
+        system: {
+          platform: process.platform,
+          arch: process.arch,
+          nodeVersion: process.version,
+          cpuModel: cpus[0]?.model,
+          loadAverage: loadAvg,
         },
-        recommendations: [
-          { priority: 'low', message: 'Consider enabling response caching' },
-          { priority: 'medium', message: 'Memory usage approaching 50% threshold' },
-        ],
+        trends: {
+          cpu: cpuTrend,
+          memory: memTrend,
+          latency: 'stable',
+        },
+        recommendations: currentMetrics.memory.used / currentMetrics.memory.total > 0.8
+          ? [{ priority: 'high', message: 'Memory usage above 80% - consider cleanup' }]
+          : currentMetrics.cpu.usage > 70
+            ? [{ priority: 'medium', message: 'CPU load elevated - check for resource-intensive processes' }]
+            : [{ priority: 'low', message: 'System running normally' }],
       };
     },
   },
