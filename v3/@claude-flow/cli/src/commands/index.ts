@@ -129,6 +129,9 @@ loadedCommands.set('hooks', hooksCommand);
 loadedCommands.set('daemon', daemonCommand);
 loadedCommands.set('doctor', doctorCommand);
 loadedCommands.set('embeddings', embeddingsCommand);
+loadedCommands.set('neural', neuralCommand);
+loadedCommands.set('performance', performanceCommand);
+loadedCommands.set('security', securityCommand);
 
 // =============================================================================
 // Exports (maintain backwards compatibility)
