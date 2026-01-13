@@ -298,11 +298,16 @@ export const neuralTools: MCPTool[] = [
 
       if (action === 'store') {
         const patternId = `pattern-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+        const patternName = (input.name as string) || 'Unnamed pattern';
+
+        // Generate embedding from pattern name/content
+        const embedding = await generateEmbedding(patternName, 384);
+
         const pattern: Pattern = {
           id: patternId,
-          name: (input.name as string) || 'Unnamed pattern',
+          name: patternName,
           type: (input.type as string) || 'general',
-          embedding: generateEmbedding(384),
+          embedding,
           metadata: (input.data as Record<string, unknown>) || {},
           createdAt: new Date().toISOString(),
           usageCount: 0,
@@ -313,25 +318,33 @@ export const neuralTools: MCPTool[] = [
 
         return {
           success: true,
+          _realEmbedding: !!realEmbeddings,
           patternId,
           name: pattern.name,
           type: pattern.type,
+          embeddingDims: embedding.length,
           createdAt: pattern.createdAt,
         };
       }
 
       if (action === 'search') {
         const query = input.query as string;
-        // Simulate semantic search with random scores
+
+        // Generate query embedding for real similarity search
+        const queryEmbedding = await generateEmbedding(query, 384);
+
+        // Calculate REAL cosine similarity against stored patterns
         const results = Object.values(store.patterns)
           .map(p => ({
             ...p,
-            similarity: 0.5 + Math.random() * 0.5,
+            similarity: cosineSimilarity(queryEmbedding, p.embedding),
           }))
           .sort((a, b) => b.similarity - a.similarity)
           .slice(0, 10);
 
         return {
+          _realSimilarity: true,
+          _realEmbedding: !!realEmbeddings,
           query,
           results: results.map(r => ({
             id: r.id,
