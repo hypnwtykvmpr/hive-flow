@@ -8,7 +8,7 @@
 import type { Command, CommandContext, CommandResult } from '../types.js';
 import { output } from '../output.js';
 
-// Train subcommand
+// Train subcommand - REAL training implementation
 const trainCommand: Command = {
   name: 'train',
   description: 'Train neural patterns with WASM SIMD acceleration',
@@ -28,32 +28,176 @@ const trainCommand: Command = {
     const patternType = ctx.flags.pattern as string || 'coordination';
     const epochs = parseInt(ctx.flags.epochs as string || '50', 10);
     const learningRate = parseFloat(ctx.flags['learning-rate'] as string || '0.001');
+    const batchSize = parseInt(ctx.flags['batch-size'] as string || '32', 10);
+    const dataFile = ctx.flags.data as string | undefined;
 
     output.writeln();
-    output.writeln(output.bold('Neural Pattern Training'));
-    output.writeln(output.dim('─'.repeat(40)));
+    output.writeln(output.bold('Neural Pattern Training (Real)'));
+    output.writeln(output.dim('─'.repeat(50)));
 
-    const spinner = output.createSpinner({ text: `Training ${patternType} patterns...`, spinner: 'dots' });
+    const spinner = output.createSpinner({ text: 'Initializing neural systems...', spinner: 'dots' });
     spinner.start();
 
     try {
-      // Training progress via @claude-flow/neural MCP integration
-      for (let i = 0; i < epochs; i += 10) {
-        spinner.setText(`Training ${patternType} patterns... ${Math.round((i / epochs) * 100)}%`);
-        await new Promise(r => setTimeout(r, 100));
+      // Import real implementations
+      const {
+        initializeIntelligence,
+        recordStep,
+        recordTrajectory,
+        getIntelligenceStats,
+        benchmarkAdaptation
+      } = await import('../memory/intelligence.js');
+      const { generateEmbedding } = await import('../memory/memory-initializer.js');
+
+      // Initialize SONA + ReasoningBank
+      const initResult = await initializeIntelligence({
+        loraLearningRate: learningRate,
+        maxTrajectorySize: epochs
+      });
+
+      if (!initResult.success) {
+        spinner.fail('Failed to initialize intelligence system');
+        return { success: false, exitCode: 1 };
       }
 
-      spinner.succeed(`Training complete: ${epochs} epochs`);
+      spinner.setText(`Training ${patternType} patterns...`);
+
+      // Training data - load from file or generate synthetic
+      let trainingData: { content: string; type: string }[] = [];
+
+      if (dataFile) {
+        const fs = await import('fs');
+        if (fs.existsSync(dataFile)) {
+          const raw = fs.readFileSync(dataFile, 'utf8');
+          trainingData = JSON.parse(raw);
+        } else {
+          spinner.fail(`Training data file not found: ${dataFile}`);
+          return { success: false, exitCode: 1 };
+        }
+      } else {
+        // Generate synthetic training data based on pattern type
+        const templates: Record<string, string[]> = {
+          coordination: [
+            'Route task to coder agent for implementation',
+            'Coordinate researcher and architect for design phase',
+            'Distribute workload across mesh topology',
+            'Synchronize agents via gossip protocol',
+            'Balance load between active workers'
+          ],
+          optimization: [
+            'Apply Int8 quantization for memory reduction',
+            'Enable HNSW indexing for faster search',
+            'Batch operations for throughput improvement',
+            'Cache frequently accessed patterns',
+            'Prune unused neural pathways'
+          ],
+          prediction: [
+            'Predict optimal agent for task type',
+            'Forecast resource requirements',
+            'Anticipate failure modes and mitigate',
+            'Estimate completion time for workflow',
+            'Predict pattern similarity before search'
+          ]
+        };
+
+        const patterns = templates[patternType] || templates.coordination;
+        for (let i = 0; i < epochs; i++) {
+          trainingData.push({
+            content: patterns[i % patterns.length] + ` (epoch ${i + 1})`,
+            type: patternType
+          });
+        }
+      }
+
+      // Actual training loop with real embedding generation and pattern recording
+      const startTime = Date.now();
+      const epochTimes: number[] = [];
+      let patternsRecorded = 0;
+      let trajectoriesCompleted = 0;
+
+      for (let epoch = 0; epoch < epochs; epoch++) {
+        const epochStart = performance.now();
+
+        // Process batch
+        const batchEnd = Math.min(epoch + batchSize, trainingData.length);
+        const batch = trainingData.slice(epoch % trainingData.length, batchEnd);
+
+        // Build trajectory for this epoch
+        const steps: { type: 'observation' | 'thought' | 'action' | 'result'; content: string }[] = [];
+
+        for (const item of batch) {
+          // Record step with real embedding generation
+          await recordStep({
+            type: 'action',
+            content: item.content,
+            metadata: { epoch, patternType, learningRate }
+          });
+          patternsRecorded++;
+
+          steps.push({
+            type: 'action',
+            content: item.content
+          });
+        }
+
+        // Record complete trajectory every 10 epochs
+        if ((epoch + 1) % 10 === 0 || epoch === epochs - 1) {
+          await recordTrajectory(steps, 'success');
+          trajectoriesCompleted++;
+        }
+
+        const epochTime = performance.now() - epochStart;
+        epochTimes.push(epochTime);
+
+        // Update progress
+        const progress = Math.round(((epoch + 1) / epochs) * 100);
+        const avgEpochTime = epochTimes.reduce((a, b) => a + b, 0) / epochTimes.length;
+        const eta = Math.round((epochs - epoch - 1) * avgEpochTime / 1000);
+        spinner.setText(`Training ${patternType} patterns... ${progress}% (ETA: ${eta}s)`);
+      }
+
+      const totalTime = Date.now() - startTime;
+
+      // Benchmark final adaptation performance
+      const benchmark = benchmarkAdaptation(100);
+
+      // Get final stats
+      const stats = getIntelligenceStats();
+
+      spinner.succeed(`Training complete: ${epochs} epochs in ${(totalTime / 1000).toFixed(1)}s`);
 
       output.writeln();
-      output.printBox([
-        `Pattern Type: ${patternType}`,
-        `Epochs: ${epochs}`,
-        `Learning Rate: ${learningRate}`,
-        `Status: Complete`,
-      ].join('\n'), 'Training Results');
+      output.printTable({
+        columns: [
+          { key: 'metric', header: 'Metric', width: 26 },
+          { key: 'value', header: 'Value', width: 28 },
+        ],
+        data: [
+          { metric: 'Pattern Type', value: patternType },
+          { metric: 'Epochs', value: String(epochs) },
+          { metric: 'Batch Size', value: String(batchSize) },
+          { metric: 'Learning Rate', value: String(learningRate) },
+          { metric: 'Patterns Recorded', value: patternsRecorded.toLocaleString() },
+          { metric: 'Trajectories', value: String(trajectoriesCompleted) },
+          { metric: 'Total Time', value: `${(totalTime / 1000).toFixed(1)}s` },
+          { metric: 'Avg Epoch Time', value: `${(epochTimes.reduce((a, b) => a + b, 0) / epochTimes.length).toFixed(2)}ms` },
+          { metric: 'SONA Adaptation', value: `${(benchmark.avgMs * 1000).toFixed(2)}μs avg` },
+          { metric: 'Target Met (<0.05ms)', value: benchmark.targetMet ? output.success('Yes') : output.warning('No') },
+          { metric: 'ReasoningBank Size', value: stats.reasoningBankSize.toLocaleString() },
+        ],
+      });
 
-      return { success: true };
+      return {
+        success: true,
+        data: {
+          epochs,
+          patternsRecorded,
+          trajectoriesCompleted,
+          totalTime,
+          benchmark,
+          stats
+        }
+      };
     } catch (error) {
       spinner.fail('Training failed');
       output.printError(error instanceof Error ? error.message : String(error));
