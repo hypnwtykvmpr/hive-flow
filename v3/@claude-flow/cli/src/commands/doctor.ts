@@ -426,6 +426,8 @@ export const doctorCommand: Command = {
     ];
 
     const componentMap: Record<string, () => Promise<HealthCheck>> = {
+      'version': checkVersionFreshness,
+      'freshness': checkVersionFreshness,
       'node': checkNodeVersion,
       'npm': checkNpmVersion,
       'claude': checkClaudeCode,
