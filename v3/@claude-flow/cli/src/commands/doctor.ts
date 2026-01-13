@@ -395,6 +395,7 @@ export const doctorCommand: Command = {
     { command: 'claude-flow doctor', description: 'Run full health check' },
     { command: 'claude-flow doctor --fix', description: 'Show fixes for issues' },
     { command: 'claude-flow doctor --install', description: 'Auto-install missing dependencies' },
+    { command: 'claude-flow doctor -c version', description: 'Check for stale npx cache' },
     { command: 'claude-flow doctor -c claude', description: 'Check Claude Code CLI only' }
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
