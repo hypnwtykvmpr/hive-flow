@@ -8,7 +8,7 @@
 import type { Command, CommandContext, CommandResult } from '../types.js';
 import { output } from '../output.js';
 
-// Benchmark subcommand
+// Benchmark subcommand - REAL measurements
 const benchmarkCommand: Command = {
   name: 'benchmark',
   description: 'Run performance benchmarks',
@@ -25,51 +25,224 @@ const benchmarkCommand: Command = {
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     const suite = ctx.flags.suite as string || 'all';
     const iterations = parseInt(ctx.flags.iterations as string || '100', 10);
+    const warmup = parseInt(ctx.flags.warmup as string || '10', 10);
+    const outputFormat = ctx.flags.output as string || 'text';
 
     output.writeln();
-    output.writeln(output.bold('Performance Benchmark'));
-    output.writeln(output.dim('─'.repeat(50)));
+    output.writeln(output.bold('Performance Benchmark (Real Measurements)'));
+    output.writeln(output.dim('─'.repeat(60)));
 
     const spinner = output.createSpinner({ text: `Running ${suite} benchmarks...`, spinner: 'dots' });
     spinner.start();
 
-    const benchmarks = ['WASM SIMD', 'Flash Attention', 'HNSW Search', 'Memory Ops', 'Neural Inference'];
-    for (const bench of benchmarks) {
-      spinner.setText(`Benchmarking ${bench}...`);
-      await new Promise(r => setTimeout(r, 300));
+    // Import real implementations
+    const {
+      generateEmbedding,
+      batchCosineSim,
+      flashAttentionSearch,
+      getHNSWStatus,
+      storeEntry,
+      searchEntries,
+    } = await import('../memory/memory-initializer.js');
+    const { benchmarkAdaptation, initializeIntelligence } = await import('../memory/intelligence.js');
+
+    const results: { operation: string; mean: string; p95: string; p99: string; improvement: string }[] = [];
+    const startTotal = Date.now();
+
+    // Helper to compute percentiles
+    const percentile = (arr: number[], p: number) => {
+      const sorted = [...arr].sort((a, b) => a - b);
+      const idx = Math.ceil((p / 100) * sorted.length) - 1;
+      return sorted[Math.max(0, idx)];
+    };
+
+    // 1. Embedding Generation Benchmark
+    if (suite === 'all' || suite === 'neural' || suite === 'memory') {
+      spinner.setText('Benchmarking embedding generation...');
+      const embedTimes: number[] = [];
+
+      // Warmup
+      for (let i = 0; i < warmup; i++) {
+        await generateEmbedding(`warmup text ${i}`);
+      }
+
+      // Actual measurement
+      for (let i = 0; i < iterations; i++) {
+        const start = performance.now();
+        await generateEmbedding(`benchmark text number ${i} with some varied content`);
+        embedTimes.push(performance.now() - start);
+      }
+
+      const mean = embedTimes.reduce((a, b) => a + b, 0) / embedTimes.length;
+      results.push({
+        operation: 'Embedding Gen',
+        mean: `${mean.toFixed(2)}ms`,
+        p95: `${percentile(embedTimes, 95).toFixed(2)}ms`,
+        p99: `${percentile(embedTimes, 99).toFixed(2)}ms`,
+        improvement: mean < 10 ? output.success('Target met') : output.warning('Below target'),
+      });
     }
 
-    spinner.succeed(`Completed ${iterations} iterations`);
+    // 2. Flash Attention-style Batch Operations
+    if (suite === 'all' || suite === 'wasm') {
+      spinner.setText('Benchmarking Flash Attention batch ops...');
+      const flashTimes: number[] = [];
 
-    output.writeln();
-    output.printTable({
-      columns: [
-        { key: 'operation', header: 'Operation', width: 20 },
-        { key: 'mean', header: 'Mean', width: 12 },
-        { key: 'p95', header: 'P95', width: 12 },
-        { key: 'p99', header: 'P99', width: 12 },
-        { key: 'improvement', header: 'vs Baseline', width: 15 },
-      ],
-      data: [
-        { operation: 'WASM SIMD MatMul', mean: '0.42ms', p95: '0.58ms', p99: '0.71ms', improvement: output.success('+4.2x') },
-        { operation: 'Flash Attention', mean: '1.23ms', p95: '1.45ms', p99: '1.67ms', improvement: output.success('+2.49x') },
-        { operation: 'HNSW Search', mean: '0.08ms', p95: '0.12ms', p99: '0.15ms', improvement: output.success('+150x') },
-        { operation: 'Memory Store', mean: '0.15ms', p95: '0.22ms', p99: '0.28ms', improvement: output.success('+3.1x') },
-        { operation: 'Neural Inference', mean: '12.4ms', p95: '15.2ms', p99: '18.1ms', improvement: output.success('+2.8x') },
-      ],
-    });
+      // Generate test vectors
+      const testVectors: Float32Array[] = Array.from({ length: 100 }, () =>
+        new Float32Array(Array.from({ length: 384 }, () => Math.random()))
+      );
+      const queryVector = new Float32Array(Array.from({ length: 384 }, () => Math.random()));
 
-    output.writeln();
-    output.printBox([
-      `Suite: ${suite}`,
-      `Iterations: ${iterations}`,
-      `Total Time: 2.34s`,
-      ``,
-      `Overall Performance: ${output.success('Excellent')}`,
-      `All targets met or exceeded`,
-    ].join('\n'), 'Benchmark Summary');
+      // Warmup
+      for (let i = 0; i < warmup; i++) {
+        batchCosineSim(queryVector, testVectors);
+      }
 
-    return { success: true };
+      // Actual measurement
+      for (let i = 0; i < iterations; i++) {
+        const start = performance.now();
+        flashAttentionSearch(queryVector, testVectors, { k: 10 });
+        flashTimes.push(performance.now() - start);
+      }
+
+      const mean = flashTimes.reduce((a, b) => a + b, 0) / flashTimes.length;
+      // Compare to baseline (single-vector comparison takes ~0.5μs, so 100 vectors baseline ~0.05ms)
+      const baselineMs = 0.05;
+      const speedup = baselineMs / mean;
+      results.push({
+        operation: 'Flash Attention',
+        mean: `${mean.toFixed(3)}ms`,
+        p95: `${percentile(flashTimes, 95).toFixed(3)}ms`,
+        p99: `${percentile(flashTimes, 99).toFixed(3)}ms`,
+        improvement: speedup > 1 ? output.success(`${speedup.toFixed(2)}x`) : output.dim(`${speedup.toFixed(2)}x`),
+      });
+    }
+
+    // 3. HNSW Search Benchmark
+    if (suite === 'all' || suite === 'search') {
+      spinner.setText('Benchmarking HNSW search...');
+      const hnswStatus = getHNSWStatus();
+
+      if (hnswStatus.available && hnswStatus.entryCount > 0) {
+        const searchTimes: number[] = [];
+        const testQueries = [
+          'error handling patterns',
+          'authentication flow',
+          'database optimization',
+          'API design patterns',
+          'test coverage strategies',
+        ];
+
+        // Warmup
+        for (const q of testQueries.slice(0, 2)) {
+          await searchEntries({ query: q, limit: 10 });
+        }
+
+        // Actual measurement
+        for (let i = 0; i < Math.min(iterations, 50); i++) {
+          const query = testQueries[i % testQueries.length];
+          const start = performance.now();
+          await searchEntries({ query, limit: 10 });
+          searchTimes.push(performance.now() - start);
+        }
+
+        const mean = searchTimes.reduce((a, b) => a + b, 0) / searchTimes.length;
+        // Brute force baseline: ~0.5μs per vector comparison, 1000 vectors = 0.5ms
+        // HNSW should be O(log n) ~150x faster
+        const baselineBruteForce = hnswStatus.entryCount * 0.0005;
+        const speedup = baselineBruteForce / (mean / 1000);
+        results.push({
+          operation: `HNSW Search (n=${hnswStatus.entryCount})`,
+          mean: `${mean.toFixed(2)}ms`,
+          p95: `${percentile(searchTimes, 95).toFixed(2)}ms`,
+          p99: `${percentile(searchTimes, 99).toFixed(2)}ms`,
+          improvement: speedup > 10 ? output.success(`~${Math.round(speedup)}x`) : output.dim(`${speedup.toFixed(1)}x`),
+        });
+      } else {
+        results.push({
+          operation: 'HNSW Search',
+          mean: 'N/A',
+          p95: 'N/A',
+          p99: 'N/A',
+          improvement: output.warning('No index'),
+        });
+      }
+    }
+
+    // 4. SONA Adaptation Benchmark
+    if (suite === 'all' || suite === 'neural') {
+      spinner.setText('Benchmarking SONA adaptation...');
+      await initializeIntelligence();
+      const sonaResult = benchmarkAdaptation(iterations);
+
+      results.push({
+        operation: 'SONA Adaptation',
+        mean: `${(sonaResult.avgMs * 1000).toFixed(2)}μs`,
+        p95: `${(sonaResult.maxMs * 1000).toFixed(2)}μs`,
+        p99: `${(sonaResult.maxMs * 1000).toFixed(2)}μs`,
+        improvement: sonaResult.targetMet ? output.success('<0.05ms ✓') : output.warning('Above target'),
+      });
+    }
+
+    // 5. Memory Store/Retrieve
+    if (suite === 'all' || suite === 'memory') {
+      spinner.setText('Benchmarking memory operations...');
+      const storeTimes: number[] = [];
+
+      // Use in-memory operations for benchmark (don't persist)
+      for (let i = 0; i < Math.min(iterations, 20); i++) {
+        const start = performance.now();
+        await storeEntry({
+          key: `bench_${Date.now()}_${i}`,
+          value: `Benchmark test entry ${i} with some content for testing storage performance`,
+          namespace: 'benchmark',
+          generateEmbeddingFlag: true,
+        });
+        storeTimes.push(performance.now() - start);
+      }
+
+      const mean = storeTimes.reduce((a, b) => a + b, 0) / storeTimes.length;
+      results.push({
+        operation: 'Memory Store+Embed',
+        mean: `${mean.toFixed(1)}ms`,
+        p95: `${percentile(storeTimes, 95).toFixed(1)}ms`,
+        p99: `${percentile(storeTimes, 99).toFixed(1)}ms`,
+        improvement: mean < 50 ? output.success('Target met') : output.warning('Slow'),
+      });
+    }
+
+    const totalTime = ((Date.now() - startTotal) / 1000).toFixed(2);
+    spinner.succeed(`Completed ${iterations} iterations in ${totalTime}s`);
+
+    // Output results
+    if (outputFormat === 'json') {
+      output.printJson({ suite, iterations, totalTime: `${totalTime}s`, results });
+    } else {
+      output.writeln();
+      output.printTable({
+        columns: [
+          { key: 'operation', header: 'Operation', width: 22 },
+          { key: 'mean', header: 'Mean', width: 12 },
+          { key: 'p95', header: 'P95', width: 12 },
+          { key: 'p99', header: 'P99', width: 12 },
+          { key: 'improvement', header: 'Status', width: 15 },
+        ],
+        data: results,
+      });
+
+      output.writeln();
+      const allTargetsMet = results.every(r => !r.improvement.includes('warning') && !r.improvement.includes('Slow'));
+      output.printBox([
+        `Suite: ${suite}`,
+        `Iterations: ${iterations}`,
+        `Total Time: ${totalTime}s`,
+        ``,
+        `Overall: ${allTargetsMet ? output.success('All targets met') : output.warning('Some targets missed')}`,
+      ].join('\n'), 'Benchmark Summary');
+    }
+
+    return { success: true, data: { results, totalTime } };
   },
 };
 
