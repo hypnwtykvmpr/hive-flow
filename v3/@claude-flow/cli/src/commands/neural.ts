@@ -340,28 +340,85 @@ const patternsCommand: Command = {
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     const action = ctx.flags.action as string || 'list';
+    const query = ctx.flags.query as string;
+    const limit = parseInt(ctx.flags.limit as string, 10) || 10;
 
     output.writeln();
     output.writeln(output.bold(`Neural Patterns - ${action}`));
     output.writeln(output.dim('─'.repeat(40)));
 
-    output.printTable({
-      columns: [
-        { key: 'id', header: 'ID', width: 10 },
-        { key: 'type', header: 'Type', width: 15 },
-        { key: 'confidence', header: 'Confidence', width: 12 },
-        { key: 'usage', header: 'Usage', width: 8 },
-      ],
-      data: [
-        { id: 'P001', type: output.highlight('coordination'), confidence: '94.2%', usage: '1,247' },
-        { id: 'P002', type: output.highlight('optimization'), confidence: '91.8%', usage: '892' },
-        { id: 'P003', type: output.highlight('prediction'), confidence: '88.5%', usage: '654' },
-        { id: 'P004', type: output.highlight('error-recovery'), confidence: '96.1%', usage: '2,103' },
-        { id: 'P005', type: output.highlight('task-routing'), confidence: '92.7%', usage: '1,567' },
-      ],
-    });
+    try {
+      const {
+        initializeIntelligence,
+        getIntelligenceStats,
+        findSimilarPatterns,
+      } = await import('../memory/intelligence.js');
 
-    return { success: true };
+      await initializeIntelligence();
+      const stats = getIntelligenceStats();
+
+      if (action === 'list') {
+        // Get real patterns from ReasoningBank
+        const patterns = await findSimilarPatterns(query || 'all patterns', limit);
+
+        if (patterns.length === 0) {
+          output.writeln(output.dim('No patterns found. Train some patterns first with: neural train'));
+          output.writeln();
+          output.printBox([
+            `Total Patterns: ${stats.patternsLearned}`,
+            `Trajectories: ${stats.trajectoriesRecorded}`,
+            `ReasoningBank Size: ${stats.reasoningBankSize}`,
+          ].join('\n'), 'Pattern Statistics');
+        } else {
+          output.printTable({
+            columns: [
+              { key: 'id', header: 'ID', width: 12 },
+              { key: 'type', header: 'Type', width: 18 },
+              { key: 'confidence', header: 'Confidence', width: 12 },
+              { key: 'similarity', header: 'Match', width: 10 },
+            ],
+            data: patterns.map((p, i) => ({
+              id: `P${String(i + 1).padStart(3, '0')}`,
+              type: output.highlight(p.type || p.metadata?.patternType || 'unknown'),
+              confidence: `${((p.confidence || p.score || 0.5) * 100).toFixed(1)}%`,
+              similarity: `${((p.similarity || 0) * 100).toFixed(0)}%`,
+            })),
+          });
+        }
+
+        output.writeln();
+        output.writeln(output.dim(`Total: ${stats.patternsLearned} patterns | Trajectories: ${stats.trajectoriesRecorded}`));
+      } else if (action === 'analyze' && query) {
+        // Analyze patterns related to query
+        const related = await findSimilarPatterns(query, limit);
+        output.writeln(`Analyzing patterns related to: "${query}"`);
+        output.writeln();
+
+        if (related.length > 0) {
+          output.printTable({
+            columns: [
+              { key: 'content', header: 'Pattern', width: 40 },
+              { key: 'similarity', header: 'Relevance', width: 12 },
+              { key: 'type', header: 'Type', width: 15 },
+            ],
+            data: related.slice(0, 5).map(p => ({
+              content: (p.content || p.text || '').substring(0, 38) + '...',
+              similarity: `${((p.similarity || 0) * 100).toFixed(0)}%`,
+              type: p.type || p.metadata?.patternType || 'general',
+            })),
+          });
+        } else {
+          output.writeln(output.dim('No related patterns found.'));
+        }
+      }
+
+      return { success: true };
+    } catch (error) {
+      // Fallback if intelligence not initialized
+      output.writeln(output.dim('Intelligence system not initialized.'));
+      output.writeln(output.dim('Run: claude-flow neural train --pattern-type general'));
+      return { success: false };
+    }
   },
 };
 
