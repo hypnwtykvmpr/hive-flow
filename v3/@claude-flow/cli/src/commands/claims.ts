@@ -65,6 +65,7 @@ const checkCommand: Command = {
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     const claim = ctx.flags.claim as string;
     const user = ctx.flags.user as string || 'current';
+    const resource = ctx.flags.resource as string;
 
     if (!claim) {
       output.printError('Claim is required');
@@ -77,27 +78,118 @@ const checkCommand: Command = {
 
     const spinner = output.createSpinner({ text: 'Evaluating claim...', spinner: 'dots' });
     spinner.start();
-    await new Promise(r => setTimeout(r, 300));
 
-    // Simulate claim check
-    const isGranted = !claim.startsWith('admin:');
+    const fs = await import('fs');
+    const path = await import('path');
+
+    // Real claims evaluation from config file
+    let isGranted = false;
+    let reason = 'Claim not found in policy';
+    let policySource = 'default';
+
+    try {
+      // Check for claims config file
+      const claimsConfigPaths = [
+        path.resolve('.claude-flow/claims.json'),
+        path.resolve('claude-flow.claims.json'),
+        path.resolve(process.env.HOME || '~', '.config/claude-flow/claims.json'),
+      ];
+
+      let claimsConfig: {
+        roles?: Record<string, string[]>;
+        users?: Record<string, { role?: string; claims?: string[] }>;
+        defaultClaims?: string[];
+      } = {
+        // Default policy - allows basic operations
+        roles: {
+          admin: ['*'],
+          developer: ['swarm:*', 'agent:*', 'memory:*', 'task:*', 'session:*'],
+          operator: ['swarm:status', 'agent:list', 'memory:read', 'task:list'],
+          viewer: ['*:list', '*:status', '*:read'],
+        },
+        defaultClaims: ['swarm:create', 'swarm:status', 'agent:spawn', 'agent:list', 'memory:read', 'memory:write', 'task:create'],
+      };
+
+      for (const configPath of claimsConfigPaths) {
+        if (fs.existsSync(configPath)) {
+          const content = fs.readFileSync(configPath, 'utf-8');
+          claimsConfig = { ...claimsConfig, ...JSON.parse(content) };
+          policySource = configPath;
+          break;
+        }
+      }
+
+      // Resolve user's claims
+      const userConfig = claimsConfig.users?.[user];
+      let userClaims: string[] = [...(claimsConfig.defaultClaims || [])];
+
+      if (userConfig) {
+        // Add user-specific claims
+        if (userConfig.claims) {
+          userClaims = [...userClaims, ...userConfig.claims];
+        }
+        // Add role-based claims
+        if (userConfig.role && claimsConfig.roles?.[userConfig.role]) {
+          userClaims = [...userClaims, ...claimsConfig.roles[userConfig.role]];
+        }
+      }
+
+      // Check if claim is granted
+      const checkClaim = (claimToCheck: string, grantedClaims: string[]): boolean => {
+        for (const granted of grantedClaims) {
+          // Exact match
+          if (granted === claimToCheck) return true;
+          // Wildcard match (e.g., "swarm:*" matches "swarm:create")
+          if (granted === '*') return true;
+          if (granted.endsWith(':*')) {
+            const prefix = granted.slice(0, -1);
+            if (claimToCheck.startsWith(prefix)) return true;
+          }
+          // Pattern match (e.g., "*:list" matches "swarm:list")
+          if (granted.startsWith('*:')) {
+            const suffix = granted.slice(1);
+            if (claimToCheck.endsWith(suffix)) return true;
+          }
+        }
+        return false;
+      };
+
+      isGranted = checkClaim(claim, userClaims);
+      if (isGranted) {
+        reason = userConfig?.role
+          ? `Granted via role: ${userConfig.role}`
+          : 'Granted via default policy';
+      } else {
+        reason = 'Not in user claims or role permissions';
+      }
+
+      spinner.stop();
+    } catch (error) {
+      spinner.stop();
+      // On error, fall back to permissive default
+      isGranted = !claim.startsWith('admin:');
+      reason = isGranted ? 'Granted (default permissive policy)' : 'Admin claims require explicit grant';
+      policySource = 'fallback';
+    }
 
     if (isGranted) {
-      spinner.succeed('Claim granted');
+      output.writeln(output.success('✓ Claim granted'));
     } else {
-      spinner.fail('Claim denied');
+      output.writeln(output.error('✗ Claim denied'));
     }
 
     output.writeln();
     output.printBox([
       `Claim: ${claim}`,
       `User: ${user}`,
+      `Resource: ${resource || 'global'}`,
       `Result: ${isGranted ? output.success('GRANTED') : output.error('DENIED')}`,
       ``,
-      `Reason: ${isGranted ? 'User has required role' : 'Requires admin role'}`,
+      `Reason: ${reason}`,
+      `Policy: ${policySource}`,
     ].join('\n'), 'Result');
 
-    return { success: true };
+    return { success: isGranted };
   },
 };
 
