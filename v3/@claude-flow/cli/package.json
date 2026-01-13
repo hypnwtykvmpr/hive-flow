@@ -1,6 +1,6 @@
 {
   "name": "@claude-flow/cli",
-  "version": "3.0.0-alpha.91",
+  "version": "3.0.0-alpha.92",
   "type": "module",
   "description": "CLI module - command parsing, prompts, output formatting",
   "main": "dist/src/index.js",
@@ -40,6 +40,7 @@
     "test": "vitest run",
     "test:plugin-store": "npx tsx src/plugins/tests/standalone-test.ts",
     "test:pattern-store": "npx tsx src/transfer/store/tests/standalone-test.ts",
+    "prepublishOnly": "cp ../../../README.md ./README.md",
     "release": "npm version prerelease --preid=alpha && npm run publish:all",
     "publish:all": "./scripts/publish.sh"
   },
