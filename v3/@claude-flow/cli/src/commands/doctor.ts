@@ -262,7 +262,7 @@ async function checkVersionFreshness(): Promise<HealthCheck> {
         try {
           const npxCacheDir = join(homeDir, '.npm', '_npx');
           if (existsSync(npxCacheDir)) {
-            const cacheEntries = require('fs').readdirSync(npxCacheDir);
+            const cacheEntries = readdirSync(npxCacheDir);
             for (const entry of cacheEntries) {
               const npxPkgPath = join(npxCacheDir, entry, 'node_modules', '@claude-flow', 'cli', 'package.json');
               if (existsSync(npxPkgPath)) {
