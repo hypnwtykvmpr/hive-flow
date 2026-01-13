@@ -880,7 +880,6 @@ function countEnabledHooks(options: InitOptions): number {
   if (hooks.sessionStart) count++;
   if (hooks.stop) count++;
   if (hooks.notification) count++;
-  if (hooks.permissionRequest) count++;
 
   return count;
 }
