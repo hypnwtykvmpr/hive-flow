@@ -3,15 +3,16 @@
  *
  * V2 Compatibility - System monitoring tools: status, metrics, health
  *
- * ⚠️ IMPORTANT: Metrics are ILLUSTRATIVE, not real system metrics.
- * - CPU/memory values are simulated for demo purposes
- * - Use for workflow coordination and state tracking
- * - For real metrics, use process.memoryUsage(), os module, etc.
+ * ✅ Uses REAL system metrics via Node.js APIs:
+ * - process.memoryUsage() for real memory stats
+ * - process.cpuUsage() for real CPU stats
+ * - os module for system information
  */
 
 import type { MCPTool } from './types.js';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
+import * as os from 'node:os';
 
 // Storage paths
 const STORAGE_DIR = '.claude-flow';
