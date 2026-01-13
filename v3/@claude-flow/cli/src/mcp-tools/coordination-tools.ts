@@ -19,7 +19,7 @@ const COORD_DIR = 'coordination';
 const COORD_FILE = 'store.json';
 
 interface TopologyConfig {
-  type: 'mesh' | 'hierarchical' | 'ring' | 'star' | 'hybrid';
+  type: 'mesh' | 'hierarchical' | 'ring' | 'star' | 'hybrid' | 'hierarchical-mesh';
   maxNodes: number;
   redundancy: number;
   consensusAlgorithm: string;
