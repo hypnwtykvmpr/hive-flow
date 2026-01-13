@@ -11,8 +11,13 @@
  * @module @claude-flow/cli/production
  */
 
-export { ErrorHandler, withErrorHandling, type ErrorContext, type ErrorHandlerConfig } from './error-handler.js';
-export { RateLimiter, createRateLimiter, type RateLimiterConfig, type RateLimitResult } from './rate-limiter.js';
-export { RetryStrategy, withRetry, type RetryConfig, type RetryResult } from './retry.js';
-export { CircuitBreaker, type CircuitBreakerConfig, type CircuitState } from './circuit-breaker.js';
-export { MonitoringHooks, createMonitor, type MonitorConfig, type MetricEvent } from './monitoring.js';
+export { ErrorHandler, withErrorHandling } from './error-handler.js';
+export type { ErrorContext, ErrorHandlerConfig } from './error-handler.js';
+export { RateLimiter, createRateLimiter } from './rate-limiter.js';
+export type { RateLimiterConfig, RateLimitResult } from './rate-limiter.js';
+export { withRetry } from './retry.js';
+export type { RetryConfig, RetryResult, RetryStrategy } from './retry.js';
+export { CircuitBreaker } from './circuit-breaker.js';
+export type { CircuitBreakerConfig, CircuitState } from './circuit-breaker.js';
+export { MonitoringHooks, createMonitor } from './monitoring.js';
+export type { MonitorConfig, MetricEvent } from './monitoring.js';
