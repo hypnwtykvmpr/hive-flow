@@ -120,9 +120,8 @@ export class PatternPublisher {
         await pinContent(uploadResult.cid);
       }
 
-      // Step 7: Create pattern entry
+      // Step 6: Create pattern entry
       const patternId = generatePatternId(options.name);
-      const author = this.getAuthor();
 
       const patternEntry: PatternEntry = {
         id: patternId,
@@ -130,7 +129,7 @@ export class PatternPublisher {
         displayName: options.displayName,
         description: options.description,
         version: cfp.version,
-        cid: uploadResult.cid,
+        cid: uploadCid,
         size: contentBuffer.length,
         checksum,
         author,
@@ -151,16 +150,13 @@ export class PatternPublisher {
         publicKey,
       };
 
-      // Step 8: Add to registry (in production: submit to registry maintainers)
+      // Step 7: Add to registry (in production: submit to registry maintainers)
       console.log(`[Publish] Pattern entry created: ${patternId}`);
-
-      // Generate gateway URL
-      const gatewayUrl = `${this.config.gateway}/ipfs/${uploadResult.cid}`;
 
       return {
         success: true,
         patternId,
-        cid: uploadResult.cid,
+        cid: uploadCid,
         registryCid: '', // Would be updated after registry update
         gatewayUrl,
         message: `Pattern '${options.displayName}' published successfully!`,
