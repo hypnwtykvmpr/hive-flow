@@ -774,8 +774,8 @@ function findSourceDir(type: 'skills' | 'commands' | 'agents', sourceBaseDir?: s
   // IMPORTANT: Check the package's own .claude directory first
   // This is the primary path when running as an npm package
   // __dirname is typically /path/to/node_modules/@claude-flow/cli/dist/src/init
-  // We need to go up 4 levels to reach the package root
-  const packageRoot = path.resolve(__dirname, '..', '..', '..', '..');
+  // We need to go up 3 levels to reach the package root (dist/src/init -> dist/src -> dist -> root)
+  const packageRoot = path.resolve(__dirname, '..', '..', '..');
   const packageDotClaude = path.join(packageRoot, '.claude', type);
   if (fs.existsSync(packageDotClaude)) {
     possiblePaths.unshift(packageDotClaude); // Add to beginning (highest priority)
