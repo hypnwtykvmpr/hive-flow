@@ -57,6 +57,8 @@ const commandLoaders: Record<string, CommandLoader> = {
   progress: () => import('./progress.js'),
   // Issue Claims Commands (ADR-016)
   issues: () => import('./issues.js'),
+  // Auto-update System (ADR-025)
+  update: () => import('./update.js'),
 };
 
 // Cache for loaded commands
