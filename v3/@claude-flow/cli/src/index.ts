@@ -503,23 +503,29 @@ export {
 export {
   ErrorHandler,
   withErrorHandling,
-  type ErrorContext,
-  type ErrorHandlerConfig,
+} from './production/error-handler.js';
+export type {
+  ErrorContext,
+  ErrorHandlerConfig,
 } from './production/error-handler.js';
 
 export {
   RateLimiter,
   createRateLimiter,
-  type RateLimiterConfig,
-  type RateLimitResult,
+} from './production/rate-limiter.js';
+export type {
+  RateLimiterConfig,
+  RateLimitResult,
 } from './production/rate-limiter.js';
 
 export {
   withRetry,
   makeRetryable,
-  type RetryConfig,
-  type RetryResult,
-  type RetryStrategy,
+} from './production/retry.js';
+export type {
+  RetryConfig,
+  RetryResult,
+  RetryStrategy,
 } from './production/retry.js';
 
 export {
@@ -527,18 +533,22 @@ export {
   getCircuitBreaker,
   getAllCircuitStats,
   resetAllCircuits,
-  type CircuitBreakerConfig,
-  type CircuitState,
+} from './production/circuit-breaker.js';
+export type {
+  CircuitBreakerConfig,
+  CircuitState,
 } from './production/circuit-breaker.js';
 
 export {
   MonitoringHooks,
   createMonitor,
   getMonitor,
-  type MonitorConfig,
-  type MetricEvent,
-  type HealthStatus,
-  type PerformanceMetrics,
+} from './production/monitoring.js';
+export type {
+  MonitorConfig,
+  MetricEvent,
+  HealthStatus,
+  PerformanceMetrics,
 } from './production/monitoring.js';
 
 // Default export
