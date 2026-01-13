@@ -7,7 +7,7 @@
 
 import type { Command, CommandContext, CommandResult } from '../types.js';
 import { output } from '../output.js';
-import { existsSync, readFileSync } from 'fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'fs';
 import { join } from 'path';
 import { execSync, exec } from 'child_process';
 import { promisify } from 'util';
