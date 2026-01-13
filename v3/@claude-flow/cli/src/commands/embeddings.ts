@@ -1360,18 +1360,31 @@ const benchmarkCommand: Command = {
         opsPerSec: `${(1000 / avgWarm).toFixed(1)}`
       });
 
-      // Test 4: Batch embed
-      output.writeln(output.dim(`Testing batch of ${batchSize}...`));
+      // Test 4a: Sequential batch embed
+      output.writeln(output.dim(`Testing sequential batch of ${batchSize}...`));
       const batchTexts = Array.from({ length: batchSize }, (_, i) => `Batch text ${i + 1} for testing`);
-      const batchStart = Date.now();
+      const seqStart = Date.now();
       for (const text of batchTexts) {
         await generateEmbedding(text);
       }
-      const batchTime = Date.now() - batchStart;
+      const seqTime = Date.now() - seqStart;
       results.push({
-        test: `Batch (n=${batchSize})`,
-        time: `${batchTime}ms total (${(batchTime / batchSize).toFixed(1)}ms/item)`,
-        opsPerSec: `${(1000 * batchSize / batchTime).toFixed(1)}`
+        test: `Sequential (n=${batchSize})`,
+        time: `${seqTime}ms total (${(seqTime / batchSize).toFixed(1)}ms/item)`,
+        opsPerSec: `${(1000 * batchSize / seqTime).toFixed(1)}`
+      });
+
+      // Test 4b: Parallel batch embed (2-4x faster for batch operations)
+      output.writeln(output.dim(`Testing parallel batch of ${batchSize}...`));
+      const parallelTexts = Array.from({ length: batchSize }, (_, i) => `Parallel batch text ${i + 1}`);
+      const parallelStart = Date.now();
+      await Promise.all(parallelTexts.map(text => generateEmbedding(text)));
+      const parallelTime = Date.now() - parallelStart;
+      const speedup = seqTime / parallelTime;
+      results.push({
+        test: `Parallel (n=${batchSize})`,
+        time: `${parallelTime}ms total (${(parallelTime / batchSize).toFixed(1)}ms/item)`,
+        opsPerSec: `${(1000 * batchSize / parallelTime).toFixed(1)} (${speedup.toFixed(1)}x speedup)`
       });
 
       // Test 5: Cache hit (same text)
