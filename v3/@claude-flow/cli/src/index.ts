@@ -499,5 +499,47 @@ export {
   type IntelligenceStats,
 } from './memory/intelligence.js';
 
+// Production Hardening
+export {
+  ErrorHandler,
+  withErrorHandling,
+  type ErrorContext,
+  type ErrorHandlerConfig,
+} from './production/error-handler.js';
+
+export {
+  RateLimiter,
+  createRateLimiter,
+  type RateLimiterConfig,
+  type RateLimitResult,
+} from './production/rate-limiter.js';
+
+export {
+  withRetry,
+  makeRetryable,
+  type RetryConfig,
+  type RetryResult,
+  type RetryStrategy,
+} from './production/retry.js';
+
+export {
+  CircuitBreaker,
+  getCircuitBreaker,
+  getAllCircuitStats,
+  resetAllCircuits,
+  type CircuitBreakerConfig,
+  type CircuitState,
+} from './production/circuit-breaker.js';
+
+export {
+  MonitoringHooks,
+  createMonitor,
+  getMonitor,
+  type MonitorConfig,
+  type MetricEvent,
+  type HealthStatus,
+  type PerformanceMetrics,
+} from './production/monitoring.js';
+
 // Default export
 export default CLI;
