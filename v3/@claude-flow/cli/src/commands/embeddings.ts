@@ -1359,15 +1359,15 @@ const cacheCommand: Command = {
       }
     } catch { /* file access error */ }
 
-    // Get in-memory cache stats from actual cache if available
+    // Get in-memory HNSW stats if available
     let memoryEntries = 0;
     let memorySize = '0 B';
     try {
-      const { getCacheStats } = await import('../memory/memory-initializer.js');
-      const cacheStats = getCacheStats();
-      if (cacheStats) {
-        memoryEntries = cacheStats.entries || 0;
-        const memBytes = memoryEntries * 384 * 4; // Float32 = 4 bytes per dimension
+      const { getHNSWStatus } = await import('../memory/memory-initializer.js');
+      const hnswStatus = getHNSWStatus();
+      if (hnswStatus && hnswStatus.initialized) {
+        memoryEntries = hnswStatus.entryCount || 0;
+        const memBytes = memoryEntries * (hnswStatus.dimensions || 384) * 4; // Float32 = 4 bytes per dimension
         if (memBytes >= 1024 * 1024) {
           memorySize = `${(memBytes / 1024 / 1024).toFixed(1)} MB`;
         } else if (memBytes >= 1024) {
@@ -1376,7 +1376,7 @@ const cacheCommand: Command = {
           memorySize = `${memBytes} B`;
         }
       }
-    } catch { /* cache not initialized */ }
+    } catch { /* HNSW not initialized */ }
 
     if (action === 'clear') {
       try {
