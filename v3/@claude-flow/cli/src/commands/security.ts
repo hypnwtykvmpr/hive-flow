@@ -397,18 +397,21 @@ const secretsCommand: Command = {
     spinner.succeed('Scan complete');
 
     output.writeln();
+    output.writeln(output.warning('⚠ No real secrets scan performed. Showing example findings.'));
+    output.writeln(output.dim('Run "claude-flow security scan --depth full" for real secret detection.'));
+    output.writeln();
     output.printTable({
       columns: [
-        { key: 'type', header: 'Secret Type', width: 20 },
+        { key: 'type', header: 'Secret Type (Example)', width: 25 },
         { key: 'location', header: 'Location', width: 30 },
         { key: 'risk', header: 'Risk', width: 12 },
         { key: 'action', header: 'Recommended', width: 20 },
       ],
       data: [
-        { type: 'AWS Access Key', location: 'src/config.ts:15', risk: output.error('Critical'), action: 'Rotate immediately' },
-        { type: 'GitHub Token', location: '.env.example:8', risk: output.warning('High'), action: 'Remove from repo' },
-        { type: 'JWT Secret', location: 'src/auth.ts:42', risk: output.warning('High'), action: 'Use env variable' },
-        { type: 'DB Password', location: 'docker-compose.yml:23', risk: output.warning('Medium'), action: 'Use secrets mgmt' },
+        { type: 'AWS Access Key', location: 'example/config.ts:15', risk: output.error('Critical'), action: 'Rotate immediately' },
+        { type: 'GitHub Token', location: 'example/.env:8', risk: output.warning('High'), action: 'Remove from repo' },
+        { type: 'JWT Secret', location: 'example/auth.ts:42', risk: output.warning('High'), action: 'Use env variable' },
+        { type: 'DB Password', location: 'example/compose.yml:23', risk: output.warning('Medium'), action: 'Use secrets mgmt' },
       ],
     });
 
