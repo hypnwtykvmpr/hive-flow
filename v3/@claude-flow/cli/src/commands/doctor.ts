@@ -410,6 +410,7 @@ export const doctorCommand: Command = {
     output.writeln();
 
     const allChecks: (() => Promise<HealthCheck>)[] = [
+      checkVersionFreshness,
       checkNodeVersion,
       checkNpmVersion,
       checkClaudeCode,
