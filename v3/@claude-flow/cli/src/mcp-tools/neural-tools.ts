@@ -235,13 +235,20 @@ export const neuralTools: MCPTool[] = [
         .sort((a, b) => b.confidence - a.confidence)
         .slice(0, topK);
 
+      // Generate real embedding for the input
+      const startTime = performance.now();
+      const embedding = await generateEmbedding(inputText, 128);
+      const latency = Math.round(performance.now() - startTime);
+
       return {
         success: true,
+        _realEmbedding: !!realEmbeddings,
         modelId: model?.id || 'default',
         input: inputText,
         predictions,
-        embedding: generateEmbedding(128).slice(0, 8),
-        latency: Math.floor(Math.random() * 50) + 10,
+        embedding: embedding.slice(0, 8), // Preview of embedding
+        embeddingDims: embedding.length,
+        latency,
       };
     },
   },
