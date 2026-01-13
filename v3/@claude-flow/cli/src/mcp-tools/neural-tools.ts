@@ -18,14 +18,26 @@ import { join } from 'node:path';
 
 // Try to import real embeddings from @claude-flow/embeddings
 let realEmbeddings: { embed: (text: string) => Promise<number[]> } | null = null;
+let embeddingServiceName: string = 'none';
 try {
   // Dynamic import to avoid hard dependency
   const embeddingsModule = await import('@claude-flow/embeddings');
-  if (embeddingsModule.SimpleEmbeddings) {
-    const embedder = new embeddingsModule.SimpleEmbeddings();
-    realEmbeddings = {
-      embed: async (text: string) => embedder.embed(text),
-    };
+  if (embeddingsModule.createEmbeddingService) {
+    // Try to create agentic-flow service (fastest), fall back to mock
+    try {
+      const service = embeddingsModule.createEmbeddingService({ provider: 'agentic-flow' });
+      realEmbeddings = {
+        embed: async (text: string) => service.embed(text),
+      };
+      embeddingServiceName = 'agentic-flow';
+    } catch {
+      // Fall back to mock service
+      const service = embeddingsModule.createEmbeddingService({ provider: 'mock' });
+      realEmbeddings = {
+        embed: async (text: string) => service.embed(text),
+      };
+      embeddingServiceName = 'mock';
+    }
   }
 } catch {
   // @claude-flow/embeddings not available, will use fallback
