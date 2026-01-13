@@ -380,7 +380,7 @@ export const doctorCommand: Command = {
     {
       name: 'component',
       short: 'c',
-      description: 'Check specific component (node, config, daemon, memory, api, git, mcp, claude)',
+      description: 'Check specific component (version, node, npm, config, daemon, memory, api, git, mcp, claude, disk, typescript)',
       type: 'string'
     },
     {
