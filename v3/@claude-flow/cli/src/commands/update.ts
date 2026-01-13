@@ -10,8 +10,8 @@ import {
   checkSinglePackage,
   getInstalledVersion,
   DEFAULT_CONFIG,
-  UpdateCheckResult,
 } from '../update/checker.js';
+import type { UpdateCheckResult } from '../update/checker.js';
 import {
   executeUpdate,
   executeMultipleUpdates,
@@ -21,6 +21,35 @@ import {
 } from '../update/executor.js';
 import { clearCache } from '../update/rate-limiter.js';
 
+// Helper functions
+function formatUpdateType(type: string): string {
+  switch (type) {
+    case 'major':
+      return output.error('MAJOR');
+    case 'minor':
+      return output.warning('minor');
+    case 'patch':
+      return output.success('patch');
+    default:
+      return type;
+  }
+}
+
+function formatPriority(priority: string): string {
+  switch (priority) {
+    case 'critical':
+      return output.error('CRITICAL');
+    case 'high':
+      return output.warning('high');
+    case 'normal':
+      return output.info('normal');
+    case 'low':
+      return output.dim('low');
+    default:
+      return priority;
+  }
+}
+
 // Subcommand: check
 const checkCommand: Command = {
   name: 'check',
@@ -29,7 +58,7 @@ const checkCommand: Command = {
     { name: 'force', description: 'Force check (ignore rate limit)', type: 'boolean' },
     { name: 'json', description: 'Output as JSON', type: 'boolean' },
   ],
-  async execute(ctx: CommandContext): Promise<CommandResult> {
+  async action(ctx: CommandContext): Promise<CommandResult> {
     const { flags } = ctx;
 
     if (flags.force) {
@@ -55,11 +84,19 @@ const checkCommand: Command = {
         return { success: true };
       }
 
-      output.printHeader('Available Updates');
+      output.writeln();
+      output.writeln(output.highlight('═══ Available Updates ═══'));
       output.writeln();
 
       output.printTable({
-        headers: ['Package', 'Current', 'Latest', 'Type', 'Priority', 'Auto'],
+        columns: [
+          { key: 'package', header: 'Package' },
+          { key: 'current', header: 'Current' },
+          { key: 'latest', header: 'Latest' },
+          { key: 'type', header: 'Type' },
+          { key: 'priority', header: 'Priority' },
+          { key: 'auto', header: 'Auto' },
+        ],
         data: results.map((r) => ({
           package: r.package,
           current: r.currentVersion,
@@ -101,7 +138,7 @@ const allCommand: Command = {
     { name: 'dry-run', description: 'Show what would be updated', type: 'boolean' },
     { name: 'include-major', description: 'Include major version updates', type: 'boolean' },
   ],
-  async execute(ctx: CommandContext): Promise<CommandResult> {
+  async action(ctx: CommandContext): Promise<CommandResult> {
     const { flags } = ctx;
     process.env.CLAUDE_FLOW_FORCE_UPDATE = 'true';
 
@@ -113,7 +150,7 @@ const allCommand: Command = {
         autoUpdate: {
           patch: true,
           minor: true,
-          major: flags.includeMajor as boolean || false,
+          major: flags['include-major'] as boolean || false,
         },
       };
 
@@ -138,19 +175,19 @@ const allCommand: Command = {
       const updateResults = await executeMultipleUpdates(
         results,
         installedPackages,
-        flags.dryRun as boolean
+        flags['dry-run'] as boolean
       );
 
       const successful = updateResults.filter((r) => r.success);
       const failed = updateResults.filter((r) => !r.success);
 
       output.writeln();
-      output.printHeader(flags.dryRun ? 'Dry Run - Would Update' : 'Update Results');
+      output.writeln(output.highlight(flags['dry-run'] ? '═══ Dry Run - Would Update ═══' : '═══ Update Results ═══'));
       output.writeln();
 
       if (successful.length > 0) {
         output.printSuccess(
-          `${successful.length} package(s) ${flags.dryRun ? 'would be ' : ''}updated:`
+          `${successful.length} package(s) ${flags['dry-run'] ? 'would be ' : ''}updated:`
         );
         for (const r of successful) {
           output.writeln(`  ${output.success('✓')} ${r.package}@${r.version}`);
@@ -181,7 +218,7 @@ const historyCommand: Command = {
     { name: 'json', description: 'Output as JSON', type: 'boolean' },
     { name: 'clear', description: 'Clear history', type: 'boolean' },
   ],
-  async execute(ctx: CommandContext): Promise<CommandResult> {
+  async action(ctx: CommandContext): Promise<CommandResult> {
     const { flags } = ctx;
 
     if (flags.clear) {
@@ -203,17 +240,24 @@ const historyCommand: Command = {
       return { success: true };
     }
 
-    output.printHeader('Update History');
+    output.writeln();
+    output.writeln(output.highlight('═══ Update History ═══'));
     output.writeln();
 
     output.printTable({
-      headers: ['Time', 'Package', 'From', 'To', 'Status'],
+      columns: [
+        { key: 'time', header: 'Time' },
+        { key: 'package', header: 'Package' },
+        { key: 'from', header: 'From' },
+        { key: 'to', header: 'To' },
+        { key: 'status', header: 'Status' },
+      ],
       data: history.map((h) => ({
         time: new Date(h.timestamp).toLocaleString(),
         package: h.package,
         from: h.fromVersion,
         to: h.toVersion,
-        status: h.success ? output.success('success') : output.error(`failed`),
+        status: h.success ? output.success('success') : output.error('failed'),
       })),
     });
 
@@ -228,7 +272,7 @@ const rollbackCommand: Command = {
   options: [
     { name: 'package', short: 'p', description: 'Specific package to rollback', type: 'string' },
   ],
-  async execute(ctx: CommandContext): Promise<CommandResult> {
+  async action(ctx: CommandContext): Promise<CommandResult> {
     const { flags } = ctx;
     const packageName = flags.package as string | undefined;
 
@@ -252,7 +296,7 @@ const rollbackCommand: Command = {
 const clearCacheCommand: Command = {
   name: 'clear-cache',
   description: 'Clear update check cache',
-  async execute(): Promise<CommandResult> {
+  async action(): Promise<CommandResult> {
     clearCache();
     output.printSuccess('Update cache cleared');
     output.printInfo('Next startup will check for updates');
@@ -260,43 +304,15 @@ const clearCacheCommand: Command = {
   },
 };
 
-// Helper functions
-function formatUpdateType(type: string): string {
-  switch (type) {
-    case 'major':
-      return output.error('MAJOR');
-    case 'minor':
-      return output.warning('minor');
-    case 'patch':
-      return output.success('patch');
-    default:
-      return type;
-  }
-}
-
-function formatPriority(priority: string): string {
-  switch (priority) {
-    case 'critical':
-      return output.error('CRITICAL');
-    case 'high':
-      return output.warning('high');
-    case 'normal':
-      return output.info('normal');
-    case 'low':
-      return output.dim('low');
-    default:
-      return priority;
-  }
-}
-
 // Main update command
 const updateCommand: Command = {
   name: 'update',
   description: 'Manage @claude-flow package updates (ADR-025)',
   subcommands: [checkCommand, allCommand, historyCommand, rollbackCommand, clearCacheCommand],
-  async execute(ctx: CommandContext): Promise<CommandResult> {
+  async action(): Promise<CommandResult> {
     // Show help if no subcommand
-    output.printHeader('Update Command');
+    output.writeln();
+    output.writeln(output.highlight('═══ Update Command ═══'));
     output.writeln();
     output.writeln('Manage @claude-flow package updates with auto-update support.');
     output.writeln();
