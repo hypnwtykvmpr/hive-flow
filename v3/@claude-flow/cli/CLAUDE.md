@@ -415,15 +415,67 @@ npx @claude-flow/cli@latest migrate validate
 V3 includes the RuVector Intelligence System:
 - **SONA**: Self-Optimizing Neural Architecture (<0.05ms adaptation)
 - **MoE**: Mixture of Experts for specialized routing
-- **HNSW**: 150x-12,500x faster pattern search
+- **HNSW**: 150x-12,500x faster pattern search (persistent to disk)
 - **EWC++**: Elastic Weight Consolidation (prevents forgetting)
 - **Flash Attention**: 2.49x-7.47x speedup
+- **Int8 Quantization**: 3.92x memory compression
 
 The 4-step intelligence pipeline:
 1. **RETRIEVE** - Fetch relevant patterns via HNSW
 2. **JUDGE** - Evaluate with verdicts (success/failure)
 3. **DISTILL** - Extract key learnings via LoRA
 4. **CONSOLIDATE** - Prevent catastrophic forgetting via EWC++
+
+### Implemented Optimizations (alpha.76+)
+
+| Feature | Benefit | Location |
+|---------|---------|----------|
+| **Persistent HNSW** | 0ms warm loads, instant startup | `.swarm/hnsw.index` |
+| **Int8 Quantization** | 3.92x compression, 75% less memory | `quantizeInt8()` |
+| **ReasoningBank** | Pattern storage & similarity search | `intelligence.ts` |
+| **SONA Coordinator** | Trajectory recording & learning | `initializeIntelligence()` |
+
+### Using the Intelligence API
+
+```typescript
+import {
+  initializeIntelligence,
+  recordStep,
+  recordTrajectory,
+  findSimilarPatterns,
+  getIntelligenceStats
+} from '@claude-flow/cli/memory/intelligence';
+
+// Initialize SONA + ReasoningBank
+const init = await initializeIntelligence();
+
+// Record steps during task execution
+await recordStep({ type: 'observation', content: 'Found bug in auth module' });
+await recordStep({ type: 'action', content: 'Fixed validation logic' });
+
+// Record complete trajectory with verdict
+await recordTrajectory(steps, 'success');
+
+// Find similar patterns for new tasks
+const patterns = await findSimilarPatterns('authentication bug');
+```
+
+### Using Int8 Quantization
+
+```typescript
+import { quantizeInt8, dequantizeInt8, getQuantizationStats } from '@claude-flow/cli/memory';
+
+// Quantize embeddings for storage
+const { quantized, scale, zeroPoint } = quantizeInt8(embedding);
+// Result: Int8Array with 3.92x smaller footprint
+
+// Dequantize when needed
+const restored = dequantizeInt8(quantized, scale, zeroPoint);
+
+// Check compression stats
+const stats = getQuantizationStats(embedding);
+// { originalBytes: 1536, quantizedBytes: 392, compressionRatio: 3.92 }
+```
 
 ## 📦 Embeddings Package (v3.0.0-alpha.12)
 
