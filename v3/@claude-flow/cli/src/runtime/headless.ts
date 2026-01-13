@@ -168,7 +168,15 @@ async function runDaemon(): Promise<void> {
   console.log('[Headless] Starting daemon mode...');
 
   // Start the daemon
-  const daemon = await startDaemon();
+  const daemon = await startDaemon({
+    autoStart: true,
+    logDir: '.swarm/logs',
+    stateFile: '.swarm/daemon.state.json',
+    maxConcurrent: 2,
+    workerTimeoutMs: 300000,
+    resourceThresholds: { maxCpuLoad: 80, minFreeMemoryPercent: 10 },
+    workers: []
+  });
 
   console.log('[Headless] Daemon started');
   console.log('[Headless] Press Ctrl+C to stop');
