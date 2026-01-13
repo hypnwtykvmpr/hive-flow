@@ -250,7 +250,7 @@ async function runBenchmarks(): Promise<BenchmarkResults> {
   // HNSW Status
   console.log('\n3. HNSW Index Status...');
   const hnswStatus = getHNSWStatus();
-  console.log(`   Entries indexed: ${hnswStatus.entriesCount}`);
+  console.log(`   Entries indexed: ${hnswStatus.entryCount}`);
   console.log(`   Initialized: ${hnswStatus.initialized}`);
 
   // Intelligence Stats
@@ -272,7 +272,7 @@ async function runBenchmarks(): Promise<BenchmarkResults> {
       speedup
     },
     hnsw: {
-      entriesIndexed: hnswStatus.entriesCount,
+      entriesIndexed: hnswStatus.entryCount,
       searchTime: flashTime
     }
   };
@@ -307,7 +307,7 @@ async function showStatus(): Promise<void> {
   const hnsw = getHNSWStatus();
   console.log('\nHNSW Index:');
   console.log(`  Initialized: ${hnsw.initialized}`);
-  console.log(`  Entries: ${hnsw.entriesCount}`);
+  console.log(`  Entries: ${hnsw.entryCount}`);
 
   console.log('\nEnvironment:');
   console.log(`  CLAUDE_FLOW_HEADLESS: ${process.env.CLAUDE_FLOW_HEADLESS || 'not set'}`);
