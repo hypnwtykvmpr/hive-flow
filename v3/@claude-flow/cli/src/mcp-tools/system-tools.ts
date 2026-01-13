@@ -2,6 +2,11 @@
  * System MCP Tools for CLI
  *
  * V2 Compatibility - System monitoring tools: status, metrics, health
+ *
+ * ⚠️ IMPORTANT: Metrics are ILLUSTRATIVE, not real system metrics.
+ * - CPU/memory values are simulated for demo purposes
+ * - Use for workflow coordination and state tracking
+ * - For real metrics, use process.memoryUsage(), os module, etc.
  */
 
 import type { MCPTool } from './types.js';
