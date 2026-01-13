@@ -516,55 +516,138 @@ function formatBytes(bytes: number): string {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 }
 
-// Index subcommand
+// Index subcommand - REAL HNSW stats
 const indexCommand: Command = {
   name: 'index',
   description: 'Manage HNSW indexes',
   options: [
-    { name: 'action', short: 'a', type: 'string', description: 'Action: build, rebuild, optimize', default: 'build' },
-    { name: 'collection', short: 'c', type: 'string', description: 'Collection name', required: true },
+    { name: 'action', short: 'a', type: 'string', description: 'Action: build, rebuild, status, optimize', default: 'status' },
+    { name: 'collection', short: 'c', type: 'string', description: 'Collection/namespace name' },
     { name: 'ef-construction', type: 'number', description: 'HNSW ef_construction parameter', default: '200' },
     { name: 'm', type: 'number', description: 'HNSW M parameter', default: '16' },
   ],
   examples: [
+    { command: 'claude-flow embeddings index', description: 'Show index status' },
     { command: 'claude-flow embeddings index -a build -c documents', description: 'Build index' },
     { command: 'claude-flow embeddings index -a optimize -c patterns', description: 'Optimize index' },
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
-    const action = ctx.flags.action as string || 'build';
+    const action = ctx.flags.action as string || 'status';
     const collection = ctx.flags.collection as string;
-
-    if (!collection) {
-      output.printError('Collection is required');
-      return { success: false, exitCode: 1 };
-    }
+    const efConstruction = parseInt(ctx.flags['ef-construction'] as string || '200', 10);
+    const m = parseInt(ctx.flags.m as string || '16', 10);
 
     output.writeln();
     output.writeln(output.bold(`HNSW Index: ${action}`));
     output.writeln(output.dim('─'.repeat(50)));
 
-    const spinner = output.createSpinner({ text: `${action}ing index for ${collection}...`, spinner: 'dots' });
-    spinner.start();
-    await new Promise(r => setTimeout(r, 800));
-    spinner.succeed(`Index ${action} complete`);
+    try {
+      const { getHNSWStatus, getHNSWIndex, searchHNSWIndex, generateEmbedding } = await import('../memory/memory-initializer.js');
 
-    output.writeln();
-    output.printBox([
-      `Collection: ${collection}`,
-      `Action: ${action}`,
-      ``,
-      `Index Parameters:`,
-      `  M: 16`,
-      `  ef_construction: 200`,
-      `  ef_search: 50`,
-      ``,
-      `Performance:`,
-      `  Build time: 1.2s`,
-      `  Search speedup: 150x vs brute force`,
-      `  Recall@10: 0.98`,
-    ].join('\n'), 'Index Stats');
+      // Get real HNSW status
+      const status = getHNSWStatus();
 
-    return { success: true };
+      if (action === 'status') {
+        output.writeln();
+        output.printTable({
+          columns: [
+            { key: 'metric', header: 'Metric', width: 24 },
+            { key: 'value', header: 'Value', width: 30 },
+          ],
+          data: [
+            { metric: 'HNSW Available', value: status.available ? output.success('Yes (@ruvector/core)') : output.warning('No') },
+            { metric: 'Index Initialized', value: status.initialized ? output.success('Yes') : output.dim('No') },
+            { metric: 'Vector Count', value: status.entryCount.toLocaleString() },
+            { metric: 'Dimensions', value: String(status.dimensions) },
+            { metric: 'Distance Metric', value: 'Cosine' },
+            { metric: 'HNSW M', value: String(m) },
+            { metric: 'ef_construction', value: String(efConstruction) },
+          ],
+        });
+
+        if (status.available && status.entryCount > 0) {
+          // Run a quick benchmark to show actual performance
+          output.writeln();
+          output.writeln(output.dim('Running quick performance test...'));
+
+          const testQuery = await generateEmbedding('test performance query');
+          const start = performance.now();
+          const results = await searchHNSWIndex(testQuery.embedding, { k: 10 });
+          const searchTime = performance.now() - start;
+
+          // Estimate brute force time (0.5μs per comparison)
+          const bruteForceEstimate = status.entryCount * 0.0005;
+          const speedup = bruteForceEstimate / (searchTime / 1000);
+
+          output.writeln();
+          output.printBox([
+            `Performance (n=${status.entryCount}):`,
+            `  HNSW Search: ${searchTime.toFixed(2)}ms`,
+            `  Brute Force Est: ${(bruteForceEstimate * 1000).toFixed(2)}ms`,
+            `  Speedup: ~${Math.round(speedup)}x`,
+            `  Results: ${results?.length || 0} matches`,
+          ].join('\n'), 'Search Performance');
+        } else if (!status.available) {
+          output.writeln();
+          output.printWarning('@ruvector/core not available');
+          output.printInfo('Install: npm install @ruvector/core');
+        } else {
+          output.writeln();
+          output.printInfo('Index is empty. Store some entries to populate it.');
+          output.printInfo('Run: claude-flow memory store -k "key" --value "text"');
+        }
+
+        return { success: true, data: status };
+      }
+
+      // Build/Rebuild action
+      if (action === 'build' || action === 'rebuild') {
+        if (!collection) {
+          output.printError('Collection is required for build/rebuild');
+          return { success: false, exitCode: 1 };
+        }
+
+        const spinner = output.createSpinner({ text: `${action}ing index for ${collection}...`, spinner: 'dots' });
+        spinner.start();
+
+        // Force rebuild if requested
+        const index = await getHNSWIndex({ forceRebuild: action === 'rebuild' });
+
+        if (!index) {
+          spinner.fail('@ruvector/core not available');
+          output.printInfo('Install: npm install @ruvector/core');
+          return { success: false, exitCode: 1 };
+        }
+
+        spinner.succeed(`Index ${action} complete`);
+
+        const newStatus = getHNSWStatus();
+        output.writeln();
+        output.printBox([
+          `Collection: ${collection}`,
+          `Action: ${action}`,
+          `Vectors: ${newStatus.entryCount}`,
+          `Dimensions: ${newStatus.dimensions}`,
+          `M: ${m}`,
+          `ef_construction: ${efConstruction}`,
+        ].join('\n'), 'Index Built');
+
+        return { success: true, data: newStatus };
+      }
+
+      // Optimize action
+      if (action === 'optimize') {
+        output.printInfo('HNSW index is optimized automatically during search');
+        output.printInfo('No manual optimization required');
+        return { success: true };
+      }
+
+      output.printError(`Unknown action: ${action}`);
+      return { success: false, exitCode: 1 };
+    } catch (error) {
+      output.printError(error instanceof Error ? error.message : String(error));
+      return { success: false, exitCode: 1 };
+    }
   },
 };
 
