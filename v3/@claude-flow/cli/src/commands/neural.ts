@@ -62,7 +62,7 @@ const trainCommand: Command = {
   },
 };
 
-// Status subcommand
+// Status subcommand - REAL measurements
 const statusCommand: Command = {
   name: 'status',
   description: 'Check neural network status and loaded models',
@@ -75,26 +75,109 @@ const statusCommand: Command = {
     { command: 'claude-flow neural status -m model-123', description: 'Check specific model' },
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
+    const verbose = ctx.flags.verbose === true;
+
     output.writeln();
-    output.writeln(output.bold('Neural Network Status'));
-    output.writeln(output.dim('─'.repeat(40)));
+    output.writeln(output.bold('Neural Network Status (Real)'));
+    output.writeln(output.dim('─'.repeat(50)));
 
-    output.printTable({
-      columns: [
-        { key: 'component', header: 'Component', width: 20 },
-        { key: 'status', header: 'Status', width: 12 },
-        { key: 'details', header: 'Details', width: 30 },
-      ],
-      data: [
-        { component: 'WASM Runtime', status: output.success('Ready'), details: 'SIMD enabled' },
-        { component: 'Flash Attention', status: output.success('Active'), details: '2.49x-7.47x speedup' },
-        { component: 'MoE Router', status: output.success('Active'), details: '8 experts loaded' },
-        { component: 'Pattern Cache', status: output.success('Warm'), details: '1,247 patterns' },
-        { component: 'EWC++ Memory', status: output.success('Active'), details: 'Fisher info computed' },
-      ],
-    });
+    const spinner = output.createSpinner({ text: 'Checking neural systems...', spinner: 'dots' });
+    spinner.start();
 
-    return { success: true };
+    try {
+      // Import real implementations
+      const { getIntelligenceStats, initializeIntelligence, benchmarkAdaptation } = await import('../memory/intelligence.js');
+      const { getHNSWStatus, loadEmbeddingModel } = await import('../memory/memory-initializer.js');
+
+      // Initialize if needed and get real stats
+      await initializeIntelligence();
+      const stats = getIntelligenceStats();
+      const hnswStatus = getHNSWStatus();
+
+      // Quick benchmark for actual adaptation time
+      const adaptBench = benchmarkAdaptation(100);
+
+      // Check embedding model
+      const modelInfo = await loadEmbeddingModel({ verbose: false });
+
+      spinner.succeed('Neural systems checked');
+
+      output.writeln();
+      output.printTable({
+        columns: [
+          { key: 'component', header: 'Component', width: 22 },
+          { key: 'status', header: 'Status', width: 12 },
+          { key: 'details', header: 'Details', width: 32 },
+        ],
+        data: [
+          {
+            component: 'SONA Coordinator',
+            status: stats.sonaEnabled ? output.success('Active') : output.warning('Inactive'),
+            details: stats.sonaEnabled
+              ? `Adaptation: ${(adaptBench.avgMs * 1000).toFixed(2)}μs avg`
+              : 'Not initialized',
+          },
+          {
+            component: 'ReasoningBank',
+            status: stats.reasoningBankSize > 0 ? output.success('Active') : output.dim('Empty'),
+            details: `${stats.patternsLearned} patterns stored`,
+          },
+          {
+            component: 'HNSW Index',
+            status: hnswStatus.available ? output.success('Ready') : output.dim('Not loaded'),
+            details: hnswStatus.available
+              ? `${hnswStatus.entryCount} vectors, ${hnswStatus.dimensions}-dim`
+              : '@ruvector/core not available',
+          },
+          {
+            component: 'Embedding Model',
+            status: modelInfo.success ? output.success('Loaded') : output.warning('Fallback'),
+            details: `${modelInfo.modelName} (${modelInfo.dimensions}-dim)`,
+          },
+          {
+            component: 'Flash Attention Ops',
+            status: output.success('Available'),
+            details: 'batchCosineSim, softmax, topK',
+          },
+          {
+            component: 'Int8 Quantization',
+            status: output.success('Available'),
+            details: '~4x memory reduction',
+          },
+        ],
+      });
+
+      if (verbose) {
+        output.writeln();
+        output.writeln(output.bold('Detailed Metrics'));
+        output.printTable({
+          columns: [
+            { key: 'metric', header: 'Metric', width: 28 },
+            { key: 'value', header: 'Value', width: 20 },
+          ],
+          data: [
+            { metric: 'Trajectories Recorded', value: String(stats.trajectoriesRecorded) },
+            { metric: 'Patterns Learned', value: String(stats.patternsLearned) },
+            { metric: 'HNSW Dimensions', value: String(hnswStatus.dimensions) },
+            { metric: 'SONA Adaptation (avg)', value: `${(adaptBench.avgMs * 1000).toFixed(2)}μs` },
+            { metric: 'SONA Adaptation (max)', value: `${(adaptBench.maxMs * 1000).toFixed(2)}μs` },
+            { metric: 'Target Met (<0.05ms)', value: adaptBench.targetMet ? output.success('Yes') : output.warning('No') },
+            {
+              metric: 'Last Adaptation',
+              value: stats.lastAdaptation
+                ? new Date(stats.lastAdaptation).toLocaleTimeString()
+                : 'Never',
+            },
+          ],
+        });
+      }
+
+      return { success: true, data: { stats, hnswStatus, adaptBench, modelInfo } };
+    } catch (error) {
+      spinner.fail('Failed to check neural systems');
+      output.printError(error instanceof Error ? error.message : String(error));
+      return { success: false, exitCode: 1 };
+    }
   },
 };
 
