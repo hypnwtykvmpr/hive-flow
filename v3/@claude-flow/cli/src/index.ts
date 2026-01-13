@@ -459,5 +459,38 @@ export {
   type MCPServerStatus,
 } from './mcp-server.js';
 
+// Memory & Intelligence (V3 Performance Features)
+export {
+  initializeMemory,
+  generateEmbedding,
+  generateBatchEmbeddings,
+  storeEntry,
+  searchEntries,
+  getHNSWIndex,
+  addToHNSWIndex,
+  searchHNSWIndex,
+  getHNSWStatus,
+  clearHNSWIndex,
+  quantizeInt8,
+  dequantizeInt8,
+  quantizedCosineSim,
+  getQuantizationStats,
+} from './memory/memory-initializer.js';
+
+export {
+  initializeIntelligence,
+  recordStep,
+  recordTrajectory,
+  findSimilarPatterns,
+  getIntelligenceStats,
+  getSonaCoordinator,
+  getReasoningBank,
+  clearIntelligence,
+  type SonaConfig,
+  type TrajectoryStep,
+  type Pattern,
+  type IntelligenceStats,
+} from './memory/intelligence.js';
+
 // Default export
 export default CLI;
