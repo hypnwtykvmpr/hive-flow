@@ -151,6 +151,9 @@ export { hooksCommand } from './hooks.js';
 export { daemonCommand } from './daemon.js';
 export { doctorCommand } from './doctor.js';
 export { embeddingsCommand } from './embeddings.js';
+export { neuralCommand } from './neural.js';
+export { performanceCommand } from './performance.js';
+export { securityCommand } from './security.js';
 
 // Lazy-loaded command re-exports (for backwards compatibility, but async-only)
 export async function getConfigCommand() { return loadCommand('config'); }
