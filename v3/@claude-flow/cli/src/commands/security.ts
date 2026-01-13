@@ -27,6 +27,7 @@ const scanCommand: Command = {
     const target = ctx.flags.target as string || '.';
     const depth = ctx.flags.depth as string || 'standard';
     const scanType = ctx.flags.type as string || 'all';
+    const fix = ctx.flags.fix as boolean;
 
     output.writeln();
     output.writeln(output.bold('Security Scan'));
@@ -35,42 +36,200 @@ const scanCommand: Command = {
     const spinner = output.createSpinner({ text: `Scanning ${target}...`, spinner: 'dots' });
     spinner.start();
 
-    // Simulate scan phases
-    const phases = ['Analyzing code patterns', 'Checking dependencies', 'CVE database lookup', 'Generating report'];
-    for (const phase of phases) {
-      spinner.setText(phase + '...');
-      await new Promise(r => setTimeout(r, 400));
+    const findings: Array<{ severity: string; type: string; location: string; description: string }> = [];
+    let criticalCount = 0, highCount = 0, mediumCount = 0, lowCount = 0;
+
+    try {
+      const fs = await import('fs');
+      const path = await import('path');
+      const { execSync } = await import('child_process');
+
+      // Phase 1: npm audit for dependency vulnerabilities
+      if (scanType === 'all' || scanType === 'deps') {
+        spinner.setText('Checking dependencies with npm audit...');
+        try {
+          const packageJsonPath = path.resolve(target, 'package.json');
+          if (fs.existsSync(packageJsonPath)) {
+            const auditResult = execSync('npm audit --json 2>/dev/null || true', {
+              cwd: path.resolve(target),
+              encoding: 'utf-8',
+              maxBuffer: 10 * 1024 * 1024,
+            });
+
+            try {
+              const audit = JSON.parse(auditResult);
+              if (audit.vulnerabilities) {
+                for (const [pkg, vuln] of Object.entries(audit.vulnerabilities as Record<string, { severity: string; via: Array<{ title?: string; url?: string }> }>)) {
+                  const sev = vuln.severity || 'low';
+                  const title = Array.isArray(vuln.via) && vuln.via[0]?.title ? vuln.via[0].title : 'Vulnerability';
+                  if (sev === 'critical') criticalCount++;
+                  else if (sev === 'high') highCount++;
+                  else if (sev === 'moderate' || sev === 'medium') mediumCount++;
+                  else lowCount++;
+
+                  findings.push({
+                    severity: sev === 'critical' ? output.error('CRITICAL') :
+                              sev === 'high' ? output.warning('HIGH') :
+                              sev === 'moderate' || sev === 'medium' ? output.warning('MEDIUM') : output.info('LOW'),
+                    type: 'Dependency CVE',
+                    location: `package.json:${pkg}`,
+                    description: title.substring(0, 35),
+                  });
+                }
+              }
+            } catch { /* JSON parse failed, no vulns */ }
+          }
+        } catch { /* npm audit failed */ }
+      }
+
+      // Phase 2: Scan for hardcoded secrets
+      if (scanType === 'all' || scanType === 'code') {
+        spinner.setText('Scanning for hardcoded secrets...');
+        const secretPatterns = [
+          { pattern: /['"](?:sk-|sk_live_|sk_test_)[a-zA-Z0-9]{20,}['"]/g, type: 'API Key (Stripe/OpenAI)' },
+          { pattern: /['"]AKIA[A-Z0-9]{16}['"]/g, type: 'AWS Access Key' },
+          { pattern: /['"]ghp_[a-zA-Z0-9]{36}['"]/g, type: 'GitHub Token' },
+          { pattern: /['"]xox[baprs]-[a-zA-Z0-9-]+['"]/g, type: 'Slack Token' },
+          { pattern: /password\s*[:=]\s*['"][^'"]{8,}['"]/gi, type: 'Hardcoded Password' },
+        ];
+
+        const scanDir = (dir: string, depthLimit: number) => {
+          if (depthLimit <= 0) return;
+          try {
+            const entries = fs.readdirSync(dir, { withFileTypes: true });
+            for (const entry of entries) {
+              if (entry.name.startsWith('.') || entry.name === 'node_modules' || entry.name === 'dist') continue;
+              const fullPath = path.join(dir, entry.name);
+              if (entry.isDirectory()) {
+                scanDir(fullPath, depthLimit - 1);
+              } else if (entry.isFile() && /\.(ts|js|json|env|yml|yaml)$/.test(entry.name) && !entry.name.endsWith('.d.ts')) {
+                try {
+                  const content = fs.readFileSync(fullPath, 'utf-8');
+                  const lines = content.split('\n');
+                  for (let i = 0; i < lines.length; i++) {
+                    for (const { pattern, type } of secretPatterns) {
+                      if (pattern.test(lines[i])) {
+                        highCount++;
+                        findings.push({
+                          severity: output.warning('HIGH'),
+                          type: 'Hardcoded Secret',
+                          location: `${path.relative(target, fullPath)}:${i + 1}`,
+                          description: type,
+                        });
+                        pattern.lastIndex = 0;
+                      }
+                    }
+                  }
+                } catch { /* file read error */ }
+              }
+            }
+          } catch { /* dir read error */ }
+        };
+
+        const scanDepth = depth === 'deep' ? 10 : depth === 'standard' ? 5 : 3;
+        scanDir(path.resolve(target), scanDepth);
+      }
+
+      // Phase 3: Check for common security issues in code
+      if ((scanType === 'all' || scanType === 'code') && depth !== 'quick') {
+        spinner.setText('Analyzing code patterns...');
+        const codePatterns = [
+          { pattern: /eval\s*\(/g, type: 'Eval Usage', severity: 'medium', desc: 'eval() can execute arbitrary code' },
+          { pattern: /innerHTML\s*=/g, type: 'innerHTML', severity: 'medium', desc: 'XSS risk with innerHTML' },
+          { pattern: /dangerouslySetInnerHTML/g, type: 'React XSS', severity: 'medium', desc: 'React XSS risk' },
+          { pattern: /child_process.*exec[^S]/g, type: 'Command Injection', severity: 'high', desc: 'Possible command injection' },
+          { pattern: /\$\{.*\}.*sql|sql.*\$\{/gi, type: 'SQL Injection', severity: 'high', desc: 'Possible SQL injection' },
+        ];
+
+        const scanCodeDir = (dir: string, depthLimit: number) => {
+          if (depthLimit <= 0) return;
+          try {
+            const entries = fs.readdirSync(dir, { withFileTypes: true });
+            for (const entry of entries) {
+              if (entry.name.startsWith('.') || entry.name === 'node_modules' || entry.name === 'dist') continue;
+              const fullPath = path.join(dir, entry.name);
+              if (entry.isDirectory()) {
+                scanCodeDir(fullPath, depthLimit - 1);
+              } else if (entry.isFile() && /\.(ts|js|tsx|jsx)$/.test(entry.name) && !entry.name.endsWith('.d.ts')) {
+                try {
+                  const content = fs.readFileSync(fullPath, 'utf-8');
+                  const lines = content.split('\n');
+                  for (let i = 0; i < lines.length; i++) {
+                    for (const { pattern, type, severity, desc } of codePatterns) {
+                      if (pattern.test(lines[i])) {
+                        if (severity === 'high') highCount++;
+                        else mediumCount++;
+                        findings.push({
+                          severity: severity === 'high' ? output.warning('HIGH') : output.warning('MEDIUM'),
+                          type,
+                          location: `${path.relative(target, fullPath)}:${i + 1}`,
+                          description: desc,
+                        });
+                        pattern.lastIndex = 0;
+                      }
+                    }
+                  }
+                } catch { /* file read error */ }
+              }
+            }
+          } catch { /* dir read error */ }
+        };
+
+        const scanDepth = depth === 'deep' ? 10 : 5;
+        scanCodeDir(path.resolve(target), scanDepth);
+      }
+
+      spinner.succeed('Scan complete');
+
+      // Display results
+      output.writeln();
+      if (findings.length > 0) {
+        output.printTable({
+          columns: [
+            { key: 'severity', header: 'Severity', width: 12 },
+            { key: 'type', header: 'Type', width: 18 },
+            { key: 'location', header: 'Location', width: 25 },
+            { key: 'description', header: 'Description', width: 35 },
+          ],
+          data: findings.slice(0, 20), // Show first 20
+        });
+
+        if (findings.length > 20) {
+          output.writeln(output.dim(`... and ${findings.length - 20} more issues`));
+        }
+      } else {
+        output.writeln(output.success('No security issues found!'));
+      }
+
+      output.writeln();
+      output.printBox([
+        `Target: ${target}`,
+        `Depth: ${depth}`,
+        `Type: ${scanType}`,
+        ``,
+        `Critical: ${criticalCount}  High: ${highCount}  Medium: ${mediumCount}  Low: ${lowCount}`,
+        `Total Issues: ${findings.length}`,
+      ].join('\n'), 'Scan Summary');
+
+      // Auto-fix if requested
+      if (fix && criticalCount + highCount > 0) {
+        output.writeln();
+        const fixSpinner = output.createSpinner({ text: 'Attempting to fix vulnerabilities...', spinner: 'dots' });
+        fixSpinner.start();
+        try {
+          execSync('npm audit fix 2>/dev/null || true', { cwd: path.resolve(target), encoding: 'utf-8' });
+          fixSpinner.succeed('Applied available fixes (run scan again to verify)');
+        } catch {
+          fixSpinner.fail('Some fixes could not be applied automatically');
+        }
+      }
+
+      return { success: findings.length === 0 || (criticalCount === 0 && highCount === 0) };
+    } catch (error) {
+      spinner.fail('Scan failed');
+      output.printError(`Error: ${error}`);
+      return { success: false };
     }
-
-    spinner.succeed('Scan complete');
-
-    output.writeln();
-    output.printTable({
-      columns: [
-        { key: 'severity', header: 'Severity', width: 12 },
-        { key: 'type', header: 'Type', width: 18 },
-        { key: 'location', header: 'Location', width: 25 },
-        { key: 'description', header: 'Description', width: 35 },
-      ],
-      data: [
-        { severity: output.error('CRITICAL'), type: 'CVE-2024-1234', location: 'package.json:45', description: 'Prototype pollution in lodash' },
-        { severity: output.warning('HIGH'), type: 'Hardcoded Secret', location: 'src/config.ts:12', description: 'API key exposed in source' },
-        { severity: output.warning('MEDIUM'), type: 'SQL Injection', location: 'src/db/query.ts:78', description: 'Unsanitized user input' },
-        { severity: output.info('LOW'), type: 'Outdated Dep', location: 'package.json:23', description: 'axios@0.21.0 has known issues' },
-      ],
-    });
-
-    output.writeln();
-    output.printBox([
-      `Target: ${target}`,
-      `Depth: ${depth}`,
-      `Type: ${scanType}`,
-      ``,
-      `Critical: 1  High: 1  Medium: 1  Low: 1`,
-      `Total Issues: 4`,
-    ].join('\n'), 'Scan Summary');
-
-    return { success: true };
   },
 };
 
