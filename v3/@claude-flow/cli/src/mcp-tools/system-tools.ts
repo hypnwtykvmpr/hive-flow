@@ -132,26 +132,58 @@ export const systemTools: MCPTool[] = [
       },
     },
     handler: async (input) => {
-      const metrics = loadMetrics();
+      const store = loadMetrics();
       const category = (input.category as string) || 'all';
 
-      // Simulate some dynamic metrics
-      const currentMetrics = {
-        ...metrics,
-        cpu: 20 + Math.random() * 40,
-        memory: { used: 256 + Math.floor(Math.random() * 256), total: 1024 },
-        uptime: Date.now() - new Date(metrics.startTime).getTime(),
+      // Get REAL system metrics via Node.js APIs
+      const memUsage = process.memoryUsage();
+      const loadAvg = os.loadavg();
+      const cpus = os.cpus();
+      const totalMem = os.totalmem();
+      const freeMem = os.freemem();
+
+      const currentMetrics: SystemMetrics = {
+        ...store,
+        cpu: loadAvg[0] * 100 / cpus.length, // Real CPU load percentage
+        memory: {
+          used: Math.round((totalMem - freeMem) / 1024 / 1024), // Real MB used
+          total: Math.round(totalMem / 1024 / 1024), // Real total MB
+        },
+        uptime: Date.now() - new Date(store.startTime).getTime(),
+        lastCheck: new Date().toISOString(),
       };
 
       saveMetrics(currentMetrics);
 
       if (category === 'all') {
-        return currentMetrics;
+        return {
+          ...currentMetrics,
+          _real: true, // Flag indicating real metrics
+          heap: {
+            used: Math.round(memUsage.heapUsed / 1024 / 1024),
+            total: Math.round(memUsage.heapTotal / 1024 / 1024),
+            external: Math.round(memUsage.external / 1024 / 1024),
+          },
+          loadAverage: loadAvg,
+          cpuCores: cpus.length,
+        };
       }
 
       const categoryMap: Record<string, unknown> = {
-        cpu: { cpu: currentMetrics.cpu, cores: 4, load: [currentMetrics.cpu / 100, currentMetrics.cpu / 100 * 0.9, currentMetrics.cpu / 100 * 0.8] },
-        memory: currentMetrics.memory,
+        cpu: {
+          usage: currentMetrics.cpu,
+          cores: cpus.length,
+          load: loadAvg,
+          model: cpus[0]?.model,
+          _real: true,
+        },
+        memory: {
+          ...currentMetrics.memory,
+          heap: Math.round(memUsage.heapUsed / 1024 / 1024),
+          heapTotal: Math.round(memUsage.heapTotal / 1024 / 1024),
+          free: Math.round(freeMem / 1024 / 1024),
+          _real: true,
+        },
         agents: currentMetrics.agents,
         tasks: currentMetrics.tasks,
         requests: currentMetrics.requests,
