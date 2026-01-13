@@ -242,17 +242,25 @@ async function checkVersionFreshness(): Promise<HealthCheck> {
     // Get current CLI version from package.json
     let currentVersion = '0.0.0';
     try {
+      // Get directory of current module and walk up to find package.json
+      const moduleUrl = new URL(import.meta.url);
+      const modulePath = moduleUrl.protocol === 'file:' ? moduleUrl.pathname : import.meta.url;
+      const moduleDir = modulePath.substring(0, modulePath.lastIndexOf('/'));
+
       // Look for package.json in multiple locations
       const possiblePaths = [
-        join(process.cwd(), 'node_modules/@claude-flow/cli/package.json'),
-        new URL('../package.json', import.meta.url).pathname
+        join(moduleDir, '..', 'package.json'),         // ../package.json from dist/commands
+        join(moduleDir, '..', '..', 'package.json'),   // ../../package.json from dist/commands
+        join(process.cwd(), 'package.json'),           // Current working directory
+        join(process.cwd(), 'node_modules/@claude-flow/cli/package.json')
       ];
 
       for (const pkgPath of possiblePaths) {
         try {
           if (existsSync(pkgPath)) {
             const packageJson = JSON.parse(readFileSync(pkgPath, 'utf8'));
-            if (packageJson.version) {
+            // Make sure it's the right package
+            if (packageJson.name === '@claude-flow/cli' && packageJson.version) {
               currentVersion = packageJson.version;
               break;
             }
