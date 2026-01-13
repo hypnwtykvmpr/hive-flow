@@ -1374,7 +1374,9 @@ const benchmarkCommand: Command = {
         opsPerSec: `${(1000 * batchSize / seqTime).toFixed(1)}`
       });
 
-      // Test 4b: Parallel batch embed (2-4x faster for batch operations)
+      // Test 4b: Parallel batch embed
+      // Note: Local ONNX is CPU-bound so parallelism has limited benefit
+      // Parallelism gives 2-4x speedup for API-based providers (OpenAI, etc.)
       output.writeln(output.dim(`Testing parallel batch of ${batchSize}...`));
       const parallelTexts = Array.from({ length: batchSize }, (_, i) => `Parallel batch text ${i + 1}`);
       const parallelStart = Date.now();
@@ -1384,7 +1386,7 @@ const benchmarkCommand: Command = {
       results.push({
         test: `Parallel (n=${batchSize})`,
         time: `${parallelTime}ms total (${(parallelTime / batchSize).toFixed(1)}ms/item)`,
-        opsPerSec: `${(1000 * batchSize / parallelTime).toFixed(1)} (${speedup.toFixed(1)}x speedup)`
+        opsPerSec: `${(1000 * batchSize / parallelTime).toFixed(1)} (${speedup.toFixed(2)}x vs seq)`
       });
 
       // Test 5: Cache hit (same text)
