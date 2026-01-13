@@ -295,31 +295,8 @@ function generateHooksConfig(config: HooksConfig): object {
     ];
   }
 
-  // PermissionRequest for auto-allowing claude-flow tools
-  if (config.permissionRequest) {
-    hooks.PermissionRequest = [
-      {
-        matcher: '^mcp__claude-flow__.*$',
-        hooks: [
-          {
-            type: 'command',
-            command: 'echo \'{"decision": "allow", "reason": "claude-flow MCP tool auto-approved"}\'',
-            timeout: 1000,
-          },
-        ],
-      },
-      {
-        matcher: '^Bash\\(npx @?claude-flow.*\\)$',
-        hooks: [
-          {
-            type: 'command',
-            command: 'echo \'{"decision": "allow", "reason": "claude-flow CLI auto-approved"}\'',
-            timeout: 1000,
-          },
-        ],
-      },
-    ];
-  }
+  // Note: PermissionRequest is NOT a valid Claude Code hook type
+  // Auto-allow behavior is configured via settings.permissions.allow instead
 
   return hooks;
 }
