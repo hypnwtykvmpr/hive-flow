@@ -163,15 +163,16 @@ async function calculateProgress(): Promise<V3ProgressMetrics> {
     } catch (_e) { /* ignore */ }
   }
 
-  // Count hooks subcommands
-  let hooksSubcommands = 20; // Approximate
+  // Count hooks subcommands (count const *Command definitions)
+  let hooksSubcommands = 27; // Default to documented count
   const hooksPath = join(V3_DIR, '@claude-flow/cli/src/commands/hooks.ts');
   if (existsSync(hooksPath)) {
     try {
       const content = readFileSync(hooksPath, 'utf-8');
-      const matches = content.match(/subcommands:\s*\[([^\]]+)\]/s);
-      if (matches) {
-        hooksSubcommands = (matches[1].match(/Command/g) || []).length || 20;
+      // Count command definitions like "const fooCommand: Command = {"
+      const commandDefs = content.match(/const\s+\w+Command\s*:\s*Command\s*=/g);
+      if (commandDefs && commandDefs.length > 0) {
+        hooksSubcommands = commandDefs.length;
       }
     } catch (_e) { /* ignore */ }
   }
