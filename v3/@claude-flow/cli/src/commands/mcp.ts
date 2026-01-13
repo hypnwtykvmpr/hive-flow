@@ -86,12 +86,20 @@ const startCommand: Command = {
       description: 'Run as background daemon',
       type: 'boolean',
       default: false
+    },
+    {
+      name: 'force',
+      short: 'f',
+      description: 'Force restart (kill existing server first)',
+      type: 'boolean',
+      default: false
     }
   ],
   examples: [
     { command: 'claude-flow mcp start', description: 'Start with defaults (stdio)' },
     { command: 'claude-flow mcp start -p 8080 -t http', description: 'Start HTTP server' },
-    { command: 'claude-flow mcp start -d', description: 'Start as daemon' }
+    { command: 'claude-flow mcp start -d', description: 'Start as daemon' },
+    { command: 'claude-flow mcp start -f', description: 'Force restart (kill existing)' }
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     const port = ctx.flags.port as number;
