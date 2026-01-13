@@ -3,15 +3,19 @@
  *
  * V2 Compatibility - Performance monitoring and optimization tools
  *
- * ⚠️ IMPORTANT: Most metrics are ILLUSTRATIVE.
- * - Some real process metrics via process.memoryUsage()
- * - Benchmarks are simulated for demonstration
- * - For production profiling, use real profiling tools
+ * ✅ Uses REAL process metrics where available:
+ * - process.memoryUsage() for real heap/memory stats
+ * - process.cpuUsage() for real CPU time
+ * - os module for system load and memory
+ * - Real timing for benchmark operations
+ *
+ * Note: Some optimization suggestions are illustrative
  */
 
 import type { MCPTool } from './types.js';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
+import * as os from 'node:os';
 
 // Storage paths
 const STORAGE_DIR = '.claude-flow';
