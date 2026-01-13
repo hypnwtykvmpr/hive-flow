@@ -431,6 +431,8 @@ export const neuralTools: MCPTool[] = [
       const patterns = Object.values(store.patterns);
 
       return {
+        _realEmbeddings: !!realEmbeddings,
+        embeddingProvider: realEmbeddings ? '@claude-flow/embeddings' : 'hash-based (deterministic)',
         models: {
           total: models.length,
           ready: models.filter(m => m.status === 'ready').length,
@@ -445,6 +447,7 @@ export const neuralTools: MCPTool[] = [
             acc[p.type] = (acc[p.type] || 0) + 1;
             return acc;
           }, {} as Record<string, number>),
+          totalEmbeddingDims: patterns.length > 0 ? patterns[0].embedding.length : 384,
         },
         features: {
           hnsw: true,
