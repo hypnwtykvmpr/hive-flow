@@ -111,6 +111,9 @@ import { hooksCommand } from './hooks.js';
 import { daemonCommand } from './daemon.js';
 import { doctorCommand } from './doctor.js';
 import { embeddingsCommand } from './embeddings.js';
+import { neuralCommand } from './neural.js';
+import { performanceCommand } from './performance.js';
+import { securityCommand } from './security.js';
 
 // Pre-populate cache with core commands
 loadedCommands.set('init', initCommand);
