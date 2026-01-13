@@ -308,7 +308,6 @@ export const DEFAULT_INIT_OPTIONS: InitOptions = {
     sessionStart: true,
     stop: true,
     notification: true,
-    permissionRequest: true,
     timeout: 5000,
     continueOnError: true,
   },
