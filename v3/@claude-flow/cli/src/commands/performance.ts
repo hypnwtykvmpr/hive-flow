@@ -269,26 +269,60 @@ const profileCommand: Command = {
 
     const spinner = output.createSpinner({ text: 'Collecting profile data...', spinner: 'dots' });
     spinner.start();
-    await new Promise(r => setTimeout(r, 1000));
+
+    // Collect real metrics
+    const startCpu = process.cpuUsage();
+    const startMem = process.memoryUsage();
+    const startTime = process.hrtime.bigint();
+
+    // Sample for a brief period
+    await new Promise(r => setTimeout(r, Math.min(duration * 100, 2000)));
+
+    const endCpu = process.cpuUsage(startCpu);
+    const endMem = process.memoryUsage();
+    const endTime = process.hrtime.bigint();
+
     spinner.succeed('Profile complete');
+
+    // Calculate real values
+    const elapsedMs = Number(endTime - startTime) / 1_000_000;
+    const cpuPercent = ((endCpu.user + endCpu.system) / 1000 / elapsedMs * 100).toFixed(1);
+    const heapUsedMB = (endMem.heapUsed / 1024 / 1024).toFixed(1);
+    const heapTotalMB = (endMem.heapTotal / 1024 / 1024).toFixed(1);
+    const rssMB = (endMem.rss / 1024 / 1024).toFixed(1);
+    const externalMB = (endMem.external / 1024 / 1024).toFixed(1);
+
+    // Get event loop lag (approximate)
+    const lagStart = Date.now();
+    await new Promise(r => setImmediate(r));
+    const eventLoopLag = (Date.now() - lagStart).toFixed(1);
+
+    // Determine status based on thresholds
+    const heapStatus = endMem.heapUsed / endMem.heapTotal > 0.9 ? output.error('High') :
+                       endMem.heapUsed / endMem.heapTotal > 0.7 ? output.warning('Elevated') : output.success('Normal');
+    const lagStatus = parseFloat(eventLoopLag) > 50 ? output.error('High') :
+                      parseFloat(eventLoopLag) > 10 ? output.warning('Elevated') : output.success('Normal');
 
     output.writeln();
     output.printTable({
       columns: [
         { key: 'metric', header: 'Metric', width: 25 },
         { key: 'current', header: 'Current', width: 15 },
-        { key: 'peak', header: 'Peak', width: 15 },
+        { key: 'peak', header: 'Peak/Total', width: 15 },
         { key: 'status', header: 'Status', width: 15 },
       ],
       data: [
-        { metric: 'CPU Usage', current: '23%', peak: '67%', status: output.success('Normal') },
-        { metric: 'Memory (Heap)', current: '145 MB', peak: '312 MB', status: output.success('Normal') },
-        { metric: 'Memory (RSS)', current: '287 MB', peak: '456 MB', status: output.success('Normal') },
-        { metric: 'Event Loop Lag', current: '1.2ms', peak: '8.4ms', status: output.success('Normal') },
-        { metric: 'Active Handles', current: '24', peak: '89', status: output.success('Normal') },
-        { metric: 'GC Pause Time', current: '2.1ms', peak: '12.3ms', status: output.warning('Elevated') },
+        { metric: 'CPU Usage', current: `${cpuPercent}%`, peak: '-', status: output.success('Sampled') },
+        { metric: 'Memory (Heap Used)', current: `${heapUsedMB} MB`, peak: `${heapTotalMB} MB`, status: heapStatus },
+        { metric: 'Memory (RSS)', current: `${rssMB} MB`, peak: '-', status: output.success('Normal') },
+        { metric: 'Memory (External)', current: `${externalMB} MB`, peak: '-', status: output.success('Normal') },
+        { metric: 'Event Loop Lag', current: `${eventLoopLag}ms`, peak: '-', status: lagStatus },
+        { metric: 'Node.js Uptime', current: `${process.uptime().toFixed(1)}s`, peak: '-', status: output.success('Running') },
       ],
     });
+
+    output.writeln();
+    output.writeln(output.dim(`Profile duration: ${elapsedMs.toFixed(0)}ms`));
 
     return { success: true };
   },
