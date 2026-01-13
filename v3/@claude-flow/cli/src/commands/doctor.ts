@@ -239,21 +239,31 @@ async function checkBuildTools(): Promise<HealthCheck> {
 // Check for stale npx cache (version freshness)
 async function checkVersionFreshness(): Promise<HealthCheck> {
   try {
-    // Get current CLI version
-    const packageJsonPath = new URL('../package.json', import.meta.url).pathname;
+    // Get current CLI version from package.json
     let currentVersion = '0.0.0';
-
     try {
-      const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8'));
-      currentVersion = packageJson.version || '0.0.0';
-    } catch {
-      // Try alternative approach - check if we can get version from module
-      try {
-        currentVersion = await runCommand('npx @claude-flow/cli@latest --version 2>/dev/null | head -1', 3000);
-        currentVersion = currentVersion.replace(/[^0-9.-]/g, '').trim() || '0.0.0';
-      } catch {
-        currentVersion = '0.0.0';
+      // Look for package.json in multiple locations
+      const possiblePaths = [
+        join(process.cwd(), 'node_modules/@claude-flow/cli/package.json'),
+        new URL('../package.json', import.meta.url).pathname
+      ];
+
+      for (const pkgPath of possiblePaths) {
+        try {
+          if (existsSync(pkgPath)) {
+            const packageJson = JSON.parse(readFileSync(pkgPath, 'utf8'));
+            if (packageJson.version) {
+              currentVersion = packageJson.version;
+              break;
+            }
+          }
+        } catch {
+          continue;
+        }
       }
+    } catch {
+      // Fall back to a default
+      currentVersion = '0.0.0';
     }
 
     // Check if running via npx (look for _npx in process path or argv)
@@ -261,10 +271,10 @@ async function checkVersionFreshness(): Promise<HealthCheck> {
                   process.env.npm_execpath?.includes('npx') ||
                   process.cwd().includes('_npx');
 
-    // Query npm for latest version
+    // Query npm for latest version (using alpha tag since that's what we publish to)
     let latestVersion = currentVersion;
     try {
-      const npmInfo = await runCommand('npm view @claude-flow/cli version 2>/dev/null', 5000);
+      const npmInfo = await runCommand('npm view @claude-flow/cli@alpha version 2>/dev/null', 5000);
       latestVersion = npmInfo.trim();
     } catch {
       // Can't reach npm registry - skip check
@@ -275,14 +285,27 @@ async function checkVersionFreshness(): Promise<HealthCheck> {
       };
     }
 
-    // Compare versions
-    const current = currentVersion.split('-')[0].split('.').map(n => parseInt(n, 10) || 0);
-    const latest = latestVersion.split('-')[0].split('.').map(n => parseInt(n, 10) || 0);
+    // Parse version numbers for comparison (handle prerelease like 3.0.0-alpha.84)
+    const parseVersion = (v: string): { major: number; minor: number; patch: number; prerelease: number } => {
+      const match = v.match(/^(\d+)\.(\d+)\.(\d+)(?:-[a-zA-Z]+\.(\d+))?/);
+      if (!match) return { major: 0, minor: 0, patch: 0, prerelease: 0 };
+      return {
+        major: parseInt(match[1], 10) || 0,
+        minor: parseInt(match[2], 10) || 0,
+        patch: parseInt(match[3], 10) || 0,
+        prerelease: parseInt(match[4], 10) || 0
+      };
+    };
 
+    const current = parseVersion(currentVersion);
+    const latest = parseVersion(latestVersion);
+
+    // Compare versions (including prerelease number)
     const isOutdated = (
-      latest[0] > current[0] ||
-      (latest[0] === current[0] && latest[1] > current[1]) ||
-      (latest[0] === current[0] && latest[1] === current[1] && latest[2] > current[2])
+      latest.major > current.major ||
+      (latest.major === current.major && latest.minor > current.minor) ||
+      (latest.major === current.major && latest.minor === current.minor && latest.patch > current.patch) ||
+      (latest.major === current.major && latest.minor === current.minor && latest.patch === current.patch && latest.prerelease > current.prerelease)
     );
 
     if (isOutdated) {
