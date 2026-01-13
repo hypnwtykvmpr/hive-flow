@@ -359,7 +359,7 @@ const patternsCommand: Command = {
 
       if (action === 'list') {
         // Get real patterns from ReasoningBank
-        const patterns = await findSimilarPatterns(query || 'all patterns', limit);
+        const patterns = await findSimilarPatterns(query || 'all patterns', { k: limit });
 
         if (patterns.length === 0) {
           output.writeln(output.dim('No patterns found. Train some patterns first with: neural train'));
@@ -375,13 +375,13 @@ const patternsCommand: Command = {
               { key: 'id', header: 'ID', width: 12 },
               { key: 'type', header: 'Type', width: 18 },
               { key: 'confidence', header: 'Confidence', width: 12 },
-              { key: 'similarity', header: 'Match', width: 10 },
+              { key: 'usage', header: 'Usage', width: 10 },
             ],
             data: patterns.map((p, i) => ({
-              id: `P${String(i + 1).padStart(3, '0')}`,
-              type: output.highlight(p.type || p.metadata?.patternType || 'unknown'),
-              confidence: `${((p.confidence || p.score || 0.5) * 100).toFixed(1)}%`,
-              similarity: `${((p.similarity || 0) * 100).toFixed(0)}%`,
+              id: p.id || `P${String(i + 1).padStart(3, '0')}`,
+              type: output.highlight(p.type || 'unknown'),
+              confidence: `${((p.confidence || 0.5) * 100).toFixed(1)}%`,
+              usage: String(p.usageCount || 0),
             })),
           });
         }
@@ -390,7 +390,7 @@ const patternsCommand: Command = {
         output.writeln(output.dim(`Total: ${stats.patternsLearned} patterns | Trajectories: ${stats.trajectoriesRecorded}`));
       } else if (action === 'analyze' && query) {
         // Analyze patterns related to query
-        const related = await findSimilarPatterns(query, limit);
+        const related = await findSimilarPatterns(query, { k: limit });
         output.writeln(`Analyzing patterns related to: "${query}"`);
         output.writeln();
 
@@ -398,13 +398,13 @@ const patternsCommand: Command = {
           output.printTable({
             columns: [
               { key: 'content', header: 'Pattern', width: 40 },
-              { key: 'similarity', header: 'Relevance', width: 12 },
+              { key: 'confidence', header: 'Confidence', width: 12 },
               { key: 'type', header: 'Type', width: 15 },
             ],
             data: related.slice(0, 5).map(p => ({
-              content: (p.content || p.text || '').substring(0, 38) + '...',
-              similarity: `${((p.similarity || 0) * 100).toFixed(0)}%`,
-              type: p.type || p.metadata?.patternType || 'general',
+              content: (p.content || '').substring(0, 38) + (p.content?.length > 38 ? '...' : ''),
+              confidence: `${((p.confidence || 0) * 100).toFixed(0)}%`,
+              type: p.type || 'general',
             })),
           });
         } else {
