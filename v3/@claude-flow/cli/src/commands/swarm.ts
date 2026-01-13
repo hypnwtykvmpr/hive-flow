@@ -165,7 +165,8 @@ const TOPOLOGIES = [
   { value: 'mesh', label: 'Mesh', hint: 'Fully connected peer-to-peer network' },
   { value: 'ring', label: 'Ring', hint: 'Circular communication pattern' },
   { value: 'star', label: 'Star', hint: 'Central coordinator with spoke agents' },
-  { value: 'hybrid', label: 'Hybrid', hint: 'Hierarchical mesh for maximum flexibility' }
+  { value: 'hybrid', label: 'Hybrid', hint: 'Hierarchical mesh for maximum flexibility' },
+  { value: 'hierarchical-mesh', label: 'Hierarchical Mesh', hint: 'V3 15-agent queen + peer communication (recommended)' }
 ];
 
 // Swarm strategies
