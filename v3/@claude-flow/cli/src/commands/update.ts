@@ -1,16 +1,10 @@
 /**
- * Update command - manage @claude-flow package updates
- *
- * Usage:
- *   claude-flow update check       - Check for available updates
- *   claude-flow update all         - Update all packages
- *   claude-flow update <package>   - Update specific package
- *   claude-flow update history     - View update history
- *   claude-flow update rollback    - Rollback last update
+ * V3 CLI Update Command
+ * Auto-update system for @claude-flow packages (ADR-025)
  */
 
-import { Command } from 'commander';
-import { createOutput, createSpinner } from '../utils/output.js';
+import type { Command, CommandContext, CommandResult } from '../types.js';
+import { output } from '../output.js';
 import {
   checkForUpdates,
   checkSinglePackage,
@@ -27,14 +21,252 @@ import {
 } from '../update/executor.js';
 import { clearCache } from '../update/rate-limiter.js';
 
-const output = createOutput();
+// Subcommand: check
+const checkCommand: Command = {
+  name: 'check',
+  description: 'Check for available @claude-flow package updates',
+  options: [
+    { name: 'force', description: 'Force check (ignore rate limit)', type: 'boolean' },
+    { name: 'json', description: 'Output as JSON', type: 'boolean' },
+  ],
+  async execute(ctx: CommandContext): Promise<CommandResult> {
+    const { flags } = ctx;
 
+    if (flags.force) {
+      process.env.CLAUDE_FLOW_FORCE_UPDATE = 'true';
+    }
+
+    try {
+      const { results, skipped, reason } = await checkForUpdates(DEFAULT_CONFIG);
+
+      if (skipped) {
+        output.printInfo(`Update check skipped: ${reason}`);
+        output.writeln('Use --force to check anyway');
+        return { success: true };
+      }
+
+      if (flags.json) {
+        console.log(JSON.stringify(results, null, 2));
+        return { success: true };
+      }
+
+      if (results.length === 0) {
+        output.printSuccess('All @claude-flow packages are up to date!');
+        return { success: true };
+      }
+
+      output.printHeader('Available Updates');
+      output.writeln();
+
+      output.printTable({
+        headers: ['Package', 'Current', 'Latest', 'Type', 'Priority', 'Auto'],
+        data: results.map((r) => ({
+          package: r.package,
+          current: r.currentVersion,
+          latest: output.highlight(r.latestVersion),
+          type: formatUpdateType(r.updateType),
+          priority: formatPriority(r.priority),
+          auto: r.shouldAutoUpdate ? output.success('yes') : output.dim('no'),
+        })),
+      });
+
+      output.writeln();
+      const autoUpdates = results.filter((r) => r.shouldAutoUpdate);
+      const manualUpdates = results.filter((r) => !r.shouldAutoUpdate);
+
+      if (autoUpdates.length > 0) {
+        output.printInfo(
+          `${autoUpdates.length} update(s) will be applied automatically on next startup`
+        );
+      }
+
+      if (manualUpdates.length > 0) {
+        output.writeln();
+        output.printInfo('To update manually, run:');
+        output.writeln('  claude-flow update all');
+      }
+
+      return { success: true };
+    } finally {
+      delete process.env.CLAUDE_FLOW_FORCE_UPDATE;
+    }
+  },
+};
+
+// Subcommand: all
+const allCommand: Command = {
+  name: 'all',
+  description: 'Update all @claude-flow packages',
+  options: [
+    { name: 'dry-run', description: 'Show what would be updated', type: 'boolean' },
+    { name: 'include-major', description: 'Include major version updates', type: 'boolean' },
+  ],
+  async execute(ctx: CommandContext): Promise<CommandResult> {
+    const { flags } = ctx;
+    process.env.CLAUDE_FLOW_FORCE_UPDATE = 'true';
+
+    try {
+      output.printInfo('Checking for updates...');
+
+      const config = {
+        ...DEFAULT_CONFIG,
+        autoUpdate: {
+          patch: true,
+          minor: true,
+          major: flags.includeMajor as boolean || false,
+        },
+      };
+
+      const { results } = await checkForUpdates(config);
+
+      if (results.length === 0) {
+        output.printSuccess('All packages are up to date!');
+        return { success: true };
+      }
+
+      // Get installed packages
+      const installedPackages: Record<string, string> = {};
+      for (const update of results) {
+        const version = getInstalledVersion(update.package);
+        if (version) {
+          installedPackages[update.package] = version;
+        }
+      }
+
+      output.printInfo(`Updating ${results.length} package(s)...`);
+
+      const updateResults = await executeMultipleUpdates(
+        results,
+        installedPackages,
+        flags.dryRun as boolean
+      );
+
+      const successful = updateResults.filter((r) => r.success);
+      const failed = updateResults.filter((r) => !r.success);
+
+      output.writeln();
+      output.printHeader(flags.dryRun ? 'Dry Run - Would Update' : 'Update Results');
+      output.writeln();
+
+      if (successful.length > 0) {
+        output.printSuccess(
+          `${successful.length} package(s) ${flags.dryRun ? 'would be ' : ''}updated:`
+        );
+        for (const r of successful) {
+          output.writeln(`  ${output.success('✓')} ${r.package}@${r.version}`);
+        }
+      }
+
+      if (failed.length > 0) {
+        output.writeln();
+        output.printError(`${failed.length} package(s) failed:`);
+        for (const r of failed) {
+          output.writeln(`  ${output.error('✗')} ${r.package}: ${r.error}`);
+        }
+      }
+
+      return { success: failed.length === 0 };
+    } finally {
+      delete process.env.CLAUDE_FLOW_FORCE_UPDATE;
+    }
+  },
+};
+
+// Subcommand: history
+const historyCommand: Command = {
+  name: 'history',
+  description: 'View update history',
+  options: [
+    { name: 'limit', short: 'n', description: 'Number of entries', type: 'string', default: '20' },
+    { name: 'json', description: 'Output as JSON', type: 'boolean' },
+    { name: 'clear', description: 'Clear history', type: 'boolean' },
+  ],
+  async execute(ctx: CommandContext): Promise<CommandResult> {
+    const { flags } = ctx;
+
+    if (flags.clear) {
+      clearHistory();
+      output.printSuccess('Update history cleared');
+      return { success: true };
+    }
+
+    const limit = parseInt(flags.limit as string || '20', 10);
+    const history = getUpdateHistory(limit);
+
+    if (history.length === 0) {
+      output.printInfo('No update history available');
+      return { success: true };
+    }
+
+    if (flags.json) {
+      console.log(JSON.stringify(history, null, 2));
+      return { success: true };
+    }
+
+    output.printHeader('Update History');
+    output.writeln();
+
+    output.printTable({
+      headers: ['Time', 'Package', 'From', 'To', 'Status'],
+      data: history.map((h) => ({
+        time: new Date(h.timestamp).toLocaleString(),
+        package: h.package,
+        from: h.fromVersion,
+        to: h.toVersion,
+        status: h.success ? output.success('success') : output.error(`failed`),
+      })),
+    });
+
+    return { success: true };
+  },
+};
+
+// Subcommand: rollback
+const rollbackCommand: Command = {
+  name: 'rollback',
+  description: 'Rollback last update',
+  options: [
+    { name: 'package', short: 'p', description: 'Specific package to rollback', type: 'string' },
+  ],
+  async execute(ctx: CommandContext): Promise<CommandResult> {
+    const { flags } = ctx;
+    const packageName = flags.package as string | undefined;
+
+    output.printInfo(
+      packageName ? `Rolling back ${packageName}...` : 'Rolling back last update...'
+    );
+
+    const result = await rollbackUpdate(packageName);
+
+    if (result.success) {
+      output.printSuccess(result.message);
+    } else {
+      output.printError(result.message);
+    }
+
+    return { success: result.success };
+  },
+};
+
+// Subcommand: clear-cache
+const clearCacheCommand: Command = {
+  name: 'clear-cache',
+  description: 'Clear update check cache',
+  async execute(): Promise<CommandResult> {
+    clearCache();
+    output.printSuccess('Update cache cleared');
+    output.printInfo('Next startup will check for updates');
+    return { success: true };
+  },
+};
+
+// Helper functions
 function formatUpdateType(type: string): string {
   switch (type) {
     case 'major':
       return output.error('MAJOR');
     case 'minor':
-      return output.warn('minor');
+      return output.warning('minor');
     case 'patch':
       return output.success('patch');
     default:
@@ -47,344 +279,46 @@ function formatPriority(priority: string): string {
     case 'critical':
       return output.error('CRITICAL');
     case 'high':
-      return output.warn('high');
+      return output.warning('high');
     case 'normal':
       return output.info('normal');
     case 'low':
-      return output.muted('low');
+      return output.dim('low');
     default:
       return priority;
   }
 }
 
-function createUpdateCommand(): Command {
-  const updateCmd = new Command('update')
-    .description('Manage @claude-flow package updates')
-    .addHelpText(
-      'after',
-      `
-Examples:
-  $ claude-flow update check              Check for available updates
-  $ claude-flow update all                Update all packages
-  $ claude-flow update @claude-flow/cli   Update specific package
-  $ claude-flow update history            View update history
-  $ claude-flow update rollback           Rollback last update
-  $ claude-flow update clear-cache        Clear update check cache
+// Main update command
+const updateCommand: Command = {
+  name: 'update',
+  description: 'Manage @claude-flow package updates (ADR-025)',
+  subcommands: [checkCommand, allCommand, historyCommand, rollbackCommand, clearCacheCommand],
+  async execute(ctx: CommandContext): Promise<CommandResult> {
+    // Show help if no subcommand
+    output.printHeader('Update Command');
+    output.writeln();
+    output.writeln('Manage @claude-flow package updates with auto-update support.');
+    output.writeln();
+    output.writeln('Subcommands:');
+    output.printList([
+      `${output.highlight('check')}       - Check for available updates`,
+      `${output.highlight('all')}         - Update all packages`,
+      `${output.highlight('history')}     - View update history`,
+      `${output.highlight('rollback')}    - Rollback last update`,
+      `${output.highlight('clear-cache')} - Clear update check cache`,
+    ]);
+    output.writeln();
+    output.writeln('Environment Variables:');
+    output.printList([
+      `${output.dim('CLAUDE_FLOW_AUTO_UPDATE=false')}  - Disable auto-update`,
+      `${output.dim('CLAUDE_FLOW_FORCE_UPDATE=true')} - Force update check`,
+    ]);
+    output.writeln();
+    output.writeln('Run "claude-flow update <subcommand> --help" for subcommand help');
 
-Environment Variables:
-  CLAUDE_FLOW_AUTO_UPDATE=false    Disable auto-update
-  CLAUDE_FLOW_FORCE_UPDATE=true    Force update check
-`
-    );
+    return { success: true };
+  },
+};
 
-  // Check for updates
-  updateCmd
-    .command('check')
-    .description('Check for available updates')
-    .option('--force', 'Force check (ignore rate limit)')
-    .option('--json', 'Output as JSON')
-    .action(async (options) => {
-      const spinner = createSpinner('Checking for updates...');
-
-      // Force check if requested
-      if (options.force) {
-        process.env.CLAUDE_FLOW_FORCE_UPDATE = 'true';
-      }
-
-      try {
-        const { results, skipped, reason } = await checkForUpdates(DEFAULT_CONFIG);
-
-        spinner.stop();
-
-        if (skipped) {
-          output.printInfo(`Update check skipped: ${reason}`);
-          output.writeln('Use --force to check anyway');
-          return;
-        }
-
-        if (options.json) {
-          console.log(JSON.stringify(results, null, 2));
-          return;
-        }
-
-        if (results.length === 0) {
-          output.printSuccess('All @claude-flow packages are up to date!');
-          return;
-        }
-
-        output.printHeader('Available Updates');
-        output.writeln();
-
-        output.printTable({
-          headers: ['Package', 'Current', 'Latest', 'Type', 'Priority', 'Auto'],
-          data: results.map((r) => ({
-            package: r.package,
-            current: r.currentVersion,
-            latest: output.highlight(r.latestVersion),
-            type: formatUpdateType(r.updateType),
-            priority: formatPriority(r.priority),
-            auto: r.shouldAutoUpdate ? output.success('yes') : output.muted('no'),
-          })),
-        });
-
-        output.writeln();
-
-        const autoUpdates = results.filter((r) => r.shouldAutoUpdate);
-        const manualUpdates = results.filter((r) => !r.shouldAutoUpdate);
-
-        if (autoUpdates.length > 0) {
-          output.printInfo(
-            `${autoUpdates.length} update(s) will be applied automatically on next startup`
-          );
-        }
-
-        if (manualUpdates.length > 0) {
-          output.writeln();
-          output.printInfo('To update manually, run:');
-          output.writeln(`  claude-flow update all`);
-          output.writeln('  or');
-          manualUpdates.forEach((r) => {
-            output.writeln(`  claude-flow update ${r.package}`);
-          });
-        }
-      } catch (error) {
-        spinner.fail('Update check failed');
-        const err = error as Error;
-        output.printError(err.message);
-      } finally {
-        // Clean up env
-        delete process.env.CLAUDE_FLOW_FORCE_UPDATE;
-      }
-    });
-
-  // Update all packages
-  updateCmd
-    .command('all')
-    .description('Update all @claude-flow packages')
-    .option('--dry-run', 'Show what would be updated without making changes')
-    .option('--include-major', 'Include major version updates')
-    .action(async (options) => {
-      const spinner = createSpinner('Checking for updates...');
-
-      // Force check
-      process.env.CLAUDE_FLOW_FORCE_UPDATE = 'true';
-
-      try {
-        const config = {
-          ...DEFAULT_CONFIG,
-          autoUpdate: {
-            patch: true,
-            minor: true,
-            major: options.includeMajor || false,
-          },
-        };
-
-        const { results } = await checkForUpdates(config);
-
-        if (results.length === 0) {
-          spinner.succeed('All packages are up to date!');
-          return;
-        }
-
-        spinner.text = `Updating ${results.length} package(s)...`;
-
-        // Get installed packages
-        const installedPackages: Record<string, string> = {};
-        for (const update of results) {
-          const version = getInstalledVersion(update.package);
-          if (version) {
-            installedPackages[update.package] = version;
-          }
-        }
-
-        // Execute updates
-        const updateResults = await executeMultipleUpdates(
-          results,
-          installedPackages,
-          options.dryRun
-        );
-
-        spinner.stop();
-
-        const successful = updateResults.filter((r) => r.success);
-        const failed = updateResults.filter((r) => !r.success);
-
-        if (options.dryRun) {
-          output.printHeader('Dry Run - Would Update');
-        } else {
-          output.printHeader('Update Results');
-        }
-
-        output.writeln();
-
-        if (successful.length > 0) {
-          output.printSuccess(`${successful.length} package(s) ${options.dryRun ? 'would be ' : ''}updated:`);
-          successful.forEach((r) => {
-            output.writeln(`  ${output.success('✓')} ${r.package}@${r.version}`);
-          });
-        }
-
-        if (failed.length > 0) {
-          output.writeln();
-          output.printError(`${failed.length} package(s) failed:`);
-          failed.forEach((r) => {
-            output.writeln(`  ${output.error('✗')} ${r.package}: ${r.error}`);
-          });
-        }
-
-        // Show warnings
-        for (const result of updateResults) {
-          if (result.validation.warnings.length > 0) {
-            output.writeln();
-            output.printWarn(`Warnings for ${result.package}:`);
-            result.validation.warnings.forEach((w) => {
-              output.writeln(`  ${output.warn('!')} ${w}`);
-            });
-          }
-        }
-      } catch (error) {
-        spinner.fail('Update failed');
-        const err = error as Error;
-        output.printError(err.message);
-      } finally {
-        delete process.env.CLAUDE_FLOW_FORCE_UPDATE;
-      }
-    });
-
-  // Update specific package
-  updateCmd
-    .command('package <name>')
-    .description('Update a specific @claude-flow package')
-    .option('--dry-run', 'Show what would be updated without making changes')
-    .action(async (name: string, options) => {
-      const spinner = createSpinner(`Checking ${name}...`);
-
-      try {
-        const result = await checkSinglePackage(name, DEFAULT_CONFIG);
-
-        if (!result) {
-          spinner.fail(`Package ${name} not found or not installed`);
-          return;
-        }
-
-        if (result.updateType === 'none') {
-          spinner.succeed(`${name} is already up to date (${result.currentVersion})`);
-          return;
-        }
-
-        spinner.text = `Updating ${name} to ${result.latestVersion}...`;
-
-        // Get installed packages for validation
-        const installedPackages: Record<string, string> = {};
-        const version = getInstalledVersion(name);
-        if (version) {
-          installedPackages[name] = version;
-        }
-
-        const updateResult = await executeUpdate(result, installedPackages, options.dryRun);
-
-        if (updateResult.success) {
-          spinner.succeed(
-            options.dryRun
-              ? `Would update ${name}: ${result.currentVersion} → ${result.latestVersion}`
-              : `Updated ${name}: ${result.currentVersion} → ${result.latestVersion}`
-          );
-        } else {
-          spinner.fail(`Failed to update ${name}: ${updateResult.error}`);
-        }
-
-        // Show warnings
-        if (updateResult.validation.warnings.length > 0) {
-          output.writeln();
-          output.printWarn('Warnings:');
-          updateResult.validation.warnings.forEach((w) => {
-            output.writeln(`  ${w}`);
-          });
-        }
-      } catch (error) {
-        spinner.fail('Update failed');
-        const err = error as Error;
-        output.printError(err.message);
-      }
-    });
-
-  // View history
-  updateCmd
-    .command('history')
-    .description('View update history')
-    .option('-n, --limit <number>', 'Number of entries to show', '20')
-    .option('--json', 'Output as JSON')
-    .option('--clear', 'Clear update history')
-    .action(async (options) => {
-      if (options.clear) {
-        clearHistory();
-        output.printSuccess('Update history cleared');
-        return;
-      }
-
-      const history = getUpdateHistory(parseInt(options.limit, 10));
-
-      if (history.length === 0) {
-        output.printInfo('No update history available');
-        return;
-      }
-
-      if (options.json) {
-        console.log(JSON.stringify(history, null, 2));
-        return;
-      }
-
-      output.printHeader('Update History');
-      output.writeln();
-
-      output.printTable({
-        headers: ['Time', 'Package', 'From', 'To', 'Status'],
-        data: history.map((h) => ({
-          time: new Date(h.timestamp).toLocaleString(),
-          package: h.package,
-          from: h.fromVersion,
-          to: h.toVersion,
-          status: h.success
-            ? output.success('success')
-            : output.error(`failed: ${h.error}`),
-        })),
-      });
-    });
-
-  // Rollback
-  updateCmd
-    .command('rollback')
-    .description('Rollback last update')
-    .argument('[package]', 'Specific package to rollback')
-    .action(async (packageName?: string) => {
-      const spinner = createSpinner(
-        packageName ? `Rolling back ${packageName}...` : 'Rolling back last update...'
-      );
-
-      try {
-        const result = await rollbackUpdate(packageName);
-
-        if (result.success) {
-          spinner.succeed(result.message);
-        } else {
-          spinner.fail(result.message);
-        }
-      } catch (error) {
-        spinner.fail('Rollback failed');
-        const err = error as Error;
-        output.printError(err.message);
-      }
-    });
-
-  // Clear cache
-  updateCmd
-    .command('clear-cache')
-    .description('Clear update check cache')
-    .action(() => {
-      clearCache();
-      output.printSuccess('Update cache cleared');
-      output.printInfo('Next startup will check for updates');
-    });
-
-  return updateCmd;
-}
+export default updateCommand;
