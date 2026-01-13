@@ -65,28 +65,60 @@ export class PatternPublisher {
         console.log(`[Publish] Content signed`);
       }
 
-      // Step 5: Upload to IPFS
-      console.log(`[Publish] Uploading to IPFS...`);
-      const uploadResult = await uploadToIPFS(contentBuffer, {
-        name: `${options.name}.cfp.json`,
-        pin: true,
-      });
+      // Step 5: Upload to IPFS or GCS
+      let uploadCid: string;
+      let gatewayUrl: string;
 
-      if (!uploadResult.cid) {
-        return {
-          success: false,
-          patternId: '',
-          cid: '',
-          registryCid: '',
-          gatewayUrl: '',
-          message: 'Failed to upload to IPFS',
-        };
+      // Check if GCS is configured
+      try {
+        const { hasGCSCredentials, uploadToGCS } = await import('../storage/gcs.js');
+        if (hasGCSCredentials()) {
+          console.log(`[Publish] Uploading to Google Cloud Storage...`);
+          const gcsResult = await uploadToGCS(contentBuffer, {
+            name: `${options.name}.cfp.json`,
+            metadata: {
+              checksum,
+              author: author.id,
+              version: cfp.version,
+            },
+          });
+
+          if (gcsResult.success) {
+            uploadCid = gcsResult.uri; // Use GCS URI as CID
+            gatewayUrl = gcsResult.publicUrl;
+            console.log(`[Publish] Uploaded to GCS: ${gcsResult.uri}`);
+          } else {
+            throw new Error('GCS upload failed');
+          }
+        } else {
+          throw new Error('GCS not configured');
+        }
+      } catch {
+        // Fallback to IPFS
+        console.log(`[Publish] Uploading to IPFS...`);
+        const uploadResult = await uploadToIPFS(contentBuffer, {
+          name: `${options.name}.cfp.json`,
+          pin: true,
+        });
+
+        if (!uploadResult.cid) {
+          return {
+            success: false,
+            patternId: '',
+            cid: '',
+            registryCid: '',
+            gatewayUrl: '',
+            message: 'Failed to upload to IPFS (no IPFS credentials configured)',
+          };
+        }
+
+        uploadCid = uploadResult.cid;
+        gatewayUrl = `${this.config.gateway}/ipfs/${uploadResult.cid}`;
+        console.log(`[Publish] Uploaded to IPFS: ${uploadResult.cid}`);
+
+        // Pin content
+        await pinContent(uploadResult.cid);
       }
-
-      console.log(`[Publish] Uploaded to IPFS: ${uploadResult.cid}`);
-
-      // Step 6: Pin content
-      await pinContent(uploadResult.cid);
 
       // Step 7: Create pattern entry
       const patternId = generatePatternId(options.name);
