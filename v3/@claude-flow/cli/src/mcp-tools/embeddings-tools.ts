@@ -291,8 +291,8 @@ export const embeddingsTools: MCPTool[] = [
       const text = input.text as string;
       const useHyperbolic = input.hyperbolic === true && config.hyperbolic.enabled;
 
-      // Generate embedding
-      const embedding = generateMockEmbedding(text, config.dimension);
+      // Generate real ONNX embedding
+      const embedding = await generateRealEmbedding(text, config.dimension);
 
       let result: number[];
       let geometry: string;
