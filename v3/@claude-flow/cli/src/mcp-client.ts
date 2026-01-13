@@ -23,6 +23,7 @@ import { workflowTools } from './mcp-tools/workflow-tools.js';
 import { analyzeTools } from './mcp-tools/analyze-tools.js';
 import { progressTools } from './mcp-tools/progress-tools.js';
 import { embeddingsTools } from './mcp-tools/embeddings-tools.js';
+import { claimsTools } from './mcp-tools/claims-tools.js';
 
 /**
  * MCP Tool Registry
