@@ -13,6 +13,7 @@ import { CommandParser, commandParser } from './parser.js';
 import { OutputFormatter, output } from './output.js';
 import { commands, commandRegistry, getCommand, getCommandAsync, getCommandNames, hasCommand } from './commands/index.js';
 import { suggestCommand } from './suggest.js';
+import { runStartupUpdateCheck } from './update/index.js';
 
 // Read version from package.json at runtime
 function getPackageVersion(): string {
