@@ -120,7 +120,7 @@ async function checkMemoryDatabase(): Promise<HealthCheck> {
   for (const dbPath of dbPaths) {
     if (existsSync(dbPath)) {
       try {
-        const stats = require('fs').statSync(dbPath);
+        const stats = statSync(dbPath);
         const sizeMB = (stats.size / 1024 / 1024).toFixed(2);
         return { name: 'Memory Database', status: 'pass', message: `${dbPath} (${sizeMB} MB)` };
       } catch {
