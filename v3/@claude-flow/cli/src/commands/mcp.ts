@@ -107,9 +107,32 @@ const startCommand: Command = {
     // Check if already running
     const existingStatus = await getMCPServerStatus();
     if (existingStatus.running) {
-      output.printWarning(`MCP Server already running (PID: ${existingStatus.pid})`);
-      output.writeln(output.dim('Use "claude-flow mcp stop" to stop the server first'));
-      return { success: false, exitCode: 1 };
+      // Verify the server is actually healthy/responsive
+      const manager = getServerManager();
+      const health = await manager.checkHealth();
+
+      if (health.healthy) {
+        output.printWarning(`MCP Server already running (PID: ${existingStatus.pid})`);
+        output.writeln(output.dim('Use "claude-flow mcp stop" to stop the server first'));
+        return { success: false, exitCode: 1 };
+      }
+
+      // Server exists but is unresponsive - auto-recover
+      output.printWarning(`MCP Server (PID: ${existingStatus.pid}) is unresponsive - auto-recovering...`);
+      try {
+        // Force kill the stale process
+        if (existingStatus.pid) {
+          try {
+            process.kill(existingStatus.pid, 'SIGKILL');
+          } catch {
+            // Process may already be dead
+          }
+        }
+        await manager.stop();
+        output.writeln(output.dim('  Cleaned up stale server'));
+      } catch {
+        // Continue anyway - the stop/cleanup may partially fail
+      }
     }
 
     const options: MCPServerOptions = {
