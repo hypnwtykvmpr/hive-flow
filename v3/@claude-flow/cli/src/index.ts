@@ -96,6 +96,11 @@ export class CLI {
         this.output.printDebug(`CWD: ${process.cwd()}`);
       }
 
+      // Run startup update check (non-blocking, silent on skip)
+      if (!flags.noUpdate && commandPath[0] !== 'update') {
+        this.checkForUpdatesOnStartup().catch(() => {/* silent */});
+      }
+
       // Handle lazy-loaded commands that weren't recognized by the parser
       // If commandPath is empty but positional has a command name, check if it's lazy-loadable
       if (commandPath.length === 0 && positional.length > 0 && !positional[0].startsWith('-')) {
