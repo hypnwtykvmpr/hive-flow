@@ -309,27 +309,179 @@ const metricsCommand: Command = {
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     const timeframe = ctx.flags.timeframe as string || '24h';
+    const format = ctx.flags.format as string || 'text';
 
     output.writeln();
     output.writeln(output.bold(`Performance Metrics (${timeframe})`));
     output.writeln(output.dim('─'.repeat(50)));
 
+    const os = await import('os');
+    const fs = await import('fs');
+    const path = await import('path');
+
+    // Real system metrics
+    const memUsage = process.memoryUsage();
+    const cpuUsage = process.cpuUsage();
+    const uptime = process.uptime();
+    const loadAvg = os.loadavg();
+    const freeMem = os.freemem();
+    const totalMem = os.totalmem();
+
+    // Calculate real metrics
+    const heapUsedMB = (memUsage.heapUsed / 1024 / 1024).toFixed(1);
+    const heapTotalMB = (memUsage.heapTotal / 1024 / 1024).toFixed(1);
+    const rssMB = (memUsage.rss / 1024 / 1024).toFixed(1);
+    const memPercent = ((1 - freeMem / totalMem) * 100).toFixed(1);
+    const cpuUserMs = (cpuUsage.user / 1000).toFixed(0);
+    const cpuSystemMs = (cpuUsage.system / 1000).toFixed(0);
+
+    // Try to get HNSW/cache stats from real data
+    let cacheHitRate = 'N/A';
+    let hnswEntries = 0;
+    try {
+      const { getHNSWStatus } = await import('../memory/memory-initializer.js');
+      const status = getHNSWStatus();
+      hnswEntries = status?.totalItems || 0;
+    } catch { /* HNSW not initialized */ }
+
+    // Try to get real cache stats
+    let cacheEntries = 0;
+    try {
+      const cachePath = path.resolve('.cache/embeddings.db');
+      if (fs.existsSync(cachePath)) {
+        const stats = fs.statSync(cachePath);
+        cacheEntries = Math.floor(stats.size / 1600); // Approximate entries
+      }
+    } catch { /* no cache */ }
+
+    // Benchmark a quick operation to get real latency
+    let avgLatencyMs = 0;
+    try {
+      const times: number[] = [];
+      for (let i = 0; i < 10; i++) {
+        const start = performance.now();
+        await new Promise(r => setImmediate(r)); // Event loop turn
+        times.push(performance.now() - start);
+      }
+      avgLatencyMs = times.reduce((a, b) => a + b, 0) / times.length;
+    } catch { /* timing failed */ }
+
+    // JSON/Prometheus output
+    if (format === 'json') {
+      const metrics = {
+        timestamp: new Date().toISOString(),
+        timeframe,
+        memory: {
+          heapUsed: memUsage.heapUsed,
+          heapTotal: memUsage.heapTotal,
+          rss: memUsage.rss,
+          external: memUsage.external,
+          systemPercent: parseFloat(memPercent),
+        },
+        cpu: {
+          user: cpuUsage.user,
+          system: cpuUsage.system,
+          loadAverage: loadAvg,
+        },
+        process: {
+          uptime,
+          pid: process.pid,
+        },
+        cache: {
+          entries: cacheEntries,
+          hnswEntries,
+        },
+        latency: {
+          avgMs: avgLatencyMs,
+        },
+      };
+      output.writeln(JSON.stringify(metrics, null, 2));
+      return { success: true };
+    }
+
+    if (format === 'prometheus') {
+      output.writeln(`# HELP claude_flow_heap_used_bytes Heap memory used`);
+      output.writeln(`claude_flow_heap_used_bytes ${memUsage.heapUsed}`);
+      output.writeln(`# HELP claude_flow_heap_total_bytes Total heap memory`);
+      output.writeln(`claude_flow_heap_total_bytes ${memUsage.heapTotal}`);
+      output.writeln(`# HELP claude_flow_rss_bytes Resident set size`);
+      output.writeln(`claude_flow_rss_bytes ${memUsage.rss}`);
+      output.writeln(`# HELP claude_flow_cpu_user_microseconds CPU user time`);
+      output.writeln(`claude_flow_cpu_user_microseconds ${cpuUsage.user}`);
+      output.writeln(`# HELP claude_flow_cpu_system_microseconds CPU system time`);
+      output.writeln(`claude_flow_cpu_system_microseconds ${cpuUsage.system}`);
+      output.writeln(`# HELP claude_flow_cache_entries Embedding cache entries`);
+      output.writeln(`claude_flow_cache_entries ${cacheEntries}`);
+      output.writeln(`# HELP claude_flow_hnsw_entries HNSW index entries`);
+      output.writeln(`claude_flow_hnsw_entries ${hnswEntries}`);
+      output.writeln(`# HELP claude_flow_uptime_seconds Process uptime`);
+      output.writeln(`claude_flow_uptime_seconds ${uptime}`);
+      return { success: true };
+    }
+
+    // Text table output with real values
     output.printTable({
       columns: [
         { key: 'metric', header: 'Metric', width: 25 },
-        { key: 'avg', header: 'Avg', width: 12 },
-        { key: 'min', header: 'Min', width: 12 },
-        { key: 'max', header: 'Max', width: 12 },
-        { key: 'trend', header: 'Trend', width: 12 },
+        { key: 'current', header: 'Current', width: 15 },
+        { key: 'limit', header: 'Limit', width: 15 },
+        { key: 'status', header: 'Status', width: 12 },
       ],
       data: [
-        { metric: 'Request Latency', avg: '45ms', min: '12ms', max: '234ms', trend: output.success('↓ 12%') },
-        { metric: 'Throughput', avg: '1,247/s', min: '892/s', max: '2,103/s', trend: output.success('↑ 8%') },
-        { metric: 'Error Rate', avg: '0.12%', min: '0%', max: '0.89%', trend: output.success('↓ 45%') },
-        { metric: 'Cache Hit Rate', avg: '94.2%', min: '87.1%', max: '98.7%', trend: output.success('↑ 3%') },
-        { metric: 'Token Usage', avg: '45K/h', min: '12K/h', max: '89K/h', trend: output.warning('↑ 15%') },
+        {
+          metric: 'Heap Memory',
+          current: `${heapUsedMB} MB`,
+          limit: `${heapTotalMB} MB`,
+          status: parseFloat(heapUsedMB) < parseFloat(heapTotalMB) * 0.8 ? output.success('OK') : output.warning('High'),
+        },
+        {
+          metric: 'RSS Memory',
+          current: `${rssMB} MB`,
+          limit: '-',
+          status: parseFloat(rssMB) < 500 ? output.success('OK') : output.warning('High'),
+        },
+        {
+          metric: 'System Memory',
+          current: `${memPercent}%`,
+          limit: '100%',
+          status: parseFloat(memPercent) < 80 ? output.success('OK') : output.warning('High'),
+        },
+        {
+          metric: 'CPU User Time',
+          current: `${cpuUserMs}ms`,
+          limit: '-',
+          status: output.success('OK'),
+        },
+        {
+          metric: 'Event Loop Latency',
+          current: `${avgLatencyMs.toFixed(2)}ms`,
+          limit: '10ms',
+          status: avgLatencyMs < 10 ? output.success('OK') : output.warning('Slow'),
+        },
+        {
+          metric: 'HNSW Index',
+          current: `${hnswEntries} entries`,
+          limit: '-',
+          status: hnswEntries > 0 ? output.success('Active') : output.dim('Empty'),
+        },
+        {
+          metric: 'Embedding Cache',
+          current: `${cacheEntries} entries`,
+          limit: '-',
+          status: cacheEntries > 0 ? output.success('Active') : output.dim('Empty'),
+        },
+        {
+          metric: 'Process Uptime',
+          current: `${Math.floor(uptime)}s`,
+          limit: '-',
+          status: output.success('Running'),
+        },
       ],
     });
+
+    output.writeln();
+    output.writeln(output.dim(`Load Average: ${loadAvg.map(l => l.toFixed(2)).join(', ')}`));
+    output.writeln(output.dim(`CPUs: ${os.cpus().length} | Platform: ${os.platform()} ${os.release()}`));
 
     return { success: true };
   },
