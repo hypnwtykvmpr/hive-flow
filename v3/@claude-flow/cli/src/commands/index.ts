@@ -193,6 +193,9 @@ export const commands: Command[] = [
   daemonCommand,
   doctorCommand,
   embeddingsCommand,
+  neuralCommand,
+  performanceCommand,
+  securityCommand,
 ];
 
 /**
