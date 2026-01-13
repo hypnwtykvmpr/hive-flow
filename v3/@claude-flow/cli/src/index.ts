@@ -461,7 +461,7 @@ export {
 
 // Memory & Intelligence (V3 Performance Features)
 export {
-  initializeMemory,
+  initializeMemoryDatabase,
   generateEmbedding,
   generateBatchEmbeddings,
   storeEntry,
@@ -475,6 +475,7 @@ export {
   dequantizeInt8,
   quantizedCosineSim,
   getQuantizationStats,
+  type MemoryInitResult,
 } from './memory/memory-initializer.js';
 
 export {
