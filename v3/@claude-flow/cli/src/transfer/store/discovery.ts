@@ -208,7 +208,8 @@ export class PatternDiscovery {
     }
 
     // Fallback: Generate deterministic CID for well-known registries
-    console.log(`[Discovery] Using fallback registry CID for: ${ipnsName}`);
+    console.warn(`⚠ [Discovery] OFFLINE MODE - Could not resolve IPNS: ${ipnsName}`);
+    console.warn(`⚠ [Discovery] Using built-in fallback registry (may be outdated)`);
     const fallbackCid = this.generateFallbackCID(ipnsName);
     const resolution: IPNSResolution = {
       ipnsName,
