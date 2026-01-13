@@ -13,10 +13,10 @@ export {
   checkForUpdates,
   checkSinglePackage,
   getInstalledVersion,
-  UpdateCheckResult,
-  UpdateConfig,
   DEFAULT_CONFIG,
 } from './checker.js';
+
+export type { UpdateCheckResult, UpdateConfig } from './checker.js';
 
 export {
   shouldCheckForUpdates,
@@ -24,14 +24,13 @@ export {
   getCachedVersions,
   clearCache,
   loadState,
-  RateLimitState,
 } from './rate-limiter.js';
 
-export {
-  validateUpdate,
-  validateBulkUpdate,
-  ValidationResult,
-} from './validator.js';
+export type { RateLimitState } from './rate-limiter.js';
+
+export { validateUpdate, validateBulkUpdate } from './validator.js';
+
+export type { ValidationResult } from './validator.js';
 
 export {
   executeUpdate,
@@ -40,12 +39,13 @@ export {
   getUpdateHistory,
   clearHistory,
   loadHistory,
-  UpdateHistoryEntry,
-  UpdateExecutionResult,
 } from './executor.js';
 
+export type { UpdateHistoryEntry, UpdateExecutionResult } from './executor.js';
+
 // Re-export a convenience function for startup
-import { checkForUpdates, UpdateCheckResult, DEFAULT_CONFIG } from './checker.js';
+import { checkForUpdates, DEFAULT_CONFIG } from './checker.js';
+import type { UpdateCheckResult } from './checker.js';
 import { executeMultipleUpdates } from './executor.js';
 import { getInstalledVersion } from './checker.js';
 
