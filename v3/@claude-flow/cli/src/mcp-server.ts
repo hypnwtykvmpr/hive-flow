@@ -242,11 +242,17 @@ export class MCPServerManager extends EventEmitter {
     metrics?: Record<string, number>;
   }> {
     if (this.options.transport === 'stdio') {
-      // For stdio, just check if process is running
+      // For stdio, check if process is running
       const pid = await this.readPidFile();
-      return {
-        healthy: pid !== null && this.isProcessRunning(pid),
-      };
+      if (pid === null) {
+        return { healthy: false, error: 'No PID file found' };
+      }
+      if (!this.isProcessRunning(pid)) {
+        // Clean up stale PID file
+        await this.removePidFile();
+        return { healthy: false, error: 'Process not running (cleaned up stale PID)' };
+      }
+      return { healthy: true };
     }
 
     // For HTTP/WebSocket, make health check request
