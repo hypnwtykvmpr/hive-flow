@@ -209,8 +209,8 @@ export const agentTools: MCPTool[] = [
       // Get task from either top-level or config (CLI passes it in config.task)
       const task = (input.task as string) || (config.task as string) || undefined;
 
-      // Determine model using routing logic
-      const { model, routedBy } = await determineAgentModel(
+      // Determine model using ADR-026 3-tier routing logic
+      const routingResult = await determineAgentModel(
         agentType,
         config,
         task
@@ -225,22 +225,35 @@ export const agentTools: MCPTool[] = [
         config,
         createdAt: new Date().toISOString(),
         domain: input.domain as string,
-        model,
-        modelRoutedBy: routedBy,
+        model: routingResult.model,
+        modelRoutedBy: routingResult.routedBy,
       };
 
       store.agents[agentId] = agent;
       saveAgentStore(store);
 
-      return {
+      // Include Agent Booster routing info if applicable
+      const response: Record<string, unknown> = {
         success: true,
         agentId,
         agentType: agent.agentType,
         model: agent.model,
-        modelRoutedBy: routedBy,
+        modelRoutedBy: routingResult.routedBy,
         status: 'spawned',
         createdAt: agent.createdAt,
       };
+
+      // Add Agent Booster info if task can skip LLM
+      if (routingResult.canSkipLLM) {
+        response.canSkipLLM = true;
+        response.agentBoosterIntent = routingResult.agentBoosterIntent;
+        response.tier = routingResult.tier;
+        response.note = `Agent Booster can handle "${routingResult.agentBoosterIntent}" - use agent_booster_edit_file MCP tool`;
+      } else if (routingResult.tier) {
+        response.tier = routingResult.tier;
+      }
+
+      return response;
     },
   },
   {
