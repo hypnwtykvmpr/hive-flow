@@ -1505,33 +1505,54 @@ const preTaskCommand: Command = {
         output.printList(result.recommendations);
       }
 
-      // Dynamic model routing based on task complexity
+      // Enhanced model routing with Agent Booster AST (ADR-026)
       try {
-        const { getModelRouter } = await import('../ruvector/model-router.js');
-        const router = getModelRouter();
-        const modelResult = await router.route(description);
+        const { getEnhancedModelRouter } = await import('../ruvector/enhanced-model-router.js');
+        const router = getEnhancedModelRouter();
+        const routeResult = await router.route(description, { filePath: ctx.flags.file as string });
 
         output.writeln();
-        output.writeln(output.bold('Model Recommendation'));
-        output.writeln(`  ${output.highlight(`model: "${modelResult.model}"`)} - ${modelResult.reasoning}`);
-        output.writeln();
+        output.writeln(output.bold('Intelligent Model Routing'));
 
-        // Output clear instruction for Claude to use
-        output.writeln(output.dim('─'.repeat(60)));
-        output.writeln(output.bold(output.success(`[TASK_MODEL_RECOMMENDATION] Use model="${modelResult.model}" for this task`)));
-        output.writeln(output.dim(`Complexity: ${(modelResult.complexity * 100).toFixed(0)}% | Confidence: ${(modelResult.confidence * 100).toFixed(0)}%`));
-        output.writeln(output.dim('─'.repeat(60)));
+        if (routeResult.tier === 1) {
+          // Agent Booster can handle this task - skip LLM entirely
+          output.writeln(output.success(`  Tier 1: Agent Booster (WASM)`));
+          output.writeln(output.dim(`  Intent: ${routeResult.agentBoosterIntent?.type}`));
+          output.writeln(output.dim(`  Latency: <1ms | Cost: $0`));
+          output.writeln();
+          output.writeln(output.dim('─'.repeat(60)));
+          output.writeln(output.bold(output.success(`[AGENT_BOOSTER_AVAILABLE] Skip LLM - use Agent Booster for "${routeResult.agentBoosterIntent?.type}"`)));
+          output.writeln(output.dim(`Confidence: ${(routeResult.confidence * 100).toFixed(0)}% | Intent: ${routeResult.agentBoosterIntent?.description}`));
+          output.writeln(output.dim('─'.repeat(60)));
+        } else {
+          // LLM required - show tier and model recommendation
+          output.writeln(`  Tier ${routeResult.tier}: ${routeResult.handler.toUpperCase()}`);
+          output.writeln(output.dim(`  Complexity: ${((routeResult.complexity || 0) * 100).toFixed(0)}%`));
+          output.writeln(output.dim(`  Est. Latency: ${routeResult.estimatedLatencyMs}ms | Cost: $${routeResult.estimatedCost.toFixed(4)}`));
+          output.writeln();
 
-        // Add model to result for programmatic use
-        (result as Record<string, unknown>).recommendedModel = modelResult.model;
+          // Clear instruction for Claude
+          output.writeln(output.dim('─'.repeat(60)));
+          output.writeln(output.bold(output.success(`[TASK_MODEL_RECOMMENDATION] Use model="${routeResult.model}" for this task`)));
+          output.writeln(output.dim(`Complexity: ${((routeResult.complexity || 0) * 100).toFixed(0)}% | Confidence: ${(routeResult.confidence * 100).toFixed(0)}%`));
+          output.writeln(output.dim('─'.repeat(60)));
+        }
+
+        // Add routing result for programmatic use
+        (result as Record<string, unknown>).routeResult = routeResult;
+        (result as Record<string, unknown>).recommendedModel = routeResult.model;
         (result as Record<string, unknown>).modelRouting = {
-          model: modelResult.model,
-          confidence: modelResult.confidence,
-          complexity: modelResult.complexity,
-          reasoning: modelResult.reasoning
+          tier: routeResult.tier,
+          handler: routeResult.handler,
+          model: routeResult.model,
+          confidence: routeResult.confidence,
+          complexity: routeResult.complexity,
+          reasoning: routeResult.reasoning,
+          canSkipLLM: routeResult.canSkipLLM,
+          agentBoosterIntent: routeResult.agentBoosterIntent
         };
       } catch {
-        // Model router not available, skip recommendation
+        // Enhanced router not available, skip recommendation
       }
 
       return { success: true, data: result };
