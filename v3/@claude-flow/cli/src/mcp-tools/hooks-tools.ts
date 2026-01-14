@@ -1281,15 +1281,30 @@ export const hooksTrajectoryStep: MCPTool = {
     const action = params.action as string;
     const result = (params.result as string) || 'success';
     const quality = (params.quality as number) || 0.85;
+    const timestamp = new Date().toISOString();
+    const stepId = `step-${Date.now()}`;
+
+    // Add step to real trajectory if it exists
+    const trajectory = activeTrajectories.get(trajectoryId);
+    if (trajectory) {
+      trajectory.steps.push({
+        action,
+        result,
+        quality,
+        timestamp,
+      });
+    }
 
     return {
       trajectoryId,
-      stepId: `step-${Date.now()}`,
+      stepId,
       action,
       result,
       quality,
-      recorded: true,
-      timestamp: new Date().toISOString(),
+      recorded: !!trajectory,
+      timestamp,
+      totalSteps: trajectory?.steps.length || 0,
+      implementation: trajectory ? 'real-step-recording' : 'trajectory-not-found',
     };
   },
 };
