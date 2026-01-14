@@ -27,6 +27,10 @@ const CONFIG = {
   topology: 'hierarchical-mesh',
 };
 
+// Cross-platform helpers
+const isWindows = process.platform === 'win32';
+const nullDevice = isWindows ? 'NUL' : '/dev/null';
+
 // ANSI colors
 const c = {
   reset: '\x1b[0m',
