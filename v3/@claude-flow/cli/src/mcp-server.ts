@@ -701,15 +701,28 @@ export function createMCPServerManager(
  * Singleton server manager instance
  */
 let serverManager: MCPServerManager | null = null;
+let currentTransport: string | undefined = undefined;
 
 /**
  * Get or create server manager singleton
+ *
+ * FIX for issue #942: Recreate singleton if transport type changes
+ * Previously, once created with stdio (default), HTTP options were ignored
  */
 export function getServerManager(
   options?: MCPServerOptions
 ): MCPServerManager {
+  const requestedTransport = options?.transport;
+
+  // Recreate if transport type changes (fixes HTTP transport not working)
+  if (serverManager && requestedTransport && requestedTransport !== currentTransport) {
+    serverManager = new MCPServerManager(options);
+    currentTransport = requestedTransport;
+  }
+
   if (!serverManager) {
     serverManager = new MCPServerManager(options);
+    currentTransport = options?.transport;
   }
   return serverManager;
 }
