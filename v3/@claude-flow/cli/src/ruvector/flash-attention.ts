@@ -178,78 +178,89 @@ export class FlashAttention {
       for (let i = 0; i < numK; i++) indices[i] = i;
     }
 
-    // Block size for cache-friendly processing
-    const BLOCK = 32;
+    // Two-stage screening: use 1/4 of dimensions for quick filtering
+    const screenDim = Math.min(96, dim >> 2);
+    const screenScale = scale * Math.sqrt(dim / screenDim);
+
+    // Candidate buffer for two-stage filtering
+    const candidateCount = Math.max(topK * 2, Math.ceil(numK * 0.25));
 
     // Process queries
     for (let qi = 0; qi < numQ; qi++) {
       const query = Q[qi];
 
-      // Blocked score computation with fused max-finding
-      let maxScore = -Infinity;
-      for (let kBlock = 0; kBlock < numK; kBlock += BLOCK) {
-        const kEnd = Math.min(kBlock + BLOCK, numK);
-        for (let ki = kBlock; ki < kEnd; ki++) {
+      if (useTopK && numK > 128) {
+        // Two-stage approach for large key sets
+        // Stage 1: Quick screening with partial dimensions
+        for (let ki = 0; ki < numK; ki++) {
+          scores[ki] = this.partialDotProduct(query, K[ki], screenDim) * screenScale;
+          indices![ki] = ki;
+        }
+
+        // Get top candidates (2x topK)
+        this.partialSort(scores, indices!, candidateCount);
+
+        // Stage 2: Full score computation only for candidates
+        let maxScore = -Infinity;
+        for (let i = 0; i < candidateCount; i++) {
+          const ki = indices![i];
           const s = this.fastDotProduct(query, K[ki], dim) * scale;
           scores[ki] = s;
           if (s > maxScore) maxScore = s;
         }
-      }
 
-      // Reset indices if using top-K
-      if (indices) {
-        for (let i = 0; i < numK; i++) indices[i] = i;
-      }
+        // Select final top-K from candidates
+        this.partialSort(scores, indices!.subarray(0, candidateCount), topK);
 
-      let activeCount: number;
-      let getIdx: (i: number) => number;
-
-      if (useTopK && indices) {
-        // Fast top-K selection using nth_element-style partitioning
-        this.partialSort(scores, indices, topK);
-        activeCount = topK;
-
-        // Recompute max for active set only
+        // Compute softmax over top-K
         maxScore = -Infinity;
         for (let i = 0; i < topK; i++) {
-          if (scores[indices[i]] > maxScore) maxScore = scores[indices[i]];
+          if (scores[indices![i]] > maxScore) maxScore = scores[indices![i]];
         }
-        getIdx = (i: number) => indices[i];
+
+        let sumExp = 0;
+        for (let i = 0; i < topK; i++) {
+          const e = Math.exp(scores[indices![i]] - maxScore);
+          exps[i] = e;
+          sumExp += e;
+        }
+
+        // Weighted sum
+        for (let d = 0; d < dim; d++) accum[d] = 0;
+
+        const invSum = 1.0 / sumExp;
+        for (let i = 0; i < topK; i++) {
+          const weight = exps[i] * invSum;
+          const value = V[indices![i]];
+          for (let d = 0; d < dim; d++) {
+            accum[d] += weight * value[d];
+          }
+        }
       } else {
-        activeCount = numK;
-        getIdx = (i: number) => i;
-      }
-
-      // Fused softmax + weighted sum
-      let sumExp = 0;
-      for (let i = 0; i < activeCount; i++) {
-        const e = Math.exp(scores[getIdx(i)] - maxScore);
-        exps[i] = e;
-        sumExp += e;
-      }
-
-      // Reset accumulator
-      accum.fill(0);
-
-      // Weighted sum with 8x unrolling
-      const invSum = 1.0 / sumExp;
-      for (let i = 0; i < activeCount; i++) {
-        const weight = exps[i] * invSum;
-        const value = V[getIdx(i)];
-
-        let d = 0;
-        for (; d <= dim - 8; d += 8) {
-          accum[d] += weight * value[d];
-          accum[d + 1] += weight * value[d + 1];
-          accum[d + 2] += weight * value[d + 2];
-          accum[d + 3] += weight * value[d + 3];
-          accum[d + 4] += weight * value[d + 4];
-          accum[d + 5] += weight * value[d + 5];
-          accum[d + 6] += weight * value[d + 6];
-          accum[d + 7] += weight * value[d + 7];
+        // Simple path for small key sets
+        let maxScore = -Infinity;
+        for (let ki = 0; ki < numK; ki++) {
+          const s = this.fastDotProduct(query, K[ki], dim) * scale;
+          scores[ki] = s;
+          if (s > maxScore) maxScore = s;
         }
-        for (; d < dim; d++) {
-          accum[d] += weight * value[d];
+
+        let sumExp = 0;
+        for (let ki = 0; ki < numK; ki++) {
+          const e = Math.exp(scores[ki] - maxScore);
+          exps[ki] = e;
+          sumExp += e;
+        }
+
+        for (let d = 0; d < dim; d++) accum[d] = 0;
+
+        const invSum = 1.0 / sumExp;
+        for (let ki = 0; ki < numK; ki++) {
+          const weight = exps[ki] * invSum;
+          const value = V[ki];
+          for (let d = 0; d < dim; d++) {
+            accum[d] += weight * value[d];
+          }
         }
       }
 
@@ -261,6 +272,21 @@ export class FlashAttention {
     }
 
     return output;
+  }
+
+  /**
+   * Partial dot product using only first N dimensions (for screening)
+   */
+  private partialDotProduct(a: Float32Array, b: Float32Array, len: number): number {
+    let sum = 0;
+    let i = 0;
+    for (; i <= len - 4; i += 4) {
+      sum += a[i] * b[i] + a[i + 1] * b[i + 1] + a[i + 2] * b[i + 2] + a[i + 3] * b[i + 3];
+    }
+    for (; i < len; i++) {
+      sum += a[i] * b[i];
+    }
+    return sum;
   }
 
   /**
