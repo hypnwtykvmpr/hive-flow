@@ -1,6 +1,7 @@
 # reviewer agent configuration
 type: reviewer
 version: "3.0.0"
+model: sonnet  # Balanced for code review tasks
 capabilities:
   - code-review
   - quality-analysis
