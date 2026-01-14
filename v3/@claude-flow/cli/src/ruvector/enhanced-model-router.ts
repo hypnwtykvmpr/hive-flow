@@ -148,6 +148,7 @@ const INTENT_PATTERNS: Record<EditIntentType, {
       /delete\s+console\s+statements?/i,
       /strip\s+console/i,
       /clean\s+up\s+console/i,
+      /clean\s+up\s+debug\s+logs?/i,
       /remove\s+debug\s+logs?/i,
     ],
     weight: 0.95,
