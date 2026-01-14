@@ -1,6 +1,7 @@
 # tester agent configuration
 type: tester
 version: "3.0.0"
+model: sonnet  # Balanced for test generation
 capabilities:
   - unit-testing
   - integration-testing
