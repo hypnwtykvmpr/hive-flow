@@ -51,7 +51,8 @@
   "dependencies": {
     "@claude-flow/shared": "^3.0.0-alpha.1",
     "@claude-flow/aidefence": "^3.0.2",
-    "@claude-flow/embeddings": "^3.0.0-alpha.12"
+    "@claude-flow/embeddings": "^3.0.0-alpha.12",
+    "@claude-flow/mcp": "^3.0.0-alpha.8"
   },
   "publishConfig": {
     "access": "public",
