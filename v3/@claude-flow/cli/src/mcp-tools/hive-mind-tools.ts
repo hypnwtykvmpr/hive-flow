@@ -91,7 +91,96 @@ function saveHiveState(state: HiveState): void {
   writeFileSync(getHivePath(), JSON.stringify(state, null, 2), 'utf-8');
 }
 
+// Import agent store helpers for spawn functionality
+import { existsSync as agentStoreExists, readFileSync as readAgentStore, writeFileSync as writeAgentStore, mkdirSync as mkdirAgentStore } from 'node:fs';
+
+function loadAgentStore(): { agents: Record<string, unknown> } {
+  const storePath = join(process.cwd(), '.claude-flow', 'agents.json');
+  try {
+    if (agentStoreExists(storePath)) {
+      return JSON.parse(readAgentStore(storePath, 'utf-8'));
+    }
+  } catch { /* ignore */ }
+  return { agents: {} };
+}
+
+function saveAgentStore(store: { agents: Record<string, unknown> }): void {
+  const storeDir = join(process.cwd(), '.claude-flow');
+  if (!agentStoreExists(storeDir)) {
+    mkdirAgentStore(storeDir, { recursive: true });
+  }
+  writeAgentStore(join(storeDir, 'agents.json'), JSON.stringify(store, null, 2), 'utf-8');
+}
+
 export const hiveMindTools: MCPTool[] = [
+  {
+    name: 'hive-mind/spawn',
+    description: 'Spawn workers and automatically join them to the hive-mind (combines agent/spawn + hive-mind/join)',
+    category: 'hive-mind',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        count: { type: 'number', description: 'Number of workers to spawn (default: 1)', default: 1 },
+        role: { type: 'string', enum: ['worker', 'specialist', 'scout'], description: 'Worker role in hive', default: 'worker' },
+        agentType: { type: 'string', description: 'Agent type for spawned workers', default: 'worker' },
+        prefix: { type: 'string', description: 'Prefix for worker IDs', default: 'hive-worker' },
+      },
+    },
+    handler: async (input) => {
+      const state = loadHiveState();
+
+      if (!state.initialized) {
+        return { success: false, error: 'Hive-mind not initialized. Run hive-mind/init first.' };
+      }
+
+      const count = Math.min(Math.max(1, (input.count as number) || 1), 20); // Cap at 20
+      const role = (input.role as string) || 'worker';
+      const agentType = (input.agentType as string) || 'worker';
+      const prefix = (input.prefix as string) || 'hive-worker';
+      const agentStore = loadAgentStore();
+
+      const spawnedWorkers: Array<{ agentId: string; role: string; joinedAt: string }> = [];
+
+      for (let i = 0; i < count; i++) {
+        const agentId = `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+
+        // Create agent record (like agent/spawn)
+        agentStore.agents[agentId] = {
+          agentId,
+          agentType,
+          status: 'idle',
+          health: 1.0,
+          taskCount: 0,
+          config: { role, hiveRole: role },
+          createdAt: new Date().toISOString(),
+          domain: 'hive-mind',
+        };
+
+        // Join to hive-mind (like hive-mind/join)
+        if (!state.workers.includes(agentId)) {
+          state.workers.push(agentId);
+        }
+
+        spawnedWorkers.push({
+          agentId,
+          role,
+          joinedAt: new Date().toISOString(),
+        });
+      }
+
+      saveAgentStore(agentStore);
+      saveHiveState(state);
+
+      return {
+        success: true,
+        spawned: count,
+        workers: spawnedWorkers,
+        totalWorkers: state.workers.length,
+        hiveStatus: 'active',
+        message: `Spawned ${count} worker(s) and joined them to the hive-mind`,
+      };
+    },
+  },
   {
     name: 'hive-mind/init',
     description: 'Initialize the hive-mind collective',
