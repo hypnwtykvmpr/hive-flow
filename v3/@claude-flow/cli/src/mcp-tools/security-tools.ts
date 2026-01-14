@@ -48,8 +48,12 @@ async function getAIDefence(): Promise<AIDefenceInstance> {
   // First attempt - try to load
   try {
     const aidefence = require(packageName);
-    aidefenceInstance = aidefence.createAIDefence({ enableLearning: true });
-    return aidefenceInstance;
+    const instance = aidefence.createAIDefence({ enableLearning: true });
+    if (!instance) {
+      throw new Error('createAIDefence returned null');
+    }
+    aidefenceInstance = instance;
+    return instance;
   } catch {
     // Package not found, continue to auto-install
   }
