@@ -3937,7 +3937,10 @@ export const hooksCommand: Command = {
       `${output.highlight('coverage-route')}  - Route tasks based on coverage gaps (ruvector)`,
       `${output.highlight('coverage-suggest')}- Suggest coverage improvements`,
       `${output.highlight('coverage-gaps')}   - List all coverage gaps with agents`,
-      `${output.highlight('token-optimize')} - Token optimization (30-50% savings)`
+      `${output.highlight('token-optimize')} - Token optimization (30-50% savings)`,
+      `${output.highlight('model-route')}    - Route to optimal model (haiku/sonnet/opus)`,
+      `${output.highlight('model-outcome')}  - Record model routing outcome`,
+      `${output.highlight('model-stats')}    - View model routing statistics`
     ]);
     output.writeln();
     output.writeln('Run "claude-flow hooks <subcommand> --help" for subcommand help');
