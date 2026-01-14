@@ -171,6 +171,9 @@ const TOPOLOGIES = [
 
 // Swarm strategies
 const STRATEGIES = [
+  { value: 'specialized', label: 'Specialized', hint: 'Clear roles, no overlap (anti-drift)' },
+  { value: 'balanced', label: 'Balanced', hint: 'Even distribution of work' },
+  { value: 'adaptive', label: 'Adaptive', hint: 'Dynamic strategy based on task' },
   { value: 'research', label: 'Research', hint: 'Distributed research and analysis' },
   { value: 'development', label: 'Development', hint: 'Collaborative code development' },
   { value: 'testing', label: 'Testing', hint: 'Comprehensive test coverage' },
