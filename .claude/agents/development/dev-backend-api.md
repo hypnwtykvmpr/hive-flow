@@ -9,7 +9,6 @@ updated: "2025-12-03"
 author: "Claude Code"
 metadata:
   specialization: "API design, implementation, optimization, and continuous improvement"
-  specialization: "API design, implementation, optimization, and continuous improvement"
   complexity: "moderate"
   autonomous: true
   v2_capabilities:
