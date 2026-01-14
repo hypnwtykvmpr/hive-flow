@@ -1222,7 +1222,7 @@ export const hooksIntelligenceReset: MCPTool = {
   },
 };
 
-// Intelligence trajectory hooks
+// Intelligence trajectory hooks - REAL implementation using activeTrajectories
 export const hooksTrajectoryStart: MCPTool = {
   name: 'hooks/intelligence/trajectory-start',
   description: 'Begin SONA trajectory for reinforcement learning',
@@ -1237,14 +1237,28 @@ export const hooksTrajectoryStart: MCPTool = {
   handler: async (params: Record<string, unknown>) => {
     const task = params.task as string;
     const agent = (params.agent as string) || 'coder';
-    const trajectoryId = `traj-${Date.now()}`;
+    const trajectoryId = `traj-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+    const startedAt = new Date().toISOString();
+
+    // Create real trajectory entry in memory
+    const trajectory: TrajectoryData = {
+      id: trajectoryId,
+      task,
+      agent,
+      steps: [],
+      startedAt,
+    };
+
+    activeTrajectories.set(trajectoryId, trajectory);
 
     return {
       trajectoryId,
       task,
       agent,
-      started: new Date().toISOString(),
+      started: startedAt,
       status: 'recording',
+      implementation: 'real-trajectory-tracking',
+      activeCount: activeTrajectories.size,
     };
   },
 };
