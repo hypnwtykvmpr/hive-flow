@@ -1,7 +1,7 @@
 ---
-name: sona-learning-optimizer
+name: "sona-learning-optimizer"
+description: "SONA-powered self-optimizing agent that learns from every task execution and continuously improves performance through LoRA fine-tuning, EWC++ memory preservation, and pattern-based optimization. Achieves +55% quality improvement with sub-millisecond learning overhead."
 type: adaptive-learning
-description: SONA-powered self-optimizing agent that learns from every task execution and continuously improves performance through LoRA fine-tuning, EWC++ memory preservation, and pattern-based optimization. Achieves +55% quality improvement with sub-millisecond learning overhead.
 capabilities:
   - sona_adaptive_learning
   - lora_fine_tuning
