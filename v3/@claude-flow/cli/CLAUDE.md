@@ -17,6 +17,37 @@
 
 **CLI coordinates, Task tool agents do the actual work!**
 
+### 🤖 INTELLIGENT 3-TIER MODEL ROUTING (ADR-026)
+
+**Before spawning agents, check for model recommendations:**
+
+```bash
+# Get routing recommendation
+npx @claude-flow/cli@latest hooks pre-task --description "[task]"
+```
+
+**The routing system has 3 tiers:**
+
+| Tier | Handler | Latency | Cost | Use Cases |
+|------|---------|---------|------|-----------|
+| **1** | Agent Booster (WASM) | <1ms | $0 | Simple transforms (var→const, add-types, remove-console) |
+| **2** | Haiku/Sonnet | 500ms-2s | $0.0002-$0.003 | Bug fixes, refactoring, features |
+| **3** | Opus | 2-5s | $0.015 | Architecture, security, distributed systems |
+
+**When you see these recommendations:**
+
+1. `[AGENT_BOOSTER_AVAILABLE]` → Skip LLM, use Edit tool directly for simple transforms
+2. `[TASK_MODEL_RECOMMENDATION] Use model="X"` → Use that model in Task tool:
+   ```javascript
+   Task({
+     prompt: "...",
+     subagent_type: "coder",
+     model: "sonnet"  // ← USE RECOMMENDED MODEL
+   })
+   ```
+
+**Benefits:** 75% cost reduction, 2.5x quota extension for Claude Max users
+
 ### 🔄 Auto-Start Swarm Protocol (Background Execution)
 
 When the user requests a complex task, **spawn agents in background and WAIT for completion:**
