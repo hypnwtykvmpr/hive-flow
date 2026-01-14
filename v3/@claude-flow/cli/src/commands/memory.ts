@@ -835,7 +835,7 @@ const compressCommand: Command = {
     },
     {
       name: 'quantize',
-      short: 'q',
+      short: 'z',
       description: 'Enable vector quantization (reduces memory 4-32x)',
       type: 'boolean',
       default: false
