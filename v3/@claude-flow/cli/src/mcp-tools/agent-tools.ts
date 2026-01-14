@@ -95,8 +95,9 @@ async function getModelRouter() {
     try {
       const { getModelRouter } = await import('../ruvector/model-router.js');
       modelRouterInstance = getModelRouter();
-    } catch {
-      // Model router not available
+    } catch (e) {
+      // Log but don't fail - model router is optional
+      console.error('[agent-tools] Model router load failed:', (e as Error).message);
     }
   }
   return modelRouterInstance;
