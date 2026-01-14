@@ -68,10 +68,84 @@ function saveAgentStore(store: AgentStore): void {
   writeFileSync(getAgentPath(), JSON.stringify(store, null, 2), 'utf-8');
 }
 
+// Default model mappings for agent types (can be overridden)
+const AGENT_TYPE_MODEL_DEFAULTS: Record<string, ClaudeModel> = {
+  // Complex agents → opus
+  'architect': 'opus',
+  'security-architect': 'opus',
+  'system-architect': 'opus',
+  'core-architect': 'opus',
+  // Medium complexity → sonnet
+  'coder': 'sonnet',
+  'reviewer': 'sonnet',
+  'researcher': 'sonnet',
+  'tester': 'sonnet',
+  'analyst': 'sonnet',
+  // Simple/fast agents → haiku
+  'formatter': 'haiku',
+  'linter': 'haiku',
+  'documenter': 'haiku',
+};
+
+// Lazy-loaded model router
+let modelRouterInstance: Awaited<ReturnType<typeof import('../ruvector/model-router.js').getModelRouter>> | null = null;
+
+async function getModelRouter() {
+  if (!modelRouterInstance) {
+    try {
+      const { getModelRouter } = await import('../ruvector/model-router.js');
+      modelRouterInstance = getModelRouter();
+    } catch {
+      // Model router not available
+    }
+  }
+  return modelRouterInstance;
+}
+
+/**
+ * Determine model for agent based on:
+ * 1. Explicit model in config
+ * 2. Task-based routing (if task provided)
+ * 3. Agent type defaults
+ * 4. Fallback to sonnet
+ */
+async function determineAgentModel(
+  agentType: string,
+  config: Record<string, unknown>,
+  task?: string
+): Promise<{ model: ClaudeModel; routedBy: 'explicit' | 'router' | 'default' }> {
+  // 1. Explicit model in config
+  if (config.model && ['haiku', 'sonnet', 'opus', 'inherit'].includes(config.model as string)) {
+    return { model: config.model as ClaudeModel, routedBy: 'explicit' };
+  }
+
+  // 2. Task-based routing
+  if (task) {
+    const router = await getModelRouter();
+    if (router) {
+      try {
+        const result = await router.route(task);
+        return { model: result.model, routedBy: 'router' };
+      } catch {
+        // Fall through to defaults
+      }
+    }
+  }
+
+  // 3. Agent type defaults
+  const defaultModel = AGENT_TYPE_MODEL_DEFAULTS[agentType];
+  if (defaultModel) {
+    return { model: defaultModel, routedBy: 'default' };
+  }
+
+  // 4. Fallback to sonnet (balanced)
+  return { model: 'sonnet', routedBy: 'default' };
+}
+
 export const agentTools: MCPTool[] = [
   {
     name: 'agent/spawn',
-    description: 'Spawn a new agent',
+    description: 'Spawn a new agent with intelligent model selection',
     category: 'agent',
     inputSchema: {
       type: 'object',
@@ -80,22 +154,44 @@ export const agentTools: MCPTool[] = [
         agentId: { type: 'string', description: 'Optional custom agent ID' },
         config: { type: 'object', description: 'Agent configuration' },
         domain: { type: 'string', description: 'Agent domain' },
+        model: {
+          type: 'string',
+          enum: ['haiku', 'sonnet', 'opus', 'inherit'],
+          description: 'Claude model to use (haiku=fast/cheap, sonnet=balanced, opus=most capable)'
+        },
+        task: { type: 'string', description: 'Task description for intelligent model routing' },
       },
       required: ['agentType'],
     },
     handler: async (input) => {
       const store = loadAgentStore();
       const agentId = (input.agentId as string) || `agent-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const agentType = input.agentType as string;
+      const config = (input.config as Record<string, unknown>) || {};
+
+      // Add explicit model to config if provided
+      if (input.model) {
+        config.model = input.model;
+      }
+
+      // Determine model using routing logic
+      const { model, routedBy } = await determineAgentModel(
+        agentType,
+        config,
+        input.task as string | undefined
+      );
 
       const agent: AgentRecord = {
         agentId,
-        agentType: input.agentType as string,
+        agentType,
         status: 'idle',
         health: 1.0,
         taskCount: 0,
-        config: (input.config as Record<string, unknown>) || {},
+        config,
         createdAt: new Date().toISOString(),
         domain: input.domain as string,
+        model,
+        modelRoutedBy: routedBy,
       };
 
       store.agents[agentId] = agent;
@@ -105,6 +201,8 @@ export const agentTools: MCPTool[] = [
         success: true,
         agentId,
         agentType: agent.agentType,
+        model: agent.model,
+        modelRoutedBy: routedBy,
         status: 'spawned',
         createdAt: agent.createdAt,
       };
