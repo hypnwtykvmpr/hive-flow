@@ -128,6 +128,23 @@ export {
   type AdaptationResult,
   type LoRAStats,
 } from './lora-adapter.js';
+export {
+  ModelRouter,
+  getModelRouter,
+  resetModelRouter,
+  createModelRouter,
+  routeToModel,
+  routeToModelFull,
+  analyzeTaskComplexity,
+  getModelRouterStats,
+  recordModelOutcome,
+  MODEL_CAPABILITIES,
+  COMPLEXITY_INDICATORS,
+  type ClaudeModel,
+  type ModelRouterConfig,
+  type ModelRoutingResult,
+  type ComplexityAnalysis,
+} from './model-router.js';
 
 /**
  * Check if ruvector packages are available
