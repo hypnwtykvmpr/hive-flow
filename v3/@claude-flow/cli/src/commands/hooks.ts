@@ -3668,6 +3668,197 @@ const tokenOptimizeCommand: Command = {
   }
 };
 
+// Model Router command - intelligent model selection (haiku/sonnet/opus)
+const modelRouteCommand: Command = {
+  name: 'model-route',
+  description: 'Route task to optimal Claude model (haiku/sonnet/opus) based on complexity',
+  options: [
+    { name: 'task', short: 't', type: 'string', description: 'Task description to route', required: true },
+    { name: 'context', short: 'c', type: 'string', description: 'Additional context' },
+    { name: 'prefer-cost', type: 'boolean', description: 'Prefer lower cost models' },
+    { name: 'prefer-quality', type: 'boolean', description: 'Prefer higher quality models' },
+  ],
+  examples: [
+    { command: 'claude-flow hooks model-route -t "fix typo"', description: 'Route simple task (likely haiku)' },
+    { command: 'claude-flow hooks model-route -t "architect auth system"', description: 'Route complex task (likely opus)' },
+  ],
+  action: async (ctx: CommandContext): Promise<CommandResult> => {
+    const task = ctx.args[0] || ctx.flags.task as string;
+    if (!task) {
+      output.printError('Task description required. Use --task or -t flag.');
+      return { success: false, exitCode: 1 };
+    }
+
+    output.printInfo(`Analyzing task complexity: ${output.highlight(task.slice(0, 50))}...`);
+
+    try {
+      const result = await callMCPTool<{
+        task: string;
+        selectedModel: string;
+        complexity: { level: string; score: number; factors: string[] };
+        confidence: number;
+        reasoning: string;
+        costSavings?: string;
+      }>('hooks/model-route', {
+        task,
+        context: ctx.flags.context,
+        preferCost: ctx.flags['prefer-cost'],
+        preferQuality: ctx.flags['prefer-quality'],
+      });
+
+      if (ctx.flags.format === 'json') {
+        output.printJson(result);
+        return { success: true, data: result };
+      }
+
+      output.writeln();
+
+      // Model icon based on selection
+      const modelIcons: Record<string, string> = {
+        haiku: '🌸',
+        sonnet: '📜',
+        opus: '🎭',
+      };
+      const icon = modelIcons[result.selectedModel] || '🤖';
+
+      output.printBox(
+        [
+          `Selected Model: ${icon} ${output.bold(result.selectedModel.toUpperCase())}`,
+          `Confidence: ${(result.confidence * 100).toFixed(1)}%`,
+          `Complexity: ${result.complexity.level} (${(result.complexity.score * 100).toFixed(0)}%)`,
+          result.costSavings ? `Cost Savings: ${result.costSavings}` : '',
+        ].filter(Boolean).join('\n'),
+        'Model Routing Result'
+      );
+
+      if (result.complexity.factors.length > 0) {
+        output.writeln();
+        output.writeln(output.bold('Complexity Factors'));
+        output.printList(result.complexity.factors.map(f => output.dim(f)));
+      }
+
+      output.writeln();
+      output.writeln(output.bold('Reasoning'));
+      output.writeln(output.dim(result.reasoning));
+
+      return { success: true, data: result };
+    } catch (error) {
+      if (error instanceof MCPClientError) {
+        output.printError(`Model routing failed: ${error.message}`);
+      } else {
+        output.printError(`Unexpected error: ${String(error)}`);
+      }
+      return { success: false, exitCode: 1 };
+    }
+  }
+};
+
+// Model Outcome command - record routing outcomes for learning
+const modelOutcomeCommand: Command = {
+  name: 'model-outcome',
+  description: 'Record model routing outcome for learning',
+  options: [
+    { name: 'task', short: 't', type: 'string', description: 'Task that was executed', required: true },
+    { name: 'model', short: 'm', type: 'string', description: 'Model that was used (haiku/sonnet/opus)', required: true },
+    { name: 'outcome', short: 'o', type: 'string', description: 'Outcome (success/failure/escalated)', required: true },
+    { name: 'quality', short: 'q', type: 'number', description: 'Quality score 0-1' },
+  ],
+  examples: [
+    { command: 'claude-flow hooks model-outcome -t "fix typo" -m haiku -o success', description: 'Record successful haiku task' },
+    { command: 'claude-flow hooks model-outcome -t "auth system" -m sonnet -o escalated', description: 'Record escalation to opus' },
+  ],
+  action: async (ctx: CommandContext): Promise<CommandResult> => {
+    const task = ctx.flags.task as string;
+    const model = ctx.flags.model as string;
+    const outcome = ctx.flags.outcome as string;
+
+    if (!task || !model || !outcome) {
+      output.printError('Task, model, and outcome are required.');
+      return { success: false, exitCode: 1 };
+    }
+
+    try {
+      const result = await callMCPTool<{ recorded: boolean; learningUpdate: string }>('hooks/model-outcome', {
+        task,
+        model,
+        outcome,
+        quality: ctx.flags.quality,
+      });
+
+      output.printSuccess(`Outcome recorded for ${model}: ${outcome}`);
+      if (result.learningUpdate) {
+        output.writeln(output.dim(result.learningUpdate));
+      }
+
+      return { success: true, data: result };
+    } catch (error) {
+      output.printError(`Failed to record outcome: ${String(error)}`);
+      return { success: false, exitCode: 1 };
+    }
+  }
+};
+
+// Model Stats command - view routing statistics
+const modelStatsCommand: Command = {
+  name: 'model-stats',
+  description: 'View model routing statistics and learning metrics',
+  options: [
+    { name: 'detailed', short: 'd', type: 'boolean', description: 'Show detailed breakdown' },
+  ],
+  examples: [
+    { command: 'claude-flow hooks model-stats', description: 'View routing stats' },
+    { command: 'claude-flow hooks model-stats --detailed', description: 'Show detailed breakdown' },
+  ],
+  action: async (ctx: CommandContext): Promise<CommandResult> => {
+    try {
+      const result = await callMCPTool<{
+        totalRouted: number;
+        byModel: Record<string, { count: number; successRate: number; avgComplexity: number }>;
+        costSavings: string;
+        learningProgress: number;
+      }>('hooks/model-stats', {
+        detailed: ctx.flags.detailed,
+      });
+
+      if (ctx.flags.format === 'json') {
+        output.printJson(result);
+        return { success: true, data: result };
+      }
+
+      output.writeln();
+      output.printBox(
+        [
+          `Total Tasks Routed: ${result.totalRouted}`,
+          `Cost Savings: ${result.costSavings}`,
+          `Learning Progress: ${(result.learningProgress * 100).toFixed(1)}%`,
+        ].join('\n'),
+        'Model Routing Statistics'
+      );
+
+      if (result.byModel && Object.keys(result.byModel).length > 0) {
+        output.writeln();
+        output.printTable({
+          columns: [
+            { key: 'model', header: 'Model', width: 10 },
+            { key: 'count', header: 'Tasks', width: 8, align: 'right' },
+            { key: 'successRate', header: 'Success', width: 10, align: 'right', format: (v) => `${(Number(v) * 100).toFixed(1)}%` },
+            { key: 'avgComplexity', header: 'Avg Complexity', width: 14, align: 'right', format: (v) => `${(Number(v) * 100).toFixed(0)}%` },
+          ],
+          data: Object.entries(result.byModel).map(([model, stats]) => ({
+            model: model.toUpperCase(),
+            ...stats,
+          })),
+        });
+      }
+
+      return { success: true, data: result };
+    } catch (error) {
+      output.printError(`Failed to get stats: ${String(error)}`);
+      return { success: false, exitCode: 1 };
+    }
+  }
+};
+
 // Main hooks command
 export const hooksCommand: Command = {
   name: 'hooks',
@@ -3698,6 +3889,10 @@ export const hooksCommand: Command = {
     coverageGapsCommand,
     // Token optimization
     tokenOptimizeCommand,
+    // Model routing (tiny-dancer integration)
+    modelRouteCommand,
+    modelOutcomeCommand,
+    modelStatsCommand,
     // Backward-compatible aliases for v2
     routeTaskCommand,
     sessionStartCommand,
