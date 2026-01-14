@@ -7,10 +7,11 @@
  * without any CLI formatting output that would corrupt the protocol.
  */
 
+import { randomUUID } from 'crypto';
 import { listMCPTools, callMCPTool, hasTool } from '../dist/src/mcp-client.js';
 
 const VERSION = '3.0.0';
-const sessionId = `mcp-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
+const sessionId = `mcp-${Date.now()}-${randomUUID().slice(0, 8)}`;
 
 // Log to stderr (doesn't corrupt stdout for MCP protocol)
 console.error(
