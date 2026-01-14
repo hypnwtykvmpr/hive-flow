@@ -1814,11 +1814,11 @@ export const hooksIntelligenceLearn: MCPTool = {
     if (consolidate) {
       const ewc = await getEWCConsolidator();
       if (ewc) {
-        const stats = ewc.getStats();
+        const stats = ewc.getConsolidationStats();
         ewcStats = {
           consolidation: true,
-          fisherUpdated: stats.fisherUpdates > 0,
-          forgettingPrevented: stats.patternsProtected,
+          fisherUpdated: stats.consolidationCount > 0,
+          forgettingPrevented: stats.highImportancePatterns,
           avgPenalty: stats.avgPenalty,
         };
       }
