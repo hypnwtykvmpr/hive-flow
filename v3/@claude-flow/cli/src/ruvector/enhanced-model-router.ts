@@ -119,10 +119,13 @@ const INTENT_PATTERNS: Record<EditIntentType, {
   'async-await': {
     patterns: [
       /convert\s+to\s+async\s*[/-]?\s*await/i,
+      /convert\s+\w+\s+to\s+async/i,
       /use\s+async\s*[/-]?\s*await/i,
       /change\s+promises?\s+to\s+async/i,
       /refactor\s+to\s+async/i,
       /\.then\s*(?:→|->|to)\s*await/i,
+      /callback\s+to\s+async/i,
+      /callbacks?\s+to\s+async/i,
     ],
     weight: 0.8,
     description: 'Convert callbacks/promises to async/await',
