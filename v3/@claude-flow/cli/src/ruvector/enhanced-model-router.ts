@@ -181,7 +181,7 @@ const TIER3_KEYWORDS: RegExp[] = [
 
   // Security
   /\b(oauth2?|pkce|jwt|rbac|authentication\s+system|security\s+audit)\b/i,
-  /\b(refresh\s+token|token\s+rotation|role-based|permission)\b/i,
+  /\b(refresh\s+token|token\s+rotation|role-based|permission|authorization)\b/i,
   /\b(encryption|cryptograph|certificate|ssl|tls)\b/i,
   /\b(end-to-end\s+encryption|key\s+rotation|secure\s+channel)\b/i,
 
