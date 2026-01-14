@@ -537,6 +537,20 @@ export {
   type IntelligenceStats,
 } from './memory/intelligence.js';
 
+// EWC++ Consolidation (Prevents Catastrophic Forgetting)
+export {
+  EWCConsolidator,
+  getEWCConsolidator,
+  resetEWCConsolidator,
+  consolidatePatterns,
+  recordPatternOutcome,
+  getEWCStats,
+  type PatternWeights,
+  type EWCConfig,
+  type ConsolidationResult,
+  type EWCStats,
+} from './memory/ewc-consolidation.js';
+
 // Production Hardening
 export {
   ErrorHandler,
