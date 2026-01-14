@@ -27,7 +27,7 @@ interface AgentRecord {
   createdAt: string;
   domain?: string;
   model?: ClaudeModel;  // Model assigned to this agent
-  modelRoutedBy?: 'explicit' | 'router' | 'default';  // How model was determined
+  modelRoutedBy?: 'explicit' | 'router' | 'agent-booster' | 'default';  // How model was determined (ADR-026)
 }
 
 interface AgentStore {
