@@ -66,8 +66,18 @@ function getUserInfo() {
     const claudeConfigPath = path.join(homedir, '.claude.json');
     if (fs.existsSync(claudeConfigPath)) {
       const claudeConfig = JSON.parse(fs.readFileSync(claudeConfigPath, 'utf-8'));
-      // Get model from lastModelUsage (most recent model used)
-      const lastModelUsage = claudeConfig.projects?.[process.cwd()]?.lastModelUsage || claudeConfig.lastModelUsage;
+      // Try to find lastModelUsage - check current dir and parent dirs
+      let lastModelUsage = null;
+      const cwd = process.cwd();
+      if (claudeConfig.projects) {
+        // Try exact match first, then check if cwd starts with any project path
+        for (const [projectPath, projectConfig] of Object.entries(claudeConfig.projects)) {
+          if (cwd === projectPath || cwd.startsWith(projectPath + '/')) {
+            lastModelUsage = projectConfig.lastModelUsage;
+            break;
+          }
+        }
+      }
       if (lastModelUsage) {
         const modelIds = Object.keys(lastModelUsage);
         if (modelIds.length > 0) {
