@@ -62,7 +62,7 @@ export class CommandParser {
       },
       {
         name: 'quiet',
-        short: 'q',
+        short: 'Q',
         description: 'Suppress non-essential output',
         type: 'boolean',
         default: false
