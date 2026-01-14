@@ -3822,10 +3822,13 @@ const modelStatsCommand: Command = {
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     try {
       const result = await callMCPTool<{
-        totalRouted: number;
-        byModel: Record<string, { count: number; successRate: number; avgComplexity: number }>;
-        costSavings: string;
-        learningProgress: number;
+        available: boolean;
+        message?: string;
+        totalDecisions?: number;
+        modelDistribution?: Record<string, number>;
+        avgComplexity?: number;
+        avgConfidence?: number;
+        circuitBreakerTrips?: number;
       }>('hooks/model-stats', {
         detailed: ctx.flags.detailed,
       });
@@ -3835,29 +3838,55 @@ const modelStatsCommand: Command = {
         return { success: true, data: result };
       }
 
+      if (!result.available) {
+        output.printWarning(result.message || 'Model router not available');
+        return { success: true, data: result };
+      }
+
+      // Calculate cost savings based on model distribution
+      const dist = result.modelDistribution || { haiku: 0, sonnet: 0, opus: 0 };
+      const totalTasks = result.totalDecisions || 0;
+      const costMultipliers: Record<string, number> = { haiku: 0.04, sonnet: 0.2, opus: 1.0 };
+
+      let totalCost = 0;
+      let maxCost = totalTasks; // If all were opus
+      for (const [model, count] of Object.entries(dist)) {
+        if (model !== 'inherit') {
+          totalCost += count * (costMultipliers[model] || 1);
+        }
+      }
+      const costSavings = maxCost > 0 ? ((1 - totalCost / maxCost) * 100).toFixed(1) : '0';
+
       output.writeln();
       output.printBox(
         [
-          `Total Tasks Routed: ${result.totalRouted}`,
-          `Cost Savings: ${result.costSavings}`,
-          `Learning Progress: ${(result.learningProgress * 100).toFixed(1)}%`,
+          `Total Tasks Routed: ${totalTasks}`,
+          `Avg Complexity: ${((result.avgComplexity || 0) * 100).toFixed(1)}%`,
+          `Avg Confidence: ${((result.avgConfidence || 0) * 100).toFixed(1)}%`,
+          `Cost Savings: ${costSavings}% vs all-opus`,
+          `Circuit Breaker Trips: ${result.circuitBreakerTrips || 0}`,
         ].join('\n'),
         'Model Routing Statistics'
       );
 
-      if (result.byModel && Object.keys(result.byModel).length > 0) {
+      if (dist && Object.keys(dist).length > 0) {
         output.writeln();
+        output.writeln(output.bold('Model Distribution'));
         output.printTable({
           columns: [
             { key: 'model', header: 'Model', width: 10 },
             { key: 'count', header: 'Tasks', width: 8, align: 'right' },
-            { key: 'successRate', header: 'Success', width: 10, align: 'right', format: (v) => `${(Number(v) * 100).toFixed(1)}%` },
-            { key: 'avgComplexity', header: 'Avg Complexity', width: 14, align: 'right', format: (v) => `${(Number(v) * 100).toFixed(0)}%` },
+            { key: 'percentage', header: '%', width: 8, align: 'right' },
+            { key: 'costMultiplier', header: 'Cost', width: 8, align: 'right' },
           ],
-          data: Object.entries(result.byModel).map(([model, stats]) => ({
-            model: model.toUpperCase(),
-            ...stats,
-          })),
+          data: Object.entries(dist)
+            .filter(([model]) => model !== 'inherit')
+            .map(([model, count]) => ({
+              model: model.toUpperCase(),
+              count,
+              percentage: totalTasks > 0 ? `${((count / totalTasks) * 100).toFixed(1)}%` : '0%',
+              costMultiplier: `${costMultipliers[model] || 1}x`,
+            })),
         });
       }
 
