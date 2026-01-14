@@ -17,12 +17,23 @@
 
 **MCP alone does NOT execute work - Task tool agents do the actual work!**
 
-### 🧠 DYNAMIC MODEL ROUTING (AUTOMATIC)
+### 🤖 INTELLIGENT 3-TIER MODEL ROUTING (ADR-026)
 
-**The pre-task hook automatically recommends the optimal model based on task complexity.**
+**The routing system has 3 tiers for optimal cost/performance:**
 
-When you see `[TASK_MODEL_RECOMMENDATION] Use model="X"` in a system reminder, **you MUST use that model** in your Task tool call:
+| Tier | Handler | Latency | Cost | Use Cases |
+|------|---------|---------|------|-----------|
+| **1** | Agent Booster (WASM) | <1ms | $0 | Simple transforms (var→const, add types, etc.) - **Skip LLM entirely** |
+| **2** | Haiku | ~500ms | $0.0002 | Simple tasks, low complexity (<30%) |
+| **3** | Sonnet/Opus | 2-5s | $0.003-0.015 | Complex reasoning, architecture, security (>30%) |
 
+**When you see these recommendations:**
+
+1. `[AGENT_BOOSTER_AVAILABLE]` → The task can be handled by Agent Booster (352x faster, $0)
+   - Use the Edit tool directly for simple code transforms
+   - Intent types: `var-to-const`, `add-types`, `add-error-handling`, `async-await`, `add-logging`, `remove-console`
+
+2. `[TASK_MODEL_RECOMMENDATION] Use model="X"` → Use that model in Task tool:
 ```javascript
 // If hook recommends: [TASK_MODEL_RECOMMENDATION] Use model="opus"
 Task({
@@ -35,11 +46,12 @@ Task({
 **Model Selection Logic:**
 | Complexity | Model | Use For |
 |------------|-------|---------|
+| Agent Booster intent detected | **Skip LLM** | var→const, add-types, remove-console (352x faster) |
 | High (architecture, system design, security) | **opus** | Complex reasoning, multi-step planning |
 | Medium (features, refactoring, debugging) | **sonnet** | Balanced capability and speed |
 | Low (formatting, simple fixes, docs) | **haiku** | Fast, cost-effective tasks |
 
-**CRITICAL:** Always check for `[TASK_MODEL_RECOMMENDATION]` before spawning agents and use the recommended model.
+**CRITICAL:** Always check for `[AGENT_BOOSTER_AVAILABLE]` or `[TASK_MODEL_RECOMMENDATION]` before spawning agents.
 
 ### 🛡️ Anti-Drift Coding Swarm (PREFERRED DEFAULT)
 
