@@ -497,34 +497,43 @@ npx claude-flow@v3alpha doctor --fix
 
 ## 📦 Publishing to npm
 
-**CRITICAL: @latest tag must ALWAYS point to the newest version**
+### 🚨 CRITICAL: ALWAYS PUBLISH BOTH PACKAGES TOGETHER
 
-When publishing a new version of `@claude-flow/cli`:
+**When publishing CLI changes, you MUST publish BOTH packages:**
+1. `@claude-flow/cli` - The CLI package
+2. `claude-flow` - The umbrella package (includes CLI)
+
+**NEVER publish just the CLI without the umbrella. Users use both!**
 
 ```bash
-# 1. Bump version
+# STEP 1: Build and publish CLI
 cd v3/@claude-flow/cli
 npm version 3.0.0-alpha.XXX --no-git-tag-version
-
-# 2. Build
 npm run build
-
-# 3. Publish with alpha tag
 npm publish --tag alpha
-
-# 4. IMMEDIATELY update @latest tag to match
 npm dist-tag add @claude-flow/cli@3.0.0-alpha.XXX latest
-```
 
-**Why both tags?**
-- `@alpha` - For users explicitly wanting pre-release versions
-- `@latest` - Default tag, MUST always be newest for `npx @claude-flow/cli@latest`
+# STEP 2: IMMEDIATELY publish umbrella (from repo root)
+cd /workspaces/claude-flow
+npm version 3.0.0-alpha.YYY --no-git-tag-version
+npm publish --tag alpha
+npm dist-tag add claude-flow@3.0.0-alpha.YYY latest
+```
 
 **Verification:**
 ```bash
 npm view @claude-flow/cli dist-tags --json
-# Should show both "alpha" and "latest" pointing to same version
+npm view claude-flow dist-tags --json
+# Both should show "alpha" and "latest" pointing to newest versions
 ```
+
+### Why Both Packages?
+| Package | Usage | Users |
+|---------|-------|-------|
+| `@claude-flow/cli` | `npx @claude-flow/cli@latest` | Direct CLI users |
+| `claude-flow` | `npx claude-flow@latest` | Umbrella users, MCP |
+
+**If you forget the umbrella, users running `npx claude-flow@latest` get stale code!**
 
 ## Support
 
