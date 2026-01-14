@@ -33,9 +33,12 @@
     "v3:security": "npm run security:audit && npm run security:test"
   },
   "dependencies": {
-    "agentdb": "alpha",
+    "agentdb": "2.0.0-alpha.3.4",
     "bcrypt": "^5.1.1",
     "zod": "^3.22.4"
+  },
+  "overrides": {
+    "hono": ">=4.11.4"
   },
   "devDependencies": {
     "@ruvector/attention": "^0.1.3",
