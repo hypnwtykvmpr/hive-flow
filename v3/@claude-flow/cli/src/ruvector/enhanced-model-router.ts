@@ -177,16 +177,19 @@ const TIER3_KEYWORDS: RegExp[] = [
   // Architecture & Design
   /\b(microservices?|architecture|system\s+design|distributed)\b/i,
   /\b(design|architect|plan)\s+(a|an|the|complex)\b/i,
+  /\b(design)\s+\w+\s+(schema|system|architecture)\b/i,
 
   // Security
   /\b(oauth2?|pkce|jwt|rbac|authentication\s+system|security\s+audit)\b/i,
   /\b(refresh\s+token|token\s+rotation|role-based|permission)\b/i,
   /\b(encryption|cryptograph|certificate|ssl|tls)\b/i,
+  /\b(end-to-end\s+encryption|key\s+rotation|secure\s+channel)\b/i,
 
   // Distributed Systems
   /\b(consensus|distributed|byzantine|raft|paxos)\b/i,
   /\b(replication|sharding|partitioning|eventual\s+consistency)\b/i,
-  /\b(load\s+balanc|fault\s+toleran|high\s+availability)\b/i,
+  /\b(load\s+balanc|fault[- ]toleran|high\s+availability)\b/i,
+  /\b(message\s+queue|event\s+sourc|cqrs|saga)\b/i,
 
   // Complex Algorithms
   /\b(algorithm|machine\s+learning|neural|optimization)\b/i,
@@ -194,6 +197,7 @@ const TIER3_KEYWORDS: RegExp[] = [
 
   // Database Design
   /\b(schema\s+design|database\s+architect|data\s+model)\b/i,
+  /\b(database\s+schema|multi[- ]tenant)\b/i,
   /\b(normalization|denormalization|index\s+strateg)\b/i,
 
   // Performance Critical
