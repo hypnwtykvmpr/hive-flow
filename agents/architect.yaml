@@ -1,6 +1,7 @@
 # architect agent configuration
 type: architect
 version: "3.0.0"
+model: opus  # Complex system design requires most capable model
 capabilities:
   - system-design
   - api-design
