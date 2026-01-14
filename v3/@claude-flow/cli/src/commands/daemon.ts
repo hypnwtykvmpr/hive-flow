@@ -250,7 +250,7 @@ const stopCommand: Command = {
   name: 'stop',
   description: 'Stop the worker daemon and all background workers',
   options: [
-    { name: 'quiet', short: 'q', type: 'boolean', description: 'Suppress output' },
+    { name: 'quiet', short: 'Q', type: 'boolean', description: 'Suppress output' },
   ],
   examples: [
     { command: 'claude-flow daemon stop', description: 'Stop the daemon' },
