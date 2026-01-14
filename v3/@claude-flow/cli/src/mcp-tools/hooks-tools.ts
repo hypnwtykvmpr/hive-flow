@@ -2805,6 +2805,10 @@ export const hooksTools: MCPTool[] = [
   hooksWorkerStatus,
   hooksWorkerDetect,
   hooksWorkerCancel,
+  // Model routing tools
+  hooksModelRoute,
+  hooksModelOutcome,
+  hooksModelStats,
 ];
 
 export default hooksTools;
