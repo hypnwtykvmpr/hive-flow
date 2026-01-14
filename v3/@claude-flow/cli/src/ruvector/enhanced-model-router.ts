@@ -87,6 +87,7 @@ const INTENT_PATTERNS: Record<EditIntentType, {
     patterns: [
       /convert\s+var\s+to\s+const/i,
       /change\s+var\s+to\s+const/i,
+      /change\s+var\s+declarations?\s+to\s+const/i,
       /replace\s+var\s+with\s+const/i,
       /var\s*(?:→|->|to)\s*const/i,
       /use\s+const\s+instead\s+of\s+var/i,
