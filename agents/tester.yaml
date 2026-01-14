@@ -7,4 +7,15 @@ capabilities:
   - coverage
 optimizations:
   - parallel-execution
+
+# ADR-026: 3-Tier Model Routing
+modelRouting:
+  defaultModel: sonnet
+  agentBoosterIntents:
+    - add-logging
+  opusKeywords:
+    - integration-test
+    - e2e
+    - security-test
+
 createdAt: "2026-01-14T20:17:21.782Z"
