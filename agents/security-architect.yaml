@@ -1,6 +1,7 @@
 # security-architect agent configuration
 type: security-architect
 version: "3.0.0"
+model: opus  # Security analysis requires most capable model
 capabilities:
   - threat-modeling
   - vulnerability-analysis
