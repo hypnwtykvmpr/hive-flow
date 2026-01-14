@@ -7,6 +7,7 @@
  * - Diff classification
  * - Coverage-based routing
  * - Graph boundary analysis
+ * - Flash Attention for faster similarity computations
  *
  * @module @claude-flow/cli/ruvector
  */
