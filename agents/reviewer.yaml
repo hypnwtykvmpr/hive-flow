@@ -7,14 +7,4 @@ capabilities:
   - best-practices
 optimizations:
   - incremental-analysis
-
-# ADR-026: 3-Tier Model Routing
-modelRouting:
-  defaultModel: sonnet
-  agentBoosterIntents: []
-  opusKeywords:
-    - security-review
-    - vulnerability
-    - authentication
-
-createdAt: "2026-01-14T20:17:21.782Z"
+createdAt: "2026-01-14T22:21:50.146Z"

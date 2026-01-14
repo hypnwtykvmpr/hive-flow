@@ -426,7 +426,7 @@ const defendCommand: Command = {
   options: [
     { name: 'input', short: 'i', type: 'string', description: 'Input text to scan for threats' },
     { name: 'file', short: 'f', type: 'string', description: 'File to scan for threats' },
-    { name: 'quick', short: 'q', type: 'boolean', description: 'Quick scan (faster, less detailed)' },
+    { name: 'quick', short: 'Q', type: 'boolean', description: 'Quick scan (faster, less detailed)' },
     { name: 'learn', short: 'l', type: 'boolean', description: 'Enable learning mode', default: 'true' },
     { name: 'stats', short: 's', type: 'boolean', description: 'Show detection statistics' },
     { name: 'output', short: 'o', type: 'string', description: 'Output format: text, json', default: 'text' },
