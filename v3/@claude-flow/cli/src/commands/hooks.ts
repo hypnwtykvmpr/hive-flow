@@ -3355,9 +3355,13 @@ const statuslineCommand: Command = {
       let activeAgents = 0;
       let coordinationActive = false;
       const maxAgents = 15;
+      const isWindows = process.platform === 'win32';
 
       try {
-        const ps = execSync('ps aux 2>/dev/null | grep -c agentic-flow || echo "0"', { encoding: 'utf-8' });
+        const psCmd = isWindows
+          ? 'tasklist /FI "IMAGENAME eq node.exe" 2>NUL | find /c "node" || echo 0'
+          : 'ps aux 2>/dev/null | grep -c agentic-flow || echo "0"';
+        const ps = execSync(psCmd, { encoding: 'utf-8' });
         activeAgents = Math.max(0, parseInt(ps.trim()) - 1);
         coordinationActive = activeAgents > 0;
       } catch {
