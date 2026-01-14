@@ -764,6 +764,24 @@ export const swarmCommand: Command = {
 // Helper function
 function getAgentPlan(strategy: string): Array<{ role: string; type: string; count: number; purpose: string }> {
   const plans: Record<string, Array<{ role: string; type: string; count: number; purpose: string }>> = {
+    specialized: [
+      { role: 'Coordinator', type: 'coordinator', count: 1, purpose: 'Central orchestration (anti-drift)' },
+      { role: 'Researcher', type: 'researcher', count: 1, purpose: 'Requirements analysis' },
+      { role: 'Architect', type: 'architect', count: 1, purpose: 'System design' },
+      { role: 'Coder', type: 'coder', count: 2, purpose: 'Implementation' },
+      { role: 'Tester', type: 'tester', count: 1, purpose: 'Quality assurance' },
+      { role: 'Reviewer', type: 'reviewer', count: 1, purpose: 'Code review' }
+    ],
+    balanced: [
+      { role: 'Coordinator', type: 'coordinator', count: 1, purpose: 'Orchestrate workflow' },
+      { role: 'Worker', type: 'coder', count: 4, purpose: 'General implementation' },
+      { role: 'Reviewer', type: 'reviewer', count: 1, purpose: 'Quality review' }
+    ],
+    adaptive: [
+      { role: 'Coordinator', type: 'coordinator', count: 1, purpose: 'Dynamic orchestration' },
+      { role: 'Scout', type: 'researcher', count: 1, purpose: 'Task analysis' },
+      { role: 'Worker', type: 'coder', count: 3, purpose: 'Adaptive execution' }
+    ],
     development: [
       { role: 'Coordinator', type: 'coordinator', count: 1, purpose: 'Orchestrate workflow' },
       { role: 'Architect', type: 'architect', count: 1, purpose: 'System design' },
