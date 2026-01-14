@@ -85,6 +85,17 @@ export {
   type CircularDependency,
   type GraphAnalysisResult,
 } from './graph-analyzer.js';
+export {
+  FlashAttention,
+  getFlashAttention,
+  resetFlashAttention,
+  computeAttention,
+  benchmarkFlashAttention,
+  getFlashAttentionSpeedup,
+  type FlashAttentionConfig,
+  type AttentionResult,
+  type BenchmarkResult,
+} from './flash-attention.js';
 
 /**
  * Check if ruvector packages are available
