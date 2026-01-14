@@ -104,9 +104,9 @@ async function getModelRouter() {
 }
 
 /**
- * Determine model for agent based on:
+ * Determine model for agent based on (ADR-026 3-tier routing):
  * 1. Explicit model in config
- * 2. Task-based routing (if task provided)
+ * 2. Enhanced task-based routing with Agent Booster AST (if task provided)
  * 3. Agent type defaults
  * 4. Fallback to sonnet
  */
@@ -114,21 +114,52 @@ async function determineAgentModel(
   agentType: string,
   config: Record<string, unknown>,
   task?: string
-): Promise<{ model: ClaudeModel; routedBy: 'explicit' | 'router' | 'default' }> {
+): Promise<{
+  model: ClaudeModel;
+  routedBy: 'explicit' | 'router' | 'agent-booster' | 'default';
+  canSkipLLM?: boolean;
+  agentBoosterIntent?: string;
+  tier?: 1 | 2 | 3;
+}> {
   // 1. Explicit model in config
   if (config.model && ['haiku', 'sonnet', 'opus', 'inherit'].includes(config.model as string)) {
     return { model: config.model as ClaudeModel, routedBy: 'explicit' };
   }
 
-  // 2. Task-based routing
+  // 2. Enhanced task-based routing with Agent Booster AST
   if (task) {
-    const router = await getModelRouter();
-    if (router) {
-      try {
-        const result = await router.route(task);
-        return { model: result.model, routedBy: 'router' };
-      } catch {
-        // Fall through to defaults on router error
+    try {
+      // Try enhanced router first (includes Agent Booster detection)
+      const { getEnhancedModelRouter } = await import('../ruvector/enhanced-model-router.js');
+      const enhancedRouter = getEnhancedModelRouter();
+      const routeResult = await enhancedRouter.route(task, { filePath: config.filePath as string });
+
+      if (routeResult.tier === 1 && routeResult.canSkipLLM) {
+        // Agent Booster can handle this task
+        return {
+          model: 'haiku', // Use haiku as fallback if AB fails
+          routedBy: 'agent-booster',
+          canSkipLLM: true,
+          agentBoosterIntent: routeResult.agentBoosterIntent?.type,
+          tier: 1,
+        };
+      }
+
+      return {
+        model: routeResult.model!,
+        routedBy: 'router',
+        tier: routeResult.tier,
+      };
+    } catch {
+      // Enhanced router not available, try basic router
+      const router = await getModelRouter();
+      if (router) {
+        try {
+          const result = await router.route(task);
+          return { model: result.model, routedBy: 'router' };
+        } catch {
+          // Fall through to defaults on router error
+        }
       }
     }
   }
