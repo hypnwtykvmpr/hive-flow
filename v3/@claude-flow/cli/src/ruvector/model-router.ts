@@ -179,7 +179,7 @@ const DEFAULT_CONFIG: ModelRouterConfig = {
   enableCircuitBreaker: true,
   circuitBreakerThreshold: 5,
   statePath: '.swarm/model-router-state.json',
-  autoSaveInterval: 20,
+  autoSaveInterval: 1, // Save after every decision for CLI persistence
   enableCostOptimization: true,
   preferSpeed: true,
 };
