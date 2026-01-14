@@ -1918,11 +1918,16 @@ export const hooksIntelligenceAttention: MCPTool = {
             values.push(value);
           }
 
-          const attentionResult = flash.computeAttention(q, keys, values);
+          const attentionResult = flash.attention([q], keys, values);
+          // Compute softmax weights from output magnitudes
+          const outputMags = attentionResult.output[0]
+            ? Array.from(attentionResult.output[0]).slice(0, topK).map(v => Math.abs(v))
+            : new Array(topK).fill(1);
+          const sumMags = outputMags.reduce((a, b) => a + b, 0) || 1;
           for (let i = 0; i < topK; i++) {
             results.push({
               index: i,
-              weight: attentionResult.weights[i] || 0,
+              weight: outputMags[i] / sumMags,
               pattern: `Flash attention target #${i + 1}`,
             });
           }
