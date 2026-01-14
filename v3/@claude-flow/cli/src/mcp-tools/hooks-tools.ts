@@ -1751,24 +1751,62 @@ export const hooksIntelligenceLearn: MCPTool = {
     const consolidate = params.consolidate !== false;
     const startTime = Date.now();
 
+    // Get SONA statistics
+    let sonaStats = {
+      totalPatterns: 0,
+      successfulRoutings: 0,
+      failedRoutings: 0,
+      trajectoriesProcessed: 0,
+      avgConfidence: 0,
+    };
+    const sona = await getSONAOptimizer();
+    if (sona) {
+      const stats = sona.getStats();
+      sonaStats = {
+        totalPatterns: stats.totalPatterns,
+        successfulRoutings: stats.successfulRoutings,
+        failedRoutings: stats.failedRoutings,
+        trajectoriesProcessed: stats.trajectoriesProcessed,
+        avgConfidence: stats.avgConfidence,
+      };
+    }
+
+    // Get EWC++ statistics and optionally trigger consolidation
+    let ewcStats = {
+      consolidation: false,
+      fisherUpdated: false,
+      forgettingPrevented: 0,
+      avgPenalty: 0,
+    };
+    if (consolidate) {
+      const ewc = await getEWCConsolidator();
+      if (ewc) {
+        const stats = ewc.getStats();
+        ewcStats = {
+          consolidation: true,
+          fisherUpdated: stats.fisherUpdates > 0,
+          forgettingPrevented: stats.patternsProtected,
+          avgPenalty: stats.avgPenalty,
+        };
+      }
+    }
+
     return {
-      learned: true,
-      duration: Date.now() - startTime + 15,
+      learned: sonaStats.totalPatterns > 0,
+      duration: Date.now() - startTime,
       updates: {
-        trajectoriesProcessed: 12,
-        patternsExtracted: 8,
-        patternsReinforced: 15,
-        patternsDeprecated: 2,
+        trajectoriesProcessed: sonaStats.trajectoriesProcessed,
+        patternsLearned: sonaStats.totalPatterns,
+        successRate: sonaStats.trajectoriesProcessed > 0
+          ? (sonaStats.successfulRoutings / (sonaStats.successfulRoutings + sonaStats.failedRoutings) * 100).toFixed(1) + '%'
+          : '0%',
       },
-      ewc: consolidate ? {
-        consolidation: true,
-        fisherUpdated: true,
-        forgettingPrevented: 3,
-      } : null,
-      newConfidences: {
-        avgIncrease: 0.05,
-        maxIncrease: 0.12,
+      ewc: consolidate ? ewcStats : null,
+      confidence: {
+        average: sonaStats.avgConfidence,
+        implementation: sona ? 'real-sona' : 'not-available',
       },
+      implementation: sona ? 'real-sona-learning' : 'placeholder',
     };
   },
 };
