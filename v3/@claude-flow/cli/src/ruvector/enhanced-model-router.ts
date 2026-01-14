@@ -144,12 +144,14 @@ const INTENT_PATTERNS: Record<EditIntentType, {
   },
   'remove-console': {
     patterns: [
-      /remove\s+console\.log/i,
-      /delete\s+console\s+statements?/i,
+      /remove\s+(?:all\s+)?console\.log/i,
+      /remove\s+(?:all\s+)?console\s+statements?/i,
+      /delete\s+(?:all\s+)?console\s+statements?/i,
       /strip\s+console/i,
       /clean\s+up\s+console/i,
       /clean\s+up\s+debug\s+logs?/i,
-      /remove\s+debug\s+logs?/i,
+      /remove\s+(?:all\s+)?debug\s+logs?/i,
+      /delete\s+(?:all\s+)?console\.log/i,
     ],
     weight: 0.95,
     description: 'Remove console.* calls',
