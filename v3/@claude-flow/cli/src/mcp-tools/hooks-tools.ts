@@ -7,6 +7,31 @@ import { mkdirSync, writeFileSync, existsSync, readFileSync, statSync } from 'fs
 import { join, resolve } from 'path';
 import type { MCPTool } from './types.js';
 
+// Real vector search functions - lazy loaded to avoid circular imports
+let searchEntriesFn: ((options: {
+  query: string;
+  namespace?: string;
+  limit?: number;
+  threshold?: number;
+}) => Promise<{
+  success: boolean;
+  results: { id: string; key: string; content: string; score: number; namespace: string }[];
+  searchTime: number;
+  error?: string;
+}>) | null = null;
+
+async function getRealSearchFunction() {
+  if (!searchEntriesFn) {
+    try {
+      const { searchEntries } = await import('../memory/memory-initializer.js');
+      searchEntriesFn = searchEntries;
+    } catch {
+      searchEntriesFn = null;
+    }
+  }
+  return searchEntriesFn;
+}
+
 // Memory store types and helpers
 interface MemoryEntry {
   key: string;
