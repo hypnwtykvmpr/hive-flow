@@ -69,12 +69,18 @@ export class FlashAttention {
   private lastSpeedup: number = 0;
   private benchmarkHistory: BenchmarkResult[] = [];
 
+  // Pre-allocated buffers for CPU optimization
+  private scoreBuffer: Float32Array | null = null;
+  private expBuffer: Float32Array | null = null;
+  private accumBuffer: Float64Array | null = null;
+
   constructor(config: Partial<FlashAttentionConfig> = {}) {
     this.config = {
-      blockSize: config.blockSize ?? 64,
+      blockSize: config.blockSize ?? 32, // Smaller blocks for CPU L1 cache
       dimensions: config.dimensions ?? 384,
       temperature: config.temperature ?? 1.0,
       useStableMode: config.useStableMode ?? true,
+      useCPUOptimizations: config.useCPUOptimizations ?? true,
     };
   }
 
