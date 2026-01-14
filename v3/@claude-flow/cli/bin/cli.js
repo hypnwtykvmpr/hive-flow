@@ -8,6 +8,8 @@
  * This allows: echo '{"jsonrpc":"2.0",...}' | npx @claude-flow/cli
  */
 
+import { randomUUID } from 'crypto';
+
 // Check if we should run in MCP server mode
 // Conditions: stdin is being piped AND no CLI arguments provided
 const isMCPMode = !process.stdin.isTTY && process.argv.length === 2;
@@ -17,7 +19,7 @@ if (isMCPMode) {
   const { listMCPTools, callMCPTool, hasTool } = await import('../dist/src/mcp-client.js');
 
   const VERSION = '3.0.0';
-  const sessionId = `mcp-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
+  const sessionId = `mcp-${Date.now()}-${randomUUID().slice(0, 8)}`;
 
   console.error(
     `[${new Date().toISOString()}] INFO [claude-flow-mcp] (${sessionId}) Starting in stdio mode`
