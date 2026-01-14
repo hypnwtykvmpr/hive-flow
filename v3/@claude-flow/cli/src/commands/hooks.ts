@@ -3693,12 +3693,12 @@ const modelRouteCommand: Command = {
 
     try {
       const result = await callMCPTool<{
-        task: string;
-        selectedModel: string;
-        complexity: { level: string; score: number; factors: string[] };
+        model: string;
+        complexity: number;
         confidence: number;
         reasoning: string;
-        costSavings?: string;
+        costMultiplier?: number;
+        implementation?: string;
       }>('hooks/model-route', {
         task,
         context: ctx.flags.context,
@@ -3719,27 +3719,37 @@ const modelRouteCommand: Command = {
         sonnet: '📜',
         opus: '🎭',
       };
-      const icon = modelIcons[result.selectedModel] || '🤖';
+      const model = result.model || 'sonnet';
+      const icon = modelIcons[model] || '🤖';
+
+      // Calculate cost savings compared to opus
+      const costMultipliers: Record<string, number> = { haiku: 0.04, sonnet: 0.2, opus: 1.0 };
+      const costSavings = model !== 'opus'
+        ? `${((1 - costMultipliers[model]) * 100).toFixed(0)}% vs opus`
+        : undefined;
+
+      // Determine complexity level
+      const complexityScore = typeof result.complexity === 'number' ? result.complexity : 0.5;
+      const complexityLevel = complexityScore > 0.7 ? 'high' : complexityScore > 0.4 ? 'medium' : 'low';
 
       output.printBox(
         [
-          `Selected Model: ${icon} ${output.bold(result.selectedModel.toUpperCase())}`,
+          `Selected Model: ${icon} ${output.bold(model.toUpperCase())}`,
           `Confidence: ${(result.confidence * 100).toFixed(1)}%`,
-          `Complexity: ${result.complexity.level} (${(result.complexity.score * 100).toFixed(0)}%)`,
-          result.costSavings ? `Cost Savings: ${result.costSavings}` : '',
+          `Complexity: ${complexityLevel} (${(complexityScore * 100).toFixed(0)}%)`,
+          costSavings ? `Cost Savings: ${costSavings}` : '',
         ].filter(Boolean).join('\n'),
         'Model Routing Result'
       );
 
-      if (result.complexity.factors.length > 0) {
-        output.writeln();
-        output.writeln(output.bold('Complexity Factors'));
-        output.printList(result.complexity.factors.map(f => output.dim(f)));
-      }
-
       output.writeln();
       output.writeln(output.bold('Reasoning'));
-      output.writeln(output.dim(result.reasoning));
+      output.writeln(output.dim(result.reasoning || 'Based on task complexity analysis'));
+
+      if (result.implementation) {
+        output.writeln();
+        output.writeln(output.dim(`Implementation: ${result.implementation}`));
+      }
 
       return { success: true, data: result };
     } catch (error) {
