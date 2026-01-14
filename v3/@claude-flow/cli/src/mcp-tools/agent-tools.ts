@@ -174,11 +174,14 @@ export const agentTools: MCPTool[] = [
         config.model = input.model;
       }
 
+      // Get task from either top-level or config (CLI passes it in config.task)
+      const task = (input.task as string) || (config.task as string) || undefined;
+
       // Determine model using routing logic
       const { model, routedBy } = await determineAgentModel(
         agentType,
         config,
-        input.task as string | undefined
+        task
       );
 
       const agent: AgentRecord = {
