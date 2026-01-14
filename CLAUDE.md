@@ -17,6 +17,30 @@
 
 **MCP alone does NOT execute work - Task tool agents do the actual work!**
 
+### 🧠 DYNAMIC MODEL ROUTING (AUTOMATIC)
+
+**The pre-task hook automatically recommends the optimal model based on task complexity.**
+
+When you see `[TASK_MODEL_RECOMMENDATION] Use model="X"` in a system reminder, **you MUST use that model** in your Task tool call:
+
+```javascript
+// If hook recommends: [TASK_MODEL_RECOMMENDATION] Use model="opus"
+Task({
+  prompt: "...",
+  subagent_type: "coder",
+  model: "opus"  // ← USE THE RECOMMENDED MODEL
+})
+```
+
+**Model Selection Logic:**
+| Complexity | Model | Use For |
+|------------|-------|---------|
+| High (architecture, system design, security) | **opus** | Complex reasoning, multi-step planning |
+| Medium (features, refactoring, debugging) | **sonnet** | Balanced capability and speed |
+| Low (formatting, simple fixes, docs) | **haiku** | Fast, cost-effective tasks |
+
+**CRITICAL:** Always check for `[TASK_MODEL_RECOMMENDATION]` before spawning agents and use the recommended model.
+
 ### 🛡️ Anti-Drift Coding Swarm (PREFERRED DEFAULT)
 
 **To prevent goal drift, context drift, and agent desynchronization, ALWAYS use this configuration for coding swarms:**
