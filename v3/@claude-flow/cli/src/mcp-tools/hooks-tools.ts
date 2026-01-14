@@ -1388,7 +1388,7 @@ export const hooksTrajectoryEnd: MCPTool = {
   },
 };
 
-// Pattern store/search hooks
+// Pattern store/search hooks - REAL implementation using storeEntry
 export const hooksPatternStore: MCPTool = {
   name: 'hooks/intelligence/pattern-store',
   description: 'Store pattern in ReasoningBank (HNSW-indexed)',
@@ -1406,15 +1406,45 @@ export const hooksPatternStore: MCPTool = {
     const pattern = params.pattern as string;
     const type = (params.type as string) || 'general';
     const confidence = (params.confidence as number) || 0.8;
+    const metadata = params.metadata as Record<string, unknown> | undefined;
+    const timestamp = new Date().toISOString();
+    const patternId = `pattern-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+
+    // Try to persist using real store
+    const storeFn = await getRealStoreFunction();
+    let storeResult: { success: boolean; id?: string; embedding?: { dimensions: number; model: string }; error?: string } = { success: false };
+
+    if (storeFn) {
+      try {
+        storeResult = await storeFn({
+          key: patternId,
+          value: JSON.stringify({
+            pattern,
+            type,
+            confidence,
+            metadata,
+            timestamp,
+          }),
+          namespace: 'pattern',
+          generateEmbeddingFlag: true, // Generate embedding for HNSW indexing
+          tags: [type, `confidence-${Math.round(confidence * 100)}`, 'reasoning-pattern'],
+        });
+      } catch (error) {
+        storeResult = { success: false, error: error instanceof Error ? error.message : String(error) };
+      }
+    }
 
     return {
-      patternId: `pattern-${Date.now()}`,
+      patternId: storeResult.id || patternId,
       pattern,
       type,
       confidence,
-      indexed: true,
-      hnswNode: Math.floor(Math.random() * 10000),
-      timestamp: new Date().toISOString(),
+      indexed: storeResult.success,
+      hnswIndexed: storeResult.success && !!storeResult.embedding,
+      embedding: storeResult.embedding,
+      timestamp,
+      implementation: storeResult.success ? 'real-hnsw-indexed' : 'memory-only',
+      note: storeResult.success ? 'Pattern stored with vector embedding for semantic search' : (storeResult.error || 'Store function unavailable'),
     };
   },
 };
