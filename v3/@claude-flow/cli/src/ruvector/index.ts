@@ -3,6 +3,7 @@
  *
  * Provides integration with @ruvector packages for:
  * - Q-Learning based task routing
+ * - Mixture of Experts (MoE) routing
  * - AST code analysis
  * - Diff classification
  * - Coverage-based routing
@@ -13,6 +14,20 @@
  */
 
 export { QLearningRouter, createQLearningRouter, type QLearningRouterConfig, type RouteDecision } from './q-learning-router.js';
+export {
+  MoERouter,
+  getMoERouter,
+  resetMoERouter,
+  createMoERouter,
+  EXPERT_NAMES,
+  NUM_EXPERTS,
+  INPUT_DIM,
+  HIDDEN_DIM,
+  type ExpertType,
+  type MoERouterConfig,
+  type RoutingResult,
+  type LoadBalanceStats,
+} from './moe-router.js';
 export { ASTAnalyzer, createASTAnalyzer, type ASTAnalysis, type ASTNode, type ASTAnalyzerConfig } from './ast-analyzer.js';
 export {
   DiffClassifier,
