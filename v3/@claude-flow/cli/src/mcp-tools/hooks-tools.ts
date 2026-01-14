@@ -1055,7 +1055,7 @@ export const hooksInit: MCPTool = {
 // Intelligence hook - RuVector intelligence system
 export const hooksIntelligence: MCPTool = {
   name: 'hooks/intelligence',
-  description: 'RuVector intelligence system (SONA, MoE, HNSW 150x faster)',
+  description: 'RuVector intelligence system status (shows REAL metrics from memory store)',
   inputSchema: {
     type: 'object',
     properties: {
@@ -1073,49 +1073,57 @@ export const hooksIntelligence: MCPTool = {
     const enableMoe = params.enableMoe !== false;
     const enableHnsw = params.enableHnsw !== false;
 
+    // Get REAL statistics from memory store
+    const realStats = getIntelligenceStatsFromMemory();
+
     return {
       mode,
       status: 'active',
       components: {
         sona: {
           enabled: enableSona,
-          status: enableSona ? 'active' : 'disabled',
-          learningTimeMs: 0.042,
-          adaptationTimeMs: 0.018,
-          trajectoriesRecorded: 156,
-          patternsLearned: 89,
-          avgQuality: 0.87,
+          status: enableSona ? 'infrastructure-ready' : 'disabled',
+          implemented: false, // HONEST: SONA self-optimization not yet implemented
+          trajectoriesRecorded: realStats.trajectories.total,
+          trajectoriesSuccessful: realStats.trajectories.successful,
+          patternsLearned: realStats.patterns.learned,
+          note: 'Trajectory recording works; self-optimization pending implementation',
         },
         moe: {
           enabled: enableMoe,
-          status: enableMoe ? 'active' : 'disabled',
-          expertsActive: 8,
-          routingAccuracy: 0.92,
-          loadBalance: 0.85,
+          status: enableMoe ? 'placeholder' : 'disabled',
+          implemented: false, // HONEST: MoE routing not yet implemented
+          routingDecisions: realStats.routing.decisions,
+          note: 'MoE expert routing returns placeholder weights - real training not implemented',
         },
         hnsw: {
           enabled: enableHnsw,
-          status: enableHnsw ? 'ready' : 'disabled',
-          indexSize: 12500,
-          searchSpeedup: '150x',
-          memoryUsage: '45MB',
-          dimension: 384,
+          status: enableHnsw ? 'partial' : 'disabled',
+          implemented: 'partial', // HONEST: Infrastructure exists but search uses memory store
+          indexSize: realStats.memory.indexSize,
+          memorySizeBytes: realStats.memory.memorySizeBytes,
+          note: 'Memory store exists; HNSW vector indexing not fully integrated',
         },
         embeddings: {
           provider: 'transformers',
           model: 'all-MiniLM-L6-v2',
           dimension: 384,
-          cacheHitRate: 0.78,
+          implemented: true, // HONEST: This actually works
+          note: 'Real ONNX embeddings via all-MiniLM-L6-v2',
         },
       },
-      performance: {
-        flashAttention: '2.49x-7.47x speedup',
-        memoryReduction: '50-75% reduction',
-        searchImprovement: '150x-12,500x faster',
-        tokenReduction: '32.3% fewer tokens',
-        sweBenchScore: '84.8%',
+      realMetrics: {
+        // Show what's ACTUALLY in the system
+        trajectories: realStats.trajectories,
+        patterns: realStats.patterns,
+        memory: realStats.memory,
+        routing: realStats.routing,
       },
-      lastTrainingMs: 0.042,
+      implementationStatus: {
+        working: ['memory-store', 'embeddings', 'trajectory-recording', 'claims', 'swarm-coordination'],
+        partial: ['hnsw-index', 'pattern-storage'],
+        notImplemented: ['sona-self-optimization', 'ewc-consolidation', 'moe-routing', 'flash-attention'],
+      },
     };
   },
 };
