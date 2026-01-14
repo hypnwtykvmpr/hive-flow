@@ -147,10 +147,10 @@ export class FlashAttention {
     const dim = Q[0]?.length ?? this.config.dimensions;
     const scale = 1.0 / (Math.sqrt(dim) * this.config.temperature);
 
-    // Top-K: Use only top 25% of keys (or min 32) for attention
-    // This gives ~4x speedup with minimal accuracy loss for typical use cases
-    const topK = Math.max(32, Math.min(numK, Math.ceil(numK * 0.25)));
-    const useTopK = numK > 64; // Only use top-K for larger inputs
+    // Top-K: Use only top 15% of keys (or min 24, max 128) for attention
+    // This gives ~6x speedup with acceptable accuracy loss for neural search
+    const topK = Math.max(24, Math.min(128, Math.ceil(numK * 0.15)));
+    const useTopK = numK > 48; // Only use top-K for larger inputs
 
     // Ensure buffers are allocated
     const bufferSize = useTopK ? topK : numK;
