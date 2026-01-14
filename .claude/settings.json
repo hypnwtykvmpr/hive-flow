@@ -513,9 +513,9 @@
   },
   "mcpServers": {
     "claude-flow": {
-      "command": "npx",
+      "command": "node",
       "args": [
-        "agentic-flow@alpha",
+        "/workspaces/claude-flow/v3/@claude-flow/cli/bin/cli.js",
         "mcp",
         "start"
       ]
