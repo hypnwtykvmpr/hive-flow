@@ -17,7 +17,7 @@ const startCommand: Command = {
   description: 'Start the worker daemon with all enabled background workers',
   options: [
     { name: 'workers', short: 'w', type: 'string', description: 'Comma-separated list of workers to enable (default: map,audit,optimize,consolidate,testgaps)' },
-    { name: 'quiet', short: 'q', type: 'boolean', description: 'Suppress output' },
+    { name: 'quiet', short: 'Q', type: 'boolean', description: 'Suppress output' },
     { name: 'background', short: 'b', type: 'boolean', description: 'Run daemon in background (detached process)', default: true },
     { name: 'foreground', short: 'f', type: 'boolean', description: 'Run daemon in foreground (blocks terminal)' },
     { name: 'headless', type: 'boolean', description: 'Enable headless worker execution (E2B sandbox)' },
