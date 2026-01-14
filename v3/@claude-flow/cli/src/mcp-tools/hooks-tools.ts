@@ -59,6 +59,80 @@ async function getRealStoreFunction() {
   return storeEntryFn;
 }
 
+// =============================================================================
+// Neural Module Lazy Loaders (SONA, EWC++, MoE, LoRA, Flash Attention)
+// =============================================================================
+
+// SONA Optimizer - lazy loaded
+let sonaOptimizer: Awaited<ReturnType<typeof import('../memory/sona-optimizer.js').getSONAOptimizer>> | null = null;
+async function getSONAOptimizer() {
+  if (!sonaOptimizer) {
+    try {
+      const { getSONAOptimizer: getSona } = await import('../memory/sona-optimizer.js');
+      sonaOptimizer = await getSona();
+    } catch {
+      sonaOptimizer = null;
+    }
+  }
+  return sonaOptimizer;
+}
+
+// EWC++ Consolidator - lazy loaded
+let ewcConsolidator: Awaited<ReturnType<typeof import('../memory/ewc-consolidation.js').getEWCConsolidator>> | null = null;
+async function getEWCConsolidator() {
+  if (!ewcConsolidator) {
+    try {
+      const { getEWCConsolidator: getEWC } = await import('../memory/ewc-consolidation.js');
+      ewcConsolidator = await getEWC();
+    } catch {
+      ewcConsolidator = null;
+    }
+  }
+  return ewcConsolidator;
+}
+
+// MoE Router - lazy loaded
+let moeRouter: Awaited<ReturnType<typeof import('../ruvector/moe-router.js').getMoERouter>> | null = null;
+async function getMoERouter() {
+  if (!moeRouter) {
+    try {
+      const { getMoERouter: getMoE } = await import('../ruvector/moe-router.js');
+      moeRouter = await getMoE();
+    } catch {
+      moeRouter = null;
+    }
+  }
+  return moeRouter;
+}
+
+// Flash Attention - lazy loaded
+let flashAttention: Awaited<ReturnType<typeof import('../ruvector/flash-attention.js').getFlashAttention>> | null = null;
+async function getFlashAttention() {
+  if (!flashAttention) {
+    try {
+      const { getFlashAttention: getFlash } = await import('../ruvector/flash-attention.js');
+      flashAttention = await getFlash();
+    } catch {
+      flashAttention = null;
+    }
+  }
+  return flashAttention;
+}
+
+// LoRA Adapter - lazy loaded
+let loraAdapter: Awaited<ReturnType<typeof import('../ruvector/lora-adapter.js').getLoRAAdapter>> | null = null;
+async function getLoRAAdapter() {
+  if (!loraAdapter) {
+    try {
+      const { getLoRAAdapter: getLora } = await import('../ruvector/lora-adapter.js');
+      loraAdapter = await getLora();
+    } catch {
+      loraAdapter = null;
+    }
+  }
+  return loraAdapter;
+}
+
 // Trajectory storage for SONA learning
 interface TrajectoryStep {
   action: string;
