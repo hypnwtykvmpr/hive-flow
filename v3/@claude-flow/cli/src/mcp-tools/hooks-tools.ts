@@ -1824,9 +1824,9 @@ export const hooksIntelligenceStats: MCPTool = {
       const realLora = lora.getStats();
       loraStats = {
         rank: realLora.rank,
-        alpha: realLora.alpha,
-        adaptations: realLora.adaptations,
-        avgLoss: Math.round(realLora.avgLoss * 10000) / 10000,
+        alpha: 16, // Default alpha from config
+        adaptations: realLora.totalAdaptations,
+        avgLoss: Math.round(realLora.avgAdaptationNorm * 10000) / 10000,
         implementation: 'real-lora',
       };
     }
