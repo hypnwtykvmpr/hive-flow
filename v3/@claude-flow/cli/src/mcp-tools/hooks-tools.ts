@@ -32,6 +32,54 @@ async function getRealSearchFunction() {
   return searchEntriesFn;
 }
 
+// Real store function - lazy loaded
+let storeEntryFn: ((options: {
+  key: string;
+  value: string;
+  namespace?: string;
+  generateEmbeddingFlag?: boolean;
+  tags?: string[];
+  ttl?: number;
+}) => Promise<{
+  success: boolean;
+  id: string;
+  embedding?: { dimensions: number; model: string };
+  error?: string;
+}>) | null = null;
+
+async function getRealStoreFunction() {
+  if (!storeEntryFn) {
+    try {
+      const { storeEntry } = await import('../memory/memory-initializer.js');
+      storeEntryFn = storeEntry;
+    } catch {
+      storeEntryFn = null;
+    }
+  }
+  return storeEntryFn;
+}
+
+// Trajectory storage for SONA learning
+interface TrajectoryStep {
+  action: string;
+  result: string;
+  quality: number;
+  timestamp: string;
+}
+
+interface TrajectoryData {
+  id: string;
+  task: string;
+  agent: string;
+  steps: TrajectoryStep[];
+  startedAt: string;
+  success?: boolean;
+  endedAt?: string;
+}
+
+// In-memory trajectory tracking (persisted on end)
+const activeTrajectories = new Map<string, TrajectoryData>();
+
 // Memory store types and helpers
 interface MemoryEntry {
   key: string;
