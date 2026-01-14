@@ -51,13 +51,37 @@ const c = {
 function getUserInfo() {
   let name = 'user';
   let gitBranch = '';
-  let modelName = 'Opus 4.5';
+  let modelName = 'Unknown';
 
   try {
     name = execSync('git config user.name 2>/dev/null || echo "user"', { encoding: 'utf-8' }).trim();
     gitBranch = execSync('git branch --show-current 2>/dev/null || echo ""', { encoding: 'utf-8' }).trim();
   } catch (e) {
     // Ignore errors
+  }
+
+  // Auto-detect model from Claude Code's config
+  try {
+    const homedir = require('os').homedir();
+    const claudeConfigPath = path.join(homedir, '.claude.json');
+    if (fs.existsSync(claudeConfigPath)) {
+      const claudeConfig = JSON.parse(fs.readFileSync(claudeConfigPath, 'utf-8'));
+      // Get model from lastModelUsage (most recent model used)
+      const lastModelUsage = claudeConfig.projects?.[process.cwd()]?.lastModelUsage || claudeConfig.lastModelUsage;
+      if (lastModelUsage) {
+        const modelIds = Object.keys(lastModelUsage);
+        if (modelIds.length > 0) {
+          const modelId = modelIds[0]; // Get most recent
+          // Parse model ID to human-readable name
+          if (modelId.includes('opus')) modelName = 'Opus 4.5';
+          else if (modelId.includes('sonnet')) modelName = 'Sonnet 4';
+          else if (modelId.includes('haiku')) modelName = 'Haiku 4.5';
+          else modelName = modelId.split('-').slice(1, 3).join(' ');
+        }
+      }
+    }
+  } catch (e) {
+    // Fallback to Unknown if can't read config
   }
 
   return { name, gitBranch, modelName };
