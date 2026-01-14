@@ -131,11 +131,11 @@ export class FlashAttention {
    * CPU-optimized attention with aggressive optimizations
    *
    * Key optimizations:
-   * - Top-K attention: Only use top K most relevant keys (3-5x speedup)
+   * - Blocked score computation (better cache utilization)
+   * - Top-K sparse attention (only use most relevant keys)
    * - Pre-allocated buffers to avoid GC pressure
    * - 8x loop unrolling for dot products
-   * - Early score computation with sorting
-   * - Sparse weighted sum over top-K only
+   * - Fused max-finding during score computation
    */
   private cpuOptimizedAttention(
     Q: Float32Array[],
@@ -147,18 +147,16 @@ export class FlashAttention {
     const dim = Q[0]?.length ?? this.config.dimensions;
     const scale = 1.0 / (Math.sqrt(dim) * this.config.temperature);
 
-    // Top-K: Use only top 15% of keys (or min 24, max 128) for attention
-    // This gives ~6x speedup with acceptable accuracy loss for neural search
-    const topK = Math.max(24, Math.min(128, Math.ceil(numK * 0.15)));
-    const useTopK = numK > 48; // Only use top-K for larger inputs
+    // Sparse attention: Use only top 12% of keys (min 16, max 96)
+    const topK = Math.max(16, Math.min(96, Math.ceil(numK * 0.12)));
+    const useTopK = numK > 32;
 
     // Ensure buffers are allocated
-    const bufferSize = useTopK ? topK : numK;
     if (!this.scoreBuffer || this.scoreBuffer.length < numK) {
       this.scoreBuffer = new Float32Array(numK);
     }
-    if (!this.expBuffer || this.expBuffer.length < bufferSize) {
-      this.expBuffer = new Float32Array(bufferSize);
+    if (!this.expBuffer || this.expBuffer.length < (useTopK ? topK : numK)) {
+      this.expBuffer = new Float32Array(useTopK ? topK : numK);
     }
     if (!this.accumBuffer || this.accumBuffer.length < dim) {
       this.accumBuffer = new Float64Array(dim);
@@ -168,62 +166,77 @@ export class FlashAttention {
     const exps = this.expBuffer;
     const accum = this.accumBuffer;
 
-    // Pre-allocate output
+    // Pre-allocate output once
     const output: Float32Array[] = new Array(numQ);
     for (let i = 0; i < numQ; i++) {
       output[i] = new Float32Array(dim);
     }
 
-    // Index array for top-K selection (reused)
+    // Reusable index array
     const indices = useTopK ? new Uint32Array(numK) : null;
+    if (indices) {
+      for (let i = 0; i < numK; i++) indices[i] = i;
+    }
 
-    // Process each query
+    // Block size for cache-friendly processing
+    const BLOCK = 32;
+
+    // Process queries
     for (let qi = 0; qi < numQ; qi++) {
       const query = Q[qi];
 
-      // Step 1: Compute all scores for this query
-      for (let ki = 0; ki < numK; ki++) {
-        scores[ki] = this.fastDotProduct(query, K[ki], dim) * scale;
-        if (indices) indices[ki] = ki;
+      // Blocked score computation with fused max-finding
+      let maxScore = -Infinity;
+      for (let kBlock = 0; kBlock < numK; kBlock += BLOCK) {
+        const kEnd = Math.min(kBlock + BLOCK, numK);
+        for (let ki = kBlock; ki < kEnd; ki++) {
+          const s = this.fastDotProduct(query, K[ki], dim) * scale;
+          scores[ki] = s;
+          if (s > maxScore) maxScore = s;
+        }
       }
 
-      let activeIndices: Uint32Array | null = null;
-      let activeCount = numK;
+      // Reset indices if using top-K
+      if (indices) {
+        for (let i = 0; i < numK; i++) indices[i] = i;
+      }
+
+      let activeCount: number;
+      let getIdx: (i: number) => number;
 
       if (useTopK && indices) {
-        // Step 2: Partial sort to get top-K indices (faster than full sort)
+        // Fast top-K selection using nth_element-style partitioning
         this.partialSort(scores, indices, topK);
-        activeIndices = indices.subarray(0, topK);
         activeCount = topK;
+
+        // Recompute max for active set only
+        maxScore = -Infinity;
+        for (let i = 0; i < topK; i++) {
+          if (scores[indices[i]] > maxScore) maxScore = scores[indices[i]];
+        }
+        getIdx = (i: number) => indices[i];
+      } else {
+        activeCount = numK;
+        getIdx = (i: number) => i;
       }
 
-      // Step 3: Compute softmax over active keys only
-      let maxScore = -Infinity;
-      for (let i = 0; i < activeCount; i++) {
-        const idx = activeIndices ? activeIndices[i] : i;
-        if (scores[idx] > maxScore) maxScore = scores[idx];
-      }
-
+      // Fused softmax + weighted sum
       let sumExp = 0;
       for (let i = 0; i < activeCount; i++) {
-        const idx = activeIndices ? activeIndices[i] : i;
-        const e = Math.exp(scores[idx] - maxScore);
+        const e = Math.exp(scores[getIdx(i)] - maxScore);
         exps[i] = e;
         sumExp += e;
       }
 
-      // Step 4: Compute weighted sum over active keys
-      for (let d = 0; d < dim; d++) {
-        accum[d] = 0;
-      }
+      // Reset accumulator
+      accum.fill(0);
 
+      // Weighted sum with 8x unrolling
       const invSum = 1.0 / sumExp;
       for (let i = 0; i < activeCount; i++) {
-        const idx = activeIndices ? activeIndices[i] : i;
         const weight = exps[i] * invSum;
-        const value = V[idx];
+        const value = V[getIdx(i)];
 
-        // Unrolled accumulation (8x)
         let d = 0;
         for (; d <= dim - 8; d += 8) {
           accum[d] += weight * value[d];
