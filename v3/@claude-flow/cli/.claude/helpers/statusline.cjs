@@ -261,8 +261,14 @@ function getSystemMetrics() {
   let subAgents = 0;
 
   try {
-    const mem = execSync('ps aux | grep -E "(node|agentic|claude)" | grep -v grep | awk \'{sum += \$6} END {print int(sum/1024)}\'', { encoding: 'utf-8' });
-    memoryMB = parseInt(mem.trim()) || 0;
+    if (isWindows) {
+      // Windows: use tasklist for memory info, fallback to process.memoryUsage
+      // tasklist memory column is complex to parse, use Node.js API instead
+      memoryMB = Math.floor(process.memoryUsage().heapUsed / 1024 / 1024);
+    } else {
+      const mem = execSync('ps aux | grep -E "(node|agentic|claude)" | grep -v grep | awk \'{sum += $6} END {print int(sum/1024)}\'', { encoding: 'utf-8' });
+      memoryMB = parseInt(mem.trim()) || 0;
+    }
   } catch (e) {
     // Fallback
     memoryMB = Math.floor(process.memoryUsage().heapUsed / 1024 / 1024);
@@ -279,10 +285,16 @@ function getSystemMetrics() {
 
   // Count active sub-agents from process list
   try {
-    const agents = execSync('ps aux 2>/dev/null | grep -c "claude-flow.*agent" || echo "0"', { encoding: 'utf-8' });
-    subAgents = Math.max(0, parseInt(agents.trim()) - 1);
+    if (isWindows) {
+      // Windows: use tasklist and findstr for agent counting
+      const agents = execSync('tasklist 2>NUL | findstr /I "claude-flow" 2>NUL | find /C /V "" 2>NUL || echo 0', { encoding: 'utf-8' });
+      subAgents = Math.max(0, parseInt(agents.trim()) || 0);
+    } else {
+      const agents = execSync('ps aux 2>/dev/null | grep -c "claude-flow.*agent" || echo "0"', { encoding: 'utf-8' });
+      subAgents = Math.max(0, parseInt(agents.trim()) - 1);
+    }
   } catch (e) {
-    // Ignore
+    // Ignore - default to 0
   }
 
   return {
