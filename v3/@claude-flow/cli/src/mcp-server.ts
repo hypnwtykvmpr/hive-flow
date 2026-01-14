@@ -502,10 +502,9 @@ export class MCPServerManager extends EventEmitter {
    * Start HTTP server in-process
    */
   private async startHttpServer(): Promise<void> {
-    // Dynamically import the MCP server
-    // Note: Path is relative to the compiled output location
-    const mcpServerPath = path.resolve(__dirname, '../../../mcp/server.js');
-    const { MCPServer, createMCPServer } = await import(mcpServerPath);
+    // Dynamically import the MCP server package
+    // FIX for issue #942: Use proper package import instead of broken relative path
+    const { createMCPServer } = await import('@claude-flow/mcp');
 
     const logger = {
       debug: (msg: string, data?: unknown) => this.emit('log', { level: 'debug', msg, data }),
