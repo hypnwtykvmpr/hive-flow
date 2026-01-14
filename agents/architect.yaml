@@ -1,7 +1,6 @@
 # architect agent configuration
 type: architect
 version: "3.0.0"
-model: opus  # Complex system design requires most capable model
 capabilities:
   - system-design
   - api-design
@@ -9,4 +8,4 @@ capabilities:
 optimizations:
   - context-caching
   - memory-persistence
-createdAt: "2026-01-14T18:57:52.789Z"
+createdAt: "2026-01-14T19:45:10.658Z"

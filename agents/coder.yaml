@@ -1,7 +1,6 @@
 # coder agent configuration
 type: coder
 version: "3.0.0"
-model: sonnet  # Balanced capability for code tasks
 capabilities:
   - code-generation
   - refactoring
@@ -9,4 +8,4 @@ capabilities:
 optimizations:
   - flash-attention
   - token-reduction
-createdAt: "2026-01-14T18:57:52.789Z"
+createdAt: "2026-01-14T19:45:10.658Z"

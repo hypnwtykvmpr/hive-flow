@@ -1,11 +1,10 @@
 # security-architect agent configuration
 type: security-architect
 version: "3.0.0"
-model: opus  # Security analysis requires most capable model
 capabilities:
   - threat-modeling
   - vulnerability-analysis
   - security-review
 optimizations:
   - pattern-matching
-createdAt: "2026-01-14T18:57:52.790Z"
+createdAt: "2026-01-14T19:45:10.659Z"
