@@ -70,9 +70,13 @@ async function getAIDefence(): Promise<AIDefenceInstance> {
   clearRequireCache(packageName);
   try {
     const aidefence = require(packageName);
-    aidefenceInstance = aidefence.createAIDefence({ enableLearning: true });
+    const instance = aidefence.createAIDefence({ enableLearning: true });
+    if (!instance) {
+      throw new Error('createAIDefence returned null after install');
+    }
+    aidefenceInstance = instance;
     console.error(`[claude-flow] ${packageName} loaded successfully after install`);
-    return aidefenceInstance;
+    return instance;
   } catch (retryError) {
     throw new Error(`AIDefence installed but failed to load: ${retryError}. Try restarting the MCP server.`);
   }
