@@ -2,6 +2,7 @@
  * Agent MCP Tools for CLI
  *
  * Tool definitions for agent lifecycle management with file persistence.
+ * Includes model routing integration for intelligent model selection.
  */
 
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
@@ -13,6 +14,9 @@ const STORAGE_DIR = '.claude-flow';
 const AGENT_DIR = 'agents';
 const AGENT_FILE = 'store.json';
 
+// Model types matching Claude Agent SDK
+type ClaudeModel = 'haiku' | 'sonnet' | 'opus' | 'inherit';
+
 interface AgentRecord {
   agentId: string;
   agentType: string;
@@ -22,6 +26,8 @@ interface AgentRecord {
   config: Record<string, unknown>;
   createdAt: string;
   domain?: string;
+  model?: ClaudeModel;  // Model assigned to this agent
+  modelRoutedBy?: 'explicit' | 'router' | 'default';  // How model was determined
 }
 
 interface AgentStore {
