@@ -1575,9 +1575,9 @@ const postTaskCommand: Command = {
     {
       name: 'task-id',
       short: 'i',
-      description: 'Unique task identifier',
+      description: 'Unique task identifier (auto-generated if not provided)',
       type: 'string',
-      required: true
+      required: false
     },
     {
       name: 'success',
