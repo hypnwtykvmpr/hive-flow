@@ -2653,35 +2653,214 @@ await aidefence.learnFromDetection(userInput, analysis, {
 </details>
 
 <details>
-<summary>📊 <strong>Embeddings</strong></summary>
+<summary>📊 <strong>Embeddings — Multi-Provider with Fine-Tuning & Hyperbolic Space</strong></summary>
+
+### Provider Comparison
+
+| Provider | Latency | Quality | Cost | Offline | Best For |
+|----------|---------|---------|------|---------|----------|
+| **Agentic-Flow (ONNX)** | ~3ms | Good | Free | ✅ | Production (75x faster) |
+| **OpenAI** | ~50-100ms | Excellent | $0.02-0.13/1M | ❌ | Highest quality |
+| **Transformers.js** | ~230ms | Good | Free | ✅ | Local development |
+| **Mock** | <1ms | N/A | Free | ✅ | Testing |
+
+### Basic Usage
 
 ```typescript
-import { createEmbeddingService } from '@claude-flow/embeddings';
+import { createEmbeddingService, cosineSimilarity } from '@claude-flow/embeddings';
 
 // Auto-selects best provider (agentic-flow ONNX preferred)
 const embeddings = await createEmbeddingService({
-  provider: 'auto',
+  provider: 'auto',        // agentic-flow → transformers → mock
+  autoInstall: true,       // Auto-install agentic-flow if missing
   dimensions: 384,
   cache: { enabled: true, maxSize: 10000 }
 });
 
 // Generate embeddings
-const vector = await embeddings.embed('authentication patterns');
+const result = await embeddings.embed('authentication patterns');
+console.log(`Generated in ${result.latencyMs}ms`);
 
-// Batch processing
-const vectors = await embeddings.embedBatch([
+// Batch processing with cache stats
+const batch = await embeddings.embedBatch([
   'user login flow',
   'password reset',
   'session management'
 ]);
+console.log(`Cache hits: ${batch.cacheStats?.hits}`);
 
 // Compare similarity
-const similarity = await embeddings.compare(
-  'JWT tokens',
-  'JSON Web Tokens'
-);
+const similarity = cosineSimilarity(batch.embeddings[0], batch.embeddings[1]);
 // 0.94 (high similarity)
 ```
+
+### Document Chunking
+
+Split long documents into overlapping chunks:
+
+```typescript
+import { chunkText, estimateTokens } from '@claude-flow/embeddings';
+
+const result = chunkText(longDocument, {
+  maxChunkSize: 512,
+  overlap: 50,
+  strategy: 'sentence',  // 'character' | 'sentence' | 'paragraph' | 'token'
+  minChunkSize: 100,
+});
+
+console.log(`Created ${result.totalChunks} chunks`);
+result.chunks.forEach((chunk, i) => {
+  console.log(`Chunk ${i}: ${chunk.length} chars, ~${chunk.tokenCount} tokens`);
+});
+```
+
+### Normalization Options
+
+Normalize embeddings for consistent similarity:
+
+```typescript
+import { l2Normalize, l1Normalize, minMaxNormalize, zScoreNormalize } from '@claude-flow/embeddings';
+
+// L2 normalize (unit vector - most common for cosine similarity)
+const l2 = l2Normalize(embedding);  // [0.6, 0.8, 0]
+
+// Other normalizations
+const l1 = l1Normalize(embedding);       // Manhattan norm = 1
+const minMax = minMaxNormalize(embedding); // Values in [0, 1]
+const zScore = zScoreNormalize(embedding); // Mean 0, std 1
+```
+
+### Hyperbolic Embeddings (Poincaré Ball)
+
+Better representation for hierarchical code structures:
+
+```typescript
+import {
+  euclideanToPoincare,
+  hyperbolicDistance,
+  hyperbolicCentroid,
+  mobiusAdd,
+} from '@claude-flow/embeddings';
+
+// Convert to hyperbolic space (better for tree-like structures)
+const poincare = euclideanToPoincare(embedding);
+
+// Hyperbolic distance (geodesic in Poincaré ball)
+const dist = hyperbolicDistance(embedding1, embedding2);
+
+// Hyperbolic centroid (Fréchet mean)
+const centroid = hyperbolicCentroid([embed1, embed2, embed3]);
+
+// Why hyperbolic? Better for:
+// - Parent-child relationships (class inheritance)
+// - Directory hierarchies
+// - Taxonomy structures
+// - Lower distortion for tree-like data
+```
+
+### Neural Substrate Integration (Fine-Tuning)
+
+Access neural features for embedding adaptation:
+
+```typescript
+import { createNeuralService, isNeuralAvailable } from '@claude-flow/embeddings';
+
+// Check availability
+const available = await isNeuralAvailable();
+
+// Create neural service
+const neural = createNeuralService({ dimension: 384 });
+await neural.init();
+
+if (neural.isAvailable()) {
+  // Semantic drift detection (catches context drift)
+  await neural.setDriftBaseline('Initial context');
+  const drift = await neural.detectDrift('New input to check');
+  console.log('Drift:', drift?.trend);  // 'stable' | 'drifting' | 'accelerating'
+
+  // Memory with interference detection
+  const stored = await neural.storeMemory('mem-1', 'Important pattern');
+  console.log('Interference:', stored?.interference);
+
+  // Recall by similarity
+  const memories = await neural.recallMemories('query', 5);
+
+  // Coherence calibration (fine-tune quality detection)
+  await neural.calibrateCoherence(['good output 1', 'good output 2']);
+  const coherence = await neural.checkCoherence('Output to verify');
+
+  // Swarm coordination via embeddings
+  await neural.addSwarmAgent('agent-1', 'researcher');
+  const coordination = await neural.coordinateSwarm('Complex task');
+}
+```
+
+### Persistent SQLite Cache
+
+Long-term embedding storage with LRU eviction:
+
+```typescript
+import { PersistentEmbeddingCache } from '@claude-flow/embeddings';
+
+const cache = new PersistentEmbeddingCache({
+  dbPath: './embeddings.db',
+  maxSize: 10000,
+  ttlMs: 7 * 24 * 60 * 60 * 1000,  // 7 days
+});
+
+await cache.init();
+await cache.set('my text', new Float32Array([0.1, 0.2, 0.3]));
+const embedding = await cache.get('my text');
+
+const stats = await cache.getStats();
+console.log(`Hit rate: ${(stats.hitRate * 100).toFixed(1)}%`);
+```
+
+### CLI Commands
+
+```bash
+# Generate embedding
+claude-flow embeddings embed "Your text here"
+
+# Batch embed from file
+claude-flow embeddings batch documents.txt -o embeddings.json
+
+# Similarity search
+claude-flow embeddings search "query" --index ./vectors
+
+# Document chunking
+claude-flow embeddings chunk document.txt --strategy sentence --max-size 512
+
+# Normalize embeddings
+claude-flow embeddings normalize embeddings.json --type l2 -o normalized.json
+
+# Convert to hyperbolic
+claude-flow embeddings hyperbolic embeddings.json -o poincare.json
+
+# Neural operations
+claude-flow embeddings neural drift --baseline "context" --input "check"
+claude-flow embeddings neural store --id mem-1 --content "data"
+claude-flow embeddings neural recall "query" --top-k 5
+
+# Model management
+claude-flow embeddings models list
+claude-flow embeddings models download all-MiniLM-L6-v2
+
+# Cache management
+claude-flow embeddings cache stats
+claude-flow embeddings cache clear --older-than 7d
+```
+
+### Available Models
+
+| Provider | Model | Dimensions | Best For |
+|----------|-------|------------|----------|
+| **Agentic-Flow** | default | 384 | General purpose (fastest) |
+| **OpenAI** | text-embedding-3-small | 1536 | Cost-effective, high quality |
+| **OpenAI** | text-embedding-3-large | 3072 | Highest quality |
+| **Transformers.js** | Xenova/all-MiniLM-L6-v2 | 384 | Fast, offline |
+| **Transformers.js** | Xenova/all-mpnet-base-v2 | 768 | Higher quality offline |
+| **Transformers.js** | Xenova/bge-small-en-v1.5 | 384 | Retrieval optimized |
 
 </details>
 
