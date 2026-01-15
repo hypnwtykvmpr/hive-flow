@@ -88,7 +88,7 @@ npx claude-flow@v3alpha init
 </details>
 
 <details>
-<summary>▶ ⚡ <strong>Optimization</strong> — How to reduce cost and latency</summary>
+<summary>⚡ <strong>Optimization</strong> — How to reduce cost and latency</summary>
 
 | Layer | Components | What It Does |
 |-------|------------|--------------|
