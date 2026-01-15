@@ -1179,20 +1179,65 @@ Shell-based daemons for monitoring (Linux/macOS only):
 ---
 
 <details>
-<summary><h2>🎯 Use Cases </h2></summary>
+<summary><h2>🎯 Use Cases — Real-world scenarios and how to solve them</h2></summary>
 
+### 👨‍💻 Development & Code Quality
 
-| Use Case | Command |
-|----------|---------|
-| Code review | `npx claude-flow@v3alpha --agent reviewer --task "Review PR #123"` |
-| Test generation | `npx claude-flow@v3alpha --agent tester --task "Write tests for auth module"` |
-| Security audit | `npx claude-flow@v3alpha --agent security-architect --task "Audit for vulnerabilities"` |
-| Multi-agent swarm | `npx claude-flow@v3alpha swarm init --topology hierarchical` |
-| Route task | `npx claude-flow@v3alpha hooks route "Optimize database queries"` |
-| Performance analysis | `npx claude-flow@v3alpha --agent perf-analyzer --task "Profile API endpoints"` |
-| GitHub PR management | `npx claude-flow@v3alpha --agent pr-manager --task "Review open PRs"` |
-| Check V3 progress | `npx claude-flow@v3alpha progress --detailed` |
-| Sync progress metrics | `npx claude-flow@v3alpha progress sync` |
+| Scenario | What It Solves | How To Do It |
+|----------|----------------|--------------|
+| **Code Review** | Get thorough reviews with security, performance, and style checks | `npx claude-flow@v3alpha --agent reviewer --task "Review PR #123"` |
+| **Test Generation** | Auto-generate unit, integration, and e2e tests for existing code | `npx claude-flow@v3alpha --agent tester --task "Write tests for auth module"` |
+| **Refactoring** | Safely restructure code while maintaining behavior | `npx claude-flow@v3alpha --agent coder --task "Refactor user service to use repository pattern"` |
+| **Bug Fixing** | Diagnose and fix bugs with full context analysis | `npx claude-flow@v3alpha --agent coder --task "Fix race condition in checkout flow"` |
+
+### 🔒 Security & Compliance
+
+| Scenario | What It Solves | How To Do It |
+|----------|----------------|--------------|
+| **Security Audit** | Find vulnerabilities before attackers do | `npx claude-flow@v3alpha --agent security-architect --task "Audit for OWASP Top 10"` |
+| **Dependency Scan** | Identify vulnerable packages and suggest upgrades | `npx claude-flow@v3alpha security scan --depth full` |
+| **Compliance Check** | Ensure code meets security standards | `npx claude-flow@v3alpha --agent security-architect --task "Check PCI-DSS compliance"` |
+
+### 🐝 Multi-Agent Swarms
+
+| Scenario | What It Solves | How To Do It |
+|----------|----------------|--------------|
+| **Feature Development** | Coordinate multiple agents on complex features | `npx claude-flow@v3alpha swarm init --topology hierarchical && npx claude-flow@v3alpha task orchestrate "Build user dashboard"` |
+| **Large Refactors** | Parallel refactoring across many files without conflicts | `npx claude-flow@v3alpha swarm init --topology mesh --max-agents 8` |
+| **Codebase Migration** | Migrate frameworks, languages, or patterns systematically | `npx claude-flow@v3alpha task orchestrate "Migrate from Express to Fastify" --strategy adaptive` |
+
+### 📊 Performance & Optimization
+
+| Scenario | What It Solves | How To Do It |
+|----------|----------------|--------------|
+| **Performance Profiling** | Find and fix bottlenecks in your application | `npx claude-flow@v3alpha --agent perf-analyzer --task "Profile API endpoints"` |
+| **Query Optimization** | Speed up slow database queries | `npx claude-flow@v3alpha hooks route "Optimize database queries"` |
+| **Memory Analysis** | Reduce memory usage and fix leaks | `npx claude-flow@v3alpha --agent perf-analyzer --task "Analyze memory usage patterns"` |
+
+### 🔄 GitHub & DevOps
+
+| Scenario | What It Solves | How To Do It |
+|----------|----------------|--------------|
+| **PR Management** | Review, approve, and merge PRs efficiently | `npx claude-flow@v3alpha --agent pr-manager --task "Review open PRs"` |
+| **Issue Triage** | Categorize, prioritize, and assign issues automatically | `npx claude-flow@v3alpha --agent issue-tracker --task "Triage new issues"` |
+| **Release Management** | Coordinate releases with changelogs and versioning | `npx claude-flow@v3alpha --agent release-manager --task "Prepare v2.0 release"` |
+| **CI/CD Optimization** | Speed up pipelines and reduce flaky tests | `npx claude-flow@v3alpha --agent cicd-engineer --task "Optimize GitHub Actions workflow"` |
+
+### 📋 Spec-Driven Development
+
+| Scenario | What It Solves | How To Do It |
+|----------|----------------|--------------|
+| **Generate Specs** | Create complete specifications before coding | `npx claude-flow@v3alpha --agent architect --task "Create ADR for authentication system"` |
+| **Validate Implementation** | Ensure code matches specifications | `npx claude-flow@v3alpha hooks progress --detailed` |
+| **Track Compliance** | Monitor spec adherence across the team | `npx claude-flow@v3alpha progress sync` |
+
+### 🧠 Learning & Intelligence
+
+| Scenario | What It Solves | How To Do It |
+|----------|----------------|--------------|
+| **Bootstrap Intelligence** | Train the system on your codebase patterns | `npx claude-flow@v3alpha hooks pretrain --depth deep` |
+| **Optimize Routing** | Improve task-to-agent matching over time | `npx claude-flow@v3alpha hooks route "<task>" --include-explanation` |
+| **Transfer Learning** | Apply patterns learned from other projects | `npx claude-flow@v3alpha hooks transfer <sourceProject>` |
 
 </details>
 
