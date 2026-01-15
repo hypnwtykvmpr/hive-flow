@@ -3262,6 +3262,221 @@ const config = optimizer.getOptimalConfig(agentCount);
 ---
 
 <details>
+<summary><h2>🦀 RuVector — High-Performance Rust/WASM Intelligence</h2></summary>
+
+[![npm version](https://img.shields.io/npm/v/ruvector?color=blue&label=npm)](https://www.npmjs.com/package/ruvector)
+[![npm downloads](https://img.shields.io/npm/dm/ruvector?color=green)](https://www.npmjs.com/package/ruvector)
+[![GitHub](https://img.shields.io/badge/GitHub-ruvnet%2Fruvector-blue?logo=github)](https://github.com/ruvnet/ruvector)
+[![Docker](https://img.shields.io/badge/Docker-ruvector--postgres-blue?logo=docker)](https://hub.docker.com/r/ruvnet/ruvector-postgres)
+
+**RuVector** is a high-performance vector database and neural computing library written in Rust with Node.js/WASM bindings. It powers Claude-Flow's intelligence layer with native speed.
+
+### Quick Start
+
+```bash
+# Install ruvector (auto-detects native vs WASM)
+npm install ruvector
+
+# Or run directly
+npx ruvector --help
+
+# Start Postgres for centralized coordination
+docker run -d -p 5432:5432 ruvnet/ruvector-postgres
+```
+
+### Package Ecosystem
+
+| Package | Description | Performance |
+|---------|-------------|-------------|
+| **[ruvector](https://www.npmjs.com/package/ruvector)** | Core vector database with HNSW | 150x-12,500x faster search |
+| **[@ruvector/attention](https://www.npmjs.com/package/@ruvector/attention)** | Flash Attention mechanisms | 2.49x-7.47x speedup |
+| **[@ruvector/sona](https://www.npmjs.com/package/@ruvector/sona)** | SONA adaptive learning (LoRA, EWC++) | <0.05ms adaptation |
+| **[@ruvector/gnn](https://www.npmjs.com/package/@ruvector/gnn)** | Graph Neural Networks | Native NAPI bindings |
+| **[@ruvector/graph-node](https://www.npmjs.com/package/@ruvector/graph-node)** | Graph DB with Cypher queries | 10x faster than WASM |
+| **[@ruvector/rvlite](https://www.npmjs.com/package/@ruvector/rvlite)** | Standalone DB (SQL, SPARQL, Cypher) | All-in-one solution |
+
+### 🐘 RuVector Postgres — Centralized Learning & Coordination
+
+For production swarms requiring centralized state and coordination:
+
+```bash
+# Pull and run RuVector Postgres
+docker run -d \
+  --name ruvector-postgres \
+  -p 5432:5432 \
+  -e POSTGRES_PASSWORD=ruvector \
+  -v ruvector-data:/var/lib/postgresql/data \
+  ruvnet/ruvector-postgres
+
+# Configure Claude-Flow to use centralized backend
+npx claude-flow@v3alpha config set memory.backend postgres
+npx claude-flow@v3alpha config set memory.postgresUrl "postgresql://postgres:ruvector@localhost:5432/ruvector"
+```
+
+**Benefits of Centralized Postgres:**
+
+| Feature | Local SQLite | RuVector Postgres |
+|---------|--------------|-------------------|
+| **Multi-Agent Coordination** | Single machine | Distributed across hosts |
+| **Pattern Sharing** | File-based | Real-time synchronized |
+| **Learning Persistence** | Local only | Centralized, backed up |
+| **Swarm Scale** | 15 agents | 100+ agents |
+| **Query Language** | Basic KV | Full SQL + pgvector |
+
+<details>
+<summary>⚡ <strong>@ruvector/attention</strong> — Flash Attention (2.49x-7.47x Speedup)</summary>
+
+Native Rust implementation of Flash Attention for transformer computations:
+
+```typescript
+import { FlashAttention } from '@ruvector/attention';
+
+const attention = new FlashAttention({
+  blockSize: 32,      // L1 cache optimized
+  dimensions: 384,
+  temperature: 1.0,
+  useCPUOptimizations: true
+});
+
+// Compute attention with O(N) memory instead of O(N²)
+const result = attention.attention(queries, keys, values);
+console.log(`Computed in ${result.computeTimeMs}ms`);
+
+// Benchmark against naive implementation
+const bench = attention.benchmark(512, 384, 5);
+console.log(`Speedup: ${bench.speedup}x`);
+console.log(`Memory reduction: ${bench.memoryReduction}x`);
+```
+
+**Key Optimizations:**
+- Block-wise computation (fits L1 cache)
+- 8x loop unrolling for dot products
+- Top-K sparse attention (12% of keys)
+- Two-stage screening for large key sets
+- Online softmax for numerical stability
+
+</details>
+
+<details>
+<summary>🧠 <strong>@ruvector/sona</strong> — Self-Optimizing Neural Architecture</summary>
+
+SONA provides runtime-adaptive learning with minimal overhead:
+
+```typescript
+import { SONA } from '@ruvector/sona';
+
+const sona = new SONA({
+  enableLoRA: true,       // Low-rank adaptation
+  enableEWC: true,        // Elastic Weight Consolidation
+  learningRate: 0.001
+});
+
+// Start learning trajectory
+const trajectory = sona.startTrajectory('task-123');
+
+// Record steps during execution
+trajectory.recordStep({
+  type: 'observation',
+  content: 'Found authentication bug'
+});
+trajectory.recordStep({
+  type: 'action',
+  content: 'Applied JWT validation fix'
+});
+
+// Complete trajectory with verdict
+await trajectory.complete('success');
+
+// EWC++ consolidation (prevents forgetting)
+await sona.consolidate();
+```
+
+**Features:**
+- **LoRA**: Low-rank adaptation for efficient fine-tuning
+- **EWC++**: Prevents catastrophic forgetting
+- **ReasoningBank**: Pattern storage with similarity search
+- **Sub-millisecond**: <0.05ms adaptation overhead
+
+</details>
+
+<details>
+<summary>📊 <strong>@ruvector/graph-node</strong> — Native Graph Database</summary>
+
+High-performance graph database with Cypher query support:
+
+```typescript
+import { GraphDB } from '@ruvector/graph-node';
+
+const db = new GraphDB({ path: './data/graph' });
+
+// Create nodes and relationships
+await db.query(`
+  CREATE (a:Agent {name: 'coder', type: 'specialist'})
+  CREATE (b:Agent {name: 'reviewer', type: 'specialist'})
+  CREATE (a)-[:COLLABORATES_WITH {weight: 0.9}]->(b)
+`);
+
+// Query patterns
+const result = await db.query(`
+  MATCH (a:Agent)-[r:COLLABORATES_WITH]->(b:Agent)
+  WHERE r.weight > 0.8
+  RETURN a.name, b.name, r.weight
+`);
+
+// Hypergraph support for multi-agent coordination
+await db.createHyperedge(['agent-1', 'agent-2', 'agent-3'], {
+  type: 'consensus',
+  topic: 'architecture-decision'
+});
+```
+
+**Performance vs WASM:**
+- 10x faster query execution
+- Native memory management
+- Zero-copy data transfer
+
+</details>
+
+### Integration with Claude-Flow
+
+Claude-Flow automatically uses RuVector when available:
+
+```typescript
+// Claude-Flow detects and uses native ruvector
+import { getVectorStore } from '@claude-flow/memory';
+
+const store = await getVectorStore();
+// Uses ruvector if installed, falls back to sql.js
+
+// HNSW-indexed search (150x faster)
+const results = await store.search(queryVector, 10);
+
+// Flash Attention for pattern matching
+const attention = await getFlashAttention();
+const similarity = attention.attention(queries, keys, values);
+```
+
+### CLI Commands
+
+```bash
+# Check ruvector installation
+npx ruvector status
+
+# Benchmark HNSW performance
+npx ruvector benchmark --vectors 10000 --dimensions 384
+
+# Initialize Postgres backend
+npx ruvector postgres init --url postgresql://localhost:5432/ruvector
+
+# Migrate patterns to centralized storage
+npx ruvector postgres migrate --from ./data/patterns
+```
+
+</details>
+
+---
+
+<details>
 <summary><h2>☁️ Flow Nexus — Cloud Platform Integration</h2></summary>
 
 Flow Nexus is a **cloud platform** for deploying and scaling Claude-Flow beyond your local machine.
