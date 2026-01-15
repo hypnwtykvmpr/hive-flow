@@ -523,8 +523,8 @@ Claude-Flow runs as an MCP (Model Context Protocol) server, allowing you to conn
 ### Quick Add Command
 
 ```bash
-# Add Claude-Flow MCP server to any environment
-npx claude-flow@v3alpha mcp add
+# Start Claude-Flow MCP server in any environment
+npx claude-flow@v3alpha mcp start
 ```
 
 ---
