@@ -223,15 +223,15 @@ Claude-Flow v3 introduces **self-learning neural capabilities** that no other ag
 
 | | Feature | What It Does | Technical Details |
 |---|---------|--------------|-------------------|
-| 🧠 | **SONA** | Your bug fixes get routed to your best coder agent automatically | Self-Optimizing Neural Architecture, <0.05ms adaptation |
-| 🔒 | **EWC++** | Learns your codebase patterns without forgetting what worked before | Elastic Weight Consolidation prevents catastrophic forgetting |
-| 🎯 | **MoE** | Security tasks go to security experts, tests go to test experts | Mixture of 8 Experts with dynamic gating |
-| ⚡ | **Flash Attention** | Complex refactors complete in seconds instead of minutes | 2.49x-7.47x speedup for attention computations |
-| 🌐 | **Hyperbolic Embeddings** | Finds related files even in deeply nested folder structures | Poincaré ball model for hierarchical code relationships |
-| 📦 | **LoRA** | Run full agent swarms on a laptop with 8GB RAM | 128x memory compression via Low-Rank Adaptation |
-| 🗜️ | **Int8 Quantization** | Cut your memory usage by 75% with no noticeable slowdown | 3.92x memory reduction with calibrated 8-bit integers |
-| 🤝 | **Claims System** | See which agent is working on what, hand off tasks mid-stream | Work ownership with claim/release/handoff protocols |
-| 🛡️ | **Byzantine Consensus** | Swarm keeps working even if an agent crashes or hangs | Fault-tolerant, handles up to 1/3 failing agents |
+| 🧠 | **SONA** | Learns which agents perform best for each task type and routes work accordingly | Self-Optimizing Neural Architecture, <0.05ms adaptation |
+| 🔒 | **EWC++** | Preserves learned patterns when training on new ones — no forgetting | Elastic Weight Consolidation prevents catastrophic forgetting |
+| 🎯 | **MoE** | Routes tasks through 8 specialized expert networks based on task type | Mixture of 8 Experts with dynamic gating |
+| ⚡ | **Flash Attention** | Accelerates attention computation 2-7x for faster agent responses | 2.49x-7.47x speedup for attention computations |
+| 🌐 | **Hyperbolic Embeddings** | Represents hierarchical code relationships in compact vector space | Poincaré ball model for hierarchical code relationships |
+| 📦 | **LoRA** | Compresses model weights 128x so agents fit in limited memory | 128x memory compression via Low-Rank Adaptation |
+| 🗜️ | **Int8 Quantization** | Converts 32-bit weights to 8-bit with minimal accuracy loss | 3.92x memory reduction with calibrated 8-bit integers |
+| 🤝 | **Claims System** | Manages task ownership between humans and agents with handoff support | Work ownership with claim/release/handoff protocols |
+| 🛡️ | **Byzantine Consensus** | Coordinates agents even when some fail or return bad results | Fault-tolerant, handles up to 1/3 failing agents |
 
 ### Intelligent 3-Tier Model Routing (ADR-026)
 
