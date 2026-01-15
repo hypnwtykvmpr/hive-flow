@@ -1076,9 +1076,13 @@ v3/
 | Mesh | 4 | 0.15s | 192 MB |
 | Hybrid | 7 | 0.18s | 320 MB |
 
+</details>
+
 ---
 
-## Cross-Platform Support
+<details>
+<summary><h2>💻 Cross-Platform Support (Click to expand)</h2></summary>
+
 
 ### Windows (PowerShell)
 
