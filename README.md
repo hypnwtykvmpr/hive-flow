@@ -380,13 +380,13 @@ npx claude-flow@v3alpha worker results --limit 10
 
 ### LLM Providers (`@claude-flow/providers`)
 
-| Provider | Models | Features | Cost |
+| Provider | Models (2025-2026) | Features | Cost |
 |----------|--------|----------|------|
-| **Anthropic** | Claude 3.5 Sonnet, Claude 3 Opus, Claude 3 Haiku | Native, streaming, tool calling | $3-15/1M tokens |
-| **OpenAI** | GPT-4o, GPT-4 Turbo, GPT-3.5, o1-preview, o3-mini | Function calling, vision | $0.50-60/1M tokens |
-| **Google** | Gemini 2.0 Flash, Gemini 1.5 Pro/Flash | Multimodal, long context | $0.075-7/1M tokens |
-| **Cohere** | Command R+, Command R, Command Light | RAG optimized | $0.50-15/1M tokens |
-| **Ollama** | Llama 3.2, Mistral, CodeLlama, DeepSeek | Local, free, offline | Free |
+| **Anthropic** | Claude Opus 4.5, Claude Sonnet 4, Claude Haiku 3.5 | Native, streaming, tool calling, extended thinking | $1-15/1M tokens |
+| **OpenAI** | GPT-4.5, o3, o4-mini, GPT-4o | Function calling, vision, reasoning | $0.15-60/1M tokens |
+| **Google** | Gemini 2.5 Pro, Gemini 2.5 Flash, Gemini Ultra 2 | Multimodal, long context (2M tokens) | $0.075-7/1M tokens |
+| **Cohere** | Command A, Command R+ 2.0, Embed v4 | RAG optimized, multilingual | $0.50-15/1M tokens |
+| **Ollama** | Llama 4, Mistral Large 3, DeepSeek V3, Qwen 3 | Local, free, offline | Free |
 | **RuVector** | Custom models via @ruvector/ruvllm | WASM optimized | Custom |
 
 ### Provider Load Balancing
