@@ -76,7 +76,7 @@ npx claude-flow@v3alpha init
 </details>
 
 <details>
-<summary>▶ 🧠 <strong>Intelligence & Memory</strong> — How the system learns and remembers</summary>
+<summary>🧠 <strong>Intelligence & Memory</strong> — How the system learns and remembers</summary>
 
 | Layer | Components | What It Does |
 |-------|------------|--------------|
