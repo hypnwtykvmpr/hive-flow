@@ -312,29 +312,57 @@ Once added, Claude Code can use all 175+ claude-flow tools directly:
 
 Claude-Flow v3 introduces **self-learning neural capabilities** that no other agent orchestration framework offers. While competitors require manual agent configuration and static routing, Claude-Flow learns from every task execution, prevents catastrophic forgetting of successful patterns, and intelligently routes work to specialized experts.
 
-| Feature | Claude Flow v3 | CrewAI | LangGraph | AutoGen | MetaGPT |
-|---------|----------------|--------|-----------|---------|---------|
+#### 🧠 Neural & Learning
+
+| Feature | Claude Flow v3 | CrewAI | LangGraph | AutoGen | Manus |
+|---------|----------------|--------|-----------|---------|-------|
 | **Self-Learning** | ✅ SONA + EWC++ | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Prevents Forgetting** | ✅ EWC++ consolidation | ⛔ | ⛔ | ⛔ | ⛔ |
-| **Expert Routing** | ✅ MoE (8 experts) | Manual roles | Graph edges | ⛔ | Fixed roles |
-| **Vector Memory** | ✅ HNSW (150x faster) | ⛔ | Via plugins | ⛔ | ⛔ |
-| **Hyperbolic Embeddings** | ✅ Poincaré ball model | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Pattern Learning** | ✅ From trajectories | ⛔ | ⛔ | ⛔ | ⛔ |
-| **Work Ownership** | ✅ Claims system | ⛔ | ⛔ | ⛔ | ⛔ |
-| **Threat Detection** | ✅ AIDefence | ⛔ | ⛔ | ⛔ | ⛔ |
+| **Expert Routing** | ✅ MoE (8 experts) | Manual | Graph edges | ⛔ | Fixed |
 | **Attention Optimization** | ✅ Flash Attention | ⛔ | ⛔ | ⛔ | ⛔ |
-| **Low-Rank Adaptation** | ✅ LoRA (128x compression) | ⛔ | ⛔ | ⛔ | ⛔ |
+| **Low-Rank Adaptation** | ✅ LoRA (128x compress) | ⛔ | ⛔ | ⛔ | ⛔ |
+
+#### 💾 Memory & Embeddings
+
+| Feature | Claude Flow v3 | CrewAI | LangGraph | AutoGen | Manus |
+|---------|----------------|--------|-----------|---------|-------|
+| **Vector Memory** | ✅ HNSW (150x faster) | ⛔ | Via plugins | ⛔ | ⛔ |
+| **Hyperbolic Embeddings** | ✅ Poincaré ball | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Quantization** | ✅ Int8 (3.92x savings) | ⛔ | ⛔ | ⛔ | ⛔ |
-| **Consensus Protocols** | ✅ 5 (Raft, Byzantine, etc.) | ⛔ | ⛔ | ⛔ | ⛔ |
+| **Persistent Memory** | ✅ SQLite + AgentDB | ⛔ | ⛔ | ⛔ | Limited |
+| **Cross-Session Context** | ✅ Full restoration | ⛔ | ⛔ | ⛔ | ⛔ |
+
+#### 🐝 Swarm & Coordination
+
+| Feature | Claude Flow v3 | CrewAI | LangGraph | AutoGen | Manus |
+|---------|----------------|--------|-----------|---------|-------|
+| **Swarm Topologies** | ✅ 4 types | 1 | 1 | 1 | 1 |
+| **Consensus Protocols** | ✅ 5 (Raft, BFT, etc.) | ⛔ | ⛔ | ⛔ | ⛔ |
+| **Work Ownership** | ✅ Claims system | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Background Workers** | ✅ 12 auto-triggered | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Multi-Provider LLM** | ✅ 6 with failover | 2 | 3 | 2 | 1 |
-| **MCP Integration** | ✅ Native | ⛔ | ⛔ | ⛔ | ⛔ |
-| **Swarm Topologies** | ✅ 4 (mesh, hierarchical, etc.) | 1 | 1 | 1 | 1 |
-| **Skills System** | ✅ 42+ pre-built skills | ⛔ | ⛔ | ⛔ | Limited |
-| **Stream Pipelines** | ✅ Multi-stage JSON chains | ⛔ | Via code | ⛔ | ⛔ |
-| **Cloud Platform** | ✅ Flow Nexus (sandboxes, swarms) | ⛔ | ⛔ | ⛔ | ⛔ |
-| **Auto-Updates** | ✅ With rollback support | ⛔ | ⛔ | ⛔ | ⛔ |
-| **Pair Programming** | ✅ Driver/Navigator modes | ⛔ | ⛔ | ⛔ | ⛔ |
+
+#### 🔧 Developer Experience
+
+| Feature | Claude Flow v3 | CrewAI | LangGraph | AutoGen | Manus |
+|---------|----------------|--------|-----------|---------|-------|
+| **MCP Integration** | ✅ Native (170+ tools) | ⛔ | ⛔ | ⛔ | ⛔ |
+| **Skills System** | ✅ 42+ pre-built | ⛔ | ⛔ | ⛔ | Limited |
+| **Stream Pipelines** | ✅ JSON chains | ⛔ | Via code | ⛔ | ⛔ |
+| **Pair Programming** | ✅ Driver/Navigator | ⛔ | ⛔ | ⛔ | ⛔ |
+| **Auto-Updates** | ✅ With rollback | ⛔ | ⛔ | ⛔ | ⛔ |
+
+#### 🛡️ Security & Platform
+
+| Feature | Claude Flow v3 | CrewAI | LangGraph | AutoGen | Manus |
+|---------|----------------|--------|-----------|---------|-------|
+| **Threat Detection** | ✅ AIDefence (<10ms) | ⛔ | ⛔ | ⛔ | ⛔ |
+| **Cloud Platform** | ✅ Flow Nexus | ⛔ | ⛔ | ⛔ | ⛔ |
+| **Code Transforms** | ✅ Agent Booster (352x) | ⛔ | ⛔ | ⛔ | ⛔ |
+| **Input Validation** | ✅ Zod + Path security | ⛔ | ⛔ | ⛔ | ⛔ |
+
+<sub>*Comparison updated January 15, 2026*</sub>
 
 <details>
 <summary>🚀 <strong>Key Differentiators</strong> — Self-learning, memory optimization, fault tolerance</summary>
