@@ -2914,6 +2914,306 @@ await hooks.endTrajectory(trajectory, { success: true });
 ---
 
 <details>
+<summary><h2>⚡ Agentic-Flow Integration — Core AI Infrastructure</h2></summary>
+
+Claude-Flow v3 is built on top of **agentic-flow**, a production-ready AI agent orchestration platform. This deep integration provides 352x faster code transformations, learning memory, and geometric intelligence.
+
+### Core Components
+
+| Component | Description | Performance |
+|-----------|-------------|-------------|
+| **Agent Booster** | Rust/WASM code transformations | 352x faster, $0 cost |
+| **ReasoningBank** | Learning memory with HNSW | 150x-12,500x search |
+| **ONNX Embeddings** | Local vector generation | 75x faster than Transformers.js |
+| **Embedding Geometry** | Geometric intelligence layer | <3ms latency |
+| **Multi-Model Router** | Intelligent model selection | 30-50% cost savings |
+| **QUIC Transport** | High-performance transport | Ultra-low latency |
+
+<details>
+<summary>⚡ <strong>Agent Booster</strong> — 352x Faster Code Transformations</summary>
+
+Agent Booster performs mechanical code edits without calling LLM APIs:
+
+| Operation | LLM API | Agent Booster | Speedup |
+|-----------|---------|---------------|---------|
+| Variable rename | 352ms | 1ms | **352x** |
+| Add import | 420ms | 1ms | **420x** |
+| Function signature | 380ms | 1ms | **380x** |
+| Code formatting | 290ms | 1ms | **290x** |
+| **1000 files** | 5.87 min | 1 second | **352x** |
+
+```bash
+# Single file edit
+npx agentic-flow agent-booster edit \
+  --file src/api.ts \
+  --instructions "Add error handling" \
+  --code 'try { ... } catch (error) { ... }'
+
+# Batch rename across codebase
+npx agentic-flow agent-booster batch-rename \
+  --pattern "getUserData" \
+  --replacement "fetchUserProfile" \
+  --glob "src/**/*.ts"
+
+# Parse LLM markdown output
+npx agentic-flow agent-booster parse-md response.md
+```
+
+**Use Cases:**
+- ✅ Variable/function renaming across files
+- ✅ Adding imports, type annotations
+- ✅ Code formatting, signature updates
+- ❌ Complex refactoring (use LLM)
+- ❌ Bug fixes requiring reasoning (use LLM)
+
+**ROI Example:** 1000 edits/day saves $10/day + 5.86 minutes = **$3,650/year**
+
+</details>
+
+<details>
+<summary>🧠 <strong>ReasoningBank</strong> — Learning Memory System</summary>
+
+ReasoningBank stores successful patterns for future retrieval:
+
+```typescript
+import { ReasoningBank } from 'agentic-flow/reasoningbank';
+
+const bank = new ReasoningBank();
+
+// Record successful outcome
+await bank.recordOutcome({
+  task: 'implement authentication',
+  outcome: 'JWT with refresh tokens',
+  success: true,
+  context: { framework: 'express' }
+});
+
+// Retrieve similar patterns for new task
+const patterns = await bank.retrieveSimilar('add user login', { k: 5 });
+// Returns past successful auth implementations
+
+// Judge and distill learnings
+await bank.judge(trajectoryId, 'success');
+await bank.distill();  // Extract key patterns
+await bank.consolidate();  // Prevent forgetting (EWC++)
+```
+
+**4-Step Pipeline:**
+1. **RETRIEVE** — Fetch relevant patterns via HNSW (150x faster)
+2. **JUDGE** — Evaluate outcomes with verdicts
+3. **DISTILL** — Extract key learnings via LoRA
+4. **CONSOLIDATE** — Prevent catastrophic forgetting (EWC++)
+
+</details>
+
+<details>
+<summary>🔢 <strong>ONNX Embeddings</strong> — 75x Faster Local Vectors</summary>
+
+Generate embeddings locally without API calls:
+
+```typescript
+import { getOptimizedEmbedder, cosineSimilarity } from 'agentic-flow/embeddings';
+
+const embedder = getOptimizedEmbedder();
+await embedder.init();
+
+// Generate embedding (3ms local vs 230ms Transformers.js)
+const vector = await embedder.embed('authentication patterns');
+
+// Batch processing
+const vectors = await embedder.embedBatch([
+  'user login flow',
+  'password reset',
+  'session management'
+]);
+
+// Calculate similarity
+const similarity = cosineSimilarity(vectors[0], vectors[1]);
+```
+
+| Provider | Latency | Cost | Offline |
+|----------|---------|------|---------|
+| **Agentic-Flow ONNX** | ~3ms | Free | ✅ |
+| Transformers.js | ~230ms | Free | ✅ |
+| OpenAI | ~50-100ms | $0.02-0.13/1M | ❌ |
+
+</details>
+
+<details>
+<summary>📐 <strong>Embedding Geometry</strong> — Intelligence as Geometry</summary>
+
+Advanced patterns treating embeddings as geometric control surfaces:
+
+**Semantic Drift Detection:**
+```typescript
+import { getOptimizedEmbedder, cosineSimilarity } from 'agentic-flow/embeddings';
+
+const embedder = getOptimizedEmbedder();
+let baseline: Float32Array;
+
+// Set baseline context
+baseline = await embedder.embed('User asking about API authentication');
+
+// Check for drift
+const current = await embedder.embed(userMessage);
+const drift = 1 - cosineSimilarity(baseline, current);
+
+if (drift > 0.15) {
+  console.log('Semantic drift detected - escalate');
+}
+```
+
+**Memory Physics:**
+- Temporal decay (forgetting)
+- Interference detection (nearby memories weaken)
+- Memory consolidation (merge similar patterns)
+
+**Swarm Coordination:**
+```typescript
+// Agents coordinate via embedding positions, not messages
+const agentPosition = await embedder.embed(agentRole);
+const taskPosition = await embedder.embed(currentTask);
+
+// Geometric alignment for task routing
+const alignment = cosineSimilarity(agentPosition, taskPosition);
+```
+
+**Coherence Monitoring:**
+```typescript
+// Detect model degradation/poisoning via embedding drift
+await monitor.calibrate(knownGoodOutputs);
+const result = await monitor.check(newOutput);
+if (result.anomalyScore > 1.5) {
+  console.log('WARNING: Output drifting from baseline');
+}
+```
+
+</details>
+
+<details>
+<summary>🔀 <strong>Multi-Model Router</strong> — Intelligent Model Selection</summary>
+
+Route tasks to optimal models based on complexity:
+
+```typescript
+import { ModelRouter } from 'agentic-flow/router';
+
+const router = new ModelRouter();
+
+// Automatic routing based on task complexity
+const result = await router.route({
+  task: 'Add console.log to function',
+  preferCost: true
+});
+// Returns: { model: 'haiku', reason: 'simple task, low complexity' }
+
+const result2 = await router.route({
+  task: 'Design distributed caching architecture'
+});
+// Returns: { model: 'opus', reason: 'complex architecture, high reasoning' }
+```
+
+| Complexity | Model | Cost | Use Case |
+|------------|-------|------|----------|
+| Agent Booster intent | **Skip LLM** | $0 | var→const, add-types |
+| Low (<30%) | **Haiku** | $0.0002 | Simple fixes, docs |
+| Medium (30-70%) | **Sonnet** | $0.003 | Features, debugging |
+| High (>70%) | **Opus** | $0.015 | Architecture, security |
+
+**Savings: 30-50% on LLM costs through intelligent routing**
+
+</details>
+
+<details>
+<summary>🚀 <strong>CLI Commands</strong> — Full agentic-flow CLI</summary>
+
+```bash
+# Agent Booster
+npx agentic-flow agent-booster edit --file <file> --instructions "<instr>" --code '<code>'
+npx agentic-flow agent-booster batch --config batch-edits.json
+npx agentic-flow agent-booster batch-rename --pattern <old> --replacement <new> --glob "**/*.ts"
+npx agentic-flow agent-booster parse-md response.md
+
+# ReasoningBank
+npx agentic-flow reasoningbank retrieve "query" --k 5
+npx agentic-flow reasoningbank record --task "task" --outcome "outcome" --success
+npx agentic-flow reasoningbank distill
+npx agentic-flow reasoningbank consolidate
+
+# Embeddings
+npx agentic-flow embeddings embed "text"
+npx agentic-flow embeddings batch documents.txt -o vectors.json
+npx agentic-flow embeddings search "query" --index ./vectors
+
+# Model Router
+npx agentic-flow router route "task description"
+npx agentic-flow router stats
+
+# MCP Server
+npx agentic-flow mcp start
+npx agentic-flow mcp stdio
+```
+
+</details>
+
+<details>
+<summary>🔧 <strong>MCP Tools</strong> — 213+ Integration Tools</summary>
+
+Agentic-flow exposes 213+ MCP tools for integration:
+
+| Category | Tools | Examples |
+|----------|-------|----------|
+| **Agent Booster** | 5 | `agent_booster_edit_file`, `agent_booster_batch` |
+| **ReasoningBank** | 8 | `reasoningbank_retrieve`, `reasoningbank_judge` |
+| **Embeddings** | 6 | `embedding_generate`, `embedding_search` |
+| **Model Router** | 4 | `router_route`, `router_stats` |
+| **Memory** | 10 | `memory_store`, `memory_search`, `memory_consolidate` |
+| **Swarm** | 12 | `swarm_init`, `agent_spawn`, `task_orchestrate` |
+| **Neural** | 8 | `neural_train`, `neural_patterns`, `neural_predict` |
+
+```bash
+# Start MCP server
+npx agentic-flow mcp start
+
+# Add to Claude Code
+claude mcp add agentic-flow -- npx agentic-flow mcp start
+```
+
+</details>
+
+### Integration with Claude-Flow
+
+Claude-Flow automatically leverages agentic-flow for:
+
+| Feature | How It's Used |
+|---------|---------------|
+| **Token Optimization** | ReasoningBank retrieval (-32% tokens) |
+| **Fast Edits** | Agent Booster for mechanical transforms |
+| **Intelligent Routing** | Model router for haiku/sonnet/opus selection |
+| **Pattern Learning** | ReasoningBank stores successful patterns |
+| **Embedding Search** | HNSW-indexed vector search (150x faster) |
+
+```typescript
+// Claude-Flow automatically uses agentic-flow optimizations
+import { getTokenOptimizer } from '@claude-flow/integration';
+
+const optimizer = await getTokenOptimizer();
+
+// Uses ReasoningBank (32% fewer tokens)
+const ctx = await optimizer.getCompactContext('auth patterns');
+
+// Uses Agent Booster (352x faster edits)
+await optimizer.optimizedEdit(file, old, new, 'typescript');
+
+// Uses Model Router (optimal model selection)
+const config = optimizer.getOptimalConfig(agentCount);
+```
+
+</details>
+
+---
+
+<details>
 <summary><h2>☁️ Flow Nexus — Cloud Platform Integration</h2></summary>
 
 Flow Nexus is a **cloud platform** for deploying and scaling Claude-Flow beyond your local machine.
