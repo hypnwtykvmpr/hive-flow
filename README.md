@@ -32,6 +32,7 @@ User → MCP Server → Router → Swarm → Agents → Memory → LLM Providers
 | **User** | Claude Code, CLI | Your interface to control agents and run commands |
 | **Orchestration** | MCP Server, Router, Hooks | Receives requests, decides which agents to use |
 | **Coordination** | Queen, Swarm, Consensus | Manages teams of agents working together |
+| **Drift Control** | Hierarchical topology, Checkpoints | Detects and prevents agents from going off-task |
 | **Agents** | 54+ types (coder, tester, reviewer...) | Specialized workers that do the actual tasks |
 | **Intelligence** | SONA, MoE, ReasoningBank | Learns from results to get smarter over time |
 | **Memory** | HNSW index, AgentDB, Cache | Stores patterns and retrieves them 150x faster |
