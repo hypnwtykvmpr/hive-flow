@@ -54,7 +54,7 @@ npx claude-flow@v3alpha init
 ---
 
 <details open>
-<summary>▶ 🔄 <strong>Core Flow</strong> — How requests move through the system</summary>
+<summary>🔄 <strong>Core Flow</strong> — How requests move through the system</summary>
 
 | Layer | Components | What It Does |
 |-------|------------|--------------|
