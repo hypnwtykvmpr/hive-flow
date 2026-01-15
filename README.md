@@ -1545,7 +1545,7 @@ Shell-based daemons for monitoring (Linux/macOS only):
 ---
 
 <details>
-<summary><h2>🪝 Self-Learning Hooks — 27 Hooks That Learn From Every Action</h2></summary>
+<summary><h2>🪝 Self-Learning Hooks — 27 Event Hooks, 12 Background Workers & Pattern Intelligence</h2></summary>
 
 ### What Are Hooks?
 
