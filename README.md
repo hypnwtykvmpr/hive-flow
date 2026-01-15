@@ -27,15 +27,16 @@ User → MCP Server → Router → Swarm → Agents → Memory → LLM Providers
                        └──── Learning Loop ←──────┘
 ```
 
-**Layers:**
-- **User**: Claude Code, CLI
-- **Orchestration**: MCP Server (27+ tools), Router, Hooks
-- **Coordination**: Queen, Swarm (mesh/hierarchical/ring/star), Consensus (raft/byzantine/gossip)
-- **Agents**: 54+ types (coder, reviewer, tester, security, performance, github)
-- **Intelligence**: SONA neural learning, Mixture of Experts, ReasoningBank
-- **Memory**: HNSW index (150x faster), AgentDB, LRU cache
-- **Providers**: Anthropic, OpenAI, Google, Local (Ollama)
-- **Learning Loop**: Results feed back to improve routing, patterns stored in ReasoningBank
+| Layer | Components | What It Does |
+|-------|------------|--------------|
+| **User** | Claude Code, CLI | Your interface to control agents and run commands |
+| **Orchestration** | MCP Server, Router, Hooks | Receives requests, decides which agents to use |
+| **Coordination** | Queen, Swarm, Consensus | Manages teams of agents working together |
+| **Agents** | 54+ types (coder, tester, reviewer...) | Specialized workers that do the actual tasks |
+| **Intelligence** | SONA, MoE, ReasoningBank | Learns from results to get smarter over time |
+| **Memory** | HNSW index, AgentDB, Cache | Stores patterns and retrieves them 150x faster |
+| **Providers** | Anthropic, OpenAI, Google, Ollama | AI models that power agent reasoning |
+| **Learning Loop** | Hooks, Pattern Storage | Feeds results back to improve future routing |
 
 ### Task Routing
 
