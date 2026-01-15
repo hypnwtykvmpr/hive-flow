@@ -65,7 +65,7 @@ User → MCP Server → Router → Swarm → Agents → Memory → LLM Providers
 | Learning | SONA, MoE, ReasoningBank | Self-improves from results (<0.05ms adaptation) |
 | Fine-tuning | MicroLoRA, EWC++ | Lightweight adaptation without full retraining |
 
-**Optimization** — How to reduce cost and latency
+⚡ **Optimization** — How to reduce cost and latency
 | Layer | Components | What It Does |
 |-------|------------|--------------|
 | Agent Booster | WASM, AST analysis | Skips LLM for simple edits (<1ms) |
