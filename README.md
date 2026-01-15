@@ -1878,7 +1878,7 @@ npx claude-flow@v3alpha transfer-store download --id "security-essentials" --app
 ---
 
 <details>
-<summary><h2>🛡️ AIDefence Security — Threat Detection, PII Scanning & Self-Learning Protection</h2></summary>
+<summary><h2>🛡️ AIDefence Security — Threat Detection, PII Scanning </h2></summary>
 
 **AI Manipulation Defense System (AIMDS)** — Protect AI applications from prompt injection, jailbreaks, and data exposure with sub-millisecond detection.
 
