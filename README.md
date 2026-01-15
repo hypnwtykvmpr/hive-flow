@@ -1172,8 +1172,6 @@ claude-flow embeddings init --model all-mpnet-base-v2
 claude-flow embeddings search -q "authentication patterns"
 ```
 
-### SONA Learning Modes
-
 | Mode | Adaptation | Quality | Memory | Use Case |
 |------|------------|---------|--------|----------|
 | `real-time` | <0.5ms | 70%+ | 25MB | Production, low-latency |
@@ -1181,8 +1179,6 @@ claude-flow embeddings search -q "authentication patterns"
 | `research` | <100ms | 95%+ | 100MB | Deep exploration |
 | `edge` | <1ms | 80%+ | 5MB | Resource-constrained |
 | `batch` | <50ms | 85%+ | 75MB | High-throughput |
-
-### RL Algorithms
 
 | Algorithm | Type | Best For |
 |-----------|------|----------|
@@ -1193,7 +1189,10 @@ claude-flow embeddings search -q "authentication patterns"
 | **SARSA** | On-policy | Online learning |
 | **Decision Transformer** | Sequence modeling | Long-horizon planning |
 
-### Hive-Mind Coordination
+</details>
+
+<details>
+<summary>👑 <strong>Hive-Mind Coordination</strong> — Queen-led topology with Byzantine consensus</summary>
 
 | Feature | Description | Capability |
 |---------|-------------|------------|
