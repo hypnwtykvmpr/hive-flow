@@ -1218,7 +1218,10 @@ claude-flow embeddings search -q "authentication patterns"
 | **Runtime Detection** | NAPI/WASM/JS auto-selection | Optimal performance per platform |
 | **Graceful Fallback** | Works with or without agentic-flow | Always functional |
 
-### MCP Server (`@claude-flow/mcp`)
+</details>
+
+<details>
+<summary>🖥️ <strong>MCP Server</strong> — Full MCP 2025-11-25 spec with multiple transports</summary>
 
 | Feature | Description | Spec |
 |---------|-------------|------|
