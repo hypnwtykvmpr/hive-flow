@@ -48,6 +48,46 @@ Claude-Flow is a comprehensive AI agent orchestration framework that transforms 
 
 - **Production-Ready Security** - Built-in protection against common vulnerabilities: input validation, path traversal prevention, command injection blocking, and safe credential handling.
 
+
+## Quick Start
+
+### Prerequisites
+
+- **Node.js 18+** or **Bun 1.0+** (Bun is faster)
+- **npm 9+** / **pnpm** / **bun** package manager
+
+**IMPORTANT**: Claude Code must be installed first:
+
+```bash
+# 1. Install Claude Code globally
+npm install -g @anthropic-ai/claude-code
+
+# 2. (Optional) Skip permissions check for faster setup
+claude --dangerously-skip-permissions
+```
+
+### Installation
+
+```bash
+# With npm/npx (Node.js)
+npm install claude-flow@v3alpha
+npx claude-flow@v3alpha init
+
+# With Bun (faster)
+bun add claude-flow@v3alpha
+bunx claude-flow@v3alpha init
+
+# Start MCP server for Claude Code integration
+npx claude-flow@v3alpha mcp start
+
+# Run a task with agents
+npx claude-flow@v3alpha --agent coder --task "Implement user authentication"
+
+# List available agents
+npx claude-flow@v3alpha --list
+```
+
+
 ### Why Claude-Flow v3?
 
 Claude-Flow v3 introduces **self-learning neural capabilities** that no other agent orchestration framework offers. While competitors require manual agent configuration and static routing, Claude-Flow learns from every task execution, prevents catastrophic forgetting of successful patterns, and intelligently routes work to specialized experts.
@@ -94,54 +134,6 @@ Automatically routes tasks to the optimal handler for **75% cost reduction** and
 
 **Benchmark Results:** 100% accuracy, 0.57ms avg routing latency
 
-```bash
-# Example: Task automatically routed to appropriate tier
-npx claude-flow@v3alpha hooks pre-task --description "Add type annotations to server.ts"
-# → [AGENT_BOOSTER_AVAILABLE] Skip LLM - use Agent Booster for "add-types"
-
-npx claude-flow@v3alpha hooks pre-task --description "Design OAuth2 with PKCE"
-# → [TASK_MODEL_RECOMMENDATION] Use model="opus" for this task
-```
-
----
-
-## Quick Start
-
-### Prerequisites
-
-- **Node.js 18+** or **Bun 1.0+** (Bun is faster)
-- **npm 9+** / **pnpm** / **bun** package manager
-
-**IMPORTANT**: Claude Code must be installed first:
-
-```bash
-# 1. Install Claude Code globally
-npm install -g @anthropic-ai/claude-code
-
-# 2. (Optional) Skip permissions check for faster setup
-claude --dangerously-skip-permissions
-```
-
-### Installation
-
-```bash
-# With npm/npx (Node.js)
-npm install claude-flow@v3alpha
-npx claude-flow@v3alpha init
-
-# With Bun (faster)
-bun add claude-flow@v3alpha
-bunx claude-flow@v3alpha init
-
-# Start MCP server for Claude Code integration
-npx claude-flow@v3alpha mcp start
-
-# Run a task with agents
-npx claude-flow@v3alpha --agent coder --task "Implement user authentication"
-
-# List available agents
-npx claude-flow@v3alpha --list
-```
 
 ---
 
