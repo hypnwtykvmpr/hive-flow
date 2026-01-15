@@ -1126,9 +1126,13 @@ export CLAUDE_FLOW_MEMORY_PATH="./data"
 | `CLAUDE_FLOW_EMBEDDING_DIM` | Vector embedding dimensions | `384` |
 | `ANTHROPIC_API_KEY` | Anthropic API key for Claude integration | - |
 
+</details>
+
 ---
 
-## Troubleshooting
+<details>
+<summary><h2>🔧 Troubleshooting (Click to expand)</h2></summary>
+
 
 ### Common Issues
 
