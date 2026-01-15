@@ -278,7 +278,7 @@ Claude-Flow v3 is built on rigorous architectural specifications with full trace
 
 ### 🏗️ Architecture Diagrams
 
-<details open>
+<details>
 <summary>📊 <strong>System Overview</strong> — High-level architecture</summary>
 
 ```mermaid
