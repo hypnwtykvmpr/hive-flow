@@ -690,6 +690,21 @@ npx @claude-flow/cli@latest memory init --force --verbose
 
 **KEY**: CLI coordinates the strategy via Bash, Claude Code's Task tool executes with real agents.
 
+## 📚 Full Capabilities Reference
+
+For a comprehensive overview of all Claude Flow V3 features, agents, commands, and integrations, see:
+
+**\`.claude-flow/CAPABILITIES.md\`** - Complete reference generated during init
+
+This includes:
+- All 60+ agent types with routing recommendations
+- All 26 CLI commands with 140+ subcommands
+- All 27 hooks + 12 background workers
+- RuVector intelligence system details
+- Hive-Mind consensus mechanisms
+- Integration ecosystem (agentic-flow, agentdb, ruv-swarm, flow-nexus, agentic-jujutsu)
+- Performance targets and status
+
 ## Support
 
 - Documentation: https://github.com/ruvnet/claude-flow
