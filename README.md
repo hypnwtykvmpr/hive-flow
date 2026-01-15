@@ -219,6 +219,40 @@ Automatically routes tasks to the optimal handler for **75% cost reduction** and
 
 **Benchmark Results:** 100% accuracy, 0.57ms avg routing latency
 
+### 📋 Specification-Driven Development (ADR/DDD)
+
+Claude-Flow v3 is built on rigorous architectural specifications with full traceability:
+
+| Feature | Description |
+|---------|-------------|
+| **10 Architecture Decision Records** | ADR-001 to ADR-010 defining system behavior, integration patterns, and security requirements |
+| **Domain-Driven Design** | 5 bounded contexts (Core, Memory, Security, Integration, Coordination) with clean interfaces |
+| **Spec Compliance Tracking** | Real-time ADR compliance monitoring in statusline and CI/CD |
+| **Automated Validation** | `npx claude-flow@v3alpha hooks progress` checks ADR compliance |
+| **Living Documentation** | ADRs evolve with codebase, maintaining decision history |
+
+**ADR Highlights:**
+- **ADR-001**: agentic-flow@alpha as foundation (eliminates 10,000+ duplicate lines)
+- **ADR-006**: Unified Memory Service with AgentDB
+- **ADR-008**: Vitest testing framework (10x faster than Jest)
+- **ADR-009**: Hybrid Memory Backend (SQLite + HNSW)
+- **ADR-026**: Intelligent 3-tier model routing
+
+**DDD Domains:**
+```
+┌─────────────┐  ┌─────────────┐  ┌─────────────┐
+│    Core     │  │   Memory    │  │  Security   │
+│  Agents,    │  │  AgentDB,   │  │  AIDefence, │
+│  Swarms,    │  │  HNSW,      │  │  Validation │
+│  Tasks      │  │  Cache      │  │  CVE Fixes  │
+└─────────────┘  └─────────────┘  └─────────────┘
+┌─────────────┐  ┌─────────────┐
+│ Integration │  │Coordination │
+│ agentic-    │  │  Consensus, │
+│ flow,MCP    │  │  Hive-Mind  │
+└─────────────┘  └─────────────┘
+```
+
 ---
 
 <details>
