@@ -66,7 +66,7 @@ npx claude-flow@v3alpha init
 </details>
 
 <details>
-<summary>▶ 🐝 <strong>Swarm Coordination</strong> — How agents work together</summary>
+<summary>🐝 <strong>Swarm Coordination</strong> — How agents work together</summary>
 
 | Layer | Components | What It Does |
 |-------|------------|--------------|
