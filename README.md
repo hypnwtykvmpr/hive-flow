@@ -1238,9 +1238,13 @@ npx claude-flow@v3alpha hooks pretrain  # Bootstrap learning
 | `hooks record` | `hooks post-edit --success` |
 | `swarm create` | `swarm init --topology` |
 
+</details>
+
 ---
 
-## Documentation
+<details>
+<summary><h2>📚 Documentation (Click to expand)</h2></summary>
+
 
 ### V3 Module Documentation
 
