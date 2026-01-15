@@ -53,7 +53,9 @@ npx claude-flow@v3alpha init
 
 ---
 
-### 🔄 **Core Flow** — How requests move through the system
+<details>
+<summary><strong>Core Flow</strong> — How requests move through the system</summary>
+
 | Layer | Components | What It Does |
 |-------|------------|--------------|
 | User | Claude Code, CLI | Your interface to control and run commands |
@@ -61,13 +63,21 @@ npx claude-flow@v3alpha init
 | Agents | 54+ types | Specialized workers (coder, tester, reviewer...) |
 | Providers | Anthropic, OpenAI, Google, Ollama | AI models that power reasoning |
 
-### 🐝 **Swarm Coordination** — How agents work together
+</details>
+
+<details>
+<summary><strong>Swarm Coordination</strong> — How agents work together</summary>
+
 | Layer | Components | What It Does |
 |-------|------------|--------------|
 | Coordination | Queen, Swarm, Consensus | Manages agent teams (Raft, Byzantine, Gossip) |
 | Drift Control | Hierarchical topology, Checkpoints | Prevents agents from going off-task |
 
-### 🧠 **Intelligence & Memory** — How the system learns and remembers
+</details>
+
+<details>
+<summary><strong>Intelligence & Memory</strong> — How the system learns and remembers</summary>
+
 | Layer | Components | What It Does |
 |-------|------------|--------------|
 | Memory | HNSW, AgentDB, Cache | Stores and retrieves patterns 150x faster |
@@ -75,13 +85,21 @@ npx claude-flow@v3alpha init
 | Learning | SONA, MoE, ReasoningBank | Self-improves from results (<0.05ms adaptation) |
 | Fine-tuning | MicroLoRA, EWC++ | Lightweight adaptation without full retraining |
 
-### ⚡ **Optimization** — How to reduce cost and latency
+</details>
+
+<details>
+<summary><strong>Optimization</strong> — How to reduce cost and latency</summary>
+
 | Layer | Components | What It Does |
 |-------|------------|--------------|
 | Agent Booster | WASM, AST analysis | Skips LLM for simple edits (<1ms) |
 | Token Optimizer | Compression, Caching | Reduces token usage 30-50% |
 
-### 🔧 **Operations** — Background services and integrations
+</details>
+
+<details>
+<summary><strong>Operations</strong> — Background services and integrations</summary>
+
 | Layer | Components | What It Does |
 |-------|------------|--------------|
 | Background | Daemon, 12 Workers | Auto-runs audits, optimization, learning |
@@ -90,7 +108,10 @@ npx claude-flow@v3alpha init
 | GitHub | PR, Issues, Workflows | Manages repos and code reviews |
 | Analytics | Metrics, Benchmarks | Monitors performance, finds bottlenecks |
 
-### 🎯 Task Routing — Extend your Claude Code subscription by 250%
+</details>
+
+<details>
+<summary><strong>Task Routing</strong> — Extend your Claude Code subscription by 250%</summary>
 
 Smart routing skips expensive LLM calls when possible. Simple edits use WASM (free), medium tasks use cheaper models. This can extend your Claude Code usage by 250% or save significantly on direct API costs.
 
@@ -99,6 +120,8 @@ Smart routing skips expensive LLM calls when possible. Simple edits use WASM (fr
 | Simple | Agent Booster (WASM) | <1ms |
 | Medium | Haiku/Sonnet | ~500ms |
 | Complex | Opus + Swarm | 2-5s |
+
+</details>
 
 ### Claude Code: With vs Without Claude-Flow
 
