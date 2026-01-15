@@ -1878,6 +1878,886 @@ npx claude-flow@v3alpha transfer-store download --id "security-essentials" --app
 ---
 
 <details>
+<summary><h2>🎓 Skills System — 42 Pre-Built Workflows for Any Task</h2></summary>
+
+Skills are **reusable workflows** that combine agents, hooks, and patterns into ready-to-use solutions. Think of them as "recipes" for common development tasks.
+
+### How Skills Work
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                         SKILL EXECUTION                          │
+├──────────────────────────────────────────────────────────────────┤
+│  You: "Run /github-code-review"                                  │
+│           ↓                                                      │
+│  ┌─────────────┐   ┌─────────────┐   ┌─────────────┐            │
+│  │ Load Skill  │──▶│ Spawn Agents│──▶│ Execute     │            │
+│  │ Definition  │   │ (5 agents)  │   │ Workflow    │            │
+│  └─────────────┘   └─────────────┘   └─────────────┘            │
+│           │                                  │                   │
+│           └──── Learns from outcome ─────────┘                   │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+### All 42 Skills by Category
+
+<details open>
+<summary>🧠 <strong>AgentDB & Memory Skills</strong> — Vector search, learning, optimization</summary>
+
+| Skill | What It Does | When To Use |
+|-------|--------------|-------------|
+| `agentdb-vector-search` | Semantic search with 150x faster retrieval | Building RAG systems, knowledge bases |
+| `agentdb-memory-patterns` | Session memory, long-term storage, context management | Stateful agents, chat systems |
+| `agentdb-learning` | 9 RL algorithms (PPO, DQN, SARSA, etc.) | Self-learning agents, behavior optimization |
+| `agentdb-optimization` | Quantization (4-32x memory reduction), HNSW indexing | Scaling to millions of vectors |
+| `agentdb-advanced` | QUIC sync, multi-database, custom distance metrics | Distributed AI systems |
+
+```bash
+# Example: Initialize vector search
+/agentdb-vector-search
+```
+
+</details>
+
+<details>
+<summary>🐙 <strong>GitHub & DevOps Skills</strong> — PRs, issues, releases, workflows</summary>
+
+| Skill | What It Does | When To Use |
+|-------|--------------|-------------|
+| `github-code-review` | Multi-agent code review with swarm coordination | Thorough PR reviews |
+| `github-project-management` | Issue tracking, project boards, sprint planning | Team coordination |
+| `github-multi-repo` | Cross-repository coordination and synchronization | Monorepo management |
+| `github-release-management` | Automated versioning, testing, deployment, rollback | Release cycles |
+| `github-workflow-automation` | GitHub Actions CI/CD with intelligent pipelines | Pipeline optimization |
+
+```bash
+# Example: Review current PR
+/github-code-review
+```
+
+</details>
+
+<details>
+<summary>☁️ <strong>Flow Nexus Skills</strong> — Cloud deployment, neural training</summary>
+
+| Skill | What It Does | When To Use |
+|-------|--------------|-------------|
+| `flow-nexus-platform` | Authentication, sandboxes, apps, payments, challenges | Full platform management |
+| `flow-nexus-swarm` | Cloud-based swarm deployment, event-driven workflows | Scale beyond local resources |
+| `flow-nexus-neural` | Train/deploy neural networks in distributed sandboxes | ML model training |
+
+```bash
+# Example: Deploy swarm to cloud
+/flow-nexus-swarm
+```
+
+</details>
+
+<details>
+<summary>🧠 <strong>Intelligence & Learning Skills</strong> — Reasoning, patterns, adaptation</summary>
+
+| Skill | What It Does | When To Use |
+|-------|--------------|-------------|
+| `reasoningbank-agentdb` | Trajectory tracking, verdict judgment, memory distillation | Experience replay systems |
+| `reasoningbank-intelligence` | Adaptive learning, pattern optimization, meta-cognition | Self-improving agents |
+| `hive-mind-advanced` | Queen-led collective intelligence with consensus | Complex multi-agent coordination |
+
+```bash
+# Example: Enable adaptive learning
+/reasoningbank-intelligence
+```
+
+</details>
+
+<details>
+<summary>🔧 <strong>V3 Implementation Skills</strong> — Architecture, security, performance</summary>
+
+| Skill | What It Does | When To Use |
+|-------|--------------|-------------|
+| `v3-ddd-architecture` | Bounded contexts, modular design, clean architecture | Large-scale refactoring |
+| `v3-security-overhaul` | CVE fixes, secure-by-default patterns | Security hardening |
+| `v3-memory-unification` | AgentDB unification, 150x-12,500x search improvements | Memory optimization |
+| `v3-performance-optimization` | 2.49x-7.47x speedup, memory reduction | Performance tuning |
+| `v3-swarm-coordination` | 15-agent hierarchical mesh, 10 ADRs implementation | Swarm architecture |
+| `v3-mcp-optimization` | Connection pooling, load balancing, <100ms response | MCP performance |
+| `v3-core-implementation` | DDD domains, dependency injection, TypeScript | Core development |
+| `v3-integration-deep` | agentic-flow@alpha deep integration | Framework integration |
+| `v3-cli-modernization` | Interactive prompts, enhanced hooks | CLI enhancement |
+
+```bash
+# Example: Apply security hardening
+/v3-security-overhaul
+```
+
+</details>
+
+<details>
+<summary>🛠️ <strong>Development Workflow Skills</strong> — Pair programming, verification, streaming</summary>
+
+| Skill | What It Does | When To Use |
+|-------|--------------|-------------|
+| `pair-programming` | Driver/navigator modes, TDD, real-time verification | Collaborative coding |
+| `verification-quality` | Truth scoring, automatic rollback (0.95 threshold) | Quality assurance |
+| `stream-chain` | JSON pipeline chaining for multi-agent workflows | Data transformation |
+| `skill-builder` | Create new skills with YAML frontmatter | Extending the system |
+| `hooks-automation` | Pre/post hooks, Git integration, memory coordination | Workflow automation |
+| `sparc-methodology` | Specification, Pseudocode, Architecture, Refinement, Completion | Structured development |
+| `swarm-orchestration` | Multi-agent orchestration with agentic-flow | Complex task coordination |
+| `swarm-advanced` | Research, development, testing workflows | Specialized swarms |
+| `performance-analysis` | Bottleneck detection, optimization recommendations | Performance debugging |
+
+```bash
+# Example: Start pair programming session
+/pair-programming
+```
+
+</details>
+
+<details>
+<summary>🔬 <strong>Specialized Skills</strong> — Version control, benchmarks, workers</summary>
+
+| Skill | What It Does | When To Use |
+|-------|--------------|-------------|
+| `agentic-jujutsu` | Quantum-resistant, self-learning version control | Multi-agent coordination |
+| `worker-benchmarks` | Performance benchmarking framework | Measuring improvements |
+| `worker-integration` | Worker-agent coordination patterns | Background processing |
+
+```bash
+# Example: Run benchmarks
+/worker-benchmarks
+```
+
+</details>
+
+### Running Skills
+
+```bash
+# In Claude Code - just use the slash command
+/github-code-review
+/pair-programming --mode tdd
+/v3-security-overhaul
+
+# Via CLI
+npx claude-flow@v3alpha skill run github-code-review
+npx claude-flow@v3alpha skill list
+npx claude-flow@v3alpha skill info sparc-methodology
+```
+
+### Creating Custom Skills
+
+Use the `skill-builder` skill to create your own:
+
+```bash
+/skill-builder
+```
+
+Skills are defined in YAML with:
+- **Frontmatter**: Name, description, agents needed
+- **Workflow**: Steps to execute
+- **Learning**: How to improve from outcomes
+
+</details>
+
+---
+
+<details>
+<summary><h2>🎫 Claims & Work Coordination — Human-Agent Task Management</h2></summary>
+
+The Claims system manages **who is working on what** — whether human or agent. It prevents conflicts, enables handoffs, and balances work across your team.
+
+### Why Use Claims?
+
+| Problem | Solution |
+|---------|----------|
+| Two agents working on the same file | Claims prevent duplicate work |
+| Agent stuck on a task | Mark as stealable, another agent takes over |
+| Need to hand off work | Structured handoff with context |
+| Unbalanced workload | Automatic rebalancing across agents |
+
+### How Claims Work
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                        CLAIMS LIFECYCLE                             │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  ┌─────────┐    ┌──────────┐    ┌──────────┐    ┌─────────────┐   │
+│  │ UNCLAIMED│───▶│ CLAIMED  │───▶│ STEALABLE│───▶│ HANDED OFF  │   │
+│  │         │    │          │    │          │    │             │   │
+│  │ Open for│    │ Agent or │    │ Stuck or │    │ New owner   │   │
+│  │ claiming│    │ human    │    │ abandoned│    │ continues   │   │
+│  └─────────┘    └──────────┘    └──────────┘    └─────────────┘   │
+│       │              │                │               │            │
+│       └──────────────┴────────────────┴───────────────┘            │
+│                           COMPLETED                                 │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Claims Commands
+
+| Command | What It Does | Example |
+|---------|--------------|---------|
+| `issues list` | See all issues and their status | `npx claude-flow@v3alpha issues list` |
+| `issues claim` | Claim an issue for yourself/agent | `npx claude-flow@v3alpha issues claim #123 --as coder-1` |
+| `issues release` | Release your claim | `npx claude-flow@v3alpha issues release #123` |
+| `issues handoff` | Hand off to another worker | `npx claude-flow@v3alpha issues handoff #123 --to reviewer` |
+| `issues status` | Update progress on claimed work | `npx claude-flow@v3alpha issues status #123 --progress 75` |
+| `issues stealable` | List abandoned/stuck issues | `npx claude-flow@v3alpha issues stealable` |
+| `issues steal` | Take over stealable issue | `npx claude-flow@v3alpha issues steal #123` |
+| `issues load` | View agent workloads | `npx claude-flow@v3alpha issues load` |
+| `issues rebalance` | Redistribute work evenly | `npx claude-flow@v3alpha issues rebalance --dry-run` |
+| `issues board` | Visual board view | `npx claude-flow@v3alpha issues board` |
+
+### Visual Board View
+
+```bash
+npx claude-flow@v3alpha issues board
+```
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│                        CLAIMS BOARD                                  │
+├───────────────┬───────────────┬───────────────┬─────────────────────┤
+│   UNCLAIMED   │    ACTIVE     │   STEALABLE   │     COMPLETED       │
+├───────────────┼───────────────┼───────────────┼─────────────────────┤
+│ #127 Add auth │ #123 Fix bug  │ #120 Refactor │ #119 Update docs    │
+│ #128 Tests    │   (coder-1)   │   (stale 2h)  │ #118 Security fix   │
+│               │ #124 API work │               │ #117 Performance    │
+│               │   (reviewer)  │               │                     │
+└───────────────┴───────────────┴───────────────┴─────────────────────┘
+```
+
+### Handoff Workflow
+
+When you need to pass work to someone else:
+
+```bash
+# 1. Request handoff with context
+npx claude-flow@v3alpha issues handoff #123 \
+  --to security-architect \
+  --reason "Needs security review" \
+  --progress 80
+
+# 2. Target accepts handoff
+npx claude-flow@v3alpha issues accept #123 --as security-architect
+
+# 3. Work continues with full context
+```
+
+### Load Balancing
+
+```bash
+# View current load
+npx claude-flow@v3alpha issues load
+
+# Output:
+# Agent          | Claims | Load  | Status
+# ---------------+--------+-------+--------
+# coder-1        | 3      | 85%   | 🔴 Overloaded
+# coder-2        | 1      | 25%   | 🟢 Available
+# reviewer       | 2      | 50%   | 🟡 Normal
+# security-arch  | 0      | 0%    | 🟢 Available
+
+# Auto-rebalance
+npx claude-flow@v3alpha issues rebalance
+```
+
+### MCP Tools
+
+| Tool | Description |
+|------|-------------|
+| `claims_claim` | Claim an issue |
+| `claims_release` | Release a claim |
+| `claims_handoff` | Request handoff |
+| `claims_accept-handoff` | Accept handoff |
+| `claims_status` | Update status |
+| `claims_list` | List claims |
+| `claims_stealable` | List stealable |
+| `claims_steal` | Steal issue |
+| `claims_load` | Get load info |
+| `claims_board` | Visual board |
+| `claims_rebalance` | Rebalance work |
+
+</details>
+
+---
+
+<details>
+<summary><h2>🧭 Intelligent Routing — Q-Learning Task Assignment</h2></summary>
+
+The Route system uses **Q-Learning** to automatically assign tasks to the best agent based on learned performance patterns.
+
+### How Routing Works
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                     INTELLIGENT ROUTING                             │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  Task: "Fix authentication bug"                                     │
+│           │                                                         │
+│           ▼                                                         │
+│  ┌─────────────────┐                                                │
+│  │ Analyze Task    │ ← Complexity, domain, keywords                 │
+│  └────────┬────────┘                                                │
+│           │                                                         │
+│           ▼                                                         │
+│  ┌─────────────────┐                                                │
+│  │ Q-Learning      │ ← Historical success rates per agent           │
+│  │ Lookup          │                                                │
+│  └────────┬────────┘                                                │
+│           │                                                         │
+│           ▼                                                         │
+│  ┌─────────────────┐                                                │
+│  │ Recommend:      │                                                │
+│  │ security-arch   │ → 94% confidence (auth domain expert)          │
+│  └─────────────────┘                                                │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Route Commands
+
+| Command | What It Does | Example |
+|---------|--------------|---------|
+| `route task` | Get agent recommendation | `npx claude-flow@v3alpha route task "implement OAuth2"` |
+| `route explain` | Understand routing decision | `npx claude-flow@v3alpha route explain "task"` |
+| `route coverage` | Route based on test coverage | `npx claude-flow@v3alpha route coverage` |
+
+### Example: Route a Task
+
+```bash
+npx claude-flow@v3alpha route task "refactor authentication to use JWT"
+
+# Output:
+# ╔══════════════════════════════════════════════════════════════╗
+# ║                    ROUTING RECOMMENDATION                     ║
+# ╠══════════════════════════════════════════════════════════════╣
+# ║ Task: "refactor authentication to use JWT"                    ║
+# ║                                                                ║
+# ║ Recommended Agent: security-architect                         ║
+# ║ Confidence: 94%                                                ║
+# ║                                                                ║
+# ║ Why this agent?                                                ║
+# ║ • Domain match: authentication, security                       ║
+# ║ • Historical success: 12/13 similar tasks (92%)                ║
+# ║ • Expertise: JWT, OAuth, session management                    ║
+# ║                                                                ║
+# ║ Alternative agents:                                            ║
+# ║ • coder (78% confidence) - general implementation              ║
+# ║ • backend-dev (71% confidence) - API expertise                 ║
+# ╚══════════════════════════════════════════════════════════════╝
+```
+
+### Coverage-Aware Routing
+
+Routes tasks to agents based on **test coverage gaps**:
+
+```bash
+npx claude-flow@v3alpha route coverage
+
+# Finds untested code and routes to tester agent:
+# • src/auth/jwt.ts - 23% coverage → tester
+# • src/api/users.ts - 45% coverage → tester
+# • src/utils/crypto.ts - 0% coverage → security-architect + tester
+```
+
+### Routing Hooks
+
+```bash
+# Route via hooks (preferred)
+npx claude-flow@v3alpha hooks route "implement caching layer" --include-explanation
+
+# Record outcome for learning
+npx claude-flow@v3alpha hooks post-task --task-id "task-123" --success true --agent coder
+```
+
+### How Q-Learning Improves Over Time
+
+| Iteration | Action | Result |
+|-----------|--------|--------|
+| 1 | Route "auth task" → coder | ❌ Failed (missing security context) |
+| 2 | Route "auth task" → security-architect | ✅ Success |
+| 3 | Route "auth task" → security-architect | ✅ Success |
+| N | Route "auth task" → security-architect | 94% confidence (learned) |
+
+The system **remembers** what works and applies it to future similar tasks.
+
+</details>
+
+---
+
+<details>
+<summary><h2>💻 Programmatic SDK — Use Claude-Flow in Your Code</h2></summary>
+
+Use Claude-Flow packages directly in your TypeScript/JavaScript applications.
+
+### Installation
+
+```bash
+# Install specific packages
+npm install @claude-flow/cli @claude-flow/memory @claude-flow/swarm
+
+# Or install everything
+npm install claude-flow@v3alpha
+```
+
+### Quick Examples
+
+<details open>
+<summary>🧠 <strong>Memory & Vector Search</strong></summary>
+
+```typescript
+import { AgentDB } from '@claude-flow/memory';
+
+// Initialize with HNSW indexing (150x faster)
+const db = new AgentDB({
+  path: './data/memory',
+  hnsw: { m: 16, efConstruction: 200 }
+});
+
+// Store patterns with embeddings
+await db.store('auth-pattern', {
+  content: 'JWT authentication flow',
+  domain: 'security',
+  embedding: await db.embed('JWT authentication flow')
+});
+
+// Semantic search
+const results = await db.search('how to authenticate users', {
+  topK: 5,
+  minSimilarity: 0.7
+});
+
+console.log(results);
+// [{ key: 'auth-pattern', similarity: 0.92, content: '...' }]
+```
+
+</details>
+
+<details>
+<summary>🐝 <strong>Swarm Coordination</strong></summary>
+
+```typescript
+import { createSwarm } from '@claude-flow/swarm';
+
+// Create a hierarchical swarm
+const swarm = await createSwarm({
+  topology: 'hierarchical',
+  maxAgents: 8,
+  strategy: 'specialized'
+});
+
+// Spawn agents
+await swarm.spawn('coder', { name: 'coder-1' });
+await swarm.spawn('tester', { name: 'tester-1' });
+await swarm.spawn('reviewer', { name: 'reviewer-1' });
+
+// Coordinate a task
+const result = await swarm.orchestrate({
+  task: 'Implement user authentication',
+  strategy: 'adaptive'
+});
+
+// Shutdown
+await swarm.shutdown({ graceful: true });
+```
+
+</details>
+
+<details>
+<summary>🛡️ <strong>Security & AIDefence</strong></summary>
+
+```typescript
+import { isSafe, checkThreats, createAIDefence } from '@claude-flow/aidefence';
+
+// Quick safety check
+if (!isSafe(userInput)) {
+  throw new Error('Potentially malicious input detected');
+}
+
+// Detailed threat analysis
+const result = checkThreats(userInput);
+if (!result.safe) {
+  console.log('Threats:', result.threats);
+  console.log('PII found:', result.piiFound);
+}
+
+// With learning enabled
+const aidefence = createAIDefence({ enableLearning: true });
+const analysis = await aidefence.detect(userInput);
+
+// Provide feedback for learning
+await aidefence.learnFromDetection(userInput, analysis, {
+  wasAccurate: true,
+  userVerdict: 'Confirmed threat'
+});
+```
+
+</details>
+
+<details>
+<summary>📊 <strong>Embeddings</strong></summary>
+
+```typescript
+import { createEmbeddingService } from '@claude-flow/embeddings';
+
+// Auto-selects best provider (agentic-flow ONNX preferred)
+const embeddings = await createEmbeddingService({
+  provider: 'auto',
+  dimensions: 384,
+  cache: { enabled: true, maxSize: 10000 }
+});
+
+// Generate embeddings
+const vector = await embeddings.embed('authentication patterns');
+
+// Batch processing
+const vectors = await embeddings.embedBatch([
+  'user login flow',
+  'password reset',
+  'session management'
+]);
+
+// Compare similarity
+const similarity = await embeddings.compare(
+  'JWT tokens',
+  'JSON Web Tokens'
+);
+// 0.94 (high similarity)
+```
+
+</details>
+
+<details>
+<summary>🪝 <strong>Hooks & Learning</strong></summary>
+
+```typescript
+import { HooksService } from '@claude-flow/hooks';
+
+const hooks = new HooksService({
+  enableLearning: true,
+  reasoningBank: true
+});
+
+// Route task to optimal agent
+const routing = await hooks.route('implement caching layer');
+console.log(`Recommended: ${routing.agent} (${routing.confidence}%)`);
+
+// Record task outcome
+await hooks.postTask({
+  taskId: 'task-123',
+  success: true,
+  quality: 0.95,
+  agent: routing.agent
+});
+
+// Start trajectory for RL learning
+const trajectory = await hooks.startTrajectory('complex-feature');
+await hooks.recordStep(trajectory, { action: 'created service', reward: 0.8 });
+await hooks.endTrajectory(trajectory, { success: true });
+```
+
+</details>
+
+### Package Reference
+
+| Package | Purpose | Main Exports |
+|---------|---------|--------------|
+| `@claude-flow/memory` | Vector storage, HNSW | `AgentDB`, `MemoryStore` |
+| `@claude-flow/swarm` | Agent coordination | `createSwarm`, `Swarm` |
+| `@claude-flow/aidefence` | Threat detection | `isSafe`, `checkThreats`, `createAIDefence` |
+| `@claude-flow/embeddings` | Vector embeddings | `createEmbeddingService` |
+| `@claude-flow/hooks` | Event hooks, learning | `HooksService`, `ReasoningBank` |
+| `@claude-flow/security` | Input validation | `InputValidator`, `PathValidator` |
+| `@claude-flow/neural` | SONA learning | `SONAAdapter`, `MoERouter` |
+| `@claude-flow/providers` | LLM providers | `ProviderRegistry`, `createProvider` |
+| `@claude-flow/plugins` | Plugin SDK | `PluginBuilder`, `createPlugin` |
+
+</details>
+
+---
+
+<details>
+<summary><h2>☁️ Flow Nexus — Cloud Platform Integration</h2></summary>
+
+Flow Nexus is a **cloud platform** for deploying and scaling Claude-Flow beyond your local machine.
+
+### What Flow Nexus Provides
+
+| Feature | Local Claude-Flow | + Flow Nexus |
+|---------|-------------------|--------------|
+| **Swarm Scale** | 15 agents (local resources) | 100+ agents (cloud resources) |
+| **Neural Training** | Limited by local GPU/CPU | Distributed GPU clusters |
+| **Persistence** | Local SQLite | Cloud-replicated databases |
+| **Collaboration** | Single user | Team workspaces |
+| **Sandboxes** | Local Docker | E2B cloud sandboxes |
+
+### Core Capabilities
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                      FLOW NEXUS PLATFORM                            │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐                 │
+│  │   Swarm     │  │   Neural    │  │  Sandboxes  │                 │
+│  │   Cloud     │  │   Training  │  │   (E2B)     │                 │
+│  │             │  │             │  │             │                 │
+│  │ Scale to    │  │ Distributed │  │ Isolated    │                 │
+│  │ 100+ agents │  │ GPU training│  │ code exec   │                 │
+│  └─────────────┘  └─────────────┘  └─────────────┘                 │
+│                                                                     │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐                 │
+│  │   App       │  │  Workflows  │  │ Challenges  │                 │
+│  │   Store     │  │  (Events)   │  │ & Rewards   │                 │
+│  │             │  │             │  │             │                 │
+│  │ Publish &   │  │ Event-driven│  │ Gamified    │                 │
+│  │ discover    │  │ automation  │  │ learning    │                 │
+│  └─────────────┘  └─────────────┘  └─────────────┘                 │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Skills for Flow Nexus
+
+| Skill | What It Does |
+|-------|--------------|
+| `/flow-nexus-platform` | Full platform management (auth, storage, users) |
+| `/flow-nexus-swarm` | Deploy swarms to cloud with event-driven workflows |
+| `/flow-nexus-neural` | Train neural networks on distributed infrastructure |
+
+### Cloud Swarm Deployment
+
+```bash
+# Deploy swarm to Flow Nexus cloud
+/flow-nexus-swarm
+
+# Or via CLI
+npx claude-flow@v3alpha nexus swarm deploy \
+  --topology hierarchical \
+  --max-agents 50 \
+  --region us-east-1
+```
+
+### E2B Sandboxes
+
+Isolated execution environments for running untrusted code:
+
+```bash
+# Create sandbox
+npx claude-flow@v3alpha nexus sandbox create --language python
+
+# Execute code safely
+npx claude-flow@v3alpha nexus sandbox exec --code "print('Hello')"
+
+# Cleanup
+npx claude-flow@v3alpha nexus sandbox destroy
+```
+
+### Event-Driven Workflows
+
+```yaml
+# workflow.yaml
+name: code-review-pipeline
+triggers:
+  - event: pull_request.opened
+steps:
+  - action: spawn_swarm
+    config:
+      topology: mesh
+      agents: [reviewer, security-architect, tester]
+  - action: run_review
+  - action: post_comments
+  - action: shutdown_swarm
+```
+
+### Getting Started with Flow Nexus
+
+```bash
+# 1. Sign up at flow-nexus.io
+# 2. Get API key
+# 3. Configure
+npx claude-flow@v3alpha nexus configure --api-key <key>
+
+# 4. Deploy
+npx claude-flow@v3alpha nexus swarm deploy
+```
+
+</details>
+
+---
+
+<details>
+<summary><h2>🔗 Stream-Chain — Multi-Agent Pipelines</h2></summary>
+
+Stream-Chain enables **sequential processing** where the output of one agent becomes the input of the next.
+
+### Pipeline Concept
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                     STREAM-CHAIN PIPELINE                           │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  Input ──▶ [Agent 1] ──▶ [Agent 2] ──▶ [Agent 3] ──▶ Output        │
+│            (Research)    (Implement)   (Test)                       │
+│                                                                     │
+│  Each stage transforms and passes data to the next                  │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Creating Pipelines
+
+```bash
+# Via skill
+/stream-chain
+
+# Define pipeline
+npx claude-flow@v3alpha stream-chain create \
+  --name "feature-pipeline" \
+  --stages "researcher,architect,coder,tester,reviewer"
+```
+
+### Pipeline Definition (YAML)
+
+```yaml
+name: feature-development
+description: End-to-end feature implementation
+
+stages:
+  - name: research
+    agent: researcher
+    input: requirements
+    output: analysis
+
+  - name: design
+    agent: architect
+    input: analysis
+    output: architecture
+
+  - name: implement
+    agent: coder
+    input: architecture
+    output: code
+
+  - name: test
+    agent: tester
+    input: code
+    output: test_results
+
+  - name: review
+    agent: reviewer
+    input: [code, test_results]
+    output: final_review
+```
+
+### Running Pipelines
+
+```bash
+# Run the pipeline
+npx claude-flow@v3alpha stream-chain run feature-pipeline \
+  --input '{"requirements": "Add user dashboard with analytics"}'
+
+# Monitor progress
+npx claude-flow@v3alpha stream-chain status feature-pipeline
+```
+
+### Use Cases
+
+| Pipeline | Stages | Output |
+|----------|--------|--------|
+| **Feature Development** | research → design → implement → test → review | Reviewed code |
+| **Security Audit** | scan → analyze → remediate → verify | Security report |
+| **Documentation** | research → outline → write → review | Documentation |
+| **Migration** | analyze → plan → migrate → validate | Migrated code |
+
+</details>
+
+---
+
+<details>
+<summary><h2>👥 Pair Programming — Collaborative AI Development</h2></summary>
+
+The Pair Programming skill provides **human-AI collaborative coding** with role switching, TDD support, and real-time verification.
+
+### Modes
+
+| Mode | Human Role | AI Role | Best For |
+|------|------------|---------|----------|
+| **Driver** | Writing code | Reviewing, suggesting | Learning, exploration |
+| **Navigator** | Directing, reviewing | Writing code | High productivity |
+| **Switch** | Alternating | Alternating | Balanced collaboration |
+| **TDD** | Writing tests | Implementing | Test-first development |
+
+### Starting a Session
+
+```bash
+# Start pair programming
+/pair-programming
+
+# Or with specific mode
+/pair-programming --mode tdd
+
+# Via CLI
+npx claude-flow@v3alpha pair start --mode navigator
+```
+
+### TDD Mode Workflow
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                     TDD PAIR PROGRAMMING                            │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  1. Human writes failing test                                       │
+│           ↓                                                         │
+│  2. AI implements minimal code to pass                              │
+│           ↓                                                         │
+│  3. Tests run automatically                                         │
+│           ↓                                                         │
+│  4. AI suggests refactoring                                         │
+│           ↓                                                         │
+│  5. Human approves/modifies                                         │
+│           ↓                                                         │
+│  6. Repeat                                                          │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Features
+
+| Feature | Description |
+|---------|-------------|
+| **Real-time Verification** | Code is continuously verified as you write |
+| **Quality Monitoring** | Track code quality metrics during session |
+| **Automatic Role Switch** | Switches roles based on context |
+| **Security Scanning** | Built-in security checks |
+| **Performance Hints** | Suggestions for optimization |
+| **Learning Mode** | AI explains decisions and teaches patterns |
+
+### Session Commands
+
+```bash
+# Switch roles mid-session
+npx claude-flow@v3alpha pair switch
+
+# Get AI explanation
+npx claude-flow@v3alpha pair explain
+
+# Run tests
+npx claude-flow@v3alpha pair test
+
+# End session with summary
+npx claude-flow@v3alpha pair end
+```
+
+</details>
+
+---
+
+<details>
 <summary><h2>🛡️ AIDefence Security — Threat Detection, PII Scanning </h2></summary>
 
 **AI Manipulation Defense System (AIMDS)** — Protect AI applications from prompt injection, jailbreaks, and data exposure with sub-millisecond detection.
