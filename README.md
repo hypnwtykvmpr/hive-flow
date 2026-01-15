@@ -244,26 +244,6 @@ Automatically routes tasks to the optimal handler for **75% cost reduction** and
 | **Hybrid (Hierarchical-Mesh)** | 7+ | Complex multi-domain tasks | 0.18s | 320 MB |
 | **Adaptive** | 2+ | Dynamic workloads, auto-scaling | Variable | Dynamic |
 
-### Self-Learning & Intelligence
-
-| Feature | Technology | Performance | Description |
-|---------|------------|-------------|-------------|
-| **ReasoningBank** | HNSW Vector Search | 150x faster | Pattern storage with similarity-based retrieval |
-| **SONA Neural** | LoRA Fine-tuning | <0.05ms adaptation | Self-optimizing neural architecture |
-| **Pattern Learning** | EWC++ Memory | Zero forgetting | Continuous learning without catastrophic forgetting |
-| **Intent Routing** | MoE (Mixture of Experts) | 95%+ accuracy | Intelligent task-to-agent routing |
-| **Domain Detection** | Vector Clustering | Real-time | Automatic categorization (security, testing, performance) |
-| **Quality Tracking** | Success/Failure Metrics | Per-pattern | Historical performance tracking |
-
-### Memory & Storage
-
-| Backend | Technology | Performance | Use Case |
-|---------|------------|-------------|----------|
-| **AgentDB** | HNSW Indexing | 150x-12,500x faster | Primary vector storage |
-| **SQLite** | Relational DB | Standard | Metadata and structured data |
-| **Hybrid** | AgentDB + SQLite | Best of both | Recommended default |
-| **In-Memory** | RAM-based | Fastest | Temporary/session data |
-
 ### MCP Tools & Integration
 
 | Category | Tools | Description |
