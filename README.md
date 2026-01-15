@@ -665,6 +665,7 @@ claude-flow embeddings search -q "authentication patterns"
 | **Input Validation** | General | Zod-based schema validation |
 | **Token Generation** | General | HMAC-signed secure tokens |
 | **HTML Sanitization** | XSS | Script and injection prevention |
+| **AIDefence** | Threats | Prompt injection, jailbreak detection, PII scanning (<10ms) |
 
 ### Security Validation Schemas
 
