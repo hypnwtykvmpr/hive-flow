@@ -111,7 +111,7 @@ npx claude-flow@v3alpha init
 </details>
 
 <details>
-<summary>▶ 🎯 <strong>Task Routing</strong> — Extend your Claude Code subscription by 250%</summary>
+<summary>🎯 <strong>Task Routing</strong> — Extend your Claude Code subscription by 250%</summary>
 
 Smart routing skips expensive LLM calls when possible. Simple edits use WASM (free), medium tasks use cheaper models. This can extend your Claude Code usage by 250% or save significantly on direct API costs.
 
