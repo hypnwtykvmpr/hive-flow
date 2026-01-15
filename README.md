@@ -27,6 +27,22 @@ User → MCP Server → Router → Swarm → Agents → Memory → LLM Providers
                        └──── Learning Loop ←──────┘
 ```
 
+### Key Capabilities
+
+🤖 **54+ Specialized Agents** - Ready-to-use AI agents for coding, code review, testing, security audits, documentation, and DevOps. Each agent is optimized for its specific role.
+
+🐝 **Coordinated Agent Teams** - Run unlimited agents simultaneously in organized swarms. Agents spawn sub-workers, communicate, share context, and divide work automatically using hierarchical (queen/workers) or mesh (peer-to-peer) patterns.
+
+🧠 **Learns From Your Workflow** - The system remembers what works. Successful patterns are stored and reused, routing similar tasks to the best-performing agents. Gets smarter over time.
+
+🔌 **Works With Any LLM** - Switch between Claude, GPT-4, Gemini, Cohere, or local models like Llama. Automatic failover if one provider is unavailable. Smart routing picks the cheapest option that meets quality requirements.
+
+⚡ **Plugs Into Claude Code** - Native integration via MCP (Model Context Protocol). Use claude-flow commands directly in your Claude Code sessions with full tool access.
+
+🔒 **Production-Ready Security** - Built-in protection against prompt injection, input validation, path traversal prevention, command injection blocking, and safe credential handling.
+
+---
+
 **Core Flow**
 | Layer | Components | What It Does |
 |-------|------------|--------------|
