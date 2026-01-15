@@ -979,8 +979,6 @@ npx claude-flow@v3alpha worker status
 
 </details>
 
-</details>
-
 <details>
 <summary>🤝 <strong>Consensus Strategies</strong> — 5 distributed agreement protocols</summary>
 
