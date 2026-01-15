@@ -35,6 +35,7 @@ User → MCP Server → Router → Swarm → Agents → Memory → LLM Providers
 - **Intelligence**: SONA neural learning, Mixture of Experts, ReasoningBank
 - **Memory**: HNSW index (150x faster), AgentDB, LRU cache
 - **Providers**: Anthropic, OpenAI, Google, Local (Ollama)
+- **Learning Loop**: Results feed back to improve routing, patterns stored in ReasoningBank
 
 ### Task Routing
 
