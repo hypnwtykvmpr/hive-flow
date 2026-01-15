@@ -1273,6 +1273,8 @@ npx claude-flow@v3alpha hooks pretrain  # Bootstrap learning
 - [API Reference](./v2/docs/technical/)
 - [Examples](./v2/examples/)
 
+</details>
+
 ## Support
 
 - Documentation: https://github.com/ruvnet/claude-flow
