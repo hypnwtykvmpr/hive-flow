@@ -233,9 +233,21 @@ Claude-Flow v3 introduces **self-learning neural capabilities** that no other ag
 | 🤝 | **Claims System** | Manages task ownership between humans and agents with handoff support | Work ownership with claim/release/handoff protocols |
 | 🛡️ | **Byzantine Consensus** | Coordinates agents even when some fail or return bad results | Fault-tolerant, handles up to 1/3 failing agents |
 
-### Intelligent 3-Tier Model Routing (ADR-026)
+<details>
+<summary>💰 <strong>Intelligent 3-Tier Model Routing</strong> — Save 75% on API costs, extend Claude Max 2.5x</summary>
 
-Automatically routes tasks to the optimal handler for **75% cost reduction** and **2.5x quota extension** for Claude Max users:
+Not every task needs the most powerful (and expensive) model. Claude-Flow analyzes each request and automatically routes it to the cheapest handler that can do the job well. Simple code transforms skip the LLM entirely using WebAssembly. Medium tasks use faster, cheaper models. Only complex architecture decisions use Opus.
+
+**Cost & Usage Benefits:**
+
+| Benefit | Impact |
+|---------|--------|
+| 💵 **API Cost Reduction** | 75% lower costs by using right-sized models |
+| ⏱️ **Claude Max Extension** | 2.5x more tasks within your quota limits |
+| 🚀 **Faster Simple Tasks** | <1ms for transforms vs 2-5s with LLM |
+| 🎯 **Zero Wasted Tokens** | Simple edits use 0 tokens (WASM handles them) |
+
+**Routing Tiers:**
 
 | Tier | Handler | Latency | Cost | Use Cases |
 |------|---------|---------|------|-----------|
@@ -243,7 +255,9 @@ Automatically routes tasks to the optimal handler for **75% cost reduction** and
 | **2** | Haiku/Sonnet | 500ms-2s | $0.0002-$0.003 | Bug fixes, refactoring, feature implementation |
 | **3** | Opus | 2-5s | $0.015 | Architecture, security design, distributed systems |
 
-**Benchmark Results:** 100% accuracy, 0.57ms avg routing latency
+**Benchmark Results:** 100% routing accuracy, 0.57ms avg routing decision latency
+
+</details>
 
 ### 📋 Specification-Driven Development (ADR/DDD)
 
