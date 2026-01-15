@@ -28,6 +28,115 @@ User → Claude-Flow (CLI/MCP) → Router → Swarm → Agents → Memory → LL
                        ↑                          ↓
                        └──── Learning Loop ←──────┘
 ```
+
+<details>
+<summary>📐 <strong>Expanded Architecture</strong> — Full system diagram with RuVector intelligence</summary>
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                           CLAUDE-FLOW V3 ARCHITECTURE                            │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                  │
+│  ┌──────────┐     ┌─────────────────┐     ┌─────────────────┐                   │
+│  │   User   │────▶│  CLI / MCP      │────▶│   AIDefence     │                   │
+│  │          │     │  Server         │     │   Security      │                   │
+│  └──────────┘     └────────┬────────┘     └─────────────────┘                   │
+│                            │                                                     │
+│                            ▼                                                     │
+│  ┌─────────────────────────────────────────────────────────────────────────┐    │
+│  │                         ROUTING LAYER                                    │    │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐    │    │
+│  │  │  Q-Learning │  │    MoE      │  │   Skills    │  │   Hooks     │    │    │
+│  │  │   Router    │  │  8 Experts  │  │    (42+)    │  │   (17)      │    │    │
+│  │  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘    │    │
+│  └─────────────────────────────────────────────────────────────────────────┘    │
+│                            │                                                     │
+│                            ▼                                                     │
+│  ┌─────────────────────────────────────────────────────────────────────────┐    │
+│  │                      SWARM COORDINATION                                  │    │
+│  │  ┌───────────────┐  ┌───────────────┐  ┌───────────────┐               │    │
+│  │  │  Topologies   │  │   Consensus   │  │    Claims     │               │    │
+│  │  │ mesh/hier/    │  │ Raft/BFT/     │  │  Human-Agent  │               │    │
+│  │  │ ring/star     │  │ Gossip/CRDT   │  │  Coordination │               │    │
+│  │  └───────────────┘  └───────────────┘  └───────────────┘               │    │
+│  └─────────────────────────────────────────────────────────────────────────┘    │
+│                            │                                                     │
+│                            ▼                                                     │
+│  ┌─────────────────────────────────────────────────────────────────────────┐    │
+│  │                        54+ AGENTS                                        │    │
+│  │  coder │ tester │ reviewer │ architect │ security │ devops │ ml │ ...  │    │
+│  └─────────────────────────────────────────────────────────────────────────┘    │
+│                            │                                                     │
+│         ┌──────────────────┼──────────────────┐                                 │
+│         ▼                  ▼                  ▼                                  │
+│  ┌─────────────┐   ┌─────────────┐   ┌─────────────────────┐                   │
+│  │   Memory    │   │  Providers  │   │  Background Workers │                   │
+│  │  (AgentDB)  │   │ Claude/GPT/ │   │       (12)          │                   │
+│  │             │   │ Gemini/     │   │  ultralearn/audit/  │                   │
+│  │             │   │ Ollama      │   │  optimize/map/...   │                   │
+│  └──────┬──────┘   └─────────────┘   └─────────────────────┘                   │
+│         │                                                                        │
+│         ▼                                                                        │
+│  ┌─────────────────────────────────────────────────────────────────────────┐    │
+│  │              RUVECTOR INTELLIGENCE LAYER (npx ruvector)                  │    │
+│  ├─────────────────────────────────────────────────────────────────────────┤    │
+│  │                                                                          │    │
+│  │  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐            │    │
+│  │  │     SONA       │  │    EWC++       │  │  Flash Attn    │            │    │
+│  │  │  Self-Optimize │  │  No Forgetting │  │  2.49-7.47x    │            │    │
+│  │  │   <0.05ms      │  │  Consolidation │  │   Speedup      │            │    │
+│  │  └────────────────┘  └────────────────┘  └────────────────┘            │    │
+│  │                                                                          │    │
+│  │  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐            │    │
+│  │  │     HNSW       │  │ ReasoningBank  │  │   Hyperbolic   │            │    │
+│  │  │  150x-12,500x  │  │  Pattern Store │  │   Poincaré     │            │    │
+│  │  │  Faster Search │  │  + Retrieval   │  │   Embeddings   │            │    │
+│  │  └────────────────┘  └────────────────┘  └────────────────┘            │    │
+│  │                                                                          │    │
+│  │  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐            │    │
+│  │  │  LoRA/Micro    │  │  Int8 Quant    │  │  9 RL Algos    │            │    │
+│  │  │  128x Compress │  │  3.92x Memory  │  │  Q/SARSA/A2C/  │            │    │
+│  │  │   <5MB Edge    │  │   Reduction    │  │  PPO/DQN/...   │            │    │
+│  │  └────────────────┘  └────────────────┘  └────────────────┘            │    │
+│  │                                                                          │    │
+│  └─────────────────────────────────────────────────────────────────────────┘    │
+│                            │                                                     │
+│                            ▼                                                     │
+│  ┌─────────────────────────────────────────────────────────────────────────┐    │
+│  │                      LEARNING LOOP                                       │    │
+│  │       RETRIEVE ──▶ JUDGE ──▶ DISTILL ──▶ CONSOLIDATE ──▶ ROUTE         │    │
+│  │         (HNSW)    (Verdict)   (LoRA)      (EWC++)      (Better)         │    │
+│  └─────────────────────────────────────────────────────────────────────────┘    │
+│                            │                                                     │
+│                            └──────────────── loops back to Router ──────────────│
+│                                                                                  │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+**RuVector Components:**
+
+| Component | Purpose | Performance |
+|-----------|---------|-------------|
+| **SONA** | Self-Optimizing Neural Architecture - learns optimal routing | <0.05ms adaptation |
+| **EWC++** | Elastic Weight Consolidation - prevents catastrophic forgetting | Preserves 95%+ knowledge |
+| **Flash Attention** | Optimized attention computation | 2.49x-7.47x speedup |
+| **HNSW** | Hierarchical Navigable Small World vector search | 150x-12,500x faster |
+| **ReasoningBank** | Pattern storage with trajectory learning | RETRIEVE→JUDGE→DISTILL |
+| **Hyperbolic** | Poincaré ball embeddings for hierarchical data | Better code relationships |
+| **LoRA/MicroLoRA** | Low-Rank Adaptation for efficient fine-tuning | 128x compression, <5MB |
+| **Int8 Quantization** | Memory-efficient weight storage | 3.92x memory reduction |
+| **9 RL Algorithms** | Q-Learning, SARSA, A2C, PPO, DQN, Decision Transformer, etc. | Task-specific learning |
+
+```bash
+# Install RuVector standalone
+npx ruvector
+
+# Or use via Claude-Flow
+npx claude-flow@v3alpha hooks intelligence --status
+```
+
+</details>
+
 ### Get Started Fast
 
 ``` 
