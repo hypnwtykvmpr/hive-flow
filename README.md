@@ -1671,8 +1671,9 @@ npx claude-flow@v3alpha progress --json
 ---
 
 <details>
-<summary><h2>🏗️ Architecture </h2></summary>
+<summary><h2>🏗️ Architecture — V3 Module Structure & Performance Metrics</h2></summary>
 
+**10 DDD modules with measured performance across all topologies.**
 
 ### V3 Module Structure
 
