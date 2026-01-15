@@ -43,7 +43,7 @@ User → MCP Server → Router → Swarm → Agents → Memory → LLM Providers
 
 ---
 
-**Core Flow**
+**Core Flow** — How requests move through the system
 | Layer | Components | What It Does |
 |-------|------------|--------------|
 | User | Claude Code, CLI | Your interface to control and run commands |
@@ -51,13 +51,13 @@ User → MCP Server → Router → Swarm → Agents → Memory → LLM Providers
 | Agents | 54+ types | Specialized workers (coder, tester, reviewer...) |
 | Providers | Anthropic, OpenAI, Google, Ollama | AI models that power reasoning |
 
-**Swarm Coordination**
+**Swarm Coordination** — How agents work together
 | Layer | Components | What It Does |
 |-------|------------|--------------|
 | Coordination | Queen, Swarm, Consensus | Manages agent teams (Raft, Byzantine, Gossip) |
 | Drift Control | Hierarchical topology, Checkpoints | Prevents agents from going off-task |
 
-**Intelligence & Memory**
+**Intelligence & Memory** — How the system learns and remembers
 | Layer | Components | What It Does |
 |-------|------------|--------------|
 | Memory | HNSW, AgentDB, Cache | Stores and retrieves patterns 150x faster |
@@ -65,13 +65,13 @@ User → MCP Server → Router → Swarm → Agents → Memory → LLM Providers
 | Learning | SONA, MoE, ReasoningBank | Self-improves from results (<0.05ms adaptation) |
 | Fine-tuning | MicroLoRA, EWC++ | Lightweight adaptation without full retraining |
 
-**Optimization**
+**Optimization** — How to reduce cost and latency
 | Layer | Components | What It Does |
 |-------|------------|--------------|
 | Agent Booster | WASM, AST analysis | Skips LLM for simple edits (<1ms) |
 | Token Optimizer | Compression, Caching | Reduces token usage 30-50% |
 
-**Operations**
+**Operations** — Background services and integrations
 | Layer | Components | What It Does |
 |-------|------------|--------------|
 | Background | Daemon, 12 Workers | Auto-runs audits, optimization, learning |
