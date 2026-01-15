@@ -2944,7 +2944,27 @@ await hooks.endTrajectory(trajectory, { success: true });
 <details>
 <summary><h2>⚡ Agentic-Flow Integration — Core AI Infrastructure</h2></summary>
 
-Claude-Flow v3 is built on top of **agentic-flow**, a production-ready AI agent orchestration platform. This deep integration provides 352x faster code transformations, learning memory, and geometric intelligence.
+[![npm version](https://img.shields.io/npm/v/agentic-flow?color=blue&label=npm)](https://www.npmjs.com/package/agentic-flow)
+[![npm downloads](https://img.shields.io/npm/dm/agentic-flow?color=green)](https://www.npmjs.com/package/agentic-flow)
+[![GitHub](https://img.shields.io/badge/GitHub-ruvnet%2Fagentic--flow-blue?logo=github)](https://github.com/ruvnet/agentic-flow)
+
+Claude-Flow v3 is built on top of **[agentic-flow](https://github.com/ruvnet/agentic-flow)**, a production-ready AI agent orchestration platform. This deep integration provides 352x faster code transformations, learning memory, and geometric intelligence.
+
+### Quick Start
+
+```bash
+# Install globally
+npm install -g agentic-flow
+
+# Or run directly with npx
+npx agentic-flow --help
+
+# Start MCP server
+npx agentic-flow mcp start
+
+# Add to Claude Code
+claude mcp add agentic-flow -- npx agentic-flow mcp start
+```
 
 ### Core Components
 
