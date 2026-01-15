@@ -3226,50 +3226,148 @@ export CLAUDE_FLOW_HNSW_EF=100
 <details>
 <summary><h2>🔄 Migration Guide (V2 → V3) </h2></summary>
 
+### Why Migrate to V3?
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    V2 → V3 IMPROVEMENTS                     │
+├───────────────────────┬─────────────────────────────────────┤
+│ Memory Search         │ 150x - 12,500x faster (HNSW)        │
+│ Pattern Matching      │ Self-learning (ReasoningBank)       │
+│ Security              │ CVE remediation + strict validation │
+│ Modular Architecture  │ 18 @claude-flow/* packages          │
+│ Agent Coordination    │ 54+ specialized agents              │
+│ Token Efficiency      │ 32% reduction with optimization     │
+└───────────────────────┴─────────────────────────────────────┘
+```
 
 ### Breaking Changes
 
-1. **Module Structure**: V3 uses scoped packages (`@claude-flow/*`)
-2. **Memory Backend**: Default changed from JSON to AgentDB with HNSW
-3. **Hooks System**: New ReasoningBank replaces basic pattern storage
-4. **Security**: Stricter input validation enabled by default
+| Change | V2 | V3 | Impact |
+|--------|----|----|--------|
+| **Package Structure** | `claude-flow` | `@claude-flow/*` (scoped) | Update imports |
+| **Memory Backend** | JSON files | AgentDB + HNSW | Faster search |
+| **Hooks System** | Basic patterns | ReasoningBank + SONA | Self-learning |
+| **Security** | Manual validation | Automatic strict mode | More secure |
+| **CLI Commands** | Flat structure | Nested subcommands | New syntax |
+| **Config Format** | `.claude-flow/config.json` | `claude-flow.config.json` | Update path |
 
-### Upgrade Steps
+### Step-by-Step Migration
 
 ```bash
-# 1. Backup existing data
+# STEP 1: Backup existing data (CRITICAL)
 cp -r ./data ./data-backup-v2
+cp -r ./.claude-flow ./.claude-flow-backup-v2
 
-# 2. Update to V3
-npm install claude-flow@latest
+# STEP 2: Check migration status
+npx claude-flow@v3alpha migrate status
 
-# 3. Run migration
-npx claude-flow@v3alpha migrate --from v2
+# STEP 3: Run migration with dry-run first
+npx claude-flow@v3alpha migrate run --dry-run
 
-# 4. Verify installation
-npx claude-flow@v3alpha --version
-npx claude-flow@v3alpha hooks metrics
+# STEP 4: Execute migration
+npx claude-flow@v3alpha migrate run --from v2
+
+# STEP 5: Verify migration
+npx claude-flow@v3alpha migrate verify
+
+# STEP 6: Initialize V3 learning
+npx claude-flow@v3alpha hooks pretrain
+npx claude-flow@v3alpha doctor --fix
 ```
 
-### Configuration Changes
+### Command Changes Reference
+
+| V2 Command | V3 Command | Notes |
+|------------|------------|-------|
+| `claude-flow start` | `claude-flow mcp start` | MCP is explicit |
+| `claude-flow init` | `claude-flow init --wizard` | Interactive mode |
+| `claude-flow spawn <type>` | `claude-flow agent spawn -t <type>` | Nested under `agent` |
+| `claude-flow swarm create` | `claude-flow swarm init --topology mesh` | Explicit topology |
+| `--pattern-store path` | `--memory-backend agentdb` | Backend selection |
+| `hooks record` | `hooks post-edit --success true` | Explicit success flag |
+| `memory get <key>` | `memory retrieve --key <key>` | Explicit flag |
+| `memory set <key> <value>` | `memory store --key <key> --value <value>` | Explicit flags |
+| `neural learn` | `hooks intelligence --mode learn` | Under hooks |
+| `config set key value` | `config set --key key --value value` | Explicit flags |
+
+### Configuration Migration
+
+**V2 Config (`.claude-flow/config.json`)**:
+```json
+{
+  "mode": "basic",
+  "patternStore": "./patterns",
+  "maxAgents": 10
+}
+```
+
+**V3 Config (`claude-flow.config.json`)**:
+```json
+{
+  "version": "3.0.0",
+  "memory": {
+    "type": "hybrid",
+    "path": "./data",
+    "hnsw": { "m": 16, "ef": 200 }
+  },
+  "swarm": {
+    "topology": "hierarchical",
+    "maxAgents": 15,
+    "strategy": "specialized"
+  },
+  "security": { "mode": "strict" },
+  "neural": { "enabled": true, "sona": true }
+}
+```
+
+### Import Changes
+
+```typescript
+// V2 (deprecated)
+import { ClaudeFlow, Agent, Memory } from 'claude-flow';
+
+// V3 (new)
+import { ClaudeFlowClient } from '@claude-flow/cli';
+import { AgentDB } from '@claude-flow/memory';
+import { ThreatDetector } from '@claude-flow/security';
+import { HNSWIndex } from '@claude-flow/embeddings';
+```
+
+### Rollback Procedure
+
+If migration fails, you can rollback:
 
 ```bash
-# V2 (deprecated)
-npx claude-flow init --mode basic
+# Check rollback options
+npx claude-flow@v3alpha migrate rollback --list
 
-# V3 (new)
-npx claude-flow@v3alpha init
-npx claude-flow@v3alpha hooks pretrain  # Bootstrap learning
+# Rollback to V2
+npx claude-flow@v3alpha migrate rollback --to v2
+
+# Restore backup manually if needed
+rm -rf ./data
+cp -r ./data-backup-v2 ./data
 ```
 
-### API Changes
+### Post-Migration Checklist
 
-| V2 API | V3 API |
-|--------|--------|
-| `claude-flow start` | `claude-flow mcp start` |
-| `--pattern-store` | `--memory-backend agentdb` |
-| `hooks record` | `hooks post-edit --success` |
-| `swarm create` | `swarm init --topology` |
+- [ ] Verify all agents spawn correctly: `npx claude-flow@v3alpha agent list`
+- [ ] Check memory search works: `npx claude-flow@v3alpha memory search -q "test"`
+- [ ] Confirm MCP server starts: `npx claude-flow@v3alpha mcp start`
+- [ ] Run doctor diagnostics: `npx claude-flow@v3alpha doctor`
+- [ ] Test a simple swarm: `npx claude-flow@v3alpha swarm init --topology mesh`
+- [ ] Bootstrap learning: `npx claude-flow@v3alpha hooks pretrain`
+
+### Common Migration Issues
+
+| Issue | Cause | Solution |
+|-------|-------|----------|
+| `MODULE_NOT_FOUND` | Old package references | Update imports to `@claude-flow/*` |
+| `Config not found` | Path change | Rename to `claude-flow.config.json` |
+| `Memory backend error` | Schema change | Run `migrate run` to convert |
+| `Hooks not working` | New hook names | Use new hook commands |
+| `Agent spawn fails` | Type name changes | Check `agent list` for new types |
 
 </details>
 
