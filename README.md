@@ -382,12 +382,12 @@ npx claude-flow@v3alpha worker results --limit 10
 
 | Provider | Models (2025-2026) | Features | Cost |
 |----------|--------|----------|------|
-| **Anthropic** | Claude Opus 4.5, Claude Sonnet 4, Claude Haiku 3.5 | Native, streaming, tool calling, extended thinking | $1-15/1M tokens |
-| **OpenAI** | GPT-4.5, o3, o4-mini, GPT-4o | Function calling, vision, reasoning | $0.15-60/1M tokens |
-| **Google** | Gemini 2.5 Pro, Gemini 2.5 Flash, Gemini Ultra 2 | Multimodal, long context (2M tokens) | $0.075-7/1M tokens |
-| **Cohere** | Command A, Command R+ 2.0, Embed v4 | RAG optimized, multilingual | $0.50-15/1M tokens |
-| **Ollama** | Llama 4, Mistral Large 3, DeepSeek V3, Qwen 3 | Local, free, offline | Free |
-| **RuVector** | Custom models via @ruvector/ruvllm | WASM optimized | Custom |
+| **Anthropic** | Claude Opus 4.5, Claude Sonnet 4.5, Claude Haiku 4.5 | Native, streaming, tool calling, extended thinking | $1-25/1M tokens |
+| **OpenAI** | GPT-5.2, o3, o3-pro, o4-mini | 400K context, reasoning chains, 100% AIME 2025 | $0.15-60/1M tokens |
+| **Google** | Gemini 3 Pro, Gemini 3 Flash, Gemini 3 Deep Think | 1M+ context, multimodal, Deep Think reasoning | $0.075-7/1M tokens |
+| **xAI** | Grok 4.1, Grok 3 | Truth-seeking, real-time data, 200K H100 training | $2-10/1M tokens |
+| **Mistral** | Mistral Large 3 (675B MoE), Codestral | 92% GPT-5.2 performance at 15% cost | $0.50-8/1M tokens |
+| **Meta/Ollama** | Llama 4 Scout/Maverick, DeepSeek V3, Qwen 3 | Local, free, up to 10M context (Scout) | Free |
 
 ### Provider Load Balancing
 
