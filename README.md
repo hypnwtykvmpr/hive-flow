@@ -445,6 +445,11 @@ npx claude-flow@v3alpha worker results --limit 10
 | `daemon` | 5 | Background workers (start, stop, status, trigger, enable) |
 | `progress` | 4 | V3 implementation progress (check, sync, summary, watch) |
 | `claims` | 4 | Authorization (check, grant, revoke, list) |
+| `analyze` | 6 | Code analysis (diff, risk, classify, reviewers, file-risk, stats) |
+| `issues` | 10 | Human-agent claims (list, claim, release, handoff, status, stealable, steal, load, rebalance, board) |
+| `transfer-store` | 4 | Pattern marketplace via IPFS (list, search, download, publish) |
+| `update` | 2 | Auto-update system (check, apply) |
+| `route` | 3 | Intelligent routing (task, explain, coverage) |
 
 ### Testing Framework (`@claude-flow/testing`)
 
