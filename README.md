@@ -223,15 +223,15 @@ Claude-Flow v3 introduces **self-learning neural capabilities** that no other ag
 
 | | Feature | What It Does | Technical Details |
 |---|---------|--------------|-------------------|
-| 🧠 | **SONA** | System gets smarter over time by learning which agents work best for each task | Self-Optimizing Neural Architecture with <0.05ms adaptation from trajectory outcomes |
-| 🔒 | **EWC++** | Remembers successful patterns without forgetting old ones when learning new things | Elastic Weight Consolidation prevents catastrophic forgetting during continuous learning |
-| 🎯 | **MoE** | Automatically picks the right specialist for each job | Mixture of 8 Experts with dynamic gating network for intelligent task routing |
-| ⚡ | **Flash Attention** | Makes thinking 2-7x faster | 2.49x-7.47x speedup for attention computations using optimized CUDA kernels |
-| 🌐 | **Hyperbolic Embeddings** | Better understands code hierarchies (folders, classes, functions) | Poincaré ball model captures hierarchical relationships in lower dimensions |
-| 📦 | **LoRA** | Runs on less powerful machines by compressing the AI brain | Low-Rank Adaptation achieves 128x memory compression for efficient fine-tuning |
-| 🗜️ | **Int8 Quantization** | Uses 4x less memory with almost no quality loss | 3.92x memory reduction via 8-bit integer quantization with calibration |
-| 🤝 | **Claims System** | Tracks who's working on what, enables smooth handoffs | Human-agent work ownership with claim/release/handoff protocols |
-| 🛡️ | **Byzantine Consensus** | Keeps working even if some agents misbehave | Fault-tolerant coordination tolerating up to f < n/3 malicious agents |
+| 🧠 | **SONA** | Your bug fixes get routed to your best coder agent automatically | Self-Optimizing Neural Architecture, <0.05ms adaptation |
+| 🔒 | **EWC++** | Learns your codebase patterns without forgetting what worked before | Elastic Weight Consolidation prevents catastrophic forgetting |
+| 🎯 | **MoE** | Security tasks go to security experts, tests go to test experts | Mixture of 8 Experts with dynamic gating |
+| ⚡ | **Flash Attention** | Complex refactors complete in seconds instead of minutes | 2.49x-7.47x speedup for attention computations |
+| 🌐 | **Hyperbolic Embeddings** | Finds related files even in deeply nested folder structures | Poincaré ball model for hierarchical code relationships |
+| 📦 | **LoRA** | Run full agent swarms on a laptop with 8GB RAM | 128x memory compression via Low-Rank Adaptation |
+| 🗜️ | **Int8 Quantization** | Cut your memory usage by 75% with no noticeable slowdown | 3.92x memory reduction with calibrated 8-bit integers |
+| 🤝 | **Claims System** | See which agent is working on what, hand off tasks mid-stream | Work ownership with claim/release/handoff protocols |
+| 🛡️ | **Byzantine Consensus** | Swarm keeps working even if an agent crashes or hangs | Fault-tolerant, handles up to 1/3 failing agents |
 
 ### Intelligent 3-Tier Model Routing (ADR-026)
 
