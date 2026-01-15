@@ -71,7 +71,7 @@ User → MCP Server → Router → Swarm → Agents → Memory → LLM Providers
 | Agent Booster | WASM, AST analysis | Skips LLM for simple edits (<1ms) |
 | Token Optimizer | Compression, Caching | Reduces token usage 30-50% |
 
-**Operations** — Background services and integrations
+🔧 **Operations** — Background services and integrations
 | Layer | Components | What It Does |
 |-------|------------|--------------|
 | Background | Daemon, 12 Workers | Auto-runs audits, optimization, learning |
