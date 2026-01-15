@@ -98,7 +98,7 @@ npx claude-flow@v3alpha init
 </details>
 
 <details>
-<summary>▶ 🔧 <strong>Operations</strong> — Background services and integrations</summary>
+<summary>🔧 <strong>Operations</strong> — Background services and integrations</summary>
 
 | Layer | Components | What It Does |
 |-------|------------|--------------|
