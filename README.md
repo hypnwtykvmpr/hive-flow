@@ -1545,125 +1545,195 @@ Shell-based daemons for monitoring (Linux/macOS only):
 ---
 
 <details>
-<summary><h2>🪝 Self-Learning Hooks Commands (27 Hooks) </h2></summary>
+<summary><h2>🪝 Self-Learning Hooks — 27 Hooks That Learn From Every Action</h2></summary>
 
+### What Are Hooks?
 
-### Core Tool Lifecycle Hooks
-```bash
-# Before/after file editing
-npx claude-flow@v3alpha hooks pre-edit <filePath>
-npx claude-flow@v3alpha hooks post-edit <filePath> --success true --train-patterns
+Hooks intercept operations (file edits, commands, tasks) and learn from outcomes. Unlike static automation, hooks **improve over time** by tracking what works and applying those patterns to future tasks.
 
-# Before/after commands
-npx claude-flow@v3alpha hooks pre-command "<command>"
-npx claude-flow@v3alpha hooks post-command "<command>" --success true
+| Concept | Plain English | Technical Details |
+|---------|---------------|-------------------|
+| **Hook** | Code that runs before/after an action | Event listener with pre/post lifecycle |
+| **Pattern** | A learned strategy that worked | Vector embedding stored in ReasoningBank |
+| **Trajectory** | Recording of actions → outcomes | RL episode for SONA training |
+| **Routing** | Picking the best agent for a task | MoE-based classifier with learned weights |
 
-# Before/after tasks
-npx claude-flow@v3alpha hooks pre-task --description "<task>"
-npx claude-flow@v3alpha hooks post-task --task-id "<id>" --success true
+### How Hooks Learn (4-Step Pipeline)
+
+```
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│  RETRIEVE   │───▶│    JUDGE    │───▶│   DISTILL   │───▶│ CONSOLIDATE │
+│             │    │             │    │             │    │             │
+│ Find similar│    │ Was it      │    │ Extract key │    │ Prevent     │
+│ past patterns│   │ successful? │    │ learnings   │    │ forgetting  │
+└─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
+     HNSW              Verdict            LoRA              EWC++
+   150x faster        success/fail      compression       memory lock
 ```
 
-### Intelligence & Routing Hooks
+### All 27 Hooks by Category
+
+#### 🔧 Tool Lifecycle Hooks (6 hooks)
+
+| Hook | When It Fires | What It Does | Learning Benefit |
+|------|---------------|--------------|------------------|
+| `pre-edit` | Before file edit | Gathers context, checks security | Learns which files need extra validation |
+| `post-edit` | After file edit | Records outcome, extracts patterns | Learns successful edit strategies |
+| `pre-command` | Before shell command | Assesses risk, validates input | Learns which commands are safe |
+| `post-command` | After shell command | Tracks success/failure | Learns command reliability patterns |
+| `pre-task` | Before task starts | Routes to optimal agent | Learns task→agent mappings |
+| `post-task` | After task completes | Records quality score | Learns what makes tasks succeed |
+
 ```bash
-# Route task to optimal agent using learned patterns
-npx claude-flow@v3alpha hooks route "<task description>" --include-explanation
-
-# Explain routing decision with transparency
-npx claude-flow@v3alpha hooks explain "<topic>" --depth comprehensive
-
-# Bootstrap intelligence from repository
-npx claude-flow@v3alpha hooks pretrain --model-type moe --epochs 10
-
-# Generate optimized agent configs from pretrain data
-npx claude-flow@v3alpha hooks build-agents --agent-types coder,tester --config-format yaml
-
-# Transfer patterns from another project
-npx claude-flow@v3alpha hooks transfer <sourceProject>
-
-# Initialize hooks system
-npx claude-flow@v3alpha hooks init
-
-# View learning metrics dashboard
-npx claude-flow@v3alpha hooks metrics
-
-# List all registered hooks
-npx claude-flow@v3alpha hooks list
+# Example: Edit with pattern learning
+npx claude-flow@v3alpha hooks pre-edit ./src/auth.ts
+npx claude-flow@v3alpha hooks post-edit ./src/auth.ts --success true --train-patterns
 ```
 
-### Session Management Hooks
+#### 🧠 Intelligence & Routing Hooks (8 hooks)
+
+| Hook | Purpose | What You Get |
+|------|---------|--------------|
+| `route` | Pick best agent for task | Agent recommendation with confidence score |
+| `explain` | Understand routing decision | Full transparency on why agent was chosen |
+| `pretrain` | Bootstrap from codebase | Learns your project's patterns before you start |
+| `build-agents` | Generate optimized configs | Agent YAML files tuned for your codebase |
+| `transfer` | Import patterns from another project | Cross-project learning |
+| `init` | Initialize hooks system | Sets up .claude/settings.json |
+| `metrics` | View learning dashboard | Success rates, pattern counts, routing accuracy |
+| `list` | List all registered hooks | See what's active |
+
 ```bash
-# Start session with context loading
-npx claude-flow@v3alpha hooks session-start --session-id "<id>" --load-context
+# Route a task with explanation
+npx claude-flow@v3alpha hooks route "refactor authentication to use JWT" --include-explanation
 
-# End session with persistence
-npx claude-flow@v3alpha hooks session-end --export-metrics true --persist-patterns
-
-# Restore previous session context
-npx claude-flow@v3alpha hooks session-restore --session-id "<id>"
-
-# Send notifications to swarm
-npx claude-flow@v3alpha hooks notify --message "<message>" --swarm-status
+# Bootstrap intelligence from your codebase
+npx claude-flow@v3alpha hooks pretrain --depth deep --model-type moe
 ```
 
-### RuVector Intelligence Hooks (Reinforcement Learning)
+#### 📅 Session Management Hooks (4 hooks)
+
+| Hook | Purpose | Key Options |
+|------|---------|-------------|
+| `session-start` | Begin session, load context | `--session-id`, `--load-context`, `--start-daemon` |
+| `session-end` | End session, persist state | `--export-metrics`, `--persist-patterns`, `--stop-daemon` |
+| `session-restore` | Resume previous session | `--session-id` or `latest` |
+| `notify` | Send cross-agent notification | `--message`, `--priority`, `--target` |
+
 ```bash
-# Trajectory-based learning (4-step pipeline: RETRIEVE, JUDGE, DISTILL, CONSOLIDATE)
-npx claude-flow@v3alpha hooks intelligence trajectory-start --session "<session>"
-npx claude-flow@v3alpha hooks intelligence trajectory-step --action "<action>" --reward 0.9
-npx claude-flow@v3alpha hooks intelligence trajectory-end --verdict success
+# Start session with auto-daemon
+npx claude-flow@v3alpha hooks session-start --session-id "feature-auth" --start-daemon
 
-# Pattern storage with HNSW indexing (150x faster search)
-npx claude-flow@v3alpha hooks intelligence pattern-store --pattern "<pattern>" --embedding "[...]"
-npx claude-flow@v3alpha hooks intelligence pattern-search --query "<query>" --limit 10
+# End session and export learnings
+npx claude-flow@v3alpha hooks session-end --export-metrics --persist-patterns
+```
 
-# Learning stats and attention focus
-npx claude-flow@v3alpha hooks intelligence stats
-npx claude-flow@v3alpha hooks intelligence learn --experience '{"type":"success"}'
-npx claude-flow@v3alpha hooks intelligence attention --focus "<task>"
+#### 🤖 Intelligence System Hooks (9 hooks)
 
-# Full intelligence system (SONA, MoE, HNSW, EWC++, Flash Attention)
-npx claude-flow@v3alpha hooks intelligence
-npx claude-flow@v3alpha hooks intelligence reset --confirm
+| Hook | Category | What It Does |
+|------|----------|--------------|
+| `intelligence` | Status | Shows SONA, MoE, HNSW, EWC++ status |
+| `intelligence-reset` | Admin | Clears learned patterns (use carefully!) |
+| `trajectory-start` | RL | Begin recording actions for learning |
+| `trajectory-step` | RL | Record an action with reward signal |
+| `trajectory-end` | RL | Finish recording, trigger learning |
+| `pattern-store` | Memory | Store a pattern with HNSW indexing |
+| `pattern-search` | Memory | Find similar patterns (150x faster) |
+| `stats` | Analytics | Learning statistics and metrics |
+| `attention` | Focus | Compute attention-weighted similarity |
 
-# ═══════════════════════════════════════════════════════════════
-# Background Worker Commands (12 workers for analysis/optimization)
-# ═══════════════════════════════════════════════════════════════
+```bash
+# Start trajectory for complex task
+npx claude-flow@v3alpha hooks intelligence trajectory-start --task "implement OAuth2"
 
-# List all available workers
+# Record successful action
+npx claude-flow@v3alpha hooks intelligence trajectory-step --action "created token service" --quality 0.9
+
+# End trajectory and trigger learning
+npx claude-flow@v3alpha hooks intelligence trajectory-end --success true
+```
+
+### 12 Background Workers (Auto-Triggered)
+
+Workers run automatically based on context, or dispatch manually.
+
+| Worker | Trigger | Auto-Fires When | What It Does |
+|--------|---------|-----------------|--------------|
+| `ultralearn` | New project | First session in new codebase | Deep knowledge acquisition |
+| `optimize` | Slow ops | Operation takes >2s | Performance suggestions |
+| `consolidate` | Session end | Every 30 min or session-end | Memory consolidation |
+| `predict` | Pattern match | Similar task seen before | Preloads likely resources |
+| `audit` | Security file | Changes to auth/crypto files | Security vulnerability scan |
+| `map` | New dirs | New directories created | Codebase structure mapping |
+| `preload` | Cache miss | Frequently accessed patterns | Resource preloading |
+| `deepdive` | Complex edit | File >500 lines edited | Deep code analysis |
+| `document` | New code | New functions/classes | Auto-documentation |
+| `refactor` | Code smell | Duplicate code detected | Refactoring suggestions |
+| `benchmark` | Perf code | Performance-critical changes | Performance benchmarking |
+| `testgaps` | No tests | Code changes without tests | Test coverage analysis |
+
+```bash
+# List all workers
 npx claude-flow@v3alpha hooks worker list
 
-# Detect triggers from prompt text
-npx claude-flow@v3alpha hooks worker detect --prompt "optimize performance"
-
-# Auto-dispatch workers when triggers match (confidence ≥0.6)
-npx claude-flow@v3alpha hooks worker detect --prompt "deep dive into auth" --auto-dispatch --min-confidence 0.6
-
-# Manually dispatch a worker (ultralearn, optimize, audit, map, deepdive, document, refactor, benchmark, testgaps, etc.)
-npx claude-flow@v3alpha hooks worker dispatch --trigger refactor --context "auth module"
+# Manually dispatch security audit
+npx claude-flow@v3alpha hooks worker dispatch --trigger audit --context "./src/auth"
 
 # Check worker status
 npx claude-flow@v3alpha hooks worker status
-
-# Cancel a running worker
-npx claude-flow@v3alpha hooks worker cancel --id worker_refactor_1_abc123
 ```
 
-### Progress Tracking Hooks
+### Model Routing Hooks (3 hooks)
+
+Automatically selects haiku/sonnet/opus based on task complexity.
+
+| Hook | Purpose | Saves Money By |
+|------|---------|----------------|
+| `model-route` | Route to optimal model | Using haiku for simple tasks |
+| `model-outcome` | Record result | Learning which model works for what |
+| `model-stats` | View routing stats | Showing cost savings |
+
 ```bash
-# Check V3 implementation progress
-npx claude-flow@v3alpha hooks progress
+# Get model recommendation
+npx claude-flow@v3alpha hooks model-route --task "fix typo in README"
+# → Recommends: haiku (simple task, low complexity)
 
-# Detailed breakdown by category (CLI, MCP, Hooks, Packages, DDD)
-npx claude-flow@v3alpha hooks progress --detailed
+npx claude-flow@v3alpha hooks model-route --task "design distributed consensus system"
+# → Recommends: opus (complex architecture, high reasoning)
+```
 
-# Sync progress and persist to file
-npx claude-flow@v3alpha hooks progress --sync
+### Progress Tracking
 
-# Get human-readable summary
-npx claude-flow@v3alpha hooks progress --summary
+| Command | Output |
+|---------|--------|
+| `hooks progress` | Current V3 implementation % |
+| `hooks progress --detailed` | Breakdown by category |
+| `hooks progress --sync` | Sync and persist to file |
+| `hooks progress --json` | JSON for scripting |
 
-# JSON output for scripting
-npx claude-flow@v3alpha progress --json
+### Quick Reference
+
+```bash
+# ══════════════════════════════════════════════════════════════════
+# MOST COMMON HOOKS
+# ══════════════════════════════════════════════════════════════════
+
+# Route task to best agent
+npx claude-flow@v3alpha hooks route "<task>" --include-explanation
+
+# Start/end session with learning
+npx claude-flow@v3alpha hooks session-start --start-daemon
+npx claude-flow@v3alpha hooks session-end --persist-patterns
+
+# View what the system has learned
+npx claude-flow@v3alpha hooks metrics
+npx claude-flow@v3alpha hooks intelligence stats
+
+# Bootstrap on new project
+npx claude-flow@v3alpha hooks pretrain --depth deep
+
+# Dispatch background worker
+npx claude-flow@v3alpha hooks worker dispatch --trigger audit
 ```
 
 </details>
