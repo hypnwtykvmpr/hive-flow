@@ -474,7 +474,7 @@ flowchart TB
 ---
 
 <details>
-<summary><h2>📦 Features </h2></summary>
+<summary><h2>📦 Features — 54+ Agents, Swarm Topologies, MCP Tools & Security</h2></summary>
 
 
 ### Agent Ecosystem
