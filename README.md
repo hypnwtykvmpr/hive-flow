@@ -1671,9 +1671,9 @@ npx claude-flow@v3alpha progress --json
 ---
 
 <details>
-<summary><h2>🏗️ Architecture — V3 Module Structure & Performance Metrics</h2></summary>
+<summary><h2>🏗️ Architecture — 10 DDD Modules, Topology Benchmarks & Runtime Metrics</h2></summary>
 
-**10 DDD modules with measured performance across all topologies.**
+Domain-Driven Design with measured performance: 100% task success, 0.10-0.20s execution, 128-320MB per agent.
 
 ### V3 Module Structure
 
