@@ -3169,6 +3169,261 @@ CLAUDE_FLOW_HNSW_EF=200
 ---
 
 <details>
+<summary><h2>📄 Configuration Reference </h2></summary>
+
+### Configuration File Location
+
+Claude Flow looks for configuration in this order:
+1. `./claude-flow.config.json` (project root)
+2. `~/.config/claude-flow/config.json` (user config)
+3. Environment variables (override any file config)
+
+### Complete Configuration Schema
+
+```json
+{
+  "version": "3.0.0",
+
+  "orchestrator": {
+    "timeout": 120000,
+    "retryAttempts": 3,
+    "retryDelay": 5000
+  },
+
+  "terminal": {
+    "emulateEnvironment": true,
+    "defaultShell": "/bin/bash",
+    "workingDirectory": "./",
+    "maxOutputLength": 10000,
+    "timeout": 60000
+  },
+
+  "memory": {
+    "type": "hybrid",
+    "path": "./data",
+    "maxEntries": 10000,
+    "ttl": 86400,
+    "hnsw": {
+      "m": 16,
+      "ef": 200,
+      "efConstruction": 200
+    },
+    "encryption": {
+      "enabled": false,
+      "algorithm": "aes-256-gcm"
+    }
+  },
+
+  "swarm": {
+    "topology": "hierarchical",
+    "maxAgents": 15,
+    "strategy": "specialized",
+    "heartbeatInterval": 5000,
+    "taskQueueSize": 100
+  },
+
+  "coordination": {
+    "mode": "hub-spoke",
+    "maxRetries": 5,
+    "retryDelay": 10000,
+    "circuitBreaker": {
+      "enabled": true,
+      "threshold": 5,
+      "timeout": 60000,
+      "resetTimeout": 300000
+    }
+  },
+
+  "loadBalancing": {
+    "strategy": "round-robin",
+    "healthCheckInterval": 30000,
+    "maxLoad": 0.8
+  },
+
+  "mcp": {
+    "transport": "stdio",
+    "port": 3000,
+    "host": "localhost"
+  },
+
+  "neural": {
+    "enabled": true,
+    "sona": true,
+    "ewc": true,
+    "moe": {
+      "experts": 8,
+      "topK": 2
+    }
+  },
+
+  "security": {
+    "mode": "strict",
+    "inputValidation": true,
+    "pathValidation": true,
+    "authentication": {
+      "required": false,
+      "method": "jwt"
+    },
+    "rateLimit": {
+      "enabled": true,
+      "maxRequests": 1000,
+      "windowMs": 60000
+    }
+  },
+
+  "logging": {
+    "level": "info",
+    "format": "json",
+    "destination": "console",
+    "filePath": "./logs/claude-flow.log",
+    "maxFileSize": "100MB",
+    "maxFiles": 10
+  },
+
+  "monitoring": {
+    "enabled": true,
+    "metricsInterval": 60000,
+    "alertThresholds": {
+      "errorRate": 0.05,
+      "responseTime": 5000,
+      "memoryUsage": 0.9
+    }
+  },
+
+  "providers": {
+    "default": "anthropic",
+    "fallback": ["openai", "google"],
+    "anthropic": {
+      "model": "claude-sonnet-4-20250514",
+      "maxTokens": 8192
+    },
+    "openai": {
+      "model": "gpt-4o",
+      "maxTokens": 4096
+    }
+  },
+
+  "hooks": {
+    "enabled": true,
+    "learning": true,
+    "pretrainOnStart": false
+  },
+
+  "update": {
+    "autoCheck": true,
+    "checkInterval": 86400000,
+    "allowPrerelease": false
+  }
+}
+```
+
+### Configuration by Use Case
+
+<details>
+<summary><strong>Development Configuration</strong></summary>
+
+```json
+{
+  "version": "3.0.0",
+  "memory": { "type": "sqlite", "path": "./dev-data" },
+  "swarm": { "topology": "mesh", "maxAgents": 5 },
+  "security": { "mode": "permissive" },
+  "logging": { "level": "debug", "destination": "console" },
+  "hooks": { "enabled": true, "learning": true }
+}
+```
+</details>
+
+<details>
+<summary><strong>Production Configuration</strong></summary>
+
+```json
+{
+  "version": "3.0.0",
+  "memory": {
+    "type": "hybrid",
+    "path": "/var/lib/claude-flow/data",
+    "encryption": { "enabled": true, "algorithm": "aes-256-gcm" }
+  },
+  "swarm": { "topology": "hierarchical", "maxAgents": 15 },
+  "security": {
+    "mode": "strict",
+    "rateLimit": { "enabled": true, "maxRequests": 100 }
+  },
+  "logging": {
+    "level": "warn",
+    "format": "json",
+    "destination": "file",
+    "filePath": "/var/log/claude-flow/production.log"
+  },
+  "monitoring": { "enabled": true, "metricsInterval": 30000 }
+}
+```
+</details>
+
+<details>
+<summary><strong>CI/CD Configuration</strong></summary>
+
+```json
+{
+  "version": "3.0.0",
+  "memory": { "type": "sqlite", "path": ":memory:" },
+  "swarm": { "topology": "mesh", "maxAgents": 3 },
+  "security": { "mode": "strict" },
+  "logging": { "level": "error", "destination": "console" },
+  "update": { "autoCheck": false },
+  "hooks": { "enabled": false }
+}
+```
+</details>
+
+<details>
+<summary><strong>Memory-Constrained Configuration</strong></summary>
+
+```json
+{
+  "version": "3.0.0",
+  "memory": {
+    "type": "sqlite",
+    "maxEntries": 1000,
+    "hnsw": { "m": 8, "ef": 100 }
+  },
+  "swarm": { "maxAgents": 3 },
+  "neural": { "enabled": false }
+}
+```
+</details>
+
+### CLI Configuration Commands
+
+```bash
+# View current configuration
+npx claude-flow@v3alpha config list
+
+# Get specific value
+npx claude-flow@v3alpha config get --key memory.type
+
+# Set configuration value
+npx claude-flow@v3alpha config set --key swarm.maxAgents --value 10
+
+# Export configuration
+npx claude-flow@v3alpha config export > my-config.json
+
+# Import configuration
+npx claude-flow@v3alpha config import --file my-config.json
+
+# Reset to defaults
+npx claude-flow@v3alpha config reset --key swarm
+
+# Initialize with wizard
+npx claude-flow@v3alpha init --wizard
+```
+
+</details>
+
+---
+
+<details>
 <summary><h2>🔧 Troubleshooting </h2></summary>
 
 
