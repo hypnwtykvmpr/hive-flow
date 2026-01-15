@@ -1121,7 +1121,10 @@ npx claude-flow@v3alpha worker status
 | **Swarm** | Consensus latency | <100ms |
 | **Neural** | SONA adaptation | <0.05ms |
 
-### Neural & SONA (`@claude-flow/neural`)
+</details>
+
+<details>
+<summary>🧠 <strong>Neural & SONA</strong> — Self-optimizing learning with 9 RL algorithms</summary>
 
 | Feature | Description | Performance |
 |---------|-------------|-------------|
