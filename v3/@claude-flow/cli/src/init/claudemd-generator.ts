@@ -804,6 +804,10 @@ npx @claude-flow/cli@latest performance benchmark
 claude mcp add claude-flow -- npx -y @claude-flow/cli@latest
 \`\`\`
 
+## 📚 Full Reference
+
+See **\`.claude-flow/CAPABILITIES.md\`** for complete documentation of all 60+ agents, 26 commands, 27 hooks, and integrations.
+
 ---
 Remember: **Claude Flow CLI coordinates, Claude Code Task tool creates!**
 `;
