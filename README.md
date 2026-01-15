@@ -47,6 +47,8 @@ npx claude-flow@v3alpha init
 
 🔒 **Production-Ready Security** - Built-in protection against prompt injection, input validation, path traversal prevention, command injection blocking, and safe credential handling.
 
+🧩 **Extensible Plugin System** - Add custom capabilities with the plugin SDK. Create workers, hooks, providers, and security modules. Share plugins via the decentralized IPFS marketplace.
+
 ---
 
 🔄 **Core Flow** — How requests move through the system
