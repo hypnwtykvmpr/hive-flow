@@ -199,6 +199,25 @@ npx claude-flow@v3alpha --agent coder --task "Implement user authentication"
 npx claude-flow@v3alpha --list
 ```
 
+### Claude Code MCP Integration
+
+Add claude-flow as an MCP server for seamless integration:
+
+```bash
+# Add claude-flow MCP server to Claude Code
+claude mcp add claude-flow -- npx -y claude-flow@v3alpha
+
+# Verify installation
+claude mcp list
+```
+
+Once added, Claude Code can use all 27+ claude-flow tools directly:
+- `swarm_init` - Initialize agent swarms
+- `agent_spawn` - Spawn specialized agents
+- `memory_search` - Search patterns with HNSW (150x faster)
+- `hooks_route` - Intelligent task routing
+- And 23+ more tools...
+
 
 ### Why Claude-Flow v3?
 
