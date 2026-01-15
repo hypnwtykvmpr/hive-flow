@@ -22,7 +22,7 @@ Claude-Flow is a comprehensive AI agent orchestration framework that transforms 
 ### Architecture
 
 ```
-User → MCP Server → Router → Swarm → Agents → Memory → LLM Providers
+User → Claude-Flow (CLI/MCP) → Router → Swarm → Agents → Memory → LLM Providers
                        ↑                          ↓
                        └──── Learning Loop ←──────┘
 ```
