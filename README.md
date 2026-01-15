@@ -26,7 +26,13 @@ User → MCP Server → Router → Swarm → Agents → Memory → LLM Providers
                        ↑                          ↓
                        └──── Learning Loop ←──────┘
 ```
+### Get Started Fast
 
+``` 
+npx claude-flow@v3alpha init 
+```
+
+---
 ### Key Capabilities
 
 🤖 **54+ Specialized Agents** - Ready-to-use AI agents for coding, code review, testing, security audits, documentation, and DevOps. Each agent is optimized for its specific role.
@@ -213,17 +219,6 @@ Automatically routes tasks to the optimal handler for **75% cost reduction** and
 ---
 
 ## Features
-
-### Core Platform Capabilities
-
-| Capability | Description | Metrics |
-|------------|-------------|---------|
-| **54+ Specialized Agents** | Purpose-built AI agents for development, testing, security, and operations | 10 categories, unlimited concurrent |
-| **Multi-Topology Swarms** | Hierarchical, mesh, ring, star, and adaptive coordination patterns | 2.8-4.4x speed improvement |
-| **Self-Learning Hooks** | ReasoningBank pattern learning with HNSW vector search | 150x faster retrieval |
-| **MCP Integration** | Native Claude Code support via Model Context Protocol | 27+ tools available |
-| **Security-First Design** | Input validation, path traversal prevention, command sandboxing | CVE-1, CVE-2, CVE-3 addressed |
-| **Cross-Platform** | Full support for Windows, macOS, and Linux environments | Node.js 18+ |
 
 ### Agent Ecosystem
 
