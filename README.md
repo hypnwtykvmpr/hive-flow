@@ -179,21 +179,21 @@ Claude-Flow v3 introduces **self-learning neural capabilities** that no other ag
 
 | Feature | Claude Flow v3 | CrewAI | LangGraph | AutoGen | MetaGPT |
 |---------|----------------|--------|-----------|---------|---------|
-| **Self-Learning** | ✅ SONA + EWC++ | 🔴 | 🔴 | 🔴 | 🔴 |
-| **Prevents Forgetting** | ✅ EWC++ consolidation | 🔴 | 🔴 | 🔴 | 🔴 |
-| **Expert Routing** | ✅ MoE (8 experts) | Manual roles | Graph edges | 🔴 | Fixed roles |
-| **Vector Memory** | ✅ HNSW (150x faster) | 🔴 | Via plugins | 🔴 | 🔴 |
-| **Hyperbolic Embeddings** | ✅ Poincaré ball model | 🔴 | 🔴 | 🔴 | 🔴 |
-| **Pattern Learning** | ✅ From trajectories | 🔴 | 🔴 | 🔴 | 🔴 |
-| **Work Ownership** | ✅ Claims system | 🔴 | 🔴 | 🔴 | 🔴 |
-| **Threat Detection** | ✅ AIDefence | 🔴 | 🔴 | 🔴 | 🔴 |
-| **Attention Optimization** | ✅ Flash Attention | 🔴 | 🔴 | 🔴 | 🔴 |
-| **Low-Rank Adaptation** | ✅ LoRA (128x compression) | 🔴 | 🔴 | 🔴 | 🔴 |
-| **Quantization** | ✅ Int8 (3.92x savings) | 🔴 | 🔴 | 🔴 | 🔴 |
-| **Consensus Protocols** | ✅ 5 (Raft, Byzantine, etc.) | 🔴 | 🔴 | 🔴 | 🔴 |
-| **Background Workers** | ✅ 12 auto-triggered | 🔴 | 🔴 | 🔴 | 🔴 |
+| **Self-Learning** | ✅ SONA + EWC++ | ⛔ | ⛔ | ⛔ | ⛔ |
+| **Prevents Forgetting** | ✅ EWC++ consolidation | ⛔ | ⛔ | ⛔ | ⛔ |
+| **Expert Routing** | ✅ MoE (8 experts) | Manual roles | Graph edges | ⛔ | Fixed roles |
+| **Vector Memory** | ✅ HNSW (150x faster) | ⛔ | Via plugins | ⛔ | ⛔ |
+| **Hyperbolic Embeddings** | ✅ Poincaré ball model | ⛔ | ⛔ | ⛔ | ⛔ |
+| **Pattern Learning** | ✅ From trajectories | ⛔ | ⛔ | ⛔ | ⛔ |
+| **Work Ownership** | ✅ Claims system | ⛔ | ⛔ | ⛔ | ⛔ |
+| **Threat Detection** | ✅ AIDefence | ⛔ | ⛔ | ⛔ | ⛔ |
+| **Attention Optimization** | ✅ Flash Attention | ⛔ | ⛔ | ⛔ | ⛔ |
+| **Low-Rank Adaptation** | ✅ LoRA (128x compression) | ⛔ | ⛔ | ⛔ | ⛔ |
+| **Quantization** | ✅ Int8 (3.92x savings) | ⛔ | ⛔ | ⛔ | ⛔ |
+| **Consensus Protocols** | ✅ 5 (Raft, Byzantine, etc.) | ⛔ | ⛔ | ⛔ | ⛔ |
+| **Background Workers** | ✅ 12 auto-triggered | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Multi-Provider LLM** | ✅ 6 with failover | 2 | 3 | 2 | 1 |
-| **MCP Integration** | ✅ Native | 🔴 | 🔴 | 🔴 | 🔴 |
+| **MCP Integration** | ✅ Native | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Swarm Topologies** | ✅ 4 (mesh, hierarchical, etc.) | 1 | 1 | 1 | 1 |
 
 **Key differentiators:**
