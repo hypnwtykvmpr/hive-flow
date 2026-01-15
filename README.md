@@ -41,6 +41,10 @@ User → MCP Server → Router → Swarm → Agents → Memory → LLM Providers
 | **Fine-tuning** | MicroLoRA, EWC++ | Lightweight model adaptation without full retraining |
 | **Providers** | Anthropic, OpenAI, Google, Ollama | AI models that power agent reasoning |
 | **Background** | Daemon, 12 Workers | Runs optimization, security audits, and learning in background |
+| **Security** | AIDefence, Input Validation | Blocks prompt injection, detects threats, validates input |
+| **Sessions** | Persist, Restore, Export | Saves context across conversations, resumes work |
+| **GitHub** | PR, Issues, Workflows | Manages repos, reviews code, tracks issues |
+| **Analytics** | Metrics, Benchmarks | Monitors performance, detects bottlenecks |
 | **Learning Loop** | Hooks, Pattern Storage | Feeds results back to improve future routing |
 
 ### Task Routing
