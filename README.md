@@ -163,12 +163,12 @@ claude mcp add claude-flow -- npx -y claude-flow@v3alpha
 claude mcp list
 ```
 
-Once added, Claude Code can use all 27+ claude-flow tools directly:
+Once added, Claude Code can use all 175+ claude-flow tools directly:
 - `swarm_init` - Initialize agent swarms
 - `agent_spawn` - Spawn specialized agents
 - `memory_search` - Search patterns with HNSW (150x faster)
 - `hooks_route` - Intelligent task routing
-- And 23+ more tools...
+- And 170+ more tools...
 
 
 ### Why Claude-Flow v3?
@@ -479,7 +479,7 @@ npx claude-flow@v3alpha worker results --limit 10
 | `agentConfigs` | 15 V3 agent configurations | Agent testing |
 | `memoryEntries` | Patterns, rules, embeddings | Memory testing |
 | `swarmConfigs` | V3 default, minimal, mesh, hierarchical | Swarm testing |
-| `mcpTools` | 27+ tool definitions | MCP testing |
+| `mcpTools` | 175+ tool definitions | MCP testing |
 
 ### Deployment & CI/CD (`@claude-flow/deployment`)
 
