@@ -27,25 +27,42 @@ User → MCP Server → Router → Swarm → Agents → Memory → LLM Providers
                        └──── Learning Loop ←──────┘
 ```
 
+**Core Flow**
 | Layer | Components | What It Does |
 |-------|------------|--------------|
-| **User** | Claude Code, CLI | Your interface to control agents and run commands |
-| **Orchestration** | MCP Server, Router, Hooks | Receives requests, decides which agents to use |
-| **Optimization** | Agent Booster, Token Optimizer, AST | Skips LLM for simple edits, reduces tokens 30-50% |
-| **Coordination** | Queen, Swarm, Consensus | Manages teams of agents working together |
-| **Drift Control** | Hierarchical topology, Checkpoints | Detects and prevents agents from going off-task |
-| **Agents** | 54+ types (coder, tester, reviewer...) | Specialized workers that do the actual tasks |
-| **Intelligence** | SONA, MoE, ReasoningBank | Learns from results to get smarter over time |
-| **Memory** | HNSW index, AgentDB, Cache | Stores patterns and retrieves them 150x faster |
-| **Embeddings** | ONNX Runtime, MiniLM | Local vector embeddings without API calls (75x faster) |
-| **Fine-tuning** | MicroLoRA, EWC++ | Lightweight model adaptation without full retraining |
-| **Providers** | Anthropic, OpenAI, Google, Ollama | AI models that power agent reasoning |
-| **Background** | Daemon, 12 Workers | Runs optimization, security audits, and learning in background |
-| **Security** | AIDefence, Input Validation | Blocks prompt injection, detects threats, validates input |
-| **Sessions** | Persist, Restore, Export | Saves context across conversations, resumes work |
-| **GitHub** | PR, Issues, Workflows | Manages repos, reviews code, tracks issues |
-| **Analytics** | Metrics, Benchmarks | Monitors performance, detects bottlenecks |
-| **Learning Loop** | Hooks, Pattern Storage | Feeds results back to improve future routing |
+| User | Claude Code, CLI | Your interface to control and run commands |
+| Orchestration | MCP Server, Router, Hooks | Routes requests to the right agents |
+| Agents | 54+ types | Specialized workers (coder, tester, reviewer...) |
+| Providers | Anthropic, OpenAI, Google, Ollama | AI models that power reasoning |
+
+**Swarm Coordination**
+| Layer | Components | What It Does |
+|-------|------------|--------------|
+| Coordination | Queen, Swarm, Consensus | Manages agent teams (Raft, Byzantine, Gossip) |
+| Drift Control | Hierarchical topology, Checkpoints | Prevents agents from going off-task |
+
+**Intelligence & Memory**
+| Layer | Components | What It Does |
+|-------|------------|--------------|
+| Memory | HNSW, AgentDB, Cache | Stores and retrieves patterns 150x faster |
+| Embeddings | ONNX Runtime, MiniLM | Local vectors without API calls (75x faster) |
+| Learning | SONA, MoE, ReasoningBank | Self-improves from results (<0.05ms adaptation) |
+| Fine-tuning | MicroLoRA, EWC++ | Lightweight adaptation without full retraining |
+
+**Optimization**
+| Layer | Components | What It Does |
+|-------|------------|--------------|
+| Agent Booster | WASM, AST analysis | Skips LLM for simple edits (<1ms) |
+| Token Optimizer | Compression, Caching | Reduces token usage 30-50% |
+
+**Operations**
+| Layer | Components | What It Does |
+|-------|------------|--------------|
+| Background | Daemon, 12 Workers | Auto-runs audits, optimization, learning |
+| Security | AIDefence, Validation | Blocks injection, detects threats |
+| Sessions | Persist, Restore, Export | Saves context across conversations |
+| GitHub | PR, Issues, Workflows | Manages repos and code reviews |
+| Analytics | Metrics, Benchmarks | Monitors performance, finds bottlenecks |
 
 ### Task Routing
 
