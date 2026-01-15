@@ -1234,8 +1234,6 @@ claude-flow embeddings search -q "authentication patterns"
 | **Connection Pooling** | Max 10 connections, configurable | Resource management |
 | **Session Management** | Timeout handling, authentication | Secure sessions |
 
-### MCP Methods
-
 | Method | Description |
 |--------|-------------|
 | `initialize` | Initialize connection |
@@ -1250,7 +1248,10 @@ claude-flow embeddings search -q "authentication patterns"
 | `tasks/cancel` | Cancel running task |
 | `completion/complete` | Auto-complete arguments |
 
-### Security Module (`@claude-flow/security`)
+</details>
+
+<details>
+<summary>🔐 <strong>Security Module</strong> — CVE-hardened with AIDefence threat detection</summary>
 
 | Feature | CVE/Issue | Description |
 |---------|-----------|-------------|
@@ -1262,8 +1263,6 @@ claude-flow embeddings search -q "authentication patterns"
 | **Token Generation** | General | HMAC-signed secure tokens |
 | **HTML Sanitization** | XSS | Script and injection prevention |
 | **AIDefence** | Threats | Prompt injection, jailbreak detection, PII scanning (<10ms) |
-
-### Security Validation Schemas
 
 | Schema | Purpose |
 |--------|---------|
@@ -1277,7 +1276,10 @@ claude-flow embeddings search -q "authentication patterns"
 | `SpawnAgentSchema` | Agent spawn requests |
 | `TaskInputSchema` | Task definitions |
 
-### Hooks System (`@claude-flow/hooks`)
+</details>
+
+<details>
+<summary>🪝 <strong>Hooks System</strong> — Pattern learning with ReasoningBank and HNSW indexing</summary>
 
 | Component | Description | Performance |
 |-----------|-------------|-------------|
@@ -1289,8 +1291,6 @@ claude-flow embeddings search -q "authentication patterns"
 | **AgentRouting** | Task-to-agent optimization | Historical performance |
 | **Consolidation** | Prune low-quality, promote high-quality | Memory optimization |
 
-### Hook Lifecycle Events
-
 | Phase | Hooks | Purpose |
 |-------|-------|---------|
 | **Pre-Edit** | `pre-edit` | Context gathering, security checks |
@@ -1301,7 +1301,10 @@ claude-flow embeddings search -q "authentication patterns"
 | **Post-Task** | `post-task` | Cleanup, learning |
 | **Session** | `session-end`, `session-restore` | State management |
 
-### V3 Statusline (`@claude-flow/hooks`)
+</details>
+
+<details>
+<summary>📊 <strong>V3 Statusline</strong> — Real-time development status for Claude Code</summary>
 
 Real-time development status display for Claude Code integration showing DDD progress, swarm activity, security status, and system metrics.
 
