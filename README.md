@@ -172,7 +172,7 @@ Once added, Claude Code can use all 175+ claude-flow tools directly:
 
 
 <details>
-<summary><h3>🆚 Why Claude-Flow v3? (Click to expand)</h3></summary>
+<summary><h3>🆚 Why Claude-Flow v3? </h3></summary>
 
 Claude-Flow v3 introduces **self-learning neural capabilities** that no other agent orchestration framework offers. While competitors require manual agent configuration and static routing, Claude-Flow learns from every task execution, prevents catastrophic forgetting of successful patterns, and intelligently routes work to specialized experts.
 
@@ -223,7 +223,7 @@ Automatically routes tasks to the optimal handler for **75% cost reduction** and
 ---
 
 <details>
-<summary><h2>📦 Features (Click to expand)</h2></summary>
+<summary><h2>📦 Features </h2></summary>
 
 
 ### Agent Ecosystem
@@ -891,7 +891,7 @@ Shell-based daemons for monitoring (Linux/macOS only):
 ---
 
 <details>
-<summary><h2>🎯 Use Cases (Click to expand)</h2></summary>
+<summary><h2>🎯 Use Cases </h2></summary>
 
 
 | Use Case | Command |
@@ -911,7 +911,7 @@ Shell-based daemons for monitoring (Linux/macOS only):
 ---
 
 <details>
-<summary><h2>🪝 Self-Learning Hooks Commands (27 Hooks) (Click to expand)</h2></summary>
+<summary><h2>🪝 Self-Learning Hooks Commands (27 Hooks) </h2></summary>
 
 
 ### Core Tool Lifecycle Hooks
@@ -1037,7 +1037,7 @@ npx claude-flow@v3alpha progress --json
 ---
 
 <details>
-<summary><h2>🏗️ Architecture (Click to expand)</h2></summary>
+<summary><h2>🏗️ Architecture </h2></summary>
 
 
 ### V3 Module Structure
@@ -1081,7 +1081,7 @@ v3/
 ---
 
 <details>
-<summary><h2>💻 Cross-Platform Support (Click to expand)</h2></summary>
+<summary><h2>💻 Cross-Platform Support </h2></summary>
 
 
 ### Windows (PowerShell)
@@ -1110,7 +1110,7 @@ export CLAUDE_FLOW_MEMORY_PATH="./data"
 ---
 
 <details>
-<summary><h2>⚙️ Environment Variables (Click to expand)</h2></summary>
+<summary><h2>⚙️ Environment Variables </h2></summary>
 
 
 | Variable | Description | Default |
@@ -1131,7 +1131,7 @@ export CLAUDE_FLOW_MEMORY_PATH="./data"
 ---
 
 <details>
-<summary><h2>🔧 Troubleshooting (Click to expand)</h2></summary>
+<summary><h2>🔧 Troubleshooting </h2></summary>
 
 
 ### Common Issues
@@ -1191,7 +1191,7 @@ export CLAUDE_FLOW_HNSW_EF=100
 ---
 
 <details>
-<summary><h2>🔄 Migration Guide (V2 → V3) (Click to expand)</h2></summary>
+<summary><h2>🔄 Migration Guide (V2 → V3) </h2></summary>
 
 
 ### Breaking Changes
@@ -1243,7 +1243,7 @@ npx claude-flow@v3alpha hooks pretrain  # Bootstrap learning
 ---
 
 <details>
-<summary><h2>📚 Documentation (Click to expand)</h2></summary>
+<summary><h2>📚 Documentation </h2></summary>
 
 
 ### V3 Module Documentation
