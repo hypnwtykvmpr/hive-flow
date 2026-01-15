@@ -54,7 +54,7 @@ npx claude-flow@v3alpha init
 ---
 
 <details open>
-<summary>▶ <strong>Core Flow</strong> — How requests move through the system</summary>
+<summary>▶ 🔄 <strong>Core Flow</strong> — How requests move through the system</summary>
 
 | Layer | Components | What It Does |
 |-------|------------|--------------|
@@ -66,7 +66,7 @@ npx claude-flow@v3alpha init
 </details>
 
 <details>
-<summary>▶ <strong>Swarm Coordination</strong> — How agents work together</summary>
+<summary>▶ 🐝 <strong>Swarm Coordination</strong> — How agents work together</summary>
 
 | Layer | Components | What It Does |
 |-------|------------|--------------|
@@ -76,7 +76,7 @@ npx claude-flow@v3alpha init
 </details>
 
 <details>
-<summary>▶ <strong>Intelligence & Memory</strong> — How the system learns and remembers</summary>
+<summary>▶ 🧠 <strong>Intelligence & Memory</strong> — How the system learns and remembers</summary>
 
 | Layer | Components | What It Does |
 |-------|------------|--------------|
@@ -88,7 +88,7 @@ npx claude-flow@v3alpha init
 </details>
 
 <details>
-<summary>▶ <strong>Optimization</strong> — How to reduce cost and latency</summary>
+<summary>▶ ⚡ <strong>Optimization</strong> — How to reduce cost and latency</summary>
 
 | Layer | Components | What It Does |
 |-------|------------|--------------|
@@ -98,7 +98,7 @@ npx claude-flow@v3alpha init
 </details>
 
 <details>
-<summary>▶ <strong>Operations</strong> — Background services and integrations</summary>
+<summary>▶ 🔧 <strong>Operations</strong> — Background services and integrations</summary>
 
 | Layer | Components | What It Does |
 |-------|------------|--------------|
@@ -111,7 +111,7 @@ npx claude-flow@v3alpha init
 </details>
 
 <details>
-<summary>▶ <strong>Task Routing</strong> — Extend your Claude Code subscription by 250%</summary>
+<summary>▶ 🎯 <strong>Task Routing</strong> — Extend your Claude Code subscription by 250%</summary>
 
 Smart routing skips expensive LLM calls when possible. Simple edits use WASM (free), medium tasks use cheaper models. This can extend your Claude Code usage by 250% or save significantly on direct API costs.
 
