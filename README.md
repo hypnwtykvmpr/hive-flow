@@ -35,6 +35,8 @@ User → MCP Server → Router → Swarm → Agents → Memory → LLM Providers
 | **Agents** | 54+ types (coder, tester, reviewer...) | Specialized workers that do the actual tasks |
 | **Intelligence** | SONA, MoE, ReasoningBank | Learns from results to get smarter over time |
 | **Memory** | HNSW index, AgentDB, Cache | Stores patterns and retrieves them 150x faster |
+| **Embeddings** | ONNX Runtime, MiniLM | Local vector embeddings without API calls (75x faster) |
+| **Fine-tuning** | MicroLoRA, EWC++ | Lightweight model adaptation without full retraining |
 | **Providers** | Anthropic, OpenAI, Google, Ollama | AI models that power agent reasoning |
 | **Learning Loop** | Hooks, Pattern Storage | Feeds results back to improve future routing |
 
