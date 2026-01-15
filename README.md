@@ -218,10 +218,13 @@ Automatically routes tasks to the optimal handler for **75% cost reduction** and
 
 **Benchmark Results:** 100% accuracy, 0.57ms avg routing latency
 
+</details>
 
 ---
 
-## Features
+<details>
+<summary><h2>📦 Features (Click to expand)</h2></summary>
+
 
 ### Agent Ecosystem
 
