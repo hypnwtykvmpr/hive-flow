@@ -80,7 +80,9 @@ User → MCP Server → Router → Swarm → Agents → Memory → LLM Providers
 | GitHub | PR, Issues, Workflows | Manages repos and code reviews |
 | Analytics | Metrics, Benchmarks | Monitors performance, finds bottlenecks |
 
-### Task Routing
+### 🎯 Task Routing — Extend your Claude Code subscription by 250%
+
+Smart routing skips expensive LLM calls when possible. Simple edits use WASM (free), medium tasks use cheaper models. This can extend your Claude Code usage by 250% or save significantly on direct API costs.
 
 | Complexity | Handler | Speed |
 |------------|---------|-------|
