@@ -1136,8 +1136,6 @@ npx claude-flow@v3alpha worker status
 | **EWC++ Memory** | Elastic Weight Consolidation prevents catastrophic forgetting | Zero knowledge loss |
 | **Trajectory Tracking** | Execution path recording for pattern extraction | Continuous learning |
 
-### Memory & Vector Optimization
-
 | Feature | Description | Improvement |
 |---------|-------------|-------------|
 | **Scalar Quantization** | Reduce vector precision for memory savings | 4x memory reduction |
@@ -1147,7 +1145,10 @@ npx claude-flow@v3alpha worker status
 | **Batch Processing** | Process multiple embeddings in single call | 10x throughput |
 | **Memory Compression** | Pattern distillation and pruning | 50-75% reduction |
 
-### Embedding System (`@claude-flow/embeddings`)
+</details>
+
+<details>
+<summary>🔢 <strong>Embedding System</strong> — Multi-provider ONNX embeddings with hyperbolic space</summary>
 
 | Feature | Description | Performance |
 |---------|-------------|-------------|
