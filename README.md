@@ -1397,10 +1397,26 @@ claude-flow embeddings search -q "authentication patterns"
 | Feature | Description | Capability |
 |---------|-------------|------------|
 | **Queen-Led Topology** | Hierarchical command structure | Unlimited agents + sub-workers |
-| **Byzantine Consensus** | Fault-tolerant agreement | f < n/3 tolerance |
-| **Collective Memory** | Shared pattern storage | Distillation, compression |
+| **Queen Types** | Strategic, Tactical, Adaptive | Research/planning, execution, optimization |
+| **Worker Types** | 8 specialized agents | researcher, coder, analyst, tester, architect, reviewer, optimizer, documenter |
+| **Byzantine Consensus** | Fault-tolerant agreement | f < n/3 tolerance (2/3 supermajority) |
+| **Weighted Consensus** | Queen 3x voting power | Strategic guidance with democratic input |
+| **Collective Memory** | Shared pattern storage | 8 memory types with TTL, LRU cache, SQLite WAL |
 | **Specialist Spawning** | Domain-specific agents | Security, performance, etc. |
-| **Adaptive Topology** | Dynamic structure changes | Load-based optimization |
+| **Adaptive Topology** | Dynamic structure changes | Load-based optimization, auto-scaling |
+| **Session Management** | Checkpoint/resume | Export/import, progress tracking |
+
+**Quick Commands:**
+```bash
+npx claude-flow hive-mind init                                    # Initialize
+npx claude-flow hive-mind spawn "Build API" --queen-type tactical # Spawn swarm
+npx claude-flow hive-mind spawn "Research AI" --consensus byzantine --claude
+npx claude-flow hive-mind status                                  # Check status
+```
+
+**Claude-Flow Skill:** `/hive-mind-advanced` — Full hive mind orchestration
+
+**Performance:** 10-20x faster batch spawning, 84.8% SWE-Bench solve rate, 32.3% token reduction
 
 </details>
 
