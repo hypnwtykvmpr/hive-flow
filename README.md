@@ -906,9 +906,13 @@ Shell-based daemons for monitoring (Linux/macOS only):
 | Check V3 progress | `npx claude-flow@v3alpha progress --detailed` |
 | Sync progress metrics | `npx claude-flow@v3alpha progress sync` |
 
+</details>
+
 ---
 
-## Self-Learning Hooks Commands (27 Hooks)
+<details>
+<summary><h2>🪝 Self-Learning Hooks Commands (27 Hooks) (Click to expand)</h2></summary>
+
 
 ### Core Tool Lifecycle Hooks
 ```bash
