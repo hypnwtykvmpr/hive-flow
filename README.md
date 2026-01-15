@@ -1072,7 +1072,10 @@ npx claude-flow@v3alpha worker status
 | `rc` | 1.0.0-rc.1 | Release candidate |
 | `latest` | 1.0.0 | Stable production |
 
-### Integration (`@claude-flow/integration`)
+</details>
+
+<details>
+<summary>🔗 <strong>Integration</strong> — agentic-flow bridge with runtime auto-detection</summary>
 
 | Component | Description | Performance |
 |-----------|-------------|-------------|
