@@ -3026,19 +3026,138 @@ export CLAUDE_FLOW_MEMORY_PATH="./data"
 <details>
 <summary><h2>⚙️ Environment Variables </h2></summary>
 
+### Core Configuration
 
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `CLAUDE_FLOW_MODE` | Operation mode (`development`, `production`, `integration`) | `development` |
+| `CLAUDE_FLOW_ENV` | Environment name for test/dev isolation | - |
+| `CLAUDE_FLOW_DATA_DIR` | Root data directory | `./data` |
 | `CLAUDE_FLOW_MEMORY_PATH` | Directory for persistent memory storage | `./data` |
+| `CLAUDE_FLOW_MEMORY_TYPE` | Memory backend type (`json`, `sqlite`, `agentdb`, `hybrid`) | `hybrid` |
 | `CLAUDE_FLOW_SECURITY_MODE` | Security level (`strict`, `standard`, `permissive`) | `standard` |
 | `CLAUDE_FLOW_LOG_LEVEL` | Logging verbosity (`debug`, `info`, `warn`, `error`) | `info` |
-| `CLAUDE_FLOW_MAX_AGENTS` | Default concurrent agent limit (increase for more parallelism) | `15` |
-| `CLAUDE_FLOW_TOPOLOGY` | Default swarm topology | `hierarchical` |
-| `CLAUDE_FLOW_HNSW_M` | HNSW index M parameter (connectivity) | `16` |
-| `CLAUDE_FLOW_HNSW_EF` | HNSW search ef parameter (accuracy) | `200` |
+| `CLAUDE_FLOW_CONFIG` | Path to configuration file | `./claude-flow.config.json` |
+| `NODE_ENV` | Node.js environment (`development`, `production`, `test`) | `development` |
+
+### Swarm & Agents
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `CLAUDE_FLOW_MAX_AGENTS` | Default concurrent agent limit | `15` |
+| `CLAUDE_FLOW_TOPOLOGY` | Default swarm topology (`hierarchical`, `mesh`, `ring`, `star`) | `hierarchical` |
+| `CLAUDE_FLOW_HEADLESS` | Run in headless mode (no interactive prompts) | `false` |
+| `CLAUDE_CODE_HEADLESS` | Claude Code headless mode compatibility | `false` |
+
+### MCP Server
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `CLAUDE_FLOW_MCP_PORT` | MCP server port | `3000` |
+| `CLAUDE_FLOW_MCP_HOST` | MCP server host | `localhost` |
+| `CLAUDE_FLOW_MCP_TRANSPORT` | Transport type (`stdio`, `http`, `websocket`) | `stdio` |
+
+### Vector Search (HNSW)
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `CLAUDE_FLOW_HNSW_M` | HNSW index M parameter (connectivity, higher = more accurate) | `16` |
+| `CLAUDE_FLOW_HNSW_EF` | HNSW search ef parameter (accuracy, higher = slower) | `200` |
 | `CLAUDE_FLOW_EMBEDDING_DIM` | Vector embedding dimensions | `384` |
-| `ANTHROPIC_API_KEY` | Anthropic API key for Claude integration | - |
+| `SQLJS_WASM_PATH` | Custom path to sql.js WASM binary | - |
+
+### AI Provider API Keys
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `ANTHROPIC_API_KEY` | Anthropic API key for Claude models | Yes (Claude) |
+| `OPENAI_API_KEY` | OpenAI API key for GPT models | Optional |
+| `GOOGLE_GEMINI_API_KEY` | Google Gemini API key | Optional |
+| `OPENROUTER_API_KEY` | OpenRouter API key (multi-provider) | Optional |
+| `OLLAMA_URL` | Ollama server URL for local models | `http://localhost:11434` |
+
+### IPFS/Decentralized Storage
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `WEB3_STORAGE_TOKEN` | Web3.Storage API token | Optional |
+| `W3_TOKEN` | Alternative Web3.Storage token | Optional |
+| `IPFS_TOKEN` | Generic IPFS API token | Optional |
+| `PINATA_API_KEY` | Pinata IPFS API key | Optional |
+| `PINATA_API_SECRET` | Pinata IPFS API secret | Optional |
+| `IPFS_API_URL` | Local IPFS node API URL | `http://localhost:5001` |
+| `IPFS_GATEWAY_URL` | IPFS gateway URL | `https://ipfs.io` |
+
+### Google Cloud Storage
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `GCS_BUCKET` | Google Cloud Storage bucket name | Optional |
+| `GOOGLE_CLOUD_BUCKET` | Alternative GCS bucket variable | Optional |
+| `GCS_PROJECT_ID` | GCS project ID | Optional |
+| `GOOGLE_CLOUD_PROJECT` | Alternative project ID variable | Optional |
+| `GOOGLE_APPLICATION_CREDENTIALS` | Path to GCS service account JSON | Optional |
+| `GCS_PREFIX` | Prefix for stored files | `claude-flow-patterns` |
+
+### Auto-Update System
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `CLAUDE_FLOW_AUTO_UPDATE` | Enable/disable auto-updates | `true` |
+| `CLAUDE_FLOW_FORCE_UPDATE` | Force update check | `false` |
+| `CI` | CI environment detection (disables updates) | - |
+| `CONTINUOUS_INTEGRATION` | Alternative CI detection | - |
+
+### Security
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `GITHUB_TOKEN` | GitHub API token for repository operations | Optional |
+| `JWT_SECRET` | JWT secret for authentication | Production |
+| `HMAC_SECRET` | HMAC secret for request signing | Production |
+| `CLAUDE_FLOW_TOKEN` | Internal authentication token | Optional |
+
+### Output Formatting
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `NO_COLOR` | Disable colored output | - |
+| `FORCE_COLOR` | Force colored output | - |
+| `DEBUG` | Enable debug output | `false` |
+| `TMPDIR` | Temporary directory path | `/tmp` |
+
+### Example `.env` File
+
+```bash
+# Core
+CLAUDE_FLOW_MODE=development
+CLAUDE_FLOW_LOG_LEVEL=info
+CLAUDE_FLOW_MAX_AGENTS=15
+
+# AI Providers
+ANTHROPIC_API_KEY=sk-ant-api03-...
+OPENAI_API_KEY=sk-...
+
+# MCP Server
+CLAUDE_FLOW_MCP_PORT=3000
+CLAUDE_FLOW_MCP_TRANSPORT=stdio
+
+# Memory
+CLAUDE_FLOW_MEMORY_TYPE=hybrid
+CLAUDE_FLOW_MEMORY_PATH=./data
+
+# Vector Search
+CLAUDE_FLOW_HNSW_M=16
+CLAUDE_FLOW_HNSW_EF=200
+
+# Optional: IPFS Storage
+# PINATA_API_KEY=...
+# PINATA_API_SECRET=...
+
+# Optional: Google Cloud
+# GCS_BUCKET=my-bucket
+# GOOGLE_APPLICATION_CREDENTIALS=./service-account.json
+```
 
 </details>
 
