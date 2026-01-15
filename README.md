@@ -218,6 +218,11 @@ Claude-Flow v3 introduces **self-learning neural capabilities** that no other ag
 | **Multi-Provider LLM** | ✅ 6 with failover | 2 | 3 | 2 | 1 |
 | **MCP Integration** | ✅ Native | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Swarm Topologies** | ✅ 4 (mesh, hierarchical, etc.) | 1 | 1 | 1 | 1 |
+| **Skills System** | ✅ 42+ pre-built skills | ⛔ | ⛔ | ⛔ | Limited |
+| **Stream Pipelines** | ✅ Multi-stage JSON chains | ⛔ | Via code | ⛔ | ⛔ |
+| **Cloud Platform** | ✅ Flow Nexus (sandboxes, swarms) | ⛔ | ⛔ | ⛔ | ⛔ |
+| **Auto-Updates** | ✅ With rollback support | ⛔ | ⛔ | ⛔ | ⛔ |
+| **Pair Programming** | ✅ Driver/Navigator modes | ⛔ | ⛔ | ⛔ | ⛔ |
 
 <details>
 <summary>🚀 <strong>Key Differentiators</strong> — Self-learning, memory optimization, fault tolerance</summary>
