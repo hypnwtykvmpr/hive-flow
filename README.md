@@ -1105,9 +1105,13 @@ npx @claude-flow/security@latest audit --platform linux
 export CLAUDE_FLOW_MEMORY_PATH="./data"
 ```
 
+</details>
+
 ---
 
-## Environment Variables
+<details>
+<summary><h2>⚙️ Environment Variables (Click to expand)</h2></summary>
+
 
 | Variable | Description | Default |
 |----------|-------------|---------|
