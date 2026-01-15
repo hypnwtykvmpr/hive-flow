@@ -1202,7 +1202,10 @@ claude-flow embeddings search -q "authentication patterns"
 | **Specialist Spawning** | Domain-specific agents | Security, performance, etc. |
 | **Adaptive Topology** | Dynamic structure changes | Load-based optimization |
 
-### agentic-flow@alpha Integration
+</details>
+
+<details>
+<summary>🔌 <strong>agentic-flow Integration</strong> — ADR-001 compliant core foundation</summary>
 
 | Feature | Description | Benefit |
 |---------|-------------|---------|
