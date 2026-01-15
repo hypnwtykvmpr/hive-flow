@@ -51,7 +51,7 @@ User → MCP Server → Router → Swarm → Agents → Memory → LLM Providers
 | Agents | 54+ types | Specialized workers (coder, tester, reviewer...) |
 | Providers | Anthropic, OpenAI, Google, Ollama | AI models that power reasoning |
 
-**Swarm Coordination** — How agents work together
+🐝 **Swarm Coordination** — How agents work together
 | Layer | Components | What It Does |
 |-------|------------|--------------|
 | Coordination | Queen, Swarm, Consensus | Manages agent teams (Raft, Byzantine, Gossip) |
