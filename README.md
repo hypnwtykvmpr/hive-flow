@@ -769,8 +769,12 @@ echo "ANTHROPIC_API_KEY=sk-ant-..." >> .env
 <details>
 <summary><h2>📦 Features — 54+ Agents, Swarm Topologies, MCP Tools & Security</h2></summary>
 
+Comprehensive feature set for enterprise-grade AI agent orchestration.
 
-### Agent Ecosystem
+<details open>
+<summary>🤖 <strong>Agent Ecosystem</strong> — 54+ specialized agents across 8 categories</summary>
+
+Pre-built agents for every development task, from coding to security audits.
 
 | Category | Agent Count | Key Agents | Purpose |
 |----------|-------------|------------|---------|
@@ -783,7 +787,12 @@ echo "ANTHROPIC_API_KEY=sk-ant-..." >> .env
 | **SPARC Methodology** | 6 | sparc-coord, specification, pseudocode, architecture | Structured development |
 | **Specialized Dev** | 8 | backend-dev, mobile-dev, ml-developer, cicd-engineer | Domain expertise |
 
-### Swarm Topologies
+</details>
+
+<details>
+<summary>🐝 <strong>Swarm Topologies</strong> — 6 coordination patterns for any workload</summary>
+
+Choose the right topology for your task complexity and team size.
 
 | Topology | Recommended Agents | Best For | Execution Time | Memory/Agent |
 |----------|-------------------|----------|----------------|--------------|
@@ -794,7 +803,12 @@ echo "ANTHROPIC_API_KEY=sk-ant-..." >> .env
 | **Hybrid (Hierarchical-Mesh)** | 7+ | Complex multi-domain tasks | 0.18s | 320 MB |
 | **Adaptive** | 2+ | Dynamic workloads, auto-scaling | Variable | Dynamic |
 
-### MCP Tools & Integration
+</details>
+
+<details>
+<summary>🔧 <strong>MCP Tools & Integration</strong> — 31+ tools across 7 categories</summary>
+
+Full MCP server with tools for coordination, monitoring, memory, and GitHub integration.
 
 | Category | Tools | Description |
 |----------|-------|-------------|
@@ -803,10 +817,15 @@ echo "ANTHROPIC_API_KEY=sk-ant-..." >> .env
 | **Memory & Neural** | `memory_usage`, `neural_status`, `neural_train`, `neural_patterns` | Memory operations and learning |
 | **GitHub** | `github_swarm`, `repo_analyze`, `pr_enhance`, `issue_triage`, `code_review` | Repository integration |
 | **Workers** | `worker/run`, `worker/status`, `worker/alerts`, `worker/history` | Background task management |
-| **Hooks** | `hooks/pre-*`, `hooks/post-*`, `hooks/route`, `hooks/session-*`, `hooks/intelligence/*`, `hooks/worker/*` | 31 lifecycle hooks |
+| **Hooks** | `hooks/pre-*`, `hooks/post-*`, `hooks/route`, `hooks/session-*`, `hooks/intelligence/*` | 31 lifecycle hooks |
 | **Progress** | `progress/check`, `progress/sync`, `progress/summary`, `progress/watch` | V3 implementation tracking |
 
-### Security Features
+</details>
+
+<details>
+<summary>🔒 <strong>Security Features</strong> — CVE-hardened with 7 protection layers</summary>
+
+Enterprise-grade security with input validation, sandboxing, and active CVE monitoring.
 
 | Feature | Protection | Implementation |
 |---------|------------|----------------|
@@ -818,7 +837,12 @@ echo "ANTHROPIC_API_KEY=sk-ant-..." >> .env
 | **Information Disclosure** | Data leakage | Error message sanitization |
 | **CVE Monitoring** | Known vulnerabilities | Active scanning and patching |
 
-### Advanced Capabilities
+</details>
+
+<details>
+<summary>⚡ <strong>Advanced Capabilities</strong> — Self-healing, auto-scaling, event sourcing</summary>
+
+Production-ready features for high availability and continuous learning.
 
 | Feature | Description | Benefit |
 |---------|-------------|---------|
@@ -830,61 +854,49 @@ echo "ANTHROPIC_API_KEY=sk-ant-..." >> .env
 | **Self-Healing Workflows** | Automatic error recovery and task retry | High availability |
 | **Cross-Session Memory** | Persistent pattern storage across sessions | Continuous learning |
 | **Event Sourcing** | Complete audit trail with replay capability | Debugging and compliance |
-| **Background Workers** | 12 auto-triggered workers for analysis and optimization | Automated maintenance |
-| **GitHub Integration** | PR management, issue triage, code review automation | Repository workflow |
 
-### Plugin System (`@claude-flow/plugins`)
+</details>
+
+<details>
+<summary>🧩 <strong>Plugin System</strong> — Extend with custom tools, hooks, workers</summary>
+
+Build custom plugins with the fluent builder API. Create MCP tools, hooks, workers, and providers.
 
 | Component | Description | Key Features |
 |-----------|-------------|--------------|
 | **PluginBuilder** | Fluent builder for creating plugins | MCP tools, hooks, workers, providers |
 | **MCPToolBuilder** | Build MCP tools with typed parameters | String, number, boolean, enum params |
-| **HookBuilder** | Build hooks with conditions and transformers | Priorities, conditional execution, data transformation |
-| **WorkerPool** | Managed worker pool with auto-scaling | Min/max workers, task queuing, graceful shutdown |
+| **HookBuilder** | Build hooks with conditions and transformers | Priorities, conditional execution |
+| **WorkerPool** | Managed worker pool with auto-scaling | Min/max workers, task queuing |
 | **ProviderRegistry** | LLM provider management with fallback | Cost optimization, automatic failover |
-| **AgenticFlowBridge** | agentic-flow@alpha integration | Swarm coordination, agent spawning |
 | **AgentDBBridge** | Vector storage with HNSW indexing | 150x faster search, batch operations |
-| **Security Utilities** | Input validation and protection | Path traversal, injection, rate limiting |
 
-### Plugin Hook Events
+**Plugin Performance:** Load <20ms, Hook execution <0.5ms, Worker spawn <50ms
+
+</details>
+
+<details>
+<summary>🪝 <strong>Plugin Hook Events</strong> — 25+ lifecycle hooks for full control</summary>
+
+Intercept and extend any operation with pre/post hooks.
 
 | Category | Events | Description |
 |----------|--------|-------------|
 | **Session** | `session:start`, `session:end` | Session lifecycle management |
-| **Agent** | `agent:pre-spawn`, `agent:post-spawn`, `agent:pre-terminate`, `agent:post-terminate` | Agent lifecycle hooks |
+| **Agent** | `agent:pre-spawn`, `agent:post-spawn`, `agent:pre-terminate` | Agent lifecycle hooks |
 | **Task** | `task:pre-execute`, `task:post-complete`, `task:error` | Task execution hooks |
 | **Tool** | `tool:pre-call`, `tool:post-call` | MCP tool invocation hooks |
-| **Memory** | `memory:pre-store`, `memory:post-store`, `memory:pre-retrieve`, `memory:post-retrieve` | Memory operation hooks |
+| **Memory** | `memory:pre-store`, `memory:post-store`, `memory:pre-retrieve` | Memory operation hooks |
 | **Swarm** | `swarm:initialized`, `swarm:shutdown`, `swarm:consensus-reached` | Swarm coordination hooks |
-| **File** | `file:pre-read`, `file:post-read`, `file:pre-write`, `file:post-write` | File operation hooks |
-| **Command** | `command:pre-execute`, `command:post-execute` | Shell command hooks |
+| **File** | `file:pre-read`, `file:post-read`, `file:pre-write` | File operation hooks |
 | **Learning** | `learning:pattern-learned`, `learning:pattern-applied` | Pattern learning hooks |
 
-### Plugin Worker Types
+</details>
 
-| Worker Type | Purpose | Capabilities |
-|-------------|---------|--------------|
-| `coder` | Code implementation | Code generation, refactoring |
-| `reviewer` | Code review | Quality analysis, suggestions |
-| `tester` | Test generation/execution | Unit tests, integration tests |
-| `researcher` | Information gathering | Web search, documentation |
-| `planner` | Task planning | Decomposition, scheduling |
-| `coordinator` | Multi-agent coordination | Orchestration, consensus |
-| `security` | Security analysis | Vulnerability scanning, audit |
-| `performance` | Performance optimization | Profiling, benchmarking |
-| `specialized` | Custom capabilities | Domain-specific tasks |
-| `long-running` | Background tasks | Async processing, polling |
+<details>
+<summary>🔌 <strong>RuVector WASM Plugins</strong> — High-performance WebAssembly extensions</summary>
 
-### Plugin Performance
-
-| Metric | Target | Achieved |
-|--------|--------|----------|
-| Plugin load time | <50ms | ~20ms |
-| Hook execution | <1ms | ~0.5ms |
-| Worker spawn | <100ms | ~50ms |
-| Vector search (10K) | <10ms | ~5ms |
-
-### RuVector WASM Plugins
+Pre-built WASM plugins for semantic search, intent routing, and pattern storage.
 
 | Plugin | Description | Performance |
 |--------|-------------|-------------|
@@ -895,38 +907,35 @@ echo "ANTHROPIC_API_KEY=sk-ant-..." >> .env
 | **ReasoningBankPlugin** | Vector-backed pattern storage with HNSW | 150x faster search |
 | **AgentConfigGeneratorPlugin** | Generates optimized agent configurations | From pretrain data |
 
-### Background Workers (12 Auto-Triggered)
+</details>
 
-Workers run automatically in the background based on context, or can be dispatched manually via MCP tools.
+<details>
+<summary>⚙️ <strong>Background Workers</strong> — 12 auto-triggered workers for automation</summary>
+
+Workers run automatically based on context, or dispatch manually via MCP tools.
 
 | Worker | Trigger | Purpose | Auto-Triggers On |
 |--------|---------|---------|------------------|
-| **UltraLearn** | `ultralearn` | Deep knowledge acquisition from codebase | New project, major refactors |
-| **Optimize** | `optimize` | Performance optimization suggestions | Slow operations detected |
-| **Consolidate** | `consolidate` | Memory pattern consolidation | Session end, memory threshold |
-| **Predict** | `predict` | Predictive resource preloading | Usage patterns detected |
+| **UltraLearn** | `ultralearn` | Deep knowledge acquisition | New project, major refactors |
+| **Optimize** | `optimize` | Performance suggestions | Slow operations detected |
+| **Consolidate** | `consolidate` | Memory consolidation | Session end, memory threshold |
 | **Audit** | `audit` | Security vulnerability analysis | Security-related file changes |
 | **Map** | `map` | Codebase structure mapping | New directories, large changes |
-| **Preload** | `preload` | Resource and dependency preloading | Project initialization |
-| **DeepDive** | `deepdive` | Deep code analysis and understanding | Complex file edits |
-| **Document** | `document` | Auto-documentation generation | New functions/classes created |
-| **Refactor** | `refactor` | Refactoring opportunity detection | Code smell patterns |
+| **DeepDive** | `deepdive` | Deep code analysis | Complex file edits |
+| **Document** | `document` | Auto-documentation | New functions/classes created |
+| **Refactor** | `refactor` | Refactoring detection | Code smell patterns |
 | **Benchmark** | `benchmark` | Performance benchmarking | Performance-critical changes |
-| **TestGaps** | `testgaps` | Test coverage gap analysis | Code changes without tests |
+| **TestGaps** | `testgaps` | Test coverage analysis | Code changes without tests |
 
-**Worker Commands:**
 ```bash
-# Dispatch a worker manually
 npx claude-flow@v3alpha worker dispatch --trigger audit --context "./src"
-
-# Check worker status
 npx claude-flow@v3alpha worker status
-
-# View completed results
-npx claude-flow@v3alpha worker results --limit 10
 ```
 
-### LLM Providers (`@claude-flow/providers`)
+</details>
+
+<details>
+<summary>☁️ <strong>LLM Providers</strong> — 6 providers with automatic failover</summary>
 
 | Provider | Models (2025-2026) | Features | Cost |
 |----------|--------|----------|------|
