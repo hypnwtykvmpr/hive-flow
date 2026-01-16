@@ -166,6 +166,14 @@ const spawnCommand: Command = {
       default: 1
     },
     {
+      name: 'role',
+      short: 'r',
+      description: 'Worker role (worker, specialist, scout)',
+      type: 'string',
+      choices: ['worker', 'specialist', 'scout'],
+      default: 'worker'
+    },
+    {
       name: 'type',
       short: 't',
       description: 'Agent type',
@@ -173,51 +181,52 @@ const spawnCommand: Command = {
       default: 'worker'
     },
     {
-      name: 'capabilities',
-      short: 'c',
-      description: 'Comma-separated capabilities',
-      type: 'string'
-    },
-    {
-      name: 'priority',
+      name: 'prefix',
       short: 'p',
-      description: 'Agent priority (low, normal, high)',
+      description: 'Prefix for worker IDs',
       type: 'string',
-      default: 'normal'
+      default: 'hive-worker'
     }
   ],
   examples: [
     { command: 'claude-flow hive-mind spawn -n 5', description: 'Spawn 5 workers' },
-    { command: 'claude-flow hive-mind spawn -t coder -c "coding,testing"', description: 'Spawn coder with capabilities' }
+    { command: 'claude-flow hive-mind spawn -n 3 -r specialist', description: 'Spawn 3 specialists' },
+    { command: 'claude-flow hive-mind spawn -t coder -p my-coder', description: 'Spawn coder with custom prefix' }
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
-    const count = ctx.flags.count as number;
-    const type = ctx.flags.type as string;
-    const capabilities = ctx.flags.capabilities ? (ctx.flags.capabilities as string).split(',') : [];
-    const priority = ctx.flags.priority as string;
+    // Parse count with fallback to default
+    const count = (ctx.flags.count as number) || 1;
+    const role = (ctx.flags.role as string) || 'worker';
+    const agentType = (ctx.flags.type as string) || 'worker';
+    const prefix = (ctx.flags.prefix as string) || 'hive-worker';
 
-    output.printInfo(`Spawning ${count} ${type} agent(s)...`);
+    output.printInfo(`Spawning ${count} ${role} agent(s)...`);
 
     try {
       const result = await callMCPTool<{
-        spawned: Array<{
-          id: string;
-          type: string;
-          status: string;
-          assignedQueen: string;
+        success: boolean;
+        spawned: number;
+        workers: Array<{
+          agentId: string;
+          role: string;
+          joinedAt: string;
         }>;
-        total: number;
-        hiveStatus: {
-          activeAgents: number;
-          maxAgents: number;
-          queenLoad: string;
-        };
+        totalWorkers: number;
+        hiveStatus: string;
+        message: string;
+        error?: string;
       }>('hive-mind/spawn', {
         count,
-        agentType: type,
-        capabilities,
-        priority,
+        role,
+        agentType,
+        prefix,
       });
+
+      // Check for errors from MCP tool
+      if (!result.success) {
+        output.printError(result.error || 'Failed to spawn workers');
+        return { success: false, exitCode: 1 };
+      }
 
       if (ctx.flags.format === 'json') {
         output.printJson(result);
@@ -225,19 +234,28 @@ const spawnCommand: Command = {
       }
 
       output.writeln();
+
+      // Transform workers array to display format
+      const displayData = (result.workers || []).map(w => ({
+        id: w.agentId,
+        role: w.role,
+        status: 'idle',
+        joinedAt: new Date(w.joinedAt).toLocaleTimeString()
+      }));
+
       output.printTable({
         columns: [
-          { key: 'id', header: 'Agent ID', width: 20 },
-          { key: 'type', header: 'Type', width: 12 },
-          { key: 'status', header: 'Status', width: 12, format: formatAgentStatus },
-          { key: 'assignedQueen', header: 'Queen', width: 15 }
+          { key: 'id', header: 'Agent ID', width: 30 },
+          { key: 'role', header: 'Role', width: 12 },
+          { key: 'status', header: 'Status', width: 10, format: formatAgentStatus },
+          { key: 'joinedAt', header: 'Joined', width: 12 }
         ],
-        data: result.spawned
+        data: displayData
       });
 
       output.writeln();
-      output.printSuccess(`Spawned ${result.spawned.length} agent(s)`);
-      output.writeln(output.dim(`  Hive: ${result.hiveStatus.activeAgents}/${result.hiveStatus.maxAgents} agents, Queen load: ${result.hiveStatus.queenLoad}`));
+      output.printSuccess(`Spawned ${result.spawned} agent(s)`);
+      output.writeln(output.dim(`  Total workers in hive: ${result.totalWorkers}`));
 
       return { success: true, data: result };
     } catch (error) {
