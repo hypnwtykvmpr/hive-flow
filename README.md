@@ -906,6 +906,32 @@ All configurations support these environment variables:
 | `OPENAI_API_KEY` | OpenAI API key | Optional (for GPT models) |
 | `GOOGLE_API_KEY` | Google AI API key | Optional (for Gemini) |
 | `CLAUDE_FLOW_LOG_LEVEL` | Logging level (debug, info, warn, error) | Optional |
+| `CLAUDE_FLOW_TOOL_GROUPS` | MCP tool groups to enable (comma-separated) | Optional |
+| `CLAUDE_FLOW_TOOL_MODE` | Preset tool mode (develop, pr-review, devops, etc.) | Optional |
+
+#### MCP Tool Groups
+
+Control which MCP tools are loaded to reduce latency and token usage:
+
+```bash
+# Enable specific tool groups
+export CLAUDE_FLOW_TOOL_GROUPS=implement,test,fix,memory
+
+# Or use a preset mode
+export CLAUDE_FLOW_TOOL_MODE=develop
+```
+
+**Available Groups:** `create`, `issue`, `branch`, `implement`, `test`, `fix`, `optimize`, `monitor`, `security`, `memory`, `all`, `minimal`
+
+**Preset Modes:**
+| Mode | Groups | Use Case |
+|------|--------|----------|
+| `develop` | create, implement, test, fix, memory | Active development |
+| `pr-review` | branch, fix, monitor, security | Code review |
+| `devops` | create, monitor, optimize, security | Infrastructure |
+| `triage` | issue, monitor, fix | Bug triage |
+
+**Precedence:** CLI args (`--tools=X`) > Environment vars > Config file > Default (all)
 
 ### Security Best Practices
 
