@@ -204,6 +204,7 @@ export const commands: Command[] = [
   neuralCommand,
   performanceCommand,
   securityCommand,
+  hiveMindCommand,
 ];
 
 /**
