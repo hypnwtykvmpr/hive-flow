@@ -135,6 +135,7 @@ loadedCommands.set('embeddings', embeddingsCommand);
 loadedCommands.set('neural', neuralCommand);
 loadedCommands.set('performance', performanceCommand);
 loadedCommands.set('security', securityCommand);
+loadedCommands.set('hive-mind', hiveMindCommand);
 
 // =============================================================================
 // Exports (maintain backwards compatibility)
