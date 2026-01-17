@@ -128,6 +128,8 @@ export default ruvectorCommand;
 
 // Re-export subcommands for direct access
 export { initCommand } from './init.js';
+export { setupCommand } from './setup.js';
+export { importCommand } from './import.js';
 export { migrateCommand } from './migrate.js';
 export { statusCommand } from './status.js';
 export { benchmarkCommand } from './benchmark.js';
