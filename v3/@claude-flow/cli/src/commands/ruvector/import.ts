@@ -238,7 +238,7 @@ export const importCommand: Command = {
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         output.printError(`Failed to parse JSON: ${errorMessage}`);
-        return { success: false, error: errorMessage };
+        return { success: false, message: errorMessage };
       }
     }
 
@@ -319,7 +319,7 @@ export const importCommand: Command = {
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         output.printError(`Failed to write SQL file: ${errorMessage}`);
-        return { success: false, error: errorMessage };
+        return { success: false, message: errorMessage };
       }
     } else {
       // Execute directly via docker exec
@@ -368,7 +368,7 @@ export const importCommand: Command = {
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         output.printError(`Failed to create temp file: ${errorMessage}`);
-        return { success: false, error: errorMessage };
+        return { success: false, message: errorMessage };
       }
     }
 
