@@ -59,6 +59,8 @@ const commandLoaders: Record<string, CommandLoader> = {
   issues: () => import('./issues.js'),
   // Auto-update System (ADR-025)
   update: () => import('./update.js'),
+  // RuVector PostgreSQL Bridge
+  ruvector: () => import('./ruvector/index.js'),
 };
 
 // Cache for loaded commands
@@ -116,6 +118,7 @@ import { embeddingsCommand } from './embeddings.js';
 import { neuralCommand } from './neural.js';
 import { performanceCommand } from './performance.js';
 import { securityCommand } from './security.js';
+import { ruvectorCommand } from './ruvector/index.js';
 import { hiveMindCommand } from './hive-mind.js';
 
 // Pre-populate cache with core commands
@@ -135,6 +138,7 @@ loadedCommands.set('embeddings', embeddingsCommand);
 loadedCommands.set('neural', neuralCommand);
 loadedCommands.set('performance', performanceCommand);
 loadedCommands.set('security', securityCommand);
+loadedCommands.set('ruvector', ruvectorCommand);
 loadedCommands.set('hive-mind', hiveMindCommand);
 
 // =============================================================================
@@ -158,6 +162,7 @@ export { embeddingsCommand } from './embeddings.js';
 export { neuralCommand } from './neural.js';
 export { performanceCommand } from './performance.js';
 export { securityCommand } from './security.js';
+export { ruvectorCommand } from './ruvector/index.js';
 export { hiveMindCommand } from './hive-mind.js';
 
 // Lazy-loaded command re-exports (for backwards compatibility, but async-only)
@@ -181,6 +186,7 @@ export async function getAnalyzeCommand() { return loadCommand('analyze'); }
 export async function getRouteCommand() { return loadCommand('route'); }
 export async function getProgressCommand() { return loadCommand('progress'); }
 export async function getIssuesCommand() { return loadCommand('issues'); }
+export async function getRuvectorCommand() { return loadCommand('ruvector'); }
 
 /**
  * Core commands loaded synchronously (available immediately)
@@ -204,6 +210,7 @@ export const commands: Command[] = [
   neuralCommand,
   performanceCommand,
   securityCommand,
+  ruvectorCommand,
   hiveMindCommand,
 ];
 
