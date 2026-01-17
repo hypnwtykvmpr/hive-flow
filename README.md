@@ -3984,17 +3984,33 @@ const similarity = attention.attention(queries, keys, values);
 ### CLI Commands
 
 ```bash
-# Check ruvector installation
-npx ruvector status
+# RuVector PostgreSQL Setup (generates Docker files + SQL)
+npx claude-flow ruvector setup                    # Output to ./ruvector-postgres
+npx claude-flow ruvector setup --output ./mydir   # Custom directory
+npx claude-flow ruvector setup --print            # Preview files
 
-# Benchmark HNSW performance
+# Import from sql.js/JSON to PostgreSQL
+npx claude-flow ruvector import --input data.json              # Direct import
+npx claude-flow ruvector import --input data.json --output sql # Dry-run (generate SQL)
+
+# Other RuVector commands
+npx claude-flow ruvector status --verbose         # Check connection
+npx claude-flow ruvector benchmark --vectors 10000 # Performance test
+npx claude-flow ruvector optimize --analyze       # Optimization suggestions
+npx claude-flow ruvector backup --output backup.sql # Backup data
+
+# Native ruvector CLI
+npx ruvector status                               # Check installation
 npx ruvector benchmark --vectors 10000 --dimensions 384
+```
 
-# Initialize Postgres backend
-npx ruvector postgres init --url postgresql://localhost:5432/ruvector
-
-# Migrate patterns to centralized storage
-npx ruvector postgres migrate --from ./data/patterns
+**Generated Setup Files:**
+```
+ruvector-postgres/
+├── docker-compose.yml    # Docker services (PostgreSQL + pgAdmin)
+├── README.md             # Quick start guide
+└── scripts/
+    └── init-db.sql       # Database initialization (tables, indexes, functions)
 ```
 
 </details>
