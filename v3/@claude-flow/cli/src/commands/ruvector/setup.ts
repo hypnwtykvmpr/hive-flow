@@ -691,9 +691,9 @@ export const setupCommand: Command = {
     { command: 'claude-flow ruvector setup --force', description: 'Overwrite existing files' },
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
-    const outputDir = ctx.options.output as string;
-    const printOnly = ctx.options.print as boolean;
-    const force = ctx.options.force as boolean;
+    const outputDir = (ctx.flags.output as string) || './ruvector-postgres';
+    const printOnly = ctx.flags.print as boolean;
+    const force = ctx.flags.force as boolean;
 
     output.writeln();
     output.writeln(output.bold('RuVector PostgreSQL Setup'));
