@@ -775,7 +775,7 @@ export const setupCommand: Command = {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       output.printError(`Failed to create setup files: ${errorMessage}`);
-      return { success: false, error: errorMessage };
+      return { success: false, message: errorMessage };
     }
   },
 };
