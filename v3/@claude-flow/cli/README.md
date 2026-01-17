@@ -253,6 +253,7 @@ Smart routing skips expensive LLM calls when possible. Simple edits use WASM (fr
 | **Hive Mind** | ⛔ Not available | 🐝 Queen-led swarms with collective intelligence, 3 queen types, 8 worker types |
 | **Consensus** | ⛔ No multi-agent decisions | Byzantine fault-tolerant voting (f < n/3), weighted, majority |
 | **Memory** | Session-only, no persistence | HNSW vector memory with 150x-12,500x faster retrieval |
+| **Vector Database** | ⛔ No native support | 🐘 RuVector PostgreSQL with 77+ SQL functions, ~61µs search, 16,400 QPS |
 | **Collective Memory** | ⛔ No shared knowledge | Shared knowledge base with LRU cache, SQLite persistence, 8 memory types |
 | **Learning** | Static behavior, no adaptation | SONA self-learning with <0.05ms adaptation, improves over time |
 | **Task Routing** | You decide which agent to use | Intelligent routing based on learned patterns (89% accuracy) |
@@ -340,10 +341,12 @@ Claude-Flow v3 introduces **self-learning neural capabilities** that no other ag
 | Feature | Claude Flow v3 | CrewAI | LangGraph | AutoGen | Manus |
 |---------|----------------|--------|-----------|---------|-------|
 | **Vector Memory** | ✅ HNSW (150x faster) | ⛔ | Via plugins | ⛔ | ⛔ |
-| **Hyperbolic Embeddings** | ✅ Poincaré ball | ⛔ | ⛔ | ⛔ | ⛔ |
+| **PostgreSQL Vector DB** | ✅ RuVector (77+ SQL functions, ~61µs) | ⛔ | pgvector only | ⛔ | ⛔ |
+| **Hyperbolic Embeddings** | ✅ Poincaré ball (native + SQL) | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Quantization** | ✅ Int8 (3.92x savings) | ⛔ | ⛔ | ⛔ | ⛔ |
-| **Persistent Memory** | ✅ SQLite + AgentDB | ⛔ | ⛔ | ⛔ | Limited |
+| **Persistent Memory** | ✅ SQLite + AgentDB + PostgreSQL | ⛔ | ⛔ | ⛔ | Limited |
 | **Cross-Session Context** | ✅ Full restoration | ⛔ | ⛔ | ⛔ | ⛔ |
+| **GNN/Attention in SQL** | ✅ 39 attention mechanisms | ⛔ | ⛔ | ⛔ | ⛔ |
 
 #### 🐝 Swarm & Coordination
 
@@ -379,7 +382,7 @@ Claude-Flow v3 introduces **self-learning neural capabilities** that no other ag
 <details>
 <summary>🚀 <strong>Key Differentiators</strong> — Self-learning, memory optimization, fault tolerance</summary>
 
-What makes Claude-Flow different from other agent frameworks? These 9 capabilities work together to create a system that learns from experience, runs efficiently on any hardware, and keeps working even when things go wrong.
+What makes Claude-Flow different from other agent frameworks? These 10 capabilities work together to create a system that learns from experience, runs efficiently on any hardware, and keeps working even when things go wrong.
 
 | | Feature | What It Does | Technical Details |
 |---|---------|--------------|-------------------|
@@ -392,6 +395,7 @@ What makes Claude-Flow different from other agent frameworks? These 9 capabiliti
 | 🗜️ | **Int8 Quantization** | Converts 32-bit weights to 8-bit with minimal accuracy loss | 3.92x memory reduction with calibrated 8-bit integers |
 | 🤝 | **Claims System** | Manages task ownership between humans and agents with handoff support | Work ownership with claim/release/handoff protocols |
 | 🛡️ | **Byzantine Consensus** | Coordinates agents even when some fail or return bad results | Fault-tolerant, handles up to 1/3 failing agents |
+| 🐘 | **RuVector PostgreSQL** | Enterprise-grade vector database with 77+ SQL functions for AI operations | ~61µs search, 16,400 QPS, GNN/attention in SQL |
 
 </details>
 

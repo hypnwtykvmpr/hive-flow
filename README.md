@@ -3786,33 +3786,67 @@ docker run -d -p 5432:5432 ruvnet/ruvector-postgres
 | **[@ruvector/graph-node](https://www.npmjs.com/package/@ruvector/graph-node)** | Graph DB with Cypher queries | 10x faster than WASM |
 | **[@ruvector/rvlite](https://www.npmjs.com/package/@ruvector/rvlite)** | Standalone DB (SQL, SPARQL, Cypher) | All-in-one solution |
 
-### 🐘 RuVector Postgres — Centralized Learning & Coordination
+### 🐘 RuVector PostgreSQL — Enterprise Vector Database
 
-For production swarms requiring centralized state and coordination:
+**77+ SQL functions** for AI operations directly in PostgreSQL with ~61µs search latency and 16,400 QPS.
 
 ```bash
-# Pull and run RuVector Postgres
+# Quick setup with CLI (recommended)
+npx claude-flow ruvector setup --output ./my-ruvector
+cd my-ruvector && docker-compose up -d
+
+# Or pull directly from Docker Hub
 docker run -d \
   --name ruvector-postgres \
   -p 5432:5432 \
-  -e POSTGRES_PASSWORD=ruvector \
-  -v ruvector-data:/var/lib/postgresql/data \
+  -e POSTGRES_USER=claude \
+  -e POSTGRES_PASSWORD=claude-flow-test \
+  -e POSTGRES_DB=claude_flow \
   ruvnet/ruvector-postgres
 
-# Configure Claude-Flow to use centralized backend
-npx claude-flow@v3alpha config set memory.backend postgres
-npx claude-flow@v3alpha config set memory.postgresUrl "postgresql://postgres:ruvector@localhost:5432/ruvector"
+# Migrate existing memory to PostgreSQL
+npx claude-flow ruvector import --input memory-export.json
 ```
 
-**Benefits of Centralized Postgres:**
+**RuVector PostgreSQL vs pgvector:**
 
-| Feature | Local SQLite | RuVector Postgres |
-|---------|--------------|-------------------|
+| Feature | pgvector | RuVector PostgreSQL |
+|---------|----------|---------------------|
+| **SQL Functions** | ~10 basic | **77+ comprehensive** |
+| **Search Latency** | ~1ms | **~61µs** |
+| **Throughput** | ~5K QPS | **16,400 QPS** |
+| **Attention Mechanisms** | ❌ None | **✅ 39 types (self, multi-head, cross)** |
+| **GNN Operations** | ❌ None | **✅ GAT, message passing** |
+| **Hyperbolic Embeddings** | ❌ None | **✅ Poincaré/Lorentz space** |
+| **Hybrid Search** | ❌ Manual | **✅ BM25/TF-IDF built-in** |
+| **Local Embeddings** | ❌ None | **✅ 6 fastembed models** |
+| **Self-Learning** | ❌ None | **✅ GNN-based optimization** |
+| **SIMD Optimization** | Basic | **AVX-512/AVX2/NEON (~2x faster)** |
+
+**Key SQL Functions:**
+
+```sql
+-- Vector operations with HNSW indexing
+SELECT * FROM embeddings ORDER BY embedding <=> query_vec LIMIT 10;
+
+-- Hyperbolic embeddings for hierarchical data
+SELECT ruvector_poincare_distance(a, b, -1.0) AS distance;
+SELECT ruvector_mobius_add(a, b, -1.0) AS result;
+
+-- Cosine similarity
+SELECT cosine_similarity_arr(a, b) AS similarity;
+```
+
+**Benefits over Local SQLite:**
+
+| Feature | Local SQLite | RuVector PostgreSQL |
+|---------|--------------|---------------------|
 | **Multi-Agent Coordination** | Single machine | Distributed across hosts |
 | **Pattern Sharing** | File-based | Real-time synchronized |
 | **Learning Persistence** | Local only | Centralized, backed up |
 | **Swarm Scale** | 15 agents | 100+ agents |
-| **Query Language** | Basic KV | Full SQL + pgvector |
+| **Query Language** | Basic KV | Full SQL + 77 functions |
+| **AI Operations** | External only | **In-database (attention, GNN)** |
 
 <details>
 <summary>⚡ <strong>@ruvector/attention</strong> — Flash Attention (2.49x-7.47x Speedup)</summary>
