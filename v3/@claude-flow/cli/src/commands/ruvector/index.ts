@@ -106,6 +106,8 @@ export const ruvectorCommand: Command = {
       '',
       'Available subcommands:',
       '',
+      '  setup      Output Docker files and SQL for setup',
+      '  import     Import from sql.js/JSON to PostgreSQL',
       '  init       Initialize RuVector in PostgreSQL',
       '  migrate    Run database migrations',
       '  status     Check connection and schema status',
