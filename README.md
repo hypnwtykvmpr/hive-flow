@@ -341,10 +341,12 @@ Claude-Flow v3 introduces **self-learning neural capabilities** that no other ag
 | Feature | Claude Flow v3 | CrewAI | LangGraph | AutoGen | Manus |
 |---------|----------------|--------|-----------|---------|-------|
 | **Vector Memory** | ✅ HNSW (150x faster) | ⛔ | Via plugins | ⛔ | ⛔ |
-| **Hyperbolic Embeddings** | ✅ Poincaré ball | ⛔ | ⛔ | ⛔ | ⛔ |
+| **PostgreSQL Vector DB** | ✅ RuVector (77+ SQL functions, ~61µs) | ⛔ | pgvector only | ⛔ | ⛔ |
+| **Hyperbolic Embeddings** | ✅ Poincaré ball (native + SQL) | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Quantization** | ✅ Int8 (3.92x savings) | ⛔ | ⛔ | ⛔ | ⛔ |
-| **Persistent Memory** | ✅ SQLite + AgentDB | ⛔ | ⛔ | ⛔ | Limited |
+| **Persistent Memory** | ✅ SQLite + AgentDB + PostgreSQL | ⛔ | ⛔ | ⛔ | Limited |
 | **Cross-Session Context** | ✅ Full restoration | ⛔ | ⛔ | ⛔ | ⛔ |
+| **GNN/Attention in SQL** | ✅ 39 attention mechanisms | ⛔ | ⛔ | ⛔ | ⛔ |
 
 #### 🐝 Swarm & Coordination
 
