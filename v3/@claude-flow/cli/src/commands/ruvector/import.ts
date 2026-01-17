@@ -356,7 +356,7 @@ export const importCommand: Command = {
           output.writeln();
           output.printInfo('You can manually run the import with:');
           output.writeln(`  docker exec -i ${containerName} psql -U claude -d claude_flow < ${tempFile}`);
-          return { success: false, error: execErrorMessage };
+          return { success: false, message: execErrorMessage };
         } finally {
           // Clean up temp file
           try {
