@@ -35,6 +35,8 @@ export const ruvectorCommand: Command = {
   aliases: ['rv', 'pgvector'],
   subcommands: [
     initCommand,
+    setupCommand,
+    importCommand,
     migrateCommand,
     statusCommand,
     benchmarkCommand,
