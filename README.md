@@ -382,7 +382,7 @@ Claude-Flow v3 introduces **self-learning neural capabilities** that no other ag
 <details>
 <summary>🚀 <strong>Key Differentiators</strong> — Self-learning, memory optimization, fault tolerance</summary>
 
-What makes Claude-Flow different from other agent frameworks? These 9 capabilities work together to create a system that learns from experience, runs efficiently on any hardware, and keeps working even when things go wrong.
+What makes Claude-Flow different from other agent frameworks? These 10 capabilities work together to create a system that learns from experience, runs efficiently on any hardware, and keeps working even when things go wrong.
 
 | | Feature | What It Does | Technical Details |
 |---|---------|--------------|-------------------|
@@ -395,6 +395,7 @@ What makes Claude-Flow different from other agent frameworks? These 9 capabiliti
 | 🗜️ | **Int8 Quantization** | Converts 32-bit weights to 8-bit with minimal accuracy loss | 3.92x memory reduction with calibrated 8-bit integers |
 | 🤝 | **Claims System** | Manages task ownership between humans and agents with handoff support | Work ownership with claim/release/handoff protocols |
 | 🛡️ | **Byzantine Consensus** | Coordinates agents even when some fail or return bad results | Fault-tolerant, handles up to 1/3 failing agents |
+| 🐘 | **RuVector PostgreSQL** | Enterprise-grade vector database with 77+ SQL functions for AI operations | ~61µs search, 16,400 QPS, GNN/attention in SQL |
 
 </details>
 
