@@ -211,7 +211,7 @@ export const importCommand: Command = {
     if (inputFile) {
       if (!fs.existsSync(inputFile)) {
         output.printError(`Input file not found: ${inputFile}`);
-        return { success: false, error: 'File not found' };
+        return { success: false, message: 'File not found' };
       }
 
       try {
