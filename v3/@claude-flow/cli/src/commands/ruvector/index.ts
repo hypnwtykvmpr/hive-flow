@@ -79,6 +79,8 @@ export const ruvectorCommand: Command = {
     },
   ],
   examples: [
+    { command: 'claude-flow ruvector setup', description: 'Output Docker files and SQL for setup' },
+    { command: 'claude-flow ruvector import --input memory.json', description: 'Import from sql.js/JSON export' },
     { command: 'claude-flow ruvector init --database mydb', description: 'Initialize RuVector in PostgreSQL' },
     { command: 'claude-flow ruvector status --verbose', description: 'Check connection and schema status' },
     { command: 'claude-flow ruvector migrate --up', description: 'Run pending migrations' },
