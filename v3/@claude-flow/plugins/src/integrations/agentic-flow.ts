@@ -22,13 +22,19 @@ import type {
 } from '../types/index.js';
 
 // Lazy-loaded agentic-flow imports (optional dependency)
-let agenticFlowCore: typeof import('agentic-flow/core') | null = null;
-let agenticFlowAgents: typeof import('agentic-flow') | null = null;
+// Using 'any' types since agentic-flow is an optional peer dependency
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let agenticFlowCore: any | null = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let agenticFlowAgents: any | null = null;
 
 async function loadAgenticFlow(): Promise<boolean> {
   try {
-    agenticFlowCore = await import('agentic-flow/core');
-    agenticFlowAgents = await import('agentic-flow');
+    // Use dynamic string to bypass TypeScript module resolution
+    const corePath = 'agentic-flow/core';
+    const agentsPath = 'agentic-flow';
+    agenticFlowCore = await import(/* @vite-ignore */ corePath);
+    agenticFlowAgents = await import(/* @vite-ignore */ agentsPath);
     return true;
   } catch {
     // agentic-flow not available - use fallback implementations

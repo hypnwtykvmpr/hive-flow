@@ -77,6 +77,91 @@ export {
 } from './registry/plugin-registry.js';
 
 // ============================================================================
+// Enhanced Plugin Registry (v2)
+// ============================================================================
+
+export {
+  EnhancedPluginRegistry,
+  getDefaultEnhancedRegistry,
+  setDefaultEnhancedRegistry,
+  type EnhancedPluginRegistryConfig,
+  type InitializationStrategy,
+  type ConflictStrategy,
+  type ConflictResolution,
+  type UnregisterOptions,
+  type HotReloadOptions,
+  type ServiceMetadata,
+} from './registry/enhanced-plugin-registry.js';
+
+// ============================================================================
+// Dependency Graph
+// ============================================================================
+
+export {
+  DependencyGraph,
+  parseVersion,
+  compareVersions,
+  satisfiesVersion,
+  type PluginDependency,
+  type DependencyNode,
+  type DependencyError,
+} from './registry/dependency-graph.js';
+
+// ============================================================================
+// Plugin Collections
+// ============================================================================
+
+export {
+  // Collection Manager
+  PluginCollectionManager,
+  getDefaultCollectionManager,
+  setDefaultCollectionManager,
+  type PluginCollection,
+  type PluginCollectionEntry,
+  type PluginCategory,
+  type PluginCapability,
+  type CollectionManagerState,
+  type CollectionManagerConfig,
+  type CollectionStats,
+
+  // Official Plugins
+  sessionPlugin,
+  memoryCoordinatorPlugin,
+  eventBusPlugin,
+  coderAgentPlugin,
+  testerAgentPlugin,
+  reviewerAgentPlugin,
+  gitIntegrationPlugin,
+  linterPlugin,
+  sonaPlugin,
+  reasoningBankPlugin,
+  patternLearningPlugin,
+  hiveMindPlugin,
+  maestroPlugin,
+  consensusPlugin,
+  coordinatorAgentPlugin,
+  inputValidationPlugin,
+  pathSecurityPlugin,
+  auditLogPlugin,
+  securityScanPlugin,
+  metricsPlugin,
+  cachePlugin,
+
+  // Official Collections
+  coreCollection,
+  developmentCollection,
+  intelligenceCollection,
+  swarmCollection,
+  securityCollection,
+  utilityCollection,
+  officialCollections,
+
+  // Helpers
+  getAllOfficialPlugins,
+  getOfficialCollection,
+} from './collections/index.js';
+
+// ============================================================================
 // SDK Builders
 // ============================================================================
 
