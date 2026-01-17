@@ -23,6 +23,8 @@ import { statusCommand } from './status.js';
 import { benchmarkCommand } from './benchmark.js';
 import { optimizeCommand } from './optimize.js';
 import { backupCommand } from './backup.js';
+import { setupCommand } from './setup.js';
+import { importCommand } from './import.js';
 
 /**
  * RuVector PostgreSQL Bridge main command
