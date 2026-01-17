@@ -247,7 +247,7 @@ export const importCommand: Command = {
       output.printInfo('Exporting from current Claude-Flow memory...');
       output.printWarning('Note: Run "npx claude-flow memory list --format json > memory-export.json" first');
       output.printInfo('Then use: npx claude-flow ruvector import --input memory-export.json');
-      return { success: false, error: 'Use explicit JSON export first' };
+      return { success: false, message: 'Use explicit JSON export first' };
     }
 
     if (entries.length === 0) {
