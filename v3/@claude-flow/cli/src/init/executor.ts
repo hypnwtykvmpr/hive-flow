@@ -12,7 +12,7 @@ import { dirname } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 import type { InitOptions, InitResult, PlatformInfo } from './types.js';
-import { detectPlatform } from './types.js';
+import { detectPlatform, DEFAULT_INIT_OPTIONS } from './types.js';
 import { generateSettingsJson } from './settings-generator.js';
 import { generateMCPJson } from './mcp-generator.js';
 import { generateStatuslineScript, generateStatuslineHook } from './statusline-generator.js';
@@ -209,6 +209,11 @@ export async function executeInit(options: InitOptions): Promise<InitResult> {
       await writeRuntimeConfig(targetDir, options, result);
     }
 
+    // Create initial metrics for statusline (prevents "all zeros" display)
+    if (options.components.statusline) {
+      await writeInitialMetrics(targetDir, options, result);
+    }
+
     // Generate CLAUDE.md
     if (options.components.claudeMd) {
       await writeClaudeMd(targetDir, options, result);
@@ -216,6 +221,146 @@ export async function executeInit(options: InitOptions): Promise<InitResult> {
 
     // Count enabled hooks
     result.summary.hooksEnabled = countEnabledHooks(options);
+
+  } catch (error) {
+    result.success = false;
+    result.errors.push(error instanceof Error ? error.message : String(error));
+  }
+
+  return result;
+}
+
+/**
+ * Upgrade result interface
+ */
+export interface UpgradeResult {
+  success: boolean;
+  updated: string[];
+  created: string[];
+  preserved: string[];
+  errors: string[];
+}
+
+/**
+ * Execute upgrade - updates helpers and creates missing metrics without losing data
+ * This is safe for existing users who want the latest statusline fixes
+ */
+export async function executeUpgrade(targetDir: string): Promise<UpgradeResult> {
+  const result: UpgradeResult = {
+    success: true,
+    updated: [],
+    created: [],
+    preserved: [],
+    errors: [],
+  };
+
+  try {
+    // Ensure required directories exist
+    const dirs = [
+      '.claude/helpers',
+      '.claude-flow/metrics',
+      '.claude-flow/security',
+      '.claude-flow/learning',
+    ];
+
+    for (const dir of dirs) {
+      const fullPath = path.join(targetDir, dir);
+      if (!fs.existsSync(fullPath)) {
+        fs.mkdirSync(fullPath, { recursive: true });
+      }
+    }
+
+    // 1. ALWAYS update statusline helper (force overwrite)
+    const statuslinePath = path.join(targetDir, '.claude', 'helpers', 'statusline.cjs');
+    // Use default options with statusline config
+    const upgradeOptions: InitOptions = {
+      ...DEFAULT_INIT_OPTIONS,
+      targetDir,
+      force: true,
+      statusline: {
+        ...DEFAULT_INIT_OPTIONS.statusline,
+        refreshInterval: 5000,
+      },
+    };
+    const statuslineContent = generateStatuslineScript(upgradeOptions);
+
+    if (fs.existsSync(statuslinePath)) {
+      result.updated.push('.claude/helpers/statusline.cjs');
+    } else {
+      result.created.push('.claude/helpers/statusline.cjs');
+    }
+    fs.writeFileSync(statuslinePath, statuslineContent, 'utf-8');
+
+    // 2. Create MISSING metrics files only (preserve existing data)
+    const metricsDir = path.join(targetDir, '.claude-flow', 'metrics');
+    const securityDir = path.join(targetDir, '.claude-flow', 'security');
+
+    // v3-progress.json
+    const progressPath = path.join(metricsDir, 'v3-progress.json');
+    if (!fs.existsSync(progressPath)) {
+      const progress = {
+        version: '3.0.0',
+        initialized: new Date().toISOString(),
+        domains: { completed: 0, total: 5, status: 'INITIALIZING' },
+        ddd: { progress: 0, modules: 0, totalFiles: 0, totalLines: 0 },
+        swarm: { activeAgents: 0, maxAgents: 15, topology: 'hierarchical-mesh' },
+        learning: { status: 'READY', patternsLearned: 0, sessionsCompleted: 0 },
+        _note: 'Metrics will update as you use Claude Flow'
+      };
+      fs.writeFileSync(progressPath, JSON.stringify(progress, null, 2), 'utf-8');
+      result.created.push('.claude-flow/metrics/v3-progress.json');
+    } else {
+      result.preserved.push('.claude-flow/metrics/v3-progress.json');
+    }
+
+    // swarm-activity.json
+    const activityPath = path.join(metricsDir, 'swarm-activity.json');
+    if (!fs.existsSync(activityPath)) {
+      const activity = {
+        timestamp: new Date().toISOString(),
+        processes: { agentic_flow: 0, mcp_server: 0, estimated_agents: 0 },
+        swarm: { active: false, agent_count: 0, coordination_active: false },
+        integration: { agentic_flow_active: false, mcp_active: false },
+        _initialized: true
+      };
+      fs.writeFileSync(activityPath, JSON.stringify(activity, null, 2), 'utf-8');
+      result.created.push('.claude-flow/metrics/swarm-activity.json');
+    } else {
+      result.preserved.push('.claude-flow/metrics/swarm-activity.json');
+    }
+
+    // learning.json
+    const learningPath = path.join(metricsDir, 'learning.json');
+    if (!fs.existsSync(learningPath)) {
+      const learning = {
+        initialized: new Date().toISOString(),
+        routing: { accuracy: 0, decisions: 0 },
+        patterns: { shortTerm: 0, longTerm: 0, quality: 0 },
+        sessions: { total: 0, current: null },
+        _note: 'Intelligence grows as you use Claude Flow'
+      };
+      fs.writeFileSync(learningPath, JSON.stringify(learning, null, 2), 'utf-8');
+      result.created.push('.claude-flow/metrics/learning.json');
+    } else {
+      result.preserved.push('.claude-flow/metrics/learning.json');
+    }
+
+    // audit-status.json
+    const auditPath = path.join(securityDir, 'audit-status.json');
+    if (!fs.existsSync(auditPath)) {
+      const audit = {
+        initialized: new Date().toISOString(),
+        status: 'PENDING',
+        cvesFixed: 0,
+        totalCves: 3,
+        lastScan: null,
+        _note: 'Run: npx @claude-flow/cli@latest security scan'
+      };
+      fs.writeFileSync(auditPath, JSON.stringify(audit, null, 2), 'utf-8');
+      result.created.push('.claude-flow/security/audit-status.json');
+    } else {
+      result.preserved.push('.claude-flow/security/audit-status.json');
+    }
 
   } catch (error) {
     result.success = false;
@@ -738,6 +883,124 @@ neural/
 
   // Write CAPABILITIES.md with full system overview
   await writeCapabilitiesDoc(targetDir, options, result);
+}
+
+/**
+ * Write initial metrics files for statusline
+ * Creates baseline data so statusline shows meaningful state instead of all zeros
+ */
+async function writeInitialMetrics(
+  targetDir: string,
+  options: InitOptions,
+  result: InitResult
+): Promise<void> {
+  const metricsDir = path.join(targetDir, '.claude-flow', 'metrics');
+  const learningDir = path.join(targetDir, '.claude-flow', 'learning');
+  const securityDir = path.join(targetDir, '.claude-flow', 'security');
+
+  // Ensure directories exist
+  for (const dir of [metricsDir, learningDir, securityDir]) {
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+  }
+
+  // Create initial v3-progress.json
+  const progressPath = path.join(metricsDir, 'v3-progress.json');
+  if (!fs.existsSync(progressPath) || options.force) {
+    const progress = {
+      version: '3.0.0',
+      initialized: new Date().toISOString(),
+      domains: {
+        completed: 0,
+        total: 5,
+        status: 'INITIALIZING'
+      },
+      ddd: {
+        progress: 0,
+        modules: 0,
+        totalFiles: 0,
+        totalLines: 0
+      },
+      swarm: {
+        activeAgents: 0,
+        maxAgents: options.runtime.maxAgents,
+        topology: options.runtime.topology
+      },
+      learning: {
+        status: 'READY',
+        patternsLearned: 0,
+        sessionsCompleted: 0
+      },
+      _note: 'Metrics will update as you use Claude Flow. Run: npx @claude-flow/cli@latest daemon start'
+    };
+    fs.writeFileSync(progressPath, JSON.stringify(progress, null, 2), 'utf-8');
+    result.created.files.push('.claude-flow/metrics/v3-progress.json');
+  }
+
+  // Create initial swarm-activity.json
+  const activityPath = path.join(metricsDir, 'swarm-activity.json');
+  if (!fs.existsSync(activityPath) || options.force) {
+    const activity = {
+      timestamp: new Date().toISOString(),
+      processes: {
+        agentic_flow: 0,
+        mcp_server: 0,
+        estimated_agents: 0
+      },
+      swarm: {
+        active: false,
+        agent_count: 0,
+        coordination_active: false
+      },
+      integration: {
+        agentic_flow_active: false,
+        mcp_active: false
+      },
+      _initialized: true
+    };
+    fs.writeFileSync(activityPath, JSON.stringify(activity, null, 2), 'utf-8');
+    result.created.files.push('.claude-flow/metrics/swarm-activity.json');
+  }
+
+  // Create initial learning.json
+  const learningPath = path.join(metricsDir, 'learning.json');
+  if (!fs.existsSync(learningPath) || options.force) {
+    const learning = {
+      initialized: new Date().toISOString(),
+      routing: {
+        accuracy: 0,
+        decisions: 0
+      },
+      patterns: {
+        shortTerm: 0,
+        longTerm: 0,
+        quality: 0
+      },
+      sessions: {
+        total: 0,
+        current: null
+      },
+      _note: 'Intelligence grows as you use Claude Flow'
+    };
+    fs.writeFileSync(learningPath, JSON.stringify(learning, null, 2), 'utf-8');
+    result.created.files.push('.claude-flow/metrics/learning.json');
+  }
+
+  // Create initial audit-status.json
+  const auditPath = path.join(securityDir, 'audit-status.json');
+  if (!fs.existsSync(auditPath) || options.force) {
+    const audit = {
+      initialized: new Date().toISOString(),
+      status: 'PENDING',
+      cvesFixed: 0,
+      totalCves: 3,
+      lastScan: null,
+      _note: 'Run: npx @claude-flow/cli@latest security scan'
+    };
+    fs.writeFileSync(auditPath, JSON.stringify(audit, null, 2), 'utf-8');
+    result.created.files.push('.claude-flow/security/audit-status.json');
+  }
 }
 
 /**
