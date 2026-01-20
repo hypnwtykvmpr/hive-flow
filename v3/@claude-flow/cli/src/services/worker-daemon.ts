@@ -266,6 +266,19 @@ export class WorkerDaemon extends EventEmitter {
     if (existsSync(this.config.stateFile)) {
       try {
         const saved = JSON.parse(readFileSync(this.config.stateFile, 'utf-8'));
+
+        // CRITICAL: Restore worker config (including enabled flag) from saved state
+        // This fixes #950: daemon enable command not persisting worker state
+        if (saved.config?.workers && Array.isArray(saved.config.workers)) {
+          for (const savedWorker of saved.config.workers) {
+            const workerConfig = this.config.workers.find(w => w.type === savedWorker.type);
+            if (workerConfig && typeof savedWorker.enabled === 'boolean') {
+              workerConfig.enabled = savedWorker.enabled;
+            }
+          }
+        }
+
+        // Restore worker runtime states (runCount, successCount, etc.)
         if (saved.workers) {
           for (const [type, state] of Object.entries(saved.workers)) {
             const savedState = state as Record<string, unknown>;

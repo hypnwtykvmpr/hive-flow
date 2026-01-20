@@ -545,6 +545,71 @@ export const hiveMindTools: MCPTool[] = [
     },
   },
   {
+    name: 'hive-mind/shutdown',
+    description: 'Shutdown the hive-mind and terminate all workers',
+    category: 'hive-mind',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        graceful: { type: 'boolean', description: 'Graceful shutdown (wait for pending tasks)', default: true },
+        force: { type: 'boolean', description: 'Force immediate shutdown', default: false },
+      },
+    },
+    handler: async (input) => {
+      const state = loadHiveState();
+
+      if (!state.initialized) {
+        return { success: false, error: 'Hive-mind not initialized or already shut down' };
+      }
+
+      const graceful = input.graceful !== false;
+      const force = input.force === true;
+      const workerCount = state.workers.length;
+      const pendingConsensus = state.consensus.pending.length;
+
+      // If graceful and there are pending consensus items, warn (unless forced)
+      if (graceful && pendingConsensus > 0 && !force) {
+        return {
+          success: false,
+          error: `Cannot gracefully shutdown with ${pendingConsensus} pending consensus items. Use force: true to override.`,
+          pendingConsensus,
+          workerCount,
+        };
+      }
+
+      // Clear workers from agent store
+      const agentStore = loadAgentStore();
+      for (const workerId of state.workers) {
+        if (agentStore.agents[workerId]) {
+          delete agentStore.agents[workerId];
+        }
+      }
+      saveAgentStore(agentStore);
+
+      // Reset hive state
+      const shutdownTime = new Date().toISOString();
+      const previousQueen = state.queen?.agentId;
+
+      state.initialized = false;
+      state.queen = undefined;
+      state.workers = [];
+      state.consensus.pending = [];
+      // Keep history for reference
+      state.sharedMemory = {};
+      saveHiveState(state);
+
+      return {
+        success: true,
+        shutdownAt: shutdownTime,
+        graceful,
+        workersTerminated: workerCount,
+        previousQueen,
+        consensusCleared: pendingConsensus,
+        message: `Hive-mind shutdown complete. ${workerCount} workers terminated.`,
+      };
+    },
+  },
+  {
     name: 'hive-mind/memory',
     description: 'Access hive shared memory',
     category: 'hive-mind',
