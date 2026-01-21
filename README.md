@@ -171,6 +171,8 @@ npx claude-flow@v3alpha init
 <details open>
 <summary>🔄 <strong>Core Flow</strong> — How requests move through the system</summary>
 
+Every request flows through four layers: from your CLI or Claude Code interface, through intelligent routing, to specialized agents, and finally to LLM providers for reasoning.
+
 | Layer | Components | What It Does |
 |-------|------------|--------------|
 | User | Claude Code, CLI | Your interface to control and run commands |
