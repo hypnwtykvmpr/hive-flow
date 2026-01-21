@@ -550,6 +550,7 @@ async function copySkills(
     if (skillsConfig.agentdb) skillsToCopy.push(...SKILLS_MAP.agentdb);
     if (skillsConfig.github) skillsToCopy.push(...SKILLS_MAP.github);
     if (skillsConfig.flowNexus) skillsToCopy.push(...SKILLS_MAP.flowNexus);
+    if (skillsConfig.browser) skillsToCopy.push(...SKILLS_MAP.browser);
     if (skillsConfig.v3) skillsToCopy.push(...SKILLS_MAP.v3);
   }
 
