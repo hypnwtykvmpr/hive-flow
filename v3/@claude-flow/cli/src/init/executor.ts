@@ -421,11 +421,21 @@ export async function executeUpgradeWithMissing(targetDir: string): Promise<Upgr
     // Add missing skills
     if (sourceSkillsDir) {
       const allSkills = Object.values(SKILLS_MAP).flat();
+      const debugMode = process.env.DEBUG || process.env.CLAUDE_FLOW_DEBUG;
+      if (debugMode) {
+        console.log(`[DEBUG] Checking ${allSkills.length} skills from SKILLS_MAP`);
+      }
       for (const skillName of [...new Set(allSkills)]) {
         const sourcePath = path.join(sourceSkillsDir, skillName);
         const targetPath = path.join(skillsDir, skillName);
+        const sourceExists = fs.existsSync(sourcePath);
+        const targetExists = fs.existsSync(targetPath);
 
-        if (fs.existsSync(sourcePath) && !fs.existsSync(targetPath)) {
+        if (debugMode) {
+          console.log(`[DEBUG] Skill '${skillName}': source=${sourceExists}, target=${targetExists}`);
+        }
+
+        if (sourceExists && !targetExists) {
           copyDirRecursive(sourcePath, targetPath);
           result.addedSkills.push(skillName);
           result.created.push(`.claude/skills/${skillName}`);
