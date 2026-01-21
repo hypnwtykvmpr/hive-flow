@@ -185,6 +185,8 @@ Every request flows through four layers: from your CLI or Claude Code interface,
 <details>
 <summary>🐝 <strong>Swarm Coordination</strong> — How agents work together</summary>
 
+Agents organize into swarms led by queens that coordinate work, prevent drift, and reach consensus on decisions—even when some agents fail.
+
 | Layer | Components | What It Does |
 |-------|------------|--------------|
 | Coordination | Queen, Swarm, Consensus | Manages agent teams (Raft, Byzantine, Gossip) |
