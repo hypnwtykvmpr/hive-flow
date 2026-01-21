@@ -410,6 +410,14 @@ export async function executeUpgradeWithMissing(targetDir: string): Promise<Upgr
     const sourceAgentsDir = findSourceDir('agents');
     const sourceCommandsDir = findSourceDir('commands');
 
+    // Debug: Log source directories found
+    if (process.env.DEBUG || process.env.CLAUDE_FLOW_DEBUG) {
+      console.log('[DEBUG] Source directories:');
+      console.log(`  Skills: ${sourceSkillsDir || 'NOT FOUND'}`);
+      console.log(`  Agents: ${sourceAgentsDir || 'NOT FOUND'}`);
+      console.log(`  Commands: ${sourceCommandsDir || 'NOT FOUND'}`);
+    }
+
     // Add missing skills
     if (sourceSkillsDir) {
       const allSkills = Object.values(SKILLS_MAP).flat();
