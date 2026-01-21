@@ -206,6 +206,8 @@ Agents organize into swarms led by queens that coordinate work, prevent drift, a
 <details>
 <summary>🧠 <strong>Intelligence & Memory</strong> — How the system learns and remembers</summary>
 
+The system stores successful patterns in vector memory, learns from outcomes via neural networks, and adapts routing based on what works best.
+
 | Layer | Components | What It Does |
 |-------|------------|--------------|
 | Memory | HNSW, AgentDB, Cache | Stores and retrieves patterns 150x faster |
