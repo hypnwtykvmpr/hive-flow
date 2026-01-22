@@ -453,7 +453,7 @@ const initCommand: Command = {
         queenId: string;
         status: 'initialized' | 'ready';
         config: typeof config;
-      }>('hive-mind/init', config);
+      }>('hive-mind_init', config);
 
       spinner.succeed('Hive Mind initialized');
 
@@ -598,7 +598,7 @@ const spawnCommand: Command = {
         hiveId?: string;
         message: string;
         error?: string;
-      }>('hive-mind/spawn', {
+      }>('hive-mind_spawn', {
         count,
         role,
         agentType,
@@ -665,7 +665,7 @@ const spawnCommand: Command = {
             hiveId?: string;
             topology?: string;
             consensus?: string;
-          }>('hive-mind/status', { includeWorkers: false });
+          }>('hive-mind_status', { includeWorkers: false });
           swarmId = statusResult.hiveId || swarmId;
         } catch {
           // Use defaults if status call fails
@@ -769,7 +769,7 @@ const statusCommand: Command = {
           consensus?: string;
           memory?: string;
         };
-      }>('hive-mind/status', {
+      }>('hive-mind_status', {
         includeMetrics: detailed,
         includeWorkers: true,
       });
@@ -949,7 +949,7 @@ const taskCommand: Command = {
         priority: string;
         requiresConsensus: boolean;
         estimatedTime: string;
-      }>('hive-mind/task', {
+      }>('hive-mind_task', {
         description,
         priority,
         requireConsensus,
@@ -1026,7 +1026,7 @@ const optimizeMemoryCommand: Command = {
         removed: number;
         consolidated: number;
         timeMs: number;
-      }>('hive-mind/optimize-memory', {
+      }>('hive-mind_optimize-memory', {
         aggressive,
         qualityThreshold: threshold,
       });
@@ -1086,7 +1086,7 @@ const joinCommand: Command = {
       return { success: false, exitCode: 1 };
     }
     try {
-      const result = await callMCPTool<{ success: boolean; agentId: string; totalWorkers: number; error?: string }>('hive-mind/join', { agentId, role: ctx.flags.role });
+      const result = await callMCPTool<{ success: boolean; agentId: string; totalWorkers: number; error?: string }>('hive-mind_join', { agentId, role: ctx.flags.role });
       if (!result.success) { output.printError(result.error || 'Failed'); return { success: false, exitCode: 1 }; }
       output.printSuccess(`Agent ${agentId} joined hive (${result.totalWorkers} workers)`);
       return { success: true, data: result };
@@ -1103,7 +1103,7 @@ const leaveCommand: Command = {
     const agentId = ctx.args[0] || ctx.flags['agent-id'] as string || ctx.flags.agentId as string;
     if (!agentId) { output.printError('Agent ID required.'); return { success: false, exitCode: 1 }; }
     try {
-      const result = await callMCPTool<{ success: boolean; agentId: string; remainingWorkers: number; error?: string }>('hive-mind/leave', { agentId });
+      const result = await callMCPTool<{ success: boolean; agentId: string; remainingWorkers: number; error?: string }>('hive-mind_leave', { agentId });
       if (!result.success) { output.printError(result.error || 'Failed'); return { success: false, exitCode: 1 }; }
       output.printSuccess(`Agent ${agentId} left hive (${result.remainingWorkers} remaining)`);
       return { success: true, data: result };
@@ -1126,7 +1126,7 @@ const consensusCommand: Command = {
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     const action = ctx.flags.action as string || 'list';
     try {
-      const result = await callMCPTool<Record<string, unknown>>('hive-mind/consensus', { action, proposalId: ctx.flags.proposalId, type: ctx.flags.type, value: ctx.flags.value, vote: ctx.flags.vote === 'yes', voterId: ctx.flags.voterId });
+      const result = await callMCPTool<Record<string, unknown>>('hive-mind_consensus', { action, proposalId: ctx.flags.proposalId, type: ctx.flags.type, value: ctx.flags.value, vote: ctx.flags.vote === 'yes', voterId: ctx.flags.voterId });
       if (ctx.flags.format === 'json') { output.printJson(result); return { success: true, data: result }; }
       if (action === 'list') {
         output.writeln(output.bold('\nPending Proposals'));
@@ -1153,7 +1153,7 @@ const broadcastCommand: Command = {
     const message = ctx.args.join(' ') || ctx.flags.message as string;
     if (!message) { output.printError('Message required. Use --message or -m flag.'); return { success: false, exitCode: 1 }; }
     try {
-      const result = await callMCPTool<{ success: boolean; messageId: string; recipients: number; error?: string }>('hive-mind/broadcast', { message, priority: ctx.flags.priority, fromId: ctx.flags.from });
+      const result = await callMCPTool<{ success: boolean; messageId: string; recipients: number; error?: string }>('hive-mind_broadcast', { message, priority: ctx.flags.priority, fromId: ctx.flags.from });
       if (!result.success) { output.printError(result.error || 'Failed'); return { success: false, exitCode: 1 }; }
       output.printSuccess(`Message broadcast to ${result.recipients} workers (ID: ${result.messageId})`);
       return { success: true, data: result };
@@ -1177,7 +1177,7 @@ const memorySubCommand: Command = {
     if ((action === 'get' || action === 'delete') && !key) { output.printError('Key required for get/delete.'); return { success: false, exitCode: 1 }; }
     if (action === 'set' && (!key || value === undefined)) { output.printError('Key and value required for set.'); return { success: false, exitCode: 1 }; }
     try {
-      const result = await callMCPTool<Record<string, unknown>>('hive-mind/memory', { action, key, value });
+      const result = await callMCPTool<Record<string, unknown>>('hive-mind_memory', { action, key, value });
       if (ctx.flags.format === 'json') { output.printJson(result); return { success: true, data: result }; }
       if (action === 'list') {
         const keys = (result.keys as string[]) || [];
@@ -1241,7 +1241,7 @@ const shutdownCommand: Command = {
         agentsTerminated: number;
         stateSaved: boolean;
         shutdownTime: string;
-      }>('hive-mind/shutdown', {
+      }>('hive-mind_shutdown', {
         force,
         saveState,
       });

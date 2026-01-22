@@ -73,7 +73,7 @@ function saveGitHubStore(store: GitHubStore): void {
 
 export const githubTools: MCPTool[] = [
   {
-    name: 'github/repo_analyze',
+    name: 'github_repo_analyze',
     description: 'Analyze a GitHub repository',
     category: 'github',
     inputSchema: {
@@ -127,7 +127,7 @@ export const githubTools: MCPTool[] = [
     },
   },
   {
-    name: 'github/pr_manage',
+    name: 'github_pr_manage',
     description: 'Manage pull requests',
     category: 'github',
     inputSchema: {
@@ -229,7 +229,7 @@ export const githubTools: MCPTool[] = [
     },
   },
   {
-    name: 'github/issue_track',
+    name: 'github_issue_track',
     description: 'Track and manage issues',
     category: 'github',
     inputSchema: {
@@ -314,7 +314,7 @@ export const githubTools: MCPTool[] = [
     },
   },
   {
-    name: 'github/workflow',
+    name: 'github_workflow',
     description: 'Manage GitHub Actions workflows',
     category: 'github',
     inputSchema: {
@@ -375,7 +375,7 @@ export const githubTools: MCPTool[] = [
     },
   },
   {
-    name: 'github/metrics',
+    name: 'github_metrics',
     description: 'Get repository metrics and statistics',
     category: 'github',
     inputSchema: {

@@ -176,7 +176,7 @@ async function determineAgentModel(
 
 export const agentTools: MCPTool[] = [
   {
-    name: 'agent/spawn',
+    name: 'agent_spawn',
     description: 'Spawn a new agent with intelligent model selection',
     category: 'agent',
     inputSchema: {
@@ -257,7 +257,7 @@ export const agentTools: MCPTool[] = [
     },
   },
   {
-    name: 'agent/terminate',
+    name: 'agent_terminate',
     description: 'Terminate an agent',
     category: 'agent',
     inputSchema: {
@@ -291,7 +291,7 @@ export const agentTools: MCPTool[] = [
     },
   },
   {
-    name: 'agent/status',
+    name: 'agent_status',
     description: 'Get agent status',
     category: 'agent',
     inputSchema: {
@@ -326,7 +326,7 @@ export const agentTools: MCPTool[] = [
     },
   },
   {
-    name: 'agent/list',
+    name: 'agent_list',
     description: 'List all agents',
     category: 'agent',
     inputSchema: {
@@ -373,7 +373,7 @@ export const agentTools: MCPTool[] = [
     },
   },
   {
-    name: 'agent/pool',
+    name: 'agent_pool',
     description: 'Manage agent pool',
     category: 'agent',
     inputSchema: {
@@ -490,7 +490,7 @@ export const agentTools: MCPTool[] = [
     },
   },
   {
-    name: 'agent/health',
+    name: 'agent_health',
     description: 'Check agent health',
     category: 'agent',
     inputSchema: {
@@ -567,7 +567,7 @@ export const agentTools: MCPTool[] = [
     },
   },
   {
-    name: 'agent/update',
+    name: 'agent_update',
     description: 'Update agent status or config',
     category: 'agent',
     inputSchema: {

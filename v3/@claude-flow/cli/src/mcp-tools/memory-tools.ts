@@ -57,7 +57,7 @@ function saveMemoryStore(store: MemoryStore): void {
 
 export const memoryTools: MCPTool[] = [
   {
-    name: 'memory/store',
+    name: 'memory_store',
     description: 'Store a value in memory (persisted to disk)',
     category: 'memory',
     inputSchema: {
@@ -95,7 +95,7 @@ export const memoryTools: MCPTool[] = [
     },
   },
   {
-    name: 'memory/retrieve',
+    name: 'memory_retrieve',
     description: 'Retrieve a value from memory',
     category: 'memory',
     inputSchema: {
@@ -134,7 +134,7 @@ export const memoryTools: MCPTool[] = [
     },
   },
   {
-    name: 'memory/search',
+    name: 'memory_search',
     description: 'Search memory by keyword',
     category: 'memory',
     inputSchema: {
@@ -177,7 +177,7 @@ export const memoryTools: MCPTool[] = [
     },
   },
   {
-    name: 'memory/delete',
+    name: 'memory_delete',
     description: 'Delete a memory entry',
     category: 'memory',
     inputSchema: {
@@ -206,7 +206,7 @@ export const memoryTools: MCPTool[] = [
     },
   },
   {
-    name: 'memory/list',
+    name: 'memory_list',
     description: 'List all memory entries',
     category: 'memory',
     inputSchema: {
@@ -240,7 +240,7 @@ export const memoryTools: MCPTool[] = [
     },
   },
   {
-    name: 'memory/stats',
+    name: 'memory_stats',
     description: 'Get memory storage statistics',
     category: 'memory',
     inputSchema: {

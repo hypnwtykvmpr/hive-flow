@@ -258,7 +258,7 @@ const initCommand: Command = {
           communicationProtocol?: string;
           autoScaling?: boolean;
         };
-      }>('swarm/init', {
+      }>('swarm_init', {
         topology: topology as 'hierarchical' | 'mesh' | 'adaptive' | 'collective' | 'hierarchical-mesh',
         maxAgents,
         config: {

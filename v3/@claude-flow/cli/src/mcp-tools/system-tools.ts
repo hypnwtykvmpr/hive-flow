@@ -76,7 +76,7 @@ function saveMetrics(metrics: SystemMetrics): void {
 
 export const systemTools: MCPTool[] = [
   {
-    name: 'system/status',
+    name: 'system_status',
     description: 'Get overall system status',
     category: 'system',
     inputSchema: {
@@ -120,7 +120,7 @@ export const systemTools: MCPTool[] = [
     },
   },
   {
-    name: 'system/metrics',
+    name: 'system_metrics',
     description: 'Get system metrics and performance data',
     category: 'system',
     inputSchema: {
@@ -193,7 +193,7 @@ export const systemTools: MCPTool[] = [
     },
   },
   {
-    name: 'system/health',
+    name: 'system_health',
     description: 'Perform system health check',
     category: 'system',
     inputSchema: {
@@ -277,7 +277,7 @@ export const systemTools: MCPTool[] = [
     },
   },
   {
-    name: 'system/info',
+    name: 'system_info',
     description: 'Get system information',
     category: 'system',
     inputSchema: {
@@ -312,7 +312,7 @@ export const systemTools: MCPTool[] = [
     },
   },
   {
-    name: 'system/reset',
+    name: 'system_reset',
     description: 'Reset system state',
     category: 'system',
     inputSchema: {

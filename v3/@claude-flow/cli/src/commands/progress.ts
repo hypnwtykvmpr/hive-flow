@@ -47,7 +47,7 @@ const checkCommand: Command = {
         ddd?: { progress: number };
         codebase?: { totalFiles: number; totalLines: number };
         lastUpdated?: string;
-      }>('progress/check', { detailed });
+      }>('progress_check', { detailed });
       spinner.stop();
 
       if (ctx.flags.format === 'json') {
@@ -111,7 +111,7 @@ const syncCommand: Command = {
         message: string;
         persisted: boolean;
         lastUpdated: string;
-      }>('progress/sync', {});
+      }>('progress_sync', {});
       spinner.stop();
 
       if (ctx.flags.format === 'json') {
@@ -146,7 +146,7 @@ const summaryCommand: Command = {
 
     try {
       spinner.start();
-      const result = await callMCPTool<{ summary: string }>('progress/summary', {});
+      const result = await callMCPTool<{ summary: string }>('progress_summary', {});
       spinner.stop();
 
       if (ctx.flags.format === 'json') {
@@ -193,7 +193,7 @@ const watchCommand: Command = {
 
     const check = async () => {
       try {
-        const result = await callMCPTool<{ progress?: number; overall?: number }>('progress/check', {});
+        const result = await callMCPTool<{ progress?: number; overall?: number }>('progress_check', {});
         const currentProgress = result.overall ?? result.progress ?? 0;
 
         if (currentProgress !== lastProgress) {

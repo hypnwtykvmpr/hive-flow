@@ -20,7 +20,7 @@ import {
  * Analyzes git diffs for change risk assessment and classification
  */
 export const analyzeDiffTool: MCPTool = {
-  name: 'analyze/diff',
+  name: 'analyze_diff',
   description: 'Analyze git diff for change risk assessment and classification',
   category: 'analyze',
   tags: ['diff', 'risk', 'classification', 'git'],
@@ -95,7 +95,7 @@ export const analyzeDiffTool: MCPTool = {
  * Focused risk assessment without full analysis
  */
 export const diffRiskTool: MCPTool = {
-  name: 'analyze/diff-risk',
+  name: 'analyze_diff-risk',
   description: 'Quick risk assessment for git diff',
   category: 'analyze',
   tags: ['diff', 'risk', 'git'],
@@ -137,7 +137,7 @@ export const diffRiskTool: MCPTool = {
  * Classify change type without full analysis
  */
 export const diffClassifyTool: MCPTool = {
-  name: 'analyze/diff-classify',
+  name: 'analyze_diff-classify',
   description: 'Classify git diff change type',
   category: 'analyze',
   tags: ['diff', 'classification', 'git'],
@@ -178,7 +178,7 @@ export const diffClassifyTool: MCPTool = {
  * Suggest reviewers for changes
  */
 export const diffReviewersTool: MCPTool = {
-  name: 'analyze/diff-reviewers',
+  name: 'analyze_diff-reviewers',
   description: 'Suggest reviewers for git diff changes',
   category: 'analyze',
   tags: ['diff', 'reviewers', 'git'],
@@ -226,7 +226,7 @@ export const diffReviewersTool: MCPTool = {
  * Assess risk for a specific file path
  */
 export const fileRiskTool: MCPTool = {
-  name: 'analyze/file-risk',
+  name: 'analyze_file-risk',
   description: 'Assess risk for a specific file change',
   category: 'analyze',
   tags: ['file', 'risk'],
@@ -281,7 +281,7 @@ export const fileRiskTool: MCPTool = {
  * Get quick diff statistics
  */
 export const diffStatsTool: MCPTool = {
-  name: 'analyze/diff-stats',
+  name: 'analyze_diff-stats',
   description: 'Get quick statistics for git diff',
   category: 'analyze',
   tags: ['diff', 'stats', 'git'],

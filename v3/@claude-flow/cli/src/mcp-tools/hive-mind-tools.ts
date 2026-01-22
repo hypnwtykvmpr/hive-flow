@@ -114,7 +114,7 @@ function saveAgentStore(store: { agents: Record<string, unknown> }): void {
 
 export const hiveMindTools: MCPTool[] = [
   {
-    name: 'hive-mind/spawn',
+    name: 'hive-mind_spawn',
     description: 'Spawn workers and automatically join them to the hive-mind (combines agent/spawn + hive-mind/join)',
     category: 'hive-mind',
     inputSchema: {
@@ -182,7 +182,7 @@ export const hiveMindTools: MCPTool[] = [
     },
   },
   {
-    name: 'hive-mind/init',
+    name: 'hive-mind_init',
     description: 'Initialize the hive-mind collective',
     category: 'hive-mind',
     inputSchema: {
@@ -227,7 +227,7 @@ export const hiveMindTools: MCPTool[] = [
     },
   },
   {
-    name: 'hive-mind/status',
+    name: 'hive-mind_status',
     description: 'Get hive-mind status',
     category: 'hive-mind',
     inputSchema: {
@@ -301,7 +301,7 @@ export const hiveMindTools: MCPTool[] = [
     },
   },
   {
-    name: 'hive-mind/join',
+    name: 'hive-mind_join',
     description: 'Join an agent to the hive-mind',
     category: 'hive-mind',
     inputSchema: {
@@ -335,7 +335,7 @@ export const hiveMindTools: MCPTool[] = [
     },
   },
   {
-    name: 'hive-mind/leave',
+    name: 'hive-mind_leave',
     description: 'Remove an agent from the hive-mind',
     category: 'hive-mind',
     inputSchema: {
@@ -365,7 +365,7 @@ export const hiveMindTools: MCPTool[] = [
     },
   },
   {
-    name: 'hive-mind/consensus',
+    name: 'hive-mind_consensus',
     description: 'Propose or vote on consensus',
     category: 'hive-mind',
     inputSchema: {
@@ -500,7 +500,7 @@ export const hiveMindTools: MCPTool[] = [
     },
   },
   {
-    name: 'hive-mind/broadcast',
+    name: 'hive-mind_broadcast',
     description: 'Broadcast message to all workers',
     category: 'hive-mind',
     inputSchema: {
@@ -545,7 +545,7 @@ export const hiveMindTools: MCPTool[] = [
     },
   },
   {
-    name: 'hive-mind/shutdown',
+    name: 'hive-mind_shutdown',
     description: 'Shutdown the hive-mind and terminate all workers',
     category: 'hive-mind',
     inputSchema: {
@@ -610,7 +610,7 @@ export const hiveMindTools: MCPTool[] = [
     },
   },
   {
-    name: 'hive-mind/memory',
+    name: 'hive-mind_memory',
     description: 'Access hive shared memory',
     category: 'hive-mind',
     inputSchema: {

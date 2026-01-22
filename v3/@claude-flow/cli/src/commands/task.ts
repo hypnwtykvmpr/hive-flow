@@ -173,7 +173,7 @@ const createCommand: Command = {
         createdAt: string;
         assignedTo?: string[];
         tags: string[];
-      }>('task/create', {
+      }>('task_create', {
         type: taskType,
         description,
         priority: priority || 'normal',
@@ -287,7 +287,7 @@ const listCommand: Command = {
           createdAt: string;
         }>;
         total: number;
-      }>('task/list', {
+      }>('task_list', {
         status,
         type: ctx.flags.type,
         priority: ctx.flags.priority,
@@ -403,7 +403,7 @@ const statusCommand: Command = {
           retries: number;
           tokensUsed: number;
         };
-      }>('task/status', {
+      }>('task_status', {
         taskId,
         includeLogs: ctx.flags.logs,
         includeMetrics: true
@@ -555,7 +555,7 @@ const cancelCommand: Command = {
         cancelled: boolean;
         previousStatus: string;
         cancelledAt: string;
-      }>('task/cancel', {
+      }>('task_cancel', {
         taskId,
         reason: reason || 'Cancelled by user via CLI'
       });
@@ -614,7 +614,7 @@ const assignCommand: Command = {
         try {
           const agents = await callMCPTool<{
             agents: Array<{ id: string; type: string; status: string }>;
-          }>('agent/list', { status: 'active,idle' });
+          }>('agent_list', { status: 'active,idle' });
 
           if (agents.agents.length === 0) {
             output.printWarning('No available agents');
@@ -641,7 +641,7 @@ const assignCommand: Command = {
             taskId: string;
             assignedTo: string[];
             previouslyAssigned: string[];
-          }>('task/assign', {
+          }>('task_assign', {
             taskId,
             agentIds: selectedAgents
           });
@@ -668,7 +668,7 @@ const assignCommand: Command = {
         taskId: string;
         assignedTo: string[];
         previouslyAssigned: string[];
-      }>('task/assign', {
+      }>('task_assign', {
         taskId,
         agentIds: unassign ? [] : agentIds.split(',').map(id => id.trim()),
         unassign
@@ -725,7 +725,7 @@ const retryCommand: Command = {
         newTaskId: string;
         previousStatus: string;
         status: string;
-      }>('task/retry', {
+      }>('task_retry', {
         taskId,
         resetState
       });

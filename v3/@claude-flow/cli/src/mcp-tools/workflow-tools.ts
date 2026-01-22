@@ -79,7 +79,7 @@ function saveWorkflowStore(store: WorkflowStore): void {
 
 export const workflowTools: MCPTool[] = [
   {
-    name: 'workflow/create',
+    name: 'workflow_create',
     description: 'Create a new workflow',
     category: 'workflow',
     inputSchema: {
@@ -139,7 +139,7 @@ export const workflowTools: MCPTool[] = [
     },
   },
   {
-    name: 'workflow/execute',
+    name: 'workflow_execute',
     description: 'Execute a workflow',
     category: 'workflow',
     inputSchema: {
@@ -206,7 +206,7 @@ export const workflowTools: MCPTool[] = [
     },
   },
   {
-    name: 'workflow/status',
+    name: 'workflow_status',
     description: 'Get workflow status',
     category: 'workflow',
     inputSchema: {
@@ -263,7 +263,7 @@ export const workflowTools: MCPTool[] = [
     },
   },
   {
-    name: 'workflow/list',
+    name: 'workflow_list',
     description: 'List all workflows',
     category: 'workflow',
     inputSchema: {
@@ -304,7 +304,7 @@ export const workflowTools: MCPTool[] = [
     },
   },
   {
-    name: 'workflow/pause',
+    name: 'workflow_pause',
     description: 'Pause a running workflow',
     category: 'workflow',
     inputSchema: {
@@ -339,7 +339,7 @@ export const workflowTools: MCPTool[] = [
     },
   },
   {
-    name: 'workflow/resume',
+    name: 'workflow_resume',
     description: 'Resume a paused workflow',
     category: 'workflow',
     inputSchema: {
@@ -392,7 +392,7 @@ export const workflowTools: MCPTool[] = [
     },
   },
   {
-    name: 'workflow/cancel',
+    name: 'workflow_cancel',
     description: 'Cancel a workflow',
     category: 'workflow',
     inputSchema: {
@@ -437,7 +437,7 @@ export const workflowTools: MCPTool[] = [
     },
   },
   {
-    name: 'workflow/delete',
+    name: 'workflow_delete',
     description: 'Delete a workflow',
     category: 'workflow',
     inputSchema: {
@@ -471,7 +471,7 @@ export const workflowTools: MCPTool[] = [
     },
   },
   {
-    name: 'workflow/template',
+    name: 'workflow_template',
     description: 'Save workflow as template or create from template',
     category: 'workflow',
     inputSchema: {

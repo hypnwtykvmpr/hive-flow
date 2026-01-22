@@ -86,7 +86,7 @@ function saveDAAStore(store: DAAStore): void {
 
 export const daaTools: MCPTool[] = [
   {
-    name: 'daa/agent_create',
+    name: 'daa_agent_create',
     description: 'Create a decentralized autonomous agent',
     category: 'daa',
     inputSchema: {
@@ -142,7 +142,7 @@ export const daaTools: MCPTool[] = [
     },
   },
   {
-    name: 'daa/agent_adapt',
+    name: 'daa_agent_adapt',
     description: 'Trigger agent adaptation based on feedback',
     category: 'daa',
     inputSchema: {
@@ -192,7 +192,7 @@ export const daaTools: MCPTool[] = [
     },
   },
   {
-    name: 'daa/workflow_create',
+    name: 'daa_workflow_create',
     description: 'Create an autonomous workflow',
     category: 'daa',
     inputSchema: {
@@ -236,7 +236,7 @@ export const daaTools: MCPTool[] = [
     },
   },
   {
-    name: 'daa/workflow_execute',
+    name: 'daa_workflow_execute',
     description: 'Execute a DAA workflow',
     category: 'daa',
     inputSchema: {
@@ -281,7 +281,7 @@ export const daaTools: MCPTool[] = [
     },
   },
   {
-    name: 'daa/knowledge_share',
+    name: 'daa_knowledge_share',
     description: 'Share knowledge between agents',
     category: 'daa',
     inputSchema: {
@@ -321,7 +321,7 @@ export const daaTools: MCPTool[] = [
     },
   },
   {
-    name: 'daa/learning_status',
+    name: 'daa_learning_status',
     description: 'Get learning status for DAA agents',
     category: 'daa',
     inputSchema: {
@@ -376,7 +376,7 @@ export const daaTools: MCPTool[] = [
     },
   },
   {
-    name: 'daa/cognitive_pattern',
+    name: 'daa_cognitive_pattern',
     description: 'Analyze or change cognitive patterns',
     category: 'daa',
     inputSchema: {
@@ -444,7 +444,7 @@ export const daaTools: MCPTool[] = [
     },
   },
   {
-    name: 'daa/performance_metrics',
+    name: 'daa_performance_metrics',
     description: 'Get DAA performance metrics',
     category: 'daa',
     inputSchema: {

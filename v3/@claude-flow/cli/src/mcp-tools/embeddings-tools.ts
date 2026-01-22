@@ -155,7 +155,7 @@ function cosineSimilarity(a: number[], b: number[]): number {
 
 export const embeddingsTools: MCPTool[] = [
   {
-    name: 'embeddings/init',
+    name: 'embeddings_init',
     description: 'Initialize the ONNX embedding subsystem with hyperbolic support',
     category: 'embeddings',
     inputSchema: {
@@ -256,7 +256,7 @@ export const embeddingsTools: MCPTool[] = [
   },
 
   {
-    name: 'embeddings/generate',
+    name: 'embeddings_generate',
     description: 'Generate embeddings for text (Euclidean or hyperbolic)',
     category: 'embeddings',
     inputSchema: {
@@ -321,7 +321,7 @@ export const embeddingsTools: MCPTool[] = [
   },
 
   {
-    name: 'embeddings/compare',
+    name: 'embeddings_compare',
     description: 'Compare similarity between two texts',
     category: 'embeddings',
     inputSchema: {
@@ -408,7 +408,7 @@ export const embeddingsTools: MCPTool[] = [
   },
 
   {
-    name: 'embeddings/search',
+    name: 'embeddings_search',
     description: 'Semantic search across stored embeddings',
     category: 'embeddings',
     inputSchema: {
@@ -507,7 +507,7 @@ export const embeddingsTools: MCPTool[] = [
   },
 
   {
-    name: 'embeddings/neural',
+    name: 'embeddings_neural',
     description: 'Neural substrate operations (RuVector integration)',
     category: 'embeddings',
     inputSchema: {
@@ -704,7 +704,7 @@ export const embeddingsTools: MCPTool[] = [
   },
 
   {
-    name: 'embeddings/hyperbolic',
+    name: 'embeddings_hyperbolic',
     description: 'Hyperbolic embedding operations (Poincaré ball)',
     category: 'embeddings',
     inputSchema: {
@@ -822,7 +822,7 @@ export const embeddingsTools: MCPTool[] = [
   },
 
   {
-    name: 'embeddings/status',
+    name: 'embeddings_status',
     description: 'Get embeddings system status and configuration',
     category: 'embeddings',
     inputSchema: {

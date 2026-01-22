@@ -91,7 +91,7 @@ const listCommand: Command = {
           memorySize: number;
         }>;
         total: number;
-      }>('session/list', {
+      }>('session_list', {
         status: activeOnly ? 'active' : includeArchived ? 'all' : 'active,saved',
         limit
       });
@@ -222,7 +222,7 @@ const saveCommand: Command = {
           memoryEntries: number;
           totalSize: number;
         };
-      }>('session/save', {
+      }>('session_save', {
         name: sessionName,
         description,
         includeMemory: ctx.flags['include-memory'] !== false,
@@ -312,7 +312,7 @@ const restoreCommand: Command = {
       try {
         const sessions = await callMCPTool<{
           sessions: Array<{ id: string; name?: string; status: string; updatedAt: string }>;
-        }>('session/list', { status: 'saved', limit: 20 });
+        }>('session_list', { status: 'saved', limit: 20 });
 
         if (sessions.sessions.length === 0) {
           output.printWarning('No saved sessions found');
@@ -376,7 +376,7 @@ const restoreCommand: Command = {
           tasksRestored: number;
           memoryEntriesRestored: number;
         };
-      }>('session/restore', {
+      }>('session_restore', {
         sessionId,
         restoreMemory,
         restoreAgents,
@@ -471,7 +471,7 @@ const deleteCommand: Command = {
         sessionId: string;
         deleted: boolean;
         deletedAt: string;
-      }>('session/delete', { sessionId });
+      }>('session_delete', { sessionId });
 
       output.writeln();
       output.printSuccess(`Session ${sessionId} deleted`);
@@ -533,7 +533,7 @@ const exportCommand: Command = {
     // Get current session if no ID provided
     if (!sessionId) {
       try {
-        const current = await callMCPTool<{ sessionId: string }>('session/current', {});
+        const current = await callMCPTool<{ sessionId: string }>('session_current', {});
         sessionId = current.sessionId;
       } catch {
         output.printError('No active session. Provide a session ID to export.');
@@ -559,7 +559,7 @@ const exportCommand: Command = {
           taskCount: number;
           memoryEntries: number;
         };
-      }>('session/export', {
+      }>('session_export', {
         sessionId,
         includeMemory: ctx.flags['include-memory'] !== false
       });
@@ -679,7 +679,7 @@ const importCommand: Command = {
           memoryEntriesImported: number;
         };
         activated: boolean;
-      }>('session/import', {
+      }>('session_import', {
         data,
         name: sessionName,
         activate
@@ -747,7 +747,7 @@ const currentCommand: Command = {
           memoryEntries: number;
           duration: number;
         };
-      }>('session/current', { includeStats: true });
+      }>('session_current', { includeStats: true });
 
       if (ctx.flags.format === 'json') {
         output.printJson(result);

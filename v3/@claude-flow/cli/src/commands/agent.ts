@@ -111,7 +111,7 @@ const spawnCommand: Command = {
         agentType: string;
         status: string;
         createdAt: string;
-      }>('agent/spawn', {
+      }>('agent_spawn', {
         agentType,
         id: agentName,
         config: {
@@ -201,7 +201,7 @@ const listCommand: Command = {
           lastActivityAt?: string;
         }>;
         total: number;
-      }>('agent/list', {
+      }>('agent_list', {
         status: ctx.flags.all ? 'all' : ctx.flags.status || undefined,
         agentType: ctx.flags.type || undefined,
         limit: 100,
@@ -300,7 +300,7 @@ const statusCommand: Command = {
           averageExecutionTime: number;
           uptime: number;
         };
-      }>('agent/status', {
+      }>('agent_status', {
         agentId,
         includeMetrics: true,
         includeHistory: false,
@@ -404,7 +404,7 @@ const stopCommand: Command = {
         agentId: string;
         terminated: boolean;
         terminatedAt: string;
-      }>('agent/terminate', {
+      }>('agent_terminate', {
         agentId,
         graceful: !force,
         reason: 'Stopped by user via CLI',
@@ -567,7 +567,7 @@ const poolCommand: Command = {
         autoScale: boolean;
         utilization: number;
         agents: Array<{ id: string; type: string; status: string }>;
-      }>('agent/pool', {
+      }>('agent_pool', {
         size: ctx.flags.size,
         min: ctx.flags.min,
         max: ctx.flags.max,
@@ -672,7 +672,7 @@ const healthCommand: Command = {
           avgCpu: number;
           avgMemory: number;
         };
-      }>('agent/health', {
+      }>('agent_health', {
         agentId,
         detailed,
       });
@@ -818,7 +818,7 @@ const logsCommand: Command = {
           context?: Record<string, unknown>;
         }>;
         total: number;
-      }>('agent/logs', {
+      }>('agent_logs', {
         agentId,
         tail,
         level,

@@ -68,7 +68,7 @@ function saveTerminalStore(store: TerminalStore): void {
 
 export const terminalTools: MCPTool[] = [
   {
-    name: 'terminal/create',
+    name: 'terminal_create',
     description: 'Create a new terminal session',
     category: 'terminal',
     inputSchema: {
@@ -108,7 +108,7 @@ export const terminalTools: MCPTool[] = [
     },
   },
   {
-    name: 'terminal/execute',
+    name: 'terminal_execute',
     description: 'Execute a command in a terminal session',
     category: 'terminal',
     inputSchema: {
@@ -175,7 +175,7 @@ export const terminalTools: MCPTool[] = [
     },
   },
   {
-    name: 'terminal/list',
+    name: 'terminal_list',
     description: 'List all terminal sessions',
     category: 'terminal',
     inputSchema: {
@@ -210,7 +210,7 @@ export const terminalTools: MCPTool[] = [
     },
   },
   {
-    name: 'terminal/close',
+    name: 'terminal_close',
     description: 'Close a terminal session',
     category: 'terminal',
     inputSchema: {
@@ -241,7 +241,7 @@ export const terminalTools: MCPTool[] = [
     },
   },
   {
-    name: 'terminal/history',
+    name: 'terminal_history',
     description: 'Get command history for a terminal session',
     category: 'terminal',
     inputSchema: {

@@ -120,7 +120,7 @@ async function getSystemStatus(): Promise<{
       agents: { total: number; active: number; idle: number; terminated: number };
       health: string;
       uptime: number;
-    }>('swarm/status', { includeMetrics: true });
+    }>('swarm_status', { includeMetrics: true });
 
     // Get MCP status
     let mcpStatus = { running: false, port: null as number | null, transport: 'stdio' };
@@ -129,7 +129,7 @@ async function getSystemStatus(): Promise<{
         running: boolean;
         port: number;
         transport: string;
-      }>('mcp/status', {});
+      }>('mcp_status', {});
       mcpStatus = mcp;
     } catch {
       // MCP not running
@@ -141,7 +141,7 @@ async function getSystemStatus(): Promise<{
       size: number;
       backend: string;
       performance: { avgSearchTime: number; cacheHitRate: number };
-    }>('memory/stats', {});
+    }>('memory_stats', {});
 
     // Get task status
     const taskStatus = await callMCPTool<{
@@ -150,7 +150,7 @@ async function getSystemStatus(): Promise<{
       running: number;
       completed: number;
       failed: number;
-    }>('task/summary', {});
+    }>('task_summary', {});
 
     return {
       initialized: true,
@@ -505,7 +505,7 @@ const agentsCommand: Command = {
           uptime: number;
           metrics: { tasksCompleted: number; successRate: number };
         }>;
-      }>('agent/list', { includeMetrics: true, status: 'all' });
+      }>('agent_list', { includeMetrics: true, status: 'all' });
 
       if (ctx.flags.format === 'json') {
         output.printJson(result);
@@ -568,7 +568,7 @@ const tasksCommand: Command = {
           progress: number;
           createdAt: string;
         }>;
-      }>('task/list', { status: 'all', limit: 50 });
+      }>('task_list', { status: 'all', limit: 50 });
 
       if (ctx.flags.format === 'json') {
         output.printJson(result);
@@ -636,7 +636,7 @@ const memoryCommand: Command = {
           searchImprovement: string;
           memoryReduction: string;
         };
-      }>('memory/detailed-stats', {});
+      }>('memory_detailed-stats', {});
 
       if (ctx.flags.format === 'json') {
         output.printJson(result);

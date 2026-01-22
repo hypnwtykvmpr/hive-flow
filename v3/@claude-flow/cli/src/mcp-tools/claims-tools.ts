@@ -94,7 +94,7 @@ function parseClaimant(str: string): Claimant | null {
 
 export const claimsTools: MCPTool[] = [
   {
-    name: 'claims/claim',
+    name: 'claims_claim',
     description: 'Claim an issue for work (human or agent)',
     category: 'claims',
     inputSchema: {
@@ -160,7 +160,7 @@ export const claimsTools: MCPTool[] = [
   },
 
   {
-    name: 'claims/release',
+    name: 'claims_release',
     description: 'Release a claim on an issue',
     category: 'claims',
     inputSchema: {
@@ -217,7 +217,7 @@ export const claimsTools: MCPTool[] = [
   },
 
   {
-    name: 'claims/handoff',
+    name: 'claims_handoff',
     description: 'Request handoff of an issue to another claimant',
     category: 'claims',
     inputSchema: {
@@ -290,7 +290,7 @@ export const claimsTools: MCPTool[] = [
   },
 
   {
-    name: 'claims/accept-handoff',
+    name: 'claims_accept-handoff',
     description: 'Accept a pending handoff',
     category: 'claims',
     inputSchema: {
@@ -353,7 +353,7 @@ export const claimsTools: MCPTool[] = [
   },
 
   {
-    name: 'claims/status',
+    name: 'claims_status',
     description: 'Update claim status',
     category: 'claims',
     inputSchema: {
@@ -414,7 +414,7 @@ export const claimsTools: MCPTool[] = [
   },
 
   {
-    name: 'claims/list',
+    name: 'claims_list',
     description: 'List all claims or filter by criteria',
     category: 'claims',
     inputSchema: {
@@ -467,7 +467,7 @@ export const claimsTools: MCPTool[] = [
   },
 
   {
-    name: 'claims/mark-stealable',
+    name: 'claims_mark-stealable',
     description: 'Mark an issue as stealable by other agents',
     category: 'claims',
     inputSchema: {
@@ -532,7 +532,7 @@ export const claimsTools: MCPTool[] = [
   },
 
   {
-    name: 'claims/steal',
+    name: 'claims_steal',
     description: 'Steal a stealable issue',
     category: 'claims',
     inputSchema: {
@@ -603,7 +603,7 @@ export const claimsTools: MCPTool[] = [
   },
 
   {
-    name: 'claims/stealable',
+    name: 'claims_stealable',
     description: 'List all stealable issues',
     category: 'claims',
     inputSchema: {
@@ -640,7 +640,7 @@ export const claimsTools: MCPTool[] = [
   },
 
   {
-    name: 'claims/load',
+    name: 'claims_load',
     description: 'Get agent load information',
     category: 'claims',
     inputSchema: {
@@ -728,7 +728,7 @@ export const claimsTools: MCPTool[] = [
   },
 
   {
-    name: 'claims/board',
+    name: 'claims_board',
     description: 'Get a visual board view of all claims',
     category: 'claims',
     inputSchema: {
@@ -782,7 +782,7 @@ export const claimsTools: MCPTool[] = [
   },
 
   {
-    name: 'claims/rebalance',
+    name: 'claims_rebalance',
     description: 'Suggest or apply load rebalancing across agents',
     category: 'claims',
     inputSchema: {
