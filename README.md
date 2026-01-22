@@ -1772,18 +1772,33 @@ Real-time development status display for Claude Code integration showing DDD pro
 
 **Usage:**
 ```bash
-# V3 statusline (Node.js)
-node v3/@claude-flow/hooks/bin/statusline.js
+# Default: Safe multi-line (avoids Claude Code collision zone)
+npx claude-flow@v3alpha hooks statusline
+
+# Single-line mode (completely avoids collision)
+npx claude-flow@v3alpha hooks statusline --single
+
+# Legacy multi-line (original behavior, may have bleeding)
+npx claude-flow@v3alpha hooks statusline --legacy
 
 # JSON output for scripting
-node v3/@claude-flow/hooks/bin/statusline.js --json
+npx claude-flow@v3alpha hooks statusline --json
 
 # Compact JSON (single line)
-node v3/@claude-flow/hooks/bin/statusline.js --compact
-
-# Help
-node v3/@claude-flow/hooks/bin/statusline.js --help
+npx claude-flow@v3alpha hooks statusline --compact
 ```
+
+**Collision Zone Fix (Issue #985):**
+
+Claude Code writes internal status (e.g., `7s • 1p`) at absolute terminal coordinates (columns 15-25 on the second-to-last line). The safe mode pads the collision line with spaces to push content past column 25, preventing character bleeding.
+
+| Option | Description |
+|--------|-------------|
+| (default) | Safe multi-line with collision zone avoidance |
+| `--single` | Single-line output (complete collision avoidance) |
+| `--legacy` | Original multi-line (may cause bleeding) |
+| `--json` | JSON output with pretty printing |
+| `--compact` | JSON output without formatting |
 
 **Claude Code Integration:**
 
@@ -1792,7 +1807,7 @@ Add to `.claude/settings.json`:
 {
   "statusLine": {
     "type": "command",
-    "command": "node v3/@claude-flow/hooks/bin/statusline.js"
+    "command": "npx claude-flow@v3alpha hooks statusline --single"
   }
 }
 ```
