@@ -163,7 +163,7 @@ function cosineSimilarity(a: number[], b: number[]): number {
 
 export const neuralTools: MCPTool[] = [
   {
-    name: 'neural/train',
+    name: 'neural_train',
     description: 'Train a neural model',
     category: 'neural',
     inputSchema: {
@@ -219,7 +219,7 @@ export const neuralTools: MCPTool[] = [
     },
   },
   {
-    name: 'neural/predict',
+    name: 'neural_predict',
     description: 'Make predictions using a neural model',
     category: 'neural',
     inputSchema: {
@@ -272,7 +272,7 @@ export const neuralTools: MCPTool[] = [
     },
   },
   {
-    name: 'neural/patterns',
+    name: 'neural_patterns',
     description: 'Get or manage neural patterns',
     category: 'neural',
     inputSchema: {
@@ -389,7 +389,7 @@ export const neuralTools: MCPTool[] = [
     },
   },
   {
-    name: 'neural/compress',
+    name: 'neural_compress',
     description: 'Compress neural model or embeddings',
     category: 'neural',
     inputSchema: {
@@ -425,7 +425,7 @@ export const neuralTools: MCPTool[] = [
     },
   },
   {
-    name: 'neural/status',
+    name: 'neural_status',
     description: 'Get neural system status',
     category: 'neural',
     inputSchema: {
@@ -478,7 +478,7 @@ export const neuralTools: MCPTool[] = [
     },
   },
   {
-    name: 'neural/optimize',
+    name: 'neural_optimize',
     description: 'Optimize neural model performance',
     category: 'neural',
     inputSchema: {

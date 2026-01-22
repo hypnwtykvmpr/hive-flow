@@ -263,7 +263,7 @@ function getSummary(metrics: V3ProgressMetrics): string {
  * progress/check - Get current V3 implementation progress
  */
 const progressCheck: MCPTool = {
-  name: 'progress/check',
+  name: 'progress_check',
   description: 'Get current V3 implementation progress percentage and metrics',
   inputSchema: {
     type: 'object',
@@ -310,7 +310,7 @@ const progressCheck: MCPTool = {
  * progress/sync - Calculate and persist V3 progress
  */
 const progressSync: MCPTool = {
-  name: 'progress/sync',
+  name: 'progress_sync',
   description: 'Calculate and persist V3 progress metrics to file',
   inputSchema: {
     type: 'object',
@@ -332,7 +332,7 @@ const progressSync: MCPTool = {
  * progress/summary - Get human-readable progress summary
  */
 const progressSummary: MCPTool = {
-  name: 'progress/summary',
+  name: 'progress_summary',
   description: 'Get human-readable V3 implementation progress summary',
   inputSchema: {
     type: 'object',
@@ -351,7 +351,7 @@ const progressSummary: MCPTool = {
  * progress/watch - Watch progress (status check)
  */
 const progressWatch: MCPTool = {
-  name: 'progress/watch',
+  name: 'progress_watch',
   description: 'Get current watch status for progress monitoring',
   inputSchema: {
     type: 'object',

@@ -400,41 +400,41 @@ const toolsCommand: Command = {
       // Fallback to static tool list
       tools = [
         // Agent tools
-        { name: 'agent/spawn', category: 'agent', description: 'Spawn a new agent', enabled: true },
-        { name: 'agent/list', category: 'agent', description: 'List all agents', enabled: true },
-        { name: 'agent/terminate', category: 'agent', description: 'Terminate an agent', enabled: true },
-        { name: 'agent/status', category: 'agent', description: 'Get agent status', enabled: true },
+        { name: 'agent_spawn', category: 'agent', description: 'Spawn a new agent', enabled: true },
+        { name: 'agent_list', category: 'agent', description: 'List all agents', enabled: true },
+        { name: 'agent_terminate', category: 'agent', description: 'Terminate an agent', enabled: true },
+        { name: 'agent_status', category: 'agent', description: 'Get agent status', enabled: true },
 
         // Swarm tools
-        { name: 'swarm/init', category: 'swarm', description: 'Initialize swarm topology', enabled: true },
-        { name: 'swarm/status', category: 'swarm', description: 'Get swarm status', enabled: true },
-        { name: 'swarm/scale', category: 'swarm', description: 'Scale swarm size', enabled: true },
+        { name: 'swarm_init', category: 'swarm', description: 'Initialize swarm topology', enabled: true },
+        { name: 'swarm_status', category: 'swarm', description: 'Get swarm status', enabled: true },
+        { name: 'swarm_scale', category: 'swarm', description: 'Scale swarm size', enabled: true },
 
         // Memory tools
-        { name: 'memory/store', category: 'memory', description: 'Store in memory', enabled: true },
-        { name: 'memory/search', category: 'memory', description: 'Search memory', enabled: true },
-        { name: 'memory/list', category: 'memory', description: 'List memory entries', enabled: true },
+        { name: 'memory_store', category: 'memory', description: 'Store in memory', enabled: true },
+        { name: 'memory_search', category: 'memory', description: 'Search memory', enabled: true },
+        { name: 'memory_list', category: 'memory', description: 'List memory entries', enabled: true },
 
         // Config tools
-        { name: 'config/load', category: 'config', description: 'Load configuration', enabled: true },
-        { name: 'config/save', category: 'config', description: 'Save configuration', enabled: true },
-        { name: 'config/validate', category: 'config', description: 'Validate configuration', enabled: true },
+        { name: 'config_load', category: 'config', description: 'Load configuration', enabled: true },
+        { name: 'config_save', category: 'config', description: 'Save configuration', enabled: true },
+        { name: 'config_validate', category: 'config', description: 'Validate configuration', enabled: true },
 
         // Hooks tools
-        { name: 'hooks/pre-edit', category: 'hooks', description: 'Pre-edit hook', enabled: true },
-        { name: 'hooks/post-edit', category: 'hooks', description: 'Post-edit hook', enabled: true },
-        { name: 'hooks/pre-command', category: 'hooks', description: 'Pre-command hook', enabled: true },
-        { name: 'hooks/post-command', category: 'hooks', description: 'Post-command hook', enabled: true },
-        { name: 'hooks/route', category: 'hooks', description: 'Route task to agent', enabled: true },
-        { name: 'hooks/explain', category: 'hooks', description: 'Explain routing', enabled: true },
-        { name: 'hooks/pretrain', category: 'hooks', description: 'Pretrain from repo', enabled: true },
-        { name: 'hooks/metrics', category: 'hooks', description: 'Learning metrics', enabled: true },
-        { name: 'hooks/list', category: 'hooks', description: 'List hooks', enabled: true },
+        { name: 'hooks_pre-edit', category: 'hooks', description: 'Pre-edit hook', enabled: true },
+        { name: 'hooks_post-edit', category: 'hooks', description: 'Post-edit hook', enabled: true },
+        { name: 'hooks_pre-command', category: 'hooks', description: 'Pre-command hook', enabled: true },
+        { name: 'hooks_post-command', category: 'hooks', description: 'Post-command hook', enabled: true },
+        { name: 'hooks_route', category: 'hooks', description: 'Route task to agent', enabled: true },
+        { name: 'hooks_explain', category: 'hooks', description: 'Explain routing', enabled: true },
+        { name: 'hooks_pretrain', category: 'hooks', description: 'Pretrain from repo', enabled: true },
+        { name: 'hooks_metrics', category: 'hooks', description: 'Learning metrics', enabled: true },
+        { name: 'hooks_list', category: 'hooks', description: 'List hooks', enabled: true },
 
         // System tools
-        { name: 'system/info', category: 'system', description: 'System information', enabled: true },
-        { name: 'system/health', category: 'system', description: 'Health status', enabled: true },
-        { name: 'system/metrics', category: 'system', description: 'Server metrics', enabled: true },
+        { name: 'system_info', category: 'system', description: 'System information', enabled: true },
+        { name: 'system_health', category: 'system', description: 'Health status', enabled: true },
+        { name: 'system_metrics', category: 'system', description: 'Server metrics', enabled: true },
       ].filter(t => !category || t.category === category);
     }
 
@@ -539,7 +539,7 @@ const execCommand: Command = {
     }
   ],
   examples: [
-    { command: 'claude-flow mcp exec -t swarm/init -p \'{"topology":"mesh"}\'', description: 'Execute tool' }
+    { command: 'claude-flow mcp exec -t swarm_init -p \'{"topology":"mesh"}\'', description: 'Execute tool' }
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     const tool = ctx.flags.tool as string || ctx.args[0];

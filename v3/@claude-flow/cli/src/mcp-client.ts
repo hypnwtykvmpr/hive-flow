@@ -94,7 +94,7 @@ export class MCPClientError extends Error {
 /**
  * Call an MCP tool by name with input parameters
  *
- * @param toolName - Name of the MCP tool (e.g., 'agent/spawn', 'swarm/init')
+ * @param toolName - Name of the MCP tool (e.g., 'agent_spawn', 'swarm_init')
  * @param input - Input parameters for the tool
  * @param context - Optional tool context
  * @returns Promise resolving to tool result
@@ -103,13 +103,13 @@ export class MCPClientError extends Error {
  * @example
  * ```typescript
  * // Spawn an agent
- * const result = await callMCPTool('agent/spawn', {
+ * const result = await callMCPTool('agent_spawn', {
  *   agentType: 'coder',
  *   priority: 'normal'
  * });
  *
  * // Initialize swarm
- * const swarm = await callMCPTool('swarm/init', {
+ * const swarm = await callMCPTool('swarm_init', {
  *   topology: 'hierarchical-mesh',
  *   maxAgents: 15
  * });

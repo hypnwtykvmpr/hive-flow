@@ -100,7 +100,7 @@ function setNestedValue(obj: Record<string, unknown>, key: string, value: unknow
 
 export const configTools: MCPTool[] = [
   {
-    name: 'config/get',
+    name: 'config_get',
     description: 'Get configuration value',
     category: 'config',
     inputSchema: {
@@ -139,7 +139,7 @@ export const configTools: MCPTool[] = [
     },
   },
   {
-    name: 'config/set',
+    name: 'config_set',
     description: 'Set configuration value',
     category: 'config',
     inputSchema: {
@@ -181,7 +181,7 @@ export const configTools: MCPTool[] = [
     },
   },
   {
-    name: 'config/list',
+    name: 'config_list',
     description: 'List configuration values',
     category: 'config',
     inputSchema: {
@@ -235,7 +235,7 @@ export const configTools: MCPTool[] = [
     },
   },
   {
-    name: 'config/reset',
+    name: 'config_reset',
     description: 'Reset configuration to defaults',
     category: 'config',
     inputSchema: {
@@ -286,7 +286,7 @@ export const configTools: MCPTool[] = [
     },
   },
   {
-    name: 'config/export',
+    name: 'config_export',
     description: 'Export configuration to JSON',
     category: 'config',
     inputSchema: {
@@ -323,7 +323,7 @@ export const configTools: MCPTool[] = [
     },
   },
   {
-    name: 'config/import',
+    name: 'config_import',
     description: 'Import configuration from JSON',
     category: 'config',
     inputSchema: {

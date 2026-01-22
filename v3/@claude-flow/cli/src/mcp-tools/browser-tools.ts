@@ -68,7 +68,7 @@ export const browserTools: MCPTool[] = [
   // Navigation Tools
   // ==========================================================================
   {
-    name: 'browser/open',
+    name: 'browser_open',
     description: 'Navigate browser to a URL',
     category: 'browser',
     tags: ['navigation', 'web'],
@@ -108,7 +108,7 @@ export const browserTools: MCPTool[] = [
     },
   },
   {
-    name: 'browser/back',
+    name: 'browser_back',
     description: 'Navigate back in browser history',
     category: 'browser',
     tags: ['navigation'],
@@ -124,7 +124,7 @@ export const browserTools: MCPTool[] = [
     },
   },
   {
-    name: 'browser/forward',
+    name: 'browser_forward',
     description: 'Navigate forward in browser history',
     category: 'browser',
     tags: ['navigation'],
@@ -140,7 +140,7 @@ export const browserTools: MCPTool[] = [
     },
   },
   {
-    name: 'browser/reload',
+    name: 'browser_reload',
     description: 'Reload the current page',
     category: 'browser',
     tags: ['navigation'],
@@ -156,7 +156,7 @@ export const browserTools: MCPTool[] = [
     },
   },
   {
-    name: 'browser/close',
+    name: 'browser_close',
     description: 'Close the browser session',
     category: 'browser',
     tags: ['navigation'],
@@ -178,7 +178,7 @@ export const browserTools: MCPTool[] = [
   // Snapshot Tools (AI-Optimized)
   // ==========================================================================
   {
-    name: 'browser/snapshot',
+    name: 'browser_snapshot',
     description: 'Get AI-optimized accessibility tree snapshot with element refs (@e1, @e2, etc.)',
     category: 'browser',
     tags: ['snapshot', 'ai'],
@@ -209,7 +209,7 @@ export const browserTools: MCPTool[] = [
     },
   },
   {
-    name: 'browser/screenshot',
+    name: 'browser_screenshot',
     description: 'Capture screenshot of the page',
     category: 'browser',
     tags: ['snapshot', 'screenshot'],
@@ -238,7 +238,7 @@ export const browserTools: MCPTool[] = [
   // Interaction Tools
   // ==========================================================================
   {
-    name: 'browser/click',
+    name: 'browser_click',
     description: 'Click an element using ref (@e1) or CSS selector',
     category: 'browser',
     tags: ['interaction'],
@@ -266,7 +266,7 @@ export const browserTools: MCPTool[] = [
     },
   },
   {
-    name: 'browser/fill',
+    name: 'browser_fill',
     description: 'Clear and fill an input element',
     category: 'browser',
     tags: ['interaction', 'form'],
@@ -289,7 +289,7 @@ export const browserTools: MCPTool[] = [
     },
   },
   {
-    name: 'browser/type',
+    name: 'browser_type',
     description: 'Type text with key events (for autocomplete, etc.)',
     category: 'browser',
     tags: ['interaction', 'form'],
@@ -316,7 +316,7 @@ export const browserTools: MCPTool[] = [
     },
   },
   {
-    name: 'browser/press',
+    name: 'browser_press',
     description: 'Press a keyboard key',
     category: 'browser',
     tags: ['interaction'],
@@ -334,7 +334,7 @@ export const browserTools: MCPTool[] = [
     },
   },
   {
-    name: 'browser/hover',
+    name: 'browser_hover',
     description: 'Hover over an element',
     category: 'browser',
     tags: ['interaction'],
@@ -352,7 +352,7 @@ export const browserTools: MCPTool[] = [
     },
   },
   {
-    name: 'browser/select',
+    name: 'browser_select',
     description: 'Select an option from a dropdown',
     category: 'browser',
     tags: ['interaction', 'form'],
@@ -375,7 +375,7 @@ export const browserTools: MCPTool[] = [
     },
   },
   {
-    name: 'browser/check',
+    name: 'browser_check',
     description: 'Check a checkbox',
     category: 'browser',
     tags: ['interaction', 'form'],
@@ -393,7 +393,7 @@ export const browserTools: MCPTool[] = [
     },
   },
   {
-    name: 'browser/uncheck',
+    name: 'browser_uncheck',
     description: 'Uncheck a checkbox',
     category: 'browser',
     tags: ['interaction', 'form'],
@@ -411,7 +411,7 @@ export const browserTools: MCPTool[] = [
     },
   },
   {
-    name: 'browser/scroll',
+    name: 'browser_scroll',
     description: 'Scroll the page',
     category: 'browser',
     tags: ['interaction'],
@@ -440,7 +440,7 @@ export const browserTools: MCPTool[] = [
   // Information Retrieval Tools
   // ==========================================================================
   {
-    name: 'browser/get-text',
+    name: 'browser_get-text',
     description: 'Get text content of an element',
     category: 'browser',
     tags: ['info'],
@@ -458,7 +458,7 @@ export const browserTools: MCPTool[] = [
     },
   },
   {
-    name: 'browser/get-value',
+    name: 'browser_get-value',
     description: 'Get value of an input element',
     category: 'browser',
     tags: ['info', 'form'],
@@ -476,7 +476,7 @@ export const browserTools: MCPTool[] = [
     },
   },
   {
-    name: 'browser/get-title',
+    name: 'browser_get-title',
     description: 'Get the page title',
     category: 'browser',
     tags: ['info'],
@@ -492,7 +492,7 @@ export const browserTools: MCPTool[] = [
     },
   },
   {
-    name: 'browser/get-url',
+    name: 'browser_get-url',
     description: 'Get the current URL',
     category: 'browser',
     tags: ['info'],
@@ -512,7 +512,7 @@ export const browserTools: MCPTool[] = [
   // Wait Tools
   // ==========================================================================
   {
-    name: 'browser/wait',
+    name: 'browser_wait',
     description: 'Wait for a condition',
     category: 'browser',
     tags: ['wait'],
@@ -547,7 +547,7 @@ export const browserTools: MCPTool[] = [
   // JavaScript Execution
   // ==========================================================================
   {
-    name: 'browser/eval',
+    name: 'browser_eval',
     description: 'Execute JavaScript in page context',
     category: 'browser',
     tags: ['eval', 'js'],
@@ -569,7 +569,7 @@ export const browserTools: MCPTool[] = [
   // Session Management
   // ==========================================================================
   {
-    name: 'browser/session-list',
+    name: 'browser_session-list',
     description: 'List active browser sessions',
     category: 'browser',
     tags: ['session'],

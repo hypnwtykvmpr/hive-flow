@@ -127,7 +127,7 @@ const startAction = async (ctx: CommandContext): Promise<CommandResult> => {
       topology: string;
       initializedAt: string;
       config: Record<string, unknown>;
-    }>('swarm/init', {
+    }>('swarm_init', {
       topology: finalTopology,
       maxAgents,
       autoScaling: swarmConfig.autoScale !== false,
@@ -148,7 +148,7 @@ const startAction = async (ctx: CommandContext): Promise<CommandResult> => {
           port: number;
           transport: string;
           startedAt: string;
-        }>('mcp/start', {
+        }>('mcp_start', {
           port: mcpPort,
           transport: mcpConfig.transportType || 'stdio',
           tools: mcpConfig.tools || ['agent', 'swarm', 'memory', 'task']
@@ -173,7 +173,7 @@ const startAction = async (ctx: CommandContext): Promise<CommandResult> => {
     const healthResult = await callMCPTool<{
       status: 'healthy' | 'degraded' | 'unhealthy';
       checks: Array<{ name: string; status: string; message?: string }>;
-    }>('swarm/health', {
+    }>('swarm_health', {
       swarmId: swarmResult.swarmId
     });
 
@@ -317,7 +317,7 @@ const stopCommand: Command = {
       // Stop MCP server
       spinner.setText('Stopping MCP server...');
       try {
-        await callMCPTool('mcp/stop', { graceful: !force, timeout });
+        await callMCPTool('mcp_stop', { graceful: !force, timeout });
         spinner.succeed('MCP server stopped');
       } catch {
         spinner.fail('MCP server was not running');
@@ -327,7 +327,7 @@ const stopCommand: Command = {
       spinner.setText('Stopping swarm...');
       spinner.start();
       try {
-        await callMCPTool('swarm/stop', {
+        await callMCPTool('swarm_stop', {
           graceful: !force,
           timeout,
           saveState: true

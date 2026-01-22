@@ -31,7 +31,7 @@ export const transferTools: MCPTool[] = [
   // ANONYMIZATION TOOLS
   // ═══════════════════════════════════════════════════════════════
   {
-    name: 'transfer/detect-pii',
+    name: 'transfer_detect-pii',
     description: 'Detect PII in content without redacting',
     category: 'transfer',
     version: '1.0.0',
@@ -60,7 +60,7 @@ export const transferTools: MCPTool[] = [
   // IPFS TOOLS
   // ═══════════════════════════════════════════════════════════════
   {
-    name: 'transfer/ipfs-resolve',
+    name: 'transfer_ipfs-resolve',
     description: 'Resolve IPNS name to CID',
     category: 'transfer',
     version: '1.0.0',
@@ -89,7 +89,7 @@ export const transferTools: MCPTool[] = [
   // PATTERN STORE TOOLS
   // ═══════════════════════════════════════════════════════════════
   {
-    name: 'transfer/store-search',
+    name: 'transfer_store-search',
     description: 'Search the pattern store',
     category: 'transfer',
     version: '1.0.0',
@@ -132,7 +132,7 @@ export const transferTools: MCPTool[] = [
   },
 
   {
-    name: 'transfer/store-info',
+    name: 'transfer_store-info',
     description: 'Get detailed info about a pattern',
     category: 'transfer',
     version: '1.0.0',
@@ -163,7 +163,7 @@ export const transferTools: MCPTool[] = [
   },
 
   {
-    name: 'transfer/store-download',
+    name: 'transfer_store-download',
     description: 'Download a pattern from the store',
     category: 'transfer',
     version: '1.0.0',
@@ -198,7 +198,7 @@ export const transferTools: MCPTool[] = [
   },
 
   {
-    name: 'transfer/store-featured',
+    name: 'transfer_store-featured',
     description: 'Get featured patterns from the store',
     category: 'transfer',
     version: '1.0.0',
@@ -226,7 +226,7 @@ export const transferTools: MCPTool[] = [
   },
 
   {
-    name: 'transfer/store-trending',
+    name: 'transfer_store-trending',
     description: 'Get trending patterns from the store',
     category: 'transfer',
     version: '1.0.0',
@@ -257,7 +257,7 @@ export const transferTools: MCPTool[] = [
   // PLUGIN STORE TOOLS
   // ═══════════════════════════════════════════════════════════════
   {
-    name: 'transfer/plugin-search',
+    name: 'transfer_plugin-search',
     description: 'Search the plugin store',
     category: 'transfer',
     version: '1.0.0',
@@ -310,7 +310,7 @@ export const transferTools: MCPTool[] = [
   },
 
   {
-    name: 'transfer/plugin-info',
+    name: 'transfer_plugin-info',
     description: 'Get detailed info about a plugin',
     category: 'transfer',
     version: '1.0.0',
@@ -345,7 +345,7 @@ export const transferTools: MCPTool[] = [
   },
 
   {
-    name: 'transfer/plugin-featured',
+    name: 'transfer_plugin-featured',
     description: 'Get featured plugins from the store',
     category: 'transfer',
     version: '1.0.0',
@@ -378,7 +378,7 @@ export const transferTools: MCPTool[] = [
   },
 
   {
-    name: 'transfer/plugin-official',
+    name: 'transfer_plugin-official',
     description: 'Get official plugins from the store',
     category: 'transfer',
     version: '1.0.0',

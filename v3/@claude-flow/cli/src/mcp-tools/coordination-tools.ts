@@ -100,7 +100,7 @@ function saveCoordStore(store: CoordinationStore): void {
 
 export const coordinationTools: MCPTool[] = [
   {
-    name: 'coordination/topology',
+    name: 'coordination_topology',
     description: 'Configure swarm topology',
     category: 'coordination',
     inputSchema: {
@@ -171,7 +171,7 @@ export const coordinationTools: MCPTool[] = [
     },
   },
   {
-    name: 'coordination/load_balance',
+    name: 'coordination_load_balance',
     description: 'Configure load balancing',
     category: 'coordination',
     inputSchema: {
@@ -258,7 +258,7 @@ export const coordinationTools: MCPTool[] = [
     },
   },
   {
-    name: 'coordination/sync',
+    name: 'coordination_sync',
     description: 'Synchronize state across nodes',
     category: 'coordination',
     inputSchema: {
@@ -330,7 +330,7 @@ export const coordinationTools: MCPTool[] = [
     },
   },
   {
-    name: 'coordination/node',
+    name: 'coordination_node',
     description: 'Manage coordination nodes',
     category: 'coordination',
     inputSchema: {
@@ -420,7 +420,7 @@ export const coordinationTools: MCPTool[] = [
     },
   },
   {
-    name: 'coordination/consensus',
+    name: 'coordination_consensus',
     description: 'Manage consensus protocol',
     category: 'coordination',
     inputSchema: {
@@ -482,7 +482,7 @@ export const coordinationTools: MCPTool[] = [
     },
   },
   {
-    name: 'coordination/orchestrate',
+    name: 'coordination_orchestrate',
     description: 'Orchestrate multi-agent coordination',
     category: 'coordination',
     inputSchema: {
@@ -516,7 +516,7 @@ export const coordinationTools: MCPTool[] = [
     },
   },
   {
-    name: 'coordination/metrics',
+    name: 'coordination_metrics',
     description: 'Get coordination metrics',
     category: 'coordination',
     inputSchema: {

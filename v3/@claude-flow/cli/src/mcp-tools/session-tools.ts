@@ -119,7 +119,7 @@ function loadRelatedStores(options: { includeMemory?: boolean; includeTasks?: bo
 
 export const sessionTools: MCPTool[] = [
   {
-    name: 'session/save',
+    name: 'session_save',
     description: 'Save current session state',
     category: 'session',
     inputSchema: {
@@ -176,7 +176,7 @@ export const sessionTools: MCPTool[] = [
     },
   },
   {
-    name: 'session/restore',
+    name: 'session_restore',
     description: 'Restore a saved session',
     category: 'session',
     inputSchema: {
@@ -244,7 +244,7 @@ export const sessionTools: MCPTool[] = [
     },
   },
   {
-    name: 'session/list',
+    name: 'session_list',
     description: 'List saved sessions',
     category: 'session',
     inputSchema: {
@@ -285,7 +285,7 @@ export const sessionTools: MCPTool[] = [
     },
   },
   {
-    name: 'session/delete',
+    name: 'session_delete',
     description: 'Delete a saved session',
     category: 'session',
     inputSchema: {
@@ -316,7 +316,7 @@ export const sessionTools: MCPTool[] = [
     },
   },
   {
-    name: 'session/info',
+    name: 'session_info',
     description: 'Get detailed session information',
     category: 'session',
     inputSchema: {

@@ -85,7 +85,7 @@ function savePerfStore(store: PerfStore): void {
 
 export const performanceTools: MCPTool[] = [
   {
-    name: 'performance/report',
+    name: 'performance_report',
     description: 'Generate performance report',
     category: 'performance',
     inputSchema: {
@@ -188,7 +188,7 @@ export const performanceTools: MCPTool[] = [
     },
   },
   {
-    name: 'performance/bottleneck',
+    name: 'performance_bottleneck',
     description: 'Detect performance bottlenecks',
     category: 'performance',
     inputSchema: {
@@ -252,7 +252,7 @@ export const performanceTools: MCPTool[] = [
     },
   },
   {
-    name: 'performance/benchmark',
+    name: 'performance_benchmark',
     description: 'Run performance benchmarks',
     category: 'performance',
     inputSchema: {
@@ -384,7 +384,7 @@ export const performanceTools: MCPTool[] = [
     },
   },
   {
-    name: 'performance/profile',
+    name: 'performance_profile',
     description: 'Profile specific component or operation',
     category: 'performance',
     inputSchema: {
@@ -427,7 +427,7 @@ export const performanceTools: MCPTool[] = [
     },
   },
   {
-    name: 'performance/optimize',
+    name: 'performance_optimize',
     description: 'Apply performance optimizations',
     category: 'performance',
     inputSchema: {
@@ -486,7 +486,7 @@ export const performanceTools: MCPTool[] = [
     },
   },
   {
-    name: 'performance/metrics',
+    name: 'performance_metrics',
     description: 'Get detailed performance metrics',
     category: 'performance',
     inputSchema: {

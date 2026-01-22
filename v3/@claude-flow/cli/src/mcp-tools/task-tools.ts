@@ -68,7 +68,7 @@ function saveTaskStore(store: TaskStore): void {
 
 export const taskTools: MCPTool[] = [
   {
-    name: 'task/create',
+    name: 'task_create',
     description: 'Create a new task',
     category: 'task',
     inputSchema: {
@@ -116,7 +116,7 @@ export const taskTools: MCPTool[] = [
     },
   },
   {
-    name: 'task/status',
+    name: 'task_status',
     description: 'Get task status',
     category: 'task',
     inputSchema: {
@@ -155,7 +155,7 @@ export const taskTools: MCPTool[] = [
     },
   },
   {
-    name: 'task/list',
+    name: 'task_list',
     description: 'List all tasks',
     category: 'task',
     inputSchema: {
@@ -217,7 +217,7 @@ export const taskTools: MCPTool[] = [
     },
   },
   {
-    name: 'task/complete',
+    name: 'task_complete',
     description: 'Mark task as complete',
     category: 'task',
     inputSchema: {
@@ -256,7 +256,7 @@ export const taskTools: MCPTool[] = [
     },
   },
   {
-    name: 'task/update',
+    name: 'task_update',
     description: 'Update task status or progress',
     category: 'task',
     inputSchema: {
@@ -307,7 +307,7 @@ export const taskTools: MCPTool[] = [
     },
   },
   {
-    name: 'task/cancel',
+    name: 'task_cancel',
     description: 'Cancel a task',
     category: 'task',
     inputSchema: {

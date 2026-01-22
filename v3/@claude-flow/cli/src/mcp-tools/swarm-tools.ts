@@ -8,7 +8,7 @@ import type { MCPTool } from './types.js';
 
 export const swarmTools: MCPTool[] = [
   {
-    name: 'swarm/init',
+    name: 'swarm_init',
     description: 'Initialize a swarm',
     category: 'swarm',
     inputSchema: {
@@ -41,7 +41,7 @@ export const swarmTools: MCPTool[] = [
     },
   },
   {
-    name: 'swarm/status',
+    name: 'swarm_status',
     description: 'Get swarm status',
     category: 'swarm',
     inputSchema: {
@@ -60,7 +60,7 @@ export const swarmTools: MCPTool[] = [
     },
   },
   {
-    name: 'swarm/shutdown',
+    name: 'swarm_shutdown',
     description: 'Shutdown a swarm',
     category: 'swarm',
     inputSchema: {
@@ -79,7 +79,7 @@ export const swarmTools: MCPTool[] = [
     },
   },
   {
-    name: 'swarm/health',
+    name: 'swarm_health',
     description: 'Check swarm health status',
     category: 'swarm',
     inputSchema: {

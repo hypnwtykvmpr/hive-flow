@@ -138,7 +138,7 @@ const diffCommand: Command = {
         }>;
         recommendedReviewers: string[];
         summary: string;
-      }>('analyze/diff', {
+      }>('analyze_diff', {
         ref,
         includeFileRisks: verbose,
         includeReviewers: showReviewers || showAll,

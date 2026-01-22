@@ -82,7 +82,7 @@ const preEditCommand: Command = {
           risks: string[];
         };
         recommendations: string[];
-      }>('hooks/pre-edit', {
+      }>('hooks_pre-edit', {
         filePath,
         operation,
         context: ctx.flags.context,
@@ -230,7 +230,7 @@ const postEditCommand: Command = {
           confidenceAdjusted: number;
           newPatterns: number;
         };
-      }>('hooks/post-edit', {
+      }>('hooks_post-edit', {
         filePath,
         success,
         outcome: ctx.flags.outcome,
@@ -317,7 +317,7 @@ const preCommandCommand: Command = {
         recommendations: string[];
         safeAlternatives?: string[];
         shouldProceed: boolean;
-      }>('hooks/pre-command', {
+      }>('hooks_pre-command', {
         command,
         includeAlternatives: true,
       });
@@ -453,7 +453,7 @@ const postCommandCommand: Command = {
           commandPatternsUpdated: number;
           riskAssessmentUpdated: boolean;
         };
-      }>('hooks/post-command', {
+      }>('hooks_post-command', {
         command,
         success,
         exitCode: ctx.flags.exitCode || 0,
@@ -547,7 +547,7 @@ const routeCommand: Command = {
           estimatedDuration: string;
           complexity: 'low' | 'medium' | 'high';
         };
-      }>('hooks/route', {
+      }>('hooks_route', {
         task,
         context: ctx.flags.context,
         topK,
@@ -665,7 +665,7 @@ const explainCommand: Command = {
           confidence: number;
           reasoning: string[];
         };
-      }>('hooks/explain', {
+      }>('hooks_explain', {
         task,
         agent: ctx.flags.agent,
         verbose: ctx.flags.verbose || false,
@@ -838,7 +838,7 @@ const pretrainCommand: Command = {
           hyperbolicProjections?: number;
         };
         duration: number;
-      }>('hooks/pretrain', {
+      }>('hooks_pretrain', {
         path: repoPath,
         depth,
         skipCache: ctx.flags.skipCache || false,
@@ -962,7 +962,7 @@ const buildAgentsCommand: Command = {
           patternsApplied: number;
           optimizationsIncluded: number;
         };
-      }>('hooks/build-agents', {
+      }>('hooks_build-agents', {
         outputDir: output_dir,
         focus,
         format: configFormat,
@@ -1079,7 +1079,7 @@ const metricsCommand: Command = {
           searchImprovement: string;
           tokenReduction: string;
         };
-      }>('hooks/metrics', {
+      }>('hooks_metrics', {
         period,
         includeV3: v3Dashboard,
         category: ctx.flags.category,
@@ -1226,7 +1226,7 @@ const transferFromProjectCommand: Command = {
           avgConfidence: number;
           avgAge: string;
         };
-      }>('hooks/transfer', {
+      }>('hooks_transfer', {
         sourcePath,
         filter: ctx.flags.filter,
         minConfidence,
@@ -1356,7 +1356,7 @@ const listCommand: Command = {
           lastExecuted?: string;
         }>;
         total: number;
-      }>('hooks/list', {
+      }>('hooks_list', {
         enabled: ctx.flags.enabled || undefined,
         type: ctx.flags.type || undefined,
       });
@@ -1457,7 +1457,7 @@ const preTaskCommand: Command = {
         estimatedDuration: string;
         risks: string[];
         recommendations: string[];
-      }>('hooks/pre-task', {
+      }>('hooks_pre-task', {
         taskId,
         description,
         autoSpawn: ctx.flags.autoSpawn || false,
@@ -1625,7 +1625,7 @@ const postTaskCommand: Command = {
           newPatterns: number;
           trajectoryId: string;
         };
-      }>('hooks/post-task', {
+      }>('hooks_post-task', {
         taskId,
         success,
         quality: ctx.flags.quality,
@@ -1701,7 +1701,7 @@ const sessionEndCommand: Command = {
           filesModified: number;
           agentsSpawned: number;
         };
-      }>('hooks/session-end', {
+      }>('hooks_session-end', {
         saveState: ctx.flags.saveState ?? true,
         timestamp: Date.now(),
       });
@@ -1795,7 +1795,7 @@ const sessionRestoreCommand: Command = {
           memoryRestored: number;
         };
         warnings?: string[];
-      }>('hooks/session-restore', {
+      }>('hooks_session-restore', {
         sessionId,
         restoreAgents: ctx.flags.restoreAgents ?? true,
         restoreTasks: ctx.flags.restoreTasks ?? true,
@@ -1935,7 +1935,7 @@ const intelligenceCommand: Command = {
 
       output.printInfo('Resetting learning state...');
       try {
-        await callMCPTool('hooks/intelligence-reset', {});
+        await callMCPTool('hooks_intelligence-reset', {});
         output.printSuccess('Learning state reset');
         return { success: true };
       } catch (error) {
@@ -1993,7 +1993,7 @@ const intelligenceCommand: Command = {
           sweBenchScore: string;
         };
         lastTrainingMs?: number;
-      }>('hooks/intelligence', {
+      }>('hooks_intelligence', {
         mode,
         enableSona,
         enableMoe,
@@ -2189,7 +2189,7 @@ const workerListCommand: Command = {
           byStatus: Record<string, number>;
         };
         performanceTargets: Record<string, string | number>;
-      }>('hooks/worker-list', {
+      }>('hooks_worker-list', {
         status: ctx.flags['status'] || 'all',
         includeActive: ctx.flags['active'] !== false,
       });
@@ -2298,7 +2298,7 @@ const workerDispatchCommand: Command = {
         };
         status: string;
         error?: string;
-      }>('hooks/worker-dispatch', {
+      }>('hooks_worker-dispatch', {
         trigger,
         context,
         priority,
@@ -2392,7 +2392,7 @@ const workerStatusCommand: Command = {
           failed: number;
         };
         error?: string;
-      }>('hooks/worker-status', {
+      }>('hooks_worker-status', {
         workerId,
         includeCompleted,
       });
@@ -2503,7 +2503,7 @@ const workerDetectCommand: Command = {
         }>;
         autoDispatched?: boolean;
         workerIds?: string[];
-      }>('hooks/worker-detect', {
+      }>('hooks_worker-detect', {
         prompt,
         autoDispatch,
         minConfidence,
@@ -2581,7 +2581,7 @@ const workerCancelCommand: Command = {
         workerId: string;
         cancelled: boolean;
         error?: string;
-      }>('hooks/worker-cancel', { workerId });
+      }>('hooks_worker-cancel', { workerId });
 
       if (!result.success) {
         spinner.fail(`Failed: ${result.error}`);
@@ -2687,7 +2687,7 @@ const coverageRouteCommand: Command = {
           criticalGaps: number;
           avgCoverage: number;
         };
-      }>('hooks/coverage-route', {
+      }>('hooks_coverage-route', {
         task,
         threshold,
         useRuvector,
@@ -2821,7 +2821,7 @@ const coverageSuggestCommand: Command = {
         };
         prioritizedFiles: string[];
         ruvectorAvailable: boolean;
-      }>('hooks/coverage-suggest', {
+      }>('hooks_coverage-suggest', {
         path,
         threshold,
         limit,
@@ -2944,7 +2944,7 @@ const coverageGapsCommand: Command = {
         };
         agentAssignments: Record<string, string[]>;
         ruvectorAvailable: boolean;
-      }>('hooks/coverage-gaps', {
+      }>('hooks_coverage-gaps', {
         threshold,
         groupByAgent,
       });
@@ -3068,7 +3068,7 @@ const progressHookCommand: Command = {
       if (summary) {
         const spinner = output.createSpinner({ text: 'Getting progress summary...' });
         spinner.start();
-        const result = await callMCPTool<{ summary: string }>('progress/summary', {});
+        const result = await callMCPTool<{ summary: string }>('progress_summary', {});
         spinner.stop();
 
         if (ctx.flags.format === 'json') {
@@ -3089,7 +3089,7 @@ const progressHookCommand: Command = {
           message: string;
           persisted: boolean;
           lastUpdated: string;
-        }>('progress/sync', {});
+        }>('progress_sync', {});
         spinner.stop();
 
         if (ctx.flags.format === 'json') {
@@ -3119,7 +3119,7 @@ const progressHookCommand: Command = {
         ddd?: { progress: number };
         codebase?: { totalFiles: number; totalLines: number };
         lastUpdated?: string;
-      }>('progress/check', { detailed });
+      }>('progress_check', { detailed });
       spinner.stop();
 
       if (ctx.flags.format === 'json') {
@@ -3956,7 +3956,7 @@ const modelRouteCommand: Command = {
         reasoning: string;
         costMultiplier?: number;
         implementation?: string;
-      }>('hooks/model-route', {
+      }>('hooks_model-route', {
         task,
         context: ctx.flags.context,
         preferCost: ctx.flags['prefer-cost'],
@@ -4045,7 +4045,7 @@ const modelOutcomeCommand: Command = {
     }
 
     try {
-      const result = await callMCPTool<{ recorded: boolean; learningUpdate: string }>('hooks/model-outcome', {
+      const result = await callMCPTool<{ recorded: boolean; learningUpdate: string }>('hooks_model-outcome', {
         task,
         model,
         outcome,
@@ -4086,7 +4086,7 @@ const modelStatsCommand: Command = {
         avgComplexity?: number;
         avgConfidence?: number;
         circuitBreakerTrips?: number;
-      }>('hooks/model-stats', {
+      }>('hooks_model-stats', {
         detailed: ctx.flags.detailed,
       });
 

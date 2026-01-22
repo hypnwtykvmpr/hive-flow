@@ -569,7 +569,7 @@ const statsCommand: Command = {
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     // Call MCP memory/stats tool for real statistics
     try {
-      const statsResult = await callMCPTool('memory/stats', {}) as {
+      const statsResult = await callMCPTool('memory_stats', {}) as {
         totalEntries: number;
         totalSize: string;
         version: string;
@@ -804,7 +804,7 @@ const cleanupCommand: Command = {
           formatted: string;
         };
         duration: number;
-      }>('memory/cleanup', {
+      }>('memory_cleanup', {
         dryRun,
         olderThan: ctx.flags.olderThan,
         expiredOnly: ctx.flags.expiredOnly,
@@ -958,7 +958,7 @@ const compressCommand: Command = {
           searchSpeedup: string;
         };
         duration: number;
-      }>('memory/compress', {
+      }>('memory_compress', {
         level,
         target,
         quantize,
@@ -1083,7 +1083,7 @@ const exportCommand: Command = {
           patterns: number;
         };
         fileSize: string;
-      }>('memory/export', {
+      }>('memory_export', {
         outputPath,
         format,
         namespace: ctx.flags.namespace,
@@ -1160,7 +1160,7 @@ const importCommand: Command = {
         };
         skipped: number;
         duration: number;
-      }>('memory/import', {
+      }>('memory_import', {
         inputPath,
         merge: ctx.flags.merge ?? true,
         namespace: ctx.flags.namespace,

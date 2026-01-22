@@ -126,7 +126,7 @@ const runCommand: Command = {
           agentsSpawned: number;
           estimatedDuration: string;
         };
-      }>('workflow/run', {
+      }>('workflow_run', {
         template: template || undefined,
         file: file || undefined,
         task,
@@ -238,7 +238,7 @@ const validateCommand: Command = {
           agents: number;
           estimatedDuration: string;
         };
-      }>('workflow/validate', {
+      }>('workflow_validate', {
         file,
         strict,
       });
@@ -335,7 +335,7 @@ const listCommand: Command = {
           progress: number;
         }>;
         total: number;
-      }>('workflow/list', {
+      }>('workflow_list', {
         status: status || 'all',
         limit,
       });
@@ -420,7 +420,7 @@ const statusCommand: Command = {
           tokensUsed: number;
           agentsSpawned: number;
         };
-      }>('workflow/status', {
+      }>('workflow_status', {
         workflowId,
       });
 
@@ -505,7 +505,7 @@ const stopCommand: Command = {
         workflowId: string;
         stopped: boolean;
         stoppedAt: string;
-      }>('workflow/stop', {
+      }>('workflow_stop', {
         workflowId,
         graceful: !force,
       });
