@@ -2300,6 +2300,114 @@ export async function getEntry(options: {
   }
 }
 
+/**
+ * Delete a memory entry by key and namespace
+ * Issue #980: Properly supports namespaced entries
+ */
+export async function deleteEntry(options: {
+  key: string;
+  namespace?: string;
+  dbPath?: string;
+}): Promise<{
+  success: boolean;
+  deleted: boolean;
+  key: string;
+  namespace: string;
+  remainingEntries: number;
+  error?: string;
+}> {
+  const {
+    key,
+    namespace = 'default',
+    dbPath: customPath
+  } = options;
+
+  const swarmDir = path.join(process.cwd(), '.swarm');
+  const dbPath = customPath || path.join(swarmDir, 'memory.db');
+
+  try {
+    if (!fs.existsSync(dbPath)) {
+      return {
+        success: false,
+        deleted: false,
+        key,
+        namespace,
+        remainingEntries: 0,
+        error: 'Database not found'
+      };
+    }
+
+    // Ensure schema has all required columns (migration for older DBs)
+    await ensureSchemaColumns(dbPath);
+
+    const initSqlJs = (await import('sql.js')).default;
+    const SQL = await initSqlJs();
+
+    const fileBuffer = fs.readFileSync(dbPath);
+    const db = new SQL.Database(fileBuffer);
+
+    // Check if entry exists first
+    const checkResult = db.exec(`
+      SELECT id FROM memory_entries
+      WHERE status = 'active'
+        AND key = '${key.replace(/'/g, "''")}'
+        AND namespace = '${namespace.replace(/'/g, "''")}'
+      LIMIT 1
+    `);
+
+    if (!checkResult[0]?.values?.[0]) {
+      // Get remaining count before closing
+      const countResult = db.exec(`SELECT COUNT(*) FROM memory_entries WHERE status = 'active'`);
+      const remainingEntries = countResult[0]?.values?.[0]?.[0] as number || 0;
+      db.close();
+      return {
+        success: true,
+        deleted: false,
+        key,
+        namespace,
+        remainingEntries,
+        error: `Key '${key}' not found in namespace '${namespace}'`
+      };
+    }
+
+    // Delete the entry (soft delete by setting status to 'deleted')
+    db.run(`
+      UPDATE memory_entries
+      SET status = 'deleted', updated_at = strftime('%s', 'now') * 1000
+      WHERE key = '${key.replace(/'/g, "''")}'
+        AND namespace = '${namespace.replace(/'/g, "''")}'
+        AND status = 'active'
+    `);
+
+    // Get remaining count
+    const countResult = db.exec(`SELECT COUNT(*) FROM memory_entries WHERE status = 'active'`);
+    const remainingEntries = countResult[0]?.values?.[0]?.[0] as number || 0;
+
+    // Save updated database
+    const data = db.export();
+    fs.writeFileSync(dbPath, Buffer.from(data));
+
+    db.close();
+
+    return {
+      success: true,
+      deleted: true,
+      key,
+      namespace,
+      remainingEntries
+    };
+  } catch (error) {
+    return {
+      success: false,
+      deleted: false,
+      key,
+      namespace,
+      remainingEntries: 0,
+      error: error instanceof Error ? error.message : String(error)
+    };
+  }
+}
+
 export default {
   initializeMemoryDatabase,
   checkMemoryInitialization,
@@ -2313,6 +2421,7 @@ export default {
   searchEntries,
   listEntries,
   getEntry,
+  deleteEntry,
   MEMORY_SCHEMA_V3,
   getInitialMetadata
 };
