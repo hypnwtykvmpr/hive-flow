@@ -489,6 +489,19 @@ const deleteCommand: Command = {
   description: 'Delete memory entry',
   options: [
     {
+      name: 'key',
+      short: 'k',
+      description: 'Storage key',
+      type: 'string'
+    },
+    {
+      name: 'namespace',
+      short: 'n',
+      description: 'Memory namespace',
+      type: 'string',
+      default: 'default'
+    },
+    {
       name: 'force',
       short: 'f',
       description: 'Skip confirmation',
@@ -496,18 +509,25 @@ const deleteCommand: Command = {
       default: false
     }
   ],
+  examples: [
+    { command: 'claude-flow memory delete -k "mykey"', description: 'Delete entry with default namespace' },
+    { command: 'claude-flow memory delete -k "lesson" -n "lessons"', description: 'Delete entry from specific namespace' },
+    { command: 'claude-flow memory delete mykey -f', description: 'Delete without confirmation' }
+  ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
-    const key = ctx.args[0];
+    // Support both --key flag and positional argument
+    const key = ctx.flags.key as string || ctx.args[0];
+    const namespace = (ctx.flags.namespace as string) || 'default';
     const force = ctx.flags.force as boolean;
 
     if (!key) {
-      output.printError('Key is required');
+      output.printError('Key is required. Use: memory delete -k "key" [-n "namespace"]');
       return { success: false, exitCode: 1 };
     }
 
     if (!force && ctx.interactive) {
       const confirmed = await confirm({
-        message: `Delete memory entry "${key}"?`,
+        message: `Delete memory entry "${key}" from namespace "${namespace}"?`,
         default: false
       });
 
@@ -517,20 +537,21 @@ const deleteCommand: Command = {
       }
     }
 
-    // Call MCP memory/delete tool
+    // Use sql.js directly for consistent data access (Issue #980)
     try {
-      const result = await callMCPTool('memory/delete', { key }) as {
-        success: boolean;
-        key: string;
-        deleted: boolean;
-        remainingEntries: number;
-      };
+      const { deleteEntry } = await import('../memory/memory-initializer.js');
+      const result = await deleteEntry({ key, namespace });
+
+      if (!result.success) {
+        output.printError(result.error || 'Failed to delete');
+        return { success: false, exitCode: 1 };
+      }
 
       if (result.deleted) {
-        output.printSuccess(`Deleted ${key}`);
+        output.printSuccess(`Deleted "${key}" from namespace "${namespace}"`);
         output.printInfo(`Remaining entries: ${result.remainingEntries}`);
       } else {
-        output.printWarning(`Key not found: ${key}`);
+        output.printWarning(`Key not found: "${key}" in namespace "${namespace}"`);
       }
 
       return { success: result.deleted, data: result };
