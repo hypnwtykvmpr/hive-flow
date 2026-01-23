@@ -180,7 +180,7 @@ Every request flows through four layers: from your CLI or Claude Code interface,
 |-------|------------|--------------|
 | User | Claude Code, CLI | Your interface to control and run commands |
 | Orchestration | MCP Server, Router, Hooks | Routes requests to the right agents |
-| Agents | 54+ types | Specialized workers (coder, tester, reviewer...) |
+| Agents | 60+ types | Specialized workers (coder, tester, reviewer...) |
 | Providers | Anthropic, OpenAI, Google, Ollama | AI models that power reasoning |
 
 </details>
