@@ -1,4 +1,4 @@
-# Claude-Flow v3: Enterprise AI Orchestration Platform
+# 🌊 Claude-Flow v3: Enterprise AI Orchestration Platform
 
 <div align="center">
 
