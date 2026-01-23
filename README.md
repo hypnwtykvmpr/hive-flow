@@ -19,7 +19,7 @@
 
 **Production-ready multi-agent AI orchestration for Claude Code**
 
-*Deploy 54+ specialized agents in coordinated swarms with self-learning capabilities, fault-tolerant consensus, and enterprise-grade security.*
+*Deploy 60+ specialized agents in coordinated swarms with self-learning capabilities, fault-tolerant consensus, and enterprise-grade security.*
 
 </div>
 
