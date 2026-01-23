@@ -5871,7 +5871,7 @@ export CLAUDE_FLOW_HNSW_EF=100
 │ Pattern Matching      │ Self-learning (ReasoningBank)       │
 │ Security              │ CVE remediation + strict validation │
 │ Modular Architecture  │ 18 @claude-flow/* packages          │
-│ Agent Coordination    │ 54+ specialized agents              │
+│ Agent Coordination    │ 60+ specialized agents              │
 │ Token Efficiency      │ 32% reduction with optimization     │
 └───────────────────────┴─────────────────────────────────────┘
 ```
