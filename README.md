@@ -2331,6 +2331,35 @@ Hooks intercept operations (file edits, commands, tasks) and learn from outcomes
    150x faster        success/fail      compression       memory lock
 ```
 
+### Hook Signals (ADR-026 Model Routing)
+
+When hooks run, they emit signals that guide routing decisions. Watch for these in hook output:
+
+| Signal | Meaning | Action |
+|--------|---------|--------|
+| `[AGENT_BOOSTER_AVAILABLE]` | Simple transform detected, skip LLM | Use Edit tool directly (352x faster, $0) |
+| `[TASK_MODEL_RECOMMENDATION] Use model="haiku"` | Low complexity task | Pass `model: "haiku"` to Task tool |
+| `[TASK_MODEL_RECOMMENDATION] Use model="sonnet"` | Medium complexity task | Pass `model: "sonnet"` to Task tool |
+| `[TASK_MODEL_RECOMMENDATION] Use model="opus"` | High complexity task | Pass `model: "opus"` to Task tool |
+
+**Agent Booster Intents** (handled without LLM):
+- `var-to-const` - Convert var/let to const
+- `add-types` - Add TypeScript type annotations
+- `add-error-handling` - Wrap in try/catch
+- `async-await` - Convert promises to async/await
+- `add-logging` - Add console.log statements
+- `remove-console` - Strip console.* calls
+
+**Example Hook Output:**
+```bash
+$ npx claude-flow@v3alpha hooks pre-task --description "convert var to const in utils.ts"
+
+[AGENT_BOOSTER_AVAILABLE] Intent: var-to-const
+Recommendation: Use Edit tool directly
+Performance: <1ms (352x faster than LLM)
+Cost: $0
+```
+
 ### All 27 Hooks by Category
 
 #### 🔧 Tool Lifecycle Hooks (6 hooks)
