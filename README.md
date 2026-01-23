@@ -62,7 +62,7 @@ flowchart TB
         CLM[Claims<br/>Human-Agent Coord]
     end
 
-    subgraph AGENTS["🤖 54+ Agents"]
+    subgraph AGENTS["🤖 60+ Agents"]
         AG1[coder]
         AG2[tester]
         AG3[reviewer]
