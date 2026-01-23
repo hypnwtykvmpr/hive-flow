@@ -522,7 +522,7 @@ flowchart TB
 
     subgraph Agents["🤖 Agent Layer"]
         Queen[Queen Coordinator]
-        Workers[54+ Specialized Agents]
+        Workers[60+ Specialized Agents]
         Swarm[Swarm Manager]
     end
 
