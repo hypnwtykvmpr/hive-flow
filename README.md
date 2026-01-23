@@ -2,6 +2,9 @@
 
 <div align="center">
 
+![Claude-Flow Banner](https://repository-images.githubusercontent.com/995029641/b9acbe16-0f49-420d-804f-468ba2a73ace)
+
+
 
 [![Star on GitHub](https://img.shields.io/github/stars/ruvnet/claude-flow?style=for-the-badge&logo=github&color=gold)](https://github.com/ruvnet/claude-flow)
 [![Monthly Downloads](https://img.shields.io/npm/dm/claude-flow?style=for-the-badge&logo=npm&color=blue&label=Monthly%20Downloads)](https://www.npmjs.com/package/claude-flow)
