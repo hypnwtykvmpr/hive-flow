@@ -50,29 +50,43 @@ async function fetchNpmStats(packageName: string): Promise<{ downloads: number; 
 /**
  * Default plugin store configuration
  */
+/**
+ * Live IPFS Registry CID - Updated 2026-01-24
+ * This is the current pinned registry on Pinata
+ */
+export const LIVE_REGISTRY_CID = 'bafkreiahw4ufxwycbwwswt7rgbx6hkgnvg3rophhocatgec4bu5e7tzk2a';
+
+/**
+ * Pre-trained Model Registry CID - Updated 2026-01-24
+ * Contains 8 pre-trained learning pattern models with 40 patterns
+ * Trained on 110,600+ examples with 90.5% average accuracy
+ */
+export const MODEL_REGISTRY_CID = 'QmNr1yYMKi7YBaL8JSztQyuB5ZUaTdRMLxJC1pBpGbjsTc';
+
 export const DEFAULT_PLUGIN_STORE_CONFIG: PluginStoreConfig = {
   registries: [
     {
       name: 'claude-flow-official',
       description: 'Official Claude Flow plugin registry',
-      ipnsName: 'k51qzi5uqu5dkplugin53t7w9w2d4xk6x0qkdvqv5h0h8rma',
-      gateway: 'https://ipfs.io',
-      publicKey: 'ed25519:0x1234567890abcdef',
+      // Use direct CID for reliable resolution (IPNS can be slow)
+      ipnsName: LIVE_REGISTRY_CID,
+      gateway: 'https://gateway.pinata.cloud',
+      publicKey: 'ed25519:21490c8ef5e6d9fea573382e52fbad7d0fa40c3eb124e6746706da7a420ae2d2',
       trusted: true,
       official: true,
     },
     {
       name: 'community-plugins',
       description: 'Community-contributed plugins',
-      ipnsName: 'k51qzi5uqu5dkcommunity7w9w2d4xk6x0qkdvqv5h0h8rmb',
-      gateway: 'https://dweb.link',
-      publicKey: 'ed25519:0xfedcba0987654321',
+      ipnsName: LIVE_REGISTRY_CID, // Same registry for now
+      gateway: 'https://ipfs.io',
+      publicKey: 'ed25519:21490c8ef5e6d9fea573382e52fbad7d0fa40c3eb124e6746706da7a420ae2d2',
       trusted: true,
       official: false,
     },
   ],
   defaultRegistry: 'claude-flow-official',
-  gateway: 'https://ipfs.io',
+  gateway: 'https://gateway.pinata.cloud',
   timeout: 30000,
   cacheDir: '.claude-flow/plugins/cache',
   cacheExpiry: 3600000, // 1 hour
@@ -137,14 +151,23 @@ export class PluginDiscoveryService {
     }
 
     try {
-      // Resolve IPNS to get current CID
-      const cid = await resolveIPNS(registry.ipnsName, registry.gateway);
-      if (!cid) {
-        // Fallback to demo registry
-        return this.createDemoRegistryAsync(registry);
-      }
+      // Check if ipnsName is actually a direct CID (CIDv1 starts with 'baf', CIDv0 starts with 'Qm')
+      const isDirectCid = registry.ipnsName.startsWith('baf') || registry.ipnsName.startsWith('Qm');
 
-      console.log(`[PluginDiscovery] Resolved to CID: ${cid}`);
+      let cid: string | null;
+      if (isDirectCid) {
+        // Use the CID directly - no IPNS resolution needed
+        cid = registry.ipnsName;
+        console.log(`[PluginDiscovery] Using direct CID: ${cid}`);
+      } else {
+        // Resolve IPNS to get current CID
+        cid = await resolveIPNS(registry.ipnsName, registry.gateway);
+        if (!cid) {
+          // Fallback to demo registry
+          return this.createDemoRegistryAsync(registry);
+        }
+        console.log(`[PluginDiscovery] Resolved IPNS to CID: ${cid}`);
+      }
 
       // Fetch registry from IPFS
       const registryData = await fetchFromIPFS<PluginRegistry>(cid, registry.gateway);

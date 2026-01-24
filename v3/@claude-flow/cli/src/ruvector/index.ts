@@ -145,6 +145,13 @@ export {
   type ModelRoutingResult,
   type ComplexityAnalysis,
 } from './model-router.js';
+export {
+  SemanticRouter,
+  createSemanticRouter,
+  type Intent,
+  type RouteResult,
+  type RouterConfig,
+} from './semantic-router.js';
 
 /**
  * Check if ruvector packages are available
