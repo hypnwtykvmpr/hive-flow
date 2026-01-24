@@ -18,6 +18,7 @@ import {
   type PluginEntry,
   type PluginSearchOptions,
 } from '../plugins/store/index.js';
+import { getPluginManager, type InstalledPlugin } from '../plugins/manager.js';
 
 // List subcommand - Now uses IPFS-based registry
 const listCommand: Command = {
@@ -46,28 +47,48 @@ const listCommand: Command = {
     const featured = ctx.flags.featured as boolean;
     const registryName = ctx.flags.registry as string;
 
-    // For installed-only, use local data (placeholder)
+    // For installed-only, read from local manifest
     if (installedOnly) {
       output.writeln();
       output.writeln(output.bold('Installed Plugins'));
       output.writeln(output.dim('─'.repeat(60)));
 
-      // TODO: Read from local installed plugins manifest
-      output.printTable({
-        columns: [
-          { key: 'name', header: 'Plugin', width: 38 },
-          { key: 'version', header: 'Version', width: 14 },
-          { key: 'type', header: 'Type', width: 12 },
-          { key: 'status', header: 'Status', width: 10 },
-        ],
-        data: [
-          { name: '@claude-flow/neural', version: '3.0.0', type: 'core', status: output.success('Active') },
-          { name: '@claude-flow/security', version: '3.0.0', type: 'command', status: output.success('Active') },
-          { name: '@claude-flow/embeddings', version: '3.0.0', type: 'core', status: output.success('Active') },
-        ],
-      });
+      try {
+        const manager = getPluginManager();
+        await manager.initialize();
+        const installed = await manager.getInstalled();
 
-      return { success: true };
+        if (installed.length === 0) {
+          output.writeln(output.dim('No plugins installed.'));
+          output.writeln();
+          output.writeln(output.dim('Run "claude-flow plugins list" to see available plugins'));
+          output.writeln(output.dim('Run "claude-flow plugins install -n <plugin>" to install'));
+          return { success: true };
+        }
+
+        output.printTable({
+          columns: [
+            { key: 'name', header: 'Plugin', width: 38 },
+            { key: 'version', header: 'Version', width: 14 },
+            { key: 'source', header: 'Source', width: 10 },
+            { key: 'status', header: 'Status', width: 10 },
+          ],
+          data: installed.map((p: InstalledPlugin) => ({
+            name: p.name,
+            version: p.version,
+            source: p.source,
+            status: p.enabled ? output.success('Enabled') : output.dim('Disabled'),
+          })),
+        });
+
+        output.writeln();
+        output.writeln(output.dim(`Plugins directory: ${manager.getPluginsDir()}`));
+
+        return { success: true, data: installed };
+      } catch (error) {
+        output.printError(`Failed to load installed plugins: ${String(error)}`);
+        return { success: false, exitCode: 1 };
+      }
     }
 
     // Discover registry via IPFS
@@ -196,76 +217,72 @@ const installCommand: Command = {
     spinner.start();
 
     try {
-      let plugin: PluginEntry | undefined;
+      const manager = getPluginManager();
+      await manager.initialize();
 
-      if (!isLocalPath) {
-        // Fetch from IPFS registry
-        const discovery = createPluginDiscoveryService();
-        const result = await discovery.discoverRegistry(registryName);
-
-        if (!result.success || !result.registry) {
-          spinner.fail('Failed to discover registry');
-          return { success: false, exitCode: 1 };
-        }
-
-        // Find the plugin
-        plugin = result.registry.plugins.find(p => p.name === name || p.id === name);
-        if (!plugin) {
-          spinner.fail(`Plugin not found: ${name}`);
-          output.writeln();
-          output.writeln(output.dim('Run "claude-flow plugins list" to see available plugins'));
-          return { success: false, exitCode: 1 };
-        }
-
-        spinner.setText(`Found ${plugin.displayName} v${plugin.version}`);
-        await new Promise(r => setTimeout(r, 200));
-
-        // Check permissions
-        if (plugin.permissions.length > 0) {
-          spinner.setText('Checking permissions...');
-          await new Promise(r => setTimeout(r, 200));
-        }
-
-        spinner.setText(`Downloading from IPFS (CID: ${plugin.cid.slice(0, 12)}...)...`);
-        await new Promise(r => setTimeout(r, 300));
-
-        if (verify) {
-          spinner.setText('Verifying checksum...');
-          await new Promise(r => setTimeout(r, 200));
-        }
+      // Check if already installed
+      const existingPlugin = await manager.getPlugin(name);
+      if (existingPlugin) {
+        spinner.fail(`Plugin ${name} is already installed (v${existingPlugin.version})`);
+        output.writeln();
+        output.writeln(output.dim('Use "claude-flow plugins upgrade -n ' + name + '" to update'));
+        return { success: false, exitCode: 1 };
       }
 
-      spinner.setText('Installing dependencies...');
-      await new Promise(r => setTimeout(r, 300));
+      let result;
+      let plugin: PluginEntry | undefined;
 
-      spinner.setText('Registering hooks and commands...');
-      await new Promise(r => setTimeout(r, 200));
+      if (isLocalPath) {
+        // Install from local path
+        spinner.setText(`Installing from ${name}...`);
+        result = await manager.installFromLocal(name);
+      } else {
+        // First, try to find in registry for metadata
+        spinner.setText(`Discovering ${name} in registry...`);
+        const discovery = createPluginDiscoveryService();
+        const registryResult = await discovery.discoverRegistry(registryName);
 
-      spinner.succeed(`Installed ${plugin?.displayName || name}@${plugin?.version || version}`);
+        if (registryResult.success && registryResult.registry) {
+          plugin = registryResult.registry.plugins.find(p => p.name === name || p.id === name);
+        }
+
+        if (plugin) {
+          spinner.setText(`Found ${plugin.displayName} v${plugin.version}`);
+        }
+
+        // Install from npm (since IPFS is demo mode)
+        spinner.setText(`Installing ${name} from npm...`);
+        result = await manager.installFromNpm(name, version !== 'latest' ? version : undefined);
+      }
+
+      if (!result.success) {
+        spinner.fail(`Installation failed: ${result.error}`);
+        return { success: false, exitCode: 1 };
+      }
+
+      const installed = result.plugin!;
+      spinner.succeed(`Installed ${installed.name}@${installed.version}`);
 
       output.writeln();
 
+      const boxContent = [
+        `Plugin: ${installed.name}`,
+        `Version: ${installed.version}`,
+        `Source: ${installed.source}`,
+        `Path: ${installed.path || 'N/A'}`,
+        ``,
+        `Hooks registered: ${installed.hooks?.length || 0}`,
+        `Commands added: ${installed.commands?.length || 0}`,
+      ];
+
       if (plugin) {
-        output.printBox([
-          `Plugin: ${plugin.displayName}`,
-          `Version: ${plugin.version}`,
-          `CID: ${plugin.cid}`,
-          `Size: ${(plugin.size / 1024).toFixed(1)} KB`,
-          `Trust: ${plugin.trustLevel}`,
-          ``,
-          `Hooks registered: ${plugin.hooks.length}`,
-          `Commands added: ${plugin.commands.length}`,
-          `Permissions: ${plugin.permissions.join(', ') || 'none'}`,
-        ].join('\n'), 'Installation Complete');
-      } else {
-        output.printBox([
-          `Plugin: ${name}`,
-          `Version: ${version}`,
-          `Location: node_modules/${name}`,
-        ].join('\n'), 'Installation Complete');
+        boxContent.push(`Trust: ${plugin.trustLevel}`);
+        boxContent.push(`Permissions: ${plugin.permissions.join(', ') || 'none'}`);
       }
 
-      return { success: true, data: plugin };
+      output.printBox(boxContent.join('\n'), 'Installation Complete');
+
+      return { success: true, data: installed };
     } catch (error) {
       spinner.fail('Installation failed');
       output.printError(`Error: ${String(error)}`);
@@ -296,10 +313,36 @@ const uninstallCommand: Command = {
     output.writeln();
     const spinner = output.createSpinner({ text: `Uninstalling ${name}...`, spinner: 'dots' });
     spinner.start();
-    await new Promise(r => setTimeout(r, 500));
-    spinner.succeed(`Uninstalled ${name}`);
 
-    return { success: true };
+    try {
+      const manager = getPluginManager();
+      await manager.initialize();
+
+      // Check if installed
+      const plugin = await manager.getPlugin(name);
+      if (!plugin) {
+        spinner.fail(`Plugin ${name} is not installed`);
+        return { success: false, exitCode: 1 };
+      }
+
+      // Uninstall
+      const result = await manager.uninstall(name);
+
+      if (!result.success) {
+        spinner.fail(`Failed to uninstall: ${result.error}`);
+        return { success: false, exitCode: 1 };
+      }
+
+      spinner.succeed(`Uninstalled ${name}`);
+      output.writeln();
+      output.writeln(output.dim(`Removed ${plugin.version} from ${manager.getPluginsDir()}`));
+
+      return { success: true };
+    } catch (error) {
+      spinner.fail('Uninstall failed');
+      output.printError(`Error: ${String(error)}`);
+      return { success: false, exitCode: 1 };
+    }
   },
 };
 
@@ -319,19 +362,57 @@ const toggleCommand: Command = {
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     const name = ctx.flags.name as string;
     const enable = ctx.flags.enable as boolean;
+    const disable = ctx.flags.disable as boolean;
 
     if (!name) {
       output.printError('Plugin name is required');
       return { success: false, exitCode: 1 };
     }
 
-    const action = enable ? 'Enabling' : 'Disabling';
-    const spinner = output.createSpinner({ text: `${action} ${name}...`, spinner: 'dots' });
-    spinner.start();
-    await new Promise(r => setTimeout(r, 300));
-    spinner.succeed(`${name} ${enable ? 'enabled' : 'disabled'}`);
+    try {
+      const manager = getPluginManager();
+      await manager.initialize();
 
-    return { success: true };
+      // Check if installed
+      const plugin = await manager.getPlugin(name);
+      if (!plugin) {
+        output.printError(`Plugin ${name} is not installed`);
+        return { success: false, exitCode: 1 };
+      }
+
+      let result;
+      let action: string;
+      let newState: boolean;
+
+      if (enable) {
+        result = await manager.enable(name);
+        action = 'Enabled';
+        newState = true;
+      } else if (disable) {
+        result = await manager.disable(name);
+        action = 'Disabled';
+        newState = false;
+      } else {
+        // Toggle
+        result = await manager.toggle(name);
+        newState = result.enabled ?? !plugin.enabled;
+        action = newState ? 'Enabled' : 'Disabled';
+      }
+
+      if (!result.success) {
+        output.printError(`Failed to toggle: ${result.error}`);
+        return { success: false, exitCode: 1 };
+      }
+
+      output.writeln();
+      output.writeln(output.success(`${action} ${name}`));
+      output.writeln(output.dim(`Plugin is now ${newState ? 'enabled' : 'disabled'}`));
+
+      return { success: true, data: { enabled: newState } };
+    } catch (error) {
+      output.printError(`Error: ${String(error)}`);
+      return { success: false, exitCode: 1 };
+    }
   },
 };
 
@@ -563,6 +644,64 @@ const createCommand: Command = {
   },
 };
 
+// Upgrade subcommand
+const upgradeCommand: Command = {
+  name: 'upgrade',
+  description: 'Upgrade an installed plugin to a newer version',
+  options: [
+    { name: 'name', short: 'n', type: 'string', description: 'Plugin name', required: true },
+    { name: 'version', short: 'v', type: 'string', description: 'Target version (default: latest)' },
+  ],
+  examples: [
+    { command: 'claude-flow plugins upgrade -n @claude-flow/neural', description: 'Upgrade to latest' },
+    { command: 'claude-flow plugins upgrade -n @claude-flow/neural -v 3.1.0', description: 'Upgrade to specific version' },
+  ],
+  action: async (ctx: CommandContext): Promise<CommandResult> => {
+    const name = ctx.flags.name as string;
+    const version = ctx.flags.version as string;
+
+    if (!name) {
+      output.printError('Plugin name is required');
+      return { success: false, exitCode: 1 };
+    }
+
+    output.writeln();
+    const spinner = output.createSpinner({ text: `Upgrading ${name}...`, spinner: 'dots' });
+    spinner.start();
+
+    try {
+      const manager = getPluginManager();
+      await manager.initialize();
+
+      // Check if installed
+      const existing = await manager.getPlugin(name);
+      if (!existing) {
+        spinner.fail(`Plugin ${name} is not installed`);
+        return { success: false, exitCode: 1 };
+      }
+
+      const oldVersion = existing.version;
+      spinner.setText(`Upgrading ${name} from v${oldVersion}...`);
+
+      const result = await manager.upgrade(name, version);
+
+      if (!result.success) {
+        spinner.fail(`Upgrade failed: ${result.error}`);
+        return { success: false, exitCode: 1 };
+      }
+
+      const plugin = result.plugin!;
+      spinner.succeed(`Upgraded ${name}: v${oldVersion} -> v${plugin.version}`);
+
+      return { success: true, data: plugin };
+    } catch (error) {
+      spinner.fail('Upgrade failed');
+      output.printError(`Error: ${String(error)}`);
+      return { success: false, exitCode: 1 };
+    }
+  },
+};
+
 // Search subcommand - Search IPFS registry
 const searchCommand: Command = {
   name: 'search',
@@ -671,7 +810,7 @@ const searchCommand: Command = {
 export const pluginsCommand: Command = {
   name: 'plugins',
   description: 'Plugin management with IPFS-based decentralized registry',
-  subcommands: [listCommand, searchCommand, installCommand, uninstallCommand, toggleCommand, infoCommand, createCommand],
+  subcommands: [listCommand, searchCommand, installCommand, uninstallCommand, upgradeCommand, toggleCommand, infoCommand, createCommand],
   examples: [
     { command: 'claude-flow plugins list', description: 'List plugins from IPFS registry' },
     { command: 'claude-flow plugins search -q neural', description: 'Search for plugins' },
@@ -687,8 +826,9 @@ export const pluginsCommand: Command = {
     output.printList([
       `${output.highlight('list')}      - List plugins from IPFS registry`,
       `${output.highlight('search')}    - Search plugins by query`,
-      `${output.highlight('install')}   - Install a plugin from IPFS or local path`,
+      `${output.highlight('install')}   - Install a plugin from npm or local path`,
       `${output.highlight('uninstall')} - Remove an installed plugin`,
+      `${output.highlight('upgrade')}   - Upgrade an installed plugin`,
       `${output.highlight('toggle')}    - Enable or disable a plugin`,
       `${output.highlight('info')}      - Show detailed plugin information`,
       `${output.highlight('create')}    - Scaffold a new plugin project`,

@@ -1264,6 +1264,31 @@ Install these optional plugins to extend Claude Flow capabilities:
 | **@claude-flow/plugin-agentic-qe** | 3.0.0-alpha.2 | Quality Engineering with 58 AI agents across 12 DDD contexts. TDD, coverage analysis, security scanning, chaos engineering, accessibility testing. | `npm install @claude-flow/plugin-agentic-qe` |
 | **@claude-flow/plugin-prime-radiant** | 0.1.4 | Mathematical AI interpretability with 6 engines: sheaf cohomology, spectral analysis, causal inference, quantum topology, category theory, HoTT proofs. | `npm install @claude-flow/plugin-prime-radiant` |
 
+#### 🏥 Domain-Specific Plugins
+
+| Plugin | Version | Description | Install Command |
+|--------|---------|-------------|-----------------|
+| **@claude-flow/plugin-healthcare-clinical** | 0.1.0 | HIPAA-compliant clinical decision support with FHIR/HL7 integration. Symptom analysis, drug interactions, treatment recommendations. | `npm install @claude-flow/plugin-healthcare-clinical` |
+| **@claude-flow/plugin-financial-risk** | 0.1.0 | PCI-DSS/SOX compliant financial risk analysis. Portfolio optimization, fraud detection, regulatory compliance, market simulation. | `npm install @claude-flow/plugin-financial-risk` |
+| **@claude-flow/plugin-legal-contracts** | 0.1.0 | Attorney-client privilege protected contract analysis. Risk identification, clause extraction, compliance verification. | `npm install @claude-flow/plugin-legal-contracts` |
+
+#### 💻 Development Intelligence Plugins
+
+| Plugin | Version | Description | Install Command |
+|--------|---------|-------------|-----------------|
+| **@claude-flow/plugin-code-intelligence** | 0.1.0 | Advanced code analysis with GNN-based pattern recognition. Security vulnerability detection, refactoring suggestions, architecture analysis. | `npm install @claude-flow/plugin-code-intelligence` |
+| **@claude-flow/plugin-test-intelligence** | 0.1.0 | AI-powered test generation and optimization. Coverage analysis, mutation testing, test prioritization, flaky test detection. | `npm install @claude-flow/plugin-test-intelligence` |
+| **@claude-flow/plugin-perf-optimizer** | 0.1.0 | Performance profiling and optimization. Memory leak detection, CPU bottleneck analysis, I/O optimization, caching strategies. | `npm install @claude-flow/plugin-perf-optimizer` |
+
+#### 🧠 Advanced AI/Reasoning Plugins
+
+| Plugin | Version | Description | Install Command |
+|--------|---------|-------------|-----------------|
+| **@claude-flow/plugin-neural-coordination** | 0.1.0 | Multi-agent neural coordination with SONA learning. Agent specialization, knowledge transfer, collective decision making. | `npm install @claude-flow/plugin-neural-coordination` |
+| **@claude-flow/plugin-cognitive-kernel** | 0.1.0 | Cognitive computing kernel for working memory, attention control, meta-cognition, and task scaffolding. Miller's Law (7±2) compliance. | `npm install @claude-flow/plugin-cognitive-kernel` |
+| **@claude-flow/plugin-quantum-optimizer** | 0.1.0 | Quantum-inspired optimization (QAOA, VQE, quantum annealing). Combinatorial optimization, Grover search, tensor networks. | `npm install @claude-flow/plugin-quantum-optimizer` |
+| **@claude-flow/plugin-hyperbolic-reasoning** | 0.1.0 | Hyperbolic geometry for hierarchical reasoning. Poincaré embeddings, tree-like structure analysis, taxonomic inference. | `npm install @claude-flow/plugin-hyperbolic-reasoning` |
+
 **Agentic-QE Plugin Features:**
 - 58 specialized QE agents across 13 bounded contexts
 - 16 MCP tools: `aqe/generate-tests`, `aqe/tdd-cycle`, `aqe/analyze-coverage`, `aqe/security-scan`, `aqe/chaos-inject`, etc.
@@ -1278,6 +1303,18 @@ Install these optional plugins to extend Claude Flow capabilities:
 - Do-calculus causal inference
 - Hallucination prevention via consensus verification
 
+**New RuVector WASM Plugins (50 MCP tools total):**
+- **Healthcare**: 5 tools for clinical decision support, drug interactions, treatment recommendations
+- **Financial**: 5 tools for risk assessment, fraud detection, portfolio optimization
+- **Legal**: 5 tools for contract analysis, clause extraction, compliance verification
+- **Code Intelligence**: 5 tools for code analysis, security scanning, architecture mapping
+- **Test Intelligence**: 5 tools for test generation, coverage optimization, mutation testing
+- **Performance**: 5 tools for profiling, bottleneck detection, optimization suggestions
+- **Neural Coordination**: 5 tools for multi-agent learning, knowledge transfer, consensus
+- **Cognitive Kernel**: 5 tools for working memory, attention control, meta-cognition
+- **Quantum Optimizer**: 5 tools for QAOA, VQE, quantum annealing, Grover search
+- **Hyperbolic Reasoning**: 5 tools for Poincaré embeddings, tree inference, taxonomic analysis
+
 ```bash
 # Install Quality Engineering plugin
 npm install @claude-flow/plugin-agentic-qe
@@ -1285,7 +1322,23 @@ npm install @claude-flow/plugin-agentic-qe
 # Install AI Interpretability plugin
 npm install @claude-flow/plugin-prime-radiant
 
-# Register plugins in your project
+# Install domain-specific plugins
+npm install @claude-flow/plugin-healthcare-clinical
+npm install @claude-flow/plugin-financial-risk
+npm install @claude-flow/plugin-legal-contracts
+
+# Install development intelligence plugins
+npm install @claude-flow/plugin-code-intelligence
+npm install @claude-flow/plugin-test-intelligence
+npm install @claude-flow/plugin-perf-optimizer
+
+# Install advanced AI/reasoning plugins
+npm install @claude-flow/plugin-neural-coordination
+npm install @claude-flow/plugin-cognitive-kernel
+npm install @claude-flow/plugin-quantum-optimizer
+npm install @claude-flow/plugin-hyperbolic-reasoning
+
+# List all installed plugins
 npx claude-flow plugins list --installed
 ```
 
