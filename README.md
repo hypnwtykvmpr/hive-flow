@@ -17,7 +17,7 @@
 [![RuVector](https://img.shields.io/npm/v/ruvector?style=for-the-badge&logo=rust&color=orange&label=RuVector)](https://www.npmjs.com/package/ruvector)
 [![Agentic-Flow](https://img.shields.io/npm/v/agentic-flow?style=for-the-badge&logo=typescript&color=3178c6&label=Agentic-Flow)](https://www.npmjs.com/package/agentic-flow)
 [![Reddit](https://img.shields.io/reddit/subreddit-subscribers/aipromptprogramming?style=for-the-badge&logo=reddit&color=FF4500&label=r/aipromptprogramming)](https://www.reddit.com/r/aipromptprogramming/)
-[![X Follow](https://img.shields.io/twitter/follow/ruv?style=for-the-badge&logo=x&color=000000)](https://x.com/ruv)
+[![Follow @ruv](https://img.shields.io/badge/Follow%20%40ruv-000000?style=for-the-badge&logo=x&logoColor=white)](https://x.com/ruv)
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-0A66C2?style=for-the-badge&logo=linkedin)](https://www.linkedin.com/in/reuvencohen/)
 
 **Production-ready multi-agent AI orchestration for Claude Code**
