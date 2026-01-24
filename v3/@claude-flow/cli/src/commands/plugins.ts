@@ -845,11 +845,12 @@ export const pluginsCommand: Command = {
     output.writeln();
     output.writeln(output.bold('Official Plugins:'));
     output.printList([
-      '@claude-flow/neural     - Neural patterns and inference (WASM SIMD)',
-      '@claude-flow/security   - Security scanning and CVE detection',
-      '@claude-flow/embeddings - Vector embeddings with hyperbolic support',
-      '@claude-flow/claims     - Claims-based authorization',
-      '@claude-flow/performance- Performance profiling and benchmarks',
+      '@claude-flow/neural              - Neural patterns and inference (WASM SIMD)',
+      '@claude-flow/security            - Security scanning and CVE detection',
+      '@claude-flow/embeddings          - Vector embeddings with hyperbolic support',
+      '@claude-flow/claims              - Claims-based authorization',
+      '@claude-flow/performance         - Performance profiling and benchmarks',
+      '@claude-flow/plugin-gastown-bridge - Gas Town orchestrator integration (WASM-accelerated)',
     ]);
     output.writeln();
     output.writeln(output.dim('Run "claude-flow plugins list --official" to see all official plugins'));

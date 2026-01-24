@@ -1263,6 +1263,7 @@ Install these optional plugins to extend Claude Flow capabilities:
 |--------|---------|-------------|-----------------|
 | **@claude-flow/plugin-agentic-qe** | 3.0.0-alpha.2 | Quality Engineering with 58 AI agents across 12 DDD contexts. TDD, coverage analysis, security scanning, chaos engineering, accessibility testing. | `npm install @claude-flow/plugin-agentic-qe` |
 | **@claude-flow/plugin-prime-radiant** | 0.1.4 | Mathematical AI interpretability with 6 engines: sheaf cohomology, spectral analysis, causal inference, quantum topology, category theory, HoTT proofs. | `npm install @claude-flow/plugin-prime-radiant` |
+| **@claude-flow/plugin-gastown-bridge** | 0.1.0 | Gas Town orchestrator integration with WASM-accelerated formula parsing (352x faster), Beads sync, convoy management, and graph analysis. 20 MCP tools. | `npx claude-flow@latest plugins install -n @claude-flow/plugin-gastown-bridge` |
 
 #### 🏥 Domain-Specific Plugins
 
@@ -1321,6 +1322,9 @@ npm install @claude-flow/plugin-agentic-qe
 
 # Install AI Interpretability plugin
 npm install @claude-flow/plugin-prime-radiant
+
+# Install Gas Town Bridge plugin (WASM-accelerated orchestration)
+npx claude-flow@latest plugins install -n @claude-flow/plugin-gastown-bridge
 
 # Install domain-specific plugins
 npm install @claude-flow/plugin-healthcare-clinical
