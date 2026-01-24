@@ -458,9 +458,6 @@ Add claude-flow as an MCP server for seamless integration:
 
 ```bash
 # Add claude-flow MCP server to Claude Code
-claude mcp add claude-flow -- npx -y @claude-flow/cli@latest mcp start
-
-# Or use the umbrella package
 claude mcp add claude-flow -- npx -y claude-flow@latest mcp start
 
 # Verify installation
