@@ -458,13 +458,16 @@ Add claude-flow as an MCP server for seamless integration:
 
 ```bash
 # Add claude-flow MCP server to Claude Code
-claude mcp add claude-flow -- npx -y claude-flow@v3alpha
+claude mcp add claude-flow -- npx -y @claude-flow/cli@latest
+
+# Or use the umbrella package
+claude mcp add claude-flow -- npx -y claude-flow@latest
 
 # Verify installation
 claude mcp list
 ```
 
-Once added, Claude Code can use all 175+ claude-flow tools directly:
+The CLI auto-detects MCP mode when stdin is piped. Once added, Claude Code can use all 175+ claude-flow MCP tools directly:
 - `swarm_init` - Initialize agent swarms
 - `agent_spawn` - Spawn specialized agents
 - `memory_search` - Search patterns with HNSW (150x faster)
