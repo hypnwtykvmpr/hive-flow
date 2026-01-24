@@ -16,6 +16,7 @@
 [![MIT License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge&logo=opensourceinitiative)](https://opensource.org/licenses/MIT)
 [![RuVector](https://img.shields.io/npm/v/ruvector?style=for-the-badge&logo=rust&color=orange&label=RuVector)](https://www.npmjs.com/package/ruvector)
 [![Agentic-Flow](https://img.shields.io/npm/v/agentic-flow?style=for-the-badge&logo=typescript&color=3178c6&label=Agentic-Flow)](https://www.npmjs.com/package/agentic-flow)
+[![Reddit](https://img.shields.io/reddit/subreddit-subscribers/aipromptprogramming?style=for-the-badge&logo=reddit&color=FF4500&label=r/aipromptprogramming)](https://www.reddit.com/r/aipromptprogramming/)
 
 **Production-ready multi-agent AI orchestration for Claude Code**
 
