@@ -153,8 +153,8 @@ npx claude-flow@v3alpha hooks intelligence --status
 
 ### Get Started Fast
 
-``` 
-npx claude-flow@v3alpha init 
+```
+npx claude-flow@latest init
 ```
 
 ---
