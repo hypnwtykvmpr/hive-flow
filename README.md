@@ -530,6 +530,8 @@ Claude-Flow v3 introduces **self-learning neural capabilities** that no other ag
 
 <sub>*Comparison updated January 23, 2026*</sub>
 
+</details>
+
 <details>
 <summary>🚀 <strong>Key Differentiators</strong> — Self-learning, memory optimization, fault tolerance</summary>
 
