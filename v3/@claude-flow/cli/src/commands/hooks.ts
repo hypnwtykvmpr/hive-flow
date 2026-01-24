@@ -532,6 +532,17 @@ const routeCommand: Command = {
       // Call MCP tool for routing
       const result = await callMCPTool<{
         task: string;
+        routing?: {
+          method: string;
+          backend?: string;
+          latencyMs: number;
+          throughput: string;
+        };
+        matchedPattern?: string;
+        semanticMatches?: Array<{
+          pattern: string;
+          score: number;
+        }>;
         primaryAgent: {
           type: string;
           confidence: number;
@@ -557,6 +568,30 @@ const routeCommand: Command = {
       if (ctx.flags.format === 'json') {
         output.printJson(result);
         return { success: true, data: result };
+      }
+
+      // Show routing method info
+      if (result.routing) {
+        output.writeln();
+        output.writeln(output.bold('Routing Method'));
+        const methodDisplay = result.routing.method.startsWith('semantic')
+          ? output.success(`${result.routing.method} (${result.routing.backend || 'semantic'})`)
+          : 'keyword';
+        output.printList([
+          `Method: ${methodDisplay}`,
+          result.routing.backend ? `Backend: ${result.routing.backend}` : null,
+          `Latency: ${result.routing.latencyMs.toFixed(3)}ms`,
+          result.matchedPattern ? `Matched Pattern: ${result.matchedPattern}` : null,
+        ].filter(Boolean) as string[]);
+
+        // Show semantic matches if available
+        if (result.semanticMatches && result.semanticMatches.length > 0) {
+          output.writeln();
+          output.writeln(output.dim('Semantic Matches:'));
+          result.semanticMatches.forEach(m => {
+            output.writeln(`  ${m.pattern}: ${(m.score * 100).toFixed(1)}%`);
+          });
+        }
       }
 
       output.writeln();
