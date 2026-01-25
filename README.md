@@ -1315,6 +1315,15 @@ Install these optional plugins to extend Claude Flow capabilities:
 - Do-calculus causal inference
 - Hallucination prevention via consensus verification
 
+**Teammate Plugin Features:**
+- Native TeammateTool integration for Claude Code v2.1.19+
+- 21 MCP tools: `teammate/spawn`, `teammate/coordinate`, `teammate/broadcast`, `teammate/discover-teams`, `teammate/route-task`, etc.
+- BMSSP WASM acceleration for topology optimization (352x faster)
+- Rate limiting with sliding window (configurable limits)
+- Circuit breaker for fault tolerance (closed/open/half-open states)
+- Semantic routing with skill-based teammate selection
+- Health monitoring with configurable thresholds
+
 **New RuVector WASM Plugins (50 MCP tools total):**
 - **Healthcare**: 5 tools for clinical decision support, drug interactions, treatment recommendations
 - **Financial**: 5 tools for risk assessment, fraud detection, portfolio optimization
