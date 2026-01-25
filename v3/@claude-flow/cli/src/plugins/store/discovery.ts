@@ -54,7 +54,7 @@ async function fetchNpmStats(packageName: string): Promise<{ downloads: number; 
  * Live IPFS Registry CID - Updated 2026-01-24
  * This is the current pinned registry on Pinata
  */
-export const LIVE_REGISTRY_CID = 'bafkreiahw4ufxwycbwwswt7rgbx6hkgnvg3rophhocatgec4bu5e7tzk2a';
+export const LIVE_REGISTRY_CID = 'QmXbfEAaR7D2Ujm4GAkbwcGZQMHqAMpwDoje4583uNP834';
 
 /**
  * Pre-trained Model Registry CID - Updated 2026-01-24
@@ -238,7 +238,7 @@ export class PluginDiscoveryService {
       totalPlugins: plugins.length,
       totalDownloads: plugins.reduce((sum, p) => sum + p.downloads, 0),
       totalAuthors: 1,
-      featured: ['@claude-flow/plugin-agentic-qe', '@claude-flow/plugin-prime-radiant', '@claude-flow/security', '@claude-flow/claims'],
+      featured: ['@claude-flow/plugin-agentic-qe', '@claude-flow/plugin-prime-radiant', '@claude-flow/security', '@claude-flow/claims', '@claude-flow/teammate-plugin'],
       trending: ['@claude-flow/plugin-agentic-qe', '@claude-flow/plugin-prime-radiant'],
       newest: ['@claude-flow/plugin-agentic-qe', '@claude-flow/plugin-prime-radiant'],
       official: ['@claude-flow/plugin-agentic-qe', '@claude-flow/plugin-prime-radiant', '@claude-flow/security', '@claude-flow/claims'],
@@ -1025,6 +1025,46 @@ export class PluginDiscoveryService {
           issues: [],
         },
       },
+      // Teammate Plugin - Claude Code v2.1.19+ integration
+      {
+        id: '@claude-flow/teammate-plugin',
+        name: '@claude-flow/teammate-plugin',
+        displayName: 'Teammate Plugin',
+        description: 'Native TeammateTool integration for Claude Code v2.1.19+. Multi-agent team orchestration with plan approval workflows, delegation, messaging, and BMSSP-optimized topology routing. 21 MCP tools.',
+        version: '1.0.0-alpha.1',
+        cid: 'bafybeiteammateplugin2026',
+        size: 387000,
+        checksum: 'sha256:e335dd24ec2e68e8952c517794421a0b18dfb23f',
+        author: officialAuthor,
+        license: 'MIT',
+        categories: ['agents', 'integrations'],
+        tags: ['teammate', 'claude-code', 'multi-agent', 'swarm', 'orchestration', 'bmssp'],
+        keywords: ['teammate', 'claude-code', 'multi-agent'],
+        downloads: 0,
+        rating: 0,
+        ratingCount: 0,
+        lastUpdated: baseTime,
+        createdAt: '2026-01-25T00:00:00Z',
+        minClaudeFlowVersion: '3.0.0',
+        dependencies: [
+          { name: '@claude-flow/core', version: '^3.0.0' },
+          { name: 'eventemitter3', version: '^5.0.1' },
+        ],
+        type: 'integration',
+        hooks: ['teammate:spawn', 'teammate:message', 'teammate:plan', 'teammate:delegate'],
+        commands: ['teammate spawn', 'teammate team', 'teammate message', 'teammate plan'],
+        permissions: ['filesystem', 'memory', 'network'],
+        exports: ['TeammateBridge', 'createTeammateBridge', 'TEAMMATE_MCP_TOOLS', 'TopologyOptimizer', 'SemanticRouter'],
+        verified: true,
+        trustLevel: 'official',
+        securityAudit: {
+          auditor: 'claude-flow-security-team',
+          auditDate: '2026-01-25T00:00:00Z',
+          auditVersion: '1.0.0-alpha.1',
+          passed: true,
+          issues: [],
+        },
+      },
     ];
   }
 
@@ -1044,6 +1084,7 @@ export class PluginDiscoveryService {
       '@claude-flow/embeddings',
       '@claude-flow/neural',
       '@claude-flow/performance',
+      '@claude-flow/teammate-plugin',
       // Domain-specific plugins
       '@claude-flow/plugin-healthcare-clinical',
       '@claude-flow/plugin-financial-risk',
