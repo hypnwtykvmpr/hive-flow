@@ -58,10 +58,15 @@ while [[ $# -gt 0 ]]; do
             RUN_DOCTOR="1"
             shift
             ;;
+        --init|-i)
+            RUN_INIT="1"
+            shift
+            ;;
         --full|-f)
             GLOBAL="1"
             SETUP_MCP="1"
             RUN_DOCTOR="1"
+            RUN_INIT="1"
             shift
             ;;
         --version=*)
