@@ -88,7 +88,7 @@ while [[ $# -gt 0 ]]; do
             echo "  --setup-mcp      Auto-configure MCP server for Claude Code"
             echo "  --doctor, -d     Run diagnostics after install"
             echo "  --no-init        Skip project initialization (enabled by default)"
-            echo "  --full, -f       Full setup (global + mcp + doctor + init)"
+            echo "  --full, -f       Full setup (global + mcp + doctor)"
             echo "  --version=X.X.X  Install specific version"
             echo "  --help, -h       Show this help"
             exit 0
