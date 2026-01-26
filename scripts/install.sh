@@ -293,6 +293,53 @@ show_quickstart() {
     echo ""
 }
 
+setup_mcp_server() {
+    if [ "$SETUP_MCP" != "1" ]; then
+        return 0
+    fi
+
+    print_step "Setting up MCP server..."
+
+    if ! command -v claude &> /dev/null; then
+        print_warning "Claude CLI not found, skipping MCP setup"
+        return 0
+    fi
+
+    # Check if already configured
+    if claude mcp list 2>/dev/null | grep -q "claude-flow"; then
+        print_substep "MCP server already configured ✓"
+        return 0
+    fi
+
+    # Add MCP server
+    if [ "$GLOBAL" = "1" ]; then
+        claude mcp add claude-flow -- claude-flow mcp start 2>/dev/null && \
+            print_substep "MCP server configured ✓" || \
+            print_warning "MCP setup failed - run manually: claude mcp add claude-flow -- claude-flow mcp start"
+    else
+        claude mcp add claude-flow -- npx -y claude-flow@${VERSION} mcp start 2>/dev/null && \
+            print_substep "MCP server configured ✓" || \
+            print_warning "MCP setup failed - run manually: claude mcp add claude-flow -- npx -y claude-flow@alpha mcp start"
+    fi
+    echo ""
+}
+
+run_doctor() {
+    if [ "$RUN_DOCTOR" != "1" ]; then
+        return 0
+    fi
+
+    print_step "Running diagnostics..."
+    echo ""
+
+    if [ "$GLOBAL" = "1" ]; then
+        claude-flow doctor 2>&1 || true
+    else
+        npx claude-flow@${VERSION} doctor 2>&1 || true
+    fi
+    echo ""
+}
+
 # Main
 main() {
     print_banner
@@ -300,6 +347,8 @@ main() {
     show_install_options
     install_package
     verify_installation
+    setup_mcp_server
+    run_doctor
     show_quickstart
 
     print_success "${BOLD}Claude Flow is ready!${NC} 🎉"
