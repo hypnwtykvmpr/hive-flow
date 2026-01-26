@@ -46,7 +46,6 @@
     "@ruvector/attention": "^0.1.3",
     "@ruvector/core": "^0.1.30",
     "@ruvector/router": "^0.1.27",
-    "@ruvector/router-linux-x64-gnu": "^0.1.27",
     "@ruvector/sona": "^0.1.5",
     "@types/bcrypt": "^5.0.2",
     "@types/node": "^20.0.0",
@@ -55,6 +54,9 @@
     "tsx": "^4.21.0",
     "typescript": "^5.0.0",
     "vitest": "^1.0.0"
+  },
+  "optionalDependencies": {
+    "@ruvector/router-linux-x64-gnu": "^0.1.27"
   },
   "engines": {
     "node": ">=20.0.0"
