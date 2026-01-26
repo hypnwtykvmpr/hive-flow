@@ -149,8 +149,15 @@ npx claude-flow@v3alpha hooks intelligence --status
 
 ### Get Started Fast
 
-```
-npx claude-flow@latest init
+```bash
+# One-line install (recommended)
+curl -fsSL https://cdn.jsdelivr.net/gh/ruvnet/claude-flow@main/scripts/install.sh | bash
+
+# Or full setup with MCP + diagnostics
+curl -fsSL https://cdn.jsdelivr.net/gh/ruvnet/claude-flow@main/scripts/install.sh | bash -s -- --full
+
+# Or via npx
+npx claude-flow@alpha init --wizard
 ```
 
 ---
