@@ -37,6 +37,7 @@ MINIMAL="${CLAUDE_FLOW_MINIMAL:-0}"
 GLOBAL="${CLAUDE_FLOW_GLOBAL:-0}"
 SETUP_MCP="${CLAUDE_FLOW_SETUP_MCP:-0}"
 RUN_DOCTOR="${CLAUDE_FLOW_DOCTOR:-0}"
+RUN_INIT="${CLAUDE_FLOW_INIT:-0}"
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
