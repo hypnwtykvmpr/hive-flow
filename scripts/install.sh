@@ -35,6 +35,8 @@ NC='\033[0m' # No Color
 VERSION="${CLAUDE_FLOW_VERSION:-alpha}"
 MINIMAL="${CLAUDE_FLOW_MINIMAL:-0}"
 GLOBAL="${CLAUDE_FLOW_GLOBAL:-0}"
+SETUP_MCP="${CLAUDE_FLOW_SETUP_MCP:-0}"
+RUN_DOCTOR="${CLAUDE_FLOW_DOCTOR:-0}"
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -45,6 +47,20 @@ while [[ $# -gt 0 ]]; do
             ;;
         --minimal|-m)
             MINIMAL="1"
+            shift
+            ;;
+        --setup-mcp|--mcp)
+            SETUP_MCP="1"
+            shift
+            ;;
+        --doctor|-d)
+            RUN_DOCTOR="1"
+            shift
+            ;;
+        --full|-f)
+            GLOBAL="1"
+            SETUP_MCP="1"
+            RUN_DOCTOR="1"
             shift
             ;;
         --version=*)
@@ -59,6 +75,9 @@ while [[ $# -gt 0 ]]; do
             echo "Options:"
             echo "  --global, -g     Install globally (npm install -g)"
             echo "  --minimal, -m    Minimal install (skip optional deps)"
+            echo "  --setup-mcp      Auto-configure MCP server for Claude Code"
+            echo "  --doctor, -d     Run diagnostics after install"
+            echo "  --full, -f       Full setup (global + mcp + doctor)"
             echo "  --version=X.X.X  Install specific version"
             echo "  --help, -h       Show this help"
             exit 0
