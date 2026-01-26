@@ -347,6 +347,22 @@ run_doctor() {
     echo ""
 }
 
+run_init() {
+    if [ "$RUN_INIT" != "1" ]; then
+        return 0
+    fi
+
+    print_step "Initializing project..."
+    echo ""
+
+    if [ "$GLOBAL" = "1" ]; then
+        claude-flow init --yes 2>&1 || true
+    else
+        npx claude-flow@${VERSION} init --yes 2>&1 || true
+    fi
+    echo ""
+}
+
 # Main
 main() {
     print_banner
