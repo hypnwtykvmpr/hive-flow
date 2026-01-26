@@ -62,6 +62,10 @@ while [[ $# -gt 0 ]]; do
             RUN_INIT="1"
             shift
             ;;
+        --no-init)
+            RUN_INIT="0"
+            shift
+            ;;
         --full|-f)
             GLOBAL="1"
             SETUP_MCP="1"
