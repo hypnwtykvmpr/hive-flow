@@ -445,8 +445,8 @@ curl -fsSL https://cdn.jsdelivr.net/gh/ruvnet/claude-flow@main/scripts/install.s
 | `--minimal`, `-m` | Skip optional deps (faster, ~15s) |
 | `--setup-mcp` | Auto-configure MCP server for Claude Code |
 | `--doctor`, `-d` | Run diagnostics after install |
-| `--init`, `-i` | Initialize project (creates `.claude/` and `CLAUDE.md`) |
-| `--full`, `-f` | Full setup: global + MCP + doctor + init |
+| `--no-init` | Skip project initialization (init runs by default) |
+| `--full`, `-f` | Full setup: global + MCP + doctor |
 | `--version=X.X.X` | Install specific version |
 
 **Examples:**
