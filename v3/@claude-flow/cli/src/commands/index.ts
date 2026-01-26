@@ -254,12 +254,27 @@ export const commandsByCategory = {
     ruvectorCommand,
   ],
   utility: [
-    // These are lazy-loaded, will be populated when accessed
+    configCommand,
     doctorCommand,
     daemonCommand,
+    completionsCommand,
+    migrateCommand,
+    workflowCommand,
   ],
-  analysis: [] as Command[],  // Lazy-loaded: analyze, route, progress
-  management: [] as Command[], // Lazy-loaded: providers, plugins, deployment, claims, issues, update, process
+  analysis: [
+    analyzeCommand,
+    routeCommand,
+    progressCommand,
+  ],
+  management: [
+    providersCommand,
+    pluginsCommand,
+    deploymentCommand,
+    claimsCommand,
+    issuesCommand,
+    updateCommand,
+    processCommand,
+  ],
 };
 
 /**
