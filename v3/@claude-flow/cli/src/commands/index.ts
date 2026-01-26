@@ -215,6 +215,39 @@ export const commands: Command[] = [
 ];
 
 /**
+ * Commands organized by category for help display
+ */
+export const commandsByCategory = {
+  primary: [
+    initCommand,
+    startCommand,
+    statusCommand,
+    agentCommand,
+    swarmCommand,
+    memoryCommand,
+    taskCommand,
+    sessionCommand,
+    mcpCommand,
+    hooksCommand,
+  ],
+  advanced: [
+    neuralCommand,
+    securityCommand,
+    performanceCommand,
+    embeddingsCommand,
+    hiveMindCommand,
+    ruvectorCommand,
+  ],
+  utility: [
+    // These are lazy-loaded, will be populated when accessed
+    doctorCommand,
+    daemonCommand,
+  ],
+  analysis: [] as Command[],  // Lazy-loaded: analyze, route, progress
+  management: [] as Command[], // Lazy-loaded: providers, plugins, deployment, claims, issues, update, process
+};
+
+/**
  * Command registry map for quick lookup
  * Supports both sync (core commands) and async (lazy-loaded) commands
  */
