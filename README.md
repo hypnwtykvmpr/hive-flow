@@ -425,9 +425,43 @@ claude --dangerously-skip-permissions
 # curl-style installer with progress display
 curl -fsSL https://cdn.jsdelivr.net/gh/ruvnet/claude-flow@main/scripts/install.sh | bash
 
-# Or install globally:
-curl -fsSL https://cdn.jsdelivr.net/gh/ruvnet/claude-flow@main/scripts/install.sh | bash -s -- --global
+# Full setup (global + MCP + diagnostics)
+curl -fsSL https://cdn.jsdelivr.net/gh/ruvnet/claude-flow@main/scripts/install.sh | bash -s -- --full
 ```
+
+<details>
+<summary><b>Install Options</b></summary>
+
+| Option | Description |
+|--------|-------------|
+| `--global`, `-g` | Install globally (`npm install -g`) |
+| `--minimal`, `-m` | Skip optional deps (faster, ~15s) |
+| `--setup-mcp` | Auto-configure MCP server for Claude Code |
+| `--doctor`, `-d` | Run diagnostics after install |
+| `--full`, `-f` | Full setup: global + MCP + doctor |
+| `--version=X.X.X` | Install specific version |
+
+**Examples:**
+```bash
+# Minimal global install (fastest)
+curl ... | bash -s -- --global --minimal
+
+# With MCP auto-setup
+curl ... | bash -s -- --global --setup-mcp
+
+# Full setup with diagnostics
+curl ... | bash -s -- --full
+```
+
+**Speed:**
+| Mode | Time |
+|------|------|
+| npx (cached) | ~3s |
+| npx (fresh) | ~20s |
+| global | ~35s |
+| --minimal | ~15s |
+
+</details>
 
 #### npm/npx Install
 
