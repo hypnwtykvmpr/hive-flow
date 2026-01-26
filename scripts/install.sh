@@ -5,12 +5,18 @@
 #
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/ruvnet/claude-flow/main/scripts/install.sh | bash
-#   curl -fsSL https://claude-flow.ruv.io/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/ruvnet/claude-flow/main/scripts/install.sh | bash -s -- --global
+#   curl -fsSL https://raw.githubusercontent.com/ruvnet/claude-flow/main/scripts/install.sh | bash -s -- --minimal
 #
-# Options:
-#   CLAUDE_FLOW_VERSION=3.0.0-alpha.181  # Specific version
-#   CLAUDE_FLOW_MINIMAL=1                 # Minimal install (no optional deps)
-#   CLAUDE_FLOW_GLOBAL=1                  # Global install (default: npx)
+# Options (via arguments):
+#   --global              Global install (npm install -g)
+#   --minimal             Minimal install (no optional deps)
+#   --version=X.X.X       Specific version
+#
+# Options (via environment - requires export):
+#   export CLAUDE_FLOW_VERSION=3.0.0-alpha.183
+#   export CLAUDE_FLOW_MINIMAL=1
+#   export CLAUDE_FLOW_GLOBAL=1
 #
 
 set -euo pipefail
@@ -25,10 +31,44 @@ BOLD='\033[1m'
 DIM='\033[2m'
 NC='\033[0m' # No Color
 
-# Configuration
+# Default configuration (can be overridden by env vars)
 VERSION="${CLAUDE_FLOW_VERSION:-alpha}"
 MINIMAL="${CLAUDE_FLOW_MINIMAL:-0}"
 GLOBAL="${CLAUDE_FLOW_GLOBAL:-0}"
+
+# Parse command line arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --global|-g)
+            GLOBAL="1"
+            shift
+            ;;
+        --minimal|-m)
+            MINIMAL="1"
+            shift
+            ;;
+        --version=*)
+            VERSION="${1#*=}"
+            shift
+            ;;
+        --help|-h)
+            echo "Claude Flow Installer"
+            echo ""
+            echo "Usage: curl -fsSL .../install.sh | bash -s -- [OPTIONS]"
+            echo ""
+            echo "Options:"
+            echo "  --global, -g     Install globally (npm install -g)"
+            echo "  --minimal, -m    Minimal install (skip optional deps)"
+            echo "  --version=X.X.X  Install specific version"
+            echo "  --help, -h       Show this help"
+            exit 0
+            ;;
+        *)
+            shift
+            ;;
+    esac
+done
+
 PACKAGE="claude-flow@${VERSION}"
 
 # Progress animation
