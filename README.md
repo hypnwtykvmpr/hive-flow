@@ -423,10 +423,10 @@ claude --dangerously-skip-permissions
 
 ```bash
 # curl-style installer with progress display
-curl -fsSL https://raw.githubusercontent.com/ruvnet/claude-flow/main/scripts/install.sh | bash
+curl -fsSL https://cdn.jsdelivr.net/gh/ruvnet/claude-flow@main/scripts/install.sh | bash
 
-# Or with options:
-CLAUDE_FLOW_GLOBAL=1 curl -fsSL https://raw.githubusercontent.com/ruvnet/claude-flow/main/scripts/install.sh | bash
+# Or install globally:
+curl -fsSL https://cdn.jsdelivr.net/gh/ruvnet/claude-flow@main/scripts/install.sh | bash -s -- --global
 ```
 
 #### npm/npx Install
