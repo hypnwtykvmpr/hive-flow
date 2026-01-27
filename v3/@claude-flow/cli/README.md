@@ -149,8 +149,15 @@ npx claude-flow@v3alpha hooks intelligence --status
 
 ### Get Started Fast
 
-```
-npx claude-flow@latest init
+```bash
+# One-line install (recommended)
+curl -fsSL https://cdn.jsdelivr.net/gh/ruvnet/claude-flow@main/scripts/install.sh | bash
+
+# Or full setup with MCP + diagnostics
+curl -fsSL https://cdn.jsdelivr.net/gh/ruvnet/claude-flow@main/scripts/install.sh | bash -s -- --full
+
+# Or via npx
+npx claude-flow@alpha init --wizard
 ```
 
 ---
@@ -423,11 +430,46 @@ claude --dangerously-skip-permissions
 
 ```bash
 # curl-style installer with progress display
-curl -fsSL https://raw.githubusercontent.com/ruvnet/claude-flow/main/scripts/install.sh | bash
+curl -fsSL https://cdn.jsdelivr.net/gh/ruvnet/claude-flow@main/scripts/install.sh | bash
 
-# Or with options:
-CLAUDE_FLOW_GLOBAL=1 curl -fsSL https://raw.githubusercontent.com/ruvnet/claude-flow/main/scripts/install.sh | bash
+# Full setup (global + MCP + diagnostics)
+curl -fsSL https://cdn.jsdelivr.net/gh/ruvnet/claude-flow@main/scripts/install.sh | bash -s -- --full
 ```
+
+<details>
+<summary><b>Install Options</b></summary>
+
+| Option | Description |
+|--------|-------------|
+| `--global`, `-g` | Install globally (`npm install -g`) |
+| `--minimal`, `-m` | Skip optional deps (faster, ~15s) |
+| `--setup-mcp` | Auto-configure MCP server for Claude Code |
+| `--doctor`, `-d` | Run diagnostics after install |
+| `--no-init` | Skip project initialization (init runs by default) |
+| `--full`, `-f` | Full setup: global + MCP + doctor |
+| `--version=X.X.X` | Install specific version |
+
+**Examples:**
+```bash
+# Minimal global install (fastest)
+curl ... | bash -s -- --global --minimal
+
+# With MCP auto-setup
+curl ... | bash -s -- --global --setup-mcp
+
+# Full setup with diagnostics
+curl ... | bash -s -- --full
+```
+
+**Speed:**
+| Mode | Time |
+|------|------|
+| npx (cached) | ~3s |
+| npx (fresh) | ~20s |
+| global | ~35s |
+| --minimal | ~15s |
+
+</details>
 
 #### npm/npx Install
 
