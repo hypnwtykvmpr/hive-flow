@@ -69,10 +69,12 @@ const pretrainCommand: Command = {
           ? 'All benchmark targets met!'
           : `${results.results.filter(r => r.targetMet).length}/${results.results.length} targets met`,
       };
-    } catch (error) {
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      output.writeln(output.error(`Benchmark failed: ${errorMsg}`));
       return {
         success: false,
-        error: `Benchmark failed: ${error instanceof Error ? error.message : String(error)}`,
+        message: `Benchmark failed: ${errorMsg}`,
       };
     }
   },
@@ -123,17 +125,18 @@ const neuralCommand: Command = {
 
       // 1. Embedding Generation
       spinner.setText('Benchmarking embedding generation...');
-      let generateEmbedding: (text: string) => Promise<Float32Array>;
+      type EmbeddingResult = { embedding: number[]; dimensions: number; model: string };
+      let generateEmbedding: (text: string) => Promise<EmbeddingResult>;
       try {
         const memory = await import('../memory/memory-initializer.js');
         generateEmbedding = memory.generateEmbedding;
       } catch {
         generateEmbedding = async (text: string) => {
-          const emb = new Float32Array(dimension);
+          const emb: number[] = [];
           for (let i = 0; i < dimension; i++) {
-            emb[i] = Math.sin(text.charCodeAt(i % text.length) * (i + 1));
+            emb.push(Math.sin(text.charCodeAt(i % text.length) * (i + 1)));
           }
-          return emb;
+          return { embedding: emb, dimensions: dimension, model: 'fallback' };
         };
       }
 
@@ -162,7 +165,7 @@ const neuralCommand: Command = {
         batchCosineSim = memory.batchCosineSim;
       } catch {
         batchCosineSim = (query: Float32Array, vectors: Float32Array[]) => {
-          const results = new Float32Array(vectors.length);
+          const res = new Float32Array(vectors.length);
           for (let i = 0; i < vectors.length; i++) {
             let dot = 0, nQ = 0, nV = 0;
             for (let j = 0; j < query.length; j++) {
@@ -170,9 +173,9 @@ const neuralCommand: Command = {
               nQ += query[j] * query[j];
               nV += vectors[i][j] * vectors[i][j];
             }
-            results[i] = dot / (Math.sqrt(nQ) * Math.sqrt(nV));
+            res[i] = dot / (Math.sqrt(nQ) * Math.sqrt(nV));
           }
-          return results;
+          return res;
         };
       }
 
@@ -200,13 +203,13 @@ const neuralCommand: Command = {
 
       // 3. Flash Attention Search (if available)
       spinner.setText('Benchmarking flash attention search...');
-      let flashTimes: number[] = [];
+      const flashTimes: number[] = [];
       try {
         const memory = await import('../memory/memory-initializer.js');
         if (memory.flashAttentionSearch) {
           for (let i = 0; i < Math.min(iterations, 50); i++) {
             const start = performance.now();
-            memory.flashAttentionSearch(query, vectors, 10);
+            memory.flashAttentionSearch(query, vectors, { k: 10 });
             flashTimes.push(performance.now() - start);
           }
         }
@@ -251,11 +254,13 @@ const neuralCommand: Command = {
         success: true,
         message: allPassed ? 'All neural benchmarks passed!' : 'Some benchmarks below target',
       };
-    } catch (error) {
+    } catch (err) {
       spinner.stop();
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      output.writeln(output.error(`Neural benchmark failed: ${errorMsg}`));
       return {
         success: false,
-        error: `Neural benchmark failed: ${error instanceof Error ? error.message : String(error)}`,
+        message: `Neural benchmark failed: ${errorMsg}`,
       };
     }
   },
@@ -377,11 +382,13 @@ const memoryCommand: Command = {
       }
 
       return { success: true, message: 'Memory benchmarks complete' };
-    } catch (error) {
+    } catch (err) {
       spinner.stop();
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      output.writeln(output.error(`Memory benchmark failed: ${errorMsg}`));
       return {
         success: false,
-        error: `Memory benchmark failed: ${error instanceof Error ? error.message : String(error)}`,
+        message: `Memory benchmark failed: ${errorMsg}`,
       };
     }
   },
@@ -415,20 +422,26 @@ const allCommand: Command = {
     // Run pretrain benchmarks
     output.writeln();
     output.writeln(output.bold('▸ Pre-Training Benchmarks'));
-    const pretrainResult = await pretrainCommand.action(ctx);
-    allResults.pretrain = pretrainResult;
+    if (pretrainCommand.action) {
+      const pretrainResult = await pretrainCommand.action(ctx);
+      allResults.pretrain = pretrainResult;
+    }
 
     // Run neural benchmarks
     output.writeln();
     output.writeln(output.bold('▸ Neural Benchmarks'));
-    const neuralResult = await neuralCommand.action(ctx);
-    allResults.neural = neuralResult;
+    if (neuralCommand.action) {
+      const neuralResult = await neuralCommand.action(ctx);
+      allResults.neural = neuralResult;
+    }
 
     // Run memory benchmarks
     output.writeln();
     output.writeln(output.bold('▸ Memory Benchmarks'));
-    const memoryResult = await memoryCommand.action(ctx);
-    allResults.memory = memoryResult;
+    if (memoryCommand.action) {
+      const memoryResult = await memoryCommand.action(ctx);
+      allResults.memory = memoryResult;
+    }
 
     const totalDuration = Date.now() - startTime;
 
