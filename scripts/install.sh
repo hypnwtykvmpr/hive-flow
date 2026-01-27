@@ -183,7 +183,20 @@ check_requirements() {
         print_substep "Claude Code ${GREEN}${CLAUDE_VERSION}${NC} ✓"
     else
         print_warning "Claude Code CLI not found"
-        print_substep "Install manually: ${BOLD}curl -fsSL https://claude.ai/install.sh | sh${NC}"
+        print_substep "Installing Claude Code CLI (30s timeout)..."
+        if timeout 30 bash -c 'curl -fsSL https://claude.ai/install.sh | sh' 2>/dev/null; then
+            # Source updated PATH
+            export PATH="$HOME/.claude/bin:$PATH"
+            if command -v claude &> /dev/null; then
+                CLAUDE_VERSION=$(claude --version 2>/dev/null | head -1 || echo "installed")
+                print_substep "Claude Code ${GREEN}${CLAUDE_VERSION}${NC} ✓"
+            else
+                print_substep "Installed. Restart terminal or run: ${BOLD}source ~/.bashrc${NC}"
+            fi
+        else
+            print_warning "Install timed out. Run manually:"
+            print_substep "${BOLD}curl -fsSL https://claude.ai/install.sh | sh${NC}"
+        fi
     fi
 
     echo ""
