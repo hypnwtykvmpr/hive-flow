@@ -183,15 +183,7 @@ check_requirements() {
         print_substep "Claude Code ${GREEN}${CLAUDE_VERSION}${NC} ✓"
     else
         print_warning "Claude Code CLI not found"
-        print_substep "Installing Claude Code CLI..."
-        curl -fsSL https://claude.ai/install.sh | sh 2>/dev/null
-        if command -v claude &> /dev/null; then
-            CLAUDE_VERSION=$(claude --version 2>/dev/null | head -1 || echo "installed")
-            print_substep "Claude Code ${GREEN}${CLAUDE_VERSION}${NC} ✓"
-        else
-            print_warning "Claude Code CLI install failed - install manually:"
-            print_substep "curl -fsSL https://claude.ai/install.sh | sh"
-        fi
+        print_substep "Install manually: ${BOLD}curl -fsSL https://claude.ai/install.sh | sh${NC}"
     fi
 
     echo ""
