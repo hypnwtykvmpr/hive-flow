@@ -61,6 +61,8 @@ const commandLoaders: Record<string, CommandLoader> = {
   update: () => import('./update.js'),
   // RuVector PostgreSQL Bridge
   ruvector: () => import('./ruvector/index.js'),
+  // Benchmark Suite (Pre-training, Neural, Memory)
+  benchmark: () => import('./benchmark.js'),
 };
 
 // Cache for loaded commands
