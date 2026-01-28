@@ -239,8 +239,8 @@ case "${1:-status}" in
         echo "  help                                       Show this help"
         echo ""
         echo "Examples:"
-        echo "  $0 start           # Start with defaults (3s swarm, 5s metrics)"
-        echo "  $0 start 2 3       # Start with 2s swarm, 3s metrics intervals"
+        echo "  $0 start           # Start with defaults (30s swarm, 60s metrics)"
+        echo "  $0 start 10 30     # Start with 10s swarm, 30s metrics intervals"
         echo "  $0 status          # Show current status"
         echo "  $0 stop            # Stop all daemons"
         ;;
