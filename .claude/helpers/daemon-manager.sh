@@ -78,7 +78,7 @@ start_swarm_monitor() {
 
 # Start the metrics update daemon
 start_metrics_daemon() {
-    local interval="${1:-30}"  # Default 30 seconds for V3 sync
+    local interval="${1:-60}"  # Default 60 seconds - less frequent updates
 
     if is_running "$METRICS_DAEMON_PID"; then
         log "Metrics daemon already running (PID: $(cat "$METRICS_DAEMON_PID"))"
