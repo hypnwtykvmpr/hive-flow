@@ -287,6 +287,36 @@ export type {
   BatchOp,
   BatchResult,
 } from './wasm-kernel.js';
+export {
+  generateClaudeMd,
+  generateClaudeLocalMd,
+  generateSkillMd,
+  generateAgentMd,
+  generateAgentIndex,
+  scaffold,
+} from './generators.js';
+export type {
+  ProjectProfile,
+  LocalProfile,
+  SkillDefinition,
+  AgentDefinition,
+  ScaffoldOptions,
+  ScaffoldResult,
+} from './generators.js';
+export {
+  analyze,
+  benchmark,
+  autoOptimize,
+  formatReport,
+  formatBenchmark,
+} from './analyzer.js';
+export type {
+  AnalysisResult,
+  AnalysisMetrics,
+  DimensionScore,
+  Suggestion,
+  BenchmarkResult,
+} from './analyzer.js';
 
 export {
   TrustAccumulator,

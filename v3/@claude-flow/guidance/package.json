@@ -117,6 +117,14 @@
     "./wasm-kernel": {
       "types": "./dist/wasm-kernel.d.ts",
       "import": "./dist/wasm-kernel.js"
+    },
+    "./generators": {
+      "types": "./dist/generators.d.ts",
+      "import": "./dist/generators.js"
+    },
+    "./analyzer": {
+      "types": "./dist/analyzer.d.ts",
+      "import": "./dist/analyzer.js"
     }
   },
   "files": [
