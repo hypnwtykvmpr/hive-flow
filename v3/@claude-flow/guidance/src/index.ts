@@ -324,6 +324,7 @@ export type {
   HeadlessBenchmarkResult,
   HeadlessTaskResult,
   IHeadlessExecutor,
+  IContentAwareExecutor,
   ValidationAssertion,
   ValidationTask,
   ValidationTaskResult,
