@@ -316,21 +316,35 @@ export class ContinueGate {
   evaluateWithHistory(context: StepContext): ContinueDecision {
     const now = Date.now();
 
-    // Cooldown check
+    // Cooldown check — but always evaluate critical stop conditions
+    // to prevent agents from timing steps to bypass safety checks
     if (now - this.lastEvaluationTime < this.config.cooldownMs) {
-      // Too soon since last evaluation; return continue with minimal overhead
-      const decision: ContinueDecision = {
+      // Even during cooldown, check hard-stop conditions
+      if (context.coherenceScore < this.config.minCoherenceForContinue) {
+        return this.createDecision('stop',
+          ['Coherence below threshold (checked during cooldown)'],
+          { budgetSlope: 0, reworkRatio: 0, stepsUntilCheckpoint: 0, coherenceLevel: 'critical', uncertaintyLevel: 'low' },
+          'Halt execution and review coherence issues');
+      }
+      if (context.budgetRemaining.tokens <= 0 || context.budgetRemaining.toolCalls <= 0 || context.budgetRemaining.timeMs <= 0) {
+        return this.createDecision('stop',
+          ['Budget exhausted (checked during cooldown)'],
+          { budgetSlope: 0, reworkRatio: 0, stepsUntilCheckpoint: 0, coherenceLevel: 'healthy', uncertaintyLevel: 'low' },
+          'Increase budget or simplify task scope');
+      }
+
+      // Non-critical checks can be skipped during cooldown
+      return {
         decision: 'continue',
         reasons: ['Cooldown period active; skipping full evaluation'],
         metrics: {
           budgetSlope: 0,
           reworkRatio: 0,
           stepsUntilCheckpoint: 0,
-          coherenceLevel: 'healthy',
-          uncertaintyLevel: 'low',
+          coherenceLevel: this.getCoherenceLevel(context.coherenceScore),
+          uncertaintyLevel: this.getUncertaintyLevel(context.uncertaintyScore),
         },
       };
-      return decision;
     }
 
     this.lastEvaluationTime = now;
