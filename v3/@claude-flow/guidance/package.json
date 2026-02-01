@@ -77,6 +77,10 @@
     "./conformance-kit": {
       "types": "./dist/conformance-kit.d.ts",
       "import": "./dist/conformance-kit.js"
+    },
+    "./ruvbot-integration": {
+      "types": "./dist/ruvbot-integration.d.ts",
+      "import": "./dist/ruvbot-integration.js"
     }
   },
   "files": [
