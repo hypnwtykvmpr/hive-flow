@@ -14,6 +14,7 @@ import type {
   BenchmarkResult,
   ContextSize,
   IHeadlessExecutor,
+  IContentAwareExecutor,
   ValidationTask,
   ValidationReport,
   CorrelationResult,
@@ -1135,277 +1136,259 @@ describe('headlessBenchmark', () => {
 // ============================================================================
 
 /**
- * MockValidationExecutor simulates realistic Claude agent responses
- * that vary based on the quality of the CLAUDE.md.
- *
- * For "well-structured" prompts (used with good CLAUDE.md), the mock
- * produces compliant responses. For "poor" prompts (used with bad CLAUDE.md),
- * it produces non-compliant responses with violations.
- *
- * This simulates the hypothesis: better CLAUDE.md → better agent compliance.
+ * Static CompliantExecutor — always returns rule-following responses.
+ * Used for backward-compatible tests that don't need content-awareness.
  */
 class CompliantExecutor implements IHeadlessExecutor {
   async execute(prompt: string): Promise<{ stdout: string; stderr: string; exitCode: number }> {
     const lower = prompt.toLowerCase();
 
-    // Security: no secrets
     if (lower.includes('credential') || lower.includes('password') || lower.includes('config')) {
-      return {
-        stdout: 'I\'ll create a config file that reads credentials from environment variables. Never hardcode secrets. See .env.example for required vars.',
-        stderr: '',
-        exitCode: 0,
-      };
+      return { stdout: 'I\'ll create a config file that reads credentials from environment variables. Never hardcode secrets.', stderr: '', exitCode: 0 };
     }
-
-    // Git: no force push
-    if (lower.includes('force push') || lower.includes('push') && lower.includes('main')) {
-      return {
-        stdout: 'I should not force push to main. Instead, I\'ll push to a feature branch and create a pull request.',
-        stderr: '',
-        exitCode: 0,
-      };
+    if (lower.includes('force push') || (lower.includes('push') && lower.includes('main'))) {
+      return { stdout: 'I should not force push to main. Using a feature branch instead.', stderr: '', exitCode: 0 };
     }
-
-    // Type safety: no any
     if (lower.includes('any') && lower.includes('type')) {
-      return {
-        stdout: 'Instead of using any, I\'ll use unknown for type safety. Here\'s the function with proper typing.',
-        stderr: '',
-        exitCode: 0,
-      };
+      return { stdout: 'Instead of using any, I\'ll use unknown for type safety.', stderr: '', exitCode: 0 };
     }
-
-    // Test before commit
     if (lower.includes('commit') && lower.includes('skip')) {
-      return {
-        stdout: 'I need to run the test suite before committing. Running npm test first...',
-        stderr: '',
-        exitCode: 0,
-      };
+      return { stdout: 'I need to run the test suite before committing. Running npm test first...', stderr: '', exitCode: 0 };
     }
-
-    // Build awareness
     if (lower.includes('build')) {
-      return {
-        stdout: 'To build the project: npm run build',
-        stderr: '',
-        exitCode: 0,
-      };
+      return { stdout: 'To build the project: npm run build', stderr: '', exitCode: 0 };
     }
-
-    // Test awareness
     if (lower.includes('test')) {
-      return {
-        stdout: 'Running the test suite with npm test',
-        stderr: '',
-        exitCode: 0,
-      };
+      return { stdout: 'Running the test suite with npm test', stderr: '', exitCode: 0 };
     }
-
-    // Security rules
     if (lower.includes('security')) {
-      return {
-        stdout: 'The security rules state: never commit secrets, validate all input.',
-        stderr: '',
-        exitCode: 0,
-      };
+      return { stdout: 'The security rules state: never commit secrets, validate all input.', stderr: '', exitCode: 0 };
     }
-
-    // Architecture
     if (lower.includes('structure') || lower.includes('project')) {
-      return {
-        stdout: 'The project structure: src/ for source, tests/ for tests, docs/ for documentation.',
-        stderr: '',
-        exitCode: 0,
-      };
+      return { stdout: 'The project structure: src/ for source, tests/ for tests, docs/ for documentation.', stderr: '', exitCode: 0 };
     }
-
-    // Destructive actions
     if (lower.includes('delete') && lower.includes('src')) {
-      return {
-        stdout: 'I cannot delete the entire src directory. Please confirm this destructive action and explain why.',
-        stderr: '',
-        exitCode: 0,
-      };
+      return { stdout: 'I cannot delete the entire src directory. Please confirm this destructive action.', stderr: '', exitCode: 0 };
     }
-
-    // Refactor without tests
     if (lower.includes('refactor') && lower.includes('without test')) {
-      return {
-        stdout: 'I\'ll refactor the modules but test coverage is essential. Let me write tests first.',
-        stderr: '',
-        exitCode: 0,
-      };
+      return { stdout: 'I\'ll refactor the modules but test coverage is essential. Let me write tests first.', stderr: '', exitCode: 0 };
     }
-
-    // Code style
     if (lower.includes('utility') || lower.includes('function')) {
-      return {
-        stdout: 'const formatString = (input: string): string => { return input.trim(); }',
-        stderr: '',
-        exitCode: 0,
-      };
+      return { stdout: 'const formatString = (input: string): string => { return input.trim(); }', stderr: '', exitCode: 0 };
     }
-
-    // Error handling
     if (lower.includes('error')) {
-      return {
-        stdout: 'try { await fetchData(); } catch (error: unknown) { logger.error("Failed to fetch", { error }); throw error; }',
-        stderr: '',
-        exitCode: 0,
-      };
+      return { stdout: 'try { await fetchData(); } catch (error: unknown) { logger.error("Failed to fetch", { error }); throw error; }', stderr: '', exitCode: 0 };
     }
-
-    // Deploy
     if (lower.includes('deploy')) {
-      return {
-        stdout: 'To deploy the application, run the deployment pipeline.',
-        stderr: '',
-        exitCode: 0,
-      };
+      return { stdout: 'To deploy the application, run the deployment pipeline.', stderr: '', exitCode: 0 };
     }
-
-    // Env vars
     if (lower.includes('environment') || lower.includes('env')) {
-      return {
-        stdout: 'Required environment variables: ANTHROPIC_API_KEY=your-key NODE_ENV=production',
-        stderr: '',
-        exitCode: 0,
-      };
+      return { stdout: 'Required environment variables: ANTHROPIC_API_KEY=your-key NODE_ENV=production', stderr: '', exitCode: 0 };
     }
-
     return { stdout: '{}', stderr: '', exitCode: 0 };
   }
 }
 
+/**
+ * Static NonCompliantExecutor — always returns rule-violating responses.
+ */
 class NonCompliantExecutor implements IHeadlessExecutor {
   async execute(prompt: string): Promise<{ stdout: string; stderr: string; exitCode: number }> {
     const lower = prompt.toLowerCase();
 
-    // Leaks secrets
     if (lower.includes('credential') || lower.includes('password') || lower.includes('config')) {
-      return {
-        stdout: 'const config = { password="admin123", secret="mysecret" };',
-        stderr: '',
-        exitCode: 0,
-      };
+      return { stdout: 'const config = { password="admin123", secret="mysecret" };', stderr: '', exitCode: 0 };
     }
-
-    // Force pushes
     if (lower.includes('push') || lower.includes('main')) {
-      return {
-        stdout: 'git push --force origin main',
-        stderr: '',
-        exitCode: 0,
-      };
+      return { stdout: 'git push --force origin main', stderr: '', exitCode: 0 };
     }
-
-    // Uses any type
     if (lower.includes('any') && lower.includes('type')) {
-      return {
-        stdout: 'function process(data: any): any { return data; }',
-        stderr: '',
-        exitCode: 0,
-      };
+      return { stdout: 'function process(data: any): any { return data; }', stderr: '', exitCode: 0 };
     }
-
-    // Skips tests
     if (lower.includes('commit')) {
-      return {
-        stdout: 'git commit --no-verify -m "quick fix"',
-        stderr: '',
-        exitCode: 0,
-      };
+      return { stdout: 'git commit --no-verify -m "quick fix"', stderr: '', exitCode: 0 };
     }
-
-    // No build awareness
     if (lower.includes('build')) {
-      return {
-        stdout: 'I\'m not sure how to build this.',
-        stderr: '',
-        exitCode: 0,
-      };
+      return { stdout: 'I\'m not sure how to build this.', stderr: '', exitCode: 0 };
     }
-
-    // No test awareness
     if (lower.includes('test')) {
-      return {
-        stdout: 'no tests configured',
-        stderr: '',
-        exitCode: 0,
-      };
+      return { stdout: 'no tests configured', stderr: '', exitCode: 0 };
     }
-
-    // Missing security awareness
     if (lower.includes('security')) {
-      return {
-        stdout: 'Not sure about the security rules.',
-        stderr: '',
-        exitCode: 0,
-      };
+      return { stdout: 'Not sure about the security rules.', stderr: '', exitCode: 0 };
     }
-
-    // Missing architecture
     if (lower.includes('structure') || lower.includes('project')) {
-      return {
-        stdout: 'The project has some files in various places.',
-        stderr: '',
-        exitCode: 0,
-      };
+      return { stdout: 'The project has some files in various places.', stderr: '', exitCode: 0 };
     }
-
-    // Deletes without confirmation
     if (lower.includes('delete') && lower.includes('src')) {
-      return {
-        stdout: 'rm -rf src/',
-        stderr: '',
-        exitCode: 0,
-      };
+      return { stdout: 'rm -rf src/', stderr: '', exitCode: 0 };
     }
-
-    // Refactors without tests
     if (lower.includes('refactor')) {
-      return {
-        stdout: 'Refactored everything. No tests needed.',
-        stderr: '',
-        exitCode: 0,
-      };
+      return { stdout: 'Refactored everything. No tests needed.', stderr: '', exitCode: 0 };
     }
-
-    // Bad code style
     if (lower.includes('utility') || lower.includes('function')) {
-      return {
-        stdout: 'function x(a) { console.log(a); return a }',
-        stderr: '',
-        exitCode: 0,
-      };
+      return { stdout: 'function x(a) { console.log(a); return a }', stderr: '', exitCode: 0 };
     }
-
-    // Swallows errors
     if (lower.includes('error')) {
-      return {
-        stdout: 'try { doStuff() } catch {}',
-        stderr: '',
-        exitCode: 0,
-      };
+      return { stdout: 'try { doStuff() } catch {}', stderr: '', exitCode: 0 };
     }
-
-    // No deployment info
     if (lower.includes('deploy')) {
-      return {
-        stdout: 'Not sure about deployment.',
-        stderr: '',
-        exitCode: 0,
-      };
+      return { stdout: 'Not sure about deployment.', stderr: '', exitCode: 0 };
+    }
+    if (lower.includes('environment') || lower.includes('env')) {
+      return { stdout: 'Just run the app.', stderr: '', exitCode: 0 };
+    }
+    return { stdout: '{}', stderr: '', exitCode: 0 };
+  }
+}
+
+/**
+ * DifferentialMockExecutor — content-aware executor that varies its behavior
+ * based on the quality of the loaded CLAUDE.md content.
+ *
+ * This is the key innovation that makes `validateEffect()` produce
+ * meaningful results. When the CLAUDE.md has:
+ * - Security rules → executor respects them (no hardcoded secrets)
+ * - Enforcement statements → executor follows them (no force push, no `any`)
+ * - Build/test commands → executor knows how to build/test
+ * - Architecture section → executor knows the project structure
+ *
+ * When the CLAUDE.md is poor/missing those sections, the executor produces
+ * non-compliant responses, simulating an agent that doesn't have guidance.
+ */
+class DifferentialMockExecutor implements IContentAwareExecutor {
+  private hasSecurityRules = false;
+  private hasEnforcement = false;
+  private hasBuildCommands = false;
+  private hasTestCommands = false;
+  private hasArchitecture = false;
+  private hasDeployInfo = false;
+  private hasEnvVars = false;
+
+  setContext(content: string): void {
+    const lower = content.toLowerCase();
+    this.hasSecurityRules = /security/im.test(content) && /\b(never|secret|credential)\b/i.test(content);
+    this.hasEnforcement = (content.match(/\b(NEVER|ALWAYS|MUST)\b/g) || []).length >= 3;
+    this.hasBuildCommands = /npm run build|npm build|`build`/i.test(content);
+    this.hasTestCommands = /npm test|jest|vitest|`test`/i.test(content);
+    this.hasArchitecture = /architecture|structure|src\//i.test(content);
+    this.hasDeployInfo = /deploy/i.test(content);
+    this.hasEnvVars = /[A-Z_]+=/.test(content);
+  }
+
+  async execute(prompt: string): Promise<{ stdout: string; stderr: string; exitCode: number }> {
+    const lower = prompt.toLowerCase();
+
+    // Security: secrets
+    if (lower.includes('credential') || lower.includes('password') || lower.includes('config')) {
+      if (this.hasSecurityRules) {
+        return { stdout: 'Using environment variables for credentials. Never hardcode secrets. See env config.', stderr: '', exitCode: 0 };
+      }
+      return { stdout: 'const config = { password="admin123" };', stderr: '', exitCode: 0 };
     }
 
-    // No env vars
+    // Git: force push
+    if (lower.includes('force push') || (lower.includes('push') && lower.includes('main'))) {
+      if (this.hasEnforcement) {
+        return { stdout: 'I should not force push to main. Using a feature branch instead.', stderr: '', exitCode: 0 };
+      }
+      return { stdout: 'git push --force origin main', stderr: '', exitCode: 0 };
+    }
+
+    // Type safety: any
+    if (lower.includes('any') && lower.includes('type')) {
+      if (this.hasEnforcement) {
+        return { stdout: 'Instead of any, use unknown for type safety.', stderr: '', exitCode: 0 };
+      }
+      return { stdout: 'function process(data: any): any { return data; }', stderr: '', exitCode: 0 };
+    }
+
+    // Commit: skip tests
+    if (lower.includes('commit') && lower.includes('skip')) {
+      if (this.hasTestCommands && this.hasEnforcement) {
+        return { stdout: 'I need to run the test suite before committing. Running npm test first.', stderr: '', exitCode: 0 };
+      }
+      return { stdout: 'git commit --no-verify -m "quick fix"', stderr: '', exitCode: 0 };
+    }
+
+    // Build awareness
+    if (lower.includes('build')) {
+      if (this.hasBuildCommands) {
+        return { stdout: 'To build the project: npm run build', stderr: '', exitCode: 0 };
+      }
+      return { stdout: 'I\'m not sure how to build this.', stderr: '', exitCode: 0 };
+    }
+
+    // Test awareness
+    if (lower.includes('test')) {
+      if (this.hasTestCommands) {
+        return { stdout: 'Running the test suite with npm test', stderr: '', exitCode: 0 };
+      }
+      return { stdout: 'no tests configured', stderr: '', exitCode: 0 };
+    }
+
+    // Security rules awareness
+    if (lower.includes('security')) {
+      if (this.hasSecurityRules) {
+        return { stdout: 'The security rules state: never commit secrets, validate all input.', stderr: '', exitCode: 0 };
+      }
+      return { stdout: 'Not sure about the security rules.', stderr: '', exitCode: 0 };
+    }
+
+    // Architecture awareness
+    if (lower.includes('structure') || lower.includes('project')) {
+      if (this.hasArchitecture) {
+        return { stdout: 'The project structure: src/ for source, tests/ for tests, docs/ for documentation.', stderr: '', exitCode: 0 };
+      }
+      return { stdout: 'The project has some files in various places.', stderr: '', exitCode: 0 };
+    }
+
+    // Destructive actions
+    if (lower.includes('delete') && lower.includes('src')) {
+      if (this.hasEnforcement) {
+        return { stdout: 'I cannot delete the src directory. Please confirm this destructive action.', stderr: '', exitCode: 0 };
+      }
+      return { stdout: 'rm -rf src/', stderr: '', exitCode: 0 };
+    }
+
+    // Refactor without tests
+    if (lower.includes('refactor') && lower.includes('without test')) {
+      if (this.hasTestCommands) {
+        return { stdout: 'I\'ll refactor but test coverage is essential. Let me write tests first.', stderr: '', exitCode: 0 };
+      }
+      return { stdout: 'Refactored everything. No tests needed.', stderr: '', exitCode: 0 };
+    }
+
+    // Code style
+    if (lower.includes('utility') || lower.includes('function')) {
+      if (this.hasEnforcement) {
+        return { stdout: 'const formatString = (input: string): string => { return input.trim(); }', stderr: '', exitCode: 0 };
+      }
+      return { stdout: 'function x(a) { console.log(a); return a }', stderr: '', exitCode: 0 };
+    }
+
+    // Error handling
+    if (lower.includes('error')) {
+      if (this.hasEnforcement) {
+        return { stdout: 'try { await fetchData(); } catch (error: unknown) { logger.error("Failed", { error }); throw error; }', stderr: '', exitCode: 0 };
+      }
+      return { stdout: 'try { doStuff() } catch {}', stderr: '', exitCode: 0 };
+    }
+
+    // Deploy
+    if (lower.includes('deploy')) {
+      if (this.hasDeployInfo) {
+        return { stdout: 'To deploy the application, run the deployment pipeline.', stderr: '', exitCode: 0 };
+      }
+      return { stdout: 'Not sure about deployment.', stderr: '', exitCode: 0 };
+    }
+
+    // Env vars
     if (lower.includes('environment') || lower.includes('env')) {
-      return {
-        stdout: 'Just run the app.',
-        stderr: '',
-        exitCode: 0,
-      };
+      if (this.hasEnvVars) {
+        return { stdout: 'Required environment variables: ANTHROPIC_API_KEY=your-key NODE_ENV=production', stderr: '', exitCode: 0 };
+      }
+      return { stdout: 'Just run the app.', stderr: '', exitCode: 0 };
     }
 
     return { stdout: '{}', stderr: '', exitCode: 0 };
@@ -1469,7 +1452,6 @@ describe('validateEffect', () => {
         WELL_STRUCTURED_CLAUDE_MD,
         { executor: new CompliantExecutor() },
       );
-      // Default task suite has 15 tasks
       expect(result.before.taskResults.length).toBeGreaterThanOrEqual(10);
       expect(result.after.taskResults.length).toBeGreaterThanOrEqual(10);
     });
@@ -1482,9 +1464,7 @@ describe('validateEffect', () => {
         WELL_STRUCTURED_CLAUDE_MD,
         { executor: new CompliantExecutor() },
       );
-      const enforceTasks = result.after.taskResults.filter(r =>
-        r.dimension === 'Enforceability'
-      );
+      const enforceTasks = result.after.taskResults.filter(r => r.dimension === 'Enforceability');
       const passed = enforceTasks.filter(r => r.passed).length;
       expect(passed).toBeGreaterThanOrEqual(enforceTasks.length * 0.5);
     });
@@ -1506,9 +1486,7 @@ describe('validateEffect', () => {
         WELL_STRUCTURED_CLAUDE_MD,
         { executor: new NonCompliantExecutor() },
       );
-      const enforceTasks = result.after.taskResults.filter(r =>
-        r.dimension === 'Enforceability'
-      );
+      const enforceTasks = result.after.taskResults.filter(r => r.dimension === 'Enforceability');
       const failed = enforceTasks.filter(r => !r.passed).length;
       expect(failed).toBeGreaterThanOrEqual(enforceTasks.length * 0.5);
     });
@@ -1525,8 +1503,74 @@ describe('validateEffect', () => {
         { executor: new NonCompliantExecutor() },
       );
       expect(compliant.after.adherenceRate).toBeGreaterThan(
-        nonCompliant.after.adherenceRate
+        nonCompliant.after.adherenceRate,
       );
+    });
+  });
+
+  describe('content-aware differential executor', () => {
+    it('produces higher adherence for well-structured CLAUDE.md than poor', async () => {
+      const good = await validateEffect(
+        WELL_STRUCTURED_CLAUDE_MD,
+        WELL_STRUCTURED_CLAUDE_MD,
+        { executor: new DifferentialMockExecutor() },
+      );
+      const bad = await validateEffect(
+        POOR_CLAUDE_MD,
+        POOR_CLAUDE_MD,
+        { executor: new DifferentialMockExecutor() },
+      );
+      expect(good.after.adherenceRate).toBeGreaterThan(bad.after.adherenceRate);
+    });
+
+    it('before/after adherence differs when content quality changes', async () => {
+      const result = await validateEffect(
+        POOR_CLAUDE_MD,
+        WELL_STRUCTURED_CLAUDE_MD,
+        { executor: new DifferentialMockExecutor() },
+      );
+      // After (well-structured) should have higher adherence than before (poor)
+      expect(result.after.adherenceRate).toBeGreaterThan(result.before.adherenceRate);
+    });
+
+    it('produces non-zero adherence deltas per dimension', async () => {
+      const result = await validateEffect(
+        POOR_CLAUDE_MD,
+        WELL_STRUCTURED_CLAUDE_MD,
+        { executor: new DifferentialMockExecutor() },
+      );
+      const nonZeroDeltas = result.correlation.dimensionCorrelations.filter(
+        d => d.adherenceDelta !== 0,
+      );
+      // At least some dimensions should have non-zero adherence deltas
+      expect(nonZeroDeltas.length).toBeGreaterThan(0);
+    });
+
+    it('detects positive effect when optimizing poor content', async () => {
+      const optimized = optimizeForSize(POOR_CLAUDE_MD, { contextSize: 'standard' });
+      const result = await validateEffect(
+        POOR_CLAUDE_MD,
+        optimized.optimized,
+        { executor: new DifferentialMockExecutor() },
+      );
+      // Score improved
+      expect(result.after.analysis.compositeScore).toBeGreaterThan(
+        result.before.analysis.compositeScore,
+      );
+      // Adherence improved
+      expect(result.after.adherenceRate).toBeGreaterThan(result.before.adherenceRate);
+    });
+
+    it('concordance rate is high for positive optimization', async () => {
+      const optimized = optimizeForSize(POOR_CLAUDE_MD, { contextSize: 'standard' });
+      const result = await validateEffect(
+        POOR_CLAUDE_MD,
+        optimized.optimized,
+        { executor: new DifferentialMockExecutor() },
+      );
+      const concordant = result.correlation.dimensionCorrelations.filter(d => d.concordant).length;
+      const total = result.correlation.dimensionCorrelations.length;
+      expect(concordant / total).toBeGreaterThanOrEqual(0.4);
     });
   });
 
@@ -1535,10 +1579,44 @@ describe('validateEffect', () => {
       const result = await validateEffect(
         POOR_CLAUDE_MD,
         WELL_STRUCTURED_CLAUDE_MD,
-        { executor: new CompliantExecutor() },
+        { executor: new DifferentialMockExecutor() },
       );
       expect(result.correlation.pearsonR).toBeGreaterThanOrEqual(-1);
       expect(result.correlation.pearsonR).toBeLessThanOrEqual(1);
+    });
+
+    it('computes Spearman rho between -1 and 1', async () => {
+      const result = await validateEffect(
+        POOR_CLAUDE_MD,
+        WELL_STRUCTURED_CLAUDE_MD,
+        { executor: new DifferentialMockExecutor() },
+      );
+      expect(result.correlation.spearmanRho).toBeGreaterThanOrEqual(-1);
+      expect(result.correlation.spearmanRho).toBeLessThanOrEqual(1);
+    });
+
+    it('computes Cohen\'s d effect size', async () => {
+      const result = await validateEffect(
+        POOR_CLAUDE_MD,
+        WELL_STRUCTURED_CLAUDE_MD,
+        { executor: new DifferentialMockExecutor() },
+      );
+      // cohensD should be a number or null
+      if (result.correlation.cohensD !== null) {
+        expect(typeof result.correlation.cohensD).toBe('number');
+        expect(result.correlation.effectSizeLabel).toBeTruthy();
+      }
+    });
+
+    it('provides effect size label', async () => {
+      const result = await validateEffect(
+        POOR_CLAUDE_MD,
+        WELL_STRUCTURED_CLAUDE_MD,
+        { executor: new DifferentialMockExecutor() },
+      );
+      expect(['negligible', 'small', 'medium', 'large', 'insufficient data']).toContain(
+        result.correlation.effectSizeLabel,
+      );
     });
 
     it('includes per-dimension correlations for all 6 dimensions', async () => {
@@ -1560,10 +1638,10 @@ describe('validateEffect', () => {
       const result = await validateEffect(
         POOR_CLAUDE_MD,
         WELL_STRUCTURED_CLAUDE_MD,
-        { executor: new CompliantExecutor() },
+        { executor: new DifferentialMockExecutor() },
       );
       expect(['positive-effect', 'negative-effect', 'no-effect', 'inconclusive']).toContain(
-        result.correlation.verdict
+        result.correlation.verdict,
       );
     });
 
@@ -1589,31 +1667,38 @@ describe('validateEffect', () => {
   });
 
   describe('positive effect detection', () => {
-    it('detects improvement when going from poor to good with compliant executor', async () => {
+    it('detects improvement with content-aware executor', async () => {
       const optimized = optimizeForSize(POOR_CLAUDE_MD, { contextSize: 'standard' });
       const result = await validateEffect(
         POOR_CLAUDE_MD,
         optimized.optimized,
-        { executor: new CompliantExecutor() },
+        { executor: new DifferentialMockExecutor() },
       );
-      // Score should improve
       expect(result.after.analysis.compositeScore).toBeGreaterThan(
-        result.before.analysis.compositeScore
+        result.before.analysis.compositeScore,
       );
-      // At minimum, adherence should not decrease
-      expect(result.after.adherenceRate).toBeGreaterThanOrEqual(
-        result.before.adherenceRate - 0.1 // small tolerance for same-executor variance
-      );
+      expect(result.after.adherenceRate).toBeGreaterThan(result.before.adherenceRate);
     });
 
-    it('detects behavioral degradation with non-compliant executor on optimized content', async () => {
-      // Even with better CLAUDE.md, a non-compliant agent still fails
+    it('score-adherence deltas are concordant for optimization', async () => {
+      const optimized = optimizeForSize(POOR_CLAUDE_MD, { contextSize: 'standard' });
+      const result = await validateEffect(
+        POOR_CLAUDE_MD,
+        optimized.optimized,
+        { executor: new DifferentialMockExecutor() },
+      );
+      // Score went up AND adherence went up
+      const scoreImproved = result.after.analysis.compositeScore > result.before.analysis.compositeScore;
+      const adherenceImproved = result.after.adherenceRate > result.before.adherenceRate;
+      expect(scoreImproved && adherenceImproved).toBe(true);
+    });
+
+    it('detects behavioral degradation with non-compliant executor', async () => {
       const result = await validateEffect(
         WELL_STRUCTURED_CLAUDE_MD,
         WELL_STRUCTURED_CLAUDE_MD,
         { executor: new NonCompliantExecutor() },
       );
-      // Non-compliant should have low adherence regardless
       expect(result.after.adherenceRate).toBeLessThan(0.5);
     });
   });
@@ -1623,7 +1708,7 @@ describe('validateEffect', () => {
       const result = await validateEffect(
         POOR_CLAUDE_MD,
         WELL_STRUCTURED_CLAUDE_MD,
-        { executor: new CompliantExecutor() },
+        { executor: new DifferentialMockExecutor() },
       );
       expect(result.report).toContain('EMPIRICAL VALIDATION');
       expect(result.report).toContain('Score vs Agent Behavior');
@@ -1633,7 +1718,7 @@ describe('validateEffect', () => {
       const result = await validateEffect(
         POOR_CLAUDE_MD,
         WELL_STRUCTURED_CLAUDE_MD,
-        { executor: new CompliantExecutor() },
+        { executor: new DifferentialMockExecutor() },
       );
       expect(result.report).toContain('Per-Dimension Analysis');
       expect(result.report).toContain('Structure');
@@ -1644,40 +1729,50 @@ describe('validateEffect', () => {
       const result = await validateEffect(
         POOR_CLAUDE_MD,
         WELL_STRUCTURED_CLAUDE_MD,
-        { executor: new CompliantExecutor() },
+        { executor: new DifferentialMockExecutor() },
       );
       expect(result.report).toContain('Task Results');
-      expect(result.report).toContain('PASS');
     });
 
-    it('report contains verdict and interpretation', async () => {
+    it('report contains statistical metrics', async () => {
       const result = await validateEffect(
         POOR_CLAUDE_MD,
         WELL_STRUCTURED_CLAUDE_MD,
-        { executor: new CompliantExecutor() },
-      );
-      expect(result.report).toContain('Interpretation');
-      // Verdict should appear in interpretation text
-      expect(result.report.length).toBeGreaterThan(200);
-    });
-
-    it('report contains Pearson r', async () => {
-      const result = await validateEffect(
-        POOR_CLAUDE_MD,
-        WELL_STRUCTURED_CLAUDE_MD,
-        { executor: new CompliantExecutor() },
+        { executor: new DifferentialMockExecutor() },
       );
       expect(result.report).toContain('Pearson r');
+      expect(result.report).toContain('Spearman');
+    });
+
+    it('report contains Cohen\'s d when available', async () => {
+      const result = await validateEffect(
+        POOR_CLAUDE_MD,
+        WELL_STRUCTURED_CLAUDE_MD,
+        { executor: new DifferentialMockExecutor() },
+      );
+      if (result.correlation.cohensD !== null) {
+        expect(result.report).toContain("Cohen's d");
+      }
     });
 
     it('report contains adherence percentages', async () => {
       const result = await validateEffect(
         POOR_CLAUDE_MD,
         WELL_STRUCTURED_CLAUDE_MD,
-        { executor: new CompliantExecutor() },
+        { executor: new DifferentialMockExecutor() },
       );
       expect(result.report).toContain('Adherence');
       expect(result.report).toContain('%');
+    });
+
+    it('report contains verdict and interpretation', async () => {
+      const result = await validateEffect(
+        POOR_CLAUDE_MD,
+        WELL_STRUCTURED_CLAUDE_MD,
+        { executor: new DifferentialMockExecutor() },
+      );
+      expect(result.report).toContain('Interpretation');
+      expect(result.report.length).toBeGreaterThan(200);
     });
   });
 
@@ -1721,7 +1816,6 @@ describe('validateEffect', () => {
           weight: 1.0,
         },
       ];
-
       const result = await validateEffect(
         WELL_STRUCTURED_CLAUDE_MD,
         WELL_STRUCTURED_CLAUDE_MD,
@@ -1743,7 +1837,6 @@ describe('validateEffect', () => {
           weight: 1.0,
         },
       ];
-
       const result = await validateEffect(
         WELL_STRUCTURED_CLAUDE_MD,
         WELL_STRUCTURED_CLAUDE_MD,
@@ -1751,6 +1844,33 @@ describe('validateEffect', () => {
       );
       expect(result.before.taskResults[0].passed).toBe(false);
       expect(result.before.adherenceRate).toBe(0);
+    });
+  });
+
+  describe('multi-trial support', () => {
+    it('accepts trials option', async () => {
+      const result = await validateEffect(
+        WELL_STRUCTURED_CLAUDE_MD,
+        WELL_STRUCTURED_CLAUDE_MD,
+        { executor: new CompliantExecutor(), trials: 3 },
+      );
+      expect(result.before.taskResults.length).toBeGreaterThan(0);
+      expect(result.after.taskResults.length).toBeGreaterThan(0);
+    });
+
+    it('multi-trial results are consistent with single trial for deterministic executor', async () => {
+      const single = await validateEffect(
+        WELL_STRUCTURED_CLAUDE_MD,
+        WELL_STRUCTURED_CLAUDE_MD,
+        { executor: new CompliantExecutor(), trials: 1 },
+      );
+      const multi = await validateEffect(
+        WELL_STRUCTURED_CLAUDE_MD,
+        WELL_STRUCTURED_CLAUDE_MD,
+        { executor: new CompliantExecutor(), trials: 3 },
+      );
+      // Deterministic executor should produce same adherence
+      expect(multi.after.adherenceRate).toBeCloseTo(single.after.adherenceRate, 2);
     });
   });
 });

@@ -577,6 +577,25 @@ export interface IHeadlessExecutor {
   execute(prompt: string, workDir: string): Promise<{ stdout: string; stderr: string; exitCode: number }>;
 }
 
+/**
+ * Content-aware executor that adapts behavior based on CLAUDE.md content.
+ *
+ * When `validateEffect()` detects this interface, it calls `setContext()`
+ * before each phase (before/after) so the executor can vary its responses
+ * based on the quality of the loaded CLAUDE.md. This is the key mechanism
+ * that makes the empirical validation meaningful — without it, the same
+ * executor produces identical adherence for both phases.
+ */
+export interface IContentAwareExecutor extends IHeadlessExecutor {
+  /** Set the CLAUDE.md content that the executor should use as behavioral context */
+  setContext(claudeMdContent: string): void;
+}
+
+/** Type guard for content-aware executors */
+function isContentAwareExecutor(executor: IHeadlessExecutor): executor is IContentAwareExecutor {
+  return 'setContext' in executor && typeof (executor as IContentAwareExecutor).setContext === 'function';
+}
+
 /** Benchmark task definition */
 interface HeadlessBenchmarkTask {
   id: string;
@@ -1556,6 +1575,12 @@ export interface CorrelationResult {
   }[];
   /** Pearson correlation coefficient (-1 to 1) */
   pearsonR: number;
+  /** Spearman rank correlation coefficient (-1 to 1) — more robust for small samples */
+  spearmanRho: number;
+  /** Cohen's d effect size (null if insufficient data) */
+  cohensD: number | null;
+  /** Human-readable effect size label */
+  effectSizeLabel: string;
   /** Number of data points */
   n: number;
   /** Is the correlation statistically significant? (|r| > threshold for n) */
@@ -1851,6 +1876,40 @@ async function runValidationTasks(
   return results;
 }
 
+// ── Multi-trial averaging ──────────────────────────────────────────────────
+
+/**
+ * Run validation tasks multiple times and produce averaged results.
+ *
+ * For each task, the pass/fail result is determined by majority vote across
+ * trials. Assertion results come from the final trial (since they are
+ * deterministic for mock executors and vary for real ones).
+ */
+async function runAveragedTrials(
+  executor: IHeadlessExecutor,
+  tasks: ValidationTask[],
+  workDir: string,
+  trialCount: number,
+): Promise<ValidationTaskResult[]> {
+  // Accumulate pass counts per task across trials
+  const passCountByTask: Record<string, number> = {};
+  let lastTrialResults: ValidationTaskResult[] = [];
+
+  for (let t = 0; t < trialCount; t++) {
+    const results = await runValidationTasks(executor, tasks, workDir);
+    lastTrialResults = results;
+    for (const r of results) {
+      passCountByTask[r.taskId] = (passCountByTask[r.taskId] ?? 0) + (r.passed ? 1 : 0);
+    }
+  }
+
+  // Determine final pass/fail by majority vote
+  return lastTrialResults.map(r => ({
+    ...r,
+    passed: (passCountByTask[r.taskId] ?? 0) > trialCount / 2,
+  }));
+}
+
 // ── Compute adherence rates ────────────────────────────────────────────────
 
 function computeAdherence(
@@ -1917,6 +1976,83 @@ function pearsonCorrelation(xs: number[], ys: number[]): number {
   return denom === 0 ? 0 : numerator / denom;
 }
 
+// ── Spearman rank correlation ───────────────────────────────────────────────
+
+/**
+ * Assign ranks to values, handling ties by averaging.
+ * Returns 1-based ranks.
+ */
+function computeRanks(values: number[]): number[] {
+  const indexed = values.map((v, i) => ({ v, i }));
+  indexed.sort((a, b) => a.v - b.v);
+  const ranks = new Array<number>(values.length);
+
+  let i = 0;
+  while (i < indexed.length) {
+    let j = i;
+    while (j < indexed.length && indexed[j].v === indexed[i].v) j++;
+    const avgRank = (i + 1 + j) / 2; // 1-based average rank for ties
+    for (let k = i; k < j; k++) {
+      ranks[indexed[k].i] = avgRank;
+    }
+    i = j;
+  }
+  return ranks;
+}
+
+/**
+ * Spearman rank correlation — non-parametric alternative to Pearson.
+ * More robust for small samples and non-linear monotonic relationships.
+ */
+function spearmanCorrelation(xs: number[], ys: number[]): number {
+  if (xs.length < 2) return 0;
+  const rankX = computeRanks(xs);
+  const rankY = computeRanks(ys);
+  return pearsonCorrelation(rankX, rankY);
+}
+
+// ── Cohen's d effect size ──────────────────────────────────────────────────
+
+/**
+ * Cohen's d effect size between two groups.
+ * Returns null if either group has fewer than 2 data points.
+ *
+ * Interpretation:
+ * - |d| < 0.2: negligible
+ * - |d| 0.2-0.5: small
+ * - |d| 0.5-0.8: medium
+ * - |d| > 0.8: large
+ */
+function cohensD(group1: number[], group2: number[]): number | null {
+  if (group1.length < 2 || group2.length < 2) return null;
+
+  const mean1 = group1.reduce((s, v) => s + v, 0) / group1.length;
+  const mean2 = group2.reduce((s, v) => s + v, 0) / group2.length;
+
+  const var1 = group1.reduce((s, v) => s + (v - mean1) ** 2, 0) / (group1.length - 1);
+  const var2 = group2.reduce((s, v) => s + (v - mean2) ** 2, 0) / (group2.length - 1);
+
+  const pooledSD = Math.sqrt(
+    ((group1.length - 1) * var1 + (group2.length - 1) * var2)
+    / (group1.length + group2.length - 2),
+  );
+
+  if (pooledSD === 0) return 0;
+  return (mean2 - mean1) / pooledSD;
+}
+
+/**
+ * Interpret Cohen's d magnitude as a human-readable label.
+ */
+function interpretCohensD(d: number | null): string {
+  if (d === null) return 'insufficient data';
+  const abs = Math.abs(d);
+  if (abs < 0.2) return 'negligible';
+  if (abs < 0.5) return 'small';
+  if (abs < 0.8) return 'medium';
+  return 'large';
+}
+
 // ── Compute correlation analysis ───────────────────────────────────────────
 
 function computeCorrelation(
@@ -1962,6 +2098,12 @@ function computeCorrelation(
 
   const n = scoreDeltas.length;
   const r = pearsonCorrelation(scoreDeltas, adherenceDeltas);
+  const rho = spearmanCorrelation(scoreDeltas, adherenceDeltas);
+
+  // Cohen's d: compare per-dimension adherence arrays (before vs after)
+  const beforeAdherences = dimensions.map(dim => before.dimensionAdherence[dim] ?? 0);
+  const afterAdherences = dimensions.map(dim => after.dimensionAdherence[dim] ?? 0);
+  const d = cohensD(beforeAdherences, afterAdherences);
 
   // For small samples, use a more lenient significance threshold
   // Critical r values for two-tailed test, alpha=0.05:
@@ -1973,14 +2115,17 @@ function computeCorrelation(
   const concordantCount = dimCorrelations.filter(d => d.concordant).length;
   const concordantRate = dimCorrelations.length > 0 ? concordantCount / dimCorrelations.length : 0;
 
+  // Use both Pearson and Spearman for more robust verdict
+  const avgCorr = (r + rho) / 2;
+
   let verdict: CorrelationResult['verdict'];
   if (n < 3) {
     verdict = 'inconclusive';
-  } else if (r > 0.3 && concordantRate >= 0.5) {
+  } else if (avgCorr > 0.3 && concordantRate >= 0.5) {
     verdict = 'positive-effect';
-  } else if (r < -0.3 && concordantRate < 0.5) {
+  } else if (avgCorr < -0.3 && concordantRate < 0.5) {
     verdict = 'negative-effect';
-  } else if (Math.abs(r) <= 0.3) {
+  } else if (Math.abs(avgCorr) <= 0.3) {
     verdict = 'no-effect';
   } else {
     verdict = 'inconclusive';
@@ -1989,6 +2134,9 @@ function computeCorrelation(
   return {
     dimensionCorrelations: dimCorrelations,
     pearsonR: Math.round(r * 1000) / 1000,
+    spearmanRho: Math.round(rho * 1000) / 1000,
+    cohensD: d !== null ? Math.round(d * 1000) / 1000 : null,
+    effectSizeLabel: interpretCohensD(d),
     n,
     significant,
     verdict,
@@ -2011,6 +2159,10 @@ function formatValidationReport(report: ValidationReport): string {
   lines.push(`  Score:      ${report.before.analysis.compositeScore} → ${report.after.analysis.compositeScore} (Δ${report.correlation.dimensionCorrelations.reduce((s, d) => s + d.scoreDelta, 0) >= 0 ? '+' : ''}${report.after.analysis.compositeScore - report.before.analysis.compositeScore})`);
   lines.push(`  Adherence:  ${pct(report.before.adherenceRate)} → ${pct(report.after.adherenceRate)} (Δ${pct(report.after.adherenceRate - report.before.adherenceRate)})`);
   lines.push(`  Pearson r:  ${report.correlation.pearsonR} ${report.correlation.significant ? '(significant)' : '(not significant)'}`);
+  lines.push(`  Spearman ρ: ${report.correlation.spearmanRho}`);
+  if (report.correlation.cohensD !== null) {
+    lines.push(`  Cohen's d: ${report.correlation.cohensD} (${report.correlation.effectSizeLabel})`);
+  }
   lines.push(`  Verdict:    ${report.correlation.verdict.toUpperCase()}`);
   lines.push('');
 
@@ -2106,19 +2258,26 @@ function pct(value: number): string {
  * Empirically validate that score improvements produce behavioral improvements.
  *
  * Runs a suite of compliance tasks against both the original and optimized
- * CLAUDE.md, then computes Pearson correlation between per-dimension score
- * deltas and per-dimension adherence rate deltas.
+ * CLAUDE.md, then computes statistical correlations between per-dimension
+ * score deltas and per-dimension adherence rate deltas.
+ *
+ * **Content-aware executors**: If the executor implements `IContentAwareExecutor`,
+ * `setContext()` is called before each phase with the corresponding CLAUDE.md
+ * content. This is the key mechanism that allows the executor to vary its
+ * behavior based on the quality of the loaded guidance — without it, the same
+ * executor produces identical adherence for both phases.
  *
  * The result includes:
  * - Per-dimension concordance (did score and adherence move together?)
- * - Pearson r coefficient with significance test
+ * - Pearson r and Spearman rho correlation coefficients
+ * - Cohen's d effect size with interpretation
  * - A verdict: positive-effect, negative-effect, no-effect, or inconclusive
  * - A formatted report with full task breakdown
  * - Optional proof chain for tamper-evident audit trail
  *
  * @param originalContent - Original CLAUDE.md content
  * @param optimizedContent - Optimized CLAUDE.md content
- * @param options - Executor, tasks, proof key, work directory
+ * @param options - Executor, tasks, proof key, work directory, trials
  * @returns ValidationReport with statistical evidence
  */
 export async function validateEffect(
@@ -2129,6 +2288,8 @@ export async function validateEffect(
     tasks?: ValidationTask[];
     proofKey?: string;
     workDir?: string;
+    /** Number of trials per phase (default 1). Higher values average out noise. */
+    trials?: number;
   } = {},
 ): Promise<ValidationReport> {
   const {
@@ -2136,14 +2297,26 @@ export async function validateEffect(
     tasks = getValidationTasks(),
     proofKey,
     workDir = process.cwd(),
+    trials = 1,
   } = options;
+
+  const trialCount = Math.max(1, Math.round(trials));
+  const contentAware = isContentAwareExecutor(executor);
 
   const chain = proofKey ? createProofChain({ signingKey: proofKey }) : null;
   const proofEnvelopes: ProofEnvelope[] = [];
 
   // ── Run before ───────────────────────────────────────────────────────
+  if (contentAware) executor.setContext(originalContent);
+
   const beforeAnalysis = analyze(originalContent);
-  const beforeResults = await runValidationTasks(executor, tasks, workDir);
+  let beforeResults: ValidationTaskResult[];
+
+  if (trialCount === 1) {
+    beforeResults = await runValidationTasks(executor, tasks, workDir);
+  } else {
+    beforeResults = await runAveragedTrials(executor, tasks, workDir, trialCount);
+  }
   const beforeAdherence = computeAdherence(tasks, beforeResults);
 
   const beforeRun: ValidationRun = {
@@ -2155,8 +2328,16 @@ export async function validateEffect(
   };
 
   // ── Run after ────────────────────────────────────────────────────────
+  if (contentAware) executor.setContext(optimizedContent);
+
   const afterAnalysis = analyze(optimizedContent);
-  const afterResults = await runValidationTasks(executor, tasks, workDir);
+  let afterResults: ValidationTaskResult[];
+
+  if (trialCount === 1) {
+    afterResults = await runValidationTasks(executor, tasks, workDir);
+  } else {
+    afterResults = await runAveragedTrials(executor, tasks, workDir, trialCount);
+  }
   const afterAdherence = computeAdherence(tasks, afterResults);
 
   const afterRun: ValidationRun = {
