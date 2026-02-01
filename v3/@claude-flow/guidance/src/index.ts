@@ -309,6 +309,7 @@ export {
   autoOptimize,
   optimizeForSize,
   headlessBenchmark,
+  validateEffect,
   formatReport,
   formatBenchmark,
 } from './analyzer.js';
@@ -323,6 +324,12 @@ export type {
   HeadlessBenchmarkResult,
   HeadlessTaskResult,
   IHeadlessExecutor,
+  ValidationAssertion,
+  ValidationTask,
+  ValidationTaskResult,
+  ValidationRun,
+  CorrelationResult,
+  ValidationReport,
 } from './analyzer.js';
 
 export {
