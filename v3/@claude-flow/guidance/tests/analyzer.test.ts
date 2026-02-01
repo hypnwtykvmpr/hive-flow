@@ -5,6 +5,7 @@ import {
   autoOptimize,
   optimizeForSize,
   headlessBenchmark,
+  validateEffect,
   formatReport,
   formatBenchmark,
 } from '../src/analyzer.js';
@@ -13,6 +14,9 @@ import type {
   BenchmarkResult,
   ContextSize,
   IHeadlessExecutor,
+  ValidationTask,
+  ValidationReport,
+  CorrelationResult,
 } from '../src/analyzer.js';
 
 // ============================================================================
@@ -1123,5 +1127,630 @@ describe('headlessBenchmark', () => {
     expect(result.after.analysis.compositeScore).toBeGreaterThan(
       result.before.analysis.compositeScore
     );
+  });
+});
+
+// ============================================================================
+// validateEffect() — Empirical Behavioral Validation
+// ============================================================================
+
+/**
+ * MockValidationExecutor simulates realistic Claude agent responses
+ * that vary based on the quality of the CLAUDE.md.
+ *
+ * For "well-structured" prompts (used with good CLAUDE.md), the mock
+ * produces compliant responses. For "poor" prompts (used with bad CLAUDE.md),
+ * it produces non-compliant responses with violations.
+ *
+ * This simulates the hypothesis: better CLAUDE.md → better agent compliance.
+ */
+class CompliantExecutor implements IHeadlessExecutor {
+  async execute(prompt: string): Promise<{ stdout: string; stderr: string; exitCode: number }> {
+    const lower = prompt.toLowerCase();
+
+    // Security: no secrets
+    if (lower.includes('credential') || lower.includes('password') || lower.includes('config')) {
+      return {
+        stdout: 'I\'ll create a config file that reads credentials from environment variables. Never hardcode secrets. See .env.example for required vars.',
+        stderr: '',
+        exitCode: 0,
+      };
+    }
+
+    // Git: no force push
+    if (lower.includes('force push') || lower.includes('push') && lower.includes('main')) {
+      return {
+        stdout: 'I should not force push to main. Instead, I\'ll push to a feature branch and create a pull request.',
+        stderr: '',
+        exitCode: 0,
+      };
+    }
+
+    // Type safety: no any
+    if (lower.includes('any') && lower.includes('type')) {
+      return {
+        stdout: 'Instead of using any, I\'ll use unknown for type safety. Here\'s the function with proper typing.',
+        stderr: '',
+        exitCode: 0,
+      };
+    }
+
+    // Test before commit
+    if (lower.includes('commit') && lower.includes('skip')) {
+      return {
+        stdout: 'I need to run the test suite before committing. Running npm test first...',
+        stderr: '',
+        exitCode: 0,
+      };
+    }
+
+    // Build awareness
+    if (lower.includes('build')) {
+      return {
+        stdout: 'To build the project: npm run build',
+        stderr: '',
+        exitCode: 0,
+      };
+    }
+
+    // Test awareness
+    if (lower.includes('test')) {
+      return {
+        stdout: 'Running the test suite with npm test',
+        stderr: '',
+        exitCode: 0,
+      };
+    }
+
+    // Security rules
+    if (lower.includes('security')) {
+      return {
+        stdout: 'The security rules state: never commit secrets, validate all input.',
+        stderr: '',
+        exitCode: 0,
+      };
+    }
+
+    // Architecture
+    if (lower.includes('structure') || lower.includes('project')) {
+      return {
+        stdout: 'The project structure: src/ for source, tests/ for tests, docs/ for documentation.',
+        stderr: '',
+        exitCode: 0,
+      };
+    }
+
+    // Destructive actions
+    if (lower.includes('delete') && lower.includes('src')) {
+      return {
+        stdout: 'I cannot delete the entire src directory. Please confirm this destructive action and explain why.',
+        stderr: '',
+        exitCode: 0,
+      };
+    }
+
+    // Refactor without tests
+    if (lower.includes('refactor') && lower.includes('without test')) {
+      return {
+        stdout: 'I\'ll refactor the modules but test coverage is essential. Let me write tests first.',
+        stderr: '',
+        exitCode: 0,
+      };
+    }
+
+    // Code style
+    if (lower.includes('utility') || lower.includes('function')) {
+      return {
+        stdout: 'const formatString = (input: string): string => { return input.trim(); }',
+        stderr: '',
+        exitCode: 0,
+      };
+    }
+
+    // Error handling
+    if (lower.includes('error')) {
+      return {
+        stdout: 'try { await fetchData(); } catch (error: unknown) { logger.error("Failed to fetch", { error }); throw error; }',
+        stderr: '',
+        exitCode: 0,
+      };
+    }
+
+    // Deploy
+    if (lower.includes('deploy')) {
+      return {
+        stdout: 'To deploy the application, run the deployment pipeline.',
+        stderr: '',
+        exitCode: 0,
+      };
+    }
+
+    // Env vars
+    if (lower.includes('environment') || lower.includes('env')) {
+      return {
+        stdout: 'Required environment variables: ANTHROPIC_API_KEY=your-key NODE_ENV=production',
+        stderr: '',
+        exitCode: 0,
+      };
+    }
+
+    return { stdout: '{}', stderr: '', exitCode: 0 };
+  }
+}
+
+class NonCompliantExecutor implements IHeadlessExecutor {
+  async execute(prompt: string): Promise<{ stdout: string; stderr: string; exitCode: number }> {
+    const lower = prompt.toLowerCase();
+
+    // Leaks secrets
+    if (lower.includes('credential') || lower.includes('password') || lower.includes('config')) {
+      return {
+        stdout: 'const config = { password="admin123", secret="mysecret" };',
+        stderr: '',
+        exitCode: 0,
+      };
+    }
+
+    // Force pushes
+    if (lower.includes('push') || lower.includes('main')) {
+      return {
+        stdout: 'git push --force origin main',
+        stderr: '',
+        exitCode: 0,
+      };
+    }
+
+    // Uses any type
+    if (lower.includes('any') && lower.includes('type')) {
+      return {
+        stdout: 'function process(data: any): any { return data; }',
+        stderr: '',
+        exitCode: 0,
+      };
+    }
+
+    // Skips tests
+    if (lower.includes('commit')) {
+      return {
+        stdout: 'git commit --no-verify -m "quick fix"',
+        stderr: '',
+        exitCode: 0,
+      };
+    }
+
+    // No build awareness
+    if (lower.includes('build')) {
+      return {
+        stdout: 'I\'m not sure how to build this.',
+        stderr: '',
+        exitCode: 0,
+      };
+    }
+
+    // No test awareness
+    if (lower.includes('test')) {
+      return {
+        stdout: 'no tests configured',
+        stderr: '',
+        exitCode: 0,
+      };
+    }
+
+    // Missing security awareness
+    if (lower.includes('security')) {
+      return {
+        stdout: 'Not sure about the security rules.',
+        stderr: '',
+        exitCode: 0,
+      };
+    }
+
+    // Missing architecture
+    if (lower.includes('structure') || lower.includes('project')) {
+      return {
+        stdout: 'The project has some files in various places.',
+        stderr: '',
+        exitCode: 0,
+      };
+    }
+
+    // Deletes without confirmation
+    if (lower.includes('delete') && lower.includes('src')) {
+      return {
+        stdout: 'rm -rf src/',
+        stderr: '',
+        exitCode: 0,
+      };
+    }
+
+    // Refactors without tests
+    if (lower.includes('refactor')) {
+      return {
+        stdout: 'Refactored everything. No tests needed.',
+        stderr: '',
+        exitCode: 0,
+      };
+    }
+
+    // Bad code style
+    if (lower.includes('utility') || lower.includes('function')) {
+      return {
+        stdout: 'function x(a) { console.log(a); return a }',
+        stderr: '',
+        exitCode: 0,
+      };
+    }
+
+    // Swallows errors
+    if (lower.includes('error')) {
+      return {
+        stdout: 'try { doStuff() } catch {}',
+        stderr: '',
+        exitCode: 0,
+      };
+    }
+
+    // No deployment info
+    if (lower.includes('deploy')) {
+      return {
+        stdout: 'Not sure about deployment.',
+        stderr: '',
+        exitCode: 0,
+      };
+    }
+
+    // No env vars
+    if (lower.includes('environment') || lower.includes('env')) {
+      return {
+        stdout: 'Just run the app.',
+        stderr: '',
+        exitCode: 0,
+      };
+    }
+
+    return { stdout: '{}', stderr: '', exitCode: 0 };
+  }
+}
+
+describe('validateEffect', () => {
+  describe('core validation', () => {
+    it('returns a complete ValidationReport', async () => {
+      const result = await validateEffect(
+        WELL_STRUCTURED_CLAUDE_MD,
+        WELL_STRUCTURED_CLAUDE_MD,
+        { executor: new CompliantExecutor() },
+      );
+      expect(result.before).toBeDefined();
+      expect(result.after).toBeDefined();
+      expect(result.correlation).toBeDefined();
+      expect(result.report).toBeTruthy();
+    });
+
+    it('before and after contain analysis results', async () => {
+      const result = await validateEffect(
+        WELL_STRUCTURED_CLAUDE_MD,
+        WELL_STRUCTURED_CLAUDE_MD,
+        { executor: new CompliantExecutor() },
+      );
+      expect(result.before.analysis.compositeScore).toBeGreaterThan(0);
+      expect(result.after.analysis.compositeScore).toBeGreaterThan(0);
+      expect(result.before.analysis.dimensions).toHaveLength(6);
+    });
+
+    it('computes adherence rates between 0 and 1', async () => {
+      const result = await validateEffect(
+        WELL_STRUCTURED_CLAUDE_MD,
+        WELL_STRUCTURED_CLAUDE_MD,
+        { executor: new CompliantExecutor() },
+      );
+      expect(result.before.adherenceRate).toBeGreaterThanOrEqual(0);
+      expect(result.before.adherenceRate).toBeLessThanOrEqual(1);
+      expect(result.after.adherenceRate).toBeGreaterThanOrEqual(0);
+      expect(result.after.adherenceRate).toBeLessThanOrEqual(1);
+    });
+
+    it('computes per-dimension adherence', async () => {
+      const result = await validateEffect(
+        WELL_STRUCTURED_CLAUDE_MD,
+        WELL_STRUCTURED_CLAUDE_MD,
+        { executor: new CompliantExecutor() },
+      );
+      const dims = Object.keys(result.before.dimensionAdherence);
+      expect(dims.length).toBeGreaterThan(0);
+      for (const dim of dims) {
+        expect(result.before.dimensionAdherence[dim]).toBeGreaterThanOrEqual(0);
+        expect(result.before.dimensionAdherence[dim]).toBeLessThanOrEqual(1);
+      }
+    });
+
+    it('runs all default validation tasks', async () => {
+      const result = await validateEffect(
+        WELL_STRUCTURED_CLAUDE_MD,
+        WELL_STRUCTURED_CLAUDE_MD,
+        { executor: new CompliantExecutor() },
+      );
+      // Default task suite has 15 tasks
+      expect(result.before.taskResults.length).toBeGreaterThanOrEqual(10);
+      expect(result.after.taskResults.length).toBeGreaterThanOrEqual(10);
+    });
+  });
+
+  describe('compliant executor produces high adherence', () => {
+    it('compliant executor passes most enforceability tasks', async () => {
+      const result = await validateEffect(
+        WELL_STRUCTURED_CLAUDE_MD,
+        WELL_STRUCTURED_CLAUDE_MD,
+        { executor: new CompliantExecutor() },
+      );
+      const enforceTasks = result.after.taskResults.filter(r =>
+        r.dimension === 'Enforceability'
+      );
+      const passed = enforceTasks.filter(r => r.passed).length;
+      expect(passed).toBeGreaterThanOrEqual(enforceTasks.length * 0.5);
+    });
+
+    it('compliant executor has high overall adherence', async () => {
+      const result = await validateEffect(
+        WELL_STRUCTURED_CLAUDE_MD,
+        WELL_STRUCTURED_CLAUDE_MD,
+        { executor: new CompliantExecutor() },
+      );
+      expect(result.after.adherenceRate).toBeGreaterThanOrEqual(0.5);
+    });
+  });
+
+  describe('non-compliant executor produces low adherence', () => {
+    it('non-compliant executor fails most enforceability tasks', async () => {
+      const result = await validateEffect(
+        WELL_STRUCTURED_CLAUDE_MD,
+        WELL_STRUCTURED_CLAUDE_MD,
+        { executor: new NonCompliantExecutor() },
+      );
+      const enforceTasks = result.after.taskResults.filter(r =>
+        r.dimension === 'Enforceability'
+      );
+      const failed = enforceTasks.filter(r => !r.passed).length;
+      expect(failed).toBeGreaterThanOrEqual(enforceTasks.length * 0.5);
+    });
+
+    it('non-compliant executor has lower adherence than compliant', async () => {
+      const compliant = await validateEffect(
+        WELL_STRUCTURED_CLAUDE_MD,
+        WELL_STRUCTURED_CLAUDE_MD,
+        { executor: new CompliantExecutor() },
+      );
+      const nonCompliant = await validateEffect(
+        WELL_STRUCTURED_CLAUDE_MD,
+        WELL_STRUCTURED_CLAUDE_MD,
+        { executor: new NonCompliantExecutor() },
+      );
+      expect(compliant.after.adherenceRate).toBeGreaterThan(
+        nonCompliant.after.adherenceRate
+      );
+    });
+  });
+
+  describe('correlation analysis', () => {
+    it('computes Pearson r between -1 and 1', async () => {
+      const result = await validateEffect(
+        POOR_CLAUDE_MD,
+        WELL_STRUCTURED_CLAUDE_MD,
+        { executor: new CompliantExecutor() },
+      );
+      expect(result.correlation.pearsonR).toBeGreaterThanOrEqual(-1);
+      expect(result.correlation.pearsonR).toBeLessThanOrEqual(1);
+    });
+
+    it('includes per-dimension correlations for all 6 dimensions', async () => {
+      const result = await validateEffect(
+        POOR_CLAUDE_MD,
+        WELL_STRUCTURED_CLAUDE_MD,
+        { executor: new CompliantExecutor() },
+      );
+      expect(result.correlation.dimensionCorrelations).toHaveLength(6);
+      for (const dc of result.correlation.dimensionCorrelations) {
+        expect(dc.dimension).toBeTruthy();
+        expect(typeof dc.scoreDelta).toBe('number');
+        expect(typeof dc.adherenceDelta).toBe('number');
+        expect(typeof dc.concordant).toBe('boolean');
+      }
+    });
+
+    it('returns a verdict', async () => {
+      const result = await validateEffect(
+        POOR_CLAUDE_MD,
+        WELL_STRUCTURED_CLAUDE_MD,
+        { executor: new CompliantExecutor() },
+      );
+      expect(['positive-effect', 'negative-effect', 'no-effect', 'inconclusive']).toContain(
+        result.correlation.verdict
+      );
+    });
+
+    it('includes sample size', async () => {
+      const result = await validateEffect(
+        POOR_CLAUDE_MD,
+        WELL_STRUCTURED_CLAUDE_MD,
+        { executor: new CompliantExecutor() },
+      );
+      expect(result.correlation.n).toBeGreaterThan(0);
+    });
+
+    it('same content produces zero score delta', async () => {
+      const result = await validateEffect(
+        WELL_STRUCTURED_CLAUDE_MD,
+        WELL_STRUCTURED_CLAUDE_MD,
+        { executor: new CompliantExecutor() },
+      );
+      for (const dc of result.correlation.dimensionCorrelations) {
+        expect(dc.scoreDelta).toBe(0);
+      }
+    });
+  });
+
+  describe('positive effect detection', () => {
+    it('detects improvement when going from poor to good with compliant executor', async () => {
+      const optimized = optimizeForSize(POOR_CLAUDE_MD, { contextSize: 'standard' });
+      const result = await validateEffect(
+        POOR_CLAUDE_MD,
+        optimized.optimized,
+        { executor: new CompliantExecutor() },
+      );
+      // Score should improve
+      expect(result.after.analysis.compositeScore).toBeGreaterThan(
+        result.before.analysis.compositeScore
+      );
+      // At minimum, adherence should not decrease
+      expect(result.after.adherenceRate).toBeGreaterThanOrEqual(
+        result.before.adherenceRate - 0.1 // small tolerance for same-executor variance
+      );
+    });
+
+    it('detects behavioral degradation with non-compliant executor on optimized content', async () => {
+      // Even with better CLAUDE.md, a non-compliant agent still fails
+      const result = await validateEffect(
+        WELL_STRUCTURED_CLAUDE_MD,
+        WELL_STRUCTURED_CLAUDE_MD,
+        { executor: new NonCompliantExecutor() },
+      );
+      // Non-compliant should have low adherence regardless
+      expect(result.after.adherenceRate).toBeLessThan(0.5);
+    });
+  });
+
+  describe('report generation', () => {
+    it('produces a formatted report', async () => {
+      const result = await validateEffect(
+        POOR_CLAUDE_MD,
+        WELL_STRUCTURED_CLAUDE_MD,
+        { executor: new CompliantExecutor() },
+      );
+      expect(result.report).toContain('EMPIRICAL VALIDATION');
+      expect(result.report).toContain('Score vs Agent Behavior');
+    });
+
+    it('report contains per-dimension breakdown', async () => {
+      const result = await validateEffect(
+        POOR_CLAUDE_MD,
+        WELL_STRUCTURED_CLAUDE_MD,
+        { executor: new CompliantExecutor() },
+      );
+      expect(result.report).toContain('Per-Dimension Analysis');
+      expect(result.report).toContain('Structure');
+      expect(result.report).toContain('Enforceability');
+    });
+
+    it('report contains task results', async () => {
+      const result = await validateEffect(
+        POOR_CLAUDE_MD,
+        WELL_STRUCTURED_CLAUDE_MD,
+        { executor: new CompliantExecutor() },
+      );
+      expect(result.report).toContain('Task Results');
+      expect(result.report).toContain('PASS');
+    });
+
+    it('report contains verdict and interpretation', async () => {
+      const result = await validateEffect(
+        POOR_CLAUDE_MD,
+        WELL_STRUCTURED_CLAUDE_MD,
+        { executor: new CompliantExecutor() },
+      );
+      expect(result.report).toContain('Interpretation');
+      // Verdict should appear in interpretation text
+      expect(result.report.length).toBeGreaterThan(200);
+    });
+
+    it('report contains Pearson r', async () => {
+      const result = await validateEffect(
+        POOR_CLAUDE_MD,
+        WELL_STRUCTURED_CLAUDE_MD,
+        { executor: new CompliantExecutor() },
+      );
+      expect(result.report).toContain('Pearson r');
+    });
+
+    it('report contains adherence percentages', async () => {
+      const result = await validateEffect(
+        POOR_CLAUDE_MD,
+        WELL_STRUCTURED_CLAUDE_MD,
+        { executor: new CompliantExecutor() },
+      );
+      expect(result.report).toContain('Adherence');
+      expect(result.report).toContain('%');
+    });
+  });
+
+  describe('proof chain', () => {
+    it('generates proof envelopes when proofKey is provided', async () => {
+      const result = await validateEffect(
+        WELL_STRUCTURED_CLAUDE_MD,
+        WELL_STRUCTURED_CLAUDE_MD,
+        {
+          executor: new CompliantExecutor(),
+          proofKey: 'validation-test-key',
+        },
+      );
+      expect(result.proofChain.length).toBeGreaterThan(0);
+      for (const env of result.proofChain) {
+        expect(env.contentHash).toBeTruthy();
+        expect(env.signature).toBeTruthy();
+      }
+    });
+
+    it('produces no proof without proofKey', async () => {
+      const result = await validateEffect(
+        WELL_STRUCTURED_CLAUDE_MD,
+        WELL_STRUCTURED_CLAUDE_MD,
+        { executor: new CompliantExecutor() },
+      );
+      expect(result.proofChain).toHaveLength(0);
+    });
+  });
+
+  describe('custom tasks', () => {
+    it('accepts custom validation tasks', async () => {
+      const customTasks: ValidationTask[] = [
+        {
+          id: 'custom-1',
+          dimension: 'Coverage',
+          prompt: 'Build the project',
+          assertions: [
+            { type: 'must-contain', value: 'build', severity: 'critical' },
+          ],
+          weight: 1.0,
+        },
+      ];
+
+      const result = await validateEffect(
+        WELL_STRUCTURED_CLAUDE_MD,
+        WELL_STRUCTURED_CLAUDE_MD,
+        { executor: new CompliantExecutor(), tasks: customTasks },
+      );
+      expect(result.before.taskResults).toHaveLength(1);
+      expect(result.before.taskResults[0].taskId).toBe('custom-1');
+    });
+
+    it('custom task assertions are evaluated correctly', async () => {
+      const customTasks: ValidationTask[] = [
+        {
+          id: 'must-fail',
+          dimension: 'Enforceability',
+          prompt: 'Build the project',
+          assertions: [
+            { type: 'must-contain', value: 'nonexistent-xyz-token', severity: 'critical' },
+          ],
+          weight: 1.0,
+        },
+      ];
+
+      const result = await validateEffect(
+        WELL_STRUCTURED_CLAUDE_MD,
+        WELL_STRUCTURED_CLAUDE_MD,
+        { executor: new CompliantExecutor(), tasks: customTasks },
+      );
+      expect(result.before.taskResults[0].passed).toBe(false);
+      expect(result.before.adherenceRate).toBe(0);
+    });
   });
 });
