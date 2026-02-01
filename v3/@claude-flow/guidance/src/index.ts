@@ -219,6 +219,56 @@ export type {
   ConformanceTestResult,
   ReplayTestResult,
 } from './conformance-kit.js';
+export {
+  RuvBotGuidanceBridge,
+  AIDefenceGate,
+  RuvBotMemoryAdapter,
+  createRuvBotBridge,
+  createAIDefenceGate,
+  createRuvBotMemoryAdapter,
+} from './ruvbot-integration.js';
+export type {
+  RuvBotInstance,
+  RuvBotAIDefenceGuard,
+  RuvBotMemory,
+  AIDefenceThreat,
+  AIDefenceResult,
+  AIDefenceGateConfig,
+  RuvBotBridgeConfig,
+  RuvBotEvent,
+} from './ruvbot-integration.js';
+export { MetaGovernor, createMetaGovernor } from './meta-governance.js';
+export type {
+  InvariantCheckResult,
+  GovernanceState,
+  ConstitutionalInvariant,
+  AmendmentChange,
+  Amendment,
+  OptimizerConstraint,
+  OptimizerAction,
+  OptimizerValidation,
+  InvariantReport,
+  MetaGovernanceConfig,
+} from './meta-governance.js';
+export {
+  ThreatDetector,
+  CollusionDetector,
+  MemoryQuorum,
+  createThreatDetector,
+  createCollusionDetector,
+  createMemoryQuorum,
+} from './adversarial.js';
+export type {
+  ThreatCategory,
+  ThreatSignal,
+  DetectionPattern,
+  CollusionReport,
+  MemoryProposal,
+  QuorumResult,
+  ThreatDetectorConfig,
+  CollusionDetectorConfig,
+  MemoryQuorumConfig,
+} from './adversarial.js';
 
 import type {
   PolicyBundle,
