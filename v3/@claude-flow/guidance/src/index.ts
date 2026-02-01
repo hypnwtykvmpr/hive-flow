@@ -33,6 +33,7 @@ import { EnforcementGates, createGates } from './gates.js';
 import { RunLedger, createLedger } from './ledger.js';
 import { OptimizerLoop, createOptimizer } from './optimizer.js';
 import { HeadlessRunner, createHeadlessRunner } from './headless.js';
+import { DeterministicToolGateway, createToolGateway } from './gateway.js';
 
 // Re-export all types
 export type {
@@ -74,6 +75,11 @@ export { ShardRetriever, createRetriever, HashEmbeddingProvider } from './retrie
 export type { IEmbeddingProvider } from './retriever.js';
 export { EnforcementGates, createGates } from './gates.js';
 export {
+  GuidanceHookProvider,
+  createGuidanceHooks,
+  gateResultsToHookResult,
+} from './hooks.js';
+export {
   RunLedger,
   createLedger,
   TestsPassEvaluator,
@@ -85,6 +91,13 @@ export {
 export type { IEvaluator } from './ledger.js';
 export { OptimizerLoop, createOptimizer } from './optimizer.js';
 export type { OptimizerConfig } from './optimizer.js';
+export {
+  PersistentLedger,
+  EventStore,
+  createPersistentLedger,
+  createEventStore,
+} from './persistence.js';
+export type { PersistenceConfig, StorageStats } from './persistence.js';
 export {
   HeadlessRunner,
   createHeadlessRunner,
@@ -99,6 +112,14 @@ export type {
   SuiteRunSummary,
   ICommandExecutor,
 } from './headless.js';
+export { DeterministicToolGateway, createToolGateway } from './gateway.js';
+export type {
+  ToolSchema,
+  Budget,
+  IdempotencyRecord,
+  GatewayDecision,
+  ToolGatewayConfig,
+} from './gateway.js';
 
 import type {
   PolicyBundle,
