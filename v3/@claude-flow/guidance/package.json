@@ -45,6 +45,38 @@
     "./gateway": {
       "types": "./dist/gateway.d.ts",
       "import": "./dist/gateway.js"
+    },
+    "./manifest-validator": {
+      "types": "./dist/manifest-validator.d.ts",
+      "import": "./dist/manifest-validator.js"
+    },
+    "./proof": {
+      "types": "./dist/proof.d.ts",
+      "import": "./dist/proof.js"
+    },
+    "./memory-gate": {
+      "types": "./dist/memory-gate.d.ts",
+      "import": "./dist/memory-gate.js"
+    },
+    "./coherence": {
+      "types": "./dist/coherence.d.ts",
+      "import": "./dist/coherence.js"
+    },
+    "./artifacts": {
+      "types": "./dist/artifacts.d.ts",
+      "import": "./dist/artifacts.js"
+    },
+    "./capabilities": {
+      "types": "./dist/capabilities.d.ts",
+      "import": "./dist/capabilities.js"
+    },
+    "./evolution": {
+      "types": "./dist/evolution.d.ts",
+      "import": "./dist/evolution.js"
+    },
+    "./conformance-kit": {
+      "types": "./dist/conformance-kit.d.ts",
+      "import": "./dist/conformance-kit.js"
     }
   },
   "files": [

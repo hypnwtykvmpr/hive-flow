@@ -120,6 +120,105 @@ export type {
   GatewayDecision,
   ToolGatewayConfig,
 } from './gateway.js';
+export { ArtifactLedger, createArtifactLedger } from './artifacts.js';
+export type {
+  ArtifactKind,
+  Artifact,
+  ArtifactLineage,
+  ArtifactVerification,
+  ArtifactSearchQuery,
+  ArtifactStats,
+  ArtifactLedgerConfig,
+  RecordArtifactParams,
+  SerializedArtifactLedger,
+} from './artifacts.js';
+export { EvolutionPipeline, createEvolutionPipeline } from './evolution.js';
+export type {
+  ChangeProposalKind,
+  ProposalStatus,
+  RiskAssessment,
+  ChangeProposal,
+  DecisionDiff,
+  SimulationResult,
+  RolloutStage,
+  StagedRollout,
+  EvolutionHistoryEntry,
+  TraceEvaluator,
+  EvolutionPipelineConfig,
+} from './evolution.js';
+export {
+  ManifestValidator,
+  ConformanceSuite,
+  createManifestValidator,
+  createConformanceSuite,
+} from './manifest-validator.js';
+export type {
+  AgentCellManifest,
+  ValidationResult,
+  ValidationError,
+  ValidationWarning,
+  GoldenTrace,
+  GoldenTraceEvent,
+  ConformanceResult,
+} from './manifest-validator.js';
+export { ProofChain, createProofChain } from './proof.js';
+export type {
+  ToolCallRecord,
+  MemoryOperation,
+  MemoryLineageEntry,
+  ProofEnvelopeMetadata,
+  ProofEnvelope,
+  SerializedProofChain,
+} from './proof.js';
+export {
+  MemoryWriteGate,
+  createMemoryWriteGate,
+  createMemoryEntry,
+} from './memory-gate.js';
+export type {
+  MemoryAuthority,
+  MemoryEntry,
+  WriteDecision,
+  MemoryWriteGateConfig,
+} from './memory-gate.js';
+export {
+  CoherenceScheduler,
+  EconomicGovernor,
+  createCoherenceScheduler,
+  createEconomicGovernor,
+} from './coherence.js';
+export type {
+  CoherenceScore,
+  CoherenceThresholds,
+  PrivilegeLevel,
+  BudgetUsage,
+  CoherenceSchedulerConfig,
+  EconomicGovernorConfig,
+} from './coherence.js';
+export { CapabilityAlgebra, createCapabilityAlgebra } from './capabilities.js';
+export type {
+  CapabilityScope,
+  CapabilityConstraint,
+  Attestation,
+  Capability,
+  CapabilityCheckResult,
+} from './capabilities.js';
+export {
+  SimulatedRuntime,
+  MemoryClerkCell,
+  ConformanceRunner,
+  createMemoryClerkCell,
+  createConformanceRunner,
+} from './conformance-kit.js';
+export type {
+  TraceEvent as CellTraceEvent,
+  CellRunResult,
+  CellRuntime,
+  AgentCell,
+  SimulatedRuntimeConfig,
+  ConformanceTestResult,
+  ReplayTestResult,
+} from './conformance-kit.js';
 
 import type {
   PolicyBundle,
