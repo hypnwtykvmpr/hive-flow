@@ -1,10 +1,38 @@
 # @claude-flow/guidance
 
-An operating system for agent autonomy. Not more prompt rules — a governance substrate that makes long-running AI agents safe, auditable, and self-correcting.
+A governance control plane for Claude Code agents built on top of the memory system Claude Code already uses: `CLAUDE.md` and `CLAUDE.local.md`.
 
-The guidance control plane sits *beside* Claude Code (not inside it). It compiles policy from CLAUDE.md, retrieves the right rules at the right time, enforces them through unavoidable gates, proves every decision cryptographically, and evolves the rule set through simulation and staged rollout. The result: agents that can operate for days instead of minutes, because the system removes the reasons autonomy must be limited.
+## How Claude Code Memory Works
 
-Most agent frameworks make models smarter. This makes autonomy survivable.
+In Claude Code, both `CLAUDE.md` and `CLAUDE.local.md` are "memory" — text files that get loaded into the agent's working context at session start. They serve different audiences:
+
+| File | Scope | Purpose |
+|------|-------|---------|
+| **CLAUDE.md** | Team / repo | Shared guidance: architecture, workflows, build commands, coding standards, domain rules. Lives at `./CLAUDE.md` or `./.claude/CLAUDE.md`. Committed to git. |
+| **CLAUDE.local.md** | Individual / machine | Private notes: local sandbox URLs, test data, machine quirks, personal preferences. Auto-added to `.gitignore` by Claude Code. Stays local. |
+
+**How they get loaded:** Claude Code searches upward from the current working directory and loads every `CLAUDE.md` and `CLAUDE.local.md` it finds on the path. In monorepos and nested projects, child directories can have their own files that layer on top of parent ones. It also discovers additional `CLAUDE.md` files in subtrees as it reads files there.
+
+**The @import pattern:** For "local" instructions that work cleanly across multiple git worktrees, you can use `@` imports inside `CLAUDE.md` that point to a file in each developer's home directory:
+
+```markdown
+# Individual Preferences
+@~/.claude/my_project_instructions.md
+```
+
+**Verification:** Run `/memory` in Claude Code to see which files were loaded. You can test by placing a unique rule in each file and asking Claude to restate both.
+
+## What This Package Does
+
+The guidance control plane takes these plain-text memory files and turns them into a structured, enforceable, auditable governance system:
+
+1. **Compiles** `CLAUDE.md` + `CLAUDE.local.md` into a typed policy bundle — a constitution (always-loaded invariants) plus task-scoped rule shards
+2. **Retrieves** the right subset of rules at task start, based on intent classification
+3. **Enforces** rules through gates that cannot be bypassed — the model can forget a rule; the gate does not
+4. **Proves** every decision cryptographically with hash-chained envelopes
+5. **Evolves** the rule set through simulation, staged rollout, and automatic promotion of winning experiments from `CLAUDE.local.md` to root `CLAUDE.md`
+
+The result: agents that can operate for days instead of minutes, because the system removes the reasons autonomy must be limited.
 
 ## Architecture
 
@@ -71,9 +99,49 @@ graph TB
   style Evolve fill:#2d6a4f,stroke:#52b788,color:#e8e8e8
 ```
 
+## How CLAUDE.md Becomes Enforceable Policy
+
+```mermaid
+graph LR
+    subgraph "Your repo"
+        A["CLAUDE.md<br/>(team rules)"]
+        B["CLAUDE.local.md<br/>(your overrides)"]
+    end
+
+    subgraph "Compile (once per session)"
+        A --> C[GuidanceCompiler]
+        B --> C
+        C --> D["Constitution<br/>(always-loaded invariants)"]
+        C --> E["Shards<br/>(task-scoped rules)"]
+        C --> F["Manifest<br/>(machine-readable index)"]
+    end
+
+    subgraph "Run (per task)"
+        G[Task description] --> H[ShardRetriever]
+        E --> H
+        D --> H
+        H --> I["Inject into agent context"]
+        I --> J[EnforcementGates]
+        J --> K{allow / deny / warn}
+    end
+
+    subgraph "Evolve (periodic)"
+        L[RunLedger] --> M[Optimizer]
+        M -->|promote| A
+        M -->|demote| A
+    end
+```
+
+The compiler splits `CLAUDE.md` into two parts:
+
+- **Constitution** — The first ~30-60 lines of always-loaded invariants. These are injected into every task regardless of intent.
+- **Shards** — Task-scoped rules tagged by intent (bug-fix, feature, refactor), risk class, domain, and tool class. Only relevant shards are retrieved per task, keeping context lean.
+
+`CLAUDE.local.md` overlays the root. The optimizer watches which local experiments reduce violations and promotes winners to root `CLAUDE.md`, generating an ADR for each change.
+
 ## What It Does
 
-28 modules across 7 layers:
+29 modules across 7 layers:
 
 | Layer | Component | Purpose |
 |-------|-----------|---------|
@@ -144,6 +212,51 @@ const results = kernel.batchProcess([
 | SHA-256 | 505k/s | 910k/s | 1.80x |
 | Secret scan (clean) | 402k/s | 676k/s | 1.68x |
 | Secret scan (dirty) | 185k/s | 362k/s | 1.96x |
+
+## CLAUDE.md vs. CLAUDE.local.md — What Goes Where
+
+### CLAUDE.md (team shared, committed to git)
+
+```markdown
+# Architecture
+This project uses a layered architecture. See docs/architecture.md.
+
+# Build & Test
+Always run `npm test` before committing. Use `npm run build` to type-check.
+
+# Coding Standards
+- No `any` types. Use `unknown` if the type is truly unknown.
+- All public functions require JSDoc.
+- Prefer `const` over `let`. Never use `var`.
+
+# Domain Rules
+- Never write to the `users` table without a migration.
+- API responses must include `requestId` for tracing.
+```
+
+### CLAUDE.local.md (personal, stays local)
+
+```markdown
+# My Environment
+- Local API: http://localhost:3001
+- Test DB: postgres://localhost:5432/myapp_test
+- I use pnpm, not npm
+
+# Preferences
+- I prefer tabs over spaces (don't enforce on the team)
+- Show me git diffs before committing
+```
+
+### The @import alternative
+
+If you use multiple git worktrees, `CLAUDE.local.md` gets awkward because each worktree needs its own copy. Use `@` imports instead:
+
+```markdown
+# In your committed CLAUDE.md:
+@~/.claude/my_project_instructions.md
+```
+
+Each developer's personal file lives in their home directory and works across all worktrees.
 
 ## Why This Is Not a Feature
 
@@ -689,7 +802,7 @@ Lead with deterministic tools + replay + continue gate. Sell memory governance a
 
 ## Test Suite
 
-1,008 tests across 21 test files.
+1,088 tests across 24 test files.
 
 ```bash
 npm test                # run all tests
@@ -717,9 +830,12 @@ npm run test:coverage   # with coverage
 | manifest-validator | 59 | Fails-closed admission, risk scoring, lane selection |
 | conformance-kit | 42 | Memory Clerk test, replay verification, proof integrity |
 | trust | 99 | Accumulation, decay, tiers, rate multipliers, ledger export/import |
-| truth-anchors | 61 | Anchor signing, verification, supersession, conflict resolution |
-| uncertainty | 74 | Belief status, evidence tracking, decay, aggregation, inference chains |
+| truth-anchors | 89 | Anchor signing, verification, supersession, conflict resolution |
+| uncertainty | 83 | Belief status, evidence tracking, decay, aggregation, inference chains |
 | temporal | 98 | Bitemporal windows, supersession, retraction, reasoning, timelines |
+| continue-gate | 42 | Decision paths, cooldown bypass, budget slope, rework ratio |
+| wasm-kernel | 15 | Output parity JS/WASM, 10k event throughput, batch API |
+| benchmark | 23 | Performance benchmarks across 11 modules |
 
 ## ADR Index
 

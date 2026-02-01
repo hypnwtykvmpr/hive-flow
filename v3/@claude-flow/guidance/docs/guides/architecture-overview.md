@@ -1,6 +1,37 @@
 # Architecture Overview
 
-The Guidance Control Plane is organized into 7 layers plus a WASM acceleration kernel. Each layer depends only on the layers below it.
+## Starting Point: CLAUDE.md as Memory
+
+In Claude Code, `CLAUDE.md` and `CLAUDE.local.md` are loaded into the agent's working context as raw text. The agent reads them and tries to follow them. This works for simple rules but breaks down at scale:
+
+- The agent can forget rules mid-session
+- There's no enforcement — violations are silent
+- There's no audit trail — you can't prove what happened
+- Rules don't evolve — stale guidance accumulates
+- In multi-agent systems, there's no access control over shared memory
+
+The Guidance Control Plane takes these files and turns them into structured, enforceable policy with 7 layers of protection.
+
+## How Guidance Files Are Discovered
+
+```mermaid
+graph TD
+    CWD["Working directory<br/>/repo/packages/api"] -->|search upward| P1["./CLAUDE.md"]
+    CWD -->|search upward| P2["./CLAUDE.local.md"]
+    P1 -->|parent| P3["/repo/packages/CLAUDE.md"]
+    P3 -->|parent| P4["/repo/CLAUDE.md"]
+    P4 -->|"@ import"| P5["~/.claude/my_instructions.md"]
+
+    P4 --> Compiler
+    P3 --> Compiler
+    P1 --> Compiler
+    P2 --> Compiler
+    P5 --> Compiler
+
+    Compiler --> Bundle["PolicyBundle<br/>(constitution + shards + manifest)"]
+```
+
+Claude Code searches upward from the current directory. Each level can add or override rules. `CLAUDE.local.md` overlays at the same level. The `@import` pattern pulls in files from outside the repo.
 
 ## Layer Diagram
 
@@ -189,9 +220,9 @@ These modules operate across all layers:
 
 ```mermaid
 graph LR
-    subgraph "Compile Time (once)"
-        MD[CLAUDE.md] --> C[Compiler]
-        LMD[CLAUDE.local.md] --> C
+    subgraph "Compile Time (once per session)"
+        MD["CLAUDE.md<br/>(team rules)"] --> C[Compiler]
+        LMD["CLAUDE.local.md<br/>(your overrides)"] --> C
         C --> PB[PolicyBundle]
         PB --> R[Retriever: load shards]
         PB --> G[Gates: set active rules]
@@ -207,10 +238,12 @@ graph LR
 
     subgraph "Evolution (periodic)"
         L[Ledger events] --> O[Optimizer]
-        O --> P[Promote/demote rules]
-        P --> MD
+        O -->|promote local winners| MD
+        O -->|demote ineffective rules| MD
     end
 ```
+
+The key lifecycle: `CLAUDE.md` is compiled once at session start. Rules are retrieved per task. The optimizer watches run outcomes and proposes changes back to `CLAUDE.md`, generating an ADR for each change. `CLAUDE.local.md` experiments that consistently reduce violations get promoted to the shared root.
 
 ## ADR Index
 
