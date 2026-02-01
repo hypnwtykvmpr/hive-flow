@@ -34,6 +34,8 @@ All exports from `@claude-flow/guidance`. Each module is also available as a sta
 | `@claude-flow/guidance/authority` | `AuthorityGate`, `IrreversibilityClassifier`, `createAuthorityGate`, `createIrreversibilityClassifier`, `isHigherAuthority`, `getAuthorityHierarchy` |
 | `@claude-flow/guidance/continue-gate` | `ContinueGate`, `createContinueGate` |
 | `@claude-flow/guidance/wasm-kernel` | `getKernel`, `isWasmAvailable`, `resetKernel` |
+| `@claude-flow/guidance/generators` | `generateClaudeMd`, `generateClaudeLocalMd`, `generateSkillMd`, `generateAgentMd`, `generateAgentIndex`, `scaffold` |
+| `@claude-flow/guidance/analyzer` | `analyze`, `benchmark`, `autoOptimize`, `optimizeForSize`, `headlessBenchmark`, `validateEffect`, `formatReport`, `formatBenchmark` |
 
 ---
 
@@ -354,3 +356,93 @@ const k = getKernel()
 |--------|---------|-------------|
 | `isWasmAvailable()` | `boolean` | Check without loading |
 | `resetKernel()` | `void` | Force re-detection on next `getKernel()` |
+
+---
+
+## Generators
+
+```ts
+import { generateClaudeMd, scaffold } from '@claude-flow/guidance/generators';
+```
+
+| Function | Returns | Description |
+|----------|---------|-------------|
+| `generateClaudeMd(profile)` | `string` | Generate CLAUDE.md from a `ProjectProfile` |
+| `generateClaudeLocalMd(profile)` | `string` | Generate CLAUDE.local.md from a `LocalProfile` |
+| `generateSkillMd(skill)` | `string` | Generate a skill definition markdown |
+| `generateAgentMd(agent)` | `string` | Generate an agent manifest markdown |
+| `generateAgentIndex(agents)` | `string` | Generate an agent index file |
+| `scaffold(options)` | `ScaffoldResult` | Full project scaffolding |
+
+**Key types**: `ProjectProfile`, `LocalProfile`, `SkillDefinition`, `AgentDefinition`, `ScaffoldOptions`, `ScaffoldResult`
+
+---
+
+## Analyzer
+
+```ts
+import { analyze, validateEffect } from '@claude-flow/guidance/analyzer';
+```
+
+### Scoring & Reporting
+
+| Function | Returns | Description |
+|----------|---------|-------------|
+| `analyze(content, localContent?)` | `AnalysisResult` | 6-dimension analysis with composite score (0-100) and grade (A-F) |
+| `benchmark(before, after, local?)` | `BenchmarkResult` | Compare two CLAUDE.md versions |
+| `formatReport(result)` | `string` | Formatted analysis report |
+| `formatBenchmark(result)` | `string` | Formatted benchmark comparison |
+
+**AnalysisResult**: `{ compositeScore, grade, dimensions[], metrics, suggestions[], analyzedAt }`
+
+**6 Dimensions**: Structure (20%), Coverage (20%), Enforceability (25%), Compilability (15%), Clarity (10%), Completeness (10%)
+
+### Optimization
+
+| Function | Returns | Description |
+|----------|---------|-------------|
+| `autoOptimize(content, local?, maxIter?)` | `{ optimized, benchmark, appliedSuggestions }` | Iterative score improvement |
+| `optimizeForSize(content, options)` | `{ optimized, benchmark, appliedSteps, proof }` | Context-size-aware optimization |
+
+**OptimizeOptions**: `{ contextSize: 'compact'|'standard'|'full', targetScore?, maxIterations?, proofKey? }`
+
+| Context Size | Line Budget | Use Case |
+|-------------|-------------|----------|
+| `compact` | 80 lines | Small context windows, cost optimization |
+| `standard` | 200 lines | Default for most projects |
+| `full` | 500 lines | Large context windows, maximum coverage |
+
+### Headless Benchmarking
+
+| Function | Returns | Description |
+|----------|---------|-------------|
+| `headlessBenchmark(original, optimized, options?)` | `Promise<HeadlessBenchmarkResult>` | Run compliance tasks via `claude -p` |
+
+**Options**: `{ executor?, proofKey?, workDir? }`
+
+Accepts an `IHeadlessExecutor` for testing without the real CLI.
+
+### Empirical Behavioral Validation
+
+| Function | Returns | Description |
+|----------|---------|-------------|
+| `validateEffect(original, optimized, options?)` | `Promise<ValidationReport>` | Prove score improvements produce behavioral improvements |
+
+**Options**: `{ executor?, tasks?, proofKey?, workDir?, trials? }`
+
+**ValidationReport fields**:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `before` / `after` | `ValidationRun` | Analysis + task results + adherence per phase |
+| `correlation.pearsonR` | `number` | Linear correlation (-1 to 1) |
+| `correlation.spearmanRho` | `number` | Rank correlation (-1 to 1) |
+| `correlation.cohensD` | `number \| null` | Effect size magnitude |
+| `correlation.effectSizeLabel` | `string` | negligible / small / medium / large |
+| `correlation.verdict` | `string` | positive-effect / negative-effect / no-effect / inconclusive |
+| `proofChain` | `ProofEnvelope[]` | Tamper-evident audit trail |
+| `report` | `string` | Full formatted evidence report |
+
+**IContentAwareExecutor**: Extends `IHeadlessExecutor` with `setContext(claudeMdContent)` — called before each phase so the executor can vary behavior based on guidance quality.
+
+**15 default validation tasks** cover all 6 dimensions: secret handling, force push prevention, type safety, test-before-commit, build/test awareness, security rules, architecture knowledge, destructive action blocking, code style, error handling, deployment, and environment variables.

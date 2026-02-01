@@ -141,7 +141,7 @@ The compiler splits `CLAUDE.md` into two parts:
 
 ## What It Does
 
-29 modules across 7 layers:
+31 modules across 9 layers:
 
 | Layer | Component | Purpose |
 |-------|-----------|---------|
@@ -173,6 +173,15 @@ The compiler splits `CLAUDE.md` into two parts:
 | **Bridge** | `RuvBotGuidanceBridge` | Wires ruvbot events to guidance hooks, AIDefence gate, memory adapter |
 | **WASM Kernel** | `guidance-kernel` | Rust→WASM policy kernel: SHA-256, HMAC, secret scanning, shard scoring |
 | | `WasmKernel` bridge | Auto-fallback host bridge with batch API for minimal boundary crossings |
+| **Generate** | `generateClaudeMd` | Scaffold CLAUDE.md from a project profile |
+| | `generateClaudeLocalMd` | Scaffold CLAUDE.local.md from a local profile |
+| | `generateSkillMd` / `generateAgentMd` | Scaffold skill definitions and agent manifests |
+| | `scaffold` | Full project scaffolding with CLAUDE.md, agents, and skills |
+| **Analyze** | `analyze` | 6-dimension scoring: Structure, Coverage, Enforceability, Compilability, Clarity, Completeness |
+| | `autoOptimize` | Iterative score improvement with patch application |
+| | `optimizeForSize` | Context-size-aware optimization (compact / standard / full) |
+| | `headlessBenchmark` | Headless `claude -p` benchmarking with proof chain |
+| | `validateEffect` | Empirical behavioral validation with Pearson r, Spearman ρ, Cohen's d |
 
 ## WASM Policy Kernel
 
@@ -756,6 +765,144 @@ if (rollout.currentStage === 'full' && rollout.divergence < 0.01) {
 
 </details>
 
+### Generators (CLAUDE.md Scaffolding)
+
+```typescript
+import {
+  generateClaudeMd,
+  generateClaudeLocalMd,
+  generateSkillMd,
+  generateAgentMd,
+  generateAgentIndex,
+  scaffold,
+} from '@claude-flow/guidance/generators';
+
+// Generate a CLAUDE.md from a project profile
+const claudeMd = generateClaudeMd({
+  name: 'my-api',
+  stack: ['TypeScript', 'Node.js', 'PostgreSQL'],
+  buildCommand: 'npm run build',
+  testCommand: 'npm test',
+  lintCommand: 'npm run lint',
+  architecture: 'layered',
+  securityRules: ['No hardcoded secrets', 'Validate all input'],
+  domainRules: ['All API responses include requestId'],
+});
+
+// Generate a CLAUDE.local.md for local dev
+const localMd = generateClaudeLocalMd({
+  name: 'Alice',
+  localApiUrl: 'http://localhost:3001',
+  testDbUrl: 'postgres://localhost:5432/mydb_test',
+  preferences: ['Prefer verbose errors', 'Show git diffs'],
+});
+
+// Full project scaffolding
+const result = scaffold({
+  profile: myProjectProfile,
+  agents: [{ name: 'coder', role: 'Implementation' }],
+  skills: [{ name: 'typescript', description: 'TypeScript patterns' }],
+  outputDir: './scaffold-output',
+});
+```
+
+### Analyzer (Scoring, Optimization, Validation)
+
+The analyzer provides a 6-dimension scoring system, automatic optimization, and empirical behavioral validation:
+
+| Dimension | Weight | What It Measures |
+|-----------|--------|------------------|
+| **Structure** | 20% | Headings, sections, hierarchy, organization |
+| **Coverage** | 20% | Build, test, security, architecture, domain rules |
+| **Enforceability** | 25% | NEVER/ALWAYS/MUST statements, absence of vague language |
+| **Compilability** | 15% | Can be parsed into a valid PolicyBundle |
+| **Clarity** | 10% | Code blocks, tables, tool mentions, formatting |
+| **Completeness** | 10% | Breadth of topic coverage across standard areas |
+
+```typescript
+import {
+  analyze, benchmark, autoOptimize, optimizeForSize,
+  headlessBenchmark, validateEffect,
+  formatReport, formatBenchmark,
+} from '@claude-flow/guidance/analyzer';
+
+// 1. Score a CLAUDE.md file
+const result = analyze(claudeMdContent);
+console.log(result.compositeScore); // 0-100
+console.log(result.grade);          // A/B/C/D/F
+console.log(result.dimensions);     // 6 dimension scores
+console.log(result.suggestions);    // actionable improvements
+console.log(formatReport(result));  // formatted report
+
+// 2. Compare before/after
+const bench = benchmark(originalContent, optimizedContent);
+console.log(bench.delta);           // score improvement
+console.log(bench.improvements);    // dimensions that improved
+console.log(formatBenchmark(bench));
+
+// 3. Auto-optimize with iterative patches
+const optimized = autoOptimize(poorContent);
+console.log(optimized.optimized);          // improved content
+console.log(optimized.appliedSuggestions); // patches applied
+console.log(optimized.benchmark.delta);    // score gain
+
+// 4. Context-size-aware optimization (compact/standard/full)
+const sized = optimizeForSize(content, {
+  contextSize: 'compact',  // 80 lines | 'standard' (200) | 'full' (500)
+  targetScore: 90,
+  maxIterations: 10,
+  proofKey: 'audit-key',   // optional proof chain
+});
+console.log(sized.optimized);     // fits within line budget
+console.log(sized.appliedSteps);  // optimization steps taken
+console.log(sized.proof);         // proof envelopes (if proofKey set)
+
+// 5. Headless Claude benchmarking (claude -p integration)
+const headless = await headlessBenchmark(originalMd, optimizedMd, {
+  executor: myExecutor,  // or uses real `claude -p` by default
+  proofKey: 'bench-key',
+});
+console.log(headless.before.suitePassRate);
+console.log(headless.after.suitePassRate);
+console.log(headless.delta);
+
+// 6. Empirical behavioral validation
+//    Proves that higher scores produce better agent behavior
+const validation = await validateEffect(originalMd, optimizedMd, {
+  executor: myContentAwareExecutor,  // varies behavior per CLAUDE.md
+  trials: 3,                         // multi-run averaging
+  proofKey: 'validation-key',        // tamper-evident audit trail
+});
+console.log(validation.correlation.pearsonR);     // score-behavior correlation
+console.log(validation.correlation.spearmanRho);  // rank correlation
+console.log(validation.correlation.cohensD);      // effect size
+console.log(validation.correlation.effectSizeLabel); // negligible/small/medium/large
+console.log(validation.correlation.verdict);      // positive-effect / negative-effect / no-effect / inconclusive
+console.log(validation.before.adherenceRate);     // behavioral compliance (0-1)
+console.log(validation.after.adherenceRate);      // improved compliance
+console.log(validation.report);                   // full formatted report
+```
+
+**Content-aware executors** implement `IContentAwareExecutor` — they receive the CLAUDE.md content via `setContext()` before each validation phase, allowing their responses to vary based on the quality of guidance loaded. This is what makes the empirical proof meaningful.
+
+```typescript
+import type { IContentAwareExecutor } from '@claude-flow/guidance/analyzer';
+
+class MyExecutor implements IContentAwareExecutor {
+  private rules: string[] = [];
+
+  setContext(claudeMdContent: string): void {
+    // Parse loaded CLAUDE.md to determine how to behave
+    this.rules = claudeMdContent.match(/\b(NEVER|ALWAYS|MUST)\b.+/g) || [];
+  }
+
+  async execute(prompt: string, workDir: string) {
+    // Vary response quality based on loaded rules
+    // ...
+  }
+}
+```
+
 ## Per-Module Impact
 
 | # | Module | Key Metric | Improvement |
@@ -802,7 +949,7 @@ Lead with deterministic tools + replay + continue gate. Sell memory governance a
 
 ## Test Suite
 
-1,088 tests across 24 test files.
+1,290 tests across 26 test files.
 
 ```bash
 npm test                # run all tests
@@ -836,6 +983,8 @@ npm run test:coverage   # with coverage
 | continue-gate | 42 | Decision paths, cooldown bypass, budget slope, rework ratio |
 | wasm-kernel | 15 | Output parity JS/WASM, 10k event throughput, batch API |
 | benchmark | 23 | Performance benchmarks across 11 modules |
+| generators | 68 | CLAUDE.md scaffolding, profiles, skills, agents, full scaffold |
+| analyzer | 134 | 6-dimension scoring, optimization, headless benchmarking, empirical validation, Pearson/Spearman/Cohen's d, content-aware executors, proof chains |
 
 ## ADR Index
 
