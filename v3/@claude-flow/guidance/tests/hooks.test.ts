@@ -359,12 +359,15 @@ describe('GuidanceHookProvider', () => {
       const hooks = registry.getForEvent(HookEvent.PreToolUse);
       const handler = hooks.find(h => h.name === 'guidance-gate-pre-tool-use')!.handler;
 
+      // Use an sk- prefixed key which is detected even through JSON.stringify
+      // (the password pattern requires surrounding quotes which get escaped by
+      // JSON.stringify in evaluateToolUse, so we use a pattern without quote delimiters)
       const ctx = makeHookContext({
         event: HookEvent.PreToolUse,
         tool: {
           name: 'Write',
           parameters: {
-            content: 'password = "superSecretPassword123"',
+            content: 'const key = sk-abcdefghij0123456789abcdef',
           },
         },
       });

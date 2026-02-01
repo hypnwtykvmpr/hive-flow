@@ -166,6 +166,19 @@ export class EventStore {
   }
 
   /**
+   * Atomically replace all events in storage with the given array.
+   * Rewrites the NDJSON file and rebuilds the index.
+   */
+  async writeAll(events: RunEvent[]): Promise<void> {
+    await this.ensureDirectory();
+    const tempPath = join(this.baseDir, `events.tmp.${randomUUID()}.ndjson`);
+    const content = events.map(e => JSON.stringify(e)).join('\n') + (events.length > 0 ? '\n' : '');
+    await writeFile(tempPath, content, 'utf-8');
+    await rename(tempPath, this.eventsPath);
+    await this.rebuildIndex(events);
+  }
+
+  /**
    * Get storage statistics.
    */
   async getStats(): Promise<StorageStats> {
@@ -435,19 +448,14 @@ export class PersistentLedger extends RunLedger {
 
   /**
    * Flush all in-memory events to storage, replacing the storage contents.
-   * This performs a full rewrite of the NDJSON file.
+   * This performs a full atomic rewrite of the NDJSON file.
    */
   async save(): Promise<void> {
     const events = this.exportEvents();
 
     await this.store.acquireLock();
     try {
-      // Compact rewrite: write all events, then rebuild index
-      await this.store.compact(Infinity); // Clear the file by compacting with no limit first
-      // Now write all current in-memory events
-      for (const event of events) {
-        await this.store.append(event);
-      }
+      await this.store.writeAll(events);
     } finally {
       await this.store.releaseLock();
     }
