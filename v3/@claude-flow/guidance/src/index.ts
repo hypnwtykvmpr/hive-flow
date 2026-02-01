@@ -307,6 +307,8 @@ export {
   analyze,
   benchmark,
   autoOptimize,
+  optimizeForSize,
+  headlessBenchmark,
   formatReport,
   formatBenchmark,
 } from './analyzer.js';
@@ -316,6 +318,11 @@ export type {
   DimensionScore,
   Suggestion,
   BenchmarkResult,
+  ContextSize,
+  OptimizeOptions,
+  HeadlessBenchmarkResult,
+  HeadlessTaskResult,
+  IHeadlessExecutor,
 } from './analyzer.js';
 
 export {
