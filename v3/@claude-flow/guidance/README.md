@@ -1,10 +1,74 @@
 # @claude-flow/guidance
 
-A governance control plane for Claude Code agents built on top of the memory system Claude Code already uses: `CLAUDE.md` and `CLAUDE.local.md`.
+**Long-horizon governance for Claude Code agents.**
+
+AI coding agents are powerful for short tasks, but they break down over long sessions. They forget rules, repeat mistakes, run in circles, corrupt their own memory, and eventually need a human to step in. The longer the session, the worse it gets.
+
+`@claude-flow/guidance` fixes this. It takes the memory files Claude Code already uses — `CLAUDE.md` and `CLAUDE.local.md` — and turns them into a structured control plane that compiles rules, enforces them through gates the agent cannot bypass, proves every decision cryptographically, and evolves the rule set over time based on what actually works.
+
+The result: agents that can operate for days instead of minutes.
+
+## The Problem
+
+Claude Code agents load `CLAUDE.md` into their context at session start. That's the entire governance mechanism — a text file that the model reads once and then gradually forgets. There is no enforcement, no audit trail, no memory protection, and no way to measure whether the rules are working.
+
+| Problem | What happens | How often |
+|---------|-------------|-----------|
+| **Rule drift** | Agent ignores a NEVER rule 40 minutes in | Every long session |
+| **Runaway loops** | Agent retries the same failing approach indefinitely | Common with complex tasks |
+| **Memory corruption** | Agent writes contradictory facts to memory | Grows with session length |
+| **Silent failures** | Destructive actions happen without detection | Hard to catch without audit |
+| **No accountability** | No way to replay or prove what happened | Every session |
+| **One-size-fits-all** | Same rules loaded for every task regardless of intent | Always |
+
+## How This Package Is Different
+
+This is not a prompt engineering library. It is not a wrapper around `CLAUDE.md`. It is a runtime governance system with enforcement gates, cryptographic proofs, and feedback loops.
+
+| Capability | Plain CLAUDE.md | Prompt libraries | @claude-flow/guidance |
+|-----------|:-:|:-:|:-:|
+| Rules loaded at session start | Yes | Yes | Yes |
+| Rules compiled into typed policy | | | Yes |
+| Task-scoped rule retrieval by intent | | | Yes |
+| Enforcement gates (model cannot bypass) | | | Yes |
+| Runaway loop detection and self-throttle | | | Yes |
+| Memory write protection (authority, TTL, contradictions) | | | Yes |
+| Cryptographic proof chain for every decision | | | Yes |
+| Trust-based agent privilege tiers | | | Yes |
+| Adversarial defense (injection, collusion, poisoning) | | | Yes |
+| Automatic rule evolution from experiments | | | Yes |
+| A/B benchmarking with composite scoring | | | Yes |
+| Empirical validation (Pearson r, Spearman ρ, Cohen's d) | | | Yes |
+| WASM kernel for security-critical hot paths | | | Yes |
+
+## What Changes for Long-Horizon Agents
+
+The gains are not "better answers." They are less rework, fewer runaway loops, and higher sustained autonomy. You are not improving output quality — you are removing the reasons autonomy must be limited.
+
+| Dimension | Without control plane | With control plane | Improvement |
+|-----------|-------|-------------------|-------------|
+| Autonomy duration | Minutes to hours | Days to weeks | **10x–100x** |
+| Cost per successful outcome | Rises super-linearly as agents loop | Agents slow naturally under uncertainty | **30–60% lower** |
+| Reliability (tool + memory) | Frequent silent failures | Failures surface early, writes blocked before corruption | **2x–5x higher** |
+| Rule compliance over time | Degrades after ~30 min | Enforced mechanically at every step | **Constant** |
+
+The most important gain: **Claude Flow can now say "no" to itself and survive.** Self-limiting behavior, self-correction, and self-preservation compound over time.
+
+## How It Works
+
+The control plane operates in a 7-phase pipeline. Each phase builds on the previous one:
+
+1. **Compiles** `CLAUDE.md` + `CLAUDE.local.md` into a typed policy bundle — a constitution (always-loaded invariants) plus task-scoped rule shards
+2. **Retrieves** the right subset of rules at task start, based on intent classification
+3. **Enforces** rules through gates that cannot be bypassed — the model can forget a rule; the gate does not
+4. **Tracks trust** per agent — reliable agents earn faster throughput; unreliable ones get throttled
+5. **Proves** every decision cryptographically with hash-chained envelopes
+6. **Defends** against adversarial attacks — prompt injection, memory poisoning, inter-agent collusion
+7. **Evolves** the rule set through simulation, staged rollout, and automatic promotion of winning experiments
 
 ## How Claude Code Memory Works
 
-In Claude Code, both `CLAUDE.md` and `CLAUDE.local.md` are "memory" — text files that get loaded into the agent's working context at session start. They serve different audiences:
+Claude Code uses two plain-text files as agent memory. Understanding them is essential because they are the input to the control plane.
 
 | File | Scope | Purpose |
 |------|-------|---------|
@@ -22,19 +86,9 @@ In Claude Code, both `CLAUDE.md` and `CLAUDE.local.md` are "memory" — text fil
 
 **Verification:** Run `/memory` in Claude Code to see which files were loaded. You can test by placing a unique rule in each file and asking Claude to restate both.
 
-## What This Package Does
-
-The guidance control plane takes these plain-text memory files and turns them into a structured, enforceable, auditable governance system:
-
-1. **Compiles** `CLAUDE.md` + `CLAUDE.local.md` into a typed policy bundle — a constitution (always-loaded invariants) plus task-scoped rule shards
-2. **Retrieves** the right subset of rules at task start, based on intent classification
-3. **Enforces** rules through gates that cannot be bypassed — the model can forget a rule; the gate does not
-4. **Proves** every decision cryptographically with hash-chained envelopes
-5. **Evolves** the rule set through simulation, staged rollout, and automatic promotion of winning experiments from `CLAUDE.local.md` to root `CLAUDE.md`
-
-The result: agents that can operate for days instead of minutes, because the system removes the reasons autonomy must be limited.
-
 ## Architecture
+
+The control plane is organized as a 7-phase pipeline. Each module is independently testable with a clean API boundary. The WASM kernel accelerates security-critical paths, and the generate/analyze layers provide tooling for creating and measuring CLAUDE.md quality.
 
 ```mermaid
 graph TB
@@ -101,6 +155,8 @@ graph TB
 
 ## How CLAUDE.md Becomes Enforceable Policy
 
+This is the core transformation: plain-text rules become compiled policy with runtime enforcement and cryptographic proof. The compiler runs once per session; the retriever and gates run per task.
+
 ```mermaid
 graph LR
     subgraph "Your repo"
@@ -141,7 +197,7 @@ The compiler splits `CLAUDE.md` into two parts:
 
 ## What It Does
 
-31 modules across 9 layers:
+The package ships 31 modules organized in 9 layers, from compilation through enforcement, trust, adversarial defense, audit, evolution, and tooling. Each module has a focused responsibility and a clean public API.
 
 | Layer | Component | Purpose |
 |-------|-----------|---------|
@@ -186,6 +242,8 @@ The compiler splits `CLAUDE.md` into two parts:
 
 ## WASM Policy Kernel
 
+Security-critical operations (hashing, signing, secret scanning) run in a sandboxed Rust-compiled WASM kernel. The kernel has no filesystem access and no network access — it is a pure function layer. A Node.js bridge auto-detects WASM availability and falls back to JS implementations transparently.
+
 A Rust-compiled WASM kernel provides deterministic, GC-free execution
 of security-critical hot paths. Two layers:
 
@@ -224,6 +282,8 @@ const results = kernel.batchProcess([
 | Secret scan (dirty) | 185k/s | 362k/s | 1.96x |
 
 ## CLAUDE.md vs. CLAUDE.local.md — What Goes Where
+
+Two files, two audiences. `CLAUDE.md` carries team-wide rules that every agent follows. `CLAUDE.local.md` carries individual experiments and machine-specific config. The optimizer watches local experiments and promotes winning ones to the shared file.
 
 ### CLAUDE.md (team shared, committed to git)
 
@@ -268,19 +328,9 @@ If you use multiple git worktrees, `CLAUDE.local.md` gets awkward because each w
 
 Each developer's personal file lives in their home directory and works across all worktrees.
 
-## Why This Is Not a Feature
-
-The gains are not "better answers." They are less rework, fewer runaway loops, and higher uptime autonomy. You are not improving output quality. You are removing the reasons autonomy must be limited. That creates compounding gains.
-
-| Dimension | Today | With Control Plane | Improvement |
-|-----------|-------|-------------------|-------------|
-| Autonomy duration | Minutes to hours | Days to weeks | **10x–100x** |
-| Cost per successful outcome | Rises super-linearly as agents loop | Agents slow naturally under uncertainty | **30–60% lower** |
-| Reliability (tool + memory) | Frequent silent failures | Failures surface early, writes blocked before corruption | **2x–5x higher** |
-
-The most important gain: **Claude Flow can now say "no" to itself and survive.** Self-limiting behavior, self-correction, and self-preservation compound over time.
-
 ## Ship Phases
+
+The control plane ships in three phases. Each phase is independently valuable and builds on the previous one. You can adopt Phase 1 alone and get immediate results.
 
 ### Phase 1 — Reproducible Runs
 
@@ -322,7 +372,7 @@ The most important gain: **Claude Flow can now say "no" to itself and survive.**
 
 ## Acceptance Tests
 
-These are the concrete tests that prove the claim:
+Four acceptance tests verify the core claims of the control plane. These are integration-level tests that exercise the full pipeline end-to-end.
 
 1. **Replay parity** — Same inputs, same hook events, same decisions, identical proof root hash
 2. **Runaway suppression** — A known looping task must self-throttle within N steps without human intervention, ending in `suspended` or `read-only` state with a clear ledger explanation
@@ -336,6 +386,8 @@ npm install @claude-flow/guidance@alpha
 ```
 
 ## Quickstart
+
+Create the control plane, retrieve rules for a task, evaluate commands through gates, and track the run. This covers the core compile → retrieve → enforce → record cycle.
 
 ```typescript
 import {
@@ -386,6 +438,8 @@ const evaluations = await plane.finalizeRun(run);
 ```
 
 ## Module Reference
+
+Each module is importable independently from its own subpath. The examples below show the most common usage patterns. For the complete API, see the [API quick reference](docs/reference/api-quick-reference.md).
 
 ### Core Pipeline
 
@@ -768,6 +822,8 @@ if (rollout.currentStage === 'full' && rollout.divergence < 0.01) {
 
 ### Generators (CLAUDE.md Scaffolding)
 
+Instead of writing CLAUDE.md from scratch, use the generators to scaffold high-scoring files from a project profile. The generated files follow best practices for structure, coverage, and enforceability.
+
 ```typescript
 import {
   generateClaudeMd,
@@ -809,7 +865,7 @@ const result = scaffold({
 
 ### Analyzer (Scoring, Optimization, Validation)
 
-The analyzer provides a 6-dimension scoring system, automatic optimization, and empirical behavioral validation:
+The analyzer answers a question most teams cannot: "Is our CLAUDE.md actually working?" It scores files across 6 dimensions, auto-optimizes them for higher scores, and empirically validates that higher scores produce better agent behavior using statistical correlation.
 
 | Dimension | Weight | What It Measures |
 |-----------|--------|------------------|
@@ -906,7 +962,7 @@ class MyExecutor implements IContentAwareExecutor {
 
 ### A/B Benchmark Harness
 
-The `abBenchmark()` function implements the Measurement Plan: run 20 real tasks drawn from Claude Flow repo history under two configs — **A** (no control plane) vs **B** (with Phase 1 guidance) — and compute KPIs, composite scores, and category shift detection.
+The final proof: does the control plane actually help? The `abBenchmark()` function implements the Measurement Plan: run 20 real tasks drawn from Claude Flow repo history under two configs — **A** (no control plane) vs **B** (with Phase 1 guidance) — and compute KPIs, composite scores, and category shift detection.
 
 ```typescript
 import { abBenchmark, getDefaultABTasks } from '@claude-flow/guidance/analyzer';
@@ -951,6 +1007,8 @@ console.log(report.report);
 
 ## Per-Module Impact
 
+Each module contributes measurable improvement to a specific failure mode. These are the expected gains when the module is wired into the agent pipeline.
+
 | # | Module | Key Metric | Improvement |
 |---|--------|-----------|-------------|
 | 1 | Hook Integration | Destructive tool actions | **50–90% reduction** |
@@ -971,7 +1029,7 @@ console.log(report.report);
 
 ## Decision Matrix
 
-What to ship first, scored 1–5:
+Prioritization for which modules to ship first, scored 1–5 across five dimensions. Higher total = ship sooner.
 
 | Module | Time to Value | Differentiation | Enterprise Pull | Risk | Impl Risk | **Total** |
 |--------|:---:|:---:|:---:|:---:|:---:|:---:|
@@ -985,6 +1043,8 @@ Lead with deterministic tools + replay + continue gate. Sell memory governance a
 
 ## Failure Modes and Fixes
 
+Every governance system has failure modes. These are the known ones and their planned mitigations.
+
 | Failure | Fix |
 |---------|-----|
 | False positive gate denials annoy users | Structured override flow: authority-signed exception with TTL |
@@ -994,6 +1054,8 @@ Lead with deterministic tools + replay + continue gate. Sell memory governance a
 | ContinueGate too aggressive | Tunable thresholds per agent type; `checkpoint` is the default, not `stop` |
 
 ## Test Suite
+
+Every module is independently tested. The suite covers unit tests, integration tests, statistical validation, performance benchmarks, and A/B measurement.
 
 1,328 tests across 26 test files.
 
@@ -1034,6 +1096,8 @@ npm run test:coverage   # with coverage
 
 ## ADR Index
 
+Every significant design decision is documented as an Architecture Decision Record. These are the authoritative references for why each module works the way it does.
+
 | ADR | Title | Status |
 |-----|-------|--------|
 | [G001](docs/adrs/ADR-G001-guidance-control-plane.md) | Guidance Control Plane | Accepted |
@@ -1063,6 +1127,8 @@ npm run test:coverage   # with coverage
 | [G025](docs/adrs/ADR-G025-wasm-kernel.md) | Rust WASM Policy Kernel | Accepted |
 
 ## Measurement Plan
+
+The control plane's value must be measurable. This section defines the A/B testing methodology, KPIs, and success criteria. The `abBenchmark()` function in the analyzer implements this plan programmatically.
 
 ### A/B Harness
 
