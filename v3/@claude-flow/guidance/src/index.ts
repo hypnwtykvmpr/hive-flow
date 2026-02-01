@@ -275,6 +275,19 @@ export type {
   StepContext,
   ContinueDecision,
 } from './continue-gate.js';
+
+// WASM Kernel exports
+export {
+  getKernel,
+  isWasmAvailable,
+  resetKernel,
+} from './wasm-kernel.js';
+export type {
+  WasmKernel,
+  BatchOp,
+  BatchResult,
+} from './wasm-kernel.js';
+
 export {
   TrustAccumulator,
   TrustLedger as TrustScoreLedger,

@@ -103,6 +103,47 @@ graph TB
 | | `ManifestValidator` | Fails-closed admission for agent cell manifests |
 | | `ConformanceRunner` | Memory Clerk acceptance test with replay verification |
 | **Bridge** | `RuvBotGuidanceBridge` | Wires ruvbot events to guidance hooks, AIDefence gate, memory adapter |
+| **WASM Kernel** | `guidance-kernel` | Rust→WASM policy kernel: SHA-256, HMAC, secret scanning, shard scoring |
+| | `WasmKernel` bridge | Auto-fallback host bridge with batch API for minimal boundary crossings |
+
+## WASM Policy Kernel
+
+A Rust-compiled WASM kernel provides deterministic, GC-free execution
+of security-critical hot paths. Two layers:
+
+- **Layer A** (Rust WASM): Pure functions — crypto, regex scanning,
+  scoring. No filesystem, no network. SIMD128 enabled.
+- **Layer B** (Node bridge): `getKernel()` loads WASM or falls back
+  to JS. `batchProcess()` amortizes boundary crossings.
+
+```typescript
+import { getKernel } from '@claude-flow/guidance/wasm-kernel';
+
+const kernel = getKernel();
+console.log(kernel.version);        // 'guidance-kernel/0.1.0' or 'js-fallback'
+console.log(kernel.available);      // true if WASM loaded
+
+// Individual calls
+const hash = kernel.sha256('hello');
+const sig = kernel.hmacSha256('key', 'message');
+const secrets = kernel.scanSecrets('api_key = "sk-abc123..."');
+
+// Batch call (single WASM boundary crossing)
+const results = kernel.batchProcess([
+  { op: 'sha256', payload: 'event-1' },
+  { op: 'sha256', payload: 'event-2' },
+  { op: 'scan_secrets', payload: fileContent },
+]);
+```
+
+**Performance (10k events, SIMD + O2):**
+
+| Operation | JS | WASM SIMD | Gain |
+|-----------|-----|-----------|------|
+| Proof chain | 76ms | 61ms | 1.25x |
+| SHA-256 | 505k/s | 910k/s | 1.80x |
+| Secret scan (clean) | 402k/s | 676k/s | 1.68x |
+| Secret scan (dirty) | 185k/s | 362k/s | 1.96x |
 
 ## Why This Is Not a Feature
 
@@ -708,6 +749,7 @@ npm run test:coverage   # with coverage
 | [G022](docs/adrs/ADR-G022-adversarial-model.md) | Adversarial Model | Accepted |
 | [G023](docs/adrs/ADR-G023-meta-governance.md) | Meta-Governance | Accepted |
 | [G024](docs/adrs/ADR-G024-continue-gate.md) | Continue Gate | Accepted |
+| [G025](docs/adrs/ADR-G025-wasm-kernel.md) | Rust WASM Policy Kernel | Accepted |
 
 ## Measurement Plan
 
@@ -733,6 +775,8 @@ Run identical tasks through two configurations:
 | Threat signals | Adversarial detection hits |
 | Belief confidence drift | Uncertainty decay over time |
 | Continue gate decisions | checkpoint / throttle / pause / stop rates |
+| WASM kernel throughput | SHA-256 ops/sec, secret scans/sec, proof chain latency |
+| WASM parity | Proof root hash identical across JS and WASM (10k events) |
 
 ### Composite Score
 

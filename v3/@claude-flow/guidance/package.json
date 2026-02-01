@@ -113,10 +113,15 @@
     "./continue-gate": {
       "types": "./dist/continue-gate.d.ts",
       "import": "./dist/continue-gate.js"
+    },
+    "./wasm-kernel": {
+      "types": "./dist/wasm-kernel.d.ts",
+      "import": "./dist/wasm-kernel.js"
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "wasm-pkg"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
