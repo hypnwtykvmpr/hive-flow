@@ -1,6 +1,26 @@
 # Getting Started with @claude-flow/guidance
 
-The Guidance Control Plane sits beside Claude Code (not inside it) to compile, retrieve, enforce, and evolve the rules that govern agent behavior.
+## Background: How Claude Code Uses Memory Files
+
+In Claude Code, `CLAUDE.md` and `CLAUDE.local.md` are loaded into the agent's working context at session start. They are the primary mechanism for telling Claude Code how to behave on your project:
+
+| File | Who it's for | Committed? |
+|------|-------------|-----------|
+| `CLAUDE.md` | The whole team | Yes |
+| `CLAUDE.local.md` | You, on this machine | No (auto-gitignored) |
+
+Claude Code searches **upward** from the current directory and loads every instance it finds. In a monorepo, a child directory's `CLAUDE.md` layers on top of the root's. Run `/memory` in Claude Code to see which files were loaded.
+
+The `@import` pattern offers an alternative to `CLAUDE.local.md` for developers using multiple git worktrees:
+
+```markdown
+# In CLAUDE.md (committed):
+@~/.claude/my_project_instructions.md
+```
+
+## What This Package Adds
+
+The Guidance Control Plane takes these plain-text files and turns them into structured, enforceable, auditable policy. Without it, Claude Code loads `CLAUDE.md` as raw text and relies on the model to follow it. With it, rules become typed objects with gates that block violations before they execute.
 
 ## Installation
 
@@ -17,18 +37,20 @@ import { createGuidanceControlPlane } from '@claude-flow/guidance';
 
 const plane = createGuidanceControlPlane({
   rootGuidancePath: './CLAUDE.md',
+  localGuidancePath: './CLAUDE.local.md', // optional, your personal overrides
 });
 await plane.initialize();
 ```
 
-This reads your `CLAUDE.md`, compiles it into a policy bundle (constitution + rule shards + manifest), and prepares all subsystems.
+This reads both files, compiles them into a policy bundle (constitution + rule shards + manifest), and prepares all subsystems.
 
 ## What Happens at Initialization
 
-1. **Compile** — `CLAUDE.md` is parsed into structured rules. Each rule gets an ID, risk class, domain tags, tool class tags, and intent tags.
-2. **Shard** — Rules are broken into task-scoped shards. The always-loaded invariants form the constitution (first ~30-60 lines). Everything else becomes retrievable shards.
-3. **Index** — Shards are loaded into the retriever for similarity-based lookup.
-4. **Activate gates** — Enforcement gates are configured from the compiled rules.
+1. **Load** — `CLAUDE.md` is read as the root guidance. `CLAUDE.local.md` (if present) is read as an overlay. Local rules supplement or override root rules.
+2. **Compile** — Both files are parsed into structured rules. Each rule gets an ID, risk class, domain tags, tool class tags, and intent tags.
+3. **Shard** — Rules are broken into task-scoped shards. The always-loaded invariants form the constitution (first ~30-60 lines of the root file). Everything else becomes retrievable shards.
+4. **Index** — Shards are loaded into the retriever for similarity-based lookup.
+5. **Activate gates** — Enforcement gates are configured from the compiled rules.
 
 ## Core Loop
 
@@ -78,15 +100,59 @@ const trust = createTrustSystem();
 
 All 20 modules are available as separate entry points. See the [API Reference](../reference/api-quick-reference.md) for the full list.
 
-## Local Overrides
+## CLAUDE.md vs. CLAUDE.local.md
 
-`CLAUDE.local.md` acts as an experiment sandbox. Rules defined there overlay the root constitution and can be promoted to root by the optimizer:
+### What goes in CLAUDE.md (shared, committed)
+
+Team-level guidance everyone benefits from:
+
+```markdown
+# Build & Test
+Run `npm test` before committing. Run `npm run build` to type-check.
+
+# Coding Standards
+- No `any` types. Use `unknown` when the type is truly unknown.
+- All public functions require JSDoc.
+
+# Architecture
+This project uses a layered architecture. See docs/architecture.md.
+
+# Domain Rules
+- Never write to the `users` table without a migration.
+- API responses must include `requestId` for tracing.
+```
+
+### What goes in CLAUDE.local.md (private, not committed)
+
+Machine-specific or personal notes:
+
+```markdown
+# My Environment
+- Local API: http://localhost:3001
+- Test DB: postgres://localhost:5432/myapp_test
+
+# Preferences
+- Show git diffs before committing
+- I prefer verbose error messages
+```
+
+### The @import alternative for worktrees
+
+If you use multiple git worktrees, `CLAUDE.local.md` is awkward because each worktree needs its own copy. The `@` import pattern inside `CLAUDE.md` points to a shared file in your home directory:
+
+```markdown
+@~/.claude/my_project_instructions.md
+```
+
+### How the optimizer uses both files
+
+The optimizer watches which `CLAUDE.local.md` experiments reduce violations. When a local rule consistently outperforms the root, the optimizer proposes promoting it to `CLAUDE.md` with an ADR:
 
 ```ts
-const plane = createGuidanceControlPlane({
-  rootGuidancePath: './CLAUDE.md',
-  localGuidancePath: './CLAUDE.local.md',
-});
+const optimized = await plane.optimize();
+// optimized.promoted — rules moved from local to root
+// optimized.demoted — ineffective root rules flagged
+// optimized.adrsCreated — decision records
 ```
 
 ## WASM Acceleration
@@ -137,6 +203,28 @@ No configuration needed. The bridge detects WASM availability at load time.
     reference/          # API reference
     diagrams/           # Architecture diagrams
     adrs/               # Architecture Decision Records (G001-G025)
+```
+
+## Verification
+
+To confirm both files are being loaded and enforced:
+
+1. Add a unique rule to `CLAUDE.md`: `# Test: Always respond in English`
+2. Add a different rule to `CLAUDE.local.md`: `# Test: Prefer bullet points`
+3. Start Claude Code and run `/memory` — both files should appear as loaded
+4. Ask Claude to restate each unique rule to confirm both were applied
+
+Then, initialize the guidance control plane and confirm:
+
+```ts
+const plane = createGuidanceControlPlane({
+  rootGuidancePath: './CLAUDE.md',
+  localGuidancePath: './CLAUDE.local.md',
+});
+await plane.initialize();
+const bundle = plane.getBundle();
+console.log(bundle.constitution.length);  // > 0
+console.log(bundle.shards.length);        // > 0
 ```
 
 ## Next Steps
