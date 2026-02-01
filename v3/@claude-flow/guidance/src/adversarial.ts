@@ -483,12 +483,15 @@ export class CollusionDetector {
   detectCollusion(): CollusionReport {
     const patterns: CollusionReport['suspiciousPatterns'] = [];
 
+    // Build graph once and pass to all detectors (avoids 3x rebuild)
+    const graph = this.getInteractionGraph();
+
     // Detect ring topologies
-    const rings = this.detectRingTopologies();
+    const rings = this.detectRingTopologies(graph);
     patterns.push(...rings);
 
     // Detect unusual frequency
-    const frequency = this.detectUnusualFrequency();
+    const frequency = this.detectUnusualFrequency(graph);
     patterns.push(...frequency);
 
     // Detect coordinated timing
@@ -522,9 +525,8 @@ export class CollusionDetector {
   /**
    * Detect ring topology patterns (A→B→C→A)
    */
-  private detectRingTopologies(): CollusionReport['suspiciousPatterns'] {
+  private detectRingTopologies(graph: Map<string, Map<string, number>>): CollusionReport['suspiciousPatterns'] {
     const patterns: CollusionReport['suspiciousPatterns'] = [];
-    const graph = this.getInteractionGraph();
 
     // Simple cycle detection using DFS
     const visited = new Set<string>();
@@ -574,9 +576,8 @@ export class CollusionDetector {
   /**
    * Detect unusual interaction frequency between specific pairs
    */
-  private detectUnusualFrequency(): CollusionReport['suspiciousPatterns'] {
+  private detectUnusualFrequency(graph: Map<string, Map<string, number>>): CollusionReport['suspiciousPatterns'] {
     const patterns: CollusionReport['suspiciousPatterns'] = [];
-    const graph = this.getInteractionGraph();
 
     for (const [from, targets] of graph) {
       for (const [to, count] of targets) {
@@ -666,10 +667,16 @@ export class MemoryQuorum {
 
     this.proposals.set(proposalId, proposal);
 
-    // Evict oldest proposals if at capacity
+    // Evict oldest proposal if at capacity (O(n) min-find, not O(n log n) sort)
     if (this.proposals.size > this.maxProposals) {
-      const oldestId = Array.from(this.proposals.entries())
-        .sort((a, b) => a[1].timestamp - b[1].timestamp)[0]?.[0];
+      let oldestId: string | undefined;
+      let oldestTimestamp = Infinity;
+      for (const [id, proposal] of this.proposals) {
+        if (proposal.timestamp < oldestTimestamp) {
+          oldestTimestamp = proposal.timestamp;
+          oldestId = id;
+        }
+      }
       if (oldestId) {
         this.proposals.delete(oldestId);
       }

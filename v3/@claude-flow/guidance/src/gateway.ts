@@ -107,6 +107,8 @@ export interface ToolGatewayConfig {
   budget?: Partial<Budget>;
   /** Default TTL for idempotency records in milliseconds */
   idempotencyTtlMs?: number;
+  /** Maximum idempotency cache entries (default 10000) */
+  maxCacheSize?: number;
   /** If true, evidence must be non-empty for allow decisions */
   requireEvidence?: boolean;
   /** Gate configuration passed through to EnforcementGates */
@@ -122,8 +124,11 @@ export class DeterministicToolGateway {
   private readonly schemas: Map<string, ToolSchema>;
   private budget: Budget;
   private readonly idempotencyTtlMs: number;
+  private readonly maxCacheSize: number;
   private readonly requireEvidence: boolean;
   private readonly idempotencyCache: Map<string, IdempotencyRecord> = new Map();
+  private lastCleanupTime = 0;
+  private static readonly CLEANUP_INTERVAL_MS = 30_000; // batch cleanup every 30s
 
   constructor(config: ToolGatewayConfig = {}) {
     this.gates = new EnforcementGates(config.gateConfig);
@@ -139,6 +144,7 @@ export class DeterministicToolGateway {
     // Merge partial budget with defaults
     this.budget = this.mergeBudget(config.budget);
     this.idempotencyTtlMs = config.idempotencyTtlMs ?? 300_000; // 5 minutes default
+    this.maxCacheSize = config.maxCacheSize ?? 10_000;
     this.requireEvidence = config.requireEvidence ?? false;
   }
 
@@ -163,8 +169,8 @@ export class DeterministicToolGateway {
   ): GatewayDecision {
     const evidence: Record<string, unknown> = {};
 
-    // Step 1: Idempotency check
-    this.cleanExpiredIdempotency();
+    // Step 1: Idempotency check (batch cleanup on interval, not every call)
+    this.maybeCleanExpiredIdempotency();
     const idempotencyKey = this.getIdempotencyKey(toolName, params);
     const cached = this.idempotencyCache.get(idempotencyKey);
 
@@ -313,7 +319,7 @@ export class DeterministicToolGateway {
       this.budget.costBudget.usedUsd += (tokenCount / 1000) * 0.003;
     }
 
-    // Store in idempotency cache
+    // Store in idempotency cache with size-based eviction
     const key = this.getIdempotencyKey(toolName, params);
     const paramsHash = this.computeParamsHash(params);
 
@@ -325,6 +331,18 @@ export class DeterministicToolGateway {
       timestamp: Date.now(),
       ttlMs: this.idempotencyTtlMs,
     });
+
+    // Evict oldest entries if cache exceeds max size
+    if (this.idempotencyCache.size > this.maxCacheSize) {
+      // Map iterates in insertion order; delete the first (oldest) entries
+      const excess = this.idempotencyCache.size - this.maxCacheSize;
+      let removed = 0;
+      for (const [k] of this.idempotencyCache) {
+        if (removed >= excess) break;
+        this.idempotencyCache.delete(k);
+        removed++;
+      }
+    }
   }
 
   /**
@@ -464,10 +482,15 @@ export class DeterministicToolGateway {
   // =========================================================================
 
   /**
-   * Remove expired idempotency records.
+   * Remove expired idempotency records (batched on interval to avoid per-call overhead).
    */
-  private cleanExpiredIdempotency(): void {
+  private maybeCleanExpiredIdempotency(): void {
     const now = Date.now();
+    if (now - this.lastCleanupTime < DeterministicToolGateway.CLEANUP_INTERVAL_MS) {
+      return; // Skip cleanup until interval has passed
+    }
+    this.lastCleanupTime = now;
+
     for (const [key, record] of this.idempotencyCache) {
       if (now - record.timestamp > record.ttlMs) {
         this.idempotencyCache.delete(key);

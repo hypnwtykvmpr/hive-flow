@@ -658,8 +658,23 @@ export class IrreversibilityClassifier {
 
   /**
    * Add a pattern to a classification.
+   *
+   * Validates the pattern against ReDoS heuristics before accepting it.
+   * Rejects patterns with nested quantifiers (e.g., `(a+)+`) that can
+   * cause catastrophic backtracking.
+   *
+   * @throws Error if the pattern is invalid regex or contains ReDoS-prone constructs
    */
   addPattern(classification: IrreversibilityClass, pattern: string): void {
+    // ReDoS heuristic: reject nested quantifiers like (a+)+, (a*)+, (a+)*, etc.
+    if (/([+*]|\{[0-9]+,?\})\s*\)[\s]*[+*]|\{[0-9]+,?\}/.test(pattern)) {
+      throw new Error(`Pattern rejected: nested quantifiers detected (potential ReDoS): ${pattern}`);
+    }
+    // Also reject patterns longer than 500 chars as a sanity bound
+    if (pattern.length > 500) {
+      throw new Error(`Pattern rejected: exceeds maximum length of 500 characters`);
+    }
+
     const regex = new RegExp(pattern, 'i');
 
     switch (classification) {
