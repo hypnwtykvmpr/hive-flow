@@ -213,8 +213,14 @@ export class DiffQualityEvaluator implements IEvaluator {
 export class RunLedger {
   private events: RunEvent[] = [];
   private evaluators: IEvaluator[] = [];
+  private readonly maxEvents: number;
 
-  constructor() {
+  /**
+   * @param maxEvents - Maximum events to retain in memory (0 = unlimited).
+   *   When the limit is exceeded the oldest events are evicted.
+   */
+  constructor(maxEvents = 0) {
+    this.maxEvents = maxEvents;
     // Register default evaluators
     this.evaluators = [
       new TestsPassEvaluator(),
