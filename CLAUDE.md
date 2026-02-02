@@ -35,24 +35,18 @@
 
 ---
 
-## Automatic Swarm Orchestration
+## Swarm Orchestration
 
-**When starting work on complex tasks, Claude Code MUST automatically:**
-
-1. **Initialize the swarm** using MCP tools
-2. **Spawn concurrent agents** using Claude Code's Task tool
-3. **Coordinate via hooks** and memory
-
-### CRITICAL: MCP + Task Tool in SAME Message
-
-**When user says "spawn swarm" or requests complex work, Claude Code MUST in ONE message:**
-1. Call MCP tools to initialize coordination
-2. **IMMEDIATELY** call Task tool to spawn REAL working agents
-3. Both MCP and Task calls must be in the SAME response
-
+- MUST initialize the swarm using MCP tools when starting complex tasks
+- MUST spawn concurrent agents using Claude Code's Task tool
 - Never use MCP tools alone for execution — Task tool agents do the actual work
 
-### Intelligent 3-Tier Model Routing (ADR-026)
+### MCP + Task Tool in SAME Message
+
+- MUST call MCP tools AND Task tool in ONE message for complex work
+- Always call MCP first, then IMMEDIATELY call Task tool to spawn agents
+
+### 3-Tier Model Routing (ADR-026)
 
 | Tier | Handler | Latency | Cost | Use Cases |
 |------|---------|---------|------|-----------|
@@ -60,54 +54,26 @@
 | **2** | Haiku | ~500ms | $0.0002 | Simple tasks, low complexity (<30%) |
 | **3** | Sonnet/Opus | 2-5s | $0.003-0.015 | Complex reasoning, architecture, security (>30%) |
 
-**When you see these recommendations:**
-
-1. `[AGENT_BOOSTER_AVAILABLE]` → Use the Edit tool directly for simple code transforms
-   - Intent types: `var-to-const`, `add-types`, `add-error-handling`, `async-await`, `add-logging`, `remove-console`
-
-2. `[TASK_MODEL_RECOMMENDATION] Use model="X"` → Use that model in Task tool:
-```javascript
-Task({
-  prompt: "...",
-  subagent_type: "coder",
-  model: "opus"  // ← USE THE RECOMMENDED MODEL
-})
-```
-
-**Model Selection Logic:**
-| Complexity | Model | Use For |
-|------------|-------|---------|
-| Agent Booster intent detected | **Skip LLM** | var→const, add-types, remove-console (352x faster) |
-| High (architecture, system design, security) | **opus** | Complex reasoning, multi-step planning |
-| Medium (features, refactoring, debugging) | **sonnet** | Balanced capability and speed |
-| Low (formatting, simple fixes, docs) | **haiku** | Fast, cost-effective tasks |
-
 - Always check for `[AGENT_BOOSTER_AVAILABLE]` or `[TASK_MODEL_RECOMMENDATION]` before spawning agents
+- Use Edit tool directly when `[AGENT_BOOSTER_AVAILABLE]` — intent types: `var-to-const`, `add-types`, `add-error-handling`, `async-await`, `add-logging`, `remove-console`
 
 ### Anti-Drift Coding Swarm (PREFERRED DEFAULT)
 
-- ALWAYS use this configuration for coding swarms:
-
-```javascript
-mcp__ruv-swarm__swarm_init({
-  topology: "hierarchical",  // Single coordinator enforces alignment
-  maxAgents: 8,              // Smaller team = less drift surface
-  strategy: "specialized"    // Clear roles reduce ambiguity
-})
-```
-
-| Choice | Anti-Drift Benefit |
-|--------|-------------------|
-| **hierarchical** | Coordinator validates each output against goal, catches divergence early |
-| **maxAgents: 6-8** | Fewer agents = less coordination overhead, easier alignment |
-| **specialized** | Clear boundaries — each agent knows exactly what to do, no overlap |
-
+- ALWAYS use hierarchical topology for coding swarms
+- Keep maxAgents at 6-8 for tight coordination
+- Use specialized strategy for clear role boundaries
 - Use `raft` consensus for hive-mind (leader maintains authoritative state)
-
-**Additional anti-drift measures:**
 - Run frequent checkpoints via `post-task` hooks
 - Keep shared memory namespace for all agents
 - Keep task cycles short with verification gates
+
+```javascript
+mcp__ruv-swarm__swarm_init({
+  topology: "hierarchical",
+  maxAgents: 8,
+  strategy: "specialized"
+})
+```
 
 ### Auto-Start Swarm Protocol
 
