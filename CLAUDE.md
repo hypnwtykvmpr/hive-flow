@@ -611,7 +611,7 @@ npm view claude-flow dist-tags --json
 | `claude-flow` | `latest` | `npx claude-flow@latest` |
 | `claude-flow` | `v3alpha` | `npx claude-flow@v3alpha` |
 
-**The umbrella `alpha` tag is MOST commonly forgotten — users run `npx claude-flow@alpha`!**
+- Never forget the umbrella `alpha` tag — users run `npx claude-flow@alpha`
 
 ## Plugin Registry Maintenance (IPFS/Pinata)
 
