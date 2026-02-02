@@ -398,9 +398,7 @@ const TEMPLATE_SECTIONS: Record<ClaudeMdTemplate, Array<(opts: InitOptions) => s
     (_opts) => antiDriftConfig(),
     executionRules,
     (_opts) => cliCommandsTable(),
-    (_opts) => quickSetup(),
-    (_opts) => executionBoundary(),
-    (_opts) => footer(),
+    (_opts) => setupAndBoundary(),
   ],
   standard: [
     behavioralRules,
@@ -415,9 +413,7 @@ const TEMPLATE_SECTIONS: Record<ClaudeMdTemplate, Array<(opts: InitOptions) => s
     (_opts) => cliCommandsTable(),
     (_opts) => agentTypes(),
     (_opts) => memoryCommands(),
-    (_opts) => quickSetup(),
-    (_opts) => executionBoundary(),
-    (_opts) => footer(),
+    (_opts) => setupAndBoundary(),
   ],
   full: [
     behavioralRules,
@@ -437,9 +433,7 @@ const TEMPLATE_SECTIONS: Record<ClaudeMdTemplate, Array<(opts: InitOptions) => s
     (_opts) => memoryCommands(),
     (_opts) => intelligenceSystem(),
     (_opts) => envVars(),
-    (_opts) => quickSetup(),
-    (_opts) => executionBoundary(),
-    (_opts) => footer(),
+    (_opts) => setupAndBoundary(),
   ],
   security: [
     behavioralRules,
@@ -454,9 +448,7 @@ const TEMPLATE_SECTIONS: Record<ClaudeMdTemplate, Array<(opts: InitOptions) => s
     (_opts) => cliCommandsTable(),
     (_opts) => agentTypes(),
     (_opts) => memoryCommands(),
-    (_opts) => quickSetup(),
-    (_opts) => executionBoundary(),
-    (_opts) => footer(),
+    (_opts) => setupAndBoundary(),
   ],
   performance: [
     behavioralRules,
@@ -473,9 +465,7 @@ const TEMPLATE_SECTIONS: Record<ClaudeMdTemplate, Array<(opts: InitOptions) => s
     (_opts) => agentTypes(),
     (_opts) => memoryCommands(),
     (_opts) => intelligenceSystem(),
-    (_opts) => quickSetup(),
-    (_opts) => executionBoundary(),
-    (_opts) => footer(),
+    (_opts) => setupAndBoundary(),
   ],
   solo: [
     behavioralRules,
@@ -487,9 +477,7 @@ const TEMPLATE_SECTIONS: Record<ClaudeMdTemplate, Array<(opts: InitOptions) => s
     executionRules,
     (_opts) => cliCommandsTable(),
     (_opts) => memoryCommands(),
-    (_opts) => quickSetup(),
-    (_opts) => executionBoundary(),
-    (_opts) => footer(),
+    (_opts) => setupAndBoundary(),
   ],
 };
 
