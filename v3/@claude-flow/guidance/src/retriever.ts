@@ -156,6 +156,7 @@ export class ShardRetriever {
   private constitution: Constitution | null = null;
   private embeddingProvider: IEmbeddingProvider;
   private indexed = false;
+  private globCache = new Map<string, RegExp>();
 
   constructor(embeddingProvider?: IEmbeddingProvider) {
     this.embeddingProvider = embeddingProvider ?? new HashEmbeddingProvider();
