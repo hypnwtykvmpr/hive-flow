@@ -473,9 +473,9 @@ export class CollusionDetector {
       timestamp: Date.now(),
     });
 
-    // Limit memory usage (keep last 10000 interactions)
+    // Batch eviction: trim 10% to amortize the O(n) splice cost
     if (this.interactions.length > 10000) {
-      this.interactions.shift();
+      this.interactions.splice(0, 1000);
     }
   }
 
