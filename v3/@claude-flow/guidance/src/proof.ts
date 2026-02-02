@@ -14,6 +14,7 @@
  */
 
 import { createHash, createHmac, randomUUID } from 'node:crypto';
+import { timingSafeEqual } from './crypto-utils.js';
 import type { RunEvent } from './types.js';
 
 // ============================================================================
