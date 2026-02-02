@@ -287,7 +287,19 @@ export class RunLedger {
   finalizeEvent(event: RunEvent): RunEvent {
     event.durationMs = Date.now() - event.timestamp;
     this.events.push(event);
+    this.evictIfNeeded();
     return event;
+  }
+
+  /**
+   * Evict oldest events when maxEvents is exceeded.
+   * Trims 10% in a batch to amortize the O(n) splice cost.
+   */
+  private evictIfNeeded(): void {
+    if (this.maxEvents > 0 && this.events.length > this.maxEvents) {
+      const trimCount = Math.max(1, Math.floor(this.maxEvents * 0.1));
+      this.events.splice(0, trimCount);
+    }
   }
 
   /**
