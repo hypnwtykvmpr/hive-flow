@@ -13,13 +13,13 @@
 
 ## File Organization
 
-**NEVER save to root folder. Use these directories:**
-- `/src` — Source code files
-- `/tests` — Test files
-- `/docs` — Documentation and markdown files
-- `/config` — Configuration files
-- `/scripts` — Utility scripts
-- `/examples` — Example code
+- NEVER save to root folder — use the directories below
+- Use `/src` for source code files
+- Use `/tests` for test files
+- Use `/docs` for documentation and markdown files
+- Use `/config` for configuration files
+- Use `/scripts` for utility scripts
+- Use `/examples` for example code
 
 ## Concurrency: 1 MESSAGE = ALL RELATED OPERATIONS
 
