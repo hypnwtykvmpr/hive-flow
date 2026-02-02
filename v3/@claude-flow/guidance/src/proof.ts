@@ -359,9 +359,11 @@ export class ProofChain {
 /**
  * Create a new ProofChain instance.
  *
- * @param config - Optional configuration. `signingKey` sets the HMAC key.
+ * @param config - Configuration with a required `signingKey` for HMAC signing.
+ *   Callers that previously relied on the optional signature must now provide
+ *   an explicit key (see ADR-G026).
  * @returns A fresh ProofChain
  */
-export function createProofChain(config?: { signingKey?: string }): ProofChain {
-  return new ProofChain(config?.signingKey);
+export function createProofChain(config: { signingKey: string }): ProofChain {
+  return new ProofChain(config.signingKey);
 }
