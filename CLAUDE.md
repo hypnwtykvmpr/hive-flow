@@ -50,7 +50,7 @@
 2. **IMMEDIATELY** call Task tool to spawn REAL working agents
 3. Both MCP and Task calls must be in the SAME response
 
-**MCP alone does NOT execute work — Task tool agents do the actual work!**
+- Never use MCP tools alone for execution — Task tool agents do the actual work
 
 ### Intelligent 3-Tier Model Routing (ADR-026)
 
