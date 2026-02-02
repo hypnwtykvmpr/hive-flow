@@ -426,15 +426,21 @@ export class ShardRetriever {
   }
 
   /**
-   * Simple glob matching (supports * and **)
+   * Simple glob matching (supports * and **).
+   * Compiled regexes are cached per glob to avoid re-compiling on every call.
    */
   private matchGlob(path: string, glob: string): boolean {
-    const regex = glob
-      .replace(/\*\*/g, '{{GLOBSTAR}}')
-      .replace(/\*/g, '[^/]*')
-      .replace(/{{GLOBSTAR}}/g, '.*')
-      .replace(/\//g, '\\/');
-    return new RegExp(`^${regex}$`).test(path);
+    let re = this.globCache.get(glob);
+    if (!re) {
+      const pattern = glob
+        .replace(/\*\*/g, '{{GLOBSTAR}}')
+        .replace(/\*/g, '[^/]*')
+        .replace(/{{GLOBSTAR}}/g, '.*')
+        .replace(/\//g, '\\/');
+      re = new RegExp(`^${pattern}$`);
+      this.globCache.set(glob, re);
+    }
+    return re.test(path);
   }
 
   /**
