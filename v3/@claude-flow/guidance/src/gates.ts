@@ -57,6 +57,14 @@ const DEFAULT_GATE_CONFIG: GateConfig = {
   ],
 };
 
+/** Severity ranking for gate decisions (module-level constant to avoid per-call allocation). */
+const GATE_DECISION_SEVERITY: Record<GateDecision, number> = {
+  'block': 3,
+  'require-confirmation': 2,
+  'warn': 1,
+  'allow': 0,
+};
+
 // ============================================================================
 // Enforcement Gates
 // ============================================================================
@@ -286,18 +294,11 @@ export class EnforcementGates {
   aggregateDecision(results: GateResult[]): GateDecision {
     if (results.length === 0) return 'allow';
 
-    const severity: Record<GateDecision, number> = {
-      'block': 3,
-      'require-confirmation': 2,
-      'warn': 1,
-      'allow': 0,
-    };
-
     let maxSeverity = 0;
     let worstDecision: GateDecision = 'allow';
 
     for (const result of results) {
-      const s = severity[result.decision];
+      const s = GATE_DECISION_SEVERITY[result.decision];
       if (s > maxSeverity) {
         maxSeverity = s;
         worstDecision = result.decision;

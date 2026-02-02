@@ -694,8 +694,10 @@ export interface ReplayTestResult {
  */
 export class ConformanceRunner {
   private readonly authority: MemoryAuthority;
+  private readonly signingKey: string;
 
-  constructor(authority?: MemoryAuthority) {
+  constructor(authority?: MemoryAuthority, signingKey?: string) {
+    this.signingKey = signingKey ?? 'conformance-test-key';
     this.authority = authority ?? {
       agentId: 'memory-clerk-agent',
       role: 'worker',
@@ -720,7 +722,7 @@ export class ConformanceRunner {
       authorities: [this.authority],
       enableContradictionTracking: false,
     });
-    const proofChain = createProofChain();
+    const proofChain = createProofChain({ signingKey: this.signingKey });
     const ledger = createLedger();
     const coherenceScheduler = createCoherenceScheduler();
     const economicGovernor = createEconomicGovernor({

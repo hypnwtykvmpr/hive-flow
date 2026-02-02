@@ -662,13 +662,17 @@ describe('ArtifactLedger', () => {
   // --------------------------------------------------------------------------
 
   describe('createArtifactLedger factory', () => {
-    it('should create a ledger with default configuration', () => {
-      const defaultLedger = createArtifactLedger();
-      const artifact = defaultLedger.record(createMockParams());
+    it('should throw when no signingKey is provided', () => {
+      expect(() => createArtifactLedger()).toThrow('requires an explicit signingKey');
+    });
+
+    it('should create a ledger with an explicit signing key', () => {
+      const ledger = createArtifactLedger({ signingKey: 'test-key' });
+      const artifact = ledger.record(createMockParams());
 
       expect(artifact.signature).toMatch(/^[a-f0-9]{64}$/);
 
-      const result = defaultLedger.verify(artifact.artifactId);
+      const result = ledger.verify(artifact.artifactId);
       expect(result.verified).toBe(true);
     });
 

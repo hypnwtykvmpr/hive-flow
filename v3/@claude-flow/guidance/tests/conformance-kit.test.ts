@@ -58,7 +58,7 @@ function makeRuntimeConfig(
       authorities: [authority],
       enableContradictionTracking: false,
     }),
-    proofChain: createProofChain(),
+    proofChain: createProofChain({ signingKey: 'conformance-test-key' }),
     ledger: createLedger(),
     coherenceScheduler: createCoherenceScheduler(),
     economicGovernor: createEconomicGovernor({
