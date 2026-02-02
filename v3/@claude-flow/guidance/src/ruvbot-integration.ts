@@ -855,9 +855,13 @@ export class RuvBotGuidanceBridge {
     this.logEvent('session:create', { sessionId });
 
     if (this.config.enableProofChain) {
-      // Dynamically import ProofChain only when needed
+      if (!this.config.proofSigningKey) {
+        throw new Error(
+          'RuvBotBridgeConfig.proofSigningKey is required when enableProofChain is true',
+        );
+      }
       const { createProofChain } = await import('./proof.js');
-      const chain = createProofChain();
+      const chain = createProofChain({ signingKey: this.config.proofSigningKey });
       this.sessionChains.set(sessionId, chain);
     }
   }
