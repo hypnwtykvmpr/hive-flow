@@ -595,7 +595,7 @@ npm dist-tag add claude-flow@3.0.0-alpha.YYY latest
 npm dist-tag add claude-flow@3.0.0-alpha.YYY alpha
 ```
 
-**Verification (MUST DO before telling user):**
+**Verification (run before telling user):**
 ```bash
 npm view @claude-flow/cli dist-tags --json
 npm view claude-flow dist-tags --json
