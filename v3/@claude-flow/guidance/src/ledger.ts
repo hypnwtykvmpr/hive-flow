@@ -255,6 +255,7 @@ export class RunLedger {
     } as RunEvent;
 
     this.events.push(fullEvent);
+    this.evictIfNeeded();
     return fullEvent;
   }
 
