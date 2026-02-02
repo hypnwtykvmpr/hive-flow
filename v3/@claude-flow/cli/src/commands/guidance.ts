@@ -246,9 +246,9 @@ const gatesCommand: Command = {
               output.writeln(`    ${output.success('ALLOW')} - All gates passed`);
             } else {
               for (const r of result) {
-                const color = r.decision === 'block' ? output.red :
-                  r.decision === 'require-confirmation' ? output.yellow :
-                    output.dim;
+                const color = r.decision === 'block' ? output.error.bind(output) :
+                  r.decision === 'require-confirmation' ? output.warning.bind(output) :
+                    output.dim.bind(output);
                 output.writeln(`    ${color(r.decision.toUpperCase())} [${r.gateName}] ${r.reason}`);
                 if (r.remediation) {
                   output.writeln(`      Remediation: ${output.dim(r.remediation)}`);
@@ -256,9 +256,9 @@ const gatesCommand: Command = {
               }
             }
           } else {
-            const color = result.decision === 'block' ? output.red :
-              result.decision === 'require-confirmation' ? output.yellow :
-                output.dim;
+            const color = result.decision === 'block' ? output.error.bind(output) :
+              result.decision === 'require-confirmation' ? output.warning.bind(output) :
+                output.dim.bind(output);
             output.writeln(`    ${color(result.decision.toUpperCase())} [${result.gateName}] ${result.reason}`);
             if (result.remediation) {
               output.writeln(`      Remediation: ${output.dim(result.remediation)}`);
