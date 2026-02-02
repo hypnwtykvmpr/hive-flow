@@ -116,18 +116,6 @@ export interface SerializedProofChain {
 const GENESIS_HASH = '0'.repeat(64);
 const SERIALIZATION_VERSION = 1;
 
-/**
- * Constant-time string comparison to prevent timing attacks on HMAC signatures.
- */
-function timingSafeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let mismatch = 0;
-  for (let i = 0; i < a.length; i++) {
-    mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  }
-  return mismatch === 0;
-}
-
 // ============================================================================
 // ProofChain
 // ============================================================================
