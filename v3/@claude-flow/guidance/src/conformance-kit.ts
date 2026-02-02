@@ -697,7 +697,10 @@ export class ConformanceRunner {
   private readonly signingKey: string;
 
   constructor(authority?: MemoryAuthority, signingKey?: string) {
-    this.signingKey = signingKey ?? 'conformance-test-key';
+    if (!signingKey) {
+      throw new Error('ConformanceRunner requires an explicit signingKey');
+    }
+    this.signingKey = signingKey;
     this.authority = authority ?? {
       agentId: 'memory-clerk-agent',
       role: 'worker',
