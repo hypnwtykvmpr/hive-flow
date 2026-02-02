@@ -35,7 +35,7 @@ const compileCommand: Command = {
       const { existsSync } = await import('node:fs');
 
       if (!existsSync(rootPath)) {
-        output.writeln(output.red(`Root guidance file not found: ${rootPath}`));
+        output.writeln(output.error(`Root guidance file not found: ${rootPath}`));
         return { success: false, message: `File not found: ${rootPath}` };
       }
 
@@ -67,7 +67,7 @@ const compileCommand: Command = {
         output.writeln();
         output.writeln(output.dim('Rule summary:'));
         for (const rule of bundle.manifest.rules.slice(0, 10)) {
-          const risk = rule.riskClass === 'critical' ? output.red(rule.riskClass) :
+          const risk = rule.riskClass === 'critical' ? output.error(rule.riskClass) :
             rule.riskClass === 'high' ? output.yellow(rule.riskClass) :
               output.dim(rule.riskClass);
           output.writeln(`  ${output.bold(rule.id)} [${risk}] ${rule.text.slice(0, 60)}${rule.text.length > 60 ? '...' : ''}`);
@@ -80,7 +80,7 @@ const compileCommand: Command = {
       return { success: true, data: bundle };
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
-      output.writeln(output.red(`Compilation failed: ${msg}`));
+      output.writeln(output.error(`Compilation failed: ${msg}`));
       return { success: false, message: msg };
     }
   },
@@ -111,7 +111,7 @@ const retrieveCommand: Command = {
     const jsonOutput = ctx.flags.json === true;
 
     if (!task) {
-      output.writeln(output.red('Task description is required (-t "...")'));
+      output.writeln(output.error('Task description is required (-t "...")'));
       return { success: false, message: 'Missing task description' };
     }
 
@@ -126,7 +126,7 @@ const retrieveCommand: Command = {
       const { ShardRetriever, HashEmbeddingProvider } = await import('@claude-flow/guidance/retriever');
 
       if (!existsSync(rootPath)) {
-        output.writeln(output.red(`Root guidance file not found: ${rootPath}`));
+        output.writeln(output.error(`Root guidance file not found: ${rootPath}`));
         return { success: false, message: `File not found: ${rootPath}` };
       }
 
@@ -178,7 +178,7 @@ const retrieveCommand: Command = {
       return { success: true, data: result };
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
-      output.writeln(output.red(`Retrieval failed: ${msg}`));
+      output.writeln(output.error(`Retrieval failed: ${msg}`));
       return { success: false, message: msg };
     }
   },
@@ -270,7 +270,7 @@ const gatesCommand: Command = {
       return { success: true, data: results };
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
-      output.writeln(output.red(`Gate evaluation failed: ${msg}`));
+      output.writeln(output.error(`Gate evaluation failed: ${msg}`));
       return { success: false, message: msg };
     }
   },
@@ -328,7 +328,7 @@ const statusCommand: Command = {
       return { success: true, data: statusData };
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
-      output.writeln(output.red(`Status check failed: ${msg}`));
+      output.writeln(output.error(`Status check failed: ${msg}`));
       return { success: false, message: msg };
     }
   },
@@ -371,7 +371,7 @@ const optimizeCommand: Command = {
       const { existsSync } = await import('node:fs');
 
       if (!existsSync(rootPath)) {
-        output.writeln(output.red(`Root guidance file not found: ${rootPath}`));
+        output.writeln(output.error(`Root guidance file not found: ${rootPath}`));
         return { success: false, message: `File not found: ${rootPath}` };
       }
 
@@ -447,7 +447,7 @@ const optimizeCommand: Command = {
       return { success: true, data: result };
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
-      output.writeln(output.red(`Optimization failed: ${msg}`));
+      output.writeln(output.error(`Optimization failed: ${msg}`));
       return { success: false, message: msg };
     }
   },
@@ -488,7 +488,7 @@ const abTestCommand: Command = {
 
       // Load Config B (candidate) content
       if (!existsSync(configBPath)) {
-        output.writeln(output.red(`Config B file not found: ${configBPath}`));
+        output.writeln(output.error(`Config B file not found: ${configBPath}`));
         return { success: false, message: `File not found: ${configBPath}` };
       }
       const configBContent = await readFile(configBPath, 'utf-8');
@@ -497,7 +497,7 @@ const abTestCommand: Command = {
       let configALabel = 'No control plane (baseline)';
       if (configAPath) {
         if (!existsSync(configAPath)) {
-          output.writeln(output.red(`Config A file not found: ${configAPath}`));
+          output.writeln(output.error(`Config A file not found: ${configAPath}`));
           return { success: false, message: `File not found: ${configAPath}` };
         }
         configALabel = configAPath;
@@ -507,7 +507,7 @@ const abTestCommand: Command = {
       let customTasks: undefined | any[];
       if (tasksPath) {
         if (!existsSync(tasksPath)) {
-          output.writeln(output.red(`Tasks file not found: ${tasksPath}`));
+          output.writeln(output.error(`Tasks file not found: ${tasksPath}`));
           return { success: false, message: `File not found: ${tasksPath}` };
         }
         const tasksJson = await readFile(tasksPath, 'utf-8');
@@ -557,7 +557,7 @@ const abTestCommand: Command = {
       if (delta > 0.05) {
         output.writeln(output.green(`Config B is better (+${delta} composite delta)`));
       } else if (delta < -0.05) {
-        output.writeln(output.red(`Config B is worse (${delta} composite delta)`));
+        output.writeln(output.error(`Config B is worse (${delta} composite delta)`));
       } else {
         output.writeln(output.yellow(`No significant difference (${delta} composite delta)`));
       }
@@ -569,7 +569,7 @@ const abTestCommand: Command = {
       return { success: true, data: report };
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
-      output.writeln(output.red(`A/B benchmark failed: ${msg}`));
+      output.writeln(output.error(`A/B benchmark failed: ${msg}`));
       return { success: false, message: msg };
     }
   },
