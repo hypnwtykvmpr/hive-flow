@@ -255,6 +255,79 @@ npx claude-flow@v3alpha security scan --depth full
 npx claude-flow@v3alpha performance benchmark --suite all
 ```
 
+## Headless Background Instances (claude -p)
+
+Use `claude -p` (print/pipe mode) to spawn headless Claude instances for parallel background work. These run non-interactively and return results to stdout.
+
+### Basic Usage
+
+```bash
+# Single headless task
+claude -p "Analyze the authentication module for security issues"
+
+# With model selection
+claude -p --model haiku "Format this config file"
+claude -p --model opus "Design the database schema for user management"
+
+# With output format
+claude -p --output-format json "List all TODO comments in src/"
+claude -p --output-format stream-json "Refactor the error handling in api.ts"
+
+# With budget limits
+claude -p --max-budget-usd 0.50 "Run comprehensive security audit"
+
+# With specific tools allowed
+claude -p --allowedTools "Read,Grep,Glob" "Find all files that import the auth module"
+
+# Skip permissions (sandboxed environments only)
+claude -p --dangerously-skip-permissions "Fix all lint errors in src/"
+```
+
+### Parallel Background Execution
+
+```bash
+# Spawn multiple headless instances in parallel
+claude -p "Analyze src/auth/ for vulnerabilities" &
+claude -p "Write tests for src/api/endpoints.ts" &
+claude -p "Review src/models/ for performance issues" &
+wait  # Wait for all to complete
+
+# With results captured
+SECURITY=$(claude -p "Security audit of auth module" &)
+TESTS=$(claude -p "Generate test coverage report" &)
+PERF=$(claude -p "Profile memory usage in workers" &)
+wait
+echo "$SECURITY" "$TESTS" "$PERF"
+```
+
+### Session Continuation
+
+```bash
+# Start a task, resume later
+claude -p --session-id "abc-123" "Start analyzing the codebase"
+claude -p --resume "abc-123" "Continue with the test files"
+
+# Fork a session for parallel exploration
+claude -p --resume "abc-123" --fork-session "Try approach A: event sourcing"
+claude -p --resume "abc-123" --fork-session "Try approach B: CQRS pattern"
+```
+
+### Key Flags
+
+| Flag | Purpose |
+|------|---------|
+| `-p, --print` | Non-interactive mode, print and exit |
+| `--model <model>` | Select model (haiku, sonnet, opus) |
+| `--output-format <fmt>` | Output: text, json, stream-json |
+| `--max-budget-usd <amt>` | Spending cap per invocation |
+| `--allowedTools <tools>` | Restrict available tools |
+| `--append-system-prompt` | Add custom instructions |
+| `--resume <id>` | Continue a previous session |
+| `--fork-session` | Branch from resumed session |
+| `--fallback-model <model>` | Auto-fallback if primary overloaded |
+| `--permission-mode <mode>` | acceptEdits, bypassPermissions, plan, etc. |
+| `--mcp-config <json>` | Load MCP servers from JSON |
+
 ## Available Agents (60+ Types)
 
 ### Core Development
