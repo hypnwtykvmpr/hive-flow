@@ -82,7 +82,7 @@ Task({
 | Medium (features, refactoring, debugging) | **sonnet** | Balanced capability and speed |
 | Low (formatting, simple fixes, docs) | **haiku** | Fast, cost-effective tasks |
 
-**CRITICAL:** Always check for `[AGENT_BOOSTER_AVAILABLE]` or `[TASK_MODEL_RECOMMENDATION]` before spawning agents.
+- Always check for `[AGENT_BOOSTER_AVAILABLE]` or `[TASK_MODEL_RECOMMENDATION]` before spawning agents
 
 ### Anti-Drift Coding Swarm (PREFERRED DEFAULT)
 
