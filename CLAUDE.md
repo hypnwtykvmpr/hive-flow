@@ -566,7 +566,7 @@ npx claude-flow@v3alpha doctor --fix
 - Neural features
 - Performance tracking
 
-**KEY**: MCP coordinates the strategy, Claude Code's Task tool executes with real agents.
+- Keep MCP for coordination strategy only — use Claude Code's Task tool for real execution
 
 ## Publishing to npm
 
