@@ -23,7 +23,7 @@ import {
   generateAgentRouter,
   generateMemoryHelper,
 } from './helpers-generator.js';
-import { generateClaudeMd, generateMinimalClaudeMd } from './claudemd-generator.js';
+import { generateClaudeMd } from './claudemd-generator.js';
 
 /**
  * Skills to copy based on configuration
