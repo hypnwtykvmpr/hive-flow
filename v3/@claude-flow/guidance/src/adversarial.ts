@@ -427,14 +427,16 @@ export class ThreatDetector {
   }
 
   /**
-   * Add signal with LRU eviction
+   * Add signal with batch eviction.
+   * Trims 10% at once to amortize the O(n) splice cost instead of
+   * calling shift() (O(n)) on every insertion.
    */
   private addSignal(signal: ThreatSignal): void {
     this.signals.push(signal);
 
-    // LRU eviction
     if (this.signals.length > this.maxSignals) {
-      this.signals.shift();
+      const trimCount = Math.max(1, Math.floor(this.maxSignals * 0.1));
+      this.signals.splice(0, trimCount);
     }
   }
 }
