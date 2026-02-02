@@ -261,6 +261,34 @@ npx @claude-flow/cli@latest memory retrieve --key "pattern-auth" --namespace pat
 \`\`\``;
 }
 
+function securityRulesLight(): string {
+  return `## Security Rules
+
+- NEVER hardcode API keys, secrets, or credentials in source files
+- NEVER commit .env files or any file containing secrets
+- Always validate user input at system boundaries
+- Always sanitize file paths to prevent directory traversal
+- Run \`npx @claude-flow/cli@latest security scan\` after security-related changes`;
+}
+
+function buildAndTest(): string {
+  return `## Build & Test
+
+\`\`\`bash
+# Build
+npm run build
+
+# Test
+npm test
+
+# Lint
+npm run lint
+\`\`\`
+
+- ALWAYS run tests after making code changes
+- ALWAYS verify build succeeds before committing`;
+}
+
 function securitySection(): string {
   return `## Security Protocol
 
