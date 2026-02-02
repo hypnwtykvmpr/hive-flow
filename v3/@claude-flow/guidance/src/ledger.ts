@@ -453,7 +453,9 @@ export class RunLedger {
 
 /**
  * Create a run ledger instance
+ *
+ * @param maxEvents - Maximum events to retain in memory (0 = unlimited).
  */
-export function createLedger(): RunLedger {
-  return new RunLedger();
+export function createLedger(maxEvents = 0): RunLedger {
+  return new RunLedger(maxEvents);
 }
