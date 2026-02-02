@@ -619,6 +619,8 @@ PINATA_API_SECRET=your-api-secret
 PINATA_API_JWT=your-jwt-token
 ```
 
+## Plugin Registry Operations
+
 ### Adding a New Plugin to Registry
 
 1. **Fetch current registry**:
