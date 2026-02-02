@@ -102,12 +102,12 @@ mcp__ruv-swarm__swarm_init({
 | **maxAgents: 6-8** | Fewer agents = less coordination overhead, easier alignment |
 | **specialized** | Clear boundaries — each agent knows exactly what to do, no overlap |
 
-**Consensus for Hive-Mind:** Use `raft` (leader maintains authoritative state)
+- Use `raft` consensus for hive-mind (leader maintains authoritative state)
 
-**Additional Anti-Drift Measures:**
-- Frequent checkpoints via `post-task` hooks
-- Shared memory namespace for all agents
-- Short task cycles with verification gates
+**Additional anti-drift measures:**
+- Run frequent checkpoints via `post-task` hooks
+- Keep shared memory namespace for all agents
+- Keep task cycles short with verification gates
 
 ### Auto-Start Swarm Protocol
 
