@@ -275,7 +275,13 @@ export class OptimizerLoop {
   }
 
   /**
-   * Simulate the effect of a rule change on metrics
+   * Heuristic estimation of how a rule change would affect metrics.
+   *
+   * This does NOT run a real A/B test against live traffic — it applies
+   * fixed multipliers per change-type to the baseline numbers.  The
+   * percentages (e.g. 40% for modify, 60% for add) are conservative
+   * estimates, not measured values.  Results should be treated as
+   * directional guidance, not ground truth.
    */
   private simulateChangeEffect(
     change: RuleChange,
