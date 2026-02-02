@@ -361,32 +361,25 @@ CLAUDE_FLOW_MEMORY_PATH=./data/memory
 \`\`\``;
 }
 
-function quickSetup(): string {
+function setupAndBoundary(): string {
   return `## Quick Setup
 
 \`\`\`bash
 claude mcp add claude-flow -- npx -y @claude-flow/cli@latest
 npx @claude-flow/cli@latest daemon start
 npx @claude-flow/cli@latest doctor --fix
-\`\`\``;
-}
+\`\`\`
 
-function executionBoundary(): string {
-  return `## Claude Code vs CLI Tools
+## Claude Code vs CLI Tools
 
 - Claude Code's Task tool handles ALL execution: agents, file ops, code generation, git
 - CLI tools handle coordination via Bash: swarm init, memory, hooks, routing
-- NEVER use CLI tools as a substitute for Task tool agents`;
-}
+- NEVER use CLI tools as a substitute for Task tool agents
 
-function footer(): string {
-  return `## Support
+## Support
 
 - Documentation: https://github.com/ruvnet/claude-flow
-- Issues: https://github.com/ruvnet/claude-flow/issues
-
----
-Remember: **Claude Flow CLI coordinates, Claude Code Task tool creates!**`;
+- Issues: https://github.com/ruvnet/claude-flow/issues`;
 }
 
 // --- Template Composers ---
