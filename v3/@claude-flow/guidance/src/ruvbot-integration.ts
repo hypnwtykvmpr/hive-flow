@@ -104,6 +104,8 @@ export interface RuvBotBridgeConfig {
   enableMemoryGovernance: boolean;
   enableTrustTracking: boolean;
   enableProofChain: boolean;
+  /** HMAC signing key for proof chains. Required when enableProofChain is true. */
+  proofSigningKey?: string;
 }
 
 /**
