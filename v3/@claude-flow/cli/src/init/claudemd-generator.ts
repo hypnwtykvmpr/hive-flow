@@ -398,6 +398,7 @@ const TEMPLATE_SECTIONS: Record<ClaudeMdTemplate, Array<(opts: InitOptions) => s
   minimal: [
     behavioralRules,
     fileOrganization,
+    projectArchitecture,
     (_opts) => buildAndTest(),
     (_opts) => securityRulesLight(),
     concurrencyRules,
