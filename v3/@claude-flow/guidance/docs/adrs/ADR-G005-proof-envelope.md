@@ -77,6 +77,7 @@ The ledger supports temporal queries: `getEventsInRange(startMs, endMs)`, `getRe
 
 - **In-memory storage.** The current implementation stores events in an in-memory array. Mitigation: `RunLedger` accepts a `maxEvents` constructor parameter (default 0 = unlimited). When set, the oldest 10% of events are evicted in a batch splice when the limit is exceeded (see ADR-G026). Events can also be exported and cleared periodically via `exportEvents()` and `clear()`.
 - **No cryptographic chaining.** The current implementation uses UUIDs and guidance hashes but does not implement full hash-chain linking (each event's hash includes the previous event's hash). This is a future enhancement.
+- **Signing key is required.** The `createProofChain()` factory requires `{ signingKey: string }` as of ADR-G026. Callers must provide an explicit HMAC key; there is no fallback. The `RuvBotBridgeConfig` exposes a `proofSigningKey` field for this purpose.
 - **Clock dependency.** Timestamps rely on `Date.now()`, which can be manipulated on the host. Mitigation: in production, timestamps should be sourced from a trusted time service.
 
 ## Alternatives Considered
