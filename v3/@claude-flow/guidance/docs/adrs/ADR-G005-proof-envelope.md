@@ -75,7 +75,7 @@ The ledger supports temporal queries: `getEventsInRange(startMs, endMs)`, `getRe
 
 ### Negative
 
-- **In-memory storage.** The current implementation stores events in an in-memory array. Long-running sessions with thousands of events will consume memory. Mitigation: events can be exported and cleared periodically via `exportEvents()` and `clear()`.
+- **In-memory storage.** The current implementation stores events in an in-memory array. Mitigation: `RunLedger` accepts a `maxEvents` constructor parameter (default 0 = unlimited). When set, the oldest 10% of events are evicted in a batch splice when the limit is exceeded (see ADR-G026). Events can also be exported and cleared periodically via `exportEvents()` and `clear()`.
 - **No cryptographic chaining.** The current implementation uses UUIDs and guidance hashes but does not implement full hash-chain linking (each event's hash includes the previous event's hash). This is a future enhancement.
 - **Clock dependency.** Timestamps rely on `Date.now()`, which can be manipulated on the host. Mitigation: in production, timestamps should be sourced from a trusted time service.
 
