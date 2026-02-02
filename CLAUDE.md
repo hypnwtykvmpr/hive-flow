@@ -76,6 +76,8 @@
 - Always check for `[AGENT_BOOSTER_AVAILABLE]` or `[TASK_MODEL_RECOMMENDATION]` before spawning agents
 - Use Edit tool directly when `[AGENT_BOOSTER_AVAILABLE]` — intent types: `var-to-const`, `add-types`, `add-error-handling`, `async-await`, `add-logging`, `remove-console`
 
+## Swarm Configuration & Anti-Drift
+
 ### Anti-Drift Coding Swarm (PREFERRED DEFAULT)
 
 - ALWAYS use hierarchical topology for coding swarms
