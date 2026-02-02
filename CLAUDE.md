@@ -96,6 +96,8 @@ mcp__ruv-swarm__swarm_init({
 })
 ```
 
+## Swarm Protocols & Routing
+
 ### Auto-Start Swarm Protocol
 
 When the user requests a complex task (multi-file changes, feature implementation, refactoring), **immediately execute this pattern in a SINGLE message:**
