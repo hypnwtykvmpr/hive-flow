@@ -23,7 +23,7 @@ import {
   generateAgentRouter,
   generateMemoryHelper,
 } from './helpers-generator.js';
-import { generateClaudeMd, generateMinimalClaudeMd } from './claudemd-generator.js';
+import { generateClaudeMd } from './claudemd-generator.js';
 
 /**
  * Skills to copy based on configuration
@@ -1531,9 +1531,9 @@ async function writeClaudeMd(
     return;
   }
 
-  // Use minimal version for minimal init, full version otherwise
-  const isMinimal = !options.components.commands && !options.components.agents;
-  const content = isMinimal ? generateMinimalClaudeMd(options) : generateClaudeMd(options);
+  // Determine template: explicit option > infer from components > 'standard'
+  const inferredTemplate = (!options.components.commands && !options.components.agents) ? 'minimal' : undefined;
+  const content = generateClaudeMd(options, inferredTemplate);
 
   fs.writeFileSync(claudeMdPath, content, 'utf-8');
   result.created.files.push('CLAUDE.md');

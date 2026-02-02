@@ -1,6 +1,6 @@
 {
   "name": "@claude-flow/cli",
-  "version": "3.0.0-alpha.185",
+  "version": "3.1.0-alpha.1",
   "type": "module",
   "description": "Claude Flow CLI - Enterprise AI agent orchestration with 60+ specialized agents, swarm coordination, MCP server, self-learning hooks, and vector memory for Claude Code",
   "main": "dist/src/index.js",
@@ -85,6 +85,7 @@
   },
   "dependencies": {
     "@claude-flow/aidefence": "^3.0.2",
+    "@claude-flow/guidance": "^3.0.0-alpha.1",
     "@claude-flow/mcp": "^3.0.0-alpha.8",
     "@claude-flow/shared": "^3.0.0-alpha.1",
     "@noble/ed25519": "^2.1.0"

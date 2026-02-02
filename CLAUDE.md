@@ -1,93 +1,109 @@
 # Claude Code Configuration - Claude Flow V3
 
-## 🚨 AUTOMATIC SWARM ORCHESTRATION
+## Behavioral Rules (Always Enforced)
 
-**When starting work on complex tasks, Claude Code MUST automatically:**
+- Do what has been asked; nothing more, nothing less
+- NEVER create files unless they're absolutely necessary for achieving your goal
+- ALWAYS prefer editing an existing file to creating a new one
+- NEVER proactively create documentation files (*.md) or README files unless explicitly requested
+- NEVER save working files, text/mds, or tests to the root folder
+- Never continuously check status after spawning a swarm — wait for results
+- ALWAYS read a file before editing it
+- NEVER commit secrets, credentials, or .env files
 
-1. **Initialize the swarm** using MCP tools
-2. **Spawn concurrent agents** using Claude Code's Task tool
-3. **Coordinate via hooks** and memory
+## File Organization
 
-### 🚨 CRITICAL: MCP + Task Tool in SAME Message
+- NEVER save to root folder — use the directories below
+- Use `/src` for source code files
+- Use `/tests` for test files
+- Use `/docs` for documentation and markdown files
+- Use `/config` for configuration files
+- Use `/scripts` for utility scripts
+- Use `/examples` for example code
 
-**When user says "spawn swarm" or requests complex work, Claude Code MUST in ONE message:**
-1. Call MCP tools to initialize coordination
-2. **IMMEDIATELY** call Task tool to spawn REAL working agents
-3. Both MCP and Task calls must be in the SAME response
+## Project Architecture
 
-**MCP alone does NOT execute work - Task tool agents do the actual work!**
+- Follow Domain-Driven Design with bounded contexts
+- Keep files under 500 lines
+- Use typed interfaces for all public APIs
+- Prefer TDD London School (mock-first) for new code
+- Use event sourcing for state changes
+- Ensure input validation at system boundaries
 
-### 🤖 INTELLIGENT 3-TIER MODEL ROUTING (ADR-026)
+### Key Packages
 
-**The routing system has 3 tiers for optimal cost/performance:**
+| Package | Path | Purpose |
+|---------|------|---------|
+| `@claude-flow/cli` | `v3/@claude-flow/cli/` | CLI entry point (26 commands) |
+| `@claude-flow/guidance` | `v3/@claude-flow/guidance/` | Governance control plane |
+| `@claude-flow/hooks` | `v3/@claude-flow/hooks/` | 17 hooks + 12 workers |
+| `@claude-flow/memory` | `v3/@claude-flow/memory/` | AgentDB + HNSW search |
+| `@claude-flow/security` | `v3/@claude-flow/security/` | Input validation, CVE remediation |
 
-| Tier | Handler | Latency | Cost | Use Cases |
-|------|---------|---------|------|-----------|
-| **1** | Agent Booster (WASM) | <1ms | $0 | Simple transforms (var→const, add types, etc.) - **Skip LLM entirely** |
-| **2** | Haiku | ~500ms | $0.0002 | Simple tasks, low complexity (<30%) |
-| **3** | Sonnet/Opus | 2-5s | $0.003-0.015 | Complex reasoning, architecture, security (>30%) |
+## Concurrency: 1 MESSAGE = ALL RELATED OPERATIONS
 
-**When you see these recommendations:**
+- All operations MUST be concurrent/parallel in a single message
+- Use Claude Code's Task tool for spawning agents, not just MCP
 
-1. `[AGENT_BOOSTER_AVAILABLE]` → The task can be handled by Agent Booster (352x faster, $0)
-   - Use the Edit tool directly for simple code transforms
-   - Intent types: `var-to-const`, `add-types`, `add-error-handling`, `async-await`, `add-logging`, `remove-console`
-
-2. `[TASK_MODEL_RECOMMENDATION] Use model="X"` → Use that model in Task tool:
-```javascript
-// If hook recommends: [TASK_MODEL_RECOMMENDATION] Use model="opus"
-Task({
-  prompt: "...",
-  subagent_type: "coder",
-  model: "opus"  // ← USE THE RECOMMENDED MODEL
-})
-```
-
-**Model Selection Logic:**
-| Complexity | Model | Use For |
-|------------|-------|---------|
-| Agent Booster intent detected | **Skip LLM** | var→const, add-types, remove-console (352x faster) |
-| High (architecture, system design, security) | **opus** | Complex reasoning, multi-step planning |
-| Medium (features, refactoring, debugging) | **sonnet** | Balanced capability and speed |
-| Low (formatting, simple fixes, docs) | **haiku** | Fast, cost-effective tasks |
-
-**CRITICAL:** Always check for `[AGENT_BOOSTER_AVAILABLE]` or `[TASK_MODEL_RECOMMENDATION]` before spawning agents.
-
-### 🛡️ Anti-Drift Coding Swarm (PREFERRED DEFAULT)
-
-**To prevent goal drift, context drift, and agent desynchronization, ALWAYS use this configuration for coding swarms:**
-
-```javascript
-mcp__ruv-swarm__swarm_init({
-  topology: "hierarchical",  // Single coordinator enforces alignment
-  maxAgents: 8,              // Smaller team = less drift surface
-  strategy: "specialized"    // Clear roles reduce ambiguity
-})
-```
-
-**Why This Prevents Drift:**
-| Choice | Anti-Drift Benefit |
-|--------|-------------------|
-| **hierarchical** | Coordinator validates each output against goal, catches divergence early |
-| **maxAgents: 6-8** | Fewer agents = less coordination overhead, easier alignment |
-| **specialized** | Clear boundaries - each agent knows exactly what to do, no overlap |
-
-**Consensus for Hive-Mind:** Use `raft` (leader maintains authoritative state)
-
-**Additional Anti-Drift Measures:**
-- Frequent checkpoints via `post-task` hooks
-- Shared memory namespace for all agents
-- Short task cycles with verification gates
+**Mandatory patterns:**
+- ALWAYS batch ALL todos in ONE TodoWrite call (5-10+ minimum)
+- ALWAYS spawn ALL agents in ONE message with full instructions via Task tool
+- ALWAYS batch ALL file reads/writes/edits in ONE message
+- ALWAYS batch ALL terminal operations in ONE Bash message
+- ALWAYS batch ALL memory store/retrieve operations in ONE message
 
 ---
 
-### 🔄 Auto-Start Swarm Protocol
+## Swarm Orchestration
+
+- MUST initialize the swarm using MCP tools when starting complex tasks
+- MUST spawn concurrent agents using Claude Code's Task tool
+- Never use MCP tools alone for execution — Task tool agents do the actual work
+
+### MCP + Task Tool in SAME Message
+
+- MUST call MCP tools AND Task tool in ONE message for complex work
+- Always call MCP first, then IMMEDIATELY call Task tool to spawn agents
+
+### 3-Tier Model Routing (ADR-026)
+
+| Tier | Handler | Latency | Cost | Use Cases |
+|------|---------|---------|------|-----------|
+| **1** | Agent Booster (WASM) | <1ms | $0 | Simple transforms (var→const, add types, etc.) — **Skip LLM entirely** |
+| **2** | Haiku | ~500ms | $0.0002 | Simple tasks, low complexity (<30%) |
+| **3** | Sonnet/Opus | 2-5s | $0.003-0.015 | Complex reasoning, architecture, security (>30%) |
+
+- Always check for `[AGENT_BOOSTER_AVAILABLE]` or `[TASK_MODEL_RECOMMENDATION]` before spawning agents
+- Use Edit tool directly when `[AGENT_BOOSTER_AVAILABLE]` — intent types: `var-to-const`, `add-types`, `add-error-handling`, `async-await`, `add-logging`, `remove-console`
+
+## Swarm Configuration & Anti-Drift
+
+### Anti-Drift Coding Swarm (PREFERRED DEFAULT)
+
+- ALWAYS use hierarchical topology for coding swarms
+- Keep maxAgents at 6-8 for tight coordination
+- Use specialized strategy for clear role boundaries
+- Use `raft` consensus for hive-mind (leader maintains authoritative state)
+- Run frequent checkpoints via `post-task` hooks
+- Keep shared memory namespace for all agents
+- Keep task cycles short with verification gates
+
+```javascript
+mcp__ruv-swarm__swarm_init({
+  topology: "hierarchical",
+  maxAgents: 8,
+  strategy: "specialized"
+})
+```
+
+## Swarm Protocols & Routing
+
+### Auto-Start Swarm Protocol
 
 When the user requests a complex task (multi-file changes, feature implementation, refactoring), **immediately execute this pattern in a SINGLE message:**
 
 ```javascript
 // STEP 1: Initialize swarm coordination via MCP (in parallel with agent spawning)
-// USE ANTI-DRIFT CONFIG: hierarchical + specialized + small team
 mcp__ruv-swarm__swarm_init({
   topology: "hierarchical",
   maxAgents: 8,
@@ -122,7 +138,7 @@ mcp__claude-flow__memory_usage({
 })
 ```
 
-### 📋 Agent Routing (Anti-Drift)
+### Agent Routing (Anti-Drift)
 
 | Code | Task | Agents |
 |------|------|--------|
@@ -136,7 +152,7 @@ mcp__claude-flow__memory_usage({
 
 **Codes 1-11: hierarchical/specialized (anti-drift). Code 13: mesh/balanced**
 
-### 🎯 Task Complexity Detection
+### Task Complexity Detection
 
 **AUTO-INVOKE SWARM when task involves:**
 - Multiple files (3+)
@@ -154,33 +170,6 @@ mcp__claude-flow__memory_usage({
 - Configuration changes
 - Quick questions/exploration
 
-## 🚨 CRITICAL: CONCURRENT EXECUTION & FILE MANAGEMENT
-
-**ABSOLUTE RULES**:
-1. ALL operations MUST be concurrent/parallel in a single message
-2. **NEVER save working files, text/mds and tests to the root folder**
-3. ALWAYS organize files in appropriate subdirectories
-4. **USE CLAUDE CODE'S TASK TOOL** for spawning agents concurrently, not just MCP
-
-### ⚡ GOLDEN RULE: "1 MESSAGE = ALL RELATED OPERATIONS"
-
-**MANDATORY PATTERNS:**
-- **TodoWrite**: ALWAYS batch ALL todos in ONE call (5-10+ todos minimum)
-- **Task tool (Claude Code)**: ALWAYS spawn ALL agents in ONE message with full instructions
-- **File operations**: ALWAYS batch ALL reads/writes/edits in ONE message
-- **Bash commands**: ALWAYS batch ALL terminal operations in ONE message
-- **Memory operations**: ALWAYS batch ALL memory store/retrieve in ONE message
-
-### 📁 File Organization Rules
-
-**NEVER save to root folder. Use these directories:**
-- `/src` - Source code files
-- `/tests` - Test files
-- `/docs` - Documentation and markdown files
-- `/config` - Configuration files
-- `/scripts` - Utility scripts
-- `/examples` - Example code
-
 ## Project Configuration
 
 This project is configured with Claude Flow V3 (Anti-Drift Defaults):
@@ -192,7 +181,7 @@ This project is configured with Claude Flow V3 (Anti-Drift Defaults):
 - **HNSW Indexing**: Enabled (150x-12,500x faster)
 - **Neural Learning**: Enabled (SONA)
 
-## 🚀 V3 CLI Commands (26 Commands, 140+ Subcommands)
+## V3 CLI Commands (26 Commands, 140+ Subcommands)
 
 ### Core Commands
 
@@ -258,7 +247,80 @@ npx claude-flow@v3alpha security scan --depth full
 npx claude-flow@v3alpha performance benchmark --suite all
 ```
 
-## 🚀 Available Agents (60+ Types)
+## Headless Background Instances (claude -p)
+
+Use `claude -p` (print/pipe mode) to spawn headless Claude instances for parallel background work. These run non-interactively and return results to stdout.
+
+### Basic Usage
+
+```bash
+# Single headless task
+claude -p "Analyze the authentication module for security issues"
+
+# With model selection
+claude -p --model haiku "Format this config file"
+claude -p --model opus "Design the database schema for user management"
+
+# With output format
+claude -p --output-format json "List all TODO comments in src/"
+claude -p --output-format stream-json "Refactor the error handling in api.ts"
+
+# With budget limits
+claude -p --max-budget-usd 0.50 "Run comprehensive security audit"
+
+# With specific tools allowed
+claude -p --allowedTools "Read,Grep,Glob" "Find all files that import the auth module"
+
+# Skip permissions (sandboxed environments only)
+claude -p --dangerously-skip-permissions "Fix all lint errors in src/"
+```
+
+### Parallel Background Execution
+
+```bash
+# Spawn multiple headless instances in parallel
+claude -p "Analyze src/auth/ for vulnerabilities" &
+claude -p "Write tests for src/api/endpoints.ts" &
+claude -p "Review src/models/ for performance issues" &
+wait  # Wait for all to complete
+
+# With results captured
+SECURITY=$(claude -p "Security audit of auth module" &)
+TESTS=$(claude -p "Generate test coverage report" &)
+PERF=$(claude -p "Profile memory usage in workers" &)
+wait
+echo "$SECURITY" "$TESTS" "$PERF"
+```
+
+### Session Continuation
+
+```bash
+# Start a task, resume later
+claude -p --session-id "abc-123" "Start analyzing the codebase"
+claude -p --resume "abc-123" "Continue with the test files"
+
+# Fork a session for parallel exploration
+claude -p --resume "abc-123" --fork-session "Try approach A: event sourcing"
+claude -p --resume "abc-123" --fork-session "Try approach B: CQRS pattern"
+```
+
+### Key Flags
+
+| Flag | Purpose |
+|------|---------|
+| `-p, --print` | Non-interactive mode, print and exit |
+| `--model <model>` | Select model (haiku, sonnet, opus) |
+| `--output-format <fmt>` | Output: text, json, stream-json |
+| `--max-budget-usd <amt>` | Spending cap per invocation |
+| `--allowedTools <tools>` | Restrict available tools |
+| `--append-system-prompt` | Add custom instructions |
+| `--resume <id>` | Continue a previous session |
+| `--fork-session` | Branch from resumed session |
+| `--fallback-model <model>` | Auto-fallback if primary overloaded |
+| `--permission-mode <mode>` | acceptEdits, bypassPermissions, plan, etc. |
+| `--mcp-config <json>` | Load MCP servers from JSON |
+
+## Available Agents (60+ Types)
 
 ### Core Development
 `coder`, `reviewer`, `tester`, `planner`, `researcher`
@@ -266,15 +328,15 @@ npx claude-flow@v3alpha performance benchmark --suite all
 ### V3 Specialized Agents
 `security-architect`, `security-auditor`, `memory-specialist`, `performance-engineer`
 
-### 🔐 @claude-flow/security Module
+### @claude-flow/security Module
 CVE remediation, input validation, path security:
-- `InputValidator` - Zod-based validation at boundaries
-- `PathValidator` - Path traversal prevention
-- `SafeExecutor` - Command injection protection
-- `PasswordHasher` - bcrypt hashing
-- `TokenGenerator` - Secure token generation
+- `InputValidator` — Zod-based validation at boundaries
+- `PathValidator` — Path traversal prevention
+- `SafeExecutor` — Command injection protection
+- `PasswordHasher` — bcrypt hashing
+- `TokenGenerator` — Secure token generation
 
-### ⚡ Token Optimizer (Agent Booster)
+### Token Optimizer (Agent Booster)
 Integrates agentic-flow optimizations for 30-50% token reduction:
 ```typescript
 import { getTokenOptimizer } from '@claude-flow/integration';
@@ -317,7 +379,7 @@ const config = optimizer.getOptimalConfig(agentCount);
 ### Testing & Validation
 `tdd-london-swarm`, `production-validator`
 
-## 🪝 V3 Hooks System (17 Hooks + 12 Workers)
+## V3 Hooks System (17 Hooks + 12 Workers)
 
 ### Hook Categories
 
@@ -372,7 +434,7 @@ npx claude-flow@v3alpha hooks worker dispatch --trigger audit
 npx claude-flow@v3alpha hooks worker status
 ```
 
-## 🧠 Intelligence System (RuVector)
+## Intelligence System (RuVector)
 
 V3 includes the RuVector Intelligence System:
 - **SONA**: Self-Optimizing Neural Architecture (<0.05ms adaptation)
@@ -382,35 +444,35 @@ V3 includes the RuVector Intelligence System:
 - **Flash Attention**: 2.49x-7.47x speedup
 
 The 4-step intelligence pipeline:
-1. **RETRIEVE** - Fetch relevant patterns via HNSW
-2. **JUDGE** - Evaluate with verdicts (success/failure)
-3. **DISTILL** - Extract key learnings via LoRA
-4. **CONSOLIDATE** - Prevent catastrophic forgetting via EWC++
+1. **RETRIEVE** — Fetch relevant patterns via HNSW
+2. **JUDGE** — Evaluate with verdicts (success/failure)
+3. **DISTILL** — Extract key learnings via LoRA
+4. **CONSOLIDATE** — Prevent catastrophic forgetting via EWC++
 
-## 📦 Embeddings Package (v3.0.0-alpha.12)
+## Embeddings Package (v3.0.0-alpha.12)
 
 Features:
 - **sql.js**: Cross-platform SQLite persistent cache (WASM, no native compilation)
 - **Document chunking**: Configurable overlap and size
 - **Normalization**: L2, L1, min-max, z-score
-- **Hyperbolic embeddings**: Poincaré ball model for hierarchical data
+- **Hyperbolic embeddings**: Poincare ball model for hierarchical data
 - **75x faster**: With agentic-flow ONNX integration
 - **Neural substrate**: Integration with RuVector
 
-## 🐝 Hive-Mind Consensus
+## Hive-Mind Consensus
 
 ### Topologies
-- `hierarchical` - Queen controls workers directly
-- `mesh` - Fully connected peer network
-- `hierarchical-mesh` - Hybrid (recommended)
-- `adaptive` - Dynamic based on load
+- `hierarchical` — Queen controls workers directly
+- `mesh` — Fully connected peer network
+- `hierarchical-mesh` — Hybrid (recommended)
+- `adaptive` — Dynamic based on load
 
 ### Consensus Strategies
-- `byzantine` - BFT (tolerates f < n/3 faulty)
-- `raft` - Leader-based (tolerates f < n/2)
-- `gossip` - Epidemic for eventual consistency
-- `crdt` - Conflict-free replicated data types
-- `quorum` - Configurable quorum-based
+- `byzantine` — BFT (tolerates f < n/3 faulty)
+- `raft` — Leader-based (tolerates f < n/2)
+- `gossip` — Epidemic for eventual consistency
+- `crdt` — Conflict-free replicated data types
+- `quorum` — Configurable quorum-based
 
 ## V3 Performance Targets
 
@@ -424,7 +486,7 @@ Features:
 | CLI Startup | <500ms | Achieved |
 | SONA Adaptation | <0.05ms | In progress |
 
-## 🔧 Environment Variables
+## Environment Variables
 
 ```bash
 # Configuration
@@ -446,7 +508,7 @@ CLAUDE_FLOW_MEMORY_BACKEND=hybrid
 CLAUDE_FLOW_MEMORY_PATH=./data/memory
 ```
 
-## 🔍 Doctor Health Checks
+## Doctor Health Checks
 
 Run `npx claude-flow@v3alpha doctor` to check:
 - Node.js version (20+)
@@ -460,7 +522,7 @@ Run `npx claude-flow@v3alpha doctor` to check:
 - Disk space
 - TypeScript installation
 
-## 🚀 Quick Setup
+## Quick Setup
 
 ```bash
 # Add MCP servers
@@ -475,7 +537,7 @@ npx claude-flow@v3alpha daemon start
 npx claude-flow@v3alpha doctor --fix
 ```
 
-## 🎯 Claude Code vs MCP Tools
+## Claude Code vs MCP Tools
 
 ### Claude Code Handles ALL EXECUTION:
 - **Task tool**: Spawn and run agents concurrently
@@ -493,16 +555,16 @@ npx claude-flow@v3alpha doctor --fix
 - Neural features
 - Performance tracking
 
-**KEY**: MCP coordinates the strategy, Claude Code's Task tool executes with real agents.
+- Keep MCP for coordination strategy only — use Claude Code's Task tool for real execution
 
-## 📦 Publishing to npm
+## Publishing to npm
 
-### 🚨 CRITICAL: ALWAYS PUBLISH BOTH PACKAGES + UPDATE ALL TAGS
+### Publishing Rules
 
-**When publishing CLI changes, you MUST:**
-1. Publish `@claude-flow/cli`
-2. Publish `claude-flow` (umbrella)
-3. Update ALL dist-tags for BOTH packages
+- MUST publish BOTH packages when publishing CLI changes
+- MUST update ALL dist-tags for BOTH packages after publishing
+- Always publish `@claude-flow/cli` first, then `claude-flow` (umbrella)
+- MUST run verification before telling user publishing is complete
 
 ```bash
 # STEP 1: Build and publish CLI
@@ -522,7 +584,7 @@ npm dist-tag add claude-flow@3.0.0-alpha.YYY latest
 npm dist-tag add claude-flow@3.0.0-alpha.YYY alpha
 ```
 
-**Verification (MUST DO before telling user):**
+**Verification (run before telling user):**
 ```bash
 npm view @claude-flow/cli dist-tags --json
 npm view claude-flow dist-tags --json
@@ -534,13 +596,13 @@ npm view claude-flow dist-tags --json
 |---------|-----|-------------------|
 | `@claude-flow/cli` | `alpha` | `npx @claude-flow/cli@alpha` |
 | `@claude-flow/cli` | `latest` | `npx @claude-flow/cli@latest` |
-| `claude-flow` | `alpha` | `npx claude-flow@alpha` ⚠️ EASY TO FORGET |
+| `claude-flow` | `alpha` | `npx claude-flow@alpha` — EASY TO FORGET |
 | `claude-flow` | `latest` | `npx claude-flow@latest` |
 | `claude-flow` | `v3alpha` | `npx claude-flow@v3alpha` |
 
-**The umbrella `alpha` tag is MOST commonly forgotten - users run `npx claude-flow@alpha`!**
+- Never forget the umbrella `alpha` tag — users run `npx claude-flow@alpha`
 
-## 🔌 Plugin Registry Maintenance (IPFS/Pinata)
+## Plugin Registry Maintenance (IPFS/Pinata)
 
 The plugin registry is stored on IPFS via Pinata for decentralized, immutable distribution.
 
@@ -556,6 +618,8 @@ PINATA_API_KEY=your-api-key
 PINATA_API_SECRET=your-api-secret
 PINATA_API_JWT=your-jwt-token
 ```
+
+## Plugin Registry Operations
 
 ### Adding a New Plugin to Registry
 
@@ -617,17 +681,83 @@ export const LIVE_REGISTRY_CID = 'NEW_CID_FROM_PINATA';
 
 6. **Also update demo registry** in discovery.ts `demoPluginRegistry` for offline fallback
 
-### 🚨 Security Rules
-- **NEVER hardcode API keys** in scripts or source files
-- **NEVER commit .env** (already in .gitignore)
-- **Always source credentials** from environment at runtime
-- **Delete temporary scripts** after one-time uploads
+### Security Rules
+- NEVER hardcode API keys in scripts or source files
+- NEVER commit .env (already in .gitignore)
+- Always source credentials from environment at runtime
+- Always delete temporary scripts after one-time uploads
 
 ### Verification
 ```bash
 # Verify new registry is accessible
 curl -s "https://gateway.pinata.cloud/ipfs/{NEW_CID}" | jq '.totalPlugins'
 ```
+
+## Optional Plugins (20 Available)
+
+Plugins are distributed via IPFS and can be installed with the CLI. Browse and install from the official registry:
+
+```bash
+# List all available plugins
+npx claude-flow@v3alpha plugins list
+
+# Install a plugin
+npx claude-flow@v3alpha plugins install @claude-flow/plugin-name
+
+# Enable/disable
+npx claude-flow@v3alpha plugins enable @claude-flow/plugin-name
+npx claude-flow@v3alpha plugins disable @claude-flow/plugin-name
+```
+
+### Core Plugins
+
+| Plugin | Version | Description |
+|--------|---------|-------------|
+| `@claude-flow/embeddings` | 3.0.0-alpha.1 | Vector embeddings with sql.js, HNSW, hyperbolic support |
+| `@claude-flow/security` | 3.0.0-alpha.1 | Input validation, path security, CVE remediation |
+| `@claude-flow/claims` | 3.0.0-alpha.8 | Claims-based authorization (check, grant, revoke, list) |
+| `@claude-flow/neural` | 3.0.0-alpha.7 | Neural pattern training (SONA, MoE, EWC++) |
+| `@claude-flow/plugins` | 3.0.0-alpha.1 | Plugin system core (manager, discovery, store) |
+| `@claude-flow/performance` | 3.0.0-alpha.1 | Performance profiling and benchmarking |
+
+### Integration Plugins
+
+| Plugin | Version | Description |
+|--------|---------|-------------|
+| `@claude-flow/plugin-agentic-qe` | 3.0.0-alpha.4 | Agentic quality engineering integration |
+| `@claude-flow/plugin-prime-radiant` | 0.1.5 | Prime Radiant intelligence integration |
+| `@claude-flow/plugin-gastown-bridge` | 3.0.0-alpha.1 | Gastown bridge protocol integration |
+| `@claude-flow/teammate-plugin` | 1.0.0-alpha.1 | Multi-agent teammate coordination |
+| `@claude-flow/plugin-code-intelligence` | 0.1.0 | Advanced code analysis and intelligence |
+| `@claude-flow/plugin-test-intelligence` | 0.1.0 | Intelligent test generation and gap analysis |
+| `@claude-flow/plugin-perf-optimizer` | 0.1.0 | Performance optimization automation |
+| `@claude-flow/plugin-neural-coordinator` | 0.1.0 | Neural network coordination across agents |
+| `@claude-flow/plugin-cognitive-kernel` | 0.1.0 | Core cognitive processing kernel |
+| `@claude-flow/plugin-quantum-optimizer` | 0.1.0 | Quantum-inspired optimization algorithms |
+| `@claude-flow/plugin-hyperbolic-reasoning` | 0.1.0 | Hyperbolic space reasoning for hierarchical data |
+
+### Domain-Specific Plugins
+
+| Plugin | Version | Description |
+|--------|---------|-------------|
+| `@claude-flow/plugin-healthcare-clinical` | 0.1.0 | Healthcare clinical workflow automation |
+| `@claude-flow/plugin-financial-risk` | 0.1.0 | Financial risk assessment and modeling |
+| `@claude-flow/plugin-legal-contracts` | 0.1.0 | Legal contract analysis and generation |
+
+### Plugin Development
+
+```bash
+# Create a new plugin from template
+npx claude-flow@v3alpha plugins create my-plugin
+
+# Test locally
+npx claude-flow@v3alpha plugins install ./path/to/my-plugin
+
+# Publish to registry (requires Pinata credentials)
+npx claude-flow@v3alpha plugins publish
+```
+
+Registry source: IPFS via Pinata (`QmXbfEAaR7D2Ujm4GAkbwcGZQMHqAMpwDoje4583uNP834`)
 
 ## Support
 
@@ -637,11 +767,3 @@ curl -s "https://gateway.pinata.cloud/ipfs/{NEW_CID}" | jq '.totalPlugins'
 ---
 
 Remember: **Claude Flow coordinates, Claude Code creates!**
-
-# important-instruction-reminders
-Do what has been asked; nothing more, nothing less.
-NEVER create files unless they're absolutely necessary for achieving your goal.
-ALWAYS prefer editing an existing file to creating a new one.
-NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
-Never save working files, text/mds and tests to the root folder.
-After spawning a swarm, wait, don't continuously check status.
