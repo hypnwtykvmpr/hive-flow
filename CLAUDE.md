@@ -23,14 +23,15 @@
 
 ## Concurrency: 1 MESSAGE = ALL RELATED OPERATIONS
 
-ALL operations MUST be concurrent/parallel in a single message. USE CLAUDE CODE'S TASK TOOL for spawning agents, not just MCP.
+- All operations MUST be concurrent/parallel in a single message
+- Use Claude Code's Task tool for spawning agents, not just MCP
 
-**MANDATORY PATTERNS:**
-- **TodoWrite**: ALWAYS batch ALL todos in ONE call (5-10+ todos minimum)
-- **Task tool (Claude Code)**: ALWAYS spawn ALL agents in ONE message with full instructions
-- **File operations**: ALWAYS batch ALL reads/writes/edits in ONE message
-- **Bash commands**: ALWAYS batch ALL terminal operations in ONE message
-- **Memory operations**: ALWAYS batch ALL memory store/retrieve in ONE message
+**Mandatory patterns:**
+- ALWAYS batch ALL todos in ONE TodoWrite call (5-10+ minimum)
+- ALWAYS spawn ALL agents in ONE message with full instructions via Task tool
+- ALWAYS batch ALL file reads/writes/edits in ONE message
+- ALWAYS batch ALL terminal operations in ONE Bash message
+- ALWAYS batch ALL memory store/retrieve operations in ONE message
 
 ---
 
