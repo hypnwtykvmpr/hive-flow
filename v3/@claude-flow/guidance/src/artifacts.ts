@@ -142,9 +142,20 @@ export interface SerializedArtifactLedger {
 // Constants
 // ============================================================================
 
-const DEFAULT_SIGNING_KEY = 'claude-flow-artifact-default-key';
 const DEFAULT_MAX_ARTIFACTS = 10_000;
 const SERIALIZATION_VERSION = 1;
+
+/**
+ * Constant-time string comparison to prevent timing attacks on HMAC signatures.
+ */
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let mismatch = 0;
+  for (let i = 0; i < a.length; i++) {
+    mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return mismatch === 0;
+}
 
 const ALL_KINDS: ArtifactKind[] = [
   'code',
@@ -211,7 +222,10 @@ export class ArtifactLedger {
   private readonly maxArtifacts: number;
 
   constructor(config: ArtifactLedgerConfig = {}) {
-    this.signingKey = config.signingKey ?? DEFAULT_SIGNING_KEY;
+    if (!config.signingKey) {
+      throw new Error('ArtifactLedger requires an explicit signingKey — hardcoded defaults are not secure');
+    }
+    this.signingKey = config.signingKey;
     this.maxArtifacts = config.maxArtifacts ?? DEFAULT_MAX_ARTIFACTS;
   }
 
@@ -276,7 +290,7 @@ export class ArtifactLedger {
     }
 
     const expectedSignature = this.signArtifact(artifact);
-    const signatureValid = artifact.signature === expectedSignature;
+    const signatureValid = timingSafeEqual(artifact.signature, expectedSignature);
 
     const expectedHash = this.computeContentHash(artifact.content);
     const contentIntact = artifact.contentHash === expectedHash;

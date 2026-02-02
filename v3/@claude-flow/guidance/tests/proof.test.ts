@@ -507,12 +507,16 @@ describe('ProofChain', () => {
   // --------------------------------------------------------------------------
 
   describe('createProofChain factory', () => {
-    it('should create a ProofChain with default key', () => {
-      const defaultChain = createProofChain();
-      const envelope = defaultChain.append(createMockEvent());
+    it('should throw when no signingKey is provided', () => {
+      expect(() => createProofChain()).toThrow('requires an explicit signingKey');
+    });
+
+    it('should create a ProofChain with an explicit signing key', () => {
+      const chain = createProofChain({ signingKey: 'test-key' });
+      const envelope = chain.append(createMockEvent());
 
       expect(envelope.signature).toMatch(/^[a-f0-9]{64}$/);
-      expect(defaultChain.verify(envelope)).toBe(true);
+      expect(chain.verify(envelope)).toBe(true);
     });
 
     it('should create a ProofChain with a custom signing key', () => {

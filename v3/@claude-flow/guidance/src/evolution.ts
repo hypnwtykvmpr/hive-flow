@@ -198,7 +198,6 @@ export interface EvolutionPipelineConfig {
   stages?: RolloutStage[];
 }
 
-const DEFAULT_SIGNING_KEY = 'claude-flow-evolution-default-key';
 const DEFAULT_MAX_DIVERGENCE = 0.3;
 
 const DEFAULT_STAGES: RolloutStage[] = [
@@ -252,7 +251,10 @@ export class EvolutionPipeline {
   private rollouts = new Map<string, StagedRollout>();
 
   constructor(config: EvolutionPipelineConfig = {}) {
-    this.signingKey = config.signingKey ?? DEFAULT_SIGNING_KEY;
+    if (!config.signingKey) {
+      throw new Error('EvolutionPipeline requires an explicit signingKey — hardcoded defaults are not secure');
+    }
+    this.signingKey = config.signingKey;
     this.maxDivergence = config.maxDivergence ?? DEFAULT_MAX_DIVERGENCE;
     this.defaultStages = config.stages ?? DEFAULT_STAGES;
   }

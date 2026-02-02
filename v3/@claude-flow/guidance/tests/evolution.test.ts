@@ -661,9 +661,13 @@ describe('EvolutionPipeline', () => {
   // --------------------------------------------------------------------------
 
   describe('createEvolutionPipeline', () => {
-    it('should create a pipeline with default config', () => {
-      const defaultPipeline = createEvolutionPipeline();
-      const proposal = defaultPipeline.propose(makeProposalParams());
+    it('should throw when no signingKey is provided', () => {
+      expect(() => createEvolutionPipeline()).toThrow('requires an explicit signingKey');
+    });
+
+    it('should create a pipeline with an explicit signing key', () => {
+      const pipeline = createEvolutionPipeline({ signingKey: 'test-key' });
+      const proposal = pipeline.propose(makeProposalParams());
 
       expect(proposal.signature).toMatch(/^[a-f0-9]{64}$/);
       expect(proposal.status).toBe('signed');

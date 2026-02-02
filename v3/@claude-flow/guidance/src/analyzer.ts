@@ -611,11 +611,11 @@ class DefaultHeadlessExecutor implements IHeadlessExecutor {
     const { promisify } = await import('node:util');
     const execFileAsync = promisify(execFile);
 
-    const escaped = prompt.replace(/'/g, "'\\''");
+    // Pass prompt as a direct argument array — no shell interpretation.
     try {
       const { stdout, stderr } = await execFileAsync(
-        'sh',
-        ['-c', `claude -p '${escaped}' --output-format json`],
+        'claude',
+        ['-p', prompt, '--output-format', 'json'],
         { timeout: 60000, maxBuffer: 10 * 1024 * 1024, encoding: 'utf-8', cwd: workDir }
       );
       return { stdout, stderr, exitCode: 0 };
@@ -839,7 +839,6 @@ function extractMetrics(content: string): AnalysisMetrics {
   const estimatedShards = Math.max(1, sectionCount);
 
   // Boolean features
-  const lower = content.toLowerCase();
   const hasBuildCommand = /\b(build|compile|tsc|webpack|vite|rollup)\b/i.test(content);
   const hasTestCommand = /\b(test|vitest|jest|pytest|mocha|cargo test)\b/i.test(content);
   const hasSecuritySection = /^##.*security/im.test(content);
@@ -1050,7 +1049,6 @@ function scoreClarity(metrics: AnalysisMetrics, content: string): DimensionScore
 function scoreCompleteness(metrics: AnalysisMetrics, content: string): DimensionScore {
   let score = 0;
   const findings: string[] = [];
-  const lower = content.toLowerCase();
 
   // Checks for common sections
   const checks: Array<[string, RegExp, number]> = [

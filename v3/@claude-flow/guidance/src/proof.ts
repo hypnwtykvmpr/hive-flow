@@ -113,8 +113,19 @@ export interface SerializedProofChain {
 // ============================================================================
 
 const GENESIS_HASH = '0'.repeat(64);
-const DEFAULT_SIGNING_KEY = 'claude-flow-guidance-default-key';
 const SERIALIZATION_VERSION = 1;
+
+/**
+ * Constant-time string comparison to prevent timing attacks on HMAC signatures.
+ */
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let mismatch = 0;
+  for (let i = 0; i < a.length; i++) {
+    mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return mismatch === 0;
+}
 
 // ============================================================================
 // ProofChain
@@ -131,7 +142,10 @@ export class ProofChain {
   private envelopes: ProofEnvelope[] = [];
   private readonly signingKey: string;
 
-  constructor(signingKey: string = DEFAULT_SIGNING_KEY) {
+  constructor(signingKey: string) {
+    if (!signingKey) {
+      throw new Error('ProofChain requires an explicit signingKey — hardcoded defaults are not secure');
+    }
     this.signingKey = signingKey;
   }
 
@@ -199,7 +213,7 @@ export class ProofChain {
   verify(envelope: ProofEnvelope): boolean {
     // Verify HMAC signature
     const expectedSignature = this.signEnvelope(envelope);
-    if (envelope.signature !== expectedSignature) {
+    if (!timingSafeEqual(envelope.signature, expectedSignature)) {
       return false;
     }
 
@@ -234,9 +248,9 @@ export class ProofChain {
     for (let i = 0; i < this.envelopes.length; i++) {
       const envelope = this.envelopes[i];
 
-      // Verify signature
+      // Verify signature (constant-time comparison)
       const expectedSignature = this.signEnvelope(envelope);
-      if (envelope.signature !== expectedSignature) {
+      if (!timingSafeEqual(envelope.signature, expectedSignature)) {
         return false;
       }
 

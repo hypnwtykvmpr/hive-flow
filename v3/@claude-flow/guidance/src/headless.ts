@@ -146,8 +146,12 @@ export class ProcessExecutor implements ICommandExecutor {
     const { promisify } = await import('node:util');
     const execFileAsync = promisify(execFile);
 
+    // Parse command into executable and args to avoid shell injection.
+    // Commands follow the pattern: claude -p '<prompt>' --output-format json
+    const parts = this.parseCommand(command);
+
     try {
-      const { stdout, stderr } = await execFileAsync('sh', ['-c', command], {
+      const { stdout, stderr } = await execFileAsync(parts[0], parts.slice(1), {
         timeout: timeoutMs,
         maxBuffer: 10 * 1024 * 1024,
         encoding: 'utf-8',
@@ -160,6 +164,18 @@ export class ProcessExecutor implements ICommandExecutor {
         exitCode: error.code ?? 1,
       };
     }
+  }
+
+  /** Parse a buildCommand() result into [executable, ...args] without shell. */
+  private parseCommand(command: string): string[] {
+    // Extract prompt from: claude -p '<prompt>' --output-format json 2>/dev/null
+    const match = command.match(/^claude\s+-p\s+'((?:[^']|'\\'')*?)'\s+--output-format\s+json/);
+    if (match) {
+      const prompt = match[1].replace(/'\\'''/g, "'");
+      return ['claude', '-p', prompt, '--output-format', 'json'];
+    }
+    // Fallback: split on whitespace (safe for commands without shell metacharacters)
+    return command.replace(/\s*2>\/dev\/null\s*$/, '').split(/\s+/);
   }
 }
 
