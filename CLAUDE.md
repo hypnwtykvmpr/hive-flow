@@ -86,7 +86,7 @@ Task({
 
 ### Anti-Drift Coding Swarm (PREFERRED DEFAULT)
 
-**ALWAYS use this configuration for coding swarms:**
+- ALWAYS use this configuration for coding swarms:
 
 ```javascript
 mcp__ruv-swarm__swarm_init({
