@@ -500,11 +500,8 @@ npm install -g claude-flow@alpha --omit=optional
 ### Basic Usage
 
 ```bash
-# Initialize project (standard template)
+# Initialize project
 npx claude-flow@alpha init
-
-# Initialize with wizard (interactive template selection)
-npx claude-flow@alpha init --wizard
 
 # Start MCP server for Claude Code integration
 npx claude-flow@alpha mcp start
@@ -515,41 +512,6 @@ npx claude-flow@alpha --agent coder --task "Implement user authentication"
 # List available agents
 npx claude-flow@alpha --list
 ```
-
-<details>
-<summary><b>CLAUDE.md Init Templates</b></summary>
-
-The `init` command generates a CLAUDE.md file that configures Claude Code behavior. Choose a template based on your use case:
-
-| Template | Score | Lines | Use Case |
-|----------|-------|-------|----------|
-| `minimal` | 93/100 (A) | ~140 | Quick start — behavioral rules, anti-drift, CLI reference |
-| `standard` | 93/100 (A) | ~190 | **Recommended** — swarm orchestration, agents, memory commands |
-| `full` | 91/100 (A) | ~295 | Everything — hooks, learning protocol, intelligence system |
-| `security` | 93/100 (A) | ~205 | Security-focused — scanning, audit protocols, CVE checks |
-| `performance` | 95/100 (A) | ~225 | Performance-focused — benchmarking, profiling, optimization |
-| `solo` | 93/100 (A) | ~145 | Solo developer — no swarm overhead, simple agent usage |
-
-All templates are analyzer-validated with **100% enforceability** and **A-grade** governance scores.
-
-**Template selection:**
-- Interactive: `npx claude-flow@alpha init --wizard` (prompts for template choice)
-- Programmatic: Set `runtime.claudeMdTemplate` in your init options
-- Default: `standard` template when components include agents/commands, `minimal` otherwise
-
-**Governance validation:**
-```bash
-# Analyze your CLAUDE.md quality and enforceability
-npx claude-flow@alpha guidance analyze
-
-# Optimize for higher score
-npx claude-flow@alpha guidance optimize --apply
-
-# Run A/B comparison test
-npx claude-flow@alpha guidance ab-test --config-a original.md --config-b optimized.md
-```
-
-</details>
 
 ### Upgrading
 
@@ -1219,6 +1181,102 @@ export ANTHROPIC_API_KEY="sk-ant-..."
 # Or use a .env file (add to .gitignore)
 echo "ANTHROPIC_API_KEY=sk-ant-..." >> .env
 ```
+
+</details>
+
+---
+
+<details>
+<summary>🛡️ <strong>@claude-flow/guidance</strong> — Long-horizon governance control plane for Claude Code agents</summary>
+
+### Overview
+
+`@claude-flow/guidance` turns `CLAUDE.md` into a runtime governance system with enforcement gates, cryptographic proofs, and feedback loops. Agents that normally drift after 30 minutes can now operate for days — rules are enforced mechanically at every step, not remembered by the model.
+
+**7-phase pipeline:** Compile → Retrieve → Enforce → Trust → Prove → Defend → Evolve
+
+| Capability | Description |
+|-----------|-------------|
+| **Compile** | Parses `CLAUDE.md` into typed policy bundles (constitution + task-scoped shards) |
+| **Retrieve** | Intent-classified shard retrieval with semantic similarity and risk filters |
+| **Enforce** | 4 gates the model cannot bypass (destructive ops, tool allowlist, diff size, secrets) |
+| **Trust** | Per-agent trust accumulation with privilege tiers and coherence-driven throttling |
+| **Prove** | HMAC-SHA256 hash-chained proof envelopes for cryptographic run auditing |
+| **Defend** | Prompt injection, memory poisoning, and inter-agent collusion detection |
+| **Evolve** | Optimizer loop that ranks violations, simulates rule changes, and promotes winners |
+
+### Install
+
+```bash
+npm install @claude-flow/guidance@alpha
+```
+
+### Quick Usage
+
+```typescript
+import {
+  createCompiler,
+  createRetriever,
+  createGates,
+  createLedger,
+  createProofChain,
+} from '@claude-flow/guidance';
+
+// Compile CLAUDE.md into a policy bundle
+const compiler = createCompiler();
+const bundle = await compiler.compile(claudeMdText);
+
+// Retrieve task-relevant rules
+const retriever = createRetriever();
+await retriever.loadBundle(bundle);
+const { shards, policyText } = await retriever.retrieve({
+  taskDescription: 'Fix authentication bug in login flow',
+});
+
+// Enforce gates on tool calls
+const gates = createGates(bundle);
+const result = gates.evaluate({ tool: 'bash', args: { command: 'rm -rf /' } });
+// result.blocked === true
+
+// Audit with proof chain
+const chain = createProofChain({ signingKey: process.env.PROOF_KEY! });
+const envelope = chain.seal(runEvent);
+chain.verify(envelope); // true — tamper-evident
+```
+
+### Key Modules
+
+| Import Path | Purpose |
+|-------------|---------|
+| `@claude-flow/guidance` | Main entry — GuidanceControlPlane |
+| `@claude-flow/guidance/compiler` | CLAUDE.md → PolicyBundle compiler |
+| `@claude-flow/guidance/retriever` | Intent classification + shard retrieval |
+| `@claude-flow/guidance/gates` | 4 enforcement gates |
+| `@claude-flow/guidance/ledger` | Run event logging + evaluators |
+| `@claude-flow/guidance/proof` | HMAC-SHA256 proof chain |
+| `@claude-flow/guidance/adversarial` | Threat, collusion, memory quorum |
+| `@claude-flow/guidance/trust` | Trust accumulation + privilege tiers |
+| `@claude-flow/guidance/authority` | Human authority + irreversibility classification |
+| `@claude-flow/guidance/wasm-kernel` | WASM-accelerated security-critical paths |
+| `@claude-flow/guidance/analyzer` | CLAUDE.md quality analysis + A/B benchmarking |
+| `@claude-flow/guidance/conformance-kit` | Headless conformance test runner |
+
+### Stats
+
+- **1,331 tests** across 26 test files
+- **27 subpath exports** for tree-shaking
+- **WASM kernel** for security-critical hot paths (gates, proof, scoring)
+- **25 ADRs** documenting every architectural decision
+
+### Documentation
+
+- [Architecture Overview](v3/@claude-flow/guidance/docs/guides/architecture-overview.md)
+- [Getting Started](v3/@claude-flow/guidance/docs/guides/getting-started.md)
+- [Enforcement Gates Tutorial](v3/@claude-flow/guidance/docs/tutorials/enforcement-gates.md)
+- [Proof Audit Trail](v3/@claude-flow/guidance/docs/tutorials/proof-audit-trail.md)
+- [Multi-Agent Security](v3/@claude-flow/guidance/docs/guides/multi-agent-security.md)
+- [API Quick Reference](v3/@claude-flow/guidance/docs/reference/api-quick-reference.md)
+- [Full README](v3/@claude-flow/guidance/README.md)
 
 </details>
 

@@ -45,7 +45,7 @@ importers:
     dependencies:
       '@claude-flow/cli':
         specifier: ^3.0.0-alpha.140
-        version: link:../cli
+        version: 3.0.0-alpha.190(agentic-flow@2.0.3)
       agent-browser:
         specifier: ^0.6.0
         version: 0.6.0
@@ -96,15 +96,34 @@ importers:
       '@claude-flow/aidefence':
         specifier: ^3.0.2
         version: link:../aidefence
-      '@claude-flow/embeddings':
-        specifier: ^3.0.0-alpha.12
-        version: link:../embeddings
+      '@claude-flow/guidance':
+        specifier: ^3.0.0-alpha.1
+        version: link:../guidance
       '@claude-flow/mcp':
         specifier: ^3.0.0-alpha.8
         version: link:../mcp
       '@claude-flow/shared':
         specifier: ^3.0.0-alpha.1
         version: link:../shared
+      '@noble/ed25519':
+        specifier: ^2.1.0
+        version: 2.3.0
+    optionalDependencies:
+      '@claude-flow/embeddings':
+        specifier: ^3.0.0-alpha.12
+        version: link:../embeddings
+      '@claude-flow/plugin-gastown-bridge':
+        specifier: ^0.1.0
+        version: 0.1.1
+      '@ruvector/attention':
+        specifier: ^0.1.4
+        version: 0.1.4
+      '@ruvector/learning-wasm':
+        specifier: ^0.1.29
+        version: 0.1.29
+      '@ruvector/sona':
+        specifier: ^0.1.5
+        version: 0.1.5
     devDependencies:
       typescript:
         specifier: ^5.3.0
@@ -140,6 +159,28 @@ importers:
       sql.js:
         specifier: ^1.13.0
         version: 1.13.0
+    devDependencies:
+      '@types/node':
+        specifier: ^20.10.0
+        version: 20.19.27
+      typescript:
+        specifier: ^5.3.0
+        version: 5.9.3
+      vitest:
+        specifier: ^4.0.16
+        version: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@20.19.27)
+
+  '@claude-flow/guidance':
+    dependencies:
+      '@claude-flow/hooks':
+        specifier: ^3.0.0-alpha.7
+        version: link:../hooks
+      '@claude-flow/memory':
+        specifier: ^3.0.0-alpha.2
+        version: link:../memory
+      '@claude-flow/shared':
+        specifier: ^3.0.0-alpha.1
+        version: link:../shared
     devDependencies:
       '@types/node':
         specifier: ^20.10.0
@@ -495,6 +536,100 @@ packages:
 
   /@borewit/text-codec@0.2.1:
     resolution: {integrity: sha512-k7vvKPbf7J2fZ5klGRD9AeKfUvojuZIQ3BT5u7Jfv+puwXkUBUT5PVyMDfJZpy30CBDXGMgw7fguK/lpOMBvgw==}
+    dev: false
+
+  /@claude-flow/aidefence@3.0.2:
+    resolution: {integrity: sha512-jyZa1axjjqtYyS1AbnW0fPuzKBUqRH4SnTOTJZLm5Q6E7qX7A/IG7JcZVEeyipHSl9rFfc6Tj91bC1EoV4GMQg==}
+    engines: {node: '>=18.0.0'}
+    peerDependencies:
+      agentdb: '>=2.0.0-alpha.1'
+    peerDependenciesMeta:
+      agentdb:
+        optional: true
+    dev: false
+
+  /@claude-flow/cli@3.0.0-alpha.190(agentic-flow@2.0.3):
+    resolution: {integrity: sha512-/DS7a53D9nZvF9S44i4BoPhdO7guSz0rLdEYW9MhHVhtElS5fo0ZIyt41QUZQgJ9FpT9ITNXUIy7zejkK2vrSA==}
+    hasBin: true
+    dependencies:
+      '@claude-flow/aidefence': 3.0.2
+      '@claude-flow/mcp': 3.0.0-alpha.8
+      '@claude-flow/shared': 3.0.0-alpha.1
+      '@noble/ed25519': 2.3.0
+    optionalDependencies:
+      '@claude-flow/embeddings': 3.0.0-alpha.12(@claude-flow/shared@3.0.0-alpha.1)(agentic-flow@2.0.3)
+      '@claude-flow/plugin-gastown-bridge': 0.1.1
+      '@ruvector/attention': 0.1.4
+      '@ruvector/learning-wasm': 0.1.29
+      '@ruvector/sona': 0.1.5
+    transitivePeerDependencies:
+      - '@claude-flow/memory'
+      - agentdb
+      - agentic-flow
+      - bare-abort-controller
+      - bare-buffer
+      - bufferutil
+      - react-native-b4a
+      - supports-color
+      - utf-8-validate
+    dev: false
+
+  /@claude-flow/embeddings@3.0.0-alpha.12(@claude-flow/shared@3.0.0-alpha.1)(agentic-flow@2.0.3):
+    resolution: {integrity: sha512-k7oyPp3QofaVZvI+ZIuNy4IC8+L60cjFDtftwmnY2/flZSE5yWDNucMuzyIumb5E5SaXgrEyh/NQbfFKPRLTXA==}
+    engines: {node: '>=20.0.0'}
+    requiresBuild: true
+    peerDependencies:
+      '@claude-flow/shared': ^3.0.0-alpha.1
+      agentic-flow: ^2.0.0
+    peerDependenciesMeta:
+      agentic-flow:
+        optional: true
+    dependencies:
+      '@claude-flow/shared': 3.0.0-alpha.1
+      '@xenova/transformers': 2.17.2
+      agentic-flow: 2.0.3(@types/node@20.19.27)(hono@4.11.3)(marked@11.2.0)
+      sql.js: 1.13.0
+    transitivePeerDependencies:
+      - bare-abort-controller
+      - bare-buffer
+      - react-native-b4a
+    dev: false
+    optional: true
+
+  /@claude-flow/mcp@3.0.0-alpha.8:
+    resolution: {integrity: sha512-lP1t8GMWDl9RxnwMZrjMukZkyglhge7Znhj1PbUiUQ94kHcN+dAxUkA75HM1n7BONbIDcE/CS8qN2ril5KgzNg==}
+    dependencies:
+      ajv: 8.17.1
+      cors: 2.8.5
+      express: 4.22.1
+      helmet: 7.2.0
+      ws: 8.19.0
+    transitivePeerDependencies:
+      - bufferutil
+      - supports-color
+      - utf-8-validate
+    dev: false
+
+  /@claude-flow/plugin-gastown-bridge@0.1.1:
+    resolution: {integrity: sha512-Wv/UO4RLiiKa9i8NMxDsex0zXJvD1QyBTIk8XH9nB72Qr91GzkXH8w4z3xPgr1koWx1CwZyim4Q6+MD2l52y9g==}
+    engines: {node: '>=20.0.0'}
+    requiresBuild: true
+    peerDependencies:
+      '@claude-flow/memory': '>=3.0.0'
+    peerDependenciesMeta:
+      '@claude-flow/memory':
+        optional: true
+    dependencies:
+      '@iarna/toml': 2.2.5
+      uuid: 9.0.1
+      zod: 3.25.76
+    dev: false
+    optional: true
+
+  /@claude-flow/shared@3.0.0-alpha.1:
+    resolution: {integrity: sha512-NIYfDd4OKeMnCe5xmEJe8aQtQCxJVo8Syf0+hGJua9exYPA9wSo0Yu1OIo1zlIOy/0upOm8mFHuDiYFL6Prqig==}
+    dependencies:
+      sql.js: 1.13.0
     dev: false
 
   /@colors/colors@1.5.0:
@@ -988,6 +1123,12 @@ packages:
     resolution: {integrity: sha512-/KPde26khDUIPkTGU82jdtTW9UAuvUTumCAbFs/7giR0SxsvZC4hru51PBvpijH6BVkHcROcvZM/lpy5h1jRRA==}
     engines: {node: '>=18'}
     dev: false
+
+  /@iarna/toml@2.2.5:
+    resolution: {integrity: sha512-trnsAYxU3xnS1gPHPyU961coFyLkh4gAD/0zQ5mymY4yOZ+CYvsPqUbOFSw0aDM4y0tV7tiFxL/1XfXPNC6IPg==}
+    requiresBuild: true
+    dev: false
+    optional: true
 
   /@img/sharp-darwin-arm64@0.33.5:
     resolution: {integrity: sha512-UT4p+iz/2H4twwAoLCqfA9UH5pI6DggwKEGuaPy7nCVQ8ZsiY5PIcrRvD1DzuY3qYL07NtIQcWnBSY/heikIFQ==}
@@ -4204,7 +4345,7 @@ packages:
       http-proxy-middleware: 3.0.5
       tiktoken: 1.0.22
       ulid: 3.0.2
-      ws: 8.18.3
+      ws: 8.19.0
       yaml: 2.8.2
       zod: 3.25.76
     transitivePeerDependencies:
@@ -4629,6 +4770,7 @@ packages:
 
   /bare-events@2.8.2:
     resolution: {integrity: sha512-riJjyv1/mHLIPX4RwiK+oW9/4c3TEUeORHKefKAKnZ5kyslbN+HXowtbaVEqt4IMUB7OXlfixcs6gsFeo/jhiQ==}
+    requiresBuild: true
     peerDependencies:
       bare-abort-controller: '*'
     peerDependenciesMeta:
@@ -5712,6 +5854,7 @@ packages:
 
   /events-universal@1.0.1:
     resolution: {integrity: sha512-LUd5euvbMLpwOF8m6ivPCbhQeSiYVNb8Vs0fQ8QjXo0JTkEHpz8pxdQf0gStltaPpw0Cca8b39KxvK9cfKRiAw==}
+    requiresBuild: true
     dependencies:
       bare-events: 2.8.2
     transitivePeerDependencies:
@@ -9475,6 +9618,7 @@ packages:
 
   /text-decoder@1.2.3:
     resolution: {integrity: sha512-3/o9z3X0X0fTupwsYvR03pJ/DjWuqqrfwBgTQzdWDiQSm9KitAyz/9WqsT2JQW7KV2m+bC2ol/zqpW37NHxLaA==}
+    requiresBuild: true
     dependencies:
       b4a: 1.7.3
     transitivePeerDependencies:
