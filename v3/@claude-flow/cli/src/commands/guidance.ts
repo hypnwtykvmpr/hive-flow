@@ -160,7 +160,7 @@ const retrieveCommand: Command = {
         if (result.shards.length > 0) {
           output.writeln(output.dim('Retrieved shards:'));
           for (const shard of result.shards) {
-            output.writeln(`  ${output.bold(shard.rule.id)} [${shard.rule.riskClass}] ${shard.rule.text.slice(0, 60)}`);
+            output.writeln(`  ${output.bold(shard.shard.rule.id)} [${shard.shard.rule.riskClass}] ${shard.shard.rule.text.slice(0, 60)}`);
           }
         }
 
