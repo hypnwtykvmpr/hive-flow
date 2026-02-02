@@ -35,7 +35,7 @@ const compileCommand: Command = {
       const { existsSync } = await import('node:fs');
 
       if (!existsSync(rootPath)) {
-        output.writeln(output.red(`Root guidance file not found: ${rootPath}`));
+        output.writeln(output.error(`Root guidance file not found: ${rootPath}`));
         return { success: false, message: `File not found: ${rootPath}` };
       }
 
@@ -52,7 +52,7 @@ const compileCommand: Command = {
       if (jsonOutput) {
         output.writeln(JSON.stringify(bundle, null, 2));
       } else {
-        output.writeln(output.green('Compiled successfully'));
+        output.writeln(output.success('Compiled successfully'));
         output.writeln();
         output.writeln(`  Constitution rules: ${output.bold(String(bundle.constitution.rules.length))}`);
         output.writeln(`  Constitution hash:  ${output.dim(bundle.constitution.hash)}`);
@@ -61,16 +61,16 @@ const compileCommand: Command = {
         output.writeln(`  Compiled at:        ${output.dim(new Date(bundle.manifest.compiledAt).toISOString())}`);
 
         if (localContent) {
-          output.writeln(`  Local overlay:      ${output.green('applied')}`);
+          output.writeln(`  Local overlay:      ${output.success('applied')}`);
         }
 
         output.writeln();
         output.writeln(output.dim('Rule summary:'));
         for (const rule of bundle.manifest.rules.slice(0, 10)) {
-          const risk = rule.riskClass === 'critical' ? output.red(rule.riskClass) :
-            rule.riskClass === 'high' ? output.yellow(rule.riskClass) :
+          const risk = rule.riskClass === 'critical' ? output.error(rule.riskClass) :
+            rule.riskClass === 'high' ? output.warning(rule.riskClass) :
               output.dim(rule.riskClass);
-          output.writeln(`  ${output.bold(rule.id)} [${risk}] ${rule.text.slice(0, 60)}${rule.text.length > 60 ? '...' : ''}`);
+          output.writeln(`  ${output.bold(rule.id)} [${risk}] ${rule.source.slice(0, 60)}${rule.source.length > 60 ? '...' : ''}`);
         }
         if (bundle.manifest.rules.length > 10) {
           output.writeln(output.dim(`  ... and ${bundle.manifest.rules.length - 10} more`));
@@ -80,7 +80,7 @@ const compileCommand: Command = {
       return { success: true, data: bundle };
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
-      output.writeln(output.red(`Compilation failed: ${msg}`));
+      output.writeln(output.error(`Compilation failed: ${msg}`));
       return { success: false, message: msg };
     }
   },
@@ -111,7 +111,7 @@ const retrieveCommand: Command = {
     const jsonOutput = ctx.flags.json === true;
 
     if (!task) {
-      output.writeln(output.red('Task description is required (-t "...")'));
+      output.writeln(output.error('Task description is required (-t "...")'));
       return { success: false, message: 'Missing task description' };
     }
 
@@ -126,7 +126,7 @@ const retrieveCommand: Command = {
       const { ShardRetriever, HashEmbeddingProvider } = await import('@claude-flow/guidance/retriever');
 
       if (!existsSync(rootPath)) {
-        output.writeln(output.red(`Root guidance file not found: ${rootPath}`));
+        output.writeln(output.error(`Root guidance file not found: ${rootPath}`));
         return { success: false, message: `File not found: ${rootPath}` };
       }
 
@@ -160,7 +160,7 @@ const retrieveCommand: Command = {
         if (result.shards.length > 0) {
           output.writeln(output.dim('Retrieved shards:'));
           for (const shard of result.shards) {
-            output.writeln(`  ${output.bold(shard.rule.id)} [${shard.rule.riskClass}] ${shard.rule.text.slice(0, 60)}`);
+            output.writeln(`  ${output.bold(shard.shard.rule.id)} [${shard.shard.rule.riskClass}] ${shard.shard.rule.text.slice(0, 60)}`);
           }
         }
 
@@ -178,7 +178,7 @@ const retrieveCommand: Command = {
       return { success: true, data: result };
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
-      output.writeln(output.red(`Retrieval failed: ${msg}`));
+      output.writeln(output.error(`Retrieval failed: ${msg}`));
       return { success: false, message: msg };
     }
   },
@@ -230,7 +230,7 @@ const gatesCommand: Command = {
       }
 
       if (results.length === 0) {
-        output.writeln(output.yellow('No input provided. Use -c, --content, or -t to evaluate.'));
+        output.writeln(output.warning('No input provided. Use -c, --content, or -t to evaluate.'));
         return { success: false, message: 'No input' };
       }
 
@@ -240,15 +240,15 @@ const gatesCommand: Command = {
         for (const { type, result } of results) {
           output.writeln(`  ${output.bold(type)}:`);
           if (result === null) {
-            output.writeln(`    ${output.green('ALLOW')} - No gate triggered`);
+            output.writeln(`    ${output.success('ALLOW')} - No gate triggered`);
           } else if (Array.isArray(result)) {
             if (result.length === 0) {
-              output.writeln(`    ${output.green('ALLOW')} - All gates passed`);
+              output.writeln(`    ${output.success('ALLOW')} - All gates passed`);
             } else {
               for (const r of result) {
-                const color = r.decision === 'block' ? output.red :
-                  r.decision === 'require-confirmation' ? output.yellow :
-                    output.dim;
+                const color = r.decision === 'block' ? output.error.bind(output) :
+                  r.decision === 'require-confirmation' ? output.warning.bind(output) :
+                    output.dim.bind(output);
                 output.writeln(`    ${color(r.decision.toUpperCase())} [${r.gateName}] ${r.reason}`);
                 if (r.remediation) {
                   output.writeln(`      Remediation: ${output.dim(r.remediation)}`);
@@ -256,9 +256,9 @@ const gatesCommand: Command = {
               }
             }
           } else {
-            const color = result.decision === 'block' ? output.red :
-              result.decision === 'require-confirmation' ? output.yellow :
-                output.dim;
+            const color = result.decision === 'block' ? output.error.bind(output) :
+              result.decision === 'require-confirmation' ? output.warning.bind(output) :
+                output.dim.bind(output);
             output.writeln(`    ${color(result.decision.toUpperCase())} [${result.gateName}] ${result.reason}`);
             if (result.remediation) {
               output.writeln(`      Remediation: ${output.dim(result.remediation)}`);
@@ -270,7 +270,7 @@ const gatesCommand: Command = {
       return { success: true, data: results };
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
-      output.writeln(output.red(`Gate evaluation failed: ${msg}`));
+      output.writeln(output.error(`Gate evaluation failed: ${msg}`));
       return { success: false, message: msg };
     }
   },
@@ -305,9 +305,9 @@ const statusCommand: Command = {
       if (jsonOutput) {
         output.writeln(JSON.stringify(statusData, null, 2));
       } else {
-        output.writeln(`  Root guidance:  ${rootExists ? output.green('CLAUDE.md found') : output.yellow('CLAUDE.md not found')}`);
-        output.writeln(`  Local overlay:  ${localExists ? output.green('CLAUDE.local.md found') : output.dim('not configured')}`);
-        output.writeln(`  Data directory: ${statusData.dataDir === 'exists' ? output.green('exists') : output.dim('not created')}`);
+        output.writeln(`  Root guidance:  ${rootExists ? output.success('CLAUDE.md found') : output.warning('CLAUDE.md not found')}`);
+        output.writeln(`  Local overlay:  ${localExists ? output.success('CLAUDE.local.md found') : output.dim('not configured')}`);
+        output.writeln(`  Data directory: ${statusData.dataDir === 'exists' ? output.success('exists') : output.dim('not created')}`);
 
         if (rootExists) {
           const { readFile } = await import('node:fs/promises');
@@ -328,7 +328,7 @@ const statusCommand: Command = {
       return { success: true, data: statusData };
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
-      output.writeln(output.red(`Status check failed: ${msg}`));
+      output.writeln(output.error(`Status check failed: ${msg}`));
       return { success: false, message: msg };
     }
   },
@@ -337,31 +337,241 @@ const statusCommand: Command = {
 // optimize subcommand
 const optimizeCommand: Command = {
   name: 'optimize',
-  description: 'Run the optimizer loop to evolve guidance rules based on run history',
+  description: 'Analyze and optimize a CLAUDE.md file for structure, coverage, and enforceability',
   options: [
-    { name: 'dry-run', type: 'boolean', description: 'Show proposed changes without applying', default: 'false' },
+    { name: 'root', short: 'r', type: 'string', description: 'Root guidance file path', default: './CLAUDE.md' },
+    { name: 'local', short: 'l', type: 'string', description: 'Local overlay file path' },
+    { name: 'apply', short: 'a', type: 'boolean', description: 'Apply optimizations to the file', default: 'false' },
+    { name: 'context-size', short: 's', type: 'string', description: 'Target context size: compact, standard, full', default: 'standard' },
+    { name: 'target-score', type: 'number', description: 'Target composite score (0-100)', default: '90' },
+    { name: 'max-iterations', type: 'number', description: 'Maximum optimization iterations', default: '5' },
     { name: 'json', type: 'boolean', description: 'Output as JSON', default: 'false' },
   ],
   examples: [
-    { command: 'claude-flow guidance optimize', description: 'Run optimization cycle' },
-    { command: 'claude-flow guidance optimize --dry-run', description: 'Preview proposed changes' },
+    { command: 'claude-flow guidance optimize', description: 'Analyze current CLAUDE.md and show suggestions' },
+    { command: 'claude-flow guidance optimize --apply', description: 'Apply optimizations to CLAUDE.md' },
+    { command: 'claude-flow guidance optimize -s compact --apply', description: 'Optimize for compact context window' },
+    { command: 'claude-flow guidance optimize --target-score 95', description: 'Optimize until score reaches 95' },
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
-    const dryRun = ctx.flags['dry-run'] === true;
+    const rootPath = ctx.flags.root as string || './CLAUDE.md';
+    const localPath = ctx.flags.local as string | undefined;
+    const applyChanges = ctx.flags.apply === true;
+    const contextSize = (ctx.flags['context-size'] as string || 'standard') as 'compact' | 'standard' | 'full';
+    const targetScore = parseInt(ctx.flags['target-score'] as string || '90', 10);
+    const maxIterations = parseInt(ctx.flags['max-iterations'] as string || '5', 10);
     const jsonOutput = ctx.flags.json === true;
 
     output.writeln();
     output.writeln(output.bold('Guidance Optimizer'));
     output.writeln(output.dim('─'.repeat(50)));
 
-    if (dryRun) {
-      output.writeln(output.yellow('(dry run - no changes will be applied)'));
+    try {
+      const { readFile, writeFile } = await import('node:fs/promises');
+      const { existsSync } = await import('node:fs');
+
+      if (!existsSync(rootPath)) {
+        output.writeln(output.error(`Root guidance file not found: ${rootPath}`));
+        return { success: false, message: `File not found: ${rootPath}` };
+      }
+
+      const rootContent = await readFile(rootPath, 'utf-8');
+      let localContent: string | undefined;
+      if (localPath && existsSync(localPath)) {
+        localContent = await readFile(localPath, 'utf-8');
+      }
+
+      // Step 1: Analyze current state
+      const { analyze, formatReport, optimizeForSize, formatBenchmark } = await import('@claude-flow/guidance/analyzer');
+      const analysis = analyze(rootContent, localContent);
+
+      if (jsonOutput && !applyChanges) {
+        output.writeln(JSON.stringify(analysis, null, 2));
+        return { success: true, data: analysis };
+      }
+
+      // Show current analysis
+      output.writeln(formatReport(analysis));
+      output.writeln();
+
+      if (analysis.compositeScore >= targetScore) {
+        output.writeln(output.success(`Score ${analysis.compositeScore}/100 already meets target ${targetScore}. No optimization needed.`));
+        return { success: true, data: analysis };
+      }
+
+      // Step 2: Run optimization
+      output.writeln(output.dim(`Optimizing (target: ${targetScore}, context: ${contextSize}, max iterations: ${maxIterations})...`));
+
+      const result = optimizeForSize(rootContent, {
+        contextSize,
+        localContent,
+        maxIterations,
+        targetScore,
+      });
+
+      if (jsonOutput) {
+        output.writeln(JSON.stringify({
+          before: analysis,
+          after: result.benchmark.after,
+          delta: result.benchmark.delta,
+          steps: result.appliedSteps,
+        }, null, 2));
+        return { success: true, data: result };
+      }
+
+      // Show benchmark comparison
+      output.writeln();
+      output.writeln(formatBenchmark(result.benchmark));
+      output.writeln();
+
+      if (result.appliedSteps.length > 0) {
+        output.writeln(`Applied ${output.bold(String(result.appliedSteps.length))} optimization steps:`);
+        for (const step of result.appliedSteps) {
+          output.writeln(`  ${output.success('+')} ${step}`);
+        }
+        output.writeln();
+      }
+
+      // Step 3: Apply if requested
+      if (applyChanges) {
+        await writeFile(rootPath, result.optimized, 'utf-8');
+        output.writeln(output.success(`Optimized CLAUDE.md written to ${rootPath}`));
+        output.writeln(`  Before: ${analysis.compositeScore}/100 (${analysis.grade})`);
+        output.writeln(`  After:  ${result.benchmark.after.compositeScore}/100 (${result.benchmark.after.grade})`);
+        output.writeln(`  Delta:  ${result.benchmark.delta >= 0 ? '+' : ''}${result.benchmark.delta}`);
+      } else {
+        output.writeln(output.warning('Dry run - use --apply to write changes.'));
+        output.writeln(`  Projected: ${analysis.compositeScore} → ${result.benchmark.after.compositeScore}/100`);
+      }
+
+      return { success: true, data: result };
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      output.writeln(output.error(`Optimization failed: ${msg}`));
+      return { success: false, message: msg };
     }
+  },
+};
 
-    output.writeln(output.dim('Optimization requires a populated run ledger.'));
-    output.writeln(output.dim('Run tasks with guidance tracking enabled first.'));
+// ab-test subcommand
+const abTestCommand: Command = {
+  name: 'ab-test',
+  description: 'Run A/B behavioral comparison between two CLAUDE.md versions',
+  options: [
+    { name: 'config-a', short: 'a', type: 'string', description: 'Path to Config A (baseline CLAUDE.md). Defaults to no guidance.' },
+    { name: 'config-b', short: 'b', type: 'string', description: 'Path to Config B (candidate CLAUDE.md)', default: './CLAUDE.md' },
+    { name: 'tasks', short: 't', type: 'string', description: 'Path to custom task JSON file (array of ABTask objects)' },
+    { name: 'work-dir', short: 'w', type: 'string', description: 'Working directory for test execution' },
+    { name: 'json', type: 'boolean', description: 'Output as JSON', default: 'false' },
+  ],
+  examples: [
+    { command: 'claude-flow guidance ab-test', description: 'Run default A/B test (no guidance vs ./CLAUDE.md)' },
+    { command: 'claude-flow guidance ab-test -a old.md -b new.md', description: 'Compare two CLAUDE.md versions' },
+    { command: 'claude-flow guidance ab-test --tasks custom-tasks.json', description: 'Run with custom test tasks' },
+    { command: 'claude-flow guidance ab-test --json', description: 'Output full report as JSON' },
+  ],
+  action: async (ctx: CommandContext): Promise<CommandResult> => {
+    const configAPath = ctx.flags['config-a'] as string | undefined;
+    const configBPath = ctx.flags['config-b'] as string || './CLAUDE.md';
+    const tasksPath = ctx.flags.tasks as string | undefined;
+    const workDir = ctx.flags['work-dir'] as string | undefined;
+    const jsonOutput = ctx.flags.json === true;
 
-    return { success: true, message: 'Optimizer ready' };
+    output.writeln();
+    output.writeln(output.bold('A/B Behavioral Benchmark'));
+    output.writeln(output.dim('─'.repeat(50)));
+
+    try {
+      const { readFile } = await import('node:fs/promises');
+      const { existsSync } = await import('node:fs');
+      const { abBenchmark, getDefaultABTasks } = await import('@claude-flow/guidance/analyzer');
+
+      // Load Config B (candidate) content
+      if (!existsSync(configBPath)) {
+        output.writeln(output.error(`Config B file not found: ${configBPath}`));
+        return { success: false, message: `File not found: ${configBPath}` };
+      }
+      const configBContent = await readFile(configBPath, 'utf-8');
+
+      // Optionally load Config A for display context
+      let configALabel = 'No control plane (baseline)';
+      if (configAPath) {
+        if (!existsSync(configAPath)) {
+          output.writeln(output.error(`Config A file not found: ${configAPath}`));
+          return { success: false, message: `File not found: ${configAPath}` };
+        }
+        configALabel = configAPath;
+      }
+
+      // Load custom tasks if provided
+      let customTasks: undefined | any[];
+      if (tasksPath) {
+        if (!existsSync(tasksPath)) {
+          output.writeln(output.error(`Tasks file not found: ${tasksPath}`));
+          return { success: false, message: `File not found: ${tasksPath}` };
+        }
+        const tasksJson = await readFile(tasksPath, 'utf-8');
+        customTasks = JSON.parse(tasksJson);
+        output.writeln(`  Custom tasks: ${output.bold(String(customTasks!.length))} loaded from ${tasksPath}`);
+      }
+
+      output.writeln(`  Config A: ${output.dim(configALabel)}`);
+      output.writeln(`  Config B: ${output.dim(configBPath)}`);
+      output.writeln(`  Tasks:    ${output.dim(customTasks ? `${customTasks.length} custom` : `${getDefaultABTasks().length} default`)}`);
+      output.writeln();
+      output.writeln(output.dim('Running benchmark...'));
+
+      // Run the A/B benchmark
+      const report = await abBenchmark(configBContent, {
+        tasks: customTasks,
+        workDir,
+      });
+
+      if (jsonOutput) {
+        output.writeln(JSON.stringify({
+          configA: { label: configALabel, metrics: report.configA.metrics },
+          configB: { label: configBPath, metrics: report.configB.metrics },
+          compositeDelta: report.compositeDelta,
+          classDeltas: report.classDeltas,
+          categoryShift: report.categoryShift,
+          taskResults: {
+            configA: report.configA.taskResults.map(r => ({
+              taskId: r.taskId, taskClass: r.taskClass, passed: r.passed,
+              violations: r.violations.length, toolCalls: r.toolCalls,
+            })),
+            configB: report.configB.taskResults.map(r => ({
+              taskId: r.taskId, taskClass: r.taskClass, passed: r.passed,
+              violations: r.violations.length, toolCalls: r.toolCalls,
+            })),
+          },
+        }, null, 2));
+        return { success: true, data: report };
+      }
+
+      // Print formatted report
+      output.writeln(report.report);
+      output.writeln();
+
+      // Summary verdict
+      const delta = report.compositeDelta;
+      if (delta > 0.05) {
+        output.writeln(output.success(`Config B is better (+${delta} composite delta)`));
+      } else if (delta < -0.05) {
+        output.writeln(output.error(`Config B is worse (${delta} composite delta)`));
+      } else {
+        output.writeln(output.warning(`No significant difference (${delta} composite delta)`));
+      }
+
+      if (report.categoryShift) {
+        output.writeln(output.success('Category shift detected: 3+ task classes improved by 20%+'));
+      }
+
+      return { success: true, data: report };
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      output.writeln(output.error(`A/B benchmark failed: ${msg}`));
+      return { success: false, message: msg };
+    }
   },
 };
 
@@ -376,6 +586,7 @@ export const guidanceCommand: Command = {
     gatesCommand,
     statusCommand,
     optimizeCommand,
+    abTestCommand,
   ],
   options: [],
   examples: [
@@ -383,7 +594,8 @@ export const guidanceCommand: Command = {
     { command: 'claude-flow guidance retrieve -t "Fix auth bug"', description: 'Retrieve relevant guidance' },
     { command: 'claude-flow guidance gates -c "rm -rf /"', description: 'Check enforcement gates' },
     { command: 'claude-flow guidance status', description: 'Show control plane status' },
-    { command: 'claude-flow guidance optimize', description: 'Run optimization cycle' },
+    { command: 'claude-flow guidance optimize', description: 'Analyze and optimize CLAUDE.md' },
+    { command: 'claude-flow guidance ab-test', description: 'Run A/B behavioral comparison' },
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     output.writeln();
@@ -395,7 +607,8 @@ export const guidanceCommand: Command = {
     output.writeln(`  ${output.bold('retrieve')}  Retrieve task-relevant guidance shards`);
     output.writeln(`  ${output.bold('gates')}     Evaluate enforcement gates`);
     output.writeln(`  ${output.bold('status')}    Show control plane status`);
-    output.writeln(`  ${output.bold('optimize')}  Run optimization cycle`);
+    output.writeln(`  ${output.bold('optimize')}  Analyze and optimize CLAUDE.md`);
+    output.writeln(`  ${output.bold('ab-test')}   Run A/B behavioral comparison`);
     output.writeln();
     output.writeln(output.dim('Use claude-flow guidance <subcommand> --help for details'));
 

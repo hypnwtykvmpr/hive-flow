@@ -1,6 +1,6 @@
 {
   "name": "claude-flow",
-  "version": "3.0.0-alpha.185",
+  "version": "3.1.0-alpha.1",
   "description": "Enterprise AI agent orchestration for Claude Code - Deploy 60+ specialized agents in coordinated swarms with self-learning, fault-tolerant consensus, vector memory, and MCP integration",
   "main": "dist/index.js",
   "type": "module",
@@ -26,6 +26,10 @@
     "v3/@claude-flow/shared/dist/**/*.d.ts",
     "!v3/@claude-flow/shared/dist/**/*.map",
     "v3/@claude-flow/shared/package.json",
+    "v3/@claude-flow/guidance/dist/**/*.js",
+    "v3/@claude-flow/guidance/dist/**/*.d.ts",
+    "!v3/@claude-flow/guidance/dist/**/*.map",
+    "v3/@claude-flow/guidance/package.json",
     ".claude-plugin/**",
     ".claude/**",
     "!.claude/**/*.db",
