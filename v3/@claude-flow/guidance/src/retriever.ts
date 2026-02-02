@@ -87,7 +87,16 @@ export interface IEmbeddingProvider {
 }
 
 /**
- * Simple hash-based embedding fallback (for testing without ONNX)
+ * Deterministic hash-based embedding provider — **test-only**.
+ *
+ * Produces fixed-dimension vectors from a simple character-hash → sin()
+ * transform.  The resulting embeddings have no real semantic meaning;
+ * they are stable and fast, which makes them useful for unit/integration
+ * tests that need a concrete {@link IEmbeddingProvider} without loading
+ * an ONNX model.
+ *
+ * **Do NOT use in production** — replace with a real model-backed
+ * provider (e.g. the agentic-flow ONNX integration).
  */
 export class HashEmbeddingProvider implements IEmbeddingProvider {
   private dimensions: number;
