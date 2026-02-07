@@ -272,6 +272,7 @@ function generateFull(options: AgentsMdOptions): string {
 | Memory Reduction | 50-75% | Int8 quantization |
 | MCP Response | <100ms | API latency |
 | CLI Startup | <500ms | Cold start |
+| SONA Adaptation | <0.05ms | Neural learning |
 
 ## Testing
 
@@ -285,6 +286,9 @@ npm run test:integration
 
 # Coverage
 npm run test:coverage
+
+# Security tests
+npm run test:security
 \`\`\`
 
 ### Test Philosophy
@@ -292,38 +296,153 @@ npm run test:coverage
 - Unit tests for business logic
 - Integration tests for boundaries
 - E2E tests for critical paths
+- Security tests for sensitive operations
+
+### Coverage Requirements
+- Minimum 80% line coverage
+- 100% coverage for security-critical code
+- All public APIs must have tests
 
 ## MCP Integration
 
-Claude Flow exposes tools via MCP:
+Claude Flow exposes tools via Model Context Protocol:
 
 \`\`\`bash
 # Start MCP server
 npx @claude-flow/cli mcp start
+
+# List available tools
+npx @claude-flow/cli mcp tools
 \`\`\`
 
 ### Available Tools
-- \`swarm_init\` - Initialize swarm coordination
-- \`agent_spawn\` - Spawn new agents
-- \`memory_store\` - Store in AgentDB
-- \`memory_search\` - Semantic search
-- \`task_orchestrate\` - Task coordination
+
+| Tool | Purpose | Example |
+|------|---------|---------|
+| \`swarm_init\` | Initialize swarm coordination | \`swarm_init({topology: "hierarchical"})\` |
+| \`agent_spawn\` | Spawn new agents | \`agent_spawn({type: "coder", name: "dev-1"})\` |
+| \`memory_store\` | Store in AgentDB | \`memory_store({key: "pattern", value: "..."})\` |
+| \`memory_search\` | Semantic search | \`memory_search({query: "auth patterns"})\` |
+| \`task_orchestrate\` | Task coordination | \`task_orchestrate({task: "implement feature"})\` |
+| \`neural_train\` | Train neural patterns | \`neural_train({iterations: 10})\` |
+| \`benchmark_run\` | Performance benchmarks | \`benchmark_run({type: "all"})\` |
 
 ## Hooks System
 
-Claude Flow uses hooks for automation:
+Claude Flow uses hooks for lifecycle automation:
+
+### Core Hooks
+
+| Hook | Trigger | Purpose |
+|------|---------|---------|
+| \`pre-task\` | Before task starts | Get context, load patterns |
+| \`post-task\` | After task completes | Record completion, train |
+| \`pre-edit\` | Before file changes | Validate, backup |
+| \`post-edit\` | After file changes | Train patterns, verify |
+| \`pre-command\` | Before shell commands | Security check |
+| \`post-command\` | After shell commands | Log results |
+
+### Session Hooks
 
 | Hook | Purpose |
 |------|---------|
-| \`pre-task\` | Get context before starting |
-| \`post-task\` | Record completion for learning |
-| \`pre-edit\` | Validate before file changes |
-| \`post-edit\` | Train neural patterns |
+| \`session-start\` | Initialize context, load memory |
+| \`session-end\` | Export metrics, consolidate memory |
+| \`session-restore\` | Resume from checkpoint |
+| \`notify\` | Send notifications |
 
-### Example
+### Intelligence Hooks
+
+| Hook | Purpose |
+|------|---------|
+| \`route\` | Route task to appropriate agents |
+| \`explain\` | Generate explanations |
+| \`pretrain\` | Pre-train neural patterns |
+| \`build-agents\` | Build specialized agents |
+| \`transfer\` | Transfer learning between domains |
+
+### Example Usage
 \`\`\`bash
+# Before starting a task
 npx @claude-flow/cli hooks pre-task \\
   --description "implementing authentication"
+
+# After completing a task
+npx @claude-flow/cli hooks post-task \\
+  --task-id "task-123" \\
+  --success true
+
+# Route a task to agents
+npx @claude-flow/cli hooks route \\
+  --task "implement OAuth2 login flow"
+\`\`\`
+
+## Background Workers
+
+12 background workers provide continuous optimization:
+
+| Worker | Priority | Purpose |
+|--------|----------|---------|
+| \`ultralearn\` | normal | Deep knowledge acquisition |
+| \`optimize\` | high | Performance optimization |
+| \`consolidate\` | low | Memory consolidation |
+| \`predict\` | normal | Predictive preloading |
+| \`audit\` | critical | Security analysis |
+| \`map\` | normal | Codebase mapping |
+| \`preload\` | low | Resource preloading |
+| \`deepdive\` | normal | Deep code analysis |
+| \`document\` | normal | Auto-documentation |
+| \`refactor\` | normal | Refactoring suggestions |
+| \`benchmark\` | normal | Performance benchmarking |
+| \`testgaps\` | normal | Test coverage analysis |
+
+### Managing Workers
+\`\`\`bash
+# List workers
+npx @claude-flow/cli hooks worker list
+
+# Trigger specific worker
+npx @claude-flow/cli hooks worker dispatch --trigger audit
+
+# Check worker status
+npx @claude-flow/cli hooks worker status
+\`\`\`
+
+## Intelligence System
+
+The RuVector Intelligence System provides neural learning:
+
+### Components
+- **SONA**: Self-Optimizing Neural Architecture (<0.05ms adaptation)
+- **MoE**: Mixture of Experts for specialized routing
+- **HNSW**: Hierarchical Navigable Small World for fast search
+- **EWC++**: Elastic Weight Consolidation (prevents forgetting)
+- **Flash Attention**: Optimized attention mechanism
+
+### 4-Step Pipeline
+1. **RETRIEVE** - Fetch relevant patterns via HNSW
+2. **JUDGE** - Evaluate with verdicts (success/failure)
+3. **DISTILL** - Extract key learnings via LoRA
+4. **CONSOLIDATE** - Prevent catastrophic forgetting via EWC++
+
+## Debugging
+
+### Log Levels
+\`\`\`bash
+# Set log level
+export CLAUDE_FLOW_LOG_LEVEL=debug
+
+# Enable verbose mode
+npx @claude-flow/cli --verbose <command>
+\`\`\`
+
+### Health Checks
+\`\`\`bash
+# Run diagnostics
+npx @claude-flow/cli doctor --fix
+
+# Check system status
+npx @claude-flow/cli status
 \`\`\`
 `;
 
