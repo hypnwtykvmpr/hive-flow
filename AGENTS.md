@@ -1,7 +1,9 @@
 # Claude Flow V3 - Agent Guide
 
-> Migrated from CLAUDE.md by @claude-flow/codex
-> Use `$skill-name` syntax to invoke skills (converted from `/skill-name`)
+> **For OpenAI Codex CLI** - This file follows the [Agentic AI Foundation](https://agenticfoundation.org) standard
+> Use `$skill-name` syntax to invoke skills
+> Configuration: `.agents/config.toml`
+> Skills: `.agents/skills/`
 
 ## Behavioral Rules (Always Enforced)
 
