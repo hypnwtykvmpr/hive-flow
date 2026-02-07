@@ -480,6 +480,7 @@ export const FULL_INIT_OPTIONS: InitOptions = {
     flowNexus: true,
     browser: true,
     v3: true,
+    dualMode: true,  // Include in full init
     all: true,
   },
   commands: {
