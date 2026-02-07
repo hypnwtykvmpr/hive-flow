@@ -231,6 +231,66 @@ export class CodexInitializer {
   }
 
   /**
+   * Copy bundled skills from the package or source directory
+   * Returns the list of skills copied
+   */
+  private async copyBundledSkills(): Promise<{ copied: string[]; warnings: string[] }> {
+    const copied: string[] = [];
+    const warnings: string[] = [];
+
+    // Check if bundled skills directory exists
+    if (!await fs.pathExists(this.bundledSkillsPath)) {
+      warnings.push(`Bundled skills directory not found: ${this.bundledSkillsPath}`);
+      return { copied, warnings };
+    }
+
+    const destSkillsDir = path.join(this.projectPath, '.agents', 'skills');
+
+    // Get all skill directories
+    const skillDirs = await fs.readdir(this.bundledSkillsPath, { withFileTypes: true });
+
+    for (const dirent of skillDirs) {
+      if (!dirent.isDirectory()) continue;
+
+      const skillName = dirent.name;
+      const srcPath = path.join(this.bundledSkillsPath, skillName);
+      const destPath = path.join(destSkillsDir, skillName);
+
+      // Skip if skill should be filtered (based on template)
+      // For 'full' and 'enterprise' templates, include all skills
+      const includeAll = this.template === 'full' || this.template === 'enterprise';
+      if (!includeAll && !this.skills.includes(skillName)) {
+        continue;
+      }
+
+      try {
+        // Check if skill already exists and we're not forcing
+        if (!this.force && await fs.pathExists(destPath)) {
+          warnings.push(`Skill ${skillName} already exists - skipped`);
+          continue;
+        }
+
+        // Copy the entire skill directory
+        await fs.copy(srcPath, destPath, { overwrite: this.force });
+        copied.push(skillName);
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        warnings.push(`Failed to copy skill ${skillName}: ${errorMessage}`);
+      }
+    }
+
+    return { copied, warnings };
+  }
+
+  /**
+   * Check if a skill is bundled (exists in source directory)
+   */
+  private async isBundledSkill(skillName: string): Promise<boolean> {
+    const skillPath = path.join(this.bundledSkillsPath, skillName);
+    return fs.pathExists(skillPath);
+  }
+
+  /**
    * Generate AGENTS.md content
    */
   private async generateAgentsMd(): Promise<string> {
