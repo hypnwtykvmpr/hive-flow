@@ -4523,7 +4523,8 @@ export const hooksCommand: Command = {
       '🔍 AgentDB integration (150x faster search)',
       '📊 84.8% SWE-Bench solve rate',
       '🎯 32.3% token reduction',
-      '🚀 2.8-4.4x speed improvement'
+      '🚀 2.8-4.4x speed improvement',
+      '👥 Agent Teams integration (auto task assignment)'
     ]);
 
     return { success: true };
