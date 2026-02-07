@@ -31,7 +31,7 @@ export class CodexInitializer {
    * Initialize a new Codex project
    */
   async initialize(options: CodexInitOptions): Promise<CodexInitResult> {
-    this.projectPath = options.projectPath;
+    this.projectPath = path.resolve(options.projectPath);
     this.template = options.template ?? 'default';
     this.skills = options.skills ?? DEFAULT_SKILLS_BY_TEMPLATE[this.template];
     this.force = options.force ?? false;
@@ -43,16 +43,23 @@ export class CodexInitializer {
     const errors: string[] = [];
 
     try {
+      // Validate project path
+      await this.validateProjectPath();
+
       // Check if already initialized
-      if (!this.force && await this.isAlreadyInitialized()) {
-        warnings.push('Project already initialized. Use --force to overwrite.');
+      const alreadyInitialized = await this.isAlreadyInitialized();
+      if (alreadyInitialized && !this.force) {
         return {
           success: false,
           filesCreated,
           skillsGenerated,
-          warnings,
+          warnings: ['Project already initialized. Use --force to overwrite.'],
           errors: ['Project already initialized'],
         };
+      }
+
+      if (alreadyInitialized && this.force) {
+        warnings.push('Overwriting existing configuration files');
       }
 
       // Create directory structure
@@ -61,65 +68,109 @@ export class CodexInitializer {
       // Generate AGENTS.md
       const agentsMd = await this.generateAgentsMd();
       const agentsMdPath = path.join(this.projectPath, 'AGENTS.md');
-      await fs.writeFile(agentsMdPath, agentsMd);
-      filesCreated.push('AGENTS.md');
+
+      if (await this.shouldWriteFile(agentsMdPath)) {
+        await fs.writeFile(agentsMdPath, agentsMd, 'utf-8');
+        filesCreated.push('AGENTS.md');
+      } else {
+        warnings.push('AGENTS.md already exists - skipped');
+      }
 
       // Generate config.toml
       const configToml = await this.generateConfigToml();
       const configTomlPath = path.join(this.projectPath, '.agents', 'config.toml');
-      await fs.writeFile(configTomlPath, configToml);
-      filesCreated.push('.agents/config.toml');
+
+      if (await this.shouldWriteFile(configTomlPath)) {
+        await fs.writeFile(configTomlPath, configToml, 'utf-8');
+        filesCreated.push('.agents/config.toml');
+      } else {
+        warnings.push('.agents/config.toml already exists - skipped');
+      }
 
       // Generate skills
       for (const skillName of this.skills) {
         try {
-          const skillPath = await this.generateSkill(skillName);
-          skillsGenerated.push(skillName);
-          filesCreated.push(skillPath);
+          const skillResult = await this.generateSkill(skillName);
+          if (skillResult.created) {
+            skillsGenerated.push(skillName);
+            filesCreated.push(skillResult.path);
+          } else if (skillResult.skipped) {
+            warnings.push(`Skill ${skillName} already exists - skipped`);
+          }
         } catch (err) {
-          warnings.push(`Failed to generate skill: ${skillName}`);
+          const errorMessage = err instanceof Error ? err.message : String(err);
+          warnings.push(`Failed to generate skill ${skillName}: ${errorMessage}`);
         }
       }
 
       // Generate local overrides template
       const overridePath = path.join(this.projectPath, '.codex', 'AGENTS.override.md');
-      await fs.writeFile(overridePath, AGENTS_OVERRIDE_TEMPLATE);
-      filesCreated.push('.codex/AGENTS.override.md');
+      if (await this.shouldWriteFile(overridePath)) {
+        await fs.writeFile(overridePath, AGENTS_OVERRIDE_TEMPLATE, 'utf-8');
+        filesCreated.push('.codex/AGENTS.override.md');
+      }
 
       // Generate local config.toml
       const localConfigPath = path.join(this.projectPath, '.codex', 'config.toml');
-      await fs.writeFile(localConfigPath, await this.generateLocalConfigToml());
-      filesCreated.push('.codex/config.toml');
+      if (await this.shouldWriteFile(localConfigPath)) {
+        await fs.writeFile(localConfigPath, await this.generateLocalConfigToml(), 'utf-8');
+        filesCreated.push('.codex/config.toml');
+      }
 
       // Update .gitignore
-      await this.updateGitignore();
-      filesCreated.push('.gitignore (updated)');
+      const gitignoreUpdated = await this.updateGitignore();
+      if (gitignoreUpdated) {
+        filesCreated.push('.gitignore (updated)');
+      }
 
       // If dual mode, also generate Claude Code files
       if (this.dual) {
         const dualResult = await this.generateDualPlatformFiles();
         filesCreated.push(...dualResult.files);
-        warnings.push(...(dualResult.warnings ?? []));
+        if (dualResult.warnings) {
+          warnings.push(...dualResult.warnings);
+        }
       }
 
-      const result: CodexInitResult = {
+      // Create a README for the .agents directory
+      const agentsReadmePath = path.join(this.projectPath, '.agents', 'README.md');
+      if (await this.shouldWriteFile(agentsReadmePath)) {
+        await fs.writeFile(agentsReadmePath, this.generateAgentsReadme(), 'utf-8');
+        filesCreated.push('.agents/README.md');
+      }
+
+      return {
         success: true,
         filesCreated,
         skillsGenerated,
+        warnings: warnings.length > 0 ? warnings : undefined,
       };
-      if (warnings.length > 0) {
-        result.warnings = warnings;
-      }
-      return result;
     } catch (error) {
-      errors.push(error instanceof Error ? error.message : 'Unknown error');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      errors.push(errorMessage);
       return {
         success: false,
         filesCreated,
         skillsGenerated,
-        warnings,
+        warnings: warnings.length > 0 ? warnings : undefined,
         errors,
       };
+    }
+  }
+
+  /**
+   * Validate that the project path is valid and writable
+   */
+  private async validateProjectPath(): Promise<void> {
+    try {
+      await fs.ensureDir(this.projectPath);
+
+      // Check write permissions by attempting to create a temp file
+      const tempFile = path.join(this.projectPath, '.codex-init-test');
+      await fs.writeFile(tempFile, 'test', 'utf-8');
+      await fs.remove(tempFile);
+    } catch (error) {
+      throw new Error(`Cannot write to project path: ${this.projectPath}`);
     }
   }
 
@@ -130,6 +181,16 @@ export class CodexInitializer {
     const agentsMdExists = await fs.pathExists(path.join(this.projectPath, 'AGENTS.md'));
     const agentsConfigExists = await fs.pathExists(path.join(this.projectPath, '.agents', 'config.toml'));
     return agentsMdExists || agentsConfigExists;
+  }
+
+  /**
+   * Check if we should write a file (force mode or doesn't exist)
+   */
+  private async shouldWriteFile(filePath: string): Promise<boolean> {
+    if (this.force) {
+      return true;
+    }
+    return !(await fs.pathExists(filePath));
   }
 
   /**
@@ -146,7 +207,8 @@ export class CodexInitializer {
     ];
 
     for (const dir of dirs) {
-      await fs.ensureDir(path.join(this.projectPath, dir));
+      const fullPath = path.join(this.projectPath, dir);
+      await fs.ensureDir(fullPath);
     }
   }
 
@@ -189,44 +251,86 @@ sandbox_mode = "danger-full-access"
 web_search = "live"
 
 # Debug settings
+# Uncomment to enable debug logging
 # CODEX_LOG_LEVEL = "debug"
+
+# Local MCP server overrides
+# [mcp_servers.local]
+# command = "node"
+# args = ["./local-mcp-server.js"]
+# enabled = true
+
+# Environment-specific settings
+# [env]
+# ANTHROPIC_API_KEY = "your-local-key"
 `;
   }
 
   /**
    * Generate a skill
    */
-  private async generateSkill(skillName: string): Promise<string> {
+  private async generateSkill(skillName: string): Promise<{ created: boolean; skipped: boolean; path: string }> {
     const skillDir = path.join(this.projectPath, '.agents', 'skills', skillName);
+    const skillPath = path.join(skillDir, 'SKILL.md');
+
+    // Check if skill already exists
+    if (!this.force && await fs.pathExists(skillPath)) {
+      return { created: false, skipped: true, path: `.agents/skills/${skillName}/SKILL.md` };
+    }
+
     await fs.ensureDir(skillDir);
 
     // Check if it's a built-in skill
-    const builtInSkills = ['swarm-orchestration', 'memory-management', 'sparc-methodology', 'security-audit', 'performance-analysis', 'github-automation'];
+    const builtInSkills: BuiltInSkill[] = [
+      'swarm-orchestration',
+      'memory-management',
+      'sparc-methodology',
+      'security-audit',
+      'performance-analysis',
+      'github-automation',
+    ];
 
     let skillMd: string;
 
-    if (builtInSkills.includes(skillName)) {
+    if (builtInSkills.includes(skillName as BuiltInSkill)) {
       const result = await generateBuiltInSkill(skillName);
       skillMd = result.skillMd;
+
+      // Also write any associated scripts or references
+      if (Object.keys(result.scripts).length > 0) {
+        const scriptsDir = path.join(skillDir, 'scripts');
+        await fs.ensureDir(scriptsDir);
+        for (const [scriptName, scriptContent] of Object.entries(result.scripts)) {
+          await fs.writeFile(path.join(scriptsDir, scriptName), scriptContent, 'utf-8');
+        }
+      }
+
+      if (Object.keys(result.references).length > 0) {
+        const refsDir = path.join(skillDir, 'docs');
+        await fs.ensureDir(refsDir);
+        for (const [refName, refContent] of Object.entries(result.references)) {
+          await fs.writeFile(path.join(refsDir, refName), refContent, 'utf-8');
+        }
+      }
     } else {
+      // Generate a custom skill template
       skillMd = await generateSkillMd({
         name: skillName,
         description: `Custom skill: ${skillName}`,
-        triggers: ['Define when to trigger'],
-        skipWhen: ['Define when to skip'],
+        triggers: ['Define when to trigger this skill'],
+        skipWhen: ['Define when to skip this skill'],
       });
     }
 
-    const skillPath = path.join(skillDir, 'SKILL.md');
-    await fs.writeFile(skillPath, skillMd);
+    await fs.writeFile(skillPath, skillMd, 'utf-8');
 
-    return `.agents/skills/${skillName}/SKILL.md`;
+    return { created: true, skipped: false, path: `.agents/skills/${skillName}/SKILL.md` };
   }
 
   /**
    * Update .gitignore with Codex entries
    */
-  private async updateGitignore(): Promise<void> {
+  private async updateGitignore(): Promise<boolean> {
     const gitignorePath = path.join(this.projectPath, '.gitignore');
     let content = '';
 
@@ -236,12 +340,59 @@ web_search = "live"
 
     // Check if Codex entries already exist
     if (content.includes('.codex/')) {
-      return;
+      return false; // Already has entries
     }
 
-    // Add entries
-    const newContent = content + '\n' + GITIGNORE_ENTRIES.join('\n') + '\n';
-    await fs.writeFile(gitignorePath, newContent);
+    // Add entries with proper spacing
+    const separator = content.length > 0 && !content.endsWith('\n') ? '\n\n' : '\n';
+    const newContent = content + separator + GITIGNORE_ENTRIES.join('\n') + '\n';
+    await fs.writeFile(gitignorePath, newContent, 'utf-8');
+    return true;
+  }
+
+  /**
+   * Generate README for .agents directory
+   */
+  private generateAgentsReadme(): string {
+    return `# .agents Directory
+
+This directory contains agent configuration and skills for OpenAI Codex CLI.
+
+## Structure
+
+\`\`\`
+.agents/
+  config.toml     # Main configuration file
+  skills/         # Skill definitions
+    skill-name/
+      SKILL.md    # Skill instructions
+      scripts/    # Optional scripts
+      docs/       # Optional documentation
+  README.md       # This file
+\`\`\`
+
+## Configuration
+
+The \`config.toml\` file controls:
+- Model selection
+- Approval policies
+- Sandbox modes
+- MCP server connections
+- Skills configuration
+
+## Skills
+
+Skills are invoked using \`$skill-name\` syntax. Each skill has:
+- YAML frontmatter with metadata
+- Trigger and skip conditions
+- Commands and examples
+
+## Documentation
+
+- Main instructions: \`AGENTS.md\` (project root)
+- Local overrides: \`.codex/AGENTS.override.md\` (gitignored)
+- Claude Flow: https://github.com/ruvnet/claude-flow
+`;
   }
 
   /**
@@ -251,52 +402,189 @@ web_search = "live"
     const files: string[] = [];
     const warnings: string[] = [];
 
-    // Generate a minimal CLAUDE.md that references AGENTS.md
-    const claudeMd = `# ${path.basename(this.projectPath)}
+    // Check if CLAUDE.md already exists
+    const claudeMdPath = path.join(this.projectPath, 'CLAUDE.md');
+    const claudeMdExists = await fs.pathExists(claudeMdPath);
+
+    if (claudeMdExists && !this.force) {
+      warnings.push('CLAUDE.md already exists - not overwriting. Use --force to replace.');
+      return { files, warnings };
+    }
+
+    const projectName = path.basename(this.projectPath);
+
+    // Generate a CLAUDE.md that references AGENTS.md
+    const claudeMd = `# ${projectName}
 
 > This project supports both Claude Code and OpenAI Codex.
 
-## Platform Instructions
+## Platform Compatibility
 
-- **Codex Users**: See \`AGENTS.md\` for full instructions
-- **Claude Code Users**: See below
+| Platform | Config File | Skill Syntax |
+|----------|-------------|--------------|
+| Claude Code | CLAUDE.md | /skill-name |
+| OpenAI Codex | AGENTS.md | $skill-name |
 
-## Quick Reference
+## Instructions
 
-This file provides Claude Code compatibility. The canonical instructions
-are in \`AGENTS.md\` (Agentic AI Foundation standard).
+**Primary instructions are in \`AGENTS.md\`** (Agentic AI Foundation standard).
 
-### Setup
+This file provides compatibility for Claude Code users.
+
+## Quick Start
+
 \`\`\`bash
-npm install && npm run build
+# Install dependencies
+npm install
+
+# Build the project
+npm run build
+
+# Run tests
+npm test
 \`\`\`
 
-### Skills
+## Available Skills
 
-Both platforms share the same skills:
-- Swarm orchestration
-- Memory management
-- SPARC methodology
-- Security audit
+Both platforms share the same skills in \`.agents/skills/\`:
 
-### MCP Integration
+${this.skills.map(s => `- \`$${s}\` (Codex) / \`/${s}\` (Claude Code)`).join('\n')}
+
+## Configuration
+
+### Codex Configuration
+- Main: \`.agents/config.toml\`
+- Local: \`.codex/config.toml\` (gitignored)
+
+### Claude Code Configuration
+- This file: \`CLAUDE.md\`
+- Local: \`CLAUDE.local.md\` (gitignored)
+
+## MCP Integration
 
 \`\`\`bash
 # Start MCP server
 npx @claude-flow/cli mcp start
 \`\`\`
 
-## Full Instructions
+## Swarm Orchestration
 
-For complete documentation, see \`AGENTS.md\`.
+This project uses hierarchical swarm coordination:
+
+| Setting | Value |
+|---------|-------|
+| Topology | hierarchical |
+| Max Agents | 8 |
+| Strategy | specialized |
+
+## Code Standards
+
+- Files under 500 lines
+- No hardcoded secrets
+- Input validation at boundaries
+- Typed interfaces for APIs
+
+## Security
+
+- NEVER commit .env files or secrets
+- Always validate user input
+- Use parameterized queries for SQL
+
+## Full Documentation
+
+For complete instructions, see \`AGENTS.md\`.
+
+---
+
+*Generated by @claude-flow/codex - Dual platform mode*
 `;
 
-    const claudeMdPath = path.join(this.projectPath, 'CLAUDE.md');
-    await fs.writeFile(claudeMdPath, claudeMd);
+    await fs.writeFile(claudeMdPath, claudeMd, 'utf-8');
     files.push('CLAUDE.md');
+
+    // Generate CLAUDE.local.md template
+    const claudeLocalPath = path.join(this.projectPath, 'CLAUDE.local.md');
+    if (await this.shouldWriteFile(claudeLocalPath)) {
+      const claudeLocal = `# Local Development Configuration
+
+## Environment
+
+\`\`\`bash
+# Development settings
+CLAUDE_FLOW_LOG_LEVEL=debug
+\`\`\`
+
+## Personal Preferences
+
+[Add your preferences here]
+
+## Debug Settings
+
+Enable verbose logging for development.
+
+---
+
+*This file is gitignored and contains local-only settings.*
+`;
+      await fs.writeFile(claudeLocalPath, claudeLocal, 'utf-8');
+      files.push('CLAUDE.local.md');
+    }
+
+    // Update .gitignore for CLAUDE.local.md
+    const gitignorePath = path.join(this.projectPath, '.gitignore');
+    if (await fs.pathExists(gitignorePath)) {
+      let content = await fs.readFile(gitignorePath, 'utf-8');
+      if (!content.includes('CLAUDE.local.md')) {
+        content += '\n# Claude Code local config\nCLAUDE.local.md\n';
+        await fs.writeFile(gitignorePath, content, 'utf-8');
+      }
+    }
 
     warnings.push('Generated dual-platform setup. AGENTS.md is the canonical source.');
 
     return { files, warnings };
   }
+
+  /**
+   * Get the list of files that would be created (dry-run)
+   */
+  async dryRun(options: CodexInitOptions): Promise<string[]> {
+    const files: string[] = [
+      'AGENTS.md',
+      '.agents/config.toml',
+      '.agents/README.md',
+      '.codex/AGENTS.override.md',
+      '.codex/config.toml',
+      '.gitignore (updated)',
+    ];
+
+    const skills = options.skills ?? DEFAULT_SKILLS_BY_TEMPLATE[options.template ?? 'default'];
+    for (const skill of skills) {
+      files.push(`.agents/skills/${skill}/SKILL.md`);
+    }
+
+    if (options.dual) {
+      files.push('CLAUDE.md');
+      files.push('CLAUDE.local.md');
+    }
+
+    return files;
+  }
+}
+
+/**
+ * Quick initialization function for programmatic use
+ */
+export async function initializeCodexProject(
+  projectPath: string,
+  options?: Partial<CodexInitOptions>
+): Promise<CodexInitResult> {
+  const initializer = new CodexInitializer();
+  return initializer.initialize({
+    projectPath,
+    template: options?.template ?? 'default',
+    skills: options?.skills,
+    force: options?.force ?? false,
+    dual: options?.dual ?? false,
+  });
 }
