@@ -252,6 +252,85 @@ export interface UpgradeResult {
 }
 
 /**
+ * Merge new settings into existing settings.json
+ * Preserves user customizations while adding new features like Agent Teams
+ */
+function mergeSettingsForUpgrade(existing: Record<string, unknown>): Record<string, unknown> {
+  const merged = { ...existing };
+
+  // 1. Merge env vars (preserve existing, add new)
+  const existingEnv = (existing.env as Record<string, string>) || {};
+  merged.env = {
+    ...existingEnv,
+    CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS: '1',
+    CLAUDE_FLOW_V3_ENABLED: existingEnv.CLAUDE_FLOW_V3_ENABLED || 'true',
+    CLAUDE_FLOW_HOOKS_ENABLED: existingEnv.CLAUDE_FLOW_HOOKS_ENABLED || 'true',
+  };
+
+  // 2. Merge hooks (preserve existing, add new Agent Teams hooks)
+  const existingHooks = (existing.hooks as Record<string, unknown[]>) || {};
+  merged.hooks = { ...existingHooks };
+
+  // Add TeammateIdle hook if not present
+  if (!existingHooks.TeammateIdle) {
+    (merged.hooks as Record<string, unknown[]>).TeammateIdle = [
+      {
+        hooks: [
+          {
+            type: 'command',
+            command: 'npx @claude-flow/cli@latest hooks teammate-idle --auto-assign true 2>/dev/null || true',
+            timeout: 5000,
+            continueOnError: true,
+          },
+        ],
+      },
+    ];
+  }
+
+  // Add TaskCompleted hook if not present
+  if (!existingHooks.TaskCompleted) {
+    (merged.hooks as Record<string, unknown[]>).TaskCompleted = [
+      {
+        hooks: [
+          {
+            type: 'command',
+            command: '[ -n "$TASK_ID" ] && npx @claude-flow/cli@latest hooks task-completed --task-id "$TASK_ID" --train-patterns true 2>/dev/null || true',
+            timeout: 5000,
+            continueOnError: true,
+          },
+        ],
+      },
+    ];
+  }
+
+  // 3. Merge claudeFlow settings (preserve existing, add agentTeams)
+  const existingClaudeFlow = (existing.claudeFlow as Record<string, unknown>) || {};
+  merged.claudeFlow = {
+    ...existingClaudeFlow,
+    version: existingClaudeFlow.version || '3.0.0',
+    enabled: existingClaudeFlow.enabled !== false,
+    agentTeams: {
+      enabled: true,
+      teammateMode: 'auto',
+      taskListEnabled: true,
+      mailboxEnabled: true,
+      coordination: {
+        autoAssignOnIdle: true,
+        trainPatternsOnComplete: true,
+        notifyLeadOnComplete: true,
+        sharedMemoryNamespace: 'agent-teams',
+      },
+      hooks: {
+        teammateIdle: { enabled: true, autoAssign: true, checkTaskList: true },
+        taskCompleted: { enabled: true, trainPatterns: true, notifyLead: true },
+      },
+    },
+  };
+
+  return merged;
+}
+
+/**
  * Execute upgrade - updates helpers and creates missing metrics without losing data
  * This is safe for existing users who want the latest statusline fixes
  * @param targetDir - Target directory
