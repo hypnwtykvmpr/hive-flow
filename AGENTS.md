@@ -191,32 +191,45 @@ npx claude-flow swarm start --objective "Your task here" --strategy development
 
 ### Recipe 1: Hello World Test (COMPLETE EXAMPLE)
 
-**Step 1: Setup coordination**
+**Step 1: Setup coordination** (returns instantly - don't stop!)
 ```bash
 npx claude-flow swarm init --topology mesh --max-agents 5
 npx claude-flow agent spawn --type coder --name hello-main
-npx claude-flow swarm start --objective "Print hello world" --strategy development
+# ⚠️ DON'T STOP HERE - CONTINUE IMMEDIATELY TO STEP 2
 ```
 
-**Step 2: YOU (Codex) execute the task**
+**Step 2: YOU (Codex) execute the task** (THIS IS THE REAL WORK)
 ```bash
-# Create the hello world file
+# ✅ YOU create the file
 echo 'console.log("Hello World from Swarm!");' > /tmp/hello-swarm.js
 
-# Execute it
+# ✅ YOU execute it
 node /tmp/hello-swarm.js
+# Output: Hello World from Swarm!
 ```
 
-**Step 3: Report completion**
+**Step 3: Report completion** (optional - store results)
 ```bash
 npx claude-flow memory store --key "hello-world-result" --value "Executed: Hello World from Swarm!" --namespace results
-npx claude-flow task create --type implementation --description "Hello world executed successfully"
 ```
 
-**Step 4: Verify**
+### Recipe 1b: 5-Agent Concurrent Hello World (COMPLETE)
 ```bash
-npx claude-flow swarm status
-npx claude-flow memory list --namespace results
+# COORDINATION (instant - creates records only)
+npx claude-flow swarm init --topology hierarchical --max-agents 5
+for i in 1 2 3 4 5; do
+  npx claude-flow agent spawn --type coder --name "worker-$i"
+done
+
+# ⚠️ NOW YOU DO THE ACTUAL CONCURRENT WORK:
+for i in 1 2 3 4 5; do
+  (echo "Worker $i: Hello World!" && sleep 0.$i) &
+done
+wait
+echo "All 5 workers completed!"
+
+# REPORT (optional)
+npx claude-flow memory store --key "concurrent-result" --value "5 workers completed" --namespace results
 ```
 
 ### Recipe 1b: Hello World (Single Command Block)
