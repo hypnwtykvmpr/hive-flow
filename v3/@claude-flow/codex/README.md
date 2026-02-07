@@ -1,6 +1,6 @@
 # @claude-flow/codex
 
-OpenAI Codex CLI adapter for Claude Flow V3. Enables multi-agent orchestration with **self-learning capabilities** for OpenAI Codex CLI following the [Agentic AI Foundation](https://agenticfoundation.org) standard.
+OpenAI Codex CLI adapter for Claude Flow V3. Enables multi-agent orchestration with **self-learning capabilities** for OpenAI Codex CLI following the [Agentics Foundation](https://agentics.org) standard.
 
 ## Key Concept: Execution Model
 
