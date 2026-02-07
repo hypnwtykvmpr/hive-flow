@@ -572,6 +572,7 @@ async function copySkills(
     if (skillsConfig.flowNexus) skillsToCopy.push(...SKILLS_MAP.flowNexus);
     if (skillsConfig.browser) skillsToCopy.push(...SKILLS_MAP.browser);
     if (skillsConfig.v3) skillsToCopy.push(...SKILLS_MAP.v3);
+    if (skillsConfig.dualMode) skillsToCopy.push(...SKILLS_MAP.dualMode);
   }
 
   // Find source skills directory
