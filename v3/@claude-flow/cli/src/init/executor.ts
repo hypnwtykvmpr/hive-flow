@@ -375,6 +375,33 @@ export async function executeUpgrade(targetDir: string, upgradeSettings = false)
       result.preserved.push('.claude-flow/security/audit-status.json');
     }
 
+    // 3. Merge settings if requested
+    if (upgradeSettings) {
+      const settingsPath = path.join(targetDir, '.claude', 'settings.json');
+      if (fs.existsSync(settingsPath)) {
+        try {
+          const existingSettings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
+          const mergedSettings = mergeSettingsForUpgrade(existingSettings);
+          fs.writeFileSync(settingsPath, JSON.stringify(mergedSettings, null, 2), 'utf-8');
+          result.updated.push('.claude/settings.json');
+          result.settingsUpdated = [
+            'env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS',
+            'hooks.TeammateIdle',
+            'hooks.TaskCompleted',
+            'claudeFlow.agentTeams',
+          ];
+        } catch (settingsError) {
+          result.errors.push(`Settings merge failed: ${settingsError instanceof Error ? settingsError.message : String(settingsError)}`);
+        }
+      } else {
+        // Create new settings.json with defaults
+        const defaultSettings = generateSettings(DEFAULT_INIT_OPTIONS);
+        fs.writeFileSync(settingsPath, JSON.stringify(defaultSettings, null, 2), 'utf-8');
+        result.created.push('.claude/settings.json');
+        result.settingsUpdated = ['Created new settings.json with Agent Teams'];
+      }
+    }
+
   } catch (error) {
     result.success = false;
     result.errors.push(error instanceof Error ? error.message : String(error));
