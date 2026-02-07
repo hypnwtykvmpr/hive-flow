@@ -537,8 +537,8 @@ describe('generateBuiltInSkill', () => {
 
     expect(result.skillMd).toContain('name: memory-management');
     expect(result.skillMd).toContain('AgentDB memory system');
-    expect(result.skillMd).toContain('Store Data');
-    expect(result.skillMd).toContain('Search Data');
+    expect(result.skillMd).toContain('Store Pattern');
+    expect(result.skillMd).toContain('Semantic Search');
   });
 
   it('should generate sparc-methodology skill', async () => {
@@ -554,7 +554,7 @@ describe('generateBuiltInSkill', () => {
     const result = await generateBuiltInSkill('security-audit');
 
     expect(result.skillMd).toContain('name: security-audit');
-    expect(result.skillMd).toContain('Security scanning');
+    expect(result.skillMd).toContain('security scanning');
     expect(result.skillMd).toContain('Full Security Scan');
     expect(result.skillMd).toContain('--depth full');
   });
@@ -572,8 +572,8 @@ describe('generateBuiltInSkill', () => {
     const result = await generateBuiltInSkill('github-automation');
 
     expect(result.skillMd).toContain('name: github-automation');
-    expect(result.skillMd).toContain('CI/CD and PR management');
-    expect(result.skillMd).toContain('Create PR');
+    expect(result.skillMd).toContain('GitHub workflow automation');
+    expect(result.skillMd).toContain('Create Pull Request');
     expect(result.skillMd).toContain('gh pr create');
   });
 
@@ -583,11 +583,22 @@ describe('generateBuiltInSkill', () => {
     );
   });
 
-  it('should return empty scripts and references', async () => {
+  it('should return generated scripts for skills with scripts', async () => {
     const result = await generateBuiltInSkill('swarm-orchestration');
 
-    expect(result.scripts).toEqual({});
+    // Scripts are now generated for skills that have them
+    expect(Object.keys(result.scripts).length).toBeGreaterThan(0);
     expect(result.references).toEqual({});
+  });
+
+  it('should generate valid bash scripts', async () => {
+    const result = await generateBuiltInSkill('memory-management');
+
+    // Check that scripts are generated and contain bash shebang
+    for (const script of Object.values(result.scripts)) {
+      expect(script).toContain('#!/bin/bash');
+      expect(script).toContain('set -e');
+    }
   });
 });
 
