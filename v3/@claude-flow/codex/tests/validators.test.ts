@@ -442,17 +442,22 @@ example
       expect(result.warnings.some(w => w.message.includes('Purpose'))).toBe(true);
     });
 
-    it('should warn about missing trigger conditions when no triggers field', async () => {
+    it('should warn about missing skip conditions when not specified', async () => {
       const content = `---
-name: no-triggers
-description: Skill without trigger conditions
+name: no-skip
+description: Skill without skip conditions
+triggers: ['always']
 ---
 
-# No Triggers Skill
+# No Skip Skill
 
 ## Purpose
 
 Does something
+
+## When to Trigger
+
+- Always
 
 \`\`\`
 example
@@ -461,13 +466,8 @@ example
 
       const result = await validateSkillMd(content);
 
-      // Should warn about missing triggers when no triggers field and no "When to Trigger" section
-      // The warning might say "Missing trigger conditions" or similar
-      const hasTriggerWarning = result.warnings.some(w =>
-        w.message.toLowerCase().includes('trigger') ||
-        w.message.toLowerCase().includes('when to')
-      );
-      expect(hasTriggerWarning).toBe(true);
+      // Should warn about missing skip conditions when not specified
+      expect(result.warnings.some(w => w.message.toLowerCase().includes('skip'))).toBe(true);
     });
 
     it('should not warn about triggers when frontmatter has triggers field', async () => {
