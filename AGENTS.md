@@ -17,9 +17,10 @@
 ```
 
 **Workflow:**
-1. `npx claude-flow swarm init` → coordination record created (instant)
-2. **YOU write the code / run the commands** ← THIS IS WHERE WORK HAPPENS
-3. `npx claude-flow memory store` → save results (optional)
+1. `npx claude-flow memory search --query "task keywords"` → LEARN from past patterns
+2. `npx claude-flow swarm init` → coordination record created (instant)
+3. **YOU write the code / run the commands** ← THIS IS WHERE WORK HAPPENS
+4. `npx claude-flow memory store --key "pattern-x" --value "what worked" --namespace patterns` → REMEMBER for next time
 
 ---
 
