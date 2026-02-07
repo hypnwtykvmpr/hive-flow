@@ -331,6 +331,7 @@ export const DEFAULT_INIT_OPTIONS: InitOptions = {
     flowNexus: false,
     browser: true,
     v3: true,
+    dualMode: false,  // Optional: enable with --dual flag
     all: false,
   },
   commands: {
