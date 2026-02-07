@@ -356,6 +356,7 @@ export const DEFAULT_INIT_OPTIONS: InitOptions = {
     v3: true,
     optimization: true,
     testing: true,
+    dualMode: false,  // Optional: enable with --dual flag
     all: true,
   },
   statusline: {
