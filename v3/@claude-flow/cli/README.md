@@ -497,6 +497,26 @@ bunx claude-flow@alpha init
 npm install -g claude-flow@alpha --omit=optional
 ```
 
+#### OpenAI Codex CLI Support
+
+Claude-Flow supports both **Claude Code** and **OpenAI Codex CLI** via the [@claude-flow/codex](https://www.npmjs.com/package/@claude-flow/codex) package.
+
+```bash
+# Initialize for Codex CLI (creates AGENTS.md instead of CLAUDE.md)
+npx claude-flow@alpha init --codex
+
+# Initialize for both platforms (dual mode)
+npx claude-flow@alpha init --dual
+
+# Full Codex setup with all 137+ skills
+npx claude-flow@alpha init --codex --full
+```
+
+| Platform | Config File | Skills Dir | Skill Syntax |
+|----------|-------------|------------|--------------|
+| Claude Code | `CLAUDE.md` | `.claude/skills/` | `/skill-name` |
+| OpenAI Codex | `AGENTS.md` | `.agents/skills/` | `$skill-name` |
+
 ### Basic Usage
 
 ```bash
