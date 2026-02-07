@@ -56,11 +56,19 @@ const storeCommand: Command = {
       description: 'Store as vector embedding',
       type: 'boolean',
       default: false
+    },
+    {
+      name: 'upsert',
+      short: 'u',
+      description: 'Update if key exists (insert or replace)',
+      type: 'boolean',
+      default: false
     }
   ],
   examples: [
     { command: 'claude-flow memory store -k "api/auth" -v "JWT implementation"', description: 'Store text' },
-    { command: 'claude-flow memory store -k "pattern/singleton" --vector', description: 'Store vector' }
+    { command: 'claude-flow memory store -k "pattern/singleton" --vector', description: 'Store vector' },
+    { command: 'claude-flow memory store -k "pattern" -v "updated" --upsert', description: 'Update existing' }
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     const key = ctx.flags.key as string;
