@@ -35,7 +35,14 @@ const initAction = async (ctx: CommandContext): Promise<CommandResult> => {
   const full = ctx.flags.full as boolean;
   const skipClaude = ctx.flags['skip-claude'] as boolean;
   const onlyClaude = ctx.flags['only-claude'] as boolean;
+  const codexMode = ctx.flags.codex as boolean;
+  const dualMode = ctx.flags.dual as boolean;
   const cwd = ctx.cwd;
+
+  // If codex mode, use the Codex initializer
+  if (codexMode || dualMode) {
+    return initCodexAction(ctx, { codexMode, dualMode, force, minimal, full });
+  }
 
   // Check if already initialized
   const initialized = isInitialized(cwd);
