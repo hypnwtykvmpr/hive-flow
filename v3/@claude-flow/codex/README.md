@@ -632,7 +632,7 @@ Both platforms share the same `.claude-flow/` runtime:
 | **Best of Both** | Interactive + batch processing |
 | **Unified Learning** | Patterns learned by both platforms |
 
-### CLI Commands (NEW in v3.0.0-alpha.7)
+### CLI Commands (NEW in v3.0.0-alpha.8)
 
 The `@claude-flow/codex` package now includes built-in dual-mode orchestration:
 
