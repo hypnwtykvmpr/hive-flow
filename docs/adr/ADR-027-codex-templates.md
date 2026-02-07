@@ -926,7 +926,8 @@ dependencies:
 ## Generation API
 
 ```typescript
-// Usage in claude-flow CLI
+// Usage in claude-flow CLI or standalone
+// Package: @claude-flow/codex (first step toward coflow rebranding)
 
 import {
   generateAgentsMd,
@@ -934,6 +935,10 @@ import {
   generateConfigToml,
   CodexInitializer
 } from '@claude-flow/codex';
+
+// Or via the CLI
+// npx @claude-flow/codex init
+// npx @claude-flow/codex generate-skill --name my-skill
 
 // Generate AGENTS.md
 const agentsMd = await generateAgentsMd({
