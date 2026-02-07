@@ -4,6 +4,7 @@
  */
 
 import type { InitOptions, HooksConfig } from './types.js';
+import { detectPlatform } from './types.js';
 
 /**
  * Generate the complete settings.json content
