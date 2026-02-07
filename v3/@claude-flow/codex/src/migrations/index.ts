@@ -482,7 +482,7 @@ function extractSettings(content: string, sections: ParsedSection[]): ParsedSett
 
   // Look for model specification
   const modelMatch = content.match(/model[:\s]+["']?([^"'\n]+)["']?/i);
-  if (modelMatch) {
+  if (modelMatch && modelMatch[1]) {
     settings.model = modelMatch[1].trim();
   }
 
