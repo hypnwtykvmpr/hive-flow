@@ -540,6 +540,15 @@
       "auditRequired": true
     }
   },
+  "agentTeams": {
+    "enabled": true,
+    "teammateMode": "auto",
+    "taskListShared": true,
+    "mailboxEnabled": true,
+    "autoAssignOnIdle": true,
+    "trainPatternsOnComplete": true,
+    "coordinationNamespace": "agent-teams"
+  },
   "statusLine": {
     "type": "command",
     "command": "/workspaces/claude-flow/.claude/statusline.sh"
