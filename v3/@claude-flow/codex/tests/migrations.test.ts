@@ -487,14 +487,16 @@ describe('convertSettingsToToml', () => {
     expect(result).toContain('command = "node"');
   });
 
-  it('should handle settings with no mcpServers', () => {
+  it('should add default claude-flow server when no mcpServers', () => {
     const settings = {
       model: 'gpt-4',
     };
 
     const result = convertSettingsToToml(settings);
 
-    expect(result).not.toContain('[mcp_servers');
+    // The implementation adds a default claude-flow server when none specified
+    expect(result).toContain('[mcp_servers.claude-flow]');
+    expect(result).toContain('command = "npx"');
   });
 
   it('should handle empty settings', () => {
