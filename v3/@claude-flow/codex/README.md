@@ -1,6 +1,29 @@
 # @claude-flow/codex
 
-OpenAI Codex CLI adapter for Claude Flow V3. Enables multi-agent orchestration with **self-learning capabilities** for OpenAI Codex CLI following the [Agentics Foundation](https://agentics.org) standard.
+<p align="center">
+  <strong>OpenAI Codex CLI Adapter for Claude Flow V3</strong><br/>
+  <em>Self-learning multi-agent orchestration following the <a href="https://agentics.org">Agentics Foundation</a> standard</em>
+</p>
+
+<p align="center">
+  <a href="https://www.npmjs.com/package/@claude-flow/codex"><img src="https://img.shields.io/npm/v/@claude-flow/codex?label=npm&color=blue" alt="npm version"></a>
+  <a href="https://github.com/ruvnet/claude-flow"><img src="https://img.shields.io/badge/license-MIT-green" alt="license"></a>
+  <a href="https://agentics.org"><img src="https://img.shields.io/badge/standard-Agentics-purple" alt="Agentics Standard"></a>
+</p>
+
+---
+
+## Why @claude-flow/codex?
+
+Transform OpenAI Codex CLI into a **self-improving AI development system**. While Codex executes code, claude-flow orchestrates, coordinates, and **learns from every interaction**.
+
+| Traditional Codex | With Claude-Flow |
+|-------------------|------------------|
+| Stateless execution | Persistent vector memory |
+| Single-agent | Multi-agent swarms (up to 15) |
+| Manual coordination | Automatic orchestration |
+| No learning | Self-learning patterns (HNSW) |
+| One platform | Dual-mode (Claude Code + Codex) |
 
 ## Key Concept: Execution Model
 
@@ -12,6 +35,30 @@ OpenAI Codex CLI adapter for Claude Flow V3. Enables multi-agent orchestration w
 ```
 
 **Codex does the work. Claude-flow coordinates and learns.**
+
+### The Self-Learning Loop
+
+```
+    ┌──────────────┐
+    │   SEARCH     │ ──→ Find relevant patterns from past successes
+    │   memory     │
+    └──────┬───────┘
+           │
+    ┌──────▼───────┐
+    │  COORDINATE  │ ──→ Initialize swarm, spawn specialized agents
+    │   swarm      │
+    └──────┬───────┘
+           │
+    ┌──────▼───────┐
+    │   EXECUTE    │ ──→ Codex writes code, runs commands
+    │   codex      │
+    └──────┬───────┘
+           │
+    ┌──────▼───────┐
+    │    STORE     │ ──→ Save successful patterns for future use
+    │   memory     │
+    └──────────────┘
+```
 
 ## Quick Start
 
@@ -25,6 +72,8 @@ npx claude-flow@alpha init --codex --full
 # Dual mode (both Claude Code and Codex)
 npx claude-flow@alpha init --dual
 ```
+
+**That's it!** The MCP server is auto-registered, skills are installed, and your project is ready for self-learning development.
 
 ---
 
@@ -41,6 +90,8 @@ npx claude-flow@alpha init --dual
 | **Auto-Registration** | MCP server registered during init |
 | **HNSW Search** | 150x-12,500x faster pattern matching |
 | **Self-Learning** | Learn from successes, remember patterns |
+| **GPT-5.3 Support** | Optimized for latest OpenAI models |
+| **Neural Training** | Train patterns with SONA architecture |
 
 </details>
 
