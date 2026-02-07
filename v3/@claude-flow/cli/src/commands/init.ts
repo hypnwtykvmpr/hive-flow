@@ -697,6 +697,7 @@ const skillsCommand: Command = {
         flowNexus: false,
         browser: false,
         v3: ctx.flags.v3 as boolean,
+        dualMode: false,
       },
     };
 
