@@ -114,15 +114,45 @@ npx claude-flow swarm start --objective "Your task here" --strategy development
 
 ## 🚀 SWARM RECIPES
 
-### Recipe 1: Hello World Test (5 Agents)
+### Recipe 1: Hello World Test (COMPLETE EXAMPLE)
+
+**Step 1: Setup coordination**
 ```bash
 npx claude-flow swarm init --topology mesh --max-agents 5
-npx claude-flow agent spawn --type coder --name hello-1
-npx claude-flow agent spawn --type coder --name hello-2
-npx claude-flow agent spawn --type coder --name hello-3
-npx claude-flow agent spawn --type coder --name hello-4
-npx claude-flow agent spawn --type coder --name hello-5
+npx claude-flow agent spawn --type coder --name hello-main
 npx claude-flow swarm start --objective "Print hello world" --strategy development
+```
+
+**Step 2: YOU (Codex) execute the task**
+```bash
+# Create the hello world file
+echo 'console.log("Hello World from Swarm!");' > /tmp/hello-swarm.js
+
+# Execute it
+node /tmp/hello-swarm.js
+```
+
+**Step 3: Report completion**
+```bash
+npx claude-flow memory store --key "hello-world-result" --value "Executed: Hello World from Swarm!" --namespace results
+npx claude-flow task create --type implementation --description "Hello world executed successfully"
+```
+
+**Step 4: Verify**
+```bash
+npx claude-flow swarm status
+npx claude-flow memory list --namespace results
+```
+
+### Recipe 1b: Hello World (Single Command Block)
+```bash
+# All-in-one execution
+npx claude-flow swarm init --topology mesh --max-agents 5 && \
+npx claude-flow agent spawn --type coder --name hello-main && \
+npx claude-flow swarm start --objective "Print hello world" --strategy development && \
+echo 'console.log("Hello World from Swarm!");' > /tmp/hello-swarm.js && \
+node /tmp/hello-swarm.js && \
+npx claude-flow memory store --key "hello-world-result" --value "Success" --namespace results
 ```
 
 ### Recipe 2: Feature Implementation (6 Agents)
