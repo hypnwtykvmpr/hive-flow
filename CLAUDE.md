@@ -653,6 +653,7 @@ SendMessage({
 | **Session** | `session-start`, `session-end`, `session-restore`, `notify` | Context management |
 | **Intelligence** | `route`, `explain`, `pretrain`, `build-agents`, `transfer` | Neural learning |
 | **Learning** | `intelligence` (trajectory-start/step/end, pattern-store/search, stats, attention) | Reinforcement |
+| **Agent Teams** | `teammate-idle`, `task-completed` | Multi-agent coordination |
 
 ### 12 Background Workers
 
