@@ -5,6 +5,46 @@
 
 ---
 
+## 🚨 CRITICAL: HOW SWARMS WORK
+
+**YOU (Codex) ARE THE AGENT.** The swarm commands create coordination infrastructure, not separate AI instances.
+
+### Execution Model
+1. `swarm init` → Creates coordination state in `.swarm/`
+2. `agent spawn` → Registers agent slots (not real processes)
+3. `swarm start` → Sets objective and strategy
+4. **YOU execute the tasks** → Codex does the actual work
+5. Report progress via `task` and `memory` commands
+
+### Correct Workflow
+```bash
+# 1. Initialize coordination
+npx claude-flow swarm init --topology hierarchical --max-agents 5
+
+# 2. Register your role
+npx claude-flow agent spawn --type coder --name codex-main
+
+# 3. Set objective
+npx claude-flow swarm start --objective "Your task" --strategy development
+
+# 4. NOW DO THE WORK YOURSELF:
+#    - Read files, write code, run tests
+#    - Store results in memory
+#    - Update task status when done
+
+# 5. Mark completion
+npx claude-flow task create --type implementation --description "Task done"
+npx claude-flow memory store --key "result" --value "Hello World executed" --namespace results
+```
+
+### Key Understanding
+- **Swarm = Coordination layer** (state tracking, not execution)
+- **Codex = The actual worker** (you do the real tasks)
+- **Memory = Shared state** (store your results here)
+- **Tasks = Progress tracking** (update status as you work)
+
+---
+
 ## ⚡ QUICK COMMANDS (NO DISCOVERY NEEDED)
 
 ### Spawn N-Agent Swarm (Copy-Paste Ready)
