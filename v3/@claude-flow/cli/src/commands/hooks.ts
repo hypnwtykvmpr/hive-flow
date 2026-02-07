@@ -4507,7 +4507,11 @@ export const hooksCommand: Command = {
       `${output.highlight('token-optimize')} - Token optimization (30-50% savings)`,
       `${output.highlight('model-route')}    - Route to optimal model (haiku/sonnet/opus)`,
       `${output.highlight('model-outcome')}  - Record model routing outcome`,
-      `${output.highlight('model-stats')}    - View model routing statistics`
+      `${output.highlight('model-stats')}    - View model routing statistics`,
+      '',
+      output.bold('Agent Teams:'),
+      `${output.highlight('teammate-idle')}  - Handle idle teammate (auto-assign tasks)`,
+      `${output.highlight('task-completed')} - Handle task completion (train patterns)`
     ]);
     output.writeln();
     output.writeln('Run "claude-flow hooks <subcommand> --help" for subcommand help');
