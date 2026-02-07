@@ -328,6 +328,221 @@ enabled = true
 tool_timeout_sec = 120
 ```
 
+## Undocumented Features (Binary Analysis)
+
+The following features were discovered through binary string analysis and are not documented in official sources.
+
+### Undocumented Environment Variables
+
+| Variable | Purpose | Claude Flow Use Case |
+|----------|---------|---------------------|
+| `CODEX_HOME` | Override config directory (default: `~/.codex`) | Custom config locations |
+| `CODEX_API_KEY` | Alternative to `OPENAI_API_KEY` | API key management |
+| `CODEX_OSS_BASE_URL` | Override OSS provider URL | Local model integration |
+| `CODEX_OSS_PORT` | Override OSS provider port | Local model integration |
+| `CODEX_SANDBOX_NETWORK_DISABLED` | Disable network in sandbox | Security hardening |
+| `CODEX_CLOUD_TASKS_FORCE_INTERNAL` | Force internal cloud tasks mode | Testing |
+| `CODEX_CLOUD_TASKS_MODE` | Cloud tasks mode override | CI/CD integration |
+| `CODEX_CLOUD_TASKS_BASE_URL` | Override cloud tasks URL | Enterprise deployment |
+| `CODEX_REFRESH_TOKEN_URL_OVERRIDE` | Override token refresh URL | Custom auth |
+| `CODEX_INTERNAL_ORIGINATOR_OVERRIDE` | Override originator header | Telemetry |
+| `CODEX_BWRAP_ENABLE_FFI` | Enable bubblewrap FFI sandbox | Linux sandboxing |
+| `CODEX_APPLY_GIT_CFG` | Custom git config for apply | Git integration |
+| `CODEX_TUI_ROUNDED` | TUI rounded corners | UI customization |
+| `CODEX_TUI_RECORD_SESSION` | Record TUI session | Debugging |
+| `CODEX_TUI_SESSION_LOG_PATH` | Session log path | Debugging |
+| `CODEX_CONNECTORS_TOKEN` | MCP connectors token | MCP auth |
+| `CODEX_GITHUB_PERSONAL_ACCESS_TOKEN` | GitHub PAT for MCP | GitHub integration |
+| `CODEX_STARTING_DIFF` | Initial diff for sessions | Session preloading |
+| `CODEX_CI` | CI mode flag | CI/CD pipelines |
+
+### Hidden API Endpoints
+
+```
+/api/codex/apps              # App management
+/api/codex/config/requirements  # Config requirements
+/api/codex/environments      # Environment management
+/api/codex/tasks             # Task management
+/api/codex/tasks/list        # List tasks
+/api/codex/usage             # Usage statistics
+/api/accounts                # Account management
+/api/version                 # Version info
+```
+
+### Internal JSON-RPC Methods
+
+These methods are available via the MCP server or app-server protocol:
+
+#### Skills Management
+```javascript
+"skills/remote/read"    // Read remote skill
+"skills/remote/write"   // Write remote skill
+"skills/config/write"   // Write skill config
+"skills/list"           // List available skills
+```
+
+#### Thread Operations
+```javascript
+"thread/start"          // Start new thread
+"thread/resume"         // Resume existing thread
+"thread/fork"           // Fork thread
+"thread/archive"        // Archive thread
+"thread/name/set"       // Set thread name
+"thread/compact/start"  // Start compaction
+"thread/rollback"       // Rollback thread
+"thread/loaded/list"    // List loaded threads
+"thread/read"           // Read thread data
+```
+
+#### Collaboration (Experimental)
+```javascript
+"collaborationMode/list"      // List collaboration modes
+"mock/experimentalMethod"     // Test experimental features
+```
+
+#### Account & Auth
+```javascript
+"account/login/start"         // Start login flow
+"account/login/cancel"        // Cancel login
+"account/logout"              // Logout
+"account/rateLimits/read"     // Read rate limits
+"account/read"                // Read account info
+```
+
+#### Configuration
+```javascript
+"config/read"                 // Read config
+"config/value/write"          // Write config value
+"config/batchWrite"           // Batch write config
+"configRequirements/read"     // Read requirements
+"config/mcpServer/reload"     // Reload MCP server
+```
+
+#### Review & Execution
+```javascript
+"review/start"                // Start code review
+"turn/start"                  // Start turn
+"turn/interrupt"              // Interrupt turn
+"command/exec"                // Execute command
+"feedback/upload"             // Upload feedback
+```
+
+### Hidden CLI Commands
+
+| Command | Purpose | Usage |
+|---------|---------|-------|
+| `debug-config` | Show config layer stack and sources | `codex debug-config` |
+| `setup-elevated-sandbox` | Windows elevated sandbox setup | Windows only |
+| `test-approval` | Test approval request flow | Testing |
+| `rollout` | Print rollout file path | Debugging |
+
+### Experimental Internal Features
+
+| Feature | Description | Potential Use |
+|---------|-------------|---------------|
+| `experimentalApi` | Enable experimental API methods | Advanced integrations |
+| `experimentalRawEvents` | Emit raw response items on stream | Event processing |
+| `subAgentThreadSpawn` | Spawn sub-agent threads | Multi-agent coordination |
+| `subAgentCompact` | Compact sub-agent history | Memory management |
+| `ghostSnapshot` | Repository state snapshots | Version control |
+| `dynamicTools` | Runtime tool registration | Plugin system |
+
+### Internal Data Structures
+
+#### CollabAgentToolCall
+Multi-agent collaboration with fields:
+- `senderThreadId` - Originating agent
+- `receiverThreadIds` - Target agents
+- `agentsStates` - Agent state tracking
+
+#### GhostCommit
+Repository snapshots:
+- Creates temporary commits for state preservation
+- Uses `codex snapshot@codex.local` as author
+- Enables undo/rollback operations
+
+#### DynamicToolCall
+Runtime tool registration:
+- Allows tools to be added at runtime
+- Supports custom schemas
+- Enables plugin architecture
+
+### Model Information
+
+The binary confirms GPT-5 model usage:
+```
+"You are Codex, based on GPT-5. You are running as a coding
+agent in the Codex CLI on a user's computer."
+```
+
+Available models include:
+- `gpt-5.3-codex` (latest)
+- `gpt-5.2-codex`
+- `gpt-5-codex`
+
+## Claude Flow Integration Opportunities
+
+### Using Undocumented Features
+
+1. **Session Recording**
+   ```bash
+   CODEX_TUI_RECORD_SESSION=1 CODEX_TUI_SESSION_LOG_PATH=/tmp/codex.log codex
+   ```
+   Use for debugging and learning pattern extraction.
+
+2. **CI Mode**
+   ```bash
+   CODEX_CI=1 codex exec --json "task description"
+   ```
+   Optimized for pipeline execution.
+
+3. **Custom Config Location**
+   ```bash
+   CODEX_HOME=/project/.codex codex
+   ```
+   Project-specific configurations.
+
+4. **Network Isolation**
+   ```bash
+   CODEX_SANDBOX_NETWORK_DISABLED=1 codex
+   ```
+   Maximum security for sensitive operations.
+
+5. **Sub-Agent Spawning**
+   Via JSON-RPC: `thread/fork` with collaboration mode for multi-agent workflows.
+
+6. **Dynamic Tools**
+   Register claude-flow tools at runtime via the MCP protocol.
+
+### Programmatic Control via JSON-RPC
+
+```typescript
+// Example: Programmatic Codex control
+const codexSession = {
+  // Start a session
+  start: { method: "thread/start", params: { prompt: "...", cwd: "..." } },
+
+  // Fork for parallel work
+  fork: { method: "thread/fork", params: { threadId: "...", prompt: "..." } },
+
+  // Read rate limits
+  limits: { method: "account/rateLimits/read", params: {} },
+
+  // Batch config update
+  config: { method: "config/batchWrite", params: { values: [...] } }
+};
+```
+
+### Ghost Snapshots for Undo
+
+Codex creates "ghost commits" for state management:
+```bash
+# Internal git operations
+git commit-tree -p HEAD "codex snapshot"
+```
+
+Claude-flow could use similar patterns for swarm state management.
+
 ## Conclusion
 
 The `@openai/codex` package is a well-designed native binary wrapper that:
@@ -337,5 +552,13 @@ The `@openai/codex` package is a well-designed native binary wrapper that:
 3. **Includes dependencies** - Bundles ripgrep for file search
 4. **Follows standards** - Uses AGENTS.md, Skills, MCP
 5. **Is actively developed** - 27+ feature flags indicate rapid iteration
+6. **Has rich internals** - Many undocumented features for advanced use
+
+The undocumented features provide significant opportunities for deep integration:
+- **Environment variables** for configuration and debugging
+- **JSON-RPC methods** for programmatic control
+- **Sub-agent collaboration** for multi-agent workflows
+- **Ghost snapshots** for state management
+- **Dynamic tools** for runtime extensibility
 
 The package architecture is similar to Claude Code's approach, making it straightforward to create a compatible Codex integration in claude-flow.
