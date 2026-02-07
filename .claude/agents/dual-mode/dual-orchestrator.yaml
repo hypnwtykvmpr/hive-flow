@@ -1,0 +1,175 @@
+name: dual-orchestrator
+description: Orchestrates Claude Code (interactive) + Codex (headless) for hybrid workflows
+type: orchestrator
+platform: dual
+
+# Mode configuration
+modes:
+  interactive:
+    platform: claude-code
+    use_for:
+      - complex-reasoning
+      - architecture-decisions
+      - debugging
+      - real-time-review
+
+  headless:
+    platform: codex
+    use_for:
+      - parallel-execution
+      - batch-processing
+      - code-generation
+      - documentation
+      - testing
+
+# Routing rules
+routing:
+  # Route to headless Codex
+  codex_patterns:
+    - "implement * in parallel"
+    - "generate * files"
+    - "write tests for *"
+    - "document *"
+    - "batch process *"
+
+  # Keep in interactive Claude Code
+  claude_patterns:
+    - "explain *"
+    - "debug *"
+    - "design *"
+    - "review with me *"
+    - "help me understand *"
+
+# MCP Integration (shared)
+mcp:
+  enabled: true
+  shared_tools:
+    - memory_search
+    - memory_store
+    - swarm_init
+    - swarm_status
+    - agent_spawn
+
+# Workflow patterns
+workflows:
+  hybrid_development:
+    name: Hybrid Development Flow
+    description: Use Claude Code for design, Codex for implementation
+    steps:
+      - phase: design
+        platform: claude-code
+        interactive: true
+        tasks:
+          - Discuss requirements
+          - Design architecture
+          - Store design in memory
+
+      - phase: implement
+        platform: codex
+        parallel: true
+        workers:
+          - type: coder
+            count: 2
+          - type: tester
+            count: 1
+
+      - phase: review
+        platform: claude-code
+        interactive: true
+        tasks:
+          - Review implementation
+          - Discuss improvements
+          - Finalize
+
+  parallel_feature:
+    name: Parallel Feature Implementation
+    steps:
+      - action: swarm_init
+        args: { topology: hierarchical, maxAgents: 6 }
+
+      - action: spawn_headless
+        workers:
+          - { role: architect, task: "Design feature" }
+          - { role: coder-1, task: "Implement core" }
+          - { role: coder-2, task: "Implement API" }
+          - { role: tester, task: "Write tests" }
+          - { role: docs, task: "Write documentation" }
+
+      - action: wait_all
+
+      - action: interactive_review
+        platform: claude-code
+
+# Prompts
+prompts:
+  decide_platform: |
+    Analyzing task: {{task}}
+
+    ROUTING DECISION:
+    {{#if requires_interaction}}
+    → Use Claude Code (interactive)
+    Reason: {{interaction_reason}}
+    {{else}}
+    → Use Codex (headless)
+    Reason: Can run in background, parallelizable
+    {{/if}}
+
+  spawn_hybrid: |
+    HYBRID WORKFLOW: {{workflow_name}}
+
+    INTERACTIVE (Claude Code):
+    {{interactive_tasks}}
+
+    HEADLESS (Codex - parallel):
+    {{#each headless_workers}}
+    claude -p "{{this.prompt}}" --session-id {{this.id}} &
+    {{/each}}
+
+    COORDINATION:
+    All workers share memory via claude-flow MCP tools.
+    Results stored in 'results' namespace.
+
+  aggregate: |
+    COLLECTING RESULTS:
+
+    ```bash
+    npx claude-flow memory list --namespace results
+    ```
+
+    SYNTHESIS:
+    {{#each results}}
+    - {{this.worker}}: {{this.summary}}
+    {{/each}}
+
+# Examples
+examples:
+  - name: Build API feature
+    interactive_phase: |
+      Let's design the API endpoints together.
+      I'll help you think through the data models
+      and error handling strategies.
+
+    headless_phase: |
+      claude -p "Implement GET /users endpoint" &
+      claude -p "Implement POST /users endpoint" &
+      claude -p "Write integration tests" &
+      wait
+
+    review_phase: |
+      Now let's review what the workers produced.
+      I'll help identify any issues or improvements.
+
+  - name: Refactor module
+    interactive_phase: |
+      Let's analyze the current code structure
+      and plan the refactoring approach.
+
+    headless_phase: |
+      claude -p "Refactor authentication module" &
+      claude -p "Update all imports" &
+      claude -p "Run test suite" &
+      wait
+
+    review_phase: |
+      Let's verify the refactoring is complete
+      and all tests pass.
