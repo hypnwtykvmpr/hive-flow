@@ -478,6 +478,114 @@ Invoke with `$my-skill`
 ---
 
 <details>
+<summary><b>Dual-Mode Integration (Claude Code + Codex)</b></summary>
+
+### Hybrid Execution Model
+
+Run Claude Code for interactive development and spawn headless Codex workers for parallel background tasks:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  CLAUDE CODE (interactive)  ←→  CODEX WORKERS (headless)        │
+│  - Main conversation         - Parallel background execution    │
+│  - Complex reasoning         - Bulk code generation            │
+│  - Architecture decisions    - Test execution                   │
+│  - Final integration         - File processing                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Setup
+
+```bash
+# Initialize dual-mode
+npx claude-flow@alpha init --dual
+
+# Creates both:
+# - CLAUDE.md (Claude Code configuration)
+# - AGENTS.md (Codex configuration)
+# - Shared .claude-flow/ runtime
+```
+
+### Spawning Parallel Codex Workers
+
+From Claude Code, spawn headless Codex instances:
+
+```bash
+# Spawn workers in parallel (each runs independently)
+claude -p "Analyze src/auth/ for security issues" --session-id "task-1" &
+claude -p "Write unit tests for src/api/" --session-id "task-2" &
+claude -p "Optimize database queries in src/db/" --session-id "task-3" &
+wait  # Wait for all to complete
+```
+
+### Dual-Mode Skills
+
+| Skill | Platform | Description |
+|-------|----------|-------------|
+| `$dual-spawn` | Codex | Spawn parallel workers from orchestrator |
+| `$dual-coordinate` | Both | Coordinate cross-platform execution |
+| `$dual-collect` | Claude Code | Collect results from Codex workers |
+
+### Dual-Mode Agents
+
+| Agent | Type | Execution |
+|-------|------|-----------|
+| `codex-worker` | Worker | Headless background execution |
+| `codex-coordinator` | Coordinator | Manage parallel worker pool |
+| `dual-orchestrator` | Orchestrator | Route tasks to appropriate platform |
+
+### Task Routing Rules
+
+| Task Complexity | Platform | Reason |
+|----------------|----------|--------|
+| Simple (1-2 files) | Codex Headless | Fast, parallel |
+| Medium (3-5 files) | Claude Code | Needs context |
+| Complex (architecture) | Claude Code | Reasoning required |
+| Bulk operations | Codex Workers | Parallelize |
+| Final review | Claude Code | Integration |
+
+### Example Workflow
+
+```
+1. Claude Code receives complex feature request
+2. Designs architecture and creates plan
+3. Spawns 4 Codex workers:
+   - Worker 1: Implement data models
+   - Worker 2: Create API endpoints
+   - Worker 3: Write unit tests
+   - Worker 4: Generate documentation
+4. Workers execute in parallel (headless)
+5. Claude Code collects and integrates results
+6. Final review and refinement in Claude Code
+```
+
+### Memory Sharing
+
+Both platforms share the same `.claude-flow/` runtime:
+
+```
+.claude-flow/
+├── data/
+│   └── memory.db      # Shared vector memory
+├── config.yaml        # Shared configuration
+└── sessions/          # Cross-platform sessions
+```
+
+### Benefits
+
+| Feature | Benefit |
+|---------|---------|
+| **Parallel Execution** | 4-8x faster for bulk tasks |
+| **Cost Optimization** | Route simple tasks to cheaper workers |
+| **Context Preservation** | Shared memory across platforms |
+| **Best of Both** | Interactive + batch processing |
+| **Unified Learning** | Patterns learned by both platforms |
+
+</details>
+
+---
+
+<details>
 <summary><b>Configuration</b></summary>
 
 ### .agents/config.toml
