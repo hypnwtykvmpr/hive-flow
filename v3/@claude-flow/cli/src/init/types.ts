@@ -70,6 +70,8 @@ export interface SkillsConfig {
   browser: boolean;
   /** Include V3 implementation skills */
   v3: boolean;
+  /** Include dual-mode skills (Claude Code + Codex hybrid) */
+  dualMode: boolean;
   /** Include all available skills */
   all: boolean;
 }
