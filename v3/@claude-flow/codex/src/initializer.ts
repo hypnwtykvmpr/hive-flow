@@ -18,6 +18,11 @@ import { generateConfigToml } from './generators/config-toml.js';
 import { DEFAULT_SKILLS_BY_TEMPLATE, AGENTS_OVERRIDE_TEMPLATE, GITIGNORE_ENTRIES, ALL_AVAILABLE_SKILLS } from './templates/index.js';
 
 /**
+ * Bundled skills source directory (relative to package)
+ */
+const BUNDLED_SKILLS_DIR = '../../../../.agents/skills';
+
+/**
  * Main initializer for Codex projects
  */
 export class CodexInitializer {
@@ -26,6 +31,7 @@ export class CodexInitializer {
   private skills: string[] = [];
   private force: boolean = false;
   private dual: boolean = false;
+  private bundledSkillsPath: string = '';
 
   /**
    * Initialize a new Codex project
