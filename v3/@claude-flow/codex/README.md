@@ -346,7 +346,7 @@ Invoke with `$my-skill`
 
 ```toml
 # Model configuration
-model = "gpt-4"
+model = "gpt-5.3"
 
 # Approval policy: "always" | "on-request" | "never"
 approval_policy = "on-request"
