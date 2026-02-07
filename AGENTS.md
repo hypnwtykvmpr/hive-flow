@@ -502,14 +502,30 @@ npx claude-flow mcp start --test
 ### MCP Tools Available
 Once added, Codex can use these tools via MCP:
 
+**Coordination:**
 | Tool | Purpose |
 |------|---------|
-| `swarm_init` | Initialize swarm coordination |
+| `swarm_init` | Initialize swarm (topology, maxAgents) |
+| `swarm_status` | Check swarm state |
 | `agent_spawn` | Register agent roles |
-| `memory_store` | Store learning patterns |
-| `memory_search` | Retrieve relevant patterns |
-| `task_orchestrate` | Coordinate tasks |
-| `neural_train` | Train on successful patterns |
+| `agent_status` | Check agent state |
+| `task_orchestrate` | Coordinate multi-agent tasks |
+
+**Learning & Memory (USE THESE!):**
+| Tool | Purpose | When |
+|------|---------|------|
+| `memory_search` | Semantic vector search | BEFORE every task |
+| `memory_store` | Store patterns with embeddings | AFTER success |
+| `memory_retrieve` | Get by exact key | When key is known |
+| `neural_train` | Train on patterns | Periodic improvement |
+| `neural_status` | Check learning state | Debugging |
+
+**Hive Mind (Advanced):**
+| Tool | Purpose |
+|------|---------|
+| `hive-mind_init` | Byzantine consensus swarm |
+| `hive-mind_spawn` | Spawn hive workers |
+| `hive-mind_broadcast` | Message all workers |
 
 ### Self-Learning via MCP Tools (PREFERRED)
 
