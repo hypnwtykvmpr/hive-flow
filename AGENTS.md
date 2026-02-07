@@ -64,16 +64,34 @@
 
 - Initialize swarm using CLI when starting complex tasks
 - Spawn agents using `npx claude-flow agent spawn`
-- Use `npx claude-flow task orchestrate` for task distribution
+- Start swarm execution using `npx claude-flow swarm start`
 
 ### Swarm Initialization Pattern
 
 ```bash
 # Initialize swarm first
-npx claude-flow swarm init --topology hierarchical --max-agents 8
+npx claude-flow swarm init --topology hierarchical --max-agents 8 --strategy specialized
 
-# Then spawn required agents
-npx claude-flow agent spawn --type coder --name impl-1
+# Spawn required agents
+npx claude-flow agent spawn --type coordinator --name swarm-coord
+npx claude-flow agent spawn --type coder --name coder-1
+npx claude-flow agent spawn --type tester --name tester-1
+
+# Start swarm execution with an objective
+npx claude-flow swarm start --objective "Build REST API" --strategy development
+```
+
+### Task Management
+
+```bash
+# Create a task
+npx claude-flow task create --type implementation --description "Add user auth"
+
+# List tasks
+npx claude-flow task list
+
+# Assign task to agent
+npx claude-flow task assign task-123 --agent coder-1
 ```
 
 ### 3-Tier Model Routing (ADR-026)
