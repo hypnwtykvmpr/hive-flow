@@ -60,14 +60,19 @@
 
 ## Swarm Orchestration
 
-- MUST initialize the swarm using MCP tools when starting complex tasks
-- MUST spawn concurrent agents using Task tool
-- Never use MCP tools alone for execution — Task tool agents do the actual work
+- Initialize swarm using CLI when starting complex tasks
+- Spawn agents using `npx claude-flow agent spawn`
+- Use `npx claude-flow task orchestrate` for task distribution
 
-### MCP + Task Tool in SAME Message
+### Swarm Initialization Pattern
 
-- MUST call MCP tools AND Task tool in ONE message for complex work
-- Always call MCP first, then IMMEDIATELY call Task tool to spawn agents
+```bash
+# Initialize swarm first
+npx claude-flow swarm init --topology hierarchical --max-agents 8
+
+# Then spawn required agents
+npx claude-flow agent spawn --type coder --name impl-1
+```
 
 ### 3-Tier Model Routing (ADR-026)
 
