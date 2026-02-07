@@ -13,6 +13,8 @@
 ║  2. Codex = EXECUTOR (writes code, runs commands, creates files)          ║
 ║  3. NEVER stop after calling claude-flow - IMMEDIATELY continue working   ║
 ║  4. If you need something BUILT/EXECUTED, YOU do it, not claude-flow      ║
+║  5. ALWAYS search memory BEFORE starting: memory search --query "task"    ║
+║  6. ALWAYS store patterns AFTER success: memory store --namespace patterns║
 ╚═══════════════════════════════════════════════════════════════════════════╝
 ```
 
