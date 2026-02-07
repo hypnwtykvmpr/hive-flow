@@ -99,15 +99,29 @@ export class CodexInitializer {
         warnings.push('.agents/config.toml already exists - skipped');
       }
 
-      // Generate skills
+      // Copy bundled skills first (for full/enterprise templates or specific skills)
+      const bundledResult = await this.copyBundledSkills();
+      skillsGenerated.push(...bundledResult.copied);
+      warnings.push(...bundledResult.warnings);
+
+      // For skills not bundled, generate from templates
       for (const skillName of this.skills) {
+        // Skip if already copied as bundled skill
+        if (bundledResult.copied.includes(skillName)) {
+          filesCreated.push(`.agents/skills/${skillName}/SKILL.md`);
+          continue;
+        }
+
         try {
           const skillResult = await this.generateSkill(skillName);
           if (skillResult.created) {
             skillsGenerated.push(skillName);
             filesCreated.push(skillResult.path);
           } else if (skillResult.skipped) {
-            warnings.push(`Skill ${skillName} already exists - skipped`);
+            // Only warn if not already in bundled warnings
+            if (!bundledResult.warnings.some(w => w.includes(skillName))) {
+              warnings.push(`Skill ${skillName} already exists - skipped`);
+            }
           }
         } catch (err) {
           const errorMessage = err instanceof Error ? err.message : String(err);
