@@ -3,6 +3,15 @@
 ## Status
 **Proposed** | 2026-02-07
 
+## Branding Note
+
+This ADR introduces the **coflow** branding transition:
+- Package: `@claude-flow/codex` (npm)
+- Future umbrella: `coflow` (npm/npx coflow)
+- Current umbrella: `claude-flow` (maintained for compatibility)
+
+The Codex integration is the first step in the coflow rebranding initiative.
+
 ## Context
 
 ### The Agentic Coding Landscape
