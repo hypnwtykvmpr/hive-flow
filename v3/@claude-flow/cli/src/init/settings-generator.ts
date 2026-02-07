@@ -66,6 +66,24 @@ export function generateSettings(options: InitOptions): object {
       teammateMode: 'auto', // 'auto' | 'in-process' | 'tmux'
       taskListEnabled: true,
       mailboxEnabled: true,
+      coordination: {
+        autoAssignOnIdle: true,       // Auto-assign pending tasks when teammate is idle
+        trainPatternsOnComplete: true, // Train neural patterns when tasks complete
+        notifyLeadOnComplete: true,   // Notify team lead when tasks complete
+        sharedMemoryNamespace: 'agent-teams', // Memory namespace for team coordination
+      },
+      hooks: {
+        teammateIdle: {
+          enabled: true,
+          autoAssign: true,
+          checkTaskList: true,
+        },
+        taskCompleted: {
+          enabled: true,
+          trainPatterns: true,
+          notifyLead: true,
+        },
+      },
     },
     swarm: {
       topology: options.runtime.topology,
