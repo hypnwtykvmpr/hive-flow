@@ -564,16 +564,19 @@ describe('generateMigrationReport', () => {
       const result: MigrationResult = {
         success: true,
         mappings: [
-          { claudeCode: 'CLAUDE.md', codex: 'AGENTS.md', status: 'mapped' },
-          { claudeCode: '/skill', codex: '$skill', status: 'mapped' },
+          { claudeCode: 'CLAUDE.md', codex: 'AGENTS.md', status: 'mapped', notes: 'Main file' },
+          { claudeCode: '/skill', codex: '$skill', status: 'mapped', notes: 'Syntax change' },
         ],
       };
 
       const report = generateMigrationReport(result);
 
       expect(report).toContain('## Feature Mappings');
-      expect(report).toContain('| Claude Code | Codex | Status |');
-      expect(report).toContain('| CLAUDE.md | AGENTS.md | mapped |');
+      // Table now includes Notes column
+      expect(report).toContain('| Claude Code | Codex | Status | Notes |');
+      expect(report).toContain('CLAUDE.md');
+      expect(report).toContain('AGENTS.md');
+      expect(report).toContain('mapped');
     });
 
     it('should include warnings', () => {
