@@ -1,0 +1,150 @@
+name: codex-coordinator
+description: Coordinates multiple headless Codex workers for parallel execution
+type: coordinator
+platform: dual
+
+# Execution mode
+execution:
+  mode: interactive
+  spawns_workers: true
+  worker_type: codex-worker
+
+# Capabilities
+capabilities:
+  - swarm-coordination
+  - task-decomposition
+  - result-aggregation
+  - worker-management
+
+# MCP Integration
+mcp:
+  enabled: true
+  tools:
+    - swarm_init
+    - swarm_status
+    - agent_spawn
+    - memory_search
+    - memory_store
+    - memory_list
+    - hive-mind_init
+    - hive-mind_spawn
+
+# Coordination patterns
+patterns:
+  parallel_workers:
+    description: Spawn multiple workers for parallel execution
+    steps:
+      - swarm_init: { topology: hierarchical, maxAgents: 8 }
+      - spawn_workers:
+          - { type: coder, count: 2 }
+          - { type: tester, count: 1 }
+          - { type: reviewer, count: 1 }
+      - wait_for_completion
+      - aggregate_results
+
+  sequential_pipeline:
+    description: Chain workers in sequence
+    steps:
+      - spawn: architect
+      - wait_for: architecture
+      - spawn: [coder-1, coder-2]
+      - wait_for: implementation
+      - spawn: tester
+      - wait_for: tests
+      - aggregate_results
+
+# Prompts
+prompts:
+  coordinate_parallel: |
+    You are the coordinator for a parallel Codex swarm.
+
+    TASK: {{task_description}}
+
+    STEP 1: Initialize swarm
+    ```bash
+    npx claude-flow swarm init --topology hierarchical --max-agents {{worker_count}}
+    ```
+
+    STEP 2: Spawn headless workers
+    {{#each workers}}
+    ```bash
+    claude -p "{{this.prompt}}" --session-id {{this.id}} &
+    ```
+    {{/each}}
+
+    STEP 3: Wait for completion
+    ```bash
+    wait
+    ```
+
+    STEP 4: Aggregate results
+    ```bash
+    npx claude-flow memory list --namespace results
+    ```
+
+  spawn_worker: |
+    Spawning worker: {{worker_name}}
+    Task: {{worker_task}}
+    Session: {{session_id}}
+
+    ```bash
+    claude -p "
+    You are {{worker_name}}.
+
+    TASK: {{worker_task}}
+
+    1. Search memory: memory_search(query='{{task_keywords}}')
+    2. Execute your task
+    3. Store results: memory_store(key='result-{{session_id}}', namespace='results', upsert=true)
+    " --session-id {{session_id}} &
+    ```
+
+# Worker templates
+workers:
+  coder:
+    prompt_template: |
+      You are a coder worker.
+      Implement: {{task}}
+      Path: {{output_path}}
+      Store results when complete.
+
+  tester:
+    prompt_template: |
+      You are a tester worker.
+      Write tests for: {{task}}
+      Path: {{test_path}}
+      Run tests and store results.
+
+  reviewer:
+    prompt_template: |
+      You are a code reviewer.
+      Review: {{files}}
+      Check for: security, performance, best practices
+      Store findings in memory.
+
+  documenter:
+    prompt_template: |
+      You are a documentation writer.
+      Document: {{component}}
+      Output: {{doc_path}}
+      Store completion status.
+
+# Examples
+examples:
+  - name: Feature implementation swarm
+    description: Coordinate 4 workers for feature implementation
+    script: |
+      #!/bin/bash
+      FEATURE="user-auth"
+
+      # Initialize
+      npx claude-flow swarm init --topology hierarchical --max-agents 4
+
+      # Spawn workers
+      claude -p "Architect: Design $FEATURE" --session-id ${FEATURE}-arch &
+      claude -p "Coder: Implement $FEATURE" --session-id ${FEATURE}-code &
+      claude -p "Tester: Test $FEATURE" --session-id ${FEATURE}-test &
+      claude -p "Docs: Document $FEATURE" --session-id ${FEATURE}-docs &
+
+      wait
+      npx claude-flow memory list --namespace results
