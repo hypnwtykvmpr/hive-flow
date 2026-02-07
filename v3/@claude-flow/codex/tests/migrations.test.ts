@@ -554,9 +554,10 @@ describe('generateMigrationReport', () => {
       const report = generateMigrationReport(result);
 
       expect(report).toContain('## Skills Created');
-      expect(report).toContain('- skill-a');
-      expect(report).toContain('- skill-b');
-      expect(report).toContain('- skill-c');
+      // Skills are formatted with $ prefix in backticks
+      expect(report).toContain('$skill-a');
+      expect(report).toContain('$skill-b');
+      expect(report).toContain('$skill-c');
     });
 
     it('should include feature mappings table', () => {
