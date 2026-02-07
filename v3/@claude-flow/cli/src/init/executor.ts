@@ -40,6 +40,7 @@ const SKILLS_MAP: Record<string, string[]> = {
     'skill-builder',
   ],
   browser: ['browser'],  // agent-browser integration
+  dualMode: ['dual-mode'],  // Claude Code + Codex hybrid execution
   agentdb: [
     'agentdb-advanced',
     'agentdb-learning',
