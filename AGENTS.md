@@ -388,9 +388,69 @@ Invoke with `$skill-name`:
 
 ---
 
+---
+
+## 🔌 MCP INTEGRATION (Learning & Coordination)
+
+Codex doesn't have native hooks like Claude Code, but uses **MCP (Model Context Protocol)** for learning and coordination.
+
+### Add Claude-Flow as MCP Server
+```bash
+# Add claude-flow MCP server to Codex
+codex mcp add claude-flow -- npx claude-flow mcp start
+
+# Verify it's added
+codex mcp list
+```
+
+### MCP Tools Available
+Once added, Codex can use these tools via MCP:
+
+| Tool | Purpose |
+|------|---------|
+| `swarm_init` | Initialize swarm coordination |
+| `agent_spawn` | Register agent roles |
+| `memory_store` | Store learning patterns |
+| `memory_search` | Retrieve relevant patterns |
+| `task_orchestrate` | Coordinate tasks |
+| `neural_train` | Train on successful patterns |
+
+### Learning via Memory
+
+**Before starting a task:**
+```bash
+# Search for relevant patterns from past work
+npx claude-flow memory search --query "similar task keywords"
+```
+
+**After completing a task:**
+```bash
+# Store successful pattern for future reference
+npx claude-flow memory store --key "pattern-name" --value "what worked" --namespace patterns
+```
+
+### Coordination via MCP
+
+When claude-flow is added as MCP server, Codex can call tools directly:
+```
+Use tool: swarm_init with topology="hierarchical"
+Use tool: memory_store with key="result" value="success"
+```
+
+### config.toml MCP Setup
+```toml
+# ~/.codex/config.toml
+[mcp_servers.claude-flow]
+command = "npx"
+args = ["claude-flow", "mcp", "start"]
+enabled = true
+```
+
+---
+
 ## 📚 SUPPORT
 
 - Docs: https://github.com/ruvnet/claude-flow
 - Issues: https://github.com/ruvnet/claude-flow/issues
 
-**Remember: Copy-paste commands, no discovery needed!**
+**Remember: Codex executes, claude-flow orchestrates!**
