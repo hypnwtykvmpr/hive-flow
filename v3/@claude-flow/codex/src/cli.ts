@@ -688,6 +688,10 @@ program
     }
   });
 
+// Dual-mode command - collaborative Claude Code + Codex execution
+import { createDualModeCommand } from './dual-mode/index.js';
+program.addCommand(createDualModeCommand());
+
 // Error handling for unknown commands
 program.on('command:*', () => {
   console.error(chalk.red(`Invalid command: ${program.args.join(' ')}`));
