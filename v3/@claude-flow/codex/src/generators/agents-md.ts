@@ -464,30 +464,204 @@ All significant changes require:
 2. Security scan passing
 3. Test coverage > 80%
 4. Documentation update
+5. Change request ticket linked
+
+### Change Classification
+
+| Class | Approval | Review Time | Examples |
+|-------|----------|-------------|----------|
+| Standard | Auto | <1 hour | Bug fixes, docs, config |
+| Normal | 1 reviewer | <4 hours | Features, refactoring |
+| Major | 2 reviewers | <24 hours | Architecture, security |
+| Emergency | Skip + post-review | Immediate | Production hotfix |
 
 ### Audit Trail
 All agent actions are logged to:
-- \`/logs/agent-actions.log\`
-- Central audit system (if configured)
+- \`/logs/agent-actions.log\` - Local file log
+- \`/logs/audit.json\` - Structured JSON log
+- Central audit system (if configured via AUDIT_ENDPOINT)
+
+\`\`\`bash
+# View recent agent actions
+npx @claude-flow/cli logs --type agent-actions --last 1h
+
+# Export audit log
+npx @claude-flow/cli logs export --format json --output audit.json
+\`\`\`
 
 ### Compliance
-- SOC2 compatible logging
-- GDPR data handling patterns
-- PCI-DSS security controls (if applicable)
+
+#### SOC2 Controls
+- All actions timestamped with actor ID
+- Immutable audit log retention (90 days minimum)
+- Access control for sensitive operations
+- Automated security scanning
+
+#### GDPR Data Handling
+- PII detection and masking in logs
+- Data minimization in memory storage
+- Right to erasure support in AgentDB
+- Cross-border transfer controls
+
+#### PCI-DSS (if applicable)
+- No storage of card data in agent memory
+- Encrypted communication for sensitive data
+- Access logging for cardholder data operations
+- Quarterly security reviews
+
+### Role-Based Access Control (RBAC)
+
+| Role | Permissions |
+|------|-------------|
+| Developer | Read, write source code, run tests |
+| Lead | Developer + approve PRs, deploy to staging |
+| Admin | Lead + deploy to production, manage config |
+| Security | Audit logs, security scans, CVE remediation |
+| Observer | Read-only access to logs and metrics |
+
+\`\`\`bash
+# Check current role
+npx @claude-flow/cli claims list
+
+# Request elevated permissions
+npx @claude-flow/cli claims request --permission deploy:production
+\`\`\`
+
+## Service Level Agreements (SLAs)
+
+### Agent Response Times
+
+| Operation | Target | Max | Escalation |
+|-----------|--------|-----|------------|
+| Code generation | <5s | 30s | Alert on-call |
+| Memory search | <100ms | 500ms | Log warning |
+| Security scan | <60s | 5min | Queue retry |
+| Test execution | <2min | 10min | Split test suite |
+
+### Availability Targets
+- Agent availability: 99.9% uptime
+- Memory system: 99.99% availability
+- MCP server: 99.5% uptime
 
 ## Incident Response
 
+### Severity Levels
+
+| Level | Description | Response Time | Notification |
+|-------|-------------|---------------|--------------|
+| P1 | Production down | <15 min | Page on-call |
+| P2 | Major feature broken | <1 hour | Slack alert |
+| P3 | Minor issue | <4 hours | Email |
+| P4 | Cosmetic/docs | Next sprint | Ticket |
+
 ### On Security Issue
-1. Immediately stop affected agents
-2. Isolate compromised resources
-3. Document timeline
-4. Notify security team
+1. **Contain** - Immediately stop affected agents
+   \`\`\`bash
+   npx @claude-flow/cli agent stop --all --force
+   \`\`\`
+2. **Isolate** - Quarantine compromised resources
+3. **Document** - Record timeline in incident log
+4. **Notify** - Alert security team via configured channel
+5. **Remediate** - Apply fix with expedited review
+6. **Review** - Post-incident analysis within 48 hours
 
 ### On Production Bug
-1. Roll back if safe
-2. Document reproduction steps
-3. Create hotfix branch
-4. Deploy with expedited review
+1. **Assess** - Determine impact and scope
+2. **Decide** - Roll back if safe, or forward-fix
+   \`\`\`bash
+   # Rollback
+   npx @claude-flow/cli deployment rollback --env production
+
+   # Or forward-fix
+   npx @claude-flow/cli workflow run hotfix
+   \`\`\`
+3. **Document** - Capture reproduction steps
+4. **Fix** - Create hotfix on dedicated branch
+5. **Validate** - Full regression test suite
+6. **Deploy** - With expedited review process
+
+### Communication Templates
+
+\`\`\`markdown
+# Incident Started
+**Status**: Investigating
+**Impact**: [Brief description]
+**Started**: [Timestamp]
+**Next Update**: [ETA]
+
+# Incident Resolved
+**Status**: Resolved
+**Impact**: [Summary]
+**Duration**: [Time]
+**Root Cause**: [Brief description]
+**Prevention**: [Actions taken]
+\`\`\`
+
+## Disaster Recovery
+
+### Backup Strategy
+- **Memory DB**: Hourly snapshots, 7-day retention
+- **Configuration**: Version controlled, immutable
+- **Agent State**: Checkpoint every 10 tasks
+
+### Recovery Procedures
+\`\`\`bash
+# Restore from backup
+npx @claude-flow/cli memory restore --snapshot latest
+
+# Restore specific checkpoint
+npx @claude-flow/cli session restore --checkpoint <id>
+\`\`\`
+
+### Recovery Time Objectives
+| Component | RTO | RPO |
+|-----------|-----|-----|
+| Memory DB | <1 hour | <1 hour |
+| Agent State | <15 min | <10 tasks |
+| Configuration | <5 min | 0 (git) |
+
+## Monitoring & Alerting
+
+### Key Metrics
+- Agent task completion rate
+- Average response latency
+- Error rate by type
+- Memory usage trends
+- Security scan findings
+
+### Alert Thresholds
+\`\`\`yaml
+alerts:
+  - name: high_error_rate
+    condition: error_rate > 5%
+    duration: 5m
+    severity: critical
+
+  - name: slow_response
+    condition: p99_latency > 10s
+    duration: 10m
+    severity: warning
+
+  - name: memory_pressure
+    condition: memory_usage > 90%
+    duration: 1m
+    severity: critical
+\`\`\`
+
+## Training & Onboarding
+
+### New Team Member Checklist
+- [ ] Read this AGENTS.md document
+- [ ] Complete security awareness training
+- [ ] Set up local development environment
+- [ ] Run \`npx @claude-flow/cli doctor\` to verify setup
+- [ ] Complete first guided task with mentor
+- [ ] Review incident response procedures
+
+### Knowledge Base
+- Internal wiki: [Link to wiki]
+- Architecture Decision Records: \`/docs/adr/\`
+- Runbooks: \`/docs/runbooks/\`
 `;
 
   return full + enterpriseSections;
