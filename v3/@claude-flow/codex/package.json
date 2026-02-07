@@ -29,6 +29,11 @@
       "types": "./dist/migrations/index.d.ts",
       "import": "./dist/migrations/index.js",
       "require": "./dist/migrations/index.js"
+    },
+    "./dual-mode": {
+      "types": "./dist/dual-mode/index.d.ts",
+      "import": "./dist/dual-mode/index.js",
+      "require": "./dist/dual-mode/index.js"
     }
   },
   "files": [
