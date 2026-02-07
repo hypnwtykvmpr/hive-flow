@@ -103,22 +103,20 @@ swarm_init({
 
 When the user requests a complex task (multi-file changes, feature implementation, refactoring), **immediately execute this pattern in a SINGLE message:**
 
-```javascript
-// STEP 1: Initialize swarm coordination via MCP (in parallel with agent spawning)
-swarm_init({
-  topology: "hierarchical",
-  maxAgents: 8,
-  strategy: "specialized"
-})
+```bash
+# STEP 1: Initialize swarm coordination
+npx claude-flow swarm init --topology hierarchical --max-agents 8 --strategy specialized
 
-// STEP 2: Spawn agents concurrently using Task tool
-// ALL Task calls MUST be in the SAME message for parallel execution
-Task("Coordinator", "You are the swarm coordinator. Initialize session, coordinate other agents via memory.", "hierarchical-coordinator")
-Task("Researcher", "Analyze requirements and existing code patterns. Store findings in memory.", "researcher")
-Task("Architect", "Design implementation approach based on research. Document decisions in memory.", "system-architect")
-Task("Coder", "Implement the solution following architect's design. Coordinate via hooks.", "coder")
-Task("Tester", "Write tests for the implementation. Report coverage via hooks.", "tester")
-Task("Reviewer", "Review code quality and security. Document findings.", "reviewer")
+# STEP 2: Spawn agents via CLI
+npx claude-flow agent spawn --type coordinator --name swarm-coord
+npx claude-flow agent spawn --type researcher --name researcher-1
+npx claude-flow agent spawn --type architect --name architect-1
+npx claude-flow agent spawn --type coder --name coder-1
+npx claude-flow agent spawn --type tester --name tester-1
+npx claude-flow agent spawn --type reviewer --name reviewer-1
+
+# STEP 3: Orchestrate task
+npx claude-flow task orchestrate --task "Your task description" --strategy adaptive
 ```
 
 ### Agent Routing (Anti-Drift)
