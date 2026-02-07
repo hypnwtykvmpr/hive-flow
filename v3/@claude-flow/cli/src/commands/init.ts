@@ -18,6 +18,109 @@ import {
   type InitOptions,
 } from '../init/index.js';
 
+// Codex initialization action
+async function initCodexAction(
+  ctx: CommandContext,
+  options: { codexMode: boolean; dualMode: boolean; force: boolean; minimal: boolean; full: boolean }
+): Promise<CommandResult> {
+  const { force, minimal, full, dualMode } = options;
+
+  output.writeln();
+  output.writeln(output.bold('Initializing Claude Flow V3 for OpenAI Codex'));
+  output.writeln();
+
+  // Determine template
+  const template = minimal ? 'minimal' : full ? 'full' : 'default';
+
+  const spinner = output.createSpinner({ text: 'Initializing Codex project...' });
+  spinner.start();
+
+  try {
+    // Dynamic import of the Codex initializer
+    const { CodexInitializer } = await import('@claude-flow/codex');
+    const initializer = new CodexInitializer();
+
+    const result = await initializer.initialize({
+      projectPath: ctx.cwd,
+      template: template as 'minimal' | 'default' | 'full' | 'enterprise',
+      force,
+      dual: dualMode,
+    });
+
+    if (!result.success) {
+      spinner.fail('Codex initialization failed');
+      if (result.errors) {
+        for (const error of result.errors) {
+          output.printError(error);
+        }
+      }
+      return { success: false, exitCode: 1 };
+    }
+
+    spinner.succeed('Codex project initialized successfully!');
+    output.writeln();
+
+    // Display summary
+    const summary: string[] = [];
+    summary.push(`Files: ${result.filesCreated.length} created`);
+    summary.push(`Skills: ${result.skillsGenerated.length} installed`);
+
+    output.printBox(summary.join('\n'), 'Summary');
+    output.writeln();
+
+    // Show what was created
+    output.printBox(
+      [
+        `AGENTS.md:     Main project instructions`,
+        `.agents/config.toml: Project configuration`,
+        `.agents/skills/: ${result.skillsGenerated.length} skills`,
+        `.codex/: Local overrides (gitignored)`,
+        dualMode ? `CLAUDE.md: Claude Code compatibility` : '',
+      ].filter(Boolean).join('\n'),
+      'OpenAI Codex Integration'
+    );
+    output.writeln();
+
+    // Warnings
+    if (result.warnings && result.warnings.length > 0) {
+      output.printWarning('Warnings:');
+      for (const warning of result.warnings.slice(0, 5)) {
+        output.printInfo(`  • ${warning}`);
+      }
+      if (result.warnings.length > 5) {
+        output.printInfo(`  ... and ${result.warnings.length - 5} more`);
+      }
+      output.writeln();
+    }
+
+    // Next steps
+    output.writeln(output.bold('Next steps:'));
+    output.printList([
+      `Review ${output.highlight('AGENTS.md')} for project instructions`,
+      `Add skills with ${output.highlight('$skill-name')} syntax`,
+      `Configure ${output.highlight('.agents/config.toml')} for your project`,
+      dualMode ? `Claude Code users can use ${output.highlight('CLAUDE.md')}` : '',
+    ].filter(Boolean));
+
+    return { success: true, data: result };
+  } catch (error) {
+    spinner.fail('Codex initialization failed');
+    const errorMessage = error instanceof Error ? error.message : String(error);
+
+    // Handle module not found error gracefully
+    if (errorMessage.includes('Cannot find module') || errorMessage.includes('@claude-flow/codex')) {
+      output.printError('The @claude-flow/codex package is not installed.');
+      output.printInfo('Install it with: npm install @claude-flow/codex');
+      output.writeln();
+      output.printInfo('Alternatively, copy skills manually from .claude/skills/ to .agents/skills/');
+    } else {
+      output.printError(`Failed to initialize: ${errorMessage}`);
+    }
+
+    return { success: false, exitCode: 1 };
+  }
+}
+
 // Check if project is already initialized
 function isInitialized(cwd: string): { claude: boolean; claudeFlow: boolean } {
   const claudePath = path.join(cwd, '.claude', 'settings.json');
