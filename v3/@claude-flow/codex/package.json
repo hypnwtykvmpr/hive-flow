@@ -1,6 +1,6 @@
 {
   "name": "@claude-flow/codex",
-  "version": "3.0.0-alpha.4",
+  "version": "3.0.0-alpha.5",
   "description": "Codex CLI integration for Claude Flow - OpenAI Codex platform adapter",
   "type": "module",
   "main": "./dist/index.js",
@@ -11,19 +11,24 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
     },
     "./generators": {
       "types": "./dist/generators/index.d.ts",
-      "import": "./dist/generators/index.js"
+      "import": "./dist/generators/index.js",
+      "require": "./dist/generators/index.js"
     },
     "./templates": {
       "types": "./dist/templates/index.d.ts",
-      "import": "./dist/templates/index.js"
+      "import": "./dist/templates/index.js",
+      "require": "./dist/templates/index.js"
     },
     "./migrations": {
       "types": "./dist/migrations/index.d.ts",
-      "import": "./dist/migrations/index.js"
+      "import": "./dist/migrations/index.js",
+      "require": "./dist/migrations/index.js"
     }
   },
   "files": [
