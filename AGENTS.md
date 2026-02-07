@@ -1,481 +1,298 @@
 # Claude Flow V3 - Agent Guide
 
-> **For OpenAI Codex CLI** - This file follows the [Agentic AI Foundation](https://agenticfoundation.org) standard
-> Use `$skill-name` syntax to invoke skills
-> Configuration: `.agents/config.toml`
-> Skills: `.agents/skills/`
-
-## Behavioral Rules (Always Enforced)
-
-- Do what has been asked; nothing more, nothing less
-- NEVER create files unless they're absolutely necessary for achieving your goal
-- ALWAYS prefer editing an existing file to creating a new one
-- NEVER proactively create documentation files (*.md) or README files unless explicitly requested
-- NEVER save working files, text/mds, or tests to the root folder
-- Never continuously check status after spawning a swarm — wait for results
-- ALWAYS read a file before editing it
-- NEVER commit secrets, credentials, or .env files
-
-## File Organization
-
-- NEVER save to root folder — use the directories below
-- Use `/src` for source code files
-- Use `/tests` for test files
-- Use `/docs` for documentation and markdown files
-- Use `/config` for configuration files
-- Use `/scripts` for utility scripts
-- Use `/examples` for example code
-
-## Project Architecture
-
-- Follow Domain-Driven Design with bounded contexts
-- Keep files under 500 lines
-- Use typed interfaces for all public APIs
-- Prefer TDD London School (mock-first) for new code
-- Use event sourcing for state changes
-- Ensure input validation at system boundaries
-
-### Key Packages
-
-| Package | Path | Purpose |
-|---------|------|---------|
-| `@claude-flow/cli` | `v3/@claude-flow/cli/` | CLI entry point (26 commands) |
-| `@claude-flow/guidance` | `v3/@claude-flow/guidance/` | Governance control plane |
-| `@claude-flow/hooks` | `v3/@claude-flow/hooks/` | 17 hooks + 12 workers |
-| `@claude-flow/memory` | `v3/@claude-flow/memory/` | AgentDB + HNSW search |
-| `@claude-flow/security` | `v3/@claude-flow/security/` | Input validation, CVE remediation |
-| `@claude-flow/codex` | `v3/@claude-flow/codex/` | OpenAI Codex integration |
-
-## Concurrency: 1 MESSAGE = ALL RELATED OPERATIONS
-
-- All operations MUST be concurrent/parallel when possible
-- Use CLI commands for spawning agents
-
-**Mandatory patterns:**
-- ALWAYS batch related operations together
-- Use `npx claude-flow agent spawn` for agent creation
-- ALWAYS batch file reads/writes/edits together
-- ALWAYS batch terminal operations together
-- ALWAYS batch memory store/retrieve operations together
+> **For OpenAI Codex CLI** - Agentic AI Foundation standard
+> Skills: `$skill-name` | Config: `.agents/config.toml`
 
 ---
 
-## Swarm Orchestration
+## ⚡ QUICK COMMANDS (NO DISCOVERY NEEDED)
 
-- Initialize swarm using CLI when starting complex tasks
-- Spawn agents using `npx claude-flow agent spawn`
-- Start swarm execution using `npx claude-flow swarm start`
-
-### Swarm Initialization Pattern
+### Spawn N-Agent Swarm (Copy-Paste Ready)
 
 ```bash
-# Initialize swarm first
-npx claude-flow swarm init --topology hierarchical --max-agents 8 --strategy specialized
-
-# Spawn required agents
-npx claude-flow agent spawn --type coordinator --name swarm-coord
+# 5-AGENT SWARM - Run these commands in sequence:
+npx claude-flow swarm init --topology hierarchical --max-agents 8
+npx claude-flow agent spawn --type coordinator --name coord-1
 npx claude-flow agent spawn --type coder --name coder-1
-npx claude-flow agent spawn --type tester --name tester-1
-
-# Start swarm execution with an objective
-npx claude-flow swarm start --objective "Build REST API" --strategy development
-```
-
-### Task Management
-
-```bash
-# Create a task
-npx claude-flow task create --type implementation --description "Add user auth"
-
-# List tasks
-npx claude-flow task list
-
-# Assign task to agent
-npx claude-flow task assign task-123 --agent coder-1
-```
-
-### 3-Tier Model Routing (ADR-026)
-
-| Tier | Handler | Latency | Cost | Use Cases |
-|------|---------|---------|------|-----------|
-| **1** | Agent Booster (WASM) | <1ms | $0 | Simple transforms (var→const, add types, etc.) — **Skip LLM entirely** |
-| **2** | Haiku/GPT-4o-mini | ~500ms | $0.0002 | Simple tasks, low complexity (<30%) |
-| **3** | Sonnet/Opus/GPT-5 | 2-5s | $0.003-0.015 | Complex reasoning, architecture, security (>30%) |
-
-## Swarm Configuration & Anti-Drift
-
-### Anti-Drift Coding Swarm (PREFERRED DEFAULT)
-
-- ALWAYS use hierarchical topology for coding swarms
-- Keep maxAgents at 6-8 for tight coordination
-- Use specialized strategy for clear role boundaries
-- Use `raft` consensus for hive-mind (leader maintains authoritative state)
-- Run frequent checkpoints via `post-task` hooks
-- Keep shared memory namespace for all agents
-- Keep task cycles short with verification gates
-
-```javascript
-swarm_init({
-  topology: "hierarchical",
-  maxAgents: 8,
-  strategy: "specialized"
-})
-```
-
-## Swarm Protocols & Routing
-
-### Auto-Start Swarm Protocol
-
-When the user requests a complex task (multi-file changes, feature implementation, refactoring), **immediately execute this pattern in a SINGLE message:**
-
-```bash
-# STEP 1: Initialize swarm coordination
-npx claude-flow swarm init --topology hierarchical --max-agents 8 --strategy specialized
-
-# STEP 2: Spawn agents via CLI
-npx claude-flow agent spawn --type coordinator --name swarm-coord
-npx claude-flow agent spawn --type researcher --name researcher-1
-npx claude-flow agent spawn --type architect --name architect-1
-npx claude-flow agent spawn --type coder --name coder-1
+npx claude-flow agent spawn --type coder --name coder-2
 npx claude-flow agent spawn --type tester --name tester-1
 npx claude-flow agent spawn --type reviewer --name reviewer-1
-
-# STEP 3: Orchestrate task
-npx claude-flow task orchestrate --task "Your task description" --strategy adaptive
+npx claude-flow swarm start --objective "Your task here" --strategy development
 ```
 
-### Agent Routing (Anti-Drift)
+### Common Swarm Patterns
 
-| Code | Task | Agents |
-|------|------|--------|
-| 1 | Bug Fix | coordinator, researcher, coder, tester |
-| 3 | Feature | coordinator, architect, coder, tester, reviewer |
-| 5 | Refactor | coordinator, architect, coder, reviewer |
-| 7 | Performance | coordinator, perf-engineer, coder |
-| 9 | Security | coordinator, security-architect, auditor |
-| 11 | Memory | coordinator, memory-specialist, perf-engineer |
-| 13 | Docs | researcher, api-docs |
+| Task | Exact Command |
+|------|---------------|
+| Init hierarchical swarm | `npx claude-flow swarm init --topology hierarchical --max-agents 8` |
+| Init mesh swarm | `npx claude-flow swarm init --topology mesh --max-agents 5` |
+| Init V3 mode (15 agents) | `npx claude-flow swarm init --v3-mode` |
+| Spawn coder | `npx claude-flow agent spawn --type coder --name coder-1` |
+| Spawn tester | `npx claude-flow agent spawn --type tester --name tester-1` |
+| Spawn coordinator | `npx claude-flow agent spawn --type coordinator --name coord-1` |
+| Spawn architect | `npx claude-flow agent spawn --type architect --name arch-1` |
+| Spawn reviewer | `npx claude-flow agent spawn --type reviewer --name rev-1` |
+| Spawn researcher | `npx claude-flow agent spawn --type researcher --name res-1` |
+| Start swarm | `npx claude-flow swarm start --objective "task" --strategy development` |
+| Check swarm status | `npx claude-flow swarm status` |
+| List agents | `npx claude-flow agent list` |
+| Stop swarm | `npx claude-flow swarm stop` |
 
-**Codes 1-11: hierarchical/specialized (anti-drift). Code 13: mesh/balanced**
+### Agent Types (Use with `--type`)
 
-### Task Complexity Detection
+| Type | Purpose |
+|------|---------|
+| `coordinator` | Orchestrates other agents |
+| `coder` | Writes code |
+| `tester` | Writes tests |
+| `reviewer` | Reviews code |
+| `architect` | Designs systems |
+| `researcher` | Analyzes requirements |
+| `security-architect` | Security design |
+| `performance-engineer` | Optimization |
 
-**AUTO-INVOKE SWARM when task involves:**
+### Task Commands
+
+| Action | Command |
+|--------|---------|
+| Create task | `npx claude-flow task create --type implementation --description "desc"` |
+| List tasks | `npx claude-flow task list` |
+| Assign task | `npx claude-flow task assign TASK_ID --agent AGENT_NAME` |
+| Task status | `npx claude-flow task status TASK_ID` |
+| Cancel task | `npx claude-flow task cancel TASK_ID` |
+
+### Memory Commands
+
+| Action | Command |
+|--------|---------|
+| Store | `npx claude-flow memory store --key "key" --value "value" --namespace patterns` |
+| Search | `npx claude-flow memory search --query "search terms"` |
+| List | `npx claude-flow memory list --namespace patterns` |
+| Retrieve | `npx claude-flow memory retrieve --key "key"` |
+
+---
+
+## 🚀 SWARM RECIPES
+
+### Recipe 1: Hello World Test (5 Agents)
+```bash
+npx claude-flow swarm init --topology mesh --max-agents 5
+npx claude-flow agent spawn --type coder --name hello-1
+npx claude-flow agent spawn --type coder --name hello-2
+npx claude-flow agent spawn --type coder --name hello-3
+npx claude-flow agent spawn --type coder --name hello-4
+npx claude-flow agent spawn --type coder --name hello-5
+npx claude-flow swarm start --objective "Print hello world" --strategy development
+```
+
+### Recipe 2: Feature Implementation (6 Agents)
+```bash
+npx claude-flow swarm init --topology hierarchical --max-agents 8
+npx claude-flow agent spawn --type coordinator --name lead
+npx claude-flow agent spawn --type architect --name arch
+npx claude-flow agent spawn --type coder --name impl-1
+npx claude-flow agent spawn --type coder --name impl-2
+npx claude-flow agent spawn --type tester --name test
+npx claude-flow agent spawn --type reviewer --name review
+npx claude-flow swarm start --objective "Implement [feature]" --strategy development
+```
+
+### Recipe 3: Bug Fix (4 Agents)
+```bash
+npx claude-flow swarm init --topology hierarchical --max-agents 4
+npx claude-flow agent spawn --type coordinator --name lead
+npx claude-flow agent spawn --type researcher --name debug
+npx claude-flow agent spawn --type coder --name fix
+npx claude-flow agent spawn --type tester --name verify
+npx claude-flow swarm start --objective "Fix [bug]" --strategy development
+```
+
+### Recipe 4: Security Audit (3 Agents)
+```bash
+npx claude-flow swarm init --topology hierarchical --max-agents 4
+npx claude-flow agent spawn --type coordinator --name lead
+npx claude-flow agent spawn --type security-architect --name audit
+npx claude-flow agent spawn --type reviewer --name review
+npx claude-flow swarm start --objective "Security audit" --strategy development
+```
+
+### Recipe 5: V3 Full Coordination (15 Agents)
+```bash
+npx claude-flow swarm init --v3-mode
+npx claude-flow swarm coordinate --agents 15
+```
+
+---
+
+## 📋 BEHAVIORAL RULES
+
+- Do what is asked; nothing more, nothing less
+- NEVER create files unless absolutely necessary
+- ALWAYS prefer editing existing files
+- NEVER save to root folder
+- NEVER commit secrets or .env files
+- ALWAYS read a file before editing it
+- NEVER check swarm status repeatedly - wait for results
+
+## 📁 FILE ORGANIZATION
+
+| Directory | Purpose |
+|-----------|---------|
+| `/src` | Source code |
+| `/tests` | Test files |
+| `/docs` | Documentation |
+| `/config` | Configuration |
+| `/scripts` | Utility scripts |
+
+## 🎯 WHEN TO USE SWARMS
+
+**USE SWARM:**
 - Multiple files (3+)
 - New feature implementation
-- Refactoring across modules
+- Cross-module refactoring
 - API changes with tests
 - Security-related changes
 - Performance optimization
-- Database schema changes
 
-**SKIP SWARM for:**
+**SKIP SWARM:**
 - Single file edits
 - Simple bug fixes (1-2 lines)
 - Documentation updates
 - Configuration changes
-- Quick questions/exploration
-
-## Project Configuration
-
-This project is configured with Claude Flow V3 (Anti-Drift Defaults):
-- **Topology**: hierarchical (prevents drift via central coordination)
-- **Max Agents**: 8 (smaller team = less drift)
-- **Strategy**: specialized (clear roles, no overlap)
-- **Consensus**: raft (leader maintains authoritative state)
-- **Memory Backend**: hybrid (SQLite + AgentDB)
-- **HNSW Indexing**: Enabled (150x-12,500x faster)
-- **Neural Learning**: Enabled (SONA)
-
-## Available Skills
-
-Use `$skill-name` syntax to invoke:
-
-| Skill | Use Case |
-|-------|----------|
-| `$swarm-orchestration` | Multi-agent task coordination |
-| `$memory-management` | Pattern storage and retrieval |
-| `$sparc-methodology` | Structured development workflow |
-| `$security-audit` | Security scanning and CVE detection |
-| `$performance-analysis` | Performance profiling and benchmarking |
-| `$github-automation` | GitHub workflow and PR management |
-| `$hive-mind` | Byzantine fault-tolerant consensus |
-| `$neural-training` | Neural pattern training (SONA, MoE) |
-| `$hooks-automation` | Hook lifecycle management |
-| `$workflow-automation` | Workflow creation and execution |
-| `$agent-coordination` | Agent spawning and coordination |
-| `$embeddings` | Vector embeddings and search |
-| `$claims` | Claims-based authorization |
-
-## V3 CLI Commands (26 Commands, 140+ Subcommands)
-
-### Core Commands
-
-| Command | Subcommands | Description |
-|---------|-------------|-------------|
-| `init` | 4 | Project initialization with wizard, presets, skills, hooks |
-| `agent` | 8 | Agent lifecycle (spawn, list, status, stop, metrics, pool, health, logs) |
-| `swarm` | 6 | Multi-agent swarm coordination and orchestration |
-| `memory` | 11 | AgentDB memory with vector search (150x-12,500x faster) |
-| `mcp` | 9 | MCP server management and tool execution |
-| `task` | 6 | Task creation, assignment, and lifecycle |
-| `session` | 7 | Session state management and persistence |
-| `config` | 7 | Configuration management and provider setup |
-| `status` | 3 | System status monitoring with watch mode |
-| `start` | 3 | Service startup and quick launch |
-| `workflow` | 6 | Workflow execution and template management |
-| `hooks` | 17 | Self-learning hooks + 12 background workers |
-| `hive-mind` | 6 | Queen-led Byzantine fault-tolerant consensus |
-
-### Advanced Commands
-
-| Command | Subcommands | Description |
-|---------|-------------|-------------|
-| `daemon` | 5 | Background worker daemon (start, stop, status, trigger, enable) |
-| `neural` | 5 | Neural pattern training (train, status, patterns, predict, optimize) |
-| `security` | 6 | Security scanning (scan, audit, cve, threats, validate, report) |
-| `performance` | 5 | Performance profiling (benchmark, profile, metrics, optimize, report) |
-| `providers` | 5 | AI providers (list, add, remove, test, configure) |
-| `plugins` | 5 | Plugin management (list, install, uninstall, enable, disable) |
-| `deployment` | 5 | Deployment management (deploy, rollback, status, environments, release) |
-| `embeddings` | 4 | Vector embeddings (embed, batch, search, init) - 75x faster |
-| `claims` | 4 | Claims-based authorization (check, grant, revoke, list) |
-| `migrate` | 5 | V2 to V3 migration with rollback support |
-| `process` | 4 | Background process management |
-| `doctor` | 1 | System diagnostics with health checks |
-| `completions` | 4 | Shell completions (bash, zsh, fish, powershell) |
-
-### Quick CLI Examples
-
-```bash
-# Initialize project
-npx claude-flow init --wizard
-
-# Start daemon with background workers
-npx claude-flow daemon start
-
-# Spawn an agent
-npx claude-flow agent spawn -t coder --name my-coder
-
-# Initialize swarm
-npx claude-flow swarm init --v3-mode
-
-# Search memory (HNSW-indexed)
-npx claude-flow memory search -q "authentication patterns"
-
-# System diagnostics
-npx claude-flow doctor --fix
-
-# Security scan
-npx claude-flow security scan --depth full
-
-# Performance benchmark
-npx claude-flow performance benchmark --suite all
-```
-
-## Available Agents (60+ Types)
-
-### Core Development
-`coder`, `reviewer`, `tester`, `planner`, `researcher`
-
-### V3 Specialized Agents
-`security-architect`, `security-auditor`, `memory-specialist`, `performance-engineer`
-
-### @claude-flow/security Module
-CVE remediation, input validation, path security:
-- `InputValidator` — Zod-based validation at boundaries
-- `PathValidator` — Path traversal prevention
-- `SafeExecutor` — Command injection protection
-- `PasswordHasher` — bcrypt hashing
-- `TokenGenerator` — Secure token generation
-
-### Swarm Coordination
-`hierarchical-coordinator`, `mesh-coordinator`, `adaptive-coordinator`, `collective-intelligence-coordinator`, `swarm-memory-manager`
-
-### Consensus & Distributed
-`byzantine-coordinator`, `raft-manager`, `gossip-coordinator`, `consensus-builder`, `crdt-synchronizer`, `quorum-manager`, `security-manager`
-
-### Performance & Optimization
-`perf-analyzer`, `performance-benchmarker`, `task-orchestrator`, `memory-coordinator`, `smart-agent`
-
-### GitHub & Repository
-`github-modes`, `pr-manager`, `code-review-swarm`, `issue-tracker`, `release-manager`, `workflow-automation`, `project-board-sync`, `repo-architect`, `multi-repo-swarm`
-
-### SPARC Methodology
-`sparc-coord`, `sparc-coder`, `specification`, `pseudocode`, `architecture`, `refinement`
-
-### Specialized Development
-`backend-dev`, `mobile-dev`, `ml-developer`, `cicd-engineer`, `api-docs`, `system-architect`, `code-analyzer`, `base-template-generator`
-
-### Testing & Validation
-`tdd-london-swarm`, `production-validator`
-
-## V3 Hooks System (17 Hooks + 12 Workers)
-
-### Hook Categories
-
-| Category | Hooks | Purpose |
-|----------|-------|---------|
-| **Core** | `pre-edit`, `post-edit`, `pre-command`, `post-command`, `pre-task`, `post-task` | Tool lifecycle |
-| **Session** | `session-start`, `session-end`, `session-restore`, `notify` | Context management |
-| **Intelligence** | `route`, `explain`, `pretrain`, `build-agents`, `transfer` | Neural learning |
-| **Learning** | `intelligence` (trajectory-start/step/end, pattern-store/search, stats, attention) | Reinforcement |
-
-### 12 Background Workers
-
-| Worker | Priority | Description |
-|--------|----------|-------------|
-| `ultralearn` | normal | Deep knowledge acquisition |
-| `optimize` | high | Performance optimization |
-| `consolidate` | low | Memory consolidation |
-| `predict` | normal | Predictive preloading |
-| `audit` | critical | Security analysis |
-| `map` | normal | Codebase mapping |
-| `preload` | low | Resource preloading |
-| `deepdive` | normal | Deep code analysis |
-| `document` | normal | Auto-documentation |
-| `refactor` | normal | Refactoring suggestions |
-| `benchmark` | normal | Performance benchmarking |
-| `testgaps` | normal | Test coverage analysis |
-
-### Essential Hook Commands
-
-```bash
-# Core hooks
-npx claude-flow hooks pre-task --description "[task]"
-npx claude-flow hooks post-task --task-id "[id]" --success true
-npx claude-flow hooks post-edit --file "[file]" --train-patterns
-
-# Session management
-npx claude-flow hooks session-start --session-id "[id]"
-npx claude-flow hooks session-end --export-metrics true
-npx claude-flow hooks session-restore --session-id "[id]"
-
-# Intelligence routing
-npx claude-flow hooks route --task "[task]"
-npx claude-flow hooks explain --topic "[topic]"
-
-# Neural learning
-npx claude-flow hooks pretrain --model-type moe --epochs 10
-npx claude-flow hooks build-agents --agent-types coder,tester
-
-# Background workers
-npx claude-flow hooks worker list
-npx claude-flow hooks worker dispatch --trigger audit
-npx claude-flow hooks worker status
-```
-
-## Intelligence System (RuVector)
-
-V3 includes the RuVector Intelligence System:
-- **SONA**: Self-Optimizing Neural Architecture (<0.05ms adaptation)
-- **MoE**: Mixture of Experts for specialized routing
-- **HNSW**: 150x-12,500x faster pattern search
-- **EWC++**: Elastic Weight Consolidation (prevents forgetting)
-- **Flash Attention**: 2.49x-7.47x speedup
-
-The 4-step intelligence pipeline:
-1. **RETRIEVE** — Fetch relevant patterns via HNSW
-2. **JUDGE** — Evaluate with verdicts (success/failure)
-3. **DISTILL** — Extract key learnings via LoRA
-4. **CONSOLIDATE** — Prevent catastrophic forgetting via EWC++
-
-## Hive-Mind Consensus
-
-### Topologies
-- `hierarchical` — Queen controls workers directly
-- `mesh` — Fully connected peer network
-- `hierarchical-mesh` — Hybrid (recommended)
-- `adaptive` — Dynamic based on load
-
-### Consensus Strategies
-- `byzantine` — BFT (tolerates f < n/3 faulty)
-- `raft` — Leader-based (tolerates f < n/2)
-- `gossip` — Epidemic for eventual consistency
-- `crdt` — Conflict-free replicated data types
-- `quorum` — Configurable quorum-based
-
-## V3 Performance Targets
-
-| Metric | Target | Status |
-|--------|--------|--------|
-| HNSW Search | 150x-12,500x faster | **Implemented** (persistent) |
-| Memory Reduction | 50-75% with quantization | **Implemented** (3.92x Int8) |
-| SONA Integration | Pattern learning | **Implemented** (ReasoningBank) |
-| Flash Attention | 2.49x-7.47x speedup | In progress |
-| MCP Response | <100ms | Achieved |
-| CLI Startup | <500ms | Achieved |
-| SONA Adaptation | <0.05ms | In progress |
-
-## Environment Variables
-
-```bash
-# Configuration
-CLAUDE_FLOW_CONFIG=./claude-flow.config.json
-CLAUDE_FLOW_LOG_LEVEL=info
-
-# Provider API Keys
-ANTHROPIC_API_KEY=sk-ant-...
-OPENAI_API_KEY=sk-...
-GOOGLE_API_KEY=...
-
-# MCP Server
-CLAUDE_FLOW_MCP_PORT=3000
-CLAUDE_FLOW_MCP_HOST=localhost
-CLAUDE_FLOW_MCP_TRANSPORT=stdio
-
-# Memory
-CLAUDE_FLOW_MEMORY_BACKEND=hybrid
-CLAUDE_FLOW_MEMORY_PATH=./data/memory
-```
-
-## Quick Setup
-
-```bash
-# Add MCP servers
-claude mcp add claude-flow npx claude-flow mcp start
-claude mcp add ruv-swarm npx ruv-swarm mcp start  # Optional
-
-# For Codex CLI
-codex mcp add claude-flow npx claude-flow mcp start
-
-# Start daemon
-npx claude-flow daemon start
-
-# Run doctor
-npx claude-flow doctor --fix
-```
-
-## Security
-
-### Critical Rules
-- NEVER commit secrets, credentials, or .env files
-- NEVER hardcode API keys
-- Always validate user input
-- Use parameterized queries for SQL
-- Sanitize output to prevent XSS
-
-### Path Security
-- Validate all file paths
-- Prevent directory traversal (../)
-- Use absolute paths internally
-
-## Optional Plugins (20 Available)
-
-| Plugin | Description |
-|--------|-------------|
-| `@claude-flow/embeddings` | Vector embeddings with sql.js, HNSW, hyperbolic support |
-| `@claude-flow/security` | Input validation, path security, CVE remediation |
-| `@claude-flow/claims` | Claims-based authorization |
-| `@claude-flow/neural` | Neural pattern training (SONA, MoE, EWC++) |
-| `@claude-flow/plugins` | Plugin system core |
-| `@claude-flow/performance` | Performance profiling and benchmarking |
-
-## Support
-
-- Documentation: https://github.com/ruvnet/claude-flow
-- Issues: https://github.com/ruvnet/claude-flow/issues
 
 ---
 
-Remember: **Claude Flow coordinates, agents execute!**
+## 🔧 CLI REFERENCE
+
+### Swarm Commands
+```bash
+npx claude-flow swarm init [--topology TYPE] [--max-agents N] [--v3-mode]
+npx claude-flow swarm start --objective "task" --strategy [development|research]
+npx claude-flow swarm status [SWARM_ID]
+npx claude-flow swarm stop [SWARM_ID]
+npx claude-flow swarm scale --count N
+npx claude-flow swarm coordinate --agents N
+```
+
+### Agent Commands
+```bash
+npx claude-flow agent spawn --type TYPE --name NAME
+npx claude-flow agent list [--filter active|idle|busy]
+npx claude-flow agent status AGENT_ID
+npx claude-flow agent stop AGENT_ID
+npx claude-flow agent metrics [AGENT_ID]
+npx claude-flow agent health
+npx claude-flow agent logs AGENT_ID
+```
+
+### Task Commands
+```bash
+npx claude-flow task create --type TYPE --description "desc"
+npx claude-flow task list [--all]
+npx claude-flow task status TASK_ID
+npx claude-flow task assign TASK_ID --agent AGENT_NAME
+npx claude-flow task cancel TASK_ID
+npx claude-flow task retry TASK_ID
+```
+
+### Memory Commands
+```bash
+npx claude-flow memory store --key KEY --value VALUE [--namespace NS]
+npx claude-flow memory search --query "terms" [--namespace NS]
+npx claude-flow memory list [--namespace NS]
+npx claude-flow memory retrieve --key KEY [--namespace NS]
+npx claude-flow memory init [--force]
+```
+
+### Hooks Commands
+```bash
+npx claude-flow hooks pre-task --description "task"
+npx claude-flow hooks post-task --task-id ID --success true
+npx claude-flow hooks route --task "task"
+npx claude-flow hooks session-start --session-id ID
+npx claude-flow hooks session-end --export-metrics true
+npx claude-flow hooks worker list
+npx claude-flow hooks worker dispatch --trigger audit
+```
+
+### System Commands
+```bash
+npx claude-flow init [--wizard] [--codex] [--full]
+npx claude-flow daemon start
+npx claude-flow daemon stop
+npx claude-flow daemon status
+npx claude-flow doctor [--fix]
+npx claude-flow status
+npx claude-flow mcp start
+```
+
+---
+
+## 🔌 TOPOLOGIES
+
+| Topology | Use Case | Command Flag |
+|----------|----------|--------------|
+| `hierarchical` | Coordinated teams, anti-drift | `--topology hierarchical` |
+| `mesh` | Peer-to-peer, equal agents | `--topology mesh` |
+| `hierarchical-mesh` | Hybrid (recommended for V3) | `--topology hierarchical-mesh` |
+| `ring` | Sequential processing | `--topology ring` |
+| `star` | Central coordinator | `--topology star` |
+| `adaptive` | Dynamic switching | `--topology adaptive` |
+
+## 🤖 AGENT TYPES
+
+### Core
+`coordinator`, `coder`, `tester`, `reviewer`, `architect`, `researcher`
+
+### Specialized
+`security-architect`, `security-auditor`, `memory-specialist`, `performance-engineer`
+
+### Swarm Coordination
+`hierarchical-coordinator`, `mesh-coordinator`, `adaptive-coordinator`
+
+### Consensus
+`byzantine-coordinator`, `raft-manager`, `gossip-coordinator`
+
+---
+
+## ⚙️ CONFIGURATION
+
+### Default Swarm Config
+- Topology: `hierarchical`
+- Max Agents: 8
+- Strategy: `specialized`
+- Consensus: `raft`
+- Memory: `hybrid`
+
+### Environment Variables
+```bash
+CLAUDE_FLOW_CONFIG=./claude-flow.config.json
+CLAUDE_FLOW_LOG_LEVEL=info
+CLAUDE_FLOW_MEMORY_BACKEND=hybrid
+```
+
+---
+
+## 🔗 SKILLS
+
+Invoke with `$skill-name`:
+
+| Skill | Purpose |
+|-------|---------|
+| `$swarm-orchestration` | Multi-agent coordination |
+| `$memory-management` | Pattern storage/retrieval |
+| `$sparc-methodology` | Structured development |
+| `$security-audit` | Security scanning |
+| `$performance-analysis` | Profiling |
+| `$github-automation` | CI/CD management |
+| `$hive-mind` | Byzantine consensus |
+| `$neural-training` | Pattern learning |
+
+---
+
+## 📚 SUPPORT
+
+- Docs: https://github.com/ruvnet/claude-flow
+- Issues: https://github.com/ruvnet/claude-flow/issues
+
+**Remember: Copy-paste commands, no discovery needed!**
