@@ -861,6 +861,18 @@ export const initCommand: Command = {
       default: 'all-MiniLM-L6-v2',
       choices: ['all-MiniLM-L6-v2', 'all-mpnet-base-v2'],
     },
+    {
+      name: 'codex',
+      description: 'Initialize for OpenAI Codex CLI (creates AGENTS.md, .agents/)',
+      type: 'boolean',
+      default: false,
+    },
+    {
+      name: 'dual',
+      description: 'Initialize for both Claude Code and OpenAI Codex',
+      type: 'boolean',
+      default: false,
+    },
   ],
   examples: [
     { command: 'claude-flow init', description: 'Initialize with default configuration' },
