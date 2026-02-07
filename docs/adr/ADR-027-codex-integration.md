@@ -479,3 +479,210 @@ sandbox_mode = "read-only"
 | `read-only` | No file/network modifications |
 | `workspace-write` | Write only to workspace |
 | `danger-full-access` | Full system access |
+
+## Appendix C: Undocumented Features for Integration
+
+These features were discovered through binary analysis and can be leveraged for deep claude-flow integration.
+
+### Environment Variables
+
+| Variable | Purpose | Integration Use |
+|----------|---------|-----------------|
+| `CODEX_HOME` | Override config directory | Project-specific configs |
+| `CODEX_CI=1` | CI mode | Pipeline optimization |
+| `CODEX_SANDBOX_NETWORK_DISABLED=1` | Disable network | Security hardening |
+| `CODEX_TUI_RECORD_SESSION=1` | Record session | Debug/learning |
+| `CODEX_TUI_SESSION_LOG_PATH` | Session log path | Pattern extraction |
+| `CODEX_STARTING_DIFF` | Initial diff | Session preloading |
+| `CODEX_GITHUB_PERSONAL_ACCESS_TOKEN` | GitHub PAT | MCP GitHub integration |
+| `CODEX_CONNECTORS_TOKEN` | MCP connectors | Auth for MCP servers |
+
+### JSON-RPC Methods (via MCP Server)
+
+#### Thread Management
+```javascript
+// Start new thread
+{ method: "thread/start", params: { prompt, cwd, approval_policy } }
+
+// Fork thread for parallel work
+{ method: "thread/fork", params: { threadId, prompt } }
+
+// Resume thread
+{ method: "thread/resume", params: { threadId } }
+
+// Rollback thread
+{ method: "thread/rollback", params: { threadId, numTurns } }
+
+// List loaded threads
+{ method: "thread/loaded/list", params: {} }
+```
+
+#### Skills Management
+```javascript
+// List available skills
+{ method: "skills/list", params: {} }
+
+// Read remote skill
+{ method: "skills/remote/read", params: { path } }
+
+// Write skill config
+{ method: "skills/config/write", params: { path, enabled } }
+```
+
+#### Configuration
+```javascript
+// Batch write config
+{ method: "config/batchWrite", params: { values: [...] } }
+
+// Read requirements
+{ method: "configRequirements/read", params: {} }
+
+// Read rate limits
+{ method: "account/rateLimits/read", params: {} }
+```
+
+### Hidden CLI Commands
+
+| Command | Purpose | Usage |
+|---------|---------|-------|
+| `codex debug-config` | Show config layers | Debug config issues |
+| `codex rollout` | Print rollout path | Access rollout files |
+
+### Experimental Features (Enable via config.toml)
+
+```toml
+[features]
+# Sub-agent spawning for multi-agent workflows
+# Not officially documented but functional
+experimentalApi = true
+
+# Emit raw response items on event stream
+experimentalRawEvents = true
+
+# Enable collaboration modes
+collab = true
+
+# Enable app integrations
+apps = true
+```
+
+### Ghost Snapshots
+
+Codex uses "ghost commits" for state management:
+- Creates temporary commits without modifying history
+- Enables undo/rollback operations
+- Uses `codex snapshot@codex.local` as author
+
+**Integration opportunity**: Use similar pattern for swarm state management.
+
+### Sub-Agent Collaboration
+
+Internal structures support multi-agent collaboration:
+
+```typescript
+interface CollabAgentToolCall {
+  senderThreadId: string;      // Originating agent
+  receiverThreadIds: string[]; // Target agents
+  prompt: string;              // Task description
+  agentsStates: AgentState[];  // State tracking
+}
+```
+
+**Integration opportunity**: Map to claude-flow swarm coordination.
+
+### Dynamic Tool Registration
+
+Codex supports runtime tool registration via MCP:
+
+```javascript
+// Register tool at runtime
+{ method: "tools/register", params: { name, schema, handler } }
+```
+
+**Integration opportunity**: Register claude-flow tools dynamically.
+
+### Integration Patterns Using Undocumented Features
+
+#### 1. CI/CD Pipeline Mode
+```bash
+# Optimized for pipelines
+CODEX_CI=1 \
+CODEX_SANDBOX_NETWORK_DISABLED=1 \
+codex exec --json \
+  -c "approval_policy='never'" \
+  "run tests and generate report"
+```
+
+#### 2. Session Recording for Learning
+```bash
+# Record session for pattern extraction
+CODEX_TUI_RECORD_SESSION=1 \
+CODEX_TUI_SESSION_LOG_PATH=/tmp/codex-session.log \
+codex
+```
+
+#### 3. Project-Specific Configuration
+```bash
+# Use project-local config
+CODEX_HOME=/project/.codex codex
+```
+
+#### 4. Programmatic Thread Control
+```javascript
+// Fork threads for parallel work
+const threads = await Promise.all([
+  codexRpc({ method: "thread/fork", params: { threadId, prompt: "Task A" }}),
+  codexRpc({ method: "thread/fork", params: { threadId, prompt: "Task B" }}),
+  codexRpc({ method: "thread/fork", params: { threadId, prompt: "Task C" }})
+]);
+```
+
+#### 5. Rate Limit Monitoring
+```javascript
+// Check rate limits before spawning agents
+const limits = await codexRpc({ method: "account/rateLimits/read" });
+if (limits.remaining > 0) {
+  await spawnAgents();
+}
+```
+
+### Generated config.toml with Undocumented Features
+
+```toml
+# Claude Flow V3 - Codex Configuration (Enhanced)
+# Includes undocumented features for advanced integration
+
+model = "gpt-5.3-codex"
+approval_policy = "on-request"
+sandbox_mode = "workspace-write"
+web_search = "cached"
+
+# Enable experimental features for integration
+[features]
+child_agents_md = true
+shell_snapshot = true
+request_rule = true
+# Undocumented but functional
+collab = true
+apps = true
+
+# MCP Servers with auth
+[mcp_servers.claude-flow]
+command = "npx"
+args = ["-y", "@claude-flow/cli@latest"]
+enabled = true
+tool_timeout_sec = 120
+# Use CODEX_CONNECTORS_TOKEN for auth
+
+[mcp_servers.github]
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-github"]
+enabled = true
+# Reads CODEX_GITHUB_PERSONAL_ACCESS_TOKEN
+
+# CI Profile with undocumented options
+[profiles.ci]
+approval_policy = "never"
+sandbox_mode = "workspace-write"
+# Set CODEX_CI=1 for additional optimizations
+```
