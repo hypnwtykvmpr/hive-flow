@@ -562,3 +562,76 @@ The undocumented features provide significant opportunities for deep integration
 - **Dynamic tools** for runtime extensibility
 
 The package architecture is similar to Claude Code's approach, making it straightforward to create a compatible Codex integration in claude-flow.
+
+## @claude-flow/codex Package
+
+Based on this analysis, we've created the `@claude-flow/codex` package as the first step in the coflow rebranding initiative.
+
+### Package Location
+
+```
+v3/@claude-flow/codex/
+├── package.json
+├── tsconfig.json
+└── src/
+    ├── index.ts              # Main exports
+    ├── types.ts              # TypeScript definitions
+    ├── cli.ts                # CLI entry point
+    ├── initializer.ts        # CodexInitializer class
+    ├── generators/
+    │   ├── index.ts
+    │   ├── agents-md.ts      # AGENTS.md generator
+    │   ├── skill-md.ts       # SKILL.md generator
+    │   └── config-toml.ts    # config.toml generator
+    ├── templates/
+    │   └── index.ts          # Built-in templates and skills
+    ├── validators/
+    │   └── index.ts          # Validation functions
+    └── migrations/
+        └── index.ts          # Claude Code → Codex migration
+```
+
+### Key Features
+
+| Feature | Description |
+|---------|-------------|
+| AGENTS.md Generator | Full/default/minimal/enterprise templates |
+| SKILL.md Generator | 6 built-in skills + custom skill support |
+| config.toml Generator | Profile support, MCP servers, features |
+| Migration Tools | Claude Code to Codex migration with analysis |
+| Validators | Validate AGENTS.md, SKILL.md, config.toml |
+| Dual Mode | Generate both Claude Code and Codex configs |
+
+### CLI Commands
+
+```bash
+# Initialize new Codex project
+npx @claude-flow/codex init --template default
+
+# Generate custom skill
+npx @claude-flow/codex generate-skill --name my-skill
+
+# Validate configuration
+npx @claude-flow/codex validate
+
+# Migrate from Claude Code
+npx @claude-flow/codex migrate --from CLAUDE.md
+
+# List available templates
+npx @claude-flow/codex templates
+
+# List built-in skills
+npx @claude-flow/codex skills
+```
+
+### Future: coflow Umbrella
+
+This package is the first step in transitioning from `claude-flow` to `coflow`:
+
+```bash
+# Current
+npx @claude-flow/codex init
+
+# Future (after umbrella rebrand)
+npx coflow init --codex
+```
