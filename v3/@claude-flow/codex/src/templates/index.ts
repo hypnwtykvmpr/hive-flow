@@ -58,13 +58,13 @@ export const TEMPLATES: Record<AgentsMdTemplate, { name: string; description: st
   },
   full: {
     name: 'Full',
-    description: 'Complete setup with all features',
-    skillCount: 6,
+    description: 'Complete setup with all 137+ skills',
+    skillCount: 137,
   },
   enterprise: {
     name: 'Enterprise',
-    description: 'Full setup with governance and compliance',
-    skillCount: 6,
+    description: 'Full setup with all skills + governance',
+    skillCount: 137,
   },
 };
 
