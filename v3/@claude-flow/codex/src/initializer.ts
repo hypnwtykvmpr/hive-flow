@@ -586,11 +586,14 @@ export async function initializeCodexProject(
   options?: Partial<CodexInitOptions>
 ): Promise<CodexInitResult> {
   const initializer = new CodexInitializer();
-  return initializer.initialize({
+  const initOptions: CodexInitOptions = {
     projectPath,
     template: options?.template ?? 'default',
-    skills: options?.skills,
     force: options?.force ?? false,
     dual: options?.dual ?? false,
-  });
+  };
+  if (options?.skills) {
+    initOptions.skills = options.skills;
+  }
+  return initializer.initialize(initOptions);
 }
