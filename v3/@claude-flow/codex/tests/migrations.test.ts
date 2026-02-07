@@ -361,13 +361,13 @@ describe('convertSkillSyntax', () => {
     expect(result).toBe('Run $skill-a then $skill-b and finally $skill-c.');
   });
 
-  it('should convert paths in URLs (known limitation)', () => {
+  it('should preserve URLs (improved regex)', () => {
     const content = 'Visit https://example.com/path for more info.';
     const result = convertSkillSyntax(content);
 
-    // The current regex converts /path to $path even in URLs
-    // This is a known limitation - skills starting with lowercase letter after /
-    expect(result).toContain('$path');
+    // The improved regex should not convert paths within URLs
+    // as it excludes patterns preceded by alphanumeric/underscore/dot/slash chars
+    expect(result).toBe(content);
   });
 
   it('should handle complex skill names', () => {
