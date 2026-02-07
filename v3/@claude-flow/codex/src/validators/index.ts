@@ -91,7 +91,7 @@ export async function validateAgentsMd(content: string): Promise<ValidationResul
   // Check for title (H1 heading)
   if (!content.startsWith('# ')) {
     const firstHeadingMatch = content.match(/^(#{1,6})\s+/m);
-    if (firstHeadingMatch) {
+    if (firstHeadingMatch && firstHeadingMatch[1]) {
       if (firstHeadingMatch[1].length > 1) {
         errors.push({
           path: 'AGENTS.md',
