@@ -394,13 +394,19 @@ Invoke with `$skill-name`:
 
 Codex doesn't have native hooks like Claude Code, but uses **MCP (Model Context Protocol)** for learning and coordination.
 
-### Add Claude-Flow as MCP Server
+### Add Claude-Flow as MCP Server (ALREADY CONFIGURED)
 ```bash
-# Add claude-flow MCP server to Codex
-codex mcp add claude-flow -- npx claude-flow mcp start
-
-# Verify it's added
+# Claude-flow MCP is already added! Verify with:
 codex mcp list
+
+# If not present, add it:
+codex mcp add claude-flow -- npx claude-flow mcp start
+```
+
+### Current MCP Status
+```
+Name         Command  Args                   Status
+claude-flow  npx      claude-flow mcp start  enabled
 ```
 
 ### MCP Tools Available
