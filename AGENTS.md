@@ -508,19 +508,55 @@ Once added, Codex can use these tools via MCP:
 | `task_orchestrate` | Coordinate tasks |
 | `neural_train` | Train on successful patterns |
 
-### Learning via Memory
+### Learning via Memory (IMPORTANT - USE THIS!)
 
-**Before starting a task:**
+**BEFORE starting any task:**
 ```bash
 # Search for relevant patterns from past work
-npx claude-flow memory search --query "similar task keywords"
+npx claude-flow memory search --query "keywords related to your task"
+
+# Example: before building an API
+npx claude-flow memory search --query "API implementation patterns REST endpoints"
+```
+If patterns are found, USE THEM to guide your implementation.
+
+**AFTER completing a task successfully:**
+```bash
+# Store the successful pattern for future reference
+npx claude-flow memory store \
+  --key "pattern-[descriptive-name]" \
+  --value "Detailed description: what the task was, what approach worked, key code patterns, gotchas to avoid" \
+  --namespace patterns
+
+# Example: after building a worker pool
+npx claude-flow memory store \
+  --key "pattern-concurrent-workers" \
+  --value "Use bash background jobs: for i in 1..N; do (work) & done; wait. Each worker in subshell for isolation." \
+  --namespace patterns
 ```
 
-**After completing a task:**
+### Self-Learning Workflow (Use This Pattern!)
+
 ```bash
-# Store successful pattern for future reference
-npx claude-flow memory store --key "pattern-name" --value "what worked" --namespace patterns
+# 1. LEARN: Search before you start
+npx claude-flow memory search --query "task keywords" --namespace patterns
+
+# 2. EXECUTE: Do the work (YOU implement)
+# ... your implementation here ...
+
+# 3. REMEMBER: Store what worked
+npx claude-flow memory store --key "pattern-xxx" --value "what worked" --namespace patterns
+
+# 4. VERIFY: Confirm pattern is searchable
+npx claude-flow memory search --query "related terms" --namespace patterns
 ```
+
+### Vector Search Tips
+- Searches are SEMANTIC (meaning-based, not keyword-based)
+- Use descriptive queries: "concurrent worker execution" not just "workers"
+- Score > 0.7 = strong match, use that pattern
+- Score 0.5-0.7 = partial match, adapt as needed
+- Store with detailed values for better retrieval
 
 ### Coordination via MCP
 
