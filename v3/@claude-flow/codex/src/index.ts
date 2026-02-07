@@ -43,6 +43,17 @@ export {
 // Main initializer class and helper function
 export { CodexInitializer, initializeCodexProject } from './initializer.js';
 
+// Dual-mode collaborative execution
+export {
+  DualModeOrchestrator,
+  DualModeConfig,
+  WorkerConfig,
+  WorkerResult,
+  CollaborationResult,
+  CollaborationTemplates,
+  createDualModeCommand,
+} from './dual-mode/index.js';
+
 // Template utilities
 export {
   getTemplate,
