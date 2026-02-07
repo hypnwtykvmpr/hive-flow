@@ -4462,6 +4462,9 @@ export const hooksCommand: Command = {
     sessionStartCommand,
     preBashCommand,
     postBashCommand,
+    // Agent Teams integration
+    teammateIdleCommand,
+    taskCompletedCommand,
   ],
   options: [],
   examples: [
