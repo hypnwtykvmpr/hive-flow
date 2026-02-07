@@ -15,7 +15,7 @@ import type {
 import { generateAgentsMd } from './generators/agents-md.js';
 import { generateSkillMd, generateBuiltInSkill } from './generators/skill-md.js';
 import { generateConfigToml } from './generators/config-toml.js';
-import { DEFAULT_SKILLS_BY_TEMPLATE, AGENTS_OVERRIDE_TEMPLATE, GITIGNORE_ENTRIES } from './templates/index.js';
+import { DEFAULT_SKILLS_BY_TEMPLATE, AGENTS_OVERRIDE_TEMPLATE, GITIGNORE_ENTRIES, ALL_AVAILABLE_SKILLS } from './templates/index.js';
 
 /**
  * Main initializer for Codex projects
