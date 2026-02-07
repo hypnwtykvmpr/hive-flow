@@ -497,9 +497,9 @@ function extractBehavioralRules(content: string): string[] {
 
   // Look for Behavioral Rules section
   const behavioralMatch = content.match(/##\s*Behavioral\s*Rules[^\n]*\n([\s\S]*?)(?=\n##|\n#\s|$)/i);
-  if (behavioralMatch) {
-    const lines = behavioralMatch[1].split('\n');
-    for (const line of lines) {
+  if (behavioralMatch && behavioralMatch[1]) {
+    const ruleLines = behavioralMatch[1].split('\n');
+    for (const line of ruleLines) {
       const trimmed = line.trim();
       if (trimmed.startsWith('- ')) {
         rules.push(trimmed.substring(2));
@@ -511,9 +511,9 @@ function extractBehavioralRules(content: string): string[] {
 
   // Also look for Security Rules
   const securityMatch = content.match(/##\s*Security\s*Rules?[^\n]*\n([\s\S]*?)(?=\n##|\n#\s|$)/i);
-  if (securityMatch) {
-    const lines = securityMatch[1].split('\n');
-    for (const line of lines) {
+  if (securityMatch && securityMatch[1]) {
+    const securityLines = securityMatch[1].split('\n');
+    for (const line of securityLines) {
       const trimmed = line.trim();
       if (trimmed.startsWith('- ')) {
         rules.push(trimmed.substring(2));
