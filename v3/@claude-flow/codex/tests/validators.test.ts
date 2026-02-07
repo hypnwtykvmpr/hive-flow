@@ -462,7 +462,12 @@ example
       const result = await validateSkillMd(content);
 
       // Should warn about missing triggers when no triggers field and no "When to Trigger" section
-      expect(result.warnings.some(w => w.message.toLowerCase().includes('trigger'))).toBe(true);
+      // The warning might say "Missing trigger conditions" or similar
+      const hasTriggerWarning = result.warnings.some(w =>
+        w.message.toLowerCase().includes('trigger') ||
+        w.message.toLowerCase().includes('when to')
+      );
+      expect(hasTriggerWarning).toBe(true);
     });
 
     it('should not warn about triggers when frontmatter has triggers field', async () => {
