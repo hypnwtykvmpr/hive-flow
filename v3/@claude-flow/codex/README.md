@@ -632,6 +632,61 @@ Both platforms share the same `.claude-flow/` runtime:
 | **Best of Both** | Interactive + batch processing |
 | **Unified Learning** | Patterns learned by both platforms |
 
+### CLI Commands (NEW in v3.0.0-alpha.7)
+
+The `@claude-flow/codex` package now includes built-in dual-mode orchestration:
+
+```bash
+# List available collaboration templates
+npx claude-flow-codex dual templates
+
+# Run a feature development swarm
+npx claude-flow-codex dual run --template feature --task "Add user authentication"
+
+# Run a security audit swarm
+npx claude-flow-codex dual run --template security --task "src/auth/"
+
+# Run a refactoring swarm
+npx claude-flow-codex dual run --template refactor --task "src/legacy/"
+
+# Check collaboration status
+npx claude-flow-codex dual status
+```
+
+### Pre-Built Templates
+
+| Template | Pipeline | Platforms |
+|----------|----------|-----------|
+| **feature** | architect → coder → tester → reviewer | Claude (architect, reviewer) + Codex (coder, tester) |
+| **security** | scanner → analyzer → fixer | Codex (scanner, fixer) + Claude (analyzer) |
+| **refactor** | analyzer → planner → refactorer → validator | Claude (analyzer, planner) + Codex (refactorer, validator) |
+
+### Programmatic API
+
+```typescript
+import { DualModeOrchestrator, CollaborationTemplates } from '@claude-flow/codex';
+
+// Create orchestrator
+const orchestrator = new DualModeOrchestrator({
+  projectPath: process.cwd(),
+  maxConcurrent: 4,
+  sharedNamespace: 'collaboration',
+  timeout: 300000,
+});
+
+// Listen to events
+orchestrator.on('worker:started', ({ id, role }) => console.log(`Started: ${role}`));
+orchestrator.on('worker:completed', ({ id }) => console.log(`Completed: ${id}`));
+
+// Run collaboration with a template
+const workers = CollaborationTemplates.featureDevelopment('Add OAuth2 login');
+const result = await orchestrator.runCollaboration(workers, 'Feature: OAuth2');
+
+console.log(`Success: ${result.success}`);
+console.log(`Duration: ${result.totalDuration}ms`);
+console.log(`Workers: ${result.workers.length}`);
+```
+
 </details>
 
 ---
