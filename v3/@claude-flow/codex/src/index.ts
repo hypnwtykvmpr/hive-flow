@@ -44,15 +44,8 @@ export {
 export { CodexInitializer, initializeCodexProject } from './initializer.js';
 
 // Dual-mode collaborative execution
-export {
-  DualModeOrchestrator,
-  DualModeConfig,
-  WorkerConfig,
-  WorkerResult,
-  CollaborationResult,
-  CollaborationTemplates,
-  createDualModeCommand,
-} from './dual-mode/index.js';
+export { DualModeOrchestrator, CollaborationTemplates, createDualModeCommand } from './dual-mode/index.js';
+export type { DualModeConfig, WorkerConfig, WorkerResult, CollaborationResult } from './dual-mode/index.js';
 
 // Template utilities
 export {
