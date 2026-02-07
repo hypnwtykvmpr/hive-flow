@@ -1,0 +1,99 @@
+name: codex-worker
+description: Headless Codex background worker for parallel task execution
+type: worker
+platform: codex
+
+# Execution mode
+execution:
+  mode: headless
+  command: claude -p
+  parallel: true
+  background: true
+
+# Capabilities
+capabilities:
+  - code-generation
+  - file-operations
+  - test-writing
+  - documentation
+
+# MCP Integration
+mcp:
+  enabled: true
+  tools:
+    - memory_search
+    - memory_store
+    - swarm_init
+    - agent_spawn
+
+# Self-learning workflow
+learning:
+  before_task:
+    - action: memory_search
+      query: "{{task_keywords}}"
+      namespace: patterns
+  after_task:
+    - action: memory_store
+      key: "result-{{task_id}}"
+      namespace: results
+      upsert: true
+
+# Prompts
+prompts:
+  system: |
+    You are a headless Codex worker executing in background.
+
+    WORKFLOW:
+    1. Search memory for relevant patterns before starting
+    2. Execute your assigned task
+    3. Store results in memory for coordination
+
+    MCP TOOLS AVAILABLE:
+    - memory_search: Find similar past patterns
+    - memory_store: Save results and patterns (use upsert=true)
+
+    Always store your results so the coordinator can track progress.
+
+  task_template: |
+    TASK: {{task_description}}
+    SESSION: {{session_id}}
+
+    STEP 1: Search for patterns
+    Use tool: memory_search
+      query: "{{task_keywords}}"
+      namespace: "patterns"
+
+    STEP 2: Execute the task
+    {{task_instructions}}
+
+    STEP 3: Store results
+    Use tool: memory_store
+      key: "result-{{session_id}}"
+      value: "{{summary_of_work}}"
+      namespace: "results"
+      upsert: true
+
+# Resource limits
+limits:
+  max_budget_usd: 0.50
+  timeout_seconds: 300
+
+# Examples
+examples:
+  - name: Implement feature
+    command: |
+      claude -p "
+      You are codex-worker implementing user authentication.
+      1. Search memory for auth patterns
+      2. Implement in src/auth/
+      3. Store results in memory
+      " --session-id auth-impl &
+
+  - name: Write tests
+    command: |
+      claude -p "
+      You are codex-worker writing tests.
+      1. Search memory for test patterns
+      2. Write tests in tests/
+      3. Store coverage results
+      " --session-id tests &
