@@ -682,6 +682,8 @@ async function copyAgents(
     if (agentsConfig.v3) agentsToCopy.push(...(AGENTS_MAP.v3 || []));
     if (agentsConfig.optimization) agentsToCopy.push(...(AGENTS_MAP.optimization || []));
     if (agentsConfig.testing) agentsToCopy.push(...(AGENTS_MAP.testing || []));
+    // Dual-mode agents (Claude Code + Codex hybrid)
+    if (agentsConfig.dualMode) agentsToCopy.push(...(AGENTS_MAP.dualMode || []));
   }
 
   // Find source agents directory
