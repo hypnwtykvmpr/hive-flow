@@ -123,7 +123,8 @@ const storeCommand: Command = {
         namespace,
         generateEmbeddingFlag: true, // Always generate embeddings for semantic search
         tags,
-        ttl
+        ttl,
+        upsert
       });
 
       if (!result.success) {
