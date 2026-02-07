@@ -1516,6 +1516,76 @@ npx claude-flow hive-mind sessions                # List active sessions
 </details>
 
 <details>
+<summary>👥 <strong>Agent Teams</strong> — Claude Code multi-instance coordination</summary>
+
+Native integration with Claude Code's experimental Agent Teams feature for spawning and coordinating multiple Claude instances.
+
+**Enable Agent Teams:**
+```bash
+# Automatically enabled with claude-flow init
+npx claude-flow@latest init
+
+# Or manually add to .claude/settings.json
+{
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  }
+}
+```
+
+**Agent Teams Components:**
+
+| Component | Tool | Purpose |
+|-----------|------|---------|
+| **Team Lead** | Main Claude | Coordinates teammates, assigns tasks, reviews results |
+| **Teammates** | `Task` tool | Sub-agents spawned to work on specific tasks |
+| **Task List** | `TaskCreate/TaskList/TaskUpdate` | Shared todos visible to all team members |
+| **Mailbox** | `SendMessage` | Inter-agent messaging for coordination |
+
+**Quick Start:**
+```javascript
+// Create a team
+TeamCreate({ team_name: "feature-dev", description: "Building feature" })
+
+// Create shared tasks
+TaskCreate({ subject: "Design API", description: "..." })
+TaskCreate({ subject: "Implement endpoints", description: "..." })
+
+// Spawn teammates (parallel background work)
+Task({ prompt: "Work on task #1...", subagent_type: "architect",
+       team_name: "feature-dev", name: "architect", run_in_background: true })
+Task({ prompt: "Work on task #2...", subagent_type: "coder",
+       team_name: "feature-dev", name: "developer", run_in_background: true })
+
+// Message teammates
+SendMessage({ type: "message", recipient: "developer",
+              content: "Prioritize auth", summary: "Priority update" })
+
+// Cleanup when done
+SendMessage({ type: "shutdown_request", recipient: "developer" })
+TeamDelete()
+```
+
+**Agent Teams Hooks:**
+
+| Hook | Trigger | Purpose |
+|------|---------|---------|
+| `teammate-idle` | Teammate finishes turn | Auto-assign pending tasks |
+| `task-completed` | Task marked complete | Train patterns, notify lead |
+
+```bash
+# Handle idle teammate
+npx claude-flow@latest hooks teammate-idle --auto-assign true
+
+# Handle task completion
+npx claude-flow@latest hooks task-completed --task-id <id> --train-patterns
+```
+
+**Display Modes:** `auto` (default), `in-process`, `tmux` (split-pane)
+
+</details>
+
+<details>
 <summary>🔧 <strong>MCP Tools & Integration</strong> — 31+ tools across 7 categories</summary>
 
 Full MCP server with tools for coordination, monitoring, memory, and GitHub integration.
