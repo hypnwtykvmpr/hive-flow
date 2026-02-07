@@ -962,13 +962,12 @@ function validateMarkdownStructure(
   }
 
   // Check for unclosed code blocks
-  const codeBlockStarts = (content.match(/```[a-z]*/g) || []).length;
-  const codeBlockEnds = (content.match(/```\s*$/gm) || []).length;
-
-  if (codeBlockStarts !== codeBlockEnds) {
+  // Count all triple backticks - they should come in pairs
+  const tripleBackticks = (content.match(/```/g) || []).length;
+  if (tripleBackticks % 2 !== 0) {
     errors.push({
       path: 'AGENTS.md',
-      message: 'Unclosed code block detected',
+      message: 'Unclosed code block detected (odd number of ``` markers)',
       line: 1,
     });
   }
