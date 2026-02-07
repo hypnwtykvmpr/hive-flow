@@ -361,26 +361,35 @@ sandbox_mode = "read-only"
 ## Implementation Plan
 
 ### Phase 1: Core Infrastructure (Week 1-2)
-1. Create `@claude-flow/codex` package
+1. Create `@claude-flow/codex` package in `v3/@claude-flow/codex/`
 2. Implement AGENTS.md generator
 3. Implement SKILL.md generator
 4. Implement config.toml generator
+5. Set up npm publishing for `@claude-flow/codex`
 
 ### Phase 2: Init Integration (Week 3)
 1. Add `--codex` flag to init command
 2. Add `--dual` flag for both platforms
 3. Add `--from-claude` and `--from-codex` conversion
 4. Update wizard to support platform selection
+5. Wire up `@claude-flow/codex` as dependency
 
 ### Phase 3: Skills Library (Week 4)
 1. Convert all `.claude/skills/` to `.agents/skills/` format
 2. Create skill migration script
 3. Test skill discovery and loading
+4. Publish skills as part of `@claude-flow/codex`
 
 ### Phase 4: Automation Integration (Week 5)
 1. Map claude-flow hooks to Codex Automations
 2. Create automation templates
 3. Document automation patterns
+
+### Phase 5: Coflow Transition (Week 6+)
+1. Create `coflow` npm package (umbrella)
+2. Update CLI entry points for `npx coflow`
+3. Maintain `claude-flow` as alias for compatibility
+4. Update documentation for dual branding
 
 ## References
 
