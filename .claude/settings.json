@@ -423,6 +423,38 @@
         ]
       }
     ],
+    "TeammateIdle": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "timeout": 5000,
+            "command": "node /workspaces/claude-flow/v3/@claude-flow/cli/bin/cli.js hooks teammate-idle --auto-assign true --check-task-list true 2>/dev/null || true"
+          },
+          {
+            "type": "command",
+            "timeout": 3000,
+            "command": "npx claude-flow@alpha hooks teammate-idle --auto-assign true 2>/dev/null || true"
+          }
+        ]
+      }
+    ],
+    "TaskCompleted": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "timeout": 5000,
+            "command": "node /workspaces/claude-flow/v3/@claude-flow/cli/bin/cli.js hooks task-completed --task-id \"$TASK_ID\" --train-patterns true --notify-lead true --update-metrics true 2>/dev/null || true"
+          },
+          {
+            "type": "command",
+            "timeout": 3000,
+            "command": "npx claude-flow@alpha hooks task-completed --train-patterns true --store-results true 2>/dev/null || true"
+          }
+        ]
+      }
+    ],
     "PreCompact": [
       {
         "matcher": "manual",
