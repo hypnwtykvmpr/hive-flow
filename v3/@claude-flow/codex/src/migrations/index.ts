@@ -192,7 +192,7 @@ export async function parseClaudeMd(content: string): Promise<ParsedClaudeMd> {
 
   // Extract title (first H1)
   const titleMatch = content.match(/^#\s+(.+)$/m);
-  if (titleMatch) {
+  if (titleMatch && titleMatch[1]) {
     result.title = titleMatch[1].trim();
     result.settings.projectName = result.title;
   }
