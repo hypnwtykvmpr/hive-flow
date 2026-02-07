@@ -257,7 +257,196 @@ export async function generateConfigToml(options: ExtendedConfigTomlOptions = {}
   lines.push('exclude_slash_tmp = false');
   lines.push('');
 
+  // Security Settings
+  lines.push('# =============================================================================');
+  lines.push('# Security Settings');
+  lines.push('# =============================================================================');
+  lines.push('');
+  lines.push('[security]');
+  lines.push('# Enable input validation for all user inputs');
+  lines.push(`input_validation = ${security.inputValidation ?? true}`);
+  lines.push('');
+  lines.push('# Prevent directory traversal attacks');
+  lines.push(`path_traversal_prevention = ${security.pathTraversal ?? true}`);
+  lines.push('');
+  lines.push('# Scan for hardcoded secrets');
+  lines.push(`secret_scanning = ${security.secretScanning ?? true}`);
+  lines.push('');
+  lines.push('# Scan dependencies for known CVEs');
+  lines.push(`cve_scanning = ${security.cveScanning ?? true}`);
+  lines.push('');
+  lines.push('# Maximum file size for operations (bytes)');
+  lines.push(`max_file_size = ${security.maxFileSize ?? 10485760}`);
+  lines.push('');
+  lines.push('# Allowed file extensions (empty = allow all)');
+  const allowedExts = security.allowedExtensions ?? [];
+  if (allowedExts.length > 0) {
+    lines.push(`allowed_extensions = [${allowedExts.map((e) => `"${e}"`).join(', ')}]`);
+  } else {
+    lines.push('allowed_extensions = []');
+  }
+  lines.push('');
+  lines.push('# Blocked file patterns (regex)');
+  const blockedPatterns = security.blockedPatterns ?? ['\\.env$', 'credentials\\.json$', '\\.pem$', '\\.key$'];
+  lines.push(`blocked_patterns = [${blockedPatterns.map((p) => `"${escapeTomlString(p)}"`).join(', ')}]`);
+  lines.push('');
+
+  // Performance Settings
+  lines.push('# =============================================================================');
+  lines.push('# Performance Settings');
+  lines.push('# =============================================================================');
+  lines.push('');
+  lines.push('[performance]');
+  lines.push('# Maximum concurrent agents');
+  lines.push(`max_agents = ${performance.maxAgents ?? 8}`);
+  lines.push('');
+  lines.push('# Task timeout in seconds');
+  lines.push(`task_timeout = ${performance.taskTimeout ?? 300}`);
+  lines.push('');
+  lines.push('# Memory limit per agent');
+  lines.push(`memory_limit = "${performance.memoryLimit ?? '512MB'}"`);
+  lines.push('');
+  lines.push('# Enable response caching');
+  lines.push(`cache_enabled = ${performance.cacheEnabled ?? true}`);
+  lines.push('');
+  lines.push('# Cache TTL in seconds');
+  lines.push(`cache_ttl = ${performance.cacheTtl ?? 3600}`);
+  lines.push('');
+  lines.push('# Enable parallel task execution');
+  lines.push(`parallel_execution = ${performance.parallelExecution ?? true}`);
+  lines.push('');
+
+  // Logging Settings
+  lines.push('# =============================================================================');
+  lines.push('# Logging Settings');
+  lines.push('# =============================================================================');
+  lines.push('');
+  lines.push('[logging]');
+  lines.push('# Log level: debug, info, warn, error');
+  lines.push(`level = "${logging.level ?? 'info'}"`);
+  lines.push('');
+  lines.push('# Log format: json, text, pretty');
+  lines.push(`format = "${logging.format ?? 'pretty'}"`);
+  lines.push('');
+  lines.push('# Log destination: stdout, file, both');
+  lines.push(`destination = "${logging.destination ?? 'stdout'}"`);
+  lines.push('');
+  if (logging.filePath || logging.destination === 'file' || logging.destination === 'both') {
+    lines.push('# Log file path');
+    lines.push(`file_path = "${logging.filePath ?? './logs/claude-flow.log'}"`);
+    lines.push('');
+    lines.push('# Maximum number of log files to retain');
+    lines.push(`max_files = ${logging.maxFiles ?? 10}`);
+    lines.push('');
+    lines.push('# Maximum size per log file');
+    lines.push(`max_size = "${logging.maxSize ?? '10MB'}"`);
+    lines.push('');
+  }
+
+  // Neural/Intelligence Settings
+  lines.push('# =============================================================================');
+  lines.push('# Neural Intelligence Settings');
+  lines.push('# =============================================================================');
+  lines.push('');
+  lines.push('[neural]');
+  lines.push('# Enable SONA (Self-Optimizing Neural Architecture)');
+  lines.push('sona_enabled = true');
+  lines.push('');
+  lines.push('# Enable HNSW vector search');
+  lines.push('hnsw_enabled = true');
+  lines.push('');
+  lines.push('# HNSW index parameters');
+  lines.push('hnsw_m = 16');
+  lines.push('hnsw_ef_construction = 200');
+  lines.push('hnsw_ef_search = 100');
+  lines.push('');
+  lines.push('# Enable pattern learning');
+  lines.push('pattern_learning = true');
+  lines.push('');
+  lines.push('# Learning rate for neural adaptation');
+  lines.push('learning_rate = 0.01');
+  lines.push('');
+
+  // Swarm Settings
+  lines.push('# =============================================================================');
+  lines.push('# Swarm Orchestration Settings');
+  lines.push('# =============================================================================');
+  lines.push('');
+  lines.push('[swarm]');
+  lines.push('# Default topology: hierarchical, mesh, ring, star');
+  lines.push('default_topology = "hierarchical"');
+  lines.push('');
+  lines.push('# Default strategy: balanced, specialized, adaptive');
+  lines.push('default_strategy = "specialized"');
+  lines.push('');
+  lines.push('# Consensus algorithm: raft, byzantine, gossip');
+  lines.push('consensus = "raft"');
+  lines.push('');
+  lines.push('# Enable anti-drift measures');
+  lines.push('anti_drift = true');
+  lines.push('');
+  lines.push('# Checkpoint interval (tasks)');
+  lines.push('checkpoint_interval = 10');
+  lines.push('');
+
+  // Hooks Settings
+  lines.push('# =============================================================================');
+  lines.push('# Hooks Configuration');
+  lines.push('# =============================================================================');
+  lines.push('');
+  lines.push('[hooks]');
+  lines.push('# Enable lifecycle hooks');
+  lines.push('enabled = true');
+  lines.push('');
+  lines.push('# Pre-task hook');
+  lines.push('pre_task = true');
+  lines.push('');
+  lines.push('# Post-task hook (for learning)');
+  lines.push('post_task = true');
+  lines.push('');
+  lines.push('# Enable neural training on post-edit');
+  lines.push('train_on_edit = true');
+  lines.push('');
+
+  // Background Workers
+  lines.push('# =============================================================================');
+  lines.push('# Background Workers');
+  lines.push('# =============================================================================');
+  lines.push('');
+  lines.push('[workers]');
+  lines.push('# Enable background workers');
+  lines.push('enabled = true');
+  lines.push('');
+  lines.push('# Worker configuration');
+  lines.push('[workers.audit]');
+  lines.push('enabled = true');
+  lines.push('priority = "critical"');
+  lines.push('interval = 300');
+  lines.push('');
+  lines.push('[workers.optimize]');
+  lines.push('enabled = true');
+  lines.push('priority = "high"');
+  lines.push('interval = 600');
+  lines.push('');
+  lines.push('[workers.consolidate]');
+  lines.push('enabled = true');
+  lines.push('priority = "low"');
+  lines.push('interval = 1800');
+  lines.push('');
+
   return lines.join('\n');
+}
+
+/**
+ * Escape special characters in TOML strings
+ */
+function escapeTomlString(str: string): string {
+  return str
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"')
+    .replace(/\n/g, '\\n')
+    .replace(/\r/g, '\\r')
+    .replace(/\t/g, '\\t');
 }
 
 /**
