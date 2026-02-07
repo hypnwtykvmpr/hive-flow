@@ -185,6 +185,7 @@ export const memoryTools: MCPTool[] = [
       const value = typeof input.value === 'string' ? input.value : JSON.stringify(input.value);
       const tags = (input.tags as string[]) || [];
       const ttl = input.ttl as number | undefined;
+      const upsert = (input.upsert as boolean) || false;
 
       const startTime = performance.now();
 
@@ -196,6 +197,7 @@ export const memoryTools: MCPTool[] = [
           generateEmbeddingFlag: true,
           tags,
           ttl,
+          upsert,
         });
 
         const duration = performance.now() - startTime;
