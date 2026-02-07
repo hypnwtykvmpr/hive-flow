@@ -1838,7 +1838,8 @@ export async function storeEntry(options: {
     generateEmbeddingFlag = true,
     tags = [],
     ttl,
-    dbPath: customPath
+    dbPath: customPath,
+    upsert = false
   } = options;
 
   const swarmDir = path.join(process.cwd(), '.swarm');
