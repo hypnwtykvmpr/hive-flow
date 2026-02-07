@@ -43,6 +43,12 @@ export class CodexInitializer {
     this.force = options.force ?? false;
     this.dual = options.dual ?? false;
 
+    // Resolve bundled skills path (relative to this file's location)
+    this.bundledSkillsPath = path.resolve(
+      path.dirname(new URL(import.meta.url).pathname),
+      BUNDLED_SKILLS_DIR
+    );
+
     const filesCreated: string[] = [];
     const skillsGenerated: string[] = [];
     const warnings: string[] = [];
