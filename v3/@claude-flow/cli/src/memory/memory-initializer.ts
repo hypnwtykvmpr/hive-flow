@@ -1874,14 +1874,20 @@ export async function storeEntry(options: {
       embeddingModel = embResult.model;
     }
 
-    // Insert entry
-    db.run(`
-      INSERT INTO memory_entries (
-        id, key, namespace, content, type,
-        embedding, embedding_dimensions, embedding_model,
-        tags, metadata, created_at, updated_at, expires_at, status
-      ) VALUES (?, ?, ?, ?, 'semantic', ?, ?, ?, ?, ?, ?, ?, ?, 'active')
-    `, [
+    // Insert or update entry (upsert mode uses REPLACE)
+    const insertSql = upsert
+      ? `INSERT OR REPLACE INTO memory_entries (
+          id, key, namespace, content, type,
+          embedding, embedding_dimensions, embedding_model,
+          tags, metadata, created_at, updated_at, expires_at, status
+        ) VALUES (?, ?, ?, ?, 'semantic', ?, ?, ?, ?, ?, ?, ?, ?, 'active')`
+      : `INSERT INTO memory_entries (
+          id, key, namespace, content, type,
+          embedding, embedding_dimensions, embedding_model,
+          tags, metadata, created_at, updated_at, expires_at, status
+        ) VALUES (?, ?, ?, ?, 'semantic', ?, ?, ?, ?, ?, ?, ?, ?, 'active')`;
+
+    db.run(insertSql, [
       id,
       key,
       namespace,
