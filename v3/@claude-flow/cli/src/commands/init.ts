@@ -890,6 +890,9 @@ export const initCommand: Command = {
     { command: 'claude-flow init hooks --minimal', description: 'Create minimal hooks configuration' },
     { command: 'claude-flow init upgrade', description: 'Update helpers while preserving data' },
     { command: 'claude-flow init upgrade --verbose', description: 'Show detailed upgrade info' },
+    { command: 'claude-flow init --codex', description: 'Initialize for OpenAI Codex (AGENTS.md)' },
+    { command: 'claude-flow init --codex --full', description: 'Codex init with all 137+ skills' },
+    { command: 'claude-flow init --dual', description: 'Initialize for both Claude Code and Codex' },
   ],
   action: initAction,
 };
