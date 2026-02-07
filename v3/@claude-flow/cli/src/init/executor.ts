@@ -492,10 +492,12 @@ export async function executeUpgrade(targetDir: string, upgradeSettings = false)
 /**
  * Execute upgrade with --add-missing flag
  * Adds any new skills, agents, and commands that don't exist yet
+ * @param targetDir - Target directory
+ * @param upgradeSettings - If true, merge new settings into existing settings.json
  */
-export async function executeUpgradeWithMissing(targetDir: string): Promise<UpgradeResult> {
-  // First do the normal upgrade
-  const result = await executeUpgrade(targetDir);
+export async function executeUpgradeWithMissing(targetDir: string, upgradeSettings = false): Promise<UpgradeResult> {
+  // First do the normal upgrade (pass through upgradeSettings)
+  const result = await executeUpgrade(targetDir, upgradeSettings);
 
   if (!result.success) {
     return result;
