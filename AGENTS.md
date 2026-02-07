@@ -5,6 +5,24 @@
 
 ---
 
+## 📢 TL;DR - READ THIS FIRST
+
+```
+╔═══════════════════════════════════════════════════════════════════════════╗
+║  1. claude-flow = LEDGER (tracks state, stores memory, coordinates)       ║
+║  2. Codex = EXECUTOR (writes code, runs commands, creates files)          ║
+║  3. NEVER stop after calling claude-flow - IMMEDIATELY continue working   ║
+║  4. If you need something BUILT/EXECUTED, YOU do it, not claude-flow      ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+```
+
+**Workflow:**
+1. `npx claude-flow swarm init` → coordination record created (instant)
+2. **YOU write the code / run the commands** ← THIS IS WHERE WORK HAPPENS
+3. `npx claude-flow memory store` → save results (optional)
+
+---
+
 ## 🚨 CRITICAL: CODEX DOES THE WORK, CLAUDE-FLOW ORCHESTRATES
 
 ```
