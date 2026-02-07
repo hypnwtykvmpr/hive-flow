@@ -938,8 +938,22 @@ const upgradeCommand: Command = {
         output.writeln();
       }
 
+      // Show settings updates
+      if (result.settingsUpdated && result.settingsUpdated.length > 0) {
+        output.printBox(
+          result.settingsUpdated.map(s => `+ ${s}`).join('\n'),
+          'Settings Updated'
+        );
+        output.writeln();
+      }
+
       output.printSuccess('Your statusline helper has been updated to the latest version');
       output.printInfo('Existing metrics and learning data were preserved');
+
+      // Show settings summary
+      if (upgradeSettings && result.settingsUpdated && result.settingsUpdated.length > 0) {
+        output.printSuccess('Settings.json updated with new Agent Teams configuration');
+      }
 
       // Show summary for --add-missing
       if (addMissing) {
