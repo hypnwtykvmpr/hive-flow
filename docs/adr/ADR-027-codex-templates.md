@@ -1,8 +1,20 @@
 # ADR-027 Supplement: Codex Template Specifications
 
+> **Branding Note**: This package is published as `@claude-flow/codex` and is the first step in transitioning to the `coflow` brand. The future umbrella package will be `npm/npx coflow`.
+
 ## Overview
 
 This document provides the complete template specifications for all Codex-generated artifacts, including AGENTS.md, SKILL.md files, and config.toml configurations.
+
+## Package Information
+
+| Property | Value |
+|----------|-------|
+| Package Name | `@claude-flow/codex` |
+| Location | `v3/@claude-flow/codex/` |
+| Future Umbrella | `coflow` |
+| CLI Command | `npx @claude-flow/codex init` |
+| Integration | Works with `@claude-flow/cli` via `--codex` flag |
 
 ## AGENTS.md Templates
 
