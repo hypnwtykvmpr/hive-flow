@@ -693,7 +693,9 @@ export async function generateBuiltInSkill(
   const scripts: Record<string, string> = {};
   if (template.scripts) {
     for (const script of template.scripts) {
-      scripts[script.path] = generateHelperScript(skillName, script.name);
+      // Use just the script filename, not the full path
+      const scriptFilename = `${script.name}.sh`;
+      scripts[scriptFilename] = generateHelperScript(skillName, script.name);
     }
   }
 
