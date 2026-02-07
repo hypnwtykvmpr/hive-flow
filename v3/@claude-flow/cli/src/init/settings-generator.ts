@@ -319,6 +319,33 @@ function generateHooksConfig(config: HooksConfig): object {
   // Note: PermissionRequest is NOT a valid Claude Code hook type
   // Auto-allow behavior is configured via settings.permissions.allow instead
 
+  // Agent Teams hooks - TeammateIdle for task assignment, TaskCompleted for coordination
+  hooks.TeammateIdle = [
+    {
+      hooks: [
+        {
+          type: 'command',
+          command: 'npx @claude-flow/cli@latest hooks teammate-idle --auto-assign true 2>/dev/null || true',
+          timeout: 5000,
+          continueOnError: true,
+        },
+      ],
+    },
+  ];
+
+  hooks.TaskCompleted = [
+    {
+      hooks: [
+        {
+          type: 'command',
+          command: '[ -n "$TASK_ID" ] && npx @claude-flow/cli@latest hooks task-completed --task-id "$TASK_ID" --train-patterns true 2>/dev/null || true',
+          timeout: 5000,
+          continueOnError: true,
+        },
+      ],
+    },
+  ];
+
   return hooks;
 }
 
