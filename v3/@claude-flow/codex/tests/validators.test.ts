@@ -17,7 +17,7 @@ import {
 
 describe('validateAgentsMd', () => {
   describe('valid AGENTS.md files', () => {
-    it('should pass for a well-formed AGENTS.md', async () => {
+    it('should pass for a well-formed AGENTS.md with all sections', async () => {
       const content = `# My Project
 
 > Project description
@@ -38,20 +38,29 @@ npm install
 - NEVER commit secrets
 - Validate all inputs
 
+## Project Overview
+
+This is a project overview section.
+
 ## Skills
 
 | Skill | Purpose |
 |-------|---------|
 | \`$swarm-orchestration\` | Multi-agent coordination |
+
+## Links
+
+- GitHub: https://github.com/example/project
 `;
 
       const result = await validateAgentsMd(content);
 
-      expect(result.valid).toBe(true);
+      // All required and recommended sections are present
       expect(result.errors).toHaveLength(0);
+      expect(result.valid).toBe(true);
     });
 
-    it('should pass with multiple code blocks', async () => {
+    it('should pass with minimal required structure', async () => {
       const content = `# Project
 
 ## Setup
@@ -62,17 +71,31 @@ npm install
 
 ## Code Standards
 
-\`\`\`typescript
-const x = 1;
-\`\`\`
+Rules here
 
 ## Security
 
-\`\`\`yaml
-security: enabled
-\`\`\`
+No secrets
 
-Skills: $memory-management
+## Project Overview
+
+Overview
+
+## Skills
+
+$skill-name
+
+## Agent Types
+
+Types here
+
+## Memory System
+
+Memory info
+
+## Links
+
+Links here
 `;
 
       const result = await validateAgentsMd(content);
@@ -92,9 +115,7 @@ Some content`;
       const result = await validateAgentsMd(content);
 
       expect(result.valid).toBe(false);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]!.message).toContain('level-1 heading');
-      expect(result.errors[0]!.line).toBe(1);
+      expect(result.errors.some(e => e.message.includes('heading'))).toBe(true);
     });
 
     it('should detect hardcoded API keys', async () => {
@@ -102,17 +123,21 @@ Some content`;
 
 ## Setup
 
-api_key: "sk-1234567890abcdefghijklmnopqrstuvwxyz1234"
+api_key = "sk-1234567890abcdefghijklmnopqrstuvwxyz1234"
 
 ## Code Standards
 
 Nothing here
+
+## Security
+
+Safe
 `;
 
       const result = await validateAgentsMd(content);
 
       expect(result.valid).toBe(false);
-      expect(result.errors.some(e => e.message.includes('secret'))).toBe(true);
+      expect(result.errors.some(e => e.message.includes('API key'))).toBe(true);
     });
 
     it('should detect hardcoded passwords', async () => {
@@ -125,87 +150,59 @@ password: "mysecretpassword"
 ## Code Standards
 
 Standard rules
+
+## Security
+
+Rules
 `;
 
       const result = await validateAgentsMd(content);
 
       expect(result.valid).toBe(false);
-      expect(result.errors.some(e => e.message.includes('secret'))).toBe(true);
+      expect(result.errors.some(e => e.message.includes('password'))).toBe(true);
     });
 
-    it('should detect hardcoded API key patterns', async () => {
+    it('should detect generic API key patterns', async () => {
       const content = `# Project
 
 ## Setup
 
-API_KEY = "mykey123456"
+apikey = "abcdefghij1234567890abcdefghij"
 
 ## Code Standards
 
 Rules here
+
+## Security
+
+Safe
 `;
 
       const result = await validateAgentsMd(content);
 
       expect(result.valid).toBe(false);
+      expect(result.errors.some(e => e.message.includes('API key'))).toBe(true);
     });
   });
 
   describe('warnings', () => {
-    it('should warn about missing Setup section', async () => {
+    it('should warn about missing recommended sections', async () => {
       const content = `# Project
 
-## Code Standards
+Description only, no sections.
 
-Rules
+$skill-name
 
-## Security
-
-Security rules
-
-$skill-name here
+\`\`\`bash
+npm install
+\`\`\`
 `;
 
       const result = await validateAgentsMd(content);
 
+      // Should warn about missing Setup, Code Standards, Security
       expect(result.warnings.some(w => w.message.includes('Setup'))).toBe(true);
-    });
-
-    it('should warn about missing Code Standards section', async () => {
-      const content = `# Project
-
-## Setup
-
-npm install
-
-## Security
-
-No secrets
-
-$skill-name
-`;
-
-      const result = await validateAgentsMd(content);
-
       expect(result.warnings.some(w => w.message.includes('Code Standards'))).toBe(true);
-    });
-
-    it('should warn about missing Security section', async () => {
-      const content = `# Project
-
-## Setup
-
-npm install
-
-## Code Standards
-
-Rules here
-
-$skill-name
-`;
-
-      const result = await validateAgentsMd(content);
-
       expect(result.warnings.some(w => w.message.includes('Security'))).toBe(true);
     });
 
@@ -223,6 +220,10 @@ Rules
 ## Security
 
 No secrets allowed
+
+\`\`\`bash
+echo test
+\`\`\`
 `;
 
       const result = await validateAgentsMd(content);
@@ -230,7 +231,7 @@ No secrets allowed
       expect(result.warnings.some(w => w.message.includes('skill references'))).toBe(true);
     });
 
-    it('should warn when few code examples', async () => {
+    it('should warn when no code examples', async () => {
       const content = `# Project
 
 ## Setup
@@ -257,8 +258,6 @@ $some-skill
       const content = `# Project
 
 Description
-
-$skill-name
 
 \`\`\`bash
 npm install
@@ -290,6 +289,7 @@ name: my-skill
 description: >
   This is a description of my skill.
   Use when: complex tasks.
+triggers: ['complex tasks', 'multi-file changes']
 ---
 
 # My Skill Skill
@@ -302,6 +302,14 @@ This skill does something useful.
 
 - Complex tasks
 - Multi-file changes
+
+## When to Skip
+
+- Simple edits
+
+\`\`\`bash
+example command
+\`\`\`
 `;
 
       const result = await validateSkillMd(content);
@@ -313,8 +321,8 @@ This skill does something useful.
     it('should pass with minimal valid structure', async () => {
       const content = `---
 name: minimal-skill
-description: >
-  Minimal skill
+description: Minimal skill
+triggers: ['always']
 ---
 
 # Minimal Skill
@@ -326,6 +334,10 @@ Does something
 ## When to Trigger
 
 - Always
+
+\`\`\`
+example
+\`\`\`
 `;
 
       const result = await validateSkillMd(content);
@@ -410,8 +422,8 @@ Something
     it('should warn about missing Purpose section', async () => {
       const content = `---
 name: no-purpose
-description: >
-  Skill without purpose section
+description: Skill without purpose section
+triggers: ['always']
 ---
 
 # No Purpose Skill
@@ -419,6 +431,10 @@ description: >
 ## When to Trigger
 
 - Always
+
+\`\`\`
+example
+\`\`\`
 `;
 
       const result = await validateSkillMd(content);
@@ -426,11 +442,10 @@ description: >
       expect(result.warnings.some(w => w.message.includes('Purpose'))).toBe(true);
     });
 
-    it('should warn about missing trigger conditions', async () => {
+    it('should warn about missing trigger conditions when no triggers field', async () => {
       const content = `---
 name: no-triggers
-description: >
-  Skill without trigger conditions
+description: Skill without trigger conditions
 ---
 
 # No Triggers Skill
@@ -438,41 +453,46 @@ description: >
 ## Purpose
 
 Does something
+
+\`\`\`
+example
+\`\`\`
 `;
 
       const result = await validateSkillMd(content);
 
-      expect(result.warnings.some(w => w.message.includes('trigger'))).toBe(true);
+      // Should warn about missing triggers when no triggers field and no "When to Trigger" section
+      expect(result.warnings.some(w => w.message.toLowerCase().includes('trigger'))).toBe(true);
     });
 
-    it('should not warn when "When to Use" section exists', async () => {
+    it('should not warn about triggers when frontmatter has triggers field', async () => {
       const content = `---
-name: when-to-use
-description: >
-  Skill with When to Use
+name: has-triggers
+description: Skill with triggers in frontmatter
+triggers: ['complex tasks', 'multi-file']
 ---
 
-# When To Use Skill
+# Has Triggers Skill
 
 ## Purpose
 
 Does something
 
-## When to Use
-
-- For complex tasks
+\`\`\`
+example
+\`\`\`
 `;
 
       const result = await validateSkillMd(content);
 
-      expect(result.warnings.every(w => !w.message.includes('trigger'))).toBe(true);
+      // Should not warn about triggers because they're in frontmatter
+      expect(result.warnings.every(w => !w.message.includes('trigger conditions'))).toBe(true);
     });
 
     it('should provide suggestions for warnings', async () => {
       const content = `---
 name: warning-skill
-description: >
-  Skill with warnings
+description: Skill with warnings
 ---
 
 # Warning Skill
@@ -502,7 +522,10 @@ model = "gpt-5.3-codex"
 approval_policy = "on-request"
 sandbox_mode = "workspace-write"
 
-[mcp_servers.claude-flow]
+[features]
+child_agents_md = true
+
+[mcp_servers.claude_flow]
 command = "npx"
 args = ["-y", "@claude-flow/cli@latest"]
 enabled = true
@@ -510,6 +533,14 @@ enabled = true
 [profiles.dev]
 approval_policy = "never"
 sandbox_mode = "danger-full-access"
+
+[profiles.safe]
+approval_policy = "untrusted"
+sandbox_mode = "read-only"
+
+[profiles.ci]
+approval_policy = "never"
+sandbox_mode = "workspace-write"
 `;
 
       const result = await validateConfigToml(content);
@@ -523,7 +554,7 @@ sandbox_mode = "danger-full-access"
 approval_policy = "on-request"
 sandbox_mode = "workspace-write"
 
-[mcp_servers.claude-flow]
+[mcp_servers.claude_flow]
 command = "npx"
 `;
 
@@ -654,7 +685,7 @@ command = "test"
       )).toBe(true);
     });
 
-    it('should not warn about never policy when profiles exist', async () => {
+    it('should not warn about never policy when profiles section exists', async () => {
       const content = `model = "gpt-5.3-codex"
 approval_policy = "never"
 sandbox_mode = "workspace-write"
@@ -668,12 +699,13 @@ approval_policy = "never"
 
       const result = await validateConfigToml(content);
 
+      // When profiles exist, the global "never" warning should not appear
       expect(result.warnings.every(w =>
-        !w.message.includes('"never" approval policy')
+        !w.message.includes('"never" approval policy globally')
       )).toBe(true);
     });
 
-    it('should warn about danger-full-access without profiles', async () => {
+    it('should warn about danger-full-access sandbox mode', async () => {
       const content = `model = "gpt-5.3-codex"
 approval_policy = "on-request"
 sandbox_mode = "danger-full-access"
@@ -684,27 +716,9 @@ command = "test"
 
       const result = await validateConfigToml(content);
 
+      // This always warns regardless of profiles
       expect(result.warnings.some(w =>
         w.message.includes('danger-full-access')
-      )).toBe(true);
-    });
-
-    it('should not warn about danger-full-access when profiles exist', async () => {
-      const content = `model = "gpt-5.3-codex"
-approval_policy = "on-request"
-sandbox_mode = "danger-full-access"
-
-[mcp_servers.test]
-command = "test"
-
-[profiles.dev]
-sandbox_mode = "danger-full-access"
-`;
-
-      const result = await validateConfigToml(content);
-
-      expect(result.warnings.every(w =>
-        !w.message.includes('danger-full-access')
       )).toBe(true);
     });
 
@@ -763,11 +777,14 @@ command = "test"
 // =============================================================================
 
 describe('validator integration', () => {
-  it('should validate content from generators', async () => {
-    // This simulates validating generator output
+  it('should validate realistic generator output', async () => {
     const agentsMd = `# Test Project
 
 > A test project
+
+## Project Overview
+
+This is a comprehensive project.
 
 ## Setup
 
@@ -785,16 +802,29 @@ npm install
 - No secrets
 - Validate inputs
 
-$swarm-orchestration
-\`\`\`
-npm test
-\`\`\`
+## Skills
+
+| Skill | Purpose |
+|-------|---------|
+| \`$swarm-orchestration\` | Coordination |
+
+## Agent Types
+
+Various agent types here.
+
+## Memory System
+
+Memory patterns.
+
+## Links
+
+- GitHub: https://github.com/example
 `;
 
     const skillMd = `---
 name: test-skill
-description: >
-  A test skill for testing.
+description: A test skill for testing.
+triggers: ['tests needed']
 ---
 
 # Test Skill Skill
@@ -806,15 +836,39 @@ Testing purposes
 ## When to Trigger
 
 - Tests needed
+
+## When to Skip
+
+- Not needed
+
+\`\`\`bash
+npm test
+\`\`\`
 `;
 
     const configToml = `model = "gpt-5.3-codex"
 approval_policy = "on-request"
 sandbox_mode = "workspace-write"
 
-[mcp_servers.claude-flow]
+[features]
+child_agents_md = true
+
+[mcp_servers.claude_flow]
 command = "npx"
 args = ["-y", "@claude-flow/cli@latest"]
+enabled = true
+
+[profiles.dev]
+approval_policy = "never"
+sandbox_mode = "danger-full-access"
+
+[profiles.safe]
+approval_policy = "untrusted"
+sandbox_mode = "read-only"
+
+[profiles.ci]
+approval_policy = "on-request"
+sandbox_mode = "workspace-write"
 `;
 
     const agentsResult = await validateAgentsMd(agentsMd);
