@@ -44,6 +44,15 @@ export function generateSettings(options: InitOptions): object {
   // Model preferences are stored in claudeFlow settings instead
   // settings.model = 'claude-sonnet-4-5-20250929'; // Uncomment if you want to set a default model
 
+  // Add Agent Teams configuration (experimental feature)
+  settings.env = {
+    // Enable Claude Code Agent Teams for multi-agent coordination
+    CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS: '1',
+    // Claude Flow specific environment
+    CLAUDE_FLOW_V3_ENABLED: 'true',
+    CLAUDE_FLOW_HOOKS_ENABLED: 'true',
+  };
+
   // Add V3-specific settings
   settings.claudeFlow = {
     version: '3.0.0',
@@ -51,6 +60,12 @@ export function generateSettings(options: InitOptions): object {
     modelPreferences: {
       default: 'claude-opus-4-6',
       routing: 'claude-haiku-4-5-20251001',
+    },
+    agentTeams: {
+      enabled: true,
+      teammateMode: 'auto', // 'auto' | 'in-process' | 'tmux'
+      taskListEnabled: true,
+      mailboxEnabled: true,
     },
     swarm: {
       topology: options.runtime.topology,
