@@ -124,6 +124,8 @@ export interface AgentsConfig {
   optimization: boolean;
   /** Include testing agents */
   testing: boolean;
+  /** Include dual-mode agents (Claude Code + Codex hybrid) */
+  dualMode: boolean;
   /** Include all agents */
   all: boolean;
 }
