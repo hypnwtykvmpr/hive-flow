@@ -1,62 +1,94 @@
 # Dual-Mode Agents (Claude Code + Codex)
 
-Optional agent configurations for running Claude Code interactively alongside headless Codex workers.
+Optional agents for orchestrating hybrid workflows combining Claude Code (interactive) and Codex (headless) execution.
+
+## Available Agents
+
+| Agent | File | Platform | Purpose |
+|-------|------|----------|---------|
+| `dual-orchestrator` | dual-orchestrator.md | dual | Orchestrate hybrid Claude+Codex workflows |
+| `codex-coordinator` | codex-coordinator.md | dual | Coordinate multiple headless Codex workers |
+| `codex-worker` | codex-worker.md | codex | Headless background worker with self-learning |
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│  CLAUDE CODE (Interactive)     CODEX (Headless Background)  │
-│  ────────────────────────      ────────────────────────────  │
-│  Direct conversation           claude -p "task" &            │
-│  Real-time feedback            Parallel execution            │
-│  Complex reasoning             Batch processing              │
-│                                                              │
-│  CLAUDE-FLOW (Shared Orchestrator)                           │
-│  • MCP tools shared by both                                  │
-│  • Vector memory persists across sessions                    │
-│  • Patterns learned and reused                               │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────┐
+│   CLAUDE CODE (Interactive)                     │
+│   ├─ Complex reasoning                         │
+│   ├─ Architecture decisions                    │
+│   └─ Real-time review                          │
+├─────────────────────────────────────────────────┤
+│   dual-orchestrator                             │
+│   ├─ Routes tasks to appropriate platform      │
+│   └─ Coordinates hybrid workflows              │
+├─────────────────────────────────────────────────┤
+│   codex-coordinator                             │
+│   ├─ Spawns headless workers                   │
+│   ├─ Tracks progress via memory                │
+│   └─ Aggregates results                        │
+├─────────────────────────────────────────────────┤
+│   CODEX (Headless)                              │
+│   ├─ codex-worker instances                    │
+│   ├─ Run in parallel via `claude -p`           │
+│   └─ Store results in shared memory            │
+└─────────────────────────────────────────────────┘
 ```
 
-## Available Agents
+## Quick Start
 
-| Agent | File | Purpose |
-|-------|------|---------|
-| `codex-worker` | codex-worker.yaml | Headless background worker |
-| `codex-coordinator` | codex-coordinator.yaml | Coordinates headless swarm |
-| `dual-orchestrator` | dual-orchestrator.yaml | Claude+Codex coordination |
-
-## Usage
-
-### Spawn Headless Workers from Claude Code
-
+### 1. Hybrid Development Workflow
 ```bash
-# Spawn parallel Codex workers
-claude -p "Implement feature X" --session-id task-1 &
-claude -p "Write tests for X" --session-id task-2 &
-claude -p "Document feature X" --session-id task-3 &
+# Interactive design → Parallel implementation → Interactive review
+# Use dual-orchestrator agent
+```
+
+### 2. Spawn Parallel Workers
+```bash
+# Initialize coordination
+npx claude-flow@v3alpha swarm init --topology hierarchical --max-agents 4
+
+# Spawn workers
+claude -p "Implement auth service" --session-id auth-1 &
+claude -p "Write auth tests" --session-id auth-2 &
 wait
+
+# Collect results
+npx claude-flow@v3alpha memory list --namespace results
 ```
 
-### Coordinate via Shared Memory
+## When to Use Each Agent
 
-```bash
-# Initialize shared coordination
-npx claude-flow swarm init --topology hierarchical
+### dual-orchestrator
+- Starting a new feature that needs both design and implementation
+- Deciding whether a task needs interactive reasoning or can run headlessly
+- Coordinating end-to-end hybrid workflows
 
-# Workers store results
-npx claude-flow memory store --key "task-1-result" --value "..." --namespace results
+### codex-coordinator
+- Spawning multiple parallel workers for batch execution
+- Managing worker lifecycle and result aggregation
+- When the task is already well-defined and can be parallelized
 
-# Interactive Claude Code reads results
-npx claude-flow memory list --namespace results
-```
+### codex-worker
+- Individual headless execution units
+- Self-learning workers that check memory before/after tasks
+- Background implementation tasks
 
-## Installation
+## Related Skills
 
-These agents are optional. To use them:
+See `.claude/skills/dual-mode/` for skill commands:
+- `/dual-spawn` - Spawn headless workers
+- `/dual-coordinate` - Full hybrid workflow
+- `/dual-collect` - Collect worker results
 
-```bash
-# Already included in .claude/agents/dual-mode/
-# Reference in your workflows as needed
-```
+## Platform Routing
+
+| Task Type | Platform | Agent |
+|-----------|----------|-------|
+| Design/Architecture | Claude Code | dual-orchestrator |
+| Debugging | Claude Code | - |
+| Implementation | Codex | codex-worker |
+| Testing | Codex | codex-worker |
+| Documentation | Codex | codex-worker |
+| Code Review | Claude Code | - |
+| Hybrid Feature | Both | dual-orchestrator |
