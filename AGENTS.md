@@ -44,6 +44,55 @@ npx claude-flow memory store --key "api-created" --value "src/api.ts" --namespac
 | **CODEX** | EXECUTES | Write files, run tests, create code, shell commands |
 | **claude-flow** | ORCHESTRATES | Track agents, store memory, coordinate tasks |
 
+---
+
+## ⛔ DON'T STOP AFTER CALLING CLAUDE-FLOW
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│  ❌ WRONG: Call claude-flow → STOP → Wait for results                   │
+│  ✅ RIGHT: Call claude-flow → IMMEDIATELY continue → YOU do the work    │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### ❌ WRONG Pattern (Stopping)
+```bash
+npx claude-flow swarm init --topology hierarchical
+npx claude-flow agent spawn --type coder --name worker-1
+npx claude-flow swarm start --objective "Build hello world"
+# WRONG: Codex stops here and waits for something to happen
+# Nothing will happen! Claude-flow doesn't execute code!
+```
+
+### ✅ CORRECT Pattern (Continue Immediately)
+```bash
+# Step 1: Coordination (optional)
+npx claude-flow swarm init --topology hierarchical
+npx claude-flow agent spawn --type coder --name worker-1
+
+# Step 2: IMMEDIATELY DO THE WORK YOURSELF - DON'T WAIT!
+echo 'console.log("Hello World!");' > hello.js
+node hello.js
+
+# Step 3: Report what you did
+npx claude-flow memory store --key "result" --value "Hello World printed" --namespace results
+```
+
+### The Rule
+**After ANY claude-flow command, IMMEDIATELY continue with your own work.**
+
+Claude-flow commands return instantly. They create coordination RECORDS only.
+You must ALWAYS follow up with YOUR OWN execution.
+
+| After This... | IMMEDIATELY Do This... |
+|---------------|----------------------|
+| `swarm init` | Start writing code |
+| `agent spawn` | Continue implementation |
+| `task create` | Execute the task yourself |
+| `swarm start` | Begin actual work |
+
+---
+
 ### When to Use Claude-Flow Commands
 
 | Use Case | Claude-Flow Command | Then Codex Does |
