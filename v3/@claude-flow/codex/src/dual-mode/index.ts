@@ -3,13 +3,12 @@
  * Collaborative execution of Claude Code + Codex workers
  */
 
-export {
-  DualModeOrchestrator,
+export { DualModeOrchestrator, CollaborationTemplates } from './orchestrator.js';
+export type {
   DualModeConfig,
   WorkerConfig,
   WorkerResult,
   CollaborationResult,
-  CollaborationTemplates,
 } from './orchestrator.js';
 
 export { createDualModeCommand } from './cli.js';
