@@ -5,43 +5,69 @@
 
 ---
 
-## 🚨 CRITICAL: HOW SWARMS WORK
+## 🚨 CRITICAL: CODEX DOES THE WORK, CLAUDE-FLOW ORCHESTRATES
 
-**YOU (Codex) ARE THE AGENT.** The swarm commands create coordination infrastructure, not separate AI instances.
-
-### Execution Model
-1. `swarm init` → Creates coordination state in `.swarm/`
-2. `agent spawn` → Registers agent slots (not real processes)
-3. `swarm start` → Sets objective and strategy
-4. **YOU execute the tasks** → Codex does the actual work
-5. Report progress via `task` and `memory` commands
-
-### Correct Workflow
-```bash
-# 1. Initialize coordination
-npx claude-flow swarm init --topology hierarchical --max-agents 5
-
-# 2. Register your role
-npx claude-flow agent spawn --type coder --name codex-main
-
-# 3. Set objective
-npx claude-flow swarm start --objective "Your task" --strategy development
-
-# 4. NOW DO THE WORK YOURSELF:
-#    - Read files, write code, run tests
-#    - Store results in memory
-#    - Update task status when done
-
-# 5. Mark completion
-npx claude-flow task create --type implementation --description "Task done"
-npx claude-flow memory store --key "result" --value "Hello World executed" --namespace results
+```
+┌─────────────────────────────────────────────────────────────┐
+│  CLAUDE-FLOW = ORCHESTRATOR (tracks state, coordinates)     │
+│  CODEX = WORKER (writes code, runs commands, implements)    │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-### Key Understanding
-- **Swarm = Coordination layer** (state tracking, not execution)
-- **Codex = The actual worker** (you do the real tasks)
-- **Memory = Shared state** (store your results here)
-- **Tasks = Progress tracking** (update status as you work)
+### ❌ WRONG: Expecting claude-flow to execute tasks
+```bash
+npx claude-flow swarm start --objective "Build API"
+# WRONG: Waiting for claude-flow to build the API
+# Claude-flow does NOT execute code!
+```
+
+### ✅ CORRECT: Codex executes, claude-flow tracks
+```bash
+# 1. Tell claude-flow what you're doing (optional coordination)
+npx claude-flow swarm init --topology hierarchical --max-agents 1
+npx claude-flow agent spawn --type coder --name codex-worker
+
+# 2. YOU (CODEX) DO THE ACTUAL WORK:
+mkdir -p src
+cat > src/api.ts << 'EOF'
+export function hello() { return "Hello World"; }
+EOF
+
+# 3. Report to claude-flow what you did (optional)
+npx claude-flow memory store --key "api-created" --value "src/api.ts" --namespace results
+```
+
+### The Division of Labor
+
+| Component | Role | Examples |
+|-----------|------|----------|
+| **CODEX** | EXECUTES | Write files, run tests, create code, shell commands |
+| **claude-flow** | ORCHESTRATES | Track agents, store memory, coordinate tasks |
+
+### When to Use Claude-Flow Commands
+
+| Use Case | Claude-Flow Command | Then Codex Does |
+|----------|---------------------|-----------------|
+| Track progress | `memory store --key "step1" --value "done"` | Continue to next step |
+| Multi-step tasks | `task create --description "step 2"` | Execute step 2 |
+| Store results | `memory store --key "output" --value "..."` | Move on |
+| Coordinate | `swarm init` | Start working |
+
+### Hello World - Correct Pattern
+
+```bash
+# STEP 1: Optional - register with orchestrator
+npx claude-flow swarm init --topology mesh --max-agents 1
+
+# STEP 2: CODEX DOES THE WORK
+echo 'console.log("Hello World!");' > hello.js
+node hello.js
+
+# STEP 3: Optional - report completion
+npx claude-flow memory store --key "hello-result" --value "printed Hello World" --namespace results
+```
+
+**REMEMBER: If you need something DONE, YOU do it. Claude-flow just tracks.**
 
 ---
 
