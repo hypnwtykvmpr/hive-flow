@@ -500,7 +500,7 @@ npm install -g claude-flow@alpha --omit=optional
 <details>
 <summary>🤖 <strong>OpenAI Codex CLI Support</strong> — Full Codex integration with self-learning</summary>
 
-Claude-Flow supports both **Claude Code** and **OpenAI Codex CLI** via the [@claude-flow/codex](https://www.npmjs.com/package/@claude-flow/codex) package.
+Claude-Flow supports both **Claude Code** and **OpenAI Codex CLI** via the [@claude-flow/codex](https://www.npmjs.com/package/@claude-flow/codex) package, following the [Agentics Foundation](https://agentics.org) standard.
 
 ### Quick Start for Codex
 
@@ -524,6 +524,7 @@ npx claude-flow@alpha init --dual
 | Skill Syntax | `/skill-name` | `$skill-name` |
 | Settings | `settings.json` | `config.toml` |
 | MCP | Native | Via `codex mcp add` |
+| Default Model | claude-sonnet | gpt-5.3 |
 
 ### Key Concept: Execution Model
 
@@ -535,6 +536,35 @@ npx claude-flow@alpha init --dual
 ```
 
 **Codex does the work. Claude-flow coordinates and learns.**
+
+### Dual-Mode Integration (Claude Code + Codex)
+
+Run Claude Code for interactive development and spawn headless Codex workers for parallel background tasks:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  CLAUDE CODE (interactive)  ←→  CODEX WORKERS (headless)        │
+│  - Main conversation         - Parallel background execution    │
+│  - Complex reasoning         - Bulk code generation            │
+│  - Architecture decisions    - Test execution                   │
+│  - Final integration         - File processing                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+```bash
+# Spawn parallel Codex workers from Claude Code
+claude -p "Analyze src/auth/ for security issues" --session-id "task-1" &
+claude -p "Write unit tests for src/api/" --session-id "task-2" &
+claude -p "Optimize database queries in src/db/" --session-id "task-3" &
+wait  # Wait for all to complete
+```
+
+| Dual-Mode Feature | Benefit |
+|-------------------|---------|
+| Parallel Execution | 4-8x faster for bulk tasks |
+| Cost Optimization | Route simple tasks to cheaper workers |
+| Context Preservation | Shared memory across platforms |
+| Best of Both | Interactive + batch processing |
 
 ### MCP Integration for Codex
 
@@ -567,34 +597,17 @@ codex mcp add claude-flow -- npx claude-flow mcp start
 | `agent_spawn` | Register agent roles | Multi-agent workflows |
 | `neural_train` | Train on patterns | Periodic improvement |
 
-### Example Prompt for Codex
+### 137+ Skills Available
 
-```
-Build an email validator using a learning-enabled swarm.
-
-STEP 1 - LEARN (use MCP tool):
-Use tool: memory_search
-  query: "validation utility function patterns"
-  namespace: "patterns"
-If score > 0.7, use that pattern as reference.
-
-STEP 2 - COORDINATE (use MCP tools):
-Use tool: swarm_init with topology="hierarchical", maxAgents=3
-Use tool: agent_spawn with type="coder", name="validator"
-
-STEP 3 - EXECUTE (YOU do this):
-Create /tmp/validator/email.js with validateEmail() function
-Create /tmp/validator/test.js with test cases
-Run the tests
-
-STEP 4 - REMEMBER (use MCP tool):
-Use tool: memory_store
-  key: "pattern-email-validator"
-  value: "Email validation: regex, returns boolean, test cases"
-  namespace: "patterns"
-
-YOU execute all code. Use MCP tools for learning.
-```
+| Category | Examples |
+|----------|----------|
+| **V3 Core** | `$v3-security-overhaul`, `$v3-memory-unification`, `$v3-performance-optimization` |
+| **AgentDB** | `$agentdb-vector-search`, `$agentdb-optimization`, `$agentdb-learning` |
+| **Swarm** | `$swarm-orchestration`, `$swarm-advanced`, `$hive-mind-advanced` |
+| **GitHub** | `$github-code-review`, `$github-workflow-automation`, `$github-multi-repo` |
+| **SPARC** | `$sparc-methodology`, `$sparc:architect`, `$sparc:coder`, `$sparc:tester` |
+| **Flow Nexus** | `$flow-nexus-neural`, `$flow-nexus-swarm`, `$flow-nexus:workflow` |
+| **Dual-Mode** | `$dual-spawn`, `$dual-coordinate`, `$dual-collect` |
 
 ### Vector Search Details
 
