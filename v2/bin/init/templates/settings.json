@@ -114,6 +114,26 @@
           }
         ]
       }
+    ],
+    "TeammateIdle": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx claude-flow@alpha hooks teammate-idle --auto-assign true --check-task-list true"
+          }
+        ]
+      }
+    ],
+    "TaskCompleted": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx claude-flow@alpha hooks task-completed --train-patterns true --notify-lead true"
+          }
+        ]
+      }
     ]
   },
   "includeCoAuthoredBy": true,
