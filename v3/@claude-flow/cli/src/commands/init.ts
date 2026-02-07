@@ -836,26 +836,41 @@ const upgradeCommand: Command = {
       type: 'boolean',
       default: false,
     },
+    {
+      name: 'settings',
+      short: 's',
+      description: 'Merge new settings (Agent Teams, hooks) into existing settings.json',
+      type: 'boolean',
+      default: false,
+    },
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     const addMissing = (ctx.flags['add-missing'] || ctx.flags.addMissing) as boolean;
+    const upgradeSettings = (ctx.flags.settings) as boolean;
 
     output.writeln();
     output.writeln(output.bold('Upgrading Claude Flow'));
-    if (addMissing) {
+    if (addMissing && upgradeSettings) {
+      output.writeln(output.dim('Updates helpers, settings, and adds any missing skills/agents/commands'));
+    } else if (addMissing) {
       output.writeln(output.dim('Updates helpers and adds any missing skills/agents/commands'));
+    } else if (upgradeSettings) {
+      output.writeln(output.dim('Updates helpers and merges new settings (Agent Teams, hooks)'));
     } else {
       output.writeln(output.dim('Updates helpers while preserving your existing data'));
     }
     output.writeln();
 
-    const spinner = output.createSpinner({ text: addMissing ? 'Upgrading and adding missing assets...' : 'Upgrading...' });
+    const spinnerText = upgradeSettings
+      ? 'Upgrading helpers and settings...'
+      : (addMissing ? 'Upgrading and adding missing assets...' : 'Upgrading...');
+    const spinner = output.createSpinner({ text: spinnerText });
     spinner.start();
 
     try {
       const result = addMissing
-        ? await executeUpgradeWithMissing(ctx.cwd)
-        : await executeUpgrade(ctx.cwd);
+        ? await executeUpgradeWithMissing(ctx.cwd, upgradeSettings)
+        : await executeUpgrade(ctx.cwd, upgradeSettings);
 
       if (!result.success) {
         spinner.fail('Upgrade failed');
@@ -923,8 +938,22 @@ const upgradeCommand: Command = {
         output.writeln();
       }
 
+      // Show settings updates
+      if (result.settingsUpdated && result.settingsUpdated.length > 0) {
+        output.printBox(
+          result.settingsUpdated.map(s => `+ ${s}`).join('\n'),
+          'Settings Updated'
+        );
+        output.writeln();
+      }
+
       output.printSuccess('Your statusline helper has been updated to the latest version');
       output.printInfo('Existing metrics and learning data were preserved');
+
+      // Show settings summary
+      if (upgradeSettings && result.settingsUpdated && result.settingsUpdated.length > 0) {
+        output.printSuccess('Settings.json updated with new Agent Teams configuration');
+      }
 
       // Show summary for --add-missing
       if (addMissing) {
@@ -1040,6 +1069,7 @@ export const initCommand: Command = {
     { command: 'claude-flow init skills --all', description: 'Install all available skills' },
     { command: 'claude-flow init hooks --minimal', description: 'Create minimal hooks configuration' },
     { command: 'claude-flow init upgrade', description: 'Update helpers while preserving data' },
+    { command: 'claude-flow init upgrade --settings', description: 'Update helpers and merge new settings (Agent Teams)' },
     { command: 'claude-flow init upgrade --verbose', description: 'Show detailed upgrade info' },
     { command: 'claude-flow init --codex', description: 'Initialize for OpenAI Codex (AGENTS.md)' },
     { command: 'claude-flow init --codex --full', description: 'Codex init with all 137+ skills' },

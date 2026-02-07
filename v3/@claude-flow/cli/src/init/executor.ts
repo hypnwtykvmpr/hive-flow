@@ -13,7 +13,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 import type { InitOptions, InitResult, PlatformInfo } from './types.js';
 import { detectPlatform, DEFAULT_INIT_OPTIONS } from './types.js';
-import { generateSettingsJson } from './settings-generator.js';
+import { generateSettingsJson, generateSettings } from './settings-generator.js';
 import { generateMCPJson } from './mcp-generator.js';
 import { generateStatuslineScript, generateStatuslineHook } from './statusline-generator.js';
 import {
@@ -247,19 +247,117 @@ export interface UpgradeResult {
   addedSkills?: string[];
   addedAgents?: string[];
   addedCommands?: string[];
+  /** Added by --settings flag */
+  settingsUpdated?: string[];
+}
+
+/**
+ * Merge new settings into existing settings.json
+ * Preserves user customizations while adding new features like Agent Teams
+ * Uses platform-specific commands for Mac, Linux, and Windows
+ */
+function mergeSettingsForUpgrade(existing: Record<string, unknown>): Record<string, unknown> {
+  const merged = { ...existing };
+  const platform = detectPlatform();
+  const isWindows = platform.os === 'windows';
+
+  // Platform-specific command wrappers
+  // Windows: Use PowerShell-compatible commands
+  // Mac/Linux: Use bash-compatible commands with 2>/dev/null
+  const teammateIdleCmd = isWindows
+    ? 'npx @claude-flow/cli@latest hooks teammate-idle --auto-assign true 2>$null; exit 0'
+    : 'npx @claude-flow/cli@latest hooks teammate-idle --auto-assign true 2>/dev/null || true';
+
+  const taskCompletedCmd = isWindows
+    ? 'if ($env:TASK_ID) { npx @claude-flow/cli@latest hooks task-completed --task-id $env:TASK_ID --train-patterns true 2>$null }; exit 0'
+    : '[ -n "$TASK_ID" ] && npx @claude-flow/cli@latest hooks task-completed --task-id "$TASK_ID" --train-patterns true 2>/dev/null || true';
+
+  // 1. Merge env vars (preserve existing, add new)
+  const existingEnv = (existing.env as Record<string, string>) || {};
+  merged.env = {
+    ...existingEnv,
+    CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS: '1',
+    CLAUDE_FLOW_V3_ENABLED: existingEnv.CLAUDE_FLOW_V3_ENABLED || 'true',
+    CLAUDE_FLOW_HOOKS_ENABLED: existingEnv.CLAUDE_FLOW_HOOKS_ENABLED || 'true',
+  };
+
+  // 2. Merge hooks (preserve existing, add new Agent Teams hooks)
+  const existingHooks = (existing.hooks as Record<string, unknown[]>) || {};
+  merged.hooks = { ...existingHooks };
+
+  // Add TeammateIdle hook if not present
+  if (!existingHooks.TeammateIdle) {
+    (merged.hooks as Record<string, unknown[]>).TeammateIdle = [
+      {
+        hooks: [
+          {
+            type: 'command',
+            command: teammateIdleCmd,
+            timeout: 5000,
+            continueOnError: true,
+          },
+        ],
+      },
+    ];
+  }
+
+  // Add TaskCompleted hook if not present
+  if (!existingHooks.TaskCompleted) {
+    (merged.hooks as Record<string, unknown[]>).TaskCompleted = [
+      {
+        hooks: [
+          {
+            type: 'command',
+            command: taskCompletedCmd,
+            timeout: 5000,
+            continueOnError: true,
+          },
+        ],
+      },
+    ];
+  }
+
+  // 3. Merge claudeFlow settings (preserve existing, add agentTeams)
+  const existingClaudeFlow = (existing.claudeFlow as Record<string, unknown>) || {};
+  merged.claudeFlow = {
+    ...existingClaudeFlow,
+    version: existingClaudeFlow.version || '3.0.0',
+    enabled: existingClaudeFlow.enabled !== false,
+    agentTeams: {
+      enabled: true,
+      teammateMode: 'auto',
+      taskListEnabled: true,
+      mailboxEnabled: true,
+      coordination: {
+        autoAssignOnIdle: true,
+        trainPatternsOnComplete: true,
+        notifyLeadOnComplete: true,
+        sharedMemoryNamespace: 'agent-teams',
+      },
+      hooks: {
+        teammateIdle: { enabled: true, autoAssign: true, checkTaskList: true },
+        taskCompleted: { enabled: true, trainPatterns: true, notifyLead: true },
+      },
+    },
+  };
+
+  return merged;
 }
 
 /**
  * Execute upgrade - updates helpers and creates missing metrics without losing data
  * This is safe for existing users who want the latest statusline fixes
+ * @param targetDir - Target directory
+ * @param upgradeSettings - If true, merge new settings into existing settings.json
  */
-export async function executeUpgrade(targetDir: string): Promise<UpgradeResult> {
+export async function executeUpgrade(targetDir: string, upgradeSettings = false): Promise<UpgradeResult> {
   const result: UpgradeResult = {
     success: true,
     updated: [],
     created: [],
     preserved: [],
     errors: [],
+    settingsUpdated: [],
   };
 
   try {
@@ -370,6 +468,33 @@ export async function executeUpgrade(targetDir: string): Promise<UpgradeResult> 
       result.preserved.push('.claude-flow/security/audit-status.json');
     }
 
+    // 3. Merge settings if requested
+    if (upgradeSettings) {
+      const settingsPath = path.join(targetDir, '.claude', 'settings.json');
+      if (fs.existsSync(settingsPath)) {
+        try {
+          const existingSettings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
+          const mergedSettings = mergeSettingsForUpgrade(existingSettings);
+          fs.writeFileSync(settingsPath, JSON.stringify(mergedSettings, null, 2), 'utf-8');
+          result.updated.push('.claude/settings.json');
+          result.settingsUpdated = [
+            'env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS',
+            'hooks.TeammateIdle',
+            'hooks.TaskCompleted',
+            'claudeFlow.agentTeams',
+          ];
+        } catch (settingsError) {
+          result.errors.push(`Settings merge failed: ${settingsError instanceof Error ? settingsError.message : String(settingsError)}`);
+        }
+      } else {
+        // Create new settings.json with defaults
+        const defaultSettings = generateSettings(DEFAULT_INIT_OPTIONS);
+        fs.writeFileSync(settingsPath, JSON.stringify(defaultSettings, null, 2), 'utf-8');
+        result.created.push('.claude/settings.json');
+        result.settingsUpdated = ['Created new settings.json with Agent Teams'];
+      }
+    }
+
   } catch (error) {
     result.success = false;
     result.errors.push(error instanceof Error ? error.message : String(error));
@@ -381,10 +506,12 @@ export async function executeUpgrade(targetDir: string): Promise<UpgradeResult> 
 /**
  * Execute upgrade with --add-missing flag
  * Adds any new skills, agents, and commands that don't exist yet
+ * @param targetDir - Target directory
+ * @param upgradeSettings - If true, merge new settings into existing settings.json
  */
-export async function executeUpgradeWithMissing(targetDir: string): Promise<UpgradeResult> {
-  // First do the normal upgrade
-  const result = await executeUpgrade(targetDir);
+export async function executeUpgradeWithMissing(targetDir: string, upgradeSettings = false): Promise<UpgradeResult> {
+  // First do the normal upgrade (pass through upgradeSettings)
+  const result = await executeUpgrade(targetDir, upgradeSettings);
 
   if (!result.success) {
     return result;
