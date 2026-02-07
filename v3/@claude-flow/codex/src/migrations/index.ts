@@ -251,7 +251,7 @@ function parseSections(content: string, lines: string[]): ParsedSection[] {
     const line = lines[i]!;
     const match = sectionRegex.exec(line);
 
-    if (match) {
+    if (match && match[1] && match[2]) {
       // Save previous section
       if (currentSection) {
         currentSection.content = contentLines.join('\n').trim();
