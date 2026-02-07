@@ -102,12 +102,15 @@ export class CodexInitializer {
         warnings.push(...(dualResult.warnings ?? []));
       }
 
-      return {
+      const result: CodexInitResult = {
         success: true,
         filesCreated,
         skillsGenerated,
-        warnings: warnings.length > 0 ? warnings : undefined,
       };
+      if (warnings.length > 0) {
+        result.warnings = warnings;
+      }
+      return result;
     } catch (error) {
       errors.push(error instanceof Error ? error.message : 'Unknown error');
       return {
