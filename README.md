@@ -566,6 +566,30 @@ wait  # Wait for all to complete
 | Context Preservation | Shared memory across platforms |
 | Best of Both | Interactive + batch processing |
 
+### Dual-Mode CLI Commands (NEW)
+
+```bash
+# List collaboration templates
+npx claude-flow-codex dual templates
+
+# Run feature development swarm (architect → coder → tester → reviewer)
+npx claude-flow-codex dual run --template feature --task "Add user auth"
+
+# Run security audit swarm (scanner → analyzer → fixer)
+npx claude-flow-codex dual run --template security --task "src/auth/"
+
+# Run refactoring swarm (analyzer → planner → refactorer → validator)
+npx claude-flow-codex dual run --template refactor --task "src/legacy/"
+```
+
+### Pre-Built Collaboration Templates
+
+| Template | Pipeline | Platforms |
+|----------|----------|-----------|
+| **feature** | architect → coder → tester → reviewer | Claude + Codex |
+| **security** | scanner → analyzer → fixer | Codex + Claude |
+| **refactor** | analyzer → planner → refactorer → validator | Claude + Codex |
+
 ### MCP Integration for Codex
 
 When you run `init --codex`, the MCP server is automatically registered:
