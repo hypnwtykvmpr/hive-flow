@@ -254,14 +254,17 @@ export interface UpgradeResult {
 /**
  * Execute upgrade - updates helpers and creates missing metrics without losing data
  * This is safe for existing users who want the latest statusline fixes
+ * @param targetDir - Target directory
+ * @param upgradeSettings - If true, merge new settings into existing settings.json
  */
-export async function executeUpgrade(targetDir: string): Promise<UpgradeResult> {
+export async function executeUpgrade(targetDir: string, upgradeSettings = false): Promise<UpgradeResult> {
   const result: UpgradeResult = {
     success: true,
     updated: [],
     created: [],
     preserved: [],
     errors: [],
+    settingsUpdated: [],
   };
 
   try {
