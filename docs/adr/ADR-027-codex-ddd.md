@@ -2,7 +2,14 @@
 
 ## Overview
 
-This document defines the Domain-Driven Design (DDD) architecture for integrating OpenAI Codex support into claude-flow. The design follows the existing V3 architecture patterns while introducing new bounded contexts for Codex-specific functionality.
+This document defines the Domain-Driven Design (DDD) architecture for integrating OpenAI Codex support into claude-flow via the `@claude-flow/codex` package. The design follows the existing V3 architecture patterns while introducing new bounded contexts for Codex-specific functionality.
+
+## Package Information
+
+- **Package Name**: `@claude-flow/codex`
+- **Location**: `v3/@claude-flow/codex/`
+- **Future Umbrella**: `coflow` (npm/npx coflow)
+- **Compatibility**: Maintains `claude-flow` branding during transition
 
 ## Strategic Design
 
