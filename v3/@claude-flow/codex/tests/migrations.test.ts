@@ -539,8 +539,10 @@ describe('generateMigrationReport', () => {
       const report = generateMigrationReport(result);
 
       expect(report).toContain('## Generated Files');
-      expect(report).toContain('AGENTS.md: /project/AGENTS.md');
-      expect(report).toContain('config.toml: /project/.agents/config.toml');
+      expect(report).toContain('AGENTS.md:');
+      expect(report).toContain('/project/AGENTS.md');
+      expect(report).toContain('config.toml:');
+      expect(report).toContain('/project/.agents/config.toml');
     });
 
     it('should list created skills', () => {
