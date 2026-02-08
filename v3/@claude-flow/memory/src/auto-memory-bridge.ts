@@ -200,8 +200,10 @@ export class AutoMemoryBridge extends EventEmitter {
   private lastSyncTime: number = 0;
   private syncTimer: ReturnType<typeof setInterval> | null = null;
   private insights: MemoryInsight[] = [];
-  /** Track AgentDB IDs of insights already written to files during this session */
+  /** Track AgentDB keys of insights already written to files during this session */
   private syncedInsightKeys = new Set<string>();
+  /** Monotonic counter to prevent key collisions within the same ms */
+  private insightCounter = 0;
 
   constructor(backend: IMemoryBackend, config: AutoMemoryBridgeConfig = {}) {
     super();
