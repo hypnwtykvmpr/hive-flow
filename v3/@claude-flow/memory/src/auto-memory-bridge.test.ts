@@ -186,7 +186,7 @@ describe('formatInsightLine', () => {
     const insight = createTestInsight();
     const line = formatInsightLine(insight);
 
-    expect(line).toStartWith('- HNSW index requires initialization before search');
+    expect(line.startsWith('- HNSW index requires initialization before search')).toBe(true);
     expect(line).toContain('agent:tester');
     expect(line).toContain('0.95');
   });
