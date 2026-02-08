@@ -1605,6 +1605,11 @@ npx @claude-flow/cli@latest hive-mind consensus --propose "task"
 | MCP Response | <100ms | ✅ Achieved |
 | CLI Startup | <500ms | ✅ Achieved |
 | SONA Adaptation | <0.05ms | 🔄 In Progress |
+| Graph Build (1k) | <200ms | ✅ 2.78ms (71.9x headroom) |
+| PageRank (1k) | <100ms | ✅ 12.21ms (8.2x headroom) |
+| Insight Recording | <5ms/each | ✅ 0.12ms (41x headroom) |
+| Consolidation | <500ms | ✅ 0.26ms (1,955x headroom) |
+| Knowledge Transfer | <100ms | ✅ 1.25ms (80x headroom) |
 
 ---
 
