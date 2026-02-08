@@ -1,37 +1,37 @@
-# RuvFlow
+# Ruflo
 
 Enterprise AI agent orchestration platform. Deploy 60+ specialized agents in coordinated swarms with self-learning, fault-tolerant consensus, vector memory, and MCP integration.
 
-**RuvFlow** is the new name for [claude-flow](https://www.npmjs.com/package/claude-flow). Both packages are fully supported.
+**Ruflo** is the new name for [claude-flow](https://www.npmjs.com/package/claude-flow). Both packages are fully supported.
 
 ## Install
 
 ```bash
 # Quick start
-npx ruvflow@latest init --wizard
+npx ruflo@latest init --wizard
 
 # Global install
-npm install -g ruvflow
+npm install -g ruflo
 
 # Add as MCP server
-claude mcp add ruvflow -- npx -y ruvflow@latest mcp start
+claude mcp add ruflo -- npx -y ruflo@latest mcp start
 ```
 
 ## Usage
 
 ```bash
-ruvflow init --wizard          # Initialize project
-ruvflow agent spawn -t coder   # Spawn an agent
-ruvflow swarm init             # Start a swarm
-ruvflow memory search -q "..."  # Search vector memory
-ruvflow doctor                 # System diagnostics
+ruflo init --wizard          # Initialize project
+ruflo agent spawn -t coder   # Spawn an agent
+ruflo swarm init             # Start a swarm
+ruflo memory search -q "..."  # Search vector memory
+ruflo doctor                 # System diagnostics
 ```
 
 ## Relationship to claude-flow
 
 | Package | npm | CLI Command |
 |---------|-----|-------------|
-| `ruvflow` | [npmjs.com/package/ruvflow](https://www.npmjs.com/package/ruvflow) | `ruvflow` |
+| `ruflo` | [npmjs.com/package/ruflo](https://www.npmjs.com/package/ruflo) | `ruflo` |
 | `claude-flow` | [npmjs.com/package/claude-flow](https://www.npmjs.com/package/claude-flow) | `claude-flow` |
 
 Both packages use `@claude-flow/cli` under the hood. Choose whichever you prefer.
