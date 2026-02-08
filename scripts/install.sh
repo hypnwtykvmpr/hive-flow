@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# RuvFlow Installer
+# Ruflo Installer
 # https://github.com/ruvnet/claude-flow
 #
 # Usage:
@@ -78,7 +78,7 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
         --help|-h)
-            echo "RuvFlow Installer"
+            echo "Ruflo Installer"
             echo ""
             echo "Usage: curl -fsSL .../install.sh | bash -s -- [OPTIONS]"
             echo ""
@@ -99,7 +99,7 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-PACKAGE="ruvflow@${VERSION}"
+PACKAGE="ruflo@${VERSION}"
 
 # Progress animation
 SPINNER_CHARS="⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
@@ -113,7 +113,7 @@ spinner() {
 print_banner() {
     echo ""
     echo -e "${CYAN}╔═══════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${CYAN}║${NC}  ${BOLD}🌊 RuvFlow${NC} - Enterprise AI Agent Orchestration        ${CYAN}║${NC}"
+    echo -e "${CYAN}║${NC}  ${BOLD}🌊 Ruflo${NC} - Enterprise AI Agent Orchestration        ${CYAN}║${NC}"
     echo -e "${CYAN}╚═══════════════════════════════════════════════════════════╝${NC}"
     echo ""
 }
@@ -254,10 +254,10 @@ verify_installation() {
 
     local VERSION_OUTPUT
     if [ "$GLOBAL" = "1" ]; then
-        VERSION_OUTPUT=$(ruvflow --version 2>/dev/null || echo "")
+        VERSION_OUTPUT=$(ruflo --version 2>/dev/null || echo "")
         if [ -z "$VERSION_OUTPUT" ]; then
             print_warning "Global command not found in PATH"
-            print_substep "Try: ${BOLD}npm install -g ruvflow@${VERSION}${NC}"
+            print_substep "Try: ${BOLD}npm install -g ruflo@${VERSION}${NC}"
             return 0  # Don't fail - npm might need PATH refresh
         fi
     else
@@ -283,22 +283,22 @@ show_quickstart() {
 
     if [ "$GLOBAL" = "1" ]; then
         echo -e "  ${DIM}# Initialize project${NC}"
-        echo -e "  ${BOLD}ruvflow init --wizard${NC}"
+        echo -e "  ${BOLD}ruflo init --wizard${NC}"
         echo ""
         echo -e "  ${DIM}# Run system diagnostics${NC}"
-        echo -e "  ${BOLD}ruvflow doctor${NC}"
+        echo -e "  ${BOLD}ruflo doctor${NC}"
         echo ""
         echo -e "  ${DIM}# Add as MCP server to Claude Code${NC}"
-        echo -e "  ${BOLD}claude mcp add ruvflow -- ruvflow mcp start${NC}"
+        echo -e "  ${BOLD}claude mcp add ruflo -- ruflo mcp start${NC}"
     else
         echo -e "  ${DIM}# Initialize project${NC}"
-        echo -e "  ${BOLD}npx ruvflow@alpha init --wizard${NC}"
+        echo -e "  ${BOLD}npx ruflo@alpha init --wizard${NC}"
         echo ""
         echo -e "  ${DIM}# Run system diagnostics${NC}"
-        echo -e "  ${BOLD}npx ruvflow@alpha doctor${NC}"
+        echo -e "  ${BOLD}npx ruflo@alpha doctor${NC}"
         echo ""
         echo -e "  ${DIM}# Add as MCP server to Claude Code${NC}"
-        echo -e "  ${BOLD}claude mcp add ruvflow -- npx -y ruvflow@alpha mcp start${NC}"
+        echo -e "  ${BOLD}claude mcp add ruflo -- npx -y ruflo@alpha mcp start${NC}"
     fi
 
     echo ""
@@ -320,20 +320,20 @@ setup_mcp_server() {
     fi
 
     # Check if already configured
-    if claude mcp list 2>/dev/null | grep -q "ruvflow"; then
+    if claude mcp list 2>/dev/null | grep -q "ruflo"; then
         print_substep "MCP server already configured ✓"
         return 0
     fi
 
     # Add MCP server
     if [ "$GLOBAL" = "1" ]; then
-        claude mcp add ruvflow -- ruvflow mcp start 2>/dev/null && \
+        claude mcp add ruflo -- ruflo mcp start 2>/dev/null && \
             print_substep "MCP server configured ✓" || \
-            print_warning "MCP setup failed - run manually: claude mcp add ruvflow -- ruvflow mcp start"
+            print_warning "MCP setup failed - run manually: claude mcp add ruflo -- ruflo mcp start"
     else
-        claude mcp add ruvflow -- npx -y ruvflow@${VERSION} mcp start 2>/dev/null && \
+        claude mcp add ruflo -- npx -y ruflo@${VERSION} mcp start 2>/dev/null && \
             print_substep "MCP server configured ✓" || \
-            print_warning "MCP setup failed - run manually: claude mcp add ruvflow -- npx -y ruvflow@alpha mcp start"
+            print_warning "MCP setup failed - run manually: claude mcp add ruflo -- npx -y ruflo@alpha mcp start"
     fi
     echo ""
 }
@@ -347,9 +347,9 @@ run_doctor() {
     echo ""
 
     if [ "$GLOBAL" = "1" ]; then
-        ruvflow doctor 2>&1 || true
+        ruflo doctor 2>&1 || true
     else
-        npx ruvflow@${VERSION} doctor 2>&1 || true
+        npx ruflo@${VERSION} doctor 2>&1 || true
     fi
     echo ""
 }
@@ -363,9 +363,9 @@ run_init() {
     echo ""
 
     if [ "$GLOBAL" = "1" ]; then
-        ruvflow init --yes 2>&1 || true
+        ruflo init --yes 2>&1 || true
     else
-        npx ruvflow@${VERSION} init --yes 2>&1 || true
+        npx ruflo@${VERSION} init --yes 2>&1 || true
     fi
     echo ""
 }
@@ -382,7 +382,7 @@ main() {
     run_init
     show_quickstart
 
-    print_success "${BOLD}RuvFlow is ready!${NC} 🎉"
+    print_success "${BOLD}Ruflo is ready!${NC} 🎉"
     echo ""
 }
 
