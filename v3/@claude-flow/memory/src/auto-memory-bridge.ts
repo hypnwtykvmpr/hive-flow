@@ -310,6 +310,12 @@ export class AutoMemoryBridge extends EventEmitter {
       const synced = buffered.length + entries.length;
       this.lastSyncTime = Date.now();
 
+      // Prevent unbounded growth of syncedInsightKeys
+      if (this.syncedInsightKeys.size > 10_000) {
+        const keys = [...this.syncedInsightKeys];
+        this.syncedInsightKeys = new Set(keys.slice(keys.length - 5_000));
+      }
+
       const result: SyncResult = {
         synced,
         categories: [...updatedCategories],
