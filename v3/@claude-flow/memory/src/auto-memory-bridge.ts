@@ -164,7 +164,9 @@ const CATEGORY_LABELS: Record<string, string> = {
   'swarm-results': 'Swarm Results',
 };
 
-const DEFAULT_CONFIG: Required<AutoMemoryBridgeConfig> = {
+type ResolvedConfig = Required<Omit<AutoMemoryBridgeConfig, 'learning' | 'graph'>> & Pick<AutoMemoryBridgeConfig, 'learning' | 'graph'>;
+
+const DEFAULT_CONFIG: ResolvedConfig = {
   memoryDir: '',
   workingDir: process.cwd(),
   maxIndexLines: 180,
