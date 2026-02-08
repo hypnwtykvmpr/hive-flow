@@ -384,7 +384,7 @@ main() {
     run_init
     show_quickstart
 
-    print_success "${BOLD}Ruflo is ready!${NC} 🎉"
+    print_success "${BOLD}Claude Flow is ready!${NC}"
     echo ""
 }
 
