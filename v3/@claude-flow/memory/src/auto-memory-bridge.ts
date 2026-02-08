@@ -575,6 +575,10 @@ export class AutoMemoryBridge extends EventEmitter {
       clearInterval(this.syncTimer);
       this.syncTimer = null;
     }
+    // ADR-049: Clean up learning bridge
+    if (this.learningBridge) {
+      this.learningBridge.destroy();
+    }
     this.removeAllListeners();
   }
 
