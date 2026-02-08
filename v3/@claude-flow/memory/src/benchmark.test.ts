@@ -23,7 +23,7 @@ function createMockBackend(entries: MemoryEntry[] = []): IMemoryBackend {
     count: vi.fn(async () => stored.size),
     listNamespaces: vi.fn(async () => ['default']),
     clearNamespace: vi.fn(async () => 0),
-    getStats: vi.fn(async () => ({ totalEntries: stored.size, entriesByNamespace: {}, entriesByType: {}, memoryUsage: 0, avgQueryTime: 0, avgSearchTime: 0 })),
+    getStats: vi.fn(async () => ({ totalEntries: stored.size, entriesByNamespace: {}, entriesByType: { semantic: 0, episodic: 0, procedural: 0, working: 0, cache: 0 } as Record<string, number>, memoryUsage: 0, avgQueryTime: 0, avgSearchTime: 0 })),
     healthCheck: vi.fn(async () => ({ status: 'healthy' as const, components: { storage: { status: 'healthy' as const, latency: 0 }, index: { status: 'healthy' as const, latency: 0 }, cache: { status: 'healthy' as const, latency: 0 } }, timestamp: Date.now(), issues: [], recommendations: [] })),
   };
 }
