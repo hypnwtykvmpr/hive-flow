@@ -264,6 +264,8 @@ export class MemoryGraph extends EventEmitter {
 
   /**
    * Compute PageRank scores using the power iteration method.
+   * Handles dangling nodes (no outgoing edges) by redistributing their
+   * rank mass equally across all nodes.
    * Returns a map of node ID to PageRank score.
    */
   computePageRank(): Map<string, number> {
@@ -282,10 +284,25 @@ export class MemoryGraph extends EventEmitter {
       this.pageRanks.set(nodeId, initialRank);
     }
 
+    // Identify dangling nodes (no outgoing edges)
+    const danglingNodes: string[] = [];
+    for (const nodeId of this.nodes.keys()) {
+      const outEdges = this.edges.get(nodeId);
+      if (!outEdges || outEdges.length === 0) {
+        danglingNodes.push(nodeId);
+      }
+    }
+
     let iterations = 0;
     for (let iter = 0; iter < this.config.pageRankIterations; iter++) {
       let maxDelta = 0;
       const newRanks = new Map<string, number>();
+
+      // Compute dangling node rank sum for redistribution
+      let danglingSum = 0;
+      for (const nodeId of danglingNodes) {
+        danglingSum += this.pageRanks.get(nodeId) || 0;
+      }
 
       for (const nodeId of this.nodes.keys()) {
         let sum = 0;
@@ -297,7 +314,8 @@ export class MemoryGraph extends EventEmitter {
           }
         }
 
-        const newRank = (1 - d) / N + d * sum;
+        // Redistribute dangling rank mass equally
+        const newRank = (1 - d) / N + d * (sum + danglingSum / N);
         newRanks.set(nodeId, newRank);
         maxDelta = Math.max(maxDelta, Math.abs(newRank - (this.pageRanks.get(nodeId) || 0)));
       }
