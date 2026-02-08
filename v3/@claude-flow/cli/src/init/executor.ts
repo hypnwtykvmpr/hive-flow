@@ -430,19 +430,22 @@ export async function executeUpgrade(targetDir: string, upgradeSettings = false)
       }
     }
 
-    // 0. ALWAYS update auto-memory-hook.mjs (force overwrite)
-    const autoMemoryHookPath = path.join(targetDir, '.claude', 'helpers', 'auto-memory-hook.mjs');
+    // 0. ALWAYS update critical helpers (force overwrite)
     const sourceHelpersForUpgrade = findSourceHelpersDir();
     if (sourceHelpersForUpgrade) {
-      const sourceAutoMemory = path.join(sourceHelpersForUpgrade, 'auto-memory-hook.mjs');
-      if (fs.existsSync(sourceAutoMemory)) {
-        if (fs.existsSync(autoMemoryHookPath)) {
-          result.updated.push('.claude/helpers/auto-memory-hook.mjs');
-        } else {
-          result.created.push('.claude/helpers/auto-memory-hook.mjs');
+      const criticalHelpers = ['auto-memory-hook.mjs', 'hook-handler.cjs'];
+      for (const helperName of criticalHelpers) {
+        const targetPath = path.join(targetDir, '.claude', 'helpers', helperName);
+        const sourcePath = path.join(sourceHelpersForUpgrade, helperName);
+        if (fs.existsSync(sourcePath)) {
+          if (fs.existsSync(targetPath)) {
+            result.updated.push(`.claude/helpers/${helperName}`);
+          } else {
+            result.created.push(`.claude/helpers/${helperName}`);
+          }
+          fs.copyFileSync(sourcePath, targetPath);
+          try { fs.chmodSync(targetPath, '755'); } catch {}
         }
-        fs.copyFileSync(sourceAutoMemory, autoMemoryHookPath);
-        fs.chmodSync(autoMemoryHookPath, '755');
       }
     }
 
