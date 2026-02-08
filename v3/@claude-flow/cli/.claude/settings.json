@@ -106,13 +106,38 @@
         ]
       }
     ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ./node_modules/@claude-flow/cli/.claude/helpers/auto-memory-hook.mjs sync 2>/dev/null || true",
+            "timeout": 10000,
+            "continueOnError": true
+          },
+          {
+            "type": "command",
+            "command": "npx @claude-flow/cli@latest hooks session-end --persist-memory true --export-patterns true 2>/dev/null || true",
+            "timeout": 8000,
+            "continueOnError": true
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "echo '{\"ok\": true}'",
-            "timeout": 1000
+            "command": "node ./node_modules/@claude-flow/cli/.claude/helpers/auto-memory-hook.mjs sync 2>/dev/null || true",
+            "timeout": 10000,
+            "continueOnError": true
+          },
+          {
+            "type": "command",
+            "command": "npx @claude-flow/cli@latest hooks session-end --persist-memory true 2>/dev/null || true",
+            "timeout": 8000,
+            "continueOnError": true
           }
         ]
       }
