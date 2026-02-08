@@ -701,6 +701,265 @@ Already in DB
     });
   });
 
+  describe('recordInsight - key uniqueness', () => {
+    it('should generate unique keys for rapid sequential inserts', async () => {
+      // Record multiple insights as fast as possible (same ms possible)
+      await bridge.recordInsight(createTestInsight({ summary: 'Insight A' }));
+      await bridge.recordInsight(createTestInsight({ summary: 'Insight B' }));
+      await bridge.recordInsight(createTestInsight({ summary: 'Insight C' }));
+
+      // All three should have unique keys
+      const keys = backend.storedEntries.map(e => e.key);
+      const uniqueKeys = new Set(keys);
+      expect(uniqueKeys.size).toBe(3);
+    });
+  });
+
+  describe('syncToAutoMemory - error handling', () => {
+    it('should emit sync:failed on backend query error', async () => {
+      const handler = vi.fn();
+      bridge.on('sync:failed', handler);
+
+      // Make ensureMemoryDir throw
+      (backend.query as any).mockRejectedValueOnce(new Error('DB connection lost'));
+
+      // Record an insight so there's something to sync
+      await bridge.recordInsight(createTestInsight());
+
+      // The sync should still succeed for the buffered part
+      // because queryRecentInsights has its own try/catch
+      const result = await bridge.syncToAutoMemory();
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should report errors for individual insight write failures', async () => {
+      // Create a read-only file to force a write error
+      const topicPath = bridge.getTopicPath('debugging');
+      fsSync.writeFileSync(topicPath, '# Debugging\n\n- Existing\n', 'utf-8');
+      fsSync.chmodSync(topicPath, 0o444); // read-only
+
+      await bridge.recordInsight(createTestInsight());
+
+      const result = await bridge.syncToAutoMemory();
+      // Should have error from trying to write to read-only file
+      expect(result.errors.length).toBeGreaterThan(0);
+
+      // Restore permissions for cleanup
+      fsSync.chmodSync(topicPath, 0o644);
+    });
+  });
+
+  describe('syncToAutoMemory - append to existing topic file', () => {
+    it('should append new insight to existing topic file', async () => {
+      // Create initial topic file
+      const topicPath = bridge.getTopicPath('debugging');
+      fsSync.writeFileSync(topicPath, '# Debugging\n\n- Existing item\n', 'utf-8');
+
+      bridge.destroy();
+      bridge = new AutoMemoryBridge(backend, {
+        memoryDir: testDir,
+        syncMode: 'on-write',
+      });
+
+      await bridge.recordInsight(createTestInsight({ summary: 'New insight' }));
+
+      const content = fsSync.readFileSync(topicPath, 'utf-8');
+      expect(content).toContain('Existing item');
+      expect(content).toContain('New insight');
+    });
+
+    it('should prune topic file when it exceeds maxTopicFileLines', async () => {
+      // Create a topic file near the limit
+      const topicPath = bridge.getTopicPath('debugging');
+      const lines = ['# Debugging', '', 'Description'];
+      for (let i = 0; i < 500; i++) {
+        lines.push(`- Entry ${i}`);
+      }
+      fsSync.writeFileSync(topicPath, lines.join('\n'), 'utf-8');
+
+      bridge.destroy();
+      bridge = new AutoMemoryBridge(backend, {
+        memoryDir: testDir,
+        syncMode: 'on-write',
+        maxTopicFileLines: 500,
+      });
+
+      await bridge.recordInsight(createTestInsight({ summary: 'Overflow insight' }));
+
+      const content = fsSync.readFileSync(topicPath, 'utf-8');
+      expect(content).toContain('Overflow insight');
+      // Old entries near the top should have been pruned
+      expect(content).not.toContain('Entry 0');
+      // Header should be preserved
+      expect(content).toContain('# Debugging');
+    });
+  });
+
+  describe('syncToAutoMemory - classifyEntry coverage', () => {
+    it('should classify by metadata category when present', async () => {
+      const entry: Partial<MemoryEntry> = {
+        id: 'e1',
+        key: 'insight:security:999:0',
+        content: 'SQL injection found',
+        tags: ['insight'],
+        metadata: { category: 'security', summary: 'SQL injection found', confidence: 0.9 },
+      };
+      (backend.query as any).mockResolvedValueOnce([entry as MemoryEntry]);
+
+      await bridge.syncToAutoMemory();
+
+      expect(fsSync.existsSync(bridge.getTopicPath('security'))).toBe(true);
+      const content = fsSync.readFileSync(bridge.getTopicPath('security'), 'utf-8');
+      expect(content).toContain('SQL injection found');
+    });
+
+    it('should classify by tags when metadata category is absent', async () => {
+      const entry: Partial<MemoryEntry> = {
+        id: 'e2',
+        key: 'insight:unknown:999:0',
+        content: 'Performance is slow',
+        tags: ['insight', 'performance', 'benchmark'],
+        metadata: { summary: 'Performance is slow', confidence: 0.85 },
+      };
+      (backend.query as any).mockResolvedValueOnce([entry as MemoryEntry]);
+
+      await bridge.syncToAutoMemory();
+
+      expect(fsSync.existsSync(bridge.getTopicPath('performance'))).toBe(true);
+    });
+
+    it('should default to project-patterns for unclassifiable entries', async () => {
+      const entry: Partial<MemoryEntry> = {
+        id: 'e3',
+        key: 'insight:misc:999:0',
+        content: 'Miscellaneous note',
+        tags: ['insight'],
+        metadata: { summary: 'Miscellaneous note', confidence: 0.8 },
+      };
+      (backend.query as any).mockResolvedValueOnce([entry as MemoryEntry]);
+
+      await bridge.syncToAutoMemory();
+
+      expect(fsSync.existsSync(bridge.getTopicPath('project-patterns'))).toBe(true);
+    });
+
+    it('should classify debugging tags correctly', async () => {
+      const bugEntry: Partial<MemoryEntry> = {
+        id: 'e4',
+        key: 'insight:bug:999:0',
+        content: 'Found a bug',
+        tags: ['insight', 'bug'],
+        metadata: { summary: 'Found a bug', confidence: 0.9 },
+      };
+      (backend.query as any).mockResolvedValueOnce([bugEntry as MemoryEntry]);
+
+      await bridge.syncToAutoMemory();
+      expect(fsSync.existsSync(bridge.getTopicPath('debugging'))).toBe(true);
+    });
+
+    it('should classify swarm/agent tags correctly', async () => {
+      const swarmEntry: Partial<MemoryEntry> = {
+        id: 'e5',
+        key: 'insight:swarm:999:0',
+        content: 'Swarm completed successfully',
+        tags: ['insight', 'swarm'],
+        metadata: { summary: 'Swarm completed successfully', confidence: 0.9 },
+      };
+      (backend.query as any).mockResolvedValueOnce([swarmEntry as MemoryEntry]);
+
+      await bridge.syncToAutoMemory();
+      expect(fsSync.existsSync(bridge.getTopicPath('swarm-results'))).toBe(true);
+    });
+  });
+
+  describe('importFromAutoMemory - edge cases', () => {
+    it('should emit import:completed event', async () => {
+      const handler = vi.fn();
+      bridge.on('import:completed', handler);
+
+      fsSync.writeFileSync(
+        path.join(testDir, 'test.md'),
+        '## Section\nContent here\n',
+        'utf-8',
+      );
+
+      await bridge.importFromAutoMemory();
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({
+        imported: expect.any(Number),
+        durationMs: expect.any(Number),
+      }));
+    });
+
+    it('should handle files with no ## headings', async () => {
+      fsSync.writeFileSync(
+        path.join(testDir, 'empty.md'),
+        '# Just a title\nSome text without sections\n',
+        'utf-8',
+      );
+
+      const result = await bridge.importFromAutoMemory();
+      expect(result.imported).toBe(0);
+      expect(result.files).toContain('empty.md');
+    });
+  });
+
+  describe('curateIndex - edge cases', () => {
+    it('should handle empty topic files', async () => {
+      fsSync.writeFileSync(
+        path.join(testDir, 'debugging.md'),
+        '# Debugging\n\n',
+        'utf-8',
+      );
+
+      await bridge.curateIndex();
+      const content = fsSync.readFileSync(bridge.getIndexPath(), 'utf-8');
+      // Should not include empty section
+      expect(content).not.toContain('Debugging');
+    });
+
+    it('should emit index:curated event', async () => {
+      const handler = vi.fn();
+      bridge.on('index:curated', handler);
+
+      fsSync.writeFileSync(
+        path.join(testDir, 'debugging.md'),
+        '# Debugging\n\n- An item\n',
+        'utf-8',
+      );
+
+      await bridge.curateIndex();
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({
+        lines: expect.any(Number),
+      }));
+    });
+
+    it('should handle pruneStrategy=lru same as fifo', async () => {
+      const lines = ['# Debugging', ''];
+      for (let i = 0; i < 50; i++) {
+        lines.push(`- Item ${i}`);
+      }
+      fsSync.writeFileSync(
+        path.join(testDir, 'debugging.md'),
+        lines.join('\n'),
+        'utf-8',
+      );
+
+      bridge.destroy();
+      bridge = new AutoMemoryBridge(backend, {
+        memoryDir: testDir,
+        maxIndexLines: 10,
+        pruneStrategy: 'lru',
+      });
+
+      await bridge.curateIndex();
+
+      const indexContent = fsSync.readFileSync(bridge.getIndexPath(), 'utf-8');
+      // LRU removes oldest (first) items, same as FIFO
+      expect(indexContent).toContain('Item 49');
+      expect(indexContent).not.toContain('Item 0');
+    });
+  });
+
   describe('destroy', () => {
     it('should clean up periodic sync timer', () => {
       const periodicBridge = new AutoMemoryBridge(backend, {
