@@ -15,6 +15,12 @@ import type { MemoryInsight, InsightCategory } from './auto-memory-bridge.js';
 
 // ===== Types =====
 
+/**
+ * Factory function that returns a neural system instance.
+ * Used for dependency injection so tests can supply a mock.
+ */
+export type NeuralLoader = () => Promise<any>;
+
 /** Configuration for the LearningBridge */
 export interface LearningBridgeConfig {
   /** SONA operating mode (default: 'balanced') */
@@ -33,6 +39,12 @@ export interface LearningBridgeConfig {
   consolidationThreshold?: number;
   /** Enable the bridge (default: true). When false all methods are no-ops */
   enabled?: boolean;
+  /**
+   * Optional factory for the neural learning system.
+   * When provided, this replaces the default dynamic import of @claude-flow/neural.
+   * Primarily used for testing.
+   */
+  neuralLoader?: NeuralLoader;
 }
 
 /** Aggregated learning statistics */
