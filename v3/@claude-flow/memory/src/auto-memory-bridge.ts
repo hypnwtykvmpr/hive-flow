@@ -236,6 +236,14 @@ export class AutoMemoryBridge extends EventEmitter {
     if (this.config.syncMode === 'periodic' && this.config.syncIntervalMs > 0) {
       this.startPeriodicSync();
     }
+
+    // ADR-049: Initialize optional learning bridge and knowledge graph
+    if (config.learning) {
+      this.learningBridge = new LearningBridge(backend, config.learning);
+    }
+    if (config.graph) {
+      this.memoryGraph = new MemoryGraph(config.graph);
+    }
   }
 
   /** Get the resolved auto memory directory path */
