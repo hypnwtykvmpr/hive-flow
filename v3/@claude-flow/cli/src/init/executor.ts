@@ -1317,6 +1317,9 @@ Claude Flow V3 is a domain-driven design architecture for multi-agent AI coordin
 | Memory Backend | ${options.runtime.memoryBackend} |
 | HNSW Indexing | ${options.runtime.enableHNSW ? 'Enabled' : 'Disabled'} |
 | Neural Learning | ${options.runtime.enableNeural ? 'Enabled' : 'Disabled'} |
+| LearningBridge | ${options.runtime.enableLearningBridge ? 'Enabled (SONA + ReasoningBank)' : 'Disabled'} |
+| Knowledge Graph | ${options.runtime.enableMemoryGraph ? 'Enabled (PageRank + Communities)' : 'Disabled'} |
+| Agent Scopes | ${options.runtime.enableAgentScopes ? 'Enabled (project/local/user)' : 'Disabled'} |
 
 ---
 
