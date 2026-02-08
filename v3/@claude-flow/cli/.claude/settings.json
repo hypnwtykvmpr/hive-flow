@@ -93,6 +93,12 @@
           },
           {
             "type": "command",
+            "command": "node ./node_modules/@claude-flow/cli/.claude/helpers/auto-memory-hook.mjs import 2>/dev/null || npx -y @claude-flow/cli@latest .claude/helpers/auto-memory-hook.mjs import 2>/dev/null || true",
+            "timeout": 8000,
+            "continueOnError": true
+          },
+          {
+            "type": "command",
             "command": "[ -n \"$SESSION_ID\" ] && npx @claude-flow/cli@latest hooks session-restore --session-id \"$SESSION_ID\" 2>/dev/null || true",
             "timeout": 10000,
             "continueOnError": true
