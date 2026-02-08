@@ -102,6 +102,19 @@ export {
   PERFORMANCE_TARGETS,
 } from './types.js';
 
+// ===== Auto Memory Bridge (ADR-048) =====
+export { AutoMemoryBridge, resolveAutoMemoryDir, findGitRoot } from './auto-memory-bridge.js';
+export type {
+  AutoMemoryBridgeConfig,
+  MemoryInsight,
+  InsightCategory,
+  SyncDirection,
+  SyncMode,
+  PruneStrategy,
+  SyncResult,
+  ImportResult,
+} from './auto-memory-bridge.js';
+
 // ===== Core Components =====
 export { AgentDBAdapter } from './agentdb-adapter.js';
 export type { AgentDBAdapterConfig } from './agentdb-adapter.js';
