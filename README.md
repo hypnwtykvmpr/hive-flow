@@ -943,28 +943,32 @@ sequenceDiagram
 </details>
 
 <details>
-<summary>🧠 <strong>Memory Architecture</strong> — How knowledge is stored and retrieved</summary>
+<summary>🧠 <strong>Memory Architecture</strong> — How knowledge is stored, learned, and retrieved</summary>
 
 ```mermaid
 flowchart LR
     subgraph Input["📥 Input"]
         Query[Query/Pattern]
+        Insight[New Insight]
     end
 
     subgraph Processing["⚙️ Processing"]
         Embed[ONNX Embeddings]
         Normalize[Normalization]
+        Learn[LearningBridge<br/>SONA + ReasoningBank]
     end
 
     subgraph Storage["💾 Storage"]
         HNSW[(HNSW Index<br/>150x faster)]
         SQLite[(SQLite Cache)]
         AgentDB[(AgentDB)]
+        Graph[MemoryGraph<br/>PageRank + Communities]
     end
 
     subgraph Retrieval["🔍 Retrieval"]
         Vector[Vector Search]
         Semantic[Semantic Match]
+        Rank[Graph-Aware Ranking]
         Results[Top-K Results]
     end
 
@@ -972,12 +976,25 @@ flowchart LR
     Embed --> Normalize
     Normalize --> HNSW
     Normalize --> SQLite
+    Insight --> Learn
+    Learn --> AgentDB
+    AgentDB --> Graph
     HNSW --> Vector
     SQLite --> Vector
     AgentDB --> Semantic
-    Vector --> Results
-    Semantic --> Results
+    Vector --> Rank
+    Semantic --> Rank
+    Graph --> Rank
+    Rank --> Results
 ```
+
+**Self-Learning Memory (ADR-049):**
+| Component | Purpose | Performance |
+|-----------|---------|-------------|
+| **LearningBridge** | Connects insights to SONA/ReasoningBank neural pipeline | 0.12 ms/insight |
+| **MemoryGraph** | PageRank + label propagation knowledge graph | 2.78 ms build (1k nodes) |
+| **AgentMemoryScope** | 3-scope agent memory (project/local/user) with cross-agent transfer | 1.25 ms transfer |
+| **AutoMemoryBridge** | Bidirectional sync: Claude Code auto memory files ↔ AgentDB | ADR-048 |
 
 </details>
 
