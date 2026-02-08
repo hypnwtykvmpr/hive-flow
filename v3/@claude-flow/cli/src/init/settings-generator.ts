@@ -340,11 +340,39 @@ function generateHooksConfig(config: HooksConfig): object {
           },
           {
             type: 'command',
+            command: cmd.simple('node .claude/helpers/auto-memory-hook.mjs import'),
+            timeout: 6000,
+            continueOnError: true,
+          },
+          {
+            type: 'command',
             command: cmd.ifVar('SESSION_ID',
               isWindows
                 ? 'npx @claude-flow/cli@latest hooks session-restore --session-id $env:SESSION_ID'
                 : 'npx @claude-flow/cli@latest hooks session-restore --session-id "$SESSION_ID"'),
             timeout: 10000,
+            continueOnError: true,
+          },
+        ],
+      },
+    ];
+  }
+
+  // SessionEnd for memory sync and state persistence
+  if (config.sessionStart) {
+    hooks.SessionEnd = [
+      {
+        hooks: [
+          {
+            type: 'command',
+            command: cmd.simple('node .claude/helpers/auto-memory-hook.mjs sync'),
+            timeout: 8000,
+            continueOnError: true,
+          },
+          {
+            type: 'command',
+            command: cmd.simple('npx @claude-flow/cli@latest hooks session-end --persist-memory true --export-patterns true'),
+            timeout: 8000,
             continueOnError: true,
           },
         ],

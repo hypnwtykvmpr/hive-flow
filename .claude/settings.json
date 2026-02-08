@@ -299,6 +299,11 @@
           },
           {
             "type": "command",
+            "timeout": 6000,
+            "command": "node /workspaces/claude-flow/.claude/helpers/auto-memory-hook.mjs import 2>/dev/null || true"
+          },
+          {
+            "type": "command",
             "timeout": 3000,
             "command": "/workspaces/claude-flow/.claude/helpers/swarm-hooks.sh agents 2>/dev/null || true"
           },
@@ -328,6 +333,11 @@
     "SessionEnd": [
       {
         "hooks": [
+          {
+            "type": "command",
+            "timeout": 8000,
+            "command": "node /workspaces/claude-flow/.claude/helpers/auto-memory-hook.mjs sync 2>/dev/null || true"
+          },
           {
             "type": "command",
             "timeout": 10000,
@@ -462,7 +472,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/bin/bash -c 'INPUT=$(cat); CUSTOM=$(echo \"$INPUT\" | jq -r \".custom_instructions // \\\"\\\"\"); echo \"🔄 PreCompact Guidance:\"; echo \"📋 IMPORTANT: Review CLAUDE.md in project root for:\"; echo \"   • 54 available agents and concurrent usage patterns\"; echo \"   • Swarm coordination strategies (hierarchical, mesh, adaptive)\"; echo \"   • SPARC methodology workflows with batchtools optimization\"; echo \"   • Critical concurrent execution rules (GOLDEN RULE: 1 MESSAGE = ALL OPERATIONS)\"; if [ -n \"$CUSTOM\" ]; then echo \"🎯 Custom compact instructions: $CUSTOM\"; fi; echo \"✅ Ready for compact operation\"'"
+            "command": "/bin/bash -c 'INPUT=$(cat); CUSTOM=$(echo \"$INPUT\" | jq -r \".custom_instructions // \\\"\\\"\"); echo \"\ud83d\udd04 PreCompact Guidance:\"; echo \"\ud83d\udccb IMPORTANT: Review CLAUDE.md in project root for:\"; echo \"   \u2022 54 available agents and concurrent usage patterns\"; echo \"   \u2022 Swarm coordination strategies (hierarchical, mesh, adaptive)\"; echo \"   \u2022 SPARC methodology workflows with batchtools optimization\"; echo \"   \u2022 Critical concurrent execution rules (GOLDEN RULE: 1 MESSAGE = ALL OPERATIONS)\"; if [ -n \"$CUSTOM\" ]; then echo \"\ud83c\udfaf Custom compact instructions: $CUSTOM\"; fi; echo \"\u2705 Ready for compact operation\"'"
           },
           {
             "type": "command",
@@ -476,7 +486,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/bin/bash -c 'echo \"🔄 Auto-Compact Guidance (Context Window Full):\"; echo \"📋 CRITICAL: Before compacting, ensure you understand:\"; echo \"   • All 54 agents available in .claude/agents/ directory\"; echo \"   • Concurrent execution patterns from CLAUDE.md\"; echo \"   • Batchtools optimization for 300% performance gains\"; echo \"   • Swarm coordination strategies for complex tasks\"; echo \"⚡ Apply GOLDEN RULE: Always batch operations in single messages\"; echo \"✅ Auto-compact proceeding with full agent context\"'"
+            "command": "/bin/bash -c 'echo \"\ud83d\udd04 Auto-Compact Guidance (Context Window Full):\"; echo \"\ud83d\udccb CRITICAL: Before compacting, ensure you understand:\"; echo \"   \u2022 All 54 agents available in .claude/agents/ directory\"; echo \"   \u2022 Concurrent execution patterns from CLAUDE.md\"; echo \"   \u2022 Batchtools optimization for 300% performance gains\"; echo \"   \u2022 Swarm coordination strategies for complex tasks\"; echo \"\u26a1 Apply GOLDEN RULE: Always batch operations in single messages\"; echo \"\u2705 Auto-compact proceeding with full agent context\"'"
           },
           {
             "type": "command",
@@ -572,7 +582,7 @@
   },
   "attribution": {
     "commit": "Co-Authored-By: claude-flow <ruv@ruv.net>",
-    "pr": "🤖 Generated with [claude-flow](https://github.com/ruvnet/claude-flow)"
+    "pr": "\ud83e\udd16 Generated with [claude-flow](https://github.com/ruvnet/claude-flow)"
   },
   "enabledMcpjsonServers": [
     "claude-flow",
