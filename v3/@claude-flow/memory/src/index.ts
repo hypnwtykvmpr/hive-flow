@@ -115,6 +115,15 @@ export type {
   ImportResult,
 } from './auto-memory-bridge.js';
 
+// ===== Learning Bridge =====
+export { LearningBridge } from './learning-bridge.js';
+export type {
+  LearningBridgeConfig,
+  LearningStats,
+  ConsolidateResult,
+  PatternMatch,
+} from './learning-bridge.js';
+
 // ===== Core Components =====
 export { AgentDBAdapter } from './agentdb-adapter.js';
 export type { AgentDBAdapterConfig } from './agentdb-adapter.js';
