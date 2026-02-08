@@ -76,7 +76,12 @@ export interface PatternMatch {
 
 // ===== Defaults =====
 
-const DEFAULT_CONFIG: Required<LearningBridgeConfig> = {
+/** Internal resolved config type where neuralLoader stays optional */
+type ResolvedConfig = Required<Omit<LearningBridgeConfig, 'neuralLoader'>> & {
+  neuralLoader?: NeuralLoader;
+};
+
+const DEFAULT_CONFIG: ResolvedConfig = {
   sonaMode: 'balanced',
   confidenceDecayRate: 0.005,
   accessBoostAmount: 0.03,
