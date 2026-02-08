@@ -78,7 +78,7 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
         --help|-h)
-            echo "Claude Flow Installer"
+            echo "RuvFlow Installer"
             echo ""
             echo "Usage: curl -fsSL .../install.sh | bash -s -- [OPTIONS]"
             echo ""
