@@ -349,9 +349,9 @@ run_doctor() {
     echo ""
 
     if [ "$GLOBAL" = "1" ]; then
-        ruflo doctor 2>&1 || true
+        claude-flow doctor 2>&1 || true
     else
-        npx ruflo@${VERSION} doctor 2>&1 || true
+        npx claude-flow@${VERSION} doctor 2>&1 || true
     fi
     echo ""
 }
