@@ -1,6 +1,8 @@
 {
   "env": {
-    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
+    "CLAUDE_FLOW_V3_ENABLED": "true",
+    "CLAUDE_FLOW_HOOKS_ENABLED": "true"
   },
   "hooks": {
     "SessionStart": [
@@ -55,7 +57,7 @@
     "deny": []
   },
   "claudeFlow": {
-    "version": "3.0.0",
+    "version": "3.1.0",
     "enabled": true,
     "modelPreferences": {
       "default": "claude-opus-4-6",
@@ -65,7 +67,13 @@
       "enabled": true,
       "teammateMode": "auto",
       "taskListEnabled": true,
-      "mailboxEnabled": true
+      "mailboxEnabled": true,
+      "coordination": {
+        "autoAssignOnIdle": true,
+        "trainPatternsOnComplete": true,
+        "notifyLeadOnComplete": true,
+        "sharedMemoryNamespace": "agent-teams"
+      }
     },
     "swarm": {
       "topology": "hierarchical-mesh",
@@ -73,10 +81,31 @@
     },
     "memory": {
       "backend": "hybrid",
-      "enableHNSW": true
+      "enableHNSW": true,
+      "learningBridge": {
+        "enabled": true,
+        "sonaMode": "balanced",
+        "confidenceDecayRate": 0.005,
+        "accessBoostAmount": 0.03,
+        "consolidationThreshold": 10
+      },
+      "memoryGraph": {
+        "enabled": true,
+        "pageRankDamping": 0.85,
+        "communityAlgorithm": "label-propagation"
+      },
+      "agentScopes": {
+        "enabled": true,
+        "scopes": ["project", "local", "user"]
+      }
     },
     "neural": {
       "enabled": true
+    },
+    "security": {
+      "autoScan": true,
+      "scanOnEdit": true,
+      "cveCheck": true
     }
   }
 }
