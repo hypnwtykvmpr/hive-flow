@@ -3,38 +3,12 @@
     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
   },
   "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "^(Write|Edit|MultiEdit)$",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node .claude/helpers/auto-memory-hook.mjs pre-edit 2>NUL || node .claude/helpers/auto-memory-hook.mjs pre-edit 2>/dev/null || exit 0",
-            "timeout": 5000,
-            "continueOnError": true
-          }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": "^(Write|Edit|MultiEdit)$",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node .claude/helpers/auto-memory-hook.mjs post-edit 2>NUL || node .claude/helpers/auto-memory-hook.mjs post-edit 2>/dev/null || exit 0",
-            "timeout": 5000,
-            "continueOnError": true
-          }
-        ]
-      }
-    ],
     "SessionStart": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/helpers/auto-memory-hook.mjs import 2>NUL || node .claude/helpers/auto-memory-hook.mjs import 2>/dev/null || exit 0",
+            "command": "node .claude/helpers/auto-memory-hook.mjs import",
             "timeout": 8000,
             "continueOnError": true
           }
@@ -46,7 +20,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/helpers/auto-memory-hook.mjs sync 2>NUL || node .claude/helpers/auto-memory-hook.mjs sync 2>/dev/null || exit 0",
+            "command": "node .claude/helpers/auto-memory-hook.mjs sync",
             "timeout": 10000,
             "continueOnError": true
           }
@@ -58,7 +32,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/helpers/auto-memory-hook.mjs sync 2>NUL || node .claude/helpers/auto-memory-hook.mjs sync 2>/dev/null || exit 0",
+            "command": "node .claude/helpers/auto-memory-hook.mjs sync",
             "timeout": 10000,
             "continueOnError": true
           }
@@ -68,7 +42,7 @@
   },
   "statusLine": {
     "type": "command",
-    "command": "node .claude/helpers/statusline.cjs 2>NUL || node .claude/helpers/statusline.cjs 2>/dev/null || echo Claude Flow V3",
+    "command": "node .claude/helpers/statusline.cjs",
     "refreshMs": 5000,
     "enabled": true
   },
