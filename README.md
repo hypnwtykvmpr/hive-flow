@@ -5665,7 +5665,7 @@ Domain-Driven Design with bounded contexts, clean architecture, and measured per
 | Module | Purpose | Key Features |
 |--------|---------|--------------|
 | `@claude-flow/hooks` | Event-driven lifecycle | ReasoningBank, 27 hooks, pattern learning |
-| `@claude-flow/memory` | Unified vector storage | AgentDB, HNSW indexing, 150x faster search |
+| `@claude-flow/memory` | Unified vector storage | AgentDB, HNSW indexing, 150x faster search, LearningBridge, MemoryGraph, AgentMemoryScope |
 | `@claude-flow/security` | CVE remediation | Input validation, path security, AIDefence |
 | `@claude-flow/swarm` | Multi-agent coordination | 6 topologies, Byzantine consensus, auto-scaling |
 | `@claude-flow/plugins` | WASM extensions | RuVector plugins, semantic search, intent routing |
