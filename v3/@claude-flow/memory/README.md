@@ -234,6 +234,101 @@ import type {
 } from '@claude-flow/memory';
 ```
 
+## Auto Memory Bridge (ADR-048)
+
+Bidirectional sync between Claude Code's [auto memory](https://code.claude.com/docs/en/memory) files and AgentDB. Auto memory is a persistent directory (`~/.claude/projects/<project>/memory/`) where Claude writes learnings as markdown. `MEMORY.md` (first 200 lines) is loaded into the system prompt; topic files are read on demand.
+
+### Quick Start
+
+```typescript
+import { AutoMemoryBridge } from '@claude-flow/memory';
+
+const bridge = new AutoMemoryBridge(memoryBackend, {
+  workingDir: '/workspaces/my-project',
+  syncMode: 'on-session-end', // 'on-write' | 'on-session-end' | 'periodic'
+  pruneStrategy: 'confidence-weighted', // 'confidence-weighted' | 'fifo' | 'lru'
+});
+
+// Record an insight (stores in AgentDB + optionally writes to files)
+await bridge.recordInsight({
+  category: 'debugging',
+  summary: 'HNSW index requires initialization before search',
+  source: 'agent:tester',
+  confidence: 0.95,
+});
+
+// Sync buffered insights to auto memory files
+const syncResult = await bridge.syncToAutoMemory();
+
+// Import existing auto memory files into AgentDB (on session start)
+const importResult = await bridge.importFromAutoMemory();
+
+// Curate MEMORY.md index (stays under 200-line limit)
+await bridge.curateIndex();
+
+// Check status
+const status = bridge.getStatus();
+```
+
+### Sync Modes
+
+| Mode | Behavior |
+|------|----------|
+| `on-write` | Writes to files immediately on `recordInsight()` |
+| `on-session-end` | Buffers insights, flushes on `syncToAutoMemory()` |
+| `periodic` | Auto-syncs on a configurable interval |
+
+### Insight Categories
+
+| Category | Topic File | Description |
+|----------|-----------|-------------|
+| `project-patterns` | `patterns.md` | Code patterns and conventions |
+| `debugging` | `debugging.md` | Bug fixes and debugging insights |
+| `architecture` | `architecture.md` | Design decisions and module relationships |
+| `performance` | `performance.md` | Benchmarks and optimization results |
+| `security` | `security.md` | Security findings and CVE notes |
+| `preferences` | `preferences.md` | User and project preferences |
+| `swarm-results` | `swarm-results.md` | Multi-agent swarm outcomes |
+
+### Key Optimizations
+
+- **Batch import** - `bulkInsert()` instead of individual `store()` calls
+- **Pre-fetched hashes** - Single query for content-hash dedup during import
+- **Async I/O** - `node:fs/promises` for non-blocking writes
+- **Exact dedup** - `hasSummaryLine()` uses bullet-prefix matching, not substring
+- **O(1) sync tracking** - `syncedInsightKeys` Set prevents double-write race
+- **Prune-before-build** - Avoids O(n^2) index rebuild loop
+
+### Utility Functions
+
+```typescript
+import {
+  resolveAutoMemoryDir,  // Derive auto memory path from working dir
+  findGitRoot,           // Walk up to find .git root
+  parseMarkdownEntries,  // Parse ## headings into structured entries
+  extractSummaries,      // Extract bullet summaries, strip metadata
+  formatInsightLine,     // Format insight as markdown bullet
+  hashContent,           // SHA-256 truncated to 16 hex chars
+  pruneTopicFile,        // Keep topic files under line limit
+  hasSummaryLine,        // Exact bullet-prefix dedup check
+} from '@claude-flow/memory';
+```
+
+### Types
+
+```typescript
+import type {
+  AutoMemoryBridgeConfig,
+  MemoryInsight,
+  InsightCategory,
+  SyncDirection,
+  SyncMode,
+  PruneStrategy,
+  SyncResult,
+  ImportResult,
+} from '@claude-flow/memory';
+```
+
 ## Dependencies
 
 - `agentdb` - Vector database engine
