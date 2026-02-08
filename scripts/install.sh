@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Claude Flow Installer
+# RuvFlow Installer
 # https://github.com/ruvnet/claude-flow
 #
 # Usage:
