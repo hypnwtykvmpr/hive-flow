@@ -124,6 +124,31 @@ export type {
   PatternMatch,
 } from './learning-bridge.js';
 
+// ===== Knowledge Graph =====
+export { MemoryGraph } from './memory-graph.js';
+export type {
+  MemoryGraphConfig,
+  GraphNode,
+  GraphEdge,
+  GraphStats,
+  RankedResult,
+  EdgeType,
+} from './memory-graph.js';
+
+// ===== Agent-Scoped Memory =====
+export {
+  resolveAgentMemoryDir,
+  createAgentBridge,
+  transferKnowledge,
+  listAgentScopes,
+} from './agent-memory-scope.js';
+export type {
+  AgentMemoryScope,
+  AgentScopedConfig,
+  TransferOptions,
+  TransferResult,
+} from './agent-memory-scope.js';
+
 // ===== Core Components =====
 export { AgentDBAdapter } from './agentdb-adapter.js';
 export type { AgentDBAdapterConfig } from './agentdb-adapter.js';
