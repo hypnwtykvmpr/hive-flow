@@ -2,12 +2,26 @@
  * Tests for Agent-Scoped Memory
  *
  * TDD London School (mock-first) tests for the 3-scope agent memory system.
- * Mocks filesystem and backend to isolate the unit under test.
+ * Uses vi.mock for ESM-compatible fs mocking.
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as path from 'node:path';
-import * as fsSync from 'node:fs';
+
+// ESM-compatible mock: vi.mock is hoisted above imports automatically
+vi.mock('node:fs', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:fs')>();
+  return {
+    ...actual,
+    existsSync: vi.fn(actual.existsSync),
+    readdirSync: vi.fn(actual.readdirSync),
+    statSync: vi.fn(actual.statSync),
+  };
+});
+
+import { existsSync, readdirSync, statSync } from 'node:fs';
+import type * as fsTypes from 'node:fs';
+
 import {
   resolveAgentMemoryDir,
   createAgentBridge,
@@ -18,6 +32,11 @@ import type { AgentMemoryScope, TransferOptions } from './agent-memory-scope.js'
 import type { IMemoryBackend, MemoryEntry } from './types.js';
 import { createDefaultEntry } from './types.js';
 import { AutoMemoryBridge } from './auto-memory-bridge.js';
+
+// Cast mocked fs functions for test control
+const mockExistsSync = existsSync as ReturnType<typeof vi.fn>;
+const mockReaddirSync = readdirSync as ReturnType<typeof vi.fn>;
+const mockStatSync = statSync as ReturnType<typeof vi.fn>;
 
 // ===== Mock Backend =====
 
@@ -62,7 +81,7 @@ function createMockBackend(entries: MemoryEntry[] = []): IMemoryBackend {
 // ===== Test Fixtures =====
 
 function createTestEntry(overrides: Partial<MemoryEntry> = {}): MemoryEntry {
-  return createDefaultEntry({
+  const base = createDefaultEntry({
     key: 'test-key',
     content: 'Test content for knowledge transfer',
     namespace: 'learnings',
@@ -72,22 +91,29 @@ function createTestEntry(overrides: Partial<MemoryEntry> = {}): MemoryEntry {
       category: 'architecture',
       summary: 'Use event sourcing for state changes',
     },
-    ...overrides,
   });
+  return { ...base, ...overrides, metadata: { ...base.metadata, ...overrides.metadata } };
 }
 
 // ===== resolveAgentMemoryDir =====
 
 describe('resolveAgentMemoryDir', () => {
   const originalHome = process.env.HOME;
+  const originalUserProfile = process.env.USERPROFILE;
+
+  beforeEach(() => {
+    mockExistsSync.mockReset();
+    // Default: no .git found anywhere
+    mockExistsSync.mockReturnValue(false);
+  });
 
   afterEach(() => {
     process.env.HOME = originalHome;
-    vi.restoreAllMocks();
+    process.env.USERPROFILE = originalUserProfile;
   });
 
   it('should resolve project scope to gitRoot/.claude/agent-memory/name/', () => {
-    vi.spyOn(fsSync, 'existsSync').mockImplementation((p) => {
+    mockExistsSync.mockImplementation((p: string) => {
       return String(p) === path.join('/workspaces/my-project', '.git');
     });
 
@@ -98,7 +124,7 @@ describe('resolveAgentMemoryDir', () => {
   });
 
   it('should resolve local scope to gitRoot/.claude/agent-memory-local/name/', () => {
-    vi.spyOn(fsSync, 'existsSync').mockImplementation((p) => {
+    mockExistsSync.mockImplementation((p: string) => {
       return String(p) === path.join('/workspaces/my-project', '.git');
     });
 
@@ -143,8 +169,8 @@ describe('resolveAgentMemoryDir', () => {
     );
   });
 
-  it('should fall back to cwd when no git root is found', () => {
-    vi.spyOn(fsSync, 'existsSync').mockReturnValue(false);
+  it('should fall back to workingDir when no git root is found', () => {
+    mockExistsSync.mockReturnValue(false);
 
     const result = resolveAgentMemoryDir('coder', 'project', '/some/dir');
     expect(result).toBe(
@@ -154,18 +180,16 @@ describe('resolveAgentMemoryDir', () => {
 
   it('should fall back to USERPROFILE when HOME is not set', () => {
     delete process.env.HOME;
-    process.env.USERPROFILE = 'C:\\Users\\testuser';
+    process.env.USERPROFILE = '/Users/testuser';
 
     const result = resolveAgentMemoryDir('coder', 'user');
     expect(result).toBe(
-      path.join('C:\\Users\\testuser', '.claude', 'agent-memory', 'coder'),
+      path.join('/Users/testuser', '.claude', 'agent-memory', 'coder'),
     );
-
-    delete process.env.USERPROFILE;
   });
 
   it('should use cwd as fallback for project scope when workingDir is omitted', () => {
-    vi.spyOn(fsSync, 'existsSync').mockReturnValue(false);
+    mockExistsSync.mockReturnValue(false);
     const cwd = process.cwd();
 
     const result = resolveAgentMemoryDir('coder', 'project');
@@ -187,12 +211,13 @@ describe('resolveAgentMemoryDir', () => {
 // ===== createAgentBridge =====
 
 describe('createAgentBridge', () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
+  beforeEach(() => {
+    mockExistsSync.mockReset();
+    mockExistsSync.mockReturnValue(false);
   });
 
   it('should create a bridge with correct memoryDir for project scope', () => {
-    vi.spyOn(fsSync, 'existsSync').mockImplementation((p) => {
+    mockExistsSync.mockImplementation((p: string) => {
       return String(p) === path.join('/workspaces/project', '.git');
     });
 
@@ -207,6 +232,7 @@ describe('createAgentBridge', () => {
     expect(bridge.getMemoryDir()).toBe(
       path.join('/workspaces/project', '.claude', 'agent-memory', 'coder'),
     );
+    bridge.destroy();
   });
 
   it('should create a bridge with correct memoryDir for user scope', () => {
@@ -224,11 +250,12 @@ describe('createAgentBridge', () => {
       path.join('/home/testuser', '.claude', 'agent-memory', 'reviewer'),
     );
 
+    bridge.destroy();
     process.env.HOME = originalHome;
   });
 
   it('should create a bridge with correct memoryDir for local scope', () => {
-    vi.spyOn(fsSync, 'existsSync').mockImplementation((p) => {
+    mockExistsSync.mockImplementation((p: string) => {
       return String(p) === path.join('/workspaces/project', '.git');
     });
 
@@ -243,22 +270,20 @@ describe('createAgentBridge', () => {
     expect(bridge.getMemoryDir()).toBe(
       path.join('/workspaces/project', '.claude', 'agent-memory-local', 'tester'),
     );
+    bridge.destroy();
   });
 
   it('should pass through other config options to AutoMemoryBridge', () => {
-    vi.spyOn(fsSync, 'existsSync').mockReturnValue(false);
-
     const backend = createMockBackend();
     const bridge = createAgentBridge(backend, {
       agentName: 'coder',
       scope: 'project',
       workingDir: '/tmp/test',
-      syncMode: 'on-write',
+      syncMode: 'on-session-end',
       maxIndexLines: 100,
       minConfidence: 0.9,
     });
 
-    // The bridge should be created without errors and be functional
     expect(bridge).toBeInstanceOf(AutoMemoryBridge);
     bridge.destroy();
   });
@@ -271,8 +296,8 @@ describe('transferKnowledge', () => {
   let targetBackend: IMemoryBackend;
 
   beforeEach(() => {
-    vi.restoreAllMocks();
-    vi.spyOn(fsSync, 'existsSync').mockReturnValue(false);
+    mockExistsSync.mockReset();
+    mockExistsSync.mockReturnValue(false);
 
     targetBackend = createMockBackend();
     targetBridge = new AutoMemoryBridge(targetBackend, {
@@ -286,7 +311,9 @@ describe('transferKnowledge', () => {
   });
 
   it('should transfer high-confidence entries', async () => {
-    const entry = createTestEntry({ metadata: { confidence: 0.95, category: 'architecture', summary: 'Use event sourcing' } });
+    const entry = createTestEntry({
+      metadata: { confidence: 0.95, category: 'architecture', summary: 'Use event sourcing' },
+    });
     const sourceBackend = createMockBackend([entry]);
 
     const result = await transferKnowledge(sourceBackend, targetBridge, {
@@ -300,7 +327,9 @@ describe('transferKnowledge', () => {
   });
 
   it('should skip entries below minConfidence', async () => {
-    const lowConfEntry = createTestEntry({ metadata: { confidence: 0.3, category: 'debugging', summary: 'Low conf item' } });
+    const lowConfEntry = createTestEntry({
+      metadata: { confidence: 0.3, category: 'debugging', summary: 'Low conf item' },
+    });
     const sourceBackend = createMockBackend([lowConfEntry]);
 
     const result = await transferKnowledge(sourceBackend, targetBridge, {
@@ -313,8 +342,12 @@ describe('transferKnowledge', () => {
   });
 
   it('should filter by categories when specified', async () => {
-    const archEntry = createTestEntry({ metadata: { confidence: 0.95, category: 'architecture', summary: 'Arch pattern' } });
-    const secEntry = createTestEntry({ metadata: { confidence: 0.95, category: 'security', summary: 'Security pattern' } });
+    const archEntry = createTestEntry({
+      metadata: { confidence: 0.95, category: 'architecture', summary: 'Arch pattern' },
+    });
+    const secEntry = createTestEntry({
+      metadata: { confidence: 0.95, category: 'security', summary: 'Security pattern' },
+    });
     const sourceBackend = createMockBackend([archEntry, secEntry]);
 
     const result = await transferKnowledge(sourceBackend, targetBridge, {
@@ -355,7 +388,9 @@ describe('transferKnowledge', () => {
   });
 
   it('should set transfer source metadata on insights', async () => {
-    const entry = createTestEntry({ metadata: { confidence: 0.95, category: 'architecture', summary: 'Test pattern' } });
+    const entry = createTestEntry({
+      metadata: { confidence: 0.95, category: 'architecture', summary: 'Test pattern' },
+    });
     const sourceBackend = createMockBackend([entry]);
 
     const recordSpy = vi.spyOn(targetBridge, 'recordInsight');
@@ -372,7 +407,9 @@ describe('transferKnowledge', () => {
   });
 
   it('should use default category when entry has no category metadata', async () => {
-    const entry = createTestEntry({ metadata: { confidence: 0.95, summary: 'No category' } });
+    const entry = createTestEntry({
+      metadata: { confidence: 0.95, summary: 'No category' },
+    });
     const sourceBackend = createMockBackend([entry]);
 
     const recordSpy = vi.spyOn(targetBridge, 'recordInsight');
@@ -409,7 +446,9 @@ describe('transferKnowledge', () => {
   });
 
   it('should include entries without category when no category filter is set', async () => {
-    const entry = createTestEntry({ metadata: { confidence: 0.95 } });
+    const entry = createTestEntry({
+      metadata: { confidence: 0.95 },
+    });
     const sourceBackend = createMockBackend([entry]);
 
     const result = await transferKnowledge(sourceBackend, targetBridge, {
@@ -420,8 +459,14 @@ describe('transferKnowledge', () => {
   });
 
   it('should default minConfidence to 0.8 when not specified', async () => {
-    const borderline = createTestEntry({ metadata: { confidence: 0.79, summary: 'Borderline' } });
-    const passing = createTestEntry({ metadata: { confidence: 0.81, summary: 'Passing' } });
+    const borderline = createTestEntry({
+      key: 'border',
+      metadata: { confidence: 0.79, summary: 'Borderline' },
+    });
+    const passing = createTestEntry({
+      key: 'passing',
+      metadata: { confidence: 0.81, summary: 'Passing' },
+    });
     const sourceBackend = createMockBackend([borderline, passing]);
 
     const result = await transferKnowledge(sourceBackend, targetBridge, {
@@ -454,14 +499,21 @@ describe('transferKnowledge', () => {
 describe('listAgentScopes', () => {
   const originalHome = process.env.HOME;
 
+  beforeEach(() => {
+    mockExistsSync.mockReset();
+    mockReaddirSync.mockReset();
+    mockStatSync.mockReset();
+    // Default: nothing exists
+    mockExistsSync.mockReturnValue(false);
+  });
+
   afterEach(() => {
     process.env.HOME = originalHome;
-    vi.restoreAllMocks();
   });
 
   it('should return empty agents when dirs do not exist', () => {
     process.env.HOME = '/home/testuser';
-    vi.spyOn(fsSync, 'existsSync').mockReturnValue(false);
+    mockExistsSync.mockReturnValue(false);
 
     const scopes = listAgentScopes('/workspaces/project');
 
@@ -474,30 +526,29 @@ describe('listAgentScopes', () => {
   it('should list agents from existing directories', () => {
     process.env.HOME = '/home/testuser';
 
+    // Compute the expected directories (no git root, falls back to workingDir)
     const projectDir = path.join('/workspaces/project', '.claude', 'agent-memory');
     const localDir = path.join('/workspaces/project', '.claude', 'agent-memory-local');
     const userDir = path.join('/home/testuser', '.claude', 'agent-memory');
 
-    vi.spyOn(fsSync, 'existsSync').mockImplementation((p) => {
+    mockExistsSync.mockImplementation((p: string) => {
       const s = String(p);
-      // No .git found, so falls back to workingDir
       if (s === projectDir) return true;
       if (s === localDir) return true;
       if (s === userDir) return true;
+      // No .git found
       return false;
     });
 
-    vi.spyOn(fsSync, 'readdirSync').mockImplementation((p) => {
+    mockReaddirSync.mockImplementation((p: string) => {
       const s = String(p);
-      if (s === projectDir) return ['coder', 'tester'] as unknown as fsSync.Dirent[];
-      if (s === localDir) return ['researcher'] as unknown as fsSync.Dirent[];
-      if (s === userDir) return ['planner'] as unknown as fsSync.Dirent[];
-      return [] as unknown as fsSync.Dirent[];
+      if (s === projectDir) return ['coder', 'tester'];
+      if (s === localDir) return ['researcher'];
+      if (s === userDir) return ['planner'];
+      return [];
     });
 
-    vi.spyOn(fsSync, 'statSync').mockReturnValue({
-      isDirectory: () => true,
-    } as fsSync.Stats);
+    mockStatSync.mockReturnValue({ isDirectory: () => true });
 
     const scopes = listAgentScopes('/workspaces/project');
 
@@ -507,7 +558,7 @@ describe('listAgentScopes', () => {
   });
 
   it('should return all three scopes in order: project, local, user', () => {
-    vi.spyOn(fsSync, 'existsSync').mockReturnValue(false);
+    mockExistsSync.mockReturnValue(false);
 
     const scopes = listAgentScopes('/tmp/test');
 
@@ -518,11 +569,11 @@ describe('listAgentScopes', () => {
     process.env.HOME = '/home/testuser';
     const projectDir = path.join('/workspaces/project', '.claude', 'agent-memory');
 
-    vi.spyOn(fsSync, 'existsSync').mockImplementation((p) => {
+    mockExistsSync.mockImplementation((p: string) => {
       return String(p) === projectDir;
     });
 
-    vi.spyOn(fsSync, 'readdirSync').mockImplementation(() => {
+    mockReaddirSync.mockImplementation(() => {
       throw new Error('Permission denied');
     });
 
@@ -535,24 +586,22 @@ describe('listAgentScopes', () => {
     process.env.HOME = '/home/testuser';
     const projectDir = path.join('/workspaces/project', '.claude', 'agent-memory');
 
-    vi.spyOn(fsSync, 'existsSync').mockImplementation((p) => {
+    mockExistsSync.mockImplementation((p: string) => {
       return String(p) === projectDir;
     });
 
-    vi.spyOn(fsSync, 'readdirSync').mockImplementation((p) => {
-      if (String(p) === projectDir) {
-        return ['coder', 'readme.md'] as unknown as fsSync.Dirent[];
-      }
-      return [] as unknown as fsSync.Dirent[];
+    mockReaddirSync.mockImplementation((p: string) => {
+      if (String(p) === projectDir) return ['coder', 'readme.md'];
+      return [];
     });
 
     let callCount = 0;
-    vi.spyOn(fsSync, 'statSync').mockImplementation(() => {
+    mockStatSync.mockImplementation(() => {
       callCount++;
       if (callCount === 1) {
-        return { isDirectory: () => true } as fsSync.Stats;
+        return { isDirectory: () => true };
       }
-      return { isDirectory: () => false } as fsSync.Stats;
+      return { isDirectory: () => false };
     });
 
     const scopes = listAgentScopes('/workspaces/project');
