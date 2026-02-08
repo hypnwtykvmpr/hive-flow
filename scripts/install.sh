@@ -1,20 +1,22 @@
 #!/usr/bin/env bash
 #
-# Ruflo Installer
+# Claude Flow Installer
 # https://github.com/ruvnet/claude-flow
 #
 # Usage:
 #   curl -fsSL https://cdn.jsdelivr.net/gh/ruvnet/claude-flow@main/scripts/install.sh | bash
+#   curl -fsSL https://cdn.jsdelivr.net/gh/ruvnet/claude-flow@main/scripts/install.sh | bash -s -- --full
 #   curl -fsSL https://cdn.jsdelivr.net/gh/ruvnet/claude-flow@main/scripts/install.sh | bash -s -- --global
 #   curl -fsSL https://cdn.jsdelivr.net/gh/ruvnet/claude-flow@main/scripts/install.sh | bash -s -- --minimal
 #
 # Options (via arguments):
 #   --global              Global install (npm install -g)
 #   --minimal             Minimal install (no optional deps)
+#   --full                Full setup (global + MCP + doctor + init)
 #   --version=X.X.X       Specific version
 #
 # Options (via environment - requires export):
-#   export CLAUDE_FLOW_VERSION=3.0.0-alpha.183
+#   export CLAUDE_FLOW_VERSION=alpha
 #   export CLAUDE_FLOW_MINIMAL=1
 #   export CLAUDE_FLOW_GLOBAL=1
 #
