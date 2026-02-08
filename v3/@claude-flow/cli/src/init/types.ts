@@ -387,6 +387,9 @@ export const DEFAULT_INIT_OPTIONS: InitOptions = {
     memoryBackend: 'hybrid',
     enableHNSW: true,
     enableNeural: true,
+    enableLearningBridge: true,
+    enableMemoryGraph: true,
+    enableAgentScopes: true,
   },
   embeddings: {
     enabled: true,
