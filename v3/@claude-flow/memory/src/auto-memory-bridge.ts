@@ -753,8 +753,9 @@ export function resolveAutoMemoryDir(workingDir: string): string {
   const basePath = gitRoot || workingDir;
 
   // Claude Code normalizes to forward slashes then replaces with dashes
+  // The leading dash IS preserved (e.g. /workspaces/foo -> -workspaces-foo)
   const normalized = basePath.split(path.sep).join('/');
-  const projectKey = normalized.replace(/\//g, '-').replace(/^-/, '');
+  const projectKey = normalized.replace(/\//g, '-');
 
   return path.join(
     process.env.HOME || process.env.USERPROFILE || '~',
