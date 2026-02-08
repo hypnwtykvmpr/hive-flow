@@ -110,7 +110,7 @@ const MS_PER_HOUR = 3_600_000;
 export class LearningBridge extends EventEmitter {
   private neural: any | null = null;
   private backend: IMemoryBackend;
-  private config: Required<LearningBridgeConfig>;
+  private config: ResolvedConfig;
   private activeTrajectories: Map<string, string> = new Map();
   private stats = {
     totalTrajectories: 0,
