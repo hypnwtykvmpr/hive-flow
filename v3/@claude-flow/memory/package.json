@@ -26,6 +26,10 @@
     "@types/sql.js": "^1.4.9",
     "vitest": "^4.0.16"
   },
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "publishConfig": {
     "access": "public",
     "tag": "v3alpha"
