@@ -256,10 +256,10 @@ verify_installation() {
 
     local VERSION_OUTPUT
     if [ "$GLOBAL" = "1" ]; then
-        VERSION_OUTPUT=$(ruflo --version 2>/dev/null || echo "")
+        VERSION_OUTPUT=$(claude-flow --version 2>/dev/null || echo "")
         if [ -z "$VERSION_OUTPUT" ]; then
             print_warning "Global command not found in PATH"
-            print_substep "Try: ${BOLD}npm install -g ruflo@${VERSION}${NC}"
+            print_substep "Try: ${BOLD}npm install -g claude-flow@${VERSION}${NC}"
             return 0  # Don't fail - npm might need PATH refresh
         fi
     else
