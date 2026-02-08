@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import * as fs from 'node:fs';
+import * as fsSync from 'node:fs';
 import * as path from 'node:path';
 import {
   AutoMemoryBridge,
@@ -17,13 +17,12 @@ import {
   formatInsightLine,
   hashContent,
   pruneTopicFile,
+  hasSummaryLine,
 } from './auto-memory-bridge.js';
 import type {
-  AutoMemoryBridgeConfig,
   MemoryInsight,
-  InsightCategory,
 } from './auto-memory-bridge.js';
-import type { IMemoryBackend, MemoryEntry, MemoryQuery } from './types.js';
+import type { IMemoryBackend, MemoryEntry } from './types.js';
 
 // ===== Mock Backend =====
 
@@ -58,7 +57,11 @@ function createMockBackend(): IMemoryBackend & { storedEntries: MemoryEntry[] } 
     }),
     healthCheck: vi.fn().mockResolvedValue({
       status: 'healthy',
-      components: { storage: { status: 'healthy', latency: 0 }, index: { status: 'healthy', latency: 0 }, cache: { status: 'healthy', latency: 0 } },
+      components: {
+        storage: { status: 'healthy', latency: 0 },
+        index: { status: 'healthy', latency: 0 },
+        cache: { status: 'healthy', latency: 0 },
+      },
       timestamp: Date.now(),
       issues: [],
       recommendations: [],
@@ -92,23 +95,30 @@ describe('resolveAutoMemoryDir', () => {
     const result = resolveAutoMemoryDir('/workspaces/my-project');
     expect(result).toContain('workspaces-my-project');
   });
+
+  it('should produce consistent paths for same input', () => {
+    const a = resolveAutoMemoryDir('/workspaces/my-project');
+    const b = resolveAutoMemoryDir('/workspaces/my-project');
+    expect(a).toBe(b);
+  });
 });
 
 describe('findGitRoot', () => {
-  it('should find git root from working directory', () => {
-    // This test depends on running inside a git repo
-    const root = findGitRoot(process.cwd());
-    if (root) {
-      expect(fs.existsSync(path.join(root, '.git'))).toBe(true);
-    }
+  it('should find git root for a directory inside a repo', () => {
+    // We know /workspaces/claude-flow is a git repo
+    const root = findGitRoot('/workspaces/claude-flow/v3/@claude-flow/memory');
+    expect(root).toBe('/workspaces/claude-flow');
   });
 
-  it('should return null for non-git directory', () => {
-    const result = findGitRoot('/tmp');
-    // /tmp might or might not be in a git repo; this is a sanity check
-    if (result === null) {
-      expect(result).toBeNull();
-    }
+  it('should return the directory itself if it is the git root', () => {
+    const root = findGitRoot('/workspaces/claude-flow');
+    expect(root).toBe('/workspaces/claude-flow');
+  });
+
+  it('should return null for root filesystem', () => {
+    // /proc is almost certainly not in a git repo
+    const result = findGitRoot('/proc');
+    expect(result).toBeNull();
   });
 });
 
@@ -149,6 +159,16 @@ Line 3
     expect(entries[0].content).toContain('Line 1');
     expect(entries[0].content).toContain('Line 3');
   });
+
+  it('should trim whitespace from section content', () => {
+    const content = '## Padded\n\n  Text here  \n\n';
+    const entries = parseMarkdownEntries(content);
+    expect(entries[0].content).toBe('Text here');
+  });
+
+  it('should handle empty content', () => {
+    expect(parseMarkdownEntries('')).toHaveLength(0);
+  });
 });
 
 describe('extractSummaries', () => {
@@ -179,6 +199,19 @@ Some other text
     const summaries = extractSummaries(content);
     expect(summaries).toHaveLength(0);
   });
+
+  it('should strip metadata annotations from summaries', () => {
+    const content = '- Use Int8 quantization _(agent:tester, 2026-02-08, conf: 0.95)_\n';
+    const summaries = extractSummaries(content);
+    expect(summaries).toHaveLength(1);
+    expect(summaries[0]).toBe('Use Int8 quantization');
+  });
+
+  it('should handle summaries without annotations', () => {
+    const content = '- Clean summary without annotation\n';
+    const summaries = extractSummaries(content);
+    expect(summaries[0]).toBe('Clean summary without annotation');
+  });
 });
 
 describe('formatInsightLine', () => {
@@ -199,6 +232,13 @@ describe('formatInsightLine', () => {
 
     expect(line).toContain('  Line 1');
     expect(line).toContain('  Line 2');
+  });
+
+  it('should not add indented detail for single-line details', () => {
+    const insight = createTestInsight({ detail: 'Short detail' });
+    const line = formatInsightLine(insight);
+    // Single-line detail should not produce indented lines
+    expect(line.split('\n')).toHaveLength(1);
   });
 });
 
@@ -238,11 +278,31 @@ describe('pruneTopicFile', () => {
     const result = pruneTopicFile(content, 13);
     const resultLines = result.split('\n');
 
-    // Should keep header (3 lines) + 10 newest entries
     expect(resultLines[0]).toBe('# Header');
     expect(resultLines).toHaveLength(13);
-    // Should keep the latest entries
     expect(resultLines[resultLines.length - 1]).toBe('- Entry 19');
+  });
+});
+
+describe('hasSummaryLine', () => {
+  it('should find exact summary at start of bullet line', () => {
+    const content = '- Use Int8 quantization _(source, date)_\n- Other item\n';
+    expect(hasSummaryLine(content, 'Use Int8 quantization')).toBe(true);
+  });
+
+  it('should not match substrings inside other bullets', () => {
+    const content = '- Do not use Int8 for this case\n';
+    // "Use Int8" should NOT match because the line starts with "- Do not use..."
+    expect(hasSummaryLine(content, 'Use Int8')).toBe(false);
+  });
+
+  it('should return false when summary is absent', () => {
+    const content = '- Something else\n';
+    expect(hasSummaryLine(content, 'Missing summary')).toBe(false);
+  });
+
+  it('should handle empty content', () => {
+    expect(hasSummaryLine('', 'anything')).toBe(false);
   });
 });
 
@@ -254,8 +314,8 @@ describe('AutoMemoryBridge', () => {
   let testDir: string;
 
   beforeEach(() => {
-    testDir = path.join('/tmp', `auto-memory-test-${Date.now()}`);
-    fs.mkdirSync(testDir, { recursive: true });
+    testDir = path.join('/tmp', `auto-memory-test-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
+    fsSync.mkdirSync(testDir, { recursive: true });
 
     backend = createMockBackend();
     bridge = new AutoMemoryBridge(backend, {
@@ -266,8 +326,8 @@ describe('AutoMemoryBridge', () => {
 
   afterEach(() => {
     bridge.destroy();
-    if (fs.existsSync(testDir)) {
-      fs.rmSync(testDir, { recursive: true, force: true });
+    if (fsSync.existsSync(testDir)) {
+      fsSync.rmSync(testDir, { recursive: true, force: true });
     }
   });
 
@@ -339,8 +399,8 @@ describe('AutoMemoryBridge', () => {
       await bridge.recordInsight(insight);
 
       const topicPath = bridge.getTopicPath('debugging');
-      expect(fs.existsSync(topicPath)).toBe(true);
-      const content = fs.readFileSync(topicPath, 'utf-8');
+      expect(fsSync.existsSync(topicPath)).toBe(true);
+      const content = fsSync.readFileSync(topicPath, 'utf-8');
       expect(content).toContain(insight.summary);
     });
 
@@ -349,7 +409,14 @@ describe('AutoMemoryBridge', () => {
       await bridge.recordInsight(insight);
 
       const topicPath = bridge.getTopicPath('debugging');
-      expect(fs.existsSync(topicPath)).toBe(false);
+      expect(fsSync.existsSync(topicPath)).toBe(false);
+    });
+
+    it('should store confidence in metadata', async () => {
+      await bridge.recordInsight(createTestInsight({ confidence: 0.42 }));
+
+      const stored = backend.storedEntries[0];
+      expect(stored.metadata.confidence).toBe(0.42);
     });
   });
 
@@ -368,16 +435,15 @@ describe('AutoMemoryBridge', () => {
       expect(result.categories).toContain('performance');
       expect(result.errors).toHaveLength(0);
 
-      // Check topic files were created
-      expect(fs.existsSync(bridge.getTopicPath('debugging'))).toBe(true);
-      expect(fs.existsSync(bridge.getTopicPath('performance'))).toBe(true);
+      expect(fsSync.existsSync(bridge.getTopicPath('debugging'))).toBe(true);
+      expect(fsSync.existsSync(bridge.getTopicPath('performance'))).toBe(true);
     });
 
     it('should create MEMORY.md index', async () => {
       await bridge.recordInsight(createTestInsight());
       await bridge.syncToAutoMemory();
 
-      expect(fs.existsSync(bridge.getIndexPath())).toBe(true);
+      expect(fsSync.existsSync(bridge.getIndexPath())).toBe(true);
     });
 
     it('should emit sync:completed event', async () => {
@@ -394,10 +460,44 @@ describe('AutoMemoryBridge', () => {
     it('should not duplicate insights on repeated sync', async () => {
       await bridge.recordInsight(createTestInsight());
       await bridge.syncToAutoMemory();
-      await bridge.syncToAutoMemory(); // Second sync
+      await bridge.syncToAutoMemory();
 
       const topicPath = bridge.getTopicPath('debugging');
-      const content = fs.readFileSync(topicPath, 'utf-8');
+      const content = fsSync.readFileSync(topicPath, 'utf-8');
+      const matches = content.match(/HNSW index requires/g);
+      expect(matches).toHaveLength(1);
+    });
+
+    it('should clear the insight buffer after sync', async () => {
+      await bridge.recordInsight(createTestInsight());
+      expect(bridge.getStatus().bufferedInsights).toBe(1);
+
+      await bridge.syncToAutoMemory();
+      expect(bridge.getStatus().bufferedInsights).toBe(0);
+    });
+
+    it('should skip AgentDB entries already synced from the buffer', async () => {
+      // Record an insight (stored in buffer AND AgentDB)
+      await bridge.recordInsight(createTestInsight());
+
+      // Mock backend.query to return the same insight from AgentDB
+      const mockEntry: Partial<MemoryEntry> = {
+        id: 'test-1',
+        key: 'insight:debugging:12345',
+        content: 'HNSW index requires initialization before search',
+        tags: ['insight', 'debugging'],
+        metadata: {
+          category: 'debugging',
+          summary: 'HNSW index requires initialization before search',
+          confidence: 0.95,
+        },
+      };
+      (backend.query as any).mockResolvedValueOnce([mockEntry as MemoryEntry]);
+
+      await bridge.syncToAutoMemory();
+
+      // Should only appear once
+      const content = fsSync.readFileSync(bridge.getTopicPath('debugging'), 'utf-8');
       const matches = content.match(/HNSW index requires/g);
       expect(matches).toHaveLength(1);
     });
@@ -405,20 +505,20 @@ describe('AutoMemoryBridge', () => {
 
   describe('importFromAutoMemory', () => {
     it('should import entries from existing markdown files', async () => {
-      // Create a topic file
       const topicContent = `# Debugging Insights
 
 ## Known Issues
 - Always init HNSW before search
 - SQLite WASM needs sql.js
 `;
-      fs.writeFileSync(path.join(testDir, 'debugging.md'), topicContent, 'utf-8');
+      fsSync.writeFileSync(path.join(testDir, 'debugging.md'), topicContent, 'utf-8');
 
       const result = await bridge.importFromAutoMemory();
 
       expect(result.imported).toBeGreaterThan(0);
       expect(result.files).toContain('debugging.md');
-      expect(backend.store).toHaveBeenCalled();
+      // Should use bulkInsert, not individual store calls
+      expect(backend.bulkInsert).toHaveBeenCalled();
     });
 
     it('should skip entries already in AgentDB', async () => {
@@ -427,9 +527,9 @@ describe('AutoMemoryBridge', () => {
 ## Existing
 Already in DB
 `;
-      fs.writeFileSync(path.join(testDir, 'test.md'), topicContent, 'utf-8');
+      fsSync.writeFileSync(path.join(testDir, 'test.md'), topicContent, 'utf-8');
 
-      // Mock backend to return existing entry on query
+      // Mock backend to return existing entry with matching content hash
       (backend.query as any).mockResolvedValue([{
         id: 'existing-1',
         metadata: { contentHash: hashContent('Already in DB') },
@@ -449,17 +549,37 @@ Already in DB
       expect(result.imported).toBe(0);
       expect(result.files).toHaveLength(0);
     });
+
+    it('should batch imports with bulkInsert', async () => {
+      // Create multiple files with multiple sections
+      fsSync.writeFileSync(
+        path.join(testDir, 'file1.md'),
+        '## A\nContent A\n## B\nContent B\n',
+        'utf-8',
+      );
+      fsSync.writeFileSync(
+        path.join(testDir, 'file2.md'),
+        '## C\nContent C\n',
+        'utf-8',
+      );
+
+      await bridge.importFromAutoMemory();
+
+      // bulkInsert should be called once with all entries
+      expect(backend.bulkInsert).toHaveBeenCalledTimes(1);
+      const batchArg = (backend.bulkInsert as any).mock.calls[0][0];
+      expect(batchArg).toHaveLength(3);
+    });
   });
 
   describe('curateIndex', () => {
     it('should generate MEMORY.md from topic files', async () => {
-      // Create topic files
-      fs.writeFileSync(
+      fsSync.writeFileSync(
         path.join(testDir, 'debugging.md'),
         '# Debugging\n\n- Init HNSW before search\n- Check embeddings dimension\n',
         'utf-8',
       );
-      fs.writeFileSync(
+      fsSync.writeFileSync(
         path.join(testDir, 'performance.md'),
         '# Performance\n\n- Use Int8 quantization\n',
         'utf-8',
@@ -467,19 +587,18 @@ Already in DB
 
       await bridge.curateIndex();
 
-      const indexContent = fs.readFileSync(bridge.getIndexPath(), 'utf-8');
+      const indexContent = fsSync.readFileSync(bridge.getIndexPath(), 'utf-8');
       expect(indexContent).toContain('# Claude Flow V3 Project Memory');
       expect(indexContent).toContain('Init HNSW before search');
       expect(indexContent).toContain('Use Int8 quantization');
     });
 
     it('should stay under maxIndexLines', async () => {
-      // Create a large topic file
       const lines = ['# Debugging', ''];
       for (let i = 0; i < 200; i++) {
         lines.push(`- Item ${i} is a debugging insight`);
       }
-      fs.writeFileSync(
+      fsSync.writeFileSync(
         path.join(testDir, 'debugging.md'),
         lines.join('\n'),
         'utf-8',
@@ -493,15 +612,55 @@ Already in DB
 
       await bridge.curateIndex();
 
-      const indexContent = fs.readFileSync(bridge.getIndexPath(), 'utf-8');
+      const indexContent = fsSync.readFileSync(bridge.getIndexPath(), 'utf-8');
       const indexLines = indexContent.split('\n');
       expect(indexLines.length).toBeLessThanOrEqual(20);
+    });
+
+    it('should strip metadata from summaries in the index', async () => {
+      fsSync.writeFileSync(
+        path.join(testDir, 'debugging.md'),
+        '# Debugging\n\n- Fixed a bug _(agent:tester, 2026-02-08, conf: 0.90)_\n',
+        'utf-8',
+      );
+
+      await bridge.curateIndex();
+
+      const indexContent = fsSync.readFileSync(bridge.getIndexPath(), 'utf-8');
+      expect(indexContent).toContain('- Fixed a bug');
+      expect(indexContent).not.toContain('_(agent:tester');
+    });
+
+    it('should handle pruneStrategy=fifo by removing oldest entries', async () => {
+      const lines = ['# Debugging', ''];
+      for (let i = 0; i < 50; i++) {
+        lines.push(`- Item ${i}`);
+      }
+      fsSync.writeFileSync(
+        path.join(testDir, 'debugging.md'),
+        lines.join('\n'),
+        'utf-8',
+      );
+
+      bridge.destroy();
+      bridge = new AutoMemoryBridge(backend, {
+        memoryDir: testDir,
+        maxIndexLines: 10,
+        pruneStrategy: 'fifo',
+      });
+
+      await bridge.curateIndex();
+
+      const indexContent = fsSync.readFileSync(bridge.getIndexPath(), 'utf-8');
+      // FIFO removes oldest (first) items, keeps newest
+      expect(indexContent).toContain('Item 49');
+      expect(indexContent).not.toContain('Item 0');
     });
   });
 
   describe('getStatus', () => {
     it('should report status for existing directory', async () => {
-      fs.writeFileSync(
+      fsSync.writeFileSync(
         path.join(testDir, 'MEMORY.md'),
         '# Memory\n- Item 1\n- Item 2\n',
         'utf-8',
@@ -532,6 +691,14 @@ Already in DB
       const status = bridge.getStatus();
       expect(status.bufferedInsights).toBe(2);
     });
+
+    it('should report lastSyncTime after sync', async () => {
+      expect(bridge.getStatus().lastSyncTime).toBe(0);
+
+      await bridge.syncToAutoMemory();
+
+      expect(bridge.getStatus().lastSyncTime).toBeGreaterThan(0);
+    });
   });
 
   describe('destroy', () => {
@@ -542,7 +709,6 @@ Already in DB
         syncIntervalMs: 1000,
       });
 
-      // Should not throw
       periodicBridge.destroy();
     });
 
