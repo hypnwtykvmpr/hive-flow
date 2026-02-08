@@ -532,7 +532,7 @@ export class AutoMemoryBridge extends EventEmitter {
       ? `${insight.summary}\n\n${insight.detail}`
       : insight.summary;
 
-    const key = `insight:${insight.category}:${Date.now()}`;
+    const key = `insight:${insight.category}:${Date.now()}:${this.insightCounter++}`;
     const input: MemoryEntryInput = {
       key,
       content,
