@@ -4288,7 +4288,7 @@ await hooks.endTrajectory(trajectory, { success: true });
 
 | Package | Purpose | Main Exports |
 |---------|---------|--------------|
-| `@claude-flow/memory` | Vector storage, HNSW | `AgentDB`, `MemoryStore` |
+| `@claude-flow/memory` | Vector storage, HNSW, self-learning graph | `AgentDB`, `AutoMemoryBridge`, `LearningBridge`, `MemoryGraph` |
 | `@claude-flow/swarm` | Agent coordination | `createSwarm`, `Swarm` |
 | `@claude-flow/aidefence` | Threat detection | `isSafe`, `checkThreats`, `createAIDefence` |
 | `@claude-flow/embeddings` | Vector embeddings | `createEmbeddingService` |
