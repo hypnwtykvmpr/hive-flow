@@ -384,6 +384,12 @@ export class LearningBridge extends EventEmitter {
 
   private async loadNeural(): Promise<void> {
     try {
+      if (this.config.neuralLoader) {
+        // Use injected loader (test / custom integrations)
+        this.neural = await this.config.neuralLoader();
+        return;
+      }
+
       const mod = await import('@claude-flow/neural' as string);
       const NeuralLearningSystem = mod.NeuralLearningSystem ?? mod.default;
       if (!NeuralLearningSystem) return;
