@@ -293,8 +293,8 @@ async function doSync() {
 
   try {
     const syncResult = await bridge.syncToAutoMemory();
-    success(`Synced ${syncResult.written} entries to auto memory`);
-    dim(`├─ Topic files updated: ${syncResult.topicFilesUpdated ?? 0}`);
+    success(`Synced ${syncResult.synced} entries to auto memory`);
+    dim(`├─ Categories updated: ${syncResult.categories?.join(', ') || 'none'}`);
     dim(`└─ Backend entries: ${entryCount}`);
 
     // Curate MEMORY.md index with graph-aware ordering
