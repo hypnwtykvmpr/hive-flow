@@ -57,6 +57,10 @@
   "claudeFlow": {
     "version": "3.0.0",
     "enabled": true,
+    "modelPreferences": {
+      "default": "claude-opus-4-6",
+      "routing": "claude-haiku-4-5-20251001"
+    },
     "agentTeams": {
       "enabled": true,
       "teammateMode": "auto",
