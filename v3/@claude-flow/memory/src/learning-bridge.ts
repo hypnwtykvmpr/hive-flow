@@ -226,7 +226,8 @@ export class LearningBridge extends EventEmitter {
     let patternsLearned = 0;
     const toRemove: string[] = [];
 
-    for (const [entryId, trajectoryId] of this.activeTrajectories) {
+    const entries = Array.from(this.activeTrajectories.entries());
+    for (const [entryId, trajectoryId] of entries) {
       try {
         await this.neural.completeTask(trajectoryId, 1.0);
         completed++;
