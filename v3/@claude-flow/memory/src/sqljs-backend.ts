@@ -190,7 +190,7 @@ export class SqlJsBackend extends EventEmitter implements IMemoryBackend {
         updated_at INTEGER NOT NULL,
         expires_at INTEGER,
         version INTEGER NOT NULL DEFAULT 1,
-        references TEXT NOT NULL,
+        "references" TEXT NOT NULL,
         access_count INTEGER NOT NULL DEFAULT 0,
         last_accessed_at INTEGER NOT NULL
       )
