@@ -14,13 +14,15 @@
 
 import { createHash } from 'node:crypto';
 import { EventEmitter } from 'node:events';
-import * as fs from 'node:fs';
+import * as fs from 'node:fs/promises';
+import { existsSync, mkdirSync, readFileSync, readdirSync } from 'node:fs';
 import * as path from 'node:path';
-import type {
-  IMemoryBackend,
-  MemoryEntry,
-  MemoryEntryInput,
-  MemoryQuery,
+import {
+  createDefaultEntry,
+  type IMemoryBackend,
+  type MemoryEntry,
+  type MemoryEntryInput,
+  type MemoryQuery,
 } from './types.js';
 
 // ===== Types =====
@@ -144,6 +146,16 @@ const DEFAULT_TOPIC_MAPPING: Record<InsightCategory, string> = {
   'swarm-results': 'swarm-results.md',
 };
 
+const CATEGORY_LABELS: Record<string, string> = {
+  'project-patterns': 'Project Patterns',
+  'debugging': 'Debugging',
+  'architecture': 'Architecture',
+  'performance': 'Performance',
+  'security': 'Security',
+  'preferences': 'Preferences',
+  'swarm-results': 'Swarm Results',
+};
+
 const DEFAULT_CONFIG: Required<AutoMemoryBridgeConfig> = {
   memoryDir: '',
   workingDir: process.cwd(),
@@ -188,6 +200,8 @@ export class AutoMemoryBridge extends EventEmitter {
   private lastSyncTime: number = 0;
   private syncTimer: ReturnType<typeof setInterval> | null = null;
   private insights: MemoryInsight[] = [];
+  /** Track AgentDB IDs of insights already written to files during this session */
+  private syncedInsightKeys = new Set<string>();
 
   constructor(backend: IMemoryBackend, config: AutoMemoryBridgeConfig = {}) {
     super();
@@ -234,7 +248,8 @@ export class AutoMemoryBridge extends EventEmitter {
     this.insights.push(insight);
 
     // Store in AgentDB
-    await this.storeInsightInAgentDB(insight);
+    const key = await this.storeInsightInAgentDB(insight);
+    this.syncedInsightKeys.add(key);
 
     // If sync-on-write, write immediately to files
     if (this.config.syncMode === 'on-write') {
@@ -257,8 +272,11 @@ export class AutoMemoryBridge extends EventEmitter {
       // Ensure directory exists
       await this.ensureMemoryDir();
 
+      // Snapshot and clear the buffer atomically to avoid race conditions
+      const buffered = this.insights.splice(0, this.insights.length);
+
       // Flush buffered insights to files
-      for (const insight of this.insights) {
+      for (const insight of buffered) {
         try {
           await this.writeInsightToFiles(insight);
           updatedCategories.add(insight.category);
@@ -267,13 +285,18 @@ export class AutoMemoryBridge extends EventEmitter {
         }
       }
 
-      // Query AgentDB for high-confidence entries since last sync
+      // Query AgentDB for high-confidence entries since last sync,
+      // skipping entries we already wrote from the buffer above
       const entries = await this.queryRecentInsights();
       for (const entry of entries) {
+        const entryKey = entry.key;
+        if (this.syncedInsightKeys.has(entryKey)) continue;
+
         try {
           const category = this.classifyEntry(entry);
           await this.appendToTopicFile(category, entry);
           updatedCategories.add(category);
+          this.syncedInsightKeys.add(entryKey);
         } catch (err) {
           errors.push(`Failed to sync entry ${entry.id}: ${(err as Error).message}`);
         }
@@ -282,8 +305,7 @@ export class AutoMemoryBridge extends EventEmitter {
       // Curate MEMORY.md index
       await this.curateIndex();
 
-      const synced = this.insights.length + entries.length;
-      this.insights = [];
+      const synced = buffered.length + entries.length;
       this.lastSyncTime = Date.now();
 
       const result: SyncResult = {
@@ -310,12 +332,13 @@ export class AutoMemoryBridge extends EventEmitter {
   /**
    * Import auto memory files into AgentDB.
    * Called on session-start to hydrate AgentDB with previous learnings.
+   * Uses bulk insert for efficiency.
    */
   async importFromAutoMemory(): Promise<ImportResult> {
     const startTime = Date.now();
     const memoryDir = this.config.memoryDir;
 
-    if (!fs.existsSync(memoryDir)) {
+    if (!existsSync(memoryDir)) {
       return { imported: 0, skipped: 0, files: [], durationMs: 0 };
     }
 
@@ -323,25 +346,27 @@ export class AutoMemoryBridge extends EventEmitter {
     let skipped = 0;
     const processedFiles: string[] = [];
 
-    const files = fs.readdirSync(memoryDir)
-      .filter(f => f.endsWith('.md'));
+    const files = readdirSync(memoryDir).filter(f => f.endsWith('.md'));
+
+    // Pre-fetch existing content hashes to avoid N queries
+    const existingHashes = await this.fetchExistingContentHashes();
+
+    // Batch entries for bulk insert
+    const batch: MemoryEntry[] = [];
 
     for (const file of files) {
       const filePath = path.join(memoryDir, file);
-      const content = fs.readFileSync(filePath, 'utf-8');
+      const content = await fs.readFile(filePath, 'utf-8');
       const entries = parseMarkdownEntries(content);
 
       for (const entry of entries) {
         const contentHash = hashContent(entry.content);
 
-        // Check if already in AgentDB by content hash
-        const existing = await this.findByContentHash(contentHash);
-        if (existing) {
+        if (existingHashes.has(contentHash)) {
           skipped++;
           continue;
         }
 
-        // Store in AgentDB
         const input: MemoryEntryInput = {
           key: `auto-memory:${file}:${entry.heading}`,
           content: entry.content,
@@ -356,11 +381,17 @@ export class AutoMemoryBridge extends EventEmitter {
           },
         };
 
-        await this.storeInBackend(input);
+        batch.push(createDefaultEntry(input));
+        existingHashes.add(contentHash);
         imported++;
       }
 
       processedFiles.push(file);
+    }
+
+    // Bulk insert all at once
+    if (batch.length > 0) {
+      await this.backend.bulkInsert(batch);
     }
 
     const result: ImportResult = {
@@ -379,7 +410,6 @@ export class AutoMemoryBridge extends EventEmitter {
    * Groups entries by category and prunes low-confidence items.
    */
   async curateIndex(): Promise<void> {
-    const indexPath = this.getIndexPath();
     await this.ensureMemoryDir();
 
     // Collect summaries from all topic files
@@ -387,8 +417,8 @@ export class AutoMemoryBridge extends EventEmitter {
 
     for (const [category, filename] of Object.entries(this.config.topicMapping)) {
       const topicPath = path.join(this.config.memoryDir, filename as string);
-      if (fs.existsSync(topicPath)) {
-        const content = fs.readFileSync(topicPath, 'utf-8');
+      if (existsSync(topicPath)) {
+        const content = await fs.readFile(topicPath, 'utf-8');
         const summaries = extractSummaries(content);
         if (summaries.length > 0) {
           sections[category] = summaries;
@@ -396,62 +426,14 @@ export class AutoMemoryBridge extends EventEmitter {
       }
     }
 
-    // Generate MEMORY.md content
-    const lines: string[] = [
-      '# Claude Flow V3 Project Memory',
-      '',
-    ];
+    // Prune sections before building the index to avoid O(n^2) rebuild loop
+    const budget = this.config.maxIndexLines;
+    pruneSectionsToFit(sections, budget, this.config.pruneStrategy);
 
-    const categoryLabels: Record<string, string> = {
-      'project-patterns': 'Project Patterns',
-      'debugging': 'Debugging',
-      'architecture': 'Architecture',
-      'performance': 'Performance',
-      'security': 'Security',
-      'preferences': 'Preferences',
-      'swarm-results': 'Swarm Results',
-    };
+    // Build the final index
+    const lines = buildIndexLines(sections, this.config.topicMapping as Record<string, string>);
 
-    for (const [category, summaries] of Object.entries(sections)) {
-      const label = categoryLabels[category] || category;
-      const filename = (this.config.topicMapping as Record<string, string>)[category] || `${category}.md`;
-
-      lines.push(`## ${label}`);
-      for (const summary of summaries) {
-        lines.push(`- ${summary}`);
-      }
-      lines.push(`- See \`${filename}\` for details`);
-      lines.push('');
-    }
-
-    // Prune if over limit
-    while (lines.length > this.config.maxIndexLines) {
-      // Remove lines from the largest section
-      const sectionSizes = Object.entries(sections)
-        .map(([cat, items]) => ({ cat, size: items.length }))
-        .sort((a, b) => b.size - a.size);
-
-      if (sectionSizes.length > 0 && sectionSizes[0].size > 1) {
-        sections[sectionSizes[0].cat].pop();
-        // Regenerate (simplified: just trim last entry from largest section)
-        lines.length = 0;
-        lines.push('# Claude Flow V3 Project Memory', '');
-        for (const [category, summaries] of Object.entries(sections)) {
-          const label = categoryLabels[category] || category;
-          const filename = (this.config.topicMapping as Record<string, string>)[category] || `${category}.md`;
-          lines.push(`## ${label}`);
-          for (const summary of summaries) {
-            lines.push(`- ${summary}`);
-          }
-          lines.push(`- See \`${filename}\` for details`);
-          lines.push('');
-        }
-      } else {
-        break;
-      }
-    }
-
-    fs.writeFileSync(indexPath, lines.join('\n'), 'utf-8');
+    await fs.writeFile(this.getIndexPath(), lines.join('\n'), 'utf-8');
     this.emit('index:curated', { lines: lines.length });
   }
 
@@ -468,9 +450,8 @@ export class AutoMemoryBridge extends EventEmitter {
     bufferedInsights: number;
   } {
     const memoryDir = this.config.memoryDir;
-    const exists = fs.existsSync(memoryDir);
 
-    if (!exists) {
+    if (!existsSync(memoryDir)) {
       return {
         memoryDir,
         exists: false,
@@ -482,25 +463,43 @@ export class AutoMemoryBridge extends EventEmitter {
       };
     }
 
-    const files: { name: string; lines: number }[] = [];
+    const fileStats: { name: string; lines: number }[] = [];
     let totalLines = 0;
     let indexLines = 0;
 
-    const mdFiles = fs.readdirSync(memoryDir).filter(f => f.endsWith('.md'));
+    let mdFiles: string[];
+    try {
+      mdFiles = readdirSync(memoryDir).filter(f => f.endsWith('.md'));
+    } catch {
+      return {
+        memoryDir,
+        exists: true,
+        files: [],
+        totalLines: 0,
+        indexLines: 0,
+        lastSyncTime: this.lastSyncTime,
+        bufferedInsights: this.insights.length,
+      };
+    }
+
     for (const file of mdFiles) {
-      const content = fs.readFileSync(path.join(memoryDir, file), 'utf-8');
-      const lineCount = content.split('\n').length;
-      files.push({ name: file, lines: lineCount });
-      totalLines += lineCount;
-      if (file === 'MEMORY.md') {
-        indexLines = lineCount;
+      try {
+        const content = readFileSync(path.join(memoryDir, file), 'utf-8');
+        const lineCount = content.split('\n').length;
+        fileStats.push({ name: file, lines: lineCount });
+        totalLines += lineCount;
+        if (file === 'MEMORY.md') {
+          indexLines = lineCount;
+        }
+      } catch {
+        // Skip unreadable files
       }
     }
 
     return {
       memoryDir,
       exists: true,
-      files,
+      files: fileStats,
       totalLines,
       indexLines,
       lastSyncTime: this.lastSyncTime,
@@ -521,18 +520,19 @@ export class AutoMemoryBridge extends EventEmitter {
 
   private async ensureMemoryDir(): Promise<void> {
     const dir = this.config.memoryDir;
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
+    if (!existsSync(dir)) {
+      await fs.mkdir(dir, { recursive: true });
     }
   }
 
-  private async storeInsightInAgentDB(insight: MemoryInsight): Promise<void> {
+  private async storeInsightInAgentDB(insight: MemoryInsight): Promise<string> {
     const content = insight.detail
       ? `${insight.summary}\n\n${insight.detail}`
       : insight.summary;
 
+    const key = `insight:${insight.category}:${Date.now()}`;
     const input: MemoryEntryInput = {
-      key: `insight:${insight.category}:${Date.now()}`,
+      key,
       content,
       namespace: 'learnings',
       type: 'semantic',
@@ -547,14 +547,9 @@ export class AutoMemoryBridge extends EventEmitter {
       },
     };
 
-    await this.storeInBackend(input);
-  }
-
-  private async storeInBackend(input: MemoryEntryInput): Promise<void> {
-    // Use the backend's store method with a constructed entry
-    const { createDefaultEntry } = await import('./types.js');
     const entry = createDefaultEntry(input);
     await this.backend.store(entry);
+    return key;
   }
 
   private async writeInsightToFiles(insight: MemoryInsight): Promise<void> {
@@ -563,32 +558,23 @@ export class AutoMemoryBridge extends EventEmitter {
     const topicPath = this.getTopicPath(insight.category);
     const line = formatInsightLine(insight);
 
-    // Append to topic file
-    if (fs.existsSync(topicPath)) {
-      const existing = fs.readFileSync(topicPath, 'utf-8');
-      // Skip if already present
-      if (existing.includes(insight.summary)) return;
+    if (existsSync(topicPath)) {
+      const existing = await fs.readFile(topicPath, 'utf-8');
+
+      // Exact line-based dedup: check if the summary already appears as a bullet
+      if (hasSummaryLine(existing, insight.summary)) return;
 
       const lineCount = existing.split('\n').length;
       if (lineCount >= this.config.maxTopicFileLines) {
-        // Prune oldest entries
         const pruned = pruneTopicFile(existing, this.config.maxTopicFileLines - 10);
-        fs.writeFileSync(topicPath, pruned + '\n' + line, 'utf-8');
+        await fs.writeFile(topicPath, pruned + '\n' + line, 'utf-8');
       } else {
-        fs.appendFileSync(topicPath, '\n' + line, 'utf-8');
+        await fs.appendFile(topicPath, '\n' + line, 'utf-8');
       }
     } else {
-      const categoryLabels: Record<string, string> = {
-        'project-patterns': 'Project Patterns',
-        'debugging': 'Debugging Insights',
-        'architecture': 'Architecture Notes',
-        'performance': 'Performance Notes',
-        'security': 'Security Notes',
-        'preferences': 'Preferences',
-        'swarm-results': 'Swarm Results',
-      };
-      const header = `# ${categoryLabels[insight.category] || insight.category}\n\n`;
-      fs.writeFileSync(topicPath, header + line, 'utf-8');
+      const label = CATEGORY_LABELS[insight.category] || insight.category;
+      const header = `# ${label}\n\n`;
+      await fs.writeFile(topicPath, header + line, 'utf-8');
     }
   }
 
@@ -614,11 +600,10 @@ export class AutoMemoryBridge extends EventEmitter {
 
   private classifyEntry(entry: MemoryEntry): InsightCategory {
     const category = entry.metadata?.category as InsightCategory | undefined;
-    if (category && Object.keys(DEFAULT_TOPIC_MAPPING).includes(category)) {
+    if (category && category in DEFAULT_TOPIC_MAPPING) {
       return category;
     }
 
-    // Classify by tags
     const tags = entry.tags || [];
     if (tags.includes('debugging') || tags.includes('bug') || tags.includes('fix')) {
       return 'debugging';
@@ -655,17 +640,22 @@ export class AutoMemoryBridge extends EventEmitter {
     await this.writeInsightToFiles(insight);
   }
 
-  private async findByContentHash(hash: string): Promise<MemoryEntry | null> {
+  /** Fetch all existing content hashes from the auto-memory namespace in one query */
+  private async fetchExistingContentHashes(): Promise<Set<string>> {
     try {
-      const results = await this.backend.query({
+      const entries = await this.backend.query({
         type: 'hybrid',
         namespace: 'auto-memory',
-        metadata: { contentHash: hash },
-        limit: 1,
+        limit: 10_000,
       });
-      return results.length > 0 ? results[0] : null;
+      const hashes = new Set<string>();
+      for (const entry of entries) {
+        const hash = entry.metadata?.contentHash as string | undefined;
+        if (hash) hashes.add(hash);
+      }
+      return hashes;
     } catch {
-      return null;
+      return new Set();
     }
   }
 
@@ -678,7 +668,6 @@ export class AutoMemoryBridge extends EventEmitter {
       }
     }, this.config.syncIntervalMs);
 
-    // Unref so it doesn't prevent process exit
     if (this.syncTimer.unref) {
       this.syncTimer.unref();
     }
@@ -695,8 +684,9 @@ export function resolveAutoMemoryDir(workingDir: string): string {
   const gitRoot = findGitRoot(workingDir);
   const basePath = gitRoot || workingDir;
 
-  // Claude Code uses the path with '/' replaced by '-', leading '-' removed
-  const projectKey = basePath.replace(/\//g, '-').replace(/^-/, '');
+  // Claude Code normalizes to forward slashes then replaces with dashes
+  const normalized = basePath.split(path.sep).join('/');
+  const projectKey = normalized.replace(/\//g, '-').replace(/^-/, '');
 
   return path.join(
     process.env.HOME || process.env.USERPROFILE || '~',
@@ -715,7 +705,7 @@ export function findGitRoot(dir: string): string | null {
   const root = path.parse(current).root;
 
   while (current !== root) {
-    if (fs.existsSync(path.join(current, '.git'))) {
+    if (existsSync(path.join(current, '.git'))) {
       return current;
     }
     current = path.dirname(current);
@@ -737,7 +727,6 @@ export function parseMarkdownEntries(content: string): ParsedEntry[] {
   for (const line of lines) {
     const headingMatch = line.match(/^##\s+(.+)/);
     if (headingMatch) {
-      // Save previous section
       if (currentHeading && currentLines.length > 0) {
         entries.push({
           heading: currentHeading,
@@ -752,7 +741,6 @@ export function parseMarkdownEntries(content: string): ParsedEntry[] {
     }
   }
 
-  // Save last section
   if (currentHeading && currentLines.length > 0) {
     entries.push({
       heading: currentHeading,
@@ -765,15 +753,18 @@ export function parseMarkdownEntries(content: string): ParsedEntry[] {
 }
 
 /**
- * Extract one-line summaries from a topic file.
- * Returns bullet-point items (lines starting with '- ').
+ * Extract clean one-line summaries from a topic file.
+ * Returns bullet-point items (lines starting with '- '), stripping
+ * metadata annotations like _(source, date, conf: 0.95)_.
  */
 export function extractSummaries(content: string): string[] {
   return content
     .split('\n')
     .filter(line => line.startsWith('- '))
     .map(line => line.slice(2).trim())
-    .filter(line => !line.startsWith('See `'));
+    .filter(line => !line.startsWith('See `'))
+    .map(line => line.replace(/\s*_\(.*?\)_\s*$/, '').trim())
+    .filter(Boolean);
 }
 
 /**
@@ -806,13 +797,86 @@ export function pruneTopicFile(content: string, maxLines: number): string {
   const lines = content.split('\n');
   if (lines.length <= maxLines) return content;
 
-  // Keep header (first 3 lines) and newest entries (from bottom)
   const header = lines.slice(0, 3);
   const entries = lines.slice(3);
-
-  // Keep the most recent entries
   const kept = entries.slice(entries.length - (maxLines - 3));
   return [...header, ...kept].join('\n');
+}
+
+/**
+ * Check if a summary already exists as a bullet line in topic file content.
+ * Uses exact bullet prefix matching (not substring) to avoid false positives.
+ */
+export function hasSummaryLine(content: string, summary: string): boolean {
+  // Match lines that start with "- <summary>" (possibly followed by metadata)
+  return content.split('\n').some(line =>
+    line.startsWith(`- ${summary}`)
+  );
+}
+
+/**
+ * Prune sections to fit within a line budget.
+ * Removes entries from the largest sections first.
+ */
+function pruneSectionsToFit(
+  sections: Record<string, string[]>,
+  budget: number,
+  strategy: PruneStrategy,
+): void {
+  const countLines = (): number => {
+    let total = 2; // "# Title" + blank line
+    for (const [, summaries] of Object.entries(sections)) {
+      total += 1 + summaries.length + 1 + 1; // heading + items + "See ..." + blank
+    }
+    return total;
+  };
+
+  while (countLines() > budget) {
+    const sorted = Object.entries(sections)
+      .filter(([, items]) => items.length > 1)
+      .sort((a, b) => b[1].length - a[1].length);
+
+    if (sorted.length === 0) break;
+
+    const [targetCat, targetItems] = sorted[0];
+
+    if (strategy === 'lru' || strategy === 'fifo') {
+      // Remove oldest (first) entry
+      targetItems.shift();
+    } else {
+      // confidence-weighted: remove last (lowest confidence, since
+      // newer = higher confidence in sorted topic files)
+      targetItems.pop();
+    }
+
+    if (targetItems.length === 0) {
+      delete sections[targetCat];
+    }
+  }
+}
+
+/**
+ * Build MEMORY.md index lines from curated sections.
+ */
+function buildIndexLines(
+  sections: Record<string, string[]>,
+  topicMapping: Record<string, string>,
+): string[] {
+  const lines: string[] = ['# Claude Flow V3 Project Memory', ''];
+
+  for (const [category, summaries] of Object.entries(sections)) {
+    const label = CATEGORY_LABELS[category] || category;
+    const filename = topicMapping[category] || `${category}.md`;
+
+    lines.push(`## ${label}`);
+    for (const summary of summaries) {
+      lines.push(`- ${summary}`);
+    }
+    lines.push(`- See \`${filename}\` for details`);
+    lines.push('');
+  }
+
+  return lines;
 }
 
 export default AutoMemoryBridge;
