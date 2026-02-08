@@ -320,7 +320,7 @@ setup_mcp_server() {
     fi
 
     # Check if already configured
-    if claude mcp list 2>/dev/null | grep -q "claude-flow"; then
+    if claude mcp list 2>/dev/null | grep -q "ruvflow"; then
         print_substep "MCP server already configured ✓"
         return 0
     fi
