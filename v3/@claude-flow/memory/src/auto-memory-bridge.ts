@@ -831,15 +831,13 @@ function pruneSectionsToFit(
   budget: number,
   strategy: PruneStrategy,
 ): void {
-  const countLines = (): number => {
-    let total = 2; // "# Title" + blank line
-    for (const [, summaries] of Object.entries(sections)) {
-      total += 1 + summaries.length + 1 + 1; // heading + items + "See ..." + blank
-    }
-    return total;
-  };
+  // Pre-compute total line count: title(1) + blank(1) + per-section(heading + items + "See..." + blank)
+  let totalLines = 2;
+  for (const summaries of Object.values(sections)) {
+    totalLines += 1 + summaries.length + 1 + 1;
+  }
 
-  while (countLines() > budget) {
+  while (totalLines > budget) {
     const sorted = Object.entries(sections)
       .filter(([, items]) => items.length > 1)
       .sort((a, b) => b[1].length - a[1].length);
@@ -849,16 +847,15 @@ function pruneSectionsToFit(
     const [targetCat, targetItems] = sorted[0];
 
     if (strategy === 'lru' || strategy === 'fifo') {
-      // Remove oldest (first) entry
       targetItems.shift();
     } else {
-      // confidence-weighted: remove last (lowest confidence, since
-      // newer = higher confidence in sorted topic files)
       targetItems.pop();
     }
+    totalLines--; // one fewer bullet line
 
     if (targetItems.length === 0) {
       delete sections[targetCat];
+      totalLines -= 3; // heading + "See..." + blank removed
     }
   }
 }
