@@ -205,7 +205,7 @@ const DEFAULT_CONFIG: ResolvedConfig = {
  * ```
  */
 export class AutoMemoryBridge extends EventEmitter {
-  private config: Required<AutoMemoryBridgeConfig>;
+  private config: ResolvedConfig;
   private backend: IMemoryBackend;
   private lastSyncTime: number = 0;
   private syncTimer: ReturnType<typeof setInterval> | null = null;
