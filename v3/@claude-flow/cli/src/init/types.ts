@@ -454,6 +454,9 @@ export const MINIMAL_INIT_OPTIONS: InitOptions = {
     memoryBackend: 'memory',
     enableHNSW: false,
     enableNeural: false,
+    enableLearningBridge: false,
+    enableMemoryGraph: false,
+    enableAgentScopes: false,
   },
   embeddings: {
     enabled: false,
