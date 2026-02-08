@@ -99,7 +99,7 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-PACKAGE="claude-flow@${VERSION}"
+PACKAGE="ruvflow@${VERSION}"
 
 # Progress animation
 SPINNER_CHARS="⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
