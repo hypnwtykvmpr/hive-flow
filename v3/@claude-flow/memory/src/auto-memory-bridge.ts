@@ -469,12 +469,31 @@ export class AutoMemoryBridge extends EventEmitter {
       }
     }
 
+    // ADR-049: Use graph PageRank to prioritize sections
+    let sectionOrder: string[] | undefined;
+    if (this.memoryGraph) {
+      const topNodes = this.memoryGraph.getTopNodes(20);
+      const categoryCounts = new Map<string, number>();
+      for (const node of topNodes) {
+        const cat = node.community || 'general';
+        categoryCounts.set(cat, (categoryCounts.get(cat) || 0) + 1);
+      }
+      sectionOrder = [...categoryCounts.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .map(([cat]) => cat)
+        .filter((cat) => sections[cat]);
+    }
+
     // Prune sections before building the index to avoid O(n^2) rebuild loop
     const budget = this.config.maxIndexLines;
     pruneSectionsToFit(sections, budget, this.config.pruneStrategy);
 
-    // Build the final index
-    const lines = buildIndexLines(sections, this.config.topicMapping as Record<string, string>);
+    // Build the final index (with optional graph-aware ordering)
+    const lines = buildIndexLines(
+      sections,
+      this.config.topicMapping as Record<string, string>,
+      sectionOrder,
+    );
 
     await fs.writeFile(this.getIndexPath(), lines.join('\n'), 'utf-8');
     this.emit('index:curated', { lines: lines.length });
