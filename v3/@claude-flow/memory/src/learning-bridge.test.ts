@@ -8,38 +8,35 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { IMemoryBackend, MemoryEntry, MemoryEntryUpdate } from './types.js';
 import type { MemoryInsight } from './auto-memory-bridge.js';
-
-// ===== Mock Neural System =====
-
-const mockNeuralSystem = {
-  initialize: vi.fn().mockResolvedValue(undefined),
-  beginTask: vi.fn().mockReturnValue('traj-1'),
-  recordStep: vi.fn(),
-  completeTask: vi.fn().mockResolvedValue(undefined),
-  findPatterns: vi.fn().mockResolvedValue([]),
-  cleanup: vi.fn().mockResolvedValue(undefined),
-};
-
-// Control whether the dynamic import succeeds
-let neuralImportShouldFail = false;
-
-vi.mock('@claude-flow/neural', () => {
-  if (neuralImportShouldFail) {
-    throw new Error('Module not found: @claude-flow/neural');
-  }
-  return {
-    NeuralLearningSystem: vi.fn().mockImplementation(() => mockNeuralSystem),
-  };
-});
-
-// Import AFTER mocking so the dynamic import inside the class picks up the mock
 import { LearningBridge } from './learning-bridge.js';
 import type {
   LearningBridgeConfig,
   LearningStats,
   ConsolidateResult,
   PatternMatch,
+  NeuralLoader,
 } from './learning-bridge.js';
+
+// ===== Mock Neural System =====
+
+function createMockNeuralSystem() {
+  return {
+    initialize: vi.fn().mockResolvedValue(undefined),
+    beginTask: vi.fn().mockReturnValue('traj-1'),
+    recordStep: vi.fn(),
+    completeTask: vi.fn().mockResolvedValue(undefined),
+    findPatterns: vi.fn().mockResolvedValue([]),
+    cleanup: vi.fn().mockResolvedValue(undefined),
+  };
+}
+
+function createNeuralLoader(neural: ReturnType<typeof createMockNeuralSystem>): NeuralLoader {
+  return async () => neural;
+}
+
+function createFailingNeuralLoader(): NeuralLoader {
+  return async () => { throw new Error('Module not found'); };
+}
 
 // ===== Mock Backend =====
 
@@ -55,10 +52,10 @@ function createMockBackend(): IMemoryBackend & { storedEntries: MemoryEntry[] } 
     }),
     get: vi.fn().mockResolvedValue(null),
     getByKey: vi.fn().mockResolvedValue(null),
-    update: vi.fn().mockImplementation(async (id: string, update: MemoryEntryUpdate) => {
+    update: vi.fn().mockImplementation(async (id: string, upd: MemoryEntryUpdate) => {
       const entry = storedEntries.find(e => e.id === id);
       if (!entry) return null;
-      if (update.metadata) entry.metadata = { ...entry.metadata, ...update.metadata };
+      if (upd.metadata) entry.metadata = { ...entry.metadata, ...upd.metadata };
       return entry;
     }),
     delete: vi.fn().mockResolvedValue(true),
@@ -70,12 +67,8 @@ function createMockBackend(): IMemoryBackend & { storedEntries: MemoryEntry[] } 
     listNamespaces: vi.fn().mockResolvedValue([]),
     clearNamespace: vi.fn().mockResolvedValue(0),
     getStats: vi.fn().mockResolvedValue({
-      totalEntries: 0,
-      entriesByNamespace: {},
-      entriesByType: {},
-      memoryUsage: 0,
-      avgQueryTime: 0,
-      avgSearchTime: 0,
+      totalEntries: 0, entriesByNamespace: {}, entriesByType: {},
+      memoryUsage: 0, avgQueryTime: 0, avgSearchTime: 0,
     }),
     healthCheck: vi.fn().mockResolvedValue({
       status: 'healthy',
@@ -84,9 +77,7 @@ function createMockBackend(): IMemoryBackend & { storedEntries: MemoryEntry[] } 
         index: { status: 'healthy', latency: 0 },
         cache: { status: 'healthy', latency: 0 },
       },
-      timestamp: Date.now(),
-      issues: [],
-      recommendations: [],
+      timestamp: Date.now(), issues: [], recommendations: [],
     }),
   };
 }
@@ -129,15 +120,12 @@ function createTestEntry(overrides: Partial<MemoryEntry> = {}): MemoryEntry {
 describe('LearningBridge', () => {
   let bridge: LearningBridge;
   let backend: ReturnType<typeof createMockBackend>;
+  let neural: ReturnType<typeof createMockNeuralSystem>;
 
   beforeEach(() => {
-    vi.clearAllMocks();
-    neuralImportShouldFail = false;
-    mockNeuralSystem.beginTask.mockReturnValue('traj-1');
-    mockNeuralSystem.findPatterns.mockResolvedValue([]);
-
     backend = createMockBackend();
-    bridge = new LearningBridge(backend);
+    neural = createMockNeuralSystem();
+    bridge = new LearningBridge(backend, { neuralLoader: createNeuralLoader(neural) });
   });
 
   afterEach(() => {
@@ -148,9 +136,11 @@ describe('LearningBridge', () => {
 
   describe('constructor', () => {
     it('should create with default config', () => {
-      const stats = bridge.getStats();
+      const b = new LearningBridge(backend);
+      const stats = b.getStats();
       expect(stats.totalTrajectories).toBe(0);
       expect(stats.neuralAvailable).toBe(false);
+      b.destroy();
     });
 
     it('should create with custom config', () => {
@@ -163,20 +153,17 @@ describe('LearningBridge', () => {
         ewcLambda: 5000,
         consolidationThreshold: 20,
       });
-
-      const stats = custom.getStats();
-      expect(stats.totalTrajectories).toBe(0);
+      expect(custom.getStats().totalTrajectories).toBe(0);
       custom.destroy();
     });
 
     it('should respect enabled=false', async () => {
-      const disabled = new LearningBridge(backend, { enabled: false });
-      const insight = createTestInsight();
-
-      await disabled.onInsightRecorded(insight, 'entry-1');
-
-      expect(mockNeuralSystem.beginTask).not.toHaveBeenCalled();
-      expect(disabled.getStats().totalTrajectories).toBe(0);
+      const disabled = new LearningBridge(backend, {
+        enabled: false,
+        neuralLoader: createNeuralLoader(neural),
+      });
+      await disabled.onInsightRecorded(createTestInsight(), 'entry-1');
+      expect(neural.beginTask).not.toHaveBeenCalled();
       disabled.destroy();
     });
   });
@@ -188,8 +175,8 @@ describe('LearningBridge', () => {
       const insight = createTestInsight();
       await bridge.onInsightRecorded(insight, 'entry-1');
 
-      expect(mockNeuralSystem.beginTask).toHaveBeenCalledWith(insight.summary, 'general');
-      expect(mockNeuralSystem.recordStep).toHaveBeenCalledWith('traj-1', expect.objectContaining({
+      expect(neural.beginTask).toHaveBeenCalledWith(insight.summary, 'general');
+      expect(neural.recordStep).toHaveBeenCalledWith('traj-1', expect.objectContaining({
         action: 'record:debugging',
         reward: 0.95,
       }));
@@ -199,41 +186,35 @@ describe('LearningBridge', () => {
     it('should emit insight:learning-started event', async () => {
       const handler = vi.fn();
       bridge.on('insight:learning-started', handler);
-
       await bridge.onInsightRecorded(createTestInsight(), 'entry-1');
-
-      expect(handler).toHaveBeenCalledWith({
-        entryId: 'entry-1',
-        category: 'debugging',
-      });
+      expect(handler).toHaveBeenCalledWith({ entryId: 'entry-1', category: 'debugging' });
     });
 
     it('should no-op when disabled', async () => {
-      const disabled = new LearningBridge(backend, { enabled: false });
-
+      const disabled = new LearningBridge(backend, {
+        enabled: false,
+        neuralLoader: createNeuralLoader(neural),
+      });
       await disabled.onInsightRecorded(createTestInsight(), 'entry-1');
-
-      expect(mockNeuralSystem.beginTask).not.toHaveBeenCalled();
+      expect(neural.beginTask).not.toHaveBeenCalled();
       disabled.destroy();
     });
 
     it('should no-op when destroyed', async () => {
       bridge.destroy();
-
       await bridge.onInsightRecorded(createTestInsight(), 'entry-1');
-
-      expect(mockNeuralSystem.beginTask).not.toHaveBeenCalled();
+      expect(neural.beginTask).not.toHaveBeenCalled();
     });
 
     it('should handle neural unavailable gracefully', async () => {
-      neuralImportShouldFail = true;
-      const safeBridge = new LearningBridge(backend);
+      const safeBridge = new LearningBridge(backend, {
+        neuralLoader: createFailingNeuralLoader(),
+      });
       const handler = vi.fn();
       safeBridge.on('insight:learning-started', handler);
 
       await safeBridge.onInsightRecorded(createTestInsight(), 'entry-1');
 
-      // Event should still be emitted even without neural
       expect(handler).toHaveBeenCalled();
       expect(safeBridge.getStats().neuralAvailable).toBe(false);
       safeBridge.destroy();
@@ -242,15 +223,13 @@ describe('LearningBridge', () => {
     it('should pass hash embedding as stateEmbedding', async () => {
       await bridge.onInsightRecorded(createTestInsight(), 'entry-1');
 
-      const stepArg = mockNeuralSystem.recordStep.mock.calls[0][1];
+      const stepArg = neural.recordStep.mock.calls[0][1];
       expect(stepArg.stateEmbedding).toBeInstanceOf(Float32Array);
       expect(stepArg.stateEmbedding.length).toBe(768);
     });
 
     it('should create unique trajectory per entry', async () => {
-      mockNeuralSystem.beginTask
-        .mockReturnValueOnce('traj-1')
-        .mockReturnValueOnce('traj-2');
+      neural.beginTask.mockReturnValueOnce('traj-1').mockReturnValueOnce('traj-2');
 
       await bridge.onInsightRecorded(createTestInsight(), 'entry-1');
       await bridge.onInsightRecorded(
@@ -263,16 +242,12 @@ describe('LearningBridge', () => {
     });
 
     it('should survive beginTask throwing', async () => {
-      mockNeuralSystem.beginTask.mockImplementationOnce(() => {
-        throw new Error('Neural failure');
-      });
-
+      neural.beginTask.mockImplementationOnce(() => { throw new Error('fail'); });
       const handler = vi.fn();
       bridge.on('insight:learning-started', handler);
 
       await bridge.onInsightRecorded(createTestInsight(), 'entry-1');
 
-      // Should still emit event
       expect(handler).toHaveBeenCalled();
     });
   });
@@ -303,17 +278,13 @@ describe('LearningBridge', () => {
 
     it('should handle missing entry gracefully', async () => {
       (backend.get as any).mockResolvedValueOnce(null);
-
-      // Should not throw
       await bridge.onInsightAccessed('nonexistent');
-
       expect(backend.update).not.toHaveBeenCalled();
     });
 
     it('should emit insight:accessed event', async () => {
       const entry = createTestEntry({ metadata: { confidence: 0.7 } });
       (backend.get as any).mockResolvedValueOnce(entry);
-
       const handler = vi.fn();
       bridge.on('insight:accessed', handler);
 
@@ -325,7 +296,7 @@ describe('LearningBridge', () => {
       });
     });
 
-    it('should update entry metadata in backend', async () => {
+    it('should update entry metadata in backend preserving existing fields', async () => {
       const entry = createTestEntry({
         metadata: { confidence: 0.6, category: 'debugging', extra: 'preserved' },
       });
@@ -334,14 +305,12 @@ describe('LearningBridge', () => {
       await bridge.onInsightAccessed('entry-1');
 
       const updateCall = (backend.update as any).mock.calls[0][1];
-      // Original metadata should be preserved alongside the updated confidence
       expect(updateCall.metadata.category).toBe('debugging');
       expect(updateCall.metadata.extra).toBe('preserved');
       expect(updateCall.metadata.confidence).toBeCloseTo(0.63, 5);
     });
 
     it('should record neural step when trajectory exists', async () => {
-      // First create a trajectory
       await bridge.onInsightRecorded(createTestInsight(), 'entry-1');
       vi.clearAllMocks();
 
@@ -350,7 +319,7 @@ describe('LearningBridge', () => {
 
       await bridge.onInsightAccessed('entry-1');
 
-      expect(mockNeuralSystem.recordStep).toHaveBeenCalledWith('traj-1', {
+      expect(neural.recordStep).toHaveBeenCalledWith('traj-1', {
         action: 'access',
         reward: 0.03,
       });
@@ -362,15 +331,13 @@ describe('LearningBridge', () => {
 
       await bridge.onInsightAccessed('entry-1');
 
-      // recordStep may have been called during initNeural on first method call,
-      // but not for this access since no trajectory exists for this entry
-      expect(mockNeuralSystem.recordStep).not.toHaveBeenCalledWith(
+      expect(neural.recordStep).not.toHaveBeenCalledWith(
         expect.anything(),
         expect.objectContaining({ action: 'access' }),
       );
     });
 
-    it('should use default 0.5 confidence when metadata lacks it', async () => {
+    it('should use default 0.5 when metadata lacks confidence', async () => {
       const entry = createTestEntry({ metadata: {} });
       (backend.get as any).mockResolvedValueOnce(entry);
 
@@ -382,9 +349,7 @@ describe('LearningBridge', () => {
 
     it('should no-op when disabled', async () => {
       const disabled = new LearningBridge(backend, { enabled: false });
-
       await disabled.onInsightAccessed('entry-1');
-
       expect(backend.get).not.toHaveBeenCalled();
       disabled.destroy();
     });
@@ -396,77 +361,56 @@ describe('LearningBridge', () => {
       await bridge.onInsightAccessed('entry-1');
       await bridge.onInsightAccessed('entry-1');
 
-      const stats = bridge.getStats();
-      expect(stats.avgConfidenceBoost).toBeCloseTo(0.03, 5);
+      expect(bridge.getStats().avgConfidenceBoost).toBeCloseTo(0.03, 5);
     });
   });
 
   // ===== consolidate =====
 
   describe('consolidate', () => {
-    it('should complete active trajectories', async () => {
-      // Create enough trajectories to meet the threshold (default 10)
-      for (let i = 0; i < 10; i++) {
-        mockNeuralSystem.beginTask.mockReturnValueOnce(`traj-${i}`);
+    async function seedTrajectories(count: number) {
+      for (let i = 0; i < count; i++) {
+        neural.beginTask.mockReturnValueOnce(`traj-${i}`);
         await bridge.onInsightRecorded(
           createTestInsight({ summary: `Insight ${i}` }),
           `entry-${i}`,
         );
       }
+    }
 
+    it('should complete active trajectories', async () => {
+      await seedTrajectories(10);
       const result = await bridge.consolidate();
-
       expect(result.trajectoriesCompleted).toBe(10);
       expect(result.patternsLearned).toBe(10);
       expect(result.durationMs).toBeGreaterThanOrEqual(0);
     });
 
     it('should return early when below threshold', async () => {
-      // Only create 2 trajectories, below default threshold of 10
-      mockNeuralSystem.beginTask.mockReturnValueOnce('traj-1');
-      await bridge.onInsightRecorded(createTestInsight(), 'entry-1');
-
+      await seedTrajectories(2);
       const result = await bridge.consolidate();
-
       expect(result.trajectoriesCompleted).toBe(0);
-      expect(mockNeuralSystem.completeTask).not.toHaveBeenCalled();
+      expect(neural.completeTask).not.toHaveBeenCalled();
     });
 
     it('should return early when neural unavailable', async () => {
-      neuralImportShouldFail = true;
-      const safeBridge = new LearningBridge(backend);
-
+      const safeBridge = new LearningBridge(backend, {
+        neuralLoader: createFailingNeuralLoader(),
+      });
       const result = await safeBridge.consolidate();
-
       expect(result.trajectoriesCompleted).toBe(0);
       safeBridge.destroy();
     });
 
     it('should clear completed trajectories', async () => {
-      for (let i = 0; i < 10; i++) {
-        mockNeuralSystem.beginTask.mockReturnValueOnce(`traj-${i}`);
-        await bridge.onInsightRecorded(
-          createTestInsight({ summary: `Insight ${i}` }),
-          `entry-${i}`,
-        );
-      }
-
+      await seedTrajectories(10);
       expect(bridge.getStats().activeTrajectories).toBe(10);
-
       await bridge.consolidate();
-
       expect(bridge.getStats().activeTrajectories).toBe(0);
     });
 
     it('should emit consolidation:completed event', async () => {
-      for (let i = 0; i < 10; i++) {
-        mockNeuralSystem.beginTask.mockReturnValueOnce(`traj-${i}`);
-        await bridge.onInsightRecorded(
-          createTestInsight({ summary: `Insight ${i}` }),
-          `entry-${i}`,
-        );
-      }
-
+      await seedTrajectories(10);
       const handler = vi.fn();
       bridge.on('consolidation:completed', handler);
 
@@ -479,52 +423,35 @@ describe('LearningBridge', () => {
     });
 
     it('should track stats correctly', async () => {
-      for (let i = 0; i < 10; i++) {
-        mockNeuralSystem.beginTask.mockReturnValueOnce(`traj-${i}`);
-        await bridge.onInsightRecorded(
-          createTestInsight({ summary: `Insight ${i}` }),
-          `entry-${i}`,
-        );
-      }
-
+      await seedTrajectories(10);
       await bridge.consolidate();
-
       const stats = bridge.getStats();
       expect(stats.completedTrajectories).toBe(10);
       expect(stats.totalConsolidations).toBe(1);
     });
 
     it('should handle completeTask failure for individual trajectories', async () => {
-      for (let i = 0; i < 10; i++) {
-        mockNeuralSystem.beginTask.mockReturnValueOnce(`traj-${i}`);
-        await bridge.onInsightRecorded(
-          createTestInsight({ summary: `Insight ${i}` }),
-          `entry-${i}`,
-        );
-      }
-
-      // Fail on 3rd trajectory
+      await seedTrajectories(10);
       let callCount = 0;
-      mockNeuralSystem.completeTask.mockImplementation(async () => {
+      neural.completeTask.mockImplementation(async () => {
         callCount++;
         if (callCount === 3) throw new Error('Neural failure');
       });
 
       const result = await bridge.consolidate();
-
-      // 9 should succeed, 1 fails
       expect(result.trajectoriesCompleted).toBe(9);
     });
 
     it('should respect custom consolidationThreshold', async () => {
-      const customBridge = new LearningBridge(backend, { consolidationThreshold: 2 });
-
-      mockNeuralSystem.beginTask.mockReturnValueOnce('traj-1').mockReturnValueOnce('traj-2');
+      const customBridge = new LearningBridge(backend, {
+        consolidationThreshold: 2,
+        neuralLoader: createNeuralLoader(neural),
+      });
+      neural.beginTask.mockReturnValueOnce('traj-1').mockReturnValueOnce('traj-2');
       await customBridge.onInsightRecorded(createTestInsight(), 'e-1');
-      await customBridge.onInsightRecorded(createTestInsight({ summary: 'Second' }), 'e-2');
+      await customBridge.onInsightRecorded(createTestInsight({ summary: 'S2' }), 'e-2');
 
       const result = await customBridge.consolidate();
-
       expect(result.trajectoriesCompleted).toBe(2);
       customBridge.destroy();
     });
@@ -536,32 +463,21 @@ describe('LearningBridge', () => {
     it('should decay entries older than 1 hour', async () => {
       const twoHoursAgo = Date.now() - 2 * 3_600_000;
       const entry = createTestEntry({
-        id: 'old-entry',
-        updatedAt: twoHoursAgo,
-        metadata: { confidence: 0.9 },
+        id: 'old-entry', updatedAt: twoHoursAgo, metadata: { confidence: 0.9 },
       });
       (backend.query as any).mockResolvedValueOnce([entry]);
 
       const count = await bridge.decayConfidences('learnings');
 
       expect(count).toBe(1);
-      expect(backend.update).toHaveBeenCalledWith('old-entry', {
-        metadata: expect.objectContaining({
-          confidence: expect.any(Number),
-        }),
-      });
-
       const newConf = (backend.update as any).mock.calls[0][1].metadata.confidence;
-      // 0.9 - (0.005 * 2) = 0.89
       expect(newConf).toBeCloseTo(0.89, 2);
     });
 
     it('should respect minConfidence floor', async () => {
-      const longAgo = Date.now() - 200 * 3_600_000; // 200 hours ago
+      const longAgo = Date.now() - 200 * 3_600_000;
       const entry = createTestEntry({
-        id: 'ancient-entry',
-        updatedAt: longAgo,
-        metadata: { confidence: 0.5 },
+        id: 'ancient', updatedAt: longAgo, metadata: { confidence: 0.5 },
       });
       (backend.query as any).mockResolvedValueOnce([entry]);
 
@@ -573,45 +489,37 @@ describe('LearningBridge', () => {
 
     it('should skip recent entries', async () => {
       const entry = createTestEntry({
-        id: 'recent-entry',
-        updatedAt: Date.now() - 30 * 60_000, // 30 minutes ago
-        metadata: { confidence: 0.8 },
+        id: 'recent', updatedAt: Date.now() - 30 * 60_000, metadata: { confidence: 0.8 },
       });
       (backend.query as any).mockResolvedValueOnce([entry]);
 
       const count = await bridge.decayConfidences('learnings');
-
       expect(count).toBe(0);
       expect(backend.update).not.toHaveBeenCalled();
     });
 
     it('should return count of decayed entries', async () => {
-      const twoHoursAgo = Date.now() - 2 * 3_600_000;
+      const old = Date.now() - 2 * 3_600_000;
       const entries = [
-        createTestEntry({ id: 'e1', updatedAt: twoHoursAgo, metadata: { confidence: 0.9 } }),
-        createTestEntry({ id: 'e2', updatedAt: twoHoursAgo, metadata: { confidence: 0.7 } }),
-        createTestEntry({ id: 'e3', updatedAt: Date.now(), metadata: { confidence: 0.5 } }), // recent
+        createTestEntry({ id: 'e1', updatedAt: old, metadata: { confidence: 0.9 } }),
+        createTestEntry({ id: 'e2', updatedAt: old, metadata: { confidence: 0.7 } }),
+        createTestEntry({ id: 'e3', updatedAt: Date.now(), metadata: { confidence: 0.5 } }),
       ];
       (backend.query as any).mockResolvedValueOnce(entries);
 
       const count = await bridge.decayConfidences('learnings');
-
       expect(count).toBe(2);
     });
 
     it('should handle empty namespace', async () => {
       (backend.query as any).mockResolvedValueOnce([]);
-
       const count = await bridge.decayConfidences('empty-ns');
-
       expect(count).toBe(0);
     });
 
     it('should handle query failure gracefully', async () => {
       (backend.query as any).mockRejectedValueOnce(new Error('DB error'));
-
       const count = await bridge.decayConfidences('broken');
-
       expect(count).toBe(0);
     });
 
@@ -622,7 +530,6 @@ describe('LearningBridge', () => {
       ]);
 
       await bridge.decayConfidences('learnings');
-
       expect(bridge.getStats().totalDecays).toBe(1);
     });
   });
@@ -631,7 +538,7 @@ describe('LearningBridge', () => {
 
   describe('findSimilarPatterns', () => {
     it('should return patterns when neural available', async () => {
-      mockNeuralSystem.findPatterns.mockResolvedValueOnce([
+      neural.findPatterns.mockResolvedValueOnce([
         { content: 'Pattern A', similarity: 0.9, category: 'debugging', confidence: 0.8 },
         { content: 'Pattern B', similarity: 0.7, category: 'performance', confidence: 0.6 },
       ]);
@@ -645,17 +552,16 @@ describe('LearningBridge', () => {
     });
 
     it('should return empty when neural unavailable', async () => {
-      neuralImportShouldFail = true;
-      const safeBridge = new LearningBridge(backend);
-
+      const safeBridge = new LearningBridge(backend, {
+        neuralLoader: createFailingNeuralLoader(),
+      });
       const patterns = await safeBridge.findSimilarPatterns('test');
-
       expect(patterns).toHaveLength(0);
       safeBridge.destroy();
     });
 
     it('should map results to PatternMatch format', async () => {
-      mockNeuralSystem.findPatterns.mockResolvedValueOnce([
+      neural.findPatterns.mockResolvedValueOnce([
         { data: 'Raw data', score: 0.85, reward: 0.7 },
       ]);
 
@@ -671,25 +577,18 @@ describe('LearningBridge', () => {
     it('should pass k parameter to neural', async () => {
       await bridge.findSimilarPatterns('test', 3);
 
-      expect(mockNeuralSystem.findPatterns).toHaveBeenCalledWith(
-        expect.any(Float32Array),
-        3,
-      );
+      expect(neural.findPatterns).toHaveBeenCalledWith(expect.any(Float32Array), 3);
     });
 
     it('should handle findPatterns throwing', async () => {
-      mockNeuralSystem.findPatterns.mockRejectedValueOnce(new Error('Neural error'));
-
+      neural.findPatterns.mockRejectedValueOnce(new Error('Neural error'));
       const patterns = await bridge.findSimilarPatterns('test');
-
       expect(patterns).toHaveLength(0);
     });
 
     it('should handle non-array result from findPatterns', async () => {
-      mockNeuralSystem.findPatterns.mockResolvedValueOnce(null);
-
+      neural.findPatterns.mockResolvedValueOnce(null);
       const patterns = await bridge.findSimilarPatterns('test');
-
       expect(patterns).toHaveLength(0);
     });
   });
@@ -699,7 +598,6 @@ describe('LearningBridge', () => {
   describe('getStats', () => {
     it('should return correct initial stats', () => {
       const stats = bridge.getStats();
-
       expect(stats.totalTrajectories).toBe(0);
       expect(stats.completedTrajectories).toBe(0);
       expect(stats.activeTrajectories).toBe(0);
@@ -709,7 +607,6 @@ describe('LearningBridge', () => {
     });
 
     it('should reflect operations in stats', async () => {
-      // Record an insight to get a trajectory
       await bridge.onInsightRecorded(createTestInsight(), 'entry-1');
 
       let stats = bridge.getStats();
@@ -717,7 +614,6 @@ describe('LearningBridge', () => {
       expect(stats.activeTrajectories).toBe(1);
       expect(stats.neuralAvailable).toBe(true);
 
-      // Access to get boost stats
       const entry = createTestEntry({ metadata: { confidence: 0.5 } });
       (backend.get as any).mockResolvedValueOnce(entry);
       await bridge.onInsightAccessed('entry-1');
@@ -738,58 +634,44 @@ describe('LearningBridge', () => {
   describe('destroy', () => {
     it('should set destroyed state', async () => {
       bridge.destroy();
-
-      // Subsequent operations should no-op
       await bridge.onInsightRecorded(createTestInsight(), 'entry-1');
-      expect(mockNeuralSystem.beginTask).not.toHaveBeenCalled();
+      expect(neural.beginTask).not.toHaveBeenCalled();
     });
 
     it('should clear trajectories', async () => {
       await bridge.onInsightRecorded(createTestInsight(), 'entry-1');
       expect(bridge.getStats().activeTrajectories).toBe(1);
-
       bridge.destroy();
-
       expect(bridge.getStats().activeTrajectories).toBe(0);
     });
 
     it('should make subsequent onInsightRecorded no-op', async () => {
       bridge.destroy();
-
       await bridge.onInsightRecorded(createTestInsight(), 'entry-1');
-
       expect(bridge.getStats().totalTrajectories).toBe(0);
     });
 
     it('should make subsequent onInsightAccessed no-op', async () => {
       bridge.destroy();
-
       await bridge.onInsightAccessed('entry-1');
-
       expect(backend.get).not.toHaveBeenCalled();
     });
 
     it('should make subsequent consolidate no-op', async () => {
       bridge.destroy();
-
       const result = await bridge.consolidate();
-
       expect(result.trajectoriesCompleted).toBe(0);
     });
 
     it('should make subsequent decayConfidences no-op', async () => {
       bridge.destroy();
-
       const count = await bridge.decayConfidences('learnings');
-
       expect(count).toBe(0);
     });
 
     it('should make subsequent findSimilarPatterns no-op', async () => {
       bridge.destroy();
-
       const patterns = await bridge.findSimilarPatterns('test');
-
       expect(patterns).toHaveLength(0);
     });
 
@@ -800,15 +682,13 @@ describe('LearningBridge', () => {
 
       bridge.destroy();
 
-      expect(mockNeuralSystem.cleanup).toHaveBeenCalled();
+      expect(neural.cleanup).toHaveBeenCalled();
     });
 
     it('should remove all event listeners', () => {
       bridge.on('insight:learning-started', () => {});
       bridge.on('consolidation:completed', () => {});
-
       bridge.destroy();
-
       expect(bridge.listenerCount('insight:learning-started')).toBe(0);
       expect(bridge.listenerCount('consolidation:completed')).toBe(0);
     });
@@ -817,25 +697,27 @@ describe('LearningBridge', () => {
   // ===== Neural init caching =====
 
   describe('neural initialization', () => {
-    it('should only attempt neural import once', async () => {
-      await bridge.onInsightRecorded(createTestInsight(), 'entry-1');
-      await bridge.onInsightRecorded(createTestInsight({ summary: 'Second' }), 'entry-2');
+    it('should only attempt neural load once', async () => {
+      const loaderFn = vi.fn().mockResolvedValue(neural);
+      const b = new LearningBridge(backend, { neuralLoader: loaderFn });
 
-      // NeuralLearningSystem constructor should only be called once
-      const neuralMod = await import('@claude-flow/neural');
-      expect(neuralMod.NeuralLearningSystem).toHaveBeenCalledTimes(1);
+      await b.onInsightRecorded(createTestInsight(), 'entry-1');
+      await b.onInsightRecorded(createTestInsight({ summary: 'Second' }), 'entry-2');
+
+      expect(loaderFn).toHaveBeenCalledTimes(1);
+      b.destroy();
     });
 
     it('should cache failed init and not retry', async () => {
-      neuralImportShouldFail = true;
-      const safeBridge = new LearningBridge(backend);
+      const loaderFn = vi.fn().mockRejectedValue(new Error('fail'));
+      const b = new LearningBridge(backend, { neuralLoader: loaderFn });
 
-      await safeBridge.onInsightRecorded(createTestInsight(), 'entry-1');
-      await safeBridge.onInsightRecorded(createTestInsight(), 'entry-2');
+      await b.onInsightRecorded(createTestInsight(), 'entry-1');
+      await b.onInsightRecorded(createTestInsight(), 'entry-2');
 
-      // Both calls should complete without error
-      expect(safeBridge.getStats().neuralAvailable).toBe(false);
-      safeBridge.destroy();
+      expect(loaderFn).toHaveBeenCalledTimes(1);
+      expect(b.getStats().neuralAvailable).toBe(false);
+      b.destroy();
     });
   });
 });
