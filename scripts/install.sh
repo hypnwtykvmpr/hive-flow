@@ -115,7 +115,7 @@ spinner() {
 print_banner() {
     echo ""
     echo -e "${CYAN}╔═══════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${CYAN}║${NC}  ${BOLD}🌊 Ruflo${NC} - Enterprise AI Agent Orchestration        ${CYAN}║${NC}"
+    echo -e "${CYAN}║${NC}  ${BOLD}Claude Flow${NC} - AI Agent Orchestration for Claude Code ${CYAN}║${NC}"
     echo -e "${CYAN}╚═══════════════════════════════════════════════════════════╝${NC}"
     echo ""
 }
