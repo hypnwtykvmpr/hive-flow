@@ -659,6 +659,7 @@ const wizardCommand: Command = {
           { setting: 'Memory Backend', value: options.runtime.memoryBackend },
           { setting: 'HNSW Indexing', value: options.runtime.enableHNSW ? 'Enabled' : 'Disabled' },
           { setting: 'Neural Learning', value: options.runtime.enableNeural ? 'Enabled' : 'Disabled' },
+          { setting: 'Self-Learning', value: options.runtime.enableLearningBridge ? 'LearningBridge + Graph + Scopes' : 'Disabled' },
           { setting: 'Embeddings', value: enableEmbeddings ? `${embeddingModel} (hyperbolic)` : 'Disabled' },
           { setting: 'Skills', value: `${result.summary.skillsCount} installed` },
           { setting: 'Commands', value: `${result.summary.commandsCount} installed` },
