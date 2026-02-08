@@ -278,6 +278,11 @@ export class AutoMemoryBridge extends EventEmitter {
       await this.writeInsightToFiles(insight);
     }
 
+    // ADR-049: Notify learning bridge
+    if (this.learningBridge) {
+      await this.learningBridge.onInsightRecorded(insight, key);
+    }
+
     this.emit('insight:recorded', insight);
   }
 
