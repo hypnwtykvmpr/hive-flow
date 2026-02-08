@@ -549,9 +549,12 @@ export async function executeUpgrade(targetDir: string, upgradeSettings = false)
           result.updated.push('.claude/settings.json');
           result.settingsUpdated = [
             'env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS',
+            'hooks.SessionStart (auto-memory import)',
+            'hooks.SessionEnd (auto-memory sync)',
             'hooks.TeammateIdle',
             'hooks.TaskCompleted',
             'claudeFlow.agentTeams',
+            'claudeFlow.memory (learningBridge, memoryGraph, agentScopes)',
           ];
         } catch (settingsError) {
           result.errors.push(`Settings merge failed: ${settingsError instanceof Error ? settingsError.message : String(settingsError)}`);
