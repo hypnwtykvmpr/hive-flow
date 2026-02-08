@@ -725,3 +725,28 @@ export const PERFORMANCE_TARGETS = {
   /** Maximum search improvement over brute force */
   MAX_SEARCH_IMPROVEMENT: 12500, // 12,500x
 } as const;
+
+// ===== Re-exports from ADR-049 modules =====
+
+export type {
+  LearningBridgeConfig,
+  LearningStats,
+  ConsolidateResult,
+  PatternMatch,
+} from './learning-bridge.js';
+
+export type {
+  MemoryGraphConfig,
+  GraphNode,
+  GraphEdge,
+  GraphStats,
+  RankedResult,
+  EdgeType,
+} from './memory-graph.js';
+
+export type {
+  AgentMemoryScope,
+  AgentScopedConfig,
+  TransferOptions,
+  TransferResult,
+} from './agent-memory-scope.js';
