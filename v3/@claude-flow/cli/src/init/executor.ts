@@ -281,9 +281,56 @@ function mergeSettingsForUpgrade(existing: Record<string, unknown>): Record<stri
     CLAUDE_FLOW_HOOKS_ENABLED: existingEnv.CLAUDE_FLOW_HOOKS_ENABLED || 'true',
   };
 
-  // 2. Merge hooks (preserve existing, add new Agent Teams hooks)
+  // 2. Merge hooks (preserve existing, add new Agent Teams + auto-memory hooks)
   const existingHooks = (existing.hooks as Record<string, unknown[]>) || {};
   merged.hooks = { ...existingHooks };
+
+  // Platform-specific auto-memory hook commands
+  const autoMemoryImportCmd = isWindows
+    ? 'node .claude/helpers/auto-memory-hook.mjs import 2>$null; exit 0'
+    : 'node .claude/helpers/auto-memory-hook.mjs import 2>/dev/null || true';
+  const autoMemorySyncCmd = isWindows
+    ? 'node .claude/helpers/auto-memory-hook.mjs sync 2>$null; exit 0'
+    : 'node .claude/helpers/auto-memory-hook.mjs sync 2>/dev/null || true';
+
+  // Add auto-memory import to SessionStart (if not already present)
+  const sessionStartHooks = existingHooks.SessionStart as Array<{ hooks?: Array<{ command?: string }> }> | undefined;
+  const hasAutoMemoryImport = sessionStartHooks?.some(group =>
+    group.hooks?.some(h => h.command?.includes('auto-memory-hook')));
+  if (!hasAutoMemoryImport) {
+    const startHooks = merged.hooks as Record<string, unknown[]>;
+    if (!startHooks.SessionStart) {
+      startHooks.SessionStart = [{ hooks: [] }];
+    }
+    const startGroup = startHooks.SessionStart[0] as { hooks: unknown[] };
+    if (!startGroup.hooks) startGroup.hooks = [];
+    startGroup.hooks.push({
+      type: 'command',
+      command: autoMemoryImportCmd,
+      timeout: 6000,
+      continueOnError: true,
+    });
+  }
+
+  // Add auto-memory sync to SessionEnd (if not already present)
+  const sessionEndHooks = existingHooks.SessionEnd as Array<{ hooks?: Array<{ command?: string }> }> | undefined;
+  const hasAutoMemorySync = sessionEndHooks?.some(group =>
+    group.hooks?.some(h => h.command?.includes('auto-memory-hook')));
+  if (!hasAutoMemorySync) {
+    const endHooks = merged.hooks as Record<string, unknown[]>;
+    if (!endHooks.SessionEnd) {
+      endHooks.SessionEnd = [{ hooks: [] }];
+    }
+    const endGroup = endHooks.SessionEnd[0] as { hooks: unknown[] };
+    if (!endGroup.hooks) endGroup.hooks = [];
+    // Insert at beginning so sync runs before other cleanup
+    endGroup.hooks.unshift({
+      type: 'command',
+      command: autoMemorySyncCmd,
+      timeout: 8000,
+      continueOnError: true,
+    });
+  }
 
   // Add TeammateIdle hook if not present
   if (!existingHooks.TeammateIdle) {
@@ -317,8 +364,9 @@ function mergeSettingsForUpgrade(existing: Record<string, unknown>): Record<stri
     ];
   }
 
-  // 3. Merge claudeFlow settings (preserve existing, add agentTeams)
+  // 3. Merge claudeFlow settings (preserve existing, add agentTeams + memory)
   const existingClaudeFlow = (existing.claudeFlow as Record<string, unknown>) || {};
+  const existingMemory = (existingClaudeFlow.memory as Record<string, unknown>) || {};
   merged.claudeFlow = {
     ...existingClaudeFlow,
     version: existingClaudeFlow.version || '3.0.0',
@@ -338,6 +386,12 @@ function mergeSettingsForUpgrade(existing: Record<string, unknown>): Record<stri
         teammateIdle: { enabled: true, autoAssign: true, checkTaskList: true },
         taskCompleted: { enabled: true, trainPatterns: true, notifyLead: true },
       },
+    },
+    memory: {
+      ...existingMemory,
+      learningBridge: existingMemory.learningBridge ?? { enabled: true },
+      memoryGraph: existingMemory.memoryGraph ?? { enabled: true },
+      agentScopes: existingMemory.agentScopes ?? { enabled: true },
     },
   };
 
