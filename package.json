@@ -1,5 +1,5 @@
 {
-  "name": "claude-flow",
+  "name": "ruvflow",
   "version": "3.1.0-alpha.14",
   "description": "Enterprise AI agent orchestration for Claude Code - Deploy 60+ specialized agents in coordinated swarms with self-learning, fault-tolerant consensus, vector memory, and MCP integration",
   "main": "dist/index.js",
