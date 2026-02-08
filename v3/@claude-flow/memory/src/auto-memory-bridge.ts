@@ -296,6 +296,11 @@ export class AutoMemoryBridge extends EventEmitter {
     const updatedCategories = new Set<string>();
 
     try {
+      // ADR-049: Consolidate learning trajectories before syncing
+      if (this.learningBridge) {
+        await this.learningBridge.consolidate();
+      }
+
       // Ensure directory exists
       await this.ensureMemoryDir();
 
