@@ -24,15 +24,16 @@ export function generateSettings(options: InitOptions): object {
 
   // Add permissions
   settings.permissions = {
-    // Auto-allow claude-flow MCP tools
-    // Note: Use ":*" for prefix matching (not just "*")
     allow: [
-      'Bash(npx claude-flow:*)',
-      'Bash(npx @claude-flow/cli:*)',
+      'Bash(npx @claude-flow*)',
+      'Bash(npx claude-flow*)',
+      'Bash(node .claude/*)',
       'mcp__claude-flow__:*',
     ],
-    // Auto-deny dangerous operations
-    deny: [],
+    deny: [
+      'Read(./.env)',
+      'Read(./.env.*)',
+    ],
   };
 
   // Add claude-flow attribution for git commits and PRs
