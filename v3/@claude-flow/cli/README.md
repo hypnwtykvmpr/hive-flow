@@ -616,6 +616,13 @@ codex mcp add ruflo -- npx ruflo mcp start
 4. REMEMBER: memory_store(key, value, namespace="patterns") → Save for future
 ```
 
+The **Intelligence Loop** (ADR-050) automates this cycle through hooks. Each session automatically:
+- Builds a knowledge graph from memory entries (PageRank + Jaccard similarity)
+- Injects ranked context into every route decision
+- Tracks edit patterns and generates new insights
+- Boosts confidence for useful patterns, decays unused ones
+- Saves snapshots so you can track improvement with `node .claude/helpers/hook-handler.cjs stats`
+
 ### MCP Tools for Learning
 
 | Tool | Purpose | When to Use |
@@ -2886,6 +2893,101 @@ Performance: <1ms (352x faster than LLM)
 Cost: $0
 ```
 
+### Intelligence Loop (ADR-050)
+
+The intelligence loop wires PageRank-ranked memory into the hook system. Every session builds a knowledge graph that improves over time:
+
+```
+SessionStart:
+  session-restore  → intelligence.init()
+    → Read MEMORY.md / auto-memory-store.json
+    → Build graph (nodes + similarity/temporal edges)
+    → Compute PageRank
+    → "[INTELLIGENCE] Loaded 13 patterns, 12 edges"
+
+UserPrompt:
+  route            → intelligence.getContext(prompt)
+    → Jaccard-match prompt against pre-ranked entries
+    → Inject top-5 patterns into Claude's context:
+
+    [INTELLIGENCE] Relevant patterns for this task:
+      * (0.95) HNSW gives 150x-12,500x speedup [rank #1, 12x accessed]
+      * (0.88) London School TDD preferred [rank #3, 8x accessed]
+
+PostEdit:
+  post-edit        → intelligence.recordEdit(file)
+    → Append to pending-insights.jsonl (<2ms)
+
+SessionEnd:
+  session-end      → intelligence.consolidate()
+    → Process pending insights (3+ edits → new entry)
+    → Confidence boost for accessed patterns (+0.03)
+    → Confidence decay for unused patterns (-0.005/day)
+    → Recompute PageRank, rebuild edges
+    → Save snapshot for trend tracking
+```
+
+**Measuring improvement:**
+
+```bash
+# Human-readable diagnostics
+node .claude/helpers/hook-handler.cjs stats
+
+# JSON output for scripting
+node .claude/helpers/hook-handler.cjs stats --json
+
+# Or via intelligence.cjs directly
+node .claude/helpers/intelligence.cjs stats
+```
+
+The stats command shows:
+
+| Section | What It Tells You |
+|---------|-------------------|
+| **Graph** | Node/edge count, density % |
+| **Confidence** | Min/max/mean/median across all patterns |
+| **Access** | Total accesses, patterns used vs never accessed |
+| **PageRank** | Sum (~1.0), highest-ranked node |
+| **Top Patterns** | Top 10 by composite score with access counts |
+| **Last Delta** | Changes since previous session (confidence shift, access delta) |
+| **Trend** | Over all sessions: IMPROVING / DECLINING / STABLE |
+
+**Example output:**
+```
++--------------------------------------------------------------+
+|  Intelligence Diagnostics (ADR-050)                          |
++--------------------------------------------------------------+
+
+  Graph
+    Nodes:    9
+    Edges:    8 (7 temporal, 1 similar)
+    Density:  22.2%
+
+  Confidence
+    Min:      0.490    Max:  0.600
+    Mean:     0.556    Median: 0.580
+
+  Access
+    Total accesses:     11
+    Patterns used:      6/9
+    Never accessed:     3
+
+  Top Patterns (by composite score)
+    #1  HNSW gives 150x-12,500x speedup
+         conf=0.600  pr=0.2099  score=0.3659  accessed=2x
+    #2  London School TDD preferred
+         conf=0.600  pr=0.1995  score=0.3597  accessed=2x
+
+  Last Delta (5m ago)
+    Confidence: +0.0300
+    Accesses:   +6
+
+  Trend (3 snapshots)
+    Confidence drift:  +0.0422
+    Direction:         IMPROVING
++--------------------------------------------------------------+
+```
+
 ### All 27 Hooks by Category
 
 #### 🔧 Tool Lifecycle Hooks (6 hooks)
@@ -2954,7 +3056,7 @@ npx ruflo@v3alpha hooks session-end --export-metrics --persist-patterns
 | `trajectory-end` | RL | Finish recording, trigger learning |
 | `pattern-store` | Memory | Store a pattern with HNSW indexing |
 | `pattern-search` | Memory | Find similar patterns (150x faster) |
-| `stats` | Analytics | Learning statistics and metrics |
+| `stats` | Analytics | Intelligence diagnostics, confidence trends, improvement tracking |
 | `attention` | Focus | Compute attention-weighted similarity |
 
 ```bash
@@ -2966,6 +3068,10 @@ npx ruflo@v3alpha hooks intelligence trajectory-step --action "created token ser
 
 # End trajectory and trigger learning
 npx ruflo@v3alpha hooks intelligence trajectory-end --success true
+
+# View intelligence diagnostics and improvement trends (ADR-050)
+node .claude/helpers/hook-handler.cjs stats
+node .claude/helpers/intelligence.cjs stats --json
 ```
 
 ### 12 Background Workers (Auto-Triggered)
@@ -3033,7 +3139,7 @@ npx ruflo@v3alpha hooks model-route --task "design distributed consensus system"
 # MOST COMMON HOOKS
 # ══════════════════════════════════════════════════════════════════
 
-# Route task to best agent
+# Route task to best agent (with intelligence context injection)
 npx ruflo@v3alpha hooks route "<task>" --include-explanation
 
 # Start/end session with learning
@@ -3043,6 +3149,11 @@ npx ruflo@v3alpha hooks session-end --persist-patterns
 # View what the system has learned
 npx ruflo@v3alpha hooks metrics
 npx ruflo@v3alpha hooks intelligence stats
+
+# Intelligence diagnostics — see if intelligence is improving
+node .claude/helpers/hook-handler.cjs stats          # Human-readable
+node .claude/helpers/hook-handler.cjs stats --json   # JSON for scripting
+node .claude/helpers/intelligence.cjs stats           # Direct access
 
 # Bootstrap on new project
 npx ruflo@v3alpha hooks pretrain --depth deep

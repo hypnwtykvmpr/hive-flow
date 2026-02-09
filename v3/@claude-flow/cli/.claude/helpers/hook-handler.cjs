@@ -120,7 +120,7 @@ const handlers = {
   'post-edit': () => {
     // Record edit for session metrics
     if (session && session.metric) {
-      session.metric('edits');
+      try { session.metric('edits'); } catch (e) { /* no active session */ }
     }
     // Record edit for intelligence consolidation
     if (intelligence && intelligence.recordEdit) {
