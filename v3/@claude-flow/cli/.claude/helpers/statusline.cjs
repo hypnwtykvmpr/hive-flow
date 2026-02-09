@@ -346,10 +346,22 @@ function getSystemMetrics() {
   // Get learning stats for intelligence %
   const learning = getLearningStats();
 
-  // Intelligence % based on learned patterns (0 patterns = 0%, 1000+ = 100%)
-  const intelligencePct = Math.min(100, Math.floor((learning.patterns / 10) * 1));
+  // Intelligence % from REAL intelligence loop data (ADR-050)
+  // Composite: 40% confidence mean + 30% access ratio + 30% pattern density
+  let intelligencePct = 0;
+  if (learning.confidenceMean > 0 || (learning.patterns > 0 && learning.accessedCount > 0)) {
+    const confScore = Math.min(100, Math.floor(learning.confidenceMean * 100));
+    const accessRatio = learning.patterns > 0 ? (learning.accessedCount / learning.patterns) : 0;
+    const accessScore = Math.min(100, Math.floor(accessRatio * 100));
+    const densityScore = Math.min(100, Math.floor(learning.patterns / 5));
+    intelligencePct = Math.floor(confScore * 0.4 + accessScore * 0.3 + densityScore * 0.3);
+  }
+  // Fallback: legacy pattern count
+  if (intelligencePct === 0 && learning.patterns > 0) {
+    intelligencePct = Math.min(100, Math.floor(learning.patterns / 10));
+  }
 
-  // Context % based on session history (0 sessions = 0%, grows with usage)
+  // Context % based on session history
   const contextPct = Math.min(100, Math.floor(learning.sessions * 5));
 
   // Count active sub-agents from process list
