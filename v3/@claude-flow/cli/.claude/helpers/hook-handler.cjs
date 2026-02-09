@@ -139,17 +139,7 @@ const handlers = {
       if (!existing) {
         session.start && session.start();
       }
-    }
-    // Initialize intelligence graph after session restore
-    if (intelligence && intelligence.init) {
-      try {
-        const result = intelligence.init();
-        if (result && result.nodes > 0) {
-          console.log(`[INTELLIGENCE] Loaded ${result.nodes} patterns, ${result.edges} edges`);
-        }
-      } catch (e) { /* non-fatal */ }
-    }
-    if (!session) {
+    } else {
       // Minimal session restore output
       const sessionId = `session-${Date.now()}`;
       console.log(`[INFO] Restoring session: %SESSION_ID%`);
@@ -165,6 +155,15 @@ const handlers = {
       console.log('| Agents         |     0 |');
       console.log('| Memory Entries |     0 |');
       console.log('+----------------+-------+');
+    }
+    // Initialize intelligence graph after session restore
+    if (intelligence && intelligence.init) {
+      try {
+        const result = intelligence.init();
+        if (result && result.nodes > 0) {
+          console.log(`[INTELLIGENCE] Loaded ${result.nodes} patterns, ${result.edges} edges`);
+        }
+      } catch (e) { /* non-fatal */ }
     }
   },
 
