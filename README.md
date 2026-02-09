@@ -3132,7 +3132,7 @@ npx ruflo@v3alpha hooks model-route --task "design distributed consensus system"
 # MOST COMMON HOOKS
 # ══════════════════════════════════════════════════════════════════
 
-# Route task to best agent
+# Route task to best agent (with intelligence context injection)
 npx ruflo@v3alpha hooks route "<task>" --include-explanation
 
 # Start/end session with learning
@@ -3142,6 +3142,11 @@ npx ruflo@v3alpha hooks session-end --persist-patterns
 # View what the system has learned
 npx ruflo@v3alpha hooks metrics
 npx ruflo@v3alpha hooks intelligence stats
+
+# Intelligence diagnostics — see if intelligence is improving
+node .claude/helpers/hook-handler.cjs stats          # Human-readable
+node .claude/helpers/hook-handler.cjs stats --json   # JSON for scripting
+node .claude/helpers/intelligence.cjs stats           # Direct access
 
 # Bootstrap on new project
 npx ruflo@v3alpha hooks pretrain --depth deep
