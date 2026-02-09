@@ -186,7 +186,7 @@ const handlers = {
 
   'pre-task': () => {
     if (session && session.metric) {
-      session.metric('tasks');
+      try { session.metric('tasks'); } catch (e) { /* no active session */ }
     }
     // Route the task if router is available
     if (router && router.routeTask && prompt) {
