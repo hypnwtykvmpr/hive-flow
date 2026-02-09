@@ -344,14 +344,18 @@ function getContext(prompt) {
   scored.sort((a, b) => b.score - a.score);
   const topEntries = scored.slice(0, TOP_K);
 
-  // Store matched IDs in session state for feedback
+  // Boost previously matched patterns (implicit success: user continued working)
+  const prevMatched = sessionGet('lastMatchedPatterns');
+
+  // Store NEW matched IDs in session state for feedback
   const matchedIds = topEntries.map(e => e.id);
   sessionSet('lastMatchedPatterns', matchedIds);
 
-  // Boost previously matched patterns (implicit success: user continued working)
-  const prevMatched = sessionGet('lastMatchedPatterns');
+  // Only boost previous if they differ from current (avoid double-boosting)
   if (prevMatched && Array.isArray(prevMatched)) {
-    boostConfidence(prevMatched, 0.03);
+    const newSet = new Set(matchedIds);
+    const toBoost = prevMatched.filter(id => !newSet.has(id));
+    if (toBoost.length > 0) boostConfidence(toBoost, 0.03);
   }
 
   // Format output
