@@ -122,6 +122,13 @@ const handlers = {
     if (session && session.metric) {
       session.metric('edits');
     }
+    // Record edit for intelligence consolidation
+    if (intelligence && intelligence.recordEdit) {
+      try {
+        const file = process.env.TOOL_INPUT_file_path || args[0] || '';
+        intelligence.recordEdit(file);
+      } catch (e) { /* non-fatal */ }
+    }
     console.log('[OK] Edit recorded');
   },
 
