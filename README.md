@@ -616,6 +616,13 @@ codex mcp add ruflo -- npx ruflo mcp start
 4. REMEMBER: memory_store(key, value, namespace="patterns") → Save for future
 ```
 
+The **Intelligence Loop** (ADR-050) automates this cycle through hooks. Each session automatically:
+- Builds a knowledge graph from memory entries (PageRank + Jaccard similarity)
+- Injects ranked context into every route decision
+- Tracks edit patterns and generates new insights
+- Boosts confidence for useful patterns, decays unused ones
+- Saves snapshots so you can track improvement with `node .claude/helpers/hook-handler.cjs stats`
+
 ### MCP Tools for Learning
 
 | Tool | Purpose | When to Use |
