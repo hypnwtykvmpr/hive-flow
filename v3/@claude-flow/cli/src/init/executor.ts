@@ -917,38 +917,45 @@ async function copyAgents(
 }
 
 /**
- * Find source helpers directory
+ * Find source helpers directory.
+ * Validates that the directory contains hook-handler.cjs to avoid
+ * returning the target directory or an incomplete source.
  */
 function findSourceHelpersDir(sourceBaseDir?: string): string | null {
   const possiblePaths: string[] = [];
+  const SENTINEL_FILE = 'hook-handler.cjs'; // Must exist in valid source
 
   // If explicit source base directory is provided, check it first
   if (sourceBaseDir) {
     possiblePaths.push(path.join(sourceBaseDir, '.claude', 'helpers'));
   }
 
-  // IMPORTANT: Check the package's own .claude/helpers directory
-  // This is the primary path when running as an npm package
-  // __dirname is typically /path/to/node_modules/@claude-flow/cli/dist/src/init
-  // We need to go up 3 levels to reach the package root (dist/src/init -> dist/src -> dist -> root)
-  const packageRoot = path.resolve(__dirname, '..', '..', '..');
-  const packageHelpers = path.join(packageRoot, '.claude', 'helpers');
-  if (fs.existsSync(packageHelpers)) {
-    possiblePaths.unshift(packageHelpers); // Add to beginning (highest priority)
+  // Strategy 1: require.resolve to find package root (most reliable for npx)
+  try {
+    // Find our own package.json via require.resolve
+    const pkgJsonPath = require.resolve('@claude-flow/cli/package.json');
+    const pkgRoot = path.dirname(pkgJsonPath);
+    possiblePaths.push(path.join(pkgRoot, '.claude', 'helpers'));
+  } catch {
+    // Not installed as a package — skip
   }
 
-  // From dist/src/init -> go up to project root
+  // Strategy 2: __dirname-based (dist/src/init -> package root)
+  const packageRoot = path.resolve(__dirname, '..', '..', '..');
+  const packageHelpers = path.join(packageRoot, '.claude', 'helpers');
+  possiblePaths.push(packageHelpers);
+
+  // Strategy 3: Walk up from __dirname looking for package root
   let currentDir = __dirname;
   for (let i = 0; i < 10; i++) {
     const parentDir = path.dirname(currentDir);
+    if (parentDir === currentDir) break; // hit filesystem root
     const helpersPath = path.join(parentDir, '.claude', 'helpers');
-    if (fs.existsSync(helpersPath)) {
-      possiblePaths.push(helpersPath);
-    }
+    possiblePaths.push(helpersPath);
     currentDir = parentDir;
   }
 
-  // Also check relative to process.cwd() for development
+  // Strategy 4: Check cwd-relative paths (for local dev)
   const cwdBased = [
     path.join(process.cwd(), '.claude', 'helpers'),
     path.join(process.cwd(), '..', '.claude', 'helpers'),
@@ -956,8 +963,9 @@ function findSourceHelpersDir(sourceBaseDir?: string): string | null {
   ];
   possiblePaths.push(...cwdBased);
 
+  // Return first path that exists AND contains the sentinel file
   for (const p of possiblePaths) {
-    if (fs.existsSync(p)) {
+    if (fs.existsSync(p) && fs.existsSync(path.join(p, SENTINEL_FILE))) {
       return p;
     }
   }
