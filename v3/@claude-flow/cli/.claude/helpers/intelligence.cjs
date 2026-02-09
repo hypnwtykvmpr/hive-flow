@@ -891,3 +891,26 @@ function stats(outputJson) {
 }
 
 module.exports = { init, getContext, recordEdit, feedback, consolidate, stats };
+
+// ── CLI entrypoint ──────────────────────────────────────────────────────────
+if (require.main === module) {
+  const cmd = process.argv[2];
+  const jsonFlag = process.argv.includes('--json');
+
+  const cmds = {
+    init: () => { const r = init(); console.log(JSON.stringify(r)); },
+    stats: () => { stats(jsonFlag); },
+    consolidate: () => { const r = consolidate(); console.log(JSON.stringify(r)); },
+  };
+
+  if (cmd && cmds[cmd]) {
+    cmds[cmd]();
+  } else {
+    console.log('Usage: intelligence.cjs <stats|init|consolidate> [--json]');
+    console.log('');
+    console.log('  stats         Show intelligence diagnostics and trends');
+    console.log('  stats --json  Output as JSON for programmatic use');
+    console.log('  init          Build graph and rank entries');
+    console.log('  consolidate   Process pending insights and recompute');
+  }
+}
