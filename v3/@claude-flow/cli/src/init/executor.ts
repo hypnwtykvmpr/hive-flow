@@ -450,6 +450,22 @@ export async function executeUpgrade(targetDir: string, upgradeSettings = false)
           try { fs.chmodSync(targetPath, '755'); } catch {}
         }
       }
+    } else {
+      // Source not found (npx with broken paths) — use generated fallbacks
+      const generatedCritical: Record<string, string> = {
+        'hook-handler.cjs': generateHookHandler(),
+        'intelligence.cjs': generateIntelligenceStub(),
+      };
+      for (const [helperName, content] of Object.entries(generatedCritical)) {
+        const targetPath = path.join(targetDir, '.claude', 'helpers', helperName);
+        if (fs.existsSync(targetPath)) {
+          result.updated.push(`.claude/helpers/${helperName}`);
+        } else {
+          result.created.push(`.claude/helpers/${helperName}`);
+        }
+        fs.writeFileSync(targetPath, content, 'utf-8');
+        try { fs.chmodSync(targetPath, '755'); } catch {}
+      }
     }
 
     // 1. ALWAYS update statusline helper (force overwrite)
