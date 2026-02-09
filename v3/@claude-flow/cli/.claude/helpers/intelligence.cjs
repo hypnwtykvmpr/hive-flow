@@ -647,4 +647,242 @@ function consolidate() {
   };
 }
 
-module.exports = { init, getContext, recordEdit, feedback, consolidate };
+// ── Snapshot for delta tracking ─────────────────────────────────────────────
+
+const SNAPSHOT_PATH = path.join(DATA_DIR, 'intelligence-snapshot.json');
+
+function saveSnapshot(graph, ranked) {
+  const snap = {
+    timestamp: Date.now(),
+    nodes: graph ? Object.keys(graph.nodes || {}).length : 0,
+    edges: graph ? (graph.edges || []).length : 0,
+    pageRankSum: 0,
+    confidences: [],
+    accessCounts: [],
+    topPatterns: [],
+  };
+
+  if (graph && graph.pageRanks) {
+    for (const v of Object.values(graph.pageRanks)) snap.pageRankSum += v;
+  }
+  if (graph && graph.nodes) {
+    for (const n of Object.values(graph.nodes)) {
+      snap.confidences.push(n.confidence || 0.5);
+      snap.accessCounts.push(n.accessCount || 0);
+    }
+  }
+  if (ranked && ranked.entries) {
+    snap.topPatterns = ranked.entries.slice(0, 10).map(e => ({
+      id: e.id,
+      summary: (e.summary || '').slice(0, 60),
+      confidence: e.confidence || 0.5,
+      pageRank: e.pageRank || 0,
+      accessCount: e.accessCount || 0,
+    }));
+  }
+
+  // Keep history: append to array, cap at 50
+  let history = readJSON(SNAPSHOT_PATH);
+  if (!Array.isArray(history)) history = [];
+  history.push(snap);
+  if (history.length > 50) history = history.slice(-50);
+  writeJSON(SNAPSHOT_PATH, history);
+}
+
+/**
+ * stats() — Diagnostic report showing intelligence health and improvement.
+ * Can be called as: node intelligence.cjs stats [--json]
+ */
+function stats(outputJson) {
+  const graph = readJSON(GRAPH_PATH);
+  const ranked = readJSON(RANKED_PATH);
+  const history = readJSON(SNAPSHOT_PATH) || [];
+  const pending = fs.existsSync(PENDING_PATH)
+    ? fs.readFileSync(PENDING_PATH, 'utf-8').trim().split('\n').filter(Boolean).length
+    : 0;
+
+  // Current state
+  const nodes = graph ? Object.keys(graph.nodes || {}).length : 0;
+  const edges = graph ? (graph.edges || []).length : 0;
+  const density = nodes > 1 ? (2 * edges) / (nodes * (nodes - 1)) : 0;
+
+  // Confidence distribution
+  const confidences = [];
+  const accessCounts = [];
+  if (graph && graph.nodes) {
+    for (const n of Object.values(graph.nodes)) {
+      confidences.push(n.confidence || 0.5);
+      accessCounts.push(n.accessCount || 0);
+    }
+  }
+  confidences.sort((a, b) => a - b);
+  const confMin = confidences.length ? confidences[0] : 0;
+  const confMax = confidences.length ? confidences[confidences.length - 1] : 0;
+  const confMean = confidences.length ? confidences.reduce((s, c) => s + c, 0) / confidences.length : 0;
+  const confMedian = confidences.length ? confidences[Math.floor(confidences.length / 2)] : 0;
+
+  // Access stats
+  const totalAccess = accessCounts.reduce((s, c) => s + c, 0);
+  const accessedCount = accessCounts.filter(c => c > 0).length;
+
+  // PageRank stats
+  let prSum = 0, prMax = 0, prMaxId = '';
+  if (graph && graph.pageRanks) {
+    for (const [id, pr] of Object.entries(graph.pageRanks)) {
+      prSum += pr;
+      if (pr > prMax) { prMax = pr; prMaxId = id; }
+    }
+  }
+
+  // Top patterns by composite score
+  const topPatterns = (ranked && ranked.entries || []).slice(0, 10).map((e, i) => ({
+    rank: i + 1,
+    summary: (e.summary || '').slice(0, 60),
+    confidence: (e.confidence || 0.5).toFixed(3),
+    pageRank: (e.pageRank || 0).toFixed(4),
+    accessed: e.accessCount || 0,
+    score: (0.6 * (e.pageRank || 0) + 0.4 * (e.confidence || 0.5)).toFixed(4),
+  }));
+
+  // Edge type breakdown
+  const edgeTypes = {};
+  if (graph && graph.edges) {
+    for (const e of graph.edges) {
+      edgeTypes[e.type || 'unknown'] = (edgeTypes[e.type || 'unknown'] || 0) + 1;
+    }
+  }
+
+  // Delta from previous snapshot
+  let delta = null;
+  if (history.length >= 2) {
+    const prev = history[history.length - 2];
+    const curr = history[history.length - 1];
+    const elapsed = (curr.timestamp - prev.timestamp) / 1000;
+    const prevConfMean = prev.confidences.length
+      ? prev.confidences.reduce((s, c) => s + c, 0) / prev.confidences.length : 0;
+    const currConfMean = curr.confidences.length
+      ? curr.confidences.reduce((s, c) => s + c, 0) / curr.confidences.length : 0;
+    const prevAccess = prev.accessCounts.reduce((s, c) => s + c, 0);
+    const currAccess = curr.accessCounts.reduce((s, c) => s + c, 0);
+
+    delta = {
+      elapsed: elapsed < 3600 ? `${Math.round(elapsed / 60)}m` : `${(elapsed / 3600).toFixed(1)}h`,
+      nodes: curr.nodes - prev.nodes,
+      edges: curr.edges - prev.edges,
+      confidenceMean: currConfMean - prevConfMean,
+      totalAccess: currAccess - prevAccess,
+    };
+  }
+
+  // Trend over all history
+  let trend = null;
+  if (history.length >= 3) {
+    const first = history[0];
+    const last = history[history.length - 1];
+    const sessions = history.length;
+    const firstConfMean = first.confidences.length
+      ? first.confidences.reduce((s, c) => s + c, 0) / first.confidences.length : 0;
+    const lastConfMean = last.confidences.length
+      ? last.confidences.reduce((s, c) => s + c, 0) / last.confidences.length : 0;
+    trend = {
+      sessions,
+      nodeGrowth: last.nodes - first.nodes,
+      edgeGrowth: last.edges - first.edges,
+      confidenceDrift: lastConfMean - firstConfMean,
+      direction: lastConfMean > firstConfMean ? 'improving' :
+                 lastConfMean < firstConfMean ? 'declining' : 'stable',
+    };
+  }
+
+  const report = {
+    graph: { nodes, edges, density: +density.toFixed(4) },
+    confidence: {
+      min: +confMin.toFixed(3), max: +confMax.toFixed(3),
+      mean: +confMean.toFixed(3), median: +confMedian.toFixed(3),
+    },
+    access: { total: totalAccess, patternsAccessed: accessedCount, patternsNeverAccessed: nodes - accessedCount },
+    pageRank: { sum: +prSum.toFixed(4), topNode: prMaxId, topNodeRank: +prMax.toFixed(4) },
+    edgeTypes,
+    pendingInsights: pending,
+    snapshots: history.length,
+    topPatterns,
+    delta,
+    trend,
+  };
+
+  if (outputJson) {
+    console.log(JSON.stringify(report, null, 2));
+    return report;
+  }
+
+  // Human-readable output
+  const bar = '+' + '-'.repeat(62) + '+';
+  console.log(bar);
+  console.log('|' + '  Intelligence Diagnostics (ADR-050)'.padEnd(62) + '|');
+  console.log(bar);
+  console.log('');
+
+  console.log('  Graph');
+  console.log(`    Nodes:    ${nodes}`);
+  console.log(`    Edges:    ${edges} (${Object.entries(edgeTypes).map(([t,c]) => `${c} ${t}`).join(', ') || 'none'})`);
+  console.log(`    Density:  ${(density * 100).toFixed(1)}%`);
+  console.log('');
+
+  console.log('  Confidence');
+  console.log(`    Min:      ${confMin.toFixed(3)}`);
+  console.log(`    Max:      ${confMax.toFixed(3)}`);
+  console.log(`    Mean:     ${confMean.toFixed(3)}`);
+  console.log(`    Median:   ${confMedian.toFixed(3)}`);
+  console.log('');
+
+  console.log('  Access');
+  console.log(`    Total accesses:     ${totalAccess}`);
+  console.log(`    Patterns used:      ${accessedCount}/${nodes}`);
+  console.log(`    Never accessed:     ${nodes - accessedCount}`);
+  console.log(`    Pending insights:   ${pending}`);
+  console.log('');
+
+  console.log('  PageRank');
+  console.log(`    Sum:      ${prSum.toFixed(4)} (should be ~1.0)`);
+  console.log(`    Top node: ${prMaxId || '(none)'} (${prMax.toFixed(4)})`);
+  console.log('');
+
+  if (topPatterns.length > 0) {
+    console.log('  Top Patterns (by composite score)');
+    console.log('  ' + '-'.repeat(60));
+    for (const p of topPatterns) {
+      console.log(`    #${p.rank}  ${p.summary}`);
+      console.log(`         conf=${p.confidence}  pr=${p.pageRank}  score=${p.score}  accessed=${p.accessed}x`);
+    }
+    console.log('');
+  }
+
+  if (delta) {
+    console.log(`  Last Delta (${delta.elapsed} ago)`);
+    const sign = v => v > 0 ? `+${v}` : `${v}`;
+    console.log(`    Nodes:      ${sign(delta.nodes)}`);
+    console.log(`    Edges:      ${sign(delta.edges)}`);
+    console.log(`    Confidence: ${delta.confidenceMean >= 0 ? '+' : ''}${delta.confidenceMean.toFixed(4)}`);
+    console.log(`    Accesses:   ${sign(delta.totalAccess)}`);
+    console.log('');
+  }
+
+  if (trend) {
+    console.log(`  Trend (${trend.sessions} snapshots)`);
+    console.log(`    Node growth:       ${trend.nodeGrowth >= 0 ? '+' : ''}${trend.nodeGrowth}`);
+    console.log(`    Edge growth:       ${trend.edgeGrowth >= 0 ? '+' : ''}${trend.edgeGrowth}`);
+    console.log(`    Confidence drift:  ${trend.confidenceDrift >= 0 ? '+' : ''}${trend.confidenceDrift.toFixed(4)}`);
+    console.log(`    Direction:         ${trend.direction.toUpperCase()}`);
+    console.log('');
+  }
+
+  if (!delta && !trend) {
+    console.log('  No history yet — run more sessions to see deltas and trends.');
+    console.log('');
+  }
+
+  console.log(bar);
+  return report;
+}
+
+module.exports = { init, getContext, recordEdit, feedback, consolidate, stats };
