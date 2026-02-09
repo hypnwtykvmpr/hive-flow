@@ -206,16 +206,7 @@ const handlers = {
     }
     console.log('[OK] Task completed');
   },
-};
 
-// Execute the handler
-if (command && handlers[command]) {
-  try {
-    handlers[command]();
-  } catch (e) {
-    // Hooks should never crash Claude Code - fail silently
-    console.log(`[WARN] Hook ${command} encountered an error: ${e.message}`);
-  }
   'stats': () => {
     if (intelligence && intelligence.stats) {
       intelligence.stats(args.includes('--json'));
