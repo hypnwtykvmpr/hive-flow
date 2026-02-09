@@ -514,6 +514,14 @@ export function generateHookHandler(): string {
     '    }',
     "    console.log('[OK] Task completed');",
     '  },',
+    '',
+    "  'stats': () => {",
+    '    if (intelligence && intelligence.stats) {',
+    "      intelligence.stats(args.includes('--json'));",
+    '    } else {',
+    "      console.log('[WARN] Intelligence module not available. Run session-restore first.');",
+    '    }',
+    '  },',
     '};',
     '',
     'if (command && handlers[command]) {',
@@ -525,7 +533,7 @@ export function generateHookHandler(): string {
     '} else if (command) {',
     "  console.log('[OK] Hook: ' + command);",
     '} else {',
-    "  console.log('Usage: hook-handler.cjs <route|pre-bash|post-edit|session-restore|session-end|pre-task|post-task>');",
+    "  console.log('Usage: hook-handler.cjs <route|pre-bash|post-edit|session-restore|session-end|pre-task|post-task|stats>');",
     '}',
   ];
   return lines.join('\n') + '\n';
