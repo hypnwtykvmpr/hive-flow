@@ -3049,7 +3049,7 @@ npx ruflo@v3alpha hooks session-end --export-metrics --persist-patterns
 | `trajectory-end` | RL | Finish recording, trigger learning |
 | `pattern-store` | Memory | Store a pattern with HNSW indexing |
 | `pattern-search` | Memory | Find similar patterns (150x faster) |
-| `stats` | Analytics | Learning statistics and metrics |
+| `stats` | Analytics | Intelligence diagnostics, confidence trends, improvement tracking |
 | `attention` | Focus | Compute attention-weighted similarity |
 
 ```bash
@@ -3061,6 +3061,10 @@ npx ruflo@v3alpha hooks intelligence trajectory-step --action "created token ser
 
 # End trajectory and trigger learning
 npx ruflo@v3alpha hooks intelligence trajectory-end --success true
+
+# View intelligence diagnostics and improvement trends (ADR-050)
+node .claude/helpers/hook-handler.cjs stats
+node .claude/helpers/intelligence.cjs stats --json
 ```
 
 ### 12 Background Workers (Auto-Triggered)
