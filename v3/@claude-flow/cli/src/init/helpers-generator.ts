@@ -445,7 +445,7 @@ export function generateHookHandler(): string {
     '',
     "  'post-edit': () => {",
     '    if (session && session.metric) {',
-    "      session.metric('edits');",
+    "      try { session.metric('edits'); } catch (e) { /* no active session */ }",
     '    }',
     '    if (intelligence && intelligence.recordEdit) {',
     '      try {',
