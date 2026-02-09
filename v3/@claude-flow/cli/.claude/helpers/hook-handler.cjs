@@ -66,7 +66,7 @@ const handlers = {
       const result = router.routeTask(prompt);
       // Format output for Claude Code hook consumption
       const output = [
-        '[INFO] Routing task: $P$G',
+        `[INFO] Routing task: ${prompt.substring(0, 80) || '(no prompt)'}`,
         '',
         'Routing Method',
         '  - Method: keyword',
