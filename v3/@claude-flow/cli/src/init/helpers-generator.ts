@@ -496,7 +496,7 @@ export function generateHookHandler(): string {
     '',
     "  'pre-task': () => {",
     '    if (session && session.metric) {',
-    "      session.metric('tasks');",
+    "      try { session.metric('tasks'); } catch (e) { /* no active session */ }",
     '    }',
     '    if (router && router.routeTask && prompt) {',
     '      var result = router.routeTask(prompt);',
