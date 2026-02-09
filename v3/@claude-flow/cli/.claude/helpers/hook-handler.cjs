@@ -216,9 +216,26 @@ if (command && handlers[command]) {
     // Hooks should never crash Claude Code - fail silently
     console.log(`[WARN] Hook ${command} encountered an error: ${e.message}`);
   }
+  'stats': () => {
+    if (intelligence && intelligence.stats) {
+      intelligence.stats(args.includes('--json'));
+    } else {
+      console.log('[WARN] Intelligence module not available. Run session-restore first.');
+    }
+  },
+};
+
+// Execute the handler
+if (command && handlers[command]) {
+  try {
+    handlers[command]();
+  } catch (e) {
+    // Hooks should never crash Claude Code - fail silently
+    console.log(`[WARN] Hook ${command} encountered an error: ${e.message}`);
+  }
 } else if (command) {
   // Unknown command - pass through without error
   console.log(`[OK] Hook: ${command}`);
 } else {
-  console.log('Usage: hook-handler.cjs <route|pre-bash|post-edit|session-restore|session-end|pre-task|post-task>');
+  console.log('Usage: hook-handler.cjs <route|pre-bash|post-edit|session-restore|session-end|pre-task|post-task|stats>');
 }
