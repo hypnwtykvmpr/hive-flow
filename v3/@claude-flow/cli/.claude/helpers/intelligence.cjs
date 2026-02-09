@@ -212,21 +212,104 @@ function buildEdges(entries) {
   return edges;
 }
 
+// ── Bootstrap from MEMORY.md files ───────────────────────────────────────────
+
+/**
+ * If auto-memory-store.json is empty, bootstrap by parsing MEMORY.md and
+ * topic files from the auto-memory directory. This removes the dependency
+ * on @claude-flow/memory for the initial seed.
+ */
+function bootstrapFromMemoryFiles() {
+  const entries = [];
+  const cwd = process.cwd();
+
+  // Search for auto-memory directories
+  const candidates = [
+    // Claude Code auto-memory (project-scoped)
+    path.join(require('os').homedir(), '.claude', 'projects'),
+    // Local project memory
+    path.join(cwd, '.claude-flow', 'memory'),
+    path.join(cwd, '.claude', 'memory'),
+  ];
+
+  // Find MEMORY.md in project-scoped dirs
+  for (const base of candidates) {
+    if (!fs.existsSync(base)) continue;
+
+    // For the projects dir, scan subdirectories for memory/
+    if (base.endsWith('projects')) {
+      try {
+        const projectDirs = fs.readdirSync(base);
+        for (const pdir of projectDirs) {
+          const memDir = path.join(base, pdir, 'memory');
+          if (fs.existsSync(memDir)) {
+            parseMemoryDir(memDir, entries);
+          }
+        }
+      } catch { /* skip */ }
+    } else if (fs.existsSync(base)) {
+      parseMemoryDir(base, entries);
+    }
+  }
+
+  return entries;
+}
+
+function parseMemoryDir(dir, entries) {
+  try {
+    const files = fs.readdirSync(dir).filter(f => f.endsWith('.md'));
+    for (const file of files) {
+      const filePath = path.join(dir, file);
+      const content = fs.readFileSync(filePath, 'utf-8');
+      if (!content.trim()) continue;
+
+      // Parse markdown sections as separate entries
+      const sections = content.split(/^##?\s+/m).filter(Boolean);
+      for (const section of sections) {
+        const lines = section.trim().split('\n');
+        const title = lines[0].trim();
+        const body = lines.slice(1).join('\n').trim();
+        if (!body || body.length < 10) continue;
+
+        const id = `mem-${file.replace('.md', '')}-${title.replace(/[^a-z0-9]/gi, '-').toLowerCase().slice(0, 30)}`;
+        entries.push({
+          id,
+          key: title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 50),
+          content: body.slice(0, 500),
+          summary: title,
+          namespace: file === 'MEMORY.md' ? 'core' : file.replace('.md', ''),
+          type: 'semantic',
+          metadata: { sourceFile: filePath, bootstrapped: true },
+          createdAt: Date.now(),
+        });
+      }
+    }
+  } catch { /* skip unreadable dirs */ }
+}
+
 // ── Exported functions ───────────────────────────────────────────────────────
 
 /**
  * init() — Called from session-restore. Budget: <200ms.
  * Reads auto-memory-store.json, builds graph, computes PageRank, writes caches.
+ * If store is empty, bootstraps from MEMORY.md files directly.
  */
 function init() {
   ensureDataDir();
 
   // Check if graph-state.json is fresh (within 60s of store)
   const graphState = readJSON(GRAPH_PATH);
-  const store = readJSON(STORE_PATH);
+  let store = readJSON(STORE_PATH);
 
+  // Bootstrap from MEMORY.md files if store is empty
   if (!store || !Array.isArray(store) || store.length === 0) {
-    return { nodes: 0, edges: 0, message: 'No memory entries to index' };
+    const bootstrapped = bootstrapFromMemoryFiles();
+    if (bootstrapped.length > 0) {
+      store = bootstrapped;
+      writeJSON(STORE_PATH, store);
+    } else {
+      return { nodes: 0, edges: 0, message: 'No memory entries to index' };
+    }
   }
 
   // Skip rebuild if graph is fresh and store hasn't changed
