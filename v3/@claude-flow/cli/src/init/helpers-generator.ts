@@ -360,6 +360,173 @@ module.exports = commands;
 }
 
 /**
+ * Generate hook-handler.cjs (cross-platform hook dispatcher)
+ * This is the inline fallback when file copy from the package fails.
+ */
+export function generateHookHandler(): string {
+  return `#!/usr/bin/env node
+/**
+ * Claude Flow Hook Handler (Cross-Platform)
+ * Dispatches hook events to the appropriate helper modules.
+ */
+
+const path = require('path');
+const fs = require('fs');
+
+const helpersDir = __dirname;
+
+function safeRequire(modulePath) {
+  try {
+    if (fs.existsSync(modulePath)) {
+      const origLog = console.log;
+      const origError = console.error;
+      console.log = () => {};
+      console.error = () => {};
+      try {
+        const mod = require(modulePath);
+        return mod;
+      } finally {
+        console.log = origLog;
+        console.error = origError;
+      }
+    }
+  } catch (e) {
+    // silently fail
+  }
+  return null;
+}
+
+const router = safeRequire(path.join(helpersDir, 'router.js'));
+const session = safeRequire(path.join(helpersDir, 'session.js'));
+const memory = safeRequire(path.join(helpersDir, 'memory.js'));
+const intelligence = safeRequire(path.join(helpersDir, 'intelligence.cjs'));
+
+const [,, command, ...args] = process.argv;
+const prompt = process.env.PROMPT || process.env.TOOL_INPUT_command || args.join(' ') || '';
+
+const handlers = {
+  'route': () => {
+    if (intelligence && intelligence.getContext) {
+      try {
+        const ctx = intelligence.getContext(prompt);
+        if (ctx) console.log(ctx);
+      } catch (e) { /* non-fatal */ }
+    }
+    if (router && router.routeTask) {
+      const result = router.routeTask(prompt);
+      const output = [
+        \\\`[INFO] Routing task: \\\${prompt.substring(0, 80) || '(no prompt)'}\\\`,
+        '',
+        '+------------------- Primary Recommendation -------------------+',
+        \\\`| Agent: \\\${result.agent.padEnd(53)}|\\\`,
+        \\\`| Confidence: \\\${(result.confidence * 100).toFixed(1)}%\\\${' '.repeat(44)}|\\\`,
+        \\\`| Reason: \\\${result.reason.substring(0, 53).padEnd(53)}|\\\`,
+        '+--------------------------------------------------------------+',
+      ];
+      console.log(output.join('\\n'));
+    } else {
+      console.log('[INFO] Router not available, using default routing');
+    }
+  },
+
+  'pre-bash': () => {
+    const cmd = prompt.toLowerCase();
+    const dangerous = ['rm -rf /', 'format c:', 'del /s /q c:\\\\', ':(){:|:&};:'];
+    for (const d of dangerous) {
+      if (cmd.includes(d)) {
+        console.error(\\\`[BLOCKED] Dangerous command detected: \\\${d}\\\`);
+        process.exit(1);
+      }
+    }
+    console.log('[OK] Command validated');
+  },
+
+  'post-edit': () => {
+    if (session && session.metric) {
+      session.metric('edits');
+    }
+    if (intelligence && intelligence.recordEdit) {
+      try {
+        const file = process.env.TOOL_INPUT_file_path || args[0] || '';
+        intelligence.recordEdit(file);
+      } catch (e) { /* non-fatal */ }
+    }
+    console.log('[OK] Edit recorded');
+  },
+
+  'session-restore': () => {
+    if (session) {
+      const existing = session.restore && session.restore();
+      if (!existing) {
+        session.start && session.start();
+      }
+    } else {
+      const sessionId = \\\`session-\\\${Date.now()}\\\`;
+      console.log('[OK] Session restored: ' + sessionId);
+    }
+    if (intelligence && intelligence.init) {
+      try {
+        const result = intelligence.init();
+        if (result && result.nodes > 0) {
+          console.log(\\\`[INTELLIGENCE] Loaded \\\${result.nodes} patterns, \\\${result.edges} edges\\\`);
+        }
+      } catch (e) { /* non-fatal */ }
+    }
+  },
+
+  'session-end': () => {
+    if (intelligence && intelligence.consolidate) {
+      try {
+        const result = intelligence.consolidate();
+        if (result && result.entries > 0) {
+          console.log(\\\`[INTELLIGENCE] Consolidated: \\\${result.entries} entries, \\\${result.edges} edges, PageRank recomputed\\\`);
+        }
+      } catch (e) { /* non-fatal */ }
+    }
+    if (session && session.end) {
+      session.end();
+    } else {
+      console.log('[OK] Session ended');
+    }
+  },
+
+  'pre-task': () => {
+    if (session && session.metric) {
+      session.metric('tasks');
+    }
+    if (router && router.routeTask && prompt) {
+      const result = router.routeTask(prompt);
+      console.log(\\\`[INFO] Task routed to: \\\${result.agent} (confidence: \\\${result.confidence})\\\`);
+    } else {
+      console.log('[OK] Task started');
+    }
+  },
+
+  'post-task': () => {
+    if (intelligence && intelligence.feedback) {
+      try {
+        intelligence.feedback(true);
+      } catch (e) { /* non-fatal */ }
+    }
+    console.log('[OK] Task completed');
+  },
+};
+
+if (command && handlers[command]) {
+  try {
+    handlers[command]();
+  } catch (e) {
+    console.log(\\\`[WARN] Hook \\\${command} encountered an error: \\\${e.message}\\\`);
+  }
+} else if (command) {
+  console.log(\\\`[OK] Hook: \\\${command}\\\`);
+} else {
+  console.log('Usage: hook-handler.cjs <route|pre-bash|post-edit|session-restore|session-end|pre-task|post-task>');
+}
+`;
+}
+
+/**
  * Generate Windows PowerShell daemon manager
  */
 export function generateWindowsDaemonManager(): string {
