@@ -24,6 +24,7 @@ import {
   generateAgentRouter,
   generateMemoryHelper,
   generateHookHandler,
+  generateIntelligenceStub,
 } from './helpers-generator.js';
 import { generateClaudeMd } from './claudemd-generator.js';
 
