@@ -168,6 +168,15 @@ const handlers = {
   },
 
   'session-end': () => {
+    // Consolidate intelligence before ending session
+    if (intelligence && intelligence.consolidate) {
+      try {
+        const result = intelligence.consolidate();
+        if (result && result.entries > 0) {
+          console.log(`[INTELLIGENCE] Consolidated: ${result.entries} entries, ${result.edges} edges${result.newEntries > 0 ? `, ${result.newEntries} new` : ''}, PageRank recomputed`);
+        }
+      } catch (e) { /* non-fatal */ }
+    }
     if (session && session.end) {
       session.end();
     } else {
