@@ -23,9 +23,11 @@ const {
   chunkTranscript,
   extractSummary,
   buildEntry,
+  buildCompactInstructions,
   storeChunks,
   retrieveContext,
   NAMESPACE,
+  COMPACT_INSTRUCTION_BUDGET,
 } = mod;
 
 // Test fixtures
