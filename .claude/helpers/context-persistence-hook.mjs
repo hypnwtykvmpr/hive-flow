@@ -305,18 +305,256 @@ class JsonFileBackend {
 }
 
 // ============================================================================
-// Backend resolution: SQLite > AgentDB > JSON
+// RuVector PostgreSQL Backend (optional, TB-scale, GNN-enhanced)
+// ============================================================================
+
+class RuVectorBackend {
+  constructor(config) {
+    this.config = config;
+    this.pool = null;
+  }
+
+  async initialize() {
+    const pg = await import('pg');
+    const Pool = pg.default?.Pool || pg.Pool;
+    this.pool = new Pool({
+      host: this.config.host,
+      port: this.config.port || 5432,
+      database: this.config.database,
+      user: this.config.user,
+      password: this.config.password,
+      ssl: this.config.ssl || false,
+      max: 3,
+      idleTimeoutMillis: 10000,
+      connectionTimeoutMillis: 3000,
+      application_name: 'claude-flow-context-persistence',
+    });
+
+    // Test connection and create schema
+    const client = await this.pool.connect();
+    try {
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS transcript_entries (
+          id TEXT PRIMARY KEY,
+          key TEXT NOT NULL,
+          content TEXT NOT NULL,
+          type TEXT NOT NULL DEFAULT 'episodic',
+          namespace TEXT NOT NULL DEFAULT 'transcript-archive',
+          tags JSONB NOT NULL DEFAULT '[]',
+          metadata JSONB NOT NULL DEFAULT '{}',
+          access_level TEXT NOT NULL DEFAULT 'private',
+          created_at BIGINT NOT NULL,
+          updated_at BIGINT NOT NULL,
+          version INTEGER NOT NULL DEFAULT 1,
+          access_count INTEGER NOT NULL DEFAULT 0,
+          last_accessed_at BIGINT NOT NULL,
+          content_hash TEXT,
+          session_id TEXT,
+          chunk_index INTEGER,
+          summary TEXT,
+          embedding vector(768)
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_te_namespace ON transcript_entries(namespace);
+        CREATE INDEX IF NOT EXISTS idx_te_session ON transcript_entries(session_id);
+        CREATE INDEX IF NOT EXISTS idx_te_hash ON transcript_entries(content_hash);
+        CREATE INDEX IF NOT EXISTS idx_te_chunk ON transcript_entries(session_id, chunk_index);
+        CREATE INDEX IF NOT EXISTS idx_te_created ON transcript_entries(created_at);
+      `);
+    } finally {
+      client.release();
+    }
+  }
+
+  async store(entry) {
+    const embeddingArr = entry._embedding
+      ? `[${Array.from(entry._embedding).join(',')}]`
+      : null;
+    await this.pool.query(
+      `INSERT INTO transcript_entries
+        (id, key, content, type, namespace, tags, metadata, access_level,
+         created_at, updated_at, version, access_count, last_accessed_at,
+         content_hash, session_id, chunk_index, summary, embedding)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
+       ON CONFLICT (id) DO NOTHING`,
+      [
+        entry.id, entry.key, entry.content, entry.type, entry.namespace,
+        JSON.stringify(entry.tags), JSON.stringify(entry.metadata), entry.accessLevel,
+        entry.createdAt, entry.updatedAt, entry.version, entry.accessCount, entry.lastAccessedAt,
+        entry.metadata?.contentHash || null,
+        entry.metadata?.sessionId || null,
+        entry.metadata?.chunkIndex ?? null,
+        entry.metadata?.summary || null,
+        embeddingArr,
+      ]
+    );
+  }
+
+  async bulkInsert(entries) {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      for (const entry of entries) {
+        const embeddingArr = entry._embedding
+          ? `[${Array.from(entry._embedding).join(',')}]`
+          : null;
+        await client.query(
+          `INSERT INTO transcript_entries
+            (id, key, content, type, namespace, tags, metadata, access_level,
+             created_at, updated_at, version, access_count, last_accessed_at,
+             content_hash, session_id, chunk_index, summary, embedding)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
+           ON CONFLICT (id) DO NOTHING`,
+          [
+            entry.id, entry.key, entry.content, entry.type, entry.namespace,
+            JSON.stringify(entry.tags), JSON.stringify(entry.metadata), entry.accessLevel,
+            entry.createdAt, entry.updatedAt, entry.version, entry.accessCount, entry.lastAccessedAt,
+            entry.metadata?.contentHash || null,
+            entry.metadata?.sessionId || null,
+            entry.metadata?.chunkIndex ?? null,
+            entry.metadata?.summary || null,
+            embeddingArr,
+          ]
+        );
+      }
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+
+  async query(opts) {
+    let sql = 'SELECT * FROM transcript_entries';
+    const params = [];
+    const clauses = [];
+    if (opts?.namespace) { params.push(opts.namespace); clauses.push(`namespace = $${params.length}`); }
+    if (clauses.length) sql += ' WHERE ' + clauses.join(' AND ');
+    sql += ' ORDER BY created_at DESC';
+    if (opts?.limit) { params.push(opts.limit); sql += ` LIMIT $${params.length}`; }
+    const { rows } = await this.pool.query(sql, params);
+    return rows.map(r => this._rowToEntry(r));
+  }
+
+  async queryBySession(namespace, sessionId) {
+    const { rows } = await this.pool.query(
+      'SELECT * FROM transcript_entries WHERE namespace = $1 AND session_id = $2 ORDER BY chunk_index DESC',
+      [namespace, sessionId]
+    );
+    return rows.map(r => this._rowToEntry(r));
+  }
+
+  hashExists(hash) {
+    // Synchronous check not possible with pg — use a cached check
+    // The bulkInsert uses ON CONFLICT DO NOTHING for dedup at DB level
+    return false;
+  }
+
+  async hashExistsAsync(hash) {
+    const { rows } = await this.pool.query(
+      'SELECT 1 FROM transcript_entries WHERE content_hash = $1 LIMIT 1',
+      [hash]
+    );
+    return rows.length > 0;
+  }
+
+  async count(namespace) {
+    const sql = namespace
+      ? 'SELECT COUNT(*) as cnt FROM transcript_entries WHERE namespace = $1'
+      : 'SELECT COUNT(*) as cnt FROM transcript_entries';
+    const params = namespace ? [namespace] : [];
+    const { rows } = await this.pool.query(sql, params);
+    return parseInt(rows[0].cnt, 10);
+  }
+
+  async listNamespaces() {
+    const { rows } = await this.pool.query('SELECT DISTINCT namespace FROM transcript_entries');
+    return rows.map(r => r.namespace);
+  }
+
+  async listSessions(namespace) {
+    const { rows } = await this.pool.query(
+      `SELECT session_id, COUNT(*) as cnt FROM transcript_entries
+       WHERE namespace = $1 GROUP BY session_id ORDER BY MAX(created_at) DESC`,
+      [namespace || NAMESPACE]
+    );
+    return rows.map(r => ({ session_id: r.session_id, cnt: parseInt(r.cnt, 10) }));
+  }
+
+  async shutdown() {
+    if (this.pool) {
+      await this.pool.end();
+      this.pool = null;
+    }
+  }
+
+  _rowToEntry(row) {
+    return {
+      id: row.id,
+      key: row.key,
+      content: row.content,
+      type: row.type,
+      namespace: row.namespace,
+      tags: typeof row.tags === 'string' ? JSON.parse(row.tags) : row.tags,
+      metadata: typeof row.metadata === 'string' ? JSON.parse(row.metadata) : row.metadata,
+      accessLevel: row.access_level,
+      createdAt: parseInt(row.created_at, 10),
+      updatedAt: parseInt(row.updated_at, 10),
+      version: row.version,
+      accessCount: row.access_count,
+      lastAccessedAt: parseInt(row.last_accessed_at, 10),
+      references: [],
+    };
+  }
+}
+
+/**
+ * Parse RuVector config from environment variables.
+ * Returns null if required vars are not set.
+ */
+function getRuVectorConfig() {
+  const host = process.env.RUVECTOR_HOST || process.env.PGHOST;
+  const database = process.env.RUVECTOR_DATABASE || process.env.PGDATABASE;
+  const user = process.env.RUVECTOR_USER || process.env.PGUSER;
+  const password = process.env.RUVECTOR_PASSWORD || process.env.PGPASSWORD;
+
+  if (!host || !database || !user) return null;
+
+  return {
+    host,
+    port: parseInt(process.env.RUVECTOR_PORT || process.env.PGPORT || '5432', 10),
+    database,
+    user,
+    password: password || '',
+    ssl: process.env.RUVECTOR_SSL === 'true',
+  };
+}
+
+// ============================================================================
+// Backend resolution: SQLite > RuVector PostgreSQL > AgentDB > JSON
 // ============================================================================
 
 async function resolveBackend() {
-  // Tier 1: better-sqlite3 (native, fastest)
+  // Tier 1: better-sqlite3 (native, fastest, local)
   try {
     const backend = new SQLiteBackend(ARCHIVE_DB_PATH);
     await backend.initialize();
     return { backend, type: 'sqlite' };
   } catch { /* fall through */ }
 
-  // Tier 2: AgentDB from @claude-flow/memory
+  // Tier 2: RuVector PostgreSQL (TB-scale, vector search, GNN)
+  try {
+    const rvConfig = getRuVectorConfig();
+    if (rvConfig) {
+      const backend = new RuVectorBackend(rvConfig);
+      await backend.initialize();
+      return { backend, type: 'ruvector' };
+    }
+  } catch { /* fall through */ }
+
+  // Tier 3: AgentDB from @claude-flow/memory (HNSW)
   try {
     const localDist = join(PROJECT_ROOT, 'v3/@claude-flow/memory/dist/index.js');
     let memPkg = null;
@@ -332,7 +570,7 @@ async function resolveBackend() {
     }
   } catch { /* fall through */ }
 
-  // Tier 3: JSON file (always works)
+  // Tier 4: JSON file (always works)
   const backend = new JsonFileBackend(ARCHIVE_JSON_PATH);
   await backend.initialize();
   return { backend, type: 'json' };
