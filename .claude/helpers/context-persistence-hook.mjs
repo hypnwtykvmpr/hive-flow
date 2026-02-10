@@ -1220,18 +1220,50 @@ async function retrieveContextSmart(backend, sessionId, budget) {
 // ============================================================================
 
 async function autoOptimize(backend, backendType) {
-  if (!AUTO_OPTIMIZE) return { pruned: 0, synced: 0 };
+  if (!AUTO_OPTIMIZE) return { pruned: 0, synced: 0, decayed: 0, embedded: 0 };
 
   let pruned = 0;
+  let decayed = 0;
+  let embedded = 0;
 
-  // Prune entries never accessed and older than RETENTION_DAYS
-  if (backend.pruneStale) {
+  // Step 1: Confidence decay — reduce confidence for unaccessed entries
+  if (backend.decayConfidence) {
     try {
-      pruned = backend.pruneStale(NAMESPACE, RETENTION_DAYS);
+      decayed = backend.decayConfidence(NAMESPACE, 1); // 1 hour worth of decay per optimize cycle
     } catch { /* non-critical */ }
   }
 
-  // Auto-sync: if SQLite is primary but RuVector is available, sync to RuVector
+  // Step 2: Smart pruning — remove low-confidence entries first
+  if (backend.pruneByConfidence) {
+    try {
+      pruned += backend.pruneByConfidence(NAMESPACE, 0.15);
+    } catch { /* non-critical */ }
+  }
+
+  // Step 3: Age-based pruning as fallback
+  if (backend.pruneStale) {
+    try {
+      pruned += backend.pruneStale(NAMESPACE, RETENTION_DAYS);
+    } catch { /* non-critical */ }
+  }
+
+  // Step 4: Generate embeddings for entries missing them (enables semantic search)
+  if (backend.storeEmbedding) {
+    try {
+      const rows = backend.db?.prepare?.(
+        'SELECT id, content FROM transcript_entries WHERE namespace = ? AND embedding IS NULL LIMIT 20'
+      )?.all(NAMESPACE);
+      if (rows) {
+        for (const row of rows) {
+          const emb = createHashEmbedding(row.content);
+          backend.storeEmbedding(row.id, emb);
+          embedded++;
+        }
+      }
+    } catch { /* non-critical */ }
+  }
+
+  // Step 5: Auto-sync to RuVector if available
   let synced = 0;
   if (backendType === 'sqlite' && backend.allForSync) {
     try {
