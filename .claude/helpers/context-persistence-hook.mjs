@@ -244,9 +244,70 @@ class SQLiteBackend {
 
   markAccessed(ids) {
     const now = Date.now();
+    const boostStmt = this.db.prepare(
+      'UPDATE transcript_entries SET access_count = access_count + 1, last_accessed_at = ?, confidence = MIN(1.0, confidence + 0.03) WHERE id = ?'
+    );
     for (const id of ids) {
-      this._stmts.markAccessed.run(now, id);
+      boostStmt.run(now, id);
     }
+  }
+
+  /**
+   * Confidence decay: reduce confidence for entries not accessed recently.
+   * Decay rate: 0.5% per hour (matches LearningBridge default).
+   * Entries with confidence below 0.1 are floor-clamped.
+   */
+  decayConfidence(namespace, hoursElapsed = 1) {
+    const decayRate = 0.005 * hoursElapsed;
+    const result = this.db.prepare(
+      'UPDATE transcript_entries SET confidence = MAX(0.1, confidence - ?) WHERE namespace = ? AND confidence > 0.1'
+    ).run(decayRate, namespace || NAMESPACE);
+    return result.changes;
+  }
+
+  /**
+   * Store embedding blob for an entry (768-dim Float32Array → Buffer).
+   */
+  storeEmbedding(id, embedding) {
+    const buf = Buffer.from(embedding.buffer, embedding.byteOffset, embedding.byteLength);
+    this.db.prepare('UPDATE transcript_entries SET embedding = ? WHERE id = ?').run(buf, id);
+  }
+
+  /**
+   * Cosine similarity search across all entries with embeddings.
+   * Returns top-k entries ranked by similarity to the query embedding.
+   */
+  semanticSearch(queryEmbedding, k = 10, namespace) {
+    const rows = this.db.prepare(
+      'SELECT id, embedding, summary, session_id, chunk_index, confidence, access_count FROM transcript_entries WHERE namespace = ? AND embedding IS NOT NULL'
+    ).all(namespace || NAMESPACE);
+
+    const scored = [];
+    for (const row of rows) {
+      if (!row.embedding) continue;
+      const stored = new Float32Array(row.embedding.buffer, row.embedding.byteOffset, row.embedding.byteLength / 4);
+      let dot = 0;
+      for (let i = 0; i < queryEmbedding.length && i < stored.length; i++) {
+        dot += queryEmbedding[i] * stored[i];
+      }
+      // Boost by confidence (self-learning signal)
+      const score = dot * (row.confidence || 0.8);
+      scored.push({ id: row.id, score, summary: row.summary, sessionId: row.session_id, chunkIndex: row.chunk_index, confidence: row.confidence, accessCount: row.access_count });
+    }
+
+    scored.sort((a, b) => b.score - a.score);
+    return scored.slice(0, k);
+  }
+
+  /**
+   * Smart pruning: prune by confidence instead of just age.
+   * Removes entries with confidence <= threshold AND access_count = 0.
+   */
+  pruneByConfidence(namespace, threshold = 0.2) {
+    const result = this.db.prepare(
+      'DELETE FROM transcript_entries WHERE namespace = ? AND confidence <= ? AND access_count = 0'
+    ).run(namespace || NAMESPACE, threshold);
+    return result.changes;
   }
 
   pruneStale(namespace, maxAgeDays) {
