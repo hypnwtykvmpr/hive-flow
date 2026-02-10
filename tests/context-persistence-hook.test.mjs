@@ -942,3 +942,220 @@ describe('buildCompactInstructions', () => {
     assert.ok(result.includes('0 conversation turns'));
   });
 });
+
+// ============================================================================
+// Importance Scoring Tests
+// ============================================================================
+
+describe('computeImportance', () => {
+  it('should rank recently accessed entries higher', () => {
+    const now = Date.now();
+    const recent = { createdAt: now - 3600000, accessCount: 1, metadata: { toolNames: [], filePaths: [] } }; // 1 hour ago
+    const old = { createdAt: now - 86400000 * 14, accessCount: 1, metadata: { toolNames: [], filePaths: [] } }; // 14 days ago
+
+    const recentScore = computeImportance(recent, now);
+    const oldScore = computeImportance(old, now);
+
+    assert.ok(recentScore > oldScore, `Recent ${recentScore} should be > old ${oldScore}`);
+  });
+
+  it('should rank frequently accessed entries higher', () => {
+    const now = Date.now();
+    const freq = { createdAt: now - 86400000, accessCount: 10, metadata: { toolNames: [], filePaths: [] } };
+    const rare = { createdAt: now - 86400000, accessCount: 0, metadata: { toolNames: [], filePaths: [] } };
+
+    const freqScore = computeImportance(freq, now);
+    const rareScore = computeImportance(rare, now);
+
+    assert.ok(freqScore > rareScore, `Frequent ${freqScore} should be > rare ${rareScore}`);
+  });
+
+  it('should boost entries with tool calls and file paths', () => {
+    const now = Date.now();
+    const rich = { createdAt: now - 86400000, accessCount: 0, metadata: { toolNames: ['Edit', 'Read'], filePaths: ['/src/a.ts'] } };
+    const plain = { createdAt: now - 86400000, accessCount: 0, metadata: { toolNames: [], filePaths: [] } };
+
+    const richScore = computeImportance(rich, now);
+    const plainScore = computeImportance(plain, now);
+
+    assert.ok(richScore > plainScore, `Rich ${richScore} should be > plain ${plainScore}`);
+  });
+
+  it('should return positive scores for all entries', () => {
+    const now = Date.now();
+    const entry = { createdAt: now - 86400000 * 30, accessCount: 0, metadata: {} };
+    assert.ok(computeImportance(entry, now) > 0);
+  });
+});
+
+// ============================================================================
+// Smart Retrieval Tests
+// ============================================================================
+
+describe('retrieveContextSmart', () => {
+  it('should return importance-ranked context', async () => {
+    const backend = new SQLiteBackend(join(TMP_DIR, 'smart-retrieve.db'));
+    await backend.initialize();
+
+    const now = Date.now();
+    // Entry with tools (will rank higher)
+    await backend.store({
+      id: 'sr-0', key: 'test:0', content: 'Turn with tools', type: 'episodic',
+      namespace: NAMESPACE, tags: [],
+      metadata: { sessionId: 'smart-sess', chunkIndex: 0, summary: 'Edited auth module', toolNames: ['Edit', 'Bash'], filePaths: ['/src/auth.ts'], contentHash: 'srh0' },
+      accessLevel: 'private', createdAt: now - 86400000, updatedAt: now, version: 1,
+      accessCount: 5, lastAccessedAt: now,
+    });
+    // Plain entry (will rank lower)
+    await backend.store({
+      id: 'sr-1', key: 'test:1', content: 'Plain turn', type: 'episodic',
+      namespace: NAMESPACE, tags: [],
+      metadata: { sessionId: 'smart-sess', chunkIndex: 1, summary: 'Asked a question', toolNames: [], filePaths: [], contentHash: 'srh1' },
+      accessLevel: 'private', createdAt: now - 86400000 * 7, updatedAt: now, version: 1,
+      accessCount: 0, lastAccessedAt: now,
+    });
+
+    const { text, accessedIds } = await retrieveContextSmart(backend, 'smart-sess', 4000);
+
+    assert.ok(text.includes('importance-ranked'));
+    assert.ok(text.includes('Edited auth module'));
+    assert.ok(accessedIds.length > 0);
+    // Tool-rich entry should appear first (higher importance)
+    assert.ok(text.indexOf('auth module') < text.indexOf('question') || !text.includes('question'));
+
+    await backend.shutdown();
+  });
+
+  it('should return empty for unknown session', async () => {
+    const backend = new SQLiteBackend(join(TMP_DIR, 'smart-empty.db'));
+    await backend.initialize();
+
+    const { text, accessedIds } = await retrieveContextSmart(backend, 'unknown-sess', 4000);
+    assert.equal(text, '');
+    assert.equal(accessedIds.length, 0);
+
+    await backend.shutdown();
+  });
+});
+
+// ============================================================================
+// Access Tracking Tests
+// ============================================================================
+
+describe('markAccessed (SQLite)', () => {
+  it('should increment access_count and update last_accessed_at', async () => {
+    const backend = new SQLiteBackend(join(TMP_DIR, 'access-track.db'));
+    await backend.initialize();
+
+    const now = Date.now();
+    await backend.store({
+      id: 'at-1', key: 'test:1', content: 'data', type: 'episodic',
+      namespace: NAMESPACE, tags: [],
+      metadata: { sessionId: 'at-sess', chunkIndex: 0, contentHash: 'ath1', summary: 's' },
+      accessLevel: 'private', createdAt: now, updatedAt: now, version: 1,
+      accessCount: 0, lastAccessedAt: now,
+    });
+
+    // Mark as accessed 3 times
+    backend.markAccessed(['at-1']);
+    backend.markAccessed(['at-1']);
+    backend.markAccessed(['at-1']);
+
+    const entries = await backend.queryBySession(NAMESPACE, 'at-sess');
+    assert.equal(entries[0].accessCount, 3);
+    assert.ok(entries[0].lastAccessedAt >= now);
+
+    await backend.shutdown();
+  });
+});
+
+// ============================================================================
+// Auto-Prune Tests
+// ============================================================================
+
+describe('pruneStale (SQLite)', () => {
+  it('should prune never-accessed entries older than retention period', async () => {
+    const backend = new SQLiteBackend(join(TMP_DIR, 'prune-test.db'));
+    await backend.initialize();
+
+    const now = Date.now();
+    const oldTime = now - (RETENTION_DAYS + 5) * 86400000; // older than retention
+
+    // Old, never accessed (should be pruned)
+    await backend.store({
+      id: 'prune-old', key: 'test:old', content: 'stale', type: 'episodic',
+      namespace: NAMESPACE, tags: [],
+      metadata: { sessionId: 'prune-sess', chunkIndex: 0, contentHash: 'poh', summary: 's' },
+      accessLevel: 'private', createdAt: oldTime, updatedAt: oldTime, version: 1,
+      accessCount: 0, lastAccessedAt: oldTime,
+    });
+
+    // Old but accessed (should NOT be pruned)
+    await backend.store({
+      id: 'prune-accessed', key: 'test:accessed', content: 'important', type: 'episodic',
+      namespace: NAMESPACE, tags: [],
+      metadata: { sessionId: 'prune-sess', chunkIndex: 1, contentHash: 'pah', summary: 's' },
+      accessLevel: 'private', createdAt: oldTime, updatedAt: oldTime, version: 1,
+      accessCount: 5, lastAccessedAt: now,
+    });
+
+    // Recent, never accessed (should NOT be pruned)
+    await backend.store({
+      id: 'prune-recent', key: 'test:recent', content: 'new', type: 'episodic',
+      namespace: NAMESPACE, tags: [],
+      metadata: { sessionId: 'prune-sess', chunkIndex: 2, contentHash: 'prh', summary: 's' },
+      accessLevel: 'private', createdAt: now, updatedAt: now, version: 1,
+      accessCount: 0, lastAccessedAt: now,
+    });
+
+    const pruned = backend.pruneStale(NAMESPACE, RETENTION_DAYS);
+    assert.equal(pruned, 1); // Only the old, never-accessed entry
+
+    const remaining = await backend.count(NAMESPACE);
+    assert.equal(remaining, 2);
+
+    await backend.shutdown();
+  });
+});
+
+// ============================================================================
+// Auto-Optimize Tests
+// ============================================================================
+
+describe('autoOptimize', () => {
+  it('should prune stale entries during optimization', async () => {
+    const backend = new SQLiteBackend(join(TMP_DIR, 'auto-opt.db'));
+    await backend.initialize();
+
+    const now = Date.now();
+    const oldTime = now - (RETENTION_DAYS + 10) * 86400000;
+
+    // Old stale entry
+    await backend.store({
+      id: 'ao-stale', key: 'test:stale', content: 'old data', type: 'episodic',
+      namespace: NAMESPACE, tags: [],
+      metadata: { sessionId: 'ao-sess', chunkIndex: 0, contentHash: 'aoh1', summary: 's' },
+      accessLevel: 'private', createdAt: oldTime, updatedAt: oldTime, version: 1,
+      accessCount: 0, lastAccessedAt: oldTime,
+    });
+
+    // Fresh entry
+    await backend.store({
+      id: 'ao-fresh', key: 'test:fresh', content: 'new data', type: 'episodic',
+      namespace: NAMESPACE, tags: [],
+      metadata: { sessionId: 'ao-sess', chunkIndex: 1, contentHash: 'aoh2', summary: 's' },
+      accessLevel: 'private', createdAt: now, updatedAt: now, version: 1,
+      accessCount: 0, lastAccessedAt: now,
+    });
+
+    const result = await autoOptimize(backend, 'sqlite');
+
+    assert.equal(result.pruned, 1);
+    assert.equal(result.synced, 0); // No RuVector configured
+
+    const remaining = await backend.count(NAMESPACE);
+    assert.equal(remaining, 1);
+
+    await backend.shutdown();
+  });
+});
