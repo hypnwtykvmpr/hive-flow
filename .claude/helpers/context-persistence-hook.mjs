@@ -1041,6 +1041,132 @@ function buildCompactInstructions(chunks, sessionId, archiveResult) {
 }
 
 // ============================================================================
+// Importance scoring for retrieval ranking
+// ============================================================================
+
+function computeImportance(entry, now) {
+  const meta = entry.metadata || {};
+  const accessCount = entry.accessCount || 0;
+  const createdAt = entry.createdAt || now;
+  const ageMs = Math.max(1, now - createdAt);
+  const ageDays = ageMs / 86400000;
+
+  // Recency: exponential decay, half-life of 7 days
+  const recency = Math.exp(-0.693 * ageDays / 7);
+
+  // Frequency: log-scaled access count
+  const frequency = Math.log2(accessCount + 1) + 1;
+
+  // Richness: tool calls and file paths indicate actionable context
+  const toolCount = meta.toolNames?.length || 0;
+  const fileCount = meta.filePaths?.length || 0;
+  const richness = 1.0 + (toolCount > 0 ? 0.5 : 0) + (fileCount > 0 ? 0.3 : 0);
+
+  return recency * frequency * richness;
+}
+
+// ============================================================================
+// Smart retrieval: importance-ranked instead of just recency
+// ============================================================================
+
+async function retrieveContextSmart(backend, sessionId, budget) {
+  let sessionEntries;
+
+  // Use importance-ranked query if backend supports it
+  if (backend.queryByImportance) {
+    try {
+      sessionEntries = backend.queryByImportance(NAMESPACE, sessionId);
+    } catch {
+      // Fall back to standard query
+      sessionEntries = null;
+    }
+  }
+
+  if (!sessionEntries) {
+    // Fall back: fetch all, compute importance in JS
+    const raw = backend.queryBySession
+      ? await backend.queryBySession(NAMESPACE, sessionId)
+      : (await backend.query({ namespace: NAMESPACE }))
+          .filter(e => e.metadata?.sessionId === sessionId);
+
+    const now = Date.now();
+    sessionEntries = raw
+      .map(e => ({ ...e, importanceScore: computeImportance(e, now) }))
+      .sort((a, b) => b.importanceScore - a.importanceScore);
+  }
+
+  if (sessionEntries.length === 0) return { text: '', accessedIds: [] };
+
+  const lines = [];
+  const accessedIds = [];
+  let charCount = 0;
+  const header = `## Restored Context (importance-ranked from archive)\n\nPrevious conversation: ${sessionEntries.length} archived turns, ranked by importance:\n\n`;
+  charCount += header.length;
+
+  for (const entry of sessionEntries) {
+    const meta = entry.metadata || {};
+    const score = entry.importanceScore?.toFixed(2) || '?';
+    const toolStr = meta.toolNames?.length ? ` Tools: ${meta.toolNames.join(', ')}.` : '';
+    const fileStr = meta.filePaths?.length ? ` Files: ${meta.filePaths.slice(0, 3).join(', ')}.` : '';
+    const line = `- [Turn ${meta.chunkIndex ?? '?'}, score:${score}] ${meta.summary || '(no summary)'}${toolStr}${fileStr}`;
+
+    if (charCount + line.length + 1 > budget) break;
+    lines.push(line);
+    accessedIds.push(entry.id);
+    charCount += line.length + 1;
+  }
+
+  if (lines.length === 0) return { text: '', accessedIds: [] };
+
+  const footer = `\n\nFull archive: ${NAMESPACE} namespace (session: ${sessionId}). ${sessionEntries.length - lines.length} additional turns available.`;
+  return { text: header + lines.join('\n') + footer, accessedIds };
+}
+
+// ============================================================================
+// Auto-optimize: prune stale entries, run after archiving
+// ============================================================================
+
+async function autoOptimize(backend, backendType) {
+  if (!AUTO_OPTIMIZE) return { pruned: 0, synced: 0 };
+
+  let pruned = 0;
+
+  // Prune entries never accessed and older than RETENTION_DAYS
+  if (backend.pruneStale) {
+    try {
+      pruned = backend.pruneStale(NAMESPACE, RETENTION_DAYS);
+    } catch { /* non-critical */ }
+  }
+
+  // Auto-sync: if SQLite is primary but RuVector is available, sync to RuVector
+  let synced = 0;
+  if (backendType === 'sqlite' && backend.allForSync) {
+    try {
+      const rvConfig = getRuVectorConfig();
+      if (rvConfig) {
+        const rvBackend = new RuVectorBackend(rvConfig);
+        await rvBackend.initialize();
+
+        const allEntries = backend.allForSync(NAMESPACE);
+        if (allEntries.length > 0) {
+          // Add hash embeddings for vector search in RuVector
+          const entriesToSync = allEntries.map(e => ({
+            ...e,
+            _embedding: createHashEmbedding(e.content),
+          }));
+          await rvBackend.bulkInsert(entriesToSync);
+          synced = entriesToSync.length;
+        }
+
+        await rvBackend.shutdown();
+      }
+    } catch { /* RuVector sync is best-effort */ }
+  }
+
+  return { pruned, synced };
+}
+
+// ============================================================================
 // Commands
 // ============================================================================
 
