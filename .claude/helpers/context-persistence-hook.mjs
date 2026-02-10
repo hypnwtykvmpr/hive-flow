@@ -112,6 +112,17 @@ class SQLiteBackend {
       CREATE INDEX IF NOT EXISTS idx_te_created ON transcript_entries(created_at);
     `);
 
+    // Schema migration: add confidence + embedding columns (self-learning support)
+    try {
+      this.db.exec(`ALTER TABLE transcript_entries ADD COLUMN confidence REAL NOT NULL DEFAULT 0.8`);
+    } catch { /* column already exists */ }
+    try {
+      this.db.exec(`ALTER TABLE transcript_entries ADD COLUMN embedding BLOB`);
+    } catch { /* column already exists */ }
+    try {
+      this.db.exec(`CREATE INDEX IF NOT EXISTS idx_te_confidence ON transcript_entries(confidence)`);
+    } catch { /* index already exists */ }
+
     // Prepare statements for reuse
     this._stmts = {
       insert: this.db.prepare(`
