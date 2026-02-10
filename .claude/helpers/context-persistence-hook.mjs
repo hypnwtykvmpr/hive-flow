@@ -1224,9 +1224,28 @@ async function doSessionStart() {
   const sessionId = input.session_id;
   if (!sessionId) return;
 
-  const { backend } = await resolveBackend();
+  const { backend, type } = await resolveBackend();
 
-  const additionalContext = await retrieveContext(backend, sessionId, RESTORE_BUDGET);
+  // Use smart retrieval (importance-ranked) when auto-optimize is on
+  let additionalContext;
+  if (AUTO_OPTIMIZE) {
+    const { text, accessedIds } = await retrieveContextSmart(backend, sessionId, RESTORE_BUDGET);
+    additionalContext = text;
+
+    // Track which entries were actually restored (access pattern learning)
+    if (accessedIds.length > 0 && backend.markAccessed) {
+      try { backend.markAccessed(accessedIds); } catch { /* non-critical */ }
+    }
+
+    if (accessedIds.length > 0) {
+      process.stderr.write(
+        `[ContextPersistence] Smart restore: ${accessedIds.length} turns (importance-ranked) via ${type}\n`
+      );
+    }
+  } else {
+    additionalContext = await retrieveContext(backend, sessionId, RESTORE_BUDGET);
+  }
+
   await backend.shutdown();
 
   if (!additionalContext) return;
