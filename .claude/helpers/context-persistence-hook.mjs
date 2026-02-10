@@ -1610,15 +1610,15 @@ async function runAutopilot(transcriptPath, sessionId, backend, backendType) {
 
   let optimizationMessage = '';
 
-  // Phase 1: Warning zone (70-85%)
+  // Phase 1: Warning zone (70-85%) — advise concise responses
   if (percentage >= AUTOPILOT_WARN_PCT && percentage < AUTOPILOT_PRUNE_PCT) {
     if (!state.warningIssued) {
       state.warningIssued = true;
-      optimizationMessage = ' | Approaching limit — archiving aggressively.';
+      optimizationMessage = ` | Context at ${(percentage * 100).toFixed(0)}%. Keep responses concise to extend session.`;
     }
   }
 
-  // Phase 2: Prune zone (85%+) — actively optimize
+  // Phase 2: Critical zone (85%+) — session rotation needed
   if (percentage >= AUTOPILOT_PRUNE_PCT) {
     state.pruneCount++;
 
@@ -1632,7 +1632,8 @@ async function runAutopilot(transcriptPath, sessionId, backend, backendType) {
       } catch { /* non-critical */ }
     }
 
-    optimizationMessage += ' | Context near capacity — keeping responses concise.';
+    const turnsLeft = Math.max(0, Math.ceil((1.0 - percentage) / 0.03));
+    optimizationMessage += ` | CRITICAL: ${(percentage * 100).toFixed(0)}% context used (~${turnsLeft} turns left). All ${turns} turns archived. Start a new session with /clear — context will be fully restored via SessionStart hook.`;
   }
 
   const report = buildAutopilotReport(percentage, tokens, CONTEXT_WINDOW_TOKENS, turns, state);
