@@ -1364,10 +1364,10 @@ async function autoOptimize(backend, backendType) {
  * Find relevant context from OTHER sessions using semantic similarity.
  * This enables "What did we discuss about auth?" across sessions.
  */
-function crossSessionSearch(backend, queryText, currentSessionId, k = 5) {
+async function crossSessionSearch(backend, queryText, currentSessionId, k = 5) {
   if (!backend.semanticSearch) return [];
   try {
-    const queryEmb = createHashEmbedding(queryText);
+    const { embedding: queryEmb } = await createEmbedding(queryText);
     const results = backend.semanticSearch(queryEmb, k * 2, NAMESPACE);
     // Filter out current session entries (we already have those)
     return results
