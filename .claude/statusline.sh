@@ -181,8 +181,8 @@ if [ -f "$AUTOPILOT_STATE" ]; then
   AP_TOKENS=$(jq -r '.lastTokenEstimate // 0' "$AUTOPILOT_STATE" 2>/dev/null || echo "0")
   AP_PRUNE=$(jq -r '.pruneCount // 0' "$AUTOPILOT_STATE" 2>/dev/null || echo "0")
 
-  # Convert float to int percentage
-  CONTEXT_PCT=$(echo "$AP_PCT * 100" | bc 2>/dev/null | cut -d. -f1 || echo "0")
+  # Convert float (0.216) to int percentage (21)
+  CONTEXT_PCT=$(printf "%.0f" "$(echo "$AP_PCT * 100" | bc -l 2>/dev/null)" 2>/dev/null || echo "0")
   if [ -z "$CONTEXT_PCT" ] || [ "$CONTEXT_PCT" = "" ]; then CONTEXT_PCT=0; fi
 
   # Format token count
