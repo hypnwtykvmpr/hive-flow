@@ -1543,26 +1543,40 @@ async function doUserPromptSubmit() {
     : 0;
 
   // Skip if we've already archived most turns (within 2 turns tolerance)
-  if (existingCount > 0 && chunks.length - existingCount <= 2) {
-    await backend.shutdown();
-    return;
+  const skipArchive = existingCount > 0 && chunks.length - existingCount <= 2;
+
+  let archiveMsg = '';
+  if (!skipArchive) {
+    const result = await storeChunks(backend, chunks, sessionId, 'proactive');
+    if (result.stored > 0) {
+      const total = await backend.count(NAMESPACE);
+      archiveMsg = `[ContextPersistence] Proactively archived ${result.stored} turns (total: ${total}).`;
+      process.stderr.write(
+        `[ContextPersistence] Proactive archive: ${result.stored} new, ${result.deduped} deduped via ${type}. Total: ${total}\n`
+      );
+    }
   }
 
-  const result = await storeChunks(backend, chunks, sessionId, 'proactive');
+  // Context Autopilot: estimate usage and report percentage
+  let autopilotMsg = '';
+  if (AUTOPILOT_ENABLED && transcriptPath) {
+    try {
+      const autopilot = await runAutopilot(transcriptPath, sessionId, backend, type);
+      autopilotMsg = autopilot.additionalContext;
 
-  // Build a brief context hint if we archived a significant amount
-  let additionalContext = '';
-  if (result.stored > 0) {
-    const total = await backend.count(NAMESPACE);
-    additionalContext = `[ContextPersistence] Proactively archived ${result.stored} turns (total: ${total}). Context is safely persisted — compaction will not lose information.`;
-    process.stderr.write(
-      `[ContextPersistence] Proactive archive: ${result.stored} new, ${result.deduped} deduped via ${type}. Total: ${total}\n`
-    );
+      process.stderr.write(
+        `[ContextAutopilot] ${(autopilot.percentage * 100).toFixed(1)}% context used (~${formatTokens(autopilot.tokens)} tokens, ${autopilot.turns} turns, ${autopilot.method})\n`
+      );
+    } catch (err) {
+      process.stderr.write(`[ContextAutopilot] Error: ${err.message}\n`);
+    }
   }
 
   await backend.shutdown();
 
-  // Inject a subtle hint so Claude knows context is being preserved
+  // Combine archive message and autopilot report
+  const additionalContext = [archiveMsg, autopilotMsg].filter(Boolean).join(' ');
+
   if (additionalContext) {
     const output = {
       hookSpecificOutput: {
