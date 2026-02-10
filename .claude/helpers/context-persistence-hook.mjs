@@ -42,6 +42,8 @@ const ARCHIVE_DB_PATH = join(DATA_DIR, 'transcript-archive.db');
 const NAMESPACE = 'transcript-archive';
 const RESTORE_BUDGET = parseInt(process.env.CLAUDE_FLOW_COMPACT_RESTORE_BUDGET || '4000', 10);
 const MAX_MESSAGES = 500;
+const BLOCK_COMPACTION = process.env.CLAUDE_FLOW_BLOCK_COMPACTION === 'true';
+const COMPACT_INSTRUCTION_BUDGET = parseInt(process.env.CLAUDE_FLOW_COMPACT_INSTRUCTION_BUDGET || '2000', 10);
 
 // Ensure data dir
 if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
