@@ -1056,9 +1056,10 @@ try {
   switch (command) {
     case 'pre-compact': await doPreCompact(); break;
     case 'session-start': await doSessionStart(); break;
+    case 'user-prompt-submit': await doUserPromptSubmit(); break;
     case 'status': await doStatus(); break;
     default:
-      console.log('Usage: context-persistence-hook.mjs <pre-compact|session-start|status>');
+      console.log('Usage: context-persistence-hook.mjs <pre-compact|session-start|user-prompt-submit|status>');
       process.exit(1);
   }
 } catch (err) {
