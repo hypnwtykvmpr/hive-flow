@@ -2833,6 +2833,120 @@ Real-world scenarios and pre-built workflows for common tasks.
 
 ---
 
+## 🧠 Infinite Context & Memory Optimization
+
+Ruflo eliminates Claude Code's context window ceiling with a real-time memory management system that archives, optimizes, and restores conversation context automatically.
+
+<details>
+<summary>♾️ <strong>Context Autopilot</strong> — Never lose context to compaction again</summary>
+
+### The Problem
+
+Claude Code has a finite context window (~200K tokens). When full, it **compacts** — summarizing the conversation and discarding details like exact file paths, tool outputs, decision reasoning, and code snippets. This creates a "context cliff" where Claude loses the ability to reference earlier work.
+
+### The Solution: Context Autopilot (ADR-051)
+
+Ruflo intercepts the compaction lifecycle with three hooks that make context loss invisible:
+
+```
+Every Prompt                    Context Full                    After Compact
+     │                              │                              │
+     ▼                              ▼                              ▼
+UserPromptSubmit              PreCompact                     SessionStart
+     │                              │                              │
+ Archive turns              Archive + BLOCK              Restore from archive
+ to SQLite                  auto-compaction               via additionalContext
+ (incremental)              (exit code 2)                (importance-ranked)
+     │                              │                              │
+     ▼                              ▼                              ▼
+ Track tokens              Manual /compact               Seamless continuation
+ Report % used             still allowed                 with full history
+```
+
+### How Memory is Optimized
+
+| Layer | What It Does | When |
+|-------|-------------|------|
+| **Proactive Archiving** | Every user prompt archives new turns to SQLite with SHA-256 dedup | Every prompt |
+| **Token Tracking** | Reads actual API `usage` data (input + cache tokens) for accurate % | Every prompt |
+| **Compaction Blocking** | PreCompact hook returns exit code 2 to cancel auto-compaction | When context fills |
+| **Manual Compact** | `/compact` is allowed — archives first, resets autopilot, then compresses | On user request |
+| **Importance Ranking** | Entries scored by `recency × frequency × richness` for smart retrieval | On restore |
+| **Access Tracking** | Restored entries get access_count++ creating a relevance feedback loop | On restore |
+| **Auto-Pruning** | Never-accessed entries older than 30 days are automatically removed | On PreCompact |
+| **Content Compaction** | Old session entries trimmed to summaries, reducing archive storage | Manual or scheduled |
+| **RuVector Sync** | SQLite entries auto-replicated to PostgreSQL when configured | On PreCompact |
+
+### Optimization Thresholds
+
+| Zone | Threshold | Statusline | Action |
+|------|-----------|-----------|--------|
+| OK | <70% | `🛡️ 43% 86.7K ⊘` (green) | Normal operation, track growth trend |
+| Warning | 70-85% | `🛡️ 72% 144K ⊘` (yellow) | Flag approaching limit, archive aggressively |
+| Optimize | 85%+ | `🛡️ 88% 176K ⟳2` (red) | Prune stale entries, keep responses concise |
+
+### Real-Time Statusline
+
+The statusline shows live context metrics read from `autopilot-state.json`:
+
+```
+🛡️  45% 89.2K ⊘  🧠 86%
+│    │   │     │    │   │
+│    │   │     │    │   └─ Intelligence score (learning.json + patterns + archive)
+│    │   │     │    └──── Intelligence indicator
+│    │   │     └───────── No prune cycles (⊘) or prune count (⟳N)
+│    │   └─────────────── Token count (actual API usage)
+│    └─────────────────── Context percentage used
+└──────────────────────── Autopilot active (shield icon)
+```
+
+### Storage Tiers
+
+| Tier | Backend | Storage | Features |
+|------|---------|---------|----------|
+| 1 | **SQLite** (default) | `.claude-flow/data/transcript-archive.db` | WAL mode, indexed queries, ACID, importance ranking |
+| 2 | **RuVector PostgreSQL** | Configurable remote | TB-scale, pgvector embeddings, GNN search |
+| 3 | **AgentDB + HNSW** | In-memory + persist | 150x-12,500x faster semantic search |
+| 4 | **JSON** (fallback) | `.claude-flow/data/transcript-archive.json` | Zero dependencies, always works |
+
+### Configuration
+
+```bash
+# Context Autopilot (all have sensible defaults)
+CLAUDE_FLOW_CONTEXT_AUTOPILOT=true        # Enable/disable autopilot (default: true)
+CLAUDE_FLOW_CONTEXT_WINDOW=200000         # Context window size in tokens
+CLAUDE_FLOW_AUTOPILOT_WARN=0.70           # Warning threshold (70%)
+CLAUDE_FLOW_AUTOPILOT_PRUNE=0.85          # Optimization threshold (85%)
+CLAUDE_FLOW_COMPACT_RESTORE_BUDGET=4000   # Max chars restored after compaction
+CLAUDE_FLOW_RETENTION_DAYS=30             # Auto-prune never-accessed entries
+CLAUDE_FLOW_AUTO_OPTIMIZE=true            # Importance ranking + pruning + sync
+```
+
+### Commands
+
+```bash
+# Check archive status and autopilot state
+node .claude/helpers/context-persistence-hook.mjs status
+
+# Manual compact (archives first, then allows Claude Code to compress)
+# Use /compact in Claude Code — autopilot allows manual, blocks auto
+
+# Query archive directly
+sqlite3 .claude-flow/data/transcript-archive.db \
+  "SELECT COUNT(*), SUM(LENGTH(content)) FROM transcript_entries;"
+```
+
+### Architecture Reference
+
+- **ADR-051**: Infinite Context via Compaction-to-Memory Bridge
+- **ADR-052**: Statusline Observability System
+- **Implementation**: `.claude/helpers/context-persistence-hook.mjs` (~1560 lines)
+- **Settings**: `.claude/settings.json` (PreCompact, SessionStart, UserPromptSubmit hooks)
+
+</details>
+
+---
+
 ## 🧠 Intelligence & Learning
 
 Self-learning hooks, pattern recognition, and intelligent task routing.
