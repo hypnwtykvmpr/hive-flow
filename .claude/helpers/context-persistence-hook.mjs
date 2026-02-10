@@ -1615,6 +1615,32 @@ async function doStatus() {
   const rvConfig = getRuVectorConfig();
   console.log(`  RuVector:    ${rvConfig ? `${rvConfig.host}:${rvConfig.port}/${rvConfig.database} (auto-sync enabled)` : 'not configured'}`);
 
+  // Autopilot status
+  console.log('');
+  console.log('  --- Context Autopilot ---');
+  console.log(`  Enabled:     ${AUTOPILOT_ENABLED}`);
+  console.log(`  Window:      ${formatTokens(CONTEXT_WINDOW_TOKENS)} tokens`);
+  console.log(`  Warn at:     ${(AUTOPILOT_WARN_PCT * 100).toFixed(0)}%`);
+  console.log(`  Prune at:    ${(AUTOPILOT_PRUNE_PCT * 100).toFixed(0)}%`);
+  console.log(`  Compaction:  ${AUTOPILOT_ENABLED ? 'BLOCKED (autopilot manages context)' : BLOCK_COMPACTION ? 'BLOCKED (env var)' : 'allowed'}`);
+
+  const apState = loadAutopilotState();
+  if (apState.sessionId) {
+    const pct = apState.lastPercentage || 0;
+    const bar = buildProgressBar(pct);
+    console.log(`  Current:     ${bar} ${(pct * 100).toFixed(1)}% (~${formatTokens(apState.lastTokenEstimate)} tokens)`);
+    console.log(`  Prune cycles: ${apState.pruneCount}`);
+    if (apState.history.length >= 2) {
+      const first = apState.history[0];
+      const last = apState.history[apState.history.length - 1];
+      const growthRate = (last.pct - first.pct) / apState.history.length;
+      if (growthRate > 0) {
+        const turnsLeft = Math.ceil((1.0 - pct) / growthRate);
+        console.log(`  Est. runway: ~${turnsLeft} turns until prune threshold`);
+      }
+    }
+  }
+
   if (sessions.length > 0) {
     console.log('\n  Recent sessions:');
     for (const s of sessions.slice(0, 10)) {
