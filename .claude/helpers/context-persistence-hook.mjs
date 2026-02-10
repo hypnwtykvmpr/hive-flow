@@ -1819,6 +1819,21 @@ async function doStatus() {
   const rvConfig = getRuVectorConfig();
   console.log(`  RuVector:    ${rvConfig ? `${rvConfig.host}:${rvConfig.port}/${rvConfig.database} (auto-sync enabled)` : 'not configured'}`);
 
+  // Self-learning stats
+  if (type === 'sqlite' && backend.db) {
+    try {
+      const embCount = backend.db.prepare('SELECT COUNT(*) as cnt FROM transcript_entries WHERE embedding IS NOT NULL').get().cnt;
+      const avgConf = backend.db.prepare('SELECT AVG(confidence) as avg FROM transcript_entries WHERE namespace = ?').get(NAMESPACE)?.avg || 0;
+      const lowConf = backend.db.prepare('SELECT COUNT(*) as cnt FROM transcript_entries WHERE namespace = ? AND confidence < 0.3').get(NAMESPACE).cnt;
+      console.log('');
+      console.log('  --- Self-Learning ---');
+      console.log(`  Embeddings:  ${embCount}/${archiveCount} entries have vector embeddings`);
+      console.log(`  Avg conf:    ${(avgConf * 100).toFixed(1)}% (decay: -0.5%/hr, boost: +3%/access)`);
+      console.log(`  Low conf:    ${lowConf} entries below 30% (pruned at 15%)`);
+      console.log(`  Semantic:    ${embCount > 0 ? 'enabled (cross-session search)' : 'pending (embeddings generating)'}`);
+    } catch { /* stats are non-critical */ }
+  }
+
   // Autopilot status
   console.log('');
   console.log('  --- Context Autopilot ---');
