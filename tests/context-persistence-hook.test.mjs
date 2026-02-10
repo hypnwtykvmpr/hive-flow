@@ -645,3 +645,177 @@ describe('no-op conditions', () => {
     await backend.shutdown();
   });
 });
+
+// ============================================================================
+// RuVector Config Tests
+// ============================================================================
+
+describe('getRuVectorConfig', () => {
+  it('should return null when no env vars set', () => {
+    // Save and clear env vars
+    const saved = { ...process.env };
+    delete process.env.RUVECTOR_HOST;
+    delete process.env.RUVECTOR_DATABASE;
+    delete process.env.RUVECTOR_USER;
+    delete process.env.PGHOST;
+    delete process.env.PGDATABASE;
+    delete process.env.PGUSER;
+
+    const config = getRuVectorConfig();
+    assert.equal(config, null);
+
+    // Restore env
+    Object.assign(process.env, saved);
+  });
+
+  it('should parse config from RUVECTOR_* env vars', () => {
+    const saved = { ...process.env };
+    process.env.RUVECTOR_HOST = 'pg.example.com';
+    process.env.RUVECTOR_PORT = '5433';
+    process.env.RUVECTOR_DATABASE = 'claude_flow';
+    process.env.RUVECTOR_USER = 'admin';
+    process.env.RUVECTOR_PASSWORD = 'secret123';
+    process.env.RUVECTOR_SSL = 'true';
+
+    const config = getRuVectorConfig();
+    assert.ok(config);
+    assert.equal(config.host, 'pg.example.com');
+    assert.equal(config.port, 5433);
+    assert.equal(config.database, 'claude_flow');
+    assert.equal(config.user, 'admin');
+    assert.equal(config.password, 'secret123');
+    assert.equal(config.ssl, true);
+
+    // Cleanup
+    delete process.env.RUVECTOR_HOST;
+    delete process.env.RUVECTOR_PORT;
+    delete process.env.RUVECTOR_DATABASE;
+    delete process.env.RUVECTOR_USER;
+    delete process.env.RUVECTOR_PASSWORD;
+    delete process.env.RUVECTOR_SSL;
+    Object.assign(process.env, saved);
+  });
+
+  it('should fall back to PG* env vars', () => {
+    const saved = { ...process.env };
+    delete process.env.RUVECTOR_HOST;
+    delete process.env.RUVECTOR_DATABASE;
+    delete process.env.RUVECTOR_USER;
+    process.env.PGHOST = 'localhost';
+    process.env.PGDATABASE = 'testdb';
+    process.env.PGUSER = 'testuser';
+    process.env.PGPORT = '5434';
+
+    const config = getRuVectorConfig();
+    assert.ok(config);
+    assert.equal(config.host, 'localhost');
+    assert.equal(config.port, 5434);
+    assert.equal(config.database, 'testdb');
+    assert.equal(config.user, 'testuser');
+
+    delete process.env.PGHOST;
+    delete process.env.PGDATABASE;
+    delete process.env.PGUSER;
+    delete process.env.PGPORT;
+    Object.assign(process.env, saved);
+  });
+});
+
+// ============================================================================
+// RuVectorBackend Class Tests (mock-based, no real PostgreSQL)
+// ============================================================================
+
+describe('RuVectorBackend', () => {
+  it('should be exported and constructable', () => {
+    assert.ok(RuVectorBackend);
+    const backend = new RuVectorBackend({
+      host: 'localhost', port: 5432, database: 'test', user: 'test', password: 'test',
+    });
+    assert.ok(backend);
+    assert.equal(backend.config.host, 'localhost');
+  });
+
+  it('hashExists should return false (async-only for pg)', () => {
+    const backend = new RuVectorBackend({
+      host: 'localhost', port: 5432, database: 'test', user: 'test', password: 'test',
+    });
+    // Synchronous hashExists always returns false for pg (uses ON CONFLICT for dedup)
+    assert.equal(backend.hashExists('any-hash'), false);
+  });
+});
+
+// ============================================================================
+// Proactive Archiving Tests
+// ============================================================================
+
+describe('proactive archiving (UserPromptSubmit)', () => {
+  it('should archive incrementally and dedup on re-archive', async () => {
+    const backend = new SQLiteBackend(join(TMP_DIR, 'proactive-sqlite.db'));
+    await backend.initialize();
+
+    // First archive: 3 chunks
+    const chunks1 = [
+      { userMessage: makeUserMsg('q1'), assistantMessage: makeAssistantMsg('a1'), toolCalls: [], turnIndex: 0 },
+      { userMessage: makeUserMsg('q2'), assistantMessage: makeAssistantMsg('a2'), toolCalls: [], turnIndex: 1 },
+      { userMessage: makeUserMsg('q3'), assistantMessage: makeAssistantMsg('a3'), toolCalls: [], turnIndex: 2 },
+    ];
+    const r1 = await storeChunks(backend, chunks1, 'proactive-sess', 'proactive');
+    assert.equal(r1.stored, 3);
+    assert.equal(r1.deduped, 0);
+
+    // Second archive (same + 2 new): dedup existing, store new
+    const chunks2 = [
+      ...chunks1,
+      { userMessage: makeUserMsg('q4'), assistantMessage: makeAssistantMsg('a4'), toolCalls: [], turnIndex: 3 },
+      { userMessage: makeUserMsg('q5'), assistantMessage: makeAssistantMsg('a5'), toolCalls: [], turnIndex: 4 },
+    ];
+    const r2 = await storeChunks(backend, chunks2, 'proactive-sess', 'proactive');
+    assert.equal(r2.stored, 2);
+    assert.equal(r2.deduped, 3);
+
+    // Total should be 5
+    const total = await backend.count(NAMESPACE);
+    assert.equal(total, 5);
+
+    await backend.shutdown();
+  });
+
+  it('should build complete restoration from proactively archived data', async () => {
+    const backend = new SQLiteBackend(join(TMP_DIR, 'proactive-restore.db'));
+    await backend.initialize();
+
+    const now = Date.now();
+    for (let i = 0; i < 10; i++) {
+      await backend.store({
+        id: `pa${i}`, key: `test:${i}`, content: `Turn ${i}`, type: 'episodic',
+        namespace: NAMESPACE, tags: [],
+        metadata: { sessionId: 'pa-sess', chunkIndex: i, summary: `Proactive turn ${i}`, toolNames: ['Edit'], filePaths: ['/src/a.ts'], contentHash: `pah${i}` },
+        accessLevel: 'private', createdAt: now + i, updatedAt: now + i, version: 1,
+        accessCount: 0, lastAccessedAt: now + i,
+      });
+    }
+
+    const ctx = await retrieveContext(backend, 'pa-sess', 4000);
+    assert.ok(ctx.includes('10 archived turns'));
+    assert.ok(ctx.includes('Proactive turn'));
+
+    await backend.shutdown();
+  });
+});
+
+// ============================================================================
+// Backend Resolution Priority Tests
+// ============================================================================
+
+describe('resolveBackend priority', () => {
+  it('should resolve sqlite as highest priority', async () => {
+    const { backend, type } = await resolveBackend();
+    assert.equal(type, 'sqlite');
+    await backend.shutdown();
+  });
+
+  it('should not resolve ruvector when env vars are absent', () => {
+    const config = getRuVectorConfig();
+    assert.equal(config, null);
+  });
+});
