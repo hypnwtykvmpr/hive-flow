@@ -928,6 +928,63 @@ async function doSessionStart() {
   process.stdout.write(JSON.stringify(output));
 }
 
+// ============================================================================
+// Proactive archiving on every user prompt (prevents context cliff)
+// ============================================================================
+
+async function doUserPromptSubmit() {
+  const input = await readStdin(200);
+  if (!input) return;
+
+  const { session_id: sessionId, transcript_path: transcriptPath } = input;
+  if (!transcriptPath || !sessionId) return;
+
+  const messages = parseTranscript(transcriptPath);
+  if (messages.length === 0) return;
+
+  const chunks = chunkTranscript(messages);
+  if (chunks.length === 0) return;
+
+  const { backend, type } = await resolveBackend();
+
+  // Only archive new turns (dedup handles the rest, but we can skip early
+  // by only processing the last N chunks since the previous archive)
+  const existingCount = backend.queryBySession
+    ? (await backend.queryBySession(NAMESPACE, sessionId)).length
+    : 0;
+
+  // Skip if we've already archived most turns (within 2 turns tolerance)
+  if (existingCount > 0 && chunks.length - existingCount <= 2) {
+    await backend.shutdown();
+    return;
+  }
+
+  const result = await storeChunks(backend, chunks, sessionId, 'proactive');
+
+  // Build a brief context hint if we archived a significant amount
+  let additionalContext = '';
+  if (result.stored > 0) {
+    const total = await backend.count(NAMESPACE);
+    additionalContext = `[ContextPersistence] Proactively archived ${result.stored} turns (total: ${total}). Context is safely persisted — compaction will not lose information.`;
+    process.stderr.write(
+      `[ContextPersistence] Proactive archive: ${result.stored} new, ${result.deduped} deduped via ${type}. Total: ${total}\n`
+    );
+  }
+
+  await backend.shutdown();
+
+  // Inject a subtle hint so Claude knows context is being preserved
+  if (additionalContext) {
+    const output = {
+      hookSpecificOutput: {
+        hookEventName: 'UserPromptSubmit',
+        additionalContext,
+      },
+    };
+    process.stdout.write(JSON.stringify(output));
+  }
+}
+
 async function doStatus() {
   const { backend, type } = await resolveBackend();
 
