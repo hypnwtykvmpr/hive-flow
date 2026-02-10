@@ -1678,12 +1678,24 @@ export {
   storeChunks,
   retrieveContext,
   readStdin,
+  // Autopilot
+  estimateContextTokens,
+  loadAutopilotState,
+  saveAutopilotState,
+  runAutopilot,
+  buildProgressBar,
+  formatTokens,
+  buildAutopilotReport,
   NAMESPACE,
   ARCHIVE_DB_PATH,
   ARCHIVE_JSON_PATH,
   COMPACT_INSTRUCTION_BUDGET,
   RETENTION_DAYS,
   AUTO_OPTIMIZE,
+  AUTOPILOT_ENABLED,
+  CONTEXT_WINDOW_TOKENS,
+  AUTOPILOT_WARN_PCT,
+  AUTOPILOT_PRUNE_PCT,
 };
 
 // ============================================================================
