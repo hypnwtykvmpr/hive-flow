@@ -47,6 +47,18 @@ const COMPACT_INSTRUCTION_BUDGET = parseInt(process.env.CLAUDE_FLOW_COMPACT_INST
 const RETENTION_DAYS = parseInt(process.env.CLAUDE_FLOW_RETENTION_DAYS || '30', 10);
 const AUTO_OPTIMIZE = process.env.CLAUDE_FLOW_AUTO_OPTIMIZE !== 'false'; // on by default
 
+// ============================================================================
+// Context Autopilot — prevent compaction by managing context size in real-time
+// ============================================================================
+const AUTOPILOT_ENABLED = process.env.CLAUDE_FLOW_CONTEXT_AUTOPILOT !== 'false'; // on by default
+const CONTEXT_WINDOW_TOKENS = parseInt(process.env.CLAUDE_FLOW_CONTEXT_WINDOW || '200000', 10);
+const AUTOPILOT_WARN_PCT = parseFloat(process.env.CLAUDE_FLOW_AUTOPILOT_WARN || '0.70');
+const AUTOPILOT_PRUNE_PCT = parseFloat(process.env.CLAUDE_FLOW_AUTOPILOT_PRUNE || '0.85');
+const AUTOPILOT_STATE_PATH = join(DATA_DIR, 'autopilot-state.json');
+
+// Approximate tokens per character (Claude averages ~3.5 chars per token)
+const CHARS_PER_TOKEN = 3.5;
+
 // Ensure data dir
 if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
 
