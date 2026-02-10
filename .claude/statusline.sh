@@ -228,28 +228,48 @@ else
   CONTEXT_COLOR="${BRIGHT_RED}"
 fi
 
-# Calculate Intelligence Score based on learning patterns and training
+# Calculate Intelligence Score from learning metrics + patterns DB
 INTEL_SCORE=0
 INTEL_COLOR="${DIM}"
 PATTERNS_DB="${PROJECT_DIR}/.claude-flow/learning/patterns.db"
 LEARNING_METRICS="${PROJECT_DIR}/.claude-flow/metrics/learning.json"
+ARCHIVE_DB="${PROJECT_DIR}/.claude-flow/data/transcript-archive.db"
 
-# Base intelligence from pattern count
-if [ -f "$PATTERNS_DB" ] && command -v sqlite3 &>/dev/null; then
+# Primary: use pre-computed intelligence score from learning.json
+if [ -f "$LEARNING_METRICS" ]; then
+  INTEL_SCORE=$(jq -r '.intelligence.score // 0' "$LEARNING_METRICS" 2>/dev/null | cut -d. -f1 || echo "0")
+
+  # Boost score based on live data if available
+  if [ -f "$PATTERNS_DB" ] && command -v sqlite3 &>/dev/null; then
+    SHORT_PATTERNS=$(sqlite3 "$PATTERNS_DB" "SELECT COUNT(*) FROM short_term_patterns" 2>/dev/null || echo "0")
+    LONG_PATTERNS=$(sqlite3 "$PATTERNS_DB" "SELECT COUNT(*) FROM long_term_patterns" 2>/dev/null || echo "0")
+    AVG_QUALITY=$(sqlite3 "$PATTERNS_DB" "SELECT COALESCE(AVG(quality), 0) FROM short_term_patterns" 2>/dev/null || echo "0")
+
+    # Live quality boost: up to +20 points from pattern quality
+    QUALITY_BOOST=$(awk "BEGIN { printf \"%.0f\", $AVG_QUALITY * 20 }" 2>/dev/null || echo "0")
+
+    # Archive memory boost: +1 per 10 archived entries, up to +10
+    ARCHIVE_COUNT=0
+    if [ -f "$ARCHIVE_DB" ] && command -v sqlite3 &>/dev/null; then
+      ARCHIVE_COUNT=$(sqlite3 "$ARCHIVE_DB" "SELECT COUNT(*) FROM transcript_entries" 2>/dev/null || echo "0")
+    fi
+    ARCHIVE_BOOST=$((ARCHIVE_COUNT / 10))
+    if [ "$ARCHIVE_BOOST" -gt 10 ]; then ARCHIVE_BOOST=10; fi
+
+    INTEL_SCORE=$((INTEL_SCORE + QUALITY_BOOST + ARCHIVE_BOOST))
+    if [ "$INTEL_SCORE" -gt 100 ]; then INTEL_SCORE=100; fi
+  fi
+elif [ -f "$PATTERNS_DB" ] && command -v sqlite3 &>/dev/null; then
+  # Fallback: compute from patterns DB directly
   SHORT_PATTERNS=$(sqlite3 "$PATTERNS_DB" "SELECT COUNT(*) FROM short_term_patterns" 2>/dev/null || echo "0")
   LONG_PATTERNS=$(sqlite3 "$PATTERNS_DB" "SELECT COUNT(*) FROM long_term_patterns" 2>/dev/null || echo "0")
   AVG_QUALITY=$(sqlite3 "$PATTERNS_DB" "SELECT COALESCE(AVG(quality), 0) FROM short_term_patterns" 2>/dev/null || echo "0")
 
-  # Score: patterns contribute up to 60%, quality contributes up to 40%
   PATTERN_SCORE=$((SHORT_PATTERNS + LONG_PATTERNS * 2))
   if [ "$PATTERN_SCORE" -gt 100 ]; then PATTERN_SCORE=100; fi
-  QUALITY_SCORE=$(echo "$AVG_QUALITY * 40" | bc 2>/dev/null | cut -d. -f1 || echo "0")
+  QUALITY_SCORE=$(awk "BEGIN { printf \"%.0f\", $AVG_QUALITY * 40 }" 2>/dev/null || echo "0")
   INTEL_SCORE=$((PATTERN_SCORE * 60 / 100 + QUALITY_SCORE))
   if [ "$INTEL_SCORE" -gt 100 ]; then INTEL_SCORE=100; fi
-elif [ -f "$LEARNING_METRICS" ]; then
-  # Fallback to learning metrics JSON
-  ROUTING_ACC=$(jq -r '.routing.accuracy // 0' "$LEARNING_METRICS" 2>/dev/null | cut -d. -f1 || echo "0")
-  INTEL_SCORE=$((ROUTING_ACC))
 fi
 
 # Color based on intelligence level
