@@ -492,7 +492,7 @@
           {
             "type": "command",
             "timeout": 5000,
-            "command": "node /workspaces/claude-flow/.claude/helpers/context-persistence-hook.mjs pre-compact 2>/dev/null || true"
+            "command": "/bin/bash -c 'node /workspaces/claude-flow/.claude/helpers/context-persistence-hook.mjs pre-compact 2>/dev/null; RC=$?; if [ $RC -eq 2 ]; then exit 2; fi; exit 0'"
           }
         ]
       },
@@ -511,7 +511,7 @@
           {
             "type": "command",
             "timeout": 5000,
-            "command": "node /workspaces/claude-flow/.claude/helpers/context-persistence-hook.mjs pre-compact 2>/dev/null || true"
+            "command": "/bin/bash -c 'node /workspaces/claude-flow/.claude/helpers/context-persistence-hook.mjs pre-compact 2>/dev/null; RC=$?; if [ $RC -eq 2 ]; then exit 2; fi; exit 0'"
           }
         ]
       }
