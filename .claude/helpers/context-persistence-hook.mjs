@@ -1025,8 +1025,10 @@ async function doStatus() {
 
 export {
   SQLiteBackend,
+  RuVectorBackend,
   JsonFileBackend,
   resolveBackend,
+  getRuVectorConfig,
   createHashEmbedding,
   hashContent,
   parseTranscript,
