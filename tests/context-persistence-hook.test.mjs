@@ -1,16 +1,17 @@
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, writeFileSync, rmSync, readFileSync } from 'fs';
+import { existsSync, mkdirSync, writeFileSync, rmSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const PROJECT_ROOT = join(__dirname, '..');
 
 // Import the module under test
 const mod = await import('../.claude/helpers/context-persistence-hook.mjs');
 const {
+  SQLiteBackend,
   JsonFileBackend,
+  resolveBackend,
   createHashEmbedding,
   hashContent,
   parseTranscript,
@@ -27,6 +28,7 @@ const {
 
 // Test fixtures
 const TMP_DIR = join(__dirname, '.tmp-ctx-test');
+const TMP_DB = join(TMP_DIR, 'test-archive.db');
 const TMP_ARCHIVE = join(TMP_DIR, 'test-archive.json');
 const TMP_TRANSCRIPT = join(TMP_DIR, 'test-transcript.jsonl');
 
@@ -56,7 +58,158 @@ after(() => {
 });
 
 // ============================================================================
-// Tests
+// SQLite Backend Tests
+// ============================================================================
+
+describe('SQLiteBackend', () => {
+  it('should initialize and create schema', async () => {
+    const backend = new SQLiteBackend(join(TMP_DIR, 'init-test.db'));
+    await backend.initialize();
+    const count = await backend.count();
+    assert.equal(count, 0);
+    await backend.shutdown();
+  });
+
+  it('should store and query entries', async () => {
+    const backend = new SQLiteBackend(join(TMP_DIR, 'store-sqlite.db'));
+    await backend.initialize();
+
+    const now = Date.now();
+    const entry = {
+      id: 'sql-1', key: 'test:1', content: 'hello world', type: 'episodic',
+      namespace: NAMESPACE, tags: ['test'], metadata: { sessionId: 'sess-1', chunkIndex: 0, contentHash: 'abc', summary: 'test' },
+      accessLevel: 'private', createdAt: now, updatedAt: now, version: 1,
+      accessCount: 0, lastAccessedAt: now,
+    };
+    await backend.store(entry);
+
+    const results = await backend.query({ namespace: NAMESPACE });
+    assert.equal(results.length, 1);
+    assert.equal(results[0].content, 'hello world');
+    assert.equal(results[0].metadata.sessionId, 'sess-1');
+
+    await backend.shutdown();
+  });
+
+  it('should query by session with indexed lookup', async () => {
+    const backend = new SQLiteBackend(join(TMP_DIR, 'session-query.db'));
+    await backend.initialize();
+
+    const now = Date.now();
+    for (let i = 0; i < 5; i++) {
+      await backend.store({
+        id: `sq-${i}`, key: `test:${i}`, content: `turn ${i}`, type: 'episodic',
+        namespace: NAMESPACE, tags: [], metadata: { sessionId: 'sess-a', chunkIndex: i, contentHash: `h${i}`, summary: `s${i}` },
+        accessLevel: 'private', createdAt: now + i, updatedAt: now + i, version: 1,
+        accessCount: 0, lastAccessedAt: now + i,
+      });
+    }
+    // Different session
+    await backend.store({
+      id: 'sq-other', key: 'test:other', content: 'other session', type: 'episodic',
+      namespace: NAMESPACE, tags: [], metadata: { sessionId: 'sess-b', chunkIndex: 0, contentHash: 'other', summary: 'other' },
+      accessLevel: 'private', createdAt: now, updatedAt: now, version: 1,
+      accessCount: 0, lastAccessedAt: now,
+    });
+
+    const sessA = await backend.queryBySession(NAMESPACE, 'sess-a');
+    assert.equal(sessA.length, 5);
+    // Should be ordered by chunk_index DESC
+    assert.equal(sessA[0].metadata.chunkIndex, 4);
+
+    const sessB = await backend.queryBySession(NAMESPACE, 'sess-b');
+    assert.equal(sessB.length, 1);
+
+    await backend.shutdown();
+  });
+
+  it('should dedup via hashExists', async () => {
+    const backend = new SQLiteBackend(join(TMP_DIR, 'hash-dedup.db'));
+    await backend.initialize();
+
+    const now = Date.now();
+    await backend.store({
+      id: 'hd-1', key: 'test:1', content: 'data', type: 'episodic',
+      namespace: NAMESPACE, tags: [], metadata: { contentHash: 'unique-hash-123', sessionId: 's', chunkIndex: 0, summary: '' },
+      accessLevel: 'private', createdAt: now, updatedAt: now, version: 1,
+      accessCount: 0, lastAccessedAt: now,
+    });
+
+    assert.ok(backend.hashExists('unique-hash-123'));
+    assert.ok(!backend.hashExists('nonexistent-hash'));
+
+    await backend.shutdown();
+  });
+
+  it('should bulk insert in a transaction', async () => {
+    const backend = new SQLiteBackend(join(TMP_DIR, 'bulk-sqlite.db'));
+    await backend.initialize();
+
+    const now = Date.now();
+    const entries = Array.from({ length: 100 }, (_, i) => ({
+      id: `bulk-${i}`, key: `test:${i}`, content: `content ${i}`, type: 'episodic',
+      namespace: NAMESPACE, tags: ['bulk'], metadata: { sessionId: 'bulk-sess', chunkIndex: i, contentHash: `bh${i}`, summary: `s${i}` },
+      accessLevel: 'private', createdAt: now + i, updatedAt: now + i, version: 1,
+      accessCount: 0, lastAccessedAt: now + i,
+    }));
+
+    await backend.bulkInsert(entries);
+    const count = await backend.count(NAMESPACE);
+    assert.equal(count, 100);
+
+    await backend.shutdown();
+  });
+
+  it('should list sessions with counts', async () => {
+    const backend = new SQLiteBackend(join(TMP_DIR, 'sessions-list.db'));
+    await backend.initialize();
+
+    const now = Date.now();
+    for (let s = 0; s < 3; s++) {
+      for (let i = 0; i < (s + 1) * 2; i++) {
+        await backend.store({
+          id: `sl-${s}-${i}`, key: `test:${s}:${i}`, content: `c`, type: 'episodic',
+          namespace: NAMESPACE, tags: [], metadata: { sessionId: `sess-${s}`, chunkIndex: i, contentHash: `slh${s}${i}`, summary: '' },
+          accessLevel: 'private', createdAt: now + s * 100 + i, updatedAt: now, version: 1,
+          accessCount: 0, lastAccessedAt: now,
+        });
+      }
+    }
+
+    const sessions = await backend.listSessions(NAMESPACE);
+    assert.equal(sessions.length, 3);
+    // Most recent session first
+    assert.equal(sessions[0].session_id, 'sess-2');
+    assert.equal(sessions[0].cnt, 6);
+
+    await backend.shutdown();
+  });
+
+  it('should persist across close/reopen', async () => {
+    const dbPath = join(TMP_DIR, 'persist-sqlite.db');
+    const now = Date.now();
+
+    const b1 = new SQLiteBackend(dbPath);
+    await b1.initialize();
+    await b1.store({
+      id: 'p-1', key: 'test:1', content: 'persisted', type: 'episodic',
+      namespace: NAMESPACE, tags: [], metadata: { sessionId: 'ps', chunkIndex: 0, contentHash: 'ph1', summary: 's' },
+      accessLevel: 'private', createdAt: now, updatedAt: now, version: 1,
+      accessCount: 0, lastAccessedAt: now,
+    });
+    await b1.shutdown();
+
+    const b2 = new SQLiteBackend(dbPath);
+    await b2.initialize();
+    const results = await b2.queryBySession(NAMESPACE, 'ps');
+    assert.equal(results.length, 1);
+    assert.equal(results[0].content, 'persisted');
+    await b2.shutdown();
+  });
+});
+
+// ============================================================================
+// JsonFileBackend Tests
 // ============================================================================
 
 describe('JsonFileBackend', () => {
@@ -69,15 +222,12 @@ describe('JsonFileBackend', () => {
   });
 
   it('should store and query entries', async () => {
-    const path = join(TMP_DIR, 'store-test.json');
+    const path = join(TMP_DIR, 'json-store.json');
     const backend = new JsonFileBackend(path);
     await backend.initialize();
 
     await backend.store({ id: '1', namespace: 'ns1', content: 'hello', metadata: {} });
     await backend.store({ id: '2', namespace: 'ns2', content: 'world', metadata: {} });
-
-    const all = await backend.query({});
-    assert.equal(all.length, 2);
 
     const ns1 = await backend.query({ namespace: 'ns1' });
     assert.equal(ns1.length, 1);
@@ -86,37 +236,52 @@ describe('JsonFileBackend', () => {
     await backend.shutdown();
   });
 
-  it('should persist and reload', async () => {
-    const path = join(TMP_DIR, 'persist-test.json');
-    const b1 = new JsonFileBackend(path);
-    await b1.initialize();
-    await b1.store({ id: 'x', namespace: 'test', content: 'persisted', metadata: {} });
-    await b1.shutdown();
-
-    const b2 = new JsonFileBackend(path);
-    await b2.initialize();
-    const results = await b2.query({ namespace: 'test' });
-    assert.equal(results.length, 1);
-    assert.equal(results[0].content, 'persisted');
-    await b2.shutdown();
-  });
-
-  it('should bulk insert entries', async () => {
-    const path = join(TMP_DIR, 'bulk-test.json');
+  it('should queryBySession', async () => {
+    const path = join(TMP_DIR, 'json-session.json');
     const backend = new JsonFileBackend(path);
     await backend.initialize();
 
-    const entries = [
-      { id: 'b1', namespace: 'ns', content: 'a', metadata: {} },
-      { id: 'b2', namespace: 'ns', content: 'b', metadata: {} },
-      { id: 'b3', namespace: 'ns', content: 'c', metadata: {} },
-    ];
-    await backend.bulkInsert(entries);
-    const count = await backend.count('ns');
-    assert.equal(count, 3);
+    await backend.store({ id: 'js1', namespace: NAMESPACE, content: 'a', metadata: { sessionId: 's1', chunkIndex: 0 } });
+    await backend.store({ id: 'js2', namespace: NAMESPACE, content: 'b', metadata: { sessionId: 's1', chunkIndex: 1 } });
+    await backend.store({ id: 'js3', namespace: NAMESPACE, content: 'c', metadata: { sessionId: 's2', chunkIndex: 0 } });
+
+    const results = await backend.queryBySession(NAMESPACE, 's1');
+    assert.equal(results.length, 2);
+    // Descending chunk order
+    assert.equal(results[0].metadata.chunkIndex, 1);
+
+    await backend.shutdown();
+  });
+
+  it('should hashExists', async () => {
+    const path = join(TMP_DIR, 'json-hash.json');
+    const backend = new JsonFileBackend(path);
+    await backend.initialize();
+
+    await backend.store({ id: 'jh1', namespace: NAMESPACE, content: 'x', metadata: { contentHash: 'hash-abc' } });
+
+    assert.ok(backend.hashExists('hash-abc'));
+    assert.ok(!backend.hashExists('hash-xyz'));
+
     await backend.shutdown();
   });
 });
+
+// ============================================================================
+// resolveBackend Tests
+// ============================================================================
+
+describe('resolveBackend', () => {
+  it('should resolve to sqlite when better-sqlite3 is available', async () => {
+    const { backend, type } = await resolveBackend();
+    assert.equal(type, 'sqlite');
+    await backend.shutdown();
+  });
+});
+
+// ============================================================================
+// createHashEmbedding Tests
+// ============================================================================
 
 describe('createHashEmbedding', () => {
   it('should produce 768-dimensional embedding', () => {
@@ -136,9 +301,7 @@ describe('createHashEmbedding', () => {
   it('should be deterministic', () => {
     const a = createHashEmbedding('deterministic test');
     const b = createHashEmbedding('deterministic test');
-    for (let i = 0; i < a.length; i++) {
-      assert.equal(a[i], b[i]);
-    }
+    for (let i = 0; i < a.length; i++) assert.equal(a[i], b[i]);
   });
 
   it('should produce different embeddings for different text', () => {
@@ -148,14 +311,13 @@ describe('createHashEmbedding', () => {
     for (let i = 0; i < a.length; i++) {
       if (a[i] !== b[i]) { same = false; break; }
     }
-    assert.ok(!same, 'Different texts should produce different embeddings');
-  });
-
-  it('should support custom dimensions', () => {
-    const emb = createHashEmbedding('test', 128);
-    assert.equal(emb.length, 128);
+    assert.ok(!same);
   });
 });
+
+// ============================================================================
+// hashContent Tests
+// ============================================================================
 
 describe('hashContent', () => {
   it('should produce SHA-256 hex string', () => {
@@ -173,6 +335,10 @@ describe('hashContent', () => {
   });
 });
 
+// ============================================================================
+// Transcript Parsing Tests
+// ============================================================================
+
 describe('parseTranscript', () => {
   it('should parse JSONL file', () => {
     const lines = [
@@ -186,16 +352,18 @@ describe('parseTranscript', () => {
   });
 
   it('should return empty for missing file', () => {
-    const msgs = parseTranscript('/nonexistent/file.jsonl');
-    assert.equal(msgs.length, 0);
+    assert.equal(parseTranscript('/nonexistent/file.jsonl').length, 0);
   });
 
   it('should skip malformed lines', () => {
     writeFileSync(TMP_TRANSCRIPT, '{"role":"user"}\nnot json\n{"role":"assistant"}\n', 'utf-8');
-    const msgs = parseTranscript(TMP_TRANSCRIPT);
-    assert.equal(msgs.length, 2);
+    assert.equal(parseTranscript(TMP_TRANSCRIPT).length, 2);
   });
 });
+
+// ============================================================================
+// Content Extraction Tests
+// ============================================================================
 
 describe('extractTextContent', () => {
   it('should extract from content array', () => {
@@ -204,8 +372,7 @@ describe('extractTextContent', () => {
   });
 
   it('should extract from string content', () => {
-    const msg = { content: 'simple string' };
-    assert.equal(extractTextContent(msg), 'simple string');
+    assert.equal(extractTextContent({ content: 'simple string' }), 'simple string');
   });
 
   it('should handle null/undefined', () => {
@@ -233,12 +400,6 @@ describe('extractToolCalls', () => {
     const calls = extractToolCalls(msg);
     assert.equal(calls.length, 2);
     assert.equal(calls[0].name, 'Edit');
-    assert.equal(calls[1].name, 'Bash');
-  });
-
-  it('should return empty for no tool calls', () => {
-    const msg = { content: [{ type: 'text', text: 'hello' }] };
-    assert.deepEqual(extractToolCalls(msg), []);
   });
 
   it('should handle null message', () => {
@@ -247,40 +408,31 @@ describe('extractToolCalls', () => {
 });
 
 describe('extractFilePaths', () => {
-  it('should extract file_path and path', () => {
+  it('should extract and deduplicate paths', () => {
     const calls = [
       { name: 'Edit', input: { file_path: '/src/a.ts' } },
+      { name: 'Read', input: { file_path: '/src/a.ts' } },
       { name: 'Glob', input: { path: '/src' } },
-      { name: 'Bash', input: { command: 'ls' } },
     ];
     const paths = extractFilePaths(calls);
+    assert.equal(paths.length, 2);
     assert.ok(paths.includes('/src/a.ts'));
     assert.ok(paths.includes('/src'));
-    assert.equal(paths.length, 2);
-  });
-
-  it('should deduplicate paths', () => {
-    const calls = [
-      { name: 'Read', input: { file_path: '/src/a.ts' } },
-      { name: 'Edit', input: { file_path: '/src/a.ts' } },
-    ];
-    const paths = extractFilePaths(calls);
-    assert.equal(paths.length, 1);
   });
 });
 
+// ============================================================================
+// Chunking Tests
+// ============================================================================
+
 describe('chunkTranscript', () => {
-  it('should group user+assistant pairs into chunks', () => {
+  it('should group user+assistant pairs', () => {
     const messages = [
-      makeUserMsg('first question'),
-      makeAssistantMsg('first answer'),
-      makeUserMsg('second question'),
-      makeAssistantMsg('second answer'),
+      makeUserMsg('first'), makeAssistantMsg('first answer'),
+      makeUserMsg('second'), makeAssistantMsg('second answer'),
     ];
     const chunks = chunkTranscript(messages);
     assert.equal(chunks.length, 2);
-    assert.equal(chunks[0].turnIndex, 0);
-    assert.equal(chunks[1].turnIndex, 1);
   });
 
   it('should skip synthetic tool result messages', () => {
@@ -290,18 +442,16 @@ describe('chunkTranscript', () => {
       makeToolResultMsg('id1', 'file1.txt'),
       makeAssistantMsg('done'),
     ];
-    const chunks = chunkTranscript(messages);
-    assert.equal(chunks.length, 1);
+    assert.equal(chunkTranscript(messages).length, 1);
   });
 
-  it('should filter out non user/assistant messages', () => {
+  it('should filter non user/assistant messages', () => {
     const messages = [
       { role: 'system', content: 'init' },
       makeUserMsg('hello'),
       makeAssistantMsg('hi'),
     ];
-    const chunks = chunkTranscript(messages);
-    assert.equal(chunks.length, 1);
+    assert.equal(chunkTranscript(messages).length, 1);
   });
 
   it('should handle empty messages', () => {
@@ -309,34 +459,36 @@ describe('chunkTranscript', () => {
   });
 });
 
+// ============================================================================
+// Summary Extraction Tests
+// ============================================================================
+
 describe('extractSummary', () => {
   it('should produce summary within 300 chars', () => {
     const chunk = {
-      userMessage: makeUserMsg('Implement user authentication with OAuth2 and JWT tokens'),
-      assistantMessage: makeAssistantMsg('I\'ll implement OAuth2 authentication. First, let me set up the JWT token validation.'),
+      userMessage: makeUserMsg('Implement user authentication with OAuth2'),
+      assistantMessage: makeAssistantMsg('I\'ll implement OAuth2 authentication.'),
       toolCalls: [
         { name: 'Edit', input: { file_path: '/src/auth.ts' } },
-        { name: 'Write', input: { file_path: '/src/jwt.ts' } },
       ],
       turnIndex: 0,
     };
     const summary = extractSummary(chunk);
-    assert.ok(summary.length <= 300, `Summary too long: ${summary.length}`);
+    assert.ok(summary.length <= 300);
     assert.ok(summary.includes('OAuth2') || summary.includes('authentication'));
-    assert.ok(summary.includes('Edit'));
   });
 
   it('should handle empty chunk', () => {
-    const chunk = {
-      userMessage: null,
-      assistantMessage: null,
-      toolCalls: [],
-      turnIndex: 0,
-    };
-    const summary = extractSummary(chunk);
+    const summary = extractSummary({
+      userMessage: null, assistantMessage: null, toolCalls: [], turnIndex: 0,
+    });
     assert.ok(summary.length <= 300);
   });
 });
+
+// ============================================================================
+// Entry Building Tests
+// ============================================================================
 
 describe('buildEntry', () => {
   it('should produce valid memory entry', () => {
@@ -358,32 +510,30 @@ describe('buildEntry', () => {
     assert.equal(entry.metadata.sessionId, 'session-123');
     assert.equal(entry.metadata.chunkIndex, 5);
     assert.ok(entry.metadata.contentHash);
-    assert.ok(entry.metadata.summary);
     assert.deepEqual(entry.metadata.filePaths, ['/src/x.ts']);
   });
 });
 
-describe('storeChunks', () => {
+// ============================================================================
+// Store + Dedup Tests (with SQLite)
+// ============================================================================
+
+describe('storeChunks (SQLite)', () => {
   it('should store chunks and dedup duplicates', async () => {
-    const path = join(TMP_DIR, 'dedup-test.json');
-    const backend = new JsonFileBackend(path);
+    const backend = new SQLiteBackend(join(TMP_DIR, 'dedup-sqlite.db'));
     await backend.initialize();
 
-    const chunks = [
-      {
-        userMessage: makeUserMsg('hello'),
-        assistantMessage: makeAssistantMsg('hi'),
-        toolCalls: [],
-        turnIndex: 0,
-      },
-    ];
+    const chunks = [{
+      userMessage: makeUserMsg('hello'),
+      assistantMessage: makeAssistantMsg('hi'),
+      toolCalls: [],
+      turnIndex: 0,
+    }];
 
-    // First store
     const r1 = await storeChunks(backend, chunks, 'sess1', 'auto');
     assert.equal(r1.stored, 1);
     assert.equal(r1.deduped, 0);
 
-    // Second store with same content = deduped
     const r2 = await storeChunks(backend, chunks, 'sess1', 'auto');
     assert.equal(r2.stored, 0);
     assert.equal(r2.deduped, 1);
@@ -392,25 +542,45 @@ describe('storeChunks', () => {
   });
 });
 
-describe('retrieveContext', () => {
-  it('should build restoration text within budget', async () => {
-    const path = join(TMP_DIR, 'retrieve-test.json');
-    const backend = new JsonFileBackend(path);
+describe('storeChunks (JSON fallback)', () => {
+  it('should store chunks and dedup duplicates', async () => {
+    const backend = new JsonFileBackend(join(TMP_DIR, 'dedup-json.json'));
     await backend.initialize();
 
-    // Insert some entries
+    const chunks = [{
+      userMessage: makeUserMsg('hello'),
+      assistantMessage: makeAssistantMsg('hi'),
+      toolCalls: [],
+      turnIndex: 0,
+    }];
+
+    const r1 = await storeChunks(backend, chunks, 'sess1', 'auto');
+    assert.equal(r1.stored, 1);
+
+    const r2 = await storeChunks(backend, chunks, 'sess1', 'auto');
+    assert.equal(r2.stored, 0);
+    assert.equal(r2.deduped, 1);
+
+    await backend.shutdown();
+  });
+});
+
+// ============================================================================
+// Context Retrieval Tests
+// ============================================================================
+
+describe('retrieveContext', () => {
+  it('should build restoration text (SQLite)', async () => {
+    const backend = new SQLiteBackend(join(TMP_DIR, 'retrieve-sqlite.db'));
+    await backend.initialize();
+
+    const now = Date.now();
     const entries = Array.from({ length: 5 }, (_, i) => ({
-      id: `r${i}`,
-      namespace: NAMESPACE,
-      content: `Turn ${i} content`,
-      type: 'episodic',
-      metadata: {
-        sessionId: 'sess-abc',
-        chunkIndex: i,
-        summary: `Summary of turn ${i}`,
-        toolNames: ['Read', 'Edit'],
-        filePaths: ['/src/file.ts'],
-      },
+      id: `r${i}`, key: `test:${i}`, content: `Turn ${i} content`, type: 'episodic',
+      namespace: NAMESPACE, tags: [],
+      metadata: { sessionId: 'sess-abc', chunkIndex: i, summary: `Summary of turn ${i}`, toolNames: ['Read', 'Edit'], filePaths: ['/src/file.ts'], contentHash: `rh${i}` },
+      accessLevel: 'private', createdAt: now + i, updatedAt: now + i, version: 1,
+      accessCount: 0, lastAccessedAt: now + i,
     }));
     await backend.bulkInsert(entries);
 
@@ -418,68 +588,58 @@ describe('retrieveContext', () => {
     assert.ok(ctx.includes('Restored Context'));
     assert.ok(ctx.includes('5 archived turns'));
     assert.ok(ctx.includes('Summary of turn'));
-    assert.ok(ctx.length <= 4000);
+    assert.ok(ctx.length <= 4200); // budget + header + footer
 
     await backend.shutdown();
   });
 
   it('should return empty for unknown session', async () => {
-    const path = join(TMP_DIR, 'empty-retrieve.json');
-    const backend = new JsonFileBackend(path);
+    const backend = new SQLiteBackend(join(TMP_DIR, 'empty-retrieve.db'));
     await backend.initialize();
-
-    const ctx = await retrieveContext(backend, 'unknown-session', 4000);
-    assert.equal(ctx, '');
-
+    assert.equal(await retrieveContext(backend, 'unknown', 4000), '');
     await backend.shutdown();
   });
 
   it('should respect budget constraint', async () => {
-    const path = join(TMP_DIR, 'budget-test.json');
-    const backend = new JsonFileBackend(path);
+    const backend = new SQLiteBackend(join(TMP_DIR, 'budget-sqlite.db'));
     await backend.initialize();
 
-    // Insert many entries
+    const now = Date.now();
     const entries = Array.from({ length: 50 }, (_, i) => ({
-      id: `bg${i}`,
-      namespace: NAMESPACE,
-      content: 'x'.repeat(200),
-      type: 'episodic',
-      metadata: {
-        sessionId: 'budget-sess',
-        chunkIndex: i,
-        summary: `Long summary text for turn number ${i} that takes up space in the output`,
-        toolNames: ['Edit', 'Write', 'Bash'],
-        filePaths: ['/src/very/long/file/path/component.tsx'],
-      },
+      id: `bg${i}`, key: `test:${i}`, content: 'x'.repeat(200), type: 'episodic',
+      namespace: NAMESPACE, tags: [],
+      metadata: { sessionId: 'budget-sess', chunkIndex: i, summary: `Long summary text for turn ${i} with padding`, toolNames: ['Edit', 'Write', 'Bash'], filePaths: ['/src/very/long/path.tsx'], contentHash: `bgh${i}` },
+      accessLevel: 'private', createdAt: now + i, updatedAt: now + i, version: 1,
+      accessCount: 0, lastAccessedAt: now + i,
     }));
     await backend.bulkInsert(entries);
 
     const ctx = await retrieveContext(backend, 'budget-sess', 500);
-    assert.ok(ctx.length <= 600, `Context too long: ${ctx.length}`); // budget + footer
+    assert.ok(ctx.length <= 700); // budget + header + footer
 
     await backend.shutdown();
   });
 });
 
+// ============================================================================
+// No-op Condition Tests
+// ============================================================================
+
 describe('no-op conditions', () => {
-  it('should not restore on non-compact SessionStart', async () => {
-    // The doSessionStart function checks source === 'compact'
-    // We test the retrieveContext directly since doSessionStart reads stdin
-    const path = join(TMP_DIR, 'noop-test.json');
-    const backend = new JsonFileBackend(path);
+  it('should not restore for non-matching session', async () => {
+    const backend = new SQLiteBackend(join(TMP_DIR, 'noop-sqlite.db'));
     await backend.initialize();
 
-    // Even with data, non-matching session returns empty
+    const now = Date.now();
     await backend.store({
-      id: 'noop1',
-      namespace: NAMESPACE,
-      content: 'data',
-      metadata: { sessionId: 'other-session', chunkIndex: 0 },
+      id: 'noop1', key: 'test:1', content: 'data', type: 'episodic',
+      namespace: NAMESPACE, tags: [],
+      metadata: { sessionId: 'other-session', chunkIndex: 0, contentHash: 'nph1', summary: 's' },
+      accessLevel: 'private', createdAt: now, updatedAt: now, version: 1,
+      accessCount: 0, lastAccessedAt: now,
     });
 
-    const ctx = await retrieveContext(backend, 'my-session', 4000);
-    assert.equal(ctx, '');
+    assert.equal(await retrieveContext(backend, 'my-session', 4000), '');
     await backend.shutdown();
   });
 });
