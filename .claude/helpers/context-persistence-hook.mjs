@@ -1192,9 +1192,14 @@ async function autoOptimize(backend, backendType) {
 // ============================================================================
 
 /**
- * Estimate token count from transcript JSONL.
- * Reads all messages and sums character lengths / CHARS_PER_TOKEN.
- * Also checks for compact_boundary messages which report actual pre_tokens.
+ * Estimate context token usage from transcript JSONL.
+ *
+ * Primary method: Read the most recent assistant message's `usage` field which
+ * contains `input_tokens` + `cache_read_input_tokens` — this is the ACTUAL
+ * context size as reported by the Claude API. This includes system prompt,
+ * CLAUDE.md, tool definitions, all messages, and everything Claude sees.
+ *
+ * Fallback: Sum character lengths and divide by CHARS_PER_TOKEN.
  */
 function estimateContextTokens(transcriptPath) {
   if (!existsSync(transcriptPath)) return { tokens: 0, turns: 0, method: 'none' };
@@ -1202,72 +1207,95 @@ function estimateContextTokens(transcriptPath) {
   const content = readFileSync(transcriptPath, 'utf-8');
   const lines = content.split('\n').filter(Boolean);
 
-  let totalChars = 0;
+  // Track the most recent usage data (from the last assistant message)
+  let lastInputTokens = 0;
+  let lastCacheRead = 0;
+  let lastCacheCreate = 0;
   let turns = 0;
   let lastPreTokens = 0;
-  let lastBoundaryLine = 0;
-  let postBoundaryChars = 0;
+  let totalChars = 0;
 
   for (let i = 0; i < lines.length; i++) {
     try {
       const parsed = JSON.parse(lines[i]);
 
-      // Check for compact_boundary — this has real token count
-      // SDK uses camelCase: compactMetadata.preTokens (not snake_case)
+      // Check for compact_boundary
       if (parsed.type === 'system' && parsed.subtype === 'compact_boundary') {
         lastPreTokens = parsed.compactMetadata?.preTokens
           || parsed.compact_metadata?.pre_tokens || 0;
-        lastBoundaryLine = i;
-        totalChars = 0; // Reset — post-compaction content is what matters
+        // Reset after compaction — new context starts here
+        totalChars = 0;
         turns = 0;
+        lastInputTokens = 0;
+        lastCacheRead = 0;
+        lastCacheCreate = 0;
         continue;
       }
 
-      // Count message content (SDK wraps as { type, message: { role, content } })
+      // Extract ACTUAL token usage from assistant messages
+      // The SDK transcript stores: { message: { role, content, usage: { input_tokens, cache_read_input_tokens, ... } } }
       const msg = parsed.message || parsed;
-      const role = msg.role || parsed.type;
-      if (role === 'user' || role === 'assistant') {
-        const content = msg.content;
-        let textLen = 0;
-        if (typeof content === 'string') {
-          textLen = content.length;
-        } else if (Array.isArray(content)) {
-          for (const block of content) {
-            if (block.type === 'text' && block.text) textLen += block.text.length;
-            else if (block.type === 'tool_use' && block.input) textLen += JSON.stringify(block.input).length;
-            else if (block.type === 'tool_result') {
-              if (typeof block.content === 'string') textLen += block.content.length;
-              else if (Array.isArray(block.content)) {
-                for (const sub of block.content) {
-                  if (sub.text) textLen += sub.text.length;
-                }
-              }
-            }
-          }
+      const usage = msg.usage;
+      if (usage && (msg.role === 'assistant' || parsed.type === 'assistant')) {
+        const inputTokens = usage.input_tokens || 0;
+        const cacheRead = usage.cache_read_input_tokens || 0;
+        const cacheCreate = usage.cache_creation_input_tokens || 0;
+
+        // The total context sent to Claude = input_tokens + cache_read + cache_create
+        // input_tokens: non-cached tokens actually processed
+        // cache_read: tokens served from cache (still in context)
+        // cache_create: tokens newly cached (still in context)
+        const totalContext = inputTokens + cacheRead + cacheCreate;
+
+        if (totalContext > 0) {
+          lastInputTokens = inputTokens;
+          lastCacheRead = cacheRead;
+          lastCacheCreate = cacheCreate;
         }
-        totalChars += textLen;
-        if (role === 'user') turns++;
       }
 
-      // Count system messages (they consume context too)
-      if (parsed.type === 'system' && parsed.subtype !== 'compact_boundary' && parsed.subtype !== 'status') {
-        totalChars += (parsed.content || '').length;
+      // Count turns for display
+      const role = msg.role || parsed.type;
+      if (role === 'user') turns++;
+
+      // Char fallback accumulation
+      if (role === 'user' || role === 'assistant') {
+        const c = msg.content;
+        if (typeof c === 'string') totalChars += c.length;
+        else if (Array.isArray(c)) {
+          for (const block of c) {
+            if (block.text) totalChars += block.text.length;
+            else if (block.input) totalChars += JSON.stringify(block.input).length;
+          }
+        }
       }
     } catch { /* skip */ }
   }
 
-  const estimatedTokens = Math.ceil(totalChars / CHARS_PER_TOKEN);
+  // Primary: use actual API usage data
+  const actualTotal = lastInputTokens + lastCacheRead + lastCacheCreate;
+  if (actualTotal > 0) {
+    return {
+      tokens: actualTotal,
+      turns,
+      method: 'api-usage',
+      lastPreTokens,
+      breakdown: {
+        input: lastInputTokens,
+        cacheRead: lastCacheRead,
+        cacheCreate: lastCacheCreate,
+      },
+    };
+  }
 
-  // If we had a compaction boundary, the current context is the compact summary
-  // plus everything after it. We use the estimate since we don't know the
-  // exact compact summary size, but it's typically ~2000-5000 tokens.
+  // Fallback: char-based estimate
+  const estimatedTokens = Math.ceil(totalChars / CHARS_PER_TOKEN);
   if (lastPreTokens > 0) {
-    // Post-compaction: assume compact summary is ~3000 tokens + new content
     const compactSummaryTokens = 3000;
     return {
       tokens: compactSummaryTokens + estimatedTokens,
       turns,
-      method: 'post-compact-estimate',
+      method: 'post-compact-char-estimate',
       lastPreTokens,
     };
   }
