@@ -1265,7 +1265,7 @@ async function retrieveContextSmart(backend, sessionId, budget) {
       // Use the most recent turn's summary as the search query
       const recentSummary = sessionEntries[0]?.metadata?.summary || '';
       if (recentSummary) {
-        const crossResults = crossSessionSearch(backend, recentSummary, sessionId, 3);
+        const crossResults = await crossSessionSearch(backend, recentSummary, sessionId, 3);
         if (crossResults.length > 0) {
           const crossLines = crossResults.map(r =>
             `- [Session ${r.sessionId?.slice(0, 8)}..., turn ${r.chunkIndex ?? '?'}, conf:${(r.confidence || 0).toFixed(2)}] ${r.summary || '(no summary)'}`
