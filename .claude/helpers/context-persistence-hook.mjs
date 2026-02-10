@@ -1288,7 +1288,27 @@ async function autoOptimize(backend, backendType) {
     } catch { /* RuVector sync is best-effort */ }
   }
 
-  return { pruned, synced };
+  return { pruned, synced, decayed, embedded };
+}
+
+// ============================================================================
+// Cross-session semantic retrieval
+// ============================================================================
+
+/**
+ * Find relevant context from OTHER sessions using semantic similarity.
+ * This enables "What did we discuss about auth?" across sessions.
+ */
+function crossSessionSearch(backend, queryText, currentSessionId, k = 5) {
+  if (!backend.semanticSearch) return [];
+  try {
+    const queryEmb = createHashEmbedding(queryText);
+    const results = backend.semanticSearch(queryEmb, k * 2, NAMESPACE);
+    // Filter out current session entries (we already have those)
+    return results
+      .filter(r => r.sessionId !== currentSessionId)
+      .slice(0, k);
+  } catch { return []; }
 }
 
 // ============================================================================
