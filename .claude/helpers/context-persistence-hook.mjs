@@ -3,8 +3,13 @@
  * Context Persistence Hook (ADR-051)
  *
  * Intercepts Claude Code's PreCompact and SessionStart lifecycle events
- * to persist conversation history in AgentDB/RuVector memory, enabling
- * "infinite context" across compaction boundaries.
+ * to persist conversation history in SQLite (primary) or JSON (fallback),
+ * enabling "infinite context" across compaction boundaries.
+ *
+ * Backend priority:
+ *   1. better-sqlite3 (native, WAL mode, indexed queries, ACID transactions)
+ *   2. AgentDB from @claude-flow/memory (HNSW vector search)
+ *   3. JsonFileBackend (zero dependencies, always works)
  *
  * Usage:
  *   node context-persistence-hook.mjs pre-compact   # PreCompact: archive transcript
@@ -16,12 +21,14 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { createHash } from 'crypto';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { createRequire } from 'module';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const PROJECT_ROOT = join(__dirname, '../..');
 const DATA_DIR = join(PROJECT_ROOT, '.claude-flow', 'data');
-const ARCHIVE_PATH = join(DATA_DIR, 'transcript-archive.json');
+const ARCHIVE_JSON_PATH = join(DATA_DIR, 'transcript-archive.json');
+const ARCHIVE_DB_PATH = join(DATA_DIR, 'transcript-archive.db');
 
 const NAMESPACE = 'transcript-archive';
 const RESTORE_BUDGET = parseInt(process.env.CLAUDE_FLOW_COMPACT_RESTORE_BUDGET || '4000', 10);
@@ -31,7 +38,182 @@ const MAX_MESSAGES = 500;
 if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
 
 // ============================================================================
-// Simple JSON File Backend (reused from auto-memory-hook.mjs)
+// SQLite Backend (better-sqlite3 — synchronous, fast, WAL mode)
+// ============================================================================
+
+class SQLiteBackend {
+  constructor(dbPath) {
+    this.dbPath = dbPath;
+    this.db = null;
+  }
+
+  async initialize() {
+    const require = createRequire(import.meta.url);
+    const Database = require('better-sqlite3');
+    this.db = new Database(this.dbPath);
+
+    // Performance optimizations
+    this.db.pragma('journal_mode = WAL');
+    this.db.pragma('synchronous = NORMAL');
+    this.db.pragma('cache_size = 5000');
+    this.db.pragma('temp_store = MEMORY');
+
+    // Create schema
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS transcript_entries (
+        id TEXT PRIMARY KEY,
+        key TEXT NOT NULL,
+        content TEXT NOT NULL,
+        type TEXT NOT NULL DEFAULT 'episodic',
+        namespace TEXT NOT NULL DEFAULT 'transcript-archive',
+        tags TEXT NOT NULL DEFAULT '[]',
+        metadata TEXT NOT NULL DEFAULT '{}',
+        access_level TEXT NOT NULL DEFAULT 'private',
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL,
+        version INTEGER NOT NULL DEFAULT 1,
+        access_count INTEGER NOT NULL DEFAULT 0,
+        last_accessed_at INTEGER NOT NULL,
+        content_hash TEXT,
+        session_id TEXT,
+        chunk_index INTEGER,
+        summary TEXT
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_te_namespace ON transcript_entries(namespace);
+      CREATE INDEX IF NOT EXISTS idx_te_session ON transcript_entries(session_id);
+      CREATE INDEX IF NOT EXISTS idx_te_hash ON transcript_entries(content_hash);
+      CREATE INDEX IF NOT EXISTS idx_te_chunk ON transcript_entries(session_id, chunk_index);
+      CREATE INDEX IF NOT EXISTS idx_te_created ON transcript_entries(created_at);
+    `);
+
+    // Prepare statements for reuse
+    this._stmts = {
+      insert: this.db.prepare(`
+        INSERT OR IGNORE INTO transcript_entries
+          (id, key, content, type, namespace, tags, metadata, access_level,
+           created_at, updated_at, version, access_count, last_accessed_at,
+           content_hash, session_id, chunk_index, summary)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `),
+      queryByNamespace: this.db.prepare(
+        'SELECT * FROM transcript_entries WHERE namespace = ? ORDER BY created_at DESC'
+      ),
+      queryBySession: this.db.prepare(
+        'SELECT * FROM transcript_entries WHERE namespace = ? AND session_id = ? ORDER BY chunk_index DESC'
+      ),
+      countAll: this.db.prepare('SELECT COUNT(*) as cnt FROM transcript_entries'),
+      countByNamespace: this.db.prepare(
+        'SELECT COUNT(*) as cnt FROM transcript_entries WHERE namespace = ?'
+      ),
+      hashExists: this.db.prepare(
+        'SELECT 1 FROM transcript_entries WHERE content_hash = ? LIMIT 1'
+      ),
+      listNamespaces: this.db.prepare(
+        'SELECT DISTINCT namespace FROM transcript_entries'
+      ),
+      listSessions: this.db.prepare(
+        'SELECT session_id, COUNT(*) as cnt FROM transcript_entries WHERE namespace = ? GROUP BY session_id ORDER BY MAX(created_at) DESC'
+      ),
+    };
+
+    this._bulkInsert = this.db.transaction((entries) => {
+      for (const e of entries) {
+        this._stmts.insert.run(
+          e.id, e.key, e.content, e.type, e.namespace,
+          JSON.stringify(e.tags), JSON.stringify(e.metadata), e.accessLevel,
+          e.createdAt, e.updatedAt, e.version, e.accessCount, e.lastAccessedAt,
+          e.metadata?.contentHash || null,
+          e.metadata?.sessionId || null,
+          e.metadata?.chunkIndex ?? null,
+          e.metadata?.summary || null
+        );
+      }
+    });
+  }
+
+  async store(entry) {
+    this._stmts.insert.run(
+      entry.id, entry.key, entry.content, entry.type, entry.namespace,
+      JSON.stringify(entry.tags), JSON.stringify(entry.metadata), entry.accessLevel,
+      entry.createdAt, entry.updatedAt, entry.version, entry.accessCount, entry.lastAccessedAt,
+      entry.metadata?.contentHash || null,
+      entry.metadata?.sessionId || null,
+      entry.metadata?.chunkIndex ?? null,
+      entry.metadata?.summary || null
+    );
+  }
+
+  async bulkInsert(entries) {
+    this._bulkInsert(entries);
+  }
+
+  async query(opts) {
+    let rows;
+    if (opts?.namespace && opts?.sessionId) {
+      rows = this._stmts.queryBySession.all(opts.namespace, opts.sessionId);
+    } else if (opts?.namespace) {
+      rows = this._stmts.queryByNamespace.all(opts.namespace);
+    } else {
+      rows = this.db.prepare('SELECT * FROM transcript_entries ORDER BY created_at DESC').all();
+    }
+    return rows.map(r => this._rowToEntry(r));
+  }
+
+  async queryBySession(namespace, sessionId) {
+    const rows = this._stmts.queryBySession.all(namespace, sessionId);
+    return rows.map(r => this._rowToEntry(r));
+  }
+
+  hashExists(hash) {
+    return !!this._stmts.hashExists.get(hash);
+  }
+
+  async count(namespace) {
+    if (namespace) {
+      return this._stmts.countByNamespace.get(namespace).cnt;
+    }
+    return this._stmts.countAll.get().cnt;
+  }
+
+  async listNamespaces() {
+    return this._stmts.listNamespaces.all().map(r => r.namespace);
+  }
+
+  async listSessions(namespace) {
+    return this._stmts.listSessions.all(namespace || NAMESPACE);
+  }
+
+  async shutdown() {
+    if (this.db) {
+      this.db.pragma('optimize');
+      this.db.close();
+      this.db = null;
+    }
+  }
+
+  _rowToEntry(row) {
+    return {
+      id: row.id,
+      key: row.key,
+      content: row.content,
+      type: row.type,
+      namespace: row.namespace,
+      tags: JSON.parse(row.tags),
+      metadata: JSON.parse(row.metadata),
+      accessLevel: row.access_level,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      version: row.version,
+      accessCount: row.access_count,
+      lastAccessedAt: row.last_accessed_at,
+      references: [],
+    };
+  }
+}
+
+// ============================================================================
+// JSON File Backend (fallback when better-sqlite3 unavailable)
 // ============================================================================
 
 class JsonFileBackend {
@@ -66,6 +248,19 @@ class JsonFileBackend {
     return results;
   }
 
+  async queryBySession(namespace, sessionId) {
+    return [...this.entries.values()]
+      .filter(e => e.namespace === namespace && e.metadata?.sessionId === sessionId)
+      .sort((a, b) => (b.metadata?.chunkIndex ?? 0) - (a.metadata?.chunkIndex ?? 0));
+  }
+
+  hashExists(hash) {
+    for (const e of this.entries.values()) {
+      if (e.metadata?.contentHash === hash) return true;
+    }
+    return false;
+  }
+
   async count(namespace) {
     if (!namespace) return this.entries.size;
     let n = 0;
@@ -81,6 +276,16 @@ class JsonFileBackend {
     return [...ns];
   }
 
+  async listSessions(namespace) {
+    const sessions = new Map();
+    for (const e of this.entries.values()) {
+      if (e.namespace === (namespace || NAMESPACE) && e.metadata?.sessionId) {
+        sessions.set(e.metadata.sessionId, (sessions.get(e.metadata.sessionId) || 0) + 1);
+      }
+    }
+    return [...sessions.entries()].map(([session_id, cnt]) => ({ session_id, cnt }));
+  }
+
   async shutdown() { this._persist(); }
 
   _persist() {
@@ -91,16 +296,37 @@ class JsonFileBackend {
 }
 
 // ============================================================================
-// Try loading AgentDB memory package for HNSW-indexed storage
+// Backend resolution: SQLite > AgentDB > JSON
 // ============================================================================
 
-async function loadMemoryPackage() {
-  const localDist = join(PROJECT_ROOT, 'v3/@claude-flow/memory/dist/index.js');
-  if (existsSync(localDist)) {
-    try { return await import(`file://${localDist}`); } catch { /* fall through */ }
-  }
-  try { return await import('@claude-flow/memory'); } catch { /* fall through */ }
-  return null;
+async function resolveBackend() {
+  // Tier 1: better-sqlite3 (native, fastest)
+  try {
+    const backend = new SQLiteBackend(ARCHIVE_DB_PATH);
+    await backend.initialize();
+    return { backend, type: 'sqlite' };
+  } catch { /* fall through */ }
+
+  // Tier 2: AgentDB from @claude-flow/memory
+  try {
+    const localDist = join(PROJECT_ROOT, 'v3/@claude-flow/memory/dist/index.js');
+    let memPkg = null;
+    if (existsSync(localDist)) {
+      memPkg = await import(`file://${localDist}`);
+    } else {
+      memPkg = await import('@claude-flow/memory');
+    }
+    if (memPkg?.AgentDBBackend) {
+      const backend = new memPkg.AgentDBBackend();
+      await backend.initialize();
+      return { backend, type: 'agentdb' };
+    }
+  } catch { /* fall through */ }
+
+  // Tier 3: JSON file (always works)
+  const backend = new JsonFileBackend(ARCHIVE_JSON_PATH);
+  await backend.initialize();
+  return { backend, type: 'json' };
 }
 
 // ============================================================================
@@ -188,16 +414,13 @@ function parseTranscript(transcriptPath) {
 
 function extractTextContent(message) {
   if (!message) return '';
-  // String content
   if (typeof message.content === 'string') return message.content;
-  // Array of content blocks
   if (Array.isArray(message.content)) {
     return message.content
       .filter(b => b.type === 'text')
       .map(b => b.text || '')
       .join('\n');
   }
-  // Direct message text
   if (typeof message.text === 'string') return message.text;
   return '';
 }
@@ -235,12 +458,9 @@ function extractFilePaths(toolCalls) {
 // ============================================================================
 
 function chunkTranscript(messages) {
-  // Filter to user + assistant role messages only
   const relevant = messages.filter(
     m => m.role === 'user' || m.role === 'assistant'
   );
-
-  // Cap for timeout safety
   const capped = relevant.slice(-MAX_MESSAGES);
 
   const chunks = [];
@@ -248,14 +468,9 @@ function chunkTranscript(messages) {
 
   for (const msg of capped) {
     if (msg.role === 'user') {
-      // Check if this is a synthetic tool-result continuation
       const isSynthetic = Array.isArray(msg.content) &&
         msg.content.every(b => b.type === 'tool_result');
-      if (isSynthetic && currentChunk) {
-        // Append tool results to current chunk
-        continue;
-      }
-      // New turn
+      if (isSynthetic && currentChunk) continue;
       if (currentChunk) chunks.push(currentChunk);
       currentChunk = {
         userMessage: msg,
@@ -280,26 +495,22 @@ function chunkTranscript(messages) {
 function extractSummary(chunk) {
   const parts = [];
 
-  // First line of user prompt
   const userText = extractTextContent(chunk.userMessage);
   const firstUserLine = userText.split('\n').find(l => l.trim()) || '';
   if (firstUserLine) parts.push(firstUserLine.slice(0, 100));
 
-  // Tool names
   const toolNames = [...new Set(chunk.toolCalls.map(tc => tc.name))];
   if (toolNames.length) parts.push('Tools: ' + toolNames.join(', '));
 
-  // File paths
   const filePaths = extractFilePaths(chunk.toolCalls);
   if (filePaths.length) {
     const shortPaths = filePaths.slice(0, 5).map(p => {
-      const parts = p.split('/');
-      return parts.length > 2 ? '.../' + parts.slice(-2).join('/') : p;
+      const segs = p.split('/');
+      return segs.length > 2 ? '.../' + segs.slice(-2).join('/') : p;
     });
     parts.push('Files: ' + shortPaths.join(', '));
   }
 
-  // First two lines of assistant text
   const assistantText = extractTextContent(chunk.assistantMessage);
   const assistantLines = assistantText.split('\n').filter(l => l.trim()).slice(0, 2);
   if (assistantLines.length) parts.push(assistantLines.join(' ').slice(0, 120));
@@ -359,22 +570,17 @@ function buildEntry(chunk, sessionId, trigger, timestamp) {
 }
 
 // ============================================================================
-// Store chunks with dedup
+// Store chunks with dedup (uses indexed hash lookup for SQLite)
 // ============================================================================
 
 async function storeChunks(backend, chunks, sessionId, trigger) {
   const timestamp = new Date().toISOString();
 
-  // Get existing hashes for dedup
-  const existing = await backend.query({ namespace: NAMESPACE });
-  const existingHashes = new Set(
-    existing.map(e => e.metadata?.contentHash).filter(Boolean)
-  );
-
   const entries = [];
   for (const chunk of chunks) {
     const entry = buildEntry(chunk, sessionId, trigger, timestamp);
-    if (!existingHashes.has(entry.metadata.contentHash)) {
+    // Fast hash-based dedup (indexed lookup in SQLite, scan in JSON)
+    if (!backend.hashExists(entry.metadata.contentHash)) {
       entries.push(entry);
     }
   }
@@ -387,16 +593,16 @@ async function storeChunks(backend, chunks, sessionId, trigger) {
 }
 
 // ============================================================================
-// Retrieve context for restoration
+// Retrieve context for restoration (uses indexed session query for SQLite)
 // ============================================================================
 
 async function retrieveContext(backend, sessionId, budget) {
-  const entries = await backend.query({ namespace: NAMESPACE });
-
-  // Filter to current session, sort by chunkIndex descending (most recent first)
-  const sessionEntries = entries
-    .filter(e => e.metadata?.sessionId === sessionId)
-    .sort((a, b) => (b.metadata?.chunkIndex ?? 0) - (a.metadata?.chunkIndex ?? 0));
+  // Use optimized session query if available, otherwise filter manually
+  const sessionEntries = backend.queryBySession
+    ? await backend.queryBySession(NAMESPACE, sessionId)
+    : (await backend.query({ namespace: NAMESPACE }))
+        .filter(e => e.metadata?.sessionId === sessionId)
+        .sort((a, b) => (b.metadata?.chunkIndex ?? 0) - (a.metadata?.chunkIndex ?? 0));
 
   if (sessionEntries.length === 0) return '';
 
@@ -433,72 +639,39 @@ async function doPreCompact() {
   const { session_id: sessionId, transcript_path: transcriptPath, trigger } = input;
   if (!transcriptPath || !sessionId) return;
 
-  // Parse transcript
   const messages = parseTranscript(transcriptPath);
   if (messages.length === 0) return;
 
-  // Chunk into turns
   const chunks = chunkTranscript(messages);
   if (chunks.length === 0) return;
 
-  // Initialize backend
-  const memPkg = await loadMemoryPackage();
-  let backend;
-  if (memPkg?.AgentDBBackend) {
-    try {
-      backend = new memPkg.AgentDBBackend();
-      await backend.initialize();
-    } catch {
-      backend = null;
-    }
-  }
-  if (!backend) {
-    backend = new JsonFileBackend(ARCHIVE_PATH);
-    await backend.initialize();
-  }
+  const { backend, type } = await resolveBackend();
 
-  // Store chunks
   const result = await storeChunks(backend, chunks, sessionId, trigger || 'auto');
+
+  const total = await backend.count(NAMESPACE);
   await backend.shutdown();
 
-  // Output guidance to stderr (visible in hook output but not treated as JSON)
-  const total = await backend.count?.() ?? result.stored;
   process.stderr.write(
-    `[ContextPersistence] Archived ${result.stored} turns (${result.deduped} deduped). Total: ${total}\n`
+    `[ContextPersistence] Archived ${result.stored} turns (${result.deduped} deduped) via ${type}. Total: ${total}\n`
   );
 }
 
 async function doSessionStart() {
   const input = await readStdin(200);
 
-  // Only act on post-compaction restarts
   if (!input || input.source !== 'compact') return;
 
   const sessionId = input.session_id;
   if (!sessionId) return;
 
-  // Initialize backend
-  const memPkg = await loadMemoryPackage();
-  let backend;
-  if (memPkg?.AgentDBBackend) {
-    try {
-      backend = new memPkg.AgentDBBackend();
-      await backend.initialize();
-    } catch {
-      backend = null;
-    }
-  }
-  if (!backend) {
-    backend = new JsonFileBackend(ARCHIVE_PATH);
-    await backend.initialize();
-  }
+  const { backend } = await resolveBackend();
 
   const additionalContext = await retrieveContext(backend, sessionId, RESTORE_BUDGET);
   await backend.shutdown();
 
   if (!additionalContext) return;
 
-  // Output JSON to stdout for Claude Code to pick up
   const output = {
     hookSpecificOutput: {
       hookEventName: 'SessionStart',
@@ -509,31 +682,25 @@ async function doSessionStart() {
 }
 
 async function doStatus() {
-  const backend = new JsonFileBackend(ARCHIVE_PATH);
-  await backend.initialize();
+  const { backend, type } = await resolveBackend();
 
   const total = await backend.count();
   const archiveCount = await backend.count(NAMESPACE);
   const namespaces = await backend.listNamespaces();
+  const sessions = await backend.listSessions(NAMESPACE);
 
   console.log('\n=== Context Persistence Archive Status ===\n');
-  console.log(`  Archive:     ${existsSync(ARCHIVE_PATH) ? ARCHIVE_PATH : 'Not initialized'}`);
+  console.log(`  Backend:     ${type} (${type === 'sqlite' ? ARCHIVE_DB_PATH : type === 'json' ? ARCHIVE_JSON_PATH : 'agentdb'})`);
   console.log(`  Total:       ${total} entries`);
   console.log(`  Transcripts: ${archiveCount} entries`);
   console.log(`  Namespaces:  ${namespaces.join(', ') || 'none'}`);
   console.log(`  Budget:      ${RESTORE_BUDGET} chars`);
+  console.log(`  Sessions:    ${sessions.length}`);
 
-  // Show sessions
-  const entries = await backend.query({ namespace: NAMESPACE });
-  const sessions = new Set(entries.map(e => e.metadata?.sessionId).filter(Boolean));
-  console.log(`  Sessions:    ${sessions.size}`);
-
-  if (sessions.size > 0) {
+  if (sessions.length > 0) {
     console.log('\n  Recent sessions:');
-    const sorted = [...sessions].slice(-5);
-    for (const sid of sorted) {
-      const count = entries.filter(e => e.metadata?.sessionId === sid).length;
-      console.log(`    - ${sid}: ${count} turns`);
+    for (const s of sessions.slice(0, 10)) {
+      console.log(`    - ${s.session_id}: ${s.cnt} turns`);
     }
   }
 
@@ -546,7 +713,9 @@ async function doStatus() {
 // ============================================================================
 
 export {
+  SQLiteBackend,
   JsonFileBackend,
+  resolveBackend,
   createHashEmbedding,
   hashContent,
   parseTranscript,
@@ -560,7 +729,8 @@ export {
   retrieveContext,
   readStdin,
   NAMESPACE,
-  ARCHIVE_PATH,
+  ARCHIVE_DB_PATH,
+  ARCHIVE_JSON_PATH,
 };
 
 // ============================================================================
