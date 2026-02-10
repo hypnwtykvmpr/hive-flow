@@ -746,10 +746,53 @@ async function resolveBackend() {
 }
 
 // ============================================================================
-// Hash embedding (from learning-bridge.ts:425-450)
+// ONNX Embedding (384-dim, all-MiniLM-L6-v2 via @xenova/transformers)
 // ============================================================================
 
-function createHashEmbedding(text, dimensions = 768) {
+const EMBEDDING_DIM = 384; // ONNX all-MiniLM-L6-v2 output dimension
+let _onnxPipeline = null;
+let _onnxFailed = false;
+
+/**
+ * Initialize ONNX embedding pipeline (lazy, cached).
+ * Returns null if @xenova/transformers is not available.
+ */
+async function getOnnxPipeline() {
+  if (_onnxFailed) return null;
+  if (_onnxPipeline) return _onnxPipeline;
+  try {
+    const { pipeline } = await import('@xenova/transformers');
+    _onnxPipeline = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
+    return _onnxPipeline;
+  } catch {
+    _onnxFailed = true;
+    return null;
+  }
+}
+
+/**
+ * Generate ONNX embedding (384-dim, high quality semantic vectors).
+ * Falls back to hash embedding if ONNX is unavailable.
+ */
+async function createEmbedding(text) {
+  // Try ONNX first (384-dim, real semantic understanding)
+  const pipe = await getOnnxPipeline();
+  if (pipe) {
+    try {
+      const truncated = text.slice(0, 512); // MiniLM max ~512 tokens
+      const output = await pipe(truncated, { pooling: 'mean', normalize: true });
+      return { embedding: new Float32Array(output.data), dim: 384, method: 'onnx' };
+    } catch { /* fall through to hash */ }
+  }
+  // Fallback: hash embedding (384-dim to match ONNX dimension)
+  return { embedding: createHashEmbedding(text, 384), dim: 384, method: 'hash' };
+}
+
+// ============================================================================
+// Hash embedding fallback (deterministic, sub-millisecond)
+// ============================================================================
+
+function createHashEmbedding(text, dimensions = 384) {
   const embedding = new Float32Array(dimensions);
   const normalized = text.toLowerCase().trim();
   for (let i = 0; i < dimensions; i++) {
