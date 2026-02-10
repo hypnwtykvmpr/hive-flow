@@ -1135,12 +1135,14 @@ export {
   chunkTranscript,
   extractSummary,
   buildEntry,
+  buildCompactInstructions,
   storeChunks,
   retrieveContext,
   readStdin,
   NAMESPACE,
   ARCHIVE_DB_PATH,
   ARCHIVE_JSON_PATH,
+  COMPACT_INSTRUCTION_BUDGET,
 };
 
 // ============================================================================
