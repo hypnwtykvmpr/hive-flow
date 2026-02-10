@@ -219,6 +219,30 @@ class SQLiteBackend {
     return this._stmts.listSessions.all(namespace || NAMESPACE);
   }
 
+  markAccessed(ids) {
+    const now = Date.now();
+    for (const id of ids) {
+      this._stmts.markAccessed.run(now, id);
+    }
+  }
+
+  pruneStale(namespace, maxAgeDays) {
+    const cutoff = Date.now() - (maxAgeDays * 24 * 60 * 60 * 1000);
+    const result = this._stmts.pruneStale.run(namespace || NAMESPACE, cutoff);
+    return result.changes;
+  }
+
+  queryByImportance(namespace, sessionId) {
+    const now = Date.now();
+    const rows = this._stmts.queryByImportance.all(now, namespace, sessionId);
+    return rows.map(r => ({ ...this._rowToEntry(r), importanceScore: r.importance_score }));
+  }
+
+  allForSync(namespace) {
+    const rows = this._stmts.allForSync.all(namespace || NAMESPACE);
+    return rows.map(r => this._rowToEntry(r));
+  }
+
   async shutdown() {
     if (this.db) {
       this.db.pragma('optimize');
