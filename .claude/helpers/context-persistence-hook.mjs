@@ -976,14 +976,29 @@ async function doPreCompact() {
 
   const { backend, type } = await resolveBackend();
 
-  const result = await storeChunks(backend, chunks, sessionId, trigger || 'auto');
+  const archiveResult = await storeChunks(backend, chunks, sessionId, trigger || 'auto');
 
   const total = await backend.count(NAMESPACE);
   await backend.shutdown();
 
   process.stderr.write(
-    `[ContextPersistence] Archived ${result.stored} turns (${result.deduped} deduped) via ${type}. Total: ${total}\n`
+    `[ContextPersistence] Archived ${archiveResult.stored} turns (${archiveResult.deduped} deduped) via ${type}. Total: ${total}\n`
   );
+
+  // Exit code 0: stdout is appended as custom compact instructions
+  // This guides Claude on what to preserve in the compaction summary
+  const instructions = buildCompactInstructions(chunks, sessionId, archiveResult);
+  process.stdout.write(instructions);
+
+  // Exit code 2 blocks compaction entirely (opt-in via env var)
+  // Use case: when proactive archiving has already captured everything
+  // and the user prefers to manually trigger compaction
+  if (BLOCK_COMPACTION && trigger === 'auto') {
+    process.stderr.write(
+      `[ContextPersistence] BLOCKING auto-compaction (CLAUDE_FLOW_BLOCK_COMPACTION=true). All ${chunks.length} turns archived.\n`
+    );
+    process.exit(2);
+  }
 }
 
 async function doSessionStart() {
