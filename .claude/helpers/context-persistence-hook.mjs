@@ -1187,11 +1187,17 @@ async function doPreCompact() {
 
   const archiveResult = await storeChunks(backend, chunks, sessionId, trigger || 'auto');
 
+  // Auto-optimize: prune stale entries + sync to RuVector if available
+  const optimizeResult = await autoOptimize(backend, type);
+
   const total = await backend.count(NAMESPACE);
   await backend.shutdown();
 
+  const optimizeMsg = optimizeResult.pruned > 0 || optimizeResult.synced > 0
+    ? ` Optimized: ${optimizeResult.pruned} pruned, ${optimizeResult.synced} synced to RuVector.`
+    : '';
   process.stderr.write(
-    `[ContextPersistence] Archived ${archiveResult.stored} turns (${archiveResult.deduped} deduped) via ${type}. Total: ${total}\n`
+    `[ContextPersistence] Archived ${archiveResult.stored} turns (${archiveResult.deduped} deduped) via ${type}. Total: ${total}.${optimizeMsg}\n`
   );
 
   // Exit code 0: stdout is appended as custom compact instructions
