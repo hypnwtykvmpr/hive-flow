@@ -1223,21 +1223,35 @@ function estimateContextTokens(transcriptPath) {
         continue;
       }
 
-      // Count message content
+      // Count message content (SDK wraps as { type, message: { role, content } })
       const msg = parsed.message || parsed;
-      if (msg.role === 'user' || msg.role === 'assistant') {
-        const text = typeof msg.content === 'string'
-          ? msg.content
-          : Array.isArray(msg.content)
-            ? msg.content.map(b => b.text || JSON.stringify(b.input || '') || '').join('')
-            : '';
-        totalChars += text.length;
-        if (msg.role === 'user') turns++;
+      const role = msg.role || parsed.type;
+      if (role === 'user' || role === 'assistant') {
+        const content = msg.content;
+        let textLen = 0;
+        if (typeof content === 'string') {
+          textLen = content.length;
+        } else if (Array.isArray(content)) {
+          for (const block of content) {
+            if (block.type === 'text' && block.text) textLen += block.text.length;
+            else if (block.type === 'tool_use' && block.input) textLen += JSON.stringify(block.input).length;
+            else if (block.type === 'tool_result') {
+              if (typeof block.content === 'string') textLen += block.content.length;
+              else if (Array.isArray(block.content)) {
+                for (const sub of block.content) {
+                  if (sub.text) textLen += sub.text.length;
+                }
+              }
+            }
+          }
+        }
+        totalChars += textLen;
+        if (role === 'user') turns++;
       }
 
       // Count system messages (they consume context too)
-      if (parsed.type === 'system' && parsed.subtype !== 'compact_boundary') {
-        totalChars += JSON.stringify(parsed).length;
+      if (parsed.type === 'system' && parsed.subtype !== 'compact_boundary' && parsed.subtype !== 'status') {
+        totalChars += (parsed.content || '').length;
       }
     } catch { /* skip */ }
   }
