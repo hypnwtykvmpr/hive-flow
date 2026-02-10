@@ -497,6 +497,11 @@
             "type": "command",
             "timeout": 6000,
             "command": "node /workspaces/claude-flow/v3/@claude-flow/cli/bin/cli.js hooks intelligence --export-state /workspaces/claude-flow/.claude-flow/intelligence-state.json --preserve-patterns true 2>/dev/null || true"
+          },
+          {
+            "type": "command",
+            "timeout": 5000,
+            "command": "node /workspaces/claude-flow/.claude/helpers/context-persistence-hook.mjs pre-compact 2>/dev/null || true"
           }
         ]
       }
