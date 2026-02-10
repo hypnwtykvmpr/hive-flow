@@ -403,6 +403,11 @@
             "type": "command",
             "timeout": 6000,
             "command": "node /workspaces/claude-flow/v3/@claude-flow/cli/bin/cli.js hooks worker detect --prompt \"$USER_PROMPT\" --auto-dispatch --min-confidence 0.6 2>/dev/null || true"
+          },
+          {
+            "type": "command",
+            "timeout": 5000,
+            "command": "node /workspaces/claude-flow/.claude/helpers/context-persistence-hook.mjs user-prompt-submit 2>/dev/null || true"
           }
         ]
       }
