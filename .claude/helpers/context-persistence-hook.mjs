@@ -1370,6 +1370,9 @@ export {
   extractSummary,
   buildEntry,
   buildCompactInstructions,
+  computeImportance,
+  retrieveContextSmart,
+  autoOptimize,
   storeChunks,
   retrieveContext,
   readStdin,
@@ -1377,6 +1380,8 @@ export {
   ARCHIVE_DB_PATH,
   ARCHIVE_JSON_PATH,
   COMPACT_INSTRUCTION_BUDGET,
+  RETENTION_DAYS,
+  AUTO_OPTIMIZE,
 };
 
 // ============================================================================
