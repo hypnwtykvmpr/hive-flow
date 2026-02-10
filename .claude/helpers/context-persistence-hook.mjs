@@ -1188,6 +1188,234 @@ async function autoOptimize(backend, backendType) {
 }
 
 // ============================================================================
+// Context Autopilot Engine
+// ============================================================================
+
+/**
+ * Estimate token count from transcript JSONL.
+ * Reads all messages and sums character lengths / CHARS_PER_TOKEN.
+ * Also checks for compact_boundary messages which report actual pre_tokens.
+ */
+function estimateContextTokens(transcriptPath) {
+  if (!existsSync(transcriptPath)) return { tokens: 0, turns: 0, method: 'none' };
+
+  const content = readFileSync(transcriptPath, 'utf-8');
+  const lines = content.split('\n').filter(Boolean);
+
+  let totalChars = 0;
+  let turns = 0;
+  let lastPreTokens = 0;
+  let lastBoundaryLine = 0;
+  let postBoundaryChars = 0;
+
+  for (let i = 0; i < lines.length; i++) {
+    try {
+      const parsed = JSON.parse(lines[i]);
+
+      // Check for compact_boundary — this has real token count
+      if (parsed.type === 'system' && parsed.subtype === 'compact_boundary') {
+        lastPreTokens = parsed.compact_metadata?.pre_tokens || 0;
+        lastBoundaryLine = i;
+        totalChars = 0; // Reset — post-compaction content is what matters
+        turns = 0;
+        continue;
+      }
+
+      // Count message content
+      const msg = parsed.message || parsed;
+      if (msg.role === 'user' || msg.role === 'assistant') {
+        const text = typeof msg.content === 'string'
+          ? msg.content
+          : Array.isArray(msg.content)
+            ? msg.content.map(b => b.text || JSON.stringify(b.input || '') || '').join('')
+            : '';
+        totalChars += text.length;
+        if (msg.role === 'user') turns++;
+      }
+
+      // Count system messages (they consume context too)
+      if (parsed.type === 'system' && parsed.subtype !== 'compact_boundary') {
+        totalChars += JSON.stringify(parsed).length;
+      }
+    } catch { /* skip */ }
+  }
+
+  const estimatedTokens = Math.ceil(totalChars / CHARS_PER_TOKEN);
+
+  // If we had a compaction boundary, the current context is the compact summary
+  // plus everything after it. We use the estimate since we don't know the
+  // exact compact summary size, but it's typically ~2000-5000 tokens.
+  if (lastPreTokens > 0) {
+    // Post-compaction: assume compact summary is ~3000 tokens + new content
+    const compactSummaryTokens = 3000;
+    return {
+      tokens: compactSummaryTokens + estimatedTokens,
+      turns,
+      method: 'post-compact-estimate',
+      lastPreTokens,
+    };
+  }
+
+  return { tokens: estimatedTokens, turns, method: 'char-estimate' };
+}
+
+/**
+ * Load autopilot state (persisted across hook invocations).
+ */
+function loadAutopilotState() {
+  try {
+    if (existsSync(AUTOPILOT_STATE_PATH)) {
+      return JSON.parse(readFileSync(AUTOPILOT_STATE_PATH, 'utf-8'));
+    }
+  } catch { /* fresh state */ }
+  return {
+    sessionId: null,
+    lastTokenEstimate: 0,
+    lastPercentage: 0,
+    pruneCount: 0,
+    warningIssued: false,
+    lastCheck: 0,
+    history: [], // Track token growth over time
+  };
+}
+
+/**
+ * Save autopilot state.
+ */
+function saveAutopilotState(state) {
+  try {
+    writeFileSync(AUTOPILOT_STATE_PATH, JSON.stringify(state, null, 2), 'utf-8');
+  } catch { /* best effort */ }
+}
+
+/**
+ * Build a context optimization report for additionalContext injection.
+ */
+function buildAutopilotReport(percentage, tokens, windowSize, turns, state) {
+  const bar = buildProgressBar(percentage);
+  const status = percentage >= AUTOPILOT_PRUNE_PCT
+    ? 'OPTIMIZING'
+    : percentage >= AUTOPILOT_WARN_PCT
+      ? 'WARNING'
+      : 'OK';
+
+  const parts = [
+    `[ContextAutopilot] ${bar} ${(percentage * 100).toFixed(1)}% context used`,
+    `(~${formatTokens(tokens)}/${formatTokens(windowSize)} tokens, ${turns} turns)`,
+    `Status: ${status}`,
+  ];
+
+  if (state.pruneCount > 0) {
+    parts.push(`| Optimizations: ${state.pruneCount} prune cycles`);
+  }
+
+  // Add trend if we have history
+  if (state.history.length >= 2) {
+    const recent = state.history.slice(-3);
+    const avgGrowth = recent.reduce((sum, h, i) => {
+      if (i === 0) return 0;
+      return sum + (h.pct - recent[i - 1].pct);
+    }, 0) / (recent.length - 1);
+
+    if (avgGrowth > 0) {
+      const turnsUntilFull = Math.ceil((1.0 - percentage) / avgGrowth);
+      parts.push(`| ~${turnsUntilFull} turns until optimization needed`);
+    }
+  }
+
+  return parts.join(' ');
+}
+
+/**
+ * Visual progress bar for context usage.
+ */
+function buildProgressBar(percentage) {
+  const width = 20;
+  const filled = Math.round(percentage * width);
+  const empty = width - filled;
+  const fillChar = percentage >= AUTOPILOT_PRUNE_PCT ? '!' : percentage >= AUTOPILOT_WARN_PCT ? '#' : '=';
+  return `[${fillChar.repeat(filled)}${'-'.repeat(empty)}]`;
+}
+
+/**
+ * Format token count for display.
+ */
+function formatTokens(n) {
+  if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+  if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+  return String(n);
+}
+
+/**
+ * Context Autopilot: run on every UserPromptSubmit.
+ * Returns { additionalContext, shouldBlock } for the hook output.
+ */
+async function runAutopilot(transcriptPath, sessionId, backend, backendType) {
+  const state = loadAutopilotState();
+
+  // Reset state if session changed
+  if (state.sessionId !== sessionId) {
+    state.sessionId = sessionId;
+    state.lastTokenEstimate = 0;
+    state.lastPercentage = 0;
+    state.pruneCount = 0;
+    state.warningIssued = false;
+    state.history = [];
+  }
+
+  // Estimate current context usage
+  const { tokens, turns, method, lastPreTokens } = estimateContextTokens(transcriptPath);
+  const percentage = Math.min(tokens / CONTEXT_WINDOW_TOKENS, 1.0);
+
+  // Track history (keep last 50 data points)
+  state.history.push({ ts: Date.now(), tokens, pct: percentage, turns });
+  if (state.history.length > 50) state.history.shift();
+
+  state.lastTokenEstimate = tokens;
+  state.lastPercentage = percentage;
+  state.lastCheck = Date.now();
+
+  let optimizationMessage = '';
+
+  // Phase 1: Warning zone (70-85%)
+  if (percentage >= AUTOPILOT_WARN_PCT && percentage < AUTOPILOT_PRUNE_PCT) {
+    if (!state.warningIssued) {
+      state.warningIssued = true;
+      optimizationMessage = ' | Approaching limit — archiving aggressively.';
+    }
+  }
+
+  // Phase 2: Prune zone (85%+) — actively optimize
+  if (percentage >= AUTOPILOT_PRUNE_PCT) {
+    state.pruneCount++;
+
+    // Prune stale entries from archive to free up storage
+    if (backend.pruneStale) {
+      try {
+        const pruned = backend.pruneStale(NAMESPACE, Math.min(RETENTION_DAYS, 7));
+        if (pruned > 0) {
+          optimizationMessage += ` | Pruned ${pruned} stale archive entries.`;
+        }
+      } catch { /* non-critical */ }
+    }
+
+    optimizationMessage += ' | Context near capacity — keeping responses concise.';
+  }
+
+  const report = buildAutopilotReport(percentage, tokens, CONTEXT_WINDOW_TOKENS, turns, state);
+  saveAutopilotState(state);
+
+  return {
+    additionalContext: report + optimizationMessage,
+    percentage,
+    tokens,
+    turns,
+    method,
+    state,
+  };
+}
+
+// ============================================================================
 // Commands
 // ============================================================================
 
