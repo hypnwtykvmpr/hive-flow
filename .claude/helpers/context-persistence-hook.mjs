@@ -533,6 +533,41 @@ class RuVectorBackend {
     return rows.map(r => ({ session_id: r.session_id, cnt: parseInt(r.cnt, 10) }));
   }
 
+  async markAccessed(ids) {
+    const now = Date.now();
+    for (const id of ids) {
+      await this.pool.query(
+        'UPDATE transcript_entries SET access_count = access_count + 1, last_accessed_at = $1 WHERE id = $2',
+        [now, id]
+      );
+    }
+  }
+
+  async pruneStale(namespace, maxAgeDays) {
+    const cutoff = Date.now() - (maxAgeDays * 24 * 60 * 60 * 1000);
+    const { rowCount } = await this.pool.query(
+      'DELETE FROM transcript_entries WHERE namespace = $1 AND access_count = 0 AND created_at < $2',
+      [namespace || NAMESPACE, cutoff]
+    );
+    return rowCount;
+  }
+
+  async queryByImportance(namespace, sessionId) {
+    const now = Date.now();
+    const { rows } = await this.pool.query(`
+      SELECT *, (
+        (CAST(access_count AS REAL) + 1) *
+        (1.0 / (1.0 + ($1 - created_at) / 86400000.0)) *
+        (CASE WHEN jsonb_array_length(metadata->'toolNames') > 0 THEN 1.5 ELSE 1.0 END) *
+        (CASE WHEN jsonb_array_length(metadata->'filePaths') > 0 THEN 1.3 ELSE 1.0 END)
+      ) AS importance_score
+      FROM transcript_entries
+      WHERE namespace = $2 AND session_id = $3
+      ORDER BY importance_score DESC
+    `, [now, namespace, sessionId]);
+    return rows.map(r => ({ ...this._rowToEntry(r), importanceScore: r.importance_score }));
+  }
+
   async shutdown() {
     if (this.pool) {
       await this.pool.end();
