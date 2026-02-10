@@ -1312,7 +1312,7 @@ async function autoOptimize(backend, backendType) {
     } catch { /* non-critical */ }
   }
 
-  // Step 4: Generate embeddings for entries missing them (enables semantic search)
+  // Step 4: Generate ONNX embeddings (384-dim) for entries missing them
   if (backend.storeEmbedding) {
     try {
       const rows = backend.db?.prepare?.(
@@ -1320,8 +1320,8 @@ async function autoOptimize(backend, backendType) {
       )?.all(NAMESPACE);
       if (rows) {
         for (const row of rows) {
-          const emb = createHashEmbedding(row.content);
-          backend.storeEmbedding(row.id, emb);
+          const { embedding } = await createEmbedding(row.content);
+          backend.storeEmbedding(row.id, embedding);
           embedded++;
         }
       }
