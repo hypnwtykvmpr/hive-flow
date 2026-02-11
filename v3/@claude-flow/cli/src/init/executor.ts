@@ -25,6 +25,7 @@ import {
   generateMemoryHelper,
   generateHookHandler,
   generateIntelligenceStub,
+  generateAutoMemoryHook,
 } from './helpers-generator.js';
 import { generateClaudeMd } from './claudemd-generator.js';
 
@@ -455,6 +456,7 @@ export async function executeUpgrade(targetDir: string, upgradeSettings = false)
       const generatedCritical: Record<string, string> = {
         'hook-handler.cjs': generateHookHandler(),
         'intelligence.cjs': generateIntelligenceStub(),
+        'auto-memory-hook.mjs': generateAutoMemoryHook(),
       };
       for (const [helperName, content] of Object.entries(generatedCritical)) {
         const targetPath = path.join(targetDir, '.claude', 'helpers', helperName);
@@ -1046,6 +1048,7 @@ async function writeHelpers(
     'memory.js': generateMemoryHelper(),
     'hook-handler.cjs': generateHookHandler(),
     'intelligence.cjs': generateIntelligenceStub(),
+    'auto-memory-hook.mjs': generateAutoMemoryHook(),
   };
 
   for (const [name, content] of Object.entries(helpers)) {
@@ -1125,7 +1128,6 @@ async function writeStatusline(
     { src: 'statusline.mjs', dest: 'statusline.mjs', dir: claudeDir },
   ];
 
-  let copiedAdvanced = false;
   if (sourceClaudeDir) {
     for (const file of advancedStatuslineFiles) {
       const sourcePath = path.join(sourceClaudeDir, file.src);
@@ -1139,7 +1141,6 @@ async function writeStatusline(
             fs.chmodSync(destPath, '755');
           }
           result.created.files.push(`.claude/${file.dest}`);
-          copiedAdvanced = true;
         } else {
           result.skipped.push(`.claude/${file.dest}`);
         }
@@ -1147,26 +1148,16 @@ async function writeStatusline(
     }
   }
 
-  // Fall back to generating simple statusline if advanced files not available
-  if (!copiedAdvanced) {
-    const statuslineScript = generateStatuslineScript(options);
-    const statuslineHook = generateStatuslineHook(options);
+  // ALWAYS generate statusline.cjs — settings.json references this path
+  // regardless of whether advanced statusline files were also copied.
+  const statuslineScript = generateStatuslineScript(options);
+  const statuslinePath = path.join(helpersDir, 'statusline.cjs');
 
-    const files: Record<string, string> = {
-      'statusline.cjs': statuslineScript,  // .cjs for ES module project compatibility
-      'statusline-hook.sh': statuslineHook,
-    };
-
-    for (const [name, content] of Object.entries(files)) {
-      const filePath = path.join(helpersDir, name);
-
-      if (!fs.existsSync(filePath) || options.force) {
-        fs.writeFileSync(filePath, content, 'utf-8');
-        result.created.files.push(`.claude/helpers/${name}`);
-      } else {
-        result.skipped.push(`.claude/helpers/${name}`);
-      }
-    }
+  if (!fs.existsSync(statuslinePath) || options.force) {
+    fs.writeFileSync(statuslinePath, statuslineScript, 'utf-8');
+    result.created.files.push('.claude/helpers/statusline.cjs');
+  } else {
+    result.skipped.push('.claude/helpers/statusline.cjs');
   }
 }
 
@@ -1938,6 +1929,7 @@ function countEnabledHooks(options: InitOptions): number {
   if (hooks.userPromptSubmit) count++;
   if (hooks.sessionStart) count++;
   if (hooks.stop) count++;
+  if (hooks.preCompact) count++;
   if (hooks.notification) count++;
 
   return count;
