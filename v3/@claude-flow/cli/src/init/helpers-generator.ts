@@ -556,7 +556,7 @@ export function generateHookHandler(): string {
     '} else if (command) {',
     "  console.log('[OK] Hook: ' + command);",
     '} else {',
-    "  console.log('Usage: hook-handler.cjs <route|pre-bash|post-edit|session-restore|session-end|pre-task|post-task|stats>');",
+    "  console.log('Usage: hook-handler.cjs <route|pre-bash|post-edit|session-restore|session-end|pre-task|post-task|compact-manual|compact-auto|status|stats>');",
     '}',
   ];
   return lines.join('\n') + '\n';
