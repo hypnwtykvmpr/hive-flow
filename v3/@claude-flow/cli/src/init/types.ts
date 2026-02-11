@@ -46,6 +46,8 @@ export interface HooksConfig {
   sessionStart: boolean;
   /** Enable Stop hooks */
   stop: boolean;
+  /** Enable PreCompact hooks (context preservation before compaction) */
+  preCompact: boolean;
   /** Enable Notification hooks */
   notification: boolean;
   /** Hook timeout in milliseconds */
@@ -326,6 +328,7 @@ export const DEFAULT_INIT_OPTIONS: InitOptions = {
     userPromptSubmit: true,
     sessionStart: true,
     stop: true,
+    preCompact: true,
     notification: true,
     timeout: 5000,
     continueOnError: true,

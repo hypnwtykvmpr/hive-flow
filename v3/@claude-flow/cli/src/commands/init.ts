@@ -808,6 +808,7 @@ const hooksCommand: Command = {
             userPromptSubmit: false,
             sessionStart: false,
             stop: false,
+            preCompact: false,
             notification: false,
             timeout: 5000,
             continueOnError: true,

@@ -178,6 +178,9 @@ function generateStatusLineConfig(options: InitOptions): object {
 function generateHooksConfig(config: HooksConfig): object {
   const hooks: Record<string, unknown[]> = {};
 
+  // All hook commands use `2>/dev/null || true` to prevent Node.js errors
+  // (e.g. MODULE_NOT_FOUND) from surfacing as hook failures in Claude Code.
+
   // PreToolUse — validate commands before execution
   if (config.preToolUse) {
     hooks.PreToolUse = [
@@ -186,7 +189,7 @@ function generateHooksConfig(config: HooksConfig): object {
         hooks: [
           {
             type: 'command',
-            command: 'node .claude/helpers/hook-handler.cjs pre-bash',
+            command: 'node .claude/helpers/hook-handler.cjs pre-bash 2>/dev/null || true',
             timeout: config.timeout,
           },
         ],
@@ -202,7 +205,7 @@ function generateHooksConfig(config: HooksConfig): object {
         hooks: [
           {
             type: 'command',
-            command: 'node .claude/helpers/hook-handler.cjs post-edit',
+            command: 'node .claude/helpers/hook-handler.cjs post-edit 2>/dev/null || true',
             timeout: 10000,
           },
         ],
@@ -217,7 +220,7 @@ function generateHooksConfig(config: HooksConfig): object {
         hooks: [
           {
             type: 'command',
-            command: 'node .claude/helpers/hook-handler.cjs route',
+            command: 'node .claude/helpers/hook-handler.cjs route 2>/dev/null || true',
             timeout: 10000,
           },
         ],
@@ -229,19 +232,16 @@ function generateHooksConfig(config: HooksConfig): object {
   if (config.sessionStart) {
     hooks.SessionStart = [
       {
-        matcher: 'startup|resume',
         hooks: [
           {
             type: 'command',
-            command: 'node .claude/helpers/hook-handler.cjs session-restore',
+            command: 'node .claude/helpers/hook-handler.cjs session-restore 2>/dev/null || true',
             timeout: 15000,
-            continueOnError: true,
           },
           {
             type: 'command',
-            command: 'node .claude/helpers/auto-memory-hook.mjs import',
+            command: 'node .claude/helpers/auto-memory-hook.mjs import 2>/dev/null || true',
             timeout: 8000,
-            continueOnError: true,
           },
         ],
       },
@@ -255,9 +255,8 @@ function generateHooksConfig(config: HooksConfig): object {
         hooks: [
           {
             type: 'command',
-            command: 'node .claude/helpers/hook-handler.cjs session-end',
+            command: 'node .claude/helpers/hook-handler.cjs session-end 2>/dev/null || true',
             timeout: 10000,
-            continueOnError: true,
           },
         ],
       },
@@ -271,9 +270,42 @@ function generateHooksConfig(config: HooksConfig): object {
         hooks: [
           {
             type: 'command',
-            command: 'node .claude/helpers/auto-memory-hook.mjs sync',
+            command: 'node .claude/helpers/auto-memory-hook.mjs sync 2>/dev/null || true',
             timeout: 10000,
-            continueOnError: true,
+          },
+        ],
+      },
+    ];
+  }
+
+  // PreCompact — preserve context before compaction
+  if (config.preCompact) {
+    hooks.PreCompact = [
+      {
+        matcher: 'manual',
+        hooks: [
+          {
+            type: 'command',
+            command: `/bin/bash -c 'echo "PreCompact Guidance:"; echo "IMPORTANT: Review CLAUDE.md in project root for:"; echo "   - Available agents and concurrent usage patterns"; echo "   - Swarm coordination strategies (hierarchical, mesh, adaptive)"; echo "   - Critical concurrent execution rules (1 MESSAGE = ALL OPERATIONS)"; echo "Ready for compact operation"'`,
+          },
+          {
+            type: 'command',
+            command: 'node .claude/helpers/hook-handler.cjs session-end 2>/dev/null || true',
+            timeout: 5000,
+          },
+        ],
+      },
+      {
+        matcher: 'auto',
+        hooks: [
+          {
+            type: 'command',
+            command: `/bin/bash -c 'echo "Auto-Compact Guidance (Context Window Full):"; echo "CRITICAL: Before compacting, ensure you understand:"; echo "   - All agents available in .claude/agents/ directory"; echo "   - Concurrent execution patterns from CLAUDE.md"; echo "   - Swarm coordination strategies for complex tasks"; echo "Apply GOLDEN RULE: Always batch operations in single messages"; echo "Auto-compact proceeding with full agent context"'`,
+          },
+          {
+            type: 'command',
+            command: 'node .claude/helpers/hook-handler.cjs session-end 2>/dev/null || true',
+            timeout: 6000,
           },
         ],
       },
@@ -286,9 +318,8 @@ function generateHooksConfig(config: HooksConfig): object {
       hooks: [
         {
           type: 'command',
-          command: 'node .claude/helpers/hook-handler.cjs status',
+          command: 'node .claude/helpers/hook-handler.cjs status 2>/dev/null || true',
           timeout: 3000,
-          continueOnError: true,
         },
       ],
     },
