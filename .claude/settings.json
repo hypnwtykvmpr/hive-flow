@@ -109,11 +109,6 @@
         "hooks": [
           {
             "type": "command",
-            "timeout": 5000,
-            "command": "/workspaces/claude-flow/.claude/helpers/guidance-hooks.sh pre-edit \"$TOOL_INPUT_file_path\""
-          },
-          {
-            "type": "command",
             "timeout": 4000,
             "command": "node /workspaces/claude-flow/v3/@claude-flow/cli/bin/cli.js hooks pre-edit --file \"$TOOL_INPUT_file_path\" --intelligence true"
           }
@@ -125,11 +120,6 @@
           {
             "type": "command",
             "timeout": 3000,
-            "command": "/workspaces/claude-flow/.claude/helpers/guidance-hooks.sh pre-command \"$TOOL_INPUT_command\""
-          },
-          {
-            "type": "command",
-            "timeout": 3000,
             "command": "node /workspaces/claude-flow/v3/@claude-flow/cli/bin/cli.js hooks pre-command --command \"$TOOL_INPUT_command\""
           }
         ]
@@ -137,21 +127,6 @@
       {
         "matcher": "Task",
         "hooks": [
-          {
-            "type": "command",
-            "timeout": 2000,
-            "command": "/workspaces/claude-flow/.claude/helpers/guidance-hooks.sh route \"$TOOL_INPUT_prompt\""
-          },
-          {
-            "type": "command",
-            "timeout": 3000,
-            "command": "/workspaces/claude-flow/.claude/helpers/swarm-hooks.sh pre-task \"$TOOL_INPUT_prompt\""
-          },
-          {
-            "type": "command",
-            "timeout": 3000,
-            "command": "cat | jq -r '.tool_input.prompt // empty' | tr '\\n' '\\0' | xargs -0 -I {} npx claude-flow@alpha hooks pre-task --description '{}' --coordinate-swarm true"
-          },
           {
             "type": "command",
             "timeout": 4000,
@@ -166,39 +141,14 @@
         "hooks": [
           {
             "type": "command",
-            "timeout": 5000,
-            "command": "/workspaces/claude-flow/.claude/helpers/guidance-hooks.sh post-edit \"$TOOL_INPUT_file_path\""
-          },
-          {
-            "type": "command",
-            "timeout": 4000,
-            "command": "/workspaces/claude-flow/.claude/helpers/learning-hooks.sh store \"Edit: $TOOL_INPUT_file_path\" code 0.7"
-          },
-          {
-            "type": "command",
             "timeout": 4000,
             "command": "node /workspaces/claude-flow/v3/@claude-flow/cli/bin/cli.js hooks post-edit --file \"$TOOL_INPUT_file_path\" --success true --train-patterns true --memory-key \"edit/$TOOL_INPUT_file_path\""
-          },
-          {
-            "type": "command",
-            "timeout": 10000,
-            "command": "/workspaces/claude-flow/.claude/helpers/auto-commit.sh batch 'Checkpoint: File edits'"
           }
         ]
       },
       {
         "matcher": "Bash",
         "hooks": [
-          {
-            "type": "command",
-            "timeout": 3000,
-            "command": "npx agentic-flow@alpha hooks post-command \"$TOOL_INPUT_command\" -c 0"
-          },
-          {
-            "type": "command",
-            "timeout": 2000,
-            "command": "/workspaces/claude-flow/.claude/helpers/swarm-monitor.sh check"
-          },
           {
             "type": "command",
             "timeout": 3000,
@@ -209,31 +159,6 @@
       {
         "matcher": "Task",
         "hooks": [
-          {
-            "type": "command",
-            "timeout": 2000,
-            "command": "npx agentic-flow@alpha hooks metrics"
-          },
-          {
-            "type": "command",
-            "timeout": 3000,
-            "command": "/workspaces/claude-flow/.claude/helpers/swarm-monitor.sh check"
-          },
-          {
-            "type": "command",
-            "timeout": 3000,
-            "command": "/workspaces/claude-flow/.claude/helpers/swarm-hooks.sh post-task \"$TOOL_INPUT_prompt\" true"
-          },
-          {
-            "type": "command",
-            "timeout": 4000,
-            "command": "/workspaces/claude-flow/.claude/helpers/checkpoint-manager.sh agent-checkpoint \"Task completed: $TOOL_INPUT_prompt\""
-          },
-          {
-            "type": "command",
-            "timeout": 3000,
-            "command": "cat | jq -r '{agent: .tool_input.subagent_type, description: .tool_input.description} | @json' | xargs -I {} npx claude-flow@alpha hooks post-task --agent-data '{}' --update-swarm-status true --train-patterns true"
-          },
           {
             "type": "command",
             "timeout": 4000,
@@ -248,11 +173,6 @@
         "hooks": [
           {
             "type": "command",
-            "timeout": 5000,
-            "command": "npx agentic-flow@alpha hooks post-edit \"$TOOL_INPUT_file_path\" --fail"
-          },
-          {
-            "type": "command",
             "timeout": 4000,
             "command": "node /workspaces/claude-flow/v3/@claude-flow/cli/bin/cli.js hooks post-edit --file \"$TOOL_INPUT_file_path\" --success false --learn-from-failure true"
           }
@@ -261,11 +181,6 @@
       {
         "matcher": "Bash",
         "hooks": [
-          {
-            "type": "command",
-            "timeout": 3000,
-            "command": "npx agentic-flow@alpha hooks post-command \"$TOOL_INPUT_command\" -c 1"
-          },
           {
             "type": "command",
             "timeout": 3000,
@@ -289,31 +204,6 @@
         "hooks": [
           {
             "type": "command",
-            "timeout": 3000,
-            "command": "/workspaces/claude-flow/.claude/helpers/daemon-manager.sh start 3 5"
-          },
-          {
-            "type": "command",
-            "timeout": 8000,
-            "command": "/workspaces/claude-flow/.claude/helpers/learning-hooks.sh session-start"
-          },
-          {
-            "type": "command",
-            "timeout": 3000,
-            "command": "/workspaces/claude-flow/.claude/helpers/swarm-hooks.sh agents"
-          },
-          {
-            "type": "command",
-            "timeout": 5000,
-            "command": "/workspaces/claude-flow/.claude/helpers/guidance-hooks.sh session-context"
-          },
-          {
-            "type": "command",
-            "timeout": 5000,
-            "command": "npx claude-flow@alpha hooks session-start --auto-configure true --restore-context true"
-          },
-          {
-            "type": "command",
             "timeout": 6000,
             "command": "node /workspaces/claude-flow/v3/@claude-flow/cli/bin/cli.js hooks session-restore --restore-memory true --load-patterns true --intelligence true"
           },
@@ -328,31 +218,6 @@
     "SessionEnd": [
       {
         "hooks": [
-          {
-            "type": "command",
-            "timeout": 10000,
-            "command": "/workspaces/claude-flow/.claude/helpers/learning-hooks.sh session-end"
-          },
-          {
-            "type": "command",
-            "timeout": 8000,
-            "command": "npx agentic-flow@alpha hooks metrics --json"
-          },
-          {
-            "type": "command",
-            "timeout": 6000,
-            "command": "/workspaces/claude-flow/.claude/helpers/checkpoint-manager.sh session-end \"V3 development session completed\""
-          },
-          {
-            "type": "command",
-            "timeout": 4000,
-            "command": "/workspaces/claude-flow/.claude/helpers/update-v3-progress.sh status > /workspaces/claude-flow/.claude-flow/last-session-status.txt"
-          },
-          {
-            "type": "command",
-            "timeout": 2000,
-            "command": "/workspaces/claude-flow/.claude/helpers/daemon-manager.sh stop"
-          },
           {
             "type": "command",
             "timeout": 8000,
@@ -371,16 +236,6 @@
         "hooks": [
           {
             "type": "command",
-            "timeout": 4000,
-            "command": "/workspaces/claude-flow/.claude/helpers/guidance-hooks.sh user-prompt \"$USER_PROMPT\""
-          },
-          {
-            "type": "command",
-            "timeout": 5000,
-            "command": "npx claude-flow@alpha hooks route-task --auto-swarm true --detect-complexity true"
-          },
-          {
-            "type": "command",
             "timeout": 5000,
             "command": "node /workspaces/claude-flow/v3/@claude-flow/cli/bin/cli.js hooks route --task \"$USER_PROMPT\" --intelligence true --auto-swarm true --complexity-threshold 3"
           },
@@ -396,21 +251,6 @@
       {
         "matcher": ".*",
         "hooks": [
-          {
-            "type": "command",
-            "timeout": 8000,
-            "command": "/workspaces/claude-flow/.claude/helpers/learning-hooks.sh session-end"
-          },
-          {
-            "type": "command",
-            "timeout": 5000,
-            "command": "npx agentic-flow@alpha hooks metrics --json"
-          },
-          {
-            "type": "command",
-            "timeout": 5000,
-            "command": "npx claude-flow@alpha hooks session-end --generate-summary true --persist-state true --export-metrics true"
-          },
           {
             "type": "command",
             "timeout": 6000,
@@ -431,11 +271,6 @@
             "type": "command",
             "timeout": 5000,
             "command": "node /workspaces/claude-flow/v3/@claude-flow/cli/bin/cli.js hooks teammate-idle --auto-assign true --check-task-list true"
-          },
-          {
-            "type": "command",
-            "timeout": 3000,
-            "command": "npx claude-flow@alpha hooks teammate-idle --auto-assign true"
           }
         ]
       }
@@ -447,11 +282,6 @@
             "type": "command",
             "timeout": 5000,
             "command": "node /workspaces/claude-flow/v3/@claude-flow/cli/bin/cli.js hooks task-completed --task-id \"$TASK_ID\" --train-patterns true --notify-lead true --update-metrics true"
-          },
-          {
-            "type": "command",
-            "timeout": 3000,
-            "command": "npx claude-flow@alpha hooks task-completed --train-patterns true --store-results true"
           }
         ]
       }
@@ -462,10 +292,6 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/bin/bash -c 'INPUT=$(cat); CUSTOM=$(echo \"$INPUT\" | jq -r \".custom_instructions // \\\"\\\"\"); echo \"🔄 PreCompact Guidance:\"; echo \"📋 IMPORTANT: Review CLAUDE.md in project root for:\"; echo \"   • 54 available agents and concurrent usage patterns\"; echo \"   • Swarm coordination strategies (hierarchical, mesh, adaptive)\"; echo \"   • SPARC methodology workflows with batchtools optimization\"; echo \"   • Critical concurrent execution rules (GOLDEN RULE: 1 MESSAGE = ALL OPERATIONS)\"; if [ -n \"$CUSTOM\" ]; then echo \"🎯 Custom compact instructions: $CUSTOM\"; fi; echo \"✅ Ready for compact operation\"'"
-          },
-          {
-            "type": "command",
             "timeout": 5000,
             "command": "node /workspaces/claude-flow/v3/@claude-flow/cli/bin/cli.js hooks transfer --export-patterns /workspaces/claude-flow/.claude-flow/compact-patterns.json --preserve-critical true"
           }
@@ -474,10 +300,6 @@
       {
         "matcher": "auto",
         "hooks": [
-          {
-            "type": "command",
-            "command": "/bin/bash -c 'echo \"🔄 Auto-Compact Guidance (Context Window Full):\"; echo \"📋 CRITICAL: Before compacting, ensure you understand:\"; echo \"   • All 54 agents available in .claude/agents/ directory\"; echo \"   • Concurrent execution patterns from CLAUDE.md\"; echo \"   • Batchtools optimization for 300% performance gains\"; echo \"   • Swarm coordination strategies for complex tasks\"; echo \"⚡ Apply GOLDEN RULE: Always batch operations in single messages\"; echo \"✅ Auto-compact proceeding with full agent context\"'"
-          },
           {
             "type": "command",
             "timeout": 6000,
