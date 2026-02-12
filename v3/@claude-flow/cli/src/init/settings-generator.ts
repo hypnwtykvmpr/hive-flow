@@ -325,6 +325,32 @@ function generateHooksConfig(config: HooksConfig): object {
     },
   ];
 
+  // TeammateIdle — auto-assign pending tasks to idle teammates
+  hooks.TeammateIdle = [
+    {
+      hooks: [
+        {
+          type: 'command',
+          command: 'node .claude/helpers/hook-handler.cjs post-task',
+          timeout: 5000,
+        },
+      ],
+    },
+  ];
+
+  // TaskCompleted — train patterns and record completion
+  hooks.TaskCompleted = [
+    {
+      hooks: [
+        {
+          type: 'command',
+          command: 'node .claude/helpers/hook-handler.cjs post-task',
+          timeout: 5000,
+        },
+      ],
+    },
+  ];
+
   return hooks;
 }
 

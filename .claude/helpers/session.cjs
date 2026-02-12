@@ -110,14 +110,16 @@ const commands = {
   }
 };
 
-// CLI
-const [,, command, ...args] = process.argv;
-if (command && commands[command]) {
-  commands[command](...args);
-} else {
-  console.log('Usage: session.js <start|restore|end|status|metric>');
-  console.log(`Platform: ${platform}`);
-  console.log(`Data dir: ${SESSION_DIR}`);
-}
-
 module.exports = commands;
+
+// CLI - only run when executed directly
+if (require.main === module) {
+  const [,, command, ...args] = process.argv;
+  if (command && commands[command]) {
+    commands[command](...args);
+  } else {
+    console.log('Usage: session.js <start|restore|end|status|metric>');
+    console.log(`Platform: ${platform}`);
+    console.log(`Data dir: ${SESSION_DIR}`);
+  }
+}
