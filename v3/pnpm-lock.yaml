@@ -327,8 +327,8 @@ importers:
   '@claude-flow/memory':
     dependencies:
       agentdb:
-        specifier: 2.0.0-alpha.3.5
-        version: 2.0.0-alpha.3.5(@types/node@20.19.27)(express@4.22.1)(hono@4.11.3)(marked@11.2.0)
+        specifier: 2.0.0-alpha.3.6
+        version: 2.0.0-alpha.3.6(@types/node@20.19.27)(express@4.22.1)(hono@4.11.3)(marked@11.2.0)
       sql.js:
         specifier: ^1.10.3
         version: 1.13.0
@@ -4564,8 +4564,8 @@ packages:
       - supports-color
     dev: false
 
-  /agentdb@2.0.0-alpha.3.5(@types/node@20.19.27)(express@4.22.1)(hono@4.11.3)(marked@11.2.0):
-    resolution: {integrity: sha512-tfGRuy5sAg/Z+hLb2MQ/QURDOKVO84yNiYd/UiE3X6tN7f9fbh3JzECtIArx/60WO7V9RTMh7LEbGR+TRWOD1w==}
+  /agentdb@2.0.0-alpha.3.6(@types/node@20.19.27)(express@4.22.1)(hono@4.11.3)(marked@11.2.0):
+    resolution: {integrity: sha512-Qn+9e7PULNtVl+1b3GA6+oqc3EZNTvN4KHG/5PsUmmxNQW1c54Z1fGDaRWS9M+djpK0nlO06AnK8gkV5CYOpng==}
     engines: {node: '>=18.0.0'}
     hasBin: true
     requiresBuild: true
@@ -4622,8 +4622,8 @@ packages:
       - supports-color
     dev: false
 
-  /agentdb@2.0.0-alpha.3.5(@types/node@20.19.27)(express@5.2.1)(hono@4.11.3)(marked@11.2.0):
-    resolution: {integrity: sha512-tfGRuy5sAg/Z+hLb2MQ/QURDOKVO84yNiYd/UiE3X6tN7f9fbh3JzECtIArx/60WO7V9RTMh7LEbGR+TRWOD1w==}
+  /agentdb@2.0.0-alpha.3.6(@types/node@20.19.27)(express@5.2.1)(hono@4.11.3)(marked@11.2.0):
+    resolution: {integrity: sha512-Qn+9e7PULNtVl+1b3GA6+oqc3EZNTvN4KHG/5PsUmmxNQW1c54Z1fGDaRWS9M+djpK0nlO06AnK8gkV5CYOpng==}
     engines: {node: '>=18.0.0'}
     hasBin: true
     requiresBuild: true
@@ -4836,7 +4836,7 @@ packages:
     optionalDependencies:
       '@ruvector/attention': 0.1.4
       '@ruvector/sona': 0.1.5
-      agentdb: 2.0.0-alpha.3.5(@types/node@20.19.27)(express@5.2.1)(hono@4.11.3)(marked@11.2.0)
+      agentdb: 2.0.0-alpha.3.6(@types/node@20.19.27)(express@5.2.1)(hono@4.11.3)(marked@11.2.0)
       better-sqlite3: 11.10.0
       onnxruntime-node: 1.23.2
       sharp: 0.32.6
