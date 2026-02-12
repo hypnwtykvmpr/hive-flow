@@ -37,7 +37,7 @@ const preEditCommand: Command = {
       short: 'f',
       description: 'File path to edit',
       type: 'string',
-      required: true
+      required: false
     },
     {
       name: 'operation',
@@ -160,14 +160,14 @@ const postEditCommand: Command = {
       short: 'f',
       description: 'File path that was edited',
       type: 'string',
-      required: true
+      required: false
     },
     {
       name: 'success',
       short: 's',
       description: 'Whether the edit was successful',
       type: 'boolean',
-      required: true
+      required: false
     },
     {
       name: 'outcome',
@@ -395,7 +395,7 @@ const postCommandCommand: Command = {
       short: 's',
       description: 'Whether the command succeeded',
       type: 'boolean',
-      required: true
+      required: false
     },
     {
       name: 'exit-code',
@@ -1603,7 +1603,7 @@ const postTaskCommand: Command = {
       short: 's',
       description: 'Whether the task succeeded',
       type: 'boolean',
-      required: true
+      required: false
     },
     {
       name: 'quality',
