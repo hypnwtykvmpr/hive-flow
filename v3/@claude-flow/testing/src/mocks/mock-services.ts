@@ -318,10 +318,10 @@ export class MockSwarmAgent {
   private messages: SwarmMessage[] = [];
   private taskResults: TaskResult[] = [];
 
-  execute = vi.fn();
-  receive = vi.fn();
-  send = vi.fn();
-  terminate = vi.fn();
+  execute: Mock = vi.fn();
+  receive: Mock = vi.fn();
+  send: Mock = vi.fn();
+  terminate: Mock = vi.fn();
 
   constructor(id: string, config: AgentConfig) {
     this.id = id;
