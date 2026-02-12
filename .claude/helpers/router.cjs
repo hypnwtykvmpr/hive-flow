@@ -47,15 +47,16 @@ function routeTask(task) {
   };
 }
 
-// CLI
-const task = process.argv.slice(2).join(' ');
-
-if (task) {
-  const result = routeTask(task);
-  console.log(JSON.stringify(result, null, 2));
-} else {
-  console.log('Usage: router.js <task description>');
-  console.log('\nAvailable agents:', Object.keys(AGENT_CAPABILITIES).join(', '));
-}
-
 module.exports = { routeTask, AGENT_CAPABILITIES, TASK_PATTERNS };
+
+// CLI - only run when executed directly
+if (require.main === module) {
+  const task = process.argv.slice(2).join(' ');
+  if (task) {
+    const result = routeTask(task);
+    console.log(JSON.stringify(result, null, 2));
+  } else {
+    console.log('Usage: router.js <task description>');
+    console.log('\nAvailable agents:', Object.keys(AGENT_CAPABILITIES).join(', '));
+  }
+}
