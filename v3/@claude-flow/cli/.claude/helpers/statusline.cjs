@@ -135,48 +135,104 @@ function getUserInfo() {
   return { name, gitBranch, modelName };
 }
 
-// Get learning stats from memory database
+// Get learning stats from intelligence loop data (ADR-050)
 function getLearningStats() {
-  const memoryPaths = [
-    path.join(process.cwd(), '.swarm', 'memory.db'),
-    path.join(process.cwd(), '.claude', 'memory.db'),
-    path.join(process.cwd(), 'data', 'memory.db'),
-  ];
-
   let patterns = 0;
   let sessions = 0;
   let trajectories = 0;
+  let edges = 0;
+  let confidenceMean = 0;
+  let accessedCount = 0;
+  let trend = 'STABLE';
 
-  // Try to read from sqlite database
-  for (const dbPath of memoryPaths) {
-    if (fs.existsSync(dbPath)) {
+  // PRIMARY: Read from intelligence loop data files
+  const dataDir = path.join(process.cwd(), '.claude-flow', 'data');
+
+  // 1. graph-state.json — authoritative node/edge counts
+  const graphPath = path.join(dataDir, 'graph-state.json');
+  if (fs.existsSync(graphPath)) {
+    try {
+      const graph = JSON.parse(fs.readFileSync(graphPath, 'utf-8'));
+      patterns = graph.nodes ? Object.keys(graph.nodes).length : 0;
+      edges = Array.isArray(graph.edges) ? graph.edges.length : 0;
+    } catch (e) { /* ignore */ }
+  }
+
+  // 2. ranked-context.json — confidence and access data
+  const rankedPath = path.join(dataDir, 'ranked-context.json');
+  if (fs.existsSync(rankedPath)) {
+    try {
+      const ranked = JSON.parse(fs.readFileSync(rankedPath, 'utf-8'));
+      if (ranked.entries && ranked.entries.length > 0) {
+        patterns = Math.max(patterns, ranked.entries.length);
+        let confSum = 0;
+        let accCount = 0;
+        for (let i = 0; i < ranked.entries.length; i++) {
+          confSum += (ranked.entries[i].confidence || 0);
+          if ((ranked.entries[i].accessCount || 0) > 0) accCount++;
+        }
+        confidenceMean = confSum / ranked.entries.length;
+        accessedCount = accCount;
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  // 3. intelligence-snapshot.json — trend history
+  const snapshotPath = path.join(dataDir, 'intelligence-snapshot.json');
+  if (fs.existsSync(snapshotPath)) {
+    try {
+      const snapshot = JSON.parse(fs.readFileSync(snapshotPath, 'utf-8'));
+      if (snapshot.history && snapshot.history.length >= 2) {
+        const first = snapshot.history[0];
+        const last = snapshot.history[snapshot.history.length - 1];
+        const confDrift = (last.confidenceMean || 0) - (first.confidenceMean || 0);
+        trend = confDrift > 0.01 ? 'IMPROVING' : confDrift < -0.01 ? 'DECLINING' : 'STABLE';
+        sessions = Math.max(sessions, snapshot.history.length);
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  // 4. auto-memory-store.json — fallback entry count
+  if (patterns === 0) {
+    const autoMemPath = path.join(dataDir, 'auto-memory-store.json');
+    if (fs.existsSync(autoMemPath)) {
       try {
-        // Count entries in memory file (rough estimate from file size)
-        const stats = fs.statSync(dbPath);
-        const sizeKB = stats.size / 1024;
-        // Estimate: ~2KB per pattern on average
-        patterns = Math.floor(sizeKB / 2);
-        sessions = Math.max(1, Math.floor(patterns / 10));
-        trajectories = Math.floor(patterns / 5);
-        break;
-      } catch (e) {
-        // Ignore
+        const data = JSON.parse(fs.readFileSync(autoMemPath, 'utf-8'));
+        patterns = Array.isArray(data) ? data.length : (data.entries ? data.entries.length : 0);
+      } catch (e) { /* ignore */ }
+    }
+  }
+
+  // FALLBACK: Legacy memory.db file-size estimation
+  if (patterns === 0) {
+    const memoryPaths = [
+      path.join(process.cwd(), '.swarm', 'memory.db'),
+      path.join(process.cwd(), '.claude', 'memory.db'),
+      path.join(process.cwd(), 'data', 'memory.db'),
+    ];
+    for (let j = 0; j < memoryPaths.length; j++) {
+      if (fs.existsSync(memoryPaths[j])) {
+        try {
+          const dbStats = fs.statSync(memoryPaths[j]);
+          patterns = Math.floor(dbStats.size / 1024 / 2);
+          break;
+        } catch (e) { /* ignore */ }
       }
     }
   }
 
-  // Also check for session files
+  // Session count from session files
   const sessionsPath = path.join(process.cwd(), '.claude', 'sessions');
   if (fs.existsSync(sessionsPath)) {
     try {
       const sessionFiles = fs.readdirSync(sessionsPath).filter(f => f.endsWith('.json'));
       sessions = Math.max(sessions, sessionFiles.length);
-    } catch (e) {
-      // Ignore
-    }
+    } catch (e) { /* ignore */ }
   }
 
-  return { patterns, sessions, trajectories };
+  trajectories = Math.floor(patterns / 5);
+
+  return { patterns, sessions, trajectories, edges, confidenceMean, accessedCount, trend };
 }
 
 // Get V3 progress from learning state (grows as system learns)
@@ -290,10 +346,22 @@ function getSystemMetrics() {
   // Get learning stats for intelligence %
   const learning = getLearningStats();
 
-  // Intelligence % based on learned patterns (0 patterns = 0%, 1000+ = 100%)
-  const intelligencePct = Math.min(100, Math.floor((learning.patterns / 10) * 1));
+  // Intelligence % from REAL intelligence loop data (ADR-050)
+  // Composite: 40% confidence mean + 30% access ratio + 30% pattern density
+  let intelligencePct = 0;
+  if (learning.confidenceMean > 0 || (learning.patterns > 0 && learning.accessedCount > 0)) {
+    const confScore = Math.min(100, Math.floor(learning.confidenceMean * 100));
+    const accessRatio = learning.patterns > 0 ? (learning.accessedCount / learning.patterns) : 0;
+    const accessScore = Math.min(100, Math.floor(accessRatio * 100));
+    const densityScore = Math.min(100, Math.floor(learning.patterns / 5));
+    intelligencePct = Math.floor(confScore * 0.4 + accessScore * 0.3 + densityScore * 0.3);
+  }
+  // Fallback: legacy pattern count
+  if (intelligencePct === 0 && learning.patterns > 0) {
+    intelligencePct = Math.min(100, Math.floor(learning.patterns / 10));
+  }
 
-  // Context % based on session history (0 sessions = 0%, grows with usage)
+  // Context % based on session history
   const contextPct = Math.min(100, Math.floor(learning.sessions * 5));
 
   // Count active sub-agents from process list

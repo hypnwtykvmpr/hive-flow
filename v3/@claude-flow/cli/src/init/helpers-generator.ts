@@ -360,6 +360,507 @@ module.exports = commands;
 }
 
 /**
+ * Generate hook-handler.cjs (cross-platform hook dispatcher)
+ * This is the inline fallback when file copy from the package fails.
+ * Uses string concatenation instead of template literals to avoid escaping issues.
+ */
+export function generateHookHandler(): string {
+  // Build as array of lines to avoid template-in-template escaping nightmares
+  const lines = [
+    '#!/usr/bin/env node',
+    '/**',
+    ' * Claude Flow Hook Handler (Cross-Platform)',
+    ' * Dispatches hook events to the appropriate helper modules.',
+    ' */',
+    '',
+    "const path = require('path');",
+    "const fs = require('fs');",
+    '',
+    'const helpersDir = __dirname;',
+    '',
+    'function safeRequire(modulePath) {',
+    '  try {',
+    '    if (fs.existsSync(modulePath)) {',
+    '      const origLog = console.log;',
+    '      const origError = console.error;',
+    '      console.log = () => {};',
+    '      console.error = () => {};',
+    '      try {',
+    '        const mod = require(modulePath);',
+    '        return mod;',
+    '      } finally {',
+    '        console.log = origLog;',
+    '        console.error = origError;',
+    '      }',
+    '    }',
+    '  } catch (e) {',
+    '    // silently fail',
+    '  }',
+    '  return null;',
+    '}',
+    '',
+    "const router = safeRequire(path.join(helpersDir, 'router.js'));",
+    "const session = safeRequire(path.join(helpersDir, 'session.js'));",
+    "const memory = safeRequire(path.join(helpersDir, 'memory.js'));",
+    "const intelligence = safeRequire(path.join(helpersDir, 'intelligence.cjs'));",
+    '',
+    'const [,, command, ...args] = process.argv;',
+    "const prompt = process.env.PROMPT || process.env.TOOL_INPUT_command || args.join(' ') || '';",
+    '',
+    'const handlers = {',
+    "  'route': () => {",
+    '    if (intelligence && intelligence.getContext) {',
+    '      try {',
+    '        const ctx = intelligence.getContext(prompt);',
+    '        if (ctx) console.log(ctx);',
+    '      } catch (e) { /* non-fatal */ }',
+    '    }',
+    '    if (router && router.routeTask) {',
+    '      const result = router.routeTask(prompt);',
+    '      var output = [];',
+    "      output.push('[INFO] Routing task: ' + (prompt.substring(0, 80) || '(no prompt)'));",
+    "      output.push('');",
+    "      output.push('+------------------- Primary Recommendation -------------------+');",
+    "      output.push('| Agent: ' + result.agent.padEnd(53) + '|');",
+    "      output.push('| Confidence: ' + (result.confidence * 100).toFixed(1) + '%' + ' '.repeat(44) + '|');",
+    "      output.push('| Reason: ' + result.reason.substring(0, 53).padEnd(53) + '|');",
+    "      output.push('+--------------------------------------------------------------+');",
+    "      console.log(output.join('\\n'));",
+    '    } else {',
+    "      console.log('[INFO] Router not available, using default routing');",
+    '    }',
+    '  },',
+    '',
+    "  'pre-bash': () => {",
+    '    var cmd = prompt.toLowerCase();',
+    "    var dangerous = ['rm -rf /', 'format c:', 'del /s /q c:\\\\', ':(){:|:&};:'];",
+    '    for (var i = 0; i < dangerous.length; i++) {',
+    '      if (cmd.includes(dangerous[i])) {',
+    "        console.error('[BLOCKED] Dangerous command detected: ' + dangerous[i]);",
+    '        process.exit(1);',
+    '      }',
+    '    }',
+    "    console.log('[OK] Command validated');",
+    '  },',
+    '',
+    "  'post-edit': () => {",
+    '    if (session && session.metric) {',
+    "      try { session.metric('edits'); } catch (e) { /* no active session */ }",
+    '    }',
+    '    if (intelligence && intelligence.recordEdit) {',
+    '      try {',
+    "        var file = process.env.TOOL_INPUT_file_path || args[0] || '';",
+    '        intelligence.recordEdit(file);',
+    '      } catch (e) { /* non-fatal */ }',
+    '    }',
+    "    console.log('[OK] Edit recorded');",
+    '  },',
+    '',
+    "  'session-restore': () => {",
+    '    if (session) {',
+    '      var existing = session.restore && session.restore();',
+    '      if (!existing) {',
+    '        session.start && session.start();',
+    '      }',
+    '    } else {',
+    "      console.log('[OK] Session restored: session-' + Date.now());",
+    '    }',
+    '    if (intelligence && intelligence.init) {',
+    '      try {',
+    '        var result = intelligence.init();',
+    '        if (result && result.nodes > 0) {',
+    "          console.log('[INTELLIGENCE] Loaded ' + result.nodes + ' patterns, ' + result.edges + ' edges');",
+    '        }',
+    '      } catch (e) { /* non-fatal */ }',
+    '    }',
+    '  },',
+    '',
+    "  'session-end': () => {",
+    '    if (intelligence && intelligence.consolidate) {',
+    '      try {',
+    '        var result = intelligence.consolidate();',
+    '        if (result && result.entries > 0) {',
+    "          var msg = '[INTELLIGENCE] Consolidated: ' + result.entries + ' entries, ' + result.edges + ' edges';",
+    "          if (result.newEntries > 0) msg += ', ' + result.newEntries + ' new';",
+    "          msg += ', PageRank recomputed';",
+    '          console.log(msg);',
+    '        }',
+    '      } catch (e) { /* non-fatal */ }',
+    '    }',
+    '    if (session && session.end) {',
+    '      session.end();',
+    '    } else {',
+    "      console.log('[OK] Session ended');",
+    '    }',
+    '  },',
+    '',
+    "  'pre-task': () => {",
+    '    if (session && session.metric) {',
+    "      try { session.metric('tasks'); } catch (e) { /* no active session */ }",
+    '    }',
+    '    if (router && router.routeTask && prompt) {',
+    '      var result = router.routeTask(prompt);',
+    "      console.log('[INFO] Task routed to: ' + result.agent + ' (confidence: ' + result.confidence + ')');",
+    '    } else {',
+    "      console.log('[OK] Task started');",
+    '    }',
+    '  },',
+    '',
+    "  'post-task': () => {",
+    '    if (intelligence && intelligence.feedback) {',
+    '      try {',
+    '        intelligence.feedback(true);',
+    '      } catch (e) { /* non-fatal */ }',
+    '    }',
+    "    console.log('[OK] Task completed');",
+    '  },',
+    '',
+    "  'compact-manual': () => {",
+    "    console.log('PreCompact Guidance:');",
+    "    console.log('IMPORTANT: Review CLAUDE.md in project root for:');",
+    "    console.log('   - Available agents and concurrent usage patterns');",
+    "    console.log('   - Swarm coordination strategies (hierarchical, mesh, adaptive)');",
+    "    console.log('   - Critical concurrent execution rules (1 MESSAGE = ALL OPERATIONS)');",
+    "    console.log('Ready for compact operation');",
+    '  },',
+    '',
+    "  'compact-auto': () => {",
+    "    console.log('Auto-Compact Guidance (Context Window Full):');",
+    "    console.log('CRITICAL: Before compacting, ensure you understand:');",
+    "    console.log('   - All agents available in .claude/agents/ directory');",
+    "    console.log('   - Concurrent execution patterns from CLAUDE.md');",
+    "    console.log('   - Swarm coordination strategies for complex tasks');",
+    "    console.log('Apply GOLDEN RULE: Always batch operations in single messages');",
+    "    console.log('Auto-compact proceeding with full agent context');",
+    '  },',
+    '',
+    "  'status': () => {",
+    "    console.log('[OK] Status check');",
+    '  },',
+    '',
+    "  'stats': () => {",
+    '    if (intelligence && intelligence.stats) {',
+    "      intelligence.stats(args.includes('--json'));",
+    '    } else {',
+    "      console.log('[WARN] Intelligence module not available. Run session-restore first.');",
+    '    }',
+    '  },',
+    '};',
+    '',
+    'if (command && handlers[command]) {',
+    '  try {',
+    '    handlers[command]();',
+    '  } catch (e) {',
+    "    console.log('[WARN] Hook ' + command + ' encountered an error: ' + e.message);",
+    '  }',
+    '} else if (command) {',
+    "  console.log('[OK] Hook: ' + command);",
+    '} else {',
+    "  console.log('Usage: hook-handler.cjs <route|pre-bash|post-edit|session-restore|session-end|pre-task|post-task|compact-manual|compact-auto|status|stats>');",
+    '}',
+  ];
+  return lines.join('\n') + '\n';
+}
+
+/**
+ * Generate a minimal intelligence.cjs stub for fallback installs.
+ * Provides the same API as the full intelligence.cjs but with simplified logic.
+ * Gets overwritten when source copy succeeds (full version has PageRank, Jaccard, etc.)
+ */
+export function generateIntelligenceStub(): string {
+  const lines = [
+    '#!/usr/bin/env node',
+    '/**',
+    ' * Intelligence Layer Stub (ADR-050)',
+    ' * Minimal fallback — full version is copied from package source.',
+    ' * Provides: init, getContext, recordEdit, feedback, consolidate',
+    ' */',
+    "'use strict';",
+    '',
+    "const fs = require('fs');",
+    "const path = require('path');",
+    "const os = require('os');",
+    '',
+    "const DATA_DIR = path.join(process.cwd(), '.claude-flow', 'data');",
+    "const STORE_PATH = path.join(DATA_DIR, 'auto-memory-store.json');",
+    "const RANKED_PATH = path.join(DATA_DIR, 'ranked-context.json');",
+    "const PENDING_PATH = path.join(DATA_DIR, 'pending-insights.jsonl');",
+    "const SESSION_DIR = path.join(process.cwd(), '.claude-flow', 'sessions');",
+    "const SESSION_FILE = path.join(SESSION_DIR, 'current.json');",
+    '',
+    'function ensureDir(dir) {',
+    '  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });',
+    '}',
+    '',
+    'function readJSON(p) {',
+    '  try { return fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, "utf-8")) : null; }',
+    '  catch { return null; }',
+    '}',
+    '',
+    'function writeJSON(p, data) {',
+    '  ensureDir(path.dirname(p));',
+    '  fs.writeFileSync(p, JSON.stringify(data, null, 2), "utf-8");',
+    '}',
+    '',
+    '// Read session context key',
+    'function sessionGet(key) {',
+    '  var session = readJSON(SESSION_FILE);',
+    '  if (!session) return null;',
+    '  return key ? (session.context || {})[key] : session.context;',
+    '}',
+    '',
+    '// Write session context key',
+    'function sessionSet(key, value) {',
+    '  var session = readJSON(SESSION_FILE);',
+    '  if (!session) return;',
+    '  if (!session.context) session.context = {};',
+    '  session.context[key] = value;',
+    '  writeJSON(SESSION_FILE, session);',
+    '}',
+    '',
+    '// Tokenize text into words',
+    'function tokenize(text) {',
+    '  if (!text) return [];',
+    '  return text.toLowerCase().replace(/[^a-z0-9\\s]/g, " ").split(/\\s+/).filter(function(w) { return w.length > 2; });',
+    '}',
+    '',
+    '// Bootstrap entries from MEMORY.md files when store is empty',
+    'function bootstrapFromMemoryFiles() {',
+    '  var entries = [];',
+    '  var candidates = [',
+    '    path.join(os.homedir(), ".claude", "projects"),',
+    '    path.join(process.cwd(), ".claude-flow", "memory"),',
+    '    path.join(process.cwd(), ".claude", "memory"),',
+    '  ];',
+    '  for (var i = 0; i < candidates.length; i++) {',
+    '    try {',
+    '      if (!fs.existsSync(candidates[i])) continue;',
+    '      var files = [];',
+    '      try {',
+    '        var items = fs.readdirSync(candidates[i], { withFileTypes: true, recursive: true });',
+    '        for (var j = 0; j < items.length; j++) {',
+    '          if (items[j].name === "MEMORY.md") {',
+    '            var fp = items[j].path ? path.join(items[j].path, items[j].name) : path.join(candidates[i], items[j].name);',
+    '            files.push(fp);',
+    '          }',
+    '        }',
+    '      } catch (e) { continue; }',
+    '      for (var k = 0; k < files.length; k++) {',
+    '        try {',
+    '          var content = fs.readFileSync(files[k], "utf-8");',
+    '          var sections = content.split(/^##\\s+/m).filter(function(s) { return s.trim().length > 20; });',
+    '          for (var s = 0; s < sections.length; s++) {',
+    '            var lines2 = sections[s].split("\\n");',
+    '            var title = lines2[0] ? lines2[0].trim() : "section-" + s;',
+    '            entries.push({',
+    '              id: "mem-" + entries.length,',
+    '              content: sections[s].substring(0, 500),',
+    '              summary: title.substring(0, 100),',
+    '              category: "memory",',
+    '              confidence: 0.5,',
+    '              sourceFile: files[k],',
+    '              words: tokenize(sections[s].substring(0, 500)),',
+    '            });',
+    '          }',
+    '        } catch (e) { /* skip */ }',
+    '      }',
+    '    } catch (e) { /* skip */ }',
+    '  }',
+    '  return entries;',
+    '}',
+    '',
+    '// Load entries from auto-memory-store or bootstrap from MEMORY.md',
+    'function loadEntries() {',
+    '  var store = readJSON(STORE_PATH);',
+    '  if (store && store.entries && store.entries.length > 0) {',
+    '    return store.entries.map(function(e, i) {',
+    '      return {',
+    '        id: e.id || ("entry-" + i),',
+    '        content: e.content || e.value || "",',
+    '        summary: e.summary || e.key || "",',
+    '        category: e.category || e.namespace || "default",',
+    '        confidence: e.confidence || 0.5,',
+    '        sourceFile: e.sourceFile || "",',
+    '        words: tokenize((e.content || e.value || "") + " " + (e.summary || e.key || "")),',
+    '      };',
+    '    });',
+    '  }',
+    '  return bootstrapFromMemoryFiles();',
+    '}',
+    '',
+    '// Simple keyword match score',
+    'function matchScore(promptWords, entryWords) {',
+    '  if (!promptWords.length || !entryWords.length) return 0;',
+    '  var entrySet = {};',
+    '  for (var i = 0; i < entryWords.length; i++) entrySet[entryWords[i]] = true;',
+    '  var overlap = 0;',
+    '  for (var j = 0; j < promptWords.length; j++) {',
+    '    if (entrySet[promptWords[j]]) overlap++;',
+    '  }',
+    '  var union = Object.keys(entrySet).length + promptWords.length - overlap;',
+    '  return union > 0 ? overlap / union : 0;',
+    '}',
+    '',
+    'var cachedEntries = null;',
+    '',
+    'module.exports = {',
+    '  init: function() {',
+    '    cachedEntries = loadEntries();',
+    '    var ranked = cachedEntries.map(function(e) {',
+    '      return { id: e.id, content: e.content, summary: e.summary, category: e.category, confidence: e.confidence, words: e.words };',
+    '    });',
+    '    writeJSON(RANKED_PATH, { version: 1, computedAt: Date.now(), entries: ranked });',
+    '    return { nodes: cachedEntries.length, edges: 0 };',
+    '  },',
+    '',
+    '  getContext: function(prompt) {',
+    '    if (!prompt) return null;',
+    '    var ranked = readJSON(RANKED_PATH);',
+    '    var entries = (ranked && ranked.entries) || (cachedEntries || []);',
+    '    if (!entries.length) return null;',
+    '    var promptWords = tokenize(prompt);',
+    '    if (!promptWords.length) return null;',
+    '    var scored = entries.map(function(e) {',
+    '      return { entry: e, score: matchScore(promptWords, e.words || tokenize(e.content + " " + e.summary)) };',
+    '    }).filter(function(s) { return s.score > 0.05; });',
+    '    scored.sort(function(a, b) { return b.score - a.score; });',
+    '    var top = scored.slice(0, 5);',
+    '    if (!top.length) return null;',
+    '    var prevMatched = sessionGet("lastMatchedPatterns");',
+    '    var matchedIds = top.map(function(s) { return s.entry.id; });',
+    '    sessionSet("lastMatchedPatterns", matchedIds);',
+    '    if (prevMatched && Array.isArray(prevMatched)) {',
+    '      var newSet = {};',
+    '      for (var i = 0; i < matchedIds.length; i++) newSet[matchedIds[i]] = true;',
+    '    }',
+    '    var lines2 = ["[INTELLIGENCE] Relevant patterns for this task:"];',
+    '    for (var j = 0; j < top.length; j++) {',
+    '      var e = top[j];',
+    '      var conf = e.entry.confidence || 0.5;',
+    '      var summary = (e.entry.summary || e.entry.content || "").substring(0, 80);',
+    '      lines2.push("  * (" + conf.toFixed(2) + ") " + summary);',
+    '    }',
+    '    return lines2.join("\\n");',
+    '  },',
+    '',
+    '  recordEdit: function(file) {',
+    '    if (!file) return;',
+    '    ensureDir(DATA_DIR);',
+    '    var line = JSON.stringify({ type: "edit", file: file, timestamp: Date.now() }) + "\\n";',
+    '    fs.appendFileSync(PENDING_PATH, line, "utf-8");',
+    '  },',
+    '',
+    '  feedback: function(success) {',
+    '    // Stub: no-op in minimal version',
+    '  },',
+    '',
+    '  consolidate: function() {',
+    '    var count = 0;',
+    '    if (fs.existsSync(PENDING_PATH)) {',
+    '      try {',
+    '        var content = fs.readFileSync(PENDING_PATH, "utf-8").trim();',
+    '        count = content ? content.split("\\n").length : 0;',
+    '        fs.writeFileSync(PENDING_PATH, "", "utf-8");',
+    '      } catch (e) { /* skip */ }',
+    '    }',
+    '    return { entries: count, edges: 0, newEntries: 0 };',
+    '  },',
+    '};',
+  ];
+  return lines.join('\n') + '\n';
+}
+
+/**
+ * Generate a minimal auto-memory-hook.mjs fallback for fresh installs.
+ * This ESM script handles import/sync/status commands gracefully when
+ * @claude-flow/memory is not installed. Gets overwritten when source copy succeeds.
+ */
+export function generateAutoMemoryHook(): string {
+  return `#!/usr/bin/env node
+/**
+ * Auto Memory Bridge Hook (ADR-048/049) — Minimal Fallback
+ * Full version is copied from package source when available.
+ *
+ * Usage:
+ *   node auto-memory-hook.mjs import   # SessionStart
+ *   node auto-memory-hook.mjs sync     # SessionEnd / Stop
+ *   node auto-memory-hook.mjs status   # Show bridge status
+ */
+
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const PROJECT_ROOT = join(__dirname, '../..');
+const DATA_DIR = join(PROJECT_ROOT, '.claude-flow', 'data');
+const STORE_PATH = join(DATA_DIR, 'auto-memory-store.json');
+
+const DIM = '\\x1b[2m';
+const RESET = '\\x1b[0m';
+const dim = (msg) => console.log(\`  \${DIM}\${msg}\${RESET}\`);
+
+// Ensure data dir
+if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
+
+async function doImport() {
+  // Try loading @claude-flow/memory for full functionality
+  let memPkg = null;
+  try { memPkg = await import('@claude-flow/memory'); } catch {}
+
+  if (!memPkg || !memPkg.AutoMemoryBridge) {
+    dim('Memory package not available — auto memory import skipped (non-critical)');
+    return;
+  }
+
+  // Full implementation deferred to copied version
+  dim('Auto memory import available — run init --upgrade for full support');
+}
+
+async function doSync() {
+  if (!existsSync(STORE_PATH)) {
+    dim('No entries to sync');
+    return;
+  }
+
+  let memPkg = null;
+  try { memPkg = await import('@claude-flow/memory'); } catch {}
+
+  if (!memPkg || !memPkg.AutoMemoryBridge) {
+    dim('Memory package not available — sync skipped (non-critical)');
+    return;
+  }
+
+  dim('Auto memory sync available — run init --upgrade for full support');
+}
+
+function doStatus() {
+  console.log('\\n=== Auto Memory Bridge Status ===\\n');
+  console.log('  Package:        Fallback mode (run init --upgrade for full)');
+  console.log(\`  Store:          \${existsSync(STORE_PATH) ? 'Initialized' : 'Not initialized'}\`);
+  console.log('');
+}
+
+const command = process.argv[2] || 'status';
+
+try {
+  switch (command) {
+    case 'import': await doImport(); break;
+    case 'sync': await doSync(); break;
+    case 'status': doStatus(); break;
+    default:
+      console.log('Usage: auto-memory-hook.mjs <import|sync|status>');
+      process.exit(1);
+  }
+} catch (err) {
+  // Hooks must never crash Claude Code - fail silently
+  dim(\`Error (non-critical): \${err.message}\`);
+}
+`;
+}
+
+/**
  * Generate Windows PowerShell daemon manager
  */
 export function generateWindowsDaemonManager(): string {

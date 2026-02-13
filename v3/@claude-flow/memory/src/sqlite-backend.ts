@@ -151,7 +151,7 @@ export class SQLiteBackend extends EventEmitter implements IMemoryBackend {
       INSERT OR REPLACE INTO memory_entries (
         id, key, content, type, namespace, tags, metadata,
         owner_id, access_level, created_at, updated_at, expires_at,
-        version, references, access_count, last_accessed_at
+        version, "references", access_count, last_accessed_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
@@ -634,7 +634,7 @@ export class SQLiteBackend extends EventEmitter implements IMemoryBackend {
         updated_at INTEGER NOT NULL,
         expires_at INTEGER,
         version INTEGER NOT NULL,
-        references TEXT NOT NULL,
+        "references" TEXT NOT NULL,
         access_count INTEGER NOT NULL,
         last_accessed_at INTEGER NOT NULL
       );
@@ -696,7 +696,7 @@ export class SQLiteBackend extends EventEmitter implements IMemoryBackend {
       INSERT OR REPLACE INTO memory_entries (
         id, key, content, type, namespace, tags, metadata,
         owner_id, access_level, created_at, updated_at, expires_at,
-        version, references, access_count, last_accessed_at
+        version, "references", access_count, last_accessed_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 

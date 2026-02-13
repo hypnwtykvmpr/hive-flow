@@ -375,12 +375,31 @@ export class HybridBackend extends EventEmitter implements IMemoryBackend {
     }
 
     const searchResults = await this.agentdb.search(embedding, {
-      k: query.k || 10,
+      k: (query.k || 10) * 2, // Over-fetch to account for post-filtering
       threshold: query.threshold || this.config.semanticThreshold,
       filters: query.filters as MemoryQuery | undefined,
     });
 
-    return searchResults.map((r) => r.entry);
+    let entries = searchResults.map((r) => r.entry);
+
+    // Apply tag/namespace/type filters that AgentDB may not enforce
+    if (query.filters) {
+      const f = query.filters as Record<string, unknown>;
+      if (f.tags && Array.isArray(f.tags)) {
+        const requiredTags = f.tags as string[];
+        entries = entries.filter((e) =>
+          requiredTags.every((t) => e.tags.includes(t))
+        );
+      }
+      if (f.namespace && typeof f.namespace === 'string') {
+        entries = entries.filter((e) => e.namespace === f.namespace);
+      }
+      if (f.type && typeof f.type === 'string' && f.type !== 'semantic') {
+        entries = entries.filter((e) => e.type === f.type);
+      }
+    }
+
+    return entries.slice(0, query.k || 10);
   }
 
   /**
@@ -495,8 +514,18 @@ export class HybridBackend extends EventEmitter implements IMemoryBackend {
       entriesByNamespace: agentdbStats.entriesByNamespace,
       entriesByType: agentdbStats.entriesByType,
       memoryUsage: sqliteStats.memoryUsage + agentdbStats.memoryUsage,
-      hnswStats: agentdbStats.hnswStats,
-      cacheStats: agentdbStats.cacheStats,
+      hnswStats: agentdbStats.hnswStats ?? {
+        vectorCount: agentdbStats.totalEntries,
+        memoryUsage: 0,
+        avgSearchTime: agentdbStats.avgSearchTime,
+        buildTime: 0,
+        compressionRatio: 1.0,
+      },
+      cacheStats: (agentdbStats as any).cacheStats ?? {
+        hitRate: 0,
+        size: 0,
+        maxSize: 1000,
+      },
       avgQueryTime:
         this.stats.hybridQueries + this.stats.sqliteQueries + this.stats.agentdbQueries > 0
           ? this.stats.totalQueryTime /

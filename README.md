@@ -1,14 +1,14 @@
-# 🌊 Claude-Flow v3: Enterprise AI Orchestration Platform
+# 🌊 Ruflo v3: Enterprise AI Orchestration Platform
 
 <div align="center">
 
-![Claude-Flow Banner](https://repository-images.githubusercontent.com/995029641/b9acbe16-0f49-420d-804f-468ba2a73ace)
+![Ruflo Banner](https://repository-images.githubusercontent.com/995029641/b9acbe16-0f49-420d-804f-468ba2a73ace)
 
 
 
 [![Star on GitHub](https://img.shields.io/github/stars/ruvnet/claude-flow?style=for-the-badge&logo=github&color=gold)](https://github.com/ruvnet/claude-flow)
-[![Monthly Downloads](https://img.shields.io/npm/dm/claude-flow?style=for-the-badge&logo=npm&color=blue&label=Monthly%20Downloads)](https://www.npmjs.com/package/claude-flow)
-[![Total Downloads](https://img.shields.io/npm/dt/claude-flow?style=for-the-badge&logo=npm&color=cyan&label=Total%20Downloads)](https://www.npmjs.com/package/claude-flow)
+[![Monthly Downloads](https://img.shields.io/npm/dm/ruflo?style=for-the-badge&logo=npm&color=blue&label=Monthly%20Downloads)](https://www.npmjs.com/package/ruflo)
+[![Total Downloads](https://img.shields.io/npm/dt/ruflo?style=for-the-badge&logo=npm&color=cyan&label=Total%20Downloads)](https://www.npmjs.com/package/ruflo)
 [![ruv.io](https://img.shields.io/badge/ruv.io-AI%20Platform-green?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0id2hpdGUiIGQ9Ik0xMiAyQzYuNDggMiAyIDYuNDggMiAxMnM0LjQ4IDEwIDEwIDEwIDEwLTQuNDggMTAtMTBTMTcuNTIgMiAxMiAyem0wIDE4Yy00LjQyIDAtOC0zLjU4LTgtOHMzLjU4LTggOC04IDggMy41OCA4IDgtMy41OCA4LTggOHoiLz48L3N2Zz4=)](https://ruv.io)
 [![Agentics Foundation](https://img.shields.io/badge/Agentics-Foundation-crimson?style=for-the-badge&logo=openai)](https://discord.com/invite/dfxmpwkG2D)
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-SDK%20Integrated-green?style=for-the-badge&logo=anthropic)](https://github.com/ruvnet/claude-flow)
@@ -25,12 +25,12 @@
 
 ## Getting into the Flow
 
-Claude-Flow is a comprehensive AI agent orchestration framework that transforms Claude Code into a powerful multi-agent development platform. It enables teams to deploy, coordinate, and optimize specialized AI agents working together on complex software engineering tasks.
+Ruflo is a comprehensive AI agent orchestration framework that transforms Claude Code into a powerful multi-agent development platform. It enables teams to deploy, coordinate, and optimize specialized AI agents working together on complex software engineering tasks.
 
 ### Self-Learning/Self-Optimizing Agent Architecture
 
 ```
-User → Claude-Flow (CLI/MCP) → Router → Swarm → Agents → Memory → LLM Providers
+User → Ruflo (CLI/MCP) → Router → Swarm → Agents → Memory → LLM Providers
                        ↑                          ↓
                        └──── Learning Loop ←──────┘
 ```
@@ -141,8 +141,8 @@ flowchart TB
 # Install RuVector standalone
 npx ruvector
 
-# Or use via Claude-Flow
-npx claude-flow@v3alpha hooks intelligence --status
+# Or use via Ruflo
+npx ruflo@v3alpha hooks intelligence --status
 ```
 
 </details>
@@ -157,7 +157,7 @@ curl -fsSL https://cdn.jsdelivr.net/gh/ruvnet/claude-flow@main/scripts/install.s
 curl -fsSL https://cdn.jsdelivr.net/gh/ruvnet/claude-flow@main/scripts/install.sh | bash -s -- --full
 
 # Or via npx
-npx claude-flow@alpha init --wizard
+npx ruflo@alpha init --wizard
 ```
 
 ---
@@ -171,7 +171,7 @@ npx claude-flow@alpha init --wizard
 
 🔌 **Works With Any LLM** - Switch between Claude, GPT, Gemini, Cohere, or local models like Llama. Automatic failover if one provider is unavailable. Smart routing picks the cheapest option that meets quality requirements.
 
-⚡ **Plugs Into Claude Code** - Native integration via MCP (Model Context Protocol). Use claude-flow commands directly in your Claude Code sessions with full tool access.
+⚡ **Plugs Into Claude Code** - Native integration via MCP (Model Context Protocol). Use ruflo commands directly in your Claude Code sessions with full tool access.
 
 🔒 **Production-Ready Security** - Built-in protection against prompt injection, input validation, path traversal prevention, command injection blocking, and safe credential handling.
 
@@ -219,11 +219,14 @@ Agents organize into swarms led by queens that coordinate work, prevent drift, a
 <details>
 <summary>🧠 <strong>Intelligence & Memory</strong> — How the system learns and remembers</summary>
 
-The system stores successful patterns in vector memory, learns from outcomes via neural networks, and adapts routing based on what works best.
+The system stores successful patterns in vector memory, builds a knowledge graph for structural understanding, learns from outcomes via neural networks, and adapts routing based on what works best.
 
 | Layer | Components | What It Does |
 |-------|------------|--------------|
 | Memory | HNSW, AgentDB, Cache | Stores and retrieves patterns 150x faster |
+| Knowledge Graph | MemoryGraph, PageRank, Communities | Identifies influential insights, detects clusters (ADR-049) |
+| Self-Learning | LearningBridge, SONA, ReasoningBank | Triggers learning from insights, confidence lifecycle (ADR-049) |
+| Agent Scopes | AgentMemoryScope, 3-scope dirs | Per-agent isolation + cross-agent knowledge transfer (ADR-049) |
 | Embeddings | ONNX Runtime, MiniLM | Local vectors without API calls (75x faster) |
 | Learning | SONA, MoE, ReasoningBank | Self-improves from results (<0.05ms adaptation) |
 | Fine-tuning | MicroLoRA, EWC++ | Lightweight adaptation without full retraining |
@@ -346,7 +349,7 @@ const config = optimizer.getOptimalConfig(agentCount);
 <details>
 <summary>🛡️ <strong>Anti-Drift Swarm Configuration</strong> — Prevent goal drift in multi-agent work</summary>
 
-Complex swarms can drift from their original goals. Claude-Flow V3 includes anti-drift defaults that prevent agents from going off-task.
+Complex swarms can drift from their original goals. Ruflo V3 includes anti-drift defaults that prevent agents from going off-task.
 
 **Recommended Configuration:**
 
@@ -388,18 +391,20 @@ swarm_init({
 
 </details>
 
-### Claude Code: With vs Without Claude-Flow
+### Claude Code: With vs Without Ruflo
 
-| Capability | Claude Code Alone | Claude Code + Claude-Flow |
+| Capability | Claude Code Alone | Claude Code + Ruflo |
 |------------|-------------------|---------------------------|
 | **Agent Collaboration** | Agents work in isolation, no shared context | Agents collaborate via swarms with shared memory and consensus |
 | **Coordination** | Manual orchestration between tasks | Queen-led hierarchy with 5 consensus algorithms (Raft, Byzantine, Gossip) |
 | **Hive Mind** | ⛔ Not available | 🐝 Queen-led swarms with collective intelligence, 3 queen types, 8 worker types |
 | **Consensus** | ⛔ No multi-agent decisions | Byzantine fault-tolerant voting (f < n/3), weighted, majority |
-| **Memory** | Session-only, no persistence | HNSW vector memory with 150x-12,500x faster retrieval |
+| **Memory** | Session-only, no persistence | HNSW vector memory with 150x-12,500x faster retrieval + knowledge graph |
 | **Vector Database** | ⛔ No native support | 🐘 RuVector PostgreSQL with 77+ SQL functions, ~61µs search, 16,400 QPS |
+| **Knowledge Graph** | ⛔ Flat insight lists | PageRank + community detection identifies influential insights (ADR-049) |
 | **Collective Memory** | ⛔ No shared knowledge | Shared knowledge base with LRU cache, SQLite persistence, 8 memory types |
-| **Learning** | Static behavior, no adaptation | SONA self-learning with <0.05ms adaptation, improves over time |
+| **Learning** | Static behavior, no adaptation | SONA self-learning with <0.05ms adaptation, LearningBridge for insights |
+| **Agent Scoping** | Single project scope | 3-scope agent memory (project/local/user) with cross-agent transfer |
 | **Task Routing** | You decide which agent to use | Intelligent routing based on learned patterns (89% accuracy) |
 | **Complex Tasks** | Manual breakdown required | Automatic decomposition across 5 domains (Security, Core, Integration, Support) |
 | **Background Workers** | Nothing runs automatically | 12 context-triggered workers auto-dispatch on file changes, patterns, sessions |
@@ -475,14 +480,14 @@ curl ... | bash -s -- --full
 
 ```bash
 # Quick start (no install needed)
-npx claude-flow@alpha init
+npx ruflo@alpha init
 
 # Or install globally
-npm install -g claude-flow@alpha
-claude-flow init
+npm install -g ruflo@alpha
+ruflo init
 
 # With Bun (faster)
-bunx claude-flow@alpha init
+bunx ruflo@alpha init
 ```
 
 #### Install Profiles
@@ -494,25 +499,25 @@ bunx claude-flow@alpha init
 
 ```bash
 # Minimal install (skip ML/embeddings)
-npm install -g claude-flow@alpha --omit=optional
+npm install -g ruflo@alpha --omit=optional
 ```
 
 <details>
 <summary>🤖 <strong>OpenAI Codex CLI Support</strong> — Full Codex integration with self-learning</summary>
 
-Claude-Flow supports both **Claude Code** and **OpenAI Codex CLI** via the [@claude-flow/codex](https://www.npmjs.com/package/@claude-flow/codex) package, following the [Agentics Foundation](https://agentics.org) standard.
+Ruflo supports both **Claude Code** and **OpenAI Codex CLI** via the [@claude-flow/codex](https://www.npmjs.com/package/@claude-flow/codex) package, following the [Agentics Foundation](https://agentics.org) standard.
 
 ### Quick Start for Codex
 
 ```bash
 # Initialize for Codex CLI (creates AGENTS.md instead of CLAUDE.md)
-npx claude-flow@alpha init --codex
+npx ruflo@alpha init --codex
 
 # Full Codex setup with all 137+ skills
-npx claude-flow@alpha init --codex --full
+npx ruflo@alpha init --codex --full
 
 # Initialize for both platforms (dual mode)
-npx claude-flow@alpha init --dual
+npx ruflo@alpha init --dual
 ```
 
 ### Platform Comparison
@@ -570,16 +575,16 @@ wait  # Wait for all to complete
 
 ```bash
 # List collaboration templates
-npx claude-flow-codex dual templates
+npx ruflo-codex dual templates
 
 # Run feature development swarm (architect → coder → tester → reviewer)
-npx claude-flow-codex dual run --template feature --task "Add user auth"
+npx ruflo-codex dual run --template feature --task "Add user auth"
 
 # Run security audit swarm (scanner → analyzer → fixer)
-npx claude-flow-codex dual run --template security --task "src/auth/"
+npx ruflo-codex dual run --template security --task "src/auth/"
 
 # Run refactoring swarm (analyzer → planner → refactorer → validator)
-npx claude-flow-codex dual run --template refactor --task "src/legacy/"
+npx ruflo-codex dual run --template refactor --task "src/legacy/"
 ```
 
 ### Pre-Built Collaboration Templates
@@ -599,7 +604,7 @@ When you run `init --codex`, the MCP server is automatically registered:
 codex mcp list
 
 # If not present, add manually:
-codex mcp add claude-flow -- npx claude-flow mcp start
+codex mcp add ruflo -- npx ruflo mcp start
 ```
 
 ### Self-Learning Workflow
@@ -610,6 +615,13 @@ codex mcp add claude-flow -- npx claude-flow mcp start
 3. EXECUTE: YOU write code, run commands       → Codex does real work
 4. REMEMBER: memory_store(key, value, namespace="patterns") → Save for future
 ```
+
+The **Intelligence Loop** (ADR-050) automates this cycle through hooks. Each session automatically:
+- Builds a knowledge graph from memory entries (PageRank + Jaccard similarity)
+- Injects ranked context into every route decision
+- Tracks edit patterns and generates new insights
+- Boosts confidence for useful patterns, decays unused ones
+- Saves snapshots so you can track improvement with `node .claude/helpers/hook-handler.cjs stats`
 
 ### MCP Tools for Learning
 
@@ -648,43 +660,43 @@ codex mcp add claude-flow -- npx claude-flow mcp start
 
 ```bash
 # Initialize project
-npx claude-flow@alpha init
+npx ruflo@alpha init
 
 # Start MCP server for Claude Code integration
-npx claude-flow@alpha mcp start
+npx ruflo@alpha mcp start
 
 # Run a task with agents
-npx claude-flow@alpha --agent coder --task "Implement user authentication"
+npx ruflo@alpha --agent coder --task "Implement user authentication"
 
 # List available agents
-npx claude-flow@alpha --list
+npx ruflo@alpha --list
 ```
 
 ### Upgrading
 
 ```bash
 # Update helpers and statusline (preserves your data)
-npx claude-flow@v3alpha init upgrade
+npx ruflo@v3alpha init upgrade
 
 # Update AND add any missing skills/agents/commands
-npx claude-flow@v3alpha init upgrade --add-missing
+npx ruflo@v3alpha init upgrade --add-missing
 ```
 
 The `--add-missing` flag automatically detects and installs new skills, agents, and commands that were added in newer versions, without overwriting your existing customizations.
 
 ### Claude Code MCP Integration
 
-Add claude-flow as an MCP server for seamless integration:
+Add ruflo as an MCP server for seamless integration:
 
 ```bash
-# Add claude-flow MCP server to Claude Code
-claude mcp add claude-flow -- npx -y claude-flow@latest mcp start
+# Add ruflo MCP server to Claude Code
+claude mcp add ruflo -- npx -y ruflo@latest mcp start
 
 # Verify installation
 claude mcp list
 ```
 
-Once added, Claude Code can use all 175+ claude-flow MCP tools directly:
+Once added, Claude Code can use all 175+ ruflo MCP tools directly:
 - `swarm_init` - Initialize agent swarms
 - `agent_spawn` - Spawn specialized agents
 - `memory_search` - Search patterns with HNSW (150x faster)
@@ -695,13 +707,13 @@ Once added, Claude Code can use all 175+ claude-flow MCP tools directly:
 ## What is it exactly? Agents that learn, build and work perpetually. 
 
 <details>
-<summary>🆚 <strong>Why Claude-Flow v3?</strong></summary>
+<summary>🆚 <strong>Why Ruflo v3?</strong></summary>
 
-Claude-Flow v3 introduces **self-learning neural capabilities** that no other agent orchestration framework offers. While competitors require manual agent configuration and static routing, Claude-Flow learns from every task execution, prevents catastrophic forgetting of successful patterns, and intelligently routes work to specialized experts.
+Ruflo v3 introduces **self-learning neural capabilities** that no other agent orchestration framework offers. While competitors require manual agent configuration and static routing, Ruflo learns from every task execution, prevents catastrophic forgetting of successful patterns, and intelligently routes work to specialized experts.
 
 #### 🧠 Neural & Learning
 
-| Feature | Claude Flow v3 | CrewAI | LangGraph | AutoGen | Manus |
+| Feature | Ruflo v3 | CrewAI | LangGraph | AutoGen | Manus |
 |---------|----------------|--------|-----------|---------|-------|
 | **Self-Learning** | ✅ SONA + EWC++ | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Prevents Forgetting** | ✅ EWC++ consolidation | ⛔ | ⛔ | ⛔ | ⛔ |
@@ -712,9 +724,12 @@ Claude-Flow v3 introduces **self-learning neural capabilities** that no other ag
 
 #### 💾 Memory & Embeddings
 
-| Feature | Claude Flow v3 | CrewAI | LangGraph | AutoGen | Manus |
+| Feature | Ruflo v3 | CrewAI | LangGraph | AutoGen | Manus |
 |---------|----------------|--------|-----------|---------|-------|
 | **Vector Memory** | ✅ HNSW (150x faster) | ⛔ | Via plugins | ⛔ | ⛔ |
+| **Knowledge Graph** | ✅ PageRank + communities | ⛔ | ⛔ | ⛔ | ⛔ |
+| **Self-Learning Memory** | ✅ LearningBridge (SONA) | ⛔ | ⛔ | ⛔ | ⛔ |
+| **Agent-Scoped Memory** | ✅ 3-scope (project/local/user) | ⛔ | ⛔ | ⛔ | ⛔ |
 | **PostgreSQL Vector DB** | ✅ RuVector (77+ SQL functions, ~61µs) | ⛔ | pgvector only | ⛔ | ⛔ |
 | **Hyperbolic Embeddings** | ✅ Poincaré ball (native + SQL) | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Quantization** | ✅ Int8 (3.92x savings) | ⛔ | ⛔ | ⛔ | ⛔ |
@@ -724,7 +739,7 @@ Claude-Flow v3 introduces **self-learning neural capabilities** that no other ag
 
 #### 🐝 Swarm & Coordination
 
-| Feature | Claude Flow v3 | CrewAI | LangGraph | AutoGen | Manus |
+| Feature | Ruflo v3 | CrewAI | LangGraph | AutoGen | Manus |
 |---------|----------------|--------|-----------|---------|-------|
 | **Swarm Topologies** | ✅ 4 types | 1 | 1 | 1 | 1 |
 | **Consensus Protocols** | ✅ 5 (Raft, BFT, etc.) | ⛔ | ⛔ | ⛔ | ⛔ |
@@ -734,7 +749,7 @@ Claude-Flow v3 introduces **self-learning neural capabilities** that no other ag
 
 #### 🔧 Developer Experience
 
-| Feature | Claude Flow v3 | CrewAI | LangGraph | AutoGen | Manus |
+| Feature | Ruflo v3 | CrewAI | LangGraph | AutoGen | Manus |
 |---------|----------------|--------|-----------|---------|-------|
 | **MCP Integration** | ✅ Native (170+ tools) | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Skills System** | ✅ 42+ pre-built | ⛔ | ⛔ | ⛔ | Limited |
@@ -744,7 +759,7 @@ Claude-Flow v3 introduces **self-learning neural capabilities** that no other ag
 
 #### 🛡️ Security & Platform
 
-| Feature | Claude Flow v3 | CrewAI | LangGraph | AutoGen | Manus |
+| Feature | Ruflo v3 | CrewAI | LangGraph | AutoGen | Manus |
 |---------|----------------|--------|-----------|---------|-------|
 | **Threat Detection** | ✅ AIDefence (<10ms) | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Cloud Platform** | ✅ Flow Nexus | ⛔ | ⛔ | ⛔ | ⛔ |
@@ -758,7 +773,7 @@ Claude-Flow v3 introduces **self-learning neural capabilities** that no other ag
 <details>
 <summary>🚀 <strong>Key Differentiators</strong> — Self-learning, memory optimization, fault tolerance</summary>
 
-What makes Claude-Flow different from other agent frameworks? These 10 capabilities work together to create a system that learns from experience, runs efficiently on any hardware, and keeps working even when things go wrong.
+What makes Ruflo different from other agent frameworks? These 10 capabilities work together to create a system that learns from experience, runs efficiently on any hardware, and keeps working even when things go wrong.
 
 | | Feature | What It Does | Technical Details |
 |---|---------|--------------|-------------------|
@@ -778,7 +793,7 @@ What makes Claude-Flow different from other agent frameworks? These 10 capabilit
 <details>
 <summary>💰 <strong>Intelligent 3-Tier Model Routing</strong> — Save 75% on API costs, extend Claude Max 2.5x</summary>
 
-Not every task needs the most powerful (and expensive) model. Claude-Flow analyzes each request and automatically routes it to the cheapest handler that can do the job well. Simple code transforms skip the LLM entirely using WebAssembly. Medium tasks use faster, cheaper models. Only complex architecture decisions use Opus.
+Not every task needs the most powerful (and expensive) model. Ruflo analyzes each request and automatically routes it to the cheapest handler that can do the job well. Simple code transforms skip the LLM entirely using WebAssembly. Medium tasks use faster, cheaper models. Only complex architecture decisions use Opus.
 
 **Cost & Usage Benefits:**
 
@@ -804,7 +819,7 @@ Not every task needs the most powerful (and expensive) model. Claude-Flow analyz
 <details>
 <summary>📋 <strong>Spec-Driven Development</strong> — Build complete specs, implement without drift</summary>
 
-Complex projects fail when implementation drifts from the original plan. Claude-Flow solves this with a spec-first approach: define your architecture through ADRs (Architecture Decision Records), organize code into DDD bounded contexts, and let the system enforce compliance as agents work. The result is implementations that match specifications — even across multi-agent swarms working in parallel.
+Complex projects fail when implementation drifts from the original plan. Ruflo solves this with a spec-first approach: define your architecture through ADRs (Architecture Decision Records), organize code into DDD bounded contexts, and let the system enforce compliance as agents work. The result is implementations that match specifications — even across multi-agent swarms working in parallel.
 
 **How It Prevents Drift:**
 
@@ -847,6 +862,8 @@ Complex projects fail when implementation drifts from the original plan. Claude-
 - **ADR-008**: Vitest testing framework (10x faster than Jest)
 - **ADR-009**: Hybrid Memory Backend (SQLite + HNSW)
 - **ADR-026**: Intelligent 3-tier model routing
+- **ADR-048**: Auto Memory Bridge (Claude Code ↔ AgentDB bidirectional sync)
+- **ADR-049**: Self-Learning Memory with GNN (LearningBridge, MemoryGraph, AgentMemoryScope)
 
 </details>
 
@@ -943,28 +960,32 @@ sequenceDiagram
 </details>
 
 <details>
-<summary>🧠 <strong>Memory Architecture</strong> — How knowledge is stored and retrieved</summary>
+<summary>🧠 <strong>Memory Architecture</strong> — How knowledge is stored, learned, and retrieved</summary>
 
 ```mermaid
 flowchart LR
     subgraph Input["📥 Input"]
         Query[Query/Pattern]
+        Insight[New Insight]
     end
 
     subgraph Processing["⚙️ Processing"]
         Embed[ONNX Embeddings]
         Normalize[Normalization]
+        Learn[LearningBridge<br/>SONA + ReasoningBank]
     end
 
     subgraph Storage["💾 Storage"]
         HNSW[(HNSW Index<br/>150x faster)]
         SQLite[(SQLite Cache)]
         AgentDB[(AgentDB)]
+        Graph[MemoryGraph<br/>PageRank + Communities]
     end
 
     subgraph Retrieval["🔍 Retrieval"]
         Vector[Vector Search]
         Semantic[Semantic Match]
+        Rank[Graph-Aware Ranking]
         Results[Top-K Results]
     end
 
@@ -972,12 +993,25 @@ flowchart LR
     Embed --> Normalize
     Normalize --> HNSW
     Normalize --> SQLite
+    Insight --> Learn
+    Learn --> AgentDB
+    AgentDB --> Graph
     HNSW --> Vector
     SQLite --> Vector
     AgentDB --> Semantic
-    Vector --> Results
-    Semantic --> Results
+    Vector --> Rank
+    Semantic --> Rank
+    Graph --> Rank
+    Rank --> Results
 ```
+
+**Self-Learning Memory (ADR-049):**
+| Component | Purpose | Performance |
+|-----------|---------|-------------|
+| **LearningBridge** | Connects insights to SONA/ReasoningBank neural pipeline | 0.12 ms/insight |
+| **MemoryGraph** | PageRank + label propagation knowledge graph | 2.78 ms build (1k nodes) |
+| **AgentMemoryScope** | 3-scope agent memory (project/local/user) with cross-agent transfer | 1.25 ms transfer |
+| **AutoMemoryBridge** | Bidirectional sync: Claude Code auto memory files ↔ AgentDB | ADR-048 |
 
 </details>
 
@@ -1051,18 +1085,18 @@ flowchart TB
 
 ## 🔌 Setup & Configuration
 
-Connect Claude-Flow to your development environment.
+Connect Ruflo to your development environment.
 
 <details>
-<summary>🔌 <strong>MCP Setup</strong> — Connect Claude-Flow to Any AI Environment</summary>
+<summary>🔌 <strong>MCP Setup</strong> — Connect Ruflo to Any AI Environment</summary>
 
-Claude-Flow runs as an MCP (Model Context Protocol) server, allowing you to connect it to any MCP-compatible AI client. This means you can use Claude-Flow's 60+ agents, swarm coordination, and self-learning capabilities from Claude Desktop, VS Code, Cursor, Windsurf, ChatGPT, and more.
+Ruflo runs as an MCP (Model Context Protocol) server, allowing you to connect it to any MCP-compatible AI client. This means you can use Ruflo's 60+ agents, swarm coordination, and self-learning capabilities from Claude Desktop, VS Code, Cursor, Windsurf, ChatGPT, and more.
 
 ### Quick Add Command
 
 ```bash
-# Start Claude-Flow MCP server in any environment
-npx claude-flow@v3alpha mcp start
+# Start Ruflo MCP server in any environment
+npx ruflo@v3alpha mcp start
 ```
 
 <details open>
@@ -1077,9 +1111,9 @@ npx claude-flow@v3alpha mcp start
 ```json
 {
   "mcpServers": {
-    "claude-flow": {
+    "ruflo": {
       "command": "npx",
-      "args": ["claude-flow@v3alpha", "mcp", "start"],
+      "args": ["ruflo@v3alpha", "mcp", "start"],
       "env": {
         "ANTHROPIC_API_KEY": "sk-ant-..."
       }
@@ -1099,12 +1133,12 @@ Restart Claude Desktop after saving. Look for the MCP indicator (hammer icon) in
 
 ```bash
 # Add via CLI (recommended)
-claude mcp add claude-flow -- npx claude-flow@v3alpha mcp start
+claude mcp add ruflo -- npx ruflo@v3alpha mcp start
 
 # Or add with environment variables
-claude mcp add claude-flow \
+claude mcp add ruflo \
   --env ANTHROPIC_API_KEY=sk-ant-... \
-  -- npx claude-flow@v3alpha mcp start
+  -- npx ruflo@v3alpha mcp start
 
 # Verify installation
 claude mcp list
@@ -1131,9 +1165,9 @@ Create `.vscode/mcp.json` in your project:
 ```json
 {
   "mcpServers": {
-    "claude-flow": {
+    "ruflo": {
       "command": "npx",
-      "args": ["claude-flow@v3alpha", "mcp", "start"],
+      "args": ["ruflo@v3alpha", "mcp", "start"],
       "env": {
         "ANTHROPIC_API_KEY": "sk-ant-..."
       }
@@ -1158,9 +1192,9 @@ Create `.cursor/mcp.json` in your project (or global config):
 ```json
 {
   "mcpServers": {
-    "claude-flow": {
+    "ruflo": {
       "command": "npx",
-      "args": ["claude-flow@v3alpha", "mcp", "start"],
+      "args": ["ruflo@v3alpha", "mcp", "start"],
       "env": {
         "ANTHROPIC_API_KEY": "sk-ant-..."
       }
@@ -1185,9 +1219,9 @@ Create `.cursor/mcp.json` in your project (or global config):
 ```json
 {
   "mcpServers": {
-    "claude-flow": {
+    "ruflo": {
       "command": "npx",
-      "args": ["claude-flow@v3alpha", "mcp", "start"],
+      "args": ["ruflo@v3alpha", "mcp", "start"],
       "env": {
         "ANTHROPIC_API_KEY": "sk-ant-..."
       }
@@ -1214,11 +1248,11 @@ Click **Refresh** in the MCP settings to connect. Windsurf supports up to 100 MC
 
 **Remote Server Setup:**
 
-For ChatGPT, you need a remote MCP server (not local stdio). Deploy claude-flow to a server with HTTP transport:
+For ChatGPT, you need a remote MCP server (not local stdio). Deploy ruflo to a server with HTTP transport:
 
 ```bash
 # Start with HTTP transport
-npx claude-flow@v3alpha mcp start --transport http --port 3000
+npx ruflo@v3alpha mcp start --transport http --port 3000
 ```
 
 Then add the server URL in ChatGPT Connectors settings.
@@ -1234,7 +1268,7 @@ Google AI Studio supports MCP natively since May 2025, with managed MCP servers 
 
 **Using MCP SuperAssistant Extension:**
 1. Install [MCP SuperAssistant](https://chrome.google.com/webstore) Chrome extension
-2. Configure your claude-flow MCP server
+2. Configure your ruflo MCP server
 3. Use with Google AI Studio, Gemini, and other AI platforms
 
 **Native SDK Integration:**
@@ -1247,9 +1281,9 @@ const ai = new GoogleGenAI({ apiKey: 'YOUR_API_KEY' });
 // MCP definitions are natively supported in the Gen AI SDK
 const mcpConfig = {
   servers: [{
-    name: 'claude-flow',
+    name: 'ruflo',
     command: 'npx',
-    args: ['claude-flow@v3alpha', 'mcp', 'start']
+    args: ['ruflo@v3alpha', 'mcp', 'start']
   }]
 };
 ```
@@ -1270,9 +1304,9 @@ JetBrains AI Assistant supports MCP for IntelliJ IDEA, PyCharm, WebStorm, and ot
 
 ```json
 {
-  "name": "claude-flow",
+  "name": "ruflo",
   "command": "npx",
-  "args": ["claude-flow@v3alpha", "mcp", "start"]
+  "args": ["ruflo@v3alpha", "mcp", "start"]
 }
 ```
 
@@ -1502,13 +1536,13 @@ The Hive Mind system implements queen-led hierarchical coordination where strate
 
 **CLI Commands:**
 ```bash
-npx claude-flow hive-mind init                    # Initialize hive mind
-npx claude-flow hive-mind spawn "Build API"       # Spawn with objective
-npx claude-flow hive-mind spawn "..." --queen-type strategic --consensus byzantine
-npx claude-flow hive-mind status                  # Check status
-npx claude-flow hive-mind metrics                 # Performance metrics
-npx claude-flow hive-mind memory                  # Collective memory stats
-npx claude-flow hive-mind sessions                # List active sessions
+npx ruflo hive-mind init                    # Initialize hive mind
+npx ruflo hive-mind spawn "Build API"       # Spawn with objective
+npx ruflo hive-mind spawn "..." --queen-type strategic --consensus byzantine
+npx ruflo hive-mind status                  # Check status
+npx ruflo hive-mind metrics                 # Performance metrics
+npx ruflo hive-mind memory                  # Collective memory stats
+npx ruflo hive-mind sessions                # List active sessions
 ```
 
 **Performance:** 10-20x faster batch spawning, 2.8-4.4x speed improvement, 84.8% SWE-Bench solve rate
@@ -1522,8 +1556,8 @@ Native integration with Claude Code's experimental Agent Teams feature for spawn
 
 **Enable Agent Teams:**
 ```bash
-# Automatically enabled with claude-flow init
-npx claude-flow@latest init
+# Automatically enabled with ruflo init
+npx ruflo@latest init
 
 # Or manually add to .claude/settings.json
 {
@@ -1575,10 +1609,10 @@ TeamDelete()
 
 ```bash
 # Handle idle teammate
-npx claude-flow@latest hooks teammate-idle --auto-assign true
+npx ruflo@latest hooks teammate-idle --auto-assign true
 
 # Handle task completion
-npx claude-flow@latest hooks task-completed --task-id <id> --train-patterns
+npx ruflo@latest hooks task-completed --task-id <id> --train-patterns
 ```
 
 **Display Modes:** `auto` (default), `in-process`, `tmux` (split-pane)
@@ -1655,14 +1689,14 @@ Build custom plugins with the fluent builder API. Create MCP tools, hooks, worke
 
 ### 📦 Available Optional Plugins
 
-Install these optional plugins to extend Claude Flow capabilities:
+Install these optional plugins to extend Ruflo capabilities:
 
 | Plugin | Version | Description | Install Command |
 |--------|---------|-------------|-----------------|
 | **@claude-flow/plugin-agentic-qe** | 3.0.0-alpha.2 | Quality Engineering with 58 AI agents across 12 DDD contexts. TDD, coverage analysis, security scanning, chaos engineering, accessibility testing. | `npm install @claude-flow/plugin-agentic-qe` |
 | **@claude-flow/plugin-prime-radiant** | 0.1.4 | Mathematical AI interpretability with 6 engines: sheaf cohomology, spectral analysis, causal inference, quantum topology, category theory, HoTT proofs. | `npm install @claude-flow/plugin-prime-radiant` |
-| **@claude-flow/plugin-gastown-bridge** | 0.1.0 | Gas Town orchestrator integration with WASM-accelerated formula parsing (352x faster), Beads sync, convoy management, and graph analysis. 20 MCP tools. | `npx claude-flow@latest plugins install -n @claude-flow/plugin-gastown-bridge` |
-| **@claude-flow/teammate-plugin** | 1.0.0-alpha.1 | Native TeammateTool integration for Claude Code v2.1.19+. BMSSP WASM acceleration, rate limiting, circuit breaker, semantic routing. 21 MCP tools. | `npx claude-flow@latest plugins install -n @claude-flow/teammate-plugin` |
+| **@claude-flow/plugin-gastown-bridge** | 0.1.0 | Gas Town orchestrator integration with WASM-accelerated formula parsing (352x faster), Beads sync, convoy management, and graph analysis. 20 MCP tools. | `npx ruflo@latest plugins install -n @claude-flow/plugin-gastown-bridge` |
+| **@claude-flow/teammate-plugin** | 1.0.0-alpha.1 | Native TeammateTool integration for Claude Code v2.1.19+. BMSSP WASM acceleration, rate limiting, circuit breaker, semantic routing. 21 MCP tools. | `npx ruflo@latest plugins install -n @claude-flow/teammate-plugin` |
 
 #### 🏥 Domain-Specific Plugins
 
@@ -1732,7 +1766,7 @@ npm install @claude-flow/plugin-agentic-qe
 npm install @claude-flow/plugin-prime-radiant
 
 # Install Gas Town Bridge plugin (WASM-accelerated orchestration)
-npx claude-flow@latest plugins install -n @claude-flow/plugin-gastown-bridge
+npx ruflo@latest plugins install -n @claude-flow/plugin-gastown-bridge
 
 # Install domain-specific plugins
 npm install @claude-flow/plugin-healthcare-clinical
@@ -1751,7 +1785,7 @@ npm install @claude-flow/plugin-quantum-optimizer
 npm install @claude-flow/plugin-hyperbolic-reasoning
 
 # List all installed plugins
-npx claude-flow plugins list --installed
+npx ruflo plugins list --installed
 ```
 
 </details>
@@ -1920,8 +1954,8 @@ Workers run automatically based on context, or dispatch manually via MCP tools.
 | **TestGaps** | `testgaps` | Test coverage analysis | Code changes without tests |
 
 ```bash
-npx claude-flow@v3alpha worker dispatch --trigger audit --context "./src"
-npx claude-flow@v3alpha worker status
+npx ruflo@v3alpha worker dispatch --trigger audit --context "./src"
+npx ruflo@v3alpha worker status
 ```
 
 </details>
@@ -2145,7 +2179,7 @@ npx claude-flow@v3alpha worker status
 | Feature | Description | Performance |
 |---------|-------------|-------------|
 | **Multi-Provider** | Agentic-Flow (ONNX), OpenAI, Transformers.js, Mock | 4 providers |
-| **Auto-Install** | `claude-flow embeddings init` or `createEmbeddingServiceAsync()` | Zero config |
+| **Auto-Install** | `ruflo embeddings init` or `createEmbeddingServiceAsync()` | Zero config |
 | **75x Faster** | Agentic-flow ONNX SIMD vs Transformers.js | 3ms vs 230ms |
 | **Hyperbolic Space** | Poincaré ball model for hierarchical data | Exponential capacity |
 | **Dimensions** | 384 to 3072 configurable | Quality vs speed tradeoff |
@@ -2155,13 +2189,13 @@ npx claude-flow@v3alpha worker status
 
 ```bash
 # Initialize ONNX embeddings with hyperbolic config
-claude-flow embeddings init
+ruflo embeddings init
 
 # Use larger model for higher quality
-claude-flow embeddings init --model all-mpnet-base-v2
+ruflo embeddings init --model all-mpnet-base-v2
 
 # Semantic search
-claude-flow embeddings search -q "authentication patterns"
+ruflo embeddings search -q "authentication patterns"
 ```
 
 | Mode | Adaptation | Quality | Memory | Use Case |
@@ -2198,22 +2232,22 @@ claude-flow embeddings search -q "authentication patterns"
 
 ```bash
 # Initialize RuVector in PostgreSQL
-claude-flow ruvector init --database mydb --user admin
+ruflo ruvector init --database mydb --user admin
 
 # Check connection and schema status
-claude-flow ruvector status --verbose
+ruflo ruvector status --verbose
 
 # Run pending migrations
-claude-flow ruvector migrate --up
+ruflo ruvector migrate --up
 
 # Performance benchmark
-claude-flow ruvector benchmark --iterations 1000
+ruflo ruvector benchmark --iterations 1000
 
 # Optimize indices and vacuum
-claude-flow ruvector optimize --analyze
+ruflo ruvector optimize --analyze
 
 # Backup vector data
-claude-flow ruvector backup --output ./backup.sql
+ruflo ruvector backup --output ./backup.sql
 ```
 
 | Migration | Purpose | Features |
@@ -2245,13 +2279,13 @@ claude-flow ruvector backup --output ./backup.sql
 
 **Quick Commands:**
 ```bash
-npx claude-flow hive-mind init                                    # Initialize
-npx claude-flow hive-mind spawn "Build API" --queen-type tactical # Spawn swarm
-npx claude-flow hive-mind spawn "Research AI" --consensus byzantine --claude
-npx claude-flow hive-mind status                                  # Check status
+npx ruflo hive-mind init                                    # Initialize
+npx ruflo hive-mind spawn "Build API" --queen-type tactical # Spawn swarm
+npx ruflo hive-mind spawn "Research AI" --consensus byzantine --claude
+npx ruflo hive-mind status                                  # Check status
 ```
 
-**Claude-Flow Skill:** `/hive-mind-advanced` — Full hive mind orchestration
+**Ruflo Skill:** `/hive-mind-advanced` — Full hive mind orchestration
 
 **Performance:** 10-20x faster batch spawning, 84.8% SWE-Bench solve rate, 32.3% token reduction
 
@@ -2363,7 +2397,7 @@ Real-time development status display for Claude Code integration showing DDD pro
 
 **Output Format:**
 ```
-▊ Claude Flow V3 ● ruvnet  │  ⎇ v3  │  Opus 4.5
+▊ Ruflo V3 ● ruvnet  │  ⎇ v3  │  Opus 4.5
 ─────────────────────────────────────────────────────
 🏗️  DDD Domains    [●●●●●]  5/5    ⚡ 1.0x → 2.49x-7.47x
 🤖 Swarm  ◉ [58/15]  👥 0    🟢 CVE 3/3    💾 22282MB    📂  47%    🧠  10%
@@ -2372,7 +2406,7 @@ Real-time development status display for Claude Code integration showing DDD pro
 
 | Indicator | Description | Values |
 |-----------|-------------|--------|
-| `▊ Claude Flow V3` | Project header | Always shown |
+| `▊ Ruflo V3` | Project header | Always shown |
 | `● ruvnet` | GitHub user (via `gh` CLI) | Dynamic |
 | `⎇ v3` | Current git branch | Dynamic |
 | `Opus 4.5` | Claude model name | From Claude Code |
@@ -2393,19 +2427,19 @@ Real-time development status display for Claude Code integration showing DDD pro
 **Usage:**
 ```bash
 # Default: Safe multi-line (avoids Claude Code collision zone)
-npx claude-flow@v3alpha hooks statusline
+npx ruflo@v3alpha hooks statusline
 
 # Single-line mode (completely avoids collision)
-npx claude-flow@v3alpha hooks statusline --single
+npx ruflo@v3alpha hooks statusline --single
 
 # Legacy multi-line (original behavior, may have bleeding)
-npx claude-flow@v3alpha hooks statusline --legacy
+npx ruflo@v3alpha hooks statusline --legacy
 
 # JSON output for scripting
-npx claude-flow@v3alpha hooks statusline --json
+npx ruflo@v3alpha hooks statusline --json
 
 # Compact JSON (single line)
-npx claude-flow@v3alpha hooks statusline --compact
+npx ruflo@v3alpha hooks statusline --compact
 ```
 
 **Collision Zone Fix (Issue #985):**
@@ -2427,16 +2461,16 @@ Add to `.claude/settings.json`:
 {
   "statusLine": {
     "type": "command",
-    "command": "npx claude-flow@v3alpha hooks statusline --single"
+    "command": "npx ruflo@v3alpha hooks statusline --single"
   }
 }
 ```
 
 **Data Sources:**
-- `.claude-flow/metrics/v3-progress.json` - DDD domain progress
-- `.claude-flow/metrics/swarm-activity.json` - Active agent counts
-- `.claude-flow/security/audit-status.json` - CVE remediation status
-- `.claude-flow/learning/patterns.db` - Intelligence score (pattern count)
+- `.ruflo/metrics/v3-progress.json` - DDD domain progress
+- `.ruflo/metrics/swarm-activity.json` - Active agent counts
+- `.ruflo/security/audit-status.json` - CVE remediation status
+- `.ruflo/learning/patterns.db` - Intelligence score (pattern count)
 - Process detection via `ps aux` - Real-time memory and agent counts
 - Git branch via `git branch --show-current`
 - GitHub user via `gh api user`
@@ -2461,19 +2495,19 @@ Cross-platform TypeScript-based daemon service with auto-scheduling:
 **Commands:**
 ```bash
 # Start daemon (auto-runs on SessionStart hooks)
-npx claude-flow@v3alpha daemon start
+npx ruflo@v3alpha daemon start
 
 # Check status with worker history
-npx claude-flow@v3alpha daemon status
+npx ruflo@v3alpha daemon status
 
 # Manually trigger a worker
-npx claude-flow@v3alpha daemon trigger map
+npx ruflo@v3alpha daemon trigger map
 
 # Enable/disable workers
-npx claude-flow@v3alpha daemon enable map audit optimize
+npx ruflo@v3alpha daemon enable map audit optimize
 
 # Stop daemon
-npx claude-flow@v3alpha daemon stop
+npx ruflo@v3alpha daemon stop
 ```
 
 **Daemon Status Output:**
@@ -2547,7 +2581,7 @@ Shell-based daemons for monitoring (Linux/macOS only):
 <details>
 <summary>⌨️ <strong>V3 CLI Commands</strong> — 26 commands with 140+ subcommands</summary>
 
-Complete command-line interface for all Claude-Flow operations.
+Complete command-line interface for all Ruflo operations.
 
 **Core Commands:**
 
@@ -2589,25 +2623,25 @@ Complete command-line interface for all Claude-Flow operations.
 
 ```bash
 # Initialize project with wizard
-npx claude-flow@v3alpha init --wizard
+npx ruflo@v3alpha init --wizard
 
 # Start daemon with background workers
-npx claude-flow@v3alpha daemon start
+npx ruflo@v3alpha daemon start
 
 # Spawn an agent with specific type
-npx claude-flow@v3alpha agent spawn -t coder --name my-coder
+npx ruflo@v3alpha agent spawn -t coder --name my-coder
 
 # Initialize swarm with V3 mode
-npx claude-flow@v3alpha swarm init --v3-mode
+npx ruflo@v3alpha swarm init --v3-mode
 
 # Search memory (HNSW-indexed, 150x faster)
-npx claude-flow@v3alpha memory search -q "authentication patterns"
+npx ruflo@v3alpha memory search -q "authentication patterns"
 
 # Run security scan
-npx claude-flow@v3alpha security scan --depth full
+npx ruflo@v3alpha security scan --depth full
 
 # Performance benchmark
-npx claude-flow@v3alpha performance benchmark --suite all
+npx ruflo@v3alpha performance benchmark --suite all
 ```
 
 </details>
@@ -2615,7 +2649,7 @@ npx claude-flow@v3alpha performance benchmark --suite all
 <details>
 <summary>🩺 <strong>Doctor Health Checks</strong> — System diagnostics with auto-fix</summary>
 
-Run `npx claude-flow@v3alpha doctor` to diagnose and fix common issues.
+Run `npx ruflo@v3alpha doctor` to diagnose and fix common issues.
 
 **Health Checks Performed:**
 
@@ -2636,22 +2670,22 @@ Run `npx claude-flow@v3alpha doctor` to diagnose and fix common issues.
 
 ```bash
 # Run full diagnostics
-npx claude-flow@v3alpha doctor
+npx ruflo@v3alpha doctor
 
 # Run diagnostics with auto-fix
-npx claude-flow@v3alpha doctor --fix
+npx ruflo@v3alpha doctor --fix
 
 # Check specific component
-npx claude-flow@v3alpha doctor --component memory
+npx ruflo@v3alpha doctor --component memory
 
 # Verbose output
-npx claude-flow@v3alpha doctor --verbose
+npx ruflo@v3alpha doctor --verbose
 ```
 
 **Output Example:**
 
 ```
-🩺 Claude-Flow Doctor v3.0.0-alpha
+🩺 Ruflo Doctor v3.0.0-alpha
 
 ✅ Node.js      20.11.0 (required: 20+)
 ✅ npm          10.2.4 (required: 9+)
@@ -2695,16 +2729,16 @@ The embeddings package (v3.0.0-alpha.12) provides high-performance vector embedd
 
 ```bash
 # Initialize embeddings system
-npx claude-flow@v3alpha embeddings init
+npx ruflo@v3alpha embeddings init
 
 # Generate embedding for text
-npx claude-flow@v3alpha embeddings embed "authentication patterns"
+npx ruflo@v3alpha embeddings embed "authentication patterns"
 
 # Batch embed multiple texts
-npx claude-flow@v3alpha embeddings batch --file texts.txt
+npx ruflo@v3alpha embeddings batch --file texts.txt
 
 # Search with semantic similarity
-npx claude-flow@v3alpha embeddings search "login flow" --top-k 5
+npx ruflo@v3alpha embeddings search "login flow" --top-k 5
 ```
 
 **Programmatic:**
@@ -2741,59 +2775,173 @@ Real-world scenarios and pre-built workflows for common tasks.
 
 | Scenario | What It Solves | How To Do It |
 |----------|----------------|--------------|
-| **Code Review** | Get thorough reviews with security, performance, and style checks | `npx claude-flow@v3alpha --agent reviewer --task "Review PR #123"` |
-| **Test Generation** | Auto-generate unit, integration, and e2e tests for existing code | `npx claude-flow@v3alpha --agent tester --task "Write tests for auth module"` |
-| **Refactoring** | Safely restructure code while maintaining behavior | `npx claude-flow@v3alpha --agent coder --task "Refactor user service to use repository pattern"` |
-| **Bug Fixing** | Diagnose and fix bugs with full context analysis | `npx claude-flow@v3alpha --agent coder --task "Fix race condition in checkout flow"` |
+| **Code Review** | Get thorough reviews with security, performance, and style checks | `npx ruflo@v3alpha --agent reviewer --task "Review PR #123"` |
+| **Test Generation** | Auto-generate unit, integration, and e2e tests for existing code | `npx ruflo@v3alpha --agent tester --task "Write tests for auth module"` |
+| **Refactoring** | Safely restructure code while maintaining behavior | `npx ruflo@v3alpha --agent coder --task "Refactor user service to use repository pattern"` |
+| **Bug Fixing** | Diagnose and fix bugs with full context analysis | `npx ruflo@v3alpha --agent coder --task "Fix race condition in checkout flow"` |
 
 ### 🔒 Security & Compliance
 
 | Scenario | What It Solves | How To Do It |
 |----------|----------------|--------------|
-| **Security Audit** | Find vulnerabilities before attackers do | `npx claude-flow@v3alpha --agent security-architect --task "Audit for OWASP Top 10"` |
-| **Dependency Scan** | Identify vulnerable packages and suggest upgrades | `npx claude-flow@v3alpha security scan --depth full` |
-| **Compliance Check** | Ensure code meets security standards | `npx claude-flow@v3alpha --agent security-architect --task "Check PCI-DSS compliance"` |
+| **Security Audit** | Find vulnerabilities before attackers do | `npx ruflo@v3alpha --agent security-architect --task "Audit for OWASP Top 10"` |
+| **Dependency Scan** | Identify vulnerable packages and suggest upgrades | `npx ruflo@v3alpha security scan --depth full` |
+| **Compliance Check** | Ensure code meets security standards | `npx ruflo@v3alpha --agent security-architect --task "Check PCI-DSS compliance"` |
 
 ### 🐝 Multi-Agent Swarms
 
 | Scenario | What It Solves | How To Do It |
 |----------|----------------|--------------|
-| **Feature Development** | Coordinate multiple agents on complex features | `npx claude-flow@v3alpha swarm init --topology hierarchical && npx claude-flow@v3alpha task orchestrate "Build user dashboard"` |
-| **Large Refactors** | Parallel refactoring across many files without conflicts | `npx claude-flow@v3alpha swarm init --topology mesh --max-agents 8` |
-| **Codebase Migration** | Migrate frameworks, languages, or patterns systematically | `npx claude-flow@v3alpha task orchestrate "Migrate from Express to Fastify" --strategy adaptive` |
+| **Feature Development** | Coordinate multiple agents on complex features | `npx ruflo@v3alpha swarm init --topology hierarchical && npx ruflo@v3alpha task orchestrate "Build user dashboard"` |
+| **Large Refactors** | Parallel refactoring across many files without conflicts | `npx ruflo@v3alpha swarm init --topology mesh --max-agents 8` |
+| **Codebase Migration** | Migrate frameworks, languages, or patterns systematically | `npx ruflo@v3alpha task orchestrate "Migrate from Express to Fastify" --strategy adaptive` |
 
 ### 📊 Performance & Optimization
 
 | Scenario | What It Solves | How To Do It |
 |----------|----------------|--------------|
-| **Performance Profiling** | Find and fix bottlenecks in your application | `npx claude-flow@v3alpha --agent perf-analyzer --task "Profile API endpoints"` |
-| **Query Optimization** | Speed up slow database queries | `npx claude-flow@v3alpha hooks route "Optimize database queries"` |
-| **Memory Analysis** | Reduce memory usage and fix leaks | `npx claude-flow@v3alpha --agent perf-analyzer --task "Analyze memory usage patterns"` |
+| **Performance Profiling** | Find and fix bottlenecks in your application | `npx ruflo@v3alpha --agent perf-analyzer --task "Profile API endpoints"` |
+| **Query Optimization** | Speed up slow database queries | `npx ruflo@v3alpha hooks route "Optimize database queries"` |
+| **Memory Analysis** | Reduce memory usage and fix leaks | `npx ruflo@v3alpha --agent perf-analyzer --task "Analyze memory usage patterns"` |
 
 ### 🔄 GitHub & DevOps
 
 | Scenario | What It Solves | How To Do It |
 |----------|----------------|--------------|
-| **PR Management** | Review, approve, and merge PRs efficiently | `npx claude-flow@v3alpha --agent pr-manager --task "Review open PRs"` |
-| **Issue Triage** | Categorize, prioritize, and assign issues automatically | `npx claude-flow@v3alpha --agent issue-tracker --task "Triage new issues"` |
-| **Release Management** | Coordinate releases with changelogs and versioning | `npx claude-flow@v3alpha --agent release-manager --task "Prepare v2.0 release"` |
-| **CI/CD Optimization** | Speed up pipelines and reduce flaky tests | `npx claude-flow@v3alpha --agent cicd-engineer --task "Optimize GitHub Actions workflow"` |
+| **PR Management** | Review, approve, and merge PRs efficiently | `npx ruflo@v3alpha --agent pr-manager --task "Review open PRs"` |
+| **Issue Triage** | Categorize, prioritize, and assign issues automatically | `npx ruflo@v3alpha --agent issue-tracker --task "Triage new issues"` |
+| **Release Management** | Coordinate releases with changelogs and versioning | `npx ruflo@v3alpha --agent release-manager --task "Prepare v2.0 release"` |
+| **CI/CD Optimization** | Speed up pipelines and reduce flaky tests | `npx ruflo@v3alpha --agent cicd-engineer --task "Optimize GitHub Actions workflow"` |
 
 ### 📋 Spec-Driven Development
 
 | Scenario | What It Solves | How To Do It |
 |----------|----------------|--------------|
-| **Generate Specs** | Create complete specifications before coding | `npx claude-flow@v3alpha --agent architect --task "Create ADR for authentication system"` |
-| **Validate Implementation** | Ensure code matches specifications | `npx claude-flow@v3alpha hooks progress --detailed` |
-| **Track Compliance** | Monitor spec adherence across the team | `npx claude-flow@v3alpha progress sync` |
+| **Generate Specs** | Create complete specifications before coding | `npx ruflo@v3alpha --agent architect --task "Create ADR for authentication system"` |
+| **Validate Implementation** | Ensure code matches specifications | `npx ruflo@v3alpha hooks progress --detailed` |
+| **Track Compliance** | Monitor spec adherence across the team | `npx ruflo@v3alpha progress sync` |
 
 ### 🧠 Learning & Intelligence
 
 | Scenario | What It Solves | How To Do It |
 |----------|----------------|--------------|
-| **Bootstrap Intelligence** | Train the system on your codebase patterns | `npx claude-flow@v3alpha hooks pretrain --depth deep` |
-| **Optimize Routing** | Improve task-to-agent matching over time | `npx claude-flow@v3alpha hooks route "<task>" --include-explanation` |
-| **Transfer Learning** | Apply patterns learned from other projects | `npx claude-flow@v3alpha hooks transfer <sourceProject>` |
+| **Bootstrap Intelligence** | Train the system on your codebase patterns | `npx ruflo@v3alpha hooks pretrain --depth deep` |
+| **Optimize Routing** | Improve task-to-agent matching over time | `npx ruflo@v3alpha hooks route "<task>" --include-explanation` |
+| **Transfer Learning** | Apply patterns learned from other projects | `npx ruflo@v3alpha hooks transfer <sourceProject>` |
+
+</details>
+
+---
+
+## 🧠 Infinite Context & Memory Optimization
+
+Ruflo eliminates Claude Code's context window ceiling with a real-time memory management system that archives, optimizes, and restores conversation context automatically.
+
+<details>
+<summary>♾️ <strong>Context Autopilot</strong> — Never lose context to compaction again</summary>
+
+### The Problem
+
+Claude Code has a finite context window (~200K tokens). When full, it **compacts** — summarizing the conversation and discarding details like exact file paths, tool outputs, decision reasoning, and code snippets. This creates a "context cliff" where Claude loses the ability to reference earlier work.
+
+### The Solution: Context Autopilot (ADR-051)
+
+Ruflo intercepts the compaction lifecycle with three hooks that make context loss invisible:
+
+```
+Every Prompt                    Context Full                    After Compact
+     │                              │                              │
+     ▼                              ▼                              ▼
+UserPromptSubmit              PreCompact                     SessionStart
+     │                              │                              │
+ Archive turns              Archive + BLOCK              Restore from archive
+ to SQLite                  auto-compaction               via additionalContext
+ (incremental)              (exit code 2)                (importance-ranked)
+     │                              │                              │
+     ▼                              ▼                              ▼
+ Track tokens              Manual /compact               Seamless continuation
+ Report % used             still allowed                 with full history
+```
+
+### How Memory is Optimized
+
+| Layer | What It Does | When |
+|-------|-------------|------|
+| **Proactive Archiving** | Every user prompt archives new turns to SQLite with SHA-256 dedup | Every prompt |
+| **Token Tracking** | Reads actual API `usage` data (input + cache tokens) for accurate % | Every prompt |
+| **Compaction Blocking** | PreCompact hook returns exit code 2 to cancel auto-compaction | When context fills |
+| **Manual Compact** | `/compact` is allowed — archives first, resets autopilot, then compresses | On user request |
+| **Importance Ranking** | Entries scored by `recency × frequency × richness` for smart retrieval | On restore |
+| **Access Tracking** | Restored entries get access_count++ creating a relevance feedback loop | On restore |
+| **Auto-Pruning** | Never-accessed entries older than 30 days are automatically removed | On PreCompact |
+| **Content Compaction** | Old session entries trimmed to summaries, reducing archive storage | Manual or scheduled |
+| **RuVector Sync** | SQLite entries auto-replicated to PostgreSQL when configured | On PreCompact |
+
+### Optimization Thresholds
+
+| Zone | Threshold | Statusline | Action |
+|------|-----------|-----------|--------|
+| OK | <70% | `🛡️ 43% 86.7K ⊘` (green) | Normal operation, track growth trend |
+| Warning | 70-85% | `🛡️ 72% 144K ⊘` (yellow) | Flag approaching limit, archive aggressively |
+| Optimize | 85%+ | `🛡️ 88% 176K ⟳2` (red) | Prune stale entries, keep responses concise |
+
+### Real-Time Statusline
+
+The statusline shows live context metrics read from `autopilot-state.json`:
+
+```
+🛡️  45% 89.2K ⊘  🧠 86%
+│    │   │     │    │   │
+│    │   │     │    │   └─ Intelligence score (learning.json + patterns + archive)
+│    │   │     │    └──── Intelligence indicator
+│    │   │     └───────── No prune cycles (⊘) or prune count (⟳N)
+│    │   └─────────────── Token count (actual API usage)
+│    └─────────────────── Context percentage used
+└──────────────────────── Autopilot active (shield icon)
+```
+
+### Storage Tiers
+
+| Tier | Backend | Storage | Features |
+|------|---------|---------|----------|
+| 1 | **SQLite** (default) | `.claude-flow/data/transcript-archive.db` | WAL mode, indexed queries, ACID, importance ranking |
+| 2 | **RuVector PostgreSQL** | Configurable remote | TB-scale, pgvector embeddings, GNN search |
+| 3 | **AgentDB + HNSW** | In-memory + persist | 150x-12,500x faster semantic search |
+| 4 | **JSON** (fallback) | `.claude-flow/data/transcript-archive.json` | Zero dependencies, always works |
+
+### Configuration
+
+```bash
+# Context Autopilot (all have sensible defaults)
+CLAUDE_FLOW_CONTEXT_AUTOPILOT=true        # Enable/disable autopilot (default: true)
+CLAUDE_FLOW_CONTEXT_WINDOW=200000         # Context window size in tokens
+CLAUDE_FLOW_AUTOPILOT_WARN=0.70           # Warning threshold (70%)
+CLAUDE_FLOW_AUTOPILOT_PRUNE=0.85          # Optimization threshold (85%)
+CLAUDE_FLOW_COMPACT_RESTORE_BUDGET=4000   # Max chars restored after compaction
+CLAUDE_FLOW_RETENTION_DAYS=30             # Auto-prune never-accessed entries
+CLAUDE_FLOW_AUTO_OPTIMIZE=true            # Importance ranking + pruning + sync
+```
+
+### Commands
+
+```bash
+# Check archive status and autopilot state
+node .claude/helpers/context-persistence-hook.mjs status
+
+# Manual compact (archives first, then allows Claude Code to compress)
+# Use /compact in Claude Code — autopilot allows manual, blocks auto
+
+# Query archive directly
+sqlite3 .claude-flow/data/transcript-archive.db \
+  "SELECT COUNT(*), SUM(LENGTH(content)) FROM transcript_entries;"
+```
+
+### Architecture Reference
+
+- **ADR-051**: Infinite Context via Compaction-to-Memory Bridge
+- **ADR-052**: Statusline Observability System
+- **Implementation**: `.claude/helpers/context-persistence-hook.mjs` (~1560 lines)
+- **Settings**: `.claude/settings.json` (PreCompact, SessionStart, UserPromptSubmit hooks)
 
 </details>
 
@@ -2851,12 +2999,107 @@ When hooks run, they emit signals that guide routing decisions. Watch for these 
 
 **Example Hook Output:**
 ```bash
-$ npx claude-flow@v3alpha hooks pre-task --description "convert var to const in utils.ts"
+$ npx ruflo@v3alpha hooks pre-task --description "convert var to const in utils.ts"
 
 [AGENT_BOOSTER_AVAILABLE] Intent: var-to-const
 Recommendation: Use Edit tool directly
 Performance: <1ms (352x faster than LLM)
 Cost: $0
+```
+
+### Intelligence Loop (ADR-050)
+
+The intelligence loop wires PageRank-ranked memory into the hook system. Every session builds a knowledge graph that improves over time:
+
+```
+SessionStart:
+  session-restore  → intelligence.init()
+    → Read MEMORY.md / auto-memory-store.json
+    → Build graph (nodes + similarity/temporal edges)
+    → Compute PageRank
+    → "[INTELLIGENCE] Loaded 13 patterns, 12 edges"
+
+UserPrompt:
+  route            → intelligence.getContext(prompt)
+    → Jaccard-match prompt against pre-ranked entries
+    → Inject top-5 patterns into Claude's context:
+
+    [INTELLIGENCE] Relevant patterns for this task:
+      * (0.95) HNSW gives 150x-12,500x speedup [rank #1, 12x accessed]
+      * (0.88) London School TDD preferred [rank #3, 8x accessed]
+
+PostEdit:
+  post-edit        → intelligence.recordEdit(file)
+    → Append to pending-insights.jsonl (<2ms)
+
+SessionEnd:
+  session-end      → intelligence.consolidate()
+    → Process pending insights (3+ edits → new entry)
+    → Confidence boost for accessed patterns (+0.03)
+    → Confidence decay for unused patterns (-0.005/day)
+    → Recompute PageRank, rebuild edges
+    → Save snapshot for trend tracking
+```
+
+**Measuring improvement:**
+
+```bash
+# Human-readable diagnostics
+node .claude/helpers/hook-handler.cjs stats
+
+# JSON output for scripting
+node .claude/helpers/hook-handler.cjs stats --json
+
+# Or via intelligence.cjs directly
+node .claude/helpers/intelligence.cjs stats
+```
+
+The stats command shows:
+
+| Section | What It Tells You |
+|---------|-------------------|
+| **Graph** | Node/edge count, density % |
+| **Confidence** | Min/max/mean/median across all patterns |
+| **Access** | Total accesses, patterns used vs never accessed |
+| **PageRank** | Sum (~1.0), highest-ranked node |
+| **Top Patterns** | Top 10 by composite score with access counts |
+| **Last Delta** | Changes since previous session (confidence shift, access delta) |
+| **Trend** | Over all sessions: IMPROVING / DECLINING / STABLE |
+
+**Example output:**
+```
++--------------------------------------------------------------+
+|  Intelligence Diagnostics (ADR-050)                          |
++--------------------------------------------------------------+
+
+  Graph
+    Nodes:    9
+    Edges:    8 (7 temporal, 1 similar)
+    Density:  22.2%
+
+  Confidence
+    Min:      0.490    Max:  0.600
+    Mean:     0.556    Median: 0.580
+
+  Access
+    Total accesses:     11
+    Patterns used:      6/9
+    Never accessed:     3
+
+  Top Patterns (by composite score)
+    #1  HNSW gives 150x-12,500x speedup
+         conf=0.600  pr=0.2099  score=0.3659  accessed=2x
+    #2  London School TDD preferred
+         conf=0.600  pr=0.1995  score=0.3597  accessed=2x
+
+  Last Delta (5m ago)
+    Confidence: +0.0300
+    Accesses:   +6
+
+  Trend (3 snapshots)
+    Confidence drift:  +0.0422
+    Direction:         IMPROVING
++--------------------------------------------------------------+
 ```
 
 ### All 27 Hooks by Category
@@ -2874,8 +3117,8 @@ Cost: $0
 
 ```bash
 # Example: Edit with pattern learning
-npx claude-flow@v3alpha hooks pre-edit ./src/auth.ts
-npx claude-flow@v3alpha hooks post-edit ./src/auth.ts --success true --train-patterns
+npx ruflo@v3alpha hooks pre-edit ./src/auth.ts
+npx ruflo@v3alpha hooks post-edit ./src/auth.ts --success true --train-patterns
 ```
 
 #### 🧠 Intelligence & Routing Hooks (8 hooks)
@@ -2893,10 +3136,10 @@ npx claude-flow@v3alpha hooks post-edit ./src/auth.ts --success true --train-pat
 
 ```bash
 # Route a task with explanation
-npx claude-flow@v3alpha hooks route "refactor authentication to use JWT" --include-explanation
+npx ruflo@v3alpha hooks route "refactor authentication to use JWT" --include-explanation
 
 # Bootstrap intelligence from your codebase
-npx claude-flow@v3alpha hooks pretrain --depth deep --model-type moe
+npx ruflo@v3alpha hooks pretrain --depth deep --model-type moe
 ```
 
 #### 📅 Session Management Hooks (4 hooks)
@@ -2910,10 +3153,10 @@ npx claude-flow@v3alpha hooks pretrain --depth deep --model-type moe
 
 ```bash
 # Start session with auto-daemon
-npx claude-flow@v3alpha hooks session-start --session-id "feature-auth" --start-daemon
+npx ruflo@v3alpha hooks session-start --session-id "feature-auth" --start-daemon
 
 # End session and export learnings
-npx claude-flow@v3alpha hooks session-end --export-metrics --persist-patterns
+npx ruflo@v3alpha hooks session-end --export-metrics --persist-patterns
 ```
 
 #### 🤖 Intelligence System Hooks (9 hooks)
@@ -2927,18 +3170,22 @@ npx claude-flow@v3alpha hooks session-end --export-metrics --persist-patterns
 | `trajectory-end` | RL | Finish recording, trigger learning |
 | `pattern-store` | Memory | Store a pattern with HNSW indexing |
 | `pattern-search` | Memory | Find similar patterns (150x faster) |
-| `stats` | Analytics | Learning statistics and metrics |
+| `stats` | Analytics | Intelligence diagnostics, confidence trends, improvement tracking |
 | `attention` | Focus | Compute attention-weighted similarity |
 
 ```bash
 # Start trajectory for complex task
-npx claude-flow@v3alpha hooks intelligence trajectory-start --task "implement OAuth2"
+npx ruflo@v3alpha hooks intelligence trajectory-start --task "implement OAuth2"
 
 # Record successful action
-npx claude-flow@v3alpha hooks intelligence trajectory-step --action "created token service" --quality 0.9
+npx ruflo@v3alpha hooks intelligence trajectory-step --action "created token service" --quality 0.9
 
 # End trajectory and trigger learning
-npx claude-flow@v3alpha hooks intelligence trajectory-end --success true
+npx ruflo@v3alpha hooks intelligence trajectory-end --success true
+
+# View intelligence diagnostics and improvement trends (ADR-050)
+node .claude/helpers/hook-handler.cjs stats
+node .claude/helpers/intelligence.cjs stats --json
 ```
 
 ### 12 Background Workers (Auto-Triggered)
@@ -2962,13 +3209,13 @@ Workers run automatically based on context, or dispatch manually.
 
 ```bash
 # List all workers
-npx claude-flow@v3alpha hooks worker list
+npx ruflo@v3alpha hooks worker list
 
 # Manually dispatch security audit
-npx claude-flow@v3alpha hooks worker dispatch --trigger audit --context "./src/auth"
+npx ruflo@v3alpha hooks worker dispatch --trigger audit --context "./src/auth"
 
 # Check worker status
-npx claude-flow@v3alpha hooks worker status
+npx ruflo@v3alpha hooks worker status
 ```
 
 ### Model Routing Hooks (3 hooks)
@@ -2983,10 +3230,10 @@ Automatically selects haiku/sonnet/opus based on task complexity.
 
 ```bash
 # Get model recommendation
-npx claude-flow@v3alpha hooks model-route --task "fix typo in README"
+npx ruflo@v3alpha hooks model-route --task "fix typo in README"
 # → Recommends: haiku (simple task, low complexity)
 
-npx claude-flow@v3alpha hooks model-route --task "design distributed consensus system"
+npx ruflo@v3alpha hooks model-route --task "design distributed consensus system"
 # → Recommends: opus (complex architecture, high reasoning)
 ```
 
@@ -3006,22 +3253,27 @@ npx claude-flow@v3alpha hooks model-route --task "design distributed consensus s
 # MOST COMMON HOOKS
 # ══════════════════════════════════════════════════════════════════
 
-# Route task to best agent
-npx claude-flow@v3alpha hooks route "<task>" --include-explanation
+# Route task to best agent (with intelligence context injection)
+npx ruflo@v3alpha hooks route "<task>" --include-explanation
 
 # Start/end session with learning
-npx claude-flow@v3alpha hooks session-start --start-daemon
-npx claude-flow@v3alpha hooks session-end --persist-patterns
+npx ruflo@v3alpha hooks session-start --start-daemon
+npx ruflo@v3alpha hooks session-end --persist-patterns
 
 # View what the system has learned
-npx claude-flow@v3alpha hooks metrics
-npx claude-flow@v3alpha hooks intelligence stats
+npx ruflo@v3alpha hooks metrics
+npx ruflo@v3alpha hooks intelligence stats
+
+# Intelligence diagnostics — see if intelligence is improving
+node .claude/helpers/hook-handler.cjs stats          # Human-readable
+node .claude/helpers/hook-handler.cjs stats --json   # JSON for scripting
+node .claude/helpers/intelligence.cjs stats           # Direct access
 
 # Bootstrap on new project
-npx claude-flow@v3alpha hooks pretrain --depth deep
+npx ruflo@v3alpha hooks pretrain --depth deep
 
 # Dispatch background worker
-npx claude-flow@v3alpha hooks worker dispatch --trigger audit
+npx ruflo@v3alpha hooks worker dispatch --trigger audit
 ```
 
 </details>
@@ -3047,38 +3299,38 @@ Share learned patterns across projects, teams, and the community via the decentr
 
 ```bash
 # Export learned patterns to file
-npx claude-flow@v3alpha memory export --format json --output ./patterns.json
+npx ruflo@v3alpha memory export --format json --output ./patterns.json
 
 # Export specific namespace
-npx claude-flow@v3alpha memory export --namespace "security" --output ./security-patterns.json
+npx ruflo@v3alpha memory export --namespace "security" --output ./security-patterns.json
 
 # Export with embeddings (larger file, faster import)
-npx claude-flow@v3alpha memory export --include-embeddings --output ./full-export.json
+npx ruflo@v3alpha memory export --include-embeddings --output ./full-export.json
 
 # Export agent configurations
-npx claude-flow@v3alpha config export --scope project --output ./agent-configs.json
+npx ruflo@v3alpha config export --scope project --output ./agent-configs.json
 
 # Export session state
-npx claude-flow@v3alpha session export --session-id "my-session" --output ./session.json
+npx ruflo@v3alpha session export --session-id "my-session" --output ./session.json
 ```
 
 ### Import Commands
 
 ```bash
 # Import patterns from file
-npx claude-flow@v3alpha memory import --input ./patterns.json
+npx ruflo@v3alpha memory import --input ./patterns.json
 
 # Import and merge with existing (don't overwrite)
-npx claude-flow@v3alpha memory import --input ./patterns.json --merge
+npx ruflo@v3alpha memory import --input ./patterns.json --merge
 
 # Import from another project
-npx claude-flow@v3alpha hooks transfer --source-path ../other-project
+npx ruflo@v3alpha hooks transfer --source-path ../other-project
 
 # Import agent configurations
-npx claude-flow@v3alpha config import --input ./agent-configs.json --scope project
+npx ruflo@v3alpha config import --input ./agent-configs.json --scope project
 
 # Restore session
-npx claude-flow@v3alpha session restore --session-id "my-session"
+npx ruflo@v3alpha session restore --session-id "my-session"
 ```
 
 ### Pattern Store (IPFS Marketplace)
@@ -3096,13 +3348,13 @@ Decentralized pattern marketplace for sharing and discovering community patterns
 
 ```bash
 # Search for authentication patterns
-npx claude-flow@v3alpha transfer-store search --query "authentication" --min-rating 4.0
+npx ruflo@v3alpha transfer-store search --query "authentication" --min-rating 4.0
 
 # Download a pattern
-npx claude-flow@v3alpha transfer-store download --id "auth-jwt-patterns-v2" --verify
+npx ruflo@v3alpha transfer-store download --id "auth-jwt-patterns-v2" --verify
 
 # Publish your patterns
-npx claude-flow@v3alpha transfer-store publish --input ./my-patterns.json --category "security"
+npx ruflo@v3alpha transfer-store publish --input ./my-patterns.json --category "security"
 ```
 
 ### Plugin Store
@@ -3120,22 +3372,22 @@ Discover and install community plugins from the **live IPFS registry** with 19 o
 
 ```bash
 # List plugins with live ratings from Cloud Function
-npx claude-flow@v3alpha plugins list
+npx ruflo@v3alpha plugins list
 
 # Filter by type
-npx claude-flow@v3alpha plugins list --type integration
+npx ruflo@v3alpha plugins list --type integration
 
 # Rate a plugin
-npx claude-flow@v3alpha plugins rate --name @claude-flow/embeddings --rating 5
+npx ruflo@v3alpha plugins rate --name @claude-flow/embeddings --rating 5
 
 # Search for MCP tool plugins
-npx claude-flow@v3alpha transfer plugin-search --type "mcp-tool" --verified
+npx ruflo@v3alpha transfer plugin-search --type "mcp-tool" --verified
 
 # Get plugin info
-npx claude-flow@v3alpha transfer plugin-info --name "semantic-code-search"
+npx ruflo@v3alpha transfer plugin-info --name "semantic-code-search"
 
 # List official plugins
-npx claude-flow@v3alpha transfer plugin-official
+npx ruflo@v3alpha transfer plugin-official
 ```
 
 #### Live IPFS Plugin Registry
@@ -3168,10 +3420,10 @@ Patterns and models are distributed via IPFS for decentralization and integrity.
 
 ```bash
 # Resolve IPNS name to CID
-npx claude-flow@v3alpha transfer ipfs-resolve --name "/ipns/patterns.claude-flow.io"
+npx ruflo@v3alpha transfer ipfs-resolve --name "/ipns/patterns.ruflo.io"
 
 # Detect PII before publishing
-npx claude-flow@v3alpha transfer detect-pii --content "$(cat ./patterns.json)"
+npx ruflo@v3alpha transfer detect-pii --content "$(cat ./patterns.json)"
 ```
 
 ### Model & Learning Pattern Import/Export
@@ -3194,7 +3446,7 @@ curl -X POST "https://api.pinata.cloud/pinning/pinJSONToIPFS" \
       "name": "my-patterns",
       "patterns": [...]
     },
-    "pinataMetadata": {"name": "claude-flow-learning-pattern"}
+    "pinataMetadata": {"name": "ruflo-learning-pattern"}
   }'
 
 # Import a pattern from IPFS CID
@@ -3236,13 +3488,13 @@ Import pre-trained learning patterns for common tasks. **90.5% average accuracy*
 curl -s "https://gateway.pinata.cloud/ipfs/QmNr1yYMKi7YBaL8JSztQyuB5ZUaTdRMLxJC1pBpGbjsTc" | jq '.models[].name'
 
 # Import all models
-npx claude-flow@v3alpha transfer import --cid QmNr1yYMKi7YBaL8JSztQyuB5ZUaTdRMLxJC1pBpGbjsTc
+npx ruflo@v3alpha transfer import --cid QmNr1yYMKi7YBaL8JSztQyuB5ZUaTdRMLxJC1pBpGbjsTc
 
 # Import specific category
-npx claude-flow@v3alpha neural import --model security-review-patterns --source ipfs
+npx ruflo@v3alpha neural import --model security-review-patterns --source ipfs
 
 # Use patterns in routing
-npx claude-flow@v3alpha hooks route --task "review authentication code" --use-patterns
+npx ruflo@v3alpha hooks route --task "review authentication code" --use-patterns
 ```
 
 #### Benefits vs Fresh Install
@@ -3267,7 +3519,7 @@ npx claude-flow@v3alpha hooks route --task "review authentication code" --use-pa
 
 ```bash
 # Install a pattern pack
-npx claude-flow@v3alpha transfer-store download --id "security-essentials" --apply
+npx ruflo@v3alpha transfer-store download --id "security-essentials" --apply
 ```
 
 ### RuVector WASM Neural Training
@@ -3285,25 +3537,25 @@ Real WASM-accelerated neural training using `@ruvector/learning-wasm` and `@ruve
 
 ```bash
 # List available pre-trained models from IPFS registry
-npx claude-flow@v3alpha neural list
+npx ruflo@v3alpha neural list
 
 # List models by category
-npx claude-flow@v3alpha neural list --category security
+npx ruflo@v3alpha neural list --category security
 
 # Train with WASM acceleration
-npx claude-flow@v3alpha neural train -p coordination -e 100 --wasm --flash --contrastive
+npx ruflo@v3alpha neural train -p coordination -e 100 --wasm --flash --contrastive
 
 # Train security patterns
-npx claude-flow@v3alpha neural train -p security --wasm --contrastive
+npx ruflo@v3alpha neural train -p security --wasm --contrastive
 
 # Benchmark WASM performance
-npx claude-flow@v3alpha neural benchmark -d 256 -i 1000
+npx ruflo@v3alpha neural benchmark -d 256 -i 1000
 
 # Import pre-trained models
-npx claude-flow@v3alpha neural import --cid QmNr1yYMKi7YBaL8JSztQyuB5ZUaTdRMLxJC1pBpGbjsTc
+npx ruflo@v3alpha neural import --cid QmNr1yYMKi7YBaL8JSztQyuB5ZUaTdRMLxJC1pBpGbjsTc
 
 # Export trained patterns to IPFS
-npx claude-flow@v3alpha neural export --ipfs --sign
+npx ruflo@v3alpha neural export --ipfs --sign
 ```
 
 #### Benchmark Results
@@ -3642,9 +3894,9 @@ Skills are **reusable workflows** that combine agents, hooks, and patterns into 
 /v3-security-overhaul
 
 # Via CLI
-npx claude-flow@v3alpha skill run github-code-review
-npx claude-flow@v3alpha skill list
-npx claude-flow@v3alpha skill info sparc-methodology
+npx ruflo@v3alpha skill run github-code-review
+npx ruflo@v3alpha skill list
+npx ruflo@v3alpha skill info sparc-methodology
 ```
 
 ### Creating Custom Skills
@@ -3701,21 +3953,21 @@ The Claims system manages **who is working on what** — whether human or agent.
 
 | Command | What It Does | Example |
 |---------|--------------|---------|
-| `issues list` | See all issues and their status | `npx claude-flow@v3alpha issues list` |
-| `issues claim` | Claim an issue for yourself/agent | `npx claude-flow@v3alpha issues claim #123 --as coder-1` |
-| `issues release` | Release your claim | `npx claude-flow@v3alpha issues release #123` |
-| `issues handoff` | Hand off to another worker | `npx claude-flow@v3alpha issues handoff #123 --to reviewer` |
-| `issues status` | Update progress on claimed work | `npx claude-flow@v3alpha issues status #123 --progress 75` |
-| `issues stealable` | List abandoned/stuck issues | `npx claude-flow@v3alpha issues stealable` |
-| `issues steal` | Take over stealable issue | `npx claude-flow@v3alpha issues steal #123` |
-| `issues load` | View agent workloads | `npx claude-flow@v3alpha issues load` |
-| `issues rebalance` | Redistribute work evenly | `npx claude-flow@v3alpha issues rebalance --dry-run` |
-| `issues board` | Visual board view | `npx claude-flow@v3alpha issues board` |
+| `issues list` | See all issues and their status | `npx ruflo@v3alpha issues list` |
+| `issues claim` | Claim an issue for yourself/agent | `npx ruflo@v3alpha issues claim #123 --as coder-1` |
+| `issues release` | Release your claim | `npx ruflo@v3alpha issues release #123` |
+| `issues handoff` | Hand off to another worker | `npx ruflo@v3alpha issues handoff #123 --to reviewer` |
+| `issues status` | Update progress on claimed work | `npx ruflo@v3alpha issues status #123 --progress 75` |
+| `issues stealable` | List abandoned/stuck issues | `npx ruflo@v3alpha issues stealable` |
+| `issues steal` | Take over stealable issue | `npx ruflo@v3alpha issues steal #123` |
+| `issues load` | View agent workloads | `npx ruflo@v3alpha issues load` |
+| `issues rebalance` | Redistribute work evenly | `npx ruflo@v3alpha issues rebalance --dry-run` |
+| `issues board` | Visual board view | `npx ruflo@v3alpha issues board` |
 
 ### Visual Board View
 
 ```bash
-npx claude-flow@v3alpha issues board
+npx ruflo@v3alpha issues board
 ```
 
 ```
@@ -3737,13 +3989,13 @@ When you need to pass work to someone else:
 
 ```bash
 # 1. Request handoff with context
-npx claude-flow@v3alpha issues handoff #123 \
+npx ruflo@v3alpha issues handoff #123 \
   --to security-architect \
   --reason "Needs security review" \
   --progress 80
 
 # 2. Target accepts handoff
-npx claude-flow@v3alpha issues accept #123 --as security-architect
+npx ruflo@v3alpha issues accept #123 --as security-architect
 
 # 3. Work continues with full context
 ```
@@ -3752,7 +4004,7 @@ npx claude-flow@v3alpha issues accept #123 --as security-architect
 
 ```bash
 # View current load
-npx claude-flow@v3alpha issues load
+npx ruflo@v3alpha issues load
 
 # Output:
 # Agent          | Claims | Load  | Status
@@ -3763,7 +4015,7 @@ npx claude-flow@v3alpha issues load
 # security-arch  | 0      | 0%    | 🟢 Available
 
 # Auto-rebalance
-npx claude-flow@v3alpha issues rebalance
+npx ruflo@v3alpha issues rebalance
 ```
 
 ### MCP Tools
@@ -3824,14 +4076,14 @@ The Route system uses **Q-Learning** to automatically assign tasks to the best a
 
 | Command | What It Does | Example |
 |---------|--------------|---------|
-| `route task` | Get agent recommendation | `npx claude-flow@v3alpha route task "implement OAuth2"` |
-| `route explain` | Understand routing decision | `npx claude-flow@v3alpha route explain "task"` |
-| `route coverage` | Route based on test coverage | `npx claude-flow@v3alpha route coverage` |
+| `route task` | Get agent recommendation | `npx ruflo@v3alpha route task "implement OAuth2"` |
+| `route explain` | Understand routing decision | `npx ruflo@v3alpha route explain "task"` |
+| `route coverage` | Route based on test coverage | `npx ruflo@v3alpha route coverage` |
 
 ### Example: Route a Task
 
 ```bash
-npx claude-flow@v3alpha route task "refactor authentication to use JWT"
+npx ruflo@v3alpha route task "refactor authentication to use JWT"
 
 # Output:
 # ╔══════════════════════════════════════════════════════════════╗
@@ -3858,7 +4110,7 @@ npx claude-flow@v3alpha route task "refactor authentication to use JWT"
 Routes tasks to agents based on **test coverage gaps**:
 
 ```bash
-npx claude-flow@v3alpha route coverage
+npx ruflo@v3alpha route coverage
 
 # Finds untested code and routes to tester agent:
 # • src/auth/jwt.ts - 23% coverage → tester
@@ -3870,10 +4122,10 @@ npx claude-flow@v3alpha route coverage
 
 ```bash
 # Route via hooks (preferred)
-npx claude-flow@v3alpha hooks route "implement caching layer" --include-explanation
+npx ruflo@v3alpha hooks route "implement caching layer" --include-explanation
 
 # Record outcome for learning
-npx claude-flow@v3alpha hooks post-task --task-id "task-123" --success true --agent coder
+npx ruflo@v3alpha hooks post-task --task-id "task-123" --success true --agent coder
 ```
 
 ### How Q-Learning Improves Over Time
@@ -3893,12 +4145,12 @@ The system **remembers** what works and applies it to future similar tasks.
 
 ## 💻 Programmatic Usage
 
-Use Claude-Flow packages directly in your applications.
+Use Ruflo packages directly in your applications.
 
 <details>
-<summary>💻 <strong>Programmatic SDK</strong> — Use Claude-Flow in Your Code</summary>
+<summary>💻 <strong>Programmatic SDK</strong> — Use Ruflo in Your Code</summary>
 
-Use Claude-Flow packages directly in your TypeScript/JavaScript applications.
+Use Ruflo packages directly in your TypeScript/JavaScript applications.
 
 ### Installation
 
@@ -3907,7 +4159,7 @@ Use Claude-Flow packages directly in your TypeScript/JavaScript applications.
 npm install @claude-flow/cli @claude-flow/memory @claude-flow/swarm
 
 # Or install everything
-npm install claude-flow@v3alpha
+npm install ruflo@v3alpha
 ```
 
 ### Quick Examples
@@ -3944,21 +4196,21 @@ console.log(results);
 **CLI Commands:**
 ```bash
 # Initialize memory database
-npx claude-flow@alpha memory init --force
+npx ruflo@alpha memory init --force
 
 # Store patterns
-npx claude-flow@alpha memory store --key "pattern-auth" --value "JWT authentication with refresh tokens"
-npx claude-flow@alpha memory store --key "pattern-cache" --value "Redis caching for API responses"
+npx ruflo@alpha memory store --key "pattern-auth" --value "JWT authentication with refresh tokens"
+npx ruflo@alpha memory store --key "pattern-cache" --value "Redis caching for API responses"
 
 # Build HNSW index for 150x-12,500x faster search
-npx claude-flow@alpha memory search --query "authentication" --build-hnsw
+npx ruflo@alpha memory search --query "authentication" --build-hnsw
 
 # Semantic search (uses HNSW if built)
-npx claude-flow@alpha memory search --query "how to cache data" --limit 5
+npx ruflo@alpha memory search --query "how to cache data" --limit 5
 
 # List and manage entries
-npx claude-flow@alpha memory list --namespace patterns
-npx claude-flow@alpha memory stats
+npx ruflo@alpha memory list --namespace patterns
+npx ruflo@alpha memory stats
 ```
 
 </details>
@@ -4192,35 +4444,35 @@ console.log(`Hit rate: ${(stats.hitRate * 100).toFixed(1)}%`);
 
 ```bash
 # Generate embedding
-claude-flow embeddings embed "Your text here"
+ruflo embeddings embed "Your text here"
 
 # Batch embed from file
-claude-flow embeddings batch documents.txt -o embeddings.json
+ruflo embeddings batch documents.txt -o embeddings.json
 
 # Similarity search
-claude-flow embeddings search "query" --index ./vectors
+ruflo embeddings search "query" --index ./vectors
 
 # Document chunking
-claude-flow embeddings chunk document.txt --strategy sentence --max-size 512
+ruflo embeddings chunk document.txt --strategy sentence --max-size 512
 
 # Normalize embeddings
-claude-flow embeddings normalize embeddings.json --type l2 -o normalized.json
+ruflo embeddings normalize embeddings.json --type l2 -o normalized.json
 
 # Convert to hyperbolic
-claude-flow embeddings hyperbolic embeddings.json -o poincare.json
+ruflo embeddings hyperbolic embeddings.json -o poincare.json
 
 # Neural operations
-claude-flow embeddings neural drift --baseline "context" --input "check"
-claude-flow embeddings neural store --id mem-1 --content "data"
-claude-flow embeddings neural recall "query" --top-k 5
+ruflo embeddings neural drift --baseline "context" --input "check"
+ruflo embeddings neural store --id mem-1 --content "data"
+ruflo embeddings neural recall "query" --top-k 5
 
 # Model management
-claude-flow embeddings models list
-claude-flow embeddings models download all-MiniLM-L6-v2
+ruflo embeddings models list
+ruflo embeddings models download all-MiniLM-L6-v2
 
 # Cache management
-claude-flow embeddings cache stats
-claude-flow embeddings cache clear --older-than 7d
+ruflo embeddings cache stats
+ruflo embeddings cache clear --older-than 7d
 ```
 
 ### Available Models
@@ -4271,7 +4523,7 @@ await hooks.endTrajectory(trajectory, { success: true });
 
 | Package | Purpose | Main Exports |
 |---------|---------|--------------|
-| `@claude-flow/memory` | Vector storage, HNSW | `AgentDB`, `MemoryStore` |
+| `@claude-flow/memory` | Vector storage, HNSW, self-learning graph | `AgentDB`, `AutoMemoryBridge`, `LearningBridge`, `MemoryGraph` |
 | `@claude-flow/swarm` | Agent coordination | `createSwarm`, `Swarm` |
 | `@claude-flow/aidefence` | Threat detection | `isSafe`, `checkThreats`, `createAIDefence` |
 | `@claude-flow/embeddings` | Vector embeddings | `createEmbeddingService` |
@@ -4287,7 +4539,7 @@ await hooks.endTrajectory(trajectory, { success: true });
 
 ## 🔗 Ecosystem & Integrations
 
-Core infrastructure packages powering Claude-Flow's intelligence layer.
+Core infrastructure packages powering Ruflo's intelligence layer.
 
 <details>
 <summary>⚡ <strong>Agentic-Flow Integration</strong> — Core AI Infrastructure</summary>
@@ -4296,7 +4548,7 @@ Core infrastructure packages powering Claude-Flow's intelligence layer.
 [![npm downloads](https://img.shields.io/npm/dm/agentic-flow?color=green)](https://www.npmjs.com/package/agentic-flow)
 [![GitHub](https://img.shields.io/badge/GitHub-ruvnet%2Fagentic--flow-blue?logo=github)](https://github.com/ruvnet/agentic-flow)
 
-Claude-Flow v3 is built on top of **[agentic-flow](https://github.com/ruvnet/agentic-flow)**, a production-ready AI agent orchestration platform. This deep integration provides 352x faster code transformations, learning memory, and geometric intelligence.
+Ruflo v3 is built on top of **[agentic-flow](https://github.com/ruvnet/agentic-flow)**, a production-ready AI agent orchestration platform. This deep integration provides 352x faster code transformations, learning memory, and geometric intelligence.
 
 ### Quick Start
 
@@ -4577,9 +4829,9 @@ claude mcp add agentic-flow -- npx agentic-flow mcp start
 
 </details>
 
-### Integration with Claude-Flow
+### Integration with Ruflo
 
-Claude-Flow automatically leverages agentic-flow for:
+Ruflo automatically leverages agentic-flow for:
 
 | Feature | How It's Used |
 |---------|---------------|
@@ -4590,7 +4842,7 @@ Claude-Flow automatically leverages agentic-flow for:
 | **Embedding Search** | HNSW-indexed vector search (150x faster) |
 
 ```typescript
-// Claude-Flow automatically uses agentic-flow optimizations
+// Ruflo automatically uses agentic-flow optimizations
 import { getTokenOptimizer } from '@claude-flow/integration';
 
 const optimizer = await getTokenOptimizer();
@@ -4766,9 +5018,9 @@ jj.enableEncryption(key);
 
 </details>
 
-### Claude-Flow Skill
+### Ruflo Skill
 
-Claude-Flow includes a dedicated `/agentic-jujutsu` skill for AI-powered version control:
+Ruflo includes a dedicated `/agentic-jujutsu` skill for AI-powered version control:
 
 ```bash
 # Invoke the skill
@@ -4851,7 +5103,7 @@ npx agentic-jujutsu examples        # Show usage examples
 [![GitHub](https://img.shields.io/badge/GitHub-ruvnet%2Fruvector-blue?logo=github)](https://github.com/ruvnet/ruvector)
 [![Docker](https://img.shields.io/badge/Docker-ruvector--postgres-blue?logo=docker)](https://hub.docker.com/r/ruvnet/ruvector-postgres)
 
-**RuVector** is a high-performance distributed vector database combining vector search, graph queries, and self-learning neural networks. Written in Rust with Node.js/WASM bindings, it powers Claude-Flow's intelligence layer with native speed.
+**RuVector** is a high-performance distributed vector database combining vector search, graph queries, and self-learning neural networks. Written in Rust with Node.js/WASM bindings, it powers Ruflo's intelligence layer with native speed.
 
 ### Key Capabilities
 
@@ -4933,7 +5185,7 @@ const compressed = ruvector.compress(embedding, 0.3); // 30% quality threshold
 
 ```bash
 # Quick setup with CLI (recommended)
-npx claude-flow ruvector setup --output ./my-ruvector
+npx ruflo ruvector setup --output ./my-ruvector
 cd my-ruvector && docker-compose up -d
 
 # Or pull directly from Docker Hub
@@ -4941,12 +5193,12 @@ docker run -d \
   --name ruvector-postgres \
   -p 5432:5432 \
   -e POSTGRES_USER=claude \
-  -e POSTGRES_PASSWORD=claude-flow-test \
+  -e POSTGRES_PASSWORD=ruflo-test \
   -e POSTGRES_DB=claude_flow \
   ruvnet/ruvector-postgres
 
 # Migrate existing memory to PostgreSQL
-npx claude-flow ruvector import --input memory-export.json
+npx ruflo ruvector import --input memory-export.json
 ```
 
 **RuVector PostgreSQL vs pgvector:**
@@ -5103,12 +5355,12 @@ await db.createHyperedge(['agent-1', 'agent-2', 'agent-3'], {
 
 </details>
 
-### Integration with Claude-Flow
+### Integration with Ruflo
 
-Claude-Flow automatically uses RuVector when available:
+Ruflo automatically uses RuVector when available:
 
 ```typescript
-// Claude-Flow detects and uses native ruvector
+// Ruflo detects and uses native ruvector
 import { getVectorStore } from '@claude-flow/memory';
 
 const store = await getVectorStore();
@@ -5126,19 +5378,19 @@ const similarity = attention.attention(queries, keys, values);
 
 ```bash
 # RuVector PostgreSQL Setup (generates Docker files + SQL)
-npx claude-flow ruvector setup                    # Output to ./ruvector-postgres
-npx claude-flow ruvector setup --output ./mydir   # Custom directory
-npx claude-flow ruvector setup --print            # Preview files
+npx ruflo ruvector setup                    # Output to ./ruvector-postgres
+npx ruflo ruvector setup --output ./mydir   # Custom directory
+npx ruflo ruvector setup --print            # Preview files
 
 # Import from sql.js/JSON to PostgreSQL
-npx claude-flow ruvector import --input data.json              # Direct import
-npx claude-flow ruvector import --input data.json --output sql # Dry-run (generate SQL)
+npx ruflo ruvector import --input data.json              # Direct import
+npx ruflo ruvector import --input data.json --output sql # Dry-run (generate SQL)
 
 # Other RuVector commands
-npx claude-flow ruvector status --verbose         # Check connection
-npx claude-flow ruvector benchmark --vectors 10000 # Performance test
-npx claude-flow ruvector optimize --analyze       # Optimization suggestions
-npx claude-flow ruvector backup --output backup.sql # Backup data
+npx ruflo ruvector status --verbose         # Check connection
+npx ruflo ruvector benchmark --vectors 10000 # Performance test
+npx ruflo ruvector optimize --analyze       # Optimization suggestions
+npx ruflo ruvector backup --output backup.sql # Backup data
 
 # Native ruvector CLI
 npx ruvector status                               # Check installation
@@ -5165,11 +5417,11 @@ Cloud platform integration and deployment tools.
 <details>
 <summary>☁️ <strong>Flow Nexus</strong> — Cloud Platform Integration</summary>
 
-Flow Nexus is a **cloud platform** for deploying and scaling Claude-Flow beyond your local machine.
+Flow Nexus is a **cloud platform** for deploying and scaling Ruflo beyond your local machine.
 
 ### What Flow Nexus Provides
 
-| Feature | Local Claude-Flow | + Flow Nexus |
+| Feature | Local Ruflo | + Flow Nexus |
 |---------|-------------------|--------------|
 | **Swarm Scale** | 15 agents (local resources) | 100+ agents (cloud resources) |
 | **Neural Training** | Limited by local GPU/CPU | Distributed GPU clusters |
@@ -5218,7 +5470,7 @@ Flow Nexus is a **cloud platform** for deploying and scaling Claude-Flow beyond 
 /flow-nexus-swarm
 
 # Or via CLI
-npx claude-flow@v3alpha nexus swarm deploy \
+npx ruflo@v3alpha nexus swarm deploy \
   --topology hierarchical \
   --max-agents 50 \
   --region us-east-1
@@ -5230,13 +5482,13 @@ Isolated execution environments for running untrusted code:
 
 ```bash
 # Create sandbox
-npx claude-flow@v3alpha nexus sandbox create --language python
+npx ruflo@v3alpha nexus sandbox create --language python
 
 # Execute code safely
-npx claude-flow@v3alpha nexus sandbox exec --code "print('Hello')"
+npx ruflo@v3alpha nexus sandbox exec --code "print('Hello')"
 
 # Cleanup
-npx claude-flow@v3alpha nexus sandbox destroy
+npx ruflo@v3alpha nexus sandbox destroy
 ```
 
 ### Event-Driven Workflows
@@ -5262,10 +5514,10 @@ steps:
 # 1. Sign up at flow-nexus.io
 # 2. Get API key
 # 3. Configure
-npx claude-flow@v3alpha nexus configure --api-key <key>
+npx ruflo@v3alpha nexus configure --api-key <key>
 
 # 4. Deploy
-npx claude-flow@v3alpha nexus swarm deploy
+npx ruflo@v3alpha nexus swarm deploy
 ```
 
 </details>
@@ -5299,7 +5551,7 @@ Stream-Chain enables **sequential processing** where the output of one agent bec
 /stream-chain
 
 # Define pipeline
-npx claude-flow@v3alpha stream-chain create \
+npx ruflo@v3alpha stream-chain create \
   --name "feature-pipeline" \
   --stages "researcher,architect,coder,tester,reviewer"
 ```
@@ -5341,11 +5593,11 @@ stages:
 
 ```bash
 # Run the pipeline
-npx claude-flow@v3alpha stream-chain run feature-pipeline \
+npx ruflo@v3alpha stream-chain run feature-pipeline \
   --input '{"requirements": "Add user dashboard with analytics"}'
 
 # Monitor progress
-npx claude-flow@v3alpha stream-chain status feature-pipeline
+npx ruflo@v3alpha stream-chain status feature-pipeline
 ```
 
 ### Use Cases
@@ -5385,7 +5637,7 @@ The Pair Programming skill provides **human-AI collaborative coding** with role 
 /pair-programming --mode tdd
 
 # Via CLI
-npx claude-flow@v3alpha pair start --mode navigator
+npx ruflo@v3alpha pair start --mode navigator
 ```
 
 ### TDD Mode Workflow
@@ -5425,16 +5677,16 @@ npx claude-flow@v3alpha pair start --mode navigator
 
 ```bash
 # Switch roles mid-session
-npx claude-flow@v3alpha pair switch
+npx ruflo@v3alpha pair switch
 
 # Get AI explanation
-npx claude-flow@v3alpha pair explain
+npx ruflo@v3alpha pair explain
 
 # Run tests
-npx claude-flow@v3alpha pair test
+npx ruflo@v3alpha pair test
 
 # End session with summary
-npx claude-flow@v3alpha pair end
+npx ruflo@v3alpha pair end
 ```
 
 </details>
@@ -5491,22 +5743,22 @@ Detection Time: 0.04ms | 50+ Patterns | Self-Learning | HNSW Vector Search
 
 ```bash
 # Basic threat scan
-npx claude-flow@v3alpha security defend -i "ignore previous instructions"
+npx ruflo@v3alpha security defend -i "ignore previous instructions"
 
 # Scan a file
-npx claude-flow@v3alpha security defend -f ./user-prompts.txt
+npx ruflo@v3alpha security defend -f ./user-prompts.txt
 
 # Quick scan (faster)
-npx claude-flow@v3alpha security defend -i "some text" --quick
+npx ruflo@v3alpha security defend -i "some text" --quick
 
 # JSON output
-npx claude-flow@v3alpha security defend -i "test" -o json
+npx ruflo@v3alpha security defend -i "test" -o json
 
 # View statistics
-npx claude-flow@v3alpha security defend --stats
+npx ruflo@v3alpha security defend --stats
 
 # Full security audit
-npx claude-flow@v3alpha security scan --depth full
+npx ruflo@v3alpha security scan --depth full
 ```
 
 ### MCP Tools
@@ -5638,7 +5890,7 @@ Domain-Driven Design with bounded contexts, clean architecture, and measured per
 | Module | Purpose | Key Features |
 |--------|---------|--------------|
 | `@claude-flow/hooks` | Event-driven lifecycle | ReasoningBank, 27 hooks, pattern learning |
-| `@claude-flow/memory` | Unified vector storage | AgentDB, HNSW indexing, 150x faster search |
+| `@claude-flow/memory` | Unified vector storage | AgentDB, HNSW indexing, 150x faster search, LearningBridge, MemoryGraph, AgentMemoryScope |
 | `@claude-flow/security` | CVE remediation | Input validation, path security, AIDefence |
 | `@claude-flow/swarm` | Multi-agent coordination | 6 topologies, Byzantine consensus, auto-scaling |
 | `@claude-flow/plugins` | WASM extensions | RuVector plugins, semantic search, intent routing |
@@ -5670,6 +5922,12 @@ Domain-Driven Design with bounded contexts, clean architecture, and measured per
 | **Swarm** | Agent spawn | <200ms | ✅ 150ms |
 | **Swarm** | Consensus latency | <100ms | ✅ 75ms |
 | **Neural** | SONA adaptation | <0.05ms | ✅ 0.03ms |
+| **Graph** | Build (1k nodes) | <200ms | ✅ 2.78ms (71.9x headroom) |
+| **Graph** | PageRank (1k nodes) | <100ms | ✅ 12.21ms (8.2x headroom) |
+| **Learning** | Insight recording | <5ms | ✅ 0.12ms (41x headroom) |
+| **Learning** | Consolidation | <500ms | ✅ 0.26ms (1,955x headroom) |
+| **Learning** | Confidence decay (1k) | <50ms | ✅ 0.23ms (215x headroom) |
+| **Transfer** | Knowledge transfer | <100ms | ✅ 1.25ms (80x headroom) |
 | **Task** | Success rate | 95%+ | ✅ 100% (7/7) |
 
 ### Topology Performance
@@ -5692,7 +5950,7 @@ Domain-Driven Design with bounded contexts, clean architecture, and measured per
 
 [![npm version](https://img.shields.io/npm/v/@claude-flow/browser?color=blue&label=npm)](https://www.npmjs.com/package/@claude-flow/browser)
 
-AI-optimized browser automation integrating [agent-browser](https://github.com/AugmentCode/agent-browser) with claude-flow for intelligent web automation, trajectory learning, and multi-agent browser coordination.
+AI-optimized browser automation integrating [agent-browser](https://github.com/AugmentCode/agent-browser) with ruflo for intelligent web automation, trajectory learning, and multi-agent browser coordination.
 
 ### Installation
 
@@ -5777,7 +6035,7 @@ const template = getWorkflow('login-basic');
 <details>
 <summary>📦 <strong>Release Management</strong> — @claude-flow/deployment</summary>
 
-Automated release management, versioning, and CI/CD for Claude Flow packages.
+Automated release management, versioning, and CI/CD for Ruflo packages.
 
 ### Features
 
@@ -6091,10 +6349,10 @@ npm run bench:attention
 npm run bench:startup
 
 # Performance report
-npx claude-flow@v3alpha performance report
+npx ruflo@v3alpha performance report
 
 # Benchmark specific suite
-npx claude-flow@v3alpha performance benchmark --suite memory
+npx ruflo@v3alpha performance benchmark --suite memory
 ```
 
 </details>
@@ -6475,7 +6733,7 @@ export CLAUDE_FLOW_MEMORY_PATH="./data"
 | `GCS_PROJECT_ID` | GCS project ID | Optional |
 | `GOOGLE_CLOUD_PROJECT` | Alternative project ID variable | Optional |
 | `GOOGLE_APPLICATION_CREDENTIALS` | Path to GCS service account JSON | Optional |
-| `GCS_PREFIX` | Prefix for stored files | `claude-flow-patterns` |
+| `GCS_PREFIX` | Prefix for stored files | `ruflo-patterns` |
 
 ### Auto-Update System
 
@@ -6546,9 +6804,9 @@ CLAUDE_FLOW_HNSW_EF=200
 
 ### Configuration File Location
 
-Claude Flow looks for configuration in this order:
+Ruflo looks for configuration in this order:
 1. `./claude-flow.config.json` (project root)
-2. `~/.config/claude-flow/config.json` (user config)
+2. `~/.config/ruflo/config.json` (user config)
 3. Environment variables (override any file config)
 
 ### Complete Configuration Schema
@@ -6648,7 +6906,7 @@ Claude Flow looks for configuration in this order:
     "level": "info",
     "format": "json",
     "destination": "console",
-    "filePath": "./logs/claude-flow.log",
+    "filePath": "./logs/ruflo.log",
     "maxFileSize": "100MB",
     "maxFiles": 10
   },
@@ -6715,7 +6973,7 @@ Claude Flow looks for configuration in this order:
   "version": "3.0.0",
   "memory": {
     "type": "hybrid",
-    "path": "/var/lib/claude-flow/data",
+    "path": "/var/lib/ruflo/data",
     "encryption": { "enabled": true, "algorithm": "aes-256-gcm" }
   },
   "swarm": { "topology": "hierarchical", "maxAgents": 15 },
@@ -6727,7 +6985,7 @@ Claude Flow looks for configuration in this order:
     "level": "warn",
     "format": "json",
     "destination": "file",
-    "filePath": "/var/log/claude-flow/production.log"
+    "filePath": "/var/log/ruflo/production.log"
   },
   "monitoring": { "enabled": true, "metricsInterval": 30000 }
 }
@@ -6771,25 +7029,25 @@ Claude Flow looks for configuration in this order:
 
 ```bash
 # View current configuration
-npx claude-flow@v3alpha config list
+npx ruflo@v3alpha config list
 
 # Get specific value
-npx claude-flow@v3alpha config get --key memory.type
+npx ruflo@v3alpha config get --key memory.type
 
 # Set configuration value
-npx claude-flow@v3alpha config set --key swarm.maxAgents --value 10
+npx ruflo@v3alpha config set --key swarm.maxAgents --value 10
 
 # Export configuration
-npx claude-flow@v3alpha config export > my-config.json
+npx ruflo@v3alpha config export > my-config.json
 
 # Import configuration
-npx claude-flow@v3alpha config import --file my-config.json
+npx ruflo@v3alpha config import --file my-config.json
 
 # Reset to defaults
-npx claude-flow@v3alpha config reset --key swarm
+npx ruflo@v3alpha config reset --key swarm
 
 # Initialize with wizard
-npx claude-flow@v3alpha init --wizard
+npx ruflo@v3alpha init --wizard
 ```
 
 </details>
@@ -6813,7 +7071,7 @@ lsof -i :3000
 # Kill existing process
 kill -9 <PID>
 # Restart MCP server
-npx claude-flow@v3alpha mcp start
+npx ruflo@v3alpha mcp start
 ```
 
 **Agent spawn failures**
@@ -6827,9 +7085,9 @@ export CLAUDE_FLOW_MAX_AGENTS=5
 **Pattern search returning no results**
 ```bash
 # Verify patterns are stored
-npx claude-flow@v3alpha hooks metrics
+npx ruflo@v3alpha hooks metrics
 # Re-run pretraining if empty
-npx claude-flow@v3alpha hooks pretrain
+npx ruflo@v3alpha hooks pretrain
 ```
 
 **Windows path issues**
@@ -6837,7 +7095,7 @@ npx claude-flow@v3alpha hooks pretrain
 # Use forward slashes or escape backslashes
 $env:CLAUDE_FLOW_MEMORY_PATH = "./data"
 # Or use absolute path
-$env:CLAUDE_FLOW_MEMORY_PATH = "C:/Users/name/claude-flow/data"
+$env:CLAUDE_FLOW_MEMORY_PATH = "C:/Users/name/ruflo/data"
 ```
 
 **Permission denied errors**
@@ -6850,7 +7108,7 @@ sudo chown -R $(whoami) ~/.npm
 **High memory usage**
 ```bash
 # Enable garbage collection
-node --expose-gc node_modules/.bin/claude-flow
+node --expose-gc node_modules/.bin/ruflo
 # Reduce HNSW parameters for lower memory
 export CLAUDE_FLOW_HNSW_M=8
 export CLAUDE_FLOW_HNSW_EF=100
@@ -6882,45 +7140,45 @@ export CLAUDE_FLOW_HNSW_EF=100
 
 | Change | V2 | V3 | Impact |
 |--------|----|----|--------|
-| **Package Structure** | `claude-flow` | `@claude-flow/*` (scoped) | Update imports |
+| **Package Structure** | `ruflo` | `@claude-flow/*` (scoped) | Update imports |
 | **Memory Backend** | JSON files | AgentDB + HNSW | Faster search |
 | **Hooks System** | Basic patterns | ReasoningBank + SONA | Self-learning |
 | **Security** | Manual validation | Automatic strict mode | More secure |
 | **CLI Commands** | Flat structure | Nested subcommands | New syntax |
-| **Config Format** | `.claude-flow/config.json` | `claude-flow.config.json` | Update path |
+| **Config Format** | `.ruflo/config.json` | `claude-flow.config.json` | Update path |
 
 ### Step-by-Step Migration
 
 ```bash
 # STEP 1: Backup existing data (CRITICAL)
 cp -r ./data ./data-backup-v2
-cp -r ./.claude-flow ./.claude-flow-backup-v2
+cp -r ./.ruflo ./.ruflo-backup-v2
 
 # STEP 2: Check migration status
-npx claude-flow@v3alpha migrate status
+npx ruflo@v3alpha migrate status
 
 # STEP 3: Run migration with dry-run first
-npx claude-flow@v3alpha migrate run --dry-run
+npx ruflo@v3alpha migrate run --dry-run
 
 # STEP 4: Execute migration
-npx claude-flow@v3alpha migrate run --from v2
+npx ruflo@v3alpha migrate run --from v2
 
 # STEP 5: Verify migration
-npx claude-flow@v3alpha migrate verify
+npx ruflo@v3alpha migrate verify
 
 # STEP 6: Initialize V3 learning
-npx claude-flow@v3alpha hooks pretrain
-npx claude-flow@v3alpha doctor --fix
+npx ruflo@v3alpha hooks pretrain
+npx ruflo@v3alpha doctor --fix
 ```
 
 ### Command Changes Reference
 
 | V2 Command | V3 Command | Notes |
 |------------|------------|-------|
-| `claude-flow start` | `claude-flow mcp start` | MCP is explicit |
-| `claude-flow init` | `claude-flow init --wizard` | Interactive mode |
-| `claude-flow spawn <type>` | `claude-flow agent spawn -t <type>` | Nested under `agent` |
-| `claude-flow swarm create` | `claude-flow swarm init --topology mesh` | Explicit topology |
+| `ruflo start` | `ruflo mcp start` | MCP is explicit |
+| `ruflo init` | `ruflo init --wizard` | Interactive mode |
+| `ruflo spawn <type>` | `ruflo agent spawn -t <type>` | Nested under `agent` |
+| `ruflo swarm create` | `ruflo swarm init --topology mesh` | Explicit topology |
 | `--pattern-store path` | `--memory-backend agentdb` | Backend selection |
 | `hooks record` | `hooks post-edit --success true` | Explicit success flag |
 | `memory get <key>` | `memory retrieve --key <key>` | Explicit flag |
@@ -6930,7 +7188,7 @@ npx claude-flow@v3alpha doctor --fix
 
 ### Configuration Migration
 
-**V2 Config (`.claude-flow/config.json`)**:
+**V2 Config (`.ruflo/config.json`)**:
 ```json
 {
   "mode": "basic",
@@ -6962,7 +7220,7 @@ npx claude-flow@v3alpha doctor --fix
 
 ```typescript
 // V2 (deprecated)
-import { ClaudeFlow, Agent, Memory } from 'claude-flow';
+import { ClaudeFlow, Agent, Memory } from 'ruflo';
 
 // V3 (new)
 import { ClaudeFlowClient } from '@claude-flow/cli';
@@ -6977,10 +7235,10 @@ If migration fails, you can rollback:
 
 ```bash
 # Check rollback options
-npx claude-flow@v3alpha migrate rollback --list
+npx ruflo@v3alpha migrate rollback --list
 
 # Rollback to V2
-npx claude-flow@v3alpha migrate rollback --to v2
+npx ruflo@v3alpha migrate rollback --to v2
 
 # Restore backup manually if needed
 rm -rf ./data
@@ -6989,12 +7247,12 @@ cp -r ./data-backup-v2 ./data
 
 ### Post-Migration Checklist
 
-- [ ] Verify all agents spawn correctly: `npx claude-flow@v3alpha agent list`
-- [ ] Check memory search works: `npx claude-flow@v3alpha memory search -q "test"`
-- [ ] Confirm MCP server starts: `npx claude-flow@v3alpha mcp start`
-- [ ] Run doctor diagnostics: `npx claude-flow@v3alpha doctor`
-- [ ] Test a simple swarm: `npx claude-flow@v3alpha swarm init --topology mesh`
-- [ ] Bootstrap learning: `npx claude-flow@v3alpha hooks pretrain`
+- [ ] Verify all agents spawn correctly: `npx ruflo@v3alpha agent list`
+- [ ] Check memory search works: `npx ruflo@v3alpha memory search -q "test"`
+- [ ] Confirm MCP server starts: `npx ruflo@v3alpha mcp start`
+- [ ] Run doctor diagnostics: `npx ruflo@v3alpha doctor`
+- [ ] Test a simple swarm: `npx ruflo@v3alpha swarm init --topology mesh`
+- [ ] Bootstrap learning: `npx ruflo@v3alpha hooks pretrain`
 
 ### Common Migration Issues
 

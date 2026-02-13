@@ -4,7 +4,6 @@
  */
 
 import type { InitOptions, HooksConfig } from './types.js';
-import { detectPlatform } from './types.js';
 
 /**
  * Generate the complete settings.json content
@@ -24,15 +23,16 @@ export function generateSettings(options: InitOptions): object {
 
   // Add permissions
   settings.permissions = {
-    // Auto-allow claude-flow MCP tools
-    // Note: Use ":*" for prefix matching (not just "*")
     allow: [
-      'Bash(npx claude-flow:*)',
-      'Bash(npx @claude-flow/cli:*)',
+      'Bash(npx @claude-flow*)',
+      'Bash(npx claude-flow*)',
+      'Bash(node .claude/*)',
       'mcp__claude-flow__:*',
     ],
-    // Auto-deny dangerous operations
-    deny: [],
+    deny: [
+      'Read(./.env)',
+      'Read(./.env.*)',
+    ],
   };
 
   // Add claude-flow attribution for git commits and PRs
@@ -93,6 +93,9 @@ export function generateSettings(options: InitOptions): object {
     memory: {
       backend: options.runtime.memoryBackend,
       enableHNSW: options.runtime.enableHNSW,
+      learningBridge: { enabled: options.runtime.enableLearningBridge ?? true },
+      memoryGraph: { enabled: options.runtime.enableMemoryGraph ?? true },
+      agentScopes: { enabled: options.runtime.enableAgentScopes ?? true },
     },
     neural: {
       enabled: options.runtime.enableNeural,
@@ -152,269 +155,197 @@ export function generateSettings(options: InitOptions): object {
 
 /**
  * Generate statusLine configuration for Claude Code
- * This configures the Claude Code status bar to show V3 metrics
+ * Uses local helper script for cross-platform compatibility (no npx cold-start)
  */
 function generateStatusLineConfig(options: InitOptions): object {
   const config = options.statusline;
 
-  // Build the command that generates the statusline
-  // Uses npx @claude-flow/cli@latest (or @alpha) to run the hooks statusline command
-  // Falls back to local helper script or simple "V3" if CLI not available
-  // Default: full multi-line statusline with progress bars, metrics, and architecture status
-  const statuslineCommand = 'npx @claude-flow/cli@latest hooks statusline 2>/dev/null || node .claude/helpers/statusline.cjs 2>/dev/null || echo "▊ Claude Flow V3"';
-
   return {
-    // Type must be "command" for Claude Code validation
     type: 'command',
-    // Command to execute for statusline content
-    command: statuslineCommand,
-    // Refresh interval in milliseconds (5 seconds default)
+    command: 'node .claude/helpers/statusline.cjs',
     refreshMs: config.refreshInterval,
-    // Enable the statusline
     enabled: config.enabled,
   };
 }
 
 /**
  * Generate hooks configuration
- * Detects platform and generates appropriate commands for Mac, Linux, and Windows
+ * Uses local hook-handler.cjs for cross-platform compatibility.
+ * All hooks delegate to `node .claude/helpers/hook-handler.cjs <command>`
+ * which works identically on Windows, macOS, and Linux without
+ * shell-specific syntax (no bash 2>/dev/null, no PowerShell 2>$null).
  */
 function generateHooksConfig(config: HooksConfig): object {
   const hooks: Record<string, unknown[]> = {};
-  const platform = detectPlatform();
-  const isWindows = platform.os === 'windows';
 
-  // Platform-specific command helpers
-  // Windows: PowerShell syntax with 2>$null and ; exit 0
-  // Mac/Linux: Bash syntax with 2>/dev/null || true
-  const cmd = {
-    // Check if variable is set and run command
-    ifVar: (varName: string, command: string) => isWindows
-      ? `if ($env:${varName}) { ${command} 2>$null }; exit 0`
-      : `[ -n "$${varName}" ] && ${command} 2>/dev/null || true`,
-    // Simple command with error suppression
-    simple: (command: string) => isWindows
-      ? `${command} 2>$null; exit 0`
-      : `${command} 2>/dev/null || true`,
-    // Echo JSON (different quote escaping)
-    echoJson: (json: string) => isWindows
-      ? `Write-Output '${json}'`
-      : `echo '${json}'`,
-    // Generate timestamp (for unique keys)
-    timestamp: () => isWindows
-      ? '$(Get-Date -UFormat %s)'
-      : '$(date +%s)',
-  };
+  // Node.js scripts handle errors internally via try/catch.
+  // No shell-level error suppression needed (2>/dev/null || true breaks Windows).
 
-  // PreToolUse hooks - cross-platform via npx with defensive guards
+  // PreToolUse — validate commands before execution
   if (config.preToolUse) {
     hooks.PreToolUse = [
-      // File edit hooks with intelligence routing
       {
-        matcher: '^(Write|Edit|MultiEdit)$',
+        matcher: 'Bash',
         hooks: [
           {
             type: 'command',
-            command: cmd.ifVar('TOOL_INPUT_file_path',
-              isWindows
-                ? 'npx @claude-flow/cli@latest hooks pre-edit --file $env:TOOL_INPUT_file_path'
-                : 'npx @claude-flow/cli@latest hooks pre-edit --file "$TOOL_INPUT_file_path"'),
+            command: 'node .claude/helpers/hook-handler.cjs pre-bash',
             timeout: config.timeout,
-            continueOnError: true,
-          },
-        ],
-      },
-      // Bash command hooks with safety validation
-      {
-        matcher: '^Bash$',
-        hooks: [
-          {
-            type: 'command',
-            command: cmd.ifVar('TOOL_INPUT_command',
-              isWindows
-                ? 'npx @claude-flow/cli@latest hooks pre-command --command $env:TOOL_INPUT_command'
-                : 'npx @claude-flow/cli@latest hooks pre-command --command "$TOOL_INPUT_command"'),
-            timeout: config.timeout,
-            continueOnError: true,
-          },
-        ],
-      },
-      // Task/Agent hooks - require task-id for tracking
-      {
-        matcher: '^Task$',
-        hooks: [
-          {
-            type: 'command',
-            command: cmd.ifVar('TOOL_INPUT_prompt',
-              isWindows
-                ? `npx @claude-flow/cli@latest hooks pre-task --task-id "task-${cmd.timestamp()}" --description $env:TOOL_INPUT_prompt`
-                : `npx @claude-flow/cli@latest hooks pre-task --task-id "task-${cmd.timestamp()}" --description "$TOOL_INPUT_prompt"`),
-            timeout: config.timeout,
-            continueOnError: true,
           },
         ],
       },
     ];
   }
 
-  // PostToolUse hooks - cross-platform via npx with defensive guards
+  // PostToolUse — record edits for session metrics / learning
   if (config.postToolUse) {
     hooks.PostToolUse = [
-      // File edit hooks with neural pattern training
       {
-        matcher: '^(Write|Edit|MultiEdit)$',
+        matcher: 'Write|Edit|MultiEdit',
         hooks: [
           {
             type: 'command',
-            command: cmd.ifVar('TOOL_INPUT_file_path',
-              isWindows
-                ? 'npx @claude-flow/cli@latest hooks post-edit --file $env:TOOL_INPUT_file_path --success $($env:TOOL_SUCCESS ?? "true")'
-                : 'npx @claude-flow/cli@latest hooks post-edit --file "$TOOL_INPUT_file_path" --success "${TOOL_SUCCESS:-true}"'),
-            timeout: config.timeout,
-            continueOnError: true,
-          },
-        ],
-      },
-      // Bash command hooks with metrics tracking
-      {
-        matcher: '^Bash$',
-        hooks: [
-          {
-            type: 'command',
-            command: cmd.ifVar('TOOL_INPUT_command',
-              isWindows
-                ? 'npx @claude-flow/cli@latest hooks post-command --command $env:TOOL_INPUT_command --success $($env:TOOL_SUCCESS ?? "true")'
-                : 'npx @claude-flow/cli@latest hooks post-command --command "$TOOL_INPUT_command" --success "${TOOL_SUCCESS:-true}"'),
-            timeout: config.timeout,
-            continueOnError: true,
-          },
-        ],
-      },
-      // Task completion hooks - use task-id
-      {
-        matcher: '^Task$',
-        hooks: [
-          {
-            type: 'command',
-            command: cmd.ifVar('TOOL_RESULT_agent_id',
-              isWindows
-                ? 'npx @claude-flow/cli@latest hooks post-task --task-id $env:TOOL_RESULT_agent_id --success $($env:TOOL_SUCCESS ?? "true")'
-                : 'npx @claude-flow/cli@latest hooks post-task --task-id "$TOOL_RESULT_agent_id" --success "${TOOL_SUCCESS:-true}"'),
-            timeout: config.timeout,
-            continueOnError: true,
+            command: 'node .claude/helpers/hook-handler.cjs post-edit',
+            timeout: 10000,
           },
         ],
       },
     ];
   }
 
-  // UserPromptSubmit for intelligent routing
+  // UserPromptSubmit — intelligent task routing
   if (config.userPromptSubmit) {
     hooks.UserPromptSubmit = [
       {
         hooks: [
           {
             type: 'command',
-            command: cmd.ifVar('PROMPT',
-              isWindows
-                ? 'npx @claude-flow/cli@latest hooks route --task $env:PROMPT'
-                : 'npx @claude-flow/cli@latest hooks route --task "$PROMPT"'),
-            timeout: config.timeout,
-            continueOnError: true,
+            command: 'node .claude/helpers/hook-handler.cjs route',
+            timeout: 10000,
           },
         ],
       },
     ];
   }
 
-  // SessionStart for context loading and daemon auto-start
+  // SessionStart — restore session state + import auto memory
   if (config.sessionStart) {
     hooks.SessionStart = [
       {
         hooks: [
           {
             type: 'command',
-            command: cmd.simple('npx @claude-flow/cli@latest daemon start --quiet'),
-            timeout: 5000,
-            continueOnError: true,
+            command: 'node .claude/helpers/hook-handler.cjs session-restore',
+            timeout: 15000,
           },
           {
             type: 'command',
-            command: cmd.ifVar('SESSION_ID',
-              isWindows
-                ? 'npx @claude-flow/cli@latest hooks session-restore --session-id $env:SESSION_ID'
-                : 'npx @claude-flow/cli@latest hooks session-restore --session-id "$SESSION_ID"'),
-            timeout: 10000,
-            continueOnError: true,
+            command: 'node .claude/helpers/auto-memory-hook.mjs import',
+            timeout: 8000,
           },
         ],
       },
     ];
   }
 
-  // Stop hooks for task evaluation - always return ok by default
-  // The hook outputs JSON that Claude Code validates
+  // SessionEnd — persist session state
+  if (config.sessionStart) {
+    hooks.SessionEnd = [
+      {
+        hooks: [
+          {
+            type: 'command',
+            command: 'node .claude/helpers/hook-handler.cjs session-end',
+            timeout: 10000,
+          },
+        ],
+      },
+    ];
+  }
+
+  // Stop — sync auto memory on exit
   if (config.stop) {
     hooks.Stop = [
       {
         hooks: [
           {
             type: 'command',
-            command: cmd.echoJson('{"ok": true}'),
-            timeout: 1000,
+            command: 'node .claude/helpers/auto-memory-hook.mjs sync',
+            timeout: 10000,
           },
         ],
       },
     ];
   }
 
-  // Notification hooks - store notifications in memory for swarm awareness
-  if (config.notification) {
-    hooks.Notification = [
+  // PreCompact — preserve context before compaction
+  if (config.preCompact) {
+    hooks.PreCompact = [
       {
+        matcher: 'manual',
         hooks: [
           {
             type: 'command',
-            command: cmd.ifVar('NOTIFICATION_MESSAGE',
-              isWindows
-                ? `npx @claude-flow/cli@latest memory store --namespace notifications --key "notify-${cmd.timestamp()}" --value $env:NOTIFICATION_MESSAGE`
-                : `npx @claude-flow/cli@latest memory store --namespace notifications --key "notify-${cmd.timestamp()}" --value "$NOTIFICATION_MESSAGE"`),
-            timeout: 3000,
-            continueOnError: true,
+            command: 'node .claude/helpers/hook-handler.cjs compact-manual',
+          },
+          {
+            type: 'command',
+            command: 'node .claude/helpers/hook-handler.cjs session-end',
+            timeout: 5000,
+          },
+        ],
+      },
+      {
+        matcher: 'auto',
+        hooks: [
+          {
+            type: 'command',
+            command: 'node .claude/helpers/hook-handler.cjs compact-auto',
+          },
+          {
+            type: 'command',
+            command: 'node .claude/helpers/hook-handler.cjs session-end',
+            timeout: 6000,
           },
         ],
       },
     ];
   }
 
-  // Note: PermissionRequest is NOT a valid Claude Code hook type
-  // Auto-allow behavior is configured via settings.permissions.allow instead
-
-  // Agent Teams hooks - TeammateIdle for task assignment, TaskCompleted for coordination
-  hooks.TeammateIdle = [
+  // SubagentStart — status update
+  hooks.SubagentStart = [
     {
       hooks: [
         {
           type: 'command',
-          command: cmd.simple('npx @claude-flow/cli@latest hooks teammate-idle --auto-assign true'),
-          timeout: 5000,
-          continueOnError: true,
+          command: 'node .claude/helpers/hook-handler.cjs status',
+          timeout: 3000,
         },
       ],
     },
   ];
 
+  // TeammateIdle — auto-assign pending tasks to idle teammates
+  hooks.TeammateIdle = [
+    {
+      hooks: [
+        {
+          type: 'command',
+          command: 'node .claude/helpers/hook-handler.cjs post-task',
+          timeout: 5000,
+        },
+      ],
+    },
+  ];
+
+  // TaskCompleted — train patterns and record completion
   hooks.TaskCompleted = [
     {
       hooks: [
         {
           type: 'command',
-          command: cmd.ifVar('TASK_ID',
-            isWindows
-              ? 'npx @claude-flow/cli@latest hooks task-completed --task-id $env:TASK_ID --train-patterns true'
-              : 'npx @claude-flow/cli@latest hooks task-completed --task-id "$TASK_ID" --train-patterns true'),
+          command: 'node .claude/helpers/hook-handler.cjs post-task',
           timeout: 5000,
-          continueOnError: true,
         },
       ],
     },

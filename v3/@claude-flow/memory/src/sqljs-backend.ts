@@ -190,7 +190,7 @@ export class SqlJsBackend extends EventEmitter implements IMemoryBackend {
         updated_at INTEGER NOT NULL,
         expires_at INTEGER,
         version INTEGER NOT NULL DEFAULT 1,
-        references TEXT NOT NULL,
+        "references" TEXT NOT NULL,
         access_count INTEGER NOT NULL DEFAULT 0,
         last_accessed_at INTEGER NOT NULL
       )
@@ -222,7 +222,7 @@ export class SqlJsBackend extends EventEmitter implements IMemoryBackend {
       INSERT OR REPLACE INTO memory_entries (
         id, key, content, embedding, type, namespace, tags, metadata,
         owner_id, access_level, created_at, updated_at, expires_at,
-        version, references, access_count, last_accessed_at
+        version, "references", access_count, last_accessed_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
@@ -439,6 +439,9 @@ export class SqlJsBackend extends EventEmitter implements IMemoryBackend {
     }
 
     const stmt = this.db!.prepare(sql);
+    if (params.length > 0) {
+      stmt.bind(params);
+    }
     const results: MemoryEntry[] = [];
 
     while (stmt.step()) {
