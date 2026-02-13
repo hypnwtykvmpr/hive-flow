@@ -37,7 +37,7 @@ const preEditCommand: Command = {
       short: 'f',
       description: 'File path to edit',
       type: 'string',
-      required: true
+      required: false
     },
     {
       name: 'operation',
@@ -58,13 +58,9 @@ const preEditCommand: Command = {
     { command: 'claude-flow hooks pre-edit -f src/api.ts -o refactor', description: 'Pre-edit with operation type' }
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
-    const filePath = ctx.args[0] || ctx.flags.file as string;
+    // Default file to 'unknown' for backward compatibility (env var may be empty)
+    const filePath = ctx.args[0] || ctx.flags.file as string || 'unknown';
     const operation = ctx.flags.operation as string || 'update';
-
-    if (!filePath) {
-      output.printError('File path is required. Use --file or -f flag.');
-      return { success: false, exitCode: 1 };
-    }
 
     output.printInfo(`Analyzing context for: ${output.highlight(filePath)}`);
 
@@ -164,14 +160,14 @@ const postEditCommand: Command = {
       short: 'f',
       description: 'File path that was edited',
       type: 'string',
-      required: true
+      required: false
     },
     {
       name: 'success',
       short: 's',
       description: 'Whether the edit was successful',
       type: 'boolean',
-      required: true
+      required: false
     },
     {
       name: 'outcome',
@@ -191,18 +187,10 @@ const postEditCommand: Command = {
     { command: 'claude-flow hooks post-edit -f src/api.ts --success false -o "Type error"', description: 'Record failed edit' }
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
-    const filePath = ctx.args[0] || ctx.flags.file as string;
-    const success = ctx.flags.success as boolean;
-
-    if (!filePath) {
-      output.printError('File path is required. Use --file or -f flag.');
-      return { success: false, exitCode: 1 };
-    }
-
-    if (success === undefined) {
-      output.printError('Success flag is required. Use --success true/false.');
-      return { success: false, exitCode: 1 };
-    }
+    // Default file to 'unknown' for backward compatibility (env var may be empty)
+    const filePath = ctx.args[0] || ctx.flags.file as string || 'unknown';
+    // Default success to true for backward compatibility (PostToolUse = success, PostToolUseFailure = failure)
+    const success = ctx.flags.success !== undefined ? (ctx.flags.success as boolean) : true;
 
     output.printInfo(`Recording outcome for: ${output.highlight(filePath)}`);
 
@@ -407,7 +395,7 @@ const postCommandCommand: Command = {
       short: 's',
       description: 'Whether the command succeeded',
       type: 'boolean',
-      required: true
+      required: false
     },
     {
       name: 'exit-code',
@@ -429,15 +417,11 @@ const postCommandCommand: Command = {
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     const command = ctx.args[0] || ctx.flags.command as string;
-    const success = ctx.flags.success as boolean;
+    // Default success to true for backward compatibility
+    const success = ctx.flags.success !== undefined ? (ctx.flags.success as boolean) : true;
 
     if (!command) {
       output.printError('Command is required. Use --command or -c flag.');
-      return { success: false, exitCode: 1 };
-    }
-
-    if (success === undefined) {
-      output.printError('Success flag is required. Use --success true/false.');
       return { success: false, exitCode: 1 };
     }
 
@@ -1619,7 +1603,7 @@ const postTaskCommand: Command = {
       short: 's',
       description: 'Whether the task succeeded',
       type: 'boolean',
-      required: true
+      required: false
     },
     {
       name: 'quality',
@@ -1641,12 +1625,8 @@ const postTaskCommand: Command = {
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     // Auto-generate task ID if not provided
     const taskId = (ctx.flags.taskId as string) || `task_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    const success = ctx.flags.success as boolean;
-
-    if (success === undefined) {
-      output.printError('Success flag is required. Use --success true/false.');
-      return { success: false, exitCode: 1 };
-    }
+    // Default success to true for backward compatibility
+    const success = ctx.flags.success !== undefined ? (ctx.flags.success as boolean) : true;
 
     output.printInfo(`Recording outcome for task: ${output.highlight(taskId)}`);
 

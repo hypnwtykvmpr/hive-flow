@@ -168,18 +168,40 @@ if [ -x "$SWARM_COMMS" ]; then
   QUEUE_PENDING=$(echo "$COMMS_STATS" | jq -r '.queue // 0' 2>/dev/null || echo "0")
 fi
 
-# Get context window usage from Claude Code input
+# Get context window usage from Context Autopilot state (primary) or Claude Code input (fallback)
 CONTEXT_PCT=0
+CONTEXT_TOKENS=""
 CONTEXT_COLOR="${DIM}"
-if [ "$CLAUDE_INPUT" != "{}" ]; then
-  # Try to get remaining percentage directly from Claude Code
+AUTOPILOT_STATUS=""
+AUTOPILOT_STATE="${PROJECT_DIR}/.claude-flow/data/autopilot-state.json"
+
+if [ -f "$AUTOPILOT_STATE" ]; then
+  # Primary: read from autopilot real-time state
+  AP_PCT=$(jq -r '.lastPercentage // 0' "$AUTOPILOT_STATE" 2>/dev/null || echo "0")
+  AP_TOKENS=$(jq -r '.lastTokenEstimate // 0' "$AUTOPILOT_STATE" 2>/dev/null || echo "0")
+  AP_PRUNE=$(jq -r '.pruneCount // 0' "$AUTOPILOT_STATE" 2>/dev/null || echo "0")
+
+  # Convert float (0.227) to int percentage (23) using awk
+  CONTEXT_PCT=$(awk "BEGIN { printf \"%.0f\", $AP_PCT * 100 }" 2>/dev/null || echo "0")
+  if [ -z "$CONTEXT_PCT" ] || [ "$CONTEXT_PCT" = "" ]; then CONTEXT_PCT=0; fi
+
+  # Format token count using awk
+  CONTEXT_TOKENS=$(awk "BEGIN { t=$AP_TOKENS; if (t>=1000) printf \"%.1fK\", t/1000; else printf \"%d\", t }" 2>/dev/null || echo "?")
+
+
+  # Autopilot active indicator
+  if [ "$AP_PRUNE" -gt 0 ]; then
+    AUTOPILOT_STATUS="${BRIGHT_YELLOW}⟳${AP_PRUNE}${RESET}"
+  else
+    AUTOPILOT_STATUS="${BRIGHT_GREEN}⊘${RESET}"
+  fi
+elif [ "$CLAUDE_INPUT" != "{}" ]; then
+  # Fallback: read from Claude Code input JSON
   CONTEXT_REMAINING=$(echo "$CLAUDE_INPUT" | jq '.context_window.remaining_percentage // null' 2>/dev/null)
 
   if [ "$CONTEXT_REMAINING" != "null" ] && [ -n "$CONTEXT_REMAINING" ]; then
-    # If we have remaining %, convert to used %
     CONTEXT_PCT=$((100 - CONTEXT_REMAINING))
   else
-    # Fallback: calculate from token counts
     CURRENT_USAGE=$(echo "$CLAUDE_INPUT" | jq '.context_window.current_usage // null' 2>/dev/null)
     if [ "$CURRENT_USAGE" != "null" ] && [ "$CURRENT_USAGE" != "" ]; then
       CONTEXT_SIZE=$(echo "$CLAUDE_INPUT" | jq '.context_window.context_window_size // 200000' 2>/dev/null)
@@ -193,39 +215,61 @@ if [ "$CLAUDE_INPUT" != "{}" ]; then
       fi
     fi
   fi
-
-  # Color based on usage (higher = worse)
-  if [ "$CONTEXT_PCT" -lt 50 ]; then
-    CONTEXT_COLOR="${BRIGHT_GREEN}"
-  elif [ "$CONTEXT_PCT" -lt 75 ]; then
-    CONTEXT_COLOR="${BRIGHT_YELLOW}"
-  else
-    CONTEXT_COLOR="${BRIGHT_RED}"
-  fi
 fi
 
-# Calculate Intelligence Score based on learning patterns and training
+# Color based on usage thresholds (matches autopilot: 70% warn, 85% prune)
+if [ "$CONTEXT_PCT" -lt 50 ]; then
+  CONTEXT_COLOR="${BRIGHT_GREEN}"
+elif [ "$CONTEXT_PCT" -lt 70 ]; then
+  CONTEXT_COLOR="${BRIGHT_CYAN}"
+elif [ "$CONTEXT_PCT" -lt 85 ]; then
+  CONTEXT_COLOR="${BRIGHT_YELLOW}"
+else
+  CONTEXT_COLOR="${BRIGHT_RED}"
+fi
+
+# Calculate Intelligence Score from learning metrics + patterns DB
 INTEL_SCORE=0
 INTEL_COLOR="${DIM}"
 PATTERNS_DB="${PROJECT_DIR}/.claude-flow/learning/patterns.db"
 LEARNING_METRICS="${PROJECT_DIR}/.claude-flow/metrics/learning.json"
+ARCHIVE_DB="${PROJECT_DIR}/.claude-flow/data/transcript-archive.db"
 
-# Base intelligence from pattern count
-if [ -f "$PATTERNS_DB" ] && command -v sqlite3 &>/dev/null; then
+# Primary: use pre-computed intelligence score from learning.json
+if [ -f "$LEARNING_METRICS" ]; then
+  INTEL_SCORE=$(jq -r '.intelligence.score // 0' "$LEARNING_METRICS" 2>/dev/null | cut -d. -f1 || echo "0")
+
+  # Boost score based on live data if available
+  if [ -f "$PATTERNS_DB" ] && command -v sqlite3 &>/dev/null; then
+    SHORT_PATTERNS=$(sqlite3 "$PATTERNS_DB" "SELECT COUNT(*) FROM short_term_patterns" 2>/dev/null || echo "0")
+    LONG_PATTERNS=$(sqlite3 "$PATTERNS_DB" "SELECT COUNT(*) FROM long_term_patterns" 2>/dev/null || echo "0")
+    AVG_QUALITY=$(sqlite3 "$PATTERNS_DB" "SELECT COALESCE(AVG(quality), 0) FROM short_term_patterns" 2>/dev/null || echo "0")
+
+    # Live quality boost: up to +20 points from pattern quality
+    QUALITY_BOOST=$(awk "BEGIN { printf \"%.0f\", $AVG_QUALITY * 20 }" 2>/dev/null || echo "0")
+
+    # Archive memory boost: +1 per 10 archived entries, up to +10
+    ARCHIVE_COUNT=0
+    if [ -f "$ARCHIVE_DB" ] && command -v sqlite3 &>/dev/null; then
+      ARCHIVE_COUNT=$(sqlite3 "$ARCHIVE_DB" "SELECT COUNT(*) FROM transcript_entries" 2>/dev/null || echo "0")
+    fi
+    ARCHIVE_BOOST=$((ARCHIVE_COUNT / 10))
+    if [ "$ARCHIVE_BOOST" -gt 10 ]; then ARCHIVE_BOOST=10; fi
+
+    INTEL_SCORE=$((INTEL_SCORE + QUALITY_BOOST + ARCHIVE_BOOST))
+    if [ "$INTEL_SCORE" -gt 100 ]; then INTEL_SCORE=100; fi
+  fi
+elif [ -f "$PATTERNS_DB" ] && command -v sqlite3 &>/dev/null; then
+  # Fallback: compute from patterns DB directly
   SHORT_PATTERNS=$(sqlite3 "$PATTERNS_DB" "SELECT COUNT(*) FROM short_term_patterns" 2>/dev/null || echo "0")
   LONG_PATTERNS=$(sqlite3 "$PATTERNS_DB" "SELECT COUNT(*) FROM long_term_patterns" 2>/dev/null || echo "0")
   AVG_QUALITY=$(sqlite3 "$PATTERNS_DB" "SELECT COALESCE(AVG(quality), 0) FROM short_term_patterns" 2>/dev/null || echo "0")
 
-  # Score: patterns contribute up to 60%, quality contributes up to 40%
   PATTERN_SCORE=$((SHORT_PATTERNS + LONG_PATTERNS * 2))
   if [ "$PATTERN_SCORE" -gt 100 ]; then PATTERN_SCORE=100; fi
-  QUALITY_SCORE=$(echo "$AVG_QUALITY * 40" | bc 2>/dev/null | cut -d. -f1 || echo "0")
+  QUALITY_SCORE=$(awk "BEGIN { printf \"%.0f\", $AVG_QUALITY * 40 }" 2>/dev/null || echo "0")
   INTEL_SCORE=$((PATTERN_SCORE * 60 / 100 + QUALITY_SCORE))
   if [ "$INTEL_SCORE" -gt 100 ]; then INTEL_SCORE=100; fi
-elif [ -f "$LEARNING_METRICS" ]; then
-  # Fallback to learning metrics JSON
-  ROUTING_ACC=$(jq -r '.routing.accuracy // 0' "$LEARNING_METRICS" 2>/dev/null | cut -d. -f1 || echo "0")
-  INTEL_SCORE=$((ROUTING_ACC))
 fi
 
 # Color based on intelligence level
@@ -352,7 +396,19 @@ fi
 CONTEXT_DISPLAY=$(printf "%3d" "$CONTEXT_PCT")
 INTEL_DISPLAY=$(printf "%3d" "$INTEL_SCORE")
 
-OUTPUT="${OUTPUT}\n${BRIGHT_YELLOW}🤖 Swarm${RESET}  ${ACTIVITY_INDICATOR}[${AGENTS_COLOR}${AGENT_DISPLAY}${RESET}/${BRIGHT_WHITE}${AGENTS_TARGET}${RESET}]  ${SUBAGENT_COLOR}👥 ${SUBAGENT_COUNT}${RESET}${QUEUE_INDICATOR}    ${SECURITY_ICON} ${SECURITY_COLOR}CVE ${CVES_FIXED}${RESET}/${BRIGHT_WHITE}${SECURITY_CVES}${RESET}    ${MEMORY_COLOR}💾 ${MEMORY_DISPLAY}${RESET}    ${CONTEXT_COLOR}📂 ${CONTEXT_DISPLAY}%${RESET}    ${INTEL_COLOR}🧠 ${INTEL_DISPLAY}%${RESET}"
+# Build context display with autopilot info
+CONTEXT_LABEL="📂"
+if [ -n "$AUTOPILOT_STATUS" ]; then
+  CONTEXT_EXTRA=" ${AUTOPILOT_STATUS}"
+  if [ -n "$CONTEXT_TOKENS" ]; then
+    CONTEXT_LABEL="🛡️"
+    CONTEXT_EXTRA="${DIM}${CONTEXT_TOKENS}${RESET} ${AUTOPILOT_STATUS}"
+  fi
+else
+  CONTEXT_EXTRA=""
+fi
+
+OUTPUT="${OUTPUT}\n${BRIGHT_YELLOW}🤖 Swarm${RESET}  ${ACTIVITY_INDICATOR}[${AGENTS_COLOR}${AGENT_DISPLAY}${RESET}/${BRIGHT_WHITE}${AGENTS_TARGET}${RESET}]  ${SUBAGENT_COLOR}👥 ${SUBAGENT_COUNT}${RESET}${QUEUE_INDICATOR}    ${SECURITY_ICON} ${SECURITY_COLOR}CVE ${CVES_FIXED}${RESET}/${BRIGHT_WHITE}${SECURITY_CVES}${RESET}    ${MEMORY_COLOR}💾 ${MEMORY_DISPLAY}${RESET}    ${CONTEXT_COLOR}${CONTEXT_LABEL} ${CONTEXT_DISPLAY}%${RESET} ${CONTEXT_EXTRA}    ${INTEL_COLOR}🧠 ${INTEL_DISPLAY}%${RESET}"
 
 # Line 3: V3 Architecture Components with better alignment
 DDD_COLOR="${BRIGHT_GREEN}"

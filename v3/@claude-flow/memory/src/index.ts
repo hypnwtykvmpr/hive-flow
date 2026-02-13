@@ -102,6 +102,53 @@ export {
   PERFORMANCE_TARGETS,
 } from './types.js';
 
+// ===== Auto Memory Bridge (ADR-048) =====
+export { AutoMemoryBridge, resolveAutoMemoryDir, findGitRoot } from './auto-memory-bridge.js';
+export type {
+  AutoMemoryBridgeConfig,
+  MemoryInsight,
+  InsightCategory,
+  SyncDirection,
+  SyncMode,
+  PruneStrategy,
+  SyncResult,
+  ImportResult,
+} from './auto-memory-bridge.js';
+
+// ===== Learning Bridge =====
+export { LearningBridge } from './learning-bridge.js';
+export type {
+  LearningBridgeConfig,
+  LearningStats,
+  ConsolidateResult,
+  PatternMatch,
+} from './learning-bridge.js';
+
+// ===== Knowledge Graph =====
+export { MemoryGraph } from './memory-graph.js';
+export type {
+  MemoryGraphConfig,
+  GraphNode,
+  GraphEdge,
+  GraphStats,
+  RankedResult,
+  EdgeType,
+} from './memory-graph.js';
+
+// ===== Agent-Scoped Memory =====
+export {
+  resolveAgentMemoryDir,
+  createAgentBridge,
+  transferKnowledge,
+  listAgentScopes,
+} from './agent-memory-scope.js';
+export type {
+  AgentMemoryScope,
+  AgentScopedConfig,
+  TransferOptions,
+  TransferResult,
+} from './agent-memory-scope.js';
+
 // ===== Core Components =====
 export { AgentDBAdapter } from './agentdb-adapter.js';
 export type { AgentDBAdapterConfig } from './agentdb-adapter.js';

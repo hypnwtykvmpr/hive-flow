@@ -5,16 +5,18 @@
 #
 # Usage:
 #   curl -fsSL https://cdn.jsdelivr.net/gh/ruvnet/claude-flow@main/scripts/install.sh | bash
+#   curl -fsSL https://cdn.jsdelivr.net/gh/ruvnet/claude-flow@main/scripts/install.sh | bash -s -- --full
 #   curl -fsSL https://cdn.jsdelivr.net/gh/ruvnet/claude-flow@main/scripts/install.sh | bash -s -- --global
 #   curl -fsSL https://cdn.jsdelivr.net/gh/ruvnet/claude-flow@main/scripts/install.sh | bash -s -- --minimal
 #
 # Options (via arguments):
 #   --global              Global install (npm install -g)
 #   --minimal             Minimal install (no optional deps)
+#   --full                Full setup (global + MCP + doctor + init)
 #   --version=X.X.X       Specific version
 #
 # Options (via environment - requires export):
-#   export CLAUDE_FLOW_VERSION=3.0.0-alpha.183
+#   export CLAUDE_FLOW_VERSION=alpha
 #   export CLAUDE_FLOW_MINIMAL=1
 #   export CLAUDE_FLOW_GLOBAL=1
 #
@@ -83,13 +85,13 @@ while [[ $# -gt 0 ]]; do
             echo "Usage: curl -fsSL .../install.sh | bash -s -- [OPTIONS]"
             echo ""
             echo "Options:"
-            echo "  --global, -g     Install globally (npm install -g)"
+            echo "  --global, -g     Install globally (npm install -g claude-flow)"
             echo "  --minimal, -m    Minimal install (skip optional deps)"
             echo "  --setup-mcp      Auto-configure MCP server for Claude Code"
             echo "  --doctor, -d     Run diagnostics after install"
             echo "  --no-init        Skip project initialization (enabled by default)"
-            echo "  --full, -f       Full setup (global + mcp + doctor)"
-            echo "  --version=X.X.X  Install specific version"
+            echo "  --full, -f       Full setup (global + mcp + doctor + init)"
+            echo "  --version=X.X.X  Install specific version (default: alpha)"
             echo "  --help, -h       Show this help"
             exit 0
             ;;
@@ -113,7 +115,7 @@ spinner() {
 print_banner() {
     echo ""
     echo -e "${CYAN}╔═══════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${CYAN}║${NC}  ${BOLD}🌊 Claude Flow${NC} - Enterprise AI Agent Orchestration    ${CYAN}║${NC}"
+    echo -e "${CYAN}║${NC}  ${BOLD}Claude Flow${NC} - AI Agent Orchestration for Claude Code ${CYAN}║${NC}"
     echo -e "${CYAN}╚═══════════════════════════════════════════════════════════╝${NC}"
     echo ""
 }
@@ -277,7 +279,7 @@ verify_installation() {
 
 show_quickstart() {
     echo -e "${CYAN}╔═══════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${CYAN}║${NC}  ${BOLD}🚀 Quick Start${NC}                                          ${CYAN}║${NC}"
+    echo -e "${CYAN}║${NC}  ${BOLD}Quick Start${NC}                                              ${CYAN}║${NC}"
     echo -e "${CYAN}╚═══════════════════════════════════════════════════════════╝${NC}"
     echo ""
 
@@ -382,7 +384,7 @@ main() {
     run_init
     show_quickstart
 
-    print_success "${BOLD}Claude Flow is ready!${NC} 🎉"
+    print_success "${BOLD}Claude Flow is ready!${NC}"
     echo ""
 }
 

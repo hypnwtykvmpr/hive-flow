@@ -46,6 +46,8 @@ export interface HooksConfig {
   sessionStart: boolean;
   /** Enable Stop hooks */
   stop: boolean;
+  /** Enable PreCompact hooks (context preservation before compaction) */
+  preCompact: boolean;
   /** Enable Notification hooks */
   notification: boolean;
   /** Hook timeout in milliseconds */
@@ -180,6 +182,12 @@ export interface RuntimeConfig {
   enableHNSW: boolean;
   /** Enable neural learning */
   enableNeural: boolean;
+  /** Enable LearningBridge (ADR-049) - connects insights to SONA/ReasoningBank */
+  enableLearningBridge?: boolean;
+  /** Enable MemoryGraph (ADR-049) - PageRank knowledge graph */
+  enableMemoryGraph?: boolean;
+  /** Enable AgentMemoryScope (ADR-049) - 3-scope agent memory */
+  enableAgentScopes?: boolean;
   /** CLAUDE.md template variant */
   claudeMdTemplate?: ClaudeMdTemplate;
 }
@@ -320,6 +328,7 @@ export const DEFAULT_INIT_OPTIONS: InitOptions = {
     userPromptSubmit: true,
     sessionStart: true,
     stop: true,
+    preCompact: true,
     notification: true,
     timeout: 5000,
     continueOnError: true,
@@ -381,6 +390,9 @@ export const DEFAULT_INIT_OPTIONS: InitOptions = {
     memoryBackend: 'hybrid',
     enableHNSW: true,
     enableNeural: true,
+    enableLearningBridge: true,
+    enableMemoryGraph: true,
+    enableAgentScopes: true,
   },
   embeddings: {
     enabled: true,
@@ -445,6 +457,9 @@ export const MINIMAL_INIT_OPTIONS: InitOptions = {
     memoryBackend: 'memory',
     enableHNSW: false,
     enableNeural: false,
+    enableLearningBridge: false,
+    enableMemoryGraph: false,
+    enableAgentScopes: false,
   },
   embeddings: {
     enabled: false,
