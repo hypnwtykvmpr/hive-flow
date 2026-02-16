@@ -826,10 +826,10 @@ npx claude-flow@v3alpha doctor --fix
 
 ### Publishing Rules
 
-- MUST publish BOTH packages when publishing CLI changes
-- MUST update ALL dist-tags for BOTH packages after publishing
-- Always publish `@claude-flow/cli` first, then `claude-flow` (umbrella)
-- MUST run verification before telling user publishing is complete
+- MUST publish ALL THREE packages when publishing CLI changes: `@claude-flow/cli`, `claude-flow`, AND `ruflo`
+- MUST update ALL dist-tags for ALL THREE packages after publishing
+- Publish order: `@claude-flow/cli` first, then `claude-flow` (umbrella), then `ruflo` (alias umbrella)
+- MUST run verification for ALL THREE before telling user publishing is complete
 
 ```bash
 # STEP 1: Build and publish CLI
@@ -839,21 +839,28 @@ npm run build
 npm publish --tag alpha
 npm dist-tag add @claude-flow/cli@3.0.0-alpha.XXX latest
 
-# STEP 2: Publish umbrella
+# STEP 2: Publish claude-flow umbrella
 cd /workspaces/claude-flow
-npm version 3.0.0-alpha.YYY --no-git-tag-version
+npm version 3.0.0-alpha.XXX --no-git-tag-version
 npm publish --tag v3alpha
 
-# STEP 3: Update ALL umbrella tags (CRITICAL - DON'T SKIP!)
-npm dist-tag add claude-flow@3.0.0-alpha.YYY latest
-npm dist-tag add claude-flow@3.0.0-alpha.YYY alpha
+# STEP 3: Update ALL claude-flow umbrella tags (CRITICAL - DON'T SKIP!)
+npm dist-tag add claude-flow@3.0.0-alpha.XXX latest
+npm dist-tag add claude-flow@3.0.0-alpha.XXX alpha
+
+# STEP 4: Publish ruflo umbrella (CRITICAL - DON'T FORGET!)
+cd /workspaces/claude-flow/ruflo
+npm version 3.0.0-alpha.XXX --no-git-tag-version
+npm publish --tag alpha
+npm dist-tag add ruflo@3.0.0-alpha.XXX latest
 ```
 
 **Verification (run before telling user):**
 ```bash
 npm view @claude-flow/cli dist-tags --json
 npm view claude-flow dist-tags --json
-# BOTH packages need: alpha AND latest pointing to newest version
+npm view ruflo dist-tags --json
+# ALL THREE packages need: alpha AND latest pointing to newest version
 ```
 
 ### All Tags That Must Be Updated
@@ -861,11 +868,16 @@ npm view claude-flow dist-tags --json
 |---------|-----|-------------------|
 | `@claude-flow/cli` | `alpha` | `npx @claude-flow/cli@alpha` |
 | `@claude-flow/cli` | `latest` | `npx @claude-flow/cli@latest` |
+| `@claude-flow/cli` | `v3alpha` | `npx @claude-flow/cli@v3alpha` |
 | `claude-flow` | `alpha` | `npx claude-flow@alpha` — EASY TO FORGET |
 | `claude-flow` | `latest` | `npx claude-flow@latest` |
 | `claude-flow` | `v3alpha` | `npx claude-flow@v3alpha` |
+| `ruflo` | `alpha` | `npx ruflo@alpha` — EASY TO FORGET |
+| `ruflo` | `latest` | `npx ruflo@latest` |
 
+- Never forget the `ruflo` package — it's a thin wrapper users run via `npx ruflo@alpha`
 - Never forget the umbrella `alpha` tag — users run `npx claude-flow@alpha`
+- `ruflo` source is in `/ruflo/` — it depends on `@claude-flow/cli`
 
 ## Plugin Registry Maintenance (IPFS/Pinata)
 
