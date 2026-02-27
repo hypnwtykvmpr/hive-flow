@@ -532,9 +532,6 @@ export class EnhancedModelRouter {
     context?: { filePath?: string; originalCode?: string }
   ): Promise<{ success: boolean; confidence: number; output?: string }> {
     try {
-      // Try to import and use agentic-flow's agent-booster
-      const { execSync } = await import('child_process');
-
       const filePath = intent.filePath || context?.filePath;
       if (!filePath || !existsSync(filePath)) {
         return { success: false, confidence: 0 };
@@ -542,7 +539,6 @@ export class EnhancedModelRouter {
 
       const originalCode = context?.originalCode || readFileSync(filePath, 'utf-8');
 
-      // Build agent-booster command based on intent
       const intentToInstruction: Record<EditIntentType, string> = {
         'var-to-const': 'Convert all var declarations to const',
         'add-types': 'Add TypeScript type annotations',
@@ -555,31 +551,42 @@ export class EnhancedModelRouter {
       const instruction = intentToInstruction[intent.type];
       const language = intent.language || 'javascript';
 
-      // Try using npx agent-booster
-      const cmd = `npx --yes agent-booster@0.2.2 apply --language ${language}`;
-
-      const result = execSync(cmd, {
-        encoding: 'utf-8',
-        input: JSON.stringify({
+      // Try local agentic-flow agent-booster (v3 — no npx needed)
+      // Note: agent-booster export declared but dist missing in alpha.1; use intelligence path as fallback
+      const boosterModule = await import('agentic-flow/agent-booster')
+        .catch(() => import(/* @vite-ignore */ 'agentic-flow/intelligence/agent-booster-enhanced'))
+        .catch(() => null);
+      if (boosterModule?.enhancedApply) {
+        const result = await boosterModule.enhancedApply({
           code: originalCode,
           edit: instruction,
-        }),
+          language,
+        });
+        if (result && result.confidence >= this.config.agentBoosterConfidenceThreshold) {
+          return { success: true, confidence: result.confidence, output: result.output };
+        }
+        return { success: false, confidence: result?.confidence ?? 0 };
+      }
+
+      // Fallback: shell out to npx agent-booster
+      // Sanitize language to prevent command injection (whitelist only)
+      const SAFE_LANGUAGES = ['javascript', 'typescript', 'python', 'rust', 'go', 'java', 'c', 'cpp', 'ruby', 'swift', 'kotlin'];
+      const safeLang = SAFE_LANGUAGES.includes(language) ? language : 'javascript';
+      const { execSync } = await import('child_process');
+      const cmd = `npx --yes agent-booster@0.2.2 apply --language ${safeLang}`;
+      const result = execSync(cmd, {
+        encoding: 'utf-8',
+        input: JSON.stringify({ code: originalCode, edit: instruction }),
         maxBuffer: 10 * 1024 * 1024,
         timeout: 5000,
         stdio: ['pipe', 'pipe', 'pipe'],
       });
 
       const parsed = JSON.parse(result);
-
       if (parsed.confidence >= this.config.agentBoosterConfidenceThreshold) {
-        return {
-          success: true,
-          confidence: parsed.confidence,
-          output: parsed.output,
-        };
+        return { success: true, confidence: parsed.confidence, output: parsed.output };
       }
-
-      return { success: false, confidence: parsed.confidence || 0 };
+      return { success: false, confidence: parsed.confidence ?? 0 };
     } catch {
       // Agent Booster not available or failed
       return { success: false, confidence: 0 };

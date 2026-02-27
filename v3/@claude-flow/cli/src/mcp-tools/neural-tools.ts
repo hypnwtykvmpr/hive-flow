@@ -16,38 +16,44 @@ import type { MCPTool } from './types.js';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 
-// Try to import real embeddings from @claude-flow/embeddings
+// Try to import real embeddings — prefer agentic-flow v3 ReasoningBank, then @claude-flow/embeddings
 let realEmbeddings: { embed: (text: string) => Promise<number[]> } | null = null;
 let embeddingServiceName: string = 'none';
 try {
-  // Dynamic import to avoid hard dependency
-  const embeddingsModule = await import('@claude-flow/embeddings');
-  if (embeddingsModule.createEmbeddingService) {
-    // Try to create agentic-flow service (fastest), fall back to mock
-    try {
-      const service = embeddingsModule.createEmbeddingService({ provider: 'agentic-flow' });
-      realEmbeddings = {
-        embed: async (text: string) => {
-          const result = await service.embed(text);
-          // Convert Float32Array to number[] if needed
-          return Array.from(result.embedding);
-        },
-      };
-      embeddingServiceName = 'agentic-flow';
-    } catch {
-      // Fall back to mock service
-      const service = embeddingsModule.createEmbeddingService({ provider: 'mock' });
-      realEmbeddings = {
-        embed: async (text: string) => {
-          const result = await service.embed(text);
-          return Array.from(result.embedding);
-        },
-      };
-      embeddingServiceName = 'mock';
+  // Tier 1: agentic-flow v3 ReasoningBank (fastest — WASM-accelerated)
+  const rb = await import('agentic-flow/reasoningbank').catch(() => null);
+  if (rb?.computeEmbedding) {
+    realEmbeddings = { embed: (text: string) => rb.computeEmbedding(text) };
+    embeddingServiceName = 'agentic-flow/reasoningbank';
+  }
+
+  // Tier 2: @claude-flow/embeddings
+  if (!realEmbeddings) {
+    const embeddingsModule = await import('@claude-flow/embeddings').catch(() => null);
+    if (embeddingsModule?.createEmbeddingService) {
+      try {
+        const service = embeddingsModule.createEmbeddingService({ provider: 'agentic-flow' });
+        realEmbeddings = {
+          embed: async (text: string) => {
+            const result = await service.embed(text);
+            return Array.from(result.embedding);
+          },
+        };
+        embeddingServiceName = 'agentic-flow';
+      } catch {
+        const service = embeddingsModule.createEmbeddingService({ provider: 'mock' });
+        realEmbeddings = {
+          embed: async (text: string) => {
+            const result = await service.embed(text);
+            return Array.from(result.embedding);
+          },
+        };
+        embeddingServiceName = 'mock';
+      }
     }
   }
 } catch {
-  // @claude-flow/embeddings not available, will use fallback
+  // No embedding provider available, will use fallback
 }
 
 // Storage paths

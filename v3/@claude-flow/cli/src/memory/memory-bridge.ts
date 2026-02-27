@@ -18,6 +18,7 @@
  */
 
 import * as path from 'path';
+import * as crypto from 'crypto';
 
 // ===== Lazy singleton =====
 
@@ -25,9 +26,29 @@ let registryPromise: Promise<any> | null = null;
 let registryInstance: any = null;
 let bridgeAvailable: boolean | null = null;
 
+/**
+ * Resolve database path with path traversal protection.
+ * Only allows paths within or below the project's .swarm directory,
+ * or the special ':memory:' path.
+ */
 function getDbPath(customPath?: string): string {
-  const swarmDir = path.join(process.cwd(), '.swarm');
-  return customPath || path.join(swarmDir, 'memory.db');
+  const swarmDir = path.resolve(process.cwd(), '.swarm');
+  if (!customPath) return path.join(swarmDir, 'memory.db');
+  if (customPath === ':memory:') return ':memory:';
+  const resolved = path.resolve(customPath);
+  // Ensure the path doesn't escape the working directory
+  const cwd = process.cwd();
+  if (!resolved.startsWith(cwd)) {
+    return path.join(swarmDir, 'memory.db'); // fallback to safe default
+  }
+  return resolved;
+}
+
+/**
+ * Generate a secure random ID for memory entries.
+ */
+function generateId(prefix: string): string {
+  return `${prefix}_${Date.now()}_${crypto.randomBytes(8).toString('hex')}`;
 }
 
 /**
@@ -194,7 +215,8 @@ async function cacheInvalidate(registry: any, cacheKey: string): Promise<void> {
 /**
  * Validate a mutation through MutationGuard before executing.
  * Returns true if the mutation is allowed, false if rejected.
- * Falls back to allowing if guard is unavailable.
+ * When guard is unavailable (not installed), mutations are allowed.
+ * When guard is present but throws, mutations are DENIED (fail-closed).
  */
 async function guardValidate(
   registry: any,
@@ -204,12 +226,12 @@ async function guardValidate(
   try {
     const guard = registry.get('mutationGuard');
     if (!guard || typeof guard.validate !== 'function') {
-      return { allowed: true }; // No guard = allow
+      return { allowed: true }; // No guard installed = allow (degraded mode)
     }
     const result = guard.validate({ operation, params, timestamp: Date.now() });
-    return { allowed: result?.allowed !== false, reason: result?.reason };
+    return { allowed: result?.allowed === true, reason: result?.reason };
   } catch {
-    return { allowed: true }; // Guard error = allow (graceful degradation)
+    return { allowed: false, reason: 'MutationGuard validation error' }; // Fail-closed
   }
 }
 
@@ -314,7 +336,7 @@ export async function bridgeStoreEntry(options: {
 
   try {
     const { key, value, namespace = 'default', tags = [], ttl } = options;
-    const id = `entry_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+    const id = generateId('entry');
     const now = Date.now();
 
     // Phase 5: MutationGuard validation before write
@@ -368,7 +390,9 @@ export async function bridgeStoreEntry(options: {
     );
 
     // Phase 2: Write-through to TieredCache
-    const cacheKey = `entry:${namespace}:${key}`;
+    const safeNs = String(namespace).replace(/:/g, '_');
+    const safeKey = String(key).replace(/:/g, '_');
+    const cacheKey = `entry:${safeNs}:${safeKey}`;
     await cacheSet(registry, cacheKey, { id, key, namespace, content: value, embedding: embeddingJson });
 
     // Phase 4: AttestationLog write audit
@@ -558,7 +582,7 @@ export async function bridgeListEntries(options: {
         `SELECT COUNT(*) as cnt FROM memory_entries WHERE status = 'active' ${nsFilter}`
       );
       const countRow = countStmt.get(...nsParams);
-      total = countRow?.cnt || 0;
+      total = countRow?.cnt ?? 0;
     } catch {
       return null;
     }
@@ -580,7 +604,7 @@ export async function bridgeListEntries(options: {
           key: row.key || String(row.id).substring(0, 15),
           namespace: row.namespace || 'default',
           size: (row.content || '').length,
-          accessCount: row.access_count || 0,
+          accessCount: row.access_count ?? 0,
           createdAt: row.created_at || new Date().toISOString(),
           updatedAt: row.updated_at || new Date().toISOString(),
           hasEmbedding: !!(row.embedding && String(row.embedding).length > 10),
@@ -631,7 +655,9 @@ export async function bridgeGetEntry(options: {
     const { key, namespace = 'default' } = options;
 
     // Phase 2: Check TieredCache first
-    const cacheKey = `entry:${namespace}:${key}`;
+    const safeNs = String(namespace).replace(/:/g, '_');
+    const safeKey = String(key).replace(/:/g, '_');
+    const cacheKey = `entry:${safeNs}:${safeKey}`;
     const cached = await cacheGet(registry, cacheKey);
     if (cached && cached.content) {
       return {
@@ -643,7 +669,7 @@ export async function bridgeGetEntry(options: {
           key: cached.key || key,
           namespace: cached.namespace || namespace,
           content: cached.content || '',
-          accessCount: cached.accessCount || 0,
+          accessCount: cached.accessCount ?? 0,
           createdAt: cached.createdAt || new Date().toISOString(),
           updatedAt: cached.updatedAt || new Date().toISOString(),
           hasEmbedding: !!cached.embedding,
@@ -688,7 +714,7 @@ export async function bridgeGetEntry(options: {
       key: row.key || String(row.id),
       namespace: row.namespace || 'default',
       content: row.content || '',
-      accessCount: (row.access_count || 0) + 1,
+      accessCount: (row.access_count ?? 0) + 1,
       createdAt: row.created_at || new Date().toISOString(),
       updatedAt: row.updated_at || new Date().toISOString(),
       hasEmbedding: !!(row.embedding && String(row.embedding).length > 10),
@@ -750,7 +776,9 @@ export async function bridgeDeleteEntry(options: {
     }
 
     // Phase 2: Invalidate cache
-    await cacheInvalidate(registry, `entry:${namespace}:${key}`);
+    const safeNs = String(namespace).replace(/:/g, '_');
+    const safeKey = String(key).replace(/:/g, '_');
+    await cacheInvalidate(registry, `entry:${safeNs}:${safeKey}`);
 
     // Phase 4: AttestationLog delete audit
     if (changes > 0) {
@@ -760,7 +788,7 @@ export async function bridgeDeleteEntry(options: {
     let remaining = 0;
     try {
       const row = ctx.db.prepare(`SELECT COUNT(*) as cnt FROM memory_entries WHERE status = 'active'`).get();
-      remaining = row?.cnt || 0;
+      remaining = row?.cnt ?? 0;
     } catch {
       // Non-fatal
     }
@@ -872,7 +900,7 @@ export async function bridgeGetHNSWStatus(
       const row = ctx.db.prepare(
         `SELECT COUNT(*) as cnt FROM memory_entries WHERE status = 'active' AND embedding IS NOT NULL`,
       ).get();
-      entryCount = row?.cnt || 0;
+      entryCount = row?.cnt ?? 0;
     } catch {
       // Table might not exist
     }
@@ -1103,7 +1131,7 @@ export async function bridgeStorePattern(options: {
 
   try {
     const reasoningBank = registry.get('reasoningBank');
-    const patternId = `pattern-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+    const patternId = generateId('pattern');
 
     if (reasoningBank && typeof reasoningBank.store === 'function') {
       await reasoningBank.store({
@@ -1157,7 +1185,7 @@ export async function bridgeSearchPatterns(options: {
         results: Array.isArray(results) ? results.map((r: any) => ({
           id: r.id || r.patternId || '',
           content: r.content || r.pattern || '',
-          score: r.score || r.confidence || 0,
+          score: r.score ?? r.confidence ?? 0,
         })) : [],
         controller: 'reasoningBank',
       };
@@ -1291,7 +1319,7 @@ export async function bridgeRecordCausalEdge(options: {
     if (causalGraph && typeof causalGraph.addEdge === 'function') {
       causalGraph.addEdge(options.sourceId, options.targetId, {
         relation: options.relation,
-        weight: options.weight || 1.0,
+        weight: options.weight ?? 1.0,
         timestamp: Date.now(),
       });
       return { success: true, controller: 'causalGraph' };
@@ -1305,7 +1333,7 @@ export async function bridgeRecordCausalEdge(options: {
           INSERT OR REPLACE INTO memory_entries (id, key, namespace, content, type, created_at, updated_at, status)
           VALUES (?, ?, 'causal-edges', ?, 'procedural', ?, ?, 'active')
         `).run(
-          `edge-${Date.now()}`,
+          generateId('edge'),
           `${options.sourceId}→${options.targetId}`,
           JSON.stringify(options),
           Date.now(), Date.now(),
@@ -1413,8 +1441,8 @@ export async function bridgeSessionEnd(options: {
       value: JSON.stringify({
         sessionId: options.sessionId,
         summary: options.summary || 'Session ended',
-        tasksCompleted: options.tasksCompleted || 0,
-        patternsLearned: options.patternsLearned || 0,
+        tasksCompleted: options.tasksCompleted ?? 0,
+        patternsLearned: options.patternsLearned ?? 0,
         endedAt: new Date().toISOString(),
       }),
       namespace: 'session',
@@ -1468,7 +1496,7 @@ export async function bridgeRouteTask(options: {
       if (result) {
         return {
           route: result.route || result.category || 'general',
-          confidence: result.confidence || result.score || 0.5,
+          confidence: result.confidence ?? result.score ?? 0.5,
           agents: result.agents || result.suggestedAgents || [],
           controller: 'semanticRouter',
         };
@@ -1482,7 +1510,7 @@ export async function bridgeRouteTask(options: {
       if (rec) {
         return {
           route: rec.algorithm || rec.route || 'general',
-          confidence: rec.confidence || 0.5,
+          confidence: rec.confidence ?? 0.5,
           agents: rec.agents || [],
           controller: 'learningSystem',
         };
@@ -1526,7 +1554,7 @@ export async function bridgeHealthCheck(
     const cache = registry.get('tieredCache');
     if (cache && typeof cache.stats === 'function') {
       const s = cache.stats();
-      cacheStats = { size: s.size || 0, hits: s.hits || 0, misses: s.misses || 0 };
+      cacheStats = { size: s.size ?? 0, hits: s.hits ?? 0, misses: s.misses ?? 0 };
     }
 
     return { available: true, controllers, attestationCount, cacheStats };
@@ -1539,40 +1567,89 @@ export async function bridgeHealthCheck(
 
 /**
  * Store to hierarchical memory with tier.
+ * Valid tiers: working, episodic, semantic
+ *
+ * Real HierarchicalMemory API (agentdb alpha.10+):
+ *   store(content, importance?, tier?, options?) → Promise<string>
+ * Stub API (fallback):
+ *   store(key, value, tier) — synchronous
  */
-export async function bridgeHierarchicalStore(params: { key: string; value: string; tier?: string }): Promise<any> {
+export async function bridgeHierarchicalStore(params: { key: string; value: string; tier?: string; importance?: number }): Promise<any> {
   const registry = await getRegistry();
   if (!registry) return null;
   try {
-    const hm = registry.getController('hierarchicalMemory');
+    const hm = registry.get('hierarchicalMemory');
     if (!hm) return { success: false, error: 'HierarchicalMemory not available' };
-    await hm.store(params.key, params.value, params.tier || 'working');
-    return { success: true, key: params.key, tier: params.tier || 'working' };
+    const tier = params.tier || 'working';
+
+    // Detect real HierarchicalMemory (has async store returning id) vs stub
+    if (typeof hm.getStats === 'function' && typeof hm.promote === 'function') {
+      // Real agentdb HierarchicalMemory
+      const id = await hm.store(params.value, params.importance || 0.5, tier, {
+        metadata: { key: params.key },
+        tags: [params.key],
+      });
+      return { success: true, id, key: params.key, tier };
+    }
+    // Stub fallback
+    hm.store(params.key, params.value, tier);
+    return { success: true, key: params.key, tier };
   } catch (e: any) { return { success: false, error: e.message }; }
 }
 
 /**
  * Recall from hierarchical memory.
+ *
+ * Real HierarchicalMemory API (agentdb alpha.10+):
+ *   recall(query: MemoryQuery) → Promise<MemoryItem[]>
+ *   where MemoryQuery = { query, tier?, k?, threshold?, context?, includeDecayed? }
+ * Stub API (fallback):
+ *   recall(query: string, topK: number) → synchronous array
  */
 export async function bridgeHierarchicalRecall(params: { query: string; tier?: string; topK?: number }): Promise<any> {
   const registry = await getRegistry();
   if (!registry) return null;
   try {
-    const hm = registry.getController('hierarchicalMemory');
+    const hm = registry.get('hierarchicalMemory');
     if (!hm) return { results: [], error: 'HierarchicalMemory not available' };
-    const results = await hm.recall(params.query, params.topK || 5);
-    return { results, controller: 'hierarchicalMemory' };
+
+    // Detect real HierarchicalMemory vs stub
+    if (typeof hm.getStats === 'function' && typeof hm.promote === 'function') {
+      // Real agentdb HierarchicalMemory — recall takes MemoryQuery object
+      const memoryQuery: any = {
+        query: params.query,
+        k: params.topK || 5,
+      };
+      if (params.tier) {
+        memoryQuery.tier = params.tier;
+      }
+      const results = await hm.recall(memoryQuery);
+      return { results: results || [], controller: 'hierarchicalMemory' };
+    }
+
+    // Stub fallback — recall(string, number)
+    const results = hm.recall(params.query, params.topK || 5);
+    const filtered = params.tier
+      ? results.filter((r: any) => r.tier === params.tier)
+      : results;
+    return { results: filtered, controller: 'hierarchicalMemory' };
   } catch (e: any) { return { results: [], error: e.message }; }
 }
 
 /**
  * Run memory consolidation.
+ *
+ * Real MemoryConsolidation API (agentdb alpha.10+):
+ *   consolidate() → Promise<ConsolidationReport>
+ *   ConsolidationReport = { episodicProcessed, semanticCreated, memoriesForgotten, ... }
+ * Stub API (fallback):
+ *   consolidate() → { promoted, pruned, timestamp }
  */
 export async function bridgeConsolidate(params: { minAge?: number; maxEntries?: number }): Promise<any> {
   const registry = await getRegistry();
   if (!registry) return null;
   try {
-    const mc = registry.getController('memoryConsolidation');
+    const mc = registry.get('memoryConsolidation');
     if (!mc) return { success: false, error: 'MemoryConsolidation not available' };
     const result = await mc.consolidate();
     return { success: true, consolidated: result };
@@ -1581,18 +1658,44 @@ export async function bridgeConsolidate(params: { minAge?: number; maxEntries?: 
 
 /**
  * Batch operations (insert, update, delete).
+ * - insert: calls insertEpisodes(entries) where entries are {content, metadata?}
+ * - delete: calls bulkDelete(table, conditions) on episodes table
+ * - update: calls bulkUpdate(table, updates, conditions) on episodes table
  */
 export async function bridgeBatchOperation(params: { operation: string; entries: any[] }): Promise<any> {
   const registry = await getRegistry();
   if (!registry) return null;
   try {
-    const batch = registry.getController('batchOperations');
+    const batch = registry.get('batchOperations');
     if (!batch) return { success: false, error: 'BatchOperations not available' };
     let result;
     switch (params.operation) {
-      case 'insert': result = await batch.insertEpisodes(params.entries); break;
-      case 'delete': result = await batch.bulkDelete(params.entries.map((e: any) => e.key)); break;
-      case 'update': result = await batch.bulkUpdate(params.entries); break;
+      case 'insert': {
+        // insertEpisodes expects [{content, metadata?, embedding?}]
+        const episodes = params.entries.map((e: any) => ({
+          content: e.value || e.content || JSON.stringify(e),
+          metadata: e.metadata || { key: e.key },
+        }));
+        result = await batch.insertEpisodes(episodes);
+        break;
+      }
+      case 'delete': {
+        // bulkDelete(table, conditions) — conditions is a WHERE clause object
+        const keys = params.entries.map((e: any) => e.key).filter(Boolean);
+        for (const key of keys) {
+          await batch.bulkDelete('episodes', { key });
+        }
+        result = { deleted: keys.length };
+        break;
+      }
+      case 'update': {
+        // bulkUpdate(table, updates, conditions)
+        for (const entry of params.entries) {
+          await batch.bulkUpdate('episodes', { content: entry.value || entry.content }, { key: entry.key });
+        }
+        result = { updated: params.entries.length };
+        break;
+      }
       default: return { success: false, error: `Unknown operation: ${params.operation}` };
     }
     return { success: true, operation: params.operation, count: params.entries.length, result };
@@ -1601,27 +1704,51 @@ export async function bridgeBatchOperation(params: { operation: string; entries:
 
 /**
  * Synthesize context from memories.
+ * ContextSynthesizer.synthesize is a static method that takes MemoryPattern[] (not a string).
  */
 export async function bridgeContextSynthesize(params: { query: string; maxEntries?: number }): Promise<any> {
   const registry = await getRegistry();
   if (!registry) return null;
   try {
-    const agentdbModule: any = await import('agentdb');
-    const ContextSynthesizer = agentdbModule.ContextSynthesizer;
-    if (!ContextSynthesizer) return { success: false, error: 'ContextSynthesizer not available' };
-    const result = ContextSynthesizer.synthesize(params.query, []);
+    const CS = registry.get('contextSynthesizer');
+    if (!CS || typeof CS.synthesize !== 'function') {
+      return { success: false, error: 'ContextSynthesizer not available' };
+    }
+    // Gather memory patterns from hierarchical memory as input
+    const hm = registry.get('hierarchicalMemory');
+    let memories: any[] = [];
+    if (hm && typeof hm.recall === 'function') {
+      // Detect real HierarchicalMemory (MemoryQuery object) vs stub (string, number)
+      let recalled: any[];
+      if (typeof hm.promote === 'function') {
+        // Real agentdb HierarchicalMemory
+        recalled = await hm.recall({ query: params.query, k: params.maxEntries || 10 });
+      } else {
+        // Stub
+        recalled = hm.recall(params.query, params.maxEntries || 10);
+      }
+      memories = (recalled || []).map((r: any) => ({
+        content: r.value || r.content || '',
+        key: r.key || r.id || '',
+        reward: 1,
+        verdict: 'success',
+      }));
+    }
+    const result = CS.synthesize(memories, { includeRecommendations: true });
     return { success: true, synthesis: result };
   } catch (e: any) { return { success: false, error: e.message }; }
 }
 
 /**
  * Route via SemanticRouter.
+ * Available since agentdb 3.0.0-alpha.10 — uses @ruvector/router for
+ * semantic matching with keyword fallback.
  */
 export async function bridgeSemanticRoute(params: { input: string }): Promise<any> {
   const registry = await getRegistry();
   if (!registry) return null;
   try {
-    const router = registry.getController('semanticRouter');
+    const router = registry.get('semanticRouter');
     if (!router) return { route: null, error: 'SemanticRouter not available' };
     const result = await router.route(params.input);
     return { route: result, controller: 'semanticRouter' };

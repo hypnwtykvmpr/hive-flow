@@ -1,7 +1,7 @@
 {
   "name": "claude-flow",
-  "version": "3.1.0-alpha.52",
-  "description": "Enterprise AI agent orchestration for Claude Code - Deploy 60+ specialized agents in coordinated swarms with self-learning, fault-tolerant consensus, vector memory, and MCP integration",
+  "version": "3.5.0",
+  "description": "Ruflo - Enterprise AI agent orchestration for Claude Code. Deploy 60+ specialized agents in coordinated swarms with self-learning, fault-tolerant consensus, vector memory, and MCP integration",
   "main": "dist/index.js",
   "type": "module",
   "bin": {
@@ -131,6 +131,6 @@
   "license": "MIT",
   "publishConfig": {
     "access": "public",
-    "tag": "v3alpha"
+    "tag": "latest"
   }
 }
