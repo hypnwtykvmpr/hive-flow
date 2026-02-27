@@ -1485,7 +1485,30 @@ export async function loadEmbeddingModel(options?: {
       };
     }
 
-    // Fallback: Check for agentic-flow ONNX
+    // Fallback: Check for agentic-flow ReasoningBank embeddings (v3)
+    const reasoningBank = await import('agentic-flow/reasoningbank').catch(() => null);
+
+    if (reasoningBank?.computeEmbedding) {
+      if (verbose) {
+        console.log('Loading agentic-flow ReasoningBank embedding model...');
+      }
+
+      embeddingModelState = {
+        loaded: true,
+        model: { embed: reasoningBank.computeEmbedding },
+        tokenizer: null,
+        dimensions: 768
+      };
+
+      return {
+        success: true,
+        dimensions: 768,
+        modelName: 'agentic-flow/reasoningbank',
+        loadTime: Date.now() - startTime
+      };
+    }
+
+    // Legacy fallback: Check for agentic-flow core embeddings
     const agenticFlow = await import('agentic-flow').catch(() => null);
 
     if (agenticFlow && (agenticFlow as any).embeddings) {

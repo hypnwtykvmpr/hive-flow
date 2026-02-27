@@ -3835,18 +3835,21 @@ const tokenOptimizeCommand: Command = {
     let reasoningBank: any = null;
 
     try {
-      // Check if agentic-flow is available
-      const af = await import('agentic-flow').catch(() => null);
-      if (af) {
+      // Check if agentic-flow v3 is available
+      const rb = await import('agentic-flow/reasoningbank').catch(() => null);
+      if (rb) {
         agenticFlowAvailable = true;
-        // Try to load ReasoningBank
-        const rb = await import('agentic-flow/reasoningbank').catch(() => null);
-        if (rb && typeof rb.retrieveMemories === 'function') {
+        if (typeof rb.retrieveMemories === 'function') {
           reasoningBank = rb;
         }
+      } else {
+        // Legacy check for older agentic-flow
+        const af = await import('agentic-flow').catch(() => null);
+        if (af) agenticFlowAvailable = true;
       }
 
-      spinner.succeed(agenticFlowAvailable ? 'agentic-flow detected' : 'agentic-flow not available (using fallbacks)');
+      const versionLabel = agenticFlowAvailable ? `agentic-flow v3 detected (ReasoningBank: ${reasoningBank ? 'active' : 'unavailable'})` : 'agentic-flow not available (using fallbacks)';
+      spinner.succeed(versionLabel);
       output.writeln();
 
       // Anti-drift config (hardcoded optimal values from research)

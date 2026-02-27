@@ -1725,8 +1725,8 @@ npx @claude-flow/cli@latest hive-mind consensus --propose "task"
 ### Integrated Packages
 | Package | Version | Purpose |
 |---------|---------|---------|
-| agentic-flow | 2.0.1-alpha | Core coordination |
-| agentdb | 2.0.0-alpha.3.4 | Vector database |
+| agentic-flow | 3.0.0-alpha.1 | Core coordination + ReasoningBank + Router |
+| agentdb | 3.0.0-alpha.10 | Vector database + 8 controllers |
 | @ruvector/attention | 0.1.3 | Flash attention |
 | @ruvector/sona | 0.1.5 | Neural learning |
 

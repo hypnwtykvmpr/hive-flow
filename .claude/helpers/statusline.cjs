@@ -536,8 +536,71 @@ function progressBar(current, total) {
   return '[' + '\u25CF'.repeat(filled) + '\u25CB'.repeat(width - filled) + ']';
 }
 
+// Single-line statusline for Claude Code's status bar
 function generateStatusline() {
-  // Collect all data (mostly pure Node.js, one git exec)
+  const git = getGitInfo();
+  const modelName = getModelName();
+  const swarm = getSwarmStatus();
+  const system = getSystemMetrics();
+  const session = getSessionStats();
+  const hooks = getHooksStatus();
+  const integration = getIntegrationStatus();
+
+  const parts = [];
+
+  // Branding
+  parts.push(`${c.bold}${c.brightPurple}\u258A Claude Flow V3${c.reset}`);
+
+  // User + swarm indicator
+  const dot = swarm.coordinationActive ? `${c.brightGreen}\u25CF${c.reset}` : `${c.brightCyan}\u25CF${c.reset}`;
+  parts.push(`${dot} ${c.brightCyan}${git.name}${c.reset}`);
+
+  // Git branch + changes
+  if (git.gitBranch) {
+    let branchPart = `${c.brightBlue}\u23C7 ${git.gitBranch}${c.reset}`;
+    const changes = [];
+    if (git.staged > 0) changes.push(`${c.brightGreen}+${git.staged}${c.reset}`);
+    if (git.modified > 0) changes.push(`${c.brightYellow}~${git.modified}${c.reset}`);
+    if (git.untracked > 0) changes.push(`${c.dim}?${git.untracked}${c.reset}`);
+    if (changes.length > 0) branchPart += ` ${changes.join('')}`;
+    if (git.ahead > 0) branchPart += ` ${c.brightGreen}\u2191${git.ahead}${c.reset}`;
+    if (git.behind > 0) branchPart += ` ${c.brightRed}\u2193${git.behind}${c.reset}`;
+    parts.push(branchPart);
+  }
+
+  // Model
+  parts.push(`${c.purple}${modelName}${c.reset}`);
+
+  // Session duration
+  if (session.duration) {
+    parts.push(`${c.cyan}\u23F1 ${session.duration}${c.reset}`);
+  }
+
+  // Intelligence %
+  const intellColor = system.intelligencePct >= 80 ? c.brightGreen : system.intelligencePct >= 40 ? c.brightYellow : c.dim;
+  parts.push(`${intellColor}\u25CF ${system.intelligencePct}%${c.reset}`);
+
+  // Swarm agents (only if active)
+  if (swarm.activeAgents > 0 || swarm.coordinationActive) {
+    parts.push(`${c.brightYellow}\u25C9 ${swarm.activeAgents}/${swarm.maxAgents}${c.reset}`);
+  }
+
+  // Hooks (compact)
+  if (hooks.enabled > 0) {
+    parts.push(`${c.brightGreen}\u2713${hooks.enabled}h${c.reset}`);
+  }
+
+  // MCP (compact)
+  if (integration.mcpServers.total > 0) {
+    const mcpCol = integration.mcpServers.enabled === integration.mcpServers.total ? c.brightGreen : c.brightYellow;
+    parts.push(`${mcpCol}MCP${integration.mcpServers.enabled}${c.reset}`);
+  }
+
+  return parts.join(` ${c.dim}\u2502${c.reset} `);
+}
+
+// Multi-line dashboard (for --dashboard flag)
+function generateDashboard() {
   const git = getGitInfo();
   const modelName = getModelName();
   const progress = getV3Progress();
@@ -671,6 +734,9 @@ if (process.argv.includes('--json')) {
   console.log(JSON.stringify(generateJSON(), null, 2));
 } else if (process.argv.includes('--compact')) {
   console.log(JSON.stringify(generateJSON()));
-} else {
+} else if (process.argv.includes('--single-line')) {
   console.log(generateStatusline());
+} else {
+  // Default: multi-line dashboard
+  console.log(generateDashboard());
 }

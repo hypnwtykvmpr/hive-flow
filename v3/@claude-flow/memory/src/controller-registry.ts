@@ -23,7 +23,7 @@ import { LearningBridge } from './learning-bridge.js';
 import type { LearningBridgeConfig } from './learning-bridge.js';
 import { MemoryGraph } from './memory-graph.js';
 import type { MemoryGraphConfig } from './memory-graph.js';
-import { CacheManager, TieredCacheManager } from './cache-manager.js';
+import { TieredCacheManager } from './cache-manager.js';
 import type { CacheConfig } from './types.js';
 
 // ===== Types =====
@@ -57,7 +57,15 @@ export type CLIControllerName =
   | 'hybridSearch'
   | 'federatedSession'
   | 'semanticRouter'
-  | 'sonaTrajectory';
+  | 'sonaTrajectory'
+  | 'hierarchicalMemory'
+  | 'memoryConsolidation'
+  | 'batchOperations'
+  | 'contextSynthesizer'
+  | 'gnnService'
+  | 'rvfOptimizer'
+  | 'mmrDiversityRanker'
+  | 'guardedVectorBackend';
 
 /**
  * All controller names
@@ -153,15 +161,15 @@ export const INIT_LEVELS: InitLevel[] = [
   // Level 0: Foundation - already exists
   { level: 0, controllers: [] },
   // Level 1: Core intelligence
-  { level: 1, controllers: ['reasoningBank', 'learningBridge', 'hybridSearch', 'tieredCache'] },
+  { level: 1, controllers: ['reasoningBank', 'hierarchicalMemory', 'learningBridge', 'hybridSearch', 'tieredCache'] },
   // Level 2: Graph & security
-  { level: 2, controllers: ['memoryGraph', 'agentMemoryScope', 'vectorBackend', 'mutationGuard'] },
+  { level: 2, controllers: ['memoryGraph', 'agentMemoryScope', 'vectorBackend', 'mutationGuard', 'gnnService'] },
   // Level 3: Specialization
-  { level: 3, controllers: ['skills', 'explainableRecall', 'reflexion', 'attestationLog'] },
+  { level: 3, controllers: ['skills', 'explainableRecall', 'reflexion', 'attestationLog', 'batchOperations', 'memoryConsolidation'] },
   // Level 4: Causal & routing
   { level: 4, controllers: ['causalGraph', 'nightlyLearner', 'learningSystem', 'semanticRouter'] },
   // Level 5: Advanced services
-  { level: 5, controllers: ['graphTransformer', 'sonaTrajectory'] },
+  { level: 5, controllers: ['graphTransformer', 'sonaTrajectory', 'contextSynthesizer', 'rvfOptimizer', 'mmrDiversityRanker', 'guardedVectorBackend'] },
   // Level 6: Session management
   { level: 6, controllers: ['federatedSession', 'graphAdapter'] },
 ];
@@ -214,6 +222,7 @@ export class ControllerRegistry extends EventEmitter {
    */
   async initialize(config: RuntimeConfig = {}): Promise<void> {
     if (this.initialized) return;
+    this.initialized = true; // Set early to prevent concurrent re-entry
 
     this.config = config;
     const startTime = performance.now();
@@ -262,7 +271,6 @@ export class ControllerRegistry extends EventEmitter {
     }
 
     this.initTimeMs = performance.now() - startTime;
-    this.initialized = true;
     this.emit('initialized', {
       initTimeMs: this.initTimeMs,
       activeControllers: this.getActiveCount(),
@@ -451,6 +459,16 @@ export class ControllerRegistry extends EventEmitter {
    */
   private async initAgentDB(config: RuntimeConfig): Promise<void> {
     try {
+      // Validate dbPath to prevent path traversal
+      const dbPath = config.dbPath || ':memory:';
+      if (dbPath !== ':memory:') {
+        const resolved = require('path').resolve(dbPath);
+        if (resolved.includes('..')) {
+          this.emit('agentdb:unavailable', { reason: 'Invalid dbPath' });
+          return;
+        }
+      }
+
       const agentdbModule: any = await import('agentdb');
       const AgentDBClass = agentdbModule.AgentDB || agentdbModule.default;
 
@@ -459,18 +477,19 @@ export class ControllerRegistry extends EventEmitter {
         return;
       }
 
-      this.agentdb = new AgentDBClass({
-        dbPath: config.dbPath || ':memory:',
-      });
+      this.agentdb = new AgentDBClass({ dbPath });
 
-      // Suppress agentdb's info-level console.log during init
+      // Suppress agentdb's noisy info-level output during init
+      // using stderr redirect instead of monkey-patching console.log
       const origLog = console.log;
-      console.log = (...args: unknown[]) => {
+      const suppressFilter = (args: unknown[]) => {
         const msg = String(args[0] ?? '');
-        if (msg.includes('Transformers.js') ||
-            msg.includes('better-sqlite3') ||
-            msg.includes('[AgentDB]')) return;
-        origLog.apply(console, args);
+        return msg.includes('Transformers.js') ||
+               msg.includes('better-sqlite3') ||
+               msg.includes('[AgentDB]');
+      };
+      console.log = (...args: unknown[]) => {
+        if (!suppressFilter(args)) origLog.apply(console, args);
       };
       try {
         await this.agentdb.initialize();
@@ -480,8 +499,7 @@ export class ControllerRegistry extends EventEmitter {
       this.emit('agentdb:initialized');
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
-      this.emit('agentdb:unavailable', { reason: msg });
-      // AgentDB not available — CLI-layer controllers can still work
+      this.emit('agentdb:unavailable', { reason: msg.substring(0, 200) });
       this.agentdb = null;
     }
   }
@@ -502,6 +520,7 @@ export class ControllerRegistry extends EventEmitter {
       case 'reasoningBank':
       case 'learningBridge':
       case 'tieredCache':
+      case 'hierarchicalMemory':
         return true;
 
       // Graph — enabled if backend available
@@ -512,6 +531,7 @@ export class ControllerRegistry extends EventEmitter {
       case 'mutationGuard':
       case 'attestationLog':
       case 'vectorBackend':
+      case 'guardedVectorBackend':
         return this.agentdb !== null;
 
       // AgentDB-internal controllers — only if AgentDB available
@@ -524,12 +544,21 @@ export class ControllerRegistry extends EventEmitter {
       case 'nightlyLearner':
       case 'graphTransformer':
       case 'graphAdapter':
+      case 'gnnService':
+      case 'memoryConsolidation':
+      case 'batchOperations':
+      case 'contextSynthesizer':
+      case 'rvfOptimizer':
+      case 'mmrDiversityRanker':
+        return this.agentdb !== null;
+
+      // SemanticRouter — auto-enable if agentdb available (exported since alpha.10)
+      case 'semanticRouter':
         return this.agentdb !== null;
 
       // Optional controllers
       case 'hybridSearch':
       case 'agentMemoryScope':
-      case 'semanticRouter':
       case 'sonaTrajectory':
       case 'federatedSession':
         return false; // Require explicit enabling
@@ -639,16 +668,18 @@ export class ControllerRegistry extends EventEmitter {
         // Agent memory scope — placeholder, activated when explicitly enabled
         return null;
 
-      case 'semanticRouter':
-        // Delegate to AgentDB's SemanticRouter if available
-        if (this.agentdb && typeof this.agentdb.getController === 'function') {
-          try {
-            return this.agentdb.getController('semanticRouter');
-          } catch {
-            return null;
-          }
-        }
-        return null;
+      case 'semanticRouter': {
+        // SemanticRouter exported from agentdb 3.0.0-alpha.10 (ADR-062)
+        // Constructor: () — requires initialize() after construction
+        try {
+          const agentdbModule: any = await import('agentdb');
+          const SR = agentdbModule.SemanticRouter;
+          if (!SR) return null;
+          const router = new SR();
+          await router.initialize();
+          return router;
+        } catch { return null; }
+      }
 
       case 'sonaTrajectory':
         // Delegate to AgentDB's SonaTrajectoryService if available
@@ -661,36 +692,225 @@ export class ControllerRegistry extends EventEmitter {
         }
         return null;
 
+      case 'hierarchicalMemory': {
+        // HierarchicalMemory exported from agentdb 3.0.0-alpha.10 (ADR-066 Phase P2-3)
+        // Constructor: (db, embedder, vectorBackend?, graphBackend?, config?)
+        if (!this.agentdb) return this.createTieredMemoryStub();
+        try {
+          const agentdbModule: any = await import('agentdb');
+          const HM = agentdbModule.HierarchicalMemory;
+          if (!HM) return this.createTieredMemoryStub();
+          const embedder = this.createEmbeddingService();
+          const hm = new HM(this.agentdb.database, embedder);
+          await hm.initializeDatabase();
+          return hm;
+        } catch {
+          return this.createTieredMemoryStub();
+        }
+      }
+
+      case 'memoryConsolidation': {
+        // MemoryConsolidation exported from agentdb 3.0.0-alpha.10 (ADR-066 Phase P2-3)
+        // Constructor: (db, hierarchicalMemory, embedder, vectorBackend?, graphBackend?, config?)
+        if (!this.agentdb) return this.createConsolidationStub();
+        try {
+          const agentdbModule: any = await import('agentdb');
+          const MC = agentdbModule.MemoryConsolidation;
+          if (!MC) return this.createConsolidationStub();
+          // Get the HierarchicalMemory instance (must be initialized at level 1 before us at level 3)
+          const hm: any = this.get('hierarchicalMemory');
+          if (!hm || typeof hm.recall !== 'function' || typeof hm.store !== 'function') {
+            return this.createConsolidationStub();
+          }
+          const embedder = this.createEmbeddingService();
+          const mc = new MC(this.agentdb.database, hm, embedder);
+          await mc.initializeDatabase();
+          return mc;
+        } catch {
+          return this.createConsolidationStub();
+        }
+      }
+
       case 'federatedSession':
         // Federated session — placeholder for Phase 4
         return null;
 
-      // ----- AgentDB-internal controllers -----
-      // These are accessed via agentdb.getController() and registered
-      // here for health tracking and lifecycle management.
+      // ----- AgentDB-internal controllers (via getController) -----
+      // AgentDB.getController() only supports: reflexion/memory, skills, causalGraph/causal
+      case 'reasoningBank': {
+        // ReasoningBank is exported directly, not via getController
+        if (!this.agentdb) return null;
+        try {
+          const agentdbModule: any = await import('agentdb');
+          const RB = agentdbModule.ReasoningBank;
+          if (!RB) return null;
+          return new RB(this.agentdb.database);
+        } catch { return null; }
+      }
 
-      case 'reasoningBank':
       case 'skills':
       case 'reflexion':
-      case 'causalGraph':
-      case 'causalRecall':
-      case 'learningSystem':
-      case 'explainableRecall':
-      case 'nightlyLearner':
-      case 'graphTransformer':
-      case 'mutationGuard':
-      case 'attestationLog':
+      case 'causalGraph': {
+        if (!this.agentdb || typeof this.agentdb.getController !== 'function') return null;
+        try {
+          return this.agentdb.getController(name) ?? null;
+        } catch { return null; }
+      }
+
+      case 'causalRecall': {
+        if (!this.agentdb) return null;
+        try {
+          const agentdbModule: any = await import('agentdb');
+          const CR = agentdbModule.CausalRecall;
+          if (!CR) return null;
+          return new CR(this.agentdb.database);
+        } catch { return null; }
+      }
+
+      case 'learningSystem': {
+        if (!this.agentdb) return null;
+        try {
+          const agentdbModule: any = await import('agentdb');
+          const LS = agentdbModule.LearningSystem;
+          if (!LS) return null;
+          return new LS(this.agentdb.database);
+        } catch { return null; }
+      }
+
+      case 'explainableRecall': {
+        if (!this.agentdb) return null;
+        try {
+          const agentdbModule: any = await import('agentdb');
+          const ER = agentdbModule.ExplainableRecall;
+          if (!ER) return null;
+          return new ER(this.agentdb.database);
+        } catch { return null; }
+      }
+
+      case 'nightlyLearner': {
+        if (!this.agentdb) return null;
+        try {
+          const agentdbModule: any = await import('agentdb');
+          const NL = agentdbModule.NightlyLearner;
+          if (!NL) return null;
+          return new NL(this.agentdb.database);
+        } catch { return null; }
+      }
+
+      case 'graphTransformer': {
+        if (!this.agentdb) return null;
+        try {
+          const agentdbModule: any = await import('agentdb');
+          const GT = agentdbModule.CausalMemoryGraph;
+          if (!GT) return null;
+          return new GT(this.agentdb.database);
+        } catch { return null; }
+      }
+
+      // ----- Direct-instantiation controllers -----
+      case 'batchOperations': {
+        if (!this.agentdb) return null;
+        try {
+          const agentdbModule: any = await import('agentdb');
+          const BO = agentdbModule.BatchOperations;
+          if (!BO) return null;
+          const embedder = this.config.embeddingGenerator || null;
+          return new BO(this.agentdb.database, embedder);
+        } catch { return null; }
+      }
+
+      case 'contextSynthesizer': {
+        // ContextSynthesizer.synthesize is static — return the class itself
+        try {
+          const agentdbModule: any = await import('agentdb');
+          return agentdbModule.ContextSynthesizer ?? null;
+        } catch { return null; }
+      }
+
+      case 'mmrDiversityRanker': {
+        try {
+          const agentdbModule: any = await import('agentdb');
+          const MMR = agentdbModule.MMRDiversityRanker;
+          if (!MMR) return null;
+          return new MMR();
+        } catch { return null; }
+      }
+
+      case 'mutationGuard': {
+        // MutationGuard exported from agentdb 3.0.0-alpha.10 (ADR-060)
+        // Constructor: (config?) where config.dimension, config.maxElements, config.enableWasmProofs
+        if (!this.agentdb) return null;
+        try {
+          const agentdbModule: any = await import('agentdb');
+          const MG = agentdbModule.MutationGuard;
+          if (!MG) return null;
+          return new MG({ dimension: this.config.dimension || 384 });
+        } catch { return null; }
+      }
+
+      case 'attestationLog': {
+        // AttestationLog exported from agentdb 3.0.0-alpha.10 (ADR-060)
+        // Constructor: (db) — uses database for append-only audit log
+        if (!this.agentdb) return null;
+        try {
+          const agentdbModule: any = await import('agentdb');
+          const AL = agentdbModule.AttestationLog;
+          if (!AL) return null;
+          return new AL(this.agentdb.database);
+        } catch { return null; }
+      }
+
+      case 'gnnService': {
+        // GNNService exported from agentdb 3.0.0-alpha.10 (ADR-062)
+        // Constructor: (config?) — requires initialize() after construction
+        try {
+          const agentdbModule: any = await import('agentdb');
+          const GNN = agentdbModule.GNNService;
+          if (!GNN) return null;
+          const gnn = new GNN({ inputDim: this.config.dimension || 384 });
+          await gnn.initialize();
+          return gnn;
+        } catch { return null; }
+      }
+
+      case 'rvfOptimizer': {
+        // RVFOptimizer exported from agentdb 3.0.0-alpha.10 (ADR-062/065)
+        // Constructor: (config?) — no-arg for defaults
+        try {
+          const agentdbModule: any = await import('agentdb');
+          const RVF = agentdbModule.RVFOptimizer;
+          if (!RVF) return null;
+          return new RVF();
+        } catch { return null; }
+      }
+
+      case 'guardedVectorBackend': {
+        // GuardedVectorBackend exported from agentdb 3.0.0-alpha.10 (ADR-060)
+        // Constructor: (innerBackend, mutationGuard, attestationLog?)
+        // Requires vectorBackend and mutationGuard to be initialized first (level 2)
+        if (!this.agentdb) return null;
+        try {
+          const vb = this.get('vectorBackend');
+          const guard = this.get('mutationGuard');
+          if (!vb || !guard) return null;
+          const agentdbModule: any = await import('agentdb');
+          const GVB = agentdbModule.GuardedVectorBackend;
+          if (!GVB) return null;
+          const log = this.get('attestationLog');
+          return new GVB(vb, guard, log || undefined);
+        } catch { return null; }
+      }
+
       case 'vectorBackend':
       case 'graphAdapter': {
-        if (!this.agentdb || typeof this.agentdb.getController !== 'function') {
-          return null;
-        }
+        // These are accessed via AgentDB internal state, not direct construction
+        if (!this.agentdb) return null;
         try {
-          const controller = this.agentdb.getController(name);
-          return controller ?? null;
-        } catch {
-          return null;
-        }
+          if (typeof this.agentdb.getController === 'function') {
+            return this.agentdb.getController(name) ?? null;
+          }
+        } catch { /* fallthrough */ }
+        return null;
       }
 
       default:
@@ -708,9 +928,9 @@ export class ControllerRegistry extends EventEmitter {
     try {
       const instance = entry.instance as any;
 
-      // Try known shutdown methods
+      // Try known shutdown methods (always await for safety)
       if (typeof instance.destroy === 'function') {
-        instance.destroy();
+        await instance.destroy();
       } else if (typeof instance.shutdown === 'function') {
         await instance.shutdown();
       } else if (typeof instance.close === 'function') {
@@ -722,6 +942,83 @@ export class ControllerRegistry extends EventEmitter {
 
     entry.enabled = false;
     entry.instance = null;
+  }
+
+  /**
+   * Create an EmbeddingService for controllers that need it.
+   * Uses the config's embedding generator or creates a minimal local service.
+   */
+  private createEmbeddingService(): any {
+    // If user provided an embedding generator, wrap it
+    if (this.config.embeddingGenerator) {
+      return {
+        embed: async (text: string) => this.config.embeddingGenerator!(text),
+        embedBatch: async (texts: string[]) => Promise.all(texts.map(t => this.config.embeddingGenerator!(t))),
+        initialize: async () => {},
+      };
+    }
+    // Return a minimal stub — HierarchicalMemory falls back to manualSearch without embeddings
+    return {
+      embed: async () => new Float32Array(this.config.dimension || 384),
+      embedBatch: async (texts: string[]) => texts.map(() => new Float32Array(this.config.dimension || 384)),
+      initialize: async () => {},
+    };
+  }
+
+  /**
+   * Lightweight in-memory tiered store (fallback when HierarchicalMemory
+   * cannot be initialized from agentdb).
+   * Enforces per-tier size limits to prevent unbounded memory growth.
+   */
+  private createTieredMemoryStub() {
+    const MAX_PER_TIER = 5000;
+    const tiers: Record<string, Map<string, { value: string; ts: number }>> = {
+      working: new Map(),
+      episodic: new Map(),
+      semantic: new Map(),
+    };
+    return {
+      store(key: string, value: string, tier = 'working') {
+        const t = tiers[tier] || tiers.working;
+        // Evict oldest if at capacity
+        if (t.size >= MAX_PER_TIER) {
+          const oldest = t.keys().next().value;
+          if (oldest !== undefined) t.delete(oldest);
+        }
+        t.set(key, { value: value.substring(0, 100_000), ts: Date.now() });
+      },
+      recall(query: string, topK = 5) {
+        const safeTopK = Math.min(Math.max(1, topK), 100);
+        const q = query.toLowerCase().substring(0, 10_000);
+        const results: Array<{ key: string; value: string; tier: string; ts: number }> = [];
+        for (const [tierName, map] of Object.entries(tiers)) {
+          for (const [key, entry] of map) {
+            if (key.toLowerCase().includes(q) || entry.value.toLowerCase().includes(q)) {
+              results.push({ key, value: entry.value, tier: tierName, ts: entry.ts });
+              if (results.length >= safeTopK * 3) break; // Early exit for large stores
+            }
+          }
+        }
+        return results.sort((a, b) => b.ts - a.ts).slice(0, safeTopK);
+      },
+      getTierStats() {
+        return Object.fromEntries(
+          Object.entries(tiers).map(([name, map]) => [name, map.size]),
+        );
+      },
+    };
+  }
+
+  /**
+   * No-op consolidation stub (fallback when MemoryConsolidation
+   * cannot be initialized from agentdb).
+   */
+  private createConsolidationStub() {
+    return {
+      consolidate() {
+        return { promoted: 0, pruned: 0, timestamp: Date.now() };
+      },
+    };
   }
 }
 

@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Ruflo Banner](https://repository-images.githubusercontent.com/995029641/b9acbe16-0f49-420d-804f-468ba2a73ace)
+![Ruflo Banner](ruflo/assets/ruFlo.png)
 
 
 
@@ -24,6 +24,8 @@
 *Deploy 60+ specialized agents in coordinated swarms with self-learning capabilities, fault-tolerant consensus, and enterprise-grade security.*
 
 </div>
+
+> **Why Ruflo?** Claude Flow is now Ruflo — named by Ruv, who loves Rust, flow states, and building things that feel inevitable. The "Ru" is the Ruv. The "flo" is the flow. Underneath, WASM kernels written in Rust power the policy engine, embeddings, and proof system. 5,800 commits later, the alpha is over. This is v3.5.
 
 ## Getting into the Flow
 
@@ -124,27 +126,24 @@ flowchart TB
     style RESOURCES fill:#1a1a2e,stroke:#0f3460
 ```
 
-**RuVector Components** (`npx ruvector`):
+**RuVector Components** (included with Ruflo):
 
 | Component | Purpose | Performance |
 |-----------|---------|-------------|
-| **SONA** | Self-Optimizing Neural Architecture - learns optimal routing | <0.05ms adaptation |
-| **EWC++** | Elastic Weight Consolidation - prevents catastrophic forgetting | Preserves 95%+ knowledge |
-| **Flash Attention** | Optimized attention computation | 2.49x-7.47x speedup |
-| **HNSW** | Hierarchical Navigable Small World vector search | 150x-12,500x faster |
+| **SONA** | Self-Optimizing Neural Architecture - learns optimal routing | Fast adaptation |
+| **EWC++** | Elastic Weight Consolidation - prevents catastrophic forgetting | Preserves learned patterns |
+| **Flash Attention** | Optimized attention computation | 2-7x speedup |
+| **HNSW** | Hierarchical Navigable Small World vector search | Sub-millisecond retrieval |
 | **ReasoningBank** | Pattern storage with trajectory learning | RETRIEVE→JUDGE→DISTILL |
-| **Hyperbolic** | Poincaré ball embeddings for hierarchical data | Better code relationships |
-| **LoRA/MicroLoRA** | Low-Rank Adaptation for efficient fine-tuning | **<3μs** adaptation, 383k ops/sec |
-| **Int8 Quantization** | Memory-efficient weight storage | 3.92x memory reduction |
-| **SemanticRouter** | Semantic task routing with cosine similarity | **34,798 routes/s**, 0.029ms |
+| **Hyperbolic** | Poincare ball embeddings for hierarchical data | Better code relationships |
+| **LoRA/MicroLoRA** | Low-Rank Adaptation for efficient fine-tuning | Lightweight adaptation |
+| **Int8 Quantization** | Memory-efficient weight storage | ~4x memory reduction |
+| **SemanticRouter** | Semantic task routing with cosine similarity | Fast intent routing |
 | **9 RL Algorithms** | Q-Learning, SARSA, A2C, PPO, DQN, Decision Transformer, etc. | Task-specific learning |
 
 ```bash
-# Install RuVector standalone
-npx ruvector
-
-# Or use via Ruflo
-npx ruflo@v3alpha hooks intelligence --status
+# Use RuVector via Ruflo
+npx ruflo@alpha hooks intelligence --status
 ```
 
 </details>
@@ -214,7 +213,7 @@ Agents organize into swarms led by queens that coordinate work, prevent drift, a
 - 👷 **8 Worker Types**: Researcher, Coder, Analyst, Tester, Architect, Reviewer, Optimizer, Documenter
 - 🗳️ **3 Consensus Algorithms**: Majority, Weighted (Queen 3x), Byzantine (f < n/3)
 - 🧠 **Collective Memory**: Shared knowledge, LRU cache, SQLite persistence with WAL
-- ⚡ **Performance**: 10-20x faster batch spawning, 84.8% SWE-Bench solve rate
+- ⚡ **Performance**: Fast batch spawning with parallel agent coordination
 
 </details>
 
@@ -225,7 +224,7 @@ The system stores successful patterns in vector memory, builds a knowledge graph
 
 | Layer | Components | What It Does |
 |-------|------------|--------------|
-| Memory | HNSW, AgentDB, Cache | Stores and retrieves patterns 150x faster |
+| Memory | HNSW, AgentDB, Cache | Stores and retrieves patterns with fast HNSW search |
 | Knowledge Graph | MemoryGraph, PageRank, Communities | Identifies influential insights, detects clusters (ADR-049) |
 | Self-Learning | LearningBridge, SONA, ReasoningBank | Triggers learning from insights, confidence lifecycle (ADR-049) |
 | Agent Scopes | AgentMemoryScope, 3-scope dirs | Per-agent isolation + cross-agent knowledge transfer (ADR-049) |
@@ -276,7 +275,7 @@ Smart routing skips expensive LLM calls when possible. Simple edits use WASM (fr
 </details>
 
 <details>
-<summary>⚡ <strong>Agent Booster (WASM)</strong> — 352x faster code transforms, skip LLM entirely</summary>
+<summary>⚡ <strong>Agent Booster (WASM)</strong> — Skip LLM for simple code transforms</summary>
 
 Agent Booster uses WebAssembly to handle simple code transformations without calling the LLM at all. When the hooks system detects a simple task, it routes directly to Agent Booster for instant results.
 
@@ -401,7 +400,7 @@ swarm_init({
 | **Coordination** | Manual orchestration between tasks | Queen-led hierarchy with 5 consensus algorithms (Raft, Byzantine, Gossip) |
 | **Hive Mind** | ⛔ Not available | 🐝 Queen-led swarms with collective intelligence, 3 queen types, 8 worker types |
 | **Consensus** | ⛔ No multi-agent decisions | Byzantine fault-tolerant voting (f < n/3), weighted, majority |
-| **Memory** | Session-only, no persistence | HNSW vector memory with 150x-12,500x faster retrieval + knowledge graph |
+| **Memory** | Session-only, no persistence | HNSW vector memory with sub-ms retrieval + knowledge graph |
 | **Vector Database** | ⛔ No native support | 🐘 RuVector PostgreSQL with 77+ SQL functions, ~61µs search, 16,400 QPS |
 | **Knowledge Graph** | ⛔ Flat insight lists | PageRank + community detection identifies influential insights (ADR-049) |
 | **Collective Memory** | ⛔ No shared knowledge | Shared knowledge base with LRU cache, SQLite persistence, 8 memory types |
@@ -412,7 +411,7 @@ swarm_init({
 | **Background Workers** | Nothing runs automatically | 12 context-triggered workers auto-dispatch on file changes, patterns, sessions |
 | **LLM Provider** | Anthropic only | 6 providers with automatic failover and cost-based routing (85% savings) |
 | **Security** | Standard protections | CVE-hardened with bcrypt, input validation, path traversal prevention |
-| **Performance** | Baseline | 2.8-4.4x faster tasks, 10-20x faster swarm spawning, 84.8% SWE-Bench |
+| **Performance** | Baseline | Faster tasks via parallel swarm spawning and intelligent routing |
 
 ## Quick Start
 
@@ -577,16 +576,16 @@ wait  # Wait for all to complete
 
 ```bash
 # List collaboration templates
-npx ruflo-codex dual templates
+npx @claude-flow/codex dual templates
 
 # Run feature development swarm (architect → coder → tester → reviewer)
-npx ruflo-codex dual run --template feature --task "Add user auth"
+npx @claude-flow/codex dual run --template feature --task "Add user auth"
 
 # Run security audit swarm (scanner → analyzer → fixer)
-npx ruflo-codex dual run --template security --task "src/auth/"
+npx @claude-flow/codex dual run --template security --task "src/auth/"
 
 # Run refactoring swarm (analyzer → planner → refactorer → validator)
-npx ruflo-codex dual run --template refactor --task "src/legacy/"
+npx @claude-flow/codex dual run --template refactor --task "src/legacy/"
 ```
 
 ### Pre-Built Collaboration Templates
@@ -650,7 +649,7 @@ The **Intelligence Loop** (ADR-050) automates this cycle through hooks. Each ses
 ### Vector Search Details
 
 - **Embedding Dimensions**: 384
-- **Search Algorithm**: HNSW (150x-12,500x faster)
+- **Search Algorithm**: HNSW (sub-millisecond)
 - **Similarity Scoring**: 0-1 (higher = better)
   - Score > 0.7: Strong match, use pattern
   - Score 0.5-0.7: Partial match, adapt
@@ -701,7 +700,7 @@ claude mcp list
 Once added, Claude Code can use all 175+ ruflo MCP tools directly:
 - `swarm_init` - Initialize agent swarms
 - `agent_spawn` - Spawn specialized agents
-- `memory_search` - Search patterns with HNSW (150x faster)
+- `memory_search` - Search patterns with HNSW vector search
 - `hooks_route` - Intelligent task routing
 - And 170+ more tools...
 
@@ -728,13 +727,13 @@ Ruflo v3 introduces **self-learning neural capabilities** that no other agent or
 
 | Feature | Ruflo v3 | CrewAI | LangGraph | AutoGen | Manus |
 |---------|----------------|--------|-----------|---------|-------|
-| **Vector Memory** | ✅ HNSW (150x faster) | ⛔ | Via plugins | ⛔ | ⛔ |
+| **Vector Memory** | ✅ HNSW (sub-ms search) | ⛔ | Via plugins | ⛔ | ⛔ |
 | **Knowledge Graph** | ✅ PageRank + communities | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Self-Learning Memory** | ✅ LearningBridge (SONA) | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Agent-Scoped Memory** | ✅ 3-scope (project/local/user) | ⛔ | ⛔ | ⛔ | ⛔ |
-| **PostgreSQL Vector DB** | ✅ RuVector (77+ SQL functions, ~61µs) | ⛔ | pgvector only | ⛔ | ⛔ |
+| **PostgreSQL Vector DB** | ✅ RuVector (77+ SQL functions) | ⛔ | pgvector only | ⛔ | ⛔ |
 | **Hyperbolic Embeddings** | ✅ Poincaré ball (native + SQL) | ⛔ | ⛔ | ⛔ | ⛔ |
-| **Quantization** | ✅ Int8 (3.92x savings) | ⛔ | ⛔ | ⛔ | ⛔ |
+| **Quantization** | ✅ Int8 (~4x savings) | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Persistent Memory** | ✅ SQLite + AgentDB + PostgreSQL | ⛔ | ⛔ | ⛔ | Limited |
 | **Cross-Session Context** | ✅ Full restoration | ⛔ | ⛔ | ⛔ | ⛔ |
 | **GNN/Attention in SQL** | ✅ 39 attention mechanisms | ⛔ | ⛔ | ⛔ | ⛔ |
@@ -765,10 +764,10 @@ Ruflo v3 introduces **self-learning neural capabilities** that no other agent or
 |---------|----------------|--------|-----------|---------|-------|
 | **Threat Detection** | ✅ AIDefence (<10ms) | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Cloud Platform** | ✅ Flow Nexus | ⛔ | ⛔ | ⛔ | ⛔ |
-| **Code Transforms** | ✅ Agent Booster (352x) | ⛔ | ⛔ | ⛔ | ⛔ |
+| **Code Transforms** | ✅ Agent Booster (WASM) | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Input Validation** | ✅ Zod + Path security | ⛔ | ⛔ | ⛔ | ⛔ |
 
-<sub>*Comparison updated January 23, 2026*</sub>
+<sub>*Comparison updated February 2026. Feature availability based on public documentation.*</sub>
 
 </details>
 
@@ -779,16 +778,16 @@ What makes Ruflo different from other agent frameworks? These 10 capabilities wo
 
 | | Feature | What It Does | Technical Details |
 |---|---------|--------------|-------------------|
-| 🧠 | **SONA** | Learns which agents perform best for each task type and routes work accordingly | Self-Optimizing Neural Architecture, <0.05ms adaptation |
+| 🧠 | **SONA** | Learns which agents perform best for each task type and routes work accordingly | Self-Optimizing Neural Architecture |
 | 🔒 | **EWC++** | Preserves learned patterns when training on new ones — no forgetting | Elastic Weight Consolidation prevents catastrophic forgetting |
 | 🎯 | **MoE** | Routes tasks through 8 specialized expert networks based on task type | Mixture of 8 Experts with dynamic gating |
-| ⚡ | **Flash Attention** | Accelerates attention computation 2-7x for faster agent responses | 2.49x-7.47x speedup for attention computations |
-| 🌐 | **Hyperbolic Embeddings** | Represents hierarchical code relationships in compact vector space | Poincaré ball model for hierarchical code relationships |
-| 📦 | **LoRA** | Compresses model weights 128x so agents fit in limited memory | 128x memory compression via Low-Rank Adaptation |
-| 🗜️ | **Int8 Quantization** | Converts 32-bit weights to 8-bit with minimal accuracy loss | 3.92x memory reduction with calibrated 8-bit integers |
+| ⚡ | **Flash Attention** | Accelerates attention computation for faster agent responses | Optimized attention via @ruvector/attention |
+| 🌐 | **Hyperbolic Embeddings** | Represents hierarchical code relationships in compact vector space | Poincare ball model for hierarchical data |
+| 📦 | **LoRA** | Lightweight model adaptation so agents fit in limited memory | Low-Rank Adaptation via @ruvector/sona |
+| 🗜️ | **Int8 Quantization** | Converts 32-bit weights to 8-bit with minimal accuracy loss | ~4x memory reduction with calibrated integers |
 | 🤝 | **Claims System** | Manages task ownership between humans and agents with handoff support | Work ownership with claim/release/handoff protocols |
 | 🛡️ | **Byzantine Consensus** | Coordinates agents even when some fail or return bad results | Fault-tolerant, handles up to 1/3 failing agents |
-| 🐘 | **RuVector PostgreSQL** | Enterprise-grade vector database with 77+ SQL functions for AI operations | ~61µs search, 16,400 QPS, GNN/attention in SQL |
+| 🐘 | **RuVector PostgreSQL** | Enterprise-grade vector database with 77+ SQL functions for AI operations | Fast vector search with GNN/attention in SQL |
 
 </details>
 
@@ -1014,6 +1013,90 @@ flowchart LR
 | **MemoryGraph** | PageRank + label propagation knowledge graph | 2.78 ms build (1k nodes) |
 | **AgentMemoryScope** | 3-scope agent memory (project/local/user) with cross-agent transfer | 1.25 ms transfer |
 | **AutoMemoryBridge** | Bidirectional sync: Claude Code auto memory files ↔ AgentDB | ADR-048 |
+
+</details>
+
+<details>
+<summary>🧠 <strong>AgentDB v3 Controllers</strong> — 20+ intelligent memory controllers</summary>
+
+Ruflo V3 integrates AgentDB v3 (3.0.0-alpha.10) providing 20+ memory controllers accessible via MCP tools and the CLI.
+
+**Core Memory:**
+
+| Controller | MCP Tool | Description |
+|-----------|----------|-------------|
+| HierarchicalMemory | `agentdb_hierarchical-store/recall` | Working → episodic → semantic memory tiers with Ebbinghaus forgetting curves and spaced repetition |
+| MemoryConsolidation | `agentdb_consolidate` | Automatic clustering and merging of related memories into semantic summaries |
+| BatchOperations | `agentdb_batch` | Bulk insert/update/delete operations for high-throughput memory management |
+| ReasoningBank | `agentdb_pattern-store/search` | Pattern storage with BM25+semantic hybrid search |
+
+**Intelligence:**
+
+| Controller | MCP Tool | Description |
+|-----------|----------|-------------|
+| SemanticRouter | `agentdb_semantic-route` | Route tasks to agents using vector similarity instead of manual rules |
+| ContextSynthesizer | `agentdb_context-synthesize` | Auto-generate context summaries from memory entries |
+| GNNService | — | Graph neural network for intent classification and skill recommendation |
+| SonaTrajectoryService | — | Record and predict learning trajectories for agents |
+| GraphTransformerService | — | Sublinear attention, causal attention, Granger causality extraction |
+
+**Causal & Explainable:**
+
+| Controller | MCP Tool | Description |
+|-----------|----------|-------------|
+| CausalRecall | `agentdb_causal-edge` | Recall with causal re-ranking and utility scoring |
+| ExplainableRecall | — | Certificates proving *why* a memory was recalled |
+| CausalMemoryGraph | — | Directed causal relationships between memory entries |
+| MMRDiversityRanker | — | Maximal Marginal Relevance for diverse search results |
+
+**Security & Integrity:**
+
+| Controller | MCP Tool | Description |
+|-----------|----------|-------------|
+| GuardedVectorBackend | — | Cryptographic proof-of-work before vector insert/search |
+| MutationGuard | — | Token-validated mutations with cryptographic proofs |
+| AttestationLog | — | Immutable audit trail of all memory operations |
+
+**Optimization:**
+
+| Controller | MCP Tool | Description |
+|-----------|----------|-------------|
+| RVFOptimizer | — | 4-bit adaptive quantization and progressive compression |
+
+**MCP Tool Examples:**
+```bash
+# Store to hierarchical memory
+agentdb_hierarchical-store --key "auth-pattern" --value "JWT refresh" --tier "semantic"
+
+# Recall from memory tiers
+agentdb_hierarchical-recall --query "authentication" --topK 5
+
+# Run memory consolidation
+agentdb_consolidate
+
+# Batch insert
+agentdb_batch --operation insert --entries '[{"key":"k1","value":"v1"}]'
+
+# Synthesize context
+agentdb_context-synthesize --query "error handling patterns"
+
+# Semantic routing
+agentdb_semantic-route --input "fix auth bug in login"
+```
+
+**Hierarchical Memory Tiers:**
+```
+┌─────────────────────────────────────────────┐
+│  Working Memory                             │  ← Active context, fast access
+│  Size-based eviction (1MB limit)            │
+├─────────────────────────────────────────────┤
+│  Episodic Memory                            │  ← Recent patterns, moderate retention
+│  Importance × retention score ranking       │
+├─────────────────────────────────────────────┤
+│  Semantic Memory                            │  ← Consolidated knowledge, persistent
+│  Promoted from episodic via consolidation   │
+└─────────────────────────────────────────────┘
+```
 
 </details>
 
@@ -1547,7 +1630,7 @@ npx ruflo hive-mind memory                  # Collective memory stats
 npx ruflo hive-mind sessions                # List active sessions
 ```
 
-**Performance:** 10-20x faster batch spawning, 2.8-4.4x speed improvement, 84.8% SWE-Bench solve rate
+**Performance:** Fast batch spawning with parallel agent coordination
 
 </details>
 
@@ -1965,14 +2048,14 @@ npx ruflo@v3alpha worker status
 <details>
 <summary>☁️ <strong>LLM Providers</strong> — 6 providers with automatic failover</summary>
 
-| Provider | Models (2025-2026) | Features | Cost |
+| Provider | Models | Features | Cost |
 |----------|--------|----------|------|
-| **Anthropic** | Claude Opus 4.5, Claude Sonnet 4.5, Claude Haiku 4.5 | Native, streaming, tool calling, extended thinking | $1-25/1M tokens |
-| **OpenAI** | GPT-5.2, o3, o3-pro, o4-mini | 400K context, reasoning chains, 100% AIME 2025 | $0.15-60/1M tokens |
-| **Google** | Gemini 3 Pro, Gemini 3 Flash, Gemini 3 Deep Think | 1M+ context, multimodal, Deep Think reasoning | $0.075-7/1M tokens |
-| **xAI** | Grok 4.1, Grok 3 | Truth-seeking, real-time data, 200K H100 training | $2-10/1M tokens |
-| **Mistral** | Mistral Large 3 (675B MoE), Codestral | 92% GPT-5.2 performance at 15% cost | $0.50-8/1M tokens |
-| **Meta/Ollama** | Llama 4 Scout/Maverick, DeepSeek V3, Qwen 3 | Local, free, up to 10M context (Scout) | Free |
+| **Anthropic** | Claude Opus 4, Claude Sonnet 4, Claude Haiku 3.5 | Native, streaming, tool calling, extended thinking | $1-15/1M tokens |
+| **OpenAI** | GPT-4o, o3-mini, o1 | 128K context, reasoning chains, function calling | $0.15-60/1M tokens |
+| **Google** | Gemini 2.0 Flash, Gemini 1.5 Pro | 1M+ context, multimodal, grounding | $0.075-7/1M tokens |
+| **xAI** | Grok 3, Grok 3 Mini | Real-time data, reasoning, large context | $2-10/1M tokens |
+| **Mistral** | Mistral Large 2, Codestral | Open-weight, efficient MoE architecture | $0.50-8/1M tokens |
+| **Meta/Ollama** | Llama 3.3, DeepSeek V3, Qwen 2.5 | Local, free, open-weight | Free |
 
 <details>
 <summary>⚖️ <strong>Provider Load Balancing</strong> — 4 strategies for optimal cost and performance</summary>
@@ -2289,7 +2372,7 @@ npx ruflo hive-mind status                                  # Check status
 
 **Ruflo Skill:** `/hive-mind-advanced` — Full hive mind orchestration
 
-**Performance:** 10-20x faster batch spawning, 84.8% SWE-Bench solve rate, 32.3% token reduction
+**Performance:** Fast batch spawning with token reduction via intelligent routing
 
 </details>
 
@@ -2403,13 +2486,13 @@ Claude Code pipes JSON session data via **stdin** to the statusline script after
 
 **Output Format:**
 ```
-▊ Claude Flow V3 ● ruvnet  │  ⎇ main  │  Opus 4.6  | ●42% ctx  | $0.15
+▊ Ruflo V3 ● ruvnet  │  ⎇ main  │  Opus 4.6  | ●42% ctx  | $0.15
 🏗️ DDD [●●●●○] 4/5  ⚡ HNSW 150x  🤖 ◉ [12/8]  👥 3  🟢 CVE 3/3  💾 512MB  🧠 15%  📦 AgentDB ●1.2K vectors
 ```
 
 | Indicator | Description | Source |
 |-----------|-------------|--------|
-| `▊ Claude Flow V3` | Project header | Always shown |
+| `▊ Ruflo V3` | Project header | Always shown |
 | `● ruvnet` | GitHub user | `gh api user` CLI |
 | `⎇ main` | Current git branch | `git branch --show-current` |
 | `Opus 4.6` | Claude model name | Stdin JSON `model.display_name` |
@@ -2427,7 +2510,7 @@ Claude Code pipes JSON session data via **stdin** to the statusline script after
 
 **Setup (Automatic):**
 
-Run `npx claude-flow@v3alpha init` — this generates `.claude/settings.json` with the correct statusline config and creates the helper script at `.claude/helpers/statusline.cjs`.
+Run `npx ruflo@alpha init` — this generates `.claude/settings.json` with the correct statusline config and creates the helper script at `.claude/helpers/statusline.cjs`.
 
 The generated config uses a **fast local script** (no `npx` cold-start):
 ```json
@@ -2445,7 +2528,7 @@ The generated config uses a **fast local script** (no `npx` cold-start):
 
 If your statusline is not updating, run the upgrade command to regenerate helpers and fix the config:
 ```bash
-npx claude-flow@v3alpha init --update --settings
+npx ruflo@alpha init --update --settings
 ```
 
 This removes invalid config fields and regenerates the statusline helper with stdin support.
@@ -3763,7 +3846,7 @@ Skills are **reusable workflows** that combine agents, hooks, and patterns into 
 | Skill | What It Does | When To Use |
 |-------|--------------|-------------|
 | `agentdb-vector-search` | Semantic search with 150x faster retrieval | Building RAG systems, knowledge bases |
-| `agentdb-memory-patterns` | Session memory, long-term storage, context management | Stateful agents, chat systems |
+| `agentdb-memory-patterns` | Session memory, persistent storage, context management | Stateful agents, chat systems |
 | `agentdb-learning` | 9 RL algorithms (PPO, DQN, SARSA, etc.) | Self-learning agents, behavior optimization |
 | `agentdb-optimization` | Quantization (4-32x memory reduction), HNSW indexing | Scaling to millions of vectors |
 | `agentdb-advanced` | QUIC sync, multi-database, custom distance metrics | Distributed AI systems |
@@ -3874,7 +3957,7 @@ Skills are **reusable workflows** that combine agents, hooks, and patterns into 
 
 | Skill | What It Does | When To Use |
 |-------|--------------|-------------|
-| `agentic-jujutsu` | Quantum-resistant, self-learning version control | Multi-agent coordination |
+| `agentic-jujutsu` | Self-learning version control for AI agents | Multi-agent coordination |
 | `worker-benchmarks` | Performance benchmarking framework | Measuring improvements |
 | `worker-integration` | Worker-agent coordination patterns | Background processing |
 
@@ -4862,13 +4945,13 @@ const config = optimizer.getOptimalConfig(agentCount);
 ---
 
 <details>
-<summary>🥋 <strong>Agentic-Jujutsu</strong> — Quantum-Ready AI Version Control</summary>
+<summary>🥋 <strong>Agentic-Jujutsu</strong> — Self-Learning AI Version Control</summary>
 
 [![npm version](https://img.shields.io/npm/v/agentic-jujutsu?color=blue&label=npm)](https://www.npmjs.com/package/agentic-jujutsu)
 [![npm downloads](https://img.shields.io/npm/dm/agentic-jujutsu?color=green)](https://www.npmjs.com/package/agentic-jujutsu)
 [![GitHub](https://img.shields.io/badge/GitHub-ruvnet%2Fagentic--flow-blue?logo=github)](https://github.com/ruvnet/agentic-flow/tree/main/packages/agentic-jujutsu)
 
-**Agentic-Jujutsu** is quantum-ready, self-learning version control designed for multiple AI agents working simultaneously without conflicts. Built on [Jujutsu](https://github.com/martinvonz/jj), it provides 23x faster performance than Git with automatic conflict resolution.
+**Agentic-Jujutsu** is self-learning version control designed for multiple AI agents working simultaneously without conflicts. Built on [Jujutsu](https://github.com/martinvonz/jj), it provides faster performance than Git with automatic conflict resolution.
 
 ### Quick Start
 
@@ -4899,7 +4982,7 @@ npx agentic-jujutsu compare-git
 | **AI integration** | Manual work | Built-in (MCP protocol) |
 | **Self-learning capabilities** | ❌ None | ✅ ReasoningBank |
 | **Automatic conflict resolution** | 30-40% auto | **87% auto** |
-| **Quantum-resistant security** | ❌ None | ✅ Architecture ready |
+| **Cryptographic security** | Basic | SHA3-512 fingerprints |
 
 ### Core Capabilities
 
@@ -4945,7 +5028,7 @@ console.log('Confidence:', (suggestion.confidence * 100).toFixed(1) + '%');
 </details>
 
 <details>
-<summary>🤝 <strong>Multi-Agent Coordination</strong> — QuantumDAG architecture for conflict-free collaboration</summary>
+<summary>🤝 <strong>Multi-Agent Coordination</strong> — DAG architecture for conflict-free collaboration</summary>
 
 ```javascript
 // All agents work concurrently (no conflicts!)
@@ -4981,12 +5064,12 @@ console.log('All agents completed:', results);
 | Context switching | 500-1000ms | **50-100ms (10x)** |
 | Conflict resolution | 30-40% auto | **87% auto (2.5x)** |
 | Lock waiting | 50 min/day | **0 min (∞)** |
-| Quantum fingerprints | N/A | **<1ms** |
+| SHA3-512 fingerprints | N/A | **<1ms** |
 
 </details>
 
 <details>
-<summary>🔐 <strong>Quantum-Resistant Security</strong> — SHA3-512 fingerprints and HQC-128 encryption</summary>
+<summary>🔐 <strong>Cryptographic Security</strong> — SHA3-512 fingerprints and AES-256 encryption</summary>
 
 ```javascript
 const { generateQuantumFingerprint, verifyQuantumFingerprint } = require('agentic-jujutsu');
@@ -5007,7 +5090,7 @@ const key = crypto.randomBytes(32).toString('base64');
 jj.enableEncryption(key);
 ```
 
-**Quantum Security Methods:**
+**Security Methods:**
 
 | Method | Description | Returns |
 |--------|-------------|---------|
@@ -5029,9 +5112,9 @@ Ruflo includes a dedicated `/agentic-jujutsu` skill for AI-powered version contr
 
 **Use this skill when you need:**
 - ✅ Multiple AI agents modifying code simultaneously
-- ✅ Lock-free version control (23x faster than Git)
+- ✅ Lock-free version control (faster than Git for concurrent agents)
 - ✅ Self-learning AI that improves from experience
-- ✅ Quantum-resistant security for future-proof protection
+- ✅ SHA3-512 cryptographic integrity verification
 - ✅ Automatic conflict resolution (87% success rate)
 - ✅ Pattern recognition and intelligent suggestions
 
@@ -5088,7 +5171,7 @@ npx agentic-jujutsu examples        # Show usage examples
 | **v1.x** | Required separate jj install |
 | **v2.0** | Zero-dependency (jj binary embedded) |
 | **v2.1** | Self-learning AI with ReasoningBank |
-| **v2.2** | Multi-agent coordination + quantum-ready |
+| **v2.2** | Multi-agent coordination + cryptographic security |
 | **v2.3** | Kubernetes GitOps + production stability |
 
 </details>
@@ -5171,17 +5254,17 @@ const compressed = ruvector.compress(embedding, 0.3); // 30% quality threshold
 
 | Package | Description | Performance |
 |---------|-------------|-------------|
-| **[ruvector](https://www.npmjs.com/package/ruvector)** | Core vector database with HNSW | **~61µs search, 16,400 QPS** |
-| **[@ruvector/attention](https://www.npmjs.com/package/@ruvector/attention)** | Flash Attention mechanisms | 2.49x-7.47x speedup |
-| **[@ruvector/sona](https://www.npmjs.com/package/@ruvector/sona)** | SONA adaptive learning (LoRA, EWC++) | <0.05ms adaptation |
+| **[ruvector](https://www.npmjs.com/package/ruvector)** | Core vector database with HNSW | Fast vector search |
+| **[@ruvector/attention](https://www.npmjs.com/package/@ruvector/attention)** | Flash Attention mechanisms | 2-7x speedup |
+| **[@ruvector/sona](https://www.npmjs.com/package/@ruvector/sona)** | SONA adaptive learning (LoRA, EWC++) | Fast adaptation |
 | **[@ruvector/gnn](https://www.npmjs.com/package/@ruvector/gnn)** | Graph Neural Networks (15 layer types) | Native NAPI bindings |
-| **[@ruvector/graph-node](https://www.npmjs.com/package/@ruvector/graph-node)** | Graph DB with Cypher queries | 10x faster than WASM |
+| **[@ruvector/graph-node](https://www.npmjs.com/package/@ruvector/graph-node)** | Graph DB with Cypher queries | Native NAPI |
 | **[@ruvector/rvlite](https://www.npmjs.com/package/@ruvector/rvlite)** | Standalone DB (SQL, SPARQL, Cypher) | All-in-one solution |
-| **[ruvector-wasm](https://www.npmjs.com/package/ruvector-wasm)** | Browser/Edge WASM build | Works everywhere |
+| **[@ruvector/router](https://www.npmjs.com/package/@ruvector/router)** | Semantic intent routing | Fast routing |
 
 ### 🐘 RuVector PostgreSQL — Enterprise Vector Database
 
-**77+ SQL functions** for AI operations directly in PostgreSQL with ~61µs search latency and 16,400 QPS.
+**77+ SQL functions** for AI operations directly in PostgreSQL with fast vector search.
 
 ```bash
 # Quick setup with CLI (recommended)
@@ -5913,22 +5996,22 @@ Domain-Driven Design with bounded contexts, clean architecture, and measured per
 
 ### Performance Benchmarks
 
-| Category | Metric | Target | Measured |
-|----------|--------|--------|----------|
-| **Startup** | CLI cold start | <500ms | ✅ 380ms |
-| **Startup** | MCP server init | <400ms | ✅ 320ms |
-| **Memory** | HNSW search | <1ms | ✅ 0.4ms |
-| **Memory** | Pattern retrieval | <10ms | ✅ 6ms |
-| **Swarm** | Agent spawn | <200ms | ✅ 150ms |
-| **Swarm** | Consensus latency | <100ms | ✅ 75ms |
-| **Neural** | SONA adaptation | <0.05ms | ✅ 0.03ms |
-| **Graph** | Build (1k nodes) | <200ms | ✅ 2.78ms (71.9x headroom) |
-| **Graph** | PageRank (1k nodes) | <100ms | ✅ 12.21ms (8.2x headroom) |
-| **Learning** | Insight recording | <5ms | ✅ 0.12ms (41x headroom) |
-| **Learning** | Consolidation | <500ms | ✅ 0.26ms (1,955x headroom) |
-| **Learning** | Confidence decay (1k) | <50ms | ✅ 0.23ms (215x headroom) |
-| **Transfer** | Knowledge transfer | <100ms | ✅ 1.25ms (80x headroom) |
-| **Task** | Success rate | 95%+ | ✅ 100% (7/7) |
+*Benchmarks measured on Node.js 20+ with local SQLite. Results vary by hardware and workload.*
+
+| Category | Metric | Target | Status |
+|----------|--------|--------|--------|
+| **Startup** | CLI cold start | <500ms | ✅ Met |
+| **Startup** | MCP server init | <400ms | ✅ Met |
+| **Memory** | HNSW search | <1ms | ✅ Sub-ms |
+| **Memory** | Pattern retrieval | <10ms | ✅ Met |
+| **Swarm** | Agent spawn | <200ms | ✅ Met |
+| **Swarm** | Consensus latency | <100ms | ✅ Met |
+| **Neural** | SONA adaptation | <0.05ms | ✅ Met |
+| **Graph** | Build (1k nodes) | <200ms | ✅ Met |
+| **Graph** | PageRank (1k nodes) | <100ms | ✅ Met |
+| **Learning** | Insight recording | <5ms | ✅ Met |
+| **Learning** | Consolidation | <500ms | ✅ Met |
+| **Task** | Success rate | 95%+ | ✅ Met |
 
 ### Topology Performance
 
@@ -5977,7 +6060,7 @@ browser.startTrajectory('Login to dashboard');
 
 await browser.open('https://example.com/login');
 
-// Use element refs (93% context reduction vs CSS selectors)
+// Use element refs (shorter tokens vs full CSS selectors)
 const snapshot = await browser.snapshot({ interactive: true });
 await browser.fill('@e1', 'user@example.com');
 await browser.fill('@e2', 'password');
@@ -5992,7 +6075,7 @@ await browser.close();
 | Feature | Description |
 |---------|-------------|
 | **59 MCP Tools** | Complete browser automation via MCP protocol |
-| **Element Refs** | 93% context reduction with `@e1`, `@e2` refs |
+| **Element Refs** | Compact `@e1`, `@e2` refs instead of verbose CSS selectors |
 | **Trajectory Learning** | Records actions for ReasoningBank/SONA |
 | **Security Scanning** | URL validation, PII detection, XSS/SQL injection prevention |
 | **9 Workflow Templates** | Login, OAuth, scraping, testing, monitoring |
@@ -6925,7 +7008,7 @@ Ruflo looks for configuration in this order:
     "default": "anthropic",
     "fallback": ["openai", "google"],
     "anthropic": {
-      "model": "claude-sonnet-4-20250514",
+      "model": "claude-sonnet-4-6-20250514",
       "maxTokens": 8192
     },
     "openai": {
