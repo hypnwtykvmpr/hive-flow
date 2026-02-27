@@ -15,7 +15,7 @@ const HIVE_FILE = 'state.json';
 
 interface HiveState {
   initialized: boolean;
-  topology: 'mesh' | 'hierarchical' | 'ring' | 'star';
+  topology: 'mesh' | 'hierarchical' | 'ring' | 'star' | 'adaptive' | 'hierarchical-mesh';
   queen?: {
     agentId: string;
     electedAt: string;
@@ -188,7 +188,7 @@ export const hiveMindTools: MCPTool[] = [
     inputSchema: {
       type: 'object',
       properties: {
-        topology: { type: 'string', enum: ['mesh', 'hierarchical', 'ring', 'star'], description: 'Network topology' },
+        topology: { type: 'string', enum: ['mesh', 'hierarchical', 'ring', 'star', 'adaptive', 'hierarchical-mesh'], description: 'Network topology' },
         queenId: { type: 'string', description: 'Initial queen agent ID' },
       },
     },
