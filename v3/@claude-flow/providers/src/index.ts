@@ -35,6 +35,15 @@ export { GoogleProvider } from './google-provider.js';
 export { CohereProvider } from './cohere-provider.js';
 export { OllamaProvider } from './ollama-provider.js';
 export { RuVectorProvider } from './ruvector-provider.js';
+export { LMStudioProvider } from './lm-studio-provider.js';
+export { OpenRouterProvider } from './openrouter-provider.js';
+export { GeminiCLIProvider } from './gemini-cli-provider.js';
+export { CodexCLIProvider } from './codex-cli-provider.js';
+export { DeepSeekProvider } from './deepseek-provider.js';
+export { QwenProvider } from './qwen-provider.js';
+export { QwenCLIProvider } from './qwen-cli-provider.js';
+export { CursorCLIProvider } from './cursor-cli-provider.js';
+export { CopilotProvider } from './copilot-provider.js';
 
 // Export provider manager
 export { ProviderManager, createProviderManager } from './provider-manager.js';

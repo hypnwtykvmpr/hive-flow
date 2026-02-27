@@ -20,6 +20,9 @@ import {
   RateLimitError,
   LLMProviderError,
 } from './types.js';
+import { readFileSync } from 'fs';
+import { join } from 'path';
+import { homedir } from 'os';
 
 interface GeminiRequest {
   contents: Array<{
@@ -65,18 +68,24 @@ export class GoogleProvider extends BaseProvider {
   readonly capabilities: ProviderCapabilities = {
     supportedModels: [
       'gemini-2.0-flash',
+      'gemini-2.5-flash',
+      'gemini-2.5-pro',
       'gemini-1.5-pro',
       'gemini-1.5-flash',
       'gemini-pro',
     ],
     maxContextLength: {
       'gemini-2.0-flash': 1000000,
+      'gemini-2.5-flash': 1000000,
+      'gemini-2.5-pro': 1000000,
       'gemini-1.5-pro': 2000000,
       'gemini-1.5-flash': 1000000,
       'gemini-pro': 32000,
     },
     maxOutputTokens: {
       'gemini-2.0-flash': 8192,
+      'gemini-2.5-flash': 65536,
+      'gemini-2.5-pro': 65536,
       'gemini-1.5-pro': 8192,
       'gemini-1.5-flash': 8192,
       'gemini-pro': 8192,
@@ -100,6 +109,8 @@ export class GoogleProvider extends BaseProvider {
         completionCostPer1k: 0.0,
         currency: 'USD',
       },
+      'gemini-2.5-flash': { promptCostPer1k: 0.00015, completionCostPer1k: 0.0006, currency: 'USD' },
+      'gemini-2.5-pro': { promptCostPer1k: 0.00125, completionCostPer1k: 0.01, currency: 'USD' },
       'gemini-1.5-pro': {
         promptCostPer1k: 0.00125,
         completionCostPer1k: 0.005,
@@ -125,11 +136,35 @@ export class GoogleProvider extends BaseProvider {
   }
 
   protected async doInitialize(): Promise<void> {
+    // Auto-discover API key from multiple sources
     if (!this.config.apiKey) {
-      throw new AuthenticationError('Google API key is required', 'google');
+      this.config.apiKey = process.env.GEMINI_API_KEY
+        || process.env.GOOGLE_API_KEY
+        || this.readEnvFile(join(homedir(), '.gemini', '.env'), 'GEMINI_API_KEY')
+        || this.readEnvFile(join(homedir(), '.gemini', '.env'), 'GOOGLE_API_KEY')
+        || this.readEnvFile(join('.gemini', '.env'), 'GEMINI_API_KEY')
+        || this.readEnvFile(join('.gemini', '.env'), 'GOOGLE_API_KEY')
+        || undefined;
+    }
+
+    if (!this.config.apiKey) {
+      throw new AuthenticationError(
+        'Google API key not found. Set GEMINI_API_KEY or GOOGLE_API_KEY environment variable, or configure in ~/.gemini/.env',
+        'google'
+      );
     }
 
     this.baseUrl = this.config.apiUrl || 'https://generativelanguage.googleapis.com/v1beta';
+  }
+
+  private readEnvFile(filePath: string, key: string): string | undefined {
+    try {
+      const content = readFileSync(filePath, 'utf8');
+      const match = content.match(new RegExp(`^${key}=(.+)$`, 'm'));
+      return match?.[1]?.trim();
+    } catch {
+      return undefined;
+    }
   }
 
   protected async doComplete(request: LLMRequest): Promise<LLMResponse> {
@@ -260,6 +295,8 @@ export class GoogleProvider extends BaseProvider {
   async getModelInfo(model: LLMModel): Promise<ModelInfo> {
     const descriptions: Record<string, string> = {
       'gemini-2.0-flash': 'Latest Gemini 2.0 with multimodal capabilities',
+      'gemini-2.5-flash': 'Gemini 2.5 Flash with 1M context and enhanced reasoning',
+      'gemini-2.5-pro': 'Gemini 2.5 Pro with 1M context and advanced reasoning',
       'gemini-1.5-pro': 'Most capable Gemini model with 2M context',
       'gemini-1.5-flash': 'Fast and efficient Gemini model',
       'gemini-pro': 'Balanced Gemini model',

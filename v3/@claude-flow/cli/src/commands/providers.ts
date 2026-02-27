@@ -35,12 +35,21 @@ const listCommand: Command = {
         { key: 'status', header: 'Status', width: 12 },
       ],
       data: [
-        { provider: 'Anthropic', type: 'LLM', models: 'claude-3.5-sonnet, opus', status: output.success('Active') },
-        { provider: 'OpenAI', type: 'LLM', models: 'gpt-4o, gpt-4-turbo', status: output.success('Active') },
-        { provider: 'OpenAI', type: 'Embedding', models: 'text-embedding-3-small/large', status: output.success('Active') },
-        { provider: 'Transformers.js', type: 'Embedding', models: 'all-MiniLM-L6-v2', status: output.success('Active') },
-        { provider: 'Agentic Flow', type: 'Embedding', models: 'ONNX optimized', status: output.success('Active') },
-        { provider: 'Mock', type: 'All', models: 'mock-*', status: output.dim('Dev only') },
+        { provider: 'Anthropic', type: 'LLM', models: 'claude-3.5-sonnet, opus, haiku', status: output.success('Active') },
+        { provider: 'OpenAI', type: 'LLM', models: 'gpt-4o, gpt-4-turbo, o3-mini', status: output.success('Active') },
+        { provider: 'Google (API)', type: 'LLM', models: 'gemini-2.5-flash/pro, 2.0-flash', status: output.success('Active') },
+        { provider: 'Gemini CLI', type: 'LLM (CLI)', models: 'gemini-2.5-flash/pro', status: output.dim('Subprocess') },
+        { provider: 'Codex CLI', type: 'LLM (CLI)', models: 'gpt-5.3-codex, codex-mini', status: output.dim('Subprocess') },
+        { provider: 'Cohere', type: 'LLM', models: 'command-r-plus, command-r', status: output.success('Active') },
+        { provider: 'Ollama', type: 'LLM (Local)', models: 'llama3.2, mistral, phi-4', status: output.success('Active') },
+        { provider: 'LM Studio', type: 'LLM (Local)', models: '(dynamic — user loaded)', status: output.dim('Local') },
+        { provider: 'OpenRouter', type: 'LLM (Proxy)', models: 'google/*, meta-llama/*', status: output.success('Active') },
+        { provider: 'DeepSeek', type: 'LLM', models: 'deepseek-chat, deepseek-reasoner', status: output.success('Active') },
+        { provider: 'Qwen API', type: 'LLM', models: 'qwen-max, qwen-plus, qwen-turbo', status: output.success('Active') },
+        { provider: 'Qwen CLI', type: 'LLM (CLI)', models: 'qwen-max, qwen-turbo', status: output.dim('Subprocess') },
+        { provider: 'Cursor CLI', type: 'LLM (CLI)', models: 'auto, composer-1.5, gpt-5.3-codex', status: output.dim('Subprocess') },
+        { provider: 'Copilot API', type: 'LLM (Local)', models: 'gpt-4o, claude-3.5-sonnet', status: output.dim('copilot-api') },
+        { provider: 'RuVector', type: 'Intelligence', models: 'ruvector-v3', status: output.success('Active') },
       ],
     });
 
@@ -114,7 +123,7 @@ const testCommand: Command = {
     output.writeln(output.dim('─'.repeat(50)));
 
     const providers = testAll || !provider
-      ? ['Anthropic', 'OpenAI (LLM)', 'OpenAI (Embedding)', 'Transformers.js', 'Agentic Flow']
+      ? ['Anthropic', 'OpenAI', 'Google (API)', 'Gemini CLI', 'Codex CLI', 'DeepSeek', 'Qwen API', 'Qwen CLI', 'Cursor CLI', 'Copilot API', 'Cohere', 'Ollama', 'LM Studio', 'OpenRouter', 'RuVector']
       : [provider];
 
     for (const p of providers) {
@@ -159,11 +168,25 @@ const modelsCommand: Command = {
       data: [
         { model: 'claude-3.5-sonnet-20241022', provider: 'Anthropic', capability: 'Chat', context: '200K', cost: '$0.003/$0.015' },
         { model: 'claude-3-opus-20240229', provider: 'Anthropic', capability: 'Chat', context: '200K', cost: '$0.015/$0.075' },
-        { model: 'gpt-4o', provider: 'OpenAI', capability: 'Chat', context: '128K', cost: '$0.005/$0.015' },
-        { model: 'gpt-4-turbo', provider: 'OpenAI', capability: 'Chat', context: '128K', cost: '$0.01/$0.03' },
-        { model: 'text-embedding-3-small', provider: 'OpenAI', capability: 'Embedding', context: '8K', cost: '$0.00002' },
-        { model: 'text-embedding-3-large', provider: 'OpenAI', capability: 'Embedding', context: '8K', cost: '$0.00013' },
-        { model: 'all-MiniLM-L6-v2', provider: 'Transformers', capability: 'Embedding', context: '512', cost: output.success('Free') },
+        { model: 'gpt-4o', provider: 'OpenAI', capability: 'Chat', context: '128K', cost: '$0.0025/$0.01' },
+        { model: 'gpt-4o-mini', provider: 'OpenAI', capability: 'Chat', context: '128K', cost: '$0.00015/$0.0006' },
+        { model: 'o3-mini', provider: 'OpenAI', capability: 'Chat', context: '200K', cost: '$0.0011/$0.0044' },
+        { model: 'gemini-2.5-flash', provider: 'Google', capability: 'Chat', context: '1M', cost: '$0.00015/$0.0006' },
+        { model: 'gemini-2.5-pro', provider: 'Google', capability: 'Chat', context: '1M', cost: '$0.00125/$0.01' },
+        { model: 'gemini-2.5-flash', provider: 'Gemini CLI', capability: 'Chat', context: '1M', cost: output.success('Free tier') },
+        { model: 'gpt-5.3-codex', provider: 'Codex CLI', capability: 'Chat', context: '200K', cost: output.success('ChatGPT sub') },
+        { model: 'codex-mini-latest', provider: 'Codex CLI', capability: 'Chat', context: '200K', cost: '$0.0015/$0.006' },
+        { model: 'command-r-plus', provider: 'Cohere', capability: 'Chat', context: '128K', cost: '$0.003/$0.015' },
+        { model: 'llama3.2', provider: 'Ollama', capability: 'Chat', context: '128K', cost: output.success('Free') },
+        { model: '(user loaded)', provider: 'LM Studio', capability: 'Chat', context: 'varies', cost: output.success('Free') },
+        { model: 'google/gemini-2.5-flash', provider: 'OpenRouter', capability: 'Chat', context: '1M', cost: '$0.00015/$0.0006' },
+        { model: 'deepseek-chat', provider: 'DeepSeek', capability: 'Chat', context: '64K', cost: '$0.00014/$0.00028' },
+        { model: 'deepseek-reasoner', provider: 'DeepSeek', capability: 'Reasoning', context: '64K', cost: '$0.00055/$0.0022' },
+        { model: 'qwen-max', provider: 'Qwen API', capability: 'Chat', context: '32K', cost: '$0.0016/$0.0064' },
+        { model: 'qwen-turbo', provider: 'Qwen API', capability: 'Chat', context: '131K', cost: '$0.0002/$0.0006' },
+        { model: 'qwen-turbo', provider: 'Qwen CLI', capability: 'Chat', context: '131K', cost: '$0.0002/$0.0006' },
+        { model: 'auto', provider: 'Cursor CLI', capability: 'Chat', context: '200K', cost: output.success('Cursor sub') },
+        { model: 'gpt-4o', provider: 'Copilot API', capability: 'Chat', context: '128K', cost: output.success('Copilot sub') },
       ],
     });
 
@@ -247,8 +270,19 @@ export const providersCommand: Command = {
     output.printList([
       'Anthropic (Claude models)',
       'OpenAI (GPT + embeddings)',
-      'Transformers.js (local ONNX)',
-      'Agentic Flow (optimized ONNX with SIMD)',
+      'Google (Gemini API)',
+      'Gemini CLI (subprocess — uses Google account)',
+      'Codex CLI (subprocess — uses ChatGPT subscription)',
+      'DeepSeek (DeepSeek-V3 + R1 reasoning)',
+      'Qwen API (Alibaba Cloud DashScope)',
+      'Qwen CLI (subprocess — uses Qwen OAuth)',
+      'Cursor CLI (subprocess — uses Cursor subscription)',
+      'Copilot API (local copilot-api server — uses GitHub Copilot subscription)',
+      'Cohere (Command R models)',
+      'Ollama (local models)',
+      'LM Studio (local OpenAI-compatible)',
+      'OpenRouter (multi-provider proxy)',
+      'RuVector (intelligence system)',
     ]);
     output.writeln();
     output.writeln(output.dim('Created with ❤️ by ruv.io'));

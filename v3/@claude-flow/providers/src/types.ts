@@ -19,6 +19,14 @@ export type LLMProvider =
   | 'ollama'
   | 'ruvector'
   | 'openrouter'
+  | 'lm-studio'
+  | 'gemini-cli'
+  | 'codex-cli'
+  | 'deepseek'
+  | 'qwen'
+  | 'qwen-cli'
+  | 'cursor-cli'
+  | 'copilot'
   | 'litellm'
   | 'custom';
 
@@ -39,6 +47,11 @@ export type LLMModel =
   | 'o1-mini'
   | 'o3-mini'
   // Google Models
+  | 'gemini-2.5-flash'
+  | 'gemini-2.5-flash-lite'
+  | 'gemini-2.5-pro'
+  | 'gemini-3-flash-preview'
+  | 'gemini-3.1-pro-preview'
   | 'gemini-2.0-flash'
   | 'gemini-1.5-pro'
   | 'gemini-1.5-flash'
@@ -56,6 +69,25 @@ export type LLMModel =
   | 'codellama'
   | 'phi-4'
   | 'deepseek-coder'
+  // Codex/OpenAI Models
+  | 'gpt-5.3-codex'
+  | 'gpt-5.2-codex'
+  | 'gpt-5.1-codex-max'
+  | 'gpt-5.1-codex-mini'
+  | 'gpt-5-codex'
+  | 'codex-mini-latest'
+  // DeepSeek Models
+  | 'deepseek-chat'
+  | 'deepseek-reasoner'
+  // Qwen Models
+  | 'qwen-max'
+  | 'qwen-plus'
+  | 'qwen-turbo'
+  | 'qwen-long'
+  // Cursor Agent Models
+  | 'auto'
+  | 'composer-1.5'
+  | 'composer-1'
   // Generic
   | 'custom-model'
   | string;
