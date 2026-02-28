@@ -12,7 +12,8 @@ import {
   createPublicKey, createPrivateKey,
   type KeyObject,
 } from 'node:crypto';
-import { readFile, writeFile, stat, chmod } from 'node:fs/promises';
+import { readFile, writeFile, stat, chmod, mkdir } from 'node:fs/promises';
+import { dirname } from 'node:path';
 
 // ── Constants ────────────────────────────────────────────────
 
@@ -84,6 +85,8 @@ export async function saveKeyPair(
   dir: string,
   name = 'rvfa-signing',
 ): Promise<{ publicKeyPath: string; privateKeyPath: string }> {
+  await mkdir(dir, { recursive: true });
+
   const pubPath = `${dir}/${name}.pub`;
   const privPath = `${dir}/${name}.key`;
 

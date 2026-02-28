@@ -15,7 +15,7 @@
 
 import { readdir, stat } from 'node:fs/promises';
 import { join, extname, basename } from 'node:path';
-import type { GgufEngine as GgufEngineType, GgufMetadata } from './gguf-engine.js';
+import type { GgufEngine as GgufEngineType } from './gguf-engine.js';
 
 // ── Configuration ───────────────────────────────────────────
 

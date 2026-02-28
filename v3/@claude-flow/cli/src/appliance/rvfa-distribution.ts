@@ -50,12 +50,23 @@ export interface PublishedItem { cid: string; name: string; size: number; date: 
 function sha256(d: Buffer): string { return createHash('sha256').update(d).digest('hex'); }
 function sha256B(d: Buffer): Buffer { return createHash('sha256').update(d).digest(); }
 
+function detectKeyFormat(key: Buffer): { format: 'pem' | 'der'; type: string } {
+  const str = key.toString('utf-8');
+  if (str.includes('BEGIN PRIVATE KEY')) return { format: 'pem', type: 'pkcs8' };
+  if (str.includes('BEGIN PUBLIC KEY')) return { format: 'pem', type: 'spki' };
+  // Heuristic: DER-encoded keys are raw binary, never valid UTF-8 "BEGIN"
+  return { format: 'der', type: 'pkcs8' }; // caller must override type for public keys
+}
+
 function edSign(data: Buffer, key: Buffer): string {
-  return sign(null, data, { key, format: 'der', type: 'pkcs8' }).toString('hex');
+  const det = detectKeyFormat(key);
+  return sign(null, data, { key, format: det.format, type: det.type } as any).toString('hex');
 }
 function edCheck(data: Buffer, sig: string, key: Buffer): boolean {
   try {
-    return edVerify(null, data, { key, format: 'der', type: 'spki' }, Buffer.from(sig, 'hex'));
+    const det = detectKeyFormat(key);
+    const type = det.format === 'pem' ? det.type : 'spki'; // public key for verify
+    return edVerify(null, data, { key, format: det.format, type } as any, Buffer.from(sig, 'hex'));
   } catch { return false; }
 }
 
@@ -81,23 +92,28 @@ function pinataReq(
         });
       },
     );
+    req.setTimeout(30_000, () => { req.destroy(new Error('Request timed out after 30s')); });
     req.on('error', reject);
     if (body) req.write(body);
     req.end();
   });
 }
 
-function httpGet(url: string): Promise<Buffer> {
+function httpGet(url: string, maxRedirects = 5): Promise<Buffer> {
   return new Promise((resolve, reject) => {
+    if (maxRedirects <= 0) return reject(new Error('Too many redirects'));
     const u = new URL(url);
-    httpsRequest({ hostname: u.hostname, path: u.pathname + u.search, method: 'GET' }, (res) => {
+    const req = httpsRequest({ hostname: u.hostname, path: u.pathname + u.search, method: 'GET' }, (res) => {
       if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-        return void httpGet(res.headers.location).then(resolve, reject);
+        return void httpGet(res.headers.location, maxRedirects - 1).then(resolve, reject);
       }
       const ch: Buffer[] = [];
       res.on('data', (c: Buffer) => ch.push(c));
       res.on('end', () => resolve(Buffer.concat(ch)));
-    }).on('error', reject).end();
+    });
+    req.setTimeout(30_000, () => { req.destroy(new Error('Request timed out after 30s')); });
+    req.on('error', reject);
+    req.end();
   });
 }
 
@@ -128,6 +144,20 @@ function patchData(buf: Buffer): { start: number; end: number; section: Buffer }
   return { start, end, section: buf.subarray(start, end) };
 }
 
+/** Canonical JSON: recursive key-sorting for deterministic serialization. */
+function canonicalJson(value: unknown): string {
+  return JSON.stringify(value, (_key, val) => {
+    if (val !== null && typeof val === 'object' && !Array.isArray(val) && !Buffer.isBuffer(val)) {
+      const sorted: Record<string, unknown> = {};
+      for (const k of Object.keys(val as Record<string, unknown>).sort()) {
+        sorted[k] = (val as Record<string, unknown>)[k];
+      }
+      return sorted;
+    }
+    return val;
+  });
+}
+
 /** Build a failed ApplyResult. */
 function failResult(sec: string, errs: string[], extra?: Partial<ApplyResult>): ApplyResult {
   return { success: false, newSize: 0, patchedSection: sec, errors: errs, ...extra };
@@ -146,7 +176,7 @@ export class RvfaPatcher {
       newSectionSha256: sha256(payload), compression: comp,
     };
     if (opts.privateKey && opts.signedBy) {
-      const signable = Buffer.concat([Buffer.from(JSON.stringify(header), 'utf-8'), payload]);
+      const signable = Buffer.concat([Buffer.from(canonicalJson(header), 'utf-8'), payload]);
       header.signature = edSign(signable, opts.privateKey);
       header.signedBy = opts.signedBy;
     }
@@ -213,7 +243,7 @@ export class RvfaPatcher {
       const { section } = patchData(patchBuf);
       const unsigned = { ...header } as Record<string, unknown>;
       delete unsigned.signature; delete unsigned.signedBy;
-      const signable = Buffer.concat([Buffer.from(JSON.stringify(unsigned), 'utf-8'), section]);
+      const signable = Buffer.concat([Buffer.from(canonicalJson(unsigned), 'utf-8'), section]);
       if (!edCheck(signable, header.signature, opts.publicKey))
         return failResult(sec, ['Patch signature verification failed']);
     }
