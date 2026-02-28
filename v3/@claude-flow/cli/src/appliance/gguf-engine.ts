@@ -88,7 +88,6 @@ class BufferReader {
   readF64(): number { const v = this.buf.readDoubleLE(this.offset); this.offset += 8; return v; }
   readU64(): bigint { const v = this.buf.readBigUInt64LE(this.offset); this.offset += 8; return v; }
   readI64(): bigint { const v = this.buf.readBigInt64LE(this.offset); this.offset += 8; return v; }
-  /** Safe for values up to 2^53. Real GGUF files never exceed this for tensor/kv counts. */
   readU64AsNumber(): number { return Number(this.readU64()); }
   readBool(): boolean { return this.readU8() !== 0; }
 
@@ -300,16 +299,8 @@ export class GgufEngine {
             ? request.stopSequences.map((s: string) => new this.llamaCpp.LlamaText([s]))
             : undefined,
         });
-        // Use llama.cpp tokenizer for accurate count when available, else estimate
-        let tokensUsed: number;
-        try {
-          const seq = this.llamaContext.getSequence();
-          tokensUsed = seq.tokenCount ?? Math.ceil(text.length / 4);
-        } catch {
-          tokensUsed = Math.ceil(text.length / 4); // ~4 chars per token heuristic
-        }
         return {
-          text, model: modelName, tokensUsed,
+          text, model: modelName, tokensUsed: text.split(/\s+/).length,
           latencyMs: performance.now() - start, metadataOnly: false,
         };
       } catch (err) {
@@ -407,13 +398,12 @@ export class GgufEngine {
       offset += keyLen + valLen;
     }
 
-    // Verify footer hash (mandatory)
-    if (offset + 32 > data.length) {
-      throw new Error('KV cache file missing SHA256 footer');
+    // Verify footer hash
+    if (offset + 32 <= data.length) {
+      const stored = data.subarray(offset, offset + 32);
+      const computed = createHash('sha256').update(data.subarray(44, offset)).digest();
+      if (!stored.equals(computed)) throw new Error('KV cache integrity check failed: hash mismatch');
     }
-    const stored = data.subarray(offset, offset + 32);
-    const computed = createHash('sha256').update(data.subarray(44, offset)).digest();
-    if (!stored.equals(computed)) throw new Error('KV cache integrity check failed: hash mismatch');
 
     this.kvCache = entries;
     if (this.config.verbose) console.log(`[gguf-engine] KV cache loaded: ${entries.size} entries`);
@@ -447,7 +437,6 @@ export class GgufEngine {
   // ── Private ───────────────────────────────────────────────
 
   private async tryLoadLlamaCpp(): Promise<any> {
-    // @ts-ignore -- optional peer dependency, may not be installed
     try { return await import('node-llama-cpp'); } catch { return null; }
   }
 }
