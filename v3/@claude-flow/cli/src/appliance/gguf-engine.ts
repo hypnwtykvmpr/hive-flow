@@ -447,6 +447,7 @@ export class GgufEngine {
   // ── Private ───────────────────────────────────────────────
 
   private async tryLoadLlamaCpp(): Promise<any> {
+    // @ts-ignore -- optional peer dependency, may not be installed
     try { return await import('node-llama-cpp'); } catch { return null; }
   }
 }
