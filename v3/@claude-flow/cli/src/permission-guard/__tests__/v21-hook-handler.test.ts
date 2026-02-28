@@ -64,17 +64,14 @@ describe('Step 1: hook-handler.cjs Bug A fix (CJS/ESM)', () => {
     // must NOT use require() for the gate module.
     // We check that the permission-guard handler section uses import(), not require(),
     // for the gate path specifically.
-    const pgHandlerMatch = hookHandlerSource.match(
-      /'permission-guard':\s*async\s*\(\)\s*=>\s*\{([\s\S]*?)\n\s*\}/
-    );
-    expect(pgHandlerMatch).not.toBeNull();
-    if (pgHandlerMatch) {
-      const handlerBody = pgHandlerMatch[1];
-      // Should NOT have: const gate = require(gatePath)
-      expect(handlerBody).not.toMatch(/const\s+gate\s*=\s*require\s*\(/);
-      // Should have: await import(...)
-      expect(handlerBody).toContain('await import(');
-    }
+    const pgStart = hookHandlerSource.indexOf("'permission-guard':");
+    expect(pgStart).toBeGreaterThan(-1);
+    // Extract a large enough section to cover the full handler body
+    const handlerBody = hookHandlerSource.slice(pgStart, pgStart + 3000);
+    // Should NOT have: const gate = require(gatePath)
+    expect(handlerBody).not.toMatch(/const\s+gate\s*=\s*require\s*\(/);
+    // Should have: await import(...)
+    expect(handlerBody).toContain('await import(');
   });
 
   it('pathToFileURL is imported from url module', () => {

@@ -1,4 +1,13 @@
 #!/usr/bin/env node
+// Process-level safety net: if anything escapes all other error handling,
+// produce valid JSON so Claude Code never sees a hook error.
+process.on('uncaughtException', () => {
+  if (process.argv[2] === 'permission-guard') {
+    process.stdout.write(JSON.stringify({ hookSpecificOutput: { permissionDecision: 'allow' } }));
+  }
+  process.exit(0);
+});
+
 /**
  * Claude Flow Hook Handler (Cross-Platform)
  * Dispatches hook events to the appropriate helper modules.
@@ -216,10 +225,29 @@ const handlers = {
   },
 
   'permission-guard': async () => {
+    const ALLOW_JSON = JSON.stringify({ hookSpecificOutput: { permissionDecision: 'allow' } });
     try {
+      // Read stdin with a 10-second timeout to prevent hanging
       const chunks = [];
-      for await (const chunk of process.stdin) chunks.push(chunk);
-      const input = JSON.parse(Buffer.concat(chunks).toString());
+      const input = await new Promise((resolve, reject) => {
+        const timer = setTimeout(() => {
+          process.stdin.destroy();
+          reject(new Error('stdin timeout after 10s'));
+        }, 10000);
+        process.stdin.on('data', (chunk) => chunks.push(chunk));
+        process.stdin.on('end', () => {
+          clearTimeout(timer);
+          try {
+            resolve(JSON.parse(Buffer.concat(chunks).toString()));
+          } catch (parseErr) {
+            reject(parseErr);
+          }
+        });
+        process.stdin.on('error', (err) => {
+          clearTimeout(timer);
+          reject(err);
+        });
+      });
 
       const gatePath = require('path').join(__dirname, '..', '..', 'v3', '@claude-flow', 'cli', 'dist', 'src', 'permission-guard', 'gate.js');
       try {
@@ -249,17 +277,15 @@ const handlers = {
           }));
           return;
         }
-      } catch (e) {
-        // Gate module not compiled — fall through to allow
+      } catch (gateErr) {
+        // Gate module not compiled — log to stderr and fall through to allow
+        process.stderr.write(`[permission-guard] gate error: ${gateErr.message}\n`);
       }
 
-      console.log(JSON.stringify({
-        hookSpecificOutput: { permissionDecision: 'allow' }
-      }));
-    } catch {
-      console.log(JSON.stringify({
-        hookSpecificOutput: { permissionDecision: 'allow' }
-      }));
+      console.log(ALLOW_JSON);
+    } catch (outerErr) {
+      process.stderr.write(`[permission-guard] outer error: ${outerErr.message}\n`);
+      console.log(ALLOW_JSON);
     }
   },
 };
@@ -270,7 +296,8 @@ const handlers = {
     try {
       await handlers[command]();
     } catch (e) {
-      console.log(`[WARN] Hook ${command} encountered an error: ${e.message}`);
+      const msg = e instanceof Error ? e.message : String(e);
+      console.log(`[WARN] Hook ${command} encountered an error: ${msg}`);
     }
   } else if (command) {
     console.log(`[OK] Hook: ${command}`);

@@ -13,7 +13,6 @@ import { readFileSync, writeFileSync, appendFileSync, mkdirSync, statSync, renam
 import { dirname, resolve, relative, join } from 'node:path';
 import { homedir } from 'node:os';
 import { randomUUID } from 'node:crypto';
-import { resolveProjectRoot } from '@claude-flow/shared';
 import type {
   PermissionConfig,
   GateResult,
@@ -423,7 +422,7 @@ export function writeEscalationContext(
 export async function evaluate(hookInput: HookInput, config: Partial<PermissionConfig>): Promise<GateResult> {
   const toolName = hookInput.tool_name || '';
   const toolInput = hookInput.tool_input || {};
-  const cwd = hookInput.cwd || resolveProjectRoot();
+  const cwd = hookInput.cwd || process.cwd();
 
   // Extract a summary for logging
   let inputSummary: string;
