@@ -84,7 +84,7 @@ export const signCommand: Command = {
       }
 
       const s = new signing.RvfaSigner(privateKey);
-      const meta = await s.signAppliance(file);
+      const meta = await s.signAppliance(file, signer);
       output.printSuccess('Appliance signed successfully');
       output.printInfo(`Algorithm:   ${meta.algorithm}`);
       output.printInfo(`Fingerprint: ${meta.publicKeyFingerprint}`);
