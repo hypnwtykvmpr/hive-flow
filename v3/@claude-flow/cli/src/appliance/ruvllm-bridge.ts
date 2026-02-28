@@ -15,6 +15,7 @@
 
 import { readdir, stat } from 'node:fs/promises';
 import { join, extname, basename } from 'node:path';
+import type { GgufEngine as GgufEngineType } from './gguf-engine.js';
 
 // ── Configuration ───────────────────────────────────────────
 
@@ -128,17 +129,34 @@ export class RuvllmBridge {
   private ruvectorCore: any = null;
   private ruvectorRouter: any = null;
   private ruvectorSona: any = null;
+  private ggufEngine: GgufEngineType | null = null;
 
   constructor(config: RuvllmConfig) {
     if (!config.modelsDir) throw new Error('RuvllmConfig.modelsDir is required');
     this.config = { ...DEFAULT_CONFIG, ...config };
   }
 
-  /** Probe optional @ruvector packages and scan modelsDir for GGUF files. */
+  /** Probe optional @ruvector packages, initialize GGUF engine, and scan modelsDir. */
   async initialize(): Promise<void> {
     this.ruvectorCore = await this.tryImport('@ruvector/core');
     this.ruvectorRouter = await this.tryImport('@ruvector/router');
     this.ruvectorSona = await this.tryImport('@ruvector/sona');
+
+    // Initialize GGUF engine for local model inference
+    try {
+      const { GgufEngine } = await import('./gguf-engine.js');
+      this.ggufEngine = new GgufEngine({
+        contextSize: this.config.contextSize,
+        maxTokens: this.config.maxTokens,
+        temperature: this.config.temperature,
+        kvCachePath: this.config.kvCachePath,
+        verbose: this.config.verbose,
+      });
+      await this.ggufEngine.initialize();
+    } catch {
+      // GGUF engine is optional
+    }
+
     await this.scanModelsDir();
 
     if (this.config.verbose) {
@@ -146,6 +164,7 @@ export class RuvllmBridge {
         this.ruvectorCore && '@ruvector/core',
         this.ruvectorRouter && '@ruvector/router',
         this.ruvectorSona && '@ruvector/sona',
+        this.ggufEngine && 'gguf-engine',
       ].filter(Boolean);
       if (pkgs.length) console.log(`[ruvLLM] Loaded: ${pkgs.join(', ')}`);
       console.log(`[ruvLLM] ${this.models.size} model(s) in ${this.config.modelsDir}`);
@@ -157,12 +176,17 @@ export class RuvllmBridge {
     return Array.from(this.models.values());
   }
 
-  /** Load a model into memory (delegates to @ruvector/core when available). */
+  /** Load a model into memory (delegates to GGUF engine or @ruvector/core). */
   async loadModel(name: string): Promise<void> {
     const info = this.models.get(name);
     if (!info) throw new Error(`Model "${name}" not found. Available: ${[...this.models.keys()].join(', ')}`);
 
-    if (this.ruvectorCore?.loadModel) {
+    // Prefer GGUF engine (parses header, loads via node-llama-cpp if available)
+    if (this.ggufEngine) {
+      const meta = await this.ggufEngine.loadModel(info.path);
+      if (meta.architecture) info.parameters = meta.architecture;
+      if (meta.quantization) info.quantization = meta.quantization;
+    } else if (this.ruvectorCore?.loadModel) {
       await this.ruvectorCore.loadModel(info.path, { contextSize: this.config.contextSize });
     }
     info.loaded = true;
@@ -185,17 +209,27 @@ export class RuvllmBridge {
       return { text: booster, model: 'agent-booster', tokensUsed: 0, latencyMs: performance.now() - start, tier: 1, cached: false };
     }
 
-    // Tier 2: Local model
+    // Tier 2: Local model (GGUF engine preferred, then @ruvector/core)
     const info = this.models.get(modelName);
-    if (info?.loaded && this.ruvectorCore?.generate) {
+    if (info?.loaded) {
       try {
-        const r = await this.ruvectorCore.generate({
-          model: info.path, prompt: request.prompt,
-          maxTokens: request.maxTokens ?? this.config.maxTokens,
-          temperature: request.temperature ?? this.config.temperature,
-          stopSequences: request.stopSequences,
-        });
-        return { text: r.text ?? '', model: modelName, tokensUsed: r.tokensUsed ?? 0, latencyMs: performance.now() - start, tier: 2, cached: false };
+        if (this.ggufEngine) {
+          const r = await this.ggufEngine.generate({
+            prompt: request.prompt,
+            maxTokens: request.maxTokens ?? this.config.maxTokens,
+            temperature: request.temperature ?? this.config.temperature,
+            stopSequences: request.stopSequences,
+          });
+          return { text: r.text, model: modelName, tokensUsed: r.tokensUsed, latencyMs: performance.now() - start, tier: 2, cached: false };
+        } else if (this.ruvectorCore?.generate) {
+          const r = await this.ruvectorCore.generate({
+            model: info.path, prompt: request.prompt,
+            maxTokens: request.maxTokens ?? this.config.maxTokens,
+            temperature: request.temperature ?? this.config.temperature,
+            stopSequences: request.stopSequences,
+          });
+          return { text: r.text ?? '', model: modelName, tokensUsed: r.tokensUsed ?? 0, latencyMs: performance.now() - start, tier: 2, cached: false };
+        }
       } catch (err) {
         if (this.config.verbose) console.warn('[ruvLLM] Local generation failed, tier 3 fallback:', err);
       }
@@ -236,6 +270,10 @@ export class RuvllmBridge {
 
   /** Persist KV-cache, unload models, and clean up. */
   async shutdown(): Promise<void> {
+    if (this.ggufEngine) {
+      await this.ggufEngine.shutdown();
+      this.ggufEngine = null;
+    }
     if (this.config.kvCachePath && this.ruvectorCore?.persistKvCache) {
       try { await this.ruvectorCore.persistKvCache(this.config.kvCachePath); }
       catch (e) { if (this.config.verbose) console.warn('[ruvLLM] KV-cache persist failed:', e); }

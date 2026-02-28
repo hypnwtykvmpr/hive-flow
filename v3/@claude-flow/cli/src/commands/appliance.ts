@@ -1,10 +1,11 @@
 /**
  * V3 CLI Appliance Command
- * Self-contained RVFA appliance management (build, inspect, verify, extract, run)
+ * Self-contained RVFA appliance management (build, inspect, verify, extract, run, sign, publish, update)
  */
 
 import type { Command, CommandContext, CommandResult } from '../types.js';
 import { output } from '../output.js';
+import { signCommand, publishCommand, updateAppCommand } from './appliance-advanced.js';
 
 interface RvfaSection {
   id: string;
@@ -402,13 +403,16 @@ export const applianceCommand: Command = {
   name: 'appliance',
   description: 'Self-contained RVFA appliance management (build, inspect, verify, extract, run)',
   aliases: ['rvfa'],
-  subcommands: [buildCommand, inspectCommand, verifyCommand, extractCommand, runCommand],
+  subcommands: [buildCommand, inspectCommand, verifyCommand, extractCommand, runCommand, signCommand, publishCommand, updateAppCommand],
   examples: [
     { command: 'ruflo appliance build -p cloud', description: 'Build a cloud appliance' },
     { command: 'ruflo appliance inspect -f ruflo.rvf', description: 'Inspect appliance contents' },
     { command: 'ruflo appliance verify -f ruflo.rvf', description: 'Verify integrity' },
     { command: 'ruflo appliance extract -f ruflo.rvf', description: 'Extract sections' },
     { command: 'ruflo appliance run -f ruflo.rvf', description: 'Boot and run appliance' },
+    { command: 'ruflo appliance sign -f ruflo.rvf --generate-keys', description: 'Generate keys and sign' },
+    { command: 'ruflo appliance publish -f ruflo.rvf', description: 'Publish to IPFS via Pinata' },
+    { command: 'ruflo appliance update -f ruflo.rvf -s ruflo -d ./new-ruflo.bin', description: 'Hot-patch a section' },
   ],
   action: async (): Promise<CommandResult> => {
     output.writeln();
@@ -422,6 +426,9 @@ export const applianceCommand: Command = {
       'verify    - Verify appliance integrity and run capability tests',
       'extract   - Extract all sections from an appliance',
       'run       - Boot and run an RVFA appliance',
+      'sign      - Sign an appliance with Ed25519 for tamper detection',
+      'publish   - Publish an appliance to IPFS via Pinata',
+      'update    - Hot-patch a section in an appliance',
     ]);
     output.writeln();
     output.writeln('Profiles:');
