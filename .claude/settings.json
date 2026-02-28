@@ -143,9 +143,11 @@
   },
   "permissions": {
     "allow": [
-      "Bash(npx @claude-flow*)",
-      "Bash(npx claude-flow*)",
-      "Bash(node .claude/*)",
+      "Bash",
+      "Write",
+      "Edit",
+      "MultiEdit",
+      "WebFetch",
       "mcp__claude-flow__:*"
     ],
     "deny": [
