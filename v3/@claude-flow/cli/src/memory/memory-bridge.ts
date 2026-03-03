@@ -67,7 +67,7 @@ async function getRegistry(dbPath?: string): Promise<any | null> {
               tieredCache: true,
               hierarchicalMemory: true,
               memoryConsolidation: true,
-            },
+            } as Record<string, boolean>,
           });
         } finally {
           console.log = origLog;
