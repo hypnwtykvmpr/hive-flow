@@ -420,6 +420,10 @@ export function writeEscalationContext(
 // ---------------------------------------------------------------------------
 
 export async function evaluate(hookInput: HookInput, config: Partial<PermissionConfig>): Promise<GateResult> {
+  // Normalize tool_input early — Claude Code may omit it or send null
+  if (!hookInput.tool_input || typeof hookInput.tool_input !== 'object') {
+    hookInput.tool_input = {};
+  }
   const toolName = hookInput.tool_name || '';
   const toolInput = hookInput.tool_input || {};
   const cwd = hookInput.cwd || process.cwd();

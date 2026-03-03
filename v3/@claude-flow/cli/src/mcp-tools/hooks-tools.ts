@@ -3155,7 +3155,7 @@ export const hooksModelOutcome: MCPTool = {
 
     const router = await getModelRouterInstance();
     if (router) {
-      router.recordOutcome(task, model, outcome);
+      router.recordOutcome(task, model as 'haiku' | 'sonnet' | 'opus' | 'inherit', outcome);
     }
 
     return {

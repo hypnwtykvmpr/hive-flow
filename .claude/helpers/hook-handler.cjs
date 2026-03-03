@@ -278,13 +278,13 @@ const handlers = {
           return;
         }
       } catch (gateErr) {
-        // Gate module not compiled — log to stderr and fall through to allow
-        process.stderr.write(`[permission-guard] gate error: ${gateErr.message}\n`);
+        // Gate module not compiled or input issue — silently fall through to allow
+        // NOTE: Do NOT write to stderr — Claude Code treats any stderr as hook error
       }
 
       console.log(ALLOW_JSON);
     } catch (outerErr) {
-      process.stderr.write(`[permission-guard] outer error: ${outerErr.message}\n`);
+      // Silently fall through — do NOT write to stderr
       console.log(ALLOW_JSON);
     }
   },
