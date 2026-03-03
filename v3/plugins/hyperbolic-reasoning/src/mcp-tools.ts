@@ -52,6 +52,7 @@ let gnnBridge: GnnBridge | null = null;
 // Stored embeddings and taxonomies
 const embeddingStore = new Map<string, Awaited<ReturnType<HyperbolicBridge['embedHierarchy']>>>();
 const taxonomyStore = new Map<string, Hierarchy>();
+let embedCounter = 0;
 
 async function getHyperbolicBridge(): Promise<HyperbolicBridge> {
   if (!hyperbolicBridge) {
@@ -102,7 +103,7 @@ async function embedHierarchyHandler(
     const result = await bridge.embedHierarchy(data.hierarchy, data.parameters);
 
     // Store for later use
-    const indexId = `embed_${Date.now()}`;
+    const indexId = `embed_${Date.now()}_${embedCounter++}`;
     embeddingStore.set(indexId, result);
 
     // Create index for search

@@ -170,19 +170,119 @@ module.exports = {
   },
 
   feedback: function(success) {
-    // Stub: no-op in minimal version
+    // Record task outcome signal alongside edit logs.
+    // Hardcoded true from Stop hook — see hook-handler.cjs comment.
+    ensureDir(DATA_DIR);
+    var line = JSON.stringify({ type: "feedback", success: !!success, timestamp: Date.now() }) + "\n";
+    try { fs.appendFileSync(PENDING_PATH, line, "utf-8"); } catch (e) { /* non-fatal */ }
   },
 
   consolidate: function() {
-    var count = 0;
-    if (fs.existsSync(PENDING_PATH)) {
+    if (!fs.existsSync(PENDING_PATH)) return { entries: 0, edges: 0, newEntries: 0 };
+    var content;
+    try {
+      content = fs.readFileSync(PENDING_PATH, "utf-8").trim();
+    } catch (e) { return { entries: 0, edges: 0, newEntries: 0 }; }
+    if (!content) return { entries: 0, edges: 0, newEntries: 0 };
+
+    var lines = content.split("\n");
+    var edits = [];
+    var feedbackSignals = [];
+    for (var i = 0; i < lines.length; i++) {
       try {
-        var content = fs.readFileSync(PENDING_PATH, "utf-8").trim();
-        count = content ? content.split("\n").length : 0;
-        fs.writeFileSync(PENDING_PATH, "", "utf-8");
-      } catch (e) { /* skip */ }
+        var entry = JSON.parse(lines[i]);
+        if (entry.type === "edit") edits.push(entry);
+        else if (entry.type === "feedback") feedbackSignals.push(entry);
+      } catch (e) { /* skip malformed */ }
     }
-    return { entries: count, edges: 0, newEntries: 0 };
+
+    // Clear pending file
+    try { fs.writeFileSync(PENDING_PATH, "", "utf-8"); } catch (e) { /* skip */ }
+
+    if (edits.length === 0) return { entries: lines.length, edges: 0, newEntries: 0 };
+
+    // Synthesize patterns from edit clusters by directory
+    var dirClusters = {};
+    for (var j = 0; j < edits.length; j++) {
+      var filePath = edits[j].file || "";
+      // Extract meaningful directory (2 levels deep from src/)
+      var parts = filePath.replace(/\\/g, "/").split("/");
+      var srcIdx = parts.indexOf("src");
+      var dirKey;
+      if (srcIdx >= 0 && parts.length > srcIdx + 1) {
+        dirKey = parts.slice(srcIdx, Math.min(srcIdx + 3, parts.length - 1)).join("/");
+      } else {
+        dirKey = parts.slice(Math.max(0, parts.length - 3), parts.length - 1).join("/");
+      }
+      if (!dirKey) dirKey = "root";
+      if (!dirClusters[dirKey]) dirClusters[dirKey] = [];
+      dirClusters[dirKey].push(edits[j]);
+    }
+
+    // Determine overall success from feedback signals
+    var hasSuccess = feedbackSignals.some(function(f) { return f.success; });
+
+    // Write synthesized patterns to auto-memory-store
+    var storeWrapper;
+    var store;
+    try {
+      storeWrapper = fs.existsSync(STORE_PATH) ? JSON.parse(fs.readFileSync(STORE_PATH, "utf-8")) : null;
+      // Handle both formats: { entries: [...] } (from loadEntries) and plain array (legacy)
+      if (storeWrapper && Array.isArray(storeWrapper.entries)) {
+        store = storeWrapper.entries;
+      } else if (Array.isArray(storeWrapper)) {
+        store = storeWrapper;
+      } else {
+        store = [];
+      }
+    } catch (e) { store = []; }
+
+    var newEntries = 0;
+    var dirs = Object.keys(dirClusters);
+    for (var k = 0; k < dirs.length; k++) {
+      var cluster = dirClusters[dirs[k]];
+      if (cluster.length < 2) continue; // Skip single-edit clusters — not a pattern
+
+      var files = [];
+      var seen = {};
+      for (var m = 0; m < cluster.length; m++) {
+        var basename = (cluster[m].file || "").split("/").pop() || "";
+        if (basename && !seen[basename]) {
+          seen[basename] = true;
+          files.push(basename);
+        }
+      }
+
+      var patternId = "pattern-" + dirs[k].replace(/[^a-z0-9]/gi, "-") + "-" + Date.now();
+      var patternContent = "Edited " + files.length + " files in " + dirs[k] + ": " + files.slice(0, 5).join(", ") + (hasSuccess ? " (successful)" : "");
+
+      // Dedup: skip if a similar pattern already exists (same directory, recent)
+      var isDuplicate = store.some(function(e) {
+        return e.namespace === "patterns" && e.key && e.key.indexOf(dirs[k].replace(/[^a-z0-9]/gi, "-")) >= 0
+          && (Date.now() - (e.updatedAt || e.createdAt || 0)) < 3600000; // within 1 hour
+      });
+      if (isDuplicate) continue;
+
+      store.push({
+        id: patternId,
+        key: patternId,
+        namespace: "patterns",
+        type: "procedural",
+        content: patternContent,
+        tags: ["auto-synthesized", dirs[k]],
+        metadata: { fileCount: files.length, editCount: cluster.length, success: hasSuccess },
+        confidence: hasSuccess ? 0.6 : 0.3,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      newEntries++;
+    }
+
+    if (newEntries > 0) {
+      try { fs.writeFileSync(STORE_PATH, JSON.stringify({ entries: store }, null, 2), "utf-8"); } catch (e) { /* best effort */ }
+    }
+
+    return { entries: lines.length, edges: 0, newEntries: newEntries };
   },
 
   stats: function(json) {

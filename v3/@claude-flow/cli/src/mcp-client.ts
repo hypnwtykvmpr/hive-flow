@@ -37,6 +37,8 @@ import { coordinationTools } from './mcp-tools/coordination-tools.js';
 import { browserTools } from './mcp-tools/browser-tools.js';
 // Phase 6: AgentDB v3 controller tools
 import { agentdbTools } from './mcp-tools/agentdb-tools.js';
+// First-class provider tools: Cursor, Codex, Gemini
+import { providerTools } from './mcp-tools/provider-tools.js';
 
 /**
  * MCP Tool Registry
@@ -79,6 +81,8 @@ registerTools([
   ...browserTools,
   // Phase 6: AgentDB v3 controller tools
   ...agentdbTools,
+  // First-class provider tools: Cursor, Codex, Gemini
+  ...providerTools,
 ]);
 
 /**

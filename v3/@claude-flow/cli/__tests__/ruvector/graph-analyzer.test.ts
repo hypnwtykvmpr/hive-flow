@@ -16,6 +16,7 @@ import {
   loadRuVector,
   fallbackMinCut,
   fallbackLouvain,
+  clearGraphCaches,
   type DependencyGraph,
   type GraphNode,
   type GraphEdge,
@@ -38,7 +39,8 @@ describe('Graph Analyzer', () => {
   let testDir: string;
 
   beforeEach(async () => {
-    testDir = join(tmpdir(), `graph-test-${Date.now()}`);
+    clearGraphCaches();
+    testDir = join(tmpdir(), `graph-test-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
     await mkdir(testDir, { recursive: true });
   });
 
@@ -99,7 +101,7 @@ export const b = 'value';
       expect(graph.edges.length).toBe(0);
     });
 
-    it.skip('should handle nested directories', async () => { // Skip: file system race condition
+    it('should handle nested directories', async () => {
       await mkdir(join(testDir, 'src'), { recursive: true });
       await writeFile(join(testDir, 'src', 'index.ts'), `
 export const main = 'main';

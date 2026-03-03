@@ -55,6 +55,18 @@
 
 ---
 
+## Agent Model Display & Selection (Permanent)
+
+When spawning agents with the Task tool:
+- ALWAYS append `(model)` to the `description` parameter: e.g. `"Fix tests (opus)"`
+- ALWAYS set the `model` parameter explicitly: `"opus"`, `"sonnet"`, or `"haiku"`
+
+### Model Selection Priority
+- **opus**: Architecture, security, complex reasoning, multi-file changes
+- **sonnet**: Implementation, testing, moderate complexity
+- **haiku**: ONLY for simple lookups, formatting, trivial tasks
+- NEVER use haiku for non-trivial work
+
 ## Swarm Orchestration
 
 - MUST initialize the swarm using MCP tools when starting complex tasks

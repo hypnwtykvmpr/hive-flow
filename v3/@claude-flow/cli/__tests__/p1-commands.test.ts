@@ -26,7 +26,7 @@ vi.mock('fs', () => ({
 vi.mock('../src/mcp-client.js', () => ({
   callMCPTool: vi.fn(async (toolName: string, input: Record<string, unknown>) => {
     // Swarm tools
-    if (toolName === 'swarm/init') {
+    if (toolName === 'swarm_init') {
       return {
         swarmId: 'swarm-mock-123',
         topology: input.topology || 'hierarchical-mesh',
@@ -40,7 +40,7 @@ vi.mock('../src/mcp-client.js', () => ({
       };
     }
 
-    if (toolName === 'swarm/status') {
+    if (toolName === 'swarm_status') {
       return {
         swarmId: 'swarm-mock-123',
         topology: 'hierarchical-mesh',
@@ -50,7 +50,7 @@ vi.mock('../src/mcp-client.js', () => ({
       };
     }
 
-    if (toolName === 'swarm/health') {
+    if (toolName === 'swarm_health') {
       return {
         status: 'healthy',
         checks: [
@@ -60,12 +60,12 @@ vi.mock('../src/mcp-client.js', () => ({
       };
     }
 
-    if (toolName === 'swarm/stop') {
+    if (toolName === 'swarm_stop') {
       return { stopped: true, stoppedAt: new Date().toISOString() };
     }
 
     // MCP tools
-    if (toolName === 'mcp/start') {
+    if (toolName === 'mcp_start') {
       return {
         serverId: 'mcp-mock-123',
         port: input.port || 3000,
@@ -74,16 +74,16 @@ vi.mock('../src/mcp-client.js', () => ({
       };
     }
 
-    if (toolName === 'mcp/status') {
+    if (toolName === 'mcp_status') {
       return { running: true, port: 3000, transport: 'stdio' };
     }
 
-    if (toolName === 'mcp/stop') {
+    if (toolName === 'mcp_stop') {
       return { stopped: true };
     }
 
     // Memory tools
-    if (toolName === 'memory/stats') {
+    if (toolName === 'memory_stats') {
       return {
         entries: 100,
         size: 1024000,
@@ -92,7 +92,7 @@ vi.mock('../src/mcp-client.js', () => ({
       };
     }
 
-    if (toolName === 'memory/detailed-stats') {
+    if (toolName === 'memory_detailed-stats') {
       return {
         backend: 'hybrid',
         entries: 100,
@@ -112,7 +112,7 @@ vi.mock('../src/mcp-client.js', () => ({
     }
 
     // Task tools
-    if (toolName === 'task/create') {
+    if (toolName === 'task_create') {
       return {
         taskId: `task-${Date.now()}`,
         type: input.type,
@@ -125,7 +125,7 @@ vi.mock('../src/mcp-client.js', () => ({
       };
     }
 
-    if (toolName === 'task/list') {
+    if (toolName === 'task_list') {
       return {
         tasks: [
           {
@@ -151,7 +151,7 @@ vi.mock('../src/mcp-client.js', () => ({
       };
     }
 
-    if (toolName === 'task/status') {
+    if (toolName === 'task_status') {
       return {
         id: input.taskId,
         type: 'implementation',
@@ -174,7 +174,7 @@ vi.mock('../src/mcp-client.js', () => ({
       };
     }
 
-    if (toolName === 'task/cancel') {
+    if (toolName === 'task_cancel') {
       return {
         taskId: input.taskId,
         cancelled: true,
@@ -183,7 +183,7 @@ vi.mock('../src/mcp-client.js', () => ({
       };
     }
 
-    if (toolName === 'task/assign') {
+    if (toolName === 'task_assign') {
       return {
         taskId: input.taskId,
         assignedTo: input.agentIds || [],
@@ -191,7 +191,7 @@ vi.mock('../src/mcp-client.js', () => ({
       };
     }
 
-    if (toolName === 'task/retry') {
+    if (toolName === 'task_retry') {
       return {
         taskId: input.taskId,
         newTaskId: `task-retry-${Date.now()}`,
@@ -200,7 +200,7 @@ vi.mock('../src/mcp-client.js', () => ({
       };
     }
 
-    if (toolName === 'task/summary') {
+    if (toolName === 'task_summary') {
       return {
         total: 10,
         pending: 3,
@@ -211,7 +211,7 @@ vi.mock('../src/mcp-client.js', () => ({
     }
 
     // Session tools
-    if (toolName === 'session/list') {
+    if (toolName === 'session_list') {
       return {
         sessions: [
           {
@@ -239,7 +239,7 @@ vi.mock('../src/mcp-client.js', () => ({
       };
     }
 
-    if (toolName === 'session/save') {
+    if (toolName === 'session_save') {
       return {
         sessionId: `session-${Date.now()}`,
         name: input.name || 'unnamed',
@@ -259,7 +259,7 @@ vi.mock('../src/mcp-client.js', () => ({
       };
     }
 
-    if (toolName === 'session/restore') {
+    if (toolName === 'session_restore') {
       return {
         sessionId: input.sessionId,
         restoredAt: new Date().toISOString(),
@@ -276,7 +276,7 @@ vi.mock('../src/mcp-client.js', () => ({
       };
     }
 
-    if (toolName === 'session/delete') {
+    if (toolName === 'session_delete') {
       return {
         sessionId: input.sessionId,
         deleted: true,
@@ -284,7 +284,7 @@ vi.mock('../src/mcp-client.js', () => ({
       };
     }
 
-    if (toolName === 'session/export') {
+    if (toolName === 'session_export') {
       return {
         sessionId: input.sessionId || 'current',
         data: { agents: [], tasks: [], memory: [] },
@@ -296,7 +296,7 @@ vi.mock('../src/mcp-client.js', () => ({
       };
     }
 
-    if (toolName === 'session/import') {
+    if (toolName === 'session_import') {
       return {
         sessionId: `session-imported-${Date.now()}`,
         name: input.name || 'imported',
@@ -310,7 +310,7 @@ vi.mock('../src/mcp-client.js', () => ({
       };
     }
 
-    if (toolName === 'session/current') {
+    if (toolName === 'session_current') {
       return {
         sessionId: 'session-current',
         name: 'current-session',
@@ -326,7 +326,7 @@ vi.mock('../src/mcp-client.js', () => ({
     }
 
     // Agent tools for task assign
-    if (toolName === 'agent/list') {
+    if (toolName === 'agent_list') {
       return {
         agents: [
           { id: 'coder-1', type: 'coder', status: 'active' },
@@ -381,6 +381,111 @@ vi.mock('../src/output.js', () => ({
   }
 }));
 
+// Mock init executor
+vi.mock('../src/init/index.js', () => ({
+  executeInit: vi.fn(async () => ({
+    success: true,
+    errors: [],
+    created: { directories: ['.claude', '.claude-flow'], files: ['config.yaml', 'settings.json'] },
+    skipped: [],
+    summary: {
+      skillsCount: 5,
+      commandsCount: 3,
+      agentsCount: 10,
+      hooksEnabled: 4,
+    },
+  })),
+  executeUpgrade: vi.fn(async () => ({
+    success: true,
+    errors: [],
+    updated: [],
+    created: [],
+    preserved: [],
+  })),
+  executeUpgradeWithMissing: vi.fn(async () => ({
+    success: true,
+    errors: [],
+    updated: [],
+    created: [],
+    preserved: [],
+    addedSkills: [],
+    addedAgents: [],
+    addedCommands: [],
+  })),
+  DEFAULT_INIT_OPTIONS: {
+    targetDir: '.',
+    force: false,
+    components: {
+      settings: true, skills: true, commands: true, agents: true,
+      helpers: true, statusline: false, mcp: true, runtime: true, claudeMd: true,
+    },
+    skills: { all: false, core: true, agentdb: true, github: true, flowNexus: false, browser: false, v3: true, dualMode: false },
+    hooks: {
+      preToolUse: true, postToolUse: true, userPromptSubmit: true,
+      sessionStart: true, stop: true, preCompact: false, notification: true,
+      timeout: 10000, continueOnError: true,
+    },
+    runtime: {
+      topology: 'hierarchical-mesh',
+      maxAgents: 15,
+      memoryBackend: 'hybrid',
+      enableHNSW: true,
+      enableNeural: true,
+      enableLearningBridge: false,
+      enableMemoryGraph: false,
+      enableAgentScopes: false,
+    },
+  },
+  MINIMAL_INIT_OPTIONS: {
+    targetDir: '.',
+    force: false,
+    components: {
+      settings: true, skills: true, commands: false, agents: false,
+      helpers: false, statusline: false, mcp: true, runtime: true, claudeMd: true,
+    },
+    skills: { all: false, core: true, agentdb: false, github: false, flowNexus: false, browser: false, v3: false, dualMode: false },
+    hooks: {
+      preToolUse: true, postToolUse: true, userPromptSubmit: false,
+      sessionStart: false, stop: false, preCompact: false, notification: false,
+      timeout: 5000, continueOnError: true,
+    },
+    runtime: {
+      topology: 'hierarchical',
+      maxAgents: 8,
+      memoryBackend: 'hybrid',
+      enableHNSW: true,
+      enableNeural: false,
+      enableLearningBridge: false,
+      enableMemoryGraph: false,
+      enableAgentScopes: false,
+    },
+  },
+  FULL_INIT_OPTIONS: {
+    targetDir: '.',
+    force: false,
+    components: {
+      settings: true, skills: true, commands: true, agents: true,
+      helpers: true, statusline: true, mcp: true, runtime: true, claudeMd: true,
+    },
+    skills: { all: true, core: true, agentdb: true, github: true, flowNexus: true, browser: true, v3: true, dualMode: false },
+    hooks: {
+      preToolUse: true, postToolUse: true, userPromptSubmit: true,
+      sessionStart: true, stop: true, preCompact: true, notification: true,
+      timeout: 10000, continueOnError: true,
+    },
+    runtime: {
+      topology: 'hierarchical-mesh',
+      maxAgents: 15,
+      memoryBackend: 'hybrid',
+      enableHNSW: true,
+      enableNeural: true,
+      enableLearningBridge: true,
+      enableMemoryGraph: true,
+      enableAgentScopes: true,
+    },
+  },
+}));
+
 // Mock prompts
 vi.mock('../src/prompt.js', () => ({
   select: vi.fn(async (opts) => opts.default || opts.options[0]?.value),
@@ -403,20 +508,16 @@ describe('Init Command', () => {
   });
 
   describe('init (default)', () => {
-    // TODO: Init command tests require complex mocking of executeInit internals
-    // These tests were never running before, skipped for alpha release
-    it.skip('should initialize with default configuration', async () => {
+    it('should initialize with default configuration', async () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
 
       const result = await initCommand.action!(ctx);
 
       expect(result.success).toBe(true);
       expect(result.data).toHaveProperty('success', true);
-      expect(fs.mkdirSync).toHaveBeenCalled();
-      expect(fs.writeFileSync).toHaveBeenCalled();
     });
 
-    it.skip('should initialize with minimal configuration', async () => {
+    it('should initialize with minimal configuration', async () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
       ctx.flags = { minimal: true, _: [] };
 
@@ -426,7 +527,7 @@ describe('Init Command', () => {
       expect(result.data).toHaveProperty('success', true);
     });
 
-    it.skip('should initialize with full configuration', async () => {
+    it('should initialize with full configuration', async () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
       ctx.flags = { full: true, _: [] };
 
@@ -444,7 +545,7 @@ describe('Init Command', () => {
       expect(result.success).toBe(false);
     });
 
-    it.skip('should reinitialize with force flag', async () => {
+    it('should reinitialize with force flag', async () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
       ctx.flags = { force: true, _: [] };
 
@@ -605,7 +706,7 @@ describe('Status Command', () => {
       expect(result.success).toBe(true);
     });
 
-    it.skip('should perform health check', async () => { // Skip: requires live MCP context
+    it('should perform health check', async () => {
       ctx.flags = { 'health-check': true, _: [] };
 
       const result = await statusCommand.action!(ctx);
@@ -636,7 +737,7 @@ describe('Status Command', () => {
   });
 
   describe('status tasks', () => {
-    it.skip('should show task status', async () => { // Skip: requires live MCP context
+    it('should show task status', async () => {
       const tasksCmd = statusCommand.subcommands?.find(c => c.name === 'tasks');
       const result = await tasksCmd!.action!(ctx);
 
@@ -645,7 +746,7 @@ describe('Status Command', () => {
   });
 
   describe('status memory', () => {
-    it.skip('should show memory status', async () => { // Skip: requires live MCP context
+    it('should show memory status', async () => {
       const memoryCmd = statusCommand.subcommands?.find(c => c.name === 'memory');
       const result = await memoryCmd!.action!(ctx);
 
@@ -668,7 +769,7 @@ describe('Task Command', () => {
   });
 
   describe('task create', () => {
-    it.skip('should create task with type and description', async () => { // Skip: requires live MCP context
+    it('should create task with type and description', async () => {
       const createCmd = taskCommand.subcommands?.find(c => c.name === 'create');
       ctx.flags = {
         type: 'implementation',
@@ -684,7 +785,7 @@ describe('Task Command', () => {
       expect(result.data).toHaveProperty('description', 'Add user authentication');
     });
 
-    it.skip('should create task with priority', async () => { // Skip: requires live MCP context
+    it('should create task with priority', async () => {
       const createCmd = taskCommand.subcommands?.find(c => c.name === 'create');
       ctx.flags = {
         type: 'bug-fix',
@@ -719,7 +820,7 @@ describe('Task Command', () => {
   });
 
   describe('task list', () => {
-    it.skip('should list tasks', async () => { // Skip: requires live MCP context
+    it('should list tasks', async () => {
       const listCmd = taskCommand.subcommands?.find(c => c.name === 'list');
 
       const result = await listCmd!.action!(ctx);
@@ -729,7 +830,7 @@ describe('Task Command', () => {
       expect(result.data).toHaveProperty('total');
     });
 
-    it.skip('should filter by status', async () => { // Skip: requires live MCP context
+    it('should filter by status', async () => {
       const listCmd = taskCommand.subcommands?.find(c => c.name === 'list');
       ctx.flags = { status: 'running', _: [] };
 
@@ -738,7 +839,7 @@ describe('Task Command', () => {
       expect(result.success).toBe(true);
     });
 
-    it.skip('should show all tasks', async () => { // Skip: requires live MCP context
+    it('should show all tasks', async () => {
       const listCmd = taskCommand.subcommands?.find(c => c.name === 'list');
       ctx.flags = { all: true, _: [] };
 
@@ -749,7 +850,7 @@ describe('Task Command', () => {
   });
 
   describe('task status', () => {
-    it.skip('should get task status', async () => { // Skip: requires live MCP context
+    it('should get task status', async () => {
       const statusCmd = taskCommand.subcommands?.find(c => c.name === 'status');
       ctx.args = ['task-123'];
 
@@ -771,7 +872,7 @@ describe('Task Command', () => {
   });
 
   describe('task cancel', () => {
-    it.skip('should cancel task', async () => { // Skip: requires live MCP context
+    it('should cancel task', async () => {
       const cancelCmd = taskCommand.subcommands?.find(c => c.name === 'cancel');
       ctx.args = ['task-123'];
       ctx.flags = { force: true, _: [] };
@@ -792,7 +893,7 @@ describe('Task Command', () => {
   });
 
   describe('task assign', () => {
-    it.skip('should assign task to agent', async () => { // Skip: requires live MCP context
+    it('should assign task to agent', async () => {
       const assignCmd = taskCommand.subcommands?.find(c => c.name === 'assign');
       ctx.args = ['task-123'];
       ctx.flags = { agent: 'coder-1', _: [] };
@@ -824,7 +925,7 @@ describe('Task Command', () => {
   });
 
   describe('task retry', () => {
-    it.skip('should retry failed task', async () => { // Skip: requires live MCP context
+    it('should retry failed task', async () => {
       const retryCmd = taskCommand.subcommands?.find(c => c.name === 'retry');
       ctx.args = ['task-123'];
 
@@ -858,7 +959,7 @@ describe('Session Command', () => {
   });
 
   describe('session list', () => {
-    it.skip('should list sessions', async () => { // Skip: requires live MCP context
+    it('should list sessions', async () => {
       const listCmd = sessionCommand.subcommands?.find(c => c.name === 'list');
 
       const result = await listCmd!.action!(ctx);
@@ -868,7 +969,7 @@ describe('Session Command', () => {
       expect(result.data).toHaveProperty('total');
     });
 
-    it.skip('should filter active sessions', async () => { // Skip: requires live MCP context
+    it('should filter active sessions', async () => {
       const listCmd = sessionCommand.subcommands?.find(c => c.name === 'list');
       ctx.flags = { active: true, _: [] };
 
@@ -877,7 +978,7 @@ describe('Session Command', () => {
       expect(result.success).toBe(true);
     });
 
-    it.skip('should include archived sessions', async () => { // Skip: requires live MCP context
+    it('should include archived sessions', async () => {
       const listCmd = sessionCommand.subcommands?.find(c => c.name === 'list');
       ctx.flags = { all: true, _: [] };
 
@@ -888,7 +989,7 @@ describe('Session Command', () => {
   });
 
   describe('session save', () => {
-    it.skip('should save session with name', async () => { // Skip: requires live MCP context
+    it('should save session with name', async () => {
       const saveCmd = sessionCommand.subcommands?.find(c => c.name === 'save');
       ctx.flags = { name: 'my-session', _: [] };
 
@@ -899,7 +1000,7 @@ describe('Session Command', () => {
       expect(result.data).toHaveProperty('name', 'my-session');
     });
 
-    it.skip('should save session with description', async () => { // Skip: requires live MCP context
+    it('should save session with description', async () => {
       const saveCmd = sessionCommand.subcommands?.find(c => c.name === 'save');
       ctx.flags = { name: 'checkpoint', description: 'Before refactoring', _: [] };
 
@@ -908,7 +1009,7 @@ describe('Session Command', () => {
       expect(result.success).toBe(true);
     });
 
-    it.skip('should exclude memory when requested', async () => { // Skip: requires live MCP context
+    it('should exclude memory when requested', async () => {
       const saveCmd = sessionCommand.subcommands?.find(c => c.name === 'save');
       ctx.flags = { name: 'no-memory', 'include-memory': false, _: [] };
 
@@ -919,7 +1020,7 @@ describe('Session Command', () => {
   });
 
   describe('session restore', () => {
-    it.skip('should restore session', async () => { // Skip: requires live MCP context
+    it('should restore session', async () => {
       const restoreCmd = sessionCommand.subcommands?.find(c => c.name === 'restore');
       ctx.args = ['session-123'];
       ctx.flags = { force: true, _: [] };
@@ -930,7 +1031,7 @@ describe('Session Command', () => {
       expect(result.data).toHaveProperty('restored');
     });
 
-    it.skip('should restore only memory', async () => { // Skip: requires live MCP context
+    it('should restore only memory', async () => {
       const restoreCmd = sessionCommand.subcommands?.find(c => c.name === 'restore');
       ctx.args = ['session-123'];
       ctx.flags = { force: true, 'memory-only': true, _: [] };
@@ -950,7 +1051,7 @@ describe('Session Command', () => {
   });
 
   describe('session delete', () => {
-    it.skip('should delete session', async () => { // Skip: requires live MCP context
+    it('should delete session', async () => {
       const deleteCmd = sessionCommand.subcommands?.find(c => c.name === 'delete');
       ctx.args = ['session-123'];
       ctx.flags = { force: true, _: [] };
@@ -986,7 +1087,7 @@ describe('Session Command', () => {
       expect(result).toBeDefined();
     });
 
-    it.skip('should export in YAML format', async () => { // Skip: requires live MCP context
+    it('should export in YAML format', async () => {
       const exportCmd = sessionCommand.subcommands?.find(c => c.name === 'export');
       ctx.args = ['session-123'];
       ctx.flags = { output: 'backup.yaml', format: 'yaml', _: [] };
@@ -999,7 +1100,7 @@ describe('Session Command', () => {
   });
 
   describe('session import', () => {
-    it.skip('should import session from file', async () => { // Skip: requires live MCP context
+    it('should import session from file', async () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
       vi.mocked(fs.readFileSync).mockReturnValue('{"agents":[],"tasks":[]}');
 
@@ -1033,7 +1134,7 @@ describe('Session Command', () => {
   });
 
   describe('session current', () => {
-    it.skip('should show current session', async () => { // Skip: requires live MCP context
+    it('should show current session', async () => {
       const currentCmd = sessionCommand.subcommands?.find(c => c.name === 'current');
 
       const result = await currentCmd!.action!(ctx);

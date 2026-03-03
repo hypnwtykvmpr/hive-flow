@@ -142,7 +142,7 @@ async function runWorker(workerType: HeadlessWorkerType, timeout: number): Promi
   try {
     const result = await executor.execute(workerType, {
       timeoutMs: timeout,
-      model: 'sonnet',
+      model: (process.env.CLAUDE_FLOW_HEADLESS_MODEL as 'sonnet' | 'opus' | 'haiku') || 'sonnet',
       sandbox: 'permissive'
     });
 

@@ -140,6 +140,7 @@ export {
   recordModelOutcome,
   MODEL_CAPABILITIES,
   COMPLEXITY_INDICATORS,
+  type AgentModel,
   type ClaudeModel,
   type ModelRouterConfig,
   type ModelRoutingResult,

@@ -225,22 +225,20 @@ npx @claude-flow/cli@latest hooks worker dispatch --trigger audit
 }
 
 function learningProtocol(): string {
-  return `## Auto-Learning Protocol
+  return `## Turn Completion (CRITICAL)
 
-### Before Starting Any Task
-\`\`\`bash
-npx @claude-flow/cli@latest memory search --query "[task keywords]" --namespace patterns
-npx @claude-flow/cli@latest hooks route --task "[task description]"
-\`\`\`
+When you finish the user's request: **report results, then STOP.**
+- Do NOT run post-task hooks, memory commands, or neural training
+- Do NOT trigger worker dispatches
+- Background systems handle all learning automatically
 
-### After Completing Any Task Successfully
-\`\`\`bash
-npx @claude-flow/cli@latest memory store --namespace patterns --key "[pattern-name]" --value "[what worked]"
-npx @claude-flow/cli@latest hooks post-task --task-id "[id]" --success true --store-results true
-\`\`\`
+## Background Learning
 
-- ALWAYS check memory before starting new features, debugging, or refactoring
-- ALWAYS store patterns in memory after solving bugs, completing features, or finding optimizations`;
+Pattern learning, memory sync, and neural training are handled automatically by:
+- **Daemon workers** (optimize, audit, consolidate — scheduled intervals)
+- **Hooks** (post-edit on file save, post-task on turn end, memory sync on Stop)
+
+Do NOT run manual memory/hooks/neural commands after completing work. Just stop.`;
 }
 
 function memoryCommands(): string {
@@ -313,7 +311,7 @@ npx @claude-flow/cli@latest security cve --check
 }
 
 function performanceSection(): string {
-  return `## Performance Optimization Protocol
+  return `## Performance Guidelines
 
 - Always run benchmarks before and after performance changes
 - Always profile before optimizing — never guess at bottlenecks

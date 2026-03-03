@@ -29,12 +29,15 @@ import { dirname, join } from 'path';
 /**
  * Available Claude models for routing
  */
-export type ClaudeModel = 'haiku' | 'sonnet' | 'opus' | 'inherit';
+export type AgentModel = 'haiku' | 'sonnet' | 'opus' | 'inherit';
+
+/** @deprecated Use AgentModel instead */
+export type ClaudeModel = AgentModel;
 
 /**
  * Model capabilities and characteristics
  */
-export const MODEL_CAPABILITIES: Record<ClaudeModel, {
+export const MODEL_CAPABILITIES: Record<AgentModel, {
   maxComplexity: number;
   costMultiplier: number;
   speedMultiplier: number;
@@ -112,7 +115,7 @@ export interface ModelRouterConfig {
  */
 export interface ModelRoutingResult {
   /** Selected model */
-  model: ClaudeModel;
+  model: AgentModel;
   /** Confidence in the decision (0-1) */
   confidence: number;
   /** Uncertainty estimate (0-1) */
@@ -122,7 +125,7 @@ export interface ModelRoutingResult {
   /** Reasoning for the selection */
   reasoning: string;
   /** Alternative models considered */
-  alternatives: Array<{ model: ClaudeModel; score: number }>;
+  alternatives: Array<{ model: AgentModel; score: number }>;
   /** Inference time in microseconds */
   inferenceTimeUs: number;
   /** Estimated cost multiplier */
@@ -155,14 +158,14 @@ export interface ComplexityAnalysis {
  */
 interface RouterState {
   totalDecisions: number;
-  modelDistribution: Record<ClaudeModel, number>;
+  modelDistribution: Record<AgentModel, number>;
   avgComplexity: number;
   avgConfidence: number;
   circuitBreakerTrips: number;
   lastUpdated: string;
   learningHistory: Array<{
     task: string;
-    model: ClaudeModel;
+    model: AgentModel;
     complexity: number;
     outcome: 'success' | 'failure' | 'escalated';
     timestamp: string;
@@ -195,7 +198,7 @@ export class ModelRouter {
   private config: ModelRouterConfig;
   private state: RouterState;
   private decisionCount = 0;
-  private consecutiveFailures: Record<ClaudeModel, number> = {
+  private consecutiveFailures: Record<AgentModel, number> = {
     haiku: 0,
     sonnet: 0,
     opus: 0,
@@ -236,7 +239,7 @@ export class ModelRouter {
       reasoning: this.buildReasoning(model, complexity, confidence),
       alternatives: Object.entries(adjustedScores)
         .filter(([m]) => m !== model)
-        .map(([m, score]) => ({ model: m as ClaudeModel, score }))
+        .map(([m, score]) => ({ model: m as AgentModel, score }))
         .sort((a, b) => b.score - a.score),
       inferenceTimeUs,
       costMultiplier: MODEL_CAPABILITIES[model].costMultiplier,
@@ -369,7 +372,7 @@ export class ModelRouter {
   /**
    * Compute scores for each model
    */
-  private computeModelScores(complexity: ComplexityAnalysis): Record<ClaudeModel, number> {
+  private computeModelScores(complexity: ComplexityAnalysis): Record<AgentModel, number> {
     const { score } = complexity;
 
     // Base scoring: inverse relationship with complexity
@@ -386,13 +389,13 @@ export class ModelRouter {
   /**
    * Apply circuit breaker adjustments
    */
-  private applyCircuitBreaker(scores: Record<ClaudeModel, number>): Record<ClaudeModel, number> {
+  private applyCircuitBreaker(scores: Record<AgentModel, number>): Record<AgentModel, number> {
     if (!this.config.enableCircuitBreaker) {
       return scores;
     }
 
     const adjusted = { ...scores };
-    for (const model of Object.keys(adjusted) as ClaudeModel[]) {
+    for (const model of Object.keys(adjusted) as AgentModel[]) {
       if (this.consecutiveFailures[model] >= this.config.circuitBreakerThreshold) {
         // Circuit is open - heavily penalize this model
         adjusted[model] *= 0.1;
@@ -408,11 +411,11 @@ export class ModelRouter {
    * Select the best model from scores
    */
   private selectModel(
-    scores: Record<ClaudeModel, number>,
+    scores: Record<AgentModel, number>,
     complexityScore: number
-  ): { model: ClaudeModel; confidence: number; uncertainty: number } {
+  ): { model: AgentModel; confidence: number; uncertainty: number } {
     // Get sorted models by score
-    const sorted = (Object.entries(scores) as [ClaudeModel, number][])
+    const sorted = (Object.entries(scores) as [AgentModel, number][])
       .filter(([m]) => m !== 'inherit')
       .sort((a, b) => b[1] - a[1]);
 
@@ -440,7 +443,7 @@ export class ModelRouter {
    * Build human-readable reasoning
    */
   private buildReasoning(
-    model: ClaudeModel,
+    model: AgentModel,
     complexity: ComplexityAnalysis,
     confidence: number
   ): string {
@@ -489,7 +492,7 @@ export class ModelRouter {
    */
   recordOutcome(
     task: string,
-    model: ClaudeModel,
+    model: AgentModel,
     outcome: 'success' | 'failure' | 'escalated'
   ): void {
     // Update circuit breaker state
@@ -525,11 +528,11 @@ export class ModelRouter {
    */
   getStats(): {
     totalDecisions: number;
-    modelDistribution: Record<ClaudeModel, number>;
+    modelDistribution: Record<AgentModel, number>;
     avgComplexity: number;
     avgConfidence: number;
     circuitBreakerTrips: number;
-    consecutiveFailures: Record<ClaudeModel, number>;
+    consecutiveFailures: Record<AgentModel, number>;
   } {
     return {
       totalDecisions: this.state.totalDecisions,
@@ -641,7 +644,7 @@ export function createModelRouter(config?: Partial<ModelRouterConfig>): ModelRou
 /**
  * Quick route function for common use case
  */
-export async function routeToModel(task: string): Promise<ClaudeModel> {
+export async function routeToModel(task: string): Promise<AgentModel> {
   const router = getModelRouter();
   const result = await router.route(task);
   return result.model;
@@ -679,7 +682,7 @@ export function getModelRouterStats(): ReturnType<ModelRouter['getStats']> {
  */
 export function recordModelOutcome(
   task: string,
-  model: ClaudeModel,
+  model: AgentModel,
   outcome: 'success' | 'failure' | 'escalated'
 ): void {
   const router = getModelRouter();

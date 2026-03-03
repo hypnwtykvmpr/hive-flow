@@ -259,7 +259,7 @@ describe('Permission-guard handler structure', () => {
   it('handler outputs deny decision with reason', () => {
     const pgStart = hookHandlerSource.indexOf("'permission-guard':");
     expect(pgStart).toBeGreaterThan(-1);
-    const handlerSection = hookHandlerSource.slice(pgStart, pgStart + 2000);
+    const handlerSection = hookHandlerSource.slice(pgStart, pgStart + 3000);
     expect(handlerSection).toContain("permissionDecision: 'deny'");
     expect(handlerSection).toContain('permissionDecisionReason');
   });
@@ -267,7 +267,7 @@ describe('Permission-guard handler structure', () => {
   it('handler outputs allow decision for approved commands', () => {
     const pgStart = hookHandlerSource.indexOf("'permission-guard':");
     expect(pgStart).toBeGreaterThan(-1);
-    const handlerSection = hookHandlerSource.slice(pgStart, pgStart + 2000);
+    const handlerSection = hookHandlerSource.slice(pgStart, pgStart + 3000);
     expect(handlerSection).toContain("permissionDecision: 'allow'");
   });
 });

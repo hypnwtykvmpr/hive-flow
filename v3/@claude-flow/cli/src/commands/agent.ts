@@ -48,7 +48,7 @@ const spawnCommand: Command = {
     {
       name: 'provider',
       short: 'p',
-      description: 'Provider to use (anthropic, openrouter, ollama)',
+      description: 'Provider to use (anthropic, gemini-cli, codex-cli, cursor-cli)',
       type: 'string',
       default: 'anthropic'
     },
@@ -111,6 +111,10 @@ const spawnCommand: Command = {
         agentType: string;
         status: string;
         createdAt: string;
+        provider?: string;
+        model?: string;
+        resolvedModel?: string;
+        modelRoutedBy?: string;
       }>('agent_spawn', {
         agentType,
         id: agentName,
@@ -139,6 +143,9 @@ const spawnCommand: Command = {
           { property: 'Type', value: result.agentType },
           { property: 'Name', value: agentName },
           { property: 'Status', value: result.status },
+          { property: 'Provider', value: result.provider || 'anthropic' },
+          { property: 'Model', value: result.model || 'default' },
+          { property: 'Resolved Model', value: result.resolvedModel || '-' },
           { property: 'Created', value: result.createdAt },
           { property: 'Capabilities', value: getAgentCapabilities(agentType).join(', ') }
         ]

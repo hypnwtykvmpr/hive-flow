@@ -45,7 +45,7 @@ export type HeadlessWorkerType =
 /**
  * Local worker types - workers that run locally without AI
  */
-export type LocalWorkerType = 'map' | 'consolidate' | 'benchmark' | 'preload';
+export type LocalWorkerType = 'map' | 'consolidate' | 'benchmark' | 'preload' | 'context-manager';
 
 /**
  * Sandbox mode for headless execution
@@ -99,6 +99,9 @@ export interface HeadlessOptions {
 
   /** Model to use: sonnet, opus, or haiku */
   model?: ModelType;
+
+  /** LLM provider (default: anthropic). Supports gemini-cli, codex-cli, cursor-cli */
+  provider?: string;
 
   /** Maximum tokens for output */
   maxOutputTokens?: number;
@@ -265,6 +268,7 @@ export const LOCAL_WORKER_TYPES: LocalWorkerType[] = [
   'consolidate',
   'benchmark',
   'preload',
+  'context-manager',
 ];
 
 /**
@@ -524,6 +528,14 @@ export const LOCAL_WORKER_CONFIGS: Record<LocalWorkerType, HeadlessWorkerConfig>
     priority: 'low',
     description: 'Resource preloading',
     enabled: false,
+  },
+  'context-manager': {
+    type: 'context-manager',
+    mode: 'local',
+    intervalMs: 60 * 1000,
+    priority: 'high',
+    description: 'Context window optimization',
+    enabled: true,
   },
 };
 

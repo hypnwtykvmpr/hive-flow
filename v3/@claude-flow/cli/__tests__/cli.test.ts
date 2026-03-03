@@ -258,11 +258,14 @@ describe('CLI', () => {
       expect(flagsPassed).toBe(true);
     });
 
-    it.skip('should parse multiple flags', async () => { // Skip: process.exit mock issue
+    it('should parse multiple flags', async () => {
       let flagsPassed = false;
       const mockCommand: Command = {
         name: 'testmulti',
         description: 'Test command',
+        options: [
+          { name: 'quiet', short: 'q', type: 'boolean', description: 'Quiet mode' }
+        ],
         action: async (ctx) => {
           expect(ctx.flags.verbose).toBe(true);
           expect(ctx.flags.format).toBe('json');

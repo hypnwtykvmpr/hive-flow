@@ -14,8 +14,11 @@ const STORAGE_DIR = '.claude-flow';
 const AGENT_DIR = 'agents';
 const AGENT_FILE = 'store.json';
 
-// Model types matching Claude Agent SDK
-type ClaudeModel = 'haiku' | 'sonnet' | 'opus' | 'inherit';
+// Model tier aliases — map to provider-native models via resolveProviderModel()
+type AgentModel = 'haiku' | 'sonnet' | 'opus' | 'inherit';
+
+// First-class providers: Cursor, Codex, Gemini alongside Anthropic
+type AgentProvider = 'anthropic' | 'gemini-cli' | 'codex-cli' | 'cursor-cli';
 
 interface AgentRecord {
   agentId: string;
@@ -26,7 +29,9 @@ interface AgentRecord {
   config: Record<string, unknown>;
   createdAt: string;
   domain?: string;
-  model?: ClaudeModel;  // Model assigned to this agent
+  model?: AgentModel;  // Model tier assigned to this agent
+  provider?: AgentProvider;  // LLM provider (anthropic, gemini-cli, codex-cli, cursor-cli)
+  resolvedModel?: string;  // Provider-native model name (e.g. gemini-3.1-pro-preview, gpt-5.3-codex)
   modelRoutedBy?: 'explicit' | 'router' | 'agent-booster' | 'default';  // How model was determined (ADR-026)
 }
 
@@ -69,7 +74,7 @@ function saveAgentStore(store: AgentStore): void {
 }
 
 // Default model mappings for agent types (can be overridden)
-const AGENT_TYPE_MODEL_DEFAULTS: Record<string, ClaudeModel> = {
+const AGENT_TYPE_MODEL_DEFAULTS: Record<string, AgentModel> = {
   // Complex agents → opus
   'architect': 'opus',
   'security-architect': 'opus',
@@ -115,7 +120,7 @@ async function determineAgentModel(
   config: Record<string, unknown>,
   task?: string
 ): Promise<{
-  model: ClaudeModel;
+  model: AgentModel;
   routedBy: 'explicit' | 'router' | 'agent-booster' | 'default';
   canSkipLLM?: boolean;
   agentBoosterIntent?: string;
@@ -123,7 +128,7 @@ async function determineAgentModel(
 }> {
   // 1. Explicit model in config
   if (config.model && ['haiku', 'sonnet', 'opus', 'inherit'].includes(config.model as string)) {
-    return { model: config.model as ClaudeModel, routedBy: 'explicit' };
+    return { model: config.model as AgentModel, routedBy: 'explicit' };
   }
 
   // 2. Enhanced task-based routing with Agent Booster AST
@@ -186,10 +191,15 @@ export const agentTools: MCPTool[] = [
         agentId: { type: 'string', description: 'Optional custom agent ID' },
         config: { type: 'object', description: 'Agent configuration' },
         domain: { type: 'string', description: 'Agent domain' },
+        provider: {
+          type: 'string',
+          enum: ['anthropic', 'gemini-cli', 'codex-cli', 'cursor-cli'],
+          description: 'LLM provider (default: anthropic). Cursor, Codex, Gemini are first-class.',
+        },
         model: {
           type: 'string',
           enum: ['haiku', 'sonnet', 'opus', 'inherit'],
-          description: 'Claude model to use (haiku=fast/cheap, sonnet=balanced, opus=most capable)'
+          description: 'Model tier (maps to provider-native model via alias resolver)',
         },
         task: { type: 'string', description: 'Task description for intelligent model routing' },
       },
@@ -216,6 +226,18 @@ export const agentTools: MCPTool[] = [
         task
       );
 
+      // Resolve provider and provider-native model name
+      const provider = (input.provider as AgentProvider) || 'anthropic';
+      let resolvedModel: string | undefined;
+      if (provider !== 'anthropic') {
+        try {
+          const { resolveProviderModel } = await import('@claude-flow/providers');
+          resolvedModel = resolveProviderModel(provider, routingResult.model);
+        } catch {
+          // Provider package not available — fall through without resolved model
+        }
+      }
+
       const agent: AgentRecord = {
         agentId,
         agentType,
@@ -226,6 +248,8 @@ export const agentTools: MCPTool[] = [
         createdAt: new Date().toISOString(),
         domain: input.domain as string,
         model: routingResult.model,
+        provider,
+        resolvedModel,
         modelRoutedBy: routingResult.routedBy,
       };
 
@@ -238,6 +262,8 @@ export const agentTools: MCPTool[] = [
         agentId,
         agentType: agent.agentType,
         model: agent.model,
+        provider: agent.provider,
+        resolvedModel: agent.resolvedModel,
         modelRoutedBy: routingResult.routedBy,
         status: 'spawned',
         createdAt: agent.createdAt,
@@ -315,6 +341,10 @@ export const agentTools: MCPTool[] = [
           taskCount: agent.taskCount,
           createdAt: agent.createdAt,
           domain: agent.domain,
+          model: agent.model,
+          provider: agent.provider,
+          resolvedModel: agent.resolvedModel,
+          modelRoutedBy: agent.modelRoutedBy,
         };
       }
 
@@ -362,6 +392,10 @@ export const agentTools: MCPTool[] = [
           taskCount: a.taskCount,
           createdAt: a.createdAt,
           domain: a.domain,
+          model: a.model,
+          provider: a.provider,
+          resolvedModel: a.resolvedModel,
+          modelRoutedBy: a.modelRoutedBy,
         })),
         total: agents.length,
         filters: {

@@ -35,7 +35,8 @@ export type WorkerType =
   | 'document'
   | 'refactor'
   | 'benchmark'
-  | 'testgaps';
+  | 'testgaps'
+  | 'context-manager';
 
 interface WorkerConfig {
   type: WorkerType;
@@ -100,6 +101,7 @@ const DEFAULT_WORKERS: WorkerConfigInternal[] = [
   { type: 'testgaps', intervalMs: 20 * 60 * 1000, offsetMs: 8 * 60 * 1000, priority: 'normal', description: 'Test coverage analysis', enabled: true },
   { type: 'predict', intervalMs: 10 * 60 * 1000, offsetMs: 0, priority: 'low', description: 'Predictive preloading', enabled: false },
   { type: 'document', intervalMs: 60 * 60 * 1000, offsetMs: 0, priority: 'low', description: 'Auto-documentation', enabled: false },
+  { type: 'context-manager', intervalMs: 60 * 1000, offsetMs: 15 * 1000, priority: 'high', description: 'Context window optimization', enabled: true },
 ];
 
 // Worker timeout (5 minutes max per worker)
@@ -584,6 +586,10 @@ export class WorkerDaemon extends EventEmitter {
         return this.runBenchmarkWorkerLocal();
       case 'preload':
         return this.runPreloadWorkerLocal();
+      case 'context-manager': {
+        const { runContextManagerWorker } = await import('./context-manager-worker.js');
+        return runContextManagerWorker(this.projectRoot);
+      }
       default:
         return { status: 'unknown worker type', mode: 'local' };
     }

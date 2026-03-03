@@ -26,6 +26,7 @@ import { deepInspect } from './deep-inspect.js';
 import { evaluateInlineJury } from './jury-evaluator.js';
 import { classifyCommand } from './risk-classifier.js';
 import { mergeWithDefaults } from './default-config.js';
+import { evaluateSelfProtection } from './self-protection.js';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -39,9 +40,10 @@ import { mergeWithDefaults } from './default-config.js';
  * overrides to deny.
  */
 const FORBIDDEN_PATTERNS = [
-  'rm *', 'chmod *', 'chown *', 'killall *',
-  'docker rm*', 'docker rmi*',
-  'git push --force*', 'git reset --hard*',
+  '^rm\\b', '^chmod\\b', '^chown\\b', '^killall\\b',
+  '^docker\\s+rm\\b', '^docker\\s+rmi\\b',
+  '^git\\s+push\\s+--force', '^git\\s+push\\s+-f\\b',
+  '^git\\s+reset\\s+--hard',
 ];
 
 const HOME = homedir();
@@ -212,6 +214,16 @@ function isCommentEntry(entry: BashPatternEntry): boolean {
   return false;
 }
 
+/**
+ * Anchor a pattern to the start of the string if it isn't already.
+ * Patterns that start with ^ are used as-is. Otherwise they're wrapped
+ * in ^(?:...) so glob-like patterns (e.g. "rm *") only match when "rm"
+ * is the leading command, not when it appears inside arguments.
+ */
+function anchorPattern(pattern: string): string {
+  return pattern.startsWith('^') ? pattern : `^(?:${pattern})`;
+}
+
 export function checkBashPatterns(cmd: string, patterns: BashPatternEntry[]): string | null {
   const stripped = stripCommand(cmd);
   for (const entry of patterns) {
@@ -230,7 +242,7 @@ export function checkBashPatterns(cmd: string, patterns: BashPatternEntry[]): st
     }
     if (!pattern) continue;
     try {
-      if (new RegExp(pattern, 'i').test(stripped)) {
+      if (new RegExp(anchorPattern(pattern), 'i').test(stripped)) {
         return feedback;
       }
     } catch {
@@ -245,7 +257,7 @@ function checkPatternList(cmd: string, patterns: BashPatternEntry[]): boolean {
   for (const entry of patterns) {
     if (typeof entry !== 'string' || entry.startsWith('COMMENT:')) continue;
     try {
-      if (new RegExp(entry, 'i').test(stripped)) return true;
+      if (new RegExp(anchorPattern(entry), 'i').test(stripped)) return true;
     } catch {
       continue;
     }
@@ -259,6 +271,113 @@ export function checkBashAllow(cmd: string, patterns: BashPatternEntry[]): boole
 
 export function checkBashEscalation(cmd: string, patterns: BashPatternEntry[]): boolean {
   return checkPatternList(cmd, patterns);
+}
+
+// ---------------------------------------------------------------------------
+// Quote-aware shell command splitting
+// ---------------------------------------------------------------------------
+
+/**
+ * Split a shell command string on unquoted operators (&&, ||, ;, |).
+ * Respects single quotes, double quotes, $'...' (ANSI-C), and backslash escapes.
+ * Returns trimmed, non-empty segments.
+ */
+export function splitShellCommands(cmd: string): string[] {
+  if (!cmd.trim()) return [];
+
+  const segments: string[] = [];
+  let current = '';
+  let inSingle = false;
+  let inDouble = false;
+  let inDollarQuote = false;
+  let escaped = false;
+
+  for (let i = 0; i < cmd.length; i++) {
+    const ch = cmd[i];
+
+    if (escaped) {
+      current += ch;
+      escaped = false;
+      continue;
+    }
+
+    if (ch === '\\' && !inSingle) {
+      current += ch;
+      escaped = true;
+      continue;
+    }
+
+    // Enter $'...' quoting — consume both $ and ' atomically
+    if (ch === '$' && !inSingle && !inDouble && !inDollarQuote && cmd[i + 1] === "'") {
+      inDollarQuote = true;
+      current += "$'";
+      i++; // skip the opening quote
+      continue;
+    }
+
+    // Close $'...' quoting
+    if (ch === "'" && inDollarQuote) {
+      inDollarQuote = false;
+      current += ch;
+      continue;
+    }
+
+    if (ch === "'" && !inDouble && !inDollarQuote) {
+      inSingle = !inSingle;
+      current += ch;
+      continue;
+    }
+
+    if (ch === '"' && !inSingle && !inDollarQuote) {
+      inDouble = !inDouble;
+      current += ch;
+      continue;
+    }
+
+    // Only split on operators when not inside any quotes
+    if (!inSingle && !inDouble && !inDollarQuote) {
+      // Check for && (two chars)
+      if (ch === '&' && cmd[i + 1] === '&') {
+        const trimmed = current.trim();
+        if (trimmed) segments.push(trimmed);
+        current = '';
+        i++; // skip second &
+        continue;
+      }
+
+      // Check for || (two chars) — must check before single |
+      if (ch === '|' && cmd[i + 1] === '|') {
+        const trimmed = current.trim();
+        if (trimmed) segments.push(trimmed);
+        current = '';
+        i++; // skip second |
+        continue;
+      }
+
+      // Check for single | (pipe)
+      if (ch === '|') {
+        const trimmed = current.trim();
+        if (trimmed) segments.push(trimmed);
+        current = '';
+        continue;
+      }
+
+      // Check for ;
+      if (ch === ';') {
+        const trimmed = current.trim();
+        if (trimmed) segments.push(trimmed);
+        current = '';
+        continue;
+      }
+    }
+
+    current += ch;
+  }
+
+  const trimmed = current.trim();
+  if (trimmed) segments.push(trimmed);
+
+  return segments;
 }
 
 // ---------------------------------------------------------------------------
@@ -324,24 +443,51 @@ export function detectEvasion(cmd: string): string | null {
 // ---------------------------------------------------------------------------
 
 export function hasChainedDestructive(cmd: string): boolean {
-  const destructivePatterns = [
-    /&&\s*rm\b/i, /;\s*rm\b/i, /\|\|\s*rm\b/i,
-    /&&\s*del\b/i, /;\s*del\b/i, /\|\|\s*del\b/i,
-    /&&\s*rmdir\b/i, /;\s*rmdir\b/i, /\|\|\s*rmdir\b/i,
-    /&&\s*Remove-Item\b/i, /;\s*Remove-Item\b/i, /\|\|\s*Remove-Item\b/i,
-    /&&\s*shred\b/i, /;\s*shred\b/i, /\|\|\s*shred\b/i,
-    /&&\s*unlink\b/i, /;\s*unlink\b/i, /\|\|\s*unlink\b/i,
-    /&&\s*mkfs\b/i, /;\s*mkfs\b/i, /\|\|\s*mkfs\b/i,
-    /&&\s*dd\s/i, /;\s*dd\s/i, /\|\|\s*dd\s/i,
-    /&&\s*truncate\b/i, /;\s*truncate\b/i, /\|\|\s*truncate\b/i,
+  // Chain operators: &&, ;, ||
+  const chainOps = '(?:&&|;|\\|\\|)';
+  // Pipe operator: single | but NOT ||
+  // Use negative lookahead to distinguish | from ||
+  const pipeOp = '(?<!\\|)\\|(?!\\|)';
+
+  // Destructive commands that should be caught after chain operators
+  const chainDestructive = [
+    'rm\\b', 'del\\b', 'rmdir\\b', 'Remove-Item\\b',
+    'shred\\b', 'unlink\\b', 'mkfs\\b', 'dd\\s', 'truncate\\b',
+  ];
+
+  // Commands that should be caught after pipe operators (broader set)
+  const pipeDestructive = [
+    'rm\\b', 'rmdir\\b', 'del\\b', 'Remove-Item\\b',
+    'shred\\b', 'unlink\\b', 'mkfs\\b', 'dd\\s', 'truncate\\b',
+    'chmod\\b', 'chown\\b',
+    'kill\\b', 'killall\\b', 'pkill\\b',
+    'sudo\\b',
+    'bash\\b', 'sh\\b', 'zsh\\b', 'dash\\b', 'ksh\\b', 'eval\\b',
+  ];
+
+  // Build chain patterns
+  const chainPatterns = chainDestructive.map(d => new RegExp(`${chainOps}\\s*${d}`, 'i'));
+
+  // Build pipe patterns — match | followed by optional whitespace and destructive command
+  const pipePatterns = pipeDestructive.map(d => new RegExp(`${pipeOp}\\s*${d}`, 'i'));
+
+  // Build xargs patterns — | xargs [flags...] destructiveCmd
+  const xargsDestructive = ['rm\\b', 'shred\\b', 'unlink\\b', 'chmod\\b', 'chown\\b'];
+  const xargsPatterns = xargsDestructive.map(d =>
+    new RegExp(`${pipeOp}\\s*xargs\\s+(?:-[a-zA-Z0-9]+\\s+)*(?:\\{\\}\\s+)*${d}`, 'i'),
+  );
+
+  // Legacy patterns for subshell/process substitution
+  const legacyPatterns = [
     /\$\(\s*rm\b/i, /\$\(\s*shred\b/i,
     /`\s*rm\b/i, /`\s*shred\b/i,
-    /\|\s*xargs\s+rm\b/i, /\|\s*xargs\s+shred\b/i, /\|\s*xargs\s+unlink\b/i,
     /\n\s*rm\b/i, /\n\s*shred\b/i,
     /<<<.*\brm\b/i, /<<<.*\bshred\b/i,
     /<\(\s*rm\b/i, /<\(\s*shred\b/i,
   ];
-  return destructivePatterns.some(p => p.test(cmd));
+
+  const allPatterns = [...chainPatterns, ...pipePatterns, ...xargsPatterns, ...legacyPatterns];
+  return allPatterns.some(p => p.test(cmd));
 }
 
 // ---------------------------------------------------------------------------
@@ -416,6 +562,120 @@ export function writeEscalationContext(
 }
 
 // ---------------------------------------------------------------------------
+// MCP tool normalization
+// ---------------------------------------------------------------------------
+
+interface NormalizationResult {
+  toolName: string;
+  toolInput: Record<string, unknown>;
+}
+
+/**
+ * Normalize MCP tool calls to their native Claude Code equivalents.
+ * This ensures MCP tools flow through the same permission pipeline as
+ * native Write/Edit/Bash tools (self-protection, path checks, etc.).
+ *
+ * Returns null if no normalization applies (tool stays as MCP).
+ */
+function normalizeMcpTool(
+  mcpToolName: string,
+  toolInput: Record<string, unknown>,
+  cwd: string,
+): NormalizationResult | null {
+  // mcp__filesystem__write_file → Write
+  if (mcpToolName === 'mcp__filesystem__write_file') {
+    const filePath = (toolInput.path as string) || (toolInput.file_path as string) || '';
+    return {
+      toolName: 'Write',
+      toolInput: { file_path: filePath, content: toolInput.content || '' },
+    };
+  }
+
+  // mcp__filesystem__edit_file → Edit
+  if (mcpToolName === 'mcp__filesystem__edit_file') {
+    const filePath = (toolInput.path as string) || (toolInput.file_path as string) || '';
+    return {
+      toolName: 'Edit',
+      toolInput: {
+        file_path: filePath,
+        old_string: toolInput.old_text || toolInput.old_string || '',
+        new_string: toolInput.new_text || toolInput.new_string || '',
+      },
+    };
+  }
+
+  // mcp__filesystem__move_file → Bash (mv)
+  if (mcpToolName === 'mcp__filesystem__move_file') {
+    const source = (toolInput.source as string) || '';
+    const dest = (toolInput.destination as string) || '';
+    return {
+      toolName: 'Bash',
+      toolInput: { command: `mv "${source}" "${dest}"` },
+    };
+  }
+
+  // mcp__filesystem__create_directory → Bash (mkdir -p)
+  if (mcpToolName === 'mcp__filesystem__create_directory') {
+    const dirPath = (toolInput.path as string) || '';
+    return {
+      toolName: 'Bash',
+      toolInput: { command: `mkdir -p "${dirPath}"` },
+    };
+  }
+
+  // mcp__plugin_serena_serena__replace_content → Edit
+  if (mcpToolName === 'mcp__plugin_serena_serena__replace_content') {
+    const filePath = (toolInput.relative_path as string) || (toolInput.file_path as string) || '';
+    return {
+      toolName: 'Edit',
+      toolInput: {
+        file_path: filePath,
+        old_string: toolInput.old_string || '',
+        new_string: toolInput.new_string || '',
+      },
+    };
+  }
+
+  // mcp__plugin_serena_serena__create_text_file → Write
+  if (mcpToolName === 'mcp__plugin_serena_serena__create_text_file') {
+    const filePath = (toolInput.relative_path as string) || (toolInput.file_path as string) || '';
+    return {
+      toolName: 'Write',
+      toolInput: { file_path: filePath, content: toolInput.content || '' },
+    };
+  }
+
+  // mcp__plugin_serena_serena__execute_shell_command → Bash
+  if (mcpToolName === 'mcp__plugin_serena_serena__execute_shell_command') {
+    const command = (toolInput.command as string) || '';
+    return {
+      toolName: 'Bash',
+      toolInput: { command },
+    };
+  }
+
+  // mcp__claude-flow__terminal_execute → Bash
+  if (mcpToolName === 'mcp__claude-flow__terminal_execute') {
+    const command = (toolInput.command as string) || (toolInput.cmd as string) || '';
+    return {
+      toolName: 'Bash',
+      toolInput: { command },
+    };
+  }
+
+  // mcp__claude-flow__terminal_create → Bash
+  if (mcpToolName === 'mcp__claude-flow__terminal_create') {
+    const command = (toolInput.command as string) || '';
+    return {
+      toolName: 'Bash',
+      toolInput: { command },
+    };
+  }
+
+  return null;
+}
+
+// ---------------------------------------------------------------------------
 // Main evaluation logic
 // ---------------------------------------------------------------------------
 
@@ -424,9 +684,21 @@ export async function evaluate(hookInput: HookInput, config: Partial<PermissionC
   if (!hookInput.tool_input || typeof hookInput.tool_input !== 'object') {
     hookInput.tool_input = {};
   }
-  const toolName = hookInput.tool_name || '';
+  let toolName = hookInput.tool_name || '';
   const toolInput = hookInput.tool_input || {};
   const cwd = hookInput.cwd || process.cwd();
+
+  // -- MCP tool normalization --
+  // Normalize MCP tool calls to their native Claude Code equivalents so they
+  // flow through the same permission pipeline (self-protection, path checks, etc.)
+  if (toolName.startsWith('mcp__')) {
+    const normalized = normalizeMcpTool(toolName, toolInput, cwd);
+    if (normalized) {
+      toolName = normalized.toolName;
+      hookInput.tool_name = normalized.toolName;
+      Object.assign(hookInput.tool_input, normalized.toolInput);
+    }
+  }
 
   // Extract a summary for logging
   let inputSummary: string;
@@ -436,6 +708,16 @@ export async function evaluate(hookInput: HookInput, config: Partial<PermissionC
     inputSummary = (toolInput.file_path as string) || '';
   } else {
     inputSummary = JSON.stringify(toolInput).slice(0, DEFAULT_INPUT_SUMMARY_MAX);
+  }
+
+  // -- Self-protection check (highest priority after normalization) --
+  // Must run before any allow-list checks to prevent bypass via always_allow_tools
+  if (toolName === 'Write' || toolName === 'Edit' || toolName === 'MultiEdit' || toolName === 'Bash') {
+    const selfProtection = evaluateSelfProtection(toolName, toolInput, cwd);
+    if (selfProtection && selfProtection.blocked) {
+      logDecision(config, toolName, inputSummary, 'deny', 'self-protection', selfProtection.reason);
+      return { decision: 'deny', reason: selfProtection.reason };
+    }
   }
 
   // -- Always-allow tools (non-Bash) --
@@ -453,7 +735,7 @@ export async function evaluate(hookInput: HookInput, config: Partial<PermissionC
     }
   }
 
-  // -- MCP tool policy --
+  // -- MCP tool policy (only for tools that weren't normalized) --
   if (toolName.startsWith('mcp__')) {
     // Check deny prefixes first
     for (const prefix of config.mcp_deny_tool_prefixes || []) {
@@ -643,6 +925,10 @@ export async function evaluate(hookInput: HookInput, config: Partial<PermissionC
  * pattern. Called as the LAST step before returning an allow verdict for Bash
  * commands. Even if a bug in the jury, learned patterns, or pre-filter somehow
  * produces an allow verdict for a forbidden command, this catches it.
+ *
+ * Uses splitShellCommands() to split on chain operators and pipes, then
+ * checks each sub-command independently against FORBIDDEN_PATTERNS.
+ * Also extracts inner commands from bash -c / sh -c wrappers.
  */
 function checkForbiddenSafeguard(
   cmd: string,
@@ -650,16 +936,34 @@ function checkForbiddenSafeguard(
   toolName: string,
   inputSummary: string,
 ): GateResult | null {
-  const stripped = stripCommand(cmd);
-  for (const fp of FORBIDDEN_PATTERNS) {
-    try {
-      if (new RegExp(fp, 'i').test(stripped)) {
-        logDecision(config, toolName, inputSummary, 'deny', 'forbidden-safeguard',
-          `Post-verdict safeguard: ${fp} is FORBIDDEN`);
-        return { decision: 'deny', reason: 'DENIED: This command is not available.' };
+  // Split the command on all shell operators (&&, ||, ;, |)
+  const segments = splitShellCommands(cmd);
+
+  for (const segment of segments) {
+    const stripped = stripCommand(segment);
+
+    // Check direct match against FORBIDDEN_PATTERNS
+    for (const fp of FORBIDDEN_PATTERNS) {
+      try {
+        if (new RegExp(fp, 'i').test(stripped)) {
+          logDecision(config, toolName, inputSummary, 'deny', 'forbidden-safeguard',
+            `Post-verdict safeguard: ${fp} is FORBIDDEN`);
+          return { decision: 'deny', reason: 'DENIED: This command is not available.' };
+        }
+      } catch {
+        continue;
       }
-    } catch {
-      continue;
+    }
+
+    // Extract and check inner commands from bash -c / sh -c wrappers
+    const shellMatch = stripped.match(/^(?:bash|sh)\s+-c\s+(['"])(.*)\1/i)
+                    || stripped.match(/^(?:bash|sh)\s+-c\s+(.*)/i);
+    if (shellMatch) {
+      const inner = shellMatch[2] ?? shellMatch[1];
+      if (inner) {
+        const innerResult = checkForbiddenSafeguard(inner, config, toolName, inputSummary);
+        if (innerResult) return innerResult;
+      }
     }
   }
   return null;

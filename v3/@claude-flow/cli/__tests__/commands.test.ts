@@ -14,16 +14,22 @@ import type { CommandContext } from '../src/types.js';
 vi.mock('../src/mcp-client.js', () => ({
   callMCPTool: vi.fn(async (toolName: string, input: Record<string, unknown>) => {
     // Mock responses for different tools
-    if (toolName === 'agent/spawn') {
+    // Note: tool names use underscores (agent_spawn), not slashes (agent/spawn)
+    if (toolName === 'agent_spawn') {
+      const config = (input.config as Record<string, unknown>) || {};
       return {
         agentId: input.id || 'mock-agent-123',
         agentType: input.agentType,
         status: 'active',
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        provider: (config.provider as string) || 'anthropic',
+        model: 'sonnet',
+        resolvedModel: undefined,
+        modelRoutedBy: 'default',
       };
     }
 
-    if (toolName === 'agent/list') {
+    if (toolName === 'agent_list') {
       return {
         agents: [
           { id: 'agent-1', agentType: 'coder', status: 'active', createdAt: '2024-01-01T00:00:00Z' },
@@ -33,7 +39,7 @@ vi.mock('../src/mcp-client.js', () => ({
       };
     }
 
-    if (toolName === 'agent/status') {
+    if (toolName === 'agent_status') {
       return {
         id: input.agentId,
         agentType: 'coder',
@@ -50,7 +56,7 @@ vi.mock('../src/mcp-client.js', () => ({
       };
     }
 
-    if (toolName === 'agent/terminate') {
+    if (toolName === 'agent_terminate') {
       return {
         agentId: input.agentId,
         terminated: true,
@@ -58,7 +64,7 @@ vi.mock('../src/mcp-client.js', () => ({
       };
     }
 
-    if (toolName === 'swarm/init') {
+    if (toolName === 'swarm_init') {
       return {
         swarmId: 'swarm-mock-123',
         topology: input.topology,
@@ -73,7 +79,7 @@ vi.mock('../src/mcp-client.js', () => ({
     }
 
     // Memory tool mocks
-    if (toolName === 'memory/store') {
+    if (toolName === 'memory_store') {
       return {
         success: true,
         key: input.key,
@@ -81,7 +87,7 @@ vi.mock('../src/mcp-client.js', () => ({
       };
     }
 
-    if (toolName === 'memory/retrieve') {
+    if (toolName === 'memory_retrieve') {
       return {
         key: input.key,
         value: 'mock-value-for-' + input.key,
@@ -92,7 +98,7 @@ vi.mock('../src/mcp-client.js', () => ({
       };
     }
 
-    if (toolName === 'memory/search') {
+    if (toolName === 'memory_search') {
       return {
         query: input.query,
         results: [
@@ -104,7 +110,7 @@ vi.mock('../src/mcp-client.js', () => ({
       };
     }
 
-    if (toolName === 'memory/list') {
+    if (toolName === 'memory_list') {
       return {
         entries: [
           { key: 'entry-1', storedAt: '2024-01-01T00:00:00Z', accessCount: 10, preview: 'test value 1' },
@@ -116,7 +122,7 @@ vi.mock('../src/mcp-client.js', () => ({
       };
     }
 
-    if (toolName === 'memory/delete') {
+    if (toolName === 'memory_delete') {
       return {
         success: true,
         key: input.key,
@@ -125,7 +131,7 @@ vi.mock('../src/mcp-client.js', () => ({
       };
     }
 
-    if (toolName === 'memory/stats') {
+    if (toolName === 'memory_stats') {
       // Return raw MCP format that the command expects and transforms
       return {
         totalEntries: 42,
@@ -186,6 +192,53 @@ vi.mock('../src/prompt.js', () => ({
   multiSelect: vi.fn(async (opts) => opts.default || [])
 }));
 
+// Mock memory-initializer (search/list/store/retrieve/delete commands use direct imports, not MCP)
+vi.mock('../src/memory/memory-initializer.js', () => ({
+  searchEntries: vi.fn(async (opts: { query: string; namespace?: string; limit?: number; threshold?: number }) => ({
+    success: true,
+    results: [
+      { id: 'r1', key: 'result-1', content: 'auth pattern 1', score: 0.95, namespace: opts.namespace || 'default' },
+      { id: 'r2', key: 'result-2', content: 'auth pattern 2', score: 0.85, namespace: opts.namespace || 'default' }
+    ],
+    searchTime: 2
+  })),
+  listEntries: vi.fn(async (opts: { namespace?: string; limit?: number; offset?: number }) => ({
+    success: true,
+    entries: [
+      { id: 'e1', key: 'entry-1', namespace: 'default', size: 128, accessCount: 10, createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-07T00:00:00Z', hasEmbedding: true },
+      { id: 'e2', key: 'entry-2', namespace: 'default', size: 256, accessCount: 5, createdAt: '2024-01-01T00:01:00Z', updatedAt: '2024-01-06T00:00:00Z', hasEmbedding: false }
+    ],
+    total: 2
+  })),
+  storeEntry: vi.fn(async (opts: { key: string; value: string; namespace?: string; tags?: string[]; ttl?: number; upsert?: boolean; generateEmbeddingFlag?: boolean }) => ({
+    success: true,
+    id: 'stored-' + opts.key,
+    embedding: opts.generateEmbeddingFlag ? { dimensions: 384 } : null
+  })),
+  getEntry: vi.fn(async (opts: { key: string; namespace?: string }) => ({
+    success: true,
+    found: true,
+    entry: {
+      key: opts.key,
+      namespace: opts.namespace || 'default',
+      content: 'mock-value-for-' + opts.key,
+      accessCount: 5,
+      tags: ['test'],
+      hasEmbedding: true,
+      createdAt: '2024-01-01T00:00:00Z',
+      updatedAt: '2024-01-07T00:00:00Z'
+    }
+  })),
+  deleteEntry: vi.fn(async (opts: { key: string; namespace?: string }) => ({
+    success: true,
+    deleted: true,
+    remainingEntries: 41
+  })),
+  getHNSWIndex: vi.fn(async () => null),
+  getHNSWStatus: vi.fn(() => ({ entryCount: 0, dimensions: 384 })),
+  generateEmbedding: vi.fn(async () => ({ embedding: new Float32Array(384) }))
+}));
+
 describe('Agent Commands', () => {
   let ctx: CommandContext;
 
@@ -199,7 +252,7 @@ describe('Agent Commands', () => {
   });
 
   describe('agent spawn', () => {
-    it.skip('should spawn agent with type flag', async () => { // Skip: requires live MCP context
+    it('should spawn agent with type flag', async () => {
       const spawnCmd = agentCommand.subcommands?.find(c => c.name === 'spawn');
       expect(spawnCmd).toBeDefined();
 
@@ -211,7 +264,7 @@ describe('Agent Commands', () => {
       expect(result.data).toHaveProperty('agentType', 'coder');
     });
 
-    it.skip('should spawn agent with custom name', async () => { // Skip: requires live MCP context
+    it('should spawn agent with custom name', async () => {
       const spawnCmd = agentCommand.subcommands?.find(c => c.name === 'spawn');
 
       ctx.flags = { type: 'tester', name: 'my-tester', _: [] };
@@ -260,7 +313,7 @@ describe('Agent Commands', () => {
   });
 
   describe('agent list', () => {
-    it.skip('should list all agents', async () => { // Skip: requires live MCP context
+    it('should list all agents', async () => {
       const listCmd = agentCommand.subcommands?.find(c => c.name === 'list');
       expect(listCmd).toBeDefined();
 
@@ -271,7 +324,7 @@ describe('Agent Commands', () => {
       expect(result.data).toHaveProperty('total', 2);
     });
 
-    it.skip('should filter by agent type', async () => { // Skip: requires live MCP context
+    it('should filter by agent type', async () => {
       const listCmd = agentCommand.subcommands?.find(c => c.name === 'list');
 
       ctx.flags = { type: 'coder', _: [] };
@@ -280,7 +333,7 @@ describe('Agent Commands', () => {
       expect(result.success).toBe(true);
     });
 
-    it.skip('should filter by status', async () => { // Skip: requires live MCP context
+    it('should filter by status', async () => {
       const listCmd = agentCommand.subcommands?.find(c => c.name === 'list');
 
       ctx.flags = { status: 'active', _: [] };
@@ -289,7 +342,7 @@ describe('Agent Commands', () => {
       expect(result.success).toBe(true);
     });
 
-    it.skip('should include inactive agents with --all flag', async () => { // Skip: requires live MCP context
+    it('should include inactive agents with --all flag', async () => {
       const listCmd = agentCommand.subcommands?.find(c => c.name === 'list');
 
       ctx.flags = { all: true, _: [] };
@@ -300,7 +353,7 @@ describe('Agent Commands', () => {
   });
 
   describe('agent status', () => {
-    it.skip('should show agent status', async () => { // Skip: requires live MCP context
+    it('should show agent status', async () => {
       const statusCmd = agentCommand.subcommands?.find(c => c.name === 'status');
       expect(statusCmd).toBeDefined();
 
@@ -326,7 +379,7 @@ describe('Agent Commands', () => {
   });
 
   describe('agent stop', () => {
-    it.skip('should stop agent', async () => { // Skip: requires live MCP context
+    it('should stop agent', async () => {
       const stopCmd = agentCommand.subcommands?.find(c => c.name === 'stop');
       expect(stopCmd).toBeDefined();
 
@@ -385,7 +438,7 @@ describe('Swarm Commands', () => {
   });
 
   describe('swarm init', () => {
-    it.skip('should initialize swarm with default topology', async () => { // Skip: requires live MCP context
+    it('should initialize swarm with default topology', async () => {
       const initCmd = swarmCommand.subcommands?.find(c => c.name === 'init');
       expect(initCmd).toBeDefined();
 
@@ -396,7 +449,7 @@ describe('Swarm Commands', () => {
       expect(result.data).toHaveProperty('topology');
     });
 
-    it.skip('should initialize swarm with custom topology', async () => { // Skip: requires live MCP context
+    it('should initialize swarm with custom topology', async () => {
       const initCmd = swarmCommand.subcommands?.find(c => c.name === 'init');
 
       ctx.flags = { topology: 'mesh', _: [] };
@@ -406,7 +459,7 @@ describe('Swarm Commands', () => {
       expect(result.data).toHaveProperty('topology', 'mesh');
     });
 
-    it.skip('should enable V3 mode', async () => { // Skip: requires live MCP context
+    it('should enable V3 mode', async () => {
       const initCmd = swarmCommand.subcommands?.find(c => c.name === 'init');
 
       ctx.flags = { v3Mode: true, _: [] };
@@ -415,7 +468,7 @@ describe('Swarm Commands', () => {
       expect(result.success).toBe(true);
     });
 
-    it.skip('should set max agents', async () => { // Skip: requires live MCP context
+    it('should set max agents', async () => {
       const initCmd = swarmCommand.subcommands?.find(c => c.name === 'init');
 
       ctx.flags = { maxAgents: 20, _: [] };
@@ -545,7 +598,7 @@ describe('Memory Commands', () => {
   });
 
   describe('memory store', () => {
-    it.skip('should store data', async () => { // Skip: requires live memory service
+    it('should store data', async () => {
       const storeCmd = memoryCommand.subcommands?.find(c => c.name === 'store');
       expect(storeCmd).toBeDefined();
 
@@ -567,7 +620,7 @@ describe('Memory Commands', () => {
   });
 
   describe('memory retrieve', () => {
-    it.skip('should retrieve data', async () => { // Skip: requires live memory service
+    it('should retrieve data', async () => {
       const retrieveCmd = memoryCommand.subcommands?.find(c => c.name === 'retrieve');
       expect(retrieveCmd).toBeDefined();
 
@@ -613,7 +666,7 @@ describe('Memory Commands', () => {
   });
 
   describe('memory delete', () => {
-    it.skip('should delete entry', async () => { // Skip: requires live memory service
+    it('should delete entry', async () => {
       const deleteCmd = memoryCommand.subcommands?.find(c => c.name === 'delete');
       expect(deleteCmd).toBeDefined();
 
@@ -627,7 +680,7 @@ describe('Memory Commands', () => {
   });
 
   describe('memory stats', () => {
-    it.skip('should show memory statistics', async () => { // Skip: requires live memory service
+    it('should show memory statistics', async () => {
       const statsCmd = memoryCommand.subcommands?.find(c => c.name === 'stats');
       expect(statsCmd).toBeDefined();
 

@@ -67,6 +67,8 @@ const commandLoaders: Record<string, CommandLoader> = {
   guidance: () => import('./guidance.js'),
   // RVFA Appliance Management
   appliance: () => import('./appliance.js'),
+  // Context Manager
+  'context-manager': () => import('./context-manager.js'),
 };
 
 // Cache for loaded commands

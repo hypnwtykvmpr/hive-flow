@@ -68,36 +68,38 @@ const DEFAULT_ALLOW_BASH: BashPatternEntry[] = [
 
 const DEFAULT_DENY_BASH: BashPatternEntry[] = [
   // --- Existing catastrophic patterns ---
-  { pattern: 'rm -rf /', feedback: 'Cannot delete root filesystem' },
-  { pattern: 'rm -rf /*', feedback: 'Cannot delete root filesystem contents' },
-  { pattern: 'rm -fr /', feedback: 'Cannot delete root filesystem' },
-  { pattern: 'sudo rm *', feedback: 'Sudo rm is too dangerous for autonomous operation' },
-  { pattern: 'sudo dd *', feedback: 'Sudo dd is too dangerous for autonomous operation' },
-  { pattern: 'mkfs*', feedback: 'Cannot format filesystems' },
-  { pattern: 'dd if=*of=/dev/*', feedback: 'Cannot write directly to block devices' },
-  { pattern: 'shred *', feedback: 'Cannot shred files' },
-  { pattern: ':(){ :|:& };:', feedback: 'Fork bomb detected' },
-  { pattern: 'shutdown*', feedback: 'Cannot shut down the system' },
-  { pattern: 'reboot*', feedback: 'Cannot reboot the system' },
-  { pattern: 'poweroff*', feedback: 'Cannot power off the system' },
-  { pattern: 'halt*', feedback: 'Cannot halt the system' },
-  { pattern: 'systemctl stop*', feedback: 'Cannot stop system services' },
-  { pattern: 'systemctl disable*', feedback: 'Cannot disable system services' },
-  { pattern: 'chmod 777 *', feedback: 'Cannot set world-writable permissions' },
-  { pattern: 'curl *|*bash*', feedback: 'Cannot pipe curl to shell' },
-  { pattern: 'curl *|*sh*', feedback: 'Cannot pipe curl to shell' },
-  { pattern: 'wget *|*bash*', feedback: 'Cannot pipe wget to shell' },
-  { pattern: 'wget *|*sh*', feedback: 'Cannot pipe wget to shell' },
+  // --- Catastrophic patterns (proper regex, anchored by checkBashPatterns) ---
+  { pattern: 'rm\\s+-rf\\s+/', feedback: 'Cannot delete root filesystem' },
+  { pattern: 'rm\\s+-rf\\s+/.*', feedback: 'Cannot delete root filesystem contents' },
+  { pattern: 'rm\\s+-fr\\s+/', feedback: 'Cannot delete root filesystem' },
+  { pattern: '^sudo\\s+rm\\b', feedback: 'Sudo rm is too dangerous for autonomous operation' },
+  { pattern: '^sudo\\s+dd\\b', feedback: 'Sudo dd is too dangerous for autonomous operation' },
+  { pattern: '^mkfs\\b', feedback: 'Cannot format filesystems' },
+  { pattern: '^dd\\s+.*of=/dev/', feedback: 'Cannot write directly to block devices' },
+  { pattern: '^shred\\b', feedback: 'Cannot shred files' },
+  { pattern: '^:\\(\\)\\{\\s*:\\|:\\&\\s*\\};:', feedback: 'Fork bomb detected' },
+  { pattern: '^shutdown\\b', feedback: 'Cannot shut down the system' },
+  { pattern: '^reboot\\b', feedback: 'Cannot reboot the system' },
+  { pattern: '^poweroff\\b', feedback: 'Cannot power off the system' },
+  { pattern: '^halt\\b', feedback: 'Cannot halt the system' },
+  { pattern: '^systemctl\\s+stop\\b', feedback: 'Cannot stop system services' },
+  { pattern: '^systemctl\\s+disable\\b', feedback: 'Cannot disable system services' },
+  { pattern: '^chmod\\s+777\\b', feedback: 'Cannot set world-writable permissions' },
+  { pattern: '^curl\\b.*\\|.*\\bbash\\b', feedback: 'Cannot pipe curl to shell' },
+  { pattern: '^curl\\b.*\\|.*\\bsh\\b', feedback: 'Cannot pipe curl to shell' },
+  { pattern: '^wget\\b.*\\|.*\\bbash\\b', feedback: 'Cannot pipe wget to shell' },
+  { pattern: '^wget\\b.*\\|.*\\bsh\\b', feedback: 'Cannot pipe wget to shell' },
 
   // --- FORBIDDEN patterns (no automated override, no escalation path) ---
-  { pattern: 'rm *', feedback: 'DENIED: File deletion is not available. Use `npm run clean` or `make clean` for build artifacts.' },
-  { pattern: 'chmod *', feedback: 'DENIED: Permission changes are not available. Configure execute permissions in your build system.' },
-  { pattern: 'chown *', feedback: 'DENIED: Ownership changes are not available.' },
-  { pattern: 'killall *', feedback: 'DENIED: Bulk process termination is not available. Use the application\'s own stop/restart command.' },
-  { pattern: 'docker rm*', feedback: 'DENIED: Container removal is not available. Use `docker-compose down` for managed containers.' },
-  { pattern: 'docker rmi*', feedback: 'DENIED: Image removal is not available.' },
-  { pattern: 'git push --force*', feedback: 'DENIED: Force push is not available (including --force-with-lease). Rebase and push normally with `git push`.' },
-  { pattern: 'git reset --hard*', feedback: 'DENIED: Hard reset is not available. Use `git stash` to save work safely.' },
+  { pattern: '^rm\\b', feedback: 'DENIED: File deletion is not available. Use `npm run clean` or `make clean` for build artifacts.' },
+  { pattern: '^chmod\\b', feedback: 'DENIED: Permission changes are not available. Configure execute permissions in your build system.' },
+  { pattern: '^chown\\b', feedback: 'DENIED: Ownership changes are not available.' },
+  { pattern: '^killall\\b', feedback: 'DENIED: Bulk process termination is not available. Use the application\'s own stop/restart command.' },
+  { pattern: '^docker\\s+rm\\b', feedback: 'DENIED: Container removal is not available. Use `docker-compose down` for managed containers.' },
+  { pattern: '^docker\\s+rmi\\b', feedback: 'DENIED: Image removal is not available.' },
+  { pattern: '^git\\s+push\\s+--force', feedback: 'DENIED: Force push is not available (including --force-with-lease). Rebase and push normally with `git push`.' },
+  { pattern: '^git\\s+push\\s+-f\\b', feedback: 'DENIED: Force push is not available. Rebase and push normally with `git push`.' },
+  { pattern: '^git\\s+reset\\s+--hard', feedback: 'DENIED: Hard reset is not available. Use `git stash` to save work safely.' },
 ];
 
 // ---------------------------------------------------------------------------
@@ -107,10 +109,10 @@ const DEFAULT_DENY_BASH: BashPatternEntry[] = [
 const DEFAULT_ESCALATION_BASH: BashPatternEntry[] = [
   // Jury-assessable patterns: LLM jury can evaluate with full context.
   // When auto-denied, feedback tells the agent how to re-submit with justification.
-  { pattern: 'sudo *', feedback: 'Elevated privileges are auto-denied. Find a userspace alternative. If truly required, re-submit with an explanation of what needs root access and why — a jury will evaluate your justification.' },
-  { pattern: 'kill *', feedback: 'Process termination is auto-denied. Use the process\'s own shutdown mechanism (npm stop, the tool\'s CLI). If a process is stuck, re-submit with the specific PID and reason — a jury will evaluate.' },
-  { pattern: 'pkill *', feedback: 'Pattern-based process kill is auto-denied. Use the application\'s own shutdown mechanism. If needed, re-submit with the specific process name and reason — a jury will evaluate.' },
-  { pattern: 'git checkout *', feedback: 'git checkout is auto-denied — it can discard uncommitted changes. Use `git switch` for branch changes (pre-approved) or `git stash` to save work. If checkout is truly the only option, re-submit with justification — a jury will evaluate.' },
+  { pattern: '^sudo\\b', feedback: 'Elevated privileges are auto-denied. Find a userspace alternative. If truly required, re-submit with an explanation of what needs root access and why — a jury will evaluate your justification.' },
+  { pattern: '^kill\\b', feedback: 'Process termination is auto-denied. Use the process\'s own shutdown mechanism (npm stop, the tool\'s CLI). If a process is stuck, re-submit with the specific PID and reason — a jury will evaluate.' },
+  { pattern: '^pkill\\b', feedback: 'Pattern-based process kill is auto-denied. Use the application\'s own shutdown mechanism. If needed, re-submit with the specific process name and reason — a jury will evaluate.' },
+  { pattern: '^git\\s+checkout\\b', feedback: 'git checkout is auto-denied — it can discard uncommitted changes. Use `git switch` for branch changes (pre-approved) or `git stash` to save work. If checkout is truly the only option, re-submit with justification — a jury will evaluate.' },
 ];
 
 // ---------------------------------------------------------------------------

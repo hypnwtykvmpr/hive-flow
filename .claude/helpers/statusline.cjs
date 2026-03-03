@@ -172,6 +172,16 @@ function getModelName() {
     if (m.includes('sonnet')) return 'Sonnet 4.6';
     if (m.includes('haiku')) return 'Haiku 4.5';
   }
+
+  // Fallback: project-level claudeFlow.modelPreferences.default
+  const projSettings = readJSON(path.join(CWD, '.claude', 'settings.json'));
+  if (projSettings?.claudeFlow?.modelPreferences?.default) {
+    const m = projSettings.claudeFlow.modelPreferences.default;
+    if (m.includes('opus')) return 'Opus 4.6';
+    if (m.includes('sonnet')) return 'Sonnet 4.6';
+    if (m.includes('haiku')) return 'Haiku 4.5';
+  }
+
   return 'Claude Code';
 }
 
@@ -514,6 +524,23 @@ function getIntegrationStatus() {
   return { mcpServers, hasDatabase, hasApi };
 }
 
+// Context usage estimate (reads tool call counter from hook handler)
+function getContextUsage() {
+  const ctxFile = path.join(CWD, '.claude', '.context-tracker.json');
+  try {
+    const data = JSON.parse(fs.readFileSync(ctxFile, 'utf-8'));
+    const calls = data.calls || 0;
+    // Estimate: ~1500 tokens per tool call average, 200K context window
+    // Each call adds prompt (~500 tokens) + response (~1000 tokens)
+    // Compaction typically triggers around 80-90% of context
+    const estimatedTokens = calls * 1500;
+    const contextWindow = 200000;
+    const pct = Math.min(99, Math.floor((estimatedTokens / contextWindow) * 100));
+    return { calls, pct, nearCompaction: pct >= 70 };
+  } catch { /* no tracker yet */ }
+  return { calls: 0, pct: 0, nearCompaction: false };
+}
+
 // Session stats (pure file reads)
 function getSessionStats() {
   for (const p of ['.claude-flow/session.json', '.claude/session.json']) {
@@ -550,6 +577,7 @@ function generateStatusline() {
   const tests = getTestStats();
   const session = getSessionStats();
   const integration = getIntegrationStatus();
+  const context = getContextUsage();
   const lines = [];
 
   // Header
@@ -570,6 +598,12 @@ function generateStatusline() {
   }
   header += `  ${c.dim}\u2502${c.reset}  ${c.purple}${modelName}${c.reset}`;
   if (session.duration) header += `  ${c.dim}\u2502${c.reset}  ${c.cyan}\u23F1 ${session.duration}${c.reset}`;
+  // Context usage indicator
+  if (context.calls > 0) {
+    const ctxColor = context.pct >= 75 ? c.brightRed : context.pct >= 50 ? c.brightYellow : c.brightGreen;
+    header += `  ${c.dim}\u2502${c.reset}  ${ctxColor}\uD83D\uDCD6 ${context.pct}% ctx${c.reset}`;
+    if (context.nearCompaction) header += ` ${c.brightRed}\u26A0 compaction soon${c.reset}`;
+  }
   lines.push(header);
 
   // Separator
@@ -662,6 +696,7 @@ function generateJSON() {
     agentdb: getAgentDBStats(),
     tests: getTestStats(),
     git: { modified: git.modified, untracked: git.untracked, staged: git.staged, ahead: git.ahead, behind: git.behind },
+    context: getContextUsage(),
     lastUpdated: new Date().toISOString(),
   };
 }

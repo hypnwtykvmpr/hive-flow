@@ -104,8 +104,7 @@ describe('hyperbolic_embed_hierarchy handler', () => {
     expect(result.isError).toBeUndefined();
   });
 
-  // lorentz model currently returns error - skip for now
-  it.skip('should handle lorentz model', async () => {
+  it('should handle lorentz model', async () => {
     const input = {
       hierarchy: {
         nodes: [{ id: 'root', parent: null }],
@@ -129,8 +128,7 @@ describe('hyperbolic_embed_hierarchy handler', () => {
     expect(result.isError).toBeUndefined();
   });
 
-  // half_plane model currently returns error - skip for now
-  it.skip('should handle half_plane model', async () => {
+  it('should handle half_plane model', async () => {
     const input = {
       hierarchy: {
         nodes: [{ id: 'root', parent: null }],

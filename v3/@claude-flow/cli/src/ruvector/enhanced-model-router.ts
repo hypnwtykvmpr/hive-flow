@@ -11,7 +11,7 @@
 
 import { existsSync, readFileSync } from 'fs';
 import { extname } from 'path';
-import { ClaudeModel, getModelRouter, ModelRouter, ModelRoutingResult } from './model-router.js';
+import { AgentModel, getModelRouter, ModelRouter, ModelRoutingResult } from './model-router.js';
 
 // ============================================================================
 // Types
@@ -45,7 +45,7 @@ export interface EditIntent {
 export interface EnhancedRouteResult {
   tier: 1 | 2 | 3;
   handler: 'agent-booster' | 'haiku' | 'sonnet' | 'opus';
-  model?: ClaudeModel;
+  model?: AgentModel;
   confidence: number;
   complexity?: number;
   reasoning: string;

@@ -1712,6 +1712,70 @@ async function doPreCompact() {
   }
 }
 
+/**
+ * Try tiered restoration from shadow copy (context-manager daemon worker).
+ * Returns formatted string with 3 tiers, or null if shadow copy unavailable.
+ */
+function tryTieredShadowRestore(budget) {
+  try {
+    const shadowPath = join(DATA_DIR, 'shadow-context.json');
+    if (!existsSync(shadowPath)) return null;
+
+    const data = JSON.parse(readFileSync(shadowPath, 'utf-8'));
+    const ranked = (data.entries || [])
+      .filter(e => e.importanceRank > 0)
+      .sort((a, b) => a.importanceRank - b.importanceRank);
+    if (ranked.length < 5) return null;
+
+    const t1Pct = parseFloat(process.env.CLAUDE_FLOW_RESTORE_TIER1_PCT || '0.50');
+    const t2Pct = parseFloat(process.env.CLAUDE_FLOW_RESTORE_TIER2_PCT || '0.35');
+    const t3Pct = parseFloat(process.env.CLAUDE_FLOW_RESTORE_TIER3_PCT || '0.15');
+    const t1Budget = Math.floor(budget * t1Pct);
+    const t2Budget = Math.floor(budget * t2Pct);
+    const t3Budget = Math.floor(budget * t3Pct);
+
+    // Tier 1: Full content of top-ranked entries
+    let t1 = '', t1Len = 0, t1Count = 0;
+    for (const e of ranked) {
+      const c = e.content || '';
+      if (t1Len + c.length > t1Budget) break;
+      t1 += `[${e.role}] ${c}\n`;
+      t1Len += c.length;
+      t1Count++;
+    }
+
+    // Tier 2: Summaries of next batch
+    let t2 = '', t2Len = 0;
+    for (let i = t1Count; i < ranked.length; i++) {
+      const e = ranked[i];
+      const summary = e.summaryLong || e.summaryShort || (e.content || '').slice(0, 100);
+      if (t2Len + summary.length > t2Budget) break;
+      t2 += `- ${summary}\n`;
+      t2Len += summary.length;
+    }
+
+    // Tier 3: File/tool reference index
+    const files = new Set();
+    const tools = new Set();
+    for (const e of ranked) {
+      for (const f of (e.filePaths || [])) files.add(f);
+      for (const t of (e.toolNames || [])) tools.add(t);
+    }
+    const refLine = `Files: ${[...files].slice(0, 20).join(', ')}\nTools: ${[...tools].slice(0, 10).join(', ')}`;
+    const t3 = refLine.length <= t3Budget ? refLine : '';
+
+    if (!t1 && !t2) return null;
+
+    let result = '[Context Restored - Tiered]\n';
+    if (t1) result += `\n--- Critical (full content) ---\n${t1}`;
+    if (t2) result += `\n--- Summary ---\n${t2}`;
+    if (t3) result += `\n--- References ---\n${t3}`;
+    return result;
+  } catch {
+    return null;
+  }
+}
+
 async function doSessionStart() {
   const input = await readStdin(200);
 
@@ -1725,8 +1789,10 @@ async function doSessionStart() {
   const { backend, type } = await resolveBackend();
 
   // Use smart retrieval (importance-ranked) when auto-optimize is on
-  let additionalContext;
-  if (AUTO_OPTIMIZE) {
+  // Tiered restoration from shadow copy (context-manager daemon worker)
+  let additionalContext = tryTieredShadowRestore(RESTORE_BUDGET);
+
+  if (!additionalContext && AUTO_OPTIMIZE) {
     const { text, accessedIds } = await retrieveContextSmart(backend, sessionId, RESTORE_BUDGET);
     additionalContext = text;
 
@@ -1791,9 +1857,7 @@ async function doUserPromptSubmit() {
     if (result.stored > 0) {
       const total = await backend.count(NAMESPACE);
       archiveMsg = `[ContextPersistence] Proactively archived ${result.stored} turns (total: ${total}).`;
-      process.stderr.write(
-        `[ContextPersistence] Proactive archive: ${result.stored} new, ${result.deduped} deduped via ${type}. Total: ${total}\n`
-      );
+      // NOTE: Do NOT write to stderr — Claude Code treats any stderr as hook error
     }
   }
 
@@ -1804,18 +1868,28 @@ async function doUserPromptSubmit() {
       const autopilot = await runAutopilot(transcriptPath, sessionId, backend, type);
       autopilotMsg = autopilot.additionalContext;
 
-      process.stderr.write(
-        `[ContextAutopilot] ${(autopilot.percentage * 100).toFixed(1)}% context used (~${formatTokens(autopilot.tokens)} tokens, ${autopilot.turns} turns, ${autopilot.method})\n`
-      );
+      // NOTE: Do NOT write to stderr — Claude Code treats any stderr as hook error
     } catch (err) {
-      process.stderr.write(`[ContextAutopilot] Error: ${err.message}\n`);
+      // Silently ignore — do NOT write to stderr
     }
   }
 
   await backend.shutdown();
 
-  // Combine archive message and autopilot report
-  const additionalContext = [archiveMsg, autopilotMsg].filter(Boolean).join(' ');
+  // Check for context manager cull plan (written by daemon worker)
+  let cullMsg = '';
+  try {
+    const cullPath = join(DATA_DIR, 'cull-plan.json');
+    if (existsSync(cullPath)) {
+      const plan = JSON.parse(readFileSync(cullPath, 'utf-8'));
+      if (plan.phase === 'critical' && plan.tokensFreed > 0) {
+        cullMsg = `[ContextManager] ${plan.phase}: ${plan.entriesToCull?.length || 0} low-ranked entries (${plan.tokensFreed} tokens recoverable).`;
+      }
+    }
+  } catch { /* non-critical */ }
+
+  // Combine archive message, autopilot report, and cull plan
+  const additionalContext = [archiveMsg, autopilotMsg, cullMsg].filter(Boolean).join(' ');
 
   if (additionalContext) {
     const output = {
@@ -1975,5 +2049,5 @@ try {
   }
 } catch (err) {
   // Hooks must never crash Claude Code - fail silently
-  process.stderr.write(`[ContextPersistence] Error (non-critical): ${err.message}\n`);
+  // NOTE: Do NOT write to stderr — Claude Code treats any stderr as hook error
 }

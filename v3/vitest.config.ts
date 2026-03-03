@@ -35,8 +35,9 @@ export default defineConfig({
     ],
 
     // Coverage configuration - London School targets
+    // Disabled by default to avoid OOM with 600+ test files; enable with --coverage
     coverage: {
-      enabled: true,
+      enabled: false,
       provider: 'v8',
       reporter: ['text', 'json', 'html', 'lcov'],
       reportsDirectory: './__tests__/coverage',
@@ -80,14 +81,10 @@ export default defineConfig({
     // Reporter configuration
     reporters: ['default'],
 
-    // Parallel execution
-    pool: 'threads',
-    poolOptions: {
-      threads: {
-        singleThread: false,
-        isolate: true,
-      },
-    },
+    // Parallel execution — Vitest 4.x uses forks by default (isolated child processes).
+    // Limit concurrency to prevent OOM with 600+ test files.
+    pool: 'forks',
+    maxWorkers: 4,
 
     // Globals for easier testing
     globals: true,

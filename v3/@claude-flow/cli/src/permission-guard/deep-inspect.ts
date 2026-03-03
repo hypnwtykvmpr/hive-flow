@@ -125,6 +125,29 @@ const LANG_PATTERNS: Record<string, RegExp[]> = {
   perl: PERL_DANGEROUS,
 };
 
+// Layer A2: AWK/SED dangerous patterns (must run before ALWAYS_SAFE)
+const AWK_DANGEROUS: RegExp[] = [
+  /\bawk\b.*\bsystem\s*\(/, // awk with system() call
+  /\bawk\b.*\bgetline\b/, // awk with getline (can read files)
+  /\bawk\b.*\"|.*\bpipe\b/, // awk piping to commands
+];
+
+const SED_DANGEROUS: RegExp[] = [
+  /\bsed\b.*\/e['"]?\s/, // sed with /e execute flag (trailing space variant)
+  /\bsed\b.*\/e['"]?\s*$/, // sed with /e execute flag (end of string)
+  /\bsed\b.*'[^']*\/e'/, // sed with /e inside single-quoted expression
+  /\bsed\b.*"[^"]*\/e"/, // sed with /e inside double-quoted expression
+];
+
+// Layer A3: Network exfiltration / attack tools
+const NETWORK_ATTACK_TOOLS: RegExp[] = [
+  /\bscp\b.*@/, // scp to a remote host
+  /\brsync\b.*@/, // rsync to a remote host
+  /\bsftp\b.*@/, // sftp to a remote host
+  /\bnc\s+-e\b/, // netcat reverse shell (also in BASH_DANGEROUS)
+  /\btftp\b/, // trivial FTP
+];
+
 function matchFirst(cmd: string, patterns: RegExp[]): RegExp | null {
   for (const p of patterns) {
     if (p.test(cmd)) return p;
@@ -157,6 +180,16 @@ export function deepInspect(command: string, depth: number = 0): DeepInspectResu
   if (XARGS_DANGEROUS.test(cmd)) {
     return block('Dangerous command via xargs', 'xargs-destructive', 'critical', [cmd], depth);
   }
+
+  // Layer A2: AWK/SED dangerous patterns (before ALWAYS_SAFE to catch dangerous variants)
+  const awkMatch = matchFirst(cmd, AWK_DANGEROUS);
+  if (awkMatch) return block(`Dangerous awk usage: ${awkMatch.source}`, 'awk-dangerous', 'critical', [cmd], depth);
+  const sedMatch = matchFirst(cmd, SED_DANGEROUS);
+  if (sedMatch) return block(`Dangerous sed usage: ${sedMatch.source}`, 'sed-dangerous', 'critical', [cmd], depth);
+
+  // Layer A3: Network exfiltration tools (before ALWAYS_SAFE)
+  const netMatch = matchFirst(cmd, NETWORK_ATTACK_TOOLS);
+  if (netMatch) return block(`Network attack/exfiltration tool: ${netMatch.source}`, 'network-attack', 'critical', [cmd], depth);
 
   // Layer A: Always-safe short-circuit
   if (matchFirst(cmd, ALWAYS_SAFE)) return ok([], depth);

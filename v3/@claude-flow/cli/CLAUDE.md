@@ -156,59 +156,28 @@ They're working in parallel. I'll synthesize their results when they complete.
 - Wait for agent results to arrive
 - Synthesize results when they return
 
-## 🧠 AUTO-LEARNING PROTOCOL
+## Turn Completion (CRITICAL)
 
-### Before Starting Any Task
-```bash
-# 1. Search memory for relevant patterns from past successes
-Bash("npx @claude-flow/cli@latest memory search --query '[task keywords]' --namespace patterns")
+When you finish the user's request: **report results, then STOP.**
+- Do NOT run post-task hooks, memory commands, or neural training
+- Do NOT search memory for patterns to store
+- Do NOT trigger worker dispatches
+- Background systems handle all learning automatically
 
-# 2. Check if similar task was done before
-Bash("npx @claude-flow/cli@latest memory search --query '[task type]' --namespace tasks")
+## Background Learning
 
-# 3. Load learned optimizations
-Bash("npx @claude-flow/cli@latest hooks route --task '[task description]'")
-```
+These fire automatically — no model action needed:
 
-### After Completing Any Task Successfully
-```bash
-# 1. Store successful pattern for future reference
-Bash("npx @claude-flow/cli@latest memory store --namespace patterns --key '[pattern-name]' --value '[what worked]'")
+| Signal | Hook/Trigger | What It Does |
+|--------|-------------|--------------|
+| File edited | `PostToolUse` → `post-edit` | Logs edit to `pending-insights.jsonl` via `intelligence.recordEdit()` |
+| Turn ends | `Stop` → `post-task` + `auto-memory-hook.mjs sync` | Intelligence feedback + incremental memory sync to MEMORY.md |
+| Team agent idle | `TeammateIdle` → `post-task` | Intelligence feedback for team turns |
+| Task completed | `TaskCompleted` → `post-task` | Intelligence feedback for task completion |
+| Session ends | `SessionEnd` → `session-end` | Consolidates pending insights, persists session state |
+| Scheduled | Daemon workers (optimize, audit, consolidate) | Background optimization on 60s intervals |
 
-# 2. Train neural patterns on the successful approach
-Bash("npx @claude-flow/cli@latest hooks post-edit --file '[main-file]' --train-neural true")
-
-# 3. Record task completion with metrics
-Bash("npx @claude-flow/cli@latest hooks post-task --task-id '[id]' --success true --store-results true")
-
-# 4. Trigger optimization worker if performance-related
-Bash("npx @claude-flow/cli@latest hooks worker dispatch --trigger optimize")
-```
-
-### Continuous Improvement Triggers
-
-| Trigger | Worker | When to Use |
-|---------|--------|-------------|
-| After major refactor | `optimize` | Performance optimization |
-| After adding features | `testgaps` | Find missing test coverage |
-| After security changes | `audit` | Security analysis |
-| After API changes | `document` | Update documentation |
-| Every 5+ file changes | `map` | Update codebase map |
-| Complex debugging | `deepdive` | Deep code analysis |
-
-### Memory-Enhanced Development
-
-**ALWAYS check memory before:**
-- Starting a new feature (search for similar implementations)
-- Debugging an issue (search for past solutions)
-- Refactoring code (search for learned patterns)
-- Performance work (search for optimization strategies)
-
-**ALWAYS store in memory after:**
-- Solving a tricky bug (store the solution pattern)
-- Completing a feature (store the approach)
-- Finding a performance fix (store the optimization)
-- Discovering a security issue (store the vulnerability pattern)
+Do NOT run manual memory/hooks/neural commands after completing work. Just stop.
 
 ### 📋 Agent Routing (Anti-Drift)
 
@@ -528,41 +497,6 @@ Features:
 | MCP Response | <100ms |
 | CLI Startup | <500ms |
 | SONA Adaptation | <0.05ms |
-
-## 📊 Performance Optimization Protocol
-
-### Automatic Performance Tracking
-```bash
-# After any significant operation, track metrics
-Bash("npx @claude-flow/cli@latest hooks post-command --command '[operation]' --track-metrics true")
-
-# Periodically run benchmarks (every major feature)
-Bash("npx @claude-flow/cli@latest performance benchmark --suite all")
-
-# Analyze bottlenecks when performance degrades
-Bash("npx @claude-flow/cli@latest performance profile --target '[component]'")
-```
-
-### Session Persistence (Cross-Conversation Learning)
-```bash
-# At session start - restore previous context
-Bash("npx @claude-flow/cli@latest session restore --latest")
-
-# At session end - persist learned patterns
-Bash("npx @claude-flow/cli@latest hooks session-end --generate-summary true --persist-state true --export-metrics true")
-```
-
-### Neural Pattern Training
-```bash
-# Train on successful code patterns
-Bash("npx @claude-flow/cli@latest neural train --pattern-type coordination --epochs 10")
-
-# Predict optimal approach for new tasks
-Bash("npx @claude-flow/cli@latest neural predict --input '[task description]'")
-
-# View learned patterns
-Bash("npx @claude-flow/cli@latest neural patterns --list")
-```
 
 ## 🔧 Environment Variables
 
