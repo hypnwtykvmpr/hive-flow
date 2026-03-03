@@ -29,11 +29,13 @@ import { z } from 'zod';
 import { MCPTool, ToolContext } from '../types.js';
 
 // Lazy-loaded agentic-flow imports for HNSW search optimization
+// @ts-ignore - agentic-flow is an optional dependency
 let agenticFlowCore: typeof import('agentic-flow/core') | null = null;
 let agentDBInstance: unknown | null = null;
 
 async function loadAgenticFlow(): Promise<boolean> {
   try {
+    // @ts-ignore - agentic-flow is an optional dependency
     agenticFlowCore = await import('agentic-flow/core');
     if (agenticFlowCore?.createFastAgentDB) {
       agentDBInstance = agenticFlowCore.createFastAgentDB({ dimensions: 768 });

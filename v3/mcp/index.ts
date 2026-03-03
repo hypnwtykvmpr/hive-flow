@@ -21,8 +21,11 @@
  * @version 3.0.0
  */
 
+import type { MCPServerConfig, ILogger } from './types.js';
+import { MCPServer, createMCPServer } from './server.js';
+
 // Core types
-export {
+export type {
   // Protocol types
   JsonRpcVersion,
   RequestId,
@@ -91,11 +94,8 @@ export {
 } from './types.js';
 
 // Server
-export {
-  MCPServer,
-  IMCPServer,
-  createMCPServer,
-} from './server.js';
+export { MCPServer, createMCPServer } from './server.js';
+export type { IMCPServer } from './server.js';
 
 // Tool Registry
 export {
@@ -105,11 +105,8 @@ export {
 } from './tool-registry.js';
 
 // Session Manager
-export {
-  SessionManager,
-  SessionConfig,
-  createSessionManager,
-} from './session-manager.js';
+export { SessionManager, createSessionManager } from './session-manager.js';
+export type { SessionConfig } from './session-manager.js';
 
 // Connection Pool
 export {
@@ -124,15 +121,17 @@ export {
   createInProcessTransport,
   TransportManager,
   createTransportManager,
-  TransportConfig,
   DEFAULT_TRANSPORT_CONFIGS,
 
   // Specific transports
   StdioTransport,
-  StdioTransportConfig,
   HttpTransport,
-  HttpTransportConfig,
   WebSocketTransport,
+} from './transport/index.js';
+export type {
+  TransportConfig,
+  StdioTransportConfig,
+  HttpTransportConfig,
   WebSocketTransportConfig,
 } from './transport/index.js';
 

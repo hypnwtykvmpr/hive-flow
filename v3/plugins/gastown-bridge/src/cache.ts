@@ -689,8 +689,8 @@ export class ModulePreloader {
 
   private scheduleIdleTask(task: () => Promise<void>): Promise<void> {
     return new Promise((resolve) => {
-      if (typeof requestIdleCallback !== 'undefined') {
-        requestIdleCallback(async () => {
+      if (typeof (globalThis as any).requestIdleCallback !== 'undefined') {
+        (globalThis as any).requestIdleCallback(async () => {
           await task();
           resolve();
         });

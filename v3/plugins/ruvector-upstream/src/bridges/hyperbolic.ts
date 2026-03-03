@@ -67,6 +67,7 @@ export class HyperbolicBridge implements WasmBridge<HyperbolicModule> {
     this._status = 'loading';
 
     try {
+      // @ts-expect-error optional wasm package may not be installed
       const wasmModule = await import('@ruvector/hyperbolic-hnsw-wasm').catch(() => null);
 
       if (wasmModule) {

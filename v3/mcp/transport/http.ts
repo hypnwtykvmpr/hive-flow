@@ -608,7 +608,7 @@ export class PooledHttpTransport {
     poolConfig: HttpPoolConfig = {}
   ) {
     const factory = new HttpConnectionFactory(logger, transportConfig);
-    this.pool = createConnectionPool(factory, {
+    this.pool = createConnectionPool<{ transport: HttpTransport; id: string }>(factory, {
       minConnections: poolConfig.minConnections ?? 2,
       maxConnections: poolConfig.maxConnections ?? 10,
       acquireTimeout: poolConfig.acquireTimeout ?? 5000,

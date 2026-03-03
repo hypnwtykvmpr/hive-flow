@@ -75,6 +75,7 @@ export class LearningBridge implements WasmBridge<LearningModule> {
     this._status = 'loading';
 
     try {
+      // @ts-expect-error optional wasm package may not be installed
       const wasmModule = await import('@ruvector/learning-wasm').catch(() => null);
 
       if (wasmModule) {

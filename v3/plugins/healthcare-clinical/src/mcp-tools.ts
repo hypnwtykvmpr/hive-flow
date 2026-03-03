@@ -17,6 +17,7 @@ import type {
   DrugInteractionsResult,
   ClinicalPathwayResult,
   LiteratureSearchResult,
+  LiteratureArticle,
   OntologyNavigationResult,
   HealthcareAuditLog,
 } from './types.js';
@@ -482,7 +483,7 @@ async function literatureSearchHandler(
 function generateSampleArticles(query: string, sources: string[], maxResults: number) {
   // Generate sample articles for demonstration
   const evidenceLevels = ['systematic-review', 'rct', 'cohort', 'case-control'];
-  const articles = [];
+  const articles: LiteratureArticle[] = [];
 
   for (let i = 0; i < Math.min(maxResults, 10); i++) {
     articles.push({

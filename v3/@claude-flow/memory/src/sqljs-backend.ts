@@ -9,7 +9,9 @@
 
 import { EventEmitter } from 'node:events';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
-import initSqlJs, { Database as SqlJsDatabase } from 'sql.js';
+import initSqlJs from 'sql.js';
+// Database is a global class from sql.js; use any for cross-platform compatibility
+type SqlJsDatabase = InstanceType<Awaited<ReturnType<typeof initSqlJs>>['Database']>;
 import {
   IMemoryBackend,
   MemoryEntry,

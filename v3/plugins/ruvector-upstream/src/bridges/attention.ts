@@ -58,6 +58,7 @@ export class AttentionBridge implements WasmBridge<AttentionModule> {
     this._status = 'loading';
 
     try {
+      // @ts-expect-error optional wasm package may not be installed
       const wasmModule = await import('@ruvector/attention-wasm').catch(() => null);
 
       if (wasmModule) {

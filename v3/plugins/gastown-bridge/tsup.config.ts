@@ -14,6 +14,7 @@
  * - Source maps for debugging
  */
 
+// @ts-expect-error tsup is a build-time dependency
 import { defineConfig } from 'tsup';
 import { readFileSync } from 'fs';
 import { join } from 'path';

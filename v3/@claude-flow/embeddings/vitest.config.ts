@@ -16,6 +16,7 @@ export default defineConfig({
     testTimeout: 10000,
     // Use forks with execArgv to pass memory to child process
     pool: 'forks',
+    // @ts-expect-error poolOptions typing varies by vitest version
     poolOptions: {
       forks: {
         singleFork: true,

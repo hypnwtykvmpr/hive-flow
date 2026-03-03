@@ -17,6 +17,7 @@ async function loadBMSSP(): Promise<void> {
   if (WasmGraph) return;
 
   try {
+    // @ts-expect-error optional wasm package may not be installed
     const bmssp = await import('@ruvnet/bmssp');
     await bmssp.default(); // Initialize WASM
     WasmGraph = bmssp.WasmGraph;

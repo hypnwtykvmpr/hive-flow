@@ -27,7 +27,7 @@ import {
 } from './types.js';
 
 // Schema validator instance (singleton for performance)
-const ajv = new Ajv({ allErrors: true, strict: false });
+const ajv = new Ajv({ allErrors: true });
 
 /**
  * Tool metadata for enhanced lookup
@@ -356,7 +356,7 @@ export class ToolRegistry extends EventEmitter {
       if (!valid && validate.errors) {
         return {
           valid: false,
-          errors: validate.errors.map(e => `${e.instancePath || 'input'}: ${e.message}`),
+          errors: validate.errors.map(e => `${'instancePath' in e ? (e as any).instancePath || 'input' : 'input'}: ${e.message}`),
         };
       }
 
@@ -400,7 +400,7 @@ export class ToolRegistry extends EventEmitter {
       };
     }
 
-    const execContext = { ...this.defaultContext, ...context };
+    const execContext = { ...this.defaultContext, ...context } as ToolContext;
     this.totalExecutions++;
     metadata.callCount++;
     metadata.lastCalled = new Date();

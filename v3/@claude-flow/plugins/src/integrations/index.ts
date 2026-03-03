@@ -46,9 +46,6 @@ export {
   isSuccess,
   isError,
 
-  // Namespace
-  RuVector,
-
   // Attention Mechanisms
   AttentionRegistry,
   AttentionFactory,
@@ -78,6 +75,7 @@ export {
 
 // Re-export common RuVector types for convenience
 export type {
+  RuVector,
   RuVectorConfig,
   VectorSearchOptions as RuVectorSearchOptions,
   VectorSearchResult as RuVectorSearchResult,

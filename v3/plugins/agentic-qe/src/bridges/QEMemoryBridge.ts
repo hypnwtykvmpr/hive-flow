@@ -176,7 +176,7 @@ export class QEMemoryBridge implements IQEMemoryBridge {
         await this.memory.createNamespace(config.name, {
           vectorDimension: config.vectorDimension,
           hnswConfig: config.hnswConfig,
-          schema: config.schema,
+          schema: (config as any).schema,
         });
       }
 

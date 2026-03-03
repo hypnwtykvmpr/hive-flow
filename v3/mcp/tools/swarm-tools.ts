@@ -147,6 +147,7 @@ async function handleInitSwarm(
   // Try to use swarmCoordinator if available
   if (context?.swarmCoordinator) {
     try {
+      // @ts-ignore - @claude-flow/swarm is an optional dependency
       const { UnifiedSwarmCoordinator } = await import('@claude-flow/swarm');
       const coordinator = context.swarmCoordinator as InstanceType<typeof UnifiedSwarmCoordinator>;
 
@@ -202,6 +203,7 @@ async function handleSwarmStatus(
   // Try to use swarmCoordinator if available
   if (context?.swarmCoordinator) {
     try {
+      // @ts-ignore - @claude-flow/swarm is an optional dependency
       const { UnifiedSwarmCoordinator } = await import('@claude-flow/swarm');
       const coordinator = context.swarmCoordinator as InstanceType<typeof UnifiedSwarmCoordinator>;
 
@@ -307,6 +309,7 @@ async function handleScaleSwarm(
   // Try to use swarmCoordinator if available
   if (context?.swarmCoordinator) {
     try {
+      // @ts-ignore - @claude-flow/swarm is an optional dependency
       const { UnifiedSwarmCoordinator } = await import('@claude-flow/swarm');
       const coordinator = context.swarmCoordinator as InstanceType<typeof UnifiedSwarmCoordinator>;
 

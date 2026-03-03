@@ -78,7 +78,7 @@ function detectEnvironment(): 'node' | 'browser' | 'edge' {
   if (typeof process !== 'undefined' && process.versions?.node) {
     return 'node';
   }
-  if (typeof window !== 'undefined') {
+  if (typeof (globalThis as any).window !== 'undefined') {
     return 'browser';
   }
   return 'edge';

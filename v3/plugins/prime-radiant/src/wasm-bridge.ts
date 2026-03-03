@@ -176,6 +176,7 @@ export class WasmBridge {
   private async loadWasmNode(wasmPath: string): Promise<void> {
     try {
       // Try dynamic import of the WASM package
+      // @ts-expect-error optional wasm package may not be installed
       const primeRadiant = await import('prime-radiant-advanced-wasm');
 
       // Initialize the module
@@ -235,6 +236,7 @@ export class WasmBridge {
   private async loadWasmBrowser(wasmPath: string): Promise<void> {
     try {
       // Try dynamic import first (bundler support)
+      // @ts-expect-error optional wasm package may not be installed
       const primeRadiant = await import('prime-radiant-advanced-wasm');
 
       if (typeof primeRadiant.default === 'function') {

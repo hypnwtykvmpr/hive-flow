@@ -24,9 +24,12 @@ import { HttpTransport, HttpTransportConfig, createHttpTransport } from './http.
 import { WebSocketTransport, WebSocketTransportConfig, createWebSocketTransport } from './websocket.js';
 
 // Re-export transport classes
-export { StdioTransport, StdioTransportConfig } from './stdio.js';
-export { HttpTransport, HttpTransportConfig } from './http.js';
-export { WebSocketTransport, WebSocketTransportConfig } from './websocket.js';
+export { StdioTransport } from './stdio.js';
+export type { StdioTransportConfig } from './stdio.js';
+export { HttpTransport } from './http.js';
+export type { HttpTransportConfig } from './http.js';
+export { WebSocketTransport } from './websocket.js';
+export type { WebSocketTransportConfig } from './websocket.js';
 
 /**
  * Transport configuration union
@@ -107,10 +110,8 @@ class InProcessTransport implements ITransport {
 
   async getHealthStatus() {
     return {
-      healthy: true,
-      metrics: {
-        transport: 'in-process',
-      },
+      healthy: true as const,
+      metrics: {} as Record<string, number>,
     };
   }
 }

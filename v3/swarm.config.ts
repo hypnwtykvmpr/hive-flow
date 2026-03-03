@@ -5,15 +5,36 @@
  * Based on the V3 Architecture Decision Records and Swarm Implementation Plan
  */
 
-import {
-  SwarmConfig,
-  TopologyType,
-  LoadBalancingStrategy,
-  AgentDomain,
-  PhaseId,
-  PerformanceTargets,
-  V3_PERFORMANCE_TARGETS
-} from './shared/types';
+// Core types defined inline (./shared/types not available at this level)
+export type TopologyType = 'hierarchical-mesh' | 'mesh' | 'hierarchical' | 'centralized';
+export type LoadBalancingStrategy = 'round-robin' | 'capability-match' | 'least-loaded' | 'priority';
+export type AgentDomain = 'security' | 'core' | 'integration' | 'quality' | 'performance' | 'deployment';
+export type PhaseId = 'phase-1-foundation' | 'phase-2-core' | 'phase-3-integration' | 'phase-4-release';
+
+export interface PerformanceTargets {
+  flashAttentionSpeedup: [number, number];
+  agentDbSearchImprovement: [number, number];
+  memoryReduction: [number, number];
+  maxCodeLines: number;
+  maxStartupMs: number;
+}
+
+export interface SwarmConfig {
+  topology: TopologyType;
+  maxAgents: number;
+  messageTimeout: number;
+  retryAttempts: number;
+  healthCheckInterval: number;
+  loadBalancingStrategy: LoadBalancingStrategy;
+}
+
+export const V3_PERFORMANCE_TARGETS: PerformanceTargets = {
+  flashAttentionSpeedup: [2.49, 7.47],
+  agentDbSearchImprovement: [150, 12500],
+  memoryReduction: [50, 75],
+  maxCodeLines: 5000,
+  maxStartupMs: 500,
+};
 
 // =============================================================================
 // Swarm Configuration

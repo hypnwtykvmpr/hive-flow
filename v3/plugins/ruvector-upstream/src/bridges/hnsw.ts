@@ -55,6 +55,7 @@ export class HnswBridge implements WasmBridge<HnswModule> {
 
     try {
       // Dynamic import of WASM module
+      // @ts-expect-error optional wasm package may not be installed
       const wasmModule = await import('@ruvector/micro-hnsw-wasm').catch(() => null);
 
       if (wasmModule) {

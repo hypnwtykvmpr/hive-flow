@@ -88,6 +88,7 @@ export class ExoticBridge implements WasmBridge<ExoticModule> {
     this._status = 'loading';
 
     try {
+      // @ts-expect-error optional wasm package may not be installed
       const wasmModule = await import('@ruvector/exotic-wasm').catch(() => null);
 
       if (wasmModule) {

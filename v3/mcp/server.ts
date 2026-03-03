@@ -461,7 +461,7 @@ export class MCPServer extends EventEmitter implements IMCPServer {
    * Handle initialize request
    */
   private async handleInitialize(request: MCPRequest): Promise<MCPResponse> {
-    const params = request.params as MCPInitializeParams;
+    const params = request.params as unknown as MCPInitializeParams;
 
     if (!params) {
       return this.createErrorResponse(
@@ -724,9 +724,10 @@ export class MCPServer extends EventEmitter implements IMCPServer {
           category: { type: 'string', description: 'Filter by category' },
         },
       },
-      handler: async (input: { category?: string }) => {
-        if (input.category) {
-          return this.toolRegistry.getByCategory(input.category);
+      handler: async (input: unknown) => {
+        const typedInput = input as { category?: string };
+        if (typedInput.category) {
+          return this.toolRegistry.getByCategory(typedInput.category);
         }
         return this.toolRegistry.listTools();
       },

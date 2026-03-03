@@ -131,8 +131,9 @@ async function handleStoreMemory(
   const resourceManager = context?.resourceManager as any;
   if (resourceManager?.memoryService) {
     try {
+      // @ts-ignore - @claude-flow/memory is an optional dependency
       const { UnifiedMemoryService } = await import('@claude-flow/memory');
-      const memoryService = resourceManager.memoryService as UnifiedMemoryService;
+      const memoryService = resourceManager.memoryService as InstanceType<typeof UnifiedMemoryService>;
 
       // Store the memory entry
       const entry = await memoryService.storeEntry({
@@ -181,8 +182,9 @@ async function handleSearchMemory(
   const resourceManager = context?.resourceManager as any;
   if (resourceManager?.memoryService) {
     try {
+      // @ts-ignore - @claude-flow/memory is an optional dependency
       const { UnifiedMemoryService } = await import('@claude-flow/memory');
-      const memoryService = resourceManager.memoryService as UnifiedMemoryService;
+      const memoryService = resourceManager.memoryService as InstanceType<typeof UnifiedMemoryService>;
 
       let searchResults: any[];
 
@@ -274,8 +276,9 @@ async function handleListMemory(
   const resourceManager = context?.resourceManager as any;
   if (resourceManager?.memoryService) {
     try {
+      // @ts-ignore - @claude-flow/memory is an optional dependency
       const { UnifiedMemoryService } = await import('@claude-flow/memory');
-      const memoryService = resourceManager.memoryService as UnifiedMemoryService;
+      const memoryService = resourceManager.memoryService as InstanceType<typeof UnifiedMemoryService>;
 
       // Query all entries
       const entries = await memoryService.query({

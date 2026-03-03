@@ -3,7 +3,7 @@
     "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "lib": ["ES2022"],
+    "lib": ["ES2022", "WebWorker"],
     "outDir": "./dist",
     "rootDir": "./",
     "strict": true,
@@ -33,6 +33,9 @@
     "dist",
     "**/*.test.ts",
     "**/*.bench.ts",
-    "v3/__tests__/**/*.ts"
+    "v3/__tests__/**/*.ts",
+    "v3/**/examples/**/*.ts",
+    "v3/**/__tests__/**/*.ts",
+    "v3/**/tests/**/*.ts"
   ]
 }

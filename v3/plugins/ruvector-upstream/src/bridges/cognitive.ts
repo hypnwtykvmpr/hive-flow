@@ -94,6 +94,7 @@ export class CognitiveBridge implements WasmBridge<CognitiveModule> {
     this._status = 'loading';
 
     try {
+      // @ts-expect-error optional wasm package may not be installed
       const wasmModule = await import('@ruvector/cognitum-gate-kernel').catch(() => null);
 
       if (wasmModule) {
