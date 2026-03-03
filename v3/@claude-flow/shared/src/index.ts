@@ -6,9 +6,44 @@
  */
 
 // =============================================================================
-// Types - Primary type definitions (from ./types.js)
+// Types - Primary type definitions (from ./types.js and ./types/index.js)
+// ./types.js exports are listed explicitly to avoid ambiguity with ./types/index.js
+// Conflicting names (AgentStatus, SwarmMessage, SwarmMetrics, TaskMetadata,
+// TaskPriority, TaskStatus) are only exported from ./types/index.js.
 // =============================================================================
-export * from './types.js';
+export type {
+  AgentId,
+  AgentRole,
+  AgentDomain,
+  AgentCapability,
+  AgentDefinition,
+  AgentState,
+  AgentMetrics,
+  TaskId,
+  TaskType,
+  TaskDefinition,
+  TaskResult,
+  TaskResultMetrics,
+  PhaseId,
+  PhaseDefinition,
+  MilestoneDefinition,
+  MilestoneStatus,
+  MilestoneCriteria,
+  TopologyType,
+  SwarmConfig,
+  LoadBalancingStrategy,
+  SwarmState,
+  EventType,
+  SwarmEvent,
+  EventHandler,
+  MessageType,
+  MessageHandler,
+  PerformanceTargets,
+  DeepPartial,
+  AsyncCallback,
+} from './types.js';
+export { V3_PERFORMANCE_TARGETS } from './types.js';
+export * from './types/index.js';
 
 // =============================================================================
 // Events - Event bus and basic event interfaces (from ./events.js)
@@ -102,6 +137,8 @@ export {
   HealthMonitor,
   LifecycleManager,
   EventCoordinator,
+  CheckpointManager,
+  CrashDetector,
   // Config validation/loading
   ConfigLoader,
   loadConfig,
@@ -137,6 +174,12 @@ export type {
   SessionManagerConfig,
   HealthMonitorConfig,
   LifecycleManagerConfig,
+  CheckpointManagerConfig,
+  CrashDetectorConfig,
+  Checkpoint,
+  AgentCheckpointState,
+  TaskCheckpointState,
+  RecoverableSession,
   // Schema types (from config - note these extend the basic types from types.js)
   AgentConfig,
   TaskConfig,
@@ -188,6 +231,26 @@ export * from './security/index.js';
 // Resilience Patterns
 // =============================================================================
 export * from './resilience/index.js';
+
+// =============================================================================
+// Lifecycle - Graceful shutdown, process tracking, resource cleanup
+// =============================================================================
+export * from './lifecycle/index.js';
+
+// =============================================================================
+// Signals - User-initiated workflow control (pause, resume, skip, stop)
+// =============================================================================
+export * from './signals/index.js';
+
+// =============================================================================
+// Directives - Agent-issued workflow control (loop, checkpoint, trigger)
+// =============================================================================
+export * from './directives/index.js';
+
+// =============================================================================
+// Observability - Tracing, metrics, span buffering, diagnostics
+// =============================================================================
+export * from './observability/index.js';
 
 // =============================================================================
 // Services

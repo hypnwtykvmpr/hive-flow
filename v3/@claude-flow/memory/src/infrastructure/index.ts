@@ -13,6 +13,10 @@ export {
   type HybridRepositoryConfig,
 } from './repositories/hybrid-memory-repository.js';
 
+// Sync and Hashing
+export { DeterministicIdGenerator } from './DeterministicIdGenerator.js';
+export { SyncManager, type SyncResult } from './SyncManager.js';
+
 // Re-export existing adapters
 export { AgentDBAdapter } from '../agentdb-adapter.js';
 export type { AgentDBAdapterConfig } from '../agentdb-adapter.js';

@@ -5,8 +5,15 @@
 
 import { mkdirSync, writeFileSync, existsSync, readFileSync, statSync } from 'fs';
 import { join, resolve } from 'path';
-import { resolveProjectRoot } from '@claude-flow/shared';
 import type { MCPTool } from './types.js';
+
+function resolveProjectRoot(): string {
+  const envRoot = process.env.CLAUDE_FLOW_PROJECT_ROOT;
+  if (envRoot && envRoot.trim().length > 0) {
+    return resolve(envRoot);
+  }
+  return process.cwd();
+}
 
 // Real vector search functions - lazy loaded to avoid circular imports
 let searchEntriesFn: ((options: {

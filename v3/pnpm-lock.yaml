@@ -7,6 +7,10 @@ settings:
 neverBuiltDependencies:
   - sharp
 
+overrides:
+  '@ruvector/gnn': 0.1.25
+  '@ruvector/gnn-linux-x64-gnu': 0.1.25
+
 importers:
 
   .:
@@ -96,12 +100,6 @@ importers:
 
   '@claude-flow/cli':
     dependencies:
-      '@claude-flow/aidefence':
-        specifier: ^3.0.2
-        version: link:../aidefence
-      '@claude-flow/guidance':
-        specifier: ^3.0.0-alpha.1
-        version: link:../guidance
       '@claude-flow/mcp':
         specifier: ^3.0.0-alpha.8
         version: link:../mcp
@@ -115,12 +113,18 @@ importers:
         specifier: ^7.6.0
         version: 7.7.3
     optionalDependencies:
+      '@claude-flow/aidefence':
+        specifier: ^3.0.2
+        version: link:../aidefence
       '@claude-flow/codex':
         specifier: ^3.0.0-alpha.8
         version: link:../codex
       '@claude-flow/embeddings':
         specifier: ^3.0.0-alpha.12
         version: link:../embeddings
+      '@claude-flow/guidance':
+        specifier: ^3.0.0-alpha.1
+        version: link:../guidance
       '@claude-flow/memory':
         specifier: ^3.0.0-alpha.11
         version: link:../memory
@@ -139,6 +143,9 @@ importers:
       '@ruvector/sona':
         specifier: ^0.1.5
         version: 0.1.5
+      agentic-flow:
+        specifier: ^3.0.0-alpha.1
+        version: 3.0.0-alpha.1(hono@4.11.3)
     devDependencies:
       typescript:
         specifier: ^5.3.0
@@ -189,6 +196,22 @@ importers:
       vitest:
         specifier: ^1.4.0
         version: 1.6.1(@types/node@20.19.27)
+
+  '@claude-flow/context':
+    dependencies:
+      '@claude-flow/providers':
+        specifier: workspace:*
+        version: link:../providers
+    devDependencies:
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.27
+      typescript:
+        specifier: ^5.0.0
+        version: 5.9.3
+      vitest:
+        specifier: ^4.0.16
+        version: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@20.19.27)
 
   '@claude-flow/deployment':
     dependencies:
@@ -431,6 +454,9 @@ importers:
 
   '@claude-flow/security':
     dependencies:
+      ajv:
+        specifier: ^8.12.0
+        version: 8.17.1
       bcrypt:
         specifier: ^5.1.1
         version: 5.1.1
@@ -530,6 +556,42 @@ packages:
 
   /@actions/io@2.0.0:
     resolution: {integrity: sha512-Jv33IN09XLO+0HS79aaODsvIRyduiF7NY/F6LYeK5oeUmrsz7aFdRphQjFoESF4jS7lMauDOttKALcpapVDIAg==}
+
+  /@ai-sdk/google@3.0.37(zod@3.25.76):
+    resolution: {integrity: sha512-hZ7nO55+GfQEWJe2B5XRoLNeEubMTuk6OjJJUDS+XCtjKLCd973rRkc62vS86rHw5VuCGITwn3gUZRhSbuX5vw==}
+    engines: {node: '>=18'}
+    requiresBuild: true
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+    dependencies:
+      '@ai-sdk/provider': 3.0.8
+      '@ai-sdk/provider-utils': 4.0.17(zod@3.25.76)
+      zod: 3.25.76
+    dev: false
+    optional: true
+
+  /@ai-sdk/provider-utils@4.0.17(zod@3.25.76):
+    resolution: {integrity: sha512-oyCeFINTYK0B8ZGUBiQc05G5vytPlKSmTTtm19xfJuUgoi8zkvvRcoPQci4mSnyfpPn2XSFFDfsALG8uGcapfg==}
+    engines: {node: '>=18'}
+    requiresBuild: true
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+    dependencies:
+      '@ai-sdk/provider': 3.0.8
+      '@standard-schema/spec': 1.1.0
+      eventsource-parser: 3.0.6
+      zod: 3.25.76
+    dev: false
+    optional: true
+
+  /@ai-sdk/provider@3.0.8:
+    resolution: {integrity: sha512-oGMAgGoQdBXbZqNG0Ze56CHjDZ1IDYOwGYxYjO5KLSlz5HiNQ9udIXsPZ61VWaHGZ5XW/jyjmr6t2xz2jGVwbQ==}
+    engines: {node: '>=18'}
+    requiresBuild: true
+    dependencies:
+      json-schema: 0.4.0
+    dev: false
+    optional: true
 
   /@anthropic-ai/claude-agent-sdk@0.1.76(zod@3.25.76):
     resolution: {integrity: sha512-s7RvpXoFaLXLG7A1cJBAPD8ilwOhhc/12fb5mJXRuD561o4FmPtQ+WRfuy9akMmrFRfLsKv8Ornw3ClGAPL2fw==}
@@ -1211,6 +1273,27 @@ packages:
       - utf-8-validate
     dev: false
 
+  /@google/genai@1.43.0:
+    resolution: {integrity: sha512-hklCsJNdMlDM1IwcCVcGQFBg2izY0+t5BIGbRsxi2UnKi6AGKL7pqJqmBDNRbw0bYCs4y3NA7TB+fkKfP/Nrdw==}
+    engines: {node: '>=20.0.0'}
+    requiresBuild: true
+    peerDependencies:
+      '@modelcontextprotocol/sdk': ^1.25.2
+    peerDependenciesMeta:
+      '@modelcontextprotocol/sdk':
+        optional: true
+    dependencies:
+      google-auth-library: 10.5.0
+      p-retry: 4.6.2
+      protobufjs: 7.5.4
+      ws: 8.19.0
+    transitivePeerDependencies:
+      - bufferutil
+      - supports-color
+      - utf-8-validate
+    dev: false
+    optional: true
+
   /@grpc/grpc-js@1.14.3:
     resolution: {integrity: sha512-Iq8QQQ/7X3Sac15oB6p0FmUg/klxQvXLeileoqrTRGJYLV+/9tubbr9ipz0GKHjmXVsgFPo/+W+2cA8eNcR+XA==}
     engines: {node: '>=12.10.0'}
@@ -1625,9 +1708,31 @@ packages:
     dev: false
     optional: true
 
+  /@octokit/auth-token@5.1.2:
+    resolution: {integrity: sha512-JcQDsBdg49Yky2w2ld20IHAlwr8d/d8N6NiOXbtuoPCqzbsiJgF633mVUw3x4mo0H5ypataQIX7SFu3yy44Mpw==}
+    engines: {node: '>= 18'}
+    requiresBuild: true
+    dev: false
+    optional: true
+
   /@octokit/auth-token@6.0.0:
     resolution: {integrity: sha512-P4YJBPdPSpWTQ1NU4XYdvHvXJJDxM6YwpS0FZHRgP7YFkdVxsWcpWGy/NVqlAA7PcPCnMacXlRm1y2PFZRWL/w==}
     engines: {node: '>= 20'}
+
+  /@octokit/core@6.1.6:
+    resolution: {integrity: sha512-kIU8SLQkYWGp3pVKiYzA5OSaNF5EE03P/R8zEmmrG6XwOg5oBjXyQVVIauQ0dgau4zYhpZEhJrvIYt6oM+zZZA==}
+    engines: {node: '>= 18'}
+    requiresBuild: true
+    dependencies:
+      '@octokit/auth-token': 5.1.2
+      '@octokit/graphql': 8.2.2
+      '@octokit/request': 9.2.4
+      '@octokit/request-error': 6.1.8
+      '@octokit/types': 14.1.0
+      before-after-hook: 3.0.2
+      universal-user-agent: 7.0.3
+    dev: false
+    optional: true
 
   /@octokit/core@7.0.6:
     resolution: {integrity: sha512-DhGl4xMVFGVIyMwswXeyzdL4uXD5OGILGX5N8Y+f6W7LhC1Ze2poSNrkF/fedpVDHEEZ+PHFW0vL14I+mm8K3Q==}
@@ -1641,12 +1746,33 @@ packages:
       before-after-hook: 4.0.0
       universal-user-agent: 7.0.3
 
+  /@octokit/endpoint@10.1.4:
+    resolution: {integrity: sha512-OlYOlZIsfEVZm5HCSR8aSg02T2lbUWOsCQoPKfTXJwDzcHQBrVBGdGXb89dv2Kw2ToZaRtudp8O3ZIYoaOjKlA==}
+    engines: {node: '>= 18'}
+    requiresBuild: true
+    dependencies:
+      '@octokit/types': 14.1.0
+      universal-user-agent: 7.0.3
+    dev: false
+    optional: true
+
   /@octokit/endpoint@11.0.2:
     resolution: {integrity: sha512-4zCpzP1fWc7QlqunZ5bSEjxc6yLAlRTnDwKtgXfcI/FxxGoqedDG8V2+xJ60bV2kODqcGB+nATdtap/XYq2NZQ==}
     engines: {node: '>= 20'}
     dependencies:
       '@octokit/types': 16.0.0
       universal-user-agent: 7.0.3
+
+  /@octokit/graphql@8.2.2:
+    resolution: {integrity: sha512-Yi8hcoqsrXGdt0yObxbebHXFOiUA+2v3n53epuOg1QUgOB6c4XzvisBNVXJSl8RYA5KrDuSL2yq9Qmqe5N0ryA==}
+    engines: {node: '>= 18'}
+    requiresBuild: true
+    dependencies:
+      '@octokit/request': 9.2.4
+      '@octokit/types': 14.1.0
+      universal-user-agent: 7.0.3
+    dev: false
+    optional: true
 
   /@octokit/graphql@9.0.3:
     resolution: {integrity: sha512-grAEuupr/C1rALFnXTv6ZQhFuL1D8G5y8CN04RgrO4FIPMrtm+mcZzFG7dcBm+nq+1ppNixu+Jd78aeJOYxlGA==}
@@ -1656,8 +1782,32 @@ packages:
       '@octokit/types': 16.0.0
       universal-user-agent: 7.0.3
 
+  /@octokit/openapi-types@24.2.0:
+    resolution: {integrity: sha512-9sIH3nSUttelJSXUrmGzl7QUBFul0/mB8HRYl3fOlgHbIWG+WnYDXU3v/2zMtAvuzZ/ed00Ei6on975FhBfzrg==}
+    requiresBuild: true
+    dev: false
+    optional: true
+
+  /@octokit/openapi-types@25.1.0:
+    resolution: {integrity: sha512-idsIggNXUKkk0+BExUn1dQ92sfysJrje03Q0bv0e+KPLrvyqZF8MnBpFz8UNfYDwB3Ie7Z0TByjWfzxt7vseaA==}
+    requiresBuild: true
+    dev: false
+    optional: true
+
   /@octokit/openapi-types@27.0.0:
     resolution: {integrity: sha512-whrdktVs1h6gtR+09+QsNk2+FO+49j6ga1c55YZudfEG+oKJVvJLQi3zkOm5JjiUXAagWK2tI2kTGKJ2Ys7MGA==}
+
+  /@octokit/plugin-paginate-rest@11.6.0(@octokit/core@6.1.6):
+    resolution: {integrity: sha512-n5KPteiF7pWKgBIBJSk8qzoZWcUkza2O6A0za97pMGVrGfPdltxrfmfF5GucHYvHGZD8BdaZmmHGz5cX/3gdpw==}
+    engines: {node: '>= 18'}
+    requiresBuild: true
+    peerDependencies:
+      '@octokit/core': '>=6'
+    dependencies:
+      '@octokit/core': 6.1.6
+      '@octokit/types': 13.10.0
+    dev: false
+    optional: true
 
   /@octokit/plugin-paginate-rest@14.0.0(@octokit/core@7.0.6):
     resolution: {integrity: sha512-fNVRE7ufJiAA3XUrha2omTA39M6IXIc6GIZLvlbsm8QOQCYvpq/LkMNGyFlB1d8hTDzsAXa3OKtybdMAYsV/fw==}
@@ -1667,6 +1817,29 @@ packages:
     dependencies:
       '@octokit/core': 7.0.6
       '@octokit/types': 16.0.0
+
+  /@octokit/plugin-request-log@5.3.1(@octokit/core@6.1.6):
+    resolution: {integrity: sha512-n/lNeCtq+9ofhC15xzmJCNKP2BWTv8Ih2TTy+jatNCCq/gQP/V7rK3fjIfuz0pDWDALO/o/4QY4hyOF6TQQFUw==}
+    engines: {node: '>= 18'}
+    requiresBuild: true
+    peerDependencies:
+      '@octokit/core': '>=6'
+    dependencies:
+      '@octokit/core': 6.1.6
+    dev: false
+    optional: true
+
+  /@octokit/plugin-rest-endpoint-methods@13.5.0(@octokit/core@6.1.6):
+    resolution: {integrity: sha512-9Pas60Iv9ejO3WlAX3maE1+38c5nqbJXV5GrncEfkndIpZrJ/WPMRd2xYDcPPEt5yzpxcjw9fWNoPhsSGzqKqw==}
+    engines: {node: '>= 18'}
+    requiresBuild: true
+    peerDependencies:
+      '@octokit/core': '>=6'
+    dependencies:
+      '@octokit/core': 6.1.6
+      '@octokit/types': 13.10.0
+    dev: false
+    optional: true
 
   /@octokit/plugin-retry@8.0.3(@octokit/core@7.0.6):
     resolution: {integrity: sha512-vKGx1i3MC0za53IzYBSBXcrhmd+daQDzuZfYDd52X5S0M2otf3kVZTVP8bLA3EkU0lTvd1WEC2OlNNa4G+dohA==}
@@ -1689,6 +1862,15 @@ packages:
       '@octokit/types': 16.0.0
       bottleneck: 2.19.5
 
+  /@octokit/request-error@6.1.8:
+    resolution: {integrity: sha512-WEi/R0Jmq+IJKydWlKDmryPcmdYSVjL3ekaiEL1L9eo1sUnqMJ+grqmC9cjk7CA7+b2/T397tO5d8YLOH3qYpQ==}
+    engines: {node: '>= 18'}
+    requiresBuild: true
+    dependencies:
+      '@octokit/types': 14.1.0
+    dev: false
+    optional: true
+
   /@octokit/request-error@7.1.0:
     resolution: {integrity: sha512-KMQIfq5sOPpkQYajXHwnhjCC0slzCNScLHs9JafXc4RAJI+9f+jNDlBNaIMTvazOPLgb4BnlhGJOTbnN0wIjPw==}
     engines: {node: '>= 20'}
@@ -1704,6 +1886,47 @@ packages:
       '@octokit/types': 16.0.0
       fast-content-type-parse: 3.0.0
       universal-user-agent: 7.0.3
+
+  /@octokit/request@9.2.4:
+    resolution: {integrity: sha512-q8ybdytBmxa6KogWlNa818r0k1wlqzNC+yNkcQDECHvQo8Vmstrg18JwqJHdJdUiHD2sjlwBgSm9kHkOKe2iyA==}
+    engines: {node: '>= 18'}
+    requiresBuild: true
+    dependencies:
+      '@octokit/endpoint': 10.1.4
+      '@octokit/request-error': 6.1.8
+      '@octokit/types': 14.1.0
+      fast-content-type-parse: 2.0.1
+      universal-user-agent: 7.0.3
+    dev: false
+    optional: true
+
+  /@octokit/rest@21.1.1:
+    resolution: {integrity: sha512-sTQV7va0IUVZcntzy1q3QqPm/r8rWtDCqpRAmb8eXXnKkjoQEtFe3Nt5GTVsHft+R6jJoHeSiVLcgcvhtue/rg==}
+    engines: {node: '>= 18'}
+    requiresBuild: true
+    dependencies:
+      '@octokit/core': 6.1.6
+      '@octokit/plugin-paginate-rest': 11.6.0(@octokit/core@6.1.6)
+      '@octokit/plugin-request-log': 5.3.1(@octokit/core@6.1.6)
+      '@octokit/plugin-rest-endpoint-methods': 13.5.0(@octokit/core@6.1.6)
+    dev: false
+    optional: true
+
+  /@octokit/types@13.10.0:
+    resolution: {integrity: sha512-ifLaO34EbbPj0Xgro4G5lP5asESjwHracYJvVaPIyXMuiuXLlhic3S47cBdTb+jfODkTE5YtGCLt3Ay3+J97sA==}
+    requiresBuild: true
+    dependencies:
+      '@octokit/openapi-types': 24.2.0
+    dev: false
+    optional: true
+
+  /@octokit/types@14.1.0:
+    resolution: {integrity: sha512-1y6DgTy8Jomcpu33N+p5w58l6xyt55Ar2I91RPiIA0xCJBXyUAhXCcmZaDWSANiha7R9a6qJJ2CRomGPZ6f46g==}
+    requiresBuild: true
+    dependencies:
+      '@octokit/openapi-types': 25.1.0
+    dev: false
+    optional: true
 
   /@octokit/types@16.0.0:
     resolution: {integrity: sha512-sKq+9r1Mm4efXW1FCk7hFSeJo4QKreL/tTbR0rz/qx/r1Oa2VV83LTA/H/MuCOX7uCIJmQVRKBcbmWoySjAnSg==}
@@ -3230,15 +3453,8 @@ packages:
     resolution: {integrity: sha512-GSvq2bB+aTNXpISTqccdZwOroRLSdQhi33L7569QUVi9P7a03hEtdZSX/Gk5aWtDufp230T57uLXQUA1Q0uBeQ==}
     dev: false
 
-  /@ruvector/gnn-darwin-arm64@0.1.22:
-    resolution: {integrity: sha512-5K4ZVMGyjyeB8O99Ol7hmD8CAd5J9WbtT2OD3AESEJ1FiLiSkYbqslODXVEBvFe8G/UwjOJnoJaFFUhyjBqbTA==}
-    os: ['!invalid']
-    requiresBuild: true
-    dev: false
-    optional: true
-
-  /@ruvector/gnn-darwin-arm64@0.1.24:
-    resolution: {integrity: sha512-NFPYrZ3bQdDCBHinxYVtThxQpt6vOuVvDiuzeyCjqrodlqvTN8pnKITMP+GxONItAtD4gnAAXtQG1WPKbyh8/A==}
+  /@ruvector/gnn-darwin-arm64@0.1.25:
+    resolution: {integrity: sha512-/MfLrqsIGxcMVHRW5ZyaU+0w+tnoEw+sLrQCYj/o3E7Gu0Cc+5QFE84p9CJUtaJLO/T+x5kEYLLC4iBwbYjkNg==}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [darwin]
@@ -3246,15 +3462,8 @@ packages:
     dev: false
     optional: true
 
-  /@ruvector/gnn-darwin-x64@0.1.22:
-    resolution: {integrity: sha512-qmS4epED7uS58VjYbbIOyBa1lyJQoZi0tYV5tbFMhGO8ljGDEfF3OWguKaUsTYLgOOhXNoYM16Ex7mPvC/KoMQ==}
-    os: ['!invalid']
-    requiresBuild: true
-    dev: false
-    optional: true
-
-  /@ruvector/gnn-darwin-x64@0.1.24:
-    resolution: {integrity: sha512-pFj10fqExLpx8+fEuOYxjhD8jIWTUSoH88LYFXXX7woetdPEzgyoRe1CwZySbVufFUmuA90JXa9bVvH4wtwqgA==}
+  /@ruvector/gnn-darwin-x64@0.1.25:
+    resolution: {integrity: sha512-Zw8HGUEFzWFVkTpMP4D9zoLMh5Tn6ztZsa74o6sMLKkXjWLIOhRIBBUXNtiJ6fv8QMXqqJyhNmBFNRXlglmLzA==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [darwin]
@@ -3262,15 +3471,17 @@ packages:
     dev: false
     optional: true
 
-  /@ruvector/gnn-linux-arm64-gnu@0.1.22:
-    resolution: {integrity: sha512-YUUfNpt76o6wafVL1m087hm0xoXZDf8yA1qMmEH7dOt4PM/9/Xk4PqHa2gD7NKhVrqRuSxBxXuJ9RTgahs8A3g==}
-    os: ['!invalid']
+  /@ruvector/gnn-linux-arm64-gnu@0.1.25:
+    resolution: {integrity: sha512-Nran7u3oAth3eXS0hq0cQiYr85wAJDM9tdVGApa5LhI1RqSgXlvC2g+AjCBA+074TUfQboKcH38hpnfuF2hpRA==}
+    engines: {node: '>= 18'}
+    cpu: [arm64]
+    os: [linux]
     requiresBuild: true
     dev: false
     optional: true
 
-  /@ruvector/gnn-linux-arm64-gnu@0.1.24:
-    resolution: {integrity: sha512-BL17BeJ9bK9Uim0gGUd3pBrBZGjYJWincZfnnZKjsGpnAMMCO0j62uSdLWH+aHglQ1Ys9lS0gE2E36WD24xEOg==}
+  /@ruvector/gnn-linux-arm64-musl@0.1.25:
+    resolution: {integrity: sha512-Xih6WQ9frA4VpFtQSHWj0frk+fCuEzFDzeMme0QWzUcQZvMUzqiRiSRSRB8jatas7Skbzl+4ZRi6C6THMlccJg==}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [linux]
@@ -3278,24 +3489,8 @@ packages:
     dev: false
     optional: true
 
-  /@ruvector/gnn-linux-arm64-musl@0.1.22:
-    resolution: {integrity: sha512-u9CeAWosrX+M1bjECIV3NKENUitspPTakAgoILoR3Rb/FeKGAFDkpjMhTEEkr3rRBw6ihmiSEvI1m6YeUYmQPw==}
-    os: ['!invalid']
-    requiresBuild: true
-    dev: false
-    optional: true
-
-  /@ruvector/gnn-linux-arm64-musl@0.1.24:
-    resolution: {integrity: sha512-PaLO2puGfxLXdaxuSXkrrQtcYRNwD3ybKTqwW4D/fzPqsCd6C3HxHLnOwQpr9y1LhLDNEu/un3fkjginmJXPpg==}
-    engines: {node: '>= 10'}
-    cpu: [arm64]
-    os: [linux]
-    requiresBuild: true
-    dev: false
-    optional: true
-
-  /@ruvector/gnn-linux-x64-gnu@0.1.22:
-    resolution: {integrity: sha512-fv+WKHTVv5TU2Oiod+ue8SwcllE83V+Kc9/14OU1aF5lR6ZAIPIha/MvTYTlgz5+O2B2s0+ArhLJJ2vohaXZkA==}
+  /@ruvector/gnn-linux-x64-gnu@0.1.25:
+    resolution: {integrity: sha512-CwEk4cQ/whmHtAPu6b9hnUAgQiK1DrUDPumXGLh9O4b/WmwjddFfswfoRvacbSMMqwyXGLnAnidjhDZFBx06EQ==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [linux]
@@ -3303,8 +3498,8 @@ packages:
     dev: false
     optional: true
 
-  /@ruvector/gnn-linux-x64-gnu@0.1.24:
-    resolution: {integrity: sha512-X5QeVuk9fLMNPOQBuHA9MgE2pN7wM9GUdGJZwVJPkApdkKV9RwGIhWtpfs7KCtduEM/4tmDgJSj1AcxKYcZ72g==}
+  /@ruvector/gnn-linux-x64-musl@0.1.25:
+    resolution: {integrity: sha512-4nVcUFeN7dES6/mJ3e00FpZvZVZpGOQFFwWotHENFgNwIQc8XLqbbyeI3/rwhC1HJxxwf0oR+ianYoWKQptI/Q==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [linux]
@@ -3312,31 +3507,8 @@ packages:
     dev: false
     optional: true
 
-  /@ruvector/gnn-linux-x64-musl@0.1.22:
-    resolution: {integrity: sha512-YkKw032ezjtlVKRiBWsYDHoAWgL5ZMALXcZRDl3EJmBBsIZXty1EpeYw0PogVsfAIDJ9+EFOARLX4+AwkqMqKg==}
-    os: ['!invalid']
-    requiresBuild: true
-    dev: false
-    optional: true
-
-  /@ruvector/gnn-linux-x64-musl@0.1.24:
-    resolution: {integrity: sha512-W8Tg/1EaoNj/OdYcCnPxJ3apG7OZN/lX1jAP9k86IQkQd/1SodhXf0Zv0xwPPxPtFk3lekBP253gdFdyuV+wTA==}
-    engines: {node: '>= 10'}
-    cpu: [x64]
-    os: [linux]
-    requiresBuild: true
-    dev: false
-    optional: true
-
-  /@ruvector/gnn-win32-x64-msvc@0.1.22:
-    resolution: {integrity: sha512-Pcde+8gafJTlHCR71JihNuMH82lL8zjJ2WbCFgcFXB5Bm9Chgjdch2L+aoj9FFRWw/x2IaY/7jd58GfIkOGE+A==}
-    os: ['!invalid']
-    requiresBuild: true
-    dev: false
-    optional: true
-
-  /@ruvector/gnn-win32-x64-msvc@0.1.24:
-    resolution: {integrity: sha512-CTOOYQB3q1qFIPCgteyBxbBJwfyqlvhxXsEF3GJZqYyJeazL00ObT0u3kQKeQADTBai3cO6vnoIvZr/lP/DciQ==}
+  /@ruvector/gnn-win32-x64-msvc@0.1.25:
+    resolution: {integrity: sha512-tJNwffB5jzb6g+5r2H9r8X2oa1q0dSHWN7pXDV9JLh6kYmsk55v6vjaYe7H7M3fP51BCrUGu+vVTiBlBoVvrYA==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [win32]
@@ -3344,30 +3516,17 @@ packages:
     dev: false
     optional: true
 
-  /@ruvector/gnn@0.1.22:
-    resolution: {integrity: sha512-BOXLu6x/1GVj1zAqXJfF3zJWOzVl94i4bo6ATOlaDAlmGCvTwvvmomz8p9lPAMc99vmaox650MO9D4+CEqXK/A==}
+  /@ruvector/gnn@0.1.25:
+    resolution: {integrity: sha512-4q9HRHzA6IzCi2gXkppCuj8+y5jBN9xw9ea3nLq0WwtOc7zSK2x0n+zsNPiQVAeuGFO8CBTPjRyIDbXAOPvtsQ==}
     engines: {node: '>= 10'}
     optionalDependencies:
-      '@ruvector/gnn-darwin-arm64': 0.1.22
-      '@ruvector/gnn-darwin-x64': 0.1.22
-      '@ruvector/gnn-linux-arm64-gnu': 0.1.22
-      '@ruvector/gnn-linux-arm64-musl': 0.1.22
-      '@ruvector/gnn-linux-x64-gnu': 0.1.22
-      '@ruvector/gnn-linux-x64-musl': 0.1.22
-      '@ruvector/gnn-win32-x64-msvc': 0.1.22
-    dev: false
-
-  /@ruvector/gnn@0.1.24:
-    resolution: {integrity: sha512-6rRBGblh+gl6a4fLQSZoEWX/QGIx9tlL76FkgQmA9BeCKUcx5wXpjgLfml2uanTZiIn3lVF1nTrpdPmlyTohOw==}
-    engines: {node: '>= 10'}
-    optionalDependencies:
-      '@ruvector/gnn-darwin-arm64': 0.1.24
-      '@ruvector/gnn-darwin-x64': 0.1.24
-      '@ruvector/gnn-linux-arm64-gnu': 0.1.24
-      '@ruvector/gnn-linux-arm64-musl': 0.1.24
-      '@ruvector/gnn-linux-x64-gnu': 0.1.24
-      '@ruvector/gnn-linux-x64-musl': 0.1.24
-      '@ruvector/gnn-win32-x64-msvc': 0.1.24
+      '@ruvector/gnn-darwin-arm64': 0.1.25
+      '@ruvector/gnn-darwin-x64': 0.1.25
+      '@ruvector/gnn-linux-arm64-gnu': 0.1.25
+      '@ruvector/gnn-linux-arm64-musl': 0.1.25
+      '@ruvector/gnn-linux-x64-gnu': 0.1.25
+      '@ruvector/gnn-linux-x64-musl': 0.1.25
+      '@ruvector/gnn-win32-x64-msvc': 0.1.25
     dev: false
 
   /@ruvector/graph-node-darwin-arm64@0.1.26:
@@ -4494,6 +4653,12 @@ packages:
       csstype: 3.2.3
     dev: false
 
+  /@types/retry@0.12.0:
+    resolution: {integrity: sha512-wWKOClTTiizcZhXnPY4wikVAwmdYHp8q6DmC+EJUzAMsycb7HB32Kh9RN4+0gExjmPmZSAQjgURXIGATPegAvA==}
+    requiresBuild: true
+    dev: false
+    optional: true
+
   /@types/send@0.17.6:
     resolution: {integrity: sha512-Uqt8rPBE8SY0RK8JB1EzVOIZ32uqy8HwdxCnoCOsYrvnswqmFZ/k+9Ikidlk/ImhsdvBsloHbAlewb2IEBV/Og==}
     dependencies:
@@ -4531,6 +4696,12 @@ packages:
     requiresBuild: true
     dependencies:
       '@types/node': 20.19.27
+    dev: false
+    optional: true
+
+  /@types/validator@13.15.10:
+    resolution: {integrity: sha512-T8L6i7wCuyoK8A/ZeLYt1+q0ty3Zb9+qbSSvrIVitzT3YjZqkTZ40IbRsPanlB4h1QB3JVL1SYCdR6ngtFYcuA==}
+    requiresBuild: true
     dev: false
     optional: true
 
@@ -4860,7 +5031,7 @@ packages:
       chalk: 5.6.2
       commander: 12.1.0
       hnswlib-node: 3.0.0
-      sql.js: 1.13.0
+      sql.js: 1.14.0
       zod: 3.25.76
     optionalDependencies:
       better-sqlite3: 11.10.0
@@ -4883,7 +5054,7 @@ packages:
       '@modelcontextprotocol/sdk': 1.25.1(hono@4.11.3)(zod@3.25.76)
       '@opentelemetry/api': 1.9.0
       '@ruvector/attention': 0.1.4
-      '@ruvector/gnn': 0.1.22
+      '@ruvector/gnn': 0.1.25
       '@ruvector/graph-node': 0.1.26
       '@ruvector/router': 0.1.26
       '@ruvector/ruvllm': 0.2.4
@@ -4944,7 +5115,7 @@ packages:
       '@modelcontextprotocol/sdk': 1.25.1(hono@4.11.3)(zod@3.25.76)
       '@opentelemetry/api': 1.9.0
       '@ruvector/attention': 0.1.31
-      '@ruvector/gnn': 0.1.22
+      '@ruvector/gnn': 0.1.25
       '@ruvector/graph-node': 0.1.26
       '@ruvector/router': 0.1.28
       '@ruvector/ruvllm': 0.2.4
@@ -5005,7 +5176,7 @@ packages:
       '@modelcontextprotocol/sdk': 1.25.1(hono@4.11.3)(zod@3.25.76)
       '@opentelemetry/api': 1.9.0
       '@ruvector/attention': 0.1.31
-      '@ruvector/gnn': 0.1.22
+      '@ruvector/gnn': 0.1.25
       '@ruvector/graph-node': 0.1.26
       '@ruvector/router': 0.1.28
       '@ruvector/ruvllm': 0.2.4
@@ -5081,7 +5252,7 @@ packages:
       zod: 3.25.76
     optionalDependencies:
       '@ruvector/attention': 0.1.31
-      '@ruvector/gnn': 0.1.24
+      '@ruvector/gnn': 0.1.25
       '@ruvector/graph-node': 2.0.2
       '@ruvector/router': 0.1.28
       '@ruvector/sona': 0.1.5
@@ -5165,7 +5336,7 @@ packages:
       '@anthropic-ai/sdk': 0.65.0(zod@3.25.76)
       '@google/genai': 1.34.0(@modelcontextprotocol/sdk@1.25.1)
       '@ruvector/attention': 0.1.31
-      '@ruvector/gnn': 0.1.22
+      '@ruvector/gnn': 0.1.25
       '@supabase/supabase-js': 2.89.0
       '@types/react': 19.2.7
       '@types/react-dom': 19.2.3(@types/react@19.2.7)
@@ -5284,6 +5455,53 @@ packages:
       - sury
       - utf-8-validate
     dev: false
+
+  /agentic-flow@3.0.0-alpha.1(hono@4.11.3):
+    resolution: {integrity: sha512-J/bPUfBEsa52HVllSb6h/iIXqv8LZ0RveTDBlfm+96K6dYl+4SOYF3hl3ElalNbwOVEiO1fQpfP/Yb0JiRQkTQ==}
+    engines: {node: '>=18.0.0'}
+    hasBin: true
+    requiresBuild: true
+    dependencies:
+      '@ai-sdk/google': 3.0.37(zod@3.25.76)
+      '@anthropic-ai/claude-agent-sdk': 0.1.76(zod@3.25.76)
+      '@anthropic-ai/sdk': 0.65.0(zod@3.25.76)
+      '@google/genai': 1.43.0
+      '@octokit/rest': 21.1.1
+      '@ruvector/graph-node': 2.0.2
+      '@supabase/supabase-js': 2.89.0
+      '@types/validator': 13.15.10
+      '@xenova/transformers': 2.17.2
+      agentdb: 1.6.1(hono@4.11.3)
+      axios: 1.13.2
+      dotenv: 16.6.1
+      express: 5.2.1
+      fastmcp: 3.26.7(hono@4.11.3)
+      http-proxy-middleware: 3.0.5
+      sql.js: 1.14.0
+      tiktoken: 1.0.22
+      ulid: 3.0.2
+      validator: 13.15.26
+      ws: 8.19.0
+      yaml: 2.8.2
+      zod: 3.25.76
+    transitivePeerDependencies:
+      - '@cfworker/json-schema'
+      - '@modelcontextprotocol/sdk'
+      - '@valibot/to-json-schema'
+      - arktype
+      - bare-abort-controller
+      - bare-buffer
+      - bufferutil
+      - debug
+      - effect
+      - hono
+      - jose
+      - react-native-b4a
+      - supports-color
+      - sury
+      - utf-8-validate
+    dev: false
+    optional: true
 
   /agentic-payments@0.1.13(hono@4.11.3)(typescript@5.9.3):
     resolution: {integrity: sha512-XMwOIjodoqg+Q5usjcuZUYiu54O1Jn1PeLm7VYEpWG6GIANb6LM8ZbihlshhjhDetqfSBLT4hmrKZfKxuySzxg==}
@@ -5659,6 +5877,12 @@ packages:
     dev: false
     optional: true
 
+  /before-after-hook@3.0.2:
+    resolution: {integrity: sha512-Nik3Sc0ncrMK4UUdXQmAnRtzmNQTAAXmXIopizwZ1W1t8QmfJj+zL4OA2I7XPTPW5z5TDqv4hRo/JzouDJnX3A==}
+    requiresBuild: true
+    dev: false
+    optional: true
+
   /before-after-hook@4.0.0:
     resolution: {integrity: sha512-q6tR3RPqIB1pMiTRMFcZwuG5T8vwp+vUvEG0vuI6B+Rikh5BfPp2fQ82c925FOs+b0lcFQ8CFrL+KbilfZFhOQ==}
 
@@ -5672,6 +5896,7 @@ packages:
 
   /bignumber.js@9.3.1:
     resolution: {integrity: sha512-Ko0uX15oIUS7wJ3Rb30Fs6SkVbLmPBAKdlm7q9+ak9bbIeFf0MwuBsQV6z7+X768/cHsfg+WlysDWJcmthjsjQ==}
+    requiresBuild: true
     dev: false
 
   /bindings@1.5.0:
@@ -6783,6 +7008,7 @@ packages:
   /expand-template@2.0.3:
     resolution: {integrity: sha512-XYfuKMvj4O35f/pOXLObndIRvyQ+/+6AhODh+OKWj9S9498pHHn/IMszH+gt0fBCRWMNfk1ZSp5x3AifmnI2vg==}
     engines: {node: '>=6'}
+    requiresBuild: true
     dev: false
 
   /expect-type@1.3.0:
@@ -6900,6 +7126,12 @@ packages:
   /extend@3.0.2:
     resolution: {integrity: sha512-fjquC59cD7CyW6urNXK0FBufkZcoiGG80wTuPujX590cB5Ttln20E2UB4S/WARVqhXffZl2LNgS+gQdPIIim/g==}
     dev: false
+
+  /fast-content-type-parse@2.0.1:
+    resolution: {integrity: sha512-nGqtvLrj5w0naR6tDPfB4cUmYCqouzyQiz6C5y/LtcDllJdrcc6WaWW6iXyIIOErTa/XRybj28aasdn4LkVk6Q==}
+    requiresBuild: true
+    dev: false
+    optional: true
 
   /fast-content-type-parse@3.0.0:
     resolution: {integrity: sha512-ZvLdcY8P+N8mGQJahJV5G4U88CSvT1rP8ApL6uETe88MBXrBHAkZlSEySdUlyztF7ccb+Znos3TFqaepHxdhBg==}
@@ -7358,6 +7590,7 @@ packages:
 
   /github-from-package@0.0.0:
     resolution: {integrity: sha512-SyHy3T1v2NUXn29OsWdxmK6RwHD+vkj3v8en8AOBZ1wBQ/hCAQ5bAQTD02kW4W9tUp/3Qh6J8r9EvntiyCmOOw==}
+    requiresBuild: true
     dev: false
 
   /glob-parent@6.0.2:
@@ -8060,6 +8293,12 @@ packages:
     resolution: {integrity: sha512-fQhoXdcvc3V28x7C7BMs4P5+kNlgUURe2jmUT1T//oBRMDrqy1QPelJimwZGo7Hg9VPV3EQV5Bnq4hbFy2vetA==}
     dev: false
 
+  /json-schema@0.4.0:
+    resolution: {integrity: sha512-es94M3nTIfsEPisRafak+HDLfHXnKBhV3vU5eqPcS3flIWqcxJWgXHXiey3YrpaNsanY5ei1VoYEbOzijuq9BA==}
+    requiresBuild: true
+    dev: false
+    optional: true
+
   /json-stable-stringify-without-jsonify@1.0.1:
     resolution: {integrity: sha512-Bdboy+l7tA3OGW6FjyFHWkP5LuByj1Tk33Ljyq0axyzdk9//JSi2u3fP1QSmd1KNwq6VOKYGlAu87CisVir6Pw==}
     dev: true
@@ -8587,6 +8826,7 @@ packages:
 
   /mkdirp-classic@0.5.3:
     resolution: {integrity: sha512-gKLcREMhtuZRwRAfqP3RFW+TK4JqApVBtOIftVgjuABpAtpxhPGaDcfvbhNvD0B8iD1oUr/txX35NjcaY6Ns/A==}
+    requiresBuild: true
     dev: false
 
   /mkdirp@1.0.4:
@@ -8635,6 +8875,7 @@ packages:
 
   /napi-build-utils@2.0.0:
     resolution: {integrity: sha512-GEbrYkbfF7MoNaoh2iGG84Mnf/WZfB0GdGEsM8wz7Expx/LlWf5U8t9nvJKXSp3qr5IsEbK04cBGhol/KwOsWA==}
+    requiresBuild: true
     dev: false
 
   /natural-compare@1.4.0:
@@ -8666,6 +8907,7 @@ packages:
   /node-abi@3.85.0:
     resolution: {integrity: sha512-zsFhmbkAzwhTft6nd3VxcG0cvJsT70rL+BIGHWVq5fi6MwGrHwzqKaxXE+Hl2GmnGItnDKPPkO5/LQqjVkIdFg==}
     engines: {node: '>=10'}
+    requiresBuild: true
     dependencies:
       semver: 7.7.3
     dev: false
@@ -9119,6 +9361,16 @@ packages:
   /p-reduce@3.0.0:
     resolution: {integrity: sha512-xsrIUgI0Kn6iyDYm9StOpOeK29XM1aboGji26+QEortiFST1hGZaUQOLhtEbqHErPpGW/aSz6allwK2qcptp0Q==}
     engines: {node: '>=12'}
+
+  /p-retry@4.6.2:
+    resolution: {integrity: sha512-312Id396EbJdvRONlngUx0NydfrIQ5lsYu0znKVUzVvArzEIt08V1qhtyESbGVd1FGX7UKtiFp5uwKZdM8wIuQ==}
+    engines: {node: '>=8'}
+    requiresBuild: true
+    dependencies:
+      '@types/retry': 0.12.0
+      retry: 0.13.1
+    dev: false
+    optional: true
 
   /p-timeout@6.1.4:
     resolution: {integrity: sha512-MyIV3ZA/PmyBN/ud8vV9XzwTrNtR4jFrObymZYnZqMmW0zA8Z17vnT0rBgFE/TlohB+YCHqXMgZzb3Csp49vqg==}
@@ -9774,6 +10026,13 @@ packages:
     dev: false
     optional: true
 
+  /retry@0.13.1:
+    resolution: {integrity: sha512-XQBQ3I8W1Cge0Seh+6gjj03LbmRFWuoszgK9ooCpwYIrhhoO80pfq4cUkU5DkknwfOfFteRwlZ56PYOGYyFWdg==}
+    engines: {node: '>= 4'}
+    requiresBuild: true
+    dev: false
+    optional: true
+
   /reusify@1.1.0:
     resolution: {integrity: sha512-g6QUff04oZpHs0eG5p83rFLhHeV00ug/Yf9nZM6fLeUrPguBTkTQOdpAWWspMh55TZfVQDPaN3NQJfbVRAxdIw==}
     engines: {iojs: '>=1.0.0', node: '>=0.10.0'}
@@ -9925,7 +10184,7 @@ packages:
       '@modelcontextprotocol/sdk': 1.25.1(hono@4.11.3)(zod@3.25.76)
       '@ruvector/attention': 0.1.31
       '@ruvector/core': 0.1.30
-      '@ruvector/gnn': 0.1.24
+      '@ruvector/gnn': 0.1.25
       '@ruvector/sona': 0.1.5
       chalk: 4.1.2
       commander: 11.1.0
@@ -9947,7 +10206,7 @@ packages:
       '@modelcontextprotocol/sdk': 1.25.1(hono@4.11.3)(zod@3.25.76)
       '@ruvector/attention': 0.1.31
       '@ruvector/core': 0.1.30
-      '@ruvector/gnn': 0.1.22
+      '@ruvector/gnn': 0.1.25
       '@ruvector/sona': 0.1.5
       '@xenova/transformers': 2.17.2
       chalk: 4.1.2
@@ -10323,6 +10582,12 @@ packages:
     resolution: {integrity: sha512-RJbVP1HRDlUUXahJ7VMTcu9Rm1Nzw+EBpoPr94vnbD4LwR715F3CcxE2G2k45PewcaZ57pjetYa+LoSJLAASgA==}
     dev: false
 
+  /sql.js@1.14.0:
+    resolution: {integrity: sha512-NXYh+kFqLiYRCNAaHD0PcbjFgXyjuolEKLMk5vRt2DgPENtF1kkNzzMlg42dUk5wIsH8MhUzsRhaUxIisoSlZQ==}
+    requiresBuild: true
+    dev: false
+    optional: true
+
   /sqlite3@5.1.7:
     resolution: {integrity: sha512-GGIyOiFaG+TUra3JIfkI/zGP8yZYLPQ0pl1bH+ODjiX57sPhrLU5sQJn1y9bDKZUFYkX1crlrPfSYt0BKKdkog==}
     requiresBuild: true
@@ -10564,6 +10829,7 @@ packages:
 
   /tar-fs@2.1.4:
     resolution: {integrity: sha512-mDAjwmZdh7LTT6pNleZ05Yt65HC3E+NiQzl672vQG38jIrehtJk/J3mNwIg+vShQPcLF/LV7CMnDW6vjj6sfYQ==}
+    requiresBuild: true
     dependencies:
       chownr: 1.1.4
       mkdirp-classic: 0.5.3
@@ -11028,6 +11294,13 @@ packages:
     dependencies:
       spdx-correct: 3.2.0
       spdx-expression-parse: 3.0.1
+
+  /validator@13.15.26:
+    resolution: {integrity: sha512-spH26xU080ydGggxRyR1Yhcbgx+j3y5jbNXk/8L+iRvdIEQ4uTRH2Sgf2dokud6Q4oAtsbNvJ1Ft+9xmm6IZcA==}
+    engines: {node: '>= 0.10'}
+    requiresBuild: true
+    dev: false
+    optional: true
 
   /vary@1.1.2:
     resolution: {integrity: sha512-BNGbWLfd0eUPabhkXUVm0j8uuvREyTh5ovRa/dyow/BqAbZJyC+5fU+IzQOzmAKzYqYRAISoRhdQr3eIZ/PXqg==}

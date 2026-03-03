@@ -13,6 +13,7 @@
  */
 
 import { z } from 'zod';
+import Ajv from 'ajv';
 
 /**
  * Custom error map for security-focused messages
@@ -369,14 +370,29 @@ export function sanitizeHtml(input: string): string {
 
 /**
  * Sanitizes a path by removing traversal patterns
+ * @throws {Error} If the resulting path starts with `~` (home-directory
+ *   expansion) or matches a Windows drive letter (`C:\`), as these represent
+ *   traversal vectors that cannot be safely stripped.
  */
 export function sanitizePath(input: string): string {
-  return input
+  const result = input
     .replace(/\0/g, '')           // Remove null bytes
     .replace(/\.\./g, '')         // Remove traversal patterns
     .replace(/\/+/g, '/')         // Normalize slashes
     .replace(/^\//, '')           // Remove leading slash
     .trim();
+
+  // Reject home-directory traversal via tilde.
+  if (result.startsWith('~')) {
+    throw new Error('Path contains home directory traversal (~)');
+  }
+
+  // Reject Windows drive letter references (e.g. C:\, d:/).
+  if (/^[a-zA-Z]:[/\\]/.test(result)) {
+    throw new Error('Path contains Windows drive letter traversal');
+  }
+
+  return result;
 }
 
 // ============================================================================
@@ -384,6 +400,8 @@ export function sanitizePath(input: string): string {
 // ============================================================================
 
 export class InputValidator {
+  private static readonly _ajv = new Ajv({ allErrors: true });
+
   /**
    * Validates input against a schema
    */
@@ -452,6 +470,37 @@ export class InputValidator {
    */
   static validateTaskInput(data: unknown): z.infer<typeof TaskInputSchema> {
     return TaskInputSchema.parse(data);
+  }
+
+  /**
+   * Validates a GitHub-style issue number (`#?\\d+`).
+   * Prevents path-traversal via issue number parameters (Neo F-03).
+   */
+  static validateIssueNumber(input: string): boolean {
+    return /^#?[0-9]+$/.test(input);
+  }
+
+  /**
+   * Validates `data` against a JSON Schema using ajv (draft-07).
+   * Returns `{ valid: true }` on success or `{ valid: false, errors }` on failure.
+   */
+  static validateToolInput(
+    schema: object,
+    data: unknown,
+  ): { valid: boolean; errors?: string[] } {
+    const validate = InputValidator._ajv.compile(schema);
+    const valid = validate(data) as boolean;
+
+    if (valid) {
+      return { valid: true };
+    }
+
+    const errors = (validate.errors ?? []).map((err) => {
+      const field = err.instancePath || err.schemaPath;
+      return `${field}: ${err.message ?? 'validation error'}`;
+    });
+
+    return { valid: false, errors };
   }
 }
 

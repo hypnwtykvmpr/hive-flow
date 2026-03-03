@@ -18,5 +18,9 @@ export * from './memory.types.js';
 // MCP types
 export * from './mcp.types.js';
 
+// Error and Result types
+export * from './errors.js';
+export * from './result.js';
+
 // Re-export core interfaces for convenience
 export * from '../core/interfaces/index.js';

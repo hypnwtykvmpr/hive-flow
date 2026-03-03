@@ -24,3 +24,10 @@ export type { RateLimiter, RateLimiterOptions, RateLimitResult } from './rate-li
 // Bulkhead
 export { Bulkhead } from './bulkhead.js';
 export type { BulkheadOptions, BulkheadStats } from './bulkhead.js';
+
+// DLQ
+export { AgentTaskDLQ } from './dlq.js';
+export type { IDLQBackend } from './dlq.js';
+
+// Types
+export * from './types.js';

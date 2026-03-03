@@ -67,6 +67,109 @@ When spawning agents with the Task tool:
 - **haiku**: ONLY for simple lookups, formatting, trivial tasks
 - NEVER use haiku for non-trivial work
 
+## External CLI Agents (Cursor, Codex, Gemini)
+
+Three external AI CLI tools are installed on this system and MUST be prioritized as sub-agents for delegated work. Use these via Bash tool instead of (or in addition to) Claude Code's Task tool agents.
+
+### Priority Order for Sub-Agent Delegation
+
+1. **Codex** and **Gemini** (PREFERRED) — headless execution, conserves Claude quota
+2. **Task tool agents** (opus/sonnet/haiku) — use when external CLIs are insufficient
+3. **Cursor** — editor-based, use for opening files or UI-driven tasks
+
+### Codex CLI (`/opt/homebrew/bin/codex`)
+
+Headless non-interactive execution via `codex exec`:
+
+```bash
+# Basic headless execution (auto-approves file writes in sandbox)
+codex exec --full-auto "Write tests for src/auth/login.ts"
+
+# With model selection
+codex exec --full-auto -c model="o3-mini" "Analyze this codebase for security issues"
+
+# Code review mode
+codex exec review
+
+# Run in background for parallel work
+codex exec --full-auto "Implement the feature" &
+```
+
+**Key flags:**
+| Flag | Purpose |
+|------|---------|
+| `--full-auto` | Sandboxed auto-execution (recommended) |
+| `-c model="o3-mini"` | Select model (o3-mini, o4-mini, etc.) |
+| `--writable-root <dir>` | Additional writable directories |
+| `--ephemeral` | Don't persist session |
+
+### Gemini CLI (`/opt/homebrew/bin/gemini`)
+
+Headless non-interactive execution via `-p` flag:
+
+```bash
+# Basic headless execution
+gemini -p "Write comprehensive tests for the auth module"
+
+# Auto-approve all tool actions (like --full-auto)
+gemini -p "Refactor the error handling in api.ts" --yolo
+
+# With sandbox
+gemini -p "Analyze security vulnerabilities" --sandbox
+
+# With specific model
+gemini -p "Design the database schema" -m gemini-2.0-pro
+
+# Run in background for parallel work
+gemini -p "Generate test coverage report" --yolo &
+```
+
+**Key flags:**
+| Flag | Purpose |
+|------|---------|
+| `-p "prompt"` | Non-interactive headless mode (REQUIRED) |
+| `--yolo` | Auto-approve all tool actions |
+| `--sandbox` | Run in sandboxed environment |
+| `-m <model>` | Select model (gemini-2.0-flash, gemini-2.0-pro) |
+| `--approval-mode <mode>` | default, auto_edit, yolo, plan |
+
+### Cursor CLI (`/usr/local/bin/cursor`)
+
+Editor-based (no headless prompt mode). Use for file operations:
+
+```bash
+# Open a file at specific line
+cursor -g src/auth/login.ts:42
+
+# Open a folder
+cursor -a v3/@claude-flow/shared/
+
+# Diff two files
+cursor -d file1.ts file2.ts
+```
+
+### Parallel External Agent Execution
+
+ALWAYS run external agents in parallel via background Bash when possible:
+
+```bash
+# Spawn 3 agents in parallel — one message, three Bash calls with run_in_background: true
+codex exec --full-auto "Write unit tests for lifecycle module" &
+gemini -p "Write unit tests for signals module" --yolo &
+codex exec --full-auto "Write unit tests for directives module" &
+```
+
+### When to Use External Agents vs Task Tool
+
+| Task Type | Use External Agent | Use Task Tool |
+|-----------|-------------------|---------------|
+| Writing tests | Codex/Gemini (PREFERRED) | Fallback |
+| Code review | Codex review / Gemini | Sonnet agent |
+| Implementation | Codex/Gemini | Opus agent |
+| Architecture | Gemini | Opus agent |
+| Simple lookups | Gemini -m flash | Haiku agent |
+| Multi-file refactor | Codex --full-auto | Opus agent |
+
 ## Swarm Orchestration
 
 - MUST initialize the swarm using MCP tools when starting complex tasks

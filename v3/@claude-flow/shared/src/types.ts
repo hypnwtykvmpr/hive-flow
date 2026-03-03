@@ -351,17 +351,3 @@ export type DeepPartial<T> = {
 };
 
 export type AsyncCallback<T = void> = () => Promise<T>;
-
-export interface Result<T, E = Error> {
-  success: boolean;
-  value?: T;
-  error?: E;
-}
-
-export function success<T>(value: T): Result<T> {
-  return { success: true, value };
-}
-
-export function failure<E = Error>(error: E): Result<never, E> {
-  return { success: false, error };
-}

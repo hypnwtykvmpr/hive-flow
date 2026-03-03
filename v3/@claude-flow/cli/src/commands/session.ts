@@ -7,6 +7,7 @@ import type { Command, CommandContext, CommandResult } from '../types.js';
 import { output } from '../output.js';
 import { confirm, input, select } from '../prompt.js';
 import { callMCPTool, MCPClientError } from '../mcp-client.js';
+import { CheckpointManager, CrashDetector } from '@claude-flow/shared';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -788,6 +789,153 @@ const currentCommand: Command = {
   }
 };
 
+// Recover subcommand — scan for crashed sessions and recover from checkpoint
+const recoverCommand: Command = {
+  name: 'recover',
+  aliases: ['crash-recover'],
+  description: 'Detect crashed sessions and recover from checkpoint',
+  options: [
+    {
+      name: 'data-dir',
+      short: 'd',
+      description: 'Data directory containing checkpoints (default: ./data)',
+      type: 'string',
+      default: './data',
+    },
+    {
+      name: 'session-id',
+      short: 's',
+      description: 'Recover a specific session by ID',
+      type: 'string',
+    },
+    {
+      name: 'dismiss',
+      description: 'Dismiss (discard) a crashed session instead of recovering',
+      type: 'boolean',
+      default: false,
+    },
+    {
+      name: 'max-stale',
+      description: 'Max age in hours before session is considered abandoned (default: 24)',
+      type: 'number',
+      default: 24,
+    },
+  ],
+  action: async (ctx: CommandContext): Promise<CommandResult> => {
+    const dataDir = path.resolve(
+      ctx.cwd,
+      (ctx.flags['data-dir'] as string) || './data',
+    );
+    const targetSession = ctx.flags['session-id'] as string | undefined;
+    const dismissMode = ctx.flags.dismiss as boolean;
+    const maxStaleHours = (ctx.flags['max-stale'] as number) || 24;
+
+    // Stand up checkpoint + crash detector for this scan
+    const eventBus = { emit: () => {}, on: () => ({}) } as never;
+    const checkpointMgr = new CheckpointManager(eventBus, { dataDir });
+    const crashDetector = new CrashDetector(eventBus, checkpointMgr, {
+      maxStaleMs: maxStaleHours * 60 * 60 * 1000,
+    });
+
+    const spinner = output.createSpinner({ text: 'Scanning for crashed sessions...' });
+    spinner.start();
+
+    const recoverable = await crashDetector.detectCrashedSessions();
+
+    if (recoverable.length === 0) {
+      spinner.succeed('No crashed sessions found');
+      output.printInfo('All sessions completed normally.');
+      return { success: true };
+    }
+
+    spinner.succeed(`Found ${recoverable.length} recoverable session(s)`);
+    output.writeln();
+
+    // Display recoverable sessions
+    output.printTable({
+      columns: [
+        { key: 'session', header: 'Session ID', width: 22 },
+        { key: 'lastActive', header: 'Last Active', width: 20 },
+        { key: 'agents', header: 'Agents', width: 8, align: 'right' as const },
+        { key: 'tasks', header: 'Pending', width: 8, align: 'right' as const },
+        { key: 'stale', header: 'Stale', width: 12 },
+      ],
+      data: recoverable.map(r => ({
+        session: r.sessionId,
+        lastActive: formatDate(r.lastActiveAt),
+        agents: r.activeAgents.length,
+        tasks: r.pendingTaskCount,
+        stale: formatDuration(r.staleDurationMs),
+      })),
+    });
+
+    output.writeln();
+
+    // If a specific session was requested, operate on it
+    let selected = targetSession
+      ? recoverable.find(r => r.sessionId === targetSession)
+      : undefined;
+
+    // Interactive selection
+    if (!selected && ctx.interactive && recoverable.length > 0) {
+      const choice = await select({
+        message: dismissMode ? 'Select session to dismiss:' : 'Select session to recover:',
+        options: recoverable.map(r => ({
+          value: r.sessionId,
+          label: r.sessionId,
+          hint: `${r.activeAgents.length} agents, ${r.pendingTaskCount} pending tasks`,
+        })),
+      });
+      selected = recoverable.find(r => r.sessionId === choice);
+    } else if (!selected && recoverable.length === 1) {
+      selected = recoverable[0];
+    }
+
+    if (!selected) {
+      if (targetSession) {
+        output.printWarning(`Session ${targetSession} not found among recoverable sessions`);
+      }
+      return { success: true };
+    }
+
+    // Dismiss or recover
+    if (dismissMode) {
+      await crashDetector.dismiss(selected.sessionId);
+      output.printSuccess(`Dismissed session ${selected.sessionId}`);
+      output.printInfo('Checkpoint files have been cleaned up.');
+    } else {
+      // Show checkpoint details, then invoke restore via MCP
+      output.writeln(output.bold(`Recovering: ${selected.sessionId}`));
+      output.writeln(output.dim('─'.repeat(50)));
+      output.writeln(`Checkpoint: ${selected.checkpoint.id}`);
+      output.writeln(`Sequence:   ${selected.checkpoint.sequence}`);
+      output.writeln(`Agents:     ${selected.activeAgents.map(a => `${a.agentId} (${a.agentType})`).join(', ') || 'none'}`);
+      output.writeln(`Tasks:      ${selected.pendingTaskCount} pending`);
+      output.writeln(`Memory:     ${selected.checkpoint.memoryKeys.length} keys`);
+      output.writeln();
+
+      try {
+        await callMCPTool('session_restore', {
+          sessionId: selected.sessionId,
+          restoreMemory: true,
+          restoreAgents: true,
+          restoreTasks: true,
+        });
+
+        await crashDetector.markRecovered(selected.sessionId);
+        output.printSuccess(`Session ${selected.sessionId} recovered from checkpoint ${selected.checkpoint.id}`);
+      } catch (error) {
+        // If MCP restore isn't available, at least mark it and report
+        output.printWarning('MCP session_restore not available — marking session as recovered');
+        await crashDetector.markRecovered(selected.sessionId);
+        output.printInfo('Checkpoint preserved. Restore manually with: claude-flow session restore ' + selected.sessionId);
+      }
+    }
+
+    return { success: true };
+  },
+};
+
 // Helper functions
 function formatSize(bytes: number): string {
   if (bytes === 0) return '0 B';
@@ -852,7 +1000,8 @@ export const sessionCommand: Command = {
     deleteCommand,
     exportCommand,
     importCommand,
-    currentCommand
+    currentCommand,
+    recoverCommand,
   ],
   options: [],
   examples: [
@@ -862,7 +1011,9 @@ export const sessionCommand: Command = {
     { command: 'claude-flow session delete session-123', description: 'Delete a session' },
     { command: 'claude-flow session export -o backup.json', description: 'Export session to file' },
     { command: 'claude-flow session import backup.json', description: 'Import session from file' },
-    { command: 'claude-flow session current', description: 'Show current session' }
+    { command: 'claude-flow session current', description: 'Show current session' },
+    { command: 'claude-flow session recover', description: 'Detect and recover crashed sessions' },
+    { command: 'claude-flow session recover --dismiss -s sess-123', description: 'Dismiss a crashed session' },
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     // Show help if no subcommand
@@ -879,7 +1030,8 @@ export const sessionCommand: Command = {
       `${output.highlight('delete')}  - Delete a saved session`,
       `${output.highlight('export')}  - Export session to file`,
       `${output.highlight('import')}  - Import session from file`,
-      `${output.highlight('current')} - Show current active session`
+      `${output.highlight('current')} - Show current active session`,
+      `${output.highlight('recover')} - Detect and recover crashed sessions`,
     ]);
     output.writeln();
     output.writeln('Run "claude-flow session <subcommand> --help" for subcommand help');

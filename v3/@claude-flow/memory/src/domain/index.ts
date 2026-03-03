@@ -33,3 +33,8 @@ export {
   type DeduplicationResult,
   type NamespaceAnalysis,
 } from './services/memory-domain-service.js';
+
+export { 
+  RerankService, 
+  type RerankWeights 
+} from './RerankService.js';

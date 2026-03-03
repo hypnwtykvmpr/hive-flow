@@ -23,16 +23,19 @@ import {
 import { StdioTransport, StdioTransportConfig, createStdioTransport } from './stdio.js';
 import { HttpTransport, HttpTransportConfig, createHttpTransport } from './http.js';
 import { WebSocketTransport, WebSocketTransportConfig, createWebSocketTransport } from './websocket.js';
+import { ResilientWebSocketClient, ResilientWebSocketConfig, WebSocketState } from './resilient-websocket.js';
 
 // Re-export transport classes (values)
 export { StdioTransport } from './stdio.js';
 export { HttpTransport } from './http.js';
 export { WebSocketTransport } from './websocket.js';
+export { ResilientWebSocketClient, WebSocketState } from './resilient-websocket.js';
 
 // Re-export transport config types
 export type { StdioTransportConfig } from './stdio.js';
 export type { HttpTransportConfig } from './http.js';
 export type { WebSocketTransportConfig } from './websocket.js';
+export type { ResilientWebSocketConfig } from './resilient-websocket.js';
 
 /**
  * Transport configuration union
