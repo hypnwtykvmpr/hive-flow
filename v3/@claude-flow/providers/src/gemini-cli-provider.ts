@@ -24,9 +24,16 @@ import {
 /** Gemini CLI exit codes */
 const EXIT = { Success: 0, Generic: 1, Auth: 41, Input: 42, Config: 52, Cancel: 130 } as const;
 
-/** Shape returned by `gemini --output-format json` */
+/** Safety limit to prevent unbounded stdout accumulation */
+const MAX_STDOUT_BYTES = 50 * 1024 * 1024; // 50 MB
+
+/** Shape returned by `gemini --output-format json` (batch mode) */
 interface GeminiJsonOutput {
   response?: string;
+  // stream-json events use type-based wrapping
+  type?: string;
+  content?: string;
+  message?: { content?: string };
   stats?: {
     models?: Record<string, {
       tokens?: { prompt?: number; candidates?: number; total?: number };
@@ -35,11 +42,13 @@ interface GeminiJsonOutput {
 }
 
 const SUPPORTED_MODELS: LLMModel[] = [
+  'auto',
   'gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.5-pro',
   'gemini-3-flash-preview', 'gemini-3.1-pro-preview',
 ];
 
 const MODEL_DESCRIPTIONS: Record<string, string> = {
+  'auto': 'Auto - Gemini CLI selects optimal model',
   'gemini-2.5-flash': 'Gemini 2.5 Flash - Fast and cost-effective',
   'gemini-2.5-flash-lite': 'Gemini 2.5 Flash Lite - Ultra-lightweight',
   'gemini-2.5-pro': 'Gemini 2.5 Pro - High capability reasoning',
@@ -57,11 +66,13 @@ export class GeminiCLIProvider extends BaseProvider {
   readonly capabilities: ProviderCapabilities = {
     supportedModels: SUPPORTED_MODELS,
     maxContextLength: {
+      'auto': 1048576,
       'gemini-2.5-flash': 1048576, 'gemini-2.5-flash-lite': 1048576,
       'gemini-2.5-pro': 1048576, 'gemini-3-flash-preview': 1048576,
       'gemini-3.1-pro-preview': 2097152,
     },
     maxOutputTokens: {
+      'auto': 65536,
       'gemini-2.5-flash': 65536, 'gemini-2.5-flash-lite': 65536,
       'gemini-2.5-pro': 65536, 'gemini-3-flash-preview': 65536,
       'gemini-3.1-pro-preview': 65536,
@@ -76,6 +87,7 @@ export class GeminiCLIProvider extends BaseProvider {
     supportsBatching: false,
     rateLimit: { requestsPerMinute: 60, tokensPerMinute: 4000000, concurrentRequests: 5 },
     pricing: {
+      'auto': makePricing(0, 0),
       'gemini-2.5-flash': makePricing(0.00015, 0.0006),
       'gemini-2.5-flash-lite': makePricing(0.0001, 0.0004),
       'gemini-2.5-pro': makePricing(0.00125, 0.01),
@@ -94,7 +106,7 @@ export class GeminiCLIProvider extends BaseProvider {
   /** Skip API key requirement — Gemini CLI uses Google account OAuth. */
   protected validateConfig(): void {
     if (!this.config.model) {
-      this.config.model = 'gemini-2.5-flash';
+      this.config.model = 'auto';
     }
     if (!this.validateModel(this.config.model)) {
       this.logger.warn(`Model ${this.config.model} may not be supported by ${this.name}`);
@@ -114,6 +126,10 @@ export class GeminiCLIProvider extends BaseProvider {
       );
     } else {
       this.logger.info(`Gemini CLI found at: ${this.binaryPath}`);
+      const binaryOk = await this.checkBinaryRunnable();
+      if (!binaryOk) {
+        this.logger.warn('Gemini CLI found but failed to run. You may need to run "gemini auth" in a terminal.');
+      }
     }
   }
 
@@ -122,23 +138,41 @@ export class GeminiCLIProvider extends BaseProvider {
     const model = request.model || this.config.model;
     const prompt = this.formatMessages(request.messages);
     const timeoutMs = this.config.timeout || 120000;
-    const args = ['-p', prompt, '--output-format', 'json', '--model', model];
+    const args = ['--output-format', 'json'];
+    // Omit --model when 'auto' or undefined — let Gemini CLI pick its own default
+    if (model && model !== 'auto') {
+      args.push('--model', model);
+    }
+    // --sandbox requires Docker; only enable if explicitly configured
+    // --sandbox requires Docker; opt-in only to avoid breaking Docker-absent environments
+    if (this.config.sandbox === true) {
+      args.push('--sandbox');
+    }
 
     return new Promise<LLMResponse>((resolve, reject) => {
+      let settled = false;
       const child = spawn(this.binaryPath!, args, {
         stdio: ['pipe', 'pipe', 'pipe'],
-        env: { ...process.env },
+        env: this.minimalEnv(),
       });
       this.activeChildren.add(child);
-      child.stdin.end(); // CRITICAL: prevent hang (#6715)
+      // Handle stdin EPIPE gracefully (child may exit before reading)
+      child.stdin.on('error', (err) => {
+        if ((err as NodeJS.ErrnoException).code !== 'EPIPE') {
+          this.logger.warn('Gemini stdin write error', { error: err.message });
+        }
+      });
+      child.stdin.write(prompt);
+      child.stdin.end();
 
       let stdout = '';
       let stderr = '';
-      child.stdout.on('data', (d: Buffer) => { stdout += d.toString(); });
-      child.stderr.on('data', (d: Buffer) => { stderr += d.toString(); });
 
       // CRITICAL: SIGKILL on timeout — Gemini CLI ignores SIGTERM (#15874)
+      // Declare timer before listeners that reference it
       const timer = setTimeout(() => {
+        if (settled) return;
+        settled = true;
         child.kill('SIGKILL');
         this.activeChildren.delete(child);
         reject(new LLMProviderError(
@@ -146,9 +180,26 @@ export class GeminiCLIProvider extends BaseProvider {
         ));
       }, timeoutMs);
 
+      child.stdout.on('data', (d: Buffer) => {
+        stdout += d.toString();
+        if (stdout.length > MAX_STDOUT_BYTES) {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          child.kill('SIGKILL');
+          this.activeChildren.delete(child);
+          reject(new LLMProviderError(
+            'Response exceeded maximum size (50MB)', 'RESPONSE_TOO_LARGE', 'gemini-cli', undefined, false
+          ));
+        }
+      });
+      child.stderr.on('data', (d: Buffer) => { stderr += d.toString(); });
+
       child.on('close', (code: number | null) => {
         clearTimeout(timer);
         this.activeChildren.delete(child);
+        if (settled) return;
+        settled = true;
         if (code !== EXIT.Success) { reject(this.exitCodeToError(code, stderr)); return; }
         try { resolve(this.parseJsonOutput(stdout, model)); }
         catch (e) { reject(this.transformError(e instanceof Error ? e : new Error(String(e)))); }
@@ -157,6 +208,8 @@ export class GeminiCLIProvider extends BaseProvider {
       child.on('error', (err: Error) => {
         clearTimeout(timer);
         this.activeChildren.delete(child);
+        if (settled) return;
+        settled = true;
         reject(this.transformError(err));
       });
     });
@@ -167,16 +220,31 @@ export class GeminiCLIProvider extends BaseProvider {
     const model = request.model || this.config.model;
     const prompt = this.formatMessages(request.messages);
     const timeoutMs = (this.config.timeout || 120000) * 2;
-    const args = ['-p', prompt, '--output-format', 'stream-json', '--model', model];
+    const args = ['--output-format', 'stream-json'];
+    if (model && model !== 'auto') {
+      args.push('--model', model);
+    }
+    // --sandbox requires Docker; opt-in only to avoid breaking Docker-absent environments
+    if (this.config.sandbox === true) {
+      args.push('--sandbox');
+    }
 
     const child = spawn(this.binaryPath!, args, {
       stdio: ['pipe', 'pipe', 'pipe'],
-      env: { ...process.env },
+      env: this.minimalEnv(),
     });
     this.activeChildren.add(child);
-    child.stdin.end(); // CRITICAL (#6715)
+    child.stdin.on('error', (err) => {
+      if ((err as NodeJS.ErrnoException).code !== 'EPIPE') {
+        this.logger.warn('Gemini stdin write error', { error: err.message });
+      }
+    });
+    child.stdin.write(prompt);
+    child.stdin.end();
 
+    let timedOut = false;
     const timer = setTimeout(() => {
+      timedOut = true;
       child.kill('SIGKILL');
       this.activeChildren.delete(child);
     }, timeoutMs);
@@ -184,14 +252,27 @@ export class GeminiCLIProvider extends BaseProvider {
     const rl = createInterface({ input: child.stdout });
     let promptTokens = 0;
     let completionTokens = 0;
+    let stderr = '';
+    child.stderr.on('data', (d: Buffer) => { stderr += d.toString(); });
+
+    // Capture exit code eagerly — close may fire before readline finishes
+    let exitCode: number | null = null;
+    const exitPromise = new Promise<number | null>((resolve) => {
+      child.once('close', (code: number | null) => { exitCode = code; resolve(code); });
+    });
 
     try {
       for await (const line of rl) {
         if (!line.trim()) continue;
         try {
           const evt = JSON.parse(line) as GeminiJsonOutput;
-          if (evt.response) {
-            yield { type: 'content', delta: { content: evt.response } };
+          // Handle both batch-style (response field) and stream-json (type-based) events
+          const text = evt.response
+            || (evt.type === 'message' && evt.message?.content)
+            || (evt.type === 'message' && evt.content)
+            || evt.content;
+          if (text) {
+            yield { type: 'content', delta: { content: text } };
           }
           if (evt.stats?.models) {
             const s = Object.values(evt.stats.models)[0];
@@ -201,6 +282,25 @@ export class GeminiCLIProvider extends BaseProvider {
             }
           }
         } catch { /* non-JSON line — skip */ }
+      }
+
+      // Surface timeout as an error event instead of silent empty completion
+      if (timedOut) {
+        yield {
+          type: 'error',
+          error: new LLMProviderError(
+            `Gemini CLI streaming timed out after ${timeoutMs}ms`, 'TIMEOUT', 'gemini-cli', undefined, true
+          ),
+        };
+        return;
+      }
+
+      // Check exit code after stream ends — auth errors (exit 41) would otherwise be swallowed
+      // Use eagerly-captured exit code, or await if close hasn't fired yet
+      if (exitCode === null) await exitPromise;
+      if (exitCode !== null && exitCode !== EXIT.Success) {
+        yield { type: 'error', error: this.exitCodeToError(exitCode, stderr) };
+        return;
       }
 
       const pricing = this.capabilities.pricing[model];
@@ -279,7 +379,7 @@ export class GeminiCLIProvider extends BaseProvider {
     const cmd = process.platform === 'win32' ? 'where' : 'which';
     return new Promise((resolve) => {
       execFile(cmd, ['gemini'], (err, stdout) => {
-        resolve(!err && stdout.trim() ? stdout.trim().split('\n')[0] : null);
+        resolve(!err && stdout.trim() ? stdout.trim().split('\n')[0].trim() : null);
       });
     });
   }
@@ -292,6 +392,41 @@ export class GeminiCLIProvider extends BaseProvider {
         resolve((out || serr).trim() || 'unknown');
       });
     });
+  }
+
+  /** Check if the binary runs under our minimal env (does NOT verify auth — just binary health). */
+  private checkBinaryRunnable(): Promise<boolean> {
+    return new Promise((resolve) => {
+      execFile(this.binaryPath!, ['--version'], { timeout: 10000, env: this.minimalEnv() }, (err) => {
+        resolve(!err);
+      });
+    });
+  }
+
+  private minimalEnv(): Record<string, string | undefined> {
+    return {
+      PATH: process.env.PATH,
+      HOME: process.env.HOME,
+      USER: process.env.USER,
+      SHELL: process.env.SHELL,
+      LANG: process.env.LANG,
+      TERM: process.env.TERM,
+      TMPDIR: process.env.TMPDIR,
+      // Auth: support all Gemini auth modes (OAuth, API key, Vertex AI)
+      GOOGLE_APPLICATION_CREDENTIALS: process.env.GOOGLE_APPLICATION_CREDENTIALS,
+      GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+      GOOGLE_API_KEY: process.env.GOOGLE_API_KEY,
+      GOOGLE_CLOUD_PROJECT: process.env.GOOGLE_CLOUD_PROJECT,
+      GOOGLE_CLOUD_LOCATION: process.env.GOOGLE_CLOUD_LOCATION,
+      XDG_CONFIG_HOME: process.env.XDG_CONFIG_HOME,
+      // Proxy: required for subscription auth through corporate proxies
+      HTTP_PROXY: process.env.HTTP_PROXY,
+      HTTPS_PROXY: process.env.HTTPS_PROXY,
+      NO_PROXY: process.env.NO_PROXY,
+      http_proxy: process.env.http_proxy,
+      https_proxy: process.env.https_proxy,
+      no_proxy: process.env.no_proxy,
+    };
   }
 
   /** Guard: throw if binary not found. */
@@ -327,7 +462,11 @@ export class GeminiCLIProvider extends BaseProvider {
         completionTokens = s.tokens.candidates || 0;
       }
     }
-    return this.buildResponse(parsed.response || '', model, promptTokens, completionTokens);
+    const content = parsed.response || '';
+    if (!content) {
+      throw new LLMProviderError('Gemini returned empty response', 'EMPTY_RESPONSE', 'gemini-cli', undefined, true);
+    }
+    return this.buildResponse(content, model, promptTokens, completionTokens);
   }
 
   /** Build a standardized LLMResponse with cost tracking. */
@@ -347,7 +486,10 @@ export class GeminiCLIProvider extends BaseProvider {
 
   /** Map Gemini CLI exit codes to typed provider errors. */
   private exitCodeToError(code: number | null, stderr: string): LLMProviderError {
-    const msg = stderr.trim() || `Gemini CLI exited with code ${code}`;
+    const filtered = stderr.split('\n')
+      .filter(line => !line.includes('Loaded cached credentials'))
+      .join('\n');
+    const msg = filtered.trim() || `Gemini CLI exited with code ${code}`;
     switch (code) {
       case EXIT.Auth:
         return new AuthenticationError(
@@ -355,7 +497,10 @@ export class GeminiCLIProvider extends BaseProvider {
           'gemini-cli', { exitCode: code }
         );
       case EXIT.Input:
-        return new LLMProviderError(`Gemini CLI input error: ${msg}`, 'INVALID_INPUT', 'gemini-cli', undefined, false, { exitCode: code });
+        return new LLMProviderError(
+          `Gemini CLI: empty or invalid prompt (exit code 42). Ensure prompt is non-empty.`,
+          'INVALID_INPUT', 'gemini-cli', undefined, false, { exitCode: code }
+        );
       case EXIT.Config:
         return new LLMProviderError(`Gemini CLI config error: ${msg}`, 'CONFIG_ERROR', 'gemini-cli', undefined, false, { exitCode: code });
       case EXIT.Cancel:

@@ -23,7 +23,7 @@ export interface PreBrowseResult {
     value?: string;
   }>;
   similarPatterns: number;
-  suggestedModel: 'haiku' | 'sonnet' | 'opus';
+  suggestedModel: 'haiku' | 'sonnet' | 'opus' | string;
   estimatedDuration: number;
   warnings: string[];
 }
@@ -63,7 +63,7 @@ export async function preBrowseHook(input: PreBrowseInput): Promise<PreBrowseRes
   const recommendedSteps = await reasoningBank.getRecommendedSteps(input.goal);
 
   // Suggest model based on complexity
-  let suggestedModel: 'haiku' | 'sonnet' | 'opus' = 'sonnet';
+  let suggestedModel: 'haiku' | 'sonnet' | 'opus' | string = 'sonnet';
   if (recommendedSteps.length <= 3) {
     suggestedModel = 'haiku';
   } else if (recommendedSteps.length > 10 || input.goal.toLowerCase().includes('complex')) {

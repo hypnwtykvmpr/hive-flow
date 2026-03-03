@@ -42,16 +42,16 @@ interface CodexErrorEvent extends CodexEvent {
 
 const CODEX_MODELS: LLMModel[] = [
   'gpt-5.3-codex', 'gpt-5.2-codex', 'gpt-5.1-codex-max',
-  'gpt-5.1-codex-mini', 'gpt-5-codex', 'codex-mini-latest',
+  'gpt-5.1-codex', 'gpt-5-codex', 'gpt-5-codex-mini',
 ];
 
 const MODEL_INFO: Record<string, { desc: string; ctx: number; out: number }> = {
   'gpt-5.3-codex':     { desc: 'GPT-5.3 Codex - Latest flagship code model',        ctx: 200000, out: 32768 },
   'gpt-5.2-codex':     { desc: 'GPT-5.2 Codex - Previous-generation flagship',      ctx: 200000, out: 32768 },
   'gpt-5.1-codex-max': { desc: 'GPT-5.1 Codex Max - Extended context and reasoning', ctx: 512000, out: 65536 },
-  'gpt-5.1-codex-mini':{ desc: 'GPT-5.1 Codex Mini - Fast and cost-effective',       ctx: 128000, out: 16384 },
+  'gpt-5.1-codex':     { desc: 'GPT-5.1 Codex - High-capability code model',        ctx: 128000, out: 16384 },
   'gpt-5-codex':       { desc: 'GPT-5 Codex - Baseline code model',                  ctx: 128000, out: 16384 },
-  'codex-mini-latest':  { desc: 'Codex Mini Latest - Lightweight, low-latency',       ctx: 128000, out: 16384 },
+  'gpt-5-codex-mini':  { desc: 'GPT-5 Codex Mini - Fast and cost-effective',         ctx: 128000, out: 16384 },
 };
 
 const toRecord = (fn: (k: string) => number) =>
@@ -70,6 +70,7 @@ const CODEX_ERROR_MAP: Record<string, { code: string; status: number; retryable:
 };
 
 const RECONNECT_RE = /Reconnecting\.\.\.\s*\d+\/\d+/;
+
 const FREE = { promptCostPer1k: 0, completionCostPer1k: 0, currency: 'USD' };
 
 function calcCost(prompt: number, completion: number, pricing: { promptCostPer1k: number; completionCostPer1k: number }) {
@@ -90,8 +91,8 @@ export class CodexCLIProvider extends BaseProvider {
     rateLimit: { requestsPerMinute: 60, tokensPerMinute: 1000000, concurrentRequests: 5 },
     pricing: {
       'gpt-5.3-codex': FREE, 'gpt-5.2-codex': FREE, 'gpt-5.1-codex-max': FREE,
-      'gpt-5.1-codex-mini': FREE, 'gpt-5-codex': FREE,
-      'codex-mini-latest': { promptCostPer1k: 0.0015, completionCostPer1k: 0.006, currency: 'USD' },
+      'gpt-5.1-codex': FREE, 'gpt-5-codex': FREE,
+      'gpt-5-codex-mini': { promptCostPer1k: 0.0015, completionCostPer1k: 0.006, currency: 'USD' },
     },
   };
 
@@ -114,8 +115,9 @@ export class CodexCLIProvider extends BaseProvider {
   }
 
   protected validateConfig(): void {
-    if (!this.config.model) this.config.model = 'gpt-5.3-codex';
-    if (!this.validateModel(this.config.model)) {
+    // Don't set default model - omitting --model flag lets Codex use config.toml default
+    // 'auto' is explicitly handled as "use default" in spawnCodex()
+    if (this.config.model && this.config.model !== 'auto' && !this.validateModel(this.config.model)) {
       this.logger.warn(`Model ${this.config.model} may not be supported by codex-cli`);
     }
   }
@@ -131,9 +133,13 @@ export class CodexCLIProvider extends BaseProvider {
       let usage = { input: 0, output: 0 };
       let errorMsg = '';
       let turnFailed = false;
+      let settled = false;
 
       const timer = setTimeout(() => {
-        child.kill('SIGTERM');
+        if (settled) return;
+        settled = true;
+        child.kill('SIGKILL');
+        this.activeProcesses.delete(child);
         reject(new LLMProviderError('Request timed out', 'TIMEOUT', 'codex-cli', undefined, true));
       }, this.defaultTimeout);
 
@@ -149,9 +155,16 @@ export class CodexCLIProvider extends BaseProvider {
         } else if (ev.type === 'turn.failed') {
           const e = ev as CodexTurnFailed;
           turnFailed = true;
-          errorMsg = e.error?.message || 'Turn failed';
+          const rawMsg = e.error?.message || 'Turn failed';
+          errorMsg = this.parseNestedErrorMessage(rawMsg);
           const t = e.error?.codexErrorInfo?.type;
-          if (t) reject(this.mapCodexError(errorMsg, t));
+          if (!settled) {
+            settled = true;
+            clearTimeout(timer);
+            this.activeProcesses.delete(child);
+            rl.close();
+            reject(t ? this.mapCodexError(errorMsg, t) : new LLMProviderError(errorMsg, 'EXECUTION_FAILED', 'codex-cli', undefined, true));
+          }
         } else if (ev.type === 'error') {
           const e = ev as CodexErrorEvent;
           const m = e.message || e.error?.message || '';
@@ -168,6 +181,8 @@ export class CodexCLIProvider extends BaseProvider {
         clearTimeout(timer);
         this.activeProcesses.delete(child);
         rl.close();
+        if (settled) return;
+        settled = true;
         if (turnFailed && !responseText) {
           reject(new LLMProviderError(errorMsg || 'Turn failed', 'EXECUTION_FAILED', 'codex-cli', undefined, true));
           return;
@@ -175,6 +190,10 @@ export class CodexCLIProvider extends BaseProvider {
         // SIGINT bug (#4721): exit code 0 on Ctrl+C -- don't rely on exit code alone
         if (!responseText && code !== 0) {
           reject(new LLMProviderError(errorMsg || `Exited with code ${code}`, 'EXECUTION_FAILED', 'codex-cli', undefined, true));
+          return;
+        }
+        if (!responseText) {
+          reject(new LLMProviderError('Codex returned empty response', 'EMPTY_RESPONSE', 'codex-cli', undefined, true));
           return;
         }
         const pricing = this.capabilities.pricing[model] || FREE;
@@ -191,6 +210,8 @@ export class CodexCLIProvider extends BaseProvider {
         clearTimeout(timer);
         this.activeProcesses.delete(child);
         rl.close();
+        if (settled) return;
+        settled = true;
         reject(this.transformError(err));
       });
     });
@@ -207,11 +228,12 @@ export class CodexCLIProvider extends BaseProvider {
     let notify: (() => void) | null = null;
     const wake = () => { if (notify) { notify(); notify = null; } };
 
+    let spawnError: Error | null = null;
     rl.on('line', (line) => { queue.push(line); wake(); });
     child.on('close', () => { done = true; this.activeProcesses.delete(child); rl.close(); wake(); });
-    child.on('error', () => { done = true; this.activeProcesses.delete(child); rl.close(); wake(); });
+    child.on('error', (err) => { spawnError = err; done = true; this.activeProcesses.delete(child); rl.close(); wake(); });
 
-    const timer = setTimeout(() => { child.kill('SIGTERM'); done = true; wake(); }, this.defaultTimeout);
+    const timer = setTimeout(() => { child.kill('SIGKILL'); this.activeProcesses.delete(child); done = true; wake(); }, this.defaultTimeout);
 
     try {
       while (!done || queue.length > 0) {
@@ -245,9 +267,15 @@ export class CodexCLIProvider extends BaseProvider {
           if (!RECONNECT_RE.test(m)) yield { type: 'error', error: new Error(m || 'Unknown error') };
         }
       }
+      // Surface spawn errors instead of silently completing
+      if (spawnError) {
+        yield { type: 'error', error: this.transformError(spawnError) };
+        return;
+      }
     } finally {
       clearTimeout(timer);
-      if (!done) { child.kill('SIGTERM'); this.activeProcesses.delete(child); }
+      rl.close();
+      if (!done) { child.kill('SIGKILL'); this.activeProcesses.delete(child); }
     }
   }
 
@@ -295,7 +323,7 @@ export class CodexCLIProvider extends BaseProvider {
   }
 
   destroy(): void {
-    for (const p of this.activeProcesses) { try { p.kill('SIGTERM'); } catch { /* already dead */ } }
+    for (const p of this.activeProcesses) { try { p.kill('SIGKILL'); } catch { /* already dead */ } }
     this.activeProcesses.clear();
     super.destroy();
   }
@@ -306,7 +334,7 @@ export class CodexCLIProvider extends BaseProvider {
     return new Promise((resolve) => {
       const cmd = process.platform === 'win32' ? 'where' : 'which';
       execFile(cmd, ['codex'], (err, stdout) => {
-        resolve(!err && stdout.trim() ? stdout.trim().split('\n')[0] : null);
+        resolve(!err && stdout.trim() ? stdout.trim().split('\n')[0].trim() : null);
       });
     });
   }
@@ -326,14 +354,73 @@ export class CodexCLIProvider extends BaseProvider {
       return `${role}: ${text}`;
     }).join('\n\n');
 
-    const args = ['exec', prompt, '--json', '--model', String(model), '--ephemeral', '--skip-git-repo-check'];
-    const env = { ...process.env };
+    // Guard against ARG_MAX: measure byte length (UTF-8) not JS character count
+    // to handle multi-byte Unicode correctly. Limit to 200KB to stay well under
+    // typical ARG_MAX of 1MB (leaving room for env vars and other args).
+    const promptBytes = Buffer.byteLength(prompt, 'utf8');
+    if (promptBytes > 200_000) {
+      throw new LLMProviderError(
+        `Prompt too long for CLI argument (${promptBytes} bytes, max ~200KB). Reduce prompt size.`,
+        'INPUT_TOO_LARGE', 'codex-cli', 400, false
+      );
+    }
+
+    const args = ['exec', prompt, '--json', '--ephemeral', '--skip-git-repo-check'];
+    // Only include --model if explicitly set (not 'auto' or undefined)
+    // Omitting --model lets Codex use config.toml default (typically gpt-5.3-codex)
+    if (model && model !== 'auto') {
+      args.push('--model', String(model));
+    }
+
+    const env: Record<string, string | undefined> = {
+      PATH: process.env.PATH,
+      HOME: process.env.HOME,
+      USER: process.env.USER,
+      SHELL: process.env.SHELL,
+      LANG: process.env.LANG,
+      TERM: process.env.TERM,
+      TMPDIR: process.env.TMPDIR,
+      // Config discovery: Codex uses XDG and CODEX_HOME for config.toml
+      XDG_CONFIG_HOME: process.env.XDG_CONFIG_HOME,
+      CODEX_HOME: process.env.CODEX_HOME,
+      // Proxy: required for subscription auth through corporate proxies
+      HTTP_PROXY: process.env.HTTP_PROXY,
+      HTTPS_PROXY: process.env.HTTPS_PROXY,
+      NO_PROXY: process.env.NO_PROXY,
+      http_proxy: process.env.http_proxy,
+      https_proxy: process.env.https_proxy,
+      no_proxy: process.env.no_proxy,
+    };
     const apiKey = this.config.apiKey || process.env.CODEX_API_KEY;
     if (apiKey) env.CODEX_API_KEY = apiKey;
+    // Also forward OPENAI_API_KEY for users who use that instead
+    if (process.env.OPENAI_API_KEY) env.OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+    // Windows: HOME is undefined; Codex needs USERPROFILE for config.toml discovery
+    if (process.platform === 'win32') {
+      env.USERPROFILE = process.env.USERPROFILE;
+      env.APPDATA = process.env.APPDATA;
+      env.LOCALAPPDATA = process.env.LOCALAPPDATA;
+    }
 
     const child = spawn(this.binaryPath!, args, { stdio: ['pipe', 'pipe', 'pipe'], env });
     this.activeProcesses.add(child);
+    child.stdin.end(); // CRITICAL: prevent hang — stdin must be closed
     return child;
+  }
+
+  private parseNestedErrorMessage(message: string): string {
+    try {
+      const parsed = JSON.parse(message);
+      if (typeof parsed === 'object' && parsed !== null) {
+        return (parsed as Record<string, unknown>).detail as string
+          || (parsed as Record<string, unknown>).message as string
+          || (parsed as Record<string, unknown>).error as string
+          || message;
+      }
+      return String(parsed);
+    } catch {
+      return message;
+    }
   }
 
   private parseLine(line: string): CodexEvent | null {

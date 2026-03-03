@@ -47,3 +47,10 @@ export { CopilotProvider } from './copilot-provider.js';
 
 // Export provider manager
 export { ProviderManager, createProviderManager } from './provider-manager.js';
+
+// Export streaming buffer utility
+export { bufferStreamResponse } from './streaming-buffer.js';
+
+// Export model alias resolver
+export { resolveProviderModel, PROVIDER_ALIAS_MAP, KNOWN_PROVIDER_MODELS, CLAUDE_ALIASES, PROVIDER_DEFAULTS } from './model-alias-resolver.js';
+export type { ClaudeAlias, CLIProviderName } from './model-alias-resolver.js';

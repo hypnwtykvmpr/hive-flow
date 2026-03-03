@@ -5,6 +5,7 @@
 
 import { mkdirSync, writeFileSync, existsSync, readFileSync, statSync } from 'fs';
 import { join, resolve } from 'path';
+import { resolveProjectRoot } from '@claude-flow/shared';
 import type { MCPTool } from './types.js';
 
 // Real vector search functions - lazy loaded to avoid circular imports
@@ -1049,10 +1050,24 @@ export const hooksPreTask: MCPTool = {
         suggestion.agents.length > 2 ? 'Consider using swarm coordination' : 'Single agent recommended',
       ],
       modelRouting,
+      providerAlternatives: buildProviderAlternatives(complexity),
       timestamp: new Date().toISOString(),
     };
   },
 };
+
+// Build provider alternatives for pre-task suggestions
+function buildProviderAlternatives(
+  complexity: 'low' | 'medium' | 'high',
+): Array<{ provider: string; model: string; estimatedCost: string; availabilityStatus: 'available' | 'unchecked' | 'unavailable' }> {
+  const costByComplexity = { low: '$0.001-0.01', medium: '$0.01-0.05', high: '$0.05-0.15' };
+  const cost = costByComplexity[complexity];
+  return [
+    { provider: 'gemini-cli', model: 'gemini-3.1-pro-preview', estimatedCost: cost, availabilityStatus: 'unchecked' },
+    { provider: 'codex-cli', model: 'gpt-5.3-codex', estimatedCost: cost, availabilityStatus: 'unchecked' },
+    { provider: 'cursor-cli', model: 'auto', estimatedCost: cost, availabilityStatus: 'unchecked' },
+  ];
+}
 
 export const hooksPostTask: MCPTool = {
   name: 'hooks_post-task',
@@ -1394,7 +1409,7 @@ export const hooksSessionStart: MCPTool = {
       try {
         // Dynamic import to avoid circular dependencies
         const { startDaemon } = await import('../services/worker-daemon.js');
-        const daemon = await startDaemon(process.cwd());
+        const daemon = await startDaemon(resolveProjectRoot());
         const status = daemon.getStatus();
         daemonStatus = {
           started: true,
@@ -3092,16 +3107,19 @@ export const hooksModelRoute: MCPTool = {
     if (!router) {
       // Fallback to simple heuristic
       const complexity = analyzeComplexityFallback(task);
+      const fallbackModel = complexity > 0.7 ? 'opus' : complexity > 0.4 ? 'sonnet' : 'haiku';
       return {
-        model: complexity > 0.7 ? 'opus' : complexity > 0.4 ? 'sonnet' : 'haiku',
+        model: fallbackModel,
         confidence: 0.7,
         complexity,
         reasoning: 'Fallback heuristic (model router not available)',
         implementation: 'fallback',
+        suggestedProviders: buildProviderSuggestions(complexity, fallbackModel),
       };
     }
 
     const result = await router.route(task);
+    const routedComplexity = result.complexity ?? analyzeComplexityFallback(task);
     return {
       model: result.model,
       confidence: result.confidence,
@@ -3112,6 +3130,7 @@ export const hooksModelRoute: MCPTool = {
       inferenceTimeUs: result.inferenceTimeUs,
       costMultiplier: result.costMultiplier,
       implementation: 'tiny-dancer-neural',
+      suggestedProviders: buildProviderSuggestions(routedComplexity, result.model),
     };
   },
 };
@@ -3124,14 +3143,14 @@ export const hooksModelOutcome: MCPTool = {
     type: 'object',
     properties: {
       task: { type: 'string', description: 'Original task' },
-      model: { type: 'string', enum: ['haiku', 'sonnet', 'opus'], description: 'Model used' },
+      model: { type: 'string', enum: ['haiku', 'sonnet', 'opus', 'gemini-cli', 'codex-cli', 'cursor-cli'], description: 'Model used' },
       outcome: { type: 'string', enum: ['success', 'failure', 'escalated'], description: 'Task outcome' },
     },
     required: ['task', 'model', 'outcome'],
   },
   handler: async (params: Record<string, unknown>) => {
     const task = params.task as string;
-    const model = params.model as 'haiku' | 'sonnet' | 'opus';
+    const model = params.model as 'haiku' | 'sonnet' | 'opus' | 'gemini-cli' | 'codex-cli' | 'cursor-cli' | string;
     const outcome = params.outcome as 'success' | 'failure' | 'escalated';
 
     const router = await getModelRouterInstance();
@@ -3174,6 +3193,31 @@ export const hooksModelStats: MCPTool = {
     };
   },
 };
+
+// Build CLI provider suggestions based on task complexity and routed model
+function buildProviderSuggestions(
+  complexity: number,
+  claudeModel: string,
+): Array<{ provider: string; model: string; reason: string; confidence: number; tier: 2 | 3 }> {
+  const suggestions: Array<{ provider: string; model: string; reason: string; confidence: number; tier: 2 | 3 }> = [];
+
+  if (complexity <= 0.4) {
+    // Tier 2 tasks — suggest all 3 providers
+    suggestions.push(
+      { provider: 'gemini-cli', model: 'gemini-3.1-pro-preview', reason: `Alternative to ${claudeModel} for low-complexity task`, confidence: 0.75, tier: 2 },
+      { provider: 'codex-cli', model: 'gpt-5.3-codex', reason: `Code-specialized alternative for low-complexity task`, confidence: 0.7, tier: 2 },
+      { provider: 'cursor-cli', model: 'auto', reason: `IDE-integrated alternative for low-complexity task`, confidence: 0.65, tier: 2 },
+    );
+  } else {
+    // Tier 3 tasks — suggest gemini + codex (higher capability needed)
+    suggestions.push(
+      { provider: 'gemini-cli', model: 'gemini-3.1-pro-preview', reason: `High-capability alternative to ${claudeModel} for complex task`, confidence: 0.7, tier: 3 },
+      { provider: 'codex-cli', model: 'gpt-5.3-codex', reason: `Code-specialized alternative for complex task`, confidence: 0.65, tier: 3 },
+    );
+  }
+
+  return suggestions;
+}
 
 // Simple fallback complexity analyzer
 function analyzeComplexityFallback(task: string): number {

@@ -73,9 +73,9 @@ export type LLMModel =
   | 'gpt-5.3-codex'
   | 'gpt-5.2-codex'
   | 'gpt-5.1-codex-max'
-  | 'gpt-5.1-codex-mini'
+  | 'gpt-5.1-codex'
   | 'gpt-5-codex'
-  | 'codex-mini-latest'
+  | 'gpt-5-codex-mini'
   // DeepSeek Models
   | 'deepseek-chat'
   | 'deepseek-reasoner'
@@ -151,6 +151,9 @@ export interface LLMProviderConfig {
 
   // Provider-specific options
   providerOptions?: Record<string, unknown>;
+
+  // CLI provider options
+  sandbox?: boolean;  // Gemini CLI: enable --sandbox (requires Docker, opt-in)
 
   // Performance settings
   timeout?: number;
