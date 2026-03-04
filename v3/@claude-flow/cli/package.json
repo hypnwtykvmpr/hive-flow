@@ -93,6 +93,7 @@
   "optionalDependencies": {
     "@claude-flow/aidefence": "^3.0.2",
     "@claude-flow/codex": "^3.0.0-alpha.8",
+    "@claude-flow/providers": "^3.0.0-alpha.6",
     "@claude-flow/embeddings": "^3.0.0-alpha.12",
     "@claude-flow/guidance": "^3.0.0-alpha.1",
     "@claude-flow/memory": "^3.0.0-alpha.11",

@@ -24,6 +24,7 @@ process.on('uncaughtException', () => {
 
 const path = require('path');
 const fs = require('fs');
+const tracker = require('./provider-tracker.cjs');
 
 const helpersDir = __dirname;
 
@@ -71,6 +72,13 @@ const handlers = {
         if (ctx) console.log(ctx);
       } catch (e) { /* non-fatal */ }
     }
+
+    try {
+      if (/gemini/i.test(prompt)) tracker.track('gemini', {});
+      if (/codex/i.test(prompt)) tracker.track('codex', {});
+      if (/cursor/i.test(prompt)) tracker.track('cursor', {});
+    } catch (e) {}
+
     if (router && router.routeTask) {
       const result = router.routeTask(prompt);
       // Format output for Claude Code hook consumption
@@ -222,7 +230,27 @@ const handlers = {
         intelligence.feedback(true);
       } catch (e) { /* non-fatal */ }
     }
+
+    try {
+      const modelVal = (process.argv.find((a, i) => a === '--model' && process.argv[i+1]) ? process.argv[process.argv.indexOf('--model') + 1] : (process.env.MODEL || '')).toLowerCase();
+      let modelName = '';
+      if (modelVal.includes('opus')) modelName = 'opus';
+      else if (modelVal.includes('sonnet')) modelName = 'sonnet';
+      else if (modelVal.includes('haiku')) modelName = 'haiku';
+      if (modelName) tracker.track(modelName, {});
+    } catch (e) {}
+
     console.log('[OK] Task completed');
+  },
+
+  'post-command': () => {
+    try {
+      const cmd = `${process.env.TOOL_INPUT_command || prompt || args.join(' ') || ''}`;
+      if (/gemini/i.test(cmd)) tracker.track('gemini', {});
+      if (/codex/i.test(cmd)) tracker.track('codex', {});
+      if (/cursor/i.test(cmd)) tracker.track('cursor', {});
+    } catch (e) {}
+    console.log('[OK] Command tracked');
   },
 
   'stats': () => {
@@ -240,6 +268,21 @@ const handlers = {
     const parent = process.env.CLAUDE_PARENT_AGENT_ID || 'human';
     const model = process.env.CLAUDE_MODEL || process.env.CLAUDE_AGENT_MODEL || '';
     const provider = process.env.CLAUDE_PROVIDER || '';
+
+    if (tracker && tracker.track) {
+      try {
+        const modelLower = model.toLowerCase();
+        const modelName = modelLower.includes('opus')
+          ? 'opus'
+          : modelLower.includes('sonnet')
+            ? 'sonnet'
+            : modelLower.includes('haiku')
+              ? 'haiku'
+              : '';
+        if (modelName) tracker.track(modelName, {});
+      } catch (e) { /* non-fatal */ }
+    }
+
     const modelStr = model ? ` model=${model}` : '';
     const providerStr = provider ? ` provider=${provider}` : '';
     console.log(`[AGENT] Started: name=${name}${modelStr}${providerStr} id=${id} parent=${parent}`);
@@ -260,6 +303,45 @@ const handlers = {
       ctx.calls = (ctx.calls || 0) + 1;
       ctx.lastCallAt = Date.now();
       fs.writeFileSync(ctxFile, JSON.stringify(ctx));
+    } catch { /* never fail on tracking */ }
+
+    // Track current Claude model usage (every tool call = work by the active model)
+    try {
+      const os = require('os');
+      const claudeCfg = JSON.parse(fs.readFileSync(path.join(os.homedir(), '.claude.json'), 'utf-8'));
+      if (claudeCfg?.projects) {
+        const cwd = process.cwd();
+        // Find the most specific (longest) matching project path
+        let bestPath = '', bestCfg = null;
+        for (const [projPath, projCfg] of Object.entries(claudeCfg.projects)) {
+          if ((cwd === projPath || cwd.startsWith(projPath + '/')) && projPath.length > bestPath.length) {
+            bestPath = projPath;
+            bestCfg = projCfg;
+          }
+        }
+        if (bestCfg?.lastModelUsage) {
+          const usage = bestCfg.lastModelUsage;
+          // Try lastUsedAt first (most recently active model)
+          let bestId = '', bestTs = 0;
+          for (const [id, info] of Object.entries(usage)) {
+            const ts = info?.lastUsedAt ? new Date(info.lastUsedAt).getTime() : 0;
+            if (ts > bestTs) { bestTs = ts; bestId = id; }
+          }
+          // Fallback: most output tokens (dominant model in this project)
+          if (!bestId) {
+            let bestTokens = 0;
+            for (const [id, info] of Object.entries(usage)) {
+              const tokens = (info?.outputTokens || 0);
+              if (tokens > bestTokens) { bestTokens = tokens; bestId = id; }
+            }
+          }
+          const lower = bestId.toLowerCase();
+          const model = lower.includes('opus') ? 'opus'
+            : lower.includes('sonnet') ? 'sonnet'
+            : lower.includes('haiku') ? 'haiku' : '';
+          if (model) tracker.track(model, {});
+        }
+      }
     } catch { /* never fail on tracking */ }
 
     try {
@@ -341,6 +423,6 @@ const handlers = {
   } else if (command) {
     // No output for unknown commands — avoid non-JSON text that triggers hook errors
   } else {
-    console.log('Usage: hook-handler.cjs <route|pre-bash|post-edit|session-restore|session-end|pre-task|post-task|stats|permission-guard>');
+    console.log('Usage: hook-handler.cjs <route|pre-bash|post-edit|session-restore|session-end|pre-task|post-task|post-command|stats|permission-guard>');
   }
 })();

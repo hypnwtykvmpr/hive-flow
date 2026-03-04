@@ -463,24 +463,6 @@ This project is configured with Claude Flow V3 (Anti-Drift Defaults):
 | `hooks` | 17 | Self-learning hooks + 12 background workers |
 | `hive-mind` | 6 | Queen-led Byzantine fault-tolerant consensus |
 
-### Advanced Commands
-
-| Command | Subcommands | Description |
-|---------|-------------|-------------|
-| `daemon` | 5 | Background worker daemon (start, stop, status, trigger, enable) |
-| `neural` | 5 | Neural pattern training (train, status, patterns, predict, optimize) |
-| `security` | 6 | Security scanning (scan, audit, cve, threats, validate, report) |
-| `performance` | 5 | Performance profiling (benchmark, profile, metrics, optimize, report) |
-| `providers` | 5 | AI providers (list, add, remove, test, configure) |
-| `plugins` | 5 | Plugin management (list, install, uninstall, enable, disable) |
-| `deployment` | 5 | Deployment management (deploy, rollback, status, environments, release) |
-| `embeddings` | 4 | Vector embeddings (embed, batch, search, init) - 75x faster with agentic-flow |
-| `claims` | 4 | Claims-based authorization (check, grant, revoke, list) |
-| `migrate` | 5 | V2 to V3 migration with rollback support |
-| `process` | 4 | Background process management |
-| `doctor` | 1 | System diagnostics with health checks |
-| `completions` | 4 | Shell completions (bash, zsh, fish, powershell) |
-
 ### Quick CLI Examples
 
 ```bash
@@ -535,35 +517,6 @@ claude -p --allowedTools "Read,Grep,Glob" "Find all files that import the auth m
 
 # Skip permissions (sandboxed environments only)
 claude -p --dangerously-skip-permissions "Fix all lint errors in src/"
-```
-
-### Parallel Background Execution
-
-```bash
-# Spawn multiple headless instances in parallel
-claude -p "Analyze src/auth/ for vulnerabilities" &
-claude -p "Write tests for src/api/endpoints.ts" &
-claude -p "Review src/models/ for performance issues" &
-wait  # Wait for all to complete
-
-# With results captured
-SECURITY=$(claude -p "Security audit of auth module" &)
-TESTS=$(claude -p "Generate test coverage report" &)
-PERF=$(claude -p "Profile memory usage in workers" &)
-wait
-echo "$SECURITY" "$TESTS" "$PERF"
-```
-
-### Session Continuation
-
-```bash
-# Start a task, resume later
-claude -p --session-id "abc-123" "Start analyzing the codebase"
-claude -p --resume "abc-123" "Continue with the test files"
-
-# Fork a session for parallel exploration
-claude -p --resume "abc-123" --fork-session "Try approach A: event sourcing"
-claude -p --resume "abc-123" --fork-session "Try approach B: CQRS pattern"
 ```
 
 ### Key Flags
@@ -771,48 +724,7 @@ SendMessage({
 | **Agent Teams** | `teammate-idle`, `task-completed` | Multi-agent coordination |
 
 ### 12 Background Workers
-
-| Worker | Priority | Description |
-|--------|----------|-------------|
-| `ultralearn` | normal | Deep knowledge acquisition |
-| `optimize` | high | Performance optimization |
-| `consolidate` | low | Memory consolidation |
-| `predict` | normal | Predictive preloading |
-| `audit` | critical | Security analysis |
-| `map` | normal | Codebase mapping |
-| `preload` | low | Resource preloading |
-| `deepdive` | normal | Deep code analysis |
-| `document` | normal | Auto-documentation |
-| `refactor` | normal | Refactoring suggestions |
-| `benchmark` | normal | Performance benchmarking |
-| `testgaps` | normal | Test coverage analysis |
-
-### Essential Hook Commands
-
-```bash
-# Core hooks
-npx claude-flow@v3alpha hooks pre-task --description "[task]"
-npx claude-flow@v3alpha hooks post-task --task-id "[id]" --success true
-npx claude-flow@v3alpha hooks post-edit --file "[file]" --train-patterns
-
-# Session management
-npx claude-flow@v3alpha hooks session-start --session-id "[id]"
-npx claude-flow@v3alpha hooks session-end --export-metrics true
-npx claude-flow@v3alpha hooks session-restore --session-id "[id]"
-
-# Intelligence routing
-npx claude-flow@v3alpha hooks route --task "[task]"
-npx claude-flow@v3alpha hooks explain --topic "[topic]"
-
-# Neural learning
-npx claude-flow@v3alpha hooks pretrain --model-type moe --epochs 10
-npx claude-flow@v3alpha hooks build-agents --agent-types coder,tester
-
-# Background workers
-npx claude-flow@v3alpha hooks worker list
-npx claude-flow@v3alpha hooks worker dispatch --trigger audit
-npx claude-flow@v3alpha hooks worker status
-```
+`ultralearn`, `optimize`, `consolidate`, `predict`, `audit`, `map`, `preload`, `deepdive`, `document`, `refactor`, `benchmark`, `testgaps`
 
 ## Intelligence System (RuVector)
 
@@ -829,78 +741,9 @@ The 4-step intelligence pipeline:
 3. **DISTILL** — Extract key learnings via LoRA
 4. **CONSOLIDATE** — Prevent catastrophic forgetting via EWC++
 
-## Embeddings Package (v3.0.0-alpha.12)
-
-Features:
-- **sql.js**: Cross-platform SQLite persistent cache (WASM, no native compilation)
-- **Document chunking**: Configurable overlap and size
-- **Normalization**: L2, L1, min-max, z-score
-- **Hyperbolic embeddings**: Poincare ball model for hierarchical data
-- **75x faster**: With agentic-flow ONNX integration
-- **Neural substrate**: Integration with RuVector
-
 ## Hive-Mind Consensus
-
-### Topologies
-- `hierarchical` — Queen controls workers directly
-- `mesh` — Fully connected peer network
-- `hierarchical-mesh` — Hybrid (recommended)
-- `adaptive` — Dynamic based on load
-
-### Consensus Strategies
-- `byzantine` — BFT (tolerates f < n/3 faulty)
-- `raft` — Leader-based (tolerates f < n/2)
-- `gossip` — Epidemic for eventual consistency
-- `crdt` — Conflict-free replicated data types
-- `quorum` — Configurable quorum-based
-
-## V3 Performance Targets
-
-| Metric | Target | Status |
-|--------|--------|--------|
-| HNSW Search | 150x-12,500x faster | **Implemented** (persistent) |
-| Memory Reduction | 50-75% with quantization | **Implemented** (3.92x Int8) |
-| SONA Integration | Pattern learning | **Implemented** (ReasoningBank) |
-| Flash Attention | 2.49x-7.47x speedup | In progress |
-| MCP Response | <100ms | Achieved |
-| CLI Startup | <500ms | Achieved |
-| SONA Adaptation | <0.05ms | In progress |
-
-## Environment Variables
-
-```bash
-# Configuration
-CLAUDE_FLOW_CONFIG=./claude-flow.config.json
-CLAUDE_FLOW_LOG_LEVEL=info
-
-# Provider API Keys
-ANTHROPIC_API_KEY=sk-ant-...
-OPENAI_API_KEY=sk-...
-GOOGLE_API_KEY=...
-
-# MCP Server
-CLAUDE_FLOW_MCP_PORT=3000
-CLAUDE_FLOW_MCP_HOST=localhost
-CLAUDE_FLOW_MCP_TRANSPORT=stdio
-
-# Memory
-CLAUDE_FLOW_MEMORY_BACKEND=hybrid
-CLAUDE_FLOW_MEMORY_PATH=./data/memory
-```
-
-## Doctor Health Checks
-
-Run `npx claude-flow@v3alpha doctor` to check:
-- Node.js version (20+)
-- npm version (9+)
-- Git installation
-- Config file validity
-- Daemon status
-- Memory database
-- API keys
-- MCP servers
-- Disk space
-- TypeScript installation
+**Topologies:** `hierarchical`, `mesh`, `hierarchical-mesh`, `adaptive`
+**Consensus Strategies:** `byzantine`, `raft`, `gossip`, `crdt`, `quorum`
 
 ## Quick Setup
 
@@ -994,97 +837,6 @@ npm view ruflo dist-tags --json
 - Never forget the umbrella `alpha` tag — users run `npx claude-flow@alpha`
 - `ruflo` source is in `/ruflo/` — it depends on `@claude-flow/cli`
 
-## Plugin Registry Maintenance (IPFS/Pinata)
-
-The plugin registry is stored on IPFS via Pinata for decentralized, immutable distribution.
-
-### Registry Location
-- **Current CID**: Stored in `v3/@claude-flow/cli/src/plugins/store/discovery.ts`
-- **Gateway**: `https://gateway.pinata.cloud/ipfs/{CID}`
-- **Format**: JSON with plugin metadata, categories, featured/trending lists
-
-### Required Environment Variables
-Add to `.env` (NEVER commit actual values):
-```bash
-PINATA_API_KEY=your-api-key
-PINATA_API_SECRET=your-api-secret
-PINATA_API_JWT=your-jwt-token
-```
-
-## Plugin Registry Operations
-
-### Adding a New Plugin to Registry
-
-1. **Fetch current registry**:
-```bash
-curl -s "https://gateway.pinata.cloud/ipfs/$(grep LIVE_REGISTRY_CID v3/@claude-flow/cli/src/plugins/store/discovery.ts | cut -d"'" -f2)" > /tmp/registry.json
-```
-
-2. **Add plugin entry** to the `plugins` array:
-```json
-{
-  "id": "@claude-flow/your-plugin",
-  "name": "@claude-flow/your-plugin",
-  "displayName": "Your Plugin",
-  "description": "Plugin description",
-  "version": "1.0.0-alpha.1",
-  "size": 100000,
-  "checksum": "sha256:abc123",
-  "author": {"id": "claude-flow-team", "displayName": "Claude Flow Team", "verified": true},
-  "license": "MIT",
-  "categories": ["official"],
-  "tags": ["your", "tags"],
-  "downloads": 0,
-  "rating": 5,
-  "lastUpdated": "2026-01-25T00:00:00.000Z",
-  "minClaudeFlowVersion": "3.0.0",
-  "type": "integration",
-  "hooks": [],
-  "commands": [],
-  "permissions": ["memory"],
-  "exports": ["YourExport"],
-  "verified": true,
-  "trustLevel": "official"
-}
-```
-
-3. **Update counts and arrays**:
-   - Increment `totalPlugins`
-   - Add to `official` array
-   - Add to `featured`/`newest` if applicable
-   - Update category `pluginCount`
-
-4. **Upload to Pinata** (read credentials from .env):
-```bash
-# Source credentials from .env
-PINATA_JWT=$(grep "^PINATA_API_JWT=" .env | cut -d'=' -f2-)
-
-# Upload updated registry
-curl -X POST "https://api.pinata.cloud/pinning/pinJSONToIPFS" \
-  -H "Authorization: Bearer $PINATA_JWT" \
-  -H "Content-Type: application/json" \
-  -d @/tmp/registry.json
-```
-
-5. **Update discovery.ts** with new CID:
-```typescript
-export const LIVE_REGISTRY_CID = 'NEW_CID_FROM_PINATA';
-```
-
-6. **Also update demo registry** in discovery.ts `demoPluginRegistry` for offline fallback
-
-### Security Rules
-- NEVER hardcode API keys in scripts or source files
-- NEVER commit .env (already in .gitignore)
-- Always source credentials from environment at runtime
-- Always delete temporary scripts after one-time uploads
-
-### Verification
-```bash
-# Verify new registry is accessible
-curl -s "https://gateway.pinata.cloud/ipfs/{NEW_CID}" | jq '.totalPlugins'
-```
-
 ## Optional Plugins (20 Available)
 
 Plugins are distributed via IPFS and can be installed with the CLI. Browse and install from the official registry:
@@ -1111,45 +863,6 @@ npx claude-flow@v3alpha plugins disable @claude-flow/plugin-name
 | `@claude-flow/neural` | 3.0.0-alpha.7 | Neural pattern training (SONA, MoE, EWC++) |
 | `@claude-flow/plugins` | 3.0.0-alpha.1 | Plugin system core (manager, discovery, store) |
 | `@claude-flow/performance` | 3.0.0-alpha.1 | Performance profiling and benchmarking |
-
-### Integration Plugins
-
-| Plugin | Version | Description |
-|--------|---------|-------------|
-| `@claude-flow/plugin-agentic-qe` | 3.0.0-alpha.4 | Agentic quality engineering integration |
-| `@claude-flow/plugin-prime-radiant` | 0.1.5 | Prime Radiant intelligence integration |
-| `@claude-flow/plugin-gastown-bridge` | 3.0.0-alpha.1 | Gastown bridge protocol integration |
-| `@claude-flow/teammate-plugin` | 1.0.0-alpha.1 | Multi-agent teammate coordination |
-| `@claude-flow/plugin-code-intelligence` | 0.1.0 | Advanced code analysis and intelligence |
-| `@claude-flow/plugin-test-intelligence` | 0.1.0 | Intelligent test generation and gap analysis |
-| `@claude-flow/plugin-perf-optimizer` | 0.1.0 | Performance optimization automation |
-| `@claude-flow/plugin-neural-coordinator` | 0.1.0 | Neural network coordination across agents |
-| `@claude-flow/plugin-cognitive-kernel` | 0.1.0 | Core cognitive processing kernel |
-| `@claude-flow/plugin-quantum-optimizer` | 0.1.0 | Quantum-inspired optimization algorithms |
-| `@claude-flow/plugin-hyperbolic-reasoning` | 0.1.0 | Hyperbolic space reasoning for hierarchical data |
-
-### Domain-Specific Plugins
-
-| Plugin | Version | Description |
-|--------|---------|-------------|
-| `@claude-flow/plugin-healthcare-clinical` | 0.1.0 | Healthcare clinical workflow automation |
-| `@claude-flow/plugin-financial-risk` | 0.1.0 | Financial risk assessment and modeling |
-| `@claude-flow/plugin-legal-contracts` | 0.1.0 | Legal contract analysis and generation |
-
-### Plugin Development
-
-```bash
-# Create a new plugin from template
-npx claude-flow@v3alpha plugins create my-plugin
-
-# Test locally
-npx claude-flow@v3alpha plugins install ./path/to/my-plugin
-
-# Publish to registry (requires Pinata credentials)
-npx claude-flow@v3alpha plugins publish
-```
-
-Registry source: IPFS via Pinata (`QmXbfEAaR7D2Ujm4GAkbwcGZQMHqAMpwDoje4583uNP834`)
 
 ## Support
 

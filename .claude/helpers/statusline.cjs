@@ -563,6 +563,20 @@ function progressBar(current, total) {
   return '[' + '\u25CF'.repeat(filled) + '\u25CB'.repeat(width - filled) + ']';
 }
 
+// Get AI provider usage (pure file reads)
+function getProviderUsage() {
+  const usagePath = path.join(CWD, '.claude-flow', 'metrics', 'provider-usage.json');
+  const data = readJSON(usagePath);
+  if (data?.providers) return data.providers;
+
+  // Default structure if missing
+  const providers = {};
+  ['opus', 'sonnet', 'haiku'].forEach(p => {
+    providers[p] = { calls: 0, tokens: 0, ttfb_avg_ms: 0, last_used: null };
+  });
+  return providers;
+}
+
 function generateStatusline() {
   // Collect all data (mostly pure Node.js, one git exec)
   const git = getGitInfo();
@@ -608,6 +622,56 @@ function generateStatusline() {
 
   // Separator
   lines.push(`${c.dim}\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500${c.reset}`);
+
+  // Provider Usage
+  const providers = getProviderUsage();
+  const alwaysShow = ['opus', 'sonnet']; // Always visible (even at 0)
+  const conditionalClaude = ['haiku'];    // Only show if calls >= 1
+  const externalNames = Object.keys(providers).filter(
+    p => !['opus', 'sonnet', 'haiku'].includes(p) && providers[p].calls > 0
+  );
+
+  const colorFor = (p) => {
+    if (p.calls <= 0) return c.dim;
+    if (p.ttfb_avg_ms > 0 && p.ttfb_avg_ms < 1000) return c.brightGreen;
+    if (p.ttfb_avg_ms >= 1000 && p.ttfb_avg_ms <= 3000) return c.brightYellow;
+    if (p.ttfb_avg_ms > 3000) return c.brightRed;
+    return c.brightGreen;
+  };
+
+  const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+
+  const claudeVisible = [
+    ...alwaysShow,
+    ...conditionalClaude.filter(p => (providers[p]?.calls || 0) >= 1),
+  ];
+
+  const formatFull = (name) => {
+    const p = providers[name] || { calls: 0, ttfb_avg_ms: 0 };
+    return `${colorFor(p)}${capitalize(name)} ${p.calls}${c.reset}`;
+  };
+  const formatAbbr = (name) => {
+    const p = providers[name] || { calls: 0, ttfb_avg_ms: 0 };
+    return `${colorFor(p)}${capitalize(name).substring(0, 2)}:${p.calls}${c.reset}`;
+  };
+
+  const fullClaude = claudeVisible.map(formatFull).join(`${c.dim},${c.reset} `);
+  const fullExternal = externalNames.map(formatFull).join(`${c.dim},${c.reset} `);
+  const fullLine = fullExternal
+    ? `\uD83E\uDD16 ${fullClaude} ${c.dim}|${c.reset} ${fullExternal}`
+    : `\uD83E\uDD16 ${fullClaude}`;
+
+  const stripAnsi = (s) => s.replace(/\x1b\[[0-9;]*m/g, '');
+  if (stripAnsi(fullLine).length <= 70) {
+    lines.push(fullLine);
+  } else {
+    const abbrClaude = claudeVisible.map(formatAbbr).join(`${c.dim},${c.reset} `);
+    const abbrExternal = externalNames.map(formatAbbr).join(`${c.dim},${c.reset} `);
+    lines.push(abbrExternal
+      ? `\uD83E\uDD16 ${abbrClaude} ${c.dim}|${c.reset} ${abbrExternal}`
+      : `\uD83E\uDD16 ${abbrClaude}`
+    );
+  }
 
   // Line 1: DDD Domains + perf
   const domainsColor = progress.domainsCompleted >= 3 ? c.brightGreen : progress.domainsCompleted > 0 ? c.yellow : c.red;
@@ -687,6 +751,7 @@ function generateJSON() {
   const git = getGitInfo();
   return {
     user: { name: git.name, gitBranch: git.gitBranch, modelName: getModelName() },
+    providers: getProviderUsage(),
     v3Progress: getV3Progress(),
     security: getSecurityStatus(),
     swarm: getSwarmStatus(),

@@ -97,6 +97,7 @@ export const providerTools: MCPTool[] = [
         return { success: false, error: 'Prompt must be a non-empty string.' };
       }
 
+      const start = Date.now();
       const providerName = input.provider as 'gemini-cli' | 'codex-cli' | 'cursor-cli';
       const { createProviderManager, resolveProviderModel } = await import('@claude-flow/providers');
       const resolvedModel = resolveProviderModel(providerName, input.model as string | undefined);
@@ -118,7 +119,7 @@ export const providerTools: MCPTool[] = [
         messages.push({ role: 'user', content: prompt });
 
         const result = await provider.complete({ messages, model: resolvedModel });
-        return {
+        const successResult = {
           success: true,
           provider: providerName,
           text: result.content,
@@ -127,6 +128,47 @@ export const providerTools: MCPTool[] = [
           usage: result.usage,
           cost: result.cost,
         };
+
+        try {
+          const fs = await import('node:fs');
+          const path = await import('node:path');
+
+          const providerMap: Record<string, string> = {
+            'gemini-cli': 'gemini',
+            'codex-cli': 'codex',
+            'cursor-cli': 'cursor',
+          };
+          const mappedName = providerMap[providerName] || providerName;
+          const ttfb_ms = Date.now() - start;
+          const metricsDir = path.join(process.cwd(), '.claude-flow', 'metrics');
+          const metricsPath = path.join(metricsDir, 'provider-usage.json');
+
+          if (!fs.existsSync(metricsDir)) fs.mkdirSync(metricsDir, { recursive: true });
+
+          let data: any = { providers: {} };
+          try {
+            if (fs.existsSync(metricsPath)) {
+              data = JSON.parse(fs.readFileSync(metricsPath, 'utf8'));
+            }
+          } catch (e) { /* ignore read error */ }
+
+          if (!data.providers) data.providers = {};
+          if (!data.providers[mappedName]) {
+            data.providers[mappedName] = { calls: 0, tokens: 0, avg_ttfb_ms: 0 };
+          }
+
+          const p = data.providers[mappedName];
+          const totalTokens = result.usage?.totalTokens || 0;
+          p.avg_ttfb_ms = Math.round((p.avg_ttfb_ms * p.calls + ttfb_ms) / (p.calls + 1));
+          p.calls += 1;
+          p.tokens += totalTokens;
+
+          fs.writeFileSync(metricsPath, JSON.stringify(data, null, 2));
+        } catch (e) {
+          // Silent failure
+        }
+
+        return successResult;
       } catch (err) {
         const error = err as Error & { code?: string; retryable?: boolean };
         return {
