@@ -18,11 +18,25 @@
   },
   "files": [
     "bin/**",
+    "src/**",
+    "dist/**",
     "README.md",
     "LICENSE"
   ],
   "scripts": {
-    "preinstall": "node -e \"var f=require('fs'),p=require('path'),o=require('os'),h=o.homedir(),d=p.join(h,'.npm','_npx');try{if(f.existsSync(d))f.readdirSync(d).forEach(function(x){var nm=p.join(d,x,'node_modules');try{if(f.existsSync(nm))f.readdirSync(nm).forEach(function(e){if(e.charAt(0)==='.'&&e.indexOf('-')>0&&/[A-Za-z]{8}/.test(e)){try{var t=p.join(nm,e);if(f.statSync(t).isDirectory())f.rmSync(t,{recursive:true,force:true})}catch(x){}}})}catch(x){}})}catch(x){}try{var ci=p.join(h,'.npm','_cacache','index-v5');if(f.existsSync(ci)){(function walk(dir){f.readdirSync(dir).forEach(function(e){var fp=p.join(dir,e);try{if(f.statSync(fp).isDirectory())walk(fp);else{var c=f.readFileSync(fp,'utf-8');if(c.indexOf('claude-flow')!==-1||c.indexOf('ruflo')!==-1)f.unlinkSync(fp)}}catch(x){}});})(ci)}}catch(x){}\" || true"
+    "dev": "node src/mcp-bridge/index.js",
+    "dev:bridge": "node --watch src/mcp-bridge/index.js",
+    "dev:test": "node src/mcp-bridge/test-harness.js",
+    "start": "node src/mcp-bridge/index.js",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:build": "docker compose build",
+    "docker:logs": "docker compose logs -f",
+    "install:bridge": "cd src/mcp-bridge && npm install",
+    "generate:config": "node src/scripts/generate-config.js",
+    "generate:welcome": "node src/scripts/generate-welcome.js",
+    "deploy": "bash src/scripts/deploy.sh",
+    "package:rvf": "bash src/scripts/package-rvf.sh"
   },
   "dependencies": {
     "@claude-flow/cli": ">=3.0.0-alpha.1"
