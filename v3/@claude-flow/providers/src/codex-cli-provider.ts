@@ -135,13 +135,14 @@ export class CodexCLIProvider extends BaseProvider {
       let turnFailed = false;
       let settled = false;
 
+      const timeoutMs = request.timeout || this.defaultTimeout;
       const timer = setTimeout(() => {
         if (settled) return;
         settled = true;
         child.kill('SIGKILL');
         this.activeProcesses.delete(child);
-        reject(new LLMProviderError('Request timed out', 'TIMEOUT', 'codex-cli', undefined, true));
-      }, this.defaultTimeout);
+        reject(new LLMProviderError(`Request timed out after ${timeoutMs}ms`, 'TIMEOUT', 'codex-cli', undefined, true));
+      }, timeoutMs);
 
       rl.on('line', (line) => {
         const ev = this.parseLine(line);
@@ -233,7 +234,8 @@ export class CodexCLIProvider extends BaseProvider {
     child.on('close', () => { done = true; this.activeProcesses.delete(child); rl.close(); wake(); });
     child.on('error', (err) => { spawnError = err; done = true; this.activeProcesses.delete(child); rl.close(); wake(); });
 
-    const timer = setTimeout(() => { child.kill('SIGKILL'); this.activeProcesses.delete(child); done = true; wake(); }, this.defaultTimeout);
+    const streamTimeoutMs = request.timeout || this.defaultTimeout;
+    const timer = setTimeout(() => { child.kill('SIGKILL'); this.activeProcesses.delete(child); done = true; wake(); }, streamTimeoutMs);
 
     try {
       while (!done || queue.length > 0) {

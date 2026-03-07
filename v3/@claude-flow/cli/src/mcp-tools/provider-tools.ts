@@ -88,6 +88,7 @@ export const providerTools: MCPTool[] = [
         prompt: { type: 'string', description: 'Prompt text' },
         model: { type: 'string', description: 'Model name or Claude alias (haiku/sonnet/opus)' },
         systemPrompt: { type: 'string', description: 'Optional system prompt' },
+        timeout: { type: 'number', description: 'Timeout in milliseconds (default: 30000 for simple prompts, use 120000+ for complex/research tasks)' },
       },
       required: ['provider', 'prompt'],
     },
@@ -118,7 +119,13 @@ export const providerTools: MCPTool[] = [
         }
         messages.push({ role: 'user', content: prompt });
 
-        const result = await provider.complete({ messages, model: resolvedModel });
+        const timeoutMs = typeof input.timeout === 'number' && input.timeout > 0
+          ? input.timeout
+          : 30000;
+        // Pass timeout via request object (supported in providers >=3.0.0-alpha.7)
+        const request = { messages, model: resolvedModel } as Record<string, unknown>;
+        request.timeout = timeoutMs;
+        const result = await provider.complete(request as { messages: LLMMessage[]; model: string });
         const successResult = {
           success: true,
           provider: providerName,
@@ -145,7 +152,7 @@ export const providerTools: MCPTool[] = [
 
           if (!fs.existsSync(metricsDir)) fs.mkdirSync(metricsDir, { recursive: true });
 
-          let data: any = { providers: {} };
+          let data: any = { sessionId: `session-${Date.now()}`, startedAt: new Date().toISOString(), providers: {} };
           try {
             if (fs.existsSync(metricsPath)) {
               data = JSON.parse(fs.readFileSync(metricsPath, 'utf8'));
@@ -154,14 +161,15 @@ export const providerTools: MCPTool[] = [
 
           if (!data.providers) data.providers = {};
           if (!data.providers[mappedName]) {
-            data.providers[mappedName] = { calls: 0, tokens: 0, avg_ttfb_ms: 0 };
+            data.providers[mappedName] = { calls: 0, tokens: 0, ttfb_avg_ms: 0, last_used: null };
           }
 
           const p = data.providers[mappedName];
           const totalTokens = result.usage?.totalTokens || 0;
-          p.avg_ttfb_ms = Math.round((p.avg_ttfb_ms * p.calls + ttfb_ms) / (p.calls + 1));
+          p.ttfb_avg_ms = Math.round(((p.ttfb_avg_ms || 0) * p.calls + ttfb_ms) / (p.calls + 1));
           p.calls += 1;
           p.tokens += totalTokens;
+          p.last_used = new Date().toISOString();
 
           fs.writeFileSync(metricsPath, JSON.stringify(data, null, 2));
         } catch (e) {

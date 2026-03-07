@@ -167,3 +167,8 @@ hive-mind-prompt-*.txt
 
 # Temp test directories
 tests/.tmp-*/
+
+# additional crap I feel like ignoring
+.gitignore
+/.resources/
+/.resources/*

@@ -116,7 +116,13 @@ function buildMessages(agent, newTask) {
   const history = agent.conversationHistory || [];
   for (const entry of history) {
     const content = entry.content ?? '';
-    messages.push({ role: entry.role, content: typeof content === 'string' ? content : String(content) });
+    messages.push({
+      role: entry.role,
+      content: typeof content === 'string' ? content : String(content),
+      ...(entry.toolCalls ? { toolCalls: entry.toolCalls } : {}),
+      ...(entry.toolCallId ? { toolCallId: entry.toolCallId } : {}),
+      ...(entry.name ? { name: entry.name } : {}),
+    });
   }
 
   // New task
@@ -283,18 +289,79 @@ async function main() {
     try {
       // Call provider.complete()
       const request = {
-        messages: messages.map((m) => ({ role: m.role, content: m.content })),
+        messages: messages.map((m) => ({
+          role: m.role,
+          content: m.content,
+          ...(m.toolCalls ? { toolCalls: m.toolCalls } : {}),
+          ...(m.toolCallId ? { toolCallId: m.toolCallId } : {}),
+          ...(m.name ? { name: m.name } : {}),
+        })),
         model: agent.providerModel || PROVIDER_DEFAULT_MODELS[providerName],
       };
 
-      const response = await provider.complete(request);
+      // 1. Add tools from agent config if available
+      if (agent.config?.tools && Array.isArray(agent.config.tools)) {
+        request.tools = agent.config.tools;
+      }
+
+      let response;
+      let iterations = 0;
+      const MAX_TOOL_ITERATIONS = 10;
+
+      // 2-4. Tool-calling loop
+      while (iterations < MAX_TOOL_ITERATIONS) {
+        response = await provider.complete(request);
+        iterations++;
+
+        if (response.toolCalls && response.toolCalls.length > 0) {
+          // Log tool calls to stderr
+          for (const toolCall of response.toolCalls) {
+            process.stderr.write(`[bridge] Tool call: ${toolCall.function.name}(${toolCall.function.arguments})\n`);
+          }
+
+          // Append assistant message with tool calls to conversation
+          request.messages.push({
+            role: 'assistant',
+            content: response.content || '',
+            toolCalls: response.toolCalls
+          });
+
+          // Create tool_result messages
+          for (const toolCall of response.toolCalls) {
+            request.messages.push({
+              role: 'tool',
+              toolCallId: toolCall.id,
+              name: toolCall.function.name,
+              content: JSON.stringify({ status: 'success', message: 'Acknowledged' })
+            });
+          }
+
+          if (response.finishReason !== 'tool_calls') {
+            break;
+          }
+        } else {
+          break;
+        }
+      }
 
       // Update agent state
       const history = agent.conversationHistory || [];
-      history.push(
-        { role: 'user', content: task, timestamp: new Date().toISOString() },
-        { role: 'assistant', content: response.content, timestamp: new Date().toISOString() }
-      );
+
+      // Add initial user task
+      history.push({ role: 'user', content: task, timestamp: new Date().toISOString() });
+
+      // Add intermediate tool turns from request.messages (after original history + user task)
+      const initialMessageCount = messages.length;
+      const newTurns = request.messages.slice(initialMessageCount);
+      for (const turn of newTurns) {
+        history.push({
+          ...turn,
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      // 5. Use final response.content as result
+      history.push({ role: 'assistant', content: response.content, timestamp: new Date().toISOString() });
 
       // Trim history to MAX_HISTORY_ENTRIES
       while (history.length > MAX_HISTORY_ENTRIES) {

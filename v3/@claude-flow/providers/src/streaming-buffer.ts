@@ -8,13 +8,15 @@
  * @module @claude-flow/providers/streaming-buffer
  */
 
-import type { ILLMProvider, LLMRequest, LLMResponse } from './types.js';
+import type { ILLMProvider, LLMRequest, LLMResponse, LLMToolCall } from './types.js';
 
 export async function bufferStreamResponse(
   provider: ILLMProvider,
   request: LLMRequest
 ): Promise<LLMResponse> {
   const chunks: string[] = [];
+  const toolCallOrder: string[] = [];
+  const toolCallMap = new Map<string, LLMToolCall>();
   let usage: LLMResponse['usage'] | undefined;
   let cost: LLMResponse['cost'] | undefined;
 
@@ -24,7 +26,32 @@ export async function bufferStreamResponse(
         if (event.delta?.content) chunks.push(event.delta.content);
         break;
       case 'tool_call':
-        // Tool call deltas are not buffered — provider agents are text-only
+        if (!event.delta?.toolCall) break;
+
+        const toolCallDelta = event.delta.toolCall;
+        const existingKey = toolCallDelta.id
+          ? toolCallDelta.id
+          : toolCallOrder[toolCallOrder.length - 1];
+        const toolCallKey = existingKey ?? `stream-tool-${toolCallOrder.length}`;
+
+        if (!toolCallMap.has(toolCallKey)) {
+          toolCallOrder.push(toolCallKey);
+          toolCallMap.set(toolCallKey, {
+            id: toolCallDelta.id ?? toolCallKey,
+            type: 'function',
+            function: {
+              name: '',
+              arguments: '',
+            },
+          });
+        }
+
+        const toolCall = toolCallMap.get(toolCallKey)!;
+        if (toolCallDelta.id) toolCall.id = toolCallDelta.id;
+        if (toolCallDelta.function?.name) toolCall.function.name = toolCallDelta.function.name;
+        if (typeof toolCallDelta.function?.arguments === 'string') {
+          toolCall.function.arguments += toolCallDelta.function.arguments;
+        }
         break;
       case 'done':
         usage = event.usage;
@@ -35,13 +62,19 @@ export async function bufferStreamResponse(
     }
   }
 
+  const toolCalls = toolCallOrder
+    .map((key) => toolCallMap.get(key))
+    .filter((toolCall): toolCall is LLMToolCall => Boolean(toolCall));
+  const hasToolCalls = toolCalls.length > 0;
+
   return {
     id: `stream-${Date.now()}`,
     model: request.model ?? provider.config.model,
     provider: provider.name,
     content: chunks.join(''),
+    ...(hasToolCalls ? { toolCalls } : {}),
     usage: usage ?? { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
     cost,
-    finishReason: 'stop',
+    finishReason: hasToolCalls ? 'tool_calls' : 'stop',
   };
 }

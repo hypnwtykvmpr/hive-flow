@@ -114,13 +114,14 @@ export class CursorCLIProvider extends BaseProvider {
       let stderr = '';
 
       // Declare timer before listeners that reference it
+      const timeoutMs = request.timeout || this.defaultTimeout;
       const timer = setTimeout(() => {
         if (settled) return;
         settled = true;
         child.kill('SIGKILL');
         this.activeProcesses.delete(child);
-        reject(new LLMProviderError('Request timed out', 'TIMEOUT', 'cursor-cli', undefined, true));
-      }, this.defaultTimeout);
+        reject(new LLMProviderError(`Request timed out after ${timeoutMs}ms`, 'TIMEOUT', 'cursor-cli', undefined, true));
+      }, timeoutMs);
 
       child.stdout!.on('data', (d: Buffer) => {
         stdout += d.toString();
@@ -185,7 +186,8 @@ export class CursorCLIProvider extends BaseProvider {
     child.on('close', () => { done = true; this.activeProcesses.delete(child); rl.close(); wake(); });
     child.on('error', (err) => { spawnError = err; done = true; this.activeProcesses.delete(child); rl.close(); wake(); });
 
-    const timer = setTimeout(() => { child.kill('SIGKILL'); done = true; wake(); }, this.defaultTimeout * 2);
+    const streamTimeoutMs = (request.timeout || this.defaultTimeout) * 2;
+    const timer = setTimeout(() => { child.kill('SIGKILL'); done = true; wake(); }, streamTimeoutMs);
 
     let promptTokens = 0;
     let completionTokens = 0;

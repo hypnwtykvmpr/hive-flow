@@ -17,7 +17,7 @@ import { createInterface } from 'readline';
 import { BaseProvider, BaseProviderOptions } from './base-provider.js';
 import {
   LLMProvider, LLMModel, LLMRequest, LLMResponse, LLMStreamEvent,
-  LLMMessage, ModelInfo, ProviderCapabilities, HealthCheckResult,
+  LLMMessage, LLMTool, LLMToolCall, ModelInfo, ProviderCapabilities, HealthCheckResult,
   LLMProviderError, AuthenticationError, ProviderUnavailableError,
 } from './types.js';
 
@@ -78,7 +78,7 @@ export class GeminiCLIProvider extends BaseProvider {
       'gemini-3.1-pro-preview': 65536,
     },
     supportsStreaming: true,
-    supportsToolCalling: false,
+    supportsToolCalling: true,
     supportsSystemMessages: true,
     supportsVision: false,
     supportsAudio: false,
@@ -136,8 +136,8 @@ export class GeminiCLIProvider extends BaseProvider {
   protected async doComplete(request: LLMRequest): Promise<LLMResponse> {
     this.ensureBinary();
     const model = request.model || this.config.model;
-    const prompt = this.formatMessages(request.messages);
-    const timeoutMs = this.config.timeout || 120000;
+    const prompt = this.formatMessages(request.messages, request.tools);
+    const timeoutMs = request.timeout || this.config.timeout || 120000;
     const args = ['--output-format', 'json'];
     // Omit --model when 'auto' or undefined — let Gemini CLI pick its own default
     if (model && model !== 'auto') {
@@ -218,8 +218,8 @@ export class GeminiCLIProvider extends BaseProvider {
   protected async *doStreamComplete(request: LLMRequest): AsyncIterable<LLMStreamEvent> {
     this.ensureBinary();
     const model = request.model || this.config.model;
-    const prompt = this.formatMessages(request.messages);
-    const timeoutMs = (this.config.timeout || 120000) * 2;
+    const prompt = this.formatMessages(request.messages, request.tools);
+    const timeoutMs = (request.timeout || this.config.timeout || 120000) * 2;
     const args = ['--output-format', 'stream-json'];
     if (model && model !== 'auto') {
       args.push('--model', model);
@@ -255,6 +255,46 @@ export class GeminiCLIProvider extends BaseProvider {
     let stderr = '';
     child.stderr.on('data', (d: Buffer) => { stderr += d.toString(); });
 
+    // Buffer for tool_call detection: emit content and tool_call events as complete blocks appear
+    let contentBuffer = '';
+    let streamToolCallCount = 0;
+    const toolCallBlockRe = /<tool_call>\s*([\s\S]*?)<\/tool_call>/gi;
+
+    const flushToolCallsFromBuffer = (): LLMStreamEvent[] => {
+      const events: LLMStreamEvent[] = [];
+      let match: RegExpExecArray | null;
+      let lastEnd = 0;
+      toolCallBlockRe.lastIndex = 0;
+      while ((match = toolCallBlockRe.exec(contentBuffer)) !== null) {
+        const before = contentBuffer.slice(lastEnd, match.index);
+        if (before.length > 0) {
+          events.push({ type: 'content', delta: { content: before } });
+        }
+
+        const parsedCall = this.parseToolCallPayload(match[1].trim());
+        if (parsedCall) {
+          streamToolCallCount += 1;
+          events.push({
+            type: 'tool_call',
+            delta: {
+              toolCall: {
+                id: `gemini-tool-${Date.now()}-${streamToolCallCount}`,
+                type: 'function',
+                function: parsedCall,
+              },
+            },
+          });
+        } else {
+          // Unparseable tool payload: preserve model output as plain content.
+          events.push({ type: 'content', delta: { content: match[0] } });
+        }
+        lastEnd = match.index + match[0].length;
+      }
+
+      contentBuffer = contentBuffer.slice(lastEnd);
+      return events;
+    };
+
     // Capture exit code eagerly — close may fire before readline finishes
     let exitCode: number | null = null;
     const exitPromise = new Promise<number | null>((resolve) => {
@@ -272,7 +312,10 @@ export class GeminiCLIProvider extends BaseProvider {
             || (evt.type === 'message' && evt.content)
             || evt.content;
           if (text) {
-            yield { type: 'content', delta: { content: text } };
+            contentBuffer += text;
+            for (const event of flushToolCallsFromBuffer()) {
+              yield event;
+            }
           }
           if (evt.stats?.models) {
             const s = Object.values(evt.stats.models)[0];
@@ -282,6 +325,11 @@ export class GeminiCLIProvider extends BaseProvider {
             }
           }
         } catch { /* non-JSON line — skip */ }
+      }
+
+      // Emit any remaining buffer as content
+      if (contentBuffer.length > 0) {
+        yield { type: 'content', delta: { content: contentBuffer } };
       }
 
       // Surface timeout as an error event instead of silent empty completion
@@ -331,7 +379,7 @@ export class GeminiCLIProvider extends BaseProvider {
       description: MODEL_DESCRIPTIONS[model] || 'Gemini CLI model',
       contextLength: this.capabilities.maxContextLength[model] || 1048576,
       maxOutputTokens: this.capabilities.maxOutputTokens[model] || 65536,
-      supportedFeatures: ['chat', 'completion', 'cli-subprocess'],
+      supportedFeatures: ['chat', 'completion', 'cli-subprocess', 'tool_calling'],
       pricing: p ? { promptCostPer1k: p.promptCostPer1k, completionCostPer1k: p.completionCostPer1k, currency: p.currency } : undefined,
     };
   }
@@ -450,7 +498,12 @@ export class GeminiCLIProvider extends BaseProvider {
       if (!content) {
         throw new LLMProviderError('Gemini CLI returned empty output', 'EMPTY_RESPONSE', 'gemini-cli', undefined, true);
       }
-      return this.buildResponse(content, model, 0, 0);
+      const { contentWithoutToolCalls, toolCalls } = this.parseToolCallsFromContent(content);
+      return this.buildResponse(
+        contentWithoutToolCalls, model, 0, 0,
+        toolCalls.length > 0 ? toolCalls : undefined,
+        toolCalls.length > 0 ? 'tool_calls' : undefined
+      );
     }
 
     let promptTokens = 0;
@@ -462,25 +515,42 @@ export class GeminiCLIProvider extends BaseProvider {
         completionTokens = s.tokens.candidates || 0;
       }
     }
-    const content = parsed.response || '';
+    const content = parsed.response || parsed.message?.content || parsed.content || '';
     if (!content) {
       throw new LLMProviderError('Gemini returned empty response', 'EMPTY_RESPONSE', 'gemini-cli', undefined, true);
     }
-    return this.buildResponse(content, model, promptTokens, completionTokens);
+    const { contentWithoutToolCalls, toolCalls } = this.parseToolCallsFromContent(content);
+    if (!contentWithoutToolCalls && toolCalls.length === 0) {
+      throw new LLMProviderError('Gemini returned empty response', 'EMPTY_RESPONSE', 'gemini-cli', undefined, true);
+    }
+    return this.buildResponse(
+      contentWithoutToolCalls, model, promptTokens, completionTokens,
+      toolCalls.length > 0 ? toolCalls : undefined,
+      toolCalls.length > 0 ? 'tool_calls' : undefined
+    );
   }
 
   /** Build a standardized LLMResponse with cost tracking. */
   private buildResponse(
-    content: string, model: LLMModel, promptTokens: number, completionTokens: number
+    content: string,
+    model: LLMModel,
+    promptTokens: number,
+    completionTokens: number,
+    toolCalls?: LLMToolCall[],
+    finishReason?: LLMResponse['finishReason']
   ): LLMResponse {
     const pricing = this.capabilities.pricing[model];
     const pCost = pricing ? (promptTokens / 1000) * pricing.promptCostPer1k : 0;
     const cCost = pricing ? (completionTokens / 1000) * pricing.completionCostPer1k : 0;
     return {
-      id: `gemini-cli-${Date.now()}`, model, provider: 'gemini-cli', content,
+      id: `gemini-cli-${Date.now()}`,
+      model,
+      provider: 'gemini-cli',
+      content,
+      ...(toolCalls && toolCalls.length > 0 ? { toolCalls } : {}),
       usage: { promptTokens, completionTokens, totalTokens: promptTokens + completionTokens },
       cost: { promptCost: pCost, completionCost: cCost, totalCost: pCost + cCost, currency: 'USD' },
-      finishReason: 'stop',
+      finishReason: finishReason ?? 'stop',
     };
   }
 
@@ -513,8 +583,9 @@ export class GeminiCLIProvider extends BaseProvider {
   /**
    * Format LLMMessage[] into a single prompt string for the CLI.
    * System messages first, then user/assistant turns in order.
+   * If tools are provided, appends a structured tool schema section and usage instructions.
    */
-  private formatMessages(messages: LLMMessage[]): string {
+  private formatMessages(messages: LLMMessage[], tools?: LLMTool[]): string {
     const systemParts: string[] = [];
     const convParts: string[] = [];
 
@@ -534,6 +605,113 @@ export class GeminiCLIProvider extends BaseProvider {
     const parts: string[] = [];
     if (systemParts.length > 0) parts.push(`System: ${systemParts.join('\n')}`);
     if (convParts.length > 0) parts.push(convParts.join('\n'));
+
+    if (tools && tools.length > 0) {
+      const toolsXml = tools.map((tool) => {
+        const name = this.escapeXml(tool.function.name);
+        const description = this.escapeXml(tool.function.description || '');
+        const parameters = this.escapeXml(JSON.stringify(tool.function.parameters));
+        return [
+          '<tool>',
+          `  <name>${name}</name>`,
+          `  <description>${description}</description>`,
+          `  <parameters>${parameters}</parameters>`,
+          '</tool>',
+        ].join('\n');
+      }).join('\n');
+
+      parts.push(
+        '<available_tools>',
+        toolsXml,
+        '</available_tools>',
+        '',
+        'If you decide to call a tool, respond with one or more <tool_call> XML blocks using this exact JSON payload format:',
+        '<tool_call>',
+        '{"name":"tool_name","arguments":{"param":"value"}}',
+        '</tool_call>',
+        'Do not wrap tool calls in markdown fences.'
+      );
+    }
+
     return parts.join('\n\n');
+  }
+
+  private escapeXml(input: string): string {
+    return input
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&apos;');
+  }
+
+  private parseToolCallPayload(raw: string): { name: string; arguments: string } | null {
+    if (!raw) return null;
+    const trimmed = raw.trim();
+    if (!trimmed) return null;
+
+    // Preferred format: JSON payload inside <tool_call>.
+    try {
+      const parsed = JSON.parse(trimmed) as { name?: unknown; arguments?: unknown };
+      const name = typeof parsed.name === 'string' ? parsed.name.trim() : '';
+      if (!name) return null;
+      const args = parsed.arguments === undefined
+        ? '{}'
+        : (typeof parsed.arguments === 'object' && parsed.arguments !== null
+          ? JSON.stringify(parsed.arguments)
+          : String(parsed.arguments));
+      return { name, arguments: args };
+    } catch {
+      // Fall through to XML field extraction.
+    }
+
+    // Fallback format: nested XML tags inside <tool_call>.
+    const nameMatch = trimmed.match(/<name>\s*([\s\S]*?)\s*<\/name>/i);
+    if (!nameMatch) return null;
+    const name = nameMatch[1].trim();
+    if (!name) return null;
+
+    const argsMatch = trimmed.match(/<arguments>\s*([\s\S]*?)\s*<\/arguments>/i);
+    if (!argsMatch) return { name, arguments: '{}' };
+
+    const rawArgs = argsMatch[1].trim();
+    if (!rawArgs) return { name, arguments: '{}' };
+    try {
+      const parsedArgs = JSON.parse(rawArgs) as unknown;
+      return {
+        name,
+        arguments: typeof parsedArgs === 'object' && parsedArgs !== null
+          ? JSON.stringify(parsedArgs)
+          : String(parsedArgs),
+      };
+    } catch {
+      return { name, arguments: rawArgs };
+    }
+  }
+
+  /**
+   * Extract <tool_call> blocks from model output. Returns cleaned content and parsed LLMToolCall[].
+   */
+  private parseToolCallsFromContent(content: string): { contentWithoutToolCalls: string; toolCalls: LLMToolCall[] } {
+    const toolCalls: LLMToolCall[] = [];
+    const blockRe = /<tool_call>\s*([\s\S]*?)<\/tool_call>/gi;
+    let match: RegExpExecArray | null;
+    let lastIndex = 0;
+    const textParts: string[] = [];
+
+    while ((match = blockRe.exec(content)) !== null) {
+      textParts.push(content.slice(lastIndex, match.index));
+      lastIndex = match.index + match[0].length;
+      const parsedCall = this.parseToolCallPayload(match[1].trim());
+      if (!parsedCall) continue;
+      toolCalls.push({
+        id: `gemini-tool-${Date.now()}-${toolCalls.length + 1}`,
+        type: 'function',
+        function: parsedCall,
+      });
+    }
+    textParts.push(content.slice(lastIndex));
+    const contentWithoutToolCalls = textParts.join('').replace(/\n{3,}/g, '\n\n').trim();
+    return { contentWithoutToolCalls, toolCalls };
   }
 }

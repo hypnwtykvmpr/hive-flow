@@ -48,6 +48,10 @@ export { CopilotProvider } from './copilot-provider.js';
 // Export provider manager
 export { ProviderManager, createProviderManager } from './provider-manager.js';
 
+// Export agentic wrapper
+export { AgenticWrapper } from './agentic-wrapper.js';
+export type { AgenticProvider, AgenticOptions, AgenticResult, AgenticToolEvent } from './agentic-wrapper.js';
+
 // Export streaming buffer utility
 export { bufferStreamResponse } from './streaming-buffer.js';
 

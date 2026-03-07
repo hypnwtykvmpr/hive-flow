@@ -196,6 +196,9 @@ export interface LLMRequest {
     preferredModels?: LLMModel[];
   };
 
+  // Timeout override (milliseconds) — overrides provider default
+  timeout?: number;
+
   // Request metadata
   requestId?: string;
   metadata?: Record<string, unknown>;

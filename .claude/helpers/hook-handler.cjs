@@ -63,6 +63,17 @@ const [,, command, ...args] = process.argv;
 // Get prompt from environment variable (set by Claude Code hooks)
 const prompt = process.env.PROMPT || process.env.TOOL_INPUT_command || args.join(' ') || '';
 
+// Reusable provider summary for compact/session-end output
+function providerSummaryLine() {
+  try {
+    const usage = tracker.getUsage();
+    return Object.entries(usage.providers || {})
+      .filter(([, v]) => v.calls > 0)
+      .map(([name, v]) => `${name}:${v.calls}`)
+      .join(' ');
+  } catch { return ''; }
+}
+
 const handlers = {
   'route': () => {
     // Inject ranked intelligence context before routing
@@ -156,6 +167,13 @@ const handlers = {
       fs.writeFileSync(ctxFile, JSON.stringify({ calls: 0, startedAt: Date.now() }));
     } catch { /* ignore */ }
 
+    // Reset provider usage counts for new session
+    let sessionId;
+    try {
+      sessionId = `session-${Date.now()}`;
+      tracker.resetSession(sessionId);
+    } catch { /* ignore */ }
+
     if (session) {
       // Try restore first, fall back to start
       const existing = session.restore && session.restore();
@@ -164,7 +182,6 @@ const handlers = {
       }
     } else {
       // Minimal session restore output
-      const sessionId = `session-${Date.now()}`;
       console.log(`[INFO] Restoring session: %SESSION_ID%`);
       console.log('');
       console.log(`[OK] Session restored from %SESSION_ID%`);
@@ -191,6 +208,9 @@ const handlers = {
   },
 
   'session-end': () => {
+    // Output provider usage summary before ending
+    const summary = providerSummaryLine();
+    if (summary) console.log(`[PROVIDERS] ${summary}`);
     // Consolidate intelligence before ending session
     if (intelligence && intelligence.consolidate) {
       try {
@@ -205,6 +225,18 @@ const handlers = {
     } else {
       console.log('[OK] Session ended');
     }
+  },
+
+  'compact-manual': () => {
+    console.log('[COMPACT] Manual compaction triggered');
+    const summary = providerSummaryLine();
+    if (summary) console.log(`[PROVIDERS] ${summary}`);
+  },
+
+  'compact-auto': () => {
+    console.log('[COMPACT] Auto compaction triggered');
+    const summary = providerSummaryLine();
+    if (summary) console.log(`[PROVIDERS] ${summary}`);
   },
 
   'pre-task': () => {
@@ -231,6 +263,9 @@ const handlers = {
       } catch (e) { /* non-fatal */ }
     }
 
+    // Note: TTFB and token counts are always 0 from hooks — Claude Code hooks
+    // don't expose timing or token data. Only provider_complete (MCP tool) can
+    // calculate these. The track() call here increments calls and last_used only.
     try {
       const modelVal = (process.argv.find((a, i) => a === '--model' && process.argv[i+1]) ? process.argv[process.argv.indexOf('--model') + 1] : (process.env.MODEL || '')).toLowerCase();
       let modelName = '';
@@ -423,6 +458,6 @@ const handlers = {
   } else if (command) {
     // No output for unknown commands — avoid non-JSON text that triggers hook errors
   } else {
-    console.log('Usage: hook-handler.cjs <route|pre-bash|post-edit|session-restore|session-end|pre-task|post-task|post-command|stats|permission-guard>');
+    console.log('Usage: hook-handler.cjs <route|pre-bash|post-edit|session-restore|session-end|pre-task|post-task|post-command|compact-manual|compact-auto|stats|permission-guard>');
   }
 })();
