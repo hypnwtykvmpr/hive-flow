@@ -20,7 +20,7 @@ import {
   LLMMessage, LLMTool, LLMToolCall, ModelInfo, ProviderCapabilities, HealthCheckResult,
   LLMProviderError, ProviderUnavailableError,
 } from './types.js';
-import { parseToolCallPayload, parseToolCallsFromContent, formatToolInstructions, flushToolCallsFromBuffer } from './tool-call-utils.js';
+import { parseToolCallsFromContent, formatToolInstructions, flushToolCallsFromBuffer } from './tool-call-utils.js';
 
 const CURSOR_MODELS: LLMModel[] = [
   'auto', 'composer-1.5', 'composer-1',

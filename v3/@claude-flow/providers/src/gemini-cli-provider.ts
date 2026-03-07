@@ -20,7 +20,7 @@ import {
   LLMMessage, LLMTool, LLMToolCall, ModelInfo, ProviderCapabilities, HealthCheckResult,
   LLMProviderError, AuthenticationError, ProviderUnavailableError,
 } from './types.js';
-import { escapeXml, parseToolCallPayload, parseToolCallsFromContent, formatToolInstructions, flushToolCallsFromBuffer } from './tool-call-utils.js';
+import { parseToolCallsFromContent, formatToolInstructions, flushToolCallsFromBuffer } from './tool-call-utils.js';
 
 /** Gemini CLI exit codes */
 const EXIT = { Success: 0, Generic: 1, Auth: 41, Input: 42, Config: 52, Cancel: 130 } as const;

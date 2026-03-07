@@ -18,11 +18,9 @@ import {
   AuthenticationError, ProviderUnavailableError, RateLimitError,
 } from './types.js';
 import {
-  parseToolCallPayload,
   parseToolCallsFromContent,
   formatToolInstructions,
   flushToolCallsFromBuffer,
-  escapeXml,
 } from './tool-call-utils.js';
 
 // ===== JSONL Event Types =====
