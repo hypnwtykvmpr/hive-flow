@@ -227,8 +227,8 @@ export class CursorCLIProvider extends BaseProvider {
             }
             const usage = msg.usage as Record<string, number> | undefined;
             if (usage) {
-              promptTokens = usage.input_tokens || 0;
-              completionTokens = usage.output_tokens || 0;
+              promptTokens = usage.inputTokens || usage.input_tokens || 0;
+              completionTokens = usage.outputTokens || usage.output_tokens || 0;
             }
           }
 
@@ -247,8 +247,8 @@ export class CursorCLIProvider extends BaseProvider {
           if (evt.type === 'result') {
             const usage = evt.usage as Record<string, number> | undefined;
             if (usage) {
-              promptTokens = usage.input_tokens || usage.prompt_tokens || promptTokens;
-              completionTokens = usage.output_tokens || usage.completion_tokens || completionTokens;
+              promptTokens = usage.inputTokens || usage.input_tokens || usage.prompt_tokens || promptTokens;
+              completionTokens = usage.outputTokens || usage.output_tokens || usage.completion_tokens || completionTokens;
             }
           }
         } catch { /* non-JSON line */ }
@@ -369,7 +369,11 @@ export class CursorCLIProvider extends BaseProvider {
       );
     }
 
+    // When binaryPath is 'cursor' (Electron launcher), the headless agent is a subcommand.
+    // When binaryPath is 'cursor-agent', flags are top-level.
+    const isCursorLauncher = this.binaryPath!.endsWith('/cursor') || this.binaryPath!.endsWith('\\cursor');
     const args = [
+      ...(isCursorLauncher ? ['agent'] : []),
       '--print',
       '--trust',  // Prevent workspace trust prompt blocking non-interactive mode
       '--force',  // Required for file writes in --print mode
@@ -445,8 +449,8 @@ export class CursorCLIProvider extends BaseProvider {
     }
 
     const usage = (parsed.usage ?? {}) as Record<string, number>;
-    const promptTokens = usage.input_tokens || usage.prompt_tokens || 0;
-    const completionTokens = usage.output_tokens || usage.completion_tokens || 0;
+    const promptTokens = usage.inputTokens || usage.input_tokens || usage.prompt_tokens || 0;
+    const completionTokens = usage.outputTokens || usage.output_tokens || usage.completion_tokens || 0;
 
     return this.buildResponse(
       contentWithoutToolCalls, model, promptTokens, completionTokens,
