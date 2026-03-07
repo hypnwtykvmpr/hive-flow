@@ -17,9 +17,10 @@ import { createInterface } from 'readline';
 import { BaseProvider, BaseProviderOptions } from './base-provider.js';
 import {
   LLMProvider, LLMModel, LLMRequest, LLMResponse, LLMStreamEvent,
-  LLMMessage, ModelInfo, ProviderCapabilities, HealthCheckResult,
+  LLMMessage, LLMTool, LLMToolCall, ModelInfo, ProviderCapabilities, HealthCheckResult,
   LLMProviderError, ProviderUnavailableError,
 } from './types.js';
+import { parseToolCallPayload, parseToolCallsFromContent, formatToolInstructions, flushToolCallsFromBuffer } from './tool-call-utils.js';
 
 const CURSOR_MODELS: LLMModel[] = [
   'auto', 'composer-1.5', 'composer-1',
@@ -59,7 +60,7 @@ export class CursorCLIProvider extends BaseProvider {
       'gpt-5.3-codex': 32768, 'gpt-5.2-codex': 32768, 'gpt-5.2': 16384,
     },
     supportsStreaming: true,
-    supportsToolCalling: false,
+    supportsToolCalling: true,
     supportsSystemMessages: true,
     supportsVision: false,
     supportsAudio: false,
@@ -105,7 +106,7 @@ export class CursorCLIProvider extends BaseProvider {
   protected async doComplete(request: LLMRequest): Promise<LLMResponse> {
     this.ensureBinary();
     const model = request.model || this.config.model;
-    const prompt = this.formatMessages(request.messages);
+    const prompt = this.formatMessages(request.messages, request.tools);
     const child = this.spawnCursor(prompt, model, false);
 
     return new Promise<LLMResponse>((resolve, reject) => {
@@ -172,7 +173,7 @@ export class CursorCLIProvider extends BaseProvider {
   protected async *doStreamComplete(request: LLMRequest): AsyncIterable<LLMStreamEvent> {
     this.ensureBinary();
     const model = request.model || this.config.model;
-    const prompt = this.formatMessages(request.messages);
+    const prompt = this.formatMessages(request.messages, request.tools);
     const child = this.spawnCursor(prompt, model, true);
     const rl = createInterface({ input: child.stdout! });
 
@@ -191,6 +192,10 @@ export class CursorCLIProvider extends BaseProvider {
 
     let promptTokens = 0;
     let completionTokens = 0;
+
+    // Buffer for tool_call detection: emit content and tool_call events as complete blocks appear
+    let contentBuffer = '';
+    let streamToolCallCount = 0;
 
     try {
       while (!done || queue.length > 0) {
@@ -211,7 +216,15 @@ export class CursorCLIProvider extends BaseProvider {
             const text = Array.isArray(content)
               ? (content as Array<{ text?: string }>).map((p) => p.text || '').join('')
               : typeof content === 'string' ? content : '';
-            if (text) yield { type: 'content', delta: { content: text } };
+            if (text) {
+              contentBuffer += text;
+              const flushed = flushToolCallsFromBuffer(contentBuffer, 'cursor', streamToolCallCount);
+              contentBuffer = flushed.remainingBuffer;
+              streamToolCallCount = flushed.count;
+              for (const event of flushed.events) {
+                yield event;
+              }
+            }
             const usage = msg.usage as Record<string, number> | undefined;
             if (usage) {
               promptTokens = usage.input_tokens || 0;
@@ -221,7 +234,13 @@ export class CursorCLIProvider extends BaseProvider {
 
           // Direct content delta
           if (evt.content && typeof evt.content === 'string') {
-            yield { type: 'content', delta: { content: evt.content as string } };
+            contentBuffer += evt.content;
+            const flushed = flushToolCallsFromBuffer(contentBuffer, 'cursor', streamToolCallCount);
+            contentBuffer = flushed.remainingBuffer;
+            streamToolCallCount = flushed.count;
+            for (const event of flushed.events) {
+              yield event;
+            }
           }
 
           // Result/completion event
@@ -233,6 +252,11 @@ export class CursorCLIProvider extends BaseProvider {
             }
           }
         } catch { /* non-JSON line */ }
+      }
+
+      // Emit any remaining buffer as content
+      if (contentBuffer.length > 0) {
+        yield { type: 'content', delta: { content: contentBuffer } };
       }
 
       // Surface spawn errors instead of silently completing
@@ -402,7 +426,12 @@ export class CursorCLIProvider extends BaseProvider {
       if (!content) {
         throw new LLMProviderError('Cursor Agent returned empty output', 'EMPTY_RESPONSE', 'cursor-cli', undefined, true);
       }
-      return this.buildResponse(content, model, 0, 0);
+      const { contentWithoutToolCalls, toolCalls } = parseToolCallsFromContent(content, 'cursor');
+      return this.buildResponse(
+        contentWithoutToolCalls, model, 0, 0,
+        toolCalls.length > 0 ? toolCalls : undefined,
+        toolCalls.length > 0 ? 'tool_calls' : undefined
+      );
     }
 
     const raw = parsed.result ?? parsed.response ?? parsed.content ?? '';
@@ -410,25 +439,42 @@ export class CursorCLIProvider extends BaseProvider {
     if (!content) {
       throw new LLMProviderError('Cursor Agent returned empty response', 'EMPTY_RESPONSE', 'cursor-cli', undefined, true);
     }
+    const { contentWithoutToolCalls, toolCalls } = parseToolCallsFromContent(content, 'cursor');
+    if (!contentWithoutToolCalls && toolCalls.length === 0) {
+      throw new LLMProviderError('Cursor Agent returned empty response', 'EMPTY_RESPONSE', 'cursor-cli', undefined, true);
+    }
+
     const usage = (parsed.usage ?? {}) as Record<string, number>;
     const promptTokens = usage.input_tokens || usage.prompt_tokens || 0;
     const completionTokens = usage.output_tokens || usage.completion_tokens || 0;
 
-    return this.buildResponse(content, model, promptTokens, completionTokens);
+    return this.buildResponse(
+      contentWithoutToolCalls, model, promptTokens, completionTokens,
+      toolCalls.length > 0 ? toolCalls : undefined,
+      toolCalls.length > 0 ? 'tool_calls' : undefined
+    );
   }
 
-  private buildResponse(content: string, model: LLMModel, promptTokens: number, completionTokens: number): LLMResponse {
+  private buildResponse(
+    content: string,
+    model: LLMModel,
+    promptTokens: number,
+    completionTokens: number,
+    toolCalls?: LLMToolCall[],
+    finishReason?: LLMResponse['finishReason']
+  ): LLMResponse {
     const pricing = this.capabilities.pricing[model] || FREE;
     return {
       id: `cursor-cli-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       model, provider: 'cursor-cli', content,
+      ...(toolCalls && toolCalls.length > 0 ? { toolCalls } : {}),
       usage: { promptTokens, completionTokens, totalTokens: promptTokens + completionTokens },
       cost: calcCost(promptTokens, completionTokens, pricing),
-      finishReason: 'stop',
+      finishReason: finishReason || 'stop',
     };
   }
 
-  private formatMessages(messages: LLMMessage[]): string {
+  private formatMessages(messages: LLMMessage[], tools?: LLMTool[]): string {
     const systemParts: string[] = [];
     const convParts: string[] = [];
     for (const msg of messages) {
@@ -448,6 +494,12 @@ export class CursorCLIProvider extends BaseProvider {
     const parts: string[] = [];
     if (systemParts.length > 0) parts.push(`System: ${systemParts.join('\n')}`);
     if (convParts.length > 0) parts.push(convParts.join('\n'));
+
+    if (tools && tools.length > 0) {
+      parts.push(...formatToolInstructions(tools));
+    }
+
     return parts.join('\n\n');
   }
+
 }

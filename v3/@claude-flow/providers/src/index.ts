@@ -55,6 +55,9 @@ export type { AgenticProvider, AgenticOptions, AgenticResult, AgenticToolEvent }
 // Export streaming buffer utility
 export { bufferStreamResponse } from './streaming-buffer.js';
 
+// Export shared tool-call utilities
+export { escapeXml, parseToolCallPayload, parseToolCallsFromContent, formatToolInstructions, flushToolCallsFromBuffer } from './tool-call-utils.js';
+
 // Export model alias resolver
 export { resolveProviderModel, PROVIDER_ALIAS_MAP, KNOWN_PROVIDER_MODELS, CLAUDE_ALIASES, PROVIDER_DEFAULTS } from './model-alias-resolver.js';
 export type { ClaudeAlias, CLIProviderName } from './model-alias-resolver.js';

@@ -6,7 +6,9 @@
  */
 
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
+import { execFile } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import type { MCPTool } from './types.js';
 
 // Storage paths
@@ -521,6 +523,110 @@ export const agentTools: MCPTool[] = [
       }
 
       return { action, error: 'Unknown action' };
+    },
+  },
+  {
+    name: 'agent_task',
+    description: 'Send a task to a provider-backed agent for execution',
+    category: 'agent',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        agentId: { type: 'string', description: 'ID of the agent (must be spawned first via agent_spawn)' },
+        task: { type: 'string', description: 'Task prompt to send to the agent' },
+        timeout: { type: 'number', description: 'Timeout in ms (default: 120000)' },
+      },
+      required: ['agentId', 'task'],
+    },
+    handler: async (input) => {
+      const agentId = input.agentId as string;
+      const task = input.task as string;
+      const timeout = (input.timeout as number) || 120000;
+
+      // Load and validate agent
+      const store = loadAgentStore();
+      const agent = store.agents[agentId];
+      if (!agent) {
+        return { success: false, agentId, error: 'Agent not found' };
+      }
+      if (!agent.provider) {
+        return { success: false, agentId, error: 'Agent has no provider — use agent_spawn with a provider first' };
+      }
+      if (agent.status === 'terminated') {
+        return { success: false, agentId, error: 'Agent is terminated' };
+      }
+
+      // Mark agent busy
+      agent.status = 'busy';
+      saveAgentStore(store);
+
+      // Resolve bridge script path relative to compiled output location
+      const thisDir = dirname(fileURLToPath(import.meta.url));
+      const bridgePath = join(thisDir, '..', '..', '..', '..', 'providers', 'scripts', 'provider-agent-bridge.mjs');
+
+      if (!existsSync(bridgePath)) {
+        agent.status = 'idle';
+        saveAgentStore(store);
+        return { success: false, agentId, error: `Bridge script not found at ${bridgePath}` };
+      }
+
+      const agentDir = getAgentDir();
+      const args = ['--agent-id', agentId, '--task', task, '--store-dir', agentDir];
+
+      return new Promise((resolve) => {
+        const child = execFile('node', [bridgePath, ...args], { timeout, maxBuffer: 10 * 1024 * 1024 }, (err, stdout, stderr) => {
+          // Reload store to avoid overwriting bridge's state updates
+          const freshStore = loadAgentStore();
+          const freshAgent = freshStore.agents[agentId];
+
+          if (err) {
+            if (freshAgent) {
+              freshAgent.status = 'idle';
+              saveAgentStore(freshStore);
+            }
+            // Try to parse error JSON from stdout (bridge writes errors there)
+            let parsed: Record<string, unknown> | undefined;
+            try { parsed = JSON.parse(stdout); } catch { /* not JSON */ }
+            if (parsed && parsed.error) {
+              resolve({ success: false, agentId, error: parsed.error, stderr: stderr || undefined });
+            } else {
+              resolve({ success: false, agentId, error: err.message, stderr: stderr || undefined });
+            }
+            return;
+          }
+
+          // Parse bridge JSON output
+          let result: Record<string, unknown>;
+          try {
+            result = JSON.parse(stdout);
+          } catch {
+            if (freshAgent) {
+              freshAgent.status = 'idle';
+              saveAgentStore(freshStore);
+            }
+            resolve({ success: false, agentId, error: 'Failed to parse bridge output', rawOutput: stdout.slice(0, 2000) });
+            return;
+          }
+
+          // Bridge already saves updated agent state; just reset status to idle
+          if (freshAgent && freshAgent.status === 'busy') {
+            freshAgent.status = 'idle';
+            saveAgentStore(freshStore);
+          }
+
+          resolve(result);
+        });
+
+        // Safety: ensure child is killed on timeout (execFile handles this, but be explicit)
+        child.on('error', (spawnErr) => {
+          const errStore = loadAgentStore();
+          if (errStore.agents[agentId]) {
+            errStore.agents[agentId].status = 'idle';
+            saveAgentStore(errStore);
+          }
+          resolve({ success: false, agentId, error: `Failed to spawn bridge: ${spawnErr.message}` });
+        });
+      });
     },
   },
   {

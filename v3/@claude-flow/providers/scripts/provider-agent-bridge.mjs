@@ -227,6 +227,43 @@ function parseArgs() {
   return parsed;
 }
 
+// ===== Provider Usage Tracking =====
+
+function trackProviderUsage(providerName, usage, startTime) {
+  try {
+    const providerMap = { 'gemini-cli': 'gemini', 'codex-cli': 'codex', 'cursor-cli': 'cursor' };
+    const mappedName = providerMap[providerName] || providerName;
+    const ttfb_ms = Date.now() - startTime;
+    const metricsDir = join(process.cwd(), '.claude-flow', 'metrics');
+    const metricsPath = join(metricsDir, 'provider-usage.json');
+
+    if (!existsSync(metricsDir)) mkdirSync(metricsDir, { recursive: true });
+
+    let data = { sessionId: `session-${Date.now()}`, startedAt: new Date().toISOString(), providers: {} };
+    try {
+      if (existsSync(metricsPath)) {
+        data = JSON.parse(readFileSync(metricsPath, 'utf8'));
+      }
+    } catch { /* ignore read error */ }
+
+    if (!data.providers) data.providers = {};
+    if (!data.providers[mappedName]) {
+      data.providers[mappedName] = { calls: 0, tokens: 0, ttfb_avg_ms: 0, last_used: null };
+    }
+
+    const p = data.providers[mappedName];
+    const totalTokens = usage?.totalTokens || 0;
+    p.ttfb_avg_ms = Math.round(((p.ttfb_avg_ms || 0) * p.calls + ttfb_ms) / (p.calls + 1));
+    p.calls += 1;
+    p.tokens += totalTokens;
+    p.last_used = new Date().toISOString();
+
+    writeFileSync(metricsPath, JSON.stringify(data, null, 2));
+  } catch (e) {
+    process.stderr.write(`[bridge] Provider usage tracking failed: ${e.message}\n`);
+  }
+}
+
 // ===== Main =====
 
 async function main() {
@@ -307,6 +344,7 @@ async function main() {
       let response;
       let iterations = 0;
       const MAX_TOOL_ITERATIONS = 10;
+      const providerStartTime = Date.now();
 
       // 2-4. Tool-calling loop
       while (iterations < MAX_TOOL_ITERATIONS) {
@@ -343,6 +381,9 @@ async function main() {
           break;
         }
       }
+
+      // Track provider usage metrics
+      trackProviderUsage(providerName, response.usage, providerStartTime);
 
       // Update agent state
       const history = agent.conversationHistory || [];

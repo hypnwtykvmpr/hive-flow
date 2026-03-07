@@ -13,9 +13,17 @@ import { createInterface } from 'readline';
 import { BaseProvider, BaseProviderOptions } from './base-provider.js';
 import {
   LLMProvider, LLMModel, LLMRequest, LLMResponse, LLMStreamEvent,
+  LLMMessage, LLMTool, LLMToolCall,
   ModelInfo, ProviderCapabilities, HealthCheckResult, LLMProviderError,
   AuthenticationError, ProviderUnavailableError, RateLimitError,
 } from './types.js';
+import {
+  parseToolCallPayload,
+  parseToolCallsFromContent,
+  formatToolInstructions,
+  flushToolCallsFromBuffer,
+  escapeXml,
+} from './tool-call-utils.js';
 
 // ===== JSONL Event Types =====
 
@@ -85,7 +93,7 @@ export class CodexCLIProvider extends BaseProvider {
     supportedModels: CODEX_MODELS,
     maxContextLength: toRecord((k) => MODEL_INFO[k].ctx),
     maxOutputTokens: toRecord((k) => MODEL_INFO[k].out),
-    supportsStreaming: true, supportsToolCalling: false, supportsSystemMessages: true,
+    supportsStreaming: true, supportsToolCalling: true, supportsSystemMessages: true,
     supportsVision: false, supportsAudio: false, supportsFineTuning: false,
     supportsEmbeddings: false, supportsBatching: false,
     rateLimit: { requestsPerMinute: 60, tokensPerMinute: 1000000, concurrentRequests: 5 },
@@ -125,7 +133,8 @@ export class CodexCLIProvider extends BaseProvider {
   protected async doComplete(request: LLMRequest): Promise<LLMResponse> {
     this.ensureBinary();
     const model = request.model || this.config.model;
-    const child = this.spawnCodex(request, model);
+    const prompt = this.formatMessages(request.messages, request.tools);
+    const child = this.spawnCodex(prompt, model);
     const rl = createInterface({ input: child.stdout! });
 
     return new Promise<LLMResponse>((resolve, reject) => {
@@ -197,14 +206,19 @@ export class CodexCLIProvider extends BaseProvider {
           reject(new LLMProviderError('Codex returned empty response', 'EMPTY_RESPONSE', 'codex-cli', undefined, true));
           return;
         }
-        const pricing = this.capabilities.pricing[model] || FREE;
-        resolve({
-          id: `codex-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-          model: model as LLMModel, provider: 'codex-cli', content: responseText,
-          usage: { promptTokens: usage.input, completionTokens: usage.output, totalTokens: usage.input + usage.output },
-          cost: calcCost(usage.input, usage.output, pricing),
-          finishReason: 'stop',
-        });
+        const { contentWithoutToolCalls, toolCalls } = parseToolCallsFromContent(responseText, 'codex');
+        if (!contentWithoutToolCalls && toolCalls.length === 0) {
+          reject(new LLMProviderError('Codex returned empty response', 'EMPTY_RESPONSE', 'codex-cli', undefined, true));
+          return;
+        }
+        resolve(this.buildResponse(
+          contentWithoutToolCalls,
+          model as LLMModel,
+          usage.input,
+          usage.output,
+          toolCalls.length > 0 ? toolCalls : undefined,
+          toolCalls.length > 0 ? 'tool_calls' : undefined
+        ));
       });
 
       child.on('error', (err) => {
@@ -221,7 +235,8 @@ export class CodexCLIProvider extends BaseProvider {
   protected async *doStreamComplete(request: LLMRequest): AsyncIterable<LLMStreamEvent> {
     this.ensureBinary();
     const model = request.model || this.config.model;
-    const child = this.spawnCodex(request, model);
+    const prompt = this.formatMessages(request.messages, request.tools);
+    const child = this.spawnCodex(prompt, model);
     const rl = createInterface({ input: child.stdout! });
 
     const queue: string[] = [];
@@ -237,6 +252,10 @@ export class CodexCLIProvider extends BaseProvider {
     const streamTimeoutMs = request.timeout || this.defaultTimeout;
     const timer = setTimeout(() => { child.kill('SIGKILL'); this.activeProcesses.delete(child); done = true; wake(); }, streamTimeoutMs);
 
+    // Buffer for tool_call detection: emit content and tool_call events as complete blocks appear
+    let contentBuffer = '';
+    let streamToolCallCount = 0;
+
     try {
       while (!done || queue.length > 0) {
         if (queue.length === 0 && !done) {
@@ -251,10 +270,20 @@ export class CodexCLIProvider extends BaseProvider {
         if (ev.type === 'item.completed') {
           const e = ev as CodexItemCompleted;
           if (e.item.type === 'agent_message' && e.item.text) {
-            yield { type: 'content', delta: { content: e.item.text } };
+            contentBuffer += e.item.text;
+            const flushed = flushToolCallsFromBuffer(contentBuffer, 'codex', streamToolCallCount);
+            contentBuffer = flushed.remainingBuffer;
+            streamToolCallCount = flushed.count;
+            for (const event of flushed.events) {
+              yield event;
+            }
           }
         } else if (ev.type === 'turn.completed') {
           const e = ev as CodexTurnCompleted;
+          if (contentBuffer.length > 0) {
+            yield { type: 'content', delta: { content: contentBuffer } };
+            contentBuffer = '';
+          }
           const p = e.usage?.input_tokens || 0, c = e.usage?.output_tokens || 0;
           const pricing = this.capabilities.pricing[model] || FREE;
           yield { type: 'done', usage: { promptTokens: p, completionTokens: c, totalTokens: p + c }, cost: calcCost(p, c, pricing) };
@@ -268,6 +297,9 @@ export class CodexCLIProvider extends BaseProvider {
           const m = e.message || e.error?.message || '';
           if (!RECONNECT_RE.test(m)) yield { type: 'error', error: new Error(m || 'Unknown error') };
         }
+      }
+      if (contentBuffer.length > 0) {
+        yield { type: 'content', delta: { content: contentBuffer } };
       }
       // Surface spawn errors instead of silently completing
       if (spawnError) {
@@ -349,13 +381,7 @@ export class CodexCLIProvider extends BaseProvider {
     }
   }
 
-  private spawnCodex(request: LLMRequest, model: LLMModel): ChildProcess {
-    const prompt = request.messages.map((msg) => {
-      const role = msg.role.charAt(0).toUpperCase() + msg.role.slice(1);
-      const text = typeof msg.content === 'string' ? msg.content : msg.content.map((p) => p.text || '').join('');
-      return `${role}: ${text}`;
-    }).join('\n\n');
-
+  private spawnCodex(prompt: string, model: LLMModel): ChildProcess {
     // Guard against ARG_MAX: measure byte length (UTF-8) not JS character count
     // to handle multi-byte Unicode correctly. Limit to 200KB to stay well under
     // typical ARG_MAX of 1MB (leaving room for env vars and other args).
@@ -410,6 +436,27 @@ export class CodexCLIProvider extends BaseProvider {
     return child;
   }
 
+  private buildResponse(
+    content: string,
+    model: LLMModel,
+    promptTokens: number,
+    completionTokens: number,
+    toolCalls?: LLMToolCall[],
+    finishReason?: LLMResponse['finishReason']
+  ): LLMResponse {
+    const pricing = this.capabilities.pricing[model] || FREE;
+    return {
+      id: `codex-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      model,
+      provider: 'codex-cli',
+      content,
+      ...(toolCalls && toolCalls.length > 0 ? { toolCalls } : {}),
+      usage: { promptTokens, completionTokens, totalTokens: promptTokens + completionTokens },
+      cost: calcCost(promptTokens, completionTokens, pricing),
+      finishReason: finishReason ?? 'stop',
+    };
+  }
+
   private parseNestedErrorMessage(message: string): string {
     try {
       const parsed = JSON.parse(message);
@@ -439,5 +486,38 @@ export class CodexCLIProvider extends BaseProvider {
     }
     const m = CODEX_ERROR_MAP[errorType] || CODEX_ERROR_MAP.Other;
     return new LLMProviderError(message, m.code, 'codex-cli', m.status, m.retryable, { errorType });
+  }
+
+  /**
+   * Format LLMMessage[] into a single prompt string for the CLI.
+   * System messages first, then user/assistant turns in order.
+   * If tools are provided, appends a structured tool schema section and usage instructions.
+   */
+  private formatMessages(messages: LLMMessage[], tools?: LLMTool[]): string {
+    const systemParts: string[] = [];
+    const convParts: string[] = [];
+
+    for (const msg of messages) {
+      const text = typeof msg.content === 'string'
+        ? msg.content
+        : msg.content.filter((p) => p.type === 'text' && p.text).map((p) => p.text!).join('\n');
+
+      if (msg.role === 'system') {
+        systemParts.push(text);
+      } else {
+        const label = msg.role === 'assistant' ? 'Assistant' : 'User';
+        convParts.push(`${label}: ${text}`);
+      }
+    }
+
+    const parts: string[] = [];
+    if (systemParts.length > 0) parts.push(`System: ${systemParts.join('\n')}`);
+    if (convParts.length > 0) parts.push(convParts.join('\n'));
+
+    if (tools && tools.length > 0) {
+      parts.push(...formatToolInstructions(tools));
+    }
+
+    return parts.join('\n\n');
   }
 }
