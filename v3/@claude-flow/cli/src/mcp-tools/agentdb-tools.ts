@@ -5,10 +5,53 @@
  * Provides direct access to ReasoningBank, CausalGraph, SkillLibrary,
  * AttestationLog, and bridge health through the MCP protocol.
  *
+ * Security: All handlers validate input types, enforce length bounds,
+ * and sanitize error messages before returning to MCP callers.
+ *
  * @module v3/cli/mcp-tools/agentdb-tools
  */
 
 import type { MCPTool } from './types.js';
+
+// ===== Shared validation helpers =====
+
+const MAX_STRING_LENGTH = 100_000; // 100KB max for any string input
+const MAX_BATCH_SIZE = 500;        // Max entries per batch operation
+const MAX_TOP_K = 100;             // Max results per query
+
+function validateString(value: unknown, name: string, maxLen = MAX_STRING_LENGTH): string | null {
+  if (typeof value !== 'string' || value.length === 0) return null;
+  if (value.length > maxLen) return null;
+  return value;
+}
+
+function validatePositiveInt(value: unknown, defaultVal: number, max: number): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return defaultVal;
+  const n = Math.floor(value);
+  return n > 0 ? Math.min(n, max) : defaultVal;
+}
+
+function validateScore(value: unknown, defaultVal: number): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return defaultVal;
+  return Math.max(0, Math.min(1, value));
+}
+
+function sanitizeError(error: unknown): string {
+  if (error instanceof Error) {
+    // Strip filesystem paths from error messages
+    return error.message.replace(/\/[^\s:]+\//g, '<path>/').substring(0, 500);
+  }
+  return 'Internal error';
+}
+
+// Lazy-cached bridge module
+let bridgeModule: typeof import('../memory/memory-bridge.js') | null = null;
+async function getBridge() {
+  if (!bridgeModule) {
+    bridgeModule = await import('../memory/memory-bridge.js');
+  }
+  return bridgeModule;
+}
 
 // ===== agentdb_health — Controller health check =====
 
@@ -21,14 +64,12 @@ export const agentdbHealth: MCPTool = {
   },
   handler: async () => {
     try {
-      const bridge = await import('../memory/memory-bridge.js');
+      const bridge = await getBridge();
       const health = await bridge.bridgeHealthCheck();
-      if (!health) {
-        return { available: false, error: 'AgentDB bridge not available' };
-      }
+      if (!health) return { available: false, error: 'AgentDB bridge not available' };
       return health;
     } catch (error) {
-      return { available: false, error: error instanceof Error ? error.message : String(error) };
+      return { available: false, error: sanitizeError(error) };
     }
   },
 };
@@ -44,19 +85,17 @@ export const agentdbControllers: MCPTool = {
   },
   handler: async () => {
     try {
-      const bridge = await import('../memory/memory-bridge.js');
+      const bridge = await getBridge();
       const controllers = await bridge.bridgeListControllers();
-      if (!controllers) {
-        return { available: false, controllers: [], error: 'Bridge not available' };
-      }
+      if (!controllers) return { available: false, controllers: [], error: 'Bridge not available' };
       return {
         available: true,
         controllers,
         total: controllers.length,
-        active: controllers.filter(c => c.enabled).length,
+        active: controllers.filter((c: any) => c.enabled).length,
       };
     } catch (error) {
-      return { available: false, error: error instanceof Error ? error.message : String(error) };
+      return { available: false, error: sanitizeError(error) };
     }
   },
 };
@@ -77,15 +116,17 @@ export const agentdbPatternStore: MCPTool = {
   },
   handler: async (params: Record<string, unknown>) => {
     try {
-      const bridge = await import('../memory/memory-bridge.js');
+      const pattern = validateString(params.pattern, 'pattern');
+      if (!pattern) return { success: false, error: 'pattern is required (non-empty string, max 100KB)' };
+      const bridge = await getBridge();
       const result = await bridge.bridgeStorePattern({
-        pattern: params.pattern as string,
-        type: (params.type as string) || 'general',
-        confidence: (params.confidence as number) || 0.8,
+        pattern,
+        type: validateString(params.type, 'type', 200) ?? 'general',
+        confidence: validateScore(params.confidence, 0.8),
       });
-      return result || { success: false, error: 'Bridge not available' };
+      return result ?? { success: false, error: 'Bridge not available' };
     } catch (error) {
-      return { success: false, error: error instanceof Error ? error.message : String(error) };
+      return { success: false, error: sanitizeError(error) };
     }
   },
 };
@@ -106,15 +147,17 @@ export const agentdbPatternSearch: MCPTool = {
   },
   handler: async (params: Record<string, unknown>) => {
     try {
-      const bridge = await import('../memory/memory-bridge.js');
+      const query = validateString(params.query, 'query', 10_000);
+      if (!query) return { results: [], error: 'query is required (non-empty string, max 10KB)' };
+      const bridge = await getBridge();
       const result = await bridge.bridgeSearchPatterns({
-        query: params.query as string,
-        topK: (params.topK as number) || 5,
-        minConfidence: (params.minConfidence as number) || 0.3,
+        query,
+        topK: validatePositiveInt(params.topK, 5, MAX_TOP_K),
+        minConfidence: validateScore(params.minConfidence, 0.3),
       });
-      return result || { results: [], controller: 'unavailable' };
+      return result ?? { results: [], controller: 'unavailable' };
     } catch (error) {
-      return { results: [], error: error instanceof Error ? error.message : String(error) };
+      return { results: [], error: sanitizeError(error) };
     }
   },
 };
@@ -136,16 +179,18 @@ export const agentdbFeedback: MCPTool = {
   },
   handler: async (params: Record<string, unknown>) => {
     try {
-      const bridge = await import('../memory/memory-bridge.js');
+      const taskId = validateString(params.taskId, 'taskId', 500);
+      if (!taskId) return { success: false, error: 'taskId is required (non-empty string, max 500 chars)' };
+      const bridge = await getBridge();
       const result = await bridge.bridgeRecordFeedback({
-        taskId: params.taskId as string,
-        success: params.success !== false,
-        quality: (params.quality as number) || 0.85,
-        agent: params.agent as string | undefined,
+        taskId,
+        success: params.success === true,
+        quality: validateScore(params.quality, 0.85),
+        agent: validateString(params.agent, 'agent', 200) ?? undefined,
       });
-      return result || { success: false, error: 'Bridge not available' };
+      return result ?? { success: false, error: 'Bridge not available' };
     } catch (error) {
-      return { success: false, error: error instanceof Error ? error.message : String(error) };
+      return { success: false, error: sanitizeError(error) };
     }
   },
 };
@@ -167,16 +212,22 @@ export const agentdbCausalEdge: MCPTool = {
   },
   handler: async (params: Record<string, unknown>) => {
     try {
-      const bridge = await import('../memory/memory-bridge.js');
+      const sourceId = validateString(params.sourceId, 'sourceId', 500);
+      const targetId = validateString(params.targetId, 'targetId', 500);
+      const relation = validateString(params.relation, 'relation', 200);
+      if (!sourceId) return { success: false, error: 'sourceId is required (non-empty string)' };
+      if (!targetId) return { success: false, error: 'targetId is required (non-empty string)' };
+      if (!relation) return { success: false, error: 'relation is required (non-empty string)' };
+      const bridge = await getBridge();
       const result = await bridge.bridgeRecordCausalEdge({
-        sourceId: params.sourceId as string,
-        targetId: params.targetId as string,
-        relation: params.relation as string,
-        weight: params.weight as number | undefined,
+        sourceId,
+        targetId,
+        relation,
+        weight: typeof params.weight === 'number' ? validateScore(params.weight, 0.5) : undefined,
       });
-      return result || { success: false, error: 'Bridge not available' };
+      return result ?? { success: false, error: 'Bridge not available' };
     } catch (error) {
-      return { success: false, error: error instanceof Error ? error.message : String(error) };
+      return { success: false, error: sanitizeError(error) };
     }
   },
 };
@@ -196,14 +247,16 @@ export const agentdbRoute: MCPTool = {
   },
   handler: async (params: Record<string, unknown>) => {
     try {
-      const bridge = await import('../memory/memory-bridge.js');
+      const task = validateString(params.task, 'task', 10_000);
+      if (!task) return { route: 'general', confidence: 0.5, agents: ['coder'], controller: 'error', error: 'task is required (non-empty string)' };
+      const bridge = await getBridge();
       const result = await bridge.bridgeRouteTask({
-        task: params.task as string,
-        context: params.context as string | undefined,
+        task,
+        context: validateString(params.context, 'context', 10_000) ?? undefined,
       });
-      return result || { route: 'general', confidence: 0.5, agents: ['coder'], controller: 'fallback' };
+      return result ?? { route: 'general', confidence: 0.5, agents: ['coder'], controller: 'fallback' };
     } catch (error) {
-      return { route: 'general', confidence: 0.5, agents: ['coder'], controller: 'error', error: error instanceof Error ? error.message : String(error) };
+      return { route: 'general', confidence: 0.5, agents: ['coder'], controller: 'error', error: sanitizeError(error) };
     }
   },
 };
@@ -223,14 +276,16 @@ export const agentdbSessionStart: MCPTool = {
   },
   handler: async (params: Record<string, unknown>) => {
     try {
-      const bridge = await import('../memory/memory-bridge.js');
+      const sessionId = validateString(params.sessionId, 'sessionId', 500);
+      if (!sessionId) return { success: false, error: 'sessionId is required (non-empty string)' };
+      const bridge = await getBridge();
       const result = await bridge.bridgeSessionStart({
-        sessionId: params.sessionId as string,
-        context: params.context as string | undefined,
+        sessionId,
+        context: validateString(params.context, 'context', 10_000) ?? undefined,
       });
-      return result || { success: false, error: 'Bridge not available' };
+      return result ?? { success: false, error: 'Bridge not available' };
     } catch (error) {
-      return { success: false, error: error instanceof Error ? error.message : String(error) };
+      return { success: false, error: sanitizeError(error) };
     }
   },
 };
@@ -251,15 +306,17 @@ export const agentdbSessionEnd: MCPTool = {
   },
   handler: async (params: Record<string, unknown>) => {
     try {
-      const bridge = await import('../memory/memory-bridge.js');
+      const sessionId = validateString(params.sessionId, 'sessionId', 500);
+      if (!sessionId) return { success: false, error: 'sessionId is required (non-empty string)' };
+      const bridge = await getBridge();
       const result = await bridge.bridgeSessionEnd({
-        sessionId: params.sessionId as string,
-        summary: params.summary as string | undefined,
-        tasksCompleted: params.tasksCompleted as number | undefined,
+        sessionId,
+        summary: validateString(params.summary, 'summary', 50_000) ?? undefined,
+        tasksCompleted: validatePositiveInt(params.tasksCompleted, 0, 10_000),
       });
-      return result || { success: false, error: 'Bridge not available' };
+      return result ?? { success: false, error: 'Bridge not available' };
     } catch (error) {
-      return { success: false, error: error instanceof Error ? error.message : String(error) };
+      return { success: false, error: sanitizeError(error) };
     }
   },
 };
@@ -268,7 +325,7 @@ export const agentdbSessionEnd: MCPTool = {
 
 export const agentdbHierarchicalStore: MCPTool = {
   name: 'agentdb_hierarchical-store',
-  description: 'Store to hierarchical memory with tier (working, shortTerm, longTerm)',
+  description: 'Store to hierarchical memory with tier (working, episodic, semantic)',
   inputSchema: {
     type: 'object',
     properties: {
@@ -276,8 +333,8 @@ export const agentdbHierarchicalStore: MCPTool = {
       value: { type: 'string', description: 'Memory entry value' },
       tier: {
         type: 'string',
-        description: 'Memory tier (working, shortTerm, longTerm)',
-        enum: ['working', 'shortTerm', 'longTerm'],
+        description: 'Memory tier (working, episodic, semantic)',
+        enum: ['working', 'episodic', 'semantic'],
         default: 'working',
       },
     },
@@ -285,15 +342,19 @@ export const agentdbHierarchicalStore: MCPTool = {
   },
   handler: async (params: Record<string, unknown>) => {
     try {
-      const bridge = await import('../memory/memory-bridge.js');
-      const result = await bridge.bridgeHierarchicalStore({
-        key: params.key as string,
-        value: params.value as string,
-        tier: (params.tier as string) || 'working',
-      });
-      return result || { success: false, error: 'Bridge not available' };
+      const key = validateString(params.key, 'key', 1000);
+      const value = validateString(params.value, 'value');
+      if (!key) return { success: false, error: 'key is required (non-empty string, max 1KB)' };
+      if (!value) return { success: false, error: 'value is required (non-empty string, max 100KB)' };
+      const tier = validateString(params.tier, 'tier', 20) ?? 'working';
+      if (!['working', 'episodic', 'semantic'].includes(tier)) {
+        return { success: false, error: `Invalid tier: ${tier}. Must be working, episodic, or semantic` };
+      }
+      const bridge = await getBridge();
+      const result = await bridge.bridgeHierarchicalStore({ key, value, tier });
+      return result ?? { success: false, error: 'Bridge not available' };
     } catch (error) {
-      return { success: false, error: error instanceof Error ? error.message : String(error) };
+      return { success: false, error: sanitizeError(error) };
     }
   },
 };
@@ -307,22 +368,28 @@ export const agentdbHierarchicalRecall: MCPTool = {
     type: 'object',
     properties: {
       query: { type: 'string', description: 'Recall query' },
-      tier: { type: 'string', description: 'Filter by tier (working, shortTerm, longTerm)' },
+      tier: { type: 'string', description: 'Filter by tier (working, episodic, semantic)' },
       topK: { type: 'number', description: 'Number of results (default: 5)' },
     },
     required: ['query'],
   },
   handler: async (params: Record<string, unknown>) => {
     try {
-      const bridge = await import('../memory/memory-bridge.js');
+      const query = validateString(params.query, 'query', 10_000);
+      if (!query) return { results: [], error: 'query is required (non-empty string, max 10KB)' };
+      const tier = validateString(params.tier, 'tier', 20);
+      if (tier && !['working', 'episodic', 'semantic'].includes(tier)) {
+        return { results: [], error: `Invalid tier: ${tier}. Must be working, episodic, or semantic` };
+      }
+      const bridge = await getBridge();
       const result = await bridge.bridgeHierarchicalRecall({
-        query: params.query as string,
-        tier: params.tier as string | undefined,
-        topK: (params.topK as number) || 5,
+        query,
+        tier: tier ?? undefined,
+        topK: validatePositiveInt(params.topK, 5, MAX_TOP_K),
       });
-      return result || { results: [], error: 'Bridge not available' };
+      return result ?? { results: [], error: 'Bridge not available' };
     } catch (error) {
-      return { results: [], error: error instanceof Error ? error.message : String(error) };
+      return { results: [], error: sanitizeError(error) };
     }
   },
 };
@@ -341,14 +408,14 @@ export const agentdbConsolidate: MCPTool = {
   },
   handler: async (params: Record<string, unknown>) => {
     try {
-      const bridge = await import('../memory/memory-bridge.js');
+      const bridge = await getBridge();
       const result = await bridge.bridgeConsolidate({
-        minAge: params.minAge as number | undefined,
-        maxEntries: params.maxEntries as number | undefined,
+        minAge: typeof params.minAge === 'number' ? Math.max(0, params.minAge) : undefined,
+        maxEntries: validatePositiveInt(params.maxEntries, 1000, 10_000),
       });
-      return result || { success: false, error: 'Bridge not available' };
+      return result ?? { success: false, error: 'Bridge not available' };
     } catch (error) {
-      return { success: false, error: error instanceof Error ? error.message : String(error) };
+      return { success: false, error: sanitizeError(error) };
     }
   },
 };
@@ -383,14 +450,37 @@ export const agentdbBatch: MCPTool = {
   },
   handler: async (params: Record<string, unknown>) => {
     try {
-      const bridge = await import('../memory/memory-bridge.js');
+      const operation = validateString(params.operation, 'operation', 20);
+      if (!operation) return { success: false, error: 'operation is required (string)' };
+      if (!['insert', 'update', 'delete'].includes(operation)) {
+        return { success: false, error: `Invalid operation: ${operation}. Must be insert, update, or delete` };
+      }
+      if (!Array.isArray(params.entries) || params.entries.length === 0) {
+        return { success: false, error: 'entries is required (non-empty array)' };
+      }
+      if (params.entries.length > MAX_BATCH_SIZE) {
+        return { success: false, error: `Too many entries: ${params.entries.length}. Max is ${MAX_BATCH_SIZE}` };
+      }
+      // Validate each entry
+      const validatedEntries: Array<{ key: string; value?: string; metadata?: Record<string, unknown> }> = [];
+      for (let i = 0; i < params.entries.length; i++) {
+        const entry = params.entries[i];
+        if (!entry || typeof entry !== 'object') {
+          return { success: false, error: `entries[${i}] must be an object` };
+        }
+        const key = validateString((entry as any).key, `entries[${i}].key`, 1000);
+        if (!key) return { success: false, error: `entries[${i}].key is required (non-empty string)` };
+        const value = validateString((entry as any).value, `entries[${i}].value`);
+        validatedEntries.push({ key, value: value ?? undefined });
+      }
+      const bridge = await getBridge();
       const result = await bridge.bridgeBatchOperation({
-        operation: params.operation as string,
-        entries: params.entries as any[],
+        operation,
+        entries: validatedEntries,
       });
-      return result || { success: false, error: 'Bridge not available' };
+      return result ?? { success: false, error: 'Bridge not available' };
     } catch (error) {
-      return { success: false, error: error instanceof Error ? error.message : String(error) };
+      return { success: false, error: sanitizeError(error) };
     }
   },
 };
@@ -410,14 +500,16 @@ export const agentdbContextSynthesize: MCPTool = {
   },
   handler: async (params: Record<string, unknown>) => {
     try {
-      const bridge = await import('../memory/memory-bridge.js');
+      const query = validateString(params.query, 'query', 10_000);
+      if (!query) return { success: false, error: 'query is required (non-empty string, max 10KB)' };
+      const bridge = await getBridge();
       const result = await bridge.bridgeContextSynthesize({
-        query: params.query as string,
-        maxEntries: (params.maxEntries as number) || 10,
+        query,
+        maxEntries: validatePositiveInt(params.maxEntries, 10, MAX_TOP_K),
       });
-      return result || { success: false, error: 'Bridge not available' };
+      return result ?? { success: false, error: 'Bridge not available' };
     } catch (error) {
-      return { success: false, error: error instanceof Error ? error.message : String(error) };
+      return { success: false, error: sanitizeError(error) };
     }
   },
 };
@@ -436,13 +528,13 @@ export const agentdbSemanticRoute: MCPTool = {
   },
   handler: async (params: Record<string, unknown>) => {
     try {
-      const bridge = await import('../memory/memory-bridge.js');
-      const result = await bridge.bridgeSemanticRoute({
-        input: params.input as string,
-      });
-      return result || { route: null, error: 'Bridge not available' };
+      const input = validateString(params.input, 'input', 10_000);
+      if (!input) return { route: null, error: 'input is required (non-empty string, max 10KB)' };
+      const bridge = await getBridge();
+      const result = await bridge.bridgeSemanticRoute({ input });
+      return result ?? { route: null, error: 'Bridge not available' };
     } catch (error) {
-      return { route: null, error: error instanceof Error ? error.message : String(error) };
+      return { route: null, error: sanitizeError(error) };
     }
   },
 };

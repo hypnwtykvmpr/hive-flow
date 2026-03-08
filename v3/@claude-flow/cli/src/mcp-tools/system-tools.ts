@@ -11,8 +11,23 @@
 
 import type { MCPTool } from './types.js';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import * as os from 'node:os';
+
+// Dynamic version from package.json
+function getPackageVersion(): string {
+  try {
+    const thisDir = import.meta.dirname ?? dirname(fileURLToPath(import.meta.url));
+    const pkgPath = join(thisDir, '..', '..', 'package.json');
+    const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
+    return pkg.version || '3.0.0-alpha';
+  } catch {
+    return '3.0.0-alpha';
+  }
+}
+
+const PKG_VERSION = getPackageVersion();
 
 // Storage paths
 const STORAGE_DIR = '.claude-flow';
@@ -83,7 +98,7 @@ export const systemTools: MCPTool[] = [
       type: 'object',
       properties: {
         verbose: { type: 'boolean', description: 'Include detailed information' },
-        components: { type: 'array', description: 'Specific components to check' },
+        components: { type: 'array', items: { type: 'string' }, description: 'Specific components to check' },
       },
     },
     handler: async (input) => {
@@ -94,7 +109,7 @@ export const systemTools: MCPTool[] = [
         status: metrics.health >= 0.8 ? 'healthy' : metrics.health >= 0.5 ? 'degraded' : 'unhealthy',
         uptime,
         uptimeFormatted: `${Math.floor(uptime / 3600000)}h ${Math.floor((uptime % 3600000) / 60000)}m`,
-        version: '3.0.0-alpha',
+        version: PKG_VERSION,
         components: {
           swarm: { status: 'running', health: metrics.health },
           memory: { status: 'running', health: 0.95 },
@@ -283,12 +298,12 @@ export const systemTools: MCPTool[] = [
     inputSchema: {
       type: 'object',
       properties: {
-        include: { type: 'array', description: 'Information to include' },
+        include: { type: 'array', items: { type: 'string' }, description: 'Information to include' },
       },
     },
     handler: async () => {
       return {
-        version: '3.0.0-alpha',
+        version: PKG_VERSION,
         nodeVersion: process.version,
         platform: process.platform,
         arch: process.arch,
@@ -350,6 +365,78 @@ export const systemTools: MCPTool[] = [
         component,
         resetAt: new Date().toISOString(),
         message: `System ${component} has been reset`,
+      };
+    },
+  },
+  {
+    name: 'mcp_status',
+    description: 'Get MCP server status, including stdio mode detection',
+    category: 'system',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+    },
+    handler: async () => {
+      const isStdio = !process.stdin.isTTY;
+      const transport = process.env.CLAUDE_FLOW_MCP_TRANSPORT || (isStdio ? 'stdio' : 'http');
+      const port = parseInt(process.env.CLAUDE_FLOW_MCP_PORT || '3000', 10);
+
+      if (transport === 'stdio' || isStdio) {
+        return {
+          running: true,
+          pid: process.pid,
+          transport: 'stdio',
+          port: null,
+          host: null,
+        };
+      }
+
+      const host = process.env.CLAUDE_FLOW_MCP_HOST || 'localhost';
+      try {
+        const { createConnection } = await import('node:net');
+        const connected = await new Promise<boolean>((resolve) => {
+          const socket = createConnection({ host, port }, () => {
+            socket.destroy();
+            resolve(true);
+          });
+          socket.on('error', () => resolve(false));
+          socket.setTimeout(2000, () => {
+            socket.destroy();
+            resolve(false);
+          });
+        });
+
+        return { running: connected, transport, port, host };
+      } catch {
+        return { running: false, transport, port, host };
+      }
+    },
+  },
+  {
+    name: 'task_summary',
+    description: 'Get a summary of all tasks by status',
+    category: 'task',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+    },
+    handler: async () => {
+      const storePath = join(process.cwd(), '.claude-flow', 'tasks', 'store.json');
+      let tasks: Array<{ status: string }> = [];
+      try {
+        if (existsSync(storePath)) {
+          const data = readFileSync(storePath, 'utf-8');
+          const store = JSON.parse(data);
+          tasks = Object.values(store.tasks || {});
+        }
+      } catch { /* empty store */ }
+
+      return {
+        total: tasks.length,
+        pending: tasks.filter(t => t.status === 'pending').length,
+        running: tasks.filter(t => t.status === 'in_progress').length,
+        completed: tasks.filter(t => t.status === 'completed').length,
+        failed: tasks.filter(t => t.status === 'failed').length,
       };
     },
   },
