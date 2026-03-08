@@ -558,7 +558,7 @@ async function handleReasoningBankCommand(command, subArgs, flags) {
     if (isNativeBindingError) {
       console.log('⚠️  ReasoningBank unavailable (native bindings not found)');
       console.log('   Using basic JSON memory instead');
-      console.log('   💡 For full features, install locally: npm install claude-flow\n');
+      console.log('   💡 For full features, install locally: npm install hive-flow\n');
       // Fall back to basic memory stats
       if (command === 'status' || command === 'stats') {
         await showMemoryStats(async () => {
@@ -586,7 +586,7 @@ async function handleReasoningBankCommand(command, subArgs, flags) {
 
       try {
         // Set the database path for ReasoningBank
-        process.env.CLAUDE_FLOW_DB_PATH = dbPath;
+        process.env.HIVE_FLOW_DB_PATH = dbPath;
 
         const tableCheck = await checkReasoningBankTables();
 
@@ -1052,6 +1052,6 @@ function showMemoryHelp() {
   console.log('  Local Install:         Uses transformer embeddings (semantic AI)');
   console.log('                         • Finds conceptually related content');
   console.log('                         • 384-dimensional vectors (Xenova/all-MiniLM-L6-v2)');
-  console.log('                         • Install: npm install -g claude-flow@alpha');
+  console.log('                         • Install: npm install -g hive-flow@alpha');
   console.log('  Both modes work perfectly - choose based on your needs!');
 }

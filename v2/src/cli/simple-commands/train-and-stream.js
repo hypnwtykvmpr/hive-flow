@@ -11,7 +11,7 @@ import { TrainingPipeline } from './training-pipeline.js';
 export class TrainAndStreamSystem {
   constructor() {
     this.trainingPipeline = new TrainingPipeline();
-    this.streamConfig = '.claude-flow/stream-config.json';
+    this.streamConfig = '.hive-flow/stream-config.json';
   }
 
   /**
@@ -34,7 +34,7 @@ export class TrainAndStreamSystem {
 
     // Step 2: Load trained profiles
     const profiles = JSON.parse(
-      await fs.readFile('.claude-flow/agents/profiles.json', 'utf8')
+      await fs.readFile('.hive-flow/agents/profiles.json', 'utf8')
     );
 
     // Step 3: Select best strategy based on task requirements
@@ -273,7 +273,7 @@ export class TrainAndStreamSystem {
    */
   async updateProfilesFromExecution(strategy, result) {
     const profiles = JSON.parse(
-      await fs.readFile('.claude-flow/agents/profiles.json', 'utf8')
+      await fs.readFile('.hive-flow/agents/profiles.json', 'utf8')
     );
 
     if (profiles[strategy]) {
@@ -297,7 +297,7 @@ export class TrainAndStreamSystem {
       });
 
       await fs.writeFile(
-        '.claude-flow/agents/profiles.json',
+        '.hive-flow/agents/profiles.json',
         JSON.stringify(profiles, null, 2)
       );
     }

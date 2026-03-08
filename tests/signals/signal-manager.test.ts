@@ -7,8 +7,8 @@ import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vite
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
-import { SignalManager, SignalEvents } from '../../v3/@claude-flow/shared/src/signals/manager.js';
-import type { IEventBus } from '../../v3/@claude-flow/shared/src/core/interfaces/event.interface.js';
+import { SignalManager, SignalEvents } from '../../v3/@hive-flow/shared/src/signals/manager.js';
+import type { IEventBus } from '../../v3/@hive-flow/shared/src/core/interfaces/event.interface.js';
 
 function createMockEventBus(): IEventBus & { emit: Mock } {
   return {
@@ -31,7 +31,7 @@ describe('SignalManager', () => {
 
   beforeEach(async () => {
     eventBus = createMockEventBus();
-    signalsDir = path.join(os.tmpdir(), `claude-flow-test-signals-${Date.now()}`);
+    signalsDir = path.join(os.tmpdir(), `hive-flow-test-signals-${Date.now()}`);
     signalManager = new SignalManager(eventBus, {
       signalsDir,
       swarmId: 'test-swarm',

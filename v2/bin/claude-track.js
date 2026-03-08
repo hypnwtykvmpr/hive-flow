@@ -53,7 +53,7 @@ function parseTokensFromTelemetry(data) {
  */
 export async function trackClaudeSession() {
   console.log('🔍 Claude token tracker started (running in background)');
-  console.log('   Token usage will be saved to .claude-flow/metrics/token-usage.json');
+  console.log('   Token usage will be saved to .hive-flow/metrics/token-usage.json');
   
   let totalInput = 0;
   let totalOutput = 0;

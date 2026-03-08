@@ -279,7 +279,7 @@ Examples:
     Deno.exit(1);
   }
 
-  console.log(`🚀 Claude Flow Init Command Test Suite`);
+  console.log(`🚀 Hive Flow Init Command Test Suite`);
   console.log(`Running ${suitesToRun.length} test suite(s)\n`);
 
   const success = await runTests(suitesToRun, {

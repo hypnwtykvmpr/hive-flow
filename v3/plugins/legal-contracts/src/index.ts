@@ -1,5 +1,5 @@
 /**
- * Legal Contracts Plugin for Claude Flow V3
+ * Legal Contracts Plugin for Hive Flow V3
  *
  * A comprehensive legal contract analysis plugin combining hyperbolic embeddings
  * for legal ontology navigation with fast vector search for clause similarity.
@@ -13,7 +13,7 @@
  *
  * Based on ADR-034: Legal Contract Analysis Plugin
  *
- * @module @claude-flow/plugin-legal-contracts
+ * @module @hive-flow/plugin-legal-contracts
  */
 
 // Export types
@@ -51,14 +51,14 @@ import { DEFAULT_CONFIG } from './types.js';
  * Plugin metadata
  */
 export const pluginMetadata = {
-  name: '@claude-flow/plugin-legal-contracts',
+  name: '@hive-flow/plugin-legal-contracts',
   version: '3.0.0-alpha.1',
   description: 'Legal contract analysis plugin for clause extraction, risk assessment, and comparison',
-  author: 'Claude Flow Team',
+  author: 'Hive Flow Team',
   category: 'legal',
   keywords: ['legal', 'contracts', 'clause', 'risk', 'compliance'],
-  homepage: 'https://github.com/ruvnet/claude-flow',
-  repository: 'https://github.com/ruvnet/claude-flow.git',
+  homepage: 'https://github.com/ruvnet/hive-flow',
+  repository: 'https://github.com/ruvnet/hive-flow.git',
 };
 
 /**

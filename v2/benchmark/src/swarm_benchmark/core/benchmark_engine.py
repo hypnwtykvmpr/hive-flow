@@ -11,9 +11,9 @@ from ..strategies import create_strategy
 from ..output.json_writer import JSONWriter
 from ..output.sqlite_manager import SQLiteManager
 
-# Import real executor for actual Claude Flow integration
-from .claude_flow_real_executor import (
-    RealClaudeFlowExecutor, 
+# Import real executor for actual Hive Flow integration
+from .hive_flow_real_executor import (
+    RealHiveFlowExecutor, 
     SwarmCommand, 
     RealExecutionResult
 )
@@ -35,8 +35,8 @@ class BenchmarkEngine:
         # Initialize real executor if requested
         if self.use_real_executor:
             try:
-                self.real_executor = RealClaudeFlowExecutor()
-                logger.info("Real Claude Flow executor initialized")
+                self.real_executor = RealHiveFlowExecutor()
+                logger.info("Real Hive Flow executor initialized")
             except Exception as e:
                 logger.error(f"Failed to initialize real executor: {e}")
                 self.real_executor = None
@@ -172,7 +172,7 @@ class BenchmarkEngine:
                                 max_agents: int = 5,
                                 timeout: int = 60) -> Dict[str, Any]:
         """
-        Run a benchmark using real Claude Flow execution.
+        Run a benchmark using real Hive Flow execution.
         
         Args:
             objective: The benchmark objective

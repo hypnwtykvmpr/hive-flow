@@ -30,21 +30,21 @@ RUN echo '#!/bin/bash' > /test/test-concurrent.sh && \
     echo '# Test 1: Single execution' >> /test/test-concurrent.sh && \
     echo 'echo ""' >> /test/test-concurrent.sh && \
     echo 'echo "Test 1: Single NPX execution"' >> /test/test-concurrent.sh && \
-    echo 'npx claude-flow@2.7.27 --version || exit 1' >> /test/test-concurrent.sh && \
+    echo 'npx hive-flow@2.7.27 --version || exit 1' >> /test/test-concurrent.sh && \
     echo '' >> /test/test-concurrent.sh && \
     echo '# Test 2: Sequential execution (5 times)' >> /test/test-concurrent.sh && \
     echo 'echo ""' >> /test/test-concurrent.sh && \
     echo 'echo "Test 2: Sequential executions"' >> /test/test-concurrent.sh && \
     echo 'for i in {1..5}; do' >> /test/test-concurrent.sh && \
     echo '  echo "  Execution $i/5"' >> /test/test-concurrent.sh && \
-    echo '  npx claude-flow@2.7.27 --version || exit 1' >> /test/test-concurrent.sh && \
+    echo '  npx hive-flow@2.7.27 --version || exit 1' >> /test/test-concurrent.sh && \
     echo 'done' >> /test/test-concurrent.sh && \
     echo '' >> /test/test-concurrent.sh && \
     echo '# Test 3: Concurrent execution (5 parallel)' >> /test/test-concurrent.sh && \
     echo 'echo ""' >> /test/test-concurrent.sh && \
     echo 'echo "Test 3: Concurrent executions (5 parallel)"' >> /test/test-concurrent.sh && \
     echo 'for i in {1..5}; do' >> /test/test-concurrent.sh && \
-    echo '  npx claude-flow@2.7.27 --version &' >> /test/test-concurrent.sh && \
+    echo '  npx hive-flow@2.7.27 --version &' >> /test/test-concurrent.sh && \
     echo 'done' >> /test/test-concurrent.sh && \
     echo 'wait || exit 1' >> /test/test-concurrent.sh && \
     echo '' >> /test/test-concurrent.sh && \
@@ -52,14 +52,14 @@ RUN echo '#!/bin/bash' > /test/test-concurrent.sh && \
     echo 'echo ""' >> /test/test-concurrent.sh && \
     echo 'echo "Test 4: Rapid sequential (no delay)"' >> /test/test-concurrent.sh && \
     echo 'for i in {1..10}; do' >> /test/test-concurrent.sh && \
-    echo '  npx claude-flow@2.7.27 --version >/dev/null 2>&1 &' >> /test/test-concurrent.sh && \
+    echo '  npx hive-flow@2.7.27 --version >/dev/null 2>&1 &' >> /test/test-concurrent.sh && \
     echo 'done' >> /test/test-concurrent.sh && \
     echo 'wait || exit 1' >> /test/test-concurrent.sh && \
     echo '' >> /test/test-concurrent.sh && \
     echo '# Test 5: Test with hooks (if enabled)' >> /test/test-concurrent.sh && \
     echo 'echo ""' >> /test/test-concurrent.sh && \
     echo 'echo "Test 5: Testing with hooks execution"' >> /test/test-concurrent.sh && \
-    echo 'npx claude-flow@2.7.27 hooks list || echo "Hooks not configured, skipping"' >> /test/test-concurrent.sh && \
+    echo 'npx hive-flow@2.7.27 hooks list || echo "Hooks not configured, skipping"' >> /test/test-concurrent.sh && \
     echo '' >> /test/test-concurrent.sh && \
     echo 'echo ""' >> /test/test-concurrent.sh && \
     echo 'echo "✅ All tests passed!"' >> /test/test-concurrent.sh && \
@@ -87,7 +87,7 @@ RUN echo '#!/bin/bash' > /test/test-cache-cleanup.sh && \
     echo '# Run command that triggers cleanup on retry' >> /test/test-cache-cleanup.sh && \
     echo 'echo ""' >> /test/test-cache-cleanup.sh && \
     echo 'echo "Running command..."' >> /test/test-cache-cleanup.sh && \
-    echo 'npx claude-flow@2.7.27 --version || exit 1' >> /test/test-cache-cleanup.sh && \
+    echo 'npx hive-flow@2.7.27 --version || exit 1' >> /test/test-cache-cleanup.sh && \
     echo '' >> /test/test-cache-cleanup.sh && \
     echo '# Count cache entries after (should be cleaned)' >> /test/test-cache-cleanup.sh && \
     echo 'sleep 2' >> /test/test-cache-cleanup.sh && \
@@ -100,8 +100,8 @@ RUN echo '#!/bin/bash' > /test/test-cache-cleanup.sh && \
 
 # Create simple version test
 RUN echo '#!/bin/bash' > /test/test-version.sh && \
-    echo 'echo "🧪 Testing claude-flow version"' >> /test/test-version.sh && \
-    echo './bin/claude-flow --version' >> /test/test-version.sh && \
+    echo 'echo "🧪 Testing hive-flow version"' >> /test/test-version.sh && \
+    echo './bin/hive-flow --version' >> /test/test-version.sh && \
     chmod +x /test/test-version.sh
 
 # Set entrypoint

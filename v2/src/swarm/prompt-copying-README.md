@@ -1,6 +1,6 @@
 # Robust Prompt Copying System
 
-A comprehensive, enterprise-grade prompt copying mechanism designed for Claude-Flow projects. This system provides efficient, reliable, and safe copying of prompt files with advanced features like parallel processing, conflict resolution, verification, and rollback capabilities.
+A comprehensive, enterprise-grade prompt copying mechanism designed for Hive-Flow projects. This system provides efficient, reliable, and safe copying of prompt files with advanced features like parallel processing, conflict resolution, verification, and rollback capabilities.
 
 ## Features
 
@@ -73,7 +73,7 @@ const result = await manager.copyPrompts();
 ### Installation
 
 ```bash
-npm install -g @claude-flow/prompt-copier
+npm install -g @hive-flow/prompt-copier
 ```
 
 ### Basic Commands

@@ -1,10 +1,10 @@
 #!/bin/bash
-# Claude-Flow v3 Repository Cleanup Script
+# Hive-Flow v3 Repository Cleanup Script
 # Run from repository root: ./scripts/cleanup-v3.sh
 
 set -e
 
-echo "=== Claude-Flow v3 Repository Cleanup ==="
+echo "=== Hive-Flow v3 Repository Cleanup ==="
 echo ""
 
 # Colors
@@ -99,8 +99,8 @@ remove_file ".claude/test-reasoningbank-hooks.sh"
 
 echo ""
 echo "=== Phase 5: Remove Empty Directories ==="
-if [ -d "claude-flow-wiki" ] && [ -z "$(ls -A claude-flow-wiki 2>/dev/null)" ]; then
-    remove_dir "claude-flow-wiki"
+if [ -d "hive-flow-wiki" ] && [ -z "$(ls -A hive-flow-wiki 2>/dev/null)" ]; then
+    remove_dir "hive-flow-wiki"
 fi
 
 echo ""

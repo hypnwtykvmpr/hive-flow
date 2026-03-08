@@ -9,7 +9,7 @@
  */
 
 // Set environment to prevent logger initialization error
-process.env.CLAUDE_FLOW_ENV = '';
+process.env.HIVE_FLOW_ENV = '';
 
 import { describe, it, expect, beforeEach, afterEach, beforeAll } from '@jest/globals';
 import { VersionNegotiator, BackwardCompatibilityAdapter } from '../../src/mcp/protocol/version-negotiation.js';

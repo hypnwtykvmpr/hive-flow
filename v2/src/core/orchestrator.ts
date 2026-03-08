@@ -1,5 +1,5 @@
 /**
- * Main orchestrator for Claude-Flow
+ * Main orchestrator for Hive-Flow
  */
 
 import {

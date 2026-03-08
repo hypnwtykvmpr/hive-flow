@@ -1,12 +1,12 @@
 /**
  * Tool Registry for In-Process MCP Server
  *
- * Registers all 50+ Claude-Flow MCP tools for in-process execution.
+ * Registers all 50+ Hive-Flow MCP tools for in-process execution.
  * Provides tool discovery, validation, and routing.
  */
 
 import { createInProcessServer, InProcessMCPServer } from './in-process-server.js';
-import { createClaudeFlowTools } from './claude-flow-tools.js';
+import { createHiveFlowTools } from './hive-flow-tools.js';
 import { logger } from '../core/logger.js';
 import type { MCPTool } from '../utils/types.js';
 import type { McpSdkServerConfigWithInstance } from '@anthropic-ai/claude-code/sdk.d.ts';
@@ -25,7 +25,7 @@ export interface ToolRegistryConfig {
 /**
  * Global tool registry for managing all MCP tools
  */
-export class ClaudeFlowToolRegistry {
+export class HiveFlowToolRegistry {
   private inProcessServer?: InProcessMCPServer;
   private sdkServer?: McpSdkServerConfigWithInstance;
   private tools: Map<string, MCPTool>;
@@ -35,27 +35,27 @@ export class ClaudeFlowToolRegistry {
     this.config = config;
     this.tools = new Map();
 
-    logger.info('ClaudeFlowToolRegistry initialized', {
+    logger.info('HiveFlowToolRegistry initialized', {
       enableInProcess: config.enableInProcess,
       enableMetrics: config.enableMetrics,
     });
   }
 
   /**
-   * Initialize the tool registry with all Claude-Flow tools
+   * Initialize the tool registry with all Hive-Flow tools
    */
   async initialize(): Promise<void> {
-    logger.info('Loading Claude-Flow tools...');
+    logger.info('Loading Hive-Flow tools...');
 
-    // Load all tools from claude-flow-tools.ts
-    const claudeFlowTools = await createClaudeFlowTools(logger);
+    // Load all tools from hive-flow-tools.ts
+    const hiveFlowTools = await createHiveFlowTools(logger);
 
     // Register each tool
-    for (const tool of claudeFlowTools) {
+    for (const tool of hiveFlowTools) {
       this.tools.set(tool.name, tool);
     }
 
-    logger.info(`Loaded ${this.tools.size} Claude-Flow tools`);
+    logger.info(`Loaded ${this.tools.size} Hive-Flow tools`);
 
     // Create in-process server if enabled
     if (this.config.enableInProcess) {
@@ -71,7 +71,7 @@ export class ClaudeFlowToolRegistry {
 
     // Create in-process server
     this.inProcessServer = createInProcessServer({
-      name: 'claude-flow',
+      name: 'hive-flow',
       version: '2.0.0',
       enableMetrics: this.config.enableMetrics,
       enableCaching: this.config.enableCaching,
@@ -106,14 +106,14 @@ export class ClaudeFlowToolRegistry {
       throw new Error('In-process server not initialized');
     }
 
-    // Convert Claude-Flow tools to SDK tool format
+    // Convert Hive-Flow tools to SDK tool format
     const sdkTools = Array.from(this.tools.values()).map(tool => {
       return this.convertToSdkTool(tool);
     });
 
     // Create SDK MCP server
     this.sdkServer = createSdkMcpServer({
-      name: 'claude-flow',
+      name: 'hive-flow',
       version: '2.0.0',
       tools: sdkTools,
     });
@@ -122,7 +122,7 @@ export class ClaudeFlowToolRegistry {
   }
 
   /**
-   * Convert Claude-Flow tool to SDK tool format
+   * Convert Hive-Flow tool to SDK tool format
    */
   private convertToSdkTool(mcpTool: MCPTool): any {
     // Convert JSON Schema to Zod schema
@@ -255,7 +255,7 @@ export class ClaudeFlowToolRegistry {
    * Check if tool should use in-process execution
    */
   shouldUseInProcess(toolName: string): boolean {
-    // All Claude-Flow tools use in-process
+    // All Hive-Flow tools use in-process
     return this.tools.has(toolName);
   }
 
@@ -334,7 +334,7 @@ export class ClaudeFlowToolRegistry {
       inProcessLatency: `${avgInProcessLatency.toFixed(2)}ms`,
       estimatedIPCLatency: `${estimatedIPCLatency.toFixed(2)}ms`,
       speedupFactor: `${(estimatedIPCLatency / avgInProcessLatency).toFixed(1)}x`,
-      recommendation: 'Use in-process for all Claude-Flow tools for maximum performance',
+      recommendation: 'Use in-process for all Hive-Flow tools for maximum performance',
     };
   }
 
@@ -357,8 +357,8 @@ export class ClaudeFlowToolRegistry {
  */
 export async function createToolRegistry(
   config: ToolRegistryConfig
-): Promise<ClaudeFlowToolRegistry> {
-  const registry = new ClaudeFlowToolRegistry(config);
+): Promise<HiveFlowToolRegistry> {
+  const registry = new HiveFlowToolRegistry(config);
   await registry.initialize();
   return registry;
 }
@@ -366,7 +366,7 @@ export async function createToolRegistry(
 /**
  * Export SDK server creation helper
  */
-export async function createClaudeFlowSdkServer(
+export async function createHiveFlowSdkServer(
   orchestratorContext?: any
 ): Promise<McpSdkServerConfigWithInstance> {
   const registry = await createToolRegistry({

@@ -1,6 +1,6 @@
 /**
  * SDK Feature Verification Tests
- * Claude-Flow v2.5-alpha.130+
+ * Hive-Flow v2.5-alpha.130+
  *
  * PROOF that features are REAL and SDK-powered (not fake)
  */

@@ -418,7 +418,7 @@ https://github.com/ruvnet/claude-code-flow/docs/windows-installation.md
     }
 
     // For other tools, use mock responses
-    console.log(`Executing MCP tool: mcp__claude-flow__${toolName} with params:`, params);
+    console.log(`Executing MCP tool: mcp__hive-flow__${toolName} with params:`, params);
 
     // Simulate async execution for non-memory tools
     await new Promise((resolve) => setTimeout(resolve, Math.random() * 500));

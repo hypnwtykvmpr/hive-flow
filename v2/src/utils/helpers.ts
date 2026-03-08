@@ -1,5 +1,5 @@
 /**
- * Utility helper functions for Claude-Flow
+ * Utility helper functions for Hive-Flow
  */
 
 import { promisify } from 'util';

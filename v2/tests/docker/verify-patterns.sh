@@ -47,7 +47,7 @@ echo -e ""
 # Test 1: Verify neural_train is available
 log_test "Checking neural_train availability"
 
-NEURAL_TRAIN_CHECK=$(claude-flow mcp tools 2>&1 | grep -i "neural_train" || echo "not found")
+NEURAL_TRAIN_CHECK=$(hive-flow mcp tools 2>&1 | grep -i "neural_train" || echo "not found")
 if [[ "$NEURAL_TRAIN_CHECK" != "not found" ]]; then
     log_pass "neural_train tool is available"
 else
@@ -57,7 +57,7 @@ fi
 # Test 2: Verify neural_patterns is available
 log_test "Checking neural_patterns availability"
 
-NEURAL_PATTERNS_CHECK=$(claude-flow mcp tools 2>&1 | grep -i "neural_patterns" || echo "not found")
+NEURAL_PATTERNS_CHECK=$(hive-flow mcp tools 2>&1 | grep -i "neural_patterns" || echo "not found")
 if [[ "$NEURAL_PATTERNS_CHECK" != "not found" ]]; then
     log_pass "neural_patterns tool is available (FIX VERIFIED)"
     log_info "This confirms the missing handler has been implemented"
@@ -68,7 +68,7 @@ fi
 # Test 3: Check for memory/persistence tools
 log_test "Checking memory persistence tools"
 
-MEMORY_CHECK=$(claude-flow mcp tools 2>&1 | grep -i "memory" || echo "not found")
+MEMORY_CHECK=$(hive-flow mcp tools 2>&1 | grep -i "memory" || echo "not found")
 if [[ "$MEMORY_CHECK" != "not found" ]]; then
     log_pass "Memory persistence tools available"
 else
@@ -78,7 +78,7 @@ fi
 # Test 4: Verify MCP server can start (basic check)
 log_test "Verifying MCP server functionality"
 
-MCP_STATUS=$(claude-flow mcp status 2>&1)
+MCP_STATUS=$(hive-flow mcp status 2>&1)
 if [[ $? -eq 0 ]]; then
     log_pass "MCP server status responds"
     log_info "$(echo "$MCP_STATUS" | head -3)"
@@ -89,7 +89,7 @@ fi
 # Test 5: Check package version matches
 log_test "Verifying fix version"
 
-PKG_VERSION=$(npm list -g claude-flow --depth=0 2>/dev/null | grep claude-flow | awk '{print $2}' | tr -d '@')
+PKG_VERSION=$(npm list -g hive-flow --depth=0 2>/dev/null | grep hive-flow | awk '{print $2}' | tr -d '@')
 if [[ "$PKG_VERSION" == "2.7.1" ]]; then
     log_pass "Correct version installed (2.7.1 - includes pattern persistence fix)"
 else
@@ -99,7 +99,7 @@ fi
 # Test 6: Check for pattern-related documentation
 log_test "Checking documentation updates"
 
-DOC_CHECK=$(npm list -g claude-flow --depth=0 2>&1)
+DOC_CHECK=$(npm list -g hive-flow --depth=0 2>&1)
 if [[ $? -eq 0 ]]; then
     log_pass "Package installation is valid"
 else
@@ -123,7 +123,7 @@ cat > /test/results/pattern-verification.txt << EOF
 Pattern Persistence Verification Report
 ========================================
 Date: $(date)
-Package: claude-flow@2.7.1
+Package: hive-flow@2.7.1
 
 Critical Bug Fixes Verified:
 ✓ neural_train - Pattern storage functionality

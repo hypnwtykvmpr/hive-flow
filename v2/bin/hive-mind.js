@@ -1,5 +1,5 @@
 /**
- * Hive Mind command for Claude-Flow v2.0.0
+ * Hive Mind command for Hive-Flow v2.0.0
  * Advanced swarm intelligence with collective decision-making
  */
 
@@ -59,10 +59,10 @@ import { createAutoSaveMiddleware } from './hive-mind/auto-save-middleware.js';
 
 function showHiveMindHelp() {
   console.log(`
-${chalk.yellow('🧠 Claude Flow Hive Mind System')}
+${chalk.yellow('🧠 Hive Flow Hive Mind System')}
 
 ${chalk.bold('USAGE:')}
-  claude-flow hive-mind [subcommand] [options]
+  hive-flow hive-mind [subcommand] [options]
 
 ${chalk.bold('SUBCOMMANDS:')}
   ${chalk.green('init')}         Initialize hive mind system
@@ -78,31 +78,31 @@ ${chalk.bold('SUBCOMMANDS:')}
 
 ${chalk.bold('EXAMPLES:')}
   ${chalk.gray('# Initialize hive mind')}
-  claude-flow hive-mind init
+  hive-flow hive-mind init
 
   ${chalk.gray('# Spawn swarm with interactive wizard')}
-  claude-flow hive-mind spawn
+  hive-flow hive-mind spawn
 
   ${chalk.gray('# Quick spawn with objective')}
-  claude-flow hive-mind spawn "Build microservices architecture"
+  hive-flow hive-mind spawn "Build microservices architecture"
 
   ${chalk.gray('# View current status')}
-  claude-flow hive-mind status
+  hive-flow hive-mind status
 
   ${chalk.gray('# Interactive wizard')}
-  claude-flow hive-mind wizard
+  hive-flow hive-mind wizard
 
   ${chalk.gray('# Spawn with Claude Code coordination')}
-  claude-flow hive-mind spawn "Build REST API" --claude
+  hive-flow hive-mind spawn "Build REST API" --claude
 
   ${chalk.gray('# Auto-spawn coordinated Claude Code instances')}
-  claude-flow hive-mind spawn "Research AI trends" --auto-spawn --verbose
+  hive-flow hive-mind spawn "Research AI trends" --auto-spawn --verbose
 
   ${chalk.gray('# List all sessions')}
-  claude-flow hive-mind sessions
+  hive-flow hive-mind sessions
 
   ${chalk.gray('# Resume a paused session')}
-  claude-flow hive-mind resume session-1234567890-abc123
+  hive-flow hive-mind resume session-1234567890-abc123
 
 ${chalk.bold('KEY FEATURES:')}
   ${chalk.cyan('🐝')} Queen-led coordination with worker specialization
@@ -129,7 +129,7 @@ ${chalk.bold('OPTIONS:')}
   --execute              Execute Claude Code spawn commands immediately
 
 ${chalk.bold('For more information:')}
-${chalk.blue('https://github.com/ruvnet/claude-flow/tree/main/docs/hive-mind')}
+${chalk.blue('https://github.com/ruvnet/hive-flow/tree/main/docs/hive-mind')}
 `);
 }
 
@@ -174,7 +174,7 @@ async function initHiveMind(flags) {
       spinner.succeed('Hive Mind initialized with JSON fallback');
       console.log(chalk.yellow('\n⚠️  Note: SQLite native bindings not available'));
       console.log(chalk.gray('   Using JSON fallback for data persistence'));
-      console.log(chalk.gray('   For full SQLite features, install locally: npm install claude-flow'));
+      console.log(chalk.gray('   For full SQLite features, install locally: npm install hive-flow'));
       return;
     }
 
@@ -279,10 +279,10 @@ async function initHiveMind(flags) {
     console.log(chalk.green('✓') + ' Created configuration file');
     console.log('\n' + chalk.yellow('Next steps:'));
     console.log(
-      '  1. Run ' + chalk.cyan('claude-flow hive-mind spawn') + ' to create your first swarm',
+      '  1. Run ' + chalk.cyan('hive-flow hive-mind spawn') + ' to create your first swarm',
     );
     console.log(
-      '  2. Use ' + chalk.cyan('claude-flow hive-mind wizard') + ' for interactive setup',
+      '  2. Use ' + chalk.cyan('hive-flow hive-mind wizard') + ' for interactive setup',
     );
   } catch (error) {
     spinner.fail('Failed to initialize Hive Mind system');
@@ -482,10 +482,10 @@ async function spawnSwarm(args, flags) {
   if (!objective && !flags.wizard) {
     if (isNonInteractive) {
       console.error(chalk.red('Error: Objective required in non-interactive mode'));
-      console.log('Usage: claude-flow hive-mind spawn "Your objective" --non-interactive');
+      console.log('Usage: hive-flow hive-mind spawn "Your objective" --non-interactive');
     } else {
       console.error(chalk.red('Error: Please provide an objective or use --wizard flag'));
-      console.log('Example: claude-flow hive-mind spawn "Build REST API"');
+      console.log('Example: hive-flow hive-mind spawn "Build REST API"');
     }
     return;
   }
@@ -854,10 +854,10 @@ async function spawnSwarm(args, flags) {
 
     // Enhanced coordination instructions with MCP tools
     console.log('\n' + chalk.green('✓') + ' Swarm is ready for coordination');
-    console.log(chalk.gray('Use "claude-flow hive-mind status" to view swarm activity'));
+    console.log(chalk.gray('Use "hive-flow hive-mind status" to view swarm activity'));
     console.log(chalk.gray('Session auto-save enabled - progress saved every 30 seconds'));
     console.log(chalk.blue('💡 To pause:') + ' Press Ctrl+C to safely pause and resume later');
-    console.log(chalk.blue('💡 To resume:') + ' claude-flow hive-mind resume ' + sessionId);
+    console.log(chalk.blue('💡 To resume:') + ' hive-flow hive-mind resume ' + sessionId);
 
     // Set up SIGINT handler for automatic session pausing
     let isExiting = false;
@@ -893,7 +893,7 @@ async function spawnSwarm(args, flags) {
         
         console.log(chalk.green('✓') + ' Session paused successfully');
         console.log(chalk.cyan('\nTo resume this session, run:'));
-        console.log(chalk.bold(`  claude-flow hive-mind resume ${sessionId}`));
+        console.log(chalk.bold(`  hive-flow hive-mind resume ${sessionId}`));
         console.log();
         
         // Clean up auto-save if active
@@ -922,7 +922,7 @@ async function spawnSwarm(args, flags) {
           chalk.blue('💡 Pro Tip:') +
           ' Add --claude to spawn coordinated Claude Code instances',
       );
-      console.log(chalk.gray('   claude-flow hive-mind spawn "objective" --claude'));
+      console.log(chalk.gray('   hive-flow hive-mind spawn "objective" --claude'));
     }
   } catch (error) {
     spinner.fail('Failed to spawn Hive Mind swarm');
@@ -974,7 +974,7 @@ async function showStatus(flags) {
     // Check if hive-mind is initialized at all
     if (!existsSync(hiveMindDir)) {
       console.error(chalk.red('Error: Hive Mind not initialized'));
-      console.log('Run "claude-flow hive-mind init" first');
+      console.log('Run "hive-flow hive-mind init" first');
       return;
     }
 
@@ -997,7 +997,7 @@ async function showStatus(flags) {
           console.log(chalk.cyan('  Agents:'), fallbackData.agents?.length || 0);
           console.log('');
           console.log(chalk.gray('💡 For full SQLite features, install locally:'));
-          console.log(chalk.gray('   npm install claude-flow'));
+          console.log(chalk.gray('   npm install hive-flow'));
           return;
         } catch {
           // Fallback file exists but couldn't be read
@@ -1010,7 +1010,7 @@ async function showStatus(flags) {
       console.log(chalk.cyan('  Database:'), chalk.yellow('SQLite (unavailable in npx mode)'));
       console.log('');
       console.log(chalk.gray('💡 For full functionality, install locally:'));
-      console.log(chalk.gray('   npm install claude-flow'));
+      console.log(chalk.gray('   npm install hive-flow'));
       return;
     }
 
@@ -1027,12 +1027,12 @@ async function showStatus(flags) {
           return;
         } catch {
           console.error(chalk.red('Error: Hive Mind not initialized'));
-          console.log('Run "claude-flow hive-mind init" first');
+          console.log('Run "hive-flow hive-mind init" first');
           return;
         }
       }
       console.error(chalk.red('Error: Hive Mind not initialized'));
-      console.log('Run "claude-flow hive-mind init" first');
+      console.log('Run "hive-flow hive-mind init" first');
       return;
     }
 
@@ -1649,7 +1649,7 @@ export async function hiveMindCommand(args, flags) {
         // In non-interactive mode, skip wizard and use defaults
         if (subArgs.length === 0) {
           console.error(chalk.red('Error: Objective required in non-interactive mode'));
-          console.log('Usage: claude-flow hive-mind spawn "Your objective" --non-interactive');
+          console.log('Usage: hive-flow hive-mind spawn "Your objective" --non-interactive');
           return;
         }
         await spawnSwarm(subArgs, flags);
@@ -1700,7 +1700,7 @@ export async function hiveMindCommand(args, flags) {
 
     default:
       console.error(chalk.red(`Unknown subcommand: ${subcommand}`));
-      console.log('Run "claude-flow hive-mind help" for usage information');
+      console.log('Run "hive-flow hive-mind help" for usage information');
       exit(1);
   }
 }
@@ -2124,7 +2124,7 @@ async function spawnClaudeCodeInstances(swarmId, swarmName, objective, workers, 
     console.log(chalk.cyan('Worker Count:'), workers.length);
     console.log(chalk.cyan('Worker Types:'), Object.keys(workerGroups).join(', '));
     console.log(chalk.cyan('Consensus Algorithm:'), flags.consensus || 'majority');
-    console.log(chalk.cyan('MCP Tools:'), 'Full Claude-Flow integration enabled');
+    console.log(chalk.cyan('MCP Tools:'), 'Full Hive-Flow integration enabled');
 
     try {
       // ALWAYS save the prompt file first (fix for issue #330)
@@ -2223,7 +2223,7 @@ async function spawnClaudeCodeInstances(swarmId, swarmName, objective, workers, 
               
               console.log(chalk.green('✓') + ' Session paused successfully');
               console.log(chalk.cyan('\nTo resume this session, run:'));
-              console.log(chalk.bold(`  claude-flow hive-mind resume ${sessionId}`));
+              console.log(chalk.bold(`  hive-flow hive-mind resume ${sessionId}`));
             }
             
             sessionManager.close();
@@ -2307,7 +2307,7 @@ async function spawnClaudeCodeInstances(swarmId, swarmName, objective, workers, 
     console.log(chalk.gray('─'.repeat(30)));
     console.log('• Use --auto-spawn to launch instances automatically');
     console.log('• Add --verbose for detailed coordination context');
-    console.log('• Monitor with: claude-flow hive-mind status');
+    console.log('• Monitor with: hive-flow hive-mind status');
     console.log('• Share memories: mcp__ruv-swarm__memory_usage');
   } catch (error) {
     spinner.fail('Failed to prepare Claude Code coordination');
@@ -2344,34 +2344,34 @@ ${workerTypes.map((type) => `• ${type}: ${workerGroups[type].length} agents`).
 🔧 AVAILABLE MCP TOOLS FOR HIVE MIND COORDINATION:
 
 1️⃣ **COLLECTIVE INTELLIGENCE**
-   mcp__claude-flow__consensus_vote    - Democratic decision making
-   mcp__claude-flow__memory_share      - Share knowledge across the hive
-   mcp__claude-flow__neural_sync       - Synchronize neural patterns
-   mcp__claude-flow__swarm_think       - Collective problem solving
+   mcp__hive-flow__consensus_vote    - Democratic decision making
+   mcp__hive-flow__memory_share      - Share knowledge across the hive
+   mcp__hive-flow__neural_sync       - Synchronize neural patterns
+   mcp__hive-flow__swarm_think       - Collective problem solving
 
 2️⃣ **QUEEN COORDINATION**
-   mcp__claude-flow__queen_command     - Issue directives to workers
-   mcp__claude-flow__queen_monitor     - Monitor swarm health
-   mcp__claude-flow__queen_delegate    - Delegate complex tasks
-   mcp__claude-flow__queen_aggregate   - Aggregate worker results
+   mcp__hive-flow__queen_command     - Issue directives to workers
+   mcp__hive-flow__queen_monitor     - Monitor swarm health
+   mcp__hive-flow__queen_delegate    - Delegate complex tasks
+   mcp__hive-flow__queen_aggregate   - Aggregate worker results
 
 3️⃣ **WORKER MANAGEMENT**
-   mcp__claude-flow__agent_spawn       - Create specialized workers
-   mcp__claude-flow__agent_assign      - Assign tasks to workers
-   mcp__claude-flow__agent_communicate - Inter-agent communication
-   mcp__claude-flow__agent_metrics     - Track worker performance
+   mcp__hive-flow__agent_spawn       - Create specialized workers
+   mcp__hive-flow__agent_assign      - Assign tasks to workers
+   mcp__hive-flow__agent_communicate - Inter-agent communication
+   mcp__hive-flow__agent_metrics     - Track worker performance
 
 4️⃣ **TASK ORCHESTRATION**
-   mcp__claude-flow__task_create       - Create hierarchical tasks
-   mcp__claude-flow__task_distribute   - Distribute work efficiently
-   mcp__claude-flow__task_monitor      - Track task progress
-   mcp__claude-flow__task_aggregate    - Combine task results
+   mcp__hive-flow__task_create       - Create hierarchical tasks
+   mcp__hive-flow__task_distribute   - Distribute work efficiently
+   mcp__hive-flow__task_monitor      - Track task progress
+   mcp__hive-flow__task_aggregate    - Combine task results
 
 5️⃣ **MEMORY & LEARNING**
-   mcp__claude-flow__memory_store      - Store collective knowledge
-   mcp__claude-flow__memory_retrieve   - Access shared memory
-   mcp__claude-flow__neural_train      - Learn from experiences
-   mcp__claude-flow__pattern_recognize - Identify patterns
+   mcp__hive-flow__memory_store      - Store collective knowledge
+   mcp__hive-flow__memory_retrieve   - Access shared memory
+   mcp__hive-flow__neural_train      - Learn from experiences
+   mcp__hive-flow__pattern_recognize - Identify patterns
 
 📋 HIVE MIND EXECUTION PROTOCOL:
 
@@ -2381,10 +2381,10 @@ As the Queen coordinator, you must:
    
    Step 1: Optional MCP Coordination Setup (Single Message):
    [MCP Tools - Coordination Only]:
-   ${workerTypes.map((type) => `   mcp__claude-flow__agent_spawn { "type": "${type}", "count": ${workerGroups[type].length} }`).join('\n')}
-   mcp__claude-flow__memory_store { "key": "hive/objective", "value": "${objective}" }
-   mcp__claude-flow__memory_store { "key": "hive/queen", "value": "${queenType}" }
-   mcp__claude-flow__swarm_think { "topic": "initial_strategy" }
+   ${workerTypes.map((type) => `   mcp__hive-flow__agent_spawn { "type": "${type}", "count": ${workerGroups[type].length} }`).join('\n')}
+   mcp__hive-flow__memory_store { "key": "hive/objective", "value": "${objective}" }
+   mcp__hive-flow__memory_store { "key": "hive/queen", "value": "${queenType}" }
+   mcp__hive-flow__swarm_think { "topic": "initial_strategy" }
    
    Step 2: REQUIRED - Spawn ACTUAL Agents with Claude Code's Task Tool (Single Message):
    [Claude Code Task Tool - CONCURRENT Agent Execution]:
@@ -2729,8 +2729,8 @@ async function showSessions(flags) {
     console.log(chalk.yellow('═'.repeat(60)) + '\n');
 
     console.log(chalk.blue('💡 Tips:'));
-    console.log('  • Resume a session: claude-flow hive-mind resume <session-id>');
-    console.log('  • View session details: claude-flow hive-mind status');
+    console.log('  • Resume a session: hive-flow hive-mind resume <session-id>');
+    console.log('  • View session details: hive-flow hive-mind status');
 
     sessionManager.close();
   } catch (error) {
@@ -2747,8 +2747,8 @@ async function resumeSession(args, flags) {
 
   if (!sessionId) {
     console.error(chalk.red('Error: Please provide a session ID'));
-    console.log('Usage: claude-flow hive-mind resume <session-id>');
-    console.log('Run "claude-flow hive-mind sessions" to see available sessions');
+    console.log('Usage: hive-flow hive-mind resume <session-id>');
+    console.log('Run "hive-flow hive-mind sessions" to see available sessions');
     return;
   }
 
@@ -2762,7 +2762,7 @@ async function resumeSession(args, flags) {
 
     if (!session) {
       spinner.fail(`Session ${sessionId} not found`);
-      console.log('\nRun "claude-flow hive-mind sessions" to see available sessions');
+      console.log('\nRun "hive-flow hive-mind sessions" to see available sessions');
       sessionManager.close();
       return;
     }
@@ -2834,7 +2834,7 @@ async function resumeSession(args, flags) {
           chalk.blue('💡 Pro Tip:') +
           ' Add --claude to spawn Claude Code with restored context',
       );
-      console.log(chalk.gray('   claude-flow hive-mind resume ' + sessionId + ' --claude'));
+      console.log(chalk.gray('   hive-flow hive-mind resume ' + sessionId + ' --claude'));
     }
   } catch (error) {
     spinner.fail('Failed to resume session');
@@ -2851,8 +2851,8 @@ async function stopSession(args, flags) {
 
   if (!sessionId) {
     console.error(chalk.red('Error: Please provide a session ID'));
-    console.log('Usage: claude-flow hive-mind stop <session-id>');
-    console.log('Run "claude-flow hive-mind sessions" to see available sessions');
+    console.log('Usage: hive-flow hive-mind stop <session-id>');
+    console.log('Run "hive-flow hive-mind sessions" to see available sessions');
     return;
   }
 
@@ -2866,7 +2866,7 @@ async function stopSession(args, flags) {
 
     if (!session) {
       spinner.fail(`Session ${sessionId} not found`);
-      console.log('\nRun "claude-flow hive-mind sessions" to see available sessions');
+      console.log('\nRun "hive-flow hive-mind sessions" to see available sessions');
       sessionManager.close();
       return;
     }
@@ -2890,7 +2890,7 @@ async function stopSession(args, flags) {
 
     console.log('\n' + chalk.yellow('💡 Session has been stopped and all processes cleaned up.'));
     console.log(
-      chalk.gray('To resume this session later, use: claude-flow hive-mind resume ' + sessionId),
+      chalk.gray('To resume this session later, use: hive-flow hive-mind resume ' + sessionId),
     );
 
     sessionManager.close();
@@ -3038,7 +3038,7 @@ ${formatActivityLogs(activityLogs, 20)}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 1. **RESTORE CONTEXT**:
    - Review all checkpoint data and activity history above
-   - Use mcp__claude-flow__memory_usage to retrieve collective memory
+   - Use mcp__hive-flow__memory_usage to retrieve collective memory
    - Check agent statuses and reassign tasks if needed
    - Verify all in-progress tasks are still valid
 
@@ -3049,7 +3049,7 @@ ${formatActivityLogs(activityLogs, 20)}
    - Update progress tracking after each task completion
 
 3. **COORDINATION REQUIREMENTS**:
-   - Use mcp__claude-flow__memory_usage for all cross-agent communication
+   - Use mcp__hive-flow__memory_usage for all cross-agent communication
    - Apply consensus mechanisms for important decisions
    - Maintain swarm topology: ${session.swarm?.topology || 'unknown'}
    - Keep session checkpoint data updated regularly
@@ -3147,7 +3147,7 @@ async function launchClaudeWithContext(prompt, flags, sessionId) {
           
           console.log(chalk.green('✓') + ' Session paused successfully');
           console.log(chalk.cyan('\nTo resume this session, run:'));
-          console.log(chalk.bold(`  claude-flow hive-mind resume ${sessionId}`));
+          console.log(chalk.bold(`  hive-flow hive-mind resume ${sessionId}`));
           console.log();
           
           process.exit(0);

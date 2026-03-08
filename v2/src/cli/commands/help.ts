@@ -1,5 +1,5 @@
 /**
- * Standardized help system for Claude-Flow CLI
+ * Standardized help system for Hive-Flow CLI
  * Follows Unix/Linux conventions for help output
  */
 
@@ -26,61 +26,61 @@ export const helpCommand = new Command()
 const HELP_TOPICS = [
   {
     name: 'getting-started',
-    description: 'Basic introduction to Claude-Flow',
+    description: 'Basic introduction to Hive-Flow',
     category: 'basic',
     tutorial: [
-      'Welcome to Claude-Flow! This tutorial will get you started.',
+      'Welcome to Hive-Flow! This tutorial will get you started.',
       '1. First, initialize a configuration file:',
-      '   claude-flow config init',
+      '   hive-flow config init',
       '',
       '2. Start the orchestration system:',
-      '   claude-flow start',
+      '   hive-flow start',
       '',
       '3. In another terminal, spawn your first agent:',
-      '   claude-flow agent spawn researcher --name "My Research Agent"',
+      '   hive-flow agent spawn researcher --name "My Research Agent"',
       '',
       '4. Create a task for the agent:',
-      '   claude-flow task create research "Find information about AI trends"',
+      '   hive-flow task create research "Find information about AI trends"',
       '',
       '5. Monitor progress:',
-      '   claude-flow status',
+      '   hive-flow status',
       '',
       'You can also use the interactive REPL mode:',
-      '   claude-flow repl',
+      '   hive-flow repl',
       '',
-      'For more help, try: claude-flow help <topic>',
+      'For more help, try: hive-flow help <topic>',
     ],
     related: ['agents', 'tasks', 'configuration'],
   },
   {
     name: 'agents',
-    description: 'Working with Claude-Flow agents',
+    description: 'Working with Hive-Flow agents',
     category: 'basic',
     examples: [
       {
         description: 'Spawn a research agent',
-        command: 'claude-flow agent spawn researcher --name "Research Assistant"',
+        command: 'hive-flow agent spawn researcher --name "Research Assistant"',
         explanation:
           'Creates a new research agent with specialized capabilities for information gathering',
       },
       {
         description: 'List all active agents',
-        command: 'claude-flow agent list',
+        command: 'hive-flow agent list',
         explanation: 'Shows all currently running agents with their status and task counts',
       },
       {
         description: 'Get detailed agent information',
-        command: 'claude-flow agent info agent-001',
+        command: 'hive-flow agent info agent-001',
         explanation: 'Displays comprehensive information about a specific agent',
       },
       {
         description: 'Terminate an agent',
-        command: 'claude-flow agent terminate agent-001',
+        command: 'hive-flow agent terminate agent-001',
         explanation: 'Safely shuts down an agent and reassigns its tasks',
       },
     ],
     tutorial: [
-      'Agents are the core workers in Claude-Flow. Each agent has:',
+      'Agents are the core workers in Hive-Flow. Each agent has:',
       '• A unique ID (automatically generated)',
       '• A name (for easy identification)',
       '• A type (coordinator, researcher, implementer, analyst, custom)',
@@ -97,7 +97,7 @@ const HELP_TOPICS = [
       'Best Practices:',
       '• Use descriptive names for your agents',
       '• Match agent types to your workflow needs',
-      '• Monitor agent performance with "claude-flow status"',
+      '• Monitor agent performance with "hive-flow status"',
       '• Terminate idle agents to free resources',
     ],
     related: ['tasks', 'workflows', 'coordination'],
@@ -109,28 +109,28 @@ const HELP_TOPICS = [
     examples: [
       {
         description: 'Create a research task',
-        command: 'claude-flow task create research "Find papers on quantum computing" --priority 5',
+        command: 'hive-flow task create research "Find papers on quantum computing" --priority 5',
         explanation: 'Creates a high-priority research task with specific instructions',
       },
       {
         description: 'Create a task with dependencies',
         command:
-          'claude-flow task create analysis "Analyze research results" --dependencies task-001',
+          'hive-flow task create analysis "Analyze research results" --dependencies task-001',
         explanation: 'Creates a task that waits for task-001 to complete before starting',
       },
       {
         description: 'Assign task to specific agent',
-        command: 'claude-flow task create implementation "Write API client" --assign agent-003',
+        command: 'hive-flow task create implementation "Write API client" --assign agent-003',
         explanation: 'Directly assigns a task to a specific agent',
       },
       {
         description: 'Monitor task progress',
-        command: 'claude-flow task status task-001',
+        command: 'hive-flow task status task-001',
         explanation: 'Shows detailed status and progress information for a task',
       },
       {
         description: 'Cancel a running task',
-        command: 'claude-flow task cancel task-001 --reason "Requirements changed"',
+        command: 'hive-flow task cancel task-001 --reason "Requirements changed"',
         explanation: 'Stops a task and provides a reason for cancellation',
       },
     ],
@@ -168,28 +168,28 @@ const HELP_TOPICS = [
     examples: [
       {
         description: 'Spawn Claude with web research capabilities',
-        command: 'claude-flow claude spawn "implement user authentication" --research --parallel',
+        command: 'hive-flow claude spawn "implement user authentication" --research --parallel',
         explanation:
           'Creates a Claude instance with WebFetchTool and BatchTool for parallel web research',
       },
       {
         description: 'Spawn Claude without permission prompts',
-        command: 'claude-flow claude spawn "fix payment bug" --no-permissions',
+        command: 'hive-flow claude spawn "fix payment bug" --no-permissions',
         explanation: 'Runs Claude with --dangerously-skip-permissions flag to avoid interruptions',
       },
       {
         description: 'Spawn Claude with custom tools',
-        command: 'claude-flow claude spawn "analyze codebase" --tools "View,Edit,GrepTool,LS"',
+        command: 'hive-flow claude spawn "analyze codebase" --tools "View,Edit,GrepTool,LS"',
         explanation: 'Specifies exactly which tools Claude can use for the task',
       },
       {
         description: 'Spawn Claude with test coverage target',
-        command: 'claude-flow claude spawn "write unit tests" --coverage 95 --commit feature',
+        command: 'hive-flow claude spawn "write unit tests" --coverage 95 --commit feature',
         explanation: 'Sets test coverage goal to 95% and commits after each feature',
       },
       {
         description: 'Dry run to preview command',
-        command: 'claude-flow claude spawn "build API" --mode backend-only --dry-run',
+        command: 'hive-flow claude spawn "build API" --mode backend-only --dry-run',
         explanation: 'Shows what would be executed without actually running Claude',
       },
     ],
@@ -210,9 +210,9 @@ const HELP_TOPICS = [
       '',
       'Environment Variables Set:',
       '• CLAUDE_INSTANCE_ID: Unique identifier for the Claude instance',
-      '• CLAUDE_FLOW_MODE: Development mode setting',
-      '• CLAUDE_FLOW_COVERAGE: Target test coverage percentage',
-      '• CLAUDE_FLOW_COMMIT: Commit frequency setting',
+      '• HIVE_FLOW_MODE: Development mode setting',
+      '• HIVE_FLOW_COVERAGE: Target test coverage percentage',
+      '• HIVE_FLOW_COMMIT: Commit frequency setting',
       '',
       'Common Use Cases:',
       '• Full-stack development: --mode full --parallel',
@@ -230,27 +230,27 @@ const HELP_TOPICS = [
     examples: [
       {
         description: 'Run a workflow from file',
-        command: 'claude-flow workflow run research-pipeline.json --watch',
+        command: 'hive-flow workflow run research-pipeline.json --watch',
         explanation: 'Executes a workflow definition and monitors progress in real-time',
       },
       {
         description: 'Validate workflow before running',
-        command: 'claude-flow workflow validate my-workflow.json --strict',
+        command: 'hive-flow workflow validate my-workflow.json --strict',
         explanation: 'Checks workflow syntax and dependencies without executing',
       },
       {
         description: 'Generate workflow template',
-        command: 'claude-flow workflow template research --output research-workflow.json',
+        command: 'hive-flow workflow template research --output research-workflow.json',
         explanation: 'Creates a pre-configured workflow template for research tasks',
       },
       {
         description: 'Monitor running workflows',
-        command: 'claude-flow workflow list --all',
+        command: 'hive-flow workflow list --all',
         explanation: 'Shows all workflows including completed ones',
       },
       {
         description: 'Stop a running workflow',
-        command: 'claude-flow workflow stop workflow-001 --force',
+        command: 'hive-flow workflow stop workflow-001 --force',
         explanation: 'Immediately stops all tasks in a workflow',
       },
     ],
@@ -299,37 +299,37 @@ const HELP_TOPICS = [
   },
   {
     name: 'configuration',
-    description: 'Configuring Claude-Flow settings',
+    description: 'Configuring Hive-Flow settings',
     category: 'configuration',
     examples: [
       {
         description: 'Initialize default configuration',
-        command: 'claude-flow config init --template development',
+        command: 'hive-flow config init --template development',
         explanation: 'Creates a configuration file optimized for development',
       },
       {
         description: 'View current configuration',
-        command: 'claude-flow config show --diff',
+        command: 'hive-flow config show --diff',
         explanation: 'Shows only settings that differ from defaults',
       },
       {
         description: 'Update a setting',
-        command: 'claude-flow config set orchestrator.maxConcurrentAgents 20',
+        command: 'hive-flow config set orchestrator.maxConcurrentAgents 20',
         explanation: 'Changes the maximum number of concurrent agents',
       },
       {
         description: 'Save configuration profile',
-        command: 'claude-flow config profile save production',
+        command: 'hive-flow config profile save production',
         explanation: 'Saves current settings as a named profile',
       },
       {
         description: 'Load configuration profile',
-        command: 'claude-flow config profile load development',
+        command: 'hive-flow config profile load development',
         explanation: 'Switches to a previously saved configuration profile',
       },
     ],
     tutorial: [
-      'Configuration controls all aspects of Claude-Flow behavior.',
+      'Configuration controls all aspects of Hive-Flow behavior.',
       '',
       'Main Configuration Sections:',
       '',
@@ -352,14 +352,14 @@ const HELP_TOPICS = [
       '  - port: Network port for HTTP transport',
       '',
       'Configuration Files:',
-      '• Global: ~/.claude-flow/config.json',
-      '• Project: ./claude-flow.config.json',
-      '• Profiles: ~/.claude-flow/profiles/',
+      '• Global: ~/.hive-flow/config.json',
+      '• Project: ./hive-flow.config.json',
+      '• Profiles: ~/.hive-flow/profiles/',
       '',
       'Environment Variables:',
-      '• CLAUDE_FLOW_LOG_LEVEL: Override log level',
-      '• CLAUDE_FLOW_MAX_AGENTS: Override agent limit',
-      '• CLAUDE_FLOW_MCP_PORT: Override MCP port',
+      '• HIVE_FLOW_LOG_LEVEL: Override log level',
+      '• HIVE_FLOW_MAX_AGENTS: Override agent limit',
+      '• HIVE_FLOW_MCP_PORT: Override MCP port',
     ],
     related: ['profiles', 'environment', 'troubleshooting'],
   },
@@ -370,27 +370,27 @@ const HELP_TOPICS = [
     examples: [
       {
         description: 'Check system status',
-        command: 'claude-flow status --watch',
+        command: 'hive-flow status --watch',
         explanation: 'Continuously monitors system health and updates every few seconds',
       },
       {
         description: 'Start monitoring dashboard',
-        command: 'claude-flow monitor --interval 5',
+        command: 'hive-flow monitor --interval 5',
         explanation: 'Opens a live dashboard with real-time metrics and graphs',
       },
       {
         description: 'View component-specific status',
-        command: 'claude-flow status --component orchestrator',
+        command: 'hive-flow status --component orchestrator',
         explanation: 'Shows detailed status for a specific system component',
       },
       {
         description: 'Monitor in compact mode',
-        command: 'claude-flow monitor --compact --no-graphs',
+        command: 'hive-flow monitor --compact --no-graphs',
         explanation: 'Simplified monitoring view without visual graphs',
       },
     ],
     tutorial: [
-      'Claude-Flow provides comprehensive monitoring capabilities.',
+      'Hive-Flow provides comprehensive monitoring capabilities.',
       '',
       'Monitoring Commands:',
       '• status: Point-in-time system status',
@@ -427,32 +427,32 @@ const HELP_TOPICS = [
       {
         description: 'Save current session',
         command:
-          'claude-flow session save "Development Session" --description "Working on API integration"',
+          'hive-flow session save "Development Session" --description "Working on API integration"',
         explanation: 'Saves all current agents, tasks, and memory state',
       },
       {
         description: 'List saved sessions',
-        command: 'claude-flow session list',
+        command: 'hive-flow session list',
         explanation: 'Shows all saved sessions with creation dates and metadata',
       },
       {
         description: 'Restore a session',
-        command: 'claude-flow session restore session-001 --merge',
+        command: 'hive-flow session restore session-001 --merge',
         explanation: 'Restores session state, merging with current state',
       },
       {
         description: 'Export session to file',
-        command: 'claude-flow session export session-001 backup.json --include-memory',
+        command: 'hive-flow session export session-001 backup.json --include-memory',
         explanation: 'Creates a portable backup including agent memory',
       },
       {
         description: 'Clean up old sessions',
-        command: 'claude-flow session clean --older-than 30 --dry-run',
+        command: 'hive-flow session clean --older-than 30 --dry-run',
         explanation: 'Shows what sessions would be deleted (older than 30 days)',
       },
     ],
     tutorial: [
-      'Sessions capture the complete state of your Claude-Flow environment.',
+      'Sessions capture the complete state of your Hive-Flow environment.',
       '',
       'What Sessions Include:',
       '• All active agents and their configurations',
@@ -489,17 +489,17 @@ const HELP_TOPICS = [
     examples: [
       {
         description: 'Start REPL mode',
-        command: 'claude-flow repl',
+        command: 'hive-flow repl',
         explanation: 'Opens interactive command line with tab completion',
       },
       {
         description: 'REPL with custom history file',
-        command: 'claude-flow repl --history-file .my-history',
+        command: 'hive-flow repl --history-file .my-history',
         explanation: 'Uses a specific file for command history',
       },
       {
         description: 'Skip welcome banner',
-        command: 'claude-flow repl --no-banner',
+        command: 'hive-flow repl --no-banner',
         explanation: 'Starts REPL in minimal mode',
       },
     ],
@@ -537,22 +537,22 @@ const HELP_TOPICS = [
     examples: [
       {
         description: 'Check system health',
-        command: 'claude-flow status --component all',
+        command: 'hive-flow status --component all',
         explanation: 'Comprehensive health check of all components',
       },
       {
         description: 'Enable debug logging',
-        command: 'claude-flow start --log-level debug',
+        command: 'hive-flow start --log-level debug',
         explanation: 'Start with verbose logging for debugging',
       },
       {
         description: 'Validate configuration',
-        command: 'claude-flow config validate claude-flow.config.json --strict',
+        command: 'hive-flow config validate hive-flow.config.json --strict',
         explanation: 'Check configuration file for errors',
       },
       {
         description: 'Reset to defaults',
-        command: 'claude-flow config reset --confirm',
+        command: 'hive-flow config reset --confirm',
         explanation: 'Restore default configuration settings',
       },
     ],
@@ -561,7 +561,7 @@ const HELP_TOPICS = [
       '',
       'Connection Issues:',
       '• Problem: "Connection refused" errors',
-      '• Solution: Ensure Claude-Flow is started with "claude-flow start"',
+      '• Solution: Ensure Hive-Flow is started with "hive-flow start"',
       '• Check: MCP transport settings match between client and server',
       '',
       'Agent Issues:',
@@ -585,10 +585,10 @@ const HELP_TOPICS = [
       '• Check: Environment variable overrides',
       '',
       'Debug Commands:',
-      '• claude-flow status: System health check',
-      '• claude-flow config validate: Configuration check',
-      '• claude-flow --verbose: Enable detailed logging',
-      '• claude-flow monitor: Real-time diagnostics',
+      '• hive-flow status: System health check',
+      '• hive-flow config validate: Configuration check',
+      '• hive-flow --verbose: Enable detailed logging',
+      '• hive-flow monitor: Real-time diagnostics',
     ],
     related: ['monitoring', 'configuration', 'debugging'],
   },
@@ -596,11 +596,11 @@ const HELP_TOPICS = [
 
 function showMainHelp(): void {
   const mainHelp: CommandInfo = {
-    name: 'claude-flow',
+    name: 'hive-flow',
     description: 'Advanced AI agent orchestration system',
-    usage: `claude-flow <command> [<args>] [options]
-    claude-flow <command> --help
-    claude-flow --version`,
+    usage: `hive-flow <command> [<args>] [options]
+    hive-flow <command> --help
+    hive-flow --version`,
     commands: [
       {
         name: 'hive-mind',
@@ -608,7 +608,7 @@ function showMainHelp(): void {
       },
       {
         name: 'init',
-        description: 'Initialize Claude Flow configuration',
+        description: 'Initialize Hive Flow configuration',
       },
       {
         name: 'start',
@@ -679,10 +679,10 @@ function showMainHelp(): void {
       },
     ],
     examples: [
-      'claude-flow init --sparc',
-      'claude-flow hive-mind wizard',
-      'claude-flow swarm "Build REST API"',
-      'claude-flow status --json',
+      'hive-flow init --sparc',
+      'hive-flow hive-mind wizard',
+      'hive-flow swarm "Build REST API"',
+      'hive-flow status --json',
     ],
   };
 
@@ -697,8 +697,8 @@ function showCommandHelp(command: string): void {
     console.error(
       HelpFormatter.formatError(
         `Unknown command: ${command}`,
-        'claude-flow help',
-        'claude-flow help [command]',
+        'hive-flow help',
+        'hive-flow help [command]',
       ),
     );
   }
@@ -707,9 +707,9 @@ function showCommandHelp(command: string): void {
 function getCommandHelp(command: string): CommandInfo | null {
   const commandHelpMap: Record<string, CommandInfo> = {
     'hive-mind': {
-      name: 'claude-flow hive-mind',
+      name: 'hive-flow hive-mind',
       description: 'Manage hive mind swarm intelligence',
-      usage: 'claude-flow hive-mind <subcommand> [options]',
+      usage: 'hive-flow hive-mind <subcommand> [options]',
       commands: [
         { name: 'init', description: 'Initialize hive mind system' },
         { name: 'spawn', description: 'Create intelligent swarm with objective' },
@@ -746,15 +746,15 @@ function getCommandHelp(command: string): CommandInfo | null {
         },
       ],
       examples: [
-        'claude-flow hive-mind spawn "Build REST API" --queen-type strategic',
-        'claude-flow hive-mind status --json',
-        'claude-flow hive-mind stop swarm-123',
+        'hive-flow hive-mind spawn "Build REST API" --queen-type strategic',
+        'hive-flow hive-mind status --json',
+        'hive-flow hive-mind stop swarm-123',
       ],
     },
     agent: {
-      name: 'claude-flow agent',
+      name: 'hive-flow agent',
       description: 'Manage individual agents',
-      usage: 'claude-flow agent <action> [options]',
+      usage: 'hive-flow agent <action> [options]',
       commands: [
         { name: 'spawn', description: 'Create a new agent' },
         { name: 'list', description: 'List all active agents' },
@@ -781,9 +781,9 @@ function getCommandHelp(command: string): CommandInfo | null {
         },
       ],
       examples: [
-        'claude-flow agent spawn researcher --name "Research Bot"',
-        'claude-flow agent list --json',
-        'claude-flow agent terminate agent-123',
+        'hive-flow agent spawn researcher --name "Research Bot"',
+        'hive-flow agent list --json',
+        'hive-flow agent terminate agent-123',
       ],
     },
   };
@@ -807,7 +807,7 @@ function showAllTopics(): void {
   console.log(table.toString());
 
   console.log();
-  console.log(chalk.gray('Use "claude-flow help <topic>" for detailed information.'));
+  console.log(chalk.gray('Use "hive-flow help <topic>" for detailed information.'));
 }
 
 async function showTopicHelp(topicName: string, options: any): Promise<void> {
@@ -829,7 +829,7 @@ async function showTopicHelp(topicName: string, options: any): Promise<void> {
         console.log(chalk.cyan(`  ${suggestion.name}`));
       }
     } else {
-      console.log(chalk.gray('Use "claude-flow help --all" to see all topics.'));
+      console.log(chalk.gray('Use "hive-flow help --all" to see all topics.'));
     }
     return;
   }
@@ -843,7 +843,7 @@ async function showTopicHelp(topicName: string, options: any): Promise<void> {
     console.log(chalk.yellow.bold('Tutorial:'));
     console.log('─'.repeat(20));
     for (const line of topic.tutorial) {
-      if (line.trim().startsWith('claude-flow')) {
+      if (line.trim().startsWith('hive-flow')) {
         console.log(chalk.cyan(`  ${line}`));
       } else if (line.trim() === '') {
         console.log();
@@ -906,7 +906,7 @@ async function showTopicHelp(topicName: string, options: any): Promise<void> {
     console.log(chalk.yellow.bold('Related Topics:'));
     console.log('─'.repeat(20));
     for (const related of topic.related) {
-      console.log(chalk.cyan(`  claude-flow help ${related}`));
+      console.log(chalk.cyan(`  hive-flow help ${related}`));
     }
     console.log();
   }

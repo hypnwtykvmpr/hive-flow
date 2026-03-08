@@ -1,6 +1,6 @@
 /**
  * Real-Time Query Control
- * Claude-Flow v2.5-alpha.130
+ * Hive-Flow v2.5-alpha.130
  *
  * Implements real-time control of running agent queries:
  * - Pause/resume execution

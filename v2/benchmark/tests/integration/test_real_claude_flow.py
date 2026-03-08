@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Real Claude-Flow Benchmark Test
-Tests actual claude-flow execution with --non-interactive flag
+Real Hive-Flow Benchmark Test
+Tests actual hive-flow execution with --non-interactive flag
 """
 
 import subprocess
@@ -11,16 +11,16 @@ import os
 from pathlib import Path
 import sys
 
-# Add parent directory to path to access claude-flow
+# Add parent directory to path to access hive-flow
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-class RealClaudeFlowBenchmark:
+class RealHiveFlowBenchmark:
     def __init__(self):
-        self.claude_flow_path = Path(__file__).parent.parent / "claude-flow"
+        self.hive_flow_path = Path(__file__).parent.parent / "hive-flow"
         self.results = []
         
     def run_command(self, command, description):
-        """Execute a claude-flow command and measure performance"""
+        """Execute a hive-flow command and measure performance"""
         print(f"\n{'='*60}")
         print(f"Running: {description}")
         print(f"Command: {' '.join(command)}")
@@ -84,24 +84,24 @@ class RealClaudeFlowBenchmark:
             }
     
     def test_basic_commands(self):
-        """Test basic claude-flow commands"""
-        print("\n🧪 Testing Basic Claude-Flow Commands")
+        """Test basic hive-flow commands"""
+        print("\n🧪 Testing Basic Hive-Flow Commands")
         
         # Test 1: Version check
         self.run_command(
-            [str(self.claude_flow_path), "--version"],
+            [str(self.hive_flow_path), "--version"],
             "Version Check"
         )
         
         # Test 2: Help command
         self.run_command(
-            [str(self.claude_flow_path), "--help"],
+            [str(self.hive_flow_path), "--help"],
             "Help Command"
         )
         
         # Test 3: Status command
         self.run_command(
-            [str(self.claude_flow_path), "status", "--non-interactive"],
+            [str(self.hive_flow_path), "status", "--non-interactive"],
             "Status Command (Non-Interactive)"
         )
     
@@ -111,20 +111,20 @@ class RealClaudeFlowBenchmark:
         
         # Test 1: SPARC list
         self.run_command(
-            [str(self.claude_flow_path), "sparc", "list", "--non-interactive"],
+            [str(self.hive_flow_path), "sparc", "list", "--non-interactive"],
             "SPARC List Modes"
         )
         
         # Test 2: SPARC coder mode
         self.run_command(
-            [str(self.claude_flow_path), "sparc", "coder", 
+            [str(self.hive_flow_path), "sparc", "coder", 
              "Create a simple hello world function", "--non-interactive"],
             "SPARC Coder Mode"
         )
         
         # Test 3: SPARC researcher mode
         self.run_command(
-            [str(self.claude_flow_path), "sparc", "researcher",
+            [str(self.hive_flow_path), "sparc", "researcher",
              "Research best practices for Python testing", "--non-interactive"],
             "SPARC Researcher Mode"
         )
@@ -135,7 +135,7 @@ class RealClaudeFlowBenchmark:
         
         # Test 1: Simple swarm with auto strategy
         self.run_command(
-            [str(self.claude_flow_path), "swarm",
+            [str(self.hive_flow_path), "swarm",
              "Create a basic calculator", 
              "--strategy", "auto",
              "--non-interactive"],
@@ -144,7 +144,7 @@ class RealClaudeFlowBenchmark:
         
         # Test 2: Research swarm
         self.run_command(
-            [str(self.claude_flow_path), "swarm",
+            [str(self.hive_flow_path), "swarm",
              "Research cloud computing trends",
              "--strategy", "research",
              "--mode", "distributed",
@@ -154,7 +154,7 @@ class RealClaudeFlowBenchmark:
         
         # Test 3: Development swarm
         self.run_command(
-            [str(self.claude_flow_path), "swarm",
+            [str(self.hive_flow_path), "swarm",
              "Build a REST API endpoint",
              "--strategy", "development",
              "--mode", "hierarchical",
@@ -203,8 +203,8 @@ class RealClaudeFlowBenchmark:
     
     def run_all_tests(self):
         """Run all benchmark tests"""
-        print("🚀 Starting Real Claude-Flow Benchmark Tests")
-        print(f"Using: {self.claude_flow_path}")
+        print("🚀 Starting Real Hive-Flow Benchmark Tests")
+        print(f"Using: {self.hive_flow_path}")
         
         self.test_basic_commands()
         self.test_sparc_commands()
@@ -214,5 +214,5 @@ class RealClaudeFlowBenchmark:
 
 
 if __name__ == "__main__":
-    benchmark = RealClaudeFlowBenchmark()
+    benchmark = RealHiveFlowBenchmark()
     benchmark.run_all_tests()

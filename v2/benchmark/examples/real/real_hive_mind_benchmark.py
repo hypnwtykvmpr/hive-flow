@@ -3,7 +3,7 @@
 Real Hive-Mind Benchmark Example - Execute and measure real hive-mind performance.
 
 This example demonstrates how to:
-1. Execute real Claude Flow hive-mind commands
+1. Execute real Hive Flow hive-mind commands
 2. Measure collective intelligence performance
 3. Parse real distributed agent responses
 4. Track swarm coordination metrics

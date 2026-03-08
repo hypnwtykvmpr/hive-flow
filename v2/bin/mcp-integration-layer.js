@@ -1,6 +1,6 @@
 /**
  * MCP Integration Layer for Web UI
- * Provides comprehensive integration with all Claude-Flow MCP tools
+ * Provides comprehensive integration with all Hive-Flow MCP tools
  * Supports real-time updates, error handling, and result streaming
  */
 
@@ -274,8 +274,8 @@ export class MCPIntegrationLayer {
     }
 
     try {
-      // Use the mcp__claude-flow__ tools that are available
-      const mcpToolName = `mcp__claude-flow__${toolName}`;
+      // Use the mcp__hive-flow__ tools that are available
+      const mcpToolName = `mcp__hive-flow__${toolName}`;
 
       // Check if we have this tool available (would need to be passed from the calling context)
       // For now, simulate execution

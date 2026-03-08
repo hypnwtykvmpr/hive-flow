@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Demo script for the new real claude-flow benchmark system
-Shows how to benchmark actual claude-flow commands with real metrics
+Demo script for the new real hive-flow benchmark system
+Shows how to benchmark actual hive-flow commands with real metrics
 """
 
 import asyncio
@@ -12,8 +12,8 @@ import sys
 # Add the benchmark source to path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from swarm_benchmark.core.claude_flow_executor import (
-    ClaudeFlowExecutor, SwarmConfig, SparcConfig, 
+from swarm_benchmark.core.hive_flow_executor import (
+    HiveFlowExecutor, SwarmConfig, SparcConfig, 
     ExecutionStrategy, CoordinationMode
 )
 from swarm_benchmark.metrics.performance_collector import PerformanceCollector
@@ -22,11 +22,11 @@ from swarm_benchmark.core.orchestration_manager import OrchestrationManager
 
 
 async def demo_basic_benchmark():
-    """Demonstrate basic benchmarking with real claude-flow execution"""
+    """Demonstrate basic benchmarking with real hive-flow execution"""
     print("\n🚀 Demo 1: Basic Real Benchmark")
     print("=" * 60)
     
-    executor = ClaudeFlowExecutor()
+    executor = HiveFlowExecutor()
     
     # Test 1: Simple SPARC mode
     print("\n📊 Testing SPARC Coder Mode:")
@@ -70,21 +70,21 @@ async def demo_parallel_benchmark():
     tasks = [
         {
             'name': 'sparc_coder',
-            'func': lambda: ClaudeFlowExecutor().execute_sparc(
+            'func': lambda: HiveFlowExecutor().execute_sparc(
                 SparcConfig(mode="coder", prompt="Write a sorting algorithm")
             ),
             'priority': 1
         },
         {
             'name': 'sparc_tester',
-            'func': lambda: ClaudeFlowExecutor().execute_sparc(
+            'func': lambda: HiveFlowExecutor().execute_sparc(
                 SparcConfig(mode="tester", prompt="Test a login function")
             ),
             'priority': 2
         },
         {
             'name': 'swarm_development',
-            'func': lambda: ClaudeFlowExecutor().execute_swarm(
+            'func': lambda: HiveFlowExecutor().execute_swarm(
                 SwarmConfig(
                     objective="Build a simple TODO API",
                     strategy=ExecutionStrategy.DEVELOPMENT,
@@ -189,10 +189,10 @@ async def demo_comprehensive_benchmark():
 
 async def main():
     """Run all demos"""
-    print("🧠 Claude-Flow Real Benchmark System Demo")
+    print("🧠 Hive-Flow Real Benchmark System Demo")
     print("=" * 60)
     print("This demo showcases the new benchmark system that executes")
-    print("real claude-flow commands and measures actual performance.")
+    print("real hive-flow commands and measures actual performance.")
     
     try:
         # Run demos
@@ -202,7 +202,7 @@ async def main():
         
         print("\n\n✅ All demos completed successfully!")
         print("\nKey Features Demonstrated:")
-        print("  • Real claude-flow command execution")
+        print("  • Real hive-flow command execution")
         print("  • Accurate performance metrics collection")
         print("  • Parallel benchmark execution")
         print("  • Resource monitoring and limits")

@@ -1,5 +1,5 @@
 /**
- * Integration Types for Claude Flow v2.0.0
+ * Integration Types for Hive Flow v2.0.0
  */
 
 export interface IntegrationConfig {

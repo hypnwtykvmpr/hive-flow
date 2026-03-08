@@ -20,7 +20,7 @@ export class NeuralInitCommand {
     const targetDir = options.targetDir || '.claude/agents/neural';
     const absoluteTarget = path.resolve(process.cwd(), targetDir);
     
-    logger.info(chalk.cyan('🧠 Initializing Claude Flow Neural Module...'));
+    logger.info(chalk.cyan('🧠 Initializing Hive Flow Neural Module...'));
     
     try {
       // Check if target exists
@@ -105,7 +105,7 @@ color: cyan
 
 # SAFLA Neural Agent
 
-Integrated with Claude Flow neural system for persistent memory and self-learning capabilities.
+Integrated with Hive Flow neural system for persistent memory and self-learning capabilities.
 
 ## Core Features
 - 4-tier memory architecture (Vector, Episodic, Semantic, Working)
@@ -117,10 +117,10 @@ Integrated with Claude Flow neural system for persistent memory and self-learnin
 ## Usage
 \`\`\`bash
 # Initialize SAFLA neural training
-npx claude-flow neural train --type safla
+npx hive-flow neural train --type safla
 
 # Run inference
-npx claude-flow neural predict --model safla
+npx hive-flow neural predict --model safla
 \`\`\`
 `;
     await fs.writeFile(targetPath, template);
@@ -155,7 +155,7 @@ color: purple
 
 # Neural Trainer Agent
 
-Manages distributed neural network training with Claude Flow.
+Manages distributed neural network training with Hive Flow.
 `;
   }
   
@@ -217,8 +217,8 @@ Handles neural network inference and predictions.
   
   private printUsage(): void {
     console.log('\n' + chalk.cyan('📚 Usage:'));
-    console.log(chalk.gray('  npx claude-flow neural train --type safla'));
-    console.log(chalk.gray('  npx claude-flow neural predict --model safla'));
+    console.log(chalk.gray('  npx hive-flow neural train --type safla'));
+    console.log(chalk.gray('  npx hive-flow neural predict --model safla'));
     console.log(chalk.gray('  @agent-safla-neural "Create self-improving system"'));
     console.log('\n' + chalk.cyan('🔗 Documentation:'));
     console.log(chalk.gray('  https://github.com/ruvnet/SAFLA'));

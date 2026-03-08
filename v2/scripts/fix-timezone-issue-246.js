@@ -179,7 +179,7 @@ async function main() {
     return;
   }
   
-  console.log('🔧 Claude Flow Timezone Fix (Issue #246)\n');
+  console.log('🔧 Hive Flow Timezone Fix (Issue #246)\n');
   console.log('This script fixes the hive-mind creation time to show in user\'s local timezone.\n');
   
   await applyTimezoneFixes();

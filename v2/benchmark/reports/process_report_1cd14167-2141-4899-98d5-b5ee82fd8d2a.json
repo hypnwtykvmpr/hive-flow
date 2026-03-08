@@ -32,7 +32,7 @@
   },
   "executions": [
     {
-      "command": "claude-flow sparc coder Build a data processing pipeline",
+      "command": "hive-flow sparc coder Build a data processing pipeline",
       "exit_code": 0,
       "success": true,
       "duration": 0.30324411392211914,

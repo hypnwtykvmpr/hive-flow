@@ -1,7 +1,7 @@
 """
 Token Optimization Tracker
 
-Comprehensive token usage analysis and optimization for Claude Flow swarm operations.
+Comprehensive token usage analysis and optimization for Hive Flow swarm operations.
 Implements intelligent caching, batching, compression, and pruning strategies.
 """
 
@@ -354,7 +354,7 @@ class TokenOptimizationTracker:
     Track and optimize token usage across benchmark runs.
     
     This class provides comprehensive token analysis, optimization suggestions,
-    and performance tracking for Claude Flow swarm operations.
+    and performance tracking for Hive Flow swarm operations.
     """
     
     def __init__(self, config: Optional[Dict] = None):

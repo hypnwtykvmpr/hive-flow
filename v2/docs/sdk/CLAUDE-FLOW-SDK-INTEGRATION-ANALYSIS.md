@@ -1,4 +1,4 @@
-# Claude-Flow and Claude Agent SDK Integration Analysis
+# Hive-Flow and Claude Agent SDK Integration Analysis
 
 ## Executive Summary
 
@@ -8,7 +8,7 @@ After analyzing Claude Code's source, Claude Agent SDK features, and Claude-Flow
 
 ### 1. Core Feature Overlap
 
-| Feature | Claude-Flow Implementation | Claude Agent SDK | Integration Opportunity |
+| Feature | Hive-Flow Implementation | Claude Agent SDK | Integration Opportunity |
 |---------|---------------------------|------------------|------------------------|
 | **Retry Handling** | Custom exponential backoff in `src/api/claude-client.ts` | Built-in retry with configurable policies | Migrate to SDK's native retry, focus on orchestration |
 | **Artifact Management** | Memory-based storage in `swarm/memory` | Native artifact durability | Leverage SDK artifacts for swarm coordination |
@@ -18,13 +18,13 @@ After analyzing Claude Code's source, Claude Agent SDK features, and Claude-Flow
 
 ### 2. Architectural Convergence
 
-**Claude-Flow's Innovations Now in SDK:**
+**Hive-Flow's Innovations Now in SDK:**
 - Checkpoint-based recovery (your rollback system → SDK's context checkpoints)
 - Artifact tracking (your memory system → SDK's artifact durability)
 - Tool governance (your hook system → SDK's permission model)
 - Retry mechanisms (your custom retry → SDK's retry policies)
 
-**Claude-Flow's Unique Value:**
+**Hive-Flow's Unique Value:**
 - Multi-agent swarm orchestration
 - Distributed consensus protocols (Byzantine, Raft, Gossip)
 - Neural pattern learning across swarms
@@ -70,7 +70,7 @@ class SwarmOrchestrator {
 
 ```
 ┌─────────────────────────────────────┐
-│     Claude-Flow Swarm Layer         │ ← Your unique value
+│     Hive-Flow Swarm Layer         │ ← Your unique value
 ├─────────────────────────────────────┤
 │   - Multi-agent orchestration       │
 │   - Distributed consensus            │
@@ -109,7 +109,7 @@ class SwarmOrchestrator {
 
 ### 4. Unique Value Proposition
 
-**Position Claude-Flow as "Enterprise Swarm Orchestration for Claude Agent SDK"**
+**Position Hive-Flow as "Enterprise Swarm Orchestration for Claude Agent SDK"**
 
 **Your Differentiators:**
 1. **Swarm Intelligence**: SDK provides single-agent, you provide multi-agent
@@ -124,7 +124,7 @@ class SwarmOrchestrator {
 
 ```typescript
 // New architecture leveraging SDK
-export class ClaudeFlowOrchestrator {
+export class HiveFlowOrchestrator {
   private sdk: ClaudeAgentSDK;
   private swarmCoordinator: SwarmCoordinator;
   private consensusManager: ConsensusManager;
@@ -161,7 +161,7 @@ export class ClaudeFlowOrchestrator {
 
 ### 6. Competitive Advantages
 
-**Claude-Flow 3.0 Vision:**
+**Hive-Flow 3.0 Vision:**
 - **"Multi-Agent Orchestration for Claude Agent SDK"**
 - First-class swarm coordination for SDK users
 - Enterprise features (consensus, failover, distribution)
@@ -228,9 +228,9 @@ async orchestrateWithSDK(task: SwarmTask): Promise<SwarmResult> {
 
 ## Conclusion
 
-Claude-Flow has successfully pioneered concepts now adopted by Claude Agent SDK. Rather than competing with the SDK, Claude-Flow should evolve to become the premier multi-agent orchestration layer built on top of the SDK. This positions you as extending rather than duplicating Anthropic's work, focusing your innovation on the unique value of swarm intelligence, distributed consensus, and enterprise orchestration features that the base SDK doesn't provide.
+Hive-Flow has successfully pioneered concepts now adopted by Claude Agent SDK. Rather than competing with the SDK, Hive-Flow should evolve to become the premier multi-agent orchestration layer built on top of the SDK. This positions you as extending rather than duplicating Anthropic's work, focusing your innovation on the unique value of swarm intelligence, distributed consensus, and enterprise orchestration features that the base SDK doesn't provide.
 
-**Key Message**: "Claude Agent SDK handles single agents brilliantly. Claude-Flow makes them work as a swarm."
+**Key Message**: "Claude Agent SDK handles single agents brilliantly. Hive-Flow makes them work as a swarm."
 
 ## Next Steps
 
@@ -239,4 +239,4 @@ Claude-Flow has successfully pioneered concepts now adopted by Claude Agent SDK.
 3. **Long-term**: Position as enterprise orchestration for Claude Agent SDK
 4. **Marketing**: "From Single Agent to Swarm Intelligence"
 
-This evolution validates your original vision while ensuring Claude-Flow remains at the cutting edge of AI agent orchestration.
+This evolution validates your original vision while ensuring Hive-Flow remains at the cutting edge of AI agent orchestration.

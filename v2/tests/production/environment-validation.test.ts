@@ -132,7 +132,7 @@ describe('Production Environment Validation', () => {
 
   describe('Configuration File Validation', () => {
     test('should validate configuration file structure', async () => {
-      const configPath = path.join(process.cwd(), 'claude-flow.config.json');
+      const configPath = path.join(process.cwd(), 'hive-flow.config.json');
       
       if (await fs.pathExists(configPath)) {
         const configContent = await fs.readJson(configPath);

@@ -1,7 +1,7 @@
 """
 Performance Analyzer
 
-Comprehensive performance analysis and optimization system for Claude Flow swarm benchmarks.
+Comprehensive performance analysis and optimization system for Hive Flow swarm benchmarks.
 Provides advanced analytics, bottleneck identification, optimization recommendations,
 and performance trend analysis.
 """
@@ -835,7 +835,7 @@ class TrendAnalyzer:
 
 class PerformanceAnalyzer:
     """
-    Comprehensive performance analysis system for Claude Flow swarm benchmarks.
+    Comprehensive performance analysis system for Hive Flow swarm benchmarks.
     
     Provides advanced analytics, bottleneck identification, optimization recommendations,
     trend analysis, and comparative performance evaluation.

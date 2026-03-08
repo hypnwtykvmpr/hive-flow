@@ -9,7 +9,7 @@ process.on('uncaughtException', () => {
 });
 
 /**
- * Claude Flow Hook Handler (Cross-Platform)
+ * Hive Flow Hook Handler (Cross-Platform)
  * Dispatches hook events to the appropriate helper modules.
  *
  * Usage: node hook-handler.cjs <command> [args...]
@@ -78,7 +78,7 @@ function providerSummaryLine() {
 // Returns null if the module is not compiled or cannot be loaded (fail-open).
 function loadEnforcerModule() {
   try {
-    const enforcerPath = path.join(__dirname, '..', '..', 'v3', '@claude-flow', 'cli', 'dist', 'src', 'mcp-tools', 'workflow-enforcer.js');
+    const enforcerPath = path.join(__dirname, '..', '..', 'v3', '@hive-flow', 'cli', 'dist', 'src', 'mcp-tools', 'workflow-enforcer.js');
     if (!fs.existsSync(enforcerPath)) return null;
     const { pathToFileURL } = require('url');
     // Note: dynamic import returns a promise, caller must await
@@ -652,7 +652,7 @@ const handlers = {
         });
       });
 
-      const gatePath = require('path').join(__dirname, '..', '..', 'v3', '@claude-flow', 'cli', 'dist', 'src', 'permission-guard', 'gate.js');
+      const gatePath = require('path').join(__dirname, '..', '..', 'v3', '@hive-flow', 'cli', 'dist', 'src', 'permission-guard', 'gate.js');
       try {
         const { pathToFileURL } = require('url');
         const gate = await import(pathToFileURL(gatePath).href);

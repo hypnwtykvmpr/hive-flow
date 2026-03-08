@@ -5,7 +5,7 @@
 set -e
 
 echo "Running memory consolidation..."
-npx @claude-flow/cli hooks worker dispatch --trigger consolidate
+npx @hive-flow/cli hooks worker dispatch --trigger consolidate
 
 echo "Memory consolidation complete"
-npx @claude-flow/cli memory stats
+npx @hive-flow/cli memory stats

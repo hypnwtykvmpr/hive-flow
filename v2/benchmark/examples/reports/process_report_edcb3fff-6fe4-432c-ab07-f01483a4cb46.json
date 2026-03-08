@@ -32,7 +32,7 @@
   },
   "executions": [
     {
-      "command": "claude-flow sparc orchestrator echo hello world",
+      "command": "hive-flow sparc orchestrator echo hello world",
       "exit_code": 0,
       "success": true,
       "duration": 0.30389904975891113,

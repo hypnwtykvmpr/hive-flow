@@ -57,7 +57,7 @@ Successfully created **5 production-ready ReasoningBank models** with **11,000+ 
 
 ### Training Excellence
 - ✅ **5 agents trained in parallel** using Claude Code's Task tool
-- ✅ **Memory coordination** between agents via claude-flow
+- ✅ **Memory coordination** between agents via hive-flow
 - ✅ **11,000+ unique patterns** across all models
 - ✅ **Zero training failures** - all agents completed successfully
 
@@ -178,7 +178,7 @@ Successfully created **5 production-ready ReasoningBank models** with **11,000+ 
 ## 🔧 Technical Implementation
 
 ### Schema Compliance
-All models include **10 required tables** for full claude-flow compatibility:
+All models include **10 required tables** for full hive-flow compatibility:
 
 **ReasoningBank Core:**
 - `patterns` - Core pattern storage
@@ -186,15 +186,15 @@ All models include **10 required tables** for full claude-flow compatibility:
 - `task_trajectories` - Multi-step reasoning sequences
 - `pattern_links` - Causal relationships
 
-**Claude-Flow Memory:**
+**Hive-Flow Memory:**
 - `memories` - General memory storage
 - `memory_embeddings` - Memory vectors
 
-**Claude-Flow Session:**
+**Hive-Flow Session:**
 - `sessions` - Session tracking
 - `session_metrics` - Performance metrics
 
-**Claude-Flow Neural:**
+**Hive-Flow Neural:**
 - `neural_patterns` - Neural network patterns
 - `training_data` - Training examples
 
@@ -214,7 +214,7 @@ All models include **10 required tables** for full claude-flow compatibility:
 **Path**: 30 seconds
 1. Read `models/README.md` - Choose model
 2. Run install command: `cp model/memory.db ~/.swarm/`
-3. Query: `npx claude-flow@alpha memory query "your question"`
+3. Query: `npx hive-flow@alpha memory query "your question"`
 **Result**: Instant access to expert patterns
 
 ### Intermediate: "I want to understand how models work"
@@ -248,7 +248,7 @@ All models include **10 required tables** for full claude-flow compatibility:
 cp docs/reasoningbank/models/safla/memory.db ~/.swarm/memory.db
 
 # Query patterns
-npx claude-flow@alpha memory query "API optimization"
+npx hive-flow@alpha memory query "API optimization"
 
 # Expected: 2-3 relevant patterns in <2ms
 ```
@@ -393,7 +393,7 @@ docs/reasoningbank/models/
 5. Domain Expert Training Agent
 
 **Coordination**:
-- Memory coordination via `claude-flow@alpha memory store`
+- Memory coordination via `hive-flow@alpha memory store`
 - Progress tracking via shared namespace
 - Hook-based notifications
 - Autonomous completion
@@ -444,7 +444,7 @@ Every model achieved:
 ## 🙏 Acknowledgments
 
 **Training Agents**: 5 parallel Claude Code agents
-**Coordination**: claude-flow@alpha memory system
+**Coordination**: hive-flow@alpha memory system
 **Research Foundation**: Google Research (arXiv:2509.25140)
 **Backend**: agentic-flow@1.5.13
 **Database**: SQLite with better-sqlite3
@@ -459,7 +459,7 @@ Every model achieved:
 - Training Guide: [models/HOW-TO-TRAIN.md](./HOW-TO-TRAIN.md)
 - Navigation Index: [models/INDEX.md](./INDEX.md)
 
-**Issues**: [GitHub Issues](https://github.com/ruvnet/claude-flow/issues)
+**Issues**: [GitHub Issues](https://github.com/ruvnet/hive-flow/issues)
 
 ---
 

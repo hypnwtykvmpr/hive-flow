@@ -1,5 +1,5 @@
 /**
- * Claude-Flow UI Module
+ * Hive-Flow UI Module
  * Provides compatible UI solutions for different terminal environments
  */
 

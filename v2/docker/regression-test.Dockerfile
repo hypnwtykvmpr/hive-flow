@@ -33,10 +33,10 @@ RUN mkdir -p /test-results /test-data /test-logs
 
 # Set environment variables for testing
 ENV NODE_ENV=test
-ENV CLAUDE_FLOW_TEST=true
+ENV HIVE_FLOW_TEST=true
 ENV AGENTDB_PATH=/test-data/.agentdb
 
-# Install claude-flow globally for CLI testing
+# Install hive-flow globally for CLI testing
 RUN npm link
 
 # Create regression test runner script
@@ -45,7 +45,7 @@ RUN cat > /usr/local/bin/run-regression-tests.sh << 'EOF'
 set -e
 
 echo "=================================================="
-echo "Claude Flow AgentDB Integration Regression Tests"
+echo "Hive Flow AgentDB Integration Regression Tests"
 echo "=================================================="
 echo ""
 
@@ -94,44 +94,44 @@ echo "Phase 1: CLI Command Tests"
 echo "=================================================="
 echo ""
 
-run_test "CLI" "Version check" "claude-flow --version"
-run_test "CLI" "Help output" "claude-flow --help"
-run_test "CLI" "Memory help" "claude-flow memory --help"
-run_test "CLI" "SPARC help" "claude-flow sparc --help"
-run_test "CLI" "Hooks help" "claude-flow hooks --help"
-run_test "CLI" "MCP help" "claude-flow mcp --help"
+run_test "CLI" "Version check" "hive-flow --version"
+run_test "CLI" "Help output" "hive-flow --help"
+run_test "CLI" "Memory help" "hive-flow memory --help"
+run_test "CLI" "SPARC help" "hive-flow sparc --help"
+run_test "CLI" "Hooks help" "hive-flow hooks --help"
+run_test "CLI" "MCP help" "hive-flow mcp --help"
 
 echo "=================================================="
 echo "Phase 2: Memory System Tests"
 echo "=================================================="
 echo ""
 
-run_test "Memory" "Store operation" "claude-flow memory store test-key '{\"value\":\"test\"}' --namespace test"
-run_test "Memory" "Retrieve operation" "claude-flow memory retrieve test-key --namespace test"
-run_test "Memory" "List operation" "claude-flow memory list --namespace test"
-run_test "Memory" "Search operation" "claude-flow memory search 'test' --namespace test"
-run_test "Memory" "Delete operation" "claude-flow memory delete test-key --namespace test"
-run_test "Memory" "Backup operation" "claude-flow memory backup /test-data/backup.json"
-run_test "Memory" "Stats operation" "claude-flow memory stats"
+run_test "Memory" "Store operation" "hive-flow memory store test-key '{\"value\":\"test\"}' --namespace test"
+run_test "Memory" "Retrieve operation" "hive-flow memory retrieve test-key --namespace test"
+run_test "Memory" "List operation" "hive-flow memory list --namespace test"
+run_test "Memory" "Search operation" "hive-flow memory search 'test' --namespace test"
+run_test "Memory" "Delete operation" "hive-flow memory delete test-key --namespace test"
+run_test "Memory" "Backup operation" "hive-flow memory backup /test-data/backup.json"
+run_test "Memory" "Stats operation" "hive-flow memory stats"
 
 echo "=================================================="
 echo "Phase 3: AgentDB-Specific Tests"
 echo "=================================================="
 echo ""
 
-run_test "AgentDB" "Vector store" "claude-flow memory store-vector test-vec '{\"data\":\"semantic test\"}' --namespace agentdb-test"
-run_test "AgentDB" "Vector search" "claude-flow memory vector-search 'semantic' --namespace agentdb-test --k 5"
-run_test "AgentDB" "Quantization info" "claude-flow memory quantization-info"
-run_test "AgentDB" "HNSW stats" "claude-flow memory hnsw-stats"
-run_test "AgentDB" "Learning status" "claude-flow memory learning-status"
-run_test "AgentDB" "Skill library" "claude-flow memory skills-list"
+run_test "AgentDB" "Vector store" "hive-flow memory store-vector test-vec '{\"data\":\"semantic test\"}' --namespace agentdb-test"
+run_test "AgentDB" "Vector search" "hive-flow memory vector-search 'semantic' --namespace agentdb-test --k 5"
+run_test "AgentDB" "Quantization info" "hive-flow memory quantization-info"
+run_test "AgentDB" "HNSW stats" "hive-flow memory hnsw-stats"
+run_test "AgentDB" "Learning status" "hive-flow memory learning-status"
+run_test "AgentDB" "Skill library" "hive-flow memory skills-list"
 
 echo "=================================================="
 echo "Phase 4: MCP Tool Tests"
 echo "=================================================="
 echo ""
 
-run_test "MCP" "MCP start" "timeout 5 claude-flow mcp start || true"
+run_test "MCP" "MCP start" "timeout 5 hive-flow mcp start || true"
 run_test "MCP" "Swarm init" "node -e \"require('./dist/mcp/tools/swarm.js')\""
 run_test "MCP" "Memory tools" "node -e \"require('./dist/mcp/tools/memory.js')\""
 run_test "MCP" "Neural tools" "node -e \"require('./dist/mcp/tools/neural.js')\""
@@ -142,19 +142,19 @@ echo "Phase 5: SPARC Mode Tests"
 echo "=================================================="
 echo ""
 
-run_test "SPARC" "List modes" "claude-flow sparc modes"
-run_test "SPARC" "Mode info" "claude-flow sparc info spec"
-run_test "SPARC" "Help output" "claude-flow sparc --help"
+run_test "SPARC" "List modes" "hive-flow sparc modes"
+run_test "SPARC" "Mode info" "hive-flow sparc info spec"
+run_test "SPARC" "Help output" "hive-flow sparc --help"
 
 echo "=================================================="
 echo "Phase 6: Hooks System Tests"
 echo "=================================================="
 echo ""
 
-run_test "Hooks" "List hooks" "claude-flow hooks list"
-run_test "Hooks" "Pre-task hook" "claude-flow hooks pre-task --description 'test task'"
-run_test "Hooks" "Post-task hook" "claude-flow hooks post-task --task-id test-123"
-run_test "Hooks" "Memory coordination" "claude-flow hooks post-edit --file test.js --memory-key test/key"
+run_test "Hooks" "List hooks" "hive-flow hooks list"
+run_test "Hooks" "Pre-task hook" "hive-flow hooks pre-task --description 'test task'"
+run_test "Hooks" "Post-task hook" "hive-flow hooks post-task --task-id test-123"
+run_test "Hooks" "Memory coordination" "hive-flow hooks post-edit --file test.js --memory-key test/key"
 
 echo "=================================================="
 echo "Phase 7: Integration Tests"

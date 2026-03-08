@@ -1,6 +1,6 @@
-# Claude Flow Benchmark System v2.0
+# Hive Flow Benchmark System v2.0
 
-A production-ready benchmarking system for Claude Flow that executes **real commands** and measures **actual performance metrics**.
+A production-ready benchmarking system for Hive Flow that executes **real commands** and measures **actual performance metrics**.
 
 ## 🚀 Quick Start
 
@@ -18,7 +18,7 @@ python run_real_benchmarks.py --mode comprehensive
 
 ## ✨ Key Features
 
-- **Real Command Execution**: Executes actual `./claude-flow` commands via subprocess
+- **Real Command Execution**: Executes actual `./hive-flow` commands via subprocess
 - **Stream JSON Parsing**: Real-time parsing of `--non-interactive --output-format stream-json`
 - **Authentic Metrics**: Token usage, execution time, and resource consumption from real runs
 - **No Simulations**: 100% real execution, no mocks or placeholders
@@ -29,17 +29,17 @@ python run_real_benchmarks.py --mode comprehensive
 
 ### Swarm Benchmarking
 ```bash
-./claude-flow swarm "objective" --non-interactive --output-format stream-json
+./hive-flow swarm "objective" --non-interactive --output-format stream-json
 ```
 
 ### Hive-Mind Benchmarking
 ```bash
-./claude-flow hive-mind spawn "task" --non-interactive
+./hive-flow hive-mind spawn "task" --non-interactive
 ```
 
 ### SPARC Mode Benchmarking
 ```bash
-./claude-flow sparc run code "task" --non-interactive
+./hive-flow sparc run code "task" --non-interactive
 ```
 
 ## 🏗️ Architecture
@@ -48,7 +48,7 @@ python run_real_benchmarks.py --mode comprehensive
 benchmark/
 ├── src/swarm_benchmark/
 │   ├── core/
-│   │   ├── claude_flow_real_executor.py  # Real command executor
+│   │   ├── hive_flow_real_executor.py  # Real command executor
 │   │   ├── real_benchmark_engine_v2.py   # Production benchmark engine
 │   │   └── benchmark_engine.py           # Core engine with real support
 │   ├── scenarios/
@@ -78,7 +78,7 @@ benchmark/
 python test_real_benchmarks.py --quick
 
 # Integration tests
-pytest tests/integration/test_real_claude_flow_integration.py
+pytest tests/integration/test_real_hive_flow_integration.py
 
 # Verify real integration
 python examples/verify_real_integration.py
@@ -115,7 +115,7 @@ print(f"Agents spawned: {result.metrics['agents_spawned']}")
 
 ## 🔧 Configuration
 
-The system uses real Claude Flow commands with these flags:
+The system uses real Hive Flow commands with these flags:
 - `--non-interactive`: Automation mode
 - `--output-format stream-json`: Structured output
 - `--dangerously-skip-permissions`: Skip prompts
@@ -123,7 +123,7 @@ The system uses real Claude Flow commands with these flags:
 
 ## 📊 Performance
 
-Validated with Claude Flow v2.0.0-alpha.87:
+Validated with Hive Flow v2.0.0-alpha.87:
 - Real token usage tracking
 - Actual execution timing
 - Live resource monitoring
@@ -132,7 +132,7 @@ Validated with Claude Flow v2.0.0-alpha.87:
 ## 🤝 Contributing
 
 This is a production system designed for real benchmarking. All contributions must:
-1. Use real Claude Flow commands
+1. Use real Hive Flow commands
 2. Parse actual responses
 3. Measure genuine metrics
 4. Include comprehensive tests

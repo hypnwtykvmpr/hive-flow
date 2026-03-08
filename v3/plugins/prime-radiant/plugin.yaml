@@ -1,5 +1,5 @@
 # Prime Radiant Plugin Manifest
-# Mathematical AI Interpretability for Claude Flow V3
+# Mathematical AI Interpretability for Hive Flow V3
 
 name: prime-radiant
 version: 0.1.3
@@ -10,8 +10,8 @@ description: |
 
 author: rUv
 license: MIT
-repository: https://github.com/ruvnet/claude-flow
-documentation: https://github.com/ruvnet/claude-flow/blob/main/v3/plugins/prime-radiant/README.md
+repository: https://github.com/ruvnet/hive-flow
+documentation: https://github.com/ruvnet/hive-flow/blob/main/v3/plugins/prime-radiant/README.md
 
 # Plugin metadata
 metadata:
@@ -35,15 +35,15 @@ domains:
   - coordination # Swarm stability analysis
   - hive-mind    # Consensus verification
 
-# Required Claude Flow dependencies
+# Required Hive Flow dependencies
 dependencies:
   required:
-    - "@claude-flow/memory": ">=3.0.0"
-    - "@claude-flow/security": ">=3.0.0"
-    - "@claude-flow/coordination": ">=3.0.0"
+    - "@hive-flow/memory": ">=3.0.0"
+    - "@hive-flow/security": ">=3.0.0"
+    - "@hive-flow/coordination": ">=3.0.0"
   optional:
-    - "@claude-flow/embeddings": ">=3.0.0"  # For embedding generation
-    - "@claude-flow/aidefence": ">=3.0.0"   # For enhanced threat detection
+    - "@hive-flow/embeddings": ">=3.0.0"  # For embedding generation
+    - "@hive-flow/aidefence": ">=3.0.0"   # For enhanced threat detection
 
 # Capabilities provided by this plugin
 capabilities:
@@ -678,7 +678,7 @@ implementation:
       files: 5
       estimatedLines: 475
       deliverables:
-        - Plugin registers with @claude-flow/plugins SDK
+        - Plugin registers with @hive-flow/plugins SDK
         - Type-safe configuration
         - Basic lifecycle hooks
 

@@ -56,14 +56,14 @@ export async function createDirectoryStructure(): Promise<void> {
     version: '1.0.71',
   };
 
-  await fs.writeFile('memory/claude-flow-data.json', JSON.stringify(initialData, null, 2));
-  console.log('  ✅ Created memory/claude-flow-data.json (persistence database)');
+  await fs.writeFile('memory/hive-flow-data.json', JSON.stringify(initialData, null, 2));
+  console.log('  ✅ Created memory/hive-flow-data.json (persistence database)');
 }
 
 function createAgentsReadme(): string {
   return `# Agents Directory
 
-This directory stores persistent information about AI agents created and managed by Claude-Flow.
+This directory stores persistent information about AI agents created and managed by Hive-Flow.
 
 ## Structure
 - Each agent gets its own JSON file named by agent ID
@@ -71,10 +71,10 @@ This directory stores persistent information about AI agents created and managed
 - Shared agent data is stored in agent-registry.json
 
 ## Usage
-Agents are automatically managed by the Claude-Flow orchestration system. You can:
-- View agent status with \`claude-flow agent list\`
-- Create new agents with \`claude-flow agent spawn <type>\`
-- Configure agents with \`claude-flow agent configure <id>\`
+Agents are automatically managed by the Hive-Flow orchestration system. You can:
+- View agent status with \`hive-flow agent list\`
+- Create new agents with \`hive-flow agent spawn <type>\`
+- Configure agents with \`hive-flow agent configure <id>\`
 
 ## Files
 - \`agent-registry.json\`: Central agent registry
@@ -86,7 +86,7 @@ Agents are automatically managed by the Claude-Flow orchestration system. You ca
 function createSessionsReadme(): string {
   return `# Sessions Directory
 
-This directory stores information about Claude-Flow orchestration sessions.
+This directory stores information about Hive-Flow orchestration sessions.
 
 ## Structure
 - Each session gets its own subdirectory
@@ -95,9 +95,9 @@ This directory stores information about Claude-Flow orchestration sessions.
 
 ## Usage
 Sessions are managed automatically during orchestration:
-- Start sessions with \`claude-flow start\`
-- Monitor sessions with \`claude-flow status\`
-- Review session history with \`claude-flow session list\`
+- Start sessions with \`hive-flow start\`
+- Monitor sessions with \`hive-flow status\`
+- Review session history with \`hive-flow session list\`
 
 ## Files
 - \`session-<id>/\`: Individual session directories
@@ -123,7 +123,7 @@ Coordination data is used for:
 - Resource allocation and balancing
 - Error recovery and failover
 
-Access coordination data through the Claude-Flow API or CLI commands.
+Access coordination data through the Hive-Flow API or CLI commands.
 `;
 }
 
@@ -139,8 +139,8 @@ This directory stores output reports from swarm operations and orchestration tas
 
 ## Usage
 Reports are generated automatically by swarm operations:
-- View recent reports with \`claude-flow swarm list\`
-- Check specific reports with \`claude-flow swarm status <id>\`
+- View recent reports with \`hive-flow swarm list\`
+- Check specific reports with \`hive-flow swarm status <id>\`
 - Export reports in different formats using \`--output\` flags
 
 ## File Types

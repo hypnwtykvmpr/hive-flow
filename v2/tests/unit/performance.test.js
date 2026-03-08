@@ -1,5 +1,5 @@
 /**
- * Performance tests for Claude-Flow
+ * Performance tests for Hive-Flow
  */
 
 import { jest } from '@jest/globals';

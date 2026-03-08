@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Real Claude-Flow Integration Tests
-Tests actual claude-flow execution with streaming JSON parsing and metrics extraction.
+Real Hive-Flow Integration Tests
+Tests actual hive-flow execution with streaming JSON parsing and metrics extraction.
 """
 
 import subprocess
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class StreamingResponse:
-    """Represents a streaming JSON response from Claude Flow."""
+    """Represents a streaming JSON response from Hive Flow."""
     type: str
     data: Dict[str, Any]
     timestamp: float
@@ -43,45 +43,45 @@ class ExecutionMetrics:
     peak_memory_usage: Optional[float] = None
 
 
-class ClaudeFlowRealExecutor:
-    """Executor for real Claude Flow commands with JSON streaming support."""
+class HiveFlowRealExecutor:
+    """Executor for real Hive Flow commands with JSON streaming support."""
     
-    def __init__(self, claude_flow_path: Optional[str] = None):
-        """Initialize with path to claude-flow executable."""
-        self.claude_flow_path = claude_flow_path or self._find_claude_flow()
+    def __init__(self, hive_flow_path: Optional[str] = None):
+        """Initialize with path to hive-flow executable."""
+        self.hive_flow_path = hive_flow_path or self._find_hive_flow()
         self.validate_installation()
     
-    def _find_claude_flow(self) -> str:
-        """Find the claude-flow executable in the project."""
+    def _find_hive_flow(self) -> str:
+        """Find the hive-flow executable in the project."""
         # Check project locations
         base_path = Path(__file__).parent.parent.parent.parent
         locations = [
-            Path("/workspaces/claude-code-flow/bin/claude-flow"),
-            base_path / "bin" / "claude-flow",
-            Path("/workspaces/claude-code-flow/claude-flow"),
-            base_path / "claude-flow",
-            base_path / "dist" / "claude-flow",
-            Path.cwd() / "claude-flow",
+            Path("/workspaces/claude-code-flow/bin/hive-flow"),
+            base_path / "bin" / "hive-flow",
+            Path("/workspaces/claude-code-flow/hive-flow"),
+            base_path / "hive-flow",
+            base_path / "dist" / "hive-flow",
+            Path.cwd() / "hive-flow",
         ]
         
         for loc in locations:
             if loc.exists() and os.access(loc, os.X_OK):
                 return str(loc)
         
-        # Try ./claude-flow in current directory
-        local_claude_flow = Path("./claude-flow").resolve()
-        if local_claude_flow.exists() and os.access(local_claude_flow, os.X_OK):
-            return str(local_claude_flow)
+        # Try ./hive-flow in current directory
+        local_hive_flow = Path("./hive-flow").resolve()
+        if local_hive_flow.exists() and os.access(local_hive_flow, os.X_OK):
+            return str(local_hive_flow)
             
-        raise RuntimeError("Could not find claude-flow executable")
+        raise RuntimeError("Could not find hive-flow executable")
     
     def validate_installation(self) -> bool:
-        """Validate that claude-flow is properly installed."""
+        """Validate that hive-flow is properly installed."""
         try:
-            result = subprocess.run([self.claude_flow_path, "--version"], 
+            result = subprocess.run([self.hive_flow_path, "--version"], 
                                   capture_output=True, text=True, timeout=10)
             if result.returncode == 0:
-                logger.info(f"Found claude-flow: {result.stdout.strip()}")
+                logger.info(f"Found hive-flow: {result.stdout.strip()}")
                 return True
             else:
                 logger.error(f"Version check failed: {result.stderr}")
@@ -91,7 +91,7 @@ class ClaudeFlowRealExecutor:
             return False
     
     def parse_streaming_json(self, output: str) -> List[StreamingResponse]:
-        """Parse streaming JSON responses from claude-flow output."""
+        """Parse streaming JSON responses from hive-flow output."""
         responses = []
         lines = output.split('\n')
         
@@ -183,7 +183,7 @@ class ClaudeFlowRealExecutor:
                      timeout: int = 60) -> ExecutionMetrics:
         """Execute a real swarm command with metrics collection."""
         command = [
-            self.claude_flow_path, "swarm",
+            self.hive_flow_path, "swarm",
             objective,
             "--strategy", strategy,
             "--mode", mode,
@@ -225,7 +225,7 @@ class ClaudeFlowRealExecutor:
                          non_interactive: bool = True, timeout: int = 60) -> ExecutionMetrics:
         """Execute a real hive-mind command."""
         command = [
-            self.claude_flow_path, "hive-mind",
+            self.hive_flow_path, "hive-mind",
             objective,
             "--agents", str(agents),
             "--stream-json",
@@ -262,7 +262,7 @@ class ClaudeFlowRealExecutor:
                      timeout: int = 60) -> ExecutionMetrics:
         """Execute a real SPARC command."""
         command = [
-            self.claude_flow_path, "sparc", mode,
+            self.hive_flow_path, "sparc", mode,
             task,
             "--stream-json",
             "--timeout", str(timeout)
@@ -295,19 +295,19 @@ class ClaudeFlowRealExecutor:
             return self.extract_metrics(stdout, stderr, duration, False)
 
 
-class TestRealClaudeFlowIntegration:
-    """Test suite for real Claude Flow integration."""
+class TestRealHiveFlowIntegration:
+    """Test suite for real Hive Flow integration."""
     
     @pytest.fixture(scope="class")
     def executor(self):
         """Create executor instance."""
-        return ClaudeFlowRealExecutor()
+        return HiveFlowRealExecutor()
     
     def test_executor_initialization(self, executor):
         """Test that executor initializes correctly."""
         assert executor is not None
-        assert executor.claude_flow_path is not None
-        assert Path(executor.claude_flow_path).exists()
+        assert executor.hive_flow_path is not None
+        assert Path(executor.hive_flow_path).exists()
         assert executor.validate_installation()
     
     def test_real_swarm_execution(self, executor):
@@ -444,9 +444,9 @@ class TestRealClaudeFlowIntegration:
 
 def main():
     """Run tests directly."""
-    executor = ClaudeFlowRealExecutor()
+    executor = HiveFlowRealExecutor()
     
-    print("🚀 Running Real Claude Flow Integration Tests")
+    print("🚀 Running Real Hive Flow Integration Tests")
     print("=" * 60)
     
     # Test 1: Basic execution

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Run and optimize SWE-bench evaluation with claude-flow.
+Run and optimize SWE-bench evaluation with hive-flow.
 Tests different configurations to find the best performance.
 """
 

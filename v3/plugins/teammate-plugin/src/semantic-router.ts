@@ -4,7 +4,7 @@
  * Uses WebAssembly-accelerated neural pathfinding with embeddings
  * to match tasks to the best-suited teammates based on semantic similarity.
  *
- * @module @claude-flow/teammate-plugin/semantic
+ * @module @hive-flow/teammate-plugin/semantic
  * @version 1.0.0-alpha.1
  */
 

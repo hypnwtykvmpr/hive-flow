@@ -1,29 +1,29 @@
 /**
  * SDK Integration Regression Tests
- * Claude-Flow v2.5-alpha.130
+ * Hive-Flow v2.5-alpha.130
  *
  * Comprehensive test suite to ensure no regressions
  */
 
 // Set up test environment - must be before imports
 process.env.NODE_ENV = 'test';
-process.env.CLAUDE_FLOW_ENV = 'development'; // Use development to allow logger initialization
+process.env.HIVE_FLOW_ENV = 'development'; // Use development to allow logger initialization
 
 import { ClaudeClientV25 } from '../api/claude-client-v2.5';
 import { TaskExecutorSDK } from '../swarm/executor-sdk';
-import { ClaudeFlowSDKAdapter } from '../sdk/sdk-config';
+import { HiveFlowSDKAdapter } from '../sdk/sdk-config';
 import { SDKCompatibilityLayer } from '../sdk/compatibility-layer';
 
 describe('SDK Integration Tests - v2.5-alpha.130', () => {
   let newClient: ClaudeClientV25;
-  let sdkAdapter: ClaudeFlowSDKAdapter;
+  let sdkAdapter: HiveFlowSDKAdapter;
   let compatibility: SDKCompatibilityLayer;
 
   beforeEach(() => {
     // Initialize with test API key
     process.env.ANTHROPIC_API_KEY = 'test-key';
 
-    sdkAdapter = new ClaudeFlowSDKAdapter({
+    sdkAdapter = new HiveFlowSDKAdapter({
       apiKey: 'test-key',
       maxRetries: 3,
       timeout: 5000
@@ -95,7 +95,7 @@ describe('SDK Integration Tests - v2.5-alpha.130', () => {
 
   describe('SDK Configuration', () => {
     test('SDK adapter initializes correctly', () => {
-      const adapter = new ClaudeFlowSDKAdapter({
+      const adapter = new HiveFlowSDKAdapter({
         apiKey: 'test-key',
         maxRetries: 5,
         timeout: 10000,
@@ -113,14 +113,14 @@ describe('SDK Integration Tests - v2.5-alpha.130', () => {
       delete process.env.ANTHROPIC_API_KEY;
       delete process.env.CLAUDE_API_KEY;
 
-      const adapter = new ClaudeFlowSDKAdapter({});
+      const adapter = new HiveFlowSDKAdapter({});
       const config = adapter.getConfig();
 
       expect(config.apiKey).toBeUndefined();
     });
 
     test('SDK adapter validates configuration', async () => {
-      const adapter = new ClaudeFlowSDKAdapter({
+      const adapter = new HiveFlowSDKAdapter({
         apiKey: 'invalid-key'
       });
 

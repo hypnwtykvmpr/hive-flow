@@ -1,10 +1,10 @@
 #!/bin/bash
 
 echo "╔════════════════════════════════════════════════════════════════╗"
-echo "║   Claude Flow v2.7.40 - Docker Validation Test Suite          ║"
+echo "║   Hive Flow v2.7.40 - Docker Validation Test Suite          ║"
 echo "╚════════════════════════════════════════════════════════════════╝"
 echo ""
-echo "Testing published package: claude-flow@2.7.40"
+echo "Testing published package: hive-flow@2.7.40"
 echo "Focus: CLI functionality and hook error fixes"
 echo "Started: $(date)"
 echo ""
@@ -51,7 +51,7 @@ echo ""
 if [ $FAILED -eq 0 ]; then
     echo "╔════════════════════════════════════════════════════════════════╗"
     echo "║                                                                ║"
-    echo "║  🎉 ALL TESTS PASSED - claude-flow@2.7.40 is PRODUCTION-READY ║"
+    echo "║  🎉 ALL TESTS PASSED - hive-flow@2.7.40 is PRODUCTION-READY ║"
     echo "║                                                                ║"
     echo "║  ✅ CLI works correctly with npx                               ║"
     echo "║  ✅ All hooks exit with status 0                               ║"

@@ -1,7 +1,7 @@
 """
 Memory Persistence Profiler
 
-Comprehensive memory profiling and optimization for Claude Flow swarm operations.
+Comprehensive memory profiling and optimization for Hive Flow swarm operations.
 Tracks memory usage patterns, persistence overhead, and provides optimization suggestions.
 """
 
@@ -571,7 +571,7 @@ class DataModel:
 
 class MemoryPersistenceProfiler:
     """
-    Profile memory persistence overhead and optimization for Claude Flow swarms.
+    Profile memory persistence overhead and optimization for Hive Flow swarms.
     
     This class provides comprehensive memory analysis including growth patterns,
     GC impact, cache efficiency, and persistence overhead measurement.

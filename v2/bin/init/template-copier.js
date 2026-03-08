@@ -168,7 +168,7 @@ async function copyFile(source, destination, options) {
       await fs.writeFile(destination, content);
       
       // Preserve file permissions for executable scripts
-      if (source.endsWith('.sh') || source.includes('claude-flow')) {
+      if (source.endsWith('.sh') || source.includes('hive-flow')) {
         await fs.chmod(destination, 0o755);
       }
     }
@@ -350,14 +350,14 @@ async function copyHelperScripts(templatesDir, targetDir, options, results) {
 async function copyWrapperScripts(templatesDir, targetDir, options, results) {
   try {
     // Unix wrapper only
-    const unixWrapperPath = join(targetDir, 'claude-flow');
-    const unixWrapperSource = join(templatesDir, 'claude-flow-universal');
+    const unixWrapperPath = join(targetDir, 'hive-flow');
+    const unixWrapperSource = join(templatesDir, 'hive-flow-universal');
     
     if (await copyFile(unixWrapperSource, unixWrapperPath, options)) {
       if (!options.dryRun) {
         await fs.chmod(unixWrapperPath, 0o755);
       }
-      results.copiedFiles.push('claude-flow');
+      results.copiedFiles.push('hive-flow');
     }
 
     // Removed Windows batch and PowerShell wrappers per user request
@@ -433,7 +433,7 @@ async function createMemoryReadmeFiles(targetDir, options, results) {
   }
 
   // Initialize persistence database
-  const dbPath = join(targetDir, 'memory', 'claude-flow-data.json');
+  const dbPath = join(targetDir, 'memory', 'hive-flow-data.json');
   const initialData = {
     agents: [],
     tasks: [],
@@ -444,8 +444,8 @@ async function createMemoryReadmeFiles(targetDir, options, results) {
     if (!options.dryRun) {
       await fs.writeFile(dbPath, JSON.stringify(initialData, null, 2));
     }
-    console.log(`  ${options.dryRun ? '[DRY RUN] Would create' : '✓ Created'} memory/claude-flow-data.json (persistence database)`);
-    results.copiedFiles.push('memory/claude-flow-data.json');
+    console.log(`  ${options.dryRun ? '[DRY RUN] Would create' : '✓ Created'} memory/hive-flow-data.json (persistence database)`);
+    results.copiedFiles.push('memory/hive-flow-data.json');
   } catch (err) {
     results.errors.push(`Failed to create persistence database: ${err.message}`);
   }
@@ -518,8 +518,8 @@ async function getTemplateContent(templatePath) {
       const { createVerificationSettingsJson } = await import('./templates/verification-claude-md.js');
       return createVerificationSettingsJson();
     },
-    'claude-flow-universal': async () => {
-      return await fs.readFile(join(__dirname, 'templates', 'claude-flow-universal'), 'utf8');
+    'hive-flow-universal': async () => {
+      return await fs.readFile(join(__dirname, 'templates', 'hive-flow-universal'), 'utf8');
     },
     // Removed Windows wrapper templates per user request
   };
@@ -554,7 +554,7 @@ async function generateCommandTemplates(targetDir, options, results) {
         // Create category README
         const categoryReadme = `# ${category.charAt(0).toUpperCase() + category.slice(1)} Commands
 
-Commands for ${category} operations in Claude Flow.
+Commands for ${category} operations in Hive Flow.
 
 ## Available Commands
 

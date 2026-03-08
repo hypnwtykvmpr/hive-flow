@@ -6,7 +6,7 @@
  */
 
 import { query, type Query, type Options } from '@anthropic-ai/claude-code/sdk';
-import { createClaudeFlowSdkServer, ClaudeFlowToolRegistry } from './tool-registry.js';
+import { createHiveFlowSdkServer, HiveFlowToolRegistry } from './tool-registry.js';
 import type { McpSdkServerConfigWithInstance } from '@anthropic-ai/claude-code/sdk.d.ts';
 import { logger } from '../core/logger.js';
 
@@ -24,7 +24,7 @@ export interface SDKIntegrationConfig {
  */
 export class SDKIntegration {
   private sdkServer?: McpSdkServerConfigWithInstance;
-  private registry?: ClaudeFlowToolRegistry;
+  private registry?: HiveFlowToolRegistry;
   private config: SDKIntegrationConfig;
 
   constructor(config: SDKIntegrationConfig) {
@@ -51,8 +51,8 @@ export class SDKIntegration {
     logger.info('Initializing in-process MCP server...');
 
     try {
-      // Create SDK server with all Claude-Flow tools
-      this.sdkServer = await createClaudeFlowSdkServer(this.config.orchestratorContext);
+      // Create SDK server with all Hive-Flow tools
+      this.sdkServer = await createHiveFlowSdkServer(this.config.orchestratorContext);
 
       logger.info('In-process MCP server initialized successfully', {
         serverName: this.sdkServer.name,
@@ -81,7 +81,7 @@ export class SDKIntegration {
     if (this.sdkServer) {
       queryOptions.mcpServers = {
         ...queryOptions.mcpServers,
-        'claude-flow': this.sdkServer,
+        'hive-flow': this.sdkServer,
       };
 
       logger.debug('Query created with in-process MCP server', {
@@ -111,7 +111,7 @@ export class SDKIntegration {
 
     // Add in-process server
     if (this.sdkServer) {
-      queryOptions.mcpServers!['claude-flow'] = this.sdkServer;
+      queryOptions.mcpServers!['hive-flow'] = this.sdkServer;
     }
 
     // Create agent-specific context

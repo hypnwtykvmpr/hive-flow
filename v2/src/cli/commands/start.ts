@@ -1,5 +1,5 @@
 /**
- * Start command for Claude-Flow
+ * Start command for Hive-Flow
  * Re-exports the modular implementation
  */
 

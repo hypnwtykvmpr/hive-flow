@@ -1,5 +1,5 @@
 /**
- * Hive Mind Initialization Module for Claude Flow v2.0.0
+ * Hive Mind Initialization Module for Hive Flow v2.0.0
  * Provides comprehensive hive-mind system setup for the init process
  */
 
@@ -604,7 +604,7 @@ export async function createHiveMindDocumentation(workingDir, dryRun = false) {
 
   const readmeContent = `# Hive Mind System
 
-This directory contains the Claude Flow Hive Mind system configuration and data.
+This directory contains the Hive Flow Hive Mind system configuration and data.
 
 ## Directory Structure
 
@@ -623,9 +623,9 @@ This directory contains the Claude Flow Hive Mind system configuration and data.
 
 ## Getting Started
 
-1. Initialize: \`npx claude-flow@alpha hive-mind init\`
-2. Spawn swarm: \`npx claude-flow@alpha hive-mind spawn "your objective"\`
-3. Check status: \`npx claude-flow@alpha hive-mind status\`
+1. Initialize: \`npx hive-flow@alpha hive-mind init\`
+2. Spawn swarm: \`npx hive-flow@alpha hive-mind spawn "your objective"\`
+3. Check status: \`npx hive-flow@alpha hive-mind status\`
 
 ## Features
 
@@ -644,7 +644,7 @@ Edit \`.hive-mind/config.json\` to customize:
 - Memory settings
 - Integration options
 
-For more information, see the [Hive Mind Documentation](https://github.com/ruvnet/claude-flow/docs/hive-mind.md).
+For more information, see the [Hive Mind Documentation](https://github.com/ruvnet/hive-flow/docs/hive-mind.md).
 `;
 
   await fs.writeFile(

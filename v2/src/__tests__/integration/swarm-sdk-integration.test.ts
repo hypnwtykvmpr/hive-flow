@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
-import { ClaudeFlowSDKAdapter, SDKConfiguration } from '../../sdk/sdk-config.js';
+import { HiveFlowSDKAdapter, SDKConfiguration } from '../../sdk/sdk-config.js';
 import { SDKCompatibilityLayer } from '../../sdk/compatibility-layer.js';
 import { TaskExecutorSDK, ExecutionConfig } from '../../swarm/executor-sdk.js';
 import { ClaudeClientV25 } from '../../api/claude-client-v2.5.js';
@@ -17,7 +17,7 @@ import Anthropic from '@anthropic-ai/sdk';
 jest.mock('@anthropic-ai/sdk');
 
 describe('SDK Integration Tests', () => {
-  let adapter: ClaudeFlowSDKAdapter;
+  let adapter: HiveFlowSDKAdapter;
   let compatibility: SDKCompatibilityLayer;
   let executor: TaskExecutorSDK;
   let client: ClaudeClientV25;
@@ -44,7 +44,7 @@ describe('SDK Integration Tests', () => {
       checkpointInterval: 30000,
     };
 
-    adapter = new ClaudeFlowSDKAdapter(config);
+    adapter = new HiveFlowSDKAdapter(config);
     compatibility = new SDKCompatibilityLayer(adapter);
 
     const executorConfig: ExecutionConfig = {
@@ -91,13 +91,13 @@ describe('SDK Integration Tests', () => {
 
       it('should handle API key from environment', () => {
         process.env.ANTHROPIC_API_KEY = 'env-key';
-        const newAdapter = new ClaudeFlowSDKAdapter({});
+        const newAdapter = new HiveFlowSDKAdapter({});
         expect(newAdapter.getConfig().apiKey).toBe('env-key');
         delete process.env.ANTHROPIC_API_KEY;
       });
 
       it('should support custom baseURL configuration', () => {
-        const customAdapter = new ClaudeFlowSDKAdapter({
+        const customAdapter = new HiveFlowSDKAdapter({
           apiKey: 'test-key',
           baseURL: 'https://custom.api.com',
         });
@@ -159,7 +159,7 @@ describe('SDK Integration Tests', () => {
       });
 
       it('should respect maxRetries configuration', async () => {
-        const customAdapter = new ClaudeFlowSDKAdapter({
+        const customAdapter = new HiveFlowSDKAdapter({
           apiKey: 'test-key',
           maxRetries: 5,
         });

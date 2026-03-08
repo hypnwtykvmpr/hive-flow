@@ -1,5 +1,5 @@
 /**
- * Component Unit Tests for Claude Flow v2.0.0
+ * Component Unit Tests for Hive Flow v2.0.0
  */
 
 import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';

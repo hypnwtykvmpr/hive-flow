@@ -57,10 +57,10 @@ describe("Template Generation Tests", () => {
       const content = createSparcClaudeMd();
       
       // Check for SPARC commands
-      expect(content).toContain("./claude-flow sparc modes");
-      expect(content).toContain("./claude-flow sparc run");
-      expect(content).toContain("./claude-flow sparc tdd");
-      expect(content).toContain("./claude-flow sparc info");
+      expect(content).toContain("./hive-flow sparc modes");
+      expect(content).toContain("./hive-flow sparc run");
+      expect(content).toContain("./hive-flow sparc tdd");
+      expect(content).toContain("./hive-flow sparc info");
     });
   });
 

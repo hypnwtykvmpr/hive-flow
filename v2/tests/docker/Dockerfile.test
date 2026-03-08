@@ -1,4 +1,4 @@
-# Test Dockerfile for claude-flow validation
+# Test Dockerfile for hive-flow validation
 # Simulates a clean remote environment
 
 FROM node:18-alpine
@@ -36,7 +36,7 @@ ENV NODE_ENV=test
 ENV CI=true
 
 # Create test directories
-RUN mkdir -p memory .swarm .claude-flow
+RUN mkdir -p memory .swarm .hive-flow
 
 # Entry point for tests
 CMD ["sh", "-c", "./tests/docker/run-validation.sh"]

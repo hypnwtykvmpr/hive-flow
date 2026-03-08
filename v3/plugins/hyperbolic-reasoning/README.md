@@ -1,8 +1,8 @@
-# @claude-flow/plugin-hyperbolic-reasoning
+# @hive-flow/plugin-hyperbolic-reasoning
 
-[![npm version](https://img.shields.io/npm/v/@claude-flow/plugin-hyperbolic-reasoning.svg)](https://www.npmjs.com/package/@claude-flow/plugin-hyperbolic-reasoning)
-[![license](https://img.shields.io/npm/l/@claude-flow/plugin-hyperbolic-reasoning.svg)](https://github.com/ruvnet/claude-flow/blob/main/LICENSE)
-[![downloads](https://img.shields.io/npm/dm/@claude-flow/plugin-hyperbolic-reasoning.svg)](https://www.npmjs.com/package/@claude-flow/plugin-hyperbolic-reasoning)
+[![npm version](https://img.shields.io/npm/v/@hive-flow/plugin-hyperbolic-reasoning.svg)](https://www.npmjs.com/package/@hive-flow/plugin-hyperbolic-reasoning)
+[![license](https://img.shields.io/npm/l/@hive-flow/plugin-hyperbolic-reasoning.svg)](https://github.com/ruvnet/hive-flow/blob/main/LICENSE)
+[![downloads](https://img.shields.io/npm/dm/@hive-flow/plugin-hyperbolic-reasoning.svg)](https://www.npmjs.com/package/@hive-flow/plugin-hyperbolic-reasoning)
 
 An exotic reasoning plugin implementing hyperbolic neural networks for superior hierarchical understanding. The plugin enables efficient representation of tree structures, taxonomic reasoning, and hierarchical entailment using Poincare ball embeddings with Mobius operations. Applications include improved ontology navigation, hierarchical code understanding, and organizational relationship modeling.
 
@@ -11,19 +11,19 @@ An exotic reasoning plugin implementing hyperbolic neural networks for superior 
 ### npm
 
 ```bash
-npm install @claude-flow/plugin-hyperbolic-reasoning
+npm install @hive-flow/plugin-hyperbolic-reasoning
 ```
 
 ### CLI
 
 ```bash
-npx claude-flow plugins install --name @claude-flow/plugin-hyperbolic-reasoning
+npx hive-flow plugins install --name @hive-flow/plugin-hyperbolic-reasoning
 ```
 
 ## Quick Start
 
 ```typescript
-import { HyperbolicReasoningPlugin } from '@claude-flow/plugin-hyperbolic-reasoning';
+import { HyperbolicReasoningPlugin } from '@hive-flow/plugin-hyperbolic-reasoning';
 
 // Initialize the plugin
 const plugin = new HyperbolicReasoningPlugin();
@@ -309,9 +309,9 @@ The plugin supports learning optimal curvature per hierarchy:
 
 | Plugin | Description | Synergy |
 |--------|-------------|---------|
-| [@claude-flow/plugin-neural-coordination](https://www.npmjs.com/package/@claude-flow/plugin-neural-coordination) | Multi-agent coordination | Hierarchical embeddings enable efficient agent organization structures |
-| [@claude-flow/plugin-cognitive-kernel](https://www.npmjs.com/package/@claude-flow/plugin-cognitive-kernel) | Cognitive augmentation | Hyperbolic memory organization for improved episodic retrieval |
-| [@claude-flow/plugin-quantum-optimizer](https://www.npmjs.com/package/@claude-flow/plugin-quantum-optimizer) | Quantum-inspired optimization | Optimizes hierarchical constraint satisfaction and tree operations |
+| [@hive-flow/plugin-neural-coordination](https://www.npmjs.com/package/@hive-flow/plugin-neural-coordination) | Multi-agent coordination | Hierarchical embeddings enable efficient agent organization structures |
+| [@hive-flow/plugin-cognitive-kernel](https://www.npmjs.com/package/@hive-flow/plugin-cognitive-kernel) | Cognitive augmentation | Hyperbolic memory organization for improved episodic retrieval |
+| [@hive-flow/plugin-quantum-optimizer](https://www.npmjs.com/package/@hive-flow/plugin-quantum-optimizer) | Quantum-inspired optimization | Optimizes hierarchical constraint satisfaction and tree operations |
 
 ## License
 

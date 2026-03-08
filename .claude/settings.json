@@ -203,7 +203,7 @@
       "Edit",
       "MultiEdit",
       "WebFetch",
-      "mcp__claude-flow__:*"
+      "mcp__hive-flow__:*"
     ],
     "deny": [
       "Read(./.env)",
@@ -211,15 +211,15 @@
     ]
   },
   "attribution": {
-    "commit": "Co-Authored-By: claude-flow <ruv@ruv.net>",
-    "pr": "🤖 Generated with [claude-flow](https://github.com/ruvnet/claude-flow)"
+    "commit": "Co-Authored-By: hive-flow <ruv@ruv.net>",
+    "pr": "🤖 Generated with [hive-flow](https://github.com/ruvnet/hive-flow)"
   },
   "env": {
     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
-    "CLAUDE_FLOW_V3_ENABLED": "true",
-    "CLAUDE_FLOW_HOOKS_ENABLED": "true"
+    "HIVE_FLOW_V3_ENABLED": "true",
+    "HIVE_FLOW_HOOKS_ENABLED": "true"
   },
-  "claudeFlow": {
+  "hiveFlow": {
     "version": "3.0.0",
     "enabled": true,
     "modelPreferences": {
@@ -352,7 +352,7 @@
       "thresholds": { "simple": 25, "moderate": 60 },
       "securityFloor": "MODERATE",
       "overrideAllowed": true,
-      "auditLog": ".claude-flow/enforcement/audit.jsonl"
+      "auditLog": ".hive-flow/enforcement/audit.jsonl"
     }
   }
 }

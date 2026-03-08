@@ -4,7 +4,7 @@
  */
 
 // Set test environment flags
-process.env.CLAUDE_FLOW_ENV = 'test';
+process.env.HIVE_FLOW_ENV = 'test';
 process.env.NODE_ENV = 'test';
 
 // Suppress console output during tests unless explicitly needed

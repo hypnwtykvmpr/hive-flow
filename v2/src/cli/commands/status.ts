@@ -1,6 +1,6 @@
 import { promises as fs } from 'node:fs';
 /**
- * Status command for Claude-Flow
+ * Status command for Hive-Flow
  */
 
 import { Command } from '../commander-fix.js';
@@ -12,7 +12,7 @@ import { MetricsReader } from '../../utils/metrics-reader.js';
 
 export const statusCommand = new Command()
   .name('status')
-  .description('Show Claude-Flow system status')
+  .description('Show Hive-Flow system status')
   .option('-w, --watch', 'Watch mode - continuously update status')
   .option('-i, --interval <seconds>', 'Update interval in seconds', '5')
   .option('-c, --component <name>', 'Show status for specific component')
@@ -45,8 +45,8 @@ async function showStatus(options: any): Promise<void> {
       (error as Error).message.includes('ECONNREFUSED') ||
       (error as Error).message.includes('connection refused')
     ) {
-      console.error(chalk.red('✗ Claude-Flow is not running'));
-      console.log(chalk.gray('Start it with: claude-flow start'));
+      console.error(chalk.red('✗ Hive-Flow is not running'));
+      console.log(chalk.gray('Start it with: hive-flow start'));
     } else {
       console.error(chalk.red('Error getting status:'), (error as Error).message);
     }
@@ -56,7 +56,7 @@ async function showStatus(options: any): Promise<void> {
 async function watchStatus(options: any): Promise<void> {
   const interval = parseInt(options.interval) * 1000;
 
-  console.log(chalk.cyan('Watching Claude-Flow status...'));
+  console.log(chalk.cyan('Watching Hive-Flow status...'));
   console.log(chalk.gray(`Update interval: ${options.interval}s`));
   console.log(chalk.gray('Press Ctrl+C to stop\n'));
 
@@ -64,7 +64,7 @@ async function watchStatus(options: any): Promise<void> {
   while (true) {
     // Clear screen and show status
     console.clear();
-    console.log(chalk.cyan.bold('Claude-Flow Status Monitor'));
+    console.log(chalk.cyan.bold('Hive-Flow Status Monitor'));
     console.log(chalk.gray(`Last updated: ${new Date().toLocaleTimeString()}\n`));
 
     try {

@@ -604,7 +604,7 @@ export class AuthService {
     const adminId = 'admin_default';
     const adminUser: User = {
       id: adminId,
-      email: 'admin@claude-flow.local',
+      email: 'admin@hive-flow.local',
       passwordHash: createHash('sha256').update('admin123' + 'salt').digest('hex'),
       role: 'admin',
       permissions: ROLE_PERMISSIONS.admin,
@@ -622,7 +622,7 @@ export class AuthService {
     const serviceId = 'service_default';
     const serviceUser: User = {
       id: serviceId,
-      email: 'service@claude-flow.local',
+      email: 'service@hive-flow.local',
       passwordHash: createHash('sha256').update('service123' + 'salt').digest('hex'),
       role: 'service',
       permissions: ROLE_PERMISSIONS.service,

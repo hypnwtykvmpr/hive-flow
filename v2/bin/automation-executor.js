@@ -1,5 +1,5 @@
 /**
- * Modular Automation Executor for Claude Flow
+ * Modular Automation Executor for Hive Flow
  * 
  * This module provides the core infrastructure for executing automation
  * workflows with Claude CLI integration, while preserving existing 
@@ -461,14 +461,14 @@ ${this.getMethodologyGuidance(agent.type)}
 
 🔧 COORDINATION REQUIREMENTS:
 1. **HOOKS INTEGRATION** (CRITICAL):
-   - BEFORE starting: \`npx claude-flow@alpha hooks pre-task --description "${task.description}"\`
-   - AFTER each file operation: \`npx claude-flow@alpha hooks post-edit --file "[filepath]"\`
-   - WHEN complete: \`npx claude-flow@alpha hooks post-task --task-id "${task.id}"\`
+   - BEFORE starting: \`npx hive-flow@alpha hooks pre-task --description "${task.description}"\`
+   - AFTER each file operation: \`npx hive-flow@alpha hooks post-edit --file "[filepath]"\`
+   - WHEN complete: \`npx hive-flow@alpha hooks post-task --task-id "${task.id}"\`
 
 2. **MEMORY STORAGE** (CRITICAL):
-   - Store findings: \`npx claude-flow@alpha memory store "agent/${agent.id}/findings" "[your_findings]"\`
-   - Store results: \`npx claude-flow@alpha memory store "agent/${agent.id}/results" "[your_results]"\`
-   - Check other agents: \`npx claude-flow@alpha memory search "agent/*"\`
+   - Store findings: \`npx hive-flow@alpha memory store "agent/${agent.id}/findings" "[your_findings]"\`
+   - Store results: \`npx hive-flow@alpha memory store "agent/${agent.id}/results" "[your_results]"\`
+   - Check other agents: \`npx hive-flow@alpha memory search "agent/*"\`
 
 3. **SESSION COORDINATION**:
    - Session ID: ${this.sessionId}
@@ -523,14 +523,14 @@ Begin execution now with the hooks pre-task command.`;
 🆔 AGENT ID: ${agent.id}
 
 CRITICAL COORDINATION REQUIREMENTS:
-1. HOOKS: Use claude-flow hooks for coordination:
-   - Run "npx claude-flow@alpha hooks pre-task --description '[your task]'" before starting
-   - Run "npx claude-flow@alpha hooks post-edit --file '[file]'" after each file operation  
-   - Run "npx claude-flow@alpha hooks post-task --task-id '${agent.id}'" when complete
+1. HOOKS: Use hive-flow hooks for coordination:
+   - Run "npx hive-flow@alpha hooks pre-task --description '[your task]'" before starting
+   - Run "npx hive-flow@alpha hooks post-edit --file '[file]'" after each file operation  
+   - Run "npx hive-flow@alpha hooks post-task --task-id '${agent.id}'" when complete
 
 2. MEMORY: Store all findings and results:
-   - Use "npx claude-flow@alpha memory store 'agent/${agent.id}/[key]' '[value]'" for important data
-   - Check "npx claude-flow@alpha memory search 'agent/*'" for coordination with other agents
+   - Use "npx hive-flow@alpha memory store 'agent/${agent.id}/[key]' '[value]'" for important data
+   - Check "npx hive-flow@alpha memory search 'agent/*'" for coordination with other agents
 
 3. SESSION: Maintain session coordination:
    - Session ID: ${this.sessionId}
@@ -1374,7 +1374,7 @@ COORDINATION KEY POINTS:
     try {
       const { execSync } = await import('child_process');
       
-      let hookCommand = `npx claude-flow@alpha hooks ${hookType}`;
+      let hookCommand = `npx hive-flow@alpha hooks ${hookType}`;
       
       if (params.description) {
         hookCommand += ` --description "${params.description}"`;
@@ -1408,7 +1408,7 @@ COORDINATION KEY POINTS:
       const { execSync } = await import('child_process');
       const resultJson = JSON.stringify(result);
       
-      execSync(`npx claude-flow@alpha memory store "workflow/${this.executionId}/${taskId}" '${resultJson}'`, {
+      execSync(`npx hive-flow@alpha memory store "workflow/${this.executionId}/${taskId}" '${resultJson}'`, {
         stdio: 'pipe'
       });
       

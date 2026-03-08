@@ -8,7 +8,7 @@
 
 ## 🎯 What Was Done
 
-Successfully integrated ReasoningBank as an **optional enhanced mode** for `claude-flow memory` commands with **100% backward compatibility**.
+Successfully integrated ReasoningBank as an **optional enhanced mode** for `hive-flow memory` commands with **100% backward compatibility**.
 
 ## ✅ Features Implemented
 
@@ -16,14 +16,14 @@ Successfully integrated ReasoningBank as an **optional enhanced mode** for `clau
 
 ```bash
 # Basic mode (default - backward compatible)
-claude-flow memory store key "value"
+hive-flow memory store key "value"
 
 # ReasoningBank mode (opt-in with flag)
-claude-flow memory store key "value" --reasoningbank
-claude-flow memory store key "value" --rb  # short form
+hive-flow memory store key "value" --reasoningbank
+hive-flow memory store key "value" --rb  # short form
 
 # Auto-detect mode (intelligent selection)
-claude-flow memory query search --auto
+hive-flow memory query search --auto
 ```
 
 ### 2. New Commands
@@ -117,13 +117,13 @@ Complete help documentation showing:
 ### New User (No ReasoningBank)
 
 ```bash
-$ claude-flow memory store api_key "sk-ant-xxx" --redact
+$ hive-flow memory store api_key "sk-ant-xxx" --redact
 ✅ Stored successfully (with redaction)
 
-$ claude-flow memory query api
+$ hive-flow memory query api
 ✅ Found 1 results  # Uses basic mode
 
-$ claude-flow memory detect
+$ hive-flow memory detect
 ✅ Basic Mode (active)
 ⚠️  ReasoningBank Mode (not initialized)
 💡 To enable: memory init --reasoningbank
@@ -133,39 +133,39 @@ $ claude-flow memory detect
 
 ```bash
 # Everything continues to work exactly as before
-$ claude-flow memory stats
+$ hive-flow memory stats
 ✅ Total Entries: 9  # No changes required
 
-$ claude-flow memory query research
+$ hive-flow memory query research
 ✅ Found 3 results  # Basic mode by default
 ```
 
 ### Power User (Opt-In to ReasoningBank)
 
 ```bash
-$ claude-flow memory init --reasoningbank
+$ hive-flow memory init --reasoningbank
 ✅ ReasoningBank initialized!
 
-$ claude-flow memory store pattern "Use env vars for keys" --reasoningbank
+$ hive-flow memory store pattern "Use env vars for keys" --reasoningbank
 🧠 Using ReasoningBank mode...
 ✅ Stored with semantic embeddings
 
-$ claude-flow memory query "API configuration" --reasoningbank
+$ hive-flow memory query "API configuration" --reasoningbank
 🧠 Using ReasoningBank mode...
 ✅ Found 3 results (semantic search):
    1. [0.92] Use env vars for keys
    2. [0.85] API keys in .env files
    3. [0.78] Never commit API keys
 
-$ claude-flow memory query config --auto
+$ hive-flow memory query config --auto
 # Automatically uses ReasoningBank (intelligent selection)
 ```
 
 ## 🔌 MCP Integration (Next Phase)
 
 Specification complete for:
-- Enhanced `mcp__claude-flow__memory_usage` with `mode` parameter
-- New `mcp__claude-flow__reasoningbank_query` tool
+- Enhanced `mcp__hive-flow__memory_usage` with `mode` parameter
+- New `mcp__hive-flow__reasoningbank_query` tool
 - Backward compatible MCP tools
 - Claude Desktop integration examples
 
@@ -209,7 +209,7 @@ Specification complete for:
 ### Near-term (v2.7.1)
 - [ ] Implement migration tools (basic ↔ ReasoningBank)
 - [ ] Add MCP tool `mode` parameter
-- [ ] Add `mcp__claude-flow__reasoningbank_query` tool
+- [ ] Add `mcp__hive-flow__reasoningbank_query` tool
 - [ ] Add config option for default mode
 
 ### Future (v2.8.0)

@@ -1,7 +1,7 @@
 {
-  "name": "@claude-flow/plugin-agentic-qe",
+  "name": "@hive-flow/plugin-agentic-qe",
   "version": "3.0.0-alpha.4",
-  "description": "Quality Engineering plugin for Claude Flow V3 with 51 specialized agents across 12 DDD bounded contexts",
+  "description": "Quality Engineering plugin for Hive Flow V3 with 51 specialized agents across 12 DDD bounded contexts",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -28,7 +28,7 @@
     "test:watch": "vitest"
   },
   "keywords": [
-    "claude-flow",
+    "hive-flow",
     "plugin",
     "quality-engineering",
     "testing",
@@ -43,36 +43,36 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ruvnet/claude-flow.git",
+    "url": "https://github.com/ruvnet/hive-flow.git",
     "directory": "v3/plugins/agentic-qe"
   },
-  "homepage": "https://github.com/ruvnet/claude-flow/tree/main/v3/plugins/agentic-qe",
+  "homepage": "https://github.com/ruvnet/hive-flow/tree/main/v3/plugins/agentic-qe",
   "bugs": {
-    "url": "https://github.com/ruvnet/claude-flow/issues"
+    "url": "https://github.com/ruvnet/hive-flow/issues"
   },
   "dependencies": {
     "zod": "^3.23.0"
   },
   "peerDependencies": {
-    "@claude-flow/plugins": ">=3.0.0",
-    "@claude-flow/memory": ">=3.0.0",
-    "@claude-flow/security": ">=3.0.0",
-    "@claude-flow/embeddings": ">=3.0.0"
+    "@hive-flow/plugins": ">=3.0.0",
+    "@hive-flow/memory": ">=3.0.0",
+    "@hive-flow/security": ">=3.0.0",
+    "@hive-flow/embeddings": ">=3.0.0"
   },
   "peerDependenciesMeta": {
-    "@claude-flow/plugins": {
+    "@hive-flow/plugins": {
       "optional": true
     },
-    "@claude-flow/memory": {
+    "@hive-flow/memory": {
       "optional": true
     },
-    "@claude-flow/security": {
+    "@hive-flow/security": {
       "optional": true
     },
-    "@claude-flow/embeddings": {
+    "@hive-flow/embeddings": {
       "optional": true
     },
-    "@claude-flow/browser": {
+    "@hive-flow/browser": {
       "optional": true
     },
     "@ruvector/attention": {

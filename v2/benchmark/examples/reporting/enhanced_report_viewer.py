@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Enhanced Report Viewer for Claude Flow Benchmarks
+Enhanced Report Viewer for Hive Flow Benchmarks
 Shows detailed metrics with file references and analysis.
 """
 
@@ -234,7 +234,7 @@ def main():
     """Main entry point for enhanced report viewer."""
     import argparse
     
-    parser = argparse.ArgumentParser(description="View and analyze Claude Flow benchmark reports")
+    parser = argparse.ArgumentParser(description="View and analyze Hive Flow benchmark reports")
     parser.add_argument("--dir", default="reports", help="Directory containing reports")
     parser.add_argument("--id", help="Specific benchmark ID to view")
     parser.add_argument("--summary", action="store_true", help="Show summary of all reports")

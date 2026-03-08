@@ -2,7 +2,7 @@
  * Neural Module - Advanced Domain Mapping and GNN Analysis
  * 
  * This module provides Graph Neural Network (GNN) based domain relationship
- * mapping, analysis, and optimization capabilities for Claude Flow.
+ * mapping, analysis, and optimization capabilities for Hive Flow.
  * 
  * Key Features:
  * - Domain structure to graph conversion
@@ -11,9 +11,9 @@
  * - Cross-domain dependency identification
  * - Predictive boundary optimization
  * - Neural network training and inference
- * - Integration with Claude Flow hooks system
+ * - Integration with Hive Flow hooks system
  * 
- * @author Claude Flow Neural Team
+ * @author Hive Flow Neural Team
  * @version 2.0.0
  */
 

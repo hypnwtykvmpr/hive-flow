@@ -36,7 +36,7 @@ checkpointCommand
       console.log(`${chalk.white('ID:')} ${checkpointId}`);
       console.log(`${chalk.white('Session:')} ${sessionId}`);
       console.log(`${chalk.white('Description:')} ${description || '(auto-generated)'}`);
-      console.log(chalk.gray(`  Use 'claude-flow checkpoint rollback ${checkpointId}' to restore`));
+      console.log(chalk.gray(`  Use 'hive-flow checkpoint rollback ${checkpointId}' to restore`));
     } catch (error) {
       console.error(chalk.red('Failed to create checkpoint:'), (error as Error).message);
       process.exit(1);

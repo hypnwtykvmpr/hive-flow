@@ -1,7 +1,7 @@
 """
 Metric Aggregator
 
-Real-time metric collection and aggregation system for Claude Flow swarm benchmarks.
+Real-time metric collection and aggregation system for Hive Flow swarm benchmarks.
 Provides unified metric collection, real-time aggregation, and comprehensive analytics.
 """
 
@@ -522,7 +522,7 @@ class MetricAnalyzer:
 
 class MetricAggregator:
     """
-    Comprehensive metric aggregation system for Claude Flow swarm benchmarks.
+    Comprehensive metric aggregation system for Hive Flow swarm benchmarks.
     
     Provides real-time metric collection, aggregation, analysis, and alerting
     capabilities for distributed swarm performance monitoring.

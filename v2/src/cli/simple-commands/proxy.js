@@ -50,7 +50,7 @@ export async function proxyCommand(subArgs, flags) {
 
 /**
  * Start OpenRouter proxy server
- * Usage: claude-flow proxy start [--port 8080]
+ * Usage: hive-flow proxy start [--port 8080]
  */
 async function startProxy(subArgs, flags) {
   printSuccess('🚀 Starting OpenRouter proxy server...');
@@ -87,7 +87,7 @@ async function startProxy(subArgs, flags) {
     console.log(`     export ANTHROPIC_BASE_URL=http://localhost:${flags.port || 8080}`);
     console.log('  2. Configure Claude Code to use the proxy');
     console.log('  3. Your OpenRouter key will be used automatically');
-    console.log('  4. Check status: claude-flow proxy status');
+    console.log('  4. Check status: hive-flow proxy status');
     console.log('\n💰 Cost Savings:');
     console.log('  - Anthropic Claude 3.5 Sonnet: ~$3 per million tokens');
     console.log('  - OpenRouter Claude 3.5 Sonnet: ~$0.30 per million tokens');
@@ -95,7 +95,7 @@ async function startProxy(subArgs, flags) {
   } catch (error) {
     if (error.killed && flags.daemon) {
       printSuccess('✅ Proxy started in background!');
-      console.log('Check status: claude-flow proxy status');
+      console.log('Check status: hive-flow proxy status');
     } else {
       printError('❌ Failed to start proxy server');
       console.error(error.message);
@@ -109,7 +109,7 @@ async function startProxy(subArgs, flags) {
 
 /**
  * Stop OpenRouter proxy server
- * Usage: claude-flow proxy stop
+ * Usage: hive-flow proxy stop
  */
 async function stopProxy(subArgs, flags) {
   printWarning('🛑 Stopping OpenRouter proxy server...');
@@ -135,7 +135,7 @@ async function stopProxy(subArgs, flags) {
 
 /**
  * Get proxy server status
- * Usage: claude-flow proxy status
+ * Usage: hive-flow proxy status
  */
 async function getProxyStatus(subArgs, flags) {
   printSuccess('📊 Getting OpenRouter proxy status...');
@@ -161,14 +161,14 @@ async function getProxyStatus(subArgs, flags) {
     printError('❌ Failed to get proxy status');
     console.error(error.message);
     console.log('\nTip: Proxy may not be running. Start it with:');
-    console.log('  claude-flow proxy start');
+    console.log('  hive-flow proxy start');
     process.exit(1);
   }
 }
 
 /**
  * Get proxy server logs
- * Usage: claude-flow proxy logs [--lines 100] [--follow]
+ * Usage: hive-flow proxy logs [--lines 100] [--follow]
  */
 async function getProxyLogs(subArgs, flags) {
   printSuccess('📄 Getting OpenRouter proxy logs...');
@@ -203,7 +203,7 @@ async function getProxyLogs(subArgs, flags) {
 
 /**
  * Restart proxy server
- * Usage: claude-flow proxy restart
+ * Usage: hive-flow proxy restart
  */
 async function restartProxy(subArgs, flags) {
   printWarning('🔄 Restarting OpenRouter proxy server...');
@@ -228,7 +228,7 @@ async function restartProxy(subArgs, flags) {
 
 /**
  * Configure proxy server
- * Usage: claude-flow proxy config
+ * Usage: hive-flow proxy config
  */
 async function configureProxy(subArgs, flags) {
   printSuccess('🔧 OpenRouter Proxy Configuration');
@@ -255,8 +255,8 @@ async function configureProxy(subArgs, flags) {
   console.log('  export PROXY_LOG_LEVEL=debug        # Verbose logging');
 
   console.log('\n🚀 Quick Start:');
-  console.log('  1. claude-flow agent config set OPENROUTER_API_KEY sk-or-v1-...');
-  console.log('  2. claude-flow proxy start --daemon');
+  console.log('  1. hive-flow agent config set OPENROUTER_API_KEY sk-or-v1-...');
+  console.log('  2. hive-flow proxy start --daemon');
   console.log('  3. export ANTHROPIC_BASE_URL=http://localhost:8080');
   console.log('  4. Use Claude Code normally → automatic 90% savings!');
 
@@ -268,7 +268,7 @@ async function configureProxy(subArgs, flags) {
       });
       console.log('✅ Proxy is responding:', stdout);
     } catch (error) {
-      printWarning('⚠️  Proxy not responding. Start it with: claude-flow proxy start');
+      printWarning('⚠️  Proxy not responding. Start it with: hive-flow proxy start');
     }
   }
 }
@@ -285,7 +285,7 @@ Standalone proxy server that translates Anthropic API calls to OpenRouter.
 Enables 85-98% cost savings with Claude Code integration.
 
 USAGE:
-  claude-flow proxy <command> [options]
+  hive-flow proxy <command> [options]
 
 COMMANDS:
   start               Start OpenRouter proxy server
@@ -308,36 +308,36 @@ OPTIONS:
 
 EXAMPLES:
   # Start proxy server
-  claude-flow proxy start
-  claude-flow proxy start --port 8080 --daemon
+  hive-flow proxy start
+  hive-flow proxy start --port 8080 --daemon
 
   # Configure Claude Code to use proxy
   export ANTHROPIC_BASE_URL=http://localhost:8080
 
   # Check status
-  claude-flow proxy status
-  claude-flow proxy status --verbose
+  hive-flow proxy status
+  hive-flow proxy status --verbose
 
   # View logs
-  claude-flow proxy logs
-  claude-flow proxy logs --lines 50 --follow
-  claude-flow proxy logs --error
+  hive-flow proxy logs
+  hive-flow proxy logs --lines 50 --follow
+  hive-flow proxy logs --error
 
   # Stop/restart proxy
-  claude-flow proxy stop
-  claude-flow proxy restart
+  hive-flow proxy stop
+  hive-flow proxy restart
 
   # Configuration guide
-  claude-flow proxy config
-  claude-flow proxy config --test
+  hive-flow proxy config
+  hive-flow proxy config --test
 
 SETUP GUIDE:
   1. Get OpenRouter API key: https://openrouter.ai/keys
   2. Set environment variable:
-     claude-flow agent config set OPENROUTER_API_KEY sk-or-v1-...
+     hive-flow agent config set OPENROUTER_API_KEY sk-or-v1-...
 
   3. Start proxy server:
-     claude-flow proxy start --daemon
+     hive-flow proxy start --daemon
 
   4. Configure Claude Code:
      export ANTHROPIC_BASE_URL=http://localhost:8080

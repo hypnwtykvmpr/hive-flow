@@ -31,7 +31,7 @@ async def test_basic_metrics():
     engine = RealBenchmarkEngine(config)
     
     # Run a simple benchmark
-    result = await engine.run_benchmark("Show claude-flow status")
+    result = await engine.run_benchmark("Show hive-flow status")
     
     print("\nBenchmark Results:")
     print(f"Status: {result['status']}")
@@ -112,7 +112,7 @@ async def test_multiple_commands():
 
 def main():
     """Main test function."""
-    print("Claude-Flow Real Metrics Collection Test")
+    print("Hive-Flow Real Metrics Collection Test")
     print("=" * 50)
     
     # Run tests

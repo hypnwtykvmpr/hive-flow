@@ -4,9 +4,9 @@
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { ProviderRegistry, ProviderEvents } from '../../v3/@claude-flow/shared/src/services/provider-registry.js';
-import type { ProviderModule, ProviderHealthResult } from '../../v3/@claude-flow/shared/src/services/provider-registry.js';
-import type { IEventBus } from '../../v3/@claude-flow/shared/src/core/interfaces/event.interface.js';
+import { ProviderRegistry, ProviderEvents } from '../../v3/@hive-flow/shared/src/services/provider-registry.js';
+import type { ProviderModule, ProviderHealthResult } from '../../v3/@hive-flow/shared/src/services/provider-registry.js';
+import type { IEventBus } from '../../v3/@hive-flow/shared/src/core/interfaces/event.interface.js';
 
 // ─── Helpers ──────────────────────────────────────────────────────
 

@@ -1,5 +1,5 @@
 /**
- * JSON-based persistence layer for Claude-Flow
+ * JSON-based persistence layer for Hive-Flow
  */
 
 import { join } from 'path';
@@ -43,7 +43,7 @@ export class JsonPersistenceManager {
   private data: PersistenceData;
 
   constructor(dataDir: string = './memory') {
-    this.dataPath = join(dataDir, 'claude-flow-data.json');
+    this.dataPath = join(dataDir, 'hive-flow-data.json');
     this.data = {
       agents: [],
       tasks: [],

@@ -16,7 +16,7 @@ import {
   validateHeader,
   RVFA_MAGIC,
   RVFA_VERSION,
-} from '../../@claude-flow/cli/src/appliance/rvfa-format.js';
+} from '../../@hive-flow/cli/src/appliance/rvfa-format.js';
 
 // -- Helpers ------------------------------------------------------------------
 

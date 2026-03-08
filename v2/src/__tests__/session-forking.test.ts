@@ -1,6 +1,6 @@
 /**
  * Session Forking Tests
- * Claude-Flow v2.5-alpha.130
+ * Hive-Flow v2.5-alpha.130
  *
  * Tests for parallel agent execution and real-time query control
  */

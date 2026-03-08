@@ -1,4 +1,4 @@
-# Release Notes - Claude-Flow v2.7.15
+# Release Notes - Hive-Flow v2.7.15
 **Release Date:** 2025-10-25
 **Type:** Point Release (Dependency Updates + Fixes)
 **Branch:** fix/dependency-update-v2.7.14 → main
@@ -39,7 +39,7 @@ This point release updates critical dependencies to their latest versions, bring
 ## 🔧 Fixes
 
 ### Memory Command Fix
-**Issue:** `npx claude-flow memory status` failed with "Cannot find package 'onnxruntime-node'"
+**Issue:** `npx hive-flow memory status` failed with "Cannot find package 'onnxruntime-node'"
 
 **Resolution:**
 - ✅ Added `onnxruntime-node` to `optionalDependencies`
@@ -191,8 +191,8 @@ onnxruntime-node@1.23.0 ✅ (optional)
 
 ### Migration Notes
 - Memory commands work with local installation
-- Use `node_modules/.bin/claude-flow` instead of `npx claude-flow` for memory commands
-- Or use MCP tools: `mcp__claude-flow__memory_usage()`
+- Use `node_modules/.bin/hive-flow` instead of `npx hive-flow` for memory commands
+- Or use MCP tools: `mcp__hive-flow__memory_usage()`
 
 ---
 
@@ -214,10 +214,10 @@ onnxruntime-node@1.23.0 ✅ (optional)
 npm run build:esm
 
 # Agent Booster
-npx claude-flow agent booster benchmark
+npx hive-flow agent booster benchmark
 
 # Memory
-node_modules/.bin/claude-flow memory stats
+node_modules/.bin/hive-flow memory stats
 
 # MCP
 # Via Claude Code:
@@ -280,7 +280,7 @@ mcp__ruv-swarm__swarm_status()
 
 ### npx Memory Commands
 **Status:** Workaround available
-**Solution:** Use local binary: `node_modules/.bin/claude-flow memory stats`
+**Solution:** Use local binary: `node_modules/.bin/hive-flow memory stats`
 **Alternative:** Use MCP tools instead
 **Documentation:** `/docs/MEMORY_COMMAND_FIX.md`
 
@@ -294,8 +294,8 @@ mcp__ruv-swarm__swarm_status()
 
 ## 📞 Support
 
-**Documentation:** https://github.com/ruvnet/claude-flow
-**Issues:** https://github.com/ruvnet/claude-flow/issues
+**Documentation:** https://github.com/ruvnet/hive-flow
+**Issues:** https://github.com/ruvnet/hive-flow/issues
 **Discord:** https://discord.agentics.org
 
 ---

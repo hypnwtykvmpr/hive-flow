@@ -12,7 +12,7 @@ import { promises as fs } from 'fs';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export async function migrateHooksCommand(flags, args) {
-  console.log('🔄 Claude Flow Hooks Migration\n');
+  console.log('🔄 Hive Flow Hooks Migration\n');
 
   try {
     // Find the migration script
@@ -49,8 +49,8 @@ export const migrateHooksCommandConfig = {
   description: 'Migrate settings.json hooks to Claude Code 1.0.51+ format',
   usage: 'migrate-hooks [settings-file]',
   examples: [
-    'claude-flow migrate-hooks                    # Migrate all found settings.json files',
-    'claude-flow migrate-hooks .claude/settings.json  # Migrate specific file',
+    'hive-flow migrate-hooks                    # Migrate all found settings.json files',
+    'hive-flow migrate-hooks .claude/settings.json  # Migrate specific file',
   ],
   details: `
 Migrates old hooks format to new Claude Code 1.0.51+ format:

@@ -8,7 +8,7 @@
 
 console.log('🧪 Testing agentic-flow v1.7.4 - Export Fix Verification\n');
 console.log('📦 Package: agentic-flow@1.7.4');
-console.log('🔗 Integration: claude-flow@alpha v2.7.1\n');
+console.log('🔗 Integration: hive-flow@alpha v2.7.1\n');
 
 // Test 1: Standard imports (should work now!)
 console.log('═══════════════════════════════════════════════════');

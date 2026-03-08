@@ -7,7 +7,7 @@ Deep code and data analysis with batch processing capabilities.
 
 ### Option 1: Using MCP Tools (Preferred in Claude Code)
 ```javascript
-mcp__claude-flow__sparc_mode {
+mcp__hive-flow__sparc_mode {
   mode: "analyzer",
   task_description: "analyze codebase performance",
   options: {
@@ -20,16 +20,16 @@ mcp__claude-flow__sparc_mode {
 ### Option 2: Using NPX CLI (Fallback when MCP not available)
 ```bash
 # Use when running from terminal or MCP tools unavailable
-npx claude-flow sparc run analyzer "analyze codebase performance"
+npx hive-flow sparc run analyzer "analyze codebase performance"
 
 # For alpha features
-npx claude-flow@alpha sparc run analyzer "analyze codebase performance"
+npx hive-flow@alpha sparc run analyzer "analyze codebase performance"
 ```
 
 ### Option 3: Local Installation
 ```bash
-# If claude-flow is installed locally
-./claude-flow sparc run analyzer "analyze codebase performance"
+# If hive-flow is installed locally
+./hive-flow sparc run analyzer "analyze codebase performance"
 ```
 
 ## Core Capabilities

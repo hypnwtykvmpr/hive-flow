@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Comprehensive Performance Benchmarking Suite for Claude-Flow Swarm Operations
+Comprehensive Performance Benchmarking Suite for Hive-Flow Swarm Operations
 
 This suite provides automated performance testing and monitoring for:
 - Swarm initialization performance
@@ -212,7 +212,7 @@ class SwarmPerformanceBenchmark:
         # Test 1: Basic swarm initialization
         result = await self._benchmark_operation(
             "swarm_init_basic",
-            lambda: self._run_claude_flow_command(["swarm", "init", "--mode", "mesh", "--agents", "3"]),
+            lambda: self._run_hive_flow_command(["swarm", "init", "--mode", "mesh", "--agents", "3"]),
             target_time=self.targets.swarm_init_time_seconds
         )
         tests.append(result)
@@ -220,7 +220,7 @@ class SwarmPerformanceBenchmark:
         # Test 2: Large swarm initialization
         result = await self._benchmark_operation(
             "swarm_init_large", 
-            lambda: self._run_claude_flow_command(["swarm", "init", "--mode", "hierarchical", "--agents", "8"]),
+            lambda: self._run_hive_flow_command(["swarm", "init", "--mode", "hierarchical", "--agents", "8"]),
             target_time=self.targets.swarm_init_time_seconds * 2  # Allow more time for larger swarms
         )
         tests.append(result)
@@ -229,7 +229,7 @@ class SwarmPerformanceBenchmark:
         # Cold start
         result = await self._benchmark_operation(
             "cold_start",
-            lambda: self._run_claude_flow_command(["swarm", "status"], clear_cache=True),
+            lambda: self._run_hive_flow_command(["swarm", "status"], clear_cache=True),
             target_time=self.targets.swarm_init_time_seconds
         )
         tests.append(result)
@@ -237,7 +237,7 @@ class SwarmPerformanceBenchmark:
         # Warm start (immediate second call)
         result = await self._benchmark_operation(
             "warm_start",
-            lambda: self._run_claude_flow_command(["swarm", "status"]),
+            lambda: self._run_hive_flow_command(["swarm", "status"]),
             target_time=self.targets.swarm_init_time_seconds / 2  # Should be faster
         )
         tests.append(result)
@@ -493,14 +493,14 @@ class SwarmPerformanceBenchmark:
                 error_message=str(e)
             )
             
-    def _run_claude_flow_command(self, args: List[str], clear_cache: bool = False) -> str:
-        """Run a claude-flow command and return output."""
+    def _run_hive_flow_command(self, args: List[str], clear_cache: bool = False) -> str:
+        """Run a hive-flow command and return output."""
         if clear_cache:
             # Clear any potential cache
             cache_dirs = [
-                Path.home() / ".claude-flow" / "cache",
+                Path.home() / ".hive-flow" / "cache",
                 Path.cwd() / ".cache",
-                Path("/tmp/claude-flow-cache")
+                Path("/tmp/hive-flow-cache")
             ]
             for cache_dir in cache_dirs:
                 if cache_dir.exists():
@@ -527,7 +527,7 @@ class SwarmPerformanceBenchmark:
     def _measure_agent_spawn_time(self) -> float:
         """Measure time to spawn a new agent."""
         start = time.time()
-        output = self._run_claude_flow_command(["swarm", "spawn", "researcher", "--name", "test-agent"])
+        output = self._run_hive_flow_command(["swarm", "spawn", "researcher", "--name", "test-agent"])
         end = time.time()
         return end - start
     
@@ -536,7 +536,7 @@ class SwarmPerformanceBenchmark:
         # This would measure actual communication between agents
         # For now, simulate with a simple command
         start = time.time()
-        output = self._run_claude_flow_command(["swarm", "status"])
+        output = self._run_hive_flow_command(["swarm", "status"])
         end = time.time()
         return end - start
     
@@ -544,7 +544,7 @@ class SwarmPerformanceBenchmark:
         """Measure task coordination overhead."""
         # Compare single agent vs multi-agent task execution
         start = time.time()
-        output = self._run_claude_flow_command(["swarm", "task", "simple test task", "--agents", "3"])
+        output = self._run_hive_flow_command(["swarm", "task", "simple test task", "--agents", "3"])
         end = time.time()
         return end - start
     
@@ -554,13 +554,13 @@ class SwarmPerformanceBenchmark:
         
         # Run multiple operations that could cause memory leaks
         for i in range(10):
-            output = self._run_claude_flow_command(["swarm", "init", "--mode", "mesh", "--agents", "2"])
+            output = self._run_hive_flow_command(["swarm", "init", "--mode", "mesh", "--agents", "2"])
             operations.append(output)
             
-            output = self._run_claude_flow_command(["swarm", "spawn", "researcher"])
+            output = self._run_hive_flow_command(["swarm", "spawn", "researcher"])
             operations.append(output)
             
-            output = self._run_claude_flow_command(["swarm", "status"])
+            output = self._run_hive_flow_command(["swarm", "status"])
             operations.append(output)
             
             # Small delay to allow monitoring
@@ -577,28 +577,28 @@ class SwarmPerformanceBenchmark:
         """Measure cross-session persistence overhead."""
         # Time operation with persistence vs without
         start = time.time()
-        output = self._run_claude_flow_command(["swarm", "init", "--persist"])
+        output = self._run_hive_flow_command(["swarm", "init", "--persist"])
         end = time.time()
         return end - start
     
     def _measure_mcp_response_time(self) -> float:
         """Measure MCP tool response time."""
         start = time.time()
-        output = self._run_claude_flow_command(["mcp", "status"])
+        output = self._run_hive_flow_command(["mcp", "status"])
         end = time.time()
         return end - start
     
     def _measure_neural_processing(self) -> float:
         """Measure neural pattern processing time."""
         start = time.time()
-        output = self._run_claude_flow_command(["sparc", "researcher", "quick test"])
+        output = self._run_hive_flow_command(["sparc", "researcher", "quick test"])
         end = time.time()
         return end - start
     
     def _run_scalability_test(self, agent_count: int) -> float:
         """Run scalability test with specified agent count."""
         start = time.time()
-        output = self._run_claude_flow_command(["swarm", "init", "--agents", str(agent_count)])
+        output = self._run_hive_flow_command(["swarm", "init", "--agents", str(agent_count)])
         end = time.time()
         return end - start
     
@@ -608,12 +608,12 @@ class SwarmPerformanceBenchmark:
         
         # Swarm init time
         start = time.time()
-        self._run_claude_flow_command(["swarm", "init", "--mode", "mesh", "--agents", "3"])
+        self._run_hive_flow_command(["swarm", "init", "--mode", "mesh", "--agents", "3"])
         metrics["swarm_init_time"] = time.time() - start
         
         # Agent spawn time
         start = time.time()
-        self._run_claude_flow_command(["swarm", "spawn", "researcher"])
+        self._run_hive_flow_command(["swarm", "spawn", "researcher"])
         metrics["agent_spawn_time"] = time.time() - start
         
         # Memory usage

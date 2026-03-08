@@ -180,7 +180,7 @@ def main():
     """Main entry point for benchmark comparison."""
     import argparse
     
-    parser = argparse.ArgumentParser(description="Compare multiple Claude Flow benchmarks")
+    parser = argparse.ArgumentParser(description="Compare multiple Hive Flow benchmarks")
     parser.add_argument("--preset", choices=["quick", "thorough", "strategies"],
                        default="quick", help="Preset comparison suite")
     parser.add_argument("--output-dir", default="reports", help="Output directory")

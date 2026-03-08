@@ -1,13 +1,13 @@
 ---
 name: "V3 Deep Integration"
-description: "Deep agentic-flow@alpha integration implementing ADR-001. Eliminates 10,000+ duplicate lines by building claude-flow as specialized extension rather than parallel implementation."
+description: "Deep agentic-flow@alpha integration implementing ADR-001. Eliminates 10,000+ duplicate lines by building hive-flow as specialized extension rather than parallel implementation."
 ---
 
 # V3 Deep Integration
 
 ## What This Skill Does
 
-Transforms claude-flow from parallel implementation to specialized extension of agentic-flow@alpha, eliminating massive code duplication while achieving performance improvements and feature parity.
+Transforms hive-flow from parallel implementation to specialized extension of agentic-flow@alpha, eliminating massive code duplication while achieving performance improvements and feature parity.
 
 ## Quick Start
 
@@ -26,7 +26,7 @@ Task("AgentDB coordination", "Setup 150x-12,500x search", "v3-integration-archit
 ### Current Overlap → Integration
 ```
 ┌─────────────────────────────────────────┐
-│  claude-flow          agentic-flow      │
+│  hive-flow          agentic-flow      │
 ├─────────────────────────────────────────┤
 │ SwarmCoordinator  →   Swarm System      │ 80% overlap (eliminate)
 │ AgentManager      →   Agent Lifecycle   │ 70% overlap (eliminate)
@@ -87,11 +87,11 @@ class MCPToolsIntegration {
   async integrateBuiltinTools(): Promise<void> {
     // Leverage 213 pre-built tools
     const tools = await this.agenticFlow.mcp.getAvailableTools();
-    await this.registerClaudeFlowSpecificTools(tools);
+    await this.registerHiveFlowSpecificTools(tools);
 
     // Use 19 hook types
     const hookTypes = await this.agenticFlow.hooks.getTypes();
-    await this.configureClaudeFlowHooks(hookTypes);
+    await this.configureHiveFlowHooks(hookTypes);
   }
 }
 ```
@@ -102,8 +102,8 @@ class MCPToolsIntegration {
 ```typescript
 import { Agent as AgenticFlowAgent } from 'agentic-flow@alpha';
 
-export class ClaudeFlowAgent extends AgenticFlowAgent {
-  async handleClaudeFlowTask(task: ClaudeTask): Promise<TaskResult> {
+export class HiveFlowAgent extends AgenticFlowAgent {
+  async handleHiveFlowTask(task: ClaudeTask): Promise<TaskResult> {
     return this.executeWithSONA(task);
   }
 
@@ -166,7 +166,7 @@ class RLIntegration {
     for (const algorithm of this.algorithms) {
       await this.agenticFlow.rl.train(algorithm, {
         episodes: 1000,
-        rewardFunction: this.claudeFlowRewardFunction
+        rewardFunction: this.hiveFlowRewardFunction
       });
     }
   }

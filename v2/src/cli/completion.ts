@@ -1,5 +1,5 @@
 /**
- * Shell completion generator for Claude-Flow CLI
+ * Shell completion generator for Hive-Flow CLI
  */
 
 import chalk from 'chalk';
@@ -92,8 +92,8 @@ export class CompletionGenerator {
   }
 
   private getBashCompletionScript(): string {
-    return `# Claude-Flow bash completion
-_claude_flow_completion() {
+    return `# Hive-Flow bash completion
+_hive_flow_completion() {
     local cur prev words cword
     _init_completion || return
 
@@ -195,15 +195,15 @@ _claude_flow_completion() {
     esac
 }
 
-complete -F _claude_flow_completion claude-flow`;
+complete -F _hive_flow_completion hive-flow`;
   }
 
   private getZshCompletionScript(): string {
-    return `#compdef claude-flow
+    return `#compdef hive-flow
 
-# Claude-Flow zsh completion
+# Hive-Flow zsh completion
 
-_claude_flow() {
+_hive_flow() {
     local context state state_descr line
     typeset -A opt_args
 
@@ -216,29 +216,29 @@ _claude_flow() {
         '--no-color[Disable colored output]' \\
         '--json[Output in JSON format]' \\
         '--profile[Use named configuration profile]:profile:' \\
-        '1: :_claude_flow_commands' \\
+        '1: :_hive_flow_commands' \\
         '*::arg:->args'
 
     case $state in
         args)
             case $words[1] in
                 agent)
-                    _claude_flow_agent
+                    _hive_flow_agent
                     ;;
                 task)
-                    _claude_flow_task
+                    _hive_flow_task
                     ;;
                 memory)
-                    _claude_flow_memory
+                    _hive_flow_memory
                     ;;
                 config)
-                    _claude_flow_config
+                    _hive_flow_config
                     ;;
                 session)
-                    _claude_flow_session
+                    _hive_flow_session
                     ;;
                 workflow)
-                    _claude_flow_workflow
+                    _hive_flow_workflow
                     ;;
                 completion)
                     _arguments \\
@@ -250,17 +250,17 @@ _claude_flow() {
     esac
 }
 
-_claude_flow_commands() {
+_hive_flow_commands() {
     local commands
     commands=(
-        'start:Start the Claude-Flow orchestration system'
-        'agent:Manage Claude-Flow agents'
+        'start:Start the Hive-Flow orchestration system'
+        'agent:Manage Hive-Flow agents'
         'task:Manage tasks'
         'memory:Manage agent memory'
-        'config:Manage Claude-Flow configuration'
-        'status:Show Claude-Flow system status'
+        'config:Manage Hive-Flow configuration'
+        'status:Show Hive-Flow system status'
         'monitor:Start live monitoring dashboard'
-        'session:Manage Claude-Flow sessions'
+        'session:Manage Hive-Flow sessions'
         'workflow:Execute and manage workflows'
         'repl:Start interactive REPL mode'
         'version:Show detailed version information'
@@ -269,7 +269,7 @@ _claude_flow_commands() {
     _describe 'commands' commands
 }
 
-_claude_flow_agent() {
+_hive_flow_agent() {
     case $words[2] in
         spawn)
             _arguments \\
@@ -280,7 +280,7 @@ _claude_flow_agent() {
                 '1: :(coordinator researcher implementer analyst custom)'
             ;;
         terminate|info)
-            _arguments '1: :_claude_flow_agents'
+            _arguments '1: :_hive_flow_agents'
             ;;
         *)
             _arguments '1: :(${this.subcommands.agent.join(' ')})'
@@ -288,14 +288,14 @@ _claude_flow_agent() {
     esac
 }
 
-_claude_flow_task() {
+_hive_flow_task() {
     case $words[2] in
         create)
             _arguments \\
                 '(-p --priority)'{-p,--priority}'[Task priority]:priority:' \\
                 '(-d --dependencies)'{-d,--dependencies}'[Comma-separated dependency task IDs]:deps:' \\
                 '(-i --input)'{-i,--input}'[Task input as JSON]:input:' \\
-                '(-a --assign)'{-a,--assign}'[Assign to specific agent]:agent:_claude_flow_agents' \\
+                '(-a --assign)'{-a,--assign}'[Assign to specific agent]:agent:_hive_flow_agents' \\
                 '1: :(research implementation analysis coordination)' \\
                 '2: :_message_or_description'
             ;;
@@ -303,7 +303,7 @@ _claude_flow_task() {
             _arguments '1: :_files -g "*.json *.yaml *.yml"'
             ;;
         status|cancel)
-            _arguments '1: :_claude_flow_tasks'
+            _arguments '1: :_hive_flow_tasks'
             ;;
         *)
             _arguments '1: :(${this.subcommands.task.join(' ')})'
@@ -311,18 +311,18 @@ _claude_flow_task() {
     esac
 }
 
-_claude_flow_memory() {
+_hive_flow_memory() {
     _arguments '1: :(${this.subcommands.memory.join(' ')})'
 }
 
-_claude_flow_config() {
+_hive_flow_config() {
     _arguments '1: :(${this.subcommands.config.join(' ')})'
 }
 
-_claude_flow_session() {
+_hive_flow_session() {
     case $words[2] in
         restore|delete|info|export)
-            _arguments '1: :_claude_flow_sessions'
+            _arguments '1: :_hive_flow_sessions'
             ;;
         import)
             _arguments '1: :_files -g "*.json *.yaml *.yml"'
@@ -333,7 +333,7 @@ _claude_flow_session() {
     esac
 }
 
-_claude_flow_workflow() {
+_hive_flow_workflow() {
     case $words[2] in
         run|validate)
             _arguments '1: :_files -g "*.json *.yaml *.yml"'
@@ -342,7 +342,7 @@ _claude_flow_workflow() {
             _arguments '1: :(research implementation coordination)'
             ;;
         status|stop)
-            _arguments '1: :_claude_flow_workflows'
+            _arguments '1: :_hive_flow_workflows'
             ;;
         *)
             _arguments '1: :(${this.subcommands.workflow.join(' ')})'
@@ -351,28 +351,28 @@ _claude_flow_workflow() {
 }
 
 # Helper functions for completion
-_claude_flow_agents() {
+_hive_flow_agents() {
     # In production, this would query the running orchestrator
     local agents
     agents=('agent-001:Coordinator Agent' 'agent-002:Research Agent' 'agent-003:Implementation Agent')
     _describe 'agents' agents
 }
 
-_claude_flow_tasks() {
+_hive_flow_tasks() {
     # In production, this would query the running orchestrator
     local tasks
     tasks=('task-001:Research Task' 'task-002:Analysis Task' 'task-003:Implementation Task')
     _describe 'tasks' tasks
 }
 
-_claude_flow_sessions() {
+_hive_flow_sessions() {
     # In production, this would query saved sessions
     local sessions
     sessions=('session-001:Research Session' 'session-002:Development Session' 'session-003:Analysis Session')
     _describe 'sessions' sessions
 }
 
-_claude_flow_workflows() {
+_hive_flow_workflows() {
     # In production, this would query running workflows
     local workflows
     workflows=('workflow-001:Research Workflow' 'workflow-002:Implementation Workflow')
@@ -383,13 +383,13 @@ _message_or_description() {
     _message 'task description'
 }
 
-_claude_flow "$@"`;
+_hive_flow "$@"`;
   }
 
   private getFishCompletionScript(): string {
-    return `# Claude-Flow fish completion
+    return `# Hive-Flow fish completion
 
-function __fish_claude_flow_needs_command
+function __fish_hive_flow_needs_command
     set cmd (commandline -opc)
     if [ (count $cmd) -eq 1 ]
         return 0
@@ -397,7 +397,7 @@ function __fish_claude_flow_needs_command
     return 1
 end
 
-function __fish_claude_flow_using_command
+function __fish_hive_flow_using_command
     set cmd (commandline -opc)
     if [ (count $cmd) -gt 1 ]
         if [ $argv[1] = $cmd[2] ]
@@ -408,84 +408,84 @@ function __fish_claude_flow_using_command
 end
 
 # Main commands
-complete -f -c claude-flow -n '__fish_claude_flow_needs_command' -a 'start' -d 'Start the Claude-Flow orchestration system'
-complete -f -c claude-flow -n '__fish_claude_flow_needs_command' -a 'agent' -d 'Manage Claude-Flow agents'
-complete -f -c claude-flow -n '__fish_claude_flow_needs_command' -a 'task' -d 'Manage tasks'
-complete -f -c claude-flow -n '__fish_claude_flow_needs_command' -a 'memory' -d 'Manage agent memory'
-complete -f -c claude-flow -n '__fish_claude_flow_needs_command' -a 'config' -d 'Manage Claude-Flow configuration'
-complete -f -c claude-flow -n '__fish_claude_flow_needs_command' -a 'status' -d 'Show Claude-Flow system status'
-complete -f -c claude-flow -n '__fish_claude_flow_needs_command' -a 'monitor' -d 'Start live monitoring dashboard'
-complete -f -c claude-flow -n '__fish_claude_flow_needs_command' -a 'session' -d 'Manage Claude-Flow sessions'
-complete -f -c claude-flow -n '__fish_claude_flow_needs_command' -a 'workflow' -d 'Execute and manage workflows'
-complete -f -c claude-flow -n '__fish_claude_flow_needs_command' -a 'repl' -d 'Start interactive REPL mode'
-complete -f -c claude-flow -n '__fish_claude_flow_needs_command' -a 'version' -d 'Show detailed version information'
-complete -f -c claude-flow -n '__fish_claude_flow_needs_command' -a 'completion' -d 'Generate shell completion scripts'
+complete -f -c hive-flow -n '__fish_hive_flow_needs_command' -a 'start' -d 'Start the Hive-Flow orchestration system'
+complete -f -c hive-flow -n '__fish_hive_flow_needs_command' -a 'agent' -d 'Manage Hive-Flow agents'
+complete -f -c hive-flow -n '__fish_hive_flow_needs_command' -a 'task' -d 'Manage tasks'
+complete -f -c hive-flow -n '__fish_hive_flow_needs_command' -a 'memory' -d 'Manage agent memory'
+complete -f -c hive-flow -n '__fish_hive_flow_needs_command' -a 'config' -d 'Manage Hive-Flow configuration'
+complete -f -c hive-flow -n '__fish_hive_flow_needs_command' -a 'status' -d 'Show Hive-Flow system status'
+complete -f -c hive-flow -n '__fish_hive_flow_needs_command' -a 'monitor' -d 'Start live monitoring dashboard'
+complete -f -c hive-flow -n '__fish_hive_flow_needs_command' -a 'session' -d 'Manage Hive-Flow sessions'
+complete -f -c hive-flow -n '__fish_hive_flow_needs_command' -a 'workflow' -d 'Execute and manage workflows'
+complete -f -c hive-flow -n '__fish_hive_flow_needs_command' -a 'repl' -d 'Start interactive REPL mode'
+complete -f -c hive-flow -n '__fish_hive_flow_needs_command' -a 'version' -d 'Show detailed version information'
+complete -f -c hive-flow -n '__fish_hive_flow_needs_command' -a 'completion' -d 'Generate shell completion scripts'
 
 # Global options
-complete -c claude-flow -s h -l help -d 'Show help information'
-complete -c claude-flow -s v -l verbose -d 'Enable verbose logging'
-complete -c claude-flow -s q -l quiet -d 'Suppress non-essential output'
-complete -c claude-flow -s c -l config -r -d 'Path to configuration file'
-complete -c claude-flow -l log-level -r -a 'debug info warn error' -d 'Set log level'
-complete -c claude-flow -l no-color -d 'Disable colored output'
-complete -c claude-flow -l json -d 'Output in JSON format'
-complete -c claude-flow -l profile -r -d 'Use named configuration profile'
+complete -c hive-flow -s h -l help -d 'Show help information'
+complete -c hive-flow -s v -l verbose -d 'Enable verbose logging'
+complete -c hive-flow -s q -l quiet -d 'Suppress non-essential output'
+complete -c hive-flow -s c -l config -r -d 'Path to configuration file'
+complete -c hive-flow -l log-level -r -a 'debug info warn error' -d 'Set log level'
+complete -c hive-flow -l no-color -d 'Disable colored output'
+complete -c hive-flow -l json -d 'Output in JSON format'
+complete -c hive-flow -l profile -r -d 'Use named configuration profile'
 
 # Agent subcommands
-complete -f -c claude-flow -n '__fish_claude_flow_using_command agent' -a 'spawn' -d 'Spawn a new agent'
-complete -f -c claude-flow -n '__fish_claude_flow_using_command agent' -a 'list' -d 'List all agents'
-complete -f -c claude-flow -n '__fish_claude_flow_using_command agent' -a 'terminate' -d 'Terminate an agent'
-complete -f -c claude-flow -n '__fish_claude_flow_using_command agent' -a 'info' -d 'Get agent information'
+complete -f -c hive-flow -n '__fish_hive_flow_using_command agent' -a 'spawn' -d 'Spawn a new agent'
+complete -f -c hive-flow -n '__fish_hive_flow_using_command agent' -a 'list' -d 'List all agents'
+complete -f -c hive-flow -n '__fish_hive_flow_using_command agent' -a 'terminate' -d 'Terminate an agent'
+complete -f -c hive-flow -n '__fish_hive_flow_using_command agent' -a 'info' -d 'Get agent information'
 
 # Task subcommands
-complete -f -c claude-flow -n '__fish_claude_flow_using_command task' -a 'create' -d 'Create a new task'
-complete -f -c claude-flow -n '__fish_claude_flow_using_command task' -a 'list' -d 'List all tasks'
-complete -f -c claude-flow -n '__fish_claude_flow_using_command task' -a 'status' -d 'Get task status'
-complete -f -c claude-flow -n '__fish_claude_flow_using_command task' -a 'cancel' -d 'Cancel a task'
-complete -f -c claude-flow -n '__fish_claude_flow_using_command task' -a 'workflow' -d 'Execute workflow from file'
+complete -f -c hive-flow -n '__fish_hive_flow_using_command task' -a 'create' -d 'Create a new task'
+complete -f -c hive-flow -n '__fish_hive_flow_using_command task' -a 'list' -d 'List all tasks'
+complete -f -c hive-flow -n '__fish_hive_flow_using_command task' -a 'status' -d 'Get task status'
+complete -f -c hive-flow -n '__fish_hive_flow_using_command task' -a 'cancel' -d 'Cancel a task'
+complete -f -c hive-flow -n '__fish_hive_flow_using_command task' -a 'workflow' -d 'Execute workflow from file'
 
 # Memory subcommands
-complete -f -c claude-flow -n '__fish_claude_flow_using_command memory' -a 'query' -d 'Query memory entries'
-complete -f -c claude-flow -n '__fish_claude_flow_using_command memory' -a 'export' -d 'Export memory to file'
-complete -f -c claude-flow -n '__fish_claude_flow_using_command memory' -a 'import' -d 'Import memory from file'
-complete -f -c claude-flow -n '__fish_claude_flow_using_command memory' -a 'stats' -d 'Show memory statistics'
-complete -f -c claude-flow -n '__fish_claude_flow_using_command memory' -a 'cleanup' -d 'Clean up old entries'
+complete -f -c hive-flow -n '__fish_hive_flow_using_command memory' -a 'query' -d 'Query memory entries'
+complete -f -c hive-flow -n '__fish_hive_flow_using_command memory' -a 'export' -d 'Export memory to file'
+complete -f -c hive-flow -n '__fish_hive_flow_using_command memory' -a 'import' -d 'Import memory from file'
+complete -f -c hive-flow -n '__fish_hive_flow_using_command memory' -a 'stats' -d 'Show memory statistics'
+complete -f -c hive-flow -n '__fish_hive_flow_using_command memory' -a 'cleanup' -d 'Clean up old entries'
 
 # Config subcommands
-complete -f -c claude-flow -n '__fish_claude_flow_using_command config' -a 'show' -d 'Show current configuration'
-complete -f -c claude-flow -n '__fish_claude_flow_using_command config' -a 'get' -d 'Get specific config value'
-complete -f -c claude-flow -n '__fish_claude_flow_using_command config' -a 'set' -d 'Set config value'
-complete -f -c claude-flow -n '__fish_claude_flow_using_command config' -a 'init' -d 'Initialize config file'
-complete -f -c claude-flow -n '__fish_claude_flow_using_command config' -a 'validate' -d 'Validate config file'
+complete -f -c hive-flow -n '__fish_hive_flow_using_command config' -a 'show' -d 'Show current configuration'
+complete -f -c hive-flow -n '__fish_hive_flow_using_command config' -a 'get' -d 'Get specific config value'
+complete -f -c hive-flow -n '__fish_hive_flow_using_command config' -a 'set' -d 'Set config value'
+complete -f -c hive-flow -n '__fish_hive_flow_using_command config' -a 'init' -d 'Initialize config file'
+complete -f -c hive-flow -n '__fish_hive_flow_using_command config' -a 'validate' -d 'Validate config file'
 
 # Session subcommands
-complete -f -c claude-flow -n '__fish_claude_flow_using_command session' -a 'list' -d 'List all saved sessions'
-complete -f -c claude-flow -n '__fish_claude_flow_using_command session' -a 'save' -d 'Save current session state'
-complete -f -c claude-flow -n '__fish_claude_flow_using_command session' -a 'restore' -d 'Restore a saved session'
-complete -f -c claude-flow -n '__fish_claude_flow_using_command session' -a 'delete' -d 'Delete a saved session'
-complete -f -c claude-flow -n '__fish_claude_flow_using_command session' -a 'export' -d 'Export session to file'
-complete -f -c claude-flow -n '__fish_claude_flow_using_command session' -a 'import' -d 'Import session from file'
-complete -f -c claude-flow -n '__fish_claude_flow_using_command session' -a 'info' -d 'Show detailed session information'
-complete -f -c claude-flow -n '__fish_claude_flow_using_command session' -a 'clean' -d 'Clean up old sessions'
+complete -f -c hive-flow -n '__fish_hive_flow_using_command session' -a 'list' -d 'List all saved sessions'
+complete -f -c hive-flow -n '__fish_hive_flow_using_command session' -a 'save' -d 'Save current session state'
+complete -f -c hive-flow -n '__fish_hive_flow_using_command session' -a 'restore' -d 'Restore a saved session'
+complete -f -c hive-flow -n '__fish_hive_flow_using_command session' -a 'delete' -d 'Delete a saved session'
+complete -f -c hive-flow -n '__fish_hive_flow_using_command session' -a 'export' -d 'Export session to file'
+complete -f -c hive-flow -n '__fish_hive_flow_using_command session' -a 'import' -d 'Import session from file'
+complete -f -c hive-flow -n '__fish_hive_flow_using_command session' -a 'info' -d 'Show detailed session information'
+complete -f -c hive-flow -n '__fish_hive_flow_using_command session' -a 'clean' -d 'Clean up old sessions'
 
 # Workflow subcommands
-complete -f -c claude-flow -n '__fish_claude_flow_using_command workflow' -a 'run' -d 'Execute a workflow from file'
-complete -f -c claude-flow -n '__fish_claude_flow_using_command workflow' -a 'validate' -d 'Validate a workflow file'
-complete -f -c claude-flow -n '__fish_claude_flow_using_command workflow' -a 'list' -d 'List running workflows'
-complete -f -c claude-flow -n '__fish_claude_flow_using_command workflow' -a 'status' -d 'Show workflow execution status'
-complete -f -c claude-flow -n '__fish_claude_flow_using_command workflow' -a 'stop' -d 'Stop a running workflow'
-complete -f -c claude-flow -n '__fish_claude_flow_using_command workflow' -a 'template' -d 'Generate workflow templates'
+complete -f -c hive-flow -n '__fish_hive_flow_using_command workflow' -a 'run' -d 'Execute a workflow from file'
+complete -f -c hive-flow -n '__fish_hive_flow_using_command workflow' -a 'validate' -d 'Validate a workflow file'
+complete -f -c hive-flow -n '__fish_hive_flow_using_command workflow' -a 'list' -d 'List running workflows'
+complete -f -c hive-flow -n '__fish_hive_flow_using_command workflow' -a 'status' -d 'Show workflow execution status'
+complete -f -c hive-flow -n '__fish_hive_flow_using_command workflow' -a 'stop' -d 'Stop a running workflow'
+complete -f -c hive-flow -n '__fish_hive_flow_using_command workflow' -a 'template' -d 'Generate workflow templates'
 
 # Completion subcommands
-complete -f -c claude-flow -n '__fish_claude_flow_using_command completion' -a 'bash zsh fish'`;
+complete -f -c hive-flow -n '__fish_hive_flow_using_command completion' -a 'bash zsh fish'`;
   }
 
   private async installBashCompletion(script: string): Promise<void> {
     const possiblePaths = [
-      '/etc/bash_completion.d/claude-flow',
-      '/usr/local/etc/bash_completion.d/claude-flow',
-      `${process.env['HOME']}/.local/share/bash-completion/completions/claude-flow`,
-      `${process.env['HOME']}/.bash_completion.d/claude-flow`,
+      '/etc/bash_completion.d/hive-flow',
+      '/usr/local/etc/bash_completion.d/hive-flow',
+      `${process.env['HOME']}/.local/share/bash-completion/completions/hive-flow`,
+      `${process.env['HOME']}/.bash_completion.d/hive-flow`,
     ];
 
     for (const path of possiblePaths) {
@@ -512,9 +512,9 @@ complete -f -c claude-flow -n '__fish_claude_flow_using_command completion' -a '
 
   private async installZshCompletion(script: string): Promise<void> {
     const possiblePaths = [
-      `${process.env['HOME']}/.zsh/completions/_claude-flow`,
-      '/usr/local/share/zsh/site-functions/_claude-flow',
-      '/usr/share/zsh/site-functions/_claude-flow',
+      `${process.env['HOME']}/.zsh/completions/_hive-flow`,
+      '/usr/local/share/zsh/site-functions/_hive-flow',
+      '/usr/share/zsh/site-functions/_hive-flow',
     ];
 
     for (const path of possiblePaths) {
@@ -541,9 +541,9 @@ complete -f -c claude-flow -n '__fish_claude_flow_using_command completion' -a '
 
   private async installFishCompletion(script: string): Promise<void> {
     const possiblePaths = [
-      `${process.env['HOME']}/.config/fish/completions/claude-flow.fish`,
-      '/usr/local/share/fish/completions/claude-flow.fish',
-      '/usr/share/fish/completions/claude-flow.fish',
+      `${process.env['HOME']}/.config/fish/completions/hive-flow.fish`,
+      '/usr/local/share/fish/completions/hive-flow.fish',
+      '/usr/share/fish/completions/hive-flow.fish',
     ];
 
     for (const path of possiblePaths) {

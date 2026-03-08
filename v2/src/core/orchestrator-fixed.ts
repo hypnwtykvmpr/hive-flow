@@ -1,5 +1,5 @@
 /**
- * Fixed orchestrator implementation for Claude-Flow
+ * Fixed orchestrator implementation for Hive-Flow
  */
 
 import type { EventBus } from './event-bus.js';

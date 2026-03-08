@@ -369,11 +369,11 @@ ${mode.customInstructions}
 
 ## SPARC Development Environment
 
-You are working within the SPARC (Specification, Pseudocode, Architecture, Refinement, Completion) methodology using claude-flow orchestration features.
+You are working within the SPARC (Specification, Pseudocode, Architecture, Refinement, Completion) methodology using hive-flow orchestration features.
 
 ### Available Development Tools
-- **Memory Persistence**: Use \`npx claude-flow memory store <key> "<value>"\` to save progress and findings
-- **Memory Retrieval**: Use \`npx claude-flow memory query <search>\` to access previous work
+- **Memory Persistence**: Use \`npx hive-flow memory store <key> "<value>"\` to save progress and findings
+- **Memory Retrieval**: Use \`npx hive-flow memory query <search>\` to access previous work
 - **Namespace**: Your work is stored in the "${memoryNamespace}" namespace
 
 ### SPARC Methodology Integration
@@ -391,8 +391,8 @@ ${
   flags.workflowStep
     ? `
 **Workflow Progress**: Step ${flags.workflowStep} of ${flags.totalSteps}
-- Review previous steps: \`npx claude-flow memory query previous_steps\`
-- Store this step's output: \`npx claude-flow memory store step_${flags.workflowStep}_output "<results>"\`
+- Review previous steps: \`npx hive-flow memory query previous_steps\`
+- Store this step's output: \`npx hive-flow memory store step_${flags.workflowStep}_output "<results>"\`
 `
     : ''
 }
@@ -406,13 +406,13 @@ ${
 ### Memory Commands Examples
 \`\`\`bash
 # Store your progress
-npx claude-flow memory store ${memoryNamespace}_progress "Current status and findings"
+npx hive-flow memory store ${memoryNamespace}_progress "Current status and findings"
 
 # Check for previous work
-npx claude-flow memory query ${memoryNamespace}
+npx hive-flow memory query ${memoryNamespace}
 
 # Store phase-specific results
-npx claude-flow memory store ${memoryNamespace}_${flags.tddPhase || 'results'} "Phase output and decisions"
+npx hive-flow memory store ${memoryNamespace}_${flags.tddPhase || 'results'} "Phase output and decisions"
 \`\`\`
 
 ### Integration with Other SPARC Modes
@@ -484,8 +484,8 @@ async function executeClaudeWithSparc(
         ...process.env,
         CLAUDE_INSTANCE_ID: instanceId,
         CLAUDE_SPARC_MODE: 'true',
-        CLAUDE_FLOW_MEMORY_ENABLED: 'true',
-        CLAUDE_FLOW_MEMORY_NAMESPACE: flags.namespace || 'sparc',
+        HIVE_FLOW_MEMORY_ENABLED: 'true',
+        HIVE_FLOW_MEMORY_NAMESPACE: flags.namespace || 'sparc',
       },
       stdio: 'inherit',
     });
@@ -540,16 +540,16 @@ async function showSparcHelp(): Promise<void> {
   console.log();
   console.log(blue('Examples:'));
   console.log(
-    `  ${yellow('claude-flow sparc modes')}                              # List all modes`,
+    `  ${yellow('hive-flow sparc modes')}                              # List all modes`,
   );
   console.log(
-    `  ${yellow('claude-flow sparc run code')} "implement user auth"      # Run specific mode`,
+    `  ${yellow('hive-flow sparc run code')} "implement user auth"      # Run specific mode`,
   );
   console.log(
-    `  ${yellow('claude-flow sparc tdd')} "payment processing system"    # Full TDD workflow`,
+    `  ${yellow('hive-flow sparc tdd')} "payment processing system"    # Full TDD workflow`,
   );
   console.log(
-    `  ${yellow('claude-flow sparc workflow')} project-workflow.json     # Custom workflow`,
+    `  ${yellow('hive-flow sparc workflow')} project-workflow.json     # Custom workflow`,
   );
   console.log();
   console.log(blue('TDD Workflow:'));

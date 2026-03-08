@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 /**
- * Claude Flow WebSocket Bridge Server
- * Connects browser dashboard to claude-flow MCP tools via WebSocket
+ * Hive Flow WebSocket Bridge Server
+ * Connects browser dashboard to hive-flow MCP tools via WebSocket
  */
 
 import { WebSocketServer } from 'ws';
@@ -14,7 +14,7 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-class ClaudeFlowBridge {
+class HiveFlowBridge {
     constructor(port = 8080) {
         this.port = port;
         this.clients = new Set();
@@ -95,7 +95,7 @@ class ClaudeFlowBridge {
         });
 
         this.httpServer.listen(this.port, () => {
-            console.log(`\n🌐 Claude Flow Dashboard Server`);
+            console.log(`\n🌐 Hive Flow Dashboard Server`);
             console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
             console.log(`📊 Dashboard: http://localhost:${this.port}`);
             console.log(`🔌 WebSocket: ws://localhost:${this.port}`);
@@ -110,13 +110,13 @@ class ClaudeFlowBridge {
 
         // Route MCP commands
         switch (method) {
-            case 'mcp__claude-flow__swarm_status':
+            case 'mcp__hive-flow__swarm_status':
                 this.handleSwarmStatus(ws, id);
                 break;
-            case 'mcp__claude-flow__agents_spawn_parallel':
+            case 'mcp__hive-flow__agents_spawn_parallel':
                 this.handleSpawnAgents(ws, params, id);
                 break;
-            case 'mcp__claude-flow__query_control':
+            case 'mcp__hive-flow__query_control':
                 this.handleQueryControl(ws, params, id);
                 break;
             case 'mcp__agentic-payments__verify_consensus':
@@ -308,7 +308,7 @@ class ClaudeFlowBridge {
 }
 
 // Start server
-const server = new ClaudeFlowBridge(process.env.PORT || 8080);
+const server = new HiveFlowBridge(process.env.PORT || 8080);
 
 // Graceful shutdown
 process.on('SIGINT', () => {

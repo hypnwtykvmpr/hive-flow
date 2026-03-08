@@ -1,6 +1,6 @@
 # Training Commands
 
-Commands for training operations in Claude Flow.
+Commands for training operations in Hive Flow.
 
 ## Available Commands
 

@@ -1,9 +1,9 @@
 /**
  * Claude Agent SDK Configuration Adapter
- * Claude-Flow v2.5-alpha.130
+ * Hive-Flow v2.5-alpha.130
  *
  * This module provides the configuration adapter for integrating
- * the Anthropic SDK as the foundation layer for Claude-Flow.
+ * the Anthropic SDK as the foundation layer for Hive-Flow.
  */
 
 import Anthropic from '@anthropic-ai/sdk';
@@ -15,7 +15,7 @@ export interface SDKConfiguration {
   timeout?: number;
   defaultHeaders?: Record<string, string>;
 
-  // Claude-Flow specific extensions
+  // Hive-Flow specific extensions
   swarmMode?: boolean;
   persistenceEnabled?: boolean;
   checkpointInterval?: number;
@@ -23,10 +23,10 @@ export interface SDKConfiguration {
 }
 
 /**
- * Claude-Flow SDK Adapter
- * Wraps the Anthropic SDK with Claude-Flow extensions
+ * Hive-Flow SDK Adapter
+ * Wraps the Anthropic SDK with Hive-Flow extensions
  */
-export class ClaudeFlowSDKAdapter {
+export class HiveFlowSDKAdapter {
   private sdk: Anthropic;
   private config: SDKConfiguration;
   private swarmMetadata: Map<string, Record<string, unknown>> = new Map();
@@ -41,7 +41,7 @@ export class ClaudeFlowSDKAdapter {
       swarmMode: config.swarmMode !== false,
       persistenceEnabled: config.persistenceEnabled !== false,
       checkpointInterval: config.checkpointInterval || 60000,
-      memoryNamespace: config.memoryNamespace || 'claude-flow'
+      memoryNamespace: config.memoryNamespace || 'hive-flow'
     };
 
     // Initialize Anthropic SDK with configuration
@@ -203,4 +203,4 @@ export class ClaudeFlowSDKAdapter {
 }
 
 // Export a singleton instance for convenience
-export const defaultSDKAdapter = new ClaudeFlowSDKAdapter();
+export const defaultSDKAdapter = new HiveFlowSDKAdapter();

@@ -1,7 +1,7 @@
 """
-Claude-Flow Executor - Integration layer for executing claude-flow commands.
+Hive-Flow Executor - Integration layer for executing hive-flow commands.
 
-This module provides a robust interface to execute claude-flow commands with:
+This module provides a robust interface to execute hive-flow commands with:
 - Command construction for all modes and strategies
 - Subprocess execution with proper output capture
 - Timeout and error handling
@@ -79,7 +79,7 @@ class SparcMode(str, Enum):
 
 @dataclass
 class ExecutionResult:
-    """Result of a claude-flow execution."""
+    """Result of a hive-flow execution."""
     success: bool
     command: List[str]
     stdout: str
@@ -177,11 +177,11 @@ class SparcConfig:
         return args
 
 
-class ClaudeFlowExecutor:
-    """Executor for claude-flow commands with robust error handling."""
+class HiveFlowExecutor:
+    """Executor for hive-flow commands with robust error handling."""
     
     def __init__(self, 
-                 claude_flow_path: Optional[str] = None,
+                 hive_flow_path: Optional[str] = None,
                  working_dir: Optional[str] = None,
                  env: Optional[Dict[str, str]] = None,
                  retry_attempts: int = 3,
@@ -190,28 +190,28 @@ class ClaudeFlowExecutor:
         Initialize the executor.
         
         Args:
-            claude_flow_path: Path to claude-flow executable
+            hive_flow_path: Path to hive-flow executable
             working_dir: Working directory for execution
             env: Environment variables
             retry_attempts: Number of retry attempts for transient failures
             retry_delay: Delay between retries in seconds
         """
-        self.claude_flow_path = claude_flow_path or self._find_claude_flow()
+        self.hive_flow_path = hive_flow_path or self._find_hive_flow()
         self.working_dir = Path(working_dir) if working_dir else Path.cwd()
         self.env = self._prepare_environment(env)
         self.retry_attempts = retry_attempts
         self.retry_delay = retry_delay
         
-        logger.info(f"Initialized ClaudeFlowExecutor with path: {self.claude_flow_path}")
+        logger.info(f"Initialized HiveFlowExecutor with path: {self.hive_flow_path}")
         
-    def _find_claude_flow(self) -> str:
-        """Find the claude-flow executable."""
+    def _find_hive_flow(self) -> str:
+        """Find the hive-flow executable."""
         # Check common locations
         locations = [
-            Path(__file__).parent.parent.parent.parent.parent / "bin" / "claude-flow",
-            Path(__file__).parent.parent.parent.parent.parent / "claude-flow",
-            Path.cwd() / "bin" / "claude-flow",
-            Path.cwd() / "claude-flow",
+            Path(__file__).parent.parent.parent.parent.parent / "bin" / "hive-flow",
+            Path(__file__).parent.parent.parent.parent.parent / "hive-flow",
+            Path.cwd() / "bin" / "hive-flow",
+            Path.cwd() / "hive-flow",
         ]
         
         for loc in locations:
@@ -219,11 +219,11 @@ class ClaudeFlowExecutor:
                 return str(loc)
                 
         # Try system path
-        result = shutil.which("claude-flow")
+        result = shutil.which("hive-flow")
         if result:
             return result
             
-        raise RuntimeError("Could not find claude-flow executable")
+        raise RuntimeError("Could not find hive-flow executable")
         
     def _prepare_environment(self, env: Optional[Dict[str, str]]) -> Dict[str, str]:
         """Prepare environment variables."""
@@ -374,7 +374,7 @@ class ClaudeFlowExecutor:
             ExecutionResult with execution details
         """
         # Build command
-        command = [self.claude_flow_path, "swarm", config.objective]
+        command = [self.hive_flow_path, "swarm", config.objective]
         command.extend(config.to_command_args())
         
         # Execute with timeout in seconds
@@ -399,7 +399,7 @@ class ClaudeFlowExecutor:
             ExecutionResult with execution details
         """
         # Build command
-        command = [self.claude_flow_path, "sparc"]
+        command = [self.hive_flow_path, "sparc"]
         
         # Add mode-specific subcommand if needed
         if config.mode:
@@ -425,7 +425,7 @@ class ClaudeFlowExecutor:
                     dependencies: Optional[List[str]] = None,
                     tags: Optional[List[str]] = None) -> ExecutionResult:
         """Execute a task command."""
-        command = [self.claude_flow_path, "task", "create", task_type, description]
+        command = [self.hive_flow_path, "task", "create", task_type, description]
         command.extend(["--priority", priority])
         
         if dependencies:
@@ -443,14 +443,14 @@ class ClaudeFlowExecutor:
             temp_file = f.name
             
         try:
-            command = [self.claude_flow_path, "memory", "store", key, f"@{temp_file}"]
+            command = [self.hive_flow_path, "memory", "store", key, f"@{temp_file}"]
             return self._retry_execute(command)
         finally:
             os.unlink(temp_file)
             
     def execute_memory_get(self, key: str) -> Tuple[ExecutionResult, Optional[Any]]:
         """Get data from memory."""
-        command = [self.claude_flow_path, "memory", "get", key]
+        command = [self.hive_flow_path, "memory", "get", key]
         result = self._retry_execute(command)
         
         if result.success:
@@ -465,7 +465,7 @@ class ClaudeFlowExecutor:
         
     def execute_status(self, swarm_id: Optional[str] = None) -> ExecutionResult:
         """Get status of swarm execution."""
-        command = [self.claude_flow_path, "status"]
+        command = [self.hive_flow_path, "status"]
         if swarm_id:
             command.append(swarm_id)
             
@@ -542,11 +542,11 @@ class ClaudeFlowExecutor:
             raise ValueError(f"Unknown command type: {command_type}")
             
     def validate_installation(self) -> bool:
-        """Validate claude-flow installation."""
+        """Validate hive-flow installation."""
         try:
-            result = self._execute_command([self.claude_flow_path, "--version"])
+            result = self._execute_command([self.hive_flow_path, "--version"])
             if result.success:
-                logger.info(f"Claude-flow version: {result.stdout.strip()}")
+                logger.info(f"Hive-flow version: {result.stdout.strip()}")
                 return True
             else:
                 logger.error(f"Version check failed: {result.stderr}")

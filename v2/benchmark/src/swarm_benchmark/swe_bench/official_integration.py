@@ -80,7 +80,7 @@ class OfficialSWEBenchEngine(RealBenchmarkEngine):
             return False
             
     async def run_instance(self, instance: Dict[str, Any]) -> Dict[str, Any]:
-        """Run Claude Flow on a single SWE-bench instance."""
+        """Run Hive Flow on a single SWE-bench instance."""
         
         instance_id = instance["instance_id"]
         repo = instance["repo"]
@@ -94,7 +94,7 @@ class OfficialSWEBenchEngine(RealBenchmarkEngine):
         start_time = time.time()
         
         try:
-            # Prepare the task for Claude Flow
+            # Prepare the task for Hive Flow
             task_prompt = f"""Fix the following issue in {repo}:
 
 Repository: {repo}
@@ -112,7 +112,7 @@ Generate a git diff patch that fixes this issue. The patch should:
 
 Return ONLY the git diff patch in proper format."""
 
-            # Execute with Claude Flow using optimal configuration
+            # Execute with Hive Flow using optimal configuration
             # Build prompt using the prompt builder
             prompt_config = SWEBenchPromptConfig(
                 mode="hive-mind",
@@ -125,16 +125,16 @@ Return ONLY the git diff patch in proper format."""
             simple_prompt = prompt_builder.build_prompt(instance)
             
             # Build command as array for subprocess (avoids shell escaping issues)
-            # Use local claude-flow executable
-            claude_flow_path = './claude-flow'
+            # Use local hive-flow executable
+            hive_flow_path = './hive-flow'
             
             # Check if we're in benchmark directory
             if Path.cwd().name == 'benchmark':
-                claude_flow_path = '../claude-flow'
+                hive_flow_path = '../hive-flow'
             
             # Use hive-mind spawn with --claude flag (as it works for you)
             cmd_args = [
-                claude_flow_path, 'hive-mind', 'spawn',
+                hive_flow_path, 'hive-mind', 'spawn',
                 simple_prompt,
                 '--claude',  # This generates the Claude Code coordination
                 '--non-interactive'  # Must be at the end
@@ -189,7 +189,7 @@ Return ONLY the git diff patch in proper format."""
                 # Store prediction
                 self.predictions[instance_id] = {
                     "model_patch": patch if patch else "",
-                    "model_name_or_path": "claude-flow-swarm",
+                    "model_name_or_path": "hive-flow-swarm",
                     "instance_id": instance_id
                 }
                 
@@ -222,7 +222,7 @@ Return ONLY the git diff patch in proper format."""
             }
             
     def _extract_patch(self, output: str) -> str:
-        """Extract git diff patch from Claude Flow output."""
+        """Extract git diff patch from Hive Flow output."""
         
         if not output:
             return ""
@@ -230,7 +230,7 @@ Return ONLY the git diff patch in proper format."""
         # Debug: log first part of output
         print(f"   📝 Output length: {len(output)} chars")
         
-        # Handle JSON stream output from claude-flow
+        # Handle JSON stream output from hive-flow
         patch_content = ""
         
         # First try to parse JSON lines

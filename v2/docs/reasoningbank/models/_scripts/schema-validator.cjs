@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Claude-Flow Schema Validator
- * Ensures memory.db contains ALL required tables for full claude-flow compatibility
+ * Hive-Flow Schema Validator
+ * Ensures memory.db contains ALL required tables for full hive-flow compatibility
  */
 
 const Database = require('better-sqlite3');
@@ -13,7 +13,7 @@ class SchemaValidator {
     this.dbPath = dbPath;
     this.db = new Database(dbPath);
 
-    // Required tables for full claude-flow compatibility
+    // Required tables for full hive-flow compatibility
     this.requiredTables = {
       // ReasoningBank core tables
       'patterns': {
@@ -29,7 +29,7 @@ class SchemaValidator {
         columns: ['id', 'source_id', 'target_id', 'link_type', 'strength', 'created_at']
       },
 
-      // Claude-Flow memory tables
+      // Hive-Flow memory tables
       'memories': {
         columns: ['id', 'key', 'value', 'namespace', 'created_at', 'updated_at', 'expires_at', 'metadata']
       },
@@ -37,7 +37,7 @@ class SchemaValidator {
         columns: ['id', 'memory_id', 'embedding', 'created_at']
       },
 
-      // Claude-Flow session tables
+      // Hive-Flow session tables
       'sessions': {
         columns: ['id', 'session_id', 'agent_type', 'started_at', 'ended_at', 'metadata']
       },
@@ -45,7 +45,7 @@ class SchemaValidator {
         columns: ['id', 'session_id', 'metric_name', 'metric_value', 'recorded_at']
       },
 
-      // Claude-Flow neural tables
+      // Hive-Flow neural tables
       'neural_patterns': {
         columns: ['id', 'pattern_type', 'pattern_data', 'confidence', 'created_at']
       },
@@ -228,7 +228,7 @@ class SchemaValidator {
       'CREATE INDEX IF NOT EXISTS idx_links_target ON pattern_links(target_id)',
       'CREATE INDEX IF NOT EXISTS idx_trajectories_memory ON task_trajectories(memory_id)',
 
-      // Claude-Flow indexes
+      // Hive-Flow indexes
       'CREATE INDEX IF NOT EXISTS idx_memories_key ON memories(key)',
       'CREATE INDEX IF NOT EXISTS idx_memories_namespace ON memories(namespace)',
       'CREATE INDEX IF NOT EXISTS idx_memories_expires ON memories(expires_at)',

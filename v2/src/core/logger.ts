@@ -1,5 +1,5 @@
 /**
- * Logging infrastructure for Claude-Flow
+ * Logging infrastructure for Hive-Flow
  */
 
 import { promises as fs } from 'node:fs';
@@ -74,7 +74,7 @@ export class Logger implements ILogger {
     if (!Logger.instance) {
       if (!config) {
         // Use default config if none provided and not in test environment
-        const isTestEnv = process.env.CLAUDE_FLOW_ENV === 'test';
+        const isTestEnv = process.env.HIVE_FLOW_ENV === 'test';
         if (isTestEnv) {
           throw new Error('Logger configuration required for initialization');
         }

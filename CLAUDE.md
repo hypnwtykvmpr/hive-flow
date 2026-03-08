@@ -1,4 +1,4 @@
-# Claude Code Configuration - HiveFlow
+# Claude Code Configuration - Hive Flow
 
 ## Behavioral Rules (Always Enforced)
 
@@ -34,12 +34,12 @@
 
 | Package | Path | Purpose |
 |---------|------|---------|
-| `@claude-flow/cli` | `v3/@claude-flow/cli/` | CLI entry point (26 commands) |
-| `@claude-flow/codex` | `v3/@claude-flow/codex/` | Dual-mode Claude + Codex collaboration |
-| `@claude-flow/guidance` | `v3/@claude-flow/guidance/` | Governance control plane |
-| `@claude-flow/hooks` | `v3/@claude-flow/hooks/` | 17 hooks + 12 workers |
-| `@claude-flow/memory` | `v3/@claude-flow/memory/` | AgentDB + HNSW search |
-| `@claude-flow/security` | `v3/@claude-flow/security/` | Input validation, CVE remediation |
+| `@hive-flow/cli` | `v3/@hive-flow/cli/` | CLI entry point (26 commands) |
+| `@hive-flow/codex` | `v3/@hive-flow/codex/` | Dual-mode Claude + Codex collaboration |
+| `@hive-flow/guidance` | `v3/@hive-flow/guidance/` | Governance control plane |
+| `@hive-flow/hooks` | `v3/@hive-flow/hooks/` | 17 hooks + 12 workers |
+| `@hive-flow/memory` | `v3/@hive-flow/memory/` | AgentDB + HNSW search |
+| `@hive-flow/security` | `v3/@hive-flow/security/` | Input validation, CVE remediation |
 
 ## Concurrency: 1 MESSAGE = ALL RELATED OPERATIONS
 
@@ -69,7 +69,7 @@ When spawning agents with the Task tool:
 
 ## External Agent Providers (Cursor-Agent, Codex CLI, Gemini CLI)
 
-Three external AI agent providers are integrated as first-class HiveFlow agents. They are invoked EXCLUSIVELY through native MCP tools — never via terminal/bash commands.
+Three external AI agent providers are integrated as first-class Hive Flow agents. They are invoked EXCLUSIVELY through native MCP tools — never via terminal/bash commands.
 
 **CRITICAL TERMINOLOGY:**
 - **"Cursor"** = Cursor-Agent / Cursor-CLI (headless AI agent). NEVER the Cursor VS Code IDE fork.
@@ -87,16 +87,16 @@ Three external AI agent providers are integrated as first-class HiveFlow agents.
 
 ```javascript
 // Spawn a Gemini-backed agent
-mcp__claude-flow__agent_spawn({ agentType: "reviewer", provider: "gemini-cli", task: "Audit auth module" })
+mcp__hive-flow__agent_spawn({ agentType: "reviewer", provider: "gemini-cli", task: "Audit auth module" })
 
 // Spawn a Codex-backed agent
-mcp__claude-flow__agent_spawn({ agentType: "coder", provider: "codex-cli", task: "Implement feature X" })
+mcp__hive-flow__agent_spawn({ agentType: "coder", provider: "codex-cli", task: "Implement feature X" })
 
 // Spawn a Cursor-Agent-backed agent
-mcp__claude-flow__agent_spawn({ agentType: "tester", provider: "cursor-cli", task: "Write tests for api.ts" })
+mcp__hive-flow__agent_spawn({ agentType: "tester", provider: "cursor-cli", task: "Write tests for api.ts" })
 
 // Execute a task on a spawned agent
-mcp__claude-flow__agent_task({ agentId: "agent-id", task: "Review the error handling" })
+mcp__hive-flow__agent_task({ agentId: "agent-id", task: "Review the error handling" })
 ```
 
 ### Provider Capabilities
@@ -192,11 +192,11 @@ Task("Reviewer", "Review code quality and security. Store findings in 'collabora
 
 // 🟢 Codex workers (implementation, optimization)
 // Spawn via CLI for Codex platform
-Bash("npx hiveflow-codex dual run --worker 'codex:coder:Implement the solution based on architect design' --namespace collaboration")
-Bash("npx hiveflow-codex dual run --worker 'codex:optimizer:Optimize performance based on implementation' --namespace collaboration")
+Bash("npx hive-flow-codex dual run --worker 'codex:coder:Implement the solution based on architect design' --namespace collaboration")
+Bash("npx hive-flow-codex dual run --worker 'codex:optimizer:Optimize performance based on implementation' --namespace collaboration")
 
 // STEP 3: Coordinate via shared memory
-Bash("npx hiveflow memory store --namespace collaboration --key 'task-context' --value '[task description]'")
+Bash("npx hive-flow memory store --namespace collaboration --key 'task-context' --value '[task description]'")
 ```
 
 ### Collaboration Templates (Pre-Built Pipelines)
@@ -212,12 +212,12 @@ Bash("npx hiveflow memory store --namespace collaboration --key 'task-context' -
 
 ```bash
 # Run a collaboration template
-npx hiveflow-codex dual run feature --task "Add user authentication with OAuth"
-npx hiveflow-codex dual run security --target "./src"
-npx hiveflow-codex dual run refactor --target "./src/legacy"
+npx hive-flow-codex dual run feature --task "Add user authentication with OAuth"
+npx hive-flow-codex dual run security --target "./src"
+npx hive-flow-codex dual run refactor --target "./src/legacy"
 
 # Custom multi-platform swarm
-npx hiveflow-codex dual run \
+npx hive-flow-codex dual run \
   --worker "claude:architect:Design the API structure" \
   --worker "codex:coder:Implement REST endpoints" \
   --worker "claude:tester:Write integration tests" \
@@ -225,10 +225,10 @@ npx hiveflow-codex dual run \
   --namespace "api-feature"
 
 # Check collaboration status
-npx hiveflow-codex dual status
+npx hive-flow-codex dual status
 
 # List available templates
-npx hiveflow-codex dual templates
+npx hive-flow-codex dual templates
 ```
 
 ### Shared Memory Coordination
@@ -237,13 +237,13 @@ All workers share state via the `collaboration` namespace:
 
 ```bash
 # Store context for cross-platform sharing
-npx hiveflow memory store --namespace collaboration --key "design-decisions" --value "..."
+npx hive-flow memory store --namespace collaboration --key "design-decisions" --value "..."
 
 # Search for patterns across all workers
-npx hiveflow memory search --namespace collaboration --query "authentication patterns"
+npx hive-flow memory search --namespace collaboration --query "authentication patterns"
 
 # Retrieve specific findings
-npx hiveflow memory retrieve --namespace collaboration --key "security-findings"
+npx hive-flow memory retrieve --namespace collaboration --key "security-findings"
 ```
 
 ### Cross-Platform Learning
@@ -252,13 +252,13 @@ Both platforms learn from each other's outputs:
 
 ```bash
 # After successful collaboration, train patterns
-npx hiveflow hooks post-task --task-id "dual-[id]" --success true --train-neural true
+npx hive-flow hooks post-task --task-id "dual-[id]" --success true --train-neural true
 
 # Store successful collaboration patterns
-npx hiveflow memory store --namespace patterns --key "dual-mode-[pattern]" --value "[what worked]"
+npx hive-flow memory store --namespace patterns --key "dual-mode-[pattern]" --value "[what worked]"
 
 # Transfer learnings to both platforms
-npx hiveflow hooks transfer store --pattern "dual-collab-success"
+npx hive-flow hooks transfer store --pattern "dual-collab-success"
 ```
 
 ### Worker Dependency Levels
@@ -286,7 +286,7 @@ Level 3: [🟢 Optimizer]           # Depends on Reviewer approval
 ### Programmatic API
 
 ```typescript
-import { DualModeOrchestrator, CollaborationTemplates } from '@claude-flow/codex';
+import { DualModeOrchestrator, CollaborationTemplates } from '@hive-flow/codex';
 
 const orchestrator = new DualModeOrchestrator({
   namespace: 'my-feature',
@@ -321,7 +321,7 @@ mcp__ruv-swarm__swarm_init({
 
 // STEP 2: Spawn agents concurrently using Claude Code's Task tool
 // ALL Task calls MUST be in the SAME message for parallel execution
-Task("Coordinator", "You are the swarm coordinator. Initialize session, coordinate other agents via memory. Run: npx hiveflow hooks session-start", "hierarchical-coordinator")
+Task("Coordinator", "You are the swarm coordinator. Initialize session, coordinate other agents via memory. Run: npx hive-flow hooks session-start", "hierarchical-coordinator")
 Task("Researcher", "Analyze requirements and existing code patterns. Store findings in memory via hooks.", "researcher")
 Task("Architect", "Design implementation approach based on research. Document decisions in memory.", "system-architect")
 Task("Coder", "Implement the solution following architect's design. Coordinate via hooks.", "coder")
@@ -339,7 +339,7 @@ TodoWrite({ todos: [
 ]})
 
 // STEP 4: Store swarm state in memory
-mcp__claude-flow__memory_usage({
+mcp__hive-flow__memory_usage({
   action: "store",
   namespace: "swarm",
   key: "current-session",
@@ -381,7 +381,7 @@ mcp__claude-flow__memory_usage({
 
 ## Project Configuration
 
-This project is configured with HiveFlow (Anti-Drift Defaults):
+This project is configured with Hive Flow (Anti-Drift Defaults):
 - **Topology**: hierarchical (prevents drift via central coordination)
 - **Max Agents**: 8 (smaller team = less drift)
 - **Strategy**: specialized (clear roles, no overlap)
@@ -414,28 +414,28 @@ This project is configured with HiveFlow (Anti-Drift Defaults):
 
 ```bash
 # Initialize project
-npx hiveflow init --wizard
+npx hive-flow init --wizard
 
 # Start daemon with background workers
-npx hiveflow daemon start
+npx hive-flow daemon start
 
 # Spawn an agent
-npx hiveflow agent spawn -t coder --name my-coder
+npx hive-flow agent spawn -t coder --name my-coder
 
 # Initialize swarm
-npx hiveflow swarm init --v3-mode
+npx hive-flow swarm init --v3-mode
 
 # Search memory (HNSW-indexed)
-npx hiveflow memory search -q "authentication patterns"
+npx hive-flow memory search -q "authentication patterns"
 
 # System diagnostics
-npx hiveflow doctor --fix
+npx hive-flow doctor --fix
 
 # Security scan
-npx hiveflow security scan --depth full
+npx hive-flow security scan --depth full
 
 # Performance benchmark
-npx hiveflow performance benchmark --suite all
+npx hive-flow performance benchmark --suite all
 ```
 
 ## Headless Background Instances (claude -p)
@@ -490,7 +490,7 @@ claude -p --dangerously-skip-permissions "Fix all lint errors in src/"
 ### V3 Specialized Agents
 `security-architect`, `security-auditor`, `memory-specialist`, `performance-engineer`
 
-### @claude-flow/security Module
+### @hive-flow/security Module
 CVE remediation, input validation, path security:
 - `InputValidator` — Zod-based validation at boundaries
 - `PathValidator` — Path traversal prevention
@@ -501,7 +501,7 @@ CVE remediation, input validation, path security:
 ### Token Optimizer (Agent Booster)
 Integrates agentic-flow optimizations for 30-50% token reduction:
 ```typescript
-import { getTokenOptimizer } from '@claude-flow/integration';
+import { getTokenOptimizer } from '@hive-flow/integration';
 const optimizer = await getTokenOptimizer();
 
 // Compact context (32% fewer tokens)
@@ -543,18 +543,18 @@ const config = optimizer.getOptimalConfig(agentCount);
 
 ## Agent Teams (Multi-Agent Coordination)
 
-Claude Code's experimental Agent Teams feature is fully integrated with HiveFlow for advanced multi-agent coordination.
+Claude Code's experimental Agent Teams feature is fully integrated with Hive Flow for advanced multi-agent coordination.
 
 ### Enabling Agent Teams
 
-Agent Teams is automatically enabled when you run `npx hiveflow init`. The following is added to `.claude/settings.json`:
+Agent Teams is automatically enabled when you run `npx hive-flow init`. The following is added to `.claude/settings.json`:
 
 ```json
 {
   "env": {
     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
   },
-  "claudeFlow": {
+  "hiveFlow": {
     "agentTeams": {
       "enabled": true,
       "teammateMode": "auto",
@@ -617,10 +617,10 @@ Task({
 
 ```bash
 # Handle idle teammate (auto-assigns available tasks)
-npx hiveflow hooks teammate-idle --auto-assign true
+npx hive-flow hooks teammate-idle --auto-assign true
 
 # Handle task completion (trains patterns, notifies lead)
-npx hiveflow hooks task-completed -i task-123 --train-patterns true
+npx hive-flow hooks task-completed -i task-123 --train-patterns true
 
 # Check on team progress
 TaskList
@@ -696,15 +696,15 @@ The 4-step intelligence pipeline:
 
 ```bash
 # Add MCP servers
-claude mcp add hiveflow npx hiveflow mcp start
+claude mcp add hive-flow npx hive-flow mcp start
 claude mcp add ruv-swarm npx ruv-swarm mcp start  # Optional
 claude mcp add flow-nexus npx flow-nexus@latest mcp start  # Optional
 
 # Start daemon
-npx hiveflow daemon start
+npx hive-flow daemon start
 
 # Run doctor
-npx hiveflow doctor --fix
+npx hive-flow doctor --fix
 ```
 
 ## Claude Code vs MCP Tools
@@ -731,45 +731,45 @@ npx hiveflow doctor --fix
 
 ### Publishing Rules
 
-- MUST publish BOTH packages when publishing CLI changes: `@claude-flow/cli` AND `hiveflow`
+- MUST publish BOTH packages when publishing CLI changes: `@hive-flow/cli` AND `hive-flow`
 - MUST update ALL dist-tags for BOTH packages after publishing
-- Publish order: `@claude-flow/cli` first, then `hiveflow` (umbrella)
+- Publish order: `@hive-flow/cli` first, then `hive-flow` (umbrella)
 - MUST run verification for BOTH before telling user publishing is complete
 
 ```bash
 # STEP 1: Build and publish CLI
-cd v3/@claude-flow/cli
+cd v3/@hive-flow/cli
 npm version 3.0.0-alpha.XXX --no-git-tag-version
 npm run build
 npm publish --tag alpha
-npm dist-tag add @claude-flow/cli@3.0.0-alpha.XXX latest
+npm dist-tag add @hive-flow/cli@3.0.0-alpha.XXX latest
 
-# STEP 2: Publish hiveflow umbrella
-cd /workspaces/hiveflow
+# STEP 2: Publish hive-flow umbrella
+cd /workspaces/hive-flow
 npm version 3.0.0-alpha.XXX --no-git-tag-version
 npm publish --tag alpha
 
-# STEP 3: Update ALL hiveflow umbrella tags (CRITICAL - DON'T SKIP!)
-npm dist-tag add hiveflow@3.0.0-alpha.XXX latest
-npm dist-tag add hiveflow@3.0.0-alpha.XXX alpha
+# STEP 3: Update ALL hive-flow umbrella tags (CRITICAL - DON'T SKIP!)
+npm dist-tag add hive-flow@3.0.0-alpha.XXX latest
+npm dist-tag add hive-flow@3.0.0-alpha.XXX alpha
 ```
 
 **Verification (run before telling user):**
 ```bash
-npm view @claude-flow/cli dist-tags --json
-npm view hiveflow dist-tags --json
+npm view @hive-flow/cli dist-tags --json
+npm view hive-flow dist-tags --json
 # Both packages need: alpha AND latest pointing to newest version
 ```
 
 ### All Tags That Must Be Updated
 | Package | Tag | Command Users Run |
 |---------|-----|-------------------|
-| `@claude-flow/cli` | `alpha` | `npx @hiveflow/cli` |
-| `@claude-flow/cli` | `latest` | `npx @hiveflow/cli` |
-| `hiveflow` | `alpha` | `npx hiveflow` — EASY TO FORGET |
-| `hiveflow` | `latest` | `npx hiveflow` |
+| `@hive-flow/cli` | `alpha` | `npx @hive-flow/cli` |
+| `@hive-flow/cli` | `latest` | `npx @hive-flow/cli` |
+| `hive-flow` | `alpha` | `npx hive-flow` — EASY TO FORGET |
+| `hive-flow` | `latest` | `npx hive-flow` |
 
-- Never forget the umbrella `alpha` tag — users run `npx hiveflow`
+- Never forget the umbrella `alpha` tag — users run `npx hive-flow`
 
 ## Optional Plugins (20 Available)
 
@@ -777,32 +777,32 @@ Plugins are distributed via IPFS and can be installed with the CLI. Browse and i
 
 ```bash
 # List all available plugins
-npx hiveflow plugins list
+npx hive-flow plugins list
 
 # Install a plugin
-npx hiveflow plugins install @claude-flow/plugin-name
+npx hive-flow plugins install @hive-flow/plugin-name
 
 # Enable/disable
-npx hiveflow plugins enable @claude-flow/plugin-name
-npx hiveflow plugins disable @claude-flow/plugin-name
+npx hive-flow plugins enable @hive-flow/plugin-name
+npx hive-flow plugins disable @hive-flow/plugin-name
 ```
 
 ### Core Plugins
 
 | Plugin | Version | Description |
 |--------|---------|-------------|
-| `@claude-flow/embeddings` | 3.0.0-alpha.1 | Vector embeddings with sql.js, HNSW, hyperbolic support |
-| `@claude-flow/security` | 3.0.0-alpha.1 | Input validation, path security, CVE remediation |
-| `@claude-flow/claims` | 3.0.0-alpha.8 | Claims-based authorization (check, grant, revoke, list) |
-| `@claude-flow/neural` | 3.0.0-alpha.7 | Neural pattern training (SONA, MoE, EWC++) |
-| `@claude-flow/plugins` | 3.0.0-alpha.1 | Plugin system core (manager, discovery, store) |
-| `@claude-flow/performance` | 3.0.0-alpha.1 | Performance profiling and benchmarking |
+| `@hive-flow/embeddings` | 3.0.0-alpha.1 | Vector embeddings with sql.js, HNSW, hyperbolic support |
+| `@hive-flow/security` | 3.0.0-alpha.1 | Input validation, path security, CVE remediation |
+| `@hive-flow/claims` | 3.0.0-alpha.8 | Claims-based authorization (check, grant, revoke, list) |
+| `@hive-flow/neural` | 3.0.0-alpha.7 | Neural pattern training (SONA, MoE, EWC++) |
+| `@hive-flow/plugins` | 3.0.0-alpha.1 | Plugin system core (manager, discovery, store) |
+| `@hive-flow/performance` | 3.0.0-alpha.1 | Performance profiling and benchmarking |
 
 ## Support
 
-- Documentation: https://github.com/hypnwtykvmpr/hiveflow
-- Issues: https://github.com/hypnwtykvmpr/hiveflow/issues
+- Documentation: https://github.com/hypnwtykvmpr/hive-flow
+- Issues: https://github.com/hypnwtykvmpr/hive-flow/issues
 
 ---
 
-Remember: **HiveFlow coordinates, Claude Code creates!**
+Remember: **Hive Flow coordinates, Claude Code creates!**

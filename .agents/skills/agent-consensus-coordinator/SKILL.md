@@ -150,7 +150,7 @@ class SwarmCoordinator {
 }
 ```
 
-## Integration with Claude Flow
+## Integration with Hive Flow
 
 ### Swarm Consensus Protocols
 - **Agent Agreement**: Coordinate agreement across swarm agents

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Comprehensive integration tests for all 17 SPARC modes in claude-flow.
+Comprehensive integration tests for all 17 SPARC modes in hive-flow.
 Tests each mode with real command execution and performance metrics.
 """
 
@@ -256,7 +256,7 @@ class TestSPARCModes:
     
     def __init__(self):
         """Initialize test suite"""
-        self.claude_flow_path = Path(__file__).parent.parent.parent.parent / "claude-flow"
+        self.hive_flow_path = Path(__file__).parent.parent.parent.parent / "hive-flow"
         self.results: List[SPARCTestResult] = []
         self.temp_dirs: List[Path] = []
         
@@ -282,7 +282,7 @@ class TestSPARCModes:
             special_flags = []
             
         command = [
-            str(self.claude_flow_path),
+            str(self.hive_flow_path),
             "sparc",
             mode,
             prompt,
@@ -297,7 +297,7 @@ class TestSPARCModes:
                 capture_output=True,
                 text=True,
                 timeout=60,  # 60 second timeout
-                env={**os.environ, "CLAUDE_FLOW_NON_INTERACTIVE": "true"}
+                env={**os.environ, "HIVE_FLOW_NON_INTERACTIVE": "true"}
             )
             
             duration = time.time() - start_time
@@ -368,7 +368,7 @@ class TestSPARCModes:
     @pytest.mark.integration
     def test_all_modes_availability(self):
         """Test that all SPARC modes are available"""
-        command = [str(self.claude_flow_path), "sparc", "list", "--non-interactive"]
+        command = [str(self.hive_flow_path), "sparc", "list", "--non-interactive"]
         
         result = subprocess.run(
             command,

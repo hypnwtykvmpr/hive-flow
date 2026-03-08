@@ -1,4 +1,4 @@
-# Dockerfile for testing published claude-flow@2.7.1 package
+# Dockerfile for testing published hive-flow@2.7.1 package
 # Tests the npm package in a clean environment to verify no regressions
 
 FROM node:18-alpine
@@ -16,7 +16,7 @@ RUN apk add --no-cache \
     sqlite
 
 # Install the published package from npm
-RUN npm install -g claude-flow@2.7.1
+RUN npm install -g hive-flow@2.7.1
 
 # Create test directories
 RUN mkdir -p /test/data /test/results
@@ -30,7 +30,7 @@ RUN chmod +x /test/*.sh
 
 # Set environment variables
 ENV NODE_ENV=production
-ENV CLAUDE_FLOW_TEST=true
+ENV HIVE_FLOW_TEST=true
 
 # Default command runs all tests
 CMD ["/bin/bash", "/test/regression-tests.sh"]

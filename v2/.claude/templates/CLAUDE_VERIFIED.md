@@ -8,13 +8,13 @@ Current Mode: **PASSIVE** | Truth Threshold: **0.80**
 ### Quick Enable
 ```bash
 # Enable verification (non-breaking, opt-in)
-npx claude-flow verify --enable
+npx hive-flow verify --enable
 
 # Set verification mode
-npx claude-flow verify --mode strict  # passive|active|strict
+npx hive-flow verify --mode strict  # passive|active|strict
 
 # Set truth threshold
-npx claude-flow verify --threshold 0.95
+npx hive-flow verify --threshold 0.95
 ```
 
 ## 🎯 Truth Scoring Integration
@@ -29,13 +29,13 @@ Every agent action is automatically scored for truthfulness:
 ### Check Truth Scores
 ```bash
 # Current agent score
-npx claude-flow truth score [agent-id]
+npx hive-flow truth score [agent-id]
 
 # Agent reliability over time
-npx claude-flow truth reliability [agent-id]
+npx hive-flow truth reliability [agent-id]
 
 # Full truth report
-npx claude-flow truth report --format markdown
+npx hive-flow truth report --format markdown
 ```
 
 ## 🚨 CRITICAL: Concurrent Execution Rules
@@ -83,33 +83,33 @@ All existing agents now support optional verification:
 ### Standard Commands (Backward Compatible)
 ```bash
 # Works exactly as before
-npx claude-flow sparc run dev "build feature"
+npx hive-flow sparc run dev "build feature"
 
 # Add --verify for truth scoring
-npx claude-flow sparc run dev "build feature" --verify
+npx hive-flow sparc run dev "build feature" --verify
 
 # Set verification level
-npx claude-flow sparc run dev "build feature" --verify=strict
+npx hive-flow sparc run dev "build feature" --verify=strict
 ```
 
 ### New Verification Commands
 ```bash
 # Verification control
-npx claude-flow verify --enable                # Enable system
-npx claude-flow verify --status                # Check status
-npx claude-flow verify --mode [passive|active|strict]  # Set mode
-npx claude-flow verify --threshold 0.95        # Set threshold
+npx hive-flow verify --enable                # Enable system
+npx hive-flow verify --status                # Check status
+npx hive-flow verify --mode [passive|active|strict]  # Set mode
+npx hive-flow verify --threshold 0.95        # Set threshold
 
 # Truth scoring
-npx claude-flow truth score [agent-id]         # Get score
-npx claude-flow truth history [agent-id]       # View history
-npx claude-flow truth reliability [agent-id]   # Check reliability
-npx claude-flow truth report                   # Generate report
+npx hive-flow truth score [agent-id]         # Get score
+npx hive-flow truth history [agent-id]       # View history
+npx hive-flow truth reliability [agent-id]   # Check reliability
+npx hive-flow truth report                   # Generate report
 
 # Checkpoints & rollback
-npx claude-flow checkpoint create              # Manual checkpoint
-npx claude-flow checkpoint list                # List checkpoints
-npx claude-flow rollback [checkpoint-id]       # Rollback to checkpoint
+npx hive-flow checkpoint create              # Manual checkpoint
+npx hive-flow checkpoint list                # List checkpoints
+npx hive-flow rollback [checkpoint-id]       # Rollback to checkpoint
 ```
 
 ## 🔧 MCP Tool Integration
@@ -117,22 +117,22 @@ npx claude-flow rollback [checkpoint-id]       # Rollback to checkpoint
 ### Enhanced MCP Tools (Backward Compatible)
 ```javascript
 // Existing tools work as before
-mcp__claude-flow__swarm_init { topology: "mesh" }
+mcp__hive-flow__swarm_init { topology: "mesh" }
 
 // Add verification (optional)
-mcp__claude-flow__swarm_init { 
+mcp__hive-flow__swarm_init { 
   topology: "mesh",
   verification: { enabled: true, mode: "strict" }
 }
 
 // New verification-specific tools
-mcp__claude-flow__truth_score {
+mcp__hive-flow__truth_score {
   agent_id: "coder-1",
   claim: "All tests pass",
   evidence: { test_results: {...} }
 }
 
-mcp__claude-flow__verify_handoff {
+mcp__hive-flow__verify_handoff {
   from_agent: "coder-1",
   to_agent: "tester-1",
   require_acceptance: true
@@ -143,7 +143,7 @@ mcp__claude-flow__verify_handoff {
 
 ### Automatic Storage
 ```
-.claude-flow/memory/truth-scores/
+.hive-flow/memory/truth-scores/
 ├── coder-1_task-123_1234567890.json
 ├── tester-1_task-124_1234567891.json
 └── reviewer-1_task-125_1234567892.json
@@ -152,7 +152,7 @@ mcp__claude-flow__verify_handoff {
 ### Memory Integration
 ```javascript
 // Truth scores automatically stored via memory_usage
-mcp__claude-flow__memory_usage {
+mcp__hive-flow__memory_usage {
   action: "store",
   namespace: "truth_scores",
   key: "agent_task_score",
@@ -185,19 +185,19 @@ mcp__claude-flow__memory_usage {
 
 ### Phase 1: Start Passive
 ```bash
-npx claude-flow verify --enable --mode passive
+npx hive-flow verify --enable --mode passive
 # Monitor truth scores without disruption
 ```
 
 ### Phase 2: Active Warning
 ```bash
-npx claude-flow verify --mode active
+npx hive-flow verify --mode active
 # Get warnings but continue working
 ```
 
 ### Phase 3: Strict Enforcement
 ```bash
-npx claude-flow verify --mode strict --threshold 0.95
+npx hive-flow verify --mode strict --threshold 0.95
 # Full verification with rollback
 ```
 
@@ -205,7 +205,7 @@ npx claude-flow verify --mode strict --threshold 0.95
 
 ### Dashboard
 ```bash
-npx claude-flow dashboard --verification
+npx hive-flow dashboard --verification
 ```
 
 Shows:
@@ -218,10 +218,10 @@ Shows:
 ### Reports
 ```bash
 # Generate truth report
-npx claude-flow truth report --format markdown > truth-report.md
+npx hive-flow truth report --format markdown > truth-report.md
 
 # CI/CD integration
-npx claude-flow truth report --format json | jq '.agents'
+npx hive-flow truth report --format json | jq '.agents'
 ```
 
 ## 🔗 GitHub Integration
@@ -230,9 +230,9 @@ npx claude-flow truth report --format json | jq '.agents'
 ```yaml
 - name: Run with Verification
   run: |
-    npx claude-flow@alpha verify --enable
-    npx claude-flow@alpha sparc run dev "$TASK" --verify
-    npx claude-flow@alpha truth report
+    npx hive-flow@alpha verify --enable
+    npx hive-flow@alpha sparc run dev "$TASK" --verify
+    npx hive-flow@alpha truth report
   env:
     VERIFICATION_MODE: strict
     TRUTH_THRESHOLD: 0.95
@@ -241,7 +241,7 @@ npx claude-flow truth report --format json | jq '.agents'
 ### PR Verification
 ```yaml
 - name: Verify PR
-  run: npx claude-flow@alpha verify --pr ${{ github.event.pull_request.number }}
+  run: npx hive-flow@alpha verify --pr ${{ github.event.pull_request.number }}
 ```
 
 ## ⚡ Performance Tips with Verification
@@ -256,17 +256,17 @@ npx claude-flow truth report --format json | jq '.agents'
 ### For Existing Projects
 ```bash
 # 1. Install verification (non-breaking)
-npx claude-flow@alpha init --add-verification
+npx hive-flow@alpha init --add-verification
 
 # 2. Start in passive mode
-npx claude-flow verify --enable --mode passive
+npx hive-flow verify --enable --mode passive
 
 # 3. Monitor for 1 week
-npx claude-flow truth report
+npx hive-flow truth report
 
 # 4. Gradually increase enforcement
-npx claude-flow verify --mode active  # After 1 week
-npx claude-flow verify --mode strict  # After 2 weeks
+npx hive-flow verify --mode active  # After 1 week
+npx hive-flow verify --mode strict  # After 2 weeks
 ```
 
 ## 📝 Configuration
@@ -300,30 +300,30 @@ npx claude-flow verify --mode strict  # After 2 weeks
 ### Low Truth Scores
 ```bash
 # Check what's failing
-npx claude-flow truth diagnose [agent-id]
+npx hive-flow truth diagnose [agent-id]
 
 # View detailed evidence
-npx claude-flow truth evidence [task-id]
+npx hive-flow truth evidence [task-id]
 
 # Retrain agent
-npx claude-flow agent retrain [agent-id] --focus verification
+npx hive-flow agent retrain [agent-id] --focus verification
 ```
 
 ### Performance Impact
 ```bash
 # Measure overhead
-npx claude-flow benchmark --with-verification
+npx hive-flow benchmark --with-verification
 
 # Optimize verification
-npx claude-flow verify optimize
+npx hive-flow verify optimize
 
 # Selective verification
-npx claude-flow verify --only-critical
+npx hive-flow verify --only-critical
 ```
 
 ---
 
 **Remember**: Verification is **opt-in** and **backward compatible**. Start passive, measure impact, then increase enforcement as confidence grows.
 
-## Original Claude-Flow Features
-[All existing Claude-Flow features continue to work as before...]
+## Original Hive-Flow Features
+[All existing Hive-Flow features continue to work as before...]

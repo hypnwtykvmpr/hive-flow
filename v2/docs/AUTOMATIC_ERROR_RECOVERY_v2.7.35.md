@@ -2,7 +2,7 @@
 
 ## Summary
 
-Implemented comprehensive automatic error recovery system for `claude-flow init` that handles the WSL better-sqlite3 ENOTEMPTY error **without manual intervention**.
+Implemented comprehensive automatic error recovery system for `hive-flow init` that handles the WSL better-sqlite3 ENOTEMPTY error **without manual intervention**.
 
 ## Changes Made
 
@@ -51,7 +51,7 @@ Initialize → Error? → Retry with JSON (3x max)
 
 **User Experience:**
 ```bash
-npx claude-flow@alpha init --force
+npx hive-flow@alpha init --force
 
 🔍 WSL environment detected
 ✅ WSL environment optimized
@@ -88,19 +88,19 @@ npx claude-flow@alpha init --force
 ### Before (Manual Fix Required)
 
 ```bash
-$ npx claude-flow@alpha init --force
+$ npx hive-flow@alpha init --force
 [Error: ENOTEMPTY: directory not empty, rmdir '/home/user/.npm/_npx/xxx/node_modules/better-sqlite3']
 
 # User had to manually:
 $ npm cache clean --force
 $ rm -rf ~/.npm/_npx
-$ npx claude-flow@alpha init --force  # Try again
+$ npx hive-flow@alpha init --force  # Try again
 ```
 
 ### After (Automatic Recovery)
 
 ```bash
-$ npx claude-flow@alpha init --force
+$ npx hive-flow@alpha init --force
 
 🔍 WSL environment detected
 ✅ WSL environment optimized
@@ -232,23 +232,23 @@ USER testuser
 WORKDIR /home/testuser
 
 # Test command
-CMD npx claude-flow@alpha init --force
+CMD npx hive-flow@alpha init --force
 ```
 
 ### Test Commands
 
 ```bash
 # Build test image
-docker build -t claude-flow-test -f Dockerfile.test .
+docker build -t hive-flow-test -f Dockerfile.test .
 
 # Run test
-docker run -it claude-flow-test
+docker run -it hive-flow-test
 
 # Test with volume mount
-docker run -it -v $(pwd):/workspace -w /workspace claude-flow-test
+docker run -it -v $(pwd):/workspace -w /workspace hive-flow-test
 
 # Simulate WSL environment
-docker run -it -e SIMULATE_WSL=1 claude-flow-test
+docker run -it -e SIMULATE_WSL=1 hive-flow-test
 ```
 
 ## Rollout Plan

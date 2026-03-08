@@ -14,7 +14,7 @@ PASSED=0
 FAILED=0
 TESTS=()
 
-echo -e "${BLUE}🐳 Claude-Flow Quick Validation${NC}"
+echo -e "${BLUE}🐳 Hive-Flow Quick Validation${NC}"
 echo "========================================"
 
 # Test runner
@@ -45,36 +45,36 @@ cd "$(dirname "$0")/../.."
 
 echo ""
 echo "📦 Testing CLI & Build..."
-run_test "Binary exists" "test -f ./bin/claude-flow" ""
-run_test "Help command" "./bin/claude-flow --help" "claude-flow"
-run_test "Version command" "./bin/claude-flow --version" ""
+run_test "Binary exists" "test -f ./bin/hive-flow" ""
+run_test "Help command" "./bin/hive-flow --help" "hive-flow"
+run_test "Version command" "./bin/hive-flow --version" ""
 
 echo ""
 echo "🧠 Testing Memory (Basic Mode)..."
-run_test "Memory store" "./bin/claude-flow memory store docker_test 'validation test'" "Stored successfully"
-run_test "Memory query" "./bin/claude-flow memory query docker_test" "validation test"
-run_test "Memory stats" "./bin/claude-flow memory stats" "Total Entries"
-run_test "Memory detect" "./bin/claude-flow memory detect" "Basic Mode"
-run_test "Memory mode" "./bin/claude-flow memory mode" "Default Mode"
+run_test "Memory store" "./bin/hive-flow memory store docker_test 'validation test'" "Stored successfully"
+run_test "Memory query" "./bin/hive-flow memory query docker_test" "validation test"
+run_test "Memory stats" "./bin/hive-flow memory stats" "Total Entries"
+run_test "Memory detect" "./bin/hive-flow memory detect" "Basic Mode"
+run_test "Memory mode" "./bin/hive-flow memory mode" "Default Mode"
 
 echo ""
 echo "🤖 Testing Agent Commands..."
-run_test "Agent help" "./bin/claude-flow agent --help" "agentic-flow"
-run_test "Agent list" "./bin/claude-flow agent agents" "coder"
+run_test "Agent help" "./bin/hive-flow agent --help" "agentic-flow"
+run_test "Agent list" "./bin/hive-flow agent agents" "coder"
 
 echo ""
 echo "🌐 Testing Proxy Commands..."
-run_test "Proxy help" "./bin/claude-flow proxy --help" "OpenRouter"
+run_test "Proxy help" "./bin/hive-flow proxy --help" "OpenRouter"
 
 echo ""
 echo "📋 Testing Help System..."
-run_test "Help has ReasoningBank" "./bin/claude-flow --help | grep -i reasoningbank" "ReasoningBank"
-run_test "Help has proxy" "./bin/claude-flow --help | grep -i proxy" "proxy"
-run_test "Help has Agent Booster" "./bin/claude-flow agent --help | grep -i booster" "booster"
+run_test "Help has ReasoningBank" "./bin/hive-flow --help | grep -i reasoningbank" "ReasoningBank"
+run_test "Help has proxy" "./bin/hive-flow --help | grep -i proxy" "proxy"
+run_test "Help has Agent Booster" "./bin/hive-flow agent --help | grep -i booster" "booster"
 
 echo ""
 echo "🔒 Testing Security..."
-run_test "Redaction works" "./bin/claude-flow memory store secure_key 'api=sk-ant-test' --redact" "redacted"
+run_test "Redaction works" "./bin/hive-flow memory store secure_key 'api=sk-ant-test' --redact" "redacted"
 
 echo ""
 echo "========================================"

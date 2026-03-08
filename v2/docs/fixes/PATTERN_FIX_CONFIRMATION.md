@@ -1,7 +1,7 @@
 # Pattern Persistence Fix Confirmation - v2.7.1
 
 **Date**: 2025-10-22
-**Package**: claude-flow@2.7.1
+**Package**: hive-flow@2.7.1
 **Status**: ✅ ALL FIXES CONFIRMED
 
 ---
@@ -124,7 +124,7 @@ case 'neural_patterns':
 **Verification Evidence**:
 - ✅ Code inspection: Complete handler with 4 actions (analyze, learn, predict, stats)
 - ✅ Docker test: "neural_patterns tool is available (FIX VERIFIED)"
-- ✅ Tool discovery: `claude-flow mcp tools` shows neural_patterns
+- ✅ Tool discovery: `hive-flow mcp tools` shows neural_patterns
 - ✅ Pattern retrieval: Can retrieve by modelId or list all patterns
 
 **Actions Implemented**:
@@ -221,7 +221,7 @@ await this.memoryStore.store(statsKey, JSON.stringify(stats), {
 ```
 Base Image: node:18-alpine
 Package Source: npm registry (public)
-Installation: npm install -g claude-flow@2.7.1
+Installation: npm install -g hive-flow@2.7.1
 Test Suites: 2 (regression + pattern-specific)
 ```
 
@@ -335,13 +335,13 @@ All existing functionality continues to work correctly:
 
 ```bash
 # Global installation
-npm install -g claude-flow@2.7.1
+npm install -g hive-flow@2.7.1
 
 # Or use alpha tag (now points to 2.7.1)
-npm install -g claude-flow@alpha
+npm install -g hive-flow@alpha
 
 # Verify installation
-claude-flow --version
+hive-flow --version
 # Should output: v2.7.1
 ```
 
@@ -349,7 +349,7 @@ claude-flow --version
 
 ```bash
 # List MCP tools (should include neural_train and neural_patterns)
-claude-flow mcp tools | grep neural
+hive-flow mcp tools | grep neural
 
 # Expected output:
 # neural_train - Train neural network patterns
@@ -362,16 +362,16 @@ claude-flow mcp tools | grep neural
 
 ```bash
 # 1. Train a pattern (this will now persist)
-npx claude-flow@alpha hooks neural-train \
+npx hive-flow@alpha hooks neural-train \
   --pattern-type coordination \
   --epochs 50
 
 # 2. Retrieve patterns (this will now return data)
-npx claude-flow@alpha hooks neural-patterns \
+npx hive-flow@alpha hooks neural-patterns \
   --action analyze
 
 # 3. Get statistics (this will now return real stats)
-npx claude-flow@alpha hooks neural-patterns \
+npx hive-flow@alpha hooks neural-patterns \
   --action stats \
   --pattern-type coordination
 ```

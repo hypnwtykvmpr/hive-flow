@@ -1,7 +1,7 @@
 #!/bin/bash
-# Demonstrate Claude Flow Swarm creating a real application
+# Demonstrate Hive Flow Swarm creating a real application
 
-echo "🐝 Claude Flow Swarm - Live Demo"
+echo "🐝 Hive Flow Swarm - Live Demo"
 echo "================================"
 echo ""
 echo "This demo will use the swarm system to create a real application."
@@ -21,7 +21,7 @@ echo "🔍 Step 1: Preview what swarm will create (dry-run)"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 
-npx claude-flow@latest swarm "create a weather CLI app that shows current temperature" \
+npx hive-flow@latest swarm "create a weather CLI app that shows current temperature" \
   --strategy development \
   --max-agents 5 \
   --monitor \
@@ -49,7 +49,7 @@ cat > "$APP_DIR/package.json" << 'EOF'
 {
   "name": "weather-cli",
   "version": "1.0.0",
-  "description": "Weather CLI app created by Claude Flow Swarm",
+  "description": "Weather CLI app created by Hive Flow Swarm",
   "main": "index.js",
   "bin": {
     "weather": "./index.js"
@@ -58,8 +58,8 @@ cat > "$APP_DIR/package.json" << 'EOF'
     "start": "node index.js",
     "test": "node test.js"
   },
-  "keywords": ["weather", "cli", "swarm", "claude-flow"],
-  "author": "Claude Flow Swarm",
+  "keywords": ["weather", "cli", "swarm", "hive-flow"],
+  "author": "Hive Flow Swarm",
   "license": "MIT",
   "dependencies": {
     "axios": "^1.6.0"
@@ -73,7 +73,7 @@ cat > "$APP_DIR/index.js" << 'EOF'
 
 /**
  * Weather CLI Application
- * Created by Claude Flow Swarm System
+ * Created by Hive Flow Swarm System
  * 
  * This demonstrates the swarm's ability to create functional applications
  * through coordinated agent tasks.
@@ -106,7 +106,7 @@ function getWeather(location = '') {
 async function main() {
   const args = process.argv.slice(2);
   
-  console.log('🌤️  Weather CLI - Created by Claude Flow Swarm');
+  console.log('🌤️  Weather CLI - Created by Hive Flow Swarm');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   
   if (args[0] === '--info') {
@@ -173,7 +173,7 @@ EOF
 cat > "$APP_DIR/README.md" << 'EOF'
 # Weather CLI
 
-A simple weather CLI application created by the Claude Flow Swarm system.
+A simple weather CLI application created by the Hive Flow Swarm system.
 
 ## Swarm Creation Details
 
@@ -204,7 +204,7 @@ node index.js --info
 
 ## How This Was Created
 
-The Claude Flow Swarm system decomposed the objective "create a weather CLI app" into the following tasks:
+The Hive Flow Swarm system decomposed the objective "create a weather CLI app" into the following tasks:
 
 1. **Analyze Requirements** - Understood the need for a CLI weather application
 2. **Create Implementation** - Built the core Node.js application
@@ -234,7 +234,7 @@ This application demonstrates several benefits of the swarm approach:
 
 ---
 
-Created by Claude Flow Swarm System
+Created by Hive Flow Swarm System
 EOF
 
 # Make the CLI executable
@@ -278,7 +278,7 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo "🎯 Demo Complete!"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
-echo "This demonstration showed how the Claude Flow Swarm system:"
+echo "This demonstration showed how the Hive Flow Swarm system:"
 echo "  ✅ Decomposes objectives into tasks"
 echo "  ✅ Assigns tasks to specialized agents"
 echo "  ✅ Creates actual working applications"

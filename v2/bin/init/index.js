@@ -102,9 +102,9 @@ async function setupMcpServers(dryRun = false) {
 
   const servers = [
     {
-      name: 'claude-flow',
-      command: 'npx claude-flow@alpha mcp start',
-      description: 'Claude Flow MCP server with swarm orchestration (alpha)',
+      name: 'hive-flow',
+      command: 'npx hive-flow@alpha mcp start',
+      description: 'Hive Flow MCP server with swarm orchestration (alpha)',
     },
     {
       name: 'ruv-swarm',
@@ -158,10 +158,10 @@ export async function initCommand(subArgs, flags) {
     return await flowNexusMinimalInit(flags, subArgs);
   }
 
-  // Default to enhanced Claude Flow v2 init unless other modes are specified
+  // Default to enhanced Hive Flow v2 init unless other modes are specified
   // Use --basic flag for old behavior, or verification flags for verification mode
   if (!flags.basic && !flags.minimal && !flags.sparc && !hasVerificationFlags) {
-    return await enhancedClaudeFlowInit(flags, subArgs);
+    return await enhancedHiveFlowInit(flags, subArgs);
   }
 
   // Check for validation and rollback commands
@@ -328,11 +328,11 @@ export async function initCommand(subArgs, flags) {
 
     // Memory README files and persistence database are created by template copier
 
-    // Create local claude-flow@alpha executable wrapper
+    // Create local hive-flow@alpha executable wrapper
     if (!initDryRun) {
       await createLocalExecutable(workingDir);
     } else {
-      console.log('  [DRY RUN] Would create local claude-flow@alpha executable wrapper');
+      console.log('  [DRY RUN] Would create local hive-flow@alpha executable wrapper');
     }
 
     // SPARC initialization
@@ -411,7 +411,7 @@ export async function initCommand(subArgs, flags) {
       );
       console.log('  • Core files: CLAUDE.md, memory-bank.md, coordination.md');
       console.log('  • Directory structure: memory/, coordination/, .claude/');
-      console.log('  • Local executable: ./claude-flow@alpha');
+      console.log('  • Local executable: ./hive-flow@alpha');
       if (initSparc) {
         console.log(
           `  • Claude Code slash commands: ${selectedModes ? selectedModes.length : 'All'} SPARC mode commands`,
@@ -444,8 +444,8 @@ export async function initCommand(subArgs, flags) {
         `  ✅ coordination.md (${initOptimized ? 'Enhanced with batchtools' : 'Standard coordination'})`,
       );
       console.log('  ✅ Directory structure with memory/ and coordination/');
-      console.log('  ✅ Local executable at ./claude-flow@alpha');
-      console.log('  ✅ Persistence database at memory/claude-flow@alpha-data.json');
+      console.log('  ✅ Local executable at ./hive-flow@alpha');
+      console.log('  ✅ Persistence database at memory/hive-flow@alpha-data.json');
       console.log('  ✅ Agent system with 64 specialized agents in .claude/agents/');
 
       if (initSparc) {
@@ -456,21 +456,21 @@ export async function initCommand(subArgs, flags) {
 
       console.log('\n🚀 Next steps:');
       console.log('1. Review and customize the generated files for your project');
-      console.log("2. Run './claude-flow@alpha start' to begin the orchestration system");
-      console.log("3. Use './claude-flow@alpha' instead of 'npx claude-flow@alpha' for all commands");
+      console.log("2. Run './hive-flow@alpha start' to begin the orchestration system");
+      console.log("3. Use './hive-flow@alpha' instead of 'npx hive-flow@alpha' for all commands");
       console.log("4. Use 'claude --dangerously-skip-permissions' for unattended operation");
 
       if (initSparc) {
         console.log(
           '5. Use Claude Code slash commands: /sparc, /sparc-architect, /sparc-tdd, etc.',
         );
-        console.log("6. Explore SPARC modes with './claude-flow@alpha sparc modes'");
-        console.log('7. Try TDD workflow with \'./claude-flow@alpha sparc tdd "your task"\'');
+        console.log("6. Explore SPARC modes with './hive-flow@alpha sparc modes'");
+        console.log('7. Try TDD workflow with \'./hive-flow@alpha sparc tdd "your task"\'');
 
         if (initOptimized) {
           console.log('8. Use batchtools commands: /batchtools, /performance for optimization');
           console.log('9. Enable parallel processing with --parallel flags');
-          console.log("10. Monitor performance with './claude-flow@alpha performance monitor'");
+          console.log("10. Monitor performance with './hive-flow@alpha performance monitor'");
         }
       }
 
@@ -488,8 +488,8 @@ export async function initCommand(subArgs, flags) {
 
       console.log('\n💡 Tips:');
       console.log("  • Type '/' in Claude Code to see all available slash commands");
-      console.log("  • Use './claude-flow@alpha status' to check system health");
-      console.log("  • Store important context with './claude-flow@alpha memory store'");
+      console.log("  • Use './hive-flow@alpha status' to check system health");
+      console.log("  • Store important context with './hive-flow@alpha memory store'");
 
       if (initOptimized) {
         console.log('  • Use --parallel flags for concurrent operations');
@@ -539,7 +539,7 @@ export async function initCommand(subArgs, flags) {
             console.log('  🧠 Psycho-symbolic reasoning enabled with 97.5% overhead reduction');
             console.log('  ⚡ Sub-millisecond reasoning responses via caching');
           }
-          console.log('  💡 Use "npx claude-flow@alpha hive-mind" for advanced features');
+          console.log('  💡 Use "npx hive-flow@alpha hive-mind" for advanced features');
         } else {
           console.log(`  ⚠️  Hive-mind setup skipped: ${hiveMindResult.error}`);
         }
@@ -561,7 +561,7 @@ export async function initCommand(subArgs, flags) {
         console.log('\n⚠️  Claude Code CLI not detected!');
         console.log('  📥 Install with: npm install -g @anthropic-ai/claude-code');
         console.log('  📋 Then add MCP servers manually with:');
-        console.log('     claude mcp add claude-flow@alpha npx claude-flow@alpha mcp start');
+        console.log('     claude mcp add hive-flow@alpha npx hive-flow@alpha mcp start');
         console.log('     claude mcp add ruv-swarm npx ruv-swarm mcp start');
         console.log('');
         console.log('  📦 Optional MCP servers (flow-nexus is already installed as a dependency):');
@@ -1010,7 +1010,7 @@ async function setupMemorySystem(workingDir, dryRun = false) {
   if (!dryRun) {
     const initialData = { agents: [], tasks: [], lastUpdated: Date.now() };
     await fs.writeFile(
-      `${workingDir}/memory/claude-flow@alpha-data.json`, JSON.stringify(initialData, null, 2), 'utf8'
+      `${workingDir}/memory/hive-flow@alpha-data.json`, JSON.stringify(initialData, null, 2), 'utf8'
     );
 
     await fs.writeFile(`${workingDir}/memory/agents/README.md`, createAgentsReadme(), 'utf8');
@@ -1033,8 +1033,8 @@ async function setupMonitoring(workingDir) {
   const path = await import('path');
   
   try {
-    // Create .claude-flow@alpha directory for tracking data
-    const trackingDir = path.join(workingDir, '.claude-flow@alpha');
+    // Create .hive-flow@alpha directory for tracking data
+    const trackingDir = path.join(workingDir, '.hive-flow@alpha');
     await fs.mkdir(trackingDir, { recursive: true });
     
     // Create initial token usage file
@@ -1061,7 +1061,7 @@ async function setupMonitoring(workingDir) {
       if (!settings.hooks['post-task']) settings.hooks['post-task'] = [];
       
       // Add token tracking hook
-      const tokenTrackingHook = 'npx claude-flow@alpha internal track-tokens --session-id {{session_id}} --tokens {{token_usage}}';
+      const tokenTrackingHook = 'npx hive-flow@alpha internal track-tokens --session-id {{session_id}} --tokens {{token_usage}}';
       if (!settings.hooks['post-task'].includes(tokenTrackingHook)) {
         settings.hooks['post-task'].push(tokenTrackingHook);
       }
@@ -1089,7 +1089,7 @@ async function setupMonitoring(workingDir) {
         sessions: true
       },
       storage: {
-        location: '.claude-flow@alpha/token-usage.json',
+        location: '.hive-flow@alpha/token-usage.json',
         format: 'json',
         rotation: 'monthly'
       }
@@ -1101,7 +1101,7 @@ async function setupMonitoring(workingDir) {
     
     // Create shell profile snippet for environment variable
     const envSnippet = `
-# Claude Flow Token Tracking
+# Hive Flow Token Tracking
 # Add this to your shell profile (.bashrc, .zshrc, etc.)
 export CLAUDE_CODE_ENABLE_TELEMETRY=1
 
@@ -1115,9 +1115,9 @@ export CLAUDE_CODE_ENABLE_TELEMETRY=1
     
     console.log('\n  📋 To enable Claude Code telemetry:');
     console.log('     1. Add to your shell profile: export CLAUDE_CODE_ENABLE_TELEMETRY=1');
-    console.log('     2. Or run: source .claude-flow@alpha/env-setup.sh');
-    console.log('\n  💡 Token usage will be tracked in .claude-flow@alpha/token-usage.json');
-    console.log('     Run: claude-flow@alpha analysis token-usage --breakdown --cost-analysis');
+    console.log('     2. Or run: source .hive-flow@alpha/env-setup.sh');
+    console.log('\n  💡 Token usage will be tracked in .hive-flow@alpha/token-usage.json');
+    console.log('     Run: hive-flow@alpha analysis token-usage --breakdown --cost-analysis');
     
   } catch (err) {
     printError(`  Failed to setup monitoring: ${err.message}`);
@@ -1125,10 +1125,10 @@ export CLAUDE_CODE_ENABLE_TELEMETRY=1
 }
 
 /**
- * Enhanced Claude Flow v2.0.0 initialization
+ * Enhanced Hive Flow v2.0.0 initialization
  */
-async function enhancedClaudeFlowInit(flags, subArgs = []) {
-  console.log('🚀 Initializing Claude Flow v2.0.0 with enhanced features...');
+async function enhancedHiveFlowInit(flags, subArgs = []) {
+  console.log('🚀 Initializing Hive Flow v2.0.0 with enhanced features...');
 
   const workingDir = process.cwd();
   const force = flags.force || flags.f;
@@ -1150,7 +1150,7 @@ async function enhancedClaudeFlowInit(flags, subArgs = []) {
       'CLAUDE.md',
       '.claude/settings.json',
       '.mcp.json',
-      // Removed claude-flow@alpha.config.json per user request
+      // Removed hive-flow@alpha.config.json per user request
     ];
 
     for (const file of filesToCheck) {
@@ -1168,9 +1168,9 @@ async function enhancedClaudeFlowInit(flags, subArgs = []) {
     // Create CLAUDE.md
     if (!dryRun) {
       await fs.writeFile(`${workingDir}/CLAUDE.md`, createOptimizedSparcClaudeMd(), 'utf8');
-      printSuccess('✓ Created CLAUDE.md (Claude Flow v2.0.0 - Optimized)');
+      printSuccess('✓ Created CLAUDE.md (Hive Flow v2.0.0 - Optimized)');
     } else {
-      console.log('[DRY RUN] Would create CLAUDE.md (Claude Flow v2.0.0 - Optimized)');
+      console.log('[DRY RUN] Would create CLAUDE.md (Hive Flow v2.0.0 - Optimized)');
     }
 
     // Create .claude directory structure
@@ -1195,7 +1195,7 @@ async function enhancedClaudeFlowInit(flags, subArgs = []) {
     // Create settings.local.json with default MCP permissions
     const settingsLocal = {
       permissions: {
-        allow: ['mcp__ruv-swarm', 'mcp__claude-flow@alpha'],
+        allow: ['mcp__ruv-swarm', 'mcp__hive-flow@alpha'],
         deny: [],
       },
     };
@@ -1214,9 +1214,9 @@ async function enhancedClaudeFlowInit(flags, subArgs = []) {
     // Create .mcp.json at project root for MCP server configuration
     const mcpConfig = {
       mcpServers: {
-        'claude-flow@alpha': {
+        'hive-flow@alpha': {
           command: 'npx',
-          args: ['claude-flow@alpha', 'mcp', 'start'],
+          args: ['hive-flow@alpha', 'mcp', 'start'],
           type: 'stdio',
         },
         'ruv-swarm': {
@@ -1240,7 +1240,7 @@ async function enhancedClaudeFlowInit(flags, subArgs = []) {
       console.log('[DRY RUN] Would create .mcp.json at project root for MCP server configuration');
     }
 
-    // Removed claude-flow@alpha.config.json creation per user request
+    // Removed hive-flow@alpha.config.json creation per user request
 
     // Create command documentation
     for (const [category, commands] of Object.entries(COMMAND_STRUCTURE)) {
@@ -1252,7 +1252,7 @@ async function enhancedClaudeFlowInit(flags, subArgs = []) {
         // Create category README
         const categoryReadme = `# ${category.charAt(0).toUpperCase() + category.slice(1)} Commands
 
-Commands for ${category} operations in Claude Flow.
+Commands for ${category} operations in Hive Flow.
 
 ## Available Commands
 
@@ -1325,7 +1325,7 @@ ${commands.map((cmd) => `- [${cmd}](./${cmd}.md)`).join('\n')}
       // Initialize memory system
       const initialData = { agents: [], tasks: [], lastUpdated: Date.now() };
       await fs.writeFile(
-        `${workingDir}/memory/claude-flow@alpha-data.json`, JSON.stringify(initialData, null, 2, 'utf8'),
+        `${workingDir}/memory/hive-flow@alpha-data.json`, JSON.stringify(initialData, null, 2, 'utf8'),
       );
 
       // Create README files
@@ -1344,7 +1344,7 @@ ${commands.map((cmd) => `- [${cmd}](./${cmd}.md)`).join('\n')}
         if (memoryStore.isUsingFallback()) {
           printSuccess('✓ Initialized memory system (in-memory fallback for npx compatibility)');
           console.log(
-            '  💡 For persistent storage, install locally: npm install claude-flow@alpha',
+            '  💡 For persistent storage, install locally: npm install hive-flow@alpha',
           );
         } else {
           printSuccess('✓ Initialized memory database (.swarm/memory.db)');
@@ -1388,7 +1388,7 @@ ${commands.map((cmd) => `- [${cmd}](./${cmd}.md)`).join('\n')}
       }
     }
 
-    // Update .gitignore with Claude Flow entries
+    // Update .gitignore with Hive Flow entries
     const gitignoreResult = await updateGitignore(workingDir, force, dryRun);
     if (gitignoreResult.success) {
       if (!dryRun) {
@@ -1437,7 +1437,7 @@ ${commands.map((cmd) => `- [${cmd}](./${cmd}.md)`).join('\n')}
       } else {
         console.log('  ℹ️  Skipping MCP setup (--skip-mcp flag used)');
         console.log('\n  📋 To add MCP servers manually:');
-        console.log('     claude mcp add claude-flow@alpha npx claude-flow@alpha mcp start');
+        console.log('     claude mcp add hive-flow@alpha npx hive-flow@alpha mcp start');
         console.log('     claude mcp add ruv-swarm npx ruv-swarm@latest mcp start');
         console.log('');
         console.log('  📦 Optional MCP servers (flow-nexus is already installed as a dependency):');
@@ -1449,7 +1449,7 @@ ${commands.map((cmd) => `- [${cmd}](./${cmd}.md)`).join('\n')}
       console.log('\n  📥 To install Claude Code:');
       console.log('     npm install -g @anthropic-ai/claude-code');
       console.log('\n  📋 After installing, add MCP servers:');
-      console.log('     claude mcp add claude-flow npx claude-flow@alpha mcp start');
+      console.log('     claude mcp add hive-flow npx hive-flow@alpha mcp start');
       console.log('     claude mcp add ruv-swarm npx ruv-swarm@latest mcp start');
       console.log('');
       console.log('  📦 Optional MCP servers (flow-nexus is already installed as a dependency):');
@@ -1513,7 +1513,7 @@ ${commands.map((cmd) => `- [${cmd}](./${cmd}.md)`).join('\n')}
     }
     
     // Final instructions with hive-mind status
-    console.log('\n🎉 Claude Flow v2.0.0 initialization complete!');
+    console.log('\n🎉 Hive Flow v2.0.0 initialization complete!');
     
     // Display hive-mind status
     const hiveMindStatus = getHiveMindStatus(workingDir);
@@ -1525,20 +1525,20 @@ ${commands.map((cmd) => `- [${cmd}](./${cmd}.md)`).join('\n')}
     console.log('\n📚 Quick Start:');
     if (isClaudeCodeInstalled()) {
       console.log('1. View available commands: ls .claude/commands/');
-      console.log('2. Start a swarm: npx claude-flow@alpha swarm "your objective" --claude');
-      console.log('3. Use hive-mind: npx claude-flow@alpha hive-mind spawn "command" --claude');
+      console.log('2. Start a swarm: npx hive-flow@alpha swarm "your objective" --claude');
+      console.log('3. Use hive-mind: npx hive-flow@alpha hive-mind spawn "command" --claude');
       console.log('4. Use MCP tools in Claude Code for enhanced coordination');
       if (hiveMindStatus.configured) {
-        console.log('5. Initialize first swarm: npx claude-flow@alpha hive-mind init');
+        console.log('5. Initialize first swarm: npx hive-flow@alpha hive-mind init');
       }
     } else {
       console.log('1. Install Claude Code: npm install -g @anthropic-ai/claude-code');
       console.log('2. Add MCP servers (see instructions above)');
       console.log('3. View available commands: ls .claude/commands/');
-      console.log('4. Start a swarm: npx claude-flow@alpha swarm "your objective" --claude');
-      console.log('5. Use hive-mind: npx claude-flow@alpha hive-mind spawn "command" --claude');
+      console.log('4. Start a swarm: npx hive-flow@alpha swarm "your objective" --claude');
+      console.log('5. Use hive-mind: npx hive-flow@alpha hive-mind spawn "command" --claude');
       if (hiveMindStatus.configured) {
-        console.log('6. Initialize first swarm: npx claude-flow@alpha hive-mind init');
+        console.log('6. Initialize first swarm: npx hive-flow@alpha hive-mind init');
       }
     }
     console.log('\n💡 Tips:');
@@ -1549,7 +1549,7 @@ ${commands.map((cmd) => `- [${cmd}](./${cmd}.md)`).join('\n')}
     console.log('• Git checkpoints are automatically enabled in settings.json');
     console.log('• Use .claude/helpers/checkpoint-manager.sh for easy rollback');
   } catch (err) {
-    printError(`Failed to initialize Claude Flow v2.0.0: ${err.message}`);
+    printError(`Failed to initialize Hive Flow v2.0.0: ${err.message}`);
     
     // Attempt hive-mind rollback if it was partially initialized
     try {

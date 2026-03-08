@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Real token tracking and consumption analysis for claude-flow benchmarks.
+Real token tracking and consumption analysis for hive-flow benchmarks.
 
 This example demonstrates:
 - Accurate token consumption tracking
@@ -61,7 +61,7 @@ class RealTokenTracker:
             "output_token_cost": 0.000015,  # $15 per 1M tokens
         }
         
-        self.claude_flow_path = "/workspaces/claude-code-flow"
+        self.hive_flow_path = "/workspaces/claude-code-flow"
     
     def create_token_tracking_benchmarks(self) -> List[Dict[str, Any]]:
         """Create benchmarks specifically for token tracking."""
@@ -157,7 +157,7 @@ class RealTokenTracker:
                 capture_output=True,
                 text=True,
                 timeout=300,
-                cwd=self.claude_flow_path
+                cwd=self.hive_flow_path
             )
             
             end_time = time.time()
@@ -195,7 +195,7 @@ class RealTokenTracker:
     
     def _build_tracking_command(self, config: Dict[str, Any]) -> List[str]:
         """Build command for token tracking benchmark."""
-        base_cmd = ["npx", "claude-flow@alpha"]
+        base_cmd = ["npx", "hive-flow@alpha"]
         
         if config["methodology"] == "swarm":
             cmd = base_cmd + [

@@ -1,5 +1,5 @@
 /**
- * Event bus implementation for Claude-Flow
+ * Event bus implementation for Hive-Flow
  */
 
 import { SystemEvents } from '../utils/types.js';

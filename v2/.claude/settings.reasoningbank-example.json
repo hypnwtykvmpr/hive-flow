@@ -1,17 +1,17 @@
 {
   "comment": "ReasoningBank-Enhanced Claude Code Settings - Copy sections to .claude/settings.json",
   "env": {
-    "CLAUDE_FLOW_AUTO_COMMIT": "false",
-    "CLAUDE_FLOW_AUTO_PUSH": "false",
-    "CLAUDE_FLOW_HOOKS_ENABLED": "true",
-    "CLAUDE_FLOW_TELEMETRY_ENABLED": "true",
-    "CLAUDE_FLOW_REMOTE_EXECUTION": "true",
-    "CLAUDE_FLOW_CHECKPOINTS_ENABLED": "true",
+    "HIVE_FLOW_AUTO_COMMIT": "false",
+    "HIVE_FLOW_AUTO_PUSH": "false",
+    "HIVE_FLOW_HOOKS_ENABLED": "true",
+    "HIVE_FLOW_TELEMETRY_ENABLED": "true",
+    "HIVE_FLOW_REMOTE_EXECUTION": "true",
+    "HIVE_FLOW_CHECKPOINTS_ENABLED": "true",
     "REASONINGBANK_ENABLED": "true"
   },
   "permissions": {
     "allow": [
-      "Bash(npx claude-flow:*)",
+      "Bash(npx hive-flow:*)",
       "Bash(npm run lint)",
       "Bash(npm run test:*)",
       "Bash(npm test:*)",
@@ -44,7 +44,7 @@
           {
             "type": "command",
             "comment": "Query ReasoningBank before bash commands (adds <10ms)",
-            "command": "cat | jq -r '.tool_input.command // empty' | tr '\\n' '\\0' | xargs -0 -I {} bash -c 'CMD=\"{}\"; PATTERNS=$(npx claude-flow@alpha memory query \"$CMD\" --reasoningbank --limit 2 --format json 2>/dev/null || echo \"{}\"); if echo \"$PATTERNS\" | jq -e \".results | length > 0\" > /dev/null 2>&1; then COUNT=$(echo \"$PATTERNS\" | jq \".results | length\"); echo \"📚 Found $COUNT ReasoningBank pattern(s)\" >&2; fi; npx claude-flow@alpha hooks pre-command --command \"$CMD\" --validate-safety true'"
+            "command": "cat | jq -r '.tool_input.command // empty' | tr '\\n' '\\0' | xargs -0 -I {} bash -c 'CMD=\"{}\"; PATTERNS=$(npx hive-flow@alpha memory query \"$CMD\" --reasoningbank --limit 2 --format json 2>/dev/null || echo \"{}\"); if echo \"$PATTERNS\" | jq -e \".results | length > 0\" > /dev/null 2>&1; then COUNT=$(echo \"$PATTERNS\" | jq \".results | length\"); echo \"📚 Found $COUNT ReasoningBank pattern(s)\" >&2; fi; npx hive-flow@alpha hooks pre-command --command \"$CMD\" --validate-safety true'"
           }
         ]
       },
@@ -54,7 +54,7 @@
           {
             "type": "command",
             "comment": "Load code patterns before editing",
-            "command": "cat | jq -r '.tool_input.file_path // .tool_input.path // empty' | tr '\\n' '\\0' | xargs -0 -I {} bash -c 'FILE=\"{}\"; if [ -n \"$FILE\" ]; then EXT=\"${FILE##*.}\"; PATTERNS=$(npx claude-flow@alpha memory query \"$EXT code patterns\" --namespace code --reasoningbank --limit 2 2>/dev/null || echo \"\"); if [ -n \"$PATTERNS\" ]; then echo \"📚 Loaded $EXT patterns from ReasoningBank\" >&2; fi; fi; npx claude-flow@alpha hooks pre-edit --file \"$FILE\" --auto-assign-agents true'"
+            "command": "cat | jq -r '.tool_input.file_path // .tool_input.path // empty' | tr '\\n' '\\0' | xargs -0 -I {} bash -c 'FILE=\"{}\"; if [ -n \"$FILE\" ]; then EXT=\"${FILE##*.}\"; PATTERNS=$(npx hive-flow@alpha memory query \"$EXT code patterns\" --namespace code --reasoningbank --limit 2 2>/dev/null || echo \"\"); if [ -n \"$PATTERNS\" ]; then echo \"📚 Loaded $EXT patterns from ReasoningBank\" >&2; fi; fi; npx hive-flow@alpha hooks pre-edit --file \"$FILE\" --auto-assign-agents true'"
           }
         ]
       }
@@ -66,7 +66,7 @@
           {
             "type": "command",
             "comment": "Store successful bash patterns in ReasoningBank",
-            "command": "cat | jq -r '.tool_input.command // empty' | tr '\\n' '\\0' | xargs -0 -I {} bash -c 'CMD=\"{}\"; EXIT_CODE=$(jq -r \".result.exit_code // \\\"1\\\"\" 2>/dev/null); if [ \"$EXIT_CODE\" = \"0\" ]; then KEY=\"cmd_$(echo -n \"$CMD\" | md5sum 2>/dev/null | cut -d\" \" -f1 || echo $(date +%s))\"; DESC=\"Successful: $CMD\"; npx claude-flow@alpha memory store \"$KEY\" \"$DESC\" --namespace commands --reasoningbank --confidence 0.6 2>/dev/null; fi; npx claude-flow@alpha hooks post-command --command \"$CMD\" --track-metrics true'"
+            "command": "cat | jq -r '.tool_input.command // empty' | tr '\\n' '\\0' | xargs -0 -I {} bash -c 'CMD=\"{}\"; EXIT_CODE=$(jq -r \".result.exit_code // \\\"1\\\"\" 2>/dev/null); if [ \"$EXIT_CODE\" = \"0\" ]; then KEY=\"cmd_$(echo -n \"$CMD\" | md5sum 2>/dev/null | cut -d\" \" -f1 || echo $(date +%s))\"; DESC=\"Successful: $CMD\"; npx hive-flow@alpha memory store \"$KEY\" \"$DESC\" --namespace commands --reasoningbank --confidence 0.6 2>/dev/null; fi; npx hive-flow@alpha hooks post-command --command \"$CMD\" --track-metrics true'"
           }
         ]
       },
@@ -76,7 +76,7 @@
           {
             "type": "command",
             "comment": "Store code patterns after successful edits",
-            "command": "cat | jq -r '.tool_input.file_path // .tool_input.path // empty' | tr '\\n' '\\0' | xargs -0 -I {} bash -c 'FILE=\"{}\"; if [ -f \"$FILE\" ]; then EXT=\"${FILE##*.}\"; TIMESTAMP=$(date +%s); KEY=\"edit_${EXT}_${TIMESTAMP}\"; DESC=\"Edited $EXT file: $(basename \"$FILE\")\"; npx claude-flow@alpha memory store \"$KEY\" \"$DESC\" --namespace code --reasoningbank --confidence 0.5 2>/dev/null; echo \"💾 Stored pattern in ReasoningBank\" >&2; fi; npx claude-flow@alpha hooks post-edit --file \"$FILE\" --format true'"
+            "command": "cat | jq -r '.tool_input.file_path // .tool_input.path // empty' | tr '\\n' '\\0' | xargs -0 -I {} bash -c 'FILE=\"{}\"; if [ -f \"$FILE\" ]; then EXT=\"${FILE##*.}\"; TIMESTAMP=$(date +%s); KEY=\"edit_${EXT}_${TIMESTAMP}\"; DESC=\"Edited $EXT file: $(basename \"$FILE\")\"; npx hive-flow@alpha memory store \"$KEY\" \"$DESC\" --namespace code --reasoningbank --confidence 0.5 2>/dev/null; echo \"💾 Stored pattern in ReasoningBank\" >&2; fi; npx hive-flow@alpha hooks post-edit --file \"$FILE\" --format true'"
           }
         ]
       }
@@ -88,7 +88,7 @@
           {
             "type": "command",
             "comment": "Show session patterns before manual compact",
-            "command": "/bin/bash -c 'SESSION_COUNT=$(npx claude-flow@alpha memory stats --reasoningbank 2>/dev/null | grep -oP \"Total.*: \\K[0-9]+\" || echo \"0\"); echo \"🔄 PreCompact Guidance:\"; echo \"📋 IMPORTANT: Review CLAUDE.md for 54 agents and concurrent patterns\"; echo \"🧠 ReasoningBank: $SESSION_COUNT total patterns stored\"; echo \"✅ Ready for compact operation\"'"
+            "command": "/bin/bash -c 'SESSION_COUNT=$(npx hive-flow@alpha memory stats --reasoningbank 2>/dev/null | grep -oP \"Total.*: \\K[0-9]+\" || echo \"0\"); echo \"🔄 PreCompact Guidance:\"; echo \"📋 IMPORTANT: Review CLAUDE.md for 54 agents and concurrent patterns\"; echo \"🧠 ReasoningBank: $SESSION_COUNT total patterns stored\"; echo \"✅ Ready for compact operation\"'"
           }
         ]
       },
@@ -98,7 +98,7 @@
           {
             "type": "command",
             "comment": "Auto-compact with ReasoningBank context",
-            "command": "/bin/bash -c 'TOP_PATTERNS=$(npx claude-flow@alpha memory list --reasoningbank --limit 3 2>/dev/null | grep -oP \"\\d+ patterns\" || echo \"patterns available\"); echo \"🔄 Auto-Compact (Context Full):\"; echo \"📚 ReasoningBank: $TOP_PATTERNS\"; echo \"⚡ GOLDEN RULE: Batch all operations in single messages\"; echo \"✅ Auto-compact proceeding with memory context\"'"
+            "command": "/bin/bash -c 'TOP_PATTERNS=$(npx hive-flow@alpha memory list --reasoningbank --limit 3 2>/dev/null | grep -oP \"\\d+ patterns\" || echo \"patterns available\"); echo \"🔄 Auto-Compact (Context Full):\"; echo \"📚 ReasoningBank: $TOP_PATTERNS\"; echo \"⚡ GOLDEN RULE: Batch all operations in single messages\"; echo \"✅ Auto-compact proceeding with memory context\"'"
           }
         ]
       }
@@ -109,14 +109,14 @@
           {
             "type": "command",
             "comment": "Consolidate ReasoningBank and generate session summary",
-            "command": "bash -c 'echo \"🧠 Consolidating ReasoningBank memory...\"; BEFORE=$(npx claude-flow@alpha memory stats --reasoningbank 2>/dev/null | grep -oP \"Total.*: \\K[0-9]+\" || echo \"0\"); npx claude-flow@alpha memory consolidate --reasoningbank --threshold 0.9 --prune-low-confidence 0.2 2>/dev/null && echo \"✅ Consolidated ReasoningBank (before: $BEFORE patterns)\" || echo \"⚠️ Consolidation skipped\"; npx claude-flow@alpha hooks session-end --generate-summary true --persist-state true --export-metrics true; echo \"✅ Session ended - ReasoningBank updated\"'"
+            "command": "bash -c 'echo \"🧠 Consolidating ReasoningBank memory...\"; BEFORE=$(npx hive-flow@alpha memory stats --reasoningbank 2>/dev/null | grep -oP \"Total.*: \\K[0-9]+\" || echo \"0\"); npx hive-flow@alpha memory consolidate --reasoningbank --threshold 0.9 --prune-low-confidence 0.2 2>/dev/null && echo \"✅ Consolidated ReasoningBank (before: $BEFORE patterns)\" || echo \"⚠️ Consolidation skipped\"; npx hive-flow@alpha hooks session-end --generate-summary true --persist-state true --export-metrics true; echo \"✅ Session ended - ReasoningBank updated\"'"
           }
         ]
       }
     ]
   },
   "includeCoAuthoredBy": true,
-  "enabledMcpjsonServers": ["claude-flow", "ruv-swarm"],
+  "enabledMcpjsonServers": ["hive-flow", "ruv-swarm"],
   "statusLine": {
     "type": "command",
     "command": ".claude/statusline-command.sh"

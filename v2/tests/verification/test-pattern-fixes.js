@@ -33,7 +33,7 @@ function header(msg) {
 
 async function runMCPCommand(tool, args) {
   return new Promise((resolve, reject) => {
-    const cliPath = path.join(__dirname, '../../bin/claude-flow.js');
+    const cliPath = path.join(__dirname, '../../bin/hive-flow.js');
 
     const proc = spawn('node', [
       cliPath,

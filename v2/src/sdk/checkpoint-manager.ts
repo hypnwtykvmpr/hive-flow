@@ -1,6 +1,6 @@
 /**
  * Real Checkpoint Manager - 100% SDK-Powered
- * Claude-Flow v2.5-alpha.130+
+ * Hive-Flow v2.5-alpha.130+
  *
  * Uses ONLY Claude Code SDK primitives - TRUE checkpointing:
  * - Message UUIDs (checkpoint IDs are message UUIDs)
@@ -47,7 +47,7 @@ export class RealCheckpointManager extends EventEmitter {
 
   constructor(options: CheckpointManagerOptions = {}) {
     super();
-    this.persistPath = options.persistPath || '.claude-flow/checkpoints';
+    this.persistPath = options.persistPath || '.hive-flow/checkpoints';
     this.autoCheckpointInterval = options.autoCheckpointInterval || 10; // Every 10 messages
     this.maxCheckpoints = options.maxCheckpoints || 50;
     this.ensurePersistPath();

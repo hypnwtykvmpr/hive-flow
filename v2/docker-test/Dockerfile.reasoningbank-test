@@ -11,8 +11,8 @@ RUN apt-get update && apt-get install -y \
 # Set working directory
 WORKDIR /test
 
-# Install claude-flow@alpha from npm
-RUN npm install -g claude-flow@alpha
+# Install hive-flow@alpha from npm
+RUN npm install -g hive-flow@alpha
 
 # Create test script
 COPY reasoningbank-validation.mjs /test/

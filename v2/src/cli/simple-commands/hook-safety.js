@@ -587,7 +587,7 @@ function showHookSafetyHelp() {
 🛡️  Hook Safety System - Prevent Infinite Loops & Financial Damage
 
 USAGE:
-  claude-flow hook-safety <command> [options]
+  hive-flow hook-safety <command> [options]
 
 COMMANDS:
   validate      Validate hook configuration for dangerous patterns
@@ -603,22 +603,22 @@ SAFE-MODE OPTIONS:
 
 EXAMPLES:
   # Check your Claude Code hooks for dangerous patterns
-  claude-flow hook-safety validate
+  hive-flow hook-safety validate
 
   # Check specific configuration file
-  claude-flow hook-safety validate --config ~/.claude/settings.json
+  hive-flow hook-safety validate --config ~/.claude/settings.json
 
   # View current safety status
-  claude-flow hook-safety status
+  hive-flow hook-safety status
 
   # Reset if circuit breaker is triggered
-  claude-flow hook-safety reset
+  hive-flow hook-safety reset
 
   # Enable safe mode (skips all hooks)
-  claude-flow hook-safety safe-mode
+  hive-flow hook-safety safe-mode
 
   # Disable safe mode
-  claude-flow hook-safety safe-mode --disable
+  hive-flow hook-safety safe-mode --disable
 
 🚨 CRITICAL WARNING:
 Stop hooks that call 'claude' commands create INFINITE LOOPS that can:
@@ -632,7 +632,7 @@ SAFE ALTERNATIVES:
 • Use 'claude --skip-hooks' for manual updates
 • Create conditional execution scripts
 
-For more information: https://github.com/ruvnet/claude-flow/issues/166
+For more information: https://github.com/ruvnet/hive-flow/issues/166
 `);
 }
 

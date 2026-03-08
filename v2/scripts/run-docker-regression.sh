@@ -3,7 +3,7 @@
 
 set -e
 
-echo "🐳 Claude Flow AgentDB Integration - Docker Regression Testing"
+echo "🐳 Hive Flow AgentDB Integration - Docker Regression Testing"
 echo "=============================================================="
 echo ""
 
@@ -38,8 +38,8 @@ echo -e "${BLUE}Step 3: Copying test results from Docker...${NC}"
 mkdir -p test-results/regression
 
 # Copy results from Docker volume
-docker cp claude-flow-regression:/test-results/regression-results.json test-results/regression/ 2>/dev/null || echo "No results file found"
-docker cp claude-flow-regression:/test-logs test-results/regression/ 2>/dev/null || echo "No log files found"
+docker cp hive-flow-regression:/test-results/regression-results.json test-results/regression/ 2>/dev/null || echo "No results file found"
+docker cp hive-flow-regression:/test-logs test-results/regression/ 2>/dev/null || echo "No log files found"
 
 echo ""
 echo -e "${BLUE}Step 4: Generating regression report...${NC}"

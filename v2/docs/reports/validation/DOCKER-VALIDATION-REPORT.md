@@ -1,4 +1,4 @@
-# Docker Validation Report - Claude-Flow v2.7.0
+# Docker Validation Report - Hive-Flow v2.7.0
 
 **Date**: 2025-10-12
 **Environment**: Docker (Alpine Linux, Node 18)
@@ -25,7 +25,7 @@
 
 | Test | Status | Details |
 |------|--------|---------|
-| Binary exists | ✅ PASS | `/bin/claude-flow` created successfully |
+| Binary exists | ✅ PASS | `/bin/hive-flow` created successfully |
 | Help command | ✅ PASS | Full help output displayed |
 | Version command | ✅ PASS | Version information correct |
 
@@ -41,13 +41,13 @@
 
 **Sample Output**:
 ```bash
-$ ./bin/claude-flow memory store docker_test 'validation test'
+$ ./bin/hive-flow memory store docker_test 'validation test'
 ✅ Stored successfully
 📝 Key: docker_test
 📦 Namespace: default
 💾 Size: 15 bytes
 
-$ ./bin/claude-flow memory query docker_test
+$ ./bin/hive-flow memory query docker_test
 ✅ Found 1 results:
 📌 docker_test
    Value: validation test
@@ -122,7 +122,7 @@ Dependencies installed:
 ```bash
 ✅ npm install --legacy-peer-deps
 ✅ npm run build (585 files compiled)
-✅ All directories created (memory, .swarm, .claude-flow)
+✅ All directories created (memory, .swarm, .hive-flow)
 ```
 
 ---
@@ -172,28 +172,28 @@ All tests used the compiled binary in isolation:
 
 ```bash
 # CLI Tests
-./bin/claude-flow --help
-./bin/claude-flow --version
-./bin/claude-flow agent --help
+./bin/hive-flow --help
+./bin/hive-flow --version
+./bin/hive-flow agent --help
 
 # Memory Tests
-./bin/claude-flow memory store docker_test 'validation test'
-./bin/claude-flow memory query docker_test
-./bin/claude-flow memory stats
-./bin/claude-flow memory detect
-./bin/claude-flow memory mode
+./bin/hive-flow memory store docker_test 'validation test'
+./bin/hive-flow memory query docker_test
+./bin/hive-flow memory stats
+./bin/hive-flow memory detect
+./bin/hive-flow memory mode
 
 # Agent Tests
-./bin/claude-flow agent agents
-./bin/claude-flow agent --help
+./bin/hive-flow agent agents
+./bin/hive-flow agent --help
 
 # Proxy Tests
-./bin/claude-flow proxy --help
+./bin/hive-flow proxy --help
 
 # Help System Tests
-./bin/claude-flow --help | grep -i reasoningbank
-./bin/claude-flow --help | grep -i proxy
-./bin/claude-flow agent --help | grep -i booster
+./bin/hive-flow --help | grep -i reasoningbank
+./bin/hive-flow --help | grep -i proxy
+./bin/hive-flow agent --help | grep -i booster
 ```
 
 ---
@@ -217,8 +217,8 @@ The following environments are validated and ready:
 - **Clean installations** (no local dependencies required)
 
 ### Installation Methods Validated
-1. **NPM Global**: `npm install -g claude-flow@alpha`
-2. **NPX**: `npx claude-flow@alpha`
+1. **NPM Global**: `npm install -g hive-flow@alpha`
+2. **NPX**: `npx hive-flow@alpha`
 3. **Binary**: Direct binary execution
 
 ### Recommended Next Steps
@@ -244,7 +244,7 @@ The following environments are validated and ready:
 
 ## 🎉 Conclusion
 
-**Claude-Flow v2.7.0 is production-ready** and validated in a clean Docker environment simulating remote deployment.
+**Hive-Flow v2.7.0 is production-ready** and validated in a clean Docker environment simulating remote deployment.
 
 ### Key Achievements
 - ✅ **Zero breaking changes** - Existing users unaffected
@@ -268,8 +268,8 @@ The following environments are validated and ready:
 ## 📞 Support & Issues
 
 If you encounter any issues not covered in this validation:
-- GitHub Issues: https://github.com/ruvnet/claude-flow/issues
-- Documentation: https://github.com/ruvnet/claude-flow
+- GitHub Issues: https://github.com/ruvnet/hive-flow/issues
+- Documentation: https://github.com/ruvnet/hive-flow
 - Test Suite: `./tests/docker/quick-validation.sh`
 
 ---

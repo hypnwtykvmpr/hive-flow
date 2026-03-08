@@ -21,7 +21,7 @@ from ..output.sqlite_manager import SQLiteManager
 
 
 class RealBenchmarkEngine(BenchmarkEngine):
-    """Benchmark engine with real metrics collection for claude-flow."""
+    """Benchmark engine with real metrics collection for hive-flow."""
     
     def __init__(self, config: Optional[BenchmarkConfig] = None):
         """Initialize the real benchmark engine."""
@@ -126,7 +126,7 @@ class RealBenchmarkEngine(BenchmarkEngine):
     
     async def _execute_task_with_metrics(self, task: Task) -> Result:
         """Execute a task with real metrics collection."""
-        # Convert task to claude-flow command
+        # Convert task to hive-flow command
         command = self._task_to_command(task)
         
         # Create performance collector for this task
@@ -137,13 +137,13 @@ class RealBenchmarkEngine(BenchmarkEngine):
         execution_result = await self.process_tracker.execute_command_async(
             command,
             timeout=task.timeout,
-            env={"CLAUDE_FLOW_BENCHMARK": "true"}
+            env={"HIVE_FLOW_BENCHMARK": "true"}
         )
         
         # Create result from execution
         result = Result(
             task_id=task.id,
-            agent_id="claude-flow",
+            agent_id="hive-flow",
             status=ResultStatus.SUCCESS if execution_result.success else ResultStatus.FAILURE,
             output=self._parse_output(execution_result.stdout),
             errors=execution_result.stderr.splitlines() if execution_result.stderr else [],
@@ -167,7 +167,7 @@ class RealBenchmarkEngine(BenchmarkEngine):
         return result
     
     def _task_to_command(self, task: Task) -> List[str]:
-        """Convert a task to claude-flow command arguments."""
+        """Convert a task to hive-flow command arguments."""
         command = []
         
         # Check if we should use swarm (based on config or task objective)
@@ -213,7 +213,7 @@ class RealBenchmarkEngine(BenchmarkEngine):
         return command
     
     def _parse_output(self, stdout: str) -> Dict[str, Any]:
-        """Parse claude-flow output into structured data."""
+        """Parse hive-flow output into structured data."""
         output = {
             "raw_output": stdout,
             "lines": stdout.splitlines(),

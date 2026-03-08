@@ -9,7 +9,7 @@
 import { EventEmitter } from 'node:events';
 import { Logger } from '../core/logger.js';
 import { generateId } from '../utils/helpers.js';
-import { createClaudeFlowTools } from '../mcp/claude-flow-tools.js';
+import { createHiveFlowTools } from '../mcp/hive-flow-tools.js';
 import { createRuvSwarmTools } from '../mcp/ruv-swarm-tools.js';
 import type { MCPTool, MCPContext } from '../utils/types.js';
 import type { AdvancedSwarmOrchestrator } from './advanced-orchestrator.js';
@@ -56,7 +56,7 @@ export interface MCPExecutionContext extends MCPContext {
 }
 
 export interface MCPIntegrationConfig {
-  enableClaudeFlowTools: boolean;
+  enableHiveFlowTools: boolean;
   enableRuvSwarmTools: boolean;
   enableCustomTools: boolean;
   toolTimeout: number;
@@ -96,9 +96,9 @@ export class MCPIntegrationWrapper extends EventEmitter {
     this.logger.info('Initializing MCP integration wrapper...');
 
     try {
-      // Register Claude Flow tools
-      if (this.config.enableClaudeFlowTools) {
-        await this.registerClaudeFlowTools();
+      // Register Hive Flow tools
+      if (this.config.enableHiveFlowTools) {
+        await this.registerHiveFlowTools();
       }
 
       // Register ruv-swarm tools
@@ -418,16 +418,16 @@ export class MCPIntegrationWrapper extends EventEmitter {
 
   // Private methods
 
-  private async registerClaudeFlowTools(): Promise<void> {
-    this.logger.info('Registering Claude Flow tools...');
+  private async registerHiveFlowTools(): Promise<void> {
+    this.logger.info('Registering Hive Flow tools...');
     
-    const claudeFlowTools = createClaudeFlowTools(this.logger);
+    const hiveFlowTools = createHiveFlowTools(this.logger);
     
-    for (const tool of claudeFlowTools) {
+    for (const tool of hiveFlowTools) {
       this.toolRegistry.tools.set(tool.name, tool);
       
       // Categorize tool
-      const category = this.categorizeClaudeFlowTool(tool.name);
+      const category = this.categorizeHiveFlowTool(tool.name);
       if (!this.toolRegistry.categories.has(category)) {
         this.toolRegistry.categories.set(category, []);
       }
@@ -443,7 +443,7 @@ export class MCPIntegrationWrapper extends EventEmitter {
       }
     }
 
-    this.logger.info(`Registered ${claudeFlowTools.length} Claude Flow tools`);
+    this.logger.info(`Registered ${hiveFlowTools.length} Hive Flow tools`);
   }
 
   private async registerRuvSwarmTools(): Promise<void> {
@@ -624,7 +624,7 @@ export class MCPIntegrationWrapper extends EventEmitter {
     );
   }
 
-  private categorizeClaudeFlowTool(toolName: string): string {
+  private categorizeHiveFlowTool(toolName: string): string {
     if (toolName.includes('agents/')) return 'agent-management';
     if (toolName.includes('tasks/')) return 'task-management';
     if (toolName.includes('memory/')) return 'memory-management';
@@ -769,7 +769,7 @@ export class MCPIntegrationWrapper extends EventEmitter {
 
   private createDefaultConfig(config: Partial<MCPIntegrationConfig>): MCPIntegrationConfig {
     return {
-      enableClaudeFlowTools: true,
+      enableHiveFlowTools: true,
       enableRuvSwarmTools: true,
       enableCustomTools: true,
       toolTimeout: 30000, // 30 seconds

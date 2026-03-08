@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Run REAL SWE-bench evaluation with actual claude-flow commands.
+Run REAL SWE-bench evaluation with actual hive-flow commands.
 This generates actual code fixes for real GitHub issues.
 """
 
@@ -17,12 +17,12 @@ from swarm_benchmark.core.models import BenchmarkConfig, StrategyType, Coordinat
 
 
 async def run_real_swe_bench():
-    """Run real SWE-bench with actual claude-flow execution."""
+    """Run real SWE-bench with actual hive-flow execution."""
     
     print("""
 ╔══════════════════════════════════════════════════════════════╗
 ║            REAL SWE-Bench Evaluation                          ║
-║         Using Claude Flow to Generate Actual Fixes            ║
+║         Using Hive Flow to Generate Actual Fixes            ║
 ╚══════════════════════════════════════════════════════════════╝
 """)
     
@@ -91,7 +91,7 @@ async def run_real_swe_bench():
         print(f"   Repository: {instance['repo']}")
         print(f"   Problem: {instance['problem_statement'][:100]}...")
         
-        # Run claude-flow to generate fix
+        # Run hive-flow to generate fix
         result = await engine.run_instance(instance)
         results.append(result)
         
@@ -168,7 +168,7 @@ async def run_real_swe_bench():
 
 if __name__ == "__main__":
     print("🚀 Starting Real SWE-bench Evaluation")
-    print("This will use claude-flow to generate actual code fixes")
+    print("This will use hive-flow to generate actual code fixes")
     print()
     
     asyncio.run(run_real_swe_bench())

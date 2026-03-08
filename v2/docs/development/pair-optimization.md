@@ -58,7 +58,7 @@ if (output.includes('error')) {
 ### Manual Verification (Recommended)
 ```bash
 # Start with manual verification only
-./claude-flow pair --start --verify
+./hive-flow pair --start --verify
 
 # Run verification when needed
 /verify
@@ -67,7 +67,7 @@ if (output.includes('error')) {
 ### Auto Verification (For Monitoring)
 ```bash
 # Enable auto-verify with 60s cooldown
-./claude-flow pair --start --verify --auto
+./hive-flow pair --start --verify --auto
 
 # Toggle during session
 /auto
@@ -76,7 +76,7 @@ if (output.includes('error')) {
 ### Testing Integration
 ```bash
 # Enable testing without auto-run
-./claude-flow pair --start --test
+./hive-flow pair --start --test
 
 # Run tests manually
 /test

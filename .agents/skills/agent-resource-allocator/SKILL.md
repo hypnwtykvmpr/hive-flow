@@ -605,34 +605,34 @@ const resourceIntegration = {
 ### Resource Management Commands
 ```bash
 # Analyze resource usage
-npx claude-flow metrics-collect --components ["cpu", "memory", "network"]
+npx hive-flow metrics-collect --components ["cpu", "memory", "network"]
 
 # Optimize resource allocation
-npx claude-flow daa-resource-alloc --resources <resource-config>
+npx hive-flow daa-resource-alloc --resources <resource-config>
 
 # Predictive scaling
-npx claude-flow swarm-scale --swarm-id <id> --target-size <size>
+npx hive-flow swarm-scale --swarm-id <id> --target-size <size>
 
 # Performance profiling
-npx claude-flow performance-report --format detailed --timeframe 24h
+npx hive-flow performance-report --format detailed --timeframe 24h
 
 # Circuit breaker configuration
-npx claude-flow fault-tolerance --strategy circuit-breaker --config <config>
+npx hive-flow fault-tolerance --strategy circuit-breaker --config <config>
 ```
 
 ### Optimization Commands
 ```bash
 # Run performance optimization
-npx claude-flow optimize-performance --swarm-id <id> --strategy adaptive
+npx hive-flow optimize-performance --swarm-id <id> --strategy adaptive
 
 # Generate resource forecasts
-npx claude-flow forecast-resources --time-horizon 3600 --confidence 0.95
+npx hive-flow forecast-resources --time-horizon 3600 --confidence 0.95
 
 # Profile system performance
-npx claude-flow profile-performance --duration 60000 --components all
+npx hive-flow profile-performance --duration 60000 --components all
 
 # Analyze bottlenecks
-npx claude-flow bottleneck-analyze --component swarm-coordination
+npx hive-flow bottleneck-analyze --component swarm-coordination
 ```
 
 ## Integration Points

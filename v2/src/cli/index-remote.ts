@@ -1,6 +1,6 @@
 #!/usr/bin/env -S deno run --allow-all
 /**
- * Claude-Flow CLI entry point - Remote execution friendly version
+ * Hive-Flow CLI entry point - Remote execution friendly version
  * This version can be run directly from GitHub
  */
 
@@ -18,10 +18,10 @@ const chalk = {
 
 function printHelp() {
   console.log(`
-🧠 Claude-Flow v${VERSION} - Advanced AI Agent Orchestration System
+🧠 Hive-Flow v${VERSION} - Advanced AI Agent Orchestration System
 
 USAGE:
-  claude-flow [COMMAND] [OPTIONS]
+  hive-flow [COMMAND] [OPTIONS]
 
 COMMANDS:
   init                  Initialize Claude Code integration files
@@ -45,12 +45,12 @@ OPTIONS:
   --help                Show help for any command
 
 EXAMPLES:
-  claude-flow init                    # Initialize Claude Code integration
-  claude-flow start                   # Start orchestration system
-  claude-flow agent spawn researcher  # Spawn a research agent
-  claude-flow task create research "Analyze authentication patterns"
-  claude-flow memory store key "value"
-  claude-flow status                  # Check system status
+  hive-flow init                    # Initialize Claude Code integration
+  hive-flow start                   # Start orchestration system
+  hive-flow agent spawn researcher  # Spawn a research agent
+  hive-flow task create research "Analyze authentication patterns"
+  hive-flow memory store key "value"
+  hive-flow status                  # Check system status
 
 For more info: https://github.com/ruvnet/claude-code-flow
 `);
@@ -83,7 +83,7 @@ async function main() {
     case '--version':
     case '-v':
     case 'version':
-      console.log(`Claude-Flow v${VERSION}`);
+      console.log(`Hive-Flow v${VERSION}`);
       break;
 
     case 'init':
@@ -96,18 +96,18 @@ async function main() {
       console.log('\n💡 To run locally, clone the repo and use:');
       console.log('   git clone https://github.com/ruvnet/claude-code-flow.git');
       console.log('   cd claude-code-flow');
-      console.log('   npm install -g claude-flow');
-      console.log('   claude-flow init');
+      console.log('   npm install -g hive-flow');
+      console.log('   hive-flow init');
       break;
 
     case 'install':
-      console.log(chalk.blue('📦 Installing Claude-Flow...'));
+      console.log(chalk.blue('📦 Installing Hive-Flow...'));
       console.log('\nRun these commands to install:');
       console.log(chalk.gray('  # Using npm (recommended)'));
-      console.log('  npm install -g claude-flow');
+      console.log('  npm install -g hive-flow');
       console.log('');
       console.log(chalk.gray('  # Or using Deno'));
-      console.log('  deno install --allow-all --name claude-flow \\');
+      console.log('  deno install --allow-all --name hive-flow \\');
       console.log(
         '    https://raw.githubusercontent.com/ruvnet/claude-code-flow/main/src/cli/index.ts',
       );
@@ -120,10 +120,10 @@ async function main() {
 
     default:
       printWarning(`Command '${command}' requires local installation.`);
-      console.log('\n📥 To use all features, install Claude-Flow:');
-      console.log('   npm install -g claude-flow');
+      console.log('\n📥 To use all features, install Hive-Flow:');
+      console.log('   npm install -g hive-flow');
       console.log('\n🌐 Or run directly with Deno:');
-      console.log('   deno install --allow-all --name claude-flow \\');
+      console.log('   deno install --allow-all --name hive-flow \\');
       console.log(
         '     https://raw.githubusercontent.com/ruvnet/claude-code-flow/main/src/cli/index.ts',
       );

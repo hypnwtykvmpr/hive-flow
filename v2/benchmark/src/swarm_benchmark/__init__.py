@@ -1,5 +1,5 @@
 """
-Swarm Benchmark - Agent swarm benchmarking tool for Claude Flow.
+Swarm Benchmark - Agent swarm benchmarking tool for Hive Flow.
 
 This package provides comprehensive benchmarking capabilities for agent swarms,
 supporting various strategies and coordination modes, including MLE-STAR ensemble
@@ -8,8 +8,8 @@ intelligence benchmarking, and CLAUDE.md optimization.
 """
 
 __version__ = "2.0.0"
-__author__ = "Claude Flow Team"
-__email__ = "support@claude-flow.dev"
+__author__ = "Hive Flow Team"
+__email__ = "support@hive-flow.dev"
 
 # Core components (backward compatibility)
 from .core.models import Task, Agent, Result, Benchmark

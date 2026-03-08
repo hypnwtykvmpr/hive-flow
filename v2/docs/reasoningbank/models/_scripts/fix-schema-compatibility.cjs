@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 /**
  * Fix Schema Compatibility for ReasoningBank Models
- * Adds all required claude-flow memory tables to trained models
+ * Adds all required hive-flow memory tables to trained models
  */
 
 const Database = require('better-sqlite3');
 const fs = require('fs');
 const path = require('path');
 
-const CLAUDE_FLOW_SCHEMA = `
--- Claude-Flow Memory System Tables
+const HIVE_FLOW_SCHEMA = `
+-- Hive-Flow Memory System Tables
 
 -- Primary memory table (used by hive-mind and general memory commands)
 CREATE TABLE IF NOT EXISTS memory (
@@ -125,10 +125,10 @@ class SchemaFixer {
 
     console.log(`\n📋 Existing tables: ${existingTables.join(', ')}`);
 
-    // Add claude-flow schema
+    // Add hive-flow schema
     try {
-      db.exec(CLAUDE_FLOW_SCHEMA);
-      console.log(`\n✅ Added claude-flow memory tables`);
+      db.exec(HIVE_FLOW_SCHEMA);
+      console.log(`\n✅ Added hive-flow memory tables`);
     } catch (error) {
       console.error(`❌ Error adding schema: ${error.message}`);
       db.close();
@@ -195,7 +195,7 @@ ${addedTables.length > 0 ? addedTables.map(t => `- \`${t}\``).join('\n') : '_No 
 
 ${afterTables.sort().map(t => `- \`${t}\``).join('\n')}
 
-## Claude-Flow Compatibility
+## Hive-Flow Compatibility
 
 ### Required Tables
 
@@ -217,9 +217,9 @@ ${afterTables.sort().map(t => `- \`${t}\``).join('\n')}
 **Status**: ${this.isFullyCompatible(afterTables) ? '✅ FULLY COMPATIBLE' : '⚠️ PARTIALLY COMPATIBLE'}
 
 This model can now be used with:
-- ✅ \`npx claude-flow@alpha memory store\` - General memory commands
-- ✅ \`npx claude-flow@alpha memory query\` - Memory queries
-- ✅ \`npx claude-flow@alpha memory query --reasoningbank\` - ReasoningBank patterns
+- ✅ \`npx hive-flow@alpha memory store\` - General memory commands
+- ✅ \`npx hive-flow@alpha memory query\` - Memory queries
+- ✅ \`npx hive-flow@alpha memory query --reasoningbank\` - ReasoningBank patterns
 - ✅ Hive-mind swarm operations
 - ✅ Session tracking and metrics
 
@@ -258,7 +258,7 @@ async function fixAllModels() {
   ];
 
   console.log('\n' + '='.repeat(70));
-  console.log('🔧 Claude-Flow Schema Compatibility Fix');
+  console.log('🔧 Hive-Flow Schema Compatibility Fix');
   console.log('='.repeat(70));
 
   let successCount = 0;
@@ -283,10 +283,10 @@ async function fixAllModels() {
   console.log('='.repeat(70) + '\n');
 
   if (successCount === models.length) {
-    console.log('🎉 All models are now fully compatible with claude-flow!');
+    console.log('🎉 All models are now fully compatible with hive-flow!');
     console.log('\nYou can now use:');
-    console.log('  - npx claude-flow@alpha memory store <key> <value> --reasoningbank');
-    console.log('  - npx claude-flow@alpha memory query <query> --reasoningbank');
+    console.log('  - npx hive-flow@alpha memory store <key> <value> --reasoningbank');
+    console.log('  - npx hive-flow@alpha memory query <query> --reasoningbank');
     console.log('  - All hive-mind operations');
     console.log('  - Session tracking and metrics\n');
   }

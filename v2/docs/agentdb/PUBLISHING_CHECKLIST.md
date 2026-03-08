@@ -247,8 +247,8 @@ gh release create v2.8.0 \
 ```
 
 ### Post-Publishing
-- [ ] Verify package on npm: https://www.npmjs.com/package/claude-flow
-- [ ] Test installation: `npm install -g claude-flow@latest`
+- [ ] Verify package on npm: https://www.npmjs.com/package/hive-flow
+- [ ] Test installation: `npm install -g hive-flow@latest`
 - [ ] Update documentation website (if applicable)
 - [ ] Announce on Discord/Twitter
 - [ ] Update GitHub README badges
@@ -311,8 +311,8 @@ gh release create v2.8.0 \
 
 ## 🔗 Important Links
 
-- **Pull Request**: https://github.com/ruvnet/claude-flow/pull/830
-- **GitHub Issue**: https://github.com/ruvnet/claude-flow/issues/829
+- **Pull Request**: https://github.com/ruvnet/hive-flow/pull/830
+- **GitHub Issue**: https://github.com/ruvnet/hive-flow/issues/829
 - **Branch**: `feature/agentdb-integration`
 - **AgentDB Package**: https://www.npmjs.com/package/agentdb
 - **Documentation**: `/docs/agentdb/`

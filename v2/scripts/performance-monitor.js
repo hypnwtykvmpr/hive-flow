@@ -11,7 +11,7 @@ class PerformanceMonitor {
   constructor() {
     this.screen = blessed.screen({
       smartCSR: true,
-      title: 'Claude Flow Performance Monitor'
+      title: 'Hive Flow Performance Monitor'
     });
     
     this.metrics = {
@@ -32,7 +32,7 @@ class PerformanceMonitor {
       left: 0,
       width: '100%',
       height: 3,
-      content: '{center}Claude Flow Performance Monitor{/center}',
+      content: '{center}Hive Flow Performance Monitor{/center}',
       tags: true,
       style: {
         fg: 'white',
@@ -148,8 +148,8 @@ class PerformanceMonitor {
       this.render();
     }, 100);
 
-    // Monitor actual Claude Flow processes
-    this.monitorClaudeFlow();
+    // Monitor actual Hive Flow processes
+    this.monitorHiveFlow();
   }
 
   updateMetrics() {
@@ -220,9 +220,9 @@ class PerformanceMonitor {
     this.screen.render();
   }
 
-  monitorClaudeFlow() {
-    // In real implementation, this would connect to Claude Flow metrics
-    this.logBox.log('{green-fg}✓{/green-fg} Connected to Claude Flow metrics');
+  monitorHiveFlow() {
+    // In real implementation, this would connect to Hive Flow metrics
+    this.logBox.log('{green-fg}✓{/green-fg} Connected to Hive Flow metrics');
     this.logBox.log('{blue-fg}ℹ{/blue-fg} Monitoring performance in real-time...');
   }
 
@@ -249,7 +249,7 @@ try {
   // Fallback text-based monitoring
   setInterval(() => {
     console.clear();
-    console.log('📊 Claude Flow Performance Metrics\n');
+    console.log('📊 Hive Flow Performance Metrics\n');
     console.log('Hook Performance:');
     console.log(`  Calls: ${Math.floor(Math.random() * 1000)}`);
     console.log(`  Avg Time: ${Math.floor(Math.random() * 50) + 10}ms`);

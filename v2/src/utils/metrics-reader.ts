@@ -64,8 +64,8 @@ interface MCPServerStatus {
 }
 
 export class MetricsReader {
-  private metricsDir = '.claude-flow/metrics';
-  private sessionsDir = '.claude-flow/sessions';
+  private metricsDir = '.hive-flow/metrics';
+  private sessionsDir = '.hive-flow/sessions';
 
   async getSystemMetrics(): Promise<SystemMetrics | null> {
     try {
@@ -235,11 +235,11 @@ export class MetricsReader {
   async getMCPServerStatus(): Promise<MCPServerStatus> {
     try {
       // Check if MCP server process is running
-      const { stdout } = await execAsync('ps aux | grep -E "mcp-server\\.js|claude-flow mcp start" | grep -v grep | wc -l');
+      const { stdout } = await execAsync('ps aux | grep -E "mcp-server\\.js|hive-flow mcp start" | grep -v grep | wc -l');
       const processCount = parseInt(stdout.trim(), 10);
       
       // Check for orchestrator running
-      const { stdout: orchestratorOut } = await execAsync('ps aux | grep -E "claude-flow start" | grep -v grep | wc -l');
+      const { stdout: orchestratorOut } = await execAsync('ps aux | grep -E "hive-flow start" | grep -v grep | wc -l');
       const orchestratorRunning = parseInt(orchestratorOut.trim(), 10) > 0;
       
       // Determine status

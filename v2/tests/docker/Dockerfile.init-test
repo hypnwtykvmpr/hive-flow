@@ -25,7 +25,7 @@ RUN npm install
 RUN echo '#!/bin/bash' > /test/test-init.sh && \
     echo 'set -e' >> /test/test-init.sh && \
     echo '' >> /test/test-init.sh && \
-    echo 'echo "🧪 Testing claude-flow init without agentic-payments"' >> /test/test-init.sh && \
+    echo 'echo "🧪 Testing hive-flow init without agentic-payments"' >> /test/test-init.sh && \
     echo 'echo "====================================================="' >> /test/test-init.sh && \
     echo '' >> /test/test-init.sh && \
     echo '# Test 1: Run init in dry-run mode' >> /test/test-init.sh && \

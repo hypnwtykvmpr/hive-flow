@@ -1,5 +1,5 @@
 #!/bin/bash
-# Claude-Flow V3 Package Unit Tests
+# Hive-Flow V3 Package Unit Tests
 # Runs all vitest unit tests across V3 packages
 
 set -e
@@ -56,21 +56,21 @@ run_package_tests() {
 # ============================================================================
 echo "── V3 Package Unit Tests ──"
 
-run_package_tests "@claude-flow/hooks" "/app/v3/@claude-flow/hooks"
-run_package_tests "@claude-flow/plugins" "/app/v3/@claude-flow/plugins"
-run_package_tests "@claude-flow/security" "/app/v3/@claude-flow/security"
-run_package_tests "@claude-flow/swarm" "/app/v3/@claude-flow/swarm"
-run_package_tests "@claude-flow/cli" "/app/v3/@claude-flow/cli"
-run_package_tests "@claude-flow/memory" "/app/v3/@claude-flow/memory"
-run_package_tests "@claude-flow/mcp" "/app/v3/@claude-flow/mcp"
-run_package_tests "@claude-flow/neural" "/app/v3/@claude-flow/neural"
-run_package_tests "@claude-flow/testing" "/app/v3/@claude-flow/testing"
-run_package_tests "@claude-flow/embeddings" "/app/v3/@claude-flow/embeddings"
-run_package_tests "@claude-flow/providers" "/app/v3/@claude-flow/providers"
-run_package_tests "@claude-flow/integration" "/app/v3/@claude-flow/integration"
-run_package_tests "@claude-flow/performance" "/app/v3/@claude-flow/performance"
-run_package_tests "@claude-flow/deployment" "/app/v3/@claude-flow/deployment"
-run_package_tests "@claude-flow/shared" "/app/v3/@claude-flow/shared"
+run_package_tests "@hive-flow/hooks" "/app/v3/@hive-flow/hooks"
+run_package_tests "@hive-flow/plugins" "/app/v3/@hive-flow/plugins"
+run_package_tests "@hive-flow/security" "/app/v3/@hive-flow/security"
+run_package_tests "@hive-flow/swarm" "/app/v3/@hive-flow/swarm"
+run_package_tests "@hive-flow/cli" "/app/v3/@hive-flow/cli"
+run_package_tests "@hive-flow/memory" "/app/v3/@hive-flow/memory"
+run_package_tests "@hive-flow/mcp" "/app/v3/@hive-flow/mcp"
+run_package_tests "@hive-flow/neural" "/app/v3/@hive-flow/neural"
+run_package_tests "@hive-flow/testing" "/app/v3/@hive-flow/testing"
+run_package_tests "@hive-flow/embeddings" "/app/v3/@hive-flow/embeddings"
+run_package_tests "@hive-flow/providers" "/app/v3/@hive-flow/providers"
+run_package_tests "@hive-flow/integration" "/app/v3/@hive-flow/integration"
+run_package_tests "@hive-flow/performance" "/app/v3/@hive-flow/performance"
+run_package_tests "@hive-flow/deployment" "/app/v3/@hive-flow/deployment"
+run_package_tests "@hive-flow/shared" "/app/v3/@hive-flow/shared"
 
 # ============================================================================
 # SPECIFIC TEST SUITES
@@ -80,8 +80,8 @@ echo "── Specific Test Suites ──"
 
 # ReasoningBank tests
 echo -n "  Testing: ReasoningBank... "
-if [ -f "/app/v3/@claude-flow/hooks/src/__tests__/reasoningbank.test.ts" ]; then
-    cd /app/v3/@claude-flow/hooks
+if [ -f "/app/v3/@hive-flow/hooks/src/__tests__/reasoningbank.test.ts" ]; then
+    cd /app/v3/@hive-flow/hooks
     set +e
     npm test -- --run src/__tests__/reasoningbank.test.ts 2>/dev/null && echo "✓ PASSED" || echo "✓ PASSED (via npm test)"
     set -e
@@ -92,8 +92,8 @@ fi
 
 # GuidanceProvider tests
 echo -n "  Testing: GuidanceProvider... "
-if [ -f "/app/v3/@claude-flow/hooks/src/__tests__/guidance-provider.test.ts" ]; then
-    cd /app/v3/@claude-flow/hooks
+if [ -f "/app/v3/@hive-flow/hooks/src/__tests__/guidance-provider.test.ts" ]; then
+    cd /app/v3/@hive-flow/hooks
     set +e
     npm test -- --run src/__tests__/guidance-provider.test.ts 2>/dev/null && echo "✓ PASSED" || echo "✓ PASSED (via npm test)"
     set -e
@@ -104,8 +104,8 @@ fi
 
 # Plugin tests
 echo -n "  Testing: RuVector Plugins... "
-if [ -f "/app/v3/@claude-flow/plugins/examples/ruvector-plugins/ruvector-plugins.test.ts" ]; then
-    cd /app/v3/@claude-flow/plugins
+if [ -f "/app/v3/@hive-flow/plugins/examples/ruvector-plugins/ruvector-plugins.test.ts" ]; then
+    cd /app/v3/@hive-flow/plugins
     set +e
     npm test -- --run examples/ruvector-plugins/ruvector-plugins.test.ts 2>/dev/null && echo "✓ PASSED" || echo "✓ PASSED (via npm test)"
     set -e
@@ -120,11 +120,11 @@ fi
 echo ""
 echo "── Test Coverage Summary ──"
 
-echo "  @claude-flow/hooks:    112 tests"
-echo "  @claude-flow/plugins:  142 tests"
-echo "  @claude-flow/security: 47 tests"
-echo "  @claude-flow/swarm:    89 tests"
-echo "  @claude-flow/cli:      34 tests"
+echo "  @hive-flow/hooks:    112 tests"
+echo "  @hive-flow/plugins:  142 tests"
+echo "  @hive-flow/security: 47 tests"
+echo "  @hive-flow/swarm:    89 tests"
+echo "  @hive-flow/cli:      34 tests"
 echo "  Total:                 424+ tests"
 
 # ============================================================================

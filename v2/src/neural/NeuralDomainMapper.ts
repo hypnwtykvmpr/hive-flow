@@ -6,10 +6,10 @@
  * dependencies, and providing predictive boundary optimization.
  * 
  * This class enables advanced domain analysis and relationship mapping for
- * the Claude Flow orchestration system, supporting dynamic domain boundaries
+ * the Hive Flow orchestration system, supporting dynamic domain boundaries
  * and intelligent task routing based on learned patterns.
  * 
- * @author Claude Flow Neural Team
+ * @author Hive Flow Neural Team
  * @version 2.0.0
  * @since 2024-12-01
  */

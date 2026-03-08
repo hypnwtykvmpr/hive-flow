@@ -5,7 +5,7 @@ This directory contains the V3 monorepo packages. Root CLAUDE.md rules apply her
 ## Build & Test
 
 ```bash
-# From v3/@claude-flow/<package>
+# From v3/@hive-flow/<package>
 npm install && npm run build && npm test
 ```
 
@@ -13,12 +13,12 @@ npm install && npm run build && npm test
 
 | Package | Path | Purpose |
 |---------|------|---------|
-| `@claude-flow/cli` | `@claude-flow/cli/` | CLI entry point (26 commands, 140+ subcommands) |
-| `@claude-flow/guidance` | `@claude-flow/guidance/` | Governance control plane (compile, enforce, prove, evolve) |
-| `@claude-flow/hooks` | `@claude-flow/hooks/` | 17 hooks + 12 background workers |
-| `@claude-flow/memory` | `@claude-flow/memory/` | AgentDB + HNSW vector search |
-| `@claude-flow/shared` | `@claude-flow/shared/` | Shared types and utilities |
-| `@claude-flow/security` | `@claude-flow/security/` | Input validation, path security, CVE remediation |
+| `@hive-flow/cli` | `@hive-flow/cli/` | CLI entry point (26 commands, 140+ subcommands) |
+| `@hive-flow/guidance` | `@hive-flow/guidance/` | Governance control plane (compile, enforce, prove, evolve) |
+| `@hive-flow/hooks` | `@hive-flow/hooks/` | 17 hooks + 12 background workers |
+| `@hive-flow/memory` | `@hive-flow/memory/` | AgentDB + HNSW vector search |
+| `@hive-flow/shared` | `@hive-flow/shared/` | Shared types and utilities |
+| `@hive-flow/security` | `@hive-flow/security/` | Input validation, path security, CVE remediation |
 
 ## Code Quality
 

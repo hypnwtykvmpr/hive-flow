@@ -183,7 +183,7 @@ check_prerequisites() {
     
     # Check if CLI exists
     if [[ ! -f "$PROJECT_ROOT/src/cli/simple-cli.js" ]]; then
-        missing_deps+=("Claude Flow CLI at $PROJECT_ROOT/src/cli/simple-cli.js")
+        missing_deps+=("Hive Flow CLI at $PROJECT_ROOT/src/cli/simple-cli.js")
     fi
     
     # Check configuration file

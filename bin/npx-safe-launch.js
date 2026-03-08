@@ -11,7 +11,7 @@
  * cleaning up stale artifacts left from THIS run or prior interrupted runs.
  *
  * For the case where npx itself fails (can't even get to this script),
- * use bin/claude-flow-mcp.sh which wraps the entire npx invocation.
+ * use bin/hive-flow-mcp.sh which wraps the entire npx invocation.
  */
 import { existsSync, readdirSync, rmSync, statSync } from 'node:fs';
 import { join } from 'node:path';

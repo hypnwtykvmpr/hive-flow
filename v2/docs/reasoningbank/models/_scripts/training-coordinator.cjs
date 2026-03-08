@@ -24,7 +24,7 @@ class TrainingCoordinator {
     console.log(`🚀 Initializing training swarm: ${this.swarmId}`);
 
     // Store swarm coordination info in memory
-    execSync(`npx claude-flow@alpha memory store swarm/coordination "${JSON.stringify({
+    execSync(`npx hive-flow@alpha memory store swarm/coordination "${JSON.stringify({
       swarmId: this.swarmId,
       agents: Object.keys(this.models),
       startTime: new Date().toISOString(),
@@ -51,13 +51,13 @@ class TrainingCoordinator {
 
   async reportProgress(modelName, progress) {
     // Store progress in shared memory
-    execSync(`npx claude-flow@alpha memory store swarm/progress/${modelName} "${JSON.stringify(progress)}" --namespace training --reasoningbank`, { stdio: 'inherit' });
+    execSync(`npx hive-flow@alpha memory store swarm/progress/${modelName} "${JSON.stringify(progress)}" --namespace training --reasoningbank`, { stdio: 'inherit' });
   }
 
   async getSwarmStatus() {
     // Query all agent progress
     const result = execSync(
-      `npx claude-flow@alpha memory query "swarm/progress" --namespace training --reasoningbank`,
+      `npx hive-flow@alpha memory query "swarm/progress" --namespace training --reasoningbank`,
       { encoding: 'utf-8' }
     );
     return result;
@@ -67,7 +67,7 @@ class TrainingCoordinator {
     console.log(`✅ Training swarm ${this.swarmId} completed`);
 
     // Store final status
-    execSync(`npx claude-flow@alpha memory store swarm/coordination "${JSON.stringify({
+    execSync(`npx hive-flow@alpha memory store swarm/coordination "${JSON.stringify({
       swarmId: this.swarmId,
       endTime: new Date().toISOString(),
       status: 'completed'

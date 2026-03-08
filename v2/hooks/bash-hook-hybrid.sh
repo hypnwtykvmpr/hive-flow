@@ -31,7 +31,7 @@ if echo "$COMMAND" | grep -qE ">\s*test.*\.(txt|log|tmp)" && ! echo "$COMMAND" |
 fi
 
 # Call npx for coordination (in background, don't wait)
-echo "$INPUT" | npx claude-flow@alpha hooks pre-task --description "Bash: $COMMAND" >/dev/null 2>&1 &
+echo "$INPUT" | npx hive-flow@alpha hooks pre-task --description "Bash: $COMMAND" >/dev/null 2>&1 &
 
 # Return modified JSON
 if [ -n "$NOTES" ]; then

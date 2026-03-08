@@ -162,7 +162,7 @@ npx agentic-flow agent list
 
 ```bash
 # Command
-./bin/claude-flow agent agents
+./bin/hive-flow agent agents
 
 # Result
 ✅ Command executes successfully
@@ -232,10 +232,10 @@ SUPABASE_ACCESS_TOKEN=eyJ...[REDACTED]
 
 ### CLI Commands Tested
 ```bash
-✅ claude-flow --version (v2.6.0-alpha.1)
-✅ claude-flow --help (shows integration)
-✅ claude-flow agent (shows new commands)
-✅ claude-flow agent agents (lists 66+ agents)
+✅ hive-flow --version (v2.6.0-alpha.1)
+✅ hive-flow --help (shows integration)
+✅ hive-flow agent (shows new commands)
+✅ hive-flow agent agents (lists 66+ agents)
 ✅ npx agentic-flow agent list (direct access)
 ```
 

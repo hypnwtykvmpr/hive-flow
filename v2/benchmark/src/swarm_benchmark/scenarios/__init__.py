@@ -1,5 +1,5 @@
 """
-Benchmark scenarios package for executing real Claude Flow commands.
+Benchmark scenarios package for executing real Hive Flow commands.
 """
 
 from .real_benchmarks import RealSwarmBenchmark, RealHiveMindBenchmark, RealSparcBenchmark

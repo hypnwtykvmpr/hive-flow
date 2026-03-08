@@ -1,5 +1,5 @@
 /**
- * Performance Benchmark Tests for Claude Flow v2.0.0
+ * Performance Benchmark Tests for Hive Flow v2.0.0
  */
 
 import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';

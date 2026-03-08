@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import uuid
 import numpy as np
 
-# Import Claude Flow performance tracking
+# Import Hive Flow performance tracking
 try:
     from ...benchmark.src.swarm_benchmark.core.models import (
         PerformanceMetrics, QualityMetrics, ResourceUsage
@@ -148,7 +148,7 @@ class MLESTARModel(ABC):
     """Abstract base class for all MLE-STAR models.
     
     This class provides the foundation for all ML models in the MLE-STAR framework,
-    with built-in coordination capabilities for Claude Flow integration.
+    with built-in coordination capabilities for Hive Flow integration.
     """
     
     def __init__(self, config: ModelConfig):
@@ -171,7 +171,7 @@ class MLESTARModel(ABC):
         self.model_path: Optional[str] = None
         self.checkpoint_paths: List[str] = []
         
-        # Coordination state for Claude Flow integration
+        # Coordination state for Hive Flow integration
         self.coordination_state: Dict[str, Any] = {
             "agent_id": None,
             "task_id": None,
@@ -263,7 +263,7 @@ class MLESTARModel(ABC):
             return False
     
     def update_coordination_state(self, **kwargs) -> None:
-        """Update coordination state for Claude Flow integration."""
+        """Update coordination state for Hive Flow integration."""
         self.coordination_state.update(kwargs)
         self.last_updated = datetime.now()
     

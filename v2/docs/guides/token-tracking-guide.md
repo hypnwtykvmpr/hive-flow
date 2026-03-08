@@ -2,7 +2,7 @@
 
 ## Overview
 
-Claude Flow now includes **REAL** token tracking capabilities that capture actual Claude API usage, not simulated data. This guide shows how to enable and use token tracking with the Claude Code CLI.
+Hive Flow now includes **REAL** token tracking capabilities that capture actual Claude API usage, not simulated data. This guide shows how to enable and use token tracking with the Claude Code CLI.
 
 ## Quick Start
 
@@ -11,13 +11,13 @@ Claude Flow now includes **REAL** token tracking capabilities that capture actua
 First, enable telemetry for token tracking:
 
 ```bash
-./claude-flow analysis setup-telemetry
+./hive-flow analysis setup-telemetry
 ```
 
 This will:
 - Set `CLAUDE_CODE_ENABLE_TELEMETRY=1` environment variable
 - Create `.env` file with telemetry settings
-- Initialize token tracking directory (`.claude-flow/metrics/`)
+- Initialize token tracking directory (`.hive-flow/metrics/`)
 
 ### Step 2: Run Claude with Token Tracking
 
@@ -25,15 +25,15 @@ Use the `--claude` flag with telemetry enabled:
 
 ```bash
 # Option 1: Set environment variable inline
-CLAUDE_CODE_ENABLE_TELEMETRY=1 ./claude-flow swarm "your task" --claude
+CLAUDE_CODE_ENABLE_TELEMETRY=1 ./hive-flow swarm "your task" --claude
 
 # Option 2: Export environment variable
 export CLAUDE_CODE_ENABLE_TELEMETRY=1
-./claude-flow swarm "your task" --claude
+./hive-flow swarm "your task" --claude
 
 # Option 3: Use wrapper directly
-./claude-flow analysis claude-monitor  # Start monitoring in one terminal
-./claude-flow swarm "your task" --claude  # Run Claude in another terminal
+./hive-flow analysis claude-monitor  # Start monitoring in one terminal
+./hive-flow swarm "your task" --claude  # Run Claude in another terminal
 ```
 
 ### Step 3: View Token Usage
@@ -42,13 +42,13 @@ After running Claude commands:
 
 ```bash
 # View comprehensive token usage report
-./claude-flow analysis token-usage --breakdown --cost-analysis
+./hive-flow analysis token-usage --breakdown --cost-analysis
 
 # Get current session cost
-./claude-flow analysis claude-cost
+./hive-flow analysis claude-cost
 
 # Monitor session in real-time
-./claude-flow analysis claude-monitor [session-id]
+./hive-flow analysis claude-monitor [session-id]
 ```
 
 ## Architecture
@@ -61,7 +61,7 @@ After running Claude commands:
    - Claude CLI output patterns
    - Session JSONL files (if accessible)
    - `/cost` command output
-4. **Persistent Storage**: Token data is stored in `.claude-flow/metrics/token-usage.json`
+4. **Persistent Storage**: Token data is stored in `.hive-flow/metrics/token-usage.json`
 
 ### Key Components
 
@@ -77,10 +77,10 @@ Monitor Claude sessions as they run:
 
 ```bash
 # Monitor with default 5-second interval
-./claude-flow analysis claude-monitor
+./hive-flow analysis claude-monitor
 
 # Monitor with custom interval (3 seconds)
-./claude-flow analysis claude-monitor current --interval 3000
+./hive-flow analysis claude-monitor current --interval 3000
 ```
 
 ### Cost Analysis
@@ -103,10 +103,10 @@ View token usage by:
 
 ```bash
 # Detailed breakdown
-./claude-flow analysis token-usage --breakdown
+./hive-flow analysis token-usage --breakdown
 
 # Agent-specific analysis
-./claude-flow analysis token-usage --agent coordinator --cost-analysis
+./hive-flow analysis token-usage --agent coordinator --cost-analysis
 ```
 
 ## Advanced Usage
@@ -151,7 +151,7 @@ stopMonitor();
 
 2. Check token usage file exists:
    ```bash
-   cat .claude-flow/metrics/token-usage.json
+   cat .hive-flow/metrics/token-usage.json
    ```
 
 3. Ensure Claude is installed:
@@ -163,17 +163,17 @@ stopMonitor();
 
 1. Clear existing metrics:
    ```bash
-   rm -rf .claude-flow/metrics/token-usage.json
+   rm -rf .hive-flow/metrics/token-usage.json
    ```
 
 2. Re-enable telemetry:
    ```bash
-   ./claude-flow analysis setup-telemetry
+   ./hive-flow analysis setup-telemetry
    ```
 
 3. Run with explicit telemetry:
    ```bash
-   CLAUDE_CODE_ENABLE_TELEMETRY=1 ./claude-flow swarm "test" --claude
+   CLAUDE_CODE_ENABLE_TELEMETRY=1 ./hive-flow swarm "test" --claude
    ```
 
 ## Integration with CI/CD
@@ -187,19 +187,19 @@ env:
   
 steps:
   - name: Setup telemetry
-    run: ./claude-flow analysis setup-telemetry
+    run: ./hive-flow analysis setup-telemetry
     
   - name: Run Claude task
-    run: ./claude-flow swarm "${{ inputs.task }}" --claude
+    run: ./hive-flow swarm "${{ inputs.task }}" --claude
     
   - name: Report costs
-    run: ./claude-flow analysis claude-cost
+    run: ./hive-flow analysis claude-cost
 ```
 
 ## Privacy & Security
 
 - **No sensitive data**: Only token counts and costs are tracked
-- **Local storage**: All data is stored locally in `.claude-flow/metrics/`
+- **Local storage**: All data is stored locally in `.hive-flow/metrics/`
 - **Opt-in**: Telemetry must be explicitly enabled
 - **No external transmission**: Data is never sent to external servers
 
@@ -234,8 +234,8 @@ steps:
 
 | File | Purpose |
 |------|---------|
-| `.claude-flow/metrics/token-usage.json` | Token usage data |
-| `.claude-flow/metrics/sessions/*.json` | Session metrics |
+| `.hive-flow/metrics/token-usage.json` | Token usage data |
+| `.hive-flow/metrics/sessions/*.json` | Session metrics |
 | `.env` | Environment configuration |
 
 ## Examples
@@ -244,45 +244,45 @@ steps:
 
 ```bash
 # 1. Setup
-./claude-flow analysis setup-telemetry
+./hive-flow analysis setup-telemetry
 
 # 2. Run task with tracking
 export CLAUDE_CODE_ENABLE_TELEMETRY=1
-./claude-flow swarm "Create a REST API with authentication" --claude
+./hive-flow swarm "Create a REST API with authentication" --claude
 
 # 3. Check usage
-./claude-flow analysis token-usage --breakdown --cost-analysis
+./hive-flow analysis token-usage --breakdown --cost-analysis
 
 # 4. Monitor next session
-./claude-flow analysis claude-monitor &  # Run in background
-./claude-flow swarm "Add tests to the API" --claude
+./hive-flow analysis claude-monitor &  # Run in background
+./hive-flow swarm "Add tests to the API" --claude
 
 # 5. Final cost report
-./claude-flow analysis claude-cost
+./hive-flow analysis claude-cost
 ```
 
 ### Optimization Example
 
 ```bash
 # Analyze token usage patterns
-./claude-flow analysis token-usage --breakdown
+./hive-flow analysis token-usage --breakdown
 
 # Identify high-consumption agents
-./claude-flow analysis token-usage --agent coordinator
+./hive-flow analysis token-usage --agent coordinator
 
 # Get optimization suggestions
-./claude-flow analysis bottleneck-detect --scope agent
+./hive-flow analysis bottleneck-detect --scope agent
 ```
 
 ## Support
 
 For issues or questions:
-- GitHub Issues: https://github.com/ruvnet/claude-flow/issues
-- Documentation: https://github.com/ruvnet/claude-flow/docs
+- GitHub Issues: https://github.com/ruvnet/hive-flow/issues
+- Documentation: https://github.com/ruvnet/hive-flow/docs
 
 ## Conclusion
 
-Real token tracking in Claude Flow provides transparency into API usage and costs. By following this guide, you can:
+Real token tracking in Hive Flow provides transparency into API usage and costs. By following this guide, you can:
 - Track actual Claude API token consumption
 - Monitor costs in real-time
 - Optimize token usage patterns

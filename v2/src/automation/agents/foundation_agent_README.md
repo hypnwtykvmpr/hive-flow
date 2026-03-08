@@ -38,7 +38,7 @@ Advanced feature engineering capabilities:
 ### 3. `foundation_agent_integration.py`
 Integration with MLE-STAR workflow:
 - **FoundationAgentIntegration**: Coordination layer
-- Claude-flow hooks integration
+- Hive-flow hooks integration
 - Memory system coordination
 - Workflow step processing
 - Cross-agent communication
@@ -139,20 +139,20 @@ The agent automatically selects appropriate models based on problem type:
 
 ## Coordination & Memory
 
-The agent uses Claude-flow hooks for coordination:
+The agent uses Hive-flow hooks for coordination:
 
 ```bash
 # Pre-task coordination
-npx claude-flow@alpha hooks pre-task --description "Foundation building"
+npx hive-flow@alpha hooks pre-task --description "Foundation building"
 
 # Post-edit notifications
-npx claude-flow@alpha hooks post-edit --file "model.pkl"
+npx hive-flow@alpha hooks post-edit --file "model.pkl"
 
 # Memory storage
-npx claude-flow@alpha memory store "agent/foundation/results" "{...}"
+npx hive-flow@alpha memory store "agent/foundation/results" "{...}"
 
 # Result sharing
-npx claude-flow@alpha hooks notify --message "Foundation complete"
+npx hive-flow@alpha hooks notify --message "Foundation complete"
 ```
 
 ## Output Structure
@@ -271,4 +271,4 @@ When contributing to the Foundation Agent:
 
 ## License
 
-This module is part of the Claude-Flow project and follows the same licensing terms.
+This module is part of the Hive-Flow project and follows the same licensing terms.

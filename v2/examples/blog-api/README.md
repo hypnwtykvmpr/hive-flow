@@ -1,6 +1,6 @@
 # Application
 
-Created by Claude Flow Swarm
+Created by Hive Flow Swarm
 
 ## Overview
 Write tests for the implementation

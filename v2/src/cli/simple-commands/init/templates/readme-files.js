@@ -39,7 +39,7 @@ export function createSessionsReadme() {
   return `# Session Memory Storage
 
 ## Purpose
-This directory stores session-based memory data, conversation history, and contextual information for development sessions using the Claude-Flow orchestration system.
+This directory stores session-based memory data, conversation history, and contextual information for development sessions using the Hive-Flow orchestration system.
 
 ## Structure
 Sessions are organized by date and session ID for easy retrieval:

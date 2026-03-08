@@ -72,7 +72,7 @@ export class DatabaseManager implements IDatabaseProvider {
   }
 
   private getDefaultPath(): string {
-    const baseDir = path.join(process.cwd(), '.claude-flow');
+    const baseDir = path.join(process.cwd(), '.hive-flow');
     return this.dbType === 'sqlite'
       ? path.join(baseDir, 'database.sqlite')
       : path.join(baseDir, 'database.json');

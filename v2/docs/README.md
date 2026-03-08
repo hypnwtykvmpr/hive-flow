@@ -1,6 +1,6 @@
-# 📚 Claude-Flow Documentation
+# 📚 Hive-Flow Documentation
 
-Welcome to the Claude-Flow documentation! This directory contains comprehensive guides and references for using Claude-Flow v2.7.0.
+Welcome to the Hive-Flow documentation! This directory contains comprehensive guides and references for using Hive-Flow v2.7.0.
 
 ## 📖 Core Documentation
 
@@ -59,7 +59,7 @@ Test reports and validation results
 
 ### 📚 [User Guides](./guides/)
 Tutorials and learning resources
-- [Skills Tutorial](./guides/skills-tutorial.md) - Complete guide to 25 Claude Flow skills
+- [Skills Tutorial](./guides/skills-tutorial.md) - Complete guide to 25 Hive Flow skills
 
 ### 🔌 [Integrations](./integrations/)
 Third-party platform integrations
@@ -114,7 +114,7 @@ Third-party platform integrations
 
 ## 📞 Support
 
-- **GitHub Issues**: https://github.com/ruvnet/claude-flow/issues
+- **GitHub Issues**: https://github.com/ruvnet/hive-flow/issues
 - **Discord**: Join our community for real-time help
 - **Documentation Updates**: PRs welcome!
 

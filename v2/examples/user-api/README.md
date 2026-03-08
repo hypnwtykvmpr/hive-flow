@@ -1,6 +1,6 @@
 # REST API
 
-This REST API was created by the Claude Flow Swarm system.
+This REST API was created by the Hive Flow Swarm system.
 
 ## Swarm Details
 - Swarm ID: swarm_aipkebfuq_nexjqmitd
@@ -39,4 +39,4 @@ npm test
 - `DELETE /api/v1/items/:id` - Delete item
 
 ---
-Created by Claude Flow Swarm
+Created by Hive Flow Swarm

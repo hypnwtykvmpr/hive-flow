@@ -1,6 +1,6 @@
 #\!/usr/bin/env python3
 """
-Simple hive-mind benchmark example using real claude-flow execution.
+Simple hive-mind benchmark example using real hive-flow execution.
 """
 
 import subprocess

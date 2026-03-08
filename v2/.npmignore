@@ -58,8 +58,8 @@ deno.json
 deno.lock
 
 # Local files
-claude-flow
-claude-flow.cmd
+hive-flow
+hive-flow.cmd
 init-test/
 exported-memory.json
 test-memory.json
@@ -73,10 +73,10 @@ reports/
 !.claude/config.json
 
 # Binary builds (we don't need prebuilt binaries for npm)
-bin/claude-flow-linux
-bin/claude-flow-macos
-bin/claude-flow-win
-bin/claude-flow-node-pkg
+bin/hive-flow-linux
+bin/hive-flow-macos
+bin/hive-flow-win
+bin/hive-flow-node-pkg
 bin/*.exe
 
 # Example and demo files

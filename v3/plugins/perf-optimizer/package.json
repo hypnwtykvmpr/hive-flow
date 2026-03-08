@@ -1,5 +1,5 @@
 {
-  "name": "@claude-flow/plugin-perf-optimizer",
+  "name": "@hive-flow/plugin-perf-optimizer",
   "version": "3.0.0-alpha.1",
   "description": "AI-powered performance optimization plugin for bottleneck detection, memory analysis, and configuration tuning",
   "main": "./dist/index.js",
@@ -40,7 +40,7 @@
     "prepublishOnly": "npm run clean && npm run build && npm run typecheck"
   },
   "keywords": [
-    "claude-flow",
+    "hive-flow",
     "plugin",
     "performance",
     "optimization",
@@ -48,21 +48,21 @@
     "memory-analysis",
     "query-optimization"
   ],
-  "author": "Claude Flow Team",
+  "author": "Hive Flow Team",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ruvnet/claude-flow.git",
+    "url": "https://github.com/ruvnet/hive-flow.git",
     "directory": "v3/plugins/perf-optimizer"
   },
   "dependencies": {
     "zod": "^3.22.4"
   },
   "peerDependencies": {
-    "@claude-flow/ruvector-upstream": ">=3.0.0-alpha.1"
+    "@hive-flow/ruvector-upstream": ">=3.0.0-alpha.1"
   },
   "peerDependenciesMeta": {
-    "@claude-flow/ruvector-upstream": {
+    "@hive-flow/ruvector-upstream": {
       "optional": true
     }
   },

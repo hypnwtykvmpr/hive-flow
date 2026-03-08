@@ -57,10 +57,10 @@ export class MCPIntegrator {
    * Register default MCP tools
    */
   private registerDefaultTools(): void {
-    // Claude Flow MCP tools
-    this.tools.set('claude-flow', {
-      name: 'claude-flow',
-      server: 'npx claude-flow@alpha mcp start',
+    // Hive Flow MCP tools
+    this.tools.set('hive-flow', {
+      name: 'hive-flow',
+      server: 'npx hive-flow@alpha mcp start',
       functions: [
         {
           name: 'swarm_init',
@@ -402,8 +402,8 @@ export class MCPIntegrator {
     maxAgents: number;
     strategy: string;
   }): Promise<MCPResult> {
-    // Try claude-flow first, then fallback to other tools
-    const toolPriority = ['claude-flow', 'ruv-swarm', 'flow-nexus'];
+    // Try hive-flow first, then fallback to other tools
+    const toolPriority = ['hive-flow', 'ruv-swarm', 'flow-nexus'];
 
     for (const toolName of toolPriority) {
       if (this.isToolAvailable(toolName)) {
@@ -431,7 +431,7 @@ export class MCPIntegrator {
    */
   async coordinateMemory(action: string, key: string, value?: string, namespace?: string): Promise<MCPResult> {
     const command: MCPCommand = {
-      tool: 'claude-flow',
+      tool: 'hive-flow',
       function: 'memory_usage',
       parameters: { action, key, value, namespace: namespace || 'coordination' }
     };
@@ -444,7 +444,7 @@ export class MCPIntegrator {
    */
   async spawnAgent(type: string, capabilities?: string[], name?: string): Promise<MCPResult> {
     const command: MCPCommand = {
-      tool: 'claude-flow',
+      tool: 'hive-flow',
       function: 'agent_spawn',
       parameters: { type, capabilities, name }
     };
@@ -457,7 +457,7 @@ export class MCPIntegrator {
    */
   async orchestrateTask(task: string, strategy?: string, priority?: string): Promise<MCPResult> {
     const command: MCPCommand = {
-      tool: 'claude-flow',
+      tool: 'hive-flow',
       function: 'task_orchestrate',
       parameters: { task, strategy, priority }
     };
@@ -470,7 +470,7 @@ export class MCPIntegrator {
    */
   async getSwarmStatus(detailed: boolean = false): Promise<MCPResult> {
     const command: MCPCommand = {
-      tool: 'claude-flow',
+      tool: 'hive-flow',
       function: 'swarm_status',
       parameters: { detailed }
     };

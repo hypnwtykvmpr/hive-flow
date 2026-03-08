@@ -1,6 +1,6 @@
 # Analysis Commands
 
-Commands for analysis operations in Claude Flow.
+Commands for analysis operations in Hive Flow.
 
 ## Available Commands
 

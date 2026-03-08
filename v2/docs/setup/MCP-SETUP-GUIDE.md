@@ -1,8 +1,8 @@
-# MCP Server Setup Guide for Claude Flow
+# MCP Server Setup Guide for Hive Flow
 
 ## 🎯 Overview
 
-Claude Flow integrates with Claude Code through MCP (Model Context Protocol) servers. This guide explains how to set up MCP servers correctly.
+Hive Flow integrates with Claude Code through MCP (Model Context Protocol) servers. This guide explains how to set up MCP servers correctly.
 
 ## 📋 Two Ways to Initialize
 
@@ -10,12 +10,12 @@ Claude Flow integrates with Claude Code through MCP (Model Context Protocol) ser
 
 ```bash
 # This command automatically adds MCP servers
-npx claude-flow@alpha init --force
+npx hive-flow@alpha init --force
 ```
 
 **What it does:**
 - Creates project files (CLAUDE.md, settings.json, etc.)
-- Automatically runs: `claude mcp add claude-flow npx claude-flow@alpha mcp start`
+- Automatically runs: `claude mcp add hive-flow npx hive-flow@alpha mcp start`
 - Sets up ruv-swarm and flow-nexus MCP servers (optional)
 - Configures hooks and permissions
 
@@ -24,8 +24,8 @@ npx claude-flow@alpha init --force
 If you already have Claude Code installed but need to add MCP servers:
 
 ```bash
-# Add Claude Flow MCP server
-claude mcp add claude-flow npx claude-flow@alpha mcp start
+# Add Hive Flow MCP server
+claude mcp add hive-flow npx hive-flow@alpha mcp start
 
 # Optional: Add enhanced coordination
 claude mcp add ruv-swarm npx ruv-swarm mcp start
@@ -44,7 +44,7 @@ claude mcp list
 
 Expected output:
 ```
-claude-flow: npx claude-flow@alpha mcp start - ✓ Connected
+hive-flow: npx hive-flow@alpha mcp start - ✓ Connected
 ruv-swarm: npx ruv-swarm mcp start - ✓ Connected
 flow-nexus: npx flow-nexus@latest mcp start - ✓ Connected
 ```
@@ -55,20 +55,20 @@ flow-nexus: npx flow-nexus@latest mcp start - ✓ Connected
 
 **Example:**
 ```
-claude-flow: /workspaces/claude-code-flow/bin/claude-flow mcp start - ✓ Connected
+hive-flow: /workspaces/claude-code-flow/bin/hive-flow mcp start - ✓ Connected
 ```
 
 **Solution:**
-This happens when you're working in the claude-flow repository itself. It's actually fine for development! The MCP server will work correctly.
+This happens when you're working in the hive-flow repository itself. It's actually fine for development! The MCP server will work correctly.
 
 If you want to use the npx command instead:
 
 ```bash
 # Remove the existing server
-claude mcp remove claude-flow
+claude mcp remove hive-flow
 
 # Re-add with npx command
-claude mcp add claude-flow npx claude-flow@alpha mcp start
+claude mcp add hive-flow npx hive-flow@alpha mcp start
 ```
 
 ### Issue: "claude: command not found"
@@ -87,12 +87,12 @@ npm install -g @anthropic-ai/claude-code
 1. **Package not installed globally:**
    ```bash
    # Install the package
-   npm install -g claude-flow@alpha
+   npm install -g hive-flow@alpha
    ```
 
 2. **Using local development version:**
    ```bash
-   # In the claude-flow repo, build first
+   # In the hive-flow repo, build first
    npm run build
    ```
 
@@ -104,15 +104,15 @@ npm install -g @anthropic-ai/claude-code
 
 ## 📚 Understanding the Commands
 
-### `npx claude-flow@alpha init`
-- Initializes Claude Flow project files
+### `npx hive-flow@alpha init`
+- Initializes Hive Flow project files
 - **Automatically calls** `claude mcp add` for you
 - Only needs to be run once per project
 
 ### `claude init`
 - Claude Code's own initialization
-- Does **NOT** automatically add Claude Flow MCP servers
-- Separate from Claude Flow initialization
+- Does **NOT** automatically add Hive Flow MCP servers
+- Separate from Hive Flow initialization
 
 ### `claude mcp add <name> <command>`
 - Adds an MCP server to Claude Code's global config
@@ -125,9 +125,9 @@ npm install -g @anthropic-ai/claude-code
 # 1. Install Claude Code (one-time)
 npm install -g @anthropic-ai/claude-code
 
-# 2. Initialize your project with Claude Flow (per project)
+# 2. Initialize your project with Hive Flow (per project)
 cd your-project
-npx claude-flow@alpha init --force
+npx hive-flow@alpha init --force
 
 # 3. Verify MCP servers are connected
 claude mcp list
@@ -138,8 +138,8 @@ claude
 
 ## 💡 Key Points
 
-- **`npx claude-flow@alpha init`** does BOTH file setup AND MCP configuration
-- **`claude init`** is just for Claude Code, not Claude Flow
+- **`npx hive-flow@alpha init`** does BOTH file setup AND MCP configuration
+- **`claude init`** is just for Claude Code, not Hive Flow
 - MCP servers are **global** (affect all Claude Code sessions)
 - Project files (.claude/, CLAUDE.md) are **local** to each project
 
@@ -151,4 +151,4 @@ claude
 
 ---
 
-**Questions?** See [GitHub Issues](https://github.com/ruvnet/claude-flow/issues) or join our [Discord](https://discord.com/invite/dfxmpwkG2D)
+**Questions?** See [GitHub Issues](https://github.com/ruvnet/hive-flow/issues) or join our [Discord](https://discord.com/invite/dfxmpwkG2D)

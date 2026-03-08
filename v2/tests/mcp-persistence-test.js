@@ -77,7 +77,7 @@ class MCPPersistenceTest {
       const value = { test: true, timestamp: new Date().toISOString() };
       
       const result = execSync(
-        `npx claude-flow@alpha mcp call memory_usage '{"action": "store", "key": "${key}", "value": ${JSON.stringify(JSON.stringify(value))}, "namespace": "test"}'`,
+        `npx hive-flow@alpha mcp call memory_usage '{"action": "store", "key": "${key}", "value": ${JSON.stringify(JSON.stringify(value))}, "namespace": "test"}'`,
         { encoding: 'utf8' }
       );
       
@@ -102,13 +102,13 @@ class MCPPersistenceTest {
       
       // First store
       execSync(
-        `npx claude-flow@alpha mcp call memory_usage '{"action": "store", "key": "${key}", "value": ${JSON.stringify(JSON.stringify(value))}, "namespace": "test"}'`,
+        `npx hive-flow@alpha mcp call memory_usage '{"action": "store", "key": "${key}", "value": ${JSON.stringify(JSON.stringify(value))}, "namespace": "test"}'`,
         { encoding: 'utf8' }
       );
       
       // Then retrieve
       const result = execSync(
-        `npx claude-flow@alpha mcp call memory_usage '{"action": "retrieve", "key": "${key}", "namespace": "test"}'`,
+        `npx hive-flow@alpha mcp call memory_usage '{"action": "retrieve", "key": "${key}", "namespace": "test"}'`,
         { encoding: 'utf8' }
       );
       
@@ -120,7 +120,7 @@ class MCPPersistenceTest {
     // List operation
     await this.runTest('memory_usage list operation', async () => {
       const result = execSync(
-        `npx claude-flow@alpha mcp call memory_usage '{"action": "list", "namespace": "test"}'`,
+        `npx hive-flow@alpha mcp call memory_usage '{"action": "list", "namespace": "test"}'`,
         { encoding: 'utf8' }
       );
       
@@ -137,7 +137,7 @@ class MCPPersistenceTest {
       const agentName = `test_agent_${Date.now()}`;
       
       const result = execSync(
-        `npx claude-flow@alpha mcp call agent_spawn '{"type": "researcher", "name": "${agentName}", "capabilities": ["test"]}'`,
+        `npx hive-flow@alpha mcp call agent_spawn '{"type": "researcher", "name": "${agentName}", "capabilities": ["test"]}'`,
         { encoding: 'utf8' }
       );
       
@@ -147,7 +147,7 @@ class MCPPersistenceTest {
 
       // Check if agent info is stored in memory
       const memoryCheck = execSync(
-        `npx claude-flow@alpha mcp call memory_usage '{"action": "search", "pattern": "${agentName}", "namespace": "agents"}'`,
+        `npx hive-flow@alpha mcp call memory_usage '{"action": "search", "pattern": "${agentName}", "namespace": "agents"}'`,
         { encoding: 'utf8' }
       );
       
@@ -163,7 +163,7 @@ class MCPPersistenceTest {
       const swarmId = `test_swarm_${Date.now()}`;
       
       const result = execSync(
-        `npx claude-flow@alpha mcp call swarm_init '{"topology": "mesh", "maxAgents": 3, "swarmId": "${swarmId}"}'`,
+        `npx hive-flow@alpha mcp call swarm_init '{"topology": "mesh", "maxAgents": 3, "swarmId": "${swarmId}"}'`,
         { encoding: 'utf8' }
       );
       
@@ -189,7 +189,7 @@ class MCPPersistenceTest {
       const message = `Test hook ${Date.now()}`;
       
       const result = execSync(
-        `npx claude-flow@alpha hooks notify --message "${message}" --level "test"`,
+        `npx hive-flow@alpha hooks notify --message "${message}" --level "test"`,
         { encoding: 'utf8' }
       );
       
@@ -255,7 +255,7 @@ class MCPPersistenceTest {
           new Promise((resolve, reject) => {
             try {
               const result = execSync(
-                `npx claude-flow@alpha mcp call memory_usage '{"action": "store", "key": "${key}", "value": "test${i}", "namespace": "concurrent"}'`,
+                `npx hive-flow@alpha mcp call memory_usage '{"action": "store", "key": "${key}", "value": "test${i}", "namespace": "concurrent"}'`,
                 { encoding: 'utf8' }
               );
               resolve(result);
@@ -328,7 +328,7 @@ class MCPPersistenceTest {
 
     // Store results using MCP
     execSync(
-      `npx claude-flow@alpha mcp call memory_usage '{"action": "store", "key": "test_results_${Date.now()}", "value": ${JSON.stringify(JSON.stringify(results))}, "namespace": "test_results"}'`,
+      `npx hive-flow@alpha mcp call memory_usage '{"action": "store", "key": "test_results_${Date.now()}", "value": ${JSON.stringify(JSON.stringify(results))}, "namespace": "test_results"}'`,
       { encoding: 'utf8' }
     );
 
@@ -346,7 +346,7 @@ class MCPPersistenceTest {
     try {
       // Ensure MCP server is available
       this.log('\n🔍 Checking MCP server availability...', 'yellow');
-      execSync('npx claude-flow@alpha mcp list', { encoding: 'utf8' });
+      execSync('npx hive-flow@alpha mcp list', { encoding: 'utf8' });
       this.log('✅ MCP server is available', 'green');
 
       // Run all tests

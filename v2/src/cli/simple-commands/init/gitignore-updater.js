@@ -1,24 +1,24 @@
 /**
- * GitIgnore updater for Claude Flow initialization
- * Ensures Claude Flow generated files are properly ignored
+ * GitIgnore updater for Hive Flow initialization
+ * Ensures Hive Flow generated files are properly ignored
  */
 
 import { existsSync, readTextFile, writeTextFile } from '../../node-compat.js';
 
 /**
- * Default gitignore entries for Claude Flow
+ * Default gitignore entries for Hive Flow
  */
-const CLAUDE_FLOW_GITIGNORE_ENTRIES = `
-# Claude Flow generated files
+const HIVE_FLOW_GITIGNORE_ENTRIES = `
+# Hive Flow generated files
 .claude/settings.local.json
 .mcp.json
-claude-flow.config.json
+hive-flow.config.json
 .swarm/
 .hive-mind/
-.claude-flow/
+.hive-flow/
 memory/
 coordination/
-memory/claude-flow-data.json
+memory/hive-flow-data.json
 memory/sessions/*
 !memory/sessions/README.md
 memory/agents/*
@@ -32,13 +32,13 @@ coordination/orchestration/*
 *.sqlite
 *.sqlite-journal
 *.sqlite-wal
-claude-flow
+hive-flow
 # Removed Windows wrapper files per user request
 hive-mind-prompt-*.txt
 `;
 
 /**
- * Update or create .gitignore with Claude Flow entries
+ * Update or create .gitignore with Hive Flow entries
  * @param {string} workingDir - The working directory
  * @param {boolean} force - Whether to force update even if entries exist
  * @param {boolean} dryRun - Whether to run in dry-run mode
@@ -57,36 +57,36 @@ export async function updateGitignore(workingDir, force = false, dryRun = false)
       gitignoreContent = await readTextFile(gitignorePath);
     }
 
-    // Check if Claude Flow section already exists
-    const claudeFlowMarker = '# Claude Flow generated files';
-    if (gitignoreContent.includes(claudeFlowMarker) && !force) {
+    // Check if Hive Flow section already exists
+    const hiveFlowMarker = '# Hive Flow generated files';
+    if (gitignoreContent.includes(hiveFlowMarker) && !force) {
       return {
         success: true,
-        message: '.gitignore already contains Claude Flow entries',
+        message: '.gitignore already contains Hive Flow entries',
       };
     }
 
     // Prepare the new content
     let newContent = gitignoreContent;
 
-    // Remove existing Claude Flow section if force updating
-    if (force && gitignoreContent.includes(claudeFlowMarker)) {
-      const startIndex = gitignoreContent.indexOf(claudeFlowMarker);
+    // Remove existing Hive Flow section if force updating
+    if (force && gitignoreContent.includes(hiveFlowMarker)) {
+      const startIndex = gitignoreContent.indexOf(hiveFlowMarker);
       const endIndex = gitignoreContent.indexOf('\n# ', startIndex + 1);
       if (endIndex !== -1) {
         newContent =
           gitignoreContent.substring(0, startIndex) + gitignoreContent.substring(endIndex);
       } else {
-        // Claude Flow section is at the end
+        // Hive Flow section is at the end
         newContent = gitignoreContent.substring(0, startIndex);
       }
     }
 
-    // Add Claude Flow entries
+    // Add Hive Flow entries
     if (!newContent.endsWith('\n') && newContent.length > 0) {
       newContent += '\n';
     }
-    newContent += CLAUDE_FLOW_GITIGNORE_ENTRIES;
+    newContent += HIVE_FLOW_GITIGNORE_ENTRIES;
 
     // Write the file
     if (!dryRun) {
@@ -97,8 +97,8 @@ export async function updateGitignore(workingDir, force = false, dryRun = false)
       success: true,
       message: fileExists
         ? (dryRun ? '[DRY RUN] Would update' : 'Updated') +
-          ' existing .gitignore with Claude Flow entries'
-        : (dryRun ? '[DRY RUN] Would create' : 'Created') + ' .gitignore with Claude Flow entries',
+          ' existing .gitignore with Hive Flow entries'
+        : (dryRun ? '[DRY RUN] Would create' : 'Created') + ' .gitignore with Hive Flow entries',
     };
   } catch (error) {
     return {
@@ -122,7 +122,7 @@ export async function needsGitignoreUpdate(workingDir) {
 
   try {
     const content = await readTextFile(gitignorePath);
-    return !content.includes('# Claude Flow generated files');
+    return !content.includes('# Hive Flow generated files');
   } catch {
     return true;
   }
@@ -133,7 +133,7 @@ export async function needsGitignoreUpdate(workingDir) {
  * @returns {string[]}
  */
 export function getGitignorePatterns() {
-  return CLAUDE_FLOW_GITIGNORE_ENTRIES.split('\n')
+  return HIVE_FLOW_GITIGNORE_ENTRIES.split('\n')
     .filter((line) => line.trim() && !line.startsWith('#') && !line.startsWith('!'))
     .map((line) => line.trim());
 }

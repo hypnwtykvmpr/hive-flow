@@ -1,5 +1,5 @@
 """
-SWE-bench prompt builder for claude-flow modes.
+SWE-bench prompt builder for hive-flow modes.
 Generates appropriate prompts based on the execution mode and context.
 """
 
@@ -19,21 +19,21 @@ class SWEBenchPromptConfig:
 
 
 class SWEBenchPromptBuilder:
-    """Builds optimized prompts for SWE-bench tasks based on claude-flow mode."""
+    """Builds optimized prompts for SWE-bench tasks based on hive-flow mode."""
     
     MODE_CONTEXTS = {
         "hive-mind": (
-            "You are operating in claude-flow hive-mind mode with a Queen coordinator "
+            "You are operating in hive-flow hive-mind mode with a Queen coordinator "
             "and {max_agents} worker agents. The Queen will analyze the problem and "
             "delegate tasks to workers for parallel execution."
         ),
         "swarm": (
-            "You are operating in claude-flow swarm mode with {max_agents} agents "
+            "You are operating in hive-flow swarm mode with {max_agents} agents "
             "working collaboratively. Agents will coordinate to analyze, implement, "
             "and validate the solution."
         ),
         "sparc": (
-            "You are operating in claude-flow SPARC {subcommand} mode following the "
+            "You are operating in hive-flow SPARC {subcommand} mode following the "
             "Specification, Pseudocode, Architecture, Refinement, and Code methodology. "
             "This structured approach ensures high-quality solutions."
         )

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Claude-Flow Verification Helper
+# Hive-Flow Verification Helper
 # Backward-compatible verification system
 
 set -e
@@ -51,7 +51,7 @@ store_truth_score() {
     local evidence=$4
     
     local timestamp=$(date +%s)
-    local score_file=".claude-flow/memory/truth-scores/${agent_id}_${task_id}_${timestamp}.json"
+    local score_file=".hive-flow/memory/truth-scores/${agent_id}_${task_id}_${timestamp}.json"
     
     mkdir -p "$(dirname "$score_file")"
     
@@ -79,7 +79,7 @@ main() {
     echo -e "${YELLOW}🔍 Running verification for $agent_id...${NC}"
     
     # Create checkpoint before verification
-    npx claude-flow@alpha hooks pre-task --description "verification_checkpoint_${task_id}" 2>/dev/null || true
+    npx hive-flow@alpha hooks pre-task --description "verification_checkpoint_${task_id}" 2>/dev/null || true
     
     # Run verification checks
     TEST_EXIT=0
@@ -155,7 +155,7 @@ EOF
             if (( $(echo "$TRUTH_SCORE < $TRUTH_THRESHOLD" | bc -l) )); then
                 echo -e "${RED}🛑 Strict mode: Blocking due to low truth score${NC}"
                 # Trigger rollback
-                npx claude-flow@alpha hooks post-task --task-id "$task_id" --rollback true 2>/dev/null || true
+                npx hive-flow@alpha hooks post-task --task-id "$task_id" --rollback true 2>/dev/null || true
                 exit 1
             fi
             exit 0

@@ -1,6 +1,6 @@
 /**
  * Performance Tracking Hooks
- * Integrates with all Claude Flow operations to track real performance metrics
+ * Integrates with all Hive Flow operations to track real performance metrics
  */
 
 import {
@@ -19,12 +19,12 @@ export async function initializePerformanceTracking() {
   await initializeMetrics();
   
   // Hook into global events if available
-  if (global.claudeFlowHooks) {
-    global.claudeFlowHooks.on('task:start', onTaskStart);
-    global.claudeFlowHooks.on('task:end', onTaskEnd);
-    global.claudeFlowHooks.on('agent:spawn', onAgentSpawn);
-    global.claudeFlowHooks.on('agent:action', onAgentAction);
-    global.claudeFlowHooks.on('neural:event', onNeuralEvent);
+  if (global.hiveFlowHooks) {
+    global.hiveFlowHooks.on('task:start', onTaskStart);
+    global.hiveFlowHooks.on('task:end', onTaskEnd);
+    global.hiveFlowHooks.on('agent:spawn', onAgentSpawn);
+    global.hiveFlowHooks.on('agent:action', onAgentAction);
+    global.hiveFlowHooks.on('neural:event', onNeuralEvent);
   }
 }
 

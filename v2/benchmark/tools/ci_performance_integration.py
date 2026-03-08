@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-CI/CD Performance Integration for Claude-Flow Swarm Operations
+CI/CD Performance Integration for Hive-Flow Swarm Operations
 
 This script provides CI/CD pipeline integration for automated performance testing:
 - Automated performance benchmarks on commits/PRs

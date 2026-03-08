@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Test script for real Claude Flow integration.
+Test script for real Hive Flow integration.
 
-This script tests the RealClaudeFlowExecutor to ensure it can execute
-actual ./claude-flow commands and parse the results properly.
+This script tests the RealHiveFlowExecutor to ensure it can execute
+actual ./hive-flow commands and parse the results properly.
 """
 
 import asyncio
@@ -14,8 +14,8 @@ from pathlib import Path
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from swarm_benchmark.core.claude_flow_real_executor import (
-    RealClaudeFlowExecutor,
+from swarm_benchmark.core.hive_flow_real_executor import (
+    RealHiveFlowExecutor,
     SwarmCommand,
     HiveMindCommand,
     SparcCommand,
@@ -32,14 +32,14 @@ logger = logging.getLogger(__name__)
 
 
 async def test_real_executor():
-    """Test the real Claude Flow executor."""
+    """Test the real Hive Flow executor."""
     logger.info("=" * 60)
-    logger.info("TESTING REAL CLAUDE FLOW EXECUTOR")
+    logger.info("TESTING REAL HIVE FLOW EXECUTOR")
     logger.info("=" * 60)
     
     try:
         # Initialize executor
-        executor = RealClaudeFlowExecutor()
+        executor = RealHiveFlowExecutor()
         
         # Test installation validation
         logger.info("Testing installation validation...")
@@ -47,7 +47,7 @@ async def test_real_executor():
         logger.info(f"Installation valid: {is_valid}")
         
         if not is_valid:
-            logger.warning("Claude Flow installation not found or invalid")
+            logger.warning("Hive Flow installation not found or invalid")
             logger.info("Continuing with tests anyway...")
         
         # Test available modes
@@ -174,13 +174,13 @@ async def test_convenience_functions():
 
 async def main():
     """Run all tests."""
-    logger.info("Starting Real Claude Flow Integration Tests")
+    logger.info("Starting Real Hive Flow Integration Tests")
     logger.info(f"Working directory: {Path.cwd()}")
     
-    # Check if claude-flow exists
-    claude_flow_path = Path.cwd() / "claude-flow"
-    if not claude_flow_path.exists():
-        logger.warning(f"claude-flow not found at {claude_flow_path}")
+    # Check if hive-flow exists
+    hive_flow_path = Path.cwd() / "hive-flow"
+    if not hive_flow_path.exists():
+        logger.warning(f"hive-flow not found at {hive_flow_path}")
         logger.info("Tests will show how the system handles missing executable")
     
     results = []
@@ -213,7 +213,7 @@ async def main():
     logger.info(f"\nTotal: {total_passed}/{len(results)} tests passed")
     
     if total_passed == len(results):
-        logger.info("🎉 All tests passed! Real Claude Flow integration is working!")
+        logger.info("🎉 All tests passed! Real Hive Flow integration is working!")
     else:
         logger.info("⚠️  Some tests failed. Check logs for details.")
     

@@ -1,5 +1,5 @@
 @echo off
-REM Claude-Flow MCP Server V3 Startup Script (Windows)
+REM Hive-Flow MCP Server V3 Startup Script (Windows)
 REM
 REM Usage:
 REM   start-mcp.cmd [options]
@@ -25,8 +25,8 @@ set "PORT=3000"
 set "LOG_LEVEL=info"
 
 REM PID file location
-set "PID_FILE=%TEMP%\claude-flow-mcp.pid"
-set "LOG_FILE=%TEMP%\claude-flow-mcp.log"
+set "PID_FILE=%TEMP%\hive-flow-mcp.pid"
+set "LOG_FILE=%TEMP%\hive-flow-mcp.log"
 
 REM Override from environment variables
 if defined MCP_TRANSPORT set "TRANSPORT=%MCP_TRANSPORT%"
@@ -87,7 +87,7 @@ goto :show_help
 
 :show_help
 echo.
-echo Claude-Flow MCP Server V3 Startup Script (Windows)
+echo Hive-Flow MCP Server V3 Startup Script (Windows)
 echo.
 echo Usage:
 echo   start-mcp.cmd [options]
@@ -127,7 +127,7 @@ if not exist "%SERVER_ENTRY%" (
     exit /b 1
 )
 
-echo [INFO] Starting Claude-Flow MCP Server V3...
+echo [INFO] Starting Hive-Flow MCP Server V3...
 echo [INFO]   Transport: %TRANSPORT%
 echo [INFO]   Host: %HOST%
 echo [INFO]   Port: %PORT%

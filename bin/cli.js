@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Claude Flow CLI - Umbrella entry point
- * Proxies to @claude-flow/cli bin for cross-platform compatibility.
+ * Hive Flow CLI - Umbrella entry point
+ * Proxies to @hive-flow/cli bin for cross-platform compatibility.
  *
  * Includes pre-flight npx cache repair to prevent ENOTEMPTY errors
  * in remote/CI environments (known npm 10.x bug).
@@ -20,5 +20,5 @@ try {
 }
 
 const __dirname2 = dirname(fileURLToPath(import.meta.url));
-const cliPath = join(__dirname2, '..', 'v3', '@claude-flow', 'cli', 'bin', 'cli.js');
+const cliPath = join(__dirname2, '..', 'v3', '@hive-flow', 'cli', 'bin', 'cli.js');
 await import(pathToFileURL(cliPath).href);

@@ -1,8 +1,8 @@
 """
-Real Benchmark Engine - Uses actual Claude Flow commands for benchmarking.
+Real Benchmark Engine - Uses actual Hive Flow commands for benchmarking.
 
-This engine replaces mock/simulated execution with real Claude Flow command execution.
-It integrates with the RealClaudeFlowExecutor to provide accurate benchmarking data.
+This engine replaces mock/simulated execution with real Hive Flow command execution.
+It integrates with the RealHiveFlowExecutor to provide accurate benchmarking data.
 """
 
 import asyncio
@@ -12,8 +12,8 @@ from typing import List, Dict, Any, Optional
 from pathlib import Path
 from dataclasses import dataclass
 
-from .claude_flow_real_executor import (
-    RealClaudeFlowExecutor, 
+from .hive_flow_real_executor import (
+    RealHiveFlowExecutor, 
     SwarmCommand, 
     HiveMindCommand, 
     SparcCommand,
@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class RealBenchmarkResult:
-    """Result from real Claude Flow benchmark execution."""
+    """Result from real Hive Flow benchmark execution."""
     benchmark_id: str
     objective: str
     strategy: str
@@ -107,30 +107,30 @@ class RealBenchmarkResult:
 
 
 class RealBenchmarkEngine:
-    """Benchmark engine that uses real Claude Flow execution."""
+    """Benchmark engine that uses real Hive Flow execution."""
     
     def __init__(self, 
                  config: Optional[BenchmarkConfig] = None,
-                 claude_flow_path: Optional[str] = None,
+                 hive_flow_path: Optional[str] = None,
                  working_dir: Optional[str] = None):
         """
         Initialize the real benchmark engine.
         
         Args:
             config: Benchmark configuration
-            claude_flow_path: Path to Claude Flow executable
+            hive_flow_path: Path to Hive Flow executable
             working_dir: Working directory for execution
         """
         self.config = config or BenchmarkConfig()
-        self.executor = RealClaudeFlowExecutor(claude_flow_path, working_dir)
+        self.executor = RealHiveFlowExecutor(hive_flow_path, working_dir)
         self.status = "READY"
         self.current_benchmarks = {}
         
         logger.info("Initialized RealBenchmarkEngine")
         
-        # Validate Claude Flow installation
+        # Validate Hive Flow installation
         if not self.executor.validate_installation():
-            logger.warning("Claude Flow installation validation failed")
+            logger.warning("Hive Flow installation validation failed")
     
     async def run_swarm_benchmark(self, 
                                  objective: str,

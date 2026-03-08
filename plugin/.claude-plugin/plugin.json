@@ -1,13 +1,13 @@
 {
-  "name": "claude-flow",
+  "name": "hive-flow",
   "description": "Multi-agent swarm coordination, memory management, SPARC methodology, and intelligent hooks for Claude Code. Provides 60+ skills, 100+ commands, and 80+ specialized agents.",
   "version": "3.0.0",
   "author": {
     "name": "ruvnet",
     "url": "https://github.com/ruvnet"
   },
-  "homepage": "https://github.com/ruvnet/claude-flow",
-  "repository": "https://github.com/ruvnet/claude-flow",
+  "homepage": "https://github.com/ruvnet/hive-flow",
+  "repository": "https://github.com/ruvnet/hive-flow",
   "license": "MIT",
   "keywords": [
     "swarm",

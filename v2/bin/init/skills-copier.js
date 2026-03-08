@@ -20,7 +20,7 @@ export async function copySkillFiles(targetDir, options = {}) {
   // Path to skill files - try multiple locations
   const packageSkillsDir = join(__dirname, '../../.claude/skills'); // From npm package (bin/init/ -> root)
   const localSkillsDir = join(__dirname, '../../../.claude/skills'); // Local development (for testing)
-  const globalNpmSkillsDir = '/usr/local/lib/node_modules/claude-flow/.claude/skills'; // Global npm install
+  const globalNpmSkillsDir = '/usr/local/lib/node_modules/hive-flow/.claude/skills'; // Global npm install
 
   let sourceSkillsDir;
 

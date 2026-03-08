@@ -126,7 +126,7 @@ export class ProcessUI {
     const stats = this.processManager.getSystemStats();
 
     // Header
-    console.log(chalk.cyan.bold('🧠 Claude-Flow Process Manager'));
+    console.log(chalk.cyan.bold('🧠 Hive-Flow Process Manager'));
     console.log(chalk.gray('─'.repeat(60)));
 
     // System stats
@@ -296,7 +296,7 @@ export class ProcessUI {
 
   private showHelp(): void {
     console.log();
-    console.log(chalk.cyan.bold('🧠 Claude-Flow Process Manager - Help'));
+    console.log(chalk.cyan.bold('🧠 Hive-Flow Process Manager - Help'));
     console.log(chalk.gray('─'.repeat(60)));
     console.log();
     console.log(chalk.white.bold('Commands:'));

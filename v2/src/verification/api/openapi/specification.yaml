@@ -1,9 +1,9 @@
 openapi: 3.0.0
 info:
-  title: Claude Flow Verification API
+  title: Hive Flow Verification API
   version: 1.0.0
   description: |
-    Comprehensive verification API for truth monitoring and agent verification in Claude Flow.
+    Comprehensive verification API for truth monitoring and agent verification in Hive Flow.
     
     This API provides:
     - REST endpoints for verification status and management
@@ -23,17 +23,17 @@ info:
     All errors follow RFC 7807 Problem Details format.
     
   contact:
-    name: Claude Flow API Support
-    url: https://github.com/ruvnet/claude-flow
-    email: support@claude-flow.dev
+    name: Hive Flow API Support
+    url: https://github.com/ruvnet/hive-flow
+    email: support@hive-flow.dev
   license:
     name: MIT
     url: https://opensource.org/licenses/MIT
     
 servers:
-  - url: https://api.claude-flow.dev/v1
+  - url: https://api.hive-flow.dev/v1
     description: Production server
-  - url: https://staging-api.claude-flow.dev/v1
+  - url: https://staging-api.hive-flow.dev/v1
     description: Staging server
   - url: http://localhost:3000/api/verification
     description: Local development server

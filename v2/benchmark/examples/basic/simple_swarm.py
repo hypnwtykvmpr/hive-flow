@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Simple swarm benchmark example using real claude-flow execution.
+Simple swarm benchmark example using real hive-flow execution.
 
 This example demonstrates:
 - Basic swarm initialization
@@ -106,7 +106,7 @@ def show_best_practices():
         "Always collect metrics for performance analysis",
         "Use hierarchical coordination for complex tasks",
         "Monitor token consumption to optimize costs",
-        "Test with real claude-flow integration for accurate results"
+        "Test with real hive-flow integration for accurate results"
     ]
     
     for i, practice in enumerate(practices, 1):

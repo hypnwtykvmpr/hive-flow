@@ -1,0 +1,61 @@
+{
+  "name": "@hive-flow/testing",
+  "version": "3.0.0-alpha.6",
+  "type": "module",
+  "description": "Testing module - TDD London School framework, test utilities, fixtures, and mock services for V3 Hive-Flow",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.js",
+      "import": "./dist/index.js"
+    },
+    "./helpers": {
+      "types": "./dist/helpers/index.d.js",
+      "import": "./dist/helpers/index.js"
+    },
+    "./fixtures": {
+      "types": "./dist/fixtures/index.d.js",
+      "import": "./dist/fixtures/index.js"
+    },
+    "./mocks": {
+      "types": "./dist/mocks/index.d.js",
+      "import": "./dist/mocks/index.js"
+    },
+    "./setup": {
+      "types": "./dist/setup.d.js",
+      "import": "./dist/setup.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "hive-flow",
+    "testing",
+    "vitest",
+    "tdd",
+    "london-school",
+    "mocks",
+    "fixtures"
+  ],
+  "peerDependencies": {
+    "@hive-flow/memory": "workspace:*",
+    "@hive-flow/shared": "workspace:*",
+    "@hive-flow/swarm": "workspace:*",
+    "vitest": ">=1.0.0"
+  },
+  "devDependencies": {
+    "@hive-flow/memory": "workspace:*",
+    "@hive-flow/shared": "workspace:*",
+    "@hive-flow/swarm": "workspace:*",
+    "typescript": "^5.3.0",
+    "vitest": "^4.0.16"
+  },
+  "publishConfig": {
+    "access": "public",
+    "tag": "v3alpha"
+  }
+}

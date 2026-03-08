@@ -2,7 +2,7 @@
 
 /**
  * SDK Integration Validation Script
- * Claude-Flow v2.5-alpha.130
+ * Hive-Flow v2.5-alpha.130
  *
  * Validates that SDK integration works without regressions
  */
@@ -16,7 +16,7 @@ const __dirname = path.dirname(__filename);
 
 // Set environment
 process.env.NODE_ENV = 'development';
-process.env.CLAUDE_FLOW_ENV = 'production';
+process.env.HIVE_FLOW_ENV = 'production';
 process.env.ANTHROPIC_API_KEY = 'test-key-validation';
 
 console.log('🔍 Validating SDK Integration for v2.5-alpha.130...\n');
@@ -62,8 +62,8 @@ test('SDK Configuration Adapter exists and loads', async () => {
 
   // Check exports
   const content = fs.readFileSync(sdkConfigPath, 'utf8');
-  if (!content.includes('export class ClaudeFlowSDKAdapter')) {
-    throw new Error('ClaudeFlowSDKAdapter not exported');
+  if (!content.includes('export class HiveFlowSDKAdapter')) {
+    throw new Error('HiveFlowSDKAdapter not exported');
   }
   if (!content.includes('export const defaultSDKAdapter')) {
     throw new Error('defaultSDKAdapter not exported');
@@ -109,8 +109,8 @@ test('Claude Client v2.5 exists and uses SDK', async () => {
   }
 
   // Check adapter usage
-  if (!content.includes('ClaudeFlowSDKAdapter')) {
-    throw new Error('Not using ClaudeFlowSDKAdapter');
+  if (!content.includes('HiveFlowSDKAdapter')) {
+    throw new Error('Not using HiveFlowSDKAdapter');
   }
 
   // Check backward compat
@@ -133,8 +133,8 @@ test('Task Executor SDK exists and uses new client', async () => {
     throw new Error('Not using ClaudeClientV25');
   }
 
-  if (!content.includes('ClaudeFlowSDKAdapter')) {
-    throw new Error('Not using ClaudeFlowSDKAdapter');
+  if (!content.includes('HiveFlowSDKAdapter')) {
+    throw new Error('Not using HiveFlowSDKAdapter');
   }
 
   // Check methods

@@ -1,5 +1,5 @@
 """
-Multi-mode SWE-bench engine that tests all claude-flow non-interactive options.
+Multi-mode SWE-bench engine that tests all hive-flow non-interactive options.
 Tests swarm, sparc, hive-mind with various configurations.
 """
 
@@ -17,8 +17,8 @@ from ..core.models import BenchmarkConfig, StrategyType, CoordinationMode
 
 
 @dataclass
-class ClaudeFlowMode:
-    """Represents a claude-flow execution mode."""
+class HiveFlowMode:
+    """Represents a hive-flow execution mode."""
     command_type: str  # swarm, sparc, hive-mind
     subcommand: Optional[str] = None  # for sparc modes, hive-mind spawn
     strategy: Optional[str] = None  # for swarm
@@ -31,9 +31,9 @@ class ClaudeFlowMode:
         if self.extra_args is None:
             self.extra_args = []
     
-    def build_command(self, claude_flow_path: str, prompt: str) -> List[str]:
+    def build_command(self, hive_flow_path: str, prompt: str) -> List[str]:
         """Build the complete command array."""
-        cmd = [claude_flow_path]
+        cmd = [hive_flow_path]
         
         if self.command_type == "swarm":
             cmd.extend(["swarm", prompt])
@@ -78,58 +78,58 @@ class ClaudeFlowMode:
 
 
 class MultiModeSWEBenchEngine(OfficialSWEBenchEngine):
-    """SWE-bench engine that tests multiple claude-flow modes."""
+    """SWE-bench engine that tests multiple hive-flow modes."""
     
     # Define all modes to test
-    CLAUDE_FLOW_MODES = [
+    HIVE_FLOW_MODES = [
         # Swarm modes with different strategies
-        ClaudeFlowMode("swarm", strategy="auto", mode="centralized", agents=5, 
+        HiveFlowMode("swarm", strategy="auto", mode="centralized", agents=5, 
                       description="Swarm auto strategy, centralized"),
-        ClaudeFlowMode("swarm", strategy="research", mode="distributed", agents=5,
+        HiveFlowMode("swarm", strategy="research", mode="distributed", agents=5,
                       description="Swarm research strategy, distributed"),
-        ClaudeFlowMode("swarm", strategy="development", mode="hierarchical", agents=8,
+        HiveFlowMode("swarm", strategy="development", mode="hierarchical", agents=8,
                       description="Swarm development strategy, hierarchical"),
-        ClaudeFlowMode("swarm", strategy="optimization", mode="mesh", agents=8,
+        HiveFlowMode("swarm", strategy="optimization", mode="mesh", agents=8,
                       description="Swarm optimization strategy, mesh (optimal)"),
-        ClaudeFlowMode("swarm", strategy="testing", mode="centralized", agents=3,
+        HiveFlowMode("swarm", strategy="testing", mode="centralized", agents=3,
                       description="Swarm testing strategy, centralized"),
-        ClaudeFlowMode("swarm", strategy="analysis", mode="distributed", agents=5,
+        HiveFlowMode("swarm", strategy="analysis", mode="distributed", agents=5,
                       description="Swarm analysis strategy, distributed"),
-        ClaudeFlowMode("swarm", strategy="maintenance", mode="hierarchical", agents=5,
+        HiveFlowMode("swarm", strategy="maintenance", mode="hierarchical", agents=5,
                       description="Swarm maintenance strategy, hierarchical"),
         
         # SPARC modes
-        ClaudeFlowMode("sparc", subcommand="coder", agents=5,
+        HiveFlowMode("sparc", subcommand="coder", agents=5,
                       description="SPARC coder mode"),
-        ClaudeFlowMode("sparc", subcommand="architect", agents=5,
+        HiveFlowMode("sparc", subcommand="architect", agents=5,
                       description="SPARC architect mode"),
-        ClaudeFlowMode("sparc", subcommand="tdd", agents=5,
+        HiveFlowMode("sparc", subcommand="tdd", agents=5,
                       description="SPARC TDD mode"),
-        ClaudeFlowMode("sparc", subcommand="reviewer", agents=3,
+        HiveFlowMode("sparc", subcommand="reviewer", agents=3,
                       description="SPARC reviewer mode"),
-        ClaudeFlowMode("sparc", subcommand="tester", agents=3,
+        HiveFlowMode("sparc", subcommand="tester", agents=3,
                       description="SPARC tester mode"),
-        ClaudeFlowMode("sparc", subcommand="optimizer", agents=5,
+        HiveFlowMode("sparc", subcommand="optimizer", agents=5,
                       description="SPARC optimizer mode"),
-        ClaudeFlowMode("sparc", subcommand="debugger", agents=5,
+        HiveFlowMode("sparc", subcommand="debugger", agents=5,
                       description="SPARC debugger mode"),
-        ClaudeFlowMode("sparc", subcommand="documenter", agents=3,
+        HiveFlowMode("sparc", subcommand="documenter", agents=3,
                       description="SPARC documenter mode"),
         
         # Hive-mind configurations
-        ClaudeFlowMode("hive-mind", agents=4,
+        HiveFlowMode("hive-mind", agents=4,
                       description="Hive-mind default (4 workers)"),
-        ClaudeFlowMode("hive-mind", agents=8,
+        HiveFlowMode("hive-mind", agents=8,
                       description="Hive-mind with 8 workers"),
-        ClaudeFlowMode("hive-mind", agents=2, extra_args=["--queen-type", "tactical"],
+        HiveFlowMode("hive-mind", agents=2, extra_args=["--queen-type", "tactical"],
                       description="Hive-mind tactical queen, 2 workers"),
-        ClaudeFlowMode("hive-mind", agents=6, extra_args=["--queen-type", "adaptive"],
+        HiveFlowMode("hive-mind", agents=6, extra_args=["--queen-type", "adaptive"],
                       description="Hive-mind adaptive queen, 6 workers"),
         
         # Special configurations
-        ClaudeFlowMode("swarm", strategy="auto", mode="hybrid", agents=10,
+        HiveFlowMode("swarm", strategy="auto", mode="hybrid", agents=10,
                       extra_args=["--parallel"], description="Swarm hybrid mode with parallel execution"),
-        ClaudeFlowMode("sparc", subcommand="batch", agents=8,
+        HiveFlowMode("sparc", subcommand="batch", agents=8,
                       extra_args=["--parallel"], description="SPARC batch mode with parallel"),
     ]
     
@@ -138,8 +138,8 @@ class MultiModeSWEBenchEngine(OfficialSWEBenchEngine):
         super().__init__(config)
         self.mode_results = {}
         
-    async def run_instance_with_mode(self, instance: Dict[str, Any], mode: ClaudeFlowMode) -> Dict[str, Any]:
-        """Run a single instance with a specific claude-flow mode."""
+    async def run_instance_with_mode(self, instance: Dict[str, Any], mode: HiveFlowMode) -> Dict[str, Any]:
+        """Run a single instance with a specific hive-flow mode."""
         
         instance_id = instance["instance_id"]
         repo = instance["repo"]
@@ -163,13 +163,13 @@ class MultiModeSWEBenchEngine(OfficialSWEBenchEngine):
             prompt_builder = SWEBenchPromptBuilder(prompt_config)
             simple_prompt = prompt_builder.build_prompt(instance)
             
-            # Get claude-flow path
-            claude_flow_path = './claude-flow'
+            # Get hive-flow path
+            hive_flow_path = './hive-flow'
             if Path.cwd().name == 'benchmark':
-                claude_flow_path = '../claude-flow'
+                hive_flow_path = '../hive-flow'
             
             # Build command
-            cmd_args = mode.build_command(claude_flow_path, simple_prompt)
+            cmd_args = mode.build_command(hive_flow_path, simple_prompt)
             
             # Display FULL command without truncation
             if len(cmd_args) > 3 and cmd_args[3] == simple_prompt:
@@ -239,14 +239,14 @@ class MultiModeSWEBenchEngine(OfficialSWEBenchEngine):
     async def benchmark_all_modes(
         self,
         instances_limit: int = 1,
-        modes_to_test: Optional[List[ClaudeFlowMode]] = None
+        modes_to_test: Optional[List[HiveFlowMode]] = None
     ) -> Dict[str, Any]:
-        """Benchmark all claude-flow modes on SWE-bench instances."""
+        """Benchmark all hive-flow modes on SWE-bench instances."""
         
         print("""
 ╔══════════════════════════════════════════════════════════════╗
 ║         Multi-Mode SWE-Bench Evaluation                       ║
-║     Testing All Claude-Flow Non-Interactive Modes             ║
+║     Testing All Hive-Flow Non-Interactive Modes             ║
 ╚══════════════════════════════════════════════════════════════╝
 """)
         
@@ -258,7 +258,7 @@ class MultiModeSWEBenchEngine(OfficialSWEBenchEngine):
         instances = list(self.dataset)[:instances_limit]
         
         # Select modes to test
-        modes = modes_to_test or self.CLAUDE_FLOW_MODES
+        modes = modes_to_test or self.HIVE_FLOW_MODES
         
         print(f"\n📊 Testing {len(modes)} modes on {len(instances)} instances")
         print(f"   Total tests: {len(modes) * len(instances)}")

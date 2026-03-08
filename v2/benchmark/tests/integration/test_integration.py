@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Test script for claude-flow integration.
+Test script for hive-flow integration.
 
 This script tests the integration layer to ensure proper execution
-of claude-flow commands with comprehensive error handling and output capture.
+of hive-flow commands with comprehensive error handling and output capture.
 """
 
 import sys
@@ -14,8 +14,8 @@ from pathlib import Path
 # Add benchmark src to path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from swarm_benchmark.core.claude_flow_executor import (
-    ClaudeFlowExecutor, SwarmConfig, SparcConfig, 
+from swarm_benchmark.core.hive_flow_executor import (
+    HiveFlowExecutor, SwarmConfig, SparcConfig, 
     ExecutionStrategy, CoordinationMode, SparcMode
 )
 from swarm_benchmark.core.integration_utils import (
@@ -38,14 +38,14 @@ def test_executor_initialization():
     
     try:
         # Initialize executor
-        executor = ClaudeFlowExecutor()
-        print(f"✅ Executor initialized with path: {executor.claude_flow_path}")
+        executor = HiveFlowExecutor()
+        print(f"✅ Executor initialized with path: {executor.hive_flow_path}")
         
         # Validate installation
         if executor.validate_installation():
-            print("✅ Claude-flow installation validated")
+            print("✅ Hive-flow installation validated")
         else:
-            print("❌ Claude-flow installation validation failed")
+            print("❌ Hive-flow installation validation failed")
             
     except Exception as e:
         print(f"❌ Failed to initialize executor: {e}")
@@ -59,7 +59,7 @@ def test_swarm_execution():
     print("\n=== Testing Swarm Execution ===")
     
     try:
-        executor = ClaudeFlowExecutor()
+        executor = HiveFlowExecutor()
         
         # Test configuration
         config = SwarmConfig(
@@ -108,7 +108,7 @@ def test_sparc_execution():
     print("\n=== Testing SPARC Execution ===")
     
     try:
-        executor = ClaudeFlowExecutor()
+        executor = HiveFlowExecutor()
         
         # Test configuration
         config = SparcConfig(
@@ -181,7 +181,7 @@ def test_error_handling():
     print("\n=== Testing Error Handling ===")
     
     test_errors = [
-        "command not found: claude-flow",
+        "command not found: hive-flow",
         "Error: invalid option --invalid",
         "Process terminated with signal 11",
         "Connection refused while fetching data",
@@ -232,7 +232,7 @@ def test_progress_tracking():
 
 def main():
     """Run all integration tests."""
-    print("🧪 Claude-Flow Integration Tests")
+    print("🧪 Hive-Flow Integration Tests")
     print("=" * 50)
     
     tests = [

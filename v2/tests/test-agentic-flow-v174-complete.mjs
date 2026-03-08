@@ -9,7 +9,7 @@ import { join } from 'path';
 
 console.log('🧪 agentic-flow v1.7.4 - Complete Integration Test\n');
 console.log('📦 Package: agentic-flow@1.7.4');
-console.log('🔗 Integration: claude-flow@alpha v2.7.1\n');
+console.log('🔗 Integration: hive-flow@alpha v2.7.1\n');
 
 // Setup test database
 const testDbPath = '.test-v174';
@@ -214,4 +214,4 @@ console.log('   - Quick Start: docs/v1.7.1-QUICK-START.md (from agentic-flow rep
 console.log('   - Integration Test: docs/integrations/agentic-flow/INTEGRATION-TEST-v1.7.1.md');
 console.log('   - Release Notes: docs/integrations/agentic-flow/RELEASE-v1.7.1.md');
 console.log('');
-console.log('✅ Ready to update claude-flow documentation and announce!');
+console.log('✅ Ready to update hive-flow documentation and announce!');

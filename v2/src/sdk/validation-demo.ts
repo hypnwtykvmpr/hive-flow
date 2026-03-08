@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * SDK Integration Validation Demo
- * Claude-Flow v2.5-alpha.130+
+ * Hive-Flow v2.5-alpha.130+
  *
  * PROOF that SDK features are:
  * 1. Actually functional (not fake)
@@ -481,7 +481,7 @@ async function validateIntegration(): Promise<boolean> {
  */
 async function main() {
   console.log('\n╔═══════════════════════════════════════════════════════════╗');
-  console.log('║  Claude-Flow SDK Integration Validation                  ║');
+  console.log('║  Hive-Flow SDK Integration Validation                  ║');
   console.log('║  Proving features are REAL, BENEFICIAL, and INTEGRATED   ║');
   console.log('╚═══════════════════════════════════════════════════════════╝');
 

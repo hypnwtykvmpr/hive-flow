@@ -1,6 +1,6 @@
 # Automatic Error Recovery
 
-Claude-Flow v2.7.35+ includes intelligent automatic error recovery that handles common installation and initialization issues without manual intervention.
+Hive-Flow v2.7.35+ includes intelligent automatic error recovery that handles common installation and initialization issues without manual intervention.
 
 ## Overview
 
@@ -69,10 +69,10 @@ if (sqliteInitFails && retries > maxRetries) {
 
 ```bash
 # Standard initialization with automatic recovery
-npx claude-flow@alpha init
+npx hive-flow@alpha init
 
 # Force mode with extended retries (5 attempts)
-npx claude-flow@alpha init --force
+npx hive-flow@alpha init --force
 ```
 
 ### Manual Recovery Commands
@@ -85,10 +85,10 @@ npm cache clean --force
 rm -rf ~/.npm/_npx
 
 # Check WSL environment
-npx claude-flow@alpha diagnose --wsl
+npx hive-flow@alpha diagnose --wsl
 
 # Verify dependencies
-npx claude-flow@alpha verify --deps
+npx hive-flow@alpha verify --deps
 ```
 
 ## Recovery Process Flow
@@ -191,7 +191,7 @@ export interface RetryOptions {
 ### Error Recovery Settings
 
 ```json
-// .claude-flow/config.json
+// .hive-flow/config.json
 {
   "errorRecovery": {
     "enabled": true,
@@ -208,7 +208,7 @@ export interface RetryOptions {
 ### Recovery Log Output
 
 ```bash
-npx claude-flow@alpha init --force
+npx hive-flow@alpha init --force
 
 🔍 WSL environment detected
 ✅ WSL environment optimized
@@ -234,7 +234,7 @@ npx claude-flow@alpha init --force
 
 ```bash
 # Enable verbose error recovery logging
-DEBUG=claude-flow:error-recovery npx claude-flow@alpha init --force
+DEBUG=hive-flow:error-recovery npx hive-flow@alpha init --force
 ```
 
 ## API Usage
@@ -242,7 +242,7 @@ DEBUG=claude-flow:error-recovery npx claude-flow@alpha init --force
 ### Programmatic Error Recovery
 
 ```typescript
-import { errorRecovery } from 'claude-flow/utils/error-recovery';
+import { errorRecovery } from 'hive-flow/utils/error-recovery';
 
 // Check if error is recoverable
 if (errorRecovery.isNpmCacheError(error)) {
@@ -330,4 +330,4 @@ Error recovery adds minimal overhead:
 
 ---
 
-**Need Help?** Report issues at https://github.com/ruvnet/claude-flow/issues
+**Need Help?** Report issues at https://github.com/ruvnet/hive-flow/issues

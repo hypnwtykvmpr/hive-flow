@@ -18,16 +18,16 @@
         {
           "id": "c291e39b-c758-4bb5-8950-34b410c4eaa6",
           "task_id": "7f9f6d98-8cc3-48d1-8f96-2f3a73e0f0f2",
-          "agent_id": "claude-flow",
+          "agent_id": "hive-flow",
           "status": "success",
           "output": {
-            "raw_output": "\u274c SPARC configuration file (.roomodes) not found\nPlease ensure .roomodes file exists in: /workspaces/claude-code-flow/benchmark\n\nTo enable SPARC development modes, run:\n  npx claude-flow@latest init --sparc",
+            "raw_output": "\u274c SPARC configuration file (.roomodes) not found\nPlease ensure .roomodes file exists in: /workspaces/claude-code-flow/benchmark\n\nTo enable SPARC development modes, run:\n  npx hive-flow@latest init --sparc",
             "lines": [
               "\u274c SPARC configuration file (.roomodes) not found",
               "Please ensure .roomodes file exists in: /workspaces/claude-code-flow/benchmark",
               "",
               "To enable SPARC development modes, run:",
-              "  npx claude-flow@latest init --sparc"
+              "  npx hive-flow@latest init --sparc"
             ],
             "sections": {}
           },
@@ -70,16 +70,16 @@
             {
               "id": "336768f3-22e3-42a7-bcb9-a648c705f920",
               "task_id": "8a677675-83d8-4d35-ba54-ef2ed75c0394",
-              "agent_id": "claude-flow",
+              "agent_id": "hive-flow",
               "status": "success",
               "output": {
-                "raw_output": "\u274c SPARC configuration file (.roomodes) not found\nPlease ensure .roomodes file exists in: /workspaces/claude-code-flow/benchmark\n\nTo enable SPARC development modes, run:\n  npx claude-flow@latest init --sparc",
+                "raw_output": "\u274c SPARC configuration file (.roomodes) not found\nPlease ensure .roomodes file exists in: /workspaces/claude-code-flow/benchmark\n\nTo enable SPARC development modes, run:\n  npx hive-flow@latest init --sparc",
                 "lines": [
                   "\u274c SPARC configuration file (.roomodes) not found",
                   "Please ensure .roomodes file exists in: /workspaces/claude-code-flow/benchmark",
                   "",
                   "To enable SPARC development modes, run:",
-                  "  npx claude-flow@latest init --sparc"
+                  "  npx hive-flow@latest init --sparc"
                 ],
                 "sections": {}
               },
@@ -115,16 +115,16 @@
             {
               "id": "89f4dc5c-49ff-4a05-8b20-41d5b04699bc",
               "task_id": "0b2a8687-eb02-480e-b611-6c1673116e28",
-              "agent_id": "claude-flow",
+              "agent_id": "hive-flow",
               "status": "success",
               "output": {
-                "raw_output": "\u274c SPARC configuration file (.roomodes) not found\nPlease ensure .roomodes file exists in: /workspaces/claude-code-flow/benchmark\n\nTo enable SPARC development modes, run:\n  npx claude-flow@latest init --sparc",
+                "raw_output": "\u274c SPARC configuration file (.roomodes) not found\nPlease ensure .roomodes file exists in: /workspaces/claude-code-flow/benchmark\n\nTo enable SPARC development modes, run:\n  npx hive-flow@latest init --sparc",
                 "lines": [
                   "\u274c SPARC configuration file (.roomodes) not found",
                   "Please ensure .roomodes file exists in: /workspaces/claude-code-flow/benchmark",
                   "",
                   "To enable SPARC development modes, run:",
-                  "  npx claude-flow@latest init --sparc"
+                  "  npx hive-flow@latest init --sparc"
                 ],
                 "sections": {}
               },
@@ -160,16 +160,16 @@
             {
               "id": "badce472-9a1e-4211-8512-12c2f0bf33fc",
               "task_id": "6b7bc80c-4b7d-4747-8594-57e83564e739",
-              "agent_id": "claude-flow",
+              "agent_id": "hive-flow",
               "status": "success",
               "output": {
-                "raw_output": "\u274c SPARC configuration file (.roomodes) not found\nPlease ensure .roomodes file exists in: /workspaces/claude-code-flow/benchmark\n\nTo enable SPARC development modes, run:\n  npx claude-flow@latest init --sparc",
+                "raw_output": "\u274c SPARC configuration file (.roomodes) not found\nPlease ensure .roomodes file exists in: /workspaces/claude-code-flow/benchmark\n\nTo enable SPARC development modes, run:\n  npx hive-flow@latest init --sparc",
                 "lines": [
                   "\u274c SPARC configuration file (.roomodes) not found",
                   "Please ensure .roomodes file exists in: /workspaces/claude-code-flow/benchmark",
                   "",
                   "To enable SPARC development modes, run:",
-                  "  npx claude-flow@latest init --sparc"
+                  "  npx hive-flow@latest init --sparc"
                 ],
                 "sections": {}
               },
@@ -191,10 +191,10 @@
   "Parallel Benchmarking": {
     "status": "success",
     "result": [
-      "Result(id='3ba5e25d-4eea-4801-b128-235332756ab1', task_id='25e0ee9d-766f-468c-80d6-b8d96de87812', agent_id='claude-flow', status=<ResultStatus.SUCCESS: 'success'>, output={'raw_output': '\u274c SPARC configuration file (.roomodes) not found\\nPlease ensure .roomodes file exists in: /workspaces/claude-code-flow/benchmark\\n\\nTo enable SPARC development modes, run:\\n  npx claude-flow@latest init --sparc', 'lines': ['\u274c SPARC configuration file (.roomodes) not found', 'Please ensure .roomodes file exists in: /workspaces/claude-code-flow/benchmark', '', 'To enable SPARC development modes, run:', '  npx claude-flow@latest init --sparc'], 'sections': {}}, errors=[], warnings=[], performance_metrics=PerformanceMetrics(execution_time=0.37185192108154297, queue_time=0.0, throughput=2.6892425272174703, success_rate=1.0, error_rate=0.0, retry_count=0, coordination_overhead=0.0, communication_latency=0.0), quality_metrics=QualityMetrics(accuracy_score=1.0, completeness_score=1.0, consistency_score=0.0, relevance_score=0.0, overall_quality=1.0, review_score=None, automated_score=None), resource_usage=ResourceUsage(cpu_percent=115.30000000000001, memory_mb=53.2490234375, network_bytes_sent=0, network_bytes_recv=0, disk_bytes_read=0, disk_bytes_write=0, peak_memory_mb=73.31640625, average_cpu_percent=115.30000000000001), execution_details={'command': 'claude-flow sparc coder Create a user authentication module', 'exit_code': 0, 'output_lines': 5, 'error_count': 0}, created_at=datetime.datetime(2025, 8, 6, 1, 51, 54, 766217), started_at=datetime.datetime(2025, 8, 6, 1, 51, 54, 342599), completed_at=datetime.datetime(2025, 8, 6, 1, 51, 54, 765947))",
-      "Result(id='6ad1de94-a39f-4584-8db5-61618a8bab9d', task_id='11bee0d6-3e50-4c43-ba87-3e0ac0a8799c', agent_id='claude-flow', status=<ResultStatus.SUCCESS: 'success'>, output={'raw_output': '\u274c SPARC configuration file (.roomodes) not found\\nPlease ensure .roomodes file exists in: /workspaces/claude-code-flow/benchmark\\n\\nTo enable SPARC development modes, run:\\n  npx claude-flow@latest init --sparc', 'lines': ['\u274c SPARC configuration file (.roomodes) not found', 'Please ensure .roomodes file exists in: /workspaces/claude-code-flow/benchmark', '', 'To enable SPARC development modes, run:', '  npx claude-flow@latest init --sparc'], 'sections': {}}, errors=[], warnings=[], performance_metrics=PerformanceMetrics(execution_time=0.3467600345611572, queue_time=0.0, throughput=2.8838386790033397, success_rate=1.0, error_rate=0.0, retry_count=0, coordination_overhead=0.0, communication_latency=0.0), quality_metrics=QualityMetrics(accuracy_score=1.0, completeness_score=1.0, consistency_score=0.0, relevance_score=0.0, overall_quality=1.0, review_score=None, automated_score=None), resource_usage=ResourceUsage(cpu_percent=104.7, memory_mb=50.1728515625, network_bytes_sent=0, network_bytes_recv=0, disk_bytes_read=0, disk_bytes_write=0, peak_memory_mb=71.125, average_cpu_percent=104.7), execution_details={'command': 'claude-flow sparc researcher Research best practices for API security', 'exit_code': 0, 'output_lines': 5, 'error_count': 0}, created_at=datetime.datetime(2025, 8, 6, 1, 51, 54, 760254), started_at=datetime.datetime(2025, 8, 6, 1, 51, 54, 342862), completed_at=datetime.datetime(2025, 8, 6, 1, 51, 54, 759914))",
-      "Result(id='b63953bd-b3e8-46b7-bc7f-7ca74663a842', task_id='0977b4b9-90c5-4a46-9aac-6e26d505d486', agent_id='claude-flow', status=<ResultStatus.SUCCESS: 'success'>, output={'raw_output': '\u274c SPARC configuration file (.roomodes) not found\\nPlease ensure .roomodes file exists in: /workspaces/claude-code-flow/benchmark\\n\\nTo enable SPARC development modes, run:\\n  npx claude-flow@latest init --sparc', 'lines': ['\u274c SPARC configuration file (.roomodes) not found', 'Please ensure .roomodes file exists in: /workspaces/claude-code-flow/benchmark', '', 'To enable SPARC development modes, run:', '  npx claude-flow@latest init --sparc'], 'sections': {}}, errors=[], warnings=[], performance_metrics=PerformanceMetrics(execution_time=0.34688830375671387, queue_time=0.0, throughput=2.8827723194188137, success_rate=1.0, error_rate=0.0, retry_count=0, coordination_overhead=0.0, communication_latency=0.0), quality_metrics=QualityMetrics(accuracy_score=1.0, completeness_score=1.0, consistency_score=0.0, relevance_score=0.0, overall_quality=1.0, review_score=None, automated_score=None), resource_usage=ResourceUsage(cpu_percent=105.725, memory_mb=47.6796875, network_bytes_sent=0, network_bytes_recv=0, disk_bytes_read=0, disk_bytes_write=0, peak_memory_mb=70.48046875, average_cpu_percent=105.725), execution_details={'command': 'claude-flow sparc analyzer Analyze code for performance bottlenecks', 'exit_code': 0, 'output_lines': 5, 'error_count': 0}, created_at=datetime.datetime(2025, 8, 6, 1, 51, 54, 767163), started_at=datetime.datetime(2025, 8, 6, 1, 51, 54, 343263), completed_at=datetime.datetime(2025, 8, 6, 1, 51, 54, 766944))",
-      "Result(id='4be5c45f-64a7-4130-a38d-8bc42fe1a531', task_id='70287046-e729-43b7-b525-a1004df6ac30', agent_id='claude-flow', status=<ResultStatus.SUCCESS: 'success'>, output={'raw_output': '\u274c SPARC configuration file (.roomodes) not found\\nPlease ensure .roomodes file exists in: /workspaces/claude-code-flow/benchmark\\n\\nTo enable SPARC development modes, run:\\n  npx claude-flow@latest init --sparc', 'lines': ['\u274c SPARC configuration file (.roomodes) not found', 'Please ensure .roomodes file exists in: /workspaces/claude-code-flow/benchmark', '', 'To enable SPARC development modes, run:', '  npx claude-flow@latest init --sparc'], 'sections': {}}, errors=[], warnings=[], performance_metrics=PerformanceMetrics(execution_time=0.3901090621948242, queue_time=0.0, throughput=2.563385721864083, success_rate=1.0, error_rate=0.0, retry_count=0, coordination_overhead=0.0, communication_latency=0.0), quality_metrics=QualityMetrics(accuracy_score=1.0, completeness_score=1.0, consistency_score=0.0, relevance_score=0.0, overall_quality=1.0, review_score=None, automated_score=None), resource_usage=ResourceUsage(cpu_percent=103.2, memory_mb=47.36328125, network_bytes_sent=0, network_bytes_recv=0, disk_bytes_read=0, disk_bytes_write=0, peak_memory_mb=69.7578125, average_cpu_percent=103.2), execution_details={'command': 'claude-flow sparc tester Generate comprehensive test suite', 'exit_code': 0, 'output_lines': 5, 'error_count': 0}, created_at=datetime.datetime(2025, 8, 6, 1, 51, 54, 766468), started_at=datetime.datetime(2025, 8, 6, 1, 51, 54, 344317), completed_at=datetime.datetime(2025, 8, 6, 1, 51, 54, 766318))"
+      "Result(id='3ba5e25d-4eea-4801-b128-235332756ab1', task_id='25e0ee9d-766f-468c-80d6-b8d96de87812', agent_id='hive-flow', status=<ResultStatus.SUCCESS: 'success'>, output={'raw_output': '\u274c SPARC configuration file (.roomodes) not found\\nPlease ensure .roomodes file exists in: /workspaces/claude-code-flow/benchmark\\n\\nTo enable SPARC development modes, run:\\n  npx hive-flow@latest init --sparc', 'lines': ['\u274c SPARC configuration file (.roomodes) not found', 'Please ensure .roomodes file exists in: /workspaces/claude-code-flow/benchmark', '', 'To enable SPARC development modes, run:', '  npx hive-flow@latest init --sparc'], 'sections': {}}, errors=[], warnings=[], performance_metrics=PerformanceMetrics(execution_time=0.37185192108154297, queue_time=0.0, throughput=2.6892425272174703, success_rate=1.0, error_rate=0.0, retry_count=0, coordination_overhead=0.0, communication_latency=0.0), quality_metrics=QualityMetrics(accuracy_score=1.0, completeness_score=1.0, consistency_score=0.0, relevance_score=0.0, overall_quality=1.0, review_score=None, automated_score=None), resource_usage=ResourceUsage(cpu_percent=115.30000000000001, memory_mb=53.2490234375, network_bytes_sent=0, network_bytes_recv=0, disk_bytes_read=0, disk_bytes_write=0, peak_memory_mb=73.31640625, average_cpu_percent=115.30000000000001), execution_details={'command': 'hive-flow sparc coder Create a user authentication module', 'exit_code': 0, 'output_lines': 5, 'error_count': 0}, created_at=datetime.datetime(2025, 8, 6, 1, 51, 54, 766217), started_at=datetime.datetime(2025, 8, 6, 1, 51, 54, 342599), completed_at=datetime.datetime(2025, 8, 6, 1, 51, 54, 765947))",
+      "Result(id='6ad1de94-a39f-4584-8db5-61618a8bab9d', task_id='11bee0d6-3e50-4c43-ba87-3e0ac0a8799c', agent_id='hive-flow', status=<ResultStatus.SUCCESS: 'success'>, output={'raw_output': '\u274c SPARC configuration file (.roomodes) not found\\nPlease ensure .roomodes file exists in: /workspaces/claude-code-flow/benchmark\\n\\nTo enable SPARC development modes, run:\\n  npx hive-flow@latest init --sparc', 'lines': ['\u274c SPARC configuration file (.roomodes) not found', 'Please ensure .roomodes file exists in: /workspaces/claude-code-flow/benchmark', '', 'To enable SPARC development modes, run:', '  npx hive-flow@latest init --sparc'], 'sections': {}}, errors=[], warnings=[], performance_metrics=PerformanceMetrics(execution_time=0.3467600345611572, queue_time=0.0, throughput=2.8838386790033397, success_rate=1.0, error_rate=0.0, retry_count=0, coordination_overhead=0.0, communication_latency=0.0), quality_metrics=QualityMetrics(accuracy_score=1.0, completeness_score=1.0, consistency_score=0.0, relevance_score=0.0, overall_quality=1.0, review_score=None, automated_score=None), resource_usage=ResourceUsage(cpu_percent=104.7, memory_mb=50.1728515625, network_bytes_sent=0, network_bytes_recv=0, disk_bytes_read=0, disk_bytes_write=0, peak_memory_mb=71.125, average_cpu_percent=104.7), execution_details={'command': 'hive-flow sparc researcher Research best practices for API security', 'exit_code': 0, 'output_lines': 5, 'error_count': 0}, created_at=datetime.datetime(2025, 8, 6, 1, 51, 54, 760254), started_at=datetime.datetime(2025, 8, 6, 1, 51, 54, 342862), completed_at=datetime.datetime(2025, 8, 6, 1, 51, 54, 759914))",
+      "Result(id='b63953bd-b3e8-46b7-bc7f-7ca74663a842', task_id='0977b4b9-90c5-4a46-9aac-6e26d505d486', agent_id='hive-flow', status=<ResultStatus.SUCCESS: 'success'>, output={'raw_output': '\u274c SPARC configuration file (.roomodes) not found\\nPlease ensure .roomodes file exists in: /workspaces/claude-code-flow/benchmark\\n\\nTo enable SPARC development modes, run:\\n  npx hive-flow@latest init --sparc', 'lines': ['\u274c SPARC configuration file (.roomodes) not found', 'Please ensure .roomodes file exists in: /workspaces/claude-code-flow/benchmark', '', 'To enable SPARC development modes, run:', '  npx hive-flow@latest init --sparc'], 'sections': {}}, errors=[], warnings=[], performance_metrics=PerformanceMetrics(execution_time=0.34688830375671387, queue_time=0.0, throughput=2.8827723194188137, success_rate=1.0, error_rate=0.0, retry_count=0, coordination_overhead=0.0, communication_latency=0.0), quality_metrics=QualityMetrics(accuracy_score=1.0, completeness_score=1.0, consistency_score=0.0, relevance_score=0.0, overall_quality=1.0, review_score=None, automated_score=None), resource_usage=ResourceUsage(cpu_percent=105.725, memory_mb=47.6796875, network_bytes_sent=0, network_bytes_recv=0, disk_bytes_read=0, disk_bytes_write=0, peak_memory_mb=70.48046875, average_cpu_percent=105.725), execution_details={'command': 'hive-flow sparc analyzer Analyze code for performance bottlenecks', 'exit_code': 0, 'output_lines': 5, 'error_count': 0}, created_at=datetime.datetime(2025, 8, 6, 1, 51, 54, 767163), started_at=datetime.datetime(2025, 8, 6, 1, 51, 54, 343263), completed_at=datetime.datetime(2025, 8, 6, 1, 51, 54, 766944))",
+      "Result(id='4be5c45f-64a7-4130-a38d-8bc42fe1a531', task_id='70287046-e729-43b7-b525-a1004df6ac30', agent_id='hive-flow', status=<ResultStatus.SUCCESS: 'success'>, output={'raw_output': '\u274c SPARC configuration file (.roomodes) not found\\nPlease ensure .roomodes file exists in: /workspaces/claude-code-flow/benchmark\\n\\nTo enable SPARC development modes, run:\\n  npx hive-flow@latest init --sparc', 'lines': ['\u274c SPARC configuration file (.roomodes) not found', 'Please ensure .roomodes file exists in: /workspaces/claude-code-flow/benchmark', '', 'To enable SPARC development modes, run:', '  npx hive-flow@latest init --sparc'], 'sections': {}}, errors=[], warnings=[], performance_metrics=PerformanceMetrics(execution_time=0.3901090621948242, queue_time=0.0, throughput=2.563385721864083, success_rate=1.0, error_rate=0.0, retry_count=0, coordination_overhead=0.0, communication_latency=0.0), quality_metrics=QualityMetrics(accuracy_score=1.0, completeness_score=1.0, consistency_score=0.0, relevance_score=0.0, overall_quality=1.0, review_score=None, automated_score=None), resource_usage=ResourceUsage(cpu_percent=103.2, memory_mb=47.36328125, network_bytes_sent=0, network_bytes_recv=0, disk_bytes_read=0, disk_bytes_write=0, peak_memory_mb=69.7578125, average_cpu_percent=103.2), execution_details={'command': 'hive-flow sparc tester Generate comprehensive test suite', 'exit_code': 0, 'output_lines': 5, 'error_count': 0}, created_at=datetime.datetime(2025, 8, 6, 1, 51, 54, 766468), started_at=datetime.datetime(2025, 8, 6, 1, 51, 54, 344317), completed_at=datetime.datetime(2025, 8, 6, 1, 51, 54, 766318))"
     ]
   },
   "Comprehensive Testing": {

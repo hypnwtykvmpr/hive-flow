@@ -3,21 +3,21 @@
 ## Environment Variables
 
 ```bash
-CLAUDE_FLOW_CONFIG=./claude-flow.config.json
-CLAUDE_FLOW_LOG_LEVEL=info
-CLAUDE_FLOW_MEMORY_BACKEND=hybrid
-CLAUDE_FLOW_MEMORY_PATH=./data/memory
-CLAUDE_FLOW_MCP_PORT=3000
-CLAUDE_FLOW_MCP_TRANSPORT=stdio
+HIVE_FLOW_CONFIG=./hive-flow.config.json
+HIVE_FLOW_LOG_LEVEL=info
+HIVE_FLOW_MEMORY_BACKEND=hybrid
+HIVE_FLOW_MEMORY_PATH=./data/memory
+HIVE_FLOW_MCP_PORT=3000
+HIVE_FLOW_MCP_TRANSPORT=stdio
 ```
 
 ## Plugin Registry Maintenance (IPFS/Pinata)
 
-Registry CID stored in: `v3/@claude-flow/cli/src/plugins/store/discovery.ts`
+Registry CID stored in: `v3/@hive-flow/cli/src/plugins/store/discovery.ts`
 Gateway: `https://gateway.pinata.cloud/ipfs/{CID}`
 
 Steps to add a plugin:
-1. Fetch current registry: `curl -s "https://gateway.pinata.cloud/ipfs/$(grep LIVE_REGISTRY_CID v3/@claude-flow/cli/src/plugins/store/discovery.ts | cut -d"'" -f2)" > /tmp/registry.json`
+1. Fetch current registry: `curl -s "https://gateway.pinata.cloud/ipfs/$(grep LIVE_REGISTRY_CID v3/@hive-flow/cli/src/plugins/store/discovery.ts | cut -d"'" -f2)" > /tmp/registry.json`
 2. Add plugin entry to `plugins` array, increment `totalPlugins`, update category counts
 3. Upload: `curl -X POST "https://api.pinata.cloud/pinning/pinJSONToIPFS" -H "Authorization: Bearer $PINATA_JWT" -H "Content-Type: application/json" -d @/tmp/registry.json`
 4. Update `LIVE_REGISTRY_CID` in discovery.ts and the `demoPluginRegistry` fallback
@@ -26,16 +26,16 @@ Security: NEVER hardcode API keys. Source from .env at runtime. NEVER commit .en
 
 ## Doctor Health Checks
 
-`npx hiveflow doctor` checks: Node 20+, npm 9+, git, config, daemon, memory DB, API keys, MCP servers, disk space, TypeScript.
+`npx hive-flow doctor` checks: Node 20+, npm 9+, git, config, daemon, memory DB, API keys, MCP servers, disk space, TypeScript.
 
 ## Hooks Quick Reference
 
 ```bash
-npx hiveflow hooks pre-task --description "[task]"
-npx hiveflow hooks post-task --task-id "[id]" --success true
-npx hiveflow hooks session-start --session-id "[id]"
-npx hiveflow hooks route --task "[task]"
-npx hiveflow hooks worker list
+npx hive-flow hooks pre-task --description "[task]"
+npx hive-flow hooks post-task --task-id "[id]" --success true
+npx hive-flow hooks session-start --session-id "[id]"
+npx hive-flow hooks route --task "[task]"
+npx hive-flow hooks worker list
 ```
 
 ## Intelligence System (RuVector)

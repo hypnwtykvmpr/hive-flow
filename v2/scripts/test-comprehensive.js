@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Comprehensive Test Runner for Claude Flow v2.0.0
+ * Comprehensive Test Runner for Hive Flow v2.0.0
  */
 
 import { spawn } from 'child_process';
@@ -75,14 +75,14 @@ const dockerTests = [
   {
     name: 'Docker Build Test',
     command: 'docker',
-    args: ['build', '-t', 'claude-flow:test', '.'],
+    args: ['build', '-t', 'hive-flow:test', '.'],
     description: 'Test Docker image build',
     timeout: 600000 // 10 minutes
   },
   {
     name: 'Docker Container Test',
     command: 'docker',
-    args: ['run', '--rm', 'claude-flow:test', 'claude-flow', '--version'],
+    args: ['run', '--rm', 'hive-flow:test', 'hive-flow', '--version'],
     description: 'Test Docker container execution',
     timeout: 120000 // 2 minutes
   }
@@ -243,7 +243,7 @@ class TestRunner {
     const total = results.length;
     
     console.log('\n' + '='.repeat(80));
-    console.log(chalk.bold.blue('📊 CLAUDE FLOW v2.0.0 TEST REPORT'));
+    console.log(chalk.bold.blue('📊 HIVE FLOW v2.0.0 TEST REPORT'));
     console.log('='.repeat(80));
     
     console.log(`\n📈 Summary:`);
@@ -291,7 +291,7 @@ class TestRunner {
   }
 
   async run() {
-    this.log('🚀 Starting Claude Flow v2.0.0 Comprehensive Test Suite');
+    this.log('🚀 Starting Hive Flow v2.0.0 Comprehensive Test Suite');
     
     try {
       // Core test suites
@@ -338,7 +338,7 @@ function parseArgs() {
 
 function showHelp() {
   console.log(`
-${chalk.bold.blue('Claude Flow v2.0.0 Comprehensive Test Runner')}
+${chalk.bold.blue('Hive Flow v2.0.0 Comprehensive Test Runner')}
 
 ${chalk.bold('Usage:')}
   node scripts/test-comprehensive.js [options]

@@ -1,5 +1,5 @@
 /**
- * Node.js-compatible Configuration management for Claude-Flow
+ * Node.js-compatible Configuration management for Hive-Flow
  */
 
 import { promises as fs } from 'fs';
@@ -159,7 +159,7 @@ export class ConfigManager {
 
   private constructor() {
     this.config = this.deepClone(DEFAULT_CONFIG);
-    this.userConfigDir = path.join(os.homedir(), '.claude-flow');
+    this.userConfigDir = path.join(os.homedir(), '.hive-flow');
   }
 
   /**
@@ -175,7 +175,7 @@ export class ConfigManager {
   /**
    * Initialize configuration from file or create default
    */
-  async init(configPath = 'claude-flow.config.json'): Promise<void> {
+  async init(configPath = 'hive-flow.config.json'): Promise<void> {
     try {
       await this.load(configPath);
       console.log(`✅ Configuration loaded from: ${configPath}`);
@@ -398,36 +398,36 @@ export class ConfigManager {
    */
   private loadFromEnv(): void {
     // Orchestrator settings
-    const maxAgents = process.env.CLAUDE_FLOW_MAX_AGENTS;
+    const maxAgents = process.env.HIVE_FLOW_MAX_AGENTS;
     if (maxAgents) {
       this.config.orchestrator.maxConcurrentAgents = parseInt(maxAgents, 10);
     }
 
     // Terminal settings
-    const terminalType = process.env.CLAUDE_FLOW_TERMINAL_TYPE;
+    const terminalType = process.env.HIVE_FLOW_TERMINAL_TYPE;
     if (terminalType === 'vscode' || terminalType === 'native' || terminalType === 'auto') {
       this.config.terminal.type = terminalType;
     }
 
     // Memory settings
-    const memoryBackend = process.env.CLAUDE_FLOW_MEMORY_BACKEND;
+    const memoryBackend = process.env.HIVE_FLOW_MEMORY_BACKEND;
     if (memoryBackend === 'sqlite' || memoryBackend === 'markdown' || memoryBackend === 'hybrid') {
       this.config.memory.backend = memoryBackend;
     }
 
     // MCP settings
-    const mcpTransport = process.env.CLAUDE_FLOW_MCP_TRANSPORT;
+    const mcpTransport = process.env.HIVE_FLOW_MCP_TRANSPORT;
     if (mcpTransport === 'stdio' || mcpTransport === 'http' || mcpTransport === 'websocket') {
       this.config.mcp.transport = mcpTransport;
     }
 
-    const mcpPort = process.env.CLAUDE_FLOW_MCP_PORT;
+    const mcpPort = process.env.HIVE_FLOW_MCP_PORT;
     if (mcpPort) {
       this.config.mcp.port = parseInt(mcpPort, 10);
     }
 
     // Logging settings
-    const logLevel = process.env.CLAUDE_FLOW_LOG_LEVEL;
+    const logLevel = process.env.HIVE_FLOW_LOG_LEVEL;
     if (
       logLevel === 'debug' ||
       logLevel === 'info' ||
@@ -438,12 +438,12 @@ export class ConfigManager {
     }
 
     // ruv-swarm settings
-    const ruvSwarmEnabled = process.env.CLAUDE_FLOW_RUV_SWARM_ENABLED;
+    const ruvSwarmEnabled = process.env.HIVE_FLOW_RUV_SWARM_ENABLED;
     if (ruvSwarmEnabled === 'true' || ruvSwarmEnabled === 'false') {
       this.config.ruvSwarm.enabled = ruvSwarmEnabled === 'true';
     }
 
-    const ruvSwarmTopology = process.env.CLAUDE_FLOW_RUV_SWARM_TOPOLOGY;
+    const ruvSwarmTopology = process.env.HIVE_FLOW_RUV_SWARM_TOPOLOGY;
     if (
       ruvSwarmTopology === 'mesh' ||
       ruvSwarmTopology === 'hierarchical' ||
@@ -453,7 +453,7 @@ export class ConfigManager {
       this.config.ruvSwarm.defaultTopology = ruvSwarmTopology;
     }
 
-    const ruvSwarmMaxAgents = process.env.CLAUDE_FLOW_RUV_SWARM_MAX_AGENTS;
+    const ruvSwarmMaxAgents = process.env.HIVE_FLOW_RUV_SWARM_MAX_AGENTS;
     if (ruvSwarmMaxAgents) {
       this.config.ruvSwarm.maxAgents = parseInt(ruvSwarmMaxAgents, 10);
     }

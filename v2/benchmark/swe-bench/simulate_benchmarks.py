@@ -192,7 +192,7 @@ Testing {len(test_configs)} configurations to find optimal settings.
 ### 🔧 **Recommended Configuration**
 
 ```yaml
-# Optimal Claude Flow settings for SWE tasks
+# Optimal Hive Flow settings for SWE tasks
 coordination_mode: {optimal['mode']}
 strategy: {optimal['strategy']}
 max_agents: {optimal['agents']}

@@ -2,7 +2,7 @@
  * Gas Town Bridge Plugin - Main Entry Point
  *
  * GasTownBridgePlugin class implementing the IPlugin interface:
- * - register(): Register with claude-flow plugin system
+ * - register(): Register with hive-flow plugin system
  * - initialize(): Load WASM modules, set up bridges
  * - shutdown(): Cleanup resources
  *
@@ -87,7 +87,7 @@ import {
 } from './errors.js';
 
 // ============================================================================
-// Plugin Interfaces (matching claude-flow plugin system)
+// Plugin Interfaces (matching hive-flow plugin system)
 // ============================================================================
 
 /**
@@ -672,7 +672,7 @@ class WasmLoaderAdapter implements IWasmLoader {
 // ============================================================================
 
 /**
- * Gas Town Bridge Plugin for Claude Flow V3
+ * Gas Town Bridge Plugin for Hive Flow V3
  *
  * Provides integration with Gas Town orchestrator:
  * - 5 Beads MCP tools (CLI-based)
@@ -682,7 +682,7 @@ class WasmLoaderAdapter implements IWasmLoader {
  * - 3 Orchestration tools
  */
 export class GasTownBridgePlugin extends EventEmitter implements IPlugin {
-  readonly name = '@claude-flow/plugin-gastown-bridge';
+  readonly name = '@hive-flow/plugin-gastown-bridge';
   readonly version = '0.1.0';
   readonly description =
     'Gas Town orchestrator integration with WASM-accelerated formula parsing and graph analysis';
@@ -713,7 +713,7 @@ export class GasTownBridgePlugin extends EventEmitter implements IPlugin {
   }
 
   /**
-   * Register the plugin with claude-flow
+   * Register the plugin with hive-flow
    */
   async register(context: PluginContext): Promise<void> {
     this.pluginContext = context;
@@ -974,9 +974,9 @@ export class GasTownBridgePlugin extends EventEmitter implements IPlugin {
       description: this.description,
       author: 'rUv',
       license: 'MIT',
-      repository: 'https://github.com/ruvnet/claude-flow',
+      repository: 'https://github.com/ruvnet/hive-flow',
       keywords: [
-        'claude-flow',
+        'hive-flow',
         'plugin',
         'gastown',
         'beads',

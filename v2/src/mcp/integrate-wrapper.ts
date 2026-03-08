@@ -5,7 +5,7 @@ import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 import { ClaudeCodeMCPWrapper } from './claude-code-wrapper.js';
 
 /**
- * Integration script that connects the Claude-Flow MCP wrapper
+ * Integration script that connects the Hive-Flow MCP wrapper
  * to the Claude Code MCP server
  */
 export class MCPIntegration {
@@ -30,7 +30,7 @@ export class MCPIntegration {
 
       this.claudeCodeClient = new Client(
         {
-          name: 'claude-flow-wrapper-client',
+          name: 'hive-flow-wrapper-client',
           version: '1.0.0',
         },
         {

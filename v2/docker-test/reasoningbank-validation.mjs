@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Docker Validation Test for ReasoningBank Semantic Search
- * Tests claude-flow@alpha with agentic-flow@1.5.13 Node.js backend
+ * Tests hive-flow@alpha with agentic-flow@1.5.13 Node.js backend
  */
 
 import { exec } from 'child_process';
@@ -12,7 +12,7 @@ const execAsync = promisify(exec);
 
 async function validateReasoningBank() {
   console.log('🐳 Docker Validation: ReasoningBank Semantic Search');
-  console.log('📦 Testing: claude-flow@alpha (from npm)\n');
+  console.log('📦 Testing: hive-flow@alpha (from npm)\n');
 
   const results = {
     passed: [],
@@ -24,7 +24,7 @@ async function validateReasoningBank() {
     // Test 1: Verify installation
     console.log('1️⃣ Verifying installation...');
     try {
-      const { stdout: version } = await execAsync('npx claude-flow@alpha --version');
+      const { stdout: version } = await execAsync('npx hive-flow@alpha --version');
       console.log(`   ✅ Version: ${version.trim()}`);
       results.passed.push('Installation verified');
     } catch (error) {
@@ -36,7 +36,7 @@ async function validateReasoningBank() {
     // Test 2: Initialize ReasoningBank memory (explicit mode)
     console.log('\n2️⃣ Initializing ReasoningBank memory...');
     try {
-      const { stdout } = await execAsync('npx claude-flow@alpha memory init --reasoningbank');
+      const { stdout } = await execAsync('npx hive-flow@alpha memory init --reasoningbank');
       console.log(`   ${stdout.trim()}`);
       results.passed.push('ReasoningBank initialization');
     } catch (error) {
@@ -54,7 +54,7 @@ async function validateReasoningBank() {
 
     for (const mem of testMemories) {
       try {
-        await execAsync(`npx claude-flow@alpha memory store "${mem.key}" "${mem.value}" --namespace ${mem.namespace} --reasoningbank`);
+        await execAsync(`npx hive-flow@alpha memory store "${mem.key}" "${mem.value}" --namespace ${mem.namespace} --reasoningbank`);
         console.log(`   ✅ Stored: ${mem.key}`);
       } catch (error) {
         console.error(`   ❌ Failed to store ${mem.key}: ${error.message}`);
@@ -77,7 +77,7 @@ async function validateReasoningBank() {
     // Test 5: Query memories (semantic search with ReasoningBank)
     console.log('\n5️⃣ Testing ReasoningBank semantic search...');
     try {
-      const { stdout } = await execAsync('npx claude-flow@alpha memory query "authentication" --namespace security --limit 5 --reasoningbank');
+      const { stdout } = await execAsync('npx hive-flow@alpha memory query "authentication" --namespace security --limit 5 --reasoningbank');
       if (stdout.includes('No results found')) {
         console.warn('   ⚠️  No results from semantic search (embeddings may need API key)');
         results.warnings.push('Semantic search returned no results');
@@ -93,7 +93,7 @@ async function validateReasoningBank() {
     // Test 6: List memories (ReasoningBank mode)
     console.log('\n6️⃣ Listing ReasoningBank memories...');
     try {
-      const { stdout } = await execAsync('npx claude-flow@alpha memory list --limit 10 --reasoningbank');
+      const { stdout } = await execAsync('npx hive-flow@alpha memory list --limit 10 --reasoningbank');
       console.log(stdout.trim());
       if (stdout.includes('security') || stdout.includes('backend')) {
         console.log('   ✅ ReasoningBank memory listing working');
@@ -110,7 +110,7 @@ async function validateReasoningBank() {
     // Test 7: ReasoningBank status
     console.log('\n7️⃣ Checking ReasoningBank status...');
     try {
-      const { stdout } = await execAsync('npx claude-flow@alpha memory status --reasoningbank');
+      const { stdout } = await execAsync('npx hive-flow@alpha memory status --reasoningbank');
       console.log(stdout.trim());
       if (stdout.includes('SQLite') || stdout.includes('memory.db') || stdout.includes('ReasoningBank')) {
         console.log('   ✅ Status reporting ReasoningBank Node.js backend');

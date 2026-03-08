@@ -120,7 +120,7 @@ export class CompatibleUI {
     const stats = this.getSystemStats();
 
     // Header
-    console.log(chalk.cyan.bold('🧠 Claude-Flow System Monitor'));
+    console.log(chalk.cyan.bold('🧠 Hive-Flow System Monitor'));
     console.log(chalk.gray('─'.repeat(60)));
 
     // System stats
@@ -312,7 +312,7 @@ export class CompatibleUI {
 
   private showHelp(): void {
     console.log();
-    console.log(chalk.cyan.bold('🧠 Claude-Flow System Monitor - Help'));
+    console.log(chalk.cyan.bold('🧠 Hive-Flow System Monitor - Help'));
     console.log(chalk.gray('─'.repeat(60)));
     console.log();
     console.log(chalk.white.bold('Commands:'));
@@ -393,7 +393,7 @@ export async function launchUI(): Promise<void> {
 
   ui.updateProcesses(mockProcesses);
 
-  console.log(chalk.green('✅ Starting Claude-Flow UI (compatible mode)'));
+  console.log(chalk.green('✅ Starting Hive-Flow UI (compatible mode)'));
   console.log(chalk.gray('Note: Using compatible UI mode for broader terminal support'));
   console.log();
 

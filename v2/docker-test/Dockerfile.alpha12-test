@@ -9,18 +9,18 @@ RUN apt-get update && apt-get install -y \
     jq \
     && rm -rf /var/lib/apt/lists/*
 
-# Install claude-flow@2.7.0-alpha.12 from npm
-RUN npm install -g claude-flow@2.7.0-alpha.12
+# Install hive-flow@2.7.0-alpha.12 from npm
+RUN npm install -g hive-flow@2.7.0-alpha.12
 
 # Verify version
-RUN claude-flow --version
+RUN hive-flow --version
 
 # Create test directory
 WORKDIR /test
 
 # Test the init command
-CMD echo "Testing claude-flow@2.7.0-alpha.12 from npm registry..." && \
-    claude-flow init --skip-open --project-name alpha12-test && \
+CMD echo "Testing hive-flow@2.7.0-alpha.12 from npm registry..." && \
+    hive-flow init --skip-open --project-name alpha12-test && \
     echo "" && \
     echo "========================================" && \
     echo "✅ VERIFICATION RESULTS" && \

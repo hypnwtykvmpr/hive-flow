@@ -8,9 +8,9 @@ export { InProcessMCPServer, createInProcessServer } from './in-process-server.j
 export type { InProcessServerConfig, ToolCallMetrics } from './in-process-server.js';
 
 export {
-  ClaudeFlowToolRegistry,
+  HiveFlowToolRegistry,
   createToolRegistry,
-  createClaudeFlowSdkServer,
+  createHiveFlowSdkServer,
 } from './tool-registry.js';
 export type { ToolRegistryConfig } from './tool-registry.js';
 
@@ -76,7 +76,7 @@ export {
 export {
   ProgressiveToolRegistry,
   createProgressiveToolRegistry,
-  createProgressiveClaudeFlowSdkServer,
+  createProgressiveHiveFlowSdkServer,
   type ProgressiveToolRegistryConfig,
 } from './tool-registry-progressive.js';
 
@@ -157,7 +157,7 @@ export { SessionManager, type ISessionManager } from './session-manager.js';
 export { LoadBalancer, type ILoadBalancer, RequestQueue } from './load-balancer.js';
 
 // Tool Implementations
-export { createClaudeFlowTools, type ClaudeFlowToolContext } from './claude-flow-tools.js';
+export { createHiveFlowTools, type HiveFlowToolContext } from './hive-flow-tools.js';
 export { createSwarmTools, type SwarmToolContext } from './swarm-tools.js';
 
 /**
@@ -400,7 +400,7 @@ export const MCPUtils = {
  * Phase 6: Initialize MCP with in-process server for maximum performance
  *
  * Provides 10-100x performance improvement by eliminating IPC overhead.
- * All Claude-Flow MCP tools execute in-process with microsecond latency.
+ * All Hive-Flow MCP tools execute in-process with microsecond latency.
  */
 export async function initializeInProcessMCP(orchestratorContext?: any) {
   const { initializeSDKIntegration } = await import('./sdk-integration.js');

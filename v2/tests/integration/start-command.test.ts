@@ -11,7 +11,7 @@ describe('Start Command Integration', () => {
 
   beforeAll(async () => {
     // Create test directory
-    testDir = await Deno.makeTempDir({ prefix: 'claude-flow-test-' });
+    testDir = await Deno.makeTempDir({ prefix: 'hive-flow-test-' });
     Deno.chdir(testDir);
     
     // Create required directories
@@ -22,7 +22,7 @@ describe('Start Command Integration', () => {
     const config = {
       memory: {
         backend: 'json',
-        path: './memory/claude-flow-data.json'
+        path: './memory/hive-flow-data.json'
       },
       terminal: {
         poolSize: 2
@@ -39,7 +39,7 @@ describe('Start Command Integration', () => {
       }
     };
     
-    await Deno.writeTextFile('claude-flow.config.json', JSON.stringify(config, null, 2));
+    await Deno.writeTextFile('hive-flow.config.json', JSON.stringify(config, null, 2));
   });
 
   afterAll(async () => {

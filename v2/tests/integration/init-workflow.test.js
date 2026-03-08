@@ -7,7 +7,7 @@ import { batchInitCommand } from '../../src/cli/simple-commands/init/batch-init.
 import { runFullValidation } from '../../src/cli/simple-commands/init/validation/index.js';
 
 // Create a temporary test directory
-const TEST_DIR = '/tmp/claude-flow-init-test';
+const TEST_DIR = '/tmp/hive-flow-init-test';
 
 describe('Init Workflow Integration Tests', () => {
   beforeEach(async () => {
@@ -42,7 +42,7 @@ describe('Init Workflow Integration Tests', () => {
         'CLAUDE.md',
         '.claude/settings.json',
         '.mcp.json',
-        'memory/claude-flow@alpha-data.json',
+        'memory/hive-flow@alpha-data.json',
       ];
 
       for (const file of coreFiles) {
@@ -92,7 +92,7 @@ describe('Init Workflow Integration Tests', () => {
       const mcpConfig = await fs.readFile('.mcp.json', 'utf8');
       const mcpData = JSON.parse(mcpConfig);
       expect(mcpData).toHaveProperty('mcpServers');
-      expect(mcpData.mcpServers).toHaveProperty('claude-flow@alpha');
+      expect(mcpData.mcpServers).toHaveProperty('hive-flow@alpha');
 
       // Test settings configuration
       const settingsConfig = await fs.readFile('.claude/settings.json', 'utf8');
@@ -100,7 +100,7 @@ describe('Init Workflow Integration Tests', () => {
       expect(settingsData).toHaveProperty('hooks');
 
       // Test memory data
-      const memoryData = await fs.readFile('memory/claude-flow@alpha-data.json', 'utf8');
+      const memoryData = await fs.readFile('memory/hive-flow@alpha-data.json', 'utf8');
       const memory = JSON.parse(memoryData);
       expect(memory).toHaveProperty('agents');
       expect(memory).toHaveProperty('tasks');

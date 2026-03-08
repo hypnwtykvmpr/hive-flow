@@ -1,7 +1,7 @@
 #!/usr/bin/env -S deno run --allow-all
 
 /**
- * Simple demonstration of Claude-Flow task system
+ * Simple demonstration of Hive-Flow task system
  * Shows the basic flow of:
  * 1. Creating tasks
  * 2. Spawning agents
@@ -148,7 +148,7 @@ class SimpleTaskExecutor {
 
 // Demo runner
 async function runDemo() {
-  console.log('🎯 Claude-Flow Task System Demo\n');
+  console.log('🎯 Hive-Flow Task System Demo\n');
   
   const eventBus = new EventBus();
   const logger = new Logger(
@@ -215,7 +215,7 @@ async function runDemo() {
   console.log(`Total tasks: ${finalStats.total}`);
   console.log(`Completed: ${finalStats.completed}`);
   console.log(`Success rate: 100%`);
-  console.log('\n✨ Claude-Flow task system is working perfectly!');
+  console.log('\n✨ Hive-Flow task system is working perfectly!');
 }
 
 // Run the demo

@@ -18,22 +18,22 @@ from swarm_benchmark.cli.swe_bench_command import swe_bench
 @click.version_option(version=__version__)
 @click.option('--verbose', '-v', is_flag=True, help='Enable verbose output')
 @click.option('--config', '-c', type=click.Path(exists=True), help='Configuration file path')
-@click.option('--mock', is_flag=True, default=False, help='Use mock execution instead of real claude-flow')
-@click.option('--claude-flow-path', default='./claude-flow', help='Path to claude-flow')
+@click.option('--mock', is_flag=True, default=False, help='Use mock execution instead of real hive-flow')
+@click.option('--hive-flow-path', default='./hive-flow', help='Path to hive-flow')
 @click.option('--timeout', default=300, help='Command timeout in seconds')
 @click.option('--stream/--no-stream', default=True, help='Stream output')
 @click.pass_context
-def cli(ctx, verbose, config, mock, claude_flow_path, timeout, stream):
-    """Claude Flow Advanced Swarm Benchmarking Tool.
+def cli(ctx, verbose, config, mock, hive_flow_path, timeout, stream):
+    """Hive Flow Advanced Swarm Benchmarking Tool.
     
     A comprehensive Python-based benchmarking tool for agent swarms that interfaces 
-    with the Claude Flow Advanced Swarm System.
+    with the Hive Flow Advanced Swarm System.
     """
     ctx.ensure_object(dict)
     ctx.obj['verbose'] = verbose
     ctx.obj['config'] = config
     ctx.obj['real'] = not mock  # Default to real execution unless --mock is specified
-    ctx.obj['claude_flow_path'] = claude_flow_path
+    ctx.obj['hive_flow_path'] = hive_flow_path
     ctx.obj['timeout'] = timeout
     ctx.obj['stream'] = stream
 
@@ -101,7 +101,7 @@ def run(ctx, objective, strategy, mode, max_agents, max_tasks, timeout, task_tim
         click.echo(f"Objective: {objective}")
         click.echo(f"Strategy: {strategy}")
         click.echo(f"Mode: {mode}")
-        click.echo(f"Execution: {'Real claude-flow' if use_real else 'Mock'}")
+        click.echo(f"Execution: {'Real hive-flow' if use_real else 'Mock'}")
     
     # Run the benchmark
     try:
@@ -262,9 +262,9 @@ def serve(ctx, port, host):
 @click.pass_context
 def swarm_cmd(ctx, objective, strategy, mode, sparc_mode, all_modes, max_agents, timeout, 
          task_timeout, parallel, monitor, output_formats, output_dir, name, description):
-    """Run real claude-flow swarm benchmarks.
+    """Run real hive-flow swarm benchmarks.
     
-    OBJECTIVE: The goal or task for claude-flow to accomplish
+    OBJECTIVE: The goal or task for hive-flow to accomplish
     
     Examples:
       swarm-bench swarm "Build a REST API" --strategy development
@@ -297,7 +297,7 @@ def swarm_cmd(ctx, objective, strategy, mode, sparc_mode, all_modes, max_agents,
               help='Output directory (default: ./reports)')
 @click.pass_context
 def hive_mind_cmd(ctx, task, queen_type, max_workers, consensus, timeout, monitor, output_dir):
-    """Run real claude-flow hive-mind benchmarks.
+    """Run real hive-flow hive-mind benchmarks.
     
     TASK: The task for the hive-mind to accomplish
     
@@ -322,7 +322,7 @@ def hive_mind_cmd(ctx, task, queen_type, max_workers, consensus, timeout, monito
               help='Output directory (default: ./reports)')
 @click.pass_context
 def sparc_cmd(ctx, mode, task, namespace, timeout, non_interactive, output_dir):
-    """Run real claude-flow SPARC mode benchmarks.
+    """Run real hive-flow SPARC mode benchmarks.
     
     MODE: The SPARC mode to use (coder, architect, tdd, etc.)
     TASK: The task to accomplish
@@ -381,9 +381,9 @@ def real(ctx):
 @click.pass_context
 def swarm(ctx, objective, strategy, mode, sparc_mode, all_modes, max_agents, timeout, 
          task_timeout, parallel, monitor, output_formats, output_dir, name, description):
-    """Run real claude-flow swarm benchmarks with actual command execution.
+    """Run real hive-flow swarm benchmarks with actual command execution.
     
-    OBJECTIVE: The goal or task for claude-flow to accomplish
+    OBJECTIVE: The goal or task for hive-flow to accomplish
     
     Examples:
       swarm-benchmark real swarm "Build a REST API" --strategy development
@@ -516,7 +516,7 @@ def swarm(ctx, objective, strategy, mode, sparc_mode, all_modes, max_agents, tim
               help='Output directory (default: ./reports)')
 @click.pass_context
 def hive_mind(ctx, task, queen_type, max_workers, consensus, timeout, monitor, output_dir):
-    """Run real claude-flow hive-mind benchmarks.
+    """Run real hive-flow hive-mind benchmarks.
     
     TASK: The task for the hive-mind to accomplish
     
@@ -534,8 +534,8 @@ def hive_mind(ctx, task, queen_type, max_workers, consensus, timeout, monitor, o
     
     # Execute real hive-mind command
     try:
-        from ..core.claude_flow_real_executor import RealClaudeFlowExecutor, HiveMindCommand
-        executor = RealClaudeFlowExecutor()
+        from ..core.hive_flow_real_executor import RealHiveFlowExecutor, HiveMindCommand
+        executor = RealHiveFlowExecutor()
         
         # Create hive-mind configuration
         config = HiveMindCommand(
@@ -628,7 +628,7 @@ def hive_mind(ctx, task, queen_type, max_workers, consensus, timeout, monitor, o
               help='Output directory (default: ./reports)')
 @click.pass_context
 def sparc(ctx, mode, task, namespace, timeout, non_interactive, output_dir):
-    """Run real claude-flow SPARC mode benchmarks.
+    """Run real hive-flow SPARC mode benchmarks.
     
     MODE: The SPARC mode to use (coder, architect, tdd, etc.)
     TASK: The task to accomplish
@@ -648,8 +648,8 @@ def sparc(ctx, mode, task, namespace, timeout, non_interactive, output_dir):
     
     # Execute real SPARC command
     try:
-        from ..core.claude_flow_real_executor import RealClaudeFlowExecutor, SparcCommand
-        executor = RealClaudeFlowExecutor()
+        from ..core.hive_flow_real_executor import RealHiveFlowExecutor, SparcCommand
+        executor = RealHiveFlowExecutor()
         
         # Create SPARC configuration
         config = SparcCommand(
@@ -743,7 +743,7 @@ async def _run_benchmark(objective: str, config: BenchmarkConfig, use_real_metri
 async def _run_real_benchmark(objective: str, config: BenchmarkConfig, 
                               sparc_mode: Optional[str] = None,
                               all_modes: bool = False) -> Optional[dict]:
-    """Run a real benchmark with actual claude-flow execution."""
+    """Run a real benchmark with actual hive-flow execution."""
     engine = RealBenchmarkEngine(config)
     
     try:

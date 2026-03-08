@@ -6,7 +6,7 @@
 
 set -e
 
-echo "🔄 Claude Flow Batch Benchmark Execution"
+echo "🔄 Hive Flow Batch Benchmark Execution"
 echo "=========================================="
 echo ""
 

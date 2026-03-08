@@ -194,8 +194,8 @@ jobs:
 
       - name: Verify CLI
         run: |
-          ./bin/claude-flow --version
-          ./bin/claude-flow --help
+          ./bin/hive-flow --version
+          ./bin/hive-flow --help
 
       - uses: actions/upload-artifact@v4
         with:

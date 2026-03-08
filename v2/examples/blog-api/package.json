@@ -1,7 +1,7 @@
 {
   "name": "app",
   "version": "1.0.0",
-  "description": "app created by Claude Flow Swarm",
+  "description": "app created by Hive Flow Swarm",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -10,9 +10,9 @@
   },
   "keywords": [
     "swarm",
-    "claude-flow"
+    "hive-flow"
   ],
-  "author": "Claude Flow Swarm",
+  "author": "Hive Flow Swarm",
   "license": "MIT",
   "dependencies": {}
 }

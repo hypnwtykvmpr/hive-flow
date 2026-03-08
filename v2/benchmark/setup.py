@@ -9,12 +9,12 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
 setup(
     name="swarm-benchmark",
     version="1.0.0",
-    author="Claude Flow Team",
-    author_email="support@claude-flow.dev",
-    description="Agent swarm benchmarking tool for Claude Flow",
+    author="Hive Flow Team",
+    author_email="support@hive-flow.dev",
+    description="Agent swarm benchmarking tool for Hive Flow",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/claude-flow/swarm-benchmark",
+    url="https://github.com/hive-flow/swarm-benchmark",
     packages=find_packages(where="src"),
     package_dir={"": "src"},
     classifiers=[

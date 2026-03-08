@@ -1,6 +1,6 @@
 # 📋 Release Notes & Changelogs
 
-Release documentation for claude-flow versions.
+Release documentation for hive-flow versions.
 
 ## Latest Releases
 

@@ -40,7 +40,7 @@ export function isInteractive() {
   }
 
   // Check if running in non-interactive mode explicitly
-  if (process.env.CLAUDE_FLOW_NON_INTERACTIVE === 'true') {
+  if (process.env.HIVE_FLOW_NON_INTERACTIVE === 'true') {
     return false;
   }
 

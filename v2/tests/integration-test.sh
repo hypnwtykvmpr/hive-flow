@@ -44,7 +44,7 @@ fi
 echo ""
 
 echo -e "${BLUE}Test 3: Initialize ReasoningBank${NC}"
-if ./bin/claude-flow agent memory init | grep -q "initialized successfully"; then
+if ./bin/hive-flow agent memory init | grep -q "initialized successfully"; then
     test_passed "Memory initialization successful"
 else
     test_failed "Memory initialization failed"
@@ -52,7 +52,7 @@ fi
 echo ""
 
 echo -e "${BLUE}Test 4: Memory status command${NC}"
-if ./bin/claude-flow agent memory status | grep -q "ReasoningBank Status"; then
+if ./bin/hive-flow agent memory status | grep -q "ReasoningBank Status"; then
     test_passed "Memory status working"
 else
     test_failed "Memory status command failed"
@@ -76,7 +76,7 @@ fi
 echo ""
 
 echo -e "${BLUE}Test 6: Memory list command${NC}"
-if ./bin/claude-flow agent memory list --limit 5 | grep -q "Listing ReasoningBank memories"; then
+if ./bin/hive-flow agent memory list --limit 5 | grep -q "Listing ReasoningBank memories"; then
     test_passed "Memory list command working"
 else
     test_failed "Memory list command failed"
@@ -84,7 +84,7 @@ fi
 echo ""
 
 echo -e "${BLUE}Test 7: Agent list command${NC}"
-if ./bin/claude-flow agent agents | head -20 | grep -q "Available Agents"; then
+if ./bin/hive-flow agent agents | head -20 | grep -q "Available Agents"; then
     test_passed "Agent list command working"
 else
     test_failed "Agent list command failed"
@@ -92,7 +92,7 @@ fi
 echo ""
 
 echo -e "${BLUE}Test 8: Help documentation check${NC}"
-if ./bin/claude-flow agent --help | grep -q "Memory Options"; then
+if ./bin/hive-flow agent --help | grep -q "Memory Options"; then
     test_passed "Memory options in help documentation"
 else
     test_failed "Memory options missing from help"
@@ -100,7 +100,7 @@ fi
 echo ""
 
 echo -e "${BLUE}Test 9: Memory subcommands check${NC}"
-if ./bin/claude-flow agent memory --help 2>&1 | grep -q "consolidate"; then
+if ./bin/hive-flow agent memory --help 2>&1 | grep -q "consolidate"; then
     test_passed "Memory subcommands available"
 else
     test_failed "Memory subcommands not found"

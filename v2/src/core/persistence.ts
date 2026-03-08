@@ -1,5 +1,5 @@
 /**
- * Persistence layer for Claude-Flow using SQLite
+ * Persistence layer for Hive-Flow using SQLite
  */
 
 import Database from 'better-sqlite3';
@@ -38,7 +38,7 @@ export class PersistenceManager {
   private dbPath: string;
 
   constructor(dataDir: string = './memory') {
-    this.dbPath = join(dataDir, 'claude-flow.db');
+    this.dbPath = join(dataDir, 'hive-flow.db');
   }
 
   async initialize(): Promise<void> {

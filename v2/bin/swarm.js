@@ -144,21 +144,21 @@ async function basicSwarmNew(args, flags) {
 
 function showSwarmHelp() {
   console.log(`
-🐝 Claude Flow Advanced Swarm System
+🐝 Hive Flow Advanced Swarm System
 
 USAGE:
-  claude-flow swarm <objective> [options]
+  hive-flow swarm <objective> [options]
 
 EXAMPLES:
-  claude-flow swarm "Build a REST API with authentication"
-  claude-flow swarm "Research cloud architecture patterns" --strategy research
-  claude-flow swarm "Analyze database performance" --max-agents 3 --parallel
-  claude-flow swarm "Develop user registration feature" --mode distributed
-  claude-flow swarm "Optimize React app performance" --strategy optimization
-  claude-flow swarm "Create microservice" --executor  # Use built-in executor
-  claude-flow swarm "Build API" --claude  # Open Claude Code CLI
-  claude-flow swarm "Build API endpoints" --output-format json  # Get JSON output
-  claude-flow swarm "Research AI trends" --output-format json --output-file results.json
+  hive-flow swarm "Build a REST API with authentication"
+  hive-flow swarm "Research cloud architecture patterns" --strategy research
+  hive-flow swarm "Analyze database performance" --max-agents 3 --parallel
+  hive-flow swarm "Develop user registration feature" --mode distributed
+  hive-flow swarm "Optimize React app performance" --strategy optimization
+  hive-flow swarm "Create microservice" --executor  # Use built-in executor
+  hive-flow swarm "Build API" --claude  # Open Claude Code CLI
+  hive-flow swarm "Build API endpoints" --output-format json  # Get JSON output
+  hive-flow swarm "Research AI trends" --output-format json --output-file results.json
 
 DEFAULT BEHAVIOR:
   Swarm attempts to open Claude Code CLI with comprehensive MCP tool instructions
@@ -269,7 +269,7 @@ export async function swarmCommand(args, flags) {
       // Quick health check for Docker/K8s
       console.log(JSON.stringify({
         status: 'healthy',
-        service: 'claude-flow-swarm',
+        service: 'hive-flow-swarm',
         version: process.env.npm_package_version || '2.0.0',
         timestamp: new Date().toISOString()
       }));
@@ -323,7 +323,7 @@ export async function swarmCommand(args, flags) {
         level: 'info',
         message: args.join(' '),
         timestamp: new Date().toISOString(),
-        service: 'claude-flow-swarm'
+        service: 'hive-flow-swarm'
       }));
     };
     
@@ -332,7 +332,7 @@ export async function swarmCommand(args, flags) {
         level: 'error',
         message: args.join(' '),
         timestamp: new Date().toISOString(),
-        service: 'claude-flow-swarm'
+        service: 'hive-flow-swarm'
       }));
     };
   }
@@ -370,7 +370,7 @@ export async function swarmCommand(args, flags) {
         flags.sparc !== false && (strategy === 'development' || strategy === 'auto');
 
       // Build the complete swarm prompt before checking for claude
-      const swarmPrompt = `You are orchestrating a Claude Flow Swarm using Claude Code's Task tool for agent execution.
+      const swarmPrompt = `You are orchestrating a Hive Flow Swarm using Claude Code's Task tool for agent execution.
 
 🚨 CRITICAL INSTRUCTION: Use Claude Code's Task Tool for ALL Agent Spawning!
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -429,12 +429,12 @@ Generate comprehensive reports instead of making changes.
     : ''
 }🚨 CRITICAL: PARALLEL EXECUTION IS MANDATORY! 🚨
 
-📋 CLAUDE-FLOW SWARM BATCHTOOL INSTRUCTIONS
+📋 HIVE-FLOW SWARM BATCHTOOL INSTRUCTIONS
 
 ⚡ THE GOLDEN RULE:
 If you need to do X operations, they should be in 1 message, not X messages.
 
-🎯 MANDATORY PATTERNS FOR CLAUDE-FLOW SWARMS:
+🎯 MANDATORY PATTERNS FOR HIVE-FLOW SWARMS:
 
 1️⃣ **SWARM INITIALIZATION** - Use Claude Code's Task Tool for Agents:
 
@@ -442,10 +442,10 @@ Step A: Optional MCP Coordination Setup (Single Message):
 \`\`\`javascript
 [MCP Tools - Coordination ONLY]:
   // Set up coordination topology (OPTIONAL)
-  mcp__claude-flow__swarm_init {"topology": "mesh", "maxAgents": ${maxAgents}}
-  mcp__claude-flow__agent_spawn {"type": "coordinator", "name": "SwarmLead"}
-  mcp__claude-flow__memory_store {"key": "swarm/objective", "value": "${objective}"}
-  mcp__claude-flow__memory_store {"key": "swarm/config", "value": {"strategy": "${strategy}"}}
+  mcp__hive-flow__swarm_init {"topology": "mesh", "maxAgents": ${maxAgents}}
+  mcp__hive-flow__agent_spawn {"type": "coordinator", "name": "SwarmLead"}
+  mcp__hive-flow__memory_store {"key": "swarm/objective", "value": "${objective}"}
+  mcp__hive-flow__memory_store {"key": "swarm/config", "value": {"strategy": "${strategy}"}}
 \`\`\`
 
 Step B: REQUIRED - Claude Code Task Tool for ACTUAL Agent Execution (Single Message):
@@ -482,30 +482,30 @@ Step B: REQUIRED - Claude Code Task Tool for ACTUAL Agent Execution (Single Mess
 \`\`\`javascript
 [Single Message]:
   // Assign all tasks
-  mcp__claude-flow__task_assign {"taskId": "research-1", "agentId": "researcher-1"}
-  mcp__claude-flow__task_assign {"taskId": "design-1", "agentId": "architect-1"}
-  mcp__claude-flow__task_assign {"taskId": "code-1", "agentId": "coder-1"}
-  mcp__claude-flow__task_assign {"taskId": "code-2", "agentId": "coder-2"}
+  mcp__hive-flow__task_assign {"taskId": "research-1", "agentId": "researcher-1"}
+  mcp__hive-flow__task_assign {"taskId": "design-1", "agentId": "architect-1"}
+  mcp__hive-flow__task_assign {"taskId": "code-1", "agentId": "coder-1"}
+  mcp__hive-flow__task_assign {"taskId": "code-2", "agentId": "coder-2"}
   
   // Communicate to all agents
-  mcp__claude-flow__agent_communicate {"to": "all", "message": "Begin phase 1"}
+  mcp__hive-flow__agent_communicate {"to": "all", "message": "Begin phase 1"}
   
   // Update multiple task statuses
-  mcp__claude-flow__task_update {"taskId": "research-1", "status": "in_progress"}
-  mcp__claude-flow__task_update {"taskId": "design-1", "status": "pending"}
+  mcp__hive-flow__task_update {"taskId": "research-1", "status": "in_progress"}
+  mcp__hive-flow__task_update {"taskId": "design-1", "status": "pending"}
 \`\`\`
 
 3️⃣ **MEMORY COORDINATION** - Store/retrieve in batches:
 \`\`\`javascript
 [Single Message]:
   // Store multiple findings
-  mcp__claude-flow__memory_store {"key": "research/requirements", "value": {...}}
-  mcp__claude-flow__memory_store {"key": "research/constraints", "value": {...}}
-  mcp__claude-flow__memory_store {"key": "architecture/decisions", "value": {...}}
+  mcp__hive-flow__memory_store {"key": "research/requirements", "value": {...}}
+  mcp__hive-flow__memory_store {"key": "research/constraints", "value": {...}}
+  mcp__hive-flow__memory_store {"key": "architecture/decisions", "value": {...}}
   
   // Retrieve related data
-  mcp__claude-flow__memory_retrieve {"key": "research/*"}
-  mcp__claude-flow__memory_search {"pattern": "architecture"}
+  mcp__hive-flow__memory_retrieve {"key": "research/*"}
+  mcp__hive-flow__memory_search {"pattern": "architecture"}
 \`\`\`
 
 4️⃣ **FILE & CODE OPERATIONS** - Parallel execution:
@@ -522,27 +522,27 @@ Step B: REQUIRED - Claude Code Task Tool for ACTUAL Agent Execution (Single Mess
   Write {"file_path": "/tests/auth.test.js", "content": "..."}
   
   // Update memory with results
-  mcp__claude-flow__memory_store {"key": "code/api/auth", "value": "implemented"}
-  mcp__claude-flow__memory_store {"key": "code/api/users", "value": "implemented"}
+  mcp__hive-flow__memory_store {"key": "code/api/auth", "value": "implemented"}
+  mcp__hive-flow__memory_store {"key": "code/api/users", "value": "implemented"}
 \`\`\`
 
 5️⃣ **MONITORING & STATUS** - Combined checks:
 \`\`\`javascript
 [Single Message]:
-  mcp__claude-flow__swarm_monitor {}
-  mcp__claude-flow__swarm_status {}
-  mcp__claude-flow__agent_list {"status": "active"}
-  mcp__claude-flow__task_status {"includeCompleted": false}
+  mcp__hive-flow__swarm_monitor {}
+  mcp__hive-flow__swarm_status {}
+  mcp__hive-flow__agent_list {"status": "active"}
+  mcp__hive-flow__task_status {"includeCompleted": false}
   TodoRead {}
 \`\`\`
 
 ❌ NEVER DO THIS (Sequential = SLOW):
 \`\`\`
-Message 1: mcp__claude-flow__agent_spawn
-Message 2: mcp__claude-flow__agent_spawn
+Message 1: mcp__hive-flow__agent_spawn
+Message 2: mcp__hive-flow__agent_spawn
 Message 3: TodoWrite (one todo)
 Message 4: Read file
-Message 5: mcp__claude-flow__memory_store
+Message 5: mcp__hive-flow__memory_store
 \`\`\`
 
 ✅ ALWAYS DO THIS (Batch = FAST):
@@ -574,13 +574,13 @@ ${agentRecommendations}
    Example:
    \`\`\`
    [BatchTool]:
-     mcp__claude-flow__agent_spawn (coordinator)
-     mcp__claude-flow__agent_spawn (architect)
-     mcp__claude-flow__agent_spawn (coder-1)
-     mcp__claude-flow__agent_spawn (coder-2)
-     mcp__claude-flow__agent_spawn (tester)
-     mcp__claude-flow__memory_store { key: "init", value: {...} }
-     mcp__claude-flow__task_create { name: "Main", subtasks: [...] }
+     mcp__hive-flow__agent_spawn (coordinator)
+     mcp__hive-flow__agent_spawn (architect)
+     mcp__hive-flow__agent_spawn (coder-1)
+     mcp__hive-flow__agent_spawn (coder-2)
+     mcp__hive-flow__agent_spawn (tester)
+     mcp__hive-flow__memory_store { key: "init", value: {...} }
+     mcp__hive-flow__task_create { name: "Main", subtasks: [...] }
      TodoWrite { todos: [5-10 todos at once] }
    \`\`\`
 
@@ -597,28 +597,28 @@ ${agentRecommendations}
 🔧 AVAILABLE MCP TOOLS FOR SWARM COORDINATION:
 
 📊 MONITORING & STATUS:
-- mcp__claude-flow__swarm_status - Check current swarm status and agent activity
-- mcp__claude-flow__swarm_monitor - Real-time monitoring of swarm execution
-- mcp__claude-flow__agent_list - List all active agents and their capabilities
-- mcp__claude-flow__task_status - Check task progress and dependencies
+- mcp__hive-flow__swarm_status - Check current swarm status and agent activity
+- mcp__hive-flow__swarm_monitor - Real-time monitoring of swarm execution
+- mcp__hive-flow__agent_list - List all active agents and their capabilities
+- mcp__hive-flow__task_status - Check task progress and dependencies
 
 🧠 MEMORY & KNOWLEDGE:
-- mcp__claude-flow__memory_store - Store knowledge in swarm collective memory
-- mcp__claude-flow__memory_retrieve - Retrieve shared knowledge from memory
-- mcp__claude-flow__memory_search - Search collective memory by pattern
-- mcp__claude-flow__memory_sync - Synchronize memory across agents
+- mcp__hive-flow__memory_store - Store knowledge in swarm collective memory
+- mcp__hive-flow__memory_retrieve - Retrieve shared knowledge from memory
+- mcp__hive-flow__memory_search - Search collective memory by pattern
+- mcp__hive-flow__memory_sync - Synchronize memory across agents
 
 🤖 AGENT MANAGEMENT:
-- mcp__claude-flow__agent_spawn - Spawn specialized agents for tasks
-- mcp__claude-flow__agent_assign - Assign tasks to specific agents
-- mcp__claude-flow__agent_communicate - Send messages between agents
-- mcp__claude-flow__agent_coordinate - Coordinate agent activities
+- mcp__hive-flow__agent_spawn - Spawn specialized agents for tasks
+- mcp__hive-flow__agent_assign - Assign tasks to specific agents
+- mcp__hive-flow__agent_communicate - Send messages between agents
+- mcp__hive-flow__agent_coordinate - Coordinate agent activities
 
 📋 TASK ORCHESTRATION:
-- mcp__claude-flow__task_create - Create new tasks with dependencies
-- mcp__claude-flow__task_assign - Assign tasks to agents
-- mcp__claude-flow__task_update - Update task status and progress
-- mcp__claude-flow__task_complete - Mark tasks as complete with results
+- mcp__hive-flow__task_create - Create new tasks with dependencies
+- mcp__hive-flow__task_assign - Assign tasks to agents
+- mcp__hive-flow__task_update - Update task status and progress
+- mcp__hive-flow__task_complete - Mark tasks as complete with results
 
 🎛️ COORDINATION MODES:
 1. CENTRALIZED (default): Single coordinator manages all agents
@@ -646,46 +646,46 @@ ${
    S - Specification Phase (Single BatchTool):
    \`\`\`
    [BatchTool]:
-     mcp__claude-flow__memory_store { key: "specs/requirements", value: {...} }
-     mcp__claude-flow__task_create { name: "Requirement 1" }
-     mcp__claude-flow__task_create { name: "Requirement 2" }
-     mcp__claude-flow__task_create { name: "Requirement 3" }
-     mcp__claude-flow__agent_spawn { type: "researcher", name: "SpecAnalyst" }
+     mcp__hive-flow__memory_store { key: "specs/requirements", value: {...} }
+     mcp__hive-flow__task_create { name: "Requirement 1" }
+     mcp__hive-flow__task_create { name: "Requirement 2" }
+     mcp__hive-flow__task_create { name: "Requirement 3" }
+     mcp__hive-flow__agent_spawn { type: "researcher", name: "SpecAnalyst" }
    \`\`\`
    
    P - Pseudocode Phase (Single BatchTool):
    \`\`\`
    [BatchTool]:
-     mcp__claude-flow__memory_store { key: "pseudocode/main", value: {...} }
-     mcp__claude-flow__task_create { name: "Design API" }
-     mcp__claude-flow__task_create { name: "Design Data Model" }
-     mcp__claude-flow__agent_communicate { to: "all", message: "Review design" }
+     mcp__hive-flow__memory_store { key: "pseudocode/main", value: {...} }
+     mcp__hive-flow__task_create { name: "Design API" }
+     mcp__hive-flow__task_create { name: "Design Data Model" }
+     mcp__hive-flow__agent_communicate { to: "all", message: "Review design" }
    \`\`\`
    
    A - Architecture Phase (Single BatchTool):
    \`\`\`
    [BatchTool]:
-     mcp__claude-flow__agent_spawn { type: "architect", name: "LeadArchitect" }
-     mcp__claude-flow__memory_store { key: "architecture/decisions", value: {...} }
-     mcp__claude-flow__task_create { name: "Backend", subtasks: [...] }
-     mcp__claude-flow__task_create { name: "Frontend", subtasks: [...] }
+     mcp__hive-flow__agent_spawn { type: "architect", name: "LeadArchitect" }
+     mcp__hive-flow__memory_store { key: "architecture/decisions", value: {...} }
+     mcp__hive-flow__task_create { name: "Backend", subtasks: [...] }
+     mcp__hive-flow__task_create { name: "Frontend", subtasks: [...] }
    \`\`\`
    
    R - Refinement Phase (Single BatchTool):
    \`\`\`
    [BatchTool]:
-     mcp__claude-flow__swarm_monitor {}
-     mcp__claude-flow__task_update { taskId: "1", progress: 50 }
-     mcp__claude-flow__task_update { taskId: "2", progress: 75 }
-     mcp__claude-flow__memory_store { key: "learnings/iteration1", value: {...} }
+     mcp__hive-flow__swarm_monitor {}
+     mcp__hive-flow__task_update { taskId: "1", progress: 50 }
+     mcp__hive-flow__task_update { taskId: "2", progress: 75 }
+     mcp__hive-flow__memory_store { key: "learnings/iteration1", value: {...} }
    \`\`\`
    
    C - Completion Phase (Single BatchTool):
    \`\`\`
    [BatchTool]:
-     mcp__claude-flow__task_complete { taskId: "1", results: {...} }
-     mcp__claude-flow__task_complete { taskId: "2", results: {...} }
-     mcp__claude-flow__memory_retrieve { pattern: "**/*" }
+     mcp__hive-flow__task_complete { taskId: "1", results: {...} }
+     mcp__hive-flow__task_complete { taskId: "2", results: {...} }
+     mcp__hive-flow__memory_retrieve { pattern: "**/*" }
      TodoWrite { todos: [{content: "Final review", status: "completed"}] }
    \`\`\`
 `
@@ -695,27 +695,27 @@ ${
    Initial Setup (Single BatchTool):
    \`\`\`
    [BatchTool]:
-     mcp__claude-flow__task_create { name: "Main", subtasks: [...] }
-     mcp__claude-flow__agent_spawn { type: "coordinator" }
-     mcp__claude-flow__agent_spawn { type: "coder" }
-     mcp__claude-flow__agent_spawn { type: "tester" }
-     mcp__claude-flow__memory_store { key: "init", value: {...} }
+     mcp__hive-flow__task_create { name: "Main", subtasks: [...] }
+     mcp__hive-flow__agent_spawn { type: "coordinator" }
+     mcp__hive-flow__agent_spawn { type: "coder" }
+     mcp__hive-flow__agent_spawn { type: "tester" }
+     mcp__hive-flow__memory_store { key: "init", value: {...} }
    \`\`\`
    
    Task Assignment (Single BatchTool):
    \`\`\`
    [BatchTool]:
-     mcp__claude-flow__task_assign { taskId: "1", agentId: "agent-1" }
-     mcp__claude-flow__task_assign { taskId: "2", agentId: "agent-2" }
-     mcp__claude-flow__task_assign { taskId: "3", agentId: "agent-3" }
+     mcp__hive-flow__task_assign { taskId: "1", agentId: "agent-1" }
+     mcp__hive-flow__task_assign { taskId: "2", agentId: "agent-2" }
+     mcp__hive-flow__task_assign { taskId: "3", agentId: "agent-3" }
    \`\`\`
    
    Monitoring & Updates (Single BatchTool):
    \`\`\`
    [BatchTool]:
-     mcp__claude-flow__swarm_monitor {}
-     mcp__claude-flow__agent_communicate { to: "all", message: "Status update" }
-     mcp__claude-flow__memory_store { key: "progress", value: {...} }
+     mcp__hive-flow__swarm_monitor {}
+     mcp__hive-flow__agent_communicate { to: "all", message: "Status update" }
+     mcp__hive-flow__memory_store { key: "progress", value: {...} }
    \`\`\`
 `
 }
@@ -750,24 +750,24 @@ TESTER:
 📝 EXAMPLE MCP TOOL USAGE PATTERNS:
 
 1. Starting a swarm:
-   mcp__claude-flow__agent_spawn {"type": "coordinator", "name": "SwarmLead"}
-   mcp__claude-flow__memory_store {"key": "objective", "value": "${objective}"}
-   mcp__claude-flow__task_create {"name": "Main Objective", "type": "parent"}
+   mcp__hive-flow__agent_spawn {"type": "coordinator", "name": "SwarmLead"}
+   mcp__hive-flow__memory_store {"key": "objective", "value": "${objective}"}
+   mcp__hive-flow__task_create {"name": "Main Objective", "type": "parent"}
 
 2. Spawning worker agents:
-   mcp__claude-flow__agent_spawn {"type": "researcher", "capabilities": ["web-search"]}
-   mcp__claude-flow__agent_spawn {"type": "coder", "capabilities": ["python", "testing"]}
-   mcp__claude-flow__task_assign {"taskId": "task-123", "agentId": "agent-456"}
+   mcp__hive-flow__agent_spawn {"type": "researcher", "capabilities": ["web-search"]}
+   mcp__hive-flow__agent_spawn {"type": "coder", "capabilities": ["python", "testing"]}
+   mcp__hive-flow__task_assign {"taskId": "task-123", "agentId": "agent-456"}
 
 3. Coordinating work:
-   mcp__claude-flow__agent_communicate {"to": "agent-123", "message": "Begin phase 2"}
-   mcp__claude-flow__memory_store {"key": "phase1/results", "value": {...}}
-   mcp__claude-flow__task_update {"taskId": "task-123", "progress": 75}
+   mcp__hive-flow__agent_communicate {"to": "agent-123", "message": "Begin phase 2"}
+   mcp__hive-flow__memory_store {"key": "phase1/results", "value": {...}}
+   mcp__hive-flow__task_update {"taskId": "task-123", "progress": 75}
 
 4. Monitoring progress:
-   mcp__claude-flow__swarm_monitor {}
-   mcp__claude-flow__task_status {"includeCompleted": true}
-   mcp__claude-flow__agent_list {"status": "active"}
+   mcp__hive-flow__swarm_monitor {}
+   mcp__hive-flow__task_status {"includeCompleted": true}
+   mcp__hive-flow__agent_list {"status": "active"}
 
 💾 MEMORY PATTERNS:
 
@@ -787,7 +787,7 @@ The swarm should be self-documenting - use memory_store to save all important in
       // If --claude flag is used, force Claude Code even if CLI not available
       if (flags && flags.claude) {
         // --claude flag means interactive mode, so don't apply non-interactive
-        console.log('🐝 Launching Claude Flow Swarm System...');
+        console.log('🐝 Launching Hive Flow Swarm System...');
         console.log(`📋 Objective: ${objective}`);
         console.log(`🎯 Strategy: ${strategy}`);
         console.log(`🏗️  Mode: ${mode}`);
@@ -832,9 +832,9 @@ The swarm should be self-documenting - use memory_store to save all important in
         console.log('\n💡 Pro Tips:');
         console.log('─'.repeat(30));
         console.log('• Use TodoWrite to track parallel tasks');
-        console.log('• Store results with mcp__claude-flow__memory_usage');
-        console.log('• Monitor progress with mcp__claude-flow__swarm_monitor');
-        console.log('• Check task status with mcp__claude-flow__task_status');
+        console.log('• Store results with mcp__hive-flow__memory_usage');
+        console.log('• Monitor progress with mcp__hive-flow__swarm_monitor');
+        console.log('• Check task status with mcp__hive-flow__task_status');
         
         // Set up clean termination
         const cleanup = () => {
@@ -891,8 +891,8 @@ The swarm should be self-documenting - use memory_store to save all important in
           console.log('\nWould spawn Claude Code with swarm objective:');
           console.log(`📋 Objective: ${objective}`);
           console.log('\nOptions:');
-          console.log('  • Use --executor flag for built-in executor: claude-flow swarm "objective" --executor');
-          console.log('  • Use --claude flag to open Claude Code CLI: claude-flow swarm "objective" --claude');
+          console.log('  • Use --executor flag for built-in executor: hive-flow swarm "objective" --executor');
+          console.log('  • Use --claude flag to open Claude Code CLI: hive-flow swarm "objective" --claude');
         } else {
           // In non-interactive mode, output JSON error
           console.error(JSON.stringify({
@@ -906,7 +906,7 @@ The swarm should be self-documenting - use memory_store to save all important in
 
       // Claude is available, use it to run swarm
       if (!isNonInteractive) {
-        console.log('🐝 Launching Claude Flow Swarm System...');
+        console.log('🐝 Launching Hive Flow Swarm System...');
         console.log(`📋 Objective: ${objective}`);
         console.log(`🎯 Strategy: ${flags.strategy || 'auto'}`);
         console.log(`🏗️  Mode: ${flags.mode || 'centralized'}`);
@@ -1050,7 +1050,7 @@ await swarmCommand(args, flags);
 
       // Use the bash script for true background execution
       const binDir = new URL('../../../bin/', import.meta.url).pathname;
-      const bgScriptPath = `${binDir}claude-flow-swarm-bg`;
+      const bgScriptPath = `${binDir}hive-flow-swarm-bg`;
 
       try {
         // Check if the background script exists
@@ -1106,7 +1106,7 @@ exit 0
 
         console.log(`\n✅ Swarm launched in background!`);
         console.log(`📄 Logs: tail -f ${logFile}`);
-        console.log(`📊 Status: claude-flow swarm status ${swarmId}`);
+        console.log(`📊 Status: hive-flow swarm status ${swarmId}`);
         console.log(`\nThe swarm will continue running independently.`);
 
         // Exit immediately
@@ -1121,10 +1121,10 @@ exit 0
 
     const objective = (args || []).join(' ').trim();
 
-    // Get the claude-flow-swarm-bg script path
+    // Get the hive-flow-swarm-bg script path
     const bgScriptPath = path.join(
       path.dirname(new URL(import.meta.url).pathname),
-      '../../../bin/claude-flow-swarm-bg',
+      '../../../bin/hive-flow-swarm-bg',
     );
 
     // Check if background script exists
@@ -1153,10 +1153,10 @@ exit 0
       // Fallback to simple message
       console.log(`🐝 Background mode requested`);
       console.log(`📋 Objective: ${objective}`);
-      console.log(`\n⚠️  Background execution requires the claude-flow-swarm-bg script.`);
+      console.log(`\n⚠️  Background execution requires the hive-flow-swarm-bg script.`);
       console.log(`\nFor true background execution, use:`);
       console.log(
-        `  nohup claude-flow swarm "${objective}" ${Object.entries(flags)
+        `  nohup hive-flow swarm "${objective}" ${Object.entries(flags)
           .filter(([k, v]) => k !== 'background' && v)
           .map(([k, v]) => `--${k}${v !== true ? ` ${v}` : ''}`)
           .join(' ')} > swarm.log 2>&1 &`,
@@ -1329,7 +1329,7 @@ exit 0
           console.log(`✅ Swarm initialized with ID: ${swarmId}`);
           console.log('\n⚠️  Note: Advanced swarm features require Claude or local installation.');
           console.log('Install Claude: https://claude.ai/code');
-          console.log('Or install locally: npm install -g claude-flow@latest');
+          console.log('Or install locally: npm install -g hive-flow@latest');
           console.log('\nThe swarm system would coordinate the following:');
           console.log('1. Agent spawning and task distribution');
           console.log('2. Parallel execution of subtasks');
@@ -1458,7 +1458,7 @@ Begin execution now. Create all necessary files and provide a complete, working 
         console.log(`✅ Swarm initialized with ID: ${swarmId}`);
         console.log('\n⚠️  Note: Advanced swarm features require Claude or local installation.');
         console.log('Install Claude: https://claude.ai/code');
-        console.log('Or install locally: npm install -g claude-flow@latest');
+        console.log('Or install locally: npm install -g hive-flow@latest');
         console.log('\nThe swarm system would coordinate the following:');
         console.log('1. Agent spawning and task distribution');
         console.log('2. Parallel execution of subtasks');
@@ -1474,16 +1474,16 @@ Begin execution now. Create all necessary files and provide a complete, working 
 
     // Fallback to comprehensive help if there's an import error
     console.log(`
-🐝 Claude Flow Advanced Swarm System
+🐝 Hive Flow Advanced Swarm System
 
 USAGE:
-  claude-flow swarm <objective> [options]
+  hive-flow swarm <objective> [options]
 
 EXAMPLES:
-  claude-flow swarm "Build a REST API" --strategy development
-  claude-flow swarm "Research cloud architecture" --strategy research --ui
-  claude-flow swarm "Analyze data trends" --strategy analysis --parallel
-  claude-flow swarm "Optimize performance" --distributed --monitor
+  hive-flow swarm "Build a REST API" --strategy development
+  hive-flow swarm "Research cloud architecture" --strategy research --ui
+  hive-flow swarm "Analyze data trends" --strategy analysis --parallel
+  hive-flow swarm "Optimize performance" --distributed --monitor
 
 STRATEGIES:
   auto           Automatically determine best approach (default)
@@ -1641,7 +1641,7 @@ app.post('/api/v1/items', (req, res) => {
 // Start server
 app.listen(port, () => {
   console.log(\`REST API server running on port \${port}\`);
-  console.log('Created by Claude Flow Swarm');
+  console.log('Created by Hive Flow Swarm');
 });
 
 module.exports = app;
@@ -1654,15 +1654,15 @@ module.exports = app;
     const packageJson = {
       name: 'rest-api',
       version: '1.0.0',
-      description: 'REST API created by Claude Flow Swarm',
+      description: 'REST API created by Hive Flow Swarm',
       main: 'server.js',
       scripts: {
         start: 'node server.js',
         dev: 'nodemon server.js',
         test: 'jest',
       },
-      keywords: ['rest', 'api', 'swarm', 'claude-flow'],
-      author: 'Claude Flow Swarm',
+      keywords: ['rest', 'api', 'swarm', 'hive-flow'],
+      author: 'Hive Flow Swarm',
       license: 'MIT',
       dependencies: {
         express: '^4.18.2',
@@ -1688,7 +1688,7 @@ module.exports = app;
     // Create README
     const readme = `# REST API
 
-This REST API was created by the Claude Flow Swarm system.
+This REST API was created by the Hive Flow Swarm system.
 
 ## Swarm Details
 - Swarm ID: ${swarmId}
@@ -1716,7 +1716,7 @@ npm start
 - \`POST /api/v1/items\` - Create new item
 
 ---
-Created by Claude Flow Swarm
+Created by Hive Flow Swarm
 `;
 
     await fs.promises.writeFile(path.join(apiDir, 'README.md'), readme);
@@ -1729,7 +1729,7 @@ Created by Claude Flow Swarm
     // Create generic application
     console.log(`\n🏗️  Creating application...`);
 
-    const appCode = `// Application created by Claude Flow Swarm
+    const appCode = `// Application created by Hive Flow Swarm
 // Objective: ${objective}
 // Swarm ID: ${swarmId}
 
@@ -1747,7 +1747,7 @@ main();
     const packageJson = {
       name: 'swarm-app',
       version: '1.0.0',
-      description: `Application created by Claude Flow Swarm: ${objective}`,
+      description: `Application created by Hive Flow Swarm: ${objective}`,
       main: 'app.js',
       scripts: {
         start: 'node app.js',
@@ -2059,12 +2059,12 @@ function getAgentRecommendations(strategy, maxAgents, objective) {
 
 \`\`\`
 [BatchTool - Single Message]:
-  mcp__claude-flow__agent_spawn {"type": "coordinator", "name": "SwarmLead"}
-  mcp__claude-flow__agent_spawn {"type": "researcher", "name": "RequirementsAnalyst"}
-  mcp__claude-flow__agent_spawn {"type": "architect", "name": "SystemDesigner"}
-  mcp__claude-flow__memory_store {"key": "swarm/objective", "value": "${objective}"}
-  mcp__claude-flow__task_create {"name": "Analyze Requirements", "assignTo": "RequirementsAnalyst"}
-  mcp__claude-flow__task_create {"name": "Design Architecture", "assignTo": "SystemDesigner", "dependsOn": ["Analyze Requirements"]}
+  mcp__hive-flow__agent_spawn {"type": "coordinator", "name": "SwarmLead"}
+  mcp__hive-flow__agent_spawn {"type": "researcher", "name": "RequirementsAnalyst"}
+  mcp__hive-flow__agent_spawn {"type": "architect", "name": "SystemDesigner"}
+  mcp__hive-flow__memory_store {"key": "swarm/objective", "value": "${objective}"}
+  mcp__hive-flow__task_create {"name": "Analyze Requirements", "assignTo": "RequirementsAnalyst"}
+  mcp__hive-flow__task_create {"name": "Design Architecture", "assignTo": "SystemDesigner", "dependsOn": ["Analyze Requirements"]}
   TodoWrite {"todos": [
     {"id": "1", "content": "Initialize swarm coordination", "status": "completed", "priority": "high"},
     {"id": "2", "content": "Analyze objective requirements", "status": "in_progress", "priority": "high"},
@@ -2079,16 +2079,16 @@ function getAgentRecommendations(strategy, maxAgents, objective) {
 
 \`\`\`
 [BatchTool - Single Message]:
-  mcp__claude-flow__agent_spawn {"type": "coordinator", "name": "ResearchLead"}
-  mcp__claude-flow__agent_spawn {"type": "researcher", "name": "PrimaryInvestigator"}
-  mcp__claude-flow__agent_spawn {"type": "analyst", "name": "DataScientist"}
-  mcp__claude-flow__agent_spawn {"type": "researcher", "name": "LiteratureExpert"}
-  mcp__claude-flow__agent_spawn {"type": "analyst", "name": "InsightsCompiler"}
-  mcp__claude-flow__memory_store {"key": "research/objective", "value": "${objective}"}
-  mcp__claude-flow__task_create {"name": "Literature Review", "assignTo": "LiteratureExpert"}
-  mcp__claude-flow__task_create {"name": "Primary Research", "assignTo": "PrimaryInvestigator"}
-  mcp__claude-flow__task_create {"name": "Data Analysis", "assignTo": "DataScientist"}
-  mcp__claude-flow__task_create {"name": "Compile Insights", "assignTo": "InsightsCompiler", "dependsOn": ["Literature Review", "Primary Research", "Data Analysis"]}
+  mcp__hive-flow__agent_spawn {"type": "coordinator", "name": "ResearchLead"}
+  mcp__hive-flow__agent_spawn {"type": "researcher", "name": "PrimaryInvestigator"}
+  mcp__hive-flow__agent_spawn {"type": "analyst", "name": "DataScientist"}
+  mcp__hive-flow__agent_spawn {"type": "researcher", "name": "LiteratureExpert"}
+  mcp__hive-flow__agent_spawn {"type": "analyst", "name": "InsightsCompiler"}
+  mcp__hive-flow__memory_store {"key": "research/objective", "value": "${objective}"}
+  mcp__hive-flow__task_create {"name": "Literature Review", "assignTo": "LiteratureExpert"}
+  mcp__hive-flow__task_create {"name": "Primary Research", "assignTo": "PrimaryInvestigator"}
+  mcp__hive-flow__task_create {"name": "Data Analysis", "assignTo": "DataScientist"}
+  mcp__hive-flow__task_create {"name": "Compile Insights", "assignTo": "InsightsCompiler", "dependsOn": ["Literature Review", "Primary Research", "Data Analysis"]}
   TodoWrite {"todos": [
     {"id": "1", "content": "Initialize research swarm", "status": "completed", "priority": "high"},
     {"id": "2", "content": "Conduct literature review", "status": "in_progress", "priority": "high"},
@@ -2104,16 +2104,16 @@ function getAgentRecommendations(strategy, maxAgents, objective) {
 
 \`\`\`
 [BatchTool - Single Message]:
-  mcp__claude-flow__agent_spawn {"type": "coordinator", "name": "TechLead"}
-  mcp__claude-flow__agent_spawn {"type": "architect", "name": "SystemArchitect"}
-  mcp__claude-flow__agent_spawn {"type": "coder", "name": "BackendDev"}
-  mcp__claude-flow__agent_spawn {"type": "coder", "name": "FrontendDev"}
-  mcp__claude-flow__agent_spawn {"type": "tester", "name": "QAEngineer"}
-  mcp__claude-flow__memory_store {"key": "dev/objective", "value": "${objective}"}
-  mcp__claude-flow__task_create {"name": "System Architecture", "assignTo": "SystemArchitect"}
-  mcp__claude-flow__task_create {"name": "Backend Implementation", "assignTo": "BackendDev", "dependsOn": ["System Architecture"]}
-  mcp__claude-flow__task_create {"name": "Frontend Implementation", "assignTo": "FrontendDev", "dependsOn": ["System Architecture"]}
-  mcp__claude-flow__task_create {"name": "Testing Suite", "assignTo": "QAEngineer", "dependsOn": ["Backend Implementation", "Frontend Implementation"]}
+  mcp__hive-flow__agent_spawn {"type": "coordinator", "name": "TechLead"}
+  mcp__hive-flow__agent_spawn {"type": "architect", "name": "SystemArchitect"}
+  mcp__hive-flow__agent_spawn {"type": "coder", "name": "BackendDev"}
+  mcp__hive-flow__agent_spawn {"type": "coder", "name": "FrontendDev"}
+  mcp__hive-flow__agent_spawn {"type": "tester", "name": "QAEngineer"}
+  mcp__hive-flow__memory_store {"key": "dev/objective", "value": "${objective}"}
+  mcp__hive-flow__task_create {"name": "System Architecture", "assignTo": "SystemArchitect"}
+  mcp__hive-flow__task_create {"name": "Backend Implementation", "assignTo": "BackendDev", "dependsOn": ["System Architecture"]}
+  mcp__hive-flow__task_create {"name": "Frontend Implementation", "assignTo": "FrontendDev", "dependsOn": ["System Architecture"]}
+  mcp__hive-flow__task_create {"name": "Testing Suite", "assignTo": "QAEngineer", "dependsOn": ["Backend Implementation", "Frontend Implementation"]}
   TodoWrite {"todos": [
     {"id": "1", "content": "Initialize development swarm", "status": "completed", "priority": "high"},
     {"id": "2", "content": "Design system architecture", "status": "in_progress", "priority": "high"},
@@ -2129,16 +2129,16 @@ function getAgentRecommendations(strategy, maxAgents, objective) {
 
 \`\`\`
 [BatchTool - Single Message]:
-  mcp__claude-flow__agent_spawn {"type": "coordinator", "name": "AnalysisLead"}
-  mcp__claude-flow__agent_spawn {"type": "analyst", "name": "DataEngineer"}
-  mcp__claude-flow__agent_spawn {"type": "analyst", "name": "StatisticalExpert"}
-  mcp__claude-flow__agent_spawn {"type": "coder", "name": "VisualizationDev"}
-  mcp__claude-flow__agent_spawn {"type": "analyst", "name": "BusinessAnalyst"}
-  mcp__claude-flow__memory_store {"key": "analysis/objective", "value": "${objective}"}
-  mcp__claude-flow__task_create {"name": "Data Pipeline Setup", "assignTo": "DataEngineer"}
-  mcp__claude-flow__task_create {"name": "Statistical Analysis", "assignTo": "StatisticalExpert", "dependsOn": ["Data Pipeline Setup"]}
-  mcp__claude-flow__task_create {"name": "Create Visualizations", "assignTo": "VisualizationDev", "dependsOn": ["Statistical Analysis"]}
-  mcp__claude-flow__task_create {"name": "Business Insights", "assignTo": "BusinessAnalyst", "dependsOn": ["Statistical Analysis"]}
+  mcp__hive-flow__agent_spawn {"type": "coordinator", "name": "AnalysisLead"}
+  mcp__hive-flow__agent_spawn {"type": "analyst", "name": "DataEngineer"}
+  mcp__hive-flow__agent_spawn {"type": "analyst", "name": "StatisticalExpert"}
+  mcp__hive-flow__agent_spawn {"type": "coder", "name": "VisualizationDev"}
+  mcp__hive-flow__agent_spawn {"type": "analyst", "name": "BusinessAnalyst"}
+  mcp__hive-flow__memory_store {"key": "analysis/objective", "value": "${objective}"}
+  mcp__hive-flow__task_create {"name": "Data Pipeline Setup", "assignTo": "DataEngineer"}
+  mcp__hive-flow__task_create {"name": "Statistical Analysis", "assignTo": "StatisticalExpert", "dependsOn": ["Data Pipeline Setup"]}
+  mcp__hive-flow__task_create {"name": "Create Visualizations", "assignTo": "VisualizationDev", "dependsOn": ["Statistical Analysis"]}
+  mcp__hive-flow__task_create {"name": "Business Insights", "assignTo": "BusinessAnalyst", "dependsOn": ["Statistical Analysis"]}
   TodoWrite {"todos": [
     {"id": "1", "content": "Initialize analysis swarm", "status": "completed", "priority": "high"},
     {"id": "2", "content": "Setup data pipelines", "status": "in_progress", "priority": "high"},
@@ -2154,16 +2154,16 @@ function getAgentRecommendations(strategy, maxAgents, objective) {
 
 \`\`\`
 [BatchTool - Single Message]:
-  mcp__claude-flow__agent_spawn {"type": "coordinator", "name": "QALead"}
-  mcp__claude-flow__agent_spawn {"type": "tester", "name": "UnitTestEngineer"}
-  mcp__claude-flow__agent_spawn {"type": "tester", "name": "IntegrationTester"}
-  mcp__claude-flow__agent_spawn {"type": "tester", "name": "PerformanceTester"}
-  mcp__claude-flow__agent_spawn {"type": "tester", "name": "SecurityAuditor"}
-  mcp__claude-flow__memory_store {"key": "testing/objective", "value": "${objective}"}
-  mcp__claude-flow__task_create {"name": "Unit Test Suite", "assignTo": "UnitTestEngineer"}
-  mcp__claude-flow__task_create {"name": "Integration Tests", "assignTo": "IntegrationTester"}
-  mcp__claude-flow__task_create {"name": "Performance Tests", "assignTo": "PerformanceTester"}
-  mcp__claude-flow__task_create {"name": "Security Audit", "assignTo": "SecurityAuditor"}
+  mcp__hive-flow__agent_spawn {"type": "coordinator", "name": "QALead"}
+  mcp__hive-flow__agent_spawn {"type": "tester", "name": "UnitTestEngineer"}
+  mcp__hive-flow__agent_spawn {"type": "tester", "name": "IntegrationTester"}
+  mcp__hive-flow__agent_spawn {"type": "tester", "name": "PerformanceTester"}
+  mcp__hive-flow__agent_spawn {"type": "tester", "name": "SecurityAuditor"}
+  mcp__hive-flow__memory_store {"key": "testing/objective", "value": "${objective}"}
+  mcp__hive-flow__task_create {"name": "Unit Test Suite", "assignTo": "UnitTestEngineer"}
+  mcp__hive-flow__task_create {"name": "Integration Tests", "assignTo": "IntegrationTester"}
+  mcp__hive-flow__task_create {"name": "Performance Tests", "assignTo": "PerformanceTester"}
+  mcp__hive-flow__task_create {"name": "Security Audit", "assignTo": "SecurityAuditor"}
   TodoWrite {"todos": [
     {"id": "1", "content": "Initialize testing swarm", "status": "completed", "priority": "high"},
     {"id": "2", "content": "Create unit tests", "status": "in_progress", "priority": "high"},
@@ -2179,16 +2179,16 @@ function getAgentRecommendations(strategy, maxAgents, objective) {
 
 \`\`\`
 [BatchTool - Single Message]:
-  mcp__claude-flow__agent_spawn {"type": "coordinator", "name": "OptimizationLead"}
-  mcp__claude-flow__agent_spawn {"type": "analyst", "name": "PerformanceProfiler"}
-  mcp__claude-flow__agent_spawn {"type": "coder", "name": "AlgorithmExpert"}
-  mcp__claude-flow__agent_spawn {"type": "analyst", "name": "DatabaseOptimizer"}
-  mcp__claude-flow__agent_spawn {"type": "coder", "name": "SystemsTuner"}
-  mcp__claude-flow__memory_store {"key": "optimization/objective", "value": "${objective}"}
-  mcp__claude-flow__task_create {"name": "Performance Profiling", "assignTo": "PerformanceProfiler"}
-  mcp__claude-flow__task_create {"name": "Algorithm Optimization", "assignTo": "AlgorithmExpert", "dependsOn": ["Performance Profiling"]}
-  mcp__claude-flow__task_create {"name": "Database Optimization", "assignTo": "DatabaseOptimizer", "dependsOn": ["Performance Profiling"]}
-  mcp__claude-flow__task_create {"name": "System Tuning", "assignTo": "SystemsTuner", "dependsOn": ["Performance Profiling"]}
+  mcp__hive-flow__agent_spawn {"type": "coordinator", "name": "OptimizationLead"}
+  mcp__hive-flow__agent_spawn {"type": "analyst", "name": "PerformanceProfiler"}
+  mcp__hive-flow__agent_spawn {"type": "coder", "name": "AlgorithmExpert"}
+  mcp__hive-flow__agent_spawn {"type": "analyst", "name": "DatabaseOptimizer"}
+  mcp__hive-flow__agent_spawn {"type": "coder", "name": "SystemsTuner"}
+  mcp__hive-flow__memory_store {"key": "optimization/objective", "value": "${objective}"}
+  mcp__hive-flow__task_create {"name": "Performance Profiling", "assignTo": "PerformanceProfiler"}
+  mcp__hive-flow__task_create {"name": "Algorithm Optimization", "assignTo": "AlgorithmExpert", "dependsOn": ["Performance Profiling"]}
+  mcp__hive-flow__task_create {"name": "Database Optimization", "assignTo": "DatabaseOptimizer", "dependsOn": ["Performance Profiling"]}
+  mcp__hive-flow__task_create {"name": "System Tuning", "assignTo": "SystemsTuner", "dependsOn": ["Performance Profiling"]}
   TodoWrite {"todos": [
     {"id": "1", "content": "Initialize optimization swarm", "status": "completed", "priority": "high"},
     {"id": "2", "content": "Profile system performance", "status": "in_progress", "priority": "high"},
@@ -2204,16 +2204,16 @@ function getAgentRecommendations(strategy, maxAgents, objective) {
 
 \`\`\`
 [BatchTool - Single Message]:
-  mcp__claude-flow__agent_spawn {"type": "coordinator", "name": "MaintenanceLead"}
-  mcp__claude-flow__agent_spawn {"type": "analyst", "name": "SystemAuditor"}
-  mcp__claude-flow__agent_spawn {"type": "coder", "name": "PatchDeveloper"}
-  mcp__claude-flow__agent_spawn {"type": "tester", "name": "RegressionTester"}
-  mcp__claude-flow__agent_spawn {"type": "analyst", "name": "DocumentationUpdater"}
-  mcp__claude-flow__memory_store {"key": "maintenance/objective", "value": "${objective}"}
-  mcp__claude-flow__task_create {"name": "System Audit", "assignTo": "SystemAuditor"}
-  mcp__claude-flow__task_create {"name": "Develop Patches", "assignTo": "PatchDeveloper", "dependsOn": ["System Audit"]}
-  mcp__claude-flow__task_create {"name": "Regression Testing", "assignTo": "RegressionTester", "dependsOn": ["Develop Patches"]}
-  mcp__claude-flow__task_create {"name": "Update Documentation", "assignTo": "DocumentationUpdater", "dependsOn": ["Develop Patches"]}
+  mcp__hive-flow__agent_spawn {"type": "coordinator", "name": "MaintenanceLead"}
+  mcp__hive-flow__agent_spawn {"type": "analyst", "name": "SystemAuditor"}
+  mcp__hive-flow__agent_spawn {"type": "coder", "name": "PatchDeveloper"}
+  mcp__hive-flow__agent_spawn {"type": "tester", "name": "RegressionTester"}
+  mcp__hive-flow__agent_spawn {"type": "analyst", "name": "DocumentationUpdater"}
+  mcp__hive-flow__memory_store {"key": "maintenance/objective", "value": "${objective}"}
+  mcp__hive-flow__task_create {"name": "System Audit", "assignTo": "SystemAuditor"}
+  mcp__hive-flow__task_create {"name": "Develop Patches", "assignTo": "PatchDeveloper", "dependsOn": ["System Audit"]}
+  mcp__hive-flow__task_create {"name": "Regression Testing", "assignTo": "RegressionTester", "dependsOn": ["Develop Patches"]}
+  mcp__hive-flow__task_create {"name": "Update Documentation", "assignTo": "DocumentationUpdater", "dependsOn": ["Develop Patches"]}
   TodoWrite {"todos": [
     {"id": "1", "content": "Initialize maintenance swarm", "status": "completed", "priority": "high"},
     {"id": "2", "content": "Audit system health", "status": "in_progress", "priority": "high"},

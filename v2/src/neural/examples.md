@@ -574,9 +574,9 @@ Or if using ts-node:
 npx ts-node examples.ts
 ```
 
-## Integration with Claude Flow
+## Integration with Hive Flow
 
-These examples demonstrate how the NeuralDomainMapper integrates with the broader Claude Flow ecosystem:
+These examples demonstrate how the NeuralDomainMapper integrates with the broader Hive Flow ecosystem:
 
 1. **Hooks Integration**: Automatic analysis triggers based on neural patterns
 2. **Memory System**: Persistent storage of analysis results and learning patterns  

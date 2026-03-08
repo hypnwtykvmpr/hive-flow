@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Claude-Flow MCP Server
- * Implements the Model Context Protocol for Claude-Flow v2.0.0
+ * Hive-Flow MCP Server
+ * Implements the Model Context Protocol for Hive-Flow v2.0.0
  * Compatible with ruv-swarm MCP interface
  */
 
@@ -62,7 +62,7 @@ function resolveLegacyAgentType(legacyType) {
   return LEGACY_AGENT_MAPPING[legacyType] || legacyType;
 }
 
-class ClaudeFlowMCPServer {
+class HiveFlowMCPServer {
   constructor() {
     this.version = VERSION; // Use version from package.json
     this.memoryStore = memoryStore; // Use shared singleton instance
@@ -83,7 +83,7 @@ class ClaudeFlowMCPServer {
     // Initialize shared memory store (same as npx commands)
     this.initializeMemory().catch((err) => {
       console.error(
-        `[${new Date().toISOString()}] ERROR [claude-flow-mcp] Failed to initialize shared memory:`,
+        `[${new Date().toISOString()}] ERROR [hive-flow-mcp] Failed to initialize shared memory:`,
         err,
       );
     });
@@ -94,10 +94,10 @@ class ClaudeFlowMCPServer {
   async initializeMemory() {
     await this.memoryStore.initialize();
     console.error(
-      `[${new Date().toISOString()}] INFO [claude-flow-mcp] (${this.sessionId}) Shared memory store initialized (same as npx)`,
+      `[${new Date().toISOString()}] INFO [hive-flow-mcp] (${this.sessionId}) Shared memory store initialized (same as npx)`,
     );
     console.error(
-      `[${new Date().toISOString()}] INFO [claude-flow-mcp] (${this.sessionId}) Using ${this.memoryStore.isUsingFallback() ? 'in-memory' : 'SQLite'} storage`,
+      `[${new Date().toISOString()}] INFO [hive-flow-mcp] (${this.sessionId}) Using ${this.memoryStore.isUsingFallback() ? 'in-memory' : 'SQLite'} storage`,
     );
   }
 
@@ -1024,26 +1024,26 @@ class ClaudeFlowMCPServer {
 
   initializeResources() {
     return {
-      'claude-flow://swarms': {
-        uri: 'claude-flow://swarms',
+      'hive-flow://swarms': {
+        uri: 'hive-flow://swarms',
         name: 'Active Swarms',
         description: 'List of active swarm configurations and status',
         mimeType: 'application/json',
       },
-      'claude-flow://agents': {
-        uri: 'claude-flow://agents',
+      'hive-flow://agents': {
+        uri: 'hive-flow://agents',
         name: 'Agent Registry',
         description: 'Registry of available agents and their capabilities',
         mimeType: 'application/json',
       },
-      'claude-flow://models': {
-        uri: 'claude-flow://models',
+      'hive-flow://models': {
+        uri: 'hive-flow://models',
         name: 'Neural Models',
         description: 'Available neural network models and training status',
         mimeType: 'application/json',
       },
-      'claude-flow://performance': {
-        uri: 'claude-flow://performance',
+      'hive-flow://performance': {
+        uri: 'hive-flow://performance',
         name: 'Performance Metrics',
         description: 'Real-time performance metrics and benchmarks',
         mimeType: 'application/json',
@@ -1076,7 +1076,7 @@ class ClaudeFlowMCPServer {
 
   handleInitialize(id, params) {
     console.error(
-      `[${new Date().toISOString()}] INFO [claude-flow-mcp] (${this.sessionId}) 🔌 Connection established: ${this.sessionId}`,
+      `[${new Date().toISOString()}] INFO [hive-flow-mcp] (${this.sessionId}) 🔌 Connection established: ${this.sessionId}`,
     );
 
     return {
@@ -1086,7 +1086,7 @@ class ClaudeFlowMCPServer {
         protocolVersion: '2024-11-05',
         capabilities: this.capabilities,
         serverInfo: {
-          name: 'claude-flow',
+          name: 'hive-flow',
           version: this.version,
         },
       },
@@ -1108,7 +1108,7 @@ class ClaudeFlowMCPServer {
     const { name, arguments: args } = params;
 
     console.error(
-      `[${new Date().toISOString()}] INFO [claude-flow-mcp] (${this.sessionId}) 🔧 Tool called: ${name}`,
+      `[${new Date().toISOString()}] INFO [hive-flow-mcp] (${this.sessionId}) 🔧 Tool called: ${name}`,
     );
 
     try {
@@ -1205,11 +1205,11 @@ class ClaudeFlowMCPServer {
             metadata: { type: 'active_swarm', sessionId: this.sessionId },
           });
           console.error(
-            `[${new Date().toISOString()}] INFO [claude-flow-mcp] Swarm persisted to memory: ${swarmId}`,
+            `[${new Date().toISOString()}] INFO [hive-flow-mcp] Swarm persisted to memory: ${swarmId}`,
           );
         } catch (error) {
           console.error(
-            `[${new Date().toISOString()}] ERROR [claude-flow-mcp] Failed to persist swarm:`,
+            `[${new Date().toISOString()}] ERROR [hive-flow-mcp] Failed to persist swarm:`,
             error,
           );
         }
@@ -1258,11 +1258,11 @@ class ClaudeFlowMCPServer {
             });
           }
           console.error(
-            `[${new Date().toISOString()}] INFO [claude-flow-mcp] Agent persisted to memory: ${agentId}`,
+            `[${new Date().toISOString()}] INFO [hive-flow-mcp] Agent persisted to memory: ${agentId}`,
           );
         } catch (error) {
           console.error(
-            `[${new Date().toISOString()}] ERROR [claude-flow-mcp] Failed to persist agent:`,
+            `[${new Date().toISOString()}] ERROR [hive-flow-mcp] Failed to persist agent:`,
             error,
           );
         }
@@ -1380,11 +1380,11 @@ class ClaudeFlowMCPServer {
             });
 
             console.error(
-              `[${new Date().toISOString()}] INFO [claude-flow-mcp] Neural pattern stored: ${modelId} (accuracy: ${patternData.accuracy.toFixed(4)})`,
+              `[${new Date().toISOString()}] INFO [hive-flow-mcp] Neural pattern stored: ${modelId} (accuracy: ${patternData.accuracy.toFixed(4)})`,
             );
           } catch (error) {
             console.error(
-              `[${new Date().toISOString()}] ERROR [claude-flow-mcp] Failed to persist pattern: ${error.message}`,
+              `[${new Date().toISOString()}] ERROR [hive-flow-mcp] Failed to persist pattern: ${error.message}`,
             );
           }
         }
@@ -1604,7 +1604,7 @@ class ClaudeFlowMCPServer {
           }
         } catch (error) {
           console.error(
-            `[${new Date().toISOString()}] ERROR [claude-flow-mcp] neural_patterns error: ${error.message}`,
+            `[${new Date().toISOString()}] ERROR [hive-flow-mcp] neural_patterns error: ${error.message}`,
           );
           return {
             success: false,
@@ -1880,7 +1880,7 @@ class ClaudeFlowMCPServer {
             };
           } catch (error) {
             console.error(
-              `[${new Date().toISOString()}] ERROR [claude-flow-mcp] Failed to list agents:`,
+              `[${new Date().toISOString()}] ERROR [hive-flow-mcp] Failed to list agents:`,
               error,
             );
             return {
@@ -2038,7 +2038,7 @@ class ClaudeFlowMCPServer {
           return response;
         } catch (error) {
           console.error(
-            `[${new Date().toISOString()}] ERROR [claude-flow-mcp] Failed to get swarm status:`,
+            `[${new Date().toISOString()}] ERROR [hive-flow-mcp] Failed to get swarm status:`,
             error,
           );
 
@@ -2102,12 +2102,12 @@ class ClaudeFlowMCPServer {
               },
             );
             console.error(
-              `[${new Date().toISOString()}] INFO [claude-flow-mcp] Task persisted to memory: ${taskId}`,
+              `[${new Date().toISOString()}] INFO [hive-flow-mcp] Task persisted to memory: ${taskId}`,
             );
           }
         } catch (error) {
           console.error(
-            `[${new Date().toISOString()}] ERROR [claude-flow-mcp] Failed to persist task:`,
+            `[${new Date().toISOString()}] ERROR [hive-flow-mcp] Failed to persist task:`,
             error,
           );
         }
@@ -2289,7 +2289,7 @@ class ClaudeFlowMCPServer {
 
   async readResource(uri) {
     switch (uri) {
-      case 'claude-flow://swarms':
+      case 'hive-flow://swarms':
         return {
           active_swarms: 3,
           total_agents: 15,
@@ -2297,7 +2297,7 @@ class ClaudeFlowMCPServer {
           performance: '2.8-4.4x speedup',
         };
 
-      case 'claude-flow://agents':
+      case 'hive-flow://agents':
         return {
           total_agents: 8,
           types: [
@@ -2314,7 +2314,7 @@ class ClaudeFlowMCPServer {
           capabilities: 127,
         };
 
-      case 'claude-flow://models':
+      case 'hive-flow://models':
         return {
           total_models: 27,
           wasm_enabled: true,
@@ -2323,7 +2323,7 @@ class ClaudeFlowMCPServer {
           accuracy_avg: 0.89,
         };
 
-      case 'claude-flow://performance':
+      case 'hive-flow://performance':
         return {
           uptime: '99.9%',
           token_reduction: '32.3%',
@@ -2360,7 +2360,7 @@ class ClaudeFlowMCPServer {
           });
 
           console.error(
-            `[${new Date().toISOString()}] INFO [claude-flow-mcp] Stored in shared memory: ${args.key} (namespace: ${args.namespace || 'default'})`,
+            `[${new Date().toISOString()}] INFO [hive-flow-mcp] Stored in shared memory: ${args.key} (namespace: ${args.namespace || 'default'})`,
           );
 
           return {
@@ -2381,7 +2381,7 @@ class ClaudeFlowMCPServer {
           });
 
           console.error(
-            `[${new Date().toISOString()}] INFO [claude-flow-mcp] Retrieved from shared memory: ${args.key} (found: ${value !== null})`,
+            `[${new Date().toISOString()}] INFO [hive-flow-mcp] Retrieved from shared memory: ${args.key} (found: ${value !== null})`,
           );
 
           return {
@@ -2402,7 +2402,7 @@ class ClaudeFlowMCPServer {
           });
 
           console.error(
-            `[${new Date().toISOString()}] INFO [claude-flow-mcp] Listed shared memory entries: ${entries.length} (namespace: ${args.namespace || 'default'})`,
+            `[${new Date().toISOString()}] INFO [hive-flow-mcp] Listed shared memory entries: ${entries.length} (namespace: ${args.namespace || 'default'})`,
           );
 
           return {
@@ -2421,7 +2421,7 @@ class ClaudeFlowMCPServer {
           });
 
           console.error(
-            `[${new Date().toISOString()}] INFO [claude-flow-mcp] Deleted from shared memory: ${args.key} (success: ${deleted})`,
+            `[${new Date().toISOString()}] INFO [hive-flow-mcp] Deleted from shared memory: ${args.key} (success: ${deleted})`,
           );
 
           return {
@@ -2441,7 +2441,7 @@ class ClaudeFlowMCPServer {
           });
 
           console.error(
-            `[${new Date().toISOString()}] INFO [claude-flow-mcp] Searched shared memory: ${results.length} results for "${args.value}"`,
+            `[${new Date().toISOString()}] INFO [hive-flow-mcp] Searched shared memory: ${results.length} results for "${args.value}"`,
           );
 
           return {
@@ -2464,7 +2464,7 @@ class ClaudeFlowMCPServer {
       }
     } catch (error) {
       console.error(
-        `[${new Date().toISOString()}] ERROR [claude-flow-mcp] Shared memory operation failed:`,
+        `[${new Date().toISOString()}] ERROR [hive-flow-mcp] Shared memory operation failed:`,
         error,
       );
       return {
@@ -2502,7 +2502,7 @@ class ClaudeFlowMCPServer {
       };
     } catch (error) {
       console.error(
-        `[${new Date().toISOString()}] ERROR [claude-flow-mcp] Memory search failed:`,
+        `[${new Date().toISOString()}] ERROR [hive-flow-mcp] Memory search failed:`,
         error,
       );
       return {
@@ -2521,7 +2521,7 @@ class ClaudeFlowMCPServer {
       return activeSwarmId || null;
     } catch (error) {
       console.error(
-        `[${new Date().toISOString()}] ERROR [claude-flow-mcp] Failed to get active swarm:`,
+        `[${new Date().toISOString()}] ERROR [hive-flow-mcp] Failed to get active swarm:`,
         error,
       );
       return null;
@@ -2541,10 +2541,10 @@ class ClaudeFlowMCPServer {
 
 // Main server execution
 async function startMCPServer() {
-  const server = new ClaudeFlowMCPServer();
+  const server = new HiveFlowMCPServer();
 
   console.error(
-    `[${new Date().toISOString()}] INFO [claude-flow-mcp] (${server.sessionId}) Claude-Flow MCP server starting in stdio mode`,
+    `[${new Date().toISOString()}] INFO [hive-flow-mcp] (${server.sessionId}) Hive-Flow MCP server starting in stdio mode`,
   );
   // Log server info as a JSON string to stderr to ensure it doesn't corrupt stdout
   console.error(JSON.stringify({
@@ -2565,7 +2565,7 @@ async function startMCPServer() {
       method: 'server.initialized',
       params: {
         serverInfo: {
-          name: 'claude-flow',
+          name: 'hive-flow',
           version: server.version,
           capabilities: server.capabilities,
         },
@@ -2593,7 +2593,7 @@ async function startMCPServer() {
           }
         } catch (error) {
           console.error(
-            `[${new Date().toISOString()}] ERROR [claude-flow-mcp] Failed to parse message:`,
+            `[${new Date().toISOString()}] ERROR [hive-flow-mcp] Failed to parse message:`,
             error.message,
           );
         }
@@ -2603,10 +2603,10 @@ async function startMCPServer() {
 
   process.stdin.on('end', () => {
     console.error(
-      `[${new Date().toISOString()}] INFO [claude-flow-mcp] (${server.sessionId}) 🔌 Connection closed: ${server.sessionId}`,
+      `[${new Date().toISOString()}] INFO [hive-flow-mcp] (${server.sessionId}) 🔌 Connection closed: ${server.sessionId}`,
     );
     console.error(
-      `[${new Date().toISOString()}] INFO [claude-flow-mcp] (${server.sessionId}) MCP: stdin closed, shutting down...`,
+      `[${new Date().toISOString()}] INFO [hive-flow-mcp] (${server.sessionId}) MCP: stdin closed, shutting down...`,
     );
     process.exit(0);
   });
@@ -2614,7 +2614,7 @@ async function startMCPServer() {
   // Handle process termination
   process.on('SIGINT', async () => {
     console.error(
-      `[${new Date().toISOString()}] INFO [claude-flow-mcp] (${server.sessionId}) Received SIGINT, shutting down gracefully...`,
+      `[${new Date().toISOString()}] INFO [hive-flow-mcp] (${server.sessionId}) Received SIGINT, shutting down gracefully...`,
     );
     if (server.sharedMemory) {
       await server.sharedMemory.close();
@@ -2624,7 +2624,7 @@ async function startMCPServer() {
 
   process.on('SIGTERM', async () => {
     console.error(
-      `[${new Date().toISOString()}] INFO [claude-flow-mcp] (${server.sessionId}) Received SIGTERM, shutting down gracefully...`,
+      `[${new Date().toISOString()}] INFO [hive-flow-mcp] (${server.sessionId}) Received SIGTERM, shutting down gracefully...`,
     );
     if (server.sharedMemory) {
       await server.sharedMemory.close();
@@ -2638,4 +2638,4 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   startMCPServer().catch(console.error);
 }
 
-export { ClaudeFlowMCPServer };
+export { HiveFlowMCPServer };

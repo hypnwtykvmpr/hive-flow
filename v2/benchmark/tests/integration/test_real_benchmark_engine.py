@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Test runner for the Real Claude-Flow Benchmark Engine
+Test runner for the Real Hive-Flow Benchmark Engine
 Validates the real benchmark architecture with actual executions
 """
 
@@ -27,7 +27,7 @@ class RealBenchmarkTester:
         self.system_monitor = SystemMonitor()
         
     async def test_basic_execution(self):
-        """Test basic claude-flow execution"""
+        """Test basic hive-flow execution"""
         print("\n🧪 Testing Basic Execution")
         print("=" * 60)
         

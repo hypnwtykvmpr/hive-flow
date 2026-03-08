@@ -468,7 +468,7 @@ class HiveMindBenchmarkRunner:
             "total_duration_seconds": total_duration,
             "benchmark_time": datetime.now().isoformat(),
             "config_count": len(configs),
-            "claude_flow_version": "2.0.0",
+            "hive_flow_version": "2.0.0",
             "hive_mind_version": "1.0.0"
         }
         analysis["files"] = file_info

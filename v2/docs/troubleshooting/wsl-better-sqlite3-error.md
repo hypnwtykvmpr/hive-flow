@@ -2,7 +2,7 @@
 
 ## ⚡ Automatic Error Recovery (v2.7.35+)
 
-**Good news!** Starting with v2.7.35, claude-flow includes **automatic error recovery** that handles this issue without manual intervention.
+**Good news!** Starting with v2.7.35, hive-flow includes **automatic error recovery** that handles this issue without manual intervention.
 
 ### What Happens Automatically:
 1. ✅ Detects ENOTEMPTY and better-sqlite3 errors
@@ -13,7 +13,7 @@
 
 ### Just Run:
 ```bash
-npx claude-flow@alpha init --force
+npx hive-flow@alpha init --force
 ```
 
 The `--force` flag enables **automatic error recovery** and will:
@@ -30,7 +30,7 @@ The `--force` flag enables **automatic error recovery** and will:
 errno: -39
 ```
 
-When running: `npx claude-flow@alpha init --force` on Windows Subsystem for Linux (WSL)
+When running: `npx hive-flow@alpha init --force` on Windows Subsystem for Linux (WSL)
 
 **Note:** If you're using v2.7.35+, automatic recovery handles this. Manual fixes below are only needed for older versions or edge cases.
 
@@ -52,16 +52,16 @@ npm cache clean --force
 rm -rf ~/.npm/_npx
 
 # Retry installation
-npx claude-flow@alpha init --force
+npx hive-flow@alpha init --force
 ```
 
 ### Solution 2: Use npm instead of npx
 ```bash
 # Install globally first
-npm install -g claude-flow@alpha
+npm install -g hive-flow@alpha
 
 # Then run init
-claude-flow init --force
+hive-flow init --force
 ```
 
 ### Solution 3: Manual Directory Cleanup
@@ -76,7 +76,7 @@ sudo rm -rf ~/.npm/_npx/*/node_modules/better-sqlite3
 rm -rf ~/.npm/_npx
 
 # Retry
-npx claude-flow@alpha init --force
+npx hive-flow@alpha init --force
 ```
 
 ### Solution 4: Fix WSL File Permissions
@@ -89,7 +89,7 @@ chmod -R 755 ~/.npm
 
 # Clear and retry
 npm cache clean --force
-npx claude-flow@alpha init --force
+npx hive-flow@alpha init --force
 ```
 
 ### Solution 5: Rebuild better-sqlite3
@@ -101,7 +101,7 @@ sudo apt-get install -y build-essential python3
 # Clear cache and retry with rebuild flag
 npm cache clean --force
 rm -rf ~/.npm/_npx
-npx claude-flow@alpha init --force
+npx hive-flow@alpha init --force
 ```
 
 ### Solution 6: Use WSL2 with Proper Node Version
@@ -122,7 +122,7 @@ nvm install 20
 nvm use 20
 
 # Retry installation
-npx claude-flow@alpha init --force
+npx hive-flow@alpha init --force
 ```
 
 ### Solution 7: Run from Linux Filesystem (Not Windows Mount)
@@ -138,7 +138,7 @@ cp -r /mnt/c/Users/username/project ~/projects/
 
 # Run from WSL filesystem
 cd ~/projects/project
-npx claude-flow@alpha init --force
+npx hive-flow@alpha init --force
 ```
 
 ## Prevention
@@ -185,14 +185,14 @@ node --version
 npm --version
 
 echo "🎉 Cleanup complete! Try running your command again."
-echo "Command: npx claude-flow@alpha init --force"
+echo "Command: npx hive-flow@alpha init --force"
 ```
 
 Usage:
 ```bash
 chmod +x wsl-fix-npx.sh
 ./wsl-fix-npx.sh
-npx claude-flow@alpha init --force
+npx hive-flow@alpha init --force
 ```
 
 ## Still Having Issues?
@@ -208,20 +208,20 @@ npm --version
 wsl --list --verbose  # Run from Windows PowerShell
 
 # Error details
-npx claude-flow@alpha init --force --verbose 2>&1 | tee error-log.txt
+npx hive-flow@alpha init --force --verbose 2>&1 | tee error-log.txt
 ```
 
-Then report at: https://github.com/ruvnet/claude-flow/issues
+Then report at: https://github.com/ruvnet/hive-flow/issues
 
 ### Alternative: Use Docker
 If WSL issues persist, consider using Docker:
 
 ```bash
-# Pull claude-flow Docker image (if available)
-docker pull ruvnet/claude-flow:latest
+# Pull hive-flow Docker image (if available)
+docker pull ruvnet/hive-flow:latest
 
 # Run in container
-docker run -it -v $(pwd):/workspace ruvnet/claude-flow:latest init --force
+docker run -it -v $(pwd):/workspace ruvnet/hive-flow:latest init --force
 ```
 
 ## Technical Background

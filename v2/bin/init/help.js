@@ -1,12 +1,12 @@
 // help.js - Help text for init command
 
 export function showInitHelp() {
-  console.log('Initialize Claude Code integration files with Claude Flow v2.0.0');
+  console.log('Initialize Claude Code integration files with Hive Flow v2.0.0');
   console.log();
-  console.log('Usage: claude-flow@alpha init [options]');
+  console.log('Usage: hive-flow@alpha init [options]');
   console.log();
   console.log('🚀 DEFAULT BEHAVIOR:');
-  console.log('  claude-flow@alpha init     Initialize with Claude Flow v2.0.0 enhanced features');
+  console.log('  hive-flow@alpha init     Initialize with Hive Flow v2.0.0 enhanced features');
   console.log('                       Creates CLAUDE.md & .claude/commands for MCP integration');
   console.log();
   console.log('Standard Options:');
@@ -44,54 +44,54 @@ export function showInitHelp() {
   console.log('  --validate --skip-mode-test         Skip SPARC mode testing');
   console.log();
   console.log('Examples:');
-  console.log('🌊 CLAUDE FLOW v2.0.0 (DEFAULT):');
-  console.log('  claude-flow@alpha init                    # ⭐ DEFAULT: Full Claude Flow v2.0.0 setup');
-  console.log('  claude-flow@alpha init --force            # Overwrite existing configuration');
-  console.log('  claude-flow@alpha init --dry-run          # Preview what will be created');
-  console.log('  claude-flow@alpha init --monitoring       # Initialize with token tracking enabled');
+  console.log('🌊 HIVE FLOW v2.0.0 (DEFAULT):');
+  console.log('  hive-flow@alpha init                    # ⭐ DEFAULT: Full Hive Flow v2.0.0 setup');
+  console.log('  hive-flow@alpha init --force            # Overwrite existing configuration');
+  console.log('  hive-flow@alpha init --dry-run          # Preview what will be created');
+  console.log('  hive-flow@alpha init --monitoring       # Initialize with token tracking enabled');
   console.log();
   console.log('🚀 STANDARD INITIALIZATION:');
-  console.log('  npx claude-flow@alpha@latest init --sparc --force  # ⭐ RECOMMENDED: Optimized setup');
-  console.log('  npx claude-flow@alpha@latest init --sparc          # Standard SPARC setup');
+  console.log('  npx hive-flow@alpha@latest init --sparc --force  # ⭐ RECOMMENDED: Optimized setup');
+  console.log('  npx hive-flow@alpha@latest init --sparc          # Standard SPARC setup');
   console.log(
-    '  claude-flow@alpha init --sparc --force             # Optimized setup (existing project)',
+    '  hive-flow@alpha init --sparc --force             # Optimized setup (existing project)',
   );
-  console.log('  claude-flow@alpha init --sparc --modes architect,tdd,code  # Selective initialization');
-  console.log('  claude-flow@alpha init --dry-run --sparc          # Preview initialization');
-  console.log('  claude-flow@alpha init --minimal                  # Minimal setup');
+  console.log('  hive-flow@alpha init --sparc --modes architect,tdd,code  # Selective initialization');
+  console.log('  hive-flow@alpha init --dry-run --sparc          # Preview initialization');
+  console.log('  hive-flow@alpha init --minimal                  # Minimal setup');
   console.log();
   console.log('🔍 VERIFICATION & PAIR PROGRAMMING:');
-  console.log('  claude-flow@alpha init --verify                   # Truth Verification System setup');
-  console.log('  claude-flow@alpha init --pair                     # Pair Programming mode setup');
-  console.log('  claude-flow@alpha init --verify --pair            # Both verification and pairing');
-  console.log('  npx claude-flow@alpha init --verify --pair  # Complete verification setup');
+  console.log('  hive-flow@alpha init --verify                   # Truth Verification System setup');
+  console.log('  hive-flow@alpha init --pair                     # Pair Programming mode setup');
+  console.log('  hive-flow@alpha init --verify --pair            # Both verification and pairing');
+  console.log('  npx hive-flow@alpha init --verify --pair  # Complete verification setup');
   console.log();
   console.log('🔄 VALIDATION & ROLLBACK:');
-  console.log('  claude-flow@alpha init --validate                 # Validate existing setup');
-  console.log('  claude-flow@alpha init --rollback --full          # Full system rollback');
-  console.log('  claude-flow@alpha init --rollback --partial --phase sparc-init  # Rollback SPARC only');
-  console.log('  claude-flow@alpha init --list-backups             # Show available backups');
+  console.log('  hive-flow@alpha init --validate                 # Validate existing setup');
+  console.log('  hive-flow@alpha init --rollback --full          # Full system rollback');
+  console.log('  hive-flow@alpha init --rollback --partial --phase sparc-init  # Rollback SPARC only');
+  console.log('  hive-flow@alpha init --list-backups             # Show available backups');
   console.log();
   console.log('What gets created:');
   console.log('  • .claude/settings.json - Claude Code configuration with hooks');
   console.log('  • .claude/settings.local.json - Pre-approved MCP permissions (no prompts!)');
   console.log('  • .mcp.json - Project-scoped MCP server configuration');
-  // Removed claude-flow@alpha.config.json reference per user request
+  // Removed hive-flow@alpha.config.json reference per user request
   console.log('  • .claude/commands/ directory with 20+ Claude Code slash commands');
   console.log('  • CLAUDE.md with project instructions (v2.0.0 enhanced by default)');
   console.log('  • memory/ directory for persistent context storage');
   console.log('  • coordination/ directory for agent orchestration');
-  console.log('  • ./claude-flow@alpha local executable wrapper');
-  console.log('  • .gitignore entries for Claude Flow generated files');
+  console.log('  • ./hive-flow@alpha local executable wrapper');
+  console.log('  • .gitignore entries for Hive Flow generated files');
   console.log('  • Automatic MCP server setup if Claude Code CLI is installed');
   console.log('  • Pre-configured for TDD, architecture, and code generation');
   console.log();
   console.log('Claude Code Slash Commands Created:');
   console.log('  • /sparc - Execute SPARC methodology workflows');
   console.log('  • /sparc-<mode> - Run specific SPARC modes (17+ modes)');
-  console.log('  • /claude-flow@alpha-help - Show all claude-flow@alpha commands');
-  console.log('  • /claude-flow@alpha-memory - Interact with memory system');
-  console.log('  • /claude-flow@alpha-swarm - Coordinate multi-agent swarms');
+  console.log('  • /hive-flow@alpha-help - Show all hive-flow@alpha commands');
+  console.log('  • /hive-flow@alpha-memory - Interact with memory system');
+  console.log('  • /hive-flow@alpha-swarm - Coordinate multi-agent swarms');
   console.log();
   console.log('Available SPARC modes:');
   console.log('  • architect - System design and architecture');
@@ -107,7 +107,7 @@ export function showInitHelp() {
   console.log('  • And 7+ more specialized modes...');
   console.log();
   console.log('🔌 MCP Servers (Auto-installed):');
-  console.log('  • claude-flow@alpha - Core orchestration (required)');
+  console.log('  • hive-flow@alpha - Core orchestration (required)');
   console.log('  • ruv-swarm - Enhanced coordination (required)');
   console.log();
   console.log('📦 Optional MCP Servers (flow-nexus included as dependency):');

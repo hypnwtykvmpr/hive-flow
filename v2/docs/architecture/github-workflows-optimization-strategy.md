@@ -177,11 +177,11 @@ run: |
 - name: Real agent coordination test
   run: |
     # Test actual CLI functionality
-    ./bin/claude-flow swarm init --topology mesh
-    ./bin/claude-flow agent spawn --type coder --count 2
+    ./bin/hive-flow swarm init --topology mesh
+    ./bin/hive-flow agent spawn --type coder --count 2
 
     # Verify agents can communicate
-    ./bin/claude-flow task orchestrate --task "Simple coordination test"
+    ./bin/hive-flow task orchestrate --task "Simple coordination test"
 ```
 
 #### B. Simplify Test Matrix
@@ -937,8 +937,8 @@ jobs:
 
       - name: Verify CLI
         run: |
-          ./bin/claude-flow --version
-          ./bin/claude-flow --help
+          ./bin/hive-flow --version
+          ./bin/hive-flow --help
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

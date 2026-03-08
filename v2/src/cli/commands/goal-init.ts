@@ -20,7 +20,7 @@ export class GoalInitCommand {
     const targetDir = options.targetDir || '.claude/agents/goal';
     const absoluteTarget = path.resolve(process.cwd(), targetDir);
     
-    logger.info(chalk.magenta('🎯 Initializing Claude Flow Goal Module...'));
+    logger.info(chalk.magenta('🎯 Initializing Hive Flow Goal Module...'));
     
     try {
       // Check if target exists
@@ -124,10 +124,10 @@ Uses gaming AI techniques to create intelligent plans for achieving complex obje
 ## Usage
 \`\`\`bash
 # Initialize goal planning
-npx claude-flow goal plan --objective "deploy application"
+npx hive-flow goal plan --objective "deploy application"
 
 # Execute plan
-npx claude-flow goal execute --plan deployment-plan
+npx hive-flow goal execute --plan deployment-plan
 \`\`\`
 `;
     await fs.writeFile(targetPath, template);
@@ -269,11 +269,11 @@ Optimizes action sequences for cost, time, and resource efficiency.
   
   private printUsage(): void {
     console.log('\n' + chalk.magenta('📚 Usage:'));
-    console.log(chalk.gray('  npx claude-flow goal plan --objective "your goal"'));
-    console.log(chalk.gray('  npx claude-flow goal execute --plan plan-id'));
+    console.log(chalk.gray('  npx hive-flow goal plan --objective "your goal"'));
+    console.log(chalk.gray('  npx hive-flow goal execute --plan plan-id'));
     console.log(chalk.gray('  @agent-goal-planner "Create deployment plan"'));
     console.log('\n' + chalk.magenta('🔗 Documentation:'));
-    console.log(chalk.gray('  https://github.com/ruvnet/claude-flow'));
+    console.log(chalk.gray('  https://github.com/ruvnet/hive-flow'));
   }
 }
 

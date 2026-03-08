@@ -1,7 +1,7 @@
 /**
  * Enhanced Web UI Complete - Full Integration
  * Combines all MCP tools with enhanced UI views and real-time updates
- * Provides access to all 87 Claude-Flow MCP tools through a comprehensive interface
+ * Provides access to all 87 Hive-Flow MCP tools through a comprehensive interface
  */
 
 import { printSuccess, printError, printWarning, printInfo } from '../utils.js';
@@ -254,7 +254,7 @@ export class EnhancedWebUIComplete {
     console.clear();
 
     // Show enhanced welcome
-    printSuccess('🧠 Claude-Flow Enhanced Web UI v2.0.0');
+    printSuccess('🧠 Hive-Flow Enhanced Web UI v2.0.0');
     printInfo('🔧 Comprehensive MCP Tool Integration - 87 Tools Available');
     console.log('─'.repeat(80));
     console.log();
@@ -375,7 +375,7 @@ export class EnhancedWebUIComplete {
    * Render enhanced header with all navigation options
    */
   renderEnhancedHeader() {
-    console.log(this.colors.cyan(this.colors.bold('🧠 Claude-Flow Enhanced Web UI v2.0.0')));
+    console.log(this.colors.cyan(this.colors.bold('🧠 Hive-Flow Enhanced Web UI v2.0.0')));
     console.log(this.colors.gray('─'.repeat(80)));
 
     // Main navigation tabs (row 1)
@@ -495,7 +495,7 @@ export class EnhancedWebUIComplete {
     const mcpStatus = this.mcpIntegration ? this.mcpIntegration.getStatus() : null;
     const toolStatus = this.toolFramework ? this.toolFramework.getStatus() : null;
 
-    let statusLine = `🧠 Claude-Flow Enhanced UI | `;
+    let statusLine = `🧠 Hive-Flow Enhanced UI | `;
     statusLine += `MCP: ${mcpStatus?.mcpAvailable ? this.colors.green('✓') : this.colors.red('✗')} | `;
     statusLine += `Tools: ${this.colors.yellow(mcpStatus?.totalTools || 87)} | `;
     statusLine += `Active: ${this.colors.blue(toolStatus?.currentExecutions || 0)} | `;

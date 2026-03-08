@@ -27,22 +27,22 @@ SPARC is a systematic approach to software development:
 4. **Refinement**: Implement, test, and optimize using TDD
 5. **Completion**: Integrate, document, and validate
 
-## Usage with Claude-Flow
+## Usage with Hive-Flow
 
-Use the claude-flow SPARC commands to leverage this environment:
+Use the hive-flow SPARC commands to leverage this environment:
 
 \`\`\`bash
 # List available modes
-claude-flow sparc modes
+hive-flow sparc modes
 
 # Run specific mode
-claude-flow sparc run code "implement user authentication"
+hive-flow sparc run code "implement user authentication"
 
 # Execute full TDD workflow  
-claude-flow sparc tdd "payment processing system"
+hive-flow sparc tdd "payment processing system"
 
 # Use custom workflow
-claude-flow sparc workflow .roo/workflows/basic-tdd.json
+hive-flow sparc workflow .roo/workflows/basic-tdd.json
 \`\`\`
 
 ## Configuration

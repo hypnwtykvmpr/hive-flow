@@ -299,7 +299,7 @@ export class StateManager extends EventEmitter {
     try {
       // Capture application configuration
       const configPaths = [
-        './claude-flow.config.json',
+        './hive-flow.config.json',
         './package.json',
         './tsconfig.json',
         './.env'
@@ -327,7 +327,7 @@ export class StateManager extends EventEmitter {
       // Capture memory-related state
       const memoryPaths = [
         './memory/memory-store.json',
-        './memory/claude-flow-data.json',
+        './memory/hive-flow-data.json',
         './swarm-memory/state.json'
       ];
 
@@ -350,8 +350,8 @@ export class StateManager extends EventEmitter {
 
   private async captureProcesses(): Promise<ProcessState[]> {
     try {
-      // Capture running processes related to claude-flow
-      const { stdout } = await execAsync('ps aux | grep -E "(claude-flow|node)" | grep -v grep');
+      // Capture running processes related to hive-flow
+      const { stdout } = await execAsync('ps aux | grep -E "(hive-flow|node)" | grep -v grep');
       const lines = stdout.trim().split('\n');
       
       return lines.map(line => {
@@ -826,7 +826,7 @@ export class AutomatedRecovery extends EventEmitter {
           this.emit('recovery_step', { strategy: 'service_restart', action: 'restarting_services' });
           
           // Restart critical services
-          await execAsync('pkill -f "claude-flow" && sleep 2');
+          await execAsync('pkill -f "hive-flow" && sleep 2');
           
           // Wait for services to restart
           await new Promise(resolve => setTimeout(resolve, 5000));
@@ -1095,7 +1095,7 @@ export class AutomatedRecovery extends EventEmitter {
   private async performFullRollback(snapshot: SystemSnapshot): Promise<void> {
     try {
       // 1. Stop services
-      await execAsync('pkill -f "claude-flow"').catch(() => {});
+      await execAsync('pkill -f "hive-flow"').catch(() => {});
       
       // 2. Restore files
       for (const file of snapshot.state.files) {

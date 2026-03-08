@@ -21,7 +21,7 @@ interface ConfigSchema {
   };
 }
 
-const CLAUDE_FLOW_CONFIG_SCHEMA: ConfigSchema = {
+const HIVE_FLOW_CONFIG_SCHEMA: ConfigSchema = {
   orchestrator: {
     type: 'object',
     required: true,
@@ -153,8 +153,8 @@ function validateObject(obj: any, schema: ConfigSchema, path = ''): string[] {
   return errors;
 }
 
-function validateClaudeFlowConfig(config: any): string[] {
-  return validateObject(config, CLAUDE_FLOW_CONFIG_SCHEMA);
+function validateHiveFlowConfig(config: any): string[] {
+  return validateObject(config, HIVE_FLOW_CONFIG_SCHEMA);
 }
 
 function validateWorkflow(workflow: any): string[] {
@@ -211,7 +211,7 @@ async function validateFile(filePath: string): Promise<ValidationResult> {
     if (filePath.includes('workflow') || config.tasks) {
       result.errors = validateWorkflow(config);
     } else if (filePath.includes('config') || config.orchestrator) {
-      result.errors = validateClaudeFlowConfig(config);
+      result.errors = validateHiveFlowConfig(config);
     } else {
       result.errors.push('Unknown configuration file type');
     }
@@ -242,7 +242,7 @@ async function main(): Promise<void> {
   }
   
   // Also check any config files in the root
-  const rootConfigFiles = ['claude-flow.config.json', 'config.json'];
+  const rootConfigFiles = ['hive-flow.config.json', 'config.json'];
   for (const filename of rootConfigFiles) {
     try {
       await Deno.stat(filename);

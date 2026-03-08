@@ -7,7 +7,7 @@ import * as fs from 'fs-extra';
 import * as path from 'path';
 import { ConfigValidationResult, InitConfig, DatabaseConfig, TopologyConfig } from '../types/interfaces.js';
 
-export interface ClaudeFlowConfig {
+export interface HiveFlowConfig {
   // Core settings
   mode?: string;
   topology?: string;
@@ -89,7 +89,7 @@ export interface PerformanceConfig {
 }
 
 export class ConfigManager {
-  private config: ClaudeFlowConfig = {};
+  private config: HiveFlowConfig = {};
   private configPath: string;
 
   constructor(configPath?: string) {
@@ -102,12 +102,12 @@ export class ConfigManager {
    */
   private findConfigFile(): string {
     const possiblePaths = [
-      'claude-flow.config.json',
-      'claude-flow.config.js',
-      '.claude-flow.json',
-      '.claude-flow/config.json',
-      'config/claude-flow.json',
-      path.join(process.cwd(), 'claude-flow.config.json')
+      'hive-flow.config.json',
+      'hive-flow.config.js',
+      '.hive-flow.json',
+      '.hive-flow/config.json',
+      'config/hive-flow.json',
+      path.join(process.cwd(), 'hive-flow.config.json')
     ];
 
     for (const configPath of possiblePaths) {
@@ -116,7 +116,7 @@ export class ConfigManager {
       }
     }
 
-    return 'claude-flow.config.json'; // Default
+    return 'hive-flow.config.json'; // Default
   }
 
   /**
@@ -141,19 +141,19 @@ export class ConfigManager {
    * Load configuration from environment variables
    */
   private loadEnvironmentVariables(): void {
-    const envConfig: Partial<ClaudeFlowConfig> = {};
+    const envConfig: Partial<HiveFlowConfig> = {};
 
     // Core settings
-    if (process.env.CLAUDE_FLOW_MODE) envConfig.mode = process.env.CLAUDE_FLOW_MODE;
-    if (process.env.CLAUDE_FLOW_TOPOLOGY) envConfig.topology = process.env.CLAUDE_FLOW_TOPOLOGY;
-    if (process.env.CLAUDE_FLOW_MAX_AGENTS) envConfig.maxAgents = parseInt(process.env.CLAUDE_FLOW_MAX_AGENTS);
-    if (process.env.CLAUDE_FLOW_STRATEGY) envConfig.strategy = process.env.CLAUDE_FLOW_STRATEGY;
+    if (process.env.HIVE_FLOW_MODE) envConfig.mode = process.env.HIVE_FLOW_MODE;
+    if (process.env.HIVE_FLOW_TOPOLOGY) envConfig.topology = process.env.HIVE_FLOW_TOPOLOGY;
+    if (process.env.HIVE_FLOW_MAX_AGENTS) envConfig.maxAgents = parseInt(process.env.HIVE_FLOW_MAX_AGENTS);
+    if (process.env.HIVE_FLOW_STRATEGY) envConfig.strategy = process.env.HIVE_FLOW_STRATEGY;
 
     // Database
-    if (process.env.CLAUDE_FLOW_DATABASE_TYPE || process.env.CLAUDE_FLOW_DATABASE_PATH) {
+    if (process.env.HIVE_FLOW_DATABASE_TYPE || process.env.HIVE_FLOW_DATABASE_PATH) {
       envConfig.database = {
-        type: (process.env.CLAUDE_FLOW_DATABASE_TYPE as 'sqlite' | 'json') || 'sqlite',
-        path: process.env.CLAUDE_FLOW_DATABASE_PATH
+        type: (process.env.HIVE_FLOW_DATABASE_TYPE as 'sqlite' | 'json') || 'sqlite',
+        path: process.env.HIVE_FLOW_DATABASE_PATH
       };
     }
 
@@ -169,8 +169,8 @@ export class ConfigManager {
     }
 
     // Debug
-    if (process.env.CLAUDE_FLOW_DEBUG) envConfig.debug = process.env.CLAUDE_FLOW_DEBUG === 'true';
-    if (process.env.CLAUDE_FLOW_LOG_LEVEL) envConfig.logLevel = process.env.CLAUDE_FLOW_LOG_LEVEL as any;
+    if (process.env.HIVE_FLOW_DEBUG) envConfig.debug = process.env.HIVE_FLOW_DEBUG === 'true';
+    if (process.env.HIVE_FLOW_LOG_LEVEL) envConfig.logLevel = process.env.HIVE_FLOW_LOG_LEVEL as any;
 
     // Merge with existing config
     this.config = { ...this.config, ...envConfig };
@@ -239,21 +239,21 @@ export class ConfigManager {
   /**
    * Get the current configuration
    */
-  getConfig(): ClaudeFlowConfig {
+  getConfig(): HiveFlowConfig {
     return { ...this.config };
   }
 
   /**
    * Get a specific configuration value
    */
-  get<K extends keyof ClaudeFlowConfig>(key: K): ClaudeFlowConfig[K] {
+  get<K extends keyof HiveFlowConfig>(key: K): HiveFlowConfig[K] {
     return this.config[key];
   }
 
   /**
    * Set a configuration value
    */
-  set<K extends keyof ClaudeFlowConfig>(key: K, value: ClaudeFlowConfig[K]): void {
+  set<K extends keyof HiveFlowConfig>(key: K, value: HiveFlowConfig[K]): void {
     this.config[key] = value;
   }
 
@@ -280,7 +280,7 @@ export class ConfigManager {
       strategy: 'balanced',
       database: {
         type: 'sqlite',
-        path: '.claude-flow/database.sqlite'
+        path: '.hive-flow/database.sqlite'
       },
       debug: false,
       logLevel: 'info'
@@ -290,7 +290,7 @@ export class ConfigManager {
   /**
    * Merge additional configuration
    */
-  merge(additionalConfig: Partial<ClaudeFlowConfig>): void {
+  merge(additionalConfig: Partial<HiveFlowConfig>): void {
     this.config = { ...this.config, ...additionalConfig };
   }
 

@@ -1,14 +1,14 @@
 """
-Real Benchmark Scenarios - Execute actual Claude Flow commands and measure performance.
+Real Benchmark Scenarios - Execute actual Hive Flow commands and measure performance.
 
 This module implements benchmarks that:
-1. Execute real Claude Flow commands via subprocess
+1. Execute real Hive Flow commands via subprocess
 2. Measure actual performance metrics (execution time, token usage, memory)
 3. Parse real JSON streaming responses 
 4. Track token usage from actual Claude responses
 5. Provide comprehensive performance analysis
 
-NO simulations - only real Claude Flow executions.
+NO simulations - only real Hive Flow executions.
 """
 
 import subprocess
@@ -26,7 +26,7 @@ import psutil
 import threading
 from contextlib import contextmanager
 
-from ..core.claude_flow_executor import ClaudeFlowExecutor, SwarmConfig, SparcConfig, ExecutionStrategy, CoordinationMode, SparcMode
+from ..core.hive_flow_executor import HiveFlowExecutor, SwarmConfig, SparcConfig, ExecutionStrategy, CoordinationMode, SparcMode
 
 logger = logging.getLogger(__name__)
 
@@ -123,21 +123,21 @@ class ResourceMonitor:
                 break
 
 
-class ClaudeFlowRealExecutor:
-    """Real executor for Claude Flow commands with comprehensive metrics."""
+class HiveFlowRealExecutor:
+    """Real executor for Hive Flow commands with comprehensive metrics."""
     
     def __init__(self, 
-                 claude_flow_path: Optional[str] = None,
+                 hive_flow_path: Optional[str] = None,
                  working_dir: Optional[str] = None):
         """
         Initialize real executor.
         
         Args:
-            claude_flow_path: Path to claude-flow executable
+            hive_flow_path: Path to hive-flow executable
             working_dir: Working directory for execution
         """
-        self.executor = ClaudeFlowExecutor(
-            claude_flow_path=claude_flow_path,
+        self.executor = HiveFlowExecutor(
+            hive_flow_path=hive_flow_path,
             working_dir=working_dir
         )
         self.resource_monitor = ResourceMonitor()
@@ -150,7 +150,7 @@ class ClaudeFlowRealExecutor:
                      timeout: int = 10,
                      non_interactive: bool = True) -> RealBenchmarkResult:
         """
-        Execute real swarm with ./claude-flow and measure performance.
+        Execute real swarm with ./hive-flow and measure performance.
         
         Args:
             objective: Task objective
@@ -241,7 +241,7 @@ class ClaudeFlowRealExecutor:
                          agent_count: int = 8,
                          timeout: int = 15) -> RealBenchmarkResult:
         """
-        Execute real hive-mind with ./claude-flow.
+        Execute real hive-mind with ./hive-flow.
         
         Args:
             task: Hive-mind task
@@ -260,7 +260,7 @@ class ClaudeFlowRealExecutor:
         try:
             # Build hive-mind command 
             command = [
-                self.executor.claude_flow_path,
+                self.executor.hive_flow_path,
                 "hive-mind",
                 task,
                 "--mode", collective_mode,
@@ -338,7 +338,7 @@ class ClaudeFlowRealExecutor:
                           task: str,
                           timeout: int = 10) -> RealBenchmarkResult:
         """
-        Execute real SPARC mode with ./claude-flow.
+        Execute real SPARC mode with ./hive-flow.
         
         Args:
             mode: SPARC mode to run
@@ -356,7 +356,7 @@ class ClaudeFlowRealExecutor:
         try:
             # Build SPARC command
             command = [
-                self.executor.claude_flow_path,
+                self.executor.hive_flow_path,
                 "sparc",
                 "run",
                 mode,
@@ -430,7 +430,7 @@ class ClaudeFlowRealExecutor:
             )
     
     def _extract_token_usage(self, output: str) -> int:
-        """Extract token usage from Claude Flow output."""
+        """Extract token usage from Hive Flow output."""
         # Look for token patterns in output
         patterns = [
             r'tokens?[:\s]+(\d+)',
@@ -447,7 +447,7 @@ class ClaudeFlowRealExecutor:
         return 0
     
     def _extract_agent_count(self, output: str) -> int:
-        """Extract agent count from Claude Flow output."""
+        """Extract agent count from Hive Flow output."""
         patterns = [
             r'(\d+)\s+agents?\s+(?:spawned|created|active)',
             r'agents?[:\s]+(\d+)',
@@ -490,14 +490,14 @@ class RealSwarmBenchmark:
     """Real swarm benchmark scenarios."""
     
     def __init__(self, 
-                 claude_flow_path: Optional[str] = None,
+                 hive_flow_path: Optional[str] = None,
                  working_dir: Optional[str] = None):
         """Initialize real swarm benchmark."""
-        self.executor = ClaudeFlowRealExecutor(claude_flow_path, working_dir)
+        self.executor = HiveFlowRealExecutor(hive_flow_path, working_dir)
         
     def benchmark_swarm_task(self, objective: str) -> RealBenchmarkResult:
         """
-        Run real swarm with ./claude-flow and measure performance.
+        Run real swarm with ./hive-flow and measure performance.
         
         Args:
             objective: Task objective
@@ -548,14 +548,14 @@ class RealHiveMindBenchmark:
     """Real hive-mind benchmark scenarios."""
     
     def __init__(self,
-                 claude_flow_path: Optional[str] = None,
+                 hive_flow_path: Optional[str] = None,
                  working_dir: Optional[str] = None):
         """Initialize real hive-mind benchmark."""
-        self.executor = ClaudeFlowRealExecutor(claude_flow_path, working_dir)
+        self.executor = HiveFlowRealExecutor(hive_flow_path, working_dir)
         
     def benchmark_hive_mind(self, task: str) -> RealBenchmarkResult:
         """
-        Run real hive-mind with ./claude-flow and measure performance.
+        Run real hive-mind with ./hive-flow and measure performance.
         
         Args:
             task: Hive-mind task
@@ -593,14 +593,14 @@ class RealSparcBenchmark:
     """Real SPARC benchmark scenarios."""
     
     def __init__(self,
-                 claude_flow_path: Optional[str] = None,
+                 hive_flow_path: Optional[str] = None,
                  working_dir: Optional[str] = None):
         """Initialize real SPARC benchmark."""
-        self.executor = ClaudeFlowRealExecutor(claude_flow_path, working_dir)
+        self.executor = HiveFlowRealExecutor(hive_flow_path, working_dir)
         
     def benchmark_sparc_modes(self, mode: str, task: str) -> RealBenchmarkResult:
         """
-        Run real SPARC modes with ./claude-flow and measure performance.
+        Run real SPARC modes with ./hive-flow and measure performance.
         
         Args:
             mode: SPARC mode to run
@@ -633,13 +633,13 @@ class RealBenchmarkSuite:
     """Suite of real benchmarks for comprehensive testing."""
     
     def __init__(self,
-                 claude_flow_path: Optional[str] = None,
+                 hive_flow_path: Optional[str] = None,
                  working_dir: Optional[str] = None,
                  output_dir: str = "./real_benchmark_results"):
         """Initialize benchmark suite."""
-        self.swarm_bench = RealSwarmBenchmark(claude_flow_path, working_dir)
-        self.hive_bench = RealHiveMindBenchmark(claude_flow_path, working_dir)
-        self.sparc_bench = RealSparcBenchmark(claude_flow_path, working_dir)
+        self.swarm_bench = RealSwarmBenchmark(hive_flow_path, working_dir)
+        self.hive_bench = RealHiveMindBenchmark(hive_flow_path, working_dir)
+        self.sparc_bench = RealSparcBenchmark(hive_flow_path, working_dir)
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(exist_ok=True)
         

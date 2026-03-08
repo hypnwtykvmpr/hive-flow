@@ -40,8 +40,8 @@ async function editFile(subArgs, flags) {
   if (!targetFile || !instruction) {
     printError('Usage: agent booster edit <file> "<instruction>"');
     console.log('\nExamples:');
-    console.log('  claude-flow agent booster edit src/app.js "Add error handling"');
-    console.log('  claude-flow agent booster edit server.ts "Refactor to async/await"');
+    console.log('  hive-flow agent booster edit src/app.js "Add error handling"');
+    console.log('  hive-flow agent booster edit server.ts "Refactor to async/await"');
     return;
   }
 
@@ -115,8 +115,8 @@ async function batchEdit(subArgs, flags) {
   if (!pattern || !instruction) {
     printError('Usage: agent booster batch <pattern> "<instruction>"');
     console.log('\nExamples:');
-    console.log('  claude-flow agent booster batch "src/**/*.js" "Add logging"');
-    console.log('  claude-flow agent booster batch "*.ts" "Convert to arrow functions"');
+    console.log('  hive-flow agent booster batch "src/**/*.js" "Add logging"');
+    console.log('  hive-flow agent booster batch "*.ts" "Convert to arrow functions"');
     return;
   }
 
@@ -213,8 +213,8 @@ async function parseMarkdown(subArgs, flags) {
   if (!markdownFile) {
     printError('Usage: agent booster parse-markdown <markdown-file>');
     console.log('\nExamples:');
-    console.log('  claude-flow agent booster parse-markdown refactoring-plan.md');
-    console.log('  claude-flow agent booster parse refactor.md --dry-run');
+    console.log('  hive-flow agent booster parse-markdown refactoring-plan.md');
+    console.log('  hive-flow agent booster parse refactor.md --dry-run');
     return;
   }
 
@@ -458,7 +458,7 @@ function showBoosterHelp() {
   console.log('with zero API costs and sub-millisecond latency.');
   console.log();
   console.log('USAGE:');
-  console.log('  claude-flow agent booster <command> [options]');
+  console.log('  hive-flow agent booster <command> [options]');
   console.log();
   console.log('COMMANDS:');
   console.log('  edit <file> "<instruction>"        Edit a single file');
@@ -478,19 +478,19 @@ function showBoosterHelp() {
   console.log('EXAMPLES:');
   console.log();
   console.log('  # Single file edit (1ms, $0)');
-  console.log('  claude-flow agent booster edit src/app.js "Add error handling"');
+  console.log('  hive-flow agent booster edit src/app.js "Add error handling"');
   console.log();
   console.log('  # Batch refactoring (100 files in 100ms, $0)');
-  console.log('  claude-flow agent booster batch "src/**/*.ts" "Convert to arrow functions"');
+  console.log('  hive-flow agent booster batch "src/**/*.ts" "Convert to arrow functions"');
   console.log();
   console.log('  # Parse LLM-generated refactoring plan');
-  console.log('  claude-flow agent booster parse-markdown refactor-plan.md');
+  console.log('  hive-flow agent booster parse-markdown refactor-plan.md');
   console.log();
   console.log('  # Dry run preview');
-  console.log('  claude-flow agent booster edit app.js "Add logging" --dry-run');
+  console.log('  hive-flow agent booster edit app.js "Add logging" --dry-run');
   console.log();
   console.log('  # Performance benchmark');
-  console.log('  claude-flow agent booster benchmark --iterations 100');
+  console.log('  hive-flow agent booster benchmark --iterations 100');
   console.log();
   console.log('PERFORMANCE:');
   console.log('  Speed:    352x faster than LLM APIs (1ms vs 352ms per edit)');

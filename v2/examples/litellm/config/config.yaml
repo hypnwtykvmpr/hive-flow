@@ -68,7 +68,7 @@ model_list:
       timeout: 120
       stream: true
       extra_headers:
-        HTTP-Referer: "https://github.com/ruvnet/claude-flow"
+        HTTP-Referer: "https://github.com/ruvnet/hive-flow"
         X-Title: "Claude Code Gateway"
     model_info:
       mode: code

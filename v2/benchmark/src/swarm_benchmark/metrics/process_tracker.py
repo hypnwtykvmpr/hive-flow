@@ -1,4 +1,4 @@
-"""Process tracking for claude-flow executions."""
+"""Process tracking for hive-flow executions."""
 
 from __future__ import annotations
 import subprocess
@@ -49,15 +49,15 @@ class CommandMetrics:
     
 
 class ProcessTracker:
-    """Tracks claude-flow process executions with metrics."""
+    """Tracks hive-flow process executions with metrics."""
     
-    def __init__(self, claude_flow_path: str = "claude-flow"):
+    def __init__(self, hive_flow_path: str = "hive-flow"):
         """Initialize process tracker.
         
         Args:
-            claude_flow_path: Path to claude-flow executable
+            hive_flow_path: Path to hive-flow executable
         """
-        self.claude_flow_path = claude_flow_path
+        self.hive_flow_path = hive_flow_path
         self._command_metrics: Dict[str, CommandMetrics] = {}
         self._execution_history: List[ProcessExecutionResult] = []
         
@@ -68,10 +68,10 @@ class ProcessTracker:
         env: Optional[Dict[str, str]] = None,
         cwd: Optional[str] = None
     ) -> ProcessExecutionResult:
-        """Execute a claude-flow command and collect metrics.
+        """Execute a hive-flow command and collect metrics.
         
         Args:
-            command: Command arguments (without claude-flow prefix)
+            command: Command arguments (without hive-flow prefix)
             timeout: Command timeout in seconds
             env: Environment variables
             cwd: Working directory
@@ -80,7 +80,7 @@ class ProcessTracker:
             ProcessExecutionResult with metrics
         """
         # Build full command
-        full_command = [self.claude_flow_path] + command
+        full_command = [self.hive_flow_path] + command
         
         # Set up environment
         process_env = os.environ.copy()

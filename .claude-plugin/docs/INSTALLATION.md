@@ -1,4 +1,4 @@
-# 📦 Claude Flow Plugin Installation Guide
+# 📦 Hive Flow Plugin Installation Guide
 
 ## Quick Installation
 
@@ -7,7 +7,7 @@
 In Claude Code:
 
 ```
-/plugin add ruvnet/claude-flow
+/plugin add ruvnet/hive-flow
 ```
 
 This will:
@@ -23,8 +23,8 @@ If you've cloned the repository:
 
 ```bash
 # Clone the repository
-git clone https://github.com/ruvnet/claude-flow.git
-cd claude-flow
+git clone https://github.com/ruvnet/hive-flow.git
+cd hive-flow
 
 # In Claude Code, install the plugin
 /plugin add .
@@ -44,7 +44,7 @@ Restart to activate the plugin:
 /plugin list
 ```
 
-Look for `claude-flow` in the active plugins list.
+Look for `hive-flow` in the active plugins list.
 
 Try a command:
 ```
@@ -88,7 +88,7 @@ Available for delegation:
 ### ✅ MCP Integration
 
 3 MCP servers with 110+ tools:
-- **claude-flow**: Core orchestration (40+ tools) - Required
+- **hive-flow**: Core orchestration (40+ tools) - Required
 - **ruv-swarm**: Enhanced coordination - Optional
 - **flow-nexus**: Cloud features (70+ tools) - Optional
 
@@ -105,19 +105,19 @@ Available for delegation:
 ### Update Plugin
 
 ```
-/plugin update claude-flow
+/plugin update hive-flow
 ```
 
 Or pull latest from GitHub:
 ```
-cd /path/to/claude-flow
+cd /path/to/hive-flow
 git pull
 ```
 
 ### Remove Plugin
 
 ```
-/plugin remove claude-flow
+/plugin remove hive-flow
 ```
 
 ---
@@ -130,7 +130,7 @@ The plugin defines MCP servers, but you may need to install the packages:
 
 ```bash
 # Core MCP (recommended)
-npm install -g claude-flow@alpha
+npm install -g hive-flow@alpha
 
 # Optional enhanced coordination
 npm install -g ruv-swarm
@@ -152,7 +152,7 @@ In Claude Code:
 /plugin list
 ```
 
-Look for `claude-flow` in the list with status "active".
+Look for `hive-flow` in the list with status "active".
 
 ### Test Commands
 
@@ -177,7 +177,7 @@ Agents are automatically available for Claude Code to delegate to when appropria
 /plugin list
 
 # Try installing again
-/plugin add ruvnet/claude-flow
+/plugin add ruvnet/hive-flow
 ```
 
 ### Commands Not Showing
@@ -199,8 +199,8 @@ ls -la agents/
 
 ```
 # Try local installation
-git clone https://github.com/ruvnet/claude-flow.git
-cd claude-flow
+git clone https://github.com/ruvnet/hive-flow.git
+cd hive-flow
 /plugin add .
 ```
 
@@ -210,8 +210,8 @@ cd claude-flow
 
 - **Documentation**: See README.md for complete documentation
 - **Quick Start**: See docs/QUICKSTART.md for 5-minute guide
-- **GitHub Issues**: https://github.com/ruvnet/claude-flow/issues
-- **Discussions**: https://github.com/ruvnet/claude-flow/discussions
+- **GitHub Issues**: https://github.com/ruvnet/hive-flow/issues
+- **Discussions**: https://github.com/ruvnet/hive-flow/discussions
 
 ---
 
@@ -220,7 +220,7 @@ cd claude-flow
 To remove the plugin:
 
 ```
-/plugin remove claude-flow
+/plugin remove hive-flow
 ```
 
 This will remove all commands, agents, and hooks.
@@ -238,7 +238,7 @@ This will remove all commands, agents, and hooks.
 After installation, the plugin structure is:
 
 ```
-claude-flow/
+hive-flow/
 ├── .claude-plugin/
 │   ├── plugin.json          # Plugin metadata
 │   ├── README.md            # Documentation

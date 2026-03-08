@@ -59,10 +59,10 @@ provider_models { "provider": "codex-cli" }  # Specific provider
 ### CLI Commands
 
 ```bash
-claude-flow providers list       # Show provider availability
-claude-flow providers test       # Run health checks
-claude-flow providers models     # List models and aliases
-claude-flow providers configure  # Setup instructions
+hive-flow providers list       # Show provider availability
+hive-flow providers test       # Run health checks
+hive-flow providers models     # List models and aliases
+hive-flow providers configure  # Setup instructions
 ```
 
 ### Persistent Provider Agents

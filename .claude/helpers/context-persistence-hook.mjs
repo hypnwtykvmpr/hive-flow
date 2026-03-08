@@ -10,7 +10,7 @@
  * Backend priority:
  *   1. better-sqlite3 (native, WAL mode, indexed queries, ACID transactions)
  *   2. RuVector PostgreSQL (if RUVECTOR_* env vars set - TB-scale, GNN search)
- *   3. AgentDB from @claude-flow/memory (HNSW vector search)
+ *   3. AgentDB from @hive-flow/memory (HNSW vector search)
  *   4. JsonFileBackend (zero dependencies, always works)
  *
  * Proactive archiving:
@@ -35,25 +35,25 @@ import { createRequire } from 'module';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const PROJECT_ROOT = join(__dirname, '../..');
-const DATA_DIR = join(PROJECT_ROOT, '.claude-flow', 'data');
+const DATA_DIR = join(PROJECT_ROOT, '.hive-flow', 'data');
 const ARCHIVE_JSON_PATH = join(DATA_DIR, 'transcript-archive.json');
 const ARCHIVE_DB_PATH = join(DATA_DIR, 'transcript-archive.db');
 
 const NAMESPACE = 'transcript-archive';
-const RESTORE_BUDGET = parseInt(process.env.CLAUDE_FLOW_COMPACT_RESTORE_BUDGET || '4000', 10);
+const RESTORE_BUDGET = parseInt(process.env.HIVE_FLOW_COMPACT_RESTORE_BUDGET || '4000', 10);
 const MAX_MESSAGES = 500;
-const BLOCK_COMPACTION = process.env.CLAUDE_FLOW_BLOCK_COMPACTION === 'true';
-const COMPACT_INSTRUCTION_BUDGET = parseInt(process.env.CLAUDE_FLOW_COMPACT_INSTRUCTION_BUDGET || '2000', 10);
-const RETENTION_DAYS = parseInt(process.env.CLAUDE_FLOW_RETENTION_DAYS || '30', 10);
-const AUTO_OPTIMIZE = process.env.CLAUDE_FLOW_AUTO_OPTIMIZE !== 'false'; // on by default
+const BLOCK_COMPACTION = process.env.HIVE_FLOW_BLOCK_COMPACTION === 'true';
+const COMPACT_INSTRUCTION_BUDGET = parseInt(process.env.HIVE_FLOW_COMPACT_INSTRUCTION_BUDGET || '2000', 10);
+const RETENTION_DAYS = parseInt(process.env.HIVE_FLOW_RETENTION_DAYS || '30', 10);
+const AUTO_OPTIMIZE = process.env.HIVE_FLOW_AUTO_OPTIMIZE !== 'false'; // on by default
 
 // ============================================================================
 // Context Autopilot — prevent compaction by managing context size in real-time
 // ============================================================================
-const AUTOPILOT_ENABLED = process.env.CLAUDE_FLOW_CONTEXT_AUTOPILOT !== 'false'; // on by default
-const CONTEXT_WINDOW_TOKENS = parseInt(process.env.CLAUDE_FLOW_CONTEXT_WINDOW || '200000', 10);
-const AUTOPILOT_WARN_PCT = parseFloat(process.env.CLAUDE_FLOW_AUTOPILOT_WARN || '0.70');
-const AUTOPILOT_PRUNE_PCT = parseFloat(process.env.CLAUDE_FLOW_AUTOPILOT_PRUNE || '0.85');
+const AUTOPILOT_ENABLED = process.env.HIVE_FLOW_CONTEXT_AUTOPILOT !== 'false'; // on by default
+const CONTEXT_WINDOW_TOKENS = parseInt(process.env.HIVE_FLOW_CONTEXT_WINDOW || '200000', 10);
+const AUTOPILOT_WARN_PCT = parseFloat(process.env.HIVE_FLOW_AUTOPILOT_WARN || '0.70');
+const AUTOPILOT_PRUNE_PCT = parseFloat(process.env.HIVE_FLOW_AUTOPILOT_PRUNE || '0.85');
 const AUTOPILOT_STATE_PATH = join(DATA_DIR, 'autopilot-state.json');
 
 // Approximate tokens per character (Claude averages ~3.5 chars per token)
@@ -465,7 +465,7 @@ class RuVectorBackend {
       max: 3,
       idleTimeoutMillis: 10000,
       connectionTimeoutMillis: 3000,
-      application_name: 'claude-flow-context-persistence',
+      application_name: 'hive-flow-context-persistence',
     });
 
     // Test connection and create schema
@@ -727,14 +727,14 @@ async function resolveBackend() {
     }
   } catch { /* fall through */ }
 
-  // Tier 3: AgentDB from @claude-flow/memory (HNSW)
+  // Tier 3: AgentDB from @hive-flow/memory (HNSW)
   try {
-    const localDist = join(PROJECT_ROOT, 'v3/@claude-flow/memory/dist/index.js');
+    const localDist = join(PROJECT_ROOT, 'v3/@hive-flow/memory/dist/index.js');
     let memPkg = null;
     if (existsSync(localDist)) {
       memPkg = await import(`file://${localDist}`);
     } else {
-      memPkg = await import('@claude-flow/memory');
+      memPkg = await import('@hive-flow/memory');
     }
     if (memPkg?.AgentDBBackend) {
       const backend = new memPkg.AgentDBBackend();
@@ -1727,9 +1727,9 @@ function tryTieredShadowRestore(budget) {
       .sort((a, b) => a.importanceRank - b.importanceRank);
     if (ranked.length < 5) return null;
 
-    const t1Pct = parseFloat(process.env.CLAUDE_FLOW_RESTORE_TIER1_PCT || '0.50');
-    const t2Pct = parseFloat(process.env.CLAUDE_FLOW_RESTORE_TIER2_PCT || '0.35');
-    const t3Pct = parseFloat(process.env.CLAUDE_FLOW_RESTORE_TIER3_PCT || '0.15');
+    const t1Pct = parseFloat(process.env.HIVE_FLOW_RESTORE_TIER1_PCT || '0.50');
+    const t2Pct = parseFloat(process.env.HIVE_FLOW_RESTORE_TIER2_PCT || '0.35');
+    const t3Pct = parseFloat(process.env.HIVE_FLOW_RESTORE_TIER3_PCT || '0.15');
     const t1Budget = Math.floor(budget * t1Pct);
     const t2Budget = Math.floor(budget * t2Pct);
     const t3Budget = Math.floor(budget * t3Pct);

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Example usage of the claude-flow integration layer.
+Example usage of the hive-flow integration layer.
 
-This script demonstrates how to use the ClaudeFlowExecutor for various tasks.
+This script demonstrates how to use the HiveFlowExecutor for various tasks.
 """
 
 import sys
@@ -12,8 +12,8 @@ from pathlib import Path
 # Add benchmark src to path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from swarm_benchmark.core.claude_flow_executor import (
-    ClaudeFlowExecutor, SwarmConfig, SparcConfig,
+from swarm_benchmark.core.hive_flow_executor import (
+    HiveFlowExecutor, SwarmConfig, SparcConfig,
     ExecutionStrategy, CoordinationMode, SparcMode, OutputFormat
 )
 from swarm_benchmark.core.integration_utils import (
@@ -25,7 +25,7 @@ def example_basic_swarm():
     """Example: Basic swarm execution with dry run."""
     print("\n=== Example: Basic Swarm Execution ===")
     
-    executor = ClaudeFlowExecutor()
+    executor = HiveFlowExecutor()
     
     # Configure swarm
     config = SwarmConfig(
@@ -58,7 +58,7 @@ def example_research_swarm():
     """Example: Research swarm with output parsing."""
     print("\n=== Example: Research Swarm ===")
     
-    executor = ClaudeFlowExecutor()
+    executor = HiveFlowExecutor()
     
     config = SwarmConfig(
         objective="Research best practices for microservices architecture",
@@ -90,7 +90,7 @@ def example_sparc_modes():
     """Example: Using different SPARC modes."""
     print("\n=== Example: SPARC Modes ===")
     
-    executor = ClaudeFlowExecutor()
+    executor = HiveFlowExecutor()
     
     # Example 1: TDD mode
     tdd_config = SparcConfig(
@@ -101,7 +101,7 @@ def example_sparc_modes():
     )
     
     print("\n1. TDD Mode:")
-    print(f"   Command: claude-flow sparc run {tdd_config.mode.value} \"{tdd_config.prompt}\"")
+    print(f"   Command: hive-flow sparc run {tdd_config.mode.value} \"{tdd_config.prompt}\"")
     
     # Example 2: Optimizer mode
     optimizer_config = SparcConfig(
@@ -112,7 +112,7 @@ def example_sparc_modes():
     )
     
     print("\n2. Optimizer Mode:")
-    print(f"   Command: claude-flow sparc run {optimizer_config.mode.value} \"{optimizer_config.prompt}\"")
+    print(f"   Command: hive-flow sparc run {optimizer_config.mode.value} \"{optimizer_config.prompt}\"")
     
     # Example 3: Workflow manager
     workflow_config = SparcConfig(
@@ -122,14 +122,14 @@ def example_sparc_modes():
     )
     
     print("\n3. Workflow Manager Mode:")
-    print(f"   Command: claude-flow sparc run {workflow_config.mode.value} \"{workflow_config.prompt}\"")
+    print(f"   Command: hive-flow sparc run {workflow_config.mode.value} \"{workflow_config.prompt}\"")
 
 
 def example_error_handling():
     """Example: Handling errors and retries."""
     print("\n=== Example: Error Handling ===")
     
-    executor = ClaudeFlowExecutor(
+    executor = HiveFlowExecutor(
         retry_attempts=3,
         retry_delay=2.0
     )
@@ -157,7 +157,7 @@ def example_batch_operations():
     """Example: Batch operations for testing."""
     print("\n=== Example: Batch Testing Operations ===")
     
-    executor = ClaudeFlowExecutor()
+    executor = HiveFlowExecutor()
     
     config = SwarmConfig(
         objective="Run comprehensive test suite with coverage analysis",
@@ -189,11 +189,11 @@ def example_memory_operations():
     """Example: Using memory for cross-session data."""
     print("\n=== Example: Memory Operations ===")
     
-    executor = ClaudeFlowExecutor()
+    executor = HiveFlowExecutor()
     
     # Store data in memory
     test_data = {
-        "project": "claude-flow-benchmark",
+        "project": "hive-flow-benchmark",
         "metrics": {
             "performance": 95,
             "reliability": 98,
@@ -219,7 +219,7 @@ def example_memory_operations():
 
 def main():
     """Run all examples."""
-    print("🚀 Claude-Flow Integration Examples")
+    print("🚀 Hive-Flow Integration Examples")
     print("=" * 50)
     
     examples = [

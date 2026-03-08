@@ -114,7 +114,7 @@ export class SparcInit implements IInitMode {
 
         // Test SPARC-related MCP functions
         const sparcStatus = await config.mcpIntegrator.executeCommand({
-          tool: 'claude-flow',
+          tool: 'hive-flow',
           function: 'sparc_mode',
           parameters: { mode: 'dev', task_description: 'Initialize SPARC workflow' }
         });

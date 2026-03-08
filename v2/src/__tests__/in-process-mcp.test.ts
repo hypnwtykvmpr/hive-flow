@@ -7,7 +7,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { InProcessMCPServer, createInProcessServer } from '../mcp/in-process-server.js';
-import { ClaudeFlowToolRegistry, createToolRegistry } from '../mcp/tool-registry.js';
+import { HiveFlowToolRegistry, createToolRegistry } from '../mcp/tool-registry.js';
 import {
   SDKIntegration,
   initializeSDKIntegration,
@@ -297,8 +297,8 @@ describe('InProcessMCPServer', () => {
   });
 });
 
-describe('ClaudeFlowToolRegistry', () => {
-  let registry: ClaudeFlowToolRegistry;
+describe('HiveFlowToolRegistry', () => {
+  let registry: HiveFlowToolRegistry;
 
   beforeEach(async () => {
     registry = await createToolRegistry({
@@ -312,7 +312,7 @@ describe('ClaudeFlowToolRegistry', () => {
     await registry.cleanup();
   });
 
-  it('should load all Claude-Flow tools', async () => {
+  it('should load all Hive-Flow tools', async () => {
     const toolNames = registry.getToolNames();
     expect(toolNames.length).toBeGreaterThan(20); // At least 20+ tools
 
@@ -332,7 +332,7 @@ describe('ClaudeFlowToolRegistry', () => {
     const sdkServer = registry.getSdkServerConfig();
     expect(sdkServer).toBeDefined();
     expect(sdkServer?.type).toBe('sdk');
-    expect(sdkServer?.name).toBe('claude-flow');
+    expect(sdkServer?.name).toBe('hive-flow');
   });
 
   it('should return performance metrics', () => {
@@ -372,7 +372,7 @@ describe('SDKIntegration', () => {
   it('should get SDK server config', () => {
     const server = integration.getSdkServer();
     expect(server).toBeDefined();
-    expect(server?.name).toBe('claude-flow');
+    expect(server?.name).toBe('hive-flow');
   });
 
   it('should provide performance comparison', () => {

@@ -1,8 +1,8 @@
-# Claude-Flow Compatibility - Schema Reference
+# Hive-Flow Compatibility - Schema Reference
 
 ## ✅ All Models Are Now Fully Compatible!
 
-As of **2025-10-15**, all ReasoningBank pre-trained models have been updated to include **all required claude-flow memory tables**. You can use these models with any claude-flow command.
+As of **2025-10-15**, all ReasoningBank pre-trained models have been updated to include **all required hive-flow memory tables**. You can use these models with any hive-flow command.
 
 ---
 
@@ -30,9 +30,9 @@ ORDER BY success_rate DESC
 LIMIT 10;
 ```
 
-### 2. Claude-Flow Memory Tables (General Storage)
+### 2. Hive-Flow Memory Tables (General Storage)
 
-These tables support general memory operations across all claude-flow commands:
+These tables support general memory operations across all hive-flow commands:
 
 | Table | Description | Usage |
 |-------|-------------|-------|
@@ -65,42 +65,42 @@ These tables track usage and performance:
 
 ## Supported Commands
 
-All models work with these claude-flow commands:
+All models work with these hive-flow commands:
 
 ### ✅ General Memory Commands
 
 ```bash
 # Store a value
-npx claude-flow@alpha memory store api_key "sk-123456" --namespace config
+npx hive-flow@alpha memory store api_key "sk-123456" --namespace config
 
 # Query by key
-npx claude-flow@alpha memory query "api" --namespace config
+npx hive-flow@alpha memory query "api" --namespace config
 
 # List all memories
-npx claude-flow@alpha memory list --namespace config
+npx hive-flow@alpha memory list --namespace config
 
 # Delete a memory
-npx claude-flow@alpha memory delete api_key --namespace config
+npx hive-flow@alpha memory delete api_key --namespace config
 ```
 
 ### ✅ ReasoningBank-Specific Commands
 
 ```bash
 # Query patterns semantically
-npx claude-flow@alpha memory query "authentication best practices" --reasoningbank
+npx hive-flow@alpha memory query "authentication best practices" --reasoningbank
 
 # Search patterns
-npx claude-flow@alpha memory search "API optimization" --namespace backend
+npx hive-flow@alpha memory search "API optimization" --namespace backend
 
 # Store pattern with learning
-npx claude-flow@alpha memory store api_pattern "Use JWT with refresh tokens" --reasoningbank
+npx hive-flow@alpha memory store api_pattern "Use JWT with refresh tokens" --reasoningbank
 ```
 
 ### ✅ Hive-Mind Swarm Operations
 
 ```bash
 # Initialize swarm with model
-npx claude-flow@alpha hive-mind init --topology mesh
+npx hive-flow@alpha hive-mind init --topology mesh
 
 # Swarms use collective_memory table automatically
 # No additional configuration needed!
@@ -110,10 +110,10 @@ npx claude-flow@alpha hive-mind init --topology mesh
 
 ```bash
 # Sessions are automatically tracked in sessions table
-npx claude-flow@alpha hooks session-restore --session-id swarm-123
+npx hive-flow@alpha hooks session-restore --session-id swarm-123
 
 # View session metrics
-npx claude-flow@alpha hooks session-end --export-metrics
+npx hive-flow@alpha hooks session-end --export-metrics
 ```
 
 ---
@@ -154,7 +154,7 @@ ORDER BY name
 
 ## Migration from Old Models
 
-If you have an older model without claude-flow tables:
+If you have an older model without hive-flow tables:
 
 ```bash
 cd /workspaces/claude-code-flow/docs/reasoningbank/models
@@ -437,8 +437,8 @@ patterns = db.execute("""
 
 ## Summary
 
-✅ **All models are fully compatible** with claude-flow
-✅ **12 tables** per model (ReasoningBank + Claude-Flow + Metrics)
+✅ **All models are fully compatible** with hive-flow
+✅ **12 tables** per model (ReasoningBank + Hive-Flow + Metrics)
 ✅ **Backups created** automatically during schema updates
 ✅ **No data loss** - all patterns preserved
 ✅ **Production ready** - tested and validated

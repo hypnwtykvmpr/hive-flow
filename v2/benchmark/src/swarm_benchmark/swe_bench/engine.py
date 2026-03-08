@@ -33,7 +33,7 @@ class SWEBenchTask:
 
 
 class SWEBenchEngine(RealBenchmarkEngine):
-    """Engine for running SWE-bench benchmarks with Claude Flow."""
+    """Engine for running SWE-bench benchmarks with Hive Flow."""
     
     def __init__(self, config: Optional[BenchmarkConfig] = None):
         """Initialize SWE-bench engine."""
@@ -170,7 +170,7 @@ class SWEBenchEngine(RealBenchmarkEngine):
             # Prepare command based on task category
             command = self._prepare_command(task)
             
-            # Execute with claude-flow
+            # Execute with hive-flow
             process = await asyncio.create_subprocess_shell(
                 command,
                 stdout=asyncio.subprocess.PIPE,
@@ -216,8 +216,8 @@ class SWEBenchEngine(RealBenchmarkEngine):
         return result
         
     def _prepare_command(self, task: SWEBenchTask) -> str:
-        """Prepare claude-flow command for task."""
-        # Map task categories to claude-flow strategies
+        """Prepare hive-flow command for task."""
+        # Map task categories to hive-flow strategies
         strategy_map = {
             "code_generation": "development",
             "bug_fix": "optimization",
@@ -231,7 +231,7 @@ class SWEBenchEngine(RealBenchmarkEngine):
         strategy = strategy_map.get(task.category, "auto")
         
         # Build command
-        cmd = f"npx claude-flow@alpha sparc run {strategy}"
+        cmd = f"npx hive-flow@alpha sparc run {strategy}"
         cmd += f' "{task.description}"'
         
         # Add configuration flags

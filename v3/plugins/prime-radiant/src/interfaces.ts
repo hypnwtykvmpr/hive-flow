@@ -537,7 +537,7 @@ export interface IPlugin {
   readonly description: string;
 
   /**
-   * Register the plugin with claude-flow
+   * Register the plugin with hive-flow
    * Called once when plugin is loaded
    */
   register(context: PluginContext): Promise<void>;

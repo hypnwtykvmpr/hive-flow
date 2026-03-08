@@ -116,10 +116,10 @@ const GITHUB_MODES = {
 
 function showGitHubHelp() {
   console.log(`
-🐙 Claude Flow GitHub Workflow Automation
+🐙 Hive Flow GitHub Workflow Automation
 
 USAGE:
-  claude-flow github <mode> <objective> [options]
+  hive-flow github <mode> <objective> [options]
 
 GITHUB AUTOMATION MODES:
 `);
@@ -130,12 +130,12 @@ GITHUB AUTOMATION MODES:
 
   console.log(`
 EXAMPLES:
-  claude-flow github pr-manager "create feature PR with automated testing"
-  claude-flow github gh-coordinator "setup CI/CD pipeline" --auto-approve
-  claude-flow github release-manager "prepare v2.0.0 release"
-  claude-flow github repo-architect "optimize repository structure"
-  claude-flow github issue-tracker "analyze project roadmap issues"
-  claude-flow github sync-coordinator "sync package versions across repos"
+  hive-flow github pr-manager "create feature PR with automated testing"
+  hive-flow github gh-coordinator "setup CI/CD pipeline" --auto-approve
+  hive-flow github release-manager "prepare v2.0.0 release"
+  hive-flow github repo-architect "optimize repository structure"
+  hive-flow github issue-tracker "analyze project roadmap issues"
+  hive-flow github sync-coordinator "sync package versions across repos"
 
 OPTIONS:
   --auto-approve             Auto-approve Claude permissions

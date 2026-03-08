@@ -610,7 +610,7 @@ export async function initializeRuvSwarmIntegration(
 ): Promise<RuvSwarmResponse> {
   const context: RuvSwarmToolContext = {
     workingDirectory,
-    sessionId: `claude-flow-${Date.now()}`,
+    sessionId: `hive-flow-${Date.now()}`,
   };
 
   logger?.info('Initializing ruv-swarm integration', { workingDirectory });

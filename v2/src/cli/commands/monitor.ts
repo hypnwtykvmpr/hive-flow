@@ -1,5 +1,5 @@
 /**
- * Monitor command for Claude-Flow - Live dashboard mode
+ * Monitor command for Hive-Flow - Live dashboard mode
  */
 
 import { Command } from '../commander-fix.js';
@@ -168,7 +168,7 @@ class Dashboard {
 
   private renderHeader(data: MonitorData): void {
     const time = data.timestamp.toLocaleTimeString();
-    console.log(chalk.cyan.bold('Claude-Flow Live Monitor') + chalk.gray(` - ${time}`));
+    console.log(chalk.cyan.bold('Hive-Flow Live Monitor') + chalk.gray(` - ${time}`));
     console.log('═'.repeat(80));
   }
 
@@ -341,8 +341,8 @@ class Dashboard {
     console.log('─'.repeat(40));
 
     if ((error as Error).message.includes('ECONNREFUSED')) {
-      console.log(chalk.red('✗ Cannot connect to Claude-Flow'));
-      console.log(chalk.gray('Make sure Claude-Flow is running with: claude-flow start'));
+      console.log(chalk.red('✗ Cannot connect to Hive-Flow'));
+      console.log(chalk.gray('Make sure Hive-Flow is running with: hive-flow start'));
     } else {
       console.log(chalk.red('Error:'), (error as Error).message);
     }
@@ -471,7 +471,7 @@ class Dashboard {
 
   private async checkSystemRunning(): Promise<boolean> {
     try {
-      return await existsSync('.claude-flow.pid');
+      return await existsSync('.hive-flow.pid');
     } catch {
       return false;
     }

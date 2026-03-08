@@ -1,17 +1,17 @@
 /**
- * Claude Flow V3 - Modular AI Agent Coordination System
+ * Hive Flow V3 - Modular AI Agent Coordination System
  *
- * This is the main entry point that re-exports all @claude-flow modules.
+ * This is the main entry point that re-exports all @hive-flow modules.
  * Each module can also be imported directly for tree-shaking.
  *
  * @example
  * // Import everything
- * import * as claudeFlow from '@claude-flow/v3';
+ * import * as hiveFlow from '@hive-flow/v3';
  *
  * // Or import specific modules
- * import { UnifiedSwarmCoordinator } from '@claude-flow/swarm';
- * import { PasswordHasher } from '@claude-flow/security';
- * import { HNSWIndex } from '@claude-flow/memory';
+ * import { UnifiedSwarmCoordinator } from '@hive-flow/swarm';
+ * import { PasswordHasher } from '@hive-flow/security';
+ * import { HNSWIndex } from '@hive-flow/memory';
  *
  * Complete reimagining based on 10 ADRs:
  * - ADR-001: Adopt agentic-flow as core foundation
@@ -32,89 +32,89 @@
  * - Code Reduction: <5,000 lines (vs 15,000+)
  * - Startup Time: <500ms
  *
- * @module @claude-flow/v3
+ * @module @hive-flow/v3
  * @version 3.0.0-alpha.1
  */
 
 // =============================================================================
-// @claude-flow Module Exports (New Modular Architecture)
+// @hive-flow Module Exports (New Modular Architecture)
 // =============================================================================
 
 /**
  * Security module - CVE fixes, input validation, credential management
- * @see {@link @claude-flow/security}
+ * @see {@link @hive-flow/security}
  */
-export * as security from './@claude-flow/security/src/index.js';
+export * as security from './@hive-flow/security/src/index.js';
 
 /**
  * Memory module - AgentDB, HNSW indexing, vector search
- * @see {@link @claude-flow/memory}
+ * @see {@link @hive-flow/memory}
  */
-export * as memory from './@claude-flow/memory/src/index.js';
+export * as memory from './@hive-flow/memory/src/index.js';
 
 /**
  * Swarm module - 15-agent coordination, hierarchical mesh, consensus
- * @see {@link @claude-flow/swarm}
+ * @see {@link @hive-flow/swarm}
  */
-export * as swarm from './@claude-flow/swarm/src/index.js';
+export * as swarm from './@hive-flow/swarm/src/index.js';
 
 /**
  * Integration module - agentic-flow@alpha integration, ADR-001 compliance
- * @see {@link @claude-flow/integration}
+ * @see {@link @hive-flow/integration}
  */
-export * as integration from './@claude-flow/integration/src/index.js';
+export * as integration from './@hive-flow/integration/src/index.js';
 
 /**
  * Shared module - common types, events, utilities, core interfaces
- * @see {@link @claude-flow/shared}
+ * @see {@link @hive-flow/shared}
  */
-export * as shared from './@claude-flow/shared/src/index.js';
+export * as shared from './@hive-flow/shared/src/index.js';
 
 /**
  * CLI module - Command parsing, prompts, output formatting
- * @see {@link @claude-flow/cli}
+ * @see {@link @hive-flow/cli}
  */
-export * as cli from './@claude-flow/cli/src/index.js';
+export * as cli from './@hive-flow/cli/src/index.js';
 
 /**
  * Neural module - SONA learning, neural modes
- * @see {@link @claude-flow/neural}
+ * @see {@link @hive-flow/neural}
  */
-export * as neural from './@claude-flow/neural/src/index.js';
+export * as neural from './@hive-flow/neural/src/index.js';
 
 /**
  * Performance module - Benchmarking, Flash Attention validation
- * @see {@link @claude-flow/performance}
+ * @see {@link @hive-flow/performance}
  */
-export * as performance from './@claude-flow/performance/src/index.js';
+export * as performance from './@hive-flow/performance/src/index.js';
 
 /**
  * Testing module - TDD London School framework, test utilities
- * @see {@link @claude-flow/testing}
+ * @see {@link @hive-flow/testing}
  */
-export * as testing from './@claude-flow/testing/src/index.js';
+export * as testing from './@hive-flow/testing/src/index.js';
 
 /**
  * Deployment module - Release management, CI/CD
- * @see {@link @claude-flow/deployment}
+ * @see {@link @hive-flow/deployment}
  */
-export * as deployment from './@claude-flow/deployment/src/index.js';
+export * as deployment from './@hive-flow/deployment/src/index.js';
 
 // =============================================================================
 // Module List for Dynamic Loading
 // =============================================================================
 
 export const MODULES = [
-  '@claude-flow/shared',
-  '@claude-flow/security',
-  '@claude-flow/memory',
-  '@claude-flow/swarm',
-  '@claude-flow/integration',
-  '@claude-flow/cli',
-  '@claude-flow/neural',
-  '@claude-flow/performance',
-  '@claude-flow/testing',
-  '@claude-flow/deployment',
+  '@hive-flow/shared',
+  '@hive-flow/security',
+  '@hive-flow/memory',
+  '@hive-flow/swarm',
+  '@hive-flow/integration',
+  '@hive-flow/cli',
+  '@hive-flow/neural',
+  '@hive-flow/performance',
+  '@hive-flow/testing',
+  '@hive-flow/deployment',
 ] as const;
 
 export type ModuleName = (typeof MODULES)[number];
@@ -182,10 +182,10 @@ export const V3_VERSION = {
 };
 
 export const V3_INFO = {
-  name: 'claude-flow',
+  name: 'hive-flow',
   version: V3_VERSION.full,
-  description: 'Complete reimagining of Claude-Flow with 15-agent hierarchical mesh swarm',
-  repository: 'https://github.com/ruvnet/claude-flow',
+  description: 'Complete reimagining of Hive-Flow with 15-agent hierarchical mesh swarm',
+  repository: 'https://github.com/ruvnet/hive-flow',
   license: 'MIT',
   engines: {
     node: '>=20.0.0'

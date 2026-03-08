@@ -3,7 +3,7 @@
 Run Real Benchmarks - Comprehensive real benchmark execution.
 
 This script orchestrates real benchmark executions across:
-1. Swarm benchmarks with actual ./claude-flow commands
+1. Swarm benchmarks with actual ./hive-flow commands
 2. Hive-mind benchmarks with collective intelligence  
 3. SPARC mode benchmarks with specialized agents
 4. Performance analysis and reporting

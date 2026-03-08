@@ -1,5 +1,5 @@
 """
-Test data and fixtures for realistic claude-flow benchmarking.
+Test data and fixtures for realistic hive-flow benchmarking.
 Provides sample projects, code snippets, and scenarios for testing.
 """
 

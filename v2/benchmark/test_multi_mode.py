@@ -10,7 +10,7 @@ import json
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from src.swarm_benchmark.swe_bench.multi_mode_engine import MultiModeSWEBenchEngine, ClaudeFlowMode
+from src.swarm_benchmark.swe_bench.multi_mode_engine import MultiModeSWEBenchEngine, HiveFlowMode
 from src.swarm_benchmark.core.models import BenchmarkConfig
 
 async def run_quick_test():
@@ -33,12 +33,12 @@ async def run_quick_test():
     
     # Define quick test modes (just 2 for speed)
     test_modes = [
-        ClaudeFlowMode(
+        HiveFlowMode(
             "hive-mind", 
             agents=2,
             description="Quick hive-mind test"
         ),
-        ClaudeFlowMode(
+        HiveFlowMode(
             "swarm",
             strategy="auto",
             mode="centralized", 
@@ -127,7 +127,7 @@ def post_results_to_issue(results):
     try:
         subprocess.run([
             "gh", "issue", "comment", "611",
-            "--repo", "ruvnet/claude-flow",
+            "--repo", "ruvnet/hive-flow",
             "--body", comment
         ], check=True)
         print("✅ Posted results to GitHub issue #611")
@@ -137,17 +137,17 @@ def post_results_to_issue(results):
 if __name__ == "__main__":
     print("\n🚀 Starting SWE-bench Multi-Mode Quick Test\n")
     
-    # Check if claude-flow executable exists
-    claude_flow_path = Path('./claude-flow')
-    if not claude_flow_path.exists():
-        claude_flow_path = Path('../claude-flow')
+    # Check if hive-flow executable exists
+    hive_flow_path = Path('./hive-flow')
+    if not hive_flow_path.exists():
+        hive_flow_path = Path('../hive-flow')
         
-    if not claude_flow_path.exists():
-        print("❌ Error: claude-flow executable not found!")
-        print("Please ensure claude-flow is built and available")
+    if not hive_flow_path.exists():
+        print("❌ Error: hive-flow executable not found!")
+        print("Please ensure hive-flow is built and available")
         sys.exit(1)
     
-    print(f"✅ Found claude-flow at: {claude_flow_path.absolute()}")
+    print(f"✅ Found hive-flow at: {hive_flow_path.absolute()}")
     
     # Run the test
     success = asyncio.run(run_quick_test())

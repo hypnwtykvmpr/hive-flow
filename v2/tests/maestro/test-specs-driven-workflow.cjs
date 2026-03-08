@@ -37,7 +37,7 @@ class WorkflowTester {
     this.log('\n📋 Testing CLI Help Command...', 'blue');
     
     try {
-      const output = execSync('npx claude-flow maestro help', { 
+      const output = execSync('npx hive-flow maestro help', { 
         encoding: 'utf8',
         timeout: 10000
       });
@@ -63,7 +63,7 @@ class WorkflowTester {
     this.log('\n🧹 Testing Clean Status Command...', 'blue');
     
     try {
-      const output = execSync('npx claude-flow maestro clean', { 
+      const output = execSync('npx hive-flow maestro clean', { 
         encoding: 'utf8',
         timeout: 10000
       });

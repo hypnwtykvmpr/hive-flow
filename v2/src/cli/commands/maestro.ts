@@ -3,7 +3,7 @@ import chalk from 'chalk';
 import { MaestroCLIBridge } from '../maestro-cli-bridge.js';
 
 export const maestroCommand = new Command('maestro')
-  .description('Specs Driven Development Framework for Claude-Flow')
+  .description('Specs Driven Development Framework for Hive-Flow')
   .action(() => {
     maestroCommand.outputHelp();
   });

@@ -731,31 +731,31 @@ class SimulatedAnnealingOptimizer {
 ### Topology Optimization Commands
 ```bash
 # Analyze current topology
-npx claude-flow topology-analyze --swarm-id <id> --metrics performance
+npx hive-flow topology-analyze --swarm-id <id> --metrics performance
 
 # Optimize topology automatically
-npx claude-flow topology-optimize --swarm-id <id> --strategy adaptive
+npx hive-flow topology-optimize --swarm-id <id> --strategy adaptive
 
 # Compare topology configurations
-npx claude-flow topology-compare --topologies ["hierarchical", "mesh", "hybrid"]
+npx hive-flow topology-compare --topologies ["hierarchical", "mesh", "hybrid"]
 
 # Generate topology recommendations
-npx claude-flow topology-recommend --workload-profile <file> --constraints <file>
+npx hive-flow topology-recommend --workload-profile <file> --constraints <file>
 
 # Monitor topology performance
-npx claude-flow topology-monitor --swarm-id <id> --interval 60
+npx hive-flow topology-monitor --swarm-id <id> --interval 60
 ```
 
 ### Agent Placement Commands
 ```bash
 # Optimize agent placement
-npx claude-flow placement-optimize --algorithm genetic --agents <agent-list>
+npx hive-flow placement-optimize --algorithm genetic --agents <agent-list>
 
 # Analyze placement efficiency
-npx claude-flow placement-analyze --current-placement <config>
+npx hive-flow placement-analyze --current-placement <config>
 
 # Generate placement recommendations
-npx claude-flow placement-recommend --communication-patterns <file>
+npx hive-flow placement-recommend --communication-patterns <file>
 ```
 
 ## Integration Points

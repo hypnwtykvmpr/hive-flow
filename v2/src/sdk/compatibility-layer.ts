@@ -1,11 +1,11 @@
 /**
  * SDK Compatibility Layer
- * Claude-Flow v2.5-alpha.130
+ * Hive-Flow v2.5-alpha.130
  *
  * Maintains backward compatibility while transitioning to SDK
  */
 
-import { ClaudeFlowSDKAdapter } from './sdk-config.js';
+import { HiveFlowSDKAdapter } from './sdk-config.js';
 import Anthropic from '@anthropic-ai/sdk';
 
 /**
@@ -13,11 +13,11 @@ import Anthropic from '@anthropic-ai/sdk';
  * while transitioning from custom implementations to SDK
  */
 export class SDKCompatibilityLayer {
-  private adapter: ClaudeFlowSDKAdapter;
+  private adapter: HiveFlowSDKAdapter;
   private legacyMode: boolean = false;
   private deprecationWarnings: Set<string> = new Set();
 
-  constructor(adapter: ClaudeFlowSDKAdapter) {
+  constructor(adapter: HiveFlowSDKAdapter) {
     this.adapter = adapter;
   }
 
@@ -85,7 +85,7 @@ export class SDKCompatibilityLayer {
       // Legacy file-based persistence
       const fs = await import('fs/promises');
       const path = await import('path');
-      const storagePath = '.claude-flow/storage';
+      const storagePath = '.hive-flow/storage';
       await fs.mkdir(storagePath, { recursive: true });
       await fs.writeFile(
         path.join(storagePath, `${key}.json`),
@@ -233,7 +233,7 @@ export class SDKCompatibilityLayer {
 
 // Export singleton for convenience
 export const createCompatibilityLayer = (
-  adapter: ClaudeFlowSDKAdapter
+  adapter: HiveFlowSDKAdapter
 ): SDKCompatibilityLayer => {
   return new SDKCompatibilityLayer(adapter);
 };

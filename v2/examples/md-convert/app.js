@@ -1,4 +1,4 @@
-// Application created by Claude Flow Swarm
+// Application created by Hive Flow Swarm
 // Task: Create Tests
 // Description: Write tests for the implementation
 

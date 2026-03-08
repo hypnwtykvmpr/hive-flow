@@ -12,8 +12,8 @@ import { glob } from 'glob';
 export class MigrationValidator {
   private requiredFiles = [
     '.claude/commands/sparc.md',
-    '.claude/commands/claude-flow-help.md',
-    '.claude/commands/claude-flow-memory.md',
+    '.claude/commands/hive-flow-help.md',
+    '.claude/commands/hive-flow-memory.md',
     '.claude/BATCHTOOLS_GUIDE.md',
     '.claude/BATCHTOOLS_BEST_PRACTICES.md',
   ];
@@ -23,9 +23,9 @@ export class MigrationValidator {
     'sparc-architect',
     'sparc-code',
     'sparc-tdd',
-    'claude-flow-help',
-    'claude-flow-memory',
-    'claude-flow-swarm',
+    'hive-flow-help',
+    'hive-flow-memory',
+    'hive-flow-swarm',
   ];
 
   async validate(projectPath: string): Promise<ValidationResult> {
@@ -291,7 +291,7 @@ export class MigrationValidator {
         // Check for script conflicts
         const scripts = packageJson.scripts || {};
         const conflictingScripts = Object.keys(scripts).filter(
-          (script) => script.startsWith('claude-flow') || script.startsWith('sparc'),
+          (script) => script.startsWith('hive-flow') || script.startsWith('sparc'),
         );
 
         if (conflictingScripts.length > 0) {

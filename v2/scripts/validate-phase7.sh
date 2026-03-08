@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Phase 7: Validation Script
-# Validates implementation with real Claude-Flow CLI commands
+# Validates implementation with real Hive-Flow CLI commands
 #
 
 set -e
@@ -41,52 +41,52 @@ echo ""
 
 validate_command \
   "Swarm initialization with topology" \
-  "./bin/claude-flow swarm init --topology mesh --max-agents 10"
+  "./bin/hive-flow swarm init --topology mesh --max-agents 10"
 
 validate_command \
   "Agent spawn command" \
-  "./bin/claude-flow agent spawn --type coder --capabilities code_generation"
+  "./bin/hive-flow agent spawn --type coder --capabilities code_generation"
 
 validate_command \
   "Swarm status check" \
-  "./bin/claude-flow swarm status"
+  "./bin/hive-flow swarm status"
 
 echo "=== Hook Matcher Tests ==="
 echo ""
 
 validate_command \
   "Pre-task hook with file pattern" \
-  "./bin/claude-flow hooks pre-task --description 'Test task' --file 'src/**/*.ts'"
+  "./bin/hive-flow hooks pre-task --description 'Test task' --file 'src/**/*.ts'"
 
 validate_command \
   "Post-edit hook with memory key" \
-  "./bin/claude-flow hooks post-edit --file 'test.ts' --memory-key 'test/key'"
+  "./bin/hive-flow hooks post-edit --file 'test.ts' --memory-key 'test/key'"
 
 validate_command \
   "Notify hook" \
-  "./bin/claude-flow hooks notify --message 'Test notification'"
+  "./bin/hive-flow hooks notify --message 'Test notification'"
 
 echo "=== In-Process MCP Tests ==="
 echo ""
 
 validate_command \
   "MCP server status" \
-  "./bin/claude-flow mcp status"
+  "./bin/hive-flow mcp status"
 
 validate_command \
   "Session restore" \
-  "./bin/claude-flow hooks session-restore --session-id 'test-session'"
+  "./bin/hive-flow hooks session-restore --session-id 'test-session'"
 
 echo "=== Memory Operations Tests ==="
 echo ""
 
 validate_command \
   "Session end with metrics" \
-  "./bin/claude-flow hooks session-end --export-metrics true"
+  "./bin/hive-flow hooks session-end --export-metrics true"
 
 validate_command \
   "Post-task hook" \
-  "./bin/claude-flow hooks post-task --task-id 'test-task-123'"
+  "./bin/hive-flow hooks post-task --task-id 'test-task-123'"
 
 echo ""
 echo "=========================================="

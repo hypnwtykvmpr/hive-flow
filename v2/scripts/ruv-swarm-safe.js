@@ -52,7 +52,7 @@ rlErr.on('line', (line) => {
 ruvSwarmProcess.on('exit', (code, signal) => {
   if (code !== null && code !== 0) {
     console.error(`\n❌ ruv-swarm exited with code ${code}`);
-    console.error('💡 Try using: npx claude-flow@alpha mcp start');
+    console.error('💡 Try using: npx hive-flow@alpha mcp start');
   }
   process.exit(code || 0);
 });
@@ -60,7 +60,7 @@ ruvSwarmProcess.on('exit', (code, signal) => {
 // Handle errors
 ruvSwarmProcess.on('error', (error) => {
   console.error('❌ Failed to start ruv-swarm:', error.message);
-  console.error('💡 Try using: npx claude-flow@alpha mcp start');
+  console.error('💡 Try using: npx hive-flow@alpha mcp start');
   process.exit(1);
 });
 

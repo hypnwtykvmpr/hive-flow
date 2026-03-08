@@ -1,4 +1,4 @@
-"""SWE-Bench integration for Claude Flow benchmarking."""
+"""SWE-Bench integration for Hive Flow benchmarking."""
 
 from .engine import SWEBenchEngine
 from .evaluator import SWEBenchEvaluator

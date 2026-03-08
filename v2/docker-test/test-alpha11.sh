@@ -1,10 +1,10 @@
 #!/bin/bash
-# Test script for claude-flow@2.7.0-alpha.11
+# Test script for hive-flow@2.7.0-alpha.11
 
 set -e  # Exit on error
 
 echo "=================================================="
-echo "🐳 Testing claude-flow@2.7.0-alpha.11 in Docker"
+echo "🐳 Testing hive-flow@2.7.0-alpha.11 in Docker"
 echo "=================================================="
 echo ""
 
@@ -42,7 +42,7 @@ section() {
 
 # Test 1: Version Check
 section "Test 1: Version Check"
-VERSION=$(claude-flow --version 2>&1 | grep -oP '\d+\.\d+\.\d+-alpha\.\d+' || echo "unknown")
+VERSION=$(hive-flow --version 2>&1 | grep -oP '\d+\.\d+\.\d+-alpha\.\d+' || echo "unknown")
 if [ "$VERSION" = "2.7.0-alpha.11" ]; then
     pass "Version is 2.7.0-alpha.11"
 else
@@ -52,7 +52,7 @@ fi
 # Test 2: Init Command
 section "Test 2: Init Command Creates Directory Structure"
 cd /test
-npx claude-flow init --skip-open --project-name "test-project" 2>&1 || true
+npx hive-flow init --skip-open --project-name "test-project" 2>&1 || true
 
 # Check .claude directory created
 if [ -d ".claude" ]; then
@@ -138,7 +138,7 @@ fi
 section "Test 5: Memory System (Regression Test)"
 
 # Test memory store
-npx claude-flow memory store test-key "test value" --namespace test 2>&1 > /tmp/memory-test.log || true
+npx hive-flow memory store test-key "test value" --namespace test 2>&1 > /tmp/memory-test.log || true
 if grep -q "Stored" /tmp/memory-test.log || grep -q "stored" /tmp/memory-test.log || grep -q "success" /tmp/memory-test.log; then
     pass "Memory store command works"
 else
@@ -148,8 +148,8 @@ fi
 
 # Test 6: Help Command
 section "Test 6: Help Command (Regression Test)"
-npx claude-flow --help > /tmp/help.txt 2>&1
-if grep -q "claude-flow" /tmp/help.txt; then
+npx hive-flow --help > /tmp/help.txt 2>&1
+if grep -q "hive-flow" /tmp/help.txt; then
     pass "Help command works"
 else
     fail "Help command failed"
@@ -157,7 +157,7 @@ fi
 
 # Test 7: Init Help
 section "Test 7: Init Help (Regression Test)"
-npx claude-flow init --help > /tmp/init-help.txt 2>&1
+npx hive-flow init --help > /tmp/init-help.txt 2>&1
 if grep -q "init" /tmp/init-help.txt; then
     pass "Init help command works"
 else
@@ -191,7 +191,7 @@ fi
 
 # Test 10: Package Integrity
 section "Test 10: Package Integrity"
-if npm list -g claude-flow 2>&1 | grep -q "claude-flow@2.7.0-alpha.11"; then
+if npm list -g hive-flow 2>&1 | grep -q "hive-flow@2.7.0-alpha.11"; then
     pass "Package installed correctly"
 else
     fail "Package not installed correctly"
@@ -219,7 +219,7 @@ fi
 
 # Test 12: ReasoningBank Integration
 section "Test 12: ReasoningBank Integration (Regression Test)"
-npx claude-flow memory query "test" --reasoningbank 2>&1 > /tmp/rb-test.log || true
+npx hive-flow memory query "test" --reasoningbank 2>&1 > /tmp/rb-test.log || true
 if grep -q "No results" /tmp/rb-test.log || grep -q "Found" /tmp/rb-test.log || grep -q "Querying" /tmp/rb-test.log; then
     pass "ReasoningBank integration works"
 else

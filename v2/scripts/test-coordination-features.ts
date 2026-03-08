@@ -16,7 +16,7 @@ import { Task, SystemEvents } from '../src/utils/types.ts';
 import { delay } from '../src/utils/helpers.ts';
 
 async function testCoordinationFeatures() {
-  console.log('🔄 Testing Claude-Flow Coordination Features\n');
+  console.log('🔄 Testing Hive-Flow Coordination Features\n');
   
   const eventBus = new EventBus();
   const logger = new ConsoleLogger('coord-test');

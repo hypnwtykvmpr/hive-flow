@@ -1,13 +1,13 @@
 #!/usr/bin/env -S deno run --allow-all
 
 /**
- * Test runner script for Claude-Flow batch task system
+ * Test runner script for Hive-Flow batch task system
  * Run with: deno run --allow-all scripts/test-batch-tasks.ts
  */
 
 import { runBatchTaskTest } from '../tests/integration/batch-task-test.ts';
 
-console.log('🚀 Claude-Flow Batch Task System Test Runner\n');
+console.log('🚀 Hive-Flow Batch Task System Test Runner\n');
 console.log('This test will demonstrate:');
 console.log('  • Task creation and queuing');
 console.log('  • Agent spawning and assignment');

@@ -1,4 +1,4 @@
-# NPM Publish Guide - Claude Flow v2.7.33
+# NPM Publish Guide - Hive Flow v2.7.33
 
 **Date**: 2025-11-12
 **Version**: v2.7.33
@@ -27,7 +27,7 @@
 ### Build Artifacts ✅
 - [x] dist/ directory populated (601 ESM files)
 - [x] dist-cjs/ directory populated (601 CJS files)
-- [x] bin/claude-flow executable packaged
+- [x] bin/hive-flow executable packaged
 - [x] All MCP files compiled (29 files in both dist/ and dist-cjs/)
 - [x] Source maps generated
 
@@ -144,7 +144,7 @@ ls -la dist/ dist-cjs/
 # Should see 601 files in each directory
 
 # Verify version in compiled files
-npx claude-flow --version
+npx hive-flow --version
 # Expected: v2.7.33
 ```
 
@@ -205,7 +205,7 @@ git push origin claude/align-flow-with-mcp-011CV45c34eF2MawJHUpj9XD
 git push origin v2.7.33
 
 # Verify tag on GitHub
-# Visit: https://github.com/ruvnet/claude-flow/releases/tag/v2.7.33
+# Visit: https://github.com/ruvnet/hive-flow/releases/tag/v2.7.33
 ```
 
 ### Step 8: Merge to Main (If Applicable)
@@ -270,30 +270,30 @@ npm publish --dry-run
 npm publish --tag latest
 
 # Expected output:
-# + claude-flow@2.7.33
+# + hive-flow@2.7.33
 
 # If you want to publish as beta first:
 # npm publish --tag beta
-# (Then promote to latest after testing: npm dist-tag add claude-flow@2.7.33 latest)
+# (Then promote to latest after testing: npm dist-tag add hive-flow@2.7.33 latest)
 ```
 
 ### Step 12: Verify NPM Publication
 
 ```bash
 # Check published version
-npm view claude-flow version
+npm view hive-flow version
 # Expected: 2.7.33
 
 # Check dist-tags
-npm view claude-flow dist-tags
+npm view hive-flow dist-tags
 # Expected: latest: '2.7.33'
 
 # View full package info
-npm view claude-flow
+npm view hive-flow
 
 # Install and test
-npm install -g claude-flow@2.7.33
-npx claude-flow --version
+npm install -g hive-flow@2.7.33
+npx hive-flow --version
 # Expected: v2.7.33
 ```
 
@@ -307,7 +307,7 @@ gh release create v2.7.33 \
   --verify-tag
 
 # Or manually via GitHub web interface:
-# 1. Go to https://github.com/ruvnet/claude-flow/releases/new
+# 1. Go to https://github.com/ruvnet/hive-flow/releases/new
 # 2. Select tag: v2.7.33
 # 3. Release title: "v2.7.33: MCP 2025-11 Compliance & Progressive Disclosure"
 # 4. Copy-paste from docs/RELEASE_NOTES_v2.7.33.md
@@ -318,21 +318,21 @@ gh release create v2.7.33 \
 
 ```bash
 # Test fresh installation
-npm install -g claude-flow@latest
+npm install -g hive-flow@latest
 
 # Verify version
-npx claude-flow --version
+npx hive-flow --version
 # Expected: v2.7.33
 
 # Test core functionality
-npx claude-flow mcp status
-npx claude-flow memory stats
-npx claude-flow hooks
+npx hive-flow mcp status
+npx hive-flow memory stats
+npx hive-flow hooks
 
 # Test MCP 2025-11 features
-npx claude-flow mcp start --mcp2025
+npx hive-flow mcp start --mcp2025
 # (In another terminal)
-npx claude-flow mcp status
+npx hive-flow mcp status
 # Look for: "MCP 2025-11: enabled"
 ```
 
@@ -369,9 +369,9 @@ git push origin main
 npm publish --tag latest
 
 # 8. Verify
-npm view claude-flow version
-npm install -g claude-flow@latest
-npx claude-flow --version
+npm view hive-flow version
+npm install -g hive-flow@latest
+npx hive-flow --version
 
 # 9. Create GitHub release
 gh release create v2.7.33 \
@@ -426,14 +426,14 @@ gh release create v2.7.33 \
 npm publish --tag beta
 
 # Test beta thoroughly:
-npm install -g claude-flow@beta
+npm install -g hive-flow@beta
 # ... test ...
 
 # Promote to latest:
-npm dist-tag add claude-flow@2.7.33 latest
+npm dist-tag add hive-flow@2.7.33 latest
 
 # Verify:
-npm dist-tag ls claude-flow
+npm dist-tag ls hive-flow
 # Expected:
 # beta: 2.7.33
 # latest: 2.7.33
@@ -448,19 +448,19 @@ npm dist-tag ls claude-flow
 **Step 1: Deprecate Release**
 ```bash
 # Deprecate version with message
-npm deprecate claude-flow@2.7.33 "Critical issue found. Use v2.7.32 instead."
+npm deprecate hive-flow@2.7.33 "Critical issue found. Use v2.7.32 instead."
 ```
 
 **Step 2: Revert Latest Tag**
 ```bash
 # Point latest back to previous version
-npm dist-tag add claude-flow@2.7.32 latest
+npm dist-tag add hive-flow@2.7.32 latest
 ```
 
 **Step 3: Unpublish (Within 72 hours)**
 ```bash
 # Only if ABSOLUTELY necessary and within 72 hours
-npm unpublish claude-flow@2.7.33
+npm unpublish hive-flow@2.7.33
 
 # Note: Unpublishing is discouraged by npm
 # Prefer deprecation instead
@@ -481,8 +481,8 @@ npm unpublish claude-flow@2.7.33
 **Installation Stats:**
 ```bash
 # Check download stats
-npm view claude-flow
-# Monitor downloads at: https://npm-stat.com/charts.html?package=claude-flow
+npm view hive-flow
+# Monitor downloads at: https://npm-stat.com/charts.html?package=hive-flow
 ```
 
 **Issue Reports:**
@@ -523,9 +523,9 @@ npm view claude-flow
 
 **Create discussion post:**
 ```markdown
-Title: 🚀 Claude Flow v2.7.33 Released - MCP 2025-11 Compliance & Progressive Disclosure
+Title: 🚀 Hive Flow v2.7.33 Released - MCP 2025-11 Compliance & Progressive Disclosure
 
-We're excited to announce Claude Flow v2.7.33 with three major feature sets:
+We're excited to announce Hive Flow v2.7.33 with three major feature sets:
 
 🎯 **MCP 2025-11 Specification Compliance** (100% Phase A & B)
 ⚡ **Progressive Disclosure** (98.7% token reduction, 10x faster)
@@ -539,8 +539,8 @@ We're excited to announce Claude Flow v2.7.33 with three major feature sets:
 
 **Get Started:**
 ```bash
-npm install -g claude-flow@2.7.33
-npx claude-flow mcp start --mcp2025
+npm install -g hive-flow@2.7.33
+npx hive-flow mcp start --mcp2025
 ```
 
 Full release notes: [link]
@@ -559,14 +559,14 @@ Update package README with:
 
 **Twitter/X:**
 ```
-🚀 Claude Flow v2.7.33 is here!
+🚀 Hive Flow v2.7.33 is here!
 
 ✨ MCP 2025-11 compliant
 ⚡ 98.7% token reduction
 🚀 10x faster startup
 🛡️ Zero breaking changes
 
-npm install -g claude-flow@2.7.33
+npm install -g hive-flow@2.7.33
 
 #AI #ModelContextProtocol #OpenSource
 ```
@@ -610,7 +610,7 @@ If issues arise during publishing:
 - Registry status: https://status.npmjs.org/
 
 **GitHub Issues:**
-- Create issue: https://github.com/ruvnet/claude-flow/issues/new
+- Create issue: https://github.com/ruvnet/hive-flow/issues/new
 - Emergency contact: @ruvnet
 
 **Rollback Decision:**

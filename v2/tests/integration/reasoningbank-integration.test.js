@@ -1,6 +1,6 @@
 /**
  * ReasoningBank Integration Tests
- * Tests claude-flow integration with agentic-flow ReasoningBank
+ * Tests hive-flow integration with agentic-flow ReasoningBank
  */
 
 import { exec } from 'child_process';
@@ -10,7 +10,7 @@ import { unlink, mkdir } from 'fs/promises';
 import path from 'path';
 
 const execAsync = promisify(exec);
-const CLI_PATH = './bin/claude-flow';
+const CLI_PATH = './bin/hive-flow';
 const TEST_DB_PATH = '.swarm/test-memory.db';
 
 describe('ReasoningBank Integration', () => {

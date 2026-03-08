@@ -31,7 +31,7 @@
 - `sqlite_sequence`
 - `task_trajectories`
 
-## Claude-Flow Compatibility
+## Hive-Flow Compatibility
 
 ### Required Tables
 
@@ -53,9 +53,9 @@
 **Status**: ✅ FULLY COMPATIBLE
 
 This model can now be used with:
-- ✅ `npx claude-flow@alpha memory store` - General memory commands
-- ✅ `npx claude-flow@alpha memory query` - Memory queries
-- ✅ `npx claude-flow@alpha memory query --reasoningbank` - ReasoningBank patterns
+- ✅ `npx hive-flow@alpha memory store` - General memory commands
+- ✅ `npx hive-flow@alpha memory query` - Memory queries
+- ✅ `npx hive-flow@alpha memory query --reasoningbank` - ReasoningBank patterns
 - ✅ Hive-mind swarm operations
 - ✅ Session tracking and metrics
 

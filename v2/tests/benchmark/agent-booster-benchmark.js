@@ -71,7 +71,7 @@ function calculateProduct(a, b) {
   for (let i = 0; i < iterations; i++) {
     const start = Date.now();
     await execAsync(
-      `npx claude-flow agent booster edit ${testFile} "Add JSDoc comment" --dry-run`
+      `npx hive-flow agent booster edit ${testFile} "Add JSDoc comment" --dry-run`
     );
     const duration = Date.now() - start;
     times.push(duration);
@@ -115,7 +115,7 @@ async function benchmarkBatchProcessing() {
 
     const start = Date.now();
     await execAsync(
-      `npx claude-flow agent booster batch "${TEST_DIR}/batch-${count}-*.js" "Add comments" --dry-run`
+      `npx hive-flow agent booster batch "${TEST_DIR}/batch-${count}-*.js" "Add comments" --dry-run`
     );
     const duration = Date.now() - start;
 
@@ -162,7 +162,7 @@ async function benchmarkLargeFiles() {
 
     const start = Date.now();
     await execAsync(
-      `npx claude-flow agent booster edit ${testFile} "Add JSDoc comments" --dry-run`
+      `npx hive-flow agent booster edit ${testFile} "Add JSDoc comments" --dry-run`
     );
     const duration = Date.now() - start;
 
@@ -199,7 +199,7 @@ async function benchmarkConcurrentOps() {
     const pattern = path.join(TEST_DIR, `concurrent-${i}*.js`);
     promises.push(
       execAsync(
-        `npx claude-flow agent booster batch "${pattern}" "Add comment" --dry-run`
+        `npx hive-flow agent booster batch "${pattern}" "Add comment" --dry-run`
       )
     );
   }
@@ -268,7 +268,7 @@ async function testAccuracy() {
     await fs.writeFile(testFile, `function test() { return true; }\n`);
 
     await execAsync(
-      `npx claude-flow agent booster edit ${testFile} "${testCase.desc}"`
+      `npx hive-flow agent booster edit ${testFile} "${testCase.desc}"`
     );
 
     const edited = await fs.readFile(testFile, 'utf8');

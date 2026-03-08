@@ -1,6 +1,6 @@
-# Claude-Flow Deep Regression Test Suite
+# Hive-Flow Deep Regression Test Suite
 
-Comprehensive Docker-based test suite for verifying all Claude-Flow capabilities.
+Comprehensive Docker-based test suite for verifying all Hive-Flow capabilities.
 
 ## Quick Start
 
@@ -109,10 +109,10 @@ bash scripts/run-all-tests.sh
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `TEST_REPORT_PATH` | `/app/reports` | Report output directory |
-| `CLAUDE_FLOW_MODE` | `test` | Operating mode |
-| `CLAUDE_FLOW_MEMORY_PATH` | `/app/data` | Memory storage path |
-| `CLAUDE_FLOW_LOG_LEVEL` | `debug` | Log verbosity |
-| `CLAUDE_FLOW_MAX_AGENTS` | `15` | Max concurrent agents |
+| `HIVE_FLOW_MODE` | `test` | Operating mode |
+| `HIVE_FLOW_MEMORY_PATH` | `/app/data` | Memory storage path |
+| `HIVE_FLOW_LOG_LEVEL` | `debug` | Log verbosity |
+| `HIVE_FLOW_MAX_AGENTS` | `15` | Max concurrent agents |
 | `MCP_SERVER_HOST` | `mcp-server` | MCP server hostname |
 | `MCP_SERVER_PORT` | `3000` | MCP server port |
 
@@ -165,11 +165,11 @@ regression-tests:
 
 | Package | Tests | Pass Rate |
 |---------|-------|-----------|
-| @claude-flow/hooks | 112 | 100% |
-| @claude-flow/plugins | 142 | 100% |
-| @claude-flow/security | 47 | 100% |
-| @claude-flow/swarm | 89 | 100% |
-| @claude-flow/cli | 34 | 100% |
+| @hive-flow/hooks | 112 | 100% |
+| @hive-flow/plugins | 142 | 100% |
+| @hive-flow/security | 47 | 100% |
+| @hive-flow/swarm | 89 | 100% |
+| @hive-flow/cli | 34 | 100% |
 
 ### Feature Coverage
 
@@ -230,4 +230,4 @@ docker-compose up unit-tests
 
 ## License
 
-MIT - Part of Claude-Flow
+MIT - Part of Hive-Flow

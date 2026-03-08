@@ -13,7 +13,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 console.log('🧪 Testing agentic-flow v1.7.1 Complete Integration\n');
 console.log('📦 Package: agentic-flow@1.7.1');
-console.log('🔗 Integration: claude-flow@alpha v2.7.1\n');
+console.log('🔗 Integration: hive-flow@alpha v2.7.1\n');
 
 // Setup test database
 const testDbPath = join(__dirname, '../.test-agentic-flow');
@@ -73,7 +73,7 @@ try {
   console.log('\n📝 Storing test pattern...');
   await rb.storePattern({
     sessionId: 'test-v171-session',
-    task: 'Integrate agentic-flow v1.7.1 with claude-flow',
+    task: 'Integrate agentic-flow v1.7.1 with hive-flow',
     input: 'Update dependency and test new features',
     output: 'Successfully integrated HybridReasoningBank and AdvancedMemorySystem',
     critique: '116x performance improvement with WASM acceleration',

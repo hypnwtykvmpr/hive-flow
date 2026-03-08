@@ -300,7 +300,7 @@ export class ClaudeCodeWebServer {
         port: this.port,
         connections: this.connections.size,
       },
-      claudeFlow: {
+      hiveFlow: {
         initialized: true,
         version: '1.0.72',
       },
@@ -378,7 +378,7 @@ export class ClaudeCodeWebServer {
       jsonrpc: '2.0',
       method: 'connection/established',
       params: {
-        server: 'claude-flow-web-server',
+        server: 'hive-flow-web-server',
         version: '2.0.0',
         timestamp: new Date().toISOString(),
       },
@@ -454,7 +454,7 @@ export class ClaudeCodeWebServer {
       result: {
         protocolVersion: { major: 2024, minor: 11, patch: 5 },
         serverInfo: {
-          name: 'claude-flow-web-server',
+          name: 'hive-flow-web-server',
           version: '2.0.0',
         },
         capabilities: {
@@ -514,8 +514,8 @@ export class ClaudeCodeWebServer {
   handleToolsList(ws, message) {
     const tools = [
       {
-        name: 'claude-flow/execute',
-        description: 'Execute Claude Flow commands (start, stop, status, modes)',
+        name: 'hive-flow/execute',
+        description: 'Execute Hive Flow commands (start, stop, status, modes)',
         inputSchema: {
           type: 'object',
           properties: {
@@ -620,8 +620,8 @@ export class ClaudeCodeWebServer {
    */
   executeMockTool(name, args) {
     switch (name) {
-      case 'claude-flow/execute':
-        return this.executeClaudeFlowCommand(args.command, args.args);
+      case 'hive-flow/execute':
+        return this.executeHiveFlowCommand(args.command, args.args);
 
       case 'system/health':
         const healthData = {
@@ -669,12 +669,12 @@ export class ClaudeCodeWebServer {
   }
 
   /**
-   * Execute Claude Flow command simulation
+   * Execute Hive Flow command simulation
    */
-  executeClaudeFlowCommand(command, args = {}) {
+  executeHiveFlowCommand(command, args = {}) {
     switch (command) {
       case 'status':
-        return `Claude Flow Status:
+        return `Hive Flow Status:
   Version: 2.0.0
   Mode: Web Console
   Active Processes: 3
@@ -682,7 +682,7 @@ export class ClaudeCodeWebServer {
   Uptime: ${Math.floor(process.uptime())}s`;
 
       case 'init':
-        return `Claude Flow initialization complete:
+        return `Hive Flow initialization complete:
   ✅ Project structure created
   ✅ Configuration files generated
   ✅ Memory bank initialized
@@ -697,7 +697,7 @@ export class ClaudeCodeWebServer {
   Total: 3 agents`;
 
       default:
-        return `Claude Flow command '${command}' executed successfully`;
+        return `Hive Flow command '${command}' executed successfully`;
     }
   }
 

@@ -11,8 +11,8 @@ export async function neuralCommand(args, flags) {
   const subcommand = args[0];
   
   if (!subcommand) {
-    console.log(chalk.cyan('🧠 Claude Flow Neural Module'));
-    console.log('\nUsage: claude-flow neural <command> [options]');
+    console.log(chalk.cyan('🧠 Hive Flow Neural Module'));
+    console.log('\nUsage: hive-flow neural <command> [options]');
     console.log('\nCommands:');
     console.log('  init    Initialize SAFLA neural module');
     console.log('\nOptions:');
@@ -32,7 +32,7 @@ export async function neuralCommand(args, flags) {
 async function initNeuralModule(flags = {}) {
   const targetDir = path.resolve(process.cwd(), flags.target || '.claude/agents/neural');
   
-  console.log(chalk.cyan('🧠 Initializing Claude Flow Neural Module...'));
+  console.log(chalk.cyan('🧠 Initializing Hive Flow Neural Module...'));
   console.log(chalk.gray(`  Target: ${targetDir}`));
   
   try {
@@ -95,7 +95,7 @@ Your memory system architecture:
 
 \`\`\`javascript
 // Initialize SAFLA neural patterns
-mcp__claude-flow__neural_train {
+mcp__hive-flow__neural_train {
   pattern_type: "coordination",
   training_data: JSON.stringify({
     architecture: "safla-transformer",
@@ -107,7 +107,7 @@ mcp__claude-flow__neural_train {
 }
 
 // Store learning patterns
-mcp__claude-flow__memory_usage {
+mcp__hive-flow__memory_usage {
   action: "store",
   namespace: "safla-learning",
   key: "pattern_\${timestamp}",

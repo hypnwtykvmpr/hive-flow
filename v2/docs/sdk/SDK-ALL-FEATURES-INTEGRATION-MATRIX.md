@@ -1,5 +1,5 @@
 # Complete SDK Feature Integration Matrix
-## All 10 Advanced Features → Claude-Flow Swarm Orchestration
+## All 10 Advanced Features → Hive-Flow Swarm Orchestration
 
 **Version**: 2.5.0-alpha.130
 **Status**: Integration Planning
@@ -37,12 +37,12 @@ Replace stdio-based MCP transport with in-process SDK server for **zero IPC over
 ### 🔧 Implementation
 
 ```typescript
-// src/mcp/claude-flow-swarm-server.ts
+// src/mcp/hive-flow-swarm-server.ts
 import { createSdkMcpServer, tool } from '@anthropic-ai/claude-code/sdk';
 import { z } from 'zod';
 
-export const claudeFlowSwarmServer = createSdkMcpServer({
-  name: 'claude-flow-swarm',
+export const hiveFlowSwarmServer = createSdkMcpServer({
+  name: 'hive-flow-swarm',
   version: '2.5.0-alpha.130',
   tools: [
     // Swarm initialization
@@ -117,10 +117,10 @@ export class SwarmCoordinator {
       prompt: 'Initialize swarm with mesh topology',
       options: {
         mcpServers: {
-          'claude-flow-swarm': {
+          'hive-flow-swarm': {
             type: 'sdk',
-            name: 'claude-flow-swarm',
-            instance: claudeFlowSwarmServer.instance
+            name: 'hive-flow-swarm',
+            instance: hiveFlowSwarmServer.instance
           }
         }
       }
@@ -168,7 +168,7 @@ export class ParallelSwarmExecutor {
             resume: baseSession.id,
             forkSession: true,  // Key: fork instead of resume
             mcpServers: {
-              'claude-flow-swarm': claudeFlowSwarmServer
+              'hive-flow-swarm': hiveFlowSwarmServer
             }
           }
         });
@@ -186,7 +186,7 @@ export class ParallelSwarmExecutor {
       prompt: this.getTaskContext(task),
       options: {
         mcpServers: {
-          'claude-flow-swarm': claudeFlowSwarmServer
+          'hive-flow-swarm': hiveFlowSwarmServer
         }
       }
     });
@@ -512,7 +512,7 @@ export class McpHealthMonitor {
 ## 9️⃣ WebAssembly Support (Browser Deploy)
 
 ### 🎯 Integration Opportunity
-Deploy Claude-Flow swarms **in browser** via WebAssembly.
+Deploy Hive-Flow swarms **in browser** via WebAssembly.
 
 ### 🔧 Future Implementation
 
@@ -531,7 +531,7 @@ export class BrowserSwarmOrchestrator {
       options: {
         executable: 'wasm',  // Use WASM runtime
         mcpServers: {
-          'claude-flow-swarm': claudeFlowSwarmServer
+          'hive-flow-swarm': hiveFlowSwarmServer
         }
       }
     });
@@ -609,4 +609,4 @@ Real-time **swarm visualization** and performance profiling.
 
 ---
 
-*Complete integration matrix for Claude-Flow v2.5.0-alpha.130*
+*Complete integration matrix for Hive-Flow v2.5.0-alpha.130*

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Claude-Flow Security Test Runner
+# Hive-Flow Security Test Runner
 # Standalone security test execution
 
 set -e

@@ -1,4 +1,4 @@
--- Database schema for Claude Flow swarm coordination system
+-- Database schema for Hive Flow swarm coordination system
 -- Supports PostgreSQL, MySQL, and SQLite
 
 -- Swarms table - stores swarm configurations and metadata

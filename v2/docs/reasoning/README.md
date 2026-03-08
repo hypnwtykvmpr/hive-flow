@@ -1,4 +1,4 @@
-# Reasoning Agents for Claude-Flow
+# Reasoning Agents for Hive-Flow
 
 ## Overview
 
@@ -26,7 +26,7 @@ Uses gaming AI techniques to dynamically create intelligent plans to achieve com
 
 **Usage:**
 ```bash
-claude-flow init --agent reasoning
+hive-flow init --agent reasoning
 # Or directly with agentic-flow:
 npx agentic-flow --agent goal-planner --task "Deploy application with prerequisites"
 ```
@@ -61,7 +61,7 @@ Based on ReasoningBank benchmarks:
 
 ### 1. Initialize with Reasoning Agents
 ```bash
-claude-flow init --agent reasoning
+hive-flow init --agent reasoning
 ```
 
 This will:
@@ -71,8 +71,8 @@ This will:
 
 ### 2. Use Reasoning Agents
 ```bash
-# Via claude-flow (when integrated)
-claude-flow agent run goal-planner "Complex deployment task"
+# Via hive-flow (when integrated)
+hive-flow agent run goal-planner "Complex deployment task"
 
 # Via agentic-flow directly
 npx agentic-flow --agent goal-planner --task "Multi-step task"
@@ -163,8 +163,8 @@ The following reasoning agents are planned for future releases:
 ## Support
 
 For issues or questions:
-- GitHub: https://github.com/ruvnet/claude-flow/issues
-- Documentation: https://github.com/ruvnet/claude-flow
+- GitHub: https://github.com/ruvnet/hive-flow/issues
+- Documentation: https://github.com/ruvnet/hive-flow
 
 ---
 

@@ -80,7 +80,7 @@ cp memory.db ~/.swarm/memory.db
 
 Usage
 -----
-npx claude-flow@alpha memory search "your query" --namespace safla
+npx hive-flow@alpha memory search "your query" --namespace safla
 
 Documentation
 -------------
@@ -90,8 +90,8 @@ See TRAINING_SUMMARY.md for detailed training report
 
 Support
 -------
-GitHub: https://github.com/ruvnet/claude-flow/issues
-CLI Help: npx claude-flow@alpha memory --help
+GitHub: https://github.com/ruvnet/hive-flow/issues
+CLI Help: npx hive-flow@alpha memory --help
 
 Checksums (SHA256)
 ------------------
@@ -99,6 +99,6 @@ Checksums (SHA256)
 
 License
 -------
-Part of Claude Flow project
+Part of Hive Flow project
 See main repository for license terms
 

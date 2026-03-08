@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Comprehensive Performance Test Runner for Claude-Flow Swarm Operations
+Comprehensive Performance Test Runner for Hive-Flow Swarm Operations
 
 This script coordinates all performance testing and monitoring tools:
 - Runs complete performance benchmark suite

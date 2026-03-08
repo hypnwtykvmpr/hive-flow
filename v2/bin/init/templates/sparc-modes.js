@@ -35,13 +35,13 @@ SPARC (Specification, Planning, Architecture, Review, Code) is a comprehensive d
 ## Usage
 \`\`\`bash
 # Run a specific mode
-./claude-flow@alpha sparc run <mode> "task description"
+./hive-flow@alpha sparc run <mode> "task description"
 
 # List all modes
-./claude-flow@alpha sparc modes
+./hive-flow@alpha sparc modes
 
 # Get help for a mode
-./claude-flow@alpha sparc help <mode>
+./hive-flow@alpha sparc help <mode>
 \`\`\`
 `;
 }
@@ -68,13 +68,13 @@ Comprehensive analysis through distributed agent coordination.
 
 ### Option 1: Using MCP Tools (Preferred in Claude Code)
 \`\`\`javascript
-mcp__claude-flow@alpha__swarm_init {
+mcp__hive-flow@alpha__swarm_init {
   topology: "mesh",
   strategy: "analysis",
   maxAgents: 6
 }
 
-mcp__claude-flow@alpha__task_orchestrate {
+mcp__hive-flow@alpha__task_orchestrate {
   task: "analyze system performance",
   strategy: "distributed"
 }
@@ -83,16 +83,16 @@ mcp__claude-flow@alpha__task_orchestrate {
 ### Option 2: Using NPX CLI (Fallback when MCP not available)
 \`\`\`bash
 # Use when running from terminal or MCP tools unavailable
-npx claude-flow@alpha swarm "analyze system performance" --strategy analysis
+npx hive-flow@alpha swarm "analyze system performance" --strategy analysis
 
 # For alpha features
-npx claude-flow@alpha swarm "analyze system performance" --strategy analysis
+npx hive-flow@alpha swarm "analyze system performance" --strategy analysis
 \`\`\`
 
 ### Option 3: Local Installation
 \`\`\`bash
-# If claude-flow@alpha is installed locally
-./claude-flow@alpha swarm "analyze system performance" --strategy analysis
+# If hive-flow@alpha is installed locally
+./hive-flow@alpha swarm "analyze system performance" --strategy analysis
 \`\`\`
 
 ## Agent Roles
@@ -118,13 +118,13 @@ Coordinated development through specialized agent teams.
 
 ### Option 1: Using MCP Tools (Preferred in Claude Code)
 \`\`\`javascript
-mcp__claude-flow@alpha__swarm_init {
+mcp__hive-flow@alpha__swarm_init {
   topology: "hierarchical",
   strategy: "development",
   maxAgents: 8
 }
 
-mcp__claude-flow@alpha__task_orchestrate {
+mcp__hive-flow@alpha__task_orchestrate {
   task: "build feature X",
   strategy: "parallel"
 }
@@ -133,16 +133,16 @@ mcp__claude-flow@alpha__task_orchestrate {
 ### Option 2: Using NPX CLI (Fallback when MCP not available)
 \`\`\`bash
 # Use when running from terminal or MCP tools unavailable
-npx claude-flow@alpha swarm "build feature X" --strategy development
+npx hive-flow@alpha swarm "build feature X" --strategy development
 
 # For alpha features
-npx claude-flow@alpha swarm "build feature X" --strategy development
+npx hive-flow@alpha swarm "build feature X" --strategy development
 \`\`\`
 
 ### Option 3: Local Installation
 \`\`\`bash
-# If claude-flow@alpha is installed locally
-./claude-flow@alpha swarm "build feature X" --strategy development
+# If hive-flow@alpha is installed locally
+./hive-flow@alpha swarm "build feature X" --strategy development
 \`\`\`
 
 ## Agent Roles
@@ -166,7 +166,7 @@ function createExamplesStrategy() {
 
 ### Research Swarm
 \`\`\`bash
-./claude-flow@alpha swarm "research AI trends" \\
+./hive-flow@alpha swarm "research AI trends" \\
   --strategy research \\
   --mode distributed \\
   --max-agents 6 \\
@@ -175,7 +175,7 @@ function createExamplesStrategy() {
 
 ### Development Swarm
 \`\`\`bash
-./claude-flow@alpha swarm "build REST API" \\
+./hive-flow@alpha swarm "build REST API" \\
   --strategy development \\
   --mode hierarchical \\
   --monitor \\
@@ -184,7 +184,7 @@ function createExamplesStrategy() {
 
 ### Analysis Swarm
 \`\`\`bash
-./claude-flow@alpha swarm "analyze codebase" \\
+./hive-flow@alpha swarm "analyze codebase" \\
   --strategy analysis \\
   --mode mesh \\
   --parallel \\
@@ -203,13 +203,13 @@ System maintenance and updates through coordinated agents.
 
 ### Option 1: Using MCP Tools (Preferred in Claude Code)
 \`\`\`javascript
-mcp__claude-flow@alpha__swarm_init {
+mcp__hive-flow@alpha__swarm_init {
   topology: "hierarchical",
   strategy: "maintenance",
   maxAgents: 5
 }
 
-mcp__claude-flow@alpha__task_orchestrate {
+mcp__hive-flow@alpha__task_orchestrate {
   task: "update dependencies",
   strategy: "sequential",
   priority: "high"
@@ -219,16 +219,16 @@ mcp__claude-flow@alpha__task_orchestrate {
 ### Option 2: Using NPX CLI (Fallback when MCP not available)
 \`\`\`bash
 # Use when running from terminal or MCP tools unavailable
-npx claude-flow@alpha swarm "update dependencies" --strategy maintenance
+npx hive-flow@alpha swarm "update dependencies" --strategy maintenance
 
 # For alpha features
-npx claude-flow@alpha swarm "update dependencies" --strategy maintenance
+npx hive-flow@alpha swarm "update dependencies" --strategy maintenance
 \`\`\`
 
 ### Option 3: Local Installation
 \`\`\`bash
-# If claude-flow@alpha is installed locally
-./claude-flow@alpha swarm "update dependencies" --strategy maintenance
+# If hive-flow@alpha is installed locally
+./hive-flow@alpha swarm "update dependencies" --strategy maintenance
 \`\`\`
 
 ## Agent Roles
@@ -254,13 +254,13 @@ Performance optimization through specialized analysis.
 
 ### Option 1: Using MCP Tools (Preferred in Claude Code)
 \`\`\`javascript
-mcp__claude-flow@alpha__swarm_init {
+mcp__hive-flow@alpha__swarm_init {
   topology: "mesh",
   strategy: "optimization",
   maxAgents: 6
 }
 
-mcp__claude-flow@alpha__task_orchestrate {
+mcp__hive-flow@alpha__task_orchestrate {
   task: "optimize performance",
   strategy: "parallel"
 }
@@ -269,16 +269,16 @@ mcp__claude-flow@alpha__task_orchestrate {
 ### Option 2: Using NPX CLI (Fallback when MCP not available)
 \`\`\`bash
 # Use when running from terminal or MCP tools unavailable
-npx claude-flow@alpha swarm "optimize performance" --strategy optimization
+npx hive-flow@alpha swarm "optimize performance" --strategy optimization
 
 # For alpha features
-npx claude-flow@alpha swarm "optimize performance" --strategy optimization
+npx hive-flow@alpha swarm "optimize performance" --strategy optimization
 \`\`\`
 
 ### Option 3: Local Installation
 \`\`\`bash
-# If claude-flow@alpha is installed locally
-./claude-flow@alpha swarm "optimize performance" --strategy optimization
+# If hive-flow@alpha is installed locally
+./hive-flow@alpha swarm "optimize performance" --strategy optimization
 \`\`\`
 
 ## Agent Roles
@@ -305,13 +305,13 @@ Deep research through parallel information gathering.
 
 ### Option 1: Using MCP Tools (Preferred in Claude Code)
 \`\`\`javascript
-mcp__claude-flow@alpha__swarm_init {
+mcp__hive-flow@alpha__swarm_init {
   topology: "distributed",
   strategy: "research",
   maxAgents: 6
 }
 
-mcp__claude-flow@alpha__task_orchestrate {
+mcp__hive-flow@alpha__task_orchestrate {
   task: "research topic X",
   strategy: "parallel"
 }
@@ -320,16 +320,16 @@ mcp__claude-flow@alpha__task_orchestrate {
 ### Option 2: Using NPX CLI (Fallback when MCP not available)
 \`\`\`bash
 # Use when running from terminal or MCP tools unavailable
-npx claude-flow@alpha swarm "research topic X" --strategy research
+npx hive-flow@alpha swarm "research topic X" --strategy research
 
 # For alpha features
-npx claude-flow@alpha swarm "research topic X" --strategy research
+npx hive-flow@alpha swarm "research topic X" --strategy research
 \`\`\`
 
 ### Option 3: Local Installation
 \`\`\`bash
-# If claude-flow@alpha is installed locally
-./claude-flow@alpha swarm "research topic X" --strategy research
+# If hive-flow@alpha is installed locally
+./hive-flow@alpha swarm "research topic X" --strategy research
 \`\`\`
 
 ## Agent Roles
@@ -355,13 +355,13 @@ Comprehensive testing through distributed execution.
 
 ### Option 1: Using MCP Tools (Preferred in Claude Code)
 \`\`\`javascript
-mcp__claude-flow@alpha__swarm_init {
+mcp__hive-flow@alpha__swarm_init {
   topology: "distributed",
   strategy: "testing",
   maxAgents: 5
 }
 
-mcp__claude-flow@alpha__task_orchestrate {
+mcp__hive-flow@alpha__task_orchestrate {
   task: "test application",
   strategy: "parallel"
 }
@@ -370,16 +370,16 @@ mcp__claude-flow@alpha__task_orchestrate {
 ### Option 2: Using NPX CLI (Fallback when MCP not available)
 \`\`\`bash
 # Use when running from terminal or MCP tools unavailable
-npx claude-flow@alpha swarm "test application" --strategy testing
+npx hive-flow@alpha swarm "test application" --strategy testing
 
 # For alpha features
-npx claude-flow@alpha swarm "test application" --strategy testing
+npx hive-flow@alpha swarm "test application" --strategy testing
 \`\`\`
 
 ### Option 3: Local Installation
 \`\`\`bash
-# If claude-flow@alpha is installed locally
-./claude-flow@alpha swarm "test application" --strategy testing
+# If hive-flow@alpha is installed locally
+./hive-flow@alpha swarm "test application" --strategy testing
 \`\`\`
 
 ## Agent Roles
@@ -428,7 +428,7 @@ Deep code and data analysis with batch processing capabilities.
 
 ### Option 1: Using MCP Tools (Preferred in Claude Code)
 \`\`\`javascript
-mcp__claude-flow@alpha__sparc_mode {
+mcp__hive-flow@alpha__sparc_mode {
   mode: "analyzer",
   task_description: "analyze codebase performance",
   options: {
@@ -441,16 +441,16 @@ mcp__claude-flow@alpha__sparc_mode {
 ### Option 2: Using NPX CLI (Fallback when MCP not available)
 \`\`\`bash
 # Use when running from terminal or MCP tools unavailable
-npx claude-flow@alpha sparc run analyzer "analyze codebase performance"
+npx hive-flow@alpha sparc run analyzer "analyze codebase performance"
 
 # For alpha features
-npx claude-flow@alpha sparc run analyzer "analyze codebase performance"
+npx hive-flow@alpha sparc run analyzer "analyze codebase performance"
 \`\`\`
 
 ### Option 3: Local Installation
 \`\`\`bash
-# If claude-flow@alpha is installed locally
-./claude-flow@alpha sparc run analyzer "analyze codebase performance"
+# If hive-flow@alpha is installed locally
+./hive-flow@alpha sparc run analyzer "analyze codebase performance"
 \`\`\`
 
 ## Core Capabilities
@@ -484,7 +484,7 @@ System design with Memory-based coordination for scalable architectures.
 
 ### Option 1: Using MCP Tools (Preferred in Claude Code)
 \`\`\`javascript
-mcp__claude-flow@alpha__sparc_mode {
+mcp__hive-flow@alpha__sparc_mode {
   mode: "architect",
   task_description: "design microservices architecture",
   options: {
@@ -497,16 +497,16 @@ mcp__claude-flow@alpha__sparc_mode {
 ### Option 2: Using NPX CLI (Fallback when MCP not available)
 \`\`\`bash
 # Use when running from terminal or MCP tools unavailable
-npx claude-flow@alpha sparc run architect "design microservices architecture"
+npx hive-flow@alpha sparc run architect "design microservices architecture"
 
 # For alpha features
-npx claude-flow@alpha sparc run architect "design microservices architecture"
+npx hive-flow@alpha sparc run architect "design microservices architecture"
 \`\`\`
 
 ### Option 3: Local Installation
 \`\`\`bash
-# If claude-flow@alpha is installed locally
-./claude-flow@alpha sparc run architect "design microservices architecture"
+# If hive-flow@alpha is installed locally
+./hive-flow@alpha sparc run architect "design microservices architecture"
 \`\`\`
 
 ## Core Capabilities
@@ -541,7 +541,7 @@ Parallel task execution specialist using batch operations.
 
 ### Option 1: Using MCP Tools (Preferred in Claude Code)
 \`\`\`javascript
-mcp__claude-flow@alpha__sparc_mode {
+mcp__hive-flow@alpha__sparc_mode {
   mode: "batch-executor",
   task_description: "process multiple files",
   options: {
@@ -554,16 +554,16 @@ mcp__claude-flow@alpha__sparc_mode {
 ### Option 2: Using NPX CLI (Fallback when MCP not available)
 \`\`\`bash
 # Use when running from terminal or MCP tools unavailable
-npx claude-flow@alpha sparc run batch-executor "process multiple files"
+npx hive-flow@alpha sparc run batch-executor "process multiple files"
 
 # For alpha features
-npx claude-flow@alpha sparc run batch-executor "process multiple files"
+npx hive-flow@alpha sparc run batch-executor "process multiple files"
 \`\`\`
 
 ### Option 3: Local Installation
 \`\`\`bash
-# If claude-flow@alpha is installed locally
-./claude-flow@alpha sparc run batch-executor "process multiple files"
+# If hive-flow@alpha is installed locally
+./hive-flow@alpha sparc run batch-executor "process multiple files"
 \`\`\`
 
 ## Core Capabilities
@@ -599,7 +599,7 @@ Autonomous code generation with batch file operations.
 
 ### Option 1: Using MCP Tools (Preferred in Claude Code)
 \`\`\`javascript
-mcp__claude-flow@alpha__sparc_mode {
+mcp__hive-flow@alpha__sparc_mode {
   mode: "coder",
   task_description: "implement user authentication",
   options: {
@@ -612,16 +612,16 @@ mcp__claude-flow@alpha__sparc_mode {
 ### Option 2: Using NPX CLI (Fallback when MCP not available)
 \`\`\`bash
 # Use when running from terminal or MCP tools unavailable
-npx claude-flow@alpha sparc run coder "implement user authentication"
+npx hive-flow@alpha sparc run coder "implement user authentication"
 
 # For alpha features
-npx claude-flow@alpha sparc run coder "implement user authentication"
+npx hive-flow@alpha sparc run coder "implement user authentication"
 \`\`\`
 
 ### Option 3: Local Installation
 \`\`\`bash
-# If claude-flow@alpha is installed locally
-./claude-flow@alpha sparc run coder "implement user authentication"
+# If hive-flow@alpha is installed locally
+./hive-flow@alpha sparc run coder "implement user authentication"
 \`\`\`
 
 ## Core Capabilities
@@ -657,7 +657,7 @@ Systematic debugging with TodoWrite and Memory integration.
 
 ### Option 1: Using MCP Tools (Preferred in Claude Code)
 \`\`\`javascript
-mcp__claude-flow@alpha__sparc_mode {
+mcp__hive-flow@alpha__sparc_mode {
   mode: "debugger",
   task_description: "fix authentication issues",
   options: {
@@ -670,16 +670,16 @@ mcp__claude-flow@alpha__sparc_mode {
 ### Option 2: Using NPX CLI (Fallback when MCP not available)
 \`\`\`bash
 # Use when running from terminal or MCP tools unavailable
-npx claude-flow@alpha sparc run debugger "fix authentication issues"
+npx hive-flow@alpha sparc run debugger "fix authentication issues"
 
 # For alpha features
-npx claude-flow@alpha sparc run debugger "fix authentication issues"
+npx hive-flow@alpha sparc run debugger "fix authentication issues"
 \`\`\`
 
 ### Option 3: Local Installation
 \`\`\`bash
-# If claude-flow@alpha is installed locally
-./claude-flow@alpha sparc run debugger "fix authentication issues"
+# If hive-flow@alpha is installed locally
+./hive-flow@alpha sparc run debugger "fix authentication issues"
 \`\`\`
 
 ## Core Capabilities
@@ -715,7 +715,7 @@ UI/UX design with Memory coordination for consistent experiences.
 
 ### Option 1: Using MCP Tools (Preferred in Claude Code)
 \`\`\`javascript
-mcp__claude-flow@alpha__sparc_mode {
+mcp__hive-flow@alpha__sparc_mode {
   mode: "designer",
   task_description: "create dashboard UI",
   options: {
@@ -728,16 +728,16 @@ mcp__claude-flow@alpha__sparc_mode {
 ### Option 2: Using NPX CLI (Fallback when MCP not available)
 \`\`\`bash
 # Use when running from terminal or MCP tools unavailable
-npx claude-flow@alpha sparc run designer "create dashboard UI"
+npx hive-flow@alpha sparc run designer "create dashboard UI"
 
 # For alpha features
-npx claude-flow@alpha sparc run designer "create dashboard UI"
+npx hive-flow@alpha sparc run designer "create dashboard UI"
 \`\`\`
 
 ### Option 3: Local Installation
 \`\`\`bash
-# If claude-flow@alpha is installed locally
-./claude-flow@alpha sparc run designer "create dashboard UI"
+# If hive-flow@alpha is installed locally
+./hive-flow@alpha sparc run designer "create dashboard UI"
 \`\`\`
 
 ## Core Capabilities
@@ -772,7 +772,7 @@ Documentation with batch file operations for comprehensive docs.
 
 ### Option 1: Using MCP Tools (Preferred in Claude Code)
 \`\`\`javascript
-mcp__claude-flow@alpha__sparc_mode {
+mcp__hive-flow@alpha__sparc_mode {
   mode: "documenter",
   task_description: "create API documentation",
   options: {
@@ -785,16 +785,16 @@ mcp__claude-flow@alpha__sparc_mode {
 ### Option 2: Using NPX CLI (Fallback when MCP not available)
 \`\`\`bash
 # Use when running from terminal or MCP tools unavailable
-npx claude-flow@alpha sparc run documenter "create API documentation"
+npx hive-flow@alpha sparc run documenter "create API documentation"
 
 # For alpha features
-npx claude-flow@alpha sparc run documenter "create API documentation"
+npx hive-flow@alpha sparc run documenter "create API documentation"
 \`\`\`
 
 ### Option 3: Local Installation
 \`\`\`bash
-# If claude-flow@alpha is installed locally
-./claude-flow@alpha sparc run documenter "create API documentation"
+# If hive-flow@alpha is installed locally
+./hive-flow@alpha sparc run documenter "create API documentation"
 \`\`\`
 
 ## Core Capabilities
@@ -830,7 +830,7 @@ Creative problem solving with WebSearch and Memory integration.
 
 ### Option 1: Using MCP Tools (Preferred in Claude Code)
 \`\`\`javascript
-mcp__claude-flow@alpha__sparc_mode {
+mcp__hive-flow@alpha__sparc_mode {
   mode: "innovator",
   task_description: "innovative solutions for scaling",
   options: {
@@ -843,16 +843,16 @@ mcp__claude-flow@alpha__sparc_mode {
 ### Option 2: Using NPX CLI (Fallback when MCP not available)
 \`\`\`bash
 # Use when running from terminal or MCP tools unavailable
-npx claude-flow@alpha sparc run innovator "innovative solutions for scaling"
+npx hive-flow@alpha sparc run innovator "innovative solutions for scaling"
 
 # For alpha features
-npx claude-flow@alpha sparc run innovator "innovative solutions for scaling"
+npx hive-flow@alpha sparc run innovator "innovative solutions for scaling"
 \`\`\`
 
 ### Option 3: Local Installation
 \`\`\`bash
-# If claude-flow@alpha is installed locally
-./claude-flow@alpha sparc run innovator "innovative solutions for scaling"
+# If hive-flow@alpha is installed locally
+./hive-flow@alpha sparc run innovator "innovative solutions for scaling"
 \`\`\`
 
 ## Core Capabilities
@@ -888,7 +888,7 @@ Knowledge management with Memory tools for persistent insights.
 
 ### Option 1: Using MCP Tools (Preferred in Claude Code)
 \`\`\`javascript
-mcp__claude-flow@alpha__sparc_mode {
+mcp__hive-flow@alpha__sparc_mode {
   mode: "memory-manager",
   task_description: "organize project knowledge",
   options: {
@@ -901,16 +901,16 @@ mcp__claude-flow@alpha__sparc_mode {
 ### Option 2: Using NPX CLI (Fallback when MCP not available)
 \`\`\`bash
 # Use when running from terminal or MCP tools unavailable
-npx claude-flow@alpha sparc run memory-manager "organize project knowledge"
+npx hive-flow@alpha sparc run memory-manager "organize project knowledge"
 
 # For alpha features
-npx claude-flow@alpha sparc run memory-manager "organize project knowledge"
+npx hive-flow@alpha sparc run memory-manager "organize project knowledge"
 \`\`\`
 
 ### Option 3: Local Installation
 \`\`\`bash
-# If claude-flow@alpha is installed locally
-./claude-flow@alpha sparc run memory-manager "organize project knowledge"
+# If hive-flow@alpha is installed locally
+./hive-flow@alpha sparc run memory-manager "organize project knowledge"
 \`\`\`
 
 ## Core Capabilities
@@ -946,7 +946,7 @@ Performance optimization with systematic analysis and improvements.
 
 ### Option 1: Using MCP Tools (Preferred in Claude Code)
 \`\`\`javascript
-mcp__claude-flow@alpha__sparc_mode {
+mcp__hive-flow@alpha__sparc_mode {
   mode: "optimizer",
   task_description: "optimize application performance",
   options: {
@@ -959,16 +959,16 @@ mcp__claude-flow@alpha__sparc_mode {
 ### Option 2: Using NPX CLI (Fallback when MCP not available)
 \`\`\`bash
 # Use when running from terminal or MCP tools unavailable
-npx claude-flow@alpha sparc run optimizer "optimize application performance"
+npx hive-flow@alpha sparc run optimizer "optimize application performance"
 
 # For alpha features
-npx claude-flow@alpha sparc run optimizer "optimize application performance"
+npx hive-flow@alpha sparc run optimizer "optimize application performance"
 \`\`\`
 
 ### Option 3: Local Installation
 \`\`\`bash
-# If claude-flow@alpha is installed locally
-./claude-flow@alpha sparc run optimizer "optimize application performance"
+# If hive-flow@alpha is installed locally
+./hive-flow@alpha sparc run optimizer "optimize application performance"
 \`\`\`
 
 ## Core Capabilities
@@ -1004,7 +1004,7 @@ Multi-agent task orchestration with TodoWrite/TodoRead/Task/Memory.
 
 ### Option 1: Using MCP Tools (Preferred in Claude Code)
 \`\`\`javascript
-mcp__claude-flow@alpha__sparc_mode {
+mcp__hive-flow@alpha__sparc_mode {
   mode: "orchestrator",
   task_description: "coordinate feature development",
   options: {
@@ -1017,16 +1017,16 @@ mcp__claude-flow@alpha__sparc_mode {
 ### Option 2: Using NPX CLI (Fallback when MCP not available)
 \`\`\`bash
 # Use when running from terminal or MCP tools unavailable
-npx claude-flow@alpha sparc run orchestrator "coordinate feature development"
+npx hive-flow@alpha sparc run orchestrator "coordinate feature development"
 
 # For alpha features
-npx claude-flow@alpha sparc run orchestrator "coordinate feature development"
+npx hive-flow@alpha sparc run orchestrator "coordinate feature development"
 \`\`\`
 
 ### Option 3: Local Installation
 \`\`\`bash
-# If claude-flow@alpha is installed locally
-./claude-flow@alpha sparc run orchestrator "coordinate feature development"
+# If hive-flow@alpha is installed locally
+./hive-flow@alpha sparc run orchestrator "coordinate feature development"
 \`\`\`
 
 ## Core Capabilities
@@ -1062,7 +1062,7 @@ Deep research with parallel WebSearch/WebFetch and Memory coordination.
 
 ### Option 1: Using MCP Tools (Preferred in Claude Code)
 \`\`\`javascript
-mcp__claude-flow@alpha__sparc_mode {
+mcp__hive-flow@alpha__sparc_mode {
   mode: "researcher",
   task_description: "research AI trends 2024",
   options: {
@@ -1075,16 +1075,16 @@ mcp__claude-flow@alpha__sparc_mode {
 ### Option 2: Using NPX CLI (Fallback when MCP not available)
 \`\`\`bash
 # Use when running from terminal or MCP tools unavailable
-npx claude-flow@alpha sparc run researcher "research AI trends 2024"
+npx hive-flow@alpha sparc run researcher "research AI trends 2024"
 
 # For alpha features
-npx claude-flow@alpha sparc run researcher "research AI trends 2024"
+npx hive-flow@alpha sparc run researcher "research AI trends 2024"
 \`\`\`
 
 ### Option 3: Local Installation
 \`\`\`bash
-# If claude-flow@alpha is installed locally
-./claude-flow@alpha sparc run researcher "research AI trends 2024"
+# If hive-flow@alpha is installed locally
+./hive-flow@alpha sparc run researcher "research AI trends 2024"
 \`\`\`
 
 ## Core Capabilities
@@ -1120,7 +1120,7 @@ Code review using batch file analysis for comprehensive reviews.
 
 ### Option 1: Using MCP Tools (Preferred in Claude Code)
 \`\`\`javascript
-mcp__claude-flow@alpha__sparc_mode {
+mcp__hive-flow@alpha__sparc_mode {
   mode: "reviewer",
   task_description: "review pull request #123",
   options: {
@@ -1133,16 +1133,16 @@ mcp__claude-flow@alpha__sparc_mode {
 ### Option 2: Using NPX CLI (Fallback when MCP not available)
 \`\`\`bash
 # Use when running from terminal or MCP tools unavailable
-npx claude-flow@alpha sparc run reviewer "review pull request #123"
+npx hive-flow@alpha sparc run reviewer "review pull request #123"
 
 # For alpha features
-npx claude-flow@alpha sparc run reviewer "review pull request #123"
+npx hive-flow@alpha sparc run reviewer "review pull request #123"
 \`\`\`
 
 ### Option 3: Local Installation
 \`\`\`bash
-# If claude-flow@alpha is installed locally
-./claude-flow@alpha sparc run reviewer "review pull request #123"
+# If hive-flow@alpha is installed locally
+./hive-flow@alpha sparc run reviewer "review pull request #123"
 \`\`\`
 
 ## Core Capabilities
@@ -1178,7 +1178,7 @@ Specialized swarm management with batch coordination capabilities.
 
 ### Option 1: Using MCP Tools (Preferred in Claude Code)
 \`\`\`javascript
-mcp__claude-flow@alpha__sparc_mode {
+mcp__hive-flow@alpha__sparc_mode {
   mode: "swarm-coordinator",
   task_description: "manage development swarm",
   options: {
@@ -1191,16 +1191,16 @@ mcp__claude-flow@alpha__sparc_mode {
 ### Option 2: Using NPX CLI (Fallback when MCP not available)
 \`\`\`bash
 # Use when running from terminal or MCP tools unavailable
-npx claude-flow@alpha sparc run swarm-coordinator "manage development swarm"
+npx hive-flow@alpha sparc run swarm-coordinator "manage development swarm"
 
 # For alpha features
-npx claude-flow@alpha sparc run swarm-coordinator "manage development swarm"
+npx hive-flow@alpha sparc run swarm-coordinator "manage development swarm"
 \`\`\`
 
 ### Option 3: Local Installation
 \`\`\`bash
-# If claude-flow@alpha is installed locally
-./claude-flow@alpha sparc run swarm-coordinator "manage development swarm"
+# If hive-flow@alpha is installed locally
+./hive-flow@alpha sparc run swarm-coordinator "manage development swarm"
 \`\`\`
 
 ## Core Capabilities
@@ -1236,7 +1236,7 @@ Test-driven development with TodoWrite planning and comprehensive testing.
 
 ### Option 1: Using MCP Tools (Preferred in Claude Code)
 \`\`\`javascript
-mcp__claude-flow@alpha__sparc_mode {
+mcp__hive-flow@alpha__sparc_mode {
   mode: "tdd",
   task_description: "shopping cart feature",
   options: {
@@ -1249,16 +1249,16 @@ mcp__claude-flow@alpha__sparc_mode {
 ### Option 2: Using NPX CLI (Fallback when MCP not available)
 \`\`\`bash
 # Use when running from terminal or MCP tools unavailable
-npx claude-flow@alpha sparc run tdd "shopping cart feature"
+npx hive-flow@alpha sparc run tdd "shopping cart feature"
 
 # For alpha features
-npx claude-flow@alpha sparc run tdd "shopping cart feature"
+npx hive-flow@alpha sparc run tdd "shopping cart feature"
 \`\`\`
 
 ### Option 3: Local Installation
 \`\`\`bash
-# If claude-flow@alpha is installed locally
-./claude-flow@alpha sparc run tdd "shopping cart feature"
+# If hive-flow@alpha is installed locally
+./hive-flow@alpha sparc run tdd "shopping cart feature"
 \`\`\`
 
 ## Core Capabilities
@@ -1294,7 +1294,7 @@ Comprehensive testing with parallel execution capabilities.
 
 ### Option 1: Using MCP Tools (Preferred in Claude Code)
 \`\`\`javascript
-mcp__claude-flow@alpha__sparc_mode {
+mcp__hive-flow@alpha__sparc_mode {
   mode: "tester",
   task_description: "full regression suite",
   options: {
@@ -1307,16 +1307,16 @@ mcp__claude-flow@alpha__sparc_mode {
 ### Option 2: Using NPX CLI (Fallback when MCP not available)
 \`\`\`bash
 # Use when running from terminal or MCP tools unavailable
-npx claude-flow@alpha sparc run tester "full regression suite"
+npx hive-flow@alpha sparc run tester "full regression suite"
 
 # For alpha features
-npx claude-flow@alpha sparc run tester "full regression suite"
+npx hive-flow@alpha sparc run tester "full regression suite"
 \`\`\`
 
 ### Option 3: Local Installation
 \`\`\`bash
-# If claude-flow@alpha is installed locally
-./claude-flow@alpha sparc run tester "full regression suite"
+# If hive-flow@alpha is installed locally
+./hive-flow@alpha sparc run tester "full regression suite"
 \`\`\`
 
 ## Core Capabilities
@@ -1352,7 +1352,7 @@ Process automation with TodoWrite planning and Task execution.
 
 ### Option 1: Using MCP Tools (Preferred in Claude Code)
 \`\`\`javascript
-mcp__claude-flow@alpha__sparc_mode {
+mcp__hive-flow@alpha__sparc_mode {
   mode: "workflow-manager",
   task_description: "automate deployment",
   options: {
@@ -1365,16 +1365,16 @@ mcp__claude-flow@alpha__sparc_mode {
 ### Option 2: Using NPX CLI (Fallback when MCP not available)
 \`\`\`bash
 # Use when running from terminal or MCP tools unavailable
-npx claude-flow@alpha sparc run workflow-manager "automate deployment"
+npx hive-flow@alpha sparc run workflow-manager "automate deployment"
 
 # For alpha features
-npx claude-flow@alpha sparc run workflow-manager "automate deployment"
+npx hive-flow@alpha sparc run workflow-manager "automate deployment"
 \`\`\`
 
 ### Option 3: Local Installation
 \`\`\`bash
-# If claude-flow@alpha is installed locally
-./claude-flow@alpha sparc run workflow-manager "automate deployment"
+# If hive-flow@alpha is installed locally
+./hive-flow@alpha sparc run workflow-manager "automate deployment"
 \`\`\`
 
 ## Core Capabilities

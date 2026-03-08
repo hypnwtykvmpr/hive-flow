@@ -5,7 +5,7 @@
 
 set -e
 
-echo "🐳 Claude-Flow ReasoningBank Integration Test Suite"
+echo "🐳 Hive-Flow ReasoningBank Integration Test Suite"
 echo "=================================================="
 echo ""
 

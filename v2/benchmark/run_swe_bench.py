@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-SWE-Bench Runner - Software Engineering Benchmark for Claude Flow
+SWE-Bench Runner - Software Engineering Benchmark for Hive Flow
 
-This script runs comprehensive benchmarks to evaluate Claude Flow's 
+This script runs comprehensive benchmarks to evaluate Hive Flow's 
 software engineering capabilities across multiple domains.
 """
 
@@ -19,7 +19,7 @@ from swarm_benchmark.core.models import BenchmarkConfig, StrategyType, Coordinat
 
 
 async def main():
-    parser = argparse.ArgumentParser(description="SWE-Bench Runner for Claude Flow")
+    parser = argparse.ArgumentParser(description="SWE-Bench Runner for Hive Flow")
     parser.add_argument(
         "--categories", 
         nargs="+",
@@ -85,7 +85,7 @@ async def main():
     
     print(f"""
 ╔══════════════════════════════════════════════════════════════╗
-║                    SWE-Bench for Claude Flow                  ║
+║                    SWE-Bench for Hive Flow                  ║
 ║                Software Engineering Benchmark Suite           ║
 ╚══════════════════════════════════════════════════════════════╝
 

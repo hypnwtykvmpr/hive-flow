@@ -1,4 +1,4 @@
-# Batchtools Usage Guide for Claude-Flow SPARC Prompts
+# Batchtools Usage Guide for Hive-Flow SPARC Prompts
 
 ## Table of Contents
 
@@ -13,7 +13,7 @@
 
 ### What are Batchtools?
 
-Batchtools are a set of utilities and patterns that enable parallel execution of multiple operations in Claude-Flow. Instead of processing tasks sequentially, batchtools allow you to execute multiple operations concurrently, significantly improving performance and reducing execution time.
+Batchtools are a set of utilities and patterns that enable parallel execution of multiple operations in Hive-Flow. Instead of processing tasks sequentially, batchtools allow you to execute multiple operations concurrently, significantly improving performance and reducing execution time.
 
 ### Why Batchtools Improve Performance
 
@@ -1028,7 +1028,7 @@ const benchmarkBatchOperations = async () => {
 
 ## Conclusion
 
-Batchtools are a powerful feature of Claude-Flow that can significantly improve the performance of your SPARC development workflow. By following the patterns and best practices outlined in this guide, you can:
+Batchtools are a powerful feature of Hive-Flow that can significantly improve the performance of your SPARC development workflow. By following the patterns and best practices outlined in this guide, you can:
 
 1. **Reduce execution time** by parallelizing independent operations
 2. **Improve resource utilization** through efficient batching
@@ -1038,4 +1038,4 @@ Batchtools are a powerful feature of Claude-Flow that can significantly improve 
 
 Remember to always consider the nature of your operations, manage resources appropriately, and handle errors gracefully when implementing batchtools in your projects.
 
-For more information and updates, refer to the [Claude-Flow documentation](https://github.com/ruvnet/claude-code-flow) and the SPARC methodology guides.
+For more information and updates, refer to the [Hive-Flow documentation](https://github.com/ruvnet/claude-code-flow) and the SPARC methodology guides.

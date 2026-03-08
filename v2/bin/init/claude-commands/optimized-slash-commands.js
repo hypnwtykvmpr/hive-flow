@@ -4,7 +4,7 @@ import {
   createOptimizedSparcSlashCommand,
   createOptimizedMainSparcCommand,
 } from './optimized-sparc-commands.js';
-import { createOptimizedClaudeFlowCommands } from './optimized-claude-flow-commands.js';
+import { createOptimizedHiveFlowCommands } from './optimized-hive-flow-commands.js';
 import { copyTemplates } from '../template-copier.js';
 import { promises as fs } from 'fs';
 import { join } from 'path';
@@ -65,8 +65,8 @@ export async function createOptimizedClaudeSlashCommands(workingDir, selectedMod
       }
     }
 
-    // Create claude-flow specific commands with batchtools optimization
-    await createOptimizedClaudeFlowCommands(workingDir);
+    // Create hive-flow specific commands with batchtools optimization
+    await createOptimizedHiveFlowCommands(workingDir);
 
     // Create batchtools-specific commands
     await createBatchtoolsCommands(workingDir);
@@ -224,25 +224,25 @@ Chain operations with parallel execution at each stage:
 ### Full SPARC Pipeline with Batchtools
 \`\`\`bash
 # Execute complete SPARC workflow with parallel processing
-./claude-flow sparc pipeline "authentication system" --batch-optimize
+./hive-flow sparc pipeline "authentication system" --batch-optimize
 
 # Run multiple SPARC modes concurrently
-./claude-flow sparc batch architect,code,tdd "user management" --parallel
+./hive-flow sparc batch architect,code,tdd "user management" --parallel
 
 # Concurrent project analysis
-./claude-flow sparc concurrent-analyze project-requirements.json --parallel
+./hive-flow sparc concurrent-analyze project-requirements.json --parallel
 \`\`\`
 
 ### Performance Monitoring
 \`\`\`bash
 # Monitor batch operation performance
-./claude-flow batchtools monitor --real-time
+./hive-flow batchtools monitor --real-time
 
 # Analyze parallel processing metrics
-./claude-flow batchtools analyze --performance --detailed
+./hive-flow batchtools analyze --performance --detailed
 
 # Check system resource utilization
-./claude-flow batchtools resources --concurrent --verbose
+./hive-flow batchtools resources --concurrent --verbose
 \`\`\`
 
 For detailed documentation, see: https://github.com/ruvnet/claude-code-flow/docs/batchtools.md
@@ -259,7 +259,7 @@ description: Monitor and optimize system performance with batchtools
 
 # 📊 Performance Monitoring & Optimization
 
-Real-time performance monitoring and optimization tools for Claude-Flow operations.
+Real-time performance monitoring and optimization tools for Hive-Flow operations.
 
 ## Performance Metrics
 
@@ -280,25 +280,25 @@ Real-time performance monitoring and optimization tools for Claude-Flow operatio
 ### Real-time Monitoring
 \`\`\`bash
 # Monitor all system performance
-./claude-flow performance monitor --real-time --all
+./hive-flow performance monitor --real-time --all
 
 # Focus on parallel operations
-./claude-flow performance monitor --parallel --batchtools
+./hive-flow performance monitor --parallel --batchtools
 
 # Monitor specific components
-./claude-flow performance monitor --focus sparc --concurrent
+./hive-flow performance monitor --focus sparc --concurrent
 \`\`\`
 
 ### Performance Analysis
 \`\`\`bash
 # Generate performance report
-./claude-flow performance report --detailed --timeframe 24h
+./hive-flow performance report --detailed --timeframe 24h
 
 # Analyze batch operation efficiency
-./claude-flow performance analyze --batchtools --optimization
+./hive-flow performance analyze --batchtools --optimization
 
 # Compare performance across different modes
-./claude-flow performance compare --modes architect,code,tdd
+./hive-flow performance compare --modes architect,code,tdd
 \`\`\`
 
 ## Optimization Recommendations

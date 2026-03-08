@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Claude Flow Agent Router
+ * Hive Flow Agent Router
  * Routes tasks to optimal agents based on learned patterns
  */
 

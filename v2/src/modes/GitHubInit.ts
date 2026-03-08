@@ -90,7 +90,7 @@ export class GitHubInit implements IInitMode {
 
         // Test GitHub MCP functions
         const githubStatus = await config.mcpIntegrator.executeCommand({
-          tool: 'claude-flow',
+          tool: 'hive-flow',
           function: 'github_repo_analyze',
           parameters: { repo: 'test/repo', analysis_type: 'code_quality' }
         });

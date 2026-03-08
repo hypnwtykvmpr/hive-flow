@@ -3,7 +3,7 @@
 
 set -e
 
-echo "🐳 Testing npx claude-flow@alpha in minimal Docker environment (no build tools)..."
+echo "🐳 Testing npx hive-flow@alpha in minimal Docker environment (no build tools)..."
 echo ""
 
 # Create a minimal Dockerfile without build tools
@@ -19,15 +19,15 @@ RUN npm install -g npm@latest
 WORKDIR /test
 
 # Test npx installation
-CMD ["sh", "-c", "npx claude-flow@2.7.11 --version 2>&1"]
+CMD ["sh", "-c", "npx hive-flow@2.7.11 --version 2>&1"]
 EOF
 
 echo "Building Docker image..."
-docker build -t claude-flow-npx-test -f /tmp/Dockerfile.npx-test /tmp
+docker build -t hive-flow-npx-test -f /tmp/Dockerfile.npx-test /tmp
 
 echo ""
 echo "Running npx test..."
-docker run --rm claude-flow-npx-test
+docker run --rm hive-flow-npx-test
 
 echo ""
 echo "✅ Docker test completed!"

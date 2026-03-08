@@ -2,10 +2,10 @@
  * Neural Domain Mapper Integration Module
  * 
  * Provides integration between NeuralDomainMapper and the existing
- * Claude Flow neural hooks system, enabling seamless domain analysis
+ * Hive Flow neural hooks system, enabling seamless domain analysis
  * and optimization within the broader orchestration framework.
  * 
- * @author Claude Flow Neural Team
+ * @author Hive Flow Neural Team
  * @version 2.0.0
  */
 
@@ -70,7 +70,7 @@ export interface DomainAnalysisResult {
  * Neural Domain Mapper Integration Class
  * 
  * This class provides seamless integration between the NeuralDomainMapper
- * and the existing Claude Flow neural hooks system. It automatically
+ * and the existing Hive Flow neural hooks system. It automatically
  * analyzes domain structures, generates optimization suggestions, and
  * learns from domain relationship patterns.
  */

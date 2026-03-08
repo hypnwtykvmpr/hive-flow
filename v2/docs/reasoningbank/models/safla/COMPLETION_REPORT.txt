@@ -48,7 +48,7 @@
    cp /workspaces/claude-code-flow/docs/reasoningbank/models/safla/memory.db ~/.swarm/memory.db
 
 🎯 Usage Example:
-   npx claude-flow@alpha memory search "API optimization" --namespace safla
+   npx hive-flow@alpha memory search "API optimization" --namespace safla
 
 📚 Documentation:
    • Quick Start:     QUICKSTART.md (60-second guide)
@@ -83,7 +83,7 @@
    1. Install model: cp memory.db ~/.swarm/memory.db
    2. Read QUICKSTART.md (60 seconds to get started)
    3. Try example queries from CHEATSHEET.md
-   4. Integrate with Claude Flow hooks
+   4. Integrate with Hive Flow hooks
    5. Use patterns in your development workflow
 
 ╔═══════════════════════════════════════════════════════════════╗
@@ -102,7 +102,7 @@ Reported to swarm memory:
   • swarm/final/safla (final metrics and deliverables)
 
 Training Agent: SAFLA Model Training Agent
-Coordination: Claude Flow Hooks System
+Coordination: Hive Flow Hooks System
 Status: ✅ MISSION ACCOMPLISHED
 
 

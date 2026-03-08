@@ -1,5 +1,5 @@
 /**
- * Environment Detection Utility for Claude-Flow v2.0
+ * Environment Detection Utility for Hive-Flow v2.0
  * Detects execution environment and recommends appropriate flags
  */
 

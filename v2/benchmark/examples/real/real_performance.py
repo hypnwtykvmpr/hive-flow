@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Real performance analysis and monitoring for claude-flow benchmarks.
+Real performance analysis and monitoring for hive-flow benchmarks.
 
 This example demonstrates:
 - Comprehensive performance monitoring
@@ -86,7 +86,7 @@ class RealPerformanceMonitor:
         self.monitoring_active = False
         self.monitor_thread: Optional[threading.Thread] = None
         self.performance_history: List[PerformanceMetrics] = []
-        self.claude_flow_path = "/workspaces/claude-code-flow"
+        self.hive_flow_path = "/workspaces/claude-code-flow"
         
         # Performance thresholds
         self.thresholds = {
@@ -251,7 +251,7 @@ class RealPerformanceMonitor:
                     capture_output=True,
                     text=True,
                     timeout=benchmark_config['expected_duration'] + 60,  # Add buffer
-                    cwd=self.claude_flow_path
+                    cwd=self.hive_flow_path
                 )
                 
                 end_time = time.time()
@@ -289,7 +289,7 @@ class RealPerformanceMonitor:
     
     def _build_performance_command(self, config: Dict[str, Any]) -> List[str]:
         """Build command for performance benchmark."""
-        base_cmd = ["npx", "claude-flow@alpha"]
+        base_cmd = ["npx", "hive-flow@alpha"]
         
         if config["methodology"] == "swarm":
             cmd = base_cmd + [

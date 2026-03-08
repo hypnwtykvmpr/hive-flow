@@ -3,7 +3,7 @@
 MLE-STAR Benchmark Integration Example
 
 Shows how to integrate MLE-STAR ensemble capabilities 
-with the existing Claude Flow benchmark system.
+with the existing Hive Flow benchmark system.
 """
 
 import asyncio

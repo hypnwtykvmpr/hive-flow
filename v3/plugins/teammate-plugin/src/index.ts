@@ -1,12 +1,12 @@
 /**
- * @claude-flow/teammate-plugin
+ * @hive-flow/teammate-plugin
  *
- * Native TeammateTool integration plugin for Claude Flow.
- * Bridges Claude Code v2.1.19+ multi-agent capabilities with Claude Flow.
+ * Native TeammateTool integration plugin for Hive Flow.
+ * Bridges Claude Code v2.1.19+ multi-agent capabilities with Hive Flow.
  *
  * @example
  * ```typescript
- * import { createTeammateBridge, TEAMMATE_MCP_TOOLS } from '@claude-flow/teammate-plugin';
+ * import { createTeammateBridge, TEAMMATE_MCP_TOOLS } from '@hive-flow/teammate-plugin';
  *
  * // Initialize bridge
  * const bridge = await createTeammateBridge();
@@ -32,7 +32,7 @@
  * });
  * ```
  *
- * @module @claude-flow/teammate-plugin
+ * @module @hive-flow/teammate-plugin
  * @version 1.0.0-alpha.1
  * @requires Claude Code >= 2.1.19
  */

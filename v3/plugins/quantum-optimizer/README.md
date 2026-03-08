@@ -1,8 +1,8 @@
-# @claude-flow/plugin-quantum-optimizer
+# @hive-flow/plugin-quantum-optimizer
 
-[![npm version](https://img.shields.io/npm/v/@claude-flow/plugin-quantum-optimizer.svg)](https://www.npmjs.com/package/@claude-flow/plugin-quantum-optimizer)
-[![license](https://img.shields.io/npm/l/@claude-flow/plugin-quantum-optimizer.svg)](https://github.com/ruvnet/claude-flow/blob/main/LICENSE)
-[![downloads](https://img.shields.io/npm/dm/@claude-flow/plugin-quantum-optimizer.svg)](https://www.npmjs.com/package/@claude-flow/plugin-quantum-optimizer)
+[![npm version](https://img.shields.io/npm/v/@hive-flow/plugin-quantum-optimizer.svg)](https://www.npmjs.com/package/@hive-flow/plugin-quantum-optimizer)
+[![license](https://img.shields.io/npm/l/@hive-flow/plugin-quantum-optimizer.svg)](https://github.com/ruvnet/hive-flow/blob/main/LICENSE)
+[![downloads](https://img.shields.io/npm/dm/@hive-flow/plugin-quantum-optimizer.svg)](https://www.npmjs.com/package/@hive-flow/plugin-quantum-optimizer)
 
 An exotic optimization plugin implementing quantum-inspired algorithms including Quantum Annealing simulation, QAOA (Quantum Approximate Optimization Algorithm) emulation, and Grover-inspired search acceleration. The plugin provides dramatic speedups for dependency resolution, optimal scheduling, and constraint satisfaction while running entirely on classical WASM-accelerated hardware.
 
@@ -11,19 +11,19 @@ An exotic optimization plugin implementing quantum-inspired algorithms including
 ### npm
 
 ```bash
-npm install @claude-flow/plugin-quantum-optimizer
+npm install @hive-flow/plugin-quantum-optimizer
 ```
 
 ### CLI
 
 ```bash
-npx claude-flow plugins install --name @claude-flow/plugin-quantum-optimizer
+npx hive-flow plugins install --name @hive-flow/plugin-quantum-optimizer
 ```
 
 ## Quick Start
 
 ```typescript
-import { QuantumOptimizerPlugin } from '@claude-flow/plugin-quantum-optimizer';
+import { QuantumOptimizerPlugin } from '@hive-flow/plugin-quantum-optimizer';
 
 // Initialize the plugin
 const plugin = new QuantumOptimizerPlugin();
@@ -291,9 +291,9 @@ Amplitude amplification for unstructured search achieving O(sqrt(N)) complexity.
 
 | Plugin | Description | Synergy |
 |--------|-------------|---------|
-| [@claude-flow/plugin-neural-coordination](https://www.npmjs.com/package/@claude-flow/plugin-neural-coordination) | Multi-agent coordination | Quantum optimizer schedules tasks across coordinated agent swarms |
-| [@claude-flow/plugin-cognitive-kernel](https://www.npmjs.com/package/@claude-flow/plugin-cognitive-kernel) | Cognitive augmentation | Optimizes cognitive load distribution and attention allocation |
-| [@claude-flow/plugin-hyperbolic-reasoning](https://www.npmjs.com/package/@claude-flow/plugin-hyperbolic-reasoning) | Hierarchical reasoning | Quantum algorithms optimize hierarchical constraint satisfaction |
+| [@hive-flow/plugin-neural-coordination](https://www.npmjs.com/package/@hive-flow/plugin-neural-coordination) | Multi-agent coordination | Quantum optimizer schedules tasks across coordinated agent swarms |
+| [@hive-flow/plugin-cognitive-kernel](https://www.npmjs.com/package/@hive-flow/plugin-cognitive-kernel) | Cognitive augmentation | Optimizes cognitive load distribution and attention allocation |
+| [@hive-flow/plugin-hyperbolic-reasoning](https://www.npmjs.com/package/@hive-flow/plugin-hyperbolic-reasoning) | Hierarchical reasoning | Quantum algorithms optimize hierarchical constraint satisfaction |
 
 ## License
 

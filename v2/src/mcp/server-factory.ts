@@ -136,7 +136,7 @@ export class MCPServerFactory {
 
     // Build MCP 2025-11 server configuration
     const serverConfig: MCP2025ServerConfig = {
-      serverId: mcp2025Config.serverId || `claude-flow-${Date.now()}`,
+      serverId: mcp2025Config.serverId || `hive-flow-${Date.now()}`,
       transport: config.transport || 'stdio',
 
       // Feature flags

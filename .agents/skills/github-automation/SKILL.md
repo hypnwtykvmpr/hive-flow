@@ -27,23 +27,23 @@ gh pr create --title "feat: description" --body "## Summary\n..."
 
 ### Review Code
 ```bash
-npx claude-flow github review --pr 123
+npx hive-flow github review --pr 123
 ```
 
 ### Manage Issues
 ```bash
-npx claude-flow github issues list --state open
-npx claude-flow github issues create --title "Bug: ..."
+npx hive-flow github issues list --state open
+npx hive-flow github issues create --title "Bug: ..."
 ```
 
 ### Setup Workflow
 ```bash
-npx claude-flow workflow create --template ci
+npx hive-flow workflow create --template ci
 ```
 
 ### Release Management
 ```bash
-npx claude-flow deployment release --version 1.0.0
+npx hive-flow deployment release --version 1.0.0
 ```
 
 ## Agent Types

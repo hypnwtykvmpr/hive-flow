@@ -1,5 +1,5 @@
 /**
- * Claude API client for Claude-Flow
+ * Claude API client for Hive-Flow
  * Provides direct integration with Claude's API including temperature and model selection
  */
 

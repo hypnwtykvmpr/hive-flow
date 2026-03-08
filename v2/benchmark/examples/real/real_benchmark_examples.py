@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Examples of using the Real Claude-Flow Benchmark Engine
+Examples of using the Real Hive-Flow Benchmark Engine
 Demonstrates various usage patterns and configurations
 """
 
@@ -321,7 +321,7 @@ async def example_resource_monitoring():
 
 async def main():
     """Run all examples"""
-    print("🚀 Real Claude-Flow Benchmark Examples")
+    print("🚀 Real Hive-Flow Benchmark Examples")
     
     examples = [
         ("Simple Benchmark", example_simple_benchmark),

@@ -1,12 +1,12 @@
 #!/bin/bash
-# CLI Examples for Claude Flow Swarm Benchmarks
+# CLI Examples for Hive Flow Swarm Benchmarks
 # 
 # This script demonstrates various CLI commands for running benchmarks
 # with different strategies, coordination modes, and configurations.
 
 set -e  # Exit on any error
 
-echo "🚀 Claude Flow Swarm Benchmark CLI Examples"
+echo "🚀 Hive Flow Swarm Benchmark CLI Examples"
 echo "============================================="
 echo ""
 

@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Comprehensive regression test suite for claude-flow@2.7.1
+# Comprehensive regression test suite for hive-flow@2.7.1
 # Tests the published npm package to verify no regressions
 #
 
@@ -48,10 +48,10 @@ log_info() {
 # Create results directory
 mkdir -p /test/results
 
-log_header "Claude-Flow v2.7.1 Regression Test Suite"
+log_header "Hive-Flow v2.7.1 Regression Test Suite"
 
 echo -e "${CYAN}Package Version Check:${NC}"
-INSTALLED_VERSION=$(npm list -g claude-flow --depth=0 2>/dev/null | grep claude-flow | awk '{print $2}' | sed 's/@//g' | sed 's/claude-flow//g')
+INSTALLED_VERSION=$(npm list -g hive-flow --depth=0 2>/dev/null | grep hive-flow | awk '{print $2}' | sed 's/@//g' | sed 's/hive-flow//g')
 echo -e "   Installed: ${GREEN}$INSTALLED_VERSION${NC}"
 echo -e "   Expected: ${GREEN}2.7.1${NC}"
 
@@ -65,8 +65,8 @@ fi
 # Test 1: Basic CLI Installation
 # ============================================================================
 log_test "CLI Installation Verification"
-if command -v claude-flow &> /dev/null; then
-    VERSION_OUTPUT=$(claude-flow --version 2>&1 || echo "error")
+if command -v hive-flow &> /dev/null; then
+    VERSION_OUTPUT=$(hive-flow --version 2>&1 || echo "error")
     if [[ "$VERSION_OUTPUT" != "error" ]]; then
         log_pass "CLI is installed and executable"
         log_info "Version output: $VERSION_OUTPUT"
@@ -81,8 +81,8 @@ fi
 # Test 2: Help Command
 # ============================================================================
 log_test "Help Command Functionality"
-HELP_OUTPUT=$(claude-flow --help 2>&1 || echo "error")
-if [[ "$HELP_OUTPUT" == *"claude-flow"* ]] || [[ "$HELP_OUTPUT" == *"Commands"* ]] || [[ "$HELP_OUTPUT" == *"Usage"* ]]; then
+HELP_OUTPUT=$(hive-flow --help 2>&1 || echo "error")
+if [[ "$HELP_OUTPUT" == *"hive-flow"* ]] || [[ "$HELP_OUTPUT" == *"Commands"* ]] || [[ "$HELP_OUTPUT" == *"Usage"* ]]; then
     log_pass "Help command works"
     log_info "$(echo "$HELP_OUTPUT" | head -5)"
 else
@@ -93,7 +93,7 @@ fi
 # Test 3: MCP Server Status
 # ============================================================================
 log_test "MCP Server Status Check"
-MCP_STATUS=$(claude-flow mcp status 2>&1 || echo "error")
+MCP_STATUS=$(hive-flow mcp status 2>&1 || echo "error")
 if [[ "$MCP_STATUS" != "error" ]]; then
     log_pass "MCP status command executes"
     log_info "$(echo "$MCP_STATUS" | head -3)"
@@ -105,7 +105,7 @@ fi
 # Test 4: MCP Tools Listing
 # ============================================================================
 log_test "MCP Tools Listing"
-MCP_TOOLS=$(claude-flow mcp tools 2>&1 || echo "error")
+MCP_TOOLS=$(hive-flow mcp tools 2>&1 || echo "error")
 if [[ "$MCP_TOOLS" == *"neural"* ]] || [[ "$MCP_TOOLS" == *"swarm"* ]] || [[ "$MCP_TOOLS" == *"tools"* ]]; then
     log_pass "MCP tools can be listed"
 
@@ -125,7 +125,7 @@ fi
 # ============================================================================
 log_test "Memory System Availability"
 # Try to initialize memory system
-MEMORY_TEST=$(claude-flow hooks session-start --session-id test-regression 2>&1 || echo "error")
+MEMORY_TEST=$(hive-flow hooks session-start --session-id test-regression 2>&1 || echo "error")
 if [[ "$MEMORY_TEST" != "error" ]]; then
     log_pass "Memory system initializes"
 else
@@ -137,7 +137,7 @@ fi
 # ============================================================================
 log_test "Swarm Initialization"
 # Note: This may require MCP server running, so we test the command availability
-SWARM_HELP=$(claude-flow --help 2>&1 | grep -i swarm || echo "")
+SWARM_HELP=$(hive-flow --help 2>&1 | grep -i swarm || echo "")
 if [[ -n "$SWARM_HELP" ]]; then
     log_pass "Swarm functionality available"
 else
@@ -159,7 +159,7 @@ try {
     console.log('Testing neural_train availability...');
 
     // Check if we can access the tool definition
-    const result = execSync('claude-flow mcp tools --category=neural 2>&1', {
+    const result = execSync('hive-flow mcp tools --category=neural 2>&1', {
         encoding: 'utf-8',
         timeout: 10000
     });
@@ -199,7 +199,7 @@ const { execSync } = require('child_process');
 try {
     console.log('Testing neural_patterns availability...');
 
-    const result = execSync('claude-flow mcp tools --category=neural 2>&1', {
+    const result = execSync('hive-flow mcp tools --category=neural 2>&1', {
         encoding: 'utf-8',
         timeout: 10000
     });
@@ -235,11 +235,11 @@ log_test "Package Structure Integrity"
 
 # Check for critical files in the installed package
 NPM_ROOT=$(npm root -g)
-PACKAGE_DIR="$NPM_ROOT/claude-flow"
+PACKAGE_DIR="$NPM_ROOT/hive-flow"
 
 CRITICAL_FILES=(
     "package.json"
-    "bin/claude-flow.js"
+    "bin/hive-flow.js"
 )
 
 STRUCTURE_OK=true
@@ -279,7 +279,7 @@ log_test "Node.js Compatibility"
 NODE_VERSION=$(node --version)
 log_info "Node version: $NODE_VERSION"
 
-# Claude-flow requires Node 18+
+# Hive-flow requires Node 18+
 if [[ "$NODE_VERSION" == v18* ]] || [[ "$NODE_VERSION" == v20* ]] || [[ "$NODE_VERSION" == v2[1-9]* ]]; then
     log_pass "Node.js version is compatible"
 else
@@ -294,7 +294,7 @@ log_test "Module Import Test"
 cat > /test/test-import.mjs << 'EOFMJS'
 try {
     // Test if the package can be imported
-    const packagePath = '/usr/local/lib/node_modules/claude-flow';
+    const packagePath = '/usr/local/lib/node_modules/hive-flow';
     import(`${packagePath}/package.json`, { assert: { type: 'json' } })
         .then(pkg => {
             console.log('SUCCESS: Package can be imported');
@@ -335,7 +335,7 @@ echo -e "${CYAN}Pass Rate:${NC} ${PASS_RATE}%"
 
 # Save results
 cat > /test/results/regression-report.txt << EOF
-Claude-Flow v2.7.1 Regression Test Report
+Hive-Flow v2.7.1 Regression Test Report
 ==========================================
 Date: $(date)
 Node Version: $(node --version)
@@ -347,7 +347,7 @@ Test Results:
 - Failed: $FAILED_TESTS
 - Pass Rate: ${PASS_RATE}%
 
-Package: claude-flow@2.7.1
+Package: hive-flow@2.7.1
 Status: $([ $FAILED_TESTS -eq 0 ] && echo "PASS - No regressions detected" || echo "FAIL - Some tests failed")
 EOF
 

@@ -61,7 +61,7 @@ async function main() {
       if (!rebuildSuccess) {
         console.log('');
         console.log('⚠️  Unable to rebuild SQLite bindings for ARM64');
-        console.log('📝 Claude-Flow will fall back to in-memory storage');
+        console.log('📝 Hive-Flow will fall back to in-memory storage');
         console.log('');
         console.log('To fix this issue, you can try:');
         console.log('1. Install Xcode Command Line Tools: xcode-select --install');

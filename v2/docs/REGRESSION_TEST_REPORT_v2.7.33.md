@@ -1,4 +1,4 @@
-# Regression Test Report - Claude Flow v2.7.33
+# Regression Test Report - Hive Flow v2.7.33
 
 **Test Date**: 2025-11-12
 **Environment**: Docker (GitHub Codespaces)
@@ -27,16 +27,16 @@
 ### 1. Core CLI Commands ✅ PASSED
 
 **Tests Performed:**
-- `npx claude-flow --version` → v2.7.32 (correct)
-- `npx claude-flow --help` → Shows full help with 50+ lines (correct)
-- `npx claude-flow mcp --help` → Shows MCP subcommands (correct)
+- `npx hive-flow --version` → v2.7.32 (correct)
+- `npx hive-flow --help` → Shows full help with 50+ lines (correct)
+- `npx hive-flow mcp --help` → Shows MCP subcommands (correct)
 
 **Result**: ✅ All core CLI commands functional
 
 **Evidence**:
 ```
 v2.7.32
-🌊 Claude-Flow v2.7.32 - Enterprise-Grade AI Agent Orchestration Platform
+🌊 Hive-Flow v2.7.32 - Enterprise-Grade AI Agent Orchestration Platform
 ✅ MCP Server Status: Stopped (orchestrator not running)
 ```
 
@@ -45,8 +45,8 @@ v2.7.32
 ### 2. MCP Server Functionality ✅ PASSED
 
 **Tests Performed:**
-- `npx claude-flow mcp status` → Shows server status (correct)
-- `npx claude-flow mcp tools` → Lists 87 tools across 12 categories (correct)
+- `npx hive-flow mcp status` → Shows server status (correct)
+- `npx hive-flow mcp tools` → Lists 87 tools across 12 categories (correct)
 - Module imports: All MCP modules load successfully
 
 **Result**: ✅ MCP server operational, all tools available
@@ -58,7 +58,7 @@ v2.7.32
 🔧 Configuration: Default settings
 📡 Tools: Ready to load
 
-✅ Claude-Flow MCP Tools & Resources (87 total)
+✅ Hive-Flow MCP Tools & Resources (87 total)
 🐝 SWARM COORDINATION (12 tools)
 🧠 NEURAL NETWORKS & AI (15 tools)
 💾 MEMORY & PERSISTENCE (12 tools)
@@ -69,7 +69,7 @@ v2.7.32
 ### 3. Memory System (AgentDB) ✅ PASSED
 
 **Tests Performed:**
-- `npx claude-flow memory stats` → Shows ReasoningBank statistics
+- `npx hive-flow memory stats` → Shows ReasoningBank statistics
 - AgentDB database file exists: `.swarm/memory.db` (13 MB)
 - Memory backend: SQLite with 19 memories, 80% confidence
 
@@ -89,7 +89,7 @@ v2.7.32
 ### 4. Hooks System ✅ PASSED
 
 **Tests Performed:**
-- `npx claude-flow hooks` → Lists all pre/post operation hooks
+- `npx hive-flow hooks` → Lists all pre/post operation hooks
 - Hook categories: Pre-task, post-task, session, MCP integration
 - Modification hooks: modify-bash, modify-file, modify-git-commit
 
@@ -97,7 +97,7 @@ v2.7.32
 
 **Evidence**:
 ```
-Claude Flow Hooks (with .swarm/memory.db persistence):
+Hive Flow Hooks (with .swarm/memory.db persistence):
 
 Pre-Operation Hooks:
   pre-task, pre-edit, pre-bash, pre-command
@@ -114,7 +114,7 @@ MCP Integration Hooks:
 ### 5. SPARC Commands ✅ PASSED
 
 **Tests Performed:**
-- `npx claude-flow sparc modes` → Lists 13 SPARC modes
+- `npx hive-flow sparc modes` → Lists 13 SPARC modes
 - Modes include: code, tdd, architect, debug, docs, review, etc.
 
 **Result**: ✅ SPARC methodology commands functional
@@ -134,7 +134,7 @@ MCP Integration Hooks:
 ### 6. Swarm Coordination ✅ PASSED
 
 **Tests Performed:**
-- `npx claude-flow agent list` → Shows 4 active agents
+- `npx hive-flow agent list` → Shows 4 active agents
 - Agent statuses: All active with 0 tasks
 - Agent types: coder, tester, researcher, general
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Claude-Flow CLI - Main entry point for Node.js
+ * Hive-Flow CLI - Main entry point for Node.js
  */
 
 import { CLI, VERSION } from './cli-core.js';
@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
 
 async function main() {
-  const cli = new CLI('claude-flow', 'Advanced AI Agent Orchestration System');
+  const cli = new CLI('hive-flow', 'Advanced AI Agent Orchestration System');
 
   // Setup all commands
   setupCommands(cli);

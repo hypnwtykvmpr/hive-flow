@@ -41,7 +41,7 @@ export async function registerNeuralGoalCommands(program) {
 async function initNeuralModule(options) {
   const targetDir = path.resolve(process.cwd(), options.target || '.claude/agents/neural');
   
-  console.log(chalk.cyan('🧠 Initializing Claude Flow Neural Module...'));
+  console.log(chalk.cyan('🧠 Initializing Hive Flow Neural Module...'));
   
   try {
     // Check if exists
@@ -68,7 +68,7 @@ You are a SAFLA Neural Specialist with:
 
 ## MCP Integration
 \`\`\`javascript
-mcp__claude-flow__neural_train {
+mcp__hive-flow__neural_train {
   pattern_type: "coordination",
   training_data: safla_config
 }
@@ -108,7 +108,7 @@ mcp__claude-flow__neural_train {
 async function initGoalModule(options) {
   const targetDir = path.resolve(process.cwd(), options.target || '.claude/agents/goal');
   
-  console.log(chalk.magenta('🎯 Initializing Claude Flow Goal Module...'));
+  console.log(chalk.magenta('🎯 Initializing Hive Flow Goal Module...'));
   
   try {
     // Check if exists
@@ -135,7 +135,7 @@ You are a GOAP specialist with:
 
 ## MCP Integration
 \`\`\`javascript
-mcp__claude-flow__task_orchestrate {
+mcp__hive-flow__task_orchestrate {
   task: "achieve_goal",
   strategy: "adaptive"
 }

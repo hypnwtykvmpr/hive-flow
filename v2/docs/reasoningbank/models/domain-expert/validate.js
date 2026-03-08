@@ -182,19 +182,19 @@ The Domain Expert model provides:
 
 ### Query DevOps patterns
 \`\`\`bash
-npx claude-flow@alpha memory search "kubernetes autoscaling" \\
+npx hive-flow@alpha memory search "kubernetes autoscaling" \\
   --namespace domain-expert --reasoningbank --limit 5
 \`\`\`
 
 ### Query Security patterns
 \`\`\`bash
-npx claude-flow@alpha memory search "OAuth 2.0 security" \\
+npx hive-flow@alpha memory search "OAuth 2.0 security" \\
   --namespace domain-expert --reasoningbank --limit 5
 \`\`\`
 
 ### Query Performance patterns
 \`\`\`bash
-npx claude-flow@alpha memory search "database query optimization" \\
+npx hive-flow@alpha memory search "database query optimization" \\
   --namespace domain-expert --reasoningbank --limit 5
 \`\`\`
 

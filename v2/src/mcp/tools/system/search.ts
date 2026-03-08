@@ -9,7 +9,7 @@
  * This is the key to achieving 98.7% token reduction.
  */
 
-import type { MCPTool, ClaudeFlowToolContext } from '../../types.js';
+import type { MCPTool, HiveFlowToolContext } from '../../types.js';
 import type { ILogger } from '../../../interfaces/logger.js';
 import type { DynamicToolLoader, ToolMetadata } from '../loader.js';
 
@@ -169,7 +169,7 @@ export function createSearchToolsTool(
 
     handler: async (
       input: any,
-      context?: ClaudeFlowToolContext
+      context?: HiveFlowToolContext
     ): Promise<SearchToolsResult> => {
       const validatedInput = input as SearchToolsInput;
       const detailLevel = validatedInput.detailLevel || 'basic';

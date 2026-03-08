@@ -1,6 +1,6 @@
 # Swarm Initialization Guide
 **Date:** 2025-10-25
-**Claude-Flow Version:** 2.7.14
+**Hive-Flow Version:** 2.7.14
 
 ---
 
@@ -8,7 +8,7 @@
 
 ```bash
 # THIS DOES NOT EXIST:
-npx claude-flow@alpha hooks swarm-init --topology adaptive --max-agents 6
+npx hive-flow@alpha hooks swarm-init --topology adaptive --max-agents 6
 # Error: ❌ Unknown hooks command: swarm-init
 ```
 
@@ -30,10 +30,10 @@ mcp__ruv-swarm__swarm_init({
 })
 ```
 
-**For claude-flow MCP:**
+**For hive-flow MCP:**
 ```javascript
 // Call this from within Claude Code:
-mcp__claude-flow__swarm_init({
+mcp__hive-flow__swarm_init({
   topology: "hierarchical",
   maxAgents: 8,
   strategy: "balanced"
@@ -63,15 +63,15 @@ mcp__claude-flow__swarm_init({
 
 ---
 
-### Method 2: Claude-Flow CLI (High-Level)
+### Method 2: Hive-Flow CLI (High-Level)
 
 **For task-based swarm deployment:**
 ```bash
 # Requires Claude Code CLI
-npx claude-flow@alpha swarm "Build a REST API with authentication" --max-agents 6
+npx hive-flow@alpha swarm "Build a REST API with authentication" --max-agents 6
 
 # With options:
-npx claude-flow@alpha swarm "Analyze codebase" \
+npx hive-flow@alpha swarm "Analyze codebase" \
   --max-agents 6 \
   --strategy research \
   --mode mesh \
@@ -95,19 +95,19 @@ npx claude-flow@alpha swarm "Analyze codebase" \
 
 **Interactive wizard:**
 ```bash
-npx claude-flow@alpha hive-mind wizard
+npx hive-flow@alpha hive-mind wizard
 ```
 
 **Direct spawn:**
 ```bash
-npx claude-flow@alpha hive-mind spawn "Build REST API with auth"
-npx claude-flow@alpha hive-mind spawn "Analyze security" --claude
+npx hive-flow@alpha hive-mind spawn "Build REST API with auth"
+npx hive-flow@alpha hive-mind spawn "Analyze security" --claude
 ```
 
 **Check status:**
 ```bash
-npx claude-flow@alpha hive-mind status
-npx claude-flow@alpha hive-mind metrics
+npx hive-flow@alpha hive-mind status
+npx hive-flow@alpha hive-mind metrics
 ```
 
 ---
@@ -141,27 +141,27 @@ npx claude-flow@alpha hive-mind metrics
 ### Available Hook Commands:
 ```bash
 # Before task starts
-npx claude-flow@alpha hooks pre-task \
+npx hive-flow@alpha hooks pre-task \
   --description "Build API" \
   --task-id "task-123"
 
 # After task completes
-npx claude-flow@alpha hooks post-task \
+npx hive-flow@alpha hooks post-task \
   --task-id "task-123" \
   --analyze-performance
 
 # Before file edit
-npx claude-flow@alpha hooks pre-edit \
+npx hive-flow@alpha hooks pre-edit \
   --file "src/api.js" \
   --operation edit
 
 # After file edit
-npx claude-flow@alpha hooks post-edit \
+npx hive-flow@alpha hooks post-edit \
   --file "src/api.js" \
   --memory-key "swarm/123/edits/api"
 
 # End of session
-npx claude-flow@alpha hooks session-end \
+npx hive-flow@alpha hooks session-end \
   --export-metrics \
   --generate-summary
 ```
@@ -216,7 +216,7 @@ mcp__flow-nexus__task_orchestrate({
 
 ### Example 1: Simple Research Swarm
 ```bash
-npx claude-flow@alpha swarm "Research GraphQL best practices" \
+npx hive-flow@alpha swarm "Research GraphQL best practices" \
   --strategy research \
   --max-agents 3 \
   --read-only
@@ -224,7 +224,7 @@ npx claude-flow@alpha swarm "Research GraphQL best practices" \
 
 ### Example 2: Development Swarm
 ```bash
-npx claude-flow@alpha swarm "Build authentication service" \
+npx hive-flow@alpha swarm "Build authentication service" \
   --strategy development \
   --max-agents 5 \
   --parallel \
@@ -254,7 +254,7 @@ mcp__ruv-swarm__task_orchestrate({
 
 ### Example 4: Hive Mind with Claude Code
 ```bash
-npx claude-flow@alpha hive-mind spawn \
+npx hive-flow@alpha hive-mind spawn \
   "Build e-commerce platform" \
   --claude
 ```
@@ -264,7 +264,7 @@ npx claude-flow@alpha hive-mind spawn \
 ## 🐞 Troubleshooting
 
 ### Issue: "Unknown hooks command: swarm-init"
-**Solution:** Use `npx claude-flow@alpha swarm` or MCP tools instead
+**Solution:** Use `npx hive-flow@alpha swarm` or MCP tools instead
 
 ### Issue: "Compiled swarm module not found"
 **Solution:** Either:
@@ -292,8 +292,8 @@ npx claude-flow@alpha hive-mind spawn \
 - Hive Mind Advanced: `.claude/skills/hive-mind-advanced/SKILL.md`
 
 **Official Guides:**
-- GitHub: https://github.com/ruvnet/claude-flow
-- Hive Mind: https://github.com/ruvnet/claude-flow/tree/main/docs/hive-mind
+- GitHub: https://github.com/ruvnet/hive-flow
+- Hive Mind: https://github.com/ruvnet/hive-flow/tree/main/docs/hive-mind
 
 ---
 

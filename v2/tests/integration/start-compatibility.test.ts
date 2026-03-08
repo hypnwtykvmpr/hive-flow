@@ -17,7 +17,7 @@ describe('Start Command Backward Compatibility', () => {
       const originalLog = console.log;
       let helpShown = false;
       console.log = (...args) => {
-        if (args.join(' ').includes('claude-flow start')) {
+        if (args.join(' ').includes('hive-flow start')) {
           helpShown = true;
         }
       };

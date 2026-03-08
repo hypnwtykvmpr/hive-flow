@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Demonstration of real metrics collection for claude-flow benchmarks."""
+"""Demonstration of real metrics collection for hive-flow benchmarks."""
 
 import asyncio
 import json
@@ -95,7 +95,7 @@ async def demo_process_tracking():
     """Demonstrate process tracking."""
     print("\n=== Process Tracking Demo ===\n")
     
-    tracker = ProcessTracker("claude-flow")
+    tracker = ProcessTracker("hive-flow")
     
     # Execute various commands
     commands = [
@@ -105,7 +105,7 @@ async def demo_process_tracking():
     ]
     
     for cmd, timeout in commands:
-        print(f"\nExecuting: claude-flow {' '.join(cmd)}")
+        print(f"\nExecuting: hive-flow {' '.join(cmd)}")
         result = await tracker.execute_command_async(cmd, timeout=timeout)
         
         print(f"  Exit code: {result.exit_code}")
@@ -219,7 +219,7 @@ def demo_system_monitoring():
 
 async def main():
     """Run all demonstrations."""
-    print("Claude-Flow Real Metrics Collection Demonstration")
+    print("Hive-Flow Real Metrics Collection Demonstration")
     print("=" * 60)
     
     # Run each demo

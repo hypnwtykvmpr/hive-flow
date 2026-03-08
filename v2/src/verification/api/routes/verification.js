@@ -2,7 +2,7 @@
  * Verification API Routes
  * REST endpoints for verification status and truth monitoring
  * 
- * Following existing claude-flow API patterns from /src/api/routes/analysis.js
+ * Following existing hive-flow API patterns from /src/api/routes/analysis.js
  */
 
 const express = require('express');

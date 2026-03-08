@@ -1,4 +1,4 @@
-# Release Summary - Claude Flow v2.7.33
+# Release Summary - Hive Flow v2.7.33
 
 **Release Date**: 2025-11-12
 **Version**: v2.7.33 (Point Release)
@@ -10,7 +10,7 @@
 
 ## 🎯 Executive Summary
 
-Claude Flow v2.7.33 is a **point release** that brings three major feature sets while maintaining **100% backward compatibility** with zero breaking changes.
+Hive Flow v2.7.33 is a **point release** that brings three major feature sets while maintaining **100% backward compatibility** with zero breaking changes.
 
 **Why v2.7.33 (not v2.8.0)?**
 - Following semantic versioning: MAJOR.MINOR.PATCH
@@ -35,7 +35,7 @@ Claude Flow v2.7.33 is a **point release** that brings three major feature sets 
 
 **Enable with:**
 ```bash
-npx claude-flow mcp start --mcp2025
+npx hive-flow mcp start --mcp2025
 ```
 
 ### 2️⃣ Progressive Disclosure Pattern ✅
@@ -191,10 +191,10 @@ All issues are documented with code examples and recommendations in `docs/DEEP_C
 
 ### Runtime Verification ✅
 ```bash
-✅ npx claude-flow --version → v2.7.32 (will be v2.7.33)
-✅ npx claude-flow mcp status → Operational
-✅ npx claude-flow memory stats → Shows ReasoningBank data
-✅ npx claude-flow hooks → Working
+✅ npx hive-flow --version → v2.7.32 (will be v2.7.33)
+✅ npx hive-flow mcp status → Operational
+✅ npx hive-flow memory stats → Shows ReasoningBank data
+✅ npx hive-flow hooks → Working
 ✅ All 29 MCP tools available
 ✅ Memory system functional (19 memories, 80% confidence)
 ```
@@ -250,20 +250,20 @@ All issues are documented with code examples and recommendations in `docs/DEEP_C
 ### Example 1: Enable MCP 2025-11 Features
 ```bash
 # Start MCP server with 2025-11 features
-npx claude-flow mcp start --mcp2025
+npx hive-flow mcp start --mcp2025
 
 # Check status
-npx claude-flow mcp status
+npx hive-flow mcp status
 # Output: MCP 2025-11: enabled
 ```
 
 ### Example 2: Verify Performance Improvements
 ```bash
 # Check startup time (should be <100ms)
-time npx claude-flow mcp status
+time npx hive-flow mcp status
 
 # Check memory stats with ReasoningBank
-npx claude-flow memory stats
+npx hive-flow memory stats
 # Expected output:
 # Backend: SQLite (.swarm/memory.db)
 # Total memories: 19
@@ -329,9 +329,9 @@ gh release create v2.7.33 \
   --notes-file docs/RELEASE_NOTES_v2.7.33.md
 
 # 7. Verify
-npm view claude-flow version  # Should show 2.7.33
-npm install -g claude-flow@latest
-npx claude-flow --version  # Should show v2.7.33
+npm view hive-flow version  # Should show 2.7.33
+npm install -g hive-flow@latest
+npx hive-flow --version  # Should show v2.7.33
 ```
 
 **Full Publishing Guide**: See `docs/NPM_PUBLISH_GUIDE_v2.7.33.md` for detailed instructions.
@@ -432,14 +432,14 @@ npx claude-flow --version  # Should show v2.7.33
 ## 📞 Support & Resources
 
 ### Documentation
-- **Main Repository**: https://github.com/ruvnet/claude-flow
+- **Main Repository**: https://github.com/ruvnet/hive-flow
 - **Release Notes**: `docs/RELEASE_NOTES_v2.7.33.md`
 - **Publishing Guide**: `docs/NPM_PUBLISH_GUIDE_v2.7.33.md`
 - **Deep Code Review**: `docs/DEEP_CODE_REVIEW_v2.7.33.md`
 
 ### Community
-- **GitHub Issues**: https://github.com/ruvnet/claude-flow/issues
-- **GitHub Discussions**: https://github.com/ruvnet/claude-flow/discussions
+- **GitHub Issues**: https://github.com/ruvnet/hive-flow/issues
+- **GitHub Discussions**: https://github.com/ruvnet/hive-flow/discussions
 - **Discord**: https://discord.agentics.org
 
 ### Enterprise

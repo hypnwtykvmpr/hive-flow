@@ -1,4 +1,4 @@
-# Claude-Flow Deep Regression Test Environment
+# Hive-Flow Deep Regression Test Environment
 # Comprehensive testing for all capabilities
 
 FROM node:20-bookworm
@@ -41,28 +41,28 @@ COPY v3/ ./v3/
 RUN npm install --legacy-peer-deps
 
 # Build v3 packages
-WORKDIR /app/v3/@claude-flow/shared
+WORKDIR /app/v3/@hive-flow/shared
 RUN npm install --legacy-peer-deps && npm run build || true
 
-WORKDIR /app/v3/@claude-flow/hooks
+WORKDIR /app/v3/@hive-flow/hooks
 RUN npm install --legacy-peer-deps && npm run build || true
 
-WORKDIR /app/v3/@claude-flow/plugins
+WORKDIR /app/v3/@hive-flow/plugins
 RUN npm install --legacy-peer-deps && npm run build || true
 
-WORKDIR /app/v3/@claude-flow/security
+WORKDIR /app/v3/@hive-flow/security
 RUN npm install --legacy-peer-deps && npm run build || true
 
-WORKDIR /app/v3/@claude-flow/swarm
+WORKDIR /app/v3/@hive-flow/swarm
 RUN npm install --legacy-peer-deps && npm run build || true
 
-WORKDIR /app/v3/@claude-flow/cli
+WORKDIR /app/v3/@hive-flow/cli
 RUN npm install --legacy-peer-deps && npm run build || true
 
-WORKDIR /app/v3/@claude-flow/memory
+WORKDIR /app/v3/@hive-flow/memory
 RUN npm install --legacy-peer-deps && npm run build || true
 
-WORKDIR /app/v3/@claude-flow/mcp
+WORKDIR /app/v3/@hive-flow/mcp
 RUN npm install --legacy-peer-deps && npm run build || true
 
 # Return to app root
@@ -79,11 +79,11 @@ RUN mkdir -p /app/data /app/reports /app/logs
 
 # Set environment variables
 ENV NODE_ENV=test
-ENV CLAUDE_FLOW_MODE=test
-ENV CLAUDE_FLOW_MEMORY_PATH=/app/data
-ENV CLAUDE_FLOW_LOG_LEVEL=debug
-ENV CLAUDE_FLOW_MAX_AGENTS=15
-ENV CLAUDE_FLOW_SECURITY_MODE=strict
+ENV HIVE_FLOW_MODE=test
+ENV HIVE_FLOW_MEMORY_PATH=/app/data
+ENV HIVE_FLOW_LOG_LEVEL=debug
+ENV HIVE_FLOW_MAX_AGENTS=15
+ENV HIVE_FLOW_SECURITY_MODE=strict
 ENV CI=true
 
 # Health check

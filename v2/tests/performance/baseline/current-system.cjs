@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Baseline Performance Measurement for Current Claude-Flow Memory System
+ * Baseline Performance Measurement for Current Hive-Flow Memory System
  *
  * Measures:
  * - Pattern search latency
@@ -20,7 +20,7 @@ class BaselinePerformanceBenchmark {
   constructor() {
     this.results = {
       timestamp: new Date().toISOString(),
-      system: 'claude-flow-current',
+      system: 'hive-flow-current',
       version: this.getVersion(),
       benchmarks: {}
     };
@@ -280,7 +280,7 @@ class BaselinePerformanceBenchmark {
 
   // Run all benchmarks
   async runAll() {
-    console.log('🚀 Starting Baseline Performance Benchmarks for Claude-Flow');
+    console.log('🚀 Starting Baseline Performance Benchmarks for Hive-Flow');
     console.log('='.repeat(80));
 
     await this.benchmarkPatternSearch();

@@ -123,7 +123,7 @@ class CryptographicCore {
   encrypt(data: string, key: string): { encrypted: string; iv: string; tag: string } {
     const iv = crypto.randomBytes(16);
     const cipher = crypto.createCipher(this.algorithm, key);
-    cipher.setAAD(Buffer.from('claude-flow-verification'));
+    cipher.setAAD(Buffer.from('hive-flow-verification'));
     
     let encrypted = cipher.update(data, 'utf8', 'hex');
     encrypted += cipher.final('hex');
@@ -140,7 +140,7 @@ class CryptographicCore {
   // Decrypt sensitive data
   decrypt(encryptedData: { encrypted: string; iv: string; tag: string }, key: string): string {
     const decipher = crypto.createDecipher(this.algorithm, key);
-    decipher.setAAD(Buffer.from('claude-flow-verification'));
+    decipher.setAAD(Buffer.from('hive-flow-verification'));
     decipher.setAuthTag(Buffer.from(encryptedData.tag, 'hex'));
     
     let decrypted = decipher.update(encryptedData.encrypted, 'hex', 'utf8');
@@ -407,7 +407,7 @@ class AgentAuthenticationSystem {
     const certificateData = {
       subject: agentId,
       publicKey,
-      issuer: 'claude-flow-verification-authority',
+      issuer: 'hive-flow-verification-authority',
       validFrom: new Date(),
       validTo: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year
       serialNumber: this.crypto.generateNonce()

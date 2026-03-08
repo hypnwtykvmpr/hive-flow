@@ -7,11 +7,11 @@ import { ClaudeCodeMCPWrapper } from './claude-code-wrapper.js';
 
 // Check if we should use the legacy server
 const useLegacy =
-  process.env.CLAUDE_FLOW_LEGACY_MCP === 'true' || process.argv.includes('--legacy');
+  process.env.HIVE_FLOW_LEGACY_MCP === 'true' || process.argv.includes('--legacy');
 
 async function main() {
   if (useLegacy) {
-    console.error('Starting Claude-Flow MCP in legacy mode...');
+    console.error('Starting Hive-Flow MCP in legacy mode...');
     // Dynamically import the old server to avoid circular dependencies
     const module = await import('./server.js');
     if (module.runMCPServer) {

@@ -32,7 +32,7 @@ try {
   console.log('\nTest 3: Storing test pattern...');
   await rb.storePattern({
     sessionId: 'test-session-1',
-    task: 'Test integration with claude-flow v2.7.1',
+    task: 'Test integration with hive-flow v2.7.1',
     input: 'Testing agentic-flow v1.7.1 features',
     output: 'Successfully integrated HybridReasoningBank',
     critique: 'Integration working as expected',

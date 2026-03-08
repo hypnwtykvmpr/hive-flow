@@ -412,8 +412,8 @@ class TestPerformanceTracking:
         assert result["prediction_time"] == 0.8
 
 
-class TestIntegrationWithClaudeFlow:
-    """Test integration with Claude Flow MCP tools."""
+class TestIntegrationWithHiveFlow:
+    """Test integration with Hive Flow MCP tools."""
     
     @pytest.mark.asyncio
     async def test_mcp_agent_spawning(self):

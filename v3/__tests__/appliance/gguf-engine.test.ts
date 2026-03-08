@@ -15,7 +15,7 @@ import {
   parseGgufHeader,
   GgufEngine,
   type GgufMetadata,
-} from '../../@claude-flow/cli/src/appliance/gguf-engine.js';
+} from '../../@hive-flow/cli/src/appliance/gguf-engine.js';
 
 // ---------------------------------------------------------------------------
 // GGUF Binary Helpers

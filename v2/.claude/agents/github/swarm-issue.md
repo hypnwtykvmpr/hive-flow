@@ -9,10 +9,10 @@ tools:
   - mcp__github__update_issue
   - mcp__github__list_issues
   - mcp__github__create_issue_comment
-  - mcp__claude-flow__swarm_init
-  - mcp__claude-flow__agent_spawn
-  - mcp__claude-flow__task_orchestrate
-  - mcp__claude-flow__memory_usage
+  - mcp__hive-flow__swarm_init
+  - mcp__hive-flow__agent_spawn
+  - mcp__hive-flow__task_orchestrate
+  - mcp__hive-flow__memory_usage
   - TodoWrite
   - TodoRead
   - Bash
@@ -516,21 +516,21 @@ npx ruv-swarm github issue-init 567 \
 ### Multi-Agent Issue Processing
 ```bash
 # Initialize issue-specific swarm with optimal topology
-mcp__claude-flow__swarm_init { topology: "hierarchical", maxAgents: 8 }
-mcp__claude-flow__agent_spawn { type: "coordinator", name: "Issue Coordinator" }
-mcp__claude-flow__agent_spawn { type: "analyst", name: "Issue Analyzer" }
-mcp__claude-flow__agent_spawn { type: "coder", name: "Solution Developer" }
-mcp__claude-flow__agent_spawn { type: "tester", name: "Validation Engineer" }
+mcp__hive-flow__swarm_init { topology: "hierarchical", maxAgents: 8 }
+mcp__hive-flow__agent_spawn { type: "coordinator", name: "Issue Coordinator" }
+mcp__hive-flow__agent_spawn { type: "analyst", name: "Issue Analyzer" }
+mcp__hive-flow__agent_spawn { type: "coder", name: "Solution Developer" }
+mcp__hive-flow__agent_spawn { type: "tester", name: "Validation Engineer" }
 
 # Store issue context in swarm memory
-mcp__claude-flow__memory_usage {
+mcp__hive-flow__memory_usage {
   action: "store",
   key: "issue/#{issue_number}/context",
   value: { title: "issue_title", labels: ["labels"], complexity: "high" }
 }
 
 # Orchestrate issue resolution workflow
-mcp__claude-flow__task_orchestrate {
+mcp__hive-flow__task_orchestrate {
   task: "Coordinate multi-agent issue resolution with progress tracking",
   strategy: "adaptive",
   priority: "high"
@@ -543,10 +543,10 @@ mcp__claude-flow__task_orchestrate {
 const preHook = async (issue) => {
   // Initialize swarm with issue-specific topology
   const topology = determineTopology(issue.complexity);
-  await mcp__claude_flow__swarm_init({ topology, maxAgents: 6 });
+  await mcp__hive_flow__swarm_init({ topology, maxAgents: 6 });
   
   // Store issue context for swarm agents
-  await mcp__claude_flow__memory_usage({
+  await mcp__hive_flow__memory_usage({
     action: "store",
     key: `issue/${issue.number}/metadata`,
     value: { issue, analysis: await analyzeIssue(issue) }
@@ -562,7 +562,7 @@ const postHook = async (results) => {
   await createFollowupTasks(results.remainingWork);
   
   // Store completion metrics
-  await mcp__claude_flow__memory_usage({
+  await mcp__hive_flow__memory_usage({
     action: "store", 
     key: `issue/${issue.number}/completion`,
     value: { metrics: results.metrics, timestamp: Date.now() }

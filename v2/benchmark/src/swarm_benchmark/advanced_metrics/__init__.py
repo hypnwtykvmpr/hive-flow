@@ -2,7 +2,7 @@
 Advanced Metrics Collection Module
 
 This module provides comprehensive performance metrics collection and optimization
-for Claude Flow swarm benchmarking systems.
+for Hive Flow swarm benchmarking systems.
 
 Features:
 - Token usage optimization tracking

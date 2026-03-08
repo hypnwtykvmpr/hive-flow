@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const METRICS_DIR = path.join(process.cwd(), '.claude-flow', 'metrics');
+const METRICS_DIR = path.join(process.cwd(), '.hive-flow', 'metrics');
 const USAGE_FILE = path.join(METRICS_DIR, 'provider-usage.json');
 
 const DEFAULT_PROVIDERS = ['opus', 'sonnet', 'haiku'];

@@ -96,9 +96,9 @@ async function executeAgentTask(subArgs, flags) {
   if (!agentType || !task) {
     printError('Usage: agent run <agent-type> "<task>" [--provider <provider>] [--model <model>]');
     console.log('\nExamples:');
-    console.log('  claude-flow agent run coder "Create a REST API"');
-    console.log('  claude-flow agent run researcher "Research AI trends" --provider openrouter');
-    console.log('  claude-flow agent run reviewer "Review code for security" --provider onnx');
+    console.log('  hive-flow agent run coder "Create a REST API"');
+    console.log('  hive-flow agent run researcher "Research AI trends" --provider openrouter');
+    console.log('  hive-flow agent run reviewer "Review code for security" --provider onnx');
     return;
   }
 
@@ -287,11 +287,11 @@ async function listAgenticFlowAgents(subArgs, flags) {
     console.log('\n66+ Available Agents:\n');
     console.log(stdout);
     console.log('\nUsage:');
-    console.log('  claude-flow agent run <agent-type> "<task>"');
+    console.log('  hive-flow agent run <agent-type> "<task>"');
     console.log('\nExamples:');
-    console.log('  claude-flow agent run coder "Build a REST API with authentication"');
-    console.log('  claude-flow agent run security-auditor "Review this code for vulnerabilities"');
-    console.log('  claude-flow agent run full-stack-developer "Create a Next.js app"');
+    console.log('  hive-flow agent run coder "Build a REST API with authentication"');
+    console.log('  hive-flow agent run security-auditor "Review this code for vulnerabilities"');
+    console.log('  hive-flow agent run full-stack-developer "Create a Next.js app"');
   } catch (error) {
     printError('Failed to load agentic-flow agents');
     console.error('Make sure agentic-flow is installed: npm install -g agentic-flow');
@@ -337,9 +337,9 @@ async function createAgent(subArgs, flags) {
 
     printSuccess('✅ Agent created successfully!');
     console.log('\nNext steps:');
-    console.log('  1. Run your agent: claude-flow agent run <agent-name> "<task>"');
-    console.log('  2. View agent info: claude-flow agent info <agent-name>');
-    console.log('  3. Check for conflicts: claude-flow agent conflicts');
+    console.log('  1. Run your agent: hive-flow agent run <agent-name> "<task>"');
+    console.log('  2. View agent info: hive-flow agent info <agent-name>');
+    console.log('  3. Check for conflicts: hive-flow agent conflicts');
   } catch (error) {
     printError('❌ Failed to create agent');
     console.error(error.message);
@@ -356,8 +356,8 @@ async function getAgentInfo(subArgs, flags) {
   if (!agentName) {
     printError('Usage: agent info <agent-name>');
     console.log('\nExample:');
-    console.log('  claude-flow agent info coder');
-    console.log('  claude-flow agent info security-auditor');
+    console.log('  hive-flow agent info coder');
+    console.log('  hive-flow agent info security-auditor');
     return;
   }
 
@@ -372,7 +372,7 @@ async function getAgentInfo(subArgs, flags) {
   } catch (error) {
     printError(`❌ Failed to get agent info for: ${agentName}`);
     console.error(error.message);
-    console.log('\nTip: List all agents with: claude-flow agent agents');
+    console.log('\nTip: List all agents with: hive-flow agent agents');
     process.exit(1);
   }
 }
@@ -458,8 +458,8 @@ async function initializeMemory(subArgs, flags) {
     printSuccess('✅ ReasoningBank initialized successfully!');
     console.log('\nNext steps:');
     console.log('  1. Run agents with --enable-memory flag');
-    console.log('  2. Check status: claude-flow agent memory status');
-    console.log('  3. View demo: claude-flow agent memory demo');
+    console.log('  2. Check status: hive-flow agent memory status');
+    console.log('  3. View demo: hive-flow agent memory demo');
   } catch (error) {
     printError('❌ Failed to initialize ReasoningBank');
     console.error(error.message);
@@ -482,7 +482,7 @@ async function getMemoryStatus(subArgs, flags) {
   } catch (error) {
     printError('❌ Failed to get memory status');
     console.error(error.message);
-    console.log('\nTip: Initialize first with: claude-flow agent memory init');
+    console.log('\nTip: Initialize first with: hive-flow agent memory init');
     process.exit(1);
   }
 }
@@ -601,11 +601,11 @@ function showMemoryHelp() {
   console.log('  --limit <n>                      Limit results [default: 10]');
   console.log();
   console.log('Examples:');
-  console.log('  claude-flow agent memory init');
-  console.log('  claude-flow agent memory status');
-  console.log('  claude-flow agent memory list --domain web --limit 5');
-  console.log('  claude-flow agent memory consolidate');
-  console.log('  claude-flow agent memory demo');
+  console.log('  hive-flow agent memory init');
+  console.log('  hive-flow agent memory status');
+  console.log('  hive-flow agent memory list --domain web --limit 5');
+  console.log('  hive-flow agent memory consolidate');
+  console.log('  hive-flow agent memory demo');
 }
 
 // Configuration Management for agentic-flow
@@ -647,8 +647,8 @@ async function agenticConfigSet(subArgs, flags) {
   if (!key || !value) {
     printError('Usage: agent config set <key> <value>');
     console.log('\nExample:');
-    console.log('  claude-flow agent config set ANTHROPIC_API_KEY sk-ant-xxx');
-    console.log('  claude-flow agent config set DEFAULT_MODEL claude-3-5-sonnet-20241022');
+    console.log('  hive-flow agent config set ANTHROPIC_API_KEY sk-ant-xxx');
+    console.log('  hive-flow agent config set DEFAULT_MODEL claude-3-5-sonnet-20241022');
     return;
   }
 
@@ -673,7 +673,7 @@ async function agenticConfigGet(subArgs, flags) {
   if (!key) {
     printError('Usage: agent config get <key>');
     console.log('\nExample:');
-    console.log('  claude-flow agent config get ANTHROPIC_API_KEY');
+    console.log('  hive-flow agent config get ANTHROPIC_API_KEY');
     return;
   }
 
@@ -737,7 +737,7 @@ async function agenticConfigDelete(subArgs, flags) {
 async function agenticConfigReset(subArgs, flags) {
   if (!flags.force) {
     printWarning('⚠️  WARNING: This will reset ALL agentic-flow configurations!');
-    console.log('\nUse --force to confirm: claude-flow agent config reset --force');
+    console.log('\nUse --force to confirm: hive-flow agent config reset --force');
     return;
   }
 
@@ -782,9 +782,9 @@ function showAgenticConfigHelp() {
   console.log('  wizard                          Run interactive setup wizard');
   console.log();
   console.log('Examples:');
-  console.log('  claude-flow agent config wizard');
-  console.log('  claude-flow agent config set ANTHROPIC_API_KEY sk-ant-xxx');
-  console.log('  claude-flow agent config list --show-secrets');
+  console.log('  hive-flow agent config wizard');
+  console.log('  hive-flow agent config set ANTHROPIC_API_KEY sk-ant-xxx');
+  console.log('  hive-flow agent config list --show-secrets');
 }
 
 // MCP Server Management for agentic-flow
@@ -937,10 +937,10 @@ function showAgenticMcpHelp() {
   console.log('  --detailed, --verbose           Detailed output');
   console.log();
   console.log('Examples:');
-  console.log('  claude-flow agent mcp start --daemon');
-  console.log('  claude-flow agent mcp status --detailed');
-  console.log('  claude-flow agent mcp list --server agent-booster');
-  console.log('  claude-flow agent mcp logs --lines 50 --follow');
+  console.log('  hive-flow agent mcp start --daemon');
+  console.log('  hive-flow agent mcp status --detailed');
+  console.log('  hive-flow agent mcp list --server agent-booster');
+  console.log('  hive-flow agent mcp logs --lines 50 --follow');
 }
 
 async function spawnAgent(subArgs, flags) {
@@ -965,7 +965,7 @@ async function spawnAgent(subArgs, flags) {
   const path = await import('path');
   
   // Ensure agents directory exists
-  const agentsDir = '.claude-flow/agents';
+  const agentsDir = '.hive-flow/agents';
   await fs.mkdir(agentsDir, { recursive: true });
   
   // Save agent data
@@ -973,7 +973,7 @@ async function spawnAgent(subArgs, flags) {
   await fs.writeFile(agentFile, JSON.stringify(agent, null, 2));
   
   // Update performance metrics
-  const perfFile = '.claude-flow/metrics/performance.json';
+  const perfFile = '.hive-flow/metrics/performance.json';
   try {
     const perfData = JSON.parse(await fs.readFile(perfFile, 'utf8'));
     perfData.totalAgents = (perfData.totalAgents || 0) + 1;
@@ -1021,7 +1021,7 @@ async function listAgents(subArgs, flags) {
   const { promises: fs } = await import('fs');
   const path = await import('path');
   
-  const agentsDir = '.claude-flow/agents';
+  const agentsDir = '.hive-flow/agents';
   const agents = [];
   
   try {
@@ -1055,9 +1055,9 @@ async function listAgents(subArgs, flags) {
   } else {
     console.log('📋 No agents currently active');
     console.log('\nTo create agents:');
-    console.log('  claude-flow agent spawn researcher --name "ResearchBot"');
-    console.log('  claude-flow agent spawn coder --name "CodeBot"');
-    console.log('  claude-flow agent spawn analyst --name "DataBot"');
+    console.log('  hive-flow agent spawn researcher --name "ResearchBot"');
+    console.log('  hive-flow agent spawn coder --name "CodeBot"');
+    console.log('  hive-flow agent spawn analyst --name "DataBot"');
   }
 }
 
@@ -1082,8 +1082,8 @@ async function manageHierarchy(subArgs, flags) {
     default:
       console.log('Hierarchy commands: create, show');
       console.log('Examples:');
-      console.log('  claude-flow agent hierarchy create enterprise');
-      console.log('  claude-flow agent hierarchy show');
+      console.log('  hive-flow agent hierarchy create enterprise');
+      console.log('  hive-flow agent hierarchy show');
   }
 }
 
@@ -1252,7 +1252,7 @@ function showAgentHelp() {
   console.log('Memory Options (NEW - for run command):');
   console.log('  --enable-memory                  Enable ReasoningBank learning');
   console.log('                                   ⚠️  REQUIRES .env with API keys');
-  console.log('                                   Run: claude-flow init --env');
+  console.log('                                   Run: hive-flow init --env');
   console.log('  --memory-db <path>               Memory database path [default: .swarm/memory.db]');
   console.log('  --memory-k <n>                   Top-k memories to retrieve [default: 3]');
   console.log('  --memory-domain <domain>         Domain filter for memories');
@@ -1262,36 +1262,36 @@ function showAgentHelp() {
   console.log();
   console.log('Examples:');
   console.log('\n  # Execute with agentic-flow (multi-provider)');
-  console.log('  claude-flow agent run coder "Build REST API with authentication"');
-  console.log('  claude-flow agent run researcher "Research React 19 features" --provider openrouter');
-  console.log('  claude-flow agent run security-auditor "Audit code" --provider onnx');
-  console.log('  claude-flow agent agents  # List all available agents');
+  console.log('  hive-flow agent run coder "Build REST API with authentication"');
+  console.log('  hive-flow agent run researcher "Research React 19 features" --provider openrouter');
+  console.log('  hive-flow agent run security-auditor "Audit code" --provider onnx');
+  console.log('  hive-flow agent agents  # List all available agents');
   console.log('\n  # Model optimization (85-98% cost savings)');
-  console.log('  claude-flow agent run coder "Build API" --optimize');
-  console.log('  claude-flow agent run coder "Fix bug" --optimize --priority cost');
-  console.log('  claude-flow agent run coder "Critical fix" --optimize --priority quality --max-cost 0.50');
+  console.log('  hive-flow agent run coder "Build API" --optimize');
+  console.log('  hive-flow agent run coder "Fix bug" --optimize --priority cost');
+  console.log('  hive-flow agent run coder "Critical fix" --optimize --priority quality --max-cost 0.50');
   console.log('\n  # Execute with ReasoningBank memory (learns from experience)');
-  console.log('  claude-flow agent run coder "Build API" --enable-memory');
-  console.log('  claude-flow agent run coder "Add auth" --enable-memory --memory-domain api');
-  console.log('  claude-flow agent run coder "Fix bug" --enable-memory --memory-k 5');
+  console.log('  hive-flow agent run coder "Build API" --enable-memory');
+  console.log('  hive-flow agent run coder "Add auth" --enable-memory --memory-domain api');
+  console.log('  hive-flow agent run coder "Fix bug" --enable-memory --memory-k 5');
   console.log('\n  # Memory management');
-  console.log('  claude-flow agent memory init');
-  console.log('  claude-flow agent memory status');
-  console.log('  claude-flow agent memory list --domain api --limit 10');
-  console.log('  claude-flow agent memory consolidate');
-  console.log('  claude-flow agent memory demo  # See 70% → 88% success improvement');
+  console.log('  hive-flow agent memory init');
+  console.log('  hive-flow agent memory status');
+  console.log('  hive-flow agent memory list --domain api --limit 10');
+  console.log('  hive-flow agent memory consolidate');
+  console.log('  hive-flow agent memory demo  # See 70% → 88% success improvement');
   console.log('\n  # Configuration management');
-  console.log('  claude-flow agent config wizard  # Interactive setup');
-  console.log('  claude-flow agent config set ANTHROPIC_API_KEY sk-ant-xxx');
-  console.log('  claude-flow agent config list --show-secrets');
-  console.log('  claude-flow agent config get DEFAULT_MODEL');
+  console.log('  hive-flow agent config wizard  # Interactive setup');
+  console.log('  hive-flow agent config set ANTHROPIC_API_KEY sk-ant-xxx');
+  console.log('  hive-flow agent config list --show-secrets');
+  console.log('  hive-flow agent config get DEFAULT_MODEL');
   console.log('\n  # MCP server management');
-  console.log('  claude-flow agent mcp start --daemon');
-  console.log('  claude-flow agent mcp status --detailed');
-  console.log('  claude-flow agent mcp list --server agent-booster');
-  console.log('  claude-flow agent mcp logs --follow');
+  console.log('  hive-flow agent mcp start --daemon');
+  console.log('  hive-flow agent mcp status --detailed');
+  console.log('  hive-flow agent mcp list --server agent-booster');
+  console.log('  hive-flow agent mcp logs --follow');
   console.log('\n  # Internal agent management');
-  console.log('  claude-flow agent spawn researcher --name "DataBot"');
-  console.log('  claude-flow agent list --verbose');
-  console.log('  claude-flow agent hierarchy create enterprise');
+  console.log('  hive-flow agent spawn researcher --name "DataBot"');
+  console.log('  hive-flow agent list --verbose');
+  console.log('  hive-flow agent hierarchy create enterprise');
 }

@@ -289,7 +289,7 @@ class TemplateEngine:
 ### Ensemble Coordination Pattern
 ```python
 # Initialize MLE-STAR ensemble
-mcp__claude-flow__swarm_init({{
+mcp__hive-flow__swarm_init({{
   topology: "mesh",
   maxAgents: 8,
   mle_star: {{
@@ -321,24 +321,24 @@ mcp__claude-flow__swarm_init({{
             section += """
 ### Pre-Task Initialization
 ```bash
-npx claude-flow@alpha hooks pre-task --description "[task]"
-npx claude-flow@alpha hooks session-restore --session-id "swarm-[id]"
+npx hive-flow@alpha hooks pre-task --description "[task]"
+npx hive-flow@alpha hooks session-restore --session-id "swarm-[id]"
 ```"""
         
         if coordination.get("post_edit_memory"):
             section += """
 ### Post-Edit Memory Sync
 ```bash
-npx claude-flow@alpha hooks post-edit --file "[file]" --memory-key "swarm/[agent]/[step]"
-npx claude-flow@alpha hooks notify --message "[decision]"
+npx hive-flow@alpha hooks post-edit --file "[file]" --memory-key "swarm/[agent]/[step]"
+npx hive-flow@alpha hooks notify --message "[decision]"
 ```"""
         
         if coordination.get("performance_analysis"):
             section += """
 ### Performance Analysis
 ```bash
-npx claude-flow@alpha hooks post-task --task-id "[task]" --analyze-performance true
-npx claude-flow@alpha hooks session-end --export-metrics true
+npx hive-flow@alpha hooks post-task --task-id "[task]" --analyze-performance true
+npx hive-flow@alpha hooks session-end --export-metrics true
 ```"""
         
         return section
@@ -438,7 +438,7 @@ class UseCaseTemplates:
 ### Ensemble Coordination
 ```python
 # Initialize MLE-STAR ensemble
-mcp__claude-flow__swarm_init({ 
+mcp__hive-flow__swarm_init({ 
   topology: "mesh", 
   maxAgents: 8,
   mle_star: {

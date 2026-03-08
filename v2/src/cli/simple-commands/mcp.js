@@ -94,9 +94,9 @@ async function startMcpServer(subArgs, flags) {
         stdio: 'inherit',
         env: {
           ...process.env,
-          CLAUDE_FLOW_AUTO_ORCHESTRATOR: autoOrchestrator ? 'true' : 'false',
-          CLAUDE_FLOW_NEURAL_ENABLED: 'true',
-          CLAUDE_FLOW_WASM_ENABLED: 'true',
+          HIVE_FLOW_AUTO_ORCHESTRATOR: autoOrchestrator ? 'true' : 'false',
+          HIVE_FLOW_NEURAL_ENABLED: 'true',
+          HIVE_FLOW_WASM_ENABLED: 'true',
         },
       });
 
@@ -114,7 +114,7 @@ async function startMcpServer(subArgs, flags) {
       // Fallback to status display
       log('🚀 MCP server would start with:');
       log('   Protocol: stdio');
-      log('   Tools: 87 Claude-Flow integration tools');
+      log('   Tools: 87 Hive-Flow integration tools');
       log('   Orchestrator: ' + (autoOrchestrator ? 'AUTO-STARTED' : 'Manual'));
       log('   Mode: ' + (daemon ? 'DAEMON' : 'Interactive'));
     }
@@ -123,7 +123,7 @@ async function startMcpServer(subArgs, flags) {
     const port = getFlag(subArgs, '--port') || flags.port || 3000;
     const host = getFlag(subArgs, '--host') || flags.host || 'localhost';
 
-    success(`Starting Claude Flow MCP server on ${host}:${port}...`);
+    success(`Starting Hive Flow MCP server on ${host}:${port}...`);
     log('🚀 HTTP mode not yet implemented, use --stdio for full functionality');
   }
 }
@@ -139,7 +139,7 @@ async function listMcpTools(subArgs, flags) {
   const verbose = subArgs.includes('--verbose') || subArgs.includes('-v') || flags.verbose;
   const category = getFlag(subArgs, '--category') || flags.category;
 
-  success('Claude-Flow MCP Tools & Resources (87 total):');
+  success('Hive-Flow MCP Tools & Resources (87 total):');
 
   if (!category || category === 'swarm') {
     log('\n🐝 SWARM COORDINATION (12 tools):');
@@ -292,8 +292,8 @@ async function listMcpTools(subArgs, flags) {
 
   log('\n📡 Status: 87 tools & resources available when server is running');
   log('🎯 Categories: swarm, neural, memory, analysis, workflow, github, daa, system');
-  log('🔗 Compatibility: ruv-swarm + DAA + Claude-Flow unified platform');
-  log('\n💡 Usage: claude-flow mcp tools --category=<category> --verbose');
+  log('🔗 Compatibility: ruv-swarm + DAA + Hive-Flow unified platform');
+  log('\n💡 Usage: hive-flow mcp tools --category=<category> --verbose');
 }
 
 async function manageMcpAuth(subArgs, flags) {
@@ -304,7 +304,7 @@ async function manageMcpAuth(subArgs, flags) {
       success('Setting up MCP authentication...');
       log('🔐 Authentication configuration:');
       log('   Type: API Key based');
-      log('   Scope: Claude-Flow tools');
+      log('   Scope: Hive-Flow tools');
       log('   Security: TLS encrypted');
       break;
 
@@ -324,13 +324,13 @@ async function manageMcpAuth(subArgs, flags) {
     default:
       log('Auth commands: setup, status, rotate');
       log('Examples:');
-      log('  claude-flow mcp auth setup');
-      log('  claude-flow mcp auth status');
+      log('  hive-flow mcp auth setup');
+      log('  hive-flow mcp auth status');
   }
 }
 
 async function showMcpConfig(subArgs, flags) {
-  success('Claude-Flow MCP Server Configuration:');
+  success('Hive-Flow MCP Server Configuration:');
   log('\n📋 Server Settings:');
   log('   Host: localhost');
   log('   Port: 3000');
@@ -370,7 +370,7 @@ async function showMcpConfig(subArgs, flags) {
   log('   SPARC Modes: 17 available');
 
   log('\n📁 Configuration Files:');
-  log('   Main Config: ./mcp_config/claude-flow.json');
+  log('   Main Config: ./mcp_config/hive-flow.json');
   log('   Neural Models: ./models/');
   log('   Memory Store: ./memory/');
   log('   Logs: ./logs/mcp/');
@@ -382,7 +382,7 @@ function getFlag(args, flagName) {
 }
 
 function showMcpHelp() {
-  log('🔧 Claude-Flow MCP Server Commands:');
+  log('🔧 Hive-Flow MCP Server Commands:');
   log();
   log('COMMANDS:');
   log('  status                           Show MCP server status');
@@ -416,13 +416,13 @@ function showMcpHelp() {
   log('  system       ⚙️ System & utilities (8 tools)');
   log();
   log('EXAMPLES:');
-  log('  claude-flow mcp status');
-  log('  claude-flow mcp start --auto-orchestrator --daemon');
-  log('  claude-flow mcp tools --category=neural --verbose');
-  log('  claude-flow mcp tools --category=swarm');
-  log('  claude-flow mcp config');
-  log('  claude-flow mcp auth setup');
+  log('  hive-flow mcp status');
+  log('  hive-flow mcp start --auto-orchestrator --daemon');
+  log('  hive-flow mcp tools --category=neural --verbose');
+  log('  hive-flow mcp tools --category=swarm');
+  log('  hive-flow mcp config');
+  log('  hive-flow mcp auth setup');
   log();
   log('🎯 Total: 87 tools & resources available');
-  log('🔗 Full ruv-swarm + DAA + Claude-Flow integration');
+  log('🔗 Full ruv-swarm + DAA + Hive-Flow integration');
 }

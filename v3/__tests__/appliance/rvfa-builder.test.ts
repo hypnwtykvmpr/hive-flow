@@ -14,8 +14,8 @@ import {
   RvfaBuilder,
   encryptApiKeys,
   decryptApiKeys,
-} from '../../@claude-flow/cli/src/appliance/rvfa-builder.js';
-import { RvfaReader } from '../../@claude-flow/cli/src/appliance/rvfa-format.js';
+} from '../../@hive-flow/cli/src/appliance/rvfa-builder.js';
+import { RvfaReader } from '../../@hive-flow/cli/src/appliance/rvfa-format.js';
 
 // ---------------------------------------------------------------------------
 // Helpers

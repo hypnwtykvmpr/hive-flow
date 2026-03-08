@@ -1,4 +1,4 @@
-"""Real-time resource monitoring for claude-flow processes."""
+"""Real-time resource monitoring for hive-flow processes."""
 
 from __future__ import annotations
 import asyncio

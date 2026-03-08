@@ -1,6 +1,6 @@
 /**
  * Agentic-QE Plugin Entry Point
- * Plugin exports for claude-flow V3 integration
+ * Plugin exports for hive-flow V3 integration
  *
  * @module v3/plugins/agentic-qe
  * @version 3.2.3
@@ -292,7 +292,7 @@ export const PLUGIN_METADATA = {
   license: 'MIT',
   homepage: 'https://github.com/ruvnet/agentic-qe',
   repository: 'https://github.com/ruvnet/agentic-qe',
-  minClaudeFlowVersion: '3.0.0-alpha.50',
+  minHiveFlowVersion: '3.0.0-alpha.50',
   capabilities: [
     'test-generation',
     'test-execution',
@@ -309,13 +309,13 @@ export const PLUGIN_METADATA = {
   ],
   dependencies: {
     required: [
-      '@claude-flow/plugins',
-      '@claude-flow/memory',
-      '@claude-flow/security',
-      '@claude-flow/embeddings',
+      '@hive-flow/plugins',
+      '@hive-flow/memory',
+      '@hive-flow/security',
+      '@hive-flow/embeddings',
     ],
     optional: [
-      '@claude-flow/browser',
+      '@hive-flow/browser',
       '@ruvector/attention',
       '@ruvector/gnn',
       '@ruvector/sona',

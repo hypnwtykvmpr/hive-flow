@@ -1,7 +1,7 @@
 {
-  "name": "@claude-flow/plugin-legal-contracts",
+  "name": "@hive-flow/plugin-legal-contracts",
   "version": "3.0.0-alpha.1",
-  "description": "Legal contract analysis plugin for Claude Flow V3 - clause extraction, risk assessment, contract comparison, obligation tracking, and playbook matching",
+  "description": "Legal contract analysis plugin for Hive Flow V3 - clause extraction, risk assessment, contract comparison, obligation tracking, and playbook matching",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -44,7 +44,7 @@
     "tag": "v3alpha"
   },
   "keywords": [
-    "claude-flow",
+    "hive-flow",
     "plugin",
     "legal",
     "contracts",
@@ -54,15 +54,15 @@
     "obligation-tracking",
     "mcp"
   ],
-  "author": "Claude Flow Team",
+  "author": "Hive Flow Team",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ruvnet/claude-flow.git",
+    "url": "https://github.com/ruvnet/hive-flow.git",
     "directory": "v3/plugins/legal-contracts"
   },
   "dependencies": {
-    "@claude-flow/ruvector-upstream": "^0.1.0",
+    "@hive-flow/ruvector-upstream": "^0.1.0",
     "zod": "^3.23.0"
   },
   "devDependencies": {
@@ -71,7 +71,7 @@
     "vitest": "^1.0.0"
   },
   "peerDependencies": {
-    "@claude-flow/plugins": "^3.0.0-alpha.1"
+    "@hive-flow/plugins": "^3.0.0-alpha.1"
   },
   "engines": {
     "node": ">=20.0.0"

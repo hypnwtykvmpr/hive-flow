@@ -29,7 +29,7 @@ class TestCLICommands:
         """Test main CLI help command."""
         result = self.runner.invoke(cli, ['--help'])
         assert result.exit_code == 0
-        assert 'Claude Flow Advanced Swarm Benchmarking Tool' in result.output
+        assert 'Hive Flow Advanced Swarm Benchmarking Tool' in result.output
         assert 'Usage:' in result.output
     
     def test_cli_version(self):
@@ -46,7 +46,7 @@ class TestCLICommands:
         
         # Check for new global options
         assert '--real / --mock' in result.output
-        assert '--claude-flow-path' in result.output
+        assert '--hive-flow-path' in result.output
         assert '--timeout' in result.output
         assert '--stream / --no-stream' in result.output
         assert '--verbose' in result.output
@@ -63,14 +63,14 @@ class TestCLICommands:
         """Test real command group help."""
         result = self.runner.invoke(cli, ['real', '--help'])
         assert result.exit_code == 0
-        assert 'Real claude-flow command execution' in result.output
+        assert 'Real hive-flow command execution' in result.output
         assert 'Commands:' in result.output
     
     def test_real_swarm_command_help(self):
         """Test real swarm command help."""
         result = self.runner.invoke(cli, ['real', 'swarm', '--help'])
         assert result.exit_code == 0
-        assert 'Run real claude-flow swarm benchmarks' in result.output
+        assert 'Run real hive-flow swarm benchmarks' in result.output
         assert 'OBJECTIVE:' in result.output
         assert '--strategy' in result.output
         assert '--mode' in result.output
@@ -158,7 +158,7 @@ class TestCLICommands:
             result = self.runner.invoke(cli, [
                 '--verbose',
                 '--real',
-                '--claude-flow-path', '/custom/path',
+                '--hive-flow-path', '/custom/path',
                 '--timeout', '600',
                 '--no-stream',
                 'run', 'Test objective'
@@ -175,7 +175,7 @@ class TestCLIIntegration:
         """Test real command execution simulation."""
         runner = CliRunner()
         
-        # This would normally execute real claude-flow commands
+        # This would normally execute real hive-flow commands
         # but we're testing the CLI structure
         with patch('swarm_benchmark.core.real_benchmark_engine.RealBenchmarkEngine') as mock_engine:
             mock_instance = MagicMock()
@@ -215,7 +215,7 @@ def test_cli_commands():
 
 def test_real_execution():
     """Test real command execution."""
-    # This would test with actual claude-flow if available
+    # This would test with actual hive-flow if available
     runner = CliRunner()
     
     # Test that the command structure is correct

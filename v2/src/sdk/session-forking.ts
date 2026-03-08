@@ -1,6 +1,6 @@
 /**
  * Session Forking & Parallel Agent Execution
- * Claude-Flow v2.5-alpha.130
+ * Hive-Flow v2.5-alpha.130
  *
  * Implements session forking for 10-20x faster parallel agent spawning
  * using Claude Code SDK's forkSession: true option

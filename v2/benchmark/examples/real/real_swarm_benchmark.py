@@ -3,7 +3,7 @@
 Real Swarm Benchmark Example - Execute and measure real swarm performance.
 
 This example demonstrates how to:
-1. Execute real Claude Flow swarm commands
+1. Execute real Hive Flow swarm commands
 2. Measure actual performance metrics
 3. Parse real JSON streaming responses
 4. Track token usage from actual Claude responses

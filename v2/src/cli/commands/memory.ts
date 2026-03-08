@@ -566,7 +566,7 @@ memoryCommand
       console.log(chalk.cyan('   # Then use hybrid mode (backward compatible)\n'));
 
       console.log(chalk.blue('📖 Quick Start:'));
-      console.log(chalk.cyan('   import { AgentDBMemoryAdapter } from "claude-flow/memory";'));
+      console.log(chalk.cyan('   import { AgentDBMemoryAdapter } from "hive-flow/memory";'));
       console.log(chalk.cyan('   const memory = new AgentDBMemoryAdapter({ mode: "hybrid" });'));
       console.log(chalk.cyan('   await memory.vectorSearch("user authentication", { k: 5 });\n'));
 

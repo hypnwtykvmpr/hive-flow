@@ -89,7 +89,7 @@ async function createTask(subArgs, flags) {
   const path = await import('path');
   
   // Ensure tasks directory exists
-  const tasksDir = '.claude-flow/tasks';
+  const tasksDir = '.hive-flow/tasks';
   await fs.mkdir(tasksDir, { recursive: true });
   
   // Save task data
@@ -97,7 +97,7 @@ async function createTask(subArgs, flags) {
   await fs.writeFile(taskFile, JSON.stringify(task, null, 2));
   
   // Update task queue file
-  const queueFile = '.claude-flow/tasks/queue.json';
+  const queueFile = '.hive-flow/tasks/queue.json';
   let queue = [];
   try {
     const queueData = await fs.readFile(queueFile, 'utf8');
@@ -160,7 +160,7 @@ async function listTasks(subArgs, flags) {
   
   let queue = [];
   try {
-    const queueFile = '.claude-flow/tasks/queue.json';
+    const queueFile = '.hive-flow/tasks/queue.json';
     const queueData = await fs.readFile(queueFile, 'utf8');
     queue = JSON.parse(queueData);
   } catch (e) {
@@ -190,9 +190,9 @@ async function listTasks(subArgs, flags) {
   } else {
     console.log('📋 No tasks in queue' + (filter ? ` with status: ${filter}` : ''));
     console.log('\nTo create tasks:');
-    console.log('  claude-flow task create research "Market analysis"');
-    console.log('  claude-flow task create code "Implement API"');
-    console.log('  claude-flow task create analysis "Data processing"');
+    console.log('  hive-flow task create research "Market analysis"');
+    console.log('  hive-flow task create code "Implement API"');
+    console.log('  hive-flow task create analysis "Data processing"');
   }
 }
 
@@ -284,8 +284,8 @@ function showTaskHelp() {
   console.log('  --verbose, -v                    Show detailed output');
   console.log();
   console.log('Examples:');
-  console.log('  claude-flow task create research "Market analysis" --priority 8');
-  console.log('  claude-flow task list --filter running');
-  console.log('  claude-flow task workflow examples/development-workflow.json');
-  console.log('  claude-flow task coordination status');
+  console.log('  hive-flow task create research "Market analysis" --priority 8');
+  console.log('  hive-flow task list --filter running');
+  console.log('  hive-flow task workflow examples/development-workflow.json');
+  console.log('  hive-flow task coordination status');
 }

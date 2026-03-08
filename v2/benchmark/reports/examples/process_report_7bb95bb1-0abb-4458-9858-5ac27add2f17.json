@@ -32,7 +32,7 @@
   },
   "executions": [
     {
-      "command": "claude-flow sparc orchestrator Create a function to calculate fibonacci numbers",
+      "command": "hive-flow sparc orchestrator Create a function to calculate fibonacci numbers",
       "exit_code": 0,
       "success": true,
       "duration": 2.9961490631103516,

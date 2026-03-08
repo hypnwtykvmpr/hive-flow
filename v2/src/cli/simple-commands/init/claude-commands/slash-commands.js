@@ -1,7 +1,7 @@
 // slash-commands.js - Create Claude Code slash commands
 
 import { createSparcSlashCommand, createMainSparcCommand } from './sparc-commands.js';
-import { createClaudeFlowCommands } from './claude-flow-commands.js';
+import { createHiveFlowCommands } from './hive-flow-commands.js';
 import { copyTemplates } from '../template-copier.js';
 import { promises as fs } from 'fs';
 import { join } from 'path';
@@ -48,8 +48,8 @@ export async function createClaudeSlashCommands(workingDir) {
       }
     }
 
-    // Create claude-flow specific commands
-    await createClaudeFlowCommands(workingDir);
+    // Create hive-flow specific commands
+    await createHiveFlowCommands(workingDir);
   } catch (err) {
     // Legacy slash command creation - silently skip if it fails
     // SPARC slash commands are already created successfully

@@ -1,4 +1,4 @@
-# Release Readiness Summary - Claude Flow v2.7.33
+# Release Readiness Summary - Hive Flow v2.7.33
 
 **Date**: 2025-11-12
 **Version**: v2.7.33
@@ -9,7 +9,7 @@
 
 ## 🎯 Executive Summary
 
-All pre-release verification, documentation, and preparation for Claude Flow v2.7.33 has been completed successfully. The release includes three major feature sets with **ZERO breaking changes** and massive performance improvements.
+All pre-release verification, documentation, and preparation for Hive Flow v2.7.33 has been completed successfully. The release includes three major feature sets with **ZERO breaking changes** and massive performance improvements.
 
 **Release Readiness**: 100% ✅
 
@@ -343,14 +343,14 @@ gh release create v2.7.33 --title "v2.7.33: MCP 2025-11 Compliance & Progressive
 ### Verification Commands
 ```bash
 # Verify npm publication
-npm view claude-flow version
-npm install -g claude-flow@latest
-npx claude-flow --version
+npm view hive-flow version
+npm install -g hive-flow@latest
+npx hive-flow --version
 
 # Verify functionality
-npx claude-flow mcp status
-npx claude-flow memory stats
-npx claude-flow mcp start --mcp2025
+npx hive-flow mcp status
+npx hive-flow memory stats
+npx hive-flow mcp start --mcp2025
 ```
 
 ---
@@ -359,12 +359,12 @@ npx claude-flow mcp start --mcp2025
 
 ### Publishing Issues
 - **NPM**: https://npmjs.com/support
-- **GitHub**: https://github.com/ruvnet/claude-flow/issues
+- **GitHub**: https://github.com/ruvnet/hive-flow/issues
 - **Emergency**: @ruvnet
 
 ### Post-Release Support
-- **Issues**: https://github.com/ruvnet/claude-flow/issues
-- **Discussions**: https://github.com/ruvnet/claude-flow/discussions
+- **Issues**: https://github.com/ruvnet/hive-flow/issues
+- **Discussions**: https://github.com/ruvnet/hive-flow/discussions
 - **Enterprise**: Flow-Nexus Platform
 
 ---

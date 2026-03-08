@@ -53,7 +53,7 @@ async function runTest(name: string, command: string[], expectedPatterns: string
 }
 
 async function main() {
-  console.log(colors.bold('Claude-Flow Swarm Mode Test Suite'));
+  console.log(colors.bold('Hive-Flow Swarm Mode Test Suite'));
   console.log('='.repeat(50));
   
   const tests = [
@@ -129,7 +129,7 @@ async function main() {
   console.log('\n' + colors.bold('Manual Testing Instructions:'));
   console.log('1. Test with actual Claude CLI (if available):');
   console.log('   ./swarm-demo.ts "Build a simple calculator"');
-  console.log('   ./bin/claude-flow swarm "Create a REST API"');
+  console.log('   ./bin/hive-flow swarm "Create a REST API"');
   console.log('\n2. Test various strategies:');
   console.log('   ./swarm-demo.ts "Research best practices" --strategy research');
   console.log('   ./swarm-demo.ts "Implement feature" --strategy development');

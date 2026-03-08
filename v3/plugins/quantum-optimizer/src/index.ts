@@ -1,7 +1,7 @@
 /**
- * @claude-flow/plugin-quantum-optimizer
+ * @hive-flow/plugin-quantum-optimizer
  *
- * Quantum-inspired optimization plugin for Claude Flow V3.
+ * Quantum-inspired optimization plugin for Hive Flow V3.
  *
  * Provides MCP tools for:
  * - Simulated quantum annealing (QUBO, Ising, SAT, Max-Cut)
@@ -10,7 +10,7 @@
  * - Dependency resolution using quantum optimization
  * - Task scheduling with DAG analysis
  *
- * @module @claude-flow/plugin-quantum-optimizer
+ * @module @hive-flow/plugin-quantum-optimizer
  * @version 3.0.0-alpha.1
  */
 
@@ -88,13 +88,13 @@ export { default } from './mcp-tools.js';
  * Plugin metadata
  */
 export const pluginMetadata = {
-  name: '@claude-flow/plugin-quantum-optimizer',
+  name: '@hive-flow/plugin-quantum-optimizer',
   version: '3.0.0-alpha.1',
   description: 'Quantum-inspired optimization for combinatorial problems',
   category: 'exotic',
   author: 'rUv',
   license: 'MIT',
-  repository: 'https://github.com/ruvnet/claude-flow',
+  repository: 'https://github.com/ruvnet/hive-flow',
   tools: [
     'quantum_annealing_solve',
     'quantum_qaoa_optimize',

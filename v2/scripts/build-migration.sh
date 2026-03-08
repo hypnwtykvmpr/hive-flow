@@ -1,10 +1,10 @@
 #!/bin/bash
 
-# Build script for Claude-Flow Migration System
+# Build script for Hive-Flow Migration System
 
 set -e
 
-echo "🚀 Building Claude-Flow Migration System..."
+echo "🚀 Building Hive-Flow Migration System..."
 
 # Check if we're in the right directory
 if [ ! -f "package.json" ]; then
@@ -51,7 +51,7 @@ chmod +x dist/migration/index.js
 # Create symlink for global usage
 echo "🔗 Creating symlinks..."
 mkdir -p bin
-ln -sf ../dist/migration/index.js bin/claude-flow-migrate
+ln -sf ../dist/migration/index.js bin/hive-flow-migrate
 
 # Run tests
 echo "🧪 Running tests..."
@@ -62,7 +62,7 @@ cd ../..
 # Create package info
 echo "📄 Creating package information..."
 cat > dist/migration/INSTALL.md << 'EOF'
-# Claude-Flow Migration System Installation
+# Hive-Flow Migration System Installation
 
 ## Quick Install
 
@@ -71,20 +71,20 @@ cat > dist/migration/INSTALL.md << 'EOF'
 npm install -g ./dist/migration
 
 # Or use directly
-./bin/claude-flow-migrate --help
+./bin/hive-flow-migrate --help
 ```
 
 ## Usage
 
 ```bash
 # Analyze project
-claude-flow-migrate analyze
+hive-flow-migrate analyze
 
 # Migrate with selective strategy
-claude-flow-migrate --strategy selective --preserve-custom
+hive-flow-migrate --strategy selective --preserve-custom
 
 # Rollback if needed
-claude-flow-migrate rollback
+hive-flow-migrate rollback
 ```
 
 ## Documentation
@@ -95,11 +95,11 @@ EOF
 echo "✅ Build completed successfully!"
 echo ""
 echo "📋 Next steps:"
-echo "   1. Test installation: ./bin/claude-flow-migrate --help"
-echo "   2. Run on test project: ./bin/claude-flow-migrate analyze /path/to/project"
+echo "   1. Test installation: ./bin/hive-flow-migrate --help"
+echo "   2. Run on test project: ./bin/hive-flow-migrate analyze /path/to/project"
 echo "   3. Create distribution: npm pack dist/migration"
 echo ""
 echo "📦 Built files:"
 echo "   - dist/migration/ - Complete migration system"
-echo "   - bin/claude-flow-migrate - Executable symlink"
+echo "   - bin/hive-flow-migrate - Executable symlink"
 echo ""

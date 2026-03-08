@@ -1,6 +1,6 @@
 import { promises as fs } from 'node:fs';
 /**
- * Enhanced Interactive REPL for Claude-Flow
+ * Enhanced Interactive REPL for Hive-Flow
  */
 
 import inquirer from 'inquirer';
@@ -34,7 +34,7 @@ class CommandHistory {
   private historyFile: string;
 
   constructor(historyFile?: string) {
-    this.historyFile = historyFile || '.claude-flow-history';
+    this.historyFile = historyFile || '.hive-flow-history';
     this.loadHistory();
   }
 
@@ -202,7 +202,7 @@ export async function startREPL(options: any = {}): Promise<void> {
     {
       name: 'connect',
       aliases: ['conn'],
-      description: 'Connect to Claude-Flow orchestrator',
+      description: 'Connect to Hive-Flow orchestrator',
       usage: 'connect [host:port]',
       examples: ['connect', 'connect localhost:3000'],
       handler: async (args, ctx) => {
@@ -444,7 +444,7 @@ function createPrompt(context: REPLContext): string {
   const statusIcon = getConnectionStatusIcon(context.connectionStatus);
   const dir = context.workingDirectory.split('/').pop() || '/';
 
-  return `${statusIcon} ${chalk.cyan('claude-flow')}:${chalk.yellow(dir)}${chalk.white('>')} `;
+  return `${statusIcon} ${chalk.cyan('hive-flow')}:${chalk.yellow(dir)}${chalk.white('>')} `;
 }
 
 function getConnectionStatusIcon(status: string): string {
@@ -500,7 +500,7 @@ function parseCommand(input: string): string[] {
 }
 
 function showHelp(commands: REPLCommand[]): void {
-  console.log(chalk.cyan.bold('Claude-Flow Interactive REPL'));
+  console.log(chalk.cyan.bold('Hive-Flow Interactive REPL'));
   console.log('─'.repeat(50));
   console.log();
 
@@ -603,7 +603,7 @@ async function connectToOrchestrator(context: REPLContext, target?: string): Pro
   } else {
     context.connectionStatus = 'disconnected';
     console.log(chalk.red('✗ Connection failed'));
-    console.log(chalk.gray('Make sure Claude-Flow is running with: claude-flow start'));
+    console.log(chalk.gray('Make sure Hive-Flow is running with: hive-flow start'));
   }
 }
 

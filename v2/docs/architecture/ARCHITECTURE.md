@@ -1,4 +1,4 @@
-# 🏗️ Claude-Flow Architecture Documentation
+# 🏗️ Hive-Flow Architecture Documentation
 
 ## Table of Contents
 
@@ -17,7 +17,7 @@
 
 ## System Overview
 
-Claude-Flow is built on a microservices architecture with event-driven communication, designed for high scalability, fault tolerance, and extensibility.
+Hive-Flow is built on a microservices architecture with event-driven communication, designed for high scalability, fault tolerance, and extensibility.
 
 ### High-Level Architecture
 
@@ -301,7 +301,7 @@ class MemoryManager {
 
 ### Swarm Topologies
 
-Claude-Flow implements sophisticated swarm coordination patterns with real-time adaptation:
+Hive-Flow implements sophisticated swarm coordination patterns with real-time adaptation:
 
 #### 1. Centralized (Queen-Led) Topology
 
@@ -664,7 +664,7 @@ class MetricsDecorator implements Agent {
 ### File Structure
 
 ```
-claude-flow/
+hive-flow/
 ├── src/
 │   ├── core/           # Core orchestration logic
 │   ├── agents/         # Agent implementations
@@ -713,20 +713,20 @@ CMD ["node", "dist/index.js"]
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: claude-flow
+  name: hive-flow
 spec:
   replicas: 3
   selector:
     matchLabels:
-      app: claude-flow
+      app: hive-flow
   template:
     metadata:
       labels:
-        app: claude-flow
+        app: hive-flow
     spec:
       containers:
-      - name: claude-flow
-        image: claude-flow:latest
+      - name: hive-flow
+        image: hive-flow:latest
         ports:
         - containerPort: 3000
         resources:
@@ -857,7 +857,7 @@ class SecurityManager {
 
 ## Consensus Mechanisms & Voting Systems
 
-Claude-Flow implements sophisticated consensus algorithms for distributed decision-making:
+Hive-Flow implements sophisticated consensus algorithms for distributed decision-making:
 
 ### Byzantine Fault Tolerance (BFT)
 
@@ -944,7 +944,7 @@ class MultiRoundConsensus {
 
 ## Memory Management Architecture
 
-Claude-Flow features a sophisticated distributed memory system:
+Hive-Flow features a sophisticated distributed memory system:
 
 ### Multi-Tier Memory Architecture
 
@@ -1018,9 +1018,9 @@ class DistributedMemoryManager {
 
 ### Real-World Performance Metrics
 
-Claude-Flow demonstrates industry-leading performance:
+Hive-Flow demonstrates industry-leading performance:
 
-| Metric | Claude-Flow | Industry Average | Improvement |
+| Metric | Hive-Flow | Industry Average | Improvement |
 |--------|-------------|------------------|-------------|
 | **SWE-Bench Score** | **84.8%** | 45-60% | **+38-78%** |
 | **Speed Improvement** | **2.8-4.4x** | 1.5-2x | **+87-120%** |
@@ -1234,12 +1234,12 @@ class ShardManager {
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: claude-flow-hpa
+  name: hive-flow-hpa
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: claude-flow
+    name: hive-flow
   minReplicas: 3
   maxReplicas: 100
   metrics:
@@ -1570,21 +1570,21 @@ class MetricsCollector {
   
   // Counter metrics
   private taskCounter = new Counter({
-    name: 'claude_flow_tasks_total',
+    name: 'hive_flow_tasks_total',
     help: 'Total number of tasks processed',
     labelNames: ['type', 'status']
   });
   
   // Gauge metrics
   private activeAgents = new Gauge({
-    name: 'claude_flow_active_agents',
+    name: 'hive_flow_active_agents',
     help: 'Number of active agents',
     labelNames: ['type']
   });
   
   // Histogram metrics
   private taskDuration = new Histogram({
-    name: 'claude_flow_task_duration_seconds',
+    name: 'hive_flow_task_duration_seconds',
     help: 'Task execution duration',
     labelNames: ['type'],
     buckets: [0.1, 0.5, 1, 2, 5, 10, 30, 60]
@@ -1615,7 +1615,7 @@ class Logger {
         winston.format.errors({ stack: true }),
         winston.format.json()
       ),
-      defaultMeta: { service: 'claude-flow' },
+      defaultMeta: { service: 'hive-flow' },
       transports: [
         new winston.transports.File({ filename: 'error.log', level: 'error' }),
         new winston.transports.File({ filename: 'combined.log' }),
@@ -1640,7 +1640,7 @@ class Logger {
 
 ## Conclusion
 
-Claude-Flow represents a sophisticated multi-layered AI orchestration system with enterprise-grade capabilities:
+Hive-Flow represents a sophisticated multi-layered AI orchestration system with enterprise-grade capabilities:
 
 ### Key Architectural Achievements
 
@@ -1677,13 +1677,13 @@ Claude-Flow represents a sophisticated multi-layered AI orchestration system wit
 - **Observability** - Comprehensive monitoring, logging, and metrics
 - **Integration** - MCP protocol support and extensive API coverage
 
-This sophisticated architecture positions Claude-Flow as the next-generation platform for AI orchestration, capable of handling complex multi-agent workflows at enterprise scale while maintaining exceptional performance and reliability.
+This sophisticated architecture positions Hive-Flow as the next-generation platform for AI orchestration, capable of handling complex multi-agent workflows at enterprise scale while maintaining exceptional performance and reliability.
 
 ---
 
 <div align="center">
 
-**Claude-Flow Architecture v2.0.0**
+**Hive-Flow Architecture v2.0.0**
 
 [Back to README](../README.md) | [API Documentation](API_DOCUMENTATION.md)
 

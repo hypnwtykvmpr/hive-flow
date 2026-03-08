@@ -17,11 +17,11 @@ const execAsync = promisify(exec);
  */
 export class TrainingPipeline {
   constructor() {
-    this.pipelineConfig = '.claude-flow/pipeline-config.json';
-    this.trainingLog = '.claude-flow/training/pipeline-log.jsonl';
-    this.improvementMetrics = '.claude-flow/metrics/improvements.json';
-    this.agentProfiles = '.claude-flow/agents/profiles.json';
-    this.realTasksDir = '.claude-flow/training/real-tasks';
+    this.pipelineConfig = '.hive-flow/pipeline-config.json';
+    this.trainingLog = '.hive-flow/training/pipeline-log.jsonl';
+    this.improvementMetrics = '.hive-flow/metrics/improvements.json';
+    this.agentProfiles = '.hive-flow/agents/profiles.json';
+    this.realTasksDir = '.hive-flow/training/real-tasks';
     this.initialized = false;
   }
 
@@ -31,13 +31,13 @@ export class TrainingPipeline {
   async initialize() {
     // Create necessary directories
     const dirs = [
-      '.claude-flow/pipeline',
-      '.claude-flow/training',
-      '.claude-flow/training/real-tasks',
-      '.claude-flow/metrics',
-      '.claude-flow/agents',
-      '.claude-flow/validation',
-      '.claude-flow/benchmarks'
+      '.hive-flow/pipeline',
+      '.hive-flow/training',
+      '.hive-flow/training/real-tasks',
+      '.hive-flow/metrics',
+      '.hive-flow/agents',
+      '.hive-flow/validation',
+      '.hive-flow/benchmarks'
     ];
 
     for (const dir of dirs) {
@@ -289,7 +289,7 @@ describe('Sorting Algorithms', () => {
     }
 
     // Save real results
-    const resultsFile = `.claude-flow/training/real-results-${Date.now()}.json`;
+    const resultsFile = `.hive-flow/training/real-results-${Date.now()}.json`;
     await fs.writeFile(resultsFile, JSON.stringify(results, null, 2));
 
     return results;

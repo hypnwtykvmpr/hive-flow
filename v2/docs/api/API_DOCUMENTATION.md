@@ -1,4 +1,4 @@
-# 🔗 Claude-Flow v2.0.0 API Documentation
+# 🔗 Hive-Flow v2.0.0 API Documentation
 
 ## Table of Contents
 
@@ -6,7 +6,7 @@
 - [Authentication](#authentication)
 - [Command Syntax](#command-syntax)
 - [MCP Tools Reference](#mcp-tools-reference)
-  - [Claude-Flow Tools (87)](#claude-flow-tools)
+  - [Hive-Flow Tools (87)](#hive-flow-tools)
   - [Ruv-Swarm Tools (25)](#ruv-swarm-tools)
 - [Agent Types](#agent-types)
 - [WebSocket Integration](#websocket-integration)
@@ -18,11 +18,11 @@
 
 ## Overview
 
-Claude-Flow v2.0.0 provides comprehensive AI agent orchestration with 112 MCP tools, 54+ specialized agent types, and advanced swarm intelligence capabilities. This documentation covers the complete API surface for programmatic access to all features.
+Hive-Flow v2.0.0 provides comprehensive AI agent orchestration with 112 MCP tools, 54+ specialized agent types, and advanced swarm intelligence capabilities. This documentation covers the complete API surface for programmatic access to all features.
 
 ### Key Features
 
-- **112 MCP Tools** - 87 Claude-Flow + 25 Ruv-Swarm integration tools
+- **112 MCP Tools** - 87 Hive-Flow + 25 Ruv-Swarm integration tools
 - **54+ Agent Types** - Specialized agents for every development need
 - **Swarm Intelligence** - Multi-topology coordination (hierarchical, mesh, ring, star)
 - **Neural Networks** - WASM-accelerated AI patterns and learning
@@ -37,21 +37,21 @@ Claude-Flow v2.0.0 provides comprehensive AI agent orchestration with 112 MCP to
 
 ```bash
 # Initialize with GitHub authentication (recommended)
-npx claude-flow@alpha github init
+npx hive-flow@alpha github init
 
 # Or use API key
-export CLAUDE_FLOW_API_KEY="your-api-key"
-npx claude-flow@alpha config set --api-key $CLAUDE_FLOW_API_KEY
+export HIVE_FLOW_API_KEY="your-api-key"
+npx hive-flow@alpha config set --api-key $HIVE_FLOW_API_KEY
 ```
 
 ### MCP Integration
 
 ```javascript
-// Add Claude-Flow as MCP server
-claude mcp add claude-flow npx claude-flow@alpha mcp start
+// Add Hive-Flow as MCP server
+claude mcp add hive-flow npx hive-flow@alpha mcp start
 
 // Available MCP servers:
-// - claude-flow: 87 native tools
+// - hive-flow: 87 native tools
 // - ruv-swarm: 25 advanced coordination tools
 ```
 
@@ -59,154 +59,154 @@ claude mcp add claude-flow npx claude-flow@alpha mcp start
 
 ```bash
 # Generate session token
-npx claude-flow@alpha auth login
+npx hive-flow@alpha auth login
 
 # Use token in API calls
-curl -H "Authorization: Bearer $(npx claude-flow@alpha auth token)" \
-  https://api.claude-flow.ai/v2/agents
+curl -H "Authorization: Bearer $(npx hive-flow@alpha auth token)" \
+  https://api.hive-flow.ai/v2/agents
 ```
 
 ## Command Syntax
 
 ### Correct Command Format
 
-**IMPORTANT**: Always use `npx claude-flow@alpha` (not `npx claude-flow`)
+**IMPORTANT**: Always use `npx hive-flow@alpha` (not `npx hive-flow`)
 
 ```bash
 # ✅ CORRECT - Updated syntax
-npx claude-flow@alpha [command] [options]
+npx hive-flow@alpha [command] [options]
 
 # ❌ OUTDATED - Do not use
-npx claude-flow [command] [options]
+npx hive-flow [command] [options]
 ```
 
 ### Core Commands
 
 ```bash
 # Swarm operations
-npx claude-flow@alpha coordination swarm-init --topology hierarchical
-npx claude-flow@alpha coordination agent-spawn --type coder
-npx claude-flow@alpha coordination task-orchestrate --task "Build API"
+npx hive-flow@alpha coordination swarm-init --topology hierarchical
+npx hive-flow@alpha coordination agent-spawn --type coder
+npx hive-flow@alpha coordination task-orchestrate --task "Build API"
 
 # Memory operations
-npx claude-flow@alpha memory usage --action store --key project/context
-npx claude-flow@alpha memory search --pattern "authentication"
+npx hive-flow@alpha memory usage --action store --key project/context
+npx hive-flow@alpha memory search --pattern "authentication"
 
 # Performance analysis
-npx claude-flow@alpha performance report --timeframe 24h
-npx claude-flow@alpha bottleneck analyze --component swarm
+npx hive-flow@alpha performance report --timeframe 24h
+npx hive-flow@alpha bottleneck analyze --component swarm
 
 # GitHub integration
-npx claude-flow@alpha github repo-analyze --repo owner/repo
-npx claude-flow@alpha github pr-manage --action create
+npx hive-flow@alpha github repo-analyze --repo owner/repo
+npx hive-flow@alpha github pr-manage --action create
 ```
 
 ## MCP Tools Reference
 
-### Claude-Flow Tools (87 Total)
+### Hive-Flow Tools (87 Total)
 
 #### 🐝 Swarm Coordination (12 tools)
-- `mcp__claude-flow__swarm_init` - Initialize swarm with topology
-- `mcp__claude-flow__agent_spawn` - Create specialized agents
-- `mcp__claude-flow__task_orchestrate` - Coordinate task execution
-- `mcp__claude-flow__swarm_status` - Monitor swarm health
-- `mcp__claude-flow__agent_list` - List active agents
-- `mcp__claude-flow__agent_metrics` - Agent performance data
-- `mcp__claude-flow__swarm_monitor` - Real-time monitoring
-- `mcp__claude-flow__topology_optimize` - Optimize coordination
-- `mcp__claude-flow__load_balance` - Balance agent workload
-- `mcp__claude-flow__coordination_sync` - Synchronize agents
-- `mcp__claude-flow__swarm_scale` - Scale agent count
-- `mcp__claude-flow__swarm_destroy` - Terminate swarm
+- `mcp__hive-flow__swarm_init` - Initialize swarm with topology
+- `mcp__hive-flow__agent_spawn` - Create specialized agents
+- `mcp__hive-flow__task_orchestrate` - Coordinate task execution
+- `mcp__hive-flow__swarm_status` - Monitor swarm health
+- `mcp__hive-flow__agent_list` - List active agents
+- `mcp__hive-flow__agent_metrics` - Agent performance data
+- `mcp__hive-flow__swarm_monitor` - Real-time monitoring
+- `mcp__hive-flow__topology_optimize` - Optimize coordination
+- `mcp__hive-flow__load_balance` - Balance agent workload
+- `mcp__hive-flow__coordination_sync` - Synchronize agents
+- `mcp__hive-flow__swarm_scale` - Scale agent count
+- `mcp__hive-flow__swarm_destroy` - Terminate swarm
 
 #### 🧠 Neural Network (15 tools)
-- `mcp__claude-flow__neural_status` - Neural system status
-- `mcp__claude-flow__neural_train` - Train AI patterns
-- `mcp__claude-flow__neural_predict` - Make AI predictions
-- `mcp__claude-flow__neural_patterns` - Cognitive patterns
-- `mcp__claude-flow__model_load` - Load AI models
-- `mcp__claude-flow__model_save` - Save trained models
-- `mcp__claude-flow__wasm_optimize` - WASM performance
-- `mcp__claude-flow__inference_run` - Run AI inference
-- `mcp__claude-flow__pattern_recognize` - Pattern detection
-- `mcp__claude-flow__cognitive_analyze` - Cognitive analysis
-- `mcp__claude-flow__learning_adapt` - Adaptive learning
-- `mcp__claude-flow__neural_compress` - Model compression
-- `mcp__claude-flow__ensemble_create` - Ensemble models
-- `mcp__claude-flow__transfer_learn` - Transfer learning
-- `mcp__claude-flow__neural_explain` - AI explainability
+- `mcp__hive-flow__neural_status` - Neural system status
+- `mcp__hive-flow__neural_train` - Train AI patterns
+- `mcp__hive-flow__neural_predict` - Make AI predictions
+- `mcp__hive-flow__neural_patterns` - Cognitive patterns
+- `mcp__hive-flow__model_load` - Load AI models
+- `mcp__hive-flow__model_save` - Save trained models
+- `mcp__hive-flow__wasm_optimize` - WASM performance
+- `mcp__hive-flow__inference_run` - Run AI inference
+- `mcp__hive-flow__pattern_recognize` - Pattern detection
+- `mcp__hive-flow__cognitive_analyze` - Cognitive analysis
+- `mcp__hive-flow__learning_adapt` - Adaptive learning
+- `mcp__hive-flow__neural_compress` - Model compression
+- `mcp__hive-flow__ensemble_create` - Ensemble models
+- `mcp__hive-flow__transfer_learn` - Transfer learning
+- `mcp__hive-flow__neural_explain` - AI explainability
 
 #### 💾 Memory & Persistence (12 tools)
-- `mcp__claude-flow__memory_usage` - Store/retrieve data
-- `mcp__claude-flow__memory_search` - Search memory entries
-- `mcp__claude-flow__memory_persist` - Persistent storage
-- `mcp__claude-flow__memory_namespace` - Namespace management
-- `mcp__claude-flow__memory_backup` - Backup memory data
-- `mcp__claude-flow__memory_restore` - Restore from backup
-- `mcp__claude-flow__memory_compress` - Compress data
-- `mcp__claude-flow__memory_sync` - Synchronize memory
-- `mcp__claude-flow__cache_manage` - Cache operations
-- `mcp__claude-flow__state_snapshot` - State snapshots
-- `mcp__claude-flow__context_restore` - Context restoration
-- `mcp__claude-flow__memory_analytics` - Memory analytics
+- `mcp__hive-flow__memory_usage` - Store/retrieve data
+- `mcp__hive-flow__memory_search` - Search memory entries
+- `mcp__hive-flow__memory_persist` - Persistent storage
+- `mcp__hive-flow__memory_namespace` - Namespace management
+- `mcp__hive-flow__memory_backup` - Backup memory data
+- `mcp__hive-flow__memory_restore` - Restore from backup
+- `mcp__hive-flow__memory_compress` - Compress data
+- `mcp__hive-flow__memory_sync` - Synchronize memory
+- `mcp__hive-flow__cache_manage` - Cache operations
+- `mcp__hive-flow__state_snapshot` - State snapshots
+- `mcp__hive-flow__context_restore` - Context restoration
+- `mcp__hive-flow__memory_analytics` - Memory analytics
 
 #### 📊 Analysis & Monitoring (13 tools)
-- `mcp__claude-flow__performance_report` - Performance reports
-- `mcp__claude-flow__bottleneck_analyze` - Bottleneck detection
-- `mcp__claude-flow__task_status` - Task monitoring
-- `mcp__claude-flow__task_results` - Task results
-- `mcp__claude-flow__benchmark_run` - Run benchmarks
-- `mcp__claude-flow__metrics_collect` - Collect metrics
-- `mcp__claude-flow__trend_analysis` - Trend analysis
-- `mcp__claude-flow__cost_analysis` - Cost tracking
-- `mcp__claude-flow__quality_assess` - Quality assessment
-- `mcp__claude-flow__error_analysis` - Error analysis
-- `mcp__claude-flow__usage_stats` - Usage statistics
-- `mcp__claude-flow__health_check` - System health
-- `mcp__claude-flow__token_usage` - Token tracking
+- `mcp__hive-flow__performance_report` - Performance reports
+- `mcp__hive-flow__bottleneck_analyze` - Bottleneck detection
+- `mcp__hive-flow__task_status` - Task monitoring
+- `mcp__hive-flow__task_results` - Task results
+- `mcp__hive-flow__benchmark_run` - Run benchmarks
+- `mcp__hive-flow__metrics_collect` - Collect metrics
+- `mcp__hive-flow__trend_analysis` - Trend analysis
+- `mcp__hive-flow__cost_analysis` - Cost tracking
+- `mcp__hive-flow__quality_assess` - Quality assessment
+- `mcp__hive-flow__error_analysis` - Error analysis
+- `mcp__hive-flow__usage_stats` - Usage statistics
+- `mcp__hive-flow__health_check` - System health
+- `mcp__hive-flow__token_usage` - Token tracking
 
 #### 🔄 Workflow & Automation (11 tools)
-- `mcp__claude-flow__workflow_create` - Create workflows
-- `mcp__claude-flow__workflow_execute` - Execute workflows
-- `mcp__claude-flow__workflow_export` - Export workflows
-- `mcp__claude-flow__automation_setup` - Setup automation
-- `mcp__claude-flow__pipeline_create` - Create pipelines
-- `mcp__claude-flow__scheduler_manage` - Manage schedules
-- `mcp__claude-flow__trigger_setup` - Setup triggers
-- `mcp__claude-flow__workflow_template` - Workflow templates
-- `mcp__claude-flow__batch_process` - Batch processing
-- `mcp__claude-flow__parallel_execute` - Parallel execution
-- `mcp__claude-flow__sparc_mode` - SPARC workflows
+- `mcp__hive-flow__workflow_create` - Create workflows
+- `mcp__hive-flow__workflow_execute` - Execute workflows
+- `mcp__hive-flow__workflow_export` - Export workflows
+- `mcp__hive-flow__automation_setup` - Setup automation
+- `mcp__hive-flow__pipeline_create` - Create pipelines
+- `mcp__hive-flow__scheduler_manage` - Manage schedules
+- `mcp__hive-flow__trigger_setup` - Setup triggers
+- `mcp__hive-flow__workflow_template` - Workflow templates
+- `mcp__hive-flow__batch_process` - Batch processing
+- `mcp__hive-flow__parallel_execute` - Parallel execution
+- `mcp__hive-flow__sparc_mode` - SPARC workflows
 
 #### 🐙 GitHub Integration (8 tools)
-- `mcp__claude-flow__github_repo_analyze` - Repository analysis
-- `mcp__claude-flow__github_pr_manage` - Pull request management
-- `mcp__claude-flow__github_issue_track` - Issue tracking
-- `mcp__claude-flow__github_release_coord` - Release coordination
-- `mcp__claude-flow__github_workflow_auto` - Workflow automation
-- `mcp__claude-flow__github_code_review` - Code review
-- `mcp__claude-flow__github_sync_coord` - Sync coordination
-- `mcp__claude-flow__github_metrics` - GitHub metrics
+- `mcp__hive-flow__github_repo_analyze` - Repository analysis
+- `mcp__hive-flow__github_pr_manage` - Pull request management
+- `mcp__hive-flow__github_issue_track` - Issue tracking
+- `mcp__hive-flow__github_release_coord` - Release coordination
+- `mcp__hive-flow__github_workflow_auto` - Workflow automation
+- `mcp__hive-flow__github_code_review` - Code review
+- `mcp__hive-flow__github_sync_coord` - Sync coordination
+- `mcp__hive-flow__github_metrics` - GitHub metrics
 
 #### 🤖 DAA (Dynamic Agent Architecture) (8 tools)
-- `mcp__claude-flow__daa_agent_create` - Create dynamic agents
-- `mcp__claude-flow__daa_capability_match` - Match capabilities
-- `mcp__claude-flow__daa_resource_alloc` - Resource allocation
-- `mcp__claude-flow__daa_lifecycle_manage` - Lifecycle management
-- `mcp__claude-flow__daa_communication` - Agent communication
-- `mcp__claude-flow__daa_consensus` - Consensus algorithms
-- `mcp__claude-flow__daa_fault_tolerance` - Fault tolerance
-- `mcp__claude-flow__daa_optimization` - Agent optimization
+- `mcp__hive-flow__daa_agent_create` - Create dynamic agents
+- `mcp__hive-flow__daa_capability_match` - Match capabilities
+- `mcp__hive-flow__daa_resource_alloc` - Resource allocation
+- `mcp__hive-flow__daa_lifecycle_manage` - Lifecycle management
+- `mcp__hive-flow__daa_communication` - Agent communication
+- `mcp__hive-flow__daa_consensus` - Consensus algorithms
+- `mcp__hive-flow__daa_fault_tolerance` - Fault tolerance
+- `mcp__hive-flow__daa_optimization` - Agent optimization
 
 #### 🛠️ System & Utilities (8 tools)
-- `mcp__claude-flow__terminal_execute` - Terminal execution
-- `mcp__claude-flow__config_manage` - Configuration management
-- `mcp__claude-flow__features_detect` - Feature detection
-- `mcp__claude-flow__security_scan` - Security scanning
-- `mcp__claude-flow__backup_create` - Create backups
-- `mcp__claude-flow__restore_system` - System restoration
-- `mcp__claude-flow__log_analysis` - Log analysis
-- `mcp__claude-flow__diagnostic_run` - Run diagnostics
+- `mcp__hive-flow__terminal_execute` - Terminal execution
+- `mcp__hive-flow__config_manage` - Configuration management
+- `mcp__hive-flow__features_detect` - Feature detection
+- `mcp__hive-flow__security_scan` - Security scanning
+- `mcp__hive-flow__backup_create` - Create backups
+- `mcp__hive-flow__restore_system` - System restoration
+- `mcp__hive-flow__log_analysis` - Log analysis
+- `mcp__hive-flow__diagnostic_run` - Run diagnostics
 
 ### Ruv-Swarm Tools (25 Total)
 
@@ -316,7 +316,7 @@ npx claude-flow@alpha github pr-manage --action create
 ### Connection Setup
 
 ```javascript
-const ws = new WebSocket('wss://api.claude-flow.ai/v2/ws');
+const ws = new WebSocket('wss://api.hive-flow.ai/v2/ws');
 
 // Authentication
 ws.on('open', () => {
@@ -405,23 +405,23 @@ ws.send(JSON.stringify({
 
 ```bash
 # 1. Initialize project with GitHub integration
-npx claude-flow@alpha github init
+npx hive-flow@alpha github init
 
 # 2. Set up swarm for development
-npx claude-flow@alpha coordination swarm-init \
+npx hive-flow@alpha coordination swarm-init \
   --topology hierarchical \
   --max-agents 8 \
   --strategy adaptive
 
 # 3. Spawn development team (concurrent)
-npx claude-flow@alpha coordination agent-spawn --type system-architect --name "Lead Architect"
-npx claude-flow@alpha coordination agent-spawn --type backend-dev --name "API Developer"
-npx claude-flow@alpha coordination agent-spawn --type coder --name "Frontend Dev"
-npx claude-flow@alpha coordination agent-spawn --type tester --name "QA Engineer"
-npx claude-flow@alpha coordination agent-spawn --type code-analyzer --name "Code Reviewer"
+npx hive-flow@alpha coordination agent-spawn --type system-architect --name "Lead Architect"
+npx hive-flow@alpha coordination agent-spawn --type backend-dev --name "API Developer"
+npx hive-flow@alpha coordination agent-spawn --type coder --name "Frontend Dev"
+npx hive-flow@alpha coordination agent-spawn --type tester --name "QA Engineer"
+npx hive-flow@alpha coordination agent-spawn --type code-analyzer --name "Code Reviewer"
 
 # 4. Store project context in memory
-npx claude-flow@alpha memory usage \
+npx hive-flow@alpha memory usage \
   --action store \
   --key "project/architecture" \
   --value "Microservices with event sourcing and CQRS" \
@@ -429,22 +429,22 @@ npx claude-flow@alpha memory usage \
   --ttl 86400
 
 # 5. Orchestrate development task
-npx claude-flow@alpha coordination task-orchestrate \
+npx hive-flow@alpha coordination task-orchestrate \
   --task "Build complete REST API with authentication and testing" \
   --strategy parallel \
   --priority high
 
 # 6. Monitor swarm performance
-npx claude-flow@alpha coordination swarm-status
-npx claude-flow@alpha performance report --timeframe 24h --format detailed
+npx hive-flow@alpha coordination swarm-status
+npx hive-flow@alpha performance report --timeframe 24h --format detailed
 
 # 7. Analyze GitHub repository
-npx claude-flow@alpha github repo-analyze \
+npx hive-flow@alpha github repo-analyze \
   --repo "myorg/my-project" \
   --analysis-type code_quality
 
 # 8. Create workflow for automation
-npx claude-flow@alpha workflow create \
+npx hive-flow@alpha workflow create \
   --name "full-stack-pipeline" \
   --steps '[
     {"type": "swarm_init", "topology": "hierarchical"},
@@ -458,21 +458,21 @@ npx claude-flow@alpha workflow create \
 
 ```bash
 # 1. Check neural system status
-npx claude-flow@alpha neural status
+npx hive-flow@alpha neural status
 
 # 2. Train coordination patterns
-npx claude-flow@alpha neural train \
+npx hive-flow@alpha neural train \
   --pattern-type coordination \
   --training-data "./data/coordination-patterns.json" \
   --epochs 100
 
 # 3. Make AI predictions
-npx claude-flow@alpha neural predict \
+npx hive-flow@alpha neural predict \
   --model-id coordination_model_v1.2 \
   --input "complex microservices architecture with event sourcing"
 
 # 4. Analyze cognitive patterns
-npx claude-flow@alpha neural patterns \
+npx hive-flow@alpha neural patterns \
   --pattern convergent \
   --analysis detailed
 ```
@@ -481,7 +481,7 @@ npx claude-flow@alpha neural patterns \
 
 ```bash
 # 1. Store complex project data
-npx claude-flow@alpha memory usage \
+npx hive-flow@alpha memory usage \
   --action store \
   --key "decisions/architecture" \
   --value '{
@@ -494,18 +494,18 @@ npx claude-flow@alpha memory usage \
   --ttl 604800
 
 # 2. Search for related information
-npx claude-flow@alpha memory search \
+npx hive-flow@alpha memory search \
   --pattern "microservices|architecture" \
   --namespace "project-alpha" \
   --limit 10
 
 # 3. Create memory backup
-npx claude-flow@alpha memory backup \
+npx hive-flow@alpha memory backup \
   --namespace "project-alpha" \
   --format compressed
 
 # 4. Analyze memory usage
-npx claude-flow@alpha memory analytics \
+npx hive-flow@alpha memory analytics \
   --timeframe 7d \
   --include-compression-stats
 ```
@@ -514,24 +514,24 @@ npx claude-flow@alpha memory analytics \
 
 ```bash
 # 1. Run comprehensive performance report
-npx claude-flow@alpha performance report \
+npx hive-flow@alpha performance report \
   --timeframe 24h \
   --format detailed \
   --include-recommendations
 
 # 2. Identify bottlenecks
-npx claude-flow@alpha bottleneck analyze \
+npx hive-flow@alpha bottleneck analyze \
   --component swarm_coordination \
   --metrics "response_time,throughput,error_rate" \
   --severity all
 
 # 3. Optimize swarm topology
-npx claude-flow@alpha topology optimize \
+npx hive-flow@alpha topology optimize \
   --swarm-id "swarm_123" \
   --target-efficiency 0.95
 
 # 4. Health check all systems
-npx claude-flow@alpha health-check \
+npx hive-flow@alpha health-check \
   --components '["swarm", "neural", "memory", "mcp"]' \
   --detailed true
 ```
@@ -579,20 +579,20 @@ npx claude-flow@alpha health-check \
 
 ```bash
 # Retry with backoff
-npx claude-flow@alpha coordination agent-spawn \
+npx hive-flow@alpha coordination agent-spawn \
   --type coder \
   --retry-attempts 3 \
   --retry-delay 1000
 
 # Graceful degradation
-npx claude-flow@alpha coordination swarm-init \
+npx hive-flow@alpha coordination swarm-init \
   --topology hierarchical \
   --fallback-topology mesh \
   --max-agents 8 \
   --min-agents 3
 
 # Error notification
-npx claude-flow@alpha hooks post-edit \
+npx hive-flow@alpha hooks post-edit \
   --file "error.log" \
   --memory-key "errors/$(date +%s)" \
   --notify-on-failure true
@@ -605,29 +605,29 @@ npx claude-flow@alpha hooks post-edit \
 ```bash
 # Always batch agent operations
 # ✅ Good - Single message with multiple spawns
-npx claude-flow@alpha coordination agent-spawn --type architect &
-npx claude-flow@alpha coordination agent-spawn --type coder &
-npx claude-flow@alpha coordination agent-spawn --type tester &
+npx hive-flow@alpha coordination agent-spawn --type architect &
+npx hive-flow@alpha coordination agent-spawn --type coder &
+npx hive-flow@alpha coordination agent-spawn --type tester &
 wait
 
 # ❌ Bad - Sequential spawning
-npx claude-flow@alpha coordination agent-spawn --type architect
-npx claude-flow@alpha coordination agent-spawn --type coder
-npx claude-flow@alpha coordination agent-spawn --type tester
+npx hive-flow@alpha coordination agent-spawn --type architect
+npx hive-flow@alpha coordination agent-spawn --type coder
+npx hive-flow@alpha coordination agent-spawn --type tester
 ```
 
 ### 2. Memory Management
 
 ```bash
 # Use namespaces effectively
-npx claude-flow@alpha memory usage \
+npx hive-flow@alpha memory usage \
   --action store \
   --key "config/database" \
   --namespace "project-$(date +%Y%m%d)" \
   --ttl 86400
 
 # Regular cleanup
-npx claude-flow@alpha memory compress \
+npx hive-flow@alpha memory compress \
   --namespace "temporary" \
   --threshold 0.8
 ```
@@ -636,8 +636,8 @@ npx claude-flow@alpha memory compress \
 
 ```bash
 # Monitor before scaling
-npx claude-flow@alpha performance report --format summary
-npx claude-flow@alpha coordination swarm-scale --target-size 12
+npx hive-flow@alpha performance report --format summary
+npx hive-flow@alpha coordination swarm-scale --target-size 12
 
 # Use appropriate topologies
 # Complex tasks -> hierarchical
@@ -650,15 +650,15 @@ npx claude-flow@alpha coordination swarm-scale --target-size 12
 
 ```bash
 # Hook integration for automation
-npx claude-flow@alpha hooks pre-task \
+npx hive-flow@alpha hooks pre-task \
   --description "Auto-spawn agents based on task complexity"
 
-npx claude-flow@alpha hooks post-edit \
+npx hive-flow@alpha hooks post-edit \
   --file "src/**/*.js" \
   --memory-key "code-changes/$(date +%s)"
 
 # Workflow templates for reusability
-npx claude-flow@alpha workflow template \
+npx hive-flow@alpha workflow template \
   --name "api-development" \
   --export "./templates/api-dev-workflow.json"
 ```
@@ -667,17 +667,17 @@ npx claude-flow@alpha workflow template \
 
 ```bash
 # Secure authentication
-npx claude-flow@alpha github init --secure-mode
-npx claude-flow@alpha config set --api-key-encryption enabled
+npx hive-flow@alpha github init --secure-mode
+npx hive-flow@alpha config set --api-key-encryption enabled
 
 # Resource limits
-npx claude-flow@alpha coordination swarm-init \
+npx hive-flow@alpha coordination swarm-init \
   --max-agents 10 \
   --memory-limit "1GB" \
   --cpu-limit "4 cores"
 
 # Audit logging
-npx claude-flow@alpha log-analysis \
+npx hive-flow@alpha log-analysis \
   --include-security-events \
   --format audit
 ```
@@ -687,7 +687,7 @@ npx claude-flow@alpha log-analysis \
 ## Support & Resources
 
 ### Documentation Links
-- [GitHub Repository](https://github.com/ruvnet/claude-flow)
+- [GitHub Repository](https://github.com/ruvnet/hive-flow)
 - [Integration Guide](./INTEGRATION_GUIDE.md)
 - [Agent System Documentation](./agent-system-documentation.md)
 - [MCP Tools Reference](./mcp-tools-reference.md)
@@ -695,24 +695,24 @@ npx claude-flow@alpha log-analysis \
 ### CLI Help
 ```bash
 # Get help for any command
-npx claude-flow@alpha --help
-npx claude-flow@alpha coordination --help
-npx claude-flow@alpha github --help
+npx hive-flow@alpha --help
+npx hive-flow@alpha coordination --help
+npx hive-flow@alpha github --help
 
 # Version information
-npx claude-flow@alpha --version
+npx hive-flow@alpha --version
 ```
 
 ### Community
-- **Discord**: [Join our community](https://discord.gg/claude-flow)
-- **GitHub Issues**: [Report bugs](https://github.com/ruvnet/claude-flow/issues)
-- **Discussions**: [Feature requests](https://github.com/ruvnet/claude-flow/discussions)
+- **Discord**: [Join our community](https://discord.gg/hive-flow)
+- **GitHub Issues**: [Report bugs](https://github.com/ruvnet/hive-flow/issues)
+- **Discussions**: [Feature requests](https://github.com/ruvnet/hive-flow/discussions)
 
 ---
 
 <div align="center">
 
-**Claude-Flow v2.0.0-alpha.59**
+**Hive-Flow v2.0.0-alpha.59**
 
 *Intelligent AI Agent Orchestration*
 

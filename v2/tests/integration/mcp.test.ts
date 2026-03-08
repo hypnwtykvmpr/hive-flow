@@ -416,7 +416,7 @@ describe('MCP Integration Tests', () => {
     });
   });
 
-  describe('Claude-Flow Tools', () => {
+  describe('Hive-Flow Tools', () => {
     beforeEach(async () => {
       await server.start();
     });

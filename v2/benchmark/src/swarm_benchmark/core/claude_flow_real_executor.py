@@ -1,8 +1,8 @@
 """
-Real Claude Flow Executor - Executes actual ./claude-flow commands with subprocess.
+Real Hive Flow Executor - Executes actual ./hive-flow commands with subprocess.
 
-This module provides real command execution for Claude Flow integration:
-- Executes real ./claude-flow commands via subprocess
+This module provides real command execution for Hive Flow integration:
+- Executes real ./hive-flow commands via subprocess
 - Uses --non-interactive flag for automation
 - Parses stream-json output line by line
 - Extracts real metrics from responses
@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 
 class CommandType(str, Enum):
-    """Claude Flow command types."""
+    """Hive Flow command types."""
     SWARM = "swarm"
     HIVE_MIND = "hive-mind"
     SPARC = "sparc"
@@ -46,7 +46,7 @@ class OutputFormat(str, Enum):
 
 @dataclass
 class RealExecutionResult:
-    """Result of real Claude Flow command execution."""
+    """Result of real Hive Flow command execution."""
     success: bool
     command: List[str]
     exit_code: int
@@ -138,7 +138,7 @@ class SparcCommand:
 
 
 class StreamingOutputParser:
-    """Parser for streaming JSON output from Claude Flow."""
+    """Parser for streaming JSON output from Hive Flow."""
     
     def __init__(self):
         self.input_tokens = 0
@@ -240,58 +240,58 @@ class StreamingOutputParser:
             self.warnings.append(line)
 
 
-class RealClaudeFlowExecutor:
-    """Executor for real Claude Flow commands."""
+class RealHiveFlowExecutor:
+    """Executor for real Hive Flow commands."""
     
     def __init__(self, 
-                 claude_flow_path: Optional[str] = None,
+                 hive_flow_path: Optional[str] = None,
                  working_dir: Optional[str] = None,
                  force_non_interactive: bool = True):
         """
         Initialize the real executor.
         
         Args:
-            claude_flow_path: Path to ./claude-flow executable
+            hive_flow_path: Path to ./hive-flow executable
             working_dir: Working directory for execution
             force_non_interactive: Always use non-interactive mode (default: True)
         """
         self.force_non_interactive = force_non_interactive
-        self.claude_flow_path = claude_flow_path or self._find_claude_flow()
+        self.hive_flow_path = hive_flow_path or self._find_hive_flow()
         self.working_dir = Path(working_dir) if working_dir else Path.cwd()
         
-        logger.info(f"Initialized RealClaudeFlowExecutor with path: {self.claude_flow_path}")
+        logger.info(f"Initialized RealHiveFlowExecutor with path: {self.hive_flow_path}")
         logger.info(f"Working directory: {self.working_dir}")
         
-        # Validate claude-flow exists
-        if not Path(self.claude_flow_path).exists():
-            raise RuntimeError(f"Claude Flow executable not found: {self.claude_flow_path}")
+        # Validate hive-flow exists
+        if not Path(self.hive_flow_path).exists():
+            raise RuntimeError(f"Hive Flow executable not found: {self.hive_flow_path}")
     
-    def _find_claude_flow(self) -> str:
-        """Find the ./claude-flow executable."""
-        # Look for ./claude-flow in current directory and parent directories
+    def _find_hive_flow(self) -> str:
+        """Find the ./hive-flow executable."""
+        # Look for ./hive-flow in current directory and parent directories
         current_dir = Path.cwd()
         
         # Check current directory and up to 3 levels up
         for _ in range(4):
-            claude_flow_path = current_dir / "claude-flow"
-            if claude_flow_path.exists() and os.access(claude_flow_path, os.X_OK):
-                return str(claude_flow_path)
+            hive_flow_path = current_dir / "hive-flow"
+            if hive_flow_path.exists() and os.access(hive_flow_path, os.X_OK):
+                return str(hive_flow_path)
             current_dir = current_dir.parent
         
         # Check benchmark directory specifically
         benchmark_root = Path(__file__).parent.parent.parent.parent
-        claude_flow_path = benchmark_root / "claude-flow"
-        if claude_flow_path.exists() and os.access(claude_flow_path, os.X_OK):
-            return str(claude_flow_path)
+        hive_flow_path = benchmark_root / "hive-flow"
+        if hive_flow_path.exists() and os.access(hive_flow_path, os.X_OK):
+            return str(hive_flow_path)
             
-        # Default to ./claude-flow in current directory
-        return "./claude-flow"
+        # Default to ./hive-flow in current directory
+        return "./hive-flow"
     
     def execute_swarm(self, config: SwarmCommand) -> RealExecutionResult:
         """Execute a real swarm command with built-in executor (non-interactive)."""
         # Build command: swarm "objective" --strategy S --mode M --max-agents N --executor --non-interactive
         command = [
-            self.claude_flow_path,
+            self.hive_flow_path,
             "swarm",
             config.objective,  # Objective comes right after swarm
             "--strategy", config.strategy,
@@ -316,7 +316,7 @@ class RealClaudeFlowExecutor:
         if config.action == "spawn":
             # Build command: hive-mind spawn "task" --count N --coordination MODE --non-interactive
             command = [
-                self.claude_flow_path,
+                self.hive_flow_path,
                 "hive-mind", 
                 "spawn",
                 config.task,  # Task comes right after spawn
@@ -327,7 +327,7 @@ class RealClaudeFlowExecutor:
         else:
             # Other hive-mind commands
             command = [
-                self.claude_flow_path,
+                self.hive_flow_path,
                 "hive-mind",
                 config.action,
                 "--non-interactive"  # Add non-interactive for all commands
@@ -348,7 +348,7 @@ class RealClaudeFlowExecutor:
         """Execute a real SPARC command."""
         # Build real SPARC command
         command = [
-            self.claude_flow_path,
+            self.hive_flow_path,
             "sparc",
             config.mode,
             config.task
@@ -538,10 +538,10 @@ class RealClaudeFlowExecutor:
         return await loop.run_in_executor(None, self.execute_sparc, config)
     
     def validate_installation(self) -> bool:
-        """Validate Claude Flow installation."""
+        """Validate Hive Flow installation."""
         try:
             result = subprocess.run(
-                [self.claude_flow_path, "--version"],
+                [self.hive_flow_path, "--version"],
                 cwd=str(self.working_dir),
                 capture_output=True,
                 text=True,
@@ -549,7 +549,7 @@ class RealClaudeFlowExecutor:
             )
             
             if result.returncode == 0:
-                logger.info(f"Claude Flow version: {result.stdout.strip()}")
+                logger.info(f"Hive Flow version: {result.stdout.strip()}")
                 return True
             else:
                 logger.error(f"Version check failed: {result.stderr}")
@@ -560,10 +560,10 @@ class RealClaudeFlowExecutor:
             return False
     
     def get_available_modes(self) -> List[str]:
-        """Get available Claude Flow modes."""
+        """Get available Hive Flow modes."""
         try:
             result = subprocess.run(
-                [self.claude_flow_path, "--help"],
+                [self.hive_flow_path, "--help"],
                 cwd=str(self.working_dir),
                 capture_output=True,
                 text=True,
@@ -605,8 +605,8 @@ def execute_swarm_benchmark(objective: str,
                           mode: str = "centralized", 
                           max_agents: int = 5,
                           timeout: int = 60) -> RealExecutionResult:
-    """Execute a swarm benchmark with real Claude Flow."""
-    executor = RealClaudeFlowExecutor()
+    """Execute a swarm benchmark with real Hive Flow."""
+    executor = RealHiveFlowExecutor()
     config = SwarmCommand(
         objective=objective,
         strategy=strategy,
@@ -620,8 +620,8 @@ def execute_swarm_benchmark(objective: str,
 def execute_hive_mind_spawn(task: str,
                            spawn_count: int = 3,
                            coordination_mode: str = "collective") -> RealExecutionResult:
-    """Execute a hive-mind spawn with real Claude Flow."""
-    executor = RealClaudeFlowExecutor()
+    """Execute a hive-mind spawn with real Hive Flow."""
+    executor = RealHiveFlowExecutor()
     config = HiveMindCommand(
         action="spawn",
         task=task,
@@ -632,8 +632,8 @@ def execute_hive_mind_spawn(task: str,
 
 
 def execute_sparc_mode(mode: str, task: str, output_format: Optional[str] = None) -> RealExecutionResult:
-    """Execute a SPARC mode with real Claude Flow."""
-    executor = RealClaudeFlowExecutor()
+    """Execute a SPARC mode with real Hive Flow."""
+    executor = RealHiveFlowExecutor()
     config = SparcCommand(
         mode=mode,
         task=task,

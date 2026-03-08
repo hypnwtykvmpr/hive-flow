@@ -738,7 +738,7 @@ class WorkingPairSession {
   }
 
   async saveSession() {
-    const sessionPath = '.claude-flow/sessions/pair';
+    const sessionPath = '.hive-flow/sessions/pair';
     await fs.mkdir(sessionPath, { recursive: true });
     
     const sessionData = {
@@ -787,7 +787,7 @@ async function pairCommand(args = [], flags = {}) {
 function showHelp() {
   console.log(`
 📚 USAGE:
-  claude-flow pair [options]
+  hive-flow pair [options]
 
 ⚙️ OPTIONS:
   --start              Start a new pair programming session
@@ -815,13 +815,13 @@ function showHelp() {
 
 💡 EXAMPLES:
   # Beginner mode with auto-fix
-  claude-flow pair --start --guidance beginner --verify --autofix
+  hive-flow pair --start --guidance beginner --verify --autofix
   
   # Expert mode with high threshold
-  claude-flow pair --start --guidance expert --verify --autofix --threshold 0.98
+  hive-flow pair --start --guidance expert --verify --autofix --threshold 0.98
   
   # Mentor mode (educational, no auto-fix)
-  claude-flow pair --start --guidance mentor --verify
+  hive-flow pair --start --guidance mentor --verify
 
 📊 DURING SESSION:
   /verify    - Manual verification

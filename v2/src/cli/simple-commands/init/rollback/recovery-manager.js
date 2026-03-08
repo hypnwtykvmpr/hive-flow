@@ -331,7 +331,7 @@ export class RecoveryManager {
 
     try {
       // Try to recreate the executable
-      const executablePath = `${this.workingDir}/claude-flow`;
+      const executablePath = `${this.workingDir}/hive-flow`;
 
       // Remove corrupted executable if it exists
       try {
@@ -344,7 +344,7 @@ export class RecoveryManager {
       // Recreate executable
       const createResult = await this.createExecutableWrapper();
       if (createResult.success) {
-        result.actions.push('Recreated claude-flow executable');
+        result.actions.push('Recreated hive-flow executable');
 
         // Set permissions
         if (Deno.build.os !== 'windows') {
@@ -395,7 +395,7 @@ export class RecoveryManager {
       }
 
       // Recreate memory data file
-      const memoryDataPath = `${this.workingDir}/memory/claude-flow-data.json`;
+      const memoryDataPath = `${this.workingDir}/memory/hive-flow-data.json`;
       const initialData = {
         agents: [],
         tasks: [],
@@ -510,7 +510,7 @@ export class RecoveryManager {
   async cleanupTemporaryFiles() {
     const result = { actions: [] };
 
-    const tempPatterns = ['*.tmp', '*.temp', '.claude-flow-*-test*'];
+    const tempPatterns = ['*.tmp', '*.temp', '.hive-flow-*-test*'];
 
     for (const pattern of tempPatterns) {
       try {
@@ -528,7 +528,7 @@ export class RecoveryManager {
     const result = { actions: [] };
 
     try {
-      const backupDir = `${this.workingDir}/.claude-flow-backups`;
+      const backupDir = `${this.workingDir}/.hive-flow-backups`;
 
       // This would normally integrate with BackupManager
       result.actions.push('Cleaned old backups');
@@ -641,7 +641,7 @@ export class RecoveryManager {
   async identifyMissingItems() {
     const missing = [];
 
-    const requiredFiles = ['CLAUDE.md', 'memory-bank.md', 'coordination.md', 'claude-flow'];
+    const requiredFiles = ['CLAUDE.md', 'memory-bank.md', 'coordination.md', 'hive-flow'];
 
     for (const file of requiredFiles) {
       try {
@@ -734,13 +734,13 @@ export class RecoveryManager {
     };
 
     const executableContent = `#!/usr/bin/env bash
-# Claude Flow Local Executable Wrapper
+# Hive Flow Local Executable Wrapper
 exec deno run --allow-all --unstable-kv --unstable-cron \\
   "${import.meta.url.replace('file://', '').replace(/[^/]*$/, '../../../main.js')}" "$@"
 `;
 
     try {
-      await Deno.writeTextFile(`${this.workingDir}/claude-flow`, executableContent);
+      await Deno.writeTextFile(`${this.workingDir}/hive-flow`, executableContent);
     } catch {
       result.success = false;
     }

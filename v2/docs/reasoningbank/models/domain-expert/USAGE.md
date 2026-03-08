@@ -382,9 +382,9 @@ sqlite3 memory.db.backup "SELECT COUNT(*) FROM patterns;" | head -1
 
 ## Support & Feedback
 
-- **Issues**: Report bugs or request features at https://github.com/ruvnet/claude-flow/issues
-- **Documentation**: https://github.com/ruvnet/claude-flow
-- **Community**: Join the Claude Flow Discord
+- **Issues**: Report bugs or request features at https://github.com/ruvnet/hive-flow/issues
+- **Documentation**: https://github.com/ruvnet/hive-flow
+- **Community**: Join the Hive Flow Discord
 
 ---
 

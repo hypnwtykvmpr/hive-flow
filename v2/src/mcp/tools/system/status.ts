@@ -8,7 +8,7 @@
  * - Performance metrics
  */
 
-import type { MCPTool, ClaudeFlowToolContext } from '../../types.js';
+import type { MCPTool, HiveFlowToolContext } from '../../types.js';
 import type { ILogger } from '../../../interfaces/logger.js';
 
 interface SystemStatusInput {
@@ -103,7 +103,7 @@ export function createSystemStatusTool(logger: ILogger): MCPTool {
 
     handler: async (
       input: any,
-      context?: ClaudeFlowToolContext
+      context?: HiveFlowToolContext
     ): Promise<SystemStatusResult> => {
       if (!context?.orchestrator) {
         throw new Error('Orchestrator not available in tool context');

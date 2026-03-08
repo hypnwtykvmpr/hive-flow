@@ -16,8 +16,8 @@ out/
 .turbo/
 
 # Binaries
-bin/claude-flow-*
-!bin/claude-flow
+bin/hive-flow-*
+!bin/hive-flow
 
 # IDE
 .vscode/
@@ -72,9 +72,9 @@ Thumbs.db
 .cache/
 tmp/
 
-# Claude-Flow specific
-claude-flow.db
-claude-flow.config.json
+# Hive-Flow specific
+hive-flow.db
+hive-flow.config.json
 # memory/
 # sessions/
 
@@ -98,7 +98,7 @@ swarm-runs
 # Temporary files
 analyzing
 the
-claude-flow-mcp-wrapper
+hive-flow-mcp-wrapper
 
 # Test artifacts
 test-output/
@@ -149,16 +149,16 @@ hive-mind-prompt-*.txt
 .roo/
 .roomodes
 
-# Claude Flow generated files
+# Hive Flow generated files
 .claude/settings.local.json
 .mcp.json
-claude-flow.config.json
+hive-flow.config.json
 .swarm/
 .hive-mind/
-.claude-flow/
+.hive-flow/
 memory/
 coordination/
-memory/claude-flow-data.json
+memory/hive-flow-data.json
 memory/sessions/*
 !memory/sessions/README.md
 memory/agents/*
@@ -172,6 +172,6 @@ coordination/orchestration/*
 *.sqlite
 *.sqlite-journal
 *.sqlite-wal
-claude-flow
+hive-flow
 # Removed Windows wrapper files per user request
 hive-mind-prompt-*.txt

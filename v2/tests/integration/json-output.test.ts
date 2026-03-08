@@ -17,7 +17,7 @@ describe('JSON Output Functionality', () => {
   
   beforeEach(async () => {
     // Create temporary directory for test files
-    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'claude-flow-json-test-'));
+    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'hive-flow-json-test-'));
     
     // Initialize aggregator
     aggregator = new SwarmJsonOutputAggregator(

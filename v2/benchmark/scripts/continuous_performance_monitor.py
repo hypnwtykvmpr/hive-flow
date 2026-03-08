@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Continuous Performance Monitoring System for Claude-Flow Swarm Operations
+Continuous Performance Monitoring System for Hive-Flow Swarm Operations
 
 This system provides real-time performance monitoring and regression detection:
 - Continuous metrics collection during swarm operations

@@ -1,10 +1,10 @@
 #!/bin/bash
 # Comprehensive validation script for Docker environment
-# Tests all claude-flow functionality in a clean environment
+# Tests all hive-flow functionality in a clean environment
 
 set -e  # Exit on error
 
-echo "🐳 Claude-Flow Docker Validation Suite"
+echo "🐳 Hive-Flow Docker Validation Suite"
 echo "========================================"
 echo ""
 
@@ -52,55 +52,55 @@ echo "--------------------------------"
 test_command "NPM install" "npm --version" ""
 test_command "Node version" "node --version" "v18"
 test_command "Build completed" "ls -la dist/src/cli/main.js" "main.js"
-test_command "Binary exists" "ls -la bin/claude-flow" "claude-flow"
+test_command "Binary exists" "ls -la bin/hive-flow" "hive-flow"
 
 echo ""
 echo "🔧 Phase 2: CLI Basic Commands"
 echo "------------------------------"
-test_command "Help command" "./bin/claude-flow --help" "claude-flow"
-test_command "Version command" "./bin/claude-flow --version" ""
-test_command "Agent help" "./bin/claude-flow agent --help" "Manage agents"
+test_command "Help command" "./bin/hive-flow --help" "hive-flow"
+test_command "Version command" "./bin/hive-flow --version" ""
+test_command "Agent help" "./bin/hive-flow agent --help" "Manage agents"
 
 echo ""
 echo "🧠 Phase 3: Memory Commands (Basic Mode)"
 echo "----------------------------------------"
-test_command "Memory store" "./bin/claude-flow memory store test_key 'test value'" "Stored successfully"
-test_command "Memory query" "./bin/claude-flow memory query test_key" "test value"
-test_command "Memory stats" "./bin/claude-flow memory stats" "Total Entries"
-test_command "Memory list" "./bin/claude-flow memory list" "default"
-test_command "Memory export" "./bin/claude-flow memory export /tmp/test-export.json" "exported"
+test_command "Memory store" "./bin/hive-flow memory store test_key 'test value'" "Stored successfully"
+test_command "Memory query" "./bin/hive-flow memory query test_key" "test value"
+test_command "Memory stats" "./bin/hive-flow memory stats" "Total Entries"
+test_command "Memory list" "./bin/hive-flow memory list" "default"
+test_command "Memory export" "./bin/hive-flow memory export /tmp/test-export.json" "exported"
 
 echo ""
 echo "🧬 Phase 4: ReasoningBank Commands"
 echo "-----------------------------------"
-test_command "Memory detect" "./bin/claude-flow memory detect" "Basic Mode"
-test_command "Memory mode" "./bin/claude-flow memory mode" "Default Mode"
+test_command "Memory detect" "./bin/hive-flow memory detect" "Basic Mode"
+test_command "Memory mode" "./bin/hive-flow memory mode" "Default Mode"
 
 echo ""
 echo "🤖 Phase 5: Agent Commands"
 echo "--------------------------"
-test_command "Agent list" "./bin/claude-flow agent agents" "coder"
-test_command "Agent info" "./bin/claude-flow agent info coder" "coder"
+test_command "Agent list" "./bin/hive-flow agent agents" "coder"
+test_command "Agent info" "./bin/hive-flow agent info coder" "coder"
 
 echo ""
 echo "🌐 Phase 6: Proxy Commands"
 echo "--------------------------"
-test_command "Proxy help" "./bin/claude-flow proxy --help" "OpenRouter"
-test_command "Proxy config" "./bin/claude-flow proxy config" "API Key Setup"
+test_command "Proxy help" "./bin/hive-flow proxy --help" "OpenRouter"
+test_command "Proxy config" "./bin/hive-flow proxy config" "API Key Setup"
 
 echo ""
 echo "📋 Phase 7: Help System"
 echo "-----------------------"
-test_command "Main help has ReasoningBank" "./bin/claude-flow --help" "ReasoningBank"
-test_command "Main help has proxy" "./bin/claude-flow --help" "proxy"
-test_command "Main help has Agent Booster" "./bin/claude-flow --help" "booster"
-test_command "Agent help has memory" "./bin/claude-flow agent --help" "memory"
+test_command "Main help has ReasoningBank" "./bin/hive-flow --help" "ReasoningBank"
+test_command "Main help has proxy" "./bin/hive-flow --help" "proxy"
+test_command "Main help has Agent Booster" "./bin/hive-flow --help" "booster"
+test_command "Agent help has memory" "./bin/hive-flow agent --help" "memory"
 
 echo ""
 echo "🔒 Phase 8: Security Features"
 echo "-----------------------------"
-test_command "Redaction flag exists" "./bin/claude-flow memory store secure_test 'key=sk-ant-test' --redact" "redacted"
-test_command "Redacted query" "./bin/claude-flow memory query secure_test --redact" "REDACTED"
+test_command "Redaction flag exists" "./bin/hive-flow memory store secure_test 'key=sk-ant-test' --redact" "redacted"
+test_command "Redacted query" "./bin/hive-flow memory query secure_test --redact" "REDACTED"
 
 echo ""
 echo "📊 Phase 9: File Structure"
@@ -111,8 +111,8 @@ test_command "Memory store file created" "test -f ./memory/memory-store.json && 
 echo ""
 echo "🧪 Phase 10: Integration Tests"
 echo "------------------------------"
-test_command "Import memory" "./bin/claude-flow memory import /tmp/test-export.json" "Imported"
-test_command "Clear namespace" "./bin/claude-flow memory clear --namespace test_ns 2>&1 || echo 'expected'" "expected"
+test_command "Import memory" "./bin/hive-flow memory import /tmp/test-export.json" "Imported"
+test_command "Clear namespace" "./bin/hive-flow memory clear --namespace test_ns 2>&1 || echo 'expected'" "expected"
 
 echo ""
 echo "========================================"
@@ -124,7 +124,7 @@ echo -e "Failed: ${RED}${FAILED}${NC}"
 
 if [ $FAILED -eq 0 ]; then
     echo -e "\n${GREEN}✅ All tests passed!${NC}"
-    echo "🚀 Claude-Flow is ready for production release"
+    echo "🚀 Hive-Flow is ready for production release"
     exit 0
 else
     echo -e "\n${RED}❌ Some tests failed${NC}"

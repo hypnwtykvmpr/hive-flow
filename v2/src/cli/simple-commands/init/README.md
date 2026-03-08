@@ -1,6 +1,6 @@
 # Init Command - Modular Structure
 
-This directory contains the modular implementation of the `claude-flow init` command, which initializes Claude Code integration files for projects.
+This directory contains the modular implementation of the `hive-flow init` command, which initializes Claude Code integration files for projects.
 
 ## Directory Structure
 
@@ -23,7 +23,7 @@ init/
 └── claude-commands/             # Claude Code slash commands
     ├── slash-commands.js        # Main slash command creator
     ├── sparc-commands.js        # SPARC-specific commands
-    └── claude-flow-commands.js  # Claude-Flow specific commands
+    └── hive-flow-commands.js  # Hive-Flow specific commands
 ```
 
 ## What Gets Created
@@ -43,7 +43,7 @@ init/
    - `memory/` directory structure
    - `memory/agents/` - Agent-specific memory
    - `memory/sessions/` - Session storage
-   - `memory/claude-flow-data.json` - Persistence database
+   - `memory/hive-flow-data.json` - Persistence database
 
 3. **Coordination System**:
 
@@ -59,13 +59,13 @@ init/
 
    - `/sparc` - Main SPARC command
    - `/sparc-<mode>` - Individual mode commands (architect, code, tdd, etc.)
-   - `/claude-flow-help` - Help command
-   - `/claude-flow-memory` - Memory system command
-   - `/claude-flow-swarm` - Swarm coordination command
+   - `/hive-flow-help` - Help command
+   - `/hive-flow-memory` - Memory system command
+   - `/hive-flow-swarm` - Swarm coordination command
 
 6. **Local Executable**:
-   - `./claude-flow` (Unix/Mac/Linux)
-   - `claude-flow.cmd` (Windows)
+   - `./hive-flow` (Unix/Mac/Linux)
+   - `hive-flow.cmd` (Windows)
 
 ### With `--minimal` flag:
 
@@ -79,13 +79,13 @@ Overwrites existing files if they already exist.
 
 ```bash
 # Recommended first-time setup with SPARC
-npx claude-flow@latest init --sparc
+npx hive-flow@latest init --sparc
 
 # Minimal setup
-npx claude-flow init --minimal
+npx hive-flow init --minimal
 
 # Force overwrite existing files
-npx claude-flow init --force
+npx hive-flow init --force
 ```
 
 ## Module Responsibilities
@@ -102,5 +102,5 @@ npx claude-flow init --force
 
 - The init command detects Claude Code's `.claude/` directory structure
 - Slash commands follow Claude Code's markdown format with YAML frontmatter
-- SPARC modes are fully integrated with Claude-Flow's orchestration system
+- SPARC modes are fully integrated with Hive-Flow's orchestration system
 - All generated files include comprehensive documentation

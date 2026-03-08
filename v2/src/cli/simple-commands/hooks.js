@@ -854,7 +854,7 @@ async function postSearchCommand(subArgs, flags) {
 
 async function mcpInitializedCommand(subArgs, flags) {
   const options = flags;
-  const serverName = options.server || 'claude-flow';
+  const serverName = options.server || 'hive-flow';
   const sessionId = options['session-id'] || generateId('mcp-session');
 
   console.log(`🔌 Executing mcp-initialized hook...`);
@@ -1205,11 +1205,11 @@ async function modifyBashCommand(subArgs, flags) {
 
   const timeout = setTimeout(() => {
     if (!hasInput) {
-      console.log('Usage: echo \'{"tool_input":{"command":"your command"}}\' | claude-flow hooks modify-bash');
+      console.log('Usage: echo \'{"tool_input":{"command":"your command"}}\' | hive-flow hooks modify-bash');
       console.log('\nThis hook reads JSON from stdin and outputs modified JSON.');
       console.log('It is designed for use with Claude Code v2.0.10+ PreToolUse feature.');
       console.log('\nExample:');
-      console.log('  echo \'{"tool_input":{"command":"rm test.txt"}}\' | claude-flow hooks modify-bash');
+      console.log('  echo \'{"tool_input":{"command":"rm test.txt"}}\' | hive-flow hooks modify-bash');
       process.exit(0);
     }
   }, 100); // 100ms timeout
@@ -1284,11 +1284,11 @@ async function modifyFileCommand(subArgs, flags) {
 
   const timeout = setTimeout(() => {
     if (!hasInput) {
-      console.log('Usage: echo \'{"tool_input":{"file_path":"your/file.js"}}\' | claude-flow hooks modify-file');
+      console.log('Usage: echo \'{"tool_input":{"file_path":"your/file.js"}}\' | hive-flow hooks modify-file');
       console.log('\nThis hook reads JSON from stdin and outputs modified JSON.');
       console.log('It is designed for use with Claude Code v2.0.10+ PreToolUse feature.');
       console.log('\nExample:');
-      console.log('  echo \'{"tool_input":{"file_path":"test.js"}}\' | claude-flow hooks modify-file');
+      console.log('  echo \'{"tool_input":{"file_path":"test.js"}}\' | hive-flow hooks modify-file');
       process.exit(0);
     }
   }, 100); // 100ms timeout
@@ -1377,11 +1377,11 @@ async function modifyGitCommitCommand(subArgs, flags) {
 
   const timeout = setTimeout(() => {
     if (!hasInput) {
-      console.log('Usage: echo \'{"tool_input":{"command":"git commit -m \\"message\\""}}\'  | claude-flow hooks modify-git-commit');
+      console.log('Usage: echo \'{"tool_input":{"command":"git commit -m \\"message\\""}}\'  | hive-flow hooks modify-git-commit');
       console.log('\nThis hook reads JSON from stdin and outputs modified JSON.');
       console.log('It is designed for use with Claude Code v2.0.10+ PreToolUse feature.');
       console.log('\nExample:');
-      console.log('  echo \'{"tool_input":{"command":"git commit -m \\"fix bug\\""}}\'  | claude-flow hooks modify-git-commit');
+      console.log('  echo \'{"tool_input":{"command":"git commit -m \\"fix bug\\""}}\'  | hive-flow hooks modify-git-commit');
       process.exit(0);
     }
   }, 100); // 100ms timeout
@@ -1448,7 +1448,7 @@ async function modifyGitCommitCommand(subArgs, flags) {
 
   // Add co-author
   if (!/Co-Authored-By/.test(command)) {
-    formattedMsg += `\n\n🤖 Generated with Claude Flow\nCo-Authored-By: claude-flow <noreply@ruv.io>`;
+    formattedMsg += `\n\n🤖 Generated with Hive Flow\nCo-Authored-By: hive-flow <noreply@ruv.io>`;
   }
 
   // Replace message in command
@@ -1473,7 +1473,7 @@ async function modifyGitCommitCommand(subArgs, flags) {
 }
 
 function showHooksHelp() {
-  console.log('Claude Flow Hooks (with .swarm/memory.db persistence):\n');
+  console.log('Hive Flow Hooks (with .swarm/memory.db persistence):\n');
 
   console.log('Pre-Operation Hooks:');
   console.log('  pre-task        Execute before starting a task');
@@ -1526,7 +1526,7 @@ function showHooksHelp() {
   console.log('  modify-git-commit  Modify git commit messages (reads/writes JSON via stdin/stdout)');
   console.log('                     • Conventional commits: Auto-adds [feat], [fix], [docs], etc.');
   console.log('                     • Ticket extraction: Extracts JIRA tickets from branch names');
-  console.log('                     • Co-author: Adds Claude Flow co-author footer');
+  console.log('                     • Co-author: Adds Hive Flow co-author footer');
 
   console.log('\nExamples:');
   console.log('  hooks pre-command --command "npm test" --validate-safety true');

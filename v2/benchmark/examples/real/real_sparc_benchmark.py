@@ -3,7 +3,7 @@
 Real SPARC Benchmark Example - Execute and measure real SPARC mode performance.
 
 This example demonstrates how to:
-1. Execute real Claude Flow SPARC modes
+1. Execute real Hive Flow SPARC modes
 2. Measure specialized agent performance
 3. Parse real SPARC execution responses  
 4. Track mode-specific metrics

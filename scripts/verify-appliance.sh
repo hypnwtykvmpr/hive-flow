@@ -4,7 +4,7 @@
 # ADR-058: Self-Contained Ruflo RVF Appliance
 #
 # Tests ALL 35 categories (95+ checks) to verify every capability
-# of the Ruflo + Claude Flow system works correctly.
+# of the Ruflo + Hive Flow system works correctly.
 #
 # Usage:
 #   sh verify-appliance.sh                    # Run all checks

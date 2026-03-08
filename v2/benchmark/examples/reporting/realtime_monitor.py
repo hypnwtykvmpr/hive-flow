@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Real-time Benchmark Monitor
-Monitors Claude Flow benchmark execution and displays live metrics.
+Monitors Hive Flow benchmark execution and displays live metrics.
 """
 
 import json
@@ -151,13 +151,13 @@ class RealtimeMonitor:
             
             if result.returncode == 0:
                 lines = result.stdout.strip().split('\n')[1:]  # Skip header
-                claude_flow_processes = [l for l in lines if 'claude-flow' in l]
+                hive_flow_processes = [l for l in lines if 'hive-flow' in l]
                 
-                if claude_flow_processes:
+                if hive_flow_processes:
                     # Parse CPU and memory
                     total_cpu = 0
                     total_mem = 0
-                    for line in claude_flow_processes:
+                    for line in hive_flow_processes:
                         parts = line.split()
                         if len(parts) > 3:
                             total_cpu += float(parts[2])
@@ -286,7 +286,7 @@ def main():
     """Main entry point for realtime monitor."""
     import argparse
     
-    parser = argparse.ArgumentParser(description="Monitor Claude Flow benchmarks in real-time")
+    parser = argparse.ArgumentParser(description="Monitor Hive Flow benchmarks in real-time")
     parser.add_argument("task", help="Task to benchmark")
     parser.add_argument("--strategy", default="auto", help="Execution strategy")
     parser.add_argument("--max-workers", type=int, default=3, help="Maximum workers")

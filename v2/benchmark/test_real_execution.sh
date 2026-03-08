@@ -1,7 +1,7 @@
 #!/bin/bash
-# Test real execution of claude-flow commands
+# Test real execution of hive-flow commands
 
-echo "Testing real claude-flow execution..."
+echo "Testing real hive-flow execution..."
 echo "===================================="
 
 # Create a test directory

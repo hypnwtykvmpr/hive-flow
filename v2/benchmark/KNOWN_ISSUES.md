@@ -1,19 +1,19 @@
-# Known Issues with Claude Flow Benchmark System
+# Known Issues with Hive Flow Benchmark System
 
-## Issue 1: Non-Interactive Mode Not Working in Claude Flow
+## Issue 1: Non-Interactive Mode Not Working in Hive Flow
 
 ### Problem
-The `--non-interactive` flag is not being properly handled by claude-flow commands, particularly:
+The `--non-interactive` flag is not being properly handled by hive-flow commands, particularly:
 - `hive-mind spawn --non-interactive` still prompts for interactive input
 - `swarm --non-interactive` may also have similar issues
 
 ### Current Status
 The benchmark system correctly passes the `--non-interactive` flag in the proper command format:
 ```bash
-./claude-flow hive-mind spawn "Task description" --count 2 --coordination majority --non-interactive
+./hive-flow hive-mind spawn "Task description" --count 2 --coordination majority --non-interactive
 ```
 
-However, the claude-flow implementation needs to be updated to:
+However, the hive-flow implementation needs to be updated to:
 1. Check for the `--non-interactive` flag before calling wizard functions
 2. Use default values or passed parameters instead of prompting
 
@@ -23,7 +23,7 @@ Currently, SPARC commands work correctly without requiring interactive input:
 swarm-benchmark real sparc tdd "Create a function"
 ```
 
-### Fix Required in Claude Flow
+### Fix Required in Hive Flow
 The following files need updates:
 - `/src/cli/simple-commands/hive-mind.js` - Check for non-interactive flag in spawn function
 - `/src/cli/simple-commands/swarm.js` - Similar check needed

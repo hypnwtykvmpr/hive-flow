@@ -15,8 +15,8 @@ A production-ready, multi-tenant LiteLLM proxy that enables Claude Code to seaml
 
 ```bash
 # Clone the repository
-git clone https://github.com/ruvnet/claude-flow.git
-cd claude-flow/examples/litellm
+git clone https://github.com/ruvnet/hive-flow.git
+cd hive-flow/examples/litellm
 
 # Copy environment template
 cp .env.example .env
@@ -338,10 +338,10 @@ MIT License - see [LICENSE](../../LICENSE) for details.
 
 ## 💬 Support
 
-- GitHub Issues: [Report bugs](https://github.com/ruvnet/claude-flow/issues)
-- Discussions: [Ask questions](https://github.com/ruvnet/claude-flow/discussions)
-- Wiki: [Documentation](https://github.com/ruvnet/claude-flow/wiki)
+- GitHub Issues: [Report bugs](https://github.com/ruvnet/hive-flow/issues)
+- Discussions: [Ask questions](https://github.com/ruvnet/hive-flow/discussions)
+- Wiki: [Documentation](https://github.com/ruvnet/hive-flow/wiki)
 
 ---
 
-Built with ❤️ by the Claude Flow team
+Built with ❤️ by the Hive Flow team

@@ -1,12 +1,12 @@
-# Real Claude Flow Benchmarks
+# Real Hive Flow Benchmarks
 
-**CRITICAL**: These are REAL benchmarks that execute actual `./claude-flow` commands. NO simulations.
+**CRITICAL**: These are REAL benchmarks that execute actual `./hive-flow` commands. NO simulations.
 
 ## 🎯 Overview
 
-This benchmark suite implements real-world performance testing for Claude Flow by:
+This benchmark suite implements real-world performance testing for Hive Flow by:
 
-1. **Executing Real Commands**: Uses actual `./claude-flow` subprocess calls
+1. **Executing Real Commands**: Uses actual `./hive-flow` subprocess calls
 2. **Measuring Actual Performance**: Tracks real execution time, token usage, memory consumption
 3. **Parsing Real Responses**: Extracts metrics from actual JSON streaming responses
 4. **Tracking Real Resources**: Monitors CPU, memory, and I/O during execution
@@ -32,7 +32,7 @@ benchmark/
 ### 1. Test Installation
 
 ```bash
-# Validate Claude Flow is available and benchmarks work
+# Validate Hive Flow is available and benchmarks work
 python test_real_benchmarks.py --quick
 ```
 
@@ -87,12 +87,12 @@ class RealBenchmarkResult:
     timestamp: str             # ISO timestamp
 ```
 
-### ClaudeFlowRealExecutor
+### HiveFlowRealExecutor
 
-Executes real Claude Flow commands with comprehensive monitoring:
+Executes real Hive Flow commands with comprehensive monitoring:
 
 ```python
-executor = ClaudeFlowRealExecutor()
+executor = HiveFlowRealExecutor()
 
 # Execute real swarm
 result = executor.execute_swarm(
@@ -177,10 +177,10 @@ for category, benchmarks in results.items():
 ### Custom Real Executor
 
 ```python
-from swarm_benchmark.scenarios.real_benchmarks import ClaudeFlowRealExecutor
+from swarm_benchmark.scenarios.real_benchmarks import HiveFlowRealExecutor
 
-executor = ClaudeFlowRealExecutor(
-    claude_flow_path="/path/to/claude-flow",
+executor = HiveFlowRealExecutor(
+    hive_flow_path="/path/to/hive-flow",
     working_dir="/workspace"
 )
 
@@ -222,7 +222,7 @@ class ResourceMonitor:
 Real output parsing extracts actual metrics:
 
 ```python
-# Extract token usage from real Claude Flow output
+# Extract token usage from real Hive Flow output
 tokens = executor._extract_token_usage(stdout)
 
 # Extract actual agent count from output  
@@ -239,14 +239,14 @@ metrics = executor._parse_json_metrics(stdout)
 Required environment for real benchmarks:
 
 ```bash
-# Ensure claude-flow is available
-export PATH="/path/to/claude-flow/bin:$PATH"
+# Ensure hive-flow is available
+export PATH="/path/to/hive-flow/bin:$PATH"
 
 # Set working directory
 export CLAUDE_WORKING_DIR="/workspace"
 
-# Optional: Custom claude-flow path
-export CLAUDE_FLOW_PATH="/custom/path/claude-flow"
+# Optional: Custom hive-flow path
+export HIVE_FLOW_PATH="/custom/path/hive-flow"
 ```
 
 ### Benchmark Configuration
@@ -288,7 +288,7 @@ Real benchmark results are saved as JSON:
   "output_size_bytes": 15420,
   "error_count": 0,
   "warning_count": 1,
-  "command_executed": ["./claude-flow", "swarm", "..."],
+  "command_executed": ["./hive-flow", "swarm", "..."],
   "stdout_excerpt": "Starting swarm execution...",
   "stderr_excerpt": "",
   "metrics_raw": {"performance": 0.95},
@@ -324,7 +324,7 @@ python examples/real_sparc_benchmark.py --workflow
 
 ### Real Execution Requirements
 
-1. **Claude Flow Installation**: Must have working `./claude-flow` executable
+1. **Hive Flow Installation**: Must have working `./hive-flow` executable
 2. **Network Access**: Real benchmarks may require internet connectivity
 3. **API Limits**: Respect Claude API rate limits and token usage
 4. **Execution Time**: Real benchmarks take actual time to complete
@@ -353,12 +353,12 @@ python examples/real_sparc_benchmark.py --workflow
 ```python
 class CustomRealBenchmark:
     def __init__(self):
-        self.executor = ClaudeFlowRealExecutor()
+        self.executor = HiveFlowRealExecutor()
     
     def benchmark_custom_workflow(self, task: str) -> RealBenchmarkResult:
         # Execute real custom command
         command = [
-            self.executor.executor.claude_flow_path,
+            self.executor.executor.hive_flow_path,
             "custom-command",
             task,
             "--mode", "custom",
@@ -401,4 +401,4 @@ def run_ci_benchmarks():
     return results
 ```
 
-This real benchmark implementation provides comprehensive, accurate performance measurement for Claude Flow operations using actual command execution and real-world metrics.
+This real benchmark implementation provides comprehensive, accurate performance measurement for Hive Flow operations using actual command execution and real-world metrics.

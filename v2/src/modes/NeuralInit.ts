@@ -106,7 +106,7 @@ export class NeuralInit implements IInitMode {
 
         // Test neural MCP functions
         const neuralStatus = await config.mcpIntegrator.executeCommand({
-          tool: 'claude-flow',
+          tool: 'hive-flow',
           function: 'neural_status',
           parameters: {}
         });
@@ -117,7 +117,7 @@ export class NeuralInit implements IInitMode {
 
         // Initialize neural training
         const trainResult = await config.mcpIntegrator.executeCommand({
-          tool: 'claude-flow',
+          tool: 'hive-flow',
           function: 'neural_train',
           parameters: {
             pattern_type: 'coordination',

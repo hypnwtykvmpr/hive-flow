@@ -1,5 +1,5 @@
 /**
- * V3 Claude-Flow Vitest Configuration
+ * V3 Hive-Flow Vitest Configuration
  *
  * London School TDD Configuration
  * - Mock-first testing approach
@@ -21,8 +21,8 @@ export default defineConfig({
     include: [
       '__tests__/**/*.test.ts',
       '__tests__/**/*.spec.ts',
-      '@claude-flow/**/__tests__/**/*.test.ts',
-      '@claude-flow/**/__tests__/**/*.spec.ts',
+      '@hive-flow/**/__tests__/**/*.test.ts',
+      '@hive-flow/**/__tests__/**/*.spec.ts',
       'mcp/__tests__/**/*.test.ts',
       'mcp/__tests__/**/*.spec.ts',
     ],

@@ -3,7 +3,7 @@
 Test Real Benchmarks - Validate real benchmark implementations.
 
 This script tests that the real benchmark scenarios can:
-1. Execute actual Claude Flow commands
+1. Execute actual Hive Flow commands
 2. Parse real responses and extract metrics
 3. Handle errors gracefully
 4. Produce valid benchmark results
@@ -26,34 +26,34 @@ from swarm_benchmark.scenarios.real_benchmarks import (
     RealHiveMindBenchmark, 
     RealSparcBenchmark,
     RealBenchmarkSuite,
-    ClaudeFlowRealExecutor
+    HiveFlowRealExecutor
 )
 
 
-def test_claude_flow_availability():
-    """Test if claude-flow command is available."""
-    print("🔍 Testing Claude Flow Availability")
+def test_hive_flow_availability():
+    """Test if hive-flow command is available."""
+    print("🔍 Testing Hive Flow Availability")
     print("-" * 40)
     
     try:
-        executor = ClaudeFlowRealExecutor()
+        executor = HiveFlowRealExecutor()
         
         # Test installation validation
         is_valid = executor.executor.validate_installation()
         
-        print(f"   Claude Flow Path: {executor.executor.claude_flow_path}")
+        print(f"   Hive Flow Path: {executor.executor.hive_flow_path}")
         print(f"   Installation Valid: {is_valid}")
         print(f"   Working Directory: {executor.executor.working_dir}")
         
         if is_valid:
-            print("✅ Claude Flow is available and working!")
+            print("✅ Hive Flow is available and working!")
             return True
         else:
-            print("❌ Claude Flow installation issues detected")
+            print("❌ Hive Flow installation issues detected")
             return False
             
     except Exception as e:
-        print(f"❌ Claude Flow not available: {e}")
+        print(f"❌ Hive Flow not available: {e}")
         return False
 
 
@@ -160,7 +160,7 @@ def test_metrics_extraction():
     print("-" * 40)
     
     try:
-        executor = ClaudeFlowRealExecutor()
+        executor = HiveFlowRealExecutor()
         
         # Test token extraction
         sample_output1 = "Processing complete. Total tokens: 1250 used in execution."
@@ -223,7 +223,7 @@ def run_quick_validation():
     print("=" * 50)
     
     tests = [
-        ("Claude Flow Availability", test_claude_flow_availability),
+        ("Hive Flow Availability", test_hive_flow_availability),
         ("Metrics Extraction", test_metrics_extraction),
         ("Benchmark Suite", test_benchmark_suite)
     ]
@@ -258,7 +258,7 @@ def run_full_tests():
     print("=" * 50)
     
     tests = [
-        ("Claude Flow Availability", test_claude_flow_availability),
+        ("Hive Flow Availability", test_hive_flow_availability),
         ("Swarm Benchmark", test_swarm_benchmark),
         ("Hive-Mind Benchmark", test_hive_mind_benchmark),
         ("SPARC Benchmark", test_sparc_benchmark),

@@ -242,7 +242,7 @@ class BenchmarkMatrix:
 
 ### 🔧 Recommended Settings
 
-Based on the analysis, the optimal Claude Flow configuration for SWE tasks is:
+Based on the analysis, the optimal Hive Flow configuration for SWE tasks is:
 
 ```yaml
 mode: {optimal['mode']}

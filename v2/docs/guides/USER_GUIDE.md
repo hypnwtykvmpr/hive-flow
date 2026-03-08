@@ -1,8 +1,8 @@
-# 📖 Claude-Flow User Guide
+# 📖 Hive-Flow User Guide
 
-## Complete Practical Guide for Claude-Flow v2.0.0
+## Complete Practical Guide for Hive-Flow v2.0.0
 
-Welcome to the comprehensive user guide for Claude-Flow! This document provides everything you need to get started and master the platform, from basic installation to advanced swarm coordination.
+Welcome to the comprehensive user guide for Hive-Flow! This document provides everything you need to get started and master the platform, from basic installation to advanced swarm coordination.
 
 ---
 
@@ -24,7 +24,7 @@ Welcome to the comprehensive user guide for Claude-Flow! This document provides 
 
 ### Prerequisites
 
-Before starting with Claude-Flow, ensure you have:
+Before starting with Hive-Flow, ensure you have:
 
 - **Node.js** ≥ 20.0.0 ([Download](https://nodejs.org/))
 - **npm** ≥ 9.0.0 (comes with Node.js)
@@ -35,35 +35,35 @@ Before starting with Claude-Flow, ensure you have:
 
 ```bash
 # Option 1: Use npx (recommended for first-time users)
-npx claude-flow@alpha --help
+npx hive-flow@alpha --help
 
 # Option 2: Global installation
-npm install -g claude-flow@alpha
+npm install -g hive-flow@alpha
 
 # Option 3: Project-specific installation
-npm install claude-flow@alpha
+npm install hive-flow@alpha
 ```
 
 ### Initial Setup
 
 ```bash
-# Initialize Claude-Flow in your project
-npx claude-flow@alpha init --force
+# Initialize Hive-Flow in your project
+npx hive-flow@alpha init --force
 
 # Verify installation
-npx claude-flow@alpha version
+npx hive-flow@alpha version
 
 # Run health check
-npx claude-flow@alpha health
+npx hive-flow@alpha health
 ```
 
 ### First Command
 
-Try your first Claude-Flow command:
+Try your first Hive-Flow command:
 
 ```bash
 # Simple task execution
-npx claude-flow@alpha swarm "create a simple Hello World application"
+npx hive-flow@alpha swarm "create a simple Hello World application"
 ```
 
 ---
@@ -163,16 +163,16 @@ For straightforward development tasks:
 
 ```bash
 # Code generation
-npx claude-flow@alpha swarm "create a REST API for user management"
+npx hive-flow@alpha swarm "create a REST API for user management"
 
 # Bug fixing
-npx claude-flow@alpha swarm "fix all TypeScript errors in the project"
+npx hive-flow@alpha swarm "fix all TypeScript errors in the project"
 
 # Documentation
-npx claude-flow@alpha swarm "generate comprehensive API documentation"
+npx hive-flow@alpha swarm "generate comprehensive API documentation"
 
 # Testing
-npx claude-flow@alpha swarm "create unit tests for all service classes"
+npx hive-flow@alpha swarm "create unit tests for all service classes"
 ```
 
 #### 2. Project-Based Development
@@ -180,18 +180,18 @@ For larger projects requiring coordination:
 
 ```bash
 # Initialize project swarm
-npx claude-flow@alpha hive-mind spawn "e-commerce platform" \
+npx hive-flow@alpha hive-mind spawn "e-commerce platform" \
   --agents architect,backend-dev,frontend-dev,tester \
   --topology hierarchical
 
 # Continue development in same session
-npx claude-flow@alpha swarm "implement user authentication" --continue-session
+npx hive-flow@alpha swarm "implement user authentication" --continue-session
 
 # Add new features
-npx claude-flow@alpha swarm "add payment processing integration"
+npx hive-flow@alpha swarm "add payment processing integration"
 
 # Monitor progress
-npx claude-flow@alpha swarm status --watch
+npx hive-flow@alpha swarm status --watch
 ```
 
 #### 3. SPARC Development Methodology
@@ -199,15 +199,15 @@ Structured development using Specification → Pseudocode → Architecture → R
 
 ```bash
 # Full SPARC pipeline
-npx claude-flow@alpha sparc pipeline "user management system"
+npx hive-flow@alpha sparc pipeline "user management system"
 
 # Individual SPARC phases
-npx claude-flow@alpha sparc spec "define requirements for authentication"
-npx claude-flow@alpha sparc architecture "design microservices structure"
-npx claude-flow@alpha sparc code "implement user service"
+npx hive-flow@alpha sparc spec "define requirements for authentication"
+npx hive-flow@alpha sparc architecture "design microservices structure"
+npx hive-flow@alpha sparc code "implement user service"
 
 # Test-driven development
-npx claude-flow@alpha sparc tdd "payment processing module"
+npx hive-flow@alpha sparc tdd "payment processing module"
 ```
 
 ### Operational Workflows
@@ -215,37 +215,37 @@ npx claude-flow@alpha sparc tdd "payment processing module"
 #### 1. Code Review and Quality
 ```bash
 # Comprehensive code review
-npx claude-flow@alpha swarm "perform security audit and code review" \
+npx hive-flow@alpha swarm "perform security audit and code review" \
   --agents security-analyst,reviewer,code-quality-checker
 
 # Performance optimization
-npx claude-flow@alpha swarm "analyze and optimize application performance" \
+npx hive-flow@alpha swarm "analyze and optimize application performance" \
   --agents performance-analyst,optimizer
 ```
 
 #### 2. DevOps and Deployment
 ```bash
 # CI/CD setup
-npx claude-flow@alpha swarm "setup complete CI/CD pipeline" \
+npx hive-flow@alpha swarm "setup complete CI/CD pipeline" \
   --agents devops-engineer,cicd-specialist
 
 # Container deployment
-npx claude-flow@alpha swarm "containerize application with Docker" \
+npx hive-flow@alpha swarm "containerize application with Docker" \
   --agents docker-specialist,devops-engineer
 
 # Kubernetes deployment
-npx claude-flow@alpha swarm "deploy to Kubernetes cluster" \
+npx hive-flow@alpha swarm "deploy to Kubernetes cluster" \
   --agents k8s-specialist,devops-engineer
 ```
 
 #### 3. Documentation and Maintenance
 ```bash
 # Generate documentation
-npx claude-flow@alpha swarm "create comprehensive project documentation" \
+npx hive-flow@alpha swarm "create comprehensive project documentation" \
   --agents technical-writer,api-docs-generator
 
 # Code maintenance
-npx claude-flow@alpha swarm "refactor legacy code and improve maintainability" \
+npx hive-flow@alpha swarm "refactor legacy code and improve maintainability" \
   --agents refactoring-specialist,code-quality-checker
 ```
 
@@ -261,8 +261,8 @@ npx claude-flow@alpha swarm "refactor legacy code and improve maintainability" \
 mkdir my-api-project
 cd my-api-project
 
-# Initialize Claude-Flow
-npx claude-flow@alpha init --force
+# Initialize Hive-Flow
+npx hive-flow@alpha init --force
 
 # Initialize npm project
 npm init -y
@@ -271,32 +271,32 @@ npm init -y
 #### Step 2: Define Requirements
 ```bash
 # Use SPARC specification mode
-npx claude-flow@alpha sparc spec "REST API for task management with CRUD operations, authentication, and data validation"
+npx hive-flow@alpha sparc spec "REST API for task management with CRUD operations, authentication, and data validation"
 ```
 
 #### Step 3: Create Architecture
 ```bash
 # Generate system architecture
-npx claude-flow@alpha sparc architecture "Node.js Express API with PostgreSQL database, JWT authentication, and comprehensive error handling"
+npx hive-flow@alpha sparc architecture "Node.js Express API with PostgreSQL database, JWT authentication, and comprehensive error handling"
 ```
 
 #### Step 4: Implement Code
 ```bash
 # Generate implementation
-npx claude-flow@alpha sparc code "implement the complete task management API based on the architecture"
+npx hive-flow@alpha sparc code "implement the complete task management API based on the architecture"
 ```
 
 #### Step 5: Add Tests
 ```bash
 # Create comprehensive tests
-npx claude-flow@alpha swarm "create unit tests, integration tests, and API endpoint tests" \
+npx hive-flow@alpha swarm "create unit tests, integration tests, and API endpoint tests" \
   --agents tester,test-automation-specialist
 ```
 
 #### Step 6: Setup DevOps
 ```bash
 # Add CI/CD and deployment
-npx claude-flow@alpha swarm "setup GitHub Actions CI/CD and Docker deployment" \
+npx hive-flow@alpha swarm "setup GitHub Actions CI/CD and Docker deployment" \
   --agents devops-engineer,cicd-specialist
 ```
 
@@ -305,7 +305,7 @@ npx claude-flow@alpha swarm "setup GitHub Actions CI/CD and Docker deployment" \
 #### Step 1: Project Planning
 ```bash
 # Initialize large project swarm
-npx claude-flow@alpha hive-mind spawn "full-stack social media application" \
+npx hive-flow@alpha hive-mind spawn "full-stack social media application" \
   --agents architect,planner,backend-dev,frontend-dev,mobile-dev,tester,devops-engineer \
   --topology hierarchical \
   --max-agents 12
@@ -314,35 +314,35 @@ npx claude-flow@alpha hive-mind spawn "full-stack social media application" \
 #### Step 2: Architecture Design
 ```bash
 # Create comprehensive architecture
-npx claude-flow@alpha swarm "design microservices architecture with event-driven communication" \
+npx hive-flow@alpha swarm "design microservices architecture with event-driven communication" \
   --agents system-architect,backend-architect,frontend-architect
 ```
 
 #### Step 3: Backend Development
 ```bash
 # Develop backend services
-npx claude-flow@alpha swarm "implement user service, post service, and notification service" \
+npx hive-flow@alpha swarm "implement user service, post service, and notification service" \
   --agents backend-dev,api-developer,database-specialist
 ```
 
 #### Step 4: Frontend Development
 ```bash
 # Create frontend applications
-npx claude-flow@alpha swarm "build React web app and React Native mobile app" \
+npx hive-flow@alpha swarm "build React web app and React Native mobile app" \
   --agents frontend-dev,mobile-dev,ui-ux-specialist
 ```
 
 #### Step 5: Testing and Quality Assurance
 ```bash
 # Comprehensive testing
-npx claude-flow@alpha swarm "create automated test suites and perform security audit" \
+npx hive-flow@alpha swarm "create automated test suites and perform security audit" \
   --agents tester,security-analyst,qa-specialist
 ```
 
 #### Step 6: Deployment and Monitoring
 ```bash
 # Deploy and monitor
-npx claude-flow@alpha swarm "deploy to cloud and setup monitoring" \
+npx hive-flow@alpha swarm "deploy to cloud and setup monitoring" \
   --agents devops-engineer,cloud-specialist,monitoring-specialist
 ```
 
@@ -351,7 +351,7 @@ npx claude-flow@alpha swarm "deploy to cloud and setup monitoring" \
 #### Step 1: Define Feature Requirements
 ```bash
 # Start TDD cycle
-npx claude-flow@alpha sparc tdd "user authentication with email verification" \
+npx hive-flow@alpha sparc tdd "user authentication with email verification" \
   --test-framework jest \
   --coverage 95
 ```
@@ -359,26 +359,26 @@ npx claude-flow@alpha sparc tdd "user authentication with email verification" \
 #### Step 2: Write Tests First
 ```bash
 # Create test specifications
-npx claude-flow@alpha swarm "write comprehensive test cases for authentication flow" \
+npx hive-flow@alpha swarm "write comprehensive test cases for authentication flow" \
   --agents test-architect,tdd-specialist
 ```
 
 #### Step 3: Implement Minimal Code
 ```bash
 # Implement just enough to pass tests
-npx claude-flow@alpha sparc code "implement minimal authentication logic to pass tests"
+npx hive-flow@alpha sparc code "implement minimal authentication logic to pass tests"
 ```
 
 #### Step 4: Refactor and Optimize
 ```bash
 # Improve implementation
-npx claude-flow@alpha sparc refinement "optimize authentication performance and security"
+npx hive-flow@alpha sparc refinement "optimize authentication performance and security"
 ```
 
 #### Step 5: Add Integration Tests
 ```bash
 # Create integration tests
-npx claude-flow@alpha swarm "add integration tests for complete authentication flow" \
+npx hive-flow@alpha swarm "add integration tests for complete authentication flow" \
   --agents integration-tester,api-tester
 ```
 
@@ -391,10 +391,10 @@ npx claude-flow@alpha swarm "add integration tests for complete authentication f
 #### Environment Variables
 ```bash
 # Core settings
-export CLAUDE_FLOW_DEBUG=true
-export CLAUDE_FLOW_LOG_LEVEL=info
-export CLAUDE_FLOW_DATA_DIR=./data
-export CLAUDE_FLOW_MAX_AGENTS=50
+export HIVE_FLOW_DEBUG=true
+export HIVE_FLOW_LOG_LEVEL=info
+export HIVE_FLOW_DATA_DIR=./data
+export HIVE_FLOW_MAX_AGENTS=50
 
 # API configuration
 export CLAUDE_API_KEY="your_claude_api_key"
@@ -402,13 +402,13 @@ export OPENAI_API_KEY="your_openai_api_key"
 export ANTHROPIC_API_KEY="your_anthropic_api_key"
 
 # Performance tuning
-export CLAUDE_FLOW_MEMORY_LIMIT=1024
-export CLAUDE_FLOW_TIMEOUT=300000
-export CLAUDE_FLOW_CONCURRENT_TASKS=10
+export HIVE_FLOW_MEMORY_LIMIT=1024
+export HIVE_FLOW_TIMEOUT=300000
+export HIVE_FLOW_CONCURRENT_TASKS=10
 ```
 
 #### Configuration File
-Create `.claude-flow.json` in your project root:
+Create `.hive-flow.json` in your project root:
 
 ```json
 {
@@ -524,7 +524,7 @@ Define custom agent combinations for specific use cases:
       },
       "backup": {
         "type": "s3",
-        "bucket": "claude-flow-backup",
+        "bucket": "hive-flow-backup",
         "region": "us-east-1"
       }
     },
@@ -573,13 +573,13 @@ Define custom agent combinations for specific use cases:
 #### Basic MCP Setup
 ```bash
 # Start MCP server
-npx claude-flow@alpha mcp start --port 3000
+npx hive-flow@alpha mcp start --port 3000
 
 # Configure MCP tools
-npx claude-flow@alpha mcp config --tools all
+npx hive-flow@alpha mcp config --tools all
 
 # Add custom MCP server
-npx claude-flow@alpha mcp add-server \
+npx hive-flow@alpha mcp add-server \
   --name "custom-tools" \
   --command "node custom-mcp-server.js"
 ```
@@ -587,13 +587,13 @@ npx claude-flow@alpha mcp add-server \
 #### MCP Integration with Claude Code
 ```bash
 # Add Claude-Flow MCP server to Claude Code
-claude mcp add claude-flow npx claude-flow@alpha mcp start
+claude mcp add hive-flow npx hive-flow@alpha mcp start
 
 # List available MCP tools
-npx claude-flow@alpha mcp tools --list
+npx hive-flow@alpha mcp tools --list
 
 # Test MCP connection
-npx claude-flow@alpha mcp test --tool swarm_init
+npx hive-flow@alpha mcp test --tool swarm_init
 ```
 
 ---
@@ -607,7 +607,7 @@ npx claude-flow@alpha mcp test --tool swarm_init
 **Issue: npm install fails with permission errors**
 ```bash
 # Solution 1: Use npx instead
-npx claude-flow@alpha --help
+npx hive-flow@alpha --help
 
 # Solution 2: Fix npm permissions
 npm config set prefix ~/.npm-global
@@ -639,37 +639,37 @@ npm install --no-optional
 **Issue: "Agent not found" error**
 ```bash
 # Check available agents
-npx claude-flow@alpha agents list
+npx hive-flow@alpha agents list
 
 # Verify agent spelling
-npx claude-flow@alpha agents info coder
+npx hive-flow@alpha agents info coder
 
 # Use default agent if uncertain
-npx claude-flow@alpha swarm "your task" --agent coder
+npx hive-flow@alpha swarm "your task" --agent coder
 ```
 
 **Issue: Memory-related errors**
 ```bash
 # Check memory usage
-npx claude-flow@alpha memory stats
+npx hive-flow@alpha memory stats
 
 # Clear memory cache
-npx claude-flow@alpha memory clear --cache
+npx hive-flow@alpha memory clear --cache
 
 # Optimize memory settings
-npx claude-flow@alpha config set memory.cacheSizeMB 256
+npx hive-flow@alpha config set memory.cacheSizeMB 256
 ```
 
 **Issue: API rate limiting**
 ```bash
 # Check API status
-npx claude-flow@alpha health --api
+npx hive-flow@alpha health --api
 
 # Configure rate limiting
-npx claude-flow@alpha config set providers.anthropic.rateLimit 60
+npx hive-flow@alpha config set providers.anthropic.rateLimit 60
 
 # Use multiple providers
-npx claude-flow@alpha config set providers.fallback openai
+npx hive-flow@alpha config set providers.fallback openai
 ```
 
 #### Performance Issues
@@ -677,25 +677,25 @@ npx claude-flow@alpha config set providers.fallback openai
 **Issue: Slow task execution**
 ```bash
 # Run diagnostics
-npx claude-flow@alpha diagnostics --performance
+npx hive-flow@alpha diagnostics --performance
 
 # Optimize configuration
-npx claude-flow@alpha optimize --auto
+npx hive-flow@alpha optimize --auto
 
 # Monitor real-time performance
-npx claude-flow@alpha monitor --interval 5s
+npx hive-flow@alpha monitor --interval 5s
 ```
 
 **Issue: High memory usage**
 ```bash
 # Check memory breakdown
-npx claude-flow@alpha memory analyze
+npx hive-flow@alpha memory analyze
 
 # Enable compression
-npx claude-flow@alpha config set memory.compressionEnabled true
+npx hive-flow@alpha config set memory.compressionEnabled true
 
 # Reduce cache size
-npx claude-flow@alpha config set memory.cacheSizeMB 128
+npx hive-flow@alpha config set memory.cacheSizeMB 128
 ```
 
 ### Debug Mode
@@ -704,45 +704,45 @@ Enable detailed logging for troubleshooting:
 
 ```bash
 # Enable debug mode
-export CLAUDE_FLOW_DEBUG=true
-export CLAUDE_FLOW_LOG_LEVEL=debug
+export HIVE_FLOW_DEBUG=true
+export HIVE_FLOW_LOG_LEVEL=debug
 
 # Run with verbose output
-npx claude-flow@alpha swarm "your task" --verbose
+npx hive-flow@alpha swarm "your task" --verbose
 
 # Generate diagnostic report
-npx claude-flow@alpha diagnostics --full --output debug-report.json
+npx hive-flow@alpha diagnostics --full --output debug-report.json
 ```
 
 ### Log Analysis
 
 ```bash
 # View recent logs
-npx claude-flow@alpha logs --tail 100
+npx hive-flow@alpha logs --tail 100
 
 # Filter logs by level
-npx claude-flow@alpha logs --level error
+npx hive-flow@alpha logs --level error
 
 # Search logs
-npx claude-flow@alpha logs --grep "swarm"
+npx hive-flow@alpha logs --grep "swarm"
 
 # Export logs
-npx claude-flow@alpha logs --export logs.json
+npx hive-flow@alpha logs --export logs.json
 ```
 
 ### Health Checks
 
 ```bash
 # Comprehensive health check
-npx claude-flow@alpha health --comprehensive
+npx hive-flow@alpha health --comprehensive
 
 # Check specific components
-npx claude-flow@alpha health --component memory
-npx claude-flow@alpha health --component agents
-npx claude-flow@alpha health --component mcp
+npx hive-flow@alpha health --component memory
+npx hive-flow@alpha health --component agents
+npx hive-flow@alpha health --component mcp
 
 # Automated health monitoring
-npx claude-flow@alpha health --monitor --interval 60s
+npx hive-flow@alpha health --monitor --interval 60s
 ```
 
 ---
@@ -764,29 +764,29 @@ npx claude-flow@alpha health --monitor --interval 60s
 
 ```bash
 # Configure memory limits
-npx claude-flow@alpha config set memory.cacheSizeMB 512
-npx claude-flow@alpha config set memory.maxMemoryMB 2048
+npx hive-flow@alpha config set memory.cacheSizeMB 512
+npx hive-flow@alpha config set memory.maxMemoryMB 2048
 
 # Enable compression
-npx claude-flow@alpha config set memory.compressionEnabled true
-npx claude-flow@alpha config set memory.indexingEnabled true
+npx hive-flow@alpha config set memory.compressionEnabled true
+npx hive-flow@alpha config set memory.indexingEnabled true
 
 # Set retention policies
-npx claude-flow@alpha config set memory.retentionDays 30
-npx claude-flow@alpha config set memory.autoCleanup true
+npx hive-flow@alpha config set memory.retentionDays 30
+npx hive-flow@alpha config set memory.autoCleanup true
 ```
 
 #### Agent Pool Optimization
 
 ```bash
 # Configure agent pools
-npx claude-flow@alpha config set orchestrator.maxConcurrentAgents 50
-npx claude-flow@alpha config set orchestrator.agentPoolSize 20
+npx hive-flow@alpha config set orchestrator.maxConcurrentAgents 50
+npx hive-flow@alpha config set orchestrator.agentPoolSize 20
 
 # Enable auto-scaling
-npx claude-flow@alpha config set swarm.autoScaling true
-npx claude-flow@alpha config set swarm.minAgents 2
-npx claude-flow@alpha config set swarm.maxAgents 100
+npx hive-flow@alpha config set swarm.autoScaling true
+npx hive-flow@alpha config set swarm.minAgents 2
+npx hive-flow@alpha config set swarm.maxAgents 100
 ```
 
 ### Task Optimization
@@ -794,14 +794,14 @@ npx claude-flow@alpha config set swarm.maxAgents 100
 #### Batch Processing
 ```bash
 # Process multiple tasks in parallel
-npx claude-flow@alpha swarm batch \
+npx hive-flow@alpha swarm batch \
   "create user service" \
   "create product service" \
   "create order service" \
   --parallel
 
 # Use agent profiles for efficiency
-npx claude-flow@alpha swarm "build microservices" \
+npx hive-flow@alpha swarm "build microservices" \
   --profile backend-development \
   --optimize-for speed
 ```
@@ -809,37 +809,37 @@ npx claude-flow@alpha swarm "build microservices" \
 #### Caching Strategy
 ```bash
 # Enable aggressive caching
-npx claude-flow@alpha config set performance.cacheEnabled true
-npx claude-flow@alpha config set performance.cacheStrategy aggressive
+npx hive-flow@alpha config set performance.cacheEnabled true
+npx hive-flow@alpha config set performance.cacheStrategy aggressive
 
 # Pre-warm caches
-npx claude-flow@alpha cache warm --agents common
-npx claude-flow@alpha cache warm --tools frequent
+npx hive-flow@alpha cache warm --agents common
+npx hive-flow@alpha cache warm --tools frequent
 ```
 
 ### Network Optimization
 
 ```bash
 # Configure connection pooling
-npx claude-flow@alpha config set network.connectionPooling true
-npx claude-flow@alpha config set network.maxConnections 100
+npx hive-flow@alpha config set network.connectionPooling true
+npx hive-flow@alpha config set network.maxConnections 100
 
 # Enable compression
-npx claude-flow@alpha config set network.compressionEnabled true
-npx claude-flow@alpha config set network.timeout 30000
+npx hive-flow@alpha config set network.compressionEnabled true
+npx hive-flow@alpha config set network.timeout 30000
 ```
 
 ### Monitoring and Metrics
 
 ```bash
 # Real-time performance monitoring
-npx claude-flow@alpha monitor --dashboard
+npx hive-flow@alpha monitor --dashboard
 
 # Generate performance report
-npx claude-flow@alpha performance report --period 7d
+npx hive-flow@alpha performance report --period 7d
 
 # Set up performance alerts
-npx claude-flow@alpha alerts configure \
+npx hive-flow@alpha alerts configure \
   --cpu-threshold 80 \
   --memory-threshold 85 \
   --response-time-threshold 5000
@@ -854,10 +854,10 @@ npx claude-flow@alpha alerts configure \
 #### Setup
 ```bash
 # Initialize GitHub integration
-npx claude-flow@alpha github init --token YOUR_GITHUB_TOKEN
+npx hive-flow@alpha github init --token YOUR_GITHUB_TOKEN
 
 # Configure repository
-npx claude-flow@alpha github config \
+npx hive-flow@alpha github config \
   --repo "username/repository" \
   --default-branch main
 ```
@@ -865,19 +865,19 @@ npx claude-flow@alpha github config \
 #### Common GitHub Workflows
 ```bash
 # Pull Request Management
-npx claude-flow@alpha github pr-manager \
+npx hive-flow@alpha github pr-manager \
   "review and merge pending PRs" \
   --auto-merge \
   --require-reviews 2
 
 # Issue Management
-npx claude-flow@alpha github issue-tracker \
+npx hive-flow@alpha github issue-tracker \
   "analyze and categorize open issues" \
   --auto-label \
   --assign-to-team
 
 # Release Management
-npx claude-flow@alpha github release-manager \
+npx hive-flow@alpha github release-manager \
   "prepare v2.1.0 release" \
   --generate-changelog \
   --create-release-notes
@@ -886,13 +886,13 @@ npx claude-flow@alpha github release-manager \
 #### Advanced GitHub Features
 ```bash
 # Automated code review
-npx claude-flow@alpha github code-review \
+npx hive-flow@alpha github code-review \
   --pr-number 123 \
   --agents security-analyst,code-reviewer \
   --auto-comment
 
 # Repository analysis
-npx claude-flow@alpha github analyze-repo \
+npx hive-flow@alpha github analyze-repo \
   --metrics code-quality,security,performance \
   --generate-report
 ```
@@ -902,18 +902,18 @@ npx claude-flow@alpha github analyze-repo \
 #### Container Management
 ```bash
 # Containerize application
-npx claude-flow@alpha docker containerize \
+npx hive-flow@alpha docker containerize \
   --app-type node \
   --multi-stage \
   --optimize-size
 
 # Build and push images
-npx claude-flow@alpha docker build-push \
+npx hive-flow@alpha docker build-push \
   --registry docker.io \
   --tags latest,v2.0.0
 
 # Container orchestration
-npx claude-flow@alpha docker compose \
+npx hive-flow@alpha docker compose \
   --services api,database,redis \
   --environment production
 ```
@@ -923,19 +923,19 @@ npx claude-flow@alpha docker compose \
 #### Cluster Management
 ```bash
 # Deploy to Kubernetes
-npx claude-flow@alpha k8s deploy \
+npx hive-flow@alpha k8s deploy \
   --cluster production \
   --namespace default \
   --replicas 3
 
 # Manage services
-npx claude-flow@alpha k8s services \
+npx hive-flow@alpha k8s services \
   "setup load balancer and ingress" \
   --ssl-enabled \
   --auto-scaling
 
 # Monitor cluster
-npx claude-flow@alpha k8s monitor \
+npx hive-flow@alpha k8s monitor \
   --real-time \
   --alerts \
   --dashboard
@@ -946,14 +946,14 @@ npx claude-flow@alpha k8s monitor \
 #### GitHub Actions
 ```bash
 # Setup CI/CD pipeline
-npx claude-flow@alpha cicd github-actions \
+npx hive-flow@alpha cicd github-actions \
   "create complete CI/CD workflow" \
   --tests \
   --security-scan \
   --deploy-staging
 
 # Custom workflows
-npx claude-flow@alpha cicd custom \
+npx hive-flow@alpha cicd custom \
   --provider github-actions \
   --stages "lint,test,build,deploy" \
   --environments "staging,production"
@@ -962,7 +962,7 @@ npx claude-flow@alpha cicd custom \
 #### Jenkins Integration
 ```bash
 # Jenkins pipeline
-npx claude-flow@alpha cicd jenkins \
+npx hive-flow@alpha cicd jenkins \
   "setup Jenkins pipeline with parallel stages" \
   --agents 4 \
   --parallel-tests
@@ -973,13 +973,13 @@ npx claude-flow@alpha cicd jenkins \
 #### AWS Integration
 ```bash
 # Deploy to AWS
-npx claude-flow@alpha aws deploy \
+npx hive-flow@alpha aws deploy \
   --service ecs \
   --region us-east-1 \
   --auto-scaling
 
 # Infrastructure as Code
-npx claude-flow@alpha aws infrastructure \
+npx hive-flow@alpha aws infrastructure \
   "create complete AWS infrastructure" \
   --terraform \
   --best-practices
@@ -988,7 +988,7 @@ npx claude-flow@alpha aws infrastructure \
 #### Azure Integration
 ```bash
 # Azure deployment
-npx claude-flow@alpha azure deploy \
+npx hive-flow@alpha azure deploy \
   --service app-service \
   --resource-group production \
   --scaling-rules
@@ -997,7 +997,7 @@ npx claude-flow@alpha azure deploy \
 #### Google Cloud Integration
 ```bash
 # GCP deployment
-npx claude-flow@alpha gcp deploy \
+npx hive-flow@alpha gcp deploy \
   --service cloud-run \
   --region us-central1 \
   --auto-scaling
@@ -1009,11 +1009,11 @@ npx claude-flow@alpha gcp deploy \
 
 ### General Questions
 
-**Q: What is Claude-Flow?**
-A: Claude-Flow is an enterprise-grade AI agent orchestration platform that enables distributed AI development through swarm intelligence, featuring 54+ specialized agents and 87 MCP tools.
+**Q: What is Hive-Flow?**
+A: Hive-Flow is an enterprise-grade AI agent orchestration platform that enables distributed AI development through swarm intelligence, featuring 54+ specialized agents and 87 MCP tools.
 
-**Q: How is Claude-Flow different from other AI tools?**
-A: Claude-Flow provides true multi-agent coordination with swarm intelligence, persistent memory management, and enterprise-grade features like security, monitoring, and scalability.
+**Q: How is Hive-Flow different from other AI tools?**
+A: Hive-Flow provides true multi-agent coordination with swarm intelligence, persistent memory management, and enterprise-grade features like security, monitoring, and scalability.
 
 **Q: Do I need Claude Code to use Claude-Flow?**
 A: While Claude-Flow can work independently, Claude Code integration provides the best experience with full MCP protocol support and seamless agent coordination.
@@ -1021,24 +1021,24 @@ A: While Claude-Flow can work independently, Claude Code integration provides th
 ### Installation and Setup
 
 **Q: Which Node.js version should I use?**
-A: Claude-Flow requires Node.js ≥ 20.0.0. We recommend using the latest LTS version for best performance and security.
+A: Hive-Flow requires Node.js ≥ 20.0.0. We recommend using the latest LTS version for best performance and security.
 
-**Q: Can I use Claude-Flow without global installation?**
-A: Yes! Using `npx claude-flow@alpha` is actually recommended as it always uses the latest version without requiring global installation.
+**Q: Can I use Hive-Flow without global installation?**
+A: Yes! Using `npx hive-flow@alpha` is actually recommended as it always uses the latest version without requiring global installation.
 
 **Q: How do I handle API key configuration?**
-A: Set your API keys as environment variables or in the `.claude-flow.json` configuration file. Never commit API keys to version control.
+A: Set your API keys as environment variables or in the `.hive-flow.json` configuration file. Never commit API keys to version control.
 
 ### Usage and Functionality
 
 **Q: How many agents can I run simultaneously?**
-A: By default, Claude-Flow can handle up to 100 concurrent agents. This can be configured based on your system resources and API limits.
+A: By default, Hive-Flow can handle up to 100 concurrent agents. This can be configured based on your system resources and API limits.
 
 **Q: Can I create custom agents?**
-A: Currently, Claude-Flow provides 54+ pre-built agents. Custom agent creation is planned for a future release.
+A: Currently, Hive-Flow provides 54+ pre-built agents. Custom agent creation is planned for a future release.
 
 **Q: How does the memory system work?**
-A: Claude-Flow uses a distributed memory system with SQLite backend by default. Memory is automatically synchronized across agents and persists between sessions.
+A: Hive-Flow uses a distributed memory system with SQLite backend by default. Memory is automatically synchronized across agents and persists between sessions.
 
 **Q: What swarm topology should I choose?**
 A: 
@@ -1055,27 +1055,27 @@ A: Enable parallel processing, use appropriate swarm topologies, configure cachi
 **Q: What should I do if I hit API rate limits?**
 A: Configure multiple providers, adjust rate limiting settings, or implement request batching and queuing.
 
-**Q: How much disk space does Claude-Flow use?**
+**Q: How much disk space does Hive-Flow use?**
 A: Base installation requires ~100MB. Memory database and cache can grow based on usage, typically 10-100MB for most projects.
 
 ### Integration and Compatibility
 
-**Q: Can Claude-Flow work with my existing CI/CD pipeline?**
-A: Yes, Claude-Flow provides integrations for GitHub Actions, Jenkins, and other CI/CD platforms.
+**Q: Can Hive-Flow work with my existing CI/CD pipeline?**
+A: Yes, Hive-Flow provides integrations for GitHub Actions, Jenkins, and other CI/CD platforms.
 
-**Q: Is Claude-Flow compatible with Docker and Kubernetes?**
-A: Absolutely! Claude-Flow includes specialized agents for Docker containerization and Kubernetes orchestration.
+**Q: Is Hive-Flow compatible with Docker and Kubernetes?**
+A: Absolutely! Hive-Flow includes specialized agents for Docker containerization and Kubernetes orchestration.
 
-**Q: Can I use Claude-Flow in enterprise environments?**
-A: Yes, Claude-Flow is designed for enterprise use with security features, audit logging, and scalable architecture.
+**Q: Can I use Hive-Flow in enterprise environments?**
+A: Yes, Hive-Flow is designed for enterprise use with security features, audit logging, and scalable architecture.
 
 ### Troubleshooting
 
 **Q: What should I do if an agent fails?**
-A: Claude-Flow includes automatic fault recovery. You can also check logs with `npx claude-flow@alpha logs` and restart failed tasks.
+A: Hive-Flow includes automatic fault recovery. You can also check logs with `npx hive-flow@alpha logs` and restart failed tasks.
 
 **Q: How do I debug performance issues?**
-A: Use the built-in diagnostics: `npx claude-flow@alpha diagnostics --performance` and monitor real-time metrics.
+A: Use the built-in diagnostics: `npx hive-flow@alpha diagnostics --performance` and monitor real-time metrics.
 
 **Q: Where can I get help if I'm stuck?**
 A: Check this guide, review the comprehensive documentation, search GitHub issues, or join our Discord community.
@@ -1085,11 +1085,11 @@ A: Check this guide, review the comprehensive documentation, search GitHub issue
 **Q: How does SPARC methodology work?**
 A: SPARC (Specification → Pseudocode → Architecture → Refinement → Code) is a structured development methodology that ensures thorough planning and high-quality implementation.
 
-**Q: Can I use Claude-Flow for machine learning projects?**
-A: Yes! Claude-Flow includes specialized ML agents for model development, training, and deployment.
+**Q: Can I use Hive-Flow for machine learning projects?**
+A: Yes! Hive-Flow includes specialized ML agents for model development, training, and deployment.
 
-**Q: How secure is Claude-Flow?**
-A: Claude-Flow includes enterprise-grade security features including input validation, data encryption, audit logging, and role-based access control.
+**Q: How secure is Hive-Flow?**
+A: Hive-Flow includes enterprise-grade security features including input validation, data encryption, audit logging, and role-based access control.
 
 ---
 
@@ -1097,10 +1097,10 @@ A: Claude-Flow includes enterprise-grade security features including input valid
 
 ### Getting Help
 
-- **📖 Documentation**: [Complete Documentation](https://github.com/ruvnet/claude-flow/docs)
-- **💬 Discord Community**: [Join Discord](https://discord.gg/claude-flow)
-- **🐛 Issue Tracker**: [GitHub Issues](https://github.com/ruvnet/claude-flow/issues)
-- **📧 Email Support**: support@claude-flow.ai
+- **📖 Documentation**: [Complete Documentation](https://github.com/ruvnet/hive-flow/docs)
+- **💬 Discord Community**: [Join Discord](https://discord.gg/hive-flow)
+- **🐛 Issue Tracker**: [GitHub Issues](https://github.com/ruvnet/hive-flow/issues)
+- **📧 Email Support**: support@hive-flow.ai
 
 ### Contributing
 
@@ -1114,10 +1114,10 @@ We welcome contributions! Please see our [Contributing Guide](../CONTRIBUTING.md
 
 ### Stay Updated
 
-- 🐦 **Twitter/X**: [@claudeflow](https://twitter.com/claudeflow)
-- 📰 **Blog**: [blog.claude-flow.ai](https://blog.claude-flow.ai)
-- 📺 **YouTube**: [Claude-Flow Channel](https://youtube.com/@claudeflow)
-- 🌟 **GitHub**: [Star the Repository](https://github.com/ruvnet/claude-flow)
+- 🐦 **Twitter/X**: [@hive-flow](https://twitter.com/hive-flow)
+- 📰 **Blog**: [blog.hive-flow.ai](https://blog.hive-flow.ai)
+- 📺 **YouTube**: [Hive-Flow Channel](https://youtube.com/@hive-flow)
+- 🌟 **GitHub**: [Star the Repository](https://github.com/ruvnet/hive-flow)
 
 ---
 
@@ -1125,14 +1125,14 @@ We welcome contributions! Please see our [Contributing Guide](../CONTRIBUTING.md
 
 ## 🎉 Ready to Get Started?
 
-You now have everything you need to master Claude-Flow!
+You now have everything you need to master Hive-Flow!
 
 [🚀 Start Building](../README.md#-quick-start) | [📖 API Reference](API_DOCUMENTATION.md) | [🏗️ Architecture Guide](ARCHITECTURE.md)
 
 ---
 
-**Claude-Flow User Guide v2.0.0**
+**Hive-Flow User Guide v2.0.0**
 
-*Built with ❤️ by the Claude-Flow Community*
+*Built with ❤️ by the Hive-Flow Community*
 
 </div>

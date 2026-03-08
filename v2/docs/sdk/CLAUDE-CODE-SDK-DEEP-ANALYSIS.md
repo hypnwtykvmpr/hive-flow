@@ -99,7 +99,7 @@ type HookJSONOutput =
     };
 ```
 
-**Claude-Flow Mapping**:
+**Hive-Flow Mapping**:
 - `pre-task` → `PreToolUse`
 - `post-task` → `PostToolUse`
 - `session-start` → `SessionStart`
@@ -143,7 +143,7 @@ type PermissionUpdateDestination =
   | 'session';          // Current session only
 ```
 
-**Claude-Flow Integration**:
+**Hive-Flow Integration**:
 - Swarm agents can have per-agent permission policies
 - Tool governance at swarm orchestration level
 - Automatic permission inheritance for spawned agents
@@ -155,7 +155,7 @@ type PermissionUpdateDestination =
 ```typescript
 type McpServerConfig =
   | {
-      type?: 'stdio';  // Command-based (current Claude-Flow method)
+      type?: 'stdio';  // Command-based (current Hive-Flow method)
       command: string;
       args?: string[];
       env?: Record<string, string>;
@@ -183,11 +183,11 @@ type McpServerConfig =
 - **http**: Request-based, ~10-100ms latency
 - **sdk**: In-process, **<0.1ms** - **10-100x faster**
 
-**Claude-Flow Opportunity**:
-Create `claude-flow-swarm` as in-process MCP server:
+**Hive-Flow Opportunity**:
+Create `hive-flow-swarm` as in-process MCP server:
 ```typescript
 const swarmServer = createSdkMcpServer({
-  name: 'claude-flow-swarm',
+  name: 'hive-flow-swarm',
   version: '2.5.0-alpha.130',
   tools: [
     tool('swarm_init', 'Initialize multi-agent swarm', {...}, handler),
@@ -228,7 +228,7 @@ interface Query extends AsyncGenerator<SDKMessage, void> {
 }
 ```
 
-**Claude-Flow Use Cases**:
+**Hive-Flow Use Cases**:
 1. **Parallel Agent Spawning**: Fork sessions for concurrent execution
 2. **Checkpoint Recovery**: Resume from specific message for fault tolerance
 3. **Dynamic Model Switching**: Switch models based on task complexity
@@ -279,7 +279,7 @@ type SDKCompactBoundaryMessage = {
 };
 ```
 
-**Claude-Flow Integration**:
+**Hive-Flow Integration**:
 - Store `SDKMessage` history for swarm coordination
 - Use `SDKCompactBoundaryMessage` as checkpoint markers
 - Track `permission_denials` for swarm-level governance
@@ -452,7 +452,7 @@ mcpServerStatus(): Promise<McpServerStatus[]>;
 
 ---
 
-## 🚀 Claude-Flow Integration Opportunities
+## 🚀 Hive-Flow Integration Opportunities
 
 ### Phase 3: Memory System → Session Persistence
 ```typescript
@@ -554,8 +554,8 @@ const hooks: Partial<Record<HookEvent, HookCallbackMatcher[]>> = {
 // Zero-overhead swarm coordination
 import { createSdkMcpServer, tool } from '@anthropic-ai/claude-code/sdk';
 
-const claudeFlowSwarmServer = createSdkMcpServer({
-  name: 'claude-flow-swarm',
+const hiveFlowSwarmServer = createSdkMcpServer({
+  name: 'hive-flow-swarm',
   version: '2.5.0-alpha.130',
   tools: [
     tool('swarm_init', 'Initialize multi-agent swarm', {
@@ -582,15 +582,15 @@ const claudeFlowSwarmServer = createSdkMcpServer({
   ]
 });
 
-// Use in Claude-Flow
+// Use in Hive-Flow
 const response = query({
   prompt: 'Deploy a 5-agent swarm to analyze this codebase',
   options: {
     mcpServers: {
-      'claude-flow-swarm': {
+      'hive-flow-swarm': {
         type: 'sdk',
-        name: 'claude-flow-swarm',
-        instance: claudeFlowSwarmServer.instance
+        name: 'hive-flow-swarm',
+        instance: hiveFlowSwarmServer.instance
       }
     }
   }
@@ -617,8 +617,8 @@ const response = query({
 2. **Phase 3**: Refactor memory system to use SDK session persistence
 3. **Phase 4**: Implement session forking for parallel agents
 4. **Phase 5**: Replace custom hooks with SDK native hooks
-5. **Phase 6**: Create `claude-flow-swarm` in-process MCP server
-6. **Testing**: Comprehensive integration tests with `./claude-flow`
+5. **Phase 6**: Create `hive-flow-swarm` in-process MCP server
+6. **Testing**: Comprehensive integration tests with `./hive-flow`
 7. **Documentation**: Update all integration guides
 
 ---
@@ -626,7 +626,7 @@ const response = query({
 ## 🎯 Strategic Positioning (Final)
 
 > **"Claude Agent SDK handles single-agent execution brilliantly.**
-> **Claude-Flow orchestrates the symphony with zero-overhead coordination."**
+> **Hive-Flow orchestrates the symphony with zero-overhead coordination."**
 
 **SDK Provides**:
 - ✅ Single-agent lifecycle (retry, artifacts, sessions)
@@ -635,7 +635,7 @@ const response = query({
 - ✅ MCP integration primitives
 - ✅ Session management & forking
 
-**Claude-Flow Adds**:
+**Hive-Flow Adds**:
 - 🚀 Multi-agent swarm orchestration (mesh, hierarchical, ring, star)
 - ⚡ **In-process MCP server** (10-100x faster than stdio)
 - 🤖 Distributed consensus (Byzantine, Raft, Gossip)

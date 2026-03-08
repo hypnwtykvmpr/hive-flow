@@ -3,31 +3,31 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@claude-flow/security": ["./@claude-flow/security/src"],
-      "@claude-flow/memory": ["./@claude-flow/memory/src"],
-      "@claude-flow/integration": ["./@claude-flow/integration/src"],
-      "@claude-flow/swarm": ["./@claude-flow/swarm/src"],
-      "@claude-flow/performance": ["./@claude-flow/performance/src"],
-      "@claude-flow/cli": ["./@claude-flow/cli/src"],
-      "@claude-flow/neural": ["./@claude-flow/neural/src"],
-      "@claude-flow/testing": ["./@claude-flow/testing/src"],
-      "@claude-flow/deployment": ["./@claude-flow/deployment/src"],
-      "@claude-flow/shared": ["./@claude-flow/shared/src"],
-      "@claude-flow/hooks": ["./@claude-flow/hooks/src"]
+      "@hive-flow/security": ["./@hive-flow/security/src"],
+      "@hive-flow/memory": ["./@hive-flow/memory/src"],
+      "@hive-flow/integration": ["./@hive-flow/integration/src"],
+      "@hive-flow/swarm": ["./@hive-flow/swarm/src"],
+      "@hive-flow/performance": ["./@hive-flow/performance/src"],
+      "@hive-flow/cli": ["./@hive-flow/cli/src"],
+      "@hive-flow/neural": ["./@hive-flow/neural/src"],
+      "@hive-flow/testing": ["./@hive-flow/testing/src"],
+      "@hive-flow/deployment": ["./@hive-flow/deployment/src"],
+      "@hive-flow/shared": ["./@hive-flow/shared/src"],
+      "@hive-flow/hooks": ["./@hive-flow/hooks/src"]
     }
   },
   "references": [
-    { "path": "./@claude-flow/shared" },
-    { "path": "./@claude-flow/security" },
-    { "path": "./@claude-flow/memory" },
-    { "path": "./@claude-flow/integration" },
-    { "path": "./@claude-flow/swarm" },
-    { "path": "./@claude-flow/performance" },
-    { "path": "./@claude-flow/cli" },
-    { "path": "./@claude-flow/neural" },
-    { "path": "./@claude-flow/testing" },
-    { "path": "./@claude-flow/deployment" },
-    { "path": "./@claude-flow/hooks" }
+    { "path": "./@hive-flow/shared" },
+    { "path": "./@hive-flow/security" },
+    { "path": "./@hive-flow/memory" },
+    { "path": "./@hive-flow/integration" },
+    { "path": "./@hive-flow/swarm" },
+    { "path": "./@hive-flow/performance" },
+    { "path": "./@hive-flow/cli" },
+    { "path": "./@hive-flow/neural" },
+    { "path": "./@hive-flow/testing" },
+    { "path": "./@hive-flow/deployment" },
+    { "path": "./@hive-flow/hooks" }
   ],
   "include": [],
   "exclude": ["node_modules", "dist"]

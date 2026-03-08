@@ -2,7 +2,7 @@
 Neural Processing Benchmark
 
 Comprehensive benchmarking system for neural pattern processing performance
-in Claude Flow swarm operations. Tests pattern recognition, inference speed,
+in Hive Flow swarm operations. Tests pattern recognition, inference speed,
 training performance, and cognitive pattern effectiveness.
 """
 
@@ -480,7 +480,7 @@ class MemoryEfficiencyTester:
 
 class NeuralProcessingBenchmark:
     """
-    Benchmark neural pattern processing performance in Claude Flow swarms.
+    Benchmark neural pattern processing performance in Hive Flow swarms.
     
     This class provides comprehensive benchmarking of neural processing capabilities
     including pattern recognition, inference speed, training performance, and

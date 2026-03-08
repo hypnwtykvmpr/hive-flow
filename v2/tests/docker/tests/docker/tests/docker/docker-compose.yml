@@ -10,11 +10,11 @@ services:
       /bin/bash -c "
       echo '🧪 ReasoningBank Integration Tests' &&
       echo '1. Initialize memory' &&
-      ./bin/claude-flow agent memory init &&
+      ./bin/hive-flow agent memory init &&
       echo '2. Check status' &&
-      ./bin/claude-flow agent memory status &&
+      ./bin/hive-flow agent memory status &&
       echo '3. List agents' &&
-      ./bin/claude-flow agent agents | head -20 &&
+      ./bin/hive-flow agent agents | head -20 &&
       echo '4. ReasoningBank help' &&
       npx agentic-flow reasoningbank help &&
       echo '5. Verify database' &&

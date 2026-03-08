@@ -1,5 +1,5 @@
 /**
- * Enterprise Configuration Management for Claude-Flow
+ * Enterprise Configuration Management for Hive-Flow
  * Features: Security masking, change tracking, multi-format support, credential management
  */
 
@@ -522,7 +522,7 @@ export class ConfigManager {
    */
   private getUserConfigDir(): string {
     const home = homedir();
-    return join(home, '.claude-flow');
+    return join(home, '.hive-flow');
   }
 
   /**
@@ -936,7 +936,7 @@ export class ConfigManager {
     const config: Partial<Config> = {};
 
     // Orchestrator settings
-    const maxAgents = process.env.CLAUDE_FLOW_MAX_AGENTS;
+    const maxAgents = process.env.HIVE_FLOW_MAX_AGENTS;
     if (maxAgents) {
       if (!config.orchestrator) {
         config.orchestrator = {} as any;
@@ -949,7 +949,7 @@ export class ConfigManager {
     }
 
     // Terminal settings
-    const terminalType = process.env.CLAUDE_FLOW_TERMINAL_TYPE;
+    const terminalType = process.env.HIVE_FLOW_TERMINAL_TYPE;
     if (terminalType === 'vscode' || terminalType === 'native' || terminalType === 'auto') {
       config.terminal = {
         ...DEFAULT_CONFIG.terminal,
@@ -959,7 +959,7 @@ export class ConfigManager {
     }
 
     // Memory settings
-    const memoryBackend = process.env.CLAUDE_FLOW_MEMORY_BACKEND;
+    const memoryBackend = process.env.HIVE_FLOW_MEMORY_BACKEND;
     if (memoryBackend === 'sqlite' || memoryBackend === 'markdown' || memoryBackend === 'hybrid') {
       config.memory = {
         ...DEFAULT_CONFIG.memory,
@@ -969,7 +969,7 @@ export class ConfigManager {
     }
 
     // MCP settings
-    const mcpTransport = process.env.CLAUDE_FLOW_MCP_TRANSPORT;
+    const mcpTransport = process.env.HIVE_FLOW_MCP_TRANSPORT;
     if (mcpTransport === 'stdio' || mcpTransport === 'http' || mcpTransport === 'websocket') {
       config.mcp = {
         ...DEFAULT_CONFIG.mcp,
@@ -978,7 +978,7 @@ export class ConfigManager {
       };
     }
 
-    const mcpPort = process.env.CLAUDE_FLOW_MCP_PORT;
+    const mcpPort = process.env.HIVE_FLOW_MCP_PORT;
     if (mcpPort) {
       config.mcp = {
         ...DEFAULT_CONFIG.mcp,
@@ -988,7 +988,7 @@ export class ConfigManager {
     }
 
     // Logging settings
-    const logLevel = process.env.CLAUDE_FLOW_LOG_LEVEL;
+    const logLevel = process.env.HIVE_FLOW_LOG_LEVEL;
     if (
       logLevel === 'debug' ||
       logLevel === 'info' ||

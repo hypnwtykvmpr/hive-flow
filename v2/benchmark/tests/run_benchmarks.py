@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Comprehensive benchmark runner for claude-flow.
+Comprehensive benchmark runner for hive-flow.
 Executes all test suites and generates consolidated reports.
 """
 
@@ -15,7 +15,7 @@ import argparse
 
 
 class BenchmarkRunner:
-    """Main benchmark runner for claude-flow tests"""
+    """Main benchmark runner for hive-flow tests"""
     
     def __init__(self, verbose: bool = False):
         self.verbose = verbose
@@ -222,7 +222,7 @@ class BenchmarkRunner:
     def _generate_markdown_report(self):
         """Generate a human-readable markdown report"""
         report_lines = [
-            "# Claude-Flow Benchmark Report",
+            "# Hive-Flow Benchmark Report",
             f"\nGenerated: {self.results['timestamp']}",
             "\n## Summary",
             f"- **Total Duration**: {self.results['summary']['total_duration']:.2f}s",
@@ -253,7 +253,7 @@ class BenchmarkRunner:
     
     def run_all_benchmarks(self):
         """Run all benchmark suites"""
-        print("🚀 Starting Comprehensive Claude-Flow Benchmarks")
+        print("🚀 Starting Comprehensive Hive-Flow Benchmarks")
         print(f"Test Directory: {self.test_dir}")
         
         # Run unit tests
@@ -271,7 +271,7 @@ class BenchmarkRunner:
 
 def main():
     """Main entry point"""
-    parser = argparse.ArgumentParser(description="Run claude-flow benchmarks")
+    parser = argparse.ArgumentParser(description="Run hive-flow benchmarks")
     parser.add_argument("-v", "--verbose", action="store_true", 
                       help="Verbose output")
     parser.add_argument("--suite", choices=["all", "unit", "integration", "performance"],

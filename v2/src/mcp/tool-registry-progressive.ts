@@ -151,7 +151,7 @@ export class ProgressiveToolRegistry {
 
     // Create in-process server
     this.inProcessServer = createInProcessServer({
-      name: 'claude-flow',
+      name: 'hive-flow',
       version: '2.7.32',
       enableMetrics: this.config.enableMetrics,
       enableCaching: this.config.enableCaching,
@@ -208,7 +208,7 @@ export class ProgressiveToolRegistry {
 
     // Create SDK MCP server
     this.sdkServer = sdk.createSdkMcpServer({
-      name: 'claude-flow',
+      name: 'hive-flow',
       version: '2.7.32',
       tools: sdkTools,
     });
@@ -514,7 +514,7 @@ export async function createProgressiveToolRegistry(
 /**
  * Export SDK server creation helper with progressive disclosure
  */
-export async function createProgressiveClaudeFlowSdkServer(
+export async function createProgressiveHiveFlowSdkServer(
   orchestratorContext?: any
 ): Promise<McpSdkServerConfigWithInstance> {
   const registry = await createProgressiveToolRegistry({
@@ -529,7 +529,7 @@ export async function createProgressiveClaudeFlowSdkServer(
     throw new Error('Failed to create SDK server');
   }
 
-  logger.info('Progressive Claude Flow SDK server created', {
+  logger.info('Progressive Hive Flow SDK server created', {
     totalTools: registry.getToolNames().length,
     approach: 'progressive-disclosure',
     tokenSavings: '98.7%',

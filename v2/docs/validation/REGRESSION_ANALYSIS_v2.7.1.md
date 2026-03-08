@@ -82,25 +82,25 @@ Result: 0 files changed
 All tested commands returned expected results:
 
 ```bash
-✅ claude-flow --version
+✅ hive-flow --version
    Output: v2.7.1 with alpha features listed
 
-✅ claude-flow memory list
+✅ hive-flow memory list
    Output: ReasoningBank initialized, 10 memories displayed
 
-✅ claude-flow sparc modes
+✅ hive-flow sparc modes
    Output: 13 SPARC modes listed correctly
 
-✅ claude-flow help
+✅ hive-flow help
    Output: Comprehensive help with all commands
 
-✅ claude-flow mcp status
+✅ hive-flow mcp status
    Output: MCP server status (stopped but ready)
 
-✅ claude-flow hooks --help
+✅ hive-flow hooks --help
    Output: Hooks command help displayed
 
-✅ claude-flow hooks pre-task --description "test" --dry-run
+✅ hive-flow hooks pre-task --description "test" --dry-run
    Output: Hook executed successfully with task ID generation
 ```
 
@@ -166,7 +166,7 @@ FAIL src/verification/tests/mocks/false-reporting-scenarios.test.ts
 
 **Status**: ✅ Backwards compatible
 - Agentic-flow v1.7.0 maintains 100% API compatibility
-- All existing claude-flow code works unchanged
+- All existing hive-flow code works unchanged
 - No breaking changes in dependencies
 
 #### Integration Points
@@ -327,10 +327,10 @@ Successfully compiled: 590 files with swc (306.39ms)
 
 ### B. CLI Command Outputs
 ```
-claude-flow --version: v2.7.1
-claude-flow memory list: 10 memories displayed
-claude-flow sparc modes: 13 modes listed
-claude-flow hooks pre-task: Hook executed successfully
+hive-flow --version: v2.7.1
+hive-flow memory list: 10 memories displayed
+hive-flow sparc modes: 13 modes listed
+hive-flow hooks pre-task: Hook executed successfully
 ```
 
 ### C. Memory System Output

@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import https from 'node:https';
 import { spawn, exec } from 'node:child_process';
 
-console.log('Installing Claude-Flow...');
+console.log('Installing Hive-Flow...');
 
 // Check if Deno is available
 function checkDeno() {
@@ -70,8 +70,8 @@ async function main() {
       await installDeno();
     }
     
-    console.log('Claude-Flow installation completed!');
-    console.log('You can now use: npx claude-flow or claude-flow (if installed globally)');
+    console.log('Hive-Flow installation completed!');
+    console.log('You can now use: npx hive-flow or hive-flow (if installed globally)');
     
   } catch (error) {
     console.error('Installation failed:', error.message);

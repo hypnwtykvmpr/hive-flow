@@ -118,16 +118,16 @@ cp /workspaces/claude-code-flow/docs/reasoningbank/models/safla/memory.db ./.swa
 
 ```bash
 # Search for patterns semantically
-npx claude-flow@alpha memory search "optimize API performance" --namespace safla
+npx hive-flow@alpha memory search "optimize API performance" --namespace safla
 
 # Retrieve by domain
-npx claude-flow@alpha memory retrieve "domain:self-learning" --namespace safla
+npx hive-flow@alpha memory retrieve "domain:self-learning" --namespace safla
 
 # Get patterns with high confidence
-npx claude-flow@alpha memory retrieve "confidence:>0.85" --namespace safla
+npx hive-flow@alpha memory retrieve "confidence:>0.85" --namespace safla
 
 # Find patterns with specific tags
-npx claude-flow@alpha memory retrieve "tags:microservices" --namespace safla
+npx hive-flow@alpha memory retrieve "tags:microservices" --namespace safla
 ```
 
 ### 3. Programmatic Access
@@ -375,25 +375,25 @@ const monitoringPatterns = await getPatterns({
 setupAdaptiveMonitoring(monitoringPatterns);
 ```
 
-## Integration with Claude Flow
+## Integration with Hive Flow
 
-SAFLA model integrates seamlessly with Claude Flow's ReasoningBank:
+SAFLA model integrates seamlessly with Hive Flow's ReasoningBank:
 
 ```bash
 # Store SAFLA patterns in swarm memory
-npx claude-flow@alpha hooks post-edit \
+npx hive-flow@alpha hooks post-edit \
   --file "src/api.ts" \
   --memory-key "swarm/optimization/api" \
   --reasoningbank
 
 # Retrieve relevant patterns during development
-npx claude-flow@alpha memory search \
+npx hive-flow@alpha memory search \
   "optimize API endpoint performance" \
   --namespace safla \
   --reasoningbank
 
 # Train new patterns from successful outcomes
-npx claude-flow@alpha hooks post-task \
+npx hive-flow@alpha hooks post-task \
   --task-id "api-optimization" \
   --reasoningbank
 ```
@@ -440,13 +440,13 @@ db.close();
 
 ## License
 
-This model is part of the Claude Flow project and follows the same license terms.
+This model is part of the Hive Flow project and follows the same license terms.
 
 ## Support
 
-- **Documentation**: https://github.com/ruvnet/claude-flow
-- **Issues**: https://github.com/ruvnet/claude-flow/issues
-- **ReasoningBank CLI**: `npx claude-flow@alpha memory --help`
+- **Documentation**: https://github.com/ruvnet/hive-flow
+- **Issues**: https://github.com/ruvnet/hive-flow/issues
+- **ReasoningBank CLI**: `npx hive-flow@alpha memory --help`
 
 ---
 

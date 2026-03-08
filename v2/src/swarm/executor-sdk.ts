@@ -1,6 +1,6 @@
 /**
  * Task Executor SDK Implementation
- * Claude-Flow v2.5-alpha.130
+ * Hive-Flow v2.5-alpha.130
  *
  * Replaces custom retry logic with SDK-based execution
  */
@@ -12,7 +12,7 @@ import * as path from 'node:path';
 import chalk from 'chalk';
 import { Logger } from '../core/logger.js';
 import { generateId } from '../utils/helpers.js';
-import { ClaudeFlowSDKAdapter } from '../sdk/sdk-config.js';
+import { HiveFlowSDKAdapter } from '../sdk/sdk-config.js';
 import { ClaudeClientV25 } from '../api/claude-client-v2.5.js';
 import {
   TaskDefinition,
@@ -47,7 +47,7 @@ export interface ExecutionResult {
 export class TaskExecutorSDK extends EventEmitter {
   private logger: Logger;
   private claudeClient: ClaudeClientV25;
-  private sdkAdapter: ClaudeFlowSDKAdapter;
+  private sdkAdapter: HiveFlowSDKAdapter;
   private config: ExecutionConfig;
   private executionStats: Map<string, any> = new Map();
 
@@ -64,7 +64,7 @@ export class TaskExecutorSDK extends EventEmitter {
     this.logger = new Logger('TaskExecutorSDK');
 
     // Initialize SDK adapter
-    this.sdkAdapter = new ClaudeFlowSDKAdapter({
+    this.sdkAdapter = new HiveFlowSDKAdapter({
       apiKey: this.config.apiKey,
       maxRetries: this.config.maxRetries,
       timeout: this.config.timeout,

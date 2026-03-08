@@ -1,7 +1,7 @@
 #!/bin/bash
 # Run various benchmark scenarios
 
-echo "🚀 Claude Flow Benchmark Suite"
+echo "🚀 Hive Flow Benchmark Suite"
 echo "================================"
 
 # Create output directory

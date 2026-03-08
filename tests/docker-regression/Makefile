@@ -1,4 +1,4 @@
-# Claude-Flow Deep Regression Test Suite
+# Hive-Flow Deep Regression Test Suite
 # Makefile for easy test execution
 
 .PHONY: all build test clean unit integration security benchmark help
@@ -84,7 +84,7 @@ logs:
 
 # Help
 help:
-	@echo "Claude-Flow Deep Regression Test Suite"
+	@echo "Hive-Flow Deep Regression Test Suite"
 	@echo ""
 	@echo "Usage: make [target]"
 	@echo ""

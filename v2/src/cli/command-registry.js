@@ -55,7 +55,7 @@ export function registerCoreCommands() {
     description: 'Initialize Claude Code integration files and SPARC development environment',
     usage: 'init [--force] [--minimal] [--sparc]',
     examples: [
-      'npx claude-flow@latest init --sparc  # Recommended: Full SPARC setup',
+      'npx hive-flow@latest init --sparc  # Recommended: Full SPARC setup',
       'init --sparc                         # Initialize with SPARC modes',
       'init --force --minimal               # Minimal setup, overwrite existing',
       'init --sparc --force                 # Force SPARC setup',
@@ -67,12 +67,12 @@ The --sparc flag creates a complete development environment:
   • Pre-configured modes: architect, code, tdd, debug, security, and more
   • Ready for TDD workflows and automated code generation
   
-First-time users should run: npx claude-flow@latest init --sparc`,
+First-time users should run: npx hive-flow@latest init --sparc`,
   });
 
   commandRegistry.set('start', {
     handler: startCommand,
-    description: 'Start the Claude-Flow orchestration system',
+    description: 'Start the Hive-Flow orchestration system',
     usage: 'start [--daemon] [--port <port>] [--verbose] [--ui] [--web]',
     examples: [
       'start                    # Start in interactive mode',
@@ -158,7 +158,7 @@ Benefits:
   commandRegistry.set('maestro', {
     handler: () => {
       console.log('⚠️  Maestro commands have been moved to TypeScript.');
-      console.log('Please use: npx claude-flow maestro help');
+      console.log('Please use: npx hive-flow maestro help');
       console.log('Or import from: ./commands/maestro.js after compilation');
     },
     description: 'Maestro: Specs-Driven Development with Hive Mind Integration',
@@ -209,7 +209,7 @@ Subcommands:
   spawn        - Internal agent management
   list         - List internal agents
 
-See 'claude-flow help agent' for full documentation.`,
+See 'hive-flow help agent' for full documentation.`,
   });
 
   commandRegistry.set('proxy', {
@@ -237,8 +237,8 @@ Cost Savings Examples:
 
 Setup:
   1. Get OpenRouter API key: https://openrouter.ai/keys
-  2. claude-flow agent config set OPENROUTER_API_KEY sk-or-xxx
-  3. claude-flow proxy start --daemon
+  2. hive-flow agent config set OPENROUTER_API_KEY sk-or-xxx
+  3. hive-flow proxy start --daemon
   4. export ANTHROPIC_BASE_URL=http://localhost:8080
   5. Use Claude Code normally → automatic savings!
 
@@ -435,8 +435,8 @@ Batch operations support:
   • Configuration validation and estimation tools
   
 Use with init command:
-  claude-flow init --batch-init project1,project2,project3
-  claude-flow init --config batch-config.json --parallel`,
+  hive-flow init --batch-init project1,project2,project3
+  hive-flow init --config batch-config.json --parallel`,
   });
 
   commandRegistry.set('github', {
@@ -598,7 +598,7 @@ SAFE ALTERNATIVES:
   • Use 'claude --skip-hooks' for manual updates
   • Create conditional execution scripts
 
-For more information: https://github.com/ruvnet/claude-flow/issues/166`,
+For more information: https://github.com/ruvnet/hive-flow/issues/166`,
   });
 
   commandRegistry.set('migrate-hooks', migrateHooksCommandConfig);
@@ -1018,7 +1018,7 @@ Commands:
     ],
     details: `
 Advanced configuration management features:
-  • Unified configuration across Claude-Flow and ruv-swarm
+  • Unified configuration across Hive-Flow and ruv-swarm
   • Configuration presets for different environments
   • Automatic synchronization between config systems
   • Import/export capabilities with validation
@@ -1102,8 +1102,8 @@ export function showCommandHelp(name) {
     console.log(
       HelpFormatter.formatError(
         `Unknown command: ${name}`,
-        'claude-flow',
-        'claude-flow <command> [options]',
+        'hive-flow',
+        'hive-flow <command> [options]',
       ),
     );
     return;
@@ -1117,9 +1117,9 @@ export function showCommandHelp(name) {
 
   // Convert command info to standardized format
   const helpInfo = {
-    name: `claude-flow ${name}`,
+    name: `hive-flow ${name}`,
     description: HelpFormatter.stripFormatting(command.description),
-    usage: `claude-flow ${command.usage}`,
+    usage: `hive-flow ${command.usage}`,
     details: command.details, // Pass through the details section
   };
 
@@ -1129,7 +1129,7 @@ export function showCommandHelp(name) {
       if (ex.startsWith('npx')) {
         return ex;
       }
-      return `claude-flow ${ex}`;
+      return `hive-flow ${ex}`;
     });
   }
 
@@ -1179,7 +1179,7 @@ export function showAllCommands() {
   }
 
   console.log();
-  console.log('Use "claude-flow help <command>" for detailed usage information');
+  console.log('Use "hive-flow help <command>" for detailed usage information');
 }
 
 // Initialize the command registry

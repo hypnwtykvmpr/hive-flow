@@ -54,16 +54,16 @@
     {
       "id": "89f4dc5c-49ff-4a05-8b20-41d5b04699bc",
       "task_id": "0b2a8687-eb02-480e-b611-6c1673116e28",
-      "agent_id": "claude-flow",
+      "agent_id": "hive-flow",
       "status": "success",
       "output": {
-        "raw_output": "\u274c SPARC configuration file (.roomodes) not found\nPlease ensure .roomodes file exists in: /workspaces/claude-code-flow/benchmark\n\nTo enable SPARC development modes, run:\n  npx claude-flow@latest init --sparc",
+        "raw_output": "\u274c SPARC configuration file (.roomodes) not found\nPlease ensure .roomodes file exists in: /workspaces/claude-code-flow/benchmark\n\nTo enable SPARC development modes, run:\n  npx hive-flow@latest init --sparc",
         "lines": [
           "\u274c SPARC configuration file (.roomodes) not found",
           "Please ensure .roomodes file exists in: /workspaces/claude-code-flow/benchmark",
           "",
           "To enable SPARC development modes, run:",
-          "  npx claude-flow@latest init --sparc"
+          "  npx hive-flow@latest init --sparc"
         ],
         "sections": {}
       },
@@ -99,7 +99,7 @@
         "average_cpu_percent": 92.73333333333333
       },
       "execution_details": {
-        "command": "claude-flow sparc researcher Build a data processing pipeline",
+        "command": "hive-flow sparc researcher Build a data processing pipeline",
         "exit_code": 0,
         "output_lines": 5,
         "error_count": 0

@@ -131,8 +131,8 @@ async function handleStoreMemory(
   const resourceManager = context?.resourceManager as any;
   if (resourceManager?.memoryService) {
     try {
-      // @ts-ignore - @claude-flow/memory is an optional dependency
-      const { UnifiedMemoryService } = await import('@claude-flow/memory');
+      // @ts-ignore - @hive-flow/memory is an optional dependency
+      const { UnifiedMemoryService } = await import('@hive-flow/memory');
       const memoryService = resourceManager.memoryService as InstanceType<typeof UnifiedMemoryService>;
 
       // Store the memory entry
@@ -182,8 +182,8 @@ async function handleSearchMemory(
   const resourceManager = context?.resourceManager as any;
   if (resourceManager?.memoryService) {
     try {
-      // @ts-ignore - @claude-flow/memory is an optional dependency
-      const { UnifiedMemoryService } = await import('@claude-flow/memory');
+      // @ts-ignore - @hive-flow/memory is an optional dependency
+      const { UnifiedMemoryService } = await import('@hive-flow/memory');
       const memoryService = resourceManager.memoryService as InstanceType<typeof UnifiedMemoryService>;
 
       let searchResults: any[];
@@ -276,8 +276,8 @@ async function handleListMemory(
   const resourceManager = context?.resourceManager as any;
   if (resourceManager?.memoryService) {
     try {
-      // @ts-ignore - @claude-flow/memory is an optional dependency
-      const { UnifiedMemoryService } = await import('@claude-flow/memory');
+      // @ts-ignore - @hive-flow/memory is an optional dependency
+      const { UnifiedMemoryService } = await import('@hive-flow/memory');
       const memoryService = resourceManager.memoryService as InstanceType<typeof UnifiedMemoryService>;
 
       // Query all entries

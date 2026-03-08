@@ -112,7 +112,7 @@ export class EnhancedProcessUI {
     console.clear();
 
     // Show welcome
-    printSuccess('🧠 Claude-Flow Process Management UI v2.0.0-alpha.80');
+    printSuccess('🧠 Hive-Flow Process Management UI v2.0.0-alpha.80');
     console.log('─'.repeat(80));
     console.log();
 
@@ -162,7 +162,7 @@ export class EnhancedProcessUI {
   }
 
   renderHeader() {
-    console.log(colors.cyan(colors.bold('🧠 Claude-Flow Process Manager')));
+    console.log(colors.cyan(colors.bold('🧠 Hive-Flow Process Manager')));
     console.log(colors.gray('─'.repeat(80)));
 
     // Navigation tabs

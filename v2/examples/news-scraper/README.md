@@ -1,6 +1,6 @@
 # Application
 
-Created by Claude Flow Swarm
+Created by Hive Flow Swarm
 
 ## Overview
 Test and validate the solution

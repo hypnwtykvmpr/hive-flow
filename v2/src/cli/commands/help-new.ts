@@ -1,5 +1,5 @@
 /**
- * Standardized help command for Claude-Flow CLI
+ * Standardized help command for Hive-Flow CLI
  * Follows Unix/Linux conventions for help output
  */
 
@@ -21,11 +21,11 @@ export const helpCommand = new Command()
 
 function showMainHelp(): void {
   const mainHelp: CommandInfo = {
-    name: 'claude-flow',
+    name: 'hive-flow',
     description: 'Advanced AI agent orchestration system',
-    usage: `claude-flow <command> [<args>] [options]
-    claude-flow <command> --help
-    claude-flow --version`,
+    usage: `hive-flow <command> [<args>] [options]
+    hive-flow <command> --help
+    hive-flow --version`,
     commands: [
       {
         name: 'hive-mind',
@@ -33,7 +33,7 @@ function showMainHelp(): void {
       },
       {
         name: 'init',
-        description: 'Initialize Claude Flow configuration',
+        description: 'Initialize Hive Flow configuration',
       },
       {
         name: 'start',
@@ -104,10 +104,10 @@ function showMainHelp(): void {
       },
     ],
     examples: [
-      'claude-flow init --sparc',
-      'claude-flow hive-mind wizard',
-      'claude-flow swarm "Build REST API"',
-      'claude-flow status --json',
+      'hive-flow init --sparc',
+      'hive-flow hive-mind wizard',
+      'hive-flow swarm "Build REST API"',
+      'hive-flow status --json',
     ],
   };
 
@@ -122,8 +122,8 @@ function showCommandHelp(command: string): void {
     console.error(
       HelpFormatter.formatError(
         `Unknown command: ${command}`,
-        'claude-flow help',
-        'claude-flow help [command]',
+        'hive-flow help',
+        'hive-flow help [command]',
       ),
     );
   }
@@ -132,9 +132,9 @@ function showCommandHelp(command: string): void {
 function getCommandHelp(command: string): CommandInfo | null {
   const commandHelpMap: Record<string, CommandInfo> = {
     'hive-mind': {
-      name: 'claude-flow hive-mind',
+      name: 'hive-flow hive-mind',
       description: 'Manage hive mind swarm intelligence',
-      usage: 'claude-flow hive-mind <subcommand> [options]',
+      usage: 'hive-flow hive-mind <subcommand> [options]',
       commands: [
         { name: 'init', description: 'Initialize hive mind system' },
         { name: 'spawn', description: 'Create intelligent swarm with objective' },
@@ -171,15 +171,15 @@ function getCommandHelp(command: string): CommandInfo | null {
         },
       ],
       examples: [
-        'claude-flow hive-mind spawn "Build REST API" --queen-type strategic',
-        'claude-flow hive-mind status --json',
-        'claude-flow hive-mind stop swarm-123',
+        'hive-flow hive-mind spawn "Build REST API" --queen-type strategic',
+        'hive-flow hive-mind status --json',
+        'hive-flow hive-mind stop swarm-123',
       ],
     },
     agent: {
-      name: 'claude-flow agent',
+      name: 'hive-flow agent',
       description: 'Manage individual agents',
-      usage: 'claude-flow agent <action> [options]',
+      usage: 'hive-flow agent <action> [options]',
       commands: [
         { name: 'spawn', description: 'Create a new agent' },
         { name: 'list', description: 'List all active agents' },
@@ -206,15 +206,15 @@ function getCommandHelp(command: string): CommandInfo | null {
         },
       ],
       examples: [
-        'claude-flow agent spawn researcher --name "Research Bot"',
-        'claude-flow agent list --json',
-        'claude-flow agent terminate agent-123',
+        'hive-flow agent spawn researcher --name "Research Bot"',
+        'hive-flow agent list --json',
+        'hive-flow agent terminate agent-123',
       ],
     },
     init: {
-      name: 'claude-flow init',
-      description: 'Initialize Claude Flow configuration',
-      usage: 'claude-flow init [options]',
+      name: 'hive-flow init',
+      description: 'Initialize Hive Flow configuration',
+      usage: 'hive-flow init [options]',
       options: [
         {
           flags: '--sparc',
@@ -235,9 +235,9 @@ function getCommandHelp(command: string): CommandInfo | null {
         },
       ],
       examples: [
-        'claude-flow init',
-        'claude-flow init --sparc',
-        'claude-flow init --template production',
+        'hive-flow init',
+        'hive-flow init --sparc',
+        'hive-flow init --template production',
       ],
     },
   };

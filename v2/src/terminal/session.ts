@@ -154,9 +154,9 @@ export class TerminalSession {
   private async setupEnvironment(): Promise<void> {
     // Set environment variables
     const envVars = {
-      CLAUDE_FLOW_SESSION: this.id,
-      CLAUDE_FLOW_AGENT: this.profile.id,
-      CLAUDE_FLOW_AGENT_TYPE: this.profile.type,
+      HIVE_FLOW_SESSION: this.id,
+      HIVE_FLOW_AGENT: this.profile.id,
+      HIVE_FLOW_AGENT_TYPE: this.profile.type,
     };
 
     for (const [key, value] of Object.entries(envVars)) {
@@ -179,7 +179,7 @@ export class TerminalSession {
     }
 
     // Set up command prompt
-    await this.terminal.executeCommand('export PS1="[claude-flow]$ "');
+    await this.terminal.executeCommand('export PS1="[hive-flow]$ "');
   }
 
   private async runCleanupCommands(): Promise<void> {

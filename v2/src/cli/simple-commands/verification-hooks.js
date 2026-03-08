@@ -196,7 +196,7 @@ async function feedToTraining(taskId, agentType, data) {
   };
   
   // Store in training data file
-  const trainingFile = '.claude-flow/training/verification-data.jsonl';
+  const trainingFile = '.hive-flow/training/verification-data.jsonl';
   const dir = path.dirname(trainingFile);
   
   if (!fs.existsSync(dir)) {

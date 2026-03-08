@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Claude-Flow Migration Tool
+ * Hive-Flow Migration Tool
  * Helps existing projects migrate to optimized prompts and configurations
  */
 
@@ -15,8 +15,8 @@ import * as path from 'path';
 const program = new Command();
 
 program
-  .name('claude-flow-migrate')
-  .description('Migrate existing claude-flow projects to optimized prompts')
+  .name('hive-flow-migrate')
+  .description('Migrate existing hive-flow projects to optimized prompts')
   .version('1.0.0');
 
 program

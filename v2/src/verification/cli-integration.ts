@@ -2,7 +2,7 @@
  * Verification CLI Integration
  * 
  * Provides command-line interface integration for the verification system.
- * Ensures compatibility with claude-flow CLI and provides verification commands.
+ * Ensures compatibility with hive-flow CLI and provides verification commands.
  */
 
 import { Logger } from '../core/logger.js';
@@ -456,13 +456,13 @@ export function createVerificationCommand(commandName: string): VerificationComm
 }
 
 /**
- * Hook integration for claude-flow CLI
+ * Hook integration for hive-flow CLI
  */
-export function integrateWithClaudeFlowCLI(): void {
+export function integrateWithHiveFlowCLI(): void {
   // Integration with existing CLI command structure
   // This will be called by the main CLI system
   
-  logger.info('Integrating verification commands with claude-flow CLI...');
+  logger.info('Integrating verification commands with hive-flow CLI...');
   
   const hookCommands = {
     'pre-task': async (args: any) => {
@@ -559,4 +559,4 @@ export async function executeVerificationFromCLI(
 }
 
 // Initialize CLI integration when module is loaded
-integrateWithClaudeFlowCLI();
+integrateWithHiveFlowCLI();

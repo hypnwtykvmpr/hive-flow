@@ -43,11 +43,11 @@ test_distro() {
         npm --version
 
         echo ''
-        echo '🚀 Running claude-flow init --force...'
+        echo '🚀 Running hive-flow init --force...'
         echo ''
 
         # Run the actual test
-        npx claude-flow@alpha init --force
+        npx hive-flow@alpha init --force
 
         echo ''
         echo '✅ Test completed successfully on $distro'
@@ -81,10 +81,10 @@ test_corrupted_cache() {
         touch ~/.npm/_npx/test-corrupt/node_modules/better-sqlite3/.lock
 
         echo ''
-        echo '🚀 Running claude-flow init --force with corrupted cache...'
+        echo '🚀 Running hive-flow init --force with corrupted cache...'
         echo ''
 
-        npx claude-flow@alpha init --force
+        npx hive-flow@alpha init --force
 
         echo ''
         echo '✅ Recovery from corrupted cache successful'
@@ -113,10 +113,10 @@ test_without_force() {
         curl -fsSL https://deb.nodesource.com/setup_20.x | bash - > /dev/null 2>&1
         apt-get install -y -qq nodejs > /dev/null 2>&1
 
-        echo '🚀 Running claude-flow init (no --force)...'
+        echo '🚀 Running hive-flow init (no --force)...'
         echo ''
 
-        npx claude-flow@alpha init
+        npx hive-flow@alpha init
 
         echo ''
         echo '✅ Init without --force successful'

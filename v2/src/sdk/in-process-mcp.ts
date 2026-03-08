@@ -1,6 +1,6 @@
 /**
  * Real In-Process MCP - 100% SDK-Powered
- * Claude-Flow v2.5-alpha.130+
+ * Hive-Flow v2.5-alpha.130+
  *
  * Uses ONLY Claude Code SDK primitives - TRUE in-process MCP:
  * - createSdkMcpServer() (SDK creates in-process server)

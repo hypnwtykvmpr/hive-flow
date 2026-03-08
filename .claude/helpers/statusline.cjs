@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Claude Flow V3 Statusline Generator (Optimized)
+ * Hive Flow V3 Statusline Generator (Optimized)
  * Displays real-time V3 implementation progress and system status
  *
  * Usage: node statusline.cjs [--json] [--compact]
@@ -173,10 +173,10 @@ function getModelName() {
     if (m.includes('haiku')) return 'Haiku 4.5';
   }
 
-  // Fallback: project-level claudeFlow.modelPreferences.default
+  // Fallback: project-level hiveFlow.modelPreferences.default
   const projSettings = readJSON(path.join(CWD, '.claude', 'settings.json'));
-  if (projSettings?.claudeFlow?.modelPreferences?.default) {
-    const m = projSettings.claudeFlow.modelPreferences.default;
+  if (projSettings?.hiveFlow?.modelPreferences?.default) {
+    const m = projSettings.hiveFlow.modelPreferences.default;
     if (m.includes('opus')) return 'Opus 4.6';
     if (m.includes('sonnet')) return 'Sonnet 4.6';
     if (m.includes('haiku')) return 'Haiku 4.5';
@@ -189,7 +189,7 @@ function getModelName() {
 function getLearningStats() {
   const memoryPaths = [
     path.join(CWD, '.swarm', 'memory.db'),
-    path.join(CWD, '.claude-flow', 'memory.db'),
+    path.join(CWD, '.hive-flow', 'memory.db'),
     path.join(CWD, '.claude', 'memory.db'),
     path.join(CWD, 'data', 'memory.db'),
     path.join(CWD, '.agentdb', 'memory.db'),
@@ -224,7 +224,7 @@ function getV3Progress() {
   const learning = getLearningStats();
   const totalDomains = 5;
 
-  const dddData = readJSON(path.join(CWD, '.claude-flow', 'metrics', 'ddd-progress.json'));
+  const dddData = readJSON(path.join(CWD, '.hive-flow', 'metrics', 'ddd-progress.json'));
   let dddProgress = dddData?.progress || 0;
   let domainsCompleted = Math.min(5, Math.floor(dddProgress / 20));
 
@@ -247,7 +247,7 @@ function getV3Progress() {
 // Security status (pure file reads)
 function getSecurityStatus() {
   const totalCves = 3;
-  const auditData = readJSON(path.join(CWD, '.claude-flow', 'security', 'audit-status.json'));
+  const auditData = readJSON(path.join(CWD, '.hive-flow', 'security', 'audit-status.json'));
   if (auditData) {
     return {
       status: auditData.status || 'PENDING',
@@ -273,7 +273,7 @@ function getSecurityStatus() {
 
 // Swarm status (pure file reads, NO ps aux)
 function getSwarmStatus() {
-  const activityData = readJSON(path.join(CWD, '.claude-flow', 'metrics', 'swarm-activity.json'));
+  const activityData = readJSON(path.join(CWD, '.hive-flow', 'metrics', 'swarm-activity.json'));
   if (activityData?.swarm) {
     return {
       activeAgents: activityData.swarm.agent_count || 0,
@@ -282,7 +282,7 @@ function getSwarmStatus() {
     };
   }
 
-  const progressData = readJSON(path.join(CWD, '.claude-flow', 'metrics', 'v3-progress.json'));
+  const progressData = readJSON(path.join(CWD, '.hive-flow', 'metrics', 'v3-progress.json'));
   if (progressData?.swarm) {
     return {
       activeAgents: progressData.swarm.activeAgents || progressData.swarm.agent_count || 0,
@@ -301,7 +301,7 @@ function getSystemMetrics() {
   const agentdb = getAgentDBStats();
 
   // Intelligence from learning.json
-  const learningData = readJSON(path.join(CWD, '.claude-flow', 'metrics', 'learning.json'));
+  const learningData = readJSON(path.join(CWD, '.hive-flow', 'metrics', 'learning.json'));
   let intelligencePct = 0;
   let contextPct = 0;
 
@@ -334,7 +334,7 @@ function getSystemMetrics() {
 
   // Sub-agents from file metrics (no ps aux)
   let subAgents = 0;
-  const activityData = readJSON(path.join(CWD, '.claude-flow', 'metrics', 'swarm-activity.json'));
+  const activityData = readJSON(path.join(CWD, '.hive-flow', 'metrics', 'swarm-activity.json'));
   if (activityData?.processes?.estimated_agents) {
     subAgents = activityData.processes.estimated_agents;
   }
@@ -344,7 +344,7 @@ function getSystemMetrics() {
 
 // ADR status (count files only — don't read contents)
 function getADRStatus() {
-  const complianceData = readJSON(path.join(CWD, '.claude-flow', 'metrics', 'adr-compliance.json'));
+  const complianceData = readJSON(path.join(CWD, '.hive-flow', 'metrics', 'adr-compliance.json'));
   if (complianceData) {
     const checks = complianceData.checks || {};
     const total = Object.keys(checks).length;
@@ -356,7 +356,7 @@ function getADRStatus() {
   const adrPaths = [
     path.join(CWD, 'v3', 'implementation', 'adrs'),
     path.join(CWD, 'docs', 'adrs'),
-    path.join(CWD, '.claude-flow', 'adrs'),
+    path.join(CWD, '.hive-flow', 'adrs'),
   ];
 
   for (const adrPath of adrPaths) {
@@ -409,7 +409,7 @@ function getAgentDBStats() {
 
   const dbFiles = [
     path.join(CWD, '.swarm', 'memory.db'),
-    path.join(CWD, '.claude-flow', 'memory.db'),
+    path.join(CWD, '.hive-flow', 'memory.db'),
     path.join(CWD, '.claude', 'memory.db'),
     path.join(CWD, 'data', 'memory.db'),
   ];
@@ -426,7 +426,7 @@ function getAgentDBStats() {
 
   if (vectorCount === 0) {
     const dbDirs = [
-      path.join(CWD, '.claude-flow', 'agentdb'),
+      path.join(CWD, '.hive-flow', 'agentdb'),
       path.join(CWD, '.swarm', 'agentdb'),
       path.join(CWD, '.agentdb'),
     ];
@@ -448,7 +448,7 @@ function getAgentDBStats() {
 
   const hnswPaths = [
     path.join(CWD, '.swarm', 'hnsw.index'),
-    path.join(CWD, '.claude-flow', 'hnsw.index'),
+    path.join(CWD, '.hive-flow', 'hnsw.index'),
   ];
   for (const p of hnswPaths) {
     const stat = safeStat(p);
@@ -517,7 +517,7 @@ function getIntegrationStatus() {
     }
   }
 
-  const hasDatabase = ['.swarm/memory.db', '.claude-flow/memory.db', 'data/memory.db']
+  const hasDatabase = ['.swarm/memory.db', '.hive-flow/memory.db', 'data/memory.db']
     .some(p => fs.existsSync(path.join(CWD, p)));
   const hasApi = !!(process.env.ANTHROPIC_API_KEY || process.env.OPENAI_API_KEY);
 
@@ -543,7 +543,7 @@ function getContextUsage() {
 
 // Session stats (pure file reads)
 function getSessionStats() {
-  for (const p of ['.claude-flow/session.json', '.claude/session.json']) {
+  for (const p of ['.hive-flow/session.json', '.claude/session.json']) {
     const data = readJSON(path.join(CWD, p));
     if (data?.startTime) {
       const diffMs = Date.now() - new Date(data.startTime).getTime();
@@ -565,7 +565,7 @@ function progressBar(current, total) {
 
 // Get AI provider usage (pure file reads)
 function getProviderUsage() {
-  const usagePath = path.join(CWD, '.claude-flow', 'metrics', 'provider-usage.json');
+  const usagePath = path.join(CWD, '.hive-flow', 'metrics', 'provider-usage.json');
   const data = readJSON(usagePath);
   if (data?.providers) return data.providers;
 
@@ -595,7 +595,7 @@ function generateStatusline() {
   const lines = [];
 
   // Header
-  let header = `${c.bold}${c.brightPurple}\u258A Claude Flow V3 ${c.reset}`;
+  let header = `${c.bold}${c.brightPurple}\u258A Hive Flow V3 ${c.reset}`;
   header += `${swarm.coordinationActive ? c.brightCyan : c.dim}\u25CF ${c.brightCyan}${git.name}${c.reset}`;
   if (git.gitBranch) {
     header += `  ${c.dim}\u2502${c.reset}  ${c.brightBlue}\u23C7 ${git.gitBranch}${c.reset}`;

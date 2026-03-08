@@ -147,8 +147,8 @@ async function handleInitSwarm(
   // Try to use swarmCoordinator if available
   if (context?.swarmCoordinator) {
     try {
-      // @ts-ignore - @claude-flow/swarm is an optional dependency
-      const { UnifiedSwarmCoordinator } = await import('@claude-flow/swarm');
+      // @ts-ignore - @hive-flow/swarm is an optional dependency
+      const { UnifiedSwarmCoordinator } = await import('@hive-flow/swarm');
       const coordinator = context.swarmCoordinator as InstanceType<typeof UnifiedSwarmCoordinator>;
 
       // Initialize the coordinator with the config
@@ -203,8 +203,8 @@ async function handleSwarmStatus(
   // Try to use swarmCoordinator if available
   if (context?.swarmCoordinator) {
     try {
-      // @ts-ignore - @claude-flow/swarm is an optional dependency
-      const { UnifiedSwarmCoordinator } = await import('@claude-flow/swarm');
+      // @ts-ignore - @hive-flow/swarm is an optional dependency
+      const { UnifiedSwarmCoordinator } = await import('@hive-flow/swarm');
       const coordinator = context.swarmCoordinator as InstanceType<typeof UnifiedSwarmCoordinator>;
 
       // Get swarm status
@@ -309,8 +309,8 @@ async function handleScaleSwarm(
   // Try to use swarmCoordinator if available
   if (context?.swarmCoordinator) {
     try {
-      // @ts-ignore - @claude-flow/swarm is an optional dependency
-      const { UnifiedSwarmCoordinator } = await import('@claude-flow/swarm');
+      // @ts-ignore - @hive-flow/swarm is an optional dependency
+      const { UnifiedSwarmCoordinator } = await import('@hive-flow/swarm');
       const coordinator = context.swarmCoordinator as InstanceType<typeof UnifiedSwarmCoordinator>;
 
       // Get current status

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Real Claude Flow Integration Verification
+Real Hive Flow Integration Verification
 Demonstrates real command execution with JSON streaming output parsing.
 """
 
@@ -18,7 +18,7 @@ import queue
 
 @dataclass
 class RealCommandResult:
-    """Result from a real Claude Flow command execution."""
+    """Result from a real Hive Flow command execution."""
     command: str
     success: bool
     duration: float
@@ -29,35 +29,35 @@ class RealCommandResult:
 
 
 class RealIntegrationVerifier:
-    """Verifier for real Claude Flow integration."""
+    """Verifier for real Hive Flow integration."""
     
     def __init__(self):
         """Initialize the verifier."""
-        self.claude_flow_path = self._find_claude_flow()
-        print(f"🔍 Found claude-flow at: {self.claude_flow_path}")
+        self.hive_flow_path = self._find_hive_flow()
+        print(f"🔍 Found hive-flow at: {self.hive_flow_path}")
         
         # Verify installation
         if not self._verify_installation():
-            raise RuntimeError("Claude Flow installation verification failed")
+            raise RuntimeError("Hive Flow installation verification failed")
         
-        print("✅ Claude Flow installation verified")
+        print("✅ Hive Flow installation verified")
     
-    def _find_claude_flow(self) -> str:
-        """Find the claude-flow executable."""
+    def _find_hive_flow(self) -> str:
+        """Find the hive-flow executable."""
         # Common locations to check
         possible_paths = [
             # Binary directories (priority)
-            Path("/workspaces/claude-code-flow/bin/claude-flow"),
-            Path(__file__).parent.parent.parent.parent / "bin" / "claude-flow",
+            Path("/workspaces/claude-code-flow/bin/hive-flow"),
+            Path(__file__).parent.parent.parent.parent / "bin" / "hive-flow",
             
             # Project root
-            Path("/workspaces/claude-code-flow/claude-flow"),
-            Path(__file__).parent.parent.parent.parent / "claude-flow",
-            Path(__file__).parent.parent.parent / "claude-flow", 
-            Path.cwd() / "claude-flow",
+            Path("/workspaces/claude-code-flow/hive-flow"),
+            Path(__file__).parent.parent.parent.parent / "hive-flow",
+            Path(__file__).parent.parent.parent / "hive-flow", 
+            Path.cwd() / "hive-flow",
             
             # Distribution directory
-            Path(__file__).parent.parent.parent.parent / "dist" / "claude-flow",
+            Path(__file__).parent.parent.parent.parent / "dist" / "hive-flow",
         ]
         
         for path in possible_paths:
@@ -66,26 +66,26 @@ class RealIntegrationVerifier:
         
         # Try system PATH
         import shutil
-        system_path = shutil.which("claude-flow")
+        system_path = shutil.which("hive-flow")
         if system_path:
             return system_path
             
         raise FileNotFoundError(
-            "Could not find claude-flow executable. Please ensure it's built and accessible."
+            "Could not find hive-flow executable. Please ensure it's built and accessible."
         )
     
     def _verify_installation(self) -> bool:
-        """Verify claude-flow is properly installed."""
+        """Verify hive-flow is properly installed."""
         try:
             result = subprocess.run(
-                [self.claude_flow_path, "--version"],
+                [self.hive_flow_path, "--version"],
                 capture_output=True,
                 text=True,
                 timeout=10
             )
             
             if result.returncode == 0:
-                print(f"📝 Claude Flow Version: {result.stdout.strip()}")
+                print(f"📝 Hive Flow Version: {result.stdout.strip()}")
                 return True
             else:
                 print(f"❌ Version check failed: {result.stderr}")
@@ -96,7 +96,7 @@ class RealIntegrationVerifier:
             return False
     
     def parse_streaming_output(self, output: str) -> List[Dict[str, Any]]:
-        """Parse streaming JSON output from claude-flow."""
+        """Parse streaming JSON output from hive-flow."""
         json_responses = []
         
         for line in output.split('\n'):
@@ -180,8 +180,8 @@ class RealIntegrationVerifier:
         return metrics
     
     def execute_real_command(self, command_args: List[str], timeout: int = 30) -> RealCommandResult:
-        """Execute a real claude-flow command and collect comprehensive metrics."""
-        full_command = [self.claude_flow_path] + command_args
+        """Execute a real hive-flow command and collect comprehensive metrics."""
+        full_command = [self.hive_flow_path] + command_args
         command_str = ' '.join(full_command)
         
         print(f"\n🚀 Executing: {command_str}")
@@ -365,7 +365,7 @@ Task completed successfully
 
 def main():
     """Main verification function."""
-    print("🔍 Claude Flow Real Integration Verification")
+    print("🔍 Hive Flow Real Integration Verification")
     print("=" * 60)
     
     try:

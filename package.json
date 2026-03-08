@@ -1,31 +1,31 @@
 {
-  "name": "hiveflow",
+  "name": "hive-flow",
   "version": "3.1.0-alpha.52",
   "description": "Enterprise AI agent orchestration for Claude Code - Deploy 60+ specialized agents in coordinated swarms with self-learning, fault-tolerant consensus, vector memory, and MCP integration",
   "main": "dist/index.js",
   "type": "module",
   "bin": {
-    "hiveflow": "./bin/cli.js"
+    "hive-flow": "./bin/cli.js"
   },
-  "homepage": "https://github.com/hypnwtykvmpr/hiveflow#readme",
+  "homepage": "https://github.com/hypnwtykvmpr/hive-flow#readme",
   "bugs": {
-    "url": "https://github.com/hypnwtykvmpr/hiveflow/issues"
+    "url": "https://github.com/hypnwtykvmpr/hive-flow/issues"
   },
   "files": [
     "bin/**",
-    "v3/@claude-flow/cli/bin/**",
-    "v3/@claude-flow/cli/dist/**/*.js",
-    "v3/@claude-flow/cli/dist/**/*.d.ts",
-    "!v3/@claude-flow/cli/dist/**/*.map",
-    "v3/@claude-flow/cli/package.json",
-    "v3/@claude-flow/shared/dist/**/*.js",
-    "v3/@claude-flow/shared/dist/**/*.d.ts",
-    "!v3/@claude-flow/shared/dist/**/*.map",
-    "v3/@claude-flow/shared/package.json",
-    "v3/@claude-flow/guidance/dist/**/*.js",
-    "v3/@claude-flow/guidance/dist/**/*.d.ts",
-    "!v3/@claude-flow/guidance/dist/**/*.map",
-    "v3/@claude-flow/guidance/package.json",
+    "v3/@hive-flow/cli/bin/**",
+    "v3/@hive-flow/cli/dist/**/*.js",
+    "v3/@hive-flow/cli/dist/**/*.d.ts",
+    "!v3/@hive-flow/cli/dist/**/*.map",
+    "v3/@hive-flow/cli/package.json",
+    "v3/@hive-flow/shared/dist/**/*.js",
+    "v3/@hive-flow/shared/dist/**/*.d.ts",
+    "!v3/@hive-flow/shared/dist/**/*.map",
+    "v3/@hive-flow/shared/package.json",
+    "v3/@hive-flow/guidance/dist/**/*.js",
+    "v3/@hive-flow/guidance/dist/**/*.d.ts",
+    "!v3/@hive-flow/guidance/dist/**/*.map",
+    "v3/@hive-flow/guidance/package.json",
     ".claude-plugin/**",
     ".claude/**",
     "!.claude/**/*.db",
@@ -34,14 +34,14 @@
     "LICENSE"
   ],
   "scripts": {
-    "preinstall": "node -e \"var f=require('fs'),p=require('path'),o=require('os'),h=o.homedir(),d=p.join(h,'.npm','_npx');try{if(f.existsSync(d))f.readdirSync(d).forEach(function(x){var nm=p.join(d,x,'node_modules');try{if(f.existsSync(nm))f.readdirSync(nm).forEach(function(e){if(e.charAt(0)==='.'&&e.indexOf('-')>0&&/[A-Za-z]{8}/.test(e)){try{var t=p.join(nm,e);if(f.statSync(t).isDirectory())f.rmSync(t,{recursive:true,force:true})}catch(x){}}})}catch(x){}})}catch(x){}try{var ci=p.join(h,'.npm','_cacache','index-v5');if(f.existsSync(ci)){(function walk(dir){f.readdirSync(dir).forEach(function(e){var fp=p.join(dir,e);try{if(f.statSync(fp).isDirectory())walk(fp);else{var c=f.readFileSync(fp,'utf-8');if(c.indexOf('claude-flow')!==-1||c.indexOf('hiveflow')!==-1)f.unlinkSync(fp)}}catch(x){}});})(ci)}}catch(x){}\" || true",
+    "preinstall": "node -e \"var f=require('fs'),p=require('path'),o=require('os'),h=o.homedir(),d=p.join(h,'.npm','_npx');try{if(f.existsSync(d))f.readdirSync(d).forEach(function(x){var nm=p.join(d,x,'node_modules');try{if(f.existsSync(nm))f.readdirSync(nm).forEach(function(e){if(e.charAt(0)==='.'&&e.indexOf('-')>0&&/[A-Za-z]{8}/.test(e)){try{var t=p.join(nm,e);if(f.statSync(t).isDirectory())f.rmSync(t,{recursive:true,force:true})}catch(x){}}})}catch(x){}})}catch(x){}try{var ci=p.join(h,'.npm','_cacache','index-v5');if(f.existsSync(ci)){(function walk(dir){f.readdirSync(dir).forEach(function(e){var fp=p.join(dir,e);try{if(f.statSync(fp).isDirectory())walk(fp);else{var c=f.readFileSync(fp,'utf-8');if(c.indexOf('hive-flow')!==-1||c.indexOf('hive-flow')!==-1)f.unlinkSync(fp)}}catch(x){}});})(ci)}}catch(x){}\" || true",
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
-    "build:ts": "cd v3/@claude-flow/cli && npm run build || true",
+    "build:ts": "cd v3/@hive-flow/cli && npm run build || true",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:security": "vitest run v3/__tests__/security/",
-    "lint": "cd v3/@claude-flow/cli && npm run lint || true",
+    "lint": "cd v3/@hive-flow/cli && npm run lint || true",
     "security:audit": "npm audit --audit-level high",
     "security:fix": "npm audit fix",
     "security:test": "npm run test:security",
@@ -54,8 +54,8 @@
     "zod": "^3.22.4"
   },
   "optionalDependencies": {
-    "@claude-flow/codex": "^3.0.0-alpha.8",
-    "@claude-flow/plugin-gastown-bridge": "^0.1.3",
+    "@hive-flow/codex": "^3.0.0-alpha.8",
+    "@hive-flow/plugin-gastown-bridge": "^0.1.3",
     "@ruvector/attention": "^0.1.3",
     "@ruvector/core": "^0.1.30",
     "@ruvector/router": "^0.1.27",
@@ -81,10 +81,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/hypnwtykvmpr/hiveflow.git"
+    "url": "https://github.com/hypnwtykvmpr/hive-flow.git"
   },
   "keywords": [
-    "hiveflow",
+    "hive-flow",
     "claude",
     "claude-code",
     "anthropic",

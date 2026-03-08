@@ -1,4 +1,4 @@
-# Epic: Claude Agent SDK Integration for Claude-Flow v3.0.0-alpha.130
+# Epic: Claude Agent SDK Integration for Hive-Flow v3.0.0-alpha.130
 
 ## 🎯 Epic Overview
 
@@ -9,7 +9,7 @@ Integrate Claude Agent SDK as Foundation Layer - Migrate from Custom Implementat
 Refactor Claude-Flow to leverage Claude Agent SDK (@anthropic-ai/claude-code) as the foundation layer, eliminating redundant custom implementations of retry logic, artifact management, and checkpoint systems. Position Claude-Flow as the premier multi-agent orchestration layer built on top of the SDK.
 
 ### Value Proposition
-**"Claude Agent SDK handles single agents brilliantly. Claude-Flow makes them work as a swarm."**
+**"Claude Agent SDK handles single agents brilliantly. Hive-Flow makes them work as a swarm."**
 
 ### Success Metrics
 - ✅ 50% reduction in custom retry/checkpoint code
@@ -55,7 +55,7 @@ export interface SDKConfiguration {
   };
 }
 
-export class ClaudeFlowSDKAdapter {
+export class HiveFlowSDKAdapter {
   private sdk: ClaudeCodeSDK;
 
   constructor(config: SDKConfiguration) {
@@ -85,19 +85,19 @@ export class ClaudeFlowSDKAdapter {
 
 **Tests**: `src/sdk/__tests__/sdk-config.test.ts`
 ```typescript
-import { ClaudeFlowSDKAdapter } from '../sdk-config';
+import { HiveFlowSDKAdapter } from '../sdk-config';
 import { ClaudeCodeSDK } from '@anthropic-ai/claude-code';
 
 describe('SDK Configuration', () => {
   it('should initialize SDK with default configuration', () => {
-    const adapter = new ClaudeFlowSDKAdapter({
+    const adapter = new HiveFlowSDKAdapter({
       apiKey: 'test-key'
     });
     expect(adapter.getSDK()).toBeInstanceOf(ClaudeCodeSDK);
   });
 
   it('should apply custom retry policy', () => {
-    const adapter = new ClaudeFlowSDKAdapter({
+    const adapter = new HiveFlowSDKAdapter({
       apiKey: 'test-key',
       retryPolicy: {
         maxAttempts: 5,
@@ -118,7 +118,7 @@ describe('SDK Configuration', () => {
 
 **File**: `src/sdk/compatibility-layer.ts`
 ```typescript
-import { ClaudeFlowSDKAdapter } from './sdk-config';
+import { HiveFlowSDKAdapter } from './sdk-config';
 import { LegacyClaudeClient } from '../api/claude-client';
 
 /**
@@ -126,10 +126,10 @@ import { LegacyClaudeClient } from '../api/claude-client';
  * while transitioning to SDK
  */
 export class SDKCompatibilityLayer {
-  private adapter: ClaudeFlowSDKAdapter;
+  private adapter: HiveFlowSDKAdapter;
   private legacyMode: boolean = false;
 
-  constructor(adapter: ClaudeFlowSDKAdapter) {
+  constructor(adapter: HiveFlowSDKAdapter) {
     this.adapter = adapter;
   }
 
@@ -229,15 +229,15 @@ export class ClaudeClient extends EventEmitter {
 ```typescript
 // src/api/claude-client-v3.ts (AFTER)
 import { ClaudeCodeSDK } from '@anthropic-ai/claude-code';
-import { ClaudeFlowSDKAdapter } from '../sdk/sdk-config';
+import { HiveFlowSDKAdapter } from '../sdk/sdk-config';
 
 export class ClaudeClientV3 extends EventEmitter {
   private sdk: ClaudeCodeSDK;
-  private adapter: ClaudeFlowSDKAdapter;
+  private adapter: HiveFlowSDKAdapter;
 
   constructor(config: ClaudeAPIConfig) {
     super();
-    this.adapter = new ClaudeFlowSDKAdapter({
+    this.adapter = new HiveFlowSDKAdapter({
       apiKey: config.apiKey,
       retryPolicy: {
         maxAttempts: config.retryAttempts || 3,
@@ -554,7 +554,7 @@ export class CheckpointManagerSDK {
       metadata: {
         scope,
         ...swarmData,
-        createdBy: 'claude-flow',
+        createdBy: 'hive-flow',
         version: '3.0.0'
       }
     });
@@ -911,10 +911,10 @@ describe('SDK Migration Performance Benchmarks', () => {
 
 **File**: `BREAKING_CHANGES.md`
 ```markdown
-# Breaking Changes in Claude-Flow v3.0.0
+# Breaking Changes in Hive-Flow v3.0.0
 
 ## Overview
-Claude-Flow v3.0.0 introduces the Claude Agent SDK as the foundation layer, resulting in several breaking changes that improve performance and reduce code complexity.
+Hive-Flow v3.0.0 introduces the Claude Agent SDK as the foundation layer, resulting in several breaking changes that improve performance and reduce code complexity.
 
 ## Breaking Changes
 
@@ -965,7 +965,7 @@ await memory.store('key', value); // Persistence is automatic
 
 #### Before (v2.x)
 ```typescript
-const checkpoints = new CheckpointManager('.claude-flow/checkpoints');
+const checkpoints = new CheckpointManager('.hive-flow/checkpoints');
 const id = await checkpoints.createCheckpoint(description, scope);
 await checkpoints.executeValidations(id);
 ```
@@ -982,7 +982,7 @@ const id = await checkpoints.createCheckpoint(description, scope);
 ### Step 1: Update Dependencies
 ```bash
 npm install @anthropic-ai/claude-code@latest
-npm update claude-flow@3.0.0-alpha.130
+npm update hive-flow@3.0.0-alpha.130
 ```
 
 ### Step 2: Update Configuration
@@ -1036,9 +1036,9 @@ The following features are deprecated and will be removed in v4.0.0:
 ## Support
 
 For migration assistance:
-- GitHub Issues: https://github.com/ruvnet/claude-flow/issues
-- Migration Guide: https://docs.claude-flow.dev/migration/v3
-- Discord: https://discord.gg/claude-flow
+- GitHub Issues: https://github.com/ruvnet/hive-flow/issues
+- Migration Guide: https://docs.hive-flow.dev/migration/v3
+- Discord: https://discord.gg/hive-flow
 ```
 
 #### Task 7.2: Create Automated Migration Script
@@ -1055,7 +1055,7 @@ const path = require('path');
 const { exec } = require('child_process').promises;
 
 async function migrateToV3() {
-  console.log('🚀 Starting Claude-Flow v3.0.0 Migration');
+  console.log('🚀 Starting Hive-Flow v3.0.0 Migration');
 
   const steps = [
     {
@@ -1120,7 +1120,7 @@ async function updateImports() {
 }
 
 async function migrateConfig() {
-  const configPath = path.join(process.cwd(), 'claude-flow.config.js');
+  const configPath = path.join(process.cwd(), 'hive-flow.config.js');
 
   if (await fileExists(configPath)) {
     let config = await fs.readFile(configPath, 'utf8');
@@ -1251,19 +1251,19 @@ export class MigrationMetrics {
 ### Rollback Plan
 ```bash
 # If issues arise, rollback to v2.x
-npm install claude-flow@2.0.0-alpha.129
+npm install hive-flow@2.0.0-alpha.129
 npm run rollback:v2
 ```
 
 ## 📝 Summary
 
-This epic transforms Claude-Flow from a standalone implementation to a powerful orchestration layer built on Claude Agent SDK. The integration:
+This epic transforms Hive-Flow from a standalone implementation to a powerful orchestration layer built on Claude Agent SDK. The integration:
 
 1. **Reduces code complexity** by 50%
 2. **Improves performance** by 30%
 3. **Maintains 100% backward compatibility** with migration path
-4. **Positions Claude-Flow** as the premier swarm orchestration solution
+4. **Positions Hive-Flow** as the premier swarm orchestration solution
 5. **Leverages SDK** for foundational capabilities
 6. **Focuses innovation** on multi-agent coordination
 
-**Key Message**: "Claude Agent SDK handles single agents brilliantly. Claude-Flow makes them work as a swarm."
+**Key Message**: "Claude Agent SDK handles single agents brilliantly. Hive-Flow makes them work as a swarm."

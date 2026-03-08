@@ -9,7 +9,7 @@ from typing import Optional
 import time
 from ..swe_bench import SWEBenchEngine
 from ..swe_bench.official_integration import OfficialSWEBenchEngine
-from ..swe_bench.multi_mode_engine import MultiModeSWEBenchEngine, ClaudeFlowMode
+from ..swe_bench.multi_mode_engine import MultiModeSWEBenchEngine, HiveFlowMode
 from ..core.models import BenchmarkConfig, StrategyType, CoordinationMode
 
 
@@ -233,9 +233,9 @@ def official(ctx, lite, limit, mode, strategy, agents, output, validate):
 @click.option('--output', '-o', type=click.Path(), help='Output directory')
 @click.pass_context
 def multi_mode(ctx, instances, lite, quick, output):
-    """Test ALL claude-flow non-interactive modes on SWE-bench.
+    """Test ALL hive-flow non-interactive modes on SWE-bench.
     
-    This command benchmarks all available claude-flow execution modes:
+    This command benchmarks all available hive-flow execution modes:
     - Swarm: Multiple strategies (auto, research, development, optimization, etc.)
     - SPARC: All subcommands (coder, architect, tdd, reviewer, etc.)
     - Hive-Mind: Various configurations (different worker counts, queen types)
@@ -254,7 +254,7 @@ def multi_mode(ctx, instances, lite, quick, output):
     click.echo("""
 ╔══════════════════════════════════════════════════════════════╗
 ║         Multi-Mode SWE-Bench Evaluation                       ║
-║     Testing All Claude-Flow Non-Interactive Modes             ║
+║     Testing All Hive-Flow Non-Interactive Modes             ║
 ╚══════════════════════════════════════════════════════════════╝
 """)
     
@@ -275,24 +275,24 @@ def multi_mode(ctx, instances, lite, quick, output):
     if quick:
         # Quick test with fewer modes
         modes_to_test = [
-            ClaudeFlowMode("swarm", strategy="optimization", mode="mesh", agents=8,
+            HiveFlowMode("swarm", strategy="optimization", mode="mesh", agents=8,
                           description="Swarm optimization (best performer)"),
-            ClaudeFlowMode("sparc", subcommand="coder", agents=5,
+            HiveFlowMode("sparc", subcommand="coder", agents=5,
                           description="SPARC coder mode"),
-            ClaudeFlowMode("hive-mind", agents=8,
+            HiveFlowMode("hive-mind", agents=8,
                           description="Hive-mind with 8 workers"),
         ]
         click.echo(f"⚡ Quick mode: Testing {len(modes_to_test)} configurations")
     else:
         # Test all modes
         modes_to_test = None
-        click.echo(f"📊 Full mode: Testing {len(engine.CLAUDE_FLOW_MODES)} configurations")
+        click.echo(f"📊 Full mode: Testing {len(engine.HIVE_FLOW_MODES)} configurations")
     
     click.echo(f"📝 Instances per mode: {instances}")
     click.echo(f"📦 Dataset: {'SWE-bench-Lite (300)' if lite else 'Full SWE-bench (2,294)'}")
     
     if not quick:
-        total_tests = len(engine.CLAUDE_FLOW_MODES) * instances
+        total_tests = len(engine.HIVE_FLOW_MODES) * instances
         click.echo(f"\n⚠️ This will run {total_tests} tests total")
         click.confirm("Ready to start multi-mode evaluation?", abort=True)
     

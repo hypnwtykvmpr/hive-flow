@@ -1,6 +1,6 @@
 import { getErrorMessage } from '../../utils/error-handler.js';
 /**
- * Workflow execution commands for Claude-Flow
+ * Workflow execution commands for Hive-Flow
  */
 
 import { Command } from '../commander-fix.js';

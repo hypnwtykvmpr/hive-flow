@@ -26,7 +26,7 @@ import readline from 'node:readline';
 // Constants
 // ---------------------------------------------------------------------------
 
-const GUARD_DIR = join(homedir(), '.claude-flow', 'permission-guard');
+const GUARD_DIR = join(homedir(), '.hive-flow', 'permission-guard');
 const PUBKEY_PATH = join(GUARD_DIR, 'override-pubkey.pem');
 const OVERRIDE_PATH = join(GUARD_DIR, 'active-override.json');
 const PRIVKEY_ENC_PATH = join(GUARD_DIR, 'privkey.enc');

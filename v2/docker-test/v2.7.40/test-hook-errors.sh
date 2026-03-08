@@ -8,7 +8,7 @@ echo ""
 echo "🔍 Testing for hook error messages in stderr..."
 
 # Capture stderr from hook execution
-STDERR_OUTPUT=$(npx claude-flow@2.7.40 hooks pre-command --command 'ls -la' --validate-safety true 2>&1 >/dev/null)
+STDERR_OUTPUT=$(npx hive-flow@2.7.40 hooks pre-command --command 'ls -la' --validate-safety true 2>&1 >/dev/null)
 
 # Check for error patterns
 ERROR_PATTERNS=(

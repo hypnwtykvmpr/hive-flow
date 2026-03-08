@@ -1,7 +1,7 @@
 /**
  * Utility exports for teammate-plugin
  *
- * @module @claude-flow/teammate-plugin/utils
+ * @module @hive-flow/teammate-plugin/utils
  */
 
 export { RateLimiter } from './rate-limiter.js';

@@ -75,7 +75,7 @@ Build warnings: 3 (bytecode generation - normal)
 ### 3. Core Agent Commands ✅
 
 #### 3.1 Agent List
-**Command**: `claude-flow agent list`
+**Command**: `hive-flow agent list`
 
 **Status**: ✅ Working
 
@@ -92,7 +92,7 @@ Build warnings: 3 (bytecode generation - normal)
 ---
 
 #### 3.2 Agent Run
-**Command**: `claude-flow agent run coder "test task" --dry-run`
+**Command**: `hive-flow agent run coder "test task" --dry-run`
 
 **Status**: ✅ Working
 
@@ -103,7 +103,7 @@ Build warnings: 3 (bytecode generation - normal)
 ---
 
 #### 3.3 Agent Help
-**Command**: `claude-flow agent --help`
+**Command**: `hive-flow agent --help`
 
 **Status**: ✅ Working
 
@@ -116,7 +116,7 @@ Build warnings: 3 (bytecode generation - normal)
 ### 4. Agent Booster Commands (NEW) ✅
 
 #### 4.1 Booster Help
-**Command**: `claude-flow agent booster help`
+**Command**: `hive-flow agent booster help`
 
 **Status**: ✅ Working (58 lines of comprehensive help)
 
@@ -137,7 +137,7 @@ COMMANDS:
 ---
 
 #### 4.2 Booster Edit
-**Command**: `claude-flow agent booster edit tests/benchmark/test.js "Add JSDoc comments" --dry-run`
+**Command**: `hive-flow agent booster edit tests/benchmark/test.js "Add JSDoc comments" --dry-run`
 
 **Status**: ✅ Working
 
@@ -154,7 +154,7 @@ COMMANDS:
 ---
 
 #### 4.3 Booster Benchmark
-**Command**: `claude-flow agent booster benchmark --iterations 5`
+**Command**: `hive-flow agent booster benchmark --iterations 5`
 
 **Status**: ✅ Working
 
@@ -182,7 +182,7 @@ LLM API (estimated):
 
 ### 5. SPARC Commands ✅
 
-**Command**: `claude-flow sparc modes`
+**Command**: `hive-flow sparc modes`
 
 **Status**: ✅ Expected behavior
 
@@ -195,7 +195,7 @@ LLM API (estimated):
 ### 6. Memory & Hooks Functionality ✅
 
 #### 6.1 Hooks
-**Command**: `claude-flow hooks --help`
+**Command**: `hive-flow hooks --help`
 
 **Status**: ✅ Working
 
@@ -206,7 +206,7 @@ LLM API (estimated):
 ---
 
 #### 6.2 Memory
-**Command**: `claude-flow memory list`
+**Command**: `hive-flow memory list`
 
 **Status**: ✅ Working
 
@@ -226,13 +226,13 @@ LLM API (estimated):
 
 **Verification**: All help sections properly organized
 
-**Main Help** (`claude-flow --help`):
+**Main Help** (`hive-flow --help`):
 - ✅ Version displays correctly (v2.6.0-alpha.2)
 - ✅ Quick start section intact
 - ✅ Command structure preserved
 - ✅ No formatting issues
 
-**Agent Help** (`claude-flow agent --help`):
+**Agent Help** (`hive-flow agent --help`):
 - ✅ Agent Booster section visible after rebuild
 - ✅ Proper emoji formatting (🚀)
 - ✅ Clear command descriptions
@@ -411,7 +411,7 @@ Branch: feature/agentic-flow-integration
 
 ### After Integration ✅
 - Agent Booster: Fully integrated CLI commands
-- CLI Access: `claude-flow agent booster <command>`
+- CLI Access: `hive-flow agent booster <command>`
 - Help Text: Comprehensive, properly organized
 - Performance: 352x faster, validated with benchmarks
 - Cost: $0 (100% free)
@@ -466,19 +466,19 @@ npm test                                                  # 2 pre-existing failu
 npm run build                                             # ✅ Success (585 files)
 
 # Core commands
-claude-flow agent list                                    # ✅ Working
-claude-flow agent run coder "test task" --dry-run        # ✅ Working
-claude-flow hooks --help                                  # ✅ Working
-claude-flow memory list                                   # ✅ Working
+hive-flow agent list                                    # ✅ Working
+hive-flow agent run coder "test task" --dry-run        # ✅ Working
+hive-flow hooks --help                                  # ✅ Working
+hive-flow memory list                                   # ✅ Working
 
 # Agent Booster
-claude-flow agent booster help                            # ✅ Working (58 lines)
-claude-flow agent booster edit <file> --dry-run          # ✅ 0ms
-claude-flow agent booster benchmark --iterations 5        # ✅ 352x validated
+hive-flow agent booster help                            # ✅ Working (58 lines)
+hive-flow agent booster edit <file> --dry-run          # ✅ 0ms
+hive-flow agent booster benchmark --iterations 5        # ✅ 352x validated
 
 # Help text
-claude-flow --help                                        # ✅ Working
-claude-flow agent --help                                  # ✅ Agent Booster visible
+hive-flow --help                                        # ✅ Working
+hive-flow agent --help                                  # ✅ Agent Booster visible
 ```
 
 ### Files Verified

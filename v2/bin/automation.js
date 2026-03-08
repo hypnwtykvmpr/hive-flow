@@ -264,7 +264,7 @@ async function runWorkflowCommand(subArgs, flags) {
   if (!workflowFile) {
     printError('Usage: automation run-workflow <workflow-file> [options]');
     console.log('\nExample:');
-    console.log('  claude-flow automation run-workflow workflow.json --claude --non-interactive');
+    console.log('  hive-flow automation run-workflow workflow.json --claude --non-interactive');
     return;
   }
 
@@ -483,7 +483,7 @@ function showAutomationHelp() {
 🤖 Automation Commands - Intelligent Agent & Workflow Management
 
 USAGE:
-  claude-flow automation <command> [options]
+  hive-flow automation <command> [options]
 
 COMMANDS:
   auto-agent        Automatically spawn optimal agents based on task complexity
@@ -562,40 +562,40 @@ STREAM CHAINING:
 
 EXAMPLES:
   # Auto-spawn for complex enterprise task
-  claude-flow automation auto-agent --task-complexity enterprise --swarm-id swarm-123
+  hive-flow automation auto-agent --task-complexity enterprise --swarm-id swarm-123
 
   # Smart spawn for web development
-  claude-flow automation smart-spawn --requirement "web-development" --max-agents 8
+  hive-flow automation smart-spawn --requirement "web-development" --max-agents 8
 
   # Select workflow for API project optimized for speed
-  claude-flow automation workflow-select --project-type api --priority speed
+  hive-flow automation workflow-select --project-type api --priority speed
 
   # Execute custom workflow with Claude integration
-  claude-flow automation run-workflow my-workflow.json --claude --non-interactive
+  hive-flow automation run-workflow my-workflow.json --claude --non-interactive
 
   # Run MLE-STAR ML engineering workflow (flagship command) - non-interactive by default
-  claude-flow automation mle-star --dataset data/train.csv --target price --claude
+  hive-flow automation mle-star --dataset data/train.csv --target price --claude
 
   # MLE-STAR with custom configuration
-  claude-flow automation mle-star --dataset sales.csv --target revenue --output models/sales/ --name "sales-prediction" --search-iterations 5
+  hive-flow automation mle-star --dataset sales.csv --target revenue --output models/sales/ --name "sales-prediction" --search-iterations 5
   
   # MLE-STAR with interactive mode (single Claude coordinator)
-  claude-flow automation mle-star --dataset data.csv --target label --claude --interactive
+  hive-flow automation mle-star --dataset data.csv --target label --claude --interactive
   
   # MLE-STAR with stream-json chaining (agents pipe outputs to each other)
-  claude-flow automation mle-star --dataset data.csv --target label --claude --output-format stream-json
+  hive-flow automation mle-star --dataset data.csv --target label --claude --output-format stream-json
   
   # MLE-STAR with minimal output for CI/CD pipelines
-  claude-flow automation mle-star --dataset data.csv --target label --claude --quiet
+  hive-flow automation mle-star --dataset data.csv --target label --claude --quiet
   
   # Custom workflow with stream chaining enabled
-  claude-flow automation run-workflow analysis-pipeline.json --claude --output-format stream-json
+  hive-flow automation run-workflow analysis-pipeline.json --claude --output-format stream-json
   
   # Disable chaining for independent task execution
-  claude-flow automation mle-star --dataset data.csv --target label --claude --no-chaining
+  hive-flow automation mle-star --dataset data.csv --target label --claude --no-chaining
   
   # View stream chaining in action with verbose output
-  claude-flow automation mle-star --dataset data.csv --target label --claude --verbose
+  hive-flow automation mle-star --dataset data.csv --target label --claude --verbose
 
 🎯 Automation benefits:
   • Optimal resource allocation

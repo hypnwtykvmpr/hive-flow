@@ -1,5 +1,5 @@
-# Non-Interactive Default Configuration for Claude Flow Benchmark
-# This configuration ensures all claude-flow commands run in non-interactive mode
+# Non-Interactive Default Configuration for Hive Flow Benchmark
+# This configuration ensures all hive-flow commands run in non-interactive mode
 
 # Global defaults for all commands
 defaults:

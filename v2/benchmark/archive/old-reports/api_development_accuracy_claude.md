@@ -94,16 +94,16 @@
 ## 🔄 Agent Coordination Protocol
 ### Pre-Task Initialization
 ```bash
-npx claude-flow@alpha hooks pre-task --description "[task]"
-npx claude-flow@alpha hooks session-restore --session-id "swarm-[id]"
+npx hive-flow@alpha hooks pre-task --description "[task]"
+npx hive-flow@alpha hooks session-restore --session-id "swarm-[id]"
 ```
 ### Post-Edit Memory Sync
 ```bash
-npx claude-flow@alpha hooks post-edit --file "[file]" --memory-key "swarm/[agent]/[step]"
-npx claude-flow@alpha hooks notify --message "[decision]"
+npx hive-flow@alpha hooks post-edit --file "[file]" --memory-key "swarm/[agent]/[step]"
+npx hive-flow@alpha hooks notify --message "[decision]"
 ```
 ### Performance Analysis
 ```bash
-npx claude-flow@alpha hooks post-task --task-id "[task]" --analyze-performance true
-npx claude-flow@alpha hooks session-end --export-metrics true
+npx hive-flow@alpha hooks post-task --task-id "[task]" --analyze-performance true
+npx hive-flow@alpha hooks session-end --export-metrics true
 ```

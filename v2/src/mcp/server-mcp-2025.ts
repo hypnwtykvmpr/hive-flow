@@ -208,7 +208,7 @@ export class MCP2025Server {
       this.config.serverId,
       this.config.transport,
       {
-        name: 'Claude Flow',
+        name: 'Hive Flow',
         version: '2.7.32',
         description: 'Enterprise AI orchestration with MCP 2025-11 support',
       }

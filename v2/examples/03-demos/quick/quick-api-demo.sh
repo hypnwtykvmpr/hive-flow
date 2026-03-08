@@ -1,18 +1,18 @@
 #!/bin/bash
 # Quick API Demo - Creates a simple API in under 2 minutes
 
-echo "🚀 Claude Flow Quick API Demo"
+echo "🚀 Hive Flow Quick API Demo"
 echo "=========================="
 echo ""
-echo "Creating a simple TODO API with Claude Flow..."
+echo "Creating a simple TODO API with Hive Flow..."
 echo ""
 
-# Navigate to examples directory to use ../claude-flow
+# Navigate to examples directory to use ../hive-flow
 cd "$(dirname "$0")/../.."
 
 # Create the API using swarm
 echo "📦 Initializing swarm..."
-if ../claude-flow swarm create "Build a TODO API with GET, POST, PUT, DELETE endpoints" \
+if ../hive-flow swarm create "Build a TODO API with GET, POST, PUT, DELETE endpoints" \
   --strategy development \
   --name todo-api-demo \
   --output ./output/todo-api \

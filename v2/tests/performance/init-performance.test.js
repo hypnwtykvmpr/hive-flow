@@ -5,7 +5,7 @@ import { performance } from 'perf_hooks';
 import { initCommand } from '../../src/cli/simple-commands/init/index.js';
 import { batchInitCommand } from '../../src/cli/simple-commands/init/batch-init.js';
 
-const TEST_DIR = '/tmp/claude-flow-perf-test';
+const TEST_DIR = '/tmp/hive-flow-perf-test';
 
 describe('Init Performance Tests', () => {
   beforeEach(async () => {

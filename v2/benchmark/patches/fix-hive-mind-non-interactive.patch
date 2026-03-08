@@ -8,7 +8,7 @@
 +  if (flags['non-interactive'] || flags.nonInteractive) {
 +    if (!objective) {
 +      console.error(chalk.red('Error: Objective required in non-interactive mode'));
-+      console.log('Usage: claude-flow hive-mind spawn --non-interactive "Your objective"');
++      console.log('Usage: hive-flow hive-mind spawn --non-interactive "Your objective"');
 +      return;
 +    }
 +    // Skip wizard and proceed with defaults
@@ -17,7 +17,7 @@
 +
    if (!objective && !flags.wizard) {
      console.error(chalk.red('Error: Please provide an objective or use --wizard flag'));
-     console.log('Example: claude-flow hive-mind spawn "Build REST API"');
+     console.log('Example: hive-flow hive-mind spawn "Build REST API"');
 @@ -1483,7 +1493,12 @@ export async function hiveMindCommand(args, flags) {
      case 'spawn':
 -      if (flags.wizard || subArgs.length === 0) {

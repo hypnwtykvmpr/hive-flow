@@ -624,7 +624,7 @@ async function trainGoogleResearchModel() {
 
       // Report to coordination memory
       if (progress % 600 === 0) {
-        const notifyCmd = `npx claude-flow@alpha hooks notify --message "Google Research model: ${progress}/3000 patterns trained"`;
+        const notifyCmd = `npx hive-flow@alpha hooks notify --message "Google Research model: ${progress}/3000 patterns trained"`;
         try {
           require('child_process').execSync(notifyCmd, { stdio: 'inherit' });
         } catch (e) {

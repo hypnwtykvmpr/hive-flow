@@ -1,5 +1,5 @@
 #!/bin/bash
-# Setup GitHub integration for Claude Flow
+# Setup GitHub integration for Hive Flow
 
 echo "🔗 Setting up GitHub integration..."
 
@@ -22,7 +22,7 @@ fi
 
 echo ""
 echo "📦 GitHub swarm commands available:"
-echo "  - npx claude-flow github swarm"
-echo "  - npx claude-flow repo analyze"
-echo "  - npx claude-flow pr enhance"
-echo "  - npx claude-flow issue triage"
+echo "  - npx hive-flow github swarm"
+echo "  - npx hive-flow repo analyze"
+echo "  - npx hive-flow pr enhance"
+echo "  - npx hive-flow issue triage"

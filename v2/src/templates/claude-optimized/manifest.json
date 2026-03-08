@@ -4,7 +4,7 @@
   "created": "2025-06-16",
   "directories": {
     "commands": {
-      "description": "Claude Code slash commands for SPARC modes and Claude Flow integration",
+      "description": "Claude Code slash commands for SPARC modes and Hive Flow integration",
       "path": "commands/"
     },
     "commands/sparc": {
@@ -73,21 +73,21 @@
       "category": "command"
     },
     {
-      "source": "commands/claude-flow-help.md",
-      "destination": "commands/claude-flow-help.md",
-      "description": "Claude Flow help and documentation command",
+      "source": "commands/hive-flow-help.md",
+      "destination": "commands/hive-flow-help.md",
+      "description": "Hive Flow help and documentation command",
       "category": "command"
     },
     {
-      "source": "commands/claude-flow-memory.md",
-      "destination": "commands/claude-flow-memory.md",
-      "description": "Claude Flow memory system interaction command",
+      "source": "commands/hive-flow-memory.md",
+      "destination": "commands/hive-flow-memory.md",
+      "description": "Hive Flow memory system interaction command",
       "category": "command"
     },
     {
-      "source": "commands/claude-flow-swarm.md",
-      "destination": "commands/claude-flow-swarm.md",
-      "description": "Claude Flow swarm coordination command",
+      "source": "commands/hive-flow-swarm.md",
+      "destination": "commands/hive-flow-swarm.md",
+      "description": "Hive Flow swarm coordination command",
       "category": "command"
     },
     {

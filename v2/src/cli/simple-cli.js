@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Simple CLI wrapper for Claude-Flow (JavaScript version)
+ * Simple CLI wrapper for Hive-Flow (JavaScript version)
  * This version avoids TypeScript issues in node_modules
  */
 
@@ -63,16 +63,16 @@ function printCommandHelp(command) {
 // Legacy help function for backward compatibility
 function printLegacyHelp() {
   console.log(`
-🌊 Claude-Flow v${VERSION} - Enterprise-Grade AI Agent Orchestration Platform
+🌊 Hive-Flow v${VERSION} - Enterprise-Grade AI Agent Orchestration Platform
 
 🎯 ENTERPRISE FEATURES: Complete ruv-swarm integration with 90+ MCP tools, neural networking, and production-ready infrastructure
 ⚡ ALPHA 85: Advanced automation capabilities & stream-JSON chaining for multi-agent pipelines
 
 USAGE:
-  claude-flow <command> [options]
+  hive-flow <command> [options]
 
 🚀 INSTALLATION & ENTERPRISE SETUP:
-  npx claude-flow@2.0.0 init --sparc  # Enterprise SPARC + ruv-swarm integration
+  npx hive-flow@2.0.0 init --sparc  # Enterprise SPARC + ruv-swarm integration
   
   The --sparc flag creates:
   • Complete ruv-swarm integration with 27 MCP tools
@@ -119,22 +119,22 @@ USAGE:
 
 🎮 ENTERPRISE QUICK START:
   # Initialize enterprise environment
-  npx claude-flow@2.0.0 init --sparc
+  npx hive-flow@2.0.0 init --sparc
   
   # Start enterprise orchestration with swarm intelligence
-  ./claude-flow start --ui --swarm
+  ./hive-flow start --ui --swarm
   
   # Deploy intelligent multi-agent development workflow
-  ./claude-flow swarm "build enterprise API" --strategy development --parallel --monitor
+  ./hive-flow swarm "build enterprise API" --strategy development --parallel --monitor
   
   # GitHub workflow automation
-  ./claude-flow github pr-manager "coordinate release with automated testing"
+  ./hive-flow github pr-manager "coordinate release with automated testing"
   
   # Neural memory management
-  ./claude-flow memory store "architecture" "microservices with API gateway pattern"
+  ./hive-flow memory store "architecture" "microservices with API gateway pattern"
   
   # Real-time system monitoring
-  ./claude-flow status --verbose
+  ./hive-flow status --verbose
 
 🏢 ENTERPRISE COMMAND CATEGORIES:
   Core Intelligence:    swarm, agent, sparc, memory, neural
@@ -166,14 +166,14 @@ USAGE:
   • Cross-package synchronization and dependency management
 
 GET DETAILED HELP:
-  claude-flow help <command>           # Command-specific enterprise documentation
-  claude-flow <command> --help         # Alternative help syntax
+  hive-flow help <command>           # Command-specific enterprise documentation
+  hive-flow <command> --help         # Alternative help syntax
   
   Examples:
-    claude-flow help swarm             # Swarm intelligence coordination
-    claude-flow help github            # GitHub workflow automation
-    claude-flow help neural            # Neural network processing
-    claude-flow help enterprise        # Enterprise features and compliance
+    hive-flow help swarm             # Swarm intelligence coordination
+    hive-flow help github            # GitHub workflow automation
+    hive-flow help neural            # Neural network processing
+    hive-flow help enterprise        # Enterprise features and compliance
 
 COMMON OPTIONS:
   --verbose, -v                        Enable detailed output with performance metrics
@@ -190,7 +190,7 @@ COMMON OPTIONS:
 }
 
 function printVersion() {
-  console.log(`Claude-Flow v${VERSION}`);
+  console.log(`Hive-Flow v${VERSION}`);
 }
 
 function printError(message) {
@@ -212,7 +212,7 @@ function showHelpWithCommands(plain = false) {
   for (const command of commands) {
     console.log(`  ${command.name.padEnd(12)} ${command.description}`);
   }
-  console.log('\nUse "claude-flow help <command>" for detailed usage information');
+  console.log('\nUse "hive-flow help <command>" for detailed usage information');
 }
 
 async function main() {
@@ -258,7 +258,7 @@ async function main() {
       showCommandHelp(command);
     } else {
       printError(`Unknown command: ${command}`);
-      console.log('\nRun "claude-flow --help" to see available commands.');
+      console.log('\nRun "hive-flow --help" to see available commands.');
     }
     return;
   }
@@ -320,7 +320,7 @@ async function main() {
       return;
     } catch (err) {
       printError(err.message);
-      console.log(`\nRun "claude-flow ${command} --help" for usage information.`);
+      console.log(`\nRun "hive-flow ${command} --help" for usage information.`);
       return;
     }
   }
@@ -330,7 +330,7 @@ async function main() {
 
   switch (command) {
     case 'status':
-      printSuccess('Claude-Flow System Status:');
+      printSuccess('Hive-Flow System Status:');
       console.log('🟡 Status: Not Running (orchestrator not started)');
       console.log('🤖 Agents: 0 active');
       console.log('📋 Tasks: 0 in queue');
@@ -627,7 +627,7 @@ async function main() {
           const accessLevel = subArgs.find((arg) => arg.includes('--access-level'));
           if (shareId) {
             printSuccess(`Sharing terminal session: ${shareId}`);
-            console.log(`🔗 Share URL: https://claude-flow.local/terminal/${shareId}/view`);
+            console.log(`🔗 Share URL: https://hive-flow.local/terminal/${shareId}/view`);
             console.log(`🔐 Access: ${accessLevel ? accessLevel.split('=')[1] : 'read-only'}`);
             console.log('⏱️  Expires in: 2 hours');
           } else {
@@ -987,7 +987,7 @@ async function main() {
               const awsHA = subArgs.includes('--ha-configuration');
               const awsCostOpt = subArgs.includes('--cost-optimization');
 
-              printSuccess('Deploying Claude-Flow to AWS');
+              printSuccess('Deploying Hive-Flow to AWS');
               console.log('☁️  AWS Deployment Configuration:');
               if (awsServices >= 0) {
                 console.log(`   Services: ${subArgs[awsServices + 1]}`);
@@ -1007,8 +1007,8 @@ async function main() {
               console.log('   ✓ Setting up load balancers');
 
               console.log('\n✅ AWS deployment completed successfully');
-              console.log('   Cluster ARN: arn:aws:ecs:us-east-1:123456789012:cluster/claude-flow');
-              console.log('   API Gateway: https://api.aws.claude-flow.com');
+              console.log('   Cluster ARN: arn:aws:ecs:us-east-1:123456789012:cluster/hive-flow');
+              console.log('   API Gateway: https://api.aws.hive-flow.com');
               console.log('   Monitoring: https://console.aws.amazon.com/cloudwatch');
               break;
 
@@ -1050,7 +1050,7 @@ async function main() {
               const azureRegions = subArgs.indexOf('--regions');
               const azureIntegration = subArgs.includes('--integration-with-aws');
 
-              printSuccess('Deploying Claude-Flow to Azure');
+              printSuccess('Deploying Hive-Flow to Azure');
               console.log('☁️  Azure Deployment Configuration:');
               if (azureServices >= 0) {
                 console.log(`   Services: ${subArgs[azureServices + 1]}`);
@@ -1069,8 +1069,8 @@ async function main() {
               console.log('   ✓ Setting up Application Gateway');
 
               console.log('\n✅ Azure deployment completed successfully');
-              console.log('   Resource Group: claude-flow-production');
-              console.log('   API Gateway: https://api.azure.claude-flow.com');
+              console.log('   Resource Group: hive-flow-production');
+              console.log('   API Gateway: https://api.azure.hive-flow.com');
               console.log('   Monitoring: https://portal.azure.com');
               break;
 
@@ -1112,7 +1112,7 @@ async function main() {
               const gcpRegions = subArgs.indexOf('--regions');
               const multiCloud = subArgs.includes('--multi-cloud-networking');
 
-              printSuccess('Deploying Claude-Flow to Google Cloud');
+              printSuccess('Deploying Hive-Flow to Google Cloud');
               console.log('☁️  GCP Deployment Configuration:');
               if (gcpServices >= 0) {
                 console.log(`   Services: ${subArgs[gcpServices + 1]}`);
@@ -1131,8 +1131,8 @@ async function main() {
               console.log('   ✓ Setting up Cloud Load Balancing');
 
               console.log('\n✅ GCP deployment completed successfully');
-              console.log('   Project ID: claude-flow-production');
-              console.log('   API Gateway: https://api.gcp.claude-flow.com');
+              console.log('   Project ID: hive-flow-production');
+              console.log('   API Gateway: https://api.gcp.hive-flow.com');
               console.log('   Monitoring: https://console.cloud.google.com');
               break;
 
@@ -1172,7 +1172,7 @@ async function main() {
 
           switch (multiCloudCmd) {
             case 'deploy':
-              printSuccess('Deploying multi-cloud Claude-Flow architecture');
+              printSuccess('Deploying multi-cloud Hive-Flow architecture');
               console.log('🌐 Multi-Cloud Deployment:');
               console.log('   Primary: AWS (us-east-1)');
               console.log('   Secondary: Azure (eastus)');
@@ -1185,7 +1185,7 @@ async function main() {
               console.log('   ✓ Unified monitoring deployed');
 
               console.log('\n✅ Multi-cloud deployment completed');
-              console.log('   Global endpoint: https://global.claude-flow.com');
+              console.log('   Global endpoint: https://global.hive-flow.com');
               console.log('   Failover time: < 30 seconds');
               console.log('   Data consistency: Eventually consistent');
               break;
@@ -1232,9 +1232,9 @@ async function main() {
 
           switch (k8sCmd) {
             case 'deploy':
-              printSuccess('Deploying Claude-Flow to Kubernetes');
+              printSuccess('Deploying Hive-Flow to Kubernetes');
               console.log('⚙️  Kubernetes Deployment:');
-              console.log('   Namespace: claude-flow');
+              console.log('   Namespace: hive-flow');
               console.log('   Replicas: 3');
               console.log('   Resources: 1Gi memory, 500m CPU per pod');
 
@@ -1248,13 +1248,13 @@ async function main() {
 
               console.log('\n✅ Kubernetes deployment completed');
               console.log('   Pods: 3/3 running');
-              console.log('   Service: claude-flow-orchestrator-service');
-              console.log('   Ingress: https://k8s.claude-flow.com');
+              console.log('   Service: hive-flow-orchestrator-service');
+              console.log('   Ingress: https://k8s.hive-flow.com');
               break;
 
             case 'scale':
               const replicas = subArgs[2] || '5';
-              printSuccess(`Scaling Claude-Flow to ${replicas} replicas`);
+              printSuccess(`Scaling Hive-Flow to ${replicas} replicas`);
               console.log('📈 Scaling Progress:');
               console.log(`   Current replicas: 3`);
               console.log(`   Target replicas: ${replicas}`);
@@ -1266,7 +1266,7 @@ async function main() {
             case 'status':
               printSuccess('Kubernetes Cluster Status');
               console.log('\n⚙️  Cluster Information:');
-              console.log('   Namespace: claude-flow');
+              console.log('   Namespace: hive-flow');
               console.log('   Deployments: 3/3 ready');
               console.log('   Pods: 3/3 running');
               console.log('   Services: 2 active');
@@ -1369,9 +1369,9 @@ async function main() {
             console.log(`Coverage: ${flags.coverage || 80}%`);
             console.log(`Commit: ${flags.commit || 'phase'}`);
             console.log(`\nEnhanced Features:`);
-            console.log(`  - Memory Bank enabled via: npx claude-flow memory commands`);
+            console.log(`  - Memory Bank enabled via: npx hive-flow memory commands`);
             console.log(`  - Coordination ${flags.parallel ? 'enabled' : 'disabled'}`);
-            console.log(`  - Access Claude-Flow features through Bash tool`);
+            console.log(`  - Access Hive-Flow features through Bash tool`);
           } else {
             printSuccess(`Spawning Claude instance: ${instanceId}`);
             console.log(`📝 Original Task: ${task}`);
@@ -1379,7 +1379,7 @@ async function main() {
             console.log(`⚙️  Mode: ${flags.mode || 'full'}`);
             console.log(`📊 Coverage: ${flags.coverage || 80}%`);
             console.log(`💾 Commit: ${flags.commit || 'phase'}`);
-            console.log(`✨ Enhanced with Claude-Flow guidance for memory and coordination`);
+            console.log(`✨ Enhanced with Hive-Flow guidance for memory and coordination`);
             console.log('');
             console.log('📋 Task will be enhanced with:');
             console.log('  - Memory Bank instructions (store/retrieve)');
@@ -1411,22 +1411,22 @@ ${flags.tools ? `- Custom tools specified: ${flags.tools}` : ''}
 
 ### Optional Orchestration Features
 
-If this task requires complex coordination, memory persistence, or multi-agent collaboration, you can use the claude-flow system:
+If this task requires complex coordination, memory persistence, or multi-agent collaboration, you can use the hive-flow system:
 
 1. **Persistent Memory** (if needed for your task)
-   - Store project data: \`npx claude-flow memory store <key> "<value>"\`
-   - Retrieve stored data: \`npx claude-flow memory query <key>\`
-   - Export/Import memory: \`npx claude-flow memory export/import <file>\`
+   - Store project data: \`npx hive-flow memory store <key> "<value>"\`
+   - Retrieve stored data: \`npx hive-flow memory query <key>\`
+   - Export/Import memory: \`npx hive-flow memory export/import <file>\`
 
 2. **Task Coordination** (if working on complex multi-part tasks)
-   - Check task status: \`npx claude-flow status\`
-   - Monitor progress: \`npx claude-flow monitor\`
-   - List active tasks: \`npx claude-flow task list\`
+   - Check task status: \`npx hive-flow status\`
+   - Monitor progress: \`npx hive-flow monitor\`
+   - List active tasks: \`npx hive-flow task list\`
 
 3. **Multi-Agent Collaboration** (if task benefits from parallelization)
-   - Spawn specialized agents: \`npx claude-flow agent spawn <type> --name <name>\`
-   - Create subtasks: \`npx claude-flow task create <type> "<description>"\`
-   - Coordinate work: \`npx claude-flow task assign <task-id> <agent-id>\``;
+   - Spawn specialized agents: \`npx hive-flow agent spawn <type> --name <name>\`
+   - Create subtasks: \`npx hive-flow task create <type> "<description>"\`
+   - Coordinate work: \`npx hive-flow task assign <task-id> <agent-id>\``;
 
             if (flags.parallel) {
               enhancedTask += `
@@ -1478,14 +1478,14 @@ Begin working on your task. The orchestration features are available as tools to
 
 \`\`\`bash
 # Example: Storing project-specific data
-Bash("npx claude-flow memory store project_config '{\\"name\\": \\"my-app\\", \\"version\\": \\"1.0.0\\"}'")
+Bash("npx hive-flow memory store project_config '{\\"name\\": \\"my-app\\", \\"version\\": \\"1.0.0\\"}'")
 
 # Example: Checking for previous work
-Bash("npx claude-flow memory query previous_implementation")
+Bash("npx hive-flow memory query previous_implementation")
 
 # Example: Creating subtasks for complex projects
-Bash("npx claude-flow task create frontend 'Build React components'")
-Bash("npx claude-flow task create backend 'Implement API endpoints'")
+Bash("npx hive-flow task create frontend 'Build React components'")
+Bash("npx hive-flow task create backend 'Implement API endpoints'")
 \`\`\`
 
 Remember: These are optional tools. Use them when they add value to your development process.
@@ -1533,14 +1533,14 @@ ${flags.mode === 'full' || !flags.mode ? `Full-stack development covering all as
                 env: {
                   ...process.env,
                   CLAUDE_INSTANCE_ID: instanceId,
-                  CLAUDE_FLOW_MODE: flags.mode || 'full',
-                  CLAUDE_FLOW_COVERAGE: (flags.coverage || 80).toString(),
-                  CLAUDE_FLOW_COMMIT: flags.commit || 'phase',
-                  // Add claude-flow specific features
-                  CLAUDE_FLOW_MEMORY_ENABLED: 'true',
-                  CLAUDE_FLOW_MEMORY_NAMESPACE: 'default',
-                  CLAUDE_FLOW_COORDINATION_ENABLED: flags.parallel ? 'true' : 'false',
-                  CLAUDE_FLOW_FEATURES: 'memory,coordination,swarm',
+                  HIVE_FLOW_MODE: flags.mode || 'full',
+                  HIVE_FLOW_COVERAGE: (flags.coverage || 80).toString(),
+                  HIVE_FLOW_COMMIT: flags.commit || 'phase',
+                  // Add hive-flow specific features
+                  HIVE_FLOW_MEMORY_ENABLED: 'true',
+                  HIVE_FLOW_MEMORY_NAMESPACE: 'default',
+                  HIVE_FLOW_COORDINATION_ENABLED: flags.parallel ? 'true' : 'false',
+                  HIVE_FLOW_FEATURES: 'memory,coordination,swarm',
                 },
                 stdio: 'inherit',
               });
@@ -1577,10 +1577,10 @@ ${flags.mode === 'full' || !flags.mode ? `Full-stack development covering all as
           console.log('Claude commands: spawn, batch');
           console.log('\nExamples:');
           console.log(
-            '  claude-flow claude spawn "implement user authentication" --research --parallel',
+            '  hive-flow claude spawn "implement user authentication" --research --parallel',
           );
-          console.log('  claude-flow claude spawn "fix bug in payment system" --no-permissions');
-          console.log('  claude-flow claude batch workflow.json --dry-run');
+          console.log('  hive-flow claude spawn "fix bug in payment system" --no-permissions');
+          console.log('  hive-flow claude batch workflow.json --dry-run');
       }
       break;
 
@@ -1612,7 +1612,7 @@ ${flags.mode === 'full' || !flags.mode ? `Full-stack development covering all as
           console.log('   ✓ Setting up health checks');
           console.log('   ✓ Establishing replication');
           console.log('\n✅ HA cluster deployed successfully!');
-          console.log('   Cluster endpoint: https://claude-flow-ha.example.com');
+          console.log('   Cluster endpoint: https://hive-flow-ha.example.com');
           break;
 
         case 'scaling':
@@ -1678,17 +1678,17 @@ ${flags.mode === 'full' || !flags.mode ? `Full-stack development covering all as
         case 'k8s':
           printSuccess('Deploying to Kubernetes...');
           console.log('☸️  Kubernetes Deployment:');
-          console.log('   Namespace: claude-flow');
+          console.log('   Namespace: hive-flow');
           console.log('   Replicas: 3');
-          console.log('   Image: claude-flow/orchestrator:latest');
+          console.log('   Image: hive-flow/orchestrator:latest');
           console.log('   Service Type: LoadBalancer');
 
           console.log('\n📦 Creating resources:');
-          console.log('   ✓ Created namespace/claude-flow');
-          console.log('   ✓ Created deployment/claude-flow-orchestrator');
-          console.log('   ✓ Created service/claude-flow-orchestrator-service');
-          console.log('   ✓ Created configmap/claude-flow-config');
-          console.log('   ✓ Created secret/claude-flow-secrets');
+          console.log('   ✓ Created namespace/hive-flow');
+          console.log('   ✓ Created deployment/hive-flow-orchestrator');
+          console.log('   ✓ Created service/hive-flow-orchestrator-service');
+          console.log('   ✓ Created configmap/hive-flow-config');
+          console.log('   ✓ Created secret/hive-flow-secrets');
           console.log('\n✅ Kubernetes deployment complete');
           console.log('   Service endpoint: http://a1b2c3d4.elb.amazonaws.com');
           break;
@@ -2153,7 +2153,7 @@ ${flags.mode === 'full' || !flags.mode ? `Full-stack development covering all as
 
     default:
       printError(`Unknown command: ${command}`);
-      console.log('Run "claude-flow help" for available commands');
+      console.log('Run "hive-flow help" for available commands');
 
       // Suggest similar commands
       const commonCommands = [
@@ -2173,7 +2173,7 @@ ${flags.mode === 'full' || !flags.mode ? `Full-stack development covering all as
 
       if (suggestions.length > 0) {
         console.log('\nDid you mean:');
-        suggestions.forEach((cmd) => console.log(`  claude-flow ${cmd}`));
+        suggestions.forEach((cmd) => console.log(`  hive-flow ${cmd}`));
       }
 
       exit(1);
@@ -2182,7 +2182,7 @@ ${flags.mode === 'full' || !flags.mode ? `Full-stack development covering all as
 
 // REPL Implementation
 async function startRepl() {
-  console.log('🧠 Claude-Flow Interactive Shell v' + VERSION);
+  console.log('🧠 Hive-Flow Interactive Shell v' + VERSION);
   console.log('Type "help" for available commands, "exit" to quit\n');
 
   const replState = {
@@ -2242,7 +2242,7 @@ Shortcuts:
     },
 
     status: () => {
-      console.log('🟢 Claude-Flow Status:');
+      console.log('🟢 Hive-Flow Status:');
       console.log(`  Agents: ${replState.context.agents.length} active`);
       console.log(`  Tasks: ${replState.context.tasks.length} in queue`);
       console.log(`  Terminals: ${replState.context.terminals.length} active`);
@@ -2251,7 +2251,7 @@ Shortcuts:
 
     clear: () => {
       console.clear();
-      console.log('🧠 Claude-Flow Interactive Shell v' + VERSION);
+      console.log('🧠 Hive-Flow Interactive Shell v' + VERSION);
     },
 
     history: () => {
@@ -2263,7 +2263,7 @@ Shortcuts:
 
     config: async (key) => {
       try {
-        const config = JSON.parse(await readTextFile('claude-flow.config.json'));
+        const config = JSON.parse(await readTextFile('hive-flow.config.json'));
         if (key) {
           const keys = key.split('.');
           let value = config;
@@ -2291,7 +2291,7 @@ Shortcuts:
 
     // Handle special commands
     if (trimmed === 'exit' || trimmed === 'quit') {
-      console.log('👋 Exiting Claude-Flow REPL...');
+      console.log('👋 Exiting Hive-Flow REPL...');
       return false;
     }
 
@@ -2607,7 +2607,7 @@ Shortcuts:
   // Set prompt based on session
   function updatePrompt() {
     rl.setPrompt(
-      replState.currentSession ? `claude-flow:${replState.currentSession}> ` : 'claude-flow> ',
+      replState.currentSession ? `hive-flow:${replState.currentSession}> ` : 'hive-flow> ',
     );
   }
 
@@ -2630,7 +2630,7 @@ Shortcuts:
 
   // Handle CTRL+C
   rl.on('SIGINT', () => {
-    console.log('\nExiting Claude-Flow...');
+    console.log('\nExiting Hive-Flow...');
     rl.close();
     process.exit(0);
   });
@@ -2929,7 +2929,7 @@ Each agent gets its own subdirectory named by agent ID:
 - \`metrics.json\`: Performance metrics
 
 ## Usage
-Files in this directory are automatically managed by the Claude-Flow system.
+Files in this directory are automatically managed by the Hive-Flow system.
 `;
 }
 
@@ -2950,7 +2950,7 @@ Each session gets a unique directory:
 Sessions are retained for 30 days by default, then archived or deleted based on configuration.
 
 ## Usage
-The Claude-Flow system automatically manages session files. Do not modify these files manually.
+The Hive-Flow system automatically manages session files. Do not modify these files manually.
 `;
 }
 
@@ -3143,22 +3143,22 @@ SPARC is a systematic approach to software development:
 4. **Refinement**: Implement, test, and optimize using TDD
 5. **Completion**: Integrate, document, and validate
 
-## Usage with Claude-Flow
+## Usage with Hive-Flow
 
-Use the claude-flow SPARC commands to leverage this environment:
+Use the hive-flow SPARC commands to leverage this environment:
 
 \`\`\`bash
 # List available modes
-claude-flow sparc modes
+hive-flow sparc modes
 
 # Run specific mode
-claude-flow sparc run code "implement user authentication"
+hive-flow sparc run code "implement user authentication"
 
 # Execute full TDD workflow  
-claude-flow sparc tdd "payment processing system"
+hive-flow sparc tdd "payment processing system"
 
 # Use custom workflow
-claude-flow sparc workflow .roo/workflows/basic-tdd.json
+hive-flow sparc workflow .roo/workflows/basic-tdd.json
 \`\`\`
 
 ## Configuration
@@ -3180,15 +3180,15 @@ function createSparcClaudeMd() {
   return `# Claude Code Configuration - SPARC Development Environment
 
 ## Project Overview
-This project uses the SPARC (Specification, Pseudocode, Architecture, Refinement, Completion) methodology for systematic Test-Driven Development with AI assistance through Claude-Flow orchestration.
+This project uses the SPARC (Specification, Pseudocode, Architecture, Refinement, Completion) methodology for systematic Test-Driven Development with AI assistance through Hive-Flow orchestration.
 
 ## SPARC Development Commands
 
 ### Core SPARC Commands
-- \`npx claude-flow sparc modes\`: List all available SPARC development modes
-- \`npx claude-flow sparc run <mode> "<task>"\`: Execute specific SPARC mode for a task
-- \`npx claude-flow sparc tdd "<feature>"\`: Run complete TDD workflow using SPARC methodology
-- \`npx claude-flow sparc info <mode>\`: Get detailed information about a specific mode
+- \`npx hive-flow sparc modes\`: List all available SPARC development modes
+- \`npx hive-flow sparc run <mode> "<task>"\`: Execute specific SPARC mode for a task
+- \`npx hive-flow sparc tdd "<feature>"\`: Run complete TDD workflow using SPARC methodology
+- \`npx hive-flow sparc info <mode>\`: Get detailed information about a specific mode
 
 ### Standard Build Commands
 - \`npm run build\`: Build the project
@@ -3201,7 +3201,7 @@ This project uses the SPARC (Specification, Pseudocode, Architecture, Refinement
 ### 1. Specification Phase
 \`\`\`bash
 # Create detailed specifications and requirements
-npx claude-flow sparc run spec-pseudocode "Define user authentication requirements"
+npx hive-flow sparc run spec-pseudocode "Define user authentication requirements"
 \`\`\`
 - Define clear functional requirements
 - Document edge cases and constraints
@@ -3211,7 +3211,7 @@ npx claude-flow sparc run spec-pseudocode "Define user authentication requiremen
 ### 2. Pseudocode Phase
 \`\`\`bash
 # Develop algorithmic logic and data flows
-npx claude-flow sparc run spec-pseudocode "Create authentication flow pseudocode"
+npx hive-flow sparc run spec-pseudocode "Create authentication flow pseudocode"
 \`\`\`
 - Break down complex logic into steps
 - Define data structures and interfaces
@@ -3221,7 +3221,7 @@ npx claude-flow sparc run spec-pseudocode "Create authentication flow pseudocode
 ### 3. Architecture Phase
 \`\`\`bash
 # Design system architecture and component structure
-npx claude-flow sparc run architect "Design authentication service architecture"
+npx hive-flow sparc run architect "Design authentication service architecture"
 \`\`\`
 - Create system diagrams and component relationships
 - Define API contracts and interfaces
@@ -3231,7 +3231,7 @@ npx claude-flow sparc run architect "Design authentication service architecture"
 ### 4. Refinement Phase (TDD Implementation)
 \`\`\`bash
 # Execute Test-Driven Development cycle
-npx claude-flow sparc tdd "implement user authentication system"
+npx hive-flow sparc tdd "implement user authentication system"
 \`\`\`
 
 **TDD Cycle:**
@@ -3243,7 +3243,7 @@ npx claude-flow sparc tdd "implement user authentication system"
 ### 5. Completion Phase
 \`\`\`bash
 # Integration, documentation, and validation
-npx claude-flow sparc run integration "integrate authentication with user management"
+npx hive-flow sparc run integration "integrate authentication with user management"
 \`\`\`
 - Integrate all components
 - Perform end-to-end testing
@@ -3286,7 +3286,7 @@ npx claude-flow sparc run integration "integrate authentication with user manage
 - Prefer composition over inheritance
 
 ### Memory and State Management
-- Use claude-flow memory system for persistent state across sessions
+- Use hive-flow memory system for persistent state across sessions
 - Store progress and findings using namespaced keys
 - Query previous work before starting new tasks
 - Export/import memory for backup and sharing
@@ -3296,19 +3296,19 @@ npx claude-flow sparc run integration "integrate authentication with user manage
 ### Memory Commands for SPARC Development
 \`\`\`bash
 # Store project specifications
-npx claude-flow memory store spec_auth "User authentication requirements and constraints"
+npx hive-flow memory store spec_auth "User authentication requirements and constraints"
 
 # Store architectural decisions
-npx claude-flow memory store arch_decisions "Database schema and API design choices"
+npx hive-flow memory store arch_decisions "Database schema and API design choices"
 
 # Store test results and coverage
-npx claude-flow memory store test_coverage "Authentication module: 95% coverage, all tests passing"
+npx hive-flow memory store test_coverage "Authentication module: 95% coverage, all tests passing"
 
 # Query previous work
-npx claude-flow memory query auth_implementation
+npx hive-flow memory query auth_implementation
 
 # Export project memory
-npx claude-flow memory export project_backup.json
+npx hive-flow memory export project_backup.json
 \`\`\`
 
 ### Memory Namespaces
@@ -3323,37 +3323,37 @@ npx claude-flow memory export project_backup.json
 ### Feature Development Workflow
 \`\`\`bash
 # 1. Start with specification
-npx claude-flow sparc run spec-pseudocode "User profile management feature"
+npx hive-flow sparc run spec-pseudocode "User profile management feature"
 
 # 2. Design architecture
-npx claude-flow sparc run architect "Profile service architecture with data validation"
+npx hive-flow sparc run architect "Profile service architecture with data validation"
 
 # 3. Implement with TDD
-npx claude-flow sparc tdd "user profile CRUD operations"
+npx hive-flow sparc tdd "user profile CRUD operations"
 
 # 4. Security review
-npx claude-flow sparc run security-review "profile data access and validation"
+npx hive-flow sparc run security-review "profile data access and validation"
 
 # 5. Integration testing
-npx claude-flow sparc run integration "profile service with authentication system"
+npx hive-flow sparc run integration "profile service with authentication system"
 
 # 6. Documentation
-npx claude-flow sparc run docs-writer "profile service API documentation"
+npx hive-flow sparc run docs-writer "profile service API documentation"
 \`\`\`
 
 ### Bug Fix Workflow
 \`\`\`bash
 # 1. Debug and analyze
-npx claude-flow sparc run debug "authentication token expiration issue"
+npx hive-flow sparc run debug "authentication token expiration issue"
 
 # 2. Write regression tests
-npx claude-flow sparc run tdd "token refresh mechanism tests"
+npx hive-flow sparc run tdd "token refresh mechanism tests"
 
 # 3. Implement fix
-npx claude-flow sparc run code "fix token refresh in authentication service"
+npx hive-flow sparc run code "fix token refresh in authentication service"
 
 # 4. Security review
-npx claude-flow sparc run security-review "token handling security implications"
+npx hive-flow sparc run security-review "token handling security implications"
 \`\`\`
 
 ## Configuration Files
@@ -3362,7 +3362,7 @@ npx claude-flow sparc run security-review "token handling security implications"
 - **\`.roomodes\`**: SPARC mode definitions and configurations
 - **\`.roo/\`**: Templates, workflows, and mode-specific rules
 
-### Claude-Flow Configuration
+### Hive-Flow Configuration
 - **\`memory/\`**: Persistent memory and session data
 - **\`coordination/\`**: Multi-agent coordination settings
 
@@ -3391,16 +3391,16 @@ npx claude-flow sparc run security-review "token handling security implications"
 ### Debug Commands
 \`\`\`bash
 # Check SPARC configuration
-npx claude-flow sparc modes
+npx hive-flow sparc modes
 
 # Verify memory system
-npx claude-flow memory stats
+npx hive-flow memory stats
 
 # Check system status
-npx claude-flow status
+npx hive-flow status
 
 # View detailed mode information
-npx claude-flow sparc info <mode-name>
+npx hive-flow sparc info <mode-name>
 \`\`\`
 
 ## Project Architecture

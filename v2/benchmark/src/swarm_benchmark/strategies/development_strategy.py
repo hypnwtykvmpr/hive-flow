@@ -13,7 +13,7 @@ class DevelopmentStrategy(BaseStrategy):
     def __init__(self):
         """Initialize the development strategy."""
         super().__init__()
-        self.claude_flow_client = None
+        self.hive_flow_client = None
         self._code_quality = 0.0
         self._test_coverage = 0.0
         self._lines_of_code = 0
@@ -40,9 +40,9 @@ class DevelopmentStrategy(BaseStrategy):
         start_time = datetime.now()
         
         try:
-            # Execute development through claude-flow swarm
-            if self.claude_flow_client:
-                swarm_result = await self.claude_flow_client.execute_swarm(
+            # Execute development through hive-flow swarm
+            if self.hive_flow_client:
+                swarm_result = await self.hive_flow_client.execute_swarm(
                     objective=task.objective,
                     strategy="development",
                     mode=task.mode.value if hasattr(task.mode, 'value') else task.mode,

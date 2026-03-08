@@ -1,15 +1,15 @@
-# Claude Flow V3
+# Hive Flow V3
 
-> **Modular AI Agent Coordination System** - A complete reimagining of Claude-Flow with 15-agent hierarchical mesh swarm coordination.
+> **Modular AI Agent Coordination System** - A complete reimagining of Hive-Flow with 15-agent hierarchical mesh swarm coordination.
 
-[![Version](https://img.shields.io/badge/version-3.0.0--alpha.1-blue.svg)](https://github.com/ruvnet/claude-flow)
+[![Version](https://img.shields.io/badge/version-3.0.0--alpha.1-blue.svg)](https://github.com/ruvnet/hive-flow)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D20.0.0-green.svg)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.3+-blue.svg)](https://www.typescriptlang.org/)
 [![License](https://img.shields.io/badge/license-MIT-purple.svg)](../LICENSE)
 
 ## Introduction
 
-Claude Flow V3 is a next-generation AI agent coordination system built on 10 Architecture Decision Records (ADRs). It provides a modular, security-first, high-performance platform for orchestrating multi-agent swarms with hierarchical mesh topology.
+Hive Flow V3 is a next-generation AI agent coordination system built on 10 Architecture Decision Records (ADRs). It provides a modular, security-first, high-performance platform for orchestrating multi-agent swarms with hierarchical mesh topology.
 
 V3 represents a complete architectural overhaul:
 - **10x faster testing** with Vitest
@@ -67,7 +67,7 @@ V3 represents a complete architectural overhaul:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                     @claude-flow/v3-monorepo                    │
+│                     @hive-flow/v3-monorepo                    │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                 │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
@@ -100,7 +100,7 @@ V3 represents a complete architectural overhaul:
 
 ```
 v3/
-├── @claude-flow/                    # Modular packages
+├── @hive-flow/                    # Modular packages
 │   ├── security/                    # Security module
 │   │   └── src/
 │   │       ├── index.ts             # Password hashing, validators
@@ -192,8 +192,8 @@ v3/
 │   └── implementation/              # Implementation details
 │
 ├── helpers/                         # Cross-platform helpers
-│   ├── claude-flow-v3.sh            # Master helper (Linux/macOS)
-│   ├── claude-flow-v3.ps1           # Master helper (Windows)
+│   ├── hive-flow-v3.sh            # Master helper (Linux/macOS)
+│   ├── hive-flow-v3.ps1           # Master helper (Windows)
 │   └── templates/                   # Helper templates
 │
 ├── scripts/                         # Utility scripts
@@ -207,22 +207,22 @@ v3/
 
 ## Modules
 
-### @claude-flow/security
+### @hive-flow/security
 Security-first implementation with CVE fixes, input validation, and credential management.
 
 ```typescript
-import { PasswordHasher, validateInput, sanitizePath } from '@claude-flow/security';
+import { PasswordHasher, validateInput, sanitizePath } from '@hive-flow/security';
 
 const hasher = new PasswordHasher();
 const hash = await hasher.hash('password');
 const valid = await hasher.verify('password', hash);
 ```
 
-### @claude-flow/memory
+### @hive-flow/memory
 Unified memory service with AgentDB, HNSW indexing, and 150x-12,500x faster search.
 
 ```typescript
-import { HybridMemoryRepository, HNSWIndex } from '@claude-flow/memory';
+import { HybridMemoryRepository, HNSWIndex } from '@hive-flow/memory';
 
 const memory = new HybridMemoryRepository({
   backend: 'agentdb',
@@ -233,11 +233,11 @@ await memory.store({ key: 'knowledge', value: 'context', embedding: [...] });
 const results = await memory.search({ query: 'knowledge', limit: 10 });
 ```
 
-### @claude-flow/swarm
+### @hive-flow/swarm
 15-agent hierarchical mesh coordination with consensus protocols.
 
 ```typescript
-import { UnifiedSwarmCoordinator } from '@claude-flow/swarm';
+import { UnifiedSwarmCoordinator } from '@hive-flow/swarm';
 
 const coordinator = new UnifiedSwarmCoordinator({
   topology: 'hierarchical-mesh',
@@ -248,22 +248,22 @@ await coordinator.initialize();
 await coordinator.spawnAgent({ type: 'queen-coordinator' });
 ```
 
-### @claude-flow/integration
+### @hive-flow/integration
 Deep integration with agentic-flow@alpha per ADR-001.
 
 ```typescript
-import { AgenticFlowBridge } from '@claude-flow/integration';
+import { AgenticFlowBridge } from '@hive-flow/integration';
 
 const bridge = new AgenticFlowBridge();
 await bridge.initialize();
 const agent = await bridge.createAgent({ type: 'coder' });
 ```
 
-### @claude-flow/performance
+### @hive-flow/performance
 Benchmarking framework with Flash Attention validation.
 
 ```typescript
-import { BenchmarkRunner, formatTime } from '@claude-flow/performance';
+import { BenchmarkRunner, formatTime } from '@hive-flow/performance';
 
 const runner = new BenchmarkRunner();
 const result = await runner.run('map-lookup', () => map.get(key), {
@@ -272,49 +272,49 @@ const result = await runner.run('map-lookup', () => map.get(key), {
 });
 ```
 
-### @claude-flow/neural
+### @hive-flow/neural
 SONA learning integration for self-optimizing agents.
 
 ```typescript
-import { SONAAdapter } from '@claude-flow/neural';
+import { SONAAdapter } from '@hive-flow/neural';
 
 const sona = new SONAAdapter();
 await sona.train({ patterns: learningData });
 const prediction = await sona.predict(context);
 ```
 
-### @claude-flow/cli
+### @hive-flow/cli
 Modern CLI with interactive prompts and formatted output.
 
 ```bash
-npx @claude-flow/cli swarm init --topology hierarchical-mesh
-npx @claude-flow/cli agent spawn --type queen-coordinator
-npx @claude-flow/cli memory search "knowledge"
+npx @hive-flow/cli swarm init --topology hierarchical-mesh
+npx @hive-flow/cli agent spawn --type queen-coordinator
+npx @hive-flow/cli memory search "knowledge"
 ```
 
-### @claude-flow/testing
+### @hive-flow/testing
 TDD London School framework with mocks, fixtures, and regression testing.
 
 ```typescript
-import { createMockAgent, createTestFixture } from '@claude-flow/testing';
+import { createMockAgent, createTestFixture } from '@hive-flow/testing';
 
 const mockAgent = createMockAgent({ type: 'coder' });
 const fixture = createTestFixture('swarm-coordination');
 ```
 
-### @claude-flow/shared
+### @hive-flow/shared
 Common types, events, utilities, and core interfaces.
 
 ```typescript
-import { EventBus, Result, success, failure } from '@claude-flow/shared';
-import type { AgentId, TaskStatus } from '@claude-flow/shared/types';
+import { EventBus, Result, success, failure } from '@hive-flow/shared';
+import type { AgentId, TaskStatus } from '@hive-flow/shared/types';
 ```
 
-### @claude-flow/deployment
+### @hive-flow/deployment
 Release management and CI/CD automation.
 
 ```typescript
-import { ReleaseManager } from '@claude-flow/deployment';
+import { ReleaseManager } from '@hive-flow/deployment';
 
 const release = new ReleaseManager();
 await release.prepare({ version: '3.0.0', changelog: '...' });
@@ -325,7 +325,7 @@ await release.prepare({ version: '3.0.0', changelog: '...' });
 ### Quick Start
 
 ```typescript
-import { initializeV3Swarm } from '@claude-flow/v3';
+import { initializeV3Swarm } from '@hive-flow/v3';
 
 // Initialize the swarm
 const swarm = await initializeV3Swarm();
@@ -351,18 +351,18 @@ const result = await swarm.waitForTask(task.id);
 
 ```typescript
 // Import everything
-import * as claudeFlow from '@claude-flow/v3';
+import * as hiveFlow from '@hive-flow/v3';
 
 // Or import specific modules for tree-shaking
-import { UnifiedSwarmCoordinator } from '@claude-flow/swarm';
-import { PasswordHasher } from '@claude-flow/security';
-import { HNSWIndex } from '@claude-flow/memory';
+import { UnifiedSwarmCoordinator } from '@hive-flow/swarm';
+import { PasswordHasher } from '@hive-flow/security';
+import { HNSWIndex } from '@hive-flow/memory';
 ```
 
 ### MCP Server
 
 ```typescript
-import { createMCPServer } from '@claude-flow/v3/mcp';
+import { createMCPServer } from '@hive-flow/v3/mcp';
 
 const server = createMCPServer({
   transport: 'stdio',
@@ -378,14 +378,14 @@ Cross-platform automation for V3 development:
 
 ```bash
 # Linux/macOS
-./helpers/claude-flow-v3.sh init
-./helpers/claude-flow-v3.sh status
-./helpers/claude-flow-v3.sh update domain 3
+./helpers/hive-flow-v3.sh init
+./helpers/hive-flow-v3.sh status
+./helpers/hive-flow-v3.sh update domain 3
 
 # Windows (PowerShell)
-.\helpers\claude-flow-v3.ps1 init
-.\helpers\claude-flow-v3.ps1 status
-.\helpers\claude-flow-v3.ps1 update domain 3
+.\helpers\hive-flow-v3.ps1 init
+.\helpers\hive-flow-v3.ps1 status
+.\helpers\hive-flow-v3.ps1 update domain 3
 ```
 
 Features:
@@ -398,8 +398,8 @@ Features:
 
 ```bash
 # Clone the repository
-git clone https://github.com/ruvnet/claude-flow.git
-cd claude-flow/v3
+git clone https://github.com/ruvnet/hive-flow.git
+cd hive-flow/v3
 
 # Install dependencies
 pnpm install
@@ -452,20 +452,20 @@ pnpm test:coverage
 - [Helper System](./helpers/README.md)
 
 ### Modules
-- [@claude-flow/security](./@claude-flow/security/)
-- [@claude-flow/memory](./@claude-flow/memory/)
-- [@claude-flow/swarm](./@claude-flow/swarm/)
-- [@claude-flow/integration](./@claude-flow/integration/)
-- [@claude-flow/performance](./@claude-flow/performance/)
-- [@claude-flow/neural](./@claude-flow/neural/)
-- [@claude-flow/cli](./@claude-flow/cli/)
-- [@claude-flow/testing](./@claude-flow/testing/)
-- [@claude-flow/shared](./@claude-flow/shared/)
-- [@claude-flow/deployment](./@claude-flow/deployment/)
+- [@hive-flow/security](./@hive-flow/security/)
+- [@hive-flow/memory](./@hive-flow/memory/)
+- [@hive-flow/swarm](./@hive-flow/swarm/)
+- [@hive-flow/integration](./@hive-flow/integration/)
+- [@hive-flow/performance](./@hive-flow/performance/)
+- [@hive-flow/neural](./@hive-flow/neural/)
+- [@hive-flow/cli](./@hive-flow/cli/)
+- [@hive-flow/testing](./@hive-flow/testing/)
+- [@hive-flow/shared](./@hive-flow/shared/)
+- [@hive-flow/deployment](./@hive-flow/deployment/)
 
 ### Examples
-- [AgentDB Example](./@claude-flow/memory/examples/agentdb-example.ts)
-- [Cross-Platform Usage](./@claude-flow/memory/examples/cross-platform-usage.ts)
+- [AgentDB Example](./@hive-flow/memory/examples/agentdb-example.ts)
+- [Cross-Platform Usage](./@hive-flow/memory/examples/cross-platform-usage.ts)
 
 ### MCP Tools
 - [Agent Tools](./mcp/tools/agent-tools.ts)
@@ -474,7 +474,7 @@ pnpm test:coverage
 - [Hooks Tools](./mcp/tools/hooks-tools.ts)
 
 ### External
-- [GitHub Repository](https://github.com/ruvnet/claude-flow)
+- [GitHub Repository](https://github.com/ruvnet/hive-flow)
 - [agentic-flow Integration](https://github.com/ruvnet/agentic-flow)
 - [AgentDB](https://github.com/ruvnet/agentdb)
 

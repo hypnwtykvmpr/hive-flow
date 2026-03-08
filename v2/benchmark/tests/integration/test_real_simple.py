@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Simple test of real claude-flow benchmark execution
+Simple test of real hive-flow benchmark execution
 """
 
 import subprocess
@@ -8,24 +8,24 @@ import time
 import json
 from pathlib import Path
 
-def test_real_claude_flow():
-    """Test actual claude-flow command execution"""
-    claude_flow_path = Path(__file__).parent.parent / "claude-flow"
+def test_real_hive_flow():
+    """Test actual hive-flow command execution"""
+    hive_flow_path = Path(__file__).parent.parent / "hive-flow"
     
-    print("🧠 Testing Real Claude-Flow Benchmark System")
+    print("🧠 Testing Real Hive-Flow Benchmark System")
     print("=" * 60)
     
     # Test 1: Version check
     print("\n1️⃣ Testing basic command:")
     start = time.time()
     result = subprocess.run(
-        [str(claude_flow_path), "--version"],
+        [str(hive_flow_path), "--version"],
         capture_output=True,
         text=True
     )
     duration = time.time() - start
     
-    print(f"   Command: claude-flow --version")
+    print(f"   Command: hive-flow --version")
     print(f"   Success: {result.returncode == 0}")
     print(f"   Output: {result.stdout.strip()}")
     print(f"   Duration: {duration:.3f}s")
@@ -34,13 +34,13 @@ def test_real_claude_flow():
     print("\n2️⃣ Testing SPARC list command:")
     start = time.time()
     result = subprocess.run(
-        [str(claude_flow_path), "sparc", "list"],
+        [str(hive_flow_path), "sparc", "list"],
         capture_output=True,
         text=True
     )
     duration = time.time() - start
     
-    print(f"   Command: claude-flow sparc list")
+    print(f"   Command: hive-flow sparc list")
     print(f"   Success: {result.returncode == 0}")
     print(f"   Duration: {duration:.3f}s")
     if result.returncode == 0:
@@ -52,13 +52,13 @@ def test_real_claude_flow():
     print("\n3️⃣ Testing SPARC execution (dry-run):")
     start = time.time()
     result = subprocess.run(
-        [str(claude_flow_path), "sparc", "coder", "Write hello world", "--dry-run"],
+        [str(hive_flow_path), "sparc", "coder", "Write hello world", "--dry-run"],
         capture_output=True,
         text=True
     )
     duration = time.time() - start
     
-    print(f"   Command: claude-flow sparc coder 'Write hello world' --dry-run")
+    print(f"   Command: hive-flow sparc coder 'Write hello world' --dry-run")
     print(f"   Success: {result.returncode == 0}")
     print(f"   Duration: {duration:.3f}s")
     
@@ -66,14 +66,14 @@ def test_real_claude_flow():
     print("\n4️⃣ Testing Swarm execution (dry-run):")
     start = time.time()
     result = subprocess.run(
-        [str(claude_flow_path), "swarm", "Build a calculator", 
+        [str(hive_flow_path), "swarm", "Build a calculator", 
          "--strategy", "development", "--mode", "centralized", "--dry-run"],
         capture_output=True,
         text=True
     )
     duration = time.time() - start
     
-    print(f"   Command: claude-flow swarm 'Build a calculator' --strategy development --mode centralized --dry-run")
+    print(f"   Command: hive-flow swarm 'Build a calculator' --strategy development --mode centralized --dry-run")
     print(f"   Success: {result.returncode == 0}")
     print(f"   Duration: {duration:.3f}s")
     
@@ -94,11 +94,11 @@ def test_real_claude_flow():
     
     print(f"\n✅ Test completed! Results saved to: {output_file}")
     print("\n📊 Summary:")
-    print("   • Claude-flow commands are executable")
+    print("   • Hive-flow commands are executable")
     print("   • Basic benchmarking infrastructure works")
     print("   • Real command execution with timing")
     print("   • Ready for full benchmark implementation")
 
 
 if __name__ == "__main__":
-    test_real_claude_flow()
+    test_real_hive_flow()

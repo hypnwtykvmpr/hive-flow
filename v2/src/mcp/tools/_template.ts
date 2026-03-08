@@ -11,7 +11,7 @@
  * 4. Implement handler logic
  */
 
-import type { MCPTool, ClaudeFlowToolContext } from '../types.js';
+import type { MCPTool, HiveFlowToolContext } from '../types.js';
 import type { ILogger } from '../../interfaces/logger.js';
 
 /**
@@ -108,7 +108,7 @@ export function createToolTemplateTool(logger: ILogger): MCPTool {
      */
     handler: async (
       input: any,
-      context?: ClaudeFlowToolContext
+      context?: HiveFlowToolContext
     ): Promise<ToolTemplateResult> => {
       // Validate context availability
       if (!context?.orchestrator) {

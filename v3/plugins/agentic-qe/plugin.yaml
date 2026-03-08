@@ -1,5 +1,5 @@
 # agentic-qe Plugin Manifest
-# Quality Engineering plugin for Claude Flow V3
+# Quality Engineering plugin for Hive Flow V3
 
 name: agentic-qe
 version: 3.2.3
@@ -27,17 +27,17 @@ metadata:
     - chaos-engineering
     - accessibility
   stability: stable
-  minClaudeFlowVersion: "3.0.0-alpha.50"
+  minHiveFlowVersion: "3.0.0-alpha.50"
 
 # Dependencies
 dependencies:
   required:
-    - "@claude-flow/plugins": ">=3.0.0"
-    - "@claude-flow/memory": ">=3.0.0"
-    - "@claude-flow/security": ">=3.0.0"
-    - "@claude-flow/embeddings": ">=3.0.0"
+    - "@hive-flow/plugins": ">=3.0.0"
+    - "@hive-flow/memory": ">=3.0.0"
+    - "@hive-flow/security": ">=3.0.0"
+    - "@hive-flow/embeddings": ">=3.0.0"
   optional:
-    - "@claude-flow/browser": ">=3.0.0"  # For E2E/visual testing
+    - "@hive-flow/browser": ">=3.0.0"  # For E2E/visual testing
     - "@ruvector/attention": ">=1.0.0"   # Enhanced pattern matching
     - "@ruvector/gnn": ">=1.0.0"         # Code graph analysis
     - "@ruvector/sona": ">=1.0.0"        # Self-optimizing learning
@@ -988,7 +988,7 @@ implementation:
       files: 8
       estimatedLines: 1210
       deliverables:
-        - Plugin registers with @claude-flow/plugins SDK
+        - Plugin registers with @hive-flow/plugins SDK
         - Type-safe configuration validation
         - Basic lifecycle hooks (onLoad, onUnload)
 

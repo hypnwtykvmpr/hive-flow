@@ -18,32 +18,32 @@ This project enforces **"truth is enforced, not assumed"** with mandatory verifi
 ### Initialize Verification System
 \`\`\`bash
 # Set verification mode (strict/moderate/development)
-./claude-flow verify init strict     # 95% threshold, auto-rollback
-./claude-flow verify init moderate   # 85% threshold, no auto-rollback
-./claude-flow verify init development # 75% threshold, for prototyping
+./hive-flow verify init strict     # 95% threshold, auto-rollback
+./hive-flow verify init moderate   # 85% threshold, no auto-rollback
+./hive-flow verify init development # 75% threshold, for prototyping
 \`\`\`
 
 ### Run Verification
 \`\`\`bash
 # Verify specific tasks
-./claude-flow verify verify task-123 --agent coder
-./claude-flow verify verify task-456 --agent reviewer --threshold 0.90
+./hive-flow verify verify task-123 --agent coder
+./hive-flow verify verify task-456 --agent reviewer --threshold 0.90
 
 # Check truth scores
-./claude-flow truth                  # View current truth scores
-./claude-flow truth --report         # Generate detailed report
-./claude-flow truth --analyze        # Analyze failure patterns
+./hive-flow truth                  # View current truth scores
+./hive-flow truth --report         # Generate detailed report
+./hive-flow truth --analyze        # Analyze failure patterns
 \`\`\`
 
 ### Pair Programming Mode
 \`\`\`bash
 # Start pair programming with real-time verification
-./claude-flow pair --start           # Begin collaborative session
-./claude-flow pair --start --mode strict  # Production-quality pairing
-./claude-flow pair --verify --threshold 0.90  # Custom threshold
+./hive-flow pair --start           # Begin collaborative session
+./hive-flow pair --start --mode strict  # Production-quality pairing
+./hive-flow pair --verify --threshold 0.90  # Custom threshold
 
 # Background monitoring (use run_in_background: true)
-./claude-flow pair --start --monitor # Continuous monitoring dashboard
+./hive-flow pair --start --monitor # Continuous monitoring dashboard
 \`\`\`
 
 ## 📊 VERIFICATION REQUIREMENTS BY AGENT TYPE
@@ -76,7 +76,7 @@ This project enforces **"truth is enforced, not assumed"** with mandatory verifi
 // Use run_in_background parameter for continuous monitoring
 {
   "tool": "Bash",
-  "command": "./claude-flow pair --start --monitor",
+  "command": "./hive-flow pair --start --monitor",
   "run_in_background": true  // Enables background execution
 }
 \`\`\`
@@ -104,15 +104,15 @@ This project enforces **"truth is enforced, not assumed"** with mandatory verifi
 \`\`\`javascript
 [Single Message]:
   // Initialize verification for multiple tasks
-  - Bash("./claude-flow verify verify task-1 --agent coder")
-  - Bash("./claude-flow verify verify task-2 --agent reviewer")
-  - Bash("./claude-flow verify verify task-3 --agent tester")
+  - Bash("./hive-flow verify verify task-1 --agent coder")
+  - Bash("./hive-flow verify verify task-2 --agent reviewer")
+  - Bash("./hive-flow verify verify task-3 --agent tester")
   
   // Check all truth scores
-  - Bash("./claude-flow truth --json")
+  - Bash("./hive-flow truth --json")
   
   // Start monitoring in background
-  - Bash("./claude-flow pair --start --monitor", run_in_background: true)
+  - Bash("./hive-flow pair --start --monitor", run_in_background: true)
 \`\`\`
 
 ### ❌ WRONG - Sequential Verification
@@ -143,7 +143,7 @@ Message 3: Check truth score
 ### 1. Start Session
 \`\`\`bash
 # Initialize pair programming with verification
-./claude-flow pair --start --mode strict
+./hive-flow pair --start --mode strict
 \`\`\`
 
 ### 2. Real-time Verification Cycle
@@ -167,7 +167,7 @@ Fail (<0.95) → Suggest fixes or rollback
 ### 3. Continuous Monitoring
 \`\`\`bash
 # Monitor in background
-./claude-flow pair --start --monitor &
+./hive-flow pair --start --monitor &
 
 # Check verification output
 /bashes  # Interactive view
@@ -192,7 +192,7 @@ Fail (<0.95) → Suggest fixes or rollback
 cat .swarm/verification-memory.json | jq .history
 
 # Check agent reliability
-./claude-flow truth --agent coder --detailed
+./hive-flow truth --agent coder --detailed
 \`\`\`
 
 ## 🚀 QUICK START VERIFICATION WORKFLOW
@@ -200,16 +200,16 @@ cat .swarm/verification-memory.json | jq .history
 ### Step 1: Initialize Project with Verification
 \`\`\`bash
 # Initialize with verification-first approach
-npx claude-flow@alpha init --verify --pair
+npx hive-flow@alpha init --verify --pair
 
 # Set up strict verification
-./claude-flow verify init strict
+./hive-flow verify init strict
 \`\`\`
 
 ### Step 2: Start Development with Pair Programming
 \`\`\`bash
 # Start pair programming session
-./claude-flow pair --start --mode strict --monitor &
+./hive-flow pair --start --mode strict --monitor &
 
 # Monitor verification (background task)
 /bashes  # Check bash_1 status
@@ -225,10 +225,10 @@ npx claude-flow@alpha init --verify --pair
 ### Step 4: Check Truth Metrics
 \`\`\`bash
 # View current truth scores
-./claude-flow truth
+./hive-flow truth
 
 # Generate detailed report
-./claude-flow truth --report --export metrics.json
+./hive-flow truth --report --export metrics.json
 \`\`\`
 
 ## 📋 VERIFICATION CHECKLIST
@@ -249,10 +249,10 @@ Before ANY operation:
 - \`npm run typecheck\`: Type check with validation
 
 ### Verification Commands
-- \`./claude-flow verify status\`: Check system status
-- \`./claude-flow verify verify <task>\`: Run verification
-- \`./claude-flow truth\`: View truth scores
-- \`./claude-flow pair --start\`: Begin pair programming
+- \`./hive-flow verify status\`: Check system status
+- \`./hive-flow verify verify <task>\`: Run verification
+- \`./hive-flow truth\`: View truth scores
+- \`./hive-flow pair --start\`: Begin pair programming
 
 ## 💾 PERSISTENT VERIFICATION MEMORY
 
@@ -303,17 +303,17 @@ Task("Validate", "Final verification", "production-validator")
 # .github/workflows/verification.yml
 - name: Run Verification
   run: |
-    npx claude-flow verify init strict
-    npx claude-flow verify verify \${{ github.run_id }}
-    npx claude-flow truth --threshold 0.95
+    npx hive-flow verify init strict
+    npx hive-flow verify verify \${{ github.run_id }}
+    npx hive-flow truth --threshold 0.95
 \`\`\`
 
 ### Pre-commit Hooks
 \`\`\`bash
 # .git/hooks/pre-commit
 #!/bin/bash
-npx claude-flow verify verify pre-commit --agent coder
-SCORE=\$(npx claude-flow truth --json | jq .averageScore)
+npx hive-flow verify verify pre-commit --agent coder
+SCORE=\$(npx hive-flow truth --json | jq .averageScore)
 if [ "\$SCORE" -lt "0.85" ]; then
   echo "❌ Commit blocked: Truth score \$SCORE below threshold"
   exit 1
@@ -322,10 +322,10 @@ fi
 
 ## 📚 DOCUMENTATION
 
-- [Truth Verification System](https://github.com/ruvnet/claude-flow/wiki/Truth-Verification-System)
-- [Pair Programming Guide](https://github.com/ruvnet/claude-flow/wiki/Pair-Programming-System)
-- [Background Commands](https://github.com/ruvnet/claude-flow/wiki/background-commands)
-- [Agent Verification](https://github.com/ruvnet/claude-flow/wiki/Agent-Verification)
+- [Truth Verification System](https://github.com/ruvnet/hive-flow/wiki/Truth-Verification-System)
+- [Pair Programming Guide](https://github.com/ruvnet/hive-flow/wiki/Pair-Programming-System)
+- [Background Commands](https://github.com/ruvnet/hive-flow/wiki/background-commands)
+- [Agent Verification](https://github.com/ruvnet/hive-flow/wiki/Agent-Verification)
 
 ## 🚨 IMPORTANT REMINDERS
 
@@ -397,9 +397,9 @@ export function createVerificationSettingsJson() {
       "autoBackground": {
         "enabled": true,
         "patterns": [
-          "./claude-flow pair --start",
-          "./claude-flow verify verify",
-          "./claude-flow truth --monitor",
+          "./hive-flow pair --start",
+          "./hive-flow verify verify",
+          "./hive-flow truth --monitor",
           "*--monitor*",
           "*--watch*"
         ]
@@ -417,15 +417,15 @@ export function createVerificationSettingsJson() {
       "pre-commit": {
         "enabled": true,
         "commands": [
-          "npx claude-flow verify verify pre-commit --agent coder"
+          "npx hive-flow verify verify pre-commit --agent coder"
         ],
         "threshold": 0.85
       },
       "post-task": {
         "enabled": true,
         "commands": [
-          "npx claude-flow truth --json",
-          "npx claude-flow verify status"
+          "npx hive-flow truth --json",
+          "npx hive-flow verify status"
         ]
       }
     }

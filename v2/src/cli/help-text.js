@@ -1,5 +1,5 @@
 /**
- * Help text templates for Claude Flow CLI
+ * Help text templates for Hive Flow CLI
  * Provides clear, actionable command documentation
  */
 
@@ -9,7 +9,7 @@ import { VERSION } from '../core/version.js';
 export { VERSION };
 
 export const MAIN_HELP = `
-🌊 Claude-Flow v${VERSION} - Enterprise-Grade AI Agent Orchestration Platform
+🌊 Hive-Flow v${VERSION} - Enterprise-Grade AI Agent Orchestration Platform
 
 🎯 ENTERPRISE FEATURES:
   • Complete ruv-swarm integration with 90+ MCP tools
@@ -18,17 +18,17 @@ export const MAIN_HELP = `
   • Production-ready infrastructure with enterprise reliability
 
 USAGE:
-  npx claude-flow <command> [options]    # Run latest alpha version
-  npx claude-flow <command> --help       # Get detailed help for any command
-  npx claude-flow --help                 # Show this help
+  npx hive-flow <command> [options]    # Run latest alpha version
+  npx hive-flow <command> --help       # Get detailed help for any command
+  npx hive-flow --help                 # Show this help
   
   # After local install:
-  claude-flow <command> [options]
-  claude-flow <command> --help    # Get detailed help for any command
+  hive-flow <command> [options]
+  hive-flow <command> --help    # Get detailed help for any command
 
 🚀 QUICK START:
   # First time setup (creates CLAUDE.md & .claude/commands)
-  npx claude-flow init
+  npx hive-flow init
   
   # 🌐 FLOW NEXUS CLOUD (NEW!):
   mcp__flow-nexus__user_register         # Register for cloud features
@@ -36,14 +36,14 @@ USAGE:
   mcp__flow-nexus__sandbox_create        # Create cloud execution environments
   
   # 🐝 HIVE MIND QUICK START:
-  claude-flow hive-mind wizard          # Interactive setup wizard
-  claude-flow hive-mind spawn "objective"  # Create intelligent swarm
-  claude-flow hive-mind spawn "Build API" --claude  # Open Claude Code CLI
+  hive-flow hive-mind wizard          # Interactive setup wizard
+  hive-flow hive-mind spawn "objective"  # Create intelligent swarm
+  hive-flow hive-mind spawn "Build API" --claude  # Open Claude Code CLI
   
   # After setup, use without npx:
-  claude-flow start --swarm              # Start with swarm intelligence
-  claude-flow swarm "build REST API"     # Deploy multi-agent workflow
-  claude-flow swarm "create service" --claude  # Open Claude Code CLI with swarm
+  hive-flow start --swarm              # Start with swarm intelligence
+  hive-flow swarm "build REST API"     # Deploy multi-agent workflow
+  hive-flow swarm "create service" --claude  # Open Claude Code CLI with swarm
 
 🐝 HIVE MIND COMMANDS (NEW!):
   hive-mind wizard         🎯 Interactive setup wizard (RECOMMENDED)
@@ -53,7 +53,7 @@ USAGE:
   hive-mind metrics        Advanced performance analytics
 
 📋 CORE COMMANDS:
-  init                     Initialize Claude Flow v2.0.0 (creates CLAUDE.md & .claude/commands)
+  init                     Initialize Hive Flow v2.0.0 (creates CLAUDE.md & .claude/commands)
                           --monitoring enables token usage tracking
   start [--swarm]          Start orchestration system
   swarm <objective>        Multi-agent swarm coordination
@@ -99,36 +99,36 @@ USAGE:
 
 🔥 NEW MCP TOOLS (v2.5.0-alpha.130):
   Available via Claude Code after installing:
-    claude mcp add claude-flow npx claude-flow@alpha mcp start
+    claude mcp add hive-flow npx hive-flow@alpha mcp start
 
-  mcp__claude-flow__agents_spawn_parallel    Spawn agents in parallel (10-20x faster)
+  mcp__hive-flow__agents_spawn_parallel    Spawn agents in parallel (10-20x faster)
     • Spawn multiple agents concurrently
     • 10-20x speedup vs sequential spawning
     • Example: 3 agents in 150ms instead of 2250ms
 
-  mcp__claude-flow__query_control            Control running queries in real-time
+  mcp__hive-flow__query_control            Control running queries in real-time
     • Actions: pause, resume, terminate
     • Change model mid-execution (Sonnet → Haiku for cost savings)
     • Change permissions dynamically
     • Execute commands in query context
 
-  mcp__claude-flow__query_list               List active queries with status
+  mcp__hive-flow__query_list               List active queries with status
     • View all running queries
     • Monitor query status and performance
     • Filter by active or include history
 
 🔍 GET HELP:
-  npx claude-flow --help                Show this help
-  npx claude-flow <command> --help      Detailed command help
+  npx hive-flow --help                Show this help
+  npx hive-flow <command> --help      Detailed command help
 
 🎯 RECOMMENDED FOR NEW USERS:
-  npx claude-flow hive-mind wizard     # Start here! Interactive guided setup
-  npx claude-flow init                 # Initialize Claude Flow
-  npx claude-flow help hive-mind       # Learn about Hive Mind features
-  npx claude-flow swarm "Build API" --claude  # Quick start with Claude Code CLI
+  npx hive-flow hive-mind wizard     # Start here! Interactive guided setup
+  npx hive-flow init                 # Initialize Hive Flow
+  npx hive-flow help hive-mind       # Learn about Hive Mind features
+  npx hive-flow swarm "Build API" --claude  # Quick start with Claude Code CLI
 
-📚 Documentation: https://github.com/ruvnet/claude-flow
-🐝 Hive Mind Guide: https://github.com/ruvnet/claude-flow/tree/main/docs/hive-mind
+📚 Documentation: https://github.com/ruvnet/hive-flow
+🐝 Hive Mind Guide: https://github.com/ruvnet/hive-flow/tree/main/docs/hive-mind
 🐝 ruv-swarm: https://github.com/ruvnet/ruv-FANN/tree/main/ruv-swarm
 💬 Discord Community: https://discord.agentics.org
 
@@ -140,7 +140,7 @@ export const COMMAND_HELP = {
 🔍 VERIFY COMMAND - Truth Verification System
 
 USAGE:
-  claude-flow verify <subcommand> [options]
+  hive-flow verify <subcommand> [options]
 
 DESCRIPTION:
   Enforce truth and accuracy in multi-agent operations with a 0.95 threshold.
@@ -161,16 +161,16 @@ OPTIONS:
   --json             Output in JSON format
 
 EXAMPLES:
-  claude-flow verify init strict                  # Production mode
-  claude-flow verify verify task-123 --agent coder
-  claude-flow verify status --recent 10
-  claude-flow verify rollback --checkpoint last
+  hive-flow verify init strict                  # Production mode
+  hive-flow verify verify task-123 --agent coder
+  hive-flow verify status --recent 10
+  hive-flow verify rollback --checkpoint last
 `,
   truth: `
 📊 TRUTH COMMAND - Truth Score Analytics
 
 USAGE:
-  claude-flow truth [options]
+  hive-flow truth [options]
 
 DESCRIPTION:
   View and analyze truth scores, reliability metrics, and verification history.
@@ -186,17 +186,17 @@ OPTIONS:
   --export <file>    Export report to file
 
 EXAMPLES:
-  claude-flow truth                        # Show current scores
-  claude-flow truth --report               # Detailed report
-  claude-flow truth --analyze              # Pattern analysis
-  claude-flow truth --agent coder --detailed
-  claude-flow truth --json | jq .averageScore
+  hive-flow truth                        # Show current scores
+  hive-flow truth --report               # Detailed report
+  hive-flow truth --analyze              # Pattern analysis
+  hive-flow truth --agent coder --detailed
+  hive-flow truth --json | jq .averageScore
 `,
   pair: `
 👥 PAIR COMMAND - Collaborative Development Mode
 
 USAGE:
-  claude-flow pair [options]
+  hive-flow pair [options]
 
 DESCRIPTION:
   Real-time collaborative development with AI verification.
@@ -214,17 +214,17 @@ OPTIONS:
   --export <file>    Export session metrics
 
 EXAMPLES:
-  claude-flow pair --start                 # Start session
-  claude-flow pair --start --mode strict   # Production pairing
-  claude-flow pair --threshold 0.90        # Custom threshold
-  claude-flow pair --summary               # View session stats
-  claude-flow pair --monitor --verify      # Real-time monitoring
+  hive-flow pair --start                 # Start session
+  hive-flow pair --start --mode strict   # Production pairing
+  hive-flow pair --threshold 0.90        # Custom threshold
+  hive-flow pair --summary               # View session stats
+  hive-flow pair --monitor --verify      # Real-time monitoring
 `,
   swarm: `
 🧠 SWARM COMMAND - Multi-Agent AI Coordination
 
 USAGE:
-  claude-flow swarm <objective> [options]
+  hive-flow swarm <objective> [options]
 
 DESCRIPTION:
   Deploy intelligent multi-agent swarms to accomplish complex objectives.
@@ -245,14 +245,14 @@ OPTIONS:
   --read-only          Enable read-only mode (alias for --analysis)
 
 EXAMPLES:
-  claude-flow swarm "Build a REST API with authentication"
-  claude-flow swarm "Research cloud architecture patterns" --strategy research
-  claude-flow swarm "Optimize database queries" --max-agents 3 --parallel
-  claude-flow swarm "Develop feature X" --strategy development --monitor
-  claude-flow swarm "Build API" --claude  # Open Claude Code CLI
-  claude-flow swarm "Create service" --executor  # Use built-in executor
-  claude-flow swarm "Analyze codebase for security issues" --analysis
-  claude-flow swarm "Review architecture patterns" --read-only --strategy research
+  hive-flow swarm "Build a REST API with authentication"
+  hive-flow swarm "Research cloud architecture patterns" --strategy research
+  hive-flow swarm "Optimize database queries" --max-agents 3 --parallel
+  hive-flow swarm "Develop feature X" --strategy development --monitor
+  hive-flow swarm "Build API" --claude  # Open Claude Code CLI
+  hive-flow swarm "Create service" --executor  # Use built-in executor
+  hive-flow swarm "Analyze codebase for security issues" --analysis
+  hive-flow swarm "Review architecture patterns" --read-only --strategy research
 
 AGENT TYPES:
   researcher    Research with web access and data analysis
@@ -281,7 +281,7 @@ ANALYSIS MODE:
 🐙 GITHUB COMMAND - Workflow Automation
 
 USAGE:
-  claude-flow github <mode> <objective> [options]
+  hive-flow github <mode> <objective> [options]
 
 DESCRIPTION:
   Automate GitHub workflows with 6 specialized AI-powered modes.
@@ -303,20 +303,20 @@ OPTIONS:
   --config <file>     Custom configuration file
 
 EXAMPLES:
-  claude-flow github init                                        # Initialize GitHub checkpoint hooks
-  claude-flow github pr-manager "create feature PR with tests"
-  claude-flow github gh-coordinator "setup CI/CD pipeline" --auto-approve
-  claude-flow github release-manager "prepare v2.0.0 release"
-  claude-flow github repo-architect "optimize monorepo structure"
-  claude-flow github issue-tracker "analyze and label issues"
-  claude-flow github sync-coordinator "sync versions across packages"
+  hive-flow github init                                        # Initialize GitHub checkpoint hooks
+  hive-flow github pr-manager "create feature PR with tests"
+  hive-flow github gh-coordinator "setup CI/CD pipeline" --auto-approve
+  hive-flow github release-manager "prepare v2.0.0 release"
+  hive-flow github repo-architect "optimize monorepo structure"
+  hive-flow github issue-tracker "analyze and label issues"
+  hive-flow github sync-coordinator "sync versions across packages"
 `,
 
   agent: `
 🤖 AGENT COMMAND - AI Agent Management
 
 USAGE:
-  claude-flow agent <action> [options]
+  hive-flow agent <action> [options]
 
 ACTIONS:
   spawn <type>      Create new AI agent
@@ -342,18 +342,18 @@ AGENT TYPES:
   optimizer        Performance optimization
 
 EXAMPLES:
-  claude-flow agent spawn researcher --name "DataBot"
-  claude-flow agent list --verbose
-  claude-flow agent terminate agent-123
-  claude-flow agent hierarchy create enterprise
-  claude-flow agent ecosystem status
+  hive-flow agent spawn researcher --name "DataBot"
+  hive-flow agent list --verbose
+  hive-flow agent terminate agent-123
+  hive-flow agent hierarchy create enterprise
+  hive-flow agent ecosystem status
 `,
 
   memory: `
 💾 MEMORY COMMAND - Persistent Memory Management
 
 USAGE:
-  claude-flow memory <action> [options]
+  hive-flow memory <action> [options]
 
 ACTIONS:
   store <key> <value>     Store data in memory
@@ -372,20 +372,20 @@ OPTIONS:
   --verbose               Detailed output
 
 EXAMPLES:
-  claude-flow memory store architecture "microservices pattern"
-  claude-flow memory get architecture
-  claude-flow memory query "API design"
-  claude-flow memory stats
-  claude-flow memory export backup.json
-  claude-flow memory cleanup --older-than 30d
+  hive-flow memory store architecture "microservices pattern"
+  hive-flow memory get architecture
+  hive-flow memory query "API design"
+  hive-flow memory stats
+  hive-flow memory export backup.json
+  hive-flow memory cleanup --older-than 30d
 `,
 
   sparc: `
 🚀 SPARC COMMAND - Development Mode Operations
 
 USAGE:
-  claude-flow sparc [mode] [objective]
-  claude-flow sparc <action>
+  hive-flow sparc [mode] [objective]
+  hive-flow sparc <action>
 
 DESCRIPTION:
   SPARC provides 17 specialized development modes for different workflows.
@@ -416,26 +416,26 @@ ACTIONS:
   run <mode>     Run specific mode
 
 EXAMPLES:
-  claude-flow sparc "design authentication system"    # Auto-select mode
-  claude-flow sparc architect "design microservices"  # Use architect mode
-  claude-flow sparc tdd "user registration feature"   # TDD workflow
-  claude-flow sparc modes                            # List all modes
-  claude-flow sparc info security                    # Mode details
+  hive-flow sparc "design authentication system"    # Auto-select mode
+  hive-flow sparc architect "design microservices"  # Use architect mode
+  hive-flow sparc tdd "user registration feature"   # TDD workflow
+  hive-flow sparc modes                            # List all modes
+  hive-flow sparc info security                    # Mode details
 `,
 
   init: `
-🎯 INIT COMMAND - Initialize Claude Flow Environment
+🎯 INIT COMMAND - Initialize Hive Flow Environment
 
 USAGE:
-  claude-flow init [options]
+  hive-flow init [options]
 
 DESCRIPTION:
-  Initialize Claude Flow v2.0.0 in your project with full MCP integration.
+  Initialize Hive Flow v2.0.0 in your project with full MCP integration.
   By default creates standard setup with local Git checkpoints.
   
   TWO INITIALIZATION MODES:
-  • claude-flow init         Standard init with local Git checkpoints
-  • claude-flow github init  GitHub-enhanced with automatic releases (NEW!)
+  • hive-flow init         Standard init with local Git checkpoints
+  • hive-flow github init  GitHub-enhanced with automatic releases (NEW!)
 
 OPTIONS:
   --force          Overwrite existing configuration
@@ -445,7 +445,7 @@ OPTIONS:
   --minimal        Minimal setup without examples
   --template <t>   Use specific project template
 
-WHAT claude-flow init CREATES (DEFAULT):
+WHAT hive-flow init CREATES (DEFAULT):
   📄 CLAUDE.md          AI-readable project instructions & context
   📁 .claude/           Enterprise configuration directory containing:
     └── commands/       Custom commands and automation scripts
@@ -476,24 +476,24 @@ WHAT claude-flow init CREATES (DEFAULT):
   • Enterprise security features
 
 EXAMPLES:
-  npx claude-flow init              # Standard init with local checkpoints
-  npx claude-flow github init       # GitHub-enhanced init with releases
-  claude-flow init --force                # Overwrite existing configuration
-  claude-flow github init --force         # Force GitHub mode (overwrite)
-  claude-flow init --dry-run              # Preview what will be created
-  claude-flow init --monitoring           # Initialize with token tracking
-  claude-flow init --sparc                # SPARC enterprise setup
-  claude-flow init --minimal              # Basic setup only
+  npx hive-flow init              # Standard init with local checkpoints
+  npx hive-flow github init       # GitHub-enhanced init with releases
+  hive-flow init --force                # Overwrite existing configuration
+  hive-flow github init --force         # Force GitHub mode (overwrite)
+  hive-flow init --dry-run              # Preview what will be created
+  hive-flow init --monitoring           # Initialize with token tracking
+  hive-flow init --sparc                # SPARC enterprise setup
+  hive-flow init --minimal              # Basic setup only
 `,
 
   start: `
 🚀 START COMMAND - Start Orchestration System
 
 USAGE:
-  claude-flow start [options]
+  hive-flow start [options]
 
 DESCRIPTION:
-  Start the Claude Flow orchestration system with optional swarm intelligence.
+  Start the Hive Flow orchestration system with optional swarm intelligence.
 
 OPTIONS:
   --swarm          Enable swarm intelligence features
@@ -503,18 +503,18 @@ OPTIONS:
   --config <file>  Custom configuration file
 
 EXAMPLES:
-  claude-flow start                      # Basic start
-  claude-flow start --swarm              # Start with swarm features
-  claude-flow start --daemon             # Background daemon
-  claude-flow start --port 8080          # Custom MCP port
-  claude-flow start --config prod.json   # Production config
+  hive-flow start                      # Basic start
+  hive-flow start --swarm              # Start with swarm features
+  hive-flow start --daemon             # Background daemon
+  hive-flow start --port 8080          # Custom MCP port
+  hive-flow start --config prod.json   # Production config
 `,
 
   status: `
 📊 STATUS COMMAND - System Status
 
 USAGE:
-  claude-flow status [options]
+  hive-flow status [options]
 
 DESCRIPTION:
   Show comprehensive system status including agents, tasks, and resources.
@@ -535,17 +535,17 @@ OUTPUT INCLUDES:
   • Performance metrics
 
 EXAMPLES:
-  claude-flow status                     # Basic status
-  claude-flow status --verbose           # Detailed information
-  claude-flow status --json              # Machine-readable format
-  claude-flow status --watch             # Live monitoring
+  hive-flow status                     # Basic status
+  hive-flow status --verbose           # Detailed information
+  hive-flow status --json              # Machine-readable format
+  hive-flow status --watch             # Live monitoring
 `,
 
   training: `
 🧠 TRAINING COMMAND - Neural Pattern Learning & Model Updates
 
 USAGE:
-  claude-flow training <command> [options]
+  hive-flow training <command> [options]
 
 DESCRIPTION:
   Train neural patterns from operations, learn from outcomes, and update agent models 
@@ -572,10 +572,10 @@ MODEL UPDATE OPTIONS:
   --operation-result <res> Result from operation execution
 
 EXAMPLES:
-  claude-flow training neural-train --data recent --model task-predictor
-  claude-flow training pattern-learn --operation "file-creation" --outcome "success"
-  claude-flow training model-update --agent-type coordinator --operation-result "efficient"
-  claude-flow training neural-train --data "swarm-123" --epochs 100 --model "coordinator-predictor"
+  hive-flow training neural-train --data recent --model task-predictor
+  hive-flow training pattern-learn --operation "file-creation" --outcome "success"
+  hive-flow training model-update --agent-type coordinator --operation-result "efficient"
+  hive-flow training neural-train --data "swarm-123" --epochs 100 --model "coordinator-predictor"
 
 🎯 Neural training improves:
   • Task selection accuracy
@@ -588,7 +588,7 @@ EXAMPLES:
 🐝 COORDINATION COMMAND - Swarm & Agent Orchestration
 
 USAGE:
-  claude-flow coordination <command> [options]
+  hive-flow coordination <command> [options]
 
 DESCRIPTION:
   Initialize swarms, spawn coordinated agents, and orchestrate task execution 
@@ -622,10 +622,10 @@ TASK-ORCHESTRATE OPTIONS:
   --share-results      Enable result sharing across swarm
 
 EXAMPLES:
-  claude-flow coordination swarm-init --topology hierarchical --max-agents 8
-  claude-flow coordination agent-spawn --type developer --name "api-dev" --swarm-id swarm-123
-  claude-flow coordination task-orchestrate --task "Build REST API" --strategy parallel --share-results
-  claude-flow coordination swarm-init --topology mesh --max-agents 12
+  hive-flow coordination swarm-init --topology hierarchical --max-agents 8
+  hive-flow coordination agent-spawn --type developer --name "api-dev" --swarm-id swarm-123
+  hive-flow coordination task-orchestrate --task "Build REST API" --strategy parallel --share-results
+  hive-flow coordination swarm-init --topology mesh --max-agents 12
 
 🎯 Coordination enables:
   • Intelligent task distribution
@@ -639,7 +639,7 @@ EXAMPLES:
 📊 ANALYSIS COMMAND - Performance & Usage Analytics
 
 USAGE:
-  claude-flow analysis <command> [options]
+  hive-flow analysis <command> [options]
 
 DESCRIPTION:
   Detect performance bottlenecks, generate comprehensive reports, and analyze 
@@ -668,11 +668,11 @@ TOKEN USAGE OPTIONS:
   --cost-analysis      Include cost projections and optimization
 
 EXAMPLES:
-  claude-flow analysis bottleneck-detect --scope system
-  claude-flow analysis bottleneck-detect --scope agent --target coordinator-1
-  claude-flow analysis performance-report --timeframe 7d --format detailed
-  claude-flow analysis token-usage --breakdown --cost-analysis
-  claude-flow analysis bottleneck-detect --scope swarm --target swarm-123
+  hive-flow analysis bottleneck-detect --scope system
+  hive-flow analysis bottleneck-detect --scope agent --target coordinator-1
+  hive-flow analysis performance-report --timeframe 7d --format detailed
+  hive-flow analysis token-usage --breakdown --cost-analysis
+  hive-flow analysis bottleneck-detect --scope swarm --target swarm-123
 
 🎯 Analysis helps with:
   • Performance optimization
@@ -686,7 +686,7 @@ EXAMPLES:
 🤖 AUTOMATION COMMAND - Intelligent Agent & Workflow Management
 
 USAGE:
-  claude-flow automation <command> [options]
+  hive-flow automation <command> [options]
 
 DESCRIPTION:
   Automatically spawn optimal agents, intelligently manage workflows, and select 
@@ -714,10 +714,10 @@ WORKFLOW-SELECT OPTIONS:
                            Options: speed, quality, cost, balanced
 
 EXAMPLES:
-  claude-flow automation auto-agent --task-complexity enterprise --swarm-id swarm-123
-  claude-flow automation smart-spawn --requirement "web-development" --max-agents 8
-  claude-flow automation workflow-select --project-type api --priority speed
-  claude-flow automation auto-agent --task-complexity low
+  hive-flow automation auto-agent --task-complexity enterprise --swarm-id swarm-123
+  hive-flow automation smart-spawn --requirement "web-development" --max-agents 8
+  hive-flow automation workflow-select --project-type api --priority speed
+  hive-flow automation auto-agent --task-complexity low
 
 🎯 Automation benefits:
   • Optimal resource allocation
@@ -731,7 +731,7 @@ EXAMPLES:
 🔗 HOOKS COMMAND - Lifecycle Event Management
 
 USAGE:
-  claude-flow hooks <command> [options]
+  hive-flow hooks <command> [options]
 
 DESCRIPTION:
   Execute lifecycle hooks before and after tasks, edits, and sessions with 
@@ -769,11 +769,11 @@ SESSION-END OPTIONS:
   --generate-summary      Create comprehensive session summary
 
 EXAMPLES:
-  claude-flow hooks pre-task --description "Build API" --task-id task-123 --agent-id agent-456
-  claude-flow hooks post-task --task-id task-123 --analyze-performance --generate-insights
-  claude-flow hooks pre-edit --file "src/api.js" --operation edit
-  claude-flow hooks post-edit --file "src/api.js" --memory-key "swarm/123/edits/timestamp"
-  claude-flow hooks session-end --export-metrics --generate-summary --swarm-id swarm-123
+  hive-flow hooks pre-task --description "Build API" --task-id task-123 --agent-id agent-456
+  hive-flow hooks post-task --task-id task-123 --analyze-performance --generate-insights
+  hive-flow hooks pre-edit --file "src/api.js" --operation edit
+  hive-flow hooks post-edit --file "src/api.js" --memory-key "swarm/123/edits/timestamp"
+  hive-flow hooks session-end --export-metrics --generate-summary --swarm-id swarm-123
 
 🎯 Hooks enable:
   • Automated preparation & cleanup
@@ -792,9 +792,9 @@ export function getCommandHelp(command) {
 export function getStandardizedCommandHelp(command) {
   const commandConfigs = {
     agent: {
-      name: 'claude-flow agent',
+      name: 'hive-flow agent',
       description: 'Manage agents with agentic-flow integration (66+ agents, ultra-fast editing, ReasoningBank memory)',
-      usage: 'claude-flow agent <action> [options]',
+      usage: 'hive-flow agent <action> [options]',
       commands: [
         { name: 'run <agent> "<task>"', description: 'Execute agent with multi-provider (NEW)' },
         { name: 'agents', description: 'List all 66+ agentic-flow agents (NEW)' },
@@ -845,16 +845,16 @@ export function getStandardizedCommandHelp(command) {
         },
       ],
       examples: [
-        'claude-flow agent spawn researcher --name "Research Bot"',
-        'claude-flow agent list --json',
-        'claude-flow agent terminate agent-123',
-        'claude-flow agent info agent-456 --verbose',
+        'hive-flow agent spawn researcher --name "Research Bot"',
+        'hive-flow agent list --json',
+        'hive-flow agent terminate agent-123',
+        'hive-flow agent info agent-456 --verbose',
       ],
     },
     sparc: {
-      name: 'claude-flow sparc',
+      name: 'hive-flow sparc',
       description: 'Execute SPARC development modes',
-      usage: 'claude-flow sparc <mode> [task] [options]',
+      usage: 'hive-flow sparc <mode> [task] [options]',
       commands: [
         { name: 'spec', description: 'Specification mode - Requirements analysis' },
         { name: 'architect', description: 'Architecture mode - System design' },
@@ -883,16 +883,16 @@ export function getStandardizedCommandHelp(command) {
         },
       ],
       examples: [
-        'claude-flow sparc spec "User authentication system"',
-        'claude-flow sparc tdd "Payment processing module"',
-        'claude-flow sparc architect "Microservices architecture"',
-        'claude-flow sparc modes',
+        'hive-flow sparc spec "User authentication system"',
+        'hive-flow sparc tdd "Payment processing module"',
+        'hive-flow sparc architect "Microservices architecture"',
+        'hive-flow sparc modes',
       ],
     },
     memory: {
-      name: 'claude-flow memory',
+      name: 'hive-flow memory',
       description: 'Manage persistent memory operations',
-      usage: 'claude-flow memory <action> [key] [value] [options]',
+      usage: 'hive-flow memory <action> [key] [value] [options]',
       commands: [
         { name: 'store', description: 'Store data in memory' },
         { name: 'query', description: 'Search memory by pattern' },
@@ -922,10 +922,10 @@ export function getStandardizedCommandHelp(command) {
         },
       ],
       examples: [
-        'claude-flow memory store "api_design" "REST endpoints specification"',
-        'claude-flow memory query "authentication"',
-        'claude-flow memory export backup.json',
-        'claude-flow memory list --namespace project',
+        'hive-flow memory store "api_design" "REST endpoints specification"',
+        'hive-flow memory query "authentication"',
+        'hive-flow memory export backup.json',
+        'hive-flow memory list --namespace project',
       ],
     },
   };
@@ -934,8 +934,8 @@ export function getStandardizedCommandHelp(command) {
   if (!config) {
     return HelpFormatter.formatError(
       `Unknown command: ${command}`,
-      'claude-flow',
-      'claude-flow <command> --help',
+      'hive-flow',
+      'hive-flow <command> --help',
     );
   }
 
@@ -950,11 +950,11 @@ export function getMainHelp(plain = false) {
 
   // Return plain standardized format when requested
   const helpInfo = {
-    name: 'claude-flow',
+    name: 'hive-flow',
     description: 'Advanced AI agent orchestration system',
-    usage: `claude-flow <command> [<args>] [options]
-    claude-flow <command> --help
-    claude-flow --version`,
+    usage: `hive-flow <command> [<args>] [options]
+    hive-flow <command> --help
+    hive-flow --version`,
     commands: [
       {
         name: 'hive-mind',
@@ -963,7 +963,7 @@ export function getMainHelp(plain = false) {
       },
       {
         name: 'init',
-        description: 'Initialize Claude Flow configuration',
+        description: 'Initialize Hive Flow configuration',
       },
       {
         name: 'start',
@@ -1054,12 +1054,12 @@ export function getMainHelp(plain = false) {
       },
     ],
     examples: [
-      'npx claude-flow init',
-      'claude-flow hive-mind wizard',
-      'claude-flow swarm "Build REST API"',
-      'claude-flow agent spawn researcher --name "Research Bot"',
-      'claude-flow status --json',
-      'claude-flow memory query "API design"',
+      'npx hive-flow init',
+      'hive-flow hive-mind wizard',
+      'hive-flow swarm "Build REST API"',
+      'hive-flow agent spawn researcher --name "Research Bot"',
+      'hive-flow status --json',
+      'hive-flow memory query "API design"',
     ],
   };
 

@@ -1,13 +1,13 @@
-# @claude-flow/plugin-gastown-bridge
+# @hive-flow/plugin-gastown-bridge
 
 > **WASM-Accelerated Bridge to Steve Yegge's Gas Town Multi-Agent Orchestrator**
 
-[![npm version](https://img.shields.io/npm/v/@claude-flow/plugin-gastown-bridge.svg)](https://www.npmjs.com/package/@claude-flow/plugin-gastown-bridge)
+[![npm version](https://img.shields.io/npm/v/@hive-flow/plugin-gastown-bridge.svg)](https://www.npmjs.com/package/@hive-flow/plugin-gastown-bridge)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Introduction
 
-The **Gas Town Bridge Plugin** brings Steve Yegge's powerful [Gas Town](https://github.com/steveyegge/gastown) multi-agent orchestrator to Claude Flow V3. Gas Town introduces battle-tested concepts for durable workflow execution that complement Claude Flow's swarm intelligence.
+The **Gas Town Bridge Plugin** brings Steve Yegge's powerful [Gas Town](https://github.com/steveyegge/gastown) multi-agent orchestrator to Hive Flow V3. Gas Town introduces battle-tested concepts for durable workflow execution that complement Hive Flow's swarm intelligence.
 
 ### What is Gas Town?
 
@@ -73,7 +73,7 @@ Gas Town is a 75,000-line Go codebase that implements:
 
 ### 🔄 Bidirectional Sync
 
-Seamlessly sync between Gas Town's Beads and Claude Flow's AgentDB:
+Seamlessly sync between Gas Town's Beads and Hive Flow's AgentDB:
 
 ```
 ┌──────────────┐     SyncBridge      ┌──────────────┐
@@ -87,9 +87,9 @@ Seamlessly sync between Gas Town's Beads and Claude Flow's AgentDB:
 
 ## Enhancement & Comparison
 
-### Gas Town vs Claude Flow V3
+### Gas Town vs Hive Flow V3
 
-| Feature | Gas Town | Claude Flow V3 | With This Plugin |
+| Feature | Gas Town | Hive Flow V3 | With This Plugin |
 |---------|----------|----------------|------------------|
 | **Issue Tracking** | Beads (Git-backed) | AgentDB | Unified sync |
 | **Workflows** | TOML Formulas | TypeScript | Both supported |
@@ -120,11 +120,11 @@ Seamlessly sync between Gas Town's Beads and Claude Flow's AgentDB:
 ## Installation
 
 ```bash
-# Install via Claude Flow CLI (recommended)
-npx claude-flow@latest plugins install -n @claude-flow/plugin-gastown-bridge
+# Install via Hive Flow CLI (recommended)
+npx hive-flow@latest plugins install -n @hive-flow/plugin-gastown-bridge
 
 # Or install directly via npm
-npm install @claude-flow/plugin-gastown-bridge
+npm install @hive-flow/plugin-gastown-bridge
 
 # Prerequisites: Gas Town and Beads CLI (optional - for full CLI integration)
 # See: https://github.com/steveyegge/gastown
@@ -137,7 +137,7 @@ go install github.com/steveyegge/beads/cmd/bd@latest
 ### Basic Setup
 
 ```typescript
-import { GasTownBridgePlugin } from '@claude-flow/plugin-gastown-bridge';
+import { GasTownBridgePlugin } from '@hive-flow/plugin-gastown-bridge';
 
 // Initialize the plugin
 const plugin = new GasTownBridgePlugin({
@@ -146,8 +146,8 @@ const plugin = new GasTownBridgePlugin({
   wasmEnabled: true,             // Enable WASM acceleration
 });
 
-// Register with Claude Flow
-await claudeFlow.registerPlugin(plugin);
+// Register with Hive Flow
+await hiveFlow.registerPlugin(plugin);
 ```
 
 ### Using MCP Tools
@@ -263,9 +263,9 @@ bd --version
 ### Step 2: Initialize Plugin in Your Project
 
 ```typescript
-// claude-flow.config.ts
-import { defineConfig } from 'claude-flow';
-import { GasTownBridgePlugin } from '@claude-flow/plugin-gastown-bridge';
+// hive-flow.config.ts
+import { defineConfig } from 'hive-flow';
+import { GasTownBridgePlugin } from '@hive-flow/plugin-gastown-bridge';
 
 export default defineConfig({
   plugins: [
@@ -279,9 +279,9 @@ export default defineConfig({
 ### Step 3: Create Your First Bead
 
 ```typescript
-const bead = await claudeFlow.mcp.call('gt_beads_create', {
+const bead = await hiveFlow.mcp.call('gt_beads_create', {
   title: 'Hello Gas Town',
-  description: 'My first bead from Claude Flow!',
+  description: 'My first bead from Hive Flow!',
   priority: 3,
   labels: ['tutorial'],
 });
@@ -293,7 +293,7 @@ console.log(`Created bead: ${bead.id}`);
 ### Step 4: List Ready Work
 
 ```typescript
-const ready = await claudeFlow.mcp.call('gt_beads_ready', {
+const ready = await hiveFlow.mcp.call('gt_beads_ready', {
   limit: 5,
 });
 
@@ -318,7 +318,7 @@ console.log('Ready beads:', ready.beads.map(b => b.title));
 
 ```typescript
 // Create a code review formula
-await claudeFlow.mcp.call('gt_formula_create', {
+await hiveFlow.mcp.call('gt_formula_create', {
   name: 'code-review-flow',
   type: 'workflow',
   steps: [
@@ -357,7 +357,7 @@ await claudeFlow.mcp.call('gt_formula_create', {
 
 ```typescript
 // Cook the formula with variables
-const cooked = await claudeFlow.mcp.call('gt_formula_cook', {
+const cooked = await hiveFlow.mcp.call('gt_formula_cook', {
   formula: 'code-review-flow',
   vars: {
     branch: 'feature/auth',
@@ -383,7 +383,7 @@ A convoy is a "work order" that tracks a set of related beads through their life
 
 ```typescript
 // Create convoy for a feature
-const convoy = await claudeFlow.mcp.call('gt_convoy_create', {
+const convoy = await hiveFlow.mcp.call('gt_convoy_create', {
   name: 'v2.0-release',
   description: 'Version 2.0 release convoy',
   issues: ['gt-abc1', 'gt-abc2', 'gt-abc3'],
@@ -396,7 +396,7 @@ console.log(`Convoy created: ${convoy.id}`);
 
 ```typescript
 // Check convoy status
-const status = await claudeFlow.mcp.call('gt_convoy_status', {
+const status = await hiveFlow.mcp.call('gt_convoy_status', {
   convoy_id: convoy.id,
   detailed: true,
 });
@@ -409,7 +409,7 @@ console.log(`Completed: ${status.completed}/${status.total}`);
 
 ```typescript
 // Get optimal execution order (150x faster with WASM)
-const optimized = await claudeFlow.mcp.call('gt_wasm_optimize_convoy', {
+const optimized = await hiveFlow.mcp.call('gt_wasm_optimize_convoy', {
   convoy_id: convoy.id,
   strategy: 'parallel', // or 'serial', 'hybrid'
 });
@@ -439,7 +439,7 @@ console.log('Execution plan:', optimized.plan);
 
 ```typescript
 // Sling a bead to a polecat for coding
-await claudeFlow.mcp.call('gt_sling', {
+await hiveFlow.mcp.call('gt_sling', {
   bead_id: 'gt-abc123',
   target: 'polecat',
   formula: 'implement-feature',
@@ -452,7 +452,7 @@ await claudeFlow.mcp.call('gt_sling', {
 ### Listing Available Agents
 
 ```typescript
-const agents = await claudeFlow.mcp.call('gt_agents', {
+const agents = await hiveFlow.mcp.call('gt_agents', {
   rig: 'main',
   role: 'polecat',
   include_inactive: false,
@@ -490,21 +490,21 @@ agents.forEach(agent => {
 
 ```typescript
 // Morning: Pull overnight changes from shared AgentDB
-await claudeFlow.mcp.call('gt_beads_sync', {
+await hiveFlow.mcp.call('gt_beads_sync', {
   direction: 'pull',
   rig: 'production',
   conflictStrategy: 'newest-wins',
 });
 
 // During work: Push local changes
-await claudeFlow.mcp.call('gt_beads_sync', {
+await hiveFlow.mcp.call('gt_beads_sync', {
   direction: 'push',
   rig: 'production',
   namespace: 'team-alpha',
 });
 
 // End of day: Full bidirectional sync
-const result = await claudeFlow.mcp.call('gt_beads_sync', {
+const result = await hiveFlow.mcp.call('gt_beads_sync', {
   direction: 'both',
   conflictStrategy: 'merge',
 });
@@ -532,14 +532,14 @@ console.log(`Conflicts: ${result.conflicts.length}`);
 ```typescript
 // Instead of this (slow):
 for (const formula of formulas) {
-  await claudeFlow.mcp.call('gt_formula_cook', {
+  await hiveFlow.mcp.call('gt_formula_cook', {
     formula: formula.name,
     vars: formula.vars,
   });
 }
 
 // Do this (352x faster):
-const results = await claudeFlow.mcp.call('gt_wasm_cook_batch', {
+const results = await hiveFlow.mcp.call('gt_wasm_cook_batch', {
   formulas: formulas.map(f => f.name),
   vars: formulas.map(f => f.vars),
 });
@@ -549,7 +549,7 @@ const results = await claudeFlow.mcp.call('gt_wasm_cook_batch', {
 
 ```typescript
 // All WASM tools return timing metrics
-const result = await claudeFlow.mcp.call('gt_wasm_parse_formula', {
+const result = await hiveFlow.mcp.call('gt_wasm_parse_formula', {
   content: formulaToml,
 });
 
@@ -593,7 +593,7 @@ See [MCP Tools Documentation](./docs/mcp-tools.md) for complete API reference.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                      Claude Flow V3 Plugin Host                      │
+│                      Hive Flow V3 Plugin Host                      │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                      │
 │  ┌─────────────────────┐    ┌─────────────────────────────────────┐ │
@@ -646,4 +646,4 @@ MIT License - see [LICENSE](./LICENSE) for details.
 
 ---
 
-**Built with ❤️ by the Claude Flow Team**
+**Built with ❤️ by the Hive Flow Team**

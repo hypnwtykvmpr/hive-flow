@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals
 import { promises as fs } from 'fs';
 import { initCommand } from '../../src/cli/simple-commands/init/index.js';
 
-const TEST_DIR = '/tmp/claude-flow-security-test';
+const TEST_DIR = '/tmp/hive-flow-security-test';
 
 describe('Init Security Tests', () => {
   beforeEach(async () => {
@@ -94,7 +94,7 @@ describe('Init Security Tests', () => {
       const files = [
         'CLAUDE.md',
         '.claude/settings.json',
-        'memory/claude-flow@alpha-data.json',
+        'memory/hive-flow@alpha-data.json',
       ];
 
       for (const file of files) {
@@ -185,7 +185,7 @@ describe('Init Security Tests', () => {
       const configFiles = [
         '.claude/settings.json',
         '.mcp.json',
-        'memory/claude-flow@alpha-data.json',
+        'memory/hive-flow@alpha-data.json',
       ];
 
       for (const file of configFiles) {
@@ -419,7 +419,7 @@ describe('Init Security Tests', () => {
 
       // Check for any temporary files created
       const tmpFiles = await fs.readdir('/tmp').catch(() => []);
-      const claudeTmpFiles = tmpFiles.filter(f => f.includes('claude-flow'));
+      const claudeTmpFiles = tmpFiles.filter(f => f.includes('hive-flow'));
 
       for (const tmpFile of claudeTmpFiles) {
         const stats = await fs.stat(`/tmp/${tmpFile}`).catch(() => null);
@@ -439,7 +439,7 @@ describe('Init Security Tests', () => {
 
       const afterTmpFiles = await fs.readdir('/tmp').catch(() => []);
       const newTmpFiles = afterTmpFiles.filter(f =>
-        !beforeTmpFiles.includes(f) && f.includes('claude-flow')
+        !beforeTmpFiles.includes(f) && f.includes('hive-flow')
       );
 
       // Should not leave temporary files behind

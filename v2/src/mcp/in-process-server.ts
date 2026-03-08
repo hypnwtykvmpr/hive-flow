@@ -29,7 +29,7 @@ export interface ToolCallMetrics {
 
 /**
  * In-Process MCP Server
- * Registers Claude-Flow tools directly in the SDK process to eliminate IPC overhead
+ * Registers Hive-Flow tools directly in the SDK process to eliminate IPC overhead
  */
 export class InProcessMCPServer extends EventEmitter {
   private name: string;

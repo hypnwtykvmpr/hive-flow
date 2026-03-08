@@ -1,6 +1,6 @@
 # Testing Examples
 
-Scripts for testing Claude Flow functionality and validating system features.
+Scripts for testing Hive Flow functionality and validating system features.
 
 ## Directory Structure
 

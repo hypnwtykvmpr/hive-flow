@@ -1,13 +1,13 @@
 ---
 name: "V3 DDD Architecture"
-description: "Domain-Driven Design architecture for claude-flow v3. Implements modular, bounded context architecture with clean separation of concerns and microkernel pattern."
+description: "Domain-Driven Design architecture for hive-flow v3. Implements modular, bounded context architecture with clean separation of concerns and microkernel pattern."
 ---
 
 # V3 DDD Architecture
 
 ## What This Skill Does
 
-Designs and implements Domain-Driven Design (DDD) architecture for claude-flow v3, decomposing god objects into bounded contexts, implementing clean architecture patterns, and enabling modular, testable code structure.
+Designs and implements Domain-Driven Design (DDD) architecture for hive-flow v3, decomposing god objects into bounded contexts, implementing clean architecture patterns, and enabling modular, testable code structure.
 
 ## Quick Start
 
@@ -115,8 +115,8 @@ interface HealthMonitoringDomain {
 
 ### Core Kernel
 ```typescript
-// core$kernel$claude-flow-kernel.ts
-export class ClaudeFlowKernel {
+// core$kernel$hive-flow-kernel.ts
+export class HiveFlowKernel {
   private domains: Map<string, Domain> = new Map();
   private eventBus: DomainEventBus;
   private dependencyContainer: Container;
@@ -154,7 +154,7 @@ interface DomainPlugin {
   version: string;
   dependencies: string[];
 
-  initialize(kernel: ClaudeFlowKernel): Promise<void>;
+  initialize(kernel: HiveFlowKernel): Promise<void>;
   shutdown(): Promise<void>;
 }
 
@@ -164,7 +164,7 @@ export class SwarmCoordinationPlugin implements DomainPlugin {
   version = '3.0.0';
   dependencies = ['task-management', 'session-management'];
 
-  async initialize(kernel: ClaudeFlowKernel): Promise<void> {
+  async initialize(kernel: HiveFlowKernel): Promise<void> {
     const taskDomain = kernel.getDomain<TaskManagementDomain>('task-management');
     const sessionDomain = kernel.getDomain<SessionManagementDomain>('session-management');
 

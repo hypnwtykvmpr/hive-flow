@@ -3,7 +3,7 @@ import { VALID_AGENT_TYPES } from '../constants/agent-types.js';
 
 // Import validation schemas from various files
 const mcpServer = require('../mcp/mcp-server.js');
-import { getClaudeFlowTools } from '../mcp/claude-flow-tools.js';
+import { getHiveFlowTools } from '../mcp/hive-flow-tools.js';
 import { getRuvSwarmTools } from '../mcp/ruv-swarm-tools.js';
 import { getSwarmTools } from '../mcp/swarm-tools.js';
 
@@ -16,8 +16,8 @@ describe('Agent Type Validation Consistency', () => {
     expect(enumValues.sort()).toEqual(expectedTypes);
   });
 
-  test('Claude Flow tools use consistent agent types', () => {
-    const tools = getClaudeFlowTools({} as any);
+  test('Hive Flow tools use consistent agent types', () => {
+    const tools = getHiveFlowTools({} as any);
     const spawnTool = tools.find((t) => t.name === 'spawn_agent');
     const enumValues = spawnTool?.inputSchema.properties.type.enum;
     expect(enumValues?.sort()).toEqual(expectedTypes);

@@ -1,5 +1,5 @@
 /**
- * ReasoningBank Adapter for Claude-Flow (Node.js Backend)
+ * ReasoningBank Adapter for Hive-Flow (Node.js Backend)
  *
  * Uses agentic-flow@1.5.13 Node.js backend with SQLite for persistent storage
  * Provides semantic search via embeddings and MMR ranking
@@ -55,9 +55,9 @@ async function ensureInitialized() {
         console.error('ReasoningBank requires better-sqlite3, which is not available in npx temp directories.\n');
         console.error('📚 Solutions:\n');
         console.error('  1. LOCAL INSTALL (Recommended):');
-        console.error('     npm install && node_modules/.bin/claude-flow memory store "key" "value"\n');
+        console.error('     npm install && node_modules/.bin/hive-flow memory store "key" "value"\n');
         console.error('  2. USE MCP TOOLS instead:');
-        console.error('     mcp__claude-flow__memory_usage({ action: "store", key: "test", value: "data" })\n');
+        console.error('     mcp__hive-flow__memory_usage({ action: "store", key: "test", value: "data" })\n');
         console.error('  3. USE JSON FALLBACK (automatic):');
         console.error('     Command will continue with JSON storage...\n');
         console.error('See: docs/MEMORY_COMMAND_FIX.md for details\n');
@@ -88,7 +88,7 @@ export async function initializeReasoningBank() {
 /**
  * Store a memory in ReasoningBank (Node.js backend with SQLite)
  *
- * Maps claude-flow memory model to ReasoningBank pattern model:
+ * Maps hive-flow memory model to ReasoningBank pattern model:
  * - key -> title
  * - value -> content (searchable text)
  * - namespace -> domain
@@ -331,7 +331,7 @@ export async function getStatus() {
       total_memories: patterns.count || 0,
       total_categories: domains.count || 0,
       storage_backend: 'SQLite (Node.js)',
-      database_path: process.env.CLAUDE_FLOW_DB_PATH || '.swarm/memory.db',
+      database_path: process.env.HIVE_FLOW_DB_PATH || '.swarm/memory.db',
       performance: 'SQLite with persistent storage',
       avg_confidence: avgConf.avg || 0.8,
       total_embeddings: embeddings.count || 0,
@@ -391,7 +391,7 @@ export async function migrateReasoningBank() {
       success: true,
       message: 'Database migrations completed successfully',
       migrated: true,
-      database_path: process.env.CLAUDE_FLOW_DB_PATH || '.swarm/memory.db'
+      database_path: process.env.HIVE_FLOW_DB_PATH || '.swarm/memory.db'
     };
   } catch (error) {
     return {

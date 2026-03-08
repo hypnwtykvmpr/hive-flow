@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Claude-Flow CLI - Core implementation using Node.js
+ * Hive-Flow CLI - Core implementation using Node.js
  */
 
 import chalk from 'chalk';
@@ -167,7 +167,7 @@ class CLI {
   }
 
   private async loadConfig(configPath?: string): Promise<Record<string, unknown> | undefined> {
-    const configFile = configPath || 'claude-flow.config.json';
+    const configFile = configPath || 'hive-flow.config.json';
     try {
       const content = await fs.readFile(configFile, 'utf8');
       return JSON.parse(content);
@@ -303,7 +303,7 @@ async function main() {
     process.argv[1] &&
     (process.argv[1].endsWith('cli-core.js') || process.argv[1].endsWith('cli-core.ts'))
   ) {
-    const cli = new CLI('claude-flow', 'Advanced AI Agent Orchestration System');
+    const cli = new CLI('hive-flow', 'Advanced AI Agent Orchestration System');
 
     // Import and register all commands
     const { setupCommands } = await import('./commands/index.js');

@@ -1,11 +1,11 @@
-# Release Summary - claude-flow v2.7.1
+# Release Summary - hive-flow v2.7.1
 
 ## 🎉 Release Complete & Verified
 
 **Release Date**: 2025-10-22
-**Package**: claude-flow@2.7.1
+**Package**: hive-flow@2.7.1
 **Status**: ✅ Published to npm & Verified
-**GitHub Issue**: [#827](https://github.com/ruvnet/claude-flow/issues/827)
+**GitHub Issue**: [#827](https://github.com/ruvnet/hive-flow/issues/827)
 
 ---
 
@@ -13,16 +13,16 @@
 
 ✅ **Successfully Published to npm**
 ```bash
-Package: claude-flow@2.7.1
-Registry: https://www.npmjs.com/package/claude-flow
+Package: hive-flow@2.7.1
+Registry: https://www.npmjs.com/package/hive-flow
 Status: Public
 Downloads: Available immediately
 ```
 
 **Verify Installation**:
 ```bash
-npm install -g claude-flow@2.7.1
-claude-flow --version  # Should show: v2.7.1
+npm install -g hive-flow@2.7.1
+hive-flow --version  # Should show: v2.7.1
 ```
 
 ---
@@ -256,32 +256,32 @@ Search: O(1) for specific, O(n) for list all
 
 ### Installation
 ```bash
-npm install -g claude-flow@2.7.1
+npm install -g hive-flow@2.7.1
 ```
 
 ### Verification
 ```bash
-claude-flow --version
-claude-flow mcp tools | grep neural
+hive-flow --version
+hive-flow mcp tools | grep neural
 ```
 
 ### Testing Pattern Persistence
 ```bash
 # Train a pattern
-claude-flow hooks neural-train --pattern-type coordination --epochs 50
+hive-flow hooks neural-train --pattern-type coordination --epochs 50
 
 # Retrieve patterns
-claude-flow hooks neural-patterns --action analyze
+hive-flow hooks neural-patterns --action analyze
 
 # Get statistics
-claude-flow hooks neural-patterns --action stats --pattern-type coordination
+hive-flow hooks neural-patterns --action stats --pattern-type coordination
 ```
 
 ### Resources
-- **npm**: https://www.npmjs.com/package/claude-flow
+- **npm**: https://www.npmjs.com/package/hive-flow
 - **GitHub**: https://github.com/ruvnet/claude-code-flow
-- **Issue #827**: https://github.com/ruvnet/claude-flow/issues/827
-- **Documentation**: https://github.com/ruvnet/claude-flow/tree/main/docs
+- **Issue #827**: https://github.com/ruvnet/hive-flow/issues/827
+- **Documentation**: https://github.com/ruvnet/hive-flow/tree/main/docs
 
 ---
 
@@ -317,7 +317,7 @@ claude-flow hooks neural-patterns --action stats --pattern-type coordination
 ║                  RELEASE VERIFIED                        ║
 ╠══════════════════════════════════════════════════════════╣
 ║                                                          ║
-║  Package: claude-flow@2.7.1                             ║
+║  Package: hive-flow@2.7.1                             ║
 ║  Status:  ✅ Published & Verified                        ║
 ║  Tests:   18 total, 17 passed (94.4%)                   ║
 ║  Regressions: 0 detected                                 ║

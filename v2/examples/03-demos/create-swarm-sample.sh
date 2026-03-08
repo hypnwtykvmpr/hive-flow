@@ -1,8 +1,8 @@
 #!/bin/bash
-# Create a fully functional sample application using Claude Flow Swarm CLI
+# Create a fully functional sample application using Hive Flow Swarm CLI
 # This ensures the swarm continues until the application is complete
 
-echo "🐝 Claude Flow Swarm - Creating Sample Application"
+echo "🐝 Hive Flow Swarm - Creating Sample Application"
 echo "================================================="
 echo ""
 echo "This script will use the swarm CLI to create a fully functional"
@@ -65,7 +65,7 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo "🚀 Step 1: Launching Swarm via CLI"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
-echo "Command: npx claude-flow@latest swarm \"create a note-taking CLI application with save, list, search, and delete features\""
+echo "Command: npx hive-flow@latest swarm \"create a note-taking CLI application with save, list, search, and delete features\""
 echo ""
 
 # Generate swarm ID for tracking
@@ -73,7 +73,7 @@ SWARM_ID="swarm_sample_$(date +%s)"
 
 # First, do a dry run to show configuration
 echo "🔍 Dry run to preview configuration:"
-npx claude-flow@latest swarm "create a note-taking CLI application with save, list, search, and delete features" \
+npx hive-flow@latest swarm "create a note-taking CLI application with save, list, search, and delete features" \
     --strategy development \
     --max-agents 6 \
     --parallel \
@@ -105,7 +105,7 @@ create_notes_app() {
 {
   "name": "notes-cli",
   "version": "1.0.0",
-  "description": "Note-taking CLI application created by Claude Flow Swarm",
+  "description": "Note-taking CLI application created by Hive Flow Swarm",
   "main": "notes.js",
   "bin": {
     "notes": "./notes.js"
@@ -115,8 +115,8 @@ create_notes_app() {
     "test": "node --test",
     "test:coverage": "node --test --experimental-test-coverage"
   },
-  "keywords": ["notes", "cli", "productivity", "swarm", "claude-flow"],
-  "author": "Claude Flow Swarm",
+  "keywords": ["notes", "cli", "productivity", "swarm", "hive-flow"],
+  "author": "Hive Flow Swarm",
   "license": "MIT",
   "dependencies": {
     "chalk": "^5.3.0",
@@ -140,7 +140,7 @@ EOF
 
 /**
  * Notes CLI Application
- * Created by Claude Flow Swarm
+ * Created by Hive Flow Swarm
  * 
  * Agent contributions:
  * - Developer-1: Core note management logic
@@ -270,7 +270,7 @@ const manager = new NotesManager();
 
 program
     .name('notes')
-    .description('CLI tool for managing notes - Created by Claude Flow Swarm')
+    .description('CLI tool for managing notes - Created by Hive Flow Swarm')
     .version('1.0.0');
 
 // Add command
@@ -386,7 +386,7 @@ program
         if (stats.tags.length > 0) {
             console.log(chalk.cyan(`\nTags: ${stats.tags.join(', ')}`));
         }
-        console.log(chalk.gray(`\n🐝 Created by Claude Flow Swarm`));
+        console.log(chalk.gray(`\n🐝 Created by Hive Flow Swarm`));
     });
 
 // Info command
@@ -394,7 +394,7 @@ program
     .command('info')
     .description('Show swarm creation information')
     .action(() => {
-        console.log(chalk.blue('\n🐝 Claude Flow Swarm Information:\n'));
+        console.log(chalk.blue('\n🐝 Hive Flow Swarm Information:\n'));
         console.log(chalk.white('This application was created through coordinated agent collaboration:'));
         console.log(chalk.green('  • Coordinator-1: Task decomposition and agent assignment'));
         console.log(chalk.green('  • Developer-1: Core note management implementation'));
@@ -585,7 +585,7 @@ EOF
     cat > "$app_dir/README.md" << 'EOF'
 # Notes CLI
 
-A powerful command-line note-taking application created by the Claude Flow Swarm system.
+A powerful command-line note-taking application created by the Hive Flow Swarm system.
 
 ## 🐝 Swarm Creation Details
 
@@ -754,11 +754,11 @@ This project was created by swarm agents, but human contributions are welcome!
 
 ## 📄 License
 
-MIT License - Created by Claude Flow Swarm
+MIT License - Created by Hive Flow Swarm
 
 ## 🙏 Acknowledgments
 
-Special thanks to the Claude Flow Swarm system and all participating agents:
+Special thanks to the Hive Flow Swarm system and all participating agents:
 - Coordinator-1 for excellent project management
 - Developer-1 & Developer-2 for robust implementation
 - Tester-1 for comprehensive quality assurance
@@ -767,7 +767,7 @@ Special thanks to the Claude Flow Swarm system and all participating agents:
 
 ---
 
-**Created with Claude Flow Swarm v1.0.49**
+**Created with Hive Flow Swarm v1.0.49**
 
 *Strategy: Development | Mode: Parallel | Quality: 0.9*
 EOF
@@ -791,7 +791,7 @@ EOF
   {
     "id": "1749848000001",
     "title": "Welcome to Notes CLI",
-    "content": "This is your first note created by the Claude Flow Swarm system!",
+    "content": "This is your first note created by the Hive Flow Swarm system!",
     "tags": ["welcome", "swarm"],
     "createdAt": "2025-06-13T20:00:00.000Z",
     "updatedAt": "2025-06-13T20:00:00.000Z",
@@ -852,7 +852,7 @@ echo "$ node notes.js list"
 echo "📝 Notes (3):"
 echo ""
 echo "[1749848000001] Welcome to Notes CLI"
-echo "   This is your first note created by the Claude Flow Swarm..."
+echo "   This is your first note created by the Hive Flow Swarm..."
 echo "   Tags: welcome, swarm"
 echo "   Created: 6/13/2025, 8:00:00 PM"
 echo ""
@@ -866,7 +866,7 @@ echo "$ node notes.js search \"swarm\""
 echo "🔍 Search results for \"swarm\" (2):"
 echo ""
 echo "[1749848000001] Welcome to Notes CLI"
-echo "   This is your first note created by the Claude Flow Swarm..."
+echo "   This is your first note created by the Hive Flow Swarm..."
 echo ""
 
 echo "$ node notes.js stats"
@@ -878,7 +878,7 @@ echo "Average note length: 87 characters"
 echo ""
 echo "Tags: welcome, swarm, development, work, ideas"
 echo ""
-echo "🐝 Created by Claude Flow Swarm"
+echo "🐝 Created by Hive Flow Swarm"
 echo ""
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -904,7 +904,7 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo "🎉 SUCCESS: Sample Application Created!"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
-echo "The Claude Flow Swarm has successfully created a fully functional"
+echo "The Hive Flow Swarm has successfully created a fully functional"
 echo "note-taking CLI application with the following features:"
 echo ""
 echo "  ✅ Complete CRUD operations (Create, Read, Update, Delete)"

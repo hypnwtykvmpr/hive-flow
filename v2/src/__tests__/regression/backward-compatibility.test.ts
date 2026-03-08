@@ -6,17 +6,17 @@
  */
 
 import { describe, it, expect, beforeEach } from '@jest/globals';
-import { ClaudeFlowSDKAdapter } from '../../sdk/sdk-config.js';
+import { HiveFlowSDKAdapter } from '../../sdk/sdk-config.js';
 import { SDKCompatibilityLayer } from '../../sdk/compatibility-layer.js';
 import { TaskExecutorSDK } from '../../swarm/executor-sdk.js';
 import { ClaudeClientV25 } from '../../api/claude-client-v2.5.js';
 
 describe('Backward Compatibility Tests', () => {
-  let adapter: ClaudeFlowSDKAdapter;
+  let adapter: HiveFlowSDKAdapter;
   let compatibility: SDKCompatibilityLayer;
 
   beforeEach(() => {
-    adapter = new ClaudeFlowSDKAdapter({
+    adapter = new HiveFlowSDKAdapter({
       apiKey: 'test-api-key',
       swarmMode: true,
     });
@@ -122,7 +122,7 @@ describe('Backward Compatibility Tests', () => {
     it('should support ANTHROPIC_API_KEY environment variable', () => {
       process.env.ANTHROPIC_API_KEY = 'env-api-key';
 
-      const newAdapter = new ClaudeFlowSDKAdapter({});
+      const newAdapter = new HiveFlowSDKAdapter({});
       expect(newAdapter.getConfig().apiKey).toBe('env-api-key');
 
       delete process.env.ANTHROPIC_API_KEY;
@@ -132,14 +132,14 @@ describe('Backward Compatibility Tests', () => {
       process.env.CLAUDE_API_KEY = 'claude-api-key';
       delete process.env.ANTHROPIC_API_KEY;
 
-      const newAdapter = new ClaudeFlowSDKAdapter({});
+      const newAdapter = new HiveFlowSDKAdapter({});
       expect(newAdapter.getConfig().apiKey).toBe('claude-api-key');
 
       delete process.env.CLAUDE_API_KEY;
     });
 
     it('should maintain default configuration values', () => {
-      const defaultAdapter = new ClaudeFlowSDKAdapter({
+      const defaultAdapter = new HiveFlowSDKAdapter({
         apiKey: 'test-key',
       });
 
@@ -153,7 +153,7 @@ describe('Backward Compatibility Tests', () => {
     });
 
     it('should allow custom configuration overrides', () => {
-      const customAdapter = new ClaudeFlowSDKAdapter({
+      const customAdapter = new HiveFlowSDKAdapter({
         apiKey: 'test-key',
         maxRetries: 5,
         timeout: 120000,
@@ -461,7 +461,7 @@ describe('Backward Compatibility Tests', () => {
       };
 
       // v2.5.0 should ignore deprecated fields
-      const newAdapter = new ClaudeFlowSDKAdapter({
+      const newAdapter = new HiveFlowSDKAdapter({
         apiKey: v2Config.apiKey,
       });
 

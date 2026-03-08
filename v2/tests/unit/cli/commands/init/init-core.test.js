@@ -259,7 +259,7 @@ describe('initCommand', () => {
       await initCommand([], {});
 
       expect(fs.writeFile).toHaveBeenCalledWith(
-        '/test/workspace/memory/claude-flow@alpha-data.json',
+        '/test/workspace/memory/hive-flow@alpha-data.json',
         expect.stringContaining('agents'),
         'utf8'
       );
@@ -272,7 +272,7 @@ describe('initCommand', () => {
 
       expect(fs.writeFile).toHaveBeenCalledWith(
         '/test/workspace/.mcp.json',
-        expect.stringContaining('claude-flow@alpha'),
+        expect.stringContaining('hive-flow@alpha'),
         'utf8'
       );
     });

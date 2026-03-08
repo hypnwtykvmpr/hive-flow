@@ -1,5 +1,5 @@
 #!/bin/bash
-# Claude Flow V3 Configuration Validator Template (Linux/macOS)
+# Hive Flow V3 Configuration Validator Template (Linux/macOS)
 
 set -e
 
@@ -18,13 +18,13 @@ log_warning() { echo -e "${YELLOW}⚠️  WARNING: $1${RESET}"; ((WARNINGS++)); 
 log_success() { echo -e "${GREEN}✅ $1${RESET}"; }
 log_info() { echo -e "${BLUE}ℹ️  $1${RESET}"; }
 
-echo -e "${BLUE}🔍 Claude Flow V3 Configuration Validation${RESET}"
+echo -e "${BLUE}🔍 Hive Flow V3 Configuration Validation${RESET}"
 echo "==========================================="
 echo ""
 
 # Check required directories
 echo "📁 Checking Directory Structure..."
-required_dirs=(".claude" ".claude/helpers" ".claude-flow/metrics" ".claude-flow/security")
+required_dirs=(".claude" ".claude/helpers" ".hive-flow/metrics" ".hive-flow/security")
 
 for dir in "${required_dirs[@]}"; do
     if [ -d "$dir" ]; then
@@ -37,7 +37,7 @@ done
 # Check required files
 echo ""
 echo "📄 Checking Required Files..."
-required_files=(".claude-flow/metrics/v3-progress.json" ".claude-flow/metrics/performance.json" ".claude-flow/security/audit-status.json")
+required_files=(".hive-flow/metrics/v3-progress.json" ".hive-flow/metrics/performance.json" ".hive-flow/security/audit-status.json")
 
 for file in "${required_files[@]}"; do
     if [ -f "$file" ]; then
