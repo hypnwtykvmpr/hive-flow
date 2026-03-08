@@ -30,7 +30,7 @@ function getHivePath(): string {
 }
 
 function getAgentStorePath(): string {
-  return join(TEST_CWD, STORAGE_DIR, 'agents.json');
+  return join(TEST_CWD, STORAGE_DIR, 'agents', 'store.json');
 }
 
 function ensureTestDir(): void {
@@ -348,8 +348,8 @@ describe('Hive-Mind Adaptive Topology', () => {
       await tools['hive-mind_join'].handler({ agentId: 'agent-dup' });
 
       const state = readHiveState();
-      const workers = state.workers as string[];
-      const dupCount = workers.filter(w => w === 'agent-dup').length;
+      const workers = state.workers as Array<{ agentId: string }>;
+      const dupCount = workers.filter(w => w.agentId === 'agent-dup').length;
       expect(dupCount).toBe(1);
     });
 
@@ -837,7 +837,7 @@ describe('Hive-Mind Adaptive Topology', () => {
       expect(result.topology).toBe('mesh');
     });
 
-    it('should expose all 8 hive-mind tools', async () => {
+    it('should expose all 9 hive-mind tools', async () => {
       const { hiveMindTools } = await import('../src/mcp-tools/hive-mind-tools.js');
       const toolNames = hiveMindTools.map(t => t.name);
 

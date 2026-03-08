@@ -67,7 +67,7 @@ describe('Step 1: hook-handler.cjs Bug A fix (CJS/ESM)', () => {
     const pgStart = hookHandlerSource.indexOf("'permission-guard':");
     expect(pgStart).toBeGreaterThan(-1);
     // Extract a large enough section to cover the full handler body
-    const handlerBody = hookHandlerSource.slice(pgStart, pgStart + 3000);
+    const handlerBody = hookHandlerSource.slice(pgStart, pgStart + 6000);
     // Should NOT have: const gate = require(gatePath)
     expect(handlerBody).not.toMatch(/const\s+gate\s*=\s*require\s*\(/);
     // Should have: await import(...)
@@ -259,7 +259,7 @@ describe('Permission-guard handler structure', () => {
   it('handler outputs deny decision with reason', () => {
     const pgStart = hookHandlerSource.indexOf("'permission-guard':");
     expect(pgStart).toBeGreaterThan(-1);
-    const handlerSection = hookHandlerSource.slice(pgStart, pgStart + 3000);
+    const handlerSection = hookHandlerSource.slice(pgStart, pgStart + 6000);
     expect(handlerSection).toContain("permissionDecision: 'deny'");
     expect(handlerSection).toContain('permissionDecisionReason');
   });
@@ -267,7 +267,7 @@ describe('Permission-guard handler structure', () => {
   it('handler outputs allow decision for approved commands', () => {
     const pgStart = hookHandlerSource.indexOf("'permission-guard':");
     expect(pgStart).toBeGreaterThan(-1);
-    const handlerSection = hookHandlerSource.slice(pgStart, pgStart + 3000);
+    const handlerSection = hookHandlerSource.slice(pgStart, pgStart + 6000);
     expect(handlerSection).toContain("permissionDecision: 'allow'");
   });
 });

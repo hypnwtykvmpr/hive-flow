@@ -20,9 +20,9 @@ const AGENT_FILE = 'store.json';
 type AgentModel = 'haiku' | 'sonnet' | 'opus' | 'inherit';
 
 // First-class providers: Cursor, Codex, Gemini alongside Anthropic
-type AgentProvider = 'anthropic' | 'gemini-cli' | 'codex-cli' | 'cursor-cli';
+export type AgentProvider = 'anthropic' | 'gemini-cli' | 'codex-cli' | 'cursor-cli';
 
-interface AgentRecord {
+export interface AgentRecord {
   agentId: string;
   agentType: string;
   status: 'idle' | 'busy' | 'terminated';
@@ -37,7 +37,7 @@ interface AgentRecord {
   modelRoutedBy?: 'explicit' | 'router' | 'agent-booster' | 'default';  // How model was determined (ADR-026)
 }
 
-interface AgentStore {
+export interface AgentStore {
   agents: Record<string, AgentRecord>;
   version: string;
 }
@@ -57,7 +57,7 @@ function ensureAgentDir(): void {
   }
 }
 
-function loadAgentStore(): AgentStore {
+export function loadAgentStore(): AgentStore {
   try {
     const path = getAgentPath();
     if (existsSync(path)) {
@@ -70,7 +70,7 @@ function loadAgentStore(): AgentStore {
   return { agents: {}, version: '3.0.0' };
 }
 
-function saveAgentStore(store: AgentStore): void {
+export function saveAgentStore(store: AgentStore): void {
   ensureAgentDir();
   writeFileSync(getAgentPath(), JSON.stringify(store, null, 2), 'utf-8');
 }
@@ -279,6 +279,18 @@ export const agentTools: MCPTool[] = [
         response.note = `Agent Booster can handle "${routingResult.agentBoosterIntent}" - use agent_booster_edit_file MCP tool`;
       } else if (routingResult.tier) {
         response.tier = routingResult.tier;
+      }
+
+      // Cursor-CLI sanity guard: warn if only IDE launcher exists (no headless binary)
+      if (provider === 'cursor-cli') {
+        try {
+          const { execFileSync } = await import('node:child_process');
+          try { execFileSync('which', ['cursor-agent'], { stdio: 'pipe' }); } catch {
+            try { execFileSync('which', ['cursor'], { stdio: 'pipe' });
+              response.warning = 'Only Cursor IDE launcher found (not cursor-agent). The \'agent\' subcommand will be prepended automatically, but installing cursor-agent is recommended for reliable headless execution. See: https://docs.cursor.com/agent';
+            } catch { /* neither found — spawn already succeeded, don't add noise */ }
+          }
+        } catch { /* import failure — skip guard */ }
       }
 
       return response;

@@ -25,6 +25,7 @@
     "test:integration": "vitest run src/__tests__/provider-integration.test.ts",
     "test:coverage": "vitest run --coverage",
     "test:quick": "npx tsx src/__tests__/quick-test.ts",
+    "lint": "eslint src/",
     "clean": "rm -rf dist",
     "typecheck": "tsc --noEmit"
   },
@@ -47,10 +48,15 @@
     "events": "^3.3.0"
   },
   "devDependencies": {
+    "@eslint/js": "^8.57.1",
     "@types/node": "^20.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.56.1",
+    "@typescript-eslint/parser": "^8.56.1",
     "dotenv": "^16.4.5",
+    "eslint": "^8.57.0",
     "tsx": "^4.19.0",
     "typescript": "^5.5.0",
+    "typescript-eslint": "^8.56.1",
     "vitest": "^4.0.16"
   },
   "peerDependencies": {

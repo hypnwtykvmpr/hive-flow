@@ -67,108 +67,55 @@ When spawning agents with the Task tool:
 - **haiku**: ONLY for simple lookups, formatting, trivial tasks
 - NEVER use haiku for non-trivial work
 
-## External CLI Agents (Cursor, Codex, Gemini)
+## External Agent Providers (Cursor-Agent, Codex CLI, Gemini CLI)
 
-Three external AI CLI tools are installed on this system and MUST be prioritized as sub-agents for delegated work. Use these via Bash tool instead of (or in addition to) Claude Code's Task tool agents.
+Three external AI agent providers are integrated as first-class claude-flow agents. They are invoked EXCLUSIVELY through native MCP tools — never via terminal/bash commands.
+
+**CRITICAL TERMINOLOGY:**
+- **"Cursor"** = Cursor-Agent / Cursor-CLI (headless AI agent). NEVER the Cursor VS Code IDE fork.
+- **"Codex"** = Codex CLI (`codex-cli`) headless AI agent. Not the OpenAI web app.
+- **"Gemini"** = Gemini CLI (`gemini-cli`) headless AI agent. Not the Google web app.
+- Agents are spawned and executed via `agent_spawn` + `agent_task` MCP tools only.
 
 ### Priority Order for Sub-Agent Delegation
 
-1. **Codex** and **Gemini** (PREFERRED) — headless execution, conserves Claude quota
-2. **Task tool agents** (opus/sonnet/haiku) — use when external CLIs are insufficient
-3. **Cursor** — editor-based, use for opening files or UI-driven tasks
+1. **Codex** and **Gemini** (PREFERRED) — headless execution via MCP agent_spawn + agent_task tools, conserves Claude quota
+2. **Task tool agents** (opus/sonnet/haiku) — use when external providers are insufficient
+3. **Cursor-Agent** — headless AI agent via MCP agent_spawn + agent_task tools
 
-### Codex CLI (`/opt/homebrew/bin/codex`)
+### Spawning External Agents (MCP Native)
 
-Headless non-interactive execution via `codex exec`:
+```javascript
+// Spawn a Gemini-backed agent
+mcp__claude-flow__agent_spawn({ agentType: "reviewer", provider: "gemini-cli", task: "Audit auth module" })
 
-```bash
-# Basic headless execution (auto-approves file writes in sandbox)
-codex exec --full-auto "Write tests for src/auth/login.ts"
+// Spawn a Codex-backed agent
+mcp__claude-flow__agent_spawn({ agentType: "coder", provider: "codex-cli", task: "Implement feature X" })
 
-# With model selection
-codex exec --full-auto -c model="o3-mini" "Analyze this codebase for security issues"
+// Spawn a Cursor-Agent-backed agent
+mcp__claude-flow__agent_spawn({ agentType: "tester", provider: "cursor-cli", task: "Write tests for api.ts" })
 
-# Code review mode
-codex exec review
-
-# Run in background for parallel work
-codex exec --full-auto "Implement the feature" &
+// Execute a task on a spawned agent
+mcp__claude-flow__agent_task({ agentId: "agent-id", task: "Review the error handling" })
 ```
 
-**Key flags:**
-| Flag | Purpose |
-|------|---------|
-| `--full-auto` | Sandboxed auto-execution (recommended) |
-| `-c model="o3-mini"` | Select model (o3-mini, o4-mini, etc.) |
-| `--writable-root <dir>` | Additional writable directories |
-| `--ephemeral` | Don't persist session |
+### Provider Capabilities
 
-### Gemini CLI (`/opt/homebrew/bin/gemini`)
+| Provider | Headless | Tool Calling | Streaming | Model Selection |
+|----------|----------|-------------|-----------|-----------------|
+| `gemini-cli` | Yes | Yes | Yes | gemini-2.5-pro, gemini-2.0-flash |
+| `codex-cli` | Yes | Yes | Yes | gpt-5.3-codex, o3-mini, o4-mini |
+| `cursor-cli` | Yes | Yes | Yes | auto, gpt-5.3-codex, claude-opus-4-6 |
 
-Headless non-interactive execution via `-p` flag:
+### When to Use External Agents
 
-```bash
-# Basic headless execution
-gemini -p "Write comprehensive tests for the auth module"
-
-# Auto-approve all tool actions (like --full-auto)
-gemini -p "Refactor the error handling in api.ts" --yolo
-
-# With sandbox
-gemini -p "Analyze security vulnerabilities" --sandbox
-
-# With specific model
-gemini -p "Design the database schema" -m gemini-2.0-pro
-
-# Run in background for parallel work
-gemini -p "Generate test coverage report" --yolo &
-```
-
-**Key flags:**
-| Flag | Purpose |
-|------|---------|
-| `-p "prompt"` | Non-interactive headless mode (REQUIRED) |
-| `--yolo` | Auto-approve all tool actions |
-| `--sandbox` | Run in sandboxed environment |
-| `-m <model>` | Select model (gemini-2.0-flash, gemini-2.0-pro) |
-| `--approval-mode <mode>` | default, auto_edit, yolo, plan |
-
-### Cursor CLI (`/usr/local/bin/cursor`)
-
-Editor-based (no headless prompt mode). Use for file operations:
-
-```bash
-# Open a file at specific line
-cursor -g src/auth/login.ts:42
-
-# Open a folder
-cursor -a v3/@claude-flow/shared/
-
-# Diff two files
-cursor -d file1.ts file2.ts
-```
-
-### Parallel External Agent Execution
-
-ALWAYS run external agents in parallel via background Bash when possible:
-
-```bash
-# Spawn 3 agents in parallel — one message, three Bash calls with run_in_background: true
-codex exec --full-auto "Write unit tests for lifecycle module" &
-gemini -p "Write unit tests for signals module" --yolo &
-codex exec --full-auto "Write unit tests for directives module" &
-```
-
-### When to Use External Agents vs Task Tool
-
-| Task Type | Use External Agent | Use Task Tool |
-|-----------|-------------------|---------------|
-| Writing tests | Codex/Gemini (PREFERRED) | Fallback |
-| Code review | Codex review / Gemini | Sonnet agent |
-| Implementation | Codex/Gemini | Opus agent |
-| Architecture | Gemini | Opus agent |
-| Simple lookups | Gemini -m flash | Haiku agent |
-| Multi-file refactor | Codex --full-auto | Opus agent |
+| Task Type | Provider | Why |
+|-----------|----------|-----|
+| Code review | gemini-cli or codex-cli | Conserves Claude quota |
+| Implementation | codex-cli | Fast code generation |
+| Testing | cursor-cli or codex-cli | Parallel test writing |
+| Architecture | gemini-cli | Strong reasoning |
+| Multi-file refactor | codex-cli | Bulk transforms |
 
 ## Swarm Orchestration
 

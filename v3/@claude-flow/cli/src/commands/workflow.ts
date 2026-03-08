@@ -702,7 +702,17 @@ function formatStageStatus(status: unknown): string {
 
 function getTemplateStages(template: string): string[] {
   const stages: Record<string, string[]> = {
-    development: ['Planning', 'Implementation', 'Testing', 'Review', 'Integration'],
+    development: [
+      'Planning',
+      'Verify: Planning -> Implementation',
+      'Implementation + Bug Hunter',
+      'Verify: Implementation -> Testing',
+      'Testing + Bug Hunter',
+      'Verify: Testing -> Review',
+      'Review + Bug Hunter',
+      'Verify: Review -> Integration',
+      'Integration',
+    ],
     research: ['Discovery', 'Analysis', 'Synthesis', 'Documentation'],
     testing: ['Unit Tests', 'Integration Tests', 'E2E Tests', 'Performance Tests'],
     'security-audit': ['Threat Model', 'Static Analysis', 'Dynamic Analysis', 'Report'],
@@ -715,7 +725,7 @@ function getTemplateStages(template: string): string[] {
 
 function getTemplateAgents(template: string): string[] {
   const agents: Record<string, string[]> = {
-    development: ['coder', 'tester', 'reviewer'],
+    development: ['planner', 'coder', 'tester', 'reviewer', 'verifier', 'bug-hunter'],
     research: ['researcher', 'analyst'],
     testing: ['tester', 'coder'],
     'security-audit': ['security-architect', 'security-auditor'],
@@ -728,7 +738,7 @@ function getTemplateAgents(template: string): string[] {
 
 function getTemplateDuration(template: string): string {
   const durations: Record<string, string> = {
-    development: '15-30 min',
+    development: '30-60 min',
     research: '10-20 min',
     testing: '5-15 min',
     'security-audit': '20-40 min',

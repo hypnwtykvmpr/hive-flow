@@ -2,7 +2,7 @@
 // Process-level safety net: if anything escapes all other error handling,
 // produce valid JSON so Claude Code never sees a hook error.
 process.on('uncaughtException', () => {
-  if (process.argv[2] === 'permission-guard') {
+  if (process.argv[2] === 'permission-guard' || process.argv[2] === 'enforce-plan') {
     process.stdout.write(JSON.stringify({ hookSpecificOutput: { permissionDecision: 'allow' } }));
   }
   process.exit(0);
@@ -72,6 +72,23 @@ function providerSummaryLine() {
       .map(([name, v]) => `${name}:${v.calls}`)
       .join(' ');
   } catch { return ''; }
+}
+
+// Shared helper: load the workflow-enforcer ESM module (returns a Promise).
+// Returns null if the module is not compiled or cannot be loaded (fail-open).
+function loadEnforcerModule() {
+  try {
+    const enforcerPath = path.join(__dirname, '..', '..', 'v3', '@claude-flow', 'cli', 'dist', 'src', 'mcp-tools', 'workflow-enforcer.js');
+    if (!fs.existsSync(enforcerPath)) return null;
+    const { pathToFileURL } = require('url');
+    // Note: dynamic import returns a promise, caller must await
+    return import(pathToFileURL(enforcerPath).href);
+  } catch { return null; }
+}
+
+// Shared helper: emit a JSON allow decision for permission-style hooks.
+function allowAndReturn() {
+  console.log(JSON.stringify({ hookSpecificOutput: { permissionDecision: 'allow' } }));
 }
 
 const handlers = {
@@ -323,6 +340,239 @@ const handlers = {
     console.log(`[AGENT] Started: name=${name}${modelStr}${providerStr} id=${id} parent=${parent}`);
   },
 
+  'assess-complexity': async () => {
+    try {
+      if (!prompt.trim()) return;
+
+      const enforcer = await loadEnforcerModule();
+      if (!enforcer) return; // fail-open: not compiled yet
+      const assessment = enforcer.assessComplexity(prompt);
+
+      // Persist state
+      enforcer.saveEnforcementState({
+        assessment,
+        planRequired: assessment.level === 'COMPLEX' || assessment.level === 'MODERATE',
+        planCreated: false,
+        sessionHighScore: assessment.score,
+      });
+
+      // Emit enforcement level as context
+      console.log(`[ENFORCEMENT: ${assessment.level}] Score: ${assessment.score}/100. ${assessment.level === 'COMPLEX' ? 'Planning subflow REQUIRED before implementation.' : assessment.level === 'MODERATE' ? 'Planning subflow recommended. Verification gates active.' : 'Lightweight flow.'}`);
+    } catch { /* fail-open */ }
+  },
+
+  'enforce-plan': async () => {
+    try {
+      const enforcer = await loadEnforcerModule();
+      if (!enforcer) {
+        allowAndReturn();
+        return;
+      }
+
+      let state;
+      try { state = enforcer.loadEnforcementState(); } catch { state = null; }
+
+      if (!state || !state.assessment) {
+        allowAndReturn();
+        return;
+      }
+
+      // COMPLEX: hard deny, no opt-out
+      if (state.assessment.level === 'COMPLEX' && state.planRequired && !state.planCreated) {
+        console.log(JSON.stringify({
+          hookSpecificOutput: {
+            permissionDecision: 'deny',
+            permissionDecisionReason: 'ENFORCEMENT: Complex task (score: ' + state.assessment.score + ') requires planning subflow before implementation. Call planning_subflow_execute first.',
+          },
+        }));
+        return;
+      }
+
+      // MODERATE: soft deny with opt-out check
+      if (state.assessment.level === 'MODERATE' && state.planRequired && !state.planCreated) {
+        const optedOut = state.moderatePlanOptOut === true || process.env.CF_WF_7D === '1';
+
+        if (optedOut) {
+          // Persist opt-out if from env var (one-time capture)
+          if (!state.moderatePlanOptOut) {
+            state.moderatePlanOptOut = true;
+            state.moderatePlanOptOutAt = new Date().toISOString();
+            enforcer.saveEnforcementState(state);
+          }
+          // Audit trail
+          enforcer.appendAuditEntry({
+            timestamp: new Date().toISOString(),
+            event: 'dismissal',
+            taskDescription: (process.env.PROMPT || '').slice(0, 200),
+            score: state.assessment.score,
+            level: 'MODERATE',
+          });
+          allowAndReturn();
+          return;
+        }
+
+        // Soft deny
+        console.log(JSON.stringify({
+          hookSpecificOutput: {
+            permissionDecision: 'deny',
+            permissionDecisionReason: 'ENFORCEMENT: Moderate task (score: ' + state.assessment.score + ') requires planning subflow before implementation. Call planning_subflow_execute first.',
+          },
+        }));
+        return;
+      }
+
+      // All other cases: allow
+      allowAndReturn();
+    } catch {
+      // fail-open
+      allowAndReturn();
+    }
+  },
+
+  'enforce-gate': async () => {
+    try {
+      const enforcer = await loadEnforcerModule();
+      if (!enforcer) return;
+
+      let state;
+      try { state = enforcer.loadEnforcementState(); } catch { return; }
+      if (!state || !state.assessment) return;
+
+      const level = state.assessment.level;
+      const flow = state.assessment.requiredFlow;
+      const results = [];
+
+      // Ambiguity filter (ALL levels)
+      if (flow.ambiguityFilter && flow.ambiguityFilter.enabled) {
+        results.push(`[AMBIGUITY-FILTER: ${level}] agents=${flow.ambiguityFilter.agentCount}${flow.ambiguityFilter.deepAnalysis ? ' +deepAnalysis' : ''}`);
+      }
+
+      // Dual-agent audit (ALL levels)
+      if (flow.dualAgentAudit && flow.dualAgentAudit.enabled) {
+        results.push(`[DUAL-AUDIT: ${level}] agents=${flow.dualAgentAudit.agentCount} mode=${flow.dualAgentAudit.hiveMind ? 'hive-mind' : 'standard'}`);
+      }
+
+      // Verification gates (MODERATE + COMPLEX)
+      if (flow.verificationGates && flow.verificationGates.enabled) {
+        results.push(`[VERIFICATION-GATE: ${level}] checks=${flow.verificationGates.categories.join(',')}`);
+      }
+
+      // Audit entry
+      enforcer.appendAuditEntry({
+        timestamp: new Date().toISOString(),
+        event: 'gate-pass',
+        taskDescription: (process.env.PROMPT || '').slice(0, 200),
+        score: state.assessment.score,
+        level: level,
+      });
+
+      if (results.length > 0) {
+        console.log(`[ENFORCEMENT-GATE: ${level}] ${results.join(' | ')}`);
+      }
+    } catch { /* fail-open */ }
+  },
+
+  'anti-re-request': async () => {
+    try {
+      const enforcer = await loadEnforcerModule();
+      if (!enforcer) return;
+
+      let state;
+      try { state = enforcer.loadEnforcementState(); } catch { return; }
+      if (!state || !state.authorized) return;
+
+      const text = process.env.PROMPT || '';
+      if (!text.trim()) return;
+
+      const RE_REQUEST_PATTERNS = [
+        /\bshould\s+i\s+(continue|proceed|go\s+ahead|start|begin|do)\b/i,
+        /\bwould\s+you\s+like\s+(me\s+to|to)\b/i,
+        /\bdo\s+you\s+want\s+(me\s+to|to)\b/i,
+        /\bshall\s+i\s+(proceed|continue|start|begin)\b/i,
+        /\bis\s+(it|that)\s+ok\s+(to|if)\b/i,
+        /\bmay\s+i\s+(proceed|continue)\b/i,
+        /\bcan\s+i\s+(proceed|continue|go\s+ahead)\b/i,
+        /\bready\s+to\s+(proceed|continue|start)\b/i,
+        /\bpermission\s+to\s+(proceed|continue)\b/i,
+        /\bawait(ing)?\s+(your\s+)?(approval|confirmation|permission|go-ahead)\b/i,
+        /\bneed\s+(your\s+)?(approval|confirmation|permission)\b/i,
+        /\bwant\s+me\s+to\s+(handle|tackle|work\s+on|implement|fix|complete)\b/i,
+        /\bit\s+might\s+be\s+worth\s+(checking|verifying|confirming)/i,
+        /\bif\s+you(?:'d)?\s+prefer/i,
+        /\bi\s+wonder\s+if\s+we\s+should\s+(reconsider|revisit|rethink)/i,
+        /\bi\s+defer\s+to\s+your\s+judg/i,
+        /\bbefore\s+i\s+continue.*is\s+there\s+anything/i,
+        /\bthis\s+also\s+touches.*should\s+i\s+include/i,
+        /\bthis\s+could\s+be\s+risky.*shall/i,
+        /\bjust\s+(?:wanted\s+to\s+)?(?:check|confirm|verify|make\s+sure)/i,
+        /\bi\s+(?:think|believe)\s+(?:it\s+)?(?:might|would)\s+be\s+(?:best|better|wise|prudent)\s+to\s+(?:check|ask|confirm)/i,
+        /\blet\s+me\s+know\s+(if|whether|what)/i,
+        /\byour\s+(?:thoughts|input|feedback)\s+(?:on|about|would\s+be)/i,
+        /\bwhat\s+(?:do\s+you\s+think|are\s+your\s+thoughts)/i,
+      ];
+
+      const isReRequest = RE_REQUEST_PATTERNS.some(re => re.test(text));
+      if (isReRequest) {
+        try {
+          enforcer.appendAuditEntry({
+            timestamp: new Date().toISOString(),
+            event: 'dismissal',
+            taskDescription: '[ANTI-RE-REQUEST] ' + text.slice(0, 200),
+            score: state.assessment?.score ?? 0,
+            level: state.assessment?.level ?? 'SIMPLE',
+          });
+        } catch { /* audit is best-effort */ }
+
+        console.log('[ANTI-RE-REQUEST] Re-request detected on authorized work. Work is already authorized — continue without asking. DO NOT re-request permission for already-authorized work. This is a policy violation.');
+      }
+    } catch { /* fail-open */ }
+  },
+
+  'enforce-final': async () => {
+    try {
+      const enforcer = await loadEnforcerModule();
+      if (!enforcer) return;
+
+      let state;
+      try { state = enforcer.loadEnforcementState(); } catch { return; }
+      if (!state || !state.assessment) return;
+
+      const level = state.assessment.level;
+      const flow = state.assessment.requiredFlow;
+      const results = [];
+
+      // Post-task verification (ALL levels)
+      if (flow.postTaskVerification) {
+        results.push(`[POST-TASK-VERIFY: ${flow.postTaskVerification.variant || 'lightweight'}]`);
+      }
+
+      // Final verification gate re-run (MODERATE + COMPLEX)
+      if (flow.verificationGates && flow.verificationGates.enabled) {
+        results.push(`[FINAL-GATE: ${flow.verificationGates.categories.length} checks]`);
+      }
+
+      // Plan concern check (COMPLEX only)
+      if (level === 'COMPLEX') {
+        results.push(state.planCreated ? '[PLAN-CHECK: pass]' : '[PLAN-CHECK: WARNING - no plan created]');
+      }
+
+      // Hive-mind consensus (COMPLEX with hiveMind config)
+      if (flow.dualAgentAudit && flow.dualAgentAudit.hiveMind) {
+        results.push('[HIVE-MIND-CONSENSUS: required]');
+      }
+
+      enforcer.appendAuditEntry({
+        timestamp: new Date().toISOString(),
+        event: 'gate-pass',
+        taskDescription: (process.env.PROMPT || '').slice(0, 200),
+        score: state.assessment.score,
+        level: level,
+      });
+
+      console.log(`[ENFORCEMENT-FINAL: ${level}] ${results.join(' | ')}`);
+    } catch { /* fail-open */ }
+  },
+
   'permission-guard': async () => {
     const ALLOW_JSON = JSON.stringify({ hookSpecificOutput: { permissionDecision: 'allow' } });
 
@@ -450,7 +700,7 @@ const handlers = {
       await handlers[command]();
     } catch (e) {
       // Output valid JSON so Claude Code doesn't flag as hook error
-      if (command === 'permission-guard') {
+      if (command === 'permission-guard' || command === 'enforce-plan') {
         console.log(JSON.stringify({ hookSpecificOutput: { permissionDecision: 'allow' } }));
       }
       // For non-permission-guard hooks, silence the error — no output needed
@@ -458,6 +708,6 @@ const handlers = {
   } else if (command) {
     // No output for unknown commands — avoid non-JSON text that triggers hook errors
   } else {
-    console.log('Usage: hook-handler.cjs <route|pre-bash|post-edit|session-restore|session-end|pre-task|post-task|post-command|compact-manual|compact-auto|stats|permission-guard>');
+    console.log('Usage: hook-handler.cjs <route|pre-bash|post-edit|session-restore|session-end|pre-task|post-task|post-command|compact-manual|compact-auto|stats|permission-guard|assess-complexity|enforce-plan|enforce-gate|enforce-final>');
   }
 })();

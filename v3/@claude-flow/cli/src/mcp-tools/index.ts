@@ -22,3 +22,23 @@ export { securityTools } from './security-tools.js';
 export { embeddingsTools } from './embeddings-tools.js';
 export { claimsTools } from './claims-tools.js';
 export { providerTools } from './provider-tools.js';
+export { verificationGateTools } from './verification-gate.js';
+export { planningSubflowTools } from './planning-subflow.js';
+export { isAmbiguityGenuine, resolveAuthorizedAmbiguity, type AmbiguityAssessment, type IntentAuditResult, type IntentAuditScore } from './ambiguity-filter.js';
+export { bugHunterTools } from './bug-hunter.js';
+export { workflowEnforcerTools, mapLevelToFlow, validateOptOut } from './workflow-enforcer.js';
+export type {
+  ComplexityLevel,
+  ComplexityAssessment,
+  ComplexitySignal,
+  RequiredFlow,
+  AgentModelTier,
+  FlowComponentConfig,
+  PlanningSubflowConfig,
+  VerificationGatesConfig,
+  AmbiguityFilterConfig,
+  DualAgentAuditConfig,
+  EnforcementState,
+  EnforcementOverride,
+  EnforcementAuditEntry,
+} from './workflow-enforcer.js';

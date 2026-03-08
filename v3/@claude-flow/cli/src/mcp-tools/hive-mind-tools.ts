@@ -7,6 +7,8 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import type { MCPTool } from './types.js';
+import { loadAgentStore, saveAgentStore, agentTools } from './agent-tools.js';
+import type { AgentProvider } from './agent-tools.js';
 
 // Storage paths
 const STORAGE_DIR = '.claude-flow';
@@ -21,7 +23,7 @@ interface HiveState {
     electedAt: string;
     term: number;
   };
-  workers: string[];
+  workers: HiveWorker[];
   consensus: {
     pending: ConsensusProposal[];
     history: ConsensusResult[];
@@ -49,6 +51,15 @@ interface ConsensusResult {
   decidedAt: string;
 }
 
+interface HiveWorker {
+  agentId: string;
+  provider?: AgentProvider;
+  model?: string;
+  role: string;
+  joinedAt: string;
+  status: 'idle' | 'busy' | 'offline';
+}
+
 function getHiveDir(): string {
   return join(process.cwd(), STORAGE_DIR, HIVE_DIR);
 }
@@ -69,19 +80,55 @@ function loadHiveState(): HiveState {
     const path = getHivePath();
     if (existsSync(path)) {
       const data = readFileSync(path, 'utf-8');
-      return JSON.parse(data);
+      const state = JSON.parse(data) as HiveState;
+
+      // Normalize workers to HiveWorker[]
+      if (Array.isArray(state.workers) && state.workers.length > 0) {
+        const seen = new Set<string>();
+        const normalized: HiveWorker[] = [];
+
+        for (const entry of state.workers as Array<unknown>) {
+          let worker: HiveWorker | null = null;
+
+          if (typeof entry === 'string') {
+            const id = entry.trim();
+            if (!id) continue;
+            worker = {
+              agentId: id, role: 'worker',
+              joinedAt: state.createdAt || new Date().toISOString(),
+              status: 'idle',
+            };
+          } else if (
+            entry !== null && typeof entry === 'object' &&
+            typeof (entry as Record<string, unknown>).agentId === 'string'
+          ) {
+            const obj = entry as HiveWorker;
+            const id = obj.agentId?.trim();
+            if (!id) continue;
+            worker = {
+              ...obj,
+              agentId: id,
+              role: obj.role || 'worker',
+              joinedAt: obj.joinedAt || state.createdAt || new Date().toISOString(),
+              status: obj.status || 'idle',
+            };
+          }
+
+          if (worker && !seen.has(worker.agentId)) {
+            seen.add(worker.agentId);
+            normalized.push(worker);
+          }
+        }
+        state.workers = normalized;
+      }
+
+      return state;
     }
-  } catch {
-    // Return default state on error
-  }
+  } catch { /* Return default */ }
   return {
-    initialized: false,
-    topology: 'mesh',
-    workers: [],
-    consensus: { pending: [], history: [] },
-    sharedMemory: {},
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    initialized: false, topology: 'mesh', workers: [],
+    consensus: { pending: [], history: [] }, sharedMemory: {},
+    createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
   };
 }
 
@@ -91,25 +138,68 @@ function saveHiveState(state: HiveState): void {
   writeFileSync(getHivePath(), JSON.stringify(state, null, 2), 'utf-8');
 }
 
-// Import agent store helpers for spawn functionality
-import { existsSync as agentStoreExists, readFileSync as readAgentStore, writeFileSync as writeAgentStore, mkdirSync as mkdirAgentStore } from 'node:fs';
-
-function loadAgentStore(): { agents: Record<string, unknown> } {
-  const storePath = join(process.cwd(), '.claude-flow', 'agents.json');
-  try {
-    if (agentStoreExists(storePath)) {
-      return JSON.parse(readAgentStore(storePath, 'utf-8'));
-    }
-  } catch { /* ignore */ }
-  return { agents: {} };
+/** Minimum votes needed for a majority decision. Handles 1-worker edge case. */
+function getMajority(n: number): number {
+  if (n <= 0) return 0;
+  return n === 1 ? 1 : Math.ceil(n / 2) + 1;
 }
 
-function saveAgentStore(store: { agents: Record<string, unknown> }): void {
-  const storeDir = join(process.cwd(), '.claude-flow');
-  if (!agentStoreExists(storeDir)) {
-    mkdirAgentStore(storeDir, { recursive: true });
+function extractVoteFromResult(result: Record<string, unknown>): boolean {
+  // If task execution failed, vote = false
+  if (result.success === false) return false;
+
+  // --- Tier 1: Structured vote field ---
+  const candidates = [result, result.result as Record<string, unknown> | undefined];
+  for (const obj of candidates) {
+    if (obj && typeof obj === 'object' && 'vote' in obj) {
+      const v = (obj as Record<string, unknown>).vote;
+      if (typeof v === 'boolean') return v;
+      if (typeof v === 'string') {
+        const vl = v.toLowerCase().trim();
+        if (['approve', 'true', 'yes'].includes(vl)) return true;
+        if (['reject', 'false', 'no'].includes(vl)) return false;
+      }
+    }
   }
-  writeAgentStore(join(storeDir, 'agents.json'), JSON.stringify(store, null, 2), 'utf-8');
+
+  // --- Extract text content ---
+  let text = '';
+  if (typeof result.content === 'string') text = result.content;       // Bridge primary field
+  else if (typeof result.rawOutput === 'string') text = result.rawOutput; // agent_task fallback
+  else text = JSON.stringify(result);
+
+  const trimmed = text.trim();
+  if (!trimmed) return true; // no signal = no objection
+
+  // --- Tier 1.5: JSON code block in text ---
+  // Regex handles one level of nested braces (e.g., {"vote":"approve","reason":{"detail":"ok"}})
+  const jsonMatch = trimmed.match(/```json\s*\n?\s*(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})\s*\n?\s*```/);
+  if (jsonMatch) {
+    try {
+      const parsed = JSON.parse(jsonMatch[1]);
+      if (typeof parsed.vote === 'boolean') return parsed.vote;
+      if (typeof parsed.vote === 'string') {
+        const vl = parsed.vote.toLowerCase().trim();
+        if (['approve', 'true', 'yes'].includes(vl)) return true;
+        if (['reject', 'false', 'no'].includes(vl)) return false;
+      }
+    } catch { /* fall through */ }
+  }
+
+  // --- Tier 2: Word-boundary keyword matching ---
+  const lower = trimmed.toLowerCase();
+  const matchesKw = (kw: string) => new RegExp(`\\b${kw}\\b`, 'i').test(lower);
+
+  // REJECT first (reject-first precedence: false approval more dangerous than false rejection)
+  const rejectKws = ['reject', 'deny', 'disapprove', 'not acceptable', 'cannot approve', 'do not approve'];
+  for (const kw of rejectKws) { if (matchesKw(kw)) return false; }
+
+  // APPROVE second
+  const approveKws = ['approve', 'accept', 'lgtm', 'looks good', 'no issues found'];
+  for (const kw of approveKws) { if (matchesKw(kw)) return true; }
+
+  // Default: approve (benefit of the doubt; consensus requires majority)
+  return true;
 }
 
 export const hiveMindTools: MCPTool[] = [
@@ -124,6 +214,8 @@ export const hiveMindTools: MCPTool[] = [
         role: { type: 'string', enum: ['worker', 'specialist', 'scout'], description: 'Worker role in hive', default: 'worker' },
         agentType: { type: 'string', description: 'Agent type for spawned workers', default: 'worker' },
         prefix: { type: 'string', description: 'Prefix for worker IDs', default: 'hive-worker' },
+        provider: { type: 'string', enum: ['gemini-cli', 'codex-cli', 'cursor-cli', 'anthropic'], description: 'AI provider' },
+        model: { type: 'string', description: 'Model to use' },
       },
     },
     handler: async (input) => {
@@ -139,7 +231,7 @@ export const hiveMindTools: MCPTool[] = [
       const prefix = (input.prefix as string) || 'hive-worker';
       const agentStore = loadAgentStore();
 
-      const spawnedWorkers: Array<{ agentId: string; role: string; joinedAt: string }> = [];
+      const spawnedWorkers: Array<{ agentId: string; role: string; provider?: AgentProvider; model?: string; joinedAt: string }> = [];
 
       for (let i = 0; i < count; i++) {
         const agentId = `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
@@ -154,16 +246,26 @@ export const hiveMindTools: MCPTool[] = [
           config: { role, hiveRole: role },
           createdAt: new Date().toISOString(),
           domain: 'hive-mind',
+          provider: (input.provider as AgentProvider) || undefined,
+          resolvedModel: (input.model as string) || undefined,
         };
 
         // Join to hive-mind (like hive-mind/join)
-        if (!state.workers.includes(agentId)) {
-          state.workers.push(agentId);
+        const worker: HiveWorker = {
+          agentId,
+          provider: (input.provider as AgentProvider) || undefined,
+          model: (input.model as string) || undefined,
+          role, joinedAt: new Date().toISOString(), status: 'idle',
+        };
+        if (!state.workers.find(w => w.agentId === agentId)) {
+          state.workers.push(worker);
         }
 
         spawnedWorkers.push({
           agentId,
           role,
+          provider: (input.provider as AgentProvider) || undefined,
+          model: (input.model as string) || undefined,
           joinedAt: new Date().toISOString(),
         });
       }
@@ -190,6 +292,10 @@ export const hiveMindTools: MCPTool[] = [
       properties: {
         topology: { type: 'string', enum: ['mesh', 'hierarchical', 'ring', 'star', 'adaptive', 'hierarchical-mesh'], description: 'Network topology' },
         queenId: { type: 'string', description: 'Initial queen agent ID' },
+        consensus: { type: 'string', enum: ['byzantine', 'raft', 'gossip', 'crdt', 'quorum'], description: 'Consensus strategy' },
+        maxAgents: { type: 'number', description: 'Maximum agents allowed (default: 15)' },
+        persist: { type: 'boolean', description: 'Persist hive state to disk (default: true)' },
+        memoryBackend: { type: 'string', enum: ['hybrid', 'sqlite', 'memory'], description: 'Memory backend (default: hybrid)' },
       },
     },
     handler: async (input) => {
@@ -256,9 +362,12 @@ export const hiveMindTools: MCPTool[] = [
           term: state.queen.term,
         } : { id: 'N/A', status: 'offline', load: 0, tasksQueued: 0 },
         workers: state.workers.map(w => ({
-          id: w,
+          id: w.agentId,
           type: 'worker',
-          status: 'idle',
+          status: w.status || 'idle',
+          provider: w.provider,
+          model: w.model,
+          role: w.role,
           currentTask: null,
           tasksCompleted: 0,
         })),
@@ -309,28 +418,39 @@ export const hiveMindTools: MCPTool[] = [
       properties: {
         agentId: { type: 'string', description: 'Agent ID to join' },
         role: { type: 'string', enum: ['worker', 'specialist', 'scout'], description: 'Agent role in hive' },
+        provider: { type: 'string', enum: ['gemini-cli', 'codex-cli', 'cursor-cli', 'anthropic'], description: 'AI provider' },
+        model: { type: 'string', description: 'Model identifier' },
       },
       required: ['agentId'],
     },
     handler: async (input) => {
       const state = loadHiveState();
       const agentId = input.agentId as string;
+      if (!state.initialized) return { success: false, error: 'Hive-mind not initialized' };
 
-      if (!state.initialized) {
-        return { success: false, error: 'Hive-mind not initialized' };
-      }
-
-      if (!state.workers.includes(agentId)) {
-        state.workers.push(agentId);
+      if (!state.workers.find(w => w.agentId === agentId)) {
+        // Resolve provider: explicit param > agent store lookup > undefined
+        let provider = input.provider as AgentProvider | undefined;
+        let model = input.model as string | undefined;
+        if (!provider) {
+          try {
+            const agentStore = loadAgentStore();
+            const rec = agentStore.agents[agentId];
+            if (rec) { provider = rec.provider; model = model || rec.resolvedModel || rec.model; }
+          } catch { /* non-fatal */ }
+        }
+        state.workers.push({
+          agentId, provider, model,
+          role: (input.role as string) || 'worker',
+          joinedAt: new Date().toISOString(), status: 'idle',
+        });
         saveHiveState(state);
       }
-
+      const worker = state.workers.find(w => w.agentId === agentId)!;
       return {
-        success: true,
-        agentId,
-        role: input.role || 'worker',
-        totalWorkers: state.workers.length,
-        joinedAt: new Date().toISOString(),
+        success: true, agentId, role: worker.role,
+        provider: worker.provider, model: worker.model,
+        totalWorkers: state.workers.length, joinedAt: worker.joinedAt,
       };
     },
   },
@@ -349,7 +469,7 @@ export const hiveMindTools: MCPTool[] = [
       const state = loadHiveState();
       const agentId = input.agentId as string;
 
-      const index = state.workers.indexOf(agentId);
+      const index = state.workers.findIndex(w => w.agentId === agentId);
       if (index > -1) {
         state.workers.splice(index, 1);
         saveHiveState(state);
@@ -371,12 +491,14 @@ export const hiveMindTools: MCPTool[] = [
     inputSchema: {
       type: 'object',
       properties: {
-        action: { type: 'string', enum: ['propose', 'vote', 'status', 'list'], description: 'Consensus action' },
+        action: { type: 'string', enum: ['propose', 'vote', 'status', 'list', 'execute'], description: 'Consensus action' },
         proposalId: { type: 'string', description: 'Proposal ID (for vote/status)' },
         type: { type: 'string', description: 'Proposal type (for propose)' },
         value: { description: 'Proposal value (for propose)' },
         vote: { type: 'boolean', description: 'Vote (true=for, false=against)' },
         voterId: { type: 'string', description: 'Voter agent ID' },
+        task: { type: 'string', description: 'Task description for execute action' },
+        timeout: { type: 'number', description: 'Timeout in ms for execute action (default: 30000)' },
       },
       required: ['action'],
     },
@@ -404,7 +526,7 @@ export const hiveMindTools: MCPTool[] = [
           proposalId,
           type: proposal.type,
           status: 'pending',
-          requiredVotes: Math.ceil(state.workers.length / 2) + 1,
+          requiredVotes: getMajority(state.workers.length),
         };
       }
 
@@ -420,7 +542,7 @@ export const hiveMindTools: MCPTool[] = [
         // Check if we have majority
         const votesFor = Object.values(proposal.votes).filter(v => v).length;
         const votesAgainst = Object.values(proposal.votes).filter(v => !v).length;
-        const majority = Math.ceil(state.workers.length / 2) + 1;
+        const majority = getMajority(state.workers.length);
 
         if (votesFor >= majority) {
           proposal.status = 'approved';
@@ -479,7 +601,7 @@ export const hiveMindTools: MCPTool[] = [
           votesFor,
           votesAgainst,
           totalVotes: Object.keys(proposal.votes).length,
-          requiredMajority: Math.ceil(state.workers.length / 2) + 1,
+          requiredMajority: getMajority(state.workers.length),
         };
       }
 
@@ -494,6 +616,71 @@ export const hiveMindTools: MCPTool[] = [
           })),
           recentHistory: state.consensus.history.slice(-5),
         };
+      }
+
+      if (action === 'execute') {
+        const proposal = state.consensus.pending.find(p => p.proposalId === input.proposalId);
+        if (!proposal) return { action, error: 'Proposal not found' };
+
+        const userTask = input.task as string || input.value as string;
+        if (!userTask) return { action, error: 'Task description required' };
+
+        // Wrap task with structured response instructions
+        const structuredTask = `${userTask}\n\nIMPORTANT: End your response with:\n\`\`\`json\n{"vote": "approve"}\n\`\`\`\nor\n\`\`\`json\n{"vote": "reject"}\n\`\`\`\nInclude reasoning before the JSON block.`;
+
+        const providerWorkers = state.workers.filter(w => w.provider);
+        const localWorkers = state.workers.filter(w => !w.provider);
+
+        // Local workers auto-approve: they lack provider execution capability.
+        // To get real votes from a worker, assign it a provider via spawn/join.
+        for (const w of localWorkers) { proposal.votes[w.agentId] = true; }
+
+        // Execute provider workers via agent_task (parallel)
+        const agentTaskTool = agentTools.find(t => t.name === 'agent_task');
+        if (!agentTaskTool && providerWorkers.length > 0) {
+          return { action, error: 'agent_task tool not found — cannot execute provider workers' };
+        }
+        const settled = await Promise.allSettled(
+          providerWorkers.map(async (worker) => {
+            const taskResult = await agentTaskTool!.handler({
+              agentId: worker.agentId, task: structuredTask,
+              timeout: (input.timeout as number) ?? 30000,
+            }) as Record<string, unknown>;
+            return { worker, taskResult };
+          }),
+        );
+        const results: Array<{ agentId: string; provider?: AgentProvider; status: string; vote?: boolean; error?: string }> = [];
+        for (let i = 0; i < settled.length; i++) {
+          const worker = providerWorkers[i];
+          const s = settled[i];
+          if (s.status === 'fulfilled') {
+            const vote = extractVoteFromResult(s.value.taskResult);
+            proposal.votes[worker.agentId] = vote;
+            results.push({ agentId: worker.agentId, provider: worker.provider, status: 'completed', vote });
+          } else {
+            results.push({ agentId: worker.agentId, provider: worker.provider, status: 'failed', error: String(s.reason) });
+          }
+        }
+
+        // Abstention handling: failed workers reduce the denominator, not count as rejections
+        const abstentions = results.filter(r => r.status === 'failed').map(r => r.agentId);
+        const participatingCount = state.workers.length - abstentions.length;
+
+        // Check majority (same logic as existing vote action)
+        const votesFor = Object.values(proposal.votes).filter(v => v).length;
+        const votesAgainst = Object.values(proposal.votes).filter(v => !v).length;
+        const majority = getMajority(participatingCount);
+        if (votesFor >= majority) {
+          proposal.status = 'approved';
+          state.consensus.history.push({ proposalId: proposal.proposalId, type: proposal.type, result: 'approved', votes: { for: votesFor, against: votesAgainst }, decidedAt: new Date().toISOString() });
+          state.consensus.pending = state.consensus.pending.filter(p => p.proposalId !== proposal.proposalId);
+        } else if (votesAgainst >= majority) {
+          proposal.status = 'rejected';
+          state.consensus.history.push({ proposalId: proposal.proposalId, type: proposal.type, result: 'rejected', votes: { for: votesFor, against: votesAgainst }, decidedAt: new Date().toISOString() });
+          state.consensus.pending = state.consensus.pending.filter(p => p.proposalId !== proposal.proposalId);
+        }
+        saveHiveState(state);
+        return { action, proposalId: proposal.proposalId, evaluated: results.length, results, votesFor, votesAgainst, abstentions: abstentions.length, participatingVoters: participatingCount, status: proposal.status };
       }
 
       return { action, error: 'Unknown action' };
@@ -579,9 +766,9 @@ export const hiveMindTools: MCPTool[] = [
 
       // Clear workers from agent store
       const agentStore = loadAgentStore();
-      for (const workerId of state.workers) {
-        if (agentStore.agents[workerId]) {
-          delete agentStore.agents[workerId];
+      for (const worker of state.workers) {
+        if (agentStore.agents[worker.agentId]) {
+          delete agentStore.agents[worker.agentId];
         }
       }
       saveAgentStore(agentStore);

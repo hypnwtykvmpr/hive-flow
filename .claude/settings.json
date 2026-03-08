@@ -6,8 +6,13 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/helpers/hook-handler.cjs permission-guard",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/hook-handler.cjs permission-guard",
             "timeout": 15000
+          },
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/hook-handler.cjs enforce-plan",
+            "timeout": 5000
           }
         ]
       }
@@ -18,7 +23,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/helpers/hook-handler.cjs post-edit",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/hook-handler.cjs post-edit",
+            "timeout": 10000
+          },
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/hook-handler.cjs enforce-gate",
             "timeout": 10000
           }
         ]
@@ -28,7 +38,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/helpers/hook-handler.cjs post-command",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/hook-handler.cjs post-command",
             "timeout": 5000
           }
         ]
@@ -39,12 +49,22 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/helpers/hook-handler.cjs route",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/hook-handler.cjs assess-complexity",
+            "timeout": 5000
+          },
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/hook-handler.cjs route",
             "timeout": 10000
           },
           {
             "type": "command",
-            "command": "node .claude/helpers/context-persistence-hook.mjs user-prompt-submit",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/context-persistence-hook.mjs user-prompt-submit",
+            "timeout": 5000
+          },
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/hook-handler.cjs anti-re-request",
             "timeout": 5000
           }
         ]
@@ -55,12 +75,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/helpers/hook-handler.cjs session-restore",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/hook-handler.cjs session-restore",
             "timeout": 15000
           },
           {
             "type": "command",
-            "command": "node .claude/helpers/auto-memory-hook.mjs import",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/auto-memory-hook.mjs import",
             "timeout": 8000
           }
         ]
@@ -71,7 +91,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/helpers/hook-handler.cjs session-end",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/hook-handler.cjs session-end",
             "timeout": 10000
           }
         ]
@@ -82,12 +102,22 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/helpers/hook-handler.cjs post-task",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/hook-handler.cjs post-task",
             "timeout": 5000
           },
           {
             "type": "command",
-            "command": "node .claude/helpers/auto-memory-hook.mjs sync",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/hook-handler.cjs enforce-final",
+            "timeout": 15000
+          },
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/hook-handler.cjs anti-re-request",
+            "timeout": 5000
+          },
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/auto-memory-hook.mjs sync",
             "timeout": 10000
           }
         ]
@@ -99,11 +129,11 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/helpers/hook-handler.cjs compact-manual"
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/hook-handler.cjs compact-manual"
           },
           {
             "type": "command",
-            "command": "node .claude/helpers/hook-handler.cjs session-end",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/hook-handler.cjs session-end",
             "timeout": 5000
           }
         ]
@@ -113,11 +143,11 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/helpers/hook-handler.cjs compact-auto"
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/hook-handler.cjs compact-auto"
           },
           {
             "type": "command",
-            "command": "node .claude/helpers/hook-handler.cjs session-end",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/hook-handler.cjs session-end",
             "timeout": 6000
           }
         ]
@@ -128,7 +158,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/helpers/hook-handler.cjs status",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/hook-handler.cjs status",
             "timeout": 3000
           }
         ]
@@ -139,7 +169,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/helpers/hook-handler.cjs post-task",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/hook-handler.cjs post-task",
+            "timeout": 5000
+          },
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/hook-handler.cjs anti-re-request",
             "timeout": 5000
           }
         ]
@@ -150,7 +185,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/helpers/hook-handler.cjs post-task",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/hook-handler.cjs post-task",
             "timeout": 5000
           }
         ]
@@ -159,7 +194,7 @@
   },
   "statusLine": {
     "type": "command",
-    "command": "node .claude/helpers/statusline.cjs"
+    "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/statusline.cjs"
   },
   "permissions": {
     "allow": [
@@ -311,6 +346,13 @@
       "scanOnEdit": true,
       "cveCheck": true,
       "threatModel": true
+    },
+    "enforcement": {
+      "enabled": true,
+      "thresholds": { "simple": 25, "moderate": 60 },
+      "securityFloor": "MODERATE",
+      "overrideAllowed": true,
+      "auditLog": ".claude-flow/enforcement/audit.jsonl"
     }
   }
 }

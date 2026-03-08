@@ -39,6 +39,10 @@ import { browserTools } from './mcp-tools/browser-tools.js';
 import { agentdbTools } from './mcp-tools/agentdb-tools.js';
 // First-class provider tools: Cursor, Codex, Gemini
 import { providerTools } from './mcp-tools/provider-tools.js';
+import { verificationGateTools } from './mcp-tools/verification-gate.js';
+import { planningSubflowTools } from './mcp-tools/planning-subflow.js';
+import { bugHunterTools } from './mcp-tools/bug-hunter.js';
+import { workflowEnforcerTools } from './mcp-tools/workflow-enforcer.js';
 
 /**
  * MCP Tool Registry
@@ -83,6 +87,12 @@ registerTools([
   ...agentdbTools,
   // First-class provider tools: Cursor, Codex, Gemini
   ...providerTools,
+  // Verification workflow tools
+  ...verificationGateTools,
+  ...planningSubflowTools,
+  ...bugHunterTools,
+  // Workflow enforcement tools
+  ...workflowEnforcerTools,
 ]);
 
 /**

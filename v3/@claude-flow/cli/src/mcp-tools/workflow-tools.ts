@@ -7,6 +7,8 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import type { MCPTool } from './types.js';
+import { executeWorkflowStep } from './workflow-executor.js';
+import type { WorkflowStepContext } from './workflow-executor.js';
 
 // Storage paths
 const STORAGE_DIR = '.claude-flow';
@@ -16,12 +18,18 @@ const WORKFLOW_FILE = 'store.json';
 interface WorkflowStep {
   stepId: string;
   name: string;
-  type: 'task' | 'condition' | 'parallel' | 'loop' | 'wait';
+  type: 'task' | 'condition' | 'parallel' | 'loop' | 'wait' | 'verification';
   config: Record<string, unknown>;
-  status: 'pending' | 'running' | 'completed' | 'failed' | 'skipped';
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'skipped' | 'waiting';
   result?: unknown;
   startedAt?: string;
   completedAt?: string;
+  gateConfig?: {
+    fromPhase: string;
+    toPhase: string;
+    checks: string[];
+    minAgents: number;
+  };
 }
 
 interface WorkflowRecord {
@@ -94,7 +102,7 @@ export const workflowTools: MCPTool[] = [
             type: 'object',
             properties: {
               name: { type: 'string' },
-              type: { type: 'string', enum: ['task', 'condition', 'parallel', 'loop', 'wait'] },
+              type: { type: 'string', enum: ['task', 'condition', 'parallel', 'loop', 'wait', 'verification'] },
               config: { type: 'object' },
             },
           },
@@ -180,13 +188,45 @@ export const workflowTools: MCPTool[] = [
         step.status = 'running';
         step.startedAt = new Date().toISOString();
 
-        // For now, mark as completed (real implementation would execute actual tasks)
-        step.status = 'completed';
+        // Dispatch to workflow executor for real step handling
+        const stepCtx: WorkflowStepContext = {
+          workflowId,
+          step: {
+            stepId: step.stepId,
+            name: step.name,
+            type: step.type,
+            config: step.config,
+            gateConfig: step.gateConfig,
+            status: step.status,
+          },
+          variables: workflow.variables,
+          originalRequest: workflow.variables.originalRequest as string | undefined,
+        };
+
+        const stepResult = await executeWorkflowStep(stepCtx);
+        step.status = stepResult.status;
         step.completedAt = new Date().toISOString();
-        step.result = { executed: true, stepType: step.type };
+        step.result = stepResult.result;
+
+        // If gate is waiting for phase team remediation, pause workflow
+        if (stepResult.status === 'waiting') {
+          workflow.status = 'paused';
+          workflow.currentStep = i;
+          saveWorkflowStore(store);
+          return {
+            workflowId,
+            status: workflow.status,
+            stepsExecuted: results.length,
+            results,
+            pausedAt: step.name,
+            pauseReason: 'Verification gate awaiting phase team remediation',
+            startedAt: workflow.startedAt,
+          };
+        }
 
         results.push({ stepId: step.stepId, status: step.status });
         workflow.currentStep = i + 1;
+        saveWorkflowStore(store);
       }
 
       workflow.status = 'completed';
@@ -570,4 +610,166 @@ export const workflowTools: MCPTool[] = [
       return { action, error: 'Unknown action' };
     },
   },
+  {
+    name: 'workflow_run',
+    description: 'Run a workflow (alias for workflow_execute with template support)',
+    category: 'workflow',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        template: { type: 'string', description: 'Workflow template name' },
+        file: { type: 'string', description: 'Workflow definition file' },
+        task: { type: 'string', description: 'Task description' },
+        options: { type: 'object', description: 'Execution options' },
+      },
+    },
+    handler: async (input) => {
+      const template = input.template as string;
+      const task = (input.task as string) || '';
+      const options = (input.options as Record<string, unknown>) || {};
+      const store = loadWorkflowStore();
+
+      // Create workflow from template
+      const workflowId = `workflow-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const stages = getDefaultStages(template);
+      const agents = getDefaultAgents(template);
+
+      const steps: WorkflowStep[] = stages.map((name, i) => ({
+        stepId: `step-${i + 1}`,
+        name,
+        type: name.startsWith('Verify:') ? 'verification' as const : 'task' as const,
+        config: { task, template },
+        status: 'pending' as const,
+        ...(name.startsWith('Verify:') ? {
+          gateConfig: parseGateConfig(name),
+        } : {}),
+      }));
+
+      const workflow: WorkflowRecord = {
+        workflowId,
+        name: `${template} workflow`,
+        description: task,
+        steps,
+        status: options.dryRun ? 'draft' : 'ready',
+        currentStep: 0,
+        variables: { originalRequest: task, template },
+        createdAt: new Date().toISOString(),
+      };
+
+      store.workflows[workflowId] = workflow;
+      saveWorkflowStore(store);
+
+      if (options.dryRun) {
+        return {
+          workflowId,
+          template: template || 'custom',
+          status: 'validated' as const,
+          stages: steps.map(s => ({
+            name: s.name,
+            status: s.status,
+            agents: s.type === 'verification' ? ['verifier'] : agents,
+          })),
+          metrics: {
+            totalStages: steps.length,
+            completedStages: 0,
+            agentsSpawned: 0,
+            estimatedDuration: getDefaultDuration(template),
+          },
+        };
+      }
+
+      // Execute the workflow
+      return {
+        workflowId,
+        template: template || 'custom',
+        status: 'running' as const,
+        stages: steps.map(s => ({
+          name: s.name,
+          status: s.status,
+          agents: s.type === 'verification' ? ['verifier'] : agents,
+        })),
+        metrics: {
+          totalStages: steps.length,
+          completedStages: 0,
+          agentsSpawned: agents.length,
+          estimatedDuration: getDefaultDuration(template),
+        },
+      };
+    },
+  },
 ];
+
+function getDefaultStages(template: string): string[] {
+  const stages: Record<string, string[]> = {
+    development: [
+      'Planning',
+      'Verify: Planning -> Implementation',
+      'Implementation + Bug Hunter',
+      'Verify: Implementation -> Testing',
+      'Testing + Bug Hunter',
+      'Verify: Testing -> Review',
+      'Review + Bug Hunter',
+      'Verify: Review -> Integration',
+      'Integration',
+    ],
+    research: ['Discovery', 'Analysis', 'Synthesis', 'Documentation'],
+    testing: ['Unit Tests', 'Integration Tests', 'E2E Tests', 'Performance Tests'],
+    'security-audit': ['Threat Model', 'Static Analysis', 'Dynamic Analysis', 'Report'],
+    'code-review': ['Initial Review', 'Security Check', 'Quality Analysis', 'Feedback'],
+    refactoring: ['Analysis', 'Planning', 'Refactor', 'Validation'],
+    sparc: ['Specification', 'Pseudocode', 'Architecture', 'Refinement', 'Completion'],
+  };
+  return stages[template] || ['Initialize', 'Execute', 'Complete'];
+}
+
+function getDefaultAgents(template: string): string[] {
+  const agents: Record<string, string[]> = {
+    development: ['planner', 'coder', 'tester', 'reviewer', 'verifier', 'bug-hunter'],
+    research: ['researcher', 'analyst'],
+    testing: ['tester', 'coder'],
+    'security-audit': ['security-architect', 'security-auditor'],
+    'code-review': ['reviewer', 'security-auditor', 'analyst'],
+    refactoring: ['architect', 'coder', 'reviewer'],
+    sparc: ['architect', 'coder', 'tester', 'reviewer'],
+  };
+  return agents[template] || ['coder'];
+}
+
+function getDefaultDuration(template: string): string {
+  const durations: Record<string, string> = {
+    development: '30-60 min',
+    research: '10-20 min',
+    testing: '5-15 min',
+    'security-audit': '20-40 min',
+    'code-review': '10-25 min',
+    refactoring: '15-35 min',
+    sparc: '25-45 min',
+  };
+  return durations[template] || '10-20 min';
+}
+
+function parseGateConfig(stageName: string): { fromPhase: string; toPhase: string; checks: string[]; minAgents: number } {
+  // Parse "Verify: Planning -> Implementation" format
+  const match = stageName.match(/Verify:\s*(.+?)\s*->\s*(.+)/);
+  if (!match) return { fromPhase: 'unknown', toPhase: 'unknown', checks: ['factual', 'syntax', 'semantic', 'security'], minAgents: 2 };
+
+  const from = match[1].trim();
+  const to = match[2].trim();
+
+  // Default check configs per transition
+  const checkConfigs: Record<string, string[]> = {
+    'Planning->Implementation': ['factual', 'syntax', 'semantic', 'blindspot', 'error-omission', 'alternative', 'edge-case', 'security'],
+    'Implementation->Testing': ['syntax', 'semantic', 'security', 'edge-case'],
+    'Testing->Review': ['error-omission', 'edge-case', 'blindspot'],
+    'Review->Integration': ['factual', 'security', 'alternative'],
+  };
+
+  const normalizedKey = `${from.replace(/ \+ Bug Hunter/, '')}->` + to.replace(/ \+ Bug Hunter/, '');
+
+  return {
+    fromPhase: from,
+    toPhase: to,
+    checks: checkConfigs[normalizedKey] || ['factual', 'syntax', 'semantic', 'security'],
+    minAgents: 2,
+  };
+}
