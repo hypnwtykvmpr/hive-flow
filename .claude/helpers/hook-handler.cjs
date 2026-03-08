@@ -213,6 +213,21 @@ const handlers = {
       console.log('| Memory Entries |     0 |');
       console.log('+----------------+-------+');
     }
+    // Check for termination marker from /terminate-agent
+    try {
+      const terminatedFile = path.join(process.cwd(), '.hive-flow', 'sessions', 'terminated.json');
+      if (fs.existsSync(terminatedFile)) {
+        const marker = JSON.parse(fs.readFileSync(terminatedFile, 'utf8'));
+        console.log('');
+        console.log(`[TERMINATED] Previous agent was forcefully killed by user at ${marker.at || 'unknown time'}.`);
+        console.log('[TERMINATED] Reason: ' + (marker.reason || 'User invoked /terminate-agent'));
+        console.log('[TERMINATED] All prior instructions are void. Await new instructions from user.');
+        console.log('');
+        // Clean up marker after reading
+        fs.unlinkSync(terminatedFile);
+      }
+    } catch { /* non-fatal */ }
+
     // Initialize intelligence graph after session restore
     if (intelligence && intelligence.init) {
       try {

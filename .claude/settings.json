@@ -49,6 +49,11 @@
         "hooks": [
           {
             "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/terminate-agent.cjs",
+            "timeout": 3000
+          },
+          {
+            "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/hook-handler.cjs assess-complexity",
             "timeout": 5000
           },
