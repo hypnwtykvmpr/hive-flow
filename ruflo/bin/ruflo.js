@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Ruflo CLI - thin wrapper around @claude-flow/cli with ruflo branding
+// HiveFlow CLI - thin wrapper around @claude-flow/cli with ruflo branding
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, resolve, join } from 'node:path';
 import { existsSync } from 'node:fs';
@@ -40,8 +40,8 @@ if (isMCPMode) {
   // CLI mode: use ruflo branding
   const { CLI } = await import(toImportURL(join(cliBase, 'dist', 'src', 'index.js')));
   const cli = new CLI({
-    name: 'ruflo',
-    description: 'Ruflo - AI Agent Orchestration Platform',
+    name: 'hiveflow',
+    description: 'HiveFlow - AI Agent Orchestration Platform',
   });
   cli.run().catch((error) => {
     console.error('Fatal error:', error.message);

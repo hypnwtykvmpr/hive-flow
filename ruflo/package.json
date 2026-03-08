@@ -1,20 +1,15 @@
 {
-  "name": "ruflo",
+  "name": "hiveflow",
   "version": "3.1.0-alpha.52",
-  "description": "Ruflo - Enterprise AI agent orchestration platform. Deploy 60+ specialized agents in coordinated swarms with self-learning, fault-tolerant consensus, vector memory, and MCP integration",
+  "description": "HiveFlow - Enterprise AI agent orchestration platform. Deploy 60+ specialized agents in coordinated swarms with self-learning, fault-tolerant consensus, vector memory, and MCP integration",
   "main": "bin/ruflo.js",
   "type": "module",
   "bin": {
-    "ruflo": "./bin/ruflo.js"
+    "hiveflow": "./bin/ruflo.js"
   },
-  "homepage": "https://github.com/ruvnet/claude-flow#readme",
+  "homepage": "https://github.com/hypnwtykvmpr/hiveflow#readme",
   "bugs": {
-    "url": "https://github.com/ruvnet/claude-flow/issues",
-    "email": "support@ruv.io"
-  },
-  "funding": {
-    "type": "github",
-    "url": "https://github.com/sponsors/ruvnet"
+    "url": "https://github.com/hypnwtykvmpr/hiveflow/issues"
   },
   "files": [
     "bin/**",
@@ -22,7 +17,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "preinstall": "node -e \"var f=require('fs'),p=require('path'),o=require('os'),h=o.homedir(),d=p.join(h,'.npm','_npx');try{if(f.existsSync(d))f.readdirSync(d).forEach(function(x){var nm=p.join(d,x,'node_modules');try{if(f.existsSync(nm))f.readdirSync(nm).forEach(function(e){if(e.charAt(0)==='.'&&e.indexOf('-')>0&&/[A-Za-z]{8}/.test(e)){try{var t=p.join(nm,e);if(f.statSync(t).isDirectory())f.rmSync(t,{recursive:true,force:true})}catch(x){}}})}catch(x){}})}catch(x){}try{var ci=p.join(h,'.npm','_cacache','index-v5');if(f.existsSync(ci)){(function walk(dir){f.readdirSync(dir).forEach(function(e){var fp=p.join(dir,e);try{if(f.statSync(fp).isDirectory())walk(fp);else{var c=f.readFileSync(fp,'utf-8');if(c.indexOf('claude-flow')!==-1||c.indexOf('ruflo')!==-1)f.unlinkSync(fp)}}catch(x){}});})(ci)}}catch(x){}\" || true"
+    "preinstall": "node -e \"var f=require('fs'),p=require('path'),o=require('os'),h=o.homedir(),d=p.join(h,'.npm','_npx');try{if(f.existsSync(d))f.readdirSync(d).forEach(function(x){var nm=p.join(d,x,'node_modules');try{if(f.existsSync(nm))f.readdirSync(nm).forEach(function(e){if(e.charAt(0)==='.'&&e.indexOf('-')>0&&/[A-Za-z]{8}/.test(e)){try{var t=p.join(nm,e);if(f.statSync(t).isDirectory())f.rmSync(t,{recursive:true,force:true})}catch(x){}}})}catch(x){}})}catch(x){}try{var ci=p.join(h,'.npm','_cacache','index-v5');if(f.existsSync(ci)){(function walk(dir){f.readdirSync(dir).forEach(function(e){var fp=p.join(dir,e);try{if(f.statSync(fp).isDirectory())walk(fp);else{var c=f.readFileSync(fp,'utf-8');if(c.indexOf('claude-flow')!==-1||c.indexOf('hiveflow')!==-1)f.unlinkSync(fp)}}catch(x){}});})(ci)}}catch(x){}\" || true"
   },
   "dependencies": {
     "@claude-flow/cli": ">=3.0.0-alpha.1"
@@ -32,11 +27,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/ruvnet/claude-flow.git",
+    "url": "https://github.com/hypnwtykvmpr/hiveflow.git",
     "directory": "ruflo"
   },
   "keywords": [
-    "ruflo",
+    "hiveflow",
     "claude-flow",
     "claude",
     "claude-code",
@@ -54,11 +49,12 @@
     "enterprise",
     "self-learning"
   ],
-  "author": {
-    "name": "RuvNet",
-    "email": "ruv@ruv.io",
-    "url": "https://ruv.io"
-  },
+  "contributors": [
+    {
+      "name": "RuvNet",
+      "url": "https://github.com/ruvnet"
+    }
+  ],
   "license": "MIT",
   "publishConfig": {
     "access": "public",

@@ -1,4 +1,4 @@
-# Claude Code Configuration - Claude Flow V3 CLI
+# Claude Code Configuration - HiveFlow CLI
 
 ## Scope
 This file contains CLI-specific guidance for `@claude-flow/cli`.
@@ -16,10 +16,10 @@ Use these defaults when initializing swarms from CLI:
 
 ```bash
 # 6-8 agents
-npx @claude-flow/cli@latest swarm init --topology hierarchical --max-agents 8 --strategy specialized
+npx @hiveflow/cli swarm init --topology hierarchical --max-agents 8 --strategy specialized
 
 # 10-15 agents
-npx @claude-flow/cli@latest swarm init --topology hierarchical-mesh --max-agents 15 --strategy specialized
+npx @hiveflow/cli swarm init --topology hierarchical-mesh --max-agents 15 --strategy specialized
 ```
 
 Common topologies:
@@ -66,11 +66,11 @@ Common topologies:
 ## Quick CLI Examples
 
 ```bash
-npx @claude-flow/cli@latest init --wizard
-npx @claude-flow/cli@latest daemon start
-npx @claude-flow/cli@latest swarm init --v3-mode
-npx @claude-flow/cli@latest memory search --query "authentication patterns"
-npx @claude-flow/cli@latest doctor --fix
+npx @hiveflow/cli init --wizard
+npx @hiveflow/cli daemon start
+npx @hiveflow/cli swarm init --v3-mode
+npx @hiveflow/cli memory search --query "authentication patterns"
+npx @hiveflow/cli doctor --fix
 ```
 
 ## Hooks System (27 Hooks + 12 Workers)
@@ -86,7 +86,7 @@ npx @claude-flow/cli@latest doctor --fix
 | Agent and model prep | `pretrain`, `build-agents`, `transfer` |
 | Utilities | `list`, `worker`, `statusline`, `coverage-route`, `coverage-suggest`, `coverage-gaps` |
 
-Use `npx @claude-flow/cli@latest hooks list --format table` for full hook detail.
+Use `npx @hiveflow/cli hooks list --format table` for full hook detail.
 
 ### Background Workers
 `ultralearn`, `optimize`, `consolidate`, `predict`, `audit`, `map`, `preload`, `deepdive`, `document`, `refactor`, `benchmark`, `testgaps`
@@ -95,70 +95,70 @@ Use `npx @claude-flow/cli@latest hooks list --format table` for full hook detail
 
 ```bash
 # Core lifecycle
-npx @claude-flow/cli@latest hooks pre-task --description "[task]"
-npx @claude-flow/cli@latest hooks post-task --task-id "[id]" --success true
-npx @claude-flow/cli@latest hooks post-edit --file "[file]" --train-neural true
+npx @hiveflow/cli hooks pre-task --description "[task]"
+npx @hiveflow/cli hooks post-task --task-id "[id]" --success true
+npx @hiveflow/cli hooks post-edit --file "[file]" --train-neural true
 
 # Session
-npx @claude-flow/cli@latest hooks session-start --session-id "[id]"
-npx @claude-flow/cli@latest hooks session-end --export-metrics true
-npx @claude-flow/cli@latest hooks session-restore --session-id "[id]"
+npx @hiveflow/cli hooks session-start --session-id "[id]"
+npx @hiveflow/cli hooks session-end --export-metrics true
+npx @hiveflow/cli hooks session-restore --session-id "[id]"
 
 # Routing/intelligence
-npx @claude-flow/cli@latest hooks route --task "[task]"
-npx @claude-flow/cli@latest hooks explain --topic "[topic]"
-npx @claude-flow/cli@latest hooks pretrain --model-type moe --epochs 10
+npx @hiveflow/cli hooks route --task "[task]"
+npx @hiveflow/cli hooks explain --topic "[topic]"
+npx @hiveflow/cli hooks pretrain --model-type moe --epochs 10
 
 # Worker and coverage operations
-npx @claude-flow/cli@latest hooks worker list
-npx @claude-flow/cli@latest hooks worker dispatch --trigger audit
-npx @claude-flow/cli@latest hooks coverage-gaps --format table
-npx @claude-flow/cli@latest hooks coverage-route --task "[task]"
+npx @hiveflow/cli hooks worker list
+npx @hiveflow/cli hooks worker dispatch --trigger audit
+npx @hiveflow/cli hooks coverage-gaps --format table
+npx @hiveflow/cli hooks coverage-route --task "[task]"
 
 # Statusline
-npx @claude-flow/cli@latest hooks statusline
-npx @claude-flow/cli@latest hooks statusline --json
+npx @hiveflow/cli hooks statusline
+npx @hiveflow/cli hooks statusline --json
 ```
 
 ## Migration (V2 to V3)
 
 ```bash
-npx @claude-flow/cli@latest migrate status
-npx @claude-flow/cli@latest migrate run --backup
-npx @claude-flow/cli@latest migrate rollback
-npx @claude-flow/cli@latest migrate validate
+npx @hiveflow/cli migrate status
+npx @hiveflow/cli migrate run --backup
+npx @hiveflow/cli migrate rollback
+npx @hiveflow/cli migrate validate
 ```
 
 ## Quick Setup
 
 ```bash
 # Add MCP servers (stdin-piped mode auto-detected)
-claude mcp add claude-flow -- npx -y @claude-flow/cli@latest
+claude mcp add hiveflow -- npx -y @hiveflow/cli
 claude mcp add ruv-swarm -- npx -y ruv-swarm mcp start
 claude mcp add flow-nexus -- npx -y flow-nexus@latest mcp start
 
 # Start services and verify
-npx @claude-flow/cli@latest daemon start
-npx @claude-flow/cli@latest doctor --fix
+npx @hiveflow/cli daemon start
+npx @hiveflow/cli doctor --fix
 ```
 
 ## Memory Commands Reference
 
 ```bash
 # Store (required: --key, --value; optional: --namespace, --ttl, --tags)
-npx @claude-flow/cli@latest memory store --key "pattern-auth" --value "JWT with refresh tokens" --namespace patterns
+npx @hiveflow/cli memory store --key "pattern-auth" --value "JWT with refresh tokens" --namespace patterns
 
 # Search (required: --query; optional: --namespace, --limit, --threshold)
-npx @claude-flow/cli@latest memory search --query "authentication patterns" --namespace patterns --limit 5
+npx @hiveflow/cli memory search --query "authentication patterns" --namespace patterns --limit 5
 
 # List (optional: --namespace, --limit)
-npx @claude-flow/cli@latest memory list --namespace patterns --limit 10
+npx @hiveflow/cli memory list --namespace patterns --limit 10
 
 # Retrieve (required: --key; optional: --namespace)
-npx @claude-flow/cli@latest memory retrieve --key "pattern-auth" --namespace patterns
+npx @hiveflow/cli memory retrieve --key "pattern-auth" --namespace patterns
 
 # Initialize
-npx @claude-flow/cli@latest memory init --force --verbose
+npx @hiveflow/cli memory init --force --verbose
 ```
 
 ## Environment Variables
@@ -184,7 +184,7 @@ CLAUDE_FLOW_MEMORY_PATH=./data/memory
 ```
 
 ## Doctor Health Checks
-Run `npx @claude-flow/cli@latest doctor` to validate:
+Run `npx @hiveflow/cli doctor` to validate:
 - Node.js and npm versions
 - Git and TypeScript availability
 - Config validity
@@ -194,7 +194,7 @@ Run `npx @claude-flow/cli@latest doctor` to validate:
 
 ## References
 - Full generated capabilities: `.claude-flow/CAPABILITIES.md`
-- Docs: https://github.com/ruvnet/claude-flow
-- Issues: https://github.com/ruvnet/claude-flow/issues
+- Docs: https://github.com/hypnwtykvmpr/hiveflow
+- Issues: https://github.com/hypnwtykvmpr/hiveflow/issues
 
 CLI coordinates; Claude Code executes.

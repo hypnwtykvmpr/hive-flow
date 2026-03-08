@@ -1,23 +1,23 @@
 {
-  "name": "@claude-flow/cli",
+  "name": "@hiveflow/cli",
   "version": "3.1.0-alpha.52",
   "type": "module",
-  "description": "Claude Flow CLI - Enterprise AI agent orchestration with 60+ specialized agents, swarm coordination, MCP server, self-learning hooks, and vector memory for Claude Code",
+  "description": "HiveFlow CLI - Enterprise AI agent orchestration with 60+ specialized agents, swarm coordination, MCP server, self-learning hooks, and vector memory for Claude Code",
   "main": "dist/src/index.js",
   "types": "dist/src/index.d.ts",
   "sideEffects": false,
   "bin": {
     "cli": "./bin/cli.js",
-    "claude-flow": "./bin/cli.js",
-    "claude-flow-mcp": "./bin/mcp-server.js"
+    "hiveflow": "./bin/cli.js",
+    "hiveflow-mcp": "./bin/mcp-server.js"
   },
-  "homepage": "https://github.com/ruvnet/claude-flow#readme",
+  "homepage": "https://github.com/hypnwtykvmpr/hiveflow#readme",
   "bugs": {
-    "url": "https://github.com/ruvnet/claude-flow/issues"
+    "url": "https://github.com/hypnwtykvmpr/hiveflow/issues"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/ruvnet/claude-flow.git",
+    "url": "https://github.com/hypnwtykvmpr/hiveflow.git",
     "directory": "v3/@claude-flow/cli"
   },
   "keywords": [
@@ -40,11 +40,12 @@
     "self-learning",
     "enterprise"
   ],
-  "author": {
-    "name": "RuvNet",
-    "email": "ruv@ruv.io",
-    "url": "https://ruv.io"
-  },
+  "contributors": [
+    {
+      "name": "RuvNet",
+      "url": "https://github.com/ruvnet"
+    }
+  ],
   "license": "MIT",
   "exports": {
     ".": {

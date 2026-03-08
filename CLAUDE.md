@@ -1,4 +1,4 @@
-# Claude Code Configuration - Claude Flow V3
+# Claude Code Configuration - HiveFlow
 
 ## Behavioral Rules (Always Enforced)
 
@@ -69,7 +69,7 @@ When spawning agents with the Task tool:
 
 ## External Agent Providers (Cursor-Agent, Codex CLI, Gemini CLI)
 
-Three external AI agent providers are integrated as first-class claude-flow agents. They are invoked EXCLUSIVELY through native MCP tools — never via terminal/bash commands.
+Three external AI agent providers are integrated as first-class HiveFlow agents. They are invoked EXCLUSIVELY through native MCP tools — never via terminal/bash commands.
 
 **CRITICAL TERMINOLOGY:**
 - **"Cursor"** = Cursor-Agent / Cursor-CLI (headless AI agent). NEVER the Cursor VS Code IDE fork.
@@ -192,11 +192,11 @@ Task("Reviewer", "Review code quality and security. Store findings in 'collabora
 
 // 🟢 Codex workers (implementation, optimization)
 // Spawn via CLI for Codex platform
-Bash("npx claude-flow-codex dual run --worker 'codex:coder:Implement the solution based on architect design' --namespace collaboration")
-Bash("npx claude-flow-codex dual run --worker 'codex:optimizer:Optimize performance based on implementation' --namespace collaboration")
+Bash("npx hiveflow-codex dual run --worker 'codex:coder:Implement the solution based on architect design' --namespace collaboration")
+Bash("npx hiveflow-codex dual run --worker 'codex:optimizer:Optimize performance based on implementation' --namespace collaboration")
 
 // STEP 3: Coordinate via shared memory
-Bash("npx claude-flow@v3alpha memory store --namespace collaboration --key 'task-context' --value '[task description]'")
+Bash("npx hiveflow memory store --namespace collaboration --key 'task-context' --value '[task description]'")
 ```
 
 ### Collaboration Templates (Pre-Built Pipelines)
@@ -212,12 +212,12 @@ Bash("npx claude-flow@v3alpha memory store --namespace collaboration --key 'task
 
 ```bash
 # Run a collaboration template
-npx claude-flow-codex dual run feature --task "Add user authentication with OAuth"
-npx claude-flow-codex dual run security --target "./src"
-npx claude-flow-codex dual run refactor --target "./src/legacy"
+npx hiveflow-codex dual run feature --task "Add user authentication with OAuth"
+npx hiveflow-codex dual run security --target "./src"
+npx hiveflow-codex dual run refactor --target "./src/legacy"
 
 # Custom multi-platform swarm
-npx claude-flow-codex dual run \
+npx hiveflow-codex dual run \
   --worker "claude:architect:Design the API structure" \
   --worker "codex:coder:Implement REST endpoints" \
   --worker "claude:tester:Write integration tests" \
@@ -225,10 +225,10 @@ npx claude-flow-codex dual run \
   --namespace "api-feature"
 
 # Check collaboration status
-npx claude-flow-codex dual status
+npx hiveflow-codex dual status
 
 # List available templates
-npx claude-flow-codex dual templates
+npx hiveflow-codex dual templates
 ```
 
 ### Shared Memory Coordination
@@ -237,13 +237,13 @@ All workers share state via the `collaboration` namespace:
 
 ```bash
 # Store context for cross-platform sharing
-npx claude-flow@v3alpha memory store --namespace collaboration --key "design-decisions" --value "..."
+npx hiveflow memory store --namespace collaboration --key "design-decisions" --value "..."
 
 # Search for patterns across all workers
-npx claude-flow@v3alpha memory search --namespace collaboration --query "authentication patterns"
+npx hiveflow memory search --namespace collaboration --query "authentication patterns"
 
 # Retrieve specific findings
-npx claude-flow@v3alpha memory retrieve --namespace collaboration --key "security-findings"
+npx hiveflow memory retrieve --namespace collaboration --key "security-findings"
 ```
 
 ### Cross-Platform Learning
@@ -252,13 +252,13 @@ Both platforms learn from each other's outputs:
 
 ```bash
 # After successful collaboration, train patterns
-npx claude-flow@v3alpha hooks post-task --task-id "dual-[id]" --success true --train-neural true
+npx hiveflow hooks post-task --task-id "dual-[id]" --success true --train-neural true
 
 # Store successful collaboration patterns
-npx claude-flow@v3alpha memory store --namespace patterns --key "dual-mode-[pattern]" --value "[what worked]"
+npx hiveflow memory store --namespace patterns --key "dual-mode-[pattern]" --value "[what worked]"
 
 # Transfer learnings to both platforms
-npx claude-flow@v3alpha hooks transfer store --pattern "dual-collab-success"
+npx hiveflow hooks transfer store --pattern "dual-collab-success"
 ```
 
 ### Worker Dependency Levels
@@ -321,7 +321,7 @@ mcp__ruv-swarm__swarm_init({
 
 // STEP 2: Spawn agents concurrently using Claude Code's Task tool
 // ALL Task calls MUST be in the SAME message for parallel execution
-Task("Coordinator", "You are the swarm coordinator. Initialize session, coordinate other agents via memory. Run: npx claude-flow@v3alpha hooks session-start", "hierarchical-coordinator")
+Task("Coordinator", "You are the swarm coordinator. Initialize session, coordinate other agents via memory. Run: npx hiveflow hooks session-start", "hierarchical-coordinator")
 Task("Researcher", "Analyze requirements and existing code patterns. Store findings in memory via hooks.", "researcher")
 Task("Architect", "Design implementation approach based on research. Document decisions in memory.", "system-architect")
 Task("Coder", "Implement the solution following architect's design. Coordinate via hooks.", "coder")
@@ -381,7 +381,7 @@ mcp__claude-flow__memory_usage({
 
 ## Project Configuration
 
-This project is configured with Claude Flow V3 (Anti-Drift Defaults):
+This project is configured with HiveFlow (Anti-Drift Defaults):
 - **Topology**: hierarchical (prevents drift via central coordination)
 - **Max Agents**: 8 (smaller team = less drift)
 - **Strategy**: specialized (clear roles, no overlap)
@@ -414,28 +414,28 @@ This project is configured with Claude Flow V3 (Anti-Drift Defaults):
 
 ```bash
 # Initialize project
-npx claude-flow@v3alpha init --wizard
+npx hiveflow init --wizard
 
 # Start daemon with background workers
-npx claude-flow@v3alpha daemon start
+npx hiveflow daemon start
 
 # Spawn an agent
-npx claude-flow@v3alpha agent spawn -t coder --name my-coder
+npx hiveflow agent spawn -t coder --name my-coder
 
 # Initialize swarm
-npx claude-flow@v3alpha swarm init --v3-mode
+npx hiveflow swarm init --v3-mode
 
 # Search memory (HNSW-indexed)
-npx claude-flow@v3alpha memory search -q "authentication patterns"
+npx hiveflow memory search -q "authentication patterns"
 
 # System diagnostics
-npx claude-flow@v3alpha doctor --fix
+npx hiveflow doctor --fix
 
 # Security scan
-npx claude-flow@v3alpha security scan --depth full
+npx hiveflow security scan --depth full
 
 # Performance benchmark
-npx claude-flow@v3alpha performance benchmark --suite all
+npx hiveflow performance benchmark --suite all
 ```
 
 ## Headless Background Instances (claude -p)
@@ -543,11 +543,11 @@ const config = optimizer.getOptimalConfig(agentCount);
 
 ## Agent Teams (Multi-Agent Coordination)
 
-Claude Code's experimental Agent Teams feature is fully integrated with Claude Flow for advanced multi-agent coordination.
+Claude Code's experimental Agent Teams feature is fully integrated with HiveFlow for advanced multi-agent coordination.
 
 ### Enabling Agent Teams
 
-Agent Teams is automatically enabled when you run `npx claude-flow@v3alpha init`. The following is added to `.claude/settings.json`:
+Agent Teams is automatically enabled when you run `npx hiveflow init`. The following is added to `.claude/settings.json`:
 
 ```json
 {
@@ -617,10 +617,10 @@ Task({
 
 ```bash
 # Handle idle teammate (auto-assigns available tasks)
-npx claude-flow@v3alpha hooks teammate-idle --auto-assign true
+npx hiveflow hooks teammate-idle --auto-assign true
 
 # Handle task completion (trains patterns, notifies lead)
-npx claude-flow@v3alpha hooks task-completed -i task-123 --train-patterns true
+npx hiveflow hooks task-completed -i task-123 --train-patterns true
 
 # Check on team progress
 TaskList
@@ -696,15 +696,15 @@ The 4-step intelligence pipeline:
 
 ```bash
 # Add MCP servers
-claude mcp add claude-flow npx claude-flow@v3alpha mcp start
+claude mcp add hiveflow npx hiveflow mcp start
 claude mcp add ruv-swarm npx ruv-swarm mcp start  # Optional
 claude mcp add flow-nexus npx flow-nexus@latest mcp start  # Optional
 
 # Start daemon
-npx claude-flow@v3alpha daemon start
+npx hiveflow daemon start
 
 # Run doctor
-npx claude-flow@v3alpha doctor --fix
+npx hiveflow doctor --fix
 ```
 
 ## Claude Code vs MCP Tools
@@ -731,10 +731,10 @@ npx claude-flow@v3alpha doctor --fix
 
 ### Publishing Rules
 
-- MUST publish ALL THREE packages when publishing CLI changes: `@claude-flow/cli`, `claude-flow`, AND `ruflo`
-- MUST update ALL dist-tags for ALL THREE packages after publishing
-- Publish order: `@claude-flow/cli` first, then `claude-flow` (umbrella), then `ruflo` (alias umbrella)
-- MUST run verification for ALL THREE before telling user publishing is complete
+- MUST publish BOTH packages when publishing CLI changes: `@claude-flow/cli` AND `hiveflow`
+- MUST update ALL dist-tags for BOTH packages after publishing
+- Publish order: `@claude-flow/cli` first, then `hiveflow` (umbrella)
+- MUST run verification for BOTH before telling user publishing is complete
 
 ```bash
 # STEP 1: Build and publish CLI
@@ -744,45 +744,32 @@ npm run build
 npm publish --tag alpha
 npm dist-tag add @claude-flow/cli@3.0.0-alpha.XXX latest
 
-# STEP 2: Publish claude-flow umbrella
-cd /workspaces/claude-flow
-npm version 3.0.0-alpha.XXX --no-git-tag-version
-npm publish --tag v3alpha
-
-# STEP 3: Update ALL claude-flow umbrella tags (CRITICAL - DON'T SKIP!)
-npm dist-tag add claude-flow@3.0.0-alpha.XXX latest
-npm dist-tag add claude-flow@3.0.0-alpha.XXX alpha
-
-# STEP 4: Publish ruflo umbrella (CRITICAL - DON'T FORGET!)
-cd /workspaces/claude-flow/ruflo
+# STEP 2: Publish hiveflow umbrella
+cd /workspaces/hiveflow
 npm version 3.0.0-alpha.XXX --no-git-tag-version
 npm publish --tag alpha
-npm dist-tag add ruflo@3.0.0-alpha.XXX latest
+
+# STEP 3: Update ALL hiveflow umbrella tags (CRITICAL - DON'T SKIP!)
+npm dist-tag add hiveflow@3.0.0-alpha.XXX latest
+npm dist-tag add hiveflow@3.0.0-alpha.XXX alpha
 ```
 
 **Verification (run before telling user):**
 ```bash
 npm view @claude-flow/cli dist-tags --json
-npm view claude-flow dist-tags --json
-npm view ruflo dist-tags --json
-# ALL THREE packages need: alpha AND latest pointing to newest version
+npm view hiveflow dist-tags --json
+# Both packages need: alpha AND latest pointing to newest version
 ```
 
 ### All Tags That Must Be Updated
 | Package | Tag | Command Users Run |
 |---------|-----|-------------------|
-| `@claude-flow/cli` | `alpha` | `npx @claude-flow/cli@alpha` |
-| `@claude-flow/cli` | `latest` | `npx @claude-flow/cli@latest` |
-| `@claude-flow/cli` | `v3alpha` | `npx @claude-flow/cli@v3alpha` |
-| `claude-flow` | `alpha` | `npx claude-flow@alpha` — EASY TO FORGET |
-| `claude-flow` | `latest` | `npx claude-flow@latest` |
-| `claude-flow` | `v3alpha` | `npx claude-flow@v3alpha` |
-| `ruflo` | `alpha` | `npx ruflo@alpha` — EASY TO FORGET |
-| `ruflo` | `latest` | `npx ruflo@latest` |
+| `@claude-flow/cli` | `alpha` | `npx @hiveflow/cli` |
+| `@claude-flow/cli` | `latest` | `npx @hiveflow/cli` |
+| `hiveflow` | `alpha` | `npx hiveflow` — EASY TO FORGET |
+| `hiveflow` | `latest` | `npx hiveflow` |
 
-- Never forget the `ruflo` package — it's a thin wrapper users run via `npx ruflo@alpha`
-- Never forget the umbrella `alpha` tag — users run `npx claude-flow@alpha`
-- `ruflo` source is in `/ruflo/` — it depends on `@claude-flow/cli`
+- Never forget the umbrella `alpha` tag — users run `npx hiveflow`
 
 ## Optional Plugins (20 Available)
 
@@ -790,14 +777,14 @@ Plugins are distributed via IPFS and can be installed with the CLI. Browse and i
 
 ```bash
 # List all available plugins
-npx claude-flow@v3alpha plugins list
+npx hiveflow plugins list
 
 # Install a plugin
-npx claude-flow@v3alpha plugins install @claude-flow/plugin-name
+npx hiveflow plugins install @claude-flow/plugin-name
 
 # Enable/disable
-npx claude-flow@v3alpha plugins enable @claude-flow/plugin-name
-npx claude-flow@v3alpha plugins disable @claude-flow/plugin-name
+npx hiveflow plugins enable @claude-flow/plugin-name
+npx hiveflow plugins disable @claude-flow/plugin-name
 ```
 
 ### Core Plugins
@@ -813,9 +800,9 @@ npx claude-flow@v3alpha plugins disable @claude-flow/plugin-name
 
 ## Support
 
-- Documentation: https://github.com/ruvnet/claude-flow
-- Issues: https://github.com/ruvnet/claude-flow/issues
+- Documentation: https://github.com/hypnwtykvmpr/hiveflow
+- Issues: https://github.com/hypnwtykvmpr/hiveflow/issues
 
 ---
 
-Remember: **Claude Flow coordinates, Claude Code creates!**
+Remember: **HiveFlow coordinates, Claude Code creates!**

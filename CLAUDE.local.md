@@ -26,16 +26,16 @@ Security: NEVER hardcode API keys. Source from .env at runtime. NEVER commit .en
 
 ## Doctor Health Checks
 
-`npx claude-flow@v3alpha doctor` checks: Node 20+, npm 9+, git, config, daemon, memory DB, API keys, MCP servers, disk space, TypeScript.
+`npx hiveflow doctor` checks: Node 20+, npm 9+, git, config, daemon, memory DB, API keys, MCP servers, disk space, TypeScript.
 
 ## Hooks Quick Reference
 
 ```bash
-npx claude-flow@v3alpha hooks pre-task --description "[task]"
-npx claude-flow@v3alpha hooks post-task --task-id "[id]" --success true
-npx claude-flow@v3alpha hooks session-start --session-id "[id]"
-npx claude-flow@v3alpha hooks route --task "[task]"
-npx claude-flow@v3alpha hooks worker list
+npx hiveflow hooks pre-task --description "[task]"
+npx hiveflow hooks post-task --task-id "[id]" --success true
+npx hiveflow hooks session-start --session-id "[id]"
+npx hiveflow hooks route --task "[task]"
+npx hiveflow hooks worker list
 ```
 
 ## Intelligence System (RuVector)

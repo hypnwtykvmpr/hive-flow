@@ -1,44 +1,33 @@
-# Ruflo
+# HiveFlow
 
 Enterprise AI agent orchestration platform. Deploy 60+ specialized agents in coordinated swarms with self-learning, fault-tolerant consensus, vector memory, and MCP integration.
-
-**Ruflo** is the new name for [claude-flow](https://www.npmjs.com/package/claude-flow). Both packages are fully supported.
 
 ## Install
 
 ```bash
 # Quick start
-npx ruflo@latest init --wizard
+npx hiveflow init --wizard
 
 # Global install
-npm install -g ruflo
+npm install -g hiveflow
 
 # Add as MCP server
-claude mcp add ruflo -- npx -y ruflo@latest mcp start
+claude mcp add hiveflow -- npx -y hiveflow mcp start
 ```
 
 ## Usage
 
 ```bash
-ruflo init --wizard          # Initialize project
-ruflo agent spawn -t coder   # Spawn an agent
-ruflo swarm init             # Start a swarm
-ruflo memory search -q "..."  # Search vector memory
-ruflo doctor                 # System diagnostics
+hiveflow init --wizard          # Initialize project
+hiveflow agent spawn -t coder   # Spawn an agent
+hiveflow swarm init             # Start a swarm
+hiveflow memory search -q "..."  # Search vector memory
+hiveflow doctor                 # System diagnostics
 ```
 
-## Relationship to claude-flow
+## Acknowledgments
 
-| Package | npm | CLI Command |
-|---------|-----|-------------|
-| `ruflo` | [npmjs.com/package/ruflo](https://www.npmjs.com/package/ruflo) | `ruflo` |
-| `claude-flow` | [npmjs.com/package/claude-flow](https://www.npmjs.com/package/claude-flow) | `claude-flow` |
-
-Both packages use `@claude-flow/cli` under the hood. Choose whichever you prefer.
-
-## Documentation
-
-Full documentation: [github.com/ruvnet/claude-flow](https://github.com/ruvnet/claude-flow)
+Forked from [claude-flow](https://github.com/ruvnet/claude-flow) by [RuvNet](https://github.com/ruvnet).
 
 ## License
 
