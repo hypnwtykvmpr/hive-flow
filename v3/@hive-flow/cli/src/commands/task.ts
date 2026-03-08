@@ -414,17 +414,28 @@ const statusCommand: Command = {
         return { success: true, data: result };
       }
 
+      if (result.status === 'not_found') {
+        output.printError(`Task not found: ${taskId}`);
+        return { success: false, exitCode: 1 };
+      }
+
+      const assignedTo = Array.isArray(result.assignedTo) ? result.assignedTo : [];
+      const dependencies = Array.isArray(result.dependencies) ? result.dependencies : [];
+      const dependents = Array.isArray(result.dependents) ? result.dependents : [];
+      const tags = Array.isArray(result.tags) ? result.tags : [];
+      const progress = Number.isFinite(result.progress) ? result.progress : 0;
+
       output.writeln();
       output.printBox(
         [
-          `Type:        ${result.type}`,
+          `Type:        ${result.type || 'unknown'}`,
           `Status:      ${formatStatus(result.status)}`,
           `Priority:    ${formatPriority(result.priority)}`,
-          `Progress:    ${result.progress}%`,
+          `Progress:    ${progress}%`,
           '',
-          `Description: ${result.description}`
+          `Description: ${result.description || '-'}`
         ].join('\n'),
-        `Task: ${result.id}`
+        `Task: ${result.id || taskId}`
       );
 
       // Assignment info
@@ -436,11 +447,11 @@ const statusCommand: Command = {
           { key: 'value', header: 'Value', width: 40 }
         ],
         data: [
-          { property: 'Assigned To', value: result.assignedTo?.join(', ') || 'Unassigned' },
+          { property: 'Assigned To', value: assignedTo.join(', ') || 'Unassigned' },
           { property: 'Parent Task', value: result.parentId || 'None' },
-          { property: 'Dependencies', value: result.dependencies.join(', ') || 'None' },
-          { property: 'Dependents', value: result.dependents.join(', ') || 'None' },
-          { property: 'Tags', value: result.tags.join(', ') || 'None' }
+          { property: 'Dependencies', value: dependencies.join(', ') || 'None' },
+          { property: 'Dependents', value: dependents.join(', ') || 'None' },
+          { property: 'Tags', value: tags.join(', ') || 'None' }
         ]
       });
 
