@@ -117,7 +117,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: v3-build-${{ matrix.os }}
-          path: v3/@claude-flow/*/dist/
+          path: v3/@hive-flow/*/dist/
 
   publish:
     name: Publish to npm (alpha)
