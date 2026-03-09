@@ -215,16 +215,20 @@ const handlers = {
     }
     // Check for termination marker from /terminate-agent
     try {
-      const terminatedFile = path.join(process.cwd(), '.hive-flow', 'sessions', 'terminated.json');
+      const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+      const terminatedFile = path.join(projectDir, '.hive-flow', 'sessions', 'terminated.json');
       if (fs.existsSync(terminatedFile)) {
         const marker = JSON.parse(fs.readFileSync(terminatedFile, 'utf8'));
         console.log('');
-        console.log(`[TERMINATED] Previous agent was forcefully killed by user at ${marker.at || 'unknown time'}.`);
+        console.log(`[TERMINATED] Previous agent was terminated by user at ${marker.at || 'unknown time'}.`);
         console.log('[TERMINATED] Reason: ' + (marker.reason || 'User invoked /terminate-agent'));
         console.log('[TERMINATED] All prior instructions are void. Await new instructions from user.');
         console.log('');
-        // Clean up marker after reading
-        fs.unlinkSync(terminatedFile);
+        // Only unlink if handoff is fully consumed (both flags false)
+        // If handoff is still pending, leave the marker for terminate-agent.cjs to process
+        if (marker.pendingUserAck === false && marker.pendingPromptInjection === false) {
+          fs.unlinkSync(terminatedFile);
+        }
       }
     } catch { /* non-fatal */ }
 
