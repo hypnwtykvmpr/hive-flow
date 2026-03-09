@@ -187,12 +187,12 @@ function hookCmdEsm(script: string, subcommand: string): string {
 
 /** Shorthand for CJS hook-handler commands */
 function hookHandlerCmd(subcommand: string): string {
-  return hookCmd('.claude/helpers/hook-handler.cjs', subcommand);
+  return hookCmd('"$CLAUDE_PROJECT_DIR/.claude/helpers/hook-handler.cjs"', subcommand);
 }
 
 /** Shorthand for ESM auto-memory-hook commands */
 function autoMemoryCmd(subcommand: string): string {
-  return hookCmdEsm('.claude/helpers/auto-memory-hook.mjs', subcommand);
+  return hookCmdEsm('"$CLAUDE_PROJECT_DIR/.claude/helpers/auto-memory-hook.mjs"', subcommand);
 }
 
 /**
@@ -207,7 +207,7 @@ function generateStatusLineConfig(_options: InitOptions): object {
   // directly for statusline commands, and `cmd /c` blocks stdin forwarding.
   return {
     type: 'command',
-    command: `node .claude/helpers/statusline.cjs`,
+    command: `node "$CLAUDE_PROJECT_DIR/.claude/helpers/statusline.cjs"`,
   };
 }
 
