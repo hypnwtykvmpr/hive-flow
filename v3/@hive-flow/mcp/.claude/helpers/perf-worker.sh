@@ -66,8 +66,8 @@ benchmark_memory() {
 benchmark_startup() {
   local start=$(date +%s%3N)
 
-  # Quick check of agentic-flow responsiveness
-  timeout 5 npx agentic-flow@alpha --version >/dev/null 2>&1 || true
+  # Quick check of hive-flow CLI responsiveness
+  timeout 5 node "$PROJECT_ROOT/v3/@hive-flow/cli/bin/cli.js" --version >/dev/null 2>&1 || true
 
   local end=$(date +%s%3N)
   local duration=$((end - start))
@@ -112,11 +112,11 @@ run_benchmarks() {
   date +%s > "$LAST_RUN_FILE"
 }
 
-# Spawn agentic-flow performance agent for deep analysis
+# Spawn hive-flow performance agent for deep analysis
 run_deep_benchmark() {
-  echo "[$(date +%H:%M:%S)] Spawning performance-benchmarker agent..."
+  echo "[$(date +%H:%M:%S)] Spawning perf-analyzer agent..."
 
-  npx agentic-flow@alpha --agent perf-analyzer --task "Analyze current system performance and update metrics" 2>/dev/null &
+  node "$PROJECT_ROOT/v3/@hive-flow/cli/bin/cli.js" agent spawn -t perf-analyzer --task "Analyze current system performance and update metrics" 2>/dev/null &
   local pid=$!
 
   # Don't wait, let it run in background

@@ -7,7 +7,7 @@
  * @module @hive-flow/providers/types
  */
 
-import { EventEmitter } from 'events';
+import { EventEmitter } from 'node:events';
 
 // ===== PROVIDER TYPES =====
 

@@ -536,40 +536,62 @@ const execCommand: Command = {
       short: 'p',
       description: 'Tool parameters (JSON)',
       type: 'string'
+    },
+    {
+      name: 'json',
+      description: 'Output pure JSON only (no decorative output)',
+      type: 'boolean',
+      default: false
     }
   ],
   examples: [
-    { command: 'hive-flow mcp exec -t swarm_init -p \'{"topology":"mesh"}\'', description: 'Execute tool' }
+    { command: 'hive-flow mcp exec -t swarm_init -p \'{"topology":"mesh"}\'', description: 'Execute tool' },
+    { command: 'hive-flow mcp exec -t swarm_init --json', description: 'Execute tool with pure JSON output' }
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     const tool = ctx.flags.tool as string || ctx.args[0];
     const paramsStr = ctx.flags.params as string;
+    const jsonMode = !!(ctx.flags.json || ctx.flags.format === 'json');
 
     if (!tool) {
-      output.printError('Tool name is required. Use --tool or -t');
+      if (jsonMode) {
+        output.writeln(JSON.stringify({ error: 'Tool name is required. Use --tool or -t' }));
+      } else {
+        output.printError('Tool name is required. Use --tool or -t');
+      }
       return { success: false, exitCode: 1 };
     }
 
-    let params = {};
+    let params: Record<string, unknown> = {};
     if (paramsStr) {
       try {
         params = JSON.parse(paramsStr);
       } catch (e) {
-        output.printError('Invalid JSON parameters');
+        if (jsonMode) {
+          output.writeln(JSON.stringify({ error: 'Invalid JSON parameters', tool }));
+        } else {
+          output.printError('Invalid JSON parameters');
+        }
         return { success: false, exitCode: 1 };
       }
     }
 
-    output.printInfo(`Executing tool: ${tool}`);
+    if (!jsonMode) {
+      output.printInfo(`Executing tool: ${tool}`);
 
-    if (Object.keys(params).length > 0) {
-      output.writeln(output.dim(`  Parameters: ${JSON.stringify(params)}`));
+      if (Object.keys(params).length > 0) {
+        output.writeln(output.dim(`  Parameters: ${JSON.stringify(params)}`));
+      }
     }
 
     try {
       // Execute through local MCP tool registry
       if (!hasTool(tool)) {
-        output.printError(`Tool not found: ${tool}`);
+        if (jsonMode) {
+          output.writeln(JSON.stringify({ error: `Tool not found: ${tool}`, tool, params }));
+        } else {
+          output.printError(`Tool not found: ${tool}`);
+        }
         return { success: false, exitCode: 1 };
       }
 
@@ -580,12 +602,11 @@ const execCommand: Command = {
       });
       const duration = performance.now() - startTime;
 
-      output.writeln();
-      output.printSuccess(`Tool executed in ${duration.toFixed(2)}ms`);
-
-      if (ctx.flags.format === 'json') {
-        output.printJson({ tool, params, result, duration });
+      if (jsonMode) {
+        output.writeln(JSON.stringify({ tool, params, result, duration }));
       } else {
+        output.writeln();
+        output.printSuccess(`Tool executed in ${duration.toFixed(2)}ms`);
         output.writeln();
         output.writeln(output.bold('Result:'));
         output.printJson(result);
@@ -593,7 +614,11 @@ const execCommand: Command = {
 
       return { success: true, data: { tool, params, result, duration } };
     } catch (error) {
-      output.printError(`Tool execution failed: ${(error as Error).message}`);
+      if (jsonMode) {
+        output.writeln(JSON.stringify({ error: (error as Error).message, tool, params }));
+      } else {
+        output.printError(`Tool execution failed: ${(error as Error).message}`);
+      }
       return { success: false, exitCode: 1 };
     }
   }

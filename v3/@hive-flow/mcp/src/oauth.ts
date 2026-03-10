@@ -6,6 +6,7 @@
 
 import { EventEmitter } from 'events';
 import * as crypto from 'crypto';
+import { ErrorCodes } from './types.js';
 import type { ILogger } from './types.js';
 
 /**
@@ -394,7 +395,7 @@ export function oauthMiddleware(oauthManager: OAuthManager, storageKey: string =
         jsonrpc: '2.0',
         id: null,
         error: {
-          code: -32000,
+          code: ErrorCodes.AUTHENTICATION_REQUIRED,
           message: 'Unauthorized - OAuth authentication required',
         },
       });

@@ -191,7 +191,10 @@ export class WorkflowEngine {
    */
   async pauseWorkflow(workflowId: string): Promise<void> {
     const execution = this.workflows.get(workflowId);
-    if (execution && execution.state.status === 'in-progress') {
+    if (
+      execution &&
+      (execution.state.status === 'in-progress' || execution.state.status === 'completed')
+    ) {
       execution.state.status = 'paused';
       execution.eventLog.push({
         timestamp: Date.now(),
@@ -207,7 +210,9 @@ export class WorkflowEngine {
   async resumeWorkflow(workflowId: string): Promise<void> {
     const execution = this.workflows.get(workflowId);
     if (execution && execution.state.status === 'paused') {
-      execution.state.status = 'in-progress';
+      const allTasksCompleted =
+        execution.state.completedTasks.length >= execution.state.tasks.length;
+      execution.state.status = allTasksCompleted ? 'completed' : 'in-progress';
       execution.eventLog.push({
         timestamp: Date.now(),
         event: 'workflow:resumed',
@@ -370,6 +375,7 @@ export class WorkflowEngine {
   ): Promise<WorkflowResult> {
     const tasks = workflow.tasks.map(t => new Task(t));
     const completedTasks = new Set<string>();
+    let tasksCompleted = 0;
     const errors: Error[] = [];
 
     // Resolve execution order
@@ -390,12 +396,15 @@ export class WorkflowEngine {
       const startTime = Date.now();
 
       try {
+        let nestedCompletedTasks = 0;
+
         // Handle nested workflows
         if (task.isWorkflow() && task.workflow) {
           const nestedResult = await this.executeWorkflow(task.workflow);
           if (nestedResult.status === 'failed') {
             throw new Error(`Nested workflow failed`);
           }
+          nestedCompletedTasks = nestedResult.tasksCompleted || 0;
         } else {
           // Get assigned agent or distribute
           let agentId = task.assignedTo;
@@ -426,6 +435,9 @@ export class WorkflowEngine {
         execution.state.completedTasks.push(task.id);
         execution.executionOrder.push(task.id);
 
+        // Count completed work, including nested workflow tasks when present.
+        tasksCompleted += task.isWorkflow() ? nestedCompletedTasks : 1;
+
         this.eventBus.emit('workflow:taskComplete', {
           workflowId: workflow.id,
           taskId: task.id
@@ -451,7 +463,7 @@ export class WorkflowEngine {
     return {
       id: workflow.id,
       status: errors.length > 0 ? 'failed' : 'completed',
-      tasksCompleted: completedTasks.size,
+      tasksCompleted,
       errors,
       executionOrder: execution.executionOrder,
       duration: execution.state.completedAt - (execution.state.startedAt || 0)

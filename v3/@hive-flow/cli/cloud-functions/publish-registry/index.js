@@ -40,7 +40,7 @@ async function getSecret(name) {
  */
 async function signRegistry(registry, privateKeyHex) {
   const privateKey = Buffer.from(privateKeyHex, 'hex');
-  const publicKey = await ed.getPublicKeyAsync(privateKey);
+  const publicKey = ed.getPublicKey(privateKey);
 
   // Create copy without signature fields
   const registryToSign = { ...registry };

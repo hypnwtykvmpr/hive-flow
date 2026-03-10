@@ -38,6 +38,18 @@ try {
 import { randomUUID } from 'crypto';
 import { listMCPTools, callMCPTool, hasTool } from '../dist/src/mcp-client.js';
 
+/**
+ * JSON-RPC error codes (MCP / JSON-RPC 2.0 spec)
+ * Mirrors @hive-flow/mcp ErrorCodes — kept local to avoid cross-package import.
+ */
+const ErrorCodes = {
+  PARSE_ERROR: -32700,
+  INVALID_REQUEST: -32600,
+  METHOD_NOT_FOUND: -32601,
+  INVALID_PARAMS: -32602,
+  INTERNAL_ERROR: -32603,
+};
+
 const VERSION = '3.0.0';
 const sessionId = `mcp-${Date.now()}-${randomUUID().slice(0, 8)}`;
 
@@ -84,7 +96,7 @@ process.stdin.on('data', async (chunk) => {
         console.log(JSON.stringify({
           jsonrpc: '2.0',
           id: null,
-          error: { code: -32700, message: 'Parse error' },
+          error: { code: ErrorCodes.PARSE_ERROR, message: 'Parse error' },
         }));
       }
     }
@@ -117,7 +129,7 @@ async function handleMessage(message) {
     return {
       jsonrpc: '2.0',
       id: message.id,
-      error: { code: -32600, message: 'Invalid Request: missing method' },
+      error: { code: ErrorCodes.INVALID_REQUEST, message: 'Invalid Request: missing method' },
     };
   }
 
@@ -162,7 +174,7 @@ async function handleMessage(message) {
           return {
             jsonrpc: '2.0',
             id: message.id,
-            error: { code: -32601, message: `Tool not found: ${toolName}` },
+            error: { code: ErrorCodes.METHOD_NOT_FOUND, message: `Tool not found: ${toolName}` },
           };
         }
 
@@ -178,7 +190,7 @@ async function handleMessage(message) {
             jsonrpc: '2.0',
             id: message.id,
             error: {
-              code: -32603,
+              code: ErrorCodes.INTERNAL_ERROR,
               message: error instanceof Error ? error.message : 'Tool execution failed',
             },
           };
@@ -200,7 +212,7 @@ async function handleMessage(message) {
         return {
           jsonrpc: '2.0',
           id: message.id,
-          error: { code: -32601, message: `Method not found: ${message.method}` },
+          error: { code: ErrorCodes.METHOD_NOT_FOUND, message: `Method not found: ${message.method}` },
         };
     }
   } catch (error) {
@@ -209,7 +221,7 @@ async function handleMessage(message) {
       jsonrpc: '2.0',
       id: message.id,
       error: {
-        code: -32603,
+        code: ErrorCodes.INTERNAL_ERROR,
         message: error instanceof Error ? error.message : 'Internal error',
       },
     };

@@ -22,6 +22,15 @@ import { readFileSync, writeFileSync, mkdirSync, renameSync, existsSync, rmdirSy
 import { join, dirname } from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 
+// ===== Stderr Logger (prevents provider logs from corrupting stdout JSON) =====
+
+const stderrLogger = {
+  info:  (msg, meta) => process.stderr.write(`[INFO] ${msg} ${meta ? JSON.stringify(meta) : ''}\n`),
+  warn:  (msg, meta) => process.stderr.write(`[WARN] ${msg} ${meta ? JSON.stringify(meta) : ''}\n`),
+  error: (msg, err)  => process.stderr.write(`[ERROR] ${msg} ${err || ''}\n`),
+  debug: (msg, meta) => process.stderr.write(`[DEBUG] ${msg} ${meta ? JSON.stringify(meta) : ''}\n`),
+};
+
 // ===== Constants =====
 
 const MAX_HISTORY_ENTRIES = 50;
@@ -197,6 +206,73 @@ function createProviderConfig(providerName, model) {
   };
 }
 
+// ===== MCP Tool Execution =====
+
+let _mcpClient = null;
+
+async function loadMCPClient() {
+  if (_mcpClient) return _mcpClient;
+
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = dirname(__filename);
+  // Relative path: providers/scripts/ -> cli/dist/src/mcp-client.js
+  const mcpClientPath = join(__dirname, '..', '..', 'cli', 'dist', 'src', 'mcp-client.js');
+
+  if (existsSync(mcpClientPath)) {
+    _mcpClient = await import(pathToFileURL(mcpClientPath).href);
+    return _mcpClient;
+  }
+
+  // Fallback: try package import
+  try {
+    _mcpClient = await import('@hive-flow/cli/mcp-client');
+    return _mcpClient;
+  } catch {
+    // Final fallback
+    try {
+      _mcpClient = await import('@hive-flow/cli');
+      return _mcpClient;
+    } catch {
+      return null;
+    }
+  }
+}
+
+async function executeMCPTool(toolName, toolArgs) {
+  const mcpClient = await loadMCPClient();
+
+  if (!mcpClient || !mcpClient.callMCPTool) {
+    stderrLogger.warn(`MCP client unavailable — cannot execute tool: ${toolName}`);
+    return {
+      status: 'error',
+      error: `MCP client not available. Tool '${toolName}' was not executed.`,
+    };
+  }
+
+  let parsedArgs;
+  if (typeof toolArgs === 'string') {
+    try {
+      parsedArgs = JSON.parse(toolArgs);
+    } catch {
+      parsedArgs = {};
+    }
+  } else {
+    parsedArgs = toolArgs || {};
+  }
+
+  try {
+    const result = await mcpClient.callMCPTool(toolName, parsedArgs);
+    return result;
+  } catch (err) {
+    stderrLogger.error(`Tool execution failed: ${toolName}`, err.message || err);
+    return {
+      status: 'error',
+      error: err.message || String(err),
+      tool: toolName,
+    };
+  }
+}
+
 // ===== Argument Parsing =====
 
 function parseArgs() {
@@ -268,178 +344,175 @@ function trackProviderUsage(providerName, usage, startTime) {
 
 async function main() {
   const { agentId, task, storeDir } = parseArgs();
-  const lockPath = join(storeDir, `.lock-${agentId}`);
+  const lockPath = join(storeDir, '.store.lock');
 
-  const result = await withFileLock(lockPath, async () => {
-    // Load agent state
+  // ── Phase 1: Lock → read state → unlock ──
+  const { store, agent, storePath, messages, providerName } = await withFileLock(lockPath, async () => {
     const { store, agent, storePath } = loadAgentState(storeDir, agentId);
-
-    // Build and trim messages
     const rawMessages = buildMessages(agent, task);
     const messages = trimMessages(rawMessages);
-
-    // Load provider module
-    const providerModule = await loadProviderModule();
-
-    // Create provider instance (no caching — script is short-lived)
     const providerName = agent.provider;
-    const config = createProviderConfig(
-      providerName,
-      agent.providerModel || PROVIDER_DEFAULT_MODELS[providerName]
-    );
+    return { store, agent, storePath, messages, providerName };
+  });
 
-    // Map provider names to classes
-    const providerClasses = {
-      'gemini-cli': providerModule.GeminiCLIProvider,
-      'codex-cli': providerModule.CodexCLIProvider,
-      'cursor-cli': providerModule.CursorCLIProvider,
+  // ── Phase 2: Provider call (no lock held) ──
+  const providerModule = await loadProviderModule();
+
+  const config = createProviderConfig(
+    providerName,
+    agent.providerModel || PROVIDER_DEFAULT_MODELS[providerName]
+  );
+
+  const providerClasses = {
+    'gemini-cli': providerModule.GeminiCLIProvider,
+    'codex-cli': providerModule.CodexCLIProvider,
+    'cursor-cli': providerModule.CursorCLIProvider,
+  };
+
+  const ProviderClass = providerClasses[providerName];
+  if (!ProviderClass) {
+    throw new Error(`Unknown provider: ${providerName}. Supported: ${Object.keys(providerClasses).join(', ')}`);
+  }
+
+  const provider = new ProviderClass({ config, logger: stderrLogger });
+
+  try {
+    await provider.initialize();
+  } catch (initError) {
+    try { provider.destroy(); } catch { /* best-effort */ }
+
+    const msg = initError.message || String(initError);
+    if (msg.includes('not found') || msg.includes('ENOENT')) {
+      throw new Error(
+        `Provider binary for ${providerName} not found. Install it first.`
+      );
+    }
+    if (msg.includes('auth') || msg.includes('401') || msg.includes('Unauthorized')) {
+      throw new Error(
+        `Authentication failed for ${providerName}. Check credentials.`
+      );
+    }
+    throw initError;
+  }
+
+  let result;
+  try {
+    const request = {
+      messages: messages.map((m) => ({
+        role: m.role,
+        content: m.content,
+        ...(m.toolCalls ? { toolCalls: m.toolCalls } : {}),
+        ...(m.toolCallId ? { toolCallId: m.toolCallId } : {}),
+        ...(m.name ? { name: m.name } : {}),
+      })),
+      model: agent.providerModel || PROVIDER_DEFAULT_MODELS[providerName],
     };
 
-    const ProviderClass = providerClasses[providerName];
-    if (!ProviderClass) {
-      throw new Error(`Unknown provider: ${providerName}. Supported: ${Object.keys(providerClasses).join(', ')}`);
+    if (agent.config?.tools && Array.isArray(agent.config.tools)) {
+      request.tools = agent.config.tools;
     }
 
-    const provider = new ProviderClass({ config });
+    let response;
+    let iterations = 0;
+    const MAX_TOOL_ITERATIONS = 10;
+    const providerStartTime = Date.now();
 
-    try {
-      await provider.initialize();
-    } catch (initError) {
-      // Clean up partially-initialized provider to avoid resource leaks
-      try { provider.destroy(); } catch { /* best-effort */ }
+    // Tool-calling loop (no lock held — provider calls can take up to 120s)
+    while (iterations < MAX_TOOL_ITERATIONS) {
+      response = await provider.complete(request);
+      iterations++;
 
-      // Translate initialization errors
-      const msg = initError.message || String(initError);
-      if (msg.includes('not found') || msg.includes('ENOENT')) {
-        throw new Error(
-          `Provider binary for ${providerName} not found. Install it first.`
+      if (response.toolCalls && response.toolCalls.length > 0) {
+        for (const toolCall of response.toolCalls) {
+          process.stderr.write(`[bridge] Tool call: ${toolCall.function.name}(${toolCall.function.arguments})\n`);
+        }
+
+        request.messages.push({
+          role: 'assistant',
+          content: response.content || '',
+          toolCalls: response.toolCalls
+        });
+
+        const toolResults = await Promise.all(
+          response.toolCalls.map((tc) =>
+            executeMCPTool(tc.function.name, tc.function.arguments)
+              .then((result) => ({ id: tc.id, name: tc.function.name, result }))
+              .catch((err) => ({
+                id: tc.id,
+                name: tc.function.name,
+                result: { status: 'error', error: err.message || String(err) },
+              }))
+          )
         );
-      }
-      if (msg.includes('auth') || msg.includes('401') || msg.includes('Unauthorized')) {
-        throw new Error(
-          `Authentication failed for ${providerName}. Check credentials.`
-        );
-      }
-      throw initError;
-    }
 
-    try {
-      // Call provider.complete()
-      const request = {
-        messages: messages.map((m) => ({
-          role: m.role,
-          content: m.content,
-          ...(m.toolCalls ? { toolCalls: m.toolCalls } : {}),
-          ...(m.toolCallId ? { toolCallId: m.toolCallId } : {}),
-          ...(m.name ? { name: m.name } : {}),
-        })),
-        model: agent.providerModel || PROVIDER_DEFAULT_MODELS[providerName],
-      };
-
-      // 1. Add tools from agent config if available
-      if (agent.config?.tools && Array.isArray(agent.config.tools)) {
-        request.tools = agent.config.tools;
-      }
-
-      let response;
-      let iterations = 0;
-      const MAX_TOOL_ITERATIONS = 10;
-      const providerStartTime = Date.now();
-
-      // 2-4. Tool-calling loop
-      while (iterations < MAX_TOOL_ITERATIONS) {
-        response = await provider.complete(request);
-        iterations++;
-
-        if (response.toolCalls && response.toolCalls.length > 0) {
-          // Log tool calls to stderr
-          for (const toolCall of response.toolCalls) {
-            process.stderr.write(`[bridge] Tool call: ${toolCall.function.name}(${toolCall.function.arguments})\n`);
-          }
-
-          // Append assistant message with tool calls to conversation
+        for (const tr of toolResults) {
           request.messages.push({
-            role: 'assistant',
-            content: response.content || '',
-            toolCalls: response.toolCalls
+            role: 'tool',
+            toolCallId: tr.id,
+            name: tr.name,
+            content: JSON.stringify(tr.result),
           });
+        }
 
-          // Create tool_result messages
-          for (const toolCall of response.toolCalls) {
-            request.messages.push({
-              role: 'tool',
-              toolCallId: toolCall.id,
-              name: toolCall.function.name,
-              content: JSON.stringify({ status: 'success', message: 'Acknowledged' })
-            });
-          }
-
-          if (response.finishReason !== 'tool_calls') {
-            break;
-          }
-        } else {
+        if (response.finishReason !== 'tool_calls') {
           break;
         }
+      } else {
+        break;
       }
-
-      // Track provider usage metrics
-      trackProviderUsage(providerName, response.usage, providerStartTime);
-
-      // Update agent state
-      const history = agent.conversationHistory || [];
-
-      // Add initial user task
-      history.push({ role: 'user', content: task, timestamp: new Date().toISOString() });
-
-      // Add intermediate tool turns from request.messages (after original history + user task)
-      const initialMessageCount = messages.length;
-      const newTurns = request.messages.slice(initialMessageCount);
-      for (const turn of newTurns) {
-        history.push({
-          ...turn,
-          timestamp: new Date().toISOString()
-        });
-      }
-
-      // 5. Use final response.content as result
-      history.push({ role: 'assistant', content: response.content, timestamp: new Date().toISOString() });
-
-      // Trim history to MAX_HISTORY_ENTRIES
-      while (history.length > MAX_HISTORY_ENTRIES) {
-        history.shift();
-      }
-
-      agent.conversationHistory = history;
-      agent.taskCount = (agent.taskCount || 0) + 1;
-      agent.lastTaskAt = new Date().toISOString();
-      agent.lastResult = {
-        content: (response.content ?? '').slice(0, 10240), // 10KB limit
-        summary: (response.content ?? '').slice(0, 200),
-        model: response.model || request.model,
-        usage: response.usage,
-        cost: response.cost,
-        completedAt: new Date().toISOString(),
-      };
-
-      // Save updated state
-      store.agents[agentId] = agent;
-      saveAgentState(storePath, store);
-
-      return {
-        success: true,
-        agentId,
-        content: response.content,
-        model: response.model,
-        usage: response.usage,
-        cost: response.cost,
-        historyLength: history.length,
-        taskCount: agent.taskCount,
-      };
-    } finally {
-      // Always destroy provider — script is short-lived, no benefit to caching
-      try { provider.destroy(); } catch { /* ignore */ }
     }
-  });
+
+    trackProviderUsage(providerName, response.usage, providerStartTime);
+
+    // Build state updates (computed outside lock, applied inside lock)
+    const history = agent.conversationHistory || [];
+    history.push({ role: 'user', content: task, timestamp: new Date().toISOString() });
+
+    const initialMessageCount = messages.length;
+    const newTurns = request.messages.slice(initialMessageCount);
+    for (const turn of newTurns) {
+      history.push({ ...turn, timestamp: new Date().toISOString() });
+    }
+
+    history.push({ role: 'assistant', content: response.content, timestamp: new Date().toISOString() });
+
+    while (history.length > MAX_HISTORY_ENTRIES) {
+      history.shift();
+    }
+
+    agent.conversationHistory = history;
+    agent.taskCount = (agent.taskCount || 0) + 1;
+    agent.lastTaskAt = new Date().toISOString();
+    agent.lastResult = {
+      content: (response.content ?? '').slice(0, 10240),
+      summary: (response.content ?? '').slice(0, 200),
+      model: response.model || request.model,
+      usage: response.usage,
+      cost: response.cost,
+      completedAt: new Date().toISOString(),
+    };
+
+    // ── Phase 3: Lock → write state → unlock ──
+    await withFileLock(lockPath, async () => {
+      // Re-read store to avoid clobbering changes from other agents
+      const freshStore = JSON.parse(readFileSync(storePath, 'utf-8'));
+      freshStore.agents[agentId] = agent;
+      saveAgentState(storePath, freshStore);
+    });
+
+    result = {
+      success: true,
+      agentId,
+      content: response.content,
+      model: response.model,
+      usage: response.usage,
+      cost: response.cost,
+      historyLength: history.length,
+      taskCount: agent.taskCount,
+    };
+  } finally {
+    try { provider.destroy(); } catch { /* ignore */ }
+  }
 
   // Output result as JSON
   process.stdout.write(JSON.stringify(result, null, 2) + '\n');

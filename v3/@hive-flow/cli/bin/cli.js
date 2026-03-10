@@ -38,6 +38,14 @@ try {
 
 import { randomUUID } from 'crypto';
 
+const ErrorCodes = {
+  PARSE_ERROR: -32700,
+  INVALID_REQUEST: -32600,
+  METHOD_NOT_FOUND: -32601,
+  INVALID_PARAMS: -32602,
+  INTERNAL_ERROR: -32603,
+};
+
 // Check if we should run in MCP server mode
 // Conditions:
 //   1. stdin is being piped AND no CLI arguments provided (auto-detect)
@@ -76,7 +84,7 @@ if (isMCPMode) {
           console.log(JSON.stringify({
             jsonrpc: '2.0',
             id: null,
-            error: { code: -32700, message: 'Parse error' },
+            error: { code: ErrorCodes.PARSE_ERROR, message: 'Parse error' },
           }));
         }
       }
@@ -92,7 +100,7 @@ if (isMCPMode) {
       return {
         jsonrpc: '2.0',
         id: message.id,
-        error: { code: -32600, message: 'Invalid Request: missing method' },
+        error: { code: ErrorCodes.INVALID_REQUEST, message: 'Invalid Request: missing method' },
       };
     }
 
@@ -136,7 +144,7 @@ if (isMCPMode) {
           return {
             jsonrpc: '2.0',
             id: message.id,
-            error: { code: -32601, message: `Tool not found: ${toolName}` },
+            error: { code: ErrorCodes.METHOD_NOT_FOUND, message: `Tool not found: ${toolName}` },
           };
         }
 
@@ -152,7 +160,7 @@ if (isMCPMode) {
             jsonrpc: '2.0',
             id: message.id,
             error: {
-              code: -32603,
+              code: ErrorCodes.INTERNAL_ERROR,
               message: error instanceof Error ? error.message : 'Tool execution failed',
             },
           };
@@ -169,7 +177,7 @@ if (isMCPMode) {
         return {
           jsonrpc: '2.0',
           id: message.id,
-          error: { code: -32601, message: `Method not found: ${message.method}` },
+          error: { code: ErrorCodes.METHOD_NOT_FOUND, message: `Method not found: ${message.method}` },
         };
     }
   }

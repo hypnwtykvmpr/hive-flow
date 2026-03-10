@@ -5,7 +5,7 @@
  * Enables lifecycle event interception, transformation, and monitoring.
  */
 
-import { EventEmitter } from 'events';
+import { EventEmitter } from 'node:events';
 import type {
   HookDefinition,
   HookEvent,

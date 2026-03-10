@@ -299,7 +299,7 @@ export class OfficialHooksBridge {
    * Create a CLI command for a V3 hook handler
    */
   static createCLICommand(event: HookEvent, handler: string): string {
-    const baseCommand = 'npx hive-flow@alpha hooks';
+    const baseCommand = 'npx hive-flow hooks';
 
     switch (event) {
       case HookEvent.PreEdit:

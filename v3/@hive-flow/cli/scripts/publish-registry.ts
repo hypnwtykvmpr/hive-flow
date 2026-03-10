@@ -131,7 +131,7 @@ async function signRegistry(registry: PluginRegistry, privateKeyHex: string): Pr
   const ed = await import('@noble/ed25519');
 
   const privateKey = Buffer.from(privateKeyHex, 'hex');
-  const publicKey = await ed.getPublicKeyAsync(privateKey);
+  const publicKey = ed.getPublicKey(privateKey);
 
   // Create a copy without signature fields for signing
   const registryToSign = { ...registry };

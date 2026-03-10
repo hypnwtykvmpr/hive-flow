@@ -7,7 +7,7 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import type { MCPTool } from './types.js';
-import { loadAgentStore, saveAgentStore, agentTools } from './agent-tools.js';
+import { loadAgentStore, saveAgentStore, withStoreLock, agentTools } from './agent-tools.js';
 import type { AgentProvider } from './agent-tools.js';
 
 // Storage paths
@@ -229,58 +229,61 @@ export const hiveMindTools: MCPTool[] = [
       const role = (input.role as string) || 'worker';
       const agentType = (input.agentType as string) || 'worker';
       const prefix = (input.prefix as string) || 'hive-worker';
-      const agentStore = loadAgentStore();
 
-      const spawnedWorkers: Array<{ agentId: string; role: string; provider?: AgentProvider; model?: string; joinedAt: string }> = [];
+      return await withStoreLock(() => {
+        const agentStore = loadAgentStore();
 
-      for (let i = 0; i < count; i++) {
-        const agentId = `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+        const spawnedWorkers: Array<{ agentId: string; role: string; provider?: AgentProvider; model?: string; joinedAt: string }> = [];
 
-        // Create agent record (like agent/spawn)
-        agentStore.agents[agentId] = {
-          agentId,
-          agentType,
-          status: 'idle',
-          health: 1.0,
-          taskCount: 0,
-          config: { role, hiveRole: role },
-          createdAt: new Date().toISOString(),
-          domain: 'hive-mind',
-          provider: (input.provider as AgentProvider) || undefined,
-          resolvedModel: (input.model as string) || undefined,
-        };
+        for (let i = 0; i < count; i++) {
+          const agentId = `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 
-        // Join to hive-mind (like hive-mind/join)
-        const worker: HiveWorker = {
-          agentId,
-          provider: (input.provider as AgentProvider) || undefined,
-          model: (input.model as string) || undefined,
-          role, joinedAt: new Date().toISOString(), status: 'idle',
-        };
-        if (!state.workers.find(w => w.agentId === agentId)) {
-          state.workers.push(worker);
+          // Create agent record (like agent/spawn)
+          agentStore.agents[agentId] = {
+            agentId,
+            agentType,
+            status: 'idle',
+            health: 1.0,
+            taskCount: 0,
+            config: { role, hiveRole: role },
+            createdAt: new Date().toISOString(),
+            domain: 'hive-mind',
+            provider: (input.provider as AgentProvider) || undefined,
+            resolvedModel: (input.model as string) || undefined,
+          };
+
+          // Join to hive-mind (like hive-mind/join)
+          const worker: HiveWorker = {
+            agentId,
+            provider: (input.provider as AgentProvider) || undefined,
+            model: (input.model as string) || undefined,
+            role, joinedAt: new Date().toISOString(), status: 'idle',
+          };
+          if (!state.workers.find(w => w.agentId === agentId)) {
+            state.workers.push(worker);
+          }
+
+          spawnedWorkers.push({
+            agentId,
+            role,
+            provider: (input.provider as AgentProvider) || undefined,
+            model: (input.model as string) || undefined,
+            joinedAt: new Date().toISOString(),
+          });
         }
 
-        spawnedWorkers.push({
-          agentId,
-          role,
-          provider: (input.provider as AgentProvider) || undefined,
-          model: (input.model as string) || undefined,
-          joinedAt: new Date().toISOString(),
-        });
-      }
+        saveAgentStore(agentStore);
+        saveHiveState(state);
 
-      saveAgentStore(agentStore);
-      saveHiveState(state);
-
-      return {
-        success: true,
-        spawned: count,
-        workers: spawnedWorkers,
-        totalWorkers: state.workers.length,
-        hiveStatus: 'active',
-        message: `Spawned ${count} worker(s) and joined them to the hive-mind`,
-      };
+        return {
+          success: true,
+          spawned: count,
+          workers: spawnedWorkers,
+          totalWorkers: state.workers.length,
+          hiveStatus: 'active',
+          message: `Spawned ${count} worker(s) and joined them to the hive-mind`,
+        };
+      });
     },
   },
   {
@@ -764,36 +767,38 @@ export const hiveMindTools: MCPTool[] = [
         };
       }
 
-      // Clear workers from agent store
-      const agentStore = loadAgentStore();
-      for (const worker of state.workers) {
-        if (agentStore.agents[worker.agentId]) {
-          delete agentStore.agents[worker.agentId];
+      // Clear workers from agent store (under lock to prevent race conditions)
+      return await withStoreLock(() => {
+        const agentStore = loadAgentStore();
+        for (const worker of state.workers) {
+          if (agentStore.agents[worker.agentId]) {
+            delete agentStore.agents[worker.agentId];
+          }
         }
-      }
-      saveAgentStore(agentStore);
+        saveAgentStore(agentStore);
 
-      // Reset hive state
-      const shutdownTime = new Date().toISOString();
-      const previousQueen = state.queen?.agentId;
+        // Reset hive state
+        const shutdownTime = new Date().toISOString();
+        const previousQueen = state.queen?.agentId;
 
-      state.initialized = false;
-      state.queen = undefined;
-      state.workers = [];
-      state.consensus.pending = [];
-      // Keep history for reference
-      state.sharedMemory = {};
-      saveHiveState(state);
+        state.initialized = false;
+        state.queen = undefined;
+        state.workers = [];
+        state.consensus.pending = [];
+        // Keep history for reference
+        state.sharedMemory = {};
+        saveHiveState(state);
 
-      return {
-        success: true,
-        shutdownAt: shutdownTime,
-        graceful,
-        workersTerminated: workerCount,
-        previousQueen,
-        consensusCleared: pendingConsensus,
-        message: `Hive-mind shutdown complete. ${workerCount} workers terminated.`,
-      };
+        return {
+          success: true,
+          shutdownAt: shutdownTime,
+          graceful,
+          workersTerminated: workerCount,
+          previousQueen,
+          consensusCleared: pendingConsensus,
+          message: `Hive-mind shutdown complete. ${workerCount} workers terminated.`,
+        };
+      });
     },
   },
   {

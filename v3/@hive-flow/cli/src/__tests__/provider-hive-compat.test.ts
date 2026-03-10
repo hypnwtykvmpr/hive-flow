@@ -9,10 +9,14 @@ vi.mock('node:fs', () => ({
   mkdirSync: vi.fn(),
 }));
 
-// Mock agent-tools to control loadAgentStore, saveAgentStore, and agentTools
+// Mock agent-tools to control loadAgentStore, saveAgentStore, withStoreLock, and agentTools
 vi.mock('../mcp-tools/agent-tools.js', () => ({
   loadAgentStore: vi.fn(),
   saveAgentStore: vi.fn(),
+  withStoreLock: vi.fn(async (fnOrScope: unknown, maybeFn?: unknown) => {
+    const fn = typeof fnOrScope === 'function' ? fnOrScope : maybeFn;
+    return (fn as () => unknown)();
+  }),
   agentTools: [] as Array<{ name: string; handler: (...args: any[]) => any }>,
 }));
 

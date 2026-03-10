@@ -202,8 +202,27 @@ export class SwarmCoordinator {
     }
 
     const startTime = Date.now();
-    const result = await agent.executeTask(task);
+    let result: TaskResult;
+
+    try {
+      result = await agent.executeTask(task);
+    } catch (error) {
+      // Normalize rejected executions into a failed TaskResult so callers
+      // never observe unhandled promise rejections.
+      result = {
+        taskId: task.id,
+        status: 'failed',
+        error: error instanceof Error ? error.message : String(error),
+        agentId
+      };
+    }
+
     const duration = Date.now() - startTime;
+
+    // Ensure duration is populated even for synthesized failure results.
+    if (typeof result.duration !== 'number') {
+      result.duration = duration;
+    }
 
     // Update metrics
     const metrics = this.agentMetrics.get(agentId);
@@ -322,20 +341,26 @@ export class SwarmCoordinator {
     );
 
     const currentCount = existingOfType.length;
-    const targetCount = currentCount + config.count;
+    const targetCount = Math.max(0, config.count);
 
-    if (config.count > 0) {
-      // Scale up
-      for (let i = currentCount; i < targetCount; i++) {
+    if (targetCount === currentCount) {
+      return;
+    }
+
+    if (targetCount > currentCount) {
+      // Scale up to the target absolute count
+      const toAdd = targetCount - currentCount;
+      for (let i = 0; i < toAdd; i++) {
         await this.spawnAgent({
-          id: `${config.type}-${Date.now()}-${i}`,
+          id: `${config.type}-${Date.now()}-${currentCount + i}`,
           type: config.type,
           capabilities: this.getDefaultCapabilities(config.type)
         });
       }
-    } else if (config.count < 0) {
-      // Scale down
-      const toRemove = existingOfType.slice(0, Math.abs(config.count));
+    } else {
+      // Scale down to the target absolute count
+      const toRemoveCount = currentCount - targetCount;
+      const toRemove = existingOfType.slice(0, toRemoveCount);
       for (const agent of toRemove) {
         await this.terminateAgent(agent.id);
       }

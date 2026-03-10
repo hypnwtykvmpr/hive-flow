@@ -2,12 +2,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ── Module mocks (must be hoisted before imports) ──────────────────────────
 
-// Mock node:fs — controls existsSync, readFileSync, writeFileSync, mkdirSync
+// Mock node:fs — controls existsSync, readFileSync, writeFileSync, mkdirSync, renameSync
 vi.mock('node:fs', () => ({
   existsSync: vi.fn(),
   readFileSync: vi.fn(),
   writeFileSync: vi.fn(),
   mkdirSync: vi.fn(),
+  renameSync: vi.fn(),
 }));
 
 // Mock node:child_process — controls execFile
@@ -30,7 +31,7 @@ vi.mock('../ruvector/enhanced-model-router.js', () => ({
   }),
 }));
 
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync } from 'node:fs';
 import { execFile } from 'node:child_process';
 import { agentTools } from '../mcp-tools/agent-tools.js';
 
@@ -106,9 +107,28 @@ function setupStoreMocks(initialStore: ReturnType<typeof makeStore>) {
     return JSON.stringify(currentStore);
   });
 
+  // Track pending tmp file writes for atomic save (writeFileSync → renameSync)
+  const tmpWrites = new Map<string, string>();
+
   (writeFileSync as ReturnType<typeof vi.fn>).mockImplementation(
-    (_path: string, data: string) => {
-      currentStore = JSON.parse(data);
+    (path: string, data: string) => {
+      if (typeof path === 'string' && path.includes('.tmp.')) {
+        // Atomic save: buffer the tmp write until renameSync commits it
+        tmpWrites.set(path, data);
+      } else {
+        // Legacy direct write (fallback)
+        currentStore = JSON.parse(data);
+      }
+    },
+  );
+
+  (renameSync as ReturnType<typeof vi.fn>).mockImplementation(
+    (src: string, _dest: string) => {
+      const data = tmpWrites.get(src);
+      if (data) {
+        currentStore = JSON.parse(data);
+        tmpWrites.delete(src);
+      }
     },
   );
 
@@ -167,10 +187,10 @@ describe('agent_task handler', () => {
 
     const result = await handler({ agentId: agent.agentId, task: 'do something' });
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       success: false,
       agentId: agent.agentId,
-      error: 'Agent is terminated',
+      error: expect.stringContaining('terminated'),
     });
   });
 

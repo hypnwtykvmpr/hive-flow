@@ -6,15 +6,18 @@ import { Memory } from '../../src/memory/domain/Memory';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
+let memTestCounter = 0;
+
 describe('Memory Integration Tests', () => {
   let hybridBackend: HybridBackend;
   let testDbPath: string;
   let testAgentDbPath: string;
 
   beforeEach(async () => {
-    // Create temporary database paths
-    testDbPath = path.join(__dirname, `test-${Date.now()}.db`);
-    testAgentDbPath = path.join(__dirname, `test-agentdb-${Date.now()}`);
+    // Create temporary database paths with unique counter to avoid collisions
+    memTestCounter++;
+    testDbPath = path.join(__dirname, `test-${Date.now()}-${memTestCounter}.db`);
+    testAgentDbPath = path.join(__dirname, `test-agentdb-${Date.now()}-${memTestCounter}`);
 
     // Initialize backends
     const sqliteBackend = new SQLiteBackend(testDbPath);

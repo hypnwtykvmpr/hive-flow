@@ -14,7 +14,11 @@ import { migrateFromClaudeCode, analyzeClaudeMd, generateMigrationReport } from 
 import { listTemplates, BUILT_IN_SKILLS } from './templates/index.js';
 import { generateSkillMd } from './generators/skill-md.js';
 import { VERSION, PACKAGE_INFO } from './index.js';
-import fs from 'fs-extra';
+import fs from 'node:fs/promises';
+
+async function pathExists(p: string): Promise<boolean> {
+  try { await fs.access(p); return true; } catch { return false; }
+}
 import path from 'path';
 
 const program = new Command();
@@ -46,7 +50,7 @@ async function validatePath(projectPath: string): Promise<string> {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
       // Directory doesn't exist, try to create it
       console.log(chalk.yellow(`Creating directory: ${resolvedPath}`));
-      await fs.ensureDir(resolvedPath);
+      await fs.mkdir(resolvedPath, { recursive: true });
       return resolvedPath;
     }
     throw error;
@@ -227,11 +231,11 @@ program
       }
 
       const skillDir = path.join(projectPath, '.agents', 'skills', options.name);
-      await fs.ensureDir(skillDir);
+      await fs.mkdir(skillDir, { recursive: true });
       const skillPath = path.join(skillDir, 'SKILL.md');
 
       // Check if skill already exists
-      if (await fs.pathExists(skillPath)) {
+      if (await pathExists(skillPath)) {
         console.log(chalk.yellow(`Skill already exists: ${skillPath}`));
         console.log(chalk.gray('Use --force to overwrite (not yet implemented)'));
         process.exit(1);
@@ -268,7 +272,7 @@ program
         // Validate specific file
         const filePath = path.resolve(options.file);
 
-        if (!await fs.pathExists(filePath)) {
+        if (!await pathExists(filePath)) {
           console.error(chalk.red(`File not found: ${filePath}`));
           process.exit(1);
         }
@@ -292,16 +296,16 @@ program
         const agentsMd = path.join(projectPath, 'AGENTS.md');
         const configToml = path.join(projectPath, '.agents', 'config.toml');
 
-        if (await fs.pathExists(agentsMd)) {
+        if (await pathExists(agentsMd)) {
           filesToValidate.push({ path: agentsMd, type: 'agents' });
         }
-        if (await fs.pathExists(configToml)) {
+        if (await pathExists(configToml)) {
           filesToValidate.push({ path: configToml, type: 'config' });
         }
 
         // Find skill files
         const skillsDir = path.join(projectPath, '.agents', 'skills');
-        if (await fs.pathExists(skillsDir)) {
+        if (await pathExists(skillsDir)) {
           try {
             const skills = await fs.readdir(skillsDir);
             for (const skill of skills) {
@@ -309,7 +313,7 @@ program
               const skillStats = await fs.stat(skillPath);
               if (skillStats.isDirectory()) {
                 const skillMd = path.join(skillPath, 'SKILL.md');
-                if (await fs.pathExists(skillMd)) {
+                if (await pathExists(skillMd)) {
                   filesToValidate.push({ path: skillMd, type: 'skill' });
                 }
               }
@@ -417,7 +421,7 @@ program
 
       const sourcePath = path.resolve(options.from);
 
-      if (!await fs.pathExists(sourcePath)) {
+      if (!await pathExists(sourcePath)) {
         console.error(chalk.red(`Source file not found: ${sourcePath}`));
         console.log(chalk.gray('\nLooking for CLAUDE.md in the current directory.'));
         console.log(chalk.gray('Use --from <path> to specify a different source file.'));
@@ -625,7 +629,7 @@ program
       }
 
       // Check for AGENTS.md in current directory
-      const agentsMdExists = await fs.pathExists(path.join(process.cwd(), 'AGENTS.md'));
+      const agentsMdExists = await pathExists(path.join(process.cwd(), 'AGENTS.md'));
       if (agentsMdExists) {
         checks.push({ name: 'AGENTS.md', status: 'pass', message: 'Found in current directory' });
       } else {
@@ -633,7 +637,7 @@ program
       }
 
       // Check for .agents directory
-      const agentsDir = await fs.pathExists(path.join(process.cwd(), '.agents'));
+      const agentsDir = await pathExists(path.join(process.cwd(), '.agents'));
       if (agentsDir) {
         checks.push({ name: '.agents/', status: 'pass', message: 'Directory exists' });
       } else {
@@ -641,7 +645,7 @@ program
       }
 
       // Check for config.toml
-      const configExists = await fs.pathExists(path.join(process.cwd(), '.agents', 'config.toml'));
+      const configExists = await pathExists(path.join(process.cwd(), '.agents', 'config.toml'));
       if (configExists) {
         checks.push({ name: 'config.toml', status: 'pass', message: 'Found in .agents/' });
       } else {
@@ -650,7 +654,7 @@ program
 
       // Check for git
       try {
-        const gitExists = await fs.pathExists(path.join(process.cwd(), '.git'));
+        const gitExists = await pathExists(path.join(process.cwd(), '.git'));
         if (gitExists) {
           checks.push({ name: 'Git', status: 'pass', message: 'Repository detected' });
         } else {

@@ -391,7 +391,7 @@ export class CodexCLIProvider extends BaseProvider {
       );
     }
 
-    const args = ['exec', prompt, '--json', '--ephemeral', '--skip-git-repo-check'];
+    const args = ['exec', prompt, '--json', '--skip-git-repo-check'];
     // Only include --model if explicitly set (not 'auto' or undefined)
     // Omitting --model lets Codex use config.toml default (typically gpt-5.3-codex)
     if (model && model !== 'auto') {

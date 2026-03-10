@@ -104,8 +104,12 @@ export class PluginBuilder {
     return this;
   }
 
-  withDependencies(dependencies: string[]): this {
-    this.metadata = { ...this.metadata, dependencies };
+  withDependencies(dependencies: (string | { name: string; version: string })[]): this {
+    // Normalize to string[] using "name@version" format for structured deps
+    const normalized = dependencies.map(d =>
+      typeof d === 'string' ? d : `${d.name}@${d.version}`
+    );
+    this.metadata = { ...this.metadata, dependencies: normalized };
     return this;
   }
 
@@ -426,19 +430,80 @@ export class HookBuilder {
     return this;
   }
 
+  /**
+   * Add a condition that must be true for the hook to execute.
+   */
+  when(condition: (ctx: { event: HookEvent; data: unknown; timestamp: Date }) => boolean): this {
+    this._conditions = this._conditions || [];
+    this._conditions.push(condition);
+    return this;
+  }
+
+  /**
+   * Add a data transformer that runs before the handler.
+   */
+  transform(transformer: (data: unknown) => unknown): this {
+    this._transformers = this._transformers || [];
+    this._transformers.push(transformer);
+    return this;
+  }
+
+  /**
+   * Set the hook handler (alias for withHandler, supports sync and async).
+   */
+  handle(handler: HookHandler | ((ctx: { event: HookEvent; data: unknown; timestamp: Date }) => { success: boolean; data?: unknown; modified?: boolean })): this {
+    this.handler = handler as HookHandler;
+    return this;
+  }
+
   withHandler(handler: HookHandler): this {
     this.handler = handler;
     return this;
   }
+
+  private _conditions?: Array<(ctx: { event: HookEvent; data: unknown; timestamp: Date }) => boolean>;
+  private _transformers?: Array<(data: unknown) => unknown>;
 
   build(): HookDefinition {
     if (!this.handler) {
       throw new Error(`Hook for event ${this.event} requires a handler`);
     }
 
+    const originalHandler = this.handler;
+    const conditions = this._conditions;
+    const transformers = this._transformers;
+
+    // Wrap handler with conditions and transformers
+    let wrappedHandler: HookHandler = originalHandler;
+
+    if (conditions?.length || transformers?.length) {
+      wrappedHandler = async (ctx: { event: HookEvent; data: unknown; timestamp: Date }) => {
+        // Check conditions
+        if (conditions) {
+          for (const condition of conditions) {
+            if (!condition(ctx)) {
+              return { success: true };
+            }
+          }
+        }
+
+        // Apply transformers
+        let transformedCtx = ctx;
+        if (transformers) {
+          let data = ctx.data;
+          for (const transformer of transformers) {
+            data = transformer(data);
+          }
+          transformedCtx = { ...ctx, data };
+        }
+
+        return originalHandler(transformedCtx);
+      };
+    }
+
     return {
       event: this.event,
-      handler: this.handler,
+      handler: wrappedHandler,
       priority: this.priority,
       name: this.name,
       description: this.description,

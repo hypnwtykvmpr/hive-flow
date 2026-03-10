@@ -5,7 +5,7 @@
  * Integrates with agentic-flow worker pools and task execution.
  */
 
-import { EventEmitter } from 'events';
+import { EventEmitter } from 'node:events';
 import type {
   WorkerDefinition,
   WorkerType,

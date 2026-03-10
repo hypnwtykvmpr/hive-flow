@@ -1,7 +1,7 @@
 /**
  * V3 Cursor CLI Subprocess Provider
  *
- * Wraps the `cursor` binary (falling back to `cursor-agent`) as a subprocess provider.
+ * Wraps the `cursor-agent` binary (falling back to `cursor agent` subcommand) as a subprocess provider.
  * Uses --print flag for non-interactive mode (resolves TTY requirement).
  * Auth: CURSOR_API_KEY environment variable or --api-key flag.
  *
@@ -93,7 +93,7 @@ export class CursorCLIProvider extends BaseProvider {
   protected async doInitialize(): Promise<void> {
     this.binaryPath = await this.findBinary();
     if (!this.binaryPath) {
-      this.logger.warn('Cursor CLI binary not found. Install Cursor from https://cursor.com or check PATH for `cursor` / `cursor-agent`.');
+      this.logger.warn('Cursor Agent CLI not found. Ensure `cursor-agent` or `cursor` is on PATH.');
     } else {
       this.logger.info('Cursor Agent CLI found', { path: this.binaryPath });
     }
@@ -323,7 +323,7 @@ export class CursorCLIProvider extends BaseProvider {
   // -- Private helpers -------------------------------------------------------
 
   private async findBinary(): Promise<string | null> {
-    // Try cursor-agent first to avoid collision with the Cursor editor launcher binary
+    // Prefer cursor-agent (standalone); fall back to cursor (IDE binary with 'agent' subcommand)
     for (const name of ['cursor-agent', 'cursor']) {
       const found = await this.whichBinary(name);
       if (found) return found;
@@ -343,8 +343,8 @@ export class CursorCLIProvider extends BaseProvider {
   private ensureBinary(): void {
     if (!this.binaryPath) {
       throw new ProviderUnavailableError('cursor-cli', {
-        message: 'Cursor Agent CLI binary not found',
-        hint: 'Install Cursor Agent from https://cursor.com',
+        message: 'Cursor Agent CLI not found on PATH',
+        hint: 'Install `cursor-agent` or Cursor IDE (which provides `cursor agent` subcommand)',
       });
     }
   }
@@ -369,11 +369,10 @@ export class CursorCLIProvider extends BaseProvider {
       );
     }
 
-    // When binaryPath is 'cursor' (Electron launcher), the headless agent is a subcommand.
-    // When binaryPath is 'cursor-agent', flags are top-level.
-    const isCursorLauncher = this.binaryPath!.endsWith('/cursor') || this.binaryPath!.endsWith('\\cursor');
+    // cursor-agent takes flags directly; cursor (IDE binary) needs 'agent' subcommand
+    const isCursorIDE = this.binaryPath!.endsWith('/cursor') || this.binaryPath!.endsWith('\\cursor');
     const args = [
-      ...(isCursorLauncher ? ['agent'] : []),
+      ...(isCursorIDE ? ['agent'] : []),
       '--print',
       '--trust',  // Prevent workspace trust prompt blocking non-interactive mode
       '--force',  // Required for file writes in --print mode

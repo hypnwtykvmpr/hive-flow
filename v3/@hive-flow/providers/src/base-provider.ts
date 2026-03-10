@@ -10,7 +10,7 @@
  * @module @hive-flow/providers/base-provider
  */
 
-import { EventEmitter } from 'events';
+import { EventEmitter } from 'node:events';
 import {
   ILLMProvider,
   LLMProvider,
@@ -97,10 +97,10 @@ export interface ILogger {
  * Console logger implementation
  */
 export const consoleLogger: ILogger = {
-  info: (msg, meta) => console.log(`[INFO] ${msg}`, meta || ''),
-  warn: (msg, meta) => console.warn(`[WARN] ${msg}`, meta || ''),
+  info: (msg, meta) => console.error(`[INFO] ${msg}`, meta || ''),
+  warn: (msg, meta) => console.error(`[WARN] ${msg}`, meta || ''),
   error: (msg, err) => console.error(`[ERROR] ${msg}`, err || ''),
-  debug: (msg, meta) => console.debug(`[DEBUG] ${msg}`, meta || ''),
+  debug: (msg, meta) => console.error(`[DEBUG] ${msg}`, meta || ''),
 };
 
 /**

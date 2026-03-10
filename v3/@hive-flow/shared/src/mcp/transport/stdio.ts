@@ -25,6 +25,14 @@ import {
   ILogger,
 } from '../types.js';
 
+const ErrorCodes = {
+  PARSE_ERROR: -32700,
+  INVALID_REQUEST: -32600,
+  METHOD_NOT_FOUND: -32601,
+  INVALID_PARAMS: -32602,
+  INTERNAL_ERROR: -32603,
+} as const;
+
 /**
  * Stdio Transport Configuration
  */
@@ -174,13 +182,13 @@ export class StdioTransport extends EventEmitter implements ITransport {
       // Validate JSON-RPC format
       if (message.jsonrpc !== '2.0') {
         this.logger.warn('Invalid JSON-RPC version', { received: message.jsonrpc });
-        await this.sendError(message.id, -32600, 'Invalid JSON-RPC version');
+        await this.sendError(message.id, ErrorCodes.INVALID_REQUEST, 'Invalid JSON-RPC version');
         return;
       }
 
       if (!message.method) {
         this.logger.warn('Missing method in request');
-        await this.sendError(message.id, -32600, 'Missing method');
+        await this.sendError(message.id, ErrorCodes.INVALID_REQUEST, 'Missing method');
         return;
       }
 
@@ -195,7 +203,7 @@ export class StdioTransport extends EventEmitter implements ITransport {
     } catch (error) {
       this.errors++;
       this.logger.error('Failed to parse message', { error, line: line.substring(0, 100) });
-      await this.sendError(null, -32700, 'Parse error');
+      await this.sendError(null, ErrorCodes.PARSE_ERROR, 'Parse error');
     }
   }
 
@@ -205,7 +213,7 @@ export class StdioTransport extends EventEmitter implements ITransport {
   private async handleRequest(request: MCPRequest): Promise<void> {
     if (!this.requestHandler) {
       this.logger.warn('No request handler registered');
-      await this.sendError(request.id, -32603, 'No request handler');
+      await this.sendError(request.id, ErrorCodes.INTERNAL_ERROR, 'No request handler');
       return;
     }
 
@@ -224,7 +232,7 @@ export class StdioTransport extends EventEmitter implements ITransport {
       this.logger.error('Request handler error', { method: request.method, error });
       await this.sendError(
         request.id,
-        -32603,
+        ErrorCodes.INTERNAL_ERROR,
         error instanceof Error ? error.message : 'Internal error'
       );
     }

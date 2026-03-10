@@ -26,6 +26,9 @@
   "peerDependencies": {
     "agentic-flow": "^2.0.0-alpha"
   },
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "devDependencies": {
     "vitest": "^4.0.16"
   },

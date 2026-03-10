@@ -28,6 +28,18 @@ import {
   AuthConfig,
 } from '../types.js';
 
+const ErrorCodes = {
+  PARSE_ERROR: -32700,
+  INVALID_REQUEST: -32600,
+  METHOD_NOT_FOUND: -32601,
+  INVALID_PARAMS: -32602,
+  INTERNAL_ERROR: -32603,
+  UNKNOWN_ERROR: -32001,
+  SERVER_NOT_INITIALIZED: -32002,
+  AUTHENTICATION_REQUIRED: -32100,
+  AUTHORIZATION_FAILED: -32101,
+} as const;
+
 /**
  * WebSocket Transport Configuration
  */
@@ -353,7 +365,7 @@ export class WebSocketTransport extends EventEmitter implements ITransport {
           client.ws.send(this.serializeMessage({
             jsonrpc: '2.0',
             id: message.id || null,
-            error: { code: -32001, message: 'Authentication required' },
+            error: { code: ErrorCodes.AUTHENTICATION_REQUIRED, message: 'Authentication required' },
           } as MCPResponse));
           return;
         }
@@ -363,7 +375,7 @@ export class WebSocketTransport extends EventEmitter implements ITransport {
         client.ws.send(this.serializeMessage({
           jsonrpc: '2.0',
           id: message.id || null,
-          error: { code: -32600, message: 'Invalid JSON-RPC version' },
+          error: { code: ErrorCodes.INVALID_REQUEST, message: 'Invalid JSON-RPC version' },
         } as MCPResponse));
         return;
       }
@@ -379,7 +391,7 @@ export class WebSocketTransport extends EventEmitter implements ITransport {
           client.ws.send(this.serializeMessage({
             jsonrpc: '2.0',
             id: message.id,
-            error: { code: -32603, message: 'No request handler' },
+            error: { code: ErrorCodes.INTERNAL_ERROR, message: 'No request handler' },
           } as MCPResponse));
           return;
         }
@@ -405,7 +417,7 @@ export class WebSocketTransport extends EventEmitter implements ITransport {
         client.ws.send(this.serializeMessage({
           jsonrpc: '2.0',
           id: null,
-          error: { code: -32700, message: 'Parse error' },
+          error: { code: ErrorCodes.PARSE_ERROR, message: 'Parse error' },
         } as MCPResponse));
       } catch {
         // Ignore send errors

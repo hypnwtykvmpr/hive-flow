@@ -4,7 +4,7 @@
  * Manages plugin lifecycle, dependency resolution, and extension point collection.
  */
 
-import { EventEmitter } from 'events';
+import { EventEmitter } from 'node:events';
 import type {
   PluginContext,
   PluginConfig,

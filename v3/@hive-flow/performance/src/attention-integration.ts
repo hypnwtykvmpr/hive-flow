@@ -120,7 +120,7 @@ export class FlashAttentionOptimizer {
     const values = input.values.map(v => this.ensureFloat32Array(v));
 
     // Use synchronous Flash Attention with raw Float32Arrays
-    const result = this.flashAttention.computeRaw(query, keys, values);
+    const result = this.flashAttention.compute(query, keys, values);
 
     const executionTimeMs = performance.now() - startTime;
     const endMemory = this.getMemoryUsage();
@@ -173,7 +173,7 @@ export class FlashAttentionOptimizer {
     // Benchmark baseline (DotProduct) - run first to establish baseline memory
     const baselineStart = performance.now();
     for (let i = 0; i < iterations; i++) {
-      this.baselineAttention.computeRaw(query, keys, values);
+      this.baselineAttention.compute(query, keys, values);
       // Sample memory periodically (every 100 iterations to reduce overhead)
       if (i % 100 === 0) {
         const currentMemory = this.getMemoryUsage();
@@ -198,7 +198,7 @@ export class FlashAttentionOptimizer {
     // Benchmark Flash Attention
     const flashStart = performance.now();
     for (let i = 0; i < iterations; i++) {
-      this.flashAttention.computeRaw(query, keys, values);
+      this.flashAttention.compute(query, keys, values);
       // Sample memory periodically
       if (i % 100 === 0) {
         const currentMemory = this.getMemoryUsage();
@@ -419,7 +419,7 @@ export class FlashAttentionOptimizer {
       let baselinePeak = baselineMemBefore;
 
       for (let i = 0; i < iterations; i++) {
-        baselineAttention.computeRaw(query, keys, values);
+        baselineAttention.compute(query, keys, values);
         if (i % 10 === 0) {
           const curr = this.getMemoryUsage();
           if (curr > baselinePeak) baselinePeak = curr;
@@ -433,7 +433,7 @@ export class FlashAttentionOptimizer {
       let flashPeak = flashMemBefore;
 
       for (let i = 0; i < iterations; i++) {
-        flashAttention.computeRaw(query, keys, values);
+        flashAttention.compute(query, keys, values);
         if (i % 10 === 0) {
           const curr = this.getMemoryUsage();
           if (curr > flashPeak) flashPeak = curr;

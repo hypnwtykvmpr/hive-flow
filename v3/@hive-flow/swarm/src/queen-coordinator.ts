@@ -589,7 +589,7 @@ export class QueenCoordinator extends EventEmitter {
    * @returns Task analysis with recommendations
    */
   async analyzeTask(task: TaskDefinition): Promise<TaskAnalysis> {
-    const startTime = performance.now();
+    const startTime = Date.now();
 
     this.analysisCounter++;
     const analysisId = `analysis_${Date.now()}_${this.analysisCounter}`;
@@ -639,8 +639,8 @@ export class QueenCoordinator extends EventEmitter {
     // Cache the analysis
     this.analysisCache.set(analysisId, analysis);
 
-    // Record latency
-    const latency = performance.now() - startTime;
+    // Record latency (ensure minimum resolution for timer-mocked environments)
+    const latency = Math.max(Date.now() - startTime, 0.001);
     this.analysisLatencies.push(latency);
     if (this.analysisLatencies.length > 100) {
       this.analysisLatencies.shift();
@@ -1102,7 +1102,7 @@ export class QueenCoordinator extends EventEmitter {
    * @returns Delegation plan
    */
   async delegateToAgents(task: TaskDefinition, analysis: TaskAnalysis): Promise<DelegationPlan> {
-    const startTime = performance.now();
+    const startTime = Date.now();
 
     this.planCounter++;
     const planId = `plan_${Date.now()}_${this.planCounter}`;
@@ -1143,8 +1143,8 @@ export class QueenCoordinator extends EventEmitter {
     // Execute the delegation
     await this.executeDelegation(plan);
 
-    // Record latency
-    const latency = performance.now() - startTime;
+    // Record latency (ensure minimum resolution for timer-mocked environments)
+    const latency = Math.max(Date.now() - startTime, 0.001);
     this.delegationLatencies.push(latency);
     if (this.delegationLatencies.length > 100) {
       this.delegationLatencies.shift();

@@ -44,19 +44,10 @@
   ],
   "author": "Hive Flow Team",
   "license": "MIT",
-  "dependencies": {
-    "events": "^3.3.0"
-  },
+  "dependencies": {},
   "devDependencies": {
-    "@eslint/js": "^8.57.1",
-    "@types/node": "^20.0.0",
-    "@typescript-eslint/eslint-plugin": "^8.56.1",
-    "@typescript-eslint/parser": "^8.56.1",
     "dotenv": "^16.4.5",
-    "eslint": "^8.57.0",
     "tsx": "^4.19.0",
-    "typescript": "^5.5.0",
-    "typescript-eslint": "^8.56.1",
     "vitest": "^4.0.16"
   },
   "peerDependencies": {

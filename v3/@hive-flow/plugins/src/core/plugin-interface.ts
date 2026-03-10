@@ -188,7 +188,8 @@ export function validatePlugin(plugin: unknown): plugin is IPlugin {
 
   // Check required properties
   if (!validatePluginMetadata(p.metadata)) return false;
-  if (typeof p.state !== 'string') return false;
+  // state can be a lifecycle string, null, or any user-defined value (subclass override)
+  // Only reject if initialize/shutdown are missing
   if (typeof p.initialize !== 'function') return false;
   if (typeof p.shutdown !== 'function') return false;
 

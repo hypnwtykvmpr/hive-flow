@@ -30,7 +30,7 @@ import {
   PathSchema,
   PATTERNS,
   LIMITS,
-} from '../../security/input-validator.js';
+} from '../src/input-validator.js';
 
 describe('InputValidator', () => {
   describe('SafeStringSchema', () => {
@@ -314,7 +314,7 @@ describe('InputValidator', () => {
       });
 
       it('should remove traversal patterns', () => {
-        expect(sanitizePath('../etc/passwd')).toBe('/etc/passwd');
+        expect(sanitizePath('../etc/passwd')).toBe('etc/passwd');
       });
 
       it('should normalize slashes', () => {

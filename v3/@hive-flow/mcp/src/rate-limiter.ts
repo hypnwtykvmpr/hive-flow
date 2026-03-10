@@ -5,6 +5,7 @@
  */
 
 import { EventEmitter } from 'events';
+import { ErrorCodes } from './types.js';
 import type { ILogger } from './types.js';
 
 export interface RateLimitConfig {
@@ -252,7 +253,7 @@ export function rateLimitMiddleware(rateLimiter: RateLimiter) {
         jsonrpc: '2.0',
         id: null,
         error: {
-          code: -32000,
+          code: ErrorCodes.RATE_LIMITED,
           message: 'Rate limit exceeded',
           data: { retryAfter: result.retryAfter },
         },

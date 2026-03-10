@@ -5,7 +5,8 @@
  * Includes model routing integration for intelligent model selection.
  */
 
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync, rmdirSync, unlinkSync, statSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { execFile } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -25,7 +26,7 @@ export type AgentProvider = 'anthropic' | 'gemini-cli' | 'codex-cli' | 'cursor-c
 export interface AgentRecord {
   agentId: string;
   agentType: string;
-  status: 'idle' | 'busy' | 'terminated';
+  status: 'spawning' | 'idle' | 'busy' | 'terminated';
   health: number;
   taskCount: number;
   config: Record<string, unknown>;
@@ -40,6 +41,29 @@ export interface AgentRecord {
 export interface AgentStore {
   agents: Record<string, AgentRecord>;
   version: string;
+}
+
+// Valid state transitions — 'terminated' is a terminal state
+const VALID_TRANSITIONS: Record<string, string[]> = {
+  'spawning': ['idle', 'terminated'],
+  'idle': ['busy', 'terminated'],
+  'busy': ['idle', 'terminated'],
+  'terminated': [], // terminal state — no transitions out
+};
+
+/**
+ * Guard: attempt to transition an agent to a new status.
+ * Returns true if the transition is valid and was applied, false otherwise.
+ * Unknown/missing statuses are treated as 'idle' for backward compatibility.
+ */
+function transitionAgent(agent: AgentRecord, newStatus: AgentRecord['status']): boolean {
+  const currentStatus = agent.status && VALID_TRANSITIONS[agent.status] ? agent.status : 'idle';
+  const validNext = VALID_TRANSITIONS[currentStatus];
+  if (!validNext || !validNext.includes(newStatus)) {
+    return false;
+  }
+  agent.status = newStatus;
+  return true;
 }
 
 function getAgentDir(): string {
@@ -72,7 +96,67 @@ export function loadAgentStore(): AgentStore {
 
 export function saveAgentStore(store: AgentStore): void {
   ensureAgentDir();
-  writeFileSync(getAgentPath(), JSON.stringify(store, null, 2), 'utf-8');
+  const targetPath = getAgentPath();
+  const tmpPath = targetPath + '.tmp.' + process.pid;
+  writeFileSync(tmpPath, JSON.stringify(store, null, 2), 'utf-8');
+  renameSync(tmpPath, targetPath);
+}
+
+/**
+ * Executes a function while holding an exclusive file lock on the agent store.
+ * Prevents race conditions when multiple processes read-modify-write store.json.
+ *
+ * This is a SINGLE store-level lock (not per-agent) since store.json is shared.
+ * - Uses O_CREAT | O_EXCL for atomic lock acquisition
+ * - Retries with jittered backoff up to 10s timeout
+ * - Detects and removes stale locks older than 30s (crashed processes)
+ */
+export async function withStoreLock<T>(fn: () => T): Promise<T>;
+export async function withStoreLock<T>(scope: string, fn: () => T): Promise<T>;
+export async function withStoreLock<T>(fnOrScope: string | (() => T), maybeFn?: () => T): Promise<T> {
+  const fn = typeof fnOrScope === 'function' ? fnOrScope : maybeFn!;
+  const lockPath = join(getAgentDir(), '.store.lock');
+  ensureAgentDir();
+  const maxWait = 10000; // 10s timeout
+  const start = Date.now();
+  let acquired = false;
+
+  // Acquire lock with retry — uses mkdirSync (same mechanism as bridge's withFileLock)
+  while (Date.now() - start < maxWait) {
+    try {
+      mkdirSync(lockPath);
+      acquired = true;
+      break;
+    } catch {
+      // Check for stale lock (older than 30s)
+      try {
+        const lockStat = statSync(lockPath);
+        if (Date.now() - lockStat.mtimeMs > 30000) {
+          try { rmdirSync(lockPath); } catch { /* race with another cleaner */ }
+          continue;
+        }
+      } catch {
+        // Lock dir gone, retry
+        continue;
+      }
+      await new Promise(r => setTimeout(r, 50 + Math.random() * 100));
+    }
+  }
+
+  if (!acquired) {
+    throw new Error('Failed to acquire store lock within 10s');
+  }
+
+  try {
+    return fn();
+  } finally {
+    try { rmdirSync(lockPath); } catch { /* ignore */ }
+  }
+}
+
+// Alias for bridge-handler coordination — same lock, just accepts agentId for error messages
+async function withBridgeLock<T>(agentId: string, fn: () => T | Promise<T>): Promise<T> {
+  return withStoreLock(agentId, async () => fn());
 }
 
 // Default model mappings for agent types (can be overridden)
@@ -208,8 +292,7 @@ export const agentTools: MCPTool[] = [
       required: ['agentType'],
     },
     handler: async (input) => {
-      const store = loadAgentStore();
-      const agentId = (input.agentId as string) || `agent-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const agentId = (input.agentId as string) || `agent-${randomUUID()}`;
       const agentType = input.agentType as string;
       const config = (input.config as Record<string, unknown>) || {};
 
@@ -243,7 +326,7 @@ export const agentTools: MCPTool[] = [
       const agent: AgentRecord = {
         agentId,
         agentType,
-        status: 'idle',
+        status: 'spawning',
         health: 1.0,
         taskCount: 0,
         config,
@@ -255,8 +338,14 @@ export const agentTools: MCPTool[] = [
         modelRoutedBy: routingResult.routedBy,
       };
 
-      store.agents[agentId] = agent;
-      saveAgentStore(store);
+      // Transition spawning → idle (setup complete)
+      transitionAgent(agent, 'idle');
+
+      await withStoreLock(() => {
+        const store = loadAgentStore();
+        store.agents[agentId] = agent;
+        saveAgentStore(store);
+      });
 
       // Include Agent Booster routing info if applicable
       const response: Record<string, unknown> = {
@@ -309,25 +398,38 @@ export const agentTools: MCPTool[] = [
       required: ['agentId'],
     },
     handler: async (input) => {
-      const store = loadAgentStore();
       const agentId = input.agentId as string;
 
-      if (store.agents[agentId]) {
-        store.agents[agentId].status = 'terminated';
-        saveAgentStore(store);
-        return {
-          success: true,
-          agentId,
-          terminated: true,
-          terminatedAt: new Date().toISOString(),
-        };
-      }
+      return withStoreLock(() => {
+        const store = loadAgentStore();
 
-      return {
-        success: false,
-        agentId,
-        error: 'Agent not found',
-      };
+        if (store.agents[agentId]) {
+          const agent = store.agents[agentId];
+          if (!transitionAgent(agent, 'terminated')) {
+            // Already terminated — idempotent success
+            return {
+              success: true,
+              agentId,
+              terminated: true,
+              alreadyTerminated: true,
+              terminatedAt: new Date().toISOString(),
+            };
+          }
+          saveAgentStore(store);
+          return {
+            success: true,
+            agentId,
+            terminated: true,
+            terminatedAt: new Date().toISOString(),
+          };
+        }
+
+        return {
+          success: false,
+          agentId,
+          error: 'Agent not found',
+        };
+      });
     },
   },
   {
@@ -475,63 +577,73 @@ export const agentTools: MCPTool[] = [
       if (action === 'scale') {
         const targetSize = (input.targetSize as number) || 5;
         const agentType = (input.agentType as string) || 'worker';
-        const currentSize = agents.filter(a => a.agentType === agentType).length;
-        const delta = targetSize - currentSize;
-        const added: string[] = [];
-        const removed: string[] = [];
 
-        if (delta > 0) {
-          for (let i = 0; i < delta; i++) {
-            const agentId = `agent-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-            store.agents[agentId] = {
-              agentId,
-              agentType,
-              status: 'idle',
-              health: 1.0,
-              taskCount: 0,
-              config: {},
-              createdAt: new Date().toISOString(),
-            };
-            added.push(agentId);
-          }
-        } else if (delta < 0) {
-          const toRemove = agents.filter(a => a.agentType === agentType && a.status === 'idle').slice(0, -delta);
-          for (const agent of toRemove) {
-            store.agents[agent.agentId].status = 'terminated';
-            removed.push(agent.agentId);
-          }
-        }
+        return withStoreLock(() => {
+          const freshStore = loadAgentStore();
+          const liveAgents = Object.values(freshStore.agents).filter(a => a.status !== 'terminated');
+          const currentSize = liveAgents.filter(a => a.agentType === agentType).length;
+          const delta = targetSize - currentSize;
+          const added: string[] = [];
+          const removed: string[] = [];
 
-        saveAgentStore(store);
-        return {
-          action,
-          agentType,
-          previousSize: currentSize,
-          targetSize,
-          newSize: currentSize + delta,
-          added,
-          removed,
-        };
+          if (delta > 0) {
+            for (let i = 0; i < delta; i++) {
+              const agentId = `agent-${randomUUID()}`;
+              freshStore.agents[agentId] = {
+                agentId,
+                agentType,
+                status: 'idle',
+                health: 1.0,
+                taskCount: 0,
+                config: {},
+                createdAt: new Date().toISOString(),
+              };
+              added.push(agentId);
+            }
+          } else if (delta < 0) {
+            const toRemove = liveAgents.filter(a => a.agentType === agentType && a.status === 'idle').slice(0, -delta);
+            for (const a of toRemove) {
+              freshStore.agents[a.agentId].status = 'terminated';
+              removed.push(a.agentId);
+            }
+          }
+
+          saveAgentStore(freshStore);
+          return {
+            action,
+            agentType,
+            previousSize: currentSize,
+            targetSize,
+            newSize: currentSize + delta,
+            added,
+            removed,
+          };
+        });
       }
 
       if (action === 'drain') {
         const agentType = input.agentType as string;
-        let drained = 0;
-        for (const agent of agents) {
-          if (!agentType || agent.agentType === agentType) {
-            if (agent.status === 'idle') {
-              store.agents[agent.agentId].status = 'terminated';
-              drained++;
+
+        return withStoreLock(() => {
+          const freshStore = loadAgentStore();
+          const liveAgents = Object.values(freshStore.agents).filter(a => a.status !== 'terminated');
+          let drained = 0;
+          for (const a of liveAgents) {
+            if (!agentType || a.agentType === agentType) {
+              if (a.status === 'idle') {
+                freshStore.agents[a.agentId].status = 'terminated';
+                drained++;
+              }
             }
           }
-        }
-        saveAgentStore(store);
-        return {
-          action,
-          agentType: agentType || 'all',
-          drained,
-          remaining: agents.length - drained,
-        };
+          saveAgentStore(freshStore);
+          return {
+            action,
+            agentType: agentType || 'all',
+            drained,
+            remaining: liveAgents.length - drained,
+          };
+        });
       }
 
       return { action, error: 'Unknown action' };
@@ -555,88 +667,138 @@ export const agentTools: MCPTool[] = [
       const task = input.task as string;
       const timeout = (input.timeout as number) || 120000;
 
-      // Load and validate agent
-      const store = loadAgentStore();
-      const agent = store.agents[agentId];
-      if (!agent) {
-        return { success: false, agentId, error: 'Agent not found' };
-      }
-      if (!agent.provider) {
-        return { success: false, agentId, error: 'Agent has no provider — use agent_spawn with a provider first' };
-      }
-      if (agent.status === 'terminated') {
-        return { success: false, agentId, error: 'Agent is terminated' };
-      }
+      // RC-2: Lock → fresh read → validate → set busy → save → unlock
+      // Uses bridge-compatible per-agent lock to coordinate with bridge subprocess.
+      const validationError = await withBridgeLock(agentId, () => {
+        const store = loadAgentStore();
+        const agent = store.agents[agentId];
+        if (!agent) {
+          return 'Agent not found';
+        }
+        if (!agent.provider) {
+          return 'Agent has no provider — use agent_spawn with a provider first';
+        }
+        if (!transitionAgent(agent, 'busy')) {
+          return `Agent cannot accept tasks in current state: '${agent.status}'`;
+        }
+        saveAgentStore(store);
+        return null; // success
+      });
 
-      // Mark agent busy
-      agent.status = 'busy';
-      saveAgentStore(store);
+      if (validationError) {
+        return { success: false, agentId, error: validationError };
+      }
 
       // Resolve bridge script path relative to compiled output location
       const thisDir = dirname(fileURLToPath(import.meta.url));
       const bridgePath = join(thisDir, '..', '..', '..', '..', 'providers', 'scripts', 'provider-agent-bridge.mjs');
 
       if (!existsSync(bridgePath)) {
-        agent.status = 'idle';
-        saveAgentStore(store);
+        // RC-2: Lock → fresh read → reset status only → save → unlock
+        await withBridgeLock(agentId, () => {
+          const s = loadAgentStore();
+          const a = s.agents[agentId];
+          if (a && a.status === 'busy') {
+            a.status = 'idle';
+            saveAgentStore(s);
+          }
+        });
         return { success: false, agentId, error: `Bridge script not found at ${bridgePath}` };
       }
 
       const agentDir = getAgentDir();
       const args = ['--agent-id', agentId, '--task', task, '--store-dir', agentDir];
 
-      return new Promise((resolve) => {
-        const child = execFile('node', [bridgePath, ...args], { timeout, maxBuffer: 10 * 1024 * 1024 }, (err, stdout, stderr) => {
-          // Reload store to avoid overwriting bridge's state updates
+      // RC-2 helper: bridge-compatible lock → fresh read → reset status to idle
+      // if still busy → save → unlock. Only touches status — never overwrites
+      // conversation history, taskCount, lastResult, or other bridge-written fields.
+      const resetStatusToIdle = async (): Promise<void> => {
+        await withBridgeLock(agentId, () => {
           const freshStore = loadAgentStore();
           const freshAgent = freshStore.agents[agentId];
-
-          if (err) {
-            if (freshAgent) {
-              freshAgent.status = 'idle';
-              saveAgentStore(freshStore);
-            }
-            // Try to parse error JSON from stdout (bridge writes errors there)
-            let parsed: Record<string, unknown> | undefined;
-            try { parsed = JSON.parse(stdout); } catch { /* not JSON */ }
-            if (parsed && parsed.error) {
-              resolve({ success: false, agentId, error: parsed.error, stderr: stderr || undefined });
-            } else {
-              resolve({ success: false, agentId, error: err.message, stderr: stderr || undefined });
-            }
-            return;
-          }
-
-          // Parse bridge JSON output
-          let result: Record<string, unknown>;
-          try {
-            result = JSON.parse(stdout);
-          } catch {
-            if (freshAgent) {
-              freshAgent.status = 'idle';
-              saveAgentStore(freshStore);
-            }
-            resolve({ success: false, agentId, error: 'Failed to parse bridge output', rawOutput: stdout.slice(0, 2000) });
-            return;
-          }
-
-          // Bridge already saves updated agent state; just reset status to idle
           if (freshAgent && freshAgent.status === 'busy') {
             freshAgent.status = 'idle';
             saveAgentStore(freshStore);
           }
+        });
+      };
 
-          resolve(result);
+      return new Promise((resolve) => {
+        const child = execFile('node', [bridgePath, ...args], { timeout, maxBuffer: 10 * 1024 * 1024 }, (err, stdout, stderr) => {
+          if (err) {
+            // RC-2: Lock → fresh read → reset status only → save → unlock
+            resetStatusToIdle().then(() => {
+              // Try to parse error JSON from stdout (bridge writes errors there)
+              // Providers may leak log lines to stdout; extract JSON robustly
+              let parsed: Record<string, unknown> | undefined;
+              try { parsed = JSON.parse(stdout); } catch {
+                const js = stdout.indexOf('{');
+                const je = stdout.lastIndexOf('}');
+                if (js !== -1 && je > js) {
+                  try { parsed = JSON.parse(stdout.slice(js, je + 1)); } catch { /* not JSON */ }
+                }
+              }
+              if (parsed && parsed.error) {
+                resolve({ success: false, agentId, error: parsed.error, stderr: stderr || undefined });
+              } else {
+                resolve({ success: false, agentId, error: err.message, stderr: stderr || undefined });
+              }
+            }).catch(() => {
+              resolve({ success: false, agentId, error: err.message, stderr: stderr || undefined });
+            });
+            return;
+          }
+
+          // Parse bridge JSON output
+          // Providers may leak log lines to stdout; extract the JSON object robustly
+          let result: Record<string, unknown>;
+          try {
+            result = JSON.parse(stdout);
+          } catch {
+            // Fallback: find the first top-level JSON object in stdout
+            const jsonStart = stdout.indexOf('{');
+            const jsonEnd = stdout.lastIndexOf('}');
+            if (jsonStart !== -1 && jsonEnd > jsonStart) {
+              try {
+                result = JSON.parse(stdout.slice(jsonStart, jsonEnd + 1));
+              } catch {
+                // RC-2: Lock → fresh read → reset status only → save → unlock
+                resetStatusToIdle().then(() => {
+                  resolve({ success: false, agentId, error: 'Failed to parse bridge output', rawOutput: stdout.slice(0, 2000) });
+                }).catch(() => {
+                  resolve({ success: false, agentId, error: 'Failed to parse bridge output', rawOutput: stdout.slice(0, 2000) });
+                });
+                return;
+              }
+            } else {
+              // RC-2: Lock → fresh read → reset status only → save → unlock
+              resetStatusToIdle().then(() => {
+                resolve({ success: false, agentId, error: 'Failed to parse bridge output', rawOutput: stdout.slice(0, 2000) });
+              }).catch(() => {
+                resolve({ success: false, agentId, error: 'Failed to parse bridge output', rawOutput: stdout.slice(0, 2000) });
+              });
+              return;
+            }
+          }
+
+          // RC-2: Bridge already saved updated agent state (history, taskCount, lastResult).
+          // Lock → fresh read → reset status to idle ONLY if still busy → save → unlock.
+          // This ensures we never overwrite bridge-written fields.
+          resetStatusToIdle().then(() => {
+            resolve(result);
+          }).catch(() => {
+            resolve(result);
+          });
         });
 
         // Safety: ensure child is killed on timeout (execFile handles this, but be explicit)
         child.on('error', (spawnErr) => {
-          const errStore = loadAgentStore();
-          if (errStore.agents[agentId]) {
-            errStore.agents[agentId].status = 'idle';
-            saveAgentStore(errStore);
-          }
-          resolve({ success: false, agentId, error: `Failed to spawn bridge: ${spawnErr.message}` });
+          // RC-2: Lock → fresh read → reset status only → save → unlock
+          resetStatusToIdle().then(() => {
+            resolve({ success: false, agentId, error: `Failed to spawn bridge: ${spawnErr.message}` });
+          }).catch(() => {
+            resolve({ success: false, agentId, error: `Failed to spawn bridge: ${spawnErr.message}` });
+          });
         });
       });
     },
@@ -734,37 +896,49 @@ export const agentTools: MCPTool[] = [
       required: ['agentId'],
     },
     handler: async (input) => {
-      const store = loadAgentStore();
       const agentId = input.agentId as string;
-      const agent = store.agents[agentId];
 
-      if (agent) {
-        if (input.status) agent.status = input.status as AgentRecord['status'];
-        if (typeof input.health === 'number') agent.health = input.health as number;
-        if (typeof input.taskCount === 'number') agent.taskCount = input.taskCount as number;
-        if (input.config) {
-          agent.config = { ...agent.config, ...(input.config as Record<string, unknown>) };
+      return withStoreLock(() => {
+        const store = loadAgentStore();
+        const agent = store.agents[agentId];
+
+        if (agent) {
+          if (input.status) {
+            const newStatus = input.status as AgentRecord['status'];
+            if (!transitionAgent(agent, newStatus)) {
+              return {
+                success: false,
+                agentId,
+                error: `Invalid status transition: '${agent.status}' → '${newStatus}'`,
+              };
+            }
+          }
+          if (typeof input.health === 'number') agent.health = input.health as number;
+          if (typeof input.taskCount === 'number') agent.taskCount = input.taskCount as number;
+          if (input.config) {
+            agent.config = { ...agent.config, ...(input.config as Record<string, unknown>) };
+          }
+          saveAgentStore(store);
+
+          return {
+            success: true,
+            agentId,
+            updated: true,
+            agent: {
+              agentId: agent.agentId,
+              status: agent.status,
+              health: agent.health,
+              taskCount: agent.taskCount,
+            },
+          };
         }
-        saveAgentStore(store);
 
         return {
-          success: true,
+          success: false,
           agentId,
-          updated: true,
-          agent: {
-            agentId: agent.agentId,
-            status: agent.status,
-            health: agent.health,
-            taskCount: agent.taskCount,
-          },
+          error: 'Agent not found',
         };
-      }
-
-      return {
-        success: false,
-        agentId,
-        error: 'Agent not found',
-      };
+      });
     },
   },
 ];

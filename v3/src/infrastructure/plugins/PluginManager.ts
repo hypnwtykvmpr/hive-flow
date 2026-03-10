@@ -206,11 +206,14 @@ export class PluginManager implements PluginManagerInterface {
   // ============================================================================
 
   private registerExtensionPoint(pluginId: string, ep: ExtensionPoint): void {
+    const plugin = this.plugins.get(pluginId);
+    const priority = ep.priority ?? plugin?.priority ?? 0;
+
     const handlers = this.extensionPoints.get(ep.name) || [];
     handlers.push({
       pluginId,
       handler: ep.handler,
-      priority: ep.priority || 0
+      priority
     });
     this.extensionPoints.set(ep.name, handlers);
   }
@@ -231,14 +234,15 @@ export class PluginManager implements PluginManagerInterface {
   }
 
   private checkVersionCompatibility(plugin: Plugin): void {
-    const coreVersion = this.parseVersion(this.coreVersion);
+    const coreVersionString = this.getCoreVersion();
+    const coreVersion = this.parseVersion(coreVersionString);
 
     if (plugin.minCoreVersion) {
       const minVersion = this.parseVersion(plugin.minCoreVersion);
       if (this.compareVersions(coreVersion, minVersion) < 0) {
         throw new PluginError(
-          `Plugin ${plugin.id} requires core version >= ${plugin.minCoreVersion}, but core version is ${this.coreVersion}`,
-          { pluginId: plugin.id, minVersion: plugin.minCoreVersion, coreVersion: this.coreVersion }
+          `Plugin ${plugin.id} requires core version >= ${plugin.minCoreVersion}, but core version is ${coreVersionString}`,
+          { pluginId: plugin.id, minVersion: plugin.minCoreVersion, coreVersion: coreVersionString }
         );
       }
     }
@@ -247,8 +251,8 @@ export class PluginManager implements PluginManagerInterface {
       const maxVersion = this.parseVersion(plugin.maxCoreVersion);
       if (this.compareVersions(coreVersion, maxVersion) > 0) {
         throw new PluginError(
-          `Plugin ${plugin.id} requires core version <= ${plugin.maxCoreVersion}, but core version is ${this.coreVersion}`,
-          { pluginId: plugin.id, maxVersion: plugin.maxCoreVersion, coreVersion: this.coreVersion }
+          `Plugin ${plugin.id} requires core version <= ${plugin.maxCoreVersion}, but core version is ${coreVersionString}`,
+          { pluginId: plugin.id, maxVersion: plugin.maxCoreVersion, coreVersion: coreVersionString }
         );
       }
     }

@@ -24,9 +24,11 @@ set "HOST=localhost"
 set "PORT=3000"
 set "LOG_LEVEL=info"
 
-REM PID file location
-set "PID_FILE=%TEMP%\hive-flow-mcp.pid"
-set "LOG_FILE=%TEMP%\hive-flow-mcp.log"
+REM PID file location (project-scoped)
+if not exist "%PROJECT_ROOT%\.hive-flow\pids" mkdir "%PROJECT_ROOT%\.hive-flow\pids"
+if not exist "%PROJECT_ROOT%\.hive-flow\logs" mkdir "%PROJECT_ROOT%\.hive-flow\logs"
+set "PID_FILE=%PROJECT_ROOT%\.hive-flow\pids\hive-flow-mcp.pid"
+set "LOG_FILE=%PROJECT_ROOT%\.hive-flow\logs\hive-flow-mcp.log"
 
 REM Override from environment variables
 if defined MCP_TRANSPORT set "TRANSPORT=%MCP_TRANSPORT%"

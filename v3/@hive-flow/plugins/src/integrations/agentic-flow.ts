@@ -13,7 +13,7 @@
  * - HybridReasoningBank: Trajectory-based learning
  */
 
-import { EventEmitter } from 'events';
+import { EventEmitter } from 'node:events';
 import type {
   AgentTypeDefinition,
   WorkerDefinition,

@@ -31,6 +31,19 @@ import {
   AuthConfig,
 } from '../types.js';
 
+const ErrorCodes = {
+  PARSE_ERROR: -32700,
+  INVALID_REQUEST: -32600,
+  METHOD_NOT_FOUND: -32601,
+  INVALID_PARAMS: -32602,
+  INTERNAL_ERROR: -32603,
+  RATE_LIMITED: -32000,
+  UNKNOWN_ERROR: -32001,
+  SERVER_NOT_INITIALIZED: -32002,
+  AUTHENTICATION_REQUIRED: -32100,
+  AUTHORIZATION_FAILED: -32101,
+} as const;
+
 /**
  * HTTP Transport Configuration
  */
@@ -254,6 +267,9 @@ export class HttpTransport extends EventEmitter implements ITransport {
       limit: this.config.maxRequestSize || '10mb',
     }));
 
+    // Express 5: query string parsing must be explicitly enabled
+    this.app.use(express.query({}));
+
     // Request timeout
     if (this.config.requestTimeout) {
       this.app.use((req, res, next) => {
@@ -261,7 +277,7 @@ export class HttpTransport extends EventEmitter implements ITransport {
           res.status(408).json({
             jsonrpc: '2.0',
             id: null,
-            error: { code: -32000, message: 'Request timeout' },
+            error: { code: ErrorCodes.RATE_LIMITED, message: 'Request timeout' },
           });
         });
         next();
@@ -335,7 +351,7 @@ export class HttpTransport extends EventEmitter implements ITransport {
       res.status(500).json({
         jsonrpc: '2.0',
         id: null,
-        error: { code: -32603, message: 'Internal error' },
+        error: { code: ErrorCodes.INTERNAL_ERROR, message: 'Internal error' },
       });
     });
   }
@@ -393,7 +409,7 @@ export class HttpTransport extends EventEmitter implements ITransport {
         res.status(401).json({
           jsonrpc: '2.0',
           id: null,
-          error: { code: -32001, message: 'Unauthorized' },
+          error: { code: ErrorCodes.AUTHENTICATION_REQUIRED, message: 'Unauthorized' },
         });
         return;
       }
@@ -409,7 +425,7 @@ export class HttpTransport extends EventEmitter implements ITransport {
       res.status(400).json({
         jsonrpc: '2.0',
         id: message.id || null,
-        error: { code: -32600, message: 'Invalid JSON-RPC version' },
+        error: { code: ErrorCodes.INVALID_REQUEST, message: 'Invalid JSON-RPC version' },
       });
       return;
     }
@@ -418,7 +434,7 @@ export class HttpTransport extends EventEmitter implements ITransport {
       res.status(400).json({
         jsonrpc: '2.0',
         id: message.id || null,
-        error: { code: -32600, message: 'Missing method' },
+        error: { code: ErrorCodes.INVALID_REQUEST, message: 'Missing method' },
       });
       return;
     }
@@ -436,7 +452,7 @@ export class HttpTransport extends EventEmitter implements ITransport {
         res.status(500).json({
           jsonrpc: '2.0',
           id: message.id,
-          error: { code: -32603, message: 'No request handler' },
+          error: { code: ErrorCodes.INTERNAL_ERROR, message: 'No request handler' },
         });
         return;
       }
@@ -451,7 +467,7 @@ export class HttpTransport extends EventEmitter implements ITransport {
           jsonrpc: '2.0',
           id: message.id,
           error: {
-            code: -32603,
+            code: ErrorCodes.INTERNAL_ERROR,
             message: error instanceof Error ? error.message : 'Internal error',
           },
         });
@@ -473,7 +489,7 @@ export class HttpTransport extends EventEmitter implements ITransport {
         ws.send(JSON.stringify({
           jsonrpc: '2.0',
           id: message.id || null,
-          error: { code: -32600, message: 'Invalid JSON-RPC version' },
+          error: { code: ErrorCodes.INVALID_REQUEST, message: 'Invalid JSON-RPC version' },
         }));
         return;
       }
@@ -489,7 +505,7 @@ export class HttpTransport extends EventEmitter implements ITransport {
           ws.send(JSON.stringify({
             jsonrpc: '2.0',
             id: message.id,
-            error: { code: -32603, message: 'No request handler' },
+            error: { code: ErrorCodes.INTERNAL_ERROR, message: 'No request handler' },
           }));
           return;
         }
@@ -507,13 +523,13 @@ export class HttpTransport extends EventEmitter implements ITransport {
         ws.send(JSON.stringify({
           jsonrpc: '2.0',
           id: parsed.id || null,
-          error: { code: -32700, message: 'Parse error' },
+          error: { code: ErrorCodes.PARSE_ERROR, message: 'Parse error' },
         }));
       } catch {
         ws.send(JSON.stringify({
           jsonrpc: '2.0',
           id: null,
-          error: { code: -32700, message: 'Parse error' },
+          error: { code: ErrorCodes.PARSE_ERROR, message: 'Parse error' },
         }));
       }
     }

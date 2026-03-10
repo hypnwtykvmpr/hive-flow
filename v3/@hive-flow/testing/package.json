@@ -47,11 +47,13 @@
     "@hive-flow/swarm": "workspace:*",
     "vitest": ">=1.0.0"
   },
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "devDependencies": {
     "@hive-flow/memory": "workspace:*",
     "@hive-flow/shared": "workspace:*",
     "@hive-flow/swarm": "workspace:*",
-    "typescript": "^5.3.0",
     "vitest": "^4.0.16"
   },
   "publishConfig": {

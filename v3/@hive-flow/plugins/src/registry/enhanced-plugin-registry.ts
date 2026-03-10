@@ -10,7 +10,7 @@
  * - Conflict resolution
  */
 
-import { EventEmitter } from 'events';
+import { EventEmitter } from 'node:events';
 import type {
   PluginContext,
   PluginConfig,
@@ -434,7 +434,12 @@ export class EnhancedPluginRegistry extends EventEmitter {
         await this.initializePlugin(entry);
         this.logger.info(`Plugin initialized: ${name}`);
       } catch (error) {
-        entry.error = error instanceof Error ? error.message : String(error);
+        const message = error instanceof Error ? error.message : String(error);
+        // Re-throw conflict errors as they indicate a configuration problem
+        if (message.includes('conflict')) {
+          throw error;
+        }
+        entry.error = message;
         this.logger.error(`Failed to initialize plugin ${name}: ${entry.error}`);
       }
     }
@@ -535,8 +540,8 @@ export class EnhancedPluginRegistry extends EventEmitter {
       state = await (entry.plugin as any).getState();
     }
 
-    // Shutdown old plugin
-    if (entry.plugin.state === 'initialized') {
+    // Shutdown old plugin (check initTime as fallback since state may be overridden)
+    if (entry.plugin.state === 'initialized' || entry.initTime) {
       await entry.plugin.shutdown();
     }
 
@@ -726,17 +731,54 @@ export class EnhancedPluginRegistry extends EventEmitter {
         this.removeFromCache(category, identifier);
         return item;
 
-      case 'namespace':
+      case 'namespace': {
         const template = resolution?.namespaceTemplate ?? '{plugin}:{name}';
+        // Namespace the existing (first) plugin's item if not already namespaced
+        const existingNamespaced = template
+          .replace('{plugin}', existing)
+          .replace('{name}', identifier);
+        if (!owners.has(existingNamespaced)) {
+          // Rename existing item in cache
+          this.renameInCache(category, identifier, existingNamespaced);
+          owners.delete(identifier);
+          owners.set(existingNamespaced, existing);
+        }
+        // Namespace the new plugin's item
         const newName = template
           .replace('{plugin}', pluginName)
           .replace('{name}', identifier);
         owners.set(newName, pluginName);
         return { ...item, name: newName, type: newName } as T;
+      }
 
       case 'error':
       default:
         throw new Error(`${category}: ${identifier} conflict between ${existing} and ${pluginName}`);
+    }
+  }
+
+  private renameInCache(category: string, oldName: string, newName: string): void {
+    switch (category) {
+      case 'agentTypes':
+        this.agentTypesCache = this.agentTypesCache.map(t =>
+          t.type === oldName ? { ...t, type: newName } : t
+        );
+        break;
+      case 'taskTypes':
+        this.taskTypesCache = this.taskTypesCache.map(t =>
+          t.type === oldName ? { ...t, type: newName } : t
+        );
+        break;
+      case 'mcpTools':
+        this.mcpToolsCache = this.mcpToolsCache.map(t =>
+          t.name === oldName ? { ...t, name: newName } : t
+        );
+        break;
+      case 'cliCommands':
+        this.cliCommandsCache = this.cliCommandsCache.map(c =>
+          c.name === oldName ? { ...c, name: newName } : c
+        );
+        break;
     }
   }
 
@@ -926,15 +968,13 @@ export class EnhancedPluginRegistry extends EventEmitter {
     const entry = this.plugins.get(name);
     if (!entry) return;
 
-    if (entry.plugin.state === 'initialized') {
-      try {
-        this.eventBus.emit(PLUGIN_EVENTS.SHUTTING_DOWN, { plugin: name });
-        await entry.plugin.shutdown();
-        this.eventBus.emit(PLUGIN_EVENTS.SHUTDOWN, { plugin: name });
-        this.logger.info(`Plugin shutdown: ${name}`);
-      } catch (error) {
-        this.logger.error(`Error shutting down plugin ${name}: ${error}`);
-      }
+    try {
+      this.eventBus.emit(PLUGIN_EVENTS.SHUTTING_DOWN, { plugin: name });
+      await entry.plugin.shutdown();
+      this.eventBus.emit(PLUGIN_EVENTS.SHUTDOWN, { plugin: name });
+      this.logger.info(`Plugin shutdown: ${name}`);
+    } catch (error) {
+      this.logger.error(`Error shutting down plugin ${name}: ${error}`);
     }
   }
 

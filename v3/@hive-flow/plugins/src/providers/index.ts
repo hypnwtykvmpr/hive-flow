@@ -5,7 +5,7 @@
  * Enables multi-provider support, fallback chains, and cost optimization.
  */
 
-import { EventEmitter } from 'events';
+import { EventEmitter } from 'node:events';
 import type {
   LLMProviderDefinition,
   LLMCapability,

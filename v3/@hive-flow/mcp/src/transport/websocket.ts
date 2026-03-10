@@ -7,17 +7,18 @@
 import { EventEmitter } from 'events';
 import { WebSocketServer, WebSocket, RawData } from 'ws';
 import { createServer, Server } from 'http';
-import type {
-  ITransport,
-  TransportType,
-  MCPRequest,
-  MCPResponse,
-  MCPNotification,
-  RequestHandler,
-  NotificationHandler,
-  TransportHealthStatus,
-  ILogger,
-  AuthConfig,
+import {
+  ErrorCodes,
+  type ITransport,
+  type TransportType,
+  type MCPRequest,
+  type MCPResponse,
+  type MCPNotification,
+  type RequestHandler,
+  type NotificationHandler,
+  type TransportHealthStatus,
+  type ILogger,
+  type AuthConfig,
 } from '../types.js';
 
 export interface WebSocketTransportConfig {
@@ -286,7 +287,7 @@ export class WebSocketTransport extends EventEmitter implements ITransport {
           client.ws.send(this.serializeMessage({
             jsonrpc: '2.0',
             id: message.id || null,
-            error: { code: -32001, message: 'Authentication required' },
+            error: { code: ErrorCodes.AUTHENTICATION_REQUIRED, message: 'Authentication required' },
           } as MCPResponse));
           return;
         }
@@ -296,7 +297,7 @@ export class WebSocketTransport extends EventEmitter implements ITransport {
         client.ws.send(this.serializeMessage({
           jsonrpc: '2.0',
           id: message.id || null,
-          error: { code: -32600, message: 'Invalid JSON-RPC version' },
+          error: { code: ErrorCodes.INVALID_REQUEST, message: 'Invalid JSON-RPC version' },
         } as MCPResponse));
         return;
       }
@@ -310,7 +311,7 @@ export class WebSocketTransport extends EventEmitter implements ITransport {
           client.ws.send(this.serializeMessage({
             jsonrpc: '2.0',
             id: message.id,
-            error: { code: -32603, message: 'No request handler' },
+            error: { code: ErrorCodes.INTERNAL_ERROR, message: 'No request handler' },
           } as MCPResponse));
           return;
         }
@@ -336,7 +337,7 @@ export class WebSocketTransport extends EventEmitter implements ITransport {
         client.ws.send(this.serializeMessage({
           jsonrpc: '2.0',
           id: null,
-          error: { code: -32700, message: 'Parse error' },
+          error: { code: ErrorCodes.PARSE_ERROR, message: 'Parse error' },
         } as MCPResponse));
       } catch {
         // Ignore send errors

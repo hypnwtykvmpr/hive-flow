@@ -222,12 +222,21 @@ const DANGEROUS_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
  * Parse JSON safely, stripping dangerous keys.
  */
 export function safeJsonParse<T = unknown>(content: string): T {
-  return JSON.parse(content, (key, value) => {
-    if (DANGEROUS_KEYS.has(key)) {
-      return undefined;
+  const parsed = JSON.parse(content);
+  return stripDangerousKeys(parsed) as T;
+}
+
+function stripDangerousKeys(value: unknown): unknown {
+  if (value === null || typeof value !== 'object') return value;
+  if (Array.isArray(value)) return value.map(stripDangerousKeys);
+
+  const clean = Object.create(null);
+  for (const key of Object.keys(value as Record<string, unknown>)) {
+    if (!DANGEROUS_KEYS.has(key)) {
+      clean[key] = stripDangerousKeys((value as Record<string, unknown>)[key]);
     }
-    return value;
-  }) as T;
+  }
+  return clean;
 }
 
 /**

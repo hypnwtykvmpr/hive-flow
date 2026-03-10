@@ -34,8 +34,11 @@ LOG_LEVEL="info"
 DAEMON=false
 
 # PID file location
-PID_FILE="${TMPDIR:-/tmp}/hive-flow-mcp.pid"
-LOG_FILE="${TMPDIR:-/tmp}/hive-flow-mcp.log"
+MCP_PID_DIR="$PROJECT_ROOT/.hive-flow/pids"
+mkdir -p "$MCP_PID_DIR"
+PID_FILE="$MCP_PID_DIR/hive-flow-mcp.pid"
+LOG_FILE="$PROJECT_ROOT/.hive-flow/logs/hive-flow-mcp.log"
+mkdir -p "$(dirname "$LOG_FILE")"
 
 # Colors for output
 RED='\033[0;31m'

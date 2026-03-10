@@ -5,7 +5,7 @@
  * Plugins should extend this class for easier implementation.
  */
 
-import { EventEmitter } from 'events';
+import { EventEmitter } from 'node:events';
 import type {
   PluginMetadata,
   PluginContext,
@@ -96,7 +96,7 @@ export abstract class BasePlugin extends EventEmitter implements IPlugin {
     return this._state;
   }
 
-  protected setState(state: PluginLifecycleState): void {
+  protected setLifecycleState(state: PluginLifecycleState): void {
     const previousState = this._state;
     this._state = state;
     this.emit('stateChange', { previousState, currentState: state });
@@ -146,7 +146,7 @@ export abstract class BasePlugin extends EventEmitter implements IPlugin {
       throw new Error(`Plugin ${this.metadata.name} already initialized`);
     }
 
-    this.setState('initializing');
+    this.setLifecycleState('initializing');
     this._context = context;
     this._initTime = new Date();
 
@@ -160,10 +160,10 @@ export abstract class BasePlugin extends EventEmitter implements IPlugin {
       // Call subclass initialization
       await this.onInitialize();
 
-      this.setState('initialized');
+      this.setLifecycleState('initialized');
       this.eventBus.emit(PLUGIN_EVENTS.INITIALIZED, { plugin: this.metadata.name });
     } catch (error) {
-      this.setState('error');
+      this.setLifecycleState('error');
       this.eventBus.emit(PLUGIN_EVENTS.ERROR, {
         plugin: this.metadata.name,
         error: error instanceof Error ? error.message : String(error),
@@ -177,18 +177,20 @@ export abstract class BasePlugin extends EventEmitter implements IPlugin {
    * Subclasses should override onShutdown() instead of this method.
    */
   async shutdown(): Promise<void> {
-    if (this._state !== 'initialized' && this._state !== 'error') {
-      return; // Already shutdown or never initialized
+    if (this._state === 'uninitialized' || this._state === 'shutdown') {
+      return; // Never initialized or already shutdown
     }
 
-    this.setState('shutting-down');
+    this.setLifecycleState('shutting-down');
 
     try {
       await this.onShutdown();
-      this.setState('shutdown');
-      this.eventBus.emit(PLUGIN_EVENTS.SHUTDOWN, { plugin: this.metadata.name });
+      this.setLifecycleState('shutdown');
+      if (this._context) {
+        this.eventBus.emit(PLUGIN_EVENTS.SHUTDOWN, { plugin: this.metadata.name });
+      }
     } catch (error) {
-      this.setState('error');
+      this.setLifecycleState('error');
       throw error;
     } finally {
       this._context = null;

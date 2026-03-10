@@ -397,7 +397,7 @@ export class MCPServer extends EventEmitter implements IMCPServer {
           jsonrpc: '2.0',
           id: request.id,
           error: {
-            code: -32000,
+            code: ErrorCodes.RATE_LIMITED,
             message: 'Rate limit exceeded',
             data: { retryAfter: rateLimitResult.retryAfter },
           },

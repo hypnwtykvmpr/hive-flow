@@ -834,35 +834,6 @@ async function isAgenticFlowAvailable(): Promise<boolean> {
 }
 
 /**
- * Auto-install agentic-flow and initialize model
- */
-async function autoInstallAgenticFlow(): Promise<boolean> {
-  const { exec } = await import('child_process');
-  const { promisify } = await import('util');
-  const execAsync = promisify(exec);
-
-  try {
-    // Check if already available
-    if (await isAgenticFlowAvailable()) {
-      return true;
-    }
-
-    console.log('[embeddings] Installing agentic-flow@alpha...');
-    await execAsync('npm install agentic-flow@alpha --save', { timeout: 120000 });
-
-    // Initialize the model
-    console.log('[embeddings] Downloading embedding model...');
-    await execAsync('npx agentic-flow@alpha embeddings init', { timeout: 300000 });
-
-    // Verify installation
-    return await isAgenticFlowAvailable();
-  } catch (error) {
-    console.warn('[embeddings] Auto-install failed:', error instanceof Error ? error.message : error);
-    return false;
-  }
-}
-
-/**
  * Create embedding service based on configuration (sync version)
  * Note: For 'auto' provider or smart fallback, use createEmbeddingServiceAsync
  */
@@ -944,11 +915,6 @@ export async function createEmbeddingServiceAsync(
 
     // Try agentic-flow (fastest neural, ONNX-based)
     let agenticFlowAvailable = await isAgenticFlowAvailable();
-
-    // Auto-install if not available and autoInstall is enabled
-    if (!agenticFlowAvailable && autoInstall) {
-      agenticFlowAvailable = await autoInstallAgenticFlow();
-    }
 
     if (agenticFlowAvailable) {
       try {
@@ -1147,8 +1113,8 @@ export function computeSimilarity(
     case 'cosine':
       return { score: cosineSimilarity(a, b), metric };
     case 'euclidean':
-      // Convert distance to similarity (closer = higher score)
-      return { score: 1 / (1 + euclideanDistance(a, b)), metric };
+      // Return raw Euclidean distance
+      return { score: euclideanDistance(a, b), metric };
     case 'dot':
       return { score: dotProduct(a, b), metric };
     default:

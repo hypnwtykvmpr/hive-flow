@@ -127,7 +127,7 @@ export class AttentionBenchmarkRunner {
     // Benchmark Flash Attention
     const flashStart = performance.now();
     for (let i = 0; i < iterations; i++) {
-      flash.computeRaw(query, keys, values);
+      flash.compute(query, keys, values);
     }
     const flashEnd = performance.now();
     const flashTimeMs = flashEnd - flashStart;
@@ -137,7 +137,7 @@ export class AttentionBenchmarkRunner {
     // Benchmark baseline
     const baselineStart = performance.now();
     for (let i = 0; i < iterations; i++) {
-      baseline.computeRaw(query, keys, values);
+      baseline.compute(query, keys, values);
     }
     const baselineEnd = performance.now();
     const baselineTimeMs = baselineEnd - baselineStart;

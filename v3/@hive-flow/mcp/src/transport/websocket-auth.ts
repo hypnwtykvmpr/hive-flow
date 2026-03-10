@@ -18,7 +18,7 @@
 
 import { createHmac, timingSafeEqual } from 'crypto';
 import type { WebSocket, RawData } from 'ws';
-import type { MCPResponse, ILogger } from '../types.js';
+import { ErrorCodes, type MCPResponse, type ILogger } from '../types.js';
 
 // ============================================================================
 // Public Interfaces
@@ -114,7 +114,7 @@ export class WebSocketAuthenticator {
         this.logger?.warn('WebSocket auth max attempts reached — closing connection');
         clearTimeout(this._timer);
         try {
-          this._sendError(null, -32001, 'Too many failed authentication attempts');
+          this._sendError(null, ErrorCodes.AUTHENTICATION_REQUIRED, 'Too many failed authentication attempts');
           this.ws.close(4001, 'Too many failed authentication attempts');
         } catch {
           // Connection may already be gone
@@ -152,7 +152,7 @@ export class WebSocketAuthenticator {
     try {
       message = JSON.parse(data.toString()) as Record<string, unknown>;
     } catch {
-      this._sendError(null, -32700, 'Parse error');
+      this._sendError(null, ErrorCodes.PARSE_ERROR, 'Parse error');
       return false;
     }
 
@@ -163,13 +163,13 @@ export class WebSocketAuthenticator {
       if (result.success) {
         this._sendResult(id as string | number | null, { authenticated: true });
       } else {
-        this._sendError(id as string | number | null, -32001, result.error ?? 'Authentication failed');
+        this._sendError(id as string | number | null, ErrorCodes.AUTHENTICATION_REQUIRED, result.error ?? 'Authentication failed');
       }
       return false;
     }
 
     // Non-auth message before handshake completes
-    this._sendError(id as string | number | null, -32001, 'Authentication required');
+    this._sendError(id as string | number | null, ErrorCodes.AUTHENTICATION_REQUIRED, 'Authentication required');
     return false;
   }
 
@@ -244,7 +244,7 @@ export class WebSocketAuthenticator {
       timeoutMs: this._timeoutMs,
     });
     try {
-      this._sendError(null, -32001, 'Authentication timeout');
+      this._sendError(null, ErrorCodes.AUTHENTICATION_REQUIRED, 'Authentication timeout');
       this.ws.close(4001, 'Authentication timeout');
     } catch {
       // Connection may already be gone

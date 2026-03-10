@@ -17,21 +17,31 @@ export default defineConfig({
     // Global test setup
     setupFiles: ['./__tests__/setup.ts'],
 
-    // Include patterns
+    // Include patterns — use single '*' for the package-name segment so
+    // tinyglobby does NOT follow pnpm workspace symlinks under
+    // @hive-flow/<pkg>/node_modules/@hive-flow/<other-pkg>/.
+    // The old '**' glob traversed those symlinks and matched 396 duplicate
+    // test files; vitest's realpath dedup masked the problem but still
+    // caused 512-path globbing overhead on every run.
     include: [
       '__tests__/**/*.test.ts',
       '__tests__/**/*.spec.ts',
-      '@hive-flow/**/__tests__/**/*.test.ts',
-      '@hive-flow/**/__tests__/**/*.spec.ts',
+      '@hive-flow/*/__tests__/**/*.test.ts',
+      '@hive-flow/*/__tests__/**/*.spec.ts',
+      '@hive-flow/*/src/__tests__/**/*.test.ts',
+      '@hive-flow/*/src/__tests__/**/*.spec.ts',
+      '@hive-flow/*/src/**/__tests__/**/*.test.ts',
+      '@hive-flow/*/src/**/__tests__/**/*.spec.ts',
       'mcp/__tests__/**/*.test.ts',
       'mcp/__tests__/**/*.spec.ts',
     ],
 
     // Exclude patterns
     exclude: [
-      'node_modules',
-      'dist',
+      '**/node_modules/**',
+      '**/dist/**',
       '.git',
+      '__tests__/appliance/**',
     ],
 
     // Coverage configuration - London School targets

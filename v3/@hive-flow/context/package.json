@@ -15,10 +15,11 @@
   "dependencies": {
     "@hive-flow/providers": "workspace:*"
   },
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "devDependencies": {
-    "@types/node": "^20.0.0",
-    "vitest": "^4.0.16",
-    "typescript": "^5.0.0"
+    "vitest": "^4.0.16"
   },
   "publishConfig": {
     "access": "public",

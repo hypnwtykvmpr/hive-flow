@@ -4,7 +4,11 @@
  * Main initialization class for setting up Codex projects
  */
 
-import fs from 'fs-extra';
+import fs from 'node:fs/promises';
+
+async function pathExists(p: string): Promise<boolean> {
+  try { await fs.access(p); return true; } catch { return false; }
+}
 import path from 'path';
 import type {
   CodexInitOptions,
@@ -204,12 +208,12 @@ export class CodexInitializer {
    */
   private async validateProjectPath(): Promise<void> {
     try {
-      await fs.ensureDir(this.projectPath);
+      await fs.mkdir(this.projectPath, { recursive: true });
 
       // Check write permissions by attempting to create a temp file
       const tempFile = path.join(this.projectPath, '.codex-init-test');
       await fs.writeFile(tempFile, 'test', 'utf-8');
-      await fs.remove(tempFile);
+      await fs.rm(tempFile, { recursive: true, force: true });
     } catch (error) {
       throw new Error(`Cannot write to project path: ${this.projectPath}`);
     }
@@ -219,8 +223,8 @@ export class CodexInitializer {
    * Check if project is already initialized
    */
   private async isAlreadyInitialized(): Promise<boolean> {
-    const agentsMdExists = await fs.pathExists(path.join(this.projectPath, 'AGENTS.md'));
-    const agentsConfigExists = await fs.pathExists(path.join(this.projectPath, '.agents', 'config.toml'));
+    const agentsMdExists = await pathExists(path.join(this.projectPath, 'AGENTS.md'));
+    const agentsConfigExists = await pathExists(path.join(this.projectPath, '.agents', 'config.toml'));
     return agentsMdExists || agentsConfigExists;
   }
 
@@ -231,7 +235,7 @@ export class CodexInitializer {
     if (this.force) {
       return true;
     }
-    return !(await fs.pathExists(filePath));
+    return !(await pathExists(filePath));
   }
 
   /**
@@ -249,7 +253,7 @@ export class CodexInitializer {
 
     for (const dir of dirs) {
       const fullPath = path.join(this.projectPath, dir);
-      await fs.ensureDir(fullPath);
+      await fs.mkdir(fullPath, { recursive: true });
     }
   }
 
@@ -262,7 +266,7 @@ export class CodexInitializer {
     const warnings: string[] = [];
 
     // Check if bundled skills directory exists
-    if (!await fs.pathExists(this.bundledSkillsPath)) {
+    if (!await pathExists(this.bundledSkillsPath)) {
       warnings.push(`Bundled skills directory not found: ${this.bundledSkillsPath}`);
       return { copied, warnings };
     }
@@ -288,13 +292,13 @@ export class CodexInitializer {
 
       try {
         // Check if skill already exists and we're not forcing
-        if (!this.force && await fs.pathExists(destPath)) {
+        if (!this.force && await pathExists(destPath)) {
           warnings.push(`Skill ${skillName} already exists - skipped`);
           continue;
         }
 
         // Copy the entire skill directory
-        await fs.copy(srcPath, destPath, { overwrite: this.force });
+        await fs.cp(srcPath, destPath, { recursive: true, force: this.force });
         copied.push(skillName);
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : String(err);
@@ -310,7 +314,7 @@ export class CodexInitializer {
    */
   private async isBundledSkill(skillName: string): Promise<boolean> {
     const skillPath = path.join(this.bundledSkillsPath, skillName);
-    return fs.pathExists(skillPath);
+    return pathExists(skillPath);
   }
 
   /**
@@ -424,11 +428,11 @@ web_search = "live"
     const skillPath = path.join(skillDir, 'SKILL.md');
 
     // Check if skill already exists
-    if (!this.force && await fs.pathExists(skillPath)) {
+    if (!this.force && await pathExists(skillPath)) {
       return { created: false, skipped: true, path: `.agents/skills/${skillName}/SKILL.md` };
     }
 
-    await fs.ensureDir(skillDir);
+    await fs.mkdir(skillDir, { recursive: true });
 
     // Check if it's a built-in skill
     const builtInSkills: BuiltInSkill[] = [
@@ -449,7 +453,7 @@ web_search = "live"
       // Also write any associated scripts or references
       if (Object.keys(result.scripts).length > 0) {
         const scriptsDir = path.join(skillDir, 'scripts');
-        await fs.ensureDir(scriptsDir);
+        await fs.mkdir(scriptsDir, { recursive: true });
         for (const [scriptName, scriptContent] of Object.entries(result.scripts)) {
           await fs.writeFile(path.join(scriptsDir, scriptName), scriptContent, 'utf-8');
         }
@@ -457,7 +461,7 @@ web_search = "live"
 
       if (Object.keys(result.references).length > 0) {
         const refsDir = path.join(skillDir, 'docs');
-        await fs.ensureDir(refsDir);
+        await fs.mkdir(refsDir, { recursive: true });
         for (const [refName, refContent] of Object.entries(result.references)) {
           await fs.writeFile(path.join(refsDir, refName), refContent, 'utf-8');
         }
@@ -484,7 +488,7 @@ web_search = "live"
     const gitignorePath = path.join(this.projectPath, '.gitignore');
     let content = '';
 
-    if (await fs.pathExists(gitignorePath)) {
+    if (await pathExists(gitignorePath)) {
       content = await fs.readFile(gitignorePath, 'utf-8');
     }
 
@@ -554,7 +558,7 @@ Skills are invoked using \`$skill-name\` syntax. Each skill has:
 
     // Check if CLAUDE.md already exists
     const claudeMdPath = path.join(this.projectPath, 'CLAUDE.md');
-    const claudeMdExists = await fs.pathExists(claudeMdPath);
+    const claudeMdExists = await pathExists(claudeMdPath);
 
     if (claudeMdExists && !this.force) {
       warnings.push('CLAUDE.md already exists - not overwriting. Use --force to replace.');
@@ -682,7 +686,7 @@ Enable verbose logging for development.
 
     // Update .gitignore for CLAUDE.local.md
     const gitignorePath = path.join(this.projectPath, '.gitignore');
-    if (await fs.pathExists(gitignorePath)) {
+    if (await pathExists(gitignorePath)) {
       let content = await fs.readFile(gitignorePath, 'utf-8');
       if (!content.includes('CLAUDE.local.md')) {
         content += '\n# Claude Code local config\nCLAUDE.local.md\n';

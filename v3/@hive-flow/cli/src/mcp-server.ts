@@ -65,6 +65,18 @@ export interface MCPServerStatus {
 }
 
 /**
+ * JSON-RPC error codes (MCP / JSON-RPC 2.0 spec)
+ * Mirrors @hive-flow/mcp ErrorCodes — kept local to avoid cross-package import.
+ */
+const ErrorCodes = {
+  PARSE_ERROR: -32700,
+  INVALID_REQUEST: -32600,
+  METHOD_NOT_FOUND: -32601,
+  INVALID_PARAMS: -32602,
+  INTERNAL_ERROR: -32603,
+} as const;
+
+/**
  * Default configuration
  */
 const DEFAULT_OPTIONS: Required<MCPServerOptions> = {
@@ -351,6 +363,12 @@ export class MCPServerManager extends EventEmitter {
               `[${new Date().toISOString()}] ERROR [hive-flow-mcp] Failed to parse message:`,
               error instanceof Error ? error.message : String(error)
             );
+            // Send JSON-RPC parse error response per spec
+            console.log(JSON.stringify({
+              jsonrpc: '2.0',
+              id: null,
+              error: { code: ErrorCodes.PARSE_ERROR, message: 'Parse error', data: error instanceof Error ? error.message : String(error) }
+            }));
           }
         }
       }
@@ -395,7 +413,7 @@ export class MCPServerManager extends EventEmitter {
       return {
         jsonrpc: '2.0',
         id: message.id,
-        error: { code: -32600, message: 'Invalid Request: missing method' },
+        error: { code: ErrorCodes.INVALID_REQUEST, message: 'Invalid Request: missing method' },
       };
     }
 
@@ -439,7 +457,7 @@ export class MCPServerManager extends EventEmitter {
             return {
               jsonrpc: '2.0',
               id: message.id,
-              error: { code: -32601, message: `Tool not found: ${toolName}` },
+              error: { code: ErrorCodes.METHOD_NOT_FOUND, message: `Tool not found: ${toolName}` },
             };
           }
 
@@ -455,7 +473,7 @@ export class MCPServerManager extends EventEmitter {
               jsonrpc: '2.0',
               id: message.id,
               error: {
-                code: -32603,
+                code: ErrorCodes.INTERNAL_ERROR,
                 message: error instanceof Error ? error.message : 'Tool execution failed',
               },
             };
@@ -479,7 +497,7 @@ export class MCPServerManager extends EventEmitter {
           return {
             jsonrpc: '2.0',
             id: message.id,
-            error: { code: -32601, message: `Method not found: ${message.method}` },
+            error: { code: ErrorCodes.METHOD_NOT_FOUND, message: `Method not found: ${message.method}` },
           };
       }
     } catch (error) {
@@ -491,7 +509,7 @@ export class MCPServerManager extends EventEmitter {
         jsonrpc: '2.0',
         id: message.id,
         error: {
-          code: -32603,
+          code: ErrorCodes.INTERNAL_ERROR,
           message: error instanceof Error ? error.message : 'Internal error',
         },
       };

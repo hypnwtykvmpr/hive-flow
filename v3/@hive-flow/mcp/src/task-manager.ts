@@ -6,13 +6,14 @@
  */
 
 import { EventEmitter } from 'events';
-import type {
-  MCPTask,
-  TaskState,
-  TaskProgress,
-  TaskResult,
-  MCPError,
-  ILogger,
+import {
+  ErrorCodes,
+  type MCPTask,
+  type TaskState,
+  type TaskProgress,
+  type TaskResult,
+  type MCPError,
+  type ILogger,
 } from './types.js';
 
 export type TaskExecutor<T = unknown> = (
@@ -143,7 +144,7 @@ export class TaskManager extends EventEmitter {
         } else {
           task.state = 'failed';
           task.error = {
-            code: -32603,
+            code: ErrorCodes.INTERNAL_ERROR,
             message: error instanceof Error ? error.message : 'Task failed',
           };
           this.logger.error('Task failed', { taskId, error });
@@ -192,7 +193,7 @@ export class TaskManager extends EventEmitter {
     if (task.state === 'pending') {
       task.state = 'cancelled';
       task.updatedAt = new Date();
-      task.error = { code: -32800, message: reason || 'Cancelled' };
+      task.error = { code: ErrorCodes.REQUEST_CANCELLED, message: reason || 'Cancelled' };
       this.emit('task:cancelled', { taskId, reason });
     }
 

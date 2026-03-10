@@ -10,7 +10,7 @@
  * @module @hive-flow/providers/provider-manager
  */
 
-import { EventEmitter } from 'events';
+import { EventEmitter } from 'node:events';
 import {
   ILLMProvider,
   LLMProvider,

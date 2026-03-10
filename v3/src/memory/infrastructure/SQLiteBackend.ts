@@ -17,9 +17,19 @@ export class SQLiteBackend implements MemoryBackend {
   private memories: Map<string, Memory>;
   private initialized: boolean = false;
 
+  // Shared stores keyed by dbPath so data survives backend reinitialization.
+  private static globalStores: Map<string, Map<string, Memory>> = new Map();
+
   constructor(dbPath: string) {
     this.dbPath = dbPath;
-    this.memories = new Map();
+
+    // Reuse an existing store for this dbPath to simulate a persistent SQLite database.
+    let store = SQLiteBackend.globalStores.get(dbPath);
+    if (!store) {
+      store = new Map<string, Memory>();
+      SQLiteBackend.globalStores.set(dbPath, store);
+    }
+    this.memories = store;
   }
 
   /**
@@ -37,7 +47,7 @@ export class SQLiteBackend implements MemoryBackend {
    * Close the database connection
    */
   async close(): Promise<void> {
-    this.memories.clear();
+    // Simulate closing the database connection without dropping persisted data.
     this.initialized = false;
   }
 

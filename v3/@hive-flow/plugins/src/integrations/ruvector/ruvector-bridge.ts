@@ -13,7 +13,7 @@
  * @version 1.0.0
  */
 
-import { EventEmitter } from 'events';
+import { EventEmitter } from 'node:events';
 import { BasePlugin } from '../../core/base-plugin.js';
 import type { MCPToolDefinition, MCPToolResult, HealthCheckResult } from '../../types/index.js';
 import type {
