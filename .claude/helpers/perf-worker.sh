@@ -1,6 +1,6 @@
 #!/bin/bash
 # Hive Flow V3 - Performance Benchmark Worker
-# Runs periodic benchmarks and updates metrics using agentic-flow agents
+# Runs periodic benchmarks and updates metrics using hive-flow agents
 
 set -euo pipefail
 
@@ -50,7 +50,7 @@ benchmark_search() {
 
 # Memory efficiency check
 benchmark_memory() {
-  local node_mem=$(ps aux 2>/dev/null | grep -E "(node|agentic)" | grep -v grep | awk '{sum += $6} END {print int(sum/1024)}')
+  local node_mem=$(ps aux 2>/dev/null | grep -E "(node|hive-flow)" | grep -v grep | awk '{sum += $6} END {print int(sum/1024)}')
   local baseline_mem=4000  # 4GB baseline
 
   if [ -n "$node_mem" ] && [ "$node_mem" -gt 0 ]; then
@@ -66,8 +66,8 @@ benchmark_memory() {
 benchmark_startup() {
   local start=$(date +%s%3N)
 
-  # Quick check of agentic-flow responsiveness
-  timeout 5 npx agentic-flow@alpha --version >/dev/null 2>&1 || true
+  # Quick check of hive-flow CLI responsiveness
+  timeout 5 node "$PROJECT_ROOT/v3/@hive-flow/cli/bin/cli.js" --version >/dev/null 2>&1 || true
 
   local end=$(date +%s%3N)
   local duration=$((end - start))
@@ -114,9 +114,9 @@ run_benchmarks() {
 
 # Spawn agentic-flow performance agent for deep analysis
 run_deep_benchmark() {
-  echo "[$(date +%H:%M:%S)] Spawning performance-benchmarker agent..."
+  echo "[$(date +%H:%M:%S)] Spawning perf-analyzer agent..."
 
-  npx agentic-flow@alpha --agent perf-analyzer --task "Analyze current system performance and update metrics" 2>/dev/null &
+  node "$PROJECT_ROOT/v3/@hive-flow/cli/bin/cli.js" agent spawn -t perf-analyzer --task "Analyze current system performance and update metrics" 2>/dev/null &
   local pid=$!
 
   # Don't wait, let it run in background
@@ -152,7 +152,7 @@ case "${1:-check}" in
   *)
     echo "Usage: perf-worker.sh [run|deep|check|force|status]"
     echo "  run    - Run quick benchmarks"
-    echo "  deep   - Spawn agentic-flow agent for deep analysis"
+    echo "  deep   - Spawn hive-flow agent for deep analysis"
     echo "  check  - Run if throttle allows (default)"
     echo "  force  - Force run ignoring throttle"
     echo "  status - Show current metrics"

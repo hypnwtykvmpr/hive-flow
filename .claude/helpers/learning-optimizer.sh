@@ -105,8 +105,8 @@ EOF
 run_sona_training() {
   echo "[$(date +%H:%M:%S)] Spawning SONA learning agent..."
 
-  # Use agentic-flow for deep learning optimization
-  npx agentic-flow@alpha hooks intelligence 2>/dev/null || true
+  # Use hive-flow CLI for deep learning optimization
+  node "$PROJECT_ROOT/v3/@hive-flow/cli/bin/cli.js" hooks intelligence 2>/dev/null || true
 
   echo "[$(date +%H:%M:%S)] ✓ SONA training triggered"
 }
