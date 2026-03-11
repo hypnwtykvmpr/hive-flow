@@ -16,6 +16,9 @@
   "engines": {
     "node": ">=20.0.0"
   },
+  "dependencies": {
+    "@hive-flow/shared": "workspace:*"
+  },
   "devDependencies": {
     "vitest": "^4.0.16"
   },

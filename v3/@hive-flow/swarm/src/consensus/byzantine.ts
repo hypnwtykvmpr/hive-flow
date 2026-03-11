@@ -212,7 +212,7 @@ export class ByzantineConsensus extends EventEmitter {
           proposal.status = 'expired';
           resolve(this.createResult(proposal, Date.now() - startTime));
         }
-      }, 10);
+      }, 10).unref();
     });
   }
 

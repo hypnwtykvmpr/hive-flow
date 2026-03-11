@@ -17,6 +17,7 @@
  */
 
 import { EventEmitter } from 'events';
+import { generateSecureId } from '@hive-flow/shared';
 import {
   SwarmId,
   AgentId,
@@ -589,7 +590,7 @@ export class UnifiedSwarmCoordinator extends EventEmitter implements IUnifiedSwa
 
   private createInitialState(): CoordinatorState {
     const swarmId: SwarmId = {
-      id: `swarm_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: generateSecureId('swarm'),
       namespace: 'default',
       version: '3.0.0',
       createdAt: new Date(),
@@ -712,16 +713,19 @@ export class UnifiedSwarmCoordinator extends EventEmitter implements IUnifiedSwa
     this.heartbeatInterval = setInterval(() => {
       this.checkHeartbeats();
     }, this.config.heartbeatIntervalMs);
+    this.heartbeatInterval.unref();
 
     // Health checks
     this.healthCheckInterval = setInterval(() => {
       this.performHealthChecks();
     }, this.config.healthCheckIntervalMs);
+    this.healthCheckInterval.unref();
 
     // Metrics collection
     this.metricsInterval = setInterval(() => {
       this.updateMetrics();
     }, 1000);
+    this.metricsInterval.unref();
   }
 
   private stopBackgroundProcesses(): void {
@@ -1053,7 +1057,7 @@ export class UnifiedSwarmCoordinator extends EventEmitter implements IUnifiedSwa
 
   private emitEvent(type: SwarmEventType, data: Record<string, unknown>): void {
     const event: SwarmEvent = {
-      id: `event_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+      id: generateSecureId('event'),
       type,
       source: this.state.id.id,
       timestamp: new Date(),
@@ -1311,7 +1315,7 @@ export class UnifiedSwarmCoordinator extends EventEmitter implements IUnifiedSwa
             durationMs: performance.now() - startTime,
           });
         }
-      }, 100);
+      }, 100).unref();
 
       // Timeout after configured duration
       setTimeout(() => {
@@ -1327,7 +1331,7 @@ export class UnifiedSwarmCoordinator extends EventEmitter implements IUnifiedSwa
           error: new Error('Task timed out'),
           durationMs: performance.now() - startTime,
         });
-      }, this.config.taskTimeoutMs);
+      }, this.config.taskTimeoutMs).unref();
     });
   }
 
@@ -1345,7 +1349,7 @@ export class UnifiedSwarmCoordinator extends EventEmitter implements IUnifiedSwa
           clearInterval(checkInterval);
           resolve(task);
         }
-      }, 100);
+      }, 100).unref();
 
       setTimeout(() => {
         clearInterval(checkInterval);
@@ -1357,7 +1361,7 @@ export class UnifiedSwarmCoordinator extends EventEmitter implements IUnifiedSwa
         } else {
           reject(new Error(`Task ${taskId} timed out`));
         }
-      }, timeoutMs);
+      }, timeoutMs).unref();
     });
   }
 
@@ -1680,7 +1684,7 @@ export class UnifiedSwarmCoordinator extends EventEmitter implements IUnifiedSwa
 
       // Wait for grace period or force terminate
       const task = agent.currentTask;
-      await new Promise(resolve => setTimeout(resolve, gracePeriodMs));
+      await new Promise(resolve => setTimeout(resolve, gracePeriodMs).unref());
 
       // Check if task still running
       const currentAgent = this.state.agents.get(agentId);

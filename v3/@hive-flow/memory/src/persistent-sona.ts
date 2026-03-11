@@ -15,6 +15,7 @@
 import {
   RvfLearningStore,
 } from './rvf-learning-store.js';
+import { generateSecureId } from '@hive-flow/shared';
 import type {
   RvfLearningStoreConfig,
   PatternRecord,
@@ -73,7 +74,7 @@ function cosineSimilarity(a: number[], b: number[]): number {
 }
 
 function generateId(prefix: string): string {
-  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  return generateSecureId(prefix);
 }
 
 // ===== PersistentSonaCoordinator =====

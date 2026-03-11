@@ -363,6 +363,7 @@ export class AgentPool extends EventEmitter implements IAgentPool {
     this.healthCheckInterval = setInterval(() => {
       this.performHealthChecks();
     }, this.config.healthCheckIntervalMs);
+    this.healthCheckInterval.unref();
   }
 
   private performHealthChecks(): void {

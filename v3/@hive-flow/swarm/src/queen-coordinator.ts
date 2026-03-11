@@ -22,6 +22,7 @@
  */
 
 import { EventEmitter } from 'events';
+import { generateSecureId } from '@hive-flow/shared';
 import type {
   AgentState,
   AgentType,
@@ -1676,6 +1677,7 @@ export class QueenCoordinator extends EventEmitter {
         this.emitEvent('queen.health.error', { error: String(error) });
       }
     }, this.config.healthCheckIntervalMs);
+    this.healthCheckInterval.unref();
   }
 
   private stopHealthMonitoring(): void {
@@ -1994,7 +1996,7 @@ export class QueenCoordinator extends EventEmitter {
 
   private emitEvent(type: string, data: Record<string, unknown>): void {
     const event = {
-      id: `event_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+      id: generateSecureId('event'),
       type,
       source: 'queen-coordinator',
       timestamp: new Date(),

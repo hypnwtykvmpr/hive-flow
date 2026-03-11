@@ -25,6 +25,7 @@
  */
 
 import { EventEmitter } from 'events';
+import { generateSecureId } from '@hive-flow/shared';
 
 // ============================================================================
 // Types
@@ -309,6 +310,7 @@ export class FederationHub extends EventEmitter {
       () => this.syncFederation(),
       this.config.syncIntervalMs
     );
+    this.syncInterval.unref();
 
     // Start cleanup interval if enabled
     if (this.config.autoCleanup) {
@@ -316,6 +318,7 @@ export class FederationHub extends EventEmitter {
         () => this.cleanupExpiredAgents(),
         this.config.cleanupIntervalMs
       );
+      this.cleanupInterval.unref();
     }
 
     this.emitEvent('federation_synced');
@@ -460,7 +463,7 @@ export class FederationHub extends EventEmitter {
 
     // Create ephemeral agent
     const ttl = options.ttl || this.config.defaultTTL;
-    const agentId = `ephemeral_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const agentId = generateSecureId('ephemeral');
     const now = new Date();
 
     const agent: EphemeralAgent = {
@@ -486,7 +489,7 @@ export class FederationHub extends EventEmitter {
         a.status = 'active';
         this.emitEvent('agent_spawned', targetSwarmId, agentId);
       }
-    }, 50);
+    }, 50).unref();
 
     // If waiting for completion
     if (options.waitForCompletion) {
@@ -535,7 +538,7 @@ export class FederationHub extends EventEmitter {
         a.status = 'terminated';
         this.emitEvent('agent_completed', a.swarmId, agentId);
       }
-    }, 100);
+    }, 100).unref();
 
     return true;
   }
@@ -609,7 +612,7 @@ export class FederationHub extends EventEmitter {
     }
 
     const message: FederationMessage = {
-      id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: generateSecureId('msg'),
       type: 'direct',
       sourceSwarmId,
       targetSwarmId,
@@ -669,7 +672,7 @@ export class FederationHub extends EventEmitter {
     }
 
     const proposal: ConsensusProposal = {
-      id: `proposal_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: generateSecureId('proposal'),
       proposerId,
       type,
       value,
@@ -857,7 +860,7 @@ export class FederationHub extends EventEmitter {
           return;
         }
 
-        setTimeout(check, 100);
+        setTimeout(check, 100).unref();
       };
 
       check();

@@ -10,7 +10,7 @@
  * @module @hive-flow/providers/scripts/setup-provider-agents
  */
 
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -57,13 +57,13 @@ const PROVIDER_BINARIES: Array<{ name: string; binary: string; fallback?: string
 
 function checkBinary(binary: string): { found: boolean; version: string | null } {
   try {
-    execSync(`which ${binary}`, { stdio: 'pipe', timeout: 5000 });
+    execFileSync('which', [binary], { stdio: 'pipe', timeout: 5000 });
   } catch {
     return { found: false, version: null };
   }
 
   try {
-    const version = execSync(`${binary} --version`, {
+    const version = execFileSync(binary, ['--version'], {
       stdio: 'pipe',
       timeout: 10000,
       encoding: 'utf-8',

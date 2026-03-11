@@ -180,7 +180,7 @@ export class RaftConsensus extends EventEmitter {
           proposal.status = 'expired';
           resolve(this.createResult(proposal, Date.now() - startTime));
         }
-      }, 10);
+      }, 10).unref();
     });
   }
 
@@ -214,6 +214,7 @@ export class RaftConsensus extends EventEmitter {
     this.electionTimeout = setTimeout(() => {
       this.startElection();
     }, timeout);
+    this.electionTimeout.unref();
   }
 
   private randomElectionTimeout(): number {
@@ -280,6 +281,7 @@ export class RaftConsensus extends EventEmitter {
     this.heartbeatInterval = setInterval(() => {
       this.sendHeartbeats();
     }, this.config.heartbeatIntervalMs ?? 50);
+    this.heartbeatInterval.unref();
 
     this.emit('leader.elected', {
       term: this.node.currentTerm,

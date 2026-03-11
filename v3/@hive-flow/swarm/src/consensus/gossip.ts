@@ -227,7 +227,7 @@ export class GossipConsensus extends EventEmitter {
 
           resolve(this.createResult(proposal, Date.now() - startTime));
         }
-      }, 50);
+      }, 50).unref();
     });
   }
 
@@ -237,6 +237,7 @@ export class GossipConsensus extends EventEmitter {
     this.gossipInterval = setInterval(() => {
       this.gossipRound();
     }, this.config.gossipIntervalMs ?? 100);
+    this.gossipInterval.unref();
   }
 
   private async gossipRound(): Promise<void> {

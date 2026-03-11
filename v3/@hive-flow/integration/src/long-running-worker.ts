@@ -330,7 +330,7 @@ export class LongRunningWorker extends WorkerBase {
       let attempt = 0;
       let lastError: Error | undefined;
 
-      while (attempt < this.maxRetries) {
+      while (attempt <= this.maxRetries) {
         try {
           result = await this.executeWithTimeout(task);
           break;
@@ -368,7 +368,10 @@ export class LongRunningWorker extends WorkerBase {
         checkpointsCreated: this.checkpointSequence,
       });
 
-      return result!;
+      if (!result) {
+        throw new Error('Retry exhausted: no result produced (maxRetries may be 0)');
+      }
+      return result;
     } catch (error) {
       // Save final checkpoint on failure
       await this.saveCheckpoint();

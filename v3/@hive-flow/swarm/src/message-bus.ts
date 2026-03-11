@@ -406,6 +406,7 @@ export class MessageBus extends EventEmitter implements IMessageBus {
     this.processingInterval = setInterval(() => {
       this.processQueues();
     }, this.config.processingIntervalMs);
+    this.processingInterval.unref();
   }
 
   private processQueues(): void {
@@ -456,6 +457,7 @@ export class MessageBus extends EventEmitter implements IMessageBus {
         const timeout = setTimeout(() => {
           this.handleAckTimeout(message);
         }, this.config.ackTimeoutMs);
+        timeout.unref();
 
         this.pendingAcks.set(message.id, { message, timeout });
       }
@@ -512,6 +514,7 @@ export class MessageBus extends EventEmitter implements IMessageBus {
     this.statsInterval = setInterval(() => {
       this.calculateMessagesPerSecond();
     }, 1000);
+    this.statsInterval.unref();
   }
 
   private calculateMessagesPerSecond(): void {

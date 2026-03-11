@@ -440,14 +440,13 @@ export class BrowserSecurityScanner {
 
   private containsInjection(value: string): boolean {
     const injectionPatterns = [
-      /['";]/,
-      /--/,
-      /\/\*/,
-      /\bOR\b.*\b=\b/i,
-      /\bAND\b.*\b=\b/i,
-      /\bUNION\b.*\bSELECT\b/i,
+      /['"](\s*OR\s+|\s*AND\s+)/i,
+      /['"];\s*(DROP|ALTER|DELETE|INSERT|UPDATE|CREATE)\b/i,
+      /\bUNION\s+(ALL\s+)?SELECT\b/i,
       /\bDROP\b.*\bTABLE\b/i,
       /\bINSERT\b.*\bINTO\b/i,
+      /['"].*--\s*$/,
+      /\/\*.*\*\//,
     ];
 
     return injectionPatterns.some((pattern) => pattern.test(value));

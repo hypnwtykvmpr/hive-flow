@@ -322,11 +322,11 @@ export class CodexInitializer {
    */
   private async registerMCPServer(): Promise<{ registered: boolean; warning?: string }> {
     try {
-      const { execSync } = await import('child_process');
+      const { execFileSync } = await import('child_process');
 
       // Check if codex CLI is available
       try {
-        execSync('which codex', { stdio: 'pipe' });
+        execFileSync('which', ['codex'], { stdio: 'pipe' });
       } catch {
         return {
           registered: false,
@@ -336,7 +336,7 @@ export class CodexInitializer {
 
       // Check if already registered
       try {
-        const list = execSync('codex mcp list 2>&1', { encoding: 'utf-8' });
+        const list = execFileSync('codex', ['mcp', 'list'], { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] });
         if (list.includes('hive-flow')) {
           return { registered: true }; // Already registered
         }
@@ -346,7 +346,7 @@ export class CodexInitializer {
 
       // Register the MCP server
       try {
-        execSync('codex mcp add hive-flow -- npx hive-flow mcp start', {
+        execFileSync('codex', ['mcp', 'add', 'hive-flow', '--', 'npx', 'hive-flow', 'mcp', 'start'], {
           stdio: 'pipe',
           timeout: 10000,
         });

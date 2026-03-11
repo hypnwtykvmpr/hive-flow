@@ -19,6 +19,7 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync } from 'fs';
 import { dirname } from 'path';
+import { generateSecureId } from '@hive-flow/shared';
 
 /** Validate a file path is safe */
 function validatePath(p: string): void {
@@ -469,7 +470,7 @@ export class RvfEmbeddingCache {
         mkdirSync(dir, { recursive: true });
       }
 
-      const tmpSuffix = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+      const tmpSuffix = generateSecureId('tmp');
       const tmpPath = this.cachePath + '.tmp.' + tmpSuffix;
       writeFileSync(tmpPath, Buffer.from(buffer));
       renameSync(tmpPath, this.cachePath);
