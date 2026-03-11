@@ -6,7 +6,6 @@
 import { spawn, ChildProcess } from 'child_process';
 import { EventEmitter } from 'events';
 import * as path from 'path';
-import * as fs from 'fs';
 
 export interface WorkerConfig {
   id: string;

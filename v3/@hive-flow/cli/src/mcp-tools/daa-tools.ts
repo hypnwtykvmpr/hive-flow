@@ -273,6 +273,7 @@ export const daaTools: MCPTool[] = [
 
       return {
         success: true,
+        simulated: true,
         workflowId,
         status: workflow.status,
         steps: workflow.steps,
@@ -401,6 +402,7 @@ export const daaTools: MCPTool[] = [
         if (action === 'analyze') {
           return {
             success: true,
+            simulated: true,
             agentId,
             currentPattern: agent.cognitivePattern,
             analysis: {

@@ -239,7 +239,8 @@ export const performanceTools: MCPTool[] = [
       const warningCount = bottlenecks.filter(b => b.severity === 'medium').length;
 
       return {
-        status: criticalCount > 0 ? 'critical' : warningCount > 0 ? 'warning' : 'healthy',
+        simulated: true,
+        status: criticalCount > 0 ? '[SIMULATED] critical' : warningCount > 0 ? '[SIMULATED] warning' : '[SIMULATED] healthy',
         bottlenecks,
         summary: {
           total: bottlenecks.length,
@@ -403,6 +404,7 @@ export const performanceTools: MCPTool[] = [
       await new Promise(resolve => setTimeout(resolve, 100));
 
       return {
+        simulated: true,
         target,
         duration: `${duration}s`,
         samples: Math.floor(duration * 100),
@@ -420,8 +422,8 @@ export const performanceTools: MCPTool[] = [
           gcTime: '50ms',
         },
         recommendations: [
-          'vectorSearch: Consider batch processing for bulk operations',
-          'embedText: Enable caching for repeated queries',
+          '[SIMULATED] vectorSearch: Consider batch processing for bulk operations',
+          '[SIMULATED] embedText: Enable caching for repeated queries',
         ],
       };
     },
@@ -472,6 +474,7 @@ export const performanceTools: MCPTool[] = [
       }
 
       return {
+        simulated: true,
         target,
         aggressive,
         applied,
@@ -480,7 +483,7 @@ export const performanceTools: MCPTool[] = [
           latency: '-40%',
           throughput: '+60%',
         },
-        status: 'optimized',
+        status: '[SIMULATED] optimized',
         timestamp: new Date().toISOString(),
       };
     },

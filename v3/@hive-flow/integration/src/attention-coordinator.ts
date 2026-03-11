@@ -560,8 +560,9 @@ export class AttentionCoordinator extends EventEmitter {
     // Scale by sqrt(d_k)
     score = score / Math.sqrt(this.config.headDim);
 
-    // Apply softmax (simplified for single attention head)
-    const weight = 1.0; // Math.exp(score) / Math.exp(score)
+    // Apply sigmoid as attention weight for single-head scalar score
+    // sigmoid maps score to (0, 1) range, providing a proper attention gate
+    const weight = 1.0 / (1.0 + Math.exp(-score));
 
     // Compute output (weight * V)
     const output = vArray.map(v => v * weight);
@@ -597,9 +598,9 @@ export class AttentionCoordinator extends EventEmitter {
   }
 
   private simpleHash(arr: number[] | Float32Array): number {
-    const slice = Array.isArray(arr) ? arr.slice(0, 8) : Array.from(arr).slice(0, 8);
+    const values = Array.isArray(arr) ? arr : Array.from(arr);
     let hash = 0;
-    for (const v of slice) {
+    for (const v of values) {
       hash = ((hash << 5) - hash) + Math.floor(v * 1000);
       hash = hash & hash;
     }

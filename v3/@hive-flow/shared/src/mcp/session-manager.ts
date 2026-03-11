@@ -15,6 +15,7 @@
  */
 
 import { EventEmitter } from 'events';
+import { randomBytes } from 'crypto';
 import {
   MCPSession,
   SessionState,
@@ -377,6 +378,7 @@ export class SessionManager extends EventEmitter {
     this.cleanupTimer = setInterval(() => {
       this.cleanupExpiredSessions();
     }, this.config.cleanupInterval);
+    this.cleanupTimer.unref?.();
   }
 
   /**
@@ -393,7 +395,7 @@ export class SessionManager extends EventEmitter {
    * Generate a unique session ID
    */
   private generateSessionId(): string {
-    return `session-${++this.sessionCounter}-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+    return `session-${++this.sessionCounter}-${Date.now()}-${randomBytes(6).toString('hex')}`;
   }
 
   /**

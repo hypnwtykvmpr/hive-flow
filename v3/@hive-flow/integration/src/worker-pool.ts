@@ -893,7 +893,10 @@ export class WorkerPool extends EventEmitter {
  * Generic worker implementation for pool spawning
  */
 class GenericWorker extends WorkerBase {
+  private executeStartTime: number = 0;
+
   async execute(task: Task): Promise<import('./worker-base.js').AgentOutput> {
+    this.executeStartTime = Date.now();
     // Simple execution that returns processed task info
     return {
       content: {
@@ -903,7 +906,7 @@ class GenericWorker extends WorkerBase {
         timestamp: Date.now(),
       },
       success: true,
-      duration: 0,
+      duration: Date.now() - this.executeStartTime,
     };
   }
 }

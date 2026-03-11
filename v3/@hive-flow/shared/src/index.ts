@@ -256,3 +256,9 @@ export * from './observability/index.js';
 // Services
 // =============================================================================
 export * from './services/index.js';
+
+// =============================================================================
+// Shared Utilities (Cross-cutting)
+// =============================================================================
+export { clamp, sigmoid, softmax, cosineSimilarity } from './utils/math-utils.js';
+export { TimerManager } from './utils/timer-manager.js';

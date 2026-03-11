@@ -574,33 +574,25 @@ function computeLocalSimilarity(query: string, content: string): number {
   const contentWords = new Set(content.toLowerCase().split(/\s+/));
   const intersection = [...queryWords].filter(w => contentWords.has(w)).length;
   const union = new Set([...queryWords, ...contentWords]).size;
-  return union > 0 ? (intersection / union) * 0.3 + 0.7 : 0.7;
+  return union > 0 ? (intersection / union) * 0.9 + 0.1 : 0.1;
 }
 
 async function handleMicroLoraApply(
   input: z.infer<typeof loraApplySchema>,
   context?: ToolContext
 ): Promise<{
-  adapted: boolean;
+  applied: boolean;
+  reason: string;
   adapterId: string;
-  latency: string;
-  output: string;
+  input: string;
 }> {
-  const startTime = performance.now();
-
-  // Micro-LoRA application (<0.05ms target latency)
   const adapterId = input.adapterId || 'micro-lora-default';
 
-  // Apply LoRA weight adaptation to input
-  const output = input.input; // Adapted output
-
-  const latency = performance.now() - startTime;
-
   return {
-    adapted: true,
+    applied: false,
+    reason: 'LoRA adaptation not yet implemented',
     adapterId,
-    latency: `${latency.toFixed(3)}ms`,
-    output,
+    input: input.input,
   };
 }
 
@@ -608,26 +600,18 @@ async function handleBaseLoraApply(
   input: z.infer<typeof loraApplySchema>,
   context?: ToolContext
 ): Promise<{
-  adapted: boolean;
+  applied: boolean;
+  reason: string;
   adapterId: string;
-  latency: string;
-  output: string;
+  input: string;
 }> {
-  const startTime = performance.now();
-
   const adapterId = input.adapterId || 'base-lora-default';
 
-  // Base LoRA is slightly slower than micro-LoRA
-  await new Promise(resolve => setTimeout(resolve, 1));
-
-  const output = input.input;
-  const latency = performance.now() - startTime;
-
   return {
-    adapted: true,
+    applied: false,
+    reason: 'LoRA adaptation not yet implemented',
     adapterId,
-    latency: `${latency.toFixed(3)}ms`,
-    output,
+    input: input.input,
   };
 }
 

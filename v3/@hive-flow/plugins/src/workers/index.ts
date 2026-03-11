@@ -383,15 +383,21 @@ export class WorkerPool extends EventEmitter implements IWorkerPool {
       throw new Error(`Worker ${workerId} not found`);
     }
 
+    const previousStatus = worker.status;
     await worker.terminate();
-    this._workers.delete(workerId);
+
+    // Keep terminated workers in the map but exclude them from dispatch
+    // Update pool metrics based on pre-termination status
     this.poolMetrics.totalWorkers--;
 
-    if (worker.status === 'idle') {
+    if (previousStatus === 'idle') {
       this.poolMetrics.idleWorkers--;
-    } else if (worker.status === 'busy') {
+    } else if (previousStatus === 'busy') {
       this.poolMetrics.activeWorkers--;
     }
+
+    // Remove from the pool so they cannot be dispatched
+    this._workers.delete(workerId);
   }
 
   async submit(task: WorkerTask): Promise<WorkerTaskResult> {
@@ -483,6 +489,7 @@ export class WorkerPool extends EventEmitter implements IWorkerPool {
 
   getAvailableWorker(type?: WorkerType): IWorkerInstance | undefined {
     for (const worker of this._workers.values()) {
+      // Only dispatch to idle workers; terminated/error workers are excluded
       if (worker.status === 'idle') {
         if (!type || worker.definition.type === type) {
           return worker;

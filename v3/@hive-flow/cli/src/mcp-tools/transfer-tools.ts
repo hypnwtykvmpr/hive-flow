@@ -23,6 +23,18 @@ function createResult(data: unknown, isError = false): MCPToolResult {
   };
 }
 
+// Module-level lazy singleton for PatternStore
+let patternStoreInstance: import('../transfer/store/index.js').PatternStore | null = null;
+
+async function getPatternStore() {
+  if (!patternStoreInstance) {
+    const { PatternStore } = await import('../transfer/store/index.js');
+    patternStoreInstance = new PatternStore();
+    await patternStoreInstance.initialize();
+  }
+  return patternStoreInstance;
+}
+
 /**
  * Transfer MCP tools for pattern export, import, anonymization, and sharing
  */
@@ -120,9 +132,7 @@ export const transferTools: MCPTool[] = [
     },
     handler: async (input): Promise<MCPToolResult> => {
       try {
-        const { PatternStore } = await import('../transfer/store/index.js');
-        const store = new PatternStore();
-        await store.initialize();
+        const store = await getPatternStore();
         const results = store.search(input as Parameters<typeof store.search>[0]);
         return createResult(results);
       } catch (error) {
@@ -148,9 +158,7 @@ export const transferTools: MCPTool[] = [
     },
     handler: async (input): Promise<MCPToolResult> => {
       try {
-        const { PatternStore } = await import('../transfer/store/index.js');
-        const store = new PatternStore();
-        await store.initialize();
+        const store = await getPatternStore();
         const pattern = store.getPattern((input as { id: string }).id);
         if (!pattern) {
           return createResult({ error: 'Pattern not found' }, true);
@@ -183,9 +191,7 @@ export const transferTools: MCPTool[] = [
     },
     handler: async (input): Promise<MCPToolResult> => {
       try {
-        const { PatternStore } = await import('../transfer/store/index.js');
-        const store = new PatternStore();
-        await store.initialize();
+        const store = await getPatternStore();
         const result = await store.download(
           (input as { id: string }).id,
           { verify: (input as { verify?: boolean }).verify }
@@ -213,9 +219,7 @@ export const transferTools: MCPTool[] = [
     },
     handler: async (input): Promise<MCPToolResult> => {
       try {
-        const { PatternStore } = await import('../transfer/store/index.js');
-        const store = new PatternStore();
-        await store.initialize();
+        const store = await getPatternStore();
         const featured = store.getFeatured();
         const limit = (input as { limit?: number }).limit || 10;
         return createResult(featured.slice(0, limit));
@@ -241,9 +245,7 @@ export const transferTools: MCPTool[] = [
     },
     handler: async (input): Promise<MCPToolResult> => {
       try {
-        const { PatternStore } = await import('../transfer/store/index.js');
-        const store = new PatternStore();
-        await store.initialize();
+        const store = await getPatternStore();
         const trending = store.getTrending();
         const limit = (input as { limit?: number }).limit || 10;
         return createResult(trending.slice(0, limit));

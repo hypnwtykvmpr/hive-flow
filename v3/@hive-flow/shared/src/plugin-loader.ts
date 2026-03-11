@@ -613,18 +613,24 @@ export class PluginLoader {
         }
       }
     }, this.config.healthCheckInterval);
+    this.healthCheckIntervalId.unref?.();
   }
 
   /**
    * Utility: Run promise with timeout
    */
   private async withTimeout<T>(promise: Promise<T>, timeoutMs: number, errorMessage: string): Promise<T> {
-    return Promise.race([
-      promise,
-      new Promise<T>((_, reject) =>
-        setTimeout(() => reject(new Error(errorMessage)), timeoutMs)
-      ),
-    ]);
+    let timeoutId: ReturnType<typeof setTimeout>;
+    try {
+      return await Promise.race([
+        promise,
+        new Promise<T>((_, reject) => {
+          timeoutId = setTimeout(() => reject(new Error(errorMessage)), timeoutMs);
+        }),
+      ]);
+    } finally {
+      clearTimeout(timeoutId!);
+    }
   }
 }
 

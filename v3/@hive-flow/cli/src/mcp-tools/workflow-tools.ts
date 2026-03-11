@@ -4,7 +4,7 @@
  * Tool definitions for workflow automation and orchestration.
  */
 
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync } from 'node:fs';
 import { join } from 'node:path';
 import type { MCPTool } from './types.js';
 import { executeWorkflowStep } from './workflow-executor.js';
@@ -82,7 +82,10 @@ function loadWorkflowStore(): WorkflowStore {
 
 function saveWorkflowStore(store: WorkflowStore): void {
   ensureWorkflowDir();
-  writeFileSync(getWorkflowPath(), JSON.stringify(store, null, 2), 'utf-8');
+  const targetPath = getWorkflowPath();
+  const tmpPath = targetPath + '.tmp.' + process.pid;
+  writeFileSync(tmpPath, JSON.stringify(store, null, 2), 'utf-8');
+  renameSync(tmpPath, targetPath);
 }
 
 export const workflowTools: MCPTool[] = [
@@ -405,17 +408,50 @@ export const workflowTools: MCPTool[] = [
       workflow.status = 'running';
       saveWorkflowStore(store);
 
-      // Continue execution from current step
+      // Continue execution from current step — dispatch to executeWorkflowStep()
       const results: Array<{ stepId: string; status: string }> = [];
       for (let i = workflow.currentStep; i < workflow.steps.length; i++) {
         const step = workflow.steps[i];
         step.status = 'running';
         step.startedAt = new Date().toISOString();
-        step.status = 'completed';
+
+        const stepCtx: WorkflowStepContext = {
+          workflowId,
+          step: {
+            stepId: step.stepId,
+            name: step.name,
+            type: step.type,
+            config: step.config,
+            gateConfig: step.gateConfig,
+            status: step.status,
+          },
+          variables: workflow.variables,
+          originalRequest: workflow.variables.originalRequest as string | undefined,
+        };
+
+        const stepResult = await executeWorkflowStep(stepCtx);
+        step.status = stepResult.status;
         step.completedAt = new Date().toISOString();
-        step.result = { executed: true };
+        step.result = stepResult.result;
+
+        // If gate is waiting for remediation, pause workflow
+        if (stepResult.status === 'waiting') {
+          workflow.status = 'paused';
+          workflow.currentStep = i;
+          saveWorkflowStore(store);
+          return {
+            workflowId,
+            status: workflow.status,
+            resumed: true,
+            stepsExecuted: results.length,
+            pausedAt: step.name,
+            pauseReason: 'Verification gate awaiting phase team remediation',
+          };
+        }
+
         results.push({ stepId: step.stepId, status: step.status });
         workflow.currentStep = i + 1;
+        saveWorkflowStore(store);
       }
 
       workflow.status = 'completed';

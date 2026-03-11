@@ -45,17 +45,20 @@ async function getRegistry(dbPath?: string): Promise<any | null> {
         const { ControllerRegistry } = await import('@hive-flow/memory');
         const registry = new ControllerRegistry();
 
-        // Suppress noisy console.log during init
+        // Suppress noisy console.log during init using a scoped flag
+        // instead of replacing the global console.log (avoids race condition
+        // with concurrent async code that also uses console.log).
+        const suppressPatterns = ['Transformers.js', 'better-sqlite3', '[AgentDB]', '[HNSWLibBackend]', 'RuVector graph'];
+        let suppressInit = true;
         const origLog = console.log;
-        console.log = (...args: unknown[]) => {
-          const msg = String(args[0] ?? '');
-          if (msg.includes('Transformers.js') ||
-              msg.includes('better-sqlite3') ||
-              msg.includes('[AgentDB]') ||
-              msg.includes('[HNSWLibBackend]') ||
-              msg.includes('RuVector graph')) return;
+        const scopedLog = (...args: unknown[]) => {
+          if (suppressInit) {
+            const msg = String(args[0] ?? '');
+            if (suppressPatterns.some(p => msg.includes(p))) return;
+          }
           origLog.apply(console, args);
         };
+        console.log = scopedLog;
 
         try {
           await registry.initialize({
@@ -70,6 +73,7 @@ async function getRegistry(dbPath?: string): Promise<any | null> {
             } as Record<string, boolean>,
           });
         } finally {
+          suppressInit = false;
           console.log = origLog;
         }
 

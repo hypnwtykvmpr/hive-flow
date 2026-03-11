@@ -128,6 +128,41 @@ export class RateLimiter {
   }
 
   /**
+   * Check if a request is allowed WITHOUT recording the event.
+   * Use this for pre-flight checks; call consume() to actually record.
+   */
+  checkLimit(operation: string, userId?: string): RateLimitResult {
+    // Check whitelist
+    if (this.config.whitelist.includes(operation)) {
+      return { allowed: true, remaining: Infinity, resetAt: 0 };
+    }
+
+    const limits = this.getLimits(operation);
+    const now = Date.now();
+
+    const bucketKey = userId && this.config.perUserLimits
+      ? `${operation}:${userId}`
+      : `global:${operation}`;
+
+    const bucket = this.buckets.get(bucketKey);
+    if (!bucket) {
+      return { allowed: true, remaining: Math.floor(limits.maxRequests * this.config.burstMultiplier), resetAt: now + limits.windowMs };
+    }
+
+    const validRequests = bucket.requests.filter(t => t > now - limits.windowMs);
+    const maxWithBurst = Math.floor(limits.maxRequests * this.config.burstMultiplier);
+    const remaining = maxWithBurst - validRequests.length;
+
+    if (remaining <= 0) {
+      const oldestRequest = validRequests[0];
+      const resetAt = oldestRequest + limits.windowMs;
+      return { allowed: false, remaining: 0, resetAt, retryAfterMs: Math.max(0, resetAt - now) };
+    }
+
+    return { allowed: true, remaining, resetAt: now + limits.windowMs };
+  }
+
+  /**
    * Consume a token (use after successful request)
    */
   consume(operation: string, userId?: string): boolean {

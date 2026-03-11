@@ -19,7 +19,7 @@
 
 import { EventEmitter } from 'events';
 import { spawn, ChildProcess } from 'child_process';
-import { createServer, Server } from 'http';
+import { createServer, Server, request as httpRequest_ } from 'http';
 import { randomUUID } from 'crypto';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -324,21 +324,9 @@ export class MCPServerManager extends EventEmitter {
       version: VERSION,
     }));
 
-    // Send server initialization notification
-    console.log(JSON.stringify({
-      jsonrpc: '2.0',
-      method: 'server.initialized',
-      params: {
-        serverInfo: {
-          name: 'hive-flow',
-          version: VERSION,
-          capabilities: {
-            tools: { listChanged: true },
-            resources: { subscribe: true, listChanged: true },
-          },
-        },
-      },
-    }));
+    // NOTE: server.initialized notification is sent AFTER the client sends
+    // its 'initialize' request, not before. See handleMCPMessage() case 'initialize'.
+    let isInitialized = false;
 
     // Handle stdin messages
     let buffer = '';
@@ -422,8 +410,10 @@ export class MCPServerManager extends EventEmitter {
     try {
       switch (message.method) {
         case 'initialize':
-          return {
-            jsonrpc: '2.0',
+          // Send the initialize response first, then the server.initialized notification
+          // per MCP spec: notification comes after the initialize response round-trip.
+          const initResponse = {
+            jsonrpc: '2.0' as const,
             id: message.id,
             result: {
               protocolVersion: '2024-11-05',
@@ -434,6 +424,15 @@ export class MCPServerManager extends EventEmitter {
               },
             },
           };
+          // Queue the server.initialized notification to be sent after this response
+          setImmediate(() => {
+            console.log(JSON.stringify({
+              jsonrpc: '2.0',
+              method: 'notifications/initialized',
+              params: {},
+            }));
+          });
+          return initResponse;
 
         case 'tools/list':
           const tools = listMCPTools();
@@ -662,9 +661,8 @@ export class MCPServerManager extends EventEmitter {
   ): Promise<any> {
     return new Promise((resolve, reject) => {
       const urlObj = new URL(url);
-      const http = require('http');
 
-      const req = http.request(
+      const req = httpRequest_(
         {
           hostname: urlObj.hostname,
           port: urlObj.port,

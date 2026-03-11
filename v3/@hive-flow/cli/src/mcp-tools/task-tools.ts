@@ -4,9 +4,14 @@
  * Tool definitions for task management with file persistence.
  */
 
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { randomBytes } from 'node:crypto';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync } from 'node:fs';
 import { join } from 'node:path';
 import type { MCPTool } from './types.js';
+
+function generateTaskId(): string {
+  return `task-${Date.now()}-${randomBytes(4).toString('hex')}`;
+}
 
 // Storage paths
 const STORAGE_DIR = '.hive-flow';
@@ -63,7 +68,10 @@ function loadTaskStore(): TaskStore {
 
 function saveTaskStore(store: TaskStore): void {
   ensureTaskDir();
-  writeFileSync(getTaskPath(), JSON.stringify(store, null, 2), 'utf-8');
+  const targetPath = getTaskPath();
+  const tmpPath = targetPath + '.tmp.' + process.pid;
+  writeFileSync(tmpPath, JSON.stringify(store, null, 2), 'utf-8');
+  renameSync(tmpPath, targetPath);
 }
 
 export const taskTools: MCPTool[] = [
@@ -84,7 +92,7 @@ export const taskTools: MCPTool[] = [
     },
     handler: async (input) => {
       const store = loadTaskStore();
-      const taskId = `task-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const taskId = generateTaskId();
 
       const task: TaskRecord = {
         taskId,

@@ -490,6 +490,14 @@ export interface AttentionParams {
   readonly topK?: number;
   /** Load balancing loss coefficient */
   readonly loadBalanceLoss?: number;
+
+  // Memory-Augmented Attention
+  /** Maximum memory bank size before FIFO eviction */
+  readonly maxMemorySize?: number;
+
+  // Sparse Attention (seeded PRNG)
+  /** Seed for deterministic random token selection */
+  readonly seed?: number;
 }
 
 /**

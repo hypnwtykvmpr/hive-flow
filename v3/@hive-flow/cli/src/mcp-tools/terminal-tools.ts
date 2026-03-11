@@ -109,7 +109,7 @@ export const terminalTools: MCPTool[] = [
   },
   {
     name: 'terminal_execute',
-    description: 'Execute a command in a terminal session',
+    description: '[SIMULATED] Record a command in a terminal session (does NOT execute — use Claude Code Bash tool for real execution)',
     category: 'terminal',
     inputSchema: {
       type: 'object',
@@ -165,12 +165,13 @@ export const terminalTools: MCPTool[] = [
 
       return {
         success: true,
+        simulated: true,
         sessionId: session.id,
         command,
         output,
         exitCode,
         executedAt: timestamp,
-        duration: Math.floor(Math.random() * 100) + 10,
+        duration: 0,
       };
     },
   },

@@ -98,6 +98,8 @@ export interface ExecutionResult {
   sql?: string;
   /** Execution statistics */
   stats?: AttentionStats;
+  /** Additional metadata for edge-case results */
+  metadata?: { mechanism: string; executionTimeMs: number; cacheHit: boolean };
 }
 
 /**
@@ -193,11 +195,25 @@ export class AttentionExecutor {
     weights?: number[],
     options?: ExecutionOptions
   ): Promise<ExecutionResult> {
+    if (mechanisms.length === 0) {
+      return {
+        output: [],
+        metadata: { mechanism: 'none', executionTimeMs: 0, cacheHit: false },
+      };
+    }
+
     const results = await Promise.all(
       mechanisms.map(m => this.execute(m, input, options))
     );
 
     const outputs = results.map(r => r.output);
+
+    if (outputs.length === 0) {
+      return {
+        output: [],
+        metadata: { mechanism: 'multi-empty', executionTimeMs: 0, cacheHit: false },
+      };
+    }
 
     let combinedOutput: number[][];
     switch (combineMethod) {

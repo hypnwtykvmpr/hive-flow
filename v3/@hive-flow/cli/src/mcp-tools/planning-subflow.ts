@@ -896,7 +896,8 @@ export async function executePlanningSubflow(
 
   // Helper to run a phase
   function runPhase<T>(phaseId: string, fn: () => T): T {
-    const phase = phases.find(p => p.phaseId === phaseId)!;
+    const phase = phases.find(p => p.phaseId === phaseId);
+    if (!phase) throw new Error(`Phase '${phaseId}' not found`);
     phase.status = 'running';
     phase.startedAt = new Date().toISOString();
     try {

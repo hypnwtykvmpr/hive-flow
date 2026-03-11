@@ -556,11 +556,12 @@ export const coordinationTools: MCPTool[] = [
       };
 
       if (metric === 'all') {
-        return { success: true, metrics };
+        return { success: true, simulated: true, metrics };
       }
 
       return {
         success: true,
+        simulated: true,
         metric,
         data: metrics[metric as keyof typeof metrics],
       };

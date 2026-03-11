@@ -42,7 +42,7 @@ interface ClaimsStore {
 }
 
 // File-based persistence
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync } from 'fs';
 import { join, resolve } from 'path';
 
 const CLAIMS_DIR = '.hive-flow/claims';
@@ -73,7 +73,10 @@ function loadClaims(): ClaimsStore {
 
 function saveClaims(store: ClaimsStore): void {
   ensureClaimsDir();
-  writeFileSync(getClaimsPath(), JSON.stringify(store, null, 2), 'utf-8');
+  const targetPath = getClaimsPath();
+  const tmpPath = targetPath + '.tmp.' + process.pid;
+  writeFileSync(tmpPath, JSON.stringify(store, null, 2), 'utf-8');
+  renameSync(tmpPath, targetPath);
 }
 
 function formatClaimant(claimant: Claimant): string {

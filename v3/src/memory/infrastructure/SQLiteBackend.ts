@@ -1,7 +1,8 @@
 /**
  * SQLiteBackend
  *
- * SQLite-based memory backend for persistent storage.
+ * @stub In-memory stub that simulates a SQLite-based memory backend.
+ * Uses a Map for storage instead of a real SQLite database.
  * Part of the hybrid memory system per ADR-009.
  */
 
@@ -13,6 +14,9 @@ import type {
 } from '../../shared/types';
 
 export class SQLiteBackend implements MemoryBackend {
+  /** @stub This backend is simulated — it uses an in-memory Map, not real SQLite. */
+  readonly simulated = true as const;
+
   private dbPath: string;
   private memories: Map<string, Memory>;
   private initialized: boolean = false;
@@ -22,6 +26,8 @@ export class SQLiteBackend implements MemoryBackend {
 
   constructor(dbPath: string) {
     this.dbPath = dbPath;
+
+    console.warn('[SQLiteBackend] Using simulated in-memory backend, not real SQLite');
 
     // Reuse an existing store for this dbPath to simulate a persistent SQLite database.
     let store = SQLiteBackend.globalStores.get(dbPath);

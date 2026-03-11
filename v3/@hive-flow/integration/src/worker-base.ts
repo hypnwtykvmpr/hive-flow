@@ -91,8 +91,10 @@ export interface WorkerCoordinationConfig {
   enabled: boolean;
   /** Coordination protocol */
   protocol?: 'direct' | 'broadcast' | 'pub-sub' | 'request-response';
-  /** Message queue capacity */
+  /** Message queue capacity (max messages before rejecting) */
   queueCapacity?: number;
+  /** Maximum message queue size (default 10000) */
+  maxQueueSize?: number;
   /** Heartbeat interval in milliseconds */
   heartbeatInterval?: number;
 }
@@ -258,6 +260,9 @@ export abstract class WorkerBase extends EventEmitter {
   /** Message queue for coordination */
   protected messageQueue: Message[] = [];
 
+  /** Maximum queue size to prevent unbounded growth */
+  protected maxQueueSize: number;
+
   /** Memory reference (for persistent memory integration) */
   protected memoryBankId?: string;
 
@@ -300,6 +305,9 @@ export abstract class WorkerBase extends EventEmitter {
       lastActivity: Date.now(),
       healthScore: 1.0,
     };
+
+    // Set max queue size from coordination config
+    this.maxQueueSize = config.coordination?.maxQueueSize ?? 10000;
 
     // Memory configuration
     if (config.memory?.enabled) {
@@ -630,6 +638,14 @@ export abstract class WorkerBase extends EventEmitter {
    * @param message - Received message
    */
   async receiveMessage(message: Message): Promise<void> {
+    if (this.messageQueue.length >= this.maxQueueSize) {
+      const err = new Error(
+        `Worker ${this.id} message queue full (max ${this.maxQueueSize}). Rejecting message.`
+      );
+      this.emit('message-rejected', { workerId: this.id, message, error: err });
+      throw err;
+    }
+
     this.messageQueue.push(message);
 
     this.emit('message-received', {

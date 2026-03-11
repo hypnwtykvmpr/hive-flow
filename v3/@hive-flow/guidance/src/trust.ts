@@ -22,6 +22,8 @@
  * @module @hive-flow/guidance/trust
  */
 
+import { clamp } from '@hive-flow/shared';
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -626,9 +628,4 @@ function scoreToTier(score: number): TrustTier {
   return 'untrusted';
 }
 
-/**
- * Clamp a number to the range [min, max].
- */
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
-}
+// clamp imported from @hive-flow/shared

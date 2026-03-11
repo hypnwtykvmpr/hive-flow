@@ -68,9 +68,11 @@ export function chunkText(
   text: string,
   config: ChunkingConfig = {}
 ): ChunkedDocument {
+  const maxChunkSize = config.maxChunkSize ?? 512;
+  const overlap = Math.min(config.overlap ?? 50, maxChunkSize - 1);
   const finalConfig: Required<ChunkingConfig> = {
-    maxChunkSize: config.maxChunkSize ?? 512,
-    overlap: config.overlap ?? 50,
+    maxChunkSize,
+    overlap: Math.max(overlap, 0),
     strategy: config.strategy ?? 'sentence',
     minChunkSize: config.minChunkSize ?? 100,
     includeMetadata: config.includeMetadata ?? true,
@@ -132,9 +134,10 @@ function chunkByCharacter(
       tokenCount: Math.ceil(chunkText.length / 4),
     });
 
-    // Move position with overlap
-    pos = endPos - overlap;
-    if (pos >= text.length - overlap) {
+    // Move position forward; step must be >= 1 to avoid infinite loop
+    const step = Math.max(config.maxChunkSize - config.overlap, 1);
+    pos += step;
+    if (pos >= text.length) {
       break;
     }
     index++;

@@ -310,7 +310,7 @@ export interface ProviderAdapterConfig {
  */
 export class ProviderAdapter extends EventEmitter {
   /** Registered providers */
-  providers: Map<string, Provider>;
+  private providers: Map<string, Provider>;
 
   /** Provider metrics */
   private metrics: Map<string, ProviderMetrics>;
@@ -320,6 +320,9 @@ export class ProviderAdapter extends EventEmitter {
 
   /** Health check timer */
   private healthCheckTimer: NodeJS.Timeout | null = null;
+
+  /** Rate limit reset timers per provider */
+  private rateLimitTimers: Map<string, NodeJS.Timeout> = new Map();
 
   /** Request cache */
   private cache: Map<string, { result: ExecutionResult; timestamp: number }>;
@@ -373,6 +376,13 @@ export class ProviderAdapter extends EventEmitter {
    */
   async shutdown(): Promise<void> {
     this.stopHealthChecks();
+
+    // Clear all rate limit reset timers
+    for (const timer of this.rateLimitTimers.values()) {
+      clearTimeout(timer);
+    }
+    this.rateLimitTimers.clear();
+
     this.providers.clear();
     this.metrics.clear();
     this.cache.clear();
@@ -770,41 +780,18 @@ export class ProviderAdapter extends EventEmitter {
 
   /**
    * Execute a request to the provider
+   *
+   * @experimental This method requires provider API configuration.
+   * Currently throws — implement provider-specific adapters to enable.
    */
   private async executeRequest(
     task: Task,
     provider: Provider,
-    options: ExecutionOptions
+    _options: ExecutionOptions
   ): Promise<ExecutionResult> {
-    const startTime = Date.now();
-
-    // Execute with provider-like latency (actual API calls via external integrations)
-    await this.delay(100);
-
-    const model = options.modelId
-      ? provider.models.find((m) => m.id === options.modelId) || provider.models[0]
-      : provider.models[0];
-
-    const inputTokens = Math.ceil(task.description.length / 4);
-    const outputTokens = Math.ceil(inputTokens * 1.5);
-
-    const cost =
-      (inputTokens / 1000) * provider.costPerToken.inputPer1K +
-      (outputTokens / 1000) * provider.costPerToken.outputPer1K;
-
-    return {
-      success: true,
-      content: `Executed task ${task.id} with ${provider.name}`,
-      providerId: provider.id,
-      modelId: model?.id || 'default',
-      usage: {
-        inputTokens,
-        outputTokens,
-        totalTokens: inputTokens + outputTokens,
-      },
-      cost,
-      latencyMs: Date.now() - startTime,
-    };
+    throw new Error(
+      `Not implemented: executeRequest requires provider API configuration for ${provider.id} (task: ${task.id})`
+    );
   }
 
   /**
@@ -898,12 +885,20 @@ export class ProviderAdapter extends EventEmitter {
     ) {
       provider.status = 'rate-limited';
 
+      // Clear existing rate limit timer for this provider
+      const existingTimer = this.rateLimitTimers.get(provider.id);
+      if (existingTimer) {
+        clearTimeout(existingTimer);
+      }
+
       // Schedule reset
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         provider.rateLimits.currentRequests = 0;
         provider.rateLimits.currentTokens = 0;
         provider.status = 'available';
+        this.rateLimitTimers.delete(provider.id);
       }, 60000);
+      this.rateLimitTimers.set(provider.id, timer);
     }
   }
 

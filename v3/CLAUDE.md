@@ -22,7 +22,6 @@ npm install && npm run build && npm test
 
 ## Code Quality
 
-- Files under 500 lines
 - No hardcoded secrets
 - Input validation at system boundaries
 - Typed interfaces for all public APIs

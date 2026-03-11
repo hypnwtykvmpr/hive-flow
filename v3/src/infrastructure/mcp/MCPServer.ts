@@ -3,6 +3,9 @@
  *
  * Model Context Protocol server for V3.
  * Provides MCP-first API design per ADR-005.
+ *
+ * @deprecated Use the canonical MCP server at `v3/mcp/server.ts` instead.
+ * This file is retained only for backward-compatible re-exports.
  */
 
 import type {

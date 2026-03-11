@@ -66,6 +66,12 @@ class ShutdownManagerImpl {
   private beforeShutdownCallbacks: BeforeShutdownCallback[] = [];
   private terminateAllFn: ((reason: string) => Promise<void>) | null = null;
 
+  // Store handler references for cleanup in reset()
+  private sigintHandler: (() => void) | null = null;
+  private sigtermHandler: (() => void) | null = null;
+  private uncaughtExceptionHandler: ((error: Error) => void) | null = null;
+  private unhandledRejectionHandler: ((reason: unknown) => void) | null = null;
+
   /**
    * Initialize shutdown handlers.
    * Call once at application startup.
@@ -85,25 +91,29 @@ class ShutdownManagerImpl {
     this.isSetup = true;
 
     // SIGINT (Ctrl+C) — two-stage handler
-    process.on('SIGINT', () => {
+    this.sigintHandler = () => {
       void this.handleCtrlC();
-    });
+    };
+    process.on('SIGINT', this.sigintHandler);
 
     // SIGTERM — immediate graceful shutdown
-    process.on('SIGTERM', () => {
+    this.sigtermHandler = () => {
       void this.handleSignal('SIGTERM', 'Process terminated');
-    });
+    };
+    process.on('SIGTERM', this.sigtermHandler);
 
     // Uncaught exceptions — log + shutdown
-    process.on('uncaughtException', (error: Error) => {
+    this.uncaughtExceptionHandler = (error: Error) => {
       void this.handleFatalError('uncaughtException', error);
-    });
+    };
+    process.on('uncaughtException', this.uncaughtExceptionHandler);
 
     // Unhandled rejections — log + shutdown
-    process.on('unhandledRejection', (reason: unknown) => {
+    this.unhandledRejectionHandler = (reason: unknown) => {
       const error = reason instanceof Error ? reason : new Error(String(reason));
       void this.handleFatalError('unhandledRejection', error);
-    });
+    };
+    process.on('unhandledRejection', this.unhandledRejectionHandler);
   }
 
   /**
@@ -140,6 +150,24 @@ class ShutdownManagerImpl {
    * Reset state (for testing).
    */
   reset(): void {
+    // Remove process listeners before resetting state
+    if (this.sigintHandler) {
+      process.removeListener('SIGINT', this.sigintHandler);
+      this.sigintHandler = null;
+    }
+    if (this.sigtermHandler) {
+      process.removeListener('SIGTERM', this.sigtermHandler);
+      this.sigtermHandler = null;
+    }
+    if (this.uncaughtExceptionHandler) {
+      process.removeListener('uncaughtException', this.uncaughtExceptionHandler);
+      this.uncaughtExceptionHandler = null;
+    }
+    if (this.unhandledRejectionHandler) {
+      process.removeListener('unhandledRejection', this.unhandledRejectionHandler);
+      this.unhandledRejectionHandler = null;
+    }
+
     this.isSetup = false;
     this.isShuttingDown = false;
     this.firstCtrlCPressed = false;

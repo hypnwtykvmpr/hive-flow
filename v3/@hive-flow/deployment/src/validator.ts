@@ -271,7 +271,7 @@ export class Validator {
    */
   private execCommand(cmd: string, returnOutput = false): string {
     // Validate: check for shell metacharacters
-    if (/[;&|`$()<>]/.test(cmd)) {
+    if (/[;&|`$()<>\n\r\0]/.test(cmd)) {
       throw new Error(`Invalid command: contains shell metacharacters`);
     }
 

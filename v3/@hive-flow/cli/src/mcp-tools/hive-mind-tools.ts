@@ -359,7 +359,7 @@ export const hiveMindTools: MCPTool[] = [
           id: state.queen.agentId,
           agentId: state.queen.agentId,
           status: 'active',
-          load: 0.3 + Math.random() * 0.4, // Simulated load
+          load: 0.3 + Math.random() * 0.4, // Simulated load (fabricated)
           tasksQueued: state.consensus.pending.length,
           electedAt: state.queen.electedAt,
           term: state.queen.term,
@@ -449,7 +449,10 @@ export const hiveMindTools: MCPTool[] = [
         });
         saveHiveState(state);
       }
-      const worker = state.workers.find(w => w.agentId === agentId)!;
+      const worker = state.workers.find(w => w.agentId === agentId);
+      if (!worker) {
+        return { success: false, error: `Agent ${agentId} not found in hive workers after join` };
+      }
       return {
         success: true, agentId, role: worker.role,
         provider: worker.provider, model: worker.model,

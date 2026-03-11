@@ -24,6 +24,7 @@ import type {
 } from '../types/index.js';
 import type { IPlugin, PluginFactory } from '../core/plugin-interface.js';
 import { validatePlugin, PLUGIN_EVENTS } from '../core/plugin-interface.js';
+import { DefaultEventBus, DefaultLogger } from './defaults.js';
 
 // ============================================================================
 // Registry Types
@@ -61,58 +62,8 @@ export interface RegistryStats {
 }
 
 // ============================================================================
-// Default Implementations
+// Default Service Container
 // ============================================================================
-
-class DefaultEventBus implements IEventBus {
-  private emitter = new EventEmitter();
-
-  emit(event: string, data?: unknown): void {
-    this.emitter.emit(event, data);
-  }
-
-  on(event: string, handler: (data?: unknown) => void | Promise<void>): () => void {
-    this.emitter.on(event, handler);
-    return () => this.off(event, handler);
-  }
-
-  off(event: string, handler: (data?: unknown) => void | Promise<void>): void {
-    this.emitter.off(event, handler);
-  }
-
-  once(event: string, handler: (data?: unknown) => void | Promise<void>): () => void {
-    this.emitter.once(event, handler);
-    return () => this.off(event, handler);
-  }
-}
-
-class DefaultLogger implements ILogger {
-  private context: Record<string, unknown> = {};
-
-  constructor(context?: Record<string, unknown>) {
-    if (context) this.context = context;
-  }
-
-  debug(message: string, ...args: unknown[]): void {
-    console.debug(`[DEBUG]`, message, ...args, this.context);
-  }
-
-  info(message: string, ...args: unknown[]): void {
-    console.info(`[INFO]`, message, ...args, this.context);
-  }
-
-  warn(message: string, ...args: unknown[]): void {
-    console.warn(`[WARN]`, message, ...args, this.context);
-  }
-
-  error(message: string, ...args: unknown[]): void {
-    console.error(`[ERROR]`, message, ...args, this.context);
-  }
-
-  child(context: Record<string, unknown>): ILogger {
-    return new DefaultLogger({ ...this.context, ...context });
-  }
-}
 
 class DefaultServiceContainer implements ServiceContainer {
   private services = new Map<string, unknown>();
@@ -573,13 +524,20 @@ export class PluginRegistry extends EventEmitter {
     context: PluginContext
   ): Promise<void> {
     const timeout = this.config.loadTimeout ?? 30000;
+    let timer: ReturnType<typeof setTimeout> | undefined;
 
-    await Promise.race([
-      plugin.initialize(context),
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Initialization timeout')), timeout)
-      ),
-    ]);
+    try {
+      await Promise.race([
+        plugin.initialize(context),
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(() => reject(new Error('Initialization timeout')), timeout);
+        }),
+      ]);
+    } finally {
+      if (timer !== undefined) {
+        clearTimeout(timer);
+      }
+    }
   }
 }
 

@@ -13,14 +13,20 @@
     "./hooks": "./dist/hooks/index.js",
     "./mcp": "./dist/mcp/index.js",
     "./security": "./dist/security/index.js",
-    "./resilience": "./dist/resilience/index.js"
+    "./resilience": "./dist/resilience/index.js",
+    "./utils/*": "./dist/utils/*"
   },
   "scripts": {
     "test": "vitest run",
     "build": "tsc"
   },
   "dependencies": {
-    "sql.js": "^1.14.1"
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "helmet": "^8.1.0",
+    "sql.js": "^1.14.1",
+    "ws": "^8.19.0",
+    "zod": "^3.25.0"
   },
   "engines": {
     "node": ">=20.0.0"
@@ -30,12 +36,7 @@
     "@types/express": "^4.17.21",
     "@types/sql.js": "^1.4.9",
     "@types/ws": "^8.5.10",
-    "cors": "^2.8.6",
-    "express": "^5.2.1",
-    "helmet": "^8.1.0",
-    "vitest": "^4.0.16",
-    "ws": "^8.19.0",
-    "zod": "^3.25.0"
+    "vitest": "^4.0.16"
   },
   "publishConfig": {
     "access": "public",

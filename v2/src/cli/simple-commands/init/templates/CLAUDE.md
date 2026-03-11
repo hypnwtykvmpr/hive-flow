@@ -140,7 +140,6 @@ npx hive-flow sparc run integration "integrate authentication with user manageme
 ## Code Style and Best Practices (Batchtools Enhanced)
 
 ### SPARC Development Principles with Batchtools
-- **Modular Design**: Keep files under 500 lines, optimize with parallel analysis
 - **Environment Safety**: Never hardcode secrets, validate with concurrent checks
 - **Test-First**: Always write tests before implementation using parallel generation
 - **Clean Architecture**: Separate concerns with concurrent validation

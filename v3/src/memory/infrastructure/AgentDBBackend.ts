@@ -1,9 +1,9 @@
 /**
  * AgentDBBackend
  *
- * Vector database backend using AgentDB for semantic search.
+ * @stub In-memory stub that simulates a vector database backend.
+ * Uses a Map and brute-force cosine similarity instead of real HNSW indexing.
  * Part of the hybrid memory system per ADR-009.
- * Provides 150x-12,500x faster search via HNSW indexing.
  */
 
 import type {
@@ -15,6 +15,9 @@ import type {
 } from '../../shared/types';
 
 export class AgentDBBackend implements MemoryBackend {
+  /** @stub This backend is simulated — it uses an in-memory Map, not real HNSW/AgentDB. */
+  readonly simulated = true as const;
+
   private dbPath: string;
   private dimensions: number;
   private hnswM: number;
@@ -28,6 +31,8 @@ export class AgentDBBackend implements MemoryBackend {
     this.hnswM = options.hnswM || 16;
     this.efConstruction = options.efConstruction || 200;
     this.memories = new Map();
+
+    console.warn('[AgentDBBackend] Using simulated in-memory backend, not real HNSW/AgentDB');
   }
 
   /**
@@ -42,10 +47,11 @@ export class AgentDBBackend implements MemoryBackend {
   }
 
   /**
-   * Close the database connection
+   * Close the database connection.
+   * Does NOT clear data — matches SQLiteBackend behavior so data persists
+   * across close/reopen cycles.
    */
   async close(): Promise<void> {
-    this.memories.clear();
     this.initialized = false;
   }
 

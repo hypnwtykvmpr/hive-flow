@@ -267,11 +267,10 @@ describe('Swarm Integration Tests', () => {
       payload: { code: 'function test() { return true; }' }
     };
 
-    const consensusResult = await coordinator.reachConsensus(decision, agents.map(a => a.id));
-
-    expect(consensusResult.decision).toBeDefined();
-    expect(consensusResult.votes).toHaveLength(3);
-    expect(consensusResult.consensusReached).toBeDefined();
+    // reachConsensus is a stub that throws until LLM integration is added
+    await expect(
+      coordinator.reachConsensus(decision, agents.map(a => a.id))
+    ).rejects.toThrow('Not implemented: consensus requires LLM integration');
   });
 
   it('should handle agent termination and cleanup', async () => {

@@ -884,9 +884,17 @@ export class ProductQuantizer implements IQuantizer {
 
   /**
    * Implements IQuantizer interface - encodes vectors.
+   * Returns empty array for empty input. Skips zero-length vectors.
    */
   quantize(vectors: number[][]): Uint8Array[] {
-    return this.encode(vectors);
+    if (vectors.length === 0) return [];
+    // Filter out zero-length / degenerate vectors, return zero codes for them
+    return vectors.map(v => {
+      if (!v || v.length === 0) {
+        return new Uint8Array(this.numSubvectors);
+      }
+      return this.encode([v])[0];
+    });
   }
 
   /**

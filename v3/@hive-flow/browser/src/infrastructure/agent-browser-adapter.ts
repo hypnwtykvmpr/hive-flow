@@ -3,7 +3,10 @@
  * Wraps agent-browser CLI for programmatic access
  */
 
-import { spawn, execSync } from 'child_process';
+import { spawn, execFile } from 'child_process';
+import { promisify } from 'util';
+
+const execFileAsync = promisify(execFile);
 import type {
   ActionResult,
   Snapshot,
@@ -69,36 +72,34 @@ export class AgentBrowserAdapter {
       console.log(`[agent-browser] ${fullArgs.join(' ')}`);
     }
 
-    return new Promise((resolve) => {
-      try {
-        const result = execSync(`agent-browser ${fullArgs.join(' ')}`, {
-          encoding: 'utf-8',
-          timeout: this.timeout + 5000,
-          stdio: ['pipe', 'pipe', 'pipe'],
-        });
+    try {
+      const { stdout: result } = await execFileAsync('agent-browser', fullArgs, {
+        encoding: 'utf-8',
+        timeout: this.timeout + 5000,
+        shell: false,
+      });
 
-        const duration = Date.now() - startTime;
+      const duration = Date.now() - startTime;
 
-        if (jsonOutput) {
-          try {
-            const parsed = JSON.parse(result);
-            resolve({
-              success: parsed.success !== false,
-              data: (parsed.data || parsed) as T,
-              duration,
-            });
-          } catch {
-            resolve({ success: true, data: result.trim() as T, duration });
-          }
-        } else {
-          resolve({ success: true, data: result.trim() as T, duration });
+      if (jsonOutput) {
+        try {
+          const parsed = JSON.parse(result);
+          return {
+            success: parsed.success !== false,
+            data: (parsed.data || parsed) as T,
+            duration,
+          };
+        } catch {
+          return { success: true, data: result.trim() as T, duration };
         }
-      } catch (error) {
-        const duration = Date.now() - startTime;
-        const message = error instanceof Error ? error.message : String(error);
-        resolve({ success: false, error: message, duration });
+      } else {
+        return { success: true, data: result.trim() as T, duration };
       }
-    });
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      const message = error instanceof Error ? error.message : String(error);
+      return { success: false, error: message, duration };
+    }
   }
 
   // ===========================================================================
@@ -636,18 +637,17 @@ export class AgentBrowserAdapter {
     const args = ['install'];
     if (withDeps) args.push('--with-deps');
 
-    return new Promise((resolve) => {
-      try {
-        const result = execSync(`agent-browser ${args.join(' ')}`, {
-          encoding: 'utf-8',
-          timeout: 300000, // 5 minutes for download
-        });
-        resolve({ success: true, data: result });
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        resolve({ success: false, error: message });
-      }
-    });
+    try {
+      const { stdout: result } = await execFileAsync('agent-browser', args, {
+        encoding: 'utf-8',
+        timeout: 300000, // 5 minutes for download
+        shell: false,
+      });
+      return { success: true, data: result };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return { success: false, error: message };
+    }
   }
 }
 

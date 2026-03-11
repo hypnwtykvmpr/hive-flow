@@ -368,34 +368,19 @@ export class SwarmCoordinator {
   }
 
   /**
-   * Reach consensus among agents
+   * Reach consensus among agents.
+   *
+   * @experimental This is a stub — real consensus requires LLM integration
+   * or a deterministic voting protocol. Do not rely on the current return
+   * value for production decisions.
    */
   async reachConsensus(
-    decision: ConsensusDecision,
-    agentIds: string[]
+    _decision: ConsensusDecision,
+    _agentIds: string[]
   ): Promise<ConsensusResult> {
-    const votes: Array<{ agentId: string; vote: unknown }> = [];
-
-    for (const agentId of agentIds) {
-      const agent = this.agents.get(agentId);
-      if (agent) {
-        // Simulate voting (in real implementation, would involve LLM calls)
-        const vote = {
-          agentId,
-          vote: Math.random() > 0.5 ? 'approve' : 'reject'
-        };
-        votes.push(vote);
-      }
-    }
-
-    const approves = votes.filter(v => v.vote === 'approve').length;
-    const consensusReached = approves > votes.length / 2;
-
-    return {
-      decision: consensusReached ? decision.payload : null,
-      votes,
-      consensusReached
-    };
+    throw new Error(
+      'Not implemented: consensus requires LLM integration or a deterministic voting protocol'
+    );
   }
 
   /**
@@ -445,25 +430,37 @@ export class SwarmCoordinator {
 
   private updateConnections(agent: Agent): void {
     if (this.topology === 'mesh') {
-      // In mesh, connect to all other agents
+      // In mesh, connect to all other agents (deduplicate using sorted pair key)
       for (const other of this.agents.values()) {
         if (other.id !== agent.id) {
-          this.connections.push({
-            from: agent.id,
-            to: other.id,
-            type: 'peer'
+          const pairKey = [agent.id, other.id].sort().join('::');
+          const exists = this.connections.some(c => {
+            const existingKey = [c.from, c.to].sort().join('::');
+            return existingKey === pairKey;
           });
+          if (!exists) {
+            this.connections.push({
+              from: agent.id,
+              to: other.id,
+              type: 'peer'
+            });
+          }
         }
       }
     } else if (this.topology === 'hierarchical') {
-      // In hierarchical, connect workers to leader
+      // In hierarchical, connect workers to leader (deduplicate)
       const leader = this.getLeader();
       if (leader && agent.role !== 'leader') {
-        this.connections.push({
-          from: agent.id,
-          to: leader.id,
-          type: 'leader'
-        });
+        const exists = this.connections.some(
+          c => c.from === agent.id && c.to === leader.id
+        );
+        if (!exists) {
+          this.connections.push({
+            from: agent.id,
+            to: leader.id,
+            type: 'leader'
+          });
+        }
       }
     }
   }

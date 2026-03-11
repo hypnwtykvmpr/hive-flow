@@ -23,7 +23,7 @@ import {
   WorkerInstance,
   TriggerDetectionResult,
   getWorkerDispatchService,
-} from '../../@hive-flow/swarm/src/workers/worker-dispatch.js';
+} from '@hive-flow/swarm/workers/worker-dispatch.js';
 
 // ============================================================================
 // Input Schemas
@@ -341,25 +341,9 @@ async function handleWorkerStats(
   const dispatcher = getDispatcher();
   const stats = dispatcher.getStats();
 
-  // Count by trigger would need additional tracking
-  const byTrigger: Record<WorkerTrigger, number> = {
-    ultralearn: 0,
-    optimize: 0,
-    consolidate: 0,
-    predict: 0,
-    audit: 0,
-    map: 0,
-    preload: 0,
-    deepdive: 0,
-    document: 0,
-    refactor: 0,
-    benchmark: 0,
-    testgaps: 0,
-  };
-
   return {
     ...stats,
-    byTrigger,
+    byTrigger: { tracked: false } as unknown as Record<WorkerTrigger, number>,
   };
 }
 

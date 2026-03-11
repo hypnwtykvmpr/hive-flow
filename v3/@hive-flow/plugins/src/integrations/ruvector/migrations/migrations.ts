@@ -9,7 +9,8 @@
  */
 
 import { readFile, readdir } from 'fs/promises';
-import { join, basename } from 'path';
+import { join, dirname, basename } from 'path';
+import { fileURLToPath } from 'url';
 
 // ============================================================================
 // Types
@@ -107,10 +108,11 @@ const defaultLogger: Logger = {
 // ============================================================================
 
 /**
- * Calculate MD5 checksum of a string
+ * Calculate a simple hash checksum of a string.
+ * NOTE: This is NOT a cryptographic hash. It is only used for file change detection
+ * in migration checksums, not for security purposes.
  */
-function md5(content: string): string {
-  // Simple hash implementation for checksum
+function simpleHash(content: string): string {
   let hash = 0;
   for (let i = 0; i < content.length; i++) {
     const char = content.charCodeAt(i);
@@ -118,6 +120,24 @@ function md5(content: string): string {
     hash = hash & hash; // Convert to 32bit integer
   }
   return Math.abs(hash).toString(16).padStart(8, '0');
+}
+
+/**
+ * SQL identifier allowlist pattern.
+ * Only allows alphanumeric characters, underscores, and dots for schema-qualified names.
+ */
+const SAFE_SQL_IDENTIFIER = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+
+/**
+ * Quote a SQL identifier safely.
+ * Validates against an allowlist and double-quotes the identifier.
+ * @throws Error if the identifier contains invalid characters.
+ */
+function quoteSqlIdentifier(identifier: string): string {
+  if (!SAFE_SQL_IDENTIFIER.test(identifier)) {
+    throw new Error(`Invalid SQL identifier: ${identifier}`);
+  }
+  return `"${identifier}"`;
 }
 
 /**
@@ -172,7 +192,7 @@ export class MigrationManager {
 
   constructor(client: DatabaseClient, options: MigrationManagerOptions = {}) {
     this.client = client;
-    this.migrationsDir = options.migrationsDir ?? join(__dirname, '.');
+    this.migrationsDir = options.migrationsDir ?? dirname(fileURLToPath(import.meta.url));
     this.schema = options.schema ?? 'hive_flow';
     this.tableName = options.tableName ?? 'migrations';
     this.verbose = options.verbose ?? false;
@@ -185,12 +205,15 @@ export class MigrationManager {
   async initialize(): Promise<void> {
     this.log('Initializing migrations table...');
 
+    const qSchema = quoteSqlIdentifier(this.schema);
+    const qTable = quoteSqlIdentifier(this.tableName);
+
     // Create schema if not exists
-    await this.client.query(`CREATE SCHEMA IF NOT EXISTS ${this.schema}`);
+    await this.client.query(`CREATE SCHEMA IF NOT EXISTS ${qSchema}`);
 
     // Create migrations tracking table
     await this.client.query(`
-      CREATE TABLE IF NOT EXISTS ${this.schema}.${this.tableName} (
+      CREATE TABLE IF NOT EXISTS ${qSchema}.${qTable} (
         id SERIAL PRIMARY KEY,
         name TEXT NOT NULL UNIQUE,
         applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -230,7 +253,7 @@ export class MigrationManager {
         filename,
         upSql: content,
         downSql: extractRollbackSql(content),
-        checksum: md5(content),
+        checksum: simpleHash(content),
       });
     }
 
@@ -243,6 +266,8 @@ export class MigrationManager {
    */
   async getAppliedMigrations(): Promise<AppliedMigration[]> {
     try {
+      const qSchema = quoteSqlIdentifier(this.schema);
+      const qTable = quoteSqlIdentifier(this.tableName);
       const result = await this.client.query<{
         id: number;
         name: string;
@@ -252,7 +277,7 @@ export class MigrationManager {
         rolled_back_at: Date | null;
       }>(`
         SELECT id, name, applied_at, checksum, execution_time_ms, rolled_back_at
-        FROM ${this.schema}.${this.tableName}
+        FROM ${qSchema}.${qTable}
         WHERE rolled_back_at IS NULL
         ORDER BY id
       `);
@@ -296,8 +321,10 @@ export class MigrationManager {
       const executionTimeMs = Date.now() - startTime;
 
       // Record the migration (ignore if already recorded by the migration itself)
+      const qSchema = quoteSqlIdentifier(this.schema);
+      const qTable = quoteSqlIdentifier(this.tableName);
       await this.client.query(`
-        INSERT INTO ${this.schema}.${this.tableName} (name, checksum, execution_time_ms)
+        INSERT INTO ${qSchema}.${qTable} (name, checksum, execution_time_ms)
         VALUES ($1, $2, $3)
         ON CONFLICT (name) DO UPDATE SET
           checksum = EXCLUDED.checksum,
@@ -352,8 +379,10 @@ export class MigrationManager {
       const executionTimeMs = Date.now() - startTime;
 
       // Mark the migration as rolled back
+      const qSchema = quoteSqlIdentifier(this.schema);
+      const qTable = quoteSqlIdentifier(this.tableName);
       await this.client.query(`
-        UPDATE ${this.schema}.${this.tableName}
+        UPDATE ${qSchema}.${qTable}
         SET rolled_back_at = NOW()
         WHERE name = $1
       `, [migration.name]);

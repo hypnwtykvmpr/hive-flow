@@ -31,12 +31,31 @@ export class SparseAttention extends BaseAttentionMechanism {
   readonly description = 'Sparse attention with local, global, and random components';
   readonly category: AttentionCategory = 'sparse';
 
+  /**
+   * Seeded xorshift32 PRNG. If no seed is provided, falls back to Math.random().
+   */
+  private createRng(seed?: number): () => number {
+    if (seed === undefined || seed === null) {
+      return Math.random;
+    }
+    let state = seed | 0;
+    if (state === 0) state = 1; // xorshift cannot have zero state
+    return () => {
+      state ^= state << 13;
+      state ^= state >> 17;
+      state ^= state << 5;
+      return (state >>> 0) / 4294967296;
+    };
+  }
+
   async compute(query: number[], keys: number[][], values: number[][]): Promise<number[]> {
     const blockSize = this.config.params?.blockSize ?? 64;
     const numGlobal = this.config.params?.numGlobalTokens ?? 2;
     const numRandom = this.config.params?.numRandomTokens ?? 3;
+    const seed = this.config.params?.seed as number | undefined;
     const scale = this.getScale();
     const seqLen = keys.length;
+    const rng = this.createRng(seed);
 
     // Build sparse attention pattern
     const attendTo = new Set<number>();
@@ -52,9 +71,9 @@ export class SparseAttention extends BaseAttentionMechanism {
       attendTo.add(i);
     }
 
-    // Random tokens
+    // Random tokens (deterministic when seed is provided)
     for (let r = 0; r < numRandom; r++) {
-      attendTo.add(Math.floor(Math.random() * seqLen));
+      attendTo.add(Math.floor(rng() * seqLen));
     }
 
     const scores = keys.map((k, i) => {

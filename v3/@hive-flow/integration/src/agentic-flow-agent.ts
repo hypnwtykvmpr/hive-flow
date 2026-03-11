@@ -412,8 +412,10 @@ export class AgenticFlowAgent extends EventEmitter implements IAgent {
       this.emit('initialized', { agentId: this.id, status: this.status });
     } catch (error) {
       this.status = 'error';
-      this.health!.status = 'unhealthy';
-      this.health!.issues!.push(`Initialization failed: ${(error as Error).message}`);
+      if (this.health) {
+        this.health.status = 'unhealthy';
+        (this.health.issues ??= []).push(`Initialization failed: ${(error as Error).message}`);
+      }
 
       this.emit('initialization-failed', {
         agentId: this.id,
@@ -527,10 +529,12 @@ export class AgenticFlowAgent extends EventEmitter implements IAgent {
       const duration = Date.now() - this.taskStartTime;
 
       // Update metrics
-      this.metrics!.tasksCompleted++;
-      this.totalTaskDuration += duration;
-      this.metrics!.avgTaskDuration =
-        this.totalTaskDuration / this.metrics!.tasksCompleted;
+      if (this.metrics) {
+        this.metrics.tasksCompleted++;
+        this.totalTaskDuration += duration;
+        this.metrics.avgTaskDuration =
+          this.totalTaskDuration / this.metrics.tasksCompleted;
+      }
 
       const result: TaskResult = {
         taskId: task.id,
@@ -551,8 +555,10 @@ export class AgenticFlowAgent extends EventEmitter implements IAgent {
       const duration = Date.now() - this.taskStartTime;
 
       // Update metrics
-      this.metrics!.tasksFailed++;
-      this.metrics!.errorCount++;
+      if (this.metrics) {
+        this.metrics.tasksFailed++;
+        this.metrics.errorCount++;
+      }
 
       const result: TaskResult = {
         taskId: task.id,
@@ -665,43 +671,53 @@ export class AgenticFlowAgent extends EventEmitter implements IAgent {
   getHealth(): AgentHealth {
     const uptime = Date.now() - this.createdAt.getTime();
 
-    // Update metrics
-    if (this.metrics) {
-      this.metrics.uptime = uptime;
-    }
+    const metricsData = this.metrics ?? {
+      tasksCompleted: 0,
+      tasksFailed: 0,
+      avgTaskDuration: 0,
+      errorCount: 0,
+      uptime: 0,
+    };
+    metricsData.uptime = uptime;
+
+    const healthData = this.health ?? {
+      status: 'healthy' as const,
+      lastCheck: new Date(),
+      issues: [],
+    };
 
     const baseHealth: AgentHealth = {
-      status: this.health!.status,
+      status: healthData.status,
       lastCheck: Date.now(),
-      issues: this.health!.issues || [],
+      issues: healthData.issues || [],
       metrics: {
         uptime,
-        tasksCompleted: this.metrics!.tasksCompleted,
-        tasksFailed: this.metrics!.tasksFailed,
-        avgLatency: this.metrics!.avgTaskDuration,
+        tasksCompleted: metricsData.tasksCompleted,
+        tasksFailed: metricsData.tasksFailed,
+        avgLatency: metricsData.avgTaskDuration,
         memoryUsageMb: this.estimateMemoryUsage(),
         cpuPercent: 0, // Would need OS-level metrics
       },
     };
 
     // Update health status based on metrics
-    const errorRate =
-      this.metrics!.tasksCompleted > 0
-        ? this.metrics!.tasksFailed / (this.metrics!.tasksCompleted + this.metrics!.tasksFailed)
-        : 0;
+    const totalTasks = metricsData.tasksCompleted + metricsData.tasksFailed;
+    const errorRate = totalTasks > 0
+      ? metricsData.tasksFailed / totalTasks
+      : 0;
 
     if (errorRate > 0.5) {
-      this.health!.status = 'unhealthy';
+      healthData.status = 'unhealthy';
       baseHealth.status = 'unhealthy';
     } else if (errorRate > 0.2) {
-      this.health!.status = 'degraded';
+      healthData.status = 'degraded';
       baseHealth.status = 'degraded';
     } else {
-      this.health!.status = 'healthy';
+      healthData.status = 'healthy';
       baseHealth.status = 'healthy';
     }
 
-    this.health!.lastCheck = new Date();
+    healthData.lastCheck = new Date();
 
     return baseHealth;
   }
@@ -721,9 +737,6 @@ export class AgenticFlowAgent extends EventEmitter implements IAgent {
     if (!this.memoryBankId) {
       this.memoryBankId = this.generateId('memory');
     }
-
-    // Additional local initialization can be added here
-    await this.delay(10); // Allow async initialization to complete
   }
 
   /**
@@ -733,9 +746,6 @@ export class AgenticFlowAgent extends EventEmitter implements IAgent {
     // Clean up resources
     this.currentTask = null;
     this.currentTaskCount = 0;
-
-    // Additional local cleanup can be added here
-    await this.delay(10); // Allow async cleanup to complete
   }
 
   /**
@@ -743,9 +753,6 @@ export class AgenticFlowAgent extends EventEmitter implements IAgent {
    * Override this method in subclasses for specific agent behavior
    */
   protected async localExecuteTask(task: Task): Promise<unknown> {
-    // Minimal processing delay for timing metrics
-    await this.delay(1);
-
     // This is a basic implementation that should be overridden by subclasses
     // For now, just return the task input as output
     return {
@@ -769,22 +776,16 @@ export class AgenticFlowAgent extends EventEmitter implements IAgent {
    */
   private estimateMemoryUsage(): number {
     // Rough estimate: 1MB base + 100KB per task completed
-    return 1 + (this.metrics!.tasksCompleted * 0.1);
+    return 1 + ((this.metrics?.tasksCompleted ?? 0) * 0.1);
   }
 
   /**
    * Generate a unique ID with prefix
    */
   private generateId(prefix: string): string {
-    return `${prefix}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `${prefix}_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
   }
 
-  /**
-   * Utility delay function
-   */
-  private delay(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-  }
 }
 
 /**

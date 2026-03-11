@@ -25,6 +25,7 @@
  */
 
 import { randomUUID } from 'node:crypto';
+import { clamp } from '@hive-flow/shared';
 
 // ============================================================================
 // Types
@@ -847,9 +848,4 @@ export function createUncertaintyAggregator(
 // Helpers
 // ============================================================================
 
-/**
- * Clamp a number to the range [min, max].
- */
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
-}
+// clamp imported from @hive-flow/shared

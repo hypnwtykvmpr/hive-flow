@@ -306,6 +306,7 @@ export class CircuitBreaker extends EventEmitter {
         this.transitionTo(CircuitBreakerState.HALF_OPEN);
       }
     }, this.options.timeout);
+    this.timeoutId.unref?.();
   }
 
   /**

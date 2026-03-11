@@ -369,7 +369,18 @@ export class WebSocketTransport extends EventEmitter implements ITransport {
     }
 
     try {
-      const message = this.parseMessage(data);
+      const parsed = this.parseMessage(data);
+
+      // Validate message shape before casting
+      if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+        client.ws.send(this.serializeMessage({
+          jsonrpc: '2.0',
+          id: null,
+          error: { code: -32600, message: 'Invalid request: expected JSON object' },
+        } as MCPResponse));
+        return;
+      }
+      const message = parsed as Record<string, unknown>;
 
       // Check authentication for non-authenticated clients
       if (!client.isAuthenticated && this.config.auth?.enabled) {
@@ -440,13 +451,13 @@ export class WebSocketTransport extends EventEmitter implements ITransport {
   /**
    * Parse incoming message with error handling
    */
-  private parseMessage(data: RawData): any {
+  private parseMessage(data: RawData): unknown {
     try {
       if (this.config.enableBinaryMode && Buffer.isBuffer(data)) {
         // Could implement binary protocol here
-        return JSON.parse(data.toString());
+        return JSON.parse(data.toString()) as unknown;
       }
-      return JSON.parse(data.toString());
+      return JSON.parse(data.toString()) as unknown;
     } catch (error) {
       // Wrap JSON parse errors with more context
       throw new Error(`JSON parse error: ${error instanceof Error ? error.message : String(error)}`);
@@ -489,6 +500,7 @@ export class WebSocketTransport extends EventEmitter implements ITransport {
         }
       }
     }, interval);
+    this.heartbeatTimer.unref?.();
   }
 
   /**

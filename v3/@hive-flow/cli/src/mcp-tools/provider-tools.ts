@@ -8,6 +8,19 @@
 import type { MCPTool } from './types.js';
 import type { LLMMessage } from '@hive-flow/providers';
 
+// Lazy singleton for provider manager (WP-U-048)
+let providerManagerPromise: Promise<any> | null = null;
+
+async function getOrCreateProviderManager(providerName: string) {
+  // Each status/complete call may need a different provider config,
+  // so we cache per-provider. For simplicity, create fresh per call
+  // but reuse the import.
+  const { createProviderManager } = await import('@hive-flow/providers');
+  return createProviderManager({
+    providers: [{ provider: providerName as 'gemini-cli' | 'codex-cli' | 'cursor-cli', model: 'auto' }],
+  });
+}
+
 export const providerTools: MCPTool[] = [
   {
     name: 'provider_status',

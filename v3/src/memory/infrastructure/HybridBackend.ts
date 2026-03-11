@@ -1,7 +1,8 @@
 /**
  * HybridBackend
  *
- * Combines SQLite for structured queries with AgentDB for vector search.
+ * @stub Composes simulated SQLite and AgentDB backends.
+ * Both sub-backends use in-memory Maps, not real databases.
  * Per ADR-009: Hybrid Memory Backend Default.
  */
 
@@ -15,6 +16,9 @@ import { SQLiteBackend } from './SQLiteBackend';
 import { AgentDBBackend } from './AgentDBBackend';
 
 export class HybridBackend implements MemoryBackend {
+  /** @stub This backend is simulated — both sub-backends use in-memory Maps. */
+  readonly simulated = true as const;
+
   private sqliteBackend: SQLiteBackend;
   private agentDbBackend: AgentDBBackend;
   private initialized: boolean = false;

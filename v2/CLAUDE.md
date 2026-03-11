@@ -78,7 +78,6 @@ This project uses SPARC (Specification, Pseudocode, Architecture, Refinement, Co
 
 ## Code Style & Best Practices
 
-- **Modular Design**: Files under 500 lines
 - **Environment Safety**: Never hardcode secrets
 - **Test-First**: Write tests before implementation
 - **Clean Architecture**: Separate concerns

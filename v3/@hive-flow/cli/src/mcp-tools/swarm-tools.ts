@@ -52,6 +52,7 @@ export const swarmTools: MCPTool[] = [
     },
     handler: async (input) => {
       return {
+        simulated: true,
         swarmId: input.swarmId,
         status: 'running',
         agentCount: 0,
@@ -90,13 +91,14 @@ export const swarmTools: MCPTool[] = [
     },
     handler: async (input) => {
       return {
+        simulated: true,
         status: 'healthy' as const,
         swarmId: input.swarmId || 'default',
         checks: [
-          { name: 'coordinator', status: 'ok', message: 'Coordinator responding' },
-          { name: 'agents', status: 'ok', message: 'Agent pool healthy' },
-          { name: 'memory', status: 'ok', message: 'Memory backend connected' },
-          { name: 'messaging', status: 'ok', message: 'Message bus active' },
+          { name: 'coordinator', status: 'ok', message: '[SIMULATED] Coordinator responding' },
+          { name: 'agents', status: 'ok', message: '[SIMULATED] Agent pool healthy' },
+          { name: 'memory', status: 'ok', message: '[SIMULATED] Memory backend connected' },
+          { name: 'messaging', status: 'ok', message: '[SIMULATED] Message bus active' },
         ],
         checkedAt: new Date().toISOString(),
       };

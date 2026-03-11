@@ -625,14 +625,23 @@ export class LongRunningWorker extends WorkerBase {
       return this.executeCore(task);
     }
 
-    return Promise.race([
-      this.executeCore(task),
-      new Promise<AgentOutput>((_, reject) => {
-        setTimeout(() => {
-          reject(new Error(`Task timeout after ${this.taskTimeout}ms`));
-        }, this.taskTimeout);
-      }),
-    ]);
+    let timeoutHandle: NodeJS.Timeout;
+
+    const timeoutPromise = new Promise<AgentOutput>((_, reject) => {
+      timeoutHandle = setTimeout(() => {
+        reject(new Error(`Task timeout after ${this.taskTimeout}ms`));
+      }, this.taskTimeout);
+    });
+
+    try {
+      const result = await Promise.race([
+        this.executeCore(task),
+        timeoutPromise,
+      ]);
+      return result;
+    } finally {
+      clearTimeout(timeoutHandle!);
+    }
   }
 
   /**

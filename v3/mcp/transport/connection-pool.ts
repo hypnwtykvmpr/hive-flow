@@ -369,6 +369,7 @@ export class ConnectionPool<T> extends EventEmitter {
     this.healthCheckTimer = setInterval(async () => {
       await this.performHealthCheck();
     }, this.config.healthCheckInterval);
+    this.healthCheckTimer.unref?.();
   }
 
   /**

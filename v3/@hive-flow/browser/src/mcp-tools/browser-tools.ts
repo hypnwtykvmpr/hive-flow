@@ -8,10 +8,22 @@ import type { ActionResult, Snapshot } from '../domain/types.js';
 
 // Session registry for multi-agent coordination
 const sessions = new Map<string, AgentBrowserAdapter>();
+const MAX_SESSIONS = 100;
 
 function getAdapter(sessionId?: string): AgentBrowserAdapter {
   const id = sessionId || 'default';
   if (!sessions.has(id)) {
+    // Evict oldest sessions if at capacity (LRU-style: delete first entry)
+    if (sessions.size >= MAX_SESSIONS) {
+      const oldestKey = sessions.keys().next().value;
+      if (oldestKey !== undefined) {
+        const oldAdapter = sessions.get(oldestKey);
+        if (oldAdapter) {
+          oldAdapter.close().catch(() => { /* best-effort cleanup */ });
+        }
+        sessions.delete(oldestKey);
+      }
+    }
     sessions.set(id, new AgentBrowserAdapter({ session: id }));
   }
   return sessions.get(id)!;

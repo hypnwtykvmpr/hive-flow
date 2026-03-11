@@ -6,6 +6,8 @@
  * @module v3/shared/security/input-validation
  */
 
+import * as nodePath from 'path';
+
 /**
  * Validation result
  */
@@ -120,13 +122,21 @@ export function validatePath(
   path: string,
   allowedBase?: string
 ): ValidationResult {
-  // Normalize and check for path traversal
-  const normalized = path
+  // Check for null bytes first (before any normalization)
+  if (path.includes('\0')) {
+    return { valid: false, error: 'Path contains null bytes' };
+  }
+
+  // Resolve to absolute path to eliminate '..' and symlink tricks
+  const resolved = nodePath.resolve(path);
+
+  // Normalize separators for consistent checking
+  const normalized = resolved
     .replace(/\\/g, '/') // Normalize Windows paths
     .replace(/\/+/g, '/'); // Remove duplicate slashes
 
-  // Check for dangerous patterns
-  if (normalized.includes('..') || normalized.includes('~')) {
+  // Check for tilde (home directory expansion is shell-specific and should be explicit)
+  if (path.includes('~')) {
     return {
       valid: false,
       error: 'Path contains directory traversal characters',
@@ -134,16 +144,11 @@ export function validatePath(
   }
 
   // Check for absolute paths outside allowed base
-  if (allowedBase && !normalized.startsWith(allowedBase)) {
-    const isAbsolute = normalized.startsWith('/') || /^[a-zA-Z]:/.test(normalized);
-    if (isAbsolute) {
+  if (allowedBase) {
+    const resolvedBase = nodePath.resolve(allowedBase).replace(/\\/g, '/').replace(/\/+/g, '/');
+    if (!normalized.startsWith(resolvedBase + '/') && normalized !== resolvedBase) {
       return { valid: false, error: 'Path is outside allowed directory' };
     }
-  }
-
-  // Check for null bytes
-  if (normalized.includes('\0')) {
-    return { valid: false, error: 'Path contains null bytes' };
   }
 
   // Check length
@@ -179,13 +184,16 @@ export function validateCommand(
 
   // Check for dangerous shell characters
   const dangerousPatterns = [
-    /[;&|`$]/,     // Shell operators
-    /\$\(/,        // Command substitution
+    /[;&|`]/,      // Shell operators (semicolon, ampersand, pipe, backtick)
+    /\$\(/,        // Command substitution $()
+    /\$\{/,        // Variable expansion ${...}
     /`.*`/,        // Backtick substitution
     /\|\|/,        // OR operator
     /&&/,          // AND operator
     />\s*>/,       // Append redirection
     /<\s*</,       // Here document
+    /<\(/,         // Process substitution <()
+    />\(/,         // Process substitution >()
     /\r|\n/,       // Newlines (command chaining)
   ];
 

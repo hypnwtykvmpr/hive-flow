@@ -4,9 +4,10 @@
  * V2 Compatibility - GitHub integration tools
  *
  * ⚠️ IMPORTANT: These tools provide LOCAL STATE MANAGEMENT only.
- * - NO actual GitHub API calls are made
+ * - NO actual GitHub API calls are made — ALL data is SIMULATED
  * - Data is stored locally for workflow coordination
  * - For real GitHub operations, use `gh` CLI or GitHub MCP server
+ * - All responses include `simulated: true`
  */
 
 import type { MCPTool } from './types.js';
@@ -110,6 +111,7 @@ export const githubTools: MCPTool[] = [
       saveGitHubStore(store);
 
       return {
+        simulated: true,
         success: true,
         repository: repoKey,
         branch,

@@ -24,7 +24,6 @@
 ## Project Architecture
 
 - Follow Domain-Driven Design with bounded contexts
-- Keep files under 500 lines
 - Use typed interfaces for all public APIs
 - Prefer TDD London School (mock-first) for new code
 - Use event sourcing for state changes
@@ -192,8 +191,8 @@ Task("Reviewer", "Review code quality and security. Store findings in 'collabora
 
 // 🟢 Codex workers (implementation, optimization)
 // Spawn via CLI for Codex platform
-Bash("npx hive-flow-codex dual run --worker 'codex:coder:Implement the solution based on architect design' --namespace collaboration")
-Bash("npx hive-flow-codex dual run --worker 'codex:optimizer:Optimize performance based on implementation' --namespace collaboration")
+Bash("npx hive-flow dual run --worker 'codex:coder:Implement the solution based on architect design' --namespace collaboration")
+Bash("npx hive-flow dual run --worker 'codex:optimizer:Optimize performance based on implementation' --namespace collaboration")
 
 // STEP 3: Coordinate via shared memory
 Bash("npx hive-flow memory store --namespace collaboration --key 'task-context' --value '[task description]'")
@@ -212,12 +211,12 @@ Bash("npx hive-flow memory store --namespace collaboration --key 'task-context' 
 
 ```bash
 # Run a collaboration template
-npx hive-flow-codex dual run feature --task "Add user authentication with OAuth"
-npx hive-flow-codex dual run security --target "./src"
-npx hive-flow-codex dual run refactor --target "./src/legacy"
+npx hive-flow dual run feature --task "Add user authentication with OAuth"
+npx hive-flow dual run security --target "./src"
+npx hive-flow dual run refactor --target "./src/legacy"
 
 # Custom multi-platform swarm
-npx hive-flow-codex dual run \
+npx hive-flow dual run \
   --worker "claude:architect:Design the API structure" \
   --worker "codex:coder:Implement REST endpoints" \
   --worker "claude:tester:Write integration tests" \
@@ -225,10 +224,10 @@ npx hive-flow-codex dual run \
   --namespace "api-feature"
 
 # Check collaboration status
-npx hive-flow-codex dual status
+npx hive-flow dual status
 
 # List available templates
-npx hive-flow-codex dual templates
+npx hive-flow dual templates
 ```
 
 ### Shared Memory Coordination

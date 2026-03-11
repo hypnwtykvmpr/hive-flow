@@ -18,13 +18,16 @@ const browserSessions = new Map<string, {
  * Execute agent-browser CLI command
  */
 async function execBrowserCommand(args: string[], session = 'default'): Promise<MCPToolResult> {
-  const { execSync } = await import('child_process');
+  const { execFile } = await import('child_process');
+  const { promisify } = await import('util');
+  const execFileAsync = promisify(execFile);
 
   try {
     const fullArgs = ['--session', session, '--json', ...args];
-    const result = execSync(`agent-browser ${fullArgs.join(' ')}`, {
+    const { stdout: result } = await execFileAsync('agent-browser', fullArgs, {
       encoding: 'utf-8',
       timeout: 30000,
+      shell: false,
     });
 
     let data;
@@ -91,6 +94,23 @@ export const browserTools: MCPTool[] = [
         session?: string;
         waitUntil?: string;
       };
+
+      // Validate URL scheme (allow only http/https)
+      try {
+        const parsed = new URL(url);
+        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+          return {
+            content: [{ type: 'text', text: JSON.stringify({ success: false, error: 'Only http and https URLs are allowed' }) }],
+            isError: true,
+          };
+        }
+      } catch {
+        return {
+          content: [{ type: 'text', text: JSON.stringify({ success: false, error: 'Invalid URL' }) }],
+          isError: true,
+        };
+      }
+
       const args = ['open', url];
       if (waitUntil) args.push('--wait-until', waitUntil);
 

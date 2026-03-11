@@ -306,8 +306,8 @@ export class ThreatDetectionService {
       }
     }
 
-    // PII detection
-    const piiFound = this.detectPII(input);
+    // PII detection (on normalized input to prevent bypass via zero-width chars)
+    const piiFound = this.detectPII(normalizedInput);
 
     const detectionTimeMs = performance.now() - startTime;
     this.detectionCount++;
@@ -348,11 +348,17 @@ export class ThreatDetectionService {
   }
 
   /**
-   * Detect PII in text
+   * Detect PII in text.
+   * Input is normalized before matching to prevent bypass via zero-width
+   * characters, Unicode tricks, or other obfuscation techniques.
    */
   detectPII(input: string): boolean {
+    // Normalize to prevent bypass via zero-width chars / Unicode tricks
+    const normalized = this.normalizeInput(input);
     for (const pii of PII_PATTERNS) {
-      if (pii.pattern.test(input)) {
+      // Reset lastIndex for global regexes to avoid stateful matching issues
+      pii.pattern.lastIndex = 0;
+      if (pii.pattern.test(normalized)) {
         return true;
       }
     }

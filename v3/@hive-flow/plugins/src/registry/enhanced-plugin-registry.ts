@@ -36,6 +36,7 @@ import {
   type DependencyError,
   satisfiesVersion,
 } from './dependency-graph.js';
+import { DefaultEventBus, DefaultLogger } from './defaults.js';
 
 // ============================================================================
 // Types
@@ -148,60 +149,6 @@ class EnhancedServiceContainer implements ServiceContainer {
 
   getMetadata(key: string): ServiceMetadata | undefined {
     return this.metadata.get(key);
-  }
-}
-
-// ============================================================================
-// Default Implementations
-// ============================================================================
-
-class DefaultEventBus implements IEventBus {
-  private emitter = new EventEmitter();
-
-  emit(event: string, data?: unknown): void {
-    this.emitter.emit(event, data);
-  }
-
-  on(event: string, handler: (data?: unknown) => void | Promise<void>): () => void {
-    this.emitter.on(event, handler);
-    return () => this.off(event, handler);
-  }
-
-  off(event: string, handler: (data?: unknown) => void | Promise<void>): void {
-    this.emitter.off(event, handler);
-  }
-
-  once(event: string, handler: (data?: unknown) => void | Promise<void>): () => void {
-    this.emitter.once(event, handler);
-    return () => this.off(event, handler);
-  }
-}
-
-class DefaultLogger implements ILogger {
-  private context: Record<string, unknown> = {};
-
-  constructor(context?: Record<string, unknown>) {
-    if (context) this.context = context;
-  }
-
-  debug(message: string, ...args: unknown[]): void {
-    console.debug(`[DEBUG]`, message, ...args, this.context);
-  }
-
-  info(message: string, ...args: unknown[]): void {
-    console.info(`[INFO]`, message, ...args, this.context);
-  }
-
-  warn(message: string, ...args: unknown[]): void {
-    console.warn(`[WARN]`, message, ...args, this.context);
-  }
-
-  error(message: string, ...args: unknown[]): void {
-    console.error(`[ERROR]`, message, ...args, this.context);
-  }
-
-  child(context: Record<string, unknown>): ILogger {
-    return new DefaultLogger({ ...this.context, ...context });
   }
 }
 
@@ -490,13 +437,20 @@ export class EnhancedPluginRegistry extends EventEmitter {
   private async initializePlugin(entry: PluginEntry): Promise<void> {
     const context = this.createPluginContext(entry);
     const timeout = this.config.loadTimeout ?? 30000;
+    let timer: ReturnType<typeof setTimeout> | undefined;
 
-    await Promise.race([
-      entry.plugin.initialize(context),
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Initialization timeout')), timeout)
-      ),
-    ]);
+    try {
+      await Promise.race([
+        entry.plugin.initialize(context),
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(() => reject(new Error('Initialization timeout')), timeout);
+        }),
+      ]);
+    } finally {
+      if (timer !== undefined) {
+        clearTimeout(timer);
+      }
+    }
 
     entry.initTime = new Date();
     this.collectExtensionPoints(entry.plugin);
@@ -564,13 +518,20 @@ export class EnhancedPluginRegistry extends EventEmitter {
     // Initialize new plugin
     const context = this.createPluginContext(entry);
     const timeout = options?.timeout ?? this.config.loadTimeout ?? 30000;
+    let reloadTimer: ReturnType<typeof setTimeout> | undefined;
 
-    await Promise.race([
-      resolved.initialize(context),
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Hot reload timeout')), timeout)
-      ),
-    ]);
+    try {
+      await Promise.race([
+        resolved.initialize(context),
+        new Promise<never>((_, reject) => {
+          reloadTimer = setTimeout(() => reject(new Error('Hot reload timeout')), timeout);
+        }),
+      ]);
+    } finally {
+      if (reloadTimer !== undefined) {
+        clearTimeout(reloadTimer);
+      }
+    }
 
     // Restore state if applicable
     if (state && options?.migrateState) {

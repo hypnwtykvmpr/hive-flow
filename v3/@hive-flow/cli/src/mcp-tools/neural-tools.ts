@@ -209,6 +209,7 @@ export const neuralTools: MCPTool[] = [
 
       return {
         success: true,
+        simulated: true,
         modelId,
         type: modelType,
         status: model.status,
@@ -414,6 +415,7 @@ export const neuralTools: MCPTool[] = [
 
       return {
         success: true,
+        simulated: true,
         method,
         originalSize: '1536 dims',
         compressedSize: `${Math.floor(1536 * targetSize)} dims`,
@@ -514,6 +516,7 @@ export const neuralTools: MCPTool[] = [
 
       return {
         success: true,
+        simulated: true,
         target,
         optimizations: result.applied,
         improvement: result.improvement,

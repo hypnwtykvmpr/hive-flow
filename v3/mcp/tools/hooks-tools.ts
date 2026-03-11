@@ -23,7 +23,7 @@ import {
   createReasoningBank,
   type Trajectory,
   type TrajectoryStep,
-} from '../../@hive-flow/neural/src/index.js';
+} from '@hive-flow/neural';
 
 // ============================================================================
 // Singleton ReasoningBank Instance

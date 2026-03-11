@@ -4,7 +4,7 @@
  * Tool definitions for configuration management with file persistence.
  */
 
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync } from 'node:fs';
 import { join } from 'node:path';
 import type { MCPTool } from './types.js';
 
@@ -69,7 +69,30 @@ function loadConfigStore(): ConfigStore {
 function saveConfigStore(store: ConfigStore): void {
   ensureConfigDir();
   store.updatedAt = new Date().toISOString();
-  writeFileSync(getConfigPath(), JSON.stringify(store, null, 2), 'utf-8');
+  const targetPath = getConfigPath();
+  const tmpPath = targetPath + '.tmp.' + process.pid;
+  writeFileSync(tmpPath, JSON.stringify(store, null, 2), 'utf-8');
+  renameSync(tmpPath, targetPath);
+}
+
+/**
+ * Deep merge two objects. Arrays are replaced, not concatenated.
+ */
+function deepMerge(target: Record<string, unknown>, source: Record<string, unknown>): Record<string, unknown> {
+  const result = { ...target };
+  for (const key of Object.keys(source)) {
+    const srcVal = source[key];
+    const tgtVal = result[key];
+    if (
+      srcVal && typeof srcVal === 'object' && !Array.isArray(srcVal) &&
+      tgtVal && typeof tgtVal === 'object' && !Array.isArray(tgtVal)
+    ) {
+      result[key] = deepMerge(tgtVal as Record<string, unknown>, srcVal as Record<string, unknown>);
+    } else {
+      result[key] = srcVal;
+    }
+  }
+  return result;
 }
 
 function getNestedValue(obj: Record<string, unknown>, key: string): unknown {
@@ -345,15 +368,15 @@ export const configTools: MCPTool[] = [
 
       if (scope === 'default') {
         if (merge) {
-          Object.assign(store.values, config);
+          store.values = deepMerge(store.values, config);
         } else {
-          store.values = { ...DEFAULT_CONFIG, ...config };
+          store.values = deepMerge({ ...DEFAULT_CONFIG }, config);
         }
       } else {
         if (!store.scopes[scope] || !merge) {
           store.scopes[scope] = {};
         }
-        Object.assign(store.scopes[scope], config);
+        store.scopes[scope] = deepMerge(store.scopes[scope], config);
       }
 
       saveConfigStore(store);

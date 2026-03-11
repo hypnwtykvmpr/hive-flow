@@ -17,6 +17,7 @@
  */
 
 import type { RunEvent, OptimizationMetrics } from './types.js';
+import { clamp } from '@hive-flow/shared';
 
 // ============================================================================
 // Coherence Types
@@ -524,9 +525,7 @@ export function createEconomicGovernor(
 // Helpers
 // ============================================================================
 
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
-}
+// clamp imported from @hive-flow/shared
 
 function safePercentage(used: number, limit: number): number {
   if (limit <= 0) return 0;

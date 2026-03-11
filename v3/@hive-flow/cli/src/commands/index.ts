@@ -99,12 +99,19 @@ async function loadCommand(name: string): Promise<Command | undefined> {
       return command;
     }
   } catch (error) {
-    // Silently fail for missing optional commands
-    if (process.env.DEBUG) {
-      console.error(`Failed to load command ${name}:`, error);
-    }
+    // Always warn for failed loads so they are diagnosable
+    console.warn(`[hive-flow] Failed to load command '${name}':`, error instanceof Error ? error.message : String(error));
+    failedCommands.push(name);
   }
   return undefined;
+}
+
+/** Commands that failed to load (for diagnostics) */
+const failedCommands: string[] = [];
+
+/** Get list of commands that failed to load */
+export function getFailedCommands(): string[] {
+  return [...failedCommands];
 }
 
 // =============================================================================
@@ -170,6 +177,21 @@ loadedCommands.set('ruvector', ruvectorCommand);
 loadedCommands.set('hive-mind', hiveMindCommand);
 loadedCommands.set('guidance', guidanceCommand);
 loadedCommands.set('signal', signalCommand);
+loadedCommands.set('config', configCommand);
+loadedCommands.set('completions', completionsCommand);
+loadedCommands.set('migrate', migrateCommand);
+loadedCommands.set('workflow', workflowCommand);
+loadedCommands.set('analyze', analyzeCommand);
+loadedCommands.set('route', routeCommand);
+loadedCommands.set('progress', progressCommand);
+loadedCommands.set('providers', providersCommand);
+loadedCommands.set('plugins', pluginsCommand);
+loadedCommands.set('deployment', deploymentCommand);
+loadedCommands.set('claims', claimsCommand);
+loadedCommands.set('issues', issuesCommand);
+loadedCommands.set('update', updateCommand);
+loadedCommands.set('process', processCommand);
+loadedCommands.set('appliance', applianceCommand);
 
 // =============================================================================
 // Exports (maintain backwards compatibility)
@@ -250,6 +272,22 @@ export const commands: Command[] = [
   hiveMindCommand,
   guidanceCommand,
   signalCommand,
+  // Additional commands (also synchronously loaded)
+  configCommand,
+  completionsCommand,
+  migrateCommand,
+  workflowCommand,
+  analyzeCommand,
+  routeCommand,
+  progressCommand,
+  providersCommand,
+  pluginsCommand,
+  deploymentCommand,
+  claimsCommand,
+  issuesCommand,
+  updateCommand,
+  processCommand,
+  applianceCommand,
 ];
 
 /**
@@ -363,10 +401,26 @@ export function getCommandNames(): string[] {
 }
 
 /**
- * Get all unique commands (excluding aliases)
+ * Get all visible commands (excluding hidden/aliases)
+ * @deprecated Use getVisibleCommands() instead
  */
 export function getUniqueCommands(): Command[] {
+  return getVisibleCommands();
+}
+
+/**
+ * Get all visible commands (excluding hidden)
+ */
+export function getVisibleCommands(): Command[] {
   return commands.filter(cmd => !cmd.hidden);
+}
+
+/**
+ * Clear command cache (useful for testing)
+ */
+export function clearCommandCache(): void {
+  loadedCommands.clear();
+  failedCommands.length = 0;
 }
 
 /**

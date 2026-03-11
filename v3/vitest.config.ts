@@ -94,6 +94,7 @@ export default defineConfig({
     // Parallel execution — Vitest 4.x uses forks by default (isolated child processes).
     // Limit concurrency to prevent OOM with 600+ test files.
     pool: 'forks',
+    execArgv: ['--max-old-space-size=16384'],
     maxWorkers: 4,
 
     // Globals for easier testing

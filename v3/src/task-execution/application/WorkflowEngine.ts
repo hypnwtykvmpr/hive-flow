@@ -193,7 +193,7 @@ export class WorkflowEngine {
     const execution = this.workflows.get(workflowId);
     if (
       execution &&
-      (execution.state.status === 'in-progress' || execution.state.status === 'completed')
+      execution.state.status === 'in-progress'
     ) {
       execution.state.status = 'paused';
       execution.eventLog.push({

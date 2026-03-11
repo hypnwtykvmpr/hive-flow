@@ -753,6 +753,12 @@ export class MemoryAugmentedAttention extends BaseAttentionMechanism {
   readonly category: AttentionCategory = 'retrieval';
 
   private memoryBank: number[][] = [];
+  private readonly maxMemorySize: number;
+
+  constructor(config?: Partial<import('./types.js').AttentionConfig>) {
+    super(config);
+    this.maxMemorySize = (config?.params?.maxMemorySize as number) ?? 10000;
+  }
 
   async compute(query: number[], keys: number[][], values: number[][]): Promise<number[]> {
     const scale = this.getScale();
@@ -778,10 +784,14 @@ export class MemoryAugmentedAttention extends BaseAttentionMechanism {
   }
 
   /**
-   * Add vectors to memory bank.
+   * Add vectors to memory bank with FIFO eviction when maxMemorySize is exceeded.
    */
   addToMemory(vectors: number[][]): void {
     this.memoryBank.push(...vectors);
+    // FIFO eviction: remove oldest entries when exceeding max size
+    if (this.memoryBank.length > this.maxMemorySize) {
+      this.memoryBank = this.memoryBank.slice(this.memoryBank.length - this.maxMemorySize);
+    }
   }
 
   /**

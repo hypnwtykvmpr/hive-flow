@@ -448,6 +448,7 @@ export class MultiModelRouter extends EventEmitter {
   private providerHealth: Map<ProviderType, ProviderHealth> = new Map();
   private costTracker: CostTracker;
   private cache: Map<string, { response: CompletionResponse; expires: number }> = new Map();
+  private circuitResetTimers: Map<ProviderType, NodeJS.Timeout> = new Map();
 
   constructor(config: Partial<RouterConfig> = {}) {
     super();
@@ -626,6 +627,18 @@ export class MultiModelRouter extends EventEmitter {
    */
   getModels(): ModelConfig[] {
     return Array.from(this.models.values());
+  }
+
+  /**
+   * Shutdown the router and clear all timers
+   */
+  shutdown(): void {
+    for (const timer of this.circuitResetTimers.values()) {
+      clearTimeout(timer);
+    }
+    this.circuitResetTimers.clear();
+    this.cache.clear();
+    this.emit('router:shutdown');
   }
 
   /**
@@ -936,44 +949,20 @@ export class MultiModelRouter extends EventEmitter {
     }
   }
 
+  /**
+   * Execute a completion request via provider API
+   *
+   * @experimental This method requires provider API configuration.
+   * Currently throws — implement provider-specific adapters to enable.
+   */
   private async executeCompletion(
-    request: CompletionRequest,
+    _request: CompletionRequest,
     provider: ProviderType,
     model: string
   ): Promise<CompletionResponse> {
-    // Provider API integration point - external calls via provider adapters
-    // Returns standardized response format for unified handling
-
-    const modelConfig = this.models.get(model)!;
-    const inputTokens = this.estimateTokens(
-      request.messages.map(m => m.content).join(' ')
+    throw new Error(
+      `Not implemented: executeCompletion requires provider API configuration for ${provider}/${model}`
     );
-    const outputTokens = Math.min(
-      request.maxTokens || 1000,
-      modelConfig.capabilities.maxOutputTokens
-    );
-
-    const cost =
-      (inputTokens / 1000) * modelConfig.costPer1kInputTokens +
-      (outputTokens / 1000) * modelConfig.costPer1kOutputTokens;
-
-    // Model-specific latency overhead for response processing
-    await new Promise(resolve => setTimeout(resolve, Math.min(modelConfig.latencyMs, 100)));
-
-    return {
-      id: `response_${Date.now()}`,
-      provider,
-      model,
-      content: `[Response from ${provider}/${model}]`,
-      finishReason: 'stop',
-      usage: {
-        inputTokens,
-        outputTokens,
-        totalTokens: inputTokens + outputTokens,
-      },
-      cost,
-      latency: modelConfig.latencyMs,
-    };
   }
 
   private generateCacheKey(request: CompletionRequest): string {
@@ -1021,12 +1010,20 @@ export class MultiModelRouter extends EventEmitter {
       health.status = 'unhealthy';
       health.circuitOpen = true;
 
+      // Clear any existing reset timer for this provider
+      const existingTimer = this.circuitResetTimers.get(provider);
+      if (existingTimer) {
+        clearTimeout(existingTimer);
+      }
+
       // Schedule circuit reset
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         health.circuitOpen = false;
         health.status = 'degraded';
         health.failureCount = 0;
+        this.circuitResetTimers.delete(provider);
       }, this.config.circuitBreaker.resetTimeout);
+      this.circuitResetTimers.set(provider, timer);
 
       this.emit('circuit:open', { provider });
     } else if (health.failureCount > 2) {

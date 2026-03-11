@@ -244,6 +244,7 @@ export class HiveFlowMemoryAdapter implements IMemoryAdapter {
       hash[i % 128] += text.charCodeAt(i);
     }
     const max = Math.max(...hash);
+    if (max <= 0) return hash;
     return hash.map((v) => v / max);
   }
 }

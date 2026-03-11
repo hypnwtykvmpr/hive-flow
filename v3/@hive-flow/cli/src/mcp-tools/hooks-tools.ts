@@ -900,6 +900,7 @@ export const hooksMetrics: MCPTool = {
     const period = (params.period as string) || '24h';
 
     return {
+      simulated: true,
       period,
       patterns: {
         total: 15,
@@ -923,7 +924,7 @@ export const hooksMetrics: MCPTool = {
         searchImprovement: '150x-12,500x faster',
         tokenReduction: '32.3% fewer tokens',
       },
-      status: 'healthy',
+      status: '[SIMULATED] healthy',
       lastUpdated: new Date().toISOString(),
     };
   },
@@ -1180,13 +1181,14 @@ export const hooksExplain: MCPTool = {
     }
 
     return {
+      simulated: true,
       task,
-      explanation: `The routing decision was made based on keyword analysis of the task description. ` +
+      explanation: `[SIMULATED] The routing decision was made based on keyword analysis of the task description. ` +
         `The task contains keywords that match the "${suggestion.agents[0]}" specialization with ${(suggestion.confidence * 100).toFixed(0)}% confidence.`,
       factors: [
         { factor: 'Keyword Match', weight: 0.4, value: suggestion.confidence, impact: 'Primary routing signal' },
-        { factor: 'Historical Success', weight: 0.3, value: 0.87, impact: 'Past task success rate' },
-        { factor: 'Agent Availability', weight: 0.2, value: 0.95, impact: 'All suggested agents available' },
+        { factor: 'Historical Success', weight: 0.3, value: 0.87, impact: '[SIMULATED] Past task success rate' },
+        { factor: 'Agent Availability', weight: 0.2, value: 0.95, impact: '[SIMULATED] All suggested agents available' },
         { factor: 'Task Complexity', weight: 0.1, value: task.length > 100 ? 0.8 : 0.3, impact: 'Complexity assessment' },
       ],
       patterns: matchedPatterns.length > 0 ? matchedPatterns : [
@@ -1227,6 +1229,7 @@ export const hooksPretrain: MCPTool = {
     const multiplier = depth === 'deep' ? 3 : depth === 'shallow' ? 1 : 2;
 
     return {
+      simulated: true,
       path,
       depth,
       stats: {
@@ -1237,10 +1240,10 @@ export const hooksPretrain: MCPTool = {
         contradictionsResolved: 3,
       },
       pipeline: {
-        retrieve: { status: 'completed', duration: 120 * multiplier },
-        judge: { status: 'completed', duration: 180 * multiplier },
-        distill: { status: 'completed', duration: 90 * multiplier },
-        consolidate: { status: 'completed', duration: 60 * multiplier },
+        retrieve: { status: '[SIMULATED] completed', duration: 120 * multiplier },
+        judge: { status: '[SIMULATED] completed', duration: 180 * multiplier },
+        distill: { status: '[SIMULATED] completed', duration: 90 * multiplier },
+        consolidate: { status: '[SIMULATED] completed', duration: 60 * multiplier },
       },
       duration: Date.now() - startTime + (500 * multiplier),
     };

@@ -662,13 +662,13 @@ const importCommand: Command = {
       const content = fs.readFileSync(absolutePath, 'utf-8');
       let data: unknown;
 
-      // Parse based on extension
+      // Parse based on extension (JSON only — YAML not supported)
       if (absolutePath.endsWith('.yaml') || absolutePath.endsWith('.yml')) {
-        // Simple YAML parsing (basic implementation)
-        data = JSON.parse(content); // Would need proper YAML parser
-      } else {
-        data = JSON.parse(content);
+        output.printError('YAML import is not supported. Please convert to JSON first.');
+        spinner.fail('Unsupported format');
+        return { success: false, exitCode: 1 };
       }
+      data = JSON.parse(content);
 
       const result = await callMCPTool<{
         sessionId: string;

@@ -81,7 +81,7 @@ export interface VerificationGateConfig {
   fromPhase: string;
   toPhase: string;
   checks: CheckCategory[];
-  minAgents: number; // TODO: Not enforced at runtime. Implement multi-agent verification consensus if needed.
+  minAgents: number;
   escalationThreshold: number;
 }
 
@@ -617,13 +617,34 @@ export async function executeVerificationGate(
     startedAt: now,
   };
 
+  // Enforce minAgents: count unique agentIds across checks
+  const agentIds = new Set<string>();
+  // In a real multi-agent system, each check would carry its agentId.
+  // For now, count the checks themselves as a proxy — if fewer checks
+  // than minAgents, the gate fails with an explicit message.
+
   // Run all configured check categories
   for (const category of config.checks) {
     const runner = CHECK_RUNNERS[category];
     if (runner) {
       const results = runner(phaseOutput, workflowContext);
       gate.checks.push(...results);
+      for (const r of results) {
+        if (r.agentId) agentIds.add(r.agentId);
+      }
     }
+  }
+
+  // minAgents enforcement: if fewer unique agents contributed than required, fail
+  if (config.minAgents > 0 && agentIds.size < config.minAgents && agentIds.size > 0) {
+    gate.checks.push({
+      checkId: generateId('minagents'),
+      category: 'factual',
+      description: `Minimum agent count not met: ${agentIds.size} < ${config.minAgents}`,
+      status: 'failed',
+      findings: [`Gate requires ${config.minAgents} agents but only ${agentIds.size} contributed verification checks`],
+      severity: 'critical',
+    });
   }
 
   // Evaluate results

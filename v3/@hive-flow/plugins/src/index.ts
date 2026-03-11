@@ -288,7 +288,12 @@ export {
 // Version
 // ============================================================================
 
-export const VERSION = '3.0.0-alpha.1';
+// Import version from package.json to avoid hardcoded mismatch
+import { createRequire } from 'module';
+const _require = createRequire(import.meta.url);
+const _pkg = _require('../package.json') as { version: string };
+
+export const VERSION = _pkg.version;
 export const SDK_VERSION = '1.0.0';
 
 // ============================================================================
@@ -335,6 +340,13 @@ export async function loadPlugin(
   modulePath: string,
   config?: Partial<PluginConfig>
 ): Promise<IPlugin> {
+  // Validate the module path to prevent directory traversal attacks.
+  // Reject paths containing '..' segments after normalization.
+  const normalizedPath = modulePath.replace(/\\/g, '/');
+  if (normalizedPath.includes('..')) {
+    throw new Error(`Plugin path must not contain directory traversal (..): ${modulePath}`);
+  }
+
   const module = await import(modulePath);
   const pluginOrFactory: IPlugin | PluginFactory = module.default ?? module.plugin;
 

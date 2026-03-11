@@ -321,9 +321,24 @@ export class BrowserService {
   }
 
   /**
-   * Close browser
+   * Close browser and clean up all associated resources
    */
   async close(): Promise<ActionResult> {
+    // End any active trajectory before closing
+    if (this.currentTrajectory) {
+      await this.endTrajectory(false, 'Session closed');
+    }
+
+    // Clean up all trajectories associated with this session
+    for (const [id, tracker] of activeTrajectories) {
+      if (tracker.sessionId === this.sessionId) {
+        activeTrajectories.delete(id);
+      }
+    }
+
+    // Clear snapshot cache
+    this.snapshots.clear();
+
     const result = await this.adapter.close();
     this.recordStep('close', {}, result);
     return result;

@@ -876,6 +876,10 @@ export const intelligenceCollection: PluginCollection = {
 
 /**
  * Database collection - database and storage plugins.
+ *
+ * Note: ruvectorPostgresPlugin is registered in the intelligence collection only
+ * to avoid duplicate registration conflicts. Use intelligenceCollection for
+ * access to the RuVector PostgreSQL plugin.
  */
 export const databaseCollection: PluginCollection = {
   id: 'hive-flow-database',
@@ -885,16 +889,7 @@ export const databaseCollection: PluginCollection = {
   author: 'Hive Flow',
   license: 'MIT',
   categories: ['database', 'integration'],
-  plugins: [
-    {
-      plugin: ruvectorPostgresPlugin,
-      defaultEnabled: false,
-      category: 'database',
-      tags: ['postgresql', 'vector', 'attention', 'gnn', 'hyperbolic'],
-      requiredCapabilities: ['database'],
-      description: 'RuVector PostgreSQL - 52K+ inserts/sec, sub-ms queries, 39 attention mechanisms, GNN, hyperbolic embeddings',
-    },
-  ],
+  plugins: [],
 };
 
 /**
