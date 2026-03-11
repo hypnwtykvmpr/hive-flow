@@ -678,6 +678,9 @@ export const agentTools: MCPTool[] = [
         if (!agent.provider) {
           return 'Agent has no provider — use agent_spawn with a provider first';
         }
+        if (agent.provider === 'anthropic') {
+          return 'agent_task bridge only supports external CLI providers (gemini-cli, codex-cli, cursor-cli). Use Claude Code Task tool for anthropic agents.';
+        }
         if (!transitionAgent(agent, 'busy')) {
           return `Agent cannot accept tasks in current state: '${agent.status}'`;
         }

@@ -35,18 +35,13 @@ const stderrLogger = {
 
 const MAX_HISTORY_ENTRIES = 50;
 const MAX_PROMPT_BYTES = 180 * 1024; // 180KB
-const LOCK_TIMEOUT = 5000; // 5 seconds
-
-const PROVIDER_DEFAULT_MODELS = {
-  'gemini-cli': 'gemini-3.1-pro-preview',
-  'codex-cli': 'gpt-5.3-codex',
-  'cursor-cli': 'auto',
-};
+const LOCK_ACQUIRE_TIMEOUT = 10000; // 10 seconds — aligned with agent-tools.ts withStoreLock
+const LOCK_STALE_THRESHOLD = 30000; // 30 seconds — aligned with agent-tools.ts stale detection
 
 // ===== File Locking (Phase 7A) =====
 
 async function withFileLock(lockPath, fn) {
-  const deadline = Date.now() + LOCK_TIMEOUT;
+  const deadline = Date.now() + LOCK_ACQUIRE_TIMEOUT;
   let acquired = false;
   while (Date.now() < deadline) {
     try {
@@ -54,19 +49,19 @@ async function withFileLock(lockPath, fn) {
       acquired = true;
       break;
     } catch {
-      // Check if lock is stale (older than LOCK_TIMEOUT — likely from a crashed process)
+      // Check if lock is stale (older than 30s — likely from a crashed process)
       try {
         const lockStat = statSync(lockPath);
-        if (Date.now() - lockStat.mtimeMs > LOCK_TIMEOUT) {
+        if (Date.now() - lockStat.mtimeMs > LOCK_STALE_THRESHOLD) {
           try { rmdirSync(lockPath); } catch { /* race with another cleaner */ }
           continue; // Retry immediately after removing stale lock
         }
       } catch { /* lock dir gone between checks — retry will succeed */ }
-      await new Promise((r) => setTimeout(r, 50));
+      await new Promise((r) => setTimeout(r, 50 + Math.random() * 100));
     }
   }
   if (!acquired) {
-    throw new Error(`Failed to acquire lock: ${lockPath} (timeout after ${LOCK_TIMEOUT}ms)`);
+    throw new Error(`Failed to acquire lock: ${lockPath} (timeout after ${LOCK_ACQUIRE_TIMEOUT}ms)`);
   }
   try {
     return await fn();
@@ -174,6 +169,36 @@ function trimMessages(messages) {
   return [...system, ...middle, newTask];
 }
 
+// ===== Provider Default Models (loaded from model-alias-resolver if available) =====
+
+let _providerDefaults = null;
+
+async function getProviderDefaults() {
+  if (_providerDefaults) return _providerDefaults;
+
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = dirname(__filename);
+  const resolverPath = join(__dirname, '..', 'dist', 'model-alias-resolver.js');
+
+  try {
+    if (existsSync(resolverPath)) {
+      const mod = await import(pathToFileURL(resolverPath).href);
+      if (mod.PROVIDER_DEFAULTS) {
+        _providerDefaults = mod.PROVIDER_DEFAULTS;
+        return _providerDefaults;
+      }
+    }
+  } catch { /* fallback below */ }
+
+  // Fallback — only used if providers package isn't built
+  _providerDefaults = {
+    'gemini-cli': 'auto',
+    'codex-cli': undefined,
+    'cursor-cli': 'auto',
+  };
+  return _providerDefaults;
+}
+
 // ===== Provider Resolution =====
 
 async function loadProviderModule() {
@@ -196,10 +221,11 @@ async function loadProviderModule() {
   }
 }
 
-function createProviderConfig(providerName, model) {
+async function createProviderConfig(providerName, model) {
+  const defaults = await getProviderDefaults();
   return {
     provider: providerName,
-    model: model || PROVIDER_DEFAULT_MODELS[providerName] || 'auto',
+    model: model || defaults[providerName] || 'auto',
     timeout: 120000,
     retryAttempts: 2,
     retryDelay: 1000,
@@ -358,9 +384,10 @@ async function main() {
   // ── Phase 2: Provider call (no lock held) ──
   const providerModule = await loadProviderModule();
 
-  const config = createProviderConfig(
+  const defaults = await getProviderDefaults();
+  const config = await createProviderConfig(
     providerName,
-    agent.providerModel || PROVIDER_DEFAULT_MODELS[providerName]
+    agent.providerModel || defaults[providerName]
   );
 
   const providerClasses = {
@@ -405,7 +432,7 @@ async function main() {
         ...(m.toolCallId ? { toolCallId: m.toolCallId } : {}),
         ...(m.name ? { name: m.name } : {}),
       })),
-      model: agent.providerModel || PROVIDER_DEFAULT_MODELS[providerName],
+      model: agent.providerModel || defaults[providerName],
     };
 
     if (agent.config?.tools && Array.isArray(agent.config.tools)) {
@@ -418,13 +445,38 @@ async function main() {
     const providerStartTime = Date.now();
 
     // Tool-calling loop (no lock held — provider calls can take up to 120s)
+    // Note: MCP tool execution requires the CLI MCP client, which is typically
+    // unavailable when bridge runs as a subprocess. When unavailable, tool calls
+    // are reported in the response but not executed — the provider's text response
+    // is used as-is. This is sufficient for prompt-response hive workers.
+    const mcpAvailable = !!(await loadMCPClient());
+
     while (iterations < MAX_TOOL_ITERATIONS) {
       response = await provider.complete(request);
       iterations++;
 
       if (response.toolCalls && response.toolCalls.length > 0) {
+        if (!mcpAvailable) {
+          // MCP unavailable — log tool calls for diagnostics, use text response as-is
+          for (const toolCall of response.toolCalls) {
+            stderrLogger.warn(`Tool call requested but MCP unavailable: ${toolCall.function.name}`, {
+              args: (toolCall.function.arguments || '').slice(0, 200),
+            });
+          }
+          // Append tool call info to response content so caller knows what was requested
+          const toolSummary = response.toolCalls
+            .map((tc) => `[tool_call: ${tc.function.name}]`)
+            .join(', ');
+          if (!response.content) {
+            response.content = `Provider requested tools but MCP is unavailable in bridge subprocess: ${toolSummary}`;
+          }
+          break;
+        }
+
         for (const toolCall of response.toolCalls) {
-          process.stderr.write(`[bridge] Tool call: ${toolCall.function.name}(${toolCall.function.arguments})\n`);
+          stderrLogger.debug(`Tool call: ${toolCall.function.name}`, {
+            args: (toolCall.function.arguments || '').slice(0, 200),
+          });
         }
 
         request.messages.push({
