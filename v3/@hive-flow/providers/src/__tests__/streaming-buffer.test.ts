@@ -4,8 +4,8 @@ import type { ILLMProvider, LLMStreamEvent, LLMRequest, LLMResponse } from '../t
 
 function createMockProvider(events: LLMStreamEvent[]): ILLMProvider {
   return {
-    name: 'custom' as any,
-    config: { provider: 'custom' as any, model: 'test-model' },
+    name: 'custom',
+    config: { provider: 'custom', model: 'test-model' },
     capabilities: {
       supportedModels: ['test-model'],
       maxContextLength: { 'test-model': 128000 },

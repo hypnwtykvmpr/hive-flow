@@ -153,7 +153,7 @@ describe('ArtifactLedger', () => {
 
       // Tamper with content directly (bypass signature)
       const stored = ledger.get(artifact.artifactId)!;
-      (stored as any).content = 'TAMPERED CONTENT';
+      (stored as Record<string, unknown>).content = 'TAMPERED CONTENT';
 
       const result = ledger.verify(artifact.artifactId);
 
@@ -166,7 +166,7 @@ describe('ArtifactLedger', () => {
 
       // Tamper with signature
       const stored = ledger.get(artifact.artifactId)!;
-      (stored as any).signature = 'f'.repeat(64);
+      (stored as Record<string, unknown>).signature = 'f'.repeat(64);
 
       const result = ledger.verify(artifact.artifactId);
 

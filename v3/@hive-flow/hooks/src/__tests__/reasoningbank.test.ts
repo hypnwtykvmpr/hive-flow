@@ -6,6 +6,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ReasoningBank, type GuidancePattern } from '../reasoningbank/index.js';
+import type { HookEvent } from '../types.js';
 
 describe('ReasoningBank', () => {
   let reasoningBank: ReasoningBank;
@@ -165,7 +166,7 @@ describe('ReasoningBank', () => {
 
     it('should generate guidance with domain detection', async () => {
       const guidance = await reasoningBank.generateGuidance({
-        event: 'pre-edit' as any,
+        event: 'pre-edit' as HookEvent, // SAFETY: string literal matches HookEvent.PreEdit enum value
         timestamp: new Date(),
         file: { path: 'src/auth/login.ts', operation: 'modify' },
       });
@@ -176,7 +177,7 @@ describe('ReasoningBank', () => {
 
     it('should detect security domain', async () => {
       const guidance = await reasoningBank.generateGuidance({
-        event: 'pre-route' as any,
+        event: 'pre-route' as HookEvent, // SAFETY: string literal matches HookEvent.PreRoute enum value
         timestamp: new Date(),
         routing: { task: 'Fix authentication security vulnerability' },
       });
@@ -186,7 +187,7 @@ describe('ReasoningBank', () => {
 
     it('should detect testing domain', async () => {
       const guidance = await reasoningBank.generateGuidance({
-        event: 'pre-route' as any,
+        event: 'pre-route' as HookEvent, // SAFETY: string literal matches HookEvent.PreRoute enum value
         timestamp: new Date(),
         routing: { task: 'Write unit tests with mocks' },
       });
@@ -196,7 +197,7 @@ describe('ReasoningBank', () => {
 
     it('should include agent suggestion', async () => {
       const guidance = await reasoningBank.generateGuidance({
-        event: 'pre-route' as any,
+        event: 'pre-route' as HookEvent, // SAFETY: string literal matches HookEvent.PreRoute enum value
         timestamp: new Date(),
         routing: { task: 'Implement caching layer' },
       });

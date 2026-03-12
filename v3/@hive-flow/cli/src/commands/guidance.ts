@@ -145,7 +145,7 @@ const retrieveCommand: Command = {
       const result = await retriever.retrieve({
         taskDescription: task,
         maxShards,
-        intent: intentOverride as any,
+        intent: intentOverride as string | undefined, // SAFETY: user-provided string may not match enum
       });
 
       if (jsonOutput) {

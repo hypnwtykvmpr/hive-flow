@@ -39,7 +39,7 @@ import {
 import { ToolRegistry, createToolRegistry } from './tool-registry.js';
 import { SessionManager, createSessionManager } from './session-manager.js';
 import { ConnectionPool, createConnectionPool } from './connection-pool.js';
-import { createTransport, TransportManager, createTransportManager } from './transport/index.js';
+import { createTransport, TransportManager, createTransportManager, type TransportConfig } from './transport/index.js';
 
 /**
  * Default server configuration
@@ -170,6 +170,8 @@ export class MCPServer extends EventEmitter implements IMCPServer {
 
     try {
       // Create and start transport
+      // SAFETY: extra properties (corsEnabled, corsOrigins, etc.) are passed through
+      // to transport implementations that accept them beyond the base TransportConfig
       this.transport = createTransport(this.config.transport, this.logger, {
         type: this.config.transport,
         host: this.config.host,
@@ -179,7 +181,7 @@ export class MCPServer extends EventEmitter implements IMCPServer {
         auth: this.config.auth,
         maxRequestSize: String(this.config.maxRequestSize),
         requestTimeout: this.config.requestTimeout,
-      } as any);
+      } as unknown as Partial<TransportConfig>);
 
       // Setup request handler
       this.transport.onRequest(async (request) => {

@@ -5,6 +5,7 @@
 
 import type {
   PluginEntry,
+  PluginPermission,
   PluginRegistry,
   PluginSearchOptions,
   PluginSearchResult,
@@ -299,6 +300,6 @@ export function getPluginsByPermission(
   permission: string
 ): PluginEntry[] {
   return registry.plugins.filter(p =>
-    p.permissions.includes(permission as any)
+    p.permissions.includes(permission as PluginPermission)
   );
 }

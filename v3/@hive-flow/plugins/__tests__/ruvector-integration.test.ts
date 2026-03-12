@@ -68,6 +68,9 @@ import type {
   PoolConfig,
   SSLConfig,
   RetryConfig,
+  AttentionMechanism,
+  GNNLayerType,
+  HyperbolicModel,
 } from '../src/integrations/ruvector/types.js';
 
 // ============================================================================
@@ -363,7 +366,7 @@ class MockRuVectorClient implements IRuVectorClient {
     );
 
     this.emit('attention:computed', {
-      mechanism: config.mechanism as any,
+      mechanism: config.mechanism as AttentionMechanism, // SAFETY: mock test uses string param matching union type
       seqLen,
       numHeads: config.numHeads,
       durationMs: seqLen * 0.1,
@@ -393,7 +396,7 @@ class MockRuVectorClient implements IRuVectorClient {
     );
 
     this.emit('gnn:forward', {
-      layerType: layer.type as any,
+      layerType: layer.type as GNNLayerType, // SAFETY: mock test uses string param matching union type
       numNodes,
       numEdges,
       durationMs: numNodes * 0.05,
@@ -429,7 +432,7 @@ class MockRuVectorClient implements IRuVectorClient {
     });
 
     this.emit('hyperbolic:embed', {
-      model: config.model as any,
+      model: config.model as HyperbolicModel, // SAFETY: mock test uses string param matching union type
       operation: 'embed',
       numPoints: input.points.length,
       durationMs: input.points.length * 0.02,
@@ -453,7 +456,7 @@ class MockRuVectorClient implements IRuVectorClient {
     const distance = Math.acosh(1 + numerator / denominator);
 
     this.emit('hyperbolic:distance', {
-      model: config.model as any,
+      model: config.model as HyperbolicModel, // SAFETY: mock test uses string param matching union type
       operation: 'distance',
       numPoints: 2,
       durationMs: 0.01,

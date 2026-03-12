@@ -31,7 +31,7 @@ export function buildZodSchema(
   switch (type) {
     case 'string': {
       let strSchema = z.string();
-      if (description) strSchema = strSchema.describe(description) as any;
+      if (description) strSchema = strSchema.describe(description) as z.ZodString; // SAFETY: Zod .describe() widens return type
       if (enumValues) {
         zodSchema = z.enum(enumValues as [string, ...string[]]);
       } else {
@@ -42,13 +42,13 @@ export function buildZodSchema(
     case 'number':
     case 'integer': {
       let numSchema = type === 'integer' ? z.number().int() : z.number();
-      if (description) numSchema = numSchema.describe(description) as any;
+      if (description) numSchema = numSchema.describe(description) as z.ZodNumber; // SAFETY: Zod .describe() widens return type
       zodSchema = numSchema;
       break;
     }
     case 'boolean': {
       let boolSchema = z.boolean();
-      if (description) boolSchema = boolSchema.describe(description) as any;
+      if (description) boolSchema = boolSchema.describe(description) as z.ZodBoolean; // SAFETY: Zod .describe() widens return type
       zodSchema = boolSchema;
       break;
     }
@@ -57,7 +57,7 @@ export function buildZodSchema(
         throw new Error('Array schema must have items defined');
       }
       let arraySchema = z.array(buildZodSchema(items, resolveRef, depth + 1));
-      if (description) arraySchema = arraySchema.describe(description) as any;
+      if (description) arraySchema = arraySchema.describe(description) as typeof arraySchema; // SAFETY: Zod .describe() widens return type
       zodSchema = arraySchema;
       break;
     }
@@ -73,16 +73,16 @@ export function buildZodSchema(
         }
       }
       let objSchema = z.object(shape);
-      if (description) objSchema = objSchema.describe(description) as any;
+      if (description) objSchema = objSchema.describe(description) as typeof objSchema; // SAFETY: Zod .describe() widens return type
       zodSchema = objSchema;
       break;
     }
     default: {
       // Handle logical composition schemas without explicit type
       if (oneOf) {
-        zodSchema = z.union(oneOf.map(s => buildZodSchema(s, resolveRef, depth + 1)) as any);
+        zodSchema = z.union(oneOf.map(s => buildZodSchema(s, resolveRef, depth + 1)) as [z.ZodTypeAny, z.ZodTypeAny, ...z.ZodTypeAny[]]); // SAFETY: OpenAPI oneOf guarantees 2+ schemas
       } else if (anyOf) {
-        zodSchema = z.union(anyOf.map(s => buildZodSchema(s, resolveRef, depth + 1)) as any);
+        zodSchema = z.union(anyOf.map(s => buildZodSchema(s, resolveRef, depth + 1)) as [z.ZodTypeAny, z.ZodTypeAny, ...z.ZodTypeAny[]]); // SAFETY: OpenAPI anyOf guarantees 2+ schemas
       } else if (allOf) {
         // Zod doesn't have a direct allOf (intersection) that works easily for all types,
         // but for objects we can use .merge(). For simplicity here, we use intersection.

@@ -13,7 +13,7 @@ import { z } from 'zod';
 import { randomBytes, createHash } from 'crypto';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { MCPTool, ToolContext } from '../types.js';
+import { MCPTool, ToolContext, AgentRecord, TaskRecord } from '../types.js';
 
 // Secure ID generation helper
 function generateSecureSessionId(): string {
@@ -271,10 +271,9 @@ async function handleSaveSession(
   // Collect agent states
   if (input.includeAgents && context?.swarmCoordinator) {
     try {
-      const coordinator = context.swarmCoordinator as any;
-      const status = await coordinator.getStatus();
+      const status = await context.swarmCoordinator.getStatus();
 
-      sessionData.agents = (status.agents || []).map((agent: any) => ({
+      sessionData.agents = (status.agents || []).map((agent: AgentRecord) => ({
         id: agent.id,
         type: agent.type,
         status: agent.status,
@@ -290,10 +289,9 @@ async function handleSaveSession(
   // Collect task queue
   if (input.includeTasks && context?.orchestrator) {
     try {
-      const orchestrator = context.orchestrator as any;
-      const tasks = await orchestrator.listTasks({ limit: 10000 });
+      const tasks = await context.orchestrator.listTasks({ limit: 10000 });
 
-      sessionData.tasks = tasks.tasks.map((task: any) => ({
+      sessionData.tasks = tasks.tasks.map((task: TaskRecord) => ({
         id: task.id,
         type: task.type,
         description: task.description,
@@ -312,19 +310,18 @@ async function handleSaveSession(
 
   // Collect memory entries
   if (input.includeMemory) {
-    const resourceManager = context?.resourceManager as any;
-    if (resourceManager?.memoryService) {
+    const memoryService = context?.resourceManager?.memoryService;
+    if (memoryService) {
       try {
-        const memoryService = resourceManager.memoryService;
         const entries = await memoryService.query({ limit: 10000 });
 
-        sessionData.memory = entries.map((entry: any) => ({
+        sessionData.memory = entries.map((entry) => ({
           id: entry.id,
           content: entry.content,
           type: entry.type,
           category: entry.namespace,
           tags: entry.tags,
-          importance: entry.metadata?.importance,
+          importance: entry.metadata?.importance as number | undefined,
           metadata: entry.metadata,
         }));
       } catch (error) {
@@ -337,8 +334,7 @@ async function handleSaveSession(
   // Collect swarm state
   if (input.includeSwarmState && context?.swarmCoordinator) {
     try {
-      const coordinator = context.swarmCoordinator as any;
-      const status = await coordinator.getStatus();
+      const status = await context.swarmCoordinator.getStatus();
 
       sessionData.swarmState = {
         topology: status.topology?.type || 'hierarchical-mesh',
@@ -420,9 +416,8 @@ async function handleRestoreSession(
   if (input.clearExisting) {
     if (context?.swarmCoordinator) {
       try {
-        const coordinator = context.swarmCoordinator as any;
-        if (coordinator.terminateAll) {
-          await coordinator.terminateAll();
+        if (context.swarmCoordinator.terminateAll) {
+          await context.swarmCoordinator.terminateAll();
         }
       } catch (error) {
         errors.push('Failed to clear existing agents');
@@ -431,9 +426,8 @@ async function handleRestoreSession(
 
     if (context?.orchestrator) {
       try {
-        const orchestrator = context.orchestrator as any;
-        if (orchestrator.cancelAll) {
-          await orchestrator.cancelAll();
+        if (context.orchestrator.cancelAll) {
+          await context.orchestrator.cancelAll();
         }
       } catch (error) {
         errors.push('Failed to clear existing tasks');
@@ -444,11 +438,9 @@ async function handleRestoreSession(
   // Restore agents
   if (input.restoreAgents && sessionData.agents && context?.swarmCoordinator) {
     try {
-      const coordinator = context.swarmCoordinator as any;
-
       for (const agent of sessionData.agents) {
         try {
-          await coordinator.spawnAgent({
+          await context.swarmCoordinator.spawnAgent({
             id: agent.id,
             type: agent.type,
             config: agent.config,
@@ -467,13 +459,11 @@ async function handleRestoreSession(
   // Restore tasks
   if (input.restoreTasks && sessionData.tasks && context?.orchestrator) {
     try {
-      const orchestrator = context.orchestrator as any;
-
       for (const task of sessionData.tasks) {
         // Only restore pending/queued tasks
         if (task.status === 'pending' || task.status === 'queued' || task.status === 'assigned') {
           try {
-            await orchestrator.submitTask({
+            await context.orchestrator.submitTask({
               id: task.id,
               type: task.type,
               description: task.description,
@@ -496,10 +486,9 @@ async function handleRestoreSession(
 
   // Restore memory
   if (input.restoreMemory && sessionData.memory) {
-    const resourceManager = context?.resourceManager as any;
-    if (resourceManager?.memoryService) {
+    const memoryService = context?.resourceManager?.memoryService;
+    if (memoryService) {
       try {
-        const memoryService = resourceManager.memoryService;
 
         for (const entry of sessionData.memory) {
           try {
@@ -529,10 +518,8 @@ async function handleRestoreSession(
   // Restore swarm state
   if (input.restoreSwarmState && sessionData.swarmState && context?.swarmCoordinator) {
     try {
-      const coordinator = context.swarmCoordinator as any;
-
-      if (coordinator.setTopology) {
-        await coordinator.setTopology({
+      if (context.swarmCoordinator.setTopology) {
+        await context.swarmCoordinator.setTopology({
           type: sessionData.swarmState.topology,
           connections: sessionData.swarmState.connections,
         });

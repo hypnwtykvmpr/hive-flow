@@ -207,9 +207,9 @@ describe('flushToolCallsFromBuffer', () => {
     const toolEvents = events.filter(e => e.type === 'tool_call');
 
     expect(contentEvents).toHaveLength(1);
-    expect((contentEvents[0].delta as any).content).toBe('hello ');
+    expect(contentEvents[0].delta!.content).toBe('hello ');
     expect(toolEvents).toHaveLength(1);
-    expect((toolEvents[0].delta as any).toolCall.function.name).toBe('x');
+    expect(toolEvents[0].delta!.toolCall!.function!.name).toBe('x');
     expect(remainingBuffer).toBe('');
     expect(count).toBe(1);
   });
@@ -247,8 +247,8 @@ describe('flushToolCallsFromBuffer', () => {
 
     const toolEvents = events.filter(e => e.type === 'tool_call');
     expect(toolEvents).toHaveLength(2);
-    expect((toolEvents[0].delta as any).toolCall.function.name).toBe('a');
-    expect((toolEvents[1].delta as any).toolCall.function.name).toBe('b');
+    expect(toolEvents[0].delta!.toolCall!.function!.name).toBe('a');
+    expect(toolEvents[1].delta!.toolCall!.function!.name).toBe('b');
     expect(remainingBuffer).toBe('');
     expect(count).toBe(2);
   });
@@ -266,7 +266,7 @@ describe('flushToolCallsFromBuffer', () => {
 
     const contentEvents = events.filter(e => e.type === 'content');
     expect(contentEvents).toHaveLength(1);
-    expect((contentEvents[0].delta as any).content).toBe('<tool_call>garbage</tool_call>');
+    expect(contentEvents[0].delta!.content).toBe('<tool_call>garbage</tool_call>');
     expect(remainingBuffer).toBe('');
   });
 });

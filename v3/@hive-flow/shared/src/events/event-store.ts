@@ -424,7 +424,7 @@ export class EventStore extends EventEmitter {
 
     return {
       aggregateId: row.aggregate_id as string,
-      aggregateType: row.aggregate_type as any,
+      aggregateType: row.aggregate_type as EventSnapshot['aggregateType'],
       version: row.version as number,
       state: JSON.parse(row.state as string),
       timestamp: row.timestamp as number,
@@ -571,10 +571,10 @@ export class EventStore extends EventEmitter {
       id: row.id as string,
       type: row.type as string,
       aggregateId: row.aggregate_id as string,
-      aggregateType: row.aggregate_type as any,
+      aggregateType: row.aggregate_type as DomainEvent['aggregateType'],
       version: row.version as number,
       timestamp: row.timestamp as number,
-      source: row.source as any,
+      source: row.source as DomainEvent['source'],
       payload: JSON.parse(row.payload as string),
       metadata: row.metadata ? JSON.parse(row.metadata as string) : undefined,
       causationId: row.causation_id as string | undefined,

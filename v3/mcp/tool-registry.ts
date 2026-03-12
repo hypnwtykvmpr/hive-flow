@@ -356,7 +356,7 @@ export class ToolRegistry extends EventEmitter {
       if (!valid && validate.errors) {
         return {
           valid: false,
-          errors: validate.errors.map(e => `${'instancePath' in e ? (e as any).instancePath || 'input' : 'input'}: ${e.message}`),
+          errors: validate.errors.map(e => `${'instancePath' in e ? (e as { instancePath?: string }).instancePath || 'input' : 'input'}: ${e.message}`),
         };
       }
 

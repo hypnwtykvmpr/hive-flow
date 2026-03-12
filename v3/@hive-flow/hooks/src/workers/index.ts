@@ -833,7 +833,7 @@ export class WorkerManager extends EventEmitter {
     // Schedule all workers
     for (const [name, config] of Object.entries(WORKER_CONFIGS)) {
       if (!config.enabled) continue;
-      if (config.platforms && !config.platforms.includes(os.platform() as any)) continue;
+      if (config.platforms && !(config.platforms as readonly string[]).includes(os.platform())) continue;
 
       this.scheduleWorker(name, config);
     }
@@ -1144,10 +1144,10 @@ export function createSwarmWorker(projectRoot: string): WorkerHandler {
       duration: Date.now() - startTime,
       timestamp: new Date(),
       data: {
-        active: (swarmData as any)?.swarm?.active ?? false,
-        agentCount: (swarmData as any)?.swarm?.agent_count ?? 0,
+        active: (swarmData.swarm as Record<string, unknown> | undefined)?.active ?? false,
+        agentCount: (swarmData.swarm as Record<string, unknown> | undefined)?.agent_count ?? 0,
         queuePending: queueCount,
-        lastUpdate: (swarmData as any)?.timestamp ?? null,
+        lastUpdate: swarmData.timestamp ?? null,
       },
     };
   };

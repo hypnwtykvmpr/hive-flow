@@ -429,7 +429,7 @@ async function configOptimizeHandler(
 
     if (context?.fpgaBridge?.isReady()) {
       const result = await context.fpgaBridge.optimizeConfig(
-        workloadProfile as any,
+        workloadProfile as unknown as Parameters<typeof context.fpgaBridge.optimizeConfig>[0],
         configSpace
       );
       recommendations = result.parameters;

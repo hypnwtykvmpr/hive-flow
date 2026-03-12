@@ -310,7 +310,7 @@ describe('generateAgentsMd', () => {
     it('should use default template for invalid template value', async () => {
       const options: AgentsMdOptions = {
         projectName: 'Invalid Template',
-        template: 'invalid-template' as any,
+        template: 'invalid-template' as unknown as AgentsMdOptions['template'], // SAFETY: intentionally testing invalid input
       };
 
       const result = await generateAgentsMd(options);

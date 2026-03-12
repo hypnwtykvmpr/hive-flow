@@ -91,7 +91,8 @@ export class CoverageRouter {
       // @ruvector/coverage is optional - gracefully fallback if not installed
       const ruvector = await import('@ruvector/coverage' as string).catch(() => null);
       if (ruvector) {
-        this.ruvectorEngine = (ruvector as any).createCoverageRouter?.(this.config);
+        const factory = (ruvector as Record<string, unknown>).createCoverageRouter as ((config: Partial<CoverageRouterConfig>) => unknown) | undefined;
+        this.ruvectorEngine = factory?.(this.config) ?? null;
         this.useNative = !!this.ruvectorEngine;
       }
     } catch { this.useNative = false; }

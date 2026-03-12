@@ -9,6 +9,7 @@ import {
   ClaimId,
   IssueId,
   Claimant,
+  ClaimantType,
   ClaimStatus,
   IssueClaim,
   IssueClaimWithStealing,
@@ -53,7 +54,7 @@ export class InMemoryClaimRepository implements IClaimRepository, IIssueClaimRep
     this.claims.set(claim.id, fullClaim);
 
     // Update indexes
-    const issueKey = this.getIssueKey(claim.issueId, (claim as any).repository ?? '');
+    const issueKey = this.getIssueKey(claim.issueId, (claim as IssueClaimWithStealing & { repository?: string }).repository ?? '');
     this.issueIndex.set(issueKey, claim.id);
 
     const claimantId = claim.claimant.id;
@@ -127,7 +128,7 @@ export class InMemoryClaimRepository implements IClaimRepository, IIssueClaimRep
     const claim = this.claims.get(claimId);
     if (claim) {
       // Remove from indexes
-      const issueKey = this.getIssueKey(claim.issueId, (claim as any).repository ?? '');
+      const issueKey = this.getIssueKey(claim.issueId, (claim as IssueClaimWithStealing & { repository?: string }).repository ?? '');
       this.issueIndex.delete(issueKey);
 
       const claimantId = claim.claimant.id;
@@ -195,11 +196,11 @@ export class InMemoryClaimRepository implements IClaimRepository, IIssueClaimRep
 
     if (options.status) {
       const statuses = Array.isArray(options.status) ? options.status : [options.status];
-      results = results.filter((c) => statuses.includes(c.status as any));
+      results = results.filter((c) => (statuses as readonly string[]).includes(c.status));
     }
 
     if (options.repository) {
-      results = results.filter((c) => (c as any).repository === options.repository);
+      results = results.filter((c) => (c as IssueClaimWithStealing & { repository?: string }).repository === options.repository);
     }
 
     if (options.issueId) {
@@ -293,7 +294,7 @@ export class InMemoryClaimRepository implements IClaimRepository, IIssueClaimRep
       byStatus[claim.status] = (byStatus[claim.status] ?? 0) + 1;
       byClaimantType[claim.claimant.type] = (byClaimantType[claim.claimant.type] ?? 0) + 1;
 
-      const repo = (claim as any).repository ?? 'unknown';
+      const repo = (claim as IssueClaimWithStealing & { repository?: string }).repository ?? 'unknown';
       byRepository[repo] = (byRepository[repo] ?? 0) + 1;
 
       totalProgress += claim.progress;
@@ -311,9 +312,9 @@ export class InMemoryClaimRepository implements IClaimRepository, IIssueClaimRep
 
     return {
       totalClaims: claims.length,
-      byStatus: byStatus as any,
+      byStatus: byStatus as Record<ExtendedClaimStatus, number>,
       byPriority: { critical: 0, high: 0, medium: 0, low: 0 },
-      byClaimantType: byClaimantType as any,
+      byClaimantType: byClaimantType as Record<ClaimantType, number>,
       avgDurationMs: completedCount > 0 ? totalDuration / completedCount : 0,
       avgProgress: claims.length > 0 ? totalProgress / claims.length : 0,
       activeSteals: claims.filter((c) => c.status === 'stealable').length,
@@ -340,7 +341,7 @@ export class InMemoryClaimRepository implements IClaimRepository, IIssueClaimRep
   private ensureFullClaim(claim: IssueClaim | IssueClaimWithStealing): IssueClaimWithStealing {
     const fullClaim = claim as IssueClaimWithStealing;
     if (fullClaim.progress === undefined) {
-      (fullClaim as any).progress = 0;
+      (fullClaim as { progress: number }).progress = 0;
     }
     return fullClaim;
   }

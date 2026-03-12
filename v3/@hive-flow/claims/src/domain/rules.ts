@@ -242,8 +242,8 @@ export function canStealClaim(
 
   // Check cross-type stealing rules if applicable
   if (config.allowCrossTypeSteal && claim.stealInfo?.allowedStealerTypes) {
-    const challengerType = (challenger as any).agentType;
-    if (challengerType && !claim.stealInfo.allowedStealerTypes.includes(challengerType)) {
+    const challengerType = (challenger as Claimant & { agentType?: string }).agentType;
+    if (challengerType && !(claim.stealInfo.allowedStealerTypes as readonly string[]).includes(challengerType)) {
       return ruleFailure(
         'CROSS_TYPE_NOT_ALLOWED',
         `Agent type '${challengerType}' cannot steal from this claim`,

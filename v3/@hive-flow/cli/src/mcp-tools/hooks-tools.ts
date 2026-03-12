@@ -789,8 +789,7 @@ export const hooksRoute: MCPTool = {
     if (native && backend === 'native') {
       const routeStart = performance.now();
       try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const results = (native as any).search(queryEmbedding, 5);
+        const results = (native as unknown as { search: (q: Float32Array, k: number) => unknown[] }).search(queryEmbedding, 5);
         routingLatencyMs = performance.now() - routeStart;
         routingMethod = 'semantic-native';
         backendInfo = 'native VectorDb (HNSW)';

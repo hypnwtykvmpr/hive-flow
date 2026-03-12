@@ -279,8 +279,8 @@ describe('BeadIdValidator', () => {
     });
 
     it('should reject null/undefined', () => {
-      expect(BeadIdValidator.isValid(null as any)).toBe(false);
-      expect(BeadIdValidator.isValid(undefined as any)).toBe(false);
+      expect(BeadIdValidator.isValid(null as unknown as string)).toBe(false);
+      expect(BeadIdValidator.isValid(undefined as unknown as string)).toBe(false);
     });
 
     it('should reject IDs that are too long', () => {
@@ -592,7 +592,7 @@ describe('ConvoyValidator', () => {
     });
 
     it('should reject non-array', () => {
-      const result = ConvoyValidator.validateIssuesList('not-an-array' as any);
+      const result = ConvoyValidator.validateIssuesList('not-an-array' as unknown as string[]);
       expect(result.valid).toBe(false);
     });
 

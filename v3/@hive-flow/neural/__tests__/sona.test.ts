@@ -326,7 +326,7 @@ describe('SONALearningEngine', () => {
         isEnabled: vi.fn().mockReturnValue(true),
         setEnabled: vi.fn(),
       };
-      vi.mocked(SonaEngine.withConfig).mockReturnValueOnce(emptyPatternsEngine as any);
+      vi.mocked(SonaEngine.withConfig).mockReturnValueOnce(emptyPatternsEngine as unknown as SonaEngine);
 
       const freshEngine = new SONALearningEngine('balanced', modeConfig);
       const context: Context = {

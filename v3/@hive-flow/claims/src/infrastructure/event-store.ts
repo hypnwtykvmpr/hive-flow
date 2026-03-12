@@ -71,7 +71,7 @@ export class InMemoryClaimEventStore implements IClaimEventStore {
     // Assign version
     const currentVersion = this.aggregateVersions.get(event.aggregateId) ?? 0;
     const newVersion = currentVersion + 1;
-    (event as any).version = newVersion;
+    (event as { version: number }).version = newVersion;
 
     // Store event
     this.events.push(event as AllExtendedClaimEvents);
@@ -108,7 +108,7 @@ export class InMemoryClaimEventStore implements IClaimEventStore {
 
   async getEventsByIssueId(issueId: IssueId): Promise<ClaimDomainEvent[]> {
     return this.events.filter(
-      (e) => (e.payload as any)?.issueId === issueId
+      (e) => (e.payload as Record<string, unknown>)?.issueId === issueId
     ) as ClaimDomainEvent[];
   }
 
@@ -120,7 +120,7 @@ export class InMemoryClaimEventStore implements IClaimEventStore {
     }
 
     if (filter.eventTypes && filter.eventTypes.length > 0) {
-      results = results.filter((e) => filter.eventTypes!.includes(e.type as any));
+      results = results.filter((e) => filter.eventTypes!.includes(e.type as ClaimEventType | ExtendedClaimEventType));
     }
 
     if (filter.fromTimestamp !== undefined) {
@@ -187,7 +187,7 @@ export class InMemoryClaimEventStore implements IClaimEventStore {
       // If no event types specified, handler receives all events
       if (
         subscription.eventTypes.length === 0 ||
-        subscription.eventTypes.includes(event.type as any)
+        subscription.eventTypes.includes(event.type as ClaimEventType | ExtendedClaimEventType)
       ) {
         try {
           await subscription.handler(event);

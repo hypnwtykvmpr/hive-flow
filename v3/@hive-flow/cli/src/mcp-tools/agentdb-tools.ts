@@ -468,9 +468,10 @@ export const agentdbBatch: MCPTool = {
         if (!entry || typeof entry !== 'object') {
           return { success: false, error: `entries[${i}] must be an object` };
         }
-        const key = validateString((entry as any).key, `entries[${i}].key`, 1000);
+        const entryObj = entry as Record<string, unknown>;
+        const key = validateString(entryObj.key as string | undefined, `entries[${i}].key`, 1000);
         if (!key) return { success: false, error: `entries[${i}].key is required (non-empty string)` };
-        const value = validateString((entry as any).value, `entries[${i}].value`);
+        const value = validateString(entryObj.value as string | undefined, `entries[${i}].value`);
         validatedEntries.push({ key, value: value ?? undefined });
       }
       const bridge = await getBridge();

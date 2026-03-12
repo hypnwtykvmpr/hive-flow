@@ -144,8 +144,8 @@ export class StateReconstructor {
       restorable.restoreFromSnapshot(snapshot.state);
     }
 
-    // Update version
-    (aggregate as any).version = snapshot.version;
+    // Update version — AggregateRoot.version is mutable by design
+    (aggregate as { version: number }).version = snapshot.version;
   }
 
   /**

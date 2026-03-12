@@ -510,16 +510,17 @@ async function handlePatternFind(
     // Use agentic-flow's AgentDBFast with HNSW indexing
     try {
       const embedding = await agenticFlowCore.computeEmbedding?.(input.query);
-      const results = await (agentDBInstance as any).search?.(embedding, {
+      const db = agentDBInstance as { search?: (embedding: unknown, opts: Record<string, unknown>) => Promise<Array<{ id: string; score: number }>> };
+      const results = await db.search?.(embedding, {
         topK: input.topK,
         threshold: input.threshold,
         filter: input.category ? { category: input.category } : undefined,
       });
 
-      patterns = results?.map((r: any) => ({
+      patterns = results?.map((r: { id: string; score: number }) => ({
         ...state.patterns.get(r.id),
         similarity: r.score,
-      })).filter(Boolean) || [];
+      })).filter(Boolean) as Array<Pattern & { similarity: number }> || [];
     } catch {
       // Fall back to local search
       patterns = performLocalPatternSearch(state, input);
@@ -579,15 +580,21 @@ function computeLocalSimilarity(query: string, content: string): number {
 }
 
 // Lazy-loaded SONAManager for LoRA adaptations
-let sonaManagerForLora: any | null = null;
+interface SONAManagerLike {
+  initialize(): Promise<void>;
+  applyAdaptations(embedding: Float32Array, mode: string): Promise<unknown>;
+}
+
+let sonaManagerForLora: SONAManagerLike | null = null;
 let sonaLoraInitialized = false;
 
-async function getSONAManagerForLora(): Promise<any | null> {
+async function getSONAManagerForLora(): Promise<SONAManagerLike | null> {
   if (sonaLoraInitialized) return sonaManagerForLora;
   sonaLoraInitialized = true;
   try {
+    // @ts-ignore - @hive-flow/neural is an optional dependency
     const neural = await import('@hive-flow/neural');
-    sonaManagerForLora = neural.createSONAManager('balanced');
+    sonaManagerForLora = neural.createSONAManager('balanced') as SONAManagerLike;
     await sonaManagerForLora.initialize();
     return sonaManagerForLora;
   } catch {

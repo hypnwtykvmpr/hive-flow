@@ -80,6 +80,28 @@ function makeConfig(overrides: Partial<BugHunterConfig> = {}): BugHunterConfig {
   };
 }
 
+// ── MCP tool result types ───────────────────────────────────────────────────
+
+/** Result shape returned by the bug_hunter_scan MCP tool handler. */
+interface ScanToolResult {
+  huntId?: string;
+  bugsFound?: number;
+  summary?: Record<string, unknown>;
+  bugs?: unknown[];
+  scannedFiles?: string[];
+  error?: string;
+}
+
+/** Result shape returned by the bug_hunter_report MCP tool handler. */
+interface ReportToolResult {
+  huntId?: string;
+  phase?: string;
+  workflowId?: string;
+  totalHunts?: number;
+  reports?: unknown[];
+  error?: string;
+}
+
 // ── MCP tool handler helpers ────────────────────────────────────────────────
 
 const scanTool = bugHunterTools.find((t) => t.name === 'bug_hunter_scan')!;
@@ -253,8 +275,8 @@ describe('bug-hunter', () => {
       for (const bug of result.bugs) {
         expect(typeof bug.suggestedFix).toBe('string');
         // The result object does not have an 'appliedFix' or 'codeChange' field
-        expect((bug as any).appliedFix).toBeUndefined();
-        expect((bug as any).codeChange).toBeUndefined();
+        expect((bug as Record<string, unknown>).appliedFix).toBeUndefined();
+        expect((bug as Record<string, unknown>).codeChange).toBeUndefined();
       }
     });
   });
@@ -399,7 +421,7 @@ describe('bug-hunter', () => {
         phase: 'implementation',
         files: ['/fake/src/scan.ts'],
         categories: ['security-vuln'],
-      })) as any;
+      })) as ScanToolResult;
 
       expect(result).toHaveProperty('huntId');
       expect(result).toHaveProperty('bugsFound');
@@ -411,7 +433,7 @@ describe('bug-hunter', () => {
 
     it('returns error for missing required fields', async () => {
       setupMocks();
-      const result = (await scanTool.handler({ phase: 'implementation' })) as any;
+      const result = (await scanTool.handler({ phase: 'implementation' })) as ScanToolResult;
       expect(result).toHaveProperty('error');
       expect(result.error).toMatch(/Missing required/i);
     });
@@ -421,7 +443,7 @@ describe('bug-hunter', () => {
       const result = (await scanTool.handler({
         phase: 'invalid-phase',
         files: ['/fake/src/a.ts'],
-      })) as any;
+      })) as ScanToolResult;
       expect(result).toHaveProperty('error');
       expect(result.error).toMatch(/Invalid phase/);
     });
@@ -432,7 +454,7 @@ describe('bug-hunter', () => {
         phase: 'implementation',
         files: ['/fake/src/a.ts'],
         categories: ['not-a-category'],
-      })) as any;
+      })) as ScanToolResult;
       expect(result).toHaveProperty('error');
       expect(result.error).toMatch(/Invalid categories/);
     });
@@ -470,7 +492,7 @@ describe('bug-hunter', () => {
 
       setupMocks({ reports: { 'hunt-test-abc': fakeResult }, version: '3.0.0' });
 
-      const result = (await reportTool.handler({ huntId: 'hunt-test-abc' })) as any;
+      const result = (await reportTool.handler({ huntId: 'hunt-test-abc' })) as ReportToolResult;
 
       expect(result.huntId).toBe('hunt-test-abc');
       expect(result.phase).toBe('testing');
@@ -478,7 +500,7 @@ describe('bug-hunter', () => {
 
     it('returns error when huntId is not found', async () => {
       setupMocks();
-      const result = (await reportTool.handler({ huntId: 'nonexistent' })) as any;
+      const result = (await reportTool.handler({ huntId: 'nonexistent' })) as ReportToolResult;
       expect(result).toHaveProperty('error');
       expect(result.error).toMatch(/No report found/);
     });
@@ -511,7 +533,7 @@ describe('bug-hunter', () => {
 
       setupMocks({ reports: { 'hunt-wf-1': fakeResult }, version: '3.0.0' });
 
-      const result = (await reportTool.handler({ workflowId: 'wf-999' })) as any;
+      const result = (await reportTool.handler({ workflowId: 'wf-999' })) as ReportToolResult;
 
       expect(result.workflowId).toBe('wf-999');
       expect(result.totalHunts).toBe(1);
@@ -520,14 +542,14 @@ describe('bug-hunter', () => {
 
     it('returns error when neither huntId nor workflowId provided', async () => {
       setupMocks();
-      const result = (await reportTool.handler({})) as any;
+      const result = (await reportTool.handler({})) as ReportToolResult;
       expect(result).toHaveProperty('error');
       expect(result.error).toMatch(/Provide either/);
     });
 
     it('returns error when workflowId has no matching reports', async () => {
       setupMocks();
-      const result = (await reportTool.handler({ workflowId: 'wf-none' })) as any;
+      const result = (await reportTool.handler({ workflowId: 'wf-none' })) as ReportToolResult;
       expect(result).toHaveProperty('error');
       expect(result.error).toMatch(/No reports found/);
     });

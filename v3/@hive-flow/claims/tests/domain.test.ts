@@ -203,8 +203,8 @@ describe('Domain Events (ADR-016)', () => {
       const event = createClaimStatusChangedEvent(
         'claim-123',
         'issue-456',
-        'active' as any,
-        'paused' as any,
+        'active',
+        'paused',
         'Taking a break'
       );
 

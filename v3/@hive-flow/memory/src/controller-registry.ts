@@ -750,7 +750,7 @@ export class ControllerRegistry extends EventEmitter {
     if (!entry?.instance) return;
 
     try {
-      const instance = entry.instance as any;
+      const instance = entry.instance as unknown as Record<string, (...args: unknown[]) => unknown>;
 
       // Try known shutdown methods
       if (typeof instance.destroy === 'function') {

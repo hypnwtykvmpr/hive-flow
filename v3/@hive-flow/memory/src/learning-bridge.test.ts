@@ -5,7 +5,7 @@
  * AutoMemoryBridge insights to the NeuralLearningSystem.
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vitest';
 import type { IMemoryBackend, MemoryEntry, MemoryEntryUpdate } from './types.js';
 import type { MemoryInsight } from './auto-memory-bridge.js';
 import { LearningBridge } from './learning-bridge.js';
@@ -257,7 +257,7 @@ describe('LearningBridge', () => {
   describe('onInsightAccessed', () => {
     it('should boost confidence by accessBoostAmount', async () => {
       const entry = createTestEntry({ metadata: { confidence: 0.5 } });
-      (backend.get as any).mockResolvedValueOnce(entry);
+      (backend.get as Mock).mockResolvedValueOnce(entry);
 
       await bridge.onInsightAccessed('entry-1');
 
@@ -268,23 +268,23 @@ describe('LearningBridge', () => {
 
     it('should cap confidence at maxConfidence', async () => {
       const entry = createTestEntry({ metadata: { confidence: 0.99 } });
-      (backend.get as any).mockResolvedValueOnce(entry);
+      (backend.get as Mock).mockResolvedValueOnce(entry);
 
       await bridge.onInsightAccessed('entry-1');
 
-      const updateCall = (backend.update as any).mock.calls[0];
+      const updateCall = (backend.update as Mock).mock.calls[0];
       expect(updateCall[1].metadata.confidence).toBeLessThanOrEqual(1.0);
     });
 
     it('should handle missing entry gracefully', async () => {
-      (backend.get as any).mockResolvedValueOnce(null);
+      (backend.get as Mock).mockResolvedValueOnce(null);
       await bridge.onInsightAccessed('nonexistent');
       expect(backend.update).not.toHaveBeenCalled();
     });
 
     it('should emit insight:accessed event', async () => {
       const entry = createTestEntry({ metadata: { confidence: 0.7 } });
-      (backend.get as any).mockResolvedValueOnce(entry);
+      (backend.get as Mock).mockResolvedValueOnce(entry);
       const handler = vi.fn();
       bridge.on('insight:accessed', handler);
 
@@ -300,11 +300,11 @@ describe('LearningBridge', () => {
       const entry = createTestEntry({
         metadata: { confidence: 0.6, category: 'debugging', extra: 'preserved' },
       });
-      (backend.get as any).mockResolvedValueOnce(entry);
+      (backend.get as Mock).mockResolvedValueOnce(entry);
 
       await bridge.onInsightAccessed('entry-1');
 
-      const updateCall = (backend.update as any).mock.calls[0][1];
+      const updateCall = (backend.update as Mock).mock.calls[0][1];
       expect(updateCall.metadata.category).toBe('debugging');
       expect(updateCall.metadata.extra).toBe('preserved');
       expect(updateCall.metadata.confidence).toBeCloseTo(0.63, 5);
@@ -315,7 +315,7 @@ describe('LearningBridge', () => {
       vi.clearAllMocks();
 
       const entry = createTestEntry();
-      (backend.get as any).mockResolvedValueOnce(entry);
+      (backend.get as Mock).mockResolvedValueOnce(entry);
 
       await bridge.onInsightAccessed('entry-1');
 
@@ -327,7 +327,7 @@ describe('LearningBridge', () => {
 
     it('should not record neural step without trajectory', async () => {
       const entry = createTestEntry();
-      (backend.get as any).mockResolvedValueOnce(entry);
+      (backend.get as Mock).mockResolvedValueOnce(entry);
 
       await bridge.onInsightAccessed('entry-1');
 
@@ -339,11 +339,11 @@ describe('LearningBridge', () => {
 
     it('should use default 0.5 when metadata lacks confidence', async () => {
       const entry = createTestEntry({ metadata: {} });
-      (backend.get as any).mockResolvedValueOnce(entry);
+      (backend.get as Mock).mockResolvedValueOnce(entry);
 
       await bridge.onInsightAccessed('entry-1');
 
-      const updateCall = (backend.update as any).mock.calls[0][1];
+      const updateCall = (backend.update as Mock).mock.calls[0][1];
       expect(updateCall.metadata.confidence).toBeCloseTo(0.53, 5);
     });
 
@@ -356,7 +356,7 @@ describe('LearningBridge', () => {
 
     it('should track boost stats', async () => {
       const entry = createTestEntry({ metadata: { confidence: 0.5 } });
-      (backend.get as any).mockResolvedValue(entry);
+      (backend.get as Mock).mockResolvedValue(entry);
 
       await bridge.onInsightAccessed('entry-1');
       await bridge.onInsightAccessed('entry-1');
@@ -465,12 +465,12 @@ describe('LearningBridge', () => {
       const entry = createTestEntry({
         id: 'old-entry', updatedAt: twoHoursAgo, metadata: { confidence: 0.9 },
       });
-      (backend.query as any).mockResolvedValueOnce([entry]);
+      (backend.query as Mock).mockResolvedValueOnce([entry]);
 
       const count = await bridge.decayConfidences('learnings');
 
       expect(count).toBe(1);
-      const newConf = (backend.update as any).mock.calls[0][1].metadata.confidence;
+      const newConf = (backend.update as Mock).mock.calls[0][1].metadata.confidence;
       expect(newConf).toBeCloseTo(0.89, 2);
     });
 
@@ -479,11 +479,11 @@ describe('LearningBridge', () => {
       const entry = createTestEntry({
         id: 'ancient', updatedAt: longAgo, metadata: { confidence: 0.5 },
       });
-      (backend.query as any).mockResolvedValueOnce([entry]);
+      (backend.query as Mock).mockResolvedValueOnce([entry]);
 
       await bridge.decayConfidences('learnings');
 
-      const newConf = (backend.update as any).mock.calls[0][1].metadata.confidence;
+      const newConf = (backend.update as Mock).mock.calls[0][1].metadata.confidence;
       expect(newConf).toBeGreaterThanOrEqual(0.1);
     });
 
@@ -491,7 +491,7 @@ describe('LearningBridge', () => {
       const entry = createTestEntry({
         id: 'recent', updatedAt: Date.now() - 30 * 60_000, metadata: { confidence: 0.8 },
       });
-      (backend.query as any).mockResolvedValueOnce([entry]);
+      (backend.query as Mock).mockResolvedValueOnce([entry]);
 
       const count = await bridge.decayConfidences('learnings');
       expect(count).toBe(0);
@@ -505,27 +505,27 @@ describe('LearningBridge', () => {
         createTestEntry({ id: 'e2', updatedAt: old, metadata: { confidence: 0.7 } }),
         createTestEntry({ id: 'e3', updatedAt: Date.now(), metadata: { confidence: 0.5 } }),
       ];
-      (backend.query as any).mockResolvedValueOnce(entries);
+      (backend.query as Mock).mockResolvedValueOnce(entries);
 
       const count = await bridge.decayConfidences('learnings');
       expect(count).toBe(2);
     });
 
     it('should handle empty namespace', async () => {
-      (backend.query as any).mockResolvedValueOnce([]);
+      (backend.query as Mock).mockResolvedValueOnce([]);
       const count = await bridge.decayConfidences('empty-ns');
       expect(count).toBe(0);
     });
 
     it('should handle query failure gracefully', async () => {
-      (backend.query as any).mockRejectedValueOnce(new Error('DB error'));
+      (backend.query as Mock).mockRejectedValueOnce(new Error('DB error'));
       const count = await bridge.decayConfidences('broken');
       expect(count).toBe(0);
     });
 
     it('should track total decays in stats', async () => {
       const old = Date.now() - 5 * 3_600_000;
-      (backend.query as any).mockResolvedValueOnce([
+      (backend.query as Mock).mockResolvedValueOnce([
         createTestEntry({ id: 'e1', updatedAt: old, metadata: { confidence: 0.9 } }),
       ]);
 
@@ -615,7 +615,7 @@ describe('LearningBridge', () => {
       expect(stats.neuralAvailable).toBe(true);
 
       const entry = createTestEntry({ metadata: { confidence: 0.5 } });
-      (backend.get as any).mockResolvedValueOnce(entry);
+      (backend.get as Mock).mockResolvedValueOnce(entry);
       await bridge.onInsightAccessed('entry-1');
 
       stats = bridge.getStats();

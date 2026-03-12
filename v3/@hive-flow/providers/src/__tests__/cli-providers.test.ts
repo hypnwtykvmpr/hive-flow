@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, type MockedFunction } from 'vitest';
 import { EventEmitter } from 'node:events';
 import { PassThrough } from 'stream';
 import type { ChildProcess } from 'child_process';
@@ -15,37 +15,101 @@ import { spawn, execFile } from 'child_process';
 import { GeminiCLIProvider } from '../gemini-cli-provider.js';
 import { CodexCLIProvider } from '../codex-cli-provider.js';
 import { CursorCLIProvider } from '../cursor-cli-provider.js';
+import type { LLMModel, LLMStreamEvent } from '../types.js';
+
+// Typed mock aliases — eliminates `as any` on mock method access
+// SAFETY: spawn/execFile are vi.mock'd above; the mock returns our mock child, not real ChildProcess
+const mockSpawn = spawn as unknown as MockedFunction<(...args: Parameters<typeof spawn>) => MockChildProcess | MockPassThroughChild>;
+const mockExecFile = execFile as MockedFunction<typeof execFile>;
+
+/**
+ * Helper to access private members of CLI providers in tests.
+ * SAFETY: Tests need to exercise private methods (formatMessages, spawnCursor, etc.)
+ * that are not exposed on the public API.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type PrivateAccess = any;
+
+/** Mock stdout shape needed by readline.createInterface */
+interface MockStdout extends EventEmitter {
+  resume: ReturnType<typeof vi.fn>;
+  pause: ReturnType<typeof vi.fn>;
+  pipe: ReturnType<typeof vi.fn>;
+  setEncoding: ReturnType<typeof vi.fn>;
+  isPaused: ReturnType<typeof vi.fn>;
+  unpipe: ReturnType<typeof vi.fn>;
+}
+
+/** Mock stderr shape */
+interface MockStderr extends EventEmitter {
+  resume: ReturnType<typeof vi.fn>;
+}
+
+/** Mock child process shape used throughout the tests */
+interface MockChildProcess extends EventEmitter {
+  stdout: MockStdout;
+  stderr: MockStderr;
+  stdin: EventEmitter & { write: ReturnType<typeof vi.fn>; end: ReturnType<typeof vi.fn> };
+  killed: boolean;
+  kill: ReturnType<typeof vi.fn>;
+  pid: number;
+}
+
+/** Mock child process with PassThrough stdout (needed for readline-based streaming) */
+interface MockPassThroughChild extends EventEmitter {
+  stdout: PassThrough;
+  stderr: MockStderr;
+  stdin: EventEmitter & { write: ReturnType<typeof vi.fn>; end: ReturnType<typeof vi.fn> };
+  killed: boolean;
+  kill: ReturnType<typeof vi.fn>;
+  pid: number;
+}
+
+/** Create a mock child with PassThrough stdout for readline streaming tests */
+function createPassThroughMockChild(): MockPassThroughChild {
+  const child = Object.assign(new EventEmitter(), {
+    killed: false,
+    pid: 12345,
+  }) as unknown as MockPassThroughChild;
+  child.stdout = new PassThrough();
+  const stderr = Object.assign(new EventEmitter(), { resume: vi.fn() }) as MockStderr;
+  child.stderr = stderr;
+  const stdinEmitter = new EventEmitter();
+  child.stdin = Object.assign(stdinEmitter, { write: vi.fn(), end: vi.fn() });
+  child.stdin.on('error', () => {}); // Prevent EPIPE unhandled errors
+  child.kill = vi.fn((_signal?: string) => { child.killed = true; return true; });
+  return child;
+}
 
 // Helper: create a mock child process
-function createMockChild(): ChildProcess & {
-  stdout: EventEmitter & { resume: ReturnType<typeof vi.fn>; pipe: ReturnType<typeof vi.fn> };
-  stderr: EventEmitter & { resume: ReturnType<typeof vi.fn> };
-  stdin: { write: ReturnType<typeof vi.fn>; end: ReturnType<typeof vi.fn> };
-} {
-  const child = new EventEmitter() as any;
+function createMockChild(): MockChildProcess {
+  const child = Object.assign(new EventEmitter(), {
+    killed: false,
+    pid: 12345,
+  }) as unknown as MockChildProcess;
 
   // stdout needs Readable-stream methods because readline.createInterface calls them
-  const stdout = new EventEmitter() as any;
-  stdout.resume = vi.fn();
-  stdout.pause = vi.fn();
-  stdout.pipe = vi.fn();
-  stdout.setEncoding = vi.fn();
-  stdout.isPaused = vi.fn(() => false);
-  stdout.unpipe = vi.fn();
+  const stdout = Object.assign(new EventEmitter(), {
+    resume: vi.fn(),
+    pause: vi.fn(),
+    pipe: vi.fn(),
+    setEncoding: vi.fn(),
+    isPaused: vi.fn(() => false),
+    unpipe: vi.fn(),
+  }) as MockStdout;
   child.stdout = stdout;
 
-  const stderr = new EventEmitter() as any;
-  stderr.resume = vi.fn();
+  const stderr = Object.assign(new EventEmitter(), {
+    resume: vi.fn(),
+  }) as MockStderr;
   child.stderr = stderr;
 
   const stdinEmitter = new EventEmitter();
   child.stdin = Object.assign(stdinEmitter, { write: vi.fn(), end: vi.fn() });
-  child.killed = false;
   child.kill = vi.fn((_signal?: string) => {
     child.killed = true;
     return true;
   });
-  child.pid = 12345;
   return child;
 }
 
@@ -58,7 +122,7 @@ function createMockChild(): ChildProcess & {
  * We detect the two patterns by argument count.
  */
 function mockBinaryFound(binaryName: string, version: string = '1.0.0') {
-  (execFile as any).mockImplementation(
+  mockExecFile.mockImplementation(
     (cmd: string, args: string[], optOrCb: any, cb?: any) => {
       if (typeof optOrCb === 'function') {
         // 3-arg call: execFile(cmd, args, callback) — this is the which/where call
@@ -81,7 +145,7 @@ function mockBinaryFound(binaryName: string, version: string = '1.0.0') {
  * Mock execFile to simulate binary NOT found (both call patterns return an error).
  */
 function mockBinaryNotFound() {
-  (execFile as any).mockImplementation(
+  mockExecFile.mockImplementation(
     (_cmd: string, _args: string[], optOrCb: any, cb?: any) => {
       const callback = typeof optOrCb === 'function' ? optOrCb : cb!;
       callback(new Error('not found'), '', '');
@@ -132,7 +196,7 @@ describe('GeminiCLIProvider', () => {
     await provider.initialize();
 
     const mockChild = createMockChild();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
     const completePromise = provider.complete({
       messages: [{ role: 'user', content: 'Hello' }],
@@ -164,14 +228,14 @@ describe('GeminiCLIProvider', () => {
     await provider.initialize();
 
     const mockChild = createMockChild();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
     const completePromise = provider.complete({
       messages: [{ role: 'user', content: 'test' }],
     });
 
     // --sandbox is opt-in — not present by default
-    const spawnArgs = (spawn as any).mock.calls[0][1] as string[];
+    const spawnArgs = mockSpawn.mock.calls[0][1] as string[];
     expect(spawnArgs).not.toContain('--sandbox');
 
     // Clean up
@@ -189,7 +253,7 @@ describe('GeminiCLIProvider', () => {
     await sandboxProvider.initialize();
 
     const mockChild = createMockChild();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
     const completePromise = sandboxProvider.complete({
       messages: [{ role: 'user', content: 'test' }],
@@ -213,7 +277,7 @@ describe('GeminiCLIProvider', () => {
     await provider.initialize();
 
     const mockChild = createMockChild();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
     provider.complete({ messages: [{ role: 'user', content: 'test' }] });
 
@@ -230,7 +294,7 @@ describe('GeminiCLIProvider', () => {
     await provider.initialize();
 
     const mockChild = createMockChild();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
     const completePromise = provider.complete({
       messages: [{ role: 'user', content: 'test' }],
@@ -247,7 +311,7 @@ describe('GeminiCLIProvider', () => {
     await provider.initialize();
 
     const mockChild = createMockChild();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
     const completePromise = provider.complete({
       messages: [{ role: 'user', content: '' }],
@@ -264,23 +328,11 @@ describe('GeminiCLIProvider', () => {
 
     // Gemini doStreamComplete uses `for await (const line of rl)` on readline,
     // which requires a real Readable stream (not just an EventEmitter mock).
-    // Create a custom mock child with PassThrough stdout for proper readline support.
-    const child = new EventEmitter() as any;
-    const stdout = new PassThrough();
-    child.stdout = stdout;
-    const stderr = new EventEmitter() as any;
-    stderr.resume = vi.fn();
-    child.stderr = stderr;
-    const stdinEmitter = new EventEmitter();
-    child.stdin = Object.assign(stdinEmitter, { write: vi.fn(), end: vi.fn() });
-    child.stdin.on('error', () => {}); // Prevent EPIPE unhandled errors
-    child.killed = false;
-    child.kill = vi.fn((_signal?: string) => { child.killed = true; return true; });
-    child.pid = 12345;
+    const child = createPassThroughMockChild();
 
-    (spawn as any).mockReturnValue(child);
+    mockSpawn.mockReturnValue(child);
 
-    const events: any[] = [];
+    const events: LLMStreamEvent[] = [];
     const streamPromise = (async () => {
       for await (const event of provider.streamComplete({
         messages: [{ role: 'user', content: 'Hello' }],
@@ -293,9 +345,9 @@ describe('GeminiCLIProvider', () => {
     await new Promise(r => setTimeout(r, 10));
 
     // Gemini stream-json emits newline-delimited JSON with response or content fields
-    stdout.write(JSON.stringify({ response: 'Hello ' }) + '\n');
-    stdout.write(JSON.stringify({ response: 'world!' }) + '\n');
-    stdout.end();
+    child.stdout.write(JSON.stringify({ response: 'Hello ' }) + '\n');
+    child.stdout.write(JSON.stringify({ response: 'world!' }) + '\n');
+    child.stdout.end();
     child.emit('close', 0);
 
     await streamPromise;
@@ -322,7 +374,7 @@ describe('CodexCLIProvider', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     provider = new CodexCLIProvider({
-      config: { provider: 'codex-cli', model: undefined as any },
+      config: { provider: 'codex-cli', model: undefined as unknown as LLMModel /* SAFETY: testing undefined model edge case */ },
       logger: noopLogger,
     });
   });
@@ -339,17 +391,17 @@ describe('CodexCLIProvider', () => {
   it('omits --model flag when model is auto', async () => {
     mockBinaryFound('codex');
     provider = new CodexCLIProvider({
-      config: { provider: 'codex-cli', model: 'auto' as any },
+      config: { provider: 'codex-cli', model: 'auto' },
       logger: noopLogger,
     });
     await provider.initialize();
 
     const mockChild = createMockChild();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
     provider.complete({ messages: [{ role: 'user', content: 'test' }] });
 
-    const spawnArgs = (spawn as any).mock.calls[0][1] as string[];
+    const spawnArgs = mockSpawn.mock.calls[0][1] as string[];
     expect(spawnArgs).not.toContain('--model');
 
     // Clean up — must emit item.completed with text before turn.completed,
@@ -372,11 +424,11 @@ describe('CodexCLIProvider', () => {
     await provider.initialize();
 
     const mockChild = createMockChild();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
     provider.complete({ messages: [{ role: 'user', content: 'test' }] });
 
-    const spawnArgs = (spawn as any).mock.calls[0][1] as string[];
+    const spawnArgs = mockSpawn.mock.calls[0][1] as string[];
     expect(spawnArgs).toContain('--model');
     expect(spawnArgs).toContain('gpt-5.3-codex');
 
@@ -395,7 +447,7 @@ describe('CodexCLIProvider', () => {
     await provider.initialize();
 
     const mockChild = createMockChild();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
     provider.complete({ messages: [{ role: 'user', content: 'test' }] });
 
@@ -416,7 +468,7 @@ describe('CodexCLIProvider', () => {
     await provider.initialize();
 
     const mockChild = createMockChild();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
     const completePromise = provider.complete({
       messages: [{ role: 'user', content: 'Hello' }],
@@ -454,7 +506,7 @@ describe('CodexCLIProvider', () => {
     await provider.initialize();
 
     const mockChild = createMockChild();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
     const completePromise = provider.complete({
       messages: [{ role: 'user', content: 'test' }],
@@ -479,7 +531,7 @@ describe('CodexCLIProvider', () => {
     await provider.initialize();
 
     const mockChild = createMockChild();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
     const events: any[] = [];
     const streamPromise = (async () => {
@@ -542,7 +594,7 @@ describe('CursorCLIProvider', () => {
     await provider.initialize();
 
     const mockChild = createMockChild();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
     provider.complete({ messages: [{ role: 'user', content: 'test' }] });
 
@@ -566,17 +618,17 @@ describe('CursorCLIProvider', () => {
     await provider.initialize();
 
     const mockChild = createMockChild();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
     provider.complete({ messages: [{ role: 'user', content: 'test' }] });
 
     // Verify API key is NOT in args
-    const spawnArgs = (spawn as any).mock.calls[0][1] as string[];
+    const spawnArgs = mockSpawn.mock.calls[0][1] as string[];
     expect(spawnArgs).not.toContain('--api-key');
     expect(spawnArgs).not.toContain('test-key-123');
 
     // Verify API key IS in env
-    const spawnEnv = (spawn as any).mock.calls[0][2].env;
+    const spawnEnv = mockSpawn.mock.calls[0][2].env;
     expect(spawnEnv.CURSOR_API_KEY).toBe('test-key-123');
 
     // Clean up
@@ -589,7 +641,7 @@ describe('CursorCLIProvider', () => {
     await provider.initialize();
 
     const mockChild = createMockChild();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
     const completePromise = provider.complete({
       messages: [{ role: 'user', content: 'Hello' }],
@@ -616,7 +668,7 @@ describe('CursorCLIProvider', () => {
     await provider.initialize();
 
     const mockChild = createMockChild();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
     provider.complete({ messages: [{ role: 'user', content: 'test' }] });
 
@@ -632,7 +684,7 @@ describe('CursorCLIProvider', () => {
     await provider.initialize();
 
     const mockChild = createMockChild();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
     const events: any[] = [];
     const streamPromise = (async () => {
@@ -699,7 +751,7 @@ describe('GeminiCLIProvider — tool calling', () => {
   afterEach(() => { provider.destroy(); });
 
   it('formatMessages() includes available_tools XML when tools provided', () => {
-    const formatMessages = (provider as any).formatMessages.bind(provider);
+    const formatMessages = (provider as PrivateAccess).formatMessages.bind(provider);
     const result = formatMessages(
       [{ role: 'user', content: 'What is the weather?' }],
       sampleTools,
@@ -714,7 +766,7 @@ describe('GeminiCLIProvider — tool calling', () => {
     await provider.initialize();
 
     const mockChild = createMockChild();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
     const completePromise = provider.complete({
       messages: [{ role: 'user', content: 'Weather?' }],
@@ -747,7 +799,7 @@ describe('CodexCLIProvider — tool calling', () => {
   afterEach(() => { provider.destroy(); });
 
   it('formatMessages() includes available_tools XML when tools provided', () => {
-    const formatMessages = (provider as any).formatMessages.bind(provider);
+    const formatMessages = (provider as PrivateAccess).formatMessages.bind(provider);
     const result = formatMessages(
       [{ role: 'user', content: 'What is the weather?' }],
       sampleTools,
@@ -761,7 +813,7 @@ describe('CodexCLIProvider — tool calling', () => {
     await provider.initialize();
 
     const mockChild = createMockChild();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
     const completePromise = provider.complete({
       messages: [{ role: 'user', content: 'Weather?' }],
@@ -798,7 +850,7 @@ describe('CursorCLIProvider — tool calling', () => {
   afterEach(() => { provider.destroy(); });
 
   it('formatMessages() includes available_tools XML when tools provided', () => {
-    const formatMessages = (provider as any).formatMessages.bind(provider);
+    const formatMessages = (provider as PrivateAccess).formatMessages.bind(provider);
     const result = formatMessages(
       [{ role: 'user', content: 'What is the weather?' }],
       sampleTools,
@@ -812,7 +864,7 @@ describe('CursorCLIProvider — tool calling', () => {
     await provider.initialize();
 
     const mockChild = createMockChild();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
     const completePromise = provider.complete({
       messages: [{ role: 'user', content: 'Weather?' }],
@@ -843,20 +895,20 @@ describe('CursorCLIProvider — spawnCursor binary detection', () => {
       config: { provider: 'cursor-cli', model: 'auto' },
       logger: noopLogger,
     });
-    (provider as any).binaryPath = '/usr/local/bin/cursor';
+    (provider as PrivateAccess).binaryPath = '/usr/local/bin/cursor';
 
     const mockChild = createMockChild();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
     // Call spawnCursor directly to test args construction
-    (provider as any).spawnCursor('test prompt', 'auto', false);
+    (provider as PrivateAccess).spawnCursor('test prompt', 'auto', false);
 
     expect(spawn).toHaveBeenCalledWith(
       '/usr/local/bin/cursor',
       expect.arrayContaining(['agent', '--print']),
       expect.any(Object),
     );
-    const spawnArgs = (spawn as any).mock.calls[0][1] as string[];
+    const spawnArgs = mockSpawn.mock.calls[0][1] as string[];
     expect(spawnArgs[0]).toBe('agent');
 
     provider.destroy();
@@ -867,19 +919,19 @@ describe('CursorCLIProvider — spawnCursor binary detection', () => {
       config: { provider: 'cursor-cli', model: 'auto' },
       logger: noopLogger,
     });
-    (provider as any).binaryPath = '/home/user/.local/bin/cursor-agent';
+    (provider as PrivateAccess).binaryPath = '/home/user/.local/bin/cursor-agent';
 
     const mockChild = createMockChild();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
-    (provider as any).spawnCursor('test prompt', 'auto', false);
+    (provider as PrivateAccess).spawnCursor('test prompt', 'auto', false);
 
     expect(spawn).toHaveBeenCalledWith(
       '/home/user/.local/bin/cursor-agent',
       expect.not.arrayContaining(['agent']),
       expect.any(Object),
     );
-    const spawnArgs = (spawn as any).mock.calls[0][1] as string[];
+    const spawnArgs = mockSpawn.mock.calls[0][1] as string[];
     expect(spawnArgs[0]).toBe('--print');
 
     provider.destroy();
@@ -898,7 +950,7 @@ describe('CursorCLIProvider — parseJsonOutput usage parsing', () => {
     await provider.initialize();
 
     const mockChild = createMockChild();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
     const completePromise = provider.complete({
       messages: [{ role: 'user', content: 'test' }],
@@ -925,7 +977,7 @@ describe('CursorCLIProvider — parseJsonOutput usage parsing', () => {
     await provider.initialize();
 
     const mockChild = createMockChild();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
     const completePromise = provider.complete({
       messages: [{ role: 'user', content: 'test' }],
@@ -965,7 +1017,7 @@ describe('GeminiCLIProvider — error handling', () => {
 
   it('rejects with error message on exit code 1 (generic)', async () => {
     const mockChild = createMockChild();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
     const promise = provider.complete({
       messages: [{ role: 'user', content: 'test' }],
@@ -979,7 +1031,7 @@ describe('GeminiCLIProvider — error handling', () => {
 
   it('rejects with input error on exit code 42', async () => {
     const mockChild = createMockChild();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
     const promise = provider.complete({
       messages: [{ role: 'user', content: 'test' }],
@@ -992,7 +1044,7 @@ describe('GeminiCLIProvider — error handling', () => {
 
   it('rejects with error message on exit code 2 (unmapped)', async () => {
     const mockChild = createMockChild();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
     const promise = provider.complete({
       messages: [{ role: 'user', content: 'test' }],
@@ -1006,7 +1058,7 @@ describe('GeminiCLIProvider — error handling', () => {
 
   it('rejects with cancel error on exit code 130', async () => {
     const mockChild = createMockChild();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
     const promise = provider.complete({
       messages: [{ role: 'user', content: 'test' }],
@@ -1019,7 +1071,7 @@ describe('GeminiCLIProvider — error handling', () => {
 
   it('rejects with generic CLI error on unknown exit code', async () => {
     const mockChild = createMockChild();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
     const promise = provider.complete({
       messages: [{ role: 'user', content: 'test' }],
@@ -1033,7 +1085,7 @@ describe('GeminiCLIProvider — error handling', () => {
 
   it('rejects on child process error event', async () => {
     const mockChild = createMockChild();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
     const promise = provider.complete({
       messages: [{ role: 'user', content: 'test' }],
@@ -1046,7 +1098,7 @@ describe('GeminiCLIProvider — error handling', () => {
 
   it('rejects with empty response when content is empty', async () => {
     const mockChild = createMockChild();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
     const promise = provider.complete({
       messages: [{ role: 'user', content: 'test' }],
@@ -1062,7 +1114,7 @@ describe('GeminiCLIProvider — error handling', () => {
     const mockChild = createMockChild();
     mockChild.killed = false;
     mockChild.kill = vi.fn();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
     // Start a request without resolving it
     provider.complete({
@@ -1075,7 +1127,7 @@ describe('GeminiCLIProvider — error handling', () => {
   });
 
   it('formatMessages handles system messages and multi-part content', () => {
-    const formatMessages = (provider as any).formatMessages.bind(provider);
+    const formatMessages = (provider as PrivateAccess).formatMessages.bind(provider);
     const result = formatMessages([
       { role: 'system', content: 'You are helpful.' },
       { role: 'user', content: [{ type: 'text', text: 'Hello' }, { type: 'text', text: 'World' }] },
@@ -1105,7 +1157,7 @@ describe('CodexCLIProvider — error handling', () => {
 
   it('rejects on non-zero exit code', async () => {
     const mockChild = createMockChild();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
     const promise = provider.complete({
       messages: [{ role: 'user', content: 'test' }],
@@ -1119,7 +1171,7 @@ describe('CodexCLIProvider — error handling', () => {
 
   it('rejects on child process error event', async () => {
     const mockChild = createMockChild();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
     const promise = provider.complete({
       messages: [{ role: 'user', content: 'test' }],
@@ -1134,7 +1186,7 @@ describe('CodexCLIProvider — error handling', () => {
     const mockChild = createMockChild();
     mockChild.killed = false;
     mockChild.kill = vi.fn();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
     provider.complete({
       messages: [{ role: 'user', content: 'test' }],
@@ -1145,7 +1197,7 @@ describe('CodexCLIProvider — error handling', () => {
   });
 
   it('formatMessages handles system messages and multi-part content', () => {
-    const formatMessages = (provider as any).formatMessages.bind(provider);
+    const formatMessages = (provider as PrivateAccess).formatMessages.bind(provider);
     const result = formatMessages([
       { role: 'system', content: 'You are helpful.' },
       { role: 'user', content: [{ type: 'text', text: 'Hello' }] },
@@ -1158,7 +1210,7 @@ describe('CodexCLIProvider — error handling', () => {
 
   it('handles turn.failed with codexErrorInfo.type Unauthorized', async () => {
     const mockChild = createMockChild();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
     const promise = provider.complete({
       messages: [{ role: 'user', content: 'test' }],
@@ -1176,7 +1228,7 @@ describe('CodexCLIProvider — error handling', () => {
 
   it('handles turn.failed with codexErrorInfo.type UsageLimitExceeded', async () => {
     const mockChild = createMockChild();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
     const promise = provider.complete({
       messages: [{ role: 'user', content: 'test' }],
@@ -1194,7 +1246,7 @@ describe('CodexCLIProvider — error handling', () => {
 
   it('handles turn.failed with codexErrorInfo.type HttpConnectionFailed', async () => {
     const mockChild = createMockChild();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
     const promise = provider.complete({
       messages: [{ role: 'user', content: 'test' }],
@@ -1212,7 +1264,7 @@ describe('CodexCLIProvider — error handling', () => {
 
   it('handles turn.failed with codexErrorInfo.type ContextWindowExceeded', async () => {
     const mockChild = createMockChild();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
     const promise = provider.complete({
       messages: [{ role: 'user', content: 'test' }],
@@ -1229,43 +1281,43 @@ describe('CodexCLIProvider — error handling', () => {
   });
 
   it('parseNestedErrorMessage extracts detail from nested JSON', async () => {
-    const parseNested = (provider as any).parseNestedErrorMessage.bind(provider);
+    const parseNested = (provider as PrivateAccess).parseNestedErrorMessage.bind(provider);
     const result = parseNested(JSON.stringify({ detail: 'inner detail' }));
     expect(result).toBe('inner detail');
   });
 
   it('parseNestedErrorMessage returns original string for non-JSON', async () => {
-    const parseNested = (provider as any).parseNestedErrorMessage.bind(provider);
+    const parseNested = (provider as PrivateAccess).parseNestedErrorMessage.bind(provider);
     const result = parseNested('plain error');
     expect(result).toBe('plain error');
   });
 
   it('parseNestedErrorMessage handles JSON primitive', async () => {
-    const parseNested = (provider as any).parseNestedErrorMessage.bind(provider);
+    const parseNested = (provider as PrivateAccess).parseNestedErrorMessage.bind(provider);
     const result = parseNested('"just a string"');
     expect(result).toBe('just a string');
   });
 
   it('parseLine returns null for empty string', () => {
-    const parseLine = (provider as any).parseLine.bind(provider);
+    const parseLine = (provider as PrivateAccess).parseLine.bind(provider);
     expect(parseLine('')).toBeNull();
     expect(parseLine('  ')).toBeNull();
   });
 
   it('parseLine returns null for non-JSON', () => {
-    const parseLine = (provider as any).parseLine.bind(provider);
+    const parseLine = (provider as PrivateAccess).parseLine.bind(provider);
     expect(parseLine('not json at all')).toBeNull();
   });
 
   it('parseLine parses valid JSON', () => {
-    const parseLine = (provider as any).parseLine.bind(provider);
+    const parseLine = (provider as PrivateAccess).parseLine.bind(provider);
     const result = parseLine('{"type":"test"}');
     expect(result).toEqual({ type: 'test' });
   });
 
   it('rejects with empty response when no text and exit code 0', async () => {
     const mockChild = createMockChild();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
     const promise = provider.complete({
       messages: [{ role: 'user', content: 'test' }],
@@ -1281,10 +1333,10 @@ describe('CodexCLIProvider — error handling', () => {
   });
 
   it('spawnCodex throws on prompt exceeding 200KB', () => {
-    (provider as any).binaryPath = '/usr/local/bin/codex';
+    (provider as PrivateAccess).binaryPath = '/usr/local/bin/codex';
     const bigPrompt = 'x'.repeat(250_000);
     expect(() => {
-      (provider as any).spawnCodex(bigPrompt, 'gpt-5.3-codex');
+      (provider as PrivateAccess).spawnCodex(bigPrompt, 'gpt-5.3-codex');
     }).toThrow(/too long/i);
   });
 });
@@ -1301,7 +1353,7 @@ describe('CodexCLIProvider — health check', () => {
     await provider.initialize();
 
     // Re-mock execFile for the health check --version call
-    (execFile as any).mockImplementation(
+    mockExecFile.mockImplementation(
       (_cmd: string, args: string[], optOrCb: any, cb?: any) => {
         if (typeof optOrCb === 'function') {
           optOrCb(null, '/usr/local/bin/codex\n', '');
@@ -1311,7 +1363,7 @@ describe('CodexCLIProvider — health check', () => {
       },
     );
 
-    const result = await (provider as any).doHealthCheck();
+    const result = await (provider as PrivateAccess).doHealthCheck();
     expect(result.healthy).toBe(true);
     expect(result.details.version).toBe('0.106.0');
     provider.destroy();
@@ -1328,7 +1380,7 @@ describe('CodexCLIProvider — health check', () => {
     // Keep binary not found for health check too
     mockBinaryNotFound();
 
-    const result = await (provider as any).doHealthCheck();
+    const result = await (provider as PrivateAccess).doHealthCheck();
     expect(result.healthy).toBe(false);
     expect(result.error).toContain('not found');
     provider.destroy();
@@ -1343,7 +1395,7 @@ describe('CodexCLIProvider — health check', () => {
     await provider.initialize();
 
     // Make --version fail for health check
-    (execFile as any).mockImplementation(
+    mockExecFile.mockImplementation(
       (_cmd: string, args: string[], optOrCb: any, cb?: any) => {
         if (typeof optOrCb === 'function') {
           optOrCb(null, '/usr/local/bin/codex\n', '');
@@ -1353,7 +1405,7 @@ describe('CodexCLIProvider — health check', () => {
       },
     );
 
-    const result = await (provider as any).doHealthCheck();
+    const result = await (provider as PrivateAccess).doHealthCheck();
     expect(result.healthy).toBe(false);
     expect(result.error).toContain('failed');
     provider.destroy();
@@ -1369,7 +1421,7 @@ describe('CodexCLIProvider — findBinary', () => {
       config: { provider: 'codex-cli', model: 'gpt-5.3-codex' },
       logger: noopLogger,
     });
-    const result = await (provider as any).findBinary();
+    const result = await (provider as PrivateAccess).findBinary();
     expect(result).toBeNull();
     provider.destroy();
   });
@@ -1380,7 +1432,7 @@ describe('CodexCLIProvider — findBinary', () => {
       config: { provider: 'codex-cli', model: 'gpt-5.3-codex' },
       logger: noopLogger,
     });
-    const result = await (provider as any).findBinary();
+    const result = await (provider as PrivateAccess).findBinary();
     expect(result).toBe('/usr/local/bin/codex');
     provider.destroy();
   });
@@ -1393,7 +1445,7 @@ describe('CodexCLIProvider — ensureBinary', () => {
       logger: noopLogger,
     });
     // Don't initialize, so binaryPath stays null
-    expect(() => (provider as any).ensureBinary()).toThrow(/unavailable|not found/i);
+    expect(() => (provider as PrivateAccess).ensureBinary()).toThrow(/unavailable|not found/i);
     provider.destroy();
   });
 });
@@ -1415,7 +1467,7 @@ describe('CodexCLIProvider — streaming edge cases', () => {
 
   it('stream emits error event on turn.failed', async () => {
     const mockChild = createMockChild();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
     const events: any[] = [];
     const streamPromise = (async () => {
@@ -1441,7 +1493,7 @@ describe('CodexCLIProvider — streaming edge cases', () => {
 
   it('stream emits content from item.completed with tool calls', async () => {
     const mockChild = createMockChild();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
     const events: any[] = [];
     const streamPromise = (async () => {
@@ -1475,7 +1527,7 @@ describe('CodexCLIProvider — streaming edge cases', () => {
 
   it('stream surfaces spawn error', async () => {
     const mockChild = createMockChild();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
     const events: any[] = [];
     const streamPromise = (async () => {
@@ -1514,7 +1566,7 @@ describe('CursorCLIProvider — error handling', () => {
 
   it('rejects on non-zero exit code', async () => {
     const mockChild = createMockChild();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
     const promise = provider.complete({
       messages: [{ role: 'user', content: 'test' }],
@@ -1528,7 +1580,7 @@ describe('CursorCLIProvider — error handling', () => {
 
   it('rejects on child process error event', async () => {
     const mockChild = createMockChild();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
     const promise = provider.complete({
       messages: [{ role: 'user', content: 'test' }],
@@ -1541,7 +1593,7 @@ describe('CursorCLIProvider — error handling', () => {
 
   it('throws on empty prompt', () => {
     expect(() => {
-      (provider as any).spawnCursor('   ', 'auto', false);
+      (provider as PrivateAccess).spawnCursor('   ', 'auto', false);
     }).toThrow(/empty/i);
   });
 
@@ -1549,7 +1601,7 @@ describe('CursorCLIProvider — error handling', () => {
     const mockChild = createMockChild();
     mockChild.killed = false;
     mockChild.kill = vi.fn();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
     provider.complete({
       messages: [{ role: 'user', content: 'test' }],
@@ -1560,7 +1612,7 @@ describe('CursorCLIProvider — error handling', () => {
   });
 
   it('formatMessages handles system messages and multi-part content', () => {
-    const formatMessages = (provider as any).formatMessages.bind(provider);
+    const formatMessages = (provider as PrivateAccess).formatMessages.bind(provider);
     const result = formatMessages([
       { role: 'system', content: 'You are helpful.' },
       { role: 'user', content: [{ type: 'text', text: 'Hello' }] },
@@ -1574,19 +1626,19 @@ describe('CursorCLIProvider — error handling', () => {
   it('spawnCursor throws on prompt exceeding 200KB', () => {
     const bigPrompt = 'x'.repeat(250_000);
     expect(() => {
-      (provider as any).spawnCursor(bigPrompt, 'auto', false);
+      (provider as PrivateAccess).spawnCursor(bigPrompt, 'auto', false);
     }).toThrow(/too long/i);
   });
 
   it('spawnCursor passes CURSOR_API_KEY via env', () => {
     const mockChild = createMockChild();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
     process.env.CURSOR_API_KEY = 'test-key-123';
-    (provider as any).spawnCursor('hello', 'auto', false);
+    (provider as PrivateAccess).spawnCursor('hello', 'auto', false);
     delete process.env.CURSOR_API_KEY;
 
-    const spawnEnv = (spawn as any).mock.calls[0][2].env;
+    const spawnEnv = mockSpawn.mock.calls[0][2].env;
     expect(spawnEnv.CURSOR_API_KEY).toBe('test-key-123');
   });
 });
@@ -1602,7 +1654,7 @@ describe('CursorCLIProvider — health check', () => {
     });
     await provider.initialize();
 
-    (execFile as any).mockImplementation(
+    mockExecFile.mockImplementation(
       (_cmd: string, _args: string[], optOrCb: any, cb?: any) => {
         if (typeof optOrCb === 'function') {
           optOrCb(null, '/usr/local/bin/cursor-agent\n', '');
@@ -1612,7 +1664,7 @@ describe('CursorCLIProvider — health check', () => {
       },
     );
 
-    const result = await (provider as any).doHealthCheck();
+    const result = await (provider as PrivateAccess).doHealthCheck();
     expect(result.healthy).toBe(true);
     provider.destroy();
   });
@@ -1626,7 +1678,7 @@ describe('CursorCLIProvider — health check', () => {
     await provider.initialize();
 
     mockBinaryNotFound();
-    const result = await (provider as any).doHealthCheck();
+    const result = await (provider as PrivateAccess).doHealthCheck();
     expect(result.healthy).toBe(false);
     provider.destroy();
   });
@@ -1639,7 +1691,7 @@ describe('CursorCLIProvider — health check', () => {
     });
     await provider.initialize();
 
-    (execFile as any).mockImplementation(
+    mockExecFile.mockImplementation(
       (_cmd: string, _args: string[], optOrCb: any, cb?: any) => {
         if (typeof optOrCb === 'function') {
           optOrCb(null, '/usr/local/bin/cursor-agent\n', '');
@@ -1649,7 +1701,7 @@ describe('CursorCLIProvider — health check', () => {
       },
     );
 
-    const result = await (provider as any).doHealthCheck();
+    const result = await (provider as PrivateAccess).doHealthCheck();
     expect(result.healthy).toBe(false);
     provider.destroy();
   });
@@ -1664,7 +1716,7 @@ describe('CursorCLIProvider — findBinary & ensureBinary', () => {
       config: { provider: 'cursor-cli', model: 'auto' },
       logger: noopLogger,
     });
-    const result = await (provider as any).findBinary();
+    const result = await (provider as PrivateAccess).findBinary();
     expect(result).toBeNull();
     provider.destroy();
   });
@@ -1675,7 +1727,7 @@ describe('CursorCLIProvider — findBinary & ensureBinary', () => {
       config: { provider: 'cursor-cli', model: 'auto' },
       logger: noopLogger,
     });
-    const result = await (provider as any).findBinary();
+    const result = await (provider as PrivateAccess).findBinary();
     expect(result).toBe('/usr/local/bin/cursor-agent');
     provider.destroy();
   });
@@ -1685,7 +1737,7 @@ describe('CursorCLIProvider — findBinary & ensureBinary', () => {
       config: { provider: 'cursor-cli', model: 'auto' },
       logger: noopLogger,
     });
-    expect(() => (provider as any).ensureBinary()).toThrow(/unavailable/i);
+    expect(() => (provider as PrivateAccess).ensureBinary()).toThrow(/unavailable/i);
     provider.destroy();
   });
 });
@@ -1707,7 +1759,7 @@ describe('CursorCLIProvider — streaming edge cases', () => {
 
   it('stream surfaces spawn error', async () => {
     const mockChild = createMockChild();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
     const events: any[] = [];
     const streamPromise = (async () => {
@@ -1739,7 +1791,7 @@ describe('GeminiCLIProvider — health check', () => {
     });
     await provider.initialize();
 
-    (execFile as any).mockImplementation(
+    mockExecFile.mockImplementation(
       (_cmd: string, _args: string[], optOrCb: any, cb?: any) => {
         if (typeof optOrCb === 'function') {
           optOrCb(null, '/opt/homebrew/bin/gemini\n', '');
@@ -1749,7 +1801,7 @@ describe('GeminiCLIProvider — health check', () => {
       },
     );
 
-    const result = await (provider as any).doHealthCheck();
+    const result = await (provider as PrivateAccess).doHealthCheck();
     expect(result.healthy).toBe(true);
     expect(result.details.version).toBe('1.5.0');
     provider.destroy();
@@ -1763,7 +1815,7 @@ describe('GeminiCLIProvider — health check', () => {
     });
     await provider.initialize();
 
-    (execFile as any).mockImplementation(
+    mockExecFile.mockImplementation(
       (_cmd: string, _args: string[], optOrCb: any, cb?: any) => {
         if (typeof optOrCb === 'function') {
           optOrCb(null, '/opt/homebrew/bin/gemini\n', '');
@@ -1773,7 +1825,7 @@ describe('GeminiCLIProvider — health check', () => {
       },
     );
 
-    const result = await (provider as any).doHealthCheck();
+    const result = await (provider as PrivateAccess).doHealthCheck();
     expect(result.healthy).toBe(false);
     provider.destroy();
   });
@@ -1788,7 +1840,7 @@ describe('GeminiCLIProvider — findBinary & ensureBinary', () => {
       config: { provider: 'gemini-cli', model: 'gemini-3.1-pro-preview' },
       logger: noopLogger,
     });
-    const result = await (provider as any).findBinary();
+    const result = await (provider as PrivateAccess).findBinary();
     expect(result).toBeNull();
     provider.destroy();
   });
@@ -1798,7 +1850,7 @@ describe('GeminiCLIProvider — findBinary & ensureBinary', () => {
       config: { provider: 'gemini-cli', model: 'gemini-3.1-pro-preview' },
       logger: noopLogger,
     });
-    expect(() => (provider as any).ensureBinary()).toThrow(/unavailable/i);
+    expect(() => (provider as PrivateAccess).ensureBinary()).toThrow(/unavailable/i);
     provider.destroy();
   });
 });
@@ -1806,21 +1858,8 @@ describe('GeminiCLIProvider — findBinary & ensureBinary', () => {
 describe('GeminiCLIProvider — streaming edge cases (PassThrough)', () => {
   let provider: GeminiCLIProvider;
 
-  function createPassThroughChild() {
-    const child = new EventEmitter() as any;
-    const stdout = new PassThrough();
-    child.stdout = stdout;
-    const stderr = new EventEmitter() as any;
-    stderr.resume = vi.fn();
-    child.stderr = stderr;
-    const stdinEmitter = new EventEmitter();
-    child.stdin = Object.assign(stdinEmitter, { write: vi.fn(), end: vi.fn() });
-    child.stdin.on('error', () => {});
-    child.killed = false;
-    child.kill = vi.fn((_signal?: string) => { child.killed = true; return true; });
-    child.pid = 12345;
-    return child;
-  }
+  // Uses the top-level createPassThroughMockChild helper
+  const createPassThroughChild = createPassThroughMockChild;
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -1836,7 +1875,7 @@ describe('GeminiCLIProvider — streaming edge cases (PassThrough)', () => {
 
   it('stream emits content and done events', async () => {
     const child = createPassThroughChild();
-    (spawn as any).mockReturnValue(child);
+    mockSpawn.mockReturnValue(child);
 
     const events: any[] = [];
     const streamPromise = (async () => {
@@ -1863,7 +1902,7 @@ describe('GeminiCLIProvider — streaming edge cases (PassThrough)', () => {
 
   it('stream surfaces non-zero exit code as error', async () => {
     const child = createPassThroughChild();
-    (spawn as any).mockReturnValue(child);
+    mockSpawn.mockReturnValue(child);
 
     const events: any[] = [];
     const streamPromise = (async () => {
@@ -1888,7 +1927,7 @@ describe('GeminiCLIProvider — streaming edge cases (PassThrough)', () => {
 
   it('stream handles message type events with content', async () => {
     const child = createPassThroughChild();
-    (spawn as any).mockReturnValue(child);
+    mockSpawn.mockReturnValue(child);
 
     const events: any[] = [];
     const streamPromise = (async () => {
@@ -2000,7 +2039,7 @@ describe('CursorCLIProvider — doComplete edge cases', () => {
 
   it('rejects with empty response on empty stdout', async () => {
     const mockChild = createMockChild();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
     const promise = provider.complete({
       messages: [{ role: 'user', content: 'test' }],
@@ -2014,7 +2053,7 @@ describe('CursorCLIProvider — doComplete edge cases', () => {
 
   it('parseJsonOutput handles prompt_tokens usage field', async () => {
     const mockChild = createMockChild();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
     const promise = provider.complete({
       messages: [{ role: 'user', content: 'test' }],
@@ -2053,7 +2092,7 @@ describe('CursorCLIProvider — streaming assistant message', () => {
 
   it('stream handles assistant event with string content', async () => {
     const mockChild = createMockChild();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
     const events: any[] = [];
     const streamPromise = (async () => {
@@ -2082,7 +2121,7 @@ describe('CursorCLIProvider — streaming assistant message', () => {
 
   it('stream flushes remaining content buffer on close', async () => {
     const mockChild = createMockChild();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
     const events: any[] = [];
     const streamPromise = (async () => {
@@ -2135,7 +2174,7 @@ describe('CursorCLIProvider — timeout (fake timers)', () => {
 
   it('rejects with timeout error when child does not respond', async () => {
     const mockChild = createMockChild();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
     const completePromise = provider.complete({
       messages: [{ role: 'user', content: 'test' }],
@@ -2157,7 +2196,7 @@ describe('CursorCLIProvider — validateConfig', () => {
     vi.clearAllMocks();
     mockBinaryFound('cursor-agent');
     const provider = new CursorCLIProvider({
-      config: { provider: 'cursor-cli', model: undefined as any },
+      config: { provider: 'cursor-cli', model: undefined as unknown as LLMModel /* SAFETY: testing undefined model edge case */ },
       logger: noopLogger,
     });
     await provider.initialize();
@@ -2170,7 +2209,7 @@ describe('CursorCLIProvider — validateConfig', () => {
     mockBinaryFound('cursor-agent');
     const warnLogger = { ...noopLogger, warn: vi.fn() };
     const provider = new CursorCLIProvider({
-      config: { provider: 'cursor-cli', model: 'unsupported-model' as any },
+      config: { provider: 'cursor-cli', model: 'unsupported-model' },
       logger: warnLogger,
     });
     await provider.initialize();
@@ -2200,7 +2239,7 @@ describe('CursorCLIProvider — streaming result event', () => {
 
   it('stream handles result event with prompt_tokens field', async () => {
     const mockChild = createMockChild();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
     const events: any[] = [];
     const streamPromise = (async () => {
@@ -2251,7 +2290,7 @@ describe('CursorCLIProvider — parseJsonOutput tool call in raw text', () => {
 
   it('extracts tool calls from non-JSON raw text', async () => {
     const mockChild = createMockChild();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
     const completePromise = provider.complete({
       messages: [{ role: 'user', content: 'test' }],
@@ -2269,7 +2308,7 @@ describe('CursorCLIProvider — parseJsonOutput tool call in raw text', () => {
 
   it('rejects when parseJsonOutput returns empty content and no tool calls', async () => {
     const mockChild = createMockChild();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
     const completePromise = provider.complete({
       messages: [{ role: 'user', content: 'test' }],
@@ -2298,7 +2337,7 @@ describe('CursorCLIProvider — getModelInfo unknown', () => {
       config: { provider: 'cursor-cli', model: 'auto' },
       logger: noopLogger,
     });
-    const info = await provider.getModelInfo('unknown-model' as any);
+    const info = await provider.getModelInfo('unknown-model');
     expect(info.model).toBe('unknown-model');
     expect(info.description).toBe('Cursor Agent model');
     provider.destroy();
@@ -2337,7 +2376,7 @@ describe('GeminiCLIProvider — listModels & getModelInfo', () => {
       config: { provider: 'gemini-cli', model: 'gemini-3.1-pro-preview' },
       logger: noopLogger,
     });
-    const info = await provider.getModelInfo('unknown-model' as any);
+    const info = await provider.getModelInfo('unknown-model');
     expect(info.model).toBe('unknown-model');
     expect(info.description).toBe('Gemini CLI model');
     provider.destroy();
@@ -2353,7 +2392,7 @@ describe('GeminiCLIProvider — validateConfig', () => {
     vi.clearAllMocks();
     mockBinaryFound('gemini');
     const provider = new GeminiCLIProvider({
-      config: { provider: 'gemini-cli', model: undefined as any },
+      config: { provider: 'gemini-cli', model: undefined as unknown as LLMModel /* SAFETY: testing undefined model edge case */ },
       logger: noopLogger,
     });
     await provider.initialize();
@@ -2366,7 +2405,7 @@ describe('GeminiCLIProvider — validateConfig', () => {
     mockBinaryFound('gemini');
     const warnLogger = { ...noopLogger, warn: vi.fn() };
     const provider = new GeminiCLIProvider({
-      config: { provider: 'gemini-cli', model: 'unsupported-model' as any },
+      config: { provider: 'gemini-cli', model: 'unsupported-model' },
       logger: warnLogger,
     });
     await provider.initialize();
@@ -2380,7 +2419,7 @@ describe('GeminiCLIProvider — validateConfig', () => {
         config: { provider: 'gemini-cli', model: 'gemini-3.1-pro-preview', temperature: 3 },
         logger: noopLogger,
       });
-      (provider as any).validateConfig();
+      (provider as PrivateAccess).validateConfig();
     }).toThrow(/temperature/i);
   });
 });
@@ -2410,7 +2449,7 @@ describe('GeminiCLIProvider — doComplete timeout (fake timers)', () => {
 
   it('rejects with timeout error when child does not respond', async () => {
     const mockChild = createMockChild();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
     const completePromise = provider.complete({
       messages: [{ role: 'user', content: 'test' }],
@@ -2444,7 +2483,7 @@ describe('GeminiCLIProvider — parseJsonOutput malformed JSON with tool calls',
 
   it('extracts tool calls from malformed JSON fallback text', async () => {
     const mockChild = createMockChild();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
     const completePromise = provider.complete({
       messages: [{ role: 'user', content: 'test' }],
@@ -2483,7 +2522,7 @@ describe('GeminiCLIProvider — stdin EPIPE handling', () => {
 
   it('ignores EPIPE error on stdin', async () => {
     const mockChild = createMockChild();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
     const completePromise = provider.complete({
       messages: [{ role: 'user', content: 'test' }],
@@ -2513,7 +2552,7 @@ describe('GeminiCLIProvider — stdin EPIPE handling', () => {
     await provider2.initialize();
 
     const mockChild = createMockChild();
-    (spawn as any).mockReturnValue(mockChild);
+    mockSpawn.mockReturnValue(mockChild);
 
     const completePromise = provider2.complete({
       messages: [{ role: 'user', content: 'test' }],

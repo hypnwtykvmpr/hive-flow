@@ -17,6 +17,7 @@ import type {
   PlanStep,
   TeleportTarget,
   MessageType,
+  MailboxMessage,
 } from './types.js';
 
 import { MCP_PARAM_LIMITS } from './types.js';
@@ -608,7 +609,7 @@ export async function handleMCPTool(
           {
             type: params.type as MessageType,
             payload: params.payload,
-            priority: params.priority as any,
+            priority: params.priority as MailboxMessage['priority'],
           }
         );
         return { success: true, data: { message } };
@@ -621,7 +622,7 @@ export async function handleMCPTool(
           {
             type: params.type as MessageType,
             payload: params.payload,
-            priority: params.priority as any,
+            priority: params.priority as MailboxMessage['priority'],
           }
         );
         return { success: true, data: { message } };

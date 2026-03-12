@@ -145,21 +145,17 @@ async function handleInitSwarm(
   };
 
   // Try to use swarmCoordinator if available
-  if (context?.swarmCoordinator) {
+  if (context?.swarmCoordinator?.initialize) {
     try {
-      // @ts-ignore - @hive-flow/swarm is an optional dependency
-      const { UnifiedSwarmCoordinator } = await import('@hive-flow/swarm');
-      const coordinator = context.swarmCoordinator as InstanceType<typeof UnifiedSwarmCoordinator>;
-
       // Initialize the coordinator with the config
-      await coordinator.initialize({
+      await context.swarmCoordinator.initialize({
         topology: {
-          type: input.topology as any,
+          type: input.topology,
           maxAgents: input.maxAgents,
         },
         consensus: {
-          algorithm: input.config?.consensusMechanism === 'unanimous' ? 'byzantine' as any :
-                     input.config?.consensusMechanism === 'weighted' ? 'raft' as any : 'gossip' as any,
+          algorithm: input.config?.consensusMechanism === 'unanimous' ? 'byzantine' :
+                     input.config?.consensusMechanism === 'weighted' ? 'raft' : 'gossip',
           threshold: input.config?.consensusMechanism === 'unanimous' ? 1.0 :
                     input.config?.consensusMechanism === 'weighted' ? 0.66 : 0.5,
         },
@@ -169,11 +165,11 @@ async function handleInitSwarm(
         },
       });
 
-      const status = await coordinator.getStatus();
+      const status = await context.swarmCoordinator.getStatus();
       config.currentAgents = status.agents.length;
 
       return {
-        swarmId: status.swarmId,
+        swarmId: status.swarmId || swarmId,
         topology: input.topology,
         initializedAt,
         config,
@@ -203,17 +199,13 @@ async function handleSwarmStatus(
   // Try to use swarmCoordinator if available
   if (context?.swarmCoordinator) {
     try {
-      // @ts-ignore - @hive-flow/swarm is an optional dependency
-      const { UnifiedSwarmCoordinator } = await import('@hive-flow/swarm');
-      const coordinator = context.swarmCoordinator as InstanceType<typeof UnifiedSwarmCoordinator>;
-
       // Get swarm status
-      const status = await coordinator.getStatus();
-      const metrics = await coordinator.getMetrics();
+      const status = await context.swarmCoordinator.getStatus();
+      const metrics = context.swarmCoordinator.getMetrics ? await context.swarmCoordinator.getMetrics() : undefined;
 
       const config: SwarmConfig = {
-        topology: status.topology.type as any,
-        maxAgents: status.topology.maxAgents,
+        topology: (status.topology?.type || 'hierarchical-mesh') as SwarmConfig['topology'],
+        maxAgents: status.topology?.maxAgents || 15,
         currentAgents: status.agents.length,
         communicationProtocol: 'message-bus',
         consensusMechanism: status.consensus?.algorithm === 'raft' ? 'weighted' :
@@ -224,7 +216,7 @@ async function handleSwarmStatus(
       };
 
       const result: SwarmStatusResult = {
-        swarmId: status.swarmId,
+        swarmId: status.swarmId || 'swarm-unknown',
         status: status.state === 'ready' ? 'active' :
                 status.state === 'scaling' ? 'scaling' :
                 status.state === 'degraded' ? 'degraded' :
@@ -234,18 +226,18 @@ async function handleSwarmStatus(
       };
 
       if (input.includeAgents) {
-        result.agents = status.agents.map(agent => ({
+        result.agents = status.agents.map((agent) => ({
           id: agent.id,
           type: agent.type,
-          status: agent.status === 'active' ? 'active' :
-                  agent.status === 'idle' ? 'idle' :
-                  agent.status === 'busy' ? 'busy' : 'error',
-          role: agent.role,
+          status: agent.status === 'active' ? 'active' as const :
+                  agent.status === 'idle' ? 'idle' as const :
+                  agent.status === 'busy' ? 'busy' as const : 'error' as const,
+          role: agent.role as SwarmAgent['role'],
           connections: agent.connections,
         }));
       }
 
-      if (input.includeMetrics) {
+      if (input.includeMetrics && metrics) {
         result.metrics = {
           totalTasks: metrics.totalTasks,
           completedTasks: metrics.completedTasks,
@@ -254,21 +246,21 @@ async function handleSwarmStatus(
           averageTaskDuration: metrics.averageTaskDuration,
           throughput: metrics.throughput,
           efficiency: metrics.successRate,
-          uptime: Date.now() - status.createdAt.getTime(),
+          uptime: status.createdAt ? Date.now() - status.createdAt.getTime() : 0,
         };
       }
 
       if (input.includeTopology) {
         const topologyState = status.topology;
         result.topology = {
-          nodes: status.agents.map(agent => ({
+          nodes: status.agents.map((agent) => ({
             id: agent.id,
             type: agent.type,
             role: agent.role,
           })),
-          edges: topologyState.edges || [],
-          depth: topologyState.depth,
-          fanout: topologyState.fanout,
+          edges: topologyState?.edges || [],
+          depth: topologyState?.depth,
+          fanout: topologyState?.fanout,
         };
       }
 
@@ -309,16 +301,11 @@ async function handleScaleSwarm(
   // Try to use swarmCoordinator if available
   if (context?.swarmCoordinator) {
     try {
-      // @ts-ignore - @hive-flow/swarm is an optional dependency
-      const { UnifiedSwarmCoordinator } = await import('@hive-flow/swarm');
-      const coordinator = context.swarmCoordinator as InstanceType<typeof UnifiedSwarmCoordinator>;
-
       // Get current status
-      const beforeStatus = await coordinator.getStatus();
+      const beforeStatus = await context.swarmCoordinator.getStatus();
       const previousAgents = beforeStatus.agents.length;
 
-      // Perform scaling (note: UnifiedSwarmCoordinator may not have a direct scale method,
-      // so we spawn or terminate agents to reach the target)
+      // Perform scaling (spawn or terminate agents to reach the target)
       const addedAgents: string[] = [];
       const removedAgents: string[] = [];
 
@@ -331,9 +318,9 @@ async function handleScaleSwarm(
           const agentType = agentTypes[i % agentTypes.length];
           const agentId = `agent-scaled-${Date.now()}-${i}`;
 
-          await coordinator.spawnAgent({
+          await context.swarmCoordinator.spawnAgent({
             id: agentId,
-            type: agentType as any,
+            type: agentType,
             capabilities: [],
             priority: 3,
           });
@@ -346,16 +333,16 @@ async function handleScaleSwarm(
         const agentsToRemove = beforeStatus.agents.slice(-count);
 
         for (const agent of agentsToRemove) {
-          await coordinator.terminateAgent(agent.id);
+          await context.swarmCoordinator.terminateAgent(agent.id);
           removedAgents.push(agent.id);
         }
       }
 
       // Get updated status
-      const afterStatus = await coordinator.getStatus();
+      const afterStatus = await context.swarmCoordinator.getStatus();
 
       return {
-        swarmId: beforeStatus.swarmId,
+        swarmId: beforeStatus.swarmId || 'swarm-unknown',
         previousAgents,
         targetAgents: input.targetAgents,
         currentAgents: afterStatus.agents.length,

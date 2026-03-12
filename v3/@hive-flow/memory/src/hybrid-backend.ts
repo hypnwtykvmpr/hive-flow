@@ -23,6 +23,7 @@ import {
   EmbeddingGenerator,
   createDefaultEntry,
   QueryType,
+  MemoryType,
 } from './types.js';
 import { SQLiteBackend, SQLiteBackendConfig } from './sqlite-backend.js';
 import { AgentDBBackend, AgentDBBackendConfig } from './agentdb-backend.js';
@@ -63,7 +64,7 @@ const DEFAULT_CONFIG: Required<HybridBackendConfig> = {
   sqlite: {},
   agentdb: {},
   defaultNamespace: 'default',
-  embeddingGenerator: undefined as any,
+  embeddingGenerator: undefined as unknown as EmbeddingGenerator, // SAFETY: Required<> makes field mandatory but default is undefined
   routingStrategy: 'auto',
   dualWrite: true,
   semanticThreshold: 0.7,
@@ -344,7 +345,7 @@ export class HybridBackend extends EventEmitter implements IMemoryBackend {
       keyPrefix: query.keyPrefix,
       namespace: query.namespace,
       ownerId: query.ownerId,
-      memoryType: query.type as any,
+      memoryType: query.type as MemoryType | undefined, // SAFETY: StructuredQuery.type is string matching MemoryType union
       createdAfter: query.createdAfter,
       createdBefore: query.createdBefore,
       updatedAfter: query.updatedAfter,
@@ -521,10 +522,13 @@ export class HybridBackend extends EventEmitter implements IMemoryBackend {
         buildTime: 0,
         compressionRatio: 1.0,
       },
-      cacheStats: (agentdbStats as any).cacheStats ?? {
+      cacheStats: agentdbStats.cacheStats ?? {
         hitRate: 0,
         size: 0,
-        maxSize: 1000,
+        hits: 0,
+        misses: 0,
+        evictions: 0,
+        memoryUsage: 0,
       },
       avgQueryTime:
         this.stats.hybridQueries + this.stats.sqliteQueries + this.stats.agentdbQueries > 0

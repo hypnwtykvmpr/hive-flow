@@ -39,7 +39,7 @@ function runCli(args: string[], timeoutMs = 10_000): Promise<ExecResult> {
         resolve({
           stdout: stdout ?? '',
           stderr: stderr ?? '',
-          exitCode: error ? (error as any).code ?? 1 : 0,
+          exitCode: error ? (error as import('node:child_process').ExecException).code ?? 1 : 0,
         });
       },
     );

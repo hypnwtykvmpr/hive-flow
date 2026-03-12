@@ -38,6 +38,16 @@ import type { VerificationGateResult } from '../mcp-tools/verification-gate.js';
 import { executePlanningSubflow } from '../mcp-tools/planning-subflow.js';
 import { executeBugHunterScan } from '../mcp-tools/bug-hunter.js';
 
+// ── Result type helpers ─────────────────────────────────────────────────────
+
+/** Shape of the nested `result` object within StepExecutionResult for generic/verification steps. */
+interface StepResultPayload {
+  executed?: boolean;
+  verified?: boolean;
+  passedWithCaveats?: boolean;
+  caveats?: string[];
+}
+
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
 function makeCtx(overrides: Partial<WorkflowStepContext> = {}): WorkflowStepContext {
@@ -349,7 +359,7 @@ describe('workflow-executor', () => {
       const result = await executeWorkflowStep(ctx);
 
       expect(result.status).toBe('waiting');
-      expect((result.result as any).verified).toBe(false);
+      expect((result.result as StepResultPayload).verified).toBe(false);
     });
 
     it('returns completed when escalation decision is pass-with-caveats', async () => {
@@ -407,8 +417,8 @@ describe('workflow-executor', () => {
       expect(shouldEscalate).toHaveBeenCalledTimes(1);
       expect(createEscalationRecord).toHaveBeenCalledTimes(1);
       expect(result.status).toBe('completed');
-      expect((result.result as any).passedWithCaveats).toBe(true);
-      expect((result.result as any).caveats).toEqual(['Monitor in production']);
+      expect((result.result as StepResultPayload).passedWithCaveats).toBe(true);
+      expect((result.result as StepResultPayload).caveats).toEqual(['Monitor in production']);
     });
   });
 
@@ -490,7 +500,7 @@ describe('workflow-executor', () => {
 
         expect(result.stepId).toBe(`step-${stepType}`);
         expect(result.status).toBe('completed');
-        expect((result.result as any).executed).toBe(true);
+        expect((result.result as StepResultPayload).executed).toBe(true);
       });
     }
 
@@ -508,7 +518,7 @@ describe('workflow-executor', () => {
       const result = await executeWorkflowStep(ctx);
 
       expect(result.status).toBe('completed');
-      expect((result.result as any).executed).toBe(true);
+      expect((result.result as StepResultPayload).executed).toBe(true);
       // Should NOT call planning or bug-hunter
       expect(executePlanningSubflow).not.toHaveBeenCalled();
       expect(executeBugHunterScan).not.toHaveBeenCalled();

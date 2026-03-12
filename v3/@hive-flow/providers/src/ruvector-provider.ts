@@ -179,7 +179,8 @@ export class RuVectorProvider extends BaseProvider {
   protected async doInitialize(): Promise<void> {
     // Configure URLs from options
     this.baseUrl = this.config.apiUrl || 'http://localhost:3000';
-    this.ollamaUrl = (this.config.providerOptions as any)?.ollamaUrl || 'http://localhost:11434';
+    const opts = this.config.providerOptions;
+    this.ollamaUrl = (typeof opts?.ollamaUrl === 'string' ? opts.ollamaUrl : null) || 'http://localhost:11434';
 
     // Try to dynamically import @ruvector/ruvllm native module
     try {

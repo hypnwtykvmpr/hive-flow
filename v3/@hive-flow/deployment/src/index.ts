@@ -62,7 +62,7 @@ export async function prepare(config: ReleaseConfig): Promise<void> {
 
   await manager.prepareRelease({
     version: config.version,
-    channel: config.channel as any,
+    channel: config.channel as ReleaseChannel,
     generateChangelog: config.changelog,
     dryRun: config.dryRun
   });

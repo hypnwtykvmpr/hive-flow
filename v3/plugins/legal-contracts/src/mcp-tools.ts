@@ -775,7 +775,7 @@ function buildCategorySummary(
     }
   }
 
-  const result: Record<RiskCategory, { count: number; highestSeverity: RiskSeverity; averageScore: number }> = {} as any;
+  const result = {} as Record<RiskCategory, { count: number; highestSeverity: RiskSeverity; averageScore: number }>;
   for (const [category, data] of Object.entries(summary)) {
     result[category as RiskCategory] = {
       count: data.count,

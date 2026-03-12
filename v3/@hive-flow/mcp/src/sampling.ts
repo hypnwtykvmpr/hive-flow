@@ -335,7 +335,7 @@ export function createAnthropicProvider(apiKey: string): LLMProvider {
           system: request.systemPrompt,
           messages: request.messages.map((m) => ({
             role: m.role,
-            content: m.content.type === 'text' ? (m.content as any).text : m.content,
+            content: m.content.type === 'text' ? (m.content as { type: 'text'; text: string }).text : m.content,
           })),
         }),
       });
@@ -344,15 +344,15 @@ export function createAnthropicProvider(apiKey: string): LLMProvider {
         throw new Error(`Anthropic API error: ${response.status}`);
       }
 
-      const data = await response.json() as any;
+      const data = await response.json() as { content?: Array<{ text?: string }>; model?: string; stop_reason?: string };
 
       return {
         role: 'assistant',
         content: {
           type: 'text',
-          text: data.content[0]?.text || '',
+          text: data.content?.[0]?.text || '',
         },
-        model: data.model,
+        model: data.model as string,
         stopReason: data.stop_reason === 'end_turn' ? 'endTurn' : 'maxTokens',
       };
     },

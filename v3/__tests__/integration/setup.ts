@@ -4,6 +4,7 @@
  * Global setup and utilities for V3 integration tests
  */
 import { beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
+import type { TaskPriority } from '../../src/shared/types';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
@@ -248,7 +249,7 @@ export const MockData = {
       id: `task-${i}`,
       type: 'code',
       description: `Task ${i}`,
-      priority: ['high', 'medium', 'low'][i % 3] as any,
+      priority: ['high', 'medium', 'low'][i % 3] as TaskPriority,
       status: 'pending',
       metadata: { index: i }
     }));

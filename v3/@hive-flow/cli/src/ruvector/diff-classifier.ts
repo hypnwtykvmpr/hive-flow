@@ -91,7 +91,8 @@ export class DiffClassifier {
       // @ruvector/diff is optional - gracefully fallback if not installed
       const ruvector = await import('@ruvector/diff' as string).catch(() => null);
       if (ruvector) {
-        this.ruvectorEngine = (ruvector as any).createDiffClassifier?.(this.config);
+        const factory = (ruvector as Record<string, unknown>).createDiffClassifier as ((config: Partial<DiffClassifierConfig>) => unknown) | undefined;
+        this.ruvectorEngine = factory?.(this.config) ?? null;
         this.useNative = !!this.ruvectorEngine;
       }
     } catch { this.useNative = false; }

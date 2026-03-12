@@ -118,8 +118,9 @@ class MockAQEPlugin {
 
     // Cleanup bridges
     for (const [name, bridge] of this.bridges) {
-      if (typeof (bridge as any)?.dispose === 'function') {
-        await (bridge as any).dispose();
+      const disposable = bridge as unknown as { dispose?: () => Promise<void> };
+      if (typeof disposable?.dispose === 'function') {
+        await disposable.dispose();
       }
     }
     this.bridges.clear();

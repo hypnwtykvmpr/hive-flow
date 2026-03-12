@@ -73,7 +73,8 @@ export class ASTAnalyzer {
       // @ruvector/ast is optional - gracefully fallback if not installed
       const ruvector = await import('@ruvector/ast' as string).catch(() => null);
       if (ruvector) {
-        this.ruvectorEngine = (ruvector as any).createASTAnalyzer?.(this.config);
+        const factory = (ruvector as Record<string, unknown>).createASTAnalyzer as ((config: Partial<ASTAnalyzerConfig>) => unknown) | undefined;
+        this.ruvectorEngine = factory?.(this.config) ?? null;
         this.useNative = !!this.ruvectorEngine;
       }
     } catch {

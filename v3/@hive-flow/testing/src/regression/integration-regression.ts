@@ -138,7 +138,7 @@ export class IntegrationRegressionSuite {
 
         await backend.initialize();
 
-        const memory = new UnifiedMemoryService(backend as any);
+        const memory = new UnifiedMemoryService(backend as unknown as Parameters<typeof UnifiedMemoryService['prototype']['constructor']>[0]);
         await memory.initialize();
 
         // Store entry
@@ -174,7 +174,7 @@ export class IntegrationRegressionSuite {
 
         await backend.initialize();
 
-        const memory = new UnifiedMemoryService(backend as any);
+        const memory = new UnifiedMemoryService(backend as unknown as Parameters<typeof UnifiedMemoryService['prototype']['constructor']>[0]);
         await memory.initialize();
 
         // Store entries
@@ -302,13 +302,13 @@ export class IntegrationRegressionSuite {
           const registry = new HookRegistry();
 
           // Register a hook
-          const hookId = registry.register('pre-edit' as any, async () => {
+          const hookId = registry.register('pre-edit' as unknown as Parameters<typeof registry.register>[0], async () => {
             return { success: true };
           }, HookPriority.Normal);
 
           // Verify hook was registered
           const hook = registry.getHook(hookId);
-          const handlers = registry.getHandlers('pre-edit' as any);
+          const handlers = registry.getHandlers('pre-edit' as unknown as Parameters<typeof registry.register>[0]);
 
           return hook !== undefined && handlers.length > 0;
         } catch (error) {

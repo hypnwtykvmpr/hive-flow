@@ -220,7 +220,7 @@ export class PluginManager implements PluginManagerInterface {
 
   private validateConfig(schema: Record<string, unknown>, config: Record<string, unknown>): void {
     // Simple validation - check required fields
-    const required = (schema as any).required as string[] | undefined;
+    const required = (schema as Record<string, unknown>).required as string[] | undefined;
     if (required) {
       for (const field of required) {
         if (!(field in config)) {

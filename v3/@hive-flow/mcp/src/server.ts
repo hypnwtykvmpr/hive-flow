@@ -219,7 +219,7 @@ export class MCPServer extends EventEmitter implements IMCPServer {
         auth: this.config.auth,
         maxRequestSize: String(this.config.maxRequestSize),
         requestTimeout: this.config.requestTimeout,
-      } as any);
+      } as unknown as Record<string, unknown>);
 
       this.transport.onRequest(async (request) => {
         return await this.handleRequest(request);
@@ -967,7 +967,7 @@ export class MCPServer extends EventEmitter implements IMCPServer {
         {
           messages: params.messages.map((m) => ({
             role: m.role as 'user' | 'assistant',
-            content: m.content as any,
+            content: m.content as unknown as import('./types.js').PromptContent,
           })),
           maxTokens: params.maxTokens,
           systemPrompt: params.systemPrompt,

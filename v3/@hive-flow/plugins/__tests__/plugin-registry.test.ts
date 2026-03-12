@@ -80,7 +80,7 @@ describe('PluginRegistry', () => {
     });
 
     it('should reject invalid plugins', async () => {
-      const invalidPlugin = { name: 'invalid' } as any;
+      const invalidPlugin = { name: 'invalid' } as unknown as BasePlugin; // SAFETY: deliberately invalid for validation test
 
       await expect(registry.register(invalidPlugin)).rejects.toThrow('Invalid plugin');
     });

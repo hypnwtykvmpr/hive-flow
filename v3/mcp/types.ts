@@ -265,16 +265,133 @@ export interface JSONSchema {
   additionalProperties?: boolean | JSONSchema;
 }
 
+// ============================================================================
+// Service Interfaces (used by ToolContext consumers to avoid `as any` casts)
+// ============================================================================
+
+/** Minimal shape of an agent record returned by the orchestrator / coordinator */
+export interface AgentRecord {
+  id: string;
+  type: string;
+  status: string;
+  config?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
+  createdAt?: Date | string;
+  lastActivityAt?: Date | string;
+  role?: string;
+  connections?: string[];
+  capabilities?: unknown[];
+  priority?: number;
+  metrics?: Record<string, unknown>;
+  history?: Array<{ timestamp: Date | string; event: string; details?: unknown }>;
+  assignedAgent?: string;
+}
+
+/** Minimal shape of a task record returned by the orchestrator */
+export interface TaskRecord {
+  id: string;
+  type: string;
+  description: string;
+  status: string;
+  priority: number;
+  dependencies?: string[];
+  assignedAgent?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  startedAt?: string;
+  completedAt?: string;
+  timeout?: number;
+  input?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
+}
+
+/** Orchestrator-like service – the subset of methods used by MCP tools */
+export interface OrchestratorLike {
+  getStatus(): Promise<{ healthy?: boolean; [key: string]: unknown }>;
+  submitTask(params: Record<string, unknown>): Promise<{ id?: string; status?: string; queuePosition?: number; [key: string]: unknown }>;
+  listTasks(params: Record<string, unknown>): Promise<{ tasks: TaskRecord[]; total: number; [key: string]: unknown }>;
+  getTaskStatus?(taskId: string, opts?: Record<string, unknown>): Promise<TaskRecord & { metrics?: Record<string, unknown>; history?: Array<{ timestamp: string; status: string; message?: string }> }>;
+  cancelTask?(taskId: string, opts?: Record<string, unknown>): Promise<{ cancelled: boolean; previousStatus: string; [key: string]: unknown }>;
+  assignTask?(taskId: string, agentId: string, opts?: Record<string, unknown>): Promise<{ assigned: boolean; previousAgent?: string; [key: string]: unknown }>;
+  updateTask?(taskId: string, updates: Record<string, unknown>): Promise<{ updated: boolean; changes?: Record<string, unknown>; [key: string]: unknown }>;
+  addTaskDependencies?(taskId: string, deps: string[]): Promise<{ dependencies: string[]; [key: string]: unknown }>;
+  removeTaskDependencies?(taskId: string, deps: string[]): Promise<{ dependencies: string[]; [key: string]: unknown }>;
+  getTaskDependencies?(taskId: string): Promise<{ dependencies: string[]; [key: string]: unknown }>;
+  clearTaskDependencies?(taskId: string): Promise<{ dependencies: string[]; [key: string]: unknown }>;
+  getTaskResults?(taskId: string, opts?: Record<string, unknown>): Promise<Record<string, unknown>>;
+  cancelAll?(): Promise<void>;
+  healthCheck?(): Promise<boolean>;
+}
+
+/** Swarm coordinator-like service – the subset of methods used by MCP tools */
+export interface SwarmCoordinatorLike {
+  getStatus(): Promise<{
+    swarmId?: string;
+    state?: string;
+    agents: AgentRecord[];
+    topology?: { type?: string; maxAgents?: number; edges?: Array<{ from: string; to: string; weight?: number }>; depth?: number; fanout?: number };
+    consensus?: Record<string, unknown>;
+    createdAt?: Date;
+    [key: string]: unknown;
+  }>;
+  getMetrics?(): Promise<{
+    totalTasks: number;
+    completedTasks: number;
+    failedTasks: number;
+    activeTasks: number;
+    averageTaskDuration: number;
+    throughput: number;
+    successRate: number;
+    [key: string]: unknown;
+  }>;
+  spawnAgent(params: Record<string, unknown>): Promise<void>;
+  terminateAgent(agentId: string): Promise<void>;
+  terminateAll?(): Promise<void>;
+  getAgentStatus?(agentId: string): Promise<AgentRecord>;
+  setTopology?(params: Record<string, unknown>): Promise<void>;
+  initialize?(params: Record<string, unknown>): Promise<void>;
+  healthCheck?(): Promise<boolean>;
+}
+
+/** Memory service – the subset of methods used by MCP tools */
+export interface MemoryServiceLike {
+  storeEntry(params: Record<string, unknown>): Promise<{ id: string; createdAt: Date; [key: string]: unknown }>;
+  query(params: Record<string, unknown>): Promise<Array<{
+    id: string;
+    content: string;
+    type: string;
+    namespace?: string;
+    tags?: string[];
+    metadata: Record<string, unknown>;
+    createdAt: Date;
+    lastAccessedAt?: Date;
+    accessCount?: number;
+    [key: string]: unknown;
+  }>>;
+  semanticSearch?(query: string, limit?: number, minRelevance?: number): Promise<Array<{
+    entry: { id: string; content: string; type: string; namespace?: string; tags?: string[]; metadata: Record<string, unknown>; createdAt: Date; lastAccessedAt?: Date; accessCount?: number };
+    score?: number;
+    distance?: number;
+  }>>;
+  getStats?(): Promise<{ entryCount?: number; size?: number; [key: string]: unknown }>;
+  healthCheck?(): Promise<boolean>;
+}
+
+/** Resource manager – the subset of methods used by MCP tools */
+export interface ResourceManagerLike {
+  memoryService?: MemoryServiceLike;
+}
+
 /**
  * Tool execution context
  */
 export interface ToolContext {
   sessionId: string;
   requestId?: RequestId;
-  orchestrator?: unknown;
-  swarmCoordinator?: unknown;
+  orchestrator?: OrchestratorLike;
+  swarmCoordinator?: SwarmCoordinatorLike;
   agentManager?: unknown;
-  resourceManager?: unknown;
+  resourceManager?: ResourceManagerLike;
   messageBus?: unknown;
   monitor?: unknown;
   metadata?: Record<string, unknown>;

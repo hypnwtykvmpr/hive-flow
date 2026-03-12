@@ -334,8 +334,15 @@ interface HNSWEntry {
   content: string;
 }
 
+/** Minimal interface for @ruvector/core VectorDb used by HNSW operations */
+interface VectorDbLike {
+  len(): Promise<number>;
+  insert(entry: { id: string; vector: Float32Array }): Promise<void>;
+  search(query: { vector: Float32Array; k: number }): Promise<Array<{ id: string; distance: number }>>;
+}
+
 interface HNSWIndex {
-  db: any;
+  db: VectorDbLike;
   entries: Map<string, HNSWEntry>;
   dimensions: number;
   initialized: boolean;
@@ -381,13 +388,13 @@ export async function getHNSWIndex(options?: {
     }
 
     // ESM returns { default: { VectorDb, ... } }, CJS returns { VectorDb, ... }
-    const ruvectorCore = (ruvectorModule as any).default || ruvectorModule;
+    const ruvectorCore = ((ruvectorModule as Record<string, unknown>).default || ruvectorModule) as Record<string, unknown>;
     if (!ruvectorCore?.VectorDb) {
       hnswInitializing = false;
       return null; // VectorDb not found
     }
 
-    const { VectorDb } = ruvectorCore;
+    const VectorDb = ruvectorCore.VectorDb as new (opts: Record<string, unknown>) => VectorDbLike;
 
     // Persistent storage paths
     const swarmDir = path.join(process.cwd(), '.swarm');
@@ -400,11 +407,12 @@ export async function getHNSWIndex(options?: {
 
     // Create HNSW index with persistent storage
     // @ruvector/core uses string enum for distanceMetric: 'Cosine', 'Euclidean', 'DotProduct', 'Manhattan'
+    // SAFETY: VectorDb constructor accepts these options but @ruvector/core lacks published type declarations
     const db = new VectorDb({
       dimensions,
       distanceMetric: 'Cosine',
       storagePath: hnswPath  // Persistent storage!
-    } as any);
+    }) as VectorDbLike;
 
     // Load metadata (entry info) if exists
     const entries = new Map<string, HNSWEntry>();
@@ -597,7 +605,7 @@ export async function searchHNSWIndex(
 
       // Convert cosine distance to similarity score (1 - distance)
       // Cosine distance from @ruvector/core: 0 = identical, 2 = opposite
-      const score = 1 - (result.score / 2);
+      const score = 1 - (result.distance / 2);
 
       filtered.push({
         id: entry.id.substring(0, 12),
@@ -1152,7 +1160,15 @@ export async function initializeMemoryDatabase(options: {
     }
 
     // Try to use sql.js (WASM SQLite)
-    let db: any;
+    // Minimal interface matching sql.js Database methods used here
+    interface SqlJsDb {
+      run(sql: string, params?: unknown[]): void;
+      exec(sql: string): Array<{ columns: string[]; values: unknown[][] }>;
+      export(): Uint8Array;
+      close(): void;
+      getRowsModified(): number;
+    }
+    let db: SqlJsDb | undefined;
     let usedSqlJs = false;
 
     try {
@@ -1503,14 +1519,15 @@ export async function loadEmbeddingModel(options?: {
     // Fallback: Check for agentic-flow ONNX
     const agenticFlow = await loadAgenticFlow();
 
-    if (agenticFlow && (agenticFlow as any).embeddings) {
+    const agenticFlowRecord = agenticFlow as Record<string, unknown> | null;
+    if (agenticFlowRecord && agenticFlowRecord.embeddings) {
       if (verbose) {
         console.log('Loading agentic-flow embedding model...');
       }
 
       embeddingModelState = {
         loaded: true,
-        model: (agenticFlow as any).embeddings,
+        model: agenticFlowRecord.embeddings,
         tokenizer: null,
         dimensions: 768
       };
@@ -1571,9 +1588,10 @@ export async function generateEmbedding(text: string): Promise<{
   const state = embeddingModelState!;
 
   // Use ONNX model if available
-  if (state.model && typeof (state.model as any) === 'function') {
+  if (state.model && typeof state.model === 'function') {
     try {
-      const output = await (state.model as any)(text, { pooling: 'mean', normalize: true });
+      const embedFn = state.model as (text: string, opts: { pooling: string; normalize: boolean }) => Promise<{ data: Float32Array }>;
+      const output = await embedFn(text, { pooling: 'mean', normalize: true });
       const embedding = Array.from(output.data as Float32Array);
       return {
         embedding,

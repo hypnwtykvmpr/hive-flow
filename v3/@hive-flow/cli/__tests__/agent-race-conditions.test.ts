@@ -141,6 +141,17 @@ function setupStoreMocks(initialStore: AgentStore) {
   };
 }
 
+/** Union of possible result shapes returned by agent tool handlers. */
+interface AgentHandlerResult {
+  success?: boolean;
+  status?: string;
+  agentId?: string;
+  terminated?: boolean;
+  total?: number;
+  agents?: unknown[];
+  error?: string;
+}
+
 // ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('Agent Race Condition Stress Tests', () => {
@@ -167,12 +178,12 @@ describe('Agent Race Condition Stress Tests', () => {
 
       // All 20 should succeed
       for (const result of results) {
-        expect((result as any).success).toBe(true);
-        expect((result as any).status).toBe('spawned');
+        expect((result as AgentHandlerResult).success).toBe(true);
+        expect((result as AgentHandlerResult).status).toBe('spawned');
       }
 
       // Verify unique IDs
-      const ids = results.map((r) => (r as any).agentId);
+      const ids = results.map((r) => (r as AgentHandlerResult).agentId);
       const uniqueIds = new Set(ids);
       expect(uniqueIds.size).toBe(20);
 
@@ -192,7 +203,7 @@ describe('Agent Race Condition Stress Tests', () => {
         ),
       );
 
-      const ids = results.map((r) => (r as any).agentId);
+      const ids = results.map((r) => (r as AgentHandlerResult).agentId);
       const uniqueIds = new Set(ids);
 
       // Every auto-generated ID must be unique (RC-4)
@@ -228,7 +239,7 @@ describe('Agent Race Condition Stress Tests', () => {
 
       // All operations should succeed
       for (const result of allResults) {
-        expect((result as any).success).toBe(true);
+        expect((result as AgentHandlerResult).success).toBe(true);
       }
 
       // Verify final store state
@@ -273,7 +284,7 @@ describe('Agent Race Condition Stress Tests', () => {
           ),
         );
         for (const r of results) {
-          allIds.push((r as any).agentId);
+          allIds.push((r as AgentHandlerResult).agentId);
         }
       }
 
@@ -303,7 +314,7 @@ describe('Agent Race Condition Stress Tests', () => {
         status: 'busy',
       });
 
-      expect((result as any).success).toBe(true);
+      expect((result as AgentHandlerResult).success).toBe(true);
     });
 
     it('should allow busy -> idle transition', async () => {
@@ -315,7 +326,7 @@ describe('Agent Race Condition Stress Tests', () => {
         status: 'idle',
       });
 
-      expect((result as any).success).toBe(true);
+      expect((result as AgentHandlerResult).success).toBe(true);
     });
 
     it('should allow idle -> terminated transition', async () => {
@@ -324,8 +335,8 @@ describe('Agent Race Condition Stress Tests', () => {
 
       const result = await terminateHandler({ agentId: 'sm-3' });
 
-      expect((result as any).success).toBe(true);
-      expect((result as any).terminated).toBe(true);
+      expect((result as AgentHandlerResult).success).toBe(true);
+      expect((result as AgentHandlerResult).terminated).toBe(true);
     });
 
     it('should allow busy -> terminated transition', async () => {
@@ -334,7 +345,7 @@ describe('Agent Race Condition Stress Tests', () => {
 
       const result = await terminateHandler({ agentId: 'sm-4' });
 
-      expect((result as any).success).toBe(true);
+      expect((result as AgentHandlerResult).success).toBe(true);
     });
 
     it('should reject terminated -> busy transition', async () => {
@@ -355,7 +366,7 @@ describe('Agent Race Condition Stress Tests', () => {
       // The agent's status should remain 'terminated' — the transition is invalid
       // If the update handler doesn't enforce state machine, the status will change
       // (indicating the RC-3 fix in agent_update is incomplete)
-      if ((result as any).success === true && storedAgent?.status === 'busy') {
+      if ((result as AgentHandlerResult).success === true && storedAgent?.status === 'busy') {
         // This means agent_update does NOT use transitionAgent() yet
         // Mark this as a known issue — the fix should make this test pass
         expect.soft(storedAgent.status).toBe('terminated');
@@ -379,7 +390,7 @@ describe('Agent Race Condition Stress Tests', () => {
       const storedAgent = store.agents['sm-6'];
 
       // Same pattern: after RC-3 fix, terminated -> idle should be rejected
-      if ((result as any).success === true && storedAgent?.status === 'idle') {
+      if ((result as AgentHandlerResult).success === true && storedAgent?.status === 'idle') {
         expect.soft(storedAgent.status).toBe('terminated');
       } else {
         expect(storedAgent?.status).toBe('terminated');
@@ -395,7 +406,7 @@ describe('Agent Race Condition Stress Tests', () => {
         status: 'idle',
       });
 
-      expect((result as any).success).toBe(true);
+      expect((result as AgentHandlerResult).success).toBe(true);
     });
 
     it('should reject spawning -> busy transition (must go idle first)', async () => {
@@ -413,7 +424,7 @@ describe('Agent Race Condition Stress Tests', () => {
       const storedAgent = store.agents['sm-8'];
 
       // spawning -> busy is NOT in VALID_TRANSITIONS, should be rejected
-      if ((result as any).success === true && storedAgent?.status === 'busy') {
+      if ((result as AgentHandlerResult).success === true && storedAgent?.status === 'busy') {
         expect.soft(storedAgent.status).toBe('spawning');
       } else {
         expect(storedAgent?.status).toBe('spawning');
@@ -452,7 +463,7 @@ describe('Agent Race Condition Stress Tests', () => {
 
       // All updates should succeed
       for (const result of results) {
-        expect((result as any).success).toBe(true);
+        expect((result as AgentHandlerResult).success).toBe(true);
       }
 
       // Verify store integrity — at minimum, the store should be valid JSON
@@ -588,8 +599,8 @@ describe('Agent Race Condition Stress Tests', () => {
       });
 
       // The spawn should succeed — stale lock should not block forever
-      expect((result as any).success).toBe(true);
-      expect((result as any).agentId).toBe('lock-test-1');
+      expect((result as AgentHandlerResult).success).toBe(true);
+      expect((result as AgentHandlerResult).agentId).toBe('lock-test-1');
     });
 
     it('should handle sequential operations correctly after lock contention', async () => {
@@ -639,8 +650,8 @@ describe('Agent Race Condition Stress Tests', () => {
 
       // All reads should return the agent data
       for (const result of results) {
-        expect((result as any).agentId).toBe('read-target');
-        expect((result as any).status).toBe('idle');
+        expect((result as AgentHandlerResult).agentId).toBe('read-target');
+        expect((result as AgentHandlerResult).status).toBe('idle');
       }
     });
 
@@ -660,8 +671,8 @@ describe('Agent Race Condition Stress Tests', () => {
       );
 
       for (const result of results) {
-        expect((result as any).total).toBeGreaterThanOrEqual(1);
-        expect(Array.isArray((result as any).agents)).toBe(true);
+        expect((result as AgentHandlerResult).total).toBeGreaterThanOrEqual(1);
+        expect(Array.isArray((result as AgentHandlerResult).agents)).toBe(true);
       }
     });
   });

@@ -5,7 +5,7 @@
  * between Claude Code auto memory and AgentDB.
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vitest';
 import * as fsSync from 'node:fs';
 import * as path from 'node:path';
 import {
@@ -495,7 +495,7 @@ describe('AutoMemoryBridge', () => {
           confidence: 0.95,
         },
       };
-      (backend.query as any).mockResolvedValueOnce([mockEntry as MemoryEntry]);
+      (backend.query as Mock).mockResolvedValueOnce([mockEntry as MemoryEntry]);
 
       await bridge.syncToAutoMemory();
 
@@ -533,7 +533,7 @@ Already in DB
       fsSync.writeFileSync(path.join(testDir, 'test.md'), topicContent, 'utf-8');
 
       // Mock backend to return existing entry with matching content hash
-      (backend.query as any).mockResolvedValue([{
+      (backend.query as Mock).mockResolvedValue([{
         id: 'existing-1',
         metadata: { contentHash: hashContent('Already in DB') },
       }]);
@@ -570,7 +570,7 @@ Already in DB
 
       // bulkInsert should be called once with all entries
       expect(backend.bulkInsert).toHaveBeenCalledTimes(1);
-      const batchArg = (backend.bulkInsert as any).mock.calls[0][0];
+      const batchArg = (backend.bulkInsert as Mock).mock.calls[0][0];
       expect(batchArg).toHaveLength(3);
     });
   });
@@ -724,7 +724,7 @@ Already in DB
       bridge.on('sync:failed', handler);
 
       // Make ensureMemoryDir throw
-      (backend.query as any).mockRejectedValueOnce(new Error('DB connection lost'));
+      (backend.query as Mock).mockRejectedValueOnce(new Error('DB connection lost'));
 
       // Record an insight so there's something to sync
       await bridge.recordInsight(createTestInsight());
@@ -807,7 +807,7 @@ Already in DB
         tags: ['insight'],
         metadata: { category: 'security', summary: 'SQL injection found', confidence: 0.9 },
       };
-      (backend.query as any).mockResolvedValueOnce([entry as MemoryEntry]);
+      (backend.query as Mock).mockResolvedValueOnce([entry as MemoryEntry]);
 
       await bridge.syncToAutoMemory();
 
@@ -824,7 +824,7 @@ Already in DB
         tags: ['insight', 'performance', 'benchmark'],
         metadata: { summary: 'Performance is slow', confidence: 0.85 },
       };
-      (backend.query as any).mockResolvedValueOnce([entry as MemoryEntry]);
+      (backend.query as Mock).mockResolvedValueOnce([entry as MemoryEntry]);
 
       await bridge.syncToAutoMemory();
 
@@ -839,7 +839,7 @@ Already in DB
         tags: ['insight'],
         metadata: { summary: 'Miscellaneous note', confidence: 0.8 },
       };
-      (backend.query as any).mockResolvedValueOnce([entry as MemoryEntry]);
+      (backend.query as Mock).mockResolvedValueOnce([entry as MemoryEntry]);
 
       await bridge.syncToAutoMemory();
 
@@ -854,7 +854,7 @@ Already in DB
         tags: ['insight', 'bug'],
         metadata: { summary: 'Found a bug', confidence: 0.9 },
       };
-      (backend.query as any).mockResolvedValueOnce([bugEntry as MemoryEntry]);
+      (backend.query as Mock).mockResolvedValueOnce([bugEntry as MemoryEntry]);
 
       await bridge.syncToAutoMemory();
       expect(fsSync.existsSync(bridge.getTopicPath('debugging'))).toBe(true);
@@ -868,7 +868,7 @@ Already in DB
         tags: ['insight', 'swarm'],
         metadata: { summary: 'Swarm completed successfully', confidence: 0.9 },
       };
-      (backend.query as any).mockResolvedValueOnce([swarmEntry as MemoryEntry]);
+      (backend.query as Mock).mockResolvedValueOnce([swarmEntry as MemoryEntry]);
 
       await bridge.syncToAutoMemory();
       expect(fsSync.existsSync(bridge.getTopicPath('swarm-results'))).toBe(true);

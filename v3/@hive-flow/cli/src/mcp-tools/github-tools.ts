@@ -1,18 +1,49 @@
 /**
  * GitHub MCP Tools for CLI
  *
- * V2 Compatibility - GitHub integration tools
+ * V2/V3 GitHub integration tools — wired to the `gh` CLI when available.
  *
- * ⚠️ IMPORTANT: These tools provide LOCAL STATE MANAGEMENT only.
- * - NO actual GitHub API calls are made — ALL data is SIMULATED
- * - Data is stored locally for workflow coordination
- * - For real GitHub operations, use `gh` CLI or GitHub MCP server
- * - All responses include `simulated: true`
+ * - When `gh` is installed and authenticated, tools execute real GitHub API calls
+ * - When `gh` is unavailable, tools fall back to local simulated data
+ * - All responses include `simulated: boolean` so callers know which path ran
  */
 
 import type { MCPTool } from './types.js';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { execFileSync } from 'node:child_process';
+
+// Check if `gh` CLI is available and authenticated
+let _ghAvailable: boolean | null = null;
+function ghAvailable(): boolean {
+  if (_ghAvailable !== null) return _ghAvailable;
+  try {
+    execFileSync('gh', ['auth', 'status'], { stdio: 'pipe', timeout: 5000 });
+    _ghAvailable = true;
+  } catch {
+    _ghAvailable = false;
+  }
+  return _ghAvailable;
+}
+
+// Run a `gh` command, return parsed JSON or null on failure
+function gh(args: string[], cwd?: string): unknown | null {
+  try {
+    const out = execFileSync('gh', args, {
+      stdio: ['pipe', 'pipe', 'pipe'],
+      timeout: 30000,
+      encoding: 'utf-8',
+      ...(cwd ? { cwd } : {}),
+    });
+    try {
+      return JSON.parse(out);
+    } catch {
+      return out.trim();
+    }
+  } catch {
+    return null;
+  }
+}
 
 // Storage paths
 const STORAGE_DIR = '.hive-flow';
@@ -93,6 +124,56 @@ export const githubTools: MCPTool[] = [
       const branch = (input.branch as string) || 'main';
       const repoKey = `${owner}/${repo}`;
 
+      // Try real gh CLI
+      if (ghAvailable()) {
+        const repoData = gh([
+          'repo', 'view', `${owner}/${repo}`,
+          '--json', 'name,owner,defaultBranchRef,description,languages,stargazerCount,forkCount,issues,pullRequests,watchers',
+        ]) as Record<string, unknown> | null;
+
+        if (repoData && typeof repoData === 'object') {
+          const languages = repoData.languages as Array<{ node: { name: string } }> | undefined;
+          const langNames = languages?.map(l => l.node?.name || l).filter(Boolean) ?? [];
+          const issues = repoData.issues as { totalCount?: number } | undefined;
+          const prs = repoData.pullRequests as { totalCount?: number } | undefined;
+
+          const repoInfo: RepoInfo = {
+            owner,
+            name: repo,
+            branch,
+            lastAnalyzed: new Date().toISOString(),
+            metrics: {
+              commits: 0, // gh repo view doesn't expose commit count directly
+              branches: 0,
+              contributors: 0,
+              openIssues: issues?.totalCount ?? 0,
+              openPRs: prs?.totalCount ?? 0,
+            },
+          };
+
+          store.repos[repoKey] = repoInfo;
+          saveGitHubStore(store);
+
+          return {
+            simulated: false,
+            success: true,
+            repository: repoKey,
+            branch,
+            metrics: repoInfo.metrics,
+            analysis: {
+              languages: langNames.length > 0 ? langNames : ['Unknown'],
+              mainLanguage: langNames[0] || 'Unknown',
+              description: repoData.description ?? '',
+              stars: repoData.stargazerCount ?? 0,
+              forks: repoData.forkCount ?? 0,
+              watchers: (repoData.watchers as { totalCount?: number })?.totalCount ?? 0,
+            },
+            lastAnalyzed: repoInfo.lastAnalyzed,
+          };
+        }
+      }
+
+      // Simulated fallback
       const repoInfo: RepoInfo = {
         owner,
         name: repo,
@@ -150,10 +231,37 @@ export const githubTools: MCPTool[] = [
       const action = (input.action as string) || 'list';
       const owner = (input.owner as string) || 'owner';
       const repo = (input.repo as string) || 'repo';
+      const nwo = `${owner}/${repo}`;
 
       if (action === 'list') {
+        if (ghAvailable()) {
+          const data = gh([
+            'pr', 'list', '-R', nwo,
+            '--json', 'number,title,state,headRefName,baseRefName,createdAt,url',
+            '--limit', '30',
+          ]) as Array<Record<string, unknown>> | null;
+          if (Array.isArray(data)) {
+            return {
+              simulated: false,
+              success: true,
+              pullRequests: data.map(pr => ({
+                id: pr.number,
+                title: pr.title,
+                status: (pr.state as string)?.toLowerCase(),
+                branch: pr.headRefName,
+                baseBranch: pr.baseRefName,
+                createdAt: pr.createdAt,
+                url: pr.url,
+              })),
+              total: data.length,
+              open: data.filter(pr => (pr.state as string)?.toLowerCase() === 'open').length,
+            };
+          }
+        }
+        // Simulated fallback
         const prs = Object.values(store.prs);
         return {
+          simulated: true,
           success: true,
           pullRequests: prs,
           total: prs.length,
@@ -162,6 +270,26 @@ export const githubTools: MCPTool[] = [
       }
 
       if (action === 'create') {
+        if (ghAvailable()) {
+          const title = (input.title as string) || 'New PR';
+          const branch = (input.branch as string) || '';
+          const baseBranch = (input.baseBranch as string) || 'main';
+          const body = (input.body as string) || '';
+          const args = ['pr', 'create', '-R', nwo, '--title', title, '--base', baseBranch, '--body', body];
+          if (branch) args.push('--head', branch);
+          args.push('--json', 'number,title,url,state,createdAt');
+          const data = gh(args) as Record<string, unknown> | null;
+          if (data && typeof data === 'object') {
+            return {
+              simulated: false,
+              success: true,
+              action: 'created',
+              pullRequest: data,
+              url: data.url,
+            };
+          }
+        }
+        // Simulated fallback
         const prId = `pr-${Date.now()}`;
         const pr = {
           id: prId,
@@ -173,8 +301,8 @@ export const githubTools: MCPTool[] = [
         };
         store.prs[prId] = pr;
         saveGitHubStore(store);
-
         return {
+          simulated: true,
           success: true,
           action: 'created',
           pullRequest: pr,
@@ -183,7 +311,23 @@ export const githubTools: MCPTool[] = [
       }
 
       if (action === 'review') {
+        if (ghAvailable() && input.prNumber) {
+          const data = gh([
+            'pr', 'view', String(input.prNumber), '-R', nwo,
+            '--json', 'number,title,state,reviews,comments,additions,deletions,changedFiles',
+          ]) as Record<string, unknown> | null;
+          if (data && typeof data === 'object') {
+            return {
+              simulated: false,
+              success: true,
+              action: 'reviewed',
+              prNumber: input.prNumber,
+              review: data,
+            };
+          }
+        }
         return {
+          simulated: true,
           success: true,
           action: 'reviewed',
           prNumber: input.prNumber,
@@ -197,13 +341,29 @@ export const githubTools: MCPTool[] = [
 
       if (action === 'merge') {
         const prNumber = input.prNumber as number;
+        if (ghAvailable() && prNumber) {
+          const data = gh([
+            'pr', 'merge', String(prNumber), '-R', nwo, '--merge',
+            '--json', 'number,title,state,mergedAt',
+          ]) as Record<string, unknown> | null;
+          if (data && typeof data === 'object') {
+            return {
+              simulated: false,
+              success: true,
+              action: 'merged',
+              prNumber,
+              ...data,
+            };
+          }
+        }
+        // Simulated fallback
         const prKey = Object.keys(store.prs).find(k => k.includes(String(prNumber)));
         if (prKey && store.prs[prKey]) {
           store.prs[prKey].status = 'merged';
           saveGitHubStore(store);
         }
-
         return {
+          simulated: true,
           success: true,
           action: 'merged',
           prNumber,
@@ -213,13 +373,28 @@ export const githubTools: MCPTool[] = [
 
       if (action === 'close') {
         const prNumber = input.prNumber as number;
+        if (ghAvailable() && prNumber) {
+          const data = gh([
+            'pr', 'close', String(prNumber), '-R', nwo,
+          ]);
+          if (data !== null) {
+            return {
+              simulated: false,
+              success: true,
+              action: 'closed',
+              prNumber,
+              closedAt: new Date().toISOString(),
+            };
+          }
+        }
+        // Simulated fallback
         const prKey = Object.keys(store.prs).find(k => k.includes(String(prNumber)));
         if (prKey && store.prs[prKey]) {
           store.prs[prKey].status = 'closed';
           saveGitHubStore(store);
         }
-
         return {
+          simulated: true,
           success: true,
           action: 'closed',
           prNumber,
@@ -250,10 +425,39 @@ export const githubTools: MCPTool[] = [
     handler: async (input) => {
       const store = loadGitHubStore();
       const action = (input.action as string) || 'list';
+      const owner = (input.owner as string) || 'owner';
+      const repo = (input.repo as string) || 'repo';
+      const nwo = `${owner}/${repo}`;
 
       if (action === 'list') {
+        if (ghAvailable()) {
+          const data = gh([
+            'issue', 'list', '-R', nwo,
+            '--json', 'number,title,state,labels,assignees,createdAt,url',
+            '--limit', '30',
+          ]) as Array<Record<string, unknown>> | null;
+          if (Array.isArray(data)) {
+            return {
+              simulated: false,
+              success: true,
+              issues: data.map(i => ({
+                id: i.number,
+                title: i.title,
+                status: (i.state as string)?.toLowerCase(),
+                labels: (i.labels as Array<{ name: string }>)?.map(l => l.name) ?? [],
+                assignees: (i.assignees as Array<{ login: string }>)?.map(a => a.login) ?? [],
+                createdAt: i.createdAt,
+                url: i.url,
+              })),
+              total: data.length,
+              open: data.filter(i => (i.state as string)?.toLowerCase() === 'open').length,
+            };
+          }
+        }
+        // Simulated fallback
         const issues = Object.values(store.issues);
         return {
+          simulated: true,
           success: true,
           issues,
           total: issues.length,
@@ -262,6 +466,26 @@ export const githubTools: MCPTool[] = [
       }
 
       if (action === 'create') {
+        if (ghAvailable()) {
+          const title = (input.title as string) || 'New Issue';
+          const body = (input.body as string) || '';
+          const labels = (input.labels as string[]) || [];
+          const assignees = (input.assignees as string[]) || [];
+          const args = ['issue', 'create', '-R', nwo, '--title', title, '--body', body];
+          for (const l of labels) args.push('--label', l);
+          for (const a of assignees) args.push('--assignee', a);
+          args.push('--json', 'number,title,url,state,createdAt');
+          const data = gh(args) as Record<string, unknown> | null;
+          if (data && typeof data === 'object') {
+            return {
+              simulated: false,
+              success: true,
+              action: 'created',
+              issue: data,
+            };
+          }
+        }
+        // Simulated fallback
         const issueId = `issue-${Date.now()}`;
         const issue = {
           id: issueId,
@@ -272,8 +496,8 @@ export const githubTools: MCPTool[] = [
         };
         store.issues[issueId] = issue;
         saveGitHubStore(store);
-
         return {
+          simulated: true,
           success: true,
           action: 'created',
           issue,
@@ -282,14 +506,34 @@ export const githubTools: MCPTool[] = [
 
       if (action === 'update') {
         const issueNumber = input.issueNumber as number;
+        if (ghAvailable() && issueNumber) {
+          const args = ['issue', 'edit', String(issueNumber), '-R', nwo];
+          if (input.title) args.push('--title', input.title as string);
+          if (input.labels) {
+            for (const l of input.labels as string[]) args.push('--add-label', l);
+          }
+          if (input.assignees) {
+            for (const a of input.assignees as string[]) args.push('--add-assignee', a);
+          }
+          const data = gh(args);
+          if (data !== null) {
+            return {
+              simulated: false,
+              success: true,
+              action: 'updated',
+              issueNumber,
+            };
+          }
+        }
+        // Simulated fallback
         const issueKey = Object.keys(store.issues).find(k => k.includes(String(issueNumber)));
         if (issueKey && store.issues[issueKey]) {
           if (input.title) store.issues[issueKey].title = input.title as string;
           if (input.labels) store.issues[issueKey].labels = input.labels as string[];
           saveGitHubStore(store);
         }
-
         return {
+          simulated: true,
           success: true,
           action: 'updated',
           issueNumber,
@@ -298,13 +542,26 @@ export const githubTools: MCPTool[] = [
 
       if (action === 'close') {
         const issueNumber = input.issueNumber as number;
+        if (ghAvailable() && issueNumber) {
+          const data = gh(['issue', 'close', String(issueNumber), '-R', nwo]);
+          if (data !== null) {
+            return {
+              simulated: false,
+              success: true,
+              action: 'closed',
+              issueNumber,
+              closedAt: new Date().toISOString(),
+            };
+          }
+        }
+        // Simulated fallback
         const issueKey = Object.keys(store.issues).find(k => k.includes(String(issueNumber)));
         if (issueKey && store.issues[issueKey]) {
           store.issues[issueKey].status = 'closed';
           saveGitHubStore(store);
         }
-
         return {
+          simulated: true,
           success: true,
           action: 'closed',
           issueNumber,
@@ -331,9 +588,35 @@ export const githubTools: MCPTool[] = [
     },
     handler: async (input) => {
       const action = (input.action as string) || 'list';
+      const owner = (input.owner as string) || 'owner';
+      const repo = (input.repo as string) || 'repo';
+      const nwo = `${owner}/${repo}`;
 
       if (action === 'list') {
+        if (ghAvailable()) {
+          const data = gh([
+            'run', 'list', '-R', nwo,
+            '--json', 'databaseId,workflowName,status,conclusion,createdAt,url,headBranch',
+            '--limit', '20',
+          ]) as Array<Record<string, unknown>> | null;
+          if (Array.isArray(data)) {
+            return {
+              simulated: false,
+              success: true,
+              workflows: data.map(r => ({
+                id: r.databaseId,
+                name: r.workflowName,
+                status: r.status,
+                conclusion: r.conclusion,
+                branch: r.headBranch,
+                createdAt: r.createdAt,
+                url: r.url,
+              })),
+            };
+          }
+        }
         return {
+          simulated: true,
           success: true,
           workflows: [
             { id: 'ci.yml', name: 'CI', status: 'active', lastRun: new Date().toISOString() },
@@ -344,7 +627,24 @@ export const githubTools: MCPTool[] = [
       }
 
       if (action === 'trigger') {
+        if (ghAvailable() && input.workflowId) {
+          const ref = (input.ref as string) || 'main';
+          const data = gh([
+            'workflow', 'run', input.workflowId as string, '-R', nwo, '--ref', ref,
+          ]);
+          if (data !== null) {
+            return {
+              simulated: false,
+              success: true,
+              action: 'triggered',
+              workflowId: input.workflowId,
+              ref,
+              triggeredAt: new Date().toISOString(),
+            };
+          }
+        }
         return {
+          simulated: true,
           success: true,
           action: 'triggered',
           workflowId: input.workflowId,
@@ -355,7 +655,31 @@ export const githubTools: MCPTool[] = [
       }
 
       if (action === 'status') {
+        if (ghAvailable() && input.workflowId) {
+          // Get the latest run for this workflow
+          const data = gh([
+            'run', 'list', '-R', nwo,
+            '--workflow', input.workflowId as string,
+            '--json', 'databaseId,status,conclusion,createdAt,updatedAt,url',
+            '--limit', '1',
+          ]) as Array<Record<string, unknown>> | null;
+          if (Array.isArray(data) && data.length > 0) {
+            const run = data[0];
+            return {
+              simulated: false,
+              success: true,
+              workflowId: input.workflowId,
+              runId: run.databaseId,
+              status: run.status,
+              conclusion: run.conclusion,
+              createdAt: run.createdAt,
+              updatedAt: run.updatedAt,
+              url: run.url,
+            };
+          }
+        }
         return {
+          simulated: true,
           success: true,
           workflowId: input.workflowId,
           status: 'completed',
@@ -365,7 +689,21 @@ export const githubTools: MCPTool[] = [
       }
 
       if (action === 'cancel') {
+        if (ghAvailable() && input.workflowId) {
+          // workflowId here may be a run ID for cancellation
+          const data = gh(['run', 'cancel', input.workflowId as string, '-R', nwo]);
+          if (data !== null) {
+            return {
+              simulated: false,
+              success: true,
+              action: 'cancelled',
+              workflowId: input.workflowId,
+              cancelledAt: new Date().toISOString(),
+            };
+          }
+        }
         return {
+          simulated: true,
           success: true,
           action: 'cancelled',
           workflowId: input.workflowId,
@@ -391,7 +729,77 @@ export const githubTools: MCPTool[] = [
     },
     handler: async (input) => {
       const metric = (input.metric as string) || 'all';
+      const owner = (input.owner as string) || 'owner';
+      const repo = (input.repo as string) || 'repo';
+      const nwo = `${owner}/${repo}`;
 
+      if (ghAvailable()) {
+        const realMetrics: Record<string, unknown> = {};
+        let gotData = false;
+
+        if (metric === 'all' || metric === 'commits') {
+          // Get recent commits
+          const commits = gh([
+            'api', `repos/${nwo}/commits`, '--jq', 'length', '-q', 'per_page=100',
+          ]);
+          if (commits !== null) {
+            const total = typeof commits === 'number' ? commits : parseInt(String(commits), 10) || 0;
+            realMetrics.commits = { total, note: 'Latest page (up to 100)' };
+            gotData = true;
+          }
+        }
+
+        if (metric === 'all' || metric === 'contributors') {
+          const contributors = gh([
+            'api', `repos/${nwo}/contributors`, '--jq', 'length', '-q', 'per_page=100',
+          ]);
+          if (contributors !== null) {
+            const total = typeof contributors === 'number' ? contributors : parseInt(String(contributors), 10) || 0;
+            realMetrics.contributors = { total };
+            gotData = true;
+          }
+        }
+
+        if (metric === 'all' || metric === 'releases') {
+          const releases = gh([
+            'release', 'list', '-R', nwo,
+            '--json', 'tagName,publishedAt,isLatest',
+            '--limit', '10',
+          ]) as Array<Record<string, unknown>> | null;
+          if (Array.isArray(releases)) {
+            const latest = releases.find(r => r.isLatest);
+            realMetrics.releases = {
+              total: releases.length,
+              latest: latest?.tagName ?? releases[0]?.tagName ?? 'none',
+              items: releases.map(r => ({ tag: r.tagName, publishedAt: r.publishedAt })),
+            };
+            gotData = true;
+          }
+        }
+
+        if (metric === 'all' || metric === 'traffic') {
+          // Traffic requires push access; try but expect it may fail
+          const views = gh(['api', `repos/${nwo}/traffic/views`]) as Record<string, unknown> | null;
+          if (views && typeof views === 'object') {
+            realMetrics.traffic = {
+              views: views.count ?? 0,
+              uniqueVisitors: views.uniques ?? 0,
+            };
+            gotData = true;
+          }
+        }
+
+        if (gotData) {
+          if (metric === 'all') {
+            return { simulated: false, success: true, metrics: realMetrics };
+          }
+          if (realMetrics[metric]) {
+            return { simulated: false, success: true, metric, data: realMetrics[metric] };
+          }
+        }
+      }
+
+      // Simulated fallback
       const metrics = {
         commits: {
           total: Math.floor(Math.random() * 1000) + 500,
@@ -416,10 +824,11 @@ export const githubTools: MCPTool[] = [
       };
 
       if (metric === 'all') {
-        return { success: true, metrics };
+        return { simulated: true, success: true, metrics };
       }
 
       return {
+        simulated: true,
         success: true,
         metric,
         data: metrics[metric as keyof typeof metrics],

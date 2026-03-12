@@ -730,8 +730,8 @@ describe('PrimeRadiantPlugin', () => {
       const config = plugin.getConfig();
 
       expect(config.coherence).toBeDefined();
-      expect((config.coherence as any).warnThreshold).toBe(0.3);
-      expect((config.coherence as any).rejectThreshold).toBe(0.7);
+      expect(config.coherence.warnThreshold).toBe(0.3);
+      expect(config.coherence.rejectThreshold).toBe(0.7);
     });
 
     it('should access spectral settings', async () => {
@@ -740,7 +740,7 @@ describe('PrimeRadiantPlugin', () => {
       const config = plugin.getConfig();
 
       expect(config.spectral).toBeDefined();
-      expect((config.spectral as any).stabilityThreshold).toBe(0.1);
+      expect(config.spectral.stabilityThreshold).toBe(0.1);
     });
 
     it('should access causal settings', async () => {
@@ -749,7 +749,7 @@ describe('PrimeRadiantPlugin', () => {
       const config = plugin.getConfig();
 
       expect(config.causal).toBeDefined();
-      expect((config.causal as any).maxBackdoorPaths).toBe(10);
+      expect(config.causal.maxBackdoorPaths).toBe(10);
     });
   });
 });

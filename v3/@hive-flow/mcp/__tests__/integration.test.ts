@@ -172,14 +172,14 @@ describe('MCP 2025-11-25 Integration', () => {
         language: 'TypeScript',
       });
       expect(review.messages[0].content.type).toBe('text');
-      expect((review.messages[0].content as any).text).toContain('TypeScript');
+      expect((review.messages[0].content as { type: string; text: string }).text).toContain('TypeScript');
 
       // Execute translation
       const translate = await registry.get('translate', {
         text: 'Hello',
         target: 'Spanish',
       });
-      expect((translate.messages[0].content as any).text).toContain('Spanish');
+      expect((translate.messages[0].content as { type: string; text: string }).text).toContain('Spanish');
     });
 
     it('should validate required arguments', async () => {
@@ -198,7 +198,7 @@ describe('MCP 2025-11-25 Integration', () => {
 
       // Should work with argument
       const result = await registry.get('greet', { name: 'World' });
-      expect((result.messages[0].content as any).text).toBe('Hello World');
+      expect((result.messages[0].content as { type: string; text: string }).text).toBe('Hello World');
     });
   });
 
@@ -332,7 +332,7 @@ describe('MCP 2025-11-25 Integration', () => {
 
       const taskResult = await taskManager.waitForTask(analysisTaskId, 5000);
       expect(taskResult.state).toBe('completed');
-      expect((taskResult.result as any).findings).toContain('All good!');
+      expect((taskResult.result as { findings: string[] }).findings).toContain('All good!');
 
       // Check metrics
       const health = await server.getHealthStatus();

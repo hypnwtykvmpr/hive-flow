@@ -482,7 +482,7 @@ async function marketRegimeHandler(
 
 function generateTransitionProbabilities(_currentRegime: MarketRegimeType): Record<MarketRegimeType, Record<MarketRegimeType, number>> {
   const regimes: MarketRegimeType[] = ['bull', 'bear', 'sideways', 'high_vol', 'crisis', 'recovery'];
-  const matrix: Record<MarketRegimeType, Record<MarketRegimeType, number>> = {} as any;
+  const matrix = {} as Record<MarketRegimeType, Record<MarketRegimeType, number>>;
 
   for (const from of regimes) {
     matrix[from] = {} as Record<MarketRegimeType, number>;

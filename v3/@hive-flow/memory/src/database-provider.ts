@@ -489,7 +489,7 @@ class JsonBackend implements IMemoryBackend {
     return {
       totalEntries: this.entries.size,
       entriesByNamespace: {},
-      entriesByType: {} as any,
+      entriesByType: {} as Record<string, number>,
       memoryUsage: 0,
       avgQueryTime: 0,
       avgSearchTime: 0,

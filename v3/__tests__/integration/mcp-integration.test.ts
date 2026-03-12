@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vitest';
 import { MCPServer } from '../../src/infrastructure/mcp/MCPServer';
 import { AgentTools } from '../../src/infrastructure/mcp/tools/AgentTools';
 import { MemoryTools } from '../../src/infrastructure/mcp/tools/MemoryTools';
@@ -22,7 +22,7 @@ describe('MCP Tools Integration Tests', () => {
       vectorSearch: vi.fn().mockResolvedValue([]),
       initialize: vi.fn(),
       close: vi.fn()
-    } as any;
+    } as unknown as HybridBackend;
 
     coordinator = {
       spawnAgent: vi.fn(),
@@ -31,7 +31,7 @@ describe('MCP Tools Integration Tests', () => {
       getAgentMetrics: vi.fn(),
       initialize: vi.fn(),
       shutdown: vi.fn()
-    } as any;
+    } as unknown as SwarmCoordinator;
 
     agentTools = new AgentTools(coordinator);
     memoryTools = new MemoryTools(memoryBackend);
@@ -56,7 +56,7 @@ describe('MCP Tools Integration Tests', () => {
       capabilities: ['code', 'refactor']
     };
 
-    (coordinator.spawnAgent as any).mockResolvedValue(mockAgent);
+    (coordinator.spawnAgent as Mock).mockResolvedValue(mockAgent);
 
     const result = await agentTools.execute('agent_spawn', {
       id: 'mcp-agent-1',
@@ -80,7 +80,7 @@ describe('MCP Tools Integration Tests', () => {
       { id: 'agent-3', type: 'reviewer', status: 'idle' }
     ];
 
-    (coordinator.listAgents as any).mockResolvedValue(mockAgents);
+    (coordinator.listAgents as Mock).mockResolvedValue(mockAgents);
 
     const result = await agentTools.execute('agent_list', {});
 
@@ -90,7 +90,7 @@ describe('MCP Tools Integration Tests', () => {
   });
 
   it('should terminate agent via MCP agent tools', async () => {
-    (coordinator.terminateAgent as any).mockResolvedValue({ success: true });
+    (coordinator.terminateAgent as Mock).mockResolvedValue({ success: true });
 
     const result = await agentTools.execute('agent_terminate', {
       agentId: 'agent-to-kill'
@@ -109,7 +109,7 @@ describe('MCP Tools Integration Tests', () => {
       health: 'healthy'
     };
 
-    (coordinator.getAgentMetrics as any).mockResolvedValue(mockMetrics);
+    (coordinator.getAgentMetrics as Mock).mockResolvedValue(mockMetrics);
 
     const result = await agentTools.execute('agent_metrics', {
       agentId: 'metrics-agent'
@@ -129,7 +129,7 @@ describe('MCP Tools Integration Tests', () => {
       timestamp: Date.now()
     };
 
-    (memoryBackend.store as any).mockResolvedValue(memory);
+    (memoryBackend.store as Mock).mockResolvedValue(memory);
 
     const result = await memoryTools.execute('memory_store', memory);
 
@@ -143,7 +143,7 @@ describe('MCP Tools Integration Tests', () => {
       { id: '2', agentId: 'agent-1', content: 'Memory 2', type: 'context', timestamp: Date.now() }
     ];
 
-    (memoryBackend.query as any).mockResolvedValue(mockMemories);
+    (memoryBackend.query as Mock).mockResolvedValue(mockMemories);
 
     const result = await memoryTools.execute('memory_search', {
       agentId: 'agent-1',
@@ -176,7 +176,7 @@ describe('MCP Tools Integration Tests', () => {
       }
     ];
 
-    (memoryBackend.vectorSearch as any).mockResolvedValue(mockResults);
+    (memoryBackend.vectorSearch as Mock).mockResolvedValue(mockResults);
 
     const queryEmbedding = new Array(384).fill(0).map(() => Math.random());
 
@@ -249,7 +249,7 @@ describe('MCP Tools Integration Tests', () => {
   });
 
   it('should handle MCP tool execution errors gracefully', async () => {
-    (coordinator.spawnAgent as any).mockRejectedValue(new Error('Spawn failed'));
+    (coordinator.spawnAgent as Mock).mockRejectedValue(new Error('Spawn failed'));
 
     const result = await agentTools.execute('agent_spawn', {
       id: 'failing-agent',
@@ -264,7 +264,7 @@ describe('MCP Tools Integration Tests', () => {
   it('should support chained MCP tool operations', async () => {
     // Spawn agent
     const mockAgent = { id: 'chain-agent', type: 'coder', status: 'active' };
-    (coordinator.spawnAgent as any).mockResolvedValue(mockAgent);
+    (coordinator.spawnAgent as Mock).mockResolvedValue(mockAgent);
 
     const spawnResult = await agentTools.execute('agent_spawn', {
       id: 'chain-agent',
@@ -282,14 +282,14 @@ describe('MCP Tools Integration Tests', () => {
       timestamp: Date.now()
     };
 
-    (memoryBackend.store as any).mockResolvedValue(memory);
+    (memoryBackend.store as Mock).mockResolvedValue(memory);
 
     const storeResult = await memoryTools.execute('memory_store', memory);
 
     expect(storeResult.success).toBe(true);
 
     // Retrieve memories
-    (memoryBackend.query as any).mockResolvedValue([memory]);
+    (memoryBackend.query as Mock).mockResolvedValue([memory]);
 
     const searchResult = await memoryTools.execute('memory_search', {
       agentId: 'chain-agent'
@@ -306,7 +306,7 @@ describe('MCP Tools Integration Tests', () => {
       status: 'active'
     }));
 
-    (coordinator.spawnAgent as any).mockImplementation(async (config) => ({
+    (coordinator.spawnAgent as Mock).mockImplementation(async (config: Record<string, unknown>) => ({
       id: config.id,
       type: config.type,
       status: 'active'
@@ -349,7 +349,7 @@ describe('MCP Tools Integration Tests', () => {
       capabilities: 'not-an-array' // Invalid: should be array
     };
 
-    const result = await agentTools.execute('agent_spawn', invalidParams as any);
+    const result = await agentTools.execute('agent_spawn', invalidParams as Record<string, unknown>);
 
     expect(result.success).toBe(false);
     expect(result.error).toContain('validation');
@@ -369,7 +369,7 @@ describe('MCP Tools Integration Tests', () => {
     expect(configResult.success).toBe(true);
 
     // 2. Spawn agents based on config
-    (coordinator.spawnAgent as any).mockImplementation(async (config) => ({
+    (coordinator.spawnAgent as Mock).mockImplementation(async (config: Record<string, unknown>) => ({
       id: config.id,
       type: config.type,
       status: 'active'
@@ -382,7 +382,7 @@ describe('MCP Tools Integration Tests', () => {
     expect(agentResult.success).toBe(true);
 
     // 3. Store agent spawn event in memory
-    (memoryBackend.store as any).mockResolvedValue({
+    (memoryBackend.store as Mock).mockResolvedValue({
       id: 'event-1',
       agentId: 'workflow-agent',
       content: 'Agent spawned',
@@ -400,7 +400,7 @@ describe('MCP Tools Integration Tests', () => {
     expect(memoryResult.success).toBe(true);
 
     // 4. Retrieve agent metrics
-    (coordinator.getAgentMetrics as any).mockResolvedValue({
+    (coordinator.getAgentMetrics as Mock).mockResolvedValue({
       agentId: 'workflow-agent',
       tasksCompleted: 0,
       successRate: 1.0,

@@ -111,7 +111,7 @@ describe('PluginBuilder', () => {
     const context = {
       config: { enabled: true, priority: 50, settings: {} },
       eventBus: { emit: () => {}, on: () => () => {}, off: () => {}, once: () => () => {} },
-      logger: { debug: () => {}, info: () => {}, warn: () => {}, error: () => {}, child: () => ({} as any) },
+      logger: { debug: () => {}, info: () => {}, warn: () => {}, error: () => {}, child: () => ({} as Record<string, unknown>) },
       services: { get: () => undefined, set: () => {}, has: () => false, delete: () => false },
       coreVersion: '3.0.0',
       dataDir: '/tmp',
@@ -195,7 +195,7 @@ describe('HookBuilder', () => {
       .withName('conditional-hook')
       .withDescription('Conditional hook test')
       .withPriority(HookPriority.High)
-      .when((ctx) => (ctx.data as any)?.shouldRun === true)
+      .when((ctx) => (ctx.data as Record<string, unknown>)?.shouldRun === true)
       .handle(async () => {
         executed = true;
         return { success: true };
@@ -236,8 +236,8 @@ describe('HookBuilder', () => {
       timestamp: new Date(),
     });
 
-    expect((result.data as any).transformed).toBe(true);
-    expect((result.data as any).original).toBe(true);
+    expect((result.data as Record<string, unknown>).transformed).toBe(true);
+    expect((result.data as Record<string, unknown>).original).toBe(true);
   });
 
   it('should support synchronous mode', () => {

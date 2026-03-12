@@ -237,7 +237,7 @@ async function runTests(): Promise<void> {
     logTest(
       'Publish preview',
       preview !== null,
-      `Preview created for ${(preview as any).name}`
+      `Preview created for ${(preview as Record<string, unknown>).name}`
     );
 
     // Publish (mock)

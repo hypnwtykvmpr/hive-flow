@@ -46,8 +46,8 @@ export class AgentTaskDLQ {
     const sanitizedEntry = {
       ...fullEntry,
       input: maskSensitiveData(fullEntry.input),
-      contextSnapshot: maskSensitiveData((fullEntry as any).contextSnapshot),
-      errors: (fullEntry as any).errors?.map((e: any) => ({
+      contextSnapshot: maskSensitiveData(fullEntry.contextSnapshot),
+      errors: fullEntry.errors?.map((e) => ({
         ...e,
         stack: process.env.NODE_ENV === 'production' ? undefined : e.stack,
       })),

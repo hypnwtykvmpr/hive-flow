@@ -359,8 +359,8 @@ export class FlashAttentionOptimizer {
    * This helps get more accurate memory measurements
    */
   private forceGC(): void {
-    if (typeof global !== 'undefined' && typeof (global as any).gc === 'function') {
-      (global as any).gc();
+    if (typeof global !== 'undefined' && typeof (global as { gc?: () => void }).gc === 'function') {
+      (global as { gc: () => void }).gc();
     }
   }
 

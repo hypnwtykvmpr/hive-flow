@@ -110,7 +110,7 @@ export class GuidanceProvider {
    */
   async generatePromptContext(prompt: string): Promise<string> {
     const guidance = await this.reasoningBank.generateGuidance({
-      event: 'pre-route' as any,
+      event: 'pre-route' as HookEvent, // SAFETY: string literal matches HookEvent.PreRoute enum value
       timestamp: new Date(),
       routing: { task: prompt },
     });
@@ -173,7 +173,7 @@ export class GuidanceProvider {
 
     // Generate file-specific guidance from patterns
     const guidance = await this.reasoningBank.generateGuidance({
-      event: 'pre-edit' as any,
+      event: 'pre-edit' as HookEvent, // SAFETY: string literal matches HookEvent.PreEdit enum value
       timestamp: new Date(),
       file: { path: filePath, operation: 'modify' },
     });

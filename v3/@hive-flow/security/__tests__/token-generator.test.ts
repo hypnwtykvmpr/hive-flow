@@ -177,7 +177,7 @@ describe('TokenGenerator', () => {
       const payload = generator.verifySignedToken(signed.combined);
 
       expect(payload).not.toBeNull();
-      expect((payload as any).userId).toBe('123');
+      expect((payload as Record<string, unknown>).userId).toBe('123');
     });
 
     it('should reject tampered token', () => {

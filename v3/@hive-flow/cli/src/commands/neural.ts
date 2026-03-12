@@ -1028,12 +1028,17 @@ const exportCommand: Command = {
         // Generate ephemeral key pair for signing
         // Use Node.js webcrypto for Ed25519 signing
         const { webcrypto } = crypto;
-        const keyPair = await webcrypto.subtle.generateKey(
+        // SAFETY: Ed25519 is supported by Node.js webcrypto but not in all TS lib type definitions
+        const generateKeyFn = webcrypto.subtle.generateKey.bind(webcrypto.subtle) as (
+          algorithm: { name: string },
+          extractable: boolean,
+          keyUsages: string[]
+        ) => Promise<{ privateKey: Parameters<typeof webcrypto.subtle.sign>[1]; publicKey: Parameters<typeof webcrypto.subtle.exportKey>[1] }>;
+        const keyPair = await generateKeyFn(
           { name: 'Ed25519' },
           true,
           ['sign', 'verify']
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ) as any;
+        );
 
         const exportBytes = new TextEncoder().encode(JSON.stringify(exportData));
         const signatureBytes = await webcrypto.subtle.sign('Ed25519', keyPair.privateKey, exportBytes);
@@ -1542,7 +1547,9 @@ const benchmarkCommand: Command = {
     spinner.start();
 
     try {
-      const attention: any = await import('@ruvector/attention');
+      // SAFETY: @ruvector/attention is optional — typed as record of constructors used below
+      type AttentionMechanism = { computeRaw: (q: Float32Array, k: Float32Array[], v: Float32Array[]) => Float32Array };
+      const attention = await import('@ruvector/attention') as unknown as Record<string, new (...args: number[]) => AttentionMechanism>;
 
       // Manual benchmark since benchmarkAttention has a binding bug
       const benchmarkMechanism = async (name: string, mechanism: { computeRaw: (q: Float32Array, k: Float32Array[], v: Float32Array[]) => Float32Array }) => {

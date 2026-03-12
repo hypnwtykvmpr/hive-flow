@@ -172,7 +172,7 @@ export async function isRuvectorAvailable(): Promise<boolean> {
 export async function getRuvectorVersion(): Promise<string | null> {
   try {
     const ruvector = await import('@ruvector/core');
-    return (ruvector as any).version || '1.0.0';
+    return (ruvector as Record<string, unknown>).version as string || '1.0.0';
   } catch {
     return null;
   }

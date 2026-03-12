@@ -60,13 +60,15 @@ function detectKeyFormat(key: Buffer): { format: 'pem' | 'der'; type: string } {
 
 function edSign(data: Buffer, key: Buffer): string {
   const det = detectKeyFormat(key);
-  return sign(null, data, { key, format: det.format, type: det.type } as any).toString('hex');
+  // SAFETY: Node.js crypto.sign accepts these key options but the overload types are narrow
+  return sign(null, data, { key, format: det.format, type: det.type } as unknown as Parameters<typeof sign>[2]).toString('hex');
 }
 function edCheck(data: Buffer, sig: string, key: Buffer): boolean {
   try {
     const det = detectKeyFormat(key);
     const type = det.format === 'pem' ? det.type : 'spki'; // public key for verify
-    return edVerify(null, data, { key, format: det.format, type } as any, Buffer.from(sig, 'hex'));
+    // SAFETY: Node.js crypto.verify accepts these key options but the overload types are narrow
+    return edVerify(null, data, { key, format: det.format, type } as unknown as Parameters<typeof edVerify>[2], Buffer.from(sig, 'hex'));
   } catch { return false; }
 }
 

@@ -126,7 +126,7 @@ describe('WorkerManager', () => {
       manager.register('test', vi.fn().mockResolvedValue(mockResult));
 
       // Add to WORKER_CONFIGS temporarily
-      (WORKER_CONFIGS as any)['test'] = {
+      (WORKER_CONFIGS as Record<string, unknown>)['test'] = {
         name: 'test',
         description: 'Test worker',
         interval: 60000,
@@ -141,7 +141,7 @@ describe('WorkerManager', () => {
       expect(result.data?.value).toBe(42);
 
       // Cleanup
-      delete (WORKER_CONFIGS as any)['test'];
+      delete (WORKER_CONFIGS as Record<string, unknown>)['test'];
     });
 
     it('should handle worker timeout', async () => {
@@ -155,7 +155,7 @@ describe('WorkerManager', () => {
         };
       });
 
-      (WORKER_CONFIGS as any)['slow'] = {
+      (WORKER_CONFIGS as Record<string, unknown>)['slow'] = {
         name: 'slow',
         description: 'Slow worker',
         interval: 60000,
@@ -169,7 +169,7 @@ describe('WorkerManager', () => {
       expect(result.success).toBe(false);
       expect(result.error).toContain('Timeout');
 
-      delete (WORKER_CONFIGS as any)['slow'];
+      delete (WORKER_CONFIGS as Record<string, unknown>)['slow'];
     });
 
     it('should handle worker errors gracefully', async () => {
@@ -177,7 +177,7 @@ describe('WorkerManager', () => {
         throw new Error('Worker crashed');
       });
 
-      (WORKER_CONFIGS as any)['failing'] = {
+      (WORKER_CONFIGS as Record<string, unknown>)['failing'] = {
         name: 'failing',
         description: 'Failing worker',
         interval: 60000,
@@ -191,7 +191,7 @@ describe('WorkerManager', () => {
       expect(result.success).toBe(false);
       expect(result.error).toContain('Worker crashed');
 
-      delete (WORKER_CONFIGS as any)['failing'];
+      delete (WORKER_CONFIGS as Record<string, unknown>)['failing'];
     });
 
     it('should return error for unknown worker', async () => {
@@ -240,7 +240,7 @@ describe('WorkerManager', () => {
       // Register multiple workers
       for (let i = 0; i < 6; i++) {
         manager.register(`worker${i}`, handler);
-        (WORKER_CONFIGS as any)[`worker${i}`] = {
+        (WORKER_CONFIGS as Record<string, unknown>)[`worker${i}`] = {
           name: `worker${i}`,
           description: 'Test',
           interval: 60000,
@@ -256,7 +256,7 @@ describe('WorkerManager', () => {
 
       // Cleanup
       for (let i = 0; i < 6; i++) {
-        delete (WORKER_CONFIGS as any)[`worker${i}`];
+        delete (WORKER_CONFIGS as Record<string, unknown>)[`worker${i}`];
       }
     });
   });
@@ -292,7 +292,7 @@ describe('Alert System', () => {
     });
 
     manager.register('test', handler);
-    (WORKER_CONFIGS as any)['test'] = {
+    (WORKER_CONFIGS as Record<string, unknown>)['test'] = {
       name: 'test',
       description: 'Test',
       interval: 60000,
@@ -308,7 +308,7 @@ describe('Alert System', () => {
     expect(result.alerts![0].severity).toBe(AlertSeverity.Warning);
     expect(result.alerts![0].value).toBe(75);
 
-    delete (WORKER_CONFIGS as any)['test'];
+    delete (WORKER_CONFIGS as Record<string, unknown>)['test'];
   });
 
   it('should generate critical alerts for critical threshold', async () => {
@@ -325,7 +325,7 @@ describe('Alert System', () => {
     });
 
     manager.register('test', handler);
-    (WORKER_CONFIGS as any)['test'] = {
+    (WORKER_CONFIGS as Record<string, unknown>)['test'] = {
       name: 'test',
       description: 'Test',
       interval: 60000,
@@ -338,7 +338,7 @@ describe('Alert System', () => {
 
     expect(result.alerts![0].severity).toBe(AlertSeverity.Critical);
 
-    delete (WORKER_CONFIGS as any)['test'];
+    delete (WORKER_CONFIGS as Record<string, unknown>)['test'];
   });
 
   it('should handle nested metric paths', async () => {
@@ -355,7 +355,7 @@ describe('Alert System', () => {
     });
 
     manager.register('test', handler);
-    (WORKER_CONFIGS as any)['test'] = {
+    (WORKER_CONFIGS as Record<string, unknown>)['test'] = {
       name: 'test',
       description: 'Test',
       interval: 60000,
@@ -369,7 +369,7 @@ describe('Alert System', () => {
     expect(result.alerts!.length).toBe(1);
     expect(result.alerts![0].metric).toBe('nested.deep.value');
 
-    delete (WORKER_CONFIGS as any)['test'];
+    delete (WORKER_CONFIGS as Record<string, unknown>)['test'];
   });
 
   it('should get recent alerts', async () => {
@@ -410,7 +410,7 @@ describe('Historical Metrics', () => {
     });
 
     manager.register('test', handler);
-    (WORKER_CONFIGS as any)['test'] = {
+    (WORKER_CONFIGS as Record<string, unknown>)['test'] = {
       name: 'test',
       description: 'Test',
       interval: 60000,
@@ -426,7 +426,7 @@ describe('Historical Metrics', () => {
     expect(history[0].metrics.metric1).toBe(100);
     expect(history[0].metrics.metric2).toBe(200);
 
-    delete (WORKER_CONFIGS as any)['test'];
+    delete (WORKER_CONFIGS as Record<string, unknown>)['test'];
   });
 
   it('should filter history by worker', async () => {

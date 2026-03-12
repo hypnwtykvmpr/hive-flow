@@ -35,11 +35,13 @@ import {
   TransportType,
   ILogger,
   ToolContext,
+  OrchestratorLike,
+  SwarmCoordinatorLike,
 } from './types.js';
 import { ToolRegistry, createToolRegistry } from './tool-registry.js';
 import { SessionManager, createSessionManager } from './session-manager.js';
 import { ConnectionPool, createConnectionPool } from './connection-pool.js';
-import { createTransport, TransportManager, createTransportManager } from './transport/index.js';
+import { createTransport, TransportManager, createTransportManager, type TransportConfig } from './transport/index.js';
 
 /**
  * Default server configuration
@@ -124,8 +126,8 @@ export class MCPServer extends EventEmitter implements IMCPServer {
   constructor(
     config: Partial<MCPServerConfig>,
     private readonly logger: ILogger,
-    private readonly orchestrator?: unknown,
-    private readonly swarmCoordinator?: unknown
+    private readonly orchestrator?: OrchestratorLike,
+    private readonly swarmCoordinator?: SwarmCoordinatorLike
   ) {
     super();
     this.config = { ...DEFAULT_CONFIG, ...config } as MCPServerConfig;
@@ -179,7 +181,7 @@ export class MCPServer extends EventEmitter implements IMCPServer {
         auth: this.config.auth,
         maxRequestSize: String(this.config.maxRequestSize),
         requestTimeout: this.config.requestTimeout,
-      } as any);
+      } as unknown as Partial<TransportConfig>); // SAFETY: transport config shape varies by transport type
 
       // Setup request handler
       this.transport.onRequest(async (request) => {
@@ -786,8 +788,8 @@ export class MCPServer extends EventEmitter implements IMCPServer {
 export function createMCPServer(
   config: Partial<MCPServerConfig>,
   logger: ILogger,
-  orchestrator?: unknown,
-  swarmCoordinator?: unknown
+  orchestrator?: OrchestratorLike,
+  swarmCoordinator?: SwarmCoordinatorLike
 ): MCPServer {
   return new MCPServer(config, logger, orchestrator, swarmCoordinator);
 }

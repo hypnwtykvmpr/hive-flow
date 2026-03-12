@@ -170,9 +170,10 @@ export class AgenticFlowBridge extends EventEmitter {
       if (this.config.features.enableSONA) {
         this.sona = new SONAAdapter(this.config.sona);
         if (this.agenticFlowCore) {
-          // Type cast: agentic-flow runtime API is compatible but typed as `unknown`
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          this.sona.setAgenticFlowReference(this.agenticFlowCore.sona as any);
+          // Type cast: AgenticFlowSONAInterface is structurally compatible with AgenticFlowSONAReference
+          this.sona.setAgenticFlowReference(
+            this.agenticFlowCore.sona as unknown as Parameters<SONAAdapter['setAgenticFlowReference']>[0]
+          );
         }
         await this.sona.initialize();
         this.updateComponentHealth('sona', 'healthy');
@@ -183,9 +184,10 @@ export class AgenticFlowBridge extends EventEmitter {
       if (this.config.features.enableFlashAttention) {
         this.attention = new AttentionCoordinator(this.config.attention);
         if (this.agenticFlowCore) {
-          // Type cast: agentic-flow runtime API is compatible but typed as `unknown`
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          this.attention.setAgenticFlowReference(this.agenticFlowCore.attention as any);
+          // Type cast: AgenticFlowAttentionInterface is structurally compatible with AgenticFlowAttentionReference
+          this.attention.setAgenticFlowReference(
+            this.agenticFlowCore.attention as unknown as Parameters<AttentionCoordinator['setAgenticFlowReference']>[0]
+          );
         }
         await this.attention.initialize();
         this.updateComponentHealth('attention', 'healthy');
@@ -742,18 +744,18 @@ export class AgenticFlowBridge extends EventEmitter {
     message: string,
     code: string,
     component: string
-  ): Error {
-    const error = new Error(message);
-    (error as any).code = code;
-    (error as any).component = component;
+  ): Error & { code: string; component: string } {
+    const error = new Error(message) as Error & { code: string; component: string };
+    error.code = code;
+    error.component = component;
     return error;
   }
 
-  private wrapError(error: Error, code: string, component: string): Error {
-    const wrapped = new Error(`${component}: ${error.message}`);
-    (wrapped as any).code = code;
-    (wrapped as any).component = component;
-    (wrapped as any).cause = error;
+  private wrapError(error: Error, code: string, component: string): Error & { code: string; component: string } {
+    const wrapped = new Error(`${component}: ${error.message}`) as Error & { code: string; component: string };
+    wrapped.code = code;
+    wrapped.component = component;
+    wrapped.cause = error;
     return wrapped;
   }
 

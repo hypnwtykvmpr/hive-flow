@@ -425,7 +425,7 @@ describe('DependencyGraph', () => {
       graph.addPlugin('plugin-a', '1.0.0');
       graph.addPlugin('plugin-b', '1.0.0', [{ name: 'plugin-a', version: '^1.0.0' }]);
 
-      const json = graph.toJSON() as any;
+      const json = graph.toJSON() as { nodes: unknown[]; edges: unknown[] };
 
       expect(json.nodes).toHaveLength(2);
       expect(json.edges).toHaveLength(2);

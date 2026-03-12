@@ -508,10 +508,8 @@ describe('ProofChain', () => {
 
   describe('createProofChain factory', () => {
     it('should throw when no signingKey is provided', () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      expect(() => createProofChain({} as any)).toThrow('requires an explicit signingKey');
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      expect(() => createProofChain(undefined as any)).toThrow();
+      expect(() => createProofChain({} as unknown as { signingKey: string })).toThrow('requires an explicit signingKey');
+      expect(() => createProofChain(undefined as unknown as { signingKey: string })).toThrow();
     });
 
     it('should create a ProofChain with an explicit signing key', () => {
@@ -574,7 +572,7 @@ describe('ProofChain', () => {
 
     it('should default sessionId to unknown when event has none', () => {
       const event = createMockEvent();
-      delete (event as any).sessionId;
+      delete (event as Partial<RunEvent>).sessionId;
       const envelope = chain.append(event);
 
       expect(envelope.metadata.sessionId).toBe('unknown');

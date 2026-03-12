@@ -113,7 +113,7 @@ const listCommand: Command = {
       // Build search options
       const searchOptions: PluginSearchOptions = {
         category,
-        type: type as any,
+        type: type as PluginSearchOptions['type'],
         sortBy: 'downloads',
         sortOrder: 'desc',
       };
@@ -768,7 +768,7 @@ const searchCommand: Command = {
       const searchOptions: PluginSearchOptions = {
         query,
         category,
-        type: type as any,
+        type: type as PluginSearchOptions['type'],
         verified,
         limit,
         sortBy: 'downloads',

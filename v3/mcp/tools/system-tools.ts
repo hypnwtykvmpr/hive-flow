@@ -12,7 +12,7 @@
 
 import { z } from 'zod';
 import * as os from 'os';
-import { MCPTool, ToolContext } from '../types.js';
+import { MCPTool, ToolContext, AgentRecord, TaskRecord } from '../types.js';
 
 // ============================================================================
 // Input Schemas
@@ -218,8 +218,7 @@ async function handleSystemStatus(
   // Check orchestrator if available
   if (context?.orchestrator) {
     try {
-      const orchestrator = context.orchestrator as any;
-      const status = await orchestrator.getStatus();
+      const status = await context.orchestrator.getStatus();
       components.push({
         name: 'orchestrator',
         status: status.healthy ? 'healthy' : 'degraded',
@@ -239,8 +238,7 @@ async function handleSystemStatus(
   // Check swarm coordinator if available
   if (context?.swarmCoordinator) {
     try {
-      const coordinator = context.swarmCoordinator as any;
-      const status = await coordinator.getStatus();
+      const status = await context.swarmCoordinator.getStatus();
       components.push({
         name: 'swarm-coordinator',
         status: status.state === 'ready' ? 'healthy' :
@@ -259,10 +257,9 @@ async function handleSystemStatus(
   }
 
   // Check memory service if available
-  const resourceManager = context?.resourceManager as any;
-  if (resourceManager?.memoryService) {
+  const memoryService = context?.resourceManager?.memoryService;
+  if (memoryService?.getStats) {
     try {
-      const memoryService = resourceManager.memoryService;
       const stats = await memoryService.getStats();
       components.push({
         name: 'memory-service',
@@ -300,15 +297,14 @@ async function handleSystemStatus(
   // Include agent information
   if (input.includeAgents && context?.swarmCoordinator) {
     try {
-      const coordinator = context.swarmCoordinator as any;
-      const status = await coordinator.getStatus();
+      const status = await context.swarmCoordinator.getStatus();
       const agents = status.agents || [];
 
       result.agents = {
         total: agents.length,
-        active: agents.filter((a: any) => a.status === 'active').length,
-        idle: agents.filter((a: any) => a.status === 'idle').length,
-        terminated: agents.filter((a: any) => a.status === 'terminated').length,
+        active: agents.filter((a: AgentRecord) => a.status === 'active').length,
+        idle: agents.filter((a: AgentRecord) => a.status === 'idle').length,
+        terminated: agents.filter((a: AgentRecord) => a.status === 'terminated').length,
       };
     } catch (error) {
       result.agents = { total: 0, active: 0, idle: 0, terminated: 0 };
@@ -318,15 +314,14 @@ async function handleSystemStatus(
   // Include task information
   if (input.includeTasks && context?.orchestrator) {
     try {
-      const orchestrator = context.orchestrator as any;
-      const tasks = await orchestrator.listTasks({ limit: 10000 });
+      const tasks = await context.orchestrator.listTasks({ limit: 10000 });
 
       result.tasks = {
         total: tasks.total,
-        pending: tasks.tasks.filter((t: any) => t.status === 'pending').length,
-        running: tasks.tasks.filter((t: any) => t.status === 'running').length,
-        completed: tasks.tasks.filter((t: any) => t.status === 'completed').length,
-        failed: tasks.tasks.filter((t: any) => t.status === 'failed').length,
+        pending: tasks.tasks.filter((t: TaskRecord) => t.status === 'pending').length,
+        running: tasks.tasks.filter((t: TaskRecord) => t.status === 'running').length,
+        completed: tasks.tasks.filter((t: TaskRecord) => t.status === 'completed').length,
+        failed: tasks.tasks.filter((t: TaskRecord) => t.status === 'failed').length,
       };
     } catch (error) {
       result.tasks = { total: 0, pending: 0, running: 0, completed: 0, failed: 0 };
@@ -406,13 +401,12 @@ async function handleSystemMetrics(
 
     if (context?.swarmCoordinator) {
       try {
-        const coordinator = context.swarmCoordinator as any;
-        const status = await coordinator.getStatus();
+        const status = await context.swarmCoordinator.getStatus();
         const agents = status.agents || [];
 
         result.metrics.agents[0].current = agents.length;
         result.metrics.agents[1].current = agents.length > 0
-          ? (agents.filter((a: any) => a.status === 'active' || a.status === 'busy').length / agents.length) * 100
+          ? (agents.filter((a: AgentRecord) => a.status === 'active' || a.status === 'busy').length / agents.length) * 100
           : 0;
       } catch (error) {
         // Use default values
@@ -564,9 +558,8 @@ async function handleSystemHealth(
     if (context?.orchestrator) {
       const checkStart = performance.now();
       try {
-        const orchestrator = context.orchestrator as any;
         await Promise.race([
-          orchestrator.healthCheck?.() || Promise.resolve(true),
+          context.orchestrator.healthCheck?.() || Promise.resolve(true),
           new Promise((_, reject) =>
             setTimeout(() => reject(new Error('Timeout')), input.timeout)
           ),
@@ -590,9 +583,8 @@ async function handleSystemHealth(
     if (context?.swarmCoordinator) {
       const checkStart = performance.now();
       try {
-        const coordinator = context.swarmCoordinator as any;
         await Promise.race([
-          coordinator.healthCheck?.() || coordinator.getStatus(),
+          context.swarmCoordinator.healthCheck?.() || context.swarmCoordinator.getStatus(),
           new Promise((_, reject) =>
             setTimeout(() => reject(new Error('Timeout')), input.timeout)
           ),
@@ -613,13 +605,12 @@ async function handleSystemHealth(
     }
 
     // Check memory service
-    const resourceManager = context?.resourceManager as any;
-    if (resourceManager?.memoryService) {
+    const deepMemoryService = context?.resourceManager?.memoryService;
+    if (deepMemoryService) {
       const checkStart = performance.now();
       try {
-        const memoryService = resourceManager.memoryService;
         await Promise.race([
-          memoryService.healthCheck?.() || memoryService.getStats(),
+          deepMemoryService.healthCheck?.() || deepMemoryService.getStats?.(),
           new Promise((_, reject) =>
             setTimeout(() => reject(new Error('Timeout')), input.timeout)
           ),

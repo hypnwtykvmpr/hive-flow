@@ -31,7 +31,7 @@ describe('Full Workflow Integration Tests', () => {
       vectorSearch: vi.fn().mockResolvedValue([]),
       initialize: vi.fn().mockResolvedValue(undefined),
       close: vi.fn().mockResolvedValue(undefined)
-    } as any;
+    } as unknown as HybridBackend;
 
     // Initialize plugin manager
     pluginManager = new PluginManager({ eventBus });
@@ -119,7 +119,7 @@ describe('Full Workflow Integration Tests', () => {
 
   it('should persist task execution pipeline to memory', async () => {
     const storedMemories: any[] = [];
-    (memoryBackend.store as any).mockImplementation(async (memory) => {
+    vi.mocked(memoryBackend.store).mockImplementation(async (memory) => {
       storedMemories.push(memory);
       return memory;
     });
@@ -157,16 +157,16 @@ describe('Full Workflow Integration Tests', () => {
   it('should handle memory persistence across multiple operations', async () => {
     const memories = new Map<string, any>();
 
-    (memoryBackend.store as any).mockImplementation(async (memory) => {
+    vi.mocked(memoryBackend.store).mockImplementation(async (memory) => {
       memories.set(memory.id, memory);
       return memory;
     });
 
-    (memoryBackend.retrieve as any).mockImplementation(async (id) => {
+    vi.mocked(memoryBackend.retrieve).mockImplementation(async (id) => {
       return memories.get(id) || null;
     });
 
-    (memoryBackend.query as any).mockImplementation(async (query) => {
+    vi.mocked(memoryBackend.query).mockImplementation(async (query) => {
       return Array.from(memories.values()).filter(m => {
         if (query.agentId && m.agentId !== query.agentId) return false;
         if (query.type && m.type !== query.type) return false;
@@ -551,7 +551,7 @@ describe('Full Workflow Integration Tests', () => {
     });
     await workflowEngine.initialize();
 
-    (memoryBackend.retrieve as any).mockResolvedValue({
+    vi.mocked(memoryBackend.retrieve).mockResolvedValue({
       id: 'workflow-state',
       agentId: 'system',
       content: JSON.stringify(workflowState),

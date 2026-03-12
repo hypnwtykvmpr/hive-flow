@@ -7,7 +7,7 @@
  * - session/list
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vitest';
 import {
   saveSessionTool,
   restoreSessionTool,
@@ -472,7 +472,7 @@ describe('Session Tools', () => {
         memory: [],
       };
 
-      (fs.readFile as any).mockResolvedValue(JSON.stringify(sessionData));
+      (fs.readFile as Mock).mockResolvedValue(JSON.stringify(sessionData));
 
       const result = await restoreSessionTool.handler({
         sessionId: 'file-session-123',

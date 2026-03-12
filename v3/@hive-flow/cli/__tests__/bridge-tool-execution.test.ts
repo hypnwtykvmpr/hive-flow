@@ -171,6 +171,20 @@ function makeBridgeErrorResponse(opts: {
   });
 }
 
+/** Union of possible shapes returned by the agent_task handler. */
+interface BridgeTaskResult {
+  success: boolean;
+  agentId?: string;
+  content?: string;
+  error?: string;
+  rawOutput?: string;
+  model?: string;
+  historyLength?: number;
+  taskCount?: number;
+  usage?: Record<string, unknown>;
+  cost?: number;
+}
+
 // ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('Bridge Tool Execution', () => {
@@ -346,7 +360,7 @@ describe('Bridge Tool Execution', () => {
         },
       );
 
-      const result = await handler({ agentId: agent.agentId, task: 'Quick task' }) as any;
+      const result = await handler({ agentId: agent.agentId, task: 'Quick task' }) as BridgeTaskResult;
 
       // The handler returns the parsed bridge JSON directly
       expect(result.success).toBe(true);
@@ -375,7 +389,7 @@ describe('Bridge Tool Execution', () => {
         },
       );
 
-      const result = await handler({ agentId: agent.agentId, task: 'Read a file that does not exist' }) as any;
+      const result = await handler({ agentId: agent.agentId, task: 'Read a file that does not exist' }) as BridgeTaskResult;
 
       expect(result.success).toBe(false);
       expect(result.error).toContain('Tool execution failed');
@@ -398,7 +412,7 @@ describe('Bridge Tool Execution', () => {
         },
       );
 
-      const result = await handler({ agentId: agent.agentId, task: 'do something' }) as any;
+      const result = await handler({ agentId: agent.agentId, task: 'do something' }) as BridgeTaskResult;
 
       expect(result.success).toBe(false);
       expect(result.error).toContain('not found');
@@ -421,7 +435,7 @@ describe('Bridge Tool Execution', () => {
         },
       );
 
-      const result = await handler({ agentId: agent.agentId, task: 'do something' }) as any;
+      const result = await handler({ agentId: agent.agentId, task: 'do something' }) as BridgeTaskResult;
 
       expect(result.success).toBe(false);
       expect(result.error).toContain('Authentication failed');
@@ -461,7 +475,7 @@ describe('Bridge Tool Execution', () => {
         },
       );
 
-      const result = await handler({ agentId: agent.agentId, task: 'long running tool task' }) as any;
+      const result = await handler({ agentId: agent.agentId, task: 'long running tool task' }) as BridgeTaskResult;
 
       expect(result.success).toBe(false);
       expect(result.error).toContain('timed out');
@@ -557,7 +571,7 @@ describe('Bridge Tool Execution', () => {
         },
       );
 
-      const result = await handler({ agentId: agent.agentId, task: 'slow tool work' }) as any;
+      const result = await handler({ agentId: agent.agentId, task: 'slow tool work' }) as BridgeTaskResult;
 
       expect(result.success).toBe(true);
 
@@ -590,7 +604,7 @@ describe('Bridge Tool Execution', () => {
         },
       );
 
-      const result = await handler({ agentId: agent.agentId, task: 'use unknown tool' }) as any;
+      const result = await handler({ agentId: agent.agentId, task: 'use unknown tool' }) as BridgeTaskResult;
 
       expect(result.success).toBe(false);
       expect(result.error).toContain('Unknown provider');
@@ -616,7 +630,7 @@ describe('Bridge Tool Execution', () => {
         },
       );
 
-      const result = await handler({ agentId: agent.agentId, task: 'trigger malformed tool call' }) as any;
+      const result = await handler({ agentId: agent.agentId, task: 'trigger malformed tool call' }) as BridgeTaskResult;
 
       expect(result.success).toBe(false);
       expect(result.error).toContain('malformed tool call');
@@ -640,7 +654,7 @@ describe('Bridge Tool Execution', () => {
         },
       );
 
-      const result = await handler({ agentId: agent.agentId, task: 'cause a crash' }) as any;
+      const result = await handler({ agentId: agent.agentId, task: 'cause a crash' }) as BridgeTaskResult;
 
       expect(result.success).toBe(false);
       expect(result.error).toBe('Failed to parse bridge output');
@@ -678,7 +692,7 @@ describe('Bridge Tool Execution', () => {
         },
       );
 
-      const result = await handler({ agentId: agent.agentId, task: 'Multi-step analysis' }) as any;
+      const result = await handler({ agentId: agent.agentId, task: 'Multi-step analysis' }) as BridgeTaskResult;
 
       expect(result.success).toBe(true);
       expect(result.historyLength).toBe(9);
@@ -706,7 +720,7 @@ describe('Bridge Tool Execution', () => {
         },
       );
 
-      const result = await handler({ agentId: agent.agentId, task: 'Simple question' }) as any;
+      const result = await handler({ agentId: agent.agentId, task: 'Simple question' }) as BridgeTaskResult;
 
       expect(result.success).toBe(true);
       expect(result.content).toBe('Simple text answer, no tools needed.');
@@ -735,7 +749,7 @@ describe('Bridge Tool Execution', () => {
         },
       );
 
-      const result = await handler({ agentId: agent.agentId, task: 'Complex multi-step task' }) as any;
+      const result = await handler({ agentId: agent.agentId, task: 'Complex multi-step task' }) as BridgeTaskResult;
 
       expect(result.success).toBe(true);
       expect(result.content).toContain('maximum iterations');
@@ -771,7 +785,7 @@ describe('Bridge Tool Execution', () => {
         },
       );
 
-      const result = await handler({ agentId: agent.agentId, task: 'Implement the feature' }) as any;
+      const result = await handler({ agentId: agent.agentId, task: 'Implement the feature' }) as BridgeTaskResult;
 
       expect(result.success).toBe(true);
       expect(result.model).toBe('gpt-5.3-codex');
@@ -802,7 +816,7 @@ describe('Bridge Tool Execution', () => {
         },
       );
 
-      const result = await handler({ agentId: agent.agentId, task: 'Review the PR' }) as any;
+      const result = await handler({ agentId: agent.agentId, task: 'Review the PR' }) as BridgeTaskResult;
 
       expect(result.success).toBe(true);
       expect(result.content).toBe('Cursor completed the review.');

@@ -16,7 +16,7 @@
 
 import { GuidanceProvider } from '../reasoningbank/guidance-provider.js';
 import { reasoningBank } from '../reasoningbank/index.js';
-import { swarmComm } from '../swarm/index.js';
+import { swarmComm, type SwarmMessage } from '../swarm/index.js';
 import { readFileSync } from 'fs';
 
 const provider = new GuidanceProvider(reasoningBank);
@@ -141,8 +141,8 @@ async function main(): Promise<void> {
         const content = args[2] || '';
         await swarmComm.initialize();
         const msg = await swarmComm.sendMessage(to, content, {
-          type: args[3] as any || 'context',
-          priority: args[4] as any || 'normal',
+          type: (args[3] || 'context') as SwarmMessage['type'], // SAFETY: CLI arg defaults to valid union member
+          priority: (args[4] || 'normal') as SwarmMessage['priority'], // SAFETY: CLI arg defaults to valid union member
         });
         console.log(JSON.stringify(msg));
         process.exit(0);
@@ -153,7 +153,7 @@ async function main(): Promise<void> {
         await swarmComm.initialize();
         const messages = swarmComm.getMessages({
           limit: parseInt(args[1] || '10'),
-          type: args[2] as any,
+          type: args[2] as SwarmMessage['type'] | undefined, // SAFETY: CLI arg matches union type
         });
         console.log(JSON.stringify({
           count: messages.length,

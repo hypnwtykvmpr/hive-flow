@@ -544,7 +544,7 @@ describe('@hive-flow/mcp', () => {
 
       const result = await registry.get('greeting', { name: 'World' });
       expect(result.messages[0].content.type).toBe('text');
-      expect((result.messages[0].content as any).text).toBe('Hello, World!');
+      expect((result.messages[0].content as { type: string; text: string }).text).toBe('Hello, World!');
     });
 
     it('should validate required arguments', async () => {

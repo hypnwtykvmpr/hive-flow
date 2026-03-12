@@ -140,6 +140,17 @@ function setupStoreMocks(initialStore: ReturnType<typeof makeStore>) {
   };
 }
 
+/** Union of possible shapes returned by the agent_task handler. */
+interface AgentTaskResult {
+  success: boolean;
+  agentId?: string;
+  response?: string;
+  error?: string;
+  rawOutput?: string;
+  stderr?: string;
+  model?: string;
+}
+
 // ── Tests ───────────────────────────────────────────────────────────────────
 
 describe('agent_task handler', () => {
@@ -371,7 +382,7 @@ describe('agent_task handler', () => {
       agentId: agent.agentId,
       error: 'Failed to parse bridge output',
     });
-    expect((result as any).rawOutput).toBe('this is not json at all');
+    expect((result as AgentTaskResult).rawOutput).toBe('this is not json at all');
 
     // Agent should be reset to idle
     const store = getPersistedStore();
@@ -465,7 +476,7 @@ describe('agent_task handler', () => {
       agentId: agent.agentId,
       error: expect.stringContaining('Failed to spawn bridge'),
     });
-    expect((result as any).error).toContain('ENOENT');
+    expect((result as AgentTaskResult).error).toContain('ENOENT');
 
     const store = getPersistedStore();
     expect(store.agents[agent.agentId].status).toBe('idle');
@@ -495,6 +506,6 @@ describe('agent_task handler', () => {
       error: 'exit code 1',
     });
     // stderr should be undefined, not empty string
-    expect((result as any).stderr).toBeUndefined();
+    expect((result as AgentTaskResult).stderr).toBeUndefined();
   });
 });

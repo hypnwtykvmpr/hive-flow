@@ -14,6 +14,7 @@ import initSqlJs from 'sql.js';
 // Database is a global class from sql.js; use any for cross-platform compatibility
 type SqlJsDatabase = InstanceType<Awaited<ReturnType<typeof initSqlJs>>['Database']>;
 import {
+  AccessLevel,
   IMemoryBackend,
   MemoryEntry,
   MemoryEntryInput,
@@ -86,7 +87,7 @@ export class SqlJsBackend extends EventEmitter implements IMemoryBackend {
   private db: SqlJsDatabase | null = null;
   private initialized: boolean = false;
   private persistTimer: NodeJS.Timeout | null = null;
-  private SQL: any = null;
+  private SQL: Awaited<ReturnType<typeof initSqlJs>> | null = null;
 
   // Performance tracking
   private stats = {
@@ -376,7 +377,7 @@ export class SqlJsBackend extends EventEmitter implements IMemoryBackend {
     const startTime = performance.now();
 
     let sql = 'SELECT * FROM memory_entries WHERE 1=1';
-    const params: any[] = [];
+    const params: (string | number)[] = [];
 
     // Namespace filter
     if (query.namespace) {
@@ -557,7 +558,7 @@ export class SqlJsBackend extends EventEmitter implements IMemoryBackend {
     this.ensureInitialized();
 
     let sql = 'SELECT COUNT(*) as count FROM memory_entries';
-    const params: any[] = [];
+    const params: string[] = [];
 
     if (namespace) {
       sql += ' WHERE namespace = ?';
@@ -618,7 +619,13 @@ export class SqlJsBackend extends EventEmitter implements IMemoryBackend {
     }
 
     // Count by type
-    const entriesByType: Record<MemoryType, number> = {} as any;
+    const entriesByType: Record<MemoryType, number> = {
+      episodic: 0,
+      semantic: 0,
+      procedural: 0,
+      working: 0,
+      cache: 0,
+    };
     const types: MemoryType[] = ['episodic', 'semantic', 'procedural', 'working', 'cache'];
     for (const type of types) {
       const stmt = this.db!.prepare('SELECT COUNT(*) as count FROM memory_entries WHERE type = ?');
@@ -715,7 +722,8 @@ export class SqlJsBackend extends EventEmitter implements IMemoryBackend {
     }
   }
 
-  private rowToEntry(row: any): MemoryEntry {
+  /** sql.js getAsObject returns Record<string, SqlJsValue> where SqlJsValue = number | string | Uint8Array | null */
+  private rowToEntry(row: Record<string, unknown>): MemoryEntry {
     return {
       id: row.id as string,
       key: row.key as string,
@@ -728,7 +736,7 @@ export class SqlJsBackend extends EventEmitter implements IMemoryBackend {
       tags: JSON.parse(row.tags as string),
       metadata: JSON.parse(row.metadata as string),
       ownerId: row.owner_id as string | undefined,
-      accessLevel: row.access_level as any,
+      accessLevel: row.access_level as AccessLevel,
       createdAt: row.created_at as number,
       updatedAt: row.updated_at as number,
       expiresAt: row.expires_at as number | undefined,

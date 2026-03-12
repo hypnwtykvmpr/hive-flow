@@ -58,7 +58,7 @@ export class HiveMindPlugin implements HiveFlowPlugin {
   private config: HiveMindConfig;
   private decisions: Map<string, CollectiveDecision> = new Map();
   private patterns: Map<string, EmergentPattern> = new Map();
-  private collectiveMemory: Map<string, unknown> = new Map();
+  private collectiveMemory: Map<string, Record<string, unknown>> = new Map();
 
   constructor(config?: Partial<HiveMindConfig>) {
     this.config = {
@@ -258,9 +258,9 @@ export class HiveMindPlugin implements HiveFlowPlugin {
    * Retrieve from collective memory
    */
   retrieveCollective(key: string): unknown {
-    const entry = this.collectiveMemory.get(key) as any;
+    const entry = this.collectiveMemory.get(key);
     if (entry) {
-      entry.accessCount++;
+      entry.accessCount = ((entry.accessCount as number) ?? 0) + 1;
       return entry.value;
     }
     return undefined;

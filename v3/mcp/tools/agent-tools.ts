@@ -15,6 +15,12 @@ import { randomBytes } from 'crypto';
 import { MCPTool, ToolContext } from '../types.js';
 import { sanitizeErrorForLogging } from '@hive-flow/shared/utils/secure-logger.js';
 
+/** Convert Date | string to ISO string safely */
+function toISOString(value: Date | string | undefined): string | undefined {
+  if (!value) return undefined;
+  return value instanceof Date ? value.toISOString() : value;
+}
+
 // Secure ID generation helper
 function generateSecureAgentId(): string {
   const timestamp = Date.now().toString(36);
@@ -160,15 +166,13 @@ async function handleSpawnAgent(
   // Try to use swarmCoordinator if available
   if (context?.swarmCoordinator) {
     try {
-      // @ts-ignore - @hive-flow/swarm is an optional dependency
-      const { UnifiedSwarmCoordinator } = await import('@hive-flow/swarm');
-      const coordinator = context.swarmCoordinator as InstanceType<typeof UnifiedSwarmCoordinator>;
+      const coordinator = context.swarmCoordinator;
 
       // Spawn agent using the coordinator
       await coordinator.spawnAgent({
         id: agentId,
-        type: input.agentType as any,
-        capabilities: input.config?.capabilities as any || [],
+        type: input.agentType,
+        capabilities: (input.config?.capabilities as unknown[]) || [],
         priority: input.priority === 'critical' ? 1 : input.priority === 'high' ? 2 : input.priority === 'normal' ? 3 : 4,
       });
 
@@ -206,9 +210,7 @@ async function handleListAgents(
   // Try to use swarmCoordinator if available
   if (context?.swarmCoordinator) {
     try {
-      // @ts-ignore - @hive-flow/swarm is an optional dependency
-      const { UnifiedSwarmCoordinator } = await import('@hive-flow/swarm');
-      const coordinator = context.swarmCoordinator as InstanceType<typeof UnifiedSwarmCoordinator>;
+      const coordinator = context.swarmCoordinator;
 
       // Get swarm status
       const status = await coordinator.getStatus();
@@ -217,10 +219,10 @@ async function handleListAgents(
       let agents: AgentInfo[] = status.agents.map(agent => ({
         id: agent.id,
         agentType: agent.type,
-        status: agent.status === 'active' ? 'active' :
-                agent.status === 'idle' ? 'idle' : 'terminated',
-        createdAt: agent.createdAt.toISOString(),
-        lastActivityAt: agent.lastActivityAt?.toISOString(),
+        status: agent.status === 'active' ? 'active' as const :
+                agent.status === 'idle' ? 'idle' as const : 'terminated' as const,
+        createdAt: toISOString(agent.createdAt) || new Date().toISOString(),
+        lastActivityAt: toISOString(agent.lastActivityAt),
         config: agent.config,
         metadata: agent.metadata,
       }));
@@ -271,9 +273,7 @@ async function handleTerminateAgent(
   // Try to use swarmCoordinator if available
   if (context?.swarmCoordinator) {
     try {
-      // @ts-ignore - @hive-flow/swarm is an optional dependency
-      const { UnifiedSwarmCoordinator } = await import('@hive-flow/swarm');
-      const coordinator = context.swarmCoordinator as InstanceType<typeof UnifiedSwarmCoordinator>;
+      const coordinator = context.swarmCoordinator;
 
       // Terminate agent
       await coordinator.terminateAgent(input.agentId);
@@ -307,39 +307,36 @@ async function handleAgentStatus(
   context?: ToolContext
 ): Promise<AgentStatus> {
   // Try to use swarmCoordinator if available
-  if (context?.swarmCoordinator) {
+  if (context?.swarmCoordinator?.getAgentStatus) {
     try {
-      // @ts-ignore - @hive-flow/swarm is an optional dependency
-      const { UnifiedSwarmCoordinator } = await import('@hive-flow/swarm');
-      const coordinator = context.swarmCoordinator as InstanceType<typeof UnifiedSwarmCoordinator>;
-
       // Get agent status
-      const agentState = await coordinator.getAgentStatus(input.agentId);
+      const agentState = await context.swarmCoordinator.getAgentStatus(input.agentId);
 
       const status: AgentStatus = {
         id: agentState.id,
         agentType: agentState.type,
         status: agentState.status === 'active' ? 'active' :
                 agentState.status === 'idle' ? 'idle' : 'terminated',
-        createdAt: agentState.createdAt.toISOString(),
-        lastActivityAt: agentState.lastActivityAt?.toISOString(),
+        createdAt: toISOString(agentState.createdAt) || new Date().toISOString(),
+        lastActivityAt: toISOString(agentState.lastActivityAt),
         config: agentState.config,
         metadata: agentState.metadata,
       };
 
       if (input.includeMetrics) {
+        const m = agentState.metrics || {};
         status.metrics = {
-          tasksCompleted: agentState.metrics?.tasksCompleted || 0,
-          tasksInProgress: agentState.metrics?.tasksInProgress || 0,
-          tasksFailed: agentState.metrics?.tasksFailed || 0,
-          averageExecutionTime: agentState.metrics?.averageExecutionTime || 0,
-          uptime: agentState.metrics?.uptime || 0,
+          tasksCompleted: (m.tasksCompleted as number) || 0,
+          tasksInProgress: (m.tasksInProgress as number) || 0,
+          tasksFailed: (m.tasksFailed as number) || 0,
+          averageExecutionTime: (m.averageExecutionTime as number) || 0,
+          uptime: (m.uptime as number) || 0,
         };
       }
 
       if (input.includeHistory) {
         status.history = (agentState.history || []).map(h => ({
-          timestamp: h.timestamp.toISOString(),
+          timestamp: toISOString(h.timestamp) || new Date().toISOString(),
           event: h.event,
           details: h.details,
         }));

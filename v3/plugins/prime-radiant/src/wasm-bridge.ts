@@ -41,10 +41,9 @@ const isNode = typeof process !== 'undefined' &&
   process.versions != null &&
   process.versions.node != null;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const globalWindow = typeof globalThis !== 'undefined' ? (globalThis as any).window : undefined;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const globalSelf = typeof globalThis !== 'undefined' ? (globalThis as any).self : undefined;
+const g = globalThis as { window?: { document?: unknown }; self?: { constructor?: { name?: string } } };
+const globalWindow = typeof globalThis !== 'undefined' ? g.window : undefined;
+const globalSelf = typeof globalThis !== 'undefined' ? g.self : undefined;
 
 const isBrowser = typeof globalWindow !== 'undefined' &&
   typeof globalWindow.document !== 'undefined';

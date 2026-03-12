@@ -490,8 +490,9 @@ export class EnhancedPluginRegistry extends EventEmitter {
 
     // Capture state if preserving
     let state: unknown;
-    if (options?.preserveState && (entry.plugin as any).getState) {
-      state = await (entry.plugin as any).getState();
+    const statefulEntry = entry.plugin as { getState?(): Promise<unknown> };
+    if (options?.preserveState && statefulEntry.getState) {
+      state = await statefulEntry.getState();
     }
 
     // Shutdown old plugin (check initTime as fallback since state may be overridden)
@@ -537,8 +538,9 @@ export class EnhancedPluginRegistry extends EventEmitter {
     if (state && options?.migrateState) {
       state = options.migrateState(state, resolved.metadata.version);
     }
-    if (state && (resolved as any).setState) {
-      await (resolved as any).setState(state);
+    const statefulResolved = resolved as { setState?(state: unknown): Promise<void> };
+    if (state && statefulResolved.setState) {
+      await statefulResolved.setState(state);
     }
 
     // Update entry

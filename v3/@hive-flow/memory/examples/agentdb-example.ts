@@ -200,9 +200,10 @@ async function hybridExample() {
   const hybridStats = await hybrid.getStats();
   console.log('Total entries:', hybridStats.totalEntries);
   console.log('Entries by namespace:', hybridStats.entriesByNamespace);
-  console.log('SQLite queries:', (hybrid as any).stats.sqliteQueries);
-  console.log('AgentDB queries:', (hybrid as any).stats.agentdbQueries);
-  console.log('Hybrid queries:', (hybrid as any).stats.hybridQueries);
+  const hybridInternal = hybrid as unknown as { stats: Record<string, number> }; // SAFETY: accessing internal stats for demo logging
+  console.log('SQLite queries:', hybridInternal.stats.sqliteQueries);
+  console.log('AgentDB queries:', hybridInternal.stats.agentdbQueries);
+  console.log('Hybrid queries:', hybridInternal.stats.hybridQueries);
 
   await hybrid.shutdown();
   console.log('\n✓ Hybrid backend shutdown complete');

@@ -13,6 +13,7 @@ import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import Database from 'better-sqlite3';
 import {
+  AccessLevel,
   IMemoryBackend,
   MemoryEntry,
   MemoryEntryInput,
@@ -53,6 +54,54 @@ export interface SQLiteBackendConfig {
 
   /** Enable verbose logging */
   verbose: boolean;
+}
+
+/** Row shape returned by better-sqlite3 for memory_entries */
+interface MemoryEntryRow {
+  id: string;
+  key: string;
+  content: string;
+  type: string;
+  namespace: string;
+  tags: string;
+  metadata: string;
+  owner_id: string | null;
+  access_level: string;
+  created_at: number;
+  updated_at: number;
+  expires_at: number | null;
+  version: number;
+  references: string;
+  access_count: number;
+  last_accessed_at: number;
+}
+
+/** Row shape for memory_embeddings */
+interface EmbeddingRow {
+  entry_id: string;
+  embedding: Buffer | null;
+}
+
+/** Row shape for COUNT(*) queries */
+interface CountRow {
+  count: number;
+}
+
+/** Row shape for namespace listing */
+interface NamespaceRow {
+  namespace: string;
+}
+
+/** Row shape for namespace aggregation */
+interface NamespaceCountRow {
+  namespace: string;
+  count: number;
+}
+
+/** Row shape for type aggregation */
+interface TypeCountRow {
+  type: string;
+  count: number;
 }
 
 /**
@@ -204,7 +253,7 @@ export class SQLiteBackend extends EventEmitter implements IMemoryBackend {
     this.ensureInitialized();
 
     const stmt = this.db!.prepare('SELECT * FROM memory_entries WHERE id = ?');
-    const row = stmt.get(id) as any;
+    const row = stmt.get(id) as MemoryEntryRow | undefined;
 
     if (!row) return null;
 
@@ -221,7 +270,7 @@ export class SQLiteBackend extends EventEmitter implements IMemoryBackend {
       SELECT * FROM memory_entries
       WHERE namespace = ? AND key = ?
     `);
-    const row = stmt.get(namespace, key) as any;
+    const row = stmt.get(namespace, key) as MemoryEntryRow | undefined;
 
     if (!row) return null;
 
@@ -285,7 +334,7 @@ export class SQLiteBackend extends EventEmitter implements IMemoryBackend {
     const startTime = performance.now();
 
     let sql = 'SELECT * FROM memory_entries WHERE 1=1';
-    const params: any[] = [];
+    const params: (string | number)[] = [];
 
     // Build WHERE clauses
     if (query.namespace) {
@@ -372,7 +421,7 @@ export class SQLiteBackend extends EventEmitter implements IMemoryBackend {
     }
 
     const stmt = this.db!.prepare(sql);
-    const rows = stmt.all(...params) as any[];
+    const rows = stmt.all(...params) as MemoryEntryRow[];
 
     const results = rows.map((row) => this.rowToEntry(row));
 
@@ -444,7 +493,7 @@ export class SQLiteBackend extends EventEmitter implements IMemoryBackend {
     this.ensureInitialized();
 
     let sql = 'SELECT COUNT(*) as count FROM memory_entries';
-    const params: any[] = [];
+    const params: string[] = [];
 
     if (namespace) {
       sql += ' WHERE namespace = ?';
@@ -452,7 +501,7 @@ export class SQLiteBackend extends EventEmitter implements IMemoryBackend {
     }
 
     const stmt = this.db!.prepare(sql);
-    const result = stmt.get(...params) as any;
+    const result = stmt.get(...params) as CountRow;
     return result.count;
   }
 
@@ -463,7 +512,7 @@ export class SQLiteBackend extends EventEmitter implements IMemoryBackend {
     this.ensureInitialized();
 
     const stmt = this.db!.prepare('SELECT DISTINCT namespace FROM memory_entries');
-    const rows = stmt.all() as any[];
+    const rows = stmt.all() as NamespaceRow[];
     return rows.map((row) => row.namespace);
   }
 
@@ -497,7 +546,7 @@ export class SQLiteBackend extends EventEmitter implements IMemoryBackend {
       FROM memory_entries
       GROUP BY namespace
     `);
-    const namespaceRows = namespaceStmt.all() as any[];
+    const namespaceRows = namespaceStmt.all() as NamespaceCountRow[];
     const entriesByNamespace: Record<string, number> = {};
     for (const row of namespaceRows) {
       entriesByNamespace[row.namespace] = row.count;
@@ -509,7 +558,7 @@ export class SQLiteBackend extends EventEmitter implements IMemoryBackend {
       FROM memory_entries
       GROUP BY type
     `);
-    const typeRows = typeStmt.all() as any[];
+    const typeRows = typeStmt.all() as TypeCountRow[];
     const entriesByType: Record<MemoryType, number> = {
       episodic: 0,
       semantic: 0,
@@ -663,13 +712,14 @@ export class SQLiteBackend extends EventEmitter implements IMemoryBackend {
     `);
   }
 
-  private rowToEntry(row: any): MemoryEntry {
+  /** Row shape returned by better-sqlite3 for memory_entries table */
+  private rowToEntry(row: MemoryEntryRow): MemoryEntry {
     // Get embedding if exists
     let embedding: Float32Array | undefined;
     const embeddingStmt = this.db!.prepare(
       'SELECT embedding FROM memory_embeddings WHERE entry_id = ?'
     );
-    const embeddingRow = embeddingStmt.get(row.id) as any;
+    const embeddingRow = embeddingStmt.get(row.id) as EmbeddingRow | undefined;
     if (embeddingRow && embeddingRow.embedding) {
       embedding = new Float32Array(embeddingRow.embedding.buffer);
     }
@@ -683,11 +733,11 @@ export class SQLiteBackend extends EventEmitter implements IMemoryBackend {
       namespace: row.namespace,
       tags: JSON.parse(row.tags),
       metadata: JSON.parse(row.metadata),
-      ownerId: row.owner_id,
-      accessLevel: row.access_level,
+      ownerId: row.owner_id ?? undefined,
+      accessLevel: row.access_level as AccessLevel,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
-      expiresAt: row.expires_at,
+      expiresAt: row.expires_at ?? undefined,
       version: row.version,
       references: JSON.parse(row.references),
       accessCount: row.access_count,

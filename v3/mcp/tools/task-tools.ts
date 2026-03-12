@@ -16,7 +16,7 @@
 
 import { z } from 'zod';
 import { randomBytes } from 'crypto';
-import { MCPTool, ToolContext } from '../types.js';
+import { MCPTool, ToolContext, TaskRecord } from '../types.js';
 
 // Secure ID generation helper
 function generateSecureTaskId(): string {
@@ -259,10 +259,8 @@ async function handleCreateTask(
   // Try to use orchestrator if available
   if (context?.orchestrator) {
     try {
-      const orchestrator = context.orchestrator as any;
-
       // Submit task to orchestrator
-      const result = await orchestrator.submitTask({
+      const result = await context.orchestrator.submitTask({
         id: taskId,
         type: input.type,
         description: input.description,
@@ -276,7 +274,7 @@ async function handleCreateTask(
 
       return {
         taskId: result.id || taskId,
-        status: result.status || 'queued',
+        status: (result.status || 'queued') as TaskStatus,
         createdAt,
         queuePosition: result.queuePosition,
       };
@@ -311,9 +309,7 @@ async function handleListTasks(
   // Try to use orchestrator if available
   if (context?.orchestrator) {
     try {
-      const orchestrator = context.orchestrator as any;
-
-      const result = await orchestrator.listTasks({
+      const result = await context.orchestrator.listTasks({
         status: input.status === 'all' ? undefined : input.status,
         agentId: input.agentId,
         type: input.type,
@@ -325,15 +321,15 @@ async function handleListTasks(
       });
 
       return {
-        tasks: result.tasks.map((t: any) => ({
+        tasks: result.tasks.map((t: TaskRecord) => ({
           id: t.id,
           type: t.type,
           description: t.description,
-          status: t.status,
+          status: t.status as TaskStatus,
           priority: t.priority,
           dependencies: t.dependencies || [],
           assignedTo: t.assignedAgent,
-          createdAt: t.createdAt,
+          createdAt: t.createdAt || new Date().toISOString(),
           updatedAt: t.updatedAt,
           startedAt: t.startedAt,
           completedAt: t.completedAt,
@@ -421,11 +417,9 @@ async function handleTaskStatus(
   context?: ToolContext
 ): Promise<TaskWithMetrics> {
   // Try to use orchestrator if available
-  if (context?.orchestrator) {
+  if (context?.orchestrator?.getTaskStatus) {
     try {
-      const orchestrator = context.orchestrator as any;
-
-      const result = await orchestrator.getTaskStatus(input.taskId, {
+      const result = await context.orchestrator.getTaskStatus(input.taskId, {
         includeMetrics: input.includeMetrics,
         includeHistory: input.includeHistory,
       });
@@ -434,11 +428,11 @@ async function handleTaskStatus(
         id: result.id,
         type: result.type,
         description: result.description,
-        status: result.status,
+        status: result.status as TaskStatus,
         priority: result.priority,
         dependencies: result.dependencies || [],
         assignedTo: result.assignedAgent,
-        createdAt: result.createdAt,
+        createdAt: result.createdAt || new Date().toISOString(),
         updatedAt: result.updatedAt,
         startedAt: result.startedAt,
         completedAt: result.completedAt,
@@ -448,11 +442,11 @@ async function handleTaskStatus(
       };
 
       if (input.includeMetrics && result.metrics) {
-        task.metrics = result.metrics;
+        task.metrics = result.metrics as TaskWithMetrics['metrics'];
       }
 
       if (input.includeHistory && result.history) {
-        task.history = result.history;
+        task.history = result.history as TaskWithMetrics['history'];
       }
 
       return task;
@@ -508,11 +502,9 @@ async function handleCancelTask(
   const cancelledAt = new Date().toISOString();
 
   // Try to use orchestrator if available
-  if (context?.orchestrator) {
+  if (context?.orchestrator?.cancelTask) {
     try {
-      const orchestrator = context.orchestrator as any;
-
-      const result = await orchestrator.cancelTask(input.taskId, {
+      const result = await context.orchestrator.cancelTask(input.taskId, {
         reason: input.reason,
         force: input.force,
       });
@@ -521,7 +513,7 @@ async function handleCancelTask(
         taskId: input.taskId,
         cancelled: result.cancelled,
         cancelledAt,
-        previousStatus: result.previousStatus,
+        previousStatus: result.previousStatus as TaskStatus,
         reason: input.reason,
       };
     } catch (error) {
@@ -586,11 +578,9 @@ async function handleAssignTask(
   const assignedAt = new Date().toISOString();
 
   // Try to use orchestrator if available
-  if (context?.orchestrator) {
+  if (context?.orchestrator?.assignTask) {
     try {
-      const orchestrator = context.orchestrator as any;
-
-      const result = await orchestrator.assignTask(input.taskId, input.agentId, {
+      const result = await context.orchestrator.assignTask(input.taskId, input.agentId, {
         reassign: input.reassign,
       });
 
@@ -655,11 +645,9 @@ async function handleUpdateTask(
   const changes: Record<string, { from: unknown; to: unknown }> = {};
 
   // Try to use orchestrator if available
-  if (context?.orchestrator) {
+  if (context?.orchestrator?.updateTask) {
     try {
-      const orchestrator = context.orchestrator as any;
-
-      const result = await orchestrator.updateTask(input.taskId, {
+      const result = await context.orchestrator.updateTask(input.taskId, {
         priority: input.priority,
         description: input.description,
         timeout: input.timeout,
@@ -670,7 +658,7 @@ async function handleUpdateTask(
         taskId: input.taskId,
         updated: result.updated,
         updatedAt,
-        changes: result.changes || {},
+        changes: (result.changes || {}) as Record<string, { from: unknown; to: unknown }>,
       };
     } catch (error) {
       console.error('Failed to update task via orchestrator:', error);
@@ -732,21 +720,19 @@ async function handleTaskDependencies(
   // Try to use orchestrator if available
   if (context?.orchestrator) {
     try {
-      const orchestrator = context.orchestrator as any;
-
-      let result;
+      let result: { dependencies: string[]; [key: string]: unknown } | undefined;
       switch (input.action) {
         case 'add':
-          result = await orchestrator.addTaskDependencies(input.taskId, input.dependencies || []);
+          result = await context.orchestrator.addTaskDependencies?.(input.taskId, input.dependencies || []);
           break;
         case 'remove':
-          result = await orchestrator.removeTaskDependencies(input.taskId, input.dependencies || []);
+          result = await context.orchestrator.removeTaskDependencies?.(input.taskId, input.dependencies || []);
           break;
         case 'list':
-          result = await orchestrator.getTaskDependencies(input.taskId);
+          result = await context.orchestrator.getTaskDependencies?.(input.taskId);
           break;
         case 'clear':
-          result = await orchestrator.clearTaskDependencies(input.taskId);
+          result = await context.orchestrator.clearTaskDependencies?.(input.taskId);
           break;
       }
 
@@ -806,24 +792,22 @@ async function handleTaskResults(
   context?: ToolContext
 ): Promise<TaskResult> {
   // Try to use orchestrator if available
-  if (context?.orchestrator) {
+  if (context?.orchestrator?.getTaskResults) {
     try {
-      const orchestrator = context.orchestrator as any;
-
-      const result = await orchestrator.getTaskResults(input.taskId, {
+      const result = await context.orchestrator.getTaskResults(input.taskId, {
         format: input.format,
         includeArtifacts: input.includeArtifacts,
       });
 
       return {
         taskId: input.taskId,
-        status: result.status,
-        success: result.success,
+        status: result.status as TaskStatus,
+        success: result.success as boolean,
         output: result.output,
-        error: result.error,
-        artifacts: input.includeArtifacts ? result.artifacts : undefined,
-        executionTime: result.executionTime,
-        completedAt: result.completedAt,
+        error: result.error as TaskResult['error'],
+        artifacts: input.includeArtifacts ? result.artifacts as TaskResult['artifacts'] : undefined,
+        executionTime: result.executionTime as number | undefined,
+        completedAt: result.completedAt as string | undefined,
       };
     } catch (error) {
       console.error('Failed to get task results via orchestrator:', error);

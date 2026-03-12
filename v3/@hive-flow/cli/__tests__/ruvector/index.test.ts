@@ -27,6 +27,7 @@ import {
   fallbackMinCut,
   fallbackLouvain,
 } from '../../src/ruvector/index.js';
+import type { DependencyGraph, GraphAnalysisResult, GraphNode, GraphEdge } from '../../src/ruvector/index.js';
 
 // Mock all ruvector modules
 vi.mock('@ruvector/core', () => ({
@@ -272,28 +273,28 @@ export function createUser(name: string) {
 
     it('should detect circular dependencies in graphs', () => {
       // Create a mock graph with circular dependency
-      const graph = {
+      const graph: DependencyGraph = {
         nodes: new Map([
-          ['a.ts', { id: 'a.ts', path: 'a.ts', name: 'a.ts', type: 'file', imports: ['./b'], exports: ['a'], size: 100 }],
-          ['b.ts', { id: 'b.ts', path: 'b.ts', name: 'b.ts', type: 'file', imports: ['./a'], exports: ['b'], size: 100 }],
+          ['a.ts', { id: 'a.ts', path: 'a.ts', name: 'a.ts', type: 'file' as const, imports: ['./b'], exports: ['a'], size: 100 }],
+          ['b.ts', { id: 'b.ts', path: 'b.ts', name: 'b.ts', type: 'file' as const, imports: ['./a'], exports: ['b'], size: 100 }],
         ]),
         edges: [
-          { source: 'a.ts', target: 'b.ts', type: 'import', weight: 1 },
-          { source: 'b.ts', target: 'a.ts', type: 'import', weight: 1 },
+          { source: 'a.ts', target: 'b.ts', type: 'import' as const, weight: 1 },
+          { source: 'b.ts', target: 'a.ts', type: 'import' as const, weight: 1 },
         ],
         metadata: { rootDir: '.', totalFiles: 2, totalEdges: 2, buildTime: 0 },
       };
 
-      const cycles = detectCircularDependencies(graph as any);
+      const cycles = detectCircularDependencies(graph);
       expect(Array.isArray(cycles)).toBe(true);
     });
 
     it('should export graph to DOT format using GraphAnalysisResult', () => {
       // exportToDot takes GraphAnalysisResult, not DependencyGraph
-      const analysisResult = {
+      const analysisResult: GraphAnalysisResult = {
         graph: {
           nodes: new Map([
-            ['a.ts', { id: 'a.ts', path: 'a.ts', name: 'a.ts', type: 'file', imports: [], exports: ['a'], size: 100 }],
+            ['a.ts', { id: 'a.ts', path: 'a.ts', name: 'a.ts', type: 'file' as const, imports: [], exports: ['a'], size: 100 }],
           ]),
           edges: [],
           metadata: { rootDir: '.', totalFiles: 1, totalEdges: 0, buildTime: 0 },
@@ -302,7 +303,7 @@ export function createUser(name: string) {
         statistics: { nodeCount: 1, edgeCount: 0, avgDegree: 0, maxDegree: 0, density: 0, componentCount: 1 },
       };
 
-      const dot = exportToDot(analysisResult as any);
+      const dot = exportToDot(analysisResult);
       expect(dot).toContain('digraph');
     });
   });
@@ -362,19 +363,19 @@ export function processOrder(order: Order) {
       const astAnalysis = astAnalyzer.analyze(code, 'order.ts');
 
       // 2. Use function-based graph API with GraphAnalysisResult
-      const mockAnalysisResult = {
+      const mockAnalysisResult: GraphAnalysisResult = {
         graph: {
           nodes: new Map([
-            ['order.ts', { id: 'order.ts', path: 'order.ts', name: 'order.ts', type: 'file', imports: ['./utils'], exports: astAnalysis.exports, size: 200 }],
-            ['utils.ts', { id: 'utils.ts', path: 'utils.ts', name: 'utils.ts', type: 'file', imports: [], exports: ['calculateTotal'], size: 100 }],
+            ['order.ts', { id: 'order.ts', path: 'order.ts', name: 'order.ts', type: 'file' as const, imports: ['./utils'], exports: astAnalysis.exports, size: 200 }],
+            ['utils.ts', { id: 'utils.ts', path: 'utils.ts', name: 'utils.ts', type: 'file' as const, imports: [], exports: ['calculateTotal'], size: 100 }],
           ]),
-          edges: [{ source: 'order.ts', target: 'utils.ts', type: 'import', weight: 1 }],
+          edges: [{ source: 'order.ts', target: 'utils.ts', type: 'import' as const, weight: 1 }],
           metadata: { rootDir: '.', totalFiles: 2, totalEdges: 1, buildTime: 0 },
         },
         circularDependencies: [],
         statistics: { nodeCount: 2, edgeCount: 1, avgDegree: 0.5, maxDegree: 1, density: 0.5, componentCount: 1 },
       };
-      const dotOutput = exportToDot(mockAnalysisResult as any);
+      const dotOutput = exportToDot(mockAnalysisResult);
 
       // 3. Check coverage
       const coverageRouter = createCoverageRouter();
@@ -416,20 +417,20 @@ describe('Error Handling', () => {
     expect(() => diffClassifier.parseDiff('')).not.toThrow();
 
     // Graph analyzer - detectCircularDependencies with proper structure
-    const emptyGraph = {
+    const emptyGraph: DependencyGraph = {
       nodes: new Map(),
       edges: [],
       metadata: { rootDir: '.', totalFiles: 0, totalEdges: 0, buildTime: 0 },
     };
-    expect(() => detectCircularDependencies(emptyGraph as any)).not.toThrow();
+    expect(() => detectCircularDependencies(emptyGraph)).not.toThrow();
 
     // exportToDot requires GraphAnalysisResult
-    const emptyAnalysisResult = {
+    const emptyAnalysisResult: GraphAnalysisResult = {
       graph: emptyGraph,
       circularDependencies: [],
       statistics: { nodeCount: 0, edgeCount: 0, avgDegree: 0, maxDegree: 0, density: 0, componentCount: 0 },
     };
-    expect(() => exportToDot(emptyAnalysisResult as any)).not.toThrow();
+    expect(() => exportToDot(emptyAnalysisResult)).not.toThrow();
 
     const coverageRouter = createCoverageRouter();
     expect(() => coverageRouter.parseCoverage({}, 'json')).not.toThrow();
@@ -455,8 +456,8 @@ describe('Error Handling', () => {
 describe('Performance', () => {
   it('should handle large graph operations efficiently', () => {
     // Generate large mock graph
-    const nodes = new Map();
-    const graphEdges = [];
+    const nodes = new Map<string, GraphNode>();
+    const graphEdges: GraphEdge[] = [];
     for (let i = 0; i < 100; i++) {
       nodes.set(`module${i}/file.ts`, {
         id: `module${i}/file.ts`,
@@ -472,20 +473,20 @@ describe('Performance', () => {
       }
     }
 
-    const graph = {
+    const graph: DependencyGraph = {
       nodes,
       edges: graphEdges,
       metadata: { rootDir: '.', totalFiles: 100, totalEdges: 99, buildTime: 0 },
     };
-    const analysisResult = {
+    const analysisResult: GraphAnalysisResult = {
       graph,
       circularDependencies: [],
       statistics: { nodeCount: 100, edgeCount: 99, avgDegree: 0.99, maxDegree: 1, density: 0.01, componentCount: 1 },
     };
 
     const startTime = performance.now();
-    const cycles = detectCircularDependencies(graph as any);
-    const dot = exportToDot(analysisResult as any);
+    const cycles = detectCircularDependencies(graph);
+    const dot = exportToDot(analysisResult);
     const duration = performance.now() - startTime;
 
     expect(nodes.size).toBe(100);

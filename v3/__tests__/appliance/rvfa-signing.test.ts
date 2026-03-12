@@ -201,7 +201,7 @@ describe('RvfaSigner.signAppliance', () => {
     const reader = RvfaReader.fromBuffer(buf);
     const header = reader.getHeader();
     assert.equal(header.name, 'test-appliance');
-    assert.ok((header as any).signature, 'Header should contain signature field');
+    assert.ok((header as Record<string, unknown>).signature, 'Header should contain signature field');
   });
 });
 

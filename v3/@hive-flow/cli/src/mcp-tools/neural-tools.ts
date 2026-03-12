@@ -50,23 +50,61 @@ try {
   // @hive-flow/embeddings not available, will use fallback
 }
 
+// ── SONA / PatternLearner interfaces (mirrors @hive-flow/neural public API) ──
+
+/** Stored pattern shape returned by PatternLearner */
+interface SONAPattern {
+  patternId?: string;
+  name: string;
+  domain: string;
+  embedding: Float32Array;
+  strategy: string;
+  successRate: number;
+  usageCount: number;
+  createdAt?: number;
+  qualityHistory: number[];
+  evolutionHistory: unknown[];
+}
+
+/** Match result from PatternLearner.findMatches */
+interface PatternMatch {
+  pattern: SONAPattern;
+  similarity: number;
+}
+
+/** Minimal SONAManager interface used by neural-tools */
+interface SONAManagerLike {
+  initialize(): Promise<void>;
+  beginTrajectory(label: string, domain: string): string;
+  recordStep(trajectoryId: string, action: string, reward: number, stateEmbedding: Float32Array): void;
+  completeTrajectory(trajectoryId: string, quality: number): void;
+  triggerLearning(context: string): Promise<void>;
+  storePattern(pattern: SONAPattern): SONAPattern;
+}
+
+/** Minimal PatternLearner interface used by neural-tools */
+interface PatternLearnerLike {
+  findMatches(query: Float32Array, topK: number): PatternMatch[];
+  getPatterns(): SONAPattern[];
+}
+
 // Lazy-loaded @hive-flow/neural integration
 let sonaModule: {
-  SONAManager: any;
-  PatternLearner: any;
-  createSONAManager: (mode?: string) => any;
-  createPatternLearner: (config?: any) => any;
+  SONAManager: unknown;
+  PatternLearner: unknown;
+  createSONAManager: (mode?: string | undefined) => SONAManagerLike;
+  createPatternLearner: (config?: Record<string, unknown> | undefined) => PatternLearnerLike;
 } | null = null;
 
-let sonaManager: any | null = null;
-let patternLearner: any | null = null;
+let sonaManager: SONAManagerLike | null = null;
+let patternLearner: PatternLearnerLike | null = null;
 let sonaInitialized = false;
 
-async function getSonaManager(): Promise<any | null> {
+async function getSonaManager(): Promise<SONAManagerLike | null> {
   if (sonaInitialized) return sonaManager;
   sonaInitialized = true;
   try {
-    sonaModule = await import('@hive-flow/neural');
+    sonaModule = await import('@hive-flow/neural') as typeof sonaModule;
     sonaManager = sonaModule!.createSONAManager('balanced');
     await sonaManager.initialize();
     patternLearner = sonaModule!.createPatternLearner();
@@ -338,7 +376,7 @@ export const neuralTools: MCPTool[] = [
           const matches = patternLearner.findMatches(queryEmbedding, topK);
 
           if (matches.length > 0) {
-            predictions = matches.map((m: any) => ({
+            predictions = matches.map((m: PatternMatch) => ({
               label: m.pattern.domain || m.pattern.name || 'unknown',
               confidence: m.similarity,
             }));
@@ -394,7 +432,7 @@ export const neuralTools: MCPTool[] = [
             const sonaPatterns = patternLearner.getPatterns();
             const typeFilter = input.type as string;
             const filtered = typeFilter
-              ? sonaPatterns.filter((p: any) => p.domain === typeFilter)
+              ? sonaPatterns.filter((p: SONAPattern) => p.domain === typeFilter)
               : sonaPatterns;
 
             // Merge with file-based patterns
@@ -402,12 +440,12 @@ export const neuralTools: MCPTool[] = [
             const fileFiltered = typeFilter ? filePatterns.filter(p => p.type === typeFilter) : filePatterns;
 
             const combined = [
-              ...filtered.map((p: any) => ({
+              ...filtered.map((p: SONAPattern) => ({
                 id: p.patternId,
                 name: p.name,
                 type: p.domain,
                 usageCount: p.usageCount,
-                createdAt: new Date(p.createdAt).toISOString(),
+                createdAt: new Date(p.createdAt ?? 0).toISOString(),
                 source: 'sona',
               })),
               ...fileFiltered.map(p => ({
@@ -476,7 +514,7 @@ export const neuralTools: MCPTool[] = [
               qualityHistory: [],
               evolutionHistory: [],
             });
-            sonaPatternId = sonaPattern.patternId;
+            sonaPatternId = sonaPattern.patternId ?? null;
           } catch {
             // Fall through to file-based storage
           }
@@ -526,7 +564,7 @@ export const neuralTools: MCPTool[] = [
                 _realEmbedding: !!realEmbeddings,
                 _sonaSearch: true,
                 query,
-                results: matches.map((m: any) => ({
+                results: matches.map((m: PatternMatch) => ({
                   id: m.pattern.patternId,
                   name: m.pattern.name,
                   type: m.pattern.domain,

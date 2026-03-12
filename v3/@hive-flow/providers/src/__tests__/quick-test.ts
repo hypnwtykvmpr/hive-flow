@@ -30,6 +30,7 @@ import {
   createProviderManager,
   LLMRequest,
 } from '../index.js';
+import type { LLMProviderConfig } from '../types.js';
 import { consoleLogger } from '../base-provider.js';
 
 const TEST_PROMPT = 'Say "Hello from Hive Flow V3!" Be brief.';
@@ -242,7 +243,7 @@ async function testRuVector() {
 async function testProviderManager() {
   console.log('\n🔷 Testing Provider Manager (multi-provider)...');
 
-  const providers = [];
+  const providers: LLMProviderConfig[] = [];
 
   if (process.env.ANTHROPIC_API_KEY) {
     providers.push({
@@ -261,7 +262,7 @@ async function testProviderManager() {
       apiUrl: 'https://openrouter.ai/api/v1',
       model: 'openai/gpt-4o-mini',
       maxTokens: 100,
-    } as any);
+    });
   }
 
   if (providers.length === 0) {

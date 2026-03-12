@@ -546,7 +546,8 @@ export class MCPServerManager extends EventEmitter {
     await mcpServer.start();
 
     // Store reference for stopping
-    (this as any)._mcpServer = mcpServer;
+    // SAFETY: dynamic property on class instance to hold MCP server reference for shutdown
+    (this as unknown as Record<string, unknown>)._mcpServer = mcpServer;
   }
 
   /**
@@ -658,7 +659,7 @@ export class MCPServerManager extends EventEmitter {
     url: string,
     method: string,
     timeout: number
-  ): Promise<any> {
+  ): Promise<{ status?: string; connections?: number }> {
     return new Promise((resolve, reject) => {
       const urlObj = new URL(url);
 
@@ -670,7 +671,7 @@ export class MCPServerManager extends EventEmitter {
           method,
           timeout,
         },
-        (res: any) => {
+        (res: import('http').IncomingMessage) => {
           let data = '';
           res.on('data', (chunk: string) => {
             data += chunk;

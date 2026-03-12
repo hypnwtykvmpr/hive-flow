@@ -18,7 +18,7 @@ describe('Swarm Integration Tests', () => {
       query: vi.fn(),
       initialize: vi.fn(),
       close: vi.fn()
-    } as any;
+    } as unknown as HybridBackend;
 
     coordinator = new SwarmCoordinator({
       topology: 'hierarchical',
@@ -225,7 +225,7 @@ describe('Swarm Integration Tests', () => {
     // Verify memory backend was called
     expect(memoryBackend.store).toHaveBeenCalled();
 
-    const storedData = (memoryBackend.store as any).mock.calls;
+    const storedData = vi.mocked(memoryBackend.store).mock.calls;
     expect(storedData.length).toBeGreaterThan(0);
   });
 

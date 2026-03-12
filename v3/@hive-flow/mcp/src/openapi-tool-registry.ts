@@ -191,6 +191,6 @@ export class OpenApiToolRegistry {
 
     // We use the inputSchema (JSON Schema) and build a Zod schema from it
     // Note: buildZodSchema expects OpenApiSchema, but our JSONSchema is compatible enough
-    return buildZodSchema(op.tool.inputSchema as any, resolveRef);
+    return buildZodSchema(op.tool.inputSchema as unknown as OpenApiSchema, resolveRef);
   }
 }

@@ -17,7 +17,7 @@ vi.mock('../mcp-tools/agent-tools.js', () => ({
     const fn = typeof fnOrScope === 'function' ? fnOrScope : maybeFn;
     return (fn as () => unknown)();
   }),
-  agentTools: [] as Array<{ name: string; handler: (...args: any[]) => any }>,
+  agentTools: [] as Array<{ name: string; handler: (input: Record<string, unknown>) => unknown }>,
 }));
 
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
@@ -27,6 +27,40 @@ import { hiveMindTools } from '../mcp-tools/hive-mind-tools.js';
 // ── Helpers ──────────────────────────────────────────────────────────────
 
 type AnyResult = Record<string, unknown>;
+
+/** Shape of a HiveWorker in status output. */
+interface HiveWorkerView {
+  id: string;
+  provider?: string;
+  model?: string;
+  role?: string;
+  status?: string;
+}
+
+/** Shape of a consensus execution result entry. */
+interface ConsensusResultEntry {
+  provider?: string;
+  status?: string;
+  error?: string;
+  vote?: boolean;
+}
+
+/** Shape of a consensus proposal stored in state. */
+interface ConsensusProposal {
+  proposalId: string;
+  type: string;
+  value: Record<string, unknown>;
+  proposedBy: string;
+  proposedAt: string;
+  votes: Record<string, unknown>;
+  status: string;
+}
+
+/** Shape of a tool entry in agentTools. */
+interface AgentToolEntry {
+  name: string;
+  handler: (input: Record<string, unknown>) => unknown;
+}
 
 /** Find a tool by name from the hiveMindTools array. */
 function getTool(name: string) {
@@ -41,7 +75,7 @@ function makeDefaultHiveState() {
     initialized: false,
     topology: 'mesh',
     workers: [] as unknown[],
-    consensus: { pending: [] as any[], history: [] as any[] },
+    consensus: { pending: [] as ConsensusProposal[], history: [] as ConsensusProposal[] },
     sharedMemory: {},
     createdAt: '2025-01-01T00:00:00.000Z',
     updatedAt: '2025-01-01T00:00:00.000Z',
@@ -110,17 +144,17 @@ function setupFsMocks(
 /**
  * Set the agentTools array to include a mock agent_task handler.
  */
-function setMockAgentTask(handler: (input: any) => any) {
+function setMockAgentTask(handler: (input: Record<string, unknown>) => unknown) {
   // Clear and repopulate the mocked array
-  (agentTools as any[]).length = 0;
-  (agentTools as any[]).push({
+  (agentTools as AgentToolEntry[]).length = 0;
+  (agentTools as AgentToolEntry[]).push({
     name: 'agent_task',
     handler,
   });
 }
 
 function clearMockAgentTask() {
-  (agentTools as any[]).length = 0;
+  (agentTools as AgentToolEntry[]).length = 0;
 }
 
 // ── Tests ────────────────────────────────────────────────────────────────
@@ -181,7 +215,7 @@ describe('Provider-Hive Compatibility', () => {
       }) as AnyResult;
 
       expect(result.evaluated).toBe(1);
-      const results = result.results as any[];
+      const results = result.results as ConsensusResultEntry[];
       expect(results[0].provider).toBe('gemini-cli');
     });
   });
@@ -200,7 +234,7 @@ describe('Provider-Hive Compatibility', () => {
       const statusTool = getTool('hive-mind_status');
       const result = await statusTool.handler({}) as AnyResult;
 
-      const workers = result.workers as any[];
+      const workers = result.workers as HiveWorkerView[];
       expect(workers).toHaveLength(2);
       expect(workers[0].id).toBe('agent-1');
       expect(workers[1].id).toBe('agent-2');
@@ -218,7 +252,7 @@ describe('Provider-Hive Compatibility', () => {
       const statusTool = getTool('hive-mind_status');
       const result = await statusTool.handler({}) as AnyResult;
 
-      const workers = result.workers as any[];
+      const workers = result.workers as HiveWorkerView[];
       expect(workers).toHaveLength(2);
       expect(workers[0].id).toBe('w1');
       expect(workers[0].provider).toBe('gemini-cli');
@@ -238,7 +272,7 @@ describe('Provider-Hive Compatibility', () => {
       const statusTool = getTool('hive-mind_status');
       const result = await statusTool.handler({}) as AnyResult;
 
-      const workers = result.workers as any[];
+      const workers = result.workers as HiveWorkerView[];
       expect(workers).toHaveLength(2);
       expect(workers[0].id).toBe('string-agent');
       expect(workers[1].id).toBe('obj-agent');
@@ -254,7 +288,7 @@ describe('Provider-Hive Compatibility', () => {
       const statusTool = getTool('hive-mind_status');
       const result = await statusTool.handler({}) as AnyResult;
 
-      const workers = result.workers as any[];
+      const workers = result.workers as HiveWorkerView[];
       expect(workers).toHaveLength(1);
       expect(workers[0].id).toBe('valid-agent');
     });
@@ -268,9 +302,9 @@ describe('Provider-Hive Compatibility', () => {
       const statusTool = getTool('hive-mind_status');
       const result = await statusTool.handler({}) as AnyResult;
 
-      const workers = result.workers as any[];
+      const workers = result.workers as HiveWorkerView[];
       expect(workers).toHaveLength(2);
-      const ids = workers.map((w: any) => w.id);
+      const ids = workers.map((w) => w.id);
       expect(ids).toContain('agent-dup');
       expect(ids).toContain('agent-unique');
     });
@@ -284,7 +318,7 @@ describe('Provider-Hive Compatibility', () => {
       const statusTool = getTool('hive-mind_status');
       const result = await statusTool.handler({}) as AnyResult;
 
-      const workers = result.workers as any[];
+      const workers = result.workers as HiveWorkerView[];
       expect(workers).toHaveLength(1);
       expect(workers[0].id).toBe('valid-agent');
     });
@@ -301,7 +335,7 @@ describe('Provider-Hive Compatibility', () => {
       const statusTool = getTool('hive-mind_status');
       const result = await statusTool.handler({}) as AnyResult;
 
-      const workers = result.workers as any[];
+      const workers = result.workers as HiveWorkerView[];
       expect(workers).toHaveLength(1);
       expect(workers[0].id).toBe('real-agent');
     });
@@ -317,7 +351,7 @@ describe('Provider-Hive Compatibility', () => {
       const statusTool = getTool('hive-mind_status');
       const result = await statusTool.handler({}) as AnyResult;
 
-      const workers = result.workers as any[];
+      const workers = result.workers as HiveWorkerView[];
       expect(workers[0].provider).toBe('cursor-cli');
       expect(workers[0].model).toBe('auto');
     });
@@ -332,14 +366,14 @@ describe('Provider-Hive Compatibility', () => {
 
       // First load triggers migration
       const result1 = await statusTool.handler({}) as AnyResult;
-      const workers1 = result1.workers as any[];
+      const workers1 = result1.workers as HiveWorkerView[];
 
       // Second load reads already-migrated data (via the saved state)
       const result2 = await statusTool.handler({}) as AnyResult;
-      const workers2 = result2.workers as any[];
+      const workers2 = result2.workers as HiveWorkerView[];
 
       expect(workers1).toHaveLength(workers2.length);
-      expect(workers1.map((w: any) => w.id)).toEqual(workers2.map((w: any) => w.id));
+      expect(workers1.map((w) => w.id)).toEqual(workers2.map((w) => w.id));
     });
 
     it('handles empty array', async () => {
@@ -349,7 +383,7 @@ describe('Provider-Hive Compatibility', () => {
       const statusTool = getTool('hive-mind_status');
       const result = await statusTool.handler({}) as AnyResult;
 
-      expect((result.workers as any[]).length).toBe(0);
+      expect((result.workers as HiveWorkerView[]).length).toBe(0);
     });
   });
 
@@ -368,7 +402,7 @@ describe('Provider-Hive Compatibility', () => {
       }) as AnyResult;
 
       expect(result.success).toBe(true);
-      const workers = result.workers as any[];
+      const workers = result.workers as HiveWorkerView[];
       expect(workers).toHaveLength(1);
       expect(workers[0].provider).toBe('gemini-cli');
       expect(workers[0].model).toBe('gemini-2.5-pro');
@@ -384,7 +418,7 @@ describe('Provider-Hive Compatibility', () => {
       }) as AnyResult;
 
       expect(result.success).toBe(true);
-      const workers = result.workers as any[];
+      const workers = result.workers as HiveWorkerView[];
       expect(workers[0].provider).toBe('codex-cli');
       expect(workers[0].model).toBe('o4-mini');
     });
@@ -399,7 +433,7 @@ describe('Provider-Hive Compatibility', () => {
       }) as AnyResult;
 
       expect(result.success).toBe(true);
-      const workers = result.workers as any[];
+      const workers = result.workers as HiveWorkerView[];
       expect(workers[0].provider).toBe('cursor-cli');
       expect(workers[0].model).toBe('auto');
     });
@@ -413,7 +447,7 @@ describe('Provider-Hive Compatibility', () => {
       }) as AnyResult;
 
       expect(result.success).toBe(true);
-      const workers = result.workers as any[];
+      const workers = result.workers as HiveWorkerView[];
       expect(workers[0].provider).toBeUndefined();
       expect(workers[0].model).toBeUndefined();
     });
@@ -511,8 +545,8 @@ describe('Provider-Hive Compatibility', () => {
       expect(result.success).toBe(true);
       expect(result.spawned).toBe(2);
       expect(result.totalWorkers).toBe(2);
-      const workers = result.workers as any[];
-      expect(workers.every((w: any) => w.provider === 'cursor-cli')).toBe(true);
+      const workers = result.workers as HiveWorkerView[];
+      expect(workers.every((w) => w.provider === 'cursor-cli')).toBe(true);
     });
 
     it('pure Gemini hive (2 workers)', async () => {
@@ -526,9 +560,9 @@ describe('Provider-Hive Compatibility', () => {
 
       expect(result.success).toBe(true);
       expect(result.spawned).toBe(2);
-      const workers = result.workers as any[];
-      expect(workers.every((w: any) => w.provider === 'gemini-cli')).toBe(true);
-      expect(workers.every((w: any) => w.model === 'gemini-2.5-pro')).toBe(true);
+      const workers = result.workers as HiveWorkerView[];
+      expect(workers.every((w) => w.provider === 'gemini-cli')).toBe(true);
+      expect(workers.every((w) => w.model === 'gemini-2.5-pro')).toBe(true);
     });
 
     it('pure Codex hive (2 workers)', async () => {
@@ -542,8 +576,8 @@ describe('Provider-Hive Compatibility', () => {
 
       expect(result.success).toBe(true);
       expect(result.spawned).toBe(2);
-      const workers = result.workers as any[];
-      expect(workers.every((w: any) => w.provider === 'codex-cli')).toBe(true);
+      const workers = result.workers as HiveWorkerView[];
+      expect(workers.every((w) => w.provider === 'codex-cli')).toBe(true);
     });
   });
 
@@ -678,7 +712,7 @@ describe('Provider-Hive Compatibility', () => {
         action: 'execute', proposalId: 'exec-prop-1', task: 'Review code',
       }) as AnyResult;
 
-      const results = result.results as any[];
+      const results = result.results as ConsensusResultEntry[];
       expect(results[0].status).toBe('failed');
       expect(results[0].error).toContain('Provider timeout');
     });
@@ -747,7 +781,7 @@ describe('Provider-Hive Compatibility', () => {
 
     it('returns error when agent_task tool is missing and provider workers exist', async () => {
       // Clear agent tools array to simulate missing agent_task
-      (agentTools as any[]).length = 0;
+      (agentTools as AgentToolEntry[]).length = 0;
 
       const workers = [
         { agentId: 'no-tool-w1', provider: 'gemini-cli', role: 'worker', joinedAt: '2025-01-01T00:00:00.000Z', status: 'idle' },
@@ -793,7 +827,7 @@ describe('Provider-Hive Compatibility', () => {
         action: 'execute', proposalId: 'vote-test', task: 'Vote',
       }) as AnyResult;
 
-      const results = result.results as any[];
+      const results = result.results as ConsensusResultEntry[];
       return results[0].vote as boolean;
     }
 
@@ -850,7 +884,7 @@ describe('Provider-Hive Compatibility', () => {
         action: 'execute', proposalId: 'json-test', task: 'Vote',
       }) as AnyResult;
 
-      const results = result.results as any[];
+      const results = result.results as ConsensusResultEntry[];
       return results[0].vote as boolean;
     }
 
@@ -901,7 +935,7 @@ describe('Provider-Hive Compatibility', () => {
         action: 'execute', proposalId: 'kw-test', task: 'Vote',
       }) as AnyResult;
 
-      const results = result.results as any[];
+      const results = result.results as ConsensusResultEntry[];
       return results[0].vote as boolean;
     }
 
@@ -960,7 +994,7 @@ describe('Provider-Hive Compatibility', () => {
         action: 'execute', proposalId: 'fail-test', task: 'Vote',
       }) as AnyResult;
 
-      const results = result.results as any[];
+      const results = result.results as ConsensusResultEntry[];
       expect(results[0].vote).toBe(false);
     });
   });
@@ -983,7 +1017,7 @@ describe('Provider-Hive Compatibility', () => {
       const statusTool = getTool('hive-mind_status');
       const result = await statusTool.handler({ verbose: true }) as AnyResult;
 
-      const workers = result.workers as any[];
+      const workers = result.workers as HiveWorkerView[];
       expect(workers).toHaveLength(3);
       expect(workers[0].provider).toBe('gemini-cli');
       expect(workers[0].model).toBe('gemini-2.5-pro');

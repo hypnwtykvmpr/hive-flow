@@ -128,26 +128,22 @@ async function handleStoreMemory(
   const storedAt = new Date().toISOString();
 
   // Try to use memory service if available
-  const resourceManager = context?.resourceManager as any;
-  if (resourceManager?.memoryService) {
+  const memoryService = context?.resourceManager?.memoryService;
+  if (memoryService) {
     try {
-      // @ts-ignore - @hive-flow/memory is an optional dependency
-      const { UnifiedMemoryService } = await import('@hive-flow/memory');
-      const memoryService = resourceManager.memoryService as InstanceType<typeof UnifiedMemoryService>;
-
       // Store the memory entry
       const entry = await memoryService.storeEntry({
         namespace: input.category || 'default',
         key: id,
         content: input.content,
-        type: input.type as any,
+        type: input.type,
         tags: input.tags || [],
         metadata: {
           ...input.metadata,
           importance: input.importance,
           expiresAt: input.ttl ? Date.now() + input.ttl : undefined,
         },
-        accessLevel: 'private' as any,
+        accessLevel: 'private',
       });
 
       return {
@@ -179,25 +175,25 @@ async function handleSearchMemory(
   const startTime = performance.now();
 
   // Try to use memory service if available
-  const resourceManager = context?.resourceManager as any;
-  if (resourceManager?.memoryService) {
+  const searchMemoryService = context?.resourceManager?.memoryService;
+  if (searchMemoryService) {
     try {
-      // @ts-ignore - @hive-flow/memory is an optional dependency
-      const { UnifiedMemoryService } = await import('@hive-flow/memory');
-      const memoryService = resourceManager.memoryService as InstanceType<typeof UnifiedMemoryService>;
+      let searchResults: Array<{
+        entry: { id: string; content: string; type: string; namespace?: string; tags?: string[]; metadata: Record<string, unknown>; createdAt: Date; lastAccessedAt?: Date; accessCount?: number };
+        score?: number;
+        distance?: number;
+      }>;
 
-      let searchResults: any[];
-
-      if (input.searchType === 'semantic' || input.searchType === 'hybrid') {
+      if ((input.searchType === 'semantic' || input.searchType === 'hybrid') && searchMemoryService.semanticSearch) {
         // Perform semantic search
-        searchResults = await memoryService.semanticSearch(
+        searchResults = await searchMemoryService.semanticSearch(
           input.query,
           input.limit,
           input.minRelevance
         );
       } else {
         // Perform keyword search via query
-        const entries = await memoryService.query({
+        const entries = await searchMemoryService.query({
           type: input.searchType === 'keyword' ? 'keyword' : 'hybrid',
           keyword: input.query,
           limit: input.limit,
@@ -215,14 +211,14 @@ async function handleSearchMemory(
       let results: SearchResult[] = searchResults.map(r => ({
         id: r.entry.id,
         content: r.entry.content,
-        type: r.entry.type,
+        type: r.entry.type as Memory['type'],
         category: r.entry.namespace,
         tags: r.entry.tags,
         importance: r.entry.metadata.importance as number,
         createdAt: r.entry.createdAt.toISOString(),
         accessedAt: r.entry.lastAccessedAt?.toISOString(),
         accessCount: r.entry.accessCount,
-        relevance: r.score || (1 - r.distance),
+        relevance: r.score || (1 - (r.distance ?? 0)),
         metadata: input.includeMetadata ? r.entry.metadata : undefined,
       }));
 
@@ -273,16 +269,12 @@ async function handleListMemory(
   context?: ToolContext
 ): Promise<ListMemoryResult> {
   // Try to use memory service if available
-  const resourceManager = context?.resourceManager as any;
-  if (resourceManager?.memoryService) {
+  const listMemoryService = context?.resourceManager?.memoryService;
+  if (listMemoryService) {
     try {
-      // @ts-ignore - @hive-flow/memory is an optional dependency
-      const { UnifiedMemoryService } = await import('@hive-flow/memory');
-      const memoryService = resourceManager.memoryService as InstanceType<typeof UnifiedMemoryService>;
-
       // Query all entries
-      const entries = await memoryService.query({
-        type: input.type === 'all' ? 'hybrid' : ('keyword' as any),
+      const entries = await listMemoryService.query({
+        type: input.type === 'all' ? 'hybrid' : 'keyword',
         limit: 10000, // Get all for filtering
         namespace: input.category,
       });
@@ -291,7 +283,7 @@ async function handleListMemory(
       let memories: Memory[] = entries.map(e => ({
         id: e.id,
         content: e.content,
-        type: e.type,
+        type: e.type as Memory['type'],
         category: e.namespace,
         tags: e.tags,
         importance: e.metadata.importance as number,

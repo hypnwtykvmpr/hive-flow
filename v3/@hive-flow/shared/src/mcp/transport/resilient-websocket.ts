@@ -322,8 +322,7 @@ export class ResilientWebSocketClient extends EventEmitter implements ITransport
       metrics: {
         ...this.metrics,
         queueSize: this.pendingMessages.length,
-        state: this.state,
-      } as any,
+      },
     };
   }
 

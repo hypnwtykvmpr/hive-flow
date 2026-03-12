@@ -3,6 +3,7 @@
  *
  * Shared test data and mock implementations for integration tests
  */
+import type { TaskPriority } from '../../src/shared/types';
 
 /**
  * Agent Fixtures
@@ -607,7 +608,7 @@ export const Generators = {
     id: `task-${Math.random().toString(36).slice(2)}`,
     type: ['code', 'test', 'review'][Math.floor(Math.random() * 3)],
     description: 'Generated test task',
-    priority: ['high', 'medium', 'low'][Math.floor(Math.random() * 3)] as any,
+    priority: ['high', 'medium', 'low'][Math.floor(Math.random() * 3)] as TaskPriority,
     status: 'pending',
     metadata: {},
     ...overrides

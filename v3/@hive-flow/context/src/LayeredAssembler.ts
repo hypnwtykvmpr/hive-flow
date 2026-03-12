@@ -138,7 +138,7 @@ export class LayeredAssembler {
     // Normalize roles for the provider
     const normalizedMessages = finalMessages.map(msg => ({
       ...msg,
-      role: RoleNormalizer.normalize(msg.role, provider) as any,
+      role: RoleNormalizer.normalize(msg.role, provider) as LLMMessage['role'],
     }));
 
     return {
@@ -221,7 +221,9 @@ export class LayeredAssembler {
     if (!p) return 4096; // Default safe limit
 
     // Try to get model specific context window
-    const modelInfo = (p.capabilities as any).maxContextLength?.[model] || (p.capabilities as any).contextWindow || 4096;
+    const caps = p.capabilities as unknown as Record<string, unknown>;
+    const ctxLengths = caps.maxContextLength as Record<string, number> | undefined;
+    const modelInfo = ctxLengths?.[model] || (caps.contextWindow as number) || 4096;
     return modelInfo;
   }
 }

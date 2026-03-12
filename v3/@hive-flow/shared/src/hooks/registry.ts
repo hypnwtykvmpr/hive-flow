@@ -275,7 +275,11 @@ export class HookRegistry {
    * @returns Hook statistics
    */
   getStats(): HookStats {
-    const byEvent: Record<HookEvent, number> = {} as any;
+    // SAFETY: all HookEvent enum values are populated below, satisfying Record<HookEvent, number>
+    const byEvent = Object.values(HookEvent).reduce(
+      (acc, event) => { acc[event] = 0; return acc; },
+      {} as Record<HookEvent, number>,
+    );
 
     for (const [event, hooks] of this.hooks) {
       byEvent[event] = hooks.filter(h => h.enabled).length;

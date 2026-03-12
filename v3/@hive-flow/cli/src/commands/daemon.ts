@@ -423,8 +423,10 @@ const statusCommand: Command = {
       const workerData = status.config.workers.map(w => {
         const state = status.workers.get(w.type);
         // Check for headless mode from worker config or state
-        const isHeadless = (w as any).headless || (state as any)?.headless || false;
-        const sandboxMode = (w as any).sandbox || (state as any)?.sandbox || null;
+        const wExt = w as Record<string, unknown>;
+        const stateExt = state as Record<string, unknown> | undefined;
+        const isHeadless = wExt.headless || stateExt?.headless || false;
+        const sandboxMode = wExt.sandbox || stateExt?.sandbox || null;
         return {
           type: w.enabled ? output.highlight(w.type) : output.dim(w.type),
           enabled: w.enabled ? output.success('✓') : output.dim('○'),
