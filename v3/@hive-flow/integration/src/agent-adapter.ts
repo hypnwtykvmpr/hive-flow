@@ -29,6 +29,7 @@ import {
   AgentStatus,
   AgentType,
 } from './agentic-flow-agent.js';
+import { loadAgenticFlow } from './agentic-flow-loader.js';
 
 /**
  * Interface for agentic-flow Agent (external package)
@@ -443,7 +444,7 @@ export class AgentAdapter extends EventEmitter {
     try {
       // Dynamic import to handle optional dependency
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const agenticFlowModule: any = await import('agentic-flow').catch(() => null);
+      const agenticFlowModule: any = await loadAgenticFlow();
 
       if (agenticFlowModule && typeof agenticFlowModule.createAgenticFlow === 'function') {
         this.agenticFlowCore = await agenticFlowModule.createAgenticFlow({});

@@ -8,7 +8,8 @@
  */
 
 import { EventEmitter } from 'node:events';
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
 import initSqlJs from 'sql.js';
 // Database is a global class from sql.js; use any for cross-platform compatibility
 type SqlJsDatabase = InstanceType<Awaited<ReturnType<typeof initSqlJs>>['Database']>;
@@ -62,7 +63,7 @@ export interface SqlJsBackendConfig {
  * Default configuration values
  */
 const DEFAULT_CONFIG: SqlJsBackendConfig = {
-  databasePath: ':memory:',
+  databasePath: '.hive-flow/data/memory.db',
   optimize: true,
   defaultNamespace: 'default',
   maxEntries: 1000000,
@@ -112,6 +113,11 @@ export class SqlJsBackend extends EventEmitter implements IMemoryBackend {
         ? () => this.config.wasmPath!
         : (file) => `https://sql.js.org/dist/${file}`,
     });
+
+    // Ensure parent directory exists for file-based databases
+    if (this.config.databasePath !== ':memory:') {
+      mkdirSync(dirname(this.config.databasePath), { recursive: true });
+    }
 
     // Load existing database if exists and not in-memory
     if (this.config.databasePath !== ':memory:' && existsSync(this.config.databasePath)) {

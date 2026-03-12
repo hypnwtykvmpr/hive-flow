@@ -20,6 +20,8 @@ import type {
   HyperbolicOperation,
 } from './types.js';
 
+import { clamp } from '@hive-flow/shared';
+
 // ============================================================================
 // Constants and Configuration
 // ============================================================================
@@ -88,13 +90,6 @@ function add(a: number[], b: number[]): number[] {
  */
 function sub(a: number[], b: number[]): number[] {
   return a.map((x, i) => x - b[i]);
-}
-
-/**
- * Clamps a value to a range.
- */
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
 }
 
 /**

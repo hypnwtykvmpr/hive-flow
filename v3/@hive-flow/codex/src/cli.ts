@@ -15,11 +15,8 @@ import { listTemplates, BUILT_IN_SKILLS } from './templates/index.js';
 import { generateSkillMd } from './generators/skill-md.js';
 import { VERSION, PACKAGE_INFO } from './index.js';
 import fs from 'node:fs/promises';
-
-async function pathExists(p: string): Promise<boolean> {
-  try { await fs.access(p); return true; } catch { return false; }
-}
 import path from 'path';
+import { pathExists } from './utils.js';
 
 const program = new Command();
 

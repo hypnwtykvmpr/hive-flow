@@ -39,6 +39,14 @@
  * @version 3.0.0-alpha.1
  */
 
+// ===== Agentic-Flow Loader (shared dynamic import) =====
+export {
+  loadAgenticFlow,
+  loadAgenticFlowSubpath,
+  isAgenticFlowAvailable,
+  resetAgenticFlowLoader,
+} from './agentic-flow-loader.js';
+
 // ===== Core Bridge =====
 export {
   AgenticFlowBridge,

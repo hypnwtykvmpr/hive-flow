@@ -26,6 +26,7 @@ export { verificationGateTools } from './verification-gate.js';
 export { planningSubflowTools } from './planning-subflow.js';
 export { isAmbiguityGenuine, resolveAuthorizedAmbiguity, type AmbiguityAssessment, type IntentAuditResult, type IntentAuditScore } from './ambiguity-filter.js';
 export { bugHunterTools } from './bug-hunter.js';
+export { neuralTools } from './neural-tools.js';
 export { workflowEnforcerTools, mapLevelToFlow, validateOptOut } from './workflow-enforcer.js';
 export type {
   ComplexityLevel,

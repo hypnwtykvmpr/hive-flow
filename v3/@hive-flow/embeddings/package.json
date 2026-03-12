@@ -47,10 +47,14 @@
   },
   "peerDependencies": {
     "@hive-flow/shared": "workspace:*",
+    "@hive-flow/integration": "workspace:*",
     "agentic-flow": "^2.0.0"
   },
   "peerDependenciesMeta": {
     "agentic-flow": {
+      "optional": true
+    },
+    "@hive-flow/integration": {
       "optional": true
     }
   },

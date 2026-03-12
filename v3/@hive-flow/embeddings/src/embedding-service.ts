@@ -34,6 +34,7 @@ import type {
 import { normalize } from './normalization.js';
 import { PersistentEmbeddingCache } from './persistent-cache.js';
 import { RvfEmbeddingService } from './rvf-embedding-service.js';
+import { loadAgenticFlowSubpath } from '@hive-flow/integration';
 
 // ============================================================================
 // LRU Cache Implementation
@@ -825,12 +826,7 @@ export class AgenticFlowEmbeddingService extends BaseEmbeddingService {
  * Check if agentic-flow is available
  */
 async function isAgenticFlowAvailable(): Promise<boolean> {
-  try {
-    await import('agentic-flow/embeddings');
-    return true;
-  } catch {
-    return false;
-  }
+  return (await loadAgenticFlowSubpath('embeddings')) != null;
 }
 
 /**

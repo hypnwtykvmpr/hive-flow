@@ -16,6 +16,7 @@
  */
 
 import { EventEmitter } from 'events';
+import { loadAgenticFlow } from './agentic-flow-loader.js';
 import type {
   SDKBridgeConfig,
   SDKVersion,
@@ -336,8 +337,8 @@ export class SDKBridge extends EventEmitter {
   private async detectVersion(): Promise<SDKVersion> {
     // Detect agentic-flow version dynamically
     try {
-      const af = await import('agentic-flow');
-      const version = (af as Record<string, unknown>)['VERSION'] as string | undefined;
+      const af = await loadAgenticFlow();
+      const version = (af as Record<string, unknown>)?.['VERSION'] as string | undefined;
       if (version) {
         return this.parseVersion(version);
       }

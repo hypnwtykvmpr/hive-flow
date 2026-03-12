@@ -27,20 +27,21 @@
 
 import { z } from 'zod';
 import { MCPTool, ToolContext } from '../types.js';
+import { loadAgenticFlowSubpath } from '@hive-flow/integration';
 
 // Lazy-loaded agentic-flow imports for HNSW search optimization
 // @ts-ignore - agentic-flow is an optional dependency
 let agenticFlowCore: typeof import('agentic-flow/core') | null = null;
 let agentDBInstance: unknown | null = null;
 
-async function loadAgenticFlow(): Promise<boolean> {
+async function loadAgenticFlowCore(): Promise<boolean> {
   try {
     // @ts-ignore - agentic-flow is an optional dependency
-    agenticFlowCore = await import('agentic-flow/core');
+    agenticFlowCore = await loadAgenticFlowSubpath('core');
     if (agenticFlowCore?.createFastAgentDB) {
       agentDBInstance = agenticFlowCore.createFastAgentDB({ dimensions: 768 });
     }
-    return true;
+    return agenticFlowCore != null;
   } catch {
     // agentic-flow not available - use fallback implementations
     return false;
@@ -502,7 +503,7 @@ async function handlePatternFind(
   const startTime = performance.now();
 
   // Try agentic-flow HNSW search for 150x-12,500x speedup
-  const loaded = await loadAgenticFlow();
+  const loaded = await loadAgenticFlowCore();
   let patterns: Array<Pattern & { similarity: number }>;
 
   if (loaded && agentDBInstance && agenticFlowCore) {
@@ -577,6 +578,23 @@ function computeLocalSimilarity(query: string, content: string): number {
   return union > 0 ? (intersection / union) * 0.9 + 0.1 : 0.1;
 }
 
+// Lazy-loaded SONAManager for LoRA adaptations
+let sonaManagerForLora: any | null = null;
+let sonaLoraInitialized = false;
+
+async function getSONAManagerForLora(): Promise<any | null> {
+  if (sonaLoraInitialized) return sonaManagerForLora;
+  sonaLoraInitialized = true;
+  try {
+    const neural = await import('@hive-flow/neural');
+    sonaManagerForLora = neural.createSONAManager('balanced');
+    await sonaManagerForLora.initialize();
+    return sonaManagerForLora;
+  } catch {
+    return null;
+  }
+}
+
 async function handleMicroLoraApply(
   input: z.infer<typeof loraApplySchema>,
   context?: ToolContext
@@ -585,12 +603,38 @@ async function handleMicroLoraApply(
   reason: string;
   adapterId: string;
   input: string;
+  latencyMs?: number;
 }> {
   const adapterId = input.adapterId || 'micro-lora-default';
+  const mgr = await getSONAManagerForLora();
+
+  if (mgr) {
+    try {
+      const startTime = performance.now();
+      // Convert input text to embedding, then apply adaptations
+      const inputBytes = new TextEncoder().encode(input.input);
+      const inputEmbedding = new Float32Array(768);
+      for (let i = 0; i < Math.min(inputBytes.length, 768); i++) {
+        inputEmbedding[i] = (inputBytes[i] / 255) * 2 - 1;
+      }
+      await mgr.applyAdaptations(inputEmbedding, 'micro');
+      const latencyMs = performance.now() - startTime;
+
+      return {
+        applied: true,
+        reason: 'Micro-LoRA adaptation applied via SONAManager',
+        adapterId,
+        input: input.input,
+        latencyMs,
+      };
+    } catch {
+      // Fall through to stub
+    }
+  }
 
   return {
     applied: false,
-    reason: 'LoRA adaptation not yet implemented',
+    reason: '@hive-flow/neural not available for LoRA adaptation',
     adapterId,
     input: input.input,
   };
@@ -604,12 +648,37 @@ async function handleBaseLoraApply(
   reason: string;
   adapterId: string;
   input: string;
+  latencyMs?: number;
 }> {
   const adapterId = input.adapterId || 'base-lora-default';
+  const mgr = await getSONAManagerForLora();
+
+  if (mgr) {
+    try {
+      const startTime = performance.now();
+      const inputBytes = new TextEncoder().encode(input.input);
+      const inputEmbedding = new Float32Array(768);
+      for (let i = 0; i < Math.min(inputBytes.length, 768); i++) {
+        inputEmbedding[i] = (inputBytes[i] / 255) * 2 - 1;
+      }
+      await mgr.applyAdaptations(inputEmbedding, 'base');
+      const latencyMs = performance.now() - startTime;
+
+      return {
+        applied: true,
+        reason: 'Base-layer LoRA adaptation applied via SONAManager',
+        adapterId,
+        input: input.input,
+        latencyMs,
+      };
+    } catch {
+      // Fall through to stub
+    }
+  }
 
   return {
     applied: false,
-    reason: 'LoRA adaptation not yet implemented',
+    reason: '@hive-flow/neural not available for LoRA adaptation',
     adapterId,
     input: input.input,
   };

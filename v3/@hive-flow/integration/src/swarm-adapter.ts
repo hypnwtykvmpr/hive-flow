@@ -20,6 +20,7 @@
  */
 
 import { EventEmitter } from 'events';
+import { loadAgenticFlow } from './agentic-flow-loader.js';
 
 // ============================================================================
 // agentic-flow Pattern Types (Target Interface)
@@ -848,7 +849,7 @@ export class SwarmAdapter extends EventEmitter {
   private async connectToAgenticFlow(): Promise<void> {
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const agenticFlowModule: any = await import('agentic-flow').catch(() => null);
+      const agenticFlowModule: any = await loadAgenticFlow();
 
       if (
         agenticFlowModule &&

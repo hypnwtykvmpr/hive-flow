@@ -12,6 +12,7 @@
  */
 
 import { EventEmitter } from 'events';
+import { loadAgenticFlow } from './agentic-flow-loader.js';
 import type {
   IntegrationConfig,
   IntegrationStatus,
@@ -222,7 +223,7 @@ export class AgenticFlowBridge extends EventEmitter {
     try {
       // Dynamic import to handle optional dependency
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const agenticFlowModule: any = await import('agentic-flow').catch(() => null);
+      const agenticFlowModule: any = await loadAgenticFlow();
 
       if (agenticFlowModule && typeof agenticFlowModule.createAgenticFlow === 'function') {
         const factory: AgenticFlowFactory = agenticFlowModule.createAgenticFlow;

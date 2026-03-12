@@ -11,6 +11,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { loadAgenticFlow } from '@hive-flow/integration';
 
 // ADR-053: Lazy import of AgentDB v3 bridge
 let _bridge: typeof import('./memory-bridge.js') | null | undefined;
@@ -492,9 +493,23 @@ export async function getHNSWIndex(options?: {
 }
 
 /**
- * Save HNSW metadata to disk for persistence
+ * Save HNSW metadata to disk for persistence (debounced — max once per 500ms)
  */
+let _hnswMetadataDirty = false;
+let _hnswMetadataTimer: ReturnType<typeof setTimeout> | null = null;
+
 function saveHNSWMetadata(): void {
+  _hnswMetadataDirty = true;
+  if (_hnswMetadataTimer) return; // Already scheduled
+  _hnswMetadataTimer = setTimeout(() => {
+    _hnswMetadataTimer = null;
+    if (!_hnswMetadataDirty) return;
+    _hnswMetadataDirty = false;
+    _flushHNSWMetadata();
+  }, 500);
+}
+
+function _flushHNSWMetadata(): void {
   if (!hnswIndex?.entries) return;
 
   try {
@@ -1486,7 +1501,7 @@ export async function loadEmbeddingModel(options?: {
     }
 
     // Fallback: Check for agentic-flow ONNX
-    const agenticFlow = await import('agentic-flow').catch(() => null);
+    const agenticFlow = await loadAgenticFlow();
 
     if (agenticFlow && (agenticFlow as any).embeddings) {
       if (verbose) {

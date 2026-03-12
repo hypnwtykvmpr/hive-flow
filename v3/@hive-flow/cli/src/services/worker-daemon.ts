@@ -13,6 +13,7 @@
 import { EventEmitter } from 'events';
 import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'fs';
 import { join } from 'path';
+import { TimerManager } from '@hive-flow/shared';
 import {
   HeadlessWorkerExecutor,
   HEADLESS_WORKER_TYPES,
@@ -113,7 +114,7 @@ const DEFAULT_WORKER_TIMEOUT_MS = 5 * 60 * 1000;
 export class WorkerDaemon extends EventEmitter {
   private config: DaemonConfig;
   private workers: Map<WorkerType, WorkerState> = new Map();
-  private timers: Map<WorkerType, NodeJS.Timeout> = new Map();
+  private timerManager = new TimerManager();
   private running = false;
   private startedAt?: Date;
   private projectRoot: string;
@@ -350,13 +351,8 @@ export class WorkerDaemon extends EventEmitter {
       return;
     }
 
-    // Clear all timers (convert to array to avoid iterator issues)
-    const timerEntries = Array.from(this.timers.entries());
-    for (const [type, timer] of timerEntries) {
-      clearTimeout(timer);
-      this.log('info', `Stopped worker: ${type}`);
-    }
-    this.timers.clear();
+    // Clear all timers
+    this.timerManager.clearAll();
 
     this.running = false;
     this.saveState();
@@ -402,15 +398,13 @@ export class WorkerDaemon extends EventEmitter {
 
       // Reschedule
       if (this.running) {
-        const timer = setTimeout(runAndReschedule, workerConfig.intervalMs);
-        this.timers.set(workerConfig.type, timer);
+        this.timerManager.setTimeout(workerConfig.type, runAndReschedule, workerConfig.intervalMs);
         state.nextRun = new Date(Date.now() + workerConfig.intervalMs);
       }
     };
 
     // Schedule first run with stagger offset
-    const timer = setTimeout(runAndReschedule, initialDelay);
-    this.timers.set(workerConfig.type, timer);
+    this.timerManager.setTimeout(workerConfig.type, runAndReschedule, initialDelay);
 
     this.log('info', `Scheduled ${workerConfig.type} (interval: ${workerConfig.intervalMs / 1000}s, first run in ${initialDelay / 1000}s)`);
   }
@@ -848,11 +842,7 @@ export class WorkerDaemon extends EventEmitter {
       if (enabled && this.running) {
         this.scheduleWorker(workerConfig);
       } else if (!enabled) {
-        const timer = this.timers.get(type);
-        if (timer) {
-          clearTimeout(timer);
-          this.timers.delete(type);
-        }
+        this.timerManager.clear(type);
       }
 
       this.saveState();

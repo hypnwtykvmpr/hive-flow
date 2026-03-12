@@ -44,6 +44,7 @@
   },
   "dependencies": {},
   "peerDependencies": {
+    "@hive-flow/shared": "workspace:*",
     "@hive-flow/hooks": "workspace:*",
     "@hive-flow/memory": "workspace:*",
     "@ruvector/learning-wasm": "^0.1.0",

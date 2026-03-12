@@ -11,6 +11,8 @@
  * These features treat embeddings as a synthetic nervous system.
  */
 
+import { loadAgenticFlowSubpath } from '@hive-flow/integration';
+
 // Types from agentic-flow/embeddings
 export interface DriftResult {
   distance: number;
@@ -82,7 +84,9 @@ export class NeuralEmbeddingService {
     if (this.initialized) return this.available;
 
     try {
-      const { getNeuralSubstrate } = await import('agentic-flow/embeddings');
+      const embeddingsModule = await loadAgenticFlowSubpath('embeddings');
+      if (!embeddingsModule) throw new Error('agentic-flow/embeddings not available');
+      const { getNeuralSubstrate } = embeddingsModule;
       this.substrate = await getNeuralSubstrate(this.config);
       await this.substrate.init();
       this.available = true;
@@ -252,12 +256,7 @@ export function createNeuralService(config: NeuralSubstrateConfig = {}): NeuralE
  * Check if neural features are available
  */
 export async function isNeuralAvailable(): Promise<boolean> {
-  try {
-    await import('agentic-flow/embeddings');
-    return true;
-  } catch {
-    return false;
-  }
+  return (await loadAgenticFlowSubpath('embeddings')) != null;
 }
 
 /**
@@ -271,7 +270,9 @@ export async function listEmbeddingModels(): Promise<Array<{
   downloaded: boolean;
 }>> {
   try {
-    const { listAvailableModels } = await import('agentic-flow/embeddings');
+    const embeddingsModule = await loadAgenticFlowSubpath('embeddings');
+    if (!embeddingsModule) throw new Error('not available');
+    const { listAvailableModels } = embeddingsModule;
     return listAvailableModels();
   } catch {
     // Return default models if agentic-flow not available
@@ -290,6 +291,8 @@ export async function downloadEmbeddingModel(
   targetDir?: string,
   onProgress?: (progress: { percent: number; bytesDownloaded: number; totalBytes: number }) => void
 ): Promise<string> {
-  const { downloadModel } = await import('agentic-flow/embeddings');
+  const embeddingsModule = await loadAgenticFlowSubpath('embeddings');
+  if (!embeddingsModule) throw new Error('agentic-flow/embeddings not available');
+  const { downloadModel } = embeddingsModule;
   return downloadModel(modelId, targetDir ?? '.models', onProgress);
 }

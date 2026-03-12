@@ -9,6 +9,7 @@ import { EventEmitter } from 'events';
 import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs/promises';
+import { TimerManager } from '@hive-flow/shared';
 
 // ============================================================================
 // Security Constants
@@ -429,7 +430,7 @@ const STATUSLINE_UPDATE_INTERVAL = 10_000; // 10 seconds
 export class WorkerManager extends EventEmitter {
   private workers: Map<string, WorkerHandler> = new Map();
   private metrics: Map<string, WorkerMetrics> = new Map();
-  private timers: Map<string, NodeJS.Timeout> = new Map();
+  private timerManager = new TimerManager();
   private running = false;
   private startTime?: Date;
   private projectRoot: string;
@@ -441,8 +442,6 @@ export class WorkerManager extends EventEmitter {
   private alerts: WorkerAlert[] = [];
   private history: HistoricalMetric[] = [];
   private thresholds: Record<string, AlertThreshold[]> = { ...DEFAULT_THRESHOLDS };
-  private statuslineTimer?: NodeJS.Timeout;
-  private autoSaveTimer?: NodeJS.Timeout;
   private initialized = false;
 
   constructor(projectRoot?: string) {
@@ -841,14 +840,14 @@ export class WorkerManager extends EventEmitter {
 
     // Auto-save every 5 minutes
     if (options?.autoSave !== false) {
-      this.autoSaveTimer = setInterval(() => {
+      this.timerManager.setInterval('autoSave', () => {
         this.saveState().catch(() => {});
       }, 300_000);
     }
 
     // Update statusline file periodically
     if (options?.statuslineUpdate !== false) {
-      this.statuslineTimer = setInterval(() => {
+      this.timerManager.setInterval('statusline', () => {
         this.exportStatusline().catch(() => {});
       }, STATUSLINE_UPDATE_INTERVAL);
     }
@@ -863,20 +862,7 @@ export class WorkerManager extends EventEmitter {
     this.running = false;
 
     // Clear all timers
-    Array.from(this.timers.values()).forEach(timer => {
-      clearTimeout(timer);
-    });
-    this.timers.clear();
-
-    if (this.autoSaveTimer) {
-      clearInterval(this.autoSaveTimer);
-      this.autoSaveTimer = undefined;
-    }
-
-    if (this.statuslineTimer) {
-      clearInterval(this.statuslineTimer);
-      this.statuslineTimer = undefined;
-    }
+    this.timerManager.clearAll();
 
     // Save final state
     await this.saveState();
@@ -1013,13 +999,13 @@ export class WorkerManager extends EventEmitter {
       await this.runWorker(name);
 
       if (this.running) {
-        this.timers.set(name, setTimeout(run, config.interval));
+        this.timerManager.setTimeout(name, run, config.interval);
       }
     };
 
     // Initial run with staggered start
     const stagger = config.priority * 1000;
-    this.timers.set(name, setTimeout(run, stagger));
+    this.timerManager.setTimeout(name, run, stagger);
   }
 
   private async ensureMetricsDir(): Promise<void> {

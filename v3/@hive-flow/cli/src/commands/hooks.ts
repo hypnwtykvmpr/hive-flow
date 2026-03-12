@@ -8,6 +8,7 @@ import { output } from '../output.js';
 import { select, confirm, input } from '../prompt.js';
 import { callMCPTool, MCPClientError } from '../mcp-client.js';
 import { storeCommand } from './transfer-store.js';
+import { loadAgenticFlow, loadAgenticFlowSubpath } from '@hive-flow/integration';
 
 // Hook types
 const HOOK_TYPES = [
@@ -3836,11 +3837,11 @@ const tokenOptimizeCommand: Command = {
 
     try {
       // Check if agentic-flow is available
-      const af = await import('agentic-flow').catch(() => null);
+      const af = await loadAgenticFlow();
       if (af) {
         agenticFlowAvailable = true;
         // Try to load ReasoningBank
-        const rb = await import('agentic-flow/reasoningbank').catch(() => null);
+        const rb = await loadAgenticFlowSubpath('reasoningbank');
         if (rb && typeof rb.retrieveMemories === 'function') {
           reasoningBank = rb;
         }

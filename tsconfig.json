@@ -21,7 +21,8 @@
     "noFallthroughCasesInSwitch": true,
     "noImplicitAny": false,
     "paths": {
-      "@v3/*": ["./v3/*"]
+      "@v3/*": ["./v3/*"],
+      "@hive-flow/integration": ["./v3/@hive-flow/integration/src"]
     },
     "baseUrl": "."
   },

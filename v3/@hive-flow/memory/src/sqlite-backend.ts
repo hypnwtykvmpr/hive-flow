@@ -9,6 +9,8 @@
  */
 
 import { EventEmitter } from 'node:events';
+import { mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
 import Database from 'better-sqlite3';
 import {
   IMemoryBackend,
@@ -57,7 +59,7 @@ export interface SQLiteBackendConfig {
  * Default configuration values
  */
 const DEFAULT_CONFIG: SQLiteBackendConfig = {
-  databasePath: ':memory:',
+  databasePath: '.hive-flow/data/memory.db',
   walMode: true,
   optimize: true,
   defaultNamespace: 'default',
@@ -98,6 +100,11 @@ export class SQLiteBackend extends EventEmitter implements IMemoryBackend {
    */
   async initialize(): Promise<void> {
     if (this.initialized) return;
+
+    // Ensure parent directory exists for file-based databases
+    if (this.config.databasePath !== ':memory:') {
+      mkdirSync(dirname(this.config.databasePath), { recursive: true });
+    }
 
     // Open database connection
     this.db = new Database(this.config.databasePath, {

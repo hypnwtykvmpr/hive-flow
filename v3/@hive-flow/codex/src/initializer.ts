@@ -5,11 +5,8 @@
  */
 
 import fs from 'node:fs/promises';
-
-async function pathExists(p: string): Promise<boolean> {
-  try { await fs.access(p); return true; } catch { return false; }
-}
 import path from 'path';
+import { pathExists } from './utils.js';
 import type {
   CodexInitOptions,
   CodexInitResult,

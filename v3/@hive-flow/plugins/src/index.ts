@@ -200,7 +200,6 @@ export {
 
 export {
   HookRegistry,
-  HookBuilder as HookBuilderAdvanced,
   HookFactory,
   HookExecutor,
   HookEvent,
