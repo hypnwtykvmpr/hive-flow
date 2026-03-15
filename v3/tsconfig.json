@@ -13,7 +13,17 @@
       "@hive-flow/testing": ["./@hive-flow/testing/src"],
       "@hive-flow/deployment": ["./@hive-flow/deployment/src"],
       "@hive-flow/shared": ["./@hive-flow/shared/src"],
-      "@hive-flow/hooks": ["./@hive-flow/hooks/src"]
+      "@hive-flow/hooks": ["./@hive-flow/hooks/src"],
+      "@hive-flow/aidefence": ["./@hive-flow/aidefence/src"],
+      "@hive-flow/browser": ["./@hive-flow/browser/src"],
+      "@hive-flow/claims": ["./@hive-flow/claims/src"],
+      "@hive-flow/codex": ["./@hive-flow/codex/src"],
+      "@hive-flow/context": ["./@hive-flow/context/src"],
+      "@hive-flow/embeddings": ["./@hive-flow/embeddings/src"],
+      "@hive-flow/guidance": ["./@hive-flow/guidance/src"],
+      "@hive-flow/mcp": ["./@hive-flow/mcp/src"],
+      "@hive-flow/plugins": ["./@hive-flow/plugins/src"],
+      "@hive-flow/providers": ["./@hive-flow/providers/src"]
     }
   },
   "references": [
@@ -27,7 +37,17 @@
     { "path": "./@hive-flow/neural" },
     { "path": "./@hive-flow/testing" },
     { "path": "./@hive-flow/deployment" },
-    { "path": "./@hive-flow/hooks" }
+    { "path": "./@hive-flow/hooks" },
+    { "path": "./@hive-flow/aidefence" },
+    { "path": "./@hive-flow/browser" },
+    { "path": "./@hive-flow/claims" },
+    { "path": "./@hive-flow/codex" },
+    { "path": "./@hive-flow/context" },
+    { "path": "./@hive-flow/embeddings" },
+    { "path": "./@hive-flow/guidance" },
+    { "path": "./@hive-flow/mcp" },
+    { "path": "./@hive-flow/plugins" },
+    { "path": "./@hive-flow/providers" }
   ],
   "include": [],
   "exclude": ["node_modules", "dist"]

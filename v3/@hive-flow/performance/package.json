@@ -16,8 +16,8 @@
     "build": "tsc"
   },
   "dependencies": {
-    "@ruvector/attention": "latest",
-    "@ruvector/sona": "latest"
+    "@ruvector/attention": "^0.1.31",
+    "@ruvector/sona": "^0.1.5"
   },
   "engines": {
     "node": ">=20.0.0"

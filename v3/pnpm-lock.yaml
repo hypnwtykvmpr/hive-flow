@@ -350,7 +350,7 @@ importers:
         specifier: workspace:*
         version: link:../memory
       '@ruvector/sona':
-        specifier: latest
+        specifier: ^0.1.5
         version: 0.1.5
     optionalDependencies:
       agentdb:
@@ -360,10 +360,10 @@ importers:
   '@hive-flow/performance':
     dependencies:
       '@ruvector/attention':
-        specifier: latest
+        specifier: ^0.1.31
         version: 0.1.31
       '@ruvector/sona':
-        specifier: latest
+        specifier: ^0.1.5
         version: 0.1.5
     devDependencies:
       vitest:
