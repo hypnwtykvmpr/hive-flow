@@ -108,6 +108,71 @@ function isTerminatePrompt(prompt) {
          /^\[TERMINATE_AGENT_NOW\]$/i.test(normalizedPrompt);
 }
 
+/**
+ * WP-31: Authorization gating for terminate-agent.
+ * Only TWO entities may invoke termination:
+ *   1. The human (user) — always authorized
+ *   2. The ENFORCER agent — requires valid token at ENFORCER_TOKEN_FILE
+ *
+ * Returns { authorized: true } or { authorized: false, reason: string }.
+ */
+const ENFORCER_TOKEN_FILE = path.join(PROJECT_DIR, '.hive-flow', 'enforcement', 'enforcer-token.json');
+const VIOLATIONS_FILE = path.join(PROJECT_DIR, '.hive-flow', 'enforcement', 'violations.jsonl');
+
+function checkTerminateAuthorization(hookInput) {
+  // Human invocations via UserPromptSubmit are always authorized.
+  // The hook_event_name tells us the source — UserPromptSubmit = human typed it.
+  const eventName = hookInput?.parsed?.hook_event_name || 'UserPromptSubmit';
+
+  if (eventName === 'UserPromptSubmit') {
+    // Check for compaction-restored stale invocations:
+    // If the session was just restored from compaction, and a /terminate-agent
+    // is in the prompt, it may be a stale restoration — not a fresh human command.
+    const isCompactionRestored = hookInput?.parsed?.restored_from_compaction === true;
+    if (isCompactionRestored) {
+      return {
+        authorized: false,
+        reason: 'Compaction-restored stale /terminate-agent invocation rejected. Re-type to confirm.',
+      };
+    }
+    return { authorized: true, source: 'human' };
+  }
+
+  // Check ENFORCER token for non-human sources
+  const enforcerToken = readJson(ENFORCER_TOKEN_FILE);
+  if (enforcerToken && enforcerToken.token && enforcerToken.expires) {
+    const expires = new Date(enforcerToken.expires).getTime();
+    if (Date.now() < expires) {
+      const providedToken = hookInput?.parsed?.enforcer_token;
+      if (providedToken === enforcerToken.token) {
+        return { authorized: true, source: 'enforcer' };
+      }
+    }
+  }
+
+  return {
+    authorized: false,
+    reason: `Unauthorized terminate-agent invocation from source: ${eventName}. Only human and ENFORCER agent are authorized.`,
+  };
+}
+
+function logViolation(reason, hookInput) {
+  try {
+    const dir = path.dirname(VIOLATIONS_FILE);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.appendFileSync(VIOLATIONS_FILE, JSON.stringify({
+      ts: new Date().toISOString(),
+      type: 'unauthorized-terminate',
+      severity: 'level2',
+      reason,
+      prompt: (hookInput?.prompt || '').slice(0, 200),
+      sessionId: hookInput?.sessionId || null,
+    }) + '\n', 'utf8');
+  } catch {
+    // Violation logging must never block the hook.
+  }
+}
+
 function isMarkerExpired(marker) {
   if (!marker || !marker.at) return false;
   try {
@@ -550,6 +615,18 @@ function main(options = {}) {
   const prompt = hookInput.prompt;
 
   if (isTerminatePrompt(prompt)) {
+    // WP-31: Authorization gate — only human and ENFORCER may invoke
+    const auth = checkTerminateAuthorization(hookInput);
+    if (!auth.authorized) {
+      logViolation(auth.reason, hookInput);
+      emitJson({
+        decision: 'block',
+        stopReason: `[UNAUTHORIZED] ${auth.reason}`,
+      });
+      if (exitOnFinish) process.exit(0);
+      return { action: 'unauthorized', reason: auth.reason };
+    }
+
     const marker = persistTermination(nowIso);
 
     // Step 1.5: Dump session state (preserve before clearing)
@@ -604,6 +681,8 @@ module.exports = {
   parseHookInput,
   readHookInput,
   isTerminatePrompt,
+  checkTerminateAuthorization,
+  logViolation,
   isMarkerExpired,
   persistTermination,
   emitTerminateBlock,

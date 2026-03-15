@@ -809,6 +809,133 @@ describe('terminate-agent hook', () => {
     }
   });
 
+  // --- WP-31: Authorization gating tests ---
+
+  it('blocks compaction-restored terminate invocations', () => {
+    const cwd = withTempRepo();
+    try {
+      const result = runHook(cwd, {
+        prompt: '/terminate-agent',
+        restored_from_compaction: true,
+      });
+      assert.equal(result.status, 0);
+      const json = JSON.parse(result.stdout);
+      assert.equal(json.decision, 'block');
+      assert.match(json.stopReason, /UNAUTHORIZED/);
+      assert.match(json.stopReason, /[Cc]ompaction/);
+      // No marker should be created
+      assert.equal(existsSync(join(cwd, '.hive-flow', 'sessions', 'terminated.json')), false);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it('logs violations for unauthorized terminate attempts', () => {
+    const cwd = withTempRepo();
+    try {
+      runHook(cwd, {
+        prompt: '/terminate-agent',
+        restored_from_compaction: true,
+      });
+      const violationsPath = join(cwd, '.hive-flow', 'enforcement', 'violations.jsonl');
+      assert.ok(existsSync(violationsPath), 'violations file should be created');
+      const lines = readFileSync(violationsPath, 'utf8').trim().split('\n');
+      assert.ok(lines.length >= 1, 'should have at least one violation logged');
+      const violation = JSON.parse(lines[0]);
+      assert.equal(violation.type, 'unauthorized-terminate');
+      assert.equal(violation.severity, 'level2');
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it('allows normal human terminate invocations (no compaction flag)', () => {
+    const cwd = withTempRepo();
+    try {
+      const result = runHook(cwd, { prompt: '/terminate-agent' });
+      assert.equal(result.status, 0);
+      const json = JSON.parse(result.stdout);
+      assert.equal(json.decision, 'block');
+      assert.match(json.stopReason, /\[TERMINATED\]/);
+      // Should NOT have UNAUTHORIZED
+      assert.doesNotMatch(json.stopReason, /UNAUTHORIZED/);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it('allows ENFORCER-authorized terminate with valid token', () => {
+    const cwd = withTempRepo();
+    try {
+      const enforcerDir = join(cwd, '.hive-flow', 'enforcement');
+      mkdirSync(enforcerDir, { recursive: true });
+      const token = 'test-enforcer-token-12345';
+      const expires = new Date(Date.now() + 3600000).toISOString(); // 1 hour from now
+      writeFileSync(join(enforcerDir, 'enforcer-token.json'), JSON.stringify({ token, expires }));
+
+      const result = runHook(cwd, {
+        prompt: '/terminate-agent',
+        hook_event_name: 'EnforcerInvocation',
+        enforcer_token: token,
+      });
+      assert.equal(result.status, 0);
+      const json = JSON.parse(result.stdout);
+      assert.equal(json.decision, 'block');
+      assert.match(json.stopReason, /\[TERMINATED\]/);
+      assert.doesNotMatch(json.stopReason, /UNAUTHORIZED/);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects ENFORCER with expired token', () => {
+    const cwd = withTempRepo();
+    try {
+      const enforcerDir = join(cwd, '.hive-flow', 'enforcement');
+      mkdirSync(enforcerDir, { recursive: true });
+      const token = 'test-enforcer-token-expired';
+      const expires = new Date(Date.now() - 3600000).toISOString(); // 1 hour ago
+      writeFileSync(join(enforcerDir, 'enforcer-token.json'), JSON.stringify({ token, expires }));
+
+      const result = runHook(cwd, {
+        prompt: '/terminate-agent',
+        hook_event_name: 'EnforcerInvocation',
+        enforcer_token: token,
+      });
+      assert.equal(result.status, 0);
+      const json = JSON.parse(result.stdout);
+      assert.equal(json.decision, 'block');
+      assert.match(json.stopReason, /UNAUTHORIZED/);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects ENFORCER with wrong token', () => {
+    const cwd = withTempRepo();
+    try {
+      const enforcerDir = join(cwd, '.hive-flow', 'enforcement');
+      mkdirSync(enforcerDir, { recursive: true });
+      const expires = new Date(Date.now() + 3600000).toISOString();
+      writeFileSync(join(enforcerDir, 'enforcer-token.json'), JSON.stringify({
+        token: 'correct-token',
+        expires,
+      }));
+
+      const result = runHook(cwd, {
+        prompt: '/terminate-agent',
+        hook_event_name: 'EnforcerInvocation',
+        enforcer_token: 'wrong-token',
+      });
+      assert.equal(result.status, 0);
+      const json = JSON.parse(result.stdout);
+      assert.equal(json.decision, 'block');
+      assert.match(json.stopReason, /UNAUTHORIZED/);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
   it('handoff injection mentions session dump', () => {
     const cwd = withTempRepo();
     const jsonlDir = join(cwd, 'mock-jsonl');
