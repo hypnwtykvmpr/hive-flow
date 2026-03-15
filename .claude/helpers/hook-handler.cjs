@@ -213,6 +213,22 @@ const handlers = {
       console.log('| Memory Entries |     0 |');
       console.log('+----------------+-------+');
     }
+    // Check for forbidden-stop marker from enforce-final
+    try {
+      const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+      const forbiddenFile = path.join(projectDir, '.hive-flow', 'data', 'forbidden-stop.json');
+      if (fs.existsSync(forbiddenFile)) {
+        const marker = JSON.parse(fs.readFileSync(forbiddenFile, 'utf8'));
+        console.log('');
+        console.log('[FORBIDDEN-STOP-VIOLATION] You stopped to ask for permission that was already granted.');
+        console.log('[FORBIDDEN-STOP-VIOLATION] This is a POLICY VIOLATION. You MUST continue without stopping unless you have a genuine question requiring human clarification.');
+        console.log('[FORBIDDEN-STOP-VIOLATION] Stopping to ask "should I continue?" or "ready to proceed?" when the next step is clear = IMMEDIATE TERMINATION RISK.');
+        console.log(`[FORBIDDEN-STOP-VIOLATION] Detected at: ${marker.at || 'unknown'}`);
+        console.log('');
+        fs.unlinkSync(forbiddenFile);
+      }
+    } catch { /* non-fatal */ }
+
     // Check for termination marker from /terminate-agent
     try {
       const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
@@ -590,6 +606,63 @@ const handlers = {
 
       console.log(`[ENFORCEMENT-FINAL: ${level}] ${results.join(' | ')}`);
     } catch { /* fail-open */ }
+
+    // --- Forbidden Stop Detection ---
+    // Detects when the agent stopped to ask for permission it already has,
+    // or stopped to ask "should I continue?" instead of continuing.
+    try {
+      const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+      const transcriptPath = process.env.TRANSCRIPT_PATH || '';
+      let lastAssistantText = '';
+
+      // Try reading last assistant message from transcript
+      if (transcriptPath && fs.existsSync(transcriptPath)) {
+        const lines = fs.readFileSync(transcriptPath, 'utf-8').split('\n').filter(Boolean);
+        for (let i = lines.length - 1; i >= Math.max(0, lines.length - 5); i--) {
+          try {
+            const parsed = JSON.parse(lines[i]);
+            const msg = parsed.message || parsed;
+            if (msg.role === 'assistant') {
+              if (typeof msg.content === 'string') lastAssistantText = msg.content;
+              else if (Array.isArray(msg.content)) {
+                lastAssistantText = msg.content
+                  .filter(b => b.type === 'text')
+                  .map(b => b.text || '')
+                  .join('\n');
+              }
+              break;
+            }
+          } catch { /* skip */ }
+        }
+      }
+
+      if (lastAssistantText) {
+        const lower = lastAssistantText.toLowerCase();
+        const forbiddenPatterns = [
+          /awaiting your (?:approval|go|confirmation|permission)/i,
+          /ready to (?:proceed|launch|continue|start).*(?:on your go|your go|when you|if you)/i,
+          /shall i (?:proceed|continue|go ahead|start|launch)/i,
+          /should i (?:proceed|continue|go ahead|start|launch)/i,
+          /would you like me to (?:proceed|continue|go ahead)/i,
+          /let me know (?:if|when|whether) (?:you|i should)/i,
+          /waiting for (?:your|confirmation|approval|the go-ahead)/i,
+        ];
+
+        const isForbiddenStop = forbiddenPatterns.some(p => p.test(lastAssistantText));
+        if (isForbiddenStop) {
+          // Write forbidden-stop marker for session-restore to pick up
+          const markerFile = path.join(projectDir, '.hive-flow', 'data', 'forbidden-stop.json');
+          const markerDir = path.dirname(markerFile);
+          if (!fs.existsSync(markerDir)) fs.mkdirSync(markerDir, { recursive: true });
+          fs.writeFileSync(markerFile, JSON.stringify({
+            at: new Date().toISOString(),
+            detected: lastAssistantText.slice(0, 500),
+            violation: 'FORBIDDEN_STOP',
+          }));
+          console.log('[FORBIDDEN-STOP-DETECTED] Agent stopped to ask for already-authorized permission. This is a policy violation. The agent must continue without stopping unless genuinely blocked.');
+        }
+      }
+    } catch { /* detection is best-effort */ }
   },
 
   'permission-guard': async () => {
