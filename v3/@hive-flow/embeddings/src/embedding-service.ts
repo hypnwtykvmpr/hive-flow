@@ -578,6 +578,7 @@ export class MockEmbeddingService extends BaseEmbeddingService {
 
     // Normalize to unit vector
     const norm = Math.sqrt(embedding.reduce((sum, v) => sum + v * v, 0));
+    if (norm === 0) return embedding;
     for (let i = 0; i < this.dimensions; i++) {
       embedding[i] /= norm;
     }

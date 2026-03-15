@@ -795,7 +795,7 @@ export const hooksRoute: MCPTool = {
         backendInfo = 'native VectorDb (HNSW)';
 
         // Convert results to semantic format
-        semanticResult = results.map((r: { id: string; score: number }) => {
+        semanticResult = (results as Array<{ id: string; score: number }>).map((r) => {
           const [patternName] = r.id.split(':');
           const pattern = TASK_PATTERNS[patternName];
           return {

@@ -8,7 +8,7 @@
  *              [header JSON] [new section data] [32B SHA256 footer]
  */
 
-import { createHash, sign, verify as edVerify } from 'node:crypto';
+import { createHash, randomBytes, sign, verify as edVerify } from 'node:crypto';
 import { readFile, writeFile, rename, unlink, copyFile, mkdir } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { request as httpsRequest } from 'node:https';
@@ -122,7 +122,7 @@ function httpGet(url: string, maxRedirects = 5): Promise<Buffer> {
 function multipart(
   name: string, file: string, data: Buffer, meta?: string,
 ): { body: Buffer; ct: string } {
-  const b = `----Rvfa${Date.now()}${Math.random().toString(36).slice(2)}`;
+  const b = `----Rvfa${Date.now()}${randomBytes(8).toString('hex')}`;
   const parts: Buffer[] = [];
   if (meta) {
     parts.push(Buffer.from(

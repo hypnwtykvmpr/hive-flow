@@ -284,7 +284,7 @@ export class AgenticWrapper {
         };
 
         // Fire-and-forget metrics update
-        this.updateMetrics(provider, result, options?.metricsPath).catch(() => {});
+        this.updateMetrics(provider, result, options?.metricsPath).catch((_e: unknown) => { /* non-fatal metrics update */ });
 
         res(result);
       });

@@ -12,11 +12,31 @@
  */
 
 import {
-  FlashAttention,
-  DotProductAttention,
-  type BenchmarkResult as AttentionBenchmarkResult,
-  type ArrayInput,
+  flashAttention,
+  scaledDotProductAttention,
 } from '@ruvector/attention';
+
+/** Local type alias for array inputs accepted by this module */
+type ArrayInput = Float32Array | number[];
+
+/** Local wrapper providing class-based API over @ruvector/attention's flashAttention function */
+class FlashAttention {
+  constructor(private dim: number, private blockSize: number = 64) {}
+  compute(query: Float32Array, keys: Float32Array[], values: Float32Array[]): Float32Array {
+    return flashAttention(query, keys, values, this.blockSize);
+  }
+}
+
+/** Local wrapper providing class-based API over @ruvector/attention's scaledDotProductAttention function */
+class DotProductAttention {
+  constructor(private dim: number) {}
+  compute(query: Float32Array, keys: Float32Array[], values: Float32Array[]): Float32Array {
+    return scaledDotProductAttention(query, keys, values);
+  }
+}
+
+/** Re-export type kept for downstream compatibility */
+type AttentionBenchmarkResult = Record<string, unknown>;
 
 // ============================================================================
 // Types

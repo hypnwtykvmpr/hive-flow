@@ -514,7 +514,7 @@ function saveHNSWMetadata(): void {
     if (!_hnswMetadataDirty) return;
     _hnswMetadataDirty = false;
     _flushHNSWMetadata();
-  }, 500);
+  }, 500).unref();
 }
 
 function _flushHNSWMetadata(): void {

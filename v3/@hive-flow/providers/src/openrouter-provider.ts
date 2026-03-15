@@ -294,7 +294,7 @@ export class OpenRouterProvider extends BaseProvider {
         throw new AuthenticationError(message, 'openrouter', errorData);
       case 429: {
         const retryAfter = response.headers.get('retry-after');
-        throw new RateLimitError(message, 'openrouter', retryAfter ? parseInt(retryAfter) : undefined, errorData);
+        throw new RateLimitError(message, 'openrouter', retryAfter ? parseInt(retryAfter, 10) : undefined, errorData);
       }
       case 404:
         throw new ModelNotFoundError(this.config.model, 'openrouter', errorData);

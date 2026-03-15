@@ -24,6 +24,7 @@
  * @version 3.0.0-alpha.1
  */
 import { EventEmitter } from 'events';
+import { randomBytes } from 'crypto';
 // ============================================================================
 // Default Configuration
 // ============================================================================
@@ -264,7 +265,7 @@ export class FederationHub extends EventEmitter {
         }
         // Create ephemeral agent
         const ttl = options.ttl || this.config.defaultTTL;
-        const agentId = `ephemeral_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const agentId = `ephemeral_${Date.now()}_${randomBytes(6).toString('hex')}`;
         const now = new Date();
         const agent = {
             id: agentId,
@@ -389,7 +390,7 @@ export class FederationHub extends EventEmitter {
             return false;
         }
         const message = {
-            id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            id: `msg_${Date.now()}_${randomBytes(6).toString('hex')}`,
             type: 'direct',
             sourceSwarmId,
             targetSwarmId,
@@ -435,7 +436,7 @@ export class FederationHub extends EventEmitter {
             throw new Error('Consensus is disabled');
         }
         const proposal = {
-            id: `proposal_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            id: `proposal_${Date.now()}_${randomBytes(6).toString('hex')}`,
             proposerId,
             type,
             value,

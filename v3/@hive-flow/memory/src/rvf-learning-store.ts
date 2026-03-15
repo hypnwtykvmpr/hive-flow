@@ -140,7 +140,7 @@ export class RvfLearningStore {
 
     if (this.config.autoPersistInterval > 0) {
       this.autoPersistTimer = setInterval(
-        () => void this.persist().catch(() => {}),
+        () => void this.persist().catch((_e: unknown) => { /* non-fatal auto-persist */ }),
         this.config.autoPersistInterval,
       );
       // Allow the process to exit even if the timer is active

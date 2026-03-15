@@ -242,6 +242,7 @@ export class HNSWIndex extends EventEmitter {
   constructor(config: Partial<HNSWConfig> = {}) {
     super();
     this.config = this.mergeConfig(config);
+    if (this.config.M && this.config.M < 2) this.config.M = 2;
     this.levelMult = 1 / Math.log(this.config.M);
 
     if (this.config.quantization) {

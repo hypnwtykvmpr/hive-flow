@@ -7,6 +7,7 @@
  * @module v3/swarm/domain/services
  */
 
+import { randomBytes } from 'crypto';
 import { Agent, AgentRole } from '../entities/agent.js';
 import { Task, TaskPriority } from '../entities/task.js';
 import { IAgentRepository } from '../repositories/agent-repository.interface.js';
@@ -111,7 +112,7 @@ export class CoordinationService {
         return this.capabilityMatchSelection(availableAgents, task);
 
       case 'random':
-        return availableAgents[Math.floor(Math.random() * availableAgents.length)];
+        return availableAgents[randomBytes(4).readUInt32BE(0) % availableAgents.length];
 
       default:
         return availableAgents[0];

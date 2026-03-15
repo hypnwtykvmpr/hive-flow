@@ -471,7 +471,7 @@ export class OpenAIProvider extends BaseProvider {
         throw new RateLimitError(
           message,
           'openai',
-          retryAfter ? parseInt(retryAfter) : undefined,
+          retryAfter ? parseInt(retryAfter, 10) : undefined,
           errorData
         );
       case 404:

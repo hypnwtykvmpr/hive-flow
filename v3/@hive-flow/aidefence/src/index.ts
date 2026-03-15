@@ -304,7 +304,8 @@ export function calculateSecurityConsensus(
   }
 
   // Normalize weights
-  const totalWeight = assessments.reduce((sum, a) => sum + a.weight, 0);
+  let totalWeight = assessments.reduce((sum, a) => sum + a.weight, 0);
+  if (totalWeight === 0) totalWeight = assessments.length || 1;
   const normalized = assessments.map(a => ({
     ...a,
     weight: a.weight / totalWeight,

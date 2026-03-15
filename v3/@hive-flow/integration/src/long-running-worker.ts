@@ -326,7 +326,7 @@ export class LongRunningWorker extends WorkerBase {
       this.startProgressTimer();
 
       // Execute with retry support
-      let result: AgentOutput;
+      let result: AgentOutput | undefined;
       let attempt = 0;
       let lastError: Error | undefined;
 

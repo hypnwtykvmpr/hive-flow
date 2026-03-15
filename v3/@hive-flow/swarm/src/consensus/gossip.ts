@@ -4,6 +4,7 @@
  */
 
 import { EventEmitter } from 'events';
+import { randomBytes } from 'crypto';
 import {
   ConsensusProposal,
   ConsensusVote,
@@ -95,7 +96,7 @@ export class GossipConsensus extends EventEmitter {
     });
 
     // Add as neighbor with some probability (random mesh)
-    if (Math.random() < 0.5) {
+    if (randomBytes(1)[0] < 128) {
       this.node.neighbors.add(nodeId);
       this.nodes.get(nodeId)!.neighbors.add(this.node.id);
     }
@@ -269,7 +270,7 @@ export class GossipConsensus extends EventEmitter {
     const selected: string[] = [];
 
     while (selected.length < count && neighbors.length > 0) {
-      const idx = Math.floor(Math.random() * neighbors.length);
+      const idx = randomBytes(4).readUInt32BE(0) % neighbors.length;
       selected.push(neighbors.splice(idx, 1)[0]);
     }
 
@@ -488,7 +489,7 @@ export class GossipConsensus extends EventEmitter {
     if (this.node.neighbors.size === 0) return;
 
     const neighbors = Array.from(this.node.neighbors);
-    const randomNeighbor = neighbors[Math.floor(Math.random() * neighbors.length)];
+    const randomNeighbor = neighbors[randomBytes(4).readUInt32BE(0) % neighbors.length];
 
     const stateMessage: GossipMessage = {
       id: `state_${this.node.id}_${Date.now()}`,

@@ -379,6 +379,7 @@ export class OutputFormatter {
   }
 
   progressBar(current: number, total: number, width: number = 40): string {
+    if (total === 0) total = 1;
     const percent = Math.min(100, Math.max(0, (current / total) * 100));
     const filled = Math.round((width * percent) / 100);
     const empty = width - filled;
@@ -598,7 +599,7 @@ export class Spinner {
     this.interval = setInterval(() => {
       this.render();
       this.frameIndex = (this.frameIndex + 1) % this.frames.length;
-    }, 100);
+    }, 100).unref();
 
     this.render();
   }

@@ -4,6 +4,7 @@
  */
 
 import { EventEmitter } from 'events';
+import { randomBytes } from 'crypto';
 import {
   TopologyConfig,
   TopologyState,
@@ -446,7 +447,7 @@ export class TopologyManager extends EventEmitter implements ITopologyManager {
             n.agentId !== node.agentId &&
             !node.connections.includes(n.agentId)
           )
-          .sort(() => Math.random() - 0.5);
+          .sort(() => randomBytes(4).readInt32BE(0));
 
         if (candidates.length > 0) {
           node.connections.push(candidates[0].agentId);
@@ -533,7 +534,7 @@ export class TopologyManager extends EventEmitter implements ITopologyManager {
         );
         if (candidates.length === 0) break;
 
-        const target = candidates[Math.floor(Math.random() * candidates.length)];
+        const target = candidates[randomBytes(4).readUInt32BE(0) % candidates.length];
         worker.connections.push(target.agentId);
         currentWorkerConnections.push(target.agentId);
         this.adjacencyList.get(worker.agentId)?.add(target.agentId);
@@ -547,7 +548,7 @@ export class TopologyManager extends EventEmitter implements ITopologyManager {
           c => coordinators.some(coord => coord.agentId === c)
         );
         if (!hasCoordinator) {
-          const coord = coordinators[Math.floor(Math.random() * coordinators.length)];
+          const coord = coordinators[randomBytes(4).readUInt32BE(0) % coordinators.length];
           worker.connections.push(coord.agentId);
           this.adjacencyList.get(worker.agentId)?.add(coord.agentId);
           coord.connections.push(worker.agentId);

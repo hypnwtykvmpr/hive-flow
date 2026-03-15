@@ -4,6 +4,7 @@
  */
 
 import { EventEmitter } from 'events';
+import { randomBytes } from 'crypto';
 import {
   ConsensusProposal,
   ConsensusVote,
@@ -220,7 +221,9 @@ export class RaftConsensus extends EventEmitter {
   private randomElectionTimeout(): number {
     const min = this.config.electionTimeoutMinMs ?? 150;
     const max = this.config.electionTimeoutMaxMs ?? 300;
-    return Math.floor(Math.random() * (max - min + 1)) + min;
+    const range = max - min + 1;
+    const rand = randomBytes(4).readUInt32BE(0);
+    return min + (rand % range);
   }
 
   private async startElection(): Promise<void> {

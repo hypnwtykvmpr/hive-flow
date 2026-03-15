@@ -138,7 +138,7 @@ export class IntegrationRegressionSuite {
 
         await backend.initialize();
 
-        const memory = new UnifiedMemoryService(backend as unknown as Parameters<typeof UnifiedMemoryService['prototype']['constructor']>[0]);
+        const memory = new UnifiedMemoryService(backend as unknown as ConstructorParameters<typeof UnifiedMemoryService>[0]);
         await memory.initialize();
 
         // Store entry
@@ -174,7 +174,7 @@ export class IntegrationRegressionSuite {
 
         await backend.initialize();
 
-        const memory = new UnifiedMemoryService(backend as unknown as Parameters<typeof UnifiedMemoryService['prototype']['constructor']>[0]);
+        const memory = new UnifiedMemoryService(backend as unknown as ConstructorParameters<typeof UnifiedMemoryService>[0]);
         await memory.initialize();
 
         // Store entries

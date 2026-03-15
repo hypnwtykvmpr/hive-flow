@@ -6,11 +6,11 @@
  * Run with: npx tsx v3/@hive-flow/performance/src/examples/quick-test.ts
  */
 
-import { FlashAttention } from '@ruvector/attention';
 import {
   createFlashAttentionOptimizer,
   quickBenchmark,
 } from '../attention-integration.js';
+import { flashAttention } from '@ruvector/attention';
 
 async function quickTest() {
   console.log('\n🧪 Quick Integration Test\n');
@@ -19,11 +19,10 @@ async function quickTest() {
   try {
     // Test 1: Direct @ruvector/attention usage
     console.log('\n✓ Test 1: Direct @ruvector/attention usage');
-    const flash = new FlashAttention(128, 64); // dim, blockSize
     const query = new Float32Array(128).fill(1.0);
     const keys = [new Float32Array(128).fill(1.0)];
     const values = [new Float32Array(128).fill(1.0)];
-    const result = flash.compute(query, keys, values);
+    const result = flashAttention(query, keys, values, 64);
     console.log(`  Result: Float32Array[${result.length}]`);
 
     // Test 2: V3 optimizer

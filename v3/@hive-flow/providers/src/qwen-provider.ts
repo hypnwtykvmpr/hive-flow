@@ -254,7 +254,7 @@ export class QwenProvider extends BaseProvider {
       case 401: throw new AuthenticationError(message, 'qwen', errorData);
       case 429: {
         const retryAfter = response.headers.get('retry-after');
-        throw new RateLimitError(message, 'qwen', retryAfter ? parseInt(retryAfter) : undefined, errorData);
+        throw new RateLimitError(message, 'qwen', retryAfter ? parseInt(retryAfter, 10) : undefined, errorData);
       }
       case 404: throw new ModelNotFoundError(this.config.model, 'qwen', errorData);
       default: throw new LLMProviderError(

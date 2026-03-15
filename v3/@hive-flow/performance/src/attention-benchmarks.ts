@@ -12,11 +12,25 @@ import {
   type AttentionInput,
 } from './attention-integration.js';
 import {
-  FlashAttention,
-  DotProductAttention,
-  MultiHeadAttention,
-  LinearAttention,
+  flashAttention,
+  scaledDotProductAttention,
 } from '@ruvector/attention';
+
+/** Local wrapper providing class-based API over @ruvector/attention's flashAttention function */
+class FlashAttention {
+  constructor(private dim: number, private blockSize: number = 64) {}
+  compute(query: Float32Array, keys: Float32Array[], values: Float32Array[]): Float32Array {
+    return flashAttention(query, keys, values, this.blockSize);
+  }
+}
+
+/** Local wrapper providing class-based API over @ruvector/attention's scaledDotProductAttention function */
+class DotProductAttention {
+  constructor(private dim: number) {}
+  compute(query: Float32Array, keys: Float32Array[], values: Float32Array[]): Float32Array {
+    return scaledDotProductAttention(query, keys, values);
+  }
+}
 
 // ============================================================================
 // Types

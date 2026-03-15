@@ -157,11 +157,11 @@ export class ReleaseManager {
     }
 
     let [, major, minor, patch, prerelease, prereleaseNum] = versionMatch;
-    let newMajor = parseInt(major);
-    let newMinor = parseInt(minor);
-    let newPatch = parseInt(patch);
+    let newMajor = parseInt(major, 10);
+    let newMinor = parseInt(minor, 10);
+    let newPatch = parseInt(patch, 10);
     let newPrerelease: string | undefined = prerelease;
-    let newPrereleaseNum = prereleaseNum ? parseInt(prereleaseNum) : 0;
+    let newPrereleaseNum = prereleaseNum ? parseInt(prereleaseNum, 10) : 0;
 
     switch (bumpType) {
       case 'major':

@@ -244,7 +244,7 @@ export class DeepSeekProvider extends BaseProvider {
       case 401: throw new AuthenticationError(message, 'deepseek', errorData);
       case 429: {
         const retryAfter = response.headers.get('retry-after');
-        throw new RateLimitError(message, 'deepseek', retryAfter ? parseInt(retryAfter) : undefined, errorData);
+        throw new RateLimitError(message, 'deepseek', retryAfter ? parseInt(retryAfter, 10) : undefined, errorData);
       }
       case 404: throw new ModelNotFoundError(this.config.model, 'deepseek', errorData);
       default: throw new LLMProviderError(

@@ -605,7 +605,7 @@ export class MCPServerManager extends EventEmitter {
       } catch (error) {
         this.emit('health-error', error);
       }
-    }, 30000);
+    }, 30000).unref();
   }
 
   /**

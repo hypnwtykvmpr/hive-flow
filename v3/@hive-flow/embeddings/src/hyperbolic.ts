@@ -259,7 +259,7 @@ export function mobiusScalarMul(
   }
 
   // r ⊗ v = tanh(r * arctanh(sqrt(c) * ||v||)) * v / (sqrt(c) * ||v||)
-  const factor = Math.tanh(r * Math.atanh(sqrtC * norm)) / (sqrtC * norm);
+  const factor = Math.tanh(r * Math.atanh(sqrtC * norm)) / Math.max(sqrtC * norm, epsilon);
 
   const result = new Float32Array(v.length);
   for (let i = 0; i < v.length; i++) {

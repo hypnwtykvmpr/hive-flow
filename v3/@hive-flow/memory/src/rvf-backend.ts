@@ -103,7 +103,7 @@ export class RvfBackend implements IMemoryBackend {
 
     if (this.config.autoPersistInterval > 0 && this.config.databasePath !== ':memory:') {
       this.persistTimer = setInterval(() => {
-        if (this.dirty && !this.persisting) this.persistToDisk().catch(() => {});
+        if (this.dirty && !this.persisting) this.persistToDisk().catch((_e: unknown) => { /* non-fatal auto-persist */ });
       }, this.config.autoPersistInterval);
       if (this.persistTimer.unref) this.persistTimer.unref();
     }

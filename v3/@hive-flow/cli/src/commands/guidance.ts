@@ -4,6 +4,7 @@
  */
 
 import type { Command, CommandContext, CommandResult } from '../types.js';
+import type { TaskIntent } from '@hive-flow/guidance';
 import { output } from '../output.js';
 
 // compile subcommand
@@ -145,7 +146,7 @@ const retrieveCommand: Command = {
       const result = await retriever.retrieve({
         taskDescription: task,
         maxShards,
-        intent: intentOverride as string | undefined, // SAFETY: user-provided string may not match enum
+        intent: intentOverride as TaskIntent | undefined, // SAFETY: user-provided string cast to TaskIntent enum
       });
 
       if (jsonOutput) {

@@ -2887,6 +2887,10 @@ function computeABMetrics(results: ABTaskResult[]): ABMetrics {
   const classSuccessRates: Record<string, number> = {};
   for (const cls of classes) {
     const classResults = results.filter(r => r.taskClass === cls);
+    if (classResults.length === 0) {
+      classSuccessRates[cls] = 0;
+      continue;
+    }
     classSuccessRates[cls] = classResults.filter(r => r.passed).length / classResults.length;
   }
 

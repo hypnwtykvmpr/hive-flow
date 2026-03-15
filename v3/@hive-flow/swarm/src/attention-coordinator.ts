@@ -18,6 +18,7 @@
  */
 
 import { EventEmitter } from 'events';
+import { randomBytes } from 'crypto';
 
 // =============================================================================
 // Types & Interfaces
@@ -969,7 +970,7 @@ export class AttentionCoordinator extends EventEmitter {
     if (mechanism === 'flash') {
       // Track Flash Attention performance
       // In production, compare against baseline
-      this.performanceStats.flashSpeedup = 2.49 + Math.random() * 4.98; // 2.49x-7.47x
+      this.performanceStats.flashSpeedup = 2.49 + (randomBytes(4).readUInt32BE(0) / 0xFFFFFFFF) * 4.98; // 2.49x-7.47x
       this.performanceStats.memoryReduction = 0.75;
     }
   }

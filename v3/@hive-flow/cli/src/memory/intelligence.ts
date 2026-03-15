@@ -291,7 +291,7 @@ class LocalReasoningBank {
 
     this.saveTimeout = setTimeout(() => {
       this.flushToDisk();
-    }, 100);
+    }, 100).unref();
   }
 
   /**

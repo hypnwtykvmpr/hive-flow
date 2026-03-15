@@ -18,6 +18,9 @@ export type {
   ChangelogEntry
 } from './types.js';
 
+// Import types used locally
+import type { ReleaseChannel } from './types.js';
+
 // Export classes
 export { ReleaseManager } from './release-manager.js';
 export { Publisher } from './publisher.js';
