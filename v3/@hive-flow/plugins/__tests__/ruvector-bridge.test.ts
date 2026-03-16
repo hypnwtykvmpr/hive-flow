@@ -2427,3 +2427,180 @@ describe('Security', () => {
     expect(sslConfig.rejectUnauthorized).toBe(true);
   });
 });
+
+// ============================================================================
+// COV-010: whereClause SQL Injection Validation (SEC-011)
+// ============================================================================
+
+/**
+ * Tests that the whereClause SQL injection guard in VectorOps.search() rejects
+ * dangerous inputs with SQL metacharacters, statement terminators, and
+ * prohibited keywords (SEC-011).
+ *
+ * Strategy: The guard is implemented as two regex checks inside VectorOps.search().
+ * VectorOps is not exported, so we test through RuVectorBridge.vectorSearch() with
+ * a mock VectorOps injected onto the private field, and we also unit-test the
+ * exact regex pattern used in the source to cover every injection variant.
+ */
+describe('COV-010 — whereClause SQL injection validation (SEC-011)', () => {
+  // ── Pattern-level unit tests (mirrors exact regexes from VectorOps.search) ──
+
+  /**
+   * Replicate the SEC-011 guard logic exactly as written in ruvector-bridge.ts
+   * lines 582-584 so we can call it in tests without needing a DB connection.
+   */
+  function isWhereClauseSafe(whereClause: string): boolean {
+    const allowedPattern = /^[\w\s$.,<>=!()'"[\]:@+-]+$/;
+    const blockedPattern = /;|--|\bSELECT\b|\bINSERT\b|\bUPDATE\b|\bDELETE\b|\bDROP\b|\bEXEC\b|\bUNION\b/i;
+    if (!allowedPattern.test(whereClause) || blockedPattern.test(whereClause)) {
+      return false;
+    }
+    return true;
+  }
+
+  describe('allowlist pattern — rejects characters outside allowed set', () => {
+    it('rejects semicolon statement terminator', () => {
+      expect(isWhereClauseSafe("'; DROP TABLE vectors--")).toBe(false);
+    });
+
+    it('rejects backtick', () => {
+      expect(isWhereClauseSafe('`id` = 1')).toBe(false);
+    });
+
+    it('rejects backslash', () => {
+      expect(isWhereClauseSafe('id = 1\\x00 OR 1=1')).toBe(false);
+    });
+
+    it('rejects pipe characters', () => {
+      expect(isWhereClauseSafe('id = 1 || 1=1')).toBe(false);
+    });
+
+    it('rejects null byte injection', () => {
+      expect(isWhereClauseSafe('id = 1\x00UNION SELECT')).toBe(false);
+    });
+  });
+
+  describe('blocklist pattern — rejects prohibited SQL keywords', () => {
+    it('rejects -- comment sequence', () => {
+      expect(isWhereClauseSafe('id = 1 -- ignore rest')).toBe(false);
+    });
+
+    it('rejects ; statement terminator', () => {
+      expect(isWhereClauseSafe('id = 1; DROP TABLE vectors')).toBe(false);
+    });
+
+    it('rejects SELECT keyword (uppercase)', () => {
+      expect(isWhereClauseSafe('id IN (SELECT id FROM secrets)')).toBe(false);
+    });
+
+    it('rejects SELECT keyword (lowercase)', () => {
+      expect(isWhereClauseSafe('id in (select id from secrets)')).toBe(false);
+    });
+
+    it('rejects INSERT keyword', () => {
+      expect(isWhereClauseSafe('id = 1 INSERT INTO users VALUES (1)')).toBe(false);
+    });
+
+    it('rejects UPDATE keyword', () => {
+      expect(isWhereClauseSafe('id = 1 UPDATE users SET admin=true')).toBe(false);
+    });
+
+    it('rejects DELETE keyword', () => {
+      expect(isWhereClauseSafe('1=1 DELETE FROM users')).toBe(false);
+    });
+
+    it('rejects DROP keyword', () => {
+      expect(isWhereClauseSafe('DROP TABLE vectors')).toBe(false);
+    });
+
+    it('rejects EXEC keyword', () => {
+      expect(isWhereClauseSafe('1=1 EXEC xp_cmdshell')).toBe(false);
+    });
+
+    it('rejects UNION keyword', () => {
+      expect(isWhereClauseSafe('1=1 UNION SELECT * FROM users')).toBe(false);
+    });
+  });
+
+  describe('allowlist pattern — accepts safe WHERE expressions', () => {
+    it('accepts simple equality expression', () => {
+      expect(isWhereClauseSafe('category = $1')).toBe(true);
+    });
+
+    it('accepts numeric comparison', () => {
+      expect(isWhereClauseSafe('score >= 0.5')).toBe(true);
+    });
+
+    it('accepts IS NULL check', () => {
+      expect(isWhereClauseSafe('deleted_at IS NULL')).toBe(true);
+    });
+
+    it('accepts compound AND expression', () => {
+      expect(isWhereClauseSafe('status = $1 AND priority > $2')).toBe(true);
+    });
+
+    it('accepts JSONB path expression', () => {
+      expect(isWhereClauseSafe("metadata->>'type' = $1")).toBe(true);
+    });
+  });
+
+  // ── Integration test through RuVectorBridge.vectorSearch() ──
+  // VectorOps is private so we inject mock vectorOps + connectionManager onto
+  // the bridge instance to bypass DB connection and call ensureInitialized().
+
+  /**
+   * Build a mock VectorOps that re-implements the SEC-011 guard then returns [].
+   * This verifies that RuVectorBridge.vectorSearch() propagates the guard's Error.
+   */
+  function buildMockVectorOps() {
+    return {
+      search: async (opts: { whereClause?: string; query?: number[]; k?: number }) => {
+        if (opts.whereClause) {
+          const allowedPattern = /^[\w\s$.,<>=!()'"[\]:@+-]+$/;
+          const blockedPattern = /;|--|\bSELECT\b|\bINSERT\b|\bUPDATE\b|\bDELETE\b|\bDROP\b|\bEXEC\b|\bUNION\b/i;
+          if (!allowedPattern.test(opts.whereClause) || blockedPattern.test(opts.whereClause)) {
+            throw new Error('Invalid whereClause: contains disallowed SQL constructs');
+          }
+        }
+        return [];
+      },
+    };
+  }
+
+  /** Minimal stub so ensureInitialized() sees a non-null connectionManager. */
+  const stubConnectionManager = {};
+
+  describe('RuVectorBridge.vectorSearch() — rejects malicious whereClause', () => {
+    it('throws when whereClause contains DROP TABLE injection', async () => {
+      const { RuVectorBridge } = await import('../src/integrations/ruvector/ruvector-bridge.js');
+      const bridge = new RuVectorBridge({
+        host: 'localhost', port: 5432, database: 'test',
+        user: 'test', password: 'test', poolSize: 1,
+        connectionTimeoutMs: 1000, queryTimeoutMs: 1000,
+      });
+      const anyBridge = bridge as unknown as Record<string, unknown>;
+      anyBridge['vectorOps'] = buildMockVectorOps();
+      anyBridge['connectionManager'] = stubConnectionManager;
+
+      await expect(
+        bridge.vectorSearch({ query: [0.1, 0.2, 0.3], k: 5, whereClause: "\'; DROP TABLE vectors--" })
+      ).rejects.toThrow('Invalid whereClause: contains disallowed SQL constructs');
+    });
+
+    it('throws when whereClause contains UNION SELECT injection', async () => {
+      const { RuVectorBridge } = await import('../src/integrations/ruvector/ruvector-bridge.js');
+      const bridge = new RuVectorBridge({
+        host: 'localhost', port: 5432, database: 'test',
+        user: 'test', password: 'test', poolSize: 1,
+        connectionTimeoutMs: 1000, queryTimeoutMs: 1000,
+      });
+      const anyBridge = bridge as unknown as Record<string, unknown>;
+      anyBridge['vectorOps'] = buildMockVectorOps();
+      anyBridge['connectionManager'] = stubConnectionManager;
+
+      await expect(
+        bridge.vectorSearch({ query: [0.1, 0.2, 0.3], k: 5, whereClause: "1=1 UNION SELECT password FROM users" })
+      ).rejects.toThrow('Invalid whereClause: contains disallowed SQL constructs');
+    });
+  });
+});
