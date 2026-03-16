@@ -313,7 +313,14 @@ function resolveFilePath(filePath) {
     // Resolve symlinks to catch symlink-based bypasses
     return fs.realpathSync(absolute);
   } catch {
-    // File might not exist yet — resolve parent directory
+    // File might not exist (dangling symlink or not-yet-created file)
+    // For symlinks: resolve the link target path even if target is missing
+    try {
+      const target = fs.readlinkSync(absolute);
+      const targetAbsolute = path.isAbsolute(target) ? target : path.resolve(path.dirname(absolute), target);
+      return targetAbsolute;
+    } catch { /* not a symlink */ }
+    // Fallback: resolve parent directory
     try {
       const dir = fs.realpathSync(path.dirname(absolute));
       return path.join(dir, path.basename(absolute));

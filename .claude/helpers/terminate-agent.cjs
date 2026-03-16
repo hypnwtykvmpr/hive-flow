@@ -54,7 +54,7 @@ function readJson(filePath) {
 }
 
 function writeJsonAtomic(filePath, data) {
-  const tmpPath = filePath + '.tmp';
+  const tmpPath = filePath + '.tmp.' + process.pid;
   try {
     fs.writeFileSync(tmpPath, JSON.stringify(data, null, 2));
     fs.renameSync(tmpPath, filePath);

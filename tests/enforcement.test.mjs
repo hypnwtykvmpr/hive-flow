@@ -10,14 +10,16 @@
  * operations target the REAL repo's .hive-flow/enforcement/ directory. Tests
  * back up and restore state around each test to maintain isolation.
  */
-import { describe, it, before, after, beforeEach } from 'node:test';
+import { describe, it, before, after, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   readFileSync, writeFileSync, existsSync, mkdirSync,
-  rmSync, copyFileSync, unlinkSync,
+  rmSync, copyFileSync, unlinkSync, mkdtempSync, symlinkSync,
 } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { createRequire } from 'node:module';
+import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { createHmac, randomBytes } from 'node:crypto';
 
@@ -27,6 +29,8 @@ import { createHmac, randomBytes } from 'node:crypto';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, '..');
 const SCRIPT = join(REPO_ROOT, '.claude/helpers/enforcement.cjs');
+const require = createRequire(import.meta.url);
+const { isProtectedPath } = require(SCRIPT);
 const ENF_DIR = join(REPO_ROOT, '.hive-flow', 'enforcement');
 const STATE_FILE = join(ENF_DIR, 'state.json');
 const HMAC_KEY_FILE = join(ENF_DIR, '.hmac-key');
@@ -102,6 +106,22 @@ function readViolations() {
   } catch {
     return [];
   }
+}
+
+// ---------------------------------------------------------------------------
+// Helpers — Temp symlinks
+// ---------------------------------------------------------------------------
+
+let symlinkTempDir = null;
+
+function makeTempSymlink(targetPath, name) {
+  if (!symlinkTempDir) {
+    symlinkTempDir = mkdtempSync(join(tmpdir(), 'hive-flow-enforcement-symlink-'));
+  }
+
+  const symlinkPath = join(symlinkTempDir, name);
+  symlinkSync(targetPath, symlinkPath);
+  return symlinkPath;
 }
 
 // ---------------------------------------------------------------------------
@@ -223,6 +243,13 @@ describe('enforcement system', () => {
 
   beforeEach(() => {
     cleanStateFiles();
+  });
+
+  afterEach(() => {
+    if (symlinkTempDir) {
+      rmSync(symlinkTempDir, { recursive: true, force: true });
+      symlinkTempDir = null;
+    }
   });
 
   // =========================================================================
@@ -1300,6 +1327,44 @@ describe('enforcement system', () => {
     });
   });
 
+  describe('symlink bypass defense', () => {
+
+    it('treats a symlink to a protected path as protected', () => {
+      const symlinkPath = makeTempSymlink(
+        join(REPO_ROOT, '.hive-flow/enforcement/state.json'),
+        'protected-state-link.json',
+      );
+
+      assert.equal(isProtectedPath(symlinkPath), true);
+    });
+
+    it('treats a symlink to a non-protected path as non-protected', () => {
+      const symlinkPath = makeTempSymlink(
+        fileURLToPath(import.meta.url),
+        'non-protected-test-link.mjs',
+      );
+
+      assert.equal(isProtectedPath(symlinkPath), false);
+    });
+
+    it('blocks Write calls targeting a symlink to a protected path', () => {
+      setState(freshState());
+
+      const symlinkPath = makeTempSymlink(
+        join(REPO_ROOT, '.hive-flow/enforcement/state.json'),
+        'write-protected-state-link.json',
+      );
+
+      const r = runEnforcement({
+        tool_name: 'Write',
+        tool_input: { file_path: symlinkPath },
+      });
+
+      assert.ok(isDeny(r.json));
+      assert.match(denyReason(r.json), /protected path/i);
+    });
+  });
+
   // =========================================================================
   // Additional: getRestrictionGroups
   // =========================================================================
@@ -1417,3 +1482,4 @@ describe('enforcement system', () => {
     });
   });
 });
+
