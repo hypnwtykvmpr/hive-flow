@@ -275,6 +275,7 @@ export type {
   StepContext,
   ContinueDecision,
 } from './continue-gate.js';
+export { timingSafeEqual } from './crypto-utils.js';
 
 // WASM Kernel exports
 export {

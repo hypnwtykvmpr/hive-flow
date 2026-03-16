@@ -86,8 +86,8 @@ function loadEnvConfig(): Partial<SystemConfig> {
   }
 
   // Memory type
-  if (process.env.HIVE_FLOW_MEMORY_TYPE) {
-    const memoryType = process.env.HIVE_FLOW_MEMORY_TYPE as NonNullable<SystemConfig['memory']>['type'];
+  if (process.env.HIVE_FLOW_MEMORY_BACKEND) {
+    const memoryType = process.env.HIVE_FLOW_MEMORY_BACKEND as NonNullable<SystemConfig['memory']>['type'];
     if (['sqlite', 'agentdb', 'hybrid', 'redis', 'memory'].includes(memoryType)) {
       config.memory = {
         ...(defaultSystemConfig.memory ?? { type: 'hybrid' }),
