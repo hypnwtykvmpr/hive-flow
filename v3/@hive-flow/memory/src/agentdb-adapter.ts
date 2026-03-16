@@ -25,6 +25,7 @@ import {
   createDefaultEntry,
   CacheStats,
   HNSWStats,
+  QuantizationConfig,
 } from './types.js';
 import { HNSWIndex } from './hnsw-index.js';
 import { CacheManager } from './cache-manager.js';
@@ -65,6 +66,9 @@ export interface AgentDBAdapterConfig {
 
   /** Persistence path */
   persistencePath?: string;
+
+  /** Quantization config for HNSW index (binary, scalar, or product) */
+  quantization?: QuantizationConfig;
 }
 
 /**
@@ -123,6 +127,7 @@ export class AgentDBAdapter extends EventEmitter implements IMemoryBackend {
       efConstruction: this.config.hnswEfConstruction,
       maxElements: this.config.maxEntries,
       metric: 'cosine',
+      quantization: this.config.quantization,
     });
 
     // Initialize cache

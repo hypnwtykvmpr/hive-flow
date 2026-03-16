@@ -17,11 +17,12 @@ import {
   DistanceMetric,
   HNSWConfig,
   HNSWStats,
-  QuantizationConfig,
   SearchResult,
   MemoryEntry,
   MemoryEvent,
   MemoryEventHandler,
+  QuantizationConfig,
+  QuantizedVector,
 } from './types.js';
 
 /**
@@ -204,6 +205,9 @@ interface HNSWNode {
 
   /** Node level (top layer this node appears in) */
   level: number;
+
+  /** Quantized vector data (null when quantization is disabled) */
+  quantizedData: QuantizedVector | null;
 }
 
 /**
@@ -221,6 +225,19 @@ export class HNSWIndex extends EventEmitter {
   private maxLevel: number = 0;
   private levelMult: number;
 
+  // Product quantization state
+  private pqCodebook: Float32Array[][] | null = null;
+  private pqNumSubvectors: number = 0;
+  private pqSubvectorDim: number = 0;
+  private pqNumCentroids: number = 256;
+  private pqTrained: boolean = false;
+
+  // Per-search context (safe: JS is single-threaded)
+  private searchContext: {
+    binaryQuery?: Uint8Array;
+    pqDistanceTables?: Float32Array[];
+  } | null = null;
+
   // Performance tracking
   private stats: {
     searchCount: number;
@@ -236,9 +253,6 @@ export class HNSWIndex extends EventEmitter {
     buildStartTime: 0,
   };
 
-  // Quantization support
-  private quantizer: Quantizer | null = null;
-
   constructor(config: Partial<HNSWConfig> = {}) {
     super();
     this.config = this.mergeConfig(config);
@@ -246,7 +260,17 @@ export class HNSWIndex extends EventEmitter {
     this.levelMult = 1 / Math.log(this.config.M);
 
     if (this.config.quantization) {
-      this.quantizer = new Quantizer(this.config.quantization, this.config.dimensions);
+      const q = this.config.quantization;
+      if (q.type === 'product') {
+        this.pqNumSubvectors = q.subquantizers ?? 8;
+        this.pqNumCentroids = q.codebookSize ?? 256;
+        if (this.config.dimensions % this.pqNumSubvectors !== 0) {
+          throw new Error(
+            `Dimensions (${this.config.dimensions}) must be divisible by subquantizers (${this.pqNumSubvectors})`
+          );
+        }
+        this.pqSubvectorDim = this.config.dimensions / this.pqNumSubvectors;
+      }
     }
   }
 
@@ -266,25 +290,42 @@ export class HNSWIndex extends EventEmitter {
       throw new Error('Index is full, cannot add more elements');
     }
 
-    // Quantize if enabled
-    const storedVector = this.quantizer
-      ? this.quantizer.encode(vector)
-      : vector;
-
     // Pre-normalize vector for O(1) cosine similarity
     const normalizedVector = this.config.metric === 'cosine'
-      ? this.normalizeVector(storedVector)
+      ? this.normalizeVector(vector)
       : null;
+
+    // Quantize vector if configured
+    let quantizedData: QuantizedVector | null = null;
+    if (this.config.quantization) {
+      switch (this.config.quantization.type) {
+        case 'binary':
+          quantizedData = { type: 'binary', packed: this.binaryQuantize(vector) };
+          break;
+        case 'scalar': {
+          const sq = this.scalarQuantize(vector);
+          quantizedData = { type: 'scalar', quantized: sq.quantized, min: sq.min, range: sq.range };
+          break;
+        }
+        case 'product':
+          if (!this.pqTrained) {
+            throw new Error('Product quantization requires training before inserting vectors. Call trainIndex() first.');
+          }
+          quantizedData = { type: 'product', codes: this.productEncode(vector) };
+          break;
+      }
+    }
 
     // Generate random level for new node
     const level = this.getRandomLevel();
 
     const node: HNSWNode = {
       id,
-      vector: storedVector,
+      vector,
       normalizedVector,
       connections: new Map(),
       level,
+      quantizedData,
     };
 
     // Initialize connection sets for each layer
@@ -331,58 +372,75 @@ export class HNSWIndex extends EventEmitter {
 
     const searchEf = ef || Math.max(k, this.config.efConstruction);
 
-    // Quantize query if needed
-    const queryVector = this.quantizer
-      ? this.quantizer.encode(query)
-      : query;
-
     // Pre-normalize query for O(1) cosine similarity
     const normalizedQuery = this.config.metric === 'cosine'
-      ? this.normalizeVector(queryVector)
+      ? this.normalizeVector(query)
       : null;
 
-    // Start from entry point and search down the layers
-    let currentNode = this.entryPoint;
-    let currentDist = this.distanceOptimized(
-      queryVector,
-      normalizedQuery,
-      this.nodes.get(currentNode)!
-    );
+    // Set up quantized search context
+    if (this.config.quantization) {
+      switch (this.config.quantization.type) {
+        case 'binary':
+          this.searchContext = { binaryQuery: this.binaryQuantize(query) };
+          break;
+        case 'product':
+          if (this.pqTrained && this.pqCodebook) {
+            this.searchContext = { pqDistanceTables: this.buildPQDistanceTables(query) };
+          }
+          break;
+        default:
+          this.searchContext = null;
+      }
+    } else {
+      this.searchContext = null;
+    }
 
-    // Search through layers from top to 1
-    for (let level = this.maxLevel; level > 0; level--) {
-      const layerResult = this.searchLayerOptimized(
-        queryVector,
-        normalizedQuery,
-        currentNode,
-        1,
-        level
-      );
-      currentNode = layerResult[0]?.id || currentNode;
-      currentDist = this.distanceOptimized(
-        queryVector,
+    try {
+      // Start from entry point and search down the layers
+      let currentNode = this.entryPoint;
+      let currentDist = this.distanceOptimized(
+        query,
         normalizedQuery,
         this.nodes.get(currentNode)!
       );
+
+      // Search through layers from top to 1
+      for (let level = this.maxLevel; level > 0; level--) {
+        const layerResult = this.searchLayerOptimized(
+          query,
+          normalizedQuery,
+          currentNode,
+          1,
+          level
+        );
+        currentNode = layerResult[0]?.id || currentNode;
+        currentDist = this.distanceOptimized(
+          query,
+          normalizedQuery,
+          this.nodes.get(currentNode)!
+        );
+      }
+
+      // Search layer 0 with ef candidates using heap-based search
+      const candidates = this.searchLayerOptimized(
+        query,
+        normalizedQuery,
+        currentNode,
+        searchEf,
+        0
+      );
+
+      // Return top k results (already sorted by heap)
+      const results = candidates.slice(0, k);
+
+      const duration = performance.now() - startTime;
+      this.stats.searchCount++;
+      this.stats.totalSearchTime += duration;
+
+      return results;
+    } finally {
+      this.searchContext = null;
     }
-
-    // Search layer 0 with ef candidates using heap-based search
-    const candidates = this.searchLayerOptimized(
-      queryVector,
-      normalizedQuery,
-      currentNode,
-      searchEf,
-      0
-    );
-
-    // Return top k results (already sorted by heap)
-    const results = candidates.slice(0, k);
-
-    const duration = performance.now() - startTime;
-    this.stats.searchCount++;
-    this.stats.totalSearchTime += duration;
-
-    return results;
   }
 
   /**
@@ -490,12 +548,28 @@ export class HNSWIndex extends EventEmitter {
     const connectionOverhead = this.config.M * 8 * (this.maxLevel + 1); // Approximate
     const memoryUsage = vectorCount * (bytesPerVector + connectionOverhead);
 
+    let compressionRatio = 1.0;
+    if (this.config.quantization) {
+      const bytesOriginal = this.config.dimensions * 4;
+      switch (this.config.quantization.type) {
+        case 'binary':
+          compressionRatio = bytesOriginal / Math.ceil(this.config.dimensions / 8);
+          break;
+        case 'scalar':
+          compressionRatio = 4.0; // Float32 -> Uint8
+          break;
+        case 'product':
+          compressionRatio = bytesOriginal / (this.pqNumSubvectors || 1);
+          break;
+      }
+    }
+
     return {
       vectorCount,
       memoryUsage,
       avgSearchTime,
       buildTime: performance.now() - this.stats.buildStartTime,
-      compressionRatio: this.quantizer?.getCompressionRatio() || 1.0,
+      compressionRatio,
     };
   }
 
@@ -853,14 +927,38 @@ export class HNSWIndex extends EventEmitter {
   }
 
   /**
-   * OPTIMIZED distance calculation that uses pre-normalized vectors when available
+   * OPTIMIZED distance calculation that uses quantized or pre-normalized vectors when available
    */
   private distanceOptimized(
     query: Float32Array,
     normalizedQuery: Float32Array | null,
     node: HNSWNode
   ): number {
-    // Use optimized path for cosine with pre-normalized vectors
+    // Quantized distance paths
+    if (this.config.quantization && node.quantizedData) {
+      switch (node.quantizedData.type) {
+        case 'binary':
+          if (this.searchContext?.binaryQuery) {
+            return this.hammingDistance(this.searchContext.binaryQuery, node.quantizedData.packed);
+          }
+          break;
+        case 'scalar': {
+          const dequantized = this.scalarDequantize(
+            node.quantizedData.quantized,
+            node.quantizedData.min,
+            node.quantizedData.range
+          );
+          return this.distance(query, dequantized);
+        }
+        case 'product':
+          if (this.searchContext?.pqDistanceTables) {
+            return this.adcDistance(this.searchContext.pqDistanceTables, node.quantizedData.codes);
+          }
+          break;
+      }
+    }
+
+    // Unquantized: optimized cosine with pre-normalized vectors
     if (
       this.config.metric === 'cosine' &&
       normalizedQuery !== null &&
@@ -869,7 +967,6 @@ export class HNSWIndex extends EventEmitter {
       return this.cosineDistanceNormalized(normalizedQuery, node.normalizedVector);
     }
 
-    // Fall back to standard distance calculation
     return this.distance(query, node.vector);
   }
 
@@ -898,116 +995,197 @@ export class HNSWIndex extends EventEmitter {
     }
     return sum;
   }
-}
 
-/**
- * Quantizer for vector compression
- */
-class Quantizer {
-  private config: QuantizationConfig;
-  private dimensions: number;
+  // ===== Quantization Methods =====
 
-  constructor(config: QuantizationConfig, dimensions: number) {
-    this.config = config;
-    this.dimensions = dimensions;
-  }
-
-  /**
-   * Encode a vector using quantization
-   */
-  encode(vector: Float32Array): Float32Array {
-    switch (this.config.type) {
-      case 'binary':
-        return this.binaryQuantize(vector);
-      case 'scalar':
-        return this.scalarQuantize(vector);
-      case 'product':
-        return this.productQuantize(vector);
-      default:
-        return vector;
-    }
-  }
-
-  /**
-   * Get compression ratio
-   */
-  getCompressionRatio(): number {
-    switch (this.config.type) {
-      case 'binary':
-        return 32; // 32x compression (32 bits -> 1 bit per dimension)
-      case 'scalar':
-        return 32 / (this.config.bits || 8);
-      case 'product':
-        return this.config.subquantizers || 8;
-      default:
-        return 1;
-    }
-  }
-
-  private binaryQuantize(vector: Float32Array): Float32Array {
-    // Simple binary quantization: > 0 becomes 1, <= 0 becomes 0
-    // Stored in packed format in a smaller Float32Array
-    const packedLength = Math.ceil(vector.length / 32);
-    const packed = new Float32Array(packedLength);
-
+  private binaryQuantize(vector: Float32Array): Uint8Array {
+    const numBytes = Math.ceil(vector.length / 8);
+    const packed = new Uint8Array(numBytes);
     for (let i = 0; i < vector.length; i++) {
-      const packedIndex = Math.floor(i / 32);
-      const bitPosition = i % 32;
       if (vector[i] > 0) {
-        packed[packedIndex] = (packed[packedIndex] || 0) | (1 << bitPosition);
+        packed[i >> 3] |= (1 << (i & 7));
       }
     }
-
     return packed;
   }
 
-  private scalarQuantize(vector: Float32Array): Float32Array {
-    // Find min/max for normalization
-    let min = Infinity;
-    let max = -Infinity;
+  private hammingDistance(a: Uint8Array, b: Uint8Array): number {
+    let distance = 0;
+    for (let i = 0; i < a.length; i++) {
+      let xor = a[i] ^ b[i];
+      while (xor) {
+        distance++;
+        xor &= xor - 1;
+      }
+    }
+    return distance;
+  }
+
+  private scalarQuantize(vector: Float32Array): { quantized: Uint8Array; min: number; range: number } {
+    let min = Infinity, max = -Infinity;
     for (let i = 0; i < vector.length; i++) {
       if (vector[i] < min) min = vector[i];
       if (vector[i] > max) max = vector[i];
     }
-
-    const range = max - min || 1;
-    const bits = this.config.bits || 8;
-    const levels = Math.pow(2, bits);
-
-    // Quantize each value
-    const quantized = new Float32Array(vector.length + 2); // +2 for min/range
-    quantized[0] = min;
-    quantized[1] = range;
-
+    const range = max - min || 1e-10;
+    const quantized = new Uint8Array(vector.length);
     for (let i = 0; i < vector.length; i++) {
-      const normalized = (vector[i] - min) / range;
-      quantized[i + 2] = Math.round(normalized * (levels - 1));
+      quantized[i] = Math.round(((vector[i] - min) / range) * 255);
     }
-
-    return quantized;
+    return { quantized, min, range };
   }
 
-  private productQuantize(vector: Float32Array): Float32Array {
-    // Simplified product quantization
-    // In production, would use trained codebooks
-    const subquantizers = this.config.subquantizers || 8;
-    const subvectorSize = Math.ceil(vector.length / subquantizers);
+  private scalarDequantize(quantized: Uint8Array, min: number, range: number): Float32Array {
+    const result = new Float32Array(quantized.length);
+    for (let i = 0; i < quantized.length; i++) {
+      result[i] = (quantized[i] / 255) * range + min;
+    }
+    return result;
+  }
 
-    const quantized = new Float32Array(subquantizers);
-
-    for (let i = 0; i < subquantizers; i++) {
-      let sum = 0;
-      const start = i * subvectorSize;
-      const end = Math.min(start + subvectorSize, vector.length);
-
-      for (let j = start; j < end; j++) {
-        sum += vector[j];
-      }
-
-      quantized[i] = sum / (end - start);
+  async trainIndex(trainingVectors: Float32Array[]): Promise<void> {
+    if (!this.config.quantization || this.config.quantization.type !== 'product') {
+      throw new Error('trainIndex() only applies to product quantization');
+    }
+    if (trainingVectors.length < this.pqNumCentroids) {
+      throw new Error(
+        `Need at least ${this.pqNumCentroids} training vectors, got ${trainingVectors.length}`
+      );
     }
 
-    return quantized;
+    this.pqCodebook = [];
+    for (let m = 0; m < this.pqNumSubvectors; m++) {
+      const subvectors = this.extractSubvectors(trainingVectors, m);
+      const centroids = this.kMeansPlusPlus(subvectors, this.pqNumCentroids);
+      this.pqCodebook.push(centroids);
+    }
+    this.pqTrained = true;
+  }
+
+  get isTrained(): boolean {
+    if (!this.config.quantization || this.config.quantization.type !== 'product') return true;
+    return this.pqTrained;
+  }
+
+  private extractSubvectors(vectors: Float32Array[], m: number): Float32Array[] {
+    const start = m * this.pqSubvectorDim;
+    return vectors.map(v => v.slice(start, start + this.pqSubvectorDim));
+  }
+
+  private kMeansPlusPlus(data: Float32Array[], k: number): Float32Array[] {
+    const dim = data[0].length;
+    const centroids: Float32Array[] = [];
+
+    // k-means++ initialization
+    centroids.push(new Float32Array(data[Math.floor(Math.random() * data.length)]));
+
+    for (let c = 1; c < k; c++) {
+      const distances = data.map(v => {
+        let minDist = Infinity;
+        for (const centroid of centroids) {
+          let d = 0;
+          for (let i = 0; i < dim; i++) {
+            const diff = v[i] - centroid[i];
+            d += diff * diff;
+          }
+          if (d < minDist) minDist = d;
+        }
+        return minDist;
+      });
+      const total = distances.reduce((a, b) => a + b, 0);
+      let threshold = Math.random() * total;
+      let chosen = 0;
+      for (let i = 0; i < data.length; i++) {
+        threshold -= distances[i];
+        if (threshold <= 0) { chosen = i; break; }
+      }
+      centroids.push(new Float32Array(data[chosen]));
+    }
+
+    // k-means iterations
+    for (let iter = 0; iter < 100; iter++) {
+      const assignments: number[][] = Array.from({ length: k }, () => []);
+      for (let i = 0; i < data.length; i++) {
+        let minDist = Infinity, minIdx = 0;
+        for (let c = 0; c < k; c++) {
+          let d = 0;
+          for (let j = 0; j < dim; j++) {
+            const diff = data[i][j] - centroids[c][j];
+            d += diff * diff;
+          }
+          if (d < minDist) { minDist = d; minIdx = c; }
+        }
+        assignments[minIdx].push(i);
+      }
+
+      let maxShift = 0;
+      for (let c = 0; c < k; c++) {
+        if (assignments[c].length === 0) {
+          centroids[c] = new Float32Array(data[Math.floor(Math.random() * data.length)]);
+          continue;
+        }
+        const newCentroid = new Float32Array(dim);
+        for (const idx of assignments[c]) {
+          for (let d = 0; d < dim; d++) newCentroid[d] += data[idx][d];
+        }
+        for (let d = 0; d < dim; d++) newCentroid[d] /= assignments[c].length;
+        let shift = 0;
+        for (let d = 0; d < dim; d++) {
+          const diff = centroids[c][d] - newCentroid[d];
+          shift += diff * diff;
+        }
+        maxShift = Math.max(maxShift, shift);
+        centroids[c] = newCentroid;
+      }
+
+      if (maxShift < 1e-6) break;
+    }
+
+    return centroids;
+  }
+
+  private productEncode(vector: Float32Array): Uint8Array {
+    const codes = new Uint8Array(this.pqNumSubvectors);
+    for (let m = 0; m < this.pqNumSubvectors; m++) {
+      const start = m * this.pqSubvectorDim;
+      let minDist = Infinity, minIdx = 0;
+      for (let c = 0; c < this.pqNumCentroids; c++) {
+        let d = 0;
+        for (let j = 0; j < this.pqSubvectorDim; j++) {
+          const diff = vector[start + j] - this.pqCodebook![m][c][j];
+          d += diff * diff;
+        }
+        if (d < minDist) { minDist = d; minIdx = c; }
+      }
+      codes[m] = minIdx;
+    }
+    return codes;
+  }
+
+  private buildPQDistanceTables(query: Float32Array): Float32Array[] {
+    const tables: Float32Array[] = [];
+    for (let m = 0; m < this.pqNumSubvectors; m++) {
+      const start = m * this.pqSubvectorDim;
+      const table = new Float32Array(this.pqNumCentroids);
+      for (let c = 0; c < this.pqNumCentroids; c++) {
+        let d = 0;
+        for (let j = 0; j < this.pqSubvectorDim; j++) {
+          const diff = query[start + j] - this.pqCodebook![m][c][j];
+          d += diff * diff;
+        }
+        table[c] = d;
+      }
+      tables.push(table);
+    }
+    return tables;
+  }
+
+  private adcDistance(tables: Float32Array[], codes: Uint8Array): number {
+    let sum = 0;
+    for (let m = 0; m < codes.length; m++) {
+      sum += tables[m][codes[m]];
+    }
+    return Math.sqrt(sum);
   }
 }
 

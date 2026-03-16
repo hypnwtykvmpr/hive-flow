@@ -63,6 +63,7 @@ export type {
   HNSWConfig,
   HNSWStats,
   QuantizationConfig,
+  QuantizedVector,
 
   // Backend Types
   IMemoryBackend,

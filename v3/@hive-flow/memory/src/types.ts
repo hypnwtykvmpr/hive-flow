@@ -283,6 +283,17 @@ export interface QuantizationConfig {
 }
 
 /**
+ * Discriminated union for quantized vector data stored per-node.
+ * Binary: bit-packed sign thresholding, Hamming distance
+ * Scalar: per-vector min/range Int8 mapping, dequantize-then-compare
+ * Product: codebook indices, ADC with lookup tables
+ */
+export type QuantizedVector =
+  | { type: 'binary'; packed: Uint8Array }
+  | { type: 'scalar'; quantized: Uint8Array; min: number; range: number }
+  | { type: 'product'; codes: Uint8Array };
+
+/**
  * HNSW index statistics
  */
 export interface HNSWStats {
