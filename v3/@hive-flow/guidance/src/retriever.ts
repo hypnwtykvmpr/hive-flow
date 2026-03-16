@@ -23,6 +23,7 @@ import type {
   RetrievalRequest,
   RetrievalResult,
 } from './types.js';
+import { clamp } from '@hive-flow/shared';
 
 // ============================================================================
 // Intent Classification
@@ -456,7 +457,7 @@ export class ShardRetriever {
       normB += b[i] * b[i];
     }
     const denom = Math.sqrt(normA) * Math.sqrt(normB);
-    return denom > 0 ? Math.max(0, Math.min(1, dot / denom)) : 0;
+    return denom > 0 ? clamp(dot / denom, 0, 1) : 0;
   }
 
   /**

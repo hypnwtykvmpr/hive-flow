@@ -63,9 +63,33 @@ export function classifyTool(toolName: string): ToolRisk {
   return ToolRisk.LOW;
 }
 
+function resolveProjectDir(): string {
+  // Priority 1: explicit env var (safe for MCP servers)
+  if (process.env.CLAUDE_PROJECT_DIR) {
+    return process.env.CLAUDE_PROJECT_DIR;
+  }
+
+  // Priority 2: ESM-compatible import.meta.url (if available)
+  try {
+    // import.meta.url is available in ESM; accessing it in CJS throws
+    const metaUrl = (import.meta as { url?: string })?.url;
+    if (metaUrl) {
+      const { fileURLToPath } = require('url');
+      const { dirname } = require('path');
+      const thisDir = dirname(fileURLToPath(metaUrl));
+      return resolve(thisDir, '..', '..', '..', '..');
+    }
+  } catch {
+    // Not in ESM context — fall through to CJS
+  }
+
+  // Priority 3: CJS __dirname traversal (works in compiled .ts → .js)
+  return resolve(__dirname, '..', '..', '..', '..');
+}
+
 export function getEnforcementLevel(): number {
   try {
-    const projectDir = resolve(__dirname, '..', '..', '..', '..');
+    const projectDir = resolveProjectDir();
     const stateFile = join(projectDir, '.hive-flow', 'enforcement', 'state.json');
     if (!existsSync(stateFile)) return 0;
 

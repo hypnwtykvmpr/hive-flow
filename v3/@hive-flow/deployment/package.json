@@ -11,7 +11,8 @@
   "scripts": {
     "build": "tsc",
     "test": "vitest run",
-    "release": "semantic-release"
+    "release": "semantic-release",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@hive-flow/shared": "workspace:*"

@@ -14,7 +14,7 @@
  * @module @hive-flow/providers/scripts/provider-status-hook
  */
 
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import { writeFileSync, readFileSync, mkdirSync, existsSync, renameSync } from 'fs';
 import { join } from 'path';
 
@@ -32,7 +32,7 @@ const PROVIDERS = [
 
 function detectBinary(binary, fallback) {
   try {
-    execSync(`which ${binary}`, { stdio: 'pipe', timeout: 5000 });
+    execFileSync('which', [binary], { stdio: 'pipe', timeout: 5000 });
   } catch {
     // Primary binary not found — try fallback if available
     if (fallback) {
@@ -43,7 +43,7 @@ function detectBinary(binary, fallback) {
   }
 
   try {
-    const output = execSync(`${binary} --version`, {
+    const output = execFileSync(binary, ['--version'], {
       stdio: 'pipe',
       timeout: 10000,
       encoding: 'utf-8',

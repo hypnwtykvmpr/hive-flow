@@ -19,6 +19,7 @@
 
 import { EventEmitter } from 'events';
 import type { Task, TaskResult, AgentStatus, Message } from './agentic-flow-agent.js';
+import { clamp } from '@hive-flow/shared';
 
 /**
  * Worker configuration interface
@@ -535,7 +536,7 @@ export abstract class WorkerBase extends EventEmitter {
    */
   updateLoad(delta?: number): void {
     if (typeof delta === 'number') {
-      this.load = Math.max(0, Math.min(1, this.load + delta));
+      this.load = clamp(this.load + delta, 0, 1);
     } else {
       // Calculate based on current task count
       const maxTasks = this.config.maxConcurrentTasks || 1;

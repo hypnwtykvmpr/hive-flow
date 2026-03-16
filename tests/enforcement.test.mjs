@@ -3,7 +3,7 @@
  *
  * Tests the enforcement.cjs PreToolUse hook which uses the Claude Code protocol:
  *   Allow (no context):   {} (empty JSON)
- *   Allow (with context):  { hookSpecificOutput: { permissionDecision: 'allow' }, additionalContext: '...' }
+ *   Allow (with context):  { hookSpecificOutput: { permissionDecision: 'allow', additionalContext: '...' } }
  *   Deny:                  { hookSpecificOutput: { permissionDecision: 'deny', permissionDecisionReason: '...' } }
  *
  * Since enforcement.cjs derives PROJECT_DIR from __dirname (not env), all state
@@ -152,10 +152,20 @@ function runEnforcement(input) {
   return { status: result.status, stdout: result.stdout, stderr: result.stderr, json };
 }
 
-function runResetCheck(input) {
+function signResetRequest(input) {
+  // Generate HMAC signature matching what hook-handler.cjs produces
+  const key = getHmacKey();
+  const timestamp = String(Date.now());
+  const payload = `enforcement-reset:${timestamp}`;
+  const signature = createHmac('sha256', key).update(payload).digest('hex');
+  return { ...input, _hmac_signature: signature, _hmac_timestamp: timestamp };
+}
+
+function runResetCheck(input, { sign = true } = {}) {
+  const signedInput = sign ? signResetRequest(input) : input;
   const result = spawnSync(process.execPath, [SCRIPT, '--reset-check'], {
     cwd: REPO_ROOT,
-    input: JSON.stringify(input),
+    input: JSON.stringify(signedInput),
     encoding: 'utf8',
     timeout: 5000,
   });
@@ -173,10 +183,8 @@ function isAllow(json) {
   if (!json) return false;
   // Empty JSON = allow without context
   if (Object.keys(json).length === 0) return true;
-  // Explicit allow with context
+  // Explicit allow with context (additionalContext nested inside hookSpecificOutput)
   if (json.hookSpecificOutput?.permissionDecision === 'allow') return true;
-  // Has additionalContext but no deny
-  if (json.additionalContext && !json.hookSpecificOutput?.permissionDecisionReason) return true;
   return false;
 }
 
@@ -190,9 +198,9 @@ function denyReason(json) {
   return json?.hookSpecificOutput?.permissionDecisionReason || '';
 }
 
-/** Get the additional context (for warnings) */
+/** Get the additional context (nested inside hookSpecificOutput) */
 function additionalContext(json) {
-  return json?.additionalContext || '';
+  return json?.hookSpecificOutput?.additionalContext || '';
 }
 
 // ===========================================================================
@@ -235,8 +243,8 @@ describe('enforcement system', () => {
       const r = runEnforcement({ tool_name: 'Bash', tool_input: { command: 'echo hello' } });
       assert.ok(isAllow(r.json), 'should be allow');
       assert.equal(r.json.hookSpecificOutput.permissionDecision, 'allow');
-      assert.ok(r.json.additionalContext, 'should have additionalContext');
-      assert.match(r.json.additionalContext, /ENFORCEMENT WARNING/);
+      assert.ok(r.json.hookSpecificOutput.additionalContext, 'should have additionalContext inside hookSpecificOutput');
+      assert.match(r.json.hookSpecificOutput.additionalContext, /ENFORCEMENT WARNING/);
     });
 
     it('returns hookSpecificOutput with permissionDecision=deny for blocked', () => {
@@ -829,6 +837,20 @@ describe('enforcement system', () => {
       assert.equal(s.integrityCompromised, true);
     });
 
+    it('treats truncated HMAC as invalid state without fail-closed denial', () => {
+      mkdirSync(ENF_DIR, { recursive: true });
+      const envelope = signState(freshState({ level: 0, violations: 0 }));
+      envelope.hmac = envelope.hmac.slice(0, -2);
+      writeFileSync(STATE_FILE, JSON.stringify(envelope, null, 2));
+
+      const r = runEnforcement({ tool_name: 'Read', tool_input: {} });
+      assert.ok(isAllow(r.json), 'truncated HMAC should not trigger internal error denial');
+
+      const s = readState();
+      assert.ok(s.level >= 1, 'invalid HMAC state should be escalated to at least WARNED');
+      assert.equal(s.integrityCompromised, true);
+    });
+
     it('handles legacy (unsigned) state with migration', () => {
       // Write legacy format (plain state without HMAC envelope)
       mkdirSync(ENF_DIR, { recursive: true });
@@ -1159,11 +1181,11 @@ describe('enforcement system', () => {
 
   describe('reset functionality', () => {
 
-    it('resets state via --reset-check with /enforcement-reset', () => {
+    it('resets state via signed --reset-check with /enforcement-reset', () => {
       setState(freshState({ level: 3, violations: 10, restrictedGroups: ['exec', 'write', 'fetch'] }));
       const r = runResetCheck({ user_prompt: '/enforcement-reset' });
-      assert.ok(r.json.additionalContext);
-      assert.match(r.json.additionalContext, /Reset complete/);
+      assert.ok(r.json.hookSpecificOutput?.additionalContext, 'should have additionalContext inside hookSpecificOutput');
+      assert.match(r.json.hookSpecificOutput.additionalContext, /Reset complete/);
 
       // State should be back to NORMAL
       const s = readState();
@@ -1180,6 +1202,45 @@ describe('enforcement system', () => {
       // State should be unchanged
       const s = readState();
       assert.equal(s.level, 2);
+    });
+
+    it('denies unsigned --reset-check with /enforcement-reset', () => {
+      setState(freshState({ level: 3, violations: 5, restrictedGroups: ['exec', 'write', 'fetch'] }));
+      const r = runResetCheck({ user_prompt: '/enforcement-reset' }, { sign: false });
+      assert.ok(isDeny(r.json), 'unsigned reset should be denied');
+      assert.match(denyReason(r.json), /unsigned/i);
+
+      // State should NOT be reset
+      const s = readState();
+      assert.ok(s.level >= 3, 'state should remain HALTED after unsigned reset');
+    });
+
+    it('denies reset with invalid HMAC signature', () => {
+      setState(freshState({ level: 3, violations: 5 }));
+      const r = runResetCheck({
+        user_prompt: '/enforcement-reset',
+        _hmac_signature: 'a'.repeat(64),
+        _hmac_timestamp: String(Date.now()),
+      }, { sign: false });
+      assert.ok(isDeny(r.json), 'invalid signature reset should be denied');
+      assert.match(denyReason(r.json), /invalid signature/i);
+    });
+
+    it('denies reset with expired timestamp (> 30s)', () => {
+      // Sign with valid key but old timestamp
+      const key = getHmacKey();
+      const oldTimestamp = String(Date.now() - 60000); // 60s ago
+      const payload = `enforcement-reset:${oldTimestamp}`;
+      const signature = createHmac('sha256', key).update(payload).digest('hex');
+
+      setState(freshState({ level: 3, violations: 5 }));
+      const r = runResetCheck({
+        user_prompt: '/enforcement-reset',
+        _hmac_signature: signature,
+        _hmac_timestamp: oldTimestamp,
+      }, { sign: false });
+      assert.ok(isDeny(r.json), 'expired timestamp reset should be denied');
+      assert.match(denyReason(r.json), /expired/i);
     });
 
     it('reset clears restrictedGroups (Bug 4 fix)', () => {
@@ -1199,6 +1260,14 @@ describe('enforcement system', () => {
       const violations = readViolations();
       const resetEntry = violations.find(v => v.type === 'reset');
       assert.ok(resetEntry, 'should log reset violation');
+    });
+
+    it('logs unsigned reset attempt to violations file', () => {
+      setState(freshState({ level: 2, violations: 3 }));
+      runResetCheck({ user_prompt: '/enforcement-reset' }, { sign: false });
+      const violations = readViolations();
+      const unsignedEntry = violations.find(v => v.type === 'unsigned-reset-attempt');
+      assert.ok(unsignedEntry, 'should log unsigned-reset-attempt violation');
     });
   });
 

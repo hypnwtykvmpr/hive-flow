@@ -391,8 +391,11 @@ export class SDKBridge extends EventEmitter {
     if (a.prerelease && !b.prerelease) return -1;
     if (!a.prerelease && !b.prerelease) return 0;
 
-    // Both have prerelease
-    return (a.prerelease || '').localeCompare(b.prerelease || '');
+    // Both have prerelease — use explicit ordering instead of locale-dependent compare
+    const prereleaseOrder: Record<string, number> = { alpha: 0, beta: 1, rc: 2 };
+    const orderA = prereleaseOrder[a.prerelease || ''] ?? 3;
+    const orderB = prereleaseOrder[b.prerelease || ''] ?? 3;
+    return orderA - orderB;
   }
 
   private isVersionError(error: unknown): boolean {

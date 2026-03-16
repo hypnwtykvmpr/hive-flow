@@ -95,6 +95,8 @@ export const performanceTools: MCPTool[] = [
         format: { type: 'string', enum: ['json', 'summary', 'detailed'], description: 'Report format' },
         components: { type: 'array', description: 'Components to include' },
       },
+      required: [],
+      additionalProperties: false,
     },
     handler: async (input) => {
       const store = loadPerfStore();
@@ -198,6 +200,8 @@ export const performanceTools: MCPTool[] = [
         threshold: { type: 'number', description: 'Alert threshold' },
         deep: { type: 'boolean', description: 'Deep analysis' },
       },
+      required: [],
+      additionalProperties: false,
     },
     handler: async (input) => {
       const deep = input.deep as boolean;
@@ -263,6 +267,8 @@ export const performanceTools: MCPTool[] = [
         iterations: { type: 'number', description: 'Number of iterations' },
         warmup: { type: 'boolean', description: 'Include warmup phase' },
       },
+      required: [],
+      additionalProperties: false,
     },
     handler: async (input) => {
       const store = loadPerfStore();
@@ -395,6 +401,8 @@ export const performanceTools: MCPTool[] = [
         duration: { type: 'number', description: 'Profile duration in seconds' },
         sampleRate: { type: 'number', description: 'Sampling rate' },
       },
+      required: [],
+      additionalProperties: false,
     },
     handler: async (input) => {
       const target = (input.target as string) || 'all';
@@ -438,6 +446,8 @@ export const performanceTools: MCPTool[] = [
         target: { type: 'string', enum: ['memory', 'latency', 'throughput', 'all'], description: 'Optimization target' },
         aggressive: { type: 'boolean', description: 'Apply aggressive optimizations' },
       },
+      required: [],
+      additionalProperties: false,
     },
     handler: async (input) => {
       const target = (input.target as string) || 'all';
@@ -499,6 +509,8 @@ export const performanceTools: MCPTool[] = [
         aggregation: { type: 'string', enum: ['avg', 'min', 'max', 'p50', 'p95', 'p99'], description: 'Aggregation method' },
         timeRange: { type: 'string', description: 'Time range' },
       },
+      required: [],
+      additionalProperties: false,
     },
     handler: async (input) => {
       const metric = (input.metric as string) || 'all';

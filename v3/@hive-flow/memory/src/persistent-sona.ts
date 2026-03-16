@@ -186,7 +186,7 @@ export class PersistentSonaCoordinator {
 
     this.patterns.set(id, record);
     // Mark for persistence on next persist() call
-    void this.store.savePatterns([record]).catch((_e: unknown) => { /* non-fatal persist */ });
+    void this.store.savePatterns([record]).catch((e: unknown) => { console.warn('[PersistentSona] non-fatal persist error:', e); });
     return id;
   }
 
@@ -267,7 +267,7 @@ export class PersistentSonaCoordinator {
     this.trajectoryBuffer.push(copy);
 
     // Persist to store immediately so evicted entries are not lost
-    void this.store.appendTrajectory(copy).catch((_e: unknown) => { /* non-fatal persist */ });
+    void this.store.appendTrajectory(copy).catch((e: unknown) => { console.warn('[PersistentSona] non-fatal persist error:', e); });
 
     while (this.trajectoryBuffer.length > this.maxTrajectoryBuffer) {
       this.trajectoryBuffer.shift();

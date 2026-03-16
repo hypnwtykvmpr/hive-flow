@@ -103,7 +103,7 @@ export class RvfBackend implements IMemoryBackend {
 
     if (this.config.autoPersistInterval > 0 && this.config.databasePath !== ':memory:') {
       this.persistTimer = setInterval(() => {
-        if (this.dirty && !this.persisting) this.persistToDisk().catch((_e: unknown) => { /* non-fatal auto-persist */ });
+        if (this.dirty && !this.persisting) this.persistToDisk().catch((e: unknown) => { console.warn('[RvfBackend] non-fatal error:', e); });
       }, this.config.autoPersistInterval);
       if (this.persistTimer.unref) this.persistTimer.unref();
     }
@@ -443,13 +443,18 @@ export class RvfBackend implements IMemoryBackend {
         const entryJson = raw.subarray(offset, offset + entryLen).toString('utf-8');
         offset += entryLen;
 
-        const parsed = JSON.parse(entryJson);
-        if (parsed.embedding) parsed.embedding = new Float32Array(parsed.embedding);
+        try {
+          const parsed = JSON.parse(entryJson);
+          if (parsed.embedding) parsed.embedding = new Float32Array(parsed.embedding);
 
-        const entry: MemoryEntry = parsed;
-        this.entries.set(entry.id, entry);
-        this.keyIndex.set(this.compositeKey(entry.namespace, entry.key), entry.id);
-        if (entry.embedding && this.hnswIndex) this.hnswIndex.add(entry.id, entry.embedding);
+          const entry: MemoryEntry = parsed;
+          this.entries.set(entry.id, entry);
+          this.keyIndex.set(this.compositeKey(entry.namespace, entry.key), entry.id);
+          if (entry.embedding && this.hnswIndex) this.hnswIndex.add(entry.id, entry.embedding);
+        } catch (e) {
+          console.warn('[RvfBackend] Skipping corrupted entry:', e);
+          continue;
+        }
       }
     } catch (err) {
       if (this.config.verbose) {

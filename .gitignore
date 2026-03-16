@@ -168,6 +168,9 @@ hive-mind-prompt-*.txt
 # Temp test directories
 tests/.tmp-*/
 
+# Serena tooling
+.serena/
+
 # additional crap I feel like ignoring
 .gitignore
 /.resources/

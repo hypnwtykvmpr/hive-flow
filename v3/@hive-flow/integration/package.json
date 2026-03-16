@@ -12,7 +12,8 @@
   },
   "scripts": {
     "test": "vitest run",
-    "build": "tsc"
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [
     "hive-flow",
@@ -23,6 +24,9 @@
     "anti-drift",
     "swarm"
   ],
+  "dependencies": {
+    "@hive-flow/shared": "workspace:*"
+  },
   "peerDependencies": {
     "agentic-flow": "^2.0.0-alpha"
   },

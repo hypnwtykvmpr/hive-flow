@@ -24,6 +24,7 @@ import {
   WorkerArtifact,
 } from './worker-base.js';
 import type { Task } from './agentic-flow-agent.js';
+import { clamp } from '@hive-flow/shared';
 
 /**
  * Domain specialization types
@@ -460,7 +461,7 @@ export class SpecializedWorker extends WorkerBase {
    * @param level - Proficiency level (0.0-1.0)
    */
   updateSkill(skill: string, level: number): void {
-    const clampedLevel = Math.max(0, Math.min(1, level));
+    const clampedLevel = clamp(level, 0, 1);
     this.skills.set(skill, clampedLevel);
 
     // Regenerate embedding with updated skills

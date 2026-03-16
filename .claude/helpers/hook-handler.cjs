@@ -7,8 +7,12 @@ process.on('uncaughtException', () => {
     process.stdout.write(JSON.stringify({ hookSpecificOutput: { permissionDecision: 'allow' } }));
   }
   // enforce-plan: fail-closed (enforcement errors must block, not allow)
-  if (process.argv[2] === 'enforce-plan') {
+  else if (process.argv[2] === 'enforce-plan') {
     process.stdout.write(JSON.stringify({ hookSpecificOutput: { permissionDecision: 'deny', permissionDecisionReason: '[ENFORCEMENT ERROR] Hook crashed. Tool blocked for safety.' } }));
+  }
+  // All other commands: emit empty JSON so Claude Code sees valid output
+  else {
+    process.stdout.write(JSON.stringify({}));
   }
   process.exit(0);
 });
@@ -515,6 +519,62 @@ const handlers = {
         console.log(`[ENFORCEMENT-GATE: ${level}] ${results.join(' | ')}`);
       }
     } catch { /* fail-open */ }
+  },
+
+  'enforcement-reset-check': () => {
+    // HMAC-signed IPC: reads UserPromptSubmit input from stdin, checks for
+    // /enforcement-reset, signs the request with the shared HMAC key, then
+    // forwards to enforcement.cjs --reset-check. Unsigned direct invocations
+    // of enforcement.cjs --reset-check are rejected by enforcement.cjs.
+    const crypto = require('crypto');
+    let rawInput = '';
+    try { rawInput = fs.readFileSync(0, 'utf8'); } catch { /* empty stdin */ }
+    let input;
+    try { input = JSON.parse(rawInput); } catch { input = {}; }
+
+    const userPrompt = input?.user_prompt || input?.prompt || '';
+    if (!/\/enforcement-reset\b/i.test(userPrompt)) {
+      // No reset token — pass through as empty (no-op)
+      console.log(JSON.stringify({}));
+      return;
+    }
+
+    // Generate HMAC signature for the reset request
+    const hmacKeyFile = path.join(__dirname, '..', '..', '.hive-flow', 'enforcement', '.hmac-key');
+    let key;
+    try {
+      key = fs.readFileSync(hmacKeyFile, 'utf8').trim();
+    } catch {
+      // No HMAC key file — enforcement.cjs will create one on first run,
+      // but we can't sign without it. Let enforcement.cjs handle the error.
+      console.log(JSON.stringify({}));
+      return;
+    }
+
+    const timestamp = String(Date.now());
+    const payload = `enforcement-reset:${timestamp}`;
+    const signature = crypto.createHmac('sha256', key).update(payload).digest('hex');
+
+    // Forward to enforcement.cjs --reset-check with signature fields injected
+    const signedInput = {
+      ...input,
+      _hmac_signature: signature,
+      _hmac_timestamp: timestamp,
+    };
+
+    const { spawnSync } = require('child_process');
+    const enforcementScript = path.join(__dirname, 'enforcement.cjs');
+    const result = spawnSync(process.execPath, [enforcementScript, '--reset-check'], {
+      input: JSON.stringify(signedInput),
+      encoding: 'utf8',
+      timeout: 3000,
+    });
+
+    if (result.stdout) {
+      process.stdout.write(result.stdout);
+    } else {
+      console.log(JSON.stringify({}));
+    }
   },
 
   'anti-re-request': async () => {

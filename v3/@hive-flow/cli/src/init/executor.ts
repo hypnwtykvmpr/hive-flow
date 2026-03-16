@@ -1698,7 +1698,7 @@ npx @hive-flow/cli@latest hive-mind consensus --propose "task"
 |---------|---------|---------|
 | agentic-flow | 2.0.1-alpha | Core coordination |
 | agentdb | 2.0.0-alpha.3.4 | Vector database |
-| @ruvector/attention | 0.1.3 | Flash attention |
+| @ruvector/attention | 0.1.31 | Flash attention |
 | @ruvector/sona | 0.1.5 | Neural learning |
 
 ### Optional Integrations

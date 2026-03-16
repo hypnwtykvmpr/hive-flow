@@ -139,7 +139,7 @@ importers:
         specifier: workspace:*
         version: link:../providers
       '@ruvector/attention':
-        specifier: ^0.1.4
+        specifier: ^0.1.31
         version: 0.1.31
       '@ruvector/learning-wasm':
         specifier: ^0.1.29
@@ -275,6 +275,9 @@ importers:
 
   '@hive-flow/integration':
     dependencies:
+      '@hive-flow/shared':
+        specifier: workspace:*
+        version: link:../shared
       agentic-flow:
         specifier: ^2.0.0-alpha
         version: 2.0.3(@types/node@20.19.27)(marked@11.2.0)

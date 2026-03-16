@@ -165,7 +165,7 @@ export const providerTools: MCPTool[] = [
 
           if (!fs.existsSync(metricsDir)) fs.mkdirSync(metricsDir, { recursive: true });
 
-          let data: any = { sessionId: `session-${Date.now()}`, startedAt: new Date().toISOString(), providers: {} };
+          let data: Record<string, unknown> = { sessionId: `session-${Date.now()}`, startedAt: new Date().toISOString(), providers: {} };
           try {
             if (fs.existsSync(metricsPath)) {
               data = JSON.parse(fs.readFileSync(metricsPath, 'utf8'));
@@ -173,11 +173,12 @@ export const providerTools: MCPTool[] = [
           } catch (e) { /* ignore read error */ }
 
           if (!data.providers) data.providers = {};
-          if (!data.providers[mappedName]) {
-            data.providers[mappedName] = { calls: 0, tokens: 0, ttfb_avg_ms: 0, last_used: null };
+          const providers = data.providers as Record<string, Record<string, unknown>>;
+          if (!providers[mappedName]) {
+            providers[mappedName] = { calls: 0, tokens: 0, ttfb_avg_ms: 0, last_used: null };
           }
 
-          const p = data.providers[mappedName];
+          const p = providers[mappedName] as { calls: number; tokens: number; ttfb_avg_ms: number; last_used: string | null };
           const totalTokens = result.usage?.totalTokens || 0;
           p.ttfb_avg_ms = Math.round(((p.ttfb_avg_ms || 0) * p.calls + ttfb_ms) / (p.calls + 1));
           p.calls += 1;

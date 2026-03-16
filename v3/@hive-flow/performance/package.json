@@ -13,7 +13,8 @@
     "bench": "vitest bench",
     "bench:attention": "vitest bench benchmarks/attention/",
     "bench:startup": "vitest bench benchmarks/startup/",
-    "build": "tsc"
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@ruvector/attention": "^0.1.31",

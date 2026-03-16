@@ -440,13 +440,18 @@ export class BrowserSecurityScanner {
 
   private containsInjection(value: string): boolean {
     const injectionPatterns = [
-      /['"](\s*OR\s+|\s*AND\s+)/i,
-      /['"];\s*(DROP|ALTER|DELETE|INSERT|UPDATE|CREATE)\b/i,
+      // Require SQL keyword context after quote-break attempts
+      /['"](\s*OR\s+|\s*AND\s+)\s*['"]?\w*['"]\s*=\s*/i,
+      /['"];\s*(DROP|ALTER|DELETE|INSERT|UPDATE|CREATE)\s+(TABLE|DATABASE|INDEX|VIEW|PROCEDURE|FUNCTION)\b/i,
       /\bUNION\s+(ALL\s+)?SELECT\b/i,
-      /\bDROP\b.*\bTABLE\b/i,
-      /\bINSERT\b.*\bINTO\b/i,
-      /['"].*--\s*$/,
-      /\/\*.*\*\//,
+      /\bDROP\s+(TABLE|DATABASE|INDEX|VIEW|PROCEDURE|FUNCTION)\b/i,
+      /\bINSERT\s+INTO\b/i,
+      // SQL comment termination: require preceding quote or semicolon
+      /[;'"].*--\s*$/,
+      // Block SQL-style block comments only when preceded by SQL context
+      /['";]\s*\/\*.*\*\//,
+      // Stored procedure / exec patterns
+      /\bEXEC(UTE)?\s+(sp_|xp_|master\.)/i,
     ];
 
     return injectionPatterns.some((pattern) => pattern.test(value));

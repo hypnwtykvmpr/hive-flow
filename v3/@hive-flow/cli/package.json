@@ -78,6 +78,7 @@
     "test:pattern-store": "npx tsx src/transfer/store/tests/standalone-test.ts",
     "preinstall": "node bin/preinstall.cjs || true",
     "prepublishOnly": "cp ../../../README.md ./README.md",
+    "typecheck": "tsc --noEmit",
     "release": "npm version prerelease --preid=alpha && npm run publish:all",
     "publish:all": "./scripts/publish.sh"
   },
@@ -104,7 +105,7 @@
     "@hive-flow/neural": "workspace:*",
     "@hive-flow/plugin-gastown-bridge": "workspace:*",
     "agentic-flow": "^3.0.0-alpha.1",
-    "@ruvector/attention": "^0.1.4",
+    "@ruvector/attention": "^0.1.31",
     "@ruvector/learning-wasm": "^0.1.29",
     "@ruvector/router": "^0.1.27",
     "@ruvector/sona": "^0.1.5"

@@ -124,10 +124,15 @@ function verifyState(envelope) {
   if (!envelope.state || !envelope.hmac) return { valid: false, state: null };
 
   const expected = computeHmac(envelope.state);
-  const valid = crypto.timingSafeEqual(
-    Buffer.from(expected, 'hex'),
-    Buffer.from(envelope.hmac, 'hex')
-  );
+  const expectedBuf = Buffer.from(expected, 'hex');
+  const actualBuf = Buffer.from(envelope.hmac, 'hex');
+
+  // BUG-γ-006: Mismatched buffer lengths cause RangeError in timingSafeEqual
+  if (expectedBuf.length !== actualBuf.length) {
+    return { valid: false, state: null };
+  }
+
+  const valid = crypto.timingSafeEqual(expectedBuf, actualBuf);
   return { valid, state: valid ? envelope.state : null };
 }
 
@@ -610,8 +615,7 @@ function makeAllow(additionalContext) {
   if (additionalContext) {
     // N2: Sanitize context — strip XML tags, limit length
     const sanitized = sanitizeContext(additionalContext);
-    result.hookSpecificOutput = { permissionDecision: 'allow' };
-    result.additionalContext = sanitized;
+    result.hookSpecificOutput = { permissionDecision: 'allow', additionalContext: sanitized };
   }
   // No hookSpecificOutput needed for allow without context — empty JSON = allow
   return result;
@@ -736,10 +740,78 @@ function resetEnforcement() {
  */
 function processResetCheck(input) {
   const prompt = input?.user_prompt || input?.prompt || '';
+
+  // HMAC-signed IPC: verify caller authentication before executing reset
   if (/\/enforcement-reset\b/i.test(prompt)) {
+    const signature = input?._hmac_signature;
+    const timestamp = input?._hmac_timestamp;
+
+    if (!signature || !timestamp) {
+      // Unsigned reset attempt — log as circumvention and reject
+      appendViolation({
+        type: 'unsigned-reset-attempt',
+        reason: 'Reset request without HMAC signature — possible circumvention',
+        severity: 'critical',
+      });
+      return {
+        hookSpecificOutput: {
+          permissionDecision: 'deny',
+          permissionDecisionReason: '[ENFORCEMENT] Reset denied: unsigned request. Resets must be routed through the hook system.',
+        },
+      };
+    }
+
+    // Verify timestamp freshness (30s window)
+    const ts = parseInt(timestamp, 10);
+    if (isNaN(ts) || Math.abs(Date.now() - ts) > 30000) {
+      appendViolation({
+        type: 'expired-reset-attempt',
+        reason: `Reset request with expired timestamp (${timestamp})`,
+        severity: 'critical',
+      });
+      return {
+        hookSpecificOutput: {
+          permissionDecision: 'deny',
+          permissionDecisionReason: '[ENFORCEMENT] Reset denied: expired timestamp. Resets must be recent (within 30s).',
+        },
+      };
+    }
+
+    // Verify HMAC signature
+    const key = getOrCreateHmacKey();
+    const payload = `enforcement-reset:${timestamp}`;
+    const expected = crypto.createHmac('sha256', key).update(payload).digest('hex');
+    let signatureValid = false;
+    try {
+      signatureValid = crypto.timingSafeEqual(
+        Buffer.from(expected, 'hex'),
+        Buffer.from(signature, 'hex')
+      );
+    } catch {
+      signatureValid = false;
+    }
+
+    if (!signatureValid) {
+      appendViolation({
+        type: 'invalid-signature-reset-attempt',
+        reason: 'Reset request with invalid HMAC signature — possible circumvention',
+        severity: 'critical',
+      });
+      return {
+        hookSpecificOutput: {
+          permissionDecision: 'deny',
+          permissionDecisionReason: '[ENFORCEMENT] Reset denied: invalid signature. Resets must be routed through the hook system.',
+        },
+      };
+    }
+
+    // Signature valid — execute reset
     resetEnforcement();
     return {
-      additionalContext: '[ENFORCEMENT] Reset complete. All restrictions cleared. Enforcement level: NORMAL.',
+      hookSpecificOutput: {
+        permissionDecision: 'allow',
+        additionalContext: '[ENFORCEMENT] Reset complete. All restrictions cleared. Enforcement level: NORMAL.',
+      },
     };
   }
   return {};

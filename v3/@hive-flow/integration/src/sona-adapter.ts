@@ -24,6 +24,7 @@ import type {
   SONALearningStats,
   DEFAULT_SONA_CONFIG,
 } from './types.js';
+import { clamp } from '@hive-flow/shared';
 
 /**
  * Interface for agentic-flow SONA reference (for delegation)
@@ -356,7 +357,7 @@ export class SONAAdapter extends EventEmitter {
           pattern: params.pattern,
           solution: params.solution,
           category: params.category,
-          confidence: Math.max(0, Math.min(1, params.confidence)),
+          confidence: clamp(params.confidence, 0, 1),
           metadata: params.metadata,
         });
 
@@ -386,7 +387,7 @@ export class SONAAdapter extends EventEmitter {
       pattern: params.pattern,
       solution: params.solution,
       category: params.category,
-      confidence: Math.max(0, Math.min(1, params.confidence)),
+      confidence: clamp(params.confidence, 0, 1),
       usageCount: 0,
       createdAt: Date.now(),
       lastUsedAt: Date.now(),

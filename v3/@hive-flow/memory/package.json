@@ -12,7 +12,8 @@
   "scripts": {
     "test": "vitest run",
     "bench": "vitest bench",
-    "build": "tsc"
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@hive-flow/shared": "workspace:*",

@@ -620,6 +620,22 @@ export class AgenticFlowEmbeddingService extends BaseEmbeddingService {
     this.autoDownload = config.autoDownload ?? false;
   }
 
+  /** Allowlist of module specifiers/path patterns permitted for dynamic import */
+  private static readonly ALLOWED_IMPORT_PATTERNS: readonly string[] = [
+    'agentic-flow/embeddings',
+    'agentic-flow/dist/embeddings/optimized-embedder.js',
+    '@ruvector/embeddings',
+    'ruvector',
+  ];
+
+  private isAllowedModulePath(modulePath: string): boolean {
+    // Strip leading file:// for validation
+    const normalized = modulePath.replace(/^file:\/\//, '');
+    return AgenticFlowEmbeddingService.ALLOWED_IMPORT_PATTERNS.some(
+      (pattern) => normalized === pattern || normalized.endsWith(`/${pattern}`) || normalized.endsWith(`\\${pattern}`),
+    );
+  }
+
   private async initialize(): Promise<void> {
     if (this.initialized) return;
 
@@ -627,6 +643,12 @@ export class AgenticFlowEmbeddingService extends BaseEmbeddingService {
 
     const createEmbedder = async (modulePath: string): Promise<boolean> => {
       try {
+        // Validate against allowlist before importing
+        if (!this.isAllowedModulePath(modulePath)) {
+          lastError = new Error(`Module path not in allowlist: ${modulePath}`);
+          return false;
+        }
+
         // Use file:// protocol for absolute paths
         const importPath = modulePath.startsWith('/') ? `file://${modulePath}` : modulePath;
         const module = await import(/* webpackIgnore: true */ importPath);

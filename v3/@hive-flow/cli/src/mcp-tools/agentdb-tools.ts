@@ -92,7 +92,7 @@ export const agentdbControllers: MCPTool = {
         available: true,
         controllers,
         total: controllers.length,
-        active: controllers.filter((c: any) => c.enabled).length,
+        active: controllers.filter((c: Record<string, unknown>) => c.enabled).length,
       };
     } catch (error) {
       return { available: false, error: sanitizeError(error) };

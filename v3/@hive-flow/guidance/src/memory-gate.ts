@@ -10,6 +10,7 @@
  */
 
 import { createHash } from 'node:crypto';
+import { clamp } from '@hive-flow/shared';
 
 // ============================================================================
 // Types
@@ -338,7 +339,7 @@ export class MemoryWriteGate {
     const ageHours = ageMs / 3_600_000;
 
     const decayed = entry.confidence * Math.exp(-entry.decayRate * ageHours);
-    return Math.max(0, Math.min(1, decayed));
+    return clamp(decayed, 0, 1);
   }
 
   /**
