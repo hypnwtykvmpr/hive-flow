@@ -1,4 +1,13 @@
 #!/usr/bin/env node
+// Guard: v3 uses workspace:* protocol — incompatible with npm/yarn
+var _agent = process.env.npm_config_user_agent || '';
+if (_agent && !_agent.startsWith('pnpm')) {
+  console.error('\n\u26d4  Wrong package manager detected.');
+  console.error('   Hive Flow V3 requires pnpm (workspace:* protocol).');
+  console.error('   Run: pnpm install\n');
+  process.exit(1);
+}
+
 /**
  * Preinstall hook: repairs npm/npx cache to prevent ENOTEMPTY and ECOMPROMISED.
  *
