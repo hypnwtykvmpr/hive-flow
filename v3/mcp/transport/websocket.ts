@@ -406,7 +406,7 @@ export class WebSocketTransport extends EventEmitter implements ITransport {
       if (message.id === undefined) {
         // Notification
         if (this.notificationHandler) {
-          await this.notificationHandler(message as MCPNotification);
+          await this.notificationHandler(message as unknown as MCPNotification);
         }
       } else {
         // Request
@@ -420,7 +420,7 @@ export class WebSocketTransport extends EventEmitter implements ITransport {
         }
 
         const startTime = performance.now();
-        const response = await this.requestHandler(message as MCPRequest);
+        const response = await this.requestHandler(message as unknown as MCPRequest);
         const duration = performance.now() - startTime;
 
         this.logger.debug('Request processed', {

@@ -65,7 +65,11 @@
     "agentic-flow": "^2.0.7"
   },
   "overrides": {
-    "hono": ">=4.11.4"
+    "hono": ">=4.12.4",
+    "tar": ">=6.2.1",
+    "undici": ">=7.24.0",
+    "@modelcontextprotocol/sdk": ">=1.25.2",
+    "glob": ">=10.0.0"
   },
   "devDependencies": {
     "@openai/codex": "^0.98.0",

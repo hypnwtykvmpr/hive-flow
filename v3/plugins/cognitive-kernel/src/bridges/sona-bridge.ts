@@ -145,7 +145,6 @@ export class SonaBridge {
     this._status = 'loading';
 
     try {
-      // @ts-expect-error — optional WASM dependency without type declarations
       const wasmModule = await (import('@ruvector/sona') as Promise<unknown>).catch(() => null);
 
       if (wasmModule) {

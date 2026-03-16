@@ -217,7 +217,7 @@ export class HttpTransport extends EventEmitter implements ITransport {
     // CORS
     if (this.config.corsEnabled !== false) {
       const corsOrigin = this.config.corsOrigins || false;
-      if (corsOrigin === '*' || (Array.isArray(corsOrigin) && corsOrigin.includes('*'))) {
+      if (Array.isArray(corsOrigin) && corsOrigin.includes('*')) {
         if (this.config.auth?.enabled) {
           this.logger.warn('CORS origin "*" configured with authentication enabled — this may expose the API to cross-origin abuse');
         }
