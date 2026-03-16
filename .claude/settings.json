@@ -2,8 +2,13 @@
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Bash|Write|Edit|MultiEdit|WebFetch",
+        "matcher": "Bash|Write|Edit|MultiEdit|WebFetch|NotebookEdit",
         "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/enforcement.cjs",
+            "timeout": 5000
+          },
           {
             "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/hook-handler.cjs permission-guard",
@@ -50,6 +55,11 @@
           {
             "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/terminate-agent.cjs",
+            "timeout": 3000
+          },
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/enforcement.cjs --reset-check",
             "timeout": 3000
           },
           {
@@ -200,6 +210,11 @@
             "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/hook-handler.cjs status",
             "timeout": 3000
+          },
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/enforcement.cjs",
+            "timeout": 3000
           }
         ]
       }
@@ -247,7 +262,8 @@
     ],
     "deny": [
       "Read(./.env)",
-      "Read(./.env.*)"
+      "Read(./.env.*)",
+      "Read(./.hive-flow/enforcement/.hmac-key)"
     ]
   },
   "attribution": {
@@ -389,10 +405,14 @@
     },
     "enforcement": {
       "enabled": true,
-      "thresholds": { "simple": 25, "moderate": 60 },
+      "thresholds": {
+        "simple": 25,
+        "moderate": 60
+      },
       "securityFloor": "MODERATE",
       "overrideAllowed": true,
       "auditLog": ".hive-flow/enforcement/audit.jsonl"
     }
-  }
+  },
+  "model": "claude-sonnet-4-6"
 }

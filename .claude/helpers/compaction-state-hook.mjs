@@ -393,11 +393,36 @@ function saveState(state) {
   }
 }
 
+/**
+ * extractEnforcementState — Read enforcement state for compaction survival.
+ * Returns enforcement level, violations, restricted groups for restoration.
+ */
+function extractEnforcementState() {
+  try {
+    const enfDir = join(PROJECT_DIR, '.hive-flow', 'enforcement');
+    const stateFile = join(enfDir, 'state.json');
+    if (!existsSync(stateFile)) return null;
+    const raw = JSON.parse(readFileSync(stateFile, 'utf-8'));
+    // Support both HMAC envelope and legacy format
+    const state = raw?.state || raw;
+    if (!state || typeof state.level !== 'number') return null;
+    return {
+      level: state.level,
+      violations: state.violations || 0,
+      restrictedGroups: state.restrictedGroups || [],
+      integrityCompromised: state.integrityCompromised || false,
+    };
+  } catch { return null; }
+}
+
 function buildState(messages, source, sessionId = null) {
   const start = Date.now();
 
   const existing = loadExistingState();
   const compactionCount = (existing?.stats?.compactionCount || 0) + (source === 'pre-compact' ? 1 : 0);
+
+  // Extract enforcement state for compaction survival
+  const enforcementState = extractEnforcementState();
 
   const state = {
     version: 1,
@@ -409,6 +434,7 @@ function buildState(messages, source, sessionId = null) {
     decisions: extractDecisions(messages),
     progress: extractProgressMarkers(messages),
     toolProfile: extractToolUsageProfile(messages),
+    enforcement: enforcementState,
     stats: {
       extractionDurationMs: Date.now() - start,
       transcriptLines: messages.length,
@@ -512,6 +538,19 @@ function formatStateForContext(state) {
     lines.push('');
   }
 
+  // Enforcement State (critical for compaction survival)
+  if (state.enforcement && state.enforcement.level > 0) {
+    const levelNames = ['Normal', 'Warned', 'Restricted', 'Halted'];
+    lines.push('### Enforcement State (CRITICAL - DO NOT IGNORE)');
+    lines.push(`- **Level:** ${state.enforcement.level} (${levelNames[state.enforcement.level] || 'Unknown'})`);
+    lines.push(`- **Violations:** ${state.enforcement.violations}`);
+    if (state.enforcement.restrictedGroups?.length > 0) {
+      lines.push(`- **Restricted Groups:** ${state.enforcement.restrictedGroups.join(', ')}`);
+    }
+    lines.push('DO NOT attempt to modify enforcement state files.');
+    lines.push('');
+  }
+
   // Stats
   if (state.stats?.compactionCount > 0) {
     lines.push(`_Compaction count: ${state.stats.compactionCount} | Extracted from ${state.stats.transcriptLines} messages in ${state.stats.extractionDurationMs}ms_`);
@@ -559,6 +598,19 @@ async function doPreCompact() {
 
   const state = buildState(messages, 'pre-compact', input?.session_id);
   saveState(state);
+
+  // Write compaction-lock.json to prevent assess-complexity from resetting enforcement score
+  if (state.enforcement && state.enforcement.level > 0) {
+    try {
+      const lockFile = join(PROJECT_DIR, '.hive-flow', 'enforcement', 'compaction-lock.json');
+      writeFileSync(lockFile, JSON.stringify({
+        level: state.enforcement.level,
+        violations: state.enforcement.violations,
+        restrictedGroups: state.enforcement.restrictedGroups,
+        timestamp: new Date().toISOString(),
+      }, null, 2));
+    } catch { /* non-fatal */ }
+  }
 
   // Output plain text summary (NOT additionalContext JSON)
   const summary = [

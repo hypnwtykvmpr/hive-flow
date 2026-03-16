@@ -43,6 +43,7 @@ import { verificationGateTools } from './mcp-tools/verification-gate.js';
 import { planningSubflowTools } from './mcp-tools/planning-subflow.js';
 import { bugHunterTools } from './mcp-tools/bug-hunter.js';
 import { workflowEnforcerTools } from './mcp-tools/workflow-enforcer.js';
+import { checkMCPEnforcement } from './mcp-tools/mcp-enforcement-gate.js';
 
 /**
  * MCP Tool Registry
@@ -138,6 +139,15 @@ export async function callMCPTool<T = unknown>(
   input: Record<string, unknown> = {},
   context?: Record<string, unknown>
 ): Promise<T> {
+  // Enforcement gate: check if tool is allowed at current enforcement level
+  const enforcement = checkMCPEnforcement(toolName);
+  if (!enforcement.allowed) {
+    throw new MCPClientError(
+      enforcement.reason || `MCP tool '${toolName}' blocked by enforcement`,
+      toolName
+    );
+  }
+
   // Look up tool in registry
   const tool = TOOL_REGISTRY.get(toolName);
 

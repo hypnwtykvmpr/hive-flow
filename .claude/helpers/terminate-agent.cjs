@@ -658,6 +658,14 @@ function main(options = {}) {
       writeJsonAtomic(MARKER_FILE, marker);
     }
 
+    // 12.7: Reset enforcement state to NORMAL on successful termination
+    try {
+      const enforcement = require('./enforcement.cjs');
+      enforcement.resetEnforcement();
+    } catch {
+      // Enforcement reset failure must not block termination.
+    }
+
     emitTerminateBlock(marker);
 
     // Step 4: Launch post-termination steps in background (memory update)

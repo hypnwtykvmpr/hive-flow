@@ -2,8 +2,13 @@
 // Process-level safety net: if anything escapes all other error handling,
 // produce valid JSON so Claude Code never sees a hook error.
 process.on('uncaughtException', () => {
-  if (process.argv[2] === 'permission-guard' || process.argv[2] === 'enforce-plan') {
+  // permission-guard: fail-open (don't block user work on internal errors)
+  if (process.argv[2] === 'permission-guard') {
     process.stdout.write(JSON.stringify({ hookSpecificOutput: { permissionDecision: 'allow' } }));
+  }
+  // enforce-plan: fail-closed (enforcement errors must block, not allow)
+  if (process.argv[2] === 'enforce-plan') {
+    process.stdout.write(JSON.stringify({ hookSpecificOutput: { permissionDecision: 'deny', permissionDecisionReason: '[ENFORCEMENT ERROR] Hook crashed. Tool blocked for safety.' } }));
   }
   process.exit(0);
 });
@@ -425,7 +430,7 @@ const handlers = {
 
       // MODERATE: soft deny with opt-out check
       if (state.assessment.level === 'MODERATE' && state.planRequired && !state.planCreated) {
-        const optedOut = state.moderatePlanOptOut === true || process.env.CF_WF_7D === '1';
+        const optedOut = state.moderatePlanOptOut === true; // N4: CF_WF_7D env bypass removed
 
         if (optedOut) {
           // Persist opt-out if from env var (one-time capture)
@@ -458,9 +463,14 @@ const handlers = {
 
       // All other cases: allow
       allowAndReturn();
-    } catch {
-      // fail-open
-      allowAndReturn();
+    } catch (err) {
+      // fail-closed: errors in enforce-plan block the tool for safety
+      console.log(JSON.stringify({
+        hookSpecificOutput: {
+          permissionDecision: 'deny',
+          permissionDecisionReason: '[ENFORCEMENT ERROR] enforce-plan hook failed. Tool blocked for safety.',
+        },
+      }));
     }
   },
 
@@ -792,8 +802,11 @@ const handlers = {
       await handlers[command]();
     } catch (e) {
       // Output valid JSON so Claude Code doesn't flag as hook error
-      if (command === 'permission-guard' || command === 'enforce-plan') {
+      if (command === 'permission-guard') {
         console.log(JSON.stringify({ hookSpecificOutput: { permissionDecision: 'allow' } }));
+      }
+      if (command === 'enforce-plan') {
+        console.log(JSON.stringify({ hookSpecificOutput: { permissionDecision: 'deny', permissionDecisionReason: '[ENFORCEMENT ERROR] Hook crashed. Tool blocked for safety.' } }));
       }
       // For non-permission-guard hooks, silence the error — no output needed
     }
