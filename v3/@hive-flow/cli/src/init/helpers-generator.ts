@@ -807,7 +807,7 @@ if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
 async function doImport() {
   // Try loading @hive-flow/memory for full functionality
   let memPkg = null;
-  try { memPkg = await import('@hive-flow/memory'); } catch {}
+  try { memPkg = await import('@hive-flow/memory'); } catch { /* optional package — not installed */ }
 
   if (!memPkg || !memPkg.AutoMemoryBridge) {
     dim('Memory package not available — auto memory import skipped (non-critical)');
@@ -825,7 +825,7 @@ async function doSync() {
   }
 
   let memPkg = null;
-  try { memPkg = await import('@hive-flow/memory'); } catch {}
+  try { memPkg = await import('@hive-flow/memory'); } catch { /* optional package — not installed */ }
 
   if (!memPkg || !memPkg.AutoMemoryBridge) {
     dim('Memory package not available — sync skipped (non-critical)');

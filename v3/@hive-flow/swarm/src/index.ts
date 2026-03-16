@@ -26,7 +26,7 @@
  *
  * const coordinator = createUnifiedSwarmCoordinator({
  *   topology: { type: 'hierarchical', maxAgents: 15 },
- *   consensus: { algorithm: 'raft', threshold: 0.66 },
+ *   consensus: { algorithm: 'raft', threshold: 0.67 },
  * });
  *
  * await coordinator.initialize();
@@ -333,7 +333,7 @@ export const DEFAULT_CONFIG = {
   },
   consensus: {
     algorithm: 'raft' as const,
-    threshold: 0.66,
+    threshold: 0.67,
     timeoutMs: 5000,
   },
   messageBus: {

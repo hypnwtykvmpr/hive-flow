@@ -505,7 +505,7 @@ export class SwarmHub implements ISwarmHub {
       },
       consensus: {
         algorithm: 'raft' as const,
-        threshold: 0.66,
+        threshold: 0.67,
         timeoutMs: 5000,
         maxRounds: 10,
         requireQuorum: true,

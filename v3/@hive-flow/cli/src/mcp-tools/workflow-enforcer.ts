@@ -9,6 +9,7 @@
 
 import { existsSync, readFileSync, writeFileSync, mkdirSync, appendFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { createHmac, randomBytes } from 'node:crypto';
 import type { MCPTool } from './types.js';
 import type { AgentProvider } from './agent-tools.js';
 
@@ -372,6 +373,30 @@ export function assessComplexity(
 }
 
 // ---------------------------------------------------------------------------
+// HMAC helpers (mirrors enforcement.cjs scheme)
+// ---------------------------------------------------------------------------
+
+function getHmacKeyPath(): string {
+  return join(getEnforcementDir(), '.hmac-key');
+}
+
+function getOrCreateHmacKey(): string {
+  const keyPath = getHmacKeyPath();
+  if (existsSync(keyPath)) {
+    return readFileSync(keyPath, 'utf-8').trim();
+  }
+  // Generate a new key if none exists
+  ensureEnforcementDir();
+  const key = randomBytes(32).toString('hex');
+  writeFileSync(keyPath, key, { mode: 0o600 });
+  return key;
+}
+
+function signPayload(payload: unknown, key: string): string {
+  return createHmac('sha256', key).update(JSON.stringify(payload)).digest('hex');
+}
+
+// ---------------------------------------------------------------------------
 // State persistence
 // ---------------------------------------------------------------------------
 
@@ -379,8 +404,17 @@ export function loadEnforcementState(): EnforcementState | null {
   try {
     const path = getStatePath();
     if (existsSync(path)) {
-      const data = readFileSync(path, 'utf-8');
-      const state = JSON.parse(data) as EnforcementState;
+      const raw = JSON.parse(readFileSync(path, 'utf-8'));
+
+      // Handle HMAC-signed envelope { payload, signature }
+      let state: EnforcementState;
+      if (raw?.payload !== undefined && typeof raw?.signature === 'string') {
+        state = raw.payload as EnforcementState;
+      } else {
+        // Legacy plain JSON — accept for migration, re-sign on next save
+        state = raw as EnforcementState;
+      }
+
       // Migrate old boolean RequiredFlow to new shape
       if (state?.assessment?.requiredFlow) {
         const flow = state.assessment.requiredFlow;
@@ -407,7 +441,10 @@ export function saveEnforcementState(state: EnforcementState): void {
   state.authorized = state.planCreated || state.authorized || false;
   state.planApproved = state.planCreated || state.planApproved || false;
   ensureEnforcementDir();
-  writeFileSync(getStatePath(), JSON.stringify(state, null, 2), 'utf-8');
+  // Write HMAC-signed envelope { payload, signature } matching enforcement.cjs scheme
+  const key = getOrCreateHmacKey();
+  const envelope = { payload: state, signature: signPayload(state, key) };
+  writeFileSync(getStatePath(), JSON.stringify(envelope, null, 2), 'utf-8');
 }
 
 export function appendAuditEntry(entry: EnforcementAuditEntry): void {

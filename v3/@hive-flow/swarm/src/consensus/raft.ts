@@ -343,7 +343,7 @@ export class RaftConsensus extends EventEmitter {
       v => v.approve
     ).length;
 
-    const threshold = this.config.threshold ?? 0.66;
+    const threshold = this.config.threshold ?? 0.67;
     const quorum = Math.floor(totalVoters * threshold);
 
     if (approvingVotes >= quorum) {

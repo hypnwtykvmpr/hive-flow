@@ -128,7 +128,7 @@ export class RvfBackend implements IMemoryBackend {
     }
 
     if (this.nativeDb) {
-      try { await this.nativeDb.close(); } catch {}
+      try { await this.nativeDb.close(); } catch { /* best-effort close — ignore errors on shutdown */ }
       this.nativeDb = null;
     }
 

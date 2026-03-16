@@ -439,10 +439,10 @@ export class V3ProgressService extends EventEmitter {
             try {
               const content = await fs.readFile(fullPath, 'utf-8');
               totalLines += content.split('\n').length;
-            } catch {}
+            } catch { /* skip unreadable files — count is best-effort */ }
           }
         }
-      } catch {}
+      } catch { /* skip unreadable directories — count is best-effort */ }
     };
 
     await countDir(v3HiveFlow);

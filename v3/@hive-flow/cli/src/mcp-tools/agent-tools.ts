@@ -5,7 +5,7 @@
  * Includes model routing integration for intelligent model selection.
  */
 
-import { randomUUID } from 'node:crypto';
+import { randomUUID, createHmac } from 'node:crypto';
 import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync, rmdirSync, unlinkSync, statSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { execFile } from 'node:child_process';
@@ -265,6 +265,81 @@ async function determineAgentModel(
   return { model: 'sonnet', routedBy: 'default' };
 }
 
+// ---------------------------------------------------------------------------
+// Enforcement level propagation (LOGIC-012)
+// When a sub-agent is spawned, inherit the parent's enforcement level rather
+// than defaulting to NORMAL. This prevents sub-agents from bypassing the
+// escalation ladder established by the parent session.
+// ---------------------------------------------------------------------------
+
+const ENFORCEMENT_DIR = join(process.cwd(), '.hive-flow', 'enforcement');
+
+function readParentEnforcementLevel(): number {
+  try {
+    const stateFile = join(ENFORCEMENT_DIR, 'state.json');
+    if (!existsSync(stateFile)) return 0; // NORMAL — no state means unrestricted
+    const raw = JSON.parse(readFileSync(stateFile, 'utf8'));
+    // Handles both envelope formats: { state, hmac } (enforcement.cjs) and { payload, signature } (workflow-enforcer.ts)
+    if (raw?.state !== undefined) {
+      return typeof (raw.state as Record<string, unknown>)?.level === 'number'
+        ? (raw.state as Record<string, unknown>).level as number
+        : 0;
+    }
+    if (raw?.payload !== undefined) {
+      return typeof (raw.payload as Record<string, unknown>)?.level === 'number'
+        ? (raw.payload as Record<string, unknown>).level as number
+        : 0;
+    }
+    return 0;
+  } catch {
+    return 0; // Fail-open: can't read parent state, treat as NORMAL
+  }
+}
+
+function propagateEnforcementToSubAgent(agentId: string): void {
+  try {
+    const level = readParentEnforcementLevel();
+    if (level === 0) return; // NORMAL — no propagation needed
+
+    // Sanitize agentId (mirrors enforcement.cjs sanitization)
+    const sanitized = agentId.replace(/[/\\.]+/g, '_').replace(/^_+|_+$/g, '');
+    if (!sanitized) return;
+
+    const agentEnfDir = join(ENFORCEMENT_DIR, 'agents', sanitized);
+    mkdirSync(agentEnfDir, { recursive: true });
+
+    // Read HMAC key (enforcement.cjs creates it; fall back to generating one)
+    const keyFile = join(ENFORCEMENT_DIR, '.hmac-key');
+    let key: string;
+    if (existsSync(keyFile)) {
+      key = readFileSync(keyFile, 'utf8').trim();
+    } else {
+      return; // Cannot sign without key — skip propagation rather than write unsigned state
+    }
+
+    const state = {
+      level,
+      violations: 0,
+      consecutiveDenials: 0,
+      lastActivity: new Date().toISOString(),
+      restrictedGroups: [],
+      history: [],
+      resetAt: null,
+      integrityCompromised: false,
+      inheritedFromParent: true,
+    };
+    const hmac = createHmac('sha256', key).update(JSON.stringify(state)).digest('hex');
+    const envelope = { state, hmac };
+
+    const agentStateFile = join(agentEnfDir, 'state.json');
+    const tmpPath = `${agentStateFile}.tmp.${process.pid}`;
+    writeFileSync(tmpPath, JSON.stringify(envelope, null, 2), 'utf-8');
+    renameSync(tmpPath, agentStateFile);
+  } catch {
+    // Non-fatal: enforcement propagation is best-effort — log would be visible to attacker
+  }
+}
+
 export const agentTools: MCPTool[] = [
   {
     name: 'agent_spawn',
@@ -346,6 +421,10 @@ export const agentTools: MCPTool[] = [
         store.agents[agentId] = agent;
         saveAgentStore(store);
       });
+
+      // LOGIC-012: Propagate parent enforcement level to sub-agent state file.
+      // Sub-agents start at the parent's enforcement level, not NORMAL.
+      propagateEnforcementToSubAgent(agentId);
 
       // Include Agent Booster routing info if applicable
       const response: Record<string, unknown> = {

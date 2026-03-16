@@ -185,7 +185,7 @@ const DEFAULT_CONFIG: Required<FederationConfig> = {
   cleanupIntervalMs: 60000, // 1 minute
   communicationTimeoutMs: 5000,
   enableConsensus: true,
-  consensusQuorum: 0.66,
+  consensusQuorum: 0.67,
 };
 
 // ============================================================================

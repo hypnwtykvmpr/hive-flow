@@ -157,7 +157,7 @@ async function handleInitSwarm(
           algorithm: input.config?.consensusMechanism === 'unanimous' ? 'byzantine' :
                      input.config?.consensusMechanism === 'weighted' ? 'raft' : 'gossip',
           threshold: input.config?.consensusMechanism === 'unanimous' ? 1.0 :
-                    input.config?.consensusMechanism === 'weighted' ? 0.66 : 0.5,
+                    input.config?.consensusMechanism === 'weighted' ? 0.67 : 0.5,
         },
         messageBus: {
           maxQueueSize: 10000,

@@ -421,7 +421,7 @@ export class GossipConsensus extends EventEmitter {
     const totalNodes = this.nodes.size + 1;
     const votes = proposal.votes.size;
     const threshold = this.config.convergenceThreshold ?? 0.9;
-    const approvalThreshold = this.config.threshold ?? 0.66;
+    const approvalThreshold = this.config.threshold ?? 0.67;
 
     // Check if we've converged (enough nodes have voted)
     if (votes / totalNodes >= threshold) {
