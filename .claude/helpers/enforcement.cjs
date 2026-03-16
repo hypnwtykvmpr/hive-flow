@@ -142,8 +142,20 @@ function verifyState(envelope) {
 
 let _readErrorCount = 0;
 
-function ensureDir() {
-  try { fs.mkdirSync(ENFORCEMENT_DIR, { recursive: true }); } catch {}
+function ensureDir(dir) {
+  try { fs.mkdirSync(dir || ENFORCEMENT_DIR, { recursive: true }); } catch {}
+}
+
+// Per-agent state isolation (WP-60)
+function getAgentId() {
+  return process.env.AGENTIC_FLOW_AGENT_ID
+    || process.env.CLAUDE_SESSION_ID
+    || null;
+}
+
+function getStateFile(agentId) {
+  if (!agentId) return STATE_FILE;
+  return path.join(ENFORCEMENT_DIR, 'agents', agentId, 'state.json');
 }
 
 function readJson(filePath) {
@@ -184,9 +196,10 @@ function freshState() {
   };
 }
 
-function getState() {
-  ensureDir();
-  const raw = readJson(STATE_FILE);
+function getState(agentId) {
+  const stateFile = getStateFile(agentId);
+  ensureDir(path.dirname(stateFile));
+  const raw = readJson(stateFile);
 
   if (raw === null) {
     _readErrorCount++;
@@ -235,11 +248,12 @@ function getState() {
   return tampered;
 }
 
-function saveState(state) {
-  ensureDir();
+function saveState(state, agentId) {
+  const stateFile = getStateFile(agentId);
+  ensureDir(path.dirname(stateFile));
   state.lastActivity = new Date().toISOString();
   const envelope = signState(state);
-  writeJsonAtomic(STATE_FILE, envelope);
+  writeJsonAtomic(stateFile, envelope);
 }
 
 function appendViolation(violation) {
@@ -655,7 +669,8 @@ function sanitizeContext(text) {
 function processPreToolUse(input) {
   const toolName = input?.tool_name || input?.toolName || '';
   const toolInput = input?.tool_input || input?.input || {};
-  const state = getState();
+  const agentId = getAgentId();
+  const state = getState(agentId);
 
   // Step 1: Check circumvention
   const circ = detectCircumvention(toolName, toolInput, state);
@@ -666,7 +681,7 @@ function processPreToolUse(input) {
       ...getRestrictionGroups(toolName),
     ])];
     const hangCheck = updateActivityTracking(state, true);
-    saveState(state);
+    saveState(state, agentId);
 
     const reason = `${circ.reason}. Escalated to level ${state.level}.${hangCheck.hung ? ' ' + hangCheck.message : ''}`;
     return makeDeny(reason);
@@ -676,7 +691,7 @@ function processPreToolUse(input) {
   const restriction = checkToolRestriction(toolName, state);
   if (!restriction.allowed) {
     const hangCheck = updateActivityTracking(state, true);
-    saveState(state);
+    saveState(state, agentId);
 
     const reason = restriction.reason + (hangCheck.hung ? ' ' + hangCheck.message : '');
     return makeDeny(reason);
@@ -696,7 +711,7 @@ function processPreToolUse(input) {
   // Step 4: SendMessage at HALTED — append enforcement warning (12.14)
   if (toolName === 'SendMessage' && state.level >= LEVELS.HALTED) {
     updateActivityTracking(state, false);
-    saveState(state);
+    saveState(state, agentId);
     return makeAllow(
       '[ENFORCEMENT] This agent is under enforcement restrictions (HALTED). Do not execute tool operations on its behalf.'
     );
@@ -705,7 +720,7 @@ function processPreToolUse(input) {
   // Step 5: Inject warning at Level 1
   if (state.level === LEVELS.WARNED) {
     updateActivityTracking(state, false);
-    saveState(state);
+    saveState(state, agentId);
     return makeAllow(
       `[ENFORCEMENT WARNING] You have ${state.violations} violation(s). Further circumvention will restrict tool access. Follow the plan exactly.`
     );
@@ -713,7 +728,7 @@ function processPreToolUse(input) {
 
   // Step 6: Normal pass-through
   updateActivityTracking(state, false);
-  saveState(state);
+  saveState(state, agentId);
   return makeAllow();
 }
 
@@ -919,6 +934,8 @@ module.exports = {
   signState,
   verifyState,
   isProtectedPath,
+  getAgentId,
+  getStateFile,
   isDestructiveRm,
   isObfuscated,
   makeAllow,
