@@ -227,7 +227,7 @@ function calculateTimeRange(range: string): { start: Date; end: Date } {
   const end = new Date();
   const start = new Date();
 
-  const days = parseInt(range.replace('d', ''));
+  const days = parseInt(range.replace('d', ''), 10);
   start.setDate(start.getDate() - days);
 
   return { start, end };

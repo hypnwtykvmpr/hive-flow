@@ -1,91 +1,109 @@
 /**
  * Tests for MCP Enforcement Gate — risk classification and level-based blocking.
  *
- * Since the gate module is TypeScript and may not be compiled, we reimplement
- * the pure classification and enforcement logic here to validate expected
- * behavior across all enforcement levels.
+ * Imports the REAL compiled module (dist/src/mcp-tools/mcp-enforcement-gate.js)
+ * so that regressions in the production code are caught here. Enforcement level
+ * is set by writing an HMAC-signed state file under a temp project directory
+ * (pointed at via CLAUDE_PROJECT_DIR) before each call, mirroring the pattern
+ * used in enforcement.test.mjs.
  */
 
-import { describe, it } from 'node:test';
+import { describe, it, before, after, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
+import {
+  mkdirSync, writeFileSync, existsSync, rmSync,
+} from 'node:fs';
+import { join, dirname } from 'node:path';
+import { createHmac, randomBytes } from 'node:crypto';
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const REPO_ROOT = join(__dirname, '..');
 
 // ---------------------------------------------------------------------------
-// Reimplement classification logic (mirrors mcp-enforcement-gate.ts)
+// Import the REAL compiled module
 // ---------------------------------------------------------------------------
 
-const ToolRisk = { CRITICAL: 3, HIGH: 2, MEDIUM: 1, LOW: 0 };
+const GATE_MODULE = join(
+  REPO_ROOT,
+  'v3/@hive-flow/cli/dist/src/mcp-tools/mcp-enforcement-gate.js',
+);
 
-const CRITICAL_TOOLS = new Set([
-  'agent_spawn', 'agent_task',
-  'workflow_enforcer_override',
-  'browser_eval',
-  'config_import',
-  'system_reset',
-]);
+let checkMCPEnforcement;
+let classifyTool;
+let ToolRisk;
 
-const HIGH_TOOLS = new Set([
-  'agent_update', 'agent_terminate',
-  'config_set', 'config_reset',
-  'terminal_execute', 'terminal_create',
-  'browser_open', 'browser_click', 'browser_fill',
-  'swarm_init',
-  'hive-mind_init', 'hive-mind_spawn',
-  'claims_claim', 'claims_steal',
-  'session_delete',
-  'memory_delete',
-  'workflow_create', 'workflow_execute',
-  'daa_agent_create', 'daa_workflow_execute',
-  'filesystem__write_file', 'filesystem__edit_file', 'filesystem__move_file',
-]);
+// Load the real module. The require below uses createRequire so we stay in ESM.
+const _require = createRequire(import.meta.url);
+const gateModule = _require(GATE_MODULE);
+checkMCPEnforcement = gateModule.checkMCPEnforcement;
+classifyTool = gateModule.classifyTool;
+ToolRisk = gateModule.ToolRisk;
 
-const MEDIUM_TOOLS = new Set([
-  'memory_store', 'memory_migrate',
-]);
+// ---------------------------------------------------------------------------
+// Temp project dir + HMAC helpers
+// ---------------------------------------------------------------------------
 
-function classifyTool(toolName) {
-  const shortName = toolName
-    .replace(/^mcp__hive-flow__/, '')
-    .replace(/^mcp__filesystem__/, 'filesystem__')
-    .replace(/^mcp__playwright__browser_/, 'browser_');
+let tmpProjectDir;
+let enforcementDir;
+let hmacKeyFile;
+let stateFile;
 
-  if (CRITICAL_TOOLS.has(shortName)) return ToolRisk.CRITICAL;
-  if (HIGH_TOOLS.has(shortName)) return ToolRisk.HIGH;
-  if (MEDIUM_TOOLS.has(shortName)) return ToolRisk.MEDIUM;
-  return ToolRisk.LOW;
+function setupTempProject() {
+  tmpProjectDir = mkdtempSync(join(tmpdir(), 'hive-flow-gate-test-'));
+  enforcementDir = join(tmpProjectDir, '.hive-flow', 'enforcement');
+  hmacKeyFile = join(enforcementDir, '.hmac-key');
+  stateFile = join(enforcementDir, 'state.json');
+  mkdirSync(enforcementDir, { recursive: true });
+
+  // Generate a fresh HMAC key for this test run
+  const key = randomBytes(32).toString('hex');
+  writeFileSync(hmacKeyFile, key, { mode: 0o600 });
+
+  // Point the gate module at this temp directory
+  process.env.CLAUDE_PROJECT_DIR = tmpProjectDir;
 }
 
-function checkMCPEnforcement(toolName, level) {
-  const risk = classifyTool(toolName);
-
-  if (level === 0) {
-    return { allowed: true, risk };
+function teardownTempProject() {
+  delete process.env.CLAUDE_PROJECT_DIR;
+  if (tmpProjectDir && existsSync(tmpProjectDir)) {
+    rmSync(tmpProjectDir, { recursive: true, force: true });
   }
+}
 
-  if (level >= 1 && risk >= ToolRisk.CRITICAL) {
-    return {
-      allowed: false,
-      risk,
-      reason: `[MCP ENFORCEMENT] Tool '${toolName}' (CRITICAL risk) blocked at enforcement level ${level}.`,
-    };
-  }
+function readHmacKey() {
+  const _req = createRequire(import.meta.url);
+  const { readFileSync } = _req('node:fs');
+  return readFileSync(hmacKeyFile, 'utf8').trim();
+}
 
-  if (level >= 2 && risk >= ToolRisk.HIGH) {
-    return {
-      allowed: false,
-      risk,
-      reason: `[MCP ENFORCEMENT] Tool '${toolName}' (HIGH risk) blocked at enforcement level ${level}.`,
-    };
-  }
+function signState(state) {
+  const key = readHmacKey();
+  const hmac = createHmac('sha256', key).update(JSON.stringify(state)).digest('hex');
+  return { state, hmac };
+}
 
-  if (level >= 3 && risk >= ToolRisk.MEDIUM) {
-    return {
-      allowed: false,
-      risk,
-      reason: `[MCP ENFORCEMENT] Tool '${toolName}' (MEDIUM risk) blocked at enforcement level ${level}.`,
-    };
-  }
-
-  return { allowed: true, risk };
+/**
+ * Write a signed enforcement state file at the given level (0–3).
+ * Called before every checkMCPEnforcement() call that needs a specific level.
+ */
+function setEnforcementLevel(level) {
+  const state = {
+    level,
+    violations: 0,
+    consecutiveDenials: 0,
+    lastActivity: new Date().toISOString(),
+    restrictedGroups: [],
+    history: [],
+    resetAt: null,
+    integrityCompromised: false,
+  };
+  const envelope = signState(state);
+  writeFileSync(stateFile, JSON.stringify(envelope, null, 2));
 }
 
 // ---------------------------------------------------------------------------
@@ -93,7 +111,8 @@ function checkMCPEnforcement(toolName, level) {
 // ---------------------------------------------------------------------------
 
 function checkAll(tools, level) {
-  return tools.map(t => ({ tool: t, ...checkMCPEnforcement(t, level) }));
+  setEnforcementLevel(level);
+  return tools.map(t => ({ tool: t, ...checkMCPEnforcement(t) }));
 }
 
 // ---------------------------------------------------------------------------
@@ -143,6 +162,19 @@ const SAMPLE_LOW = [
 
 describe('MCP Enforcement Gate', () => {
 
+  before(() => {
+    setupTempProject();
+  });
+
+  after(() => {
+    teardownTempProject();
+  });
+
+  // Ensure a clean NORMAL state before each test so isolation holds
+  beforeEach(() => {
+    setEnforcementLevel(0);
+  });
+
   // ---- I1: NORMAL (level 0) allows ALL MCP tools ----
   describe('I1: NORMAL level allows all tools', () => {
     const allTools = [...SAMPLE_CRITICAL, ...SAMPLE_HIGH, ...SAMPLE_MEDIUM, ...SAMPLE_LOW];
@@ -156,8 +188,9 @@ describe('MCP Enforcement Gate', () => {
     });
 
     it('CRITICAL tools still return risk=CRITICAL at level 0', () => {
+      setEnforcementLevel(0);
       for (const tool of SAMPLE_CRITICAL) {
-        const r = checkMCPEnforcement(tool, 0);
+        const r = checkMCPEnforcement(tool);
         assert.equal(r.risk, ToolRisk.CRITICAL, `${tool} risk should be CRITICAL`);
       }
     });
@@ -166,8 +199,9 @@ describe('MCP Enforcement Gate', () => {
   // ---- I2: WARNED (level 1) blocks CRITICAL, allows rest ----
   describe('I2: WARNED level blocks CRITICAL tools', () => {
     it('blocks all CRITICAL tools', () => {
+      setEnforcementLevel(1);
       for (const tool of SAMPLE_CRITICAL) {
-        const r = checkMCPEnforcement(tool, 1);
+        const r = checkMCPEnforcement(tool);
         assert.equal(r.allowed, false, `${tool} should be blocked at WARNED`);
         assert.match(r.reason, /CRITICAL risk/);
         assert.match(r.reason, /level 1/);
@@ -175,22 +209,25 @@ describe('MCP Enforcement Gate', () => {
     });
 
     it('allows HIGH tools', () => {
+      setEnforcementLevel(1);
       for (const tool of SAMPLE_HIGH) {
-        const r = checkMCPEnforcement(tool, 1);
+        const r = checkMCPEnforcement(tool);
         assert.equal(r.allowed, true, `${tool} should be allowed at WARNED`);
       }
     });
 
     it('allows MEDIUM tools', () => {
+      setEnforcementLevel(1);
       for (const tool of SAMPLE_MEDIUM) {
-        const r = checkMCPEnforcement(tool, 1);
+        const r = checkMCPEnforcement(tool);
         assert.equal(r.allowed, true, `${tool} should be allowed at WARNED`);
       }
     });
 
     it('allows LOW tools', () => {
+      setEnforcementLevel(1);
       for (const tool of SAMPLE_LOW) {
-        const r = checkMCPEnforcement(tool, 1);
+        const r = checkMCPEnforcement(tool);
         assert.equal(r.allowed, true, `${tool} should be allowed at WARNED`);
       }
     });
@@ -199,16 +236,18 @@ describe('MCP Enforcement Gate', () => {
   // ---- I3: RESTRICTED (level 2) blocks CRITICAL + HIGH ----
   describe('I3: RESTRICTED level blocks CRITICAL and HIGH tools', () => {
     it('blocks all CRITICAL tools', () => {
+      setEnforcementLevel(2);
       for (const tool of SAMPLE_CRITICAL) {
-        const r = checkMCPEnforcement(tool, 2);
+        const r = checkMCPEnforcement(tool);
         assert.equal(r.allowed, false, `${tool} should be blocked at RESTRICTED`);
         assert.match(r.reason, /CRITICAL risk/);
       }
     });
 
     it('blocks all HIGH tools', () => {
+      setEnforcementLevel(2);
       for (const tool of SAMPLE_HIGH) {
-        const r = checkMCPEnforcement(tool, 2);
+        const r = checkMCPEnforcement(tool);
         assert.equal(r.allowed, false, `${tool} should be blocked at RESTRICTED`);
         assert.match(r.reason, /HIGH risk/);
         assert.match(r.reason, /level 2/);
@@ -216,15 +255,17 @@ describe('MCP Enforcement Gate', () => {
     });
 
     it('allows MEDIUM tools', () => {
+      setEnforcementLevel(2);
       for (const tool of SAMPLE_MEDIUM) {
-        const r = checkMCPEnforcement(tool, 2);
+        const r = checkMCPEnforcement(tool);
         assert.equal(r.allowed, true, `${tool} should be allowed at RESTRICTED`);
       }
     });
 
     it('allows LOW tools', () => {
+      setEnforcementLevel(2);
       for (const tool of SAMPLE_LOW) {
-        const r = checkMCPEnforcement(tool, 2);
+        const r = checkMCPEnforcement(tool);
         assert.equal(r.allowed, true, `${tool} should be allowed at RESTRICTED`);
       }
     });
@@ -233,22 +274,25 @@ describe('MCP Enforcement Gate', () => {
   // ---- I4: HALTED (level 3) blocks all non-LOW ----
   describe('I4: HALTED level blocks all non-LOW tools', () => {
     it('blocks all CRITICAL tools', () => {
+      setEnforcementLevel(3);
       for (const tool of SAMPLE_CRITICAL) {
-        const r = checkMCPEnforcement(tool, 3);
+        const r = checkMCPEnforcement(tool);
         assert.equal(r.allowed, false, `${tool} should be blocked at HALTED`);
       }
     });
 
     it('blocks all HIGH tools', () => {
+      setEnforcementLevel(3);
       for (const tool of SAMPLE_HIGH) {
-        const r = checkMCPEnforcement(tool, 3);
+        const r = checkMCPEnforcement(tool);
         assert.equal(r.allowed, false, `${tool} should be blocked at HALTED`);
       }
     });
 
     it('blocks all MEDIUM tools', () => {
+      setEnforcementLevel(3);
       for (const tool of SAMPLE_MEDIUM) {
-        const r = checkMCPEnforcement(tool, 3);
+        const r = checkMCPEnforcement(tool);
         assert.equal(r.allowed, false, `${tool} should be blocked at HALTED`);
         assert.match(r.reason, /MEDIUM risk/);
         assert.match(r.reason, /level 3/);
@@ -256,8 +300,9 @@ describe('MCP Enforcement Gate', () => {
     });
 
     it('allows LOW tools', () => {
+      setEnforcementLevel(3);
       for (const tool of SAMPLE_LOW) {
-        const r = checkMCPEnforcement(tool, 3);
+        const r = checkMCPEnforcement(tool);
         assert.equal(r.allowed, true, `${tool} should be allowed at HALTED`);
       }
     });
@@ -312,8 +357,9 @@ describe('MCP Enforcement Gate', () => {
     });
 
     it('filesystem write tools blocked at RESTRICTED', () => {
+      setEnforcementLevel(2);
       const fsTool = 'mcp__filesystem__write_file';
-      const r = checkMCPEnforcement(fsTool, 2);
+      const r = checkMCPEnforcement(fsTool);
       assert.equal(r.allowed, false);
       assert.match(r.reason, /HIGH risk/);
     });
@@ -336,8 +382,9 @@ describe('MCP Enforcement Gate', () => {
     });
 
     it('unknown tools are always allowed even at HALTED', () => {
+      setEnforcementLevel(3);
       for (const tool of unknownTools) {
-        const r = checkMCPEnforcement(tool, 3);
+        const r = checkMCPEnforcement(tool);
         assert.equal(r.allowed, true, `'${tool}' should be allowed at HALTED`);
       }
     });
@@ -346,47 +393,75 @@ describe('MCP Enforcement Gate', () => {
   // ---- Edge cases ----
   describe('edge cases', () => {
     it('level values above 3 still enforce HALTED rules', () => {
-      const r = checkMCPEnforcement('mcp__hive-flow__memory_store', 5);
+      setEnforcementLevel(5);
+      const r = checkMCPEnforcement('mcp__hive-flow__memory_store');
       assert.equal(r.allowed, false, 'MEDIUM tool blocked at level > 3');
     });
 
     it('reason message includes the original tool name', () => {
+      setEnforcementLevel(1);
       const tool = 'mcp__hive-flow__agent_spawn';
-      const r = checkMCPEnforcement(tool, 1);
+      const r = checkMCPEnforcement(tool);
       assert.equal(r.allowed, false);
       assert.ok(r.reason.includes(tool), 'reason should contain original tool name');
     });
 
     it('reason message includes the enforcement level', () => {
-      const r = checkMCPEnforcement('mcp__hive-flow__terminal_execute', 2);
+      setEnforcementLevel(2);
+      const r = checkMCPEnforcement('mcp__hive-flow__terminal_execute');
       assert.ok(r.reason.includes('level 2'));
     });
 
     it('LOW tools have no reason at any level', () => {
       for (let level = 0; level <= 3; level++) {
-        const r = checkMCPEnforcement('mcp__hive-flow__agent_list', level);
+        setEnforcementLevel(level);
+        const r = checkMCPEnforcement('mcp__hive-flow__agent_list');
         assert.equal(r.allowed, true);
         assert.equal(r.reason, undefined);
       }
+    });
+
+    it('missing state file causes fail-closed (HALTED behavior)', () => {
+      // Remove the state file — gate should fail closed, blocking CRITICAL tools
+      if (existsSync(stateFile)) {
+        rmSync(stateFile);
+      }
+      const r = checkMCPEnforcement('mcp__hive-flow__agent_spawn');
+      assert.equal(r.allowed, false, 'CRITICAL tool must be blocked when state file is absent');
     });
   });
 
   // ---- Classification completeness ----
   describe('classification completeness', () => {
-    it('all CRITICAL_TOOLS entries classify as CRITICAL', () => {
-      for (const t of CRITICAL_TOOLS) {
+    // Use bare short-names that match the CRITICAL/HIGH/MEDIUM sets directly
+    const CRITICAL_SHORT = [
+      'agent_spawn', 'agent_task', 'workflow_enforcer_override',
+      'browser_eval', 'config_import', 'system_reset',
+    ];
+    const HIGH_SHORT = [
+      'agent_update', 'agent_terminate', 'config_set', 'config_reset',
+      'terminal_execute', 'terminal_create', 'browser_open', 'browser_click',
+      'browser_fill', 'swarm_init', 'hive-mind_init', 'hive-mind_spawn',
+      'claims_claim', 'claims_steal', 'session_delete', 'memory_delete',
+      'workflow_create', 'workflow_execute', 'daa_agent_create', 'daa_workflow_execute',
+      'filesystem__write_file', 'filesystem__edit_file', 'filesystem__move_file',
+    ];
+    const MEDIUM_SHORT = ['memory_store', 'memory_migrate'];
+
+    it('all CRITICAL short-names classify as CRITICAL', () => {
+      for (const t of CRITICAL_SHORT) {
         assert.equal(classifyTool(t), ToolRisk.CRITICAL, `${t} should be CRITICAL`);
       }
     });
 
-    it('all HIGH_TOOLS entries classify as HIGH', () => {
-      for (const t of HIGH_TOOLS) {
+    it('all HIGH short-names classify as HIGH', () => {
+      for (const t of HIGH_SHORT) {
         assert.equal(classifyTool(t), ToolRisk.HIGH, `${t} should be HIGH`);
       }
     });
 
-    it('all MEDIUM_TOOLS entries classify as MEDIUM', () => {
-      for (const t of MEDIUM_TOOLS) {
+    it('all MEDIUM short-names classify as MEDIUM', () => {
+      for (const t of MEDIUM_SHORT) {
         assert.equal(classifyTool(t), ToolRisk.MEDIUM, `${t} should be MEDIUM`);
       }
     });

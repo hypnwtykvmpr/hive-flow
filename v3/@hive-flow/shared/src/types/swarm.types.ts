@@ -5,6 +5,7 @@
 
 import type { ISwarmConfig, ISwarmState, SwarmTopology, CoordinationStatus } from '../core/interfaces/coordinator.interface.js';
 import type { IAgent } from '../core/interfaces/agent.interface.js';
+import { DEFAULT_MAX_AGENTS } from '../core/config/defaults.js';
 
 /**
  * Swarm initialization options
@@ -234,7 +235,7 @@ export const TopologyPresets: Record<SwarmTopology, Partial<ISwarmConfig>> = {
     autoScale: {
       enabled: true,
       minAgents: 1,
-      maxAgents: 20,
+      maxAgents: DEFAULT_MAX_AGENTS,
       scaleUpThreshold: 0.8,
       scaleDownThreshold: 0.3
     },

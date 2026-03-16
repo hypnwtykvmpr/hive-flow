@@ -89,7 +89,7 @@ async function main(): Promise<void> {
 
       case 'search': {
         const query = args[1] || '';
-        const k = parseInt(args[2] || '5');
+        const k = parseInt(args[2] || '5', 10);
         const results = await reasoningBank.searchPatterns(query, k);
         console.log(JSON.stringify({
           patterns: results.map(r => ({
@@ -152,7 +152,7 @@ async function main(): Promise<void> {
       case 'swarm-messages': {
         await swarmComm.initialize();
         const messages = swarmComm.getMessages({
-          limit: parseInt(args[1] || '10'),
+          limit: parseInt(args[1] || '10', 10),
           type: args[2] as SwarmMessage['type'] | undefined, // SAFETY: CLI arg matches union type
         });
         console.log(JSON.stringify({
@@ -242,7 +242,7 @@ async function main(): Promise<void> {
       case 'swarm-consensus': {
         const question = args[1] || '';
         const optionsStr = args[2] || '';
-        const timeout = args[3] ? parseInt(args[3]) : undefined;
+        const timeout = args[3] ? parseInt(args[3], 10) : undefined;
 
         const options = optionsStr.split(',').map(o => o.trim()).filter(Boolean);
         if (options.length < 2) {

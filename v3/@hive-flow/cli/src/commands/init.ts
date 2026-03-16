@@ -542,11 +542,11 @@ const wizardCommand: Command = {
         message: 'Maximum concurrent agents:',
         default: String(options.runtime.maxAgents),
         validate: (v) => {
-          const n = parseInt(v);
+          const n = parseInt(v, 10);
           return (!isNaN(n) && n > 0 && n <= 50) || 'Enter a number between 1 and 50';
         },
       });
-      options.runtime.maxAgents = parseInt(maxAgents);
+      options.runtime.maxAgents = parseInt(maxAgents, 10);
 
       // Memory backend
       const memoryBackend = await select({

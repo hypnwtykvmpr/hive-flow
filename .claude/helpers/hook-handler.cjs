@@ -304,6 +304,20 @@ const handlers = {
     if (session && session.metric) {
       try { session.metric('tasks'); } catch (e) { /* no active session */ }
     }
+    // Track task start in live-tasks.json for stop-guard
+    try {
+      const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+      const liveTasksPath = path.join(projectDir, '.hive-flow', 'data', 'live-tasks.json');
+      const liveTasksDir = path.dirname(liveTasksPath);
+      if (!fs.existsSync(liveTasksDir)) fs.mkdirSync(liveTasksDir, { recursive: true });
+      let tasks = [];
+      try { tasks = JSON.parse(fs.readFileSync(liveTasksPath, 'utf8')); } catch { /* fresh start */ }
+      if (!Array.isArray(tasks)) tasks = [];
+      const taskId = `task-${Date.now()}-${process.pid}`;
+      tasks.push({ taskId, startTime: new Date().toISOString(), status: 'running' });
+      fs.writeFileSync(liveTasksPath, JSON.stringify(tasks));
+      process.env._HIVE_FLOW_TASK_ID = taskId;
+    } catch { /* non-fatal */ }
     // Route the task if router is available
     if (router && router.routeTask && prompt) {
       const result = router.routeTask(prompt);
@@ -335,6 +349,28 @@ const handlers = {
       else if (modelVal.includes('haiku')) modelName = 'haiku';
       if (modelName) tracker.track(modelName, {});
     } catch (e) {}
+
+    // Update live-tasks.json: mark completed and prune entries older than 2 hours
+    try {
+      const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+      const liveTasksPath = path.join(projectDir, '.hive-flow', 'data', 'live-tasks.json');
+      let tasks = [];
+      try { tasks = JSON.parse(fs.readFileSync(liveTasksPath, 'utf8')); } catch { /* not found */ }
+      if (!Array.isArray(tasks)) tasks = [];
+      const taskId = process.env._HIVE_FLOW_TASK_ID;
+      const twoHoursAgo = Date.now() - 2 * 60 * 60 * 1000;
+      tasks = tasks
+        .map(t => (taskId && t.taskId === taskId)
+          ? { ...t, status: 'completed', endTime: new Date().toISOString() }
+          : t)
+        .filter(t => {
+          // Keep running tasks regardless of age; prune completed/old entries
+          if (t.status === 'running') return true;
+          const ts = t.endTime ? new Date(t.endTime).getTime() : new Date(t.startTime).getTime();
+          return ts > twoHoursAgo;
+        });
+      fs.writeFileSync(liveTasksPath, JSON.stringify(tasks));
+    } catch { /* non-fatal */ }
 
     console.log('[OK] Task completed');
   },

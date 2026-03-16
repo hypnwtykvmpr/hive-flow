@@ -65,8 +65,8 @@ function parseArgs(): {
 
       case '--port':
       case '-p':
-        if (nextArg && !isNaN(parseInt(nextArg))) {
-          options.port = parseInt(nextArg);
+        if (nextArg && !isNaN(parseInt(nextArg, 10))) {
+          options.port = parseInt(nextArg, 10);
           i++;
         }
         break;

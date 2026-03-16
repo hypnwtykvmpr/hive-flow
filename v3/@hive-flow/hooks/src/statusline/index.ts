@@ -541,11 +541,11 @@ export class StatuslineGenerator {
     try {
       // Get Node.js memory usage
       const ps = execSync('ps aux 2>/dev/null | grep -E "(node|agentic|claude)" | grep -v grep | awk \'{sum += $6} END {print int(sum/1024)}\'', { encoding: 'utf-8' });
-      memoryMB = parseInt(ps.trim()) || 0;
+      memoryMB = parseInt(ps.trim(), 10) || 0;
 
       // Count sub-agents
       const agents = execSync('ps aux 2>/dev/null | grep -E "Task|subagent|agent_spawn" | grep -v grep | wc -l', { encoding: 'utf-8' });
-      subAgents = parseInt(agents.trim()) || 0;
+      subAgents = parseInt(agents.trim(), 10) || 0;
     } catch {
       // Use fallback: count v3 lines as proxy for progress
       try {

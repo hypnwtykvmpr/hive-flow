@@ -37,15 +37,22 @@ export const defaultTaskConfig: Partial<TaskConfig> = {
 };
 
 /**
+ * Canonical default for the maximum number of agents in a swarm.
+ * All default configurations and quorum calculations must reference this constant.
+ * Distinguished from MAX_AGENTS_CEILING (system hard limit) which is declared separately.
+ */
+export const DEFAULT_MAX_AGENTS = 15;
+
+/**
  * Default swarm configuration (core version)
  */
 export const defaultSwarmConfigCore: SwarmConfig = {
   topology: 'hierarchical-mesh',
-  maxAgents: 20,
+  maxAgents: DEFAULT_MAX_AGENTS,
   autoScale: {
     enabled: false,
     minAgents: 1,
-    maxAgents: 20,
+    maxAgents: DEFAULT_MAX_AGENTS,
     scaleUpThreshold: 0.8,
     scaleDownThreshold: 0.3,
   },
@@ -119,7 +126,7 @@ export const defaultOrchestratorConfig: OrchestratorConfig = {
     unhealthyThreshold: 2,
   },
   lifecycle: {
-    maxConcurrentAgents: 20,
+    maxConcurrentAgents: DEFAULT_MAX_AGENTS,
     spawnTimeout: 30000, // 30 seconds
     terminateTimeout: 10000, // 10 seconds
     maxSpawnRetries: 3,

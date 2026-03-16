@@ -12,7 +12,7 @@ import {
 } from '../utils/types.js';
 import type { ILogger } from '../core/logger.js';
 import { MCPError } from '../utils/errors.js';
-import { createHash, timingSafeEqual } from 'node:crypto';
+import { createHash, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 
 export interface ISessionManager {
   createSession(transport: 'stdio' | 'http' | 'websocket'): MCPSession;
@@ -329,19 +329,25 @@ export class SessionManager implements ISessionManager {
       return false;
     }
 
-    // Hash the provided password and compare
-    const hashedPassword = this.hashPassword(password);
-    const expectedHashedPassword = this.hashPassword(user.password);
-
-    const encoder = new TextEncoder();
-    const hashedPasswordBytes = encoder.encode(hashedPassword);
-    const expectedHashedPasswordBytes = encoder.encode(expectedHashedPassword);
-
-    if (hashedPasswordBytes.length !== expectedHashedPasswordBytes.length) {
-      return false;
+    // Verify password against stored hash (scrypt or legacy SHA-256)
+    const storedPassword = user.password;
+    if (storedPassword.startsWith('scrypt:')) {
+      const parts = storedPassword.split(':');
+      if (parts.length !== 3) return false;
+      const salt = Buffer.from(parts[1]!, 'hex');
+      const expectedHash = Buffer.from(parts[2]!, 'hex');
+      const derivedKey = scryptSync(password, salt, 64, { N: 16384, r: 8, p: 1 });
+      if (derivedKey.length !== expectedHash.length) return false;
+      return timingSafeEqual(derivedKey, expectedHash);
     }
-
-    return timingSafeEqual(hashedPasswordBytes, expectedHashedPasswordBytes);
+    // Legacy SHA-256 fallback (callers should re-hash with hashPassword() after login)
+    const hashedProvided = createHash('sha256').update(password).digest('hex');
+    const hashedStored = createHash('sha256').update(storedPassword).digest('hex');
+    const encoder = new TextEncoder();
+    const hashedProvidedBytes = encoder.encode(hashedProvided);
+    const hashedStoredBytes = encoder.encode(hashedStored);
+    if (hashedProvidedBytes.length !== hashedStoredBytes.length) return false;
+    return timingSafeEqual(hashedProvidedBytes, hashedStoredBytes);
   }
 
   private authenticateOAuth(credentials: unknown): boolean {
@@ -411,6 +417,8 @@ export class SessionManager implements ISessionManager {
   }
 
   private hashPassword(password: string): string {
-    return createHash('sha256').update(password).digest('hex');
+    const salt = randomBytes(16);
+    const derivedKey = scryptSync(password, salt, 64, { N: 16384, r: 8, p: 1 });
+    return `scrypt:${salt.toString('hex')}:${derivedKey.toString('hex')}`;
   }
 }

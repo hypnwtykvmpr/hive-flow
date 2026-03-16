@@ -65,6 +65,20 @@ export class SessionManager implements ISessionManager {
   private sessionProfiles = new Map<string, AgentProfile>();
   private persistencePath: string;
 
+  // Async mutex: serialises all state-mutating operations so that
+  // concurrent callers cannot interleave reads and writes.
+  private _queue: Promise<void> = Promise.resolve();
+
+  private withLock<T>(fn: () => Promise<T>): Promise<T> {
+    const result = this._queue.then(fn);
+    // Keep the queue alive even when fn rejects so subsequent operations run.
+    this._queue = result.then(
+      () => {},
+      () => {},
+    );
+    return result;
+  }
+
   constructor(
     private eventBus: IEventBus,
     private config: SessionManagerConfig,
@@ -77,32 +91,35 @@ export class SessionManager implements ISessionManager {
     terminalId: string,
     memoryBankId: string,
   ): Promise<IAgentSession> {
-    const session: IAgentSession = {
-      id: generateSecureSessionId(),
-      agentId: profile.id,
-      terminalId,
-      startTime: new Date(),
-      status: 'active',
-      lastActivity: new Date(),
-      memoryBankId,
-    };
+    return this.withLock(async () => {
+      const session: IAgentSession = {
+        id: generateSecureSessionId(),
+        agentId: profile.id,
+        terminalId,
+        startTime: new Date(),
+        status: 'active',
+        lastActivity: new Date(),
+        memoryBankId,
+      };
 
-    this.sessions.set(session.id, session);
-    this.sessionProfiles.set(session.id, profile);
+      this.sessions.set(session.id, session);
+      this.sessionProfiles.set(session.id, profile);
 
-    this.eventBus.emit(SystemEventTypes.SESSION_CREATED, {
-      sessionId: session.id,
-      agentId: profile.id,
-      terminalId,
-      memoryBankId,
+      this.eventBus.emit(SystemEventTypes.SESSION_CREATED, {
+        sessionId: session.id,
+        agentId: profile.id,
+        terminalId,
+        memoryBankId,
+      });
+
+      // Persist inside the lock so concurrent creates/terminates
+      // never produce interleaved or duplicate file writes.
+      await this.persistSessions().catch(() => {
+        // Silently ignore persistence errors
+      });
+
+      return session;
     });
-
-    // Persist sessions asynchronously
-    this.persistSessions().catch(() => {
-      // Silently ignore persistence errors
-    });
-
-    return session;
   }
 
   getSession(sessionId: string): IAgentSession | undefined {
@@ -122,28 +139,36 @@ export class SessionManager implements ISessionManager {
   }
 
   async terminateSession(sessionId: string): Promise<void> {
-    const session = this.sessions.get(sessionId);
-    if (!session) {
-      throw new Error(`Session not found: ${sessionId}`);
-    }
+    return this.withLock(async () => {
+      const session = this.sessions.get(sessionId);
+      if (!session) {
+        throw new Error(`Session not found: ${sessionId}`);
+      }
 
-    session.status = 'terminated';
-    session.endTime = new Date();
+      // Guard against double-termination: if already terminated, skip.
+      if (session.status === 'terminated') {
+        return;
+      }
 
-    const duration = session.endTime.getTime() - session.startTime.getTime();
+      session.status = 'terminated';
+      session.endTime = new Date();
 
-    this.eventBus.emit(SystemEventTypes.SESSION_TERMINATED, {
-      sessionId,
-      agentId: session.agentId,
-      duration,
-    });
+      const duration = session.endTime.getTime() - session.startTime.getTime();
 
-    // Clean up profile reference
-    this.sessionProfiles.delete(sessionId);
+      this.eventBus.emit(SystemEventTypes.SESSION_TERMINATED, {
+        sessionId,
+        agentId: session.agentId,
+        duration,
+      });
 
-    // Persist sessions asynchronously
-    this.persistSessions().catch(() => {
-      // Silently ignore persistence errors
+      // Clean up profile reference
+      this.sessionProfiles.delete(sessionId);
+
+      // Persist inside the lock so concurrent terminates/creates
+      // never produce interleaved or duplicate file writes.
+      await this.persistSessions().catch(() => {
+        // Silently ignore persistence errors
+      });
     });
   }
 
@@ -160,8 +185,14 @@ export class SessionManager implements ISessionManager {
   }
 
   removeSession(sessionId: string): void {
-    this.sessions.delete(sessionId);
-    this.sessionProfiles.delete(sessionId);
+    // withLock is async; removeSession is declared synchronous on the
+    // interface so we fire the mutation through the queue and return
+    // immediately — callers that need the deletion to be complete before
+    // continuing should use terminateSession instead.
+    void this.withLock(async () => {
+      this.sessions.delete(sessionId);
+      this.sessionProfiles.delete(sessionId);
+    });
   }
 
   updateSessionActivity(sessionId: string): void {
@@ -240,20 +271,28 @@ export class SessionManager implements ISessionManager {
    * Clean up old terminated sessions
    */
   async cleanupTerminatedSessions(retentionMs?: number): Promise<number> {
-    const cutoffTime = Date.now() - (retentionMs ?? this.config.sessionRetentionMs ?? 3600000);
-    let cleaned = 0;
+    return this.withLock(async () => {
+      const cutoffTime = Date.now() - (retentionMs ?? this.config.sessionRetentionMs ?? 3600000);
+      let cleaned = 0;
 
-    for (const [sessionId, session] of this.sessions.entries()) {
-      if (session.status === 'terminated' && session.endTime) {
-        if (session.endTime.getTime() < cutoffTime) {
-          this.sessions.delete(sessionId);
-          this.sessionProfiles.delete(sessionId);
-          cleaned++;
+      // Collect IDs first to avoid mutating the Map during iteration.
+      const toDelete: string[] = [];
+      for (const [sessionId, session] of this.sessions.entries()) {
+        if (session.status === 'terminated' && session.endTime) {
+          if (session.endTime.getTime() < cutoffTime) {
+            toDelete.push(sessionId);
+          }
         }
       }
-    }
 
-    return cleaned;
+      for (const sessionId of toDelete) {
+        this.sessions.delete(sessionId);
+        this.sessionProfiles.delete(sessionId);
+        cleaned++;
+      }
+
+      return cleaned;
+    });
   }
 
   /**

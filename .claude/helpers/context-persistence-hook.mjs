@@ -796,7 +796,7 @@ async function createEmbedding(text) {
 // Hash embedding fallback (deterministic, sub-millisecond)
 // ============================================================================
 
-function createHashEmbedding(text, dimensions = 384) {
+function createHashEmbedding(text, dimensions = 768) {
   const embedding = new Float32Array(dimensions);
   const normalized = text.toLowerCase().trim();
   for (let i = 0; i < dimensions; i++) {

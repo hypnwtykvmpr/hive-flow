@@ -59,7 +59,7 @@ function spawnAsync(
 }
 
 const fail = (stderr: string): RunResult => ({ exitCode: 1, stdout: '', stderr, duration: 0 });
-const cleanup = (dir: string) => rm(dir, { recursive: true, force: true }).catch(() => {});
+const cleanup = (dir: string) => rm(dir, { recursive: true, force: true }).catch(() => {}); // intentional: fire-and-forget temp dir removal
 
 /** Check whether the reader has a section with the given id. */
 function hasSection(reader: RvfaReader, id: string): boolean {

@@ -841,14 +841,14 @@ export class WorkerManager extends EventEmitter {
     // Auto-save every 5 minutes
     if (options?.autoSave !== false) {
       this.timerManager.setInterval('autoSave', () => {
-        this.saveState().catch(() => {});
+        this.saveState().catch(() => {}); // intentional: fire-and-forget
       }, 300_000);
     }
 
     // Update statusline file periodically
     if (options?.statuslineUpdate !== false) {
       this.timerManager.setInterval('statusline', () => {
-        this.exportStatusline().catch(() => {});
+        this.exportStatusline().catch(() => {}); // intentional: fire-and-forget
       }, STATUSLINE_UPDATE_INTERVAL);
     }
 

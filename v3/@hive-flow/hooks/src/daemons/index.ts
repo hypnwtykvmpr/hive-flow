@@ -194,7 +194,7 @@ export class DaemonManager {
 
     // Restart if running to apply new interval
     if (daemon.state.status === 'running') {
-      this.restart(name).catch(() => {});
+      this.restart(name).catch(() => {}); // intentional: fire-and-forget
     }
   }
 
@@ -215,7 +215,7 @@ export class DaemonManager {
     const daemon = this.daemons.get(name);
     if (daemon) {
       daemon.config.enabled = false;
-      this.stop(name).catch(() => {});
+      this.stop(name).catch(() => {}); // intentional: fire-and-forget
     }
   }
 
@@ -264,7 +264,7 @@ export class DaemonManager {
         if (restartCount <= this.config.maxRestartAttempts) {
           // Schedule restart
           setTimeout(() => {
-            this.restart(name).catch(() => {});
+            this.restart(name).catch(() => {}); // intentional: fire-and-forget
           }, 1000 * restartCount); // Exponential backoff
         } else {
           daemon.state.status = 'error';

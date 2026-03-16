@@ -242,7 +242,7 @@ export async function benchmark(
       new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Warmup timeout')), timeout)
       ),
-    ]).catch(() => {});
+    ]).catch(() => {}); // intentional: warmup errors are expected and non-fatal
   }
 
   // Auto-calibrate iterations if needed

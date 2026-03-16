@@ -8,7 +8,7 @@ import { join, resolve } from 'path';
 import { existsSync } from 'fs';
 import type { SystemConfig } from './schema.js';
 import { validateSystemConfig, type ValidationResult } from './validator.js';
-import { defaultSystemConfig, mergeWithDefaults } from './defaults.js';
+import { defaultSystemConfig, mergeWithDefaults, DEFAULT_MAX_AGENTS } from './defaults.js';
 
 /**
  * Configuration source type
@@ -124,7 +124,7 @@ function loadEnvConfig(): Partial<SystemConfig> {
   }
 
   // Swarm topology
-  const defaultSwarm = defaultSystemConfig.swarm ?? { topology: 'hierarchical-mesh' as const, maxAgents: 20 };
+  const defaultSwarm = defaultSystemConfig.swarm ?? { topology: 'hierarchical-mesh' as const, maxAgents: DEFAULT_MAX_AGENTS };
   if (process.env.HIVE_FLOW_SWARM_TOPOLOGY) {
     const topology = process.env.HIVE_FLOW_SWARM_TOPOLOGY as NonNullable<SystemConfig['swarm']>['topology'];
     if (['hierarchical', 'mesh', 'ring', 'star', 'adaptive', 'hierarchical-mesh'].includes(topology)) {

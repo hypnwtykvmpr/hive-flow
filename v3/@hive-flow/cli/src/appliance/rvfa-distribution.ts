@@ -297,8 +297,8 @@ export class RvfaPatcher {
       await writeFile(tmpPath, newRvfa);
       await rename(tmpPath, rvfaPath);
     } catch (e) {
-      await unlink(tmpPath).catch(() => {});
-      if (backupPath) await copyFile(backupPath, rvfaPath).catch(() => {});
+      await unlink(tmpPath).catch(() => {}); // intentional: fire-and-forget cleanup
+      if (backupPath) await copyFile(backupPath, rvfaPath).catch(() => {}); // intentional: fire-and-forget rollback
       return failResult(sec, [`Atomic write failed: ${(e as Error).message}`], { backupPath });
     }
 
@@ -308,12 +308,12 @@ export class RvfaPatcher {
         const vr = await RvfaReader.fromFile(rvfaPath);
         const vResult = vr.verify();
         if (!vResult.valid) {
-          if (backupPath) await copyFile(backupPath, rvfaPath).catch(() => {});
+          if (backupPath) await copyFile(backupPath, rvfaPath).catch(() => {}); // intentional: fire-and-forget rollback
           return failResult(sec, [`Post-patch verification failed: ${vResult.errors.join('; ')}`],
             { backupPath, newSize: newRvfa.length });
         }
       } catch (e) {
-        if (backupPath) await copyFile(backupPath, rvfaPath).catch(() => {});
+        if (backupPath) await copyFile(backupPath, rvfaPath).catch(() => {}); // intentional: fire-and-forget rollback
         return failResult(sec, [`Post-patch verify error: ${(e as Error).message}`],
           { backupPath, newSize: newRvfa.length });
       }

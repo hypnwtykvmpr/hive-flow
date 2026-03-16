@@ -319,6 +319,7 @@ export const systemTools: MCPTool[] = [
           flashAttention: false,
         },
         limits: {
+          // MAX_AGENTS_CEILING: hard system limit on concurrent agents (not the swarm default of 15)
           maxAgents: 100,
           maxTasks: 1000,
           maxMemory: '4GB',
