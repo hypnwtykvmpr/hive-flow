@@ -151,7 +151,6 @@ hive-flow
 /docs/*
 /docs/
 /.serena/
-.gitignore
 
 # Removed Windows wrapper files per user request
 hive-mind-prompt-*.txt
@@ -179,6 +178,5 @@ tests/.tmp-*/
 .serena/
 
 # additional crap I feel like ignoring
-.gitignore
 /.resources/
 /.resources/*

@@ -1,6 +1,7 @@
 import { describe, it, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
+import { once } from 'node:events';
 import { existsSync, readFileSync, writeFileSync, mkdirSync, rmSync, readdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -45,6 +46,33 @@ function runHook(command, payload, cwd, envOverrides = {}) {
     stdout: result.stdout || '',
     stderr: result.stderr || '',
   };
+}
+
+async function runHookWithOpenStdin(command, input, cwd, envOverrides = {}) {
+  const child = spawn(process.execPath, [SCRIPT, command], {
+    cwd,
+    stdio: ['pipe', 'pipe', 'pipe'],
+    env: {
+      ...process.env,
+      CLAUDE_PROJECT_DIR: cwd,
+      ...envOverrides,
+    },
+  });
+
+  let stdout = '';
+  let stderr = '';
+  child.stdout.setEncoding('utf8');
+  child.stderr.setEncoding('utf8');
+  child.stdout.on('data', (chunk) => { stdout += chunk; });
+  child.stderr.on('data', (chunk) => { stderr += chunk; });
+
+  if (input) child.stdin.write(input);
+  // Don't end stdin — we're testing the timeout path where stdin stays open
+  // but DO end it after a short delay so the process can exit
+  setTimeout(() => { try { child.stdin.end(); } catch {} }, 200);
+
+  const [status, signal] = await once(child, 'close');
+  return { status, signal, stdout, stderr };
 }
 
 /**
@@ -485,6 +513,18 @@ describe('compaction-state-hook', () => {
   // 4. Edge Cases
   // =========================================================================
   describe('edge cases', () => {
+    it('should resolve null when timeout-path stdin JSON is truncated', async () => {
+      const res = await runHookWithOpenStdin('pre-compact', '{"session_id":', tmpDir);
+
+      assert.equal(res.status, 0, `Truncated timeout-path stdin should not crash: ${res.stderr}`);
+      assert.equal(res.stderr, '', 'Truncated timeout-path stdin should not write errors to stderr');
+      assert.match(
+        res.stdout,
+        /No transcript data available for compaction state extraction\./,
+        `Expected graceful fallback output, got: ${res.stdout}`,
+      );
+    });
+
     it('should handle empty transcript without crashing', () => {
       const transcriptPath = writeTranscript(tmpDir, []);
       const res = runHook('pre-compact', {

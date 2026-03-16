@@ -155,7 +155,10 @@ function getAgentId() {
 
 function getStateFile(agentId) {
   if (!agentId) return STATE_FILE;
-  return path.join(ENFORCEMENT_DIR, 'agents', agentId, 'state.json');
+  // Sanitize agentId: reject path traversal attempts
+  const sanitized = agentId.replace(/[\/\\\.]+/g, '_').replace(/^_+|_+$/g, '');
+  if (!sanitized) return STATE_FILE;
+  return path.join(ENFORCEMENT_DIR, 'agents', sanitized, 'state.json');
 }
 
 function readJson(filePath) {

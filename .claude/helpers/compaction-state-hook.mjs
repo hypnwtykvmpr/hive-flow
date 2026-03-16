@@ -35,7 +35,8 @@ function readStdin(timeoutMs = 100) {
     let data = '';
     const timer = setTimeout(() => {
       process.stdin.removeAllListeners();
-      resolve(data ? JSON.parse(data) : null);
+      try { resolve(data ? JSON.parse(data) : null); }
+      catch { resolve(null); }
     }, timeoutMs);
     if (process.stdin.isTTY) {
       clearTimeout(timer);
