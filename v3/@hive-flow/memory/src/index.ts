@@ -225,6 +225,8 @@ import {
 } from './types.js';
 import { AgentDBAdapter, AgentDBAdapterConfig } from './agentdb-adapter.js';
 import { MemoryMigrator } from './migration.js';
+import { HybridMemoryRepository } from './infrastructure/repositories/hybrid-memory-repository.js';
+import type { IMemoryRepository } from './domain/repositories/memory-repository.interface.js';
 
 /**
  * Configuration for UnifiedMemoryService
@@ -255,6 +257,7 @@ export class UnifiedMemoryService extends EventEmitter implements IMemoryBackend
   private adapter: AgentDBAdapter;
   private config: UnifiedMemoryServiceConfig;
   private initialized: boolean = false;
+  private memoryRepository: IMemoryRepository;
 
   constructor(config: UnifiedMemoryServiceConfig = {}) {
     super();
@@ -277,6 +280,13 @@ export class UnifiedMemoryService extends EventEmitter implements IMemoryBackend
       persistenceEnabled: this.config.persistenceEnabled,
       persistencePath: this.config.persistencePath,
       maxEntries: this.config.maxEntries,
+    });
+
+    // Wire DDD repository layer (alongside adapter — not replacing it)
+    this.memoryRepository = new HybridMemoryRepository({
+      sqlitePath: this.config.persistencePath ?? ':memory:',
+      enableVectorSearch: true,
+      cacheSize: this.config.cacheSize,
     });
 
     // Forward adapter events
@@ -593,3 +603,37 @@ export function createHybridService(
 
 // Default export
 export default UnifiedMemoryService;
+
+// ===== DDD Layer Exports =====
+
+// Domain — selective to avoid conflicts with types.js (MemoryEntry interface, MemoryType)
+export type {
+  MemoryStatus,
+  MemoryEntryProps,
+  IMemoryRepository,
+  MemoryQueryOptions,
+  VectorSearchOptions,
+  VectorSearchResult,
+  BulkOperationResult,
+  MemoryStatistics,
+  ConsolidationStrategy,
+  ConsolidationOptions,
+  ConsolidationResult,
+  DeduplicationResult,
+  NamespaceAnalysis,
+  RerankWeights,
+} from './domain/index.js';
+export { MemoryDomainService, RerankService } from './domain/index.js';
+
+// Application
+export * from './application/index.js';
+
+// Infrastructure — selective to avoid conflicts with already-exported adapters
+export {
+  HybridMemoryRepository,
+  DeterministicIdGenerator,
+  SyncManager,
+} from './infrastructure/index.js';
+export type {
+  HybridRepositoryConfig,
+} from './infrastructure/index.js';
