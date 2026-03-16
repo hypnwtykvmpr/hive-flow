@@ -382,12 +382,12 @@ const initAction = async (ctx: CommandContext): Promise<CommandResult> => {
       output.writeln();
       output.printInfo('Initializing ONNX embedding subsystem...');
 
-      const { execSync } = await import('child_process');
+      const { execFileSync } = await import('child_process');
 
       try {
         output.writeln(output.dim(`  Model: ${embeddingModel}`));
         output.writeln(output.dim('  Hyperbolic: Enabled (Poincaré ball)'));
-        execSync(`npx @hive-flow/cli@latest embeddings init --model ${embeddingModel} --no-download --force 2>/dev/null`, {
+        execFileSync('npx', ['@hive-flow/cli@latest', 'embeddings', 'init', '--model', embeddingModel, '--no-download', '--force'], {
           stdio: 'pipe',
           cwd: ctx.cwd,
           timeout: 30000
@@ -630,9 +630,9 @@ const wizardCommand: Command = {
       if (enableEmbeddings) {
         output.writeln();
         output.printInfo('Initializing ONNX embedding subsystem...');
-        const { execSync } = await import('child_process');
+        const { execFileSync } = await import('child_process');
         try {
-          execSync(`npx @hive-flow/cli@latest embeddings init --model ${embeddingModel} --no-download --force 2>/dev/null`, {
+          execFileSync('npx', ['@hive-flow/cli@latest', 'embeddings', 'init', '--model', embeddingModel, '--no-download', '--force'], {
             stdio: 'pipe',
             cwd: ctx.cwd,
             timeout: 30000

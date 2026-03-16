@@ -214,9 +214,17 @@ async function loadRuVector(): Promise<IRuVectorGraph | null> {
 
 /**
  * Extract imports from TypeScript/JavaScript file
+ * SEC-031: ReDoS defense - skip regex processing on very large files (>50K chars)
  */
 function extractImports(content: string, _filePath: string): Array<{ path: string; type: GraphEdge['type'] }> {
   const imports: Array<{ path: string; type: GraphEdge['type'] }> = [];
+
+  // SEC-031: Skip regex processing on very large input to prevent ReDoS
+  // Regex patterns can be slow on pathologically constructed input or very large files
+  if (content.length > 50000) {
+    console.warn(`[Graph] File content exceeds 50KB, skipping regex-based import extraction for ReDoS defense`);
+    return imports;
+  }
 
   // ES6 import statements
   const esImportRegex = /import\s+(?:(?:\{[^}]*\}|\*\s+as\s+\w+|\w+)\s*,?\s*)*\s*from\s*['"]([^'"]+)['"]/g;

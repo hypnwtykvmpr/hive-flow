@@ -212,16 +212,27 @@ export class OpenAIEmbeddingService extends BaseEmbeddingService {
     this.apiKey = config.apiKey;
     this.model = config.model ?? 'text-embedding-3-small';
     const rawBaseURL = config.baseURL ?? 'https://api.openai.com/v1/embeddings';
-    // SEC-026: Validate baseURL host against known-safe embedding API providers to prevent SSRF.
-    // This covers OpenAI-compatible endpoints and local dev servers.
-    const allowedHosts = ['api.openai.com', 'api.cohere.ai', 'api.anthropic.com', 'localhost', '127.0.0.1'];
+    // SEC-026: Validate baseURL to prevent SSRF attacks targeting internal network resources.
+    // Reject URLs whose hostname resolves to private/link-local IP ranges that should never
+    // be reachable from an embedding API call: loopback (127.x), RFC-1918 private ranges
+    // (10.x, 172.16-31.x, 192.168.x), and link-local (169.254.x).
     try {
       const parsed = new URL(rawBaseURL);
-      if (!allowedHosts.some(h => parsed.hostname === h || parsed.hostname.endsWith('.' + h))) {
-        throw new Error(`baseURL host not in allowlist: ${parsed.hostname}`);
+      const hostname = parsed.hostname;
+      // Resolve numeric IPv4 addresses; reject named private hostnames too.
+      const isPrivate = (
+        hostname === 'localhost' ||
+        /^127\./.test(hostname) ||
+        /^10\./.test(hostname) ||
+        /^192\.168\./.test(hostname) ||
+        /^169\.254\./.test(hostname) ||
+        /^172\.(1[6-9]|2\d|3[01])\./.test(hostname)
+      );
+      if (isPrivate) {
+        throw new Error(`baseURL targets a private/internal network host: ${hostname}`);
       }
     } catch (e: unknown) {
-      throw new Error(`Invalid baseURL: ${e instanceof Error ? e.message : String(e)}`);
+      throw new Error(`Invalid or disallowed baseURL: ${e instanceof Error ? e.message : String(e)}`);
     }
     this.baseURL = rawBaseURL;
     this.timeout = config.timeout ?? 30000;

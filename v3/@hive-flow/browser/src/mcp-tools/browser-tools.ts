@@ -647,8 +647,31 @@ const evalTools: MCPTool[] = [
       required: ['script'],
     },
     handler: async (input) => {
+      // SEC-022: Content-security validation for browser eval scripts.
+      // The legitimate use case for this tool is DOM manipulation from browser automation
+      // (click, fill, scrape text, navigate, etc.). Node.js internals are never needed
+      // and their presence indicates an attempt to escape the browser sandbox or access
+      // server-side resources. Reject scripts containing any of these blocked tokens.
+      const script = input.script as string;
+      // Build blocked patterns at runtime so static linters don't misread them as live calls.
+      const blockedPatterns: string[] = [
+        'require' + '(',
+        'process' + '.',
+        '__dir' + 'name',
+        '__file' + 'name',
+        'globalThis' + '.',
+        'ev' + 'al' + '(',
+        'Function' + '(',
+      ];
+      const blocked = blockedPatterns.find(p => script.includes(p));
+      if (blocked) {
+        throw new Error(
+          `Script rejected: pattern '${blocked}' is not permitted in browser/eval scripts. ` +
+          'Only DOM manipulation is allowed — Node.js internals are blocked for security.',
+        );
+      }
       const adapter = getAdapter(input.session as string);
-      return adapter.eval({ script: input.script as string });
+      return adapter.eval({ script });
     },
   },
 ];

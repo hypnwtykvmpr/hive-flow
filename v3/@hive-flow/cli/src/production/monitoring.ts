@@ -8,6 +8,10 @@
  * - Health checks
  * - Alerting
  *
+ * SEC-032: Audited for API key exposure in logging. This module does not log
+ * request headers or Authorization tokens. All logging is limited to structured
+ * metrics and error messages without sensitive data.
+ *
  * @module @hive-flow/cli/production/monitoring
  */
 

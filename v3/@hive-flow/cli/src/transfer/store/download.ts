@@ -25,9 +25,33 @@ const KNOWN_DOWNLOAD_GATEWAYS = new Set([
   'storage.googleapis.com',
 ]);
 
+// SEC-030: Private/link-local IP ranges to reject for SSRF prevention
+function isPrivateIP(hostname: string): boolean {
+  // Reject localhost variants
+  if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('127.')) {
+    return true;
+  }
+  // Reject private IPv4 ranges: 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16
+  if (hostname.startsWith('10.') ||
+      (hostname.startsWith('172.') && /^172\.(1[6-9]|2[0-9]|3[01])\./.test(hostname)) ||
+      hostname.startsWith('192.168.')) {
+    return true;
+  }
+  // Reject link-local range 169.254.0.0/16
+  if (hostname.startsWith('169.254.')) {
+    return true;
+  }
+  return false;
+}
+
 function validateGatewayHost(gateway: string): string {
   try {
     const parsed = new URL(gateway);
+    // SEC-030: Reject private/link-local IP hostnames
+    if (isPrivateIP(parsed.hostname)) {
+      console.warn(`[Download] config.gateway host '${parsed.hostname}' is a private IP — rejecting for SSRF prevention`);
+      return DEFAULT_STORE_CONFIG.gateway;
+    }
     if (!KNOWN_DOWNLOAD_GATEWAYS.has(parsed.hostname)) {
       console.warn(`[Download] config.gateway host '${parsed.hostname}' is not a known gateway — falling back to default`);
       return DEFAULT_STORE_CONFIG.gateway;

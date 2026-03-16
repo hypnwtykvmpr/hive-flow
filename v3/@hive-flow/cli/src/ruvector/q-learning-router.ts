@@ -11,6 +11,11 @@
  * - Experience replay buffer for stable learning
  * - Model persistence to .swarm/q-learning-model.json
  *
+ * SEC-032: Audited for API key exposure in logging. This module logs warnings
+ * and errors related to model loading/saving but never outputs request headers
+ * or Authorization tokens. All logging is restricted to version strings, file
+ * paths, and error messages.
+ *
  * @module q-learning-router
  */
 

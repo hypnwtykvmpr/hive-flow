@@ -34,11 +34,17 @@ const KNOWN_IPFS_GATEWAYS = new Set([
 /**
  * Validate a preferred gateway URL against known IPFS gateways.
  * Returns the gateway if valid, or undefined to fall back to defaults.
+ * Prevents SSRF by restricting to known gateway hosts.
  */
 export function validatePreferredGateway(gateway: string | undefined): string | undefined {
   if (!gateway) return undefined;
   try {
     const parsed = new URL(gateway);
+    // SEC-029: Validate scheme is https (prevent http SSRF)
+    if (parsed.protocol !== 'https:') {
+      console.warn(`[IPFS] preferredGateway '${gateway}' must use https:// scheme — falling back to defaults`);
+      return undefined;
+    }
     if (!KNOWN_IPFS_GATEWAYS.has(parsed.hostname)) {
       console.warn(`[IPFS] preferredGateway host '${parsed.hostname}' is not a known IPFS gateway — falling back to defaults`);
       return undefined;

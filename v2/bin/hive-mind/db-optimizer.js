@@ -14,7 +14,9 @@ import ora from 'ora';
 
 /**
  * SEC-028: Escape a SQLite identifier by wrapping in double-quotes and
- * doubling any embedded double-quote characters.
+ * doubling any embedded double-quote characters. This prevents SQL injection
+ * through table names from untrusted sources, even though table names from
+ * sqlite_master are system-controlled and trusted.
  */
 function escapeIdentifier(id) {
   return '"' + id.replace(/"/g, '""') + '"';
