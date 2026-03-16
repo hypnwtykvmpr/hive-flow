@@ -146,6 +146,13 @@ hive-flow.config.json
 *.sqlite-journal
 *.sqlite-wal
 hive-flow
+
+# private docs should not be on github
+/docs/*
+/docs/
+/.serena/
+.gitignore
+
 # Removed Windows wrapper files per user request
 hive-mind-prompt-*.txt
 
