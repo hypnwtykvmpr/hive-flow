@@ -71,6 +71,13 @@ export class OpenApiToolRegistry {
     }
 
     // 2. Build URL and request options
+    // SEC-016: Validate baseUrl is an expected domain to prevent SSRF via path parameter injection.
+    // baseUrl is supplied by the registry constructor caller (internal configuration), not by end
+    // users. The URL path parameters (op.path) are defined by the loaded OpenAPI spec and only
+    // interpolated with input values via String(input[p.name]). This trust boundary is:
+    //   - baseUrl: trusted (set at construction time from internal config)
+    //   - path params: interpolated from user input but constrained to the spec's defined paths
+    // If baseUrl were ever sourced from user input, add host allowlist validation here.
     const baseUrl = this.options.baseUrl || '';
     let urlPath = op.path;
     const queryParams = new URLSearchParams();

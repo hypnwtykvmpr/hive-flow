@@ -1326,7 +1326,7 @@ echo "  - npx hive-flow@alpha issue triage"
  *   ./github-safe.js pr create --title "Title" --body "Complex body"
  */
 
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import { writeFileSync, unlinkSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
@@ -1397,7 +1397,7 @@ if ((command === 'issue' || command === 'pr') &&
       const ghCommand = \`gh \${command} \${subcommand} \${newArgs.join(' ')}\`;
       console.log(\`Executing: \${ghCommand}\`);
       
-      const result = execSync(ghCommand, { 
+      const result = execFileSync('gh', [command, subcommand, ...newArgs], {
         stdio: 'inherit',
         timeout: 30000 // 30 second timeout
       });
@@ -1415,11 +1415,11 @@ if ((command === 'issue' || command === 'pr') &&
     }
   } else {
     // No body content, execute normally
-    execSync(\`gh \${args.join(' ')}\`, { stdio: 'inherit' });
+    execFileSync('gh', args, { stdio: 'inherit' });
   }
 } else {
   // Other commands, execute normally
-  execSync(\`gh \${args.join(' ')}\`, { stdio: 'inherit' });
+  execFileSync('gh', args, { stdio: 'inherit' });
 }
 `,
     'checkpoint-hooks.sh': `#!/bin/bash

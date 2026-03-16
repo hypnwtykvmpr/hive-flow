@@ -338,11 +338,12 @@ export const importCommand: Command = {
         output.writeln();
 
         // Execute via child_process
-        const { execSync } = await import('child_process');
+        const { execFileSync } = await import('child_process');
         try {
-          const result = execSync(`docker exec -i ${containerName} psql -U claude -d hive_flow < ${tempFile}`, {
+          const result = execFileSync('docker', ['exec', '-i', containerName, 'psql', '-U', 'claude', '-d', 'hive_flow'], {
             encoding: 'utf-8',
             timeout: 60000,
+            input: fs.readFileSync(tempFile),
           });
 
           if (verbose) {

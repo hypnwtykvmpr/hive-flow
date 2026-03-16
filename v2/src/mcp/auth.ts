@@ -5,7 +5,7 @@
 import type { MCPAuthConfig, MCPSession } from '../utils/types.js';
 import type { ILogger } from '../core/logger.js';
 import type { MCPError } from '../utils/errors.js';
-import { createHash, timingSafeEqual } from 'node:crypto';
+import { createHash, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 
 export interface IAuthManager {
   authenticate(credentials: unknown): Promise<AuthResult>;
@@ -348,16 +348,31 @@ export class AuthManager implements IAuthManager {
   }
 
   private verifyPassword(providedPassword: string, storedPassword: string): boolean {
-    // For now, using simple hash comparison
-    // In production, use proper password hashing like bcrypt
-    const hashedProvided = this.hashPassword(providedPassword);
-    const hashedStored = this.hashPassword(storedPassword);
+    // storedPassword format: "scrypt:<salt_hex>:<hash_hex>"
+    if (storedPassword.startsWith('scrypt:')) {
+      const parts = storedPassword.split(':');
+      if (parts.length !== 3) return false;
+      const salt = Buffer.from(parts[1], 'hex');
+      const storedHash = parts[2];
+      const derivedKey = scryptSync(providedPassword, salt, 64, { N: 16384, r: 8, p: 1 });
+      return this.timingSafeEqual(derivedKey.toString('hex'), storedHash);
+    }
 
+    // Legacy fallback: plain SHA-256 hash comparison (for pre-migration data).
+    // Callers should re-hash passwords with hashPassword() after successful login.
+    const hashedProvided = createHash('sha256').update(providedPassword).digest('hex');
+    const hashedStored = createHash('sha256').update(storedPassword).digest('hex');
     return this.timingSafeEqual(hashedProvided, hashedStored);
   }
 
-  private hashPassword(password: string): string {
-    return createHash('sha256').update(password).digest('hex');
+  /**
+   * Hash a password using scrypt KDF with a random salt.
+   * Returns "scrypt:<salt_hex>:<hash_hex>".
+   */
+  hashPassword(password: string): string {
+    const salt = randomBytes(32);
+    const derivedKey = scryptSync(password, salt, 64, { N: 16384, r: 8, p: 1 });
+    return `scrypt:${salt.toString('hex')}:${derivedKey.toString('hex')}`;
   }
 
   private timingSafeEqual(a: string, b: string): boolean {
@@ -373,16 +388,9 @@ export class AuthManager implements IAuthManager {
   }
 
   private createSecureToken(): string {
-    // Generate a secure random token
-    const timestamp = Date.now().toString(36);
-    const random1 = Math.random().toString(36).substring(2, 15);
-    const random2 = Math.random().toString(36).substring(2, 15);
-    const hash = createHash('sha256')
-      .update(`${timestamp}${random1}${random2}`)
-      .digest('hex')
-      .substring(0, 32);
-
-    return `mcp_${timestamp}_${hash}`;
+    // Generate a cryptographically secure random token
+    const token = randomBytes(32).toString('hex');
+    return `mcp_${token}`;
   }
 
   private cleanupExpiredTokens(): void {

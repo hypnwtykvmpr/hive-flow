@@ -419,9 +419,8 @@ export class PersistentLedger extends RunLedger {
     // to minimize the chance of data loss without blocking the caller.
     if (this.config.enableWAL) {
       // Use a void promise to avoid unhandled rejection
-      void this.store.append(logged).catch(() => {
-        // Silently swallow persistence errors to not break the caller.
-        // In production you would log this.
+      void this.store.append(logged).catch((err) => {
+        console.error('[guidance/persistence] WAL store failure — governance event dropped:', err);
       });
     }
 
@@ -439,8 +438,8 @@ export class PersistentLedger extends RunLedger {
       for (const event of events) {
         try {
           await this.store.append(event);
-        } catch {
-          // Silently continue
+        } catch (err) {
+          console.error('[guidance/persistence] WAL store failure:', err);
         }
       }
     })();

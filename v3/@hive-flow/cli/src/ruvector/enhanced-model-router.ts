@@ -533,7 +533,7 @@ export class EnhancedModelRouter {
   ): Promise<{ success: boolean; confidence: number; output?: string }> {
     try {
       // Try to import and use agentic-flow's agent-booster
-      const { execSync } = await import('child_process');
+      const { execFileSync } = await import('child_process');
 
       const filePath = intent.filePath || context?.filePath;
       if (!filePath || !existsSync(filePath)) {
@@ -556,9 +556,8 @@ export class EnhancedModelRouter {
       const language = intent.language || 'javascript';
 
       // Try using npx agent-booster
-      const cmd = `npx --yes agent-booster@0.2.2 apply --language ${language}`;
 
-      const result = execSync(cmd, {
+      const result = execFileSync('npx', ['--yes', 'agent-booster@0.2.2', 'apply', '--language', language], {
         encoding: 'utf-8',
         input: JSON.stringify({
           code: originalCode,

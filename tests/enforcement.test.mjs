@@ -988,15 +988,15 @@ describe('enforcement system', () => {
       rmSync(SWARM_DIR, { recursive: true, force: true });
     });
 
-    it('allows git commit with unsigned gate (migration support)', () => {
+    it('blocks git commit with unsigned gate (SEC-027: legacy path removed)', () => {
       setState(freshState());
       mkdirSync(SWARM_DIR, { recursive: true });
-      // Unsigned gate (legacy format)
+      // Unsigned gate (legacy format) — must no longer be accepted
       const gate = { status: 'pass', timestamp: new Date().toISOString() };
       mkdirSync(ENF_DIR, { recursive: true });
       writeFileSync(GATE_FILE, JSON.stringify(gate, null, 2));
       const r = runEnforcement({ tool_name: 'Bash', tool_input: { command: 'git commit -m "legacy-gate"' } });
-      assert.ok(isAllow(r.json));
+      assert.ok(isDeny(r.json));
       rmSync(SWARM_DIR, { recursive: true, force: true });
     });
 

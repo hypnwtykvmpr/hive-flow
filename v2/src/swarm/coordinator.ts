@@ -1290,7 +1290,13 @@ export class SwarmCoordinator extends EventEmitter implements SwarmEventEmitter 
       if (agent) {
         agent.lastHeartbeat = new Date();
         agent.health = data.health || 1.0;
-        agent.metrics = { ...agent.metrics, ...data.metrics };
+        // SEC-024: Filter dangerous keys from external heartbeat data to prevent prototype pollution
+        const DANGEROUS_SPREAD_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+        const safeMetrics: Record<string, unknown> = {};
+        for (const [key, value] of Object.entries(data.metrics || {})) {
+          if (!DANGEROUS_SPREAD_KEYS.has(key)) safeMetrics[key] = value;
+        }
+        agent.metrics = { ...agent.metrics, ...safeMetrics };
       }
     });
 

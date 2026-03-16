@@ -4,6 +4,7 @@
  */
 
 import { existsSync, readFileSync } from 'fs';
+import { createHmac, randomBytes, timingSafeEqual } from 'crypto';
 import { join, resolve } from 'path';
 
 export enum ToolRisk {
@@ -87,18 +88,68 @@ function resolveProjectDir(): string {
   return resolve(__dirname, '..', '..', '..', '..');
 }
 
+// Highest enforcement level — used for fail-closed behavior on any error.
+const LEVEL_HALTED = 3;
+
+function getOrReadHmacKey(enforcementDir: string): string | null {
+  try {
+    const keyFile = join(enforcementDir, '.hmac-key');
+    if (existsSync(keyFile)) {
+      return readFileSync(keyFile, 'utf8').trim();
+    }
+  } catch {
+    // Cannot read key — treat as unavailable
+  }
+  return null;
+}
+
+function verifyEnvelopeHmac(envelope: { state: unknown; hmac: string }, key: string): boolean {
+  try {
+    const expected = createHmac('sha256', key)
+      .update(JSON.stringify(envelope.state))
+      .digest('hex');
+    const expectedBuf = Buffer.from(expected, 'hex');
+    const actualBuf = Buffer.from(envelope.hmac, 'hex');
+    if (expectedBuf.length !== actualBuf.length) return false;
+    return timingSafeEqual(expectedBuf, actualBuf);
+  } catch {
+    return false;
+  }
+}
+
 export function getEnforcementLevel(): number {
   try {
     const projectDir = resolveProjectDir();
-    const stateFile = join(projectDir, '.hive-flow', 'enforcement', 'state.json');
-    if (!existsSync(stateFile)) return 0;
+    const enforcementDir = join(projectDir, '.hive-flow', 'enforcement');
+    const stateFile = join(enforcementDir, 'state.json');
+
+    // SEC-008: fail-CLOSED when state file is missing — treat as HALTED
+    if (!existsSync(stateFile)) return LEVEL_HALTED;
 
     const raw = JSON.parse(readFileSync(stateFile, 'utf8'));
-    // Support both HMAC envelope and legacy format
-    const state = raw?.state || raw;
-    return typeof state?.level === 'number' ? state.level : 0;
+
+    // SEC-009: HMAC verification before trusting the level.
+    // Only the signed envelope format is accepted. Legacy plain-state files are
+    // rejected (fail-closed) because their integrity cannot be verified.
+    if (raw?.state !== undefined && typeof raw?.hmac === 'string') {
+      const key = getOrReadHmacKey(enforcementDir);
+      if (key === null) {
+        // Cannot verify — fail-closed
+        return LEVEL_HALTED;
+      }
+      if (!verifyEnvelopeHmac(raw as { state: unknown; hmac: string }, key)) {
+        // HMAC mismatch — state tampered, fail-closed
+        return LEVEL_HALTED;
+      }
+      const state = raw.state as Record<string, unknown>;
+      return typeof state?.level === 'number' ? state.level : LEVEL_HALTED;
+    }
+
+    // No HMAC envelope present — unsigned state, fail-closed
+    return LEVEL_HALTED;
   } catch {
-    return 0;
+    // SEC-008: fail-CLOSED on any error reading state
+    return LEVEL_HALTED;
   }
 }
 

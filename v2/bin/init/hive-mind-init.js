@@ -745,10 +745,15 @@ export async function rollbackHiveMindInit(workingDir) {
 /**
  * Deep merge utility for configuration objects
  */
+// SEC-013: Dangerous keys that must never be merged to prevent prototype pollution
+const DANGEROUS_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
 function mergeDeep(target, source) {
   const output = Object.assign({}, target);
   if (isObject(target) && isObject(source)) {
     Object.keys(source).forEach(key => {
+      // SEC-013: Skip dangerous keys to prevent prototype pollution
+      if (DANGEROUS_KEYS.has(key)) return;
       if (isObject(source[key])) {
         if (!(key in target))
           Object.assign(output, { [key]: source[key] });

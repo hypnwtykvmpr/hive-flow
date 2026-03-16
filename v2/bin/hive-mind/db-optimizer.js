@@ -13,6 +13,14 @@ import chalk from 'chalk';
 import ora from 'ora';
 
 /**
+ * SEC-028: Escape a SQLite identifier by wrapping in double-quotes and
+ * doubling any embedded double-quote characters.
+ */
+function escapeIdentifier(id) {
+  return '"' + id.replace(/"/g, '""') + '"';
+}
+
+/**
  * Optimize existing hive mind database with backward compatibility
  */
 export async function optimizeHiveMindDatabase(dbPath, options = {}) {
@@ -801,7 +809,7 @@ export async function generateOptimizationReport(dbPath) {
       .all();
 
     for (const table of tables) {
-      const count = db.prepare(`SELECT COUNT(*) as count FROM ${table.name}`).get();
+      const count = db.prepare(`SELECT COUNT(*) as count FROM ${escapeIdentifier(table.name)}`).get();
       const size = db
         .prepare(
           `

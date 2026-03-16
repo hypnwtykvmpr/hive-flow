@@ -1372,27 +1372,27 @@ COORDINATION KEY POINTS:
    */
   async executeHook(hookType, params) {
     try {
-      const { execSync } = await import('child_process');
-      
-      let hookCommand = `npx hive-flow@alpha hooks ${hookType}`;
-      
+      const { execFileSync } = await import('child_process');
+
+      const hookArgs = ['hive-flow@alpha', 'hooks', hookType];
+
       if (params.description) {
-        hookCommand += ` --description "${params.description}"`;
+        hookArgs.push('--description', params.description);
       }
       if (params.file) {
-        hookCommand += ` --file "${params.file}"`;
+        hookArgs.push('--file', params.file);
       }
       if (params.taskId) {
-        hookCommand += ` --task-id "${params.taskId}"`;
+        hookArgs.push('--task-id', params.taskId);
       }
       if (params.sessionId) {
-        hookCommand += ` --session-id "${params.sessionId}"`;
+        hookArgs.push('--session-id', params.sessionId);
       }
       if (params.message) {
-        hookCommand += ` --message "${params.message}"`;
+        hookArgs.push('--message', params.message);
       }
-      
-      execSync(hookCommand, { stdio: 'pipe' });
+
+      execFileSync('npx', hookArgs, { stdio: 'pipe' });
       
     } catch (error) {
       // Hooks are optional, don't fail the workflow if they fail
@@ -1405,10 +1405,10 @@ COORDINATION KEY POINTS:
    */
   async storeTaskResult(taskId, result) {
     try {
-      const { execSync } = await import('child_process');
+      const { execFileSync } = await import('child_process');
       const resultJson = JSON.stringify(result);
-      
-      execSync(`npx hive-flow@alpha memory store "workflow/${this.executionId}/${taskId}" '${resultJson}'`, {
+
+      execFileSync('npx', ['hive-flow@alpha', 'memory', 'store', `workflow/${this.executionId}/${taskId}`, resultJson], {
         stdio: 'pipe'
       });
       

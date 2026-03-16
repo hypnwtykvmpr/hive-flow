@@ -119,33 +119,46 @@ class CryptographicCore {
     return crypto.randomBytes(32).toString('hex');
   }
 
-  // Encrypt sensitive data
-  encrypt(data: string, key: string): { encrypted: string; iv: string; tag: string } {
-    const iv = crypto.randomBytes(16);
-    const cipher = crypto.createCipher(this.algorithm, key);
+  // Derive a 256-bit key from a passphrase using PBKDF2
+  private deriveKey(passphrase: string, salt: Buffer): Buffer {
+    return crypto.pbkdf2Sync(passphrase, salt, 100_000, 32, 'sha256');
+  }
+
+  // Encrypt sensitive data using AES-256-GCM with proper IV and key derivation
+  encrypt(data: string, key: string): { encrypted: string; iv: string; tag: string; salt: string } {
+    const iv = crypto.randomBytes(12); // 96-bit IV for GCM
+    const salt = crypto.randomBytes(16);
+    const derivedKey = this.deriveKey(key, salt);
+    const cipher = crypto.createCipheriv(this.algorithm, derivedKey, iv);
     cipher.setAAD(Buffer.from('hive-flow-verification'));
-    
+
     let encrypted = cipher.update(data, 'utf8', 'hex');
     encrypted += cipher.final('hex');
-    
-    const tag = (cipher as any).getAuthTag();
-    
+
+    const tag = cipher.getAuthTag();
+
     return {
       encrypted,
       iv: iv.toString('hex'),
-      tag: tag.toString('hex')
+      tag: tag.toString('hex'),
+      salt: salt.toString('hex'),
     };
   }
 
-  // Decrypt sensitive data
-  decrypt(encryptedData: { encrypted: string; iv: string; tag: string }, key: string): string {
-    const decipher = crypto.createDecipher(this.algorithm, key);
+  // Decrypt sensitive data using AES-256-GCM with proper IV and key derivation
+  decrypt(encryptedData: { encrypted: string; iv: string; tag: string; salt?: string }, key: string): string {
+    const iv = Buffer.from(encryptedData.iv, 'hex');
+    const salt = encryptedData.salt
+      ? Buffer.from(encryptedData.salt, 'hex')
+      : Buffer.alloc(16); // legacy fallback — data encrypted before migration
+    const derivedKey = this.deriveKey(key, salt);
+    const decipher = crypto.createDecipheriv(this.algorithm, derivedKey, iv);
     decipher.setAAD(Buffer.from('hive-flow-verification'));
     decipher.setAuthTag(Buffer.from(encryptedData.tag, 'hex'));
-    
+
     let decrypted = decipher.update(encryptedData.encrypted, 'hex', 'utf8');
     decrypted += decipher.final('utf8');
-    
+
     return decrypted;
   }
 }

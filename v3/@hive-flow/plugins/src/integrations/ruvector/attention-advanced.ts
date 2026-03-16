@@ -16,6 +16,19 @@ import {
   type AttentionCategory,
 } from './attention.js';
 
+/**
+ * SEC-021: Validate that a value is a finite number before interpolating it
+ * into a SQL string. Throws if the value is not finite (NaN, ±Infinity, or
+ * non-numeric).  Returns the coerced number so callers can use it inline.
+ */
+function assertNumeric(value: unknown, name: string): number {
+  const n = Number(value);
+  if (!Number.isFinite(n)) {
+    throw new Error(`Invalid numeric parameter: ${name} = ${String(value)}`);
+  }
+  return n;
+}
+
 // ============================================================================
 // Graph Attention Implementations
 // ============================================================================
@@ -105,7 +118,7 @@ export class HyperbolicAttention extends BaseAttentionMechanism {
     const q = this.formatMatrix(input.query);
     const k = this.formatMatrix(input.key);
     const v = this.formatMatrix(input.value);
-    const curvature = this.config.params?.curvature ?? -1.0;
+    const curvature = assertNumeric(this.config.params?.curvature ?? -1.0, 'curvature');
     return `SELECT ruvector.hyperbolic_attention(${q}, ${k}, ${v}, ${curvature}, ${this.getScale()})`;
   }
 
@@ -939,8 +952,8 @@ export class RoutingAttention extends BaseAttentionMechanism {
     const q = this.formatMatrix(input.query);
     const k = this.formatMatrix(input.key);
     const v = this.formatMatrix(input.value);
-    const numExperts = this.config.params?.numExperts ?? 4;
-    const topK = this.config.params?.topK ?? 2;
+    const numExperts = assertNumeric(this.config.params?.numExperts ?? 4, 'numExperts');
+    const topK = assertNumeric(this.config.params?.topK ?? 2, 'topK');
     return `SELECT ruvector.routing_attention(${q}, ${k}, ${v}, ${numExperts}, ${topK}, ${this.getScale()})`;
   }
 
@@ -1020,8 +1033,8 @@ export class MixtureOfExpertsAttention extends BaseAttentionMechanism {
     const q = this.formatMatrix(input.query);
     const k = this.formatMatrix(input.key);
     const v = this.formatMatrix(input.value);
-    const numExperts = this.config.params?.numExperts ?? 8;
-    const topK = this.config.params?.topK ?? 2;
+    const numExperts = assertNumeric(this.config.params?.numExperts ?? 8, 'numExperts');
+    const topK = assertNumeric(this.config.params?.topK ?? 2, 'topK');
     return `SELECT ruvector.moe_attention(${q}, ${k}, ${v}, ${numExperts}, ${topK}, ${this.getScale()})`;
   }
 

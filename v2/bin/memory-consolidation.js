@@ -350,7 +350,15 @@ export class MemoryConsolidator {
       
       try {
         // Attach the source database
-        const alias = `db_${path.basename(dbFile, '.db')}`;
+        // SEC-012: Derive alias from basename and sanitize — only word characters
+        // are safe as a bare identifier in ATTACH DATABASE (sqlite does not
+        // support parameter binding for ATTACH). The dbFile existence is already
+        // confirmed by the existsSync guard at the start of this loop.
+        const rawAlias = `db_${path.basename(dbFile, '.db')}`;
+        if (!/^\w+$/.test(rawAlias)) {
+          throw new Error(`Unsafe database alias derived from filename: ${dbFile}`);
+        }
+        const alias = rawAlias;
         await db.exec(`ATTACH DATABASE '${dbFile}' AS ${alias}`);
         
         // Get tables from source database

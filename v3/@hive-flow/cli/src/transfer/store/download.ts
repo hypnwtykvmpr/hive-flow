@@ -15,6 +15,30 @@ import type {
 import { DEFAULT_STORE_CONFIG } from './registry.js';
 import type { CFPFormat } from '../types.js';
 
+// SEC-030: Known IPFS gateway hostnames to validate config.gateway and prevent SSRF
+const KNOWN_DOWNLOAD_GATEWAYS = new Set([
+  'gateway.pinata.cloud',
+  'cloudflare-ipfs.com',
+  'ipfs.io',
+  'dweb.link',
+  'w3s.link',
+  'storage.googleapis.com',
+]);
+
+function validateGatewayHost(gateway: string): string {
+  try {
+    const parsed = new URL(gateway);
+    if (!KNOWN_DOWNLOAD_GATEWAYS.has(parsed.hostname)) {
+      console.warn(`[Download] config.gateway host '${parsed.hostname}' is not a known gateway — falling back to default`);
+      return DEFAULT_STORE_CONFIG.gateway;
+    }
+    return gateway;
+  } catch {
+    console.warn(`[Download] config.gateway '${gateway}' is not a valid URL — falling back to default`);
+    return DEFAULT_STORE_CONFIG.gateway;
+  }
+}
+
 /**
  * Download progress callback
  */
@@ -162,7 +186,9 @@ export class PatternDownloader {
       return this.fetchFromGCS(cid, onProgress);
     }
 
-    const url = `${this.config.gateway}/ipfs/${cid}`;
+    // SEC-030: Validate config.gateway host to prevent SSRF from misconfigured gateway
+    const safeGateway = validateGatewayHost(this.config.gateway);
+    const url = `${safeGateway}/ipfs/${cid}`;
     console.log(`[Download] Fetching: ${url}`);
 
     try {

@@ -575,6 +575,14 @@ class VectorOps {
     }
 
     if (options.whereClause) {
+      // SEC-011: Validate whereClause to prevent SQL injection.
+      // Only safe patterns are allowed: word characters, spaces, common operators,
+      // parameterized placeholders ($N), and basic punctuation. Subqueries and
+      // statement terminators are explicitly rejected.
+      if (!/^[\w\s$.,<>=!()'"[\]:@+-]+$/.test(options.whereClause) ||
+          /;|--|\bSELECT\b|\bINSERT\b|\bUPDATE\b|\bDELETE\b|\bDROP\b|\bEXEC\b|\bUNION\b/i.test(options.whereClause)) {
+        throw new Error('Invalid whereClause: contains disallowed SQL constructs');
+      }
       whereClauses.push(`(${options.whereClause})`);
       if (options.whereParams) {
         // Re-index parameters in the custom WHERE clause

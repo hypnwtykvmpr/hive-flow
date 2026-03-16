@@ -100,15 +100,23 @@ export class EnhancedClaudeAPIClient extends EventEmitter {
       config.apiKey = process.env.ANTHROPIC_API_KEY;
     }
 
+    // SEC-023: Safe assign helper to prevent prototype pollution from external config data
+    function safeAssign(target: Record<string, unknown>, source: Record<string, unknown>): void {
+      const DANGEROUS = new Set(['__proto__', 'constructor', 'prototype']);
+      for (const [key, value] of Object.entries(source || {})) {
+        if (!DANGEROUS.has(key)) (target as Record<string, unknown>)[key] = value;
+      }
+    }
+
     // Load from config manager
     const claudeConfig = this.configManager.get('claude');
     if (claudeConfig) {
-      Object.assign(config, claudeConfig);
+      safeAssign(config as unknown as Record<string, unknown>, claudeConfig as Record<string, unknown>);
     }
 
     // Apply overrides
     if (overrides) {
-      Object.assign(config, overrides);
+      safeAssign(config as unknown as Record<string, unknown>, overrides as Record<string, unknown>);
     }
 
     this.validateConfiguration(config);

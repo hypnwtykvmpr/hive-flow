@@ -199,7 +199,6 @@ export class HiveFlowExecutor {
       const [cmd, ...args] = command;
 
       const proc = spawn(cmd, args, {
-        shell: true,
         env: {
           ...process.env,
           HIVE_FLOW_NON_INTERACTIVE: 'true',

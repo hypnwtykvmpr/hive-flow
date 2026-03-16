@@ -116,9 +116,9 @@ function signState(state) {
 function verifyState(envelope) {
   if (!envelope || typeof envelope !== 'object') return { valid: false, state: null };
 
-  // Legacy format migration: plain state without HMAC envelope
-  if (!envelope.hmac && typeof envelope.level === 'number') {
-    return { valid: true, state: envelope, migrated: true };
+  // SEC-027: Unsigned state rejected — no legacy migration path
+  if (!envelope.hmac) {
+    return { valid: false, reason: 'unsigned-state-rejected' };
   }
 
   if (!envelope.state || !envelope.hmac) return { valid: false, state: null };
@@ -594,13 +594,7 @@ function checkVerificationGate(toolName, toolInput) {
         return { blocked: false };
       }
     }
-    // Also accept unsigned gates during migration
-    if (!raw.hmac && raw.status === 'pass' && raw.timestamp) {
-      const ts = new Date(raw.timestamp).getTime();
-      if (!isNaN(ts) && ts <= Date.now() && (Date.now() - ts) < GATE_MAX_AGE_MS) {
-        return { blocked: false };
-      }
-    }
+    // Unsigned gates are no longer accepted — require HMAC on all state files
   }
 
   return {

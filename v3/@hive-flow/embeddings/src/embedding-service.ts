@@ -211,7 +211,19 @@ export class OpenAIEmbeddingService extends BaseEmbeddingService {
     super(config);
     this.apiKey = config.apiKey;
     this.model = config.model ?? 'text-embedding-3-small';
-    this.baseURL = config.baseURL ?? 'https://api.openai.com/v1/embeddings';
+    const rawBaseURL = config.baseURL ?? 'https://api.openai.com/v1/embeddings';
+    // SEC-026: Validate baseURL host against known-safe embedding API providers to prevent SSRF.
+    // This covers OpenAI-compatible endpoints and local dev servers.
+    const allowedHosts = ['api.openai.com', 'api.cohere.ai', 'api.anthropic.com', 'localhost', '127.0.0.1'];
+    try {
+      const parsed = new URL(rawBaseURL);
+      if (!allowedHosts.some(h => parsed.hostname === h || parsed.hostname.endsWith('.' + h))) {
+        throw new Error(`baseURL host not in allowlist: ${parsed.hostname}`);
+      }
+    } catch (e: unknown) {
+      throw new Error(`Invalid baseURL: ${e instanceof Error ? e.message : String(e)}`);
+    }
+    this.baseURL = rawBaseURL;
     this.timeout = config.timeout ?? 30000;
     this.maxRetries = config.maxRetries ?? 3;
   }

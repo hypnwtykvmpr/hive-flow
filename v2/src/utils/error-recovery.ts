@@ -3,7 +3,7 @@
  * Automatic error detection and recovery for common installation issues
  */
 
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import * as fs from 'fs-extra';
 import * as path from 'path';
 import * as os from 'os';
@@ -125,7 +125,7 @@ export async function cleanNpmCache(): Promise<RecoveryResult> {
       const npmDir = path.join(homeDir, '.npm');
       if (await fs.pathExists(npmDir)) {
         try {
-          execSync(`chmod -R 755 "${npmDir}"`, { stdio: 'pipe' });
+          execFileSync('chmod', ['-R', '755', npmDir], { stdio: 'pipe' });
           console.log('✅ npm directory permissions fixed');
         } catch (error) {
           console.warn('⚠️  Permission fix failed, continuing...');

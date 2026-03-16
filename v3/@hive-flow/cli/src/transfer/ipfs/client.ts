@@ -22,6 +22,34 @@ export const IPFS_GATEWAYS = [
   'https://w3s.link', // web3.storage gateway
 ];
 
+// SEC-029: Known IPFS gateway hostnames for preferredGateway validation
+const KNOWN_IPFS_GATEWAYS = new Set([
+  'gateway.pinata.cloud',
+  'cloudflare-ipfs.com',
+  'ipfs.io',
+  'dweb.link',
+  'w3s.link',
+]);
+
+/**
+ * Validate a preferred gateway URL against known IPFS gateways.
+ * Returns the gateway if valid, or undefined to fall back to defaults.
+ */
+export function validatePreferredGateway(gateway: string | undefined): string | undefined {
+  if (!gateway) return undefined;
+  try {
+    const parsed = new URL(gateway);
+    if (!KNOWN_IPFS_GATEWAYS.has(parsed.hostname)) {
+      console.warn(`[IPFS] preferredGateway host '${parsed.hostname}' is not a known IPFS gateway — falling back to defaults`);
+      return undefined;
+    }
+    return gateway;
+  } catch {
+    console.warn(`[IPFS] preferredGateway '${gateway}' is not a valid URL — falling back to defaults`);
+    return undefined;
+  }
+}
+
 /**
  * IPNS resolvers
  */
@@ -63,8 +91,10 @@ export async function resolveIPNS(
   ipnsName: string,
   preferredGateway?: string
 ): Promise<string | null> {
-  const resolvers = preferredGateway
-    ? [preferredGateway, ...IPNS_RESOLVERS.filter(r => r !== preferredGateway)]
+  // SEC-029: Validate preferredGateway against known IPFS gateways to prevent SSRF
+  const validatedGateway = validatePreferredGateway(preferredGateway);
+  const resolvers = validatedGateway
+    ? [validatedGateway, ...IPNS_RESOLVERS.filter(r => r !== validatedGateway)]
     : IPNS_RESOLVERS;
 
   console.log(`[IPFS] Resolving IPNS: ${ipnsName}`);
@@ -134,8 +164,10 @@ export async function fetchFromIPFS<T>(
   cid: string,
   preferredGateway?: string
 ): Promise<T | null> {
-  const gateways = preferredGateway
-    ? [preferredGateway, ...IPFS_GATEWAYS.filter(g => g !== preferredGateway)]
+  // SEC-029: Validate preferredGateway against known IPFS gateways to prevent SSRF
+  const validatedGateway = validatePreferredGateway(preferredGateway);
+  const gateways = validatedGateway
+    ? [validatedGateway, ...IPFS_GATEWAYS.filter(g => g !== validatedGateway)]
     : IPFS_GATEWAYS;
 
   console.log(`[IPFS] Fetching CID: ${cid}`);
@@ -184,8 +216,10 @@ export async function fetchFromIPFSWithMetadata<T>(
   cid: string,
   preferredGateway?: string
 ): Promise<FetchResult<T> | null> {
-  const gateways = preferredGateway
-    ? [preferredGateway, ...IPFS_GATEWAYS.filter(g => g !== preferredGateway)]
+  // SEC-029: Validate preferredGateway against known IPFS gateways to prevent SSRF
+  const validatedGateway = validatePreferredGateway(preferredGateway);
+  const gateways = validatedGateway
+    ? [validatedGateway, ...IPFS_GATEWAYS.filter(g => g !== validatedGateway)]
     : IPFS_GATEWAYS;
 
   for (const gateway of gateways) {

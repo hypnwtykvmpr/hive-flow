@@ -581,6 +581,17 @@ export const browserTools: MCPTool[] = [
     },
     handler: async (input) => {
       const { script, session } = input as { script: string; session?: string };
+      // SEC-022: Script length limit to prevent resource exhaustion
+      if (script.length > 50000) {
+        return {
+          content: [{ type: 'text', text: JSON.stringify({ success: false, error: 'Script exceeds maximum length of 50000 characters' }) }],
+          isError: true,
+        };
+      }
+      // SEC-022: Log all eval executions for audit purposes
+      // This tool requires a browser session and is intentionally unrestricted for automation.
+      // Only expose via stdio transport or with authenticated HTTP.
+      console.warn('[browser_eval] Executing script, length:', script.length, 'session:', session ?? 'default');
       return execBrowserCommand(['eval', script], session);
     },
   },

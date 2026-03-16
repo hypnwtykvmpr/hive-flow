@@ -1294,6 +1294,15 @@ export class OptimizedProductQuantizer extends ProductQuantizer {
 // ============================================================================
 
 /**
+ * SEC-020: Escape a PostgreSQL identifier by wrapping in double-quotes and
+ * doubling any embedded double-quote characters. Must be applied to every
+ * caller-supplied table name before interpolation into SQL strings.
+ */
+function escapeIdentifier(id: string): string {
+  return '"' + id.replace(/"/g, '""') + '"';
+}
+
+/**
  * QuantizationSQL generates SQL for quantized vector operations.
  *
  * Provides SQL statements for:
@@ -1354,9 +1363,10 @@ export class QuantizationSQL {
 
     const extraCols = additionalColumns ? `\n  ${additionalColumns},` : '';
 
+    const tbl = escapeIdentifier(tableName);
     return `
 -- Table for ${comment}
-CREATE TABLE IF NOT EXISTS ${tableName} (
+CREATE TABLE IF NOT EXISTS ${tbl} (
   id ${idType} PRIMARY KEY,${extraCols}
   original_vector vector(${dimensions}),  -- Optional: keep original for reranking
   ${vectorColumn},
@@ -1365,9 +1375,9 @@ CREATE TABLE IF NOT EXISTS ${tableName} (
 );
 
 -- Index for quantized search
-CREATE INDEX IF NOT EXISTS idx_${tableName}_quantized ON ${tableName} (quantized_vector);
+CREATE INDEX IF NOT EXISTS idx_${tableName}_quantized ON ${tbl} (quantized_vector);
 
-COMMENT ON TABLE ${tableName} IS '${comment}';
+COMMENT ON TABLE ${tbl} IS '${comment}';
     `.trim();
   }
 
@@ -1383,7 +1393,7 @@ COMMENT ON TABLE ${tableName} IS '${comment}';
                    (type === 'pq' || type === 'opq') ? 'pq_codes' : 'quantized_vector';
 
     return `
-INSERT INTO ${tableName} (original_vector, ${column}, metadata)
+INSERT INTO ${escapeIdentifier(tableName)} (original_vector, ${column}, metadata)
 VALUES ($1::vector, $2, $3::jsonb)
 RETURNING id;
     `.trim();
@@ -1411,7 +1421,7 @@ RETURNING id;
     }).join(',\n  ');
 
     return `
-INSERT INTO ${tableName} (original_vector, ${column}, metadata)
+INSERT INTO ${escapeIdentifier(tableName)} (original_vector, ${column}, metadata)
 VALUES
   ${values}
 RETURNING id;
@@ -1434,11 +1444,12 @@ RETURNING id;
     if (useReranking) {
       // Two-stage search: filter with quantized, rerank with original
       const filterK = k * 10;
+      const tbl = escapeIdentifier(tableName);
       return `
 WITH candidates AS (
   SELECT id, original_vector, metadata,
          ruvector_scalar_distance(quantized_vector, $1::bytea) AS approx_dist
-  FROM ${tableName}
+  FROM ${tbl}
   ORDER BY approx_dist ASC
   LIMIT ${filterK}
 )
@@ -1453,7 +1464,7 @@ LIMIT ${k};
     return `
 SELECT id, metadata,
        ruvector_scalar_distance(quantized_vector, $1::bytea) AS distance
-FROM ${tableName}
+FROM ${escapeIdentifier(tableName)}
 ORDER BY distance ASC
 LIMIT ${k};
     `.trim();
@@ -1474,11 +1485,12 @@ LIMIT ${k};
   ): string {
     if (useReranking) {
       const filterK = k * 10;
+      const tbl = escapeIdentifier(tableName);
       return `
 WITH candidates AS (
   SELECT id, original_vector, metadata,
          bit_count(binary_vector # $1::bit) AS hamming_dist
-  FROM ${tableName}
+  FROM ${tbl}
   ORDER BY hamming_dist ASC
   LIMIT ${filterK}
 )
@@ -1493,7 +1505,7 @@ LIMIT ${k};
     return `
 SELECT id, metadata,
        bit_count(binary_vector # $1::bit) AS hamming_distance
-FROM ${tableName}
+FROM ${escapeIdentifier(tableName)}
 ORDER BY hamming_distance ASC
 LIMIT ${k};
     `.trim();
@@ -1522,11 +1534,12 @@ LIMIT ${k};
 
     if (useReranking) {
       const filterK = k * 10;
+      const tbl = escapeIdentifier(tableName);
       return `
 WITH candidates AS (
   SELECT id, original_vector, metadata,
          sqrt(${distanceTerms}) AS approx_dist
-  FROM ${tableName}
+  FROM ${tbl}
   ORDER BY approx_dist ASC
   LIMIT ${filterK}
 )
@@ -1541,7 +1554,7 @@ LIMIT ${k};
     return `
 SELECT id, metadata,
        sqrt(${distanceTerms}) AS distance
-FROM ${tableName}
+FROM ${escapeIdentifier(tableName)}
 ORDER BY distance ASC
 LIMIT ${k};
     `.trim();
@@ -1560,9 +1573,12 @@ LIMIT ${k};
     numSubvectors: number = 8,
     numCentroids: number = 256
   ): string {
+    const tbl = escapeIdentifier(tableName);
+    const tblCodebooks = escapeIdentifier(`${tableName}_codebooks`);
+    const tblLookup = escapeIdentifier(`${tableName}_distance_lookup`);
     return `
 -- PQ codebooks storage
-CREATE TABLE IF NOT EXISTS ${tableName}_codebooks (
+CREATE TABLE IF NOT EXISTS ${tblCodebooks} (
   subvector_id INTEGER NOT NULL,
   centroid_id INTEGER NOT NULL,
   centroid vector NOT NULL,
@@ -1570,7 +1586,7 @@ CREATE TABLE IF NOT EXISTS ${tableName}_codebooks (
 );
 
 -- Precomputed distance lookup (for specific queries)
-CREATE TABLE IF NOT EXISTS ${tableName}_distance_lookup (
+CREATE TABLE IF NOT EXISTS ${tblLookup} (
   query_id BIGINT NOT NULL,
   subvector_id INTEGER NOT NULL,
   centroid_id INTEGER NOT NULL,
@@ -1579,9 +1595,9 @@ CREATE TABLE IF NOT EXISTS ${tableName}_distance_lookup (
 );
 
 CREATE INDEX IF NOT EXISTS idx_${tableName}_lookup_query
-ON ${tableName}_distance_lookup (query_id, subvector_id);
+ON ${tblLookup} (query_id, subvector_id);
 
-COMMENT ON TABLE ${tableName}_codebooks IS 'PQ codebooks: M=${numSubvectors}, K=${numCentroids}';
+COMMENT ON TABLE ${tblCodebooks} IS 'PQ codebooks: M=${numSubvectors}, K=${numCentroids}';
     `.trim();
   }
 
@@ -1606,7 +1622,7 @@ COMMENT ON TABLE ${tableName}_codebooks IS 'PQ codebooks: M=${numSubvectors}, K=
     }
 
     return `
-INSERT INTO ${tableName}_codebooks (subvector_id, centroid_id, centroid)
+INSERT INTO ${escapeIdentifier(`${tableName}_codebooks`)} (subvector_id, centroid_id, centroid)
 VALUES
   ${values.join(',\n  ')}
 ON CONFLICT (subvector_id, centroid_id) DO UPDATE
@@ -1672,9 +1688,10 @@ $$ LANGUAGE plpgsql IMMUTABLE;
    * @returns SQL for rotation matrix storage
    */
   static createOPQRotationTable(tableName: string, dimensions: number): string {
+    const tblRotation = escapeIdentifier(`${tableName}_rotation`);
     return `
 -- OPQ rotation matrix storage
-CREATE TABLE IF NOT EXISTS ${tableName}_rotation (
+CREATE TABLE IF NOT EXISTS ${tblRotation} (
   row_id INTEGER NOT NULL,
   col_id INTEGER NOT NULL,
   value REAL NOT NULL,
@@ -1697,7 +1714,7 @@ BEGIN
     FOR j IN 0..${dimensions - 1} LOOP
       SELECT sum + r.value * v[j+1]
       INTO sum
-      FROM ${tableName}_rotation r
+      FROM ${tblRotation} r
       WHERE r.row_id = i AND r.col_id = j;
     END LOOP;
     result[i+1] := sum;
@@ -1707,7 +1724,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql IMMUTABLE;
 
-COMMENT ON TABLE ${tableName}_rotation IS 'OPQ rotation matrix (${dimensions}x${dimensions})';
+COMMENT ON TABLE ${tblRotation} IS 'OPQ rotation matrix (${dimensions}x${dimensions})';
     `.trim();
   }
 
@@ -1718,16 +1735,18 @@ COMMENT ON TABLE ${tableName}_rotation IS 'OPQ rotation matrix (${dimensions}x${
    * @returns CREATE VIEW SQL
    */
   static createStatsView(tableName: string): string {
+    const tbl = escapeIdentifier(tableName);
+    const tblView = escapeIdentifier(`${tableName}_quantization_stats`);
     return `
-CREATE OR REPLACE VIEW ${tableName}_quantization_stats AS
+CREATE OR REPLACE VIEW ${tblView} AS
 SELECT
   pg_total_relation_size('${tableName}'::regclass) AS total_size_bytes,
   pg_relation_size('${tableName}'::regclass) AS table_size_bytes,
   pg_indexes_size('${tableName}'::regclass) AS index_size_bytes,
-  (SELECT count(*) FROM ${tableName}) AS row_count,
+  (SELECT count(*) FROM ${tbl}) AS row_count,
   CASE
-    WHEN (SELECT count(*) FROM ${tableName}) > 0
-    THEN pg_relation_size('${tableName}'::regclass)::float / (SELECT count(*) FROM ${tableName})
+    WHEN (SELECT count(*) FROM ${tbl}) > 0
+    THEN pg_relation_size('${tableName}'::regclass)::float / (SELECT count(*) FROM ${tbl})
     ELSE 0
   END AS avg_bytes_per_row;
     `.trim();

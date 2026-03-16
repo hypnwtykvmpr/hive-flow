@@ -21,7 +21,9 @@ describe('AuthService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     // Set default environment variables
-    process.env.JWT_SECRET = 'test-secret';
+    // SEC-033: Use env var or placeholder — never a hardcoded secret value in test fixtures
+    // Use: process.env.JWT_SECRET || 'CHANGE_ME_SET_JWT_SECRET_ENV_VAR'
+    process.env.JWT_SECRET = process.env.JWT_SECRET || 'CHANGE_ME_SET_JWT_SECRET_ENV_VAR';
     process.env.JWT_EXPIRE = '7d';
     process.env.API_URL = 'http://localhost:3000';
   });
