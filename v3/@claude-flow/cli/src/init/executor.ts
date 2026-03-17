@@ -1131,17 +1131,15 @@ async function writeStatusline(
     }
   }
 
-  // ALWAYS generate statusline.cjs — settings.json references this path
-  // regardless of whether advanced statusline files were also copied.
+  // ALWAYS generate statusline.cjs — the generated version includes AgentDB
+  // vectors/size, tests, ADRs, hooks, and integration stats that the
+  // pre-installed static copy in the npm package lacks.
+  // This must overwrite any copy from writeHelpers() which copies the legacy file.
   const statuslineScript = generateStatuslineScript(options);
   const statuslinePath = path.join(helpersDir, 'statusline.cjs');
 
-  if (!fs.existsSync(statuslinePath) || options.force) {
-    fs.writeFileSync(statuslinePath, statuslineScript, 'utf-8');
-    result.created.files.push('.claude/helpers/statusline.cjs');
-  } else {
-    result.skipped.push('.claude/helpers/statusline.cjs');
-  }
+  fs.writeFileSync(statuslinePath, statuslineScript, 'utf-8');
+  result.created.files.push('.claude/helpers/statusline.cjs');
 }
 
 /**
