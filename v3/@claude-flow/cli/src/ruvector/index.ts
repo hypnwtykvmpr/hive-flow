@@ -153,6 +153,60 @@ export {
   type RouterConfig,
 } from './semantic-router.js';
 
+// ── RuVector LLM WASM (inference utilities) ─────────────────
+export {
+  isRuvllmWasmAvailable,
+  initRuvllmWasm,
+  getRuvllmStatus,
+  createHnswRouter,
+  createSonaInstant,
+  createMicroLora,
+  formatChat,
+  createKvCache,
+  createGenerateConfig,
+  createBufferPool,
+  createInferenceArena,
+  HNSW_MAX_SAFE_PATTERNS,
+  type HnswRouterConfig,
+  type HnswPattern,
+  type HnswRouteResult,
+  type SonaConfig,
+  type MicroLoraConfig,
+  type ChatMessage,
+  type GenerateOptions,
+  type RuvllmStatus,
+} from './ruvllm-wasm.js';
+
+// ── Agent WASM (sandboxed agent runtime) ────────────────────
+export {
+  isAgentWasmAvailable,
+  initAgentWasm,
+  createWasmAgent,
+  promptWasmAgent,
+  executeWasmTool,
+  getWasmAgent,
+  listWasmAgents,
+  terminateWasmAgent,
+  getWasmAgentState,
+  getWasmAgentTools,
+  getWasmAgentTodos,
+  exportWasmState,
+  createWasmMcpServer,
+  listGalleryTemplates,
+  getGalleryCount,
+  getGalleryCategories,
+  searchGalleryTemplates,
+  getGalleryTemplate,
+  createAgentFromTemplate,
+  buildRvfContainer,
+  buildRvfFromTemplate,
+  type WasmAgentConfig,
+  type WasmAgentInfo,
+  type GalleryTemplate,
+  type GalleryTemplateDetail,
+  type ToolResult,
+} from './agent-wasm.js';
+
 /**
  * Check if ruvector packages are available
  */
