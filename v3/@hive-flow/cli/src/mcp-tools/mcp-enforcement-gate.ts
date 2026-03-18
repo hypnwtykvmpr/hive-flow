@@ -5,7 +5,8 @@
 
 import { existsSync, readFileSync } from 'fs';
 import { createHmac, randomBytes, timingSafeEqual } from 'crypto';
-import { join, resolve } from 'path';
+import { dirname, join, resolve } from 'path';
+import { fileURLToPath } from 'url';
 
 export enum ToolRisk {
   CRITICAL = 3,
@@ -70,22 +71,27 @@ function resolveProjectDir(): string {
     return process.env.CLAUDE_PROJECT_DIR;
   }
 
-  // Priority 2: ESM-compatible import.meta.url (if available)
+  // Priority 2: ESM import.meta.url (dirname/fileURLToPath imported at top level)
+  // Compiled layout: dist/src/mcp-tools/ → 5 levels up to project root
   try {
-    // import.meta.url is available in ESM; accessing it in CJS throws
     const metaUrl = (import.meta as { url?: string })?.url;
     if (metaUrl) {
-      const { fileURLToPath } = require('url');
-      const { dirname } = require('path');
       const thisDir = dirname(fileURLToPath(metaUrl));
-      return resolve(thisDir, '..', '..', '..', '..');
+      return resolve(thisDir, '..', '..', '..', '..', '..');
     }
   } catch {
     // Not in ESM context — fall through to CJS
   }
 
-  // Priority 3: CJS __dirname traversal (works in compiled .ts → .js)
-  return resolve(__dirname, '..', '..', '..', '..');
+  // Priority 3: CJS __dirname traversal
+  try {
+    return resolve(__dirname, '..', '..', '..', '..', '..');
+  } catch {
+    // __dirname undefined in ESM — fall through
+  }
+
+  // Priority 4: cwd fallback
+  return process.cwd();
 }
 
 // Highest enforcement level — used for fail-closed behavior on any error.

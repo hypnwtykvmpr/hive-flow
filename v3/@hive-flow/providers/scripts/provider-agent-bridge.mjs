@@ -122,7 +122,7 @@ function buildMessages(agent, newTask) {
     const content = entry.content ?? '';
     messages.push({
       role: entry.role,
-      content: typeof content === 'string' ? content : String(content),
+      content: typeof content === 'string' ? content : JSON.stringify(content),
       ...(entry.toolCalls ? { toolCalls: entry.toolCalls } : {}),
       ...(entry.toolCallId ? { toolCallId: entry.toolCallId } : {}),
       ...(entry.name ? { name: entry.name } : {}),
@@ -192,6 +192,7 @@ async function getProviderDefaults() {
 
   // Fallback — only used if providers package isn't built
   _providerDefaults = {
+    'anthropic-cli': 'claude-sonnet-4-6',
     'gemini-cli': 'auto',
     'codex-cli': undefined,
     'cursor-cli': 'auto',
@@ -221,12 +222,41 @@ async function loadProviderModule() {
   }
 }
 
-async function createProviderConfig(providerName, model) {
+function isRetryableError(error) {
+  if (error && typeof error.retryable === 'boolean') return error.retryable;
+  const msg = String(error?.message || error || '').toLowerCase();
+  if (msg.includes('circuit breaker') || msg.includes('circuit is open')) return false;
+  if (msg.includes('not found') || msg.includes('binary not found')) return false;
+  if (msg.includes('authentication') || msg.includes('invalid api key')) return false;
+  return true;
+}
+
+async function retryWithBackoff(fn, opts = {}) {
+  const { maxAttempts = 3, initialDelay = 1000, isRetryable = () => true } = opts;
+  let lastError;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      if (attempt === maxAttempts || !isRetryable(error)) throw error;
+      const retryAfter = error.retryAfter || 0;
+      const backoffDelay = initialDelay * Math.pow(2, attempt - 1);
+      const jitter = Math.random() * initialDelay * 0.3;
+      const delay = Math.max(retryAfter * 1000, backoffDelay) + jitter;
+      stderrLogger.warn(`Retry ${attempt}/${maxAttempts - 1} after ${Math.round(delay)}ms: ${error.message || error}`);
+      await new Promise(r => setTimeout(r, delay));
+    }
+  }
+  throw lastError;
+}
+
+async function createProviderConfig(providerName, model, timeoutMs) {
   const defaults = await getProviderDefaults();
   return {
     provider: providerName,
     model: model || defaults[providerName] || 'auto',
-    timeout: 120000,
+    timeout: timeoutMs || 120000,
     retryAttempts: 2,
     retryDelay: 1000,
   };
@@ -303,7 +333,7 @@ async function executeMCPTool(toolName, toolArgs) {
 
 function parseArgs() {
   const args = process.argv.slice(2);
-  const parsed = { agentId: '', task: '', storeDir: '' };
+  const parsed = { agentId: '', task: '', storeDir: '', timeout: 0 };
 
   for (let i = 0; i < args.length; i++) {
     switch (args[i]) {
@@ -315,6 +345,9 @@ function parseArgs() {
         break;
       case '--store-dir':
         parsed.storeDir = args[++i] || '';
+        break;
+      case '--timeout':
+        parsed.timeout = parseInt(args[++i], 10) || 0;
         break;
     }
   }
@@ -333,7 +366,7 @@ function parseArgs() {
 
 function trackProviderUsage(providerName, usage, startTime) {
   try {
-    const providerMap = { 'gemini-cli': 'gemini', 'codex-cli': 'codex', 'cursor-cli': 'cursor' };
+    const providerMap = { 'anthropic-cli': 'anthropic', 'gemini-cli': 'gemini', 'codex-cli': 'codex', 'cursor-cli': 'cursor' };
     const mappedName = providerMap[providerName] || providerName;
     const ttfb_ms = Date.now() - startTime;
     const metricsDir = join(process.cwd(), '.hive-flow', 'metrics');
@@ -369,7 +402,7 @@ function trackProviderUsage(providerName, usage, startTime) {
 // ===== Main =====
 
 async function main() {
-  const { agentId, task, storeDir } = parseArgs();
+  const { agentId, task, storeDir, timeout: parsedTimeout } = parseArgs();
   const lockPath = join(storeDir, '.store.lock');
 
   // ── Phase 1: Lock → read state → unlock ──
@@ -387,10 +420,12 @@ async function main() {
   const defaults = await getProviderDefaults();
   const config = await createProviderConfig(
     providerName,
-    agent.providerModel || defaults[providerName]
+    agent.providerModel || defaults[providerName],
+    parsedTimeout
   );
 
   const providerClasses = {
+    'anthropic-cli': providerModule.AnthropicCLIProvider,
     'gemini-cli': providerModule.GeminiCLIProvider,
     'codex-cli': providerModule.CodexCLIProvider,
     'cursor-cli': providerModule.CursorCLIProvider,
@@ -433,6 +468,7 @@ async function main() {
         ...(m.name ? { name: m.name } : {}),
       })),
       model: agent.providerModel || defaults[providerName],
+      timeout: parsedTimeout || undefined,
     };
 
     if (agent.config?.tools && Array.isArray(agent.config.tools)) {
@@ -452,7 +488,14 @@ async function main() {
     const mcpAvailable = !!(await loadMCPClient());
 
     while (iterations < MAX_TOOL_ITERATIONS) {
-      response = await provider.complete(request);
+      response = await retryWithBackoff(
+        () => provider.complete(request),
+        {
+          maxAttempts: (config.retryAttempts || 0) + 1,
+          initialDelay: config.retryDelay || 1000,
+          isRetryable: isRetryableError
+        }
+      );
       iterations++;
 
       if (response.toolCalls && response.toolCalls.length > 0) {

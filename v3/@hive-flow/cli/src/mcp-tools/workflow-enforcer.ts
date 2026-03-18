@@ -380,7 +380,7 @@ function getHmacKeyPath(): string {
   return join(getEnforcementDir(), '.hmac-key');
 }
 
-function getOrCreateHmacKey(): string {
+export function getOrCreateHmacKey(): string {
   const keyPath = getHmacKeyPath();
   if (existsSync(keyPath)) {
     return readFileSync(keyPath, 'utf-8').trim();
@@ -392,7 +392,7 @@ function getOrCreateHmacKey(): string {
   return key;
 }
 
-function signPayload(payload: unknown, key: string): string {
+export function signPayload(payload: unknown, key: string): string {
   return createHmac('sha256', key).update(JSON.stringify(payload)).digest('hex');
 }
 

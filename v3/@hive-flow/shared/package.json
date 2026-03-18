@@ -14,7 +14,8 @@
     "./mcp": "./dist/mcp/index.js",
     "./security": "./dist/security/index.js",
     "./resilience": "./dist/resilience/index.js",
-    "./utils/*": "./dist/utils/*"
+    "./utils/*": "./dist/utils/*",
+    "./workflow": "./dist/workflow/index.js"
   },
   "scripts": {
     "test": "vitest run",

@@ -44,6 +44,7 @@ export { QwenProvider } from './qwen-provider.js';
 export { QwenCLIProvider } from './qwen-cli-provider.js';
 export { CursorCLIProvider } from './cursor-cli-provider.js';
 export { CopilotProvider } from './copilot-provider.js';
+export { AnthropicCLIProvider } from './anthropic-cli-provider.js';
 
 // Export provider manager
 export { ProviderManager, createProviderManager } from './provider-manager.js';

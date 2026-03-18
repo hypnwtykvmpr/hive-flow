@@ -6,6 +6,11 @@
         "hooks": [
           {
             "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/role-enforcement.cjs",
+            "timeout": 3000
+          },
+          {
+            "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/enforcement.cjs",
             "timeout": 5000
           },
@@ -45,6 +50,16 @@
             "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/hook-handler.cjs post-command",
             "timeout": 5000
+          }
+        ]
+      },
+      {
+        "matcher": "Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/hook-handler.cjs post-agent-task",
+            "timeout": 10000
           }
         ]
       }
@@ -91,6 +106,26 @@
             "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/stop-guard.cjs",
             "timeout": 5000
+          },
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/hook-handler.cjs role-reinforce",
+            "timeout": 3000
+          },
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/hook-handler.cjs set-role",
+            "timeout": 3000
+          },
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/hook-handler.cjs clear-role",
+            "timeout": 3000
+          },
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/hook-handler.cjs pipeline-override",
+            "timeout": 3000
           }
         ]
       }
@@ -213,6 +248,11 @@
         "hooks": [
           {
             "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/role-enforcement.cjs",
+            "timeout": 3000
+          },
+          {
+            "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/hook-handler.cjs status",
             "timeout": 3000
           },
@@ -263,7 +303,7 @@
       "Edit",
       "MultiEdit",
       "WebFetch",
-      "mcp__hive-flow__:*"
+      "mcp__hive-flow__*"
     ],
     "deny": [
       "Read(./.env)",

@@ -48,6 +48,29 @@ export enum HookEvent {
   // Learning
   PatternLearned = 'pattern-learned',
   PatternConsolidated = 'pattern-consolidated',
+
+  // Workflow lifecycle
+  WorkflowStart = 'workflow-start',
+  WorkflowComplete = 'workflow-complete',
+  WorkflowFailed = 'workflow-failed',
+
+  // Module lifecycle
+  ModuleStart = 'module-start',
+  ModuleComplete = 'module-complete',
+  ModuleGateCheck = 'module-gate-check',
+
+  // Phase lifecycle (within a module)
+  PhaseStart = 'phase-start',
+  PhaseComplete = 'phase-complete',
+
+  // Hive lifecycle
+  HiveSpawned = 'hive-spawned',
+  HiveComplete = 'hive-complete',
+  QueenReport = 'queen-report',
+
+  // Mini-gate results
+  MiniGatePass = 'mini-gate-pass',
+  MiniGateFail = 'mini-gate-fail',
 }
 
 /**

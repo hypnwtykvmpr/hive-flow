@@ -109,6 +109,29 @@ export const V3_TO_OFFICIAL_HOOK_MAP: Record<HookEvent, OfficialHookEvent | null
   // Learning (internal)
   [HookEvent.PatternLearned]: null, // Internal only
   [HookEvent.PatternConsolidated]: null, // Internal only
+
+  // Workflow lifecycle (internal)
+  [HookEvent.WorkflowStart]: null,
+  [HookEvent.WorkflowComplete]: null,
+  [HookEvent.WorkflowFailed]: null,
+
+  // Module lifecycle (internal)
+  [HookEvent.ModuleStart]: null,
+  [HookEvent.ModuleComplete]: null,
+  [HookEvent.ModuleGateCheck]: null,
+
+  // Phase lifecycle (internal)
+  [HookEvent.PhaseStart]: null,
+  [HookEvent.PhaseComplete]: null,
+
+  // Hive lifecycle (internal)
+  [HookEvent.HiveSpawned]: null,
+  [HookEvent.HiveComplete]: null,
+  [HookEvent.QueenReport]: null,
+
+  // Mini-gate results (internal)
+  [HookEvent.MiniGatePass]: null,
+  [HookEvent.MiniGateFail]: null,
 };
 
 /**

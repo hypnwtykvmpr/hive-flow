@@ -21,7 +21,7 @@ const AGENT_FILE = 'store.json';
 type AgentModel = 'haiku' | 'sonnet' | 'opus' | 'inherit';
 
 // First-class providers: Cursor, Codex, Gemini alongside Anthropic
-export type AgentProvider = 'anthropic' | 'gemini-cli' | 'codex-cli' | 'cursor-cli';
+export type AgentProvider = 'anthropic' | 'anthropic-cli' | 'gemini-cli' | 'codex-cli' | 'cursor-cli';
 
 export interface AgentRecord {
   agentId: string;
@@ -56,7 +56,7 @@ const VALID_TRANSITIONS: Record<string, string[]> = {
  * Returns true if the transition is valid and was applied, false otherwise.
  * Unknown/missing statuses are treated as 'idle' for backward compatibility.
  */
-function transitionAgent(agent: AgentRecord, newStatus: AgentRecord['status']): boolean {
+export function transitionAgent(agent: AgentRecord, newStatus: AgentRecord['status']): boolean {
   const currentStatus = agent.status && VALID_TRANSITIONS[agent.status] ? agent.status : 'idle';
   const validNext = VALID_TRANSITIONS[currentStatus];
   if (!validNext || !validNext.includes(newStatus)) {
@@ -296,13 +296,13 @@ function readParentEnforcementLevel(): number {
   }
 }
 
-function propagateEnforcementToSubAgent(agentId: string): void {
+export function propagateEnforcementToSubAgent(agentId: string): void {
   try {
     const level = readParentEnforcementLevel();
     if (level === 0) return; // NORMAL — no propagation needed
 
     // Sanitize agentId (mirrors enforcement.cjs sanitization)
-    const sanitized = agentId.replace(/[/\\.]+/g, '_').replace(/^_+|_+$/g, '');
+    const sanitized = agentId.replace(/[/\\.]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 64);
     if (!sanitized) return;
 
     const agentEnfDir = join(ENFORCEMENT_DIR, 'agents', sanitized);
@@ -354,8 +354,8 @@ export const agentTools: MCPTool[] = [
         domain: { type: 'string', description: 'Agent domain' },
         provider: {
           type: 'string',
-          enum: ['anthropic', 'gemini-cli', 'codex-cli', 'cursor-cli'],
-          description: 'LLM provider (default: anthropic). Cursor, Codex, Gemini are first-class.',
+          enum: ['anthropic', 'anthropic-cli', 'gemini-cli', 'codex-cli', 'cursor-cli'],
+          description: 'LLM provider (default: anthropic). anthropic-cli, Codex, Gemini, Cursor are first-class CLI providers.',
         },
         model: {
           type: 'string',
@@ -744,7 +744,10 @@ export const agentTools: MCPTool[] = [
     handler: async (input) => {
       const agentId = input.agentId as string;
       const task = input.task as string;
-      const timeout = (input.timeout as number) || 120000;
+      const rawTimeout = (input.timeout as number) || 120000;
+      const MIN_TIMEOUT = 10000;    // 10 seconds
+      const MAX_TIMEOUT = 3600000;  // 60 minutes
+      const timeout = Math.max(MIN_TIMEOUT, Math.min(MAX_TIMEOUT, rawTimeout));
 
       // RC-2: Lock → fresh read → validate → set busy → save → unlock
       // Uses bridge-compatible per-agent lock to coordinate with bridge subprocess.
@@ -758,7 +761,7 @@ export const agentTools: MCPTool[] = [
           return 'Agent has no provider — use agent_spawn with a provider first';
         }
         if (agent.provider === 'anthropic') {
-          return 'agent_task bridge only supports external CLI providers (gemini-cli, codex-cli, cursor-cli). Use Claude Code Task tool for anthropic agents.';
+          return "Use 'anthropic-cli' for Claude subprocess workers, not 'anthropic'. The agent_task bridge supports CLI providers (anthropic-cli, gemini-cli, codex-cli, cursor-cli). Use Claude Code Task tool for native anthropic agents.";
         }
         if (!transitionAgent(agent, 'busy')) {
           return `Agent cannot accept tasks in current state: '${agent.status}'`;
@@ -789,7 +792,7 @@ export const agentTools: MCPTool[] = [
       }
 
       const agentDir = getAgentDir();
-      const args = ['--agent-id', agentId, '--task', task, '--store-dir', agentDir];
+      const args = ['--agent-id', agentId, '--task', task, '--store-dir', agentDir, '--timeout', String(timeout)];
 
       // RC-2 helper: bridge-compatible lock → fresh read → reset status to idle
       // if still busy → save → unlock. Only touches status — never overwrites

@@ -13,7 +13,7 @@ export const CLAUDE_ALIASES = ['haiku', 'sonnet', 'opus', 'inherit'] as const;
 export type ClaudeAlias = typeof CLAUDE_ALIASES[number];
 
 /** Provider names that support alias resolution */
-export type CLIProviderName = 'gemini-cli' | 'codex-cli' | 'cursor-cli';
+export type CLIProviderName = 'anthropic-cli' | 'gemini-cli' | 'codex-cli' | 'cursor-cli';
 
 /**
  * Maps Claude aliases to provider-native model names.
@@ -25,16 +25,22 @@ export type CLIProviderName = 'gemini-cli' | 'codex-cli' | 'cursor-cli';
  * - inherit → provider default (varies)
  */
 export const PROVIDER_ALIAS_MAP: Record<CLIProviderName, Record<string, string | undefined>> = {
+  'anthropic-cli': {
+    'opus': 'claude-opus-4-6',
+    'sonnet': 'claude-sonnet-4-6',
+    'haiku': 'claude-haiku-4-5-20251001',
+    'inherit': undefined,  // Let claude -p use its default
+  },
   'gemini-cli': {
     'opus': 'gemini-3.1-pro-preview',
-    'sonnet': 'gemini-2.5-pro',
-    'haiku': 'gemini-2.5-flash',
-    'inherit': 'gemini-2.5-flash',
+    'sonnet': 'gemini-3.1-pro-preview',
+    'haiku': 'gemini-3-flash',
+    'inherit': 'gemini-3.1-pro-preview',
   },
   'codex-cli': {
-    'opus': 'gpt-5.3-codex',
-    'sonnet': 'gpt-5.2-codex',
-    'haiku': 'gpt-5-codex-mini',
+    'opus': 'gpt-5.4',
+    'sonnet': 'gpt-5.3-codex',
+    'haiku': 'gpt-5.2-codex-mini',
     'inherit': undefined,  // Let Codex use config.toml default
   },
   'cursor-cli': {
@@ -47,6 +53,7 @@ export const PROVIDER_ALIAS_MAP: Record<CLIProviderName, Record<string, string |
 
 /** Default models when no model is specified at all */
 export const PROVIDER_DEFAULTS: Record<CLIProviderName, string | undefined> = {
+  'anthropic-cli': 'claude-opus-4-6',
   'gemini-cli': 'auto',
   'codex-cli': undefined,  // Omit --model, let config.toml decide
   'cursor-cli': 'auto',
@@ -54,6 +61,12 @@ export const PROVIDER_DEFAULTS: Record<CLIProviderName, string | undefined> = {
 
 /** Known valid model names per provider (for passthrough validation) */
 export const KNOWN_PROVIDER_MODELS: Record<CLIProviderName, Set<string>> = {
+  'anthropic-cli': new Set([
+    'claude-sonnet-4-6', 'claude-opus-4-6', 'claude-haiku-4-5-20251001',
+    'claude-3-5-sonnet-20241022', 'claude-3-5-sonnet-latest',
+    'claude-3-opus-20240229', 'claude-3-sonnet-20240229',
+    'claude-3-haiku-20240307',
+  ]),
   'gemini-cli': new Set([
     'auto', 'gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.5-pro',
     'gemini-3-flash-preview', 'gemini-3.1-pro-preview',
@@ -137,5 +150,5 @@ function isClaudeAlias(model: string): model is ClaudeAlias {
 }
 
 function isCliProvider(provider: string): provider is CLIProviderName {
-  return provider === 'gemini-cli' || provider === 'codex-cli' || provider === 'cursor-cli';
+  return provider === 'anthropic-cli' || provider === 'gemini-cli' || provider === 'codex-cli' || provider === 'cursor-cli';
 }

@@ -499,8 +499,10 @@ describe('workflow-executor', () => {
         const result = await executeWorkflowStep(ctx);
 
         expect(result.stepId).toBe(`step-${stepType}`);
+        // All implemented step types should return 'completed' (wait with no config also completes)
         expect(result.status).toBe('completed');
-        expect((result.result as StepResultPayload).executed).toBe(true);
+        // Each step type now returns structured results instead of { executed: true }
+        expect(result.result).toBeDefined();
       });
     }
 

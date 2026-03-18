@@ -25,6 +25,7 @@ export type LLMProvider =
   | 'deepseek'
   | 'qwen'
   | 'qwen-cli'
+  | 'anthropic-cli'
   | 'cursor-cli'
   | 'copilot'
   | 'litellm'

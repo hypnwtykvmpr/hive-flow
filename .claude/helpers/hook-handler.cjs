@@ -266,6 +266,15 @@ const handlers = {
         }
       } catch (e) { /* non-fatal */ }
     }
+
+    // Check for active pipeline state
+    try {
+      const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+      const pipelineFile = path.join(projectDir, '.hive-flow', 'enforcement', 'pipeline-state.json');
+      if (fs.existsSync(pipelineFile)) {
+        console.log('[PIPELINE] Active pipeline detected. Use /pipeline-status to check stage progress.');
+      }
+    } catch { /* non-fatal */ }
   },
 
   'session-end': () => {
@@ -385,6 +394,49 @@ const handlers = {
     console.log('[OK] Command tracked');
   },
 
+  'post-agent-task': async () => {
+    try {
+      const raw = fs.readFileSync(0, 'utf8').trim();
+      if (!raw) { console.log('{}'); return; }
+      let input;
+      try { input = JSON.parse(raw); } catch { console.log('{}'); return; }
+      const toolResponse = input.tool_response || input.tool_result || '';
+      const responseStr = typeof toolResponse === 'string' ? toolResponse : JSON.stringify(toolResponse);
+
+      const failurePatterns = [
+        /api.?error/i, /internal server error/i,
+        /timeout/i, /SIGKILL/i,
+        /"total_tokens"\s*:\s*0/, /"tool_uses"\s*:\s*0/
+      ];
+      const isFailure = failurePatterns.some(p => p.test(responseStr));
+
+      if (isFailure) {
+        const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+        const metricsDir = path.join(projectDir, '.hive-flow', 'metrics');
+        try {
+          fs.mkdirSync(metricsDir, { recursive: true });
+          const entry = JSON.stringify({
+            timestamp: new Date().toISOString(),
+            task: (input.tool_input?.description || input.tool_input?.prompt || '').slice(0, 200),
+            model: input.tool_input?.model || 'unknown',
+            error: responseStr.slice(0, 500)
+          }) + '\n';
+          fs.appendFileSync(path.join(metricsDir, 'agent-failures.jsonl'), entry);
+        } catch (e) { /* metrics are best-effort */ }
+
+        process.stdout.write(JSON.stringify({
+          hookSpecificOutput: {
+            additionalContext: '[AGENT_FAILURE_DETECTED] The previous Task agent failed (likely API error). FALLBACK PROTOCOL: Re-dispatch this task using MCP provider agents instead of the Task tool. Use mcp__hive-flow__agent_spawn with provider "gemini-cli" or "codex-cli", then mcp__hive-flow__agent_task with a longer timeout. Provider agents route through different APIs and are not affected by Anthropic outages.'
+          }
+        }));
+      } else {
+        console.log('{}');
+      }
+    } catch (e) {
+      console.log('{}');
+    }
+  },
+
   'stats': () => {
     if (intelligence && intelligence.stats) {
       intelligence.stats(args.includes('--json'));
@@ -417,7 +469,111 @@ const handlers = {
 
     const modelStr = model ? ` model=${model}` : '';
     const providerStr = provider ? ` provider=${provider}` : '';
-    console.log(`[AGENT] Started: name=${name}${modelStr}${providerStr} id=${id} parent=${parent}`);
+    process.stderr.write(`[AGENT] Started: name=${name}${modelStr}${providerStr} id=${id} parent=${parent}\n`);
+  },
+
+  'role-reinforce': () => {
+    const agentId = process.env.AGENTIC_FLOW_AGENT_ID || process.env.CLAUDE_SESSION_ID || process.env.CLAUDE_AGENT_ID || null;
+    if (!agentId) { console.log(JSON.stringify({})); return; }
+    try {
+      const roleEnf = require('./role-enforcement.cjs');
+      const roleFile = roleEnf.getRoleFilePath(agentId);
+      if (!roleFile || !fs.existsSync(roleFile)) { console.log(JSON.stringify({})); return; }
+      const roleData = JSON.parse(fs.readFileSync(roleFile, 'utf8'));
+      if (!roleEnf.verifyRoleHmac(roleData)) { console.log(JSON.stringify({})); return; }
+      let text = '';
+      if (roleData.state?.type === 'advocate') text = '[ADVOCATE ROLE ACTIVE] You orchestrate — you do not execute. Delegate via hives. Bash/Write/Edit are blocked.';
+      else if (roleData.state?.type === 'queen') text = `[QUEEN ROLE ACTIVE — Hive ${roleData.state?.hiveId || 'unassigned'}] Prefer delegation via queen_task_worker. Direct work is tracked.`;
+      if (text) console.log(JSON.stringify({ hookSpecificOutput: { additionalContext: text } }));
+      else console.log(JSON.stringify({}));
+    } catch (e) { console.log(JSON.stringify({})); }
+  },
+
+  'set-role': () => {
+    // Triggered via UserPromptSubmit. Reads stdin for JSON with user_prompt.
+    // If prompt matches /set-role (advocate|queen), creates role.json for the current agent.
+    let rawInput = '';
+    try { rawInput = fs.readFileSync(0, 'utf8'); } catch { /* empty stdin */ }
+    let input;
+    try { input = JSON.parse(rawInput); } catch { input = {}; }
+
+    const userPrompt = input?.user_prompt || input?.prompt || '';
+    const match = userPrompt.match(/\/set-role\s+(advocate|queen)/i);
+    if (!match) { console.log(JSON.stringify({})); return; }
+
+    const roleType = match[1].toLowerCase();
+    const agentId = process.env.AGENTIC_FLOW_AGENT_ID || process.env.CLAUDE_SESSION_ID || process.env.CLAUDE_AGENT_ID || null;
+    if (!agentId) { console.log(JSON.stringify({})); return; }
+
+    try {
+      const roleEnf = require('./role-enforcement.cjs');
+      const sanitized = roleEnf.sanitizeId(agentId);
+      if (!sanitized) { console.log(JSON.stringify({})); return; }
+
+      // Read HMAC key (same as enforcement.cjs)
+      const hmacKeyFile = path.join(__dirname, '..', '..', '.hive-flow', 'enforcement', '.hmac-key');
+      let key;
+      try {
+        key = fs.readFileSync(hmacKeyFile, 'utf8').trim();
+      } catch {
+        // No HMAC key — enforcement.cjs hasn't run yet, can't sign
+        console.log(JSON.stringify({}));
+        return;
+      }
+
+      const roleDir = path.join(__dirname, '..', '..', '.hive-flow', 'enforcement', 'agents', sanitized);
+      if (!fs.existsSync(roleDir)) fs.mkdirSync(roleDir, { recursive: true });
+
+      const roleState = {
+        type: roleType,
+        assignedAt: new Date().toISOString(),
+        assignedBy: 'human',
+        hiveId: null,
+        directWorkCount: 0,
+      };
+      const hmac = require('crypto').createHmac('sha256', key).update(JSON.stringify(roleState)).digest('hex');
+      const envelope = { state: roleState, hmac };
+      fs.writeFileSync(path.join(roleDir, 'role.json'), JSON.stringify(envelope, null, 2), 'utf8');
+
+      console.log(JSON.stringify({
+        hookSpecificOutput: {
+          additionalContext: `[ROLE SET] Agent role set to '${roleType}'. Enforcement is now active.`,
+        },
+      }));
+    } catch (e) { console.log(JSON.stringify({})); }
+  },
+
+  'clear-role': () => {
+    // Triggered via UserPromptSubmit. If prompt matches /clear-role, deletes role.json.
+    let rawInput = '';
+    try { rawInput = fs.readFileSync(0, 'utf8'); } catch { /* empty stdin */ }
+    let input;
+    try { input = JSON.parse(rawInput); } catch { input = {}; }
+
+    const userPrompt = input?.user_prompt || input?.prompt || '';
+    if (!/\/clear-role\b/i.test(userPrompt)) { console.log(JSON.stringify({})); return; }
+
+    const agentId = process.env.AGENTIC_FLOW_AGENT_ID || process.env.CLAUDE_SESSION_ID || process.env.CLAUDE_AGENT_ID || null;
+    if (!agentId) { console.log(JSON.stringify({})); return; }
+
+    try {
+      const roleEnf = require('./role-enforcement.cjs');
+      const roleFile = roleEnf.getRoleFilePath(agentId);
+      if (roleFile && fs.existsSync(roleFile)) {
+        fs.unlinkSync(roleFile);
+        console.log(JSON.stringify({
+          hookSpecificOutput: {
+            additionalContext: '[ROLE CLEARED] Agent role removed. Role enforcement is now inactive.',
+          },
+        }));
+      } else {
+        console.log(JSON.stringify({
+          hookSpecificOutput: {
+            additionalContext: '[ROLE CLEAR] No role was assigned to this agent.',
+          },
+        }));
+      }
+    } catch (e) { console.log(JSON.stringify({})); }
   },
 
   'assess-complexity': async () => {
@@ -769,6 +925,76 @@ const handlers = {
         }
       }
     } catch { /* detection is best-effort */ }
+  },
+
+  'pipeline-init': () => {
+    const enforcement = require('./enforcement.cjs');
+    const taskId = (args.find((a, i) => a === '--task-id' && args[i + 1]) ? args[args.indexOf('--task-id') + 1] : null);
+    const stagesArg = (args.find((a, i) => a === '--stages' && args[i + 1]) ? args[args.indexOf('--stages') + 1] : null);
+    const stages = stagesArg ? stagesArg.split(',').map(s => s.trim()) : [];
+    const result = enforcement.initPipeline(taskId, stages);
+    console.log(`[PIPELINE] Initialized pipeline ${result.taskId} with stages: ${(result.requiredStages || stages).join(', ')}`);
+  },
+
+  'pipeline-stage': () => {
+    const enforcement = require('./enforcement.cjs');
+    const stage = (args.find((a, i) => a === '--stage' && args[i + 1]) ? args[args.indexOf('--stage') + 1] : null);
+    const taskId = (args.find((a, i) => a === '--task-id' && args[i + 1]) ? args[args.indexOf('--task-id') + 1] : null);
+    if (!stage) { console.error('[PIPELINE] --stage is required'); process.exit(1); }
+    const result = enforcement.completePipelineStage(taskId, stage);
+    if (result.success) {
+      console.log(`[PIPELINE] Stage '${stage}' marked complete`);
+    } else {
+      console.error(`[PIPELINE] Failed: ${result.reason}`);
+      process.exit(1);
+    }
+  },
+
+  'pipeline-status': () => {
+    const enforcement = require('./enforcement.cjs');
+    const state = enforcement.getPipelineState();
+    if (!state) { console.log('[PIPELINE] No active pipeline'); return; }
+    if (state.error) { console.error(`[PIPELINE] Error: ${state.error}`); return; }
+    console.log(`[PIPELINE] Task: ${state.taskId}`);
+    console.log(`[PIPELINE] Override: ${state.overrideActive ? 'YES' : 'no'}`);
+    for (const stage of state.requiredStages) {
+      const s = state.stages[stage];
+      const icon = s.complete ? '✓' : '✗';
+      console.log(`  ${icon} ${stage}${s.completedAt ? ` (${s.completedAt})` : ''}`);
+    }
+  },
+
+  'pipeline-override': () => {
+    let rawInput = '';
+    try { rawInput = fs.readFileSync(0, 'utf8'); } catch { /* empty stdin */ }
+    const prompt = rawInput;
+    if (!prompt) return;
+    const input = typeof prompt === 'string' ? prompt : (prompt.user_prompt || prompt.input || '');
+    let parsedInput = input;
+    try {
+      const parsed = JSON.parse(input);
+      parsedInput = parsed.user_prompt || parsed.input || input;
+    } catch { /* not JSON, use raw string */ }
+    const match = parsedInput.match(/\/pipeline-override\s*(.*)/i);
+    if (!match) return; // not a pipeline-override command
+    const enforcement = require('./enforcement.cjs');
+    const reason = match[1]?.trim() || 'Manual override via slash command';
+    const result = enforcement.overridePipeline(reason);
+    if (result.success) {
+      process.stdout.write(JSON.stringify({ hookSpecificOutput: { additionalContext: '[PIPELINE OVERRIDE] Pipeline commit gate has been overridden. Commits are now allowed. Reason: ' + reason } }));
+    } else {
+      console.error(`[PIPELINE] Override failed: ${result.reason}`);
+    }
+  },
+
+  'pipeline-reset': () => {
+    const enforcement = require('./enforcement.cjs');
+    const result = enforcement.resetPipeline();
+    if (result.success) {
+      console.log('[PIPELINE] Pipeline state cleared');
+    } else {
+      console.error(`[PIPELINE] Reset failed: ${result.reason}`);
+    }
   },
 
   'permission-guard': async () => {

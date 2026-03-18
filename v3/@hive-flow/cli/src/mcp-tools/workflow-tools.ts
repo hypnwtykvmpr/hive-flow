@@ -4,8 +4,10 @@
  * Tool definitions for workflow automation and orchestration.
  */
 
-import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync, unlinkSync } from 'node:fs';
+import { join, dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import type { MCPTool } from './types.js';
 import { executeWorkflowStep } from './workflow-executor.js';
 import type { WorkflowStepContext } from './workflow-executor.js';
@@ -206,7 +208,18 @@ export const workflowTools: MCPTool[] = [
           originalRequest: workflow.variables.originalRequest as string | undefined,
         };
 
-        const stepResult = await executeWorkflowStep(stepCtx);
+        let stepResult;
+        try {
+          stepResult = await executeWorkflowStep(stepCtx);
+        } catch (stepError: unknown) {
+          step.status = 'failed';
+          step.completedAt = new Date().toISOString();
+          workflow.status = 'failed';
+          workflow.error = stepError instanceof Error ? stepError.message : String(stepError);
+          workflow.completedAt = new Date().toISOString();
+          saveWorkflowStore(store);
+          return { success: false, workflowId: workflow.workflowId, error: workflow.error, step: step.name };
+        }
         step.status = stepResult.status;
         step.completedAt = new Date().toISOString();
         step.result = stepResult.result;
@@ -429,7 +442,18 @@ export const workflowTools: MCPTool[] = [
           originalRequest: workflow.variables.originalRequest as string | undefined,
         };
 
-        const stepResult = await executeWorkflowStep(stepCtx);
+        let stepResult;
+        try {
+          stepResult = await executeWorkflowStep(stepCtx);
+        } catch (stepError: unknown) {
+          step.status = 'failed';
+          step.completedAt = new Date().toISOString();
+          workflow.status = 'failed';
+          workflow.error = stepError instanceof Error ? stepError.message : String(stepError);
+          workflow.completedAt = new Date().toISOString();
+          saveWorkflowStore(store);
+          return { success: false, workflowId, error: workflow.error, step: step.name };
+        }
         step.status = stepResult.status;
         step.completedAt = new Date().toISOString();
         step.result = stepResult.result;
@@ -695,18 +719,60 @@ export const workflowTools: MCPTool[] = [
       store.workflows[workflowId] = workflow;
       saveWorkflowStore(store);
 
+      // Gap 1 fix: workflow_run now actually chains create -> execute
+      // Gap 7 (minor): detect module references and delegate to module executor
+      // If input.file is provided (Gap 4), parse it as a module chain definition
+      const filePath = input.file as string | undefined;
+      if (filePath) {
+        try {
+          const fileContent = readFileSync(filePath, 'utf-8');
+          const fileDef = JSON.parse(fileContent);
+          // If the file contains a modules array, treat it as a module chain
+          if (fileDef.modules && Array.isArray(fileDef.modules)) {
+            // Store module chain info in workflow variables for the executor
+            workflow.variables.moduleChain = fileDef.modules;
+            workflow.variables.sharedState = fileDef.sharedState || {};
+            // Create steps from module definitions
+            workflow.steps = fileDef.modules.map((mod: { moduleName?: string; name?: string }, i: number) => ({
+              stepId: `step-${i + 1}`,
+              name: mod.moduleName || mod.name || `Module ${i + 1}`,
+              type: 'task' as const,
+              config: { ...mod, task },
+              status: 'pending' as const,
+            }));
+          } else if (fileDef.steps && Array.isArray(fileDef.steps)) {
+            // Standard step-based workflow definition
+            workflow.steps = fileDef.steps.map((s: { name?: string; type?: string; config?: Record<string, unknown> }, i: number) => ({
+              stepId: `step-${i + 1}`,
+              name: s.name || `Step ${i + 1}`,
+              type: (s.type as WorkflowStep['type']) || 'task',
+              config: s.config || {},
+              status: 'pending' as const,
+            }));
+          }
+          workflow.status = workflow.steps.length > 0 ? 'ready' : 'draft';
+          store.workflows[workflowId] = workflow;
+          saveWorkflowStore(store);
+        } catch (fileErr) {
+          return {
+            workflowId,
+            error: `Failed to parse workflow file: ${fileErr instanceof Error ? fileErr.message : String(fileErr)}`,
+          };
+        }
+      }
+
       if (options.dryRun) {
         return {
           workflowId,
           template: template || 'custom',
           status: 'validated' as const,
-          stages: steps.map(s => ({
+          stages: workflow.steps.map(s => ({
             name: s.name,
             status: s.status,
             agents: s.type === 'verification' ? ['verifier'] : agents,
           })),
           metrics: {
-            totalStages: steps.length,
+            totalStages: workflow.steps.length,
             completedStages: 0,
             agentsSpawned: 0,
             estimatedDuration: getDefaultDuration(template),
@@ -714,19 +780,81 @@ export const workflowTools: MCPTool[] = [
         };
       }
 
-      // Execute the workflow
+      // Chain to workflow_execute for actual execution (Gap 1 fix)
+      workflow.status = 'running';
+      workflow.startedAt = new Date().toISOString();
+      saveWorkflowStore(store);
+
+      const results: Array<{ stepId: string; status: string }> = [];
+      for (let i = 0; i < workflow.steps.length; i++) {
+        const step = workflow.steps[i];
+        step.status = 'running';
+        step.startedAt = new Date().toISOString();
+
+        const stepCtx: WorkflowStepContext = {
+          workflowId,
+          step: {
+            stepId: step.stepId,
+            name: step.name,
+            type: step.type,
+            config: step.config,
+            gateConfig: step.gateConfig,
+            status: step.status,
+          },
+          variables: workflow.variables,
+          originalRequest: task,
+        };
+
+        let stepResult;
+        try {
+          stepResult = await executeWorkflowStep(stepCtx);
+        } catch (stepError: unknown) {
+          step.status = 'failed';
+          step.completedAt = new Date().toISOString();
+          workflow.status = 'failed';
+          workflow.error = stepError instanceof Error ? stepError.message : String(stepError);
+          workflow.completedAt = new Date().toISOString();
+          saveWorkflowStore(store);
+          return { success: false, workflowId, error: workflow.error, step: step.name };
+        }
+        step.status = stepResult.status;
+        step.completedAt = new Date().toISOString();
+        step.result = stepResult.result;
+
+        if (stepResult.status === 'waiting') {
+          workflow.status = 'paused';
+          workflow.currentStep = i;
+          saveWorkflowStore(store);
+          return {
+            workflowId,
+            template: template || 'custom',
+            status: 'paused' as const,
+            stepsExecuted: results.length,
+            pausedAt: step.name,
+            pauseReason: 'Verification gate awaiting remediation',
+          };
+        }
+
+        results.push({ stepId: step.stepId, status: step.status });
+        workflow.currentStep = i + 1;
+        saveWorkflowStore(store);
+      }
+
+      workflow.status = 'completed';
+      workflow.completedAt = new Date().toISOString();
+      saveWorkflowStore(store);
+
       return {
         workflowId,
         template: template || 'custom',
-        status: 'running' as const,
-        stages: steps.map(s => ({
-          name: s.name,
-          status: s.status,
-          agents: s.type === 'verification' ? ['verifier'] : agents,
-        })),
+        status: workflow.status,
+        stepsExecuted: results.length,
+        results,
+        startedAt: workflow.startedAt,
+        completedAt: workflow.completedAt,
         metrics: {
-          totalStages: steps.length,
-          completedStages: 0,
+          totalStages: workflow.steps.length,
+          completedStages: results.filter(r => r.status === 'completed').length,
           agentsSpawned: agents.length,
           estimatedDuration: getDefaultDuration(template),
         },
@@ -734,6 +862,196 @@ export const workflowTools: MCPTool[] = [
     },
   },
 ];
+
+// ============================================================================
+// Pipeline State Helpers (inline — avoids CJS/ESM boundary crossing)
+// ============================================================================
+
+// Derive project root from this module's location (Finding 2: HMAC key path mismatch).
+// workflow-tools.ts lives at: <root>/v3/@hive-flow/cli/src/mcp-tools/workflow-tools.ts
+// Traversing up 5 levels:       mcp-tools -> src -> cli -> @hive-flow -> v3 -> <root>
+const __wfFilename = fileURLToPath(import.meta.url);
+const __wfDirname = dirname(__wfFilename);
+const PIPELINE_PROJECT_ROOT = resolve(__wfDirname, '..', '..', '..', '..', '..');
+const PIPELINE_ENFORCEMENT_DIR = join(PIPELINE_PROJECT_ROOT, '.hive-flow', 'enforcement');
+const PIPELINE_STATE_PATH = join(PIPELINE_ENFORCEMENT_DIR, 'pipeline-state.json');
+const PIPELINE_HMAC_KEY_FILE = join(PIPELINE_ENFORCEMENT_DIR, '.hmac-key');
+const PIPELINE_VIOLATIONS_FILE = join(PIPELINE_ENFORCEMENT_DIR, 'violations.jsonl');
+
+function getPipelineHmacKey(): string {
+  try {
+    if (existsSync(PIPELINE_HMAC_KEY_FILE)) {
+      return readFileSync(PIPELINE_HMAC_KEY_FILE, 'utf-8').trim();
+    }
+  } catch { /* fall through */ }
+  const key = randomBytes(32).toString('hex');
+  try {
+    mkdirSync(PIPELINE_ENFORCEMENT_DIR, { recursive: true });
+    writeFileSync(PIPELINE_HMAC_KEY_FILE, key, { mode: 0o600 });
+  } catch { /* ephemeral key */ }
+  return key;
+}
+
+function pipelineComputeHmac(data: unknown): string {
+  const key = getPipelineHmacKey();
+  return createHmac('sha256', key).update(JSON.stringify(data)).digest('hex');
+}
+
+function pipelineSignState(state: unknown): { state: unknown; hmac: string } {
+  return { state, hmac: pipelineComputeHmac(state) };
+}
+
+function pipelineVerifyState(envelope: unknown): { valid: boolean; state: Record<string, unknown> | null } {
+  if (!envelope || typeof envelope !== 'object') return { valid: false, state: null };
+  const env = envelope as { state?: unknown; hmac?: string };
+  if (!env.hmac || !env.state) return { valid: false, state: null };
+  const expected = pipelineComputeHmac(env.state);
+  const expectedBuf = Buffer.from(expected, 'hex');
+  const actualBuf = Buffer.from(env.hmac, 'hex');
+  if (expectedBuf.length !== actualBuf.length) return { valid: false, state: null };
+  const valid = timingSafeEqual(expectedBuf, actualBuf);
+  return { valid, state: valid ? (env.state as Record<string, unknown>) : null };
+}
+
+function pipelineReadState(): { state: Record<string, unknown> | null; error?: string } {
+  try {
+    if (!existsSync(PIPELINE_STATE_PATH)) return { state: null };
+    const raw = JSON.parse(readFileSync(PIPELINE_STATE_PATH, 'utf-8'));
+    const { valid, state } = pipelineVerifyState(raw);
+    if (!valid || !state) return { state: null, error: 'integrity-failed' };
+    return { state };
+  } catch {
+    return { state: null };
+  }
+}
+
+function pipelineWriteState(state: Record<string, unknown>): void {
+  mkdirSync(PIPELINE_ENFORCEMENT_DIR, { recursive: true });
+  const signed = pipelineSignState(state);
+  const tmpPath = `${PIPELINE_STATE_PATH}.tmp.${process.pid}.${Date.now()}`;
+  writeFileSync(tmpPath, JSON.stringify(signed, null, 2), 'utf-8');
+  // renameSync used for atomic write
+  const { renameSync: rn } = { renameSync };
+  rn(tmpPath, PIPELINE_STATE_PATH);
+}
+
+function pipelineAppendViolation(entry: Record<string, unknown>): void {
+  try {
+    mkdirSync(PIPELINE_ENFORCEMENT_DIR, { recursive: true });
+    const line = JSON.stringify({ ts: new Date().toISOString(), ...entry }) + '\n';
+    const { appendFileSync } = require('node:fs') as typeof import('node:fs');
+    appendFileSync(PIPELINE_VIOLATIONS_FILE, line, 'utf-8');
+  } catch { /* best-effort */ }
+}
+
+// ============================================================================
+// Pipeline MCP Tools
+// ============================================================================
+
+workflowTools.push(
+  {
+    name: 'pipeline_init',
+    description: 'Initialize a pipeline enforcement gate that blocks git commit until all stages are complete',
+    category: 'workflow',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        taskId: { type: 'string', description: 'Task identifier for this pipeline (auto-generated if omitted)' },
+        stages: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Stage names required before commit is allowed (defaults: implement, verify, test, debug, verify_test, audit, verify_audit)',
+        },
+      },
+    },
+    handler: async (input) => {
+      const defaultStages = ['implement', 'verify', 'test', 'debug', 'verify_test', 'audit', 'verify_audit'];
+      const stages = (input.stages as string[] | undefined)?.length ? (input.stages as string[]) : defaultStages;
+      const taskId = (input.taskId as string) || `task-${Date.now()}`;
+      const stagesObj: Record<string, { complete: boolean; completedAt: string | null; completedBy: string | null }> = {};
+      for (const s of stages) {
+        stagesObj[s] = { complete: false, completedAt: null, completedBy: null };
+      }
+      const state: Record<string, unknown> = {
+        taskId,
+        startedAt: new Date().toISOString(),
+        stages: stagesObj,
+        requiredStages: stages,
+        overrideActive: false,
+        overrideReason: null,
+        overrideAt: null,
+      };
+      pipelineWriteState(state);
+      pipelineAppendViolation({ type: 'pipeline-init', taskId, stages });
+      return { taskId, stages, startedAt: state.startedAt, message: `Pipeline initialized with ${stages.length} stages` };
+    },
+  },
+  {
+    name: 'pipeline_stage_complete',
+    description: 'Mark a pipeline stage as complete',
+    category: 'workflow',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        stage: { type: 'string', description: 'Stage name to mark complete' },
+        taskId: { type: 'string', description: 'Task ID to validate against (optional)' },
+      },
+      required: ['stage'],
+    },
+    handler: async (input) => {
+      const { state, error } = pipelineReadState();
+      if (error) return { success: false, reason: 'Pipeline state integrity check failed' };
+      if (!state) return { success: false, reason: 'No active pipeline' };
+      const stageName = input.stage as string;
+      const taskId = input.taskId as string | undefined;
+      if (taskId && state.taskId !== taskId) {
+        return { success: false, reason: `Task ID mismatch: expected ${state.taskId}, got ${taskId}` };
+      }
+      const stages = state.stages as Record<string, { complete: boolean; completedAt: string | null; completedBy: string | null }>;
+      if (!stages[stageName]) return { success: false, reason: `Unknown stage: ${stageName}` };
+      if (stages[stageName].complete) return { success: true, reason: 'Already complete', stage: stageName };
+      stages[stageName].complete = true;
+      stages[stageName].completedAt = new Date().toISOString();
+      stages[stageName].completedBy = process.env.CLAUDE_SESSION_ID || null;
+      pipelineWriteState(state);
+      pipelineAppendViolation({ type: 'pipeline-stage-complete', taskId: state.taskId, stage: stageName });
+      return { success: true, stage: stageName, completedAt: stages[stageName].completedAt };
+    },
+  },
+  {
+    name: 'pipeline_status',
+    description: 'Get the current pipeline enforcement status',
+    category: 'workflow',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+    },
+    handler: async (_input) => {
+      const { state, error } = pipelineReadState();
+      if (error) return { error: 'Pipeline state integrity check failed' };
+      if (!state) return { active: false, message: 'No active pipeline' };
+      const stages = state.stages as Record<string, { complete: boolean; completedAt: string | null }>;
+      const requiredStages = state.requiredStages as string[];
+      const stageDetails = requiredStages.map(name => ({
+        name,
+        complete: stages[name]?.complete ?? false,
+        completedAt: stages[name]?.completedAt ?? null,
+      }));
+      const incompleteStages = stageDetails.filter(s => !s.complete).map(s => s.name);
+      return {
+        active: true,
+        taskId: state.taskId,
+        startedAt: state.startedAt,
+        overrideActive: state.overrideActive,
+        overrideReason: state.overrideReason,
+        stages: stageDetails,
+        incompleteStages,
+        allComplete: incompleteStages.length === 0,
+        commitBlocked: !state.overrideActive && incompleteStages.length > 0,
+      };
+    },
+  }
+);
 
 function getDefaultStages(template: string): string[] {
   const stages: Record<string, string[]> = {

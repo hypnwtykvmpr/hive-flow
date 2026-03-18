@@ -753,50 +753,6 @@ npx hive-flow doctor --fix
 
 - Keep MCP for coordination strategy only — use Claude Code's Task tool for real execution
 
-## Publishing to npm
-
-### Publishing Rules
-
-- MUST publish BOTH packages when publishing CLI changes: `@hive-flow/cli` AND `hive-flow`
-- MUST update ALL dist-tags for BOTH packages after publishing
-- Publish order: `@hive-flow/cli` first, then `hive-flow` (umbrella)
-- MUST run verification for BOTH before telling user publishing is complete
-
-```bash
-# STEP 1: Build and publish CLI
-cd v3/@hive-flow/cli
-npm version 3.0.0-alpha.XXX --no-git-tag-version
-npm run build
-npm publish --tag alpha
-npm dist-tag add @hive-flow/cli@3.0.0-alpha.XXX latest
-
-# STEP 2: Publish hive-flow umbrella
-cd /workspaces/hive-flow
-npm version 3.0.0-alpha.XXX --no-git-tag-version
-npm publish --tag alpha
-
-# STEP 3: Update ALL hive-flow umbrella tags (CRITICAL - DON'T SKIP!)
-npm dist-tag add hive-flow@3.0.0-alpha.XXX latest
-npm dist-tag add hive-flow@3.0.0-alpha.XXX alpha
-```
-
-**Verification (run before telling user):**
-```bash
-npm view @hive-flow/cli dist-tags --json
-npm view hive-flow dist-tags --json
-# Both packages need: alpha AND latest pointing to newest version
-```
-
-### All Tags That Must Be Updated
-| Package | Tag | Command Users Run |
-|---------|-----|-------------------|
-| `@hive-flow/cli` | `alpha` | `npx @hive-flow/cli` |
-| `@hive-flow/cli` | `latest` | `npx @hive-flow/cli` |
-| `hive-flow` | `alpha` | `npx hive-flow` — EASY TO FORGET |
-| `hive-flow` | `latest` | `npx hive-flow` |
-
-- Never forget the umbrella `alpha` tag — users run `npx hive-flow`
-
 ## Optional Plugins (20 Available)
 
 Plugins are distributed via IPFS and can be installed with the CLI. Browse and install from the official registry:

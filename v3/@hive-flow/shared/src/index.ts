@@ -258,6 +258,11 @@ export * from './observability/index.js';
 export * from './services/index.js';
 
 // =============================================================================
+// Workflow Module System
+// =============================================================================
+export * from './workflow/index.js';
+
+// =============================================================================
 // Shared Utilities (Cross-cutting)
 // =============================================================================
 export { clamp, sigmoid, softmax, cosineSimilarity } from './utils/math-utils.js';

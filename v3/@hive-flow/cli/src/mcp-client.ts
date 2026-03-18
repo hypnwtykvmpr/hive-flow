@@ -43,6 +43,7 @@ import { verificationGateTools } from './mcp-tools/verification-gate.js';
 import { planningSubflowTools } from './mcp-tools/planning-subflow.js';
 import { bugHunterTools } from './mcp-tools/bug-hunter.js';
 import { workflowEnforcerTools } from './mcp-tools/workflow-enforcer.js';
+import { queenTools } from './mcp-tools/queen-tools.js';
 import { checkMCPEnforcement } from './mcp-tools/mcp-enforcement-gate.js';
 
 /**
@@ -94,6 +95,8 @@ registerTools([
   ...bugHunterTools,
   // Workflow enforcement tools
   ...workflowEnforcerTools,
+  // Queen protocol tools (hive management)
+  ...queenTools,
 ]);
 
 /**

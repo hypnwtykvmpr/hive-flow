@@ -35,6 +35,7 @@ const VIOLATIONS_FILE = path.join(ENFORCEMENT_DIR, 'violations.jsonl');
 const VERIFICATION_GATE_FILE = path.join(ENFORCEMENT_DIR, 'verification-gate.json');
 const HMAC_KEY_FILE = path.join(ENFORCEMENT_DIR, '.hmac-key');
 const COMPACTION_LOCK_FILE = path.join(ENFORCEMENT_DIR, 'compaction-lock.json');
+const PIPELINE_STATE_FILE = path.join(ENFORCEMENT_DIR, 'pipeline-state.json');
 
 const MAX_STATE_SIZE = 10240; // 10KB — larger = likely corrupt/attack (12.12)
 const MAX_HISTORY = 50;
@@ -150,13 +151,14 @@ function ensureDir(dir) {
 function getAgentId() {
   return process.env.AGENTIC_FLOW_AGENT_ID
     || process.env.CLAUDE_SESSION_ID
+    || process.env.CLAUDE_AGENT_ID
     || null;
 }
 
 function getStateFile(agentId) {
   if (!agentId) return STATE_FILE;
   // Sanitize agentId: reject path traversal attempts
-  const sanitized = agentId.replace(/[\/\\\.]+/g, '_').replace(/^_+|_+$/g, '');
+  const sanitized = agentId.replace(/[\/\\\.]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 64);
   if (!sanitized) return STATE_FILE;
   return path.join(ENFORCEMENT_DIR, 'agents', sanitized, 'state.json');
 }
@@ -420,8 +422,8 @@ function detectCircumvention(toolName, toolInput, state) {
     }
 
     // 2c. Environment variable manipulation (N13, N14)
-    if (/export\s+(CLAUDE_PROJECT_DIR|CF_WF_7D|HIVE_FLOW_ENFORCEMENT_DISABLED)\s*=/i.test(command) ||
-        /\b(CLAUDE_PROJECT_DIR|CF_WF_7D|HIVE_FLOW_ENFORCEMENT_DISABLED)\s*=\s*\S/i.test(command)) {
+    if (/export\s+(CLAUDE_PROJECT_DIR|CF_WF_7D|HIVE_FLOW_ENFORCEMENT_DISABLED|HIVE_FLOW_PIPELINE_OVERRIDE)\s*=/i.test(command) ||
+        /\b(CLAUDE_PROJECT_DIR|CF_WF_7D|HIVE_FLOW_ENFORCEMENT_DISABLED|HIVE_FLOW_PIPELINE_OVERRIDE)\s*=\s*\S/i.test(command)) {
       return {
         circumvention: true,
         reason: `CIRCUMVENTION: Environment variable manipulation targeting enforcement`,
@@ -436,6 +438,17 @@ function detectCircumvention(toolName, toolInput, state) {
       return {
         circumvention: true,
         reason: `CIRCUMVENTION: Egregiously destructive command detected`,
+        severity: 'critical',
+      };
+    }
+
+    // 2d2. pipeline-reset circumvention (Finding 1)
+    // Any agent calling hook-handler.cjs pipeline-reset via Bash can delete the
+    // pipeline state file and remove the commit gate entirely — treat as circumvention.
+    if (/hook-handler\.cjs\s+pipeline-reset/i.test(command)) {
+      return {
+        circumvention: true,
+        reason: `CIRCUMVENTION: Attempted to call hook-handler.cjs pipeline-reset directly — this bypasses the pipeline commit gate`,
         severity: 'critical',
       };
     }
@@ -576,6 +589,39 @@ function checkVerificationGate(toolName, toolInput) {
   const command = toolInput?.command || '';
   if (!/git\s+commit/i.test(command)) return { blocked: false };
 
+  // Pipeline gate — checked before swarm-mode gate
+  if (fs.existsSync(PIPELINE_STATE_FILE)) {
+    const pipelineRaw = readJson(PIPELINE_STATE_FILE);
+    if (pipelineRaw === null) {
+      // File exists but is corrupted (invalid JSON or too large) — block commit (Finding 3)
+      return {
+        blocked: true,
+        reason: '[PIPELINE GATE] Pipeline state file is corrupted. Cannot verify stage completions. Use /pipeline-reset to clear, or fix the file.',
+      };
+    }
+    const { valid, state: pState } = verifyState(pipelineRaw);
+    if (!valid || !pState) {
+      return { blocked: true, reason: '[PIPELINE GATE] Pipeline state integrity check failed (HMAC mismatch).' };
+    }
+    if (pState.overrideActive) {
+      return { blocked: false };
+    }
+    if (process.env.HIVE_FLOW_PIPELINE_OVERRIDE === '1') {
+      appendViolation({ type: 'pipeline-env-override', taskId: pState.taskId, timestamp: new Date().toISOString() });
+      return { blocked: false };
+    }
+    const incompleteStages = (pState.requiredStages || []).filter(
+      name => !pState.stages[name] || pState.stages[name].complete !== true
+    );
+    if (incompleteStages.length > 0) {
+      return {
+        blocked: true,
+        reason: '[PIPELINE GATE] git commit blocked. Incomplete stages: ' + incompleteStages.join(', ') + '. Complete all pipeline stages before committing. Use HIVE_FLOW_PIPELINE_OVERRIDE=1 or /pipeline-override for emergency bypass.',
+      };
+    }
+    return { blocked: false };
+  }
+
   // N14: Removed HIVE_FLOW_ENFORCEMENT_DISABLED env check entirely
 
   // Non-swarm mode — don't block individual commits
@@ -715,6 +761,11 @@ function processPreToolUse(input) {
   }
 
   // Step 5: Inject warning at Level 1
+  // NOTE: In SubagentStart context (no tool_name), this additionalContext will
+  // overwrite role-enforcement.cjs's identity injection because Claude Code
+  // uses "last writer wins" when merging multiple hook outputs. Enforcement.cjs
+  // runs AFTER role-enforcement.cjs in settings.json SubagentStart hooks.
+  // If ordering changes, role identity text may be lost at WARNED level.
   if (state.level === LEVELS.WARNED) {
     updateActivityTracking(state, false);
     saveState(state, agentId);
@@ -871,6 +922,79 @@ function setVerificationGate(status, details) {
 }
 
 // ============================================================================
+// Pipeline Stage-Gated Commit Enforcement
+// ============================================================================
+
+function initPipeline(taskId, stages) {
+  ensureDir();
+  const defaultStages = ['implement', 'verify', 'test', 'debug', 'verify_test', 'audit', 'verify_audit'];
+  const requiredStages = stages && stages.length > 0 ? stages : defaultStages;
+  const stagesObj = {};
+  for (const s of requiredStages) {
+    stagesObj[s] = { complete: false, completedAt: null, completedBy: null };
+  }
+  const state = {
+    taskId: taskId || `task-${Date.now()}`,
+    startedAt: new Date().toISOString(),
+    stages: stagesObj,
+    requiredStages,
+    overrideActive: false,
+    overrideReason: null,
+    overrideAt: null,
+  };
+  const signed = signState(state);
+  writeJsonAtomic(PIPELINE_STATE_FILE, signed);
+  appendViolation({ type: 'pipeline-init', taskId: state.taskId, stages: requiredStages, timestamp: new Date().toISOString() });
+  return state;
+}
+
+function completePipelineStage(taskId, stageName) {
+  const raw = readJson(PIPELINE_STATE_FILE);
+  if (!raw) return { success: false, reason: 'No active pipeline' };
+  const { valid, state } = verifyState(raw);
+  if (!valid || !state) return { success: false, reason: 'Pipeline state integrity check failed' };
+  if (taskId && state.taskId !== taskId) return { success: false, reason: `Task ID mismatch: expected ${state.taskId}, got ${taskId}` };
+  if (!state.stages[stageName]) return { success: false, reason: `Unknown stage: ${stageName}` };
+  if (state.stages[stageName].complete) return { success: true, reason: 'Already complete' };
+  state.stages[stageName].complete = true;
+  state.stages[stageName].completedAt = new Date().toISOString();
+  state.stages[stageName].completedBy = getAgentId();
+  const signed = signState(state);
+  writeJsonAtomic(PIPELINE_STATE_FILE, signed);
+  appendViolation({ type: 'pipeline-stage-complete', taskId: state.taskId, stage: stageName, completedBy: state.stages[stageName].completedBy, timestamp: new Date().toISOString() });
+  return { success: true };
+}
+
+function getPipelineState() {
+  const raw = readJson(PIPELINE_STATE_FILE);
+  if (!raw) return null;
+  const { valid, state } = verifyState(raw);
+  if (!valid) return { error: 'integrity-failed' };
+  return state;
+}
+
+function overridePipeline(reason) {
+  const raw = readJson(PIPELINE_STATE_FILE);
+  if (!raw) return { success: false, reason: 'No active pipeline' };
+  const { valid, state } = verifyState(raw);
+  if (!valid || !state) return { success: false, reason: 'Pipeline state integrity check failed' };
+  state.overrideActive = true;
+  state.overrideReason = reason || 'No reason provided';
+  state.overrideAt = new Date().toISOString();
+  const signed = signState(state);
+  writeJsonAtomic(PIPELINE_STATE_FILE, signed);
+  appendViolation({ type: 'pipeline-override-command', taskId: state.taskId, reason: state.overrideReason, timestamp: new Date().toISOString() });
+  return { success: true };
+}
+
+function resetPipeline() {
+  try {
+    if (fs.existsSync(PIPELINE_STATE_FILE)) fs.unlinkSync(PIPELINE_STATE_FILE);
+    return { success: true };
+  } catch { return { success: false, reason: 'Failed to delete pipeline state' }; }
+}
+
+// ============================================================================
 // CLI Entry Point
 // ============================================================================
 
@@ -938,4 +1062,10 @@ module.exports = {
   makeAllow,
   makeDeny,
   sanitizeContext,
+  PIPELINE_STATE_FILE,
+  initPipeline,
+  completePipelineStage,
+  getPipelineState,
+  overridePipeline,
+  resetPipeline,
 };

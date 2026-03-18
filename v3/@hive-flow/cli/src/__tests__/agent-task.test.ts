@@ -508,4 +508,275 @@ describe('agent_task handler', () => {
     // stderr should be undefined, not empty string
     expect((result as AgentTaskResult).stderr).toBeUndefined();
   });
+
+  // ====================================================================
+  // Timeout clamping (SEC / timeout propagation fix)
+  // ====================================================================
+
+  describe('timeout clamping', () => {
+    /** Shared execFile mock: succeeds immediately with { success: true }. */
+    function mockExecFileSuccess() {
+      (execFile as ReturnType<typeof vi.fn>).mockImplementation(
+        (_cmd: string, _args: string[], _opts: unknown, callback: Function) => {
+          callback(null, JSON.stringify({ success: true }), '');
+          return { on: vi.fn() };
+        },
+      );
+    }
+
+    /** Extract the [args, opts] pair from the first execFile call. */
+    function getExecFileCall(): { args: string[]; opts: Record<string, unknown> } {
+      const calls = (execFile as ReturnType<typeof vi.fn>).mock.calls;
+      expect(calls.length).toBeGreaterThan(0);
+      return { args: calls[0][1] as string[], opts: calls[0][2] as Record<string, unknown> };
+    }
+
+    // ------------------------------------------------------------------
+    // 14. Default timeout: no input.timeout → 120000
+    // ------------------------------------------------------------------
+    it('uses 120000ms timeout when input.timeout is not provided', async () => {
+      const agent = makeAgent();
+      setupStoreMocks(makeStore({ [agent.agentId]: agent }));
+      mockExecFileSuccess();
+
+      await handler({ agentId: agent.agentId, task: 'do something' });
+
+      const { args, opts } = getExecFileCall();
+      expect(opts.timeout).toBe(120000);
+      const timeoutIdx = args.indexOf('--timeout');
+      expect(timeoutIdx).not.toBe(-1);
+      expect(args[timeoutIdx + 1]).toBe('120000');
+    });
+
+    // ------------------------------------------------------------------
+    // 15. Custom timeout: input.timeout = 600000 → 600000 (within range)
+    // ------------------------------------------------------------------
+    it('passes through a custom timeout within the valid range unchanged', async () => {
+      const agent = makeAgent();
+      setupStoreMocks(makeStore({ [agent.agentId]: agent }));
+      mockExecFileSuccess();
+
+      await handler({ agentId: agent.agentId, task: 'do something', timeout: 600000 });
+
+      const { args, opts } = getExecFileCall();
+      expect(opts.timeout).toBe(600000);
+      const timeoutIdx = args.indexOf('--timeout');
+      expect(timeoutIdx).not.toBe(-1);
+      expect(args[timeoutIdx + 1]).toBe('600000');
+    });
+
+    // ------------------------------------------------------------------
+    // 16. Below minimum: input.timeout = 5000 → clamped to 10000
+    // ------------------------------------------------------------------
+    it('clamps timeout to minimum 10000ms when input is below threshold', async () => {
+      const agent = makeAgent();
+      setupStoreMocks(makeStore({ [agent.agentId]: agent }));
+      mockExecFileSuccess();
+
+      await handler({ agentId: agent.agentId, task: 'do something', timeout: 5000 });
+
+      const { args, opts } = getExecFileCall();
+      expect(opts.timeout).toBe(10000);
+      const timeoutIdx = args.indexOf('--timeout');
+      expect(timeoutIdx).not.toBe(-1);
+      expect(args[timeoutIdx + 1]).toBe('10000');
+    });
+
+    // ------------------------------------------------------------------
+    // 17. Above maximum: input.timeout = 7200000 → clamped to 3600000
+    // ------------------------------------------------------------------
+    it('clamps timeout to maximum 3600000ms when input exceeds the ceiling', async () => {
+      const agent = makeAgent();
+      setupStoreMocks(makeStore({ [agent.agentId]: agent }));
+      mockExecFileSuccess();
+
+      await handler({ agentId: agent.agentId, task: 'do something', timeout: 7200000 });
+
+      const { args, opts } = getExecFileCall();
+      expect(opts.timeout).toBe(3600000);
+      const timeoutIdx = args.indexOf('--timeout');
+      expect(timeoutIdx).not.toBe(-1);
+      expect(args[timeoutIdx + 1]).toBe('3600000');
+    });
+
+    // ------------------------------------------------------------------
+    // 18. Zero: input.timeout = 0 → fallback to 120000, then clamped
+    //     rawTimeout = (0 || 120000) = 120000 → clamped = 120000
+    // ------------------------------------------------------------------
+    it('falls back to 120000ms when input.timeout is zero', async () => {
+      const agent = makeAgent();
+      setupStoreMocks(makeStore({ [agent.agentId]: agent }));
+      mockExecFileSuccess();
+
+      await handler({ agentId: agent.agentId, task: 'do something', timeout: 0 });
+
+      const { args, opts } = getExecFileCall();
+      expect(opts.timeout).toBe(120000);
+      const timeoutIdx = args.indexOf('--timeout');
+      expect(timeoutIdx).not.toBe(-1);
+      expect(args[timeoutIdx + 1]).toBe('120000');
+    });
+
+    // ------------------------------------------------------------------
+    // 19. Negative: input.timeout = -1 → clamped to 10000
+    //     rawTimeout = (-1 || 120000) = 120000? No: -1 is truthy.
+    //     rawTimeout = -1, Math.max(10000, Math.min(3600000, -1)) = 10000
+    // ------------------------------------------------------------------
+    it('clamps timeout to minimum 10000ms when input is negative', async () => {
+      const agent = makeAgent();
+      setupStoreMocks(makeStore({ [agent.agentId]: agent }));
+      mockExecFileSuccess();
+
+      await handler({ agentId: agent.agentId, task: 'do something', timeout: -1 });
+
+      const { args, opts } = getExecFileCall();
+      expect(opts.timeout).toBe(10000);
+      const timeoutIdx = args.indexOf('--timeout');
+      expect(timeoutIdx).not.toBe(-1);
+      expect(args[timeoutIdx + 1]).toBe('10000');
+    });
+
+    // ------------------------------------------------------------------
+    // 20. NaN: input.timeout = NaN → fallback to 120000
+    //     rawTimeout = (NaN || 120000) = 120000 → clamped = 120000
+    // ------------------------------------------------------------------
+    it('falls back to 120000ms when input.timeout is NaN', async () => {
+      const agent = makeAgent();
+      setupStoreMocks(makeStore({ [agent.agentId]: agent }));
+      mockExecFileSuccess();
+
+      await handler({ agentId: agent.agentId, task: 'do something', timeout: NaN });
+
+      const { args, opts } = getExecFileCall();
+      expect(opts.timeout).toBe(120000);
+      const timeoutIdx = args.indexOf('--timeout');
+      expect(timeoutIdx).not.toBe(-1);
+      expect(args[timeoutIdx + 1]).toBe('120000');
+    });
+
+    // ------------------------------------------------------------------
+    // 21. Args array structure: includes --agent-id, --task, --store-dir, --timeout
+    // ------------------------------------------------------------------
+    it('includes all required args in execFile call: --agent-id, --task, --store-dir, --timeout', async () => {
+      const agent = makeAgent();
+      setupStoreMocks(makeStore({ [agent.agentId]: agent }));
+      mockExecFileSuccess();
+
+      await handler({ agentId: agent.agentId, task: 'specific task', timeout: 30000 });
+
+      const { args } = getExecFileCall();
+
+      // Bridge path is first
+      expect(args[0]).toBe(EXPECTED_BRIDGE_PATH);
+
+      // All required named args present
+      expect(args).toContain('--agent-id');
+      expect(args[args.indexOf('--agent-id') + 1]).toBe(agent.agentId);
+
+      expect(args).toContain('--task');
+      expect(args[args.indexOf('--task') + 1]).toBe('specific task');
+
+      expect(args).toContain('--store-dir');
+      // store-dir is a non-empty string
+      expect(args[args.indexOf('--store-dir') + 1].length).toBeGreaterThan(0);
+
+      expect(args).toContain('--timeout');
+      // timeout = 30000 (within range, no clamping)
+      expect(args[args.indexOf('--timeout') + 1]).toBe('30000');
+    });
+  });
+
+  // ====================================================================
+  // Bridge createProviderConfig timeout logic (tested via handler integration)
+  // ====================================================================
+
+  describe('bridge createProviderConfig timeout propagation', () => {
+    /**
+     * These tests verify that the timeout value written into execFile opts
+     * matches what the bridge would receive via --timeout and use in
+     * createProviderConfig. The bridge sets config.timeout = timeoutMs || 120000,
+     * so the value passed in --timeout must be the clamped value.
+     */
+
+    function mockExecFileCapture(): { getArgs: () => string[]; getOpts: () => Record<string, unknown> } {
+      let capturedArgs: string[] = [];
+      let capturedOpts: Record<string, unknown> = {};
+      (execFile as ReturnType<typeof vi.fn>).mockImplementation(
+        (_cmd: string, args: string[], opts: unknown, callback: Function) => {
+          capturedArgs = args;
+          capturedOpts = opts as Record<string, unknown>;
+          callback(null, JSON.stringify({ success: true }), '');
+          return { on: vi.fn() };
+        },
+      );
+      return {
+        getArgs: () => capturedArgs,
+        getOpts: () => capturedOpts,
+      };
+    }
+
+    // ------------------------------------------------------------------
+    // 22. parseArgs --timeout: bridge receives the clamped value
+    // ------------------------------------------------------------------
+    it('passes clamped timeout to bridge via --timeout arg as a string integer', async () => {
+      const agent = makeAgent();
+      setupStoreMocks(makeStore({ [agent.agentId]: agent }));
+      const { getArgs } = mockExecFileCapture();
+
+      await handler({ agentId: agent.agentId, task: 'task', timeout: 250000 });
+
+      const args = getArgs();
+      const idx = args.indexOf('--timeout');
+      expect(idx).not.toBe(-1);
+      // Must be a numeric string (parseInt-able)
+      const parsed = parseInt(args[idx + 1], 10);
+      expect(Number.isNaN(parsed)).toBe(false);
+      expect(parsed).toBe(250000);
+    });
+
+    // ------------------------------------------------------------------
+    // 23. createProviderConfig with timeout = 0 defaults to 120000
+    //     The handler maps timeout:0 → rawTimeout=120000 → clamped=120000.
+    //     The bridge arg is '120000'; bridge createProviderConfig: 120000 || 120000 = 120000.
+    // ------------------------------------------------------------------
+    it('bridge receives 120000 when caller provides timeout=0 (fallback chain)', async () => {
+      const agent = makeAgent();
+      setupStoreMocks(makeStore({ [agent.agentId]: agent }));
+      const { getArgs, getOpts } = mockExecFileCapture();
+
+      await handler({ agentId: agent.agentId, task: 'task', timeout: 0 });
+
+      const args = getArgs();
+      const opts = getOpts();
+
+      // execFile opts.timeout (used as process kill timeout) = 120000
+      expect(opts.timeout).toBe(120000);
+
+      // bridge --timeout arg = '120000'
+      const idx = args.indexOf('--timeout');
+      expect(idx).not.toBe(-1);
+      expect(args[idx + 1]).toBe('120000');
+    });
+
+    // ------------------------------------------------------------------
+    // 24. createProviderConfig with a valid custom timeout
+    //     timeout=45000 → rawTimeout=45000 → clamped=45000 (above min, below max)
+    //     bridge receives --timeout 45000; config.timeout = 45000 || 120000 = 45000
+    // ------------------------------------------------------------------
+    it('bridge receives exact custom timeout when within valid range', async () => {
+      const agent = makeAgent();
+      setupStoreMocks(makeStore({ [agent.agentId]: agent }));
+      const { getArgs, getOpts } = mockExecFileCapture();
+
+      await handler({ agentId: agent.agentId, task: 'task', timeout: 45000 });
+
+      const args = getArgs();
+      const opts = getOpts();
+
+      expect(opts.timeout).toBe(45000);
+      const idx = args.indexOf('--timeout');
+      expect(idx).not.toBe(-1);
+      expect(args[idx + 1]).toBe('45000');
+    });
+  });
 });

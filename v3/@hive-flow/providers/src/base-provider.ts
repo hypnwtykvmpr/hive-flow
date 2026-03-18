@@ -50,7 +50,7 @@ class CircuitBreaker {
       if (Date.now() - this.lastFailure > this.resetTimeout) {
         this.state = 'half-open';
       } else {
-        throw new Error(`Circuit breaker ${this.name} is open`);
+        throw new LLMProviderError(`Circuit breaker ${this.name} is open`, 'CIRCUIT_OPEN', { retryable: false });
       }
     }
 
