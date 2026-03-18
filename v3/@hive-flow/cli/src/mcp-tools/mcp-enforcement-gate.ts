@@ -18,6 +18,7 @@ export enum ToolRisk {
 // Risk classification table
 const CRITICAL_TOOLS = new Set([
   'agent_spawn', 'agent_task',
+  'queen_spawn_worker',
   'workflow_enforcer_override',
   'browser_eval',
   'config_import',
@@ -201,4 +202,80 @@ export function checkMCPEnforcement(toolName: string): EnforcementResult {
   }
 
   return { allowed: true, risk };
+}
+
+/**
+ * Model enforcement for agent spawning tools (PreToolUse gate).
+ *
+ * Blocks haiku for all agent tasks, enforces top-tier models for external
+ * providers, and defaults Claude provider to sonnet when no model is specified.
+ */
+export interface ModelEnforcementInput {
+  model?: string;
+  provider?: string;
+  [key: string]: unknown;
+}
+
+export interface ModelEnforcementResult {
+  allowed: boolean;
+  reason?: string;
+  /** When the input is mutated (e.g. default model applied), the corrected input is returned. */
+  correctedInput?: ModelEnforcementInput;
+}
+
+const AGENT_SPAWN_TOOLS = new Set(['agent_spawn', 'queen_spawn_worker']);
+
+export function checkModelEnforcement(
+  toolName: string,
+  input: ModelEnforcementInput,
+): ModelEnforcementResult {
+  const shortName = toolName
+    .replace(/^mcp__hive-flow__/, '')
+    .replace(/^mcp__filesystem__/, 'filesystem__')
+    .replace(/^mcp__playwright__browser_/, 'browser_');
+
+  if (!AGENT_SPAWN_TOOLS.has(shortName)) {
+    return { allowed: true };
+  }
+
+  // Rule 1: haiku is always prohibited for agent tasks
+  if (input.model === 'haiku') {
+    return {
+      allowed: false,
+      reason: 'MODEL ENFORCEMENT: haiku prohibited for agent tasks. Use sonnet or opus.',
+    };
+  }
+
+  // Rule 2: gemini-cli requires gemini-3.1-pro-preview (top tier)
+  if (
+    input.provider === 'gemini-cli' &&
+    input.model !== 'gemini-3.1-pro-preview'
+  ) {
+    return {
+      allowed: false,
+      reason: 'MODEL ENFORCEMENT: gemini-cli requires gemini-3.1-pro-preview (top tier).',
+    };
+  }
+
+  // Rule 3: codex-cli requires gpt-5.4 (top tier)
+  if (input.provider === 'codex-cli' && input.model !== 'gpt-5.4') {
+    return {
+      allowed: false,
+      reason: 'MODEL ENFORCEMENT: codex-cli requires gpt-5.4 (top tier).',
+    };
+  }
+
+  // Rule 4: Claude provider (anthropic-cli or unspecified) without explicit model → default to sonnet
+  const isClaudeProvider =
+    !input.provider ||
+    input.provider === 'anthropic-cli' ||
+    input.provider === 'claude';
+  if (isClaudeProvider && !input.model) {
+    return {
+      allowed: true,
+      correctedInput: { ...input, model: 'sonnet' },
+    };
+  }
+
+  return { allowed: true };
 }

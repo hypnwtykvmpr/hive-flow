@@ -1115,6 +1115,67 @@ const handlers = {
       console.log(ALLOW_JSON);
     }
   },
+
+  'bug-hunter-check': async () => {
+    try {
+      const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+      const storePath = path.join(projectDir, '.hive-flow', 'agents', 'store.json');
+
+      let agents = [];
+      try {
+        const raw = fs.readFileSync(storePath, 'utf8');
+        const store = JSON.parse(raw);
+        agents = Array.isArray(store) ? store : (store.agents || []);
+      } catch (e) { /* store missing — treat as empty */ }
+
+      const activeBugHunter = agents.find(
+        a => a.agentType === 'bug-hunter' && a.status !== 'terminated'
+      );
+      if (activeBugHunter) {
+        console.log('{}');
+        return;
+      }
+
+      const { pathToFileURL } = require('url');
+      const agentToolsPath = path.join(
+        projectDir, 'v3', '@hive-flow', 'cli', 'dist', 'src', 'mcp-tools', 'agent-tools.js'
+      );
+      if (!fs.existsSync(agentToolsPath)) {
+        console.log('{}');
+        return;
+      }
+
+      const agentToolsMod = await import(pathToFileURL(agentToolsPath).href);
+      const agentToolsArr = agentToolsMod.agentTools || agentToolsMod.default || [];
+      const spawnTool = Array.isArray(agentToolsArr)
+        ? agentToolsArr.find(t => t.name === 'agent_spawn')
+        : null;
+      if (!spawnTool || typeof spawnTool.handler !== 'function') {
+        console.log('{}');
+        return;
+      }
+
+      const spawnResult = await spawnTool.handler({
+        agentType: 'bug-hunter',
+        provider: 'codex-cli',
+        model: 'opus',
+      });
+
+      let bugHunterId = 'unknown';
+      try {
+        const parsed = typeof spawnResult === 'string' ? JSON.parse(spawnResult) : spawnResult;
+        bugHunterId = parsed.agentId || parsed.id || bugHunterId;
+      } catch (e) { /* best-effort id extraction */ }
+
+      process.stdout.write(JSON.stringify({
+        hookSpecificOutput: {
+          additionalContext: `[BUG HUNTER ACTIVE] Bug hunter ${bugHunterId} spawned under COORDINATOR (not inside any hive).\nCOORDINATOR: Assign bug_hunter_scan tasks to ${bugHunterId} during all dev stages.\nBug hunter finds bugs but NEVER fixes them — forward reports to debugger hive.`
+        }
+      }));
+    } catch (e) {
+      console.log('{}');
+    }
+  },
 };
 
 // Execute the handler (async IIFE to properly await async handlers like permission-guard)

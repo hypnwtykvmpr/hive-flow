@@ -271,6 +271,30 @@ function getSecurityStatus() {
   };
 }
 
+// Read agent store and count non-terminated agents
+function getAgentStoreCount() {
+  try {
+    const storePath = path.join(CWD, '.hive-flow', 'agents', 'store.json');
+    if (fs.existsSync(storePath)) {
+      const store = JSON.parse(fs.readFileSync(storePath, 'utf-8'));
+      const agents = store?.agents || store?.entries || (Array.isArray(store) ? store : []);
+      if (Array.isArray(agents) && agents.length > 0) {
+        const active = agents.filter(a => a.status !== 'terminated');
+        return { activeAgents: active.length, agents };
+      }
+      // Handle object-map format { "agent-id": { status: ... }, ... }
+      if (typeof store === 'object' && !Array.isArray(store) && store !== null) {
+        const values = Object.values(store).filter(v => v && typeof v === 'object' && 'status' in v);
+        if (values.length > 0) {
+          const active = values.filter(a => a.status !== 'terminated');
+          return { activeAgents: active.length, agents: values };
+        }
+      }
+    }
+  } catch { /* store.json doesn't exist or is invalid -- fall through */ }
+  return { activeAgents: 0, agents: [] };
+}
+
 // Swarm status (pure file reads, NO ps aux)
 function getSwarmStatus() {
   const activityData = readJSON(path.join(CWD, '.hive-flow', 'metrics', 'swarm-activity.json'));
@@ -288,6 +312,16 @@ function getSwarmStatus() {
       activeAgents: progressData.swarm.activeAgents || progressData.swarm.agent_count || 0,
       maxAgents: progressData.swarm.totalAgents || CONFIG.maxAgents,
       coordinationActive: progressData.swarm.active || (progressData.swarm.activeAgents > 0),
+    };
+  }
+
+  // Fallback: read from agent store.json for MCP-spawned agents
+  const storeData = getAgentStoreCount();
+  if (storeData.activeAgents > 0) {
+    return {
+      activeAgents: storeData.activeAgents,
+      maxAgents: CONFIG.maxAgents,
+      coordinationActive: true,
     };
   }
 
@@ -563,17 +597,44 @@ function progressBar(current, total) {
   return '[' + '\u25CF'.repeat(filled) + '\u25CB'.repeat(width - filled) + ']';
 }
 
-// Get AI provider usage (pure file reads)
+// Get AI provider usage (pure file reads + agent store supplement)
 function getProviderUsage() {
   const usagePath = path.join(CWD, '.hive-flow', 'metrics', 'provider-usage.json');
   const data = readJSON(usagePath);
-  if (data?.providers) return data.providers;
+  const providers = data?.providers ? { ...data.providers } : {};
 
-  // Default structure if missing
-  const providers = {};
+  // Ensure default Claude tiers exist
   ['opus', 'sonnet', 'haiku'].forEach(p => {
-    providers[p] = { calls: 0, tokens: 0, ttfb_avg_ms: 0, last_used: null };
+    if (!providers[p]) {
+      providers[p] = { calls: 0, tokens: 0, ttfb_avg_ms: 0, last_used: null };
+    }
   });
+
+  // Supplement with model data from store.json agents (captures MCP-spawned agents)
+  try {
+    const storeData = getAgentStoreCount();
+    for (const agent of storeData.agents) {
+      if (agent.status === 'terminated') continue;
+      const model = agent.model || agent.modelId || '';
+      const provider = agent.provider || '';
+      // Map to provider key
+      let key = '';
+      if (model.includes('opus')) key = 'opus';
+      else if (model.includes('sonnet')) key = 'sonnet';
+      else if (model.includes('haiku')) key = 'haiku';
+      else if (provider === 'gemini-cli' || model.includes('gemini')) key = 'gemini';
+      else if (provider === 'codex-cli' || model.includes('gpt') || model.includes('codex')) key = 'codex';
+      else if (provider === 'cursor-cli') key = 'cursor';
+      else if (model) key = model;
+      if (key) {
+        if (!providers[key]) {
+          providers[key] = { calls: 0, tokens: 0, ttfb_avg_ms: 0, last_used: null };
+        }
+        providers[key].calls += 1;
+      }
+    }
+  } catch { /* store.json unavailable -- keep provider-usage.json data only */ }
+
   return providers;
 }
 

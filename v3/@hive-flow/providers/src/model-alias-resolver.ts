@@ -34,13 +34,13 @@ export const PROVIDER_ALIAS_MAP: Record<CLIProviderName, Record<string, string |
   'gemini-cli': {
     'opus': 'gemini-3.1-pro-preview',
     'sonnet': 'gemini-3.1-pro-preview',
-    'haiku': 'gemini-3-flash',
+    'haiku': 'gemini-3.1-pro-preview',
     'inherit': 'gemini-3.1-pro-preview',
   },
   'codex-cli': {
     'opus': 'gpt-5.4',
-    'sonnet': 'gpt-5.3-codex',
-    'haiku': 'gpt-5.2-codex-mini',
+    'sonnet': 'gpt-5.4',
+    'haiku': 'gpt-5.4',
     'inherit': undefined,  // Let Codex use config.toml default
   },
   'cursor-cli': {
@@ -72,7 +72,7 @@ export const KNOWN_PROVIDER_MODELS: Record<CLIProviderName, Set<string>> = {
     'gemini-3-flash-preview', 'gemini-3.1-pro-preview',
   ]),
   'codex-cli': new Set([
-    'gpt-5.3-codex', 'gpt-5.2-codex', 'gpt-5.1-codex-max',
+    'gpt-5.4', 'gpt-5.3-codex', 'gpt-5.2-codex', 'gpt-5.1-codex-max',
     'gpt-5.1-codex', 'gpt-5-codex', 'gpt-5-codex-mini', 'auto',
   ]),
   'cursor-cli': new Set([

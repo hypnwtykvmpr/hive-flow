@@ -4,12 +4,12 @@
  * Tool definitions for workflow automation and orchestration.
  */
 
-import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync, unlinkSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync, appendFileSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import type { MCPTool } from './types.js';
-import { executeWorkflowStep, setWorkflowHookDispatcher, getWorkflowHookDispatcher } from './workflow-executor.js';
+import { executeWorkflowStep, getWorkflowHookDispatcher } from './workflow-executor.js';
 import type { WorkflowStepContext } from './workflow-executor.js';
 
 async function dispatchWorkflowHook(event: string, context: Record<string, unknown>): Promise<void> {
@@ -30,7 +30,7 @@ const WORKFLOW_FILE = 'store.json';
 interface WorkflowStep {
   stepId: string;
   name: string;
-  type: 'task' | 'condition' | 'parallel' | 'loop' | 'wait' | 'verification';
+  type: 'task' | 'condition' | 'parallel' | 'loop' | 'wait' | 'verification' | 'module';
   config: Record<string, unknown>;
   status: 'pending' | 'running' | 'completed' | 'failed' | 'skipped' | 'waiting';
   result?: unknown;
@@ -98,6 +98,134 @@ function saveWorkflowStore(store: WorkflowStore): void {
   const tmpPath = targetPath + '.tmp.' + process.pid;
   writeFileSync(tmpPath, JSON.stringify(store, null, 2), 'utf-8');
   renameSync(tmpPath, targetPath);
+}
+
+// ---------------------------------------------------------------------------
+// Shared step execution loop (extracted from workflow_execute/resume/run)
+// ---------------------------------------------------------------------------
+
+export interface ExecuteStepLoopParams {
+  workflow: WorkflowRecord;
+  steps: WorkflowStep[];
+  startIndex: number;
+  dispatchFailHook: boolean;
+  dispatchCompleteHook: boolean;
+  extraReturnFields: Record<string, unknown>;
+  saveStore: () => void;
+}
+
+export interface StepLoopResult {
+  completed: boolean;
+  results: Array<{ stepId: string; status: string }>;
+  /** Set when workflow paused on a gate wait */
+  pausedAt?: string;
+  pauseReason?: string;
+  /** Error info when a step throws */
+  error?: string;
+  failedStep?: string;
+}
+
+export async function executeStepLoop(params: ExecuteStepLoopParams): Promise<StepLoopResult> {
+  const { workflow, steps, startIndex, dispatchFailHook, dispatchCompleteHook, saveStore } = params;
+
+  const results: Array<{ stepId: string; status: string }> = [];
+
+  for (let i = startIndex; i < steps.length; i++) {
+    const step = steps[i];
+    step.status = 'running';
+    step.startedAt = new Date().toISOString();
+
+    const stepCtx: WorkflowStepContext = {
+      workflowId: workflow.workflowId,
+      step: {
+        stepId: step.stepId,
+        name: step.name,
+        type: step.type,
+        config: step.config,
+        gateConfig: step.gateConfig,
+        status: step.status,
+      },
+      variables: workflow.variables,
+      originalRequest: workflow.variables.originalRequest as string | undefined,
+    };
+
+    await dispatchWorkflowHook('module-start', {
+      workflowId: workflow.workflowId,
+      stepId: step.stepId,
+      stepName: step.name,
+      stepType: step.type,
+    });
+
+    let stepResult;
+    try {
+      stepResult = await executeWorkflowStep(stepCtx);
+    } catch (stepError: unknown) {
+      step.status = 'failed';
+      step.completedAt = new Date().toISOString();
+      workflow.status = 'failed';
+      workflow.error = stepError instanceof Error ? stepError.message : String(stepError);
+      workflow.completedAt = new Date().toISOString();
+      saveStore();
+
+      if (dispatchFailHook) {
+        await dispatchWorkflowHook('workflow-failed', {
+          workflowId: workflow.workflowId,
+          name: workflow.name,
+          error: workflow.error,
+        });
+      }
+
+      return {
+        completed: false,
+        results,
+        error: workflow.error,
+        failedStep: step.name,
+      };
+    }
+
+    step.status = stepResult.status;
+    step.completedAt = new Date().toISOString();
+    step.result = stepResult.result;
+
+    await dispatchWorkflowHook('module-complete', {
+      workflowId: workflow.workflowId,
+      stepId: step.stepId,
+      stepName: step.name,
+      status: stepResult.status,
+    });
+
+    // If gate is waiting for phase team remediation, pause workflow
+    if (stepResult.status === 'waiting') {
+      workflow.status = 'paused';
+      workflow.currentStep = i;
+      saveStore();
+      return {
+        completed: false,
+        results,
+        pausedAt: step.name,
+        pauseReason: 'Verification gate awaiting phase team remediation',
+      };
+    }
+
+    results.push({ stepId: step.stepId, status: step.status });
+    workflow.currentStep = i + 1;
+    saveStore();
+  }
+
+  workflow.status = 'completed';
+  workflow.completedAt = new Date().toISOString();
+
+  if (dispatchCompleteHook) {
+    await dispatchWorkflowHook('workflow-complete', {
+      workflowId: workflow.workflowId,
+      name: workflow.name,
+      stepsExecuted: results.length,
+    });
+  }
+
+  saveStore();
+
+  return { completed: true, results };
 }
 
 export const workflowTools: MCPTool[] = [
@@ -194,7 +322,7 @@ export const workflowTools: MCPTool[] = [
 
       workflow.status = 'running';
       workflow.startedAt = new Date().toISOString();
-      workflow.currentStep = (input.startFromStep as number) || 0;
+      workflow.currentStep = (input.startFromStep as number) ?? 0;
 
       await dispatchWorkflowHook('workflow-start', {
         workflowId,
@@ -202,103 +330,40 @@ export const workflowTools: MCPTool[] = [
         stepCount: workflow.steps.length,
       });
 
-      // Execute steps (in real implementation, this would be async/event-driven)
-      const results: Array<{ stepId: string; status: string }> = [];
-      for (let i = workflow.currentStep; i < workflow.steps.length; i++) {
-        const step = workflow.steps[i];
-        step.status = 'running';
-        step.startedAt = new Date().toISOString();
-
-        // Dispatch to workflow executor for real step handling
-        const stepCtx: WorkflowStepContext = {
-          workflowId,
-          step: {
-            stepId: step.stepId,
-            name: step.name,
-            type: step.type,
-            config: step.config,
-            gateConfig: step.gateConfig,
-            status: step.status,
-          },
-          variables: workflow.variables,
-          originalRequest: workflow.variables.originalRequest as string | undefined,
-        };
-
-        await dispatchWorkflowHook('module-start', {
-          workflowId,
-          stepId: step.stepId,
-          stepName: step.name,
-          stepType: step.type,
-        });
-
-        let stepResult;
-        try {
-          stepResult = await executeWorkflowStep(stepCtx);
-        } catch (stepError: unknown) {
-          step.status = 'failed';
-          step.completedAt = new Date().toISOString();
-          workflow.status = 'failed';
-          workflow.error = stepError instanceof Error ? stepError.message : String(stepError);
-          workflow.completedAt = new Date().toISOString();
-          saveWorkflowStore(store);
-          await dispatchWorkflowHook('workflow-failed', {
-            workflowId,
-            name: workflow.name,
-            error: workflow.error,
-          });
-          return { success: false, workflowId: workflow.workflowId, error: workflow.error, step: step.name };
-        }
-        step.status = stepResult.status;
-        step.completedAt = new Date().toISOString();
-
-        await dispatchWorkflowHook('module-complete', {
-          workflowId,
-          stepId: step.stepId,
-          stepName: step.name,
-          status: stepResult.status,
-        });
-        step.result = stepResult.result;
-
-        // If gate is waiting for phase team remediation, pause workflow
-        if (stepResult.status === 'waiting') {
-          workflow.status = 'paused';
-          workflow.currentStep = i;
-          saveWorkflowStore(store);
-          return {
-            workflowId,
-            status: workflow.status,
-            stepsExecuted: results.length,
-            results,
-            pausedAt: step.name,
-            pauseReason: 'Verification gate awaiting phase team remediation',
-            startedAt: workflow.startedAt,
-          };
-        }
-
-        results.push({ stepId: step.stepId, status: step.status });
-        workflow.currentStep = i + 1;
-        saveWorkflowStore(store);
-      }
-
-      workflow.status = 'completed';
-      workflow.completedAt = new Date().toISOString();
-
-      await dispatchWorkflowHook('workflow-complete', {
-        workflowId,
-        name: workflow.name,
-        stepsExecuted: results.length,
+      const loopResult = await executeStepLoop({
+        workflow,
+        steps: workflow.steps,
+        startIndex: workflow.currentStep,
+        dispatchFailHook: true,
+        dispatchCompleteHook: true,
+        extraReturnFields: {},
+        saveStore: () => saveWorkflowStore(store),
       });
 
-      saveWorkflowStore(store);
+      if (loopResult.error) {
+        return { success: false, workflowId: workflow.workflowId, error: loopResult.error, step: loopResult.failedStep };
+      }
+
+      if (loopResult.pausedAt) {
+        return {
+          workflowId,
+          status: workflow.status,
+          stepsExecuted: loopResult.results.length,
+          results: loopResult.results,
+          pausedAt: loopResult.pausedAt,
+          pauseReason: loopResult.pauseReason,
+          startedAt: workflow.startedAt,
+        };
+      }
 
       return {
         workflowId,
         status: workflow.status,
-        stepsExecuted: results.length,
-        results,
+        stepsExecuted: loopResult.results.length,
+        results: loopResult.results,
         startedAt: workflow.startedAt,
         completedAt: workflow.completedAt,
-        duration: new Date(workflow.completedAt).getTime() - new Date(workflow.startedAt!).getTime(),
+        duration: new Date(workflow.completedAt!).getTime() - new Date(workflow.startedAt!).getTime(),
       };
     },
   },
@@ -462,86 +527,36 @@ export const workflowTools: MCPTool[] = [
       workflow.status = 'running';
       saveWorkflowStore(store);
 
-      // Continue execution from current step — dispatch to executeWorkflowStep()
-      const results: Array<{ stepId: string; status: string }> = [];
-      for (let i = workflow.currentStep; i < workflow.steps.length; i++) {
-        const step = workflow.steps[i];
-        step.status = 'running';
-        step.startedAt = new Date().toISOString();
+      const loopResult = await executeStepLoop({
+        workflow,
+        steps: workflow.steps,
+        startIndex: workflow.currentStep,
+        dispatchFailHook: true,
+        dispatchCompleteHook: true,
+        extraReturnFields: { resumed: true },
+        saveStore: () => saveWorkflowStore(store),
+      });
 
-        const stepCtx: WorkflowStepContext = {
-          workflowId,
-          step: {
-            stepId: step.stepId,
-            name: step.name,
-            type: step.type,
-            config: step.config,
-            gateConfig: step.gateConfig,
-            status: step.status,
-          },
-          variables: workflow.variables,
-          originalRequest: workflow.variables.originalRequest as string | undefined,
-        };
-
-        await dispatchWorkflowHook('module-start', {
-          workflowId,
-          stepId: step.stepId,
-          stepName: step.name,
-          stepType: step.type,
-        });
-
-        let stepResult;
-        try {
-          stepResult = await executeWorkflowStep(stepCtx);
-        } catch (stepError: unknown) {
-          step.status = 'failed';
-          step.completedAt = new Date().toISOString();
-          workflow.status = 'failed';
-          workflow.error = stepError instanceof Error ? stepError.message : String(stepError);
-          workflow.completedAt = new Date().toISOString();
-          saveWorkflowStore(store);
-          return { success: false, workflowId, error: workflow.error, step: step.name };
-        }
-        step.status = stepResult.status;
-        step.completedAt = new Date().toISOString();
-        step.result = stepResult.result;
-
-        await dispatchWorkflowHook('module-complete', {
-          workflowId,
-          stepId: step.stepId,
-          stepName: step.name,
-          status: stepResult.status,
-        });
-
-        // If gate is waiting for remediation, pause workflow
-        if (stepResult.status === 'waiting') {
-          workflow.status = 'paused';
-          workflow.currentStep = i;
-          saveWorkflowStore(store);
-          return {
-            workflowId,
-            status: workflow.status,
-            resumed: true,
-            stepsExecuted: results.length,
-            pausedAt: step.name,
-            pauseReason: 'Verification gate awaiting phase team remediation',
-          };
-        }
-
-        results.push({ stepId: step.stepId, status: step.status });
-        workflow.currentStep = i + 1;
-        saveWorkflowStore(store);
+      if (loopResult.error) {
+        return { success: false, workflowId, error: loopResult.error, step: loopResult.failedStep };
       }
 
-      workflow.status = 'completed';
-      workflow.completedAt = new Date().toISOString();
-      saveWorkflowStore(store);
+      if (loopResult.pausedAt) {
+        return {
+          workflowId,
+          status: workflow.status,
+          resumed: true,
+          stepsExecuted: loopResult.results.length,
+          pausedAt: loopResult.pausedAt,
+          pauseReason: loopResult.pauseReason,
+        };
+      }
 
       return {
         workflowId,
         status: workflow.status,
         resumed: true,
-        stepsExecuted: results.length,
+        stepsExecuted: loopResult.results.length,
         completedAt: workflow.completedAt,
       };
     },
@@ -792,19 +807,21 @@ export const workflowTools: MCPTool[] = [
         }
 
         try {
-          const fileContent = readFileSync(filePath, 'utf-8');
+          // BH-1 fix: use resolvedPath (validated above) instead of raw filePath
+          const fileContent = readFileSync(resolvedPath, 'utf-8');
           const fileDef = JSON.parse(fileContent);
           // If the file contains a modules array, treat it as a module chain
           if (fileDef.modules && Array.isArray(fileDef.modules)) {
             // Store module chain info in workflow variables for the executor
             workflow.variables.moduleChain = fileDef.modules;
             workflow.variables.sharedState = fileDef.sharedState || {};
-            // Create steps from module definitions
+            // Gap 4: Create steps from module definitions with type 'module'
+            // so the executor routes them to the module registry
             workflow.steps = fileDef.modules.map((mod: { moduleName?: string; name?: string }, i: number) => ({
               stepId: `step-${i + 1}`,
               name: mod.moduleName || mod.name || `Module ${i + 1}`,
-              type: 'task' as const,
-              config: { ...mod, task },
+              type: 'module' as const,
+              config: { ...mod, moduleName: mod.moduleName || mod.name, task },
               status: 'pending' as const,
             }));
           } else if (fileDef.steps && Array.isArray(fileDef.steps)) {
@@ -852,90 +869,42 @@ export const workflowTools: MCPTool[] = [
       workflow.startedAt = new Date().toISOString();
       saveWorkflowStore(store);
 
-      const results: Array<{ stepId: string; status: string }> = [];
-      for (let i = 0; i < workflow.steps.length; i++) {
-        const step = workflow.steps[i];
-        step.status = 'running';
-        step.startedAt = new Date().toISOString();
+      const loopResult = await executeStepLoop({
+        workflow,
+        steps: workflow.steps,
+        startIndex: 0,
+        dispatchFailHook: true,
+        dispatchCompleteHook: true,
+        extraReturnFields: { template: template || 'custom' },
+        saveStore: () => saveWorkflowStore(store),
+      });
 
-        const stepCtx: WorkflowStepContext = {
-          workflowId,
-          step: {
-            stepId: step.stepId,
-            name: step.name,
-            type: step.type,
-            config: step.config,
-            gateConfig: step.gateConfig,
-            status: step.status,
-          },
-          variables: workflow.variables,
-          originalRequest: task,
-        };
-
-        await dispatchWorkflowHook('module-start', {
-          workflowId,
-          stepId: step.stepId,
-          stepName: step.name,
-          stepType: step.type,
-        });
-
-        let stepResult;
-        try {
-          stepResult = await executeWorkflowStep(stepCtx);
-        } catch (stepError: unknown) {
-          step.status = 'failed';
-          step.completedAt = new Date().toISOString();
-          workflow.status = 'failed';
-          workflow.error = stepError instanceof Error ? stepError.message : String(stepError);
-          workflow.completedAt = new Date().toISOString();
-          saveWorkflowStore(store);
-          return { success: false, workflowId, error: workflow.error, step: step.name };
-        }
-        step.status = stepResult.status;
-        step.completedAt = new Date().toISOString();
-        step.result = stepResult.result;
-
-        await dispatchWorkflowHook('module-complete', {
-          workflowId,
-          stepId: step.stepId,
-          stepName: step.name,
-          status: stepResult.status,
-        });
-
-        if (stepResult.status === 'waiting') {
-          workflow.status = 'paused';
-          workflow.currentStep = i;
-          saveWorkflowStore(store);
-          return {
-            workflowId,
-            template: template || 'custom',
-            status: 'paused' as const,
-            stepsExecuted: results.length,
-            pausedAt: step.name,
-            pauseReason: 'Verification gate awaiting remediation',
-          };
-        }
-
-        results.push({ stepId: step.stepId, status: step.status });
-        workflow.currentStep = i + 1;
-        saveWorkflowStore(store);
+      if (loopResult.error) {
+        return { success: false, workflowId, error: loopResult.error, step: loopResult.failedStep };
       }
 
-      workflow.status = 'completed';
-      workflow.completedAt = new Date().toISOString();
-      saveWorkflowStore(store);
+      if (loopResult.pausedAt) {
+        return {
+          workflowId,
+          template: template || 'custom',
+          status: 'paused' as const,
+          stepsExecuted: loopResult.results.length,
+          pausedAt: loopResult.pausedAt,
+          pauseReason: loopResult.pauseReason,
+        };
+      }
 
       return {
         workflowId,
         template: template || 'custom',
         status: workflow.status,
-        stepsExecuted: results.length,
-        results,
+        stepsExecuted: loopResult.results.length,
+        results: loopResult.results,
         startedAt: workflow.startedAt,
         completedAt: workflow.completedAt,
         metrics: {
           totalStages: workflow.steps.length,
-          completedStages: results.filter(r => r.status === 'completed').length,
+          completedStages: loopResult.results.filter(r => r.status === 'completed').length,
           agentsSpawned: agents.length,
           estimatedDuration: getDefaultDuration(template),
         },
@@ -1012,15 +981,13 @@ function pipelineWriteState(state: Record<string, unknown>): void {
   const tmpPath = `${PIPELINE_STATE_PATH}.tmp.${process.pid}.${Date.now()}`;
   writeFileSync(tmpPath, JSON.stringify(signed, null, 2), 'utf-8');
   // renameSync used for atomic write
-  const { renameSync: rn } = { renameSync };
-  rn(tmpPath, PIPELINE_STATE_PATH);
+  renameSync(tmpPath, PIPELINE_STATE_PATH);
 }
 
 function pipelineAppendViolation(entry: Record<string, unknown>): void {
   try {
     mkdirSync(PIPELINE_ENFORCEMENT_DIR, { recursive: true });
     const line = JSON.stringify({ ts: new Date().toISOString(), ...entry }) + '\n';
-    const { appendFileSync } = require('node:fs') as typeof import('node:fs');
     appendFileSync(PIPELINE_VIOLATIONS_FILE, line, 'utf-8');
   } catch { /* best-effort */ }
 }

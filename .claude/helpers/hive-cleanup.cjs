@@ -1,0 +1,317 @@
+#!/usr/bin/env node
+//
+// Hive Cleanup — Idle Agent Termination
+//
+// Trigger: Stop event + TeammateIdle event
+//
+// Flow:
+//   1. Read all .hive-flow/hives/{id}/hive.json files
+//   2. For each active hive, identify idle workers past threshold
+//   3. Terminate excess idle workers (never below 4 workers per hive)
+//   4. Update hive records, decrement budget.workersAllocated
+//   5. Output cleanup summary JSON to stdout
+//
+// Safety:
+//   - NEVER terminate below 4 workers per active hive (queen + 4 = 5 min)
+//   - NEVER terminate queens
+//   - NEVER terminate workers with status 'busy'
+//   - Only terminate workers idle past threshold
+//   - Uses mkdirSync locking for hive file access
+//
+
+'use strict';
+
+const path = require('path');
+const fs = require('fs');
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+const IDLE_TIMEOUT_MS = parseInt(process.env.HIVE_FLOW_IDLE_TIMEOUT_MS, 10) || 900000; // 15 min
+const MIN_WORKERS_PER_HIVE = 4; // queen is separate; keep at least 4 workers alive
+const HIVES_DIR = path.join(process.cwd(), '.hive-flow', 'hives');
+const LOCK_MAX_WAIT = 10000; // 10s
+const LOCK_STALE_THRESHOLD = 30000; // 30s
+
+// ---------------------------------------------------------------------------
+// Locking — mkdirSync-based (mirrors hive-store.ts withHiveLock)
+// ---------------------------------------------------------------------------
+
+function acquireLockSync(lockPath) {
+  const start = Date.now();
+  while (Date.now() - start < LOCK_MAX_WAIT) {
+    try {
+      fs.mkdirSync(lockPath);
+      return true;
+    } catch {
+      // Check for stale lock
+      try {
+        const stat = fs.statSync(lockPath);
+        if (Date.now() - stat.mtimeMs > LOCK_STALE_THRESHOLD) {
+          try { fs.rmdirSync(lockPath); } catch { /* race */ }
+          continue;
+        }
+      } catch {
+        // Lock gone, retry
+        continue;
+      }
+      // Busy-wait with small sleep (sync context)
+      const waitUntil = Date.now() + 50 + Math.random() * 100;
+      while (Date.now() < waitUntil) { /* spin */ }
+    }
+  }
+  return false;
+}
+
+function releaseLock(lockPath) {
+  try { fs.rmdirSync(lockPath); } catch { /* ignore */ }
+}
+
+function withHiveLockSync(hiveId, fn) {
+  const lockPath = path.join(HIVES_DIR, hiveId, '.lock');
+  // Ensure hive dir exists (lock dir lives inside it)
+  const hiveDir = path.join(HIVES_DIR, hiveId);
+  if (!fs.existsSync(hiveDir)) {
+    fs.mkdirSync(hiveDir, { recursive: true });
+  }
+  if (!acquireLockSync(lockPath)) {
+    throw new Error(`Failed to acquire hive lock for ${hiveId} within ${LOCK_MAX_WAIT}ms`);
+  }
+  try {
+    return fn();
+  } finally {
+    releaseLock(lockPath);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Hive I/O helpers
+// ---------------------------------------------------------------------------
+
+function loadHive(hiveId) {
+  try {
+    const hivePath = path.join(HIVES_DIR, hiveId, 'hive.json');
+    if (!fs.existsSync(hivePath)) return null;
+    return JSON.parse(fs.readFileSync(hivePath, 'utf-8'));
+  } catch {
+    return null;
+  }
+}
+
+function saveHive(hiveId, record) {
+  const hivePath = path.join(HIVES_DIR, hiveId, 'hive.json');
+  const tmpPath = hivePath + '.tmp.' + process.pid;
+  record.updatedAt = new Date().toISOString();
+  fs.writeFileSync(tmpPath, JSON.stringify(record, null, 2), 'utf-8');
+  fs.renameSync(tmpPath, hivePath);
+}
+
+function listActiveHives() {
+  if (!fs.existsSync(HIVES_DIR)) return [];
+  const results = [];
+  try {
+    const entries = fs.readdirSync(HIVES_DIR, { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.isDirectory() && !entry.name.startsWith('.')) {
+        const record = loadHive(entry.name);
+        if (record && record.status === 'active') {
+          results.push(record);
+        }
+      }
+    }
+  } catch { /* return whatever we have */ }
+  return results;
+}
+
+// ---------------------------------------------------------------------------
+// Agent termination via dynamic import of agent-tools.js (ESM from CJS)
+// ---------------------------------------------------------------------------
+
+let _agentTerminateHandler = null;
+
+async function getTerminateHandler() {
+  if (_agentTerminateHandler) return _agentTerminateHandler;
+
+  const agentToolsPath = path.join(
+    __dirname, '..', '..', 'v3', '@hive-flow', 'cli', 'dist', 'src', 'mcp-tools', 'agent-tools.js'
+  );
+
+  if (!fs.existsSync(agentToolsPath)) {
+    return null;
+  }
+
+  try {
+    const { pathToFileURL } = require('url');
+    const mod = await import(pathToFileURL(agentToolsPath).href);
+    const tools = mod.agentTools || [];
+    const terminateTool = tools.find(t => t.name === 'agent_terminate');
+    if (terminateTool && typeof terminateTool.handler === 'function') {
+      _agentTerminateHandler = terminateTool.handler;
+      return _agentTerminateHandler;
+    }
+  } catch {
+    // Cannot load — fall through
+  }
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// Core cleanup logic
+// ---------------------------------------------------------------------------
+
+async function cleanupIdleAgents() {
+  const summary = {
+    hivesScanned: 0,
+    hivesWithCleanup: 0,
+    workersTerminated: 0,
+    terminated: [],
+    errors: [],
+  };
+
+  const activeHives = listActiveHives();
+  summary.hivesScanned = activeHives.length;
+
+  if (activeHives.length === 0) {
+    return summary;
+  }
+
+  const terminateHandler = await getTerminateHandler();
+
+  const now = Date.now();
+
+  for (const hive of activeHives) {
+    try {
+      const terminatedInHive = [];
+
+      withHiveLockSync(hive.hiveId, () => {
+        // Re-read under lock for freshness
+        const freshHive = loadHive(hive.hiveId);
+        if (!freshHive || freshHive.status !== 'active') return;
+
+        const workers = freshHive.workers || [];
+
+        // Partition workers
+        const liveWorkers = workers.filter(w => w.status !== 'terminated');
+        const idleWorkers = [];
+        const nonIdleWorkers = [];
+
+        for (const w of liveWorkers) {
+          // Skip queens — NEVER terminate
+          if (w.role === 'queen') {
+            nonIdleWorkers.push(w);
+            continue;
+          }
+
+          // Skip busy workers — NEVER terminate
+          if (w.status === 'busy') {
+            nonIdleWorkers.push(w);
+            continue;
+          }
+
+          // Check idle threshold: use spawnedAt as last-activity proxy
+          if (w.status === 'idle') {
+            const spawnedAt = new Date(w.spawnedAt).getTime();
+            if (now - spawnedAt > IDLE_TIMEOUT_MS) {
+              idleWorkers.push(w);
+            } else {
+              nonIdleWorkers.push(w);
+            }
+          } else {
+            // spawning / error — count as non-idle (don't terminate)
+            nonIdleWorkers.push(w);
+          }
+        }
+
+        // Compute how many we can terminate:
+        // terminatable = max(0, idleCount - max(0, MIN_WORKERS - nonIdleCount))
+        // This ensures at least MIN_WORKERS_PER_HIVE workers remain alive.
+        const keepFromIdle = Math.max(0, MIN_WORKERS_PER_HIVE - nonIdleWorkers.length);
+        const terminatableCount = Math.max(0, idleWorkers.length - keepFromIdle);
+
+        if (terminatableCount === 0) return;
+
+        // Select workers to terminate (oldest idle first)
+        const toTerminate = idleWorkers
+          .sort((a, b) => new Date(a.spawnedAt).getTime() - new Date(b.spawnedAt).getTime())
+          .slice(0, terminatableCount);
+
+        // Mark as terminated in hive record
+        for (const w of toTerminate) {
+          w.status = 'terminated';
+          terminatedInHive.push({ workerId: w.workerId, agentId: w.agentId, hiveId: freshHive.hiveId });
+        }
+
+        // Decrement budget
+        freshHive.budget.workersAllocated = Math.max(
+          0,
+          (freshHive.budget.workersAllocated || 0) - toTerminate.length
+        );
+
+        // Append audit entries
+        if (!freshHive.audit) freshHive.audit = [];
+        for (const w of toTerminate) {
+          freshHive.audit.push({
+            timestamp: new Date().toISOString(),
+            event: 'hive-terminated',
+            hiveId: freshHive.hiveId,
+            detail: 'Idle cleanup: terminated worker ' + w.workerId + ' (agent ' + w.agentId + ')',
+            agentId: w.agentId,
+            workerId: w.workerId,
+          });
+        }
+
+        // Persist
+        saveHive(freshHive.hiveId, freshHive);
+      });
+
+      // After releasing hive lock, terminate agents in the agent store (async)
+      if (terminatedInHive.length > 0) {
+        summary.hivesWithCleanup++;
+
+        for (const entry of terminatedInHive) {
+          try {
+            if (terminateHandler) {
+              await terminateHandler({ agentId: entry.agentId });
+            }
+            summary.workersTerminated++;
+            summary.terminated.push(entry);
+          } catch (err) {
+            summary.errors.push({
+              agentId: entry.agentId,
+              error: err && err.message ? err.message : String(err),
+            });
+          }
+        }
+      }
+    } catch (err) {
+      summary.errors.push({
+        hiveId: hive.hiveId,
+        error: err && err.message ? err.message : String(err),
+      });
+    }
+  }
+
+  return summary;
+}
+
+// ---------------------------------------------------------------------------
+// Main — run cleanup and output JSON to stdout
+// ---------------------------------------------------------------------------
+
+(async () => {
+  try {
+    const result = await cleanupIdleAgents();
+    // If nothing cleaned, output empty object per spec
+    if (result.workersTerminated === 0 && result.errors.length === 0) {
+      process.stdout.write(JSON.stringify({}));
+    } else {
+      process.stdout.write(JSON.stringify(result));
+    }
+  } catch (err) {
+    // Fail gracefully — always emit valid JSON
+    process.stdout.write(JSON.stringify({
+      error: err && err.message ? err.message : String(err),
+    }));
+  }
+})();

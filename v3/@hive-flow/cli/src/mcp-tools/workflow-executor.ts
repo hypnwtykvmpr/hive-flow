@@ -22,6 +22,97 @@ import { executePlanningSubflow } from './planning-subflow.js';
 import { executeBugHunterScan } from './bug-hunter.js';
 
 // ---------------------------------------------------------------------------
+// Shared Workflow Module Integration (Gap 2 + Gap 4)
+// ---------------------------------------------------------------------------
+// Import shared module types and factories. The @hive-flow/shared/workflow
+// subpath is resolved via the package.json "exports" map.
+
+import type {
+  WorkflowModule,
+  ModuleExecutionContext,
+  ModuleExecutionResult,
+} from '@hive-flow/shared/workflow';
+
+import {
+  createInvestigateModule,
+  createVerifyModule,
+} from '@hive-flow/shared/workflow';
+
+// ---------------------------------------------------------------------------
+// Module Registry — maps module names to factory-created WorkflowModule instances
+// ---------------------------------------------------------------------------
+
+const moduleRegistry = new Map<string, WorkflowModule>();
+
+function ensureModuleRegistry(): void {
+  if (moduleRegistry.size > 0) return;
+  // Populate with built-in modules
+  const investigate = createInvestigateModule();
+  moduleRegistry.set(investigate.name, investigate);
+
+  const verifyInvestigate = createVerifyModule({ sourceModule: 'investigate' });
+  moduleRegistry.set(verifyInvestigate.name, verifyInvestigate);
+}
+
+/**
+ * Get a module from the registry by name.
+ * Returns undefined if not found.
+ */
+export function getRegisteredModule(name: string): WorkflowModule | undefined {
+  ensureModuleRegistry();
+  return moduleRegistry.get(name);
+}
+
+/**
+ * Register a custom module in the registry.
+ */
+export function registerModule(module: WorkflowModule): void {
+  ensureModuleRegistry();
+  moduleRegistry.set(module.name, module);
+}
+
+/**
+ * List all registered module names.
+ */
+export function listRegisteredModules(): string[] {
+  ensureModuleRegistry();
+  return Array.from(moduleRegistry.keys());
+}
+
+// ---------------------------------------------------------------------------
+// Status Enum Adapter (Gap 3)
+// ---------------------------------------------------------------------------
+// CLI statuses:   draft, ready, running, paused, completed, failed
+// Module statuses: pending, running, paused, completed, failed, cancelled
+
+const CLI_TO_MODULE_MAP: Record<string, string> = {
+  draft: 'pending',
+  ready: 'pending',
+  running: 'running',
+  paused: 'paused',
+  completed: 'completed',
+  failed: 'failed',
+  cancelled: 'failed',
+};
+
+const MODULE_TO_CLI_MAP: Record<string, string> = {
+  pending: 'draft',
+  running: 'running',
+  paused: 'paused',
+  completed: 'completed',
+  failed: 'failed',
+  cancelled: 'failed',
+};
+
+export function cliStatusToModuleStatus(status: string): string {
+  return CLI_TO_MODULE_MAP[status] ?? status;
+}
+
+export function moduleStatusToCliStatus(status: string): string {
+  return MODULE_TO_CLI_MAP[status] ?? status;
+}
+
+// ---------------------------------------------------------------------------
 // Workflow Hook Dispatch (lightweight — no @hive-flow/hooks dependency)
 // ---------------------------------------------------------------------------
 
@@ -65,7 +156,7 @@ export interface WorkflowStepContext {
   step: {
     stepId: string;
     name: string;
-    type: 'task' | 'condition' | 'parallel' | 'loop' | 'wait' | 'verification';
+    type: 'task' | 'condition' | 'parallel' | 'loop' | 'wait' | 'verification' | 'module';
     config: Record<string, unknown>;
     gateConfig?: {
       fromPhase: string;
@@ -235,22 +326,62 @@ export async function executeWorkflowStep(
 
   // ----- Condition step (Gap 5) -----
   if (stepType === 'condition') {
-    return await executeConditionStep(ctx, workflowContext);
+    const result = await executeConditionStep(ctx, workflowContext);
+    await dispatchHook('phase-complete', {
+      workflowId: ctx.workflowId || '',
+      stepId: step.stepId || '',
+      stepName: stepName,
+      status: result.status,
+    });
+    return result;
   }
 
   // ----- Parallel step (Gap 5) -----
   if (stepType === 'parallel') {
-    return await executeParallelStep(ctx, workflowContext);
+    const result = await executeParallelStep(ctx, workflowContext);
+    await dispatchHook('phase-complete', {
+      workflowId: ctx.workflowId || '',
+      stepId: step.stepId || '',
+      stepName: stepName,
+      status: result.status,
+    });
+    return result;
   }
 
   // ----- Loop step (Gap 5) -----
   if (stepType === 'loop') {
-    return await executeLoopStep(ctx, workflowContext);
+    const result = await executeLoopStep(ctx, workflowContext);
+    await dispatchHook('phase-complete', {
+      workflowId: ctx.workflowId || '',
+      stepId: step.stepId || '',
+      stepName: stepName,
+      status: result.status,
+    });
+    return result;
   }
 
   // ----- Wait step (Gap 5) -----
   if (stepType === 'wait') {
-    return await executeWaitStep(ctx);
+    const result = await executeWaitStep(ctx);
+    await dispatchHook('phase-complete', {
+      workflowId: ctx.workflowId || '',
+      stepId: step.stepId || '',
+      stepName: stepName,
+      status: result.status,
+    });
+    return result;
+  }
+
+  // ----- Module step (Gap 2 + Gap 4) -----
+  if (stepType === 'module') {
+    const result = await executeModuleStep(ctx, workflowContext);
+    await dispatchHook('phase-complete', {
+      workflowId: ctx.workflowId || '',
+      stepId: step.stepId || '',
+      stepName: stepName,
+      status: result.status,
+    });
+    return result;
   }
 
   // ----- All other step types (fallback) -----
@@ -356,7 +487,9 @@ async function executePhaseWithBugHunter(
 
   // Execute phase task and bug-hunter scan in parallel
   const phaseTaskPromise = executePhaseTask(step, workflowContext);
-  const bugConfig = { targetPhase: phaseName as 'implementation' | 'testing' | 'review', scanScope: files, activeScan: false };
+  // BH-8 fix: extract actual phase keyword from step name (e.g., "Implementation + Bug Hunter" -> "implementation")
+  const phaseKeyword = phaseName.replace(/\s*\+\s*Bug Hunter/i, '').replace(/:.*/,'').trim().toLowerCase() as 'implementation' | 'testing' | 'review';
+  const bugConfig = { targetPhase: phaseKeyword, scanScope: files, activeScan: false };
   const bugHunterPromise = executeBugHunterScan(bugConfig, ctx.variables);
 
   const [phaseResult, bugReport] = await Promise.all([phaseTaskPromise, bugHunterPromise]);
@@ -371,15 +504,104 @@ async function executePhaseWithBugHunter(
 
 async function executePhaseTask(
   step: WorkflowStepContext['step'],
-  _workflowContext: Record<string, unknown>,
+  workflowContext: Record<string, unknown>,
 ): Promise<unknown> {
-  // The actual phase work is performed by the swarm agents.
+  // Check if this step references a registered shared module
+  const moduleName = (step.config.moduleName as string) || (step.config.module as string);
+  if (moduleName) {
+    ensureModuleRegistry();
+    const mod = moduleRegistry.get(moduleName);
+    if (mod) {
+      const moduleCtx: ModuleExecutionContext = {
+        workflowId: (workflowContext.workflowId as string) || '',
+        moduleInstanceId: `${step.stepId}-${moduleName}`,
+        inputs: step.config,
+        variables: workflowContext,
+        previousOutput: (workflowContext._previousOutput as Record<string, unknown>) || undefined,
+      };
+      const moduleResult = await mod.execute(moduleCtx);
+      return {
+        phase: step.name,
+        executed: true,
+        moduleName,
+        moduleSuccess: moduleResult.success,
+        moduleOutputs: moduleResult.outputs,
+        moduleDurationMs: moduleResult.durationMs,
+        moduleGateResult: moduleResult.gateResult,
+        moduleHiveResult: moduleResult.hiveResult,
+        error: moduleResult.error,
+        completedAt: new Date().toISOString(),
+      };
+    }
+  }
+
+  // Fallback: The actual phase work is performed by the swarm agents.
   // This function returns the step config as a receipt of execution.
   return {
     phase: step.name,
     executed: true,
     config: step.config,
     completedAt: new Date().toISOString(),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Module step handler (Gap 2 + Gap 4)
+// ---------------------------------------------------------------------------
+
+async function executeModuleStep(
+  ctx: WorkflowStepContext,
+  workflowContext: Record<string, unknown>,
+): Promise<StepExecutionResult> {
+  const { step } = ctx;
+  const moduleName = (step.config.moduleName as string) || (step.config.module as string) || step.name;
+
+  ensureModuleRegistry();
+  const mod = moduleRegistry.get(moduleName);
+
+  if (!mod) {
+    // No registered module found — return a static receipt (backward compat)
+    return {
+      stepId: step.stepId,
+      status: 'completed',
+      result: {
+        phase: step.name,
+        executed: true,
+        moduleNotFound: moduleName,
+        config: step.config,
+        completedAt: new Date().toISOString(),
+      },
+    };
+  }
+
+  const moduleCtx: ModuleExecutionContext = {
+    workflowId: ctx.workflowId,
+    moduleInstanceId: `${step.stepId}-${moduleName}`,
+    inputs: step.config,
+    variables: { ...ctx.variables, ...workflowContext },
+    previousOutput: (workflowContext._previousOutput as Record<string, unknown>) || undefined,
+  };
+
+  const moduleResult = await mod.execute(moduleCtx);
+
+  // Map module status to CLI status
+  const cliStatus = moduleResult.success ? 'completed' : 'failed';
+
+  return {
+    stepId: step.stepId,
+    status: cliStatus as 'completed' | 'failed',
+    result: {
+      phase: step.name,
+      executed: true,
+      moduleName,
+      moduleSuccess: moduleResult.success,
+      moduleOutputs: moduleResult.outputs,
+      moduleDurationMs: moduleResult.durationMs,
+      moduleGateResult: moduleResult.gateResult,
+      moduleHiveResult: moduleResult.hiveResult,
+      error: moduleResult.error,
+      completedAt: new Date().toISOString(),
+    },
   };
 }
 
@@ -525,6 +747,14 @@ async function executeLoopStep(
       body: loopBody,
       completedAt: new Date().toISOString(),
     } : { iteration: iterationCount, executed: true };
+
+    // Propagate body results back into workflow context (BH-15)
+    // so the exit condition can evaluate updated state
+    if (loopBody && typeof loopBody === 'object') {
+      for (const [key, value] of Object.entries(loopBody)) {
+        workflowContext[key] = value;
+      }
+    }
 
     iterations.push({ iteration: iterationCount, result: bodyResult });
 
