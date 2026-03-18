@@ -22,6 +22,41 @@ import { executePlanningSubflow } from './planning-subflow.js';
 import { executeBugHunterScan } from './bug-hunter.js';
 
 // ---------------------------------------------------------------------------
+// Workflow Hook Dispatch (lightweight — no @hive-flow/hooks dependency)
+// ---------------------------------------------------------------------------
+
+export interface WorkflowHookDispatcher {
+  dispatch(event: string, context: Record<string, unknown>): Promise<{ success: boolean; abort?: boolean }>;
+}
+
+let _hookDispatcher: WorkflowHookDispatcher | null = null;
+
+export function setWorkflowHookDispatcher(dispatcher: WorkflowHookDispatcher | null): void {
+  _hookDispatcher = dispatcher;
+}
+
+export function getWorkflowHookDispatcher(): WorkflowHookDispatcher | null {
+  return _hookDispatcher;
+}
+
+async function dispatchHook(
+  event: string,
+  context: Record<string, unknown>,
+  options?: { blocking?: boolean },
+): Promise<{ success: boolean; abort?: boolean }> {
+  if (!_hookDispatcher) return { success: true };
+  try {
+    const result = await _hookDispatcher.dispatch(event, context);
+    if (options?.blocking && result.abort) {
+      return { success: false, abort: true };
+    }
+    return result;
+  } catch {
+    return { success: false };
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
@@ -138,6 +173,13 @@ export async function executeWorkflowStep(
   const stepName = step.name;
   const stepType = step.type;
 
+  await dispatchHook('phase-start', {
+    workflowId: ctx.workflowId || '',
+    stepId: step.stepId || '',
+    stepName: stepName,
+    stepType: stepType,
+  });
+
   // Build workflow context for gates and subflows
   const workflowContext: Record<string, unknown> = {
     ...variables,
@@ -147,7 +189,14 @@ export async function executeWorkflowStep(
 
   // ----- Verification step -----
   if (stepType === 'verification') {
-    return await executeVerificationStep(ctx, workflowContext);
+    const result = await executeVerificationStep(ctx, workflowContext);
+    await dispatchHook('phase-complete', {
+      workflowId: ctx.workflowId || '',
+      stepId: step.stepId || '',
+      stepName: stepName,
+      status: result.status,
+    });
+    return result;
   }
 
   // ----- Planning task -----
@@ -155,11 +204,18 @@ export async function executeWorkflowStep(
     const taskDescription = (step.config.task as string) || stepName;
     const planResult = await executePlanningSubflow(taskDescription, workflowContext);
 
-    return {
+    const result: StepExecutionResult = {
       stepId: step.stepId,
       status: 'completed',
       result: planResult,
     };
+    await dispatchHook('phase-complete', {
+      workflowId: ctx.workflowId || '',
+      stepId: step.stepId || '',
+      stepName: stepName,
+      status: result.status,
+    });
+    return result;
   }
 
   // ----- Implementation / Testing / Review tasks (with parallel bug-hunter) -----
@@ -167,7 +223,14 @@ export async function executeWorkflowStep(
     stepType === 'task' &&
     (stepName.includes('Implementation') || stepName.includes('Testing') || stepName.includes('Review'))
   ) {
-    return await executePhaseWithBugHunter(ctx, workflowContext);
+    const result = await executePhaseWithBugHunter(ctx, workflowContext);
+    await dispatchHook('phase-complete', {
+      workflowId: ctx.workflowId || '',
+      stepId: step.stepId || '',
+      stepName: stepName,
+      status: result.status,
+    });
+    return result;
   }
 
   // ----- Condition step (Gap 5) -----
@@ -191,6 +254,13 @@ export async function executeWorkflowStep(
   }
 
   // ----- All other step types (fallback) -----
+  await dispatchHook('phase-complete', {
+    workflowId: ctx.workflowId || '',
+    stepId: step.stepId || '',
+    stepName: stepName,
+    status: 'completed',
+  });
+
   return {
     stepId: step.stepId,
     status: 'completed',
@@ -208,6 +278,11 @@ async function executeVerificationStep(
 ): Promise<StepExecutionResult> {
   const { step } = ctx;
   const phaseOutput = (step.config.phaseOutput as Record<string, unknown>) || {};
+
+  await dispatchHook('module-gate-check', {
+    workflowId: ctx.workflowId || '',
+    stepId: step.stepId || '',
+  });
 
   // Build gate config from step config or use defaults
   let gateConfig: VerificationGateConfig;

@@ -150,6 +150,18 @@ export interface HookContext<T = unknown> {
     confidence?: number;
   };
 
+  /** Workflow information (for workflow hooks) */
+  workflow?: {
+    workflowId: string;
+    name?: string;
+    stepId?: string;
+    stepName?: string;
+    stepType?: string;
+    moduleName?: string;
+    status?: string;
+    error?: string;
+  };
+
   /** Execution duration in milliseconds */
   duration?: number;
 

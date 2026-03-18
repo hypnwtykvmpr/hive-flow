@@ -46,3 +46,31 @@ export type {
   EnforcementOverride,
   EnforcementAuditEntry,
 } from './workflow-enforcer.js';
+
+// Wire up workflow hook dispatcher (optional — only if @hive-flow/hooks is available)
+(async () => {
+  try {
+    const hooksModuleId = '@hive-flow/hooks';
+    const hooks = await import(/* webpackIgnore: true */ hooksModuleId);
+    if (hooks.HookExecutor && hooks.defaultRegistry) {
+      const executor = new hooks.HookExecutor(hooks.defaultRegistry);
+      const { setWorkflowHookDispatcher } = await import('./workflow-executor.js');
+      setWorkflowHookDispatcher({
+        async dispatch(event: string, context: Record<string, unknown>) {
+          const result = await executor.execute(event, {
+            metadata: context,
+            workflow: {
+              workflowId: (context.workflowId as string) || '',
+              stepId: (context.stepId as string) || '',
+              stepName: (context.stepName as string) || '',
+              status: (context.status as string) || '',
+            },
+          }, { continueOnError: true, timeout: 5000 });
+          return { success: result.success, abort: result.aborted };
+        },
+      });
+    }
+  } catch {
+    // @hive-flow/hooks not available — workflow hooks disabled (non-blocking)
+  }
+})();

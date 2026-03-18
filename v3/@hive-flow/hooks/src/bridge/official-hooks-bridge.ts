@@ -111,27 +111,27 @@ export const V3_TO_OFFICIAL_HOOK_MAP: Record<HookEvent, OfficialHookEvent | null
   [HookEvent.PatternConsolidated]: null, // Internal only
 
   // Workflow lifecycle (internal)
-  [HookEvent.WorkflowStart]: null,
-  [HookEvent.WorkflowComplete]: null,
-  [HookEvent.WorkflowFailed]: null,
+  [HookEvent.WorkflowStart]: null,    // Internal: dispatched by workflow-tools.ts
+  [HookEvent.WorkflowComplete]: null,  // Internal: dispatched by workflow-tools.ts
+  [HookEvent.WorkflowFailed]: null,    // Internal: dispatched by workflow-tools.ts
 
   // Module lifecycle (internal)
-  [HookEvent.ModuleStart]: null,
-  [HookEvent.ModuleComplete]: null,
-  [HookEvent.ModuleGateCheck]: null,
+  [HookEvent.ModuleStart]: null,       // Internal: dispatched by workflow-tools.ts
+  [HookEvent.ModuleComplete]: null,    // Internal: dispatched by workflow-tools.ts
+  [HookEvent.ModuleGateCheck]: null,   // Internal: dispatched by workflow-executor.ts
 
   // Phase lifecycle (internal)
-  [HookEvent.PhaseStart]: null,
-  [HookEvent.PhaseComplete]: null,
+  [HookEvent.PhaseStart]: null,        // Internal: dispatched by workflow-executor.ts
+  [HookEvent.PhaseComplete]: null,     // Internal: dispatched by workflow-executor.ts
 
   // Hive lifecycle (internal)
-  [HookEvent.HiveSpawned]: null,
-  [HookEvent.HiveComplete]: null,
-  [HookEvent.QueenReport]: null,
+  [HookEvent.HiveSpawned]: null,       // Internal: dispatched by hive system
+  [HookEvent.HiveComplete]: null,      // Internal: dispatched by hive system
+  [HookEvent.QueenReport]: null,       // Internal: dispatched by queen system
 
   // Mini-gate results (internal)
-  [HookEvent.MiniGatePass]: null,
-  [HookEvent.MiniGateFail]: null,
+  [HookEvent.MiniGatePass]: null,      // Internal: dispatched by workflow-executor.ts
+  [HookEvent.MiniGateFail]: null,      // Internal: dispatched by workflow-executor.ts
 };
 
 /**

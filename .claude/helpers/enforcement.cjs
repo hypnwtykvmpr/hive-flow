@@ -57,7 +57,7 @@ const LEVELS = {
 // Tool restriction groups
 const TOOL_GROUPS = {
   exec: ['Bash'],
-  write: ['Write', 'Edit', 'MultiEdit', 'NotebookEdit'], // 12.6: NotebookEdit added
+  write: ['Write', 'Edit', 'MultiEdit', 'NotebookEdit', 'mcp__filesystem__write_file', 'mcp__filesystem__edit_file', 'mcp__filesystem__move_file'], // 12.6: NotebookEdit added
   fetch: ['WebFetch'],
 };
 
@@ -377,12 +377,36 @@ function isProtectedPath(filePath) {
 
 function detectCircumvention(toolName, toolInput, state) {
   // 1. Protected path writes via Write/Edit/MultiEdit/NotebookEdit
-  if (['Write', 'Edit', 'MultiEdit', 'NotebookEdit'].includes(toolName)) {
-    const filePath = toolInput?.file_path || toolInput?.path || '';
+  if (['Write', 'Edit', 'MultiEdit', 'NotebookEdit', 'mcp__filesystem__write_file', 'mcp__filesystem__edit_file', 'mcp__filesystem__move_file'].includes(toolName)) {
+    const filePath = toolInput?.file_path || toolInput?.path || toolInput?.destination || '';
     if (filePath && isProtectedPath(filePath)) {
       return {
         circumvention: true,
         reason: `CIRCUMVENTION: Attempted write to protected path: ${filePath}`,
+        severity: 'critical',
+      };
+    }
+  }
+
+  // MCP filesystem move_file — also check source (prevents exfiltration/destruction of protected files)
+  if (toolName === 'mcp__filesystem__move_file') {
+    const sourcePath = toolInput?.source || '';
+    if (sourcePath && isProtectedPath(sourcePath)) {
+      return {
+        circumvention: true,
+        reason: `CIRCUMVENTION: Attempted to move file FROM protected path via MCP filesystem: ${sourcePath}`,
+        severity: 'critical',
+      };
+    }
+  }
+
+  // MCP filesystem create_directory targeting protected paths
+  if (toolName === 'mcp__filesystem__create_directory') {
+    const dirPath = toolInput?.path || '';
+    if (dirPath && isProtectedPath(dirPath)) {
+      return {
+        circumvention: true,
+        reason: `CIRCUMVENTION: Attempted directory creation in protected path via MCP filesystem: ${dirPath}`,
         severity: 'critical',
       };
     }
@@ -532,6 +556,31 @@ function isObfuscated(command) {
   return false;
 }
 
+/**
+ * Detects git commit commands including obfuscated variants.
+ * Catches: direct, command substitution, backtick substitution,
+ * env prefix, command builtin, and absolute path forms.
+ */
+function isGitCommitCommand(command) {
+  if (!command || typeof command !== 'string') return false;
+  if (command.length > 10000) return false;
+  // Direct: git commit
+  if (/git\s+commit/i.test(command)) return true;
+  // Command substitution: $(which git) commit, $(command -v git) commit
+  if (/\$\(.*?\bgit\b.*?\)\s+commit/i.test(command)) return true;
+  // Backtick substitution: `which git` commit
+  if (/`[^`]*\bgit\b[^`]*`\s+commit/i.test(command)) return true;
+  // env prefix: env git commit
+  if (/\benv\s+git\s+commit/i.test(command)) return true;
+  // command builtin: command git commit
+  if (/\bcommand\s+git\s+commit/i.test(command)) return true;
+  // Absolute path: /usr/bin/git commit, /usr/local/bin/git commit
+  if (/\/git\s+commit/i.test(command)) return true;
+  // git -c alias: git -c alias.x=commit x
+  if (/\bgit\s+-c\s+.*\bcommit\b/i.test(command)) return true;
+  return false;
+}
+
 // ============================================================================
 // Tool Restriction
 // ============================================================================
@@ -573,6 +622,9 @@ function getRestrictionGroups(toolName) {
   if (['Write', 'Edit', 'MultiEdit', 'NotebookEdit'].includes(toolName)) {
     return ['write', 'exec'];
   }
+  if (['mcp__filesystem__write_file', 'mcp__filesystem__edit_file', 'mcp__filesystem__move_file', 'mcp__filesystem__create_directory'].includes(toolName)) {
+    return ['write', 'exec'];
+  }
   if (['WebFetch'].includes(toolName)) {
     return ['fetch', 'exec'];
   }
@@ -587,7 +639,7 @@ function checkVerificationGate(toolName, toolInput) {
   if (toolName !== 'Bash') return { blocked: false };
 
   const command = toolInput?.command || '';
-  if (!/git\s+commit/i.test(command)) return { blocked: false };
+  if (!isGitCommitCommand(command)) return { blocked: false };
 
   // Pipeline gate — checked before swarm-mode gate
   if (fs.existsSync(PIPELINE_STATE_FILE)) {
@@ -1059,6 +1111,7 @@ module.exports = {
   getStateFile,
   isDestructiveRm,
   isObfuscated,
+  isGitCommitCommand,
   makeAllow,
   makeDeny,
   sanitizeContext,

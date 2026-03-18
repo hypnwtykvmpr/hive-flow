@@ -9,8 +9,18 @@ import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import type { MCPTool } from './types.js';
-import { executeWorkflowStep } from './workflow-executor.js';
+import { executeWorkflowStep, setWorkflowHookDispatcher, getWorkflowHookDispatcher } from './workflow-executor.js';
 import type { WorkflowStepContext } from './workflow-executor.js';
+
+async function dispatchWorkflowHook(event: string, context: Record<string, unknown>): Promise<void> {
+  const dispatcher = getWorkflowHookDispatcher();
+  if (!dispatcher) return;
+  try {
+    await dispatcher.dispatch(event, context);
+  } catch {
+    // Hook failure never crashes workflows
+  }
+}
 
 // Storage paths
 const STORAGE_DIR = '.hive-flow';
@@ -186,6 +196,12 @@ export const workflowTools: MCPTool[] = [
       workflow.startedAt = new Date().toISOString();
       workflow.currentStep = (input.startFromStep as number) || 0;
 
+      await dispatchWorkflowHook('workflow-start', {
+        workflowId,
+        name: workflow.name,
+        stepCount: workflow.steps.length,
+      });
+
       // Execute steps (in real implementation, this would be async/event-driven)
       const results: Array<{ stepId: string; status: string }> = [];
       for (let i = workflow.currentStep; i < workflow.steps.length; i++) {
@@ -208,6 +224,13 @@ export const workflowTools: MCPTool[] = [
           originalRequest: workflow.variables.originalRequest as string | undefined,
         };
 
+        await dispatchWorkflowHook('module-start', {
+          workflowId,
+          stepId: step.stepId,
+          stepName: step.name,
+          stepType: step.type,
+        });
+
         let stepResult;
         try {
           stepResult = await executeWorkflowStep(stepCtx);
@@ -218,10 +241,22 @@ export const workflowTools: MCPTool[] = [
           workflow.error = stepError instanceof Error ? stepError.message : String(stepError);
           workflow.completedAt = new Date().toISOString();
           saveWorkflowStore(store);
+          await dispatchWorkflowHook('workflow-failed', {
+            workflowId,
+            name: workflow.name,
+            error: workflow.error,
+          });
           return { success: false, workflowId: workflow.workflowId, error: workflow.error, step: step.name };
         }
         step.status = stepResult.status;
         step.completedAt = new Date().toISOString();
+
+        await dispatchWorkflowHook('module-complete', {
+          workflowId,
+          stepId: step.stepId,
+          stepName: step.name,
+          status: stepResult.status,
+        });
         step.result = stepResult.result;
 
         // If gate is waiting for phase team remediation, pause workflow
@@ -247,6 +282,12 @@ export const workflowTools: MCPTool[] = [
 
       workflow.status = 'completed';
       workflow.completedAt = new Date().toISOString();
+
+      await dispatchWorkflowHook('workflow-complete', {
+        workflowId,
+        name: workflow.name,
+        stepsExecuted: results.length,
+      });
 
       saveWorkflowStore(store);
 
@@ -442,6 +483,13 @@ export const workflowTools: MCPTool[] = [
           originalRequest: workflow.variables.originalRequest as string | undefined,
         };
 
+        await dispatchWorkflowHook('module-start', {
+          workflowId,
+          stepId: step.stepId,
+          stepName: step.name,
+          stepType: step.type,
+        });
+
         let stepResult;
         try {
           stepResult = await executeWorkflowStep(stepCtx);
@@ -457,6 +505,13 @@ export const workflowTools: MCPTool[] = [
         step.status = stepResult.status;
         step.completedAt = new Date().toISOString();
         step.result = stepResult.result;
+
+        await dispatchWorkflowHook('module-complete', {
+          workflowId,
+          stepId: step.stepId,
+          stepName: step.name,
+          status: stepResult.status,
+        });
 
         // If gate is waiting for remediation, pause workflow
         if (stepResult.status === 'waiting') {
@@ -724,6 +779,18 @@ export const workflowTools: MCPTool[] = [
       // If input.file is provided (Gap 4), parse it as a module chain definition
       const filePath = input.file as string | undefined;
       if (filePath) {
+        // Validate file path — prevent reading sensitive/protected files
+        const resolvedPath = resolve(filePath);
+        const cwd = process.cwd();
+        if (!resolvedPath.startsWith(cwd)) {
+          return { content: [{ type: 'text', text: JSON.stringify({ success: false, error: 'File path must be within the project directory' }) }] };
+        }
+        const protectedPatterns = [/\.env/, /\.hive-flow\/enforcement/, /\.claude\/helpers/, /\.claude\/settings/];
+        const relPath = resolvedPath.slice(cwd.length + 1);
+        if (protectedPatterns.some(p => p.test(relPath))) {
+          return { content: [{ type: 'text', text: JSON.stringify({ success: false, error: 'Cannot read protected files' }) }] };
+        }
+
         try {
           const fileContent = readFileSync(filePath, 'utf-8');
           const fileDef = JSON.parse(fileContent);
@@ -805,6 +872,13 @@ export const workflowTools: MCPTool[] = [
           originalRequest: task,
         };
 
+        await dispatchWorkflowHook('module-start', {
+          workflowId,
+          stepId: step.stepId,
+          stepName: step.name,
+          stepType: step.type,
+        });
+
         let stepResult;
         try {
           stepResult = await executeWorkflowStep(stepCtx);
@@ -820,6 +894,13 @@ export const workflowTools: MCPTool[] = [
         step.status = stepResult.status;
         step.completedAt = new Date().toISOString();
         step.result = stepResult.result;
+
+        await dispatchWorkflowHook('module-complete', {
+          workflowId,
+          stepId: step.stepId,
+          stepName: step.name,
+          status: stepResult.status,
+        });
 
         if (stepResult.status === 'waiting') {
           workflow.status = 'paused';
