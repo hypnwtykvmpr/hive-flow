@@ -50,6 +50,19 @@ const AUTO_OPTIMIZE = process.env.HIVE_FLOW_AUTO_OPTIMIZE !== 'false'; // on by 
 // ============================================================================
 // Context Autopilot — prevent compaction by managing context size in real-time
 // ============================================================================
+const DEFAULT_CONTEXT_WINDOW_TOKENS = 200000;
+const ONE_MILLION_CONTEXT_WINDOW_TOKENS = 1000000;
+const MODEL_CONTEXT_WINDOWS = new Map([
+  ['claude-opus-4-6', DEFAULT_CONTEXT_WINDOW_TOKENS],
+  ['claude-sonnet-4-6', DEFAULT_CONTEXT_WINDOW_TOKENS],
+  ['claude-sonnet-4-5', DEFAULT_CONTEXT_WINDOW_TOKENS],
+  ['claude-3-7-sonnet', DEFAULT_CONTEXT_WINDOW_TOKENS],
+  ['claude-haiku-4-5', DEFAULT_CONTEXT_WINDOW_TOKENS],
+  ['claude-3-5-haiku', DEFAULT_CONTEXT_WINDOW_TOKENS],
+  ['claude-opus', DEFAULT_CONTEXT_WINDOW_TOKENS],
+  ['claude-sonnet', DEFAULT_CONTEXT_WINDOW_TOKENS],
+  ['claude-haiku', DEFAULT_CONTEXT_WINDOW_TOKENS],
+]);
 const AUTOPILOT_ENABLED = process.env.HIVE_FLOW_CONTEXT_AUTOPILOT !== 'false'; // on by default
 const CONTEXT_WINDOW_TOKENS = detectContextWindowTokens();
 const AUTOPILOT_WARN_PCT = parseFloat(process.env.HIVE_FLOW_AUTOPILOT_WARN || '0.70');
@@ -60,8 +73,12 @@ const AUTOPILOT_STATE_PATH = join(DATA_DIR, 'autopilot-state.json');
 const CHARS_PER_TOKEN = 3.5;
 
 function detectContextWindowTokens() {
-  if (process.env.HIVE_FLOW_CONTEXT_WINDOW) {
-    return parseInt(process.env.HIVE_FLOW_CONTEXT_WINDOW, 10) || 200000;
+  const override = parseInt(process.env.HIVE_FLOW_CONTEXT_WINDOW || '', 10);
+  if (Number.isFinite(override) && override > 0) {
+    return override;
+  }
+  if (process.env.CLAUDE_MODEL) {
+    return modelIdToWindowSize(process.env.CLAUDE_MODEL);
   }
   try {
     const homeDir = process.env.HOME || process.env.USERPROFILE || '';
@@ -92,14 +109,17 @@ function detectContextWindowTokens() {
       }
     }
   } catch { /* fallback */ }
-  return 200000;
+  return DEFAULT_CONTEXT_WINDOW_TOKENS;
 }
 
 function modelIdToWindowSize(modelId) {
-  if (!modelId) return 200000;
-  const id = modelId.toLowerCase();
-  if (id.includes('[1m]') || id.includes('1m')) return 1000000;
-  return 200000;
+  if (!modelId) return DEFAULT_CONTEXT_WINDOW_TOKENS;
+  const id = modelId.toLowerCase().trim();
+  if (id.includes('[1m]')) return ONE_MILLION_CONTEXT_WINDOW_TOKENS;
+  for (const [pattern, windowSize] of MODEL_CONTEXT_WINDOWS.entries()) {
+    if (id.includes(pattern)) return windowSize;
+  }
+  return DEFAULT_CONTEXT_WINDOW_TOKENS;
 }
 
 // Ensure data dir
@@ -1579,6 +1599,7 @@ function buildAutopilotReport(percentage, tokens, windowSize, turns, state) {
     `[ContextAutopilot] ${bar} ${(percentage * 100).toFixed(1)}% context used`,
     `(~${formatTokens(tokens)}/${formatTokens(windowSize)} tokens, ${turns} turns)`,
     `Status: ${status}`,
+    `Window: ${(windowSize / 1000).toFixed(0)}K`,
   ];
 
   if (state.pruneCount > 0) {
@@ -1650,6 +1671,8 @@ async function runAutopilot(transcriptPath, sessionId, backend, backendType) {
   state.lastTokenEstimate = tokens;
   state.lastPercentage = percentage;
   state.lastCheck = Date.now();
+  state.contextWindow = CONTEXT_WINDOW_TOKENS;
+  state.detectedModel = process.env.CLAUDE_MODEL || 'unknown';
 
   let optimizationMessage = '';
 
@@ -2095,6 +2118,10 @@ export {
   formatTokens,
   buildAutopilotReport,
   consumeCompactSignalAdvisory,
+  detectContextWindowTokens,
+  modelIdToWindowSize,
+  MODEL_CONTEXT_WINDOWS,
+  DEFAULT_CONTEXT_WINDOW_TOKENS,
   NAMESPACE,
   ARCHIVE_DB_PATH,
   ARCHIVE_JSON_PATH,

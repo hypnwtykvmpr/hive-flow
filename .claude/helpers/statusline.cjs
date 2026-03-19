@@ -25,6 +25,8 @@ const CONFIG = {
 };
 
 const CWD = process.cwd();
+/** Resolved from repo root — same layout as context-persistence-hook.mjs (`PROJECT_ROOT/.hive-flow/data`). */
+const AUTOPILOT_STATE_PATH = path.join(__dirname, '..', '..', '.hive-flow', 'data', 'autopilot-state.json');
 
 let _stdinData = undefined;
 function getStdinData() {
@@ -579,10 +581,26 @@ function getIntegrationStatus() {
 
 function detectContextWindow() {
   const stdinData = getStdinData();
-  if (stdinData?.context_window?.context_window_size) return stdinData.context_window.context_window_size;
-  if (process.env.HIVE_FLOW_CONTEXT_WINDOW) return parseInt(process.env.HIVE_FLOW_CONTEXT_WINDOW, 10) || 200000;
+  if (stdinData?.context_window?.context_window_size != null) {
+    const n = Number(stdinData.context_window.context_window_size);
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+  // Autopilot persistence (ADR-051) — authoritative when present
+  try {
+    if (fs.existsSync(AUTOPILOT_STATE_PATH)) {
+      const state = JSON.parse(fs.readFileSync(AUTOPILOT_STATE_PATH, 'utf-8'));
+      if (state.contextWindow > 0) return state.contextWindow;
+    }
+  } catch { /* ignore */ }
+  const envOverride = process.env.HIVE_FLOW_CONTEXT_WINDOW;
+  if (envOverride) {
+    const n = parseInt(envOverride, 10);
+    if (Number.isFinite(n) && n > 0) return n;
+  }
   const modelName = (stdinData?.model?.display_name || stdinData?.model?.model_id || getModelName() || '').toLowerCase();
-  if (modelName.includes('1m')) return 1000000;
+  if (modelName.includes('1m') || modelName.includes('[1m]')) return 1000000;
+  const claudeModel = (process.env.CLAUDE_MODEL || '').toLowerCase();
+  if (claudeModel.includes('[1m]') || claudeModel.includes('1m')) return 1000000;
   return 200000;
 }
 
