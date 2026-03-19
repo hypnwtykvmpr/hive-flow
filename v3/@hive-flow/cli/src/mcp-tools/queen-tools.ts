@@ -93,7 +93,7 @@ const missionAssignTool: MCPTool = {
       scope: { type: 'string', description: 'Mission scope description' },
       description: { type: 'string', description: 'Detailed mission description' },
       format: { type: 'string', description: 'Expected report format (e.g., "markdown", "json", "structured")' },
-      maxWorkers: { type: 'number', description: 'Maximum number of workers the queen can spawn (default: 8)' },
+      maxWorkers: { type: 'number', description: 'Maximum number of workers the queen can spawn (default: 20)' },
       maxCost: { type: 'number', description: 'Maximum cost budget (informational)' },
       providers: {
         type: 'array',
@@ -117,6 +117,10 @@ const missionAssignTool: MCPTool = {
     const providers = input.providers as string[] | undefined;
     const workerDependencies = input.workerDependencies as Record<string, string[]> | undefined;
     const stalenessTimeout = input.stalenessTimeout as number | undefined;
+
+    if (maxWorkers < 5) {
+      return { success: false, error: `[COMPOSITION_ERROR] maxWorkers must be >= 5 (got ${maxWorkers}). Hives below minimum composition cannot pass report gates.` };
+    }
 
     // Verify queen exists and is alive
     const store = loadAgentStore();
@@ -478,6 +482,11 @@ const collectResultsTool: MCPTool = {
       return { success: false, error: `Queen '${queenId}' does not own hive '${hiveId}'.` };
     }
 
+    const liveWorkers = hive.workers.filter(w => w.status !== 'terminated');
+    if (liveWorkers.length < 4) {
+      return { success: false, error: `[COMPOSITION_ERROR] Cannot collect results. Found ${liveWorkers.length} live workers, minimum 4 required.` };
+    }
+
     // Collect agent status for each worker
     const store = loadAgentStore();
     const workerResults: Array<{
@@ -565,6 +574,12 @@ const reportTool: MCPTool = {
 
       if (hive.queenId !== queenId) {
         return { success: false, error: `Queen '${queenId}' does not own hive '${hiveId}'.` };
+      }
+
+      // Composition check: require minimum 4 live workers before accepting report
+      const liveWorkers = hive.workers.filter(w => w.status !== 'terminated');
+      if (liveWorkers.length < 4) {
+        return { success: false, error: `[COMPOSITION_ERROR] Queen report blocked. Found ${liveWorkers.length} live workers, minimum 4 required.` };
       }
 
       // Update hive status
@@ -750,6 +765,71 @@ const hiveTerminateTool: MCPTool = {
 };
 
 // ---------------------------------------------------------------------------
+// Tool 8: hive_validate_composition
+// ---------------------------------------------------------------------------
+
+const hiveValidateCompositionTool: MCPTool = {
+  name: 'hive_validate_composition',
+  description: 'Validate hive composition: checks live/dead worker counts, roles, and staleness. Returns PASS/FAIL.',
+  category: 'queen',
+  tags: ['hive', 'composition', 'validate'],
+  inputSchema: {
+    type: 'object',
+    properties: {
+      hiveId: { type: 'string', description: 'ID of the hive to validate' },
+    },
+    required: ['hiveId'],
+  },
+  handler: async (input) => {
+    const hiveId = input.hiveId as string;
+
+    const hive = loadHive(hiveId);
+    if (!hive) {
+      return { success: false, error: `Hive '${hiveId}' not found.` };
+    }
+
+    // Cross-reference the agent store for accurate live/dead status
+    const store = loadAgentStore();
+    let liveWorkerCount = 0;
+    let deadWorkerCount = 0;
+    const roles: Record<string, number> = {};
+
+    for (const worker of hive.workers) {
+      const agent = store.agents[worker.agentId];
+      const effectiveStatus =
+        worker.status === 'terminated' || !agent || agent.status === 'terminated'
+          ? 'terminated'
+          : worker.status;
+
+      if (effectiveStatus === 'terminated') {
+        deadWorkerCount++;
+      } else {
+        liveWorkerCount++;
+        roles[worker.role] = (roles[worker.role] || 0) + 1;
+      }
+    }
+
+    const stale = isHiveStale(hive);
+    const pass = liveWorkerCount >= 4 && !stale;
+
+    return {
+      success: true,
+      hiveId,
+      result: pass ? 'PASS' : 'FAIL',
+      liveWorkerCount,
+      deadWorkerCount,
+      roles,
+      stale,
+      ...(liveWorkerCount < 4
+        ? { reason: `Insufficient live workers: ${liveWorkerCount}/4 minimum` }
+        : stale
+          ? { reason: 'Hive is stale (exceeded staleness timeout)' }
+          : {}),
+    };
+  },
+};
+
+// ---------------------------------------------------------------------------
 // Export
 // ---------------------------------------------------------------------------
 
@@ -761,4 +841,5 @@ export const queenTools: MCPTool[] = [
   reportTool,
   hiveStatusTool,
   hiveTerminateTool,
+  hiveValidateCompositionTool,
 ];

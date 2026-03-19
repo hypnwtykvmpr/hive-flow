@@ -803,6 +803,18 @@ function processPreToolUse(input) {
     return makeDeny(verifyGate.reason);
   }
 
+  // Step 3b: Detect headless claude -p invocations in Bash
+  if (toolName === 'Bash') {
+    const bashCmd = toolInput?.command || '';
+    if (/\bclaude\s+(-p|--print)\b/i.test(bashCmd)) {
+      updateActivityTracking(state, false);
+      saveState(state, agentId);
+      return makeAllow(
+        '[ENFORCEMENT] Headless `claude -p` detected. WARNING: Headless workers bypass hook enforcement, verification gates, and hive composition tracking. Consider using Task tool or MCP agent_spawn instead for governed execution.'
+      );
+    }
+  }
+
   // Step 4: SendMessage at HALTED — append enforcement warning (12.14)
   if (toolName === 'SendMessage' && state.level >= LEVELS.HALTED) {
     updateActivityTracking(state, false);

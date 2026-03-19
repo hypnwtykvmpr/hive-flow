@@ -247,9 +247,12 @@ export function checkModelEnforcement(
   }
 
   // Rule 2: gemini-cli requires gemini-3.1-pro-preview (top tier)
+  // Allow alias names (opus, sonnet, inherit) — the alias resolver maps them to the correct native model
+  const CLAUDE_ALIASES = ['opus', 'sonnet', 'inherit', undefined, ''];
   if (
     input.provider === 'gemini-cli' &&
-    input.model !== 'gemini-3.1-pro-preview'
+    input.model !== 'gemini-3.1-pro-preview' &&
+    !CLAUDE_ALIASES.includes(input.model as string)
   ) {
     return {
       allowed: false,
@@ -258,7 +261,11 @@ export function checkModelEnforcement(
   }
 
   // Rule 3: codex-cli requires gpt-5.4 (top tier)
-  if (input.provider === 'codex-cli' && input.model !== 'gpt-5.4') {
+  if (
+    input.provider === 'codex-cli' &&
+    input.model !== 'gpt-5.4' &&
+    !CLAUDE_ALIASES.includes(input.model as string)
+  ) {
     return {
       allowed: false,
       reason: 'MODEL ENFORCEMENT: codex-cli requires gpt-5.4 (top tier).',

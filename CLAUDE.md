@@ -48,6 +48,66 @@ When spawned as an ENFORCER agent, use this identity:
 >
 > **You enforce:** verification gates, delegation-only coordinator role, commit quality, test coverage, security boundaries, and the escalation ladder (Normal → Warned → Restricted → Halted).
 
+## Enforcement Mechanisms (Automated Hooks)
+
+All enforcement is deterministic, file-based, and persists across compaction. No LLM required.
+
+### Hive Composition Gate
+
+- **Every hive MUST contain at least 5 agents** (1 queen + 4 workers minimum)
+- **Solo exceptions**: Only `bug-hunter` and `debugger` roles may run as individual agents
+- **Provider agents preferred**: Use gemini-cli and codex-cli over Claude Task tool agents
+- **No task deferment**: Workers complete their assigned duties or get terminated
+- **Fail-closed enforcement**: Task tool calls without a valid HIVE tag or solo role keyword are blocked by the PreToolUse hook
+- **Hooks**: `hive-composition-gate.cjs` (PreToolUse on Task, blocks insufficient hives) and `hive-spawn-tracker.cjs` (PostToolUse on Task, tracks spawn counts)
+
+### Hive Auto-Spawn Enforcement
+
+- **PostToolUse hook on `queen_mission_assign` and `queen_spawn_worker`**: After a queen tool returns, reads the hive record and counts live workers. If below 4 workers, auto-spawns the deficit via `agent_spawn` with provider cycling (gemini-cli -> codex-cli -> anthropic-cli)
+- **Skips at HALTED** (enforcement level 3) to prevent spawning during lockdown
+- **Hook**: `hive-enforcement.cjs`
+
+### Escalation Ladder (enforcement.cjs)
+
+- **Four levels**: Normal (0) -> Warned (1) -> Restricted (2) -> Halted (3)
+- **Circumvention detection**: Protected path writes, Bash redirects, git operations targeting enforcement files, env var manipulation, obfuscated commands, destructive `rm -rf /`
+- **Tool restriction groups**: `exec` (Bash), `write` (Write/Edit/MultiEdit/NotebookEdit), `fetch` (WebFetch) — groups are progressively blocked as level rises
+- **Verification gate**: Blocks `git commit` in swarm mode unless a signed verification-gate.json exists
+- **Pipeline commit gate**: Stage-gated commits (implement -> verify -> test -> debug -> verify_test -> audit -> verify_audit). Blocks commit until all stages complete.
+- **HMAC-SHA256 state integrity**: All state files are signed; tampered state escalates to WARNED minimum
+- **Hang detection**: 5 consecutive denials triggers a stuck-agent warning
+- **Human-only reset**: `/enforcement-reset` (HMAC-signed IPC), `/terminate-agent`
+- **Fail-closed**: Internal errors deny (never silently allow)
+- **Hook**: `enforcement.cjs` (PreToolUse on Bash/Write/Edit/MultiEdit/NotebookEdit/WebFetch/MCP filesystem tools; SubagentStart)
+
+### Role Enforcement (role-enforcement.cjs)
+
+- **Advocate role** (HARD BLOCK): Structurally denied Bash, Write, Edit, MultiEdit, NotebookEdit, WebFetch. Cannot be overridden. Only human can remove role.
+- **Queen role** (SOFT PREFERENCE): All tools allowed, but work tools inject delegation warnings when idle workers exist. Excessive direct work triggers advocate review.
+- **SubagentStart identity injection**: Injects role-specific system prompts (advocate identity, queen identity with hive ID) when subagents start
+- **HMAC-signed role files**: Per-agent role state in `.hive-flow/enforcement/agents/<id>/role.json`
+- **Hook**: `role-enforcement.cjs` (PreToolUse on Bash/Write/Edit/MultiEdit/WebFetch/MCP filesystem tools; SubagentStart)
+
+### Model Gate (mcp-enforcement-gate.ts)
+
+- **Haiku prohibited**: Always blocked for agent tasks (`agent_spawn`, `queen_spawn_worker`)
+- **Top-tier enforcement**: gemini-cli requires `gemini-3.1-pro-preview`, codex-cli requires `gpt-5.4`
+- **Auto-default**: Claude provider without explicit model defaults to `sonnet`
+- **Location**: `v3/@hive-flow/cli/src/mcp-tools/mcp-enforcement-gate.ts` (`checkModelEnforcement`)
+
+### Queen Report Composition Check
+
+- **`queen_report`**: Blocks report submission if the hive has fewer than 4 live workers (`[COMPOSITION_ERROR]`). Ensures queens cannot short-circuit by reporting without delegating.
+- **`queen_collect_results`**: Verifies queen ownership of hive before returning worker results
+- **Location**: `v3/@hive-flow/cli/src/mcp-tools/queen-tools.ts`
+
+### Idle Worker Cleanup (hive-cleanup.cjs)
+
+- **Trigger**: Stop event and TeammateIdle event
+- **Terminates idle workers** past threshold (default 15 min), oldest-first
+- **Never terminates below 4 workers per active hive**, never terminates queens or busy workers
+- **Hook**: `hive-cleanup.cjs`
+
 ## Project Architecture
 
 - Follow Domain-Driven Design with bounded contexts

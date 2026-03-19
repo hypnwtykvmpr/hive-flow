@@ -296,20 +296,157 @@ async function cleanupIdleAgents() {
 }
 
 // ---------------------------------------------------------------------------
-// Main — run cleanup and output JSON to stdout
+// C1: Orphaned agent cleanup — idle agents not in any active hive
+// ---------------------------------------------------------------------------
+
+async function cleanupOrphanedAgents() {
+  const summary = { orphansFound: 0, orphansTerminated: 0, terminated: [], errors: [] };
+  const activeHives = listActiveHives();
+  const activeAgentIds = new Set();
+  for (const hive of activeHives) {
+    for (const w of (hive.workers || [])) {
+      if (w.agentId) activeAgentIds.add(w.agentId);
+    }
+  }
+  const storePath = path.join(process.cwd(), '.hive-flow', 'agents', 'store.json');
+  let store;
+  try {
+    if (!fs.existsSync(storePath)) return summary;
+    store = JSON.parse(fs.readFileSync(storePath, 'utf-8'));
+  } catch { return summary; }
+  const now = Date.now();
+  for (const [id, agent] of Object.entries(store.agents || {})) {
+    if (agent.status !== 'idle') continue;
+    if (activeAgentIds.has(id)) continue;
+    const createdAt = new Date(agent.createdAt).getTime();
+    if (now - createdAt > IDLE_TIMEOUT_MS) {
+      summary.orphansFound++;
+      try {
+        const terminateHandler = await getTerminateHandler();
+        if (terminateHandler) await terminateHandler({ agentId: id });
+        summary.orphansTerminated++;
+        summary.terminated.push({ agentId: id, reason: 'orphaned-idle' });
+      } catch (err) {
+        summary.errors.push({ agentId: id, error: err?.message || String(err) });
+      }
+    }
+  }
+  return summary;
+}
+
+// ---------------------------------------------------------------------------
+// C3: Stale hive directory cleanup — completed/failed/terminated >1h
+// ---------------------------------------------------------------------------
+
+const STALE_HIVE_THRESHOLD_MS = 3600000;
+
+function cleanupStaleHiveDirs() {
+  const summary = { hivesArchived: 0, archived: [], errors: [] };
+  const hivesDir = path.join(process.cwd(), '.hive-flow', 'hives');
+  if (!fs.existsSync(hivesDir)) return summary;
+  const now = Date.now();
+  let entries;
+  try { entries = fs.readdirSync(hivesDir, { withFileTypes: true }); } catch { return summary; }
+  for (const entry of entries) {
+    if (!entry.isDirectory() || entry.name.startsWith('.')) continue;
+    const hivePath = path.join(hivesDir, entry.name, 'hive.json');
+    let record;
+    try { record = JSON.parse(fs.readFileSync(hivePath, 'utf-8')); } catch { continue; }
+    if (record.status !== 'completed' && record.status !== 'failed' && record.status !== 'terminated') continue;
+    const updatedAt = new Date(record.updatedAt).getTime();
+    if (now - updatedAt < STALE_HIVE_THRESHOLD_MS) continue;
+    try {
+      fs.rmSync(path.join(hivesDir, entry.name), { recursive: true, force: true });
+      summary.hivesArchived++;
+      summary.archived.push({ hiveId: record.hiveId, status: record.status });
+    } catch (err) {
+      summary.errors.push({ hiveId: record.hiveId, error: err?.message || String(err) });
+    }
+  }
+  return summary;
+}
+
+// ---------------------------------------------------------------------------
+// C4: Agent store pruning — remove terminated agents >1h
+// ---------------------------------------------------------------------------
+
+const AGENT_PRUNE_THRESHOLD_MS = 3600000;
+
+function pruneTerminatedAgents() {
+  const summary = { agentsPruned: 0, pruned: [], errors: [] };
+  const storePath = path.join(process.cwd(), '.hive-flow', 'agents', 'store.json');
+  const lockPath = path.join(process.cwd(), '.hive-flow', 'agents', '.store.lock');
+  if (!fs.existsSync(storePath)) return summary;
+  if (!acquireLockSync(lockPath)) {
+    summary.errors.push({ error: 'Could not acquire store lock for pruning' });
+    return summary;
+  }
+  try {
+    const store = JSON.parse(fs.readFileSync(storePath, 'utf-8'));
+    const now = Date.now();
+    const toPrune = [];
+    for (const [id, agent] of Object.entries(store.agents || {})) {
+      if (agent.status !== 'terminated') continue;
+      const createdAt = new Date(agent.createdAt).getTime();
+      if (now - createdAt > AGENT_PRUNE_THRESHOLD_MS) toPrune.push(id);
+    }
+    if (toPrune.length === 0) return summary;
+    for (const id of toPrune) {
+      delete store.agents[id];
+      summary.agentsPruned++;
+      summary.pruned.push(id);
+    }
+    const tmpPath = storePath + '.tmp.' + process.pid;
+    fs.writeFileSync(tmpPath, JSON.stringify(store, null, 2), 'utf-8');
+    fs.renameSync(tmpPath, storePath);
+  } catch (err) {
+    summary.errors.push({ error: err?.message || String(err) });
+  } finally {
+    releaseLock(lockPath);
+  }
+  return summary;
+}
+
+// ---------------------------------------------------------------------------
+// Main — run all cleanup and output JSON to stdout
 // ---------------------------------------------------------------------------
 
 (async () => {
   try {
-    const result = await cleanupIdleAgents();
-    // If nothing cleaned, output empty object per spec
-    if (result.workersTerminated === 0 && result.errors.length === 0) {
+    const hiveResult = await cleanupIdleAgents();
+    const orphanResult = await cleanupOrphanedAgents();
+    const hiveDirResult = cleanupStaleHiveDirs();
+    const pruneResult = pruneTerminatedAgents();
+
+    const combined = {
+      ...hiveResult,
+      orphansFound: orphanResult.orphansFound,
+      orphansTerminated: orphanResult.orphansTerminated,
+      hivesArchived: hiveDirResult.hivesArchived,
+      agentsPruned: pruneResult.agentsPruned,
+    };
+    if (orphanResult.terminated.length > 0) {
+      combined.terminated = (combined.terminated || []).concat(orphanResult.terminated);
+    }
+    if (hiveDirResult.archived?.length > 0) {
+      combined.archived = hiveDirResult.archived;
+    }
+    const allErrors = [
+      ...(hiveResult.errors || []),
+      ...(orphanResult.errors || []),
+      ...(hiveDirResult.errors || []),
+      ...(pruneResult.errors || []),
+    ];
+    if (allErrors.length > 0) combined.errors = allErrors;
+
+    const totalWork = (combined.workersTerminated || 0) + (combined.orphansTerminated || 0)
+      + (combined.hivesArchived || 0) + (combined.agentsPruned || 0);
+    if (totalWork === 0 && allErrors.length === 0) {
       process.stdout.write(JSON.stringify({}));
     } else {
-      process.stdout.write(JSON.stringify(result));
+      process.stdout.write(JSON.stringify(combined));
     }
   } catch (err) {
-    // Fail gracefully — always emit valid JSON
     process.stdout.write(JSON.stringify({
       error: err && err.message ? err.message : String(err),
     }));

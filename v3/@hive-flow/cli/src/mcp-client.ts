@@ -44,7 +44,7 @@ import { planningSubflowTools } from './mcp-tools/planning-subflow.js';
 import { bugHunterTools } from './mcp-tools/bug-hunter.js';
 import { workflowEnforcerTools } from './mcp-tools/workflow-enforcer.js';
 import { queenTools } from './mcp-tools/queen-tools.js';
-import { checkMCPEnforcement } from './mcp-tools/mcp-enforcement-gate.js';
+import { checkMCPEnforcement, checkModelEnforcement } from './mcp-tools/mcp-enforcement-gate.js';
 
 /**
  * MCP Tool Registry
@@ -151,6 +151,13 @@ export async function callMCPTool<T = unknown>(
     );
   }
 
+  // Model enforcement gate: block prohibited models, apply defaults
+  const modelEnforcement = checkModelEnforcement(toolName, input);
+  if (!modelEnforcement.allowed) {
+    throw new MCPClientError(modelEnforcement.reason || 'Blocked by model enforcement', toolName);
+  }
+  const effectiveInput = modelEnforcement.correctedInput ?? input;
+
   // Look up tool in registry
   const tool = TOOL_REGISTRY.get(toolName);
 
@@ -163,7 +170,7 @@ export async function callMCPTool<T = unknown>(
 
   try {
     // Call the tool handler
-    const result = await tool.handler(input, context);
+    const result = await tool.handler(effectiveInput, context);
     return result as T;
   } catch (error) {
     // Wrap and re-throw with context

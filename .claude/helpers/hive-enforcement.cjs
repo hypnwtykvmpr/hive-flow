@@ -59,24 +59,50 @@ const WORKER_ROLES = ['coder', 'reviewer', 'tester', 'researcher'];
 
 /**
  * Read the current enforcement level from state.json.
- * Returns 0 (NORMAL) if unreadable — fail-open for enforcement check.
+ * Returns 3 (HALTED) if unreadable or tampered — fail-closed.
+ * Returns 0 (NORMAL) only for fresh installs with no state file.
  */
 function readEnforcementLevel() {
   try {
     const stateFile = path.join(ENFORCEMENT_DIR, 'state.json');
-    if (!fs.existsSync(stateFile)) return 0;
+    if (!fs.existsSync(stateFile)) return 0; // No state file = fresh install
     const raw = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
-    // Envelope format: { state: { level: N }, hmac: "..." }
     if (raw?.state !== undefined && typeof raw.state?.level === 'number') {
+      if (raw.hmac) {
+        if (!verifyEnforcementHmac(raw.state, raw.hmac)) return 3;
+      }
       return raw.state.level;
     }
-    // Alt envelope: { payload: { level: N }, signature: "..." }
     if (raw?.payload !== undefined && typeof raw.payload?.level === 'number') {
+      if (raw.signature) {
+        if (!verifyEnforcementHmac(raw.payload, raw.signature)) return 3;
+      }
       return raw.payload.level;
     }
-    return 0;
+    return 3; // Unrecognized format — fail-closed
   } catch {
-    return 0; // fail-open
+    return 3; // fail-closed
+  }
+}
+
+/**
+ * Verify HMAC-SHA256 signature on enforcement state.
+ * Returns true if valid, false otherwise.
+ */
+function verifyEnforcementHmac(stateObj, hmacHex) {
+  try {
+    const crypto = require('crypto');
+    const hmacKeyFile = path.join(ENFORCEMENT_DIR, '.hmac-key');
+    if (!fs.existsSync(hmacKeyFile)) return false;
+    const key = fs.readFileSync(hmacKeyFile, 'utf8').trim();
+    if (!key) return false;
+    const expected = crypto.createHmac('sha256', key).update(JSON.stringify(stateObj)).digest('hex');
+    const expectedBuf = Buffer.from(expected, 'hex');
+    const actualBuf = Buffer.from(hmacHex, 'hex');
+    if (expectedBuf.length !== actualBuf.length) return false;
+    return crypto.timingSafeEqual(expectedBuf, actualBuf);
+  } catch {
+    return false;
   }
 }
 
@@ -638,6 +664,7 @@ module.exports = {
   processPostToolUse,
   extractHiveId,
   readEnforcementLevel,
+  verifyEnforcementHmac,
   acquireLock,
   releaseLock,
   loadHiveRecord,

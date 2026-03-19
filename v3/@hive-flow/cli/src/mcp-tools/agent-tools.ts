@@ -6,7 +6,7 @@
  */
 
 import { randomUUID, createHmac } from 'node:crypto';
-import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync, rmdirSync, unlinkSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync, rmdirSync, rmSync, unlinkSync, statSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { execFile, spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -479,7 +479,7 @@ export const agentTools: MCPTool[] = [
     handler: async (input) => {
       const agentId = input.agentId as string;
 
-      return withStoreLock(() => {
+      const result = await withStoreLock(() => {
         const store = loadAgentStore();
 
         if (store.agents[agentId]) {
@@ -509,6 +509,21 @@ export const agentTools: MCPTool[] = [
           error: 'Agent not found',
         };
       });
+
+      // Clean up per-agent enforcement directory after successful termination
+      if (result.success && result.terminated && !result.alreadyTerminated) {
+        try {
+          const sanitized = agentId.replace(/[/\\.]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 64);
+          if (sanitized) {
+            const agentEnfDir = join(process.cwd(), '.hive-flow', 'enforcement', 'agents', sanitized);
+            if (existsSync(agentEnfDir)) {
+              rmSync(agentEnfDir, { recursive: true, force: true });
+            }
+          }
+        } catch { /* Non-fatal: enforcement cleanup is best-effort */ }
+      }
+
+      return result;
     },
   },
   {
