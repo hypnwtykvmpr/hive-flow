@@ -420,6 +420,7 @@
     "pr": "🤖 Generated with [hive-flow](https://github.com/ruvnet/hive-flow)"
   },
   "env": {
+    "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "85",
     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
     "HIVE_FLOW_V3_ENABLED": "true",
     "HIVE_FLOW_HOOKS_ENABLED": "true"

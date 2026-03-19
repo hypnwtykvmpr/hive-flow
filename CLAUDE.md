@@ -108,6 +108,14 @@ All enforcement is deterministic, file-based, and persists across compaction. No
 - **Never terminates below 4 workers per active hive**, never terminates queens or busy workers
 - **Hook**: `hive-cleanup.cjs`
 
+## Context Management (Automatic)
+
+- **Do NOT suggest /clear or clearing context to the user** — the autopilot manages context automatically
+- **Do NOT attempt to invoke /compact programmatically** — no API exists; auto-compaction handles it
+- **Auto-compaction** is configured via `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=85` in settings.json env — compaction fires at ~85% of the model's context window (850K on 1M, 170K on 200K)
+- **Context persistence hooks** save and restore state across compactions — no manual intervention needed
+- If context is growing large, continue working normally — the system handles compaction transparently
+
 ## Project Architecture
 
 - Follow Domain-Driven Design with bounded contexts

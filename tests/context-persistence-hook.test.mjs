@@ -29,6 +29,7 @@ const {
   autoOptimize,
   storeChunks,
   retrieveContext,
+  consumeCompactSignalAdvisory,
   NAMESPACE,
   COMPACT_INSTRUCTION_BUDGET,
   RETENTION_DAYS,
@@ -806,6 +807,44 @@ describe('proactive archiving (UserPromptSubmit)', () => {
     assert.ok(ctx.includes('Proactive turn'));
 
     await backend.shutdown();
+  });
+});
+
+describe('compact advisory signal', () => {
+  it('should surface a fresh compact advisory and remove the signal file', () => {
+    const projectRoot = join(TMP_DIR, 'compact-signal-fresh');
+    const dataDir = join(projectRoot, '.hive-flow', 'data');
+    const signalPath = join(dataDir, 'compact-request.json');
+
+    mkdirSync(dataDir, { recursive: true });
+    writeFileSync(signalPath, JSON.stringify({
+      requestedAt: new Date().toISOString(),
+      reason: 'token pressure',
+    }));
+
+    const advisory = consumeCompactSignalAdvisory(projectRoot);
+
+    assert.match(advisory, /\[COMPACT_ADVISORY\]/);
+    assert.match(advisory, /token pressure/);
+    assert.match(advisory, /85%/);
+    assert.equal(existsSync(signalPath), false);
+  });
+
+  it('should ignore stale compact advisories but still remove the signal file', () => {
+    const projectRoot = join(TMP_DIR, 'compact-signal-stale');
+    const dataDir = join(projectRoot, '.hive-flow', 'data');
+    const signalPath = join(dataDir, 'compact-request.json');
+
+    mkdirSync(dataDir, { recursive: true });
+    writeFileSync(signalPath, JSON.stringify({
+      requestedAt: new Date(Date.now() - 301000).toISOString(),
+      reason: 'stale signal',
+    }));
+
+    const advisory = consumeCompactSignalAdvisory(projectRoot);
+
+    assert.equal(advisory, '');
+    assert.equal(existsSync(signalPath), false);
   });
 });
 

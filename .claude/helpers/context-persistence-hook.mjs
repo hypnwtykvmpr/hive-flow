@@ -26,7 +26,7 @@
  *   node context-persistence-hook.mjs status              # Show archive stats
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'fs';
 import { createHash } from 'crypto';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -1676,7 +1676,7 @@ async function runAutopilot(transcriptPath, sessionId, backend, backendType) {
     }
 
     const turnsLeft = Math.max(0, Math.ceil((1.0 - percentage) / 0.03));
-    optimizationMessage += ` | CRITICAL: ${(percentage * 100).toFixed(0)}% context used (~${turnsLeft} turns left). All ${turns} turns archived. Start a new session with /clear — context will be fully restored via SessionStart hook.`;
+    optimizationMessage += ` | CRITICAL: ${(percentage * 100).toFixed(0)}% context used (~${turnsLeft} turns left). All ${turns} turns archived. Auto-compaction will handle context management — continue working normally.`;
   }
 
   const report = buildAutopilotReport(percentage, tokens, CONTEXT_WINDOW_TOKENS, turns, state);
@@ -1690,6 +1690,36 @@ async function runAutopilot(transcriptPath, sessionId, backend, backendType) {
     method,
     state,
   };
+}
+
+/**
+ * Consume a one-shot compaction advisory signal, if present.
+ */
+function consumeCompactSignalAdvisory(projectRoot = PROJECT_ROOT) {
+  const compactSignalPath = join(projectRoot, '.hive-flow', 'data', 'compact-request.json');
+
+  try {
+    if (!existsSync(compactSignalPath)) return '';
+
+    const signal = JSON.parse(readFileSync(compactSignalPath, 'utf-8'));
+    const age = Date.now() - new Date(signal.requestedAt || 0).getTime();
+
+    if (age >= 0 && age < 300000) {
+      const safeReason = String(signal.reason || 'unknown').replace(/[\x00-\x1f\x7f]/g, '').slice(0, 200);
+      return `[COMPACT_ADVISORY] High context detected (reason: ${safeReason}). Auto-compaction configured at ${process.env.CLAUDE_AUTOCOMPACT_PCT_OVERRIDE || '85'}%. Compaction will trigger automatically - continue working normally.`;
+    }
+  } catch {
+    // Signal file check is advisory — never block on failure.
+    return '';
+  } finally {
+    try {
+      if (existsSync(compactSignalPath)) unlinkSync(compactSignalPath);
+    } catch {
+      // Best-effort cleanup only.
+    }
+  }
+
+  return '';
 }
 
 // ============================================================================
@@ -1885,6 +1915,8 @@ async function doUserPromptSubmit() {
 
   const { backend, type } = await resolveBackend();
 
+  const compactAdvisoryMsg = consumeCompactSignalAdvisory();
+
   // Only archive new turns (dedup handles the rest, but we can skip early
   // by only processing the last N chunks since the previous archive)
   const existingCount = backend.queryBySession
@@ -1932,7 +1964,7 @@ async function doUserPromptSubmit() {
   } catch { /* non-critical */ }
 
   // Combine archive message, autopilot report, and cull plan
-  const additionalContext = [archiveMsg, autopilotMsg, cullMsg].filter(Boolean).join(' ');
+  const additionalContext = [compactAdvisoryMsg, archiveMsg, autopilotMsg, cullMsg].filter(Boolean).join(' ');
 
   if (additionalContext) {
     const output = {
@@ -2062,6 +2094,7 @@ export {
   buildProgressBar,
   formatTokens,
   buildAutopilotReport,
+  consumeCompactSignalAdvisory,
   NAMESPACE,
   ARCHIVE_DB_PATH,
   ARCHIVE_JSON_PATH,
