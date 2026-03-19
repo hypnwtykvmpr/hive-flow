@@ -5,9 +5,9 @@
  * Uses --print flag for non-interactive mode (resolves TTY requirement).
  * Auth: CURSOR_API_KEY environment variable or --api-key flag.
  *
- * Invocation patterns:
- * - Non-streaming: cursor --print --output-format json --model <model> "prompt"
- * - Streaming:     cursor --print --output-format stream-json --stream-partial-output --model <model> "prompt"
+ * Invocation patterns (prompt piped via stdin):
+ * - Non-streaming: echo "prompt" | cursor --print --output-format json --model <model>
+ * - Streaming:     echo "prompt" | cursor --print --output-format stream-json --stream-partial-output --model <model>
  *
  * @module @hive-flow/providers/cursor-cli-provider
  */
@@ -360,15 +360,10 @@ export class CursorCLIProvider extends BaseProvider {
         false
       );
     }
-    // Guard against ARG_MAX: prompt is passed as positional arg
-    const promptBytes = Buffer.byteLength(trimmed, 'utf8');
-    if (promptBytes > 200_000) {
-      throw new LLMProviderError(
-        `Prompt too long for CLI argument (${promptBytes} bytes, max ~200KB). Reduce prompt size.`,
-        'INPUT_TOO_LARGE', 'cursor-cli', 400, false
-      );
-    }
 
+    // Pass prompt via stdin (not CLI arg) to avoid:
+    //  1. OS ARG_MAX limits for large prompts
+    //  2. Prompt text leaking into process listings (ps aux)
     // cursor-agent takes flags directly; cursor (IDE binary) needs 'agent' subcommand
     const isCursorIDE = this.binaryPath!.endsWith('/cursor') || this.binaryPath!.endsWith('\\cursor');
     const args = [
@@ -379,7 +374,6 @@ export class CursorCLIProvider extends BaseProvider {
       '--output-format', stream ? 'stream-json' : 'json',
       '--model', String(model),
       ...(stream ? ['--stream-partial-output'] : []),
-      trimmed,
     ];
 
     const env: Record<string, string | undefined> = {
@@ -415,7 +409,13 @@ export class CursorCLIProvider extends BaseProvider {
 
     const child = spawn(this.binaryPath!, args, { stdio: ['pipe', 'pipe', 'pipe'], env });
     this.activeProcesses.add(child);
-    child.stdin.end(); // Prevent hang
+    child.stdin.on('error', (err) => {
+      if ((err as NodeJS.ErrnoException).code !== 'EPIPE') {
+        this.logger.warn('Cursor stdin write error', { error: err.message });
+      }
+    });
+    child.stdin.write(trimmed);
+    child.stdin.end();
     return child;
   }
 

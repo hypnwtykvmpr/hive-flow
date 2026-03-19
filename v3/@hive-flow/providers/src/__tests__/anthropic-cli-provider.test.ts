@@ -497,14 +497,14 @@ describe('AnthropicCLIProvider', () => {
     const models = await provider.listModels();
     expect(Array.isArray(models)).toBe(true);
     expect(models.length).toBeGreaterThan(0);
-    expect(models).toContain('claude-3-5-sonnet-latest');
+    expect(models).toContain('claude-sonnet-4-6');
   });
 
   // ── getModelInfo ──
 
   it('returns model info with pricing', async () => {
-    const info = await provider.getModelInfo('claude-3-5-sonnet-latest');
-    expect(info.model).toBe('claude-3-5-sonnet-latest');
+    const info = await provider.getModelInfo('claude-sonnet-4-6');
+    expect(info.model).toBe('claude-sonnet-4-6');
     expect(info.contextLength).toBe(200000);
     expect(info.supportedFeatures).toContain('cli-subprocess');
     expect(info.pricing).toBeDefined();

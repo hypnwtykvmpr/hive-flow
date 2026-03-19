@@ -411,7 +411,20 @@ const handlers = {
       const isFailure = failurePatterns.some(p => p.test(responseStr));
 
       if (isFailure) {
+        // --- Classify failure type ---
+        let failureType = 'unknown';
+        if (/Command failed|exited with|spawn\s+ENOENT|sh:.*not found/i.test(responseStr)) {
+          failureType = 'shell-parsing';
+        } else if (/api.?error|internal server error|rate.?limit|unauthorized|403|401|429|502|503/i.test(responseStr)) {
+          failureType = 'provider-api';
+        } else if (/timeout|SIGKILL|ETIMEDOUT|ESOCKETTIMEDOUT/i.test(responseStr)) {
+          failureType = 'timeout';
+        }
+
+        const agentId = input.tool_input?.agent_id || input.agent_id || 'unknown';
         const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+
+        // --- Log to metrics (existing) ---
         const metricsDir = path.join(projectDir, '.hive-flow', 'metrics');
         try {
           fs.mkdirSync(metricsDir, { recursive: true });
@@ -424,9 +437,33 @@ const handlers = {
           fs.appendFileSync(path.join(metricsDir, 'agent-failures.jsonl'), entry);
         } catch (e) { /* metrics are best-effort */ }
 
+        // --- Log to bridge-errors.log with classification ---
+        const logsDir = path.join(projectDir, '.hive-flow', 'logs');
+        try {
+          fs.mkdirSync(logsDir, { recursive: true });
+          const logEntry = JSON.stringify({
+            timestamp: new Date().toISOString(),
+            agentId,
+            failureType,
+            error: responseStr.slice(0, 200)
+          }) + '\n';
+          fs.appendFileSync(path.join(logsDir, 'bridge-errors.log'), logEntry);
+        } catch (e) { /* logging is best-effort */ }
+
+        // --- Build classified additionalContext ---
+        let guidance = '[AGENT_FAILURE_DETECTED] failureType=' + failureType + '.';
+        if (failureType === 'shell-parsing') {
+          guidance += ' Provider bridge shell parsing error \u2014 task text may contain special characters. Escape or simplify the task description before retrying.';
+        } else if (failureType === 'provider-api') {
+          guidance += ' The provider API returned an error.';
+        } else if (failureType === 'timeout') {
+          guidance += ' The agent timed out.';
+        }
+        guidance += ' FALLBACK PROTOCOL: Re-dispatch this task using MCP provider agents instead of the Task tool. Use mcp__hive-flow__agent_spawn with provider "gemini-cli" or "codex-cli", then mcp__hive-flow__agent_task with a longer timeout. Provider agents route through different APIs and are not affected by Anthropic outages.';
+
         process.stdout.write(JSON.stringify({
           hookSpecificOutput: {
-            additionalContext: '[AGENT_FAILURE_DETECTED] The previous Task agent failed (likely API error). FALLBACK PROTOCOL: Re-dispatch this task using MCP provider agents instead of the Task tool. Use mcp__hive-flow__agent_spawn with provider "gemini-cli" or "codex-cli", then mcp__hive-flow__agent_task with a longer timeout. Provider agents route through different APIs and are not affected by Anthropic outages.'
+            additionalContext: guidance
           }
         }));
       } else {

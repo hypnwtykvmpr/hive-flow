@@ -6,10 +6,17 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { execSync, exec } from 'child_process';
+import { execSync, execFile } from 'child_process';
 import { promisify } from 'util';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
+
+function isValidNpmPackageName(name: string): boolean {
+  return /^(@[a-z0-9-~][a-z0-9-._~]*\/)?[a-z0-9-~][a-z0-9-._~]*$/.test(name);
+}
+function isValidVersion(version: string): boolean {
+  return /^[a-zA-Z0-9._-]+$/.test(version);
+}
 
 // ============================================================================
 // Types
@@ -147,10 +154,14 @@ export class PluginManager {
       // Use npm to install
       console.log(`[PluginManager] Installing ${versionSpec}...`);
 
-      const { stdout, stderr } = await execAsync(
-        `npm install --prefix "${this.config.pluginsDir}" ${versionSpec}`,
-        { timeout: 120000 }
-      );
+      if (!isValidNpmPackageName(packageName)) {
+        return { success: false, error: `Invalid package name: ${packageName}` };
+      }
+      if (version !== undefined && !isValidVersion(version)) {
+        return { success: false, error: `Invalid version: ${version}` };
+      }
+
+      await execFileAsync('npm', ['install', '--prefix', this.config.pluginsDir, versionSpec], { timeout: 120000 });
 
       // Get installed version
       const packageJsonPath = path.join(installDir, packageName, 'package.json');
@@ -277,10 +288,10 @@ export class PluginManager {
     try {
       // For npm-installed plugins, remove from node_modules
       if (plugin.source === 'npm') {
-        await execAsync(
-          `npm uninstall --prefix "${this.config.pluginsDir}" ${packageName}`,
-          { timeout: 60000 }
-        );
+        if (!isValidNpmPackageName(packageName)) {
+          return { success: false, error: `Invalid package name: ${packageName}` };
+        }
+        await execFileAsync('npm', ['uninstall', '--prefix', this.config.pluginsDir, packageName], { timeout: 60000 });
       }
 
       // Remove from manifest
@@ -431,10 +442,13 @@ export class PluginManager {
       const versionSpec = version ? `${packageName}@${version}` : `${packageName}@latest`;
 
       // Reinstall with new version
-      await execAsync(
-        `npm install --prefix "${this.config.pluginsDir}" ${versionSpec}`,
-        { timeout: 120000 }
-      );
+      if (!isValidNpmPackageName(packageName)) {
+        return { success: false, error: `Invalid package name: ${packageName}` };
+      }
+      if (version !== undefined && !isValidVersion(version)) {
+        return { success: false, error: `Invalid version: ${version}` };
+      }
+      await execFileAsync('npm', ['install', '--prefix', this.config.pluginsDir, versionSpec], { timeout: 120000 });
 
       // Update manifest
       const installDir = path.join(this.config.pluginsDir, 'node_modules');

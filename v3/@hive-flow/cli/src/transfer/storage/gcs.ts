@@ -9,7 +9,7 @@
 import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
-import { execSync, exec } from 'child_process';
+import { execFileSync } from 'child_process';
 
 /**
  * GCS configuration
@@ -53,7 +53,7 @@ export function getGCSConfig(): GCSConfig | null {
  */
 export function isGCloudAvailable(): boolean {
   try {
-    execSync('gcloud --version', { stdio: 'pipe' });
+    execFileSync('gcloud', ['--version'], { stdio: 'pipe' });
     return true;
   } catch {
     return false;
@@ -65,7 +65,7 @@ export function isGCloudAvailable(): boolean {
  */
 export async function isGCloudAuthenticated(): Promise<boolean> {
   try {
-    execSync('gcloud auth print-access-token', { stdio: 'pipe' });
+    execFileSync('gcloud', ['auth', 'print-access-token'], { stdio: 'pipe' });
     return true;
   } catch {
     return false;
@@ -113,28 +113,29 @@ export async function uploadToGCS(
   fs.writeFileSync(tempFile, content);
 
   try {
-    // Build gcloud command
-    const metadataArgs = options.metadata
-      ? Object.entries(options.metadata)
-          .map(([k, v]) => `--metadata=${k}=${v}`)
-          .join(' ')
-      : '';
-
-    const projectArg = config.projectId ? `--project=${config.projectId}` : '';
-
     // Upload using gcloud storage cp
-    const cmd = `gcloud storage cp "${tempFile}" "gs://${config.bucket}/${objectPath}" ${projectArg} --content-type="${options.contentType || 'application/json'}" 2>&1`;
+    const cpArgs = [
+      'storage', 'cp',
+      tempFile,
+      `gs://${config.bucket}/${objectPath}`,
+      `--content-type=${options.contentType || 'application/json'}`,
+    ];
+    if (config.projectId) cpArgs.push(`--project=${config.projectId}`);
 
-    execSync(cmd, { encoding: 'utf-8' });
+    execFileSync('gcloud', cpArgs, { stdio: 'pipe' });
 
     // Set metadata if provided
     if (options.metadata && Object.keys(options.metadata).length > 0) {
-      const metadataJson = JSON.stringify(options.metadata);
       try {
-        execSync(
-          `gcloud storage objects update "gs://${config.bucket}/${objectPath}" --custom-metadata='${metadataJson}' ${projectArg} 2>&1`,
-          { encoding: 'utf-8' }
-        );
+        const updateArgs = [
+          'storage', 'objects', 'update',
+          `gs://${config.bucket}/${objectPath}`,
+        ];
+        for (const [k, v] of Object.entries(options.metadata)) {
+          updateArgs.push(`--custom-metadata=${k}=${v}`);
+        }
+        if (config.projectId) updateArgs.push(`--project=${config.projectId}`);
+        execFileSync('gcloud', updateArgs, { stdio: 'pipe' });
       } catch {
         // Metadata update failed, but upload succeeded
       }
@@ -174,7 +175,6 @@ export async function downloadFromGCS(
   config?: GCSConfig
 ): Promise<Buffer | null> {
   const cfg = config || getGCSConfig();
-  const projectArg = cfg?.projectId ? `--project=${cfg.projectId}` : '';
 
   console.log(`[GCS] Downloading from ${uri}...`);
 
@@ -184,10 +184,9 @@ export async function downloadFromGCS(
 
   try {
     // Download using gcloud storage cp
-    execSync(
-      `gcloud storage cp "${uri}" "${tempFile}" ${projectArg} 2>&1`,
-      { encoding: 'utf-8' }
-    );
+    const dlArgs = ['storage', 'cp', uri, tempFile];
+    if (cfg?.projectId) dlArgs.push(`--project=${cfg.projectId}`);
+    execFileSync('gcloud', dlArgs, { stdio: 'pipe' });
 
     const content = fs.readFileSync(tempFile);
     fs.unlinkSync(tempFile);
@@ -212,13 +211,11 @@ export async function existsInGCS(
   config?: GCSConfig
 ): Promise<boolean> {
   const cfg = config || getGCSConfig();
-  const projectArg = cfg?.projectId ? `--project=${cfg.projectId}` : '';
 
   try {
-    execSync(
-      `gcloud storage ls "${uri}" ${projectArg} 2>&1`,
-      { encoding: 'utf-8', stdio: 'pipe' }
-    );
+    const lsArgs = ['storage', 'ls', uri];
+    if (cfg?.projectId) lsArgs.push(`--project=${cfg.projectId}`);
+    execFileSync('gcloud', lsArgs, { stdio: 'pipe' });
     return true;
   } catch {
     return false;
@@ -236,14 +233,12 @@ export async function listGCSObjects(
   if (!cfg) return [];
 
   const objectPrefix = prefix || cfg.prefix || '';
-  const projectArg = cfg.projectId ? `--project=${cfg.projectId}` : '';
   const uri = `gs://${cfg.bucket}/${objectPrefix}`;
 
   try {
-    const result = execSync(
-      `gcloud storage ls -l "${uri}" ${projectArg} --format=json 2>&1`,
-      { encoding: 'utf-8' }
-    );
+    const listArgs = ['storage', 'ls', '-l', uri, '--format=json'];
+    if (cfg.projectId) listArgs.push(`--project=${cfg.projectId}`);
+    const result = execFileSync('gcloud', listArgs, { stdio: 'pipe', encoding: 'utf-8' });
 
     const objects = JSON.parse(result);
     return objects.map((obj: { name: string; size: number; updated: string }) => ({
@@ -264,13 +259,11 @@ export async function deleteFromGCS(
   config?: GCSConfig
 ): Promise<boolean> {
   const cfg = config || getGCSConfig();
-  const projectArg = cfg?.projectId ? `--project=${cfg.projectId}` : '';
 
   try {
-    execSync(
-      `gcloud storage rm "${uri}" ${projectArg} 2>&1`,
-      { encoding: 'utf-8' }
-    );
+    const rmArgs = ['storage', 'rm', uri];
+    if (cfg?.projectId) rmArgs.push(`--project=${cfg.projectId}`);
+    execFileSync('gcloud', rmArgs, { stdio: 'pipe' });
     return true;
   } catch {
     return false;

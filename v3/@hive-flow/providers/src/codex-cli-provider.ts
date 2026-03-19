@@ -381,18 +381,10 @@ export class CodexCLIProvider extends BaseProvider {
   }
 
   private spawnCodex(prompt: string, model: LLMModel): ChildProcess {
-    // Guard against ARG_MAX: measure byte length (UTF-8) not JS character count
-    // to handle multi-byte Unicode correctly. Limit to 200KB to stay well under
-    // typical ARG_MAX of 1MB (leaving room for env vars and other args).
-    const promptBytes = Buffer.byteLength(prompt, 'utf8');
-    if (promptBytes > 200_000) {
-      throw new LLMProviderError(
-        `Prompt too long for CLI argument (${promptBytes} bytes, max ~200KB). Reduce prompt size.`,
-        'INPUT_TOO_LARGE', 'codex-cli', 400, false
-      );
-    }
-
-    const args = ['exec', prompt, '--json', '--skip-git-repo-check'];
+    // Pass prompt via stdin (not CLI arg) to avoid:
+    //  1. OS ARG_MAX limits for large prompts
+    //  2. Prompt text leaking into process listings (ps aux)
+    const args = ['exec', '-', '--json', '--skip-git-repo-check'];
     // Only include --model if explicitly set (not 'auto' or undefined)
     // Omitting --model lets Codex use config.toml default (typically gpt-5.3-codex)
     if (model && model !== 'auto') {
@@ -431,7 +423,13 @@ export class CodexCLIProvider extends BaseProvider {
 
     const child = spawn(this.binaryPath!, args, { stdio: ['pipe', 'pipe', 'pipe'], env });
     this.activeProcesses.add(child);
-    child.stdin.end(); // CRITICAL: prevent hang — stdin must be closed
+    child.stdin.on('error', (err) => {
+      if ((err as NodeJS.ErrnoException).code !== 'EPIPE') {
+        this.logger.warn('Codex stdin write error', { error: err.message });
+      }
+    });
+    child.stdin.write(prompt);
+    child.stdin.end();
     return child;
   }
 

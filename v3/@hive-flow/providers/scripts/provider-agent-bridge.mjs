@@ -9,8 +9,14 @@
  *
  * Input (argv):
  *   --agent-id <id>     Agent identifier
- *   --task <text>        Task prompt to send
+ *   --task <text>        Task prompt (CLI arg — legacy, may break on special chars)
+ *   --task-stdin         Read task prompt from stdin (preferred — safe for all content)
  *   --store-dir <path>  Agent store directory
+ *   --timeout <ms>       Provider timeout in milliseconds
+ *
+ * When --task-stdin is set, the task text is read from stdin instead of --task.
+ * This avoids shell parsing issues with special characters and ARG_MAX limits.
+ * If neither --task nor --task-stdin is provided, stdin is read as a fallback.
  *
  * Output (stdout): JSON response
  * Errors (stderr): Log messages
@@ -18,9 +24,56 @@
  * @module @hive-flow/providers/scripts/provider-agent-bridge
  */
 
-import { readFileSync, writeFileSync, mkdirSync, renameSync, existsSync, rmdirSync, statSync } from 'fs';
+import { readFileSync, writeFileSync, appendFileSync, mkdirSync, renameSync, existsSync, rmdirSync, statSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
+
+// ===== Bridge File Logger (append-only, mirrors hook-handler.cjs patterns) =====
+
+function getBridgeLogPath() {
+  const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+  return join(projectDir, '.hive-flow', 'logs', 'bridge.log');
+}
+
+function ensureLogDir() {
+  const logPath = getBridgeLogPath();
+  const logDir = dirname(logPath);
+  if (!existsSync(logDir)) {
+    mkdirSync(logDir, { recursive: true });
+  }
+}
+
+function bridgeLog(level, message, meta) {
+  try {
+    ensureLogDir();
+    const entry = {
+      timestamp: new Date().toISOString(),
+      level,
+      message,
+      ...(meta ? { meta } : {}),
+    };
+    appendFileSync(getBridgeLogPath(), JSON.stringify(entry) + '\n', 'utf8');
+  } catch { /* logging must never break the bridge */ }
+}
+
+/**
+ * Classify an error into one of: shell_parsing, provider_api, timeout, or other.
+ */
+function classifyError(err) {
+  const msg = String(err?.message || err || '').toLowerCase();
+  if (msg.includes('timeout') || msg.includes('timed out') || msg.includes('etimedout') || msg.includes('sigkill')) {
+    return 'timeout';
+  }
+  if (msg.includes('enoent') || msg.includes('spawn') || msg.includes('not found') || msg.includes('arg_max') || msg.includes('e2big')) {
+    return 'shell_parsing';
+  }
+  if (msg.includes('api') || msg.includes('401') || msg.includes('403') || msg.includes('429') || msg.includes('500')
+      || msg.includes('authentication') || msg.includes('unauthorized') || msg.includes('rate limit')
+      || msg.includes('circuit breaker') || msg.includes('invalid api key')) {
+    return 'provider_api';
+  }
+  return 'other';
+}
 
 // ===== Stderr Logger (prevents provider logs from corrupting stdout JSON) =====
 
@@ -262,6 +315,11 @@ async function retryWithBackoff(fn, opts = {}) {
       const jitter = Math.random() * initialDelay * 0.3;
       const delay = Math.max(retryAfter * 1000, backoffDelay) + jitter;
       stderrLogger.warn(`Retry ${attempt}/${maxAttempts - 1} after ${Math.round(delay)}ms: ${error.message || error}`);
+      bridgeLog('warn', `Retry ${attempt}/${maxAttempts - 1}`, {
+        error: (error.message || String(error)).slice(0, 300),
+        classification: classifyError(error),
+        delayMs: Math.round(delay),
+      });
       await new Promise(r => setTimeout(r, delay));
     }
   }
@@ -348,9 +406,32 @@ async function executeMCPTool(toolName, toolArgs) {
 
 // ===== Argument Parsing =====
 
-function parseArgs() {
+/**
+ * Read all data from stdin (non-TTY only).
+ * Returns the full stdin content as a string, or empty string if stdin is a TTY.
+ */
+function readStdin() {
+  return new Promise((resolve) => {
+    if (process.stdin.isTTY) {
+      resolve('');
+      return;
+    }
+    const chunks = [];
+    process.stdin.setEncoding('utf8');
+    process.stdin.on('data', (chunk) => chunks.push(chunk));
+    process.stdin.on('end', () => resolve(chunks.join('')));
+    process.stdin.on('error', () => resolve(''));
+    // Safety: if nothing arrives within 5s, treat as empty
+    setTimeout(() => {
+      process.stdin.removeAllListeners();
+      resolve(chunks.join(''));
+    }, 5000);
+  });
+}
+
+async function parseArgs() {
   const args = process.argv.slice(2);
-  const parsed = { agentId: '', task: '', storeDir: '', timeout: 0 };
+  const parsed = { agentId: '', task: '', storeDir: '', timeout: 0, taskStdin: false };
 
   for (let i = 0; i < args.length; i++) {
     switch (args[i]) {
@@ -359,6 +440,9 @@ function parseArgs() {
         break;
       case '--task':
         parsed.task = args[++i] || '';
+        break;
+      case '--task-stdin':
+        parsed.taskStdin = true;
         break;
       case '--store-dir':
         parsed.storeDir = args[++i] || '';
@@ -369,8 +453,18 @@ function parseArgs() {
     }
   }
 
+  // When --task-stdin is set (or --task is missing), read task from stdin.
+  // This avoids shell parsing issues with special characters in task text
+  // and bypasses ARG_MAX limits for very long prompts.
+  if (parsed.taskStdin || !parsed.task) {
+    const stdinTask = await readStdin();
+    if (stdinTask.trim()) {
+      parsed.task = stdinTask.trim();
+    }
+  }
+
   if (!parsed.agentId) throw new Error('Missing required argument: --agent-id');
-  if (!parsed.task) throw new Error('Missing required argument: --task');
+  if (!parsed.task) throw new Error('Missing required argument: --task (provide via --task <text> or --task-stdin with piped input)');
   if (!parsed.storeDir) {
     const home = process.env.HOME || process.env.USERPROFILE || '/tmp';
     parsed.storeDir = join(home, '.hive-flow', 'agents');
@@ -419,7 +513,7 @@ function trackProviderUsage(providerName, usage, startTime) {
 // ===== Main =====
 
 async function main() {
-  const { agentId, task, storeDir, timeout: parsedTimeout } = parseArgs();
+  const { agentId, task, storeDir, timeout: parsedTimeout } = await parseArgs();
   const lockPath = join(storeDir, '.store.lock');
 
   // ── Phase 1: Lock → read state → unlock ──
@@ -461,6 +555,14 @@ async function main() {
   } catch (initError) {
     try { provider.destroy(); } catch { /* best-effort */ }
 
+    // Log provider initialization failure with classification
+    bridgeLog('error', 'Provider initialization failed', {
+      agentId,
+      provider: providerName,
+      error: initError.message || String(initError),
+      classification: classifyError(initError),
+    });
+
     const msg = initError.message || String(initError);
     if (msg.includes('not found') || msg.includes('ENOENT')) {
       if (['anthropic-cli', 'gemini-cli', 'codex-cli', 'cursor-cli'].includes(providerName)) {
@@ -494,6 +596,16 @@ async function main() {
       request.tools = agent.config.tools;
     }
 
+    // Log the constructed CLI command / request
+    bridgeLog('info', 'Provider request constructed', {
+      agentId,
+      provider: providerName,
+      model: request.model,
+      messageCount: request.messages.length,
+      taskSummary: task.slice(0, 100),
+      timeout: request.timeout || config.timeout,
+    });
+
     let response;
     let iterations = 0;
     const MAX_TOOL_ITERATIONS = 10;
@@ -516,6 +628,18 @@ async function main() {
         }
       );
       iterations++;
+
+      // Log provider response (stdout equivalent)
+      bridgeLog('info', 'Provider response received', {
+        agentId,
+        provider: providerName,
+        iteration: iterations,
+        model: response.model || request.model,
+        contentLength: (response.content || '').length,
+        hasToolCalls: !!(response.toolCalls && response.toolCalls.length > 0),
+        finishReason: response.finishReason || null,
+        usage: response.usage || null,
+      });
 
       if (response.toolCalls && response.toolCalls.length > 0) {
         if (!mcpAvailable) {
@@ -629,11 +753,33 @@ async function main() {
     try { provider.destroy(); } catch { /* ignore */ }
   }
 
+  // Log success
+  bridgeLog('info', 'Bridge task completed successfully', {
+    agentId,
+    provider: providerName,
+    taskSummary: task.slice(0, 100),
+    model: result.model,
+    taskCount: result.taskCount,
+    historyLength: result.historyLength,
+  });
+
   // Output result as JSON
   process.stdout.write(JSON.stringify(result, null, 2) + '\n');
 }
 
 main().catch((err) => {
+  // Log failure with error classification
+  const classification = classifyError(err);
+  // Attempt to extract agentId from argv for the log entry
+  const argvAgentIdx = process.argv.indexOf('--agent-id');
+  const logAgentId = argvAgentIdx !== -1 ? (process.argv[argvAgentIdx + 1] || 'unknown') : 'unknown';
+  bridgeLog('error', 'Bridge task failed', {
+    agentId: logAgentId,
+    error: err.message || String(err),
+    classification,
+    code: err.code || 'BRIDGE_ERROR',
+  });
+
   const errorResponse = {
     success: false,
     error: err.message || String(err),

@@ -91,15 +91,22 @@ export class QwenCLIProvider extends BaseProvider {
     const model = request.model || this.config.model;
     const prompt = this.formatMessages(request.messages);
     const timeoutMs = this.config.timeout || 120000;
-    const args = [prompt, '--output-format', 'json', '-m', model];
+    const args = ['--output-format', 'json', '-m', model];
 
     return new Promise<LLMResponse>((resolve, reject) => {
+      let settled = false;
+      const env: Record<string, string> = {};
+      for (const key of ['PATH', 'HOME', 'USER', 'SHELL', 'LANG', 'TERM', 'TMPDIR', 'DASHSCOPE_API_KEY', 'QWEN_API_KEY']) {
+        if (process.env[key]) env[key] = process.env[key]!;
+      }
       const child = spawn(this.binaryPath!, args, {
         stdio: ['pipe', 'pipe', 'pipe'],
-        env: { ...process.env },
+        env,
       });
       this.activeChildren.add(child);
-      child.stdin.end(); // Prevent hang
+      child.stdin.on('error', (err) => { if ((err as NodeJS.ErrnoException).code !== 'EPIPE') {} });
+      child.stdin.write(prompt);
+      child.stdin.end();
 
       let stdout = '';
       let stderr = '';
@@ -107,6 +114,8 @@ export class QwenCLIProvider extends BaseProvider {
       child.stderr.on('data', (d: Buffer) => { stderr += d.toString(); });
 
       const timer = setTimeout(() => {
+        if (settled) return;
+        settled = true;
         child.kill('SIGKILL');
         this.activeChildren.delete(child);
         reject(new LLMProviderError(
@@ -115,6 +124,8 @@ export class QwenCLIProvider extends BaseProvider {
       }, timeoutMs);
 
       child.on('close', (code: number | null) => {
+        if (settled) return;
+        settled = true;
         clearTimeout(timer);
         this.activeChildren.delete(child);
         if (code !== 0) { reject(this.exitCodeToError(code, stderr)); return; }
@@ -123,6 +134,8 @@ export class QwenCLIProvider extends BaseProvider {
       });
 
       child.on('error', (err: Error) => {
+        if (settled) return;
+        settled = true;
         clearTimeout(timer);
         this.activeChildren.delete(child);
         reject(this.transformError(err));
@@ -135,13 +148,19 @@ export class QwenCLIProvider extends BaseProvider {
     const model = request.model || this.config.model;
     const prompt = this.formatMessages(request.messages);
     const timeoutMs = (this.config.timeout || 120000) * 2;
-    const args = [prompt, '--output-format', 'stream-json', '-m', model];
+    const args = ['--output-format', 'stream-json', '-m', model];
 
+    const env: Record<string, string> = {};
+    for (const key of ['PATH', 'HOME', 'USER', 'SHELL', 'LANG', 'TERM', 'TMPDIR', 'DASHSCOPE_API_KEY', 'QWEN_API_KEY']) {
+      if (process.env[key]) env[key] = process.env[key]!;
+    }
     const child = spawn(this.binaryPath!, args, {
       stdio: ['pipe', 'pipe', 'pipe'],
-      env: { ...process.env },
+      env,
     });
     this.activeChildren.add(child);
+    child.stdin.on('error', (err) => { if ((err as NodeJS.ErrnoException).code !== 'EPIPE') {} });
+    child.stdin.write(prompt);
     child.stdin.end();
 
     const timer = setTimeout(() => {

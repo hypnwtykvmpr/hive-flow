@@ -1332,12 +1332,15 @@ describe('CodexCLIProvider — error handling', () => {
     await expect(promise).rejects.toThrow(/empty/i);
   });
 
-  it('spawnCodex throws on prompt exceeding 200KB', () => {
+  it('spawnCodex accepts prompts exceeding 200KB (no client-side size limit)', () => {
     (provider as PrivateAccess).binaryPath = '/usr/local/bin/codex';
     const bigPrompt = 'x'.repeat(250_000);
+    const mockChild = createMockChild();
+    mockSpawn.mockReturnValue(mockChild);
+    // Should not throw — size validation is delegated to the Codex binary
     expect(() => {
       (provider as PrivateAccess).spawnCodex(bigPrompt, 'gpt-5.3-codex');
-    }).toThrow(/too long/i);
+    }).not.toThrow();
   });
 });
 
@@ -1623,11 +1626,14 @@ describe('CursorCLIProvider — error handling', () => {
     expect(result).toContain('Assistant: Hi there');
   });
 
-  it('spawnCursor throws on prompt exceeding 200KB', () => {
+  it('spawnCursor accepts prompts exceeding 200KB (no client-side size limit)', () => {
     const bigPrompt = 'x'.repeat(250_000);
+    const mockChild = createMockChild();
+    mockSpawn.mockReturnValue(mockChild);
+    // Should not throw — size validation is delegated to the Cursor binary
     expect(() => {
       (provider as PrivateAccess).spawnCursor(bigPrompt, 'auto', false);
-    }).toThrow(/too long/i);
+    }).not.toThrow();
   });
 
   it('spawnCursor passes CURSOR_API_KEY via env', () => {
@@ -2388,7 +2394,7 @@ describe('GeminiCLIProvider — listModels & getModelInfo', () => {
 // ============================================================
 
 describe('GeminiCLIProvider — validateConfig', () => {
-  it('sets model to auto when model is not provided', async () => {
+  it('sets model to gemini-3.1-pro-preview when model is not provided', async () => {
     vi.clearAllMocks();
     mockBinaryFound('gemini');
     const provider = new GeminiCLIProvider({
@@ -2396,7 +2402,7 @@ describe('GeminiCLIProvider — validateConfig', () => {
       logger: noopLogger,
     });
     await provider.initialize();
-    expect(provider.config.model).toBe('auto');
+    expect(provider.config.model).toBe('gemini-3.1-pro-preview');
     provider.destroy();
   });
 

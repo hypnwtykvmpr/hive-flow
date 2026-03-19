@@ -421,9 +421,14 @@ describe('workflow-enforcer', () => {
         expect.any(String),
         'utf-8',
       );
-      const written = JSON.parse(
-        (writeFileSync as ReturnType<typeof vi.fn>).mock.calls[0][1] as string,
-      );
+      // saveEnforcementState writes two files: the HMAC key (raw hex) then the envelope JSON.
+      // Find the call whose path ends with 'current.json'.
+      const calls = (writeFileSync as ReturnType<typeof vi.fn>).mock.calls;
+      const stateCall = calls.find((c: unknown[]) => typeof c[0] === 'string' && (c[0] as string).endsWith('current.json'));
+      expect(stateCall).toBeDefined();
+      const envelope = JSON.parse(stateCall![1] as string);
+      // saveEnforcementState writes an HMAC-signed envelope { payload, signature }
+      const written = envelope.payload ?? envelope;
       expect(written.assessment.score).toBe(50);
     });
 
@@ -561,9 +566,14 @@ describe('workflow-enforcer', () => {
       await tool.handler({
         taskDescription: 'add API endpoint with integration tests and deploy config across src/routes.ts src/handler.ts',
       });
-      const writtenState = JSON.parse(
-        (writeFileSync as ReturnType<typeof vi.fn>).mock.calls[0][1] as string,
-      );
+      // saveEnforcementState writes two files: the HMAC key (raw hex) then the envelope JSON.
+      // Find the call whose path ends with 'current.json'.
+      const calls = (writeFileSync as ReturnType<typeof vi.fn>).mock.calls;
+      const stateCall = calls.find((c: unknown[]) => typeof c[0] === 'string' && (c[0] as string).endsWith('current.json'));
+      expect(stateCall).toBeDefined();
+      const envelope = JSON.parse(stateCall![1] as string);
+      // saveEnforcementState writes an HMAC-signed envelope { payload, signature }
+      const writtenState = envelope.payload ?? envelope;
       expect(writtenState.planRequired).toBe(true);
     });
 

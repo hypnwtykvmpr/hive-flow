@@ -3,7 +3,15 @@
  * Includes rollback capability
  */
 
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
+
+function isValidNpmPackageName(name: string): boolean {
+  return /^(@[a-z0-9-~][a-z0-9-._~]*\/)?[a-z0-9-~][a-z0-9-._~]*$/.test(name);
+}
+
+function isValidVersion(version: string): boolean {
+  return /^[a-zA-Z0-9._-]+$/.test(version);
+}
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
@@ -97,12 +105,13 @@ export async function executeUpdate(
 
   try {
     // Execute npm install
-    const installCmd = `npm install ${update.package}@${update.latestVersion} --save-exact`;
-
-    execSync(installCmd, {
+    if (!isValidNpmPackageName(update.package) || !isValidVersion(update.latestVersion)) {
+      throw new Error(`Invalid package or version: ${update.package}@${update.latestVersion}`);
+    }
+    execFileSync('npm', ['install', `${update.package}@${update.latestVersion}`, '--save-exact'], {
       encoding: 'utf-8',
       stdio: 'pipe',
-      timeout: 60000, // 1 minute timeout
+      timeout: 60000,
     });
 
     // Record successful update
@@ -198,9 +207,10 @@ export async function rollbackUpdate(
 
   try {
     // Install the previous version
-    const installCmd = `npm install ${lastUpdate.package}@${lastUpdate.fromVersion} --save-exact`;
-
-    execSync(installCmd, {
+    if (!isValidNpmPackageName(lastUpdate.package) || !isValidVersion(lastUpdate.fromVersion)) {
+      throw new Error(`Invalid package or version: ${lastUpdate.package}@${lastUpdate.fromVersion}`);
+    }
+    execFileSync('npm', ['install', `${lastUpdate.package}@${lastUpdate.fromVersion}`, '--save-exact'], {
       encoding: 'utf-8',
       stdio: 'pipe',
       timeout: 60000,

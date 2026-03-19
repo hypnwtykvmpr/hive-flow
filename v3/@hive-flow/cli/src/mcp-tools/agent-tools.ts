@@ -8,7 +8,7 @@
 import { randomUUID, createHmac } from 'node:crypto';
 import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync, rmdirSync, unlinkSync, statSync } from 'node:fs';
 import { join, dirname } from 'node:path';
-import { execFile } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import type { MCPTool } from './types.js';
 
@@ -34,7 +34,7 @@ export interface AgentRecord {
   domain?: string;
   model?: AgentModel;  // Model tier assigned to this agent
   provider?: AgentProvider;  // LLM provider (anthropic, gemini-cli, codex-cli, cursor-cli)
-  resolvedModel?: string;  // Provider-native model name (e.g. gemini-3.1-pro-preview, gpt-5.3-codex)
+  resolvedModel?: string;  // Provider-native model name (e.g. gemini-3.1-pro-preview, gpt-5.4)
   modelRoutedBy?: 'explicit' | 'router' | 'agent-booster' | 'default';  // How model was determined (ADR-026)
 }
 
@@ -792,7 +792,9 @@ export const agentTools: MCPTool[] = [
       }
 
       const agentDir = getAgentDir();
-      const args = ['--agent-id', agentId, '--task', task, '--store-dir', agentDir, '--timeout', String(timeout)];
+      // Pass task via stdin (--task-stdin) to avoid shell parsing issues with
+      // special characters (colons, quotes, pipes, etc.) and ARG_MAX limits.
+      const args = ['--agent-id', agentId, '--task-stdin', '--store-dir', agentDir, '--timeout', String(timeout)];
 
       // RC-2 helper: bridge-compatible lock → fresh read → reset status to idle
       // if still busy → save → unlock. Only touches status — never overwrites
@@ -809,10 +811,34 @@ export const agentTools: MCPTool[] = [
       };
 
       return new Promise((resolve) => {
-        const child = execFile('node', [bridgePath, ...args], { timeout, maxBuffer: 10 * 1024 * 1024 }, (err, stdout, stderr) => {
-          if (err) {
-            // RC-2: Lock → fresh read → reset status only → save → unlock
-            resetStatusToIdle().then(() => {
+        // Use spawn (not execFile) so we can pipe the task via stdin.
+        // This avoids all shell-parsing issues with special characters in task text
+        // and bypasses OS ARG_MAX limits for very long prompts.
+        const child = spawn('node', [bridgePath, ...args], {
+          stdio: ['pipe', 'pipe', 'pipe'],
+          timeout,
+        });
+
+        // Pipe task text via stdin — the bridge reads it when --task-stdin is set
+        child.stdin.on('error', () => { /* ignore EPIPE if bridge exits early */ });
+        child.stdin.write(task);
+        child.stdin.end();
+
+        let stdout = '';
+        let stderr = '';
+
+        child.stdout.on('data', (d: Buffer) => {
+          stdout += d.toString();
+          // Safety: cap stdout collection at maxBuffer equivalent (10MB)
+          if (stdout.length > 10 * 1024 * 1024) {
+            child.kill('SIGKILL');
+          }
+        });
+        child.stderr.on('data', (d: Buffer) => { stderr += d.toString(); });
+
+        child.on('close', (code: number | null) => {
+          const handleResult = () => {
+            if (code !== 0) {
               // Try to parse error JSON from stdout (bridge writes errors there)
               // Providers may leak log lines to stdout; extract JSON robustly
               let parsed: Record<string, unknown> | undefined;
@@ -826,57 +852,43 @@ export const agentTools: MCPTool[] = [
               if (parsed && parsed.error) {
                 resolve({ success: false, agentId, error: parsed.error, stderr: stderr || undefined });
               } else {
-                resolve({ success: false, agentId, error: err.message, stderr: stderr || undefined });
+                const errMsg = code === null ? 'Bridge process killed (timeout or signal)' : `Bridge exited with code ${code}`;
+                resolve({ success: false, agentId, error: errMsg, stderr: stderr || undefined });
               }
-            }).catch(() => {
-              resolve({ success: false, agentId, error: err.message, stderr: stderr || undefined });
-            });
-            return;
-          }
-
-          // Parse bridge JSON output
-          // Providers may leak log lines to stdout; extract the JSON object robustly
-          let result: Record<string, unknown>;
-          try {
-            result = JSON.parse(stdout);
-          } catch {
-            // Fallback: find the first top-level JSON object in stdout
-            const jsonStart = stdout.indexOf('{');
-            const jsonEnd = stdout.lastIndexOf('}');
-            if (jsonStart !== -1 && jsonEnd > jsonStart) {
-              try {
-                result = JSON.parse(stdout.slice(jsonStart, jsonEnd + 1));
-              } catch {
-                // RC-2: Lock → fresh read → reset status only → save → unlock
-                resetStatusToIdle().then(() => {
-                  resolve({ success: false, agentId, error: 'Failed to parse bridge output', rawOutput: stdout.slice(0, 2000) });
-                }).catch(() => {
-                  resolve({ success: false, agentId, error: 'Failed to parse bridge output', rawOutput: stdout.slice(0, 2000) });
-                });
-                return;
-              }
-            } else {
-              // RC-2: Lock → fresh read → reset status only → save → unlock
-              resetStatusToIdle().then(() => {
-                resolve({ success: false, agentId, error: 'Failed to parse bridge output', rawOutput: stdout.slice(0, 2000) });
-              }).catch(() => {
-                resolve({ success: false, agentId, error: 'Failed to parse bridge output', rawOutput: stdout.slice(0, 2000) });
-              });
               return;
             }
-          }
 
-          // RC-2: Bridge already saved updated agent state (history, taskCount, lastResult).
-          // Lock → fresh read → reset status to idle ONLY if still busy → save → unlock.
+            // Parse bridge JSON output
+            // Providers may leak log lines to stdout; extract the JSON object robustly
+            let result: Record<string, unknown>;
+            try {
+              result = JSON.parse(stdout);
+            } catch {
+              // Fallback: find the first top-level JSON object in stdout
+              const jsonStart = stdout.indexOf('{');
+              const jsonEnd = stdout.lastIndexOf('}');
+              if (jsonStart !== -1 && jsonEnd > jsonStart) {
+                try {
+                  result = JSON.parse(stdout.slice(jsonStart, jsonEnd + 1));
+                } catch {
+                  resolve({ success: false, agentId, error: 'Failed to parse bridge output', rawOutput: stdout.slice(0, 2000) });
+                  return;
+                }
+              } else {
+                resolve({ success: false, agentId, error: 'Failed to parse bridge output', rawOutput: stdout.slice(0, 2000) });
+                return;
+              }
+            }
+
+            // RC-2: Bridge already saved updated agent state (history, taskCount, lastResult).
+            resolve(result);
+          };
+
+          // RC-2: Lock → fresh read → reset status to idle ONLY if still busy → save → unlock.
           // This ensures we never overwrite bridge-written fields.
-          resetStatusToIdle().then(() => {
-            resolve(result);
-          }).catch(() => {
-            resolve(result);
-          });
+          resetStatusToIdle().then(handleResult).catch(handleResult);
         });
 
-        // Safety: ensure child is killed on timeout (execFile handles this, but be explicit)
         child.on('error', (spawnErr) => {
           // RC-2: Lock → fresh read → reset status only → save → unlock
           resetStatusToIdle().then(() => {

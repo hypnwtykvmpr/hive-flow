@@ -33,6 +33,7 @@ vi.mock('node:fs', () => ({
 
 vi.mock('node:child_process', () => ({
   execFile: vi.fn(),
+  spawn: vi.fn(),
 }));
 
 vi.mock('node:url', () => ({
@@ -50,8 +51,9 @@ vi.mock('../src/ruvector/enhanced-model-router.js', () => ({
 }));
 
 import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync } from 'node:fs';
-import { execFile } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import { agentTools } from '../src/mcp-tools/agent-tools.js';
+import { EventEmitter } from 'node:events';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -185,6 +187,36 @@ interface BridgeTaskResult {
   cost?: number;
 }
 
+/**
+ * Create a mock child process for spawn(). The bridge now uses spawn + stdin pipe.
+ */
+function createMockChild(stdoutData: string, stderrData: string, exitCode: number | null = 0) {
+  const child = new EventEmitter() as EventEmitter & {
+    stdin: { write: ReturnType<typeof vi.fn>; end: ReturnType<typeof vi.fn>; on: ReturnType<typeof vi.fn> };
+    stdout: EventEmitter;
+    stderr: EventEmitter;
+    kill: ReturnType<typeof vi.fn>;
+  };
+  child.stdin = { write: vi.fn(), end: vi.fn(), on: vi.fn() };
+  child.stdout = new EventEmitter();
+  child.stderr = new EventEmitter();
+  child.kill = vi.fn();
+
+  queueMicrotask(() => {
+    if (stdoutData) child.stdout.emit('data', Buffer.from(stdoutData));
+    if (stderrData) child.stderr.emit('data', Buffer.from(stderrData));
+    child.emit('close', exitCode);
+  });
+
+  return child;
+}
+
+function mockSpawnSuccess(stdoutData: string = '{"success":true}', stderrData: string = '', exitCode: number | null = 0) {
+  (spawn as ReturnType<typeof vi.fn>).mockImplementation(() => {
+    return createMockChild(stdoutData, stderrData, exitCode);
+  });
+}
+
 // ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('Bridge Tool Execution', () => {
@@ -207,12 +239,7 @@ describe('Bridge Tool Execution', () => {
         taskCount: 1,
       });
 
-      (execFile as ReturnType<typeof vi.fn>).mockImplementation(
-        (_cmd: string, _args: string[], _opts: unknown, callback: Function) => {
-          callback(null, bridgeOutput, '[bridge] Tool call: read_file({"path":"/tmp/test.ts"})\n');
-          return { on: vi.fn() };
-        },
-      );
+      mockSpawnSuccess(bridgeOutput, '[bridge] Tool call: read_file({"path":"/tmp/test.ts"})\n');
 
       const result = await handler({ agentId: agent.agentId, task: 'Read the file and tell me the answer' });
 
@@ -239,12 +266,7 @@ describe('Bridge Tool Execution', () => {
         '[bridge] Tool call: read_file({"path":"/tmp/b.ts"})',
       ].join('\n');
 
-      (execFile as ReturnType<typeof vi.fn>).mockImplementation(
-        (_cmd: string, _args: string[], _opts: unknown, callback: Function) => {
-          callback(null, bridgeOutput, stderr);
-          return { on: vi.fn() };
-        },
-      );
+      mockSpawnSuccess(bridgeOutput, stderr);
 
       const result = await handler({ agentId: agent.agentId, task: 'Compare the two files' });
 
@@ -260,44 +282,39 @@ describe('Bridge Tool Execution', () => {
   // 2. Bridge calls correct MCP tool with correct parameters
   // ════════════════════════════════════════════════════════════════════════════
   describe('Tool call parameter passing', () => {
-    it('should pass task and agent-id to bridge via execFile args', async () => {
+    it('should pass agent-id and --task-stdin to bridge via spawn args, and pipe task via stdin', async () => {
       const agent = makeAgent({ agentId: 'tool-param-agent' });
       setupStoreMocks(makeStore({ [agent.agentId]: agent }));
 
-      (execFile as ReturnType<typeof vi.fn>).mockImplementation(
-        (_cmd: string, _args: string[], _opts: unknown, callback: Function) => {
-          callback(null, JSON.stringify({ success: true, agentId: agent.agentId }), '');
-          return { on: vi.fn() };
-        },
-      );
+      mockSpawnSuccess(JSON.stringify({ success: true, agentId: agent.agentId }));
 
       await handler({ agentId: agent.agentId, task: 'Use the search tool to find auth patterns' });
 
-      expect(execFile).toHaveBeenCalledTimes(1);
-      const [cmd, args] = (execFile as ReturnType<typeof vi.fn>).mock.calls[0];
+      expect(spawn).toHaveBeenCalledTimes(1);
+      const [cmd, args] = (spawn as ReturnType<typeof vi.fn>).mock.calls[0];
 
       expect(cmd).toBe('node');
       expect(args).toContain('--agent-id');
       expect(args).toContain('tool-param-agent');
-      expect(args).toContain('--task');
-      expect(args).toContain('Use the search tool to find auth patterns');
+      // Task is piped via stdin, not as --task arg
+      expect(args).toContain('--task-stdin');
+      expect(args).not.toContain('--task');
       expect(args).toContain('--store-dir');
+
+      // Verify task was written to stdin
+      const child = (spawn as ReturnType<typeof vi.fn>).mock.results[0].value;
+      expect(child.stdin.write).toHaveBeenCalledWith('Use the search tool to find auth patterns');
     });
 
     it('should pass store-dir pointing to agent store directory', async () => {
       const agent = makeAgent();
       setupStoreMocks(makeStore({ [agent.agentId]: agent }));
 
-      (execFile as ReturnType<typeof vi.fn>).mockImplementation(
-        (_cmd: string, _args: string[], _opts: unknown, callback: Function) => {
-          callback(null, JSON.stringify({ success: true }), '');
-          return { on: vi.fn() };
-        },
-      );
+      mockSpawnSuccess(JSON.stringify({ success: true }));
 
       await handler({ agentId: agent.agentId, task: 'do something' });
 
-      const [, args] = (execFile as ReturnType<typeof vi.fn>).mock.calls[0];
+      const [, args] = (spawn as ReturnType<typeof vi.fn>).mock.calls[0];
       const storeDirIdx = args.indexOf('--store-dir');
       expect(storeDirIdx).toBeGreaterThan(-1);
 
@@ -322,12 +339,7 @@ describe('Bridge Tool Execution', () => {
         taskCount: 2,
       });
 
-      (execFile as ReturnType<typeof vi.fn>).mockImplementation(
-        (_cmd: string, _args: string[], _opts: unknown, callback: Function) => {
-          callback(null, bridgeOutput, '');
-          return { on: vi.fn() };
-        },
-      );
+      mockSpawnSuccess(bridgeOutput);
 
       const result = await handler({ agentId: agent.agentId, task: 'Analyze the module' });
 
@@ -353,16 +365,10 @@ describe('Bridge Tool Execution', () => {
         taskCount: 1,
       });
 
-      (execFile as ReturnType<typeof vi.fn>).mockImplementation(
-        (_cmd: string, _args: string[], _opts: unknown, callback: Function) => {
-          callback(null, bridgeOutput, '');
-          return { on: vi.fn() };
-        },
-      );
+      mockSpawnSuccess(bridgeOutput);
 
       const result = await handler({ agentId: agent.agentId, task: 'Quick task' }) as BridgeTaskResult;
 
-      // The handler returns the parsed bridge JSON directly
       expect(result.success).toBe(true);
       expect(result.model).toBe('gemini-3.1-pro-preview');
     });
@@ -381,13 +387,7 @@ describe('Bridge Tool Execution', () => {
         code: 'TOOL_EXEC_ERROR',
       });
 
-      (execFile as ReturnType<typeof vi.fn>).mockImplementation(
-        (_cmd: string, _args: string[], _opts: unknown, callback: Function) => {
-          const execError = new Error('Process exited with code 1');
-          callback(execError, bridgeOutput, '[bridge] Tool call: read_file({"path":"/nonexistent"})\n');
-          return { on: vi.fn() };
-        },
-      );
+      mockSpawnSuccess(bridgeOutput, '[bridge] Tool call: read_file({"path":"/nonexistent"})\n', 1);
 
       const result = await handler({ agentId: agent.agentId, task: 'Read a file that does not exist' }) as BridgeTaskResult;
 
@@ -404,13 +404,7 @@ describe('Bridge Tool Execution', () => {
         code: 'BRIDGE_ERROR',
       });
 
-      (execFile as ReturnType<typeof vi.fn>).mockImplementation(
-        (_cmd: string, _args: string[], _opts: unknown, callback: Function) => {
-          const execError = new Error('Process exited with code 1');
-          callback(execError, bridgeOutput, '');
-          return { on: vi.fn() };
-        },
-      );
+      mockSpawnSuccess(bridgeOutput, '', 1);
 
       const result = await handler({ agentId: agent.agentId, task: 'do something' }) as BridgeTaskResult;
 
@@ -427,13 +421,7 @@ describe('Bridge Tool Execution', () => {
         code: 'BRIDGE_ERROR',
       });
 
-      (execFile as ReturnType<typeof vi.fn>).mockImplementation(
-        (_cmd: string, _args: string[], _opts: unknown, callback: Function) => {
-          const execError = new Error('Process exited with code 1');
-          callback(execError, bridgeOutput, '');
-          return { on: vi.fn() };
-        },
-      );
+      mockSpawnSuccess(bridgeOutput, '', 1);
 
       const result = await handler({ agentId: agent.agentId, task: 'do something' }) as BridgeTaskResult;
 
@@ -447,13 +435,7 @@ describe('Bridge Tool Execution', () => {
         makeStore({ [agent.agentId]: agent }),
       );
 
-      (execFile as ReturnType<typeof vi.fn>).mockImplementation(
-        (_cmd: string, _args: string[], _opts: unknown, callback: Function) => {
-          const execError = new Error('Process exited with code 1');
-          callback(execError, JSON.stringify({ success: false, error: 'tool crash' }), '');
-          return { on: vi.fn() };
-        },
-      );
+      mockSpawnSuccess(JSON.stringify({ success: false, error: 'tool crash' }), '', 1);
 
       await handler({ agentId: agent.agentId, task: 'do something risky' });
 
@@ -467,18 +449,13 @@ describe('Bridge Tool Execution', () => {
         makeStore({ [agent.agentId]: agent }),
       );
 
-      (execFile as ReturnType<typeof vi.fn>).mockImplementation(
-        (_cmd: string, _args: string[], _opts: unknown, callback: Function) => {
-          const timeoutError = new Error('Command timed out after 120000ms');
-          callback(timeoutError, '', '');
-          return { on: vi.fn() };
-        },
-      );
+      // Simulate timeout: process killed (exit code null)
+      mockSpawnSuccess('', '', null);
 
       const result = await handler({ agentId: agent.agentId, task: 'long running tool task' }) as BridgeTaskResult;
 
       expect(result.success).toBe(false);
-      expect(result.error).toContain('timed out');
+      expect(result.error).toContain('killed');
 
       // Agent should be reset to idle, not stuck in busy
       const store = getPersistedStore();
@@ -498,14 +475,11 @@ describe('Bridge Tool Execution', () => {
 
       let statusDuringExec: string | undefined;
 
-      (execFile as ReturnType<typeof vi.fn>).mockImplementation(
-        (_cmd: string, _args: string[], _opts: unknown, callback: Function) => {
-          // Phase 2: bridge is running — agent should be busy, lock is NOT held
-          statusDuringExec = getPersistedStore().agents[agent.agentId].status;
-          callback(null, JSON.stringify({ success: true, agentId: agent.agentId }), '');
-          return { on: vi.fn() };
-        },
-      );
+      (spawn as ReturnType<typeof vi.fn>).mockImplementation(() => {
+        // Phase 2: bridge is running — agent should be busy, lock is NOT held
+        statusDuringExec = getPersistedStore().agents[agent.agentId].status;
+        return createMockChild(JSON.stringify({ success: true, agentId: agent.agentId }), '', 0);
+      });
 
       await handler({ agentId: agent.agentId, task: 'execute tools' });
 
@@ -518,7 +492,6 @@ describe('Bridge Tool Execution', () => {
     });
 
     it('should allow other agents to be read while bridge executes tools', async () => {
-      // Two agents in the store — one executing, one should remain accessible
       const agent1 = makeAgent({ agentId: 'exec-agent', status: 'idle' });
       const agent2 = makeAgent({ agentId: 'other-agent', status: 'idle', provider: undefined });
       const { getPersistedStore } = setupStoreMocks(
@@ -530,22 +503,16 @@ describe('Bridge Tool Execution', () => {
 
       let otherAgentAccessible = false;
 
-      (execFile as ReturnType<typeof vi.fn>).mockImplementation(
-        (_cmd: string, _args: string[], _opts: unknown, callback: Function) => {
-          // During Phase 2, verify other agent data is still in the store
-          const store = getPersistedStore();
-          otherAgentAccessible = store.agents['other-agent'] !== undefined;
-          callback(null, JSON.stringify({ success: true, agentId: agent1.agentId }), '');
-          return { on: vi.fn() };
-        },
-      );
+      (spawn as ReturnType<typeof vi.fn>).mockImplementation(() => {
+        const store = getPersistedStore();
+        otherAgentAccessible = store.agents['other-agent'] !== undefined;
+        return createMockChild(JSON.stringify({ success: true, agentId: agent1.agentId }), '', 0);
+      });
 
       await handler({ agentId: agent1.agentId, task: 'long tool execution' });
 
-      // Other agent's data was not locked out during bridge execution
       expect(otherAgentAccessible).toBe(true);
 
-      // Both agents should still be in the store after execution
       const finalStore = getPersistedStore();
       expect(finalStore.agents['exec-agent']).toBeDefined();
       expect(finalStore.agents['other-agent']).toBeDefined();
@@ -557,25 +524,35 @@ describe('Bridge Tool Execution', () => {
         makeStore({ [agent.agentId]: agent }),
       );
 
-      (execFile as ReturnType<typeof vi.fn>).mockImplementation(
-        (_cmd: string, _args: string[], _opts: unknown, callback: Function) => {
-          // Simulate delayed response (bridge holds no lock during this time)
-          setTimeout(() => {
-            callback(null, JSON.stringify({
-              success: true,
-              agentId: agent.agentId,
-              content: 'Finished after delay',
-            }), '');
-          }, 50);
-          return { on: vi.fn() };
-        },
-      );
+      (spawn as ReturnType<typeof vi.fn>).mockImplementation(() => {
+        // Delayed child: emit data and close after 50ms
+        const child = new EventEmitter() as EventEmitter & {
+          stdin: { write: ReturnType<typeof vi.fn>; end: ReturnType<typeof vi.fn>; on: ReturnType<typeof vi.fn> };
+          stdout: EventEmitter;
+          stderr: EventEmitter;
+          kill: ReturnType<typeof vi.fn>;
+        };
+        child.stdin = { write: vi.fn(), end: vi.fn(), on: vi.fn() };
+        child.stdout = new EventEmitter();
+        child.stderr = new EventEmitter();
+        child.kill = vi.fn();
+
+        setTimeout(() => {
+          child.stdout.emit('data', Buffer.from(JSON.stringify({
+            success: true,
+            agentId: agent.agentId,
+            content: 'Finished after delay',
+          })));
+          child.emit('close', 0);
+        }, 50);
+
+        return child;
+      });
 
       const result = await handler({ agentId: agent.agentId, task: 'slow tool work' }) as BridgeTaskResult;
 
       expect(result.success).toBe(true);
 
-      // Store should be intact
       const store = getPersistedStore();
       expect(store.version).toBe('3.0.0');
       expect(store.agents[agent.agentId]).toBeDefined();
@@ -596,13 +573,7 @@ describe('Bridge Tool Execution', () => {
         code: 'BRIDGE_ERROR',
       });
 
-      (execFile as ReturnType<typeof vi.fn>).mockImplementation(
-        (_cmd: string, _args: string[], _opts: unknown, callback: Function) => {
-          const execError = new Error('Process exited with code 1');
-          callback(execError, bridgeOutput, '');
-          return { on: vi.fn() };
-        },
-      );
+      mockSpawnSuccess(bridgeOutput, '', 1);
 
       const result = await handler({ agentId: agent.agentId, task: 'use unknown tool' }) as BridgeTaskResult;
 
@@ -616,26 +587,18 @@ describe('Bridge Tool Execution', () => {
         makeStore({ [agent.agentId]: agent }),
       );
 
-      // Bridge returns an error because provider gave malformed tool call
       const bridgeOutput = makeBridgeErrorResponse({
         error: 'Provider returned malformed tool call: missing function name',
         code: 'BRIDGE_ERROR',
       });
 
-      (execFile as ReturnType<typeof vi.fn>).mockImplementation(
-        (_cmd: string, _args: string[], _opts: unknown, callback: Function) => {
-          const execError = new Error('Process exited with code 1');
-          callback(execError, bridgeOutput, '');
-          return { on: vi.fn() };
-        },
-      );
+      mockSpawnSuccess(bridgeOutput, '', 1);
 
       const result = await handler({ agentId: agent.agentId, task: 'trigger malformed tool call' }) as BridgeTaskResult;
 
       expect(result.success).toBe(false);
       expect(result.error).toContain('malformed tool call');
 
-      // Agent status should be reset
       const store = getPersistedStore();
       expect(store.agents[agent.agentId].status).toBe('idle');
     });
@@ -646,13 +609,7 @@ describe('Bridge Tool Execution', () => {
         makeStore({ [agent.agentId]: agent }),
       );
 
-      (execFile as ReturnType<typeof vi.fn>).mockImplementation(
-        (_cmd: string, _args: string[], _opts: unknown, callback: Function) => {
-          // Bridge crashes with raw error text instead of JSON
-          callback(null, 'Segmentation fault (core dumped)', 'Fatal error in bridge');
-          return { on: vi.fn() };
-        },
-      );
+      mockSpawnSuccess('Segmentation fault (core dumped)', 'Fatal error in bridge', 0);
 
       const result = await handler({ agentId: agent.agentId, task: 'cause a crash' }) as BridgeTaskResult;
 
@@ -660,7 +617,6 @@ describe('Bridge Tool Execution', () => {
       expect(result.error).toBe('Failed to parse bridge output');
       expect(result.rawOutput).toBe('Segmentation fault (core dumped)');
 
-      // Agent should not be stuck in busy
       const store = getPersistedStore();
       expect(store.agents[agent.agentId].status).toBe('idle');
     });
@@ -674,23 +630,17 @@ describe('Bridge Tool Execution', () => {
       const agent = makeAgent();
       setupStoreMocks(makeStore({ [agent.agentId]: agent }));
 
-      // Bridge ran 3 tool-call iterations, so history is longer
       const bridgeOutput = JSON.stringify({
         success: true,
         agentId: agent.agentId,
         content: 'Final answer after 3 tool calls.',
         model: 'gemini-3.1-pro-preview',
         usage: { totalTokens: 800 },
-        historyLength: 9, // system + user + 3*(assistant+tool) + final assistant
+        historyLength: 9,
         taskCount: 1,
       });
 
-      (execFile as ReturnType<typeof vi.fn>).mockImplementation(
-        (_cmd: string, _args: string[], _opts: unknown, callback: Function) => {
-          callback(null, bridgeOutput, '');
-          return { on: vi.fn() };
-        },
-      );
+      mockSpawnSuccess(bridgeOutput);
 
       const result = await handler({ agentId: agent.agentId, task: 'Multi-step analysis' }) as BridgeTaskResult;
 
@@ -702,7 +652,6 @@ describe('Bridge Tool Execution', () => {
       const agent = makeAgent();
       setupStoreMocks(makeStore({ [agent.agentId]: agent }));
 
-      // No tool calls — straightforward text response
       const bridgeOutput = JSON.stringify({
         success: true,
         agentId: agent.agentId,
@@ -713,12 +662,7 @@ describe('Bridge Tool Execution', () => {
         taskCount: 1,
       });
 
-      (execFile as ReturnType<typeof vi.fn>).mockImplementation(
-        (_cmd: string, _args: string[], _opts: unknown, callback: Function) => {
-          callback(null, bridgeOutput, '');
-          return { on: vi.fn() };
-        },
-      );
+      mockSpawnSuccess(bridgeOutput);
 
       const result = await handler({ agentId: agent.agentId, task: 'Simple question' }) as BridgeTaskResult;
 
@@ -731,23 +675,17 @@ describe('Bridge Tool Execution', () => {
       const agent = makeAgent();
       setupStoreMocks(makeStore({ [agent.agentId]: agent }));
 
-      // Bridge hit MAX_TOOL_ITERATIONS (10) but still returned a result
       const bridgeOutput = JSON.stringify({
         success: true,
         agentId: agent.agentId,
         content: 'Stopped after maximum iterations. Partial result available.',
         model: 'gemini-3.1-pro-preview',
         usage: { totalTokens: 5000 },
-        historyLength: 23, // many rounds of tool calls
+        historyLength: 23,
         taskCount: 1,
       });
 
-      (execFile as ReturnType<typeof vi.fn>).mockImplementation(
-        (_cmd: string, _args: string[], _opts: unknown, callback: Function) => {
-          callback(null, bridgeOutput, '[bridge] Tool call iterations: 10 (max reached)\n');
-          return { on: vi.fn() };
-        },
-      );
+      mockSpawnSuccess(bridgeOutput, '[bridge] Tool call iterations: 10 (max reached)\n');
 
       const result = await handler({ agentId: agent.agentId, task: 'Complex multi-step task' }) as BridgeTaskResult;
 
@@ -778,12 +716,7 @@ describe('Bridge Tool Execution', () => {
         taskCount: 1,
       });
 
-      (execFile as ReturnType<typeof vi.fn>).mockImplementation(
-        (_cmd: string, _args: string[], _opts: unknown, callback: Function) => {
-          callback(null, bridgeOutput, '');
-          return { on: vi.fn() };
-        },
-      );
+      mockSpawnSuccess(bridgeOutput);
 
       const result = await handler({ agentId: agent.agentId, task: 'Implement the feature' }) as BridgeTaskResult;
 
@@ -809,12 +742,7 @@ describe('Bridge Tool Execution', () => {
         taskCount: 1,
       });
 
-      (execFile as ReturnType<typeof vi.fn>).mockImplementation(
-        (_cmd: string, _args: string[], _opts: unknown, callback: Function) => {
-          callback(null, bridgeOutput, '');
-          return { on: vi.fn() };
-        },
-      );
+      mockSpawnSuccess(bridgeOutput);
 
       const result = await handler({ agentId: agent.agentId, task: 'Review the PR' }) as BridgeTaskResult;
 

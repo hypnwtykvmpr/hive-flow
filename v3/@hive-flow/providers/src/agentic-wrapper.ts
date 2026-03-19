@@ -220,11 +220,9 @@ export class AgenticWrapper {
     });
     this.activeProcesses.add(child);
 
-    // Gemini receives prompt via stdin; others via CLI arg
-    if (provider === 'gemini-cli') {
-      child.stdin.on('error', () => { /* EPIPE — child exited before read */ });
-      child.stdin.write(task);
-    }
+    // All providers receive prompt via stdin
+    child.stdin.on('error', () => { /* EPIPE — child exited before read */ });
+    child.stdin.write(task);
     child.stdin.end();
 
     const rl = createInterface({ input: child.stdout! });
@@ -313,12 +311,14 @@ export class AgenticWrapper {
   private buildArgs(provider: AgenticProvider, task: string): string[] {
     switch (provider) {
       case 'codex-cli':
-        return ['exec', '--full-auto', '--json', '--ephemeral', '--skip-git-repo-check', task];
+        // Prompt is passed via stdin; flags only here
+        return ['exec', '--full-auto', '--json', '--ephemeral', '--skip-git-repo-check'];
       case 'gemini-cli':
         // Prompt is passed via stdin; flags only here
         return ['-p', '--yolo', '--output-format', 'stream-json'];
       case 'cursor-cli':
-        return ['--print', '--trust', '--force', task];
+        // Prompt is passed via stdin; flags only here
+        return ['--print', '--trust', '--force'];
     }
   }
 
