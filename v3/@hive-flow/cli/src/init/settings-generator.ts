@@ -60,7 +60,7 @@ export function generateSettings(options: InitOptions): object {
     enabled: true,
     modelPreferences: {
       default: 'claude-opus-4-6',
-      routing: 'claude-haiku-4-5-20251001',
+      routing: 'claude-sonnet-4-6',
     },
     agentTeams: {
       enabled: true,

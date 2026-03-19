@@ -27,11 +27,10 @@ provider_complete { "provider": "cursor-cli", "prompt": "Refactor this class to 
 ### Model Selection
 
 Use Claude aliases for portable model selection:
-- `haiku` -- fastest, cheapest
 - `sonnet` -- balanced
 - `opus` -- most capable
 
-Or use provider-native names directly (e.g., `gemini-2.5-pro`, `gpt-5.3-codex`).
+Or use provider-native names directly (e.g., `gemini-3.1-pro-preview`, `gpt-5.4`).
 
 ### With System Prompt
 
@@ -63,7 +62,7 @@ agent_task { "agentId": "gemini-investigator", "task": "Are there any unhandled 
 agent_status { "agentId": "gemini-investigator" }
 ```
 
-Provider agents maintain conversation history across tasks. Default models: gemini-cli uses `gemini-3.1-pro-preview`, codex-cli uses `gpt-5.3-codex`, cursor-cli uses `auto`. See `/provider-agents` for full documentation.
+Provider agents maintain conversation history across tasks. Default models: gemini-cli uses `gemini-3.1-pro-preview`, codex-cli uses `gpt-5.4`, cursor-cli uses `auto`. See `/provider-agents` for full documentation.
 
 ### Prerequisites
 

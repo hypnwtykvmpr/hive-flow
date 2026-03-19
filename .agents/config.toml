@@ -13,8 +13,8 @@
 # =============================================================================
 
 # Model selection - the AI model to use for code generation
-# Options: gpt-5.3-codex, gpt-4o, claude-sonnet, claude-opus
-model = "gpt-5.3-codex"
+# Options: gpt-5.4, gpt-4o, claude-sonnet, claude-opus
+model = "gpt-5.4"
 
 # Approval policy determines when human approval is required
 # - untrusted: Always require approval

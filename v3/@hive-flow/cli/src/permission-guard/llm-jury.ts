@@ -141,7 +141,7 @@ async function callJuror(
   modelId?: string,
 ): Promise<LLMJurorVote> {
   const start = performance.now();
-  const defaultModel = modelId || 'claude-3-haiku-20240307';
+  const defaultModel = modelId || 'claude-sonnet-4-6';
 
   const manager = await providerModule.createProviderManager({
     providers: [{

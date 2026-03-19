@@ -212,7 +212,7 @@ export function createHive(queenId: string, budget: Partial<HiveBudget> = {}, co
     status: 'pending',
     workers: [],
     budget: {
-      maxWorkers: budget.maxWorkers ?? 8,
+      maxWorkers: budget.maxWorkers ?? 20,
       maxCost: budget.maxCost,
       workersAllocated: 0,
     },

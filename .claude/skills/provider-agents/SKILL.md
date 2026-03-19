@@ -12,7 +12,7 @@ Provider agents are long-lived agents backed by external CLI providers (Gemini, 
 | Provider | Default Model |
 |----------|--------------|
 | `gemini-cli` | `gemini-3.1-pro-preview` |
-| `codex-cli` | `gpt-5.3-codex` |
+| `codex-cli` | `gpt-5.4` |
 | `cursor-cli` | `auto` |
 
 ### Spawn a Provider Agent
@@ -76,7 +76,7 @@ Provider agents accumulate conversation history across tasks:
 | Tool access | Text-in/text-out only | Full tools (Read, Write, Bash, etc.) |
 | Best for | Research, analysis, review | Implementation, file editing, testing |
 | Context | Conversation history (50 entries) | Single task context |
-| Models | Gemini, Codex, Cursor native models | Haiku, Sonnet, Opus |
+| Models | Gemini, Codex, Cursor native models | Sonnet, Opus |
 | Cost | Provider-dependent | Anthropic pricing |
 
 Use provider agents for investigation and analysis tasks. Use Claude agents when the task needs file system access, code execution, or tool use.

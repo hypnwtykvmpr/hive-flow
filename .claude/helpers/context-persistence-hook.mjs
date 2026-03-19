@@ -51,13 +51,56 @@ const AUTO_OPTIMIZE = process.env.HIVE_FLOW_AUTO_OPTIMIZE !== 'false'; // on by 
 // Context Autopilot — prevent compaction by managing context size in real-time
 // ============================================================================
 const AUTOPILOT_ENABLED = process.env.HIVE_FLOW_CONTEXT_AUTOPILOT !== 'false'; // on by default
-const CONTEXT_WINDOW_TOKENS = parseInt(process.env.HIVE_FLOW_CONTEXT_WINDOW || '200000', 10);
+const CONTEXT_WINDOW_TOKENS = detectContextWindowTokens();
 const AUTOPILOT_WARN_PCT = parseFloat(process.env.HIVE_FLOW_AUTOPILOT_WARN || '0.70');
 const AUTOPILOT_PRUNE_PCT = parseFloat(process.env.HIVE_FLOW_AUTOPILOT_PRUNE || '0.85');
 const AUTOPILOT_STATE_PATH = join(DATA_DIR, 'autopilot-state.json');
 
 // Approximate tokens per character (Claude averages ~3.5 chars per token)
 const CHARS_PER_TOKEN = 3.5;
+
+function detectContextWindowTokens() {
+  if (process.env.HIVE_FLOW_CONTEXT_WINDOW) {
+    return parseInt(process.env.HIVE_FLOW_CONTEXT_WINDOW, 10) || 200000;
+  }
+  try {
+    const homeDir = process.env.HOME || process.env.USERPROFILE || '';
+    const claudeConfigPath = join(homeDir, '.claude.json');
+    if (existsSync(claudeConfigPath)) {
+      const claudeConfig = JSON.parse(readFileSync(claudeConfigPath, 'utf-8'));
+      if (claudeConfig?.projects) {
+        const cwd = process.cwd();
+        for (const [projectPath, projectConfig] of Object.entries(claudeConfig.projects)) {
+          if (cwd === projectPath || cwd.startsWith(projectPath + '/')) {
+            const usage = projectConfig.lastModelUsage;
+            if (usage) {
+              let modelId = '';
+              let latest = 0;
+              for (const id of Object.keys(usage)) {
+                const ts = usage[id]?.lastUsedAt ? new Date(usage[id].lastUsedAt).getTime() : 0;
+                if (ts > latest) { latest = ts; modelId = id; }
+              }
+              if (!modelId) {
+                const ids = Object.keys(usage);
+                modelId = ids[ids.length - 1] || '';
+              }
+              return modelIdToWindowSize(modelId);
+            }
+            break;
+          }
+        }
+      }
+    }
+  } catch { /* fallback */ }
+  return 200000;
+}
+
+function modelIdToWindowSize(modelId) {
+  if (!modelId) return 200000;
+  const id = modelId.toLowerCase();
+  if (id.includes('[1m]') || id.includes('1m')) return 1000000;
+  return 200000;
+}
 
 // Ensure data dir
 if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });

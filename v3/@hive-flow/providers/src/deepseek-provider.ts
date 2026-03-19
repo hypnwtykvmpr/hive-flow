@@ -2,7 +2,7 @@
  * V3 DeepSeek Provider
  *
  * OpenAI-compatible HTTP provider for DeepSeek's API (api.deepseek.com/v1).
- * Supports DeepSeek-V3 (chat) and DeepSeek-R1 (reasoning).
+ * Supports DeepSeek-V3 (chat) and DeepSeek-V3.2 (Thinking Mode).
  * Auth: DEEPSEEK_API_KEY environment variable. Graceful if missing.
  *
  * @module @hive-flow/providers/deepseek-provider
@@ -33,9 +33,9 @@ const p = (prompt: number, completion: number) =>
 export class DeepSeekProvider extends BaseProvider {
   readonly name: LLMProvider = 'deepseek';
   readonly capabilities: ProviderCapabilities = {
-    supportedModels: ['deepseek-chat', 'deepseek-reasoner'],
-    maxContextLength: { 'deepseek-chat': 65536, 'deepseek-reasoner': 65536 },
-    maxOutputTokens: { 'deepseek-chat': 8192, 'deepseek-reasoner': 8192 },
+    supportedModels: ['deepseek-reasoner', 'deepseek-chat'],
+    maxContextLength: { 'deepseek-chat': 128000, 'deepseek-reasoner': 128000 },
+    maxOutputTokens: { 'deepseek-chat': 8192, 'deepseek-reasoner': 32768 },
     supportsStreaming: true,
     supportsToolCalling: true,
     supportsSystemMessages: true,
@@ -157,7 +157,7 @@ export class DeepSeekProvider extends BaseProvider {
   async getModelInfo(model: LLMModel): Promise<ModelInfo> {
     const desc: Record<string, string> = {
       'deepseek-chat': 'DeepSeek-V3 - Fast general-purpose chat model',
-      'deepseek-reasoner': 'DeepSeek-R1 - Advanced chain-of-thought reasoning model',
+      'deepseek-reasoner': 'DeepSeek-V3.2 - Thinking Mode with chain-of-thought reasoning',
     };
     return {
       model, name: model,

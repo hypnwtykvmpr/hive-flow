@@ -48,7 +48,7 @@ interface AgentSpawnConfig {
   name: string;
   capabilities: string[];
   config?: Record<string, unknown>;
-  model?: 'haiku' | 'sonnet' | 'opus' | 'inherit';
+  model?: 'sonnet' | 'opus' | 'inherit';
 }
 
 interface SpawnedAgent {
@@ -154,7 +154,7 @@ const QE_AGENT_CONFIGS: Record<string, Partial<AgentSpawnConfig>> = {
   },
   'qe-coverage-analyzer': {
     capabilities: ['coverage-analysis', 'gap-detection', 'priority-ranking'],
-    model: 'haiku',
+    model: 'sonnet',
   },
   'qe-security-scanner': {
     capabilities: ['sast', 'dast', 'compliance-checking'],

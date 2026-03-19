@@ -55,7 +55,7 @@ export type SandboxMode = 'strict' | 'permissive' | 'disabled';
 /**
  * Model types for Claude Code
  */
-export type ModelType = 'sonnet' | 'opus' | 'haiku';
+export type ModelType = 'sonnet' | 'opus';
 
 /**
  * Output format for worker results
@@ -97,7 +97,7 @@ export interface HeadlessOptions {
   /** Sandbox profile: strict, permissive, or disabled */
   sandbox: SandboxMode;
 
-  /** Model to use: sonnet, opus, or haiku */
+  /** Model to use: sonnet or opus */
   model?: ModelType;
 
   /** LLM provider (default: anthropic). Supports gemini-cli, codex-cli, cursor-cli */
@@ -277,7 +277,6 @@ export const LOCAL_WORKER_TYPES: LocalWorkerType[] = [
 const MODEL_IDS: Record<ModelType, string> = {
   sonnet: 'claude-sonnet-4-5-20250929',
   opus: 'claude-opus-4-6',
-  haiku: 'claude-haiku-4-5-20251001',
 };
 
 /**
@@ -306,7 +305,7 @@ Provide a JSON report with:
   "recommendations": ["..."]
 }`,
       sandbox: 'strict',
-      model: 'haiku',
+      model: 'sonnet',
       outputFormat: 'json',
       contextPatterns: ['**/*.ts', '**/*.js', '**/.env*', '**/package.json'],
       timeoutMs: 5 * 60 * 1000,
@@ -378,7 +377,7 @@ For each gap, provide a test skeleton.`,
 
 Focus on public APIs and exported functions.`,
       sandbox: 'permissive',
-      model: 'haiku',
+      model: 'sonnet',
       outputFormat: 'markdown',
       contextPatterns: ['src/**/*.ts'],
       timeoutMs: 10 * 60 * 1000,
@@ -485,7 +484,7 @@ Provide preload suggestions as JSON:
   "confidence": 0.0-1.0
 }`,
       sandbox: 'strict',
-      model: 'haiku',
+      model: 'sonnet',
       outputFormat: 'json',
       contextPatterns: ['.hive-flow/metrics/*.json'],
       timeoutMs: 2 * 60 * 1000,

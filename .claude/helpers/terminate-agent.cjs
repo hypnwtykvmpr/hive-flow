@@ -31,7 +31,7 @@ const TERMINATE_STEPS_LOG_FILE = path.join(SESSION_DIR, 'terminate-steps.log.jso
 const MODEL_IDS = {
   opus: 'claude-opus-4-6',
   sonnet: 'claude-sonnet-4-6',
-  haiku: 'claude-haiku-4-5-20251001',
+  haiku: 'claude-sonnet-4-6',
 };
 
 function getJsonlProjectDir() {
@@ -292,7 +292,7 @@ function detectCurrentModel() {
     const lower = bestId.toLowerCase();
     if (lower.includes('opus')) return 'opus';
     if (lower.includes('sonnet')) return 'sonnet';
-    if (lower.includes('haiku')) return 'haiku';
+    if (lower.includes('haiku')) return 'sonnet';
     return null;
   } catch { return null; }
 }

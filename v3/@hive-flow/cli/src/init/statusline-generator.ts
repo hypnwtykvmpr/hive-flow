@@ -181,7 +181,6 @@ function getModelName() {
               }
               if (modelId.includes('opus')) return 'Opus 4.6';
               if (modelId.includes('sonnet')) return 'Sonnet 4.6';
-              if (modelId.includes('haiku')) return 'Haiku 4.5';
               return modelId.split('-').slice(1, 3).join(' ');
             }
           }
@@ -197,7 +196,6 @@ function getModelName() {
     const m = settings.model;
     if (m.includes('opus')) return 'Opus 4.6';
     if (m.includes('sonnet')) return 'Sonnet 4.6';
-    if (m.includes('haiku')) return 'Haiku 4.5';
   }
   return 'Claude Code';
 }

@@ -438,6 +438,21 @@ describe('Provider-Hive Compatibility', () => {
       expect(workers[0].model).toBe('auto');
     });
 
+    it('spawns with deepseek provider', async () => {
+      setupFsMocks(makeHiveState());
+      const spawnTool = getTool('hive-mind_spawn');
+
+      const result = await spawnTool.handler({
+        count: 1, agentType: 'reasoner', prefix: 'deepseek',
+        provider: 'deepseek', model: 'deepseek-reasoner',
+      }) as AnyResult;
+
+      expect(result.success).toBe(true);
+      const workers = result.workers as HiveWorkerView[];
+      expect(workers[0].provider).toBe('deepseek');
+      expect(workers[0].model).toBe('deepseek-reasoner');
+    });
+
     it('spawns without provider (backward compat)', async () => {
       setupFsMocks(makeHiveState());
       const spawnTool = getTool('hive-mind_spawn');
@@ -579,6 +594,21 @@ describe('Provider-Hive Compatibility', () => {
       const workers = result.workers as HiveWorkerView[];
       expect(workers.every((w) => w.provider === 'codex-cli')).toBe(true);
     });
+
+    it('pure DeepSeek hive (2 workers)', async () => {
+      setupFsMocks(makeHiveState());
+      const spawnTool = getTool('hive-mind_spawn');
+
+      const result = await spawnTool.handler({
+        count: 2, agentType: 'reasoner', prefix: 'deepseek-w',
+        provider: 'deepseek', model: 'deepseek-reasoner',
+      }) as AnyResult;
+
+      expect(result.success).toBe(true);
+      expect(result.spawned).toBe(2);
+      const workers = result.workers as HiveWorkerView[];
+      expect(workers.every((w) => w.provider === 'deepseek')).toBe(true);
+    });
   });
 
   // ====================================================================
@@ -616,6 +646,17 @@ describe('Provider-Hive Compatibility', () => {
 
       await spawnTool.handler({ count: 1, prefix: 'sonnet', provider: 'anthropic', model: 'sonnet' });
       const result = await spawnTool.handler({ count: 1, prefix: 'codex', provider: 'codex-cli', model: 'o4-mini' }) as AnyResult;
+
+      expect(result.success).toBe(true);
+      expect(result.totalWorkers).toBe(2);
+    });
+
+    it('sonnet + deepseek mix', async () => {
+      setupFsMocks(makeHiveState());
+      const spawnTool = getTool('hive-mind_spawn');
+
+      await spawnTool.handler({ count: 1, prefix: 'sonnet', provider: 'anthropic', model: 'sonnet' });
+      const result = await spawnTool.handler({ count: 1, prefix: 'deepseek', provider: 'deepseek', model: 'deepseek-reasoner' }) as AnyResult;
 
       expect(result.success).toBe(true);
       expect(result.totalWorkers).toBe(2);

@@ -54,7 +54,7 @@ export type SecurityLevel = 'low' | 'medium' | 'high' | 'critical';
 /**
  * Model tier for routing (TinyDancer alignment with ADR-026)
  */
-export type ModelTier = 'agent-booster' | 'haiku' | 'sonnet' | 'opus';
+export type ModelTier = 'agent-booster' | 'sonnet' | 'opus';
 
 /**
  * Contract types for API validation

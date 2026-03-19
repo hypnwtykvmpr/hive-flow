@@ -42,10 +42,9 @@ Claude aliases map to provider-native models:
 
 | Alias | Gemini CLI | Codex CLI | Cursor CLI |
 |-------|-----------|-----------|------------|
-| `opus` | gemini-3.1-pro-preview | gpt-5.3-codex | auto |
-| `sonnet` | gemini-2.5-pro | gpt-5.2-codex | auto |
-| `haiku` | gemini-2.5-flash | gpt-5-codex-mini | auto |
-| `inherit` | gemini-2.5-flash | (config.toml default) | auto |
+| `opus` | gemini-3.1-pro-preview | gpt-5.4 | auto |
+| `sonnet` | gemini-3.1-pro-preview | gpt-5.4 | auto |
+| `inherit` | gemini-3.1-pro-preview | (config.toml default) | auto |
 
 ### View Models
 
@@ -86,7 +85,7 @@ agent_status { "agentId": "my-gemini" }
 
 Provider agents accumulate conversation history across tasks (up to 50 entries, 180KB prompt limit). They are text-in/text-out research agents -- use Claude agents (Task tool) for tasks that need file access or tool use.
 
-Default models: gemini-cli uses `gemini-3.1-pro-preview`, codex-cli uses `gpt-5.3-codex`, cursor-cli uses `auto`.
+Default models: gemini-cli uses `gemini-3.1-pro-preview`, codex-cli uses `gpt-5.4`, cursor-cli uses `auto`.
 
 See the `/provider-agents` skill for full documentation.
 

@@ -17,24 +17,24 @@ describe('resolveProviderModel', () => {
       expect(resolveProviderModel('gemini-cli', 'opus')).toBe('gemini-3.1-pro-preview');
     });
 
-    it('maps sonnet to gemini-2.5-pro for gemini-cli', () => {
-      expect(resolveProviderModel('gemini-cli', 'sonnet')).toBe('gemini-2.5-pro');
+    it('maps sonnet to gemini-3.1-pro-preview for gemini-cli', () => {
+      expect(resolveProviderModel('gemini-cli', 'sonnet')).toBe('gemini-3.1-pro-preview');
     });
 
-    it('maps haiku to gemini-2.5-flash for gemini-cli', () => {
-      expect(resolveProviderModel('gemini-cli', 'haiku')).toBe('gemini-2.5-flash');
+    it('maps haiku to gemini-3.1-pro-preview for gemini-cli', () => {
+      expect(resolveProviderModel('gemini-cli', 'haiku')).toBe('gemini-3.1-pro-preview');
     });
 
-    it('maps opus to gpt-5.3-codex for codex-cli', () => {
-      expect(resolveProviderModel('codex-cli', 'opus')).toBe('gpt-5.3-codex');
+    it('maps opus to gpt-5.4 for codex-cli', () => {
+      expect(resolveProviderModel('codex-cli', 'opus')).toBe('gpt-5.4');
     });
 
-    it('maps sonnet to gpt-5.2-codex for codex-cli', () => {
-      expect(resolveProviderModel('codex-cli', 'sonnet')).toBe('gpt-5.2-codex');
+    it('maps sonnet to gpt-5.4 for codex-cli', () => {
+      expect(resolveProviderModel('codex-cli', 'sonnet')).toBe('gpt-5.4');
     });
 
-    it('maps haiku to gpt-5-codex-mini for codex-cli', () => {
-      expect(resolveProviderModel('codex-cli', 'haiku')).toBe('gpt-5-codex-mini');
+    it('maps haiku to gpt-5.4 for codex-cli', () => {
+      expect(resolveProviderModel('codex-cli', 'haiku')).toBe('gpt-5.4');
     });
 
     it('maps inherit to undefined for codex-cli (use config.toml)', () => {
@@ -48,9 +48,36 @@ describe('resolveProviderModel', () => {
     });
   });
 
+  describe('DeepSeek alias mapping', () => {
+    it('maps opus to deepseek-reasoner for deepseek', () => {
+      expect(resolveProviderModel('deepseek', 'opus')).toBe('deepseek-reasoner');
+    });
+
+    it('maps sonnet to deepseek-reasoner for deepseek', () => {
+      expect(resolveProviderModel('deepseek', 'sonnet')).toBe('deepseek-reasoner');
+    });
+
+    it('maps haiku to deepseek-reasoner for deepseek', () => {
+      expect(resolveProviderModel('deepseek', 'haiku')).toBe('deepseek-reasoner');
+    });
+
+    it('maps inherit to deepseek-reasoner for deepseek', () => {
+      expect(resolveProviderModel('deepseek', 'inherit')).toBe('deepseek-reasoner');
+    });
+
+    it('returns deepseek-reasoner as default for undefined model', () => {
+      expect(resolveProviderModel('deepseek', undefined)).toBe('deepseek-reasoner');
+    });
+
+    it('passes through known deepseek model names', () => {
+      expect(resolveProviderModel('deepseek', 'deepseek-chat')).toBe('deepseek-chat');
+      expect(resolveProviderModel('deepseek', 'deepseek-reasoner')).toBe('deepseek-reasoner');
+    });
+  });
+
   describe('provider defaults (no model specified)', () => {
-    it('returns auto for gemini-cli with undefined model', () => {
-      expect(resolveProviderModel('gemini-cli', undefined)).toBe('auto');
+    it('returns gemini-3.1-pro-preview for gemini-cli with undefined model', () => {
+      expect(resolveProviderModel('gemini-cli', undefined)).toBe('gemini-3.1-pro-preview');
     });
 
     it('returns undefined for codex-cli with undefined model', () => {
@@ -62,13 +89,13 @@ describe('resolveProviderModel', () => {
     });
 
     it('returns provider default for empty string model', () => {
-      expect(resolveProviderModel('gemini-cli', '')).toBe('auto');
+      expect(resolveProviderModel('gemini-cli', '')).toBe('gemini-3.1-pro-preview');
     });
   });
 
   describe('auto model handling', () => {
     it('maps auto to provider default for gemini-cli', () => {
-      expect(resolveProviderModel('gemini-cli', 'auto')).toBe('auto');
+      expect(resolveProviderModel('gemini-cli', 'auto')).toBe('gemini-3.1-pro-preview');
     });
 
     it('maps auto to undefined for codex-cli', () => {
@@ -105,7 +132,7 @@ describe('resolveProviderModel', () => {
     it('returns default when codex model used with gemini provider', () => {
       const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       const result = resolveProviderModel('gemini-cli', 'gpt-5.3-codex');
-      expect(result).toBe('auto'); // gemini default
+      expect(result).toBe('gemini-3.1-pro-preview'); // gemini default
       expect(spy).toHaveBeenCalledWith(expect.stringContaining('belongs to codex-cli'));
     });
   });
@@ -145,12 +172,14 @@ describe('resolveProviderModel', () => {
       expect(PROVIDER_ALIAS_MAP).toHaveProperty('gemini-cli');
       expect(PROVIDER_ALIAS_MAP).toHaveProperty('codex-cli');
       expect(PROVIDER_ALIAS_MAP).toHaveProperty('cursor-cli');
+      expect(PROVIDER_ALIAS_MAP).toHaveProperty('deepseek');
     });
 
     it('exports KNOWN_PROVIDER_MODELS as Sets', () => {
       expect(KNOWN_PROVIDER_MODELS['gemini-cli']).toBeInstanceOf(Set);
       expect(KNOWN_PROVIDER_MODELS['codex-cli']).toBeInstanceOf(Set);
       expect(KNOWN_PROVIDER_MODELS['cursor-cli']).toBeInstanceOf(Set);
+      expect(KNOWN_PROVIDER_MODELS['deepseek']).toBeInstanceOf(Set);
     });
   });
 });

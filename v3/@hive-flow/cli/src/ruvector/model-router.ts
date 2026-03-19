@@ -1,7 +1,7 @@
 /**
  * Intelligent Model Router using Tiny Dancer
  *
- * Dynamically routes requests to optimal Claude model (haiku/sonnet/opus)
+ * Dynamically routes requests to optimal Claude model (sonnet/opus)
  * based on task complexity, confidence scores, and historical performance.
  *
  * Features:
@@ -12,8 +12,7 @@
  * - Complexity scoring via embeddings
  *
  * Routing Strategy:
- * - Haiku: High confidence, low complexity (fast, cheap)
- * - Sonnet: Medium confidence, moderate complexity (balanced)
+ * - Sonnet: High confidence, low-to-moderate complexity (balanced)
  * - Opus: Low confidence, high complexity (most capable)
  *
  * @module model-router
@@ -29,7 +28,7 @@ import { dirname, join } from 'path';
 /**
  * Available Claude models for routing
  */
-export type AgentModel = 'haiku' | 'sonnet' | 'opus' | 'inherit';
+export type AgentModel = 'sonnet' | 'opus' | 'inherit';
 
 /** @deprecated Use AgentModel instead */
 export type ClaudeModel = AgentModel;
@@ -43,12 +42,6 @@ export const MODEL_CAPABILITIES: Record<AgentModel, {
   speedMultiplier: number;
   description: string;
 }> = {
-  haiku: {
-    maxComplexity: 0.4,
-    costMultiplier: 0.04,  // ~25x cheaper than Opus
-    speedMultiplier: 3.0,   // ~3x faster than Sonnet
-    description: 'Fast, cost-effective for simple tasks',
-  },
   sonnet: {
     maxComplexity: 0.7,
     costMultiplier: 0.2,    // ~5x cheaper than Opus
@@ -199,7 +192,6 @@ export class ModelRouter {
   private state: RouterState;
   private decisionCount = 0;
   private consecutiveFailures: Record<AgentModel, number> = {
-    haiku: 0,
     sonnet: 0,
     opus: 0,
     inherit: 0,
@@ -376,11 +368,10 @@ export class ModelRouter {
     const { score } = complexity;
 
     // Base scoring: inverse relationship with complexity
-    // Low complexity → haiku scores high
+    // Low complexity → sonnet scores high
     // High complexity → opus scores high
     return {
-      haiku: Math.max(0, 1 - score * 2), // Drops off quickly as complexity rises
-      sonnet: 1 - Math.abs(score - 0.5) * 2, // Peaks at medium complexity
+      sonnet: Math.max(0, 1 - score * 1.5), // Handles low-to-medium complexity
       opus: Math.min(1, score * 1.5), // Rises with complexity
       inherit: 0.1, // Low baseline unless explicitly needed
     };
@@ -433,7 +424,7 @@ export class ModelRouter {
     let model = bestModel;
     if (uncertainty > this.config.maxUncertainty && bestModel !== 'opus') {
       // Escalate to more capable model
-      model = bestModel === 'haiku' ? 'sonnet' : 'opus';
+      model = 'opus';
     }
 
     return { model, confidence, uncertainty };
@@ -550,7 +541,7 @@ export class ModelRouter {
   private loadState(): RouterState {
     const defaultState: RouterState = {
       totalDecisions: 0,
-      modelDistribution: { haiku: 0, sonnet: 0, opus: 0, inherit: 0 },
+      modelDistribution: { sonnet: 0, opus: 0, inherit: 0 },
       avgComplexity: 0.5,
       avgConfidence: 0.8,
       circuitBreakerTrips: 0,
@@ -594,14 +585,14 @@ export class ModelRouter {
   reset(): void {
     this.state = {
       totalDecisions: 0,
-      modelDistribution: { haiku: 0, sonnet: 0, opus: 0, inherit: 0 },
+      modelDistribution: { sonnet: 0, opus: 0, inherit: 0 },
       avgComplexity: 0.5,
       avgConfidence: 0.8,
       circuitBreakerTrips: 0,
       lastUpdated: new Date().toISOString(),
       learningHistory: [],
     };
-    this.consecutiveFailures = { haiku: 0, sonnet: 0, opus: 0, inherit: 0 };
+    this.consecutiveFailures = { sonnet: 0, opus: 0, inherit: 0 };
     this.decisionCount = 0;
     this.saveState();
   }

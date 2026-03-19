@@ -1099,7 +1099,7 @@ export class AQEPlugin implements IPlugin {
       case 'medium':
         return 'sonnet';
       case 'low':
-        return 'haiku';
+        return 'sonnet';
       default:
         return 'sonnet';
     }

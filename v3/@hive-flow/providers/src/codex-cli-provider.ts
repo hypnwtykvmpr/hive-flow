@@ -47,11 +47,12 @@ interface CodexErrorEvent extends CodexEvent {
 // ===== Static Data =====
 
 const CODEX_MODELS: LLMModel[] = [
-  'gpt-5.3-codex', 'gpt-5.2-codex', 'gpt-5.1-codex-max',
+  'gpt-5.4', 'gpt-5.3-codex', 'gpt-5.2-codex', 'gpt-5.1-codex-max',
   'gpt-5.1-codex', 'gpt-5-codex', 'gpt-5-codex-mini',
 ];
 
 const MODEL_INFO: Record<string, { desc: string; ctx: number; out: number }> = {
+  'gpt-5.4':           { desc: 'GPT-5.4 - Latest flagship model',                    ctx: 1000000, out: 32768 },
   'gpt-5.3-codex':     { desc: 'GPT-5.3 Codex - Latest flagship code model',        ctx: 200000, out: 32768 },
   'gpt-5.2-codex':     { desc: 'GPT-5.2 Codex - Previous-generation flagship',      ctx: 200000, out: 32768 },
   'gpt-5.1-codex-max': { desc: 'GPT-5.1 Codex Max - Extended context and reasoning', ctx: 512000, out: 65536 },
@@ -96,7 +97,7 @@ export class CodexCLIProvider extends BaseProvider {
     supportsEmbeddings: false, supportsBatching: false,
     rateLimit: { requestsPerMinute: 60, tokensPerMinute: 1000000, concurrentRequests: 5 },
     pricing: {
-      'gpt-5.3-codex': FREE, 'gpt-5.2-codex': FREE, 'gpt-5.1-codex-max': FREE,
+      'gpt-5.4': FREE, 'gpt-5.3-codex': FREE, 'gpt-5.2-codex': FREE, 'gpt-5.1-codex-max': FREE,
       'gpt-5.1-codex': FREE, 'gpt-5-codex': FREE,
       'gpt-5-codex-mini': { promptCostPer1k: 0.0015, completionCostPer1k: 0.006, currency: 'USD' },
     },

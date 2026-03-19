@@ -3,8 +3,8 @@
  *
  * Implements ADR-026: 3-tier intelligent model routing:
  * - Tier 1: Agent Booster (WASM) - <1ms, $0 for simple transforms
- * - Tier 2: Haiku - ~500ms for low complexity
- * - Tier 3: Sonnet/Opus - 2-5s for high complexity
+ * - Tier 2: Sonnet - ~500ms-2s for low-to-moderate complexity
+ * - Tier 3: Opus - 2-5s for high complexity
  *
  * @module enhanced-model-router
  */
@@ -44,7 +44,7 @@ export interface EditIntent {
  */
 export interface EnhancedRouteResult {
   tier: 1 | 2 | 3;
-  handler: 'agent-booster' | 'haiku' | 'sonnet' | 'opus';
+  handler: 'agent-booster' | 'sonnet' | 'opus';
   model?: AgentModel;
   confidence: number;
   complexity?: number;
@@ -63,7 +63,6 @@ export interface EnhancedModelRouterConfig {
   agentBoosterConfidenceThreshold: number;
   enabledIntents: EditIntentType[];
   complexityThresholds: {
-    haiku: number;
     sonnet: number;
     opus: number;
   };
@@ -233,8 +232,8 @@ const LANGUAGE_MAP: Record<string, string> = {
  *
  * Provides intelligent 3-tier routing:
  * - Tier 1: Agent Booster for simple code transforms (352x faster, $0)
- * - Tier 2: Haiku for low complexity tasks
- * - Tier 3: Sonnet/Opus for complex reasoning tasks
+ * - Tier 2: Sonnet for low-to-moderate complexity tasks
+ * - Tier 3: Opus for complex reasoning tasks
  */
 export class EnhancedModelRouter {
   private config: EnhancedModelRouterConfig;
@@ -253,7 +252,6 @@ export class EnhancedModelRouter {
         'remove-console',
       ],
       complexityThresholds: {
-        haiku: 0.3,
         sonnet: 0.6,
         opus: 1.0,
       },
@@ -409,21 +407,7 @@ export class EnhancedModelRouter {
     }
 
     // Step 6: Determine tier based on complexity
-    const { haiku, sonnet } = this.config.complexityThresholds;
-
-    if (finalComplexity < haiku) {
-      return {
-        tier: 2,
-        handler: 'haiku',
-        model: 'haiku',
-        confidence: tinyDancerResult.confidence,
-        complexity: finalComplexity,
-        reasoning: `Low complexity (${(finalComplexity * 100).toFixed(0)}%) - using haiku`,
-        canSkipLLM: false,
-        estimatedLatencyMs: 500,
-        estimatedCost: 0.0002,
-      };
-    }
+    const { sonnet } = this.config.complexityThresholds;
 
     if (finalComplexity < sonnet) {
       return {

@@ -29,6 +29,7 @@ export type ProviderType =
   | 'google'
   | 'mistral'
   | 'ollama'
+  | 'deepseek'
   | 'custom';
 
 /** Provider health status */
@@ -210,6 +211,27 @@ const BUILTIN_PROVIDERS: ProviderModule[] = [
         maxOutputTokens: 4096,
       },
       baseUrl: 'http://localhost:11434',
+    },
+  },
+  {
+    metadata: {
+      id: 'deepseek',
+      name: 'DeepSeek',
+      type: 'deepseek',
+      version: '1.0.0',
+      description: 'DeepSeek AI models (V3 chat, V3.2 Thinking Mode)',
+      priority: 5,
+      models: ['deepseek-chat', 'deepseek-reasoner'],
+      capabilities: {
+        streaming: true,
+        toolUse: true,
+        vision: false,
+        codeExecution: false,
+        contextWindow: 128000,
+        maxOutputTokens: 32768,
+      },
+      apiKeyEnvVar: 'DEEPSEEK_API_KEY',
+      baseUrl: 'https://api.deepseek.com',
     },
   },
 ];

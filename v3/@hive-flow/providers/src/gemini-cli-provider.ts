@@ -31,7 +31,7 @@ export class GeminiCLIProvider extends BaseProvider {
 
   protected validateConfig(): void {
     if (!this.config.model) {
-      this.config.model = 'auto';
+      this.config.model = 'gemini-3.1-pro-preview';
     }
     if (!this.validateModel(this.config.model)) {
       this.logger.warn(`Model ${this.config.model} may not be supported by ${this.name}`);

@@ -112,7 +112,7 @@ const missionAssignTool: MCPTool = {
     const scope = input.scope as string;
     const description = input.description as string;
     const format = input.format as string | undefined;
-    const maxWorkers = (input.maxWorkers as number) ?? 8;
+    const maxWorkers = (input.maxWorkers as number) ?? 20;
     const maxCost = input.maxCost as number | undefined;
     const providers = input.providers as string[] | undefined;
     const workerDependencies = input.workerDependencies as Record<string, string[]> | undefined;
@@ -231,12 +231,12 @@ const spawnWorkerTool: MCPTool = {
       role: { type: 'string', description: 'Worker role (e.g., "coder", "reviewer", "tester")' },
       provider: {
         type: 'string',
-        enum: ['anthropic', 'anthropic-cli', 'gemini-cli', 'codex-cli', 'cursor-cli'],
+        enum: ['anthropic', 'anthropic-cli', 'gemini-cli', 'codex-cli', 'cursor-cli', 'deepseek'],
         description: 'LLM provider for the worker',
       },
       model: {
         type: 'string',
-        enum: ['haiku', 'sonnet', 'opus', 'inherit'],
+        enum: ['sonnet', 'opus', 'inherit'],
         description: 'Model tier for the worker',
       },
       task: { type: 'string', description: 'Initial task description for model routing' },
@@ -270,6 +270,28 @@ const spawnWorkerTool: MCPTool = {
       // Check hive is active
       if (hive.status !== 'active') {
         return { success: false, error: `Hive '${hiveId}' is not active (status: ${hive.status}).` };
+      }
+
+      // Reconcile worker statuses against the agent store to clear stale
+      // entries from previous sessions (e.g. workers stuck in 'spawning' or
+      // 'error' whose underlying agent has been terminated or no longer exists).
+      const agentStore = loadAgentStore();
+      let reconciled = false;
+      for (const worker of hive.workers) {
+        if (worker.status === 'terminated') continue;
+        const agent = agentStore.agents[worker.agentId];
+        if (!agent || agent.status === 'terminated') {
+          worker.status = 'terminated';
+          reconciled = true;
+        }
+      }
+      if (reconciled) {
+        hive.budget.workersAllocated = hive.workers.filter(w => w.status !== 'terminated').length;
+        appendHiveAudit(hive, {
+          event: 'worker-spawned', // closest existing event type for bookkeeping
+          detail: 'Reconciled stale workers: marked dead/missing agents as terminated',
+        });
+        saveHive(hiveId, hive);
       }
 
       // Enforce maxWorkers hard limit (HiveBudget enforcement)

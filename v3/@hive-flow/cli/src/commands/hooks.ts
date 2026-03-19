@@ -3953,10 +3953,10 @@ const tokenOptimizeCommand: Command = {
   }
 };
 
-// Model Router command - intelligent model selection (haiku/sonnet/opus)
+// Model Router command - intelligent model selection (sonnet/opus)
 const modelRouteCommand: Command = {
   name: 'model-route',
-  description: 'Route task to optimal Claude model (haiku/sonnet/opus) based on complexity',
+  description: 'Route task to optimal Claude model (sonnet/opus) based on complexity',
   options: [
     { name: 'task', short: 't', type: 'string', description: 'Task description to route', required: true },
     { name: 'context', short: 'c', type: 'string', description: 'Additional context' },
@@ -3964,7 +3964,7 @@ const modelRouteCommand: Command = {
     { name: 'prefer-quality', type: 'boolean', description: 'Prefer higher quality models' },
   ],
   examples: [
-    { command: 'hive-flow hooks model-route -t "fix typo"', description: 'Route simple task (likely haiku)' },
+    { command: 'hive-flow hooks model-route -t "fix typo"', description: 'Route simple task (likely sonnet)' },
     { command: 'hive-flow hooks model-route -t "architect auth system"', description: 'Route complex task (likely opus)' },
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
@@ -4000,7 +4000,6 @@ const modelRouteCommand: Command = {
 
       // Model icon based on selection
       const modelIcons: Record<string, string> = {
-        haiku: '🌸',
         sonnet: '📜',
         opus: '🎭',
       };
@@ -4008,7 +4007,7 @@ const modelRouteCommand: Command = {
       const icon = modelIcons[model] || '🤖';
 
       // Calculate cost savings compared to opus
-      const costMultipliers: Record<string, number> = { haiku: 0.04, sonnet: 0.2, opus: 1.0 };
+      const costMultipliers: Record<string, number> = { sonnet: 0.2, opus: 1.0 };
       const costSavings = model !== 'opus'
         ? `${((1 - costMultipliers[model]) * 100).toFixed(0)}% vs opus`
         : undefined;
@@ -4054,12 +4053,12 @@ const modelOutcomeCommand: Command = {
   description: 'Record model routing outcome for learning',
   options: [
     { name: 'task', short: 't', type: 'string', description: 'Task that was executed', required: true },
-    { name: 'model', short: 'm', type: 'string', description: 'Model that was used (haiku/sonnet/opus)', required: true },
+    { name: 'model', short: 'm', type: 'string', description: 'Model that was used (sonnet/opus)', required: true },
     { name: 'outcome', short: 'o', type: 'string', description: 'Outcome (success/failure/escalated)', required: true },
     { name: 'quality', short: 'q', type: 'number', description: 'Quality score 0-1' },
   ],
   examples: [
-    { command: 'hive-flow hooks model-outcome -t "fix typo" -m haiku -o success', description: 'Record successful haiku task' },
+    { command: 'hive-flow hooks model-outcome -t "fix typo" -m sonnet -o success', description: 'Record successful sonnet task' },
     { command: 'hive-flow hooks model-outcome -t "auth system" -m sonnet -o escalated', description: 'Record escalation to opus' },
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
@@ -4129,9 +4128,9 @@ const modelStatsCommand: Command = {
       }
 
       // Calculate cost savings based on model distribution
-      const dist = result.modelDistribution || { haiku: 0, sonnet: 0, opus: 0 };
+      const dist = result.modelDistribution || { sonnet: 0, opus: 0 };
       const totalTasks = result.totalDecisions || 0;
-      const costMultipliers: Record<string, number> = { haiku: 0.04, sonnet: 0.2, opus: 1.0 };
+      const costMultipliers: Record<string, number> = { sonnet: 0.2, opus: 1.0 };
 
       let totalCost = 0;
       let maxCost = totalTasks; // If all were opus
@@ -4498,7 +4497,7 @@ export const hooksCommand: Command = {
       `${output.highlight('coverage-suggest')}- Suggest coverage improvements`,
       `${output.highlight('coverage-gaps')}   - List all coverage gaps with agents`,
       `${output.highlight('token-optimize')} - Token optimization (30-50% savings)`,
-      `${output.highlight('model-route')}    - Route to optimal model (haiku/sonnet/opus)`,
+      `${output.highlight('model-route')}    - Route to optimal model (sonnet/opus)`,
       `${output.highlight('model-outcome')}  - Record model routing outcome`,
       `${output.highlight('model-stats')}    - View model routing statistics`,
       '',

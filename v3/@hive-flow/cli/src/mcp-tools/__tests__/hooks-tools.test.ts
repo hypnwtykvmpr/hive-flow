@@ -1300,7 +1300,7 @@ describe('hooks-tools', () => {
     it('returns a valid model recommendation', async () => {
       const result = (await t().handler({ task: 'refactor the security module' })) as AnyResult;
 
-      expect(['haiku', 'sonnet', 'opus']).toContain(result.model);
+      expect(['sonnet', 'opus']).toContain(result.model);
       expect(typeof result.confidence).toBe('number');
       // implementation is 'fallback' when model router unavailable, 'tiny-dancer-neural' when available
       expect(typeof result.implementation).toBe('string');
@@ -1312,10 +1312,10 @@ describe('hooks-tools', () => {
       expect(result.model).toBe('opus');
     });
 
-    it('suggests haiku for simple tasks', async () => {
+    it('suggests sonnet for simple tasks', async () => {
       const result = (await t().handler({ task: 'rename a variable' })) as AnyResult;
 
-      expect(result.model).toBe('haiku');
+      expect(result.model).toBe('sonnet');
     });
 
     it('includes suggestedProviders array', async () => {
@@ -1348,7 +1348,7 @@ describe('hooks-tools', () => {
       const longTask = 'a'.repeat(100);
       const result = (await t().handler({
         task: longTask,
-        model: 'haiku',
+        model: 'sonnet',
         outcome: 'failure',
       })) as AnyResult;
 

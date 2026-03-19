@@ -28,7 +28,7 @@ const PROVIDER_AGENT_TYPES = [
     name: 'codex-researcher',
     description: 'Research agent powered by OpenAI Codex CLI',
     provider: 'codex-cli',
-    defaultModel: 'gpt-5.3-codex',
+    defaultModel: 'gpt-5.4',
     capabilities: ['code-analysis', 'architecture-review', 'documentation', 'research'],
   },
   {

@@ -13,7 +13,7 @@ export const CLAUDE_ALIASES = ['haiku', 'sonnet', 'opus', 'inherit'] as const;
 export type ClaudeAlias = typeof CLAUDE_ALIASES[number];
 
 /** Provider names that support alias resolution */
-export type CLIProviderName = 'anthropic-cli' | 'gemini-cli' | 'codex-cli' | 'cursor-cli';
+export type CLIProviderName = 'anthropic-cli' | 'gemini-cli' | 'codex-cli' | 'cursor-cli' | 'deepseek';
 
 /**
  * Maps Claude aliases to provider-native model names.
@@ -28,35 +28,42 @@ export const PROVIDER_ALIAS_MAP: Record<CLIProviderName, Record<string, string |
   'anthropic-cli': {
     'opus': 'claude-opus-4-6',
     'sonnet': 'claude-sonnet-4-6',
-    'haiku': 'claude-haiku-4-5-20251001',
+    'haiku': 'claude-sonnet-4-6',
     'inherit': undefined,  // Let claude -p use its default
   },
   'gemini-cli': {
     'opus': 'gemini-3.1-pro-preview',
     'sonnet': 'gemini-3.1-pro-preview',
-    'haiku': 'gemini-3.1-pro-preview',
+    'haiku': 'gemini-3.1-pro-preview',  // haiku alias → same as sonnet
     'inherit': 'gemini-3.1-pro-preview',
   },
   'codex-cli': {
     'opus': 'gpt-5.4',
     'sonnet': 'gpt-5.4',
-    'haiku': 'gpt-5.4',
+    'haiku': 'gpt-5.4',  // haiku alias → same as sonnet
     'inherit': undefined,  // Let Codex use config.toml default
   },
   'cursor-cli': {
     'opus': 'auto',
     'sonnet': 'auto',
-    'haiku': 'auto',
+    'haiku': 'auto',  // haiku alias → same as sonnet
     'inherit': 'auto',
+  },
+  'deepseek': {
+    'opus': 'deepseek-reasoner',
+    'sonnet': 'deepseek-reasoner',
+    'haiku': 'deepseek-reasoner',
+    'inherit': 'deepseek-reasoner',
   },
 };
 
 /** Default models when no model is specified at all */
 export const PROVIDER_DEFAULTS: Record<CLIProviderName, string | undefined> = {
   'anthropic-cli': 'claude-opus-4-6',
-  'gemini-cli': 'auto',
+  'gemini-cli': 'gemini-3.1-pro-preview',
   'codex-cli': undefined,  // Omit --model, let config.toml decide
   'cursor-cli': 'auto',
+  'deepseek': 'deepseek-reasoner',
 };
 
 /** Known valid model names per provider (for passthrough validation) */
@@ -79,6 +86,7 @@ export const KNOWN_PROVIDER_MODELS: Record<CLIProviderName, Set<string>> = {
     'auto', 'composer-1.5', 'composer-1',
     'gpt-5.3-codex', 'gpt-5.2-codex', 'gpt-5.2',
   ]),
+  'deepseek': new Set(['deepseek-chat', 'deepseek-reasoner']),
 };
 
 /**
@@ -150,5 +158,5 @@ function isClaudeAlias(model: string): model is ClaudeAlias {
 }
 
 function isCliProvider(provider: string): provider is CLIProviderName {
-  return provider === 'anthropic-cli' || provider === 'gemini-cli' || provider === 'codex-cli' || provider === 'cursor-cli';
+  return provider === 'anthropic-cli' || provider === 'gemini-cli' || provider === 'codex-cli' || provider === 'cursor-cli' || provider === 'deepseek';
 }

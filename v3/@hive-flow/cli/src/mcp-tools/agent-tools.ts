@@ -18,10 +18,10 @@ const AGENT_DIR = 'agents';
 const AGENT_FILE = 'store.json';
 
 // Model tier aliases — map to provider-native models via resolveProviderModel()
-type AgentModel = 'haiku' | 'sonnet' | 'opus' | 'inherit';
+type AgentModel = 'sonnet' | 'opus' | 'inherit';
 
 // First-class providers: Cursor, Codex, Gemini alongside Anthropic
-export type AgentProvider = 'anthropic' | 'anthropic-cli' | 'gemini-cli' | 'codex-cli' | 'cursor-cli';
+export type AgentProvider = 'anthropic' | 'anthropic-cli' | 'gemini-cli' | 'codex-cli' | 'cursor-cli' | 'deepseek';
 
 export interface AgentRecord {
   agentId: string;
@@ -172,10 +172,10 @@ const AGENT_TYPE_MODEL_DEFAULTS: Record<string, AgentModel> = {
   'researcher': 'sonnet',
   'tester': 'sonnet',
   'analyst': 'sonnet',
-  // Simple/fast agents → haiku
-  'formatter': 'haiku',
-  'linter': 'haiku',
-  'documenter': 'haiku',
+  // Simple/fast agents → sonnet
+  'formatter': 'sonnet',
+  'linter': 'sonnet',
+  'documenter': 'sonnet',
 };
 
 // Lazy-loaded model router
@@ -213,7 +213,7 @@ async function determineAgentModel(
   tier?: 1 | 2 | 3;
 }> {
   // 1. Explicit model in config
-  if (config.model && ['haiku', 'sonnet', 'opus', 'inherit'].includes(config.model as string)) {
+  if (config.model && ['sonnet', 'opus', 'inherit'].includes(config.model as string)) {
     return { model: config.model as AgentModel, routedBy: 'explicit' };
   }
 
@@ -228,7 +228,7 @@ async function determineAgentModel(
       if (routeResult.tier === 1 && routeResult.canSkipLLM) {
         // Agent Booster can handle this task
         return {
-          model: 'haiku', // Use haiku as fallback if AB fails
+          model: 'sonnet', // Use sonnet as fallback if AB fails
           routedBy: 'agent-booster',
           canSkipLLM: true,
           agentBoosterIntent: routeResult.agentBoosterIntent?.type,
@@ -354,12 +354,12 @@ export const agentTools: MCPTool[] = [
         domain: { type: 'string', description: 'Agent domain' },
         provider: {
           type: 'string',
-          enum: ['anthropic', 'anthropic-cli', 'gemini-cli', 'codex-cli', 'cursor-cli'],
+          enum: ['anthropic', 'anthropic-cli', 'gemini-cli', 'codex-cli', 'cursor-cli', 'deepseek'],
           description: 'LLM provider (default: anthropic). anthropic-cli, Codex, Gemini, Cursor are first-class CLI providers.',
         },
         model: {
           type: 'string',
-          enum: ['haiku', 'sonnet', 'opus', 'inherit'],
+          enum: ['sonnet', 'opus', 'inherit'],
           description: 'Model tier (maps to provider-native model via alias resolver)',
         },
         task: { type: 'string', description: 'Task description for intelligent model routing' },
@@ -761,7 +761,7 @@ export const agentTools: MCPTool[] = [
           return 'Agent has no provider — use agent_spawn with a provider first';
         }
         if (agent.provider === 'anthropic') {
-          return "Use 'anthropic-cli' for Claude subprocess workers, not 'anthropic'. The agent_task bridge supports CLI providers (anthropic-cli, gemini-cli, codex-cli, cursor-cli). Use Claude Code Task tool for native anthropic agents.";
+          return "Use 'anthropic-cli' for Claude subprocess workers, not 'anthropic'. The agent_task bridge supports providers: anthropic-cli, gemini-cli, codex-cli, cursor-cli, deepseek. Use Claude Code Task tool for native anthropic agents.";
         }
         if (!transitionAgent(agent, 'busy')) {
           return `Agent cannot accept tasks in current state: '${agent.status}'`;

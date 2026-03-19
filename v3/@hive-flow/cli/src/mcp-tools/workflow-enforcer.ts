@@ -51,7 +51,7 @@ export interface ComplexitySignal {
   points: number;
 }
 
-export type AgentModelTier = 'opus' | 'sonnet' | 'haiku' | 'inherit';
+export type AgentModelTier = 'opus' | 'sonnet' | 'inherit';
 
 export interface FlowComponentConfig {
   enabled: boolean;

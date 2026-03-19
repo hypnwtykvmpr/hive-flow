@@ -85,13 +85,11 @@ When spawned as an ENFORCER agent, use this identity:
 
 When spawning agents with the Task tool:
 - ALWAYS append `(model)` to the `description` parameter: e.g. `"Fix tests (opus)"`
-- ALWAYS set the `model` parameter explicitly: `"opus"`, `"sonnet"`, or `"haiku"`
+- ALWAYS set the `model` parameter explicitly: `"opus"` or `"sonnet"`
 
 ### Model Selection Priority
 - **opus**: Architecture, security, complex reasoning, multi-file changes
 - **sonnet**: Implementation, testing, moderate complexity
-- **haiku**: ONLY for simple lookups, formatting, trivial tasks
-- NEVER use haiku for non-trivial work
 
 ## External Agent Providers (Cursor-Agent, Codex CLI, Gemini CLI)
 
@@ -106,7 +104,7 @@ Three external AI agent providers are integrated as first-class Hive Flow agents
 ### Priority Order for Sub-Agent Delegation
 
 1. **Codex** and **Gemini** (PREFERRED) — headless execution via MCP agent_spawn + agent_task tools, conserves Claude quota
-2. **Task tool agents** (opus/sonnet/haiku) — use when external providers are insufficient
+2. **Task tool agents** (opus/sonnet) — use when external providers are insufficient
 3. **Cursor-Agent** — headless AI agent via MCP agent_spawn + agent_task tools
 
 ### Spawning External Agents (MCP Native)
@@ -129,9 +127,9 @@ mcp__hive-flow__agent_task({ agentId: "agent-id", task: "Review the error handli
 
 | Provider | Headless | Tool Calling | Streaming | Model Selection |
 |----------|----------|-------------|-----------|-----------------|
-| `gemini-cli` | Yes | Yes | Yes | gemini-2.5-pro, gemini-2.0-flash |
-| `codex-cli` | Yes | Yes | Yes | gpt-5.3-codex, o3-mini, o4-mini |
-| `cursor-cli` | Yes | Yes | Yes | auto, gpt-5.3-codex, claude-opus-4-6 |
+| `gemini-cli` | Yes | Yes | Yes | gemini-3.1-pro-preview |
+| `codex-cli` | Yes | Yes | Yes | gpt-5.4 |
+| `cursor-cli` | Yes | Yes | Yes | auto, gpt-5.4, claude-opus-4-6 |
 
 ### When to Use External Agents
 
@@ -475,7 +473,7 @@ Use `claude -p` (print/pipe mode) to spawn headless Claude instances for paralle
 claude -p "Analyze the authentication module for security issues"
 
 # With model selection
-claude -p --model haiku "Format this config file"
+claude -p --model sonnet "Format this config file"
 claude -p --model opus "Design the database schema for user management"
 
 # With output format
@@ -497,7 +495,7 @@ claude -p --dangerously-skip-permissions "Fix all lint errors in src/"
 | Flag | Purpose |
 |------|---------|
 | `-p, --print` | Non-interactive mode, print and exit |
-| `--model <model>` | Select model (haiku, sonnet, opus) |
+| `--model <model>` | Select model (sonnet, opus) |
 | `--output-format <fmt>` | Output: text, json, stream-json |
 | `--max-budget-usd <amt>` | Spending cap per invocation |
 | `--allowedTools <tools>` | Restrict available tools |

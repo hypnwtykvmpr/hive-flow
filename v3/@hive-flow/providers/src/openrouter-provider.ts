@@ -50,7 +50,7 @@ interface OpenRouterResponse {
 }
 
 const DEFAULT_MODELS: LLMModel[] = [
-  'google/gemini-2.5-flash', 'meta-llama/llama-3.3-70b', 'deepseek/deepseek-chat-v3',
+  'google/gemini-2.5-flash', 'meta-llama/llama-3.3-70b', 'deepseek/deepseek-reasoner',
   'openai/gpt-4o-mini', 'mistralai/mistral-small-25',
 ];
 
@@ -62,11 +62,11 @@ export class OpenRouterProvider extends BaseProvider {
     supportedModels: [...DEFAULT_MODELS],
     maxContextLength: {
       'google/gemini-2.5-flash': 1048576, 'meta-llama/llama-3.3-70b': 131072,
-      'deepseek/deepseek-chat-v3': 131072, 'openai/gpt-4o-mini': 128000, 'mistralai/mistral-small-25': 32768,
+      'deepseek/deepseek-reasoner': 131072, 'openai/gpt-4o-mini': 128000, 'mistralai/mistral-small-25': 32768,
     },
     maxOutputTokens: {
       'google/gemini-2.5-flash': 65536, 'meta-llama/llama-3.3-70b': 4096,
-      'deepseek/deepseek-chat-v3': 8192, 'openai/gpt-4o-mini': 16384, 'mistralai/mistral-small-25': 8192,
+      'deepseek/deepseek-reasoner': 8192, 'openai/gpt-4o-mini': 16384, 'mistralai/mistral-small-25': 8192,
     },
     supportsStreaming: true,
     supportsToolCalling: true,
@@ -80,7 +80,7 @@ export class OpenRouterProvider extends BaseProvider {
     pricing: {
       'google/gemini-2.5-flash': p(0.00015, 0.0006),
       'meta-llama/llama-3.3-70b': p(0.00059, 0.00079),
-      'deepseek/deepseek-chat-v3': p(0.0003, 0.00088),
+      'deepseek/deepseek-reasoner': p(0.0003, 0.00088),
       'openai/gpt-4o-mini': p(0.00015, 0.0006),
       'mistralai/mistral-small-25': p(0.0001, 0.0003),
     },

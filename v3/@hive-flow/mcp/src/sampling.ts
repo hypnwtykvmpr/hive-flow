@@ -329,7 +329,7 @@ export function createAnthropicProvider(apiKey: string): LLMProvider {
           'anthropic-version': '2023-06-01',
         },
         body: JSON.stringify({
-          model: 'claude-3-haiku-20240307',
+          model: 'claude-sonnet-4-6',
           max_tokens: request.maxTokens,
           temperature: request.temperature,
           system: request.systemPrompt,

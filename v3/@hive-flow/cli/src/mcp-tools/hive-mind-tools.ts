@@ -214,7 +214,7 @@ export const hiveMindTools: MCPTool[] = [
         role: { type: 'string', enum: ['worker', 'specialist', 'scout'], description: 'Worker role in hive', default: 'worker' },
         agentType: { type: 'string', description: 'Agent type for spawned workers', default: 'worker' },
         prefix: { type: 'string', description: 'Prefix for worker IDs', default: 'hive-worker' },
-        provider: { type: 'string', enum: ['gemini-cli', 'codex-cli', 'cursor-cli', 'anthropic'], description: 'AI provider' },
+        provider: { type: 'string', enum: ['gemini-cli', 'codex-cli', 'cursor-cli', 'anthropic', 'deepseek'], description: 'AI provider' },
         model: { type: 'string', description: 'Model to use' },
       },
     },
@@ -421,7 +421,7 @@ export const hiveMindTools: MCPTool[] = [
       properties: {
         agentId: { type: 'string', description: 'Agent ID to join' },
         role: { type: 'string', enum: ['worker', 'specialist', 'scout'], description: 'Agent role in hive' },
-        provider: { type: 'string', enum: ['gemini-cli', 'codex-cli', 'cursor-cli', 'anthropic'], description: 'AI provider' },
+        provider: { type: 'string', enum: ['gemini-cli', 'codex-cli', 'cursor-cli', 'anthropic', 'deepseek'], description: 'AI provider' },
         model: { type: 'string', description: 'Model identifier' },
       },
       required: ['agentId'],

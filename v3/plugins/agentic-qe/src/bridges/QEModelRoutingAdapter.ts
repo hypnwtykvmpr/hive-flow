@@ -140,7 +140,7 @@ const TIER_COSTS: Record<ModelTier, number> = {
  * Model selection by tier
  */
 const TIER_MODELS: Record<ModelTier, ModelSelection> = {
-  1: 'haiku',   // Fallback if Agent Booster unavailable
+  1: 'sonnet',  // Fallback if Agent Booster unavailable
   2: 'sonnet',  // Default for Tier 2
   3: 'opus',    // Always Opus for Tier 3
 };
@@ -198,7 +198,7 @@ export class QEModelRoutingAdapter implements IQEModelRoutingAdapter {
 
       const result: QERouteResult = {
         tier: agentBooster.available ? 1 : tier,
-        model: agentBooster.available ? 'haiku' : model,
+        model: agentBooster.available ? 'sonnet' : model,
         qeCategory: task.category,
         qeComplexity: complexity,
         recommendedAgents,

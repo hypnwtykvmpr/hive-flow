@@ -957,7 +957,7 @@ export type ModelTier = 1 | 2 | 3;
 /**
  * Model selection
  */
-export type ModelSelection = 'haiku' | 'sonnet' | 'opus';
+export type ModelSelection = 'sonnet' | 'opus';
 
 /**
  * Route result from model routing

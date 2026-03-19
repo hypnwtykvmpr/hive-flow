@@ -58,7 +58,7 @@ export const SecurityLevelSchema = z.enum(['low', 'medium', 'high', 'critical'])
 /**
  * Model tier enum schema
  */
-export const ModelTierSchema = z.enum(['agent-booster', 'haiku', 'sonnet', 'opus']);
+export const ModelTierSchema = z.enum(['agent-booster', 'sonnet', 'opus']);
 
 /**
  * Contract type enum schema

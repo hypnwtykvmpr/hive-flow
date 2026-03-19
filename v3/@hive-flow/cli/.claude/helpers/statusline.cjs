@@ -26,6 +26,25 @@ const CONFIG = {
 
 const CWD = process.cwd();
 
+let _stdinData = undefined;
+function getStdinData() {
+  if (_stdinData !== undefined) return _stdinData;
+  try {
+    if (process.stdin.isTTY) { _stdinData = null; return null; }
+    const chunks = [];
+    const buf = Buffer.alloc(4096);
+    try {
+      let bytesRead;
+      while ((bytesRead = fs.readSync(0, buf, 0, buf.length, null)) > 0) {
+        chunks.push(buf.slice(0, bytesRead));
+      }
+    } catch { /* EOF */ }
+    const raw = Buffer.concat(chunks).toString('utf-8').trim();
+    _stdinData = (raw && raw.startsWith('{')) ? JSON.parse(raw) : null;
+  } catch { _stdinData = null; }
+  return _stdinData;
+}
+
 // ANSI colors
 const c = {
   reset: '\x1b[0m',
@@ -524,20 +543,38 @@ function getIntegrationStatus() {
   return { mcpServers, hasDatabase, hasApi };
 }
 
+function detectContextWindow() {
+  const stdinData = getStdinData();
+  if (stdinData?.context_window?.context_window_size) return stdinData.context_window.context_window_size;
+  if (process.env.HIVE_FLOW_CONTEXT_WINDOW) return parseInt(process.env.HIVE_FLOW_CONTEXT_WINDOW, 10) || 200000;
+  const modelName = (stdinData?.model?.display_name || stdinData?.model?.model_id || getModelName() || '').toLowerCase();
+  if (modelName.includes('1m')) return 1000000;
+  return 200000;
+}
+
 // Context usage estimate (reads tool call counter from hook handler)
 function getContextUsage() {
+  const stdinData = getStdinData();
+  if (stdinData?.context_window) {
+    const cw = stdinData.context_window;
+    if (cw.used_percentage != null) {
+      const pct = Math.floor(cw.used_percentage);
+      return { calls: -1, pct, nearCompaction: pct >= 70 };
+    }
+    if (cw.remaining_percentage != null) {
+      const pct = Math.floor(100 - cw.remaining_percentage);
+      return { calls: -1, pct, nearCompaction: pct >= 70 };
+    }
+  }
+  const contextWindow = detectContextWindow();
   const ctxFile = path.join(CWD, '.claude', '.context-tracker.json');
   try {
     const data = JSON.parse(fs.readFileSync(ctxFile, 'utf-8'));
     const calls = data.calls || 0;
-    // Estimate: ~1500 tokens per tool call average, 200K context window
-    // Each call adds prompt (~500 tokens) + response (~1000 tokens)
-    // Compaction typically triggers around 80-90% of context
     const estimatedTokens = calls * 1500;
-    const contextWindow = 200000;
     const pct = Math.min(99, Math.floor((estimatedTokens / contextWindow) * 100));
     return { calls, pct, nearCompaction: pct >= 70 };
-  } catch { /* no tracker yet */ }
+  } catch { /* no tracker */ }
   return { calls: 0, pct: 0, nearCompaction: false };
 }
 
@@ -599,7 +636,7 @@ function generateStatusline() {
   header += `  ${c.dim}\u2502${c.reset}  ${c.purple}${modelName}${c.reset}`;
   if (session.duration) header += `  ${c.dim}\u2502${c.reset}  ${c.cyan}\u23F1 ${session.duration}${c.reset}`;
   // Context usage indicator
-  if (context.calls > 0) {
+  if (context.pct > 0) {
     const ctxColor = context.pct >= 75 ? c.brightRed : context.pct >= 50 ? c.brightYellow : c.brightGreen;
     header += `  ${c.dim}\u2502${c.reset}  ${ctxColor}\uD83D\uDCD6 ${context.pct}% ctx${c.reset}`;
     if (context.nearCompaction) header += ` ${c.brightRed}\u26A0 compaction soon${c.reset}`;

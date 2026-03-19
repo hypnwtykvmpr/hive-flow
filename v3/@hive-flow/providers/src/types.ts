@@ -71,6 +71,7 @@ export type LLMModel =
   | 'phi-4'
   | 'deepseek-coder'
   // Codex/OpenAI Models
+  | 'gpt-5.4'
   | 'gpt-5.3-codex'
   | 'gpt-5.2-codex'
   | 'gpt-5.1-codex-max'
@@ -78,8 +79,8 @@ export type LLMModel =
   | 'gpt-5-codex'
   | 'gpt-5-codex-mini'
   // DeepSeek Models
-  | 'deepseek-chat'
   | 'deepseek-reasoner'
+  | 'deepseek-chat'
   // Qwen Models
   | 'qwen-max'
   | 'qwen-plus'

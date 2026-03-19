@@ -33,8 +33,24 @@ const stderrLogger = {
 
 // ===== Constants =====
 
-const MAX_HISTORY_ENTRIES = 50;
-const MAX_PROMPT_BYTES = 180 * 1024; // 180KB
+const DEFAULT_MAX_HISTORY_ENTRIES = 50;
+const DEFAULT_MAX_PROMPT_BYTES = 180 * 1024; // 180KB
+
+// Per-provider context limits (deepseek has smallest context at 128K)
+const PROVIDER_LIMITS = {
+  'anthropic-cli': { maxBytes: 180 * 1024, maxEntries: 50 },
+  'gemini-cli':    { maxBytes: 180 * 1024, maxEntries: 50 },
+  'codex-cli':     { maxBytes: 180 * 1024, maxEntries: 50 },
+  'cursor-cli':    { maxBytes: 180 * 1024, maxEntries: 50 },
+  'deepseek':      { maxBytes: 100 * 1024, maxEntries: 30 },
+};
+
+function getProviderLimits(providerName) {
+  return PROVIDER_LIMITS[providerName] || {
+    maxBytes: DEFAULT_MAX_PROMPT_BYTES,
+    maxEntries: DEFAULT_MAX_HISTORY_ENTRIES
+  };
+}
 const LOCK_ACQUIRE_TIMEOUT = 10000; // 10 seconds — aligned with agent-tools.ts withStoreLock
 const LOCK_STALE_THRESHOLD = 30000; // 30 seconds — aligned with agent-tools.ts stale detection
 
@@ -141,13 +157,13 @@ function messageByteLength(msg) {
   return Buffer.byteLength(c, 'utf8');
 }
 
-function trimMessages(messages) {
+function trimMessages(messages, limits = getProviderLimits()) {
   let totalBytes = 0;
   for (const msg of messages) {
     totalBytes += messageByteLength(msg);
   }
 
-  if (totalBytes <= MAX_PROMPT_BYTES && messages.length <= MAX_HISTORY_ENTRIES + 2) {
+  if (totalBytes <= limits.maxBytes && messages.length <= limits.maxEntries + 2) {
     return messages;
   }
 
@@ -160,7 +176,7 @@ function trimMessages(messages) {
     for (const msg of [...system, ...middle, newTask]) {
       bytes += messageByteLength(msg);
     }
-    if (bytes <= MAX_PROMPT_BYTES && middle.length + system.length + 1 <= MAX_HISTORY_ENTRIES + 2) {
+    if (bytes <= limits.maxBytes && middle.length + system.length + 1 <= limits.maxEntries + 2) {
       break;
     }
     middle.shift();
@@ -193,9 +209,10 @@ async function getProviderDefaults() {
   // Fallback — only used if providers package isn't built
   _providerDefaults = {
     'anthropic-cli': 'claude-sonnet-4-6',
-    'gemini-cli': 'auto',
+    'gemini-cli': 'gemini-3.1-pro-preview',
     'codex-cli': undefined,
     'cursor-cli': 'auto',
+    'deepseek': 'deepseek-reasoner',
   };
   return _providerDefaults;
 }
@@ -409,7 +426,7 @@ async function main() {
   const { store, agent, storePath, messages, providerName } = await withFileLock(lockPath, async () => {
     const { store, agent, storePath } = loadAgentState(storeDir, agentId);
     const rawMessages = buildMessages(agent, task);
-    const messages = trimMessages(rawMessages);
+    const messages = trimMessages(rawMessages, getProviderLimits(agent.provider));
     const providerName = agent.provider;
     return { store, agent, storePath, messages, providerName };
   });
@@ -429,6 +446,7 @@ async function main() {
     'gemini-cli': providerModule.GeminiCLIProvider,
     'codex-cli': providerModule.CodexCLIProvider,
     'cursor-cli': providerModule.CursorCLIProvider,
+    'deepseek': providerModule.DeepSeekProvider,
   };
 
   const ProviderClass = providerClasses[providerName];
@@ -445,9 +463,10 @@ async function main() {
 
     const msg = initError.message || String(initError);
     if (msg.includes('not found') || msg.includes('ENOENT')) {
-      throw new Error(
-        `Provider binary for ${providerName} not found. Install it first.`
-      );
+      if (['anthropic-cli', 'gemini-cli', 'codex-cli', 'cursor-cli'].includes(providerName)) {
+        throw new Error(`Provider binary for ${providerName} not found. Install it first.`);
+      }
+      throw new Error(`Provider ${providerName} initialization failed: ${msg}`);
     }
     if (msg.includes('auth') || msg.includes('401') || msg.includes('Unauthorized')) {
       throw new Error(
@@ -571,7 +590,8 @@ async function main() {
 
     history.push({ role: 'assistant', content: response.content, timestamp: new Date().toISOString() });
 
-    while (history.length > MAX_HISTORY_ENTRIES) {
+    const limits = getProviderLimits(providerName);
+    while (history.length > limits.maxEntries) {
       history.shift();
     }
 
