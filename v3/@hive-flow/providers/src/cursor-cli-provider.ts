@@ -12,7 +12,8 @@
  * @module @hive-flow/providers/cursor-cli-provider
  */
 
-import { spawn, ChildProcess, execFile } from 'child_process';
+import { spawn, ChildProcess, execFile, execFileSync } from 'child_process';
+import { randomBytes } from 'crypto';
 import { createInterface } from 'readline';
 import { BaseProvider, BaseProviderOptions } from './base-provider.js';
 import {
@@ -40,6 +41,22 @@ const FREE = { promptCostPer1k: 0, completionCostPer1k: 0, currency: 'USD' };
 
 /** Safety limit to prevent unbounded stdout accumulation */
 const MAX_STDOUT_BYTES = 50 * 1024 * 1024; // 50 MB
+
+/**
+ * stderr patterns that indicate cursor-cli requires a real TTY and cannot
+ * operate in non-interactive pipe mode. When matched, the tmux fallback is
+ * attempted.
+ */
+const TTY_ERROR_PATTERNS: ReadonlyArray<RegExp> = [
+  /not a tty/i,
+  /no tty/i,
+  /tty.*required/i,
+  /requires.*tty/i,
+  /inappropriate ioctl for device/i,
+  /isatty/i,
+  /stdin.*interactive/i,
+  /interactive.*stdin/i,
+];
 
 function calcCost(prompt: number, completion: number, pricing: { promptCostPer1k: number; completionCostPer1k: number }) {
   const p = (prompt / 1000) * pricing.promptCostPer1k;
@@ -416,7 +433,180 @@ export class CursorCLIProvider extends BaseProvider {
     });
     child.stdin.write(trimmed);
     child.stdin.end();
-    return child;
+
+    // TTY-fallback: if the process exits with a TTY-related error, retry via
+    // tmux so cursor-cli gets a pseudo-terminal to satisfy its isatty() check.
+    // We wrap the original child in a proxy EventEmitter that intercepts the
+    // initial close/error events and replaces streams with those from the retry.
+    const { EventEmitter } = require('events') as typeof import('events');
+    const proxy = new EventEmitter() as ChildProcess;
+    // Mirror the minimum ChildProcess surface used by callers.
+    (proxy as unknown as Record<string, unknown>).stdout = child.stdout;
+    (proxy as unknown as Record<string, unknown>).stderr = child.stderr;
+    (proxy as unknown as Record<string, unknown>).stdin = child.stdin;
+    (proxy as unknown as Record<string, unknown>).pid = child.pid;
+    (proxy as unknown as Record<string, unknown>).kill = (sig?: NodeJS.Signals | number) => child.kill(sig);
+
+    let stderrAccum = '';
+    child.stderr?.on('data', (d: Buffer) => { stderrAccum += d.toString(); });
+
+    child.on('close', (code, signal) => {
+      this.activeProcesses.delete(child);
+
+      // Detect TTY-related exit: non-zero code AND stderr matches a TTY pattern.
+      const isTtyError = code !== 0 && TTY_ERROR_PATTERNS.some((re) => re.test(stderrAccum));
+
+      if (!isTtyError) {
+        proxy.emit('close', code, signal);
+        return;
+      }
+
+      this.logger.warn('cursor-cli exited with TTY error; attempting tmux fallback', {
+        code,
+        stderr: stderrAccum.slice(-500),
+      });
+
+      // Locate tmux without shell interpolation.
+      let tmuxPath: string | null = null;
+      try {
+        tmuxPath = execFileSync(
+          process.platform === 'win32' ? 'where' : 'which',
+          ['tmux'],
+          { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }
+        ).trim().split('\n')[0].trim() || null;
+      } catch {
+        tmuxPath = null;
+      }
+
+      if (!tmuxPath) {
+        proxy.emit('error', new ProviderUnavailableError('cursor-cli', {
+          message: 'cursor-cli requires a TTY but tmux was not found on PATH',
+          hint: 'Install tmux to enable the TTY fallback: brew install tmux',
+        }));
+        return;
+      }
+
+      try {
+        const tmuxChild = this.spawnInTmux(trimmed, args, env as NodeJS.ProcessEnv, tmuxPath);
+        this.activeProcesses.add(tmuxChild);
+
+        (proxy as unknown as Record<string, unknown>).stdout = tmuxChild.stdout;
+        (proxy as unknown as Record<string, unknown>).stderr = tmuxChild.stderr;
+        (proxy as unknown as Record<string, unknown>).stdin = tmuxChild.stdin;
+        (proxy as unknown as Record<string, unknown>).pid = tmuxChild.pid;
+        (proxy as unknown as Record<string, unknown>).kill = (sig?: NodeJS.Signals | number) => tmuxChild.kill(sig);
+
+        tmuxChild.stdout?.on('data', (d: Buffer) => proxy.emit('data', d));
+        tmuxChild.stderr?.on('data', (d: Buffer) => {
+          if (proxy.rawListeners('stderr').length > 0) proxy.emit('stderr', d);
+        });
+        tmuxChild.on('close', (c, s) => { this.activeProcesses.delete(tmuxChild); proxy.emit('close', c, s); });
+        tmuxChild.on('error', (err) => { this.activeProcesses.delete(tmuxChild); proxy.emit('error', err); });
+      } catch (spawnErr) {
+        proxy.emit('error', spawnErr instanceof Error ? spawnErr : new Error(String(spawnErr)));
+      }
+    });
+
+    child.on('error', (err) => {
+      this.activeProcesses.delete(child);
+      proxy.emit('error', err);
+    });
+
+    return proxy;
+  }
+
+  /**
+   * Spawns cursor-cli inside a detached tmux session so the process gets a
+   * pseudo-TTY. The prompt is written to a temp file (never shell-interpolated).
+   * Output is captured via a named FIFO written by `tmux pipe-pane`.
+   *
+   * All tmux calls use execFileSync with argument arrays — no shell invocation.
+   *
+   * Returns a ChildProcess-compatible shim whose stdout stream carries the
+   * captured output.
+   */
+  private spawnInTmux(
+    prompt: string,
+    args: string[],
+    env: NodeJS.ProcessEnv,
+    tmuxBin: string,
+  ): ChildProcess {
+    const os = require('os') as typeof import('os');
+    const fs = require('fs') as typeof import('fs');
+    const path = require('path') as typeof import('path');
+
+    const sessionId = `hive-cursor-${Date.now()}-${randomBytes(4).toString('hex')}`;
+    const pipePath = path.join(os.tmpdir(), `${sessionId}.pipe`);
+    // Write prompt to a temp file so it is never passed through any shell.
+    const promptFile = path.join(os.tmpdir(), `${sessionId}.prompt`);
+    fs.writeFileSync(promptFile, prompt, { encoding: 'utf8', mode: 0o600 });
+
+    // Create FIFO — execFileSync with argument array (no shell).
+    try {
+      execFileSync('mkfifo', [pipePath], { stdio: 'ignore' });
+    } catch {
+      try { fs.unlinkSync(promptFile); } catch { /* ignore */ }
+      throw new ProviderUnavailableError('cursor-cli', {
+        message: 'tmux fallback failed: could not create named pipe via mkfifo',
+        hint: 'Ensure mkfifo is available and the temp directory is writable',
+      });
+    }
+
+    // Start detached tmux session — all args are separate array elements.
+    execFileSync(tmuxBin, ['new-session', '-d', '-s', sessionId, '-x', '220', '-y', '50'], {
+      env,
+      stdio: 'ignore',
+    });
+
+    // Redirect pane output to FIFO.  The shell-command string passed to
+    // pipe-pane is a fixed template; pipePath is a generated temp path
+    // containing only safe characters (alphanumeric + hyphen + dot + slash).
+    execFileSync(tmuxBin, ['pipe-pane', '-t', sessionId, `cat >> ${pipePath}`], {
+      env,
+      stdio: 'ignore',
+    });
+
+    // Build the pane command: `cat <promptFile> | <cursorBin> <args...>; tmux kill-session -t <session>`.
+    // All tokens are individually single-quote-escaped so shell word-splitting
+    // cannot alter them inside the tmux pane shell.
+    const q = (s: string) => `'${s.replace(/'/g, "'\\''")}'`;
+    const paneCmd = [
+      'cat', q(promptFile), '|',
+      q(this.binaryPath!), ...args.map(q),
+      ';', tmuxBin, 'kill-session', '-t', sessionId,
+    ].join(' ');
+
+    execFileSync(tmuxBin, ['send-keys', '-t', sessionId, paneCmd, 'Enter'], {
+      env,
+      stdio: 'ignore',
+    });
+
+    // Open the FIFO for reading.
+    const fifoStream = fs.createReadStream(pipePath);
+
+    const { PassThrough } = require('stream') as typeof import('stream');
+    const { EventEmitter } = require('events') as typeof import('events');
+
+    const stderrPass = new PassThrough();
+    const shim = new EventEmitter() as ChildProcess;
+    (shim as unknown as Record<string, unknown>).stdout = fifoStream;
+    (shim as unknown as Record<string, unknown>).stderr = stderrPass;
+    (shim as unknown as Record<string, unknown>).stdin = new PassThrough();
+    (shim as unknown as Record<string, unknown>).pid = undefined;
+    (shim as unknown as Record<string, unknown>).kill = (_sig?: NodeJS.Signals | number) => {
+      try { execFileSync(tmuxBin, ['kill-session', '-t', sessionId], { stdio: 'ignore' }); } catch { /* already gone */ }
+      try { fs.unlinkSync(pipePath); } catch { /* already removed */ }
+      try { fs.unlinkSync(promptFile); } catch { /* already removed */ }
+    };
+
+    const cleanup = () => {
+      try { fs.unlinkSync(pipePath); } catch { /* already removed */ }
+      try { fs.unlinkSync(promptFile); } catch { /* already removed */ }
+    };
+    fifoStream.on('end', () => { cleanup(); stderrPass.end(); shim.emit('close', 0, null); });
+    fifoStream.on('error', (err: Error) => { cleanup(); shim.emit('error', err); });
+
+    return shim;
   }
 
   private parseJsonOutput(stdout: string, model: LLMModel): LLMResponse {

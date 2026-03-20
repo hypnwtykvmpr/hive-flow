@@ -47,6 +47,8 @@ export interface HiveWorkerRecord {
   status: 'spawning' | 'idle' | 'busy' | 'error' | 'terminated';
   spawnedAt: string;
   budgetAllocation?: number;
+  /** Task ID of the most recently dispatched task for this worker (set by queen_mission_assign spawnAndTask) */
+  taskId?: string;
 }
 
 export interface HiveMission {

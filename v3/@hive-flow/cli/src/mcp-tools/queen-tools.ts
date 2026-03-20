@@ -126,6 +126,13 @@ async function callAgentTerminate(input: Record<string, unknown>): Promise<Recor
   return terminateTool.handler(input) as Promise<Record<string, unknown>>;
 }
 
+async function callAgentTaskAsync(input: Record<string, unknown>): Promise<Record<string, unknown>> {
+  const { agentTools } = await import('./agent-tools.js');
+  const asyncTool = agentTools.find(t => t.name === 'agent_task_async');
+  if (!asyncTool) throw new Error('agent_task_async tool not found');
+  return asyncTool.handler(input) as Promise<Record<string, unknown>>;
+}
+
 // ---------------------------------------------------------------------------
 // Tool 1: queen_mission_assign
 // ---------------------------------------------------------------------------
@@ -153,6 +160,19 @@ const missionAssignTool: MCPTool = {
         description: 'Role-based dependency graph. Keys are role names (not worker IDs), values are arrays of role names that must complete first.',
       },
       stalenessTimeout: { type: 'number', description: 'Timeout in ms before hive is considered stale (default: 3600000)' },
+      workers: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            role: { type: 'string', description: 'Worker role (e.g., "coder", "reviewer", "tester")' },
+            provider: { type: 'string', description: 'LLM provider (e.g., "gemini-cli", "codex-cli")' },
+            model: { type: 'string', description: 'Model tier (e.g., "sonnet", "opus", "inherit")' },
+            task: { type: 'string', description: 'Task prompt to dispatch immediately after spawn' },
+          },
+        },
+        description: 'Worker definitions — auto-spawned and tasked in parallel',
+      },
     },
     required: ['queenId', 'scope', 'description'],
   },
@@ -260,6 +280,167 @@ const missionAssignTool: MCPTool = {
       providers,
     });
 
+    // -----------------------------------------------------------------------
+    // Auto-spawn and task workers in parallel when `workers` array is provided
+    // -----------------------------------------------------------------------
+    const workerDefs = input.workers as Array<{ role?: string; provider?: string; model?: string; task?: string }> | undefined;
+    interface WorkerSpawnResult {
+      role: string;
+      workerId?: string;
+      agentId?: string;
+      taskId?: string;
+      taskStatus?: string;
+      provider?: string;
+      model?: string;
+      resolvedModel?: string;
+      error?: string;
+    }
+    const workerResults: WorkerSpawnResult[] = [];
+
+    if (workerDefs && workerDefs.length > 0) {
+      // Enforce maxWorkers budget
+      const effectiveDefs = workerDefs.slice(0, maxWorkers);
+
+      const spawnAndTask = async (def: { role?: string; provider?: string; model?: string; task?: string }): Promise<WorkerSpawnResult> => {
+        const role = def.role || 'coder';
+        const workerProvider = (def.provider as AgentProvider) || (providers && providers.length > 0 ? providers[0] as AgentProvider : 'anthropic');
+        const workerModel = def.model;
+        const workerTask = def.task;
+
+        // Step 1: Spawn via queen_spawn_worker logic (inline to avoid double-locking)
+        const workerId = `worker-${randomUUID()}`;
+        let spawnResult: Record<string, unknown>;
+        try {
+          spawnResult = await callAgentSpawn({
+            agentType: role,
+            agentId: workerId,
+            provider: workerProvider,
+            model: workerModel,
+            task: workerTask,
+            config: {
+              hiveId: hive.hiveId,
+              parentAgentId: queenId,
+              role,
+            },
+          });
+        } catch (e) {
+          return { role, error: `Spawn failed: ${(e as Error).message}` };
+        }
+
+        if (!spawnResult.success) {
+          return { role, error: `Spawn failed: ${spawnResult.error as string}` };
+        }
+
+        const agentId = spawnResult.agentId as string;
+
+        // Step 2 task dispatch — capture taskId to write into worker record
+        let pendingTaskId: string | undefined;
+
+        // Record worker in hive (under lock)
+        await withHiveLock(hive.hiveId, () => {
+          const freshHive = loadHive(hive.hiveId);
+          if (!freshHive) return;
+          const workerRecord: HiveWorkerRecord = {
+            workerId,
+            agentId,
+            role,
+            provider: workerProvider,
+            status: 'idle',
+            spawnedAt: new Date().toISOString(),
+          };
+          freshHive.workers.push(workerRecord);
+          freshHive.budget.workersAllocated = freshHive.workers.filter(w => w.status !== 'terminated').length;
+          appendHiveAudit(freshHive, {
+            event: 'worker-spawned',
+            detail: `Worker '${role}' auto-spawned as ${workerId} via ${workerProvider}`,
+            agentId,
+            workerId,
+          });
+          saveHive(hive.hiveId, freshHive);
+        });
+
+        // Step 2: If task provided, dispatch async
+        if (workerTask) {
+          try {
+            // Log the task in hive audit (same pattern as queen_task_worker)
+            await withHiveLock(hive.hiveId, () => {
+              const freshHive = loadHive(hive.hiveId);
+              if (freshHive) {
+                appendHiveAudit(freshHive, {
+                  event: 'worker-tasked',
+                  detail: `Task sent to worker '${workerId}': ${workerTask.slice(0, 200)}`,
+                  agentId,
+                  workerId,
+                });
+                if (!freshHive.delegationMetrics) {
+                  freshHive.delegationMetrics = { taskedCount: 0, directWorkCount: 0, delegationRate: 1 };
+                }
+                freshHive.delegationMetrics.taskedCount = (freshHive.delegationMetrics.taskedCount ?? 0) + 1;
+                recomputeDelegationMetrics(freshHive);
+                saveHive(hive.hiveId, freshHive);
+              }
+            });
+
+            const asyncResult = await callAgentTaskAsync({
+              agentId,
+              task: workerTask,
+            });
+            pendingTaskId = asyncResult.taskId as string | undefined;
+
+            // Write taskId back to the worker record in the hive
+            if (pendingTaskId) {
+              await withHiveLock(hive.hiveId, () => {
+                const freshHive = loadHive(hive.hiveId);
+                if (freshHive) {
+                  const wr = freshHive.workers.find(w => w.workerId === workerId);
+                  if (wr) wr.taskId = pendingTaskId;
+                  saveHive(hive.hiveId, freshHive);
+                }
+              });
+            }
+
+            return {
+              role,
+              workerId,
+              agentId,
+              taskId: pendingTaskId,
+              taskStatus: asyncResult.status as string | undefined,
+              provider: workerProvider,
+              model: spawnResult.model as string | undefined,
+              resolvedModel: spawnResult.resolvedModel as string | undefined,
+            };
+          } catch (e) {
+            return {
+              role,
+              workerId,
+              agentId,
+              provider: workerProvider,
+              error: `Spawned but task dispatch failed: ${(e as Error).message}`,
+            };
+          }
+        }
+
+        return {
+          role,
+          workerId,
+          agentId,
+          provider: workerProvider,
+          model: spawnResult.model as string | undefined,
+          resolvedModel: spawnResult.resolvedModel as string | undefined,
+        };
+      };
+
+      // Fire all spawns in parallel
+      const settled = await Promise.allSettled(effectiveDefs.map(spawnAndTask));
+      for (const result of settled) {
+        if (result.status === 'fulfilled') {
+          workerResults.push(result.value);
+        } else {
+          workerResults.push({ role: 'unknown', error: `Promise rejected: ${result.reason}` });
+        }
+      }
+    }
+
     return {
       success: true,
       hiveId: hive.hiveId,
@@ -272,6 +453,11 @@ const missionAssignTool: MCPTool = {
       },
       budget: { maxWorkers, maxCost },
       status: 'active',
+      ...(workerResults.length > 0 ? {
+        workers: workerResults,
+        workersSpawned: workerResults.filter(w => !w.error).length,
+        workersErrored: workerResults.filter(w => !!w.error).length,
+      } : {}),
     };
   },
 };
@@ -931,6 +1117,229 @@ const hiveValidateCompositionTool: MCPTool = {
 };
 
 // ---------------------------------------------------------------------------
+// Tool 9: hive_poll_workers
+// ---------------------------------------------------------------------------
+
+const hivePollWorkersTool: MCPTool = {
+  name: 'hive_poll_workers',
+  description: 'Poll all workers in a hive for task completion status. Checks result files and PID liveness (same logic as agent_task_result). Auto-collects results into hive audit when all workers complete.',
+  category: 'queen',
+  tags: ['hive', 'poll', 'workers', 'observability'],
+  inputSchema: {
+    type: 'object',
+    properties: {
+      hiveId: { type: 'string', description: 'ID of the hive to poll' },
+    },
+    required: ['hiveId'],
+  },
+  handler: async (input) => {
+    const { existsSync, readFileSync, readdirSync, writeFileSync } = await import('node:fs');
+    const { join } = await import('node:path');
+
+    const hiveId = input.hiveId as string;
+
+    const hive = loadHive(hiveId);
+    if (!hive) {
+      return { success: false, error: `Hive '${hiveId}' not found.` };
+    }
+
+    const STORAGE_DIR = '.hive-flow';
+    const tasksDir = join(process.cwd(), STORAGE_DIR, 'tasks');
+
+    // Build a map of agentId -> tracking entries from the tasks directory
+    const agentTaskMap = new Map<string, Array<{
+      taskId: string;
+      trackingPath: string;
+      resultPath: string;
+      tracking: { status: string; taskId: string; agentId: string; startedAt: string; pid?: number };
+    }>>();
+
+    if (existsSync(tasksDir)) {
+      let files: string[];
+      try {
+        files = readdirSync(tasksDir).filter(
+          (f: string) => f.endsWith('.json') && !f.endsWith('.result.json'),
+        );
+      } catch {
+        files = [];
+      }
+      for (const file of files) {
+        const trackingPath = join(tasksDir, file);
+        try {
+          const tracking = JSON.parse(readFileSync(trackingPath, 'utf-8')) as {
+            status: string; taskId: string; agentId: string; startedAt: string; pid?: number;
+          };
+          if (!tracking.agentId || !tracking.taskId) continue;
+          if (!agentTaskMap.has(tracking.agentId)) {
+            agentTaskMap.set(tracking.agentId, []);
+          }
+          const taskId = tracking.taskId;
+          const resultPath = join(tasksDir, `${taskId}.result.json`);
+          agentTaskMap.get(tracking.agentId)!.push({ taskId, trackingPath, resultPath, tracking });
+        } catch {
+          // Skip unparseable tracking files
+        }
+      }
+    }
+
+    const workerStatuses: Array<{
+      workerId: string;
+      agentId: string;
+      role: string;
+      status: 'completed' | 'running' | 'failed' | 'idle' | 'terminated';
+      taskId?: string;
+      result?: unknown;
+    }> = [];
+
+    let completedCount = 0;
+    let runningCount = 0;
+    let failedCount = 0;
+    let idleCount = 0;
+    let terminatedCount = 0;
+
+    for (const worker of hive.workers) {
+      if (worker.status === 'terminated') {
+        workerStatuses.push({
+          workerId: worker.workerId,
+          agentId: worker.agentId,
+          role: worker.role,
+          status: 'terminated',
+        });
+        terminatedCount++;
+        continue;
+      }
+
+      // Find the most recent tracking entry for this worker's agent
+      const tasks = agentTaskMap.get(worker.agentId);
+      if (!tasks || tasks.length === 0) {
+        workerStatuses.push({
+          workerId: worker.workerId,
+          agentId: worker.agentId,
+          role: worker.role,
+          status: 'idle',
+        });
+        idleCount++;
+        continue;
+      }
+
+      // Use the most recent task (by startedAt)
+      const sorted = tasks.sort(
+        (a, b) => new Date(b.tracking.startedAt).getTime() - new Date(a.tracking.startedAt).getTime(),
+      );
+      const latest = sorted[0];
+
+      // Check if result file exists (same logic as agent_task_result)
+      if (existsSync(latest.resultPath)) {
+        let result: unknown;
+        try {
+          result = JSON.parse(readFileSync(latest.resultPath, 'utf-8'));
+        } catch {
+          result = { error: 'Failed to parse result file' };
+        }
+
+        // Update tracking status if still marked running
+        if (latest.tracking.status === 'running') {
+          latest.tracking.status = 'completed';
+          try {
+            writeFileSync(latest.trackingPath, JSON.stringify(latest.tracking, null, 2), 'utf-8');
+          } catch { /* best-effort */ }
+        }
+
+        workerStatuses.push({
+          workerId: worker.workerId,
+          agentId: worker.agentId,
+          role: worker.role,
+          status: 'completed',
+          taskId: latest.taskId,
+          result,
+        });
+        completedCount++;
+        continue;
+      }
+
+      // No result file — check PID liveness
+      if (latest.tracking.pid) {
+        try {
+          process.kill(latest.tracking.pid, 0); // signal 0 = existence check
+          workerStatuses.push({
+            workerId: worker.workerId,
+            agentId: worker.agentId,
+            role: worker.role,
+            status: 'running',
+            taskId: latest.taskId,
+          });
+          runningCount++;
+          continue;
+        } catch {
+          // Process exited without writing a result — failed
+          latest.tracking.status = 'failed';
+          try {
+            writeFileSync(latest.trackingPath, JSON.stringify(latest.tracking, null, 2), 'utf-8');
+          } catch { /* best-effort */ }
+
+          workerStatuses.push({
+            workerId: worker.workerId,
+            agentId: worker.agentId,
+            role: worker.role,
+            status: 'failed',
+            taskId: latest.taskId,
+          });
+          failedCount++;
+          continue;
+        }
+      }
+
+      // No PID — fall back to tracking status
+      const mappedStatus = latest.tracking.status === 'completed' ? 'completed' as const
+        : latest.tracking.status === 'failed' ? 'failed' as const
+        : 'running' as const;
+
+      workerStatuses.push({
+        workerId: worker.workerId,
+        agentId: worker.agentId,
+        role: worker.role,
+        status: mappedStatus,
+        taskId: latest.taskId,
+      });
+
+      if (mappedStatus === 'completed') completedCount++;
+      else if (mappedStatus === 'failed') failedCount++;
+      else runningCount++;
+    }
+
+    // Determine if all tasked workers are done (completed or failed — not running)
+    const taskedWorkers = workerStatuses.filter(w => w.status !== 'idle' && w.status !== 'terminated');
+    const allComplete = taskedWorkers.length > 0 && runningCount === 0;
+
+    // Auto-collect results into hive audit when all complete
+    if (allComplete) {
+      await withHiveLock(hiveId, () => {
+        const freshHive = loadHive(hiveId);
+        if (freshHive) {
+          appendHiveAudit(freshHive, {
+            event: 'results-collected',
+            detail: `Auto-collected via hive_poll_workers: ${completedCount} completed, ${failedCount} failed, ${idleCount} idle, ${terminatedCount} terminated`,
+          });
+          saveHive(hiveId, freshHive);
+        }
+      });
+    }
+
+    return {
+      success: true,
+      hiveId,
+      workers: workerStatuses,
+      allComplete,
+      completedCount,
+      runningCount,
+      failedCount,
+      idleCount,
+      terminatedCount,
+    };
+  },
+};
+
+// ---------------------------------------------------------------------------
 // Export
 // ---------------------------------------------------------------------------
 
@@ -943,4 +1352,5 @@ export const queenTools: MCPTool[] = [
   hiveStatusTool,
   hiveTerminateTool,
   hiveValidateCompositionTool,
+  hivePollWorkersTool,
 ];

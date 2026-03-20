@@ -83,14 +83,26 @@ function ensureAgentDir(): void {
 }
 
 export function loadAgentStore(): AgentStore {
+  const path = getAgentPath();
+  const bakPath = path + '.bak';
   try {
-    const path = getAgentPath();
     if (existsSync(path)) {
       const data = readFileSync(path, 'utf-8');
       return JSON.parse(data);
     }
-  } catch {
-    // Return empty store on error
+  } catch (err) {
+    process.stderr.write(`[agent-store] Failed to parse store.json: ${(err as Error).message}. Attempting .bak restore.\n`);
+    // Try backup
+    try {
+      if (existsSync(bakPath)) {
+        const bakData = readFileSync(bakPath, 'utf-8');
+        const restored = JSON.parse(bakData);
+        process.stderr.write('[agent-store] Restored from .bak backup.\n');
+        return restored;
+      }
+    } catch (bakErr) {
+      process.stderr.write(`[agent-store] .bak restore also failed: ${(bakErr as Error).message}. Returning empty store.\n`);
+    }
   }
   return { agents: {}, version: '3.0.0' };
 }
@@ -98,7 +110,16 @@ export function loadAgentStore(): AgentStore {
 export function saveAgentStore(store: AgentStore): void {
   ensureAgentDir();
   const targetPath = getAgentPath();
+  const bakPath = targetPath + '.bak';
   const tmpPath = targetPath + '.tmp.' + process.pid;
+  // Write .bak copy of the current file before overwriting
+  try {
+    if (existsSync(targetPath)) {
+      writeFileSync(bakPath, readFileSync(targetPath, 'utf-8'), 'utf-8');
+    }
+  } catch {
+    // Best-effort — do not block save if .bak write fails
+  }
   writeFileSync(tmpPath, JSON.stringify(store, null, 2), 'utf-8');
   renameSync(tmpPath, targetPath);
 }
@@ -993,7 +1014,7 @@ export const agentTools: MCPTool[] = [
       const MAX_TIMEOUT = 3600000;  // 60 minutes
       const timeout = Math.max(MIN_TIMEOUT, Math.min(MAX_TIMEOUT, rawTimeout));
 
-      const taskId = `task-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const taskId = `task-${randomUUID()}`;
 
       // Validate agent and set busy — same pattern as agent_task
       const validationError = await withBridgeLock(agentId, () => {

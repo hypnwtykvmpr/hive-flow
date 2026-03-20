@@ -352,23 +352,55 @@ async function loadMCPClient() {
   const mcpClientPath = join(__dirname, '..', '..', 'cli', 'dist', 'src', 'mcp-client.js');
 
   if (existsSync(mcpClientPath)) {
-    _mcpClient = await import(pathToFileURL(mcpClientPath).href);
-    return _mcpClient;
+    try {
+      const mod = await import(pathToFileURL(mcpClientPath).href);
+      if (mod && (typeof mod.callMCPTool === 'function' || typeof mod.default?.callMCPTool === 'function')) {
+        // Normalise: if callMCPTool is only on the default export, lift it
+        _mcpClient = typeof mod.callMCPTool === 'function' ? mod : mod.default;
+        stderrLogger.debug('MCP client loaded from dist', { path: mcpClientPath });
+        bridgeLog('info', 'MCP client loaded', { source: 'dist', path: mcpClientPath });
+        return _mcpClient;
+      }
+      stderrLogger.warn('MCP client module loaded but callMCPTool not found', {
+        exports: Object.keys(mod).slice(0, 10),
+      });
+    } catch (importErr) {
+      stderrLogger.warn('MCP client dist import failed, trying fallbacks', {
+        error: (importErr.message || String(importErr)).slice(0, 300),
+      });
+      bridgeLog('warn', 'MCP client dist import failed', {
+        path: mcpClientPath,
+        error: (importErr.message || String(importErr)).slice(0, 300),
+        code: importErr.code || null,
+      });
+    }
   }
 
   // Fallback: try package import
   try {
-    _mcpClient = await import('@hive-flow/cli/mcp-client');
-    return _mcpClient;
+    const mod = await import('@hive-flow/cli/mcp-client');
+    if (mod && (typeof mod.callMCPTool === 'function' || typeof mod.default?.callMCPTool === 'function')) {
+      _mcpClient = typeof mod.callMCPTool === 'function' ? mod : mod.default;
+      bridgeLog('info', 'MCP client loaded', { source: 'package-subpath' });
+      return _mcpClient;
+    }
   } catch {
     // Final fallback
     try {
-      _mcpClient = await import('@hive-flow/cli');
-      return _mcpClient;
+      const mod = await import('@hive-flow/cli');
+      if (mod && (typeof mod.callMCPTool === 'function' || typeof mod.default?.callMCPTool === 'function')) {
+        _mcpClient = typeof mod.callMCPTool === 'function' ? mod : mod.default;
+        bridgeLog('info', 'MCP client loaded', { source: 'package-main' });
+        return _mcpClient;
+      }
     } catch {
-      return null;
+      // All paths exhausted
     }
   }
+
+  stderrLogger.warn('MCP client unavailable — all import paths failed');
+  bridgeLog('warn', 'MCP client unavailable', { triedDist: mcpClientPath });
+  return null;
 }
 
 // SEC-002/HIGH-003: Bridge tool blocklist — provider agents are restricted to operational tools.
@@ -806,6 +838,10 @@ async function main() {
     };
 
     // ── Phase 3: Lock → write state → unlock ──
+    // Reset status to idle so agents don't get stuck in 'busy' if
+    // agent_task_result is never polled (idempotent: agent_task_result
+    // checks `status === 'busy'` before resetting, so this is safe).
+    agent.status = 'idle';
     await withFileLock(lockPath, async () => {
       // Re-read store to avoid clobbering changes from other agents
       const freshStore = JSON.parse(readFileSync(storePath, 'utf-8'));
@@ -846,13 +882,38 @@ async function main() {
     process.stdout.write(JSON.stringify(result, null, 2) + '\n');
   }
 
+  // Emit worker-completed event to activity.jsonl for hive observability
+  try {
+    const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+    const activityPath = join(projectDir, '.hive-flow', 'logs', 'activity.jsonl');
+    const activityDir = dirname(activityPath);
+    if (!existsSync(activityDir)) {
+      mkdirSync(activityDir, { recursive: true });
+    }
+    // Read hiveId from the agent's config (set by queen_spawn_worker)
+    const agentHiveId = (agent.config && agent.config.hiveId) || agent.hiveId || undefined;
+    const completionEvent = JSON.stringify({
+      ts: new Date().toISOString(),
+      event: 'worker-completed',
+      agentId,
+      taskId: resultFile ? resultFile.replace(/.*\//, '').replace('.result.json', '') : undefined,
+      hiveId: agentHiveId,
+      success: result.success === true,
+      provider: providerName,
+      model: result.model,
+    });
+    appendFileSync(activityPath, completionEvent + '\n');
+  } catch {
+    // Best-effort — do not block bridge completion
+  }
+
   // Cleanup: delete task file after successful processing (best-effort)
   if (taskFile) {
     try { unlinkSync(taskFile); } catch { /* ignore */ }
   }
 }
 
-main().catch((err) => {
+main().catch(async (err) => {
   // Log failure with error classification
   const classification = classifyError(err);
   // Attempt to extract agentId from argv for the log entry
@@ -870,6 +931,28 @@ main().catch((err) => {
     error: err.message || String(err),
     code: err.code || 'BRIDGE_ERROR',
   };
+
+  // Reset agent status to idle before writing the error result file so that
+  // the agent is not left stuck in 'busy' after a bridge failure.
+  try {
+    const argvStoreDirIdx = process.argv.indexOf('--store-dir');
+    const storeDir = argvStoreDirIdx !== -1
+      ? (process.argv[argvStoreDirIdx + 1] || '')
+      : join(process.env.HOME || process.env.USERPROFILE || '/tmp', '.hive-flow', 'agents');
+    if (storeDir && logAgentId !== 'unknown') {
+      const storePath = join(storeDir, 'store.json');
+      const errorLockPath = join(storeDir, '.store.lock');
+      await withFileLock(errorLockPath, async () => {
+        const freshStore = JSON.parse(readFileSync(storePath, 'utf-8'));
+        if (freshStore.agents && freshStore.agents[logAgentId]) {
+          freshStore.agents[logAgentId].status = 'idle';
+          saveAgentState(storePath, freshStore);
+        }
+      });
+    }
+  } catch {
+    // Best-effort — do not block error result writing
+  }
 
   // Write error result to --result-file if set, fall back to stdout
   const argvResultIdx = process.argv.indexOf('--result-file');

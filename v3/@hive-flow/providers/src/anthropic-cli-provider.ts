@@ -14,9 +14,10 @@ import { join } from 'path';
 import { BaseProvider, BaseProviderOptions } from './base-provider.js';
 import {
   LLMProvider, LLMModel, LLMRequest, LLMResponse, LLMStreamEvent,
-  LLMMessage, LLMTool, ModelInfo, ProviderCapabilities, HealthCheckResult,
+  LLMMessage, LLMTool, LLMToolCall, ModelInfo, ProviderCapabilities, HealthCheckResult,
   LLMProviderError, ProviderUnavailableError,
 } from './types.js';
+import { parseToolCallsFromContent, formatToolInstructions } from './tool-call-utils.js';
 
 // ===== Constants =====
 
@@ -48,7 +49,7 @@ const ANTHROPIC_CLI_CAPABILITIES: ProviderCapabilities = {
     'claude-haiku-4-5-20251001': 8192,
   },
   supportsStreaming: false,
-  supportsToolCalling: false,
+  supportsToolCalling: true,
   supportsSystemMessages: true,
   supportsVision: false,
   supportsAudio: false,
@@ -116,7 +117,7 @@ export class AnthropicCLIProvider extends BaseProvider {
   protected async doComplete(request: LLMRequest): Promise<LLMResponse> {
     this.ensureBinary();
     const model = request.model || this.config.model;
-    const prompt = this.formatMessages(request.messages);
+    const prompt = this.formatMessages(request.messages, request.tools);
     const timeoutMs = request.timeout || this.config.timeout || 120000;
     const args = ['--print', '--output-format', 'json'];
     if (model) args.push('--model', model);
@@ -347,7 +348,12 @@ export class AnthropicCLIProvider extends BaseProvider {
       if (!content) {
         throw new LLMProviderError('Claude CLI returned empty output', 'EMPTY_RESPONSE', 'anthropic-cli', undefined, true);
       }
-      return this.buildResponse(content, model, 0, 0);
+      const { contentWithoutToolCalls, toolCalls } = parseToolCallsFromContent(content, 'anthropic');
+      return this.buildResponse(
+        contentWithoutToolCalls, model, 0, 0, undefined,
+        toolCalls.length > 0 ? toolCalls : undefined,
+        toolCalls.length > 0 ? 'tool_calls' : undefined
+      );
     }
 
     // Handle is_error responses
@@ -367,7 +373,12 @@ export class AnthropicCLIProvider extends BaseProvider {
     const completionTokens = parsed.output_tokens || parsed.total_output_tokens || 0;
     const costUsd = parsed.cost_usd || parsed.total_cost || undefined;
 
-    return this.buildResponse(content, model, promptTokens, completionTokens, costUsd);
+    const { contentWithoutToolCalls, toolCalls } = parseToolCallsFromContent(content, 'anthropic');
+    return this.buildResponse(
+      contentWithoutToolCalls, model, promptTokens, completionTokens, costUsd,
+      toolCalls.length > 0 ? toolCalls : undefined,
+      toolCalls.length > 0 ? 'tool_calls' : undefined
+    );
   }
 
   private buildResponse(
@@ -376,6 +387,8 @@ export class AnthropicCLIProvider extends BaseProvider {
     promptTokens: number,
     completionTokens: number,
     reportedCost?: number,
+    toolCalls?: LLMToolCall[],
+    finishReason?: LLMResponse['finishReason'],
   ): LLMResponse {
     const pricing = this.capabilities.pricing[model];
     let pCost: number;
@@ -394,13 +407,14 @@ export class AnthropicCLIProvider extends BaseProvider {
       model,
       provider: 'anthropic-cli',
       content,
+      ...(toolCalls && toolCalls.length > 0 ? { toolCalls } : {}),
       usage: { promptTokens, completionTokens, totalTokens: promptTokens + completionTokens },
       cost: { promptCost: pCost, completionCost: cCost, totalCost: pCost + cCost, currency: 'USD' },
-      finishReason: 'stop',
+      finishReason: finishReason ?? 'stop',
     };
   }
 
-  private formatMessages(messages: LLMMessage[]): string {
+  private formatMessages(messages: LLMMessage[], tools?: LLMTool[]): string {
     const systemParts: string[] = [];
     const convParts: string[] = [];
 
@@ -420,6 +434,10 @@ export class AnthropicCLIProvider extends BaseProvider {
     const parts: string[] = [];
     if (systemParts.length > 0) parts.push(`System: ${systemParts.join('\n')}`);
     if (convParts.length > 0) parts.push(convParts.join('\n'));
+
+    if (tools && tools.length > 0) {
+      parts.push(...formatToolInstructions(tools));
+    }
 
     return parts.join('\n\n');
   }

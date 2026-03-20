@@ -67,6 +67,12 @@ vi.mock('../services/worker-daemon.js', () => ({
   stopDaemon: vi.fn().mockRejectedValue(new Error('daemon not available')),
 }));
 
+// Mock node:module so createRequire('@ruvector/router') throws immediately,
+// preventing the native VectorDb from trying to acquire a file lock and hanging.
+vi.mock('node:module', () => ({
+  createRequire: vi.fn(() => () => { throw new Error('native module not available in test'); }),
+}));
+
 import { existsSync, readFileSync, writeFileSync, mkdirSync, statSync } from 'node:fs';
 import { hooksTools } from '../hooks-tools.js';
 
