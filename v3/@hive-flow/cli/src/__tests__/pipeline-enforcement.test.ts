@@ -662,14 +662,26 @@ describe('enforcement.cjs Pipeline Functions (direct require)', () => {
       expect(result.reason).toContain('[PIPELINE GATE]');
     });
 
-    it('test 28: allows commit when HIVE_FLOW_PIPELINE_OVERRIDE=1 is set', () => {
+    it('test 28: allows commit when HIVE_FLOW_PIPELINE_OVERRIDE is HMAC-signed token', () => {
       // Initialize pipeline with incomplete stages
       enf.initPipeline('test-env-override', ['implement', 'verify']);
-      // Set env var
-      process.env.HIVE_FLOW_PIPELINE_OVERRIDE = '1';
+      // A7: Generate HMAC-signed token: "<timestamp>.<hmac-of-pipeline-override:timestamp>"
+      const key = enf.getOrCreateHmacKey();
+      const ts = String(Date.now());
+      const hmac = nodeCrypto.createHmac('sha256', key).update('pipeline-override:' + ts).digest('hex');
+      process.env.HIVE_FLOW_PIPELINE_OVERRIDE = `${ts}.${hmac}`;
       const result = enf.checkVerificationGate('Bash', { command: 'git commit -m "override"' });
       expect(result.blocked).toBe(false);
       // Clean up env var
+      delete process.env.HIVE_FLOW_PIPELINE_OVERRIDE;
+    });
+
+    it('test 28b: blocks commit when HIVE_FLOW_PIPELINE_OVERRIDE=1 (unsigned)', () => {
+      // A7: Bare "1" is no longer accepted — must be HMAC-signed
+      enf.initPipeline('test-unsigned-override', ['implement', 'verify']);
+      process.env.HIVE_FLOW_PIPELINE_OVERRIDE = '1';
+      const result = enf.checkVerificationGate('Bash', { command: 'git commit -m "unsigned"' });
+      expect(result.blocked).toBe(true);
       delete process.env.HIVE_FLOW_PIPELINE_OVERRIDE;
     });
 

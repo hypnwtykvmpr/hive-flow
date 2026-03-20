@@ -204,7 +204,16 @@ elif [ "$CLAUDE_INPUT" != "{}" ]; then
   else
     CURRENT_USAGE=$(echo "$CLAUDE_INPUT" | jq '.context_window.current_usage // null' 2>/dev/null)
     if [ "$CURRENT_USAGE" != "null" ] && [ "$CURRENT_USAGE" != "" ]; then
-      CONTEXT_SIZE=$(echo "$CLAUDE_INPUT" | jq '.context_window.context_window_size // 200000' 2>/dev/null)
+      # Model-aware context window: check for [1m] model variant before falling back to 200K default
+      MODEL_ID=$(echo "$CLAUDE_INPUT" | jq -r '.model.model_id // .model.display_name // ""' 2>/dev/null)
+      if echo "$MODEL_ID" | grep -qi '1m'; then
+        DEFAULT_CTX=1000000
+      elif [ -n "$CLAUDE_MODEL" ] && echo "$CLAUDE_MODEL" | grep -qi '1m'; then
+        DEFAULT_CTX=1000000
+      else
+        DEFAULT_CTX=200000
+      fi
+      CONTEXT_SIZE=$(echo "$CLAUDE_INPUT" | jq --argjson default "$DEFAULT_CTX" '.context_window.context_window_size // $default' 2>/dev/null)
       INPUT_TOKENS=$(echo "$CURRENT_USAGE" | jq '.input_tokens // 0' 2>/dev/null)
       CACHE_CREATE=$(echo "$CURRENT_USAGE" | jq '.cache_creation_input_tokens // 0' 2>/dev/null)
       CACHE_READ=$(echo "$CURRENT_USAGE" | jq '.cache_read_input_tokens // 0' 2>/dev/null)

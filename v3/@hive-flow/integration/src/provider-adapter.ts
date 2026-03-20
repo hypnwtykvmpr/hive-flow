@@ -1055,6 +1055,7 @@ export function createDefaultProviders(): Provider[] {
         {
           id: 'claude-3-opus-20240229',
           name: 'Claude 3 Opus',
+          // Provider-defined API limit for this model (not a runtime context window detection)
           maxContextLength: 200000,
           maxOutputTokens: 4096,
           capabilities: ['chat', 'code-generation', 'vision', 'long-context'],
@@ -1062,6 +1063,7 @@ export function createDefaultProviders(): Provider[] {
         {
           id: 'claude-3-sonnet-20240229',
           name: 'Claude 3 Sonnet',
+          // Provider-defined API limit for this model (not a runtime context window detection)
           maxContextLength: 200000,
           maxOutputTokens: 4096,
           capabilities: ['chat', 'code-generation', 'vision', 'long-context'],
@@ -1069,6 +1071,7 @@ export function createDefaultProviders(): Provider[] {
         {
           id: 'claude-3-5-sonnet-20241022',
           name: 'Claude 3.5 Sonnet',
+          // Provider-defined API limit for this model (not a runtime context window detection)
           maxContextLength: 200000,
           maxOutputTokens: 8192,
           capabilities: ['chat', 'code-generation', 'vision', 'long-context', 'streaming'],

@@ -8,9 +8,12 @@ vi.mock('node:fs', () => ({
   writeFileSync: vi.fn(),
   mkdirSync: vi.fn(),
   appendFileSync: vi.fn(),
+  renameSync: vi.fn(),
+  unlinkSync: vi.fn(),
 }));
 
-import { existsSync, readFileSync, writeFileSync, mkdirSync, appendFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, appendFileSync, renameSync, unlinkSync } from 'node:fs';
+import { createHmac } from 'node:crypto';
 import {
   assessComplexity,
   mapLevelToFlow,
@@ -21,6 +24,8 @@ import {
   loadAuditEntries,
   validateOverride,
   workflowEnforcerTools,
+  getOrCreateHmacKey,
+  signPayload,
   type ComplexityAssessment,
   type ComplexityLevel,
   type EnforcementState,
@@ -29,14 +34,23 @@ import {
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
+const TEST_HMAC_KEY = 'a'.repeat(64); // Deterministic test key
+
 function setupStateMocks(state?: EnforcementState) {
   (existsSync as ReturnType<typeof vi.fn>).mockImplementation((p: string) => {
     if (typeof p === 'string' && p.endsWith('current.json')) return !!state;
+    // A5: Return true for .hmac-key so getOrCreateHmacKey reads the test key
+    if (typeof p === 'string' && p.endsWith('.hmac-key')) return true;
     return false;
   });
-  (readFileSync as ReturnType<typeof vi.fn>).mockImplementation(() =>
-    state ? JSON.stringify(state) : '{}',
-  );
+  (readFileSync as ReturnType<typeof vi.fn>).mockImplementation((p: string) => {
+    // A5: Return test HMAC key when asked
+    if (typeof p === 'string' && p.endsWith('.hmac-key')) return TEST_HMAC_KEY;
+    if (!state) return '{}';
+    // A5: Return a signed envelope so loadEnforcementState accepts it
+    const signature = createHmac('sha256', TEST_HMAC_KEY).update(JSON.stringify(state)).digest('hex');
+    return JSON.stringify({ payload: state, signature });
+  });
   (writeFileSync as ReturnType<typeof vi.fn>).mockImplementation(() => {});
   (mkdirSync as ReturnType<typeof vi.fn>).mockImplementation(() => {});
   (appendFileSync as ReturnType<typeof vi.fn>).mockImplementation(() => {});
@@ -416,16 +430,14 @@ describe('workflow-enforcer', () => {
       const state = makeState();
       saveEnforcementState(state);
       expect(mkdirSync).toHaveBeenCalled();
-      expect(writeFileSync).toHaveBeenCalledWith(
-        expect.stringContaining('current.json'),
-        expect.any(String),
-        'utf-8',
-      );
-      // saveEnforcementState writes two files: the HMAC key (raw hex) then the envelope JSON.
-      // Find the call whose path ends with 'current.json'.
+      // Atomic write: writeFileSync targets a .tmp.PID path, then renameSync moves it to current.json
       const calls = (writeFileSync as ReturnType<typeof vi.fn>).mock.calls;
-      const stateCall = calls.find((c: unknown[]) => typeof c[0] === 'string' && (c[0] as string).endsWith('current.json'));
+      const stateCall = calls.find((c: unknown[]) => typeof c[0] === 'string' && (c[0] as string).includes('current.json.tmp.'));
       expect(stateCall).toBeDefined();
+      expect(renameSync).toHaveBeenCalledWith(
+        expect.stringContaining('current.json.tmp.'),
+        expect.stringContaining('current.json'),
+      );
       const envelope = JSON.parse(stateCall![1] as string);
       // saveEnforcementState writes an HMAC-signed envelope { payload, signature }
       const written = envelope.payload ?? envelope;
@@ -566,11 +578,14 @@ describe('workflow-enforcer', () => {
       await tool.handler({
         taskDescription: 'add API endpoint with integration tests and deploy config across src/routes.ts src/handler.ts',
       });
-      // saveEnforcementState writes two files: the HMAC key (raw hex) then the envelope JSON.
-      // Find the call whose path ends with 'current.json'.
+      // Atomic write: writeFileSync targets a .tmp.PID path, then renameSync moves it to current.json
       const calls = (writeFileSync as ReturnType<typeof vi.fn>).mock.calls;
-      const stateCall = calls.find((c: unknown[]) => typeof c[0] === 'string' && (c[0] as string).endsWith('current.json'));
+      const stateCall = calls.find((c: unknown[]) => typeof c[0] === 'string' && (c[0] as string).includes('current.json.tmp.'));
       expect(stateCall).toBeDefined();
+      expect(renameSync).toHaveBeenCalledWith(
+        expect.stringContaining('current.json.tmp.'),
+        expect.stringContaining('current.json'),
+      );
       const envelope = JSON.parse(stateCall![1] as string);
       // saveEnforcementState writes an HMAC-signed envelope { payload, signature }
       const writtenState = envelope.payload ?? envelope;

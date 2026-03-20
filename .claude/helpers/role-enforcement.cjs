@@ -93,9 +93,19 @@ STRUCTURAL RULES (enforced by hooks — violation = tool denial):
 // Tool Sets
 // ============================================================================
 
-const ADVOCATE_DENIED = new Set(['Bash', 'Write', 'Edit', 'MultiEdit', 'NotebookEdit', 'WebFetch']);
+const ADVOCATE_DENIED = new Set([
+  'Bash', 'Write', 'Edit', 'MultiEdit', 'NotebookEdit', 'WebFetch',
+  'mcp__filesystem__write_file', 'mcp__filesystem__edit_file',
+  'mcp__filesystem__move_file', 'mcp__filesystem__create_directory',
+  'mcp__filesystem__delete_file',
+]);
 /** Same structural denial as advocate — execution/fetch tools only. */
-const ENFORCER_DENIED = new Set(['Bash', 'Write', 'Edit', 'MultiEdit', 'NotebookEdit', 'WebFetch']);
+const ENFORCER_DENIED = new Set([
+  'Bash', 'Write', 'Edit', 'MultiEdit', 'NotebookEdit', 'WebFetch',
+  'mcp__filesystem__write_file', 'mcp__filesystem__edit_file',
+  'mcp__filesystem__move_file', 'mcp__filesystem__create_directory',
+  'mcp__filesystem__delete_file',
+]);
 const WORK_TOOLS = new Set(['Bash', 'Write', 'Edit', 'MultiEdit', 'NotebookEdit']);
 /** Tools that count as queen "direct work" for delegation gate (matches PreToolUse matchers). */
 const QUEEN_WORK_TOOLS = new Set([
@@ -105,6 +115,7 @@ const QUEEN_WORK_TOOLS = new Set([
   'mcp__filesystem__edit_file',
   'mcp__filesystem__move_file',
   'mcp__filesystem__create_directory',
+  'mcp__filesystem__delete_file',
 ]);
 
 // ============================================================================
@@ -388,6 +399,38 @@ function processSubagentStart(role) {
 }
 
 // ============================================================================
+// SEC-011: Spawn-origin token verification
+// ============================================================================
+
+/**
+ * SEC-011: Verify spawn-origin token matches the stored value in the agent record.
+ * Returns true if token is valid or if verification is not possible (fail-open for compatibility).
+ */
+function verifySpawnToken(agentId) {
+  const envToken = process.env.HIVE_FLOW_AGENT_TOKEN;
+  if (!envToken) return true; // No token in env — legacy agent, fail-open
+
+  try {
+    const storePath = path.join(PROJECT_DIR, '.hive-flow', 'agents', 'store.json');
+    if (!fs.existsSync(storePath)) return true; // No store — fail-open
+    const store = JSON.parse(fs.readFileSync(storePath, 'utf8'));
+    const agents = store.agents || {};
+    const agent = agents[agentId];
+    if (!agent) return true; // Agent not in store — fail-open
+    const storedToken = agent.config?._spawnToken;
+    if (!storedToken) return true; // No stored token — legacy agent, fail-open
+
+    // Constant-time comparison to prevent timing attacks
+    const envBuf = Buffer.from(String(envToken));
+    const storedBuf = Buffer.from(String(storedToken));
+    if (envBuf.length !== storedBuf.length) return false;
+    return crypto.timingSafeEqual(envBuf, storedBuf);
+  } catch {
+    return true; // Read error — fail-open for compatibility
+  }
+}
+
+// ============================================================================
 // Main Entry Point
 // ============================================================================
 
@@ -401,6 +444,14 @@ function processPreToolUse(input) {
     || null;
 
   if (!agentId) return makeAllow(); // No agent ID — pass through
+
+  // SEC-011: Verify spawn-origin token before trusting agent identity
+  if (!verifySpawnToken(agentId)) {
+    return makeDeny(
+      '[IDENTITY ENFORCEMENT] Agent token mismatch — possible env var spoofing. ' +
+      'HIVE_FLOW_AGENT_TOKEN does not match the stored spawn-origin token.'
+    );
+  }
 
   const role = loadRole(agentId);
   if (!role) return makeAllow(); // No role assigned — pass through
@@ -535,6 +586,7 @@ module.exports = {
   saveRole,
   incrementDirectWorkCount,
   verifyRoleHmac,
+  verifySpawnToken,
   makeAllow,
   makeDeny,
   enforceAdvocateRole,

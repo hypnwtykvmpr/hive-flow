@@ -601,6 +601,7 @@ function detectContextWindow() {
   if (modelName.includes('1m') || modelName.includes('[1m]')) return 1000000;
   const claudeModel = (process.env.CLAUDE_MODEL || '').toLowerCase();
   if (claudeModel.includes('[1m]') || claudeModel.includes('1m')) return 1000000;
+  // Default Anthropic API context window for standard (non-1M) models
   return 200000;
 }
 

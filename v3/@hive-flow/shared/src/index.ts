@@ -267,3 +267,4 @@ export * from './workflow/index.js';
 // =============================================================================
 export { clamp, sigmoid, softmax, cosineSimilarity } from './utils/math-utils.js';
 export { TimerManager } from './utils/timer-manager.js';
+export { sanitizePathId } from './sanitize.js';

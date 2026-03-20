@@ -17,23 +17,14 @@
 
 import { z } from 'zod';
 import { MCPTool, ToolContext } from '../types.js';
-// TODO: module not yet implemented — @hive-flow/swarm/federation-hub.js
-// import {
-//   FederationHub,
-//   getDefaultFederationHub,
-//   type FederationStats,
-//   type EphemeralAgent,
-//   type SpawnResult,
-//   type ConsensusProposal,
-// } from '@hive-flow/swarm/federation-hub.js';
-
-/* eslint-disable @typescript-eslint/no-explicit-any */
-type FederationHub = any;
-type FederationStats = any;
-type EphemeralAgent = any;
-type SpawnResult = any;
-type ConsensusProposal = any;
-declare function getDefaultFederationHub(): FederationHub;
+import {
+  FederationHub,
+  getDefaultFederationHub,
+  type FederationStats,
+  type EphemeralAgent,
+  type SpawnResult,
+  type FederationConsensusProposal as ConsensusProposal,
+} from '@hive-flow/swarm';
 
 // ============================================================================
 // Input Schemas

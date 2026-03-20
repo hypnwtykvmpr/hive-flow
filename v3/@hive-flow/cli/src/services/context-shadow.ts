@@ -56,7 +56,11 @@ export interface TieredRestoration {
 // Constants
 // ============================================================================
 
-const CONTEXT_WINDOW_TOKENS = 200_000;
+function getContextWindowTokens(): number {
+  const model = process.env.CLAUDE_MODEL_ID ?? process.env.ANTHROPIC_MODEL ?? process.env.CLAUDE_MODEL ?? '';
+  return model.toLowerCase().includes('[1m]') ? 1_000_000 : 200_000;
+}
+const CONTEXT_WINDOW_TOKENS = getContextWindowTokens();
 const RESTORE_BUDGET = 4000;
 
 // ============================================================================

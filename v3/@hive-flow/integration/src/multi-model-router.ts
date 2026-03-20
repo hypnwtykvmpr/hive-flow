@@ -283,6 +283,7 @@ const DEFAULT_MODELS: ModelConfig[] = [
     latencyMs: 500,
     qualityScore: 0.95,
     capabilities: {
+      // Provider-defined API limit for this model (not a runtime context window detection)
       contextWindow: 200000,
       supportsStreaming: true,
       supportsTools: true,
@@ -300,6 +301,7 @@ const DEFAULT_MODELS: ModelConfig[] = [
     latencyMs: 1000,
     qualityScore: 0.98,
     capabilities: {
+      // Provider-defined API limit for this model (not a runtime context window detection)
       contextWindow: 200000,
       supportsStreaming: true,
       supportsTools: true,
@@ -317,6 +319,7 @@ const DEFAULT_MODELS: ModelConfig[] = [
     latencyMs: 200,
     qualityScore: 0.85,
     capabilities: {
+      // Provider-defined API limit for this model (not a runtime context window detection)
       contextWindow: 200000,
       supportsStreaming: true,
       supportsTools: true,
@@ -369,6 +372,7 @@ const DEFAULT_MODELS: ModelConfig[] = [
     latencyMs: 2000,
     qualityScore: 0.97,
     capabilities: {
+      // Provider-defined API limit for this model (not a runtime context window detection)
       contextWindow: 200000,
       supportsStreaming: true,
       supportsTools: true,
@@ -403,6 +407,7 @@ const DEFAULT_MODELS: ModelConfig[] = [
     latencyMs: 1000,
     qualityScore: 0.92,
     capabilities: {
+      // Provider-defined API limit for this model (not a runtime context window detection)
       contextWindow: 200000,
       supportsStreaming: true,
       supportsTools: true,

@@ -52,8 +52,14 @@ import { checkMCPEnforcement, checkModelEnforcement } from './mcp-tools/mcp-enfo
  */
 const TOOL_REGISTRY = new Map<string, MCPTool>();
 
+// SEC-013: Registry freeze flag — prevents runtime tool injection after initialization
+let _registryFrozen = false;
+
 // Register all tools
 function registerTools(tools: MCPTool[]): void {
+  if (_registryFrozen) {
+    throw new Error('[SEC-013] TOOL_REGISTRY is frozen — cannot register tools after initialization');
+  }
   tools.forEach(tool => {
     TOOL_REGISTRY.set(tool.name, tool);
   });
@@ -99,6 +105,9 @@ registerTools([
   ...queenTools,
 ]);
 
+// SEC-013: Freeze registry after initialization — no further tool registration allowed
+_registryFrozen = true;
+
 /**
  * MCP Client Error
  */
@@ -137,11 +146,32 @@ export class MCPClientError extends Error {
  * });
  * ```
  */
+// SEC-014: Input size limits to prevent denial-of-service via oversized payloads
+const MAX_FIELD_BYTES = 1 * 1024 * 1024;    // 1MB per field
+const MAX_TOTAL_BYTES = 5 * 1024 * 1024;    // 5MB total serialized input
+
 export async function callMCPTool<T = unknown>(
   toolName: string,
   input: Record<string, unknown> = {},
   context?: Record<string, unknown>
 ): Promise<T> {
+  // SEC-014: Input length validation before any processing
+  const serialized = JSON.stringify(input);
+  if (serialized.length > MAX_TOTAL_BYTES) {
+    throw new MCPClientError(
+      `Input too large: ${serialized.length} bytes exceeds ${MAX_TOTAL_BYTES} byte limit`,
+      toolName
+    );
+  }
+  for (const [fieldKey, fieldValue] of Object.entries(input)) {
+    if (typeof fieldValue === 'string' && fieldValue.length > MAX_FIELD_BYTES) {
+      throw new MCPClientError(
+        `Field '${fieldKey}' too large: ${fieldValue.length} bytes exceeds ${MAX_FIELD_BYTES} byte limit`,
+        toolName
+      );
+    }
+  }
+
   // Enforcement gate: check if tool is allowed at current enforcement level
   const enforcement = checkMCPEnforcement(toolName);
   if (!enforcement.allowed) {

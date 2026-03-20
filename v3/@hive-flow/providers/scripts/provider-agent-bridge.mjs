@@ -371,7 +371,64 @@ async function loadMCPClient() {
   }
 }
 
+// SEC-002/HIGH-003: Bridge tool blocklist — provider agents are restricted to operational tools.
+// Governance, enforcement, and system-critical tools are blocked to prevent privilege escalation.
+const BRIDGE_BLOCKED_TOOLS = new Set([
+  // Enforcement/governance tools
+  'workflow_enforcer_override',
+  'workflow_enforcer_status',
+  'workflow_enforcer_assess',
+  // System administration tools
+  'system_reset',
+  'system_info',
+  // Configuration import (could overwrite security settings)
+  'config_import',
+  'config_reset',
+  'config_set',
+  // Agent lifecycle (prevent provider agents from terminating other agents)
+  'agent_terminate',
+  'agent_update',
+  // Session manipulation
+  'session_delete',
+  // Hive termination
+  'hive_terminate',
+  // Security-sensitive tools
+  'claims_steal',
+  'claims_mark-stealable',
+  'claims_rebalance',
+  // Pipeline override
+  'pipeline_init',
+  'pipeline_stage_complete',
+  // Verification gate manipulation
+  'verification_gate_run',
+  'verification_gate_escalate',
+  // Swarm lifecycle
+  'swarm_shutdown',
+  'swarm_init',
+  // Config read (may leak API keys)
+  'config_export',
+  // Queen protocol (provider agents must not impersonate queens or spawn agents)
+  'queen_mission_assign',
+  'queen_spawn_worker',
+  'queen_report',
+  'queen_task_worker',
+  'queen_collect_results',
+  // Memory deletion (destructive)
+  'memory_delete',
+  // Agent spawning (prevent provider agents from spawning other agents)
+  'agent_spawn',
+]);
+
 async function executeMCPTool(toolName, toolArgs) {
+  // SEC-002: Check blocklist before any execution
+  if (BRIDGE_BLOCKED_TOOLS.has(toolName)) {
+    stderrLogger.warn(`Tool blocked by bridge security policy: ${toolName}`);
+    return {
+      status: 'error',
+      error: `Tool '${toolName}' is blocked for provider agents (bridge security policy).`,
+    };
+  }
+
   const mcpClient = await loadMCPClient();
 
   if (!mcpClient || !mcpClient.callMCPTool) {

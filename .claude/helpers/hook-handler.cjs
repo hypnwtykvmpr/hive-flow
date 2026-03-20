@@ -61,9 +61,9 @@ function safeRequire(modulePath) {
   return null;
 }
 
-const router = safeRequire(path.join(helpersDir, 'router.js'));
-const session = safeRequire(path.join(helpersDir, 'session.js'));
-const memory = safeRequire(path.join(helpersDir, 'memory.js'));
+const router = safeRequire(path.join(helpersDir, 'router.cjs'));
+const session = safeRequire(path.join(helpersDir, 'session.cjs'));
+const memory = safeRequire(path.join(helpersDir, 'memory.cjs'));
 const intelligence = safeRequire(path.join(helpersDir, 'intelligence.cjs'));
 
 // Get the command from argv
@@ -117,7 +117,9 @@ const handlers = {
     } catch (e) {}
 
     if (router && router.routeTask) {
+      const routeStart = Date.now();
       const result = router.routeTask(prompt);
+      const routeLatency = (Date.now() - routeStart).toFixed(3);
       // Format output for Claude Code hook consumption
       const output = [
         `[INFO] Routing task: ${prompt.substring(0, 80) || '(no prompt)'}`,
@@ -125,13 +127,13 @@ const handlers = {
         'Routing Method',
         '  - Method: keyword',
         '  - Backend: keyword matching',
-        `  - Latency: ${(Math.random() * 0.5 + 0.1).toFixed(3)}ms`,
-        '  - Matched Pattern: keyword-fallback',
+        `  - Latency: ${routeLatency}ms`,
+        `  - Matched Pattern: ${result.pattern || 'keyword-fallback'}`,
         '',
         'Semantic Matches:',
-        '  bugfix-task: 15.0%',
-        '  devops-task: 14.0%',
-        '  testing-task: 13.0%',
+        `  bugfix-task: ${((result.scores && result.scores.bugfix) || 15.0).toFixed(1)}%`,
+        `  devops-task: ${((result.scores && result.scores.devops) || 14.0).toFixed(1)}%`,
+        `  testing-task: ${((result.scores && result.scores.testing) || 13.0).toFixed(1)}%`,
         '',
         '+------------------- Primary Recommendation -------------------+',
         `| Agent: ${result.agent.padEnd(53)}|`,

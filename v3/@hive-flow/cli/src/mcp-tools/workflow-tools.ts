@@ -866,7 +866,8 @@ export const workflowTools: MCPTool[] = [
         // Validate file path — prevent reading sensitive/protected files
         const resolvedPath = resolve(filePath);
         const cwd = process.cwd();
-        if (!resolvedPath.startsWith(cwd)) {
+        // SEC-012: Use cwd + '/' to prevent /project-evil matching /project, with === cwd fallback for cwd itself
+        if (resolvedPath !== cwd && !resolvedPath.startsWith(cwd + '/')) {
           return { content: [{ type: 'text', text: JSON.stringify({ success: false, error: 'File path must be within the project directory' }) }] };
         }
         const protectedPatterns = [/\.env/, /\.hive-flow\/enforcement/, /\.claude\/helpers/, /\.claude\/settings/];

@@ -545,10 +545,20 @@ function getIntegrationStatus() {
 
 function detectContextWindow() {
   const stdinData = getStdinData();
-  if (stdinData?.context_window?.context_window_size) return stdinData.context_window.context_window_size;
-  if (process.env.HIVE_FLOW_CONTEXT_WINDOW) return parseInt(process.env.HIVE_FLOW_CONTEXT_WINDOW, 10) || 200000;
+  if (stdinData?.context_window?.context_window_size != null) {
+    const n = Number(stdinData.context_window.context_window_size);
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+  const envOverride = process.env.HIVE_FLOW_CONTEXT_WINDOW;
+  if (envOverride) {
+    const n = parseInt(envOverride, 10);
+    if (Number.isFinite(n) && n > 0) return n;
+  }
   const modelName = (stdinData?.model?.display_name || stdinData?.model?.model_id || getModelName() || '').toLowerCase();
-  if (modelName.includes('1m')) return 1000000;
+  if (modelName.includes('1m') || modelName.includes('[1m]')) return 1000000;
+  const claudeModel = (process.env.CLAUDE_MODEL || '').toLowerCase();
+  if (claudeModel.includes('[1m]') || claudeModel.includes('1m')) return 1000000;
+  // Default Anthropic API context window for standard (non-1M) models
   return 200000;
 }
 

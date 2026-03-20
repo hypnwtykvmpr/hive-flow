@@ -17,21 +17,13 @@
 
 import { z } from 'zod';
 import { MCPTool, ToolContext } from '../types.js';
-// TODO: module not yet implemented — @hive-flow/swarm/workers/worker-dispatch.js
-// import {
-//   WorkerDispatchService,
-//   WorkerTrigger,
-//   WorkerInstance,
-//   TriggerDetectionResult,
-//   getWorkerDispatchService,
-// } from '@hive-flow/swarm/workers/worker-dispatch.js';
-
-/* eslint-disable @typescript-eslint/no-explicit-any */
-type WorkerDispatchService = any;
-type WorkerTrigger = string;
-type WorkerInstance = any;
-type TriggerDetectionResult = any;
-declare function getWorkerDispatchService(): WorkerDispatchService;
+import {
+  WorkerDispatchService,
+  getWorkerDispatchService,
+  type WorkerTrigger,
+  type WorkerInstance,
+  type TriggerDetectionResult,
+} from '@hive-flow/swarm';
 
 // ============================================================================
 // Input Schemas

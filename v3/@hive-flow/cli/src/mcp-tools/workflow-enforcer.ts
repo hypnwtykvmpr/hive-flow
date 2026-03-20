@@ -7,9 +7,9 @@
  * complex tasks are channeled through the full verified workflow.
  */
 
-import { existsSync, readFileSync, writeFileSync, mkdirSync, appendFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, appendFileSync, renameSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
-import { createHmac, randomBytes } from 'node:crypto';
+import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import type { MCPTool } from './types.js';
 import type { AgentProvider } from './agent-tools.js';
 
@@ -409,10 +409,17 @@ export function loadEnforcementState(): EnforcementState | null {
       // Handle HMAC-signed envelope { payload, signature }
       let state: EnforcementState;
       if (raw?.payload !== undefined && typeof raw?.signature === 'string') {
+        // A5: Verify HMAC signature before trusting payload
+        const key = getOrCreateHmacKey();
+        const expected = signPayload(raw.payload, key);
+        const expectedBuf = Buffer.from(expected, 'hex');
+        const actualBuf = Buffer.from(String(raw.signature), 'hex');
+        if (expectedBuf.length !== actualBuf.length) return null; // Tampered — reject
+        if (!timingSafeEqual(expectedBuf, actualBuf)) return null; // Tampered — reject
         state = raw.payload as EnforcementState;
       } else {
-        // Legacy plain JSON — accept for migration, re-sign on next save
-        state = raw as EnforcementState;
+        // A5: Reject unsigned state — no legacy migration path (fail-closed)
+        return null;
       }
 
       // Migrate old boolean RequiredFlow to new shape
@@ -444,7 +451,16 @@ export function saveEnforcementState(state: EnforcementState): void {
   // Write HMAC-signed envelope { payload, signature } matching enforcement.cjs scheme
   const key = getOrCreateHmacKey();
   const envelope = { payload: state, signature: signPayload(state, key) };
-  writeFileSync(getStatePath(), JSON.stringify(envelope, null, 2), 'utf-8');
+  // Atomic write — tmp+rename to prevent partial writes on crash (matches enforcement.cjs writeJsonAtomic)
+  const statePath = getStatePath();
+  const tmpPath = `${statePath}.tmp.${process.pid}`;
+  try {
+    writeFileSync(tmpPath, JSON.stringify(envelope, null, 2), 'utf-8');
+    renameSync(tmpPath, statePath);
+  } catch (err) {
+    try { unlinkSync(tmpPath); } catch { /* best-effort cleanup */ }
+    throw err;
+  }
 }
 
 export function appendAuditEntry(entry: EnforcementAuditEntry): void {

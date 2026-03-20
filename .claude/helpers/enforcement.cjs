@@ -57,7 +57,7 @@ const LEVELS = {
 // Tool restriction groups
 const TOOL_GROUPS = {
   exec: ['Bash'],
-  write: ['Write', 'Edit', 'MultiEdit', 'NotebookEdit', 'mcp__filesystem__write_file', 'mcp__filesystem__edit_file', 'mcp__filesystem__move_file'], // 12.6: NotebookEdit added
+  write: ['Write', 'Edit', 'MultiEdit', 'NotebookEdit', 'mcp__filesystem__write_file', 'mcp__filesystem__edit_file', 'mcp__filesystem__move_file', 'mcp__filesystem__create_directory', 'mcp__filesystem__delete_file'], // 12.6: NotebookEdit added, create_directory + delete_file added
   fetch: ['WebFetch'],
 };
 
@@ -214,7 +214,7 @@ function getState(agentId) {
       state.level = LEVELS.WARNED;
       state.integrityCompromised = true;
       _readErrorCount = 0;
-      saveState(state);
+      saveState(state, agentId);
       return state;
     }
     return freshState();
@@ -227,7 +227,7 @@ function getState(agentId) {
   if (valid && state) {
     // Re-sign on legacy migration
     if (migrated) {
-      saveState(state);
+      saveState(state, agentId);
     }
     return state;
   }
@@ -249,7 +249,7 @@ function getState(agentId) {
     type: 'integrity-failure',
     reason: 'state.json HMAC verification failed',
   });
-  saveState(tampered);
+  saveState(tampered, agentId);
   return tampered;
 }
 
@@ -377,7 +377,7 @@ function isProtectedPath(filePath) {
 
 function detectCircumvention(toolName, toolInput, state) {
   // 1. Protected path writes via Write/Edit/MultiEdit/NotebookEdit
-  if (['Write', 'Edit', 'MultiEdit', 'NotebookEdit', 'mcp__filesystem__write_file', 'mcp__filesystem__edit_file', 'mcp__filesystem__move_file'].includes(toolName)) {
+  if (['Write', 'Edit', 'MultiEdit', 'NotebookEdit', 'mcp__filesystem__write_file', 'mcp__filesystem__edit_file', 'mcp__filesystem__move_file', 'mcp__filesystem__delete_file'].includes(toolName)) {
     const filePath = toolInput?.file_path || toolInput?.path || toolInput?.destination || '';
     if (filePath && isProtectedPath(filePath)) {
       return {
@@ -622,7 +622,7 @@ function getRestrictionGroups(toolName) {
   if (['Write', 'Edit', 'MultiEdit', 'NotebookEdit'].includes(toolName)) {
     return ['write', 'exec'];
   }
-  if (['mcp__filesystem__write_file', 'mcp__filesystem__edit_file', 'mcp__filesystem__move_file', 'mcp__filesystem__create_directory'].includes(toolName)) {
+  if (['mcp__filesystem__write_file', 'mcp__filesystem__edit_file', 'mcp__filesystem__move_file', 'mcp__filesystem__create_directory', 'mcp__filesystem__delete_file'].includes(toolName)) {
     return ['write', 'exec'];
   }
   if (['WebFetch'].includes(toolName)) {
@@ -658,9 +658,38 @@ function checkVerificationGate(toolName, toolInput) {
     if (pState.overrideActive) {
       return { blocked: false };
     }
-    if (process.env.HIVE_FLOW_PIPELINE_OVERRIDE === '1') {
-      appendViolation({ type: 'pipeline-env-override', taskId: pState.taskId, timestamp: new Date().toISOString() });
-      return { blocked: false };
+    // A7: HMAC-signed pipeline override token: "<timestamp>.<hmac-of-timestamp>"
+    // Requires cryptographic proof + timestamp within 1 hour (anti-replay)
+    const pipelineOverride = process.env.HIVE_FLOW_PIPELINE_OVERRIDE || '';
+    if (pipelineOverride && pipelineOverride !== '1') {
+      const dotIdx = pipelineOverride.indexOf('.');
+      if (dotIdx > 0) {
+        const overrideTs = pipelineOverride.slice(0, dotIdx);
+        const overrideHmac = pipelineOverride.slice(dotIdx + 1);
+        const tsNum = parseInt(overrideTs, 10);
+        const now = Date.now();
+        if (!isNaN(tsNum) && Math.abs(now - tsNum) < 3600000) {
+          const key = getOrCreateHmacKey();
+          const expected = crypto.createHmac('sha256', key).update('pipeline-override:' + overrideTs).digest('hex');
+          let overrideValid = false;
+          try {
+            const eBuf = Buffer.from(expected, 'hex');
+            const aBuf = Buffer.from(overrideHmac, 'hex');
+            if (eBuf.length === aBuf.length) {
+              overrideValid = crypto.timingSafeEqual(eBuf, aBuf);
+            }
+          } catch { overrideValid = false; }
+          if (overrideValid) {
+            appendViolation({ type: 'pipeline-hmac-override', taskId: pState.taskId, timestamp: new Date().toISOString() });
+            return { blocked: false };
+          }
+        }
+      }
+    }
+    // Reject bare HIVE_FLOW_PIPELINE_OVERRIDE=1 (unsigned) — log as circumvention attempt
+    if (pipelineOverride === '1') {
+      appendViolation({ type: 'unsigned-pipeline-override-attempt', taskId: pState.taskId, timestamp: new Date().toISOString() });
+      // Fall through to incomplete-stages check (do NOT bypass)
     }
     const incompleteStages = (pState.requiredStages || []).filter(
       name => !pState.stages[name] || pState.stages[name].complete !== true
@@ -668,7 +697,7 @@ function checkVerificationGate(toolName, toolInput) {
     if (incompleteStages.length > 0) {
       return {
         blocked: true,
-        reason: '[PIPELINE GATE] git commit blocked. Incomplete stages: ' + incompleteStages.join(', ') + '. Complete all pipeline stages before committing. Use HIVE_FLOW_PIPELINE_OVERRIDE=1 or /pipeline-override for emergency bypass.',
+        reason: '[PIPELINE GATE] git commit blocked. Incomplete stages: ' + incompleteStages.join(', ') + '. Complete all pipeline stages before committing. Use /pipeline-override for HMAC-signed emergency bypass.',
       };
     }
     return { blocked: false };
@@ -1133,4 +1162,5 @@ module.exports = {
   getPipelineState,
   overridePipeline,
   resetPipeline,
+  getOrCreateHmacKey,
 };

@@ -15,7 +15,7 @@
 
 import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
-import { createHmac, randomBytes } from 'node:crypto';
+import { createHmac, randomBytes, timingSafeEqual as cryptoTimingSafeEqual } from 'node:crypto';
 import type {
   WorkflowState,
   WorkflowModuleState,
@@ -119,13 +119,11 @@ function signPayload(payload: unknown, key: string): string {
 
 function verifySignature(payload: unknown, signature: string, key: string): boolean {
   const expected = signPayload(payload, key);
-  // Constant-time comparison
-  if (expected.length !== signature.length) return false;
-  let result = 0;
-  for (let i = 0; i < expected.length; i++) {
-    result |= expected.charCodeAt(i) ^ signature.charCodeAt(i);
-  }
-  return result === 0;
+  // SEC-010: Use crypto.timingSafeEqual instead of hand-rolled XOR loop
+  const expectedBuf = Buffer.from(expected, 'hex');
+  const signatureBuf = Buffer.from(signature, 'hex');
+  if (expectedBuf.length !== signatureBuf.length) return false;
+  return cryptoTimingSafeEqual(expectedBuf, signatureBuf);
 }
 
 // ---------------------------------------------------------------------------
@@ -375,9 +373,9 @@ export class WorkflowStateMachine {
         state = raw.payload as WorkflowState;
         state.signature = raw.signature;
       } else {
-        // Legacy plain JSON — accept for migration
-        state = raw as WorkflowState;
-        signatureValid = true; // Trust legacy data
+        // SEC-007: Reject legacy unsigned state — matching enforcement.cjs policy.
+        // Unsigned state files may have been tampered with.
+        return null;
       }
 
       if (!signatureValid) {

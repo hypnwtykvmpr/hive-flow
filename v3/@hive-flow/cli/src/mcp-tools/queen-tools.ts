@@ -14,6 +14,7 @@
 import { randomUUID } from 'node:crypto';
 import type { MCPTool } from './types.js';
 import type { AgentProvider } from './agent-tools.js';
+import { sanitizePathId } from '@hive-flow/shared';
 import {
   transitionAgent,
   propagateEnforcementToSubAgent,
@@ -80,7 +81,8 @@ async function readVerifiedQueenDirectWorkCount(queenId: string): Promise<number
     const { readFileSync, existsSync } = await import('node:fs');
     const { join } = await import('node:path');
     const { createHmac, timingSafeEqual } = await import('node:crypto');
-    const sanitized = queenId.replace(/[/\\.]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 64);
+    // A10: Use shared sanitizePathId utility
+    const sanitized = sanitizePathId(queenId, 64);
     if (!sanitized) return 0;
     const roleFile = join(process.cwd(), '.hive-flow', 'enforcement', 'agents', sanitized, 'role.json');
     const hmacKeyFile = join(process.cwd(), '.hive-flow', 'enforcement', '.hmac-key');
@@ -220,7 +222,7 @@ const missionAssignTool: MCPTool = {
       const { createHmac: roleCreateHmac } = await import('node:crypto');
 
       // Sanitize queen ID for filesystem path
-      const sanitizedQueenId = queenId.replace(/[\/\\\.]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 64);
+      const sanitizedQueenId = sanitizePathId(queenId, 64);
       if (sanitizedQueenId) {
         const roleDir = roleJoin(process.cwd(), '.hive-flow', 'enforcement', 'agents', sanitizedQueenId);
         roleMkdir(roleDir, { recursive: true });

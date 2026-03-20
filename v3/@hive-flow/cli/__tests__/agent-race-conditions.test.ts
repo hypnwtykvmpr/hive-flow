@@ -257,12 +257,7 @@ describe('Agent Race Condition Stress Tests', () => {
           terminatedCount++;
         }
       }
-      // At minimum, the existing agents should still exist in the store
-      // (not lost entirely). The status may be stale without locking.
-      const existingCount = Array.from({ length: 5 })
-        .filter((_, i) => store.agents[`existing-${i}`] !== undefined).length;
-      expect(existingCount).toBeGreaterThan(0);
-      // TODO(RC-1): After locking fix, tighten to: expect(terminatedCount).toBe(5);
+      expect(terminatedCount).toBe(5);
     });
   });
 
@@ -555,11 +550,7 @@ describe('Agent Race Condition Stress Tests', () => {
           terminatedCount++;
         }
       }
-      // Agents should at least still exist (not lost)
-      const termTargetCount = Array.from({ length: 5 })
-        .filter((_, i) => store.agents[`to-term-${i}`] !== undefined).length;
-      expect(termTargetCount).toBeGreaterThan(0);
-      // TODO(RC-1): After locking fix, tighten to: expect(terminatedCount).toBe(5);
+      expect(terminatedCount).toBe(5);
 
       // Verify each agent record has required fields (no partial writes)
       for (const [id, agent] of Object.entries(store.agents)) {

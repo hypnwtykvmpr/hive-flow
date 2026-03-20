@@ -9,6 +9,7 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync, rmdirSync, renameSync, statSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { sanitizePathId } from '@hive-flow/shared';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -129,8 +130,8 @@ function getHivesDir(): string {
 }
 
 function getHiveDir(hiveId: string): string {
-  // Sanitize hiveId to prevent path traversal
-  const sanitized = hiveId.replace(/[/\\.]+/g, '_').replace(/^_+|_+$/g, '');
+  // A10: Use shared sanitizePathId utility to prevent path traversal
+  const sanitized = sanitizePathId(hiveId, 128);
   if (!sanitized) throw new Error('Invalid hiveId');
   return join(getHivesDir(), sanitized);
 }

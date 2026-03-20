@@ -7,7 +7,7 @@
  * when iteration limits are reached.
  */
 
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync } from 'node:fs';
 import { join } from 'node:path';
 import type { MCPTool } from './types.js';
 import { getWorkflowHookDispatcher } from './workflow-executor.js';
@@ -66,7 +66,11 @@ export function loadGateStore(): GateStore {
 
 export function saveGateStore(store: GateStore): void {
   ensureGateDir();
-  writeFileSync(getGatePath(), JSON.stringify(store, null, 2), 'utf-8');
+  // A8: Atomic write — tmp+rename to prevent partial writes on crash
+  const targetPath = getGatePath();
+  const tmpPath = targetPath + '.tmp.' + process.pid;
+  writeFileSync(tmpPath, JSON.stringify(store, null, 2), 'utf-8');
+  renameSync(tmpPath, targetPath);
 }
 
 // ---------------------------------------------------------------------------

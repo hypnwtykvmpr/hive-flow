@@ -5,12 +5,13 @@
  * Includes model routing integration for intelligent model selection.
  */
 
-import { randomUUID, createHmac } from 'node:crypto';
+import { randomUUID, createHmac, timingSafeEqual } from 'node:crypto';
 import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync, rmdirSync, rmSync, unlinkSync, statSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { execFile, spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import type { MCPTool } from './types.js';
+import { sanitizePathId } from '@hive-flow/shared';
 
 // Storage paths
 const STORAGE_DIR = '.hive-flow';
@@ -279,20 +280,48 @@ function readParentEnforcementLevel(): number {
     const stateFile = join(ENFORCEMENT_DIR, 'state.json');
     if (!existsSync(stateFile)) return 0; // NORMAL — no state means unrestricted
     const raw = JSON.parse(readFileSync(stateFile, 'utf8'));
-    // Handles both envelope formats: { state, hmac } (enforcement.cjs) and { payload, signature } (workflow-enforcer.ts)
-    if (raw?.state !== undefined) {
+
+    // A4: Read HMAC key for signature verification
+    const keyFile = join(ENFORCEMENT_DIR, '.hmac-key');
+    let hmacKey: string | null = null;
+    try {
+      if (existsSync(keyFile)) {
+        hmacKey = readFileSync(keyFile, 'utf8').trim();
+      }
+    } catch { /* key unreadable */ }
+
+    // Handles { state, hmac } envelope (enforcement.cjs)
+    if (raw?.state !== undefined && typeof raw?.hmac === 'string') {
+      // A4: Verify HMAC before trusting level
+      if (!hmacKey) return 1; // Fail-closed: no key means can't verify — WARNED
+      const expected = createHmac('sha256', hmacKey).update(JSON.stringify(raw.state)).digest('hex');
+      const expectedBuf = Buffer.from(expected, 'hex');
+      const actualBuf = Buffer.from(String(raw.hmac), 'hex');
+      if (expectedBuf.length !== actualBuf.length) return 1; // WARNED
+
+      if (!timingSafeEqual(expectedBuf, actualBuf)) return 1; // WARNED — tampered
       return typeof (raw.state as Record<string, unknown>)?.level === 'number'
         ? (raw.state as Record<string, unknown>).level as number
         : 0;
     }
-    if (raw?.payload !== undefined) {
+    // Handles { payload, signature } envelope (workflow-enforcer.ts)
+    if (raw?.payload !== undefined && typeof raw?.signature === 'string') {
+      // A4: Verify HMAC before trusting level
+      if (!hmacKey) return 1; // Fail-closed: WARNED
+      const expected = createHmac('sha256', hmacKey).update(JSON.stringify(raw.payload)).digest('hex');
+      const expectedBuf = Buffer.from(expected, 'hex');
+      const actualBuf = Buffer.from(String(raw.signature), 'hex');
+      if (expectedBuf.length !== actualBuf.length) return 1;
+
+      if (!timingSafeEqual(expectedBuf, actualBuf)) return 1;
       return typeof (raw.payload as Record<string, unknown>)?.level === 'number'
         ? (raw.payload as Record<string, unknown>).level as number
         : 0;
     }
-    return 0;
+    // Unsigned envelope — fail-closed (A4: reject unsigned state)
+    return 1; // WARNED
   } catch {
-    return 0; // Fail-open: can't read parent state, treat as NORMAL
+    return 1; // A4: Fail-closed: can't read parent state, treat as WARNED (not NORMAL)
   }
 }
 
@@ -319,8 +348,8 @@ export function propagateEnforcementToSubAgent(agentId: string): void {
     const level = readParentEnforcementLevel();
     if (level === 0) return; // NORMAL — no propagation needed
 
-    // Sanitize agentId (mirrors enforcement.cjs sanitization)
-    const sanitized = agentId.replace(/[/\\.]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 64);
+    // A10: Use shared sanitizePathId utility
+    const sanitized = sanitizePathId(agentId, 64);
     if (!sanitized) return;
 
     const agentEnfDir = join(ENFORCEMENT_DIR, 'agents', sanitized);
@@ -416,13 +445,18 @@ export const agentTools: MCPTool[] = [
         }
       }
 
+      // SEC-011: Generate spawn-origin token for identity hardening.
+      // Stored in agent record and propagated as env var HIVE_FLOW_AGENT_TOKEN
+      // to prevent env-var spoofing of agent identity.
+      const spawnToken = randomUUID();
+
       const agent: AgentRecord = {
         agentId,
         agentType,
         status: 'spawning',
         health: 1.0,
         taskCount: 0,
-        config,
+        config: { ...config, _spawnToken: spawnToken },
         createdAt: new Date().toISOString(),
         domain: input.domain as string,
         model: routingResult.model,
@@ -443,6 +477,10 @@ export const agentTools: MCPTool[] = [
       // LOGIC-012: Propagate parent enforcement level to sub-agent state file.
       // Sub-agents start at the parent's enforcement level, not NORMAL.
       propagateEnforcementToSubAgent(agentId);
+
+      // SEC-011: Set spawn-origin token in process env so child processes inherit it.
+      // role-enforcement.cjs verifies this token matches the stored value.
+      process.env.HIVE_FLOW_AGENT_TOKEN = spawnToken;
 
       // Include Agent Booster routing info if applicable
       const response: Record<string, unknown> = {
@@ -531,7 +569,8 @@ export const agentTools: MCPTool[] = [
       // Clean up per-agent enforcement directory after successful termination
       if (result.success && result.terminated && !result.alreadyTerminated) {
         try {
-          const sanitized = agentId.replace(/[/\\.]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 64);
+          // A10: Use shared sanitizePathId utility
+          const sanitized = sanitizePathId(agentId, 64);
           if (sanitized) {
             const agentEnfDir = join(process.cwd(), '.hive-flow', 'enforcement', 'agents', sanitized);
             if (existsSync(agentEnfDir)) {
@@ -1042,7 +1081,12 @@ export const agentTools: MCPTool[] = [
       required: ['taskId'],
     },
     handler: async (input) => {
-      const taskId = input.taskId as string;
+      const rawTaskId = input.taskId as string;
+      // A3+A10: Sanitize taskId using shared utility to prevent directory traversal
+      const taskId = sanitizePathId(rawTaskId, 128);
+      if (!taskId) {
+        return { success: false, error: 'Invalid taskId' };
+      }
       const tasksDir = join(process.cwd(), STORAGE_DIR, 'tasks');
       const trackingPath = join(tasksDir, `${taskId}.json`);
 
@@ -1148,8 +1192,8 @@ export const agentTools: MCPTool[] = [
       const degradedAgents = agents.filter(a => a.health >= 0.3 && a.health < threshold);
       const unhealthyAgents = agents.filter(a => a.health < 0.3);
       const avgHealth = agents.length > 0 ? agents.reduce((sum, a) => sum + a.health, 0) / agents.length : 1;
-      const avgCpu = agents.length > 0 ? 35 + Math.random() * 30 : 0; // Simulated CPU
-      const avgMemory = avgHealth * 0.6; // Correlated with health
+      const avgCpu = null; // Real process metrics require OS monitoring integration
+      const avgMemory = null; // Real process metrics require OS monitoring integration
 
       return {
         // CLI expected fields
@@ -1160,10 +1204,10 @@ export const agentTools: MCPTool[] = [
             type: a.agentType,
             health: a.health >= threshold ? 'healthy' : (a.health >= 0.3 ? 'degraded' : 'unhealthy'),
             uptime,
-            memory: { used: Math.floor(256 * (1 - a.health * 0.3)), limit: 512 },
-            cpu: 20 + Math.floor(a.health * 40),
+            memory: null, // Real process metrics require OS monitoring integration
+            cpu: null, // Real process metrics require OS monitoring integration
             tasks: { active: a.taskCount > 0 ? 1 : 0, queued: 0, completed: a.taskCount, failed: 0 },
-            latency: { avg: 50 + Math.floor((1 - a.health) * 100), p99: 150 + Math.floor((1 - a.health) * 200) },
+            latency: null, // Real process metrics require OS monitoring integration
             errors: { count: a.health < threshold ? 1 : 0 },
           };
         }),
@@ -1207,6 +1251,22 @@ export const agentTools: MCPTool[] = [
     },
     handler: async (input) => {
       const agentId = input.agentId as string;
+
+      // A9: Block cross-agent mutations when enforcement level > 0
+      const callerAgentId = process.env.AGENTIC_FLOW_AGENT_ID
+        || process.env.CLAUDE_SESSION_ID
+        || process.env.CLAUDE_AGENT_ID
+        || null;
+      if (callerAgentId && callerAgentId !== agentId) {
+        const enforcementLevel = readParentEnforcementLevel();
+        if (enforcementLevel > 0) {
+          return {
+            success: false,
+            agentId,
+            error: `[ENFORCEMENT] Cross-agent mutation blocked: caller '${callerAgentId}' cannot update agent '${agentId}' at enforcement level ${enforcementLevel}`,
+          };
+        }
+      }
 
       return withStoreLock(() => {
         const store = loadAgentStore();

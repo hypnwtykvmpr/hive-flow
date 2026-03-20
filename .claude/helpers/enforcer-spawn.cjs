@@ -49,14 +49,44 @@ function hasActiveEnforcer() {
 }
 
 function readEnforcementLevel() {
+  const crypto = require('crypto');
   try {
     const stateFile = path.join(ENFORCEMENT_DIR, 'state.json');
     if (!fs.existsSync(stateFile)) return 0;
     const raw = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
-    if (raw?.state && typeof raw.state.level === 'number') return raw.state.level;
-    if (raw?.payload && typeof raw.payload.level === 'number') return raw.payload.level;
+
+    // SEC-005: HMAC verification before trusting enforcement level.
+    // Fail-closed: return HALTED (3) on verification failure or missing key.
+    const hmacKeyFile = path.join(ENFORCEMENT_DIR, '.hmac-key');
+
+    if (raw?.state !== undefined && typeof raw.hmac === 'string') {
+      // enforcement.cjs envelope: { state, hmac }
+      let key;
+      try { key = fs.readFileSync(hmacKeyFile, 'utf8').trim(); } catch { return 3; }
+      if (!key) return 3;
+      const expected = crypto.createHmac('sha256', key).update(JSON.stringify(raw.state)).digest('hex');
+      const expectedBuf = Buffer.from(expected, 'hex');
+      const actualBuf = Buffer.from(raw.hmac, 'hex');
+      if (expectedBuf.length !== actualBuf.length || !crypto.timingSafeEqual(expectedBuf, actualBuf)) return 3;
+      return typeof raw.state.level === 'number' ? raw.state.level : 0;
+    }
+
+    if (raw?.payload !== undefined && typeof raw.signature === 'string') {
+      // workflow-enforcer.ts envelope: { payload, signature }
+      let key;
+      try { key = fs.readFileSync(hmacKeyFile, 'utf8').trim(); } catch { return 3; }
+      if (!key) return 3;
+      const expected = crypto.createHmac('sha256', key).update(JSON.stringify(raw.payload)).digest('hex');
+      const expectedBuf = Buffer.from(expected, 'hex');
+      const actualBuf = Buffer.from(raw.signature, 'hex');
+      if (expectedBuf.length !== actualBuf.length || !crypto.timingSafeEqual(expectedBuf, actualBuf)) return 3;
+      return typeof raw.payload.level === 'number' ? raw.payload.level : 0;
+    }
+
+    // Unsigned state — fail-closed (HALTED)
+    return 3;
   } catch { /* ignore */ }
-  return 0;
+  return 3; // Fail-closed on any error
 }
 
 async function main() {
