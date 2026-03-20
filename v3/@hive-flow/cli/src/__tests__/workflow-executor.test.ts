@@ -1020,10 +1020,27 @@ describe('workflow-executor', () => {
       expect(mod).toBeUndefined();
     });
 
-    it('listRegisteredModules returns at least the built-in modules', () => {
+    it('listRegisteredModules returns all 13 built-in modules', () => {
       const names = listRegisteredModules();
-      expect(names).toContain('investigate');
-      expect(names).toContain('verify-investigate');
+      expect(names).toHaveLength(13);
+      const expected = [
+        'investigate',
+        'verify-investigate',
+        'research',
+        'verify-research',
+        'design',
+        'verify-design',
+        'planning',
+        'verify-planning',
+        'implement',
+        'verify-implement',
+        'audit',
+        'verify-audit',
+        'commit',
+      ];
+      for (const n of expected) {
+        expect(names).toContain(n);
+      }
     });
 
     it('registerModule adds a custom module to the registry', () => {
@@ -1096,7 +1113,7 @@ describe('workflow-executor', () => {
       expect(mockExecute).toHaveBeenCalledWith(
         expect.objectContaining({
           workflowId: 'wf-test-1',
-          moduleInstanceId: 'step-mod-1-mock-module-exec',
+          moduleInstanceId: 'step-mod-1-Run Mock Module',
         }),
       );
       expect(result.stepId).toBe('step-mod-1');

@@ -37,6 +37,24 @@ export interface VerificationItem {
   verifiedAt: string;
 }
 
+/**
+ * Optional worker-supplied verification rows merged by {@link mergeVerificationResults}.
+ */
+export type VerificationResultInput = {
+  originalId?: string;
+  original_id?: string;
+  verdict?: VerificationVerdict;
+  confidence?: number;
+  counterEvidence?: string;
+  counter_evidence?: string;
+  supportingEvidence?: string;
+  supporting_evidence?: string;
+  verifiedBy?: string;
+  verified_by?: string;
+  verifiedAt?: string;
+  verified_at?: string;
+};
+
 export interface VerifiedRegistry {
   /** Source module that produced the original data */
   sourceModule: string;
@@ -49,6 +67,8 @@ export interface VerifiedRegistry {
     disputed: number;
     unverified: number;
     overallConfidence: number;
+    /** originalIds still UNVERIFIED after merging `verification_results` */
+    unverifiedOriginalIds: string[];
   };
   /** Verification metadata */
   metadata: {
@@ -56,6 +76,194 @@ export interface VerifiedRegistry {
     durationMs: number;
     workersUsed: number;
   };
+}
+
+// ---------------------------------------------------------------------------
+// Registry extraction (handles Maps + Object.entries-style bags)
+// ---------------------------------------------------------------------------
+
+const REGISTRY_METADATA_KEYS = new Set([
+  'summary',
+  'metadata',
+  'focusAreas',
+  'focus_areas',
+  'sourceModule',
+  'topics',
+  'research_topics',
+  'codebasePath',
+  'codebase_path',
+  'bands',
+  'effort',
+  'wont_fix',
+  'wontFix',
+  'sourcePlanSummary',
+  'sourceSummary',
+  'constraints',
+  'totals',
+]);
+
+/**
+ * Extract a flat list of registry item objects from diverse source-module shapes.
+ * Uses `Object.entries` for plain objects (never `registry.entries`, which is only valid on Map).
+ */
+export function extractRegistryItems(registry: unknown): Array<Record<string, unknown>> {
+  if (!registry || typeof registry !== 'object') return [];
+
+  if (registry instanceof Map) {
+    const out: Array<Record<string, unknown>> = [];
+    for (const [, value] of registry.entries()) {
+      if (Array.isArray(value)) {
+        for (const el of value) {
+          if (el && typeof el === 'object' && !Array.isArray(el)) {
+            out.push(el as Record<string, unknown>);
+          }
+        }
+      } else if (value && typeof value === 'object' && !Array.isArray(value)) {
+        out.push(value as Record<string, unknown>);
+      }
+    }
+    return out;
+  }
+
+  const r = registry as Record<string, unknown>;
+
+  // Audit module: flatten build, test, grep_checks, diff_reviews into verifiable rows (ids for verify-audit)
+  if (
+    typeof r.overallVerdict === 'string' &&
+    (r.build !== undefined ||
+      r.test !== undefined ||
+      Array.isArray(r.grep_checks) ||
+      Array.isArray(r.diff_reviews))
+  ) {
+    const out: Array<Record<string, unknown>> = [];
+    if (r.build && typeof r.build === 'object' && !Array.isArray(r.build)) {
+      out.push({ id: 'audit-build', ...(r.build as Record<string, unknown>) });
+    }
+    if (r.test && typeof r.test === 'object' && !Array.isArray(r.test)) {
+      out.push({ id: 'audit-test', ...(r.test as Record<string, unknown>) });
+    }
+    if (Array.isArray(r.grep_checks)) {
+      for (const el of r.grep_checks) {
+        if (el && typeof el === 'object' && !Array.isArray(el)) {
+          out.push(el as Record<string, unknown>);
+        }
+      }
+    }
+    if (Array.isArray(r.diff_reviews)) {
+      for (const el of r.diff_reviews) {
+        if (el && typeof el === 'object' && !Array.isArray(el)) {
+          out.push(el as Record<string, unknown>);
+        }
+      }
+    }
+    if (out.length > 0) return out;
+  }
+
+  for (const key of [
+    'findings',
+    'items',
+    'notes',
+    'entries',
+    'changes',
+    'work_packages',
+    'changed_files',
+    'bug_reports',
+  ] as const) {
+    const v = r[key];
+    if (Array.isArray(v)) return v as Array<Record<string, unknown>>;
+  }
+
+  const collected: Array<Record<string, unknown>> = [];
+  const entries = Object.entries(r);
+  for (const [key, value] of entries) {
+    if (REGISTRY_METADATA_KEYS.has(key)) continue;
+    if (Array.isArray(value)) {
+      for (const el of value) {
+        if (el && typeof el === 'object' && !Array.isArray(el)) {
+          collected.push(el as Record<string, unknown>);
+        }
+      }
+    }
+  }
+
+  return collected;
+}
+
+function parseVerificationVerdict(v: unknown): VerificationVerdict | undefined {
+  if (v === 'CONFIRMED' || v === 'DISPUTED' || v === 'UNVERIFIED') return v;
+  return undefined;
+}
+
+/**
+ * Overlay worker `verification_results` onto base items (by originalId). Rows-only-in-results append.
+ */
+export function mergeVerificationResults(
+  base: VerificationItem[],
+  verification_results: unknown,
+): VerificationItem[] {
+  if (!Array.isArray(verification_results) || verification_results.length === 0) {
+    return base;
+  }
+
+  const overlay = new Map<string, Partial<VerificationItem>>();
+  for (const row of verification_results) {
+    if (!row || typeof row !== 'object') continue;
+    const rec = row as VerificationResultInput;
+    const oid = coalesceString(rec.originalId ?? rec.original_id);
+    if (!oid) continue;
+
+    const partial: Partial<VerificationItem> = {};
+    const verdict = parseVerificationVerdict(rec.verdict);
+    if (verdict !== undefined) partial.verdict = verdict;
+    if (rec.confidence !== undefined && typeof rec.confidence === 'number' && Number.isFinite(rec.confidence)) {
+      partial.confidence = Math.max(0, Math.min(1, rec.confidence));
+    }
+    const ce = rec.counterEvidence ?? rec.counter_evidence;
+    if (ce !== undefined) partial.counterEvidence = coalesceString(ce);
+    const se = rec.supportingEvidence ?? rec.supporting_evidence;
+    if (se !== undefined) partial.supportingEvidence = coalesceString(se);
+    const vb = rec.verifiedBy ?? rec.verified_by;
+    if (vb !== undefined) partial.verifiedBy = coalesceString(vb) || 'worker';
+    const va = rec.verifiedAt ?? rec.verified_at;
+    if (va !== undefined) partial.verifiedAt = coalesceString(va);
+
+    const prev = overlay.get(oid) ?? {};
+    overlay.set(oid, { ...prev, ...partial });
+  }
+
+  const seen = new Set<string>();
+  const merged: VerificationItem[] = base.map((item) => {
+    seen.add(item.originalId);
+    const o = overlay.get(item.originalId);
+    if (!o) return { ...item };
+    return {
+      ...item,
+      ...o,
+      verifiedAt: o.verifiedAt || item.verifiedAt,
+      verifiedBy: o.verifiedBy || item.verifiedBy,
+      confidence: o.confidence !== undefined ? o.confidence : item.confidence,
+    };
+  });
+
+  for (const [originalId, partial] of overlay.entries()) {
+    if (seen.has(originalId)) continue;
+    merged.push({
+      originalId,
+      verdict: parseVerificationVerdict(partial.verdict) ?? 'UNVERIFIED',
+      confidence: partial.confidence ?? 0,
+      counterEvidence: partial.counterEvidence,
+      supportingEvidence: partial.supportingEvidence,
+      verifiedBy: partial.verifiedBy ?? 'worker',
+      verifiedAt: partial.verifiedAt || new Date().toISOString(),
+    });
+  }
+
+  return merged;
+}
+
+function coalesceString(v: unknown): string {
+  if (v === undefined || v === null) return '';
+  return String(v).trim();
 }
 
 // ---------------------------------------------------------------------------
@@ -73,6 +281,8 @@ export interface VerifyModuleConfig {
   /** Key within each registry item that serves as the item ID */
   itemIdKey?: string;
 }
+
+const VERIFY_GATE_CHECKS: string[] = ['all-items-have-verdict', 'disputed-have-counter-evidence'];
 
 /**
  * Create a parameterized verification module.
@@ -98,6 +308,12 @@ export function createVerifyModule(config: VerifyModuleConfig): WorkflowModule {
             type: 'object',
             description: `Registry output from the ${sourceModule} module`,
             required: true,
+          },
+          verification_results: {
+            type: 'array',
+            description:
+              'Optional worker verification rows merged by originalId (verdict, confidence, evidence)',
+            required: false,
           },
         },
         additionalFields: true,
@@ -130,7 +346,7 @@ export function createVerifyModule(config: VerifyModuleConfig): WorkflowModule {
 
     gates: {
       enabled: true,
-      checks: ['all-items-have-verdict', 'disputed-have-counter-evidence'],
+      checks: [...VERIFY_GATE_CHECKS],
       minAgents: 2,
       blocking: true,
       maxRetries: 2,
@@ -181,38 +397,68 @@ export function createVerifyModule(config: VerifyModuleConfig): WorkflowModule {
           };
         }
 
-        // Extract items from registry (handles both { findings: [...] } and { items: [...] })
-        const rawItems = (
-          (registry as Record<string, unknown>).findings ||
-          (registry as Record<string, unknown>).items ||
-          []
-        ) as Array<Record<string, unknown>>;
+        const rawItems = extractRegistryItems(registry);
 
-        // In real execution, hive workers would perform cross-referencing and challenging.
-        // Here we produce the verification structure.
-        const verificationItems: VerificationItem[] = rawItems.map((item) => ({
-          originalId: String(item[itemIdKey] || 'unknown'),
-          verdict: 'UNVERIFIED' as VerificationVerdict,
-          confidence: 0,
-          verifiedBy: 'pending',
-          verifiedAt: new Date().toISOString(),
-        }));
+        const inputsRec = context.inputs as Record<string, unknown>;
+        const verification_results =
+          inputsRec.verification_results ??
+          inputsRec.verificationResults;
 
-        // Gate check: every item must have a verdict, disputed items must have counter-evidence
-        const allHaveVerdict = verificationItems.every(v => v.verdict !== undefined);
-        const disputedHaveEvidence = verificationItems
-          .filter(v => v.verdict === 'DISPUTED')
-          .every(v => v.counterEvidence !== undefined && v.counterEvidence.length > 0);
+        let verificationItems: VerificationItem[] = rawItems.map((item) => {
+          const idRaw = coalesceString(item[itemIdKey]);
+          return {
+            originalId: idRaw || 'unknown',
+            verdict: 'UNVERIFIED' as VerificationVerdict,
+            confidence: 0,
+            verifiedBy: 'pending',
+            verifiedAt: new Date().toISOString(),
+          };
+        });
 
-        const gatePass = allHaveVerdict && disputedHaveEvidence;
+        verificationItems = mergeVerificationResults(verificationItems, verification_results);
 
-        const confirmed = verificationItems.filter(v => v.verdict === 'CONFIRMED').length;
-        const disputed = verificationItems.filter(v => v.verdict === 'DISPUTED').length;
-        const unverified = verificationItems.filter(v => v.verdict === 'UNVERIFIED').length;
+        verificationItems = verificationItems.map((v) => {
+          const c =
+            typeof v.confidence === 'number' && Number.isFinite(v.confidence) ? v.confidence : 0;
+          return {
+            ...v,
+            confidence: Math.max(0, Math.min(1, c)),
+          };
+        });
+
+        const gateChecks = context.metadata?.gateChecksOverride as string[] | undefined;
+        const activeChecks = Array.isArray(gateChecks) ? gateChecks : VERIFY_GATE_CHECKS;
+
+        const unverifiedList = verificationItems.filter((v) => v.verdict === 'UNVERIFIED');
+        const unverifiedOriginalIds = unverifiedList.map((v) => v.originalId);
+
+        const allOriginalsAddressed =
+          !activeChecks.includes('all-items-have-verdict') || unverifiedList.length === 0;
+
+        const disputedHaveEvidence =
+          !activeChecks.includes('disputed-have-counter-evidence') ||
+          verificationItems
+            .filter((v) => v.verdict === 'DISPUTED')
+            .every((v) => coalesceString(v.counterEvidence).length > 0);
+
+        const gatePass = allOriginalsAddressed && disputedHaveEvidence;
+
+        const failedChecks: string[] = [];
+        if (activeChecks.includes('all-items-have-verdict') && !allOriginalsAddressed) {
+          failedChecks.push('all-items-have-verdict');
+        }
+        if (activeChecks.includes('disputed-have-counter-evidence') && !disputedHaveEvidence) {
+          failedChecks.push('disputed-have-counter-evidence');
+        }
+
+        const confirmed = verificationItems.filter((v) => v.verdict === 'CONFIRMED').length;
+        const disputed = verificationItems.filter((v) => v.verdict === 'DISPUTED').length;
+        const unverified = unverifiedList.length;
         const total = verificationItems.length;
-        const avgConfidence = total > 0
-          ? verificationItems.reduce((sum, v) => sum + v.confidence, 0) / total
-          : 0;
+        const avgConfidence =
+          total > 0
+            ? verificationItems.reduce((sum, v) => sum + v.confidence, 0) / total
+            : 0;
 
         const verifiedRegistry: VerifiedRegistry = {
           sourceModule,
@@ -223,11 +469,12 @@ export function createVerifyModule(config: VerifyModuleConfig): WorkflowModule {
             disputed,
             unverified,
             overallConfidence: avgConfidence,
+            unverifiedOriginalIds,
           },
           metadata: {
             verifiedAt: new Date().toISOString(),
             durationMs: Date.now() - startTime,
-            workersUsed: 0, // Updated when hive is actually spawned
+            workersUsed: 0,
           },
         };
 
@@ -237,10 +484,7 @@ export function createVerifyModule(config: VerifyModuleConfig): WorkflowModule {
           durationMs: Date.now() - startTime,
           gateResult: {
             passed: gatePass,
-            failedChecks: gatePass ? [] : [
-              ...(allHaveVerdict ? [] : ['all-items-have-verdict']),
-              ...(disputedHaveEvidence ? [] : ['disputed-have-counter-evidence']),
-            ],
+            failedChecks: gatePass ? [] : failedChecks,
             iterations: 1,
           },
           hiveResult: {

@@ -10,6 +10,23 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import type { MCPTool } from './types.js';
+import { getWorkflowHookDispatcher } from './workflow-executor.js';
+
+// ---------------------------------------------------------------------------
+// Workflow hooks (fire-and-forget)
+// ---------------------------------------------------------------------------
+
+function fireMiniGatePassHook(context: Record<string, unknown>): void {
+  const dispatcher = getWorkflowHookDispatcher();
+  if (!dispatcher) return;
+  void dispatcher.dispatch('mini-gate-pass', context).catch(() => {});
+}
+
+function fireMiniGateFailHook(context: Record<string, unknown>): void {
+  const dispatcher = getWorkflowHookDispatcher();
+  if (!dispatcher) return;
+  void dispatcher.dispatch('mini-gate-fail', context).catch(() => {});
+}
 
 // ---------------------------------------------------------------------------
 // Storage helpers
@@ -605,6 +622,7 @@ export async function executeVerificationGate(
 ): Promise<VerificationGateResult> {
   const gateId = generateId('gate');
   const now = new Date().toISOString();
+  const workflowId = (workflowContext.workflowId as string) || '';
 
   const gate: VerificationGateResult = {
     gateId,
@@ -653,6 +671,13 @@ export async function executeVerificationGate(
   if (failedChecks.length === 0) {
     gate.status = 'passed';
     gate.completedAt = new Date().toISOString();
+    fireMiniGatePassHook({
+      workflowId,
+      gateId: gate.gateId,
+      fromPhase: gate.fromPhase,
+      toPhase: gate.toPhase,
+      iterations: gate.iterations,
+    });
   } else {
     // Package concerns for remediation
     const concern: ConcernPackage = {
@@ -663,6 +688,14 @@ export async function executeVerificationGate(
     };
     gate.concerns.push(concern);
     gate.status = 'waiting';
+    fireMiniGateFailHook({
+      workflowId,
+      gateId: gate.gateId,
+      fromPhase: gate.fromPhase,
+      toPhase: gate.toPhase,
+      iterations: gate.iterations,
+      failedCheckCount: failedChecks.length,
+    });
   }
 
   // Persist to store

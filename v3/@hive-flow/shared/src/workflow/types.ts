@@ -203,9 +203,17 @@ export interface WorkflowModule {
 // Workflow Definition — chain of modules with parallelism
 // ---------------------------------------------------------------------------
 
+/**
+ * Reference to a module stage within a flow (instance id + optional registry lookup key).
+ */
 export interface WorkflowModuleRef {
-  /** Module name to reference */
-  moduleName: string;
+  /** Flow step / module instance name (e.g. `investigate`, `implement-band-2`) */
+  name: string;
+  /**
+   * Registry key for module lookup when {@link name} is a unique instance id
+   * (e.g. remediation bands: `implement-band-1` → `registryModule: 'implement'`).
+   */
+  registryModule?: string;
   /** Override configuration for this instance */
   overrides?: Partial<Pick<WorkflowModule, 'hooks' | 'gates' | 'hiveConfig'>>;
   /** Modules that must complete before this one starts */
@@ -214,15 +222,19 @@ export interface WorkflowModuleRef {
   parallel?: boolean;
 }
 
-export interface WorkflowDefinition {
-  /** Unique workflow definition name */
+/**
+ * Minimal flow definition — ordered module chain only.
+ */
+export interface WorkflowFlowDefinition {
   name: string;
+  modules: WorkflowModuleRef[];
+}
+
+export interface WorkflowDefinition extends WorkflowFlowDefinition {
   /** Human-readable description */
   description: string;
   /** Version of this workflow definition */
   version: string;
-  /** Ordered list of module references */
-  modules: WorkflowModuleRef[];
   /** Shared state configuration */
   sharedState: {
     /** Memory namespace for shared state */

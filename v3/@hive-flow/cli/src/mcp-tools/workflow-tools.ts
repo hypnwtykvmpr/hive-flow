@@ -11,6 +11,7 @@ import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import type { MCPTool } from './types.js';
 import { executeWorkflowStep, getWorkflowHookDispatcher } from './workflow-executor.js';
 import type { WorkflowStepContext } from './workflow-executor.js';
+import { FLOW_REGISTRY, type FlowOptions, type WorkflowDefinition, type WorkflowModuleRef } from '@hive-flow/shared/workflow';
 
 async function dispatchWorkflowHook(event: string, context: Record<string, unknown>): Promise<void> {
   const dispatcher = getWorkflowHookDispatcher();
@@ -20,6 +21,41 @@ async function dispatchWorkflowHook(event: string, context: Record<string, unkno
   } catch {
     // Hook failure never crashes workflows
   }
+}
+
+function workflowDefinitionToSteps(def: WorkflowDefinition, task: string): WorkflowStep[] {
+  return def.modules.map((ref: WorkflowModuleRef, i: number) => {
+    if (ref.name === 'human-gate') {
+      return {
+        stepId: `step-${i + 1}`,
+        name: 'human-gate',
+        type: 'wait' as const,
+        config: {
+          waitType: 'event',
+          event: 'human-gate-approval',
+          workflowDefinition: def.name,
+          task,
+        },
+        status: 'pending' as const,
+      };
+    }
+    const moduleLookup = ref.registryModule ?? ref.name;
+    return {
+      stepId: `step-${i + 1}`,
+      name: ref.name,
+      type: 'module' as const,
+      config: {
+        moduleName: moduleLookup,
+        registryModule: ref.registryModule,
+        flowModuleRef: ref.name,
+        task,
+        overrides: ref.overrides,
+        dependsOn: ref.dependsOn,
+        parallel: ref.parallel,
+      },
+      status: 'pending' as const,
+    };
+  });
 }
 
 // Storage paths
@@ -747,6 +783,10 @@ export const workflowTools: MCPTool[] = [
     inputSchema: {
       type: 'object',
       properties: {
+        flow: {
+          type: 'string',
+          description: 'Named flow from FLOW_REGISTRY (general-development, remediation, bugfix)',
+        },
         template: { type: 'string', description: 'Workflow template name' },
         file: { type: 'string', description: 'Workflow definition file' },
         task: { type: 'string', description: 'Task description' },
@@ -761,28 +801,57 @@ export const workflowTools: MCPTool[] = [
 
       // Create workflow from template
       const workflowId = `workflow-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      const stages = getDefaultStages(template);
-      const agents = getDefaultAgents(template);
+      const flowKey = input.flow as string | undefined;
+      let flowDef: WorkflowDefinition | undefined;
+      let steps: WorkflowStep[];
+      let agents: string[];
 
-      const steps: WorkflowStep[] = stages.map((name, i) => ({
-        stepId: `step-${i + 1}`,
-        name,
-        type: name.startsWith('Verify:') ? 'verification' as const : 'task' as const,
-        config: { task, template },
-        status: 'pending' as const,
-        ...(name.startsWith('Verify:') ? {
-          gateConfig: parseGateConfig(name),
-        } : {}),
-      }));
+      if (flowKey) {
+        const factory = FLOW_REGISTRY.get(flowKey);
+        if (!factory) {
+          return {
+            success: false,
+            error: `Unknown flow "${flowKey}". Valid: ${[...FLOW_REGISTRY.keys()].join(', ')}`,
+          };
+        }
+        flowDef = factory(options as FlowOptions);
+        steps = workflowDefinitionToSteps(flowDef, task);
+        agents = ['module-runner'];
+      } else {
+        const stages = getDefaultStages(template);
+        agents = getDefaultAgents(template);
+        steps = stages.map((name, i) => ({
+          stepId: `step-${i + 1}`,
+          name,
+          type: name.startsWith('Verify:') ? 'verification' as const : 'task' as const,
+          config: { task, template },
+          status: 'pending' as const,
+          ...(name.startsWith('Verify:') ? {
+            gateConfig: parseGateConfig(name),
+          } : {}),
+        }));
+      }
 
       const workflow: WorkflowRecord = {
         workflowId,
-        name: `${template} workflow`,
-        description: task,
+        name: flowDef?.name ?? `${template || 'custom'} workflow`,
+        description: flowDef?.description ?? task,
         steps,
         status: options.dryRun ? 'draft' : 'ready',
         currentStep: 0,
-        variables: { originalRequest: task, template },
+        variables: {
+          originalRequest: task,
+          template: template || (flowKey ? flowDef?.name ?? 'flow' : 'custom'),
+          ...(flowDef
+            ? {
+                flow: flowKey,
+                sharedNamespace: flowDef.sharedState.namespace,
+                sharedState: flowDef.sharedState,
+                moduleChain: flowDef.modules,
+                ...(flowDef.sharedState.initialVariables ?? {}),
+              }
+            : {}),
+        },
         createdAt: new Date().toISOString(),
       };
 

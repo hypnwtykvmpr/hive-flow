@@ -36,6 +36,12 @@ import type {
 import {
   createInvestigateModule,
   createVerifyModule,
+  createResearchModule,
+  createDesignModule,
+  createPlanningModule,
+  createImplementModule,
+  createAuditModule,
+  createCommitModule,
 } from '@hive-flow/shared/workflow';
 
 // ---------------------------------------------------------------------------
@@ -52,6 +58,59 @@ function ensureModuleRegistry(): void {
 
   const verifyInvestigate = createVerifyModule({ sourceModule: 'investigate' });
   moduleRegistry.set(verifyInvestigate.name, verifyInvestigate);
+
+  const research = createResearchModule();
+  moduleRegistry.set(research.name, research);
+
+  const verifyResearch = createVerifyModule({
+    sourceModule: 'research',
+    registryKey: 'research_brief',
+    itemIdKey: 'id',
+  });
+  moduleRegistry.set(verifyResearch.name, verifyResearch);
+
+  const design = createDesignModule();
+  moduleRegistry.set(design.name, design);
+
+  const verifyDesign = createVerifyModule({
+    sourceModule: 'design',
+    registryKey: 'implementation_plan',
+    itemIdKey: 'id',
+  });
+  moduleRegistry.set(verifyDesign.name, verifyDesign);
+
+  const planning = createPlanningModule();
+  moduleRegistry.set(planning.name, planning);
+
+  const verifyPlanning = createVerifyModule({
+    sourceModule: 'planning',
+    registryKey: 'execution_plan',
+    itemIdKey: 'id',
+  });
+  moduleRegistry.set(verifyPlanning.name, verifyPlanning);
+
+  const implement = createImplementModule();
+  moduleRegistry.set(implement.name, implement);
+
+  const verifyImplement = createVerifyModule({
+    sourceModule: 'implement',
+    registryKey: 'implementation_result',
+    itemIdKey: 'id',
+  });
+  moduleRegistry.set(verifyImplement.name, verifyImplement);
+
+  const audit = createAuditModule();
+  moduleRegistry.set(audit.name, audit);
+
+  const verifyAudit = createVerifyModule({
+    sourceModule: 'audit',
+    registryKey: 'audit_result',
+    itemIdKey: 'id',
+  });
+  moduleRegistry.set(verifyAudit.name, verifyAudit);
+
+  const commit = createCommitModule();
+  moduleRegistry.set(commit.name, commit);
 }
 
 /**
@@ -507,14 +566,17 @@ async function executePhaseTask(
   workflowContext: Record<string, unknown>,
 ): Promise<unknown> {
   // Check if this step references a registered shared module
-  const moduleName = (step.config.moduleName as string) || (step.config.module as string);
-  if (moduleName) {
+  const registryKey =
+    (step.config.registryModule as string) ||
+    (step.config.moduleName as string) ||
+    (step.config.module as string);
+  if (registryKey) {
     ensureModuleRegistry();
-    const mod = moduleRegistry.get(moduleName);
+    const mod = moduleRegistry.get(registryKey);
     if (mod) {
       const moduleCtx: ModuleExecutionContext = {
         workflowId: (workflowContext.workflowId as string) || '',
-        moduleInstanceId: `${step.stepId}-${moduleName}`,
+        moduleInstanceId: `${step.stepId}-${step.name}`,
         inputs: step.config,
         variables: workflowContext,
         previousOutput: (workflowContext._previousOutput as Record<string, unknown>) || undefined,
@@ -523,7 +585,7 @@ async function executePhaseTask(
       return {
         phase: step.name,
         executed: true,
-        moduleName,
+        moduleName: registryKey,
         moduleSuccess: moduleResult.success,
         moduleOutputs: moduleResult.outputs,
         moduleDurationMs: moduleResult.durationMs,
@@ -554,10 +616,15 @@ async function executeModuleStep(
   workflowContext: Record<string, unknown>,
 ): Promise<StepExecutionResult> {
   const { step } = ctx;
-  const moduleName = (step.config.moduleName as string) || (step.config.module as string) || step.name;
+  // Prefer registryModule (flow/file module refs may use instance ids in name vs registry key)
+  const registryKey =
+    (step.config.registryModule as string) ||
+    (step.config.moduleName as string) ||
+    (step.config.module as string) ||
+    step.name;
 
   ensureModuleRegistry();
-  const mod = moduleRegistry.get(moduleName);
+  const mod = moduleRegistry.get(registryKey);
 
   if (!mod) {
     // No registered module found — return a static receipt (backward compat)
@@ -567,7 +634,7 @@ async function executeModuleStep(
       result: {
         phase: step.name,
         executed: true,
-        moduleNotFound: moduleName,
+        moduleNotFound: registryKey,
         config: step.config,
         completedAt: new Date().toISOString(),
       },
@@ -576,7 +643,7 @@ async function executeModuleStep(
 
   const moduleCtx: ModuleExecutionContext = {
     workflowId: ctx.workflowId,
-    moduleInstanceId: `${step.stepId}-${moduleName}`,
+    moduleInstanceId: `${step.stepId}-${step.name}`,
     inputs: step.config,
     variables: { ...ctx.variables, ...workflowContext },
     previousOutput: (workflowContext._previousOutput as Record<string, unknown>) || undefined,
@@ -593,7 +660,8 @@ async function executeModuleStep(
     result: {
       phase: step.name,
       executed: true,
-      moduleName,
+      moduleName: registryKey,
+      flowModuleRef: step.config.flowModuleRef,
       moduleSuccess: moduleResult.success,
       moduleOutputs: moduleResult.outputs,
       moduleDurationMs: moduleResult.durationMs,

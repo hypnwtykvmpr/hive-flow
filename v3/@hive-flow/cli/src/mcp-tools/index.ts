@@ -29,7 +29,7 @@ export { bugHunterTools } from './bug-hunter.js';
 export { neuralTools } from './neural-tools.js';
 export { workflowEnforcerTools, mapLevelToFlow, validateOptOut, getOrCreateHmacKey, signPayload } from './workflow-enforcer.js';
 export { queenTools } from './queen-tools.js';
-export type { HiveRecord, HiveWorkerRecord, HiveMission, HiveAuditEntry, HiveBudget, ModuleHiveConfig, HiveStatus } from './hive-store.js';
+export type { HiveRecord, HiveWorkerRecord, HiveMission, HiveAuditEntry, HiveBudget, ModuleHiveConfig, HiveStatus, DelegationMetrics } from './hive-store.js';
 export { transitionAgent, propagateEnforcementToSubAgent } from './agent-tools.js';
 export type {
   ComplexityLevel,
