@@ -13,6 +13,8 @@
  *   --task-stdin         Read task prompt from stdin (preferred — safe for all content)
  *   --store-dir <path>  Agent store directory
  *   --timeout <ms>       Provider timeout in milliseconds
+ *   --task-file <path>   Read task prompt from this file (alternative to stdin)
+ *   --result-file <path> Write result JSON to this file instead of stdout
  *
  * When --task-stdin is set, the task text is read from stdin instead of --task.
  * This avoids shell parsing issues with special characters and ARG_MAX limits.
@@ -24,7 +26,7 @@
  * @module @hive-flow/providers/scripts/provider-agent-bridge
  */
 
-import { readFileSync, writeFileSync, appendFileSync, mkdirSync, renameSync, existsSync, rmdirSync, statSync } from 'fs';
+import { readFileSync, writeFileSync, appendFileSync, mkdirSync, renameSync, existsSync, rmdirSync, statSync, unlinkSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 
@@ -431,7 +433,7 @@ function readStdin() {
 
 async function parseArgs() {
   const args = process.argv.slice(2);
-  const parsed = { agentId: '', task: '', storeDir: '', timeout: 0, taskStdin: false };
+  const parsed = { agentId: '', task: '', storeDir: '', timeout: 0, taskStdin: false, taskFile: '', resultFile: '' };
 
   for (let i = 0; i < args.length; i++) {
     switch (args[i]) {
@@ -450,13 +452,27 @@ async function parseArgs() {
       case '--timeout':
         parsed.timeout = parseInt(args[++i], 10) || 0;
         break;
+      case '--task-file':
+        parsed.taskFile = args[++i] || '';
+        break;
+      case '--result-file':
+        parsed.resultFile = args[++i] || '';
+        break;
+    }
+  }
+
+  // When --task-file is set, read task from that file.
+  if (parsed.taskFile) {
+    const fileTask = readFileSync(parsed.taskFile, 'utf-8');
+    if (fileTask.trim()) {
+      parsed.task = fileTask.trim();
     }
   }
 
   // When --task-stdin is set (or --task is missing), read task from stdin.
   // This avoids shell parsing issues with special characters in task text
   // and bypasses ARG_MAX limits for very long prompts.
-  if (parsed.taskStdin || !parsed.task) {
+  if (!parsed.task && (parsed.taskStdin || !parsed.task)) {
     const stdinTask = await readStdin();
     if (stdinTask.trim()) {
       parsed.task = stdinTask.trim();
@@ -513,7 +529,8 @@ function trackProviderUsage(providerName, usage, startTime) {
 // ===== Main =====
 
 async function main() {
-  const { agentId, task, storeDir, timeout: parsedTimeout } = await parseArgs();
+  const parsed = await parseArgs();
+  const { agentId, task, storeDir, timeout: parsedTimeout, resultFile, taskFile } = parsed;
   const lockPath = join(storeDir, '.store.lock');
 
   // ── Phase 1: Lock → read state → unlock ──
@@ -764,7 +781,18 @@ async function main() {
   });
 
   // Output result as JSON
-  process.stdout.write(JSON.stringify(result, null, 2) + '\n');
+  if (resultFile) {
+    const tmpResult = resultFile + '.tmp';
+    writeFileSync(tmpResult, JSON.stringify(result, null, 2) + '\n');
+    renameSync(tmpResult, resultFile);
+  } else {
+    process.stdout.write(JSON.stringify(result, null, 2) + '\n');
+  }
+
+  // Cleanup: delete task file after successful processing (best-effort)
+  if (taskFile) {
+    try { unlinkSync(taskFile); } catch { /* ignore */ }
+  }
 }
 
 main().catch((err) => {
@@ -785,6 +813,29 @@ main().catch((err) => {
     error: err.message || String(err),
     code: err.code || 'BRIDGE_ERROR',
   };
-  process.stdout.write(JSON.stringify(errorResponse, null, 2) + '\n');
+
+  // Write error result to --result-file if set, fall back to stdout
+  const argvResultIdx = process.argv.indexOf('--result-file');
+  const resultFile = argvResultIdx !== -1 ? (process.argv[argvResultIdx + 1] || '') : '';
+  if (resultFile) {
+    try {
+      const tmpResult = resultFile + '.tmp';
+      writeFileSync(tmpResult, JSON.stringify(errorResponse, null, 2) + '\n');
+      renameSync(tmpResult, resultFile);
+    } catch {
+      // File write failed — fall back to stdout
+      process.stdout.write(JSON.stringify(errorResponse, null, 2) + '\n');
+    }
+  } else {
+    process.stdout.write(JSON.stringify(errorResponse, null, 2) + '\n');
+  }
+
+  // Cleanup: delete task file (best-effort)
+  const argvTaskFileIdx = process.argv.indexOf('--task-file');
+  const taskFile = argvTaskFileIdx !== -1 ? (process.argv[argvTaskFileIdx + 1] || '') : '';
+  if (taskFile) {
+    try { unlinkSync(taskFile); } catch { /* ignore */ }
+  }
+
   process.exit(1);
 });

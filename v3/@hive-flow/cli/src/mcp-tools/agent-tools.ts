@@ -934,6 +934,186 @@ export const agentTools: MCPTool[] = [
     },
   },
   {
+    name: 'agent_task_async',
+    description: 'Dispatch a task to a provider-backed agent without waiting for the result (non-blocking). Poll with agent_task_result.',
+    category: 'agent',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        agentId: { type: 'string', description: 'ID of the agent (must be spawned first via agent_spawn)' },
+        task: { type: 'string', description: 'Task prompt to send to the agent' },
+        timeout: { type: 'number', description: 'Timeout in ms (default: 120000)' },
+      },
+      required: ['agentId', 'task'],
+    },
+    handler: async (input) => {
+      const agentId = input.agentId as string;
+      const task = input.task as string;
+      const rawTimeout = (input.timeout as number) || 120000;
+      const MIN_TIMEOUT = 10000;    // 10 seconds
+      const MAX_TIMEOUT = 3600000;  // 60 minutes
+      const timeout = Math.max(MIN_TIMEOUT, Math.min(MAX_TIMEOUT, rawTimeout));
+
+      const taskId = `task-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+      // Validate agent and set busy — same pattern as agent_task
+      const validationError = await withBridgeLock(agentId, () => {
+        const store = loadAgentStore();
+        const agent = store.agents[agentId];
+        if (!agent) {
+          return 'Agent not found';
+        }
+        if (!agent.provider) {
+          return 'Agent has no provider — use agent_spawn with a provider first';
+        }
+        if (agent.provider === 'anthropic') {
+          return "Use 'anthropic-cli' for Claude subprocess workers, not 'anthropic'. The agent_task bridge supports providers: anthropic-cli, gemini-cli, codex-cli, cursor-cli, deepseek. Use Claude Code Task tool for native anthropic agents.";
+        }
+        if (!transitionAgent(agent, 'busy')) {
+          return `Agent cannot accept tasks in current state: '${agent.status}'`;
+        }
+        saveAgentStore(store);
+        return null; // success
+      });
+
+      if (validationError) {
+        return { success: false, agentId, error: validationError };
+      }
+
+      // Resolve bridge script path relative to compiled output location
+      const thisDir = dirname(fileURLToPath(import.meta.url));
+      const bridgePath = join(thisDir, '..', '..', '..', '..', 'providers', 'scripts', 'provider-agent-bridge.mjs');
+
+      if (!existsSync(bridgePath)) {
+        await withBridgeLock(agentId, () => {
+          const s = loadAgentStore();
+          const a = s.agents[agentId];
+          if (a && a.status === 'busy') {
+            a.status = 'idle';
+            saveAgentStore(s);
+          }
+        });
+        return { success: false, agentId, error: `Bridge script not found at ${bridgePath}` };
+      }
+
+      // Create task directory and files
+      const tasksDir = join(process.cwd(), STORAGE_DIR, 'tasks');
+      mkdirSync(tasksDir, { recursive: true });
+
+      const taskFilePath = join(tasksDir, `${taskId}.task`);
+      const resultFilePath = join(tasksDir, `${taskId}.result.json`);
+
+      writeFileSync(taskFilePath, task, 'utf-8');
+
+      const agentDir = getAgentDir();
+      const child = spawn('node', [
+        bridgePath,
+        '--agent-id', agentId,
+        '--task-file', taskFilePath,
+        '--result-file', resultFilePath,
+        '--store-dir', agentDir,
+        '--timeout', String(timeout),
+      ], { detached: true, stdio: 'ignore' });
+
+      child.unref();
+
+      // Write tracking metadata
+      const trackingPath = join(tasksDir, `${taskId}.json`);
+      writeFileSync(trackingPath, JSON.stringify({
+        status: 'running',
+        taskId,
+        agentId,
+        startedAt: new Date().toISOString(),
+        pid: child.pid,
+      }, null, 2), 'utf-8');
+
+      return { success: true, taskId, agentId, status: 'running', pid: child.pid };
+    },
+  },
+  {
+    name: 'agent_task_result',
+    description: 'Poll for the result of an async task dispatched via agent_task_async.',
+    category: 'agent',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        taskId: { type: 'string', description: 'Task ID returned by agent_task_async' },
+      },
+      required: ['taskId'],
+    },
+    handler: async (input) => {
+      const taskId = input.taskId as string;
+      const tasksDir = join(process.cwd(), STORAGE_DIR, 'tasks');
+      const trackingPath = join(tasksDir, `${taskId}.json`);
+
+      if (!existsSync(trackingPath)) {
+        return { success: false, error: `Task not found: ${taskId}` };
+      }
+
+      let tracking: { status: string; taskId: string; agentId: string; startedAt: string; pid?: number };
+      try {
+        tracking = JSON.parse(readFileSync(trackingPath, 'utf-8'));
+      } catch {
+        return { success: false, error: `Failed to read task tracking file for ${taskId}` };
+      }
+
+      const resultFilePath = join(tasksDir, `${taskId}.result.json`);
+
+      if (existsSync(resultFilePath)) {
+        // Result file exists — task completed
+        let result: Record<string, unknown>;
+        try {
+          result = JSON.parse(readFileSync(resultFilePath, 'utf-8'));
+        } catch {
+          return { success: false, taskId, agentId: tracking.agentId, status: 'failed', error: 'Failed to parse result file' };
+        }
+
+        // Update tracking status
+        tracking.status = 'completed';
+        writeFileSync(trackingPath, JSON.stringify(tracking, null, 2), 'utf-8');
+
+        // Reset agent to idle
+        await withBridgeLock(tracking.agentId, () => {
+          const store = loadAgentStore();
+          const agent = store.agents[tracking.agentId];
+          if (agent && agent.status === 'busy') {
+            agent.status = 'idle';
+            saveAgentStore(store);
+          }
+        });
+
+        return { success: true, taskId, agentId: tracking.agentId, status: 'completed', result };
+      }
+
+      // No result file yet — check if process is still running
+      if (tracking.pid) {
+        try {
+          process.kill(tracking.pid, 0); // signal 0 = existence check
+          return { success: true, taskId, agentId: tracking.agentId, status: 'running' };
+        } catch {
+          // Process exited without writing a result
+          tracking.status = 'failed';
+          writeFileSync(trackingPath, JSON.stringify(tracking, null, 2), 'utf-8');
+
+          // Reset agent to idle
+          await withBridgeLock(tracking.agentId, () => {
+            const store = loadAgentStore();
+            const agent = store.agents[tracking.agentId];
+            if (agent && agent.status === 'busy') {
+              agent.status = 'idle';
+              saveAgentStore(store);
+            }
+          });
+
+          return { success: false, taskId, agentId: tracking.agentId, status: 'failed', error: 'Process exited without producing a result' };
+        }
+      }
+
+      // No pid recorded — treat as unknown
+      return { success: true, taskId, agentId: tracking.agentId, status: tracking.status };
+    },
+  },
+  {
     name: 'agent_health',
     description: 'Check agent health',
     category: 'agent',
