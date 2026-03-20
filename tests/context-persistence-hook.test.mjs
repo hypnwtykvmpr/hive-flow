@@ -1,4 +1,4 @@
-import { describe, it, before, after } from 'node:test';
+import { describe, it, before, after, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, mkdirSync, writeFileSync, rmSync } from 'fs';
 import { join, dirname } from 'path';
@@ -30,6 +30,10 @@ const {
   storeChunks,
   retrieveContext,
   consumeCompactSignalAdvisory,
+  detectContextWindowTokens,
+  modelIdToWindowSize,
+  MODEL_CONTEXT_WINDOWS,
+  DEFAULT_CONTEXT_WINDOW_TOKENS,
   NAMESPACE,
   COMPACT_INSTRUCTION_BUDGET,
   RETENTION_DAYS,
@@ -40,6 +44,7 @@ const TMP_DIR = join(__dirname, '.tmp-ctx-test');
 const TMP_DB = join(TMP_DIR, 'test-archive.db');
 const TMP_ARCHIVE = join(TMP_DIR, 'test-archive.json');
 const TMP_TRANSCRIPT = join(TMP_DIR, 'test-transcript.jsonl');
+const TMP_HOME = join(TMP_DIR, 'fake-home');
 
 function makeUserMsg(text) {
   return { role: 'user', content: [{ type: 'text', text }] };
@@ -60,11 +65,32 @@ function makeToolResultMsg(toolUseId, content) {
 // Setup / teardown
 before(() => {
   if (!existsSync(TMP_DIR)) mkdirSync(TMP_DIR, { recursive: true });
+  if (!existsSync(TMP_HOME)) mkdirSync(TMP_HOME, { recursive: true });
 });
 
 after(() => {
   if (existsSync(TMP_DIR)) rmSync(TMP_DIR, { recursive: true, force: true });
 });
+
+let restoreEnv = () => {};
+
+function setEnv(overrides) {
+  restoreEnv();
+  const previous = new Map();
+  for (const [key, value] of Object.entries(overrides)) {
+    previous.set(key, process.env[key]);
+    if (value == null) delete process.env[key];
+    else process.env[key] = value;
+  }
+  restoreEnv = () => {
+    for (const [key, value] of previous.entries()) {
+      if (value == null) delete process.env[key];
+      else process.env[key] = value;
+    }
+  };
+}
+
+afterEach(() => restoreEnv());
 
 // ============================================================================
 // SQLite Backend Tests
@@ -273,6 +299,48 @@ describe('JsonFileBackend', () => {
     assert.ok(!backend.hashExists('hash-xyz'));
 
     await backend.shutdown();
+  });
+});
+
+describe('context window detection', () => {
+  it('should honor HIVE_FLOW_CONTEXT_WINDOW override', () => {
+    setEnv({
+      HIVE_FLOW_CONTEXT_WINDOW: '321000',
+      CLAUDE_MODEL: 'claude-sonnet-4-6 [1m]',
+      HOME: TMP_HOME,
+      USERPROFILE: TMP_HOME,
+    });
+
+    assert.equal(detectContextWindowTokens(), 321000);
+  });
+
+  it('should detect 1M Claude models from the [1m] suffix', () => {
+    setEnv({
+      HIVE_FLOW_CONTEXT_WINDOW: null,
+      CLAUDE_MODEL: 'claude-sonnet-4-6 [1m]',
+      HOME: TMP_HOME,
+      USERPROFILE: TMP_HOME,
+    });
+
+    assert.equal(detectContextWindowTokens(), 1000000);
+    assert.equal(modelIdToWindowSize('claude-sonnet-4-6 [1m]'), 1000000);
+  });
+
+  it('should resolve known models through MODEL_CONTEXT_WINDOWS', () => {
+    assert.equal(MODEL_CONTEXT_WINDOWS.has('claude-sonnet-4-6'), true);
+    assert.equal(modelIdToWindowSize('claude-sonnet-4-6'), 200000);
+  });
+
+  it('should fall back to the default context window for unknown models', () => {
+    setEnv({
+      HIVE_FLOW_CONTEXT_WINDOW: null,
+      CLAUDE_MODEL: 'totally-unknown-model',
+      HOME: TMP_HOME,
+      USERPROFILE: TMP_HOME,
+    });
+
+    assert.equal(detectContextWindowTokens(), DEFAULT_CONTEXT_WINDOW_TOKENS);
+    assert.equal(DEFAULT_CONTEXT_WINDOW_TOKENS, 200000);
   });
 });
 

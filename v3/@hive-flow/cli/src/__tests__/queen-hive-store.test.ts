@@ -1,4 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { createHmac, randomBytes } from 'node:crypto';
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 // ── Types imported for structural tests ──────────────────────────────────
 
@@ -12,6 +16,15 @@ import type {
   HiveBudget,
   HiveStatus,
 } from '../mcp-tools/hive-store.js';
+import {
+  createHive,
+  loadHive,
+  saveHive,
+  withHiveLock,
+  recomputeDelegationMetrics,
+} from '../mcp-tools/hive-store.js';
+import { queenTools } from '../mcp-tools/queen-tools.js';
+import { setWorkflowHookDispatcher } from '../mcp-tools/workflow-executor.js';
 
 // ── Helper: build a minimal HiveRecord ───────────────────────────────────
 
@@ -249,5 +262,183 @@ describe('Queen & Hive Store — Phase 2 additions', () => {
       expect(roleEnf.sanitizeId('a/b\\c')).toBe(canonicalSanitize('a/b\\c'));
       expect(roleEnf.sanitizeId('///...')).toBe(canonicalSanitize('///...'));
     });
+  });
+});
+
+describe('Delegation metrics', () => {
+  const originalCwd = process.cwd();
+  let tempDir = '';
+
+  beforeEach(() => {
+    tempDir = mkdtempSync(join(tmpdir(), 'queen-hive-store-'));
+    process.chdir(tempDir);
+    setWorkflowHookDispatcher(null);
+  });
+
+  afterEach(() => {
+    setWorkflowHookDispatcher(null);
+    process.chdir(originalCwd);
+    if (tempDir) {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  function getQueenTool(name: string) {
+    const tool = queenTools.find(entry => entry.name === name);
+    if (!tool) throw new Error(`Tool '${name}' not found`);
+    return tool;
+  }
+
+  async function seedHiveRecord(overrides: Partial<HiveRecord> = {}): Promise<HiveRecord> {
+    const hive = createHive('queen-delegation-1', { maxWorkers: 8 });
+    await withHiveLock(hive.hiveId, () => {
+      const record = loadHive(hive.hiveId);
+      if (!record) throw new Error('expected hive record');
+      record.status = 'active';
+      record.workers = Array.from({ length: 4 }, (_, index) => ({
+        workerId: `worker-${index + 1}`,
+        agentId: `agent-${index + 1}`,
+        role: 'coder',
+        provider: 'codex-cli',
+        status: 'idle',
+        spawnedAt: new Date().toISOString(),
+      }));
+      Object.assign(record, overrides);
+      saveHive(hive.hiveId, record);
+    });
+
+    const loaded = loadHive(hive.hiveId);
+    if (!loaded) throw new Error('expected seeded hive');
+    return loaded;
+  }
+
+  function writeQueenRoleFile(queenId: string, directWorkCount: number): void {
+    const sanitizedQueenId = queenId.replace(/[/\\.]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 64);
+    const enforcementDir = join(process.cwd(), '.hive-flow', 'enforcement');
+    const agentDir = join(enforcementDir, 'agents', sanitizedQueenId);
+    mkdirSync(agentDir, { recursive: true });
+
+    const key = randomBytes(32).toString('hex');
+    const state = {
+      type: 'queen',
+      assignedAt: new Date().toISOString(),
+      assignedBy: 'advocate',
+      hiveId: 'unused-for-test',
+      directWorkCount,
+    };
+    const hmac = createHmac('sha256', key).update(JSON.stringify(state)).digest('hex');
+
+    writeFileSync(join(enforcementDir, '.hmac-key'), key, 'utf8');
+    writeFileSync(join(agentDir, 'role.json'), JSON.stringify({ state, hmac }, null, 2), 'utf8');
+  }
+
+  it('recomputes delegationRate from tasked and direct work counts', () => {
+    const hive = makeHiveRecord({
+      delegationMetrics: {
+        taskedCount: 3,
+        directWorkCount: 1,
+        delegationRate: 0,
+      },
+    });
+
+    const metrics = recomputeDelegationMetrics(hive);
+
+    expect(metrics).toEqual({
+      taskedCount: 3,
+      directWorkCount: 1,
+      delegationRate: 0.75,
+    });
+    expect(hive.delegationMetrics).toEqual(metrics);
+  });
+
+  it('queen_report blocks when delegation rate is below 0.5 and total actions are non-zero', async () => {
+    const reportTool = getQueenTool('queen_report');
+    const hive = await seedHiveRecord({
+      delegationMetrics: {
+        taskedCount: 1,
+        directWorkCount: 0,
+        delegationRate: 1,
+      },
+    });
+    writeQueenRoleFile(hive.queenId, 3);
+
+    const result = await reportTool.handler({
+      hiveId: hive.hiveId,
+      queenId: hive.queenId,
+      report: 'Delegation check report',
+    }) as Record<string, unknown>;
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('[DELEGATION_ERROR]');
+    expect(result.delegationMetrics).toEqual({
+      taskedCount: 1,
+      directWorkCount: 3,
+      delegationRate: 0.25,
+    });
+  });
+
+  it('queen_report returns delegation metrics and includes them in report hook contexts', async () => {
+    const reportTool = getQueenTool('queen_report');
+    const statusTool = getQueenTool('hive_status');
+    const dispatch = vi.fn().mockResolvedValue({ success: true });
+    const hive = await seedHiveRecord({
+      delegationMetrics: {
+        taskedCount: 3,
+        directWorkCount: 0,
+        delegationRate: 1,
+      },
+    });
+    writeQueenRoleFile(hive.queenId, 1);
+    setWorkflowHookDispatcher({ dispatch });
+
+    const result = await reportTool.handler({
+      hiveId: hive.hiveId,
+      queenId: hive.queenId,
+      report: 'Delegation success report',
+    }) as Record<string, unknown>;
+
+    expect(result.success).toBe(true);
+    expect(result.delegationMetrics).toEqual({
+      taskedCount: 3,
+      directWorkCount: 1,
+      delegationRate: 0.75,
+    });
+    expect(dispatch).toHaveBeenCalledWith('queen-report', expect.objectContaining({
+      hiveId: hive.hiveId,
+      queenId: hive.queenId,
+      delegationMetrics: {
+        taskedCount: 3,
+        directWorkCount: 1,
+        delegationRate: 0.75,
+      },
+    }));
+    expect(dispatch).toHaveBeenCalledWith('hive-complete', expect.objectContaining({
+      hiveId: hive.hiveId,
+      queenId: hive.queenId,
+      delegationMetrics: {
+        taskedCount: 3,
+        directWorkCount: 1,
+        delegationRate: 0.75,
+      },
+    }));
+
+    const singleHiveStatus = await statusTool.handler({ hiveId: hive.hiveId }) as Record<string, unknown>;
+    expect(singleHiveStatus.delegationMetrics).toEqual({
+      taskedCount: 3,
+      directWorkCount: 1,
+      delegationRate: 0.75,
+    });
+
+    const allHivesStatus = await statusTool.handler({}) as Record<string, unknown>;
+    expect(allHivesStatus.hives).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        hiveId: hive.hiveId,
+        delegationMetrics: {
+          taskedCount: 3,
+          directWorkCount: 1,
+          delegationRate: 0.75,
+        },
+      }),
+    ]));
   });
 });

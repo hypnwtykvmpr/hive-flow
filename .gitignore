@@ -180,3 +180,7 @@ tests/.tmp-*/
 # additional crap I feel like ignoring
 /.resources/
 /.resources/*
+
+# Dolt database files (added by bd init)
+.dolt/
+/.knots/
