@@ -119,6 +119,21 @@
         ]
       },
       {
+        "matcher": "Task|Bash|Write|Edit|MultiEdit|WebFetch|NotebookEdit|mcp__hive-flow__*|mcp__filesystem__*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/agent-activity-logger.cjs",
+            "timeout": 3000
+          },
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/enforcer-activity-logger.cjs",
+            "timeout": 3000
+          }
+        ]
+      },
+      {
         "matcher": "Bash",
         "hooks": [
           {
@@ -349,6 +364,11 @@
             "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/hook-handler.cjs bug-hunter-check",
             "timeout": 8000
+          },
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/enforcer-spawn.cjs",
+            "timeout": 15000
           }
         ]
       }

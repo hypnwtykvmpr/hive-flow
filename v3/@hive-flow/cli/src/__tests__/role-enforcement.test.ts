@@ -219,19 +219,15 @@ describe('Role Enforcement System', () => {
       expect(result).toEqual({});
     });
 
-    it('allows work tools when no hiveId (pre-mission queen)', () => {
+    it('allows work tools with guidance when no hiveId (pre-mission queen)', () => {
       const result = roleEnf.enforceQueenRole('Bash', { type: 'queen' });
-      expect(result).toEqual({});
+      expect(result.hookSpecificOutput?.permissionDecision).toBe('allow');
+      expect(result.hookSpecificOutput?.additionalContext).toContain('QUEEN DELEGATION');
     });
 
-    it('allows work tools with warning when idle workers exist', () => {
-      // This test requires loadQueenHive to return hive data.
-      // Since loadQueenHive reads from filesystem, we test the function directly
-      // with a known role that has hiveId but no loadable hive (filesystem mock).
-      // The function will return makeAllow() when hive is not found.
+    it('allows work tools with guidance when hive not found', () => {
       const result = roleEnf.enforceQueenRole('Bash', { type: 'queen', hiveId: 'nonexistent-hive' });
-      // Hive not found on disk -> allow
-      expect(result).toEqual({});
+      expect(result.hookSpecificOutput?.permissionDecision).toBe('allow');
     });
   });
 

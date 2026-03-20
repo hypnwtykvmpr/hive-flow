@@ -290,6 +290,36 @@ const handlers = {
         }
       } catch (e) { /* non-fatal */ }
     }
+
+    try {
+      const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+      const activityFile = path.join(projectDir, '.hive-flow', 'logs', 'activity.jsonl');
+      const cutoff = Date.now() - 24 * 3600000;
+      if (fs.existsSync(activityFile)) {
+        const lines = fs.readFileSync(activityFile, 'utf8').split('\n');
+        const kept = [];
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          try {
+            const o = JSON.parse(line);
+            const t = new Date(o.ts || o.timestamp).getTime();
+            if (!Number.isNaN(t) && t >= cutoff) kept.push(line);
+          } catch { /* drop bad line */ }
+        }
+        const tmp = `${activityFile}.prune.${process.pid}`;
+        fs.writeFileSync(tmp, kept.join('\n') + (kept.length ? '\n' : ''), 'utf8');
+        fs.renameSync(tmp, activityFile);
+      }
+    } catch { /* non-fatal */ }
+
+    try {
+      const mon = path.join(helpersDir, 'enforcer-monitor.cjs');
+      if (fs.existsSync(mon)) {
+        const { execFileSync } = require('child_process');
+        execFileSync(process.execPath, [mon, '1'], { stdio: 'ignore', timeout: 10000 });
+      }
+    } catch { /* non-fatal */ }
+
     if (session && session.end) {
       session.end();
     } else {
@@ -521,6 +551,7 @@ const handlers = {
       let text = '';
       if (roleData.state?.type === 'advocate') text = '[ADVOCATE ROLE ACTIVE] You orchestrate — you do not execute. Delegate via hives. Bash/Write/Edit are blocked.';
       else if (roleData.state?.type === 'queen') text = `[QUEEN ROLE ACTIVE — Hive ${roleData.state?.hiveId || 'unassigned'}] Prefer delegation via queen_task_worker. Direct work is tracked.`;
+      else if (roleData.state?.type === 'enforcer') text = '[ENFORCER ROLE ACTIVE] Governance proxy — observe and escalate. Bash/Write/Edit/WebFetch are blocked.';
       if (text) console.log(JSON.stringify({ hookSpecificOutput: { additionalContext: text } }));
       else console.log(JSON.stringify({}));
     } catch (e) { console.log(JSON.stringify({})); }
@@ -528,14 +559,14 @@ const handlers = {
 
   'set-role': () => {
     // Triggered via UserPromptSubmit. Reads stdin for JSON with user_prompt.
-    // If prompt matches /set-role (advocate|queen), creates role.json for the current agent.
+    // If prompt matches /set-role (advocate|queen|enforcer), creates role.json for the current agent.
     let rawInput = '';
     try { rawInput = fs.readFileSync(0, 'utf8'); } catch { /* empty stdin */ }
     let input;
     try { input = JSON.parse(rawInput); } catch { input = {}; }
 
     const userPrompt = input?.user_prompt || input?.prompt || '';
-    const match = userPrompt.match(/\/set-role\s+(advocate|queen)/i);
+    const match = userPrompt.match(/\/set-role\s+(advocate|queen|enforcer)/i);
     if (!match) { console.log(JSON.stringify({})); return; }
 
     const roleType = match[1].toLowerCase();

@@ -35,7 +35,31 @@ import {
   appendHiveAudit,
   isHiveStale,
   findStaleHives,
+  recomputeDelegationMetrics,
 } from './hive-store.js';
+import { getWorkflowHookDispatcher } from './workflow-executor.js';
+
+// ---------------------------------------------------------------------------
+// Workflow hooks (fire-and-forget)
+// ---------------------------------------------------------------------------
+
+function fireHiveSpawnedHook(context: Record<string, unknown>): void {
+  const dispatcher = getWorkflowHookDispatcher();
+  if (!dispatcher) return;
+  void dispatcher.dispatch('hive-spawned', context).catch(() => {});
+}
+
+function fireQueenReportHook(context: Record<string, unknown>): void {
+  const dispatcher = getWorkflowHookDispatcher();
+  if (!dispatcher) return;
+  void dispatcher.dispatch('queen-report', context).catch(() => {});
+}
+
+function fireHiveCompleteHook(context: Record<string, unknown>): void {
+  const dispatcher = getWorkflowHookDispatcher();
+  if (!dispatcher) return;
+  void dispatcher.dispatch('hive-complete', context).catch(() => {});
+}
 
 // ---------------------------------------------------------------------------
 // HMAC signing — lazy import to avoid circular deps with workflow-enforcer
@@ -48,6 +72,29 @@ async function signHiveState(record: HiveRecord): Promise<string> {
     return signPayload(record, key);
   } catch {
     return ''; // HMAC not available — skip signing
+  }
+}
+
+async function readVerifiedQueenDirectWorkCount(queenId: string): Promise<number> {
+  try {
+    const { readFileSync, existsSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const { createHmac, timingSafeEqual } = await import('node:crypto');
+    const sanitized = queenId.replace(/[/\\.]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 64);
+    if (!sanitized) return 0;
+    const roleFile = join(process.cwd(), '.hive-flow', 'enforcement', 'agents', sanitized, 'role.json');
+    const hmacKeyFile = join(process.cwd(), '.hive-flow', 'enforcement', '.hmac-key');
+    if (!existsSync(roleFile) || !existsSync(hmacKeyFile)) return 0;
+    const raw = JSON.parse(readFileSync(roleFile, 'utf8')) as { state?: { directWorkCount?: number }; hmac?: string };
+    if (!raw?.state || !raw?.hmac) return 0;
+    const key = readFileSync(hmacKeyFile, 'utf8').trim();
+    const expected = createHmac('sha256', key).update(JSON.stringify(raw.state)).digest('hex');
+    const a = Buffer.from(expected, 'hex');
+    const b = Buffer.from(raw.hmac, 'hex');
+    if (a.length !== b.length || !timingSafeEqual(a, b)) return 0;
+    return typeof raw.state.directWorkCount === 'number' ? raw.state.directWorkCount : 0;
+  } catch {
+    return 0;
   }
 }
 
@@ -201,6 +248,15 @@ const missionAssignTool: MCPTool = {
     } catch {
       // Role file creation is best-effort — don't block mission assignment
     }
+
+    fireHiveSpawnedHook({
+      hiveId: hive.hiveId,
+      queenId,
+      scope,
+      description,
+      maxWorkers,
+      providers,
+    });
 
     return {
       success: true,
@@ -417,6 +473,11 @@ const taskWorkerTool: MCPTool = {
           agentId: worker.agentId,
           workerId,
         });
+        if (!freshHive.delegationMetrics) {
+          freshHive.delegationMetrics = { taskedCount: 0, directWorkCount: 0, delegationRate: 1 };
+        }
+        freshHive.delegationMetrics.taskedCount = (freshHive.delegationMetrics.taskedCount ?? 0) + 1;
+        recomputeDelegationMetrics(freshHive);
         saveHive(hiveId, freshHive);
       }
     });
@@ -582,6 +643,21 @@ const reportTool: MCPTool = {
         return { success: false, error: `[COMPOSITION_ERROR] Queen report blocked. Found ${liveWorkers.length} live workers, minimum 4 required.` };
       }
 
+      const directWork = await readVerifiedQueenDirectWorkCount(queenId);
+      if (!hive.delegationMetrics) {
+        hive.delegationMetrics = { taskedCount: 0, directWorkCount: 0, delegationRate: 1 };
+      }
+      hive.delegationMetrics.directWorkCount = directWork;
+      const delegationMetrics = recomputeDelegationMetrics(hive);
+      const totalActions = delegationMetrics.taskedCount + delegationMetrics.directWorkCount;
+      if (totalActions > 0 && delegationMetrics.delegationRate < 0.5) {
+        return {
+          success: false,
+          error: `[DELEGATION_ERROR] queen_report blocked: delegation rate ${delegationMetrics.delegationRate.toFixed(3)} < 0.5 (taskedCount=${delegationMetrics.taskedCount}, directWorkCount=${delegationMetrics.directWorkCount}). Delegate more via queen_task_worker before reporting.`,
+          delegationMetrics,
+        };
+      }
+
       // Update hive status
       hive.status = status;
       hive.report = report;
@@ -600,6 +676,26 @@ const reportTool: MCPTool = {
 
       saveHive(hiveId, hive);
 
+      fireQueenReportHook({
+        hiveId,
+        queenId,
+        status,
+        reportLength: report.length,
+        workerCount: liveWorkers.length,
+        delegationMetrics: hive.delegationMetrics,
+      });
+
+      fireHiveCompleteHook({
+        hiveId,
+        queenId,
+        status,
+        completedAt: hive.completedAt,
+        reportLength: report.length,
+        workerCount: hive.workers.length,
+        auditEntryCount: hive.audit.length,
+        delegationMetrics: hive.delegationMetrics,
+      });
+
       return {
         success: true,
         hiveId,
@@ -609,6 +705,7 @@ const reportTool: MCPTool = {
         reportLength: report.length,
         workerCount: hive.workers.length,
         auditEntryCount: hive.audit.length,
+        delegationMetrics: hive.delegationMetrics,
       };
     });
   },
@@ -652,6 +749,7 @@ const hiveStatusTool: MCPTool = {
           ...hive,
           stale: includeStale ? isHiveStale(hive) : undefined,
         },
+        delegationMetrics: hive.delegationMetrics,
       };
     }
 
@@ -675,6 +773,7 @@ const hiveStatusTool: MCPTool = {
         updatedAt: h.updatedAt,
         completedAt: h.completedAt,
         stale: includeStale ? isHiveStale(h) : undefined,
+        delegationMetrics: h.delegationMetrics,
       })),
     };
   },

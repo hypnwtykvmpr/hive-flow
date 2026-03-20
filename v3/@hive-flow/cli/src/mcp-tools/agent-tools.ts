@@ -296,6 +296,24 @@ function readParentEnforcementLevel(): number {
   }
 }
 
+/** Parse agent_activity time window: default 1h; accepts "1h"/"30m"/"2d" or hours as number. */
+function parseActivityTimeRangeMs(input: Record<string, unknown>): number {
+  const raw = input.timeRange ?? input.timeRangeHours;
+  if (raw === undefined || raw === null) return 3600000;
+  if (typeof raw === 'number' && Number.isFinite(raw) && raw > 0) return raw * 3600000;
+  const s = String(raw).trim().toLowerCase();
+  const m = /^(\d+(?:\.\d+)?)\s*(h|hour|hours|m|min|mins|minute|minutes|d|day|days)?$/.exec(s);
+  if (m) {
+    const n = parseFloat(m[1]!);
+    if (!Number.isFinite(n) || n <= 0) return 3600000;
+    const u = m[2] ?? 'h';
+    if (u.startsWith('h')) return n * 3600000;
+    if (u.startsWith('m')) return n * 60000;
+    if (u.startsWith('d')) return n * 86400000;
+  }
+  return 3600000;
+}
+
 export function propagateEnforcementToSubAgent(agentId: string): void {
   try {
     const level = readParentEnforcementLevel();
@@ -1051,6 +1069,72 @@ export const agentTools: MCPTool[] = [
           error: 'Agent not found',
         };
       });
+    },
+  },
+  {
+    name: 'agent_activity',
+    description: 'Query recent per-tool activity from .hive-flow/logs/activity.jsonl (newest first).',
+    category: 'agent',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        agentId: { type: 'string', description: 'Filter by agent id' },
+        hiveId: { type: 'string', description: 'Filter by hive id from role snapshot' },
+        timeRange: {
+          type: 'string',
+          description: 'Time window (default 1h), e.g. 1h, 30m, 2d',
+        },
+        timeRangeHours: {
+          type: 'number',
+          description: 'Deprecated: hours of history; prefer timeRange string',
+        },
+        tool: { type: 'string', description: 'Substring match on tool name' },
+        limit: { type: 'number', description: 'Max rows (default 100, max 1000)' },
+      },
+    },
+    handler: async (input) => {
+      const logFile = join(process.cwd(), STORAGE_DIR, 'logs', 'activity.jsonl');
+      const windowMs = parseActivityTimeRangeMs(input as Record<string, unknown>);
+      const limit = Math.min(1000, Math.max(1, (input.limit as number) || 100));
+      const cutoff = Date.now() - windowMs;
+      const filterAgent = input.agentId as string | undefined;
+      const filterHive = input.hiveId as string | undefined;
+      const toolNeedle = (input.tool as string | undefined)?.toLowerCase();
+
+      if (!existsSync(logFile)) {
+        return { success: true, entries: [], returned: 0, note: 'no activity log yet' };
+      }
+
+      let content = '';
+      try {
+        content = readFileSync(logFile, 'utf-8');
+      } catch {
+        return { success: false, error: 'Could not read activity log' };
+      }
+
+      const lines = content.split('\n').filter(Boolean);
+      const entries: Record<string, unknown>[] = [];
+      const scanCap = limit * 4;
+      for (let i = lines.length - 1; i >= 0 && entries.length < scanCap; i--) {
+        try {
+          const row = JSON.parse(lines[i] as string) as Record<string, unknown>;
+          const ts = new Date(String(row.ts ?? '')).getTime();
+          if (Number.isNaN(ts) || ts < cutoff) continue;
+          if (filterAgent && row.agentId !== filterAgent) continue;
+          if (filterHive && row.hiveId !== filterHive) continue;
+          if (toolNeedle && !String(row.tool ?? '').toLowerCase().includes(toolNeedle)) continue;
+          entries.push(row);
+        } catch { /* skip malformed */ }
+      }
+
+      const trimmed = entries.slice(0, limit);
+      return {
+        success: true,
+        entries: trimmed,
+        returned: trimmed.length,
+        timeRangeMs: windowMs,
+        limit,
+      };
     },
   },
 ];

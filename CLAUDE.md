@@ -83,10 +83,17 @@ All enforcement is deterministic, file-based, and persists across compaction. No
 ### Role Enforcement (role-enforcement.cjs)
 
 - **Advocate role** (HARD BLOCK): Structurally denied Bash, Write, Edit, MultiEdit, NotebookEdit, WebFetch. Cannot be overridden. Only human can remove role.
-- **Queen role** (SOFT PREFERENCE): All tools allowed, but work tools inject delegation warnings when idle workers exist. Excessive direct work triggers advocate review.
-- **SubagentStart identity injection**: Injects role-specific system prompts (advocate identity, queen identity with hive ID) when subagents start
-- **HMAC-signed role files**: Per-agent role state in `.hive-flow/enforcement/agents/<id>/role.json`
-- **Hook**: `role-enforcement.cjs` (PreToolUse on Bash/Write/Edit/MultiEdit/WebFetch/MCP filesystem tools; SubagentStart)
+- **Queen role** (DELEGATION GATE): Work tools (Bash/Write/Edit/MultiEdit/NotebookEdit/WebFetch + MCP filesystem writes) are **denied** while the hive has idle/spawning workers that have **never** received a `worker-tasked` audit entry. Ground truth is hive audit, not worker `status`. After all live workers have been tasked at least once, direct work is allowed and increments HMAC-signed `directWorkCount` in `role.json`.
+- **ENFORCER role** (HARD BLOCK): Same structural denials as advocate on Bash/Write/Edit/MultiEdit/NotebookEdit/WebFetch. Spawned automatically (singleton) via `enforcer-spawn.cjs` on SubagentStart when at least one hive is `active`. Identity injected on SubagentStart.
+- **SubagentStart identity injection**: Injects role-specific prompts (advocate, queen + hive ID, enforcer) when subagents start
+- **HMAC-signed role files**: Per-agent role state in `.hive-flow/enforcement/agents/<id>/role.json` (`saveRole` / `incrementDirectWorkCount`)
+- **Hook**: `role-enforcement.cjs` (PreToolUse on Bash/Write/Edit/MultiEdit/WebFetch/MCP filesystem tools, MCP `agent_spawn`/`queen_spawn_worker`; SubagentStart)
+
+### Agent Activity & Delegation Metrics
+
+- **activity.jsonl**: PostToolUse hooks `agent-activity-logger.cjs` append one JSONL row per tool (`ts`, `agentId`, `hiveId`, `role`, `tool`, `target`, `durationMs: 0`). Query via MCP `agent_activity`.
+- **Session end**: `hook-handler.cjs session-end` prunes `activity.jsonl` entries older than 24h and runs `enforcer-monitor.cjs` (delegation rates from `enforcer-activity.jsonl`, reports to `enforcer-reports.jsonl`, may escalate via `enforcement.cjs`).
+- **Hive delegation metrics**: `hive-store` `DelegationMetrics` on `HiveRecord`; `queen_task_worker` increments `taskedCount`; `queen_report` syncs `directWorkCount` from verified queen `role.json` and **blocks** if `delegationRate < 0.5`. `hive_status` summaries include `delegationMetrics` when present.
 
 ### Model Gate (mcp-enforcement-gate.ts)
 
@@ -97,7 +104,7 @@ All enforcement is deterministic, file-based, and persists across compaction. No
 
 ### Queen Report Composition Check
 
-- **`queen_report`**: Blocks report submission if the hive has fewer than 4 live workers (`[COMPOSITION_ERROR]`). Ensures queens cannot short-circuit by reporting without delegating.
+- **`queen_report`**: Blocks if fewer than 4 live workers (`[COMPOSITION_ERROR]`). Also blocks if verified delegation rate from hive metrics is **below 0.5** (`[DELEGATION_ERROR]`) after syncing `directWorkCount` from the queen's signed `role.json`.
 - **`queen_collect_results`**: Verifies queen ownership of hive before returning worker results
 - **Location**: `v3/@hive-flow/cli/src/mcp-tools/queen-tools.ts`
 

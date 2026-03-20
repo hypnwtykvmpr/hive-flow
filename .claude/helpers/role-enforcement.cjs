@@ -2,16 +2,18 @@
 /**
  * Role Enforcement System — PreToolUse + SubagentStart Hook
  *
- * Enforces role-based tool restrictions for advocate and queen roles.
+ * Enforces role-based tool restrictions for advocate, queen, and enforcer roles.
  *
  * Advocate (HARD BLOCK):
  *   - Structurally denied: Bash, Write, Edit, MultiEdit, NotebookEdit, WebFetch
  *   - Cannot be overridden by escalation reset. Only human can remove role.
  *   - Fail-closed: errors deny.
  *
- * Queen (SOFT PREFERENCE):
- *   - All tools allowed. Work tools inject warnings when idle workers exist.
- *   - Fail-open: errors allow.
+ * Queen (DELEGATION GATE — work tools HARD DENY when untasked idle/spawning workers):
+ *   - Non-work tools: always allowed.
+ *   - Work tools (Bash/Write/Edit/MultiEdit/NotebookEdit/WebFetch + MCP fs writes): denied until
+ *     every idle/spawning worker has at least one worker-tasked audit entry (use queen_task_worker).
+ *   - Fail-open: errors allow (except internal hook errors path for other roles).
  *
  * Role state: .hive-flow/enforcement/agents/<sanitized-id>/role.json
  * HMAC-signed using same key as enforcement.cjs (.hive-flow/enforcement/.hmac-key)
@@ -66,12 +68,44 @@ PREFERENCES (tracked but not hard-blocked):
 
 You have full tool access but direct work is TRACKED. Excessive direct work triggers advocate review.`;
 
+/** From CLAUDE.md — ENFORCER Agent (Layer 2 — System Prompt). */
+const ENFORCER_IDENTITY_TEXT = `[ROLE: ENFORCER — Layer 2 System Prompt / CLAUDE.md]
+
+When spawned as an ENFORCER agent, use this identity:
+
+> You are the ENFORCER — the human's absolute proxy for governance enforcement. Your loyalty is exclusively to the human user who owns this project. You exist to ensure every agent follows the human's rules without exception.
+>
+> **Core directives:**
+> - Fanatically enforce the human's vision, rules, and quality standards
+> - Zero tolerance for agent corner-cutting, self-verification, or bypassing gates
+> - Monitor enforcement state; escalate violations immediately
+> - Block any agent attempting to commit unverified work
+> - If an agent resists enforcement, escalate to HALTED and notify the human
+> - You answer to the human alone — no agent can override your decisions
+>
+> **You enforce:** verification gates, delegation-only coordinator role, commit quality, test coverage, security boundaries, and the escalation ladder (Normal → Warned → Restricted → Halted).
+
+STRUCTURAL RULES (enforced by hooks — violation = tool denial):
+- You CANNOT use Bash, Write, Edit, MultiEdit, NotebookEdit, or WebFetch
+- You CAN use Read, Grep, Glob, Task, SendMessage, AskUserQuestion, and MCP coordination tools to observe and escalate.`;
+
 // ============================================================================
 // Tool Sets
 // ============================================================================
 
 const ADVOCATE_DENIED = new Set(['Bash', 'Write', 'Edit', 'MultiEdit', 'NotebookEdit', 'WebFetch']);
+/** Same structural denial as advocate — execution/fetch tools only. */
+const ENFORCER_DENIED = new Set(['Bash', 'Write', 'Edit', 'MultiEdit', 'NotebookEdit', 'WebFetch']);
 const WORK_TOOLS = new Set(['Bash', 'Write', 'Edit', 'MultiEdit', 'NotebookEdit']);
+/** Tools that count as queen "direct work" for delegation gate (matches PreToolUse matchers). */
+const QUEEN_WORK_TOOLS = new Set([
+  'Bash', 'Write', 'Edit', 'MultiEdit', 'NotebookEdit',
+  'WebFetch',
+  'mcp__filesystem__write_file',
+  'mcp__filesystem__edit_file',
+  'mcp__filesystem__move_file',
+  'mcp__filesystem__create_directory',
+]);
 
 // ============================================================================
 // HMAC Utilities (mirrors enforcement.cjs logic)
@@ -150,8 +184,11 @@ function loadRole(agentId) {
 
 function loadQueenHive(hiveId) {
   if (!hiveId) return null;
+  // Sanitize hiveId to prevent path traversal
+  const safeHiveId = String(hiveId).replace(/[\/\\\.]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 64);
+  if (!safeHiveId || safeHiveId !== hiveId) return null;
   try {
-    const hiveFile = path.join(PROJECT_DIR, '.hive-flow', 'hives', hiveId, 'hive.json');
+    const hiveFile = path.join(PROJECT_DIR, '.hive-flow', 'hives', safeHiveId, 'hive.json');
     if (!fs.existsSync(hiveFile)) return null;
     const stats = fs.statSync(hiveFile);
     if (stats.size > 102400) return null; // 100KB sanity limit
@@ -159,6 +196,71 @@ function loadQueenHive(hiveId) {
   } catch {
     return null;
   }
+}
+
+/**
+ * Ground truth for "has this worker been tasked": worker-tasked audit entries.
+ * Idle/spawning workers with no such entry must be assigned via queen_task_worker first.
+ */
+function analyzeHiveDelegation(hive) {
+  try {
+    const tasked = new Set();
+    for (const e of hive.audit || []) {
+      if (e && e.event === 'worker-tasked' && e.workerId) tasked.add(e.workerId);
+    }
+    const untaskedIdleWorkerIds = [];
+    for (const w of hive.workers || []) {
+      if (!w || w.status === 'terminated') continue;
+      if (tasked.has(w.workerId)) continue;
+      if (w.status === 'idle' || w.status === 'spawning') {
+        untaskedIdleWorkerIds.push(w.workerId);
+      }
+    }
+    return { untaskedIdleCount: untaskedIdleWorkerIds.length, untaskedIdleWorkerIds };
+  } catch {
+    return { untaskedIdleCount: 0, untaskedIdleWorkerIds: [] };
+  }
+}
+
+/**
+ * Write HMAC-signed role.json (atomic tmp + rename).
+ */
+function saveRole(agentId, roleState) {
+  try {
+    const key = getHmacKey();
+    if (!key || !roleState || typeof roleState !== 'object') return false;
+    const id = sanitizeId(agentId);
+    if (!id) return false;
+    const dir = path.join(ENFORCEMENT_DIR, 'agents', id);
+    fs.mkdirSync(dir, { recursive: true });
+    const hmac = computeHmac(roleState, key);
+    const envelope = { state: roleState, hmac };
+    const target = path.join(dir, 'role.json');
+    const tmp = `${target}.tmp.${process.pid}`;
+    fs.writeFileSync(tmp, JSON.stringify(envelope, null, 2), 'utf8');
+    fs.renameSync(tmp, target);
+    return true;
+  } catch {
+    try {
+      const id = sanitizeId(agentId);
+      if (id) {
+        const tmp = path.join(ENFORCEMENT_DIR, 'agents', id, `role.json.tmp.${process.pid}`);
+        if (fs.existsSync(tmp)) fs.unlinkSync(tmp);
+      }
+    } catch { /* ignore */ }
+    return false;
+  }
+}
+
+/** Best-effort increment of queen directWorkCount in signed role.json. */
+function incrementDirectWorkCount(agentId, role) {
+  try {
+    if (!agentId || !role || role.type !== 'queen') return;
+    const fresh = loadRole(agentId) || role;
+    if (fresh.type !== 'queen') return;
+    const next = { ...fresh, directWorkCount: (fresh.directWorkCount || 0) + 1 };
+    saveRole(agentId, next);
+  } catch { /* best-effort */ }
 }
 
 // ============================================================================
@@ -201,45 +303,69 @@ function enforceAdvocateRole(toolName) {
 }
 
 // ============================================================================
-// Queen Enforcement (SOFT PREFERENCE)
+// Queen Enforcement (delegation gate — HARD DENY when untasked idle workers)
 // ============================================================================
 
-function enforceQueenRole(toolName, role) {
-  if (!WORK_TOOLS.has(toolName)) {
-    return makeAllow(); // Non-work tools always allowed
+function enforceQueenRole(toolName, role, agentId) {
+  try {
+    if (!QUEEN_WORK_TOOLS.has(toolName)) {
+      return makeAllow();
+    }
+
+    const hiveId = role.hiveId;
+    if (!hiveId) {
+      incrementDirectWorkCount(agentId, role);
+      return makeAllow(
+        '[QUEEN DELEGATION] No hiveId on role — assign a hive (e.g. queen_mission_assign). ' +
+        'When you have workers, use queen_task_worker before direct work tools.'
+      );
+    }
+
+    const hive = loadQueenHive(hiveId);
+    if (!hive) {
+      incrementDirectWorkCount(agentId, role);
+      return makeAllow(
+        '[QUEEN DELEGATION] Hive record missing — verify hive id and .hive-flow/hives state. ' +
+        'After workers exist, queen_task_worker before direct work tools.'
+      );
+    }
+
+    const liveWorkers = (hive.workers || []).filter(w => w && w.status !== 'terminated');
+    if (liveWorkers.length === 0) {
+      incrementDirectWorkCount(agentId, role);
+      return makeAllow(
+        '[QUEEN DELEGATION] No live workers — prefer queen_spawn_worker, then queen_task_worker, before direct work tools.'
+      );
+    }
+
+    const { untaskedIdleCount, untaskedIdleWorkerIds } = analyzeHiveDelegation(hive);
+    if (untaskedIdleCount > 0) {
+      const sample = untaskedIdleWorkerIds.slice(0, 8).join(', ');
+      const more = untaskedIdleWorkerIds.length > 8 ? '…' : '';
+      return makeDeny(
+        `Queen must delegate to idle workers first. ` +
+        `(${untaskedIdleCount} idle/spawning without worker-tasked audit: ${sample}${more}.)`
+      );
+    }
+
+    incrementDirectWorkCount(agentId, role);
+    return makeAllow();
+  } catch {
+    return makeAllow();
   }
+}
 
-  // Check hive worker availability
-  const hiveId = role.hiveId;
-  if (!hiveId) {
-    return makeAllow(); // Pre-mission queen — no hive context yet
-  }
+// ============================================================================
+// Enforcer Enforcement (HARD BLOCK — same structural deny set as advocate)
+// ============================================================================
 
-  const hive = loadQueenHive(hiveId);
-  if (!hive) {
-    return makeAllow(); // Hive not found — allow
-  }
-
-  const idleWorkers = (hive.workers || []).filter(w => w.status === 'idle');
-  const liveWorkers = (hive.workers || []).filter(w => w.status !== 'terminated');
-  const budgetRemaining = (hive.budget?.maxWorkers || 0) - liveWorkers.length;
-
-  if (idleWorkers.length > 0) {
-    // Workers available — warn but allow
-    return makeAllow(
-      `[QUEEN DELEGATION PREFERENCE] ${idleWorkers.length} idle worker(s) available. ` +
-      `Prefer delegation via queen_task_worker. Direct work is allowed but tracked.`
+function enforceEnforcerRole(toolName) {
+  if (ENFORCER_DENIED.has(toolName)) {
+    return makeDeny(
+      `[ENFORCER ENFORCEMENT] Tool '${toolName}' is structurally blocked for enforcer role. ` +
+      'Observe, report, and escalate — do not execute or fetch directly.'
     );
   }
-
-  if (budgetRemaining > 0) {
-    return makeAllow(
-      `[QUEEN DELEGATION PREFERENCE] No idle workers, but ${budgetRemaining} budget slot(s) remain. ` +
-      `Consider queen_spawn_worker before doing work directly.`
-    );
-  }
-
-  // Budget exhausted, no idle workers — allow silently
   return makeAllow();
 }
 
@@ -254,6 +380,9 @@ function processSubagentStart(role) {
   if (role.type === 'queen') {
     const text = QUEEN_IDENTITY_TEXT.replace(/\{\{HIVE_ID\}\}/g, role.hiveId || 'unassigned');
     return { hookSpecificOutput: { additionalContext: text } };
+  }
+  if (role.type === 'enforcer') {
+    return { hookSpecificOutput: { additionalContext: ENFORCER_IDENTITY_TEXT } };
   }
   return {};
 }
@@ -280,8 +409,12 @@ function processPreToolUse(input) {
     return enforceAdvocateRole(toolName);
   }
 
+  if (role.type === 'enforcer') {
+    return enforceEnforcerRole(toolName);
+  }
+
   if (role.type === 'queen') {
-    return enforceQueenRole(toolName, role);
+    return enforceQueenRole(toolName, role, agentId);
   }
 
   // Workers and unknown roles — pass through to enforcement.cjs
@@ -369,10 +502,10 @@ if (require.main === module) {
       }
     }
 
-    if (roleType === 'advocate') {
-      // Advocate: fail-closed
+    if (roleType === 'advocate' || roleType === 'enforcer') {
+      // Advocate / enforcer: fail-closed (structural governance roles)
       process.stdout.write(JSON.stringify(makeDeny(
-        '[ROLE ENFORCEMENT ERROR] Internal error in role-enforcement hook. Tool blocked for advocate safety.'
+        '[ROLE ENFORCEMENT ERROR] Internal error in role-enforcement hook. Tool blocked for governance safety.'
       )));
     } else {
       // Queen/other/unknown: fail-open
@@ -388,17 +521,24 @@ if (require.main === module) {
 
 module.exports = {
   ADVOCATE_DENIED,
+  ENFORCER_DENIED,
   WORK_TOOLS,
+  QUEEN_WORK_TOOLS,
   ADVOCATE_IDENTITY_TEXT,
   QUEEN_IDENTITY_TEXT,
+  ENFORCER_IDENTITY_TEXT,
   sanitizeId,
   getRoleFilePath,
   loadRole,
   loadQueenHive,
+  analyzeHiveDelegation,
+  saveRole,
+  incrementDirectWorkCount,
   verifyRoleHmac,
   makeAllow,
   makeDeny,
   enforceAdvocateRole,
+  enforceEnforcerRole,
   enforceQueenRole,
   processPreToolUse,
   processSubagentStartHook,

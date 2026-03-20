@@ -84,6 +84,14 @@ export interface ModuleHiveConfig {
   stalenessTimeout?: number;
 }
 
+/** Queen delegation telemetry: tasked via queen_task_worker vs direct work (role.json). */
+export interface DelegationMetrics {
+  taskedCount: number;
+  directWorkCount: number;
+  /** taskedCount / (taskedCount + directWorkCount), or 1 when denominator is 0 */
+  delegationRate: number;
+}
+
 /**
  * Core hive record persisted at `.hive-flow/hives/{hiveId}/hive.json`.
  *
@@ -108,6 +116,8 @@ export interface HiveRecord {
   report?: string;
   /** HMAC signature over the hive record for tamper detection */
   signature?: string;
+  /** Queen delegation counters (directWorkCount synced from role.json on queen_report) */
+  delegationMetrics?: DelegationMetrics;
 }
 
 // ---------------------------------------------------------------------------
@@ -296,6 +306,17 @@ export function appendHiveAudit(record: HiveRecord, entry: Omit<HiveAuditEntry, 
     timestamp: new Date().toISOString(),
     hiveId: record.hiveId,
   });
+}
+
+/** Recompute delegationRate from taskedCount + directWorkCount on the hive record. */
+export function recomputeDelegationMetrics(record: HiveRecord): DelegationMetrics {
+  const tasked = record.delegationMetrics?.taskedCount ?? 0;
+  const direct = record.delegationMetrics?.directWorkCount ?? 0;
+  const denom = tasked + direct;
+  const delegationRate = denom === 0 ? 1 : tasked / denom;
+  const m: DelegationMetrics = { taskedCount: tasked, directWorkCount: direct, delegationRate };
+  record.delegationMetrics = m;
+  return m;
 }
 
 // ---------------------------------------------------------------------------
