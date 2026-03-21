@@ -260,9 +260,20 @@ function extractHiveId(input) {
 // Audit logging
 // ---------------------------------------------------------------------------
 
+function rotateJSONL(filePath) {
+  try {
+    if (!fs.existsSync(filePath)) return;
+    if (fs.statSync(filePath).size < 5 * 1024 * 1024) return;
+    const bak = filePath.replace(/\.jsonl$/, '.1.jsonl');
+    try { if (fs.existsSync(bak)) fs.unlinkSync(bak); } catch {}
+    fs.renameSync(filePath, bak);
+  } catch {}
+}
+
 function appendAuditLog(entry) {
   try {
     fs.mkdirSync(ENFORCEMENT_DIR, { recursive: true });
+    rotateJSONL(AUDIT_FILE);
     const line = JSON.stringify({ timestamp: new Date().toISOString(), ...entry }) + '\n';
     fs.appendFileSync(AUDIT_FILE, line);
   } catch { /* audit is best-effort */ }

@@ -90,33 +90,45 @@ export function validateWorkflowDefinition(
     }
   }
 
-  // 4. Contract compat — pairwise check: for each adjacent pair of steps,
-  // verify that all required inputs of the next step are provided by the
-  // immediate predecessor's outputs.
-  for (let i = 0; i < def.modules.length - 1; i++) {
-    const currentStep = def.modules[i];
-    const nextStep = def.modules[i + 1];
+  // 4. Contract compat — DAG traversal: for each step, collect the union of
+  // all declared dependencies' outputs and verify they satisfy every required
+  // input of that step.  Steps with no dependsOn have zero upstream outputs,
+  // so any required input they declare is an error (they must either have no
+  // required inputs or explicitly declare a dependency that provides them).
+  for (const modRef of def.modules) {
+    const stepModule = resolvedModules.get(modRef.name);
+    if (!stepModule) continue;
 
-    const currentModule = resolvedModules.get(currentStep.name);
-    const nextModule = resolvedModules.get(nextStep.name);
+    // Skip steps whose module has no required inputs — nothing to check.
+    const requiredInputs = Object.entries(stepModule.contract.inputs.fields).filter(
+      ([, f]) => (f as { required?: boolean }).required,
+    );
+    if (requiredInputs.length === 0) continue;
 
-    if (currentModule && nextModule) {
-      const currentOutputs = Object.keys(currentModule.contract.outputs.fields);
-      const nextInputs = Object.keys(nextModule.contract.inputs.fields);
+    const deps = adjList.get(modRef.name) || [];
 
-      const missingInputs: string[] = [];
-      for (const input of nextInputs) {
-        const inputField = nextModule.contract.inputs.fields[input];
-        if (inputField.required && !currentOutputs.includes(input)) {
-          missingInputs.push(input);
+    // Union of all outputs provided by every declared dependency.
+    const availableOutputs = new Set<string>();
+    for (const depName of deps) {
+      const depModule = resolvedModules.get(depName);
+      if (depModule) {
+        for (const key of Object.keys(depModule.contract.outputs.fields)) {
+          availableOutputs.add(key);
         }
       }
+    }
 
-      if (missingInputs.length > 0) {
-        errors.push(
-          `Workflow step "${nextStep.name}" requires inputs [${missingInputs.join(', ')}] but upstream outputs provide [${currentOutputs.join(', ')}].`,
-        );
+    const missingInputs: string[] = [];
+    for (const [input] of requiredInputs) {
+      if (!availableOutputs.has(input)) {
+        missingInputs.push(input);
       }
+    }
+
+    if (missingInputs.length > 0) {
+      errors.push(
+        `Workflow step "${modRef.name}" requires inputs [${missingInputs.join(', ')}] but upstream outputs provide [${[...availableOutputs].join(', ')}].`,
+      );
     }
   }
 

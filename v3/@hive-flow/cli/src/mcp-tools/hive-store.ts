@@ -344,3 +344,47 @@ export function findStaleHives(): HiveRecord[] {
   const activeHives = listHives('active');
   return activeHives.filter(isHiveStale);
 }
+
+/**
+ * W4: Transition stale active hives to 'failed' status with error 'queen-timeout'.
+ * This function finds all active hives where updatedAt is older than stalenessTimeout,
+ * changes their status to 'failed', sets error to 'queen-timeout', and saves them.
+ */
+export async function markStaleHivesAsFailed(): Promise<{ failedHives: string[]; errors: string[] }> {
+  const staleHives = findStaleHives();
+  const failedHives: string[] = [];
+  const errors: string[] = [];
+
+  for (const hive of staleHives) {
+    try {
+      await withHiveLock(hive.hiveId, () => {
+        // Re-load under lock to ensure freshness
+        const freshHive = loadHive(hive.hiveId);
+        if (!freshHive || freshHive.status !== 'active') return;
+        
+        // Check if still stale under lock
+        if (!isHiveStale(freshHive)) return;
+        
+        // Transition to failed
+        freshHive.status = 'failed';
+        freshHive.error = 'queen-timeout';
+        freshHive.updatedAt = new Date().toISOString();
+        
+        // Add audit entry
+        appendHiveAudit(freshHive, {
+          event: 'error',
+          detail: 'Hive marked as failed due to queen timeout (staleness)',
+          agentId: freshHive.queenId,
+        });
+        
+        // Save the updated hive
+        saveHive(freshHive.hiveId, freshHive);
+        failedHives.push(freshHive.hiveId);
+      });
+    } catch (error) {
+      errors.push(`Failed to transition hive ${hive.hiveId}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  return { failedHives, errors };
+}

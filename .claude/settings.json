@@ -48,6 +48,11 @@
             "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/hook-handler.cjs enforce-plan",
             "timeout": 5000
+          },
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/hook-handler.cjs pre-bash",
+            "timeout": 5000
           }
         ]
       }
@@ -90,6 +95,11 @@
             "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/hook-handler.cjs post-command",
             "timeout": 5000
+          },
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/hook-handler.cjs enforce-gate",
+            "timeout": 10000
           }
         ]
       },
@@ -436,8 +446,8 @@
     ]
   },
   "attribution": {
-    "commit": "Co-Authored-By: hive-flow <ruv@ruv.net>",
-    "pr": "🤖 Generated with [hive-flow](https://github.com/ruvnet/hive-flow)"
+    "commit": "gost",
+    "pr": "gost"
   },
   "env": {
     "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "85",
@@ -478,7 +488,7 @@
     },
     "swarm": {
       "topology": "hierarchical-mesh",
-      "maxAgents": 15
+      "maxAgents": 50
     },
     "memory": {
       "backend": "hybrid",

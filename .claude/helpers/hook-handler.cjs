@@ -601,9 +601,7 @@ const handlers = {
         hiveId: null,
         directWorkCount: 0,
       };
-      const hmac = require('crypto').createHmac('sha256', key).update(JSON.stringify(roleState)).digest('hex');
-      const envelope = { state: roleState, hmac };
-      fs.writeFileSync(path.join(roleDir, 'role.json'), JSON.stringify(envelope, null, 2), 'utf8');
+      roleEnf.saveRole(sanitized, roleState);
 
       console.log(JSON.stringify({
         hookSpecificOutput: {

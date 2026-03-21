@@ -270,6 +270,9 @@ export interface HookContext {
   /** Error information (for error hooks) */
   error?: ErrorInfo;
 
+  /** Hive information (for hive lifecycle hooks) */
+  hive?: HiveInfo;
+
   /** Additional metadata */
   metadata?: Record<string, unknown>;
 }

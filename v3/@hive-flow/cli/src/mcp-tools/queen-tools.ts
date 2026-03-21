@@ -62,6 +62,14 @@ function fireHiveCompleteHook(context: Record<string, unknown>): void {
   void dispatcher.dispatch('hive-complete', context).catch(() => {});
 }
 
+async function fireHiveTerminatedHook(context: Record<string, unknown>): Promise<void> {
+  try {
+    const { getWorkflowHookDispatcher: getDispatcher } = await import('./workflow-executor.js');
+    const dispatch = getDispatcher();
+    if (dispatch) void dispatch.dispatch('hive-terminated', context).catch(() => {});
+  } catch {}
+}
+
 // ---------------------------------------------------------------------------
 // HMAC signing — lazy import to avoid circular deps with workflow-enforcer
 // ---------------------------------------------------------------------------
@@ -1032,6 +1040,14 @@ const hiveTerminateTool: MCPTool = {
       appendHiveAudit(hive, {
         event: 'hive-terminated',
         detail: `Hive terminated: ${reason}. Terminated ${terminated.length} agents.`,
+      });
+
+      // Fire hive-terminated hook (fire-and-forget)
+      void fireHiveTerminatedHook({
+        hiveId,
+        queenId: hive.queenId,
+        workerCount: terminated.length,
+        reason: 'terminated',
       });
 
       // Sign the final state

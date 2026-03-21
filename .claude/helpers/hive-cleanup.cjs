@@ -30,7 +30,8 @@ const fs = require('fs');
 
 const IDLE_TIMEOUT_MS = parseInt(process.env.HIVE_FLOW_IDLE_TIMEOUT_MS, 10) || 900000; // 15 min
 const MIN_WORKERS_PER_HIVE = 4; // queen is separate; keep at least 4 workers alive
-const HIVES_DIR = path.join(process.cwd(), '.hive-flow', 'hives');
+const PROJECT_DIR = path.resolve(__dirname, '..', '..');
+const HIVES_DIR = path.join(PROJECT_DIR, '.hive-flow', 'hives');
 const LOCK_MAX_WAIT = 10000; // 10s
 const LOCK_STALE_THRESHOLD = 30000; // 30s
 
@@ -308,7 +309,7 @@ async function cleanupOrphanedAgents() {
       if (w.agentId) activeAgentIds.add(w.agentId);
     }
   }
-  const storePath = path.join(process.cwd(), '.hive-flow', 'agents', 'store.json');
+  const storePath = path.join(PROJECT_DIR, '.hive-flow', 'agents', 'store.json');
   let store;
   try {
     if (!fs.existsSync(storePath)) return summary;
@@ -342,7 +343,7 @@ const STALE_HIVE_THRESHOLD_MS = 3600000;
 
 function cleanupStaleHiveDirs() {
   const summary = { hivesArchived: 0, archived: [], errors: [] };
-  const hivesDir = path.join(process.cwd(), '.hive-flow', 'hives');
+  const hivesDir = path.join(PROJECT_DIR, '.hive-flow', 'hives');
   if (!fs.existsSync(hivesDir)) return summary;
   const now = Date.now();
   let entries;
@@ -374,8 +375,8 @@ const AGENT_PRUNE_THRESHOLD_MS = 3600000;
 
 function pruneTerminatedAgents() {
   const summary = { agentsPruned: 0, pruned: [], errors: [] };
-  const storePath = path.join(process.cwd(), '.hive-flow', 'agents', 'store.json');
-  const lockPath = path.join(process.cwd(), '.hive-flow', 'agents', '.store.lock');
+  const storePath = path.join(PROJECT_DIR, '.hive-flow', 'agents', 'store.json');
+  const lockPath = path.join(PROJECT_DIR, '.hive-flow', 'agents', '.store.lock');
   if (!fs.existsSync(storePath)) return summary;
   if (!acquireLockSync(lockPath)) {
     summary.errors.push({ error: 'Could not acquire store lock for pruning' });

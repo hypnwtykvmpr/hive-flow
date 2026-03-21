@@ -733,7 +733,7 @@ async function main() {
   const defaults = await getProviderDefaults();
   const config = await createProviderConfig(
     providerName,
-    agent.providerModel || defaults[providerName],
+    agent.resolvedModel || defaults[providerName],
     parsedTimeout
   );
 
@@ -790,7 +790,7 @@ async function main() {
         ...(m.toolCallId ? { toolCallId: m.toolCallId } : {}),
         ...(m.name ? { name: m.name } : {}),
       })),
-      model: agent.providerModel || defaults[providerName],
+      model: agent.resolvedModel || defaults[providerName],
       timeout: parsedTimeout || undefined,
     };
 

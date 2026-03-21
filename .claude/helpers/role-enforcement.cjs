@@ -107,16 +107,13 @@ const ENFORCER_DENIED = new Set([
   'mcp__filesystem__delete_file',
 ]);
 const WORK_TOOLS = new Set(['Bash', 'Write', 'Edit', 'MultiEdit', 'NotebookEdit']);
-/** Tools that count as queen "direct work" for delegation gate (matches PreToolUse matchers). */
-const QUEEN_WORK_TOOLS = new Set([
-  'Bash', 'Write', 'Edit', 'MultiEdit', 'NotebookEdit',
-  'WebFetch',
-  'mcp__filesystem__write_file',
-  'mcp__filesystem__edit_file',
-  'mcp__filesystem__move_file',
-  'mcp__filesystem__create_directory',
+const MCP_FS_WRITE_TOOLS = [
+  'mcp__filesystem__write_file', 'mcp__filesystem__edit_file',
+  'mcp__filesystem__move_file', 'mcp__filesystem__create_directory',
   'mcp__filesystem__delete_file',
-]);
+];
+/** Tools that count as queen "direct work" for delegation gate (matches PreToolUse matchers). */
+const QUEEN_WORK_TOOLS = new Set([...WORK_TOOLS, 'WebFetch', ...MCP_FS_WRITE_TOOLS]);
 
 // ============================================================================
 // HMAC Utilities (mirrors enforcement.cjs logic)

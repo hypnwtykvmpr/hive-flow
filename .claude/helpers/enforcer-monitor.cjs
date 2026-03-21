@@ -127,10 +127,10 @@ function main() {
   if (verdict === 'ESCALATE' || verdict === 'WARNING') {
     try {
       const enf = require('./enforcement.cjs');
-      const state = enf.getState();
+      const state = enf.getState(worstId);
       const reason = `[ENFORCER MONITOR] Queen ${worstId} delegationRate=${worstRate.toFixed(2)} (${verdict})`;
       enf.escalate(state, reason, severity);
-      enf.saveState(state);
+      enf.saveState(state, worstId);
     } catch { /* ignore */ }
   }
 

@@ -61,7 +61,7 @@ describe('validateWorkflowDefinition', () => {
       name: 'valid-workflow',
       description: 'Valid workflow',
       version: '1.0.0',
-      modules: [{ name: 'source' }, { name: 'consumer' }],
+      modules: [{ name: 'source' }, { name: 'consumer', dependsOn: ['source'] }],
       sharedState: {
         namespace: 'workflow/valid',
       },
@@ -121,8 +121,8 @@ describe('validateWorkflowDefinition', () => {
       version: '1.0.0',
       modules: [
         { name: 'source' },
-        { name: 'verify' },
-        { name: 'implement' },
+        { name: 'verify', dependsOn: ['source'] },
+        { name: 'implement', dependsOn: ['verify'] },
         { name: 'cycle-a', dependsOn: ['cycle-b'] },
         { name: 'cycle-b', dependsOn: ['cycle-a'] },
       ],

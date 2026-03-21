@@ -28,6 +28,7 @@ const advocateReviewTool: MCPTool = {
       status: hive.status,
       auditEntryCount: hive.audit.length,
       auditEntries: hive.audit,
+      delegationMetrics: hive.delegationMetrics || null,
       summary: `Hive ${hiveId} review complete. Status: ${hive.status}, Audit Entries: ${hive.audit.length}.`
     };
   }

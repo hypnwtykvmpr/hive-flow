@@ -1147,6 +1147,11 @@ export const agentTools: MCPTool[] = [
           }
         });
 
+        // W3: Delete the 3 task files after successfully reading completed result
+        try { unlinkSync(join(tasksDir, `${taskId}.task`)); } catch { /* ignore */ }
+        try { unlinkSync(resultFilePath); } catch { /* ignore */ }
+        try { unlinkSync(trackingPath); } catch { /* ignore */ }
+
         return { success: true, taskId, agentId: tracking.agentId, status: 'completed', result };
       }
 

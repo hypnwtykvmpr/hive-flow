@@ -222,13 +222,9 @@ function getState(agentId) {
 
   _readErrorCount = 0;
 
-  const { valid, state, migrated } = verifyState(raw);
+  const { valid, state } = verifyState(raw);
 
   if (valid && state) {
-    // Re-sign on legacy migration
-    if (migrated) {
-      saveState(state, agentId);
-    }
     return state;
   }
 
@@ -249,6 +245,12 @@ function getState(agentId) {
     type: 'integrity-failure',
     reason: 'state.json HMAC verification failed',
   });
+  appendViolation({
+    type: 'reconciliation',
+    reason: 'state-replaced',
+    agentId: agentId || 'global',
+    action: 'fresh-state-created',
+  });
   saveState(tampered, agentId);
   return tampered;
 }
@@ -261,10 +263,20 @@ function saveState(state, agentId) {
   writeJsonAtomic(stateFile, envelope);
 }
 
+function rotateJSONL(filePath) {
+  try {
+    if (!fs.existsSync(filePath)) return;
+    if (fs.statSync(filePath).size < 5 * 1024 * 1024) return;
+    const bak = filePath.replace(/\.jsonl$/, '.1.jsonl');
+    try { if (fs.existsSync(bak)) fs.unlinkSync(bak); } catch {}
+    fs.renameSync(filePath, bak);
+  } catch {}
+}
+
 function appendViolation(violation) {
   ensureDir();
   try {
-    // N8: Create file on first violation if it doesn't exist
+    rotateJSONL(VIOLATIONS_FILE);
     fs.appendFileSync(VIOLATIONS_FILE, JSON.stringify({
       ts: new Date().toISOString(),
       ...violation,
@@ -294,6 +306,11 @@ function escalate(state, reason, severity) {
     state.level = LEVELS.RESTRICTED;
   } else if (state.level === LEVELS.RESTRICTED) {
     state.level = LEVELS.HALTED;
+  }
+
+  // E3: Backfill restrictedGroups when reaching RESTRICTED with empty groups
+  if (state.level >= LEVELS.RESTRICTED && (!state.restrictedGroups || state.restrictedGroups.length === 0)) {
+    state.restrictedGroups = ['exec', 'write'];
   }
 
   state.violations++;

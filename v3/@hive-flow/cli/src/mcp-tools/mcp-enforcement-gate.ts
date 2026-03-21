@@ -272,6 +272,11 @@ export function checkModelEnforcement(
     };
   }
 
+  // Rule 5: deepseek provider without explicit model → default to deepseek-reasoner
+  if (input.provider === 'deepseek' && !input.model) {
+    return { allowed: true, correctedInput: { ...input, model: 'deepseek-reasoner' } };
+  }
+
   // Rule 4: Claude provider (anthropic-cli or unspecified) without explicit model → default to sonnet
   const isClaudeProvider =
     !input.provider ||
