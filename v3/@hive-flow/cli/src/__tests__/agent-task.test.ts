@@ -445,9 +445,9 @@ describe('agent_task handler', () => {
   });
 
   // ------------------------------------------------------------------
-  // 11. Default timeout is 120000ms
+  // 11. Default timeout is 300000ms
   // ------------------------------------------------------------------
-  it('uses default timeout of 120000ms when not specified', async () => {
+  it('uses default timeout of 300000ms when not specified', async () => {
     const agent = makeAgent();
     setupStoreMocks(makeStore({ [agent.agentId]: agent }));
 
@@ -456,7 +456,7 @@ describe('agent_task handler', () => {
     await handler({ agentId: agent.agentId, task: 'do something' });
 
     const { opts } = getSpawnCall();
-    expect(opts.timeout).toBe(120000);
+    expect(opts.timeout).toBe(300000);
   });
 
   // ------------------------------------------------------------------
@@ -527,9 +527,9 @@ describe('agent_task handler', () => {
 
   describe('timeout clamping', () => {
     // ------------------------------------------------------------------
-    // 14. Default timeout: no input.timeout → 120000
+    // 14. Default timeout: no input.timeout → 300000
     // ------------------------------------------------------------------
-    it('uses 120000ms timeout when input.timeout is not provided', async () => {
+    it('uses 300000ms timeout when input.timeout is not provided', async () => {
       const agent = makeAgent();
       setupStoreMocks(makeStore({ [agent.agentId]: agent }));
       mockSpawnSuccess();
@@ -537,10 +537,10 @@ describe('agent_task handler', () => {
       await handler({ agentId: agent.agentId, task: 'do something' });
 
       const { args, opts } = getSpawnCall();
-      expect(opts.timeout).toBe(120000);
+      expect(opts.timeout).toBe(300000);
       const timeoutIdx = args.indexOf('--timeout');
       expect(timeoutIdx).not.toBe(-1);
-      expect(args[timeoutIdx + 1]).toBe('120000');
+      expect(args[timeoutIdx + 1]).toBe('300000');
     });
 
     // ------------------------------------------------------------------
@@ -595,10 +595,10 @@ describe('agent_task handler', () => {
     });
 
     // ------------------------------------------------------------------
-    // 18. Zero: input.timeout = 0 → fallback to 120000, then clamped
-    //     rawTimeout = (0 || 120000) = 120000 → clamped = 120000
+    // 18. Zero: input.timeout = 0 → fallback to 300000, then clamped
+    //     rawTimeout = (0 || 300000) = 300000 → clamped = 300000
     // ------------------------------------------------------------------
-    it('falls back to 120000ms when input.timeout is zero', async () => {
+    it('falls back to 300000ms when input.timeout is zero', async () => {
       const agent = makeAgent();
       setupStoreMocks(makeStore({ [agent.agentId]: agent }));
       mockSpawnSuccess();
@@ -606,15 +606,15 @@ describe('agent_task handler', () => {
       await handler({ agentId: agent.agentId, task: 'do something', timeout: 0 });
 
       const { args, opts } = getSpawnCall();
-      expect(opts.timeout).toBe(120000);
+      expect(opts.timeout).toBe(300000);
       const timeoutIdx = args.indexOf('--timeout');
       expect(timeoutIdx).not.toBe(-1);
-      expect(args[timeoutIdx + 1]).toBe('120000');
+      expect(args[timeoutIdx + 1]).toBe('300000');
     });
 
     // ------------------------------------------------------------------
     // 19. Negative: input.timeout = -1 → clamped to 10000
-    //     rawTimeout = (-1 || 120000) = 120000? No: -1 is truthy.
+    //     rawTimeout = (-1 || 300000) = 300000? No: -1 is truthy.
     //     rawTimeout = -1, Math.max(10000, Math.min(3600000, -1)) = 10000
     // ------------------------------------------------------------------
     it('clamps timeout to minimum 10000ms when input is negative', async () => {
@@ -632,10 +632,10 @@ describe('agent_task handler', () => {
     });
 
     // ------------------------------------------------------------------
-    // 20. NaN: input.timeout = NaN → fallback to 120000
-    //     rawTimeout = (NaN || 120000) = 120000 → clamped = 120000
+    // 20. NaN: input.timeout = NaN → fallback to 300000
+    //     rawTimeout = (NaN || 300000) = 300000 → clamped = 300000
     // ------------------------------------------------------------------
-    it('falls back to 120000ms when input.timeout is NaN', async () => {
+    it('falls back to 300000ms when input.timeout is NaN', async () => {
       const agent = makeAgent();
       setupStoreMocks(makeStore({ [agent.agentId]: agent }));
       mockSpawnSuccess();
@@ -643,10 +643,10 @@ describe('agent_task handler', () => {
       await handler({ agentId: agent.agentId, task: 'do something', timeout: NaN });
 
       const { args, opts } = getSpawnCall();
-      expect(opts.timeout).toBe(120000);
+      expect(opts.timeout).toBe(300000);
       const timeoutIdx = args.indexOf('--timeout');
       expect(timeoutIdx).not.toBe(-1);
-      expect(args[timeoutIdx + 1]).toBe('120000');
+      expect(args[timeoutIdx + 1]).toBe('300000');
     });
 
     // ------------------------------------------------------------------
@@ -696,7 +696,7 @@ describe('agent_task handler', () => {
     /**
      * These tests verify that the timeout value written into spawn opts
      * matches what the bridge would receive via --timeout and use in
-     * createProviderConfig. The bridge sets config.timeout = timeoutMs || 120000,
+     * createProviderConfig. The bridge sets config.timeout = timeoutMs || 300000,
      * so the value passed in --timeout must be the clamped value.
      */
 
@@ -720,11 +720,11 @@ describe('agent_task handler', () => {
     });
 
     // ------------------------------------------------------------------
-    // 23. createProviderConfig with timeout = 0 defaults to 120000
-    //     The handler maps timeout:0 → rawTimeout=120000 → clamped=120000.
-    //     The bridge arg is '120000'; bridge createProviderConfig: 120000 || 120000 = 120000.
+    // 23. createProviderConfig with timeout = 0 defaults to 300000
+    //     The handler maps timeout:0 → rawTimeout=300000 → clamped=300000.
+    //     The bridge arg is '300000'; bridge createProviderConfig: 300000 || 300000 = 300000.
     // ------------------------------------------------------------------
-    it('bridge receives 120000 when caller provides timeout=0 (fallback chain)', async () => {
+    it('bridge receives 300000 when caller provides timeout=0 (fallback chain)', async () => {
       const agent = makeAgent();
       setupStoreMocks(makeStore({ [agent.agentId]: agent }));
       mockSpawnSuccess();
@@ -733,19 +733,19 @@ describe('agent_task handler', () => {
 
       const { args, opts } = getSpawnCall();
 
-      // spawn opts.timeout (used as process kill timeout) = 120000
-      expect(opts.timeout).toBe(120000);
+      // spawn opts.timeout (used as process kill timeout) = 300000
+      expect(opts.timeout).toBe(300000);
 
-      // bridge --timeout arg = '120000'
+      // bridge --timeout arg = '300000'
       const idx = args.indexOf('--timeout');
       expect(idx).not.toBe(-1);
-      expect(args[idx + 1]).toBe('120000');
+      expect(args[idx + 1]).toBe('300000');
     });
 
     // ------------------------------------------------------------------
     // 24. createProviderConfig with a valid custom timeout
     //     timeout=45000 → rawTimeout=45000 → clamped=45000 (above min, below max)
-    //     bridge receives --timeout 45000; config.timeout = 45000 || 120000 = 45000
+    //     bridge receives --timeout 45000; config.timeout = 45000 || 300000 = 45000
     // ------------------------------------------------------------------
     it('bridge receives exact custom timeout when within valid range', async () => {
       const agent = makeAgent();

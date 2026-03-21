@@ -830,14 +830,14 @@ export const agentTools: MCPTool[] = [
       properties: {
         agentId: { type: 'string', description: 'ID of the agent (must be spawned first via agent_spawn)' },
         task: { type: 'string', description: 'Task prompt to send to the agent' },
-        timeout: { type: 'number', description: 'Timeout in ms (default: 120000)' },
+        timeout: { type: 'number', description: 'Timeout in ms (default: 300000)' },
       },
       required: ['agentId', 'task'],
     },
     handler: async (input) => {
       const agentId = input.agentId as string;
       const task = input.task as string;
-      const rawTimeout = (input.timeout as number) || 120000;
+      const rawTimeout = (input.timeout as number) || 300000;
       const MIN_TIMEOUT = 10000;    // 10 seconds
       const MAX_TIMEOUT = 3600000;  // 60 minutes
       const timeout = Math.max(MIN_TIMEOUT, Math.min(MAX_TIMEOUT, rawTimeout));
@@ -1002,14 +1002,14 @@ export const agentTools: MCPTool[] = [
       properties: {
         agentId: { type: 'string', description: 'ID of the agent (must be spawned first via agent_spawn)' },
         task: { type: 'string', description: 'Task prompt to send to the agent' },
-        timeout: { type: 'number', description: 'Timeout in ms (default: 120000)' },
+        timeout: { type: 'number', description: 'Timeout in ms (default: 300000)' },
       },
       required: ['agentId', 'task'],
     },
     handler: async (input) => {
       const agentId = input.agentId as string;
       const task = input.task as string;
-      const rawTimeout = (input.timeout as number) || 120000;
+      const rawTimeout = (input.timeout as number) || 300000;
       const MIN_TIMEOUT = 10000;    // 10 seconds
       const MAX_TIMEOUT = 3600000;  // 60 minutes
       const timeout = Math.max(MIN_TIMEOUT, Math.min(MAX_TIMEOUT, rawTimeout));
