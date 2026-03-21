@@ -277,6 +277,11 @@ export function checkModelEnforcement(
     return { allowed: true, correctedInput: { ...input, model: 'deepseek-reasoner' } };
   }
 
+  // Rule 6: cursor-cli provider without explicit model → default to 'auto'
+  if (input.provider === 'cursor-cli' && !input.model) {
+    return { allowed: true, correctedInput: { ...input, model: 'auto' } };
+  }
+
   // Rule 4: Claude provider (anthropic-cli or unspecified) without explicit model → default to sonnet
   const isClaudeProvider =
     !input.provider ||

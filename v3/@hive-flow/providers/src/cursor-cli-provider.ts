@@ -135,9 +135,24 @@ export class CursorCLIProvider extends BaseProvider {
       const timeoutMs = request.timeout || this.defaultTimeout;
       const timer = setTimeout(() => {
         if (settled) return;
-        settled = true;
         child.kill('SIGKILL');
         this.activeProcesses.delete(child);
+
+        // F5: If stderr shows TTY patterns and this isn't already a retry,
+        // re-invoke doComplete. The new spawnChild will hit the same TTY error
+        // but catch it via close handler → tmux retry (before timeout fires).
+        const isTtyHang = TTY_ERROR_PATTERNS.some((re) => re.test(stderr));
+        if (isTtyHang && !(request as unknown as Record<string, unknown>)._tmuxRetried) {
+          this.logger.warn('cursor-cli timed out with TTY patterns in stderr; retrying', {
+            stderr: stderr.slice(-500),
+          });
+          settled = true;
+          const retryReq = Object.assign({}, request, { _tmuxRetried: true });
+          this.doComplete(retryReq).then(resolve, reject);
+          return;
+        }
+
+        settled = true;
         reject(new LLMProviderError(`Request timed out after ${timeoutMs}ms`, 'TIMEOUT', 'cursor-cli', undefined, true));
       }, timeoutMs);
 
@@ -552,37 +567,56 @@ export class CursorCLIProvider extends BaseProvider {
       });
     }
 
-    // Start detached tmux session — all args are separate array elements.
-    execFileSync(tmuxBin, ['new-session', '-d', '-s', sessionId, '-x', '220', '-y', '50'], {
-      env,
-      stdio: 'ignore',
-    });
+    // All tmux setup wrapped in try-catch: if anything after mkfifo fails,
+    // clean up the tmux session + temp files to prevent leaks.
+    let tmuxSessionStarted = false;
+    try {
+      // Start detached tmux session — all args are separate array elements.
+      execFileSync(tmuxBin, ['new-session', '-d', '-s', sessionId, '-x', '220', '-y', '50'], {
+        env,
+        stdio: 'ignore',
+      });
+      tmuxSessionStarted = true;
 
-    // Redirect pane output to FIFO.  The shell-command string passed to
-    // pipe-pane is a fixed template; pipePath is a generated temp path
-    // containing only safe characters (alphanumeric + hyphen + dot + slash).
-    execFileSync(tmuxBin, ['pipe-pane', '-t', sessionId, `cat >> ${pipePath}`], {
-      env,
-      stdio: 'ignore',
-    });
+      // Redirect pane output to FIFO via pipe-pane.
+      // Single-quote the pipePath for defense-in-depth even though it's auto-generated.
+      const qPath = `'${pipePath.replace(/'/g, "'\\''")}'`;
+      execFileSync(tmuxBin, ['pipe-pane', '-t', sessionId, `cat >> ${qPath}`], {
+        env,
+        stdio: 'ignore',
+      });
 
-    // Build the pane command: `cat <promptFile> | <cursorBin> <args...>; tmux kill-session -t <session>`.
-    // All tokens are individually single-quote-escaped so shell word-splitting
-    // cannot alter them inside the tmux pane shell.
-    const q = (s: string) => `'${s.replace(/'/g, "'\\''")}'`;
-    const paneCmd = [
-      'cat', q(promptFile), '|',
-      q(this.binaryPath!), ...args.map(q),
-      ';', tmuxBin, 'kill-session', '-t', sessionId,
-    ].join(' ');
+      // Build the pane command: `cat <promptFile> | <cursorBin> <args...>; tmux kill-session -t <session>`.
+      // All tokens are individually single-quote-escaped so shell word-splitting
+      // cannot alter them inside the tmux pane shell.
+      const q = (s: string) => `'${s.replace(/'/g, "'\\''")}'`;
+      const paneCmd = [
+        'cat', q(promptFile), '|',
+        q(this.binaryPath!), ...args.map(q),
+        ';', tmuxBin, 'kill-session', '-t', sessionId,
+      ].join(' ');
 
-    execFileSync(tmuxBin, ['send-keys', '-t', sessionId, paneCmd, 'Enter'], {
-      env,
-      stdio: 'ignore',
-    });
+      execFileSync(tmuxBin, ['send-keys', '-t', sessionId, paneCmd, 'Enter'], {
+        env,
+        stdio: 'ignore',
+      });
+    } catch (tmuxErr) {
+      // Clean up on failure: kill tmux session + remove temp files
+      if (tmuxSessionStarted) {
+        try { execFileSync(tmuxBin, ['kill-session', '-t', sessionId], { stdio: 'ignore' }); } catch { /* already gone */ }
+      }
+      try { fs.unlinkSync(pipePath); } catch { /* already removed */ }
+      try { fs.unlinkSync(promptFile); } catch { /* already removed */ }
+      throw tmuxErr;
+    }
 
-    // Open the FIFO for reading.
+    // Open the FIFO for reading with a timeout to prevent indefinite blocking.
     const fifoStream = fs.createReadStream(pipePath);
+    const fifoTimeoutMs = this.defaultTimeout * 2;
+    const fifoTimer = setTimeout(() => {
+      fifoStream.destroy(new Error(`FIFO read timed out after ${fifoTimeoutMs}ms`));
+      try { execFileSync(tmuxBin, ['kill-session', '-t', sessionId], { stdio: 'ignore' }); } catch { /* already gone */ }
+    }, fifoTimeoutMs);
 
     const { PassThrough } = require('stream') as typeof import('stream');
     const { EventEmitter } = require('events') as typeof import('events');
@@ -600,6 +634,7 @@ export class CursorCLIProvider extends BaseProvider {
     };
 
     const cleanup = () => {
+      clearTimeout(fifoTimer);
       try { fs.unlinkSync(pipePath); } catch { /* already removed */ }
       try { fs.unlinkSync(promptFile); } catch { /* already removed */ }
     };
