@@ -168,6 +168,7 @@ export async function executeStepLoop(params: ExecuteStepLoopParams): Promise<St
 
   for (let i = startIndex; i < steps.length; i++) {
     const step = steps[i];
+    if (step.name === 'commit') workflow.variables.pipelineComplete = true;
     step.status = 'running';
     step.startedAt = new Date().toISOString();
 
@@ -222,6 +223,10 @@ export async function executeStepLoop(params: ExecuteStepLoopParams): Promise<St
     step.status = stepResult.status;
     step.completedAt = new Date().toISOString();
     step.result = stepResult.result;
+
+    workflow.variables._previousOutput = stepResult.result;
+    if (!workflow.variables._moduleOutputs) workflow.variables._moduleOutputs = {};
+    (workflow.variables._moduleOutputs as Record<string, unknown>)[step.name] = stepResult.result;
 
     await dispatchWorkflowHook('module-complete', {
       workflowId: workflow.workflowId,

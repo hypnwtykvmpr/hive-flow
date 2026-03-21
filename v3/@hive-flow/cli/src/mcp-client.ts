@@ -44,6 +44,7 @@ import { planningSubflowTools } from './mcp-tools/planning-subflow.js';
 import { bugHunterTools } from './mcp-tools/bug-hunter.js';
 import { workflowEnforcerTools } from './mcp-tools/workflow-enforcer.js';
 import { queenTools } from './mcp-tools/queen-tools.js';
+import { advocateTools } from './mcp-tools/advocate-tools.js';
 import { checkMCPEnforcement, checkModelEnforcement } from './mcp-tools/mcp-enforcement-gate.js';
 
 /**
@@ -103,6 +104,7 @@ registerTools([
   ...workflowEnforcerTools,
   // Queen protocol tools (hive management)
   ...queenTools,
+  ...advocateTools,
 ]);
 
 // SEC-013: Freeze registry after initialization — no further tool registration allowed

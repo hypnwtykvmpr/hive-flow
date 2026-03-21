@@ -17,7 +17,7 @@ export function createRemediationFlow(options?: RemediationFlowOptions): Workflo
 
   const modules: WorkflowModuleRef[] = [
     { name: 'audit' },
-    { name: 'verify-investigate' },
+    { name: 'verify-audit' },
     { name: 'planning' },
   ];
 
@@ -41,7 +41,7 @@ export function createRemediationFlow(options?: RemediationFlowOptions): Workflo
   return {
     name: 'remediation',
     description:
-      'Audit → verify-investigate → planning → N×(implement-band-N → verify-implement-band-N → commit-band-N)',
+      'Audit → verify-audit → planning → N×(implement-band-N → verify-implement-band-N → commit-band-N)',
     version: '1.0.0',
     modules,
     sharedState: {

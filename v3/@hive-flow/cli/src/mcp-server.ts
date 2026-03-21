@@ -31,6 +31,12 @@ import { dirname } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+let _mcpClientModule: any = null;
+async function getMcpClient() {
+  if (!_mcpClientModule) _mcpClientModule = await import('./mcp-client.js');
+  return _mcpClientModule;
+}
+
 /**
  * MCP Server configuration
  */
@@ -304,7 +310,7 @@ export class MCPServerManager extends EventEmitter {
    */
   private async startStdioServer(): Promise<void> {
     // Import the tool registry
-    const { listMCPTools, callMCPTool, hasTool } = await import('./mcp-client.js');
+    const { listMCPTools, callMCPTool, hasTool } = await getMcpClient();
 
     const VERSION = '3.0.0';
     const sessionId = `mcp-${Date.now()}-${randomUUID().slice(0, 8)}`;
@@ -395,7 +401,7 @@ export class MCPServerManager extends EventEmitter {
     message: { jsonrpc: string; id?: string | number; method?: string; params?: unknown },
     sessionId: string
   ): Promise<{ jsonrpc: string; id?: string | number; result?: unknown; error?: { code: number; message: string } } | null> {
-    const { listMCPTools, callMCPTool, hasTool } = await import('./mcp-client.js');
+    const { listMCPTools, callMCPTool, hasTool } = await getMcpClient();
 
     if (!message.method) {
       return {

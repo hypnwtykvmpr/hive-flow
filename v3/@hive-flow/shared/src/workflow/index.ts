@@ -117,6 +117,13 @@ export type {
 export { createCommitModule, SECRET_PATTERNS } from './modules/commit.js';
 export type { CommitResult } from './modules/commit.js';
 
+export { createTestModule } from './modules/test.js';
+export { createDebugModule } from './modules/debug.js';
+export { createHumanGateModule } from './modules/human-gate.js';
+export { createAdvocateReviewModule } from './modules/advocate-review.js';
+
+export { validateWorkflowDefinition } from './validation.js';
+
 // Flow templates
 export {
   FLOW_REGISTRY,

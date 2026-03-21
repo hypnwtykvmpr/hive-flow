@@ -26,8 +26,8 @@
  * @module @hive-flow/providers/scripts/provider-agent-bridge
  */
 
-import { readFileSync, writeFileSync, appendFileSync, mkdirSync, renameSync, existsSync, rmdirSync, statSync, unlinkSync } from 'fs';
-import { join, dirname } from 'path';
+import { readFileSync, writeFileSync, appendFileSync, mkdirSync, renameSync, existsSync, rmdirSync, statSync, unlinkSync, readdirSync } from 'fs';
+import { join, dirname, resolve } from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 
 // ===== Bridge File Logger (append-only, mirrors hook-handler.cjs patterns) =====
@@ -403,6 +403,42 @@ async function loadMCPClient() {
   return null;
 }
 
+// ===== Bridge Filesystem Security Guardrails =====
+
+const PROJECT_ROOT = resolve(process.cwd());
+
+function validateFilePath(filePath) {
+  const resolved = resolve(filePath);
+  if (!resolved.startsWith(PROJECT_ROOT + '/') && resolved !== PROJECT_ROOT) {
+    throw new Error(`Path traversal blocked: ${filePath} resolves outside project root`);
+  }
+  return resolved;
+}
+
+const PROTECTED_WRITE_PATHS = [
+  '.hive-flow/enforcement/',
+  '.claude/helpers/',
+  '.claude/settings.json',
+  '.env',
+  'state.json',
+  'role.json',
+];
+
+function isProtectedPath(filePath) {
+  const rel = resolve(filePath).replace(PROJECT_ROOT + '/', '');
+  return PROTECTED_WRITE_PATHS.some(p => rel.includes(p));
+}
+
+function checkEnforcementLevel() {
+  try {
+    const statePath = resolve(PROJECT_ROOT, '.hive-flow', 'enforcement', 'state.json');
+    const raw = readFileSync(statePath, 'utf-8');
+    const state = JSON.parse(raw);
+    const level = state?.payload ? JSON.parse(state.payload).level : (state.level || 0);
+    return level;
+  } catch { return 0; }
+}
+
 // SEC-002/HIGH-003: Bridge tool blocklist — provider agents are restricted to operational tools.
 // Governance, enforcement, and system-critical tools are blocked to prevent privilege escalation.
 const BRIDGE_BLOCKED_TOOLS = new Set([
@@ -451,7 +487,67 @@ const BRIDGE_BLOCKED_TOOLS = new Set([
   'agent_spawn',
 ]);
 
+// Built-in filesystem tool handlers — always available to provider agents.
+// These bypass the MCP client entirely so providers can read/write/edit files
+// even when the CLI MCP client is unavailable in the bridge subprocess.
+const BRIDGE_FILESYSTEM_TOOLS = {
+  'read_file': ({ path: filePath }) => {
+    const safePath = validateFilePath(filePath);
+    return readFileSync(safePath, 'utf-8');
+  },
+  'write_file': ({ path: filePath, content }) => {
+    validateFilePath(filePath);
+    if (isProtectedPath(filePath)) {
+      throw new Error(`Write blocked: ${filePath} is a protected path`);
+    }
+    if (checkEnforcementLevel() >= 2) {
+      throw new Error(`Writes blocked at enforcement level RESTRICTED+`);
+    }
+    const safePath = resolve(filePath);
+    mkdirSync(dirname(safePath), { recursive: true });
+    writeFileSync(safePath, content, 'utf-8');
+    return `File written: ${safePath}`;
+  },
+  'edit_file': ({ path: filePath, old_string, new_string }) => {
+    validateFilePath(filePath);
+    if (isProtectedPath(filePath)) {
+      throw new Error(`Write blocked: ${filePath} is a protected path`);
+    }
+    if (checkEnforcementLevel() >= 2) {
+      throw new Error(`Writes blocked at enforcement level RESTRICTED+`);
+    }
+    const safePath = resolve(filePath);
+    const content = readFileSync(safePath, 'utf-8');
+    if (!content.includes(old_string)) {
+      return `Error: old_string not found in ${safePath}`;
+    }
+    writeFileSync(safePath, content.replace(old_string, new_string), 'utf-8');
+    return `File edited: ${safePath}`;
+  },
+  'list_directory': ({ path: dirPath }) => {
+    const safePath = validateFilePath(dirPath || '.');
+    return readdirSync(safePath).join('\n');
+  },
+};
+
 async function executeMCPTool(toolName, toolArgs) {
+  // Built-in filesystem tools — handle before MCP client or blocklist checks
+  const fsHandler = BRIDGE_FILESYSTEM_TOOLS[toolName];
+  if (fsHandler) {
+    let parsedFsArgs;
+    if (typeof toolArgs === 'string') {
+      try { parsedFsArgs = JSON.parse(toolArgs); } catch { parsedFsArgs = {}; }
+    } else {
+      parsedFsArgs = toolArgs || {};
+    }
+    try {
+      const result = fsHandler(parsedFsArgs);
+      return typeof result === 'string' ? result : JSON.stringify(result);
+    } catch (err) {
+      return `Error: ${err.message}`;
+    }
+  }
+
   // SEC-002: Check blocklist before any execution
   if (BRIDGE_BLOCKED_TOOLS.has(toolName)) {
     stderrLogger.warn(`Tool blocked by bridge security policy: ${toolName}`);
@@ -698,8 +794,77 @@ async function main() {
       timeout: parsedTimeout || undefined,
     };
 
+    // Always include built-in filesystem tools so providers know they can use them.
+    // These are handled directly in the bridge (no MCP client required).
+    const builtInFilesystemTools = [
+      {
+        type: 'function',
+        function: {
+          name: 'read_file',
+          description: 'Read the contents of a file.',
+          parameters: {
+            type: 'object',
+            properties: {
+              path: { type: 'string', description: 'Absolute or relative path to the file.' },
+            },
+            required: ['path'],
+          },
+        },
+      },
+      {
+        type: 'function',
+        function: {
+          name: 'write_file',
+          description: 'Write content to a file, creating parent directories if needed.',
+          parameters: {
+            type: 'object',
+            properties: {
+              path: { type: 'string', description: 'Absolute or relative path to the file.' },
+              content: { type: 'string', description: 'Full content to write to the file.' },
+            },
+            required: ['path', 'content'],
+          },
+        },
+      },
+      {
+        type: 'function',
+        function: {
+          name: 'edit_file',
+          description: 'Replace an exact substring in a file with new text.',
+          parameters: {
+            type: 'object',
+            properties: {
+              path: { type: 'string', description: 'Absolute or relative path to the file.' },
+              old_string: { type: 'string', description: 'The exact text to find and replace.' },
+              new_string: { type: 'string', description: 'The text to replace it with.' },
+            },
+            required: ['path', 'old_string', 'new_string'],
+          },
+        },
+      },
+      {
+        type: 'function',
+        function: {
+          name: 'list_directory',
+          description: 'List the contents of a directory.',
+          parameters: {
+            type: 'object',
+            properties: {
+              path: { type: 'string', description: 'Directory path to list. Defaults to current directory.' },
+            },
+            required: [],
+          },
+        },
+      },
+    ];
+
     if (agent.config?.tools && Array.isArray(agent.config.tools)) {
-      request.tools = agent.config.tools;
+      // Merge: built-in filesystem tools first, then agent-specific tools (deduplicated by name)
+      const agentToolNames = new Set(agent.config.tools.map((t) => t?.function?.name));
+      const deduped = builtInFilesystemTools.filter((t) => !agentToolNames.has(t.function.name));
+      request.tools = [...deduped, ...agent.config.tools];
+    } else {
+      request.tools = builtInFilesystemTools;
     }
 
     // Log the constructed CLI command / request

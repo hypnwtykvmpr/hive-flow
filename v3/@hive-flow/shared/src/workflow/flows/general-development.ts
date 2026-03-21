@@ -21,6 +21,7 @@ export function createGeneralDevelopmentFlow(options?: GeneralDevelopmentFlowOpt
     { name: 'verify-investigate' },
     { name: 'design' },
     { name: 'verify-design' },
+    { name: 'planning' },
   ];
 
   if (options?.humanGateAfterDesign) {
@@ -30,13 +31,15 @@ export function createGeneralDevelopmentFlow(options?: GeneralDevelopmentFlowOpt
   modules.push(
     { name: 'implement' },
     { name: 'verify-implement' },
+    { name: 'audit' },
+    { name: 'verify-audit' },
     { name: 'commit' },
   );
 
   return {
     name: 'general-development',
     description:
-      'Investigate → verify-investigate → design → verify-design → [optional human gate] → implement → verify-implement → commit',
+      'Investigate → verify-investigate → design → verify-design → planning → [optional human gate] → implement → verify-implement → audit → verify-audit → commit',
     version: '1.0.0',
     modules,
     sharedState: {

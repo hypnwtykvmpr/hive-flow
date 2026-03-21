@@ -34,6 +34,10 @@ import type {
 } from '@hive-flow/shared/workflow';
 
 import {
+  WorkflowStateMachine,
+} from '@hive-flow/shared/workflow';
+
+import {
   createInvestigateModule,
   createVerifyModule,
   createResearchModule,
@@ -43,6 +47,21 @@ import {
   createAuditModule,
   createCommitModule,
 } from '@hive-flow/shared/workflow';
+
+// ---------------------------------------------------------------------------
+// Per-workflow state machine store (B10)
+// ---------------------------------------------------------------------------
+
+const _workflowStateMachines = new Map<string, WorkflowStateMachine>();
+
+function getOrCreateStateMachine(workflowId: string): WorkflowStateMachine {
+  let sm = _workflowStateMachines.get(workflowId);
+  if (!sm) {
+    sm = new WorkflowStateMachine(workflowId, workflowId);
+    _workflowStateMachines.set(workflowId, sm);
+  }
+  return sm;
+}
 
 // ---------------------------------------------------------------------------
 // Module Registry — maps module names to factory-created WorkflowModule instances
@@ -641,18 +660,58 @@ async function executeModuleStep(
     };
   }
 
+  // B12: Read hiveConfig from module definition before execution
+  const hiveConfig = (mod as unknown as Record<string, unknown>).hiveConfig as
+    | { roles?: Array<{ role: string; [k: string]: unknown }> }
+    | undefined;
+
   const moduleCtx: ModuleExecutionContext = {
     workflowId: ctx.workflowId,
     moduleInstanceId: `${step.stepId}-${step.name}`,
     inputs: step.config,
     variables: { ...ctx.variables, ...workflowContext },
     previousOutput: (workflowContext._previousOutput as Record<string, unknown>) || undefined,
+    // B12: Propagate hive config into execution context metadata
+    metadata: hiveConfig ? { hiveConfig } : undefined,
   };
+
+  // B10: Wire state machine — register module and attempt forward transition before execution
+  const stateMachine = getOrCreateStateMachine(ctx.workflowId);
+  stateMachine.registerModule(registryKey, moduleCtx.moduleInstanceId);
+  // Map the step name to a workflow state position (best-effort forward transition)
+  const stepStateMap: Record<string, string> = {
+    investigate: 'INVESTIGATING',
+    verify_investigate: 'VERIFYING_INVESTIGATION',
+    research: 'RESEARCHING',
+    verify_research: 'VERIFYING_RESEARCH',
+    design: 'DESIGNING',
+    verify_design: 'VERIFYING_DESIGN',
+    planning: 'PLANNING',
+    verify_planning: 'VERIFYING_PLAN',
+    implement: 'IMPLEMENTING',
+    verify_implement: 'VERIFYING_IMPLEMENTATION',
+    audit: 'AUDITING',
+    verify_audit: 'VERIFYING_AUDIT',
+    commit: 'COMMITTING',
+  };
+  const stepStateName = stepStateMap[registryKey.toLowerCase()];
+  if (stepStateName) {
+    stateMachine.agentTransition(stepStateName as Parameters<WorkflowStateMachine['agentTransition']>[0]);
+  }
 
   const moduleResult = await mod.execute(moduleCtx);
 
+  // B10: Update module state after execution
+  stateMachine.updateModuleState(registryKey, {
+    status: moduleResult.success ? 'completed' : 'failed',
+    completedAt: new Date().toISOString(),
+  });
+
   // Map module status to CLI status
   const cliStatus = moduleResult.success ? 'completed' : 'failed';
+
+  // B12: Compute workersSpawned from hiveConfig roles (not hardcoded 0)
+  const workersSpawned = hiveConfig?.roles?.length ?? 0;
 
   return {
     stepId: step.stepId,
@@ -667,6 +726,8 @@ async function executeModuleStep(
       moduleDurationMs: moduleResult.durationMs,
       moduleGateResult: moduleResult.gateResult,
       moduleHiveResult: moduleResult.hiveResult,
+      workersSpawned,
+      ...(hiveConfig ? { hiveConfig } : {}),
       error: moduleResult.error,
       completedAt: new Date().toISOString(),
     },
@@ -808,20 +869,44 @@ async function executeLoopStep(
   while (iterationCount < maxIterations) {
     iterationCount++;
 
-    // Execute loop body
-    const bodyResult = loopBody ? {
-      iteration: iterationCount,
-      executed: true,
-      body: loopBody,
-      completedAt: new Date().toISOString(),
-    } : { iteration: iterationCount, executed: true };
+    // Execute loop body as a real workflow step
+    let bodyResult: unknown;
+    if (loopBody) {
+      const bodyStepCtx: WorkflowStepContext = {
+        workflowId: ctx.workflowId,
+        step: {
+          stepId: `${step.stepId}-iter-${iterationCount}`,
+          name: (loopBody.name as string) || `${step.name}-body`,
+          type: (loopBody.type as WorkflowStepContext['step']['type']) || 'task',
+          config: { ...step.config, ...(loopBody as Record<string, unknown>) },
+          status: 'running',
+        },
+        variables: { ...ctx.variables, ...workflowContext, _loopIteration: iterationCount },
+      };
+      const bodyExecResult = await executeWorkflowStep(bodyStepCtx);
+      bodyResult = bodyExecResult.result;
 
-    // Propagate body results back into workflow context (BH-15)
-    // so the exit condition can evaluate updated state
-    if (loopBody && typeof loopBody === 'object') {
-      for (const [key, value] of Object.entries(loopBody)) {
-        workflowContext[key] = value;
+      // Propagate body outputs back into workflow context so exit conditions
+      // can evaluate updated state (BH-15).
+      // First, merge the loopBody config values directly — these represent the
+      // "side-effect" variables the body is meant to set (e.g. { done: 'true' }).
+      if (loopBody && typeof loopBody === 'object') {
+        for (const [key, value] of Object.entries(loopBody as Record<string, unknown>)) {
+          // Only propagate plain string/number/boolean values from the body config,
+          // not structural keys like 'name' or 'type' that describe the step itself.
+          if (key !== 'name' && key !== 'type') {
+            workflowContext[key] = value;
+          }
+        }
       }
+      // Then merge the execution result outputs (may override body config values).
+      if (bodyExecResult.result && typeof bodyExecResult.result === 'object') {
+        for (const [key, value] of Object.entries(bodyExecResult.result as Record<string, unknown>)) {
+          workflowContext[key] = value;
+        }
+      }
+    } else {
+      bodyResult = { iteration: iterationCount, executed: true };
     }
 
     iterations.push({ iteration: iterationCount, result: bodyResult });

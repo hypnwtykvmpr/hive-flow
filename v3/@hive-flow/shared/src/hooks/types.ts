@@ -54,6 +54,13 @@ export enum HookEvent {
   // Error hooks
   OnError = 'hook:on-error',
   OnWarning = 'hook:on-warning',
+
+  // Hive lifecycle hooks
+  PreHiveCreate = 'hook:pre-hive-create',
+  PostHiveCreate = 'hook:post-hive-create',
+  PreHiveTerminate = 'hook:pre-hive-terminate',
+  PostHiveTerminate = 'hook:post-hive-terminate',
+  HiveReport = 'hook:hive-report',
 }
 
 /**
@@ -196,6 +203,17 @@ export interface MemoryInfo {
 
   /** TTL in seconds */
   ttl?: number;
+}
+
+/**
+ * Hive information for hive lifecycle hooks
+ */
+export interface HiveInfo {
+  hiveId: string;
+  queenId: string;
+  workerCount: number;
+  mission?: string;
+  status: string;
 }
 
 /**

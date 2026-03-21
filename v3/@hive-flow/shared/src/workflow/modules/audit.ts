@@ -173,7 +173,7 @@ function defaultGrepChecks(criteria: unknown): GrepCheck[] {
   return patterns.map((pattern, i) => ({
     id: stableId('grep', `${pattern}\u241e${i}`),
     pattern,
-    passed: true,
+    passed: false,
   }));
 }
 
@@ -183,14 +183,14 @@ function defaultDiffReviews(impl: ImplementationResult | undefined): DiffReview[
     return [
       {
         id: 'diff-review-empty',
-        approved: true,
+        approved: false,
         notes: 'No changed files in implementation_result; nothing to diff-review.',
       },
     ];
   }
   return paths.slice(0, 8).map((path, i) => ({
     id: stableId('diff', `${path}\u241e${i}`),
-    approved: true,
+    approved: false,
     notes: `Auto-approved stub for ${path}`,
   }));
 }

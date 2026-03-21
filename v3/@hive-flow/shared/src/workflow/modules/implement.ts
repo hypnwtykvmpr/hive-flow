@@ -20,6 +20,7 @@ export interface ChangedFile {
   path: string;
   changeKind: 'edit' | 'add' | 'delete' | string;
   packageId?: string;
+  synthetic?: boolean;
 }
 
 export interface BugReport {
@@ -52,6 +53,7 @@ export type RawChangedFile = {
   change_kind?: string;
   packageId?: string;
   package_id?: string;
+  synthetic?: boolean;
 };
 
 export type RawBugReport = {
@@ -68,7 +70,7 @@ const BUG_SEVERITIES: BugReport['severity'][] = ['info', 'warning', 'error', 'cr
 // Gates + normalization
 // ---------------------------------------------------------------------------
 
-const IMPLEMENT_GATE_CHECKS: string[] = ['syntax', 'semantic', 'security', 'edge-case'];
+const IMPLEMENT_GATE_CHECKS: string[] = ['syntax', 'semantic', 'security', 'edge-case', 'real-work'];
 
 function coalesceString(v: unknown): string {
   if (v === undefined || v === null) return '';
@@ -90,9 +92,10 @@ export function normalizeRawChangedFile(raw: unknown): ChangedFile | null {
   const path = coalesceString(r.path ?? r.file);
   const changeKind = coalesceString(r.changeKind ?? r.change_kind) || 'edit';
   const packageId = coalesceString(r.packageId ?? r.package_id) || undefined;
+  const synthetic = r.synthetic === true ? true : undefined;
   const id = coalesceString(r.id) || stableId('cf', `${path}\u241e${changeKind}\u241e${packageId ?? ''}`);
   if (!path) return null;
-  return { id, path, changeKind, packageId };
+  return { id, path, changeKind, packageId, synthetic };
 }
 
 export function normalizeRawBugReport(raw: unknown): BugReport | null {
@@ -132,6 +135,7 @@ function evaluateImplementGates(
   changedFiles: ChangedFile[],
   bugReports: BugReport[],
   checks: string[],
+  outputSynthetic: boolean,
 ): { passed: boolean; failedChecks: string[] } {
   const failed: string[] = [];
 
@@ -163,6 +167,10 @@ function evaluateImplementGates(
     if (!ok) failed.push('edge-case');
   }
 
+  if (checks.includes('real-work')) {
+    if (outputSynthetic === true) failed.push('real-work');
+  }
+
   return { passed: failed.length === 0, failedChecks: failed };
 }
 
@@ -177,6 +185,7 @@ function syntheticChangedFiles(packages: WorkPackage[]): ChangedFile[] {
         path,
         changeKind: 'edit',
         packageId: p.id,
+        synthetic: true,
       });
     }
   }
@@ -230,6 +239,11 @@ export function createImplementModule(): WorkflowModule {
             type: 'object',
             description: 'changed_files, bug_reports, totals',
             required: true,
+          },
+          _synthetic: {
+            type: 'boolean',
+            description: 'True when implementation output is synthetic rather than worker-produced',
+            required: false,
           },
         },
         additionalFields: false,
@@ -340,18 +354,15 @@ export function createImplementModule(): WorkflowModule {
           }
         }
 
-        const gateChecks = context.metadata?.gateChecksOverride as string[] | undefined;
-        const activeChecks = Array.isArray(gateChecks) ? gateChecks : IMPLEMENT_GATE_CHECKS;
-        const gateOutcome = evaluateImplementGates(packages, changed, bugs, activeChecks);
-
         const bugsOpen = bugs.filter(b => b.severity === 'error' || b.severity === 'critical').length;
+        const outputSynthetic = changed.length > 0 && changed.every(file => file.synthetic === true);
 
         const implementation_result: ImplementationResult = {
           changed_files: changed,
           bug_reports: bugs,
           totals: {
             filesTouched: changed.length,
-            packagesCompleted: packages.length,
+            packagesCompleted: outputSynthetic ? 0 : packages.length,
             bugsOpen,
           },
           metadata: {
@@ -361,11 +372,22 @@ export function createImplementModule(): WorkflowModule {
           },
         };
 
+        const gateChecks = context.metadata?.gateChecksOverride as string[] | undefined;
+        const activeChecks = Array.isArray(gateChecks) ? gateChecks : IMPLEMENT_GATE_CHECKS;
+        const outputs = { implementation_result, _synthetic: outputSynthetic };
+        const gateOutcome = evaluateImplementGates(
+          packages,
+          changed,
+          bugs,
+          activeChecks,
+          outputs._synthetic === true,
+        );
+
         void inputs.band_config;
 
         return {
           success: true,
-          outputs: { implementation_result },
+          outputs,
           durationMs: Date.now() - startTime,
           gateResult: {
             passed: gateOutcome.passed,

@@ -22,7 +22,7 @@ export const SECRET_PATTERNS: RegExp[] = [
   /-----BEGIN.*PRIVATE KEY/,
   /password\s*[:=]/,
   /bearer\s+\S+/i,
-  /\.env/,
+  /(?:^|\/)\.env(?:\.[a-zA-Z]+)?$/m,
   /credentials/,
   /api[_-]?key\s*[:=]/i,
   /connection[_-]?string\s*[:=]/i,
