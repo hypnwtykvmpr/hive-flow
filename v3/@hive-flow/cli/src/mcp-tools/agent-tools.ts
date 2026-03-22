@@ -6,7 +6,7 @@
  */
 
 import { randomUUID, createHmac, timingSafeEqual } from 'node:crypto';
-import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync, rmdirSync, rmSync, unlinkSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync, rmdirSync, rmSync, unlinkSync, statSync, readdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { execFile, spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -586,6 +586,62 @@ export const agentTools: MCPTool[] = [
           error: 'Agent not found',
         };
       });
+
+      if (result.success && result.terminated) {
+        const tasksDir = join(process.cwd(), STORAGE_DIR, 'tasks');
+
+        if (existsSync(tasksDir)) {
+          let trackingFiles: string[] = [];
+          try {
+            trackingFiles = readdirSync(tasksDir).filter(
+              (file: string) => file.endsWith('.json') && !file.endsWith('.result.json'),
+            );
+          } catch {
+            trackingFiles = [];
+          }
+
+          for (const file of trackingFiles) {
+            const trackingPath = join(tasksDir, file);
+
+            try {
+              const tracking = JSON.parse(readFileSync(trackingPath, 'utf-8')) as {
+                status?: string;
+                taskId?: string;
+                agentId?: string;
+                pid?: number;
+              };
+
+              if (tracking.agentId !== agentId || tracking.status !== 'running') {
+                continue;
+              }
+
+              if (tracking.pid) {
+                try {
+                  process.kill(tracking.pid, 'SIGTERM');
+                  await new Promise(resolve => setTimeout(resolve, 5000));
+                  try {
+                    process.kill(tracking.pid, 0);
+                    process.kill(tracking.pid, 'SIGKILL');
+                  } catch {
+                    // Process already exited after SIGTERM
+                  }
+                } catch {
+                  // Process already exited or cannot be signaled
+                }
+              }
+
+              const taskId = typeof tracking.taskId === 'string'
+                ? tracking.taskId
+                : file.replace(/\.json$/, '');
+              try { unlinkSync(join(tasksDir, `${taskId}.task`)); } catch { /* best-effort */ }
+              try { unlinkSync(join(tasksDir, `${taskId}.result.json`)); } catch { /* best-effort */ }
+              try { unlinkSync(trackingPath); } catch { /* best-effort */ }
+            } catch {
+              // Ignore unreadable tracking files during termination cleanup
+            }
+          }
+        }
+      }
 
       // Clean up per-agent enforcement directory after successful termination
       if (result.success && result.terminated && !result.alreadyTerminated) {

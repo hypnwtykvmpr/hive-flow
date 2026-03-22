@@ -100,6 +100,64 @@ function allowAndReturn() {
   console.log(JSON.stringify({ hookSpecificOutput: { permissionDecision: 'allow' } }));
 }
 
+function withAdvocateStateLock(fn) {
+  const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+  const lockPath = path.join(projectDir, '.hive-flow', 'data', '.advocate-state.lock');
+  const start = Date.now();
+  while (Date.now() - start < 5000) {
+    try { fs.mkdirSync(lockPath); break; }
+    catch {
+      try { const stat = fs.statSync(lockPath); if (Date.now() - stat.mtimeMs > 10000) { try { fs.rmdirSync(lockPath); } catch {} continue; } } catch { continue; }
+      const wait = Date.now() + 50 + Math.random() * 50; while (Date.now() < wait) {}
+    }
+  }
+  try { return fn(); } finally { try { fs.rmdirSync(lockPath); } catch {} }
+}
+
+function updateAdvocateState(projectDir, newState, description = '') {
+  const validStates = ['active', 'waiting-for-hive', 'waiting-for-human', 'finished'];
+  const VALID = {
+    active: ['waiting-for-hive', 'waiting-for-human', 'finished'],
+    'waiting-for-hive': ['active', 'finished'],
+    'waiting-for-human': ['active'],
+    finished: ['active'],
+  };
+  const cleanDescription = String(description).replace(/[\x00-\x1f]/g, '').slice(0, 200);
+
+  if (!validStates.includes(newState)) {
+    return { ok: false, error: `Invalid state: ${newState}` };
+  }
+
+  const stateDir = path.join(projectDir, '.hive-flow', 'data');
+  const statePath = path.join(stateDir, 'advocate-state.json');
+  if (!fs.existsSync(stateDir)) fs.mkdirSync(stateDir, { recursive: true });
+
+  return withAdvocateStateLock(() => {
+    let current = { state: 'waiting-for-human', updatedAt: new Date().toISOString(), description: '', history: [] };
+    if (fs.existsSync(statePath)) {
+      try { current = JSON.parse(fs.readFileSync(statePath, 'utf8')); } catch { /* reset */ }
+    }
+
+    if (current.state && VALID[current.state] && !VALID[current.state].includes(newState)) {
+      return { ok: false, error: `Invalid transition: ${current.state} -> ${newState}` };
+    }
+
+    const now = new Date().toISOString();
+    const transition = { from: current.state, to: newState, at: now, description: cleanDescription };
+    const updated = {
+      state: newState,
+      updatedAt: now,
+      description: cleanDescription,
+      history: [...(current.history || []), transition].slice(-50),
+    };
+    const tmp = statePath + '.tmp.' + process.pid;
+    fs.writeFileSync(tmp, JSON.stringify(updated, null, 2));
+    fs.renameSync(tmp, statePath);
+
+    return { ok: true, state: updated };
+  });
+}
+
 const handlers = {
   'route': () => {
     // Inject ranked intelligence context before routing
@@ -275,6 +333,43 @@ const handlers = {
       const pipelineFile = path.join(projectDir, '.hive-flow', 'enforcement', 'pipeline-state.json');
       if (fs.existsSync(pipelineFile)) {
         console.log('[PIPELINE] Active pipeline detected. Use /pipeline-status to check stage progress.');
+      }
+    } catch { /* non-fatal */ }
+
+    // Recover advocate state after crash/restart
+    try {
+      const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+      const advocateStatePath = path.join(projectDir, '.hive-flow', 'data', 'advocate-state.json');
+      if (fs.existsSync(advocateStatePath)) {
+        const advocateData = JSON.parse(fs.readFileSync(advocateStatePath, 'utf8'));
+        const currentAdvState = advocateData.state;
+        if (currentAdvState === 'active' || currentAdvState === 'waiting-for-hive') {
+          const hivesDir = path.join(projectDir, '.hive-flow', 'hives');
+          let hasActiveHives = false;
+          if (fs.existsSync(hivesDir)) {
+            const hiveDirs = fs.readdirSync(hivesDir, { withFileTypes: true });
+            for (const entry of hiveDirs) {
+              if (!entry.isDirectory() || entry.name.startsWith('.')) continue;
+              try {
+                const hiveJson = JSON.parse(fs.readFileSync(path.join(hivesDir, entry.name, 'hive.json'), 'utf8'));
+                if (hiveJson.status === 'active' || hiveJson.status === 'pending') { hasActiveHives = true; break; }
+              } catch { /* skip */ }
+            }
+          }
+          if (!hasActiveHives) {
+            advocateData.state = 'waiting-for-human';
+            advocateData.updatedAt = new Date().toISOString();
+            if (!advocateData.history) advocateData.history = [];
+            advocateData.history.push({ from: currentAdvState, to: 'waiting-for-human', at: new Date().toISOString(), description: 'Crash recovery: no active hives' });
+            if (advocateData.history.length > 50) advocateData.history = advocateData.history.slice(-50);
+            const tmp = advocateStatePath + '.tmp.' + process.pid;
+            fs.writeFileSync(tmp, JSON.stringify(advocateData, null, 2));
+            fs.renameSync(tmp, advocateStatePath);
+            console.log('[ADVOCATE] Crash recovery: reset to waiting-for-human (no active hives)');
+          } else {
+            console.log('[ADVOCATE] State preserved: waiting-for-hive (hives running)');
+          }
+        }
       }
     } catch { /* non-fatal */ }
   },
@@ -1257,40 +1352,13 @@ const handlers = {
       if (!rawInput) { console.log('{}'); return; }
       const input = JSON.parse(rawInput);
       const newState = input.newState;
-      let description = (input.description || '').replace(/[\x00-\x1f]/g, '').slice(0, 200);
-      const validStates = ['active', 'waiting-for-hive', 'waiting-for-human', 'finished'];
-      const VALID = {
-        active: ['waiting-for-hive', 'waiting-for-human', 'finished'],
-        'waiting-for-hive': ['active', 'finished'],
-        'waiting-for-human': ['active'],
-        finished: ['active'],
-      };
-      if (!validStates.includes(newState)) {
-        console.log(JSON.stringify({ hookSpecificOutput: { message: `Invalid state: ${newState}` } }));
-        return;
-      }
       const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
-      const stateDir = path.join(projectDir, '.hive-flow', 'data');
-      const statePath = path.join(stateDir, 'advocate-state.json');
-      if (!fs.existsSync(stateDir)) fs.mkdirSync(stateDir, { recursive: true });
-      let current = { state: 'waiting-for-human', updatedAt: new Date().toISOString(), description: '', history: [] };
-      if (fs.existsSync(statePath)) {
-        try { current = JSON.parse(fs.readFileSync(statePath, 'utf8')); } catch { /* reset */ }
-      }
-      if (current.state && VALID[current.state] && !VALID[current.state].includes(newState)) {
-        console.log(JSON.stringify({ hookSpecificOutput: { message: `Invalid transition: ${current.state} -> ${newState}` } }));
+      const result = updateAdvocateState(projectDir, newState, input.description || '');
+      if (!result.ok) {
+        console.log(JSON.stringify({ hookSpecificOutput: { message: result.error } }));
         return;
       }
-      const transition = { from: current.state, to: newState, at: new Date().toISOString(), description };
-      const updated = {
-        state: newState,
-        updatedAt: new Date().toISOString(),
-        description,
-        history: [...(current.history || []), transition].slice(-50),
-      };
-      const tmp = statePath + '.tmp.' + process.pid;
-      fs.writeFileSync(tmp, JSON.stringify(updated, null, 2));
-      fs.renameSync(tmp, statePath);
+      const description = result.state.description;
       process.stdout.write(JSON.stringify({ hookSpecificOutput: { message: `Advocate state: ${newState}${description ? ': ' + description : ''}` } }));
     } catch (e) { console.log('{}'); }
   },
@@ -1367,8 +1435,12 @@ const handlers = {
             completions = lines.filter(l => { try { return JSON.parse(l).event === 'hive-all-complete'; } catch { return false; } });
           } catch { /* non-fatal */ }
         }
+        const description = `${completions.length} hive(s) completed.`;
+        if (completions.length > 0) {
+          updateAdvocateState(projectDir, 'active', description);
+        }
         const msg = completions.length > 0
-          ? `[WAKE-TIMER] ${completions.length} hive(s) completed.`
+          ? `[WAKE-TIMER] ${description}`
           : '[WAKE-TIMER] Waiting for hive. No completions yet.';
         process.stdout.write(JSON.stringify({ hookSpecificOutput: { additionalContext: msg } }));
         return;
@@ -1380,6 +1452,76 @@ const handlers = {
       }
 
       console.log('{}');
+    } catch (e) { console.log('{}'); }
+  },
+
+  'advocate-auto-waiting-for-hive': () => {
+    try {
+      const raw = fs.readFileSync(0, 'utf8').trim();
+      if (!raw) { console.log('{}'); return; }
+      let input;
+      try { input = JSON.parse(raw); } catch { console.log('{}'); return; }
+      const toolResponse = input.tool_response || input.tool_result || '';
+      const responseStr = typeof toolResponse === 'string' ? toolResponse : JSON.stringify(toolResponse);
+      let hiveId = null;
+      try {
+        const contentArray = JSON.parse(responseStr);
+        if (Array.isArray(contentArray)) {
+          for (const item of contentArray) {
+            if (item && item.type === 'text' && typeof item.text === 'string') {
+              try {
+                const parsed = JSON.parse(item.text);
+                if (parsed && parsed.hiveId) { hiveId = parsed.hiveId; break; }
+              } catch { /* skip */ }
+            }
+          }
+        } else if (contentArray && contentArray.hiveId) {
+          hiveId = contentArray.hiveId;
+        }
+      } catch { /* fall through */ }
+      if (!hiveId) { console.log('{}'); return; }
+      const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+      const result = updateAdvocateState(projectDir, 'waiting-for-hive', 'Hive dispatched: ' + hiveId);
+      if (!result.ok) { console.log('{}'); return; }
+      process.stdout.write(JSON.stringify({ hookSpecificOutput: { additionalContext: `[ADVOCATE] Auto-transitioned to waiting-for-hive. Hive: ${hiveId}` } }));
+    } catch (e) { console.log('{}'); }
+  },
+
+  'advocate-auto-active-on-complete': () => {
+    try {
+      const raw = fs.readFileSync(0, 'utf8').trim();
+      if (!raw) { console.log('{}'); return; }
+      let input;
+      try { input = JSON.parse(raw); } catch { console.log('{}'); return; }
+      const toolResponse = input.tool_response || input.tool_result || '';
+      const responseStr = typeof toolResponse === 'string' ? toolResponse : JSON.stringify(toolResponse);
+      let allComplete = false;
+      let desc = 'Hive work complete';
+      try {
+        const contentArray = JSON.parse(responseStr);
+        if (Array.isArray(contentArray)) {
+          for (const item of contentArray) {
+            if (item && item.type === 'text' && typeof item.text === 'string') {
+              try {
+                const parsed = JSON.parse(item.text);
+                if (parsed && parsed.allComplete === true) {
+                  allComplete = true;
+                  if (parsed.hiveId) desc = `Hive ${parsed.hiveId} complete`;
+                  break;
+                }
+              } catch { /* skip */ }
+            }
+          }
+        } else if (contentArray && contentArray.allComplete === true) {
+          allComplete = true;
+          if (contentArray.hiveId) desc = `Hive ${contentArray.hiveId} complete`;
+        }
+      } catch { /* fall through */ }
+      if (!allComplete) { console.log('{}'); return; }
+      const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+      const result = updateAdvocateState(projectDir, 'active', desc);
+      if (!result.ok) { console.log('{}'); return; }
+      process.stdout.write(JSON.stringify({ hookSpecificOutput: { additionalContext: `[ADVOCATE] Auto-transitioned to active. ${desc}` } }));
     } catch (e) { console.log('{}'); }
   },
 };

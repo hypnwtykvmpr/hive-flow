@@ -416,6 +416,27 @@ function extractEnforcementState() {
   } catch { return null; }
 }
 
+/**
+ * extractAdvocateState — Read advocate state for compaction survival.
+ * Returns current advocate state metadata without history.
+ */
+function extractAdvocateState() {
+  try {
+    const stateFile = join(PROJECT_DIR, '.hive-flow', 'data', 'advocate-state.json');
+    if (!existsSync(stateFile)) return null;
+    const raw = JSON.parse(readFileSync(stateFile, 'utf-8'));
+    const state = raw?.state || raw;
+    if (!state || typeof state.state !== 'string') return null;
+    return {
+      state: state.state,
+      lastTransition: state.lastTransition || state.updatedAt || null,
+      lastActivity: state.lastActivity || state.updatedAt || null,
+      description: state.description || '',
+      activeHives: Array.isArray(state.activeHives) ? state.activeHives : [],
+    };
+  } catch { return null; }
+}
+
 function buildState(messages, source, sessionId = null) {
   const start = Date.now();
 
@@ -424,6 +445,7 @@ function buildState(messages, source, sessionId = null) {
 
   // Extract enforcement state for compaction survival
   const enforcementState = extractEnforcementState();
+  const advocateState = extractAdvocateState();
 
   const state = {
     version: 1,
@@ -436,6 +458,7 @@ function buildState(messages, source, sessionId = null) {
     progress: extractProgressMarkers(messages),
     toolProfile: extractToolUsageProfile(messages),
     enforcement: enforcementState,
+    advocate: advocateState,
     stats: {
       extractionDurationMs: Date.now() - start,
       transcriptLines: messages.length,
@@ -549,6 +572,22 @@ function formatStateForContext(state) {
       lines.push(`- **Restricted Groups:** ${state.enforcement.restrictedGroups.join(', ')}`);
     }
     lines.push('DO NOT attempt to modify enforcement state files.');
+    lines.push('');
+  }
+
+  // Advocate State
+  if (state.advocate) {
+    lines.push('### Advocate State');
+    if (state.advocate.state) {
+      lines.push(`- **State:** ${sanitizeForMarkdown(state.advocate.state)}`);
+    }
+    if (state.advocate.description) {
+      lines.push(`- **Description:** ${sanitizeForMarkdown(state.advocate.description)}`);
+    }
+    if (state.advocate.lastTransition) {
+      lines.push(`- **Last Transition:** ${sanitizeForMarkdown(state.advocate.lastTransition)}`);
+    }
+    lines.push(`- **Active Hives:** ${state.advocate.activeHives?.length > 0 ? state.advocate.activeHives.join(', ') : 'none'}`);
     lines.push('');
   }
 
