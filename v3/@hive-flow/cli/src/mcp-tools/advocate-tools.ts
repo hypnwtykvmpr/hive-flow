@@ -1,8 +1,7 @@
 import type { MCPTool } from './types.js';
 import { loadHive } from './hive-store.js';
-import { WorkflowStateMachine, WORKFLOW_STATES } from '@hive-flow/shared/workflow';
-import type { WorkflowStateName } from '@hive-flow/shared/workflow';
-import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync } from 'node:fs';
+import { WorkflowStateMachine } from '@hive-flow/shared/workflow';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, rmdirSync, statSync, renameSync } from 'node:fs';
 import { join } from 'node:path';
 
 const advocateReviewTool: MCPTool = {
@@ -54,7 +53,7 @@ const advocateApproveTool: MCPTool = {
     
     try {
       const stateMachine = new WorkflowStateMachine(workflowId);
-      const result = await stateMachine.advocateTransition(targetState as WorkflowStateName);
+      const result = await stateMachine.advocateTransition(targetState as Parameters<typeof stateMachine.advocateTransition>[0]);
       
       return {
         success: true,
@@ -76,28 +75,40 @@ const advocateApproveTool: MCPTool = {
 // ---------------------------------------------------------------------------
 
 const ADVOCATE_STATE_FILE = '.hive-flow/data/advocate-state.json';
+const ADVOCATE_LOCK_PATH = '.hive-flow/data/.advocate-state.lock';
 const MAX_HISTORY = 50;
 
-interface AdvocateStateRecord {
-  currentState: WorkflowStateName;
-  description?: string;
-  updatedAt: string;
-  updatedBy: string;
-}
+// Flat schema matching hook-handler.cjs
+const ADVOCATE_STATES = ['active', 'waiting-for-hive', 'waiting-for-human', 'finished'] as const;
+type AdvocateStateName = typeof ADVOCATE_STATES[number];
 
-interface AdvocateStateHistoryEntry extends AdvocateStateRecord {
-  previousState: WorkflowStateName;
-  timestamp: string;
+const VALID_TRANSITIONS: Record<AdvocateStateName, AdvocateStateName[]> = {
+  'active': ['waiting-for-hive', 'waiting-for-human', 'finished'],
+  'waiting-for-hive': ['active', 'finished'],
+  'waiting-for-human': ['active'],
+  'finished': ['active'],
+};
+
+interface AdvocateStateHistoryEntry {
+  from: string;
+  to: string;
+  at: string;
+  description: string;
 }
 
 interface AdvocateStateData {
-  current: AdvocateStateRecord;
+  state: AdvocateStateName;
+  updatedAt: string;
+  description: string;
   history: AdvocateStateHistoryEntry[];
-  validTransitions: WorkflowStateName[];
 }
 
 function getAdvocateStatePath(): string {
   return join(process.cwd(), ADVOCATE_STATE_FILE);
+}
+
+function getAdvocateLockPath(): string {
+  return join(process.cwd(), ADVOCATE_LOCK_PATH);
 }
 
 function ensureAdvocateStateDir(): void {
@@ -107,11 +118,33 @@ function ensureAdvocateStateDir(): void {
   }
 }
 
+function withAdvocateStateLock<T>(fn: () => T): T {
+  const lockPath = getAdvocateLockPath();
+  const start = Date.now();
+  while (Date.now() - start < 5000) {
+    try {
+      mkdirSync(lockPath);
+      break;
+    } catch {
+      try {
+        const stat = statSync(lockPath);
+        if (Date.now() - stat.mtimeMs > 10000) {
+          try { rmdirSync(lockPath); } catch { /* ignore */ }
+          continue;
+        }
+      } catch { continue; }
+      const wait = Date.now() + 50 + Math.random() * 50;
+      while (Date.now() < wait) { /* spin */ }
+    }
+  }
+  try { return fn(); } finally { try { rmdirSync(lockPath); } catch { /* ignore */ } }
+}
+
 function loadAdvocateState(): AdvocateStateData | null {
   try {
-    const path = getAdvocateStatePath();
-    if (existsSync(path)) {
-      const data = readFileSync(path, 'utf-8');
+    const filePath = getAdvocateStatePath();
+    if (existsSync(filePath)) {
+      const data = readFileSync(filePath, 'utf-8');
       return JSON.parse(data) as AdvocateStateData;
     }
   } catch {
@@ -129,9 +162,8 @@ function saveAdvocateState(data: AdvocateStateData): void {
   renameSync(tmpPath, targetPath);
 }
 
-function getValidTransitions(currentState: WorkflowStateName): WorkflowStateName[] {
-  // Advocate can transition to any state except current state
-  return WORKFLOW_STATES.filter(state => state !== currentState);
+function getValidTransitions(currentState: string): AdvocateStateName[] {
+  return VALID_TRANSITIONS[currentState as AdvocateStateName] ?? (ADVOCATE_STATES.filter(s => s !== currentState) as AdvocateStateName[]);
 }
 
 // ---------------------------------------------------------------------------
@@ -147,7 +179,7 @@ const advocateSignStateTool: MCPTool = {
     properties: {
       newState: {
         type: 'string',
-        enum: WORKFLOW_STATES,
+        enum: ADVOCATE_STATES,
         description: 'Target state to transition to'
       },
       description: {
@@ -158,65 +190,60 @@ const advocateSignStateTool: MCPTool = {
     required: ['newState']
   },
   handler: async (input) => {
-    const newState = input.newState as WorkflowStateName;
-    const description = input.description as string | undefined;
-    const updatedBy = 'advocate'; // Could be enhanced with authentication context
+    const newState = input.newState as AdvocateStateName;
+    const description = (input.description as string | undefined) ?? '';
+    const cleanDescription = String(description).replace(/[\x00-\x1f]/g, '').slice(0, 200);
+
+    if (!ADVOCATE_STATES.includes(newState)) {
+      return { success: false, error: `Invalid state: ${newState}` };
+    }
 
     try {
-      // Load current state
-      const currentData = loadAdvocateState();
-      const currentState = currentData?.current?.currentState || 'IDLE';
-      
-      // Validate transition - advocate can transition to any state
-      const validTransitions = getValidTransitions(currentState);
-      if (!validTransitions.includes(newState)) {
-        return {
-          success: false,
-          error: `Invalid transition from ${currentState} to ${newState}`
+      ensureAdvocateStateDir();
+
+      return withAdvocateStateLock(() => {
+        // Load current state inside lock
+        const currentData = loadAdvocateState();
+        const currentState: string = currentData?.state ?? 'waiting-for-human';
+
+        // Validate transition
+        const validTransitions = getValidTransitions(currentState);
+        if (!validTransitions.includes(newState)) {
+          return {
+            success: false,
+            error: `Invalid transition from ${currentState} to ${newState}`
+          };
+        }
+
+        const now = new Date().toISOString();
+        const historyEntry: AdvocateStateHistoryEntry = {
+          from: currentState,
+          to: newState,
+          at: now,
+          description: cleanDescription,
         };
-      }
 
-      // Create new state record
-      const now = new Date().toISOString();
-      const newRecord: AdvocateStateRecord = {
-        currentState: newState,
-        description,
-        updatedAt: now,
-        updatedBy
-      };
+        const history = [...(currentData?.history ?? []), historyEntry].slice(-MAX_HISTORY);
 
-      // Create history entry
-      const historyEntry: AdvocateStateHistoryEntry = {
-        ...newRecord,
-        previousState: currentState,
-        timestamp: now
-      };
+        const newData: AdvocateStateData = {
+          state: newState,
+          updatedAt: now,
+          description: cleanDescription,
+          history,
+        };
 
-      // Update data
-      const newData: AdvocateStateData = {
-        current: newRecord,
-        history: currentData?.history || [],
-        validTransitions: getValidTransitions(newState)
-      };
+        saveAdvocateState(newData);
 
-      // Add to history and cap at MAX_HISTORY
-      newData.history.unshift(historyEntry);
-      if (newData.history.length > MAX_HISTORY) {
-        newData.history = newData.history.slice(0, MAX_HISTORY);
-      }
-
-      // Atomic write
-      saveAdvocateState(newData);
-
-      return {
-        success: true,
-        fromState: currentState,
-        toState: newState,
-        description,
-        timestamp: now,
-        historyLength: newData.history.length,
-        validTransitions: newData.validTransitions
-      };
+        return {
+          success: true,
+          fromState: currentState,
+          toState: newState,
+          description: cleanDescription,
+          timestamp: now,
+          historyLength: history.length,
+          validTransitions: getValidTransitions(newState)
+        };
+      });
     } catch (error) {
       return {
         success: false,
@@ -242,17 +269,16 @@ const advocateGetStateTool: MCPTool = {
   handler: async () => {
     try {
       const data = loadAdvocateState();
-      const currentState = data?.current?.currentState || 'IDLE';
-      const validTransitions = getValidTransitions(currentState);
+      const state: string = data?.state ?? 'waiting-for-human';
+      const validTransitions = getValidTransitions(state);
 
       return {
         success: true,
-        currentState,
-        description: data?.current?.description,
-        updatedAt: data?.current?.updatedAt || new Date().toISOString(),
-        updatedBy: data?.current?.updatedBy || 'system',
+        state,
+        description: data?.description ?? '',
+        updatedAt: data?.updatedAt ?? new Date().toISOString(),
         validTransitions,
-        historyLength: data?.history?.length || 0
+        historyLength: data?.history?.length ?? 0
       };
     } catch (error) {
       return {

@@ -645,6 +645,60 @@ function getSessionStats() {
   return { duration: '' };
 }
 
+// Advocate state
+function getAdvocateState() {
+  const advocateStatePath = path.join(CWD, '.hive-flow', 'data', 'advocate-state.json');
+  const data = readJSON(advocateStatePath);
+
+  if (!data) {
+    return { state: 'none', indicator: '', display: '', color: c.dim };
+  }
+
+  const state = data.state || 'none';
+
+  // Map states to indicators, colors, and display text
+  switch (state) {
+    case 'active':
+      return {
+        state,
+        indicator: 'ADV:ACT',
+        display: 'ADV:ACT',
+        color: c.brightGreen
+      };
+    case 'waiting_human':
+    case 'waiting-for-human':
+      return {
+        state,
+        indicator: 'ADV:W:H',
+        display: 'ADV:W:H',
+        color: c.brightYellow
+      };
+    case 'waiting_hive':
+    case 'waiting-for-hive':
+      return {
+        state,
+        indicator: 'ADV:W:U',
+        display: 'ADV:W:U',
+        color: c.dim
+      };
+    case 'finalized':
+    case 'finished':
+      return {
+        state,
+        indicator: 'ADV:FIN',
+        display: 'ADV:FIN',
+        color: c.brightCyan
+      };
+    default:
+      return {
+        state,
+        indicator: '',
+        display: '',
+        color: c.dim
+      };
+  }
+}
+
 // ─── Rendering ──────────────────────────────────────────────────
 
 function progressBar(current, total) {
@@ -709,6 +763,7 @@ function generateStatusline() {
   const session = getSessionStats();
   const integration = getIntegrationStatus();
   const context = getContextUsage();
+  const advocate = getAdvocateState();
   const lines = [];
 
   // Header
@@ -815,8 +870,11 @@ function generateStatusline() {
   const hooksColor = hooks.enabled > 0 ? c.brightGreen : c.dim;
   const intellColor = system.intelligencePct >= 80 ? c.brightGreen : system.intelligencePct >= 40 ? c.brightYellow : c.dim;
 
+  // Add advocate indicator after [activeAgents/maxAgents]
+  const advocateIndicator = advocate.indicator ? ` ${advocate.color}${advocate.indicator}${c.reset}` : '';
+
   lines.push(
-    `${c.brightYellow}\uD83E\uDD16 Swarm${c.reset}  ${swarmInd} [${agentsColor}${String(swarm.activeAgents).padStart(2)}${c.reset}/${c.brightWhite}${swarm.maxAgents}${c.reset}]  ` +
+    `${c.brightYellow}\uD83E\uDD16 Swarm${c.reset}  ${swarmInd} [${agentsColor}${String(swarm.activeAgents).padStart(2)}${c.reset}/${c.brightWhite}${swarm.maxAgents}${c.reset}]${advocateIndicator}  ` +
     `${c.brightPurple}\uD83D\uDC65 ${system.subAgents}${c.reset}    ` +
     `${c.brightBlue}\uD83E\uDE9D ${hooksColor}${hooks.enabled}${c.reset}/${c.brightWhite}${hooks.total}${c.reset}    ` +
     `${secIcon} ${secColor}CVE ${security.cvesFixed}${c.reset}/${c.brightWhite}${security.totalCves}${c.reset}    ` +
@@ -879,6 +937,7 @@ function generateJSON() {
     tests: getTestStats(),
     git: { modified: git.modified, untracked: git.untracked, staged: git.staged, ahead: git.ahead, behind: git.behind },
     context: getContextUsage(),
+    advocate: getAdvocateState(),
     lastUpdated: new Date().toISOString(),
   };
 }
