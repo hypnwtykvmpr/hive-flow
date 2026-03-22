@@ -1223,7 +1223,7 @@ async function main() {
 
     let response;
     let iterations = 0;
-    const MAX_TOOL_ITERATIONS = 30;
+    const MAX_TOOL_ITERATIONS = 50;
     const providerStartTime = Date.now();
 
     // Tool-calling loop (no lock held — provider calls can take up to 120s)
