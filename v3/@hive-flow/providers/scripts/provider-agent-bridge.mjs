@@ -1227,6 +1227,13 @@ async function main() {
     const MAX_TOOL_ITERATIONS = 50;
     const providerStartTime = Date.now();
 
+    // Stuck detection state
+    const STUCK_WINDOW = 4;
+    const STUCK_THRESHOLD = 3;
+    const toolCallFingerprints = [];
+    let consecutiveErrorIterations = 0;
+    const MAX_CONSECUTIVE_ERRORS = 3;
+
     // Tool-calling loop (no lock held — provider calls can take up to 120s)
     // Note: MCP tool execution requires the CLI MCP client, which is typically
     // unavailable when bridge runs as a subprocess. When unavailable, tool calls
@@ -1328,6 +1335,40 @@ async function main() {
             name: tr.name,
             content: truncatedContent,
           });
+        }
+
+        // Stuck detection: fingerprint + error counter
+        if (response.toolCalls && response.toolCalls.length > 0) {
+          const fingerprint = JSON.stringify(
+            response.toolCalls.map((tc) => ({ n: tc.function.name, a: tc.function.arguments }))
+          );
+          toolCallFingerprints.push(fingerprint);
+          if (toolCallFingerprints.length > STUCK_WINDOW) toolCallFingerprints.shift();
+          if (
+            toolCallFingerprints.length >= STUCK_WINDOW &&
+            toolCallFingerprints.filter((f) => f === fingerprint).length >= STUCK_THRESHOLD
+          ) {
+            bridgeLog('warn', 'STUCK: repeated tool call fingerprint', {
+              agentId, provider: providerName, iterations,
+              fingerprint: fingerprint.slice(0, 300),
+            });
+            break;
+          }
+
+          const allErrors = toolResults.every(
+            (tr) => tr.result && typeof tr.result === 'object' && tr.result.status === 'error'
+          );
+          if (allErrors && toolResults.length > 0) {
+            consecutiveErrorIterations++;
+            if (consecutiveErrorIterations >= MAX_CONSECUTIVE_ERRORS) {
+              bridgeLog('warn', 'STUCK: consecutive all-error iterations', {
+                agentId, provider: providerName, consecutiveErrorIterations,
+              });
+              break;
+            }
+          } else {
+            consecutiveErrorIterations = 0;
+          }
         }
 
         if (response.finishReason !== 'tool_calls') {

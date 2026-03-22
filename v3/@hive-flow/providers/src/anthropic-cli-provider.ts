@@ -157,6 +157,7 @@ export class AnthropicCLIProvider extends BaseProvider {
       }, timeoutMs);
 
       child.stdout.on('data', (d: Buffer) => {
+        timer.refresh();
         stdout += d.toString();
         if (stdout.length > MAX_STDOUT_BYTES) {
           if (settled) return;

@@ -153,6 +153,7 @@ export class CodexCLIProvider extends BaseProvider {
       }, timeoutMs);
 
       rl.on('line', (line) => {
+        timer.refresh();
         const ev = this.parseLine(line);
         if (!ev) return;
         if (ev.type === 'item.completed') {
@@ -257,6 +258,7 @@ export class CodexCLIProvider extends BaseProvider {
 
     try {
       while (!done || queue.length > 0) {
+        timer.refresh();
         if (queue.length === 0 && !done) {
           await new Promise<void>((r) => { notify = r; });
           continue;

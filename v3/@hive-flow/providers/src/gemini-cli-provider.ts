@@ -96,6 +96,7 @@ export class GeminiCLIProvider extends BaseProvider {
       }, timeoutMs);
 
       child.stdout.on('data', (d: Buffer) => {
+        timer.refresh();
         stdout += d.toString();
         if (stdout.length > MAX_STDOUT_BYTES) {
           if (settled) return;
@@ -174,6 +175,7 @@ export class GeminiCLIProvider extends BaseProvider {
 
     try {
       for await (const line of rl) {
+        timer.refresh();
         if (!line.trim()) continue;
         try {
           const evt = JSON.parse(line) as GeminiJsonOutput;
