@@ -213,32 +213,147 @@ function messageByteLength(msg) {
   return Buffer.byteLength(c, 'utf8');
 }
 
+const TOOL_RESULT_TRUNCATE_BYTES = 5 * 1024; // 5KB threshold
+
+function truncateToolResult(content, toolName) {
+  if (typeof content !== 'string') return content;
+  const bytes = Buffer.byteLength(content, 'utf8');
+  if (bytes <= TOOL_RESULT_TRUNCATE_BYTES) return content;
+
+  const lines = content.split('\n');
+  const totalLines = lines.length;
+
+  // Keep first 20 and last 10 lines for structure visibility
+  const headLines = lines.slice(0, 20);
+  const tailLines = lines.slice(-10);
+  const droppedLines = totalLines - 30;
+
+  // Build short summary: byte size, line count, first meaningful content hint
+  const firstNonEmpty = lines.find(l => l.trim().length > 10) || lines[0] || '';
+  const summary = `[TRUNCATED] ${toolName}: ${totalLines} lines, ${bytes} bytes. First: ${firstNonEmpty.trim().slice(0, 80)}`;
+
+  return [
+    ...headLines,
+    '',
+    `[... ${droppedLines} lines truncated — ${summary} ...]`,
+    '',
+    ...tailLines,
+  ].join('\n');
+}
+
+// Priority classes for context trimming
+const MSG_PRIORITY = {
+  SYSTEM: 0,     // system prompt — never drop
+  TASK: 1,       // first user message (task assignment) — never drop
+  LATEST: 2,     // last user message — never drop
+  ASSISTANT: 3,  // assistant reasoning — summarize before dropping
+  TOOL_RESULT: 4, // tool results — summarize first (biggest savings)
+};
+
+function classifyMessage(msg, index, total) {
+  if (msg.role === 'system') return MSG_PRIORITY.SYSTEM;
+  if (msg.role === 'user' && index <= 1) return MSG_PRIORITY.TASK;
+  if (index === total - 1) return MSG_PRIORITY.LATEST;
+  if (msg.role === 'tool') return MSG_PRIORITY.TOOL_RESULT;
+  return MSG_PRIORITY.ASSISTANT;
+}
+
+function summarizeToolMessage(msg) {
+  const content = msg.content || '';
+  const lines = content.split('\n').length;
+  const bytes = Buffer.byteLength(content, 'utf8');
+  const toolName = msg.name || 'unknown';
+  const firstLine = content.split('\n').find(l => l.trim().length > 5) || '';
+  return {
+    ...msg,
+    content: `[SUMMARIZED] ${toolName}: ${lines} lines, ${bytes}B. ${firstLine.trim().slice(0, 120)}`,
+    _summarized: true,
+  };
+}
+
+function summarizeAssistantMessage(msg) {
+  const content = msg.content || '';
+  if (content.length <= 200) return msg;
+  // Keep first sentence + tool call info
+  const firstSentence = content.split(/[.!?\n]/).filter(s => s.trim())[0] || '';
+  const toolInfo = msg.toolCalls
+    ? ` [called: ${msg.toolCalls.map(tc => tc.function?.name).join(', ')}]`
+    : '';
+  return {
+    ...msg,
+    content: `[SUMMARIZED] ${firstSentence.trim().slice(0, 150)}${toolInfo}`,
+    _summarized: true,
+  };
+}
+
 function trimMessages(messages, limits = getProviderLimits()) {
   let totalBytes = 0;
-  for (const msg of messages) {
-    totalBytes += messageByteLength(msg);
-  }
+  for (const msg of messages) totalBytes += messageByteLength(msg);
 
   if (totalBytes <= limits.maxBytes && messages.length <= limits.maxEntries + 2) {
     return messages;
   }
 
-  const system = messages[0]?.role === 'system' ? [messages[0]] : [];
-  const newTask = messages[messages.length - 1];
-  let middle = system.length > 0 ? messages.slice(1, -1) : messages.slice(0, -1);
+  // Tag each message with priority
+  const tagged = messages.map((msg, i) => ({
+    msg,
+    priority: classifyMessage(msg, i, messages.length),
+    index: i,
+    bytes: messageByteLength(msg),
+  }));
 
-  while (middle.length > 0) {
-    let bytes = 0;
-    for (const msg of [...system, ...middle, newTask]) {
-      bytes += messageByteLength(msg);
-    }
-    if (bytes <= limits.maxBytes && middle.length + system.length + 1 <= limits.maxEntries + 2) {
-      break;
-    }
-    middle.shift();
+  // Phase 1: Summarize tool results (biggest, lowest priority) — oldest first
+  const toolResults = tagged
+    .filter(t => t.priority === MSG_PRIORITY.TOOL_RESULT && !t.msg._summarized)
+    .sort((a, b) => a.index - b.index); // oldest first
+
+  for (const entry of toolResults) {
+    const summarized = summarizeToolMessage(entry.msg);
+    const savedBytes = entry.bytes - Buffer.byteLength(summarized.content, 'utf8');
+    entry.msg = summarized;
+    entry.bytes = Buffer.byteLength(summarized.content, 'utf8');
+    totalBytes -= savedBytes;
+    if (totalBytes <= limits.maxBytes && tagged.length <= limits.maxEntries + 2) break;
   }
 
-  return [...system, ...middle, newTask];
+  if (totalBytes <= limits.maxBytes && tagged.length <= limits.maxEntries + 2) {
+    return tagged.map(t => t.msg);
+  }
+
+  // Phase 2: Summarize old assistant messages (middle of conversation)
+  const assistants = tagged
+    .filter(t => t.priority === MSG_PRIORITY.ASSISTANT && !t.msg._summarized)
+    .sort((a, b) => a.index - b.index); // oldest first
+
+  for (const entry of assistants) {
+    const summarized = summarizeAssistantMessage(entry.msg);
+    const savedBytes = entry.bytes - Buffer.byteLength(summarized.content, 'utf8');
+    entry.msg = summarized;
+    entry.bytes = Buffer.byteLength(summarized.content, 'utf8');
+    totalBytes -= savedBytes;
+    if (totalBytes <= limits.maxBytes) break;
+  }
+
+  if (totalBytes <= limits.maxBytes && tagged.length <= limits.maxEntries + 2) {
+    return tagged.map(t => t.msg);
+  }
+
+  // Phase 3: Drop already-summarized tool results (oldest first) — last resort
+  const result = tagged.map(t => t.msg);
+  while (result.length > limits.maxEntries + 2 || totalBytes > limits.maxBytes) {
+    // Find oldest droppable message (not system, not task, not latest)
+    const dropIdx = result.findIndex((msg, i) => {
+      if (i === 0 && msg.role === 'system') return false;
+      if (i <= 1 && msg.role === 'user') return false;
+      if (i === result.length - 1) return false;
+      return true;
+    });
+    if (dropIdx === -1) break; // nothing left to drop
+    totalBytes -= messageByteLength(result[dropIdx]);
+    result.splice(dropIdx, 1);
+  }
+
+  return result;
 }
 
 // ===== Provider Default Models (loaded from model-alias-resolver if available) =====
@@ -1187,11 +1302,30 @@ async function main() {
         );
 
         for (const tr of toolResults) {
+          const rawContent = JSON.stringify(tr.result);
+          const truncatedContent = truncateToolResult(rawContent, tr.name);
+          const wasTruncated = truncatedContent !== rawContent;
+          if (wasTruncated) {
+            bridgeLog('info', `Tool result truncated`, {
+              agentId,
+              tool: tr.name,
+              originalBytes: Buffer.byteLength(rawContent, 'utf8'),
+              truncatedBytes: Buffer.byteLength(truncatedContent, 'utf8'),
+            });
+          }
+          // Log file mutations for audit trail
+          if ((tr.name === 'write_file' || tr.name === 'edit_file') && tr.result && typeof tr.result === 'string') {
+            bridgeLog('info', `Worker file mutation: ${tr.name}`, {
+              agentId,
+              tool: tr.name,
+              result: tr.result.slice(0, 200),
+            });
+          }
           request.messages.push({
             role: 'tool',
             toolCallId: tr.id,
             name: tr.name,
-            content: JSON.stringify(tr.result),
+            content: truncatedContent,
           });
         }
 
