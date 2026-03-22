@@ -857,7 +857,7 @@ async function executeMCPTool(toolName, toolArgs) {
       const result = fsHandler(parsedFsArgs);
       return typeof result === 'string' ? result : JSON.stringify(result);
     } catch (err) {
-      return `Error: ${err.message}`;
+      return { status: 'error', error: err.message || String(err) };
     }
   }
 

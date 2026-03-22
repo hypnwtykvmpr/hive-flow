@@ -258,13 +258,13 @@ export class CodexCLIProvider extends BaseProvider {
 
     try {
       while (!done || queue.length > 0) {
-        timer.refresh();
         if (queue.length === 0 && !done) {
           await new Promise<void>((r) => { notify = r; });
           continue;
         }
         const line = queue.shift();
         if (!line) continue;
+        timer.refresh();
         const ev = this.parseLine(line);
         if (!ev) continue;
 
