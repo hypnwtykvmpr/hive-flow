@@ -449,7 +449,7 @@ async function createProviderConfig(providerName, model, timeoutMs) {
   return {
     provider: providerName,
     model: model || defaults[providerName] || 'auto',
-    timeout: timeoutMs || 120000,
+    timeout: timeoutMs || 300000,
     retryAttempts: 2,
     retryDelay: 1000,
   };
@@ -538,6 +538,7 @@ const PROTECTED_WRITE_PATHS = [
   '.env',
   'state.json',
   'role.json',
+  '.hive-flow/data/advocate-state.json',
 ];
 
 function isProtectedPath(filePath) {

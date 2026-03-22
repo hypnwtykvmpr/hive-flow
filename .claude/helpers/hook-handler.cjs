@@ -1250,6 +1250,138 @@ const handlers = {
       console.log('{}');
     }
   },
+
+  'advocate-sign': async () => {
+    try {
+      const rawInput = fs.readFileSync(0, 'utf8').trim();
+      if (!rawInput) { console.log('{}'); return; }
+      const input = JSON.parse(rawInput);
+      const newState = input.newState;
+      let description = (input.description || '').replace(/[\x00-\x1f]/g, '').slice(0, 200);
+      const validStates = ['active', 'waiting-for-hive', 'waiting-for-human', 'finished'];
+      const VALID = {
+        active: ['waiting-for-hive', 'waiting-for-human', 'finished'],
+        'waiting-for-hive': ['active', 'finished'],
+        'waiting-for-human': ['active'],
+        finished: ['active'],
+      };
+      if (!validStates.includes(newState)) {
+        console.log(JSON.stringify({ hookSpecificOutput: { message: `Invalid state: ${newState}` } }));
+        return;
+      }
+      const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+      const stateDir = path.join(projectDir, '.hive-flow', 'data');
+      const statePath = path.join(stateDir, 'advocate-state.json');
+      if (!fs.existsSync(stateDir)) fs.mkdirSync(stateDir, { recursive: true });
+      let current = { state: 'waiting-for-human', updatedAt: new Date().toISOString(), description: '', history: [] };
+      if (fs.existsSync(statePath)) {
+        try { current = JSON.parse(fs.readFileSync(statePath, 'utf8')); } catch { /* reset */ }
+      }
+      if (current.state && VALID[current.state] && !VALID[current.state].includes(newState)) {
+        console.log(JSON.stringify({ hookSpecificOutput: { message: `Invalid transition: ${current.state} -> ${newState}` } }));
+        return;
+      }
+      const transition = { from: current.state, to: newState, at: new Date().toISOString(), description };
+      const updated = {
+        state: newState,
+        updatedAt: new Date().toISOString(),
+        description,
+        history: [...(current.history || []), transition].slice(-50),
+      };
+      const tmp = statePath + '.tmp.' + process.pid;
+      fs.writeFileSync(tmp, JSON.stringify(updated, null, 2));
+      fs.renameSync(tmp, statePath);
+      process.stdout.write(JSON.stringify({ hookSpecificOutput: { message: `Advocate state: ${newState}${description ? ': ' + description : ''}` } }));
+    } catch (e) { console.log('{}'); }
+  },
+
+  'user-prompt-activate': () => {
+    try {
+      let rawInput = '';
+      try { rawInput = fs.readFileSync(0, 'utf8'); } catch { /* empty */ }
+      let input;
+      try { input = JSON.parse(rawInput); } catch { input = {}; }
+      const userPrompt = input?.user_prompt || input?.prompt || '';
+      if (!userPrompt.trim() || userPrompt.trim().startsWith('/')) { console.log('{}'); return; }
+      const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+      const statePath = path.join(projectDir, '.hive-flow', 'data', 'advocate-state.json');
+      if (!fs.existsSync(statePath)) { console.log('{}'); return; }
+      const stateData = JSON.parse(fs.readFileSync(statePath, 'utf8'));
+      if (stateData.state === 'waiting-for-human') {
+        stateData.state = 'active';
+        stateData.updatedAt = new Date().toISOString();
+        if (!stateData.history) stateData.history = [];
+        stateData.history.push({ from: 'waiting-for-human', to: 'active', at: new Date().toISOString(), description: 'Human prompt received' });
+        const tmp = statePath + '.tmp.' + process.pid;
+        fs.writeFileSync(tmp, JSON.stringify(stateData, null, 2));
+        fs.renameSync(tmp, statePath);
+        process.stdout.write(JSON.stringify({ hookSpecificOutput: { additionalContext: '[ADVOCATE] Auto-transitioned to active on human prompt.' } }));
+        return;
+      }
+      // Update lastActivity timestamp for any human prompt
+      stateData.updatedAt = new Date().toISOString();
+      const tmp = statePath + '.tmp.' + process.pid;
+      fs.writeFileSync(tmp, JSON.stringify(stateData, null, 2));
+      fs.renameSync(tmp, statePath);
+      console.log('{}');
+    } catch (e) { console.log('{}'); }
+  },
+
+  'wake-timer': () => {
+    try {
+      const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+      const statePath = path.join(projectDir, '.hive-flow', 'data', 'advocate-state.json');
+      if (!fs.existsSync(statePath)) { console.log('{}'); return; }
+      const stateData = JSON.parse(fs.readFileSync(statePath, 'utf8'));
+      const currentState = stateData.state;
+      const updatedAt = new Date(stateData.updatedAt).getTime();
+      if (Number.isNaN(updatedAt)) { console.log('{}'); return; }
+      const now = Date.now();
+      const elapsed = now - updatedAt;
+      const FIVE_MIN = 5 * 60 * 1000;
+      const THIRTY_MIN = 30 * 60 * 1000;
+
+      if (currentState === 'finished') { console.log('{}'); return; }
+
+      if (currentState === 'active' && elapsed >= FIVE_MIN) {
+        // Check activity.jsonl last 50 lines for hive activity
+        const activityPath = path.join(projectDir, '.hive-flow', 'logs', 'activity.jsonl');
+        let hiveInfo = '';
+        if (fs.existsSync(activityPath)) {
+          try {
+            const lines = fs.readFileSync(activityPath, 'utf8').split('\n').filter(Boolean).slice(-50);
+            const hiveEvents = lines.filter(l => { try { return JSON.parse(l).event?.includes('hive'); } catch { return false; } });
+            hiveInfo = hiveEvents.length > 0 ? ` ${hiveEvents.length} recent hive events.` : '';
+          } catch { /* non-fatal */ }
+        }
+        process.stdout.write(JSON.stringify({ hookSpecificOutput: { additionalContext: `[WAKE-TIMER] 5min idle.${hiveInfo}` } }));
+        return;
+      }
+
+      if (currentState === 'waiting-for-hive' && elapsed >= FIVE_MIN) {
+        const activityPath = path.join(projectDir, '.hive-flow', 'logs', 'activity.jsonl');
+        let completions = [];
+        if (fs.existsSync(activityPath)) {
+          try {
+            const lines = fs.readFileSync(activityPath, 'utf8').split('\n').filter(Boolean).slice(-50);
+            completions = lines.filter(l => { try { return JSON.parse(l).event === 'hive-all-complete'; } catch { return false; } });
+          } catch { /* non-fatal */ }
+        }
+        const msg = completions.length > 0
+          ? `[WAKE-TIMER] ${completions.length} hive(s) completed.`
+          : '[WAKE-TIMER] Waiting for hive. No completions yet.';
+        process.stdout.write(JSON.stringify({ hookSpecificOutput: { additionalContext: msg } }));
+        return;
+      }
+
+      if (currentState === 'waiting-for-human' && elapsed >= THIRTY_MIN) {
+        process.stdout.write(JSON.stringify({ hookSpecificOutput: { additionalContext: '[30m auto-hook]' } }));
+        return;
+      }
+
+      console.log('{}');
+    } catch (e) { console.log('{}'); }
+  },
 };
 
 // Execute the handler (async IIFE to properly await async handlers like permission-guard)

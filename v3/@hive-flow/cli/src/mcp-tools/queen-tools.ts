@@ -823,7 +823,9 @@ const reportTool: MCPTool = {
     const status = (input.status as 'completed' | 'failed') || 'completed';
     const error = input.error as string | undefined;
 
-    return withHiveLock(hiveId, async () => {
+    let liveWorkerCount = 0;
+
+    const result = await withHiveLock(hiveId, async () => {
       const hive = loadHive(hiveId);
       if (!hive) {
         return { success: false, error: `Hive '${hiveId}' not found.` };
@@ -835,8 +837,9 @@ const reportTool: MCPTool = {
 
       // Composition check: require minimum 4 live workers before accepting report
       const liveWorkers = hive.workers.filter(w => w.status !== 'terminated');
-      if (liveWorkers.length < 4) {
-        return { success: false, error: `[COMPOSITION_ERROR] Queen report blocked. Found ${liveWorkers.length} live workers, minimum 4 required.` };
+      liveWorkerCount = liveWorkers.length;
+      if (liveWorkerCount < 4) {
+        return { success: false, error: `[COMPOSITION_ERROR] Queen report blocked. Found ${liveWorkerCount} live workers, minimum 4 required.` };
       }
 
       const directWork = await readVerifiedQueenDirectWorkCount(queenId);
@@ -872,26 +875,6 @@ const reportTool: MCPTool = {
 
       saveHive(hiveId, hive);
 
-      fireQueenReportHook({
-        hiveId,
-        queenId,
-        status,
-        reportLength: report.length,
-        workerCount: liveWorkers.length,
-        delegationMetrics: hive.delegationMetrics,
-      });
-
-      fireHiveCompleteHook({
-        hiveId,
-        queenId,
-        status,
-        completedAt: hive.completedAt,
-        reportLength: report.length,
-        workerCount: hive.workers.length,
-        auditEntryCount: hive.audit.length,
-        delegationMetrics: hive.delegationMetrics,
-      });
-
       return {
         success: true,
         hiveId,
@@ -904,6 +887,30 @@ const reportTool: MCPTool = {
         delegationMetrics: hive.delegationMetrics,
       };
     });
+
+    if (result.success) {
+      fireQueenReportHook({
+        hiveId,
+        queenId,
+        status,
+        reportLength: report.length,
+        workerCount: liveWorkerCount,
+        delegationMetrics: result.delegationMetrics,
+      });
+
+      fireHiveCompleteHook({
+        hiveId,
+        queenId,
+        status,
+        completedAt: result.completedAt,
+        reportLength: report.length,
+        workerCount: result.workerCount,
+        auditEntryCount: result.auditEntryCount,
+        delegationMetrics: result.delegationMetrics,
+      });
+    }
+
+    return result;
   },
 };
 
@@ -1338,6 +1345,66 @@ const hivePollWorkersTool: MCPTool = {
           });
           saveHive(hiveId, freshHive);
         }
+      });
+
+      const freshStatus = loadHive(hiveId)?.status;
+      if (freshStatus !== 'active') {
+        return {
+          success: true,
+          hiveId,
+          workers: workerStatuses,
+          allComplete,
+          completedCount,
+          runningCount,
+          failedCount,
+          idleCount,
+          terminatedCount,
+        };
+      }
+
+      // Write hive-all-complete event to activity.jsonl
+      try {
+        const { appendFileSync, mkdirSync } = await import('node:fs');
+        const { join } = await import('node:path');
+        mkdirSync(join(process.cwd(), '.hive-flow', 'logs'), { recursive: true });
+        const activityFile = join(process.cwd(), '.hive-flow', 'logs', 'activity.jsonl');
+        
+
+        const event = {
+          ts: new Date().toISOString(),
+          event: 'hive-all-complete',
+          hiveId,
+          queenId: hive.queenId,
+          completedCount,
+          failedCount,
+          idleCount,
+          terminatedCount,
+        };
+        appendFileSync(activityFile, JSON.stringify(event) + '\n', 'utf-8');
+      } catch {
+        // Best-effort activity logging
+      }
+
+      await withHiveLock(hiveId, () => {
+        const freshHive = loadHive(hiveId);
+        if (freshHive && freshHive.status === 'active') {
+          freshHive.status = 'completed';
+          freshHive.completedAt = new Date().toISOString();
+          saveHive(hiveId, freshHive);
+        }
+      });
+
+      // Fire hive-complete hook with full context
+      fireHiveCompleteHook({
+        hiveId,
+        queenId: hive?.queenId,
+        completedCount,
+        failedCount,
+        idleCount,
+        terminatedCount,
+        allComplete: true,
+        workerCount: hive?.workers.length || 0,
+        liveWorkerCount: (hive?.workers.filter(w => w.status !== 'terminated').length) || 0,
       });
     }
 

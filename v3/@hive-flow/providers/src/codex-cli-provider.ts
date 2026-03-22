@@ -109,7 +109,7 @@ export class CodexCLIProvider extends BaseProvider {
 
   constructor(options: BaseProviderOptions) {
     super(options);
-    this.defaultTimeout = options.config.timeout || 120000;
+    this.defaultTimeout = options.config.timeout || 300000;
   }
 
   protected async doInitialize(): Promise<void> {

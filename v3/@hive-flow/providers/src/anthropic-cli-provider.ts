@@ -118,7 +118,7 @@ export class AnthropicCLIProvider extends BaseProvider {
     this.ensureBinary();
     const model = request.model || this.config.model;
     const prompt = this.formatMessages(request.messages, request.tools);
-    const timeoutMs = request.timeout || this.config.timeout || 120000;
+    const timeoutMs = request.timeout || this.config.timeout || 300000;
     const args = ['--print', '--output-format', 'json'];
     if (model) args.push('--model', model);
 
