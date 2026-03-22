@@ -27,8 +27,9 @@
  */
 
 import { readFileSync, writeFileSync, appendFileSync, mkdirSync, renameSync, existsSync, rmdirSync, statSync, unlinkSync, readdirSync } from 'fs';
-import { join, dirname, resolve } from 'path';
+import { join, dirname, resolve, relative } from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
+import { execFileSync } from 'child_process';
 
 // ===== Bridge File Logger (append-only, mirrors hook-handler.cjs patterns) =====
 
@@ -528,6 +529,202 @@ const BRIDGE_FILESYSTEM_TOOLS = {
     const safePath = validateFilePath(dirPath || '.');
     return readdirSync(safePath).join('\n');
   },
+  'grep': ({ pattern, path, file_glob, max_results }) => {
+    if (!pattern) {
+      throw new Error('Missing required parameter: pattern');
+    }
+    
+    const searchPath = path ? validateFilePath(path) : PROJECT_ROOT;
+    const maxResults = max_results || 50;
+    
+    try {
+      // Try ripgrep (rg) first, fall back to grep -rn
+      let command, args;
+      try {
+        execFileSync('rg', ['--version'], { stdio: 'ignore' });
+        command = 'rg';
+        args = ['-n', '-H', '--color=never', pattern];
+        if (file_glob) {
+          args.push('--glob', file_glob);
+        }
+        args.push(searchPath);
+      } catch {
+        command = 'grep';
+        args = ['-rn', '--color=never', pattern];
+        if (file_glob) {
+          // Basic glob to regex conversion for grep
+          // Note: grep doesn't support glob patterns natively, so we'll do a simple conversion
+          // For simplicity, we'll just pass the glob as part of the find command
+          throw new Error('grep tool with file_glob requires ripgrep (rg). Install rg or use without file_glob.');
+        }
+        args.push(searchPath);
+      }
+      
+      const output = execFileSync(command, args, { 
+        encoding: 'utf-8',
+        stdio: ['pipe', 'pipe', 'pipe']
+      }).trim();
+      
+      if (!output) {
+        return 'No matches found';
+      }
+      
+      const lines = output.split('\n');
+      const limitedLines = lines.slice(0, maxResults);
+      
+      return limitedLines.join('\n');
+      
+    } catch (error) {
+      if (error.status === 1) {
+        // grep/rg exit code 1 means no matches found
+        return 'No matches found';
+      }
+      if (error.message.includes('ENOENT')) {
+        throw new Error('Neither grep nor ripgrep (rg) found in PATH. Please install grep or rg.');
+      }
+      throw new Error(`Search failed: ${error.message}`);
+    }
+  },
+  'find_file': ({ pattern, path: searchPath }) => {
+    if (!pattern) {
+      throw new Error('Missing required parameter: pattern');
+    }
+    
+    const basePath = validateFilePath(searchPath || '.');
+    
+    // Simple glob pattern matching function
+    function matchesPattern(filename, pattern) {
+      // Convert glob pattern to regex
+      let regexStr = pattern
+        .replace(/\./g, '\\.')
+        .replace(/\*/g, '[^/]*')
+        .replace(/\?/g, '[^/]')
+        .replace(/\*\*/g, '.*');
+      
+      // Anchor to start and end
+      regexStr = '^' + regexStr + '$';
+      
+      try {
+        const regex = new RegExp(regexStr);
+        return regex.test(filename);
+      } catch {
+        // If regex fails, do simple substring match
+        return filename.includes(pattern);
+      }
+    }
+    
+    // Check if a path should be ignored based on .gitignore patterns
+    function shouldIgnore(path, gitignorePatterns) {
+      if (!gitignorePatterns || gitignorePatterns.length === 0) {
+        return false;
+      }
+      
+      const relativePath = relative(basePath, path);
+      
+      for (const rule of gitignorePatterns) {
+        const pattern = rule.pattern;
+        const isNegation = rule.negation;
+        
+        // Simple pattern matching - for now just check exact matches and wildcards
+        if (pattern === relativePath || pattern === path) {
+          return !isNegation; // If it's a negation pattern, don't ignore
+        }
+        
+        // Check for wildcard matches
+        if (pattern.includes('*')) {
+          const regexPattern = pattern
+            .replace(/\./g, '\\.')
+            .replace(/\*/g, '.*')
+            .replace(/\?/g, '.');
+          const regex = new RegExp('^' + regexPattern + '$');
+          if (regex.test(relativePath) || regex.test(path)) {
+            return !isNegation;
+          }
+        }
+      }
+      
+      return false;
+    }
+    
+    // Read .gitignore patterns from a directory
+    function readGitignorePatterns(dir) {
+      const gitignorePath = join(dir, '.gitignore');
+      const patterns = [];
+      
+      try {
+        if (existsSync(gitignorePath)) {
+          const content = readFileSync(gitignorePath, 'utf-8');
+          const lines = content.split('\n');
+          
+          for (const line of lines) {
+            const trimmed = line.trim();
+            // Skip empty lines and comments
+            if (!trimmed || trimmed.startsWith('#')) {
+              continue;
+            }
+            
+            const isNegation = trimmed.startsWith('!');
+            const pattern = isNegation ? trimmed.substring(1) : trimmed;
+            
+            patterns.push({
+              pattern,
+              negation: isNegation
+            });
+          }
+        }
+      } catch {
+        // If we can't read .gitignore, continue without patterns
+      }
+      
+      return patterns;
+    }
+    
+    // Recursive directory search
+    function findFiles(dir, pattern, gitignorePatterns = [], results = []) {
+      if (results.length >= 50) return results; // Limit to 50 files
+      
+      // Read .gitignore for this directory
+      const dirGitignorePatterns = readGitignorePatterns(dir);
+      const allPatterns = [...gitignorePatterns, ...dirGitignorePatterns];
+      
+      try {
+        const entries = readdirSync(dir, { withFileTypes: true });
+        
+        for (const entry of entries) {
+          if (results.length >= 50) break;
+          
+          const fullPath = join(dir, entry.name);
+          
+          // Skip if this path should be ignored
+          if (shouldIgnore(fullPath, allPatterns)) {
+            continue;
+          }
+          
+          // Skip common ignored directories even without .gitignore
+          if (entry.isDirectory()) {
+            if (entry.name === 'node_modules' || entry.name === '.git' || 
+                entry.name === '.hg' || entry.name === '.svn' || entry.name.startsWith('.')) {
+              continue;
+            }
+            findFiles(fullPath, pattern, allPatterns, results);
+          } else if (entry.isFile()) {
+            const relativePath = relative(basePath, fullPath);
+            if (matchesPattern(entry.name, pattern) || matchesPattern(relativePath, pattern)) {
+              results.push(resolve(fullPath));
+            }
+          }
+        }
+      } catch (err) {
+        // Skip directories we can't read
+        stderrLogger.debug(`Error reading directory ${dir}:`, err.message);
+      }
+      
+      return results;
+    }
+    
+    const results = findFiles(basePath, pattern);
+    return JSON.stringify(results);
+  },
 };
 
 async function executeMCPTool(toolName, toolArgs) {
@@ -856,6 +1053,38 @@ async function main() {
           },
         },
       },
+      {
+        type: 'function',
+        function: {
+          name: 'grep',
+          description: 'Search file contents for pattern using grep/ripgrep.',
+          parameters: {
+            type: 'object',
+            properties: {
+              pattern: { type: 'string', description: 'Pattern to search for (regex).' },
+              path: { type: 'string', description: 'Directory path to search. Defaults to project root.' },
+              file_glob: { type: 'string', description: 'Glob pattern to filter files (e.g., "*.js"). Requires ripgrep (rg).' },
+              max_results: { type: 'number', description: 'Maximum number of results to return. Defaults to 50.' },
+            },
+            required: ['pattern'],
+          },
+        },
+      },
+      {
+        type: 'function',
+        function: {
+          name: 'find_file',
+          description: 'Search for files by glob pattern.',
+          parameters: {
+            type: 'object',
+            properties: {
+              pattern: { type: 'string', description: 'Glob pattern to match (e.g., "*.js", "**/*.md").' },
+              path: { type: 'string', description: 'Directory path to search. Defaults to current directory.' },
+            },
+            required: ['pattern'],
+          },
+        },
+      },
     ];
 
     if (agent.config?.tools && Array.isArray(agent.config.tools)) {
@@ -879,7 +1108,7 @@ async function main() {
 
     let response;
     let iterations = 0;
-    const MAX_TOOL_ITERATIONS = 10;
+    const MAX_TOOL_ITERATIONS = 30;
     const providerStartTime = Date.now();
 
     // Tool-calling loop (no lock held — provider calls can take up to 120s)
@@ -931,8 +1160,11 @@ async function main() {
         }
 
         for (const toolCall of response.toolCalls) {
-          stderrLogger.debug(`Tool call: ${toolCall.function.name}`, {
-            args: (toolCall.function.arguments || '').slice(0, 200),
+          bridgeLog('info', `Tool call: ${toolCall.function.name}`, {
+            agentId,
+            tool: toolCall.function.name,
+            args: (toolCall.function.arguments || '').slice(0, 300),
+            iteration: iterations,
           });
         }
 
@@ -969,6 +1201,17 @@ async function main() {
       } else {
         break;
       }
+    }
+
+    if (iterations >= MAX_TOOL_ITERATIONS) {
+      bridgeLog('warn', 'Worker hit MAX_TOOL_ITERATIONS limit', {
+        agentId,
+        provider: providerName,
+        iterations,
+        maxIterations: MAX_TOOL_ITERATIONS,
+        hasContent: !!(response?.content),
+        historyLength: request.messages.length,
+      });
     }
 
     trackProviderUsage(providerName, response.usage, providerStartTime);
