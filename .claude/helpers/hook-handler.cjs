@@ -341,33 +341,35 @@ const handlers = {
       const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
       const advocateStatePath = path.join(projectDir, '.hive-flow', 'data', 'advocate-state.json');
       if (fs.existsSync(advocateStatePath)) {
-        const advocateData = JSON.parse(fs.readFileSync(advocateStatePath, 'utf8'));
-        const currentAdvState = advocateData.state;
-        if (currentAdvState === 'active' || currentAdvState === 'waiting-for-hive') {
-          const hivesDir = path.join(projectDir, '.hive-flow', 'hives');
-          let hasActiveHives = false;
-          if (fs.existsSync(hivesDir)) {
-            const hiveDirs = fs.readdirSync(hivesDir, { withFileTypes: true });
-            for (const entry of hiveDirs) {
-              if (!entry.isDirectory() || entry.name.startsWith('.')) continue;
-              try {
-                const hiveJson = JSON.parse(fs.readFileSync(path.join(hivesDir, entry.name, 'hive.json'), 'utf8'));
-                if (hiveJson.status === 'active' || hiveJson.status === 'pending') { hasActiveHives = true; break; }
-              } catch { /* skip */ }
+        let advocateData;
+        try { advocateData = JSON.parse(fs.readFileSync(advocateStatePath, 'utf8')); } catch { advocateData = null; }
+        if (!advocateData || !advocateData.state) {
+          // Corrupted file — reset via updateAdvocateState (uses lock)
+          updateAdvocateState(projectDir, 'active', 'Crash recovery: corrupted state file reset');
+          console.log('[ADVOCATE] Crash recovery: corrupted state file, reset to active');
+        } else {
+          const currentAdvState = advocateData.state;
+          if (currentAdvState === 'active' || currentAdvState === 'waiting-for-hive') {
+            const hivesDir = path.join(projectDir, '.hive-flow', 'hives');
+            let hasActiveHives = false;
+            if (fs.existsSync(hivesDir)) {
+              const hiveDirs = fs.readdirSync(hivesDir, { withFileTypes: true });
+              for (const entry of hiveDirs) {
+                if (!entry.isDirectory() || entry.name.startsWith('.')) continue;
+                try {
+                  const hiveJson = JSON.parse(fs.readFileSync(path.join(hivesDir, entry.name, 'hive.json'), 'utf8'));
+                  if (hiveJson.status === 'active' || hiveJson.status === 'pending') { hasActiveHives = true; break; }
+                } catch { /* skip */ }
+              }
             }
-          }
-          if (!hasActiveHives) {
-            advocateData.state = 'waiting-for-human';
-            advocateData.updatedAt = new Date().toISOString();
-            if (!advocateData.history) advocateData.history = [];
-            advocateData.history.push({ from: currentAdvState, to: 'waiting-for-human', at: new Date().toISOString(), description: 'Crash recovery: no active hives' });
-            if (advocateData.history.length > 50) advocateData.history = advocateData.history.slice(-50);
-            const tmp = advocateStatePath + '.tmp.' + process.pid;
-            fs.writeFileSync(tmp, JSON.stringify(advocateData, null, 2));
-            fs.renameSync(tmp, advocateStatePath);
-            console.log('[ADVOCATE] Crash recovery: reset to waiting-for-human (no active hives)');
-          } else {
-            console.log('[ADVOCATE] State preserved: waiting-for-hive (hives running)');
+            if (!hasActiveHives) {
+              // Use updateAdvocateState for proper locking + valid transition
+              // waiting-for-hive can transition to 'active' (valid), then active can go to 'finished'
+              updateAdvocateState(projectDir, 'active', 'Crash recovery: no active hives, reset to active');
+              console.log('[ADVOCATE] Crash recovery: reset to active (no active hives)');
+            } else {
+              console.log('[ADVOCATE] State preserved: waiting-for-hive (hives running)');
+            }
           }
         }
       }
@@ -1374,23 +1376,24 @@ const handlers = {
       const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
       const statePath = path.join(projectDir, '.hive-flow', 'data', 'advocate-state.json');
       if (!fs.existsSync(statePath)) { console.log('{}'); return; }
-      const stateData = JSON.parse(fs.readFileSync(statePath, 'utf8'));
+      let stateData;
+      try { stateData = JSON.parse(fs.readFileSync(statePath, 'utf8')); } catch { stateData = { state: 'active' }; }
       if (stateData.state === 'waiting-for-human') {
-        stateData.state = 'active';
-        stateData.updatedAt = new Date().toISOString();
-        if (!stateData.history) stateData.history = [];
-        stateData.history.push({ from: 'waiting-for-human', to: 'active', at: new Date().toISOString(), description: 'Human prompt received' });
-        const tmp = statePath + '.tmp.' + process.pid;
-        fs.writeFileSync(tmp, JSON.stringify(stateData, null, 2));
-        fs.renameSync(tmp, statePath);
-        process.stdout.write(JSON.stringify({ hookSpecificOutput: { additionalContext: '[ADVOCATE] Auto-transitioned to active on human prompt.' } }));
+        const result = updateAdvocateState(projectDir, 'active', 'Human prompt received');
+        if (result.ok) {
+          process.stdout.write(JSON.stringify({ hookSpecificOutput: { additionalContext: '[ADVOCATE] Auto-transitioned to active on human prompt.' } }));
+        } else { console.log('{}'); }
         return;
       }
-      // Update lastActivity timestamp for any human prompt
-      stateData.updatedAt = new Date().toISOString();
-      const tmp = statePath + '.tmp.' + process.pid;
-      fs.writeFileSync(tmp, JSON.stringify(stateData, null, 2));
-      fs.renameSync(tmp, statePath);
+      // Update lastActivity timestamp for any human prompt (with lock)
+      withAdvocateStateLock(() => {
+        let current;
+        try { current = JSON.parse(fs.readFileSync(statePath, 'utf8')); } catch { return; }
+        current.updatedAt = new Date().toISOString();
+        const tmp = statePath + '.tmp.' + process.pid;
+        fs.writeFileSync(tmp, JSON.stringify(current, null, 2));
+        fs.renameSync(tmp, statePath);
+      });
       console.log('{}');
     } catch (e) { console.log('{}'); }
   },
@@ -1504,7 +1507,7 @@ const handlers = {
             if (item && item.type === 'text' && typeof item.text === 'string') {
               try {
                 const parsed = JSON.parse(item.text);
-                if (parsed && parsed.allComplete === true) {
+                if (parsed && parsed.allComplete === true || parsed.allComplete === 'true') {
                   allComplete = true;
                   if (parsed.hiveId) desc = `Hive ${parsed.hiveId} complete`;
                   break;
