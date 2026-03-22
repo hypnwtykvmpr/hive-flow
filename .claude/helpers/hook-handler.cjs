@@ -751,9 +751,15 @@ const handlers = {
       const flow = state.assessment.requiredFlow;
       const results = [];
 
-      // Ambiguity filter (ALL levels)
+      // Ambiguity filter — label at all levels, deny at COMPLEX
       if (flow.ambiguityFilter && flow.ambiguityFilter.enabled) {
         results.push(`[AMBIGUITY-FILTER: ${level}] agents=${flow.ambiguityFilter.agentCount}${flow.ambiguityFilter.deepAnalysis ? ' +deepAnalysis' : ''}`);
+        if (level === 'COMPLEX') {
+          return JSON.stringify({
+            permissionDecision: 'deny',
+            reason: `[AMBIGUITY-FILTER] Task complexity is COMPLEX — requires ambiguity resolution before proceeding.`,
+          });
+        }
       }
 
       // Dual-agent audit (ALL levels)

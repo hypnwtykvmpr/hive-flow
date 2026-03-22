@@ -409,6 +409,54 @@ function pruneTerminatedAgents() {
 }
 
 // ---------------------------------------------------------------------------
+// W3: Orphaned task file cleanup — stale .task/.json files with no result
+// ---------------------------------------------------------------------------
+
+const TASK_TTL_MS = 3600000; // 1 hour
+
+function cleanupOrphanedTasks() {
+  const summary = { tasksCleaned: 0, cleaned: [], errors: [] };
+  const tasksDir = path.join(PROJECT_DIR, '.hive-flow', 'tasks');
+  if (!fs.existsSync(tasksDir)) return summary;
+  const now = Date.now();
+  let entries;
+  try { entries = fs.readdirSync(tasksDir); } catch { return summary; }
+  // Group by task ID prefix
+  const taskIds = new Set();
+  for (const entry of entries) {
+    const match = entry.match(/^(task-[a-f0-9-]+)\./);
+    if (match) taskIds.add(match[1]);
+  }
+  for (const taskId of taskIds) {
+    const jsonPath = path.join(tasksDir, `${taskId}.json`);
+    const resultPath = path.join(tasksDir, `${taskId}.result.json`);
+    const taskFilePath = path.join(tasksDir, `${taskId}.task`);
+    // Skip if result exists (completed task)
+    if (fs.existsSync(resultPath)) continue;
+    // Check age of tracking file
+    try {
+      const stat = fs.statSync(jsonPath);
+      if (now - stat.mtimeMs < TASK_TTL_MS) continue;
+      // Stale task — no result after TTL. Clean up.
+      try { fs.unlinkSync(jsonPath); } catch { /* ignore */ }
+      try { fs.unlinkSync(taskFilePath); } catch { /* ignore */ }
+      summary.tasksCleaned++;
+      summary.cleaned.push(taskId);
+    } catch {
+      // No tracking file — check .task file age
+      try {
+        const stat = fs.statSync(taskFilePath);
+        if (now - stat.mtimeMs < TASK_TTL_MS) continue;
+        try { fs.unlinkSync(taskFilePath); } catch { /* ignore */ }
+        summary.tasksCleaned++;
+        summary.cleaned.push(taskId);
+      } catch { /* neither file exists, skip */ }
+    }
+  }
+  return summary;
+}
+
+// ---------------------------------------------------------------------------
 // Main — run all cleanup and output JSON to stdout
 // ---------------------------------------------------------------------------
 
@@ -418,6 +466,7 @@ function pruneTerminatedAgents() {
     const orphanResult = await cleanupOrphanedAgents();
     const hiveDirResult = cleanupStaleHiveDirs();
     const pruneResult = pruneTerminatedAgents();
+    const taskResult = cleanupOrphanedTasks();
 
     const combined = {
       ...hiveResult,
@@ -425,6 +474,7 @@ function pruneTerminatedAgents() {
       orphansTerminated: orphanResult.orphansTerminated,
       hivesArchived: hiveDirResult.hivesArchived,
       agentsPruned: pruneResult.agentsPruned,
+      tasksCleaned: taskResult.tasksCleaned,
     };
     if (orphanResult.terminated.length > 0) {
       combined.terminated = (combined.terminated || []).concat(orphanResult.terminated);
@@ -437,11 +487,12 @@ function pruneTerminatedAgents() {
       ...(orphanResult.errors || []),
       ...(hiveDirResult.errors || []),
       ...(pruneResult.errors || []),
+      ...(taskResult.errors || []),
     ];
     if (allErrors.length > 0) combined.errors = allErrors;
 
     const totalWork = (combined.workersTerminated || 0) + (combined.orphansTerminated || 0)
-      + (combined.hivesArchived || 0) + (combined.agentsPruned || 0);
+      + (combined.hivesArchived || 0) + (combined.agentsPruned || 0) + (combined.tasksCleaned || 0);
     if (totalWork === 0 && allErrors.length === 0) {
       process.stdout.write(JSON.stringify({}));
     } else {

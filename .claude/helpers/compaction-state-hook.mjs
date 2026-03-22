@@ -600,16 +600,28 @@ async function doPreCompact() {
   const state = buildState(messages, 'pre-compact', input?.session_id);
   saveState(state);
 
-  // Write compaction-lock.json to prevent assess-complexity from resetting enforcement score
+  // Write HMAC-signed compaction-lock.json to prevent assess-complexity from resetting enforcement score
   if (state.enforcement && state.enforcement.level > 0) {
     try {
       const lockFile = join(PROJECT_DIR, '.hive-flow', 'enforcement', 'compaction-lock.json');
-      writeFileSync(lockFile, JSON.stringify({
+      const lockState = {
         level: state.enforcement.level,
         violations: state.enforcement.violations,
         restrictedGroups: state.enforcement.restrictedGroups,
         timestamp: new Date().toISOString(),
-      }, null, 2));
+      };
+      // HMAC-sign to match enforcement.cjs envelope pattern
+      const { createHmac } = await import('node:crypto');
+      const { readFileSync: readFs } = await import('node:fs');
+      const hmacKeyFile = join(PROJECT_DIR, '.hive-flow', 'enforcement', '.hmac-key');
+      let key;
+      try { key = readFs(hmacKeyFile, 'utf-8').trim(); } catch { key = null; }
+      if (key) {
+        const hmac = createHmac('sha256', key).update(JSON.stringify(lockState)).digest('hex');
+        writeFileSync(lockFile, JSON.stringify({ state: lockState, hmac }, null, 2));
+      } else {
+        writeFileSync(lockFile, JSON.stringify(lockState, null, 2));
+      }
     } catch { /* non-fatal */ }
   }
 
