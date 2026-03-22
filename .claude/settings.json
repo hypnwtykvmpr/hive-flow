@@ -129,6 +129,26 @@
         ]
       },
       {
+        "matcher": "mcp__hive-flow__queen_mission_assign",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/hook-handler.cjs advocate-auto-waiting-for-hive",
+            "timeout": 5000
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__hive-flow__hive_poll_workers",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/hook-handler.cjs advocate-auto-active-on-complete",
+            "timeout": 5000
+          }
+        ]
+      },
+      {
         "matcher": "Task|Bash|Write|Edit|MultiEdit|WebFetch|NotebookEdit|mcp__hive-flow__*|mcp__filesystem__*",
         "hooks": [
           {
