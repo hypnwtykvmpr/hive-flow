@@ -17,7 +17,7 @@ async function getOrCreateProviderManager(providerName: string) {
   // but reuse the import.
   const { createProviderManager } = await import('@hive-flow/providers');
   return createProviderManager({
-    providers: [{ provider: providerName as 'gemini-cli' | 'codex-cli' | 'cursor-cli' | 'deepseek', model: 'auto' }],
+    providers: [{ provider: providerName as 'gemini-cli' | 'codex-cli' | 'cursor-cli' | 'deepseek' | 'openrouter', model: 'auto' }],
   });
 }
 
@@ -31,7 +31,7 @@ export const providerTools: MCPTool[] = [
       properties: {
         provider: {
           type: 'string',
-          enum: ['gemini-cli', 'codex-cli', 'cursor-cli', 'deepseek'],
+          enum: ['gemini-cli', 'codex-cli', 'cursor-cli', 'deepseek', 'openrouter'],
           description: 'Specific provider to check (all if omitted)',
         },
       },
@@ -39,7 +39,7 @@ export const providerTools: MCPTool[] = [
     handler: async (input) => {
       const providers = input.provider
         ? [input.provider as string]
-        : ['gemini-cli', 'codex-cli', 'cursor-cli', 'deepseek'];
+        : ['gemini-cli', 'codex-cli', 'cursor-cli', 'deepseek', 'openrouter'];
 
       const results = await Promise.allSettled(providers.map(async (name) => {
         const start = Date.now();
@@ -47,9 +47,9 @@ export const providerTools: MCPTool[] = [
         let manager: Awaited<ReturnType<typeof createProviderManager>> | null = null;
         try {
           manager = await createProviderManager({
-            providers: [{ provider: name as 'gemini-cli' | 'codex-cli' | 'cursor-cli' | 'deepseek', model: 'auto' }],
+            providers: [{ provider: name as 'gemini-cli' | 'codex-cli' | 'cursor-cli' | 'deepseek' | 'openrouter', model: 'auto' }],
           });
-          const provider = manager.getProvider(name as 'gemini-cli' | 'codex-cli' | 'cursor-cli' | 'deepseek');
+          const provider = manager.getProvider(name as 'gemini-cli' | 'codex-cli' | 'cursor-cli' | 'deepseek' | 'openrouter');
           if (!provider) {
             return { name, available: false, healthy: false, error: 'Failed to initialize' };
           }
@@ -95,7 +95,7 @@ export const providerTools: MCPTool[] = [
       properties: {
         provider: {
           type: 'string',
-          enum: ['gemini-cli', 'codex-cli', 'cursor-cli', 'deepseek'],
+          enum: ['gemini-cli', 'codex-cli', 'cursor-cli', 'deepseek', 'openrouter'],
           description: 'Provider to use',
         },
         prompt: { type: 'string', description: 'Prompt text' },
@@ -112,7 +112,7 @@ export const providerTools: MCPTool[] = [
       }
 
       const start = Date.now();
-      const providerName = input.provider as 'gemini-cli' | 'codex-cli' | 'cursor-cli' | 'deepseek';
+      const providerName = input.provider as 'gemini-cli' | 'codex-cli' | 'cursor-cli' | 'deepseek' | 'openrouter';
       const { createProviderManager, resolveProviderModel } = await import('@hive-flow/providers');
       const resolvedModel = resolveProviderModel(providerName, input.model as string | undefined);
 
@@ -158,6 +158,7 @@ export const providerTools: MCPTool[] = [
             'codex-cli': 'codex',
             'cursor-cli': 'cursor',
             'deepseek': 'deepseek',
+            'openrouter': 'openrouter',
           };
           const mappedName = providerMap[providerName] || providerName;
           const ttfb_ms = Date.now() - start;

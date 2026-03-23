@@ -22,7 +22,7 @@ const AGENT_FILE = 'store.json';
 type AgentModel = 'sonnet' | 'opus' | 'inherit';
 
 // First-class providers: Cursor, Codex, Gemini alongside Anthropic
-export type AgentProvider = 'anthropic' | 'anthropic-cli' | 'gemini-cli' | 'codex-cli' | 'cursor-cli' | 'deepseek';
+export type AgentProvider = 'anthropic' | 'anthropic-cli' | 'gemini-cli' | 'codex-cli' | 'cursor-cli' | 'deepseek' | 'openrouter';
 
 export interface AgentRecord {
   agentId: string;
@@ -432,8 +432,8 @@ export const agentTools: MCPTool[] = [
         domain: { type: 'string', description: 'Agent domain' },
         provider: {
           type: 'string',
-          enum: ['anthropic', 'anthropic-cli', 'gemini-cli', 'codex-cli', 'cursor-cli', 'deepseek'],
-          description: 'LLM provider (default: anthropic). anthropic-cli, Codex, Gemini, Cursor are first-class CLI providers.',
+          enum: ['anthropic', 'anthropic-cli', 'gemini-cli', 'codex-cli', 'cursor-cli', 'deepseek', 'openrouter'],
+          description: 'LLM provider (default: anthropic). anthropic-cli, Codex, Gemini, Cursor, OpenRouter are first-class CLI providers.',
         },
         model: {
           type: 'string',
@@ -474,6 +474,11 @@ export const agentTools: MCPTool[] = [
         } catch {
           // Provider package not available — fall through without resolved model
         }
+      }
+
+      // OpenRouter allowlist check: undefined resolvedModel means blocked
+      if (provider === 'openrouter' && resolvedModel === undefined && input.model) {
+        return { success: false, error: `Model '${input.model}' not in OpenRouter allowedModels config.` };
       }
 
       // SEC-011: Generate spawn-origin token for identity hardening.
@@ -938,7 +943,7 @@ export const agentTools: MCPTool[] = [
         }
         if (agent.provider === 'anthropic') {
           return {
-            error: "Use 'anthropic-cli' for Claude subprocess workers, not 'anthropic'. The agent_task bridge supports providers: anthropic-cli, gemini-cli, codex-cli, cursor-cli, deepseek. Use Claude Code Task tool for native anthropic agents.",
+            error: "Use 'anthropic-cli' for Claude subprocess workers, not 'anthropic'. The agent_task bridge supports providers: anthropic-cli, gemini-cli, codex-cli, cursor-cli, deepseek, openrouter. Use Claude Code Task tool for native anthropic agents.",
           };
         }
         if (!transitionAgent(agent, 'busy')) {

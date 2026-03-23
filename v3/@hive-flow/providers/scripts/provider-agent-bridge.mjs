@@ -180,6 +180,7 @@ const PROVIDER_TOKEN_LIMITS = {
   'codex-cli':     { maxTokens: 1000000, maxEntries: 50 }, // gpt-5.4: 1M context
   'cursor-cli':    { maxTokens: 200000, maxEntries: 50 },  // conservative default
   'deepseek':      { maxTokens: 131072, maxEntries: 30 },  // deepseek-reasoner: 131072
+  'openrouter':    { maxTokens: 128000, maxEntries: 50 },  // default: varies by model
 };
 
 // Model-specific overrides (when model is known at runtime)
@@ -192,6 +193,11 @@ const MODEL_TOKEN_LIMITS = {
   'deepseek-reasoner': 131072,
   'deepseek-chat': 131072,
   'gemini-3.1-pro-preview': 1000000,
+  'google/gemini-2.5-flash': 1048576,
+  'meta-llama/llama-3.3-70b': 131072,
+  'deepseek/deepseek-reasoner': 131072,
+  'openai/gpt-4o-mini': 128000,
+  'mistralai/mistral-small-25': 32768,
 };
 
 // Token estimation: ~4 chars per token (conservative for code/mixed content)
@@ -252,10 +258,10 @@ function getProviderLimits(providerName, modelName) {
     maxChars: limits.maxTokens * 4,      // For char-based checks
     // Dynamic threshold: 40K token floor buffer, then 85% for larger models.
     // deepseek 131K → 91K (70%), sonnet 200K → 160K (80%), opus/gemini/codex 1M → 850K (85%)
-    warningThreshold: Math.min(
+    warningThreshold: Math.max(0, Math.min(
       Math.floor(limits.maxTokens * 0.85),
       limits.maxTokens - 40000
-    ),
+    )),
   };
 }
 const LOCK_ACQUIRE_TIMEOUT = 10000; // 10 seconds — aligned with agent-tools.ts withStoreLock
@@ -800,6 +806,7 @@ async function getProviderDefaults() {
     'codex-cli': undefined,
     'cursor-cli': 'auto',
     'deepseek': 'deepseek-reasoner',
+    'openrouter': 'google/gemini-2.5-flash',
   };
   return _providerDefaults;
 }
@@ -1426,7 +1433,7 @@ async function parseArgs() {
 
 function trackProviderUsage(providerName, usage, startTime) {
   try {
-    const providerMap = { 'anthropic-cli': 'anthropic', 'gemini-cli': 'gemini', 'codex-cli': 'codex', 'cursor-cli': 'cursor' };
+    const providerMap = { 'anthropic-cli': 'anthropic', 'gemini-cli': 'gemini', 'codex-cli': 'codex', 'cursor-cli': 'cursor', 'openrouter': 'openrouter' };
     const mappedName = providerMap[providerName] || providerName;
     const ttfb_ms = Date.now() - startTime;
     const metricsDir = join(process.cwd(), '.hive-flow', 'metrics');
@@ -1492,6 +1499,7 @@ async function main() {
     'codex-cli': providerModule.CodexCLIProvider,
     'cursor-cli': providerModule.CursorCLIProvider,
     'deepseek': providerModule.DeepSeekProvider,
+    'openrouter': providerModule.OpenRouterProvider,
   };
 
   const ProviderClass = providerClasses[providerName];
@@ -1542,6 +1550,30 @@ async function main() {
       model: agent.resolvedModel || defaults[providerName],
       timeout: parsedTimeout || undefined,
     };
+
+    // Phase 2 re-trim: correct context limits for OpenRouter dynamic models
+    if (providerName === 'openrouter' && typeof provider.getModelContextLength === 'function') {
+      try {
+        if (!agent.resolvedModel) throw new Error('No resolvedModel for openrouter');
+        const realContext = await provider.getModelContextLength(agent.resolvedModel);
+        if (typeof realContext !== 'number' || realContext <= 0 || !Number.isFinite(realContext)) {
+          stderrLogger.warn('[bridge] Invalid context length from provider:', realContext);
+        } else {
+          const phase1Limits = getProviderLimits(providerName, agent.resolvedModel);
+          if (realContext !== phase1Limits.maxTokens) {
+            const correctedLimits = {
+              ...phase1Limits,
+              maxTokens: realContext,
+              maxChars: realContext * 4,
+              warningThreshold: Math.max(0, Math.min(Math.floor(realContext * 0.85), realContext - 40000)),
+            };
+            request.messages = trimMessages(request.messages, correctedLimits);
+          }
+        }
+      } catch (err) {
+        stderrLogger.warn('[bridge] OpenRouter dynamic context lookup failed:', err.message);
+      }
+    }
 
     // Always include built-in filesystem tools so providers know they can use them.
     // These are handled directly in the bridge (no MCP client required).
@@ -1880,6 +1912,40 @@ async function main() {
         hasContent: !!(response?.content),
         historyLength: request.messages.length,
       });
+    }
+
+    // Post-loop: if content empty after tool work, request text summary
+    if ((!response.content || response.content.trim() === '') && iterations > 0) {
+      try {
+        const summaryRequest = {
+          messages: [...request.messages, {
+            role: 'user',
+            content: 'Summarize what you found and accomplished in the previous tool calls. Provide your analysis and conclusions as text.'
+          }],
+          model: request.model,
+        };
+        const summaryResponse = await provider.complete(summaryRequest);
+        if (summaryResponse.content && summaryResponse.content.trim() !== '') {
+          response = { ...response, content: summaryResponse.content };
+        }
+      } catch (summaryErr) {
+        stderrLogger.warn('[bridge] Post-loop summary request failed:', summaryErr.message);
+      }
+
+      // Fallback: if summary also empty, synthesize from tool results
+      if ((!response.content || response.content.trim() === '') && iterations > 0) {
+        const toolTurns = request.messages.filter(m => m.role === 'tool');
+        if (toolTurns.length > 0) {
+          const snippets = toolTurns.slice(-5).map(m => {
+            const name = m.name || 'tool';
+            const body = (typeof m.content === 'string' ? m.content : JSON.stringify(m.content)).slice(0, 500);
+            return `[${name}]: ${body}`;
+          });
+          response.content = `[Task completed via ${iterations} tool iterations]\n\n${snippets.join('\n\n')}`;
+        } else {
+          response.content = `[Task completed via ${iterations} tool iteration(s) — no tool results captured]`;
+        }
+      }
     }
 
     trackProviderUsage(providerName, response.usage, providerStartTime);

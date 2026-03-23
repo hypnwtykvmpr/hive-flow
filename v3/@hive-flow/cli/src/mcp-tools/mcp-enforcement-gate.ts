@@ -282,6 +282,17 @@ export function checkModelEnforcement(
     return { allowed: true, correctedInput: { ...input, model: 'auto' } };
   }
 
+  // Rule 7: openrouter requires an explicit model (no model content enforcement)
+  if (input.provider === 'openrouter') {
+    if (!input.model) {
+      return {
+        allowed: false,
+        reason: 'MODEL ENFORCEMENT: openrouter requires an explicit model or tier (opus/sonnet/haiku).',
+      };
+    }
+    return { allowed: true };
+  }
+
   // Rule 4: Claude provider (anthropic-cli or unspecified) without explicit model → default to sonnet
   const isClaudeProvider =
     !input.provider ||

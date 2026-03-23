@@ -30,6 +30,7 @@ export type ProviderType =
   | 'mistral'
   | 'ollama'
   | 'deepseek'
+  | 'openrouter'
   | 'custom';
 
 /** Provider health status */
@@ -232,6 +233,27 @@ const BUILTIN_PROVIDERS: ProviderModule[] = [
       },
       apiKeyEnvVar: 'DEEPSEEK_API_KEY',
       baseUrl: 'https://api.deepseek.com',
+    },
+  },
+  {
+    metadata: {
+      id: 'openrouter',
+      name: 'OpenRouter',
+      type: 'openrouter' as ProviderType,
+      version: '1.0.0',
+      description: 'OpenRouter API gateway — 200+ models from multiple providers',
+      priority: 6,
+      models: ['google/gemini-2.5-flash', 'meta-llama/llama-3.3-70b', 'deepseek/deepseek-reasoner', 'openai/gpt-4o-mini', 'mistralai/mistral-small-25'],
+      capabilities: {
+        streaming: true,
+        toolUse: true,
+        vision: true,
+        codeExecution: false,
+        contextWindow: 1048576,
+        maxOutputTokens: 65536,
+      },
+      apiKeyEnvVar: 'OPENROUTER_API_KEY',
+      baseUrl: 'https://openrouter.ai/api/v1',
     },
   },
 ];

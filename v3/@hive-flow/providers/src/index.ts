@@ -60,5 +60,13 @@ export { bufferStreamResponse } from './streaming-buffer.js';
 export { escapeXml, parseToolCallPayload, parseToolCallsFromContent, formatToolInstructions, flushToolCallsFromBuffer } from './tool-call-utils.js';
 
 // Export model alias resolver
-export { resolveProviderModel, PROVIDER_ALIAS_MAP, KNOWN_PROVIDER_MODELS, CLAUDE_ALIASES, PROVIDER_DEFAULTS } from './model-alias-resolver.js';
+export { resolveProviderModel, PROVIDER_ALIAS_MAP, KNOWN_PROVIDER_MODELS, CLAUDE_ALIASES, PROVIDER_DEFAULTS, DEFAULT_CONTEXT_WINDOWS, getModelContextLength } from './model-alias-resolver.js';
 export type { ClaudeAlias, CLIProviderName } from './model-alias-resolver.js';
+
+// Export OpenRouter model config
+export {
+  loadOpenRouterConfig, selectFromPool, isModelAllowed, resetOpenRouterConfigCache,
+  getModelContextLength as getOpenRouterModelContextLength,
+  DEFAULT_CONTEXT_WINDOWS as OR_DEFAULT_CONTEXT_WINDOWS,
+} from './openrouter-model-config.js';
+export type { OpenRouterTierPoolConfig, OpenRouterModelConfig } from './openrouter-model-config.js';

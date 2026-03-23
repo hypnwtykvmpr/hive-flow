@@ -295,7 +295,7 @@ export function mapLevelToFlow(level: ComplexityLevel): RequiredFlow {
         planningSubflow: { enabled: true, agentCount: 2, modelPreference: 'opus', providerPreference: 'gemini-cli', variant: 'full', optOutAllowed: false },
         verificationGates: { enabled: true, agentCount: 2, modelPreference: 'opus', providerPreference: 'gemini-cli', variant: 'full', categories: ['factual', 'syntax', 'semantic', 'blindspot', 'error-omission', 'alternative', 'edge-case', 'security'] },
         ambiguityFilter: { enabled: true, agentCount: 2, modelPreference: 'opus', providerPreference: 'codex-cli', variant: 'advanced', explorationAgents: 2, deepAnalysis: true },
-        dualAgentAudit: { enabled: true, agentCount: 5, modelPreference: 'opus', variant: 'full', hiveMind: true },
+        dualAgentAudit: { enabled: true, agentCount: 5, modelPreference: 'opus', providerPreference: 'openrouter', variant: 'full', hiveMind: true },
         postTaskVerification: { enabled: true, agentCount: 2, modelPreference: 'opus', providerPreference: 'cursor-cli', variant: 'full' },
       };
   }

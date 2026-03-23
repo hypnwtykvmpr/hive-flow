@@ -182,4 +182,32 @@ describe('resolveProviderModel', () => {
       expect(KNOWN_PROVIDER_MODELS['deepseek']).toBeInstanceOf(Set);
     });
   });
+
+  describe('OpenRouter provider mapping', () => {
+    it('includes openrouter in PROVIDER_ALIAS_MAP', () => {
+      expect(PROVIDER_ALIAS_MAP).toHaveProperty('openrouter');
+    });
+
+    it('includes openrouter in KNOWN_PROVIDER_MODELS', () => {
+      expect(KNOWN_PROVIDER_MODELS).toHaveProperty('openrouter');
+      expect(KNOWN_PROVIDER_MODELS['openrouter']).toBeInstanceOf(Set);
+    });
+
+    it('includes openrouter in PROVIDER_DEFAULTS', () => {
+      expect(PROVIDER_DEFAULTS).toHaveProperty('openrouter');
+      expect(typeof PROVIDER_DEFAULTS['openrouter']).toBe('string');
+    });
+
+    it('isCliProvider returns true for openrouter', () => {
+      // When openrouter is a CLI provider, resolveProviderModel will NOT
+      // passthrough — it will resolve through alias/pool logic instead of
+      // returning the raw model string unchanged.
+      // With a Claude alias like 'opus', a CLI provider maps it, while a
+      // non-CLI provider would passthrough 'opus' as-is.
+      const result = resolveProviderModel('openrouter', 'opus');
+      // If openrouter were NOT a CLI provider, result would be 'opus' (passthrough).
+      // Since it IS a CLI provider, it gets resolved through pool logic.
+      expect(result).not.toBe('opus');
+    });
+  });
 });

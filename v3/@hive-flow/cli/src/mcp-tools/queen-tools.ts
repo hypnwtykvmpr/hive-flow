@@ -577,7 +577,7 @@ const spawnWorkerTool: MCPTool = {
       role: { type: 'string', description: 'Worker role (e.g., "coder", "reviewer", "tester")' },
       provider: {
         type: 'string',
-        enum: ['anthropic', 'anthropic-cli', 'gemini-cli', 'codex-cli', 'cursor-cli', 'deepseek'],
+        enum: ['anthropic', 'anthropic-cli', 'gemini-cli', 'codex-cli', 'cursor-cli', 'deepseek', 'openrouter'],
         description: 'LLM provider for the worker',
       },
       model: {

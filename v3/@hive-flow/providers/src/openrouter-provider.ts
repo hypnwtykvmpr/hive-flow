@@ -88,6 +88,9 @@ export class OpenRouterProvider extends BaseProvider {
 
   private baseUrl = 'https://openrouter.ai/api/v1';
   private headers: Record<string, string> = {};
+  private modelMetadataCache: Map<string, number> = new Map();
+  private metadataCacheTime = 0;
+  private refreshInFlight: Promise<void> | null = null;
 
   constructor(options: BaseProviderOptions) {
     super(options);
@@ -191,12 +194,21 @@ export class OpenRouterProvider extends BaseProvider {
     try {
       const response = await fetch(`${this.baseUrl}/models`, { headers: this.headers });
       if (!response.ok) return this.capabilities.supportedModels;
-      const json = await response.json() as { data?: Array<{ id: string }> };
+      const json = await response.json() as { data?: Array<{ id: string; context_length?: number }> };
       if (json.data && Array.isArray(json.data)) {
+        // Populate metadata cache from API response
+        this.modelMetadataCache.clear();
+        for (const entry of json.data) {
+          if (typeof entry.context_length === 'number' && entry.context_length > 0 && Number.isFinite(entry.context_length)) {
+            this.modelMetadataCache.set(entry.id, entry.context_length);
+          }
+        }
+        this.metadataCacheTime = Date.now();
         return json.data.map((entry) => entry.id as LLMModel);
       }
       return this.capabilities.supportedModels;
-    } catch {
+    } catch (err) {
+      // listModels fetch failed — use static fallback
       return this.capabilities.supportedModels;
     }
   }
@@ -210,6 +222,43 @@ export class OpenRouterProvider extends BaseProvider {
       supportedFeatures: ['chat', 'completion', 'tool_calling'],
       pricing: this.capabilities.pricing[model],
     };
+  }
+
+  /**
+   * Resolve the context window length for a model.
+   *
+   * Resolution order:
+   * 1. modelMetadataCache (populated by listModels from /models API)
+   * 2. capabilities.maxContextLength (static defaults)
+   * 3. 128000 (safe fallback)
+   *
+   * If the metadata cache is empty or stale (>5 min), triggers a background
+   * listModels() refresh but returns immediately from static sources.
+   */
+  async getModelContextLength(model: string): Promise<number> {
+    // 1. Check metadata cache (populated from /models API)
+    const METADATA_TTL_MS = 5 * 60 * 1000; // 5 minutes
+    if (this.modelMetadataCache.size > 0 && (Date.now() - this.metadataCacheTime) < METADATA_TTL_MS) {
+      const cached = this.modelMetadataCache.get(model);
+      if (cached !== undefined) return cached;
+    }
+
+    // 2. Check static capabilities
+    const staticLength = this.capabilities.maxContextLength[model];
+    if (staticLength !== undefined) return staticLength;
+
+    // Trigger background refresh if cache is empty or stale (guarded against concurrent calls)
+    if (this.modelMetadataCache.size === 0 || (Date.now() - this.metadataCacheTime) >= METADATA_TTL_MS) {
+      if (!this.refreshInFlight) {
+        this.refreshInFlight = this.listModels()
+          .then(() => { /* cache populated */ })
+          .catch(() => { /* best-effort refresh */ })
+          .finally(() => { this.refreshInFlight = null; });
+      }
+    }
+
+    // 3. Safe fallback
+    return 128000;
   }
 
   /** Accept any provider/model string since OpenRouter proxies hundreds of models. */
