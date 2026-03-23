@@ -67,7 +67,7 @@ export interface HiveMission {
 
 export interface HiveAuditEntry {
   timestamp: string;
-  event: 'mission-assigned' | 'worker-spawned' | 'worker-tasked' | 'results-collected' | 'report-submitted' | 'hive-terminated' | 'watcher-spawned' | 'error';
+  event: 'mission-assigned' | 'worker-spawned' | 'worker-tasked' | 'worker-terminated' | 'results-collected' | 'report-submitted' | 'hive-terminated' | 'watcher-spawned' | 'error';
   hiveId: string;
   detail: string;
   agentId?: string;

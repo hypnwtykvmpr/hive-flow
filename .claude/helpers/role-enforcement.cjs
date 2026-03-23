@@ -404,9 +404,6 @@ function processSubagentStart(role) {
  * Returns true if token is valid or if verification is not possible (fail-open for compatibility).
  */
 function verifySpawnToken(agentId) {
-  const envToken = process.env.HIVE_FLOW_AGENT_TOKEN;
-  if (!envToken) return true; // No token in env — legacy agent, fail-open
-
   try {
     const storePath = path.join(PROJECT_DIR, '.hive-flow', 'agents', 'store.json');
     if (!fs.existsSync(storePath)) return true; // No store — fail-open
@@ -416,9 +413,11 @@ function verifySpawnToken(agentId) {
     if (!agent) return true; // Agent not in store — fail-open
     const storedToken = agent.config?._spawnToken;
     if (!storedToken) return true; // No stored token — legacy agent, fail-open
+    const candidateToken = process.env.HIVE_FLOW_AGENT_TOKEN;
+    if (!candidateToken) return true; // No env token — fail-open for legacy agents
 
     // Constant-time comparison to prevent timing attacks
-    const envBuf = Buffer.from(String(envToken));
+    const envBuf = Buffer.from(String(candidateToken));
     const storedBuf = Buffer.from(String(storedToken));
     if (envBuf.length !== storedBuf.length) return false;
     return crypto.timingSafeEqual(envBuf, storedBuf);

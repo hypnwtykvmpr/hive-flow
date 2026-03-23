@@ -337,6 +337,7 @@ export class GeminiCLIProvider extends BaseProvider {
       http_proxy: process.env.http_proxy,
       https_proxy: process.env.https_proxy,
       no_proxy: process.env.no_proxy,
+      ...(this.config.env || {}),
     };
   }
 

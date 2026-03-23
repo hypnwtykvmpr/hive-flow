@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 
 // ── Module mocks (hoisted before imports) ────────────────────────────────
 
@@ -31,6 +32,9 @@ function makeRoleEnvelope(state: Record<string, unknown>) {
 // Use dynamic require path based on project structure
 const ROLE_ENFORCEMENT_PATH = require('path').resolve(
   __dirname, '..', '..', '..', '..', '..', '.claude', 'helpers', 'role-enforcement.cjs'
+);
+const AGENT_STORE_PATH = require('path').resolve(
+  __dirname, '..', '..', '..', '..', '..', '.hive-flow', 'agents', 'store.json'
 );
 
 // We need to use the real module since it's CJS with fs/crypto calls.
@@ -313,6 +317,50 @@ describe('Role Enforcement System', () => {
       delete process.env.AGENTIC_FLOW_AGENT_ID;
       const result = roleEnf.processPreToolUse({ tool_name: 'Bash' });
       expect(result).toEqual({});
+    });
+  });
+
+  describe('verifySpawnToken', () => {
+    let storeBackup: string | null = null;
+
+    beforeEach(() => {
+      storeBackup = existsSync(AGENT_STORE_PATH)
+        ? readFileSync(AGENT_STORE_PATH, 'utf8')
+        : null;
+    });
+
+    afterEach(() => {
+      if (storeBackup === null) {
+        if (existsSync(AGENT_STORE_PATH)) {
+          rmSync(AGENT_STORE_PATH);
+        }
+      } else {
+        mkdirSync(require('path').dirname(AGENT_STORE_PATH), { recursive: true });
+        writeFileSync(AGENT_STORE_PATH, storeBackup, 'utf8');
+      }
+      delete process.env.HIVE_FLOW_AGENT_TOKEN;
+    });
+
+    it('falls back to reading the stored spawn token when env token is missing', () => {
+      delete process.env.HIVE_FLOW_AGENT_TOKEN;
+      mkdirSync(require('path').dirname(AGENT_STORE_PATH), { recursive: true });
+      writeFileSync(AGENT_STORE_PATH, JSON.stringify({
+        agents: {
+          'agent-fallback': {
+            config: {
+              _spawnToken: 'spawn-token-from-store',
+            },
+          },
+        },
+      }, null, 2));
+
+      const fs = require('fs');
+      const spy = vi.spyOn(fs, 'readFileSync');
+
+      expect(roleEnf.verifySpawnToken('agent-fallback')).toBe(true);
+      expect(spy).toHaveBeenCalledWith(AGENT_STORE_PATH, 'utf8');
+
+      spy.mockRestore();
     });
   });
 

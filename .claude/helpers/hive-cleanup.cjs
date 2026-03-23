@@ -7,12 +7,12 @@
 // Flow:
 //   1. Read all .hive-flow/hives/{id}/hive.json files
 //   2. For each active hive, identify idle workers past threshold
-//   3. Terminate excess idle workers (never below 4 workers per hive)
+//   3. Terminate excess idle workers (never below 5 workers per hive)
 //   4. Update hive records, decrement budget.workersAllocated
 //   5. Output cleanup summary JSON to stdout
 //
 // Safety:
-//   - NEVER terminate below 4 workers per active hive (queen + 4 = 5 min)
+//   - NEVER terminate below 5 workers per active hive (queen + 5 = 6 min)
 //   - NEVER terminate queens
 //   - NEVER terminate workers with status 'busy'
 //   - Only terminate workers idle past threshold
@@ -29,7 +29,7 @@ const fs = require('fs');
 // ---------------------------------------------------------------------------
 
 const IDLE_TIMEOUT_MS = parseInt(process.env.HIVE_FLOW_IDLE_TIMEOUT_MS, 10) || 900000; // 15 min
-const MIN_WORKERS_PER_HIVE = 4; // queen is separate; keep at least 4 workers alive
+const MIN_WORKERS_PER_HIVE = 5; // queen is separate; keep at least 5 workers alive
 const PROJECT_DIR = path.resolve(__dirname, '..', '..');
 const HIVES_DIR = path.join(PROJECT_DIR, '.hive-flow', 'hives');
 const LOCK_MAX_WAIT = 10000; // 10s
@@ -255,7 +255,7 @@ async function cleanupIdleAgents() {
         for (const w of toTerminate) {
           freshHive.audit.push({
             timestamp: new Date().toISOString(),
-            event: 'hive-terminated',
+            event: 'worker-terminated',
             hiveId: freshHive.hiveId,
             detail: 'Idle cleanup: terminated worker ' + w.workerId + ' (agent ' + w.agentId + ')',
             agentId: w.agentId,

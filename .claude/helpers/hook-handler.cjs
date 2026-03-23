@@ -1533,7 +1533,15 @@ const handlers = {
             if (item && item.type === 'text' && typeof item.text === 'string') {
               try {
                 const parsed = JSON.parse(item.text);
-                if (parsed && parsed.allComplete === true || parsed.allComplete === 'true') {
+                if (
+                  parsed
+                  && (
+                    parsed.allWorkersSettled === true
+                    || parsed.allWorkersSettled === 'true'
+                    || parsed.allComplete === true
+                    || parsed.allComplete === 'true'
+                  )
+                ) {
                   allComplete = true;
                   if (parsed.hiveId) desc = `Hive ${parsed.hiveId} complete`;
                   break;
@@ -1541,7 +1549,15 @@ const handlers = {
               } catch { /* skip */ }
             }
           }
-        } else if (contentArray && contentArray.allComplete === true) {
+        } else if (
+          contentArray
+          && (
+            contentArray.allWorkersSettled === true
+            || contentArray.allWorkersSettled === 'true'
+            || contentArray.allComplete === true
+            || contentArray.allComplete === 'true'
+          )
+        ) {
           allComplete = true;
           if (contentArray.hiveId) desc = `Hive ${contentArray.hiveId} complete`;
         }

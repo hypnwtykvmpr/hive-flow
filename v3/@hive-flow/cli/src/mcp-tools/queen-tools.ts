@@ -12,6 +12,8 @@
  */
 
 import { randomUUID } from 'node:crypto';
+import { dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { MCPTool } from './types.js';
 import type { AgentProvider } from './agent-tools.js';
 import { sanitizePathId } from '@hive-flow/shared';
@@ -39,6 +41,8 @@ import {
   recomputeDelegationMetrics,
 } from './hive-store.js';
 import { getWorkflowHookDispatcher } from './workflow-executor.js';
+
+const MODULE_DIR = dirname(fileURLToPath(import.meta.url));
 
 // ---------------------------------------------------------------------------
 // Workflow hooks (fire-and-forget)
@@ -194,9 +198,24 @@ const missionAssignTool: MCPTool = {
     const providers = input.providers as string[] | undefined;
     const workerDependencies = input.workerDependencies as Record<string, string[]> | undefined;
     const stalenessTimeout = input.stalenessTimeout as number | undefined;
+    const workerDefs = input.workers as Array<{ role?: string; provider?: string; model?: string; task?: string }> | undefined;
 
+    // (1) Hard minimum of 5 workers
     if (maxWorkers < 5) {
-      return { success: false, error: `[COMPOSITION_ERROR] maxWorkers must be >= 5 (got ${maxWorkers}). Hives below minimum composition cannot pass report gates.` };
+      return { success: false, error: `[COMPOSITION_ERROR] maxWorkers must be >= 5 (got ${maxWorkers}). Hives require 1 queen + 5 workers minimum.` };
+    }
+
+    // (2) If maxWorkers < 6, snap to 6, and if maxWorkers > 25, snap to 25
+    let enforcedMaxWorkers = maxWorkers;
+    if (maxWorkers < 6) {
+      enforcedMaxWorkers = 6;
+    } else if (maxWorkers > 25) {
+      enforcedMaxWorkers = 25;
+    }
+
+    // (3) Return error if fewer than 5 workers are provided in the workers array
+    if (workerDefs && workerDefs.length > 0 && workerDefs.length < 5) {
+      return { success: false, error: `[COMPOSITION_ERROR] Minimum 5 workers required in workers array (got ${workerDefs.length}).` };
     }
 
     // Verify queen exists and is alive
@@ -209,8 +228,8 @@ const missionAssignTool: MCPTool = {
       return { success: false, error: `Queen agent '${queenId}' is terminated.` };
     }
 
-    // Create hive record
-    const budget: Partial<HiveBudget> = { maxWorkers, maxCost };
+    // Create hive record (use enforcedMaxWorkers for budget)
+    const budget: Partial<HiveBudget> = { maxWorkers: enforcedMaxWorkers, maxCost };
     const config: ModuleHiveConfig = {};
     if (workerDependencies) config.workerDependencies = workerDependencies;
     if (stalenessTimeout) config.stalenessTimeout = stalenessTimeout;
@@ -284,14 +303,13 @@ const missionAssignTool: MCPTool = {
       queenId,
       scope,
       description,
-      maxWorkers,
+      maxWorkers: enforcedMaxWorkers,
       providers,
     });
 
     // -----------------------------------------------------------------------
     // Auto-spawn and task workers in parallel when `workers` array is provided
     // -----------------------------------------------------------------------
-    const workerDefs = input.workers as Array<{ role?: string; provider?: string; model?: string; task?: string }> | undefined;
     interface WorkerSpawnResult {
       role: string;
       workerId?: string;
@@ -307,7 +325,7 @@ const missionAssignTool: MCPTool = {
 
     if (workerDefs && workerDefs.length > 0) {
       // Enforce maxWorkers budget
-      const effectiveDefs = workerDefs.slice(0, maxWorkers);
+      const effectiveDefs = workerDefs.slice(0, enforcedMaxWorkers);
 
       const spawnAndTask = async (def: { role?: string; provider?: string; model?: string; task?: string }): Promise<WorkerSpawnResult> => {
         const role = def.role || 'coder';
@@ -455,15 +473,18 @@ const missionAssignTool: MCPTool = {
     try {
       const { spawn } = await import('node:child_process');
       const { join } = await import('node:path');
-      const { mkdirSync, writeFileSync } = await import('node:fs');
+      const { existsSync, mkdirSync, writeFileSync } = await import('node:fs');
 
       // Generate a unique session ID for this watcher instance
       const sessionId = `session-${randomUUID()}`;
       
-      // Path to the hive-watcher script (assumed to be in the same package)
-      const watcherScript = join(process.cwd(), 'node_modules', '@hive-flow', 'cli', 'dist', 'hive-watcher.js');
-      // Fallback: relative path from the current file
-      const fallbackScript = join(__dirname, '..', '..', 'dist', 'hive-watcher.js');
+      const candidates = [
+        join(process.cwd(), 'scripts', 'hive-watcher.js'),
+        join(process.cwd(), 'node_modules', '@hive-flow', 'cli', 'scripts', 'hive-watcher.js'),
+        join(MODULE_DIR, '..', '..', 'scripts', 'hive-watcher.js'),
+      ];
+      const watcherScript = candidates.find(c => existsSync(c));
+      if (!watcherScript) throw new Error('hive-watcher.js not found');
       
       // Spawn detached Node.js process
       const watcherProcess = spawn(
@@ -714,43 +735,46 @@ const taskWorkerTool: MCPTool = {
     const task = input.task as string;
     const timeout = input.timeout as number | undefined;
 
-    // Validate hive and worker
-    const hive = loadHive(hiveId);
-    if (!hive) {
-      return { success: false, error: `Hive '${hiveId}' not found.` };
-    }
-
-    const worker = hive.workers.find(w => w.workerId === workerId);
-    if (!worker) {
-      return { success: false, error: `Worker '${workerId}' not found in hive '${hiveId}'.` };
-    }
-
-    if (worker.status === 'terminated') {
-      return { success: false, error: `Worker '${workerId}' is terminated.` };
-    }
-
-    // Log the task in hive audit
-    await withHiveLock(hiveId, () => {
+    const dispatchContext = await withHiveLock(hiveId, () => {
       const freshHive = loadHive(hiveId);
-      if (freshHive) {
-        appendHiveAudit(freshHive, {
-          event: 'worker-tasked',
-          detail: `Task sent to worker '${workerId}': ${task.slice(0, 200)}`,
-          agentId: worker.agentId,
-          workerId,
-        });
-        if (!freshHive.delegationMetrics) {
-          freshHive.delegationMetrics = { taskedCount: 0, directWorkCount: 0, delegationRate: 1 };
-        }
-        freshHive.delegationMetrics.taskedCount = (freshHive.delegationMetrics.taskedCount ?? 0) + 1;
-        recomputeDelegationMetrics(freshHive);
-        saveHive(hiveId, freshHive);
+      if (!freshHive) {
+        return { success: false as const, error: `Hive '${hiveId}' not found.` };
       }
+
+      const worker = freshHive.workers.find(w => w.workerId === workerId);
+      if (!worker) {
+        return { success: false as const, error: `Worker '${workerId}' not found in hive '${hiveId}'.` };
+      }
+
+      if (worker.status === 'terminated') {
+        return { success: false as const, error: `Worker '${workerId}' is terminated.` };
+      }
+
+      appendHiveAudit(freshHive, {
+        event: 'worker-tasked',
+        detail: `Task sent to worker '${workerId}': ${task.slice(0, 200)}`,
+        agentId: worker.agentId,
+        workerId,
+      });
+      if (!freshHive.delegationMetrics) {
+        freshHive.delegationMetrics = { taskedCount: 0, directWorkCount: 0, delegationRate: 1 };
+      }
+      freshHive.delegationMetrics.taskedCount = (freshHive.delegationMetrics.taskedCount ?? 0) + 1;
+      recomputeDelegationMetrics(freshHive);
+      saveHive(hiveId, freshHive);
+
+      return {
+        success: true as const,
+        agentId: worker.agentId,
+      };
     });
 
-    // Call agent_task with the worker's agentId
+    if (!dispatchContext.success) {
+      return dispatchContext;
+    }
+
     const taskInput: Record<string, unknown> = {
-      agentId: worker.agentId,
+      agentId: dispatchContext.agentId,
       task,
     };
     if (timeout) taskInput.timeout = timeout;
@@ -763,9 +787,9 @@ const taskWorkerTool: MCPTool = {
       if (freshHive) {
         const freshWorker = freshHive.workers.find(w => w.workerId === workerId);
         if (freshWorker) {
-          freshWorker.status = result.success ? 'idle' : 'error'; // Reset to idle on success, error on failure
-          if (freshWorker.status === 'idle') {
-            freshWorker.idleSince = new Date().toISOString();
+          freshWorker.status = result.success ? 'busy' : 'error'; // Mark busy on success (async work in progress), error on failure
+          if (freshWorker.status === 'busy') {
+            delete freshWorker.idleSince;
           }
         }
         saveHive(hiveId, freshHive);
@@ -776,7 +800,7 @@ const taskWorkerTool: MCPTool = {
       success: result.success,
       hiveId,
       workerId,
-      agentId: worker.agentId,
+      agentId: dispatchContext.agentId,
       result,
     };
   },
@@ -813,8 +837,8 @@ const collectResultsTool: MCPTool = {
     }
 
     const liveWorkers = hive.workers.filter(w => w.status !== 'terminated');
-    if (liveWorkers.length < 4) {
-      return { success: false, error: `[COMPOSITION_ERROR] Cannot collect results. Found ${liveWorkers.length} live workers, minimum 4 required.` };
+    if (liveWorkers.length < 5) {
+      return { success: false, error: `[COMPOSITION_ERROR] Cannot collect results. Found ${liveWorkers.length} live workers, minimum 5 required.` };
     }
 
     // Collect agent status for each worker
@@ -829,7 +853,7 @@ const collectResultsTool: MCPTool = {
       lastResult?: unknown;
     }> = [];
 
-    for (const worker of hive.workers) {
+    for (const worker of liveWorkers) {
       const agent = store.agents[worker.agentId];
       workerResults.push({
         workerId: worker.workerId,
@@ -908,11 +932,11 @@ const reportTool: MCPTool = {
         return { success: false, error: `Queen '${queenId}' does not own hive '${hiveId}'.` };
       }
 
-      // Composition check: require minimum 4 live workers before accepting report
+      // Composition check: require minimum 5 live workers before accepting report
       const liveWorkers = hive.workers.filter(w => w.status !== 'terminated');
       liveWorkerCount = liveWorkers.length;
-      if (liveWorkerCount < 4) {
-        return { success: false, error: `[COMPOSITION_ERROR] Queen report blocked. Found ${liveWorkerCount} live workers, minimum 4 required.` };
+      if (liveWorkerCount < 5) {
+        return { success: false, error: `[COMPOSITION_ERROR] Queen report blocked. Found ${liveWorkerCount} live workers, minimum 5 required.` };
       }
 
       const directWork = await readVerifiedQueenDirectWorkCount(queenId);
@@ -1194,7 +1218,7 @@ const hiveValidateCompositionTool: MCPTool = {
     }
 
     const stale = isHiveStale(hive);
-    const pass = liveWorkerCount >= 4 && !stale;
+    const pass = liveWorkerCount >= 5 && !stale;
 
     return {
       success: true,
@@ -1204,8 +1228,8 @@ const hiveValidateCompositionTool: MCPTool = {
       deadWorkerCount,
       roles,
       stale,
-      ...(liveWorkerCount < 4
-        ? { reason: `Insufficient live workers: ${liveWorkerCount}/4 minimum` }
+      ...(liveWorkerCount < 5
+        ? { reason: `Insufficient live workers: ${liveWorkerCount}/5 minimum` }
         : stale
           ? { reason: 'Hive is stale (exceeded staleness timeout)' }
           : {}),
@@ -1428,6 +1452,8 @@ const hivePollWorkersTool: MCPTool = {
           hiveId,
           workers: workerStatuses,
           allComplete,
+          allWorkersSettled: allComplete,
+          readyForReport: allComplete,
           completedCount,
           runningCount,
           failedCount,
@@ -1459,27 +1485,6 @@ const hivePollWorkersTool: MCPTool = {
         // Best-effort activity logging
       }
 
-      await withHiveLock(hiveId, () => {
-        const freshHive = loadHive(hiveId);
-        if (freshHive && freshHive.status === 'active') {
-          freshHive.status = 'completed';
-          freshHive.completedAt = new Date().toISOString();
-          saveHive(hiveId, freshHive);
-        }
-      });
-
-      // Fire hive-complete hook with full context
-      fireHiveCompleteHook({
-        hiveId,
-        queenId: hive?.queenId,
-        completedCount,
-        failedCount,
-        idleCount,
-        terminatedCount,
-        allComplete: true,
-        workerCount: hive?.workers.length || 0,
-        liveWorkerCount: (hive?.workers.filter(w => w.status !== 'terminated').length) || 0,
-      });
     }
 
     return {
@@ -1487,6 +1492,8 @@ const hivePollWorkersTool: MCPTool = {
       hiveId,
       workers: workerStatuses,
       allComplete,
+      allWorkersSettled: allComplete,
+      readyForReport: allComplete,
       completedCount,
       runningCount,
       failedCount,

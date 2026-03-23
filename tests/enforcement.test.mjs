@@ -1114,6 +1114,17 @@ describe('enforcement system', () => {
       assert.match(additionalContext(r.json), /ENFORCEMENT/);
       assert.match(additionalContext(r.json), /HALTED/i);
     });
+
+    it('does not inject warning context on empty-input SubagentStart at WARNED', () => {
+      setState(freshState({ level: 1, violations: 1 }));
+      const r = runEnforcement({});
+      assert.ok(isAllow(r.json), 'SubagentStart should still allow');
+      assert.deepStrictEqual(
+        r.json,
+        {},
+        'empty-input SubagentStart must not overwrite role-enforcement identity context'
+      );
+    });
   });
 
   // =========================================================================
@@ -1482,4 +1493,3 @@ describe('enforcement system', () => {
     });
   });
 });
-

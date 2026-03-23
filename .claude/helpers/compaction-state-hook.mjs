@@ -12,7 +12,7 @@
  *   user-prompt-submit — Incrementally refresh saved state
  */
 
-import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync, readdirSync, unlinkSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 
 // ---------------------------------------------------------------------------
@@ -384,13 +384,18 @@ function loadExistingState() {
 
 function saveState(state) {
   ensureStateDir();
-  const tmpFile = STATE_FILE + '.tmp';
+  const tmpFile = STATE_FILE + '.tmp.' + process.pid;
   writeFileSync(tmpFile, JSON.stringify(state, null, 2));
   try {
     renameSync(tmpFile, STATE_FILE);
   } catch {
     // Rename failed (cross-device, permissions) — fall back to direct write
-    try { writeFileSync(STATE_FILE, JSON.stringify(state, null, 2)); } catch { /* silent */ }
+    try {
+      writeFileSync(STATE_FILE, JSON.stringify(state, null, 2));
+    } catch {
+      /* silent */
+    }
+    try { if (existsSync(tmpFile)) unlinkSync(tmpFile); } catch { /* best-effort */ }
   }
 }
 

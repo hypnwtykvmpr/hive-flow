@@ -820,6 +820,11 @@ function sanitizeContext(text) {
 
 function processPreToolUse(input) {
   const toolName = input?.tool_name || input?.toolName || '';
+  if (!toolName) {
+    // Empty input is used for SubagentStart hooks; avoid overwriting
+    // role-enforcement.cjs identity injection with enforcement warnings.
+    return makeAllow();
+  }
   const toolInput = input?.tool_input || input?.input || {};
   const agentId = getAgentId();
   const state = getState(agentId);

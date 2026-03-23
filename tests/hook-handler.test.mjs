@@ -1,7 +1,7 @@
 import { describe, it, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
@@ -433,6 +433,87 @@ describe('hook-handler.cjs', () => {
       }
       // Without the token the handler emits {}
       assert.deepEqual(parsed, {}, `Expected empty object, got: ${JSON.stringify(parsed)}`);
+    });
+  });
+
+  // =========================================================================
+  // 20. advocate state locking — stale lock recovery for state writers
+  // =========================================================================
+  describe('advocate state locking', () => {
+    it('advocate-sign recovers from a stale advocate-state lock and writes state', () => {
+      const dataDir = join(tmpDir, '.hive-flow', 'data');
+      const lockDir = join(dataDir, '.advocate-state.lock');
+      mkdirSync(lockDir, { recursive: true });
+      const staleAt = new Date(Date.now() - 60_000);
+      utimesSync(lockDir, staleAt, staleAt);
+
+      const res = runHandler('advocate-sign', {
+        cwd: tmpDir,
+        stdinData: JSON.stringify({
+          newState: 'active',
+          description: 'Recovered from stale lock',
+        }),
+      });
+
+      assert.equal(res.status, 0, `advocate-sign should exit 0, stderr: ${res.stderr}`);
+      const statePath = join(dataDir, 'advocate-state.json');
+      assert.ok(existsSync(statePath), 'advocate-sign should write advocate-state.json');
+      const state = JSON.parse(readFileSync(statePath, 'utf8'));
+      assert.equal(state.state, 'active', 'advocate-sign should update the state');
+      assert.ok(!existsSync(lockDir), 'stale advocate-state lock should be removed after write');
+    });
+
+    it('user-prompt-activate recovers from a stale advocate-state lock and updates state', () => {
+      const dataDir = join(tmpDir, '.hive-flow', 'data');
+      const statePath = join(dataDir, 'advocate-state.json');
+      writeFileSync(statePath, JSON.stringify({
+        state: 'waiting-for-human',
+        updatedAt: new Date().toISOString(),
+        description: '',
+        history: [],
+      }));
+
+      const lockDir = join(dataDir, '.advocate-state.lock');
+      mkdirSync(lockDir, { recursive: true });
+      const staleAt = new Date(Date.now() - 60_000);
+      utimesSync(lockDir, staleAt, staleAt);
+
+      const res = runHandler('user-prompt-activate', {
+        cwd: tmpDir,
+        stdinData: JSON.stringify({ user_prompt: 'Resume work' }),
+      });
+
+      assert.equal(res.status, 0, `user-prompt-activate should exit 0, stderr: ${res.stderr}`);
+      const state = JSON.parse(readFileSync(statePath, 'utf8'));
+      assert.equal(state.state, 'active', 'user-prompt-activate should promote waiting-for-human to active');
+      assert.ok(!existsSync(lockDir), 'stale advocate-state lock should be removed after write');
+    });
+
+    it('user-prompt-activate recovers from a stale advocate-state lock when only refreshing activity', () => {
+      const dataDir = join(tmpDir, '.hive-flow', 'data');
+      const statePath = join(dataDir, 'advocate-state.json');
+      writeFileSync(statePath, JSON.stringify({
+        state: 'active',
+        updatedAt: '2024-01-01T00:00:00.000Z',
+        description: '',
+        history: [],
+      }));
+
+      const lockDir = join(dataDir, '.advocate-state.lock');
+      mkdirSync(lockDir, { recursive: true });
+      const staleAt = new Date(Date.now() - 60_000);
+      utimesSync(lockDir, staleAt, staleAt);
+
+      const res = runHandler('user-prompt-activate', {
+        cwd: tmpDir,
+        stdinData: JSON.stringify({ user_prompt: 'Keep going' }),
+      });
+
+      assert.equal(res.status, 0, `user-prompt-activate should exit 0, stderr: ${res.stderr}`);
+      const state = JSON.parse(readFileSync(statePath, 'utf8'));
+      assert.equal(state.state, 'active', 'user-prompt-activate should preserve the active state');
+      assert.notEqual(state.updatedAt, '2024-01-01T00:00:00.000Z', 'user-prompt-activate should refresh updatedAt');
+      assert.ok(!existsSync(lockDir), 'stale advocate-state lock should be removed after write');
     });
   });
 });

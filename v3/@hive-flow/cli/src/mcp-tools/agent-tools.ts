@@ -32,6 +32,8 @@ export interface AgentRecord {
   taskCount: number;
   config: Record<string, unknown>;
   createdAt: string;
+  idleSince?: string;
+  terminatedAt?: string;
   domain?: string;
   model?: AgentModel;  // Model tier assigned to this agent
   provider?: AgentProvider;  // LLM provider (anthropic, gemini-cli, codex-cli, cursor-cli)
@@ -64,6 +66,14 @@ export function transitionAgent(agent: AgentRecord, newStatus: AgentRecord['stat
     return false;
   }
   agent.status = newStatus;
+  if (newStatus === 'idle') {
+    agent.idleSince = new Date().toISOString();
+  } else if (newStatus === 'busy') {
+    delete agent.idleSince;
+  } else if (newStatus === 'terminated') {
+    agent.terminatedAt = new Date().toISOString();
+    delete agent.idleSince;
+  }
   return true;
 }
 
@@ -467,8 +477,7 @@ export const agentTools: MCPTool[] = [
       }
 
       // SEC-011: Generate spawn-origin token for identity hardening.
-      // Stored in agent record and propagated as env var HIVE_FLOW_AGENT_TOKEN
-      // to prevent env-var spoofing of agent identity.
+      // Stored on the agent record so task bridges can pass it explicitly.
       const spawnToken = randomUUID();
 
       const agent: AgentRecord = {
@@ -498,10 +507,6 @@ export const agentTools: MCPTool[] = [
       // LOGIC-012: Propagate parent enforcement level to sub-agent state file.
       // Sub-agents start at the parent's enforcement level, not NORMAL.
       propagateEnforcementToSubAgent(agentId);
-
-      // SEC-011: Set spawn-origin token in process env so child processes inherit it.
-      // role-enforcement.cjs verifies this token matches the stored value.
-      process.env.HIVE_FLOW_AGENT_TOKEN = spawnToken;
 
       // Include Agent Booster routing info if applicable
       const response: Record<string, unknown> = {
@@ -568,7 +573,7 @@ export const agentTools: MCPTool[] = [
               agentId,
               terminated: true,
               alreadyTerminated: true,
-              terminatedAt: new Date().toISOString(),
+              terminatedAt: agent.terminatedAt,
             };
           }
           saveAgentStore(store);
@@ -576,7 +581,7 @@ export const agentTools: MCPTool[] = [
             success: true,
             agentId,
             terminated: true,
-            terminatedAt: new Date().toISOString(),
+            terminatedAt: agent.terminatedAt,
           };
         }
 
@@ -592,6 +597,7 @@ export const agentTools: MCPTool[] = [
 
         if (existsSync(tasksDir)) {
           let trackingFiles: string[] = [];
+          const terminateMarker = join(tasksDir, `.bridge-terminate-${agentId}`);
           try {
             trackingFiles = readdirSync(tasksDir).filter(
               (file: string) => file.endsWith('.json') && !file.endsWith('.result.json'),
@@ -600,29 +606,26 @@ export const agentTools: MCPTool[] = [
             trackingFiles = [];
           }
 
-          for (const file of trackingFiles) {
-            const trackingPath = join(tasksDir, file);
-
+          try {
             try {
-              const tracking = JSON.parse(readFileSync(trackingPath, 'utf-8')) as {
-                status?: string;
-                taskId?: string;
-                agentId?: string;
-                pid?: number;
-              };
+              writeFileSync(terminateMarker, agentId, 'utf-8');
+            } catch {
+              // tasksDir may not exist if no task was ever dispatched — ignore
+            }
 
-              if (tracking.agentId !== agentId || tracking.status !== 'running') {
-                continue;
-              }
+            for (const file of trackingFiles) {
+              const trackingPath = join(tasksDir, file);
 
-              // Write termination marker instead of killing PID directly.
-              // The bridge polls for this file and exits gracefully.
-              {
-                const terminateMarker = join(tasksDir, `.bridge-terminate-${agentId}`);
-                try {
-                  writeFileSync(terminateMarker, agentId, 'utf-8');
-                } catch {
-                  // tasksDir may not exist if no task was ever dispatched — ignore
+              try {
+                const tracking = JSON.parse(readFileSync(trackingPath, 'utf-8')) as {
+                  status?: string;
+                  taskId?: string;
+                  agentId?: string;
+                  pid?: number;
+                };
+
+                if (tracking.agentId !== agentId || tracking.status !== 'running') {
+                  continue;
                 }
 
                 // Wait up to 10s for the bridge to notice and write its result file
@@ -646,16 +649,19 @@ export const agentTools: MCPTool[] = [
                   await new Promise(resolve => setTimeout(resolve, 500));
                 }
 
-                // Clean up marker if bridge didn't delete it
-                try { unlinkSync(terminateMarker); } catch { /* best-effort */ }
-
                 // Clean up task + tracking files
                 try { unlinkSync(join(tasksDir, `${taskId}.task`)); } catch { /* best-effort */ }
                 // Skip .result.json deletion — may still be needed by collect_results
                 try { unlinkSync(trackingPath); } catch { /* best-effort */ }
+              } catch {
+                // Ignore unreadable tracking files during termination cleanup
               }
+            }
+          } finally {
+            try {
+              unlinkSync(terminateMarker);
             } catch {
-              // Ignore unreadable tracking files during termination cleanup
+              /* best-effort */
             }
           }
         }
@@ -690,31 +696,33 @@ export const agentTools: MCPTool[] = [
       required: ['agentId'],
     },
     handler: async (input) => {
-      const store = loadAgentStore();
       const agentId = input.agentId as string;
-      const agent = store.agents[agentId];
+      return withStoreLock(() => {
+        const store = loadAgentStore();
+        const agent = store.agents[agentId];
 
-      if (agent) {
+        if (agent) {
+          return {
+            agentId: agent.agentId,
+            agentType: agent.agentType,
+            status: agent.status,
+            health: agent.health,
+            taskCount: agent.taskCount,
+            createdAt: agent.createdAt,
+            domain: agent.domain,
+            model: agent.model,
+            provider: agent.provider,
+            resolvedModel: agent.resolvedModel,
+            modelRoutedBy: agent.modelRoutedBy,
+          };
+        }
+
         return {
-          agentId: agent.agentId,
-          agentType: agent.agentType,
-          status: agent.status,
-          health: agent.health,
-          taskCount: agent.taskCount,
-          createdAt: agent.createdAt,
-          domain: agent.domain,
-          model: agent.model,
-          provider: agent.provider,
-          resolvedModel: agent.resolvedModel,
-          modelRoutedBy: agent.modelRoutedBy,
+          agentId,
+          status: 'not_found',
+          error: 'Agent not found',
         };
-      }
-
-      return {
-        agentId,
-        status: 'not_found',
-        error: 'Agent not found',
-      };
+      });
     },
   },
   {
@@ -849,7 +857,7 @@ export const agentTools: MCPTool[] = [
           } else if (delta < 0) {
             const toRemove = liveAgents.filter(a => a.agentType === agentType && a.status === 'idle').slice(0, -delta);
             for (const a of toRemove) {
-              freshStore.agents[a.agentId].status = 'terminated';
+              transitionAgent(freshStore.agents[a.agentId], 'terminated');
               removed.push(a.agentId);
             }
           }
@@ -877,7 +885,7 @@ export const agentTools: MCPTool[] = [
           for (const a of liveAgents) {
             if (!agentType || a.agentType === agentType) {
               if (a.status === 'idle') {
-                freshStore.agents[a.agentId].status = 'terminated';
+                transitionAgent(freshStore.agents[a.agentId], 'terminated');
                 drained++;
               }
             }
@@ -919,27 +927,32 @@ export const agentTools: MCPTool[] = [
       const taskId = `task-${randomUUID()}`;
 
       // RC-2: Lock → fresh read → validate → set busy → save → unlock
-      const validationError = await withBridgeLock(agentId, () => {
+      const validationResult = await withBridgeLock(agentId, () => {
         const store = loadAgentStore();
         const agent = store.agents[agentId];
         if (!agent) {
-          return 'Agent not found';
+          return { error: 'Agent not found' };
         }
         if (!agent.provider) {
-          return 'Agent has no provider — use agent_spawn with a provider first';
+          return { error: 'Agent has no provider — use agent_spawn with a provider first' };
         }
         if (agent.provider === 'anthropic') {
-          return "Use 'anthropic-cli' for Claude subprocess workers, not 'anthropic'. The agent_task bridge supports providers: anthropic-cli, gemini-cli, codex-cli, cursor-cli, deepseek. Use Claude Code Task tool for native anthropic agents.";
+          return {
+            error: "Use 'anthropic-cli' for Claude subprocess workers, not 'anthropic'. The agent_task bridge supports providers: anthropic-cli, gemini-cli, codex-cli, cursor-cli, deepseek. Use Claude Code Task tool for native anthropic agents.",
+          };
         }
         if (!transitionAgent(agent, 'busy')) {
-          return `Agent cannot accept tasks in current state: '${agent.status}'`;
+          return { error: `Agent cannot accept tasks in current state: '${agent.status}'` };
         }
+        const agentToken = typeof agent.config?._spawnToken === 'string'
+          ? agent.config._spawnToken
+          : undefined;
         saveAgentStore(store);
-        return null; // success
+        return { error: null, agentToken };
       });
 
-      if (validationError) {
-        return { success: false, agentId, error: validationError };
+      if (validationResult.error) {
+        return { success: false, agentId, error: validationResult.error };
       }
 
       // Resolve bridge script path relative to compiled output location
@@ -951,7 +964,7 @@ export const agentTools: MCPTool[] = [
           const s = loadAgentStore();
           const a = s.agents[agentId];
           if (a && a.status === 'busy') {
-            a.status = 'idle';
+            transitionAgent(a, 'idle');
             saveAgentStore(s);
           }
         });
@@ -971,6 +984,7 @@ export const agentTools: MCPTool[] = [
       const child = spawn('node', [
         bridgePath,
         '--agent-id', agentId,
+        ...(validationResult.agentToken ? ['--agent-token', validationResult.agentToken] : []),
         '--task-file', taskFilePath,
         '--result-file', resultFilePath,
         '--store-dir', agentDir,
@@ -1064,10 +1078,33 @@ export const agentTools: MCPTool[] = [
           const store = loadAgentStore();
           const agent = store.agents[tracking.agentId];
           if (agent && agent.status === 'busy') {
-            agent.status = 'idle';
+            transitionAgent(agent, 'idle');
             saveAgentStore(store);
           }
         });
+
+        // Also update hive worker record status
+        try {
+          const { loadHive, saveHive, withHiveLock } = await import('./hive-store.js');
+          const { listHives } = await import('./hive-store.js');
+          const hives = listHives('active');
+          for (const hive of hives) {
+            const worker = hive.workers?.find(w => w.agentId === tracking.agentId);
+            if (worker && worker.status === 'busy') {
+              await withHiveLock(hive.hiveId, () => {
+                const fresh = loadHive(hive.hiveId);
+                if (!fresh) return;
+                const fw = fresh.workers?.find(w => w.agentId === tracking.agentId);
+                if (fw && fw.status === 'busy') {
+                  fw.status = 'idle';
+                  fw.idleSince = new Date().toISOString();
+                  saveHive(hive.hiveId, fresh);
+                }
+              });
+              break;
+            }
+          }
+        } catch { /* best-effort hive record sync */ }
 
         // W3: Delete task + tracking files after successfully reading completed result
         // Keep .result.json alive — agent_terminate and hive-cleanup may still reference it
@@ -1092,10 +1129,33 @@ export const agentTools: MCPTool[] = [
             const store = loadAgentStore();
             const agent = store.agents[tracking.agentId];
             if (agent && agent.status === 'busy') {
-              agent.status = 'idle';
+              transitionAgent(agent, 'idle');
               saveAgentStore(store);
             }
           });
+
+          // Also update hive worker record status
+          try {
+            const { loadHive, saveHive, withHiveLock } = await import('./hive-store.js');
+            const { listHives } = await import('./hive-store.js');
+            const hives = listHives('active');
+            for (const hive of hives) {
+              const worker = hive.workers?.find(w => w.agentId === tracking.agentId);
+              if (worker && worker.status === 'busy') {
+                await withHiveLock(hive.hiveId, () => {
+                  const fresh = loadHive(hive.hiveId);
+                  if (!fresh) return;
+                  const fw = fresh.workers?.find(w => w.agentId === tracking.agentId);
+                  if (fw && fw.status === 'busy') {
+                    fw.status = 'idle';
+                    fw.idleSince = new Date().toISOString();
+                    saveHive(hive.hiveId, fresh);
+                  }
+                });
+                break;
+              }
+            }
+          } catch { /* best-effort hive record sync */ }
 
           return { success: false, taskId, agentId: tracking.agentId, status: 'failed', error: 'Process exited without producing a result' };
         }

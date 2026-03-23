@@ -168,9 +168,9 @@ function main() {
     if (!hiveId) continue;
 
     // Check heartbeat freshness
-    const updatedAt = data.updatedAt ? new Date(data.updatedAt).getTime() : 0;
-    const heartbeatAge = now - updatedAt;
-    const isStale = heartbeatAge > HEARTBEAT_STALE_MS;
+    const updatedAtMs = data.updatedAt ? new Date(data.updatedAt).getTime() : NaN;
+    const heartbeatAge = Number.isFinite(updatedAtMs) ? now - updatedAtMs : NaN;
+    const isStale = !Number.isFinite(updatedAtMs) || (now - updatedAtMs) > HEARTBEAT_STALE_MS;
 
     // Check PID liveness
     const pidAlive = isPidAlive(data.watcherPid);

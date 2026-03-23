@@ -425,6 +425,7 @@ export class CursorCLIProvider extends BaseProvider {
       http_proxy: process.env.http_proxy,
       https_proxy: process.env.https_proxy,
       no_proxy: process.env.no_proxy,
+      ...(this.config.env || {}),
     };
     // Windows requires these for Cursor to find config/auth
     if (process.platform === 'win32') {

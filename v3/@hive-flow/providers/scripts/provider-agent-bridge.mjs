@@ -13,6 +13,7 @@
  *   --task-stdin         Read task prompt from stdin (preferred — safe for all content)
  *   --store-dir <path>  Agent store directory
  *   --timeout <ms>       Provider timeout in milliseconds
+ *   --agent-token <tok>  Agent spawn token for provider subprocess env only
  *   --task-file <path>   Read task prompt from this file (alternative to stdin)
  *   --result-file <path> Write result JSON to this file instead of stdout
  *
@@ -80,21 +81,23 @@ process.on('SIGTERM', () => {
 
   // Reset agent status to idle (best-effort, synchronous)
   if (storeDir && logAgentId !== 'unknown') {
+    const storeLockPath = join(storeDir, '.store.lock');
+    let storeLockAcquired = false;
     try {
-      const storePath = join(storeDir, 'store.json');
-      if (existsSync(storePath)) {
-        const store = JSON.parse(readFileSync(storePath, 'utf-8'));
-        if (store.agents && store.agents[logAgentId]) {
-          store.agents[logAgentId].status = 'idle';
-          // Write directly without lock - this is a best-effort cleanup
-          // to prevent agent from being stuck in 'busy' state
-          const tmpPath = storePath + `.tmp.sigterm.${process.pid}`;
-          writeFileSync(tmpPath, JSON.stringify(store, null, 2));
-          renameSync(tmpPath, storePath);
-        }
+      mkdirSync(storeLockPath);
+      storeLockAcquired = true;
+
+      const { store, storePath } = loadAgentState(storeDir, logAgentId);
+      if (store.agents && store.agents[logAgentId]) {
+        store.agents[logAgentId].status = 'idle';
+        saveAgentState(storePath, store);
       }
     } catch {
       // Ignore errors - this is best-effort cleanup
+    } finally {
+      if (storeLockAcquired) {
+        try { rmdirSync(storeLockPath); } catch { /* ignore */ }
+      }
     }
   }
 
@@ -200,20 +203,33 @@ function estimateTokensFromText(text) {
 
 function estimateMessageTokens(msg) {
   let tokenCount = 0;
-  // Content tokens
-  if (msg.content && typeof msg.content === 'string') {
-    tokenCount += estimateTokensFromText(msg.content);
+  const content = typeof msg.content === 'string'
+    ? msg.content
+    : msg.content == null
+      ? ''
+      : JSON.stringify(msg.content);
+  tokenCount += estimateTokensFromText(content);
+
+  const toolCalls = Array.isArray(msg.toolCalls)
+    ? msg.toolCalls
+    : Array.isArray(msg.tool_calls)
+      ? msg.tool_calls
+      : [];
+  if (toolCalls.length > 0) {
+    tokenCount += estimateTokensFromText(JSON.stringify(toolCalls));
   }
-  // Tool calls (estimate based on JSON string length)
-  if (msg.toolCalls && Array.isArray(msg.toolCalls)) {
-    tokenCount += estimateTokensFromText(JSON.stringify(msg.toolCalls));
-  }
+
   // Name/toolCallId (minor)
   if (msg.name && typeof msg.name === 'string') {
     tokenCount += estimateTokensFromText(msg.name);
   }
-  if (msg.toolCallId && typeof msg.toolCallId === 'string') {
-    tokenCount += estimateTokensFromText(msg.toolCallId);
+  const toolCallId = typeof msg.toolCallId === 'string'
+    ? msg.toolCallId
+    : typeof msg.tool_call_id === 'string'
+      ? msg.tool_call_id
+      : null;
+  if (toolCallId) {
+    tokenCount += estimateTokensFromText(toolCallId);
   }
   // System prompt overhead (role, structure) - add 10 tokens
   return tokenCount + 10;
@@ -308,7 +324,7 @@ function loadAgentState(storeDir, agentId) {
 }
 
 function saveAgentState(storePath, store) {
-  const tmpPath = storePath + '.tmp';
+  const tmpPath = storePath + '.tmp.' + process.pid;
   writeFileSync(tmpPath, JSON.stringify(store, null, 2));
   renameSync(tmpPath, storePath);
 }
@@ -394,7 +410,9 @@ function classifyMessage(msg, index, total) {
 }
 
 function summarizeToolMessage(msg) {
-  const content = msg.content || '';
+  const content = typeof msg.content === 'string'
+    ? msg.content
+    : JSON.stringify(msg.content ?? '');
   const lines = content.split('\n').length;
   const bytes = Buffer.byteLength(content, 'utf8');
   const toolName = msg.name || 'unknown';
@@ -407,12 +425,19 @@ function summarizeToolMessage(msg) {
 }
 
 function summarizeAssistantMessage(msg) {
-  const content = msg.content || '';
+  const content = typeof msg.content === 'string'
+    ? msg.content
+    : JSON.stringify(msg.content ?? '');
+  const toolCalls = Array.isArray(msg.toolCalls)
+    ? msg.toolCalls
+    : Array.isArray(msg.tool_calls)
+      ? msg.tool_calls
+      : [];
   if (content.length <= 200) return msg;
   // Keep first sentence + tool call info
   const firstSentence = content.split(/[.!?\n]/).filter(s => s.trim())[0] || '';
-  const toolInfo = msg.toolCalls
-    ? ` [called: ${msg.toolCalls.map(tc => tc.function?.name).join(', ')}]`
+  const toolInfo = toolCalls.length > 0
+    ? ` [called: ${toolCalls.map(tc => tc.function?.name || tc.name || 'unknown').join(', ')}]`
     : '';
   return {
     ...msg,
@@ -421,187 +446,280 @@ function summarizeAssistantMessage(msg) {
   };
 }
 
-function trimMessages(messages, limits = getProviderLimits()) {
-  // Calculate total tokens for proactive trimming
-  let totalTokens = 0;
-  const tokenEstimates = [];
-  for (const msg of messages) {
-    const tokens = estimateMessageTokens(msg);
-    tokenEstimates.push(tokens);
-    totalTokens += tokens;
+function trimMessages(messages, limits) {
+  if (!limits) {
+    throw new Error('trimMessages requires limits');
+  }
+  if (!Array.isArray(messages) || messages.length === 0) {
+    return Array.isArray(messages) ? messages : [];
   }
 
-  // Log context size for debugging
+  const maxEntries = typeof limits.maxEntries === 'number' ? limits.maxEntries + 2 : Number.POSITIVE_INFINITY;
+  const warningThreshold = typeof limits.warningThreshold === 'number' ? limits.warningThreshold : limits.maxTokens;
+  const originalMessageCount = messages.length;
+
+  function getToolCalls(msg) {
+    if (Array.isArray(msg.toolCalls)) return msg.toolCalls;
+    if (Array.isArray(msg.tool_calls)) return msg.tool_calls;
+    return [];
+  }
+
+  function getToolCallId(msg) {
+    if (typeof msg.toolCallId === 'string') return msg.toolCallId;
+    if (typeof msg.tool_call_id === 'string') return msg.tool_call_id;
+    return null;
+  }
+
+  function createMember(msg, index) {
+    return {
+      index,
+      msg,
+      tokens: estimateMessageTokens(msg),
+      bytes: messageByteLength(msg),
+    };
+  }
+
+  function finalizeUnit(unit, protectedIndices) {
+    unit.members.sort((a, b) => a.index - b.index);
+    unit.startIndex = unit.members[0]?.index ?? Number.POSITIVE_INFINITY;
+    unit.protected = unit.members.some((member) => protectedIndices.has(member.index));
+    unit.tokens = unit.members.reduce((sum, member) => sum + member.tokens, 0);
+    return unit;
+  }
+
+  function buildLogicalUnits(sourceMessages) {
+    const protectedIndices = new Set();
+    if (sourceMessages[0]?.role === 'system') protectedIndices.add(0);
+    const firstUserIndex = sourceMessages.findIndex((msg, index) => msg.role === 'user' && index <= 1);
+    if (firstUserIndex !== -1) protectedIndices.add(firstUserIndex);
+    protectedIndices.add(sourceMessages.length - 1);
+
+    const units = [];
+    const toolResultBacklog = [];
+    const assistantUnitsByCallId = new Map();
+
+    for (let index = 0; index < sourceMessages.length; index++) {
+      const msg = sourceMessages[index];
+      const member = createMember(msg, index);
+
+      if (msg.role === 'assistant') {
+        const toolCalls = getToolCalls(msg);
+        if (toolCalls.length > 0) {
+          const unit = { members: [member], protected: false, startIndex: index, tokens: 0 };
+          units.push(unit);
+          for (const toolCall of toolCalls) {
+            if (toolCall?.id) assistantUnitsByCallId.set(toolCall.id, unit);
+          }
+          continue;
+        }
+      }
+
+      if (msg.role === 'tool') {
+        const toolCallId = getToolCallId(msg);
+        const parentUnit = toolCallId ? assistantUnitsByCallId.get(toolCallId) : null;
+        if (parentUnit) {
+          parentUnit.members.push(member);
+        } else {
+          toolResultBacklog.push(member);
+        }
+        continue;
+      }
+
+      units.push({ members: [member], protected: false, startIndex: index, tokens: 0 });
+    }
+
+    for (const member of toolResultBacklog) {
+      const toolCallId = getToolCallId(member.msg);
+      const parentUnit = toolCallId ? assistantUnitsByCallId.get(toolCallId) : null;
+      if (parentUnit) {
+        parentUnit.members.push(member);
+      } else {
+        units.push({ members: [member], protected: false, startIndex: member.index, tokens: 0 });
+      }
+    }
+
+    return units
+      .filter((unit) => unit.members.length > 0)
+      .map((unit) => finalizeUnit(unit, protectedIndices))
+      .sort((a, b) => a.startIndex - b.startIndex);
+  }
+
+  function totalMessageCount(units) {
+    return units.reduce((sum, unit) => sum + unit.members.length, 0);
+  }
+
+  function recalculateTotals(units) {
+    return units.reduce((sum, unit) => sum + unit.tokens, 0);
+  }
+
+  function withinHardLimits(units, totalTokens) {
+    return totalTokens <= limits.maxTokens && totalMessageCount(units) <= maxEntries;
+  }
+
+  function flattenUnits(units) {
+    return units
+      .slice()
+      .sort((a, b) => a.startIndex - b.startIndex)
+      .flatMap((unit) => unit.members.slice().sort((a, b) => a.index - b.index).map((member) => member.msg));
+  }
+
+  function removeOrphanedToolResults(compactedMessages) {
+    const liveToolCallIds = new Set();
+    for (const msg of compactedMessages) {
+      if (msg.role !== 'assistant') continue;
+      for (const toolCall of getToolCalls(msg)) {
+        if (toolCall?.id) liveToolCallIds.add(toolCall.id);
+      }
+    }
+
+    const cleaned = compactedMessages.filter((msg) => {
+      if (msg.role !== 'tool') return true;
+      const toolCallId = getToolCallId(msg);
+      return Boolean(toolCallId && liveToolCallIds.has(toolCallId));
+    });
+
+    if (cleaned.length !== compactedMessages.length) {
+      bridgeLog('info', 'Removed orphaned tool results', {
+        removedCount: compactedMessages.length - cleaned.length,
+      });
+    }
+
+    return cleaned;
+  }
+
+  const units = buildLogicalUnits(messages);
+  const originalTokens = recalculateTotals(units);
+  let totalTokens = originalTokens;
+
   bridgeLog('debug', 'Context size check', {
-    messages: messages.length,
+    messages: originalMessageCount,
+    units: units.length,
     totalTokens,
     limit: limits.maxTokens,
-    warningThreshold: limits.warningThreshold,
-    provider: limits.provider || 'unknown'
+    warningThreshold,
+    provider: limits.provider || 'unknown',
   });
 
-  // Check if we're already within limits
-  if (totalTokens <= limits.maxTokens && messages.length <= limits.maxEntries + 2) {
-    return messages;
+  if (totalTokens <= warningThreshold && withinHardLimits(units, totalTokens)) {
+    return removeOrphanedToolResults(flattenUnits(units));
   }
 
-  // Tag each message with priority and token count
-  const tagged = messages.map((msg, i) => ({
-    msg,
-    priority: classifyMessage(msg, i, messages.length),
-    index: i,
-    tokens: tokenEstimates[i],
-    bytes: messageByteLength(msg),
-  }));
+  if (totalTokens > warningThreshold) {
+    while (totalTokens > warningThreshold) {
+      const dropIndex = units.findIndex((unit) => !unit.protected);
+      if (dropIndex === -1) break;
 
-  // Phase 0: Proactive trimming if approaching 80% of limit
-  // Remove oldest messages (except system, task, latest) to stay under warning threshold
-  if (totalTokens > limits.warningThreshold) {
-    const result = messages.slice(); // copy
-    let currentTokens = totalTokens;
-    let dropIndex = 1; // Start after system message if present
-    
-    while (currentTokens > limits.warningThreshold && dropIndex < result.length - 1) {
-      // Find oldest droppable message (not system, not task, not latest)
-      const dropCandidate = result[dropIndex];
-      const candidateTokens = tokenEstimates[dropIndex];
-      
-      // Skip protected messages
-      if (dropCandidate.role === 'system') {
-        dropIndex++;
-        continue;
-      }
-      if (dropIndex <= 1 && dropCandidate.role === 'user') {
-        dropIndex++;
-        continue;
-      }
-      if (dropIndex === result.length - 1) {
-        break; // Never drop the latest message
-      }
-      
-      // Drop this message
-      result.splice(dropIndex, 1);
-      tokenEstimates.splice(dropIndex, 1);
-      currentTokens -= candidateTokens;
-      
-      bridgeLog('info', 'Proactive message drop', {
-        index: dropIndex,
-        role: dropCandidate.role,
-        tokens: candidateTokens,
-        remainingTokens: currentTokens,
-        warningThreshold: limits.warningThreshold,
-        contentPreview: dropCandidate.content?.slice(0, 100) || ''
+      const [droppedUnit] = units.splice(dropIndex, 1);
+      totalTokens -= droppedUnit.tokens;
+
+      bridgeLog('info', 'Proactive unit drop', {
+        startIndex: droppedUnit.startIndex,
+        members: droppedUnit.members.length,
+        roles: droppedUnit.members.map((member) => member.msg.role),
+        tokens: droppedUnit.tokens,
+        remainingTokens: totalTokens,
+        warningThreshold,
       });
-      
-      // Note: don't increment dropIndex since we removed an element
     }
-    
-    // If we successfully reduced below warning threshold, return
-    if (currentTokens <= limits.warningThreshold) {
+
+    if (totalTokens <= warningThreshold && withinHardLimits(units, totalTokens)) {
+      const compacted = removeOrphanedToolResults(flattenUnits(units));
       bridgeLog('info', 'Proactive trimming successful', {
-        originalTokens: totalTokens,
-        finalTokens: currentTokens,
-        droppedMessages: messages.length - result.length
+        originalTokens,
+        finalTokens: totalTokens,
+        droppedMessages: originalMessageCount - compacted.length,
       });
-      return result;
+      return compacted;
     }
-    
-    // Continue with summarization phases if still over limit
-    messages = result;
-    totalTokens = currentTokens;
   }
 
-  // Phase 1: Summarize tool results (biggest, lowest priority) — oldest first
-  const toolResults = tagged
-    .filter(t => t.priority === MSG_PRIORITY.TOOL_RESULT && !t.msg._summarized)
-    .sort((a, b) => a.index - b.index); // oldest first
+  for (const unit of units) {
+    if (unit.protected) continue;
+    for (const member of unit.members) {
+      if (member.msg.role !== 'tool' || member.msg._summarized) continue;
 
-  for (const entry of toolResults) {
-    const summarized = summarizeToolMessage(entry.msg);
-    const summarizedTokens = estimateMessageTokens(summarized);
-    const savedTokens = entry.tokens - summarizedTokens;
-    entry.msg = summarized;
-    entry.tokens = summarizedTokens;
-    totalTokens -= savedTokens;
-    if (totalTokens <= limits.maxTokens && tagged.length <= limits.maxEntries + 2) break;
-    
-    bridgeLog('debug', 'Tool result summarized', {
-      toolName: entry.msg.name || 'unknown',
-      originalTokens: entry.tokens + savedTokens,
-      summarizedTokens,
-      savedTokens,
-      remainingTokens: totalTokens
+      const summarized = summarizeToolMessage(member.msg);
+      if (summarized === member.msg) continue;
+
+      const originalMemberTokens = member.tokens;
+      member.msg = summarized;
+      member.tokens = estimateMessageTokens(summarized);
+      member.bytes = messageByteLength(summarized);
+      unit.tokens += member.tokens - originalMemberTokens;
+      totalTokens += member.tokens - originalMemberTokens;
+
+      bridgeLog('debug', 'Tool result summarized', {
+        startIndex: unit.startIndex,
+        toolName: member.msg.name || 'unknown',
+        originalTokens: originalMemberTokens,
+        summarizedTokens: member.tokens,
+        savedTokens: originalMemberTokens - member.tokens,
+        remainingTokens: totalTokens,
+      });
+
+      if (withinHardLimits(units, totalTokens)) break;
+    }
+    if (withinHardLimits(units, totalTokens)) break;
+  }
+
+  if (withinHardLimits(units, totalTokens)) {
+    return removeOrphanedToolResults(flattenUnits(units));
+  }
+
+  for (const unit of units) {
+    if (unit.protected) continue;
+    for (const member of unit.members) {
+      if (member.msg.role !== 'assistant' || member.msg._summarized) continue;
+
+      const summarized = summarizeAssistantMessage(member.msg);
+      if (summarized === member.msg) continue;
+
+      const originalMemberTokens = member.tokens;
+      member.msg = summarized;
+      member.tokens = estimateMessageTokens(summarized);
+      member.bytes = messageByteLength(summarized);
+      unit.tokens += member.tokens - originalMemberTokens;
+      totalTokens += member.tokens - originalMemberTokens;
+
+      bridgeLog('debug', 'Assistant message summarized', {
+        startIndex: unit.startIndex,
+        originalTokens: originalMemberTokens,
+        summarizedTokens: member.tokens,
+        savedTokens: originalMemberTokens - member.tokens,
+        remainingTokens: totalTokens,
+      });
+
+      if (withinHardLimits(units, totalTokens)) break;
+    }
+    if (withinHardLimits(units, totalTokens)) break;
+  }
+
+  while (!withinHardLimits(units, totalTokens)) {
+    const dropIndex = units.findIndex((unit) => !unit.protected);
+    if (dropIndex === -1) break;
+
+    const [droppedUnit] = units.splice(dropIndex, 1);
+    totalTokens -= droppedUnit.tokens;
+
+    bridgeLog('info', 'Last-resort unit drop', {
+      startIndex: droppedUnit.startIndex,
+      members: droppedUnit.members.length,
+      roles: droppedUnit.members.map((member) => member.msg.role),
+      tokens: droppedUnit.tokens,
+      remainingTokens: totalTokens,
     });
   }
 
-  if (totalTokens <= limits.maxTokens && tagged.length <= limits.maxEntries + 2) {
-    return tagged.map(t => t.msg);
-  }
-
-  // Phase 2: Summarize old assistant messages (middle of conversation)
-  const assistants = tagged
-    .filter(t => t.priority === MSG_PRIORITY.ASSISTANT && !t.msg._summarized)
-    .sort((a, b) => a.index - b.index); // oldest first
-
-  for (const entry of assistants) {
-    const summarized = summarizeAssistantMessage(entry.msg);
-    const summarizedTokens = estimateMessageTokens(summarized);
-    const savedTokens = entry.tokens - summarizedTokens;
-    entry.msg = summarized;
-    entry.tokens = summarizedTokens;
-    totalTokens -= savedTokens;
-    if (totalTokens <= limits.maxTokens) break;
-    
-    bridgeLog('debug', 'Assistant message summarized', {
-      index: entry.index,
-      originalTokens: entry.tokens + savedTokens,
-      summarizedTokens,
-      savedTokens,
-      remainingTokens: totalTokens
-    });
-  }
-
-  if (totalTokens <= limits.maxTokens && tagged.length <= limits.maxEntries + 2) {
-    return tagged.map(t => t.msg);
-  }
-
-  // Phase 3: Drop already-summarized tool results (oldest first) — last resort
-  const result = tagged.map(t => t.msg);
-  let currentTokens = totalTokens;
-  
-  while (result.length > limits.maxEntries + 2 || currentTokens > limits.maxTokens) {
-    // Find oldest droppable message (not system, not task, not latest)
-    const dropIdx = result.findIndex((msg, i) => {
-      if (i === 0 && msg.role === 'system') return false;
-      if (i <= 1 && msg.role === 'user') return false;
-      if (i === result.length - 1) return false;
-      return true;
-    });
-    
-    if (dropIdx === -1) break; // nothing left to drop
-    
-    const droppedTokens = tokenEstimates[dropIdx] || 0;
-    currentTokens -= droppedTokens;
-    
-    bridgeLog('info', 'Last-resort message drop', {
-      index: dropIdx,
-      role: result[dropIdx].role,
-      tokens: droppedTokens,
-      remainingTokens: currentTokens,
-      contentPreview: result[dropIdx].content?.slice(0, 100) || ''
-    });
-    
-    result.splice(dropIdx, 1);
-    tokenEstimates.splice(dropIdx, 1);
-  }
+  const result = removeOrphanedToolResults(flattenUnits(units));
+  const finalTokens = result.reduce((sum, msg) => sum + estimateMessageTokens(msg), 0);
 
   bridgeLog('info', 'Context compaction complete', {
-    originalMessages: messages.length,
+    originalMessages: originalMessageCount,
     finalMessages: result.length,
-    originalTokens: totalTokens,
-    finalTokens: currentTokens,
+    originalTokens,
+    finalTokens,
     limit: limits.maxTokens,
-    compactionApplied: messages.length !== result.length || totalTokens !== currentTokens
+    compactionApplied: originalMessageCount !== result.length || originalTokens !== finalTokens,
   });
 
   return result;
@@ -695,7 +813,7 @@ async function retryWithBackoff(fn, opts = {}) {
   throw lastError;
 }
 
-async function createProviderConfig(providerName, model, timeoutMs) {
+async function createProviderConfig(providerName, model, timeoutMs, agentToken) {
   const defaults = await getProviderDefaults();
   return {
     provider: providerName,
@@ -703,6 +821,7 @@ async function createProviderConfig(providerName, model, timeoutMs) {
     timeout: timeoutMs || 300000,
     retryAttempts: 2,
     retryDelay: 1000,
+    ...(agentToken ? { env: { HIVE_FLOW_AGENT_TOKEN: agentToken } } : {}),
   };
 }
 
@@ -886,10 +1005,24 @@ const BRIDGE_FILESYSTEM_TOOLS = {
     }
     const safePath = resolve(filePath);
     const content = readFileSync(safePath, 'utf-8');
-    if (!content.includes(old_string)) {
+    if (old_string === '') {
+      return `Error: old_string must be non-empty for ${safePath}`;
+    }
+    const occurrences = content.split(old_string).length - 1;
+    if (occurrences === 0) {
       return `Error: old_string not found in ${safePath}`;
     }
-    writeFileSync(safePath, content.replace(old_string, new_string), 'utf-8');
+    if (occurrences > 1) {
+      stderrLogger.warn('edit_file old_string matched multiple times; replacing all occurrences', {
+        path: safePath,
+        occurrences,
+      });
+      bridgeLog('warn', 'edit_file old_string matched multiple times', {
+        path: safePath,
+        occurrences,
+      });
+    }
+    writeFileSync(safePath, content.split(old_string).join(new_string), 'utf-8');
     return `File edited: ${safePath}`;
   },
   'list_directory': ({ path: dirPath }) => {
@@ -1071,7 +1204,7 @@ const BRIDGE_FILESYSTEM_TOOLS = {
           // Skip common ignored directories even without .gitignore
           if (entry.isDirectory()) {
             if (entry.name === 'node_modules' || entry.name === '.git' || 
-                entry.name === '.hg' || entry.name === '.svn' || entry.name.startsWith('.')) {
+                entry.name === '.hg' || entry.name === '.svn') {
               continue;
             }
             findFiles(fullPath, pattern, allPatterns, results);
@@ -1183,7 +1316,7 @@ function readStdin() {
 
 async function parseArgs() {
   const args = process.argv.slice(2);
-  const parsed = { agentId: '', task: '', storeDir: '', timeout: 0, taskStdin: false, taskFile: '', resultFile: '' };
+  const parsed = { agentId: '', task: '', storeDir: '', timeout: 0, agentToken: '', taskStdin: false, taskFile: '', resultFile: '' };
 
   for (let i = 0; i < args.length; i++) {
     switch (args[i]) {
@@ -1201,6 +1334,9 @@ async function parseArgs() {
         break;
       case '--timeout':
         parsed.timeout = parseInt(args[++i], 10) || 0;
+        break;
+      case '--agent-token':
+        parsed.agentToken = args[++i] || '';
         break;
       case '--task-file':
         parsed.taskFile = args[++i] || '';
@@ -1280,7 +1416,7 @@ function trackProviderUsage(providerName, usage, startTime) {
 
 async function main() {
   const parsed = await parseArgs();
-  const { agentId, task, storeDir, timeout: parsedTimeout, resultFile, taskFile } = parsed;
+  const { agentId, task, storeDir, timeout: parsedTimeout, agentToken, resultFile, taskFile } = parsed;
   const lockPath = join(storeDir, '.store.lock');
 
   // ── Phase 1: Lock → read state → unlock ──
@@ -1299,7 +1435,8 @@ async function main() {
   const config = await createProviderConfig(
     providerName,
     agent.resolvedModel || defaults[providerName],
-    parsedTimeout
+    parsedTimeout,
+    agentToken
   );
 
   const providerClasses = {
@@ -1526,8 +1663,8 @@ async function main() {
 
         // Reset agent to idle
         try {
-          const lockPath = join(storeDir, '.store.lock');
-          await withFileLock(lockPath, async () => {
+          const storeLockPath = join(storeDir, '.store.lock');
+          await withFileLock(storeLockPath, async () => {
             const { store: s, agent: a, storePath: sp } = loadAgentState(storeDir, agentId);
             if (a && a.status === 'busy') {
               a.status = 'idle';

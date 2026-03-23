@@ -53,6 +53,8 @@ interface AgentRecord {
   taskCount: number;
   config: Record<string, unknown>;
   createdAt: string;
+  idleSince?: string;
+  terminatedAt?: string;
   provider?: string;
   model?: string;
 }
@@ -225,6 +227,22 @@ describe('agent_task_async handler', () => {
     expect(tracking.pid).toBe(99);
   });
 
+  it('passes --agent-token from the stored spawn token to the bridge process', async () => {
+    const agent = makeAgent({
+      config: { _spawnToken: 'spawn-token-123' },
+    });
+    setupStoreMocks(makeStore({ [agent.agentId]: agent }));
+    mockDetachedSpawn(12345);
+
+    await asyncHandler({ agentId: agent.agentId, task: 'do some work' });
+
+    const [, args] = (spawn as ReturnType<typeof vi.fn>).mock.calls[0];
+    const tokenArgIndex = args.indexOf('--agent-token');
+
+    expect(tokenArgIndex).toBeGreaterThan(-1);
+    expect(args[tokenArgIndex + 1]).toBe('spawn-token-123');
+  });
+
   // ------------------------------------------------------------------
   // 5. Rejects when agent does not exist
   // ------------------------------------------------------------------
@@ -272,6 +290,23 @@ describe('agent_task_async handler', () => {
     const opts = spawnCalls[0][2] as Record<string, unknown>;
     expect(opts.detached).toBe(true);
     expect(mockUnref).toHaveBeenCalledTimes(1);
+  });
+
+  it('restores idleSince when dispatch fails before the bridge starts', async () => {
+    const agent = makeAgent({ status: 'idle' });
+    const { getPersistedStore } = setupStoreMocks(makeStore({ [agent.agentId]: agent }));
+
+    (existsSync as ReturnType<typeof vi.fn>).mockImplementation((p: string) => {
+      if (typeof p === 'string' && p.endsWith('store.json')) return true;
+      return false;
+    });
+
+    const result = await asyncHandler({ agentId: agent.agentId, task: 'missing bridge' }) as Record<string, unknown>;
+
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/Bridge script not found/i);
+    expect(getPersistedStore().agents[agent.agentId].status).toBe('idle');
+    expect(getPersistedStore().agents[agent.agentId].idleSince).toBeDefined();
   });
 });
 
@@ -437,6 +472,48 @@ describe('agent_task_result handler', () => {
     await resultHandler({ taskId: TASK_ID });
 
     expect(currentStore.agents[AGENT_ID].status).toBe('idle');
+    expect(currentStore.agents[AGENT_ID].idleSince).toBeDefined();
+  });
+
+  it('sets idleSince when a dead worker is reset back to idle', async () => {
+    const DEAD_PID = 99999;
+    const agent = makeAgent({ agentId: AGENT_ID, status: 'busy' });
+    let currentStore = makeStore({ [AGENT_ID]: agent });
+    const tracking = { status: 'running', taskId: TASK_ID, agentId: AGENT_ID, startedAt: new Date().toISOString(), pid: DEAD_PID };
+
+    baseExistsMock([`${TASK_ID}.json`]);
+
+    (readFileSync as ReturnType<typeof vi.fn>).mockImplementation((p: string) => {
+      if (typeof p === 'string' && p.endsWith('store.json')) return JSON.stringify(currentStore);
+      if (typeof p === 'string' && p.endsWith(`${TASK_ID}.json`)) return JSON.stringify(tracking);
+      return JSON.stringify({});
+    });
+
+    const tmpWrites = new Map<string, string>();
+    (writeFileSync as ReturnType<typeof vi.fn>).mockImplementation((p: string, data: string) => {
+      if (typeof p === 'string' && p.includes('.tmp.')) {
+        tmpWrites.set(p, data);
+      }
+    });
+    (renameSync as ReturnType<typeof vi.fn>).mockImplementation((src: string) => {
+      const data = tmpWrites.get(src);
+      if (data) {
+        currentStore = JSON.parse(data);
+        tmpWrites.delete(src);
+      }
+    });
+    (mkdirSync as ReturnType<typeof vi.fn>).mockImplementation(() => {});
+
+    const killSpy = vi.spyOn(process, 'kill').mockImplementation((_pid: number, _sig: number | NodeJS.Signals) => {
+      throw new Error('ESRCH');
+    });
+
+    await resultHandler({ taskId: TASK_ID });
+
+    expect(currentStore.agents[AGENT_ID].status).toBe('idle');
+    expect(currentStore.agents[AGENT_ID].idleSince).toBeDefined();
+
+    killSpy.mockRestore();
   });
 
   // ------------------------------------------------------------------

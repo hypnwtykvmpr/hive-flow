@@ -52,7 +52,7 @@ import {
   mkdirSync,
   renameSync,
 } from 'node:fs';
-import { agentTools, loadAgentStore } from '../src/mcp-tools/agent-tools.js';
+import { agentTools, loadAgentStore, transitionAgent } from '../src/mcp-tools/agent-tools.js';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -64,6 +64,8 @@ interface AgentRecord {
   taskCount: number;
   config: Record<string, unknown>;
   createdAt: string;
+  idleSince?: string;
+  terminatedAt?: string;
   provider?: string;
   model?: string;
   modelRoutedBy?: string;
@@ -103,6 +105,7 @@ const terminateHandler = getHandler('agent_terminate');
 const updateHandler = getHandler('agent_update');
 const listHandler = getHandler('agent_list');
 const statusHandler = getHandler('agent_status');
+const poolHandler = getHandler('agent_pool');
 
 /**
  * Set up fs mocks so that loadAgentStore/saveAgentStore use an in-memory
@@ -167,6 +170,20 @@ describe('Agent Race Condition Stress Tests', () => {
   // 1. Concurrent spawn — 20 agents in parallel
   // ════════════════════════════════════════════════════════════════════════════
   describe('RC-1/RC-5: Concurrent spawn (20 agents)', () => {
+    it('stores the spawn token on the agent record without setting a global env var', async () => {
+      delete process.env.HIVE_FLOW_AGENT_TOKEN;
+      const { getPersistedStore } = setupStoreMocks(makeStore());
+
+      const result = await spawnHandler({ agentType: 'coder', agentId: 'spawn-token-check' });
+
+      expect((result as AgentHandlerResult).success).toBe(true);
+      expect(process.env.HIVE_FLOW_AGENT_TOKEN).toBeUndefined();
+
+      const storedAgent = getPersistedStore().agents['spawn-token-check'];
+      expect(typeof storedAgent?.config._spawnToken).toBe('string');
+      expect((storedAgent?.config._spawnToken as string).length).toBeGreaterThan(0);
+    });
+
     it('should create 20 agents with unique IDs and no data corruption', async () => {
       const { getPersistedStore } = setupStoreMocks(makeStore());
 
@@ -300,6 +317,34 @@ describe('Agent Race Condition Stress Tests', () => {
   // 4. State machine transitions (RC-3)
   // ════════════════════════════════════════════════════════════════════════════
   describe('RC-3: State machine transitions', () => {
+    it('should stamp idleSince and terminatedAt during lifecycle transitions', () => {
+      vi.useFakeTimers();
+      try {
+        const agent = makeAgent({ agentId: 'sm-ts', status: 'spawning' });
+
+        vi.setSystemTime(new Date('2026-03-23T10:00:00.000Z'));
+        expect(transitionAgent(agent, 'idle')).toBe(true);
+        expect(agent.idleSince).toBe('2026-03-23T10:00:00.000Z');
+        expect(agent.terminatedAt).toBeUndefined();
+
+        vi.setSystemTime(new Date('2026-03-23T10:01:00.000Z'));
+        expect(transitionAgent(agent, 'busy')).toBe(true);
+        expect(agent.idleSince).toBeUndefined();
+        expect(agent.terminatedAt).toBeUndefined();
+
+        vi.setSystemTime(new Date('2026-03-23T10:02:00.000Z'));
+        expect(transitionAgent(agent, 'idle')).toBe(true);
+        expect(agent.idleSince).toBe('2026-03-23T10:02:00.000Z');
+
+        vi.setSystemTime(new Date('2026-03-23T10:03:00.000Z'));
+        expect(transitionAgent(agent, 'terminated')).toBe(true);
+        expect(agent.idleSince).toBeUndefined();
+        expect(agent.terminatedAt).toBe('2026-03-23T10:03:00.000Z');
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
     it('should allow idle -> busy transition', async () => {
       const agent = makeAgent({ agentId: 'sm-1', status: 'idle' });
       setupStoreMocks(makeStore({ [agent.agentId]: agent }));
@@ -326,12 +371,15 @@ describe('Agent Race Condition Stress Tests', () => {
 
     it('should allow idle -> terminated transition', async () => {
       const agent = makeAgent({ agentId: 'sm-3', status: 'idle' });
-      setupStoreMocks(makeStore({ [agent.agentId]: agent }));
+      const { getPersistedStore } = setupStoreMocks(makeStore({ [agent.agentId]: agent }));
 
-      const result = await terminateHandler({ agentId: 'sm-3' });
+      const result = await terminateHandler({ agentId: 'sm-3' }) as AgentHandlerResult & { terminatedAt?: string };
+      const storedAgent = getPersistedStore().agents['sm-3'];
 
-      expect((result as AgentHandlerResult).success).toBe(true);
-      expect((result as AgentHandlerResult).terminated).toBe(true);
+      expect(result.success).toBe(true);
+      expect(result.terminated).toBe(true);
+      expect(storedAgent.terminatedAt).toBeDefined();
+      expect(result.terminatedAt).toBe(storedAgent.terminatedAt);
     });
 
     it('should allow busy -> terminated transition', async () => {
@@ -567,6 +615,52 @@ describe('Agent Race Condition Stress Tests', () => {
     });
   });
 
+  describe('agent_pool lifecycle timestamps', () => {
+    it('sets terminatedAt when scaling idle agents down', async () => {
+      const agents = {
+        'pool-1': makeAgent({ agentId: 'pool-1', agentType: 'coder', status: 'idle' }),
+        'pool-2': makeAgent({ agentId: 'pool-2', agentType: 'coder', status: 'idle' }),
+        'pool-3': makeAgent({ agentId: 'pool-3', agentType: 'coder', status: 'idle' }),
+      };
+      const { getPersistedStore } = setupStoreMocks(makeStore(agents));
+
+      const result = await poolHandler({
+        action: 'scale',
+        agentType: 'coder',
+        targetSize: 1,
+      }) as { removed?: string[] };
+
+      expect(result.removed).toHaveLength(2);
+
+      const store = getPersistedStore();
+      for (const agentId of result.removed ?? []) {
+        expect(store.agents[agentId].status).toBe('terminated');
+        expect(store.agents[agentId].terminatedAt).toBeDefined();
+      }
+    });
+
+    it('sets terminatedAt when draining idle agents', async () => {
+      const agents = {
+        'drain-1': makeAgent({ agentId: 'drain-1', agentType: 'coder', status: 'idle' }),
+        'drain-2': makeAgent({ agentId: 'drain-2', agentType: 'coder', status: 'busy' }),
+        'drain-3': makeAgent({ agentId: 'drain-3', agentType: 'coder', status: 'idle' }),
+      };
+      const { getPersistedStore } = setupStoreMocks(makeStore(agents));
+
+      const result = await poolHandler({
+        action: 'drain',
+        agentType: 'coder',
+      }) as { drained?: number };
+
+      expect(result.drained).toBe(2);
+
+      const store = getPersistedStore();
+      expect(store.agents['drain-1'].terminatedAt).toBeDefined();
+      expect(store.agents['drain-3'].terminatedAt).toBeDefined();
+      expect(store.agents['drain-2'].terminatedAt).toBeUndefined();
+    });
+  });
+
   // ════════════════════════════════════════════════════════════════════════════
   // 7. Lock timeout / stale lock cleanup (RC-1/RC-5)
   // ════════════════════════════════════════════════════════════════════════════
@@ -628,6 +722,17 @@ describe('Agent Race Condition Stress Tests', () => {
   // Additional: Rapid fire same-agent operations
   // ════════════════════════════════════════════════════════════════════════════
   describe('Rapid-fire operations on same agent', () => {
+    it('acquires the store lock for agent_status reads', async () => {
+      const agent = makeAgent({ agentId: 'read-locked', status: 'idle' });
+      setupStoreMocks(makeStore({ [agent.agentId]: agent }));
+
+      await statusHandler({ agentId: 'read-locked' });
+
+      expect((mkdirSync as ReturnType<typeof vi.fn>).mock.calls.some(
+        ([path]: [string]) => typeof path === 'string' && path.endsWith('.store.lock'),
+      )).toBe(true);
+    });
+
     it('should handle concurrent reads (agent_status) without error', async () => {
       const agent = makeAgent({ agentId: 'read-target', status: 'idle' });
       setupStoreMocks(makeStore({ [agent.agentId]: agent }));

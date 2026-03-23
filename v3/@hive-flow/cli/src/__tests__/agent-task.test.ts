@@ -337,6 +337,21 @@ describe('agent_task handler (non-blocking)', () => {
   // ====================================================================
 
   describe('timeout clamping', () => {
+    it('passes the stored spawn token to the bridge as --agent-token when present', async () => {
+      const agent = makeAgent({
+        config: { _spawnToken: 'spawn-token-123' },
+      });
+      setupStoreMocks(makeStore({ [agent.agentId]: agent }));
+      mockDetachedSpawn();
+
+      await handler({ agentId: agent.agentId, task: 'do something' });
+
+      const { args } = getSpawnCall();
+      const tokenIdx = args.indexOf('--agent-token');
+      expect(tokenIdx).not.toBe(-1);
+      expect(args[tokenIdx + 1]).toBe('spawn-token-123');
+    });
+
     it('uses 300000ms timeout when input.timeout is not provided', async () => {
       const agent = makeAgent();
       setupStoreMocks(makeStore({ [agent.agentId]: agent }));

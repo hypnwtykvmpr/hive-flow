@@ -2,7 +2,7 @@
 /**
  * Hive Enforcement Hook — PostToolUse for queen_mission_assign & queen_spawn_worker
  *
- * Ensures every hive has at least 4 workers (+ 1 queen = 5 total).
+ * Ensures every hive has at least 5 workers (+ 1 queen = 6 total).
  * After a queen tool returns, reads the hive record, counts live workers,
  * and auto-spawns any deficit via agent_spawn (metadata-only, fast).
  * Then fires detached fork() processes for actual agent execution.
@@ -18,6 +18,7 @@
  */
 const fs = require('fs');
 const path = require('path');
+const { randomUUID } = require('crypto');
 const { fork, spawn } = require('child_process');
 
 // ---------------------------------------------------------------------------
@@ -30,7 +31,7 @@ const HIVES_DIR = path.join(HIVE_FLOW_DIR, 'hives');
 const ENFORCEMENT_DIR = path.join(HIVE_FLOW_DIR, 'enforcement');
 const AUDIT_FILE = path.join(ENFORCEMENT_DIR, 'hive-audit.jsonl');
 
-const MIN_WORKERS = 4; // 4 workers + 1 queen = 5 total
+const MIN_WORKERS = 5; // 5 workers + 1 queen = 6 total
 const LOCK_TIMEOUT_MS = 10000; // 10s
 const STALE_LOCK_MS = 30000; // 30s
 
@@ -147,6 +148,10 @@ function releaseLock(lockPath) {
   try { fs.rmdirSync(lockPath); } catch { /* ignore */ }
 }
 
+function countLiveWorkers(workers) {
+  return (Array.isArray(workers) ? workers : []).filter(w => w.status !== 'terminated').length;
+}
+
 // ---------------------------------------------------------------------------
 // Hive record helpers (inline — no dist dependency)
 // ---------------------------------------------------------------------------
@@ -193,6 +198,40 @@ function saveHiveRecord(hiveId, record) {
     return true;
   } catch {
     return false;
+  }
+}
+
+function releaseReservedWorkerSlot(hiveId, lockPath, slots = 1) {
+  if (!acquireLock(lockPath)) {
+    appendAuditLog({
+      event: 'worker-reservation-release-failed',
+      hiveId,
+      reason: 'lock-timeout',
+    });
+    return;
+  }
+
+  try {
+    const record = loadHiveRecord(hiveId);
+    if (!record) {
+      releaseLock(lockPath);
+      return;
+    }
+
+    const liveWorkerCount = countLiveWorkers(record.workers);
+    if (!record.budget) {
+      record.budget = { workersAllocated: liveWorkerCount };
+    } else {
+      const currentAllocated = Number.isFinite(record.budget.workersAllocated)
+        ? record.budget.workersAllocated
+        : liveWorkerCount;
+      record.budget.workersAllocated = Math.max(liveWorkerCount, currentAllocated - slots);
+    }
+
+    saveHiveRecord(hiveId, record);
+    releaseLock(lockPath);
+  } catch {
+    releaseLock(lockPath);
   }
 }
 
@@ -314,17 +353,24 @@ function loadAgentTools() {
  * Spawn a single worker via agent_spawn handler (metadata-only, fast).
  * Returns the spawn result or null on failure.
  */
-async function spawnWorkerViaAgentTools(agentTools, role, provider, model) {
+async function spawnWorkerViaAgentTools(agentTools, role, provider, model, hiveId, queenId) {
   try {
     const spawnHandler = agentTools.find(t => t.name === 'agent_spawn');
     if (!spawnHandler) return null;
+    const workerId = `worker-${randomUUID()}`;
     const result = await spawnHandler.handler({
       agentType: role,
+      agentId: workerId,
       provider: provider,
       model: model,
-      config: { autoSpawnedBy: 'hive-enforcement' },
+      config: {
+        autoSpawnedBy: 'hive-enforcement',
+        hiveId,
+        queenId,
+      },
     });
-    return result || null;
+    if (!result) return null;
+    return { ...result, workerId };
   } catch {
     return null;
   }
@@ -448,6 +494,7 @@ async function processPostToolUse(input) {
   let record;
   let liveWorkerCount;
   let deficit;
+  let queenId;
   try {
     record = loadHiveRecord(sanitizedId);
     if (!record) {
@@ -461,22 +508,37 @@ async function processPostToolUse(input) {
       return {};
     }
 
-    // Count live workers (status !== 'terminated')
+    queenId = record.queenId;
+
+    // Count live workers plus any already-reserved budget slots.
     const workers = Array.isArray(record.workers) ? record.workers : [];
-    liveWorkerCount = workers.filter(w => w.status !== 'terminated').length;
-    deficit = MIN_WORKERS - liveWorkerCount;
+    liveWorkerCount = countLiveWorkers(workers);
+    if (!record.budget) {
+      record.budget = { workersAllocated: liveWorkerCount };
+    }
+    const currentAllocated = Number.isFinite(record.budget.workersAllocated)
+      ? Math.max(record.budget.workersAllocated, liveWorkerCount)
+      : liveWorkerCount;
+    deficit = MIN_WORKERS - currentAllocated;
 
     if (deficit <= 0) {
+      if (record.budget.workersAllocated !== currentAllocated) {
+        record.budget.workersAllocated = currentAllocated;
+        saveHiveRecord(sanitizedId, record);
+      }
       releaseLock(lockPath);
       appendAuditLog({
         event: 'hive-enforcement-ok',
         hiveId: sanitizedId,
         tool: toolName,
-        liveWorkers: liveWorkerCount,
+        liveWorkers: currentAllocated,
         deficit: 0,
       });
       return {};
     }
+
+    record.budget.workersAllocated = currentAllocated + deficit;
+    saveHiveRecord(sanitizedId, record);
   } catch (err) {
     releaseLock(lockPath);
     appendAuditLog({
@@ -494,6 +556,7 @@ async function processPostToolUse(input) {
   // Step 3: Load agent-tools from dist/
   const agentTools = await loadAgentTools();
   if (!agentTools) {
+    releaseReservedWorkerSlot(sanitizedId, lockPath, deficit);
     appendAuditLog({
       event: 'hive-enforcement-skipped',
       hiveId: sanitizedId,
@@ -506,8 +569,7 @@ async function processPostToolUse(input) {
 
   // Step 4: Spawn deficit workers with provider cycling
   const spawnedWorkers = [];
-  const existingProviderCount = (Array.isArray(record.workers) ? record.workers : [])
-    .filter(w => w.status !== 'terminated').length;
+  const existingProviderCount = countLiveWorkers(record.workers);
 
   for (let i = 0; i < deficit; i++) {
     const providerIndex = (existingProviderCount + i) % PROVIDERS.length;
@@ -516,8 +578,9 @@ async function processPostToolUse(input) {
     const role = WORKER_ROLES[i % WORKER_ROLES.length];
 
     // 4a: Spawn via agent_spawn handler (metadata-only, fast)
-    const spawnResult = await spawnWorkerViaAgentTools(agentTools, role, provider, model);
+    const spawnResult = await spawnWorkerViaAgentTools(agentTools, role, provider, model, sanitizedId, queenId);
     if (!spawnResult || !spawnResult.agentId) {
+      releaseReservedWorkerSlot(sanitizedId, lockPath);
       appendAuditLog({
         event: 'worker-spawn-failed',
         hiveId: sanitizedId,
@@ -529,10 +592,11 @@ async function processPostToolUse(input) {
       continue;
     }
 
-    const workerId = 'worker-' + spawnResult.agentId;
+    const workerId = spawnResult.workerId || spawnResult.agentId;
 
     // 4b: Re-acquire lock, register worker in hive record, save
     if (!acquireLock(lockPath)) {
+      releaseReservedWorkerSlot(sanitizedId, lockPath);
       appendAuditLog({
         event: 'worker-register-failed',
         hiveId: sanitizedId,
@@ -547,6 +611,7 @@ async function processPostToolUse(input) {
       const freshRecord = loadHiveRecord(sanitizedId);
       if (!freshRecord) {
         releaseLock(lockPath);
+        releaseReservedWorkerSlot(sanitizedId, lockPath);
         continue;
       }
 
@@ -559,13 +624,23 @@ async function processPostToolUse(input) {
         agentId: spawnResult.agentId,
         role,
         provider,
-        status: 'spawning',
+        status: 'idle',
         spawnedAt: new Date().toISOString(),
+        idleSince: new Date().toISOString(),
       });
 
-      // Update budget
-      if (freshRecord.budget) {
-        freshRecord.budget.workersAllocated = (freshRecord.budget.workersAllocated || 0) + 1;
+      // Preserve any still-outstanding reservations while keeping the count
+      // aligned with the actual live worker floor.
+      if (!freshRecord.budget) {
+        freshRecord.budget = { workersAllocated: countLiveWorkers(freshRecord.workers) };
+      } else {
+        const currentAllocated = Number.isFinite(freshRecord.budget.workersAllocated)
+          ? freshRecord.budget.workersAllocated
+          : 0;
+        freshRecord.budget.workersAllocated = Math.max(
+          currentAllocated,
+          countLiveWorkers(freshRecord.workers)
+        );
       }
 
       // Append audit entry (in-memory — MUST save after)
@@ -598,6 +673,7 @@ async function processPostToolUse(input) {
       launchWorkerProcess(spawnResult.agentId, provider, role);
     } catch (err) {
       releaseLock(lockPath);
+      releaseReservedWorkerSlot(sanitizedId, lockPath);
       appendAuditLog({
         event: 'worker-register-error',
         hiveId: sanitizedId,

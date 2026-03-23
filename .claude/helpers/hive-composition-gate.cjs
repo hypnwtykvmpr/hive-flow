@@ -25,7 +25,7 @@ const LOCK_DIR = path.join(DATA_DIR, '.hive-spawn-tracker.lock');
 const LOCK_TIMEOUT_MS = 5000;
 const STALE_LOCK_MS = 30000; // 30s — unified with all other components
 const MAX_TRACKER_SIZE = 262144; // 256 KB sanity limit
-const MIN_HIVE_AGENTS = 5;
+const MIN_HIVE_AGENTS = 6;
 
 const HIVE_TAG_REGEX = /^\s*\[HIVE:([A-Za-z0-9_-]+):(\d+)\/(\d+)\]\s+([\s\S]+?)\s*$/;
 const SOLO_AGENT_REGEX = /^(bug-hunter|debugger(?:-.+)?)$/i;

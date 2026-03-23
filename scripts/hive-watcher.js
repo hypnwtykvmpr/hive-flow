@@ -67,13 +67,15 @@ function parseArgs() {
 
 function getPaths(projectDir) {
   const hiveFlowDir = path.join(projectDir, '.hive-flow');
+  const dataDir = path.join(hiveFlowDir, 'data');
   return {
     hiveFlowDir,
     hivesDir: path.join(hiveFlowDir, 'hives'),
     tasksDir: path.join(hiveFlowDir, 'tasks'),
-    dataDir: path.join(hiveFlowDir, 'data'),
+    dataDir,
     logsDir: path.join(hiveFlowDir, 'logs'),
-    tmuxPaneFile: path.join(hiveFlowDir, 'data', 'tmux-pane.txt'),
+    tmuxPaneFile: path.join(dataDir, 'tmux-pane.txt'),
+    stopFile: (hiveId) => path.join(dataDir, 'watcher-' + sanitizeHiveId(hiveId) + '.stop'),
   };
 }
 
@@ -155,7 +157,7 @@ function pollWorkers(hivesDir, tasksDir, hiveId) {
     }
 
     // Most recent task by startedAt
-    const sorted = tasks.sort((a, b) =>
+    const sorted = tasks.slice().sort((a, b) =>
       new Date(b.tracking.startedAt).getTime() - new Date(a.tracking.startedAt).getTime()
     );
     if (!sorted.length) { idleCount++; continue; }
@@ -172,26 +174,20 @@ function pollWorkers(hivesDir, tasksDir, hiveId) {
       failedCount++;
       continue;
     }
-    if (latest.tracking.pid) {
-      try {
-        process.kill(latest.tracking.pid, 0);
-        runningCount++;
-        continue;
-      } catch {
-        // Dead PID, no result => failed
-        failedCount++;
-        continue;
-      }
+    try {
+      process.kill(latest.tracking.pid, 0);
+      runningCount++;
+      continue;
+    } catch {
+      // Dead PID, no result => failed
+      failedCount++;
+      continue;
     }
 
-    // No PID — use tracking status
-    if (latest.tracking.status === 'completed') completedCount++;
-    else if (latest.tracking.status === 'failed') failedCount++;
-    else runningCount++;
   }
 
   const taskedCount = completedCount + runningCount + failedCount;
-  const allComplete = taskedCount > 0 && runningCount === 0 && idleCount === 0;
+  const allComplete = taskedCount > 0 && runningCount === 0;
 
   return {
     hiveStatus: hive.status,
@@ -297,8 +293,10 @@ function emitMcpNotification(paths, level, message, data) {
 
 function writeProgressFile(paths, hiveId, status) {
   try {
+    const sanitized = sanitizeHiveId(hiveId);
+    if (!sanitized) return;
     fs.mkdirSync(paths.dataDir, { recursive: true });
-    const progressPath = path.join(paths.dataDir, `watcher-${sanitizeHiveId(hiveId)}.json`);
+    const progressPath = path.join(paths.dataDir, `watcher-${sanitized}.json`);
     const data = {
       hiveId,
       watcherPid: process.pid,
@@ -316,8 +314,31 @@ function writeProgressFile(paths, hiveId, status) {
  */
 function cleanupProgressFile(paths, hiveId) {
   try {
-    const progressPath = path.join(paths.dataDir, `watcher-${sanitizeHiveId(hiveId)}.json`);
+    const sanitized = sanitizeHiveId(hiveId);
+    if (!sanitized) return;
+    const progressPath = path.join(paths.dataDir, `watcher-${sanitized}.json`);
     if (fs.existsSync(progressPath)) fs.unlinkSync(progressPath);
+    const stopPath = paths.stopFile ? paths.stopFile(hiveId) : null;
+    if (stopPath && fs.existsSync(stopPath)) fs.unlinkSync(stopPath);
+  } catch { /* best-effort */ }
+}
+
+function writeDoneMarker(paths, hiveId, status) {
+  try {
+    const sanitized = sanitizeHiveId(hiveId);
+    if (!sanitized) return;
+    fs.mkdirSync(paths.dataDir, { recursive: true });
+    const donePath = path.join(paths.dataDir, `hive-${sanitized}.done`);
+    const data = {
+      hiveId,
+      completedAt: new Date().toISOString(),
+      summary: `completed=${status.completedCount || 0} failed=${status.failedCount || 0}`,
+      completedCount: status.completedCount || 0,
+      failedCount: status.failedCount || 0,
+    };
+    const tmpPath = donePath + '.tmp.' + process.pid;
+    fs.writeFileSync(tmpPath, JSON.stringify(data, null, 2), 'utf8');
+    fs.renameSync(tmpPath, donePath);
   } catch { /* best-effort */ }
 }
 
@@ -332,6 +353,26 @@ function appendAuditLog(paths, entry) {
     const line = JSON.stringify({ timestamp: new Date().toISOString(), ...entry }) + '\n';
     fs.appendFileSync(auditPath, line);
   } catch { /* best-effort */ }
+}
+
+function handleStopRequest(paths, hiveId, status) {
+  try {
+    if (!paths.stopFile) return false;
+    const stopPath = paths.stopFile(hiveId);
+    if (!fs.existsSync(stopPath)) return false;
+    appendAuditLog(paths, {
+      event: 'watcher-stop-requested',
+      hiveId,
+      pid: process.pid,
+    });
+    writeProgressFile(paths, hiveId, {
+      ...status,
+      status: 'stopped',
+    });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -388,6 +429,10 @@ async function main() {
 
   // Main poll loop
   while (true) {
+    if (handleStopRequest(paths, hiveId, pollWorkers(paths.hivesDir, paths.tasksDir, hiveId))) {
+      break;
+    }
+
     // Safety: hard runtime cap
     if (Date.now() - startedAt > MAX_RUNTIME_MS) {
       appendAuditLog(paths, {
@@ -435,6 +480,7 @@ async function main() {
 
     // ---- COMPLETE detection ----
     if (status.allComplete) {
+      const summary = `completed=${status.completedCount} failed=${status.failedCount}`;
       appendAuditLog(paths, {
         event: 'watcher-hive-complete',
         hiveId,
@@ -444,10 +490,10 @@ async function main() {
         idleCount: status.idleCount,
         terminatedCount: status.terminatedCount,
       });
+      writeDoneMarker(paths, hiveId, status);
 
       // Wake advocate via tmux
       if (hasTmux) {
-        const summary = `completed=${status.completedCount} failed=${status.failedCount}`;
         tmuxSendKeys(tmuxBin, tmuxPane,
           `[HIVE COMPLETE: ${hiveId}] All workers finished. ${summary}. Run hive_poll_workers or queen_collect_results to review.`);
       }
@@ -498,8 +544,8 @@ async function main() {
 
       // Reset stale counter — allow continued monitoring (don't exit on stale, just notify)
       unchangedCycles = 0;
-      prevCompletedCount = -1;
-      prevFailedCount = -1;
+      prevCompletedCount = status.completedCount;
+      prevFailedCount = status.failedCount;
     }
 
     // ---- Progress ping (every 30 min via tmux) ----

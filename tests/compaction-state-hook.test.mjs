@@ -507,6 +507,48 @@ describe('compaction-state-hook', () => {
         );
       }
     });
+
+    it('should include advocate state in additionalContext when present', () => {
+      mkdirSync(join(tmpDir, '.hive-flow', 'data'), { recursive: true });
+      writeFileSync(
+        join(tmpDir, '.hive-flow', 'data', 'advocate-state.json'),
+        JSON.stringify({
+          state: {
+            state: 'reviewing',
+            description: 'Reviewing hive reports',
+            lastTransition: '2026-03-22T12:34:56.000Z',
+            activeHives: ['hive-1', 'hive-2'],
+          },
+        }),
+      );
+
+      const transcriptPath = writeTranscript(tmpDir, standardTranscriptLines());
+      runHook('pre-compact', {
+        session_id: 'advocate-state-test',
+        transcript_path: transcriptPath,
+        trigger: 'auto',
+      }, tmpDir);
+
+      const res = runHook('session-start', {
+        session_id: 'advocate-state-test',
+      }, tmpDir);
+
+      const trimmed = res.stdout.trim();
+      if (!trimmed) {
+        assert.fail('session-start should emit additionalContext when advocate state exists');
+      }
+
+      const output = JSON.parse(trimmed);
+      const context = output?.hookSpecificOutput?.additionalContext
+        || output?.additionalContext
+        || '';
+
+      assert.match(context, /### Advocate State/);
+      assert.match(context, /\*\*State:\*\* reviewing/);
+      assert.match(context, /\*\*Description:\*\* Reviewing hive reports/);
+      assert.match(context, /\*\*Last Transition:\*\* 2026-03-22T12:34:56.000Z/);
+      assert.match(context, /\*\*Active Hives:\*\* hive-1, hive-2/);
+    });
   });
 
   // =========================================================================

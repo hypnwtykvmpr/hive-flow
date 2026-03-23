@@ -244,6 +244,30 @@ describe('AnthropicCLIProvider', () => {
     mockChild.emit('close', 0);
   });
 
+  it('passes request-scoped env vars to the spawned CLI process', async () => {
+    mockBinaryFoundViaWhich();
+    provider = new AnthropicCLIProvider({
+      config: {
+        provider: 'anthropic-cli',
+        model: 'claude-3-5-sonnet-latest',
+        env: { HIVE_FLOW_AGENT_TOKEN: 'agent-token-123' },
+      },
+      logger: noopLogger,
+    });
+    await provider.initialize();
+
+    const mockChild = createMockChild();
+    mockSpawn.mockReturnValue(mockChild);
+
+    provider.complete({ messages: [{ role: 'user', content: 'test' }] });
+
+    const spawnEnv = mockSpawn.mock.calls[0][2].env;
+    expect(spawnEnv.HIVE_FLOW_AGENT_TOKEN).toBe('agent-token-123');
+
+    mockChild.stdout.emit('data', Buffer.from(JSON.stringify({ result: 'ok' })));
+    mockChild.emit('close', 0);
+  });
+
   // ── Timeout ──
 
   it('rejects on timeout (default 120s)', async () => {

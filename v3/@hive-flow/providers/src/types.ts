@@ -156,6 +156,7 @@ export interface LLMProviderConfig {
 
   // CLI provider options
   sandbox?: boolean;  // Gemini CLI: enable --sandbox (requires Docker, opt-in)
+  env?: Record<string, string>;
 
   // Performance settings
   timeout?: number;

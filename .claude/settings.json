@@ -169,7 +169,8 @@
           {
             "type": "command",
             "command": "bash .claude/hooks/memory-capture.sh",
-            "async": true
+            "async": true,
+            "timeout": 15000
           }
         ]
       }
@@ -362,7 +363,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/hook-handler.cjs compact-manual"
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/hook-handler.cjs compact-manual",
+            "timeout": 3000
           },
           {
             "type": "command",
@@ -386,7 +388,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/hook-handler.cjs compact-auto"
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/hook-handler.cjs compact-auto",
+            "timeout": 3000
           },
           {
             "type": "command",

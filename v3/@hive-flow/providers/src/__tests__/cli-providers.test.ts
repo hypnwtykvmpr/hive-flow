@@ -272,6 +272,33 @@ describe('GeminiCLIProvider', () => {
     sandboxProvider.destroy();
   });
 
+  it('passes request-scoped env vars to the spawned CLI process', async () => {
+    mockBinaryFound('gemini');
+    provider = new GeminiCLIProvider({
+      config: {
+        provider: 'gemini-cli',
+        model: 'gemini-3.1-pro-preview',
+        env: { HIVE_FLOW_AGENT_TOKEN: 'agent-token-123' },
+      },
+      logger: noopLogger,
+    });
+    await provider.initialize();
+
+    const mockChild = createMockChild();
+    mockSpawn.mockReturnValue(mockChild);
+
+    const completePromise = provider.complete({
+      messages: [{ role: 'user', content: 'test' }],
+    });
+
+    const spawnEnv = mockSpawn.mock.calls[0][2].env;
+    expect(spawnEnv.HIVE_FLOW_AGENT_TOKEN).toBe('agent-token-123');
+
+    mockChild.stdout.emit('data', Buffer.from(JSON.stringify({ response: 'ok' })));
+    mockChild.emit('close', 0);
+    await completePromise;
+  });
+
   it('writes prompt to stdin and closes it', async () => {
     mockBinaryFound('gemini');
     await provider.initialize();
@@ -463,6 +490,35 @@ describe('CodexCLIProvider', () => {
     mockChild.emit('close', 0);
   });
 
+  it('passes request-scoped env vars to the spawned CLI process', async () => {
+    mockBinaryFound('codex');
+    provider = new CodexCLIProvider({
+      config: {
+        provider: 'codex-cli',
+        model: 'gpt-5.3-codex',
+        env: { HIVE_FLOW_AGENT_TOKEN: 'agent-token-123' },
+      },
+      logger: noopLogger,
+    });
+    await provider.initialize();
+
+    const mockChild = createMockChild();
+    mockSpawn.mockReturnValue(mockChild);
+
+    provider.complete({ messages: [{ role: 'user', content: 'test' }] });
+
+    const spawnEnv = mockSpawn.mock.calls[0][2].env;
+    expect(spawnEnv.HIVE_FLOW_AGENT_TOKEN).toBe('agent-token-123');
+
+    mockChild.stdout.emit('data', Buffer.from(
+      JSON.stringify({ type: 'item.completed', item: { type: 'agent_message', text: 'ok' } }) + '\n',
+    ));
+    mockChild.stdout.emit('data', Buffer.from(
+      JSON.stringify({ type: 'turn.completed' }) + '\n',
+    ));
+    mockChild.emit('close', 0);
+  });
+
   it('completes with item.completed and turn.completed events', async () => {
     mockBinaryFound('codex');
     await provider.initialize();
@@ -632,6 +688,30 @@ describe('CursorCLIProvider', () => {
     expect(spawnEnv.CURSOR_API_KEY).toBe('test-key-123');
 
     // Clean up
+    mockChild.stdout.emit('data', Buffer.from(JSON.stringify({ result: 'ok' })));
+    mockChild.emit('close', 0);
+  });
+
+  it('passes request-scoped env vars to the spawned CLI process', async () => {
+    mockBinaryFound('cursor-agent');
+    provider = new CursorCLIProvider({
+      config: {
+        provider: 'cursor-cli',
+        model: 'auto',
+        env: { HIVE_FLOW_AGENT_TOKEN: 'agent-token-123' },
+      },
+      logger: noopLogger,
+    });
+    await provider.initialize();
+
+    const mockChild = createMockChild();
+    mockSpawn.mockReturnValue(mockChild);
+
+    provider.complete({ messages: [{ role: 'user', content: 'test' }] });
+
+    const spawnEnv = mockSpawn.mock.calls[0][2].env;
+    expect(spawnEnv.HIVE_FLOW_AGENT_TOKEN).toBe('agent-token-123');
+
     mockChild.stdout.emit('data', Buffer.from(JSON.stringify({ result: 'ok' })));
     mockChild.emit('close', 0);
   });

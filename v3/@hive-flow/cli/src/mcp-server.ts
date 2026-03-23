@@ -26,6 +26,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import { loadHive, listHives, type HiveRecord, type HiveStatus } from './mcp-tools/hive-store.js';
 
 // ESM-compatible __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -97,6 +98,44 @@ const DEFAULT_OPTIONS: Required<MCPServerOptions> = {
 };
 
 /**
+ * Stdout write queue/mutex to prevent race conditions
+ */
+class StdoutWriteQueue {
+  private queue: Array<() => Promise<void>> = [];
+  private isWriting = false;
+  private writePromise: Promise<void> = Promise.resolve();
+
+  write(data: string): void {
+    const writeFunc = async () => {
+      // Use synchronous write to avoid interleaving
+      process.stdout.write(data + '\n');
+    };
+    
+    this.queue.push(writeFunc);
+    this.processQueue();
+  }
+
+  private processQueue(): void {
+    if (this.isWriting || this.queue.length === 0) {
+      return;
+    }
+
+    this.isWriting = true;
+    const task = this.queue.shift()!;
+    
+    this.writePromise = this.writePromise
+      .then(() => task())
+      .catch((error) => {
+        console.error(`[${new Date().toISOString()}] ERROR [hive-flow-mcp] Stdout write error:`, error);
+      })
+      .finally(() => {
+        this.isWriting = false;
+        setImmediate(() => this.processQueue());
+      });
+  }
+}
+
+/**
  * MCP Server Manager
  *
  * Manages the lifecycle of the MCP server process
@@ -107,6 +146,8 @@ export class MCPServerManager extends EventEmitter {
   private server?: Server;
   private startTime?: Date;
   private healthCheckInterval?: NodeJS.Timeout;
+  private stdoutQueue = new StdoutWriteQueue();
+  private registerHiveForMonitoring?: (hiveId: string) => Promise<void>;
 
   constructor(options: MCPServerOptions = {}) {
     super();
@@ -330,10 +371,6 @@ export class MCPServerManager extends EventEmitter {
       version: VERSION,
     }));
 
-    // NOTE: server.initialized notification is sent AFTER the client sends
-    // its 'initialize' request, not before. See handleMCPMessage() case 'initialize'.
-    let isInitialized = false;
-
     // Handle stdin messages
     let buffer = '';
 
@@ -350,7 +387,7 @@ export class MCPServerManager extends EventEmitter {
             const message = JSON.parse(line);
             const response = await this.handleMCPMessage(message, sessionId);
             if (response) {
-              console.log(JSON.stringify(response));
+              this.stdoutQueue.write(JSON.stringify(response));
             }
           } catch (error) {
             console.error(
@@ -358,7 +395,7 @@ export class MCPServerManager extends EventEmitter {
               error instanceof Error ? error.message : String(error)
             );
             // Send JSON-RPC parse error response per spec
-            console.log(JSON.stringify({
+            this.stdoutQueue.write(JSON.stringify({
               jsonrpc: '2.0',
               id: null,
               error: { code: ErrorCodes.PARSE_ERROR, message: 'Parse error', data: error instanceof Error ? error.message : String(error) }
@@ -390,6 +427,148 @@ export class MCPServerManager extends EventEmitter {
       process.exit(0);
     });
 
+    const monitoredHiveIds = new Set<string>();
+    const notifiedTerminalHives = new Set<string>();
+    let pollingInterval: NodeJS.Timeout | null = null;
+
+    const HIVE_POLL_INTERVAL = 5000;
+    const TERMINAL_HIVE_STATUSES = new Set<HiveStatus>(['completed', 'failed', 'terminated']);
+
+    const sendHiveStatusNotification = (hive: Pick<HiveRecord, 'hiveId' | 'queenId' | 'status' | 'updatedAt' | 'completedAt' | 'error'>) => {
+      if (notifiedTerminalHives.has(hive.hiveId)) {
+        return;
+      }
+
+      notifiedTerminalHives.add(hive.hiveId);
+
+      this.stdoutQueue.write(JSON.stringify({
+        jsonrpc: '2.0',
+        method: 'notifications/message',
+        params: {
+          message: {
+            type: 'hive_status_update',
+            hiveId: hive.hiveId,
+            queenId: hive.queenId,
+            status: hive.status,
+            completedAt: hive.completedAt,
+            updatedAt: hive.updatedAt,
+            error: hive.error,
+          },
+        },
+      }));
+
+      console.error(
+        `[${new Date().toISOString()}] INFO [hive-flow-mcp] (${sessionId}) Hive status update: ${hive.hiveId} - ${hive.status}`
+      );
+    };
+
+    const pollHiveStatus = async (hiveId: string) => {
+      try {
+        const hive = loadHive(hiveId);
+
+        if (!hive) {
+          monitoredHiveIds.delete(hiveId);
+          console.error(
+            `[${new Date().toISOString()}] WARN [hive-flow-mcp] (${sessionId}) Hive ${hiveId} disappeared during monitoring`
+          );
+          return;
+        }
+
+        if (!TERMINAL_HIVE_STATUSES.has(hive.status)) {
+          return;
+        }
+
+        sendHiveStatusNotification({
+          hiveId: hive.hiveId,
+          queenId: hive.queenId,
+          status: hive.status,
+          completedAt: hive.completedAt,
+          updatedAt: hive.updatedAt,
+          error: hive.error,
+        });
+
+        monitoredHiveIds.delete(hiveId);
+      } catch (error) {
+        console.error(
+          `[${new Date().toISOString()}] WARN [hive-flow-mcp] Failed to poll hive ${hiveId}:`,
+          error instanceof Error ? error.message : String(error)
+        );
+      }
+    };
+
+    const startHivePolling = () => {
+      if (pollingInterval) {
+        return;
+      }
+
+      pollingInterval = setInterval(async () => {
+        const monitoredHiveIdsArray = Array.from(monitoredHiveIds);
+        if (monitoredHiveIdsArray.length === 0) {
+          return;
+        }
+
+        await Promise.allSettled(
+          monitoredHiveIdsArray.map(hiveId => pollHiveStatus(hiveId))
+        );
+      }, HIVE_POLL_INTERVAL);
+
+      pollingInterval.unref();
+
+      console.error(
+        `[${new Date().toISOString()}] INFO [hive-flow-mcp] (${sessionId}) Hive polling started`
+      );
+
+      void Promise.allSettled(
+        Array.from(monitoredHiveIds).map(hiveId => pollHiveStatus(hiveId))
+      );
+    };
+
+    const registerHiveForMonitoring = async (hiveId: string) => {
+      if (monitoredHiveIds.has(hiveId) || notifiedTerminalHives.has(hiveId)) {
+        return;
+      }
+
+      monitoredHiveIds.add(hiveId);
+      console.error(
+        `[${new Date().toISOString()}] INFO [hive-flow-mcp] (${sessionId}) Registered hive ${hiveId} for monitoring`
+      );
+
+      startHivePolling();
+      await pollHiveStatus(hiveId);
+    };
+
+    this.registerHiveForMonitoring = registerHiveForMonitoring;
+
+    void (async () => {
+      try {
+        const activeHives = listHives('active');
+        for (const hive of activeHives) {
+          monitoredHiveIds.add(hive.hiveId);
+        }
+
+        if (activeHives.length > 0) {
+          startHivePolling();
+          console.error(
+            `[${new Date().toISOString()}] INFO [hive-flow-mcp] (${sessionId}) Restored ${activeHives.length} active hive(s) for monitoring`
+          );
+        }
+      } catch (error) {
+        console.error(
+          `[${new Date().toISOString()}] WARN [hive-flow-mcp] Failed to restore active hive monitoring:`,
+          error instanceof Error ? error.message : String(error)
+        );
+      }
+    })();
+    
+    /**
+     * Clean up interval on process exit
+     */
+    process.on('exit', () => {
+      if (pollingInterval) {
+        clearInterval(pollingInterval);
+      }
+    });
+
     // Mark as ready immediately for stdio
     this.emit('ready');
   }
@@ -416,9 +595,7 @@ export class MCPServerManager extends EventEmitter {
     try {
       switch (message.method) {
         case 'initialize':
-          // Send the initialize response first, then the server.initialized notification
-          // per MCP spec: notification comes after the initialize response round-trip.
-          const initResponse = {
+          return {
             jsonrpc: '2.0' as const,
             id: message.id,
             result: {
@@ -431,15 +608,6 @@ export class MCPServerManager extends EventEmitter {
               },
             },
           };
-          // Queue the server.initialized notification to be sent after this response
-          setImmediate(() => {
-            console.log(JSON.stringify({
-              jsonrpc: '2.0',
-              method: 'notifications/initialized',
-              params: {},
-            }));
-          });
-          return initResponse;
 
         case 'tools/list':
           const tools = listMCPTools();
@@ -469,6 +637,25 @@ export class MCPServerManager extends EventEmitter {
 
           try {
             const result = await callMCPTool(toolName, toolParams, { sessionId });
+            
+            // Intercept queen_mission_assign success to auto-register hive for monitoring
+            if (toolName === 'queen_mission_assign' && result && typeof result === 'object' && 'success' in result && result.success === true) {
+              try {
+                const hiveId = typeof (result as { hiveId?: unknown }).hiveId === 'string'
+                  ? (result as { hiveId: string }).hiveId
+                  : undefined;
+                if (hiveId) {
+                  await this.registerHiveForMonitoring?.(hiveId);
+                }
+              } catch (monitoringError) {
+                // Log but don't fail the original mission assignment
+                console.error(
+                  `[${new Date().toISOString()}] WARN [hive-flow-mcp] Failed to start hive monitoring:`,
+                  monitoringError instanceof Error ? monitoringError.message : String(monitoringError)
+                );
+              }
+            }
+            
             return {
               jsonrpc: '2.0',
               id: message.id,
