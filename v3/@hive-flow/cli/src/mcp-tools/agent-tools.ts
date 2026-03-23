@@ -615,27 +615,45 @@ export const agentTools: MCPTool[] = [
                 continue;
               }
 
-              if (tracking.pid) {
+              // Write termination marker instead of killing PID directly.
+              // The bridge polls for this file and exits gracefully.
+              {
+                const terminateMarker = join(tasksDir, `.bridge-terminate-${agentId}`);
                 try {
-                  process.kill(tracking.pid, 'SIGTERM');
-                  await new Promise(resolve => setTimeout(resolve, 5000));
-                  try {
-                    process.kill(tracking.pid, 0);
-                    process.kill(tracking.pid, 'SIGKILL');
-                  } catch {
-                    // Process already exited after SIGTERM
-                  }
+                  writeFileSync(terminateMarker, agentId, 'utf-8');
                 } catch {
-                  // Process already exited or cannot be signaled
+                  // tasksDir may not exist if no task was ever dispatched — ignore
                 }
-              }
 
-              const taskId = typeof tracking.taskId === 'string'
-                ? tracking.taskId
-                : file.replace(/\.json$/, '');
-              try { unlinkSync(join(tasksDir, `${taskId}.task`)); } catch { /* best-effort */ }
-              // Skip .result.json deletion — may still be needed by collect_results
-              try { unlinkSync(trackingPath); } catch { /* best-effort */ }
+                // Wait up to 10s for the bridge to notice and write its result file
+                const waitStart = Date.now();
+                const taskId = typeof tracking.taskId === 'string'
+                  ? tracking.taskId
+                  : file.replace(/\.json$/, '');
+                const expectedResult = join(tasksDir, `${taskId}.result.json`);
+                while (Date.now() - waitStart < 10_000) {
+                  if (existsSync(expectedResult)) break;
+                  // Also check if bridge already exited (PID no longer alive)
+                  if (tracking.pid && tracking.pid > 0 && Number.isInteger(tracking.pid)) {
+                    try {
+                      process.kill(tracking.pid, 0);
+                    } catch {
+                      break; // Process already gone
+                    }
+                  } else {
+                    break; // No valid PID to check
+                  }
+                  await new Promise(resolve => setTimeout(resolve, 500));
+                }
+
+                // Clean up marker if bridge didn't delete it
+                try { unlinkSync(terminateMarker); } catch { /* best-effort */ }
+
+                // Clean up task + tracking files
+                try { unlinkSync(join(tasksDir, `${taskId}.task`)); } catch { /* best-effort */ }
+                // Skip .result.json deletion — may still be needed by collect_results
+                try { unlinkSync(trackingPath); } catch { /* best-effort */ }
+              }
             } catch {
               // Ignore unreadable tracking files during termination cleanup
             }
@@ -1059,8 +1077,8 @@ export const agentTools: MCPTool[] = [
         return { success: true, taskId, agentId: tracking.agentId, status: 'completed', result };
       }
 
-      // No result file yet — check if process is still running
-      if (tracking.pid) {
+      // No result file yet — check if process is still running (signal 0 liveness only)
+      if (tracking.pid && tracking.pid > 0 && Number.isInteger(tracking.pid)) {
         try {
           process.kill(tracking.pid, 0); // signal 0 = existence check
           return { success: true, taskId, agentId: tracking.agentId, status: 'running' };

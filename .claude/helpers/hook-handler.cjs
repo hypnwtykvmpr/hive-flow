@@ -348,6 +348,27 @@ const handlers = {
       }
     } catch { /* non-fatal */ }
 
+    // Recover stale hive sentinel watchers after crash/restart
+    try {
+      const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+      const dataDir = path.join(projectDir, '.hive-flow', 'data');
+      if (fs.existsSync(dataDir)) {
+        const watcherFiles = fs.readdirSync(dataDir).filter(f => f.startsWith('watcher-') && f.endsWith('.json'));
+        const STALE_THRESHOLD = 10 * 60 * 1000; // 10 minutes
+        for (const wf of watcherFiles) {
+          try {
+            const wPath = path.join(dataDir, wf);
+            const wData = JSON.parse(fs.readFileSync(wPath, 'utf8'));
+            const heartbeat = new Date(wData.lastHeartbeat || wData.updatedAt || 0).getTime();
+            if (Date.now() - heartbeat > STALE_THRESHOLD) {
+              const watcherId = wf.replace(/^watcher-/, '').replace(/\.json$/, '');
+              console.log(`[SENTINEL] Stale watcher detected: ${watcherId} (last heartbeat: ${wData.lastHeartbeat || 'unknown'}). Config preserved for recovery.`);
+            }
+          } catch { /* skip malformed watcher file */ }
+        }
+      }
+    } catch { /* non-fatal */ }
+
     // Recover advocate state after crash/restart
     try {
       const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();

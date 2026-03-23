@@ -33,29 +33,38 @@ import { execFileSync } from 'child_process';
 
 // ===== Graceful shutdown handlers (prevent orphan bridges) =====
 
+let isShuttingDown = false;
+
 process.on('SIGTERM', () => {
+  if (isShuttingDown) return; // Prevent race with error handler
+  isShuttingDown = true;
+
   bridgeLog('warn', 'Bridge received SIGTERM — exiting gracefully');
-  
+
   // Extract agent info from argv for cleanup
   const argvAgentIdx = process.argv.indexOf('--agent-id');
   const logAgentId = argvAgentIdx !== -1 ? (process.argv[argvAgentIdx + 1] || 'unknown') : 'unknown';
-  
+
   const argvStoreDirIdx = process.argv.indexOf('--store-dir');
-  const storeDir = argvStoreDirIdx !== -1
+  const rawStoreDir = argvStoreDirIdx !== -1
     ? (process.argv[argvStoreDirIdx + 1] || '')
     : join(process.env.HOME || process.env.USERPROFILE || '/tmp', '.hive-flow', 'agents');
-  
+  let storeDir = '';
+  try { storeDir = validateFilePath(rawStoreDir); } catch { /* path outside project root — skip store cleanup */ }
+
   const argvResultIdx = process.argv.indexOf('--result-file');
-  const resultFile = argvResultIdx !== -1 ? (process.argv[argvResultIdx + 1] || '') : '';
-  
+  const rawResultFile = argvResultIdx !== -1 ? (process.argv[argvResultIdx + 1] || '') : '';
+  let resultFile = '';
+  try { resultFile = validateFilePath(rawResultFile); } catch { /* path outside project root — skip file write */ }
+
   // Write error result file
   const errorResponse = {
     success: false,
-    error: 'Bridge terminated by SIGTERM',
+    error: 'Bridge terminated: SIGTERM',
     code: 'SIGTERM',
     agentId: logAgentId,
   };
-  
+
   if (resultFile) {
     try {
       const tmpResult = resultFile + `.tmp.${process.pid}`;
@@ -68,7 +77,7 @@ process.on('SIGTERM', () => {
   } else {
     process.stdout.write(JSON.stringify(errorResponse, null, 2) + '\n');
   }
-  
+
   // Reset agent status to idle (best-effort, synchronous)
   if (storeDir && logAgentId !== 'unknown') {
     try {
@@ -88,8 +97,8 @@ process.on('SIGTERM', () => {
       // Ignore errors - this is best-effort cleanup
     }
   }
-  
-  process.exit(1);
+
+  process.exit(143); // 128 + 15 (SIGTERM)
 });
 
 process.on('uncaughtException', (err) => {
@@ -955,9 +964,10 @@ const BRIDGE_FILESYSTEM_TOOLS = {
       // Convert glob pattern to regex
       let regexStr = pattern
         .replace(/\./g, '\\.')
+        .replace(/\*\*/g, '§GLOBSTAR§')   // Placeholder before single * replacement
         .replace(/\*/g, '[^/]*')
         .replace(/\?/g, '[^/]')
-        .replace(/\*\*/g, '.*');
+        .replace(/§GLOBSTAR§/g, '.*');     // Now replace placeholder with cross-directory match
       
       // Anchor to start and end
       regexStr = '^' + regexStr + '$';
@@ -1483,7 +1493,58 @@ async function main() {
     // is used as-is. This is sufficient for prompt-response hive workers.
     const mcpAvailable = !!(await loadMCPClient());
 
+    // Derive tasks dir for terminate-marker checks
+    const bridgeTasksDir = join(
+      process.env.CLAUDE_PROJECT_DIR || process.cwd(),
+      '.hive-flow', 'tasks'
+    );
+
     while (iterations < MAX_TOOL_ITERATIONS) {
+      // ── Control-file termination check ──
+      // agent_terminate writes a marker file instead of sending SIGTERM/SIGKILL.
+      // We check at the top of each iteration so the bridge exits gracefully.
+      const terminateFile = join(bridgeTasksDir, `.bridge-terminate-${agentId}`);
+      if (existsSync(terminateFile)) {
+        bridgeLog('warn', 'Terminate marker detected — exiting gracefully', { agentId });
+
+        // Write an error result file so agent_task_result sees completion
+        if (resultFile) {
+          const termResult = {
+            success: false,
+            error: 'Agent terminated via control file',
+            code: 'TERMINATED',
+            agentId,
+          };
+          try {
+            const tmpResult = resultFile + `.tmp.${process.pid}`;
+            writeFileSync(tmpResult, JSON.stringify(termResult, null, 2) + '\n');
+            renameSync(tmpResult, resultFile);
+          } catch (writeErr) {
+            bridgeLog('error', 'Failed to write termination result file', { agentId, error: writeErr.message });
+          }
+        }
+
+        // Reset agent to idle
+        try {
+          const lockPath = join(storeDir, '.store.lock');
+          await withFileLock(lockPath, async () => {
+            const { store: s, agent: a, storePath: sp } = loadAgentState(storeDir, agentId);
+            if (a && a.status === 'busy') {
+              a.status = 'idle';
+              saveAgentState(sp, s);
+            }
+          });
+        } catch (resetErr) {
+          bridgeLog('error', 'Failed to reset agent after termination', { agentId, error: resetErr.message });
+        }
+
+        // Delete the marker so it doesn't fire again on a future task
+        try { unlinkSync(terminateFile); } catch { /* best-effort */ }
+
+        // Exit the bridge process
+        process.exit(0);
+      }
+
       response = await retryWithBackoff(
         () => provider.complete(request),
         {
@@ -1765,29 +1826,36 @@ main().catch(async (err) => {
 
   // Reset agent status to idle before writing the error result file so that
   // the agent is not left stuck in 'busy' after a bridge failure.
-  try {
-    const argvStoreDirIdx = process.argv.indexOf('--store-dir');
-    const storeDir = argvStoreDirIdx !== -1
-      ? (process.argv[argvStoreDirIdx + 1] || '')
-      : join(process.env.HOME || process.env.USERPROFILE || '/tmp', '.hive-flow', 'agents');
-    if (storeDir && logAgentId !== 'unknown') {
-      const storePath = join(storeDir, 'store.json');
-      const errorLockPath = join(storeDir, '.store.lock');
-      await withFileLock(errorLockPath, async () => {
-        const freshStore = JSON.parse(readFileSync(storePath, 'utf-8'));
-        if (freshStore.agents && freshStore.agents[logAgentId]) {
-          freshStore.agents[logAgentId].status = 'idle';
-          saveAgentState(storePath, freshStore);
-        }
-      });
+  // Guard against SIGTERM handler already running cleanup
+  if (!isShuttingDown) {
+    try {
+      const argvStoreDirIdx = process.argv.indexOf('--store-dir');
+      const rawStoreDir = argvStoreDirIdx !== -1
+        ? (process.argv[argvStoreDirIdx + 1] || '')
+        : join(process.env.HOME || process.env.USERPROFILE || '/tmp', '.hive-flow', 'agents');
+      let storeDir = '';
+      try { storeDir = validateFilePath(rawStoreDir); } catch { /* path outside project root — skip */ }
+      if (storeDir && logAgentId !== 'unknown') {
+        const storePath = join(storeDir, 'store.json');
+        const errorLockPath = join(storeDir, '.store.lock');
+        await withFileLock(errorLockPath, async () => {
+          const freshStore = JSON.parse(readFileSync(storePath, 'utf-8'));
+          if (freshStore.agents && freshStore.agents[logAgentId]) {
+            freshStore.agents[logAgentId].status = 'idle';
+            saveAgentState(storePath, freshStore);
+          }
+        });
+      }
+    } catch {
+      // Best-effort — do not block error result writing
     }
-  } catch {
-    // Best-effort — do not block error result writing
   }
 
   // Write error result to --result-file if set, fall back to stdout
   const argvResultIdx = process.argv.indexOf('--result-file');
-  const resultFile = argvResultIdx !== -1 ? (process.argv[argvResultIdx + 1] || '') : '';
+  const rawResultFile = argvResultIdx !== -1 ? (process.argv[argvResultIdx + 1] || '') : '';
+  let resultFile = '';
+  try { resultFile = validateFilePath(rawResultFile); } catch { /* path outside project root — skip file write */ }
   if (resultFile) {
     try {
       const tmpResult = resultFile + `.tmp.${process.pid}`;
@@ -1803,7 +1871,9 @@ main().catch(async (err) => {
 
   // Cleanup: delete task file (best-effort)
   const argvTaskFileIdx = process.argv.indexOf('--task-file');
-  const taskFile = argvTaskFileIdx !== -1 ? (process.argv[argvTaskFileIdx + 1] || '') : '';
+  const rawTaskFile = argvTaskFileIdx !== -1 ? (process.argv[argvTaskFileIdx + 1] || '') : '';
+  let taskFile = '';
+  try { taskFile = validateFilePath(rawTaskFile); } catch { /* path outside project root — skip cleanup */ }
   if (taskFile) {
     try { unlinkSync(taskFile); } catch { /* ignore */ }
   }

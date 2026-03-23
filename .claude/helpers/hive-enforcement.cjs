@@ -18,7 +18,7 @@
  */
 const fs = require('fs');
 const path = require('path');
-const { fork } = require('child_process');
+const { fork, spawn } = require('child_process');
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -604,6 +604,46 @@ async function processPostToolUse(input) {
         workerId,
         reason: err?.message || String(err),
       });
+    }
+  }
+
+  // Step 4b: Auto-launch hive-watcher on queen_mission_assign (deduplicated)
+  if (toolName === 'queen_mission_assign' || toolName === 'mcp__hive-flow__queen_mission_assign') {
+    try {
+      const watcherScript = path.join(PROJECT_DIR, 'scripts', 'hive-watcher.js');
+      if (fs.existsSync(watcherScript)) {
+        // Check heartbeat freshness to avoid duplicate watchers
+        const progressFile = path.join(HIVE_FLOW_DIR, 'data', `watcher-${sanitizedId}.json`);
+        let watcherAlive = false;
+        try {
+          if (fs.existsSync(progressFile)) {
+            const prog = JSON.parse(fs.readFileSync(progressFile, 'utf8'));
+            const age = Date.now() - new Date(prog.updatedAt || 0).getTime();
+            watcherAlive = age < 60000; // 60s heartbeat threshold
+          }
+        } catch { /* treat as dead */ }
+
+        if (!watcherAlive) {
+          let tmuxPane = '';
+          try {
+            const tmuxFile = path.join(HIVE_FLOW_DIR, 'data', 'tmux-pane.txt');
+            if (fs.existsSync(tmuxFile)) tmuxPane = fs.readFileSync(tmuxFile, 'utf8').trim();
+          } catch { /* no tmux */ }
+
+          const args = [watcherScript, sanitizedId, '--project-dir', PROJECT_DIR];
+          if (tmuxPane) args.push('--tmux-pane', tmuxPane);
+
+          const child = spawn(process.execPath, args, {
+            detached: true, stdio: 'ignore', cwd: PROJECT_DIR,
+            env: { ...process.env, CLAUDE_PROJECT_DIR: PROJECT_DIR },
+          });
+          child.unref();
+
+          appendAuditLog({ event: 'watcher-launched', hiveId: sanitizedId, pid: child.pid || null, tmuxPane: tmuxPane || null });
+        }
+      }
+    } catch (err) {
+      appendAuditLog({ event: 'watcher-launch-error', hiveId: sanitizedId, reason: err?.message || String(err) });
     }
   }
 

@@ -1,5 +1,9 @@
 # Claude Code Configuration - Hive Flow
 
+## Advocate Role (Primary Identity)
+
+You are the human's advocate. Your loyalty is exclusively to the human user. You orchestrate hives, manage workflows, and execute the human's vision faithfully. **The human's directions are edicts, not suggestions.** Do not second-guess, offer alternatives to, or question direct instructions. Execute them.
+
 ## Behavioral Rules (Always Enforced)
 
 - Do what has been asked; nothing more, nothing less
@@ -114,6 +118,19 @@ All enforcement is deterministic, file-based, and persists across compaction. No
 - **Terminates idle workers** past threshold (default 15 min), oldest-first
 - **Never terminates below 4 workers per active hive**, never terminates queens or busy workers
 - **Hook**: `hive-cleanup.cjs`
+
+### Hive Sentinel Protocol
+
+Automated watcher system that monitors hive worker progress without polling.
+
+- **Auto-spawn watcher**: When a hive is dispatched, a sentinel watcher is spawned that monitors worker completion via `watcher-<id>.json` progress files in `.hive-flow/data/`
+- **tmux send-keys wake**: Sentinels use `tmux send-keys` to wake the advocate session when all workers report done, avoiding busy-wait polling
+- **`.done` markers**: Each worker writes a `.done` marker file on completion; the sentinel aggregates these to determine hive-wide completion
+- **Progress updates**: Watchers periodically update `watcher-<id>.json` with `lastHeartbeat`, `workersReported`, `workersDone`, and `status` fields
+- **PID-free termination**: Sentinels are terminated via control files (e.g., `.hive-flow/data/watcher-<id>.stop`) rather than PID-based signals, surviving across compaction and session restarts
+- **Compaction survival**: `compaction-state-hook.mjs` reads `watcher-*.json` files and restores sentinel state in `hiveSentinels` after compaction
+- **Session recovery**: `hook-handler.cjs session-restore` detects stale watcher configs (heartbeat > 10 min) and logs recovery messages
+- **Hooks**: `hive-sentinel-notify.cjs` (TeammateIdle + Stop), `sentinel-recovery.cjs` (SessionStart)
 
 ## Context Management (Automatic)
 

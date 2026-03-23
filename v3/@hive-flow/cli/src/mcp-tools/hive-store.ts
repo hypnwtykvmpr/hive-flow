@@ -48,6 +48,8 @@ export interface HiveWorkerRecord {
   spawnedAt: string;
   /** ISO timestamp of when this worker was terminated (set by hive_terminate, hive-cleanup, queen-tools) */
   terminatedAt?: string;
+  /** ISO timestamp of when this worker last transitioned to idle (for accurate idle timeout) */
+  idleSince?: string;
   budgetAllocation?: number;
   /** Task ID of the most recently dispatched task for this worker (set by queen_mission_assign spawnAndTask) */
   taskId?: string;

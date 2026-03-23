@@ -210,10 +210,10 @@ async function cleanupIdleAgents() {
             continue;
           }
 
-          // Check idle threshold: use spawnedAt as last-activity proxy
+          // Check idle threshold: use idleSince (falls back to spawnedAt)
           if (w.status === 'idle') {
-            const spawnedAt = new Date(w.spawnedAt).getTime();
-            if (now - spawnedAt > IDLE_TIMEOUT_MS) {
+            const idleSince = new Date(w.idleSince || w.spawnedAt).getTime();
+            if (now - idleSince > IDLE_TIMEOUT_MS) {
               idleWorkers.push(w);
             } else {
               nonIdleWorkers.push(w);
@@ -240,6 +240,7 @@ async function cleanupIdleAgents() {
         // Mark as terminated in hive record
         for (const w of toTerminate) {
           w.status = 'terminated';
+          w.terminatedAt = new Date().toISOString();
           terminatedInHive.push({ workerId: w.workerId, agentId: w.agentId, hiveId: freshHive.hiveId });
         }
 
@@ -339,7 +340,7 @@ async function cleanupOrphanedAgents() {
 // C3: Stale hive directory cleanup — completed/failed/terminated >1h
 // ---------------------------------------------------------------------------
 
-const STALE_HIVE_THRESHOLD_MS = 3600000;
+const STALE_HIVE_THRESHOLD_MS = 14400000; // 4 hours
 
 function cleanupStaleHiveDirs() {
   const summary = { hivesArchived: 0, archived: [], errors: [] };

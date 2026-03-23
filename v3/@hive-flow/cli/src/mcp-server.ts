@@ -427,6 +427,7 @@ export class MCPServerManager extends EventEmitter {
               capabilities: {
                 tools: { listChanged: true },
                 resources: { subscribe: true, listChanged: true },
+                logging: {},
               },
             },
           };
@@ -492,6 +493,14 @@ export class MCPServerManager extends EventEmitter {
           return null;
 
         case 'ping':
+          return {
+            jsonrpc: '2.0',
+            id: message.id,
+            result: {},
+          };
+
+        case 'logging/setLevel':
+          // Client requests a log level change — acknowledge with an empty result
           return {
             jsonrpc: '2.0',
             id: message.id,

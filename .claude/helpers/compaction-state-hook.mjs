@@ -12,7 +12,7 @@
  *   user-prompt-submit — Incrementally refresh saved state
  */
 
-import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync, readdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 
 // ---------------------------------------------------------------------------
@@ -417,6 +417,34 @@ function extractEnforcementState() {
 }
 
 /**
+ * extractHiveSentinelState — Read watcher-*.json progress files for compaction survival.
+ * Returns active sentinel watchers and their hive status.
+ */
+function extractHiveSentinelState() {
+  try {
+    const dataDir = join(PROJECT_DIR, '.hive-flow', 'data');
+    if (!existsSync(dataDir)) return null;
+    const files = readdirSync(dataDir).filter(f => f.startsWith('watcher-') && f.endsWith('.json'));
+    if (files.length === 0) return null;
+    const watchers = [];
+    for (const f of files) {
+      try {
+        const raw = JSON.parse(readFileSync(join(dataDir, f), 'utf-8'));
+        watchers.push({
+          id: f.replace(/^watcher-/, '').replace(/\.json$/, ''),
+          hiveId: raw.hiveId || null,
+          status: raw.status || 'unknown',
+          lastHeartbeat: raw.lastHeartbeat || raw.updatedAt || null,
+          workersReported: raw.workersReported || 0,
+          workersDone: raw.workersDone || 0,
+        });
+      } catch { /* skip malformed watcher file */ }
+    }
+    return watchers.length > 0 ? watchers : null;
+  } catch { return null; }
+}
+
+/**
  * extractAdvocateState — Read advocate state for compaction survival.
  * Returns current advocate state metadata without history.
  */
@@ -446,6 +474,7 @@ function buildState(messages, source, sessionId = null) {
   // Extract enforcement state for compaction survival
   const enforcementState = extractEnforcementState();
   const advocateState = extractAdvocateState();
+  const hiveSentinels = extractHiveSentinelState();
 
   const state = {
     version: 1,
@@ -459,6 +488,7 @@ function buildState(messages, source, sessionId = null) {
     toolProfile: extractToolUsageProfile(messages),
     enforcement: enforcementState,
     advocate: advocateState,
+    hiveSentinels,
     stats: {
       extractionDurationMs: Date.now() - start,
       transcriptLines: messages.length,
@@ -588,6 +618,17 @@ function formatStateForContext(state) {
       lines.push(`- **Last Transition:** ${sanitizeForMarkdown(state.advocate.lastTransition)}`);
     }
     lines.push(`- **Active Hives:** ${state.advocate.activeHives?.length > 0 ? state.advocate.activeHives.join(', ') : 'none'}`);
+    lines.push('');
+  }
+
+  // Hive Sentinels
+  if (state.hiveSentinels && state.hiveSentinels.length > 0) {
+    lines.push('### Hive Sentinels (Active Watchers)');
+    for (const w of state.hiveSentinels) {
+      const hive = w.hiveId ? ` hive=${w.hiveId}` : '';
+      const progress = w.workersReported > 0 ? ` (${w.workersDone}/${w.workersReported} done)` : '';
+      lines.push(`- **${w.id}**: status=${w.status}${hive}${progress}${w.lastHeartbeat ? ` heartbeat=${w.lastHeartbeat}` : ''}`);
+    }
     lines.push('');
   }
 

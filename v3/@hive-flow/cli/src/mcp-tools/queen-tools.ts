@@ -764,6 +764,9 @@ const taskWorkerTool: MCPTool = {
         const freshWorker = freshHive.workers.find(w => w.workerId === workerId);
         if (freshWorker) {
           freshWorker.status = result.success ? 'idle' : 'error'; // Reset to idle on success, error on failure
+          if (freshWorker.status === 'idle') {
+            freshWorker.idleSince = new Date().toISOString();
+          }
         }
         saveHive(hiveId, freshHive);
       }
