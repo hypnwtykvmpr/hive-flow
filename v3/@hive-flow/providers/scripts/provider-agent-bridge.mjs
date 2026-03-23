@@ -27,10 +27,14 @@
  * @module @hive-flow/providers/scripts/provider-agent-bridge
  */
 
-import { readFileSync, writeFileSync, appendFileSync, mkdirSync, renameSync, existsSync, rmdirSync, statSync, unlinkSync, readdirSync } from 'fs';
+import { readFileSync, writeFileSync, appendFileSync, mkdirSync, renameSync, existsSync, rmdirSync, statSync, unlinkSync, readdirSync, openSync, readSync, closeSync } from 'fs';
 import { join, dirname, resolve, relative } from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 import { execFileSync } from 'child_process';
+
+// Module-level limits — set once in main() after provider/model are resolved.
+// Used by BRIDGE_FILESYSTEM_TOOLS handlers for context-aware size caps.
+let currentBridgeLimits = null;
 
 // ===== Graceful shutdown handlers (prevent orphan bridges) =====
 
@@ -187,8 +191,8 @@ const PROVIDER_TOKEN_LIMITS = {
 const MODEL_TOKEN_LIMITS = {
   'opus': 1000000,
   'claude-opus-4-6': 1000000,
-  'sonnet': 200000,
-  'claude-sonnet-4-6': 200000,
+  'sonnet': 1000000,
+  'claude-sonnet-4-6': 1000000,
   'gpt-5.4': 1000000,
   'deepseek-reasoner': 131072,
   'deepseek-chat': 131072,
@@ -370,12 +374,22 @@ function messageByteLength(msg) {
   return Buffer.byteLength(c, 'utf8');
 }
 
-const TOOL_RESULT_TRUNCATE_BYTES = 5 * 1024; // 5KB threshold
+function getToolResultThreshold(limits) {
+  const maxTokens = limits?.maxTokens || 128000;
+  if (maxTokens >= 800000) return Infinity; // 1M+ models: no truncation, let trimMessages handle
+  if (maxTokens >= 200000) return 100 * 1024; // 200K models: 100KB
+  if (maxTokens >= 100000) return 30 * 1024; // 128K models: 30KB
+  return 5 * 1024; // small models: 5KB
+}
 
-function truncateToolResult(content, toolName) {
+function truncateToolResult(content, toolName, limits) {
   if (typeof content !== 'string') return content;
+  const threshold = getToolResultThreshold(limits);
   const bytes = Buffer.byteLength(content, 'utf8');
-  if (bytes <= TOOL_RESULT_TRUNCATE_BYTES) return content;
+  if (bytes <= threshold) return content;
+
+  // Infinity threshold means no truncation — should not reach here, but guard anyway
+  if (threshold === Infinity) return content;
 
   const lines = content.split('\n');
   const totalLines = lines.length;
@@ -383,7 +397,7 @@ function truncateToolResult(content, toolName) {
   // If content has very few lines relative to size (e.g., JSON-encoded single-line blob),
   // truncate by characters instead of by lines
   if (totalLines <= 5 || bytes / totalLines > 10000) {
-    const maxChars = TOOL_RESULT_TRUNCATE_BYTES;
+    const maxChars = threshold;
     const head = content.slice(0, Math.floor(maxChars * 0.7));
     const tail = content.slice(-Math.floor(maxChars * 0.2));
     const summary = `[TRUNCATED] ${toolName}: ${totalLines} lines, ${bytes} bytes, ${content.length} chars`;
@@ -1034,6 +1048,25 @@ const BRIDGE_BLOCKED_TOOLS = new Set([
 const BRIDGE_FILESYSTEM_TOOLS = {
   'read_file': ({ path: filePath }) => {
     const safePath = validateFilePath(filePath);
+    const stats = statSync(safePath);
+    const threshold = getToolResultThreshold(currentBridgeLimits);
+    const maxReadBytes = threshold === Infinity ? 500 * 1024 : threshold;
+    if (stats.size > maxReadBytes) {
+      const fd = openSync(safePath, 'r');
+      try {
+        const headSize = Math.floor(maxReadBytes * 0.7);
+        const tailSize = Math.floor(maxReadBytes * 0.2);
+        const headBuf = Buffer.alloc(headSize);
+        const tailBuf = Buffer.alloc(tailSize);
+        readSync(fd, headBuf, 0, headSize, 0);
+        readSync(fd, tailBuf, 0, tailSize, stats.size - tailSize);
+        return headBuf.toString('utf-8') +
+          `\n\n[FILE TRUNCATED: ${stats.size} bytes total, showing first ${headSize} + last ${tailSize} bytes. Use offset/limit for specific sections.]\n\n` +
+          tailBuf.toString('utf-8');
+      } finally {
+        closeSync(fd);
+      }
+    }
     return readFileSync(safePath, 'utf-8');
   },
   'write_file': ({ path: filePath, content }) => {
@@ -1081,7 +1114,11 @@ const BRIDGE_FILESYSTEM_TOOLS = {
   },
   'list_directory': ({ path: dirPath }) => {
     const safePath = validateFilePath(dirPath || '.');
-    return readdirSync(safePath).join('\n');
+    const entries = readdirSync(safePath);
+    if (entries.length > 500) {
+      return entries.slice(0, 500).join('\n') + `\n\n[TRUNCATED: showing 500 of ${entries.length} entries]`;
+    }
+    return entries.join('\n');
   },
   'grep': ({ pattern, path, file_glob, max_results }) => {
     if (!pattern) {
@@ -1114,9 +1151,10 @@ const BRIDGE_FILESYSTEM_TOOLS = {
         args.push(searchPath);
       }
       
-      const output = execFileSync(command, args, { 
+      const output = execFileSync(command, args, {
         encoding: 'utf-8',
-        stdio: ['pipe', 'pipe', 'pipe']
+        stdio: ['pipe', 'pipe', 'pipe'],
+        maxBuffer: 5 * 1024 * 1024, // 5MB — prevent ENOBUFS on large repos
       }).trim();
       
       if (!output) {
@@ -1482,6 +1520,9 @@ async function main() {
     return { store, agent, storePath, messages, providerName };
   });
 
+  // Set module-level limits so BRIDGE_FILESYSTEM_TOOLS handlers can use them
+  currentBridgeLimits = getProviderLimits(providerName, agent.resolvedModel);
+
   // ── Phase 2: Provider call (no lock held) ──
   const providerModule = await loadProviderModule();
 
@@ -1537,6 +1578,12 @@ async function main() {
     throw initError;
   }
 
+  // Corrected limits from Phase 2 OpenRouter dynamic context discovery.
+  // Initialized to null; set below if the model's real context window differs
+  // from the Phase 1 static limits. Used by the tool-loop re-trim at line ~1861
+  // so it doesn't fall back to the stale Phase 1 value on every iteration.
+  let dynamicLimits = null;
+
   let result;
   try {
     const request = {
@@ -1567,6 +1614,9 @@ async function main() {
               maxChars: realContext * 4,
               warningThreshold: Math.max(0, Math.min(Math.floor(realContext * 0.85), realContext - 40000)),
             };
+            // Store for reuse in the tool loop so every iteration uses the same
+            // dynamic limit rather than re-calling getProviderLimits().
+            dynamicLimits = correctedLimits;
             request.messages = trimMessages(request.messages, correctedLimits);
           }
         }
@@ -1828,9 +1878,10 @@ async function main() {
           )
         );
 
+        const toolLimits = dynamicLimits ?? getProviderLimits(providerName, agent.resolvedModel);
         for (const tr of toolResults) {
           const rawContent = typeof tr.result === 'string' ? tr.result : JSON.stringify(tr.result);
-          const truncatedContent = truncateToolResult(rawContent, tr.name);
+          const truncatedContent = truncateToolResult(rawContent, tr.name, toolLimits);
           const wasTruncated = truncatedContent !== rawContent;
           if (wasTruncated) {
             bridgeLog('info', `Tool result truncated`, {
@@ -1857,8 +1908,10 @@ async function main() {
         }
 
         // Re-trim messages after appending tool results to prevent context overflow
-        // across multiple tool iterations (Bug fix: single-shot trimming)
-        const limits = getProviderLimits(providerName, agent.resolvedModel);
+        // across multiple tool iterations (Bug fix: single-shot trimming).
+        // Prefer dynamicLimits (set by Phase 2 OpenRouter discovery) over the
+        // static Phase 1 limits so context windows are consistent throughout.
+        const limits = dynamicLimits ?? getProviderLimits(providerName, agent.resolvedModel);
         request.messages = trimMessages(request.messages, limits);
 
         // Stuck detection: fingerprint + error counter
@@ -1924,6 +1977,7 @@ async function main() {
           }],
           model: request.model,
         };
+        summaryRequest.messages = trimMessages(summaryRequest.messages, dynamicLimits ?? getProviderLimits(providerName, agent.resolvedModel));
         const summaryResponse = await provider.complete(summaryRequest);
         if (summaryResponse.content && summaryResponse.content.trim() !== '') {
           response = { ...response, content: summaryResponse.content };
