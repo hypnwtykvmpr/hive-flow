@@ -374,6 +374,16 @@ function truncateToolResult(content, toolName) {
   const lines = content.split('\n');
   const totalLines = lines.length;
 
+  // If content has very few lines relative to size (e.g., JSON-encoded single-line blob),
+  // truncate by characters instead of by lines
+  if (totalLines <= 5 || bytes / totalLines > 10000) {
+    const maxChars = TOOL_RESULT_TRUNCATE_BYTES;
+    const head = content.slice(0, Math.floor(maxChars * 0.7));
+    const tail = content.slice(-Math.floor(maxChars * 0.2));
+    const summary = `[TRUNCATED] ${toolName}: ${totalLines} lines, ${bytes} bytes, ${content.length} chars`;
+    return head + `\n\n[... ${summary} ...]\n\n` + tail;
+  }
+
   // Keep first 20 and last 10 lines for structure visibility
   const headLines = lines.slice(0, 20);
   const tailLines = lines.slice(-10);
@@ -710,8 +720,45 @@ function trimMessages(messages, limits) {
     });
   }
 
-  const result = removeOrphanedToolResults(flattenUnits(units));
-  const finalTokens = result.reduce((sum, msg) => sum + estimateMessageTokens(msg), 0);
+  // Safety net: if protected messages alone exceed the limit, aggressively truncate
+  // the largest message content to fit. Never return over-limit.
+  let result = removeOrphanedToolResults(flattenUnits(units));
+  let finalTokens = result.reduce((sum, msg) => sum + estimateMessageTokens(msg), 0);
+
+  if (finalTokens > limits.maxTokens && result.length > 0) {
+    bridgeLog('warn', 'Protected messages exceed limit — emergency truncation', {
+      finalTokens,
+      limit: limits.maxTokens,
+      messages: result.length,
+    });
+
+    // Find the largest message and truncate its content
+    let largestIdx = 0;
+    let largestTokens = 0;
+    for (let i = 0; i < result.length; i++) {
+      const t = estimateMessageTokens(result[i]);
+      if (t > largestTokens) { largestTokens = t; largestIdx = i; }
+    }
+
+    const msg = result[largestIdx];
+    if (typeof msg.content === 'string' && msg.content.length > 1000) {
+      const targetChars = Math.floor((limits.maxTokens * 0.7) * 4); // rough chars for 70% of limit
+      msg.content = msg.content.slice(0, targetChars) +
+        `\n\n[EMERGENCY TRUNCATION: content exceeded ${limits.maxTokens} token limit. Original: ${msg.content.length} chars]`;
+    } else if (Array.isArray(msg.content)) {
+      for (const part of msg.content) {
+        if (part.type === 'text' && typeof part.text === 'string' && part.text.length > 1000) {
+          const targetChars = Math.floor((limits.maxTokens * 0.7) * 4);
+          part.text = part.text.slice(0, targetChars) +
+            `\n\n[EMERGENCY TRUNCATION: content exceeded ${limits.maxTokens} token limit]`;
+          break;
+        }
+      }
+    }
+
+    result = removeOrphanedToolResults(result);
+    finalTokens = result.reduce((sum, msg) => sum + estimateMessageTokens(msg), 0);
+  }
 
   bridgeLog('info', 'Context compaction complete', {
     originalMessages: originalMessageCount,
@@ -1750,7 +1797,7 @@ async function main() {
         );
 
         for (const tr of toolResults) {
-          const rawContent = JSON.stringify(tr.result);
+          const rawContent = typeof tr.result === 'string' ? tr.result : JSON.stringify(tr.result);
           const truncatedContent = truncateToolResult(rawContent, tr.name);
           const wasTruncated = truncatedContent !== rawContent;
           if (wasTruncated) {

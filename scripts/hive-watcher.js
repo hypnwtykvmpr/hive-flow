@@ -53,6 +53,12 @@ function parseArgs() {
       result.tmuxPane = args[++i];
     } else if (args[i] === '--project-dir' && args[i + 1]) {
       result.projectDir = args[++i];
+    } else if (args[i] === '--hiveId' && args[i + 1]) {
+      result.hiveId = args[++i];
+    } else if (args[i] === '--sessionId' && args[i + 1]) {
+      ++i; // consumed but not used by watcher
+    } else if (args[i] === '--queenId' && args[i + 1]) {
+      ++i; // consumed but not used by watcher
     } else if (!args[i].startsWith('--') && !result.hiveId) {
       result.hiveId = args[i];
     }
