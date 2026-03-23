@@ -26,7 +26,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
-import { loadHive, listHives, type HiveRecord, type HiveStatus } from './mcp-tools/hive-store.js';
+import { loadHive, saveHive, listHives, type HiveRecord, type HiveStatus } from './mcp-tools/hive-store.js';
 
 // ESM-compatible __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -474,8 +474,28 @@ export class MCPServerManager extends EventEmitter {
           return;
         }
 
-        if (!TERMINAL_HIVE_STATUSES.has(hive.status)) {
+        // Check terminal status OR detect all workers settled (workers done but status not yet transitioned)
+        const isTerminal = TERMINAL_HIVE_STATUSES.has(hive.status);
+        const allWorkersSettled = !isTerminal && hive.workers && hive.workers.length > 0 &&
+          hive.workers.some((w: { status: string }) => w.status === 'busy' || w.status === 'idle') &&
+          !hive.workers.some((w: { status: string }) => w.status === 'busy');
+
+        if (!isTerminal && !allWorkersSettled) {
           return;
+        }
+
+        // If workers settled but hive not yet terminal, transition it
+        if (allWorkersSettled && !isTerminal) {
+          try {
+            hive.status = 'completed' as any;
+            hive.completedAt = new Date().toISOString();
+            saveHive(hiveId, hive);
+            console.error(
+              `[${new Date().toISOString()}] INFO [hive-flow-mcp] (${sessionId}) Auto-completed hive ${hiveId} — all workers settled`
+            );
+          } catch (e) {
+            console.error(`[${new Date().toISOString()}] WARN [hive-flow-mcp] Failed to auto-complete hive ${hiveId}`);
+          }
         }
 
         sendHiveStatusNotification({

@@ -1487,6 +1487,25 @@ const hivePollWorkersTool: MCPTool = {
 
     }
 
+    // Auto-transition hive to completed when all workers settled
+    // This enables the MCP server polling to detect completion and fire notifications
+    if (allComplete) {
+      try {
+        await withHiveLock(hiveId, () => {
+          const freshHive = loadHive(hiveId);
+          if (freshHive && freshHive.status === 'active') {
+            freshHive.status = 'completed';
+            freshHive.completedAt = new Date().toISOString();
+            appendHiveAudit(freshHive, {
+              event: 'results-collected',
+              detail: `Auto-completed: ${completedCount} completed, ${failedCount} failed, ${idleCount} idle`,
+            });
+            saveHive(hiveId, freshHive);
+          }
+        });
+      } catch { /* best-effort transition */ }
+    }
+
     return {
       success: true,
       hiveId,

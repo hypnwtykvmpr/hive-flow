@@ -477,6 +477,17 @@
         ]
       }
     ],
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/hive-sentinel-notify.cjs notification",
+            "timeout": 5000
+          }
+        ]
+      }
+    ],
     "SubagentStop": [
       {
         "hooks": [
