@@ -464,7 +464,7 @@ export class MCPServerManager extends EventEmitter {
 
     const pollHiveStatus = async (hiveId: string) => {
       try {
-        const hive = loadHive(hiveId);
+        let hive = loadHive(hiveId);
 
         if (!hive) {
           monitoredHiveIds.delete(hiveId);
@@ -474,40 +474,62 @@ export class MCPServerManager extends EventEmitter {
           return;
         }
 
-        // Check terminal status OR detect all workers settled (workers done but status not yet transitioned)
-        const isTerminal = TERMINAL_HIVE_STATUSES.has(hive.status);
-        const allWorkersSettled = !isTerminal && hive.workers && hive.workers.length > 0 &&
-          hive.workers.some((w: { status: string }) => w.status === 'busy' || w.status === 'idle') &&
-          !hive.workers.some((w: { status: string }) => w.status === 'busy');
-
-        if (!isTerminal && !allWorkersSettled) {
+        // If already terminal, just notify
+        if (TERMINAL_HIVE_STATUSES.has(hive.status)) {
+          sendHiveStatusNotification({
+            hiveId: hive.hiveId,
+            queenId: hive.queenId,
+            status: hive.status,
+            completedAt: hive.completedAt,
+            updatedAt: hive.updatedAt,
+            error: hive.error,
+          });
+          monitoredHiveIds.delete(hiveId);
           return;
         }
 
-        // If workers settled but hive not yet terminal, transition it
-        if (allWorkersSettled && !isTerminal) {
-          try {
-            hive.status = 'completed' as any;
-            hive.completedAt = new Date().toISOString();
-            saveHive(hiveId, hive);
-            console.error(
-              `[${new Date().toISOString()}] INFO [hive-flow-mcp] (${sessionId}) Auto-completed hive ${hiveId} — all workers settled`
-            );
-          } catch (e) {
-            console.error(`[${new Date().toISOString()}] WARN [hive-flow-mcp] Failed to auto-complete hive ${hiveId}`);
+        // Not terminal — invoke hive_poll_workers to check result files + auto-transition
+        try {
+          const pollResult = await callMCPTool('hive_poll_workers', { hiveId }, { sessionId }) as Record<string, unknown> | null;
+          if (pollResult && (pollResult.allWorkersSettled || pollResult.allComplete)) {
+            // Re-read hive — hive_poll_workers may have transitioned it to completed
+            const freshHive = loadHive(hiveId);
+            if (freshHive && TERMINAL_HIVE_STATUSES.has(freshHive.status)) {
+              console.error(
+                `[${new Date().toISOString()}] INFO [hive-flow-mcp] (${sessionId}) Hive ${hiveId} completed — detected by internal poll`
+              );
+              sendHiveStatusNotification({
+                hiveId: freshHive.hiveId,
+                queenId: freshHive.queenId,
+                status: freshHive.status,
+                completedAt: freshHive.completedAt,
+                updatedAt: freshHive.updatedAt,
+                error: freshHive.error,
+              });
+              monitoredHiveIds.delete(hiveId);
+              return;
+            }
           }
+        } catch (pollErr) {
+          console.error(
+            `[${new Date().toISOString()}] WARN [hive-flow-mcp] Internal poll failed for hive ${hiveId}:`,
+            pollErr instanceof Error ? pollErr.message : String(pollErr)
+          );
         }
 
-        sendHiveStatusNotification({
-          hiveId: hive.hiveId,
-          queenId: hive.queenId,
-          status: hive.status,
-          completedAt: hive.completedAt,
-          updatedAt: hive.updatedAt,
-          error: hive.error,
-        });
-
-        monitoredHiveIds.delete(hiveId);
+        // Fallback: send notification if hive somehow reached terminal after poll
+        hive = loadHive(hiveId);
+        if (hive && TERMINAL_HIVE_STATUSES.has(hive.status)) {
+          sendHiveStatusNotification({
+            hiveId: hive.hiveId,
+            queenId: hive.queenId,
+            status: hive.status,
+            completedAt: hive.completedAt,
+            updatedAt: hive.updatedAt,
+            error: hive.error,
+          });
+          monitoredHiveIds.delete(hiveId);
+        }
       } catch (error) {
         console.error(
           `[${new Date().toISOString()}] WARN [hive-flow-mcp] Failed to poll hive ${hiveId}:`,
