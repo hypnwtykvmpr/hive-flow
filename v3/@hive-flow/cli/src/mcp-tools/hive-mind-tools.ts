@@ -641,30 +641,79 @@ export const hiveMindTools: MCPTool[] = [
         // To get real votes from a worker, assign it a provider via spawn/join.
         for (const w of localWorkers) { proposal.votes[w.agentId] = true; }
 
-        // Execute provider workers via agent_task (parallel)
+        // Execute provider workers via agent_task (non-blocking dispatch) + agent_task_result (poll)
         const agentTaskTool = agentTools.find(t => t.name === 'agent_task');
-        if (!agentTaskTool && providerWorkers.length > 0) {
-          return { action, error: 'agent_task tool not found — cannot execute provider workers' };
+        const agentTaskResultTool = agentTools.find(t => t.name === 'agent_task_result');
+        if ((!agentTaskTool || !agentTaskResultTool) && providerWorkers.length > 0) {
+          return { action, error: 'agent_task / agent_task_result tools not found — cannot execute provider workers' };
         }
-        const settled = await Promise.allSettled(
+
+        // Phase 1: Dispatch all tasks in parallel (non-blocking)
+        const taskTimeout = (input.timeout as number) ?? 30000;
+        const dispatched = await Promise.allSettled(
           providerWorkers.map(async (worker) => {
-            const taskResult = await agentTaskTool!.handler({
+            const dispatchResult = await agentTaskTool!.handler({
               agentId: worker.agentId, task: structuredTask,
-              timeout: (input.timeout as number) ?? 30000,
+              timeout: taskTimeout,
             }) as Record<string, unknown>;
-            return { worker, taskResult };
+            return { worker, dispatchResult };
           }),
         );
-        const results: Array<{ agentId: string; provider?: AgentProvider; status: string; vote?: boolean; error?: string }> = [];
-        for (let i = 0; i < settled.length; i++) {
+
+        // Phase 2: Poll for results with back-off until timeout
+        const POLL_INTERVAL = 2000;
+        const pollDeadline = Date.now() + taskTimeout;
+        const pending = new Map<string, { worker: typeof providerWorkers[0]; taskId: string }>();
+        const completedResults = new Map<string, Record<string, unknown>>();
+        const failedDispatches: Array<{ worker: typeof providerWorkers[0]; error: string }> = [];
+
+        for (let i = 0; i < dispatched.length; i++) {
           const worker = providerWorkers[i];
-          const s = settled[i];
-          if (s.status === 'fulfilled') {
-            const vote = extractVoteFromResult(s.value.taskResult);
-            proposal.votes[worker.agentId] = vote;
-            results.push({ agentId: worker.agentId, provider: worker.provider, status: 'completed', vote });
+          const d = dispatched[i];
+          if (d.status === 'fulfilled' && d.value.dispatchResult.success && d.value.dispatchResult.taskId) {
+            pending.set(d.value.dispatchResult.taskId as string, { worker, taskId: d.value.dispatchResult.taskId as string });
           } else {
-            results.push({ agentId: worker.agentId, provider: worker.provider, status: 'failed', error: String(s.reason) });
+            const errMsg = d.status === 'rejected' ? String(d.reason) : String((d.value.dispatchResult as Record<string, unknown>).error || 'dispatch failed');
+            failedDispatches.push({ worker, error: errMsg });
+          }
+        }
+
+        while (pending.size > 0 && Date.now() < pollDeadline) {
+          await new Promise(r => setTimeout(r, POLL_INTERVAL));
+          for (const [taskId, entry] of pending) {
+            const pollResult = await agentTaskResultTool!.handler({ taskId }) as Record<string, unknown>;
+            if (pollResult.status === 'completed') {
+              completedResults.set(entry.worker.agentId, (pollResult.result ?? pollResult) as Record<string, unknown>);
+              pending.delete(taskId);
+            } else if (pollResult.status === 'failed') {
+              completedResults.set(entry.worker.agentId, pollResult as Record<string, unknown>);
+              pending.delete(taskId);
+            }
+            // 'running' — keep polling
+          }
+        }
+
+        // Treat still-pending tasks as timed-out failures
+        for (const [, entry] of pending) {
+          completedResults.set(entry.worker.agentId, { success: false, error: 'Task timed out waiting for result' });
+        }
+
+        const results: Array<{ agentId: string; provider?: AgentProvider; status: string; vote?: boolean; error?: string }> = [];
+        for (const worker of providerWorkers) {
+          const taskResult = completedResults.get(worker.agentId);
+          const failedDispatch = failedDispatches.find(f => f.worker.agentId === worker.agentId);
+          if (failedDispatch) {
+            results.push({ agentId: worker.agentId, provider: worker.provider, status: 'failed', error: failedDispatch.error });
+          } else if (taskResult) {
+            if (taskResult.success === false) {
+              results.push({ agentId: worker.agentId, provider: worker.provider, status: 'failed', error: String(taskResult.error || 'unknown error') });
+            } else {
+              const vote = extractVoteFromResult(taskResult);
+              proposal.votes[worker.agentId] = vote;
+              results.push({ agentId: worker.agentId, provider: worker.provider, status: 'completed', vote });
+            }
+          } else {
+            results.push({ agentId: worker.agentId, provider: worker.provider, status: 'failed', error: 'No result received' });
           }
         }
 

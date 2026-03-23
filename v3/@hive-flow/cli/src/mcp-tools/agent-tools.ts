@@ -634,7 +634,7 @@ export const agentTools: MCPTool[] = [
                 ? tracking.taskId
                 : file.replace(/\.json$/, '');
               try { unlinkSync(join(tasksDir, `${taskId}.task`)); } catch { /* best-effort */ }
-              try { unlinkSync(join(tasksDir, `${taskId}.result.json`)); } catch { /* best-effort */ }
+              // Skip .result.json deletion — may still be needed by collect_results
               try { unlinkSync(trackingPath); } catch { /* best-effort */ }
             } catch {
               // Ignore unreadable tracking files during termination cleanup
@@ -879,179 +879,7 @@ export const agentTools: MCPTool[] = [
   },
   {
     name: 'agent_task',
-    description: 'Send a task to a provider-backed agent for execution',
-    category: 'agent',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        agentId: { type: 'string', description: 'ID of the agent (must be spawned first via agent_spawn)' },
-        task: { type: 'string', description: 'Task prompt to send to the agent' },
-        timeout: { type: 'number', description: 'Timeout in ms (default: 300000)' },
-      },
-      required: ['agentId', 'task'],
-    },
-    handler: async (input) => {
-      const agentId = input.agentId as string;
-      const task = input.task as string;
-      const rawTimeout = (input.timeout as number) || 300000;
-      const MIN_TIMEOUT = 10000;    // 10 seconds
-      const MAX_TIMEOUT = 3600000;  // 60 minutes
-      const timeout = Math.max(MIN_TIMEOUT, Math.min(MAX_TIMEOUT, rawTimeout));
-
-      // RC-2: Lock → fresh read → validate → set busy → save → unlock
-      // Uses bridge-compatible per-agent lock to coordinate with bridge subprocess.
-      const validationError = await withBridgeLock(agentId, () => {
-        const store = loadAgentStore();
-        const agent = store.agents[agentId];
-        if (!agent) {
-          return 'Agent not found';
-        }
-        if (!agent.provider) {
-          return 'Agent has no provider — use agent_spawn with a provider first';
-        }
-        if (agent.provider === 'anthropic') {
-          return "Use 'anthropic-cli' for Claude subprocess workers, not 'anthropic'. The agent_task bridge supports providers: anthropic-cli, gemini-cli, codex-cli, cursor-cli, deepseek. Use Claude Code Task tool for native anthropic agents.";
-        }
-        if (!transitionAgent(agent, 'busy')) {
-          return `Agent cannot accept tasks in current state: '${agent.status}'`;
-        }
-        saveAgentStore(store);
-        return null; // success
-      });
-
-      if (validationError) {
-        return { success: false, agentId, error: validationError };
-      }
-
-      // Resolve bridge script path relative to compiled output location
-      const thisDir = dirname(fileURLToPath(import.meta.url));
-      const bridgePath = join(thisDir, '..', '..', '..', '..', 'providers', 'scripts', 'provider-agent-bridge.mjs');
-
-      if (!existsSync(bridgePath)) {
-        // RC-2: Lock → fresh read → reset status only → save → unlock
-        await withBridgeLock(agentId, () => {
-          const s = loadAgentStore();
-          const a = s.agents[agentId];
-          if (a && a.status === 'busy') {
-            a.status = 'idle';
-            saveAgentStore(s);
-          }
-        });
-        return { success: false, agentId, error: `Bridge script not found at ${bridgePath}` };
-      }
-
-      const agentDir = getAgentDir();
-      // Pass task via stdin (--task-stdin) to avoid shell parsing issues with
-      // special characters (colons, quotes, pipes, etc.) and ARG_MAX limits.
-      const args = ['--agent-id', agentId, '--task-stdin', '--store-dir', agentDir, '--timeout', String(timeout)];
-
-      // RC-2 helper: bridge-compatible lock → fresh read → reset status to idle
-      // if still busy → save → unlock. Only touches status — never overwrites
-      // conversation history, taskCount, lastResult, or other bridge-written fields.
-      const resetStatusToIdle = async (): Promise<void> => {
-        await withBridgeLock(agentId, () => {
-          const freshStore = loadAgentStore();
-          const freshAgent = freshStore.agents[agentId];
-          if (freshAgent && freshAgent.status === 'busy') {
-            freshAgent.status = 'idle';
-            saveAgentStore(freshStore);
-          }
-        });
-      };
-
-      return new Promise((resolve) => {
-        // Use spawn (not execFile) so we can pipe the task via stdin.
-        // This avoids all shell-parsing issues with special characters in task text
-        // and bypasses OS ARG_MAX limits for very long prompts.
-        const child = spawn('node', [bridgePath, ...args], {
-          stdio: ['pipe', 'pipe', 'pipe'],
-          timeout,
-        });
-
-        // Pipe task text via stdin — the bridge reads it when --task-stdin is set
-        child.stdin.on('error', () => { /* ignore EPIPE if bridge exits early */ });
-        child.stdin.write(task);
-        child.stdin.end();
-
-        let stdout = '';
-        let stderr = '';
-
-        child.stdout.on('data', (d: Buffer) => {
-          stdout += d.toString();
-          // Safety: cap stdout collection at maxBuffer equivalent (10MB)
-          if (stdout.length > 10 * 1024 * 1024) {
-            child.kill('SIGKILL');
-          }
-        });
-        child.stderr.on('data', (d: Buffer) => { stderr += d.toString(); });
-
-        child.on('close', (code: number | null) => {
-          const handleResult = () => {
-            if (code !== 0) {
-              // Try to parse error JSON from stdout (bridge writes errors there)
-              // Providers may leak log lines to stdout; extract JSON robustly
-              let parsed: Record<string, unknown> | undefined;
-              try { parsed = JSON.parse(stdout); } catch {
-                const js = stdout.indexOf('{');
-                const je = stdout.lastIndexOf('}');
-                if (js !== -1 && je > js) {
-                  try { parsed = JSON.parse(stdout.slice(js, je + 1)); } catch { /* not JSON */ }
-                }
-              }
-              if (parsed && parsed.error) {
-                resolve({ success: false, agentId, error: parsed.error, stderr: stderr || undefined });
-              } else {
-                const errMsg = code === null ? 'Bridge process killed (timeout or signal)' : `Bridge exited with code ${code}`;
-                resolve({ success: false, agentId, error: errMsg, stderr: stderr || undefined });
-              }
-              return;
-            }
-
-            // Parse bridge JSON output
-            // Providers may leak log lines to stdout; extract the JSON object robustly
-            let result: Record<string, unknown>;
-            try {
-              result = JSON.parse(stdout);
-            } catch {
-              // Fallback: find the first top-level JSON object in stdout
-              const jsonStart = stdout.indexOf('{');
-              const jsonEnd = stdout.lastIndexOf('}');
-              if (jsonStart !== -1 && jsonEnd > jsonStart) {
-                try {
-                  result = JSON.parse(stdout.slice(jsonStart, jsonEnd + 1));
-                } catch {
-                  resolve({ success: false, agentId, error: 'Failed to parse bridge output', rawOutput: stdout.slice(0, 2000) });
-                  return;
-                }
-              } else {
-                resolve({ success: false, agentId, error: 'Failed to parse bridge output', rawOutput: stdout.slice(0, 2000) });
-                return;
-              }
-            }
-
-            // RC-2: Bridge already saved updated agent state (history, taskCount, lastResult).
-            resolve(result);
-          };
-
-          // RC-2: Lock → fresh read → reset status to idle ONLY if still busy → save → unlock.
-          // This ensures we never overwrite bridge-written fields.
-          resetStatusToIdle().then(handleResult).catch(handleResult);
-        });
-
-        child.on('error', (spawnErr) => {
-          // RC-2: Lock → fresh read → reset status only → save → unlock
-          resetStatusToIdle().then(() => {
-            resolve({ success: false, agentId, error: `Failed to spawn bridge: ${spawnErr.message}` });
-          }).catch(() => {
-            resolve({ success: false, agentId, error: `Failed to spawn bridge: ${spawnErr.message}` });
-          });
-        });
-      });
-    },
-  },
-  {
-    name: 'agent_task_async',
-    description: 'Dispatch a task to a provider-backed agent without waiting for the result (non-blocking). Poll with agent_task_result.',
+    description: 'Dispatch a task to a provider-backed agent (non-blocking). Returns immediately with taskId. Poll with agent_task_result.',
     category: 'agent',
     inputSchema: {
       type: 'object',
@@ -1072,7 +900,7 @@ export const agentTools: MCPTool[] = [
 
       const taskId = `task-${randomUUID()}`;
 
-      // Validate agent and set busy — same pattern as agent_task
+      // RC-2: Lock → fresh read → validate → set busy → save → unlock
       const validationError = await withBridgeLock(agentId, () => {
         const store = loadAgentStore();
         const agent = store.agents[agentId];
@@ -1147,6 +975,26 @@ export const agentTools: MCPTool[] = [
     },
   },
   {
+    name: 'agent_task_async',
+    description: 'Alias for agent_task (non-blocking). Dispatch a task to a provider-backed agent. Returns immediately with taskId. Poll with agent_task_result.',
+    category: 'agent',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        agentId: { type: 'string', description: 'ID of the agent (must be spawned first via agent_spawn)' },
+        task: { type: 'string', description: 'Task prompt to send to the agent' },
+        timeout: { type: 'number', description: 'Timeout in ms (default: 300000)' },
+      },
+      required: ['agentId', 'task'],
+    },
+    handler: async (input) => {
+      // Delegate to agent_task — both are now identical (non-blocking)
+      const agentTaskTool = agentTools.find(t => t.name === 'agent_task');
+      if (!agentTaskTool) throw new Error('agent_task tool not found');
+      return agentTaskTool.handler(input);
+    },
+  },
+  {
     name: 'agent_task_result',
     description: 'Poll for the result of an async task dispatched via agent_task_async.',
     category: 'agent',
@@ -1203,9 +1051,9 @@ export const agentTools: MCPTool[] = [
           }
         });
 
-        // W3: Delete the 3 task files after successfully reading completed result
+        // W3: Delete task + tracking files after successfully reading completed result
+        // Keep .result.json alive — agent_terminate and hive-cleanup may still reference it
         try { unlinkSync(join(tasksDir, `${taskId}.task`)); } catch { /* ignore */ }
-        try { unlinkSync(resultFilePath); } catch { /* ignore */ }
         try { unlinkSync(trackingPath); } catch { /* ignore */ }
 
         return { success: true, taskId, agentId: tracking.agentId, status: 'completed', result };

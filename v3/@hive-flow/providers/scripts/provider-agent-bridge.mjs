@@ -31,6 +31,72 @@ import { join, dirname, resolve, relative } from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 import { execFileSync } from 'child_process';
 
+// ===== Graceful shutdown handlers (prevent orphan bridges) =====
+
+process.on('SIGTERM', () => {
+  bridgeLog('warn', 'Bridge received SIGTERM — exiting gracefully');
+  
+  // Extract agent info from argv for cleanup
+  const argvAgentIdx = process.argv.indexOf('--agent-id');
+  const logAgentId = argvAgentIdx !== -1 ? (process.argv[argvAgentIdx + 1] || 'unknown') : 'unknown';
+  
+  const argvStoreDirIdx = process.argv.indexOf('--store-dir');
+  const storeDir = argvStoreDirIdx !== -1
+    ? (process.argv[argvStoreDirIdx + 1] || '')
+    : join(process.env.HOME || process.env.USERPROFILE || '/tmp', '.hive-flow', 'agents');
+  
+  const argvResultIdx = process.argv.indexOf('--result-file');
+  const resultFile = argvResultIdx !== -1 ? (process.argv[argvResultIdx + 1] || '') : '';
+  
+  // Write error result file
+  const errorResponse = {
+    success: false,
+    error: 'Bridge terminated by SIGTERM',
+    code: 'SIGTERM',
+    agentId: logAgentId,
+  };
+  
+  if (resultFile) {
+    try {
+      const tmpResult = resultFile + `.tmp.${process.pid}`;
+      writeFileSync(tmpResult, JSON.stringify(errorResponse, null, 2) + '\n');
+      renameSync(tmpResult, resultFile);
+    } catch {
+      // File write failed — fall back to stdout
+      process.stdout.write(JSON.stringify(errorResponse, null, 2) + '\n');
+    }
+  } else {
+    process.stdout.write(JSON.stringify(errorResponse, null, 2) + '\n');
+  }
+  
+  // Reset agent status to idle (best-effort, synchronous)
+  if (storeDir && logAgentId !== 'unknown') {
+    try {
+      const storePath = join(storeDir, 'store.json');
+      if (existsSync(storePath)) {
+        const store = JSON.parse(readFileSync(storePath, 'utf-8'));
+        if (store.agents && store.agents[logAgentId]) {
+          store.agents[logAgentId].status = 'idle';
+          // Write directly without lock - this is a best-effort cleanup
+          // to prevent agent from being stuck in 'busy' state
+          const tmpPath = storePath + `.tmp.sigterm.${process.pid}`;
+          writeFileSync(tmpPath, JSON.stringify(store, null, 2));
+          renameSync(tmpPath, storePath);
+        }
+      }
+    } catch {
+      // Ignore errors - this is best-effort cleanup
+    }
+  }
+  
+  process.exit(1);
+});
+
+process.on('uncaughtException', (err) => {
+  bridgeLog('error', 'Bridge uncaughtException', { error: err?.message || String(err) });
+  process.exit(1);
+});
+
 // ===== Bridge File Logger (append-only, mirrors hook-handler.cjs patterns) =====
 
 function getBridgeLogPath() {
@@ -90,21 +156,81 @@ const stderrLogger = {
 // ===== Constants =====
 
 const DEFAULT_MAX_HISTORY_ENTRIES = 50;
-const DEFAULT_MAX_PROMPT_BYTES = 180 * 1024; // 180KB
+const DEFAULT_MAX_PROMPT_TOKENS = 128000; // 128K tokens safe default
 
-// Per-provider context limits (deepseek has smallest context at 128K)
-const PROVIDER_LIMITS = {
-  'anthropic-cli': { maxBytes: 180 * 1024, maxEntries: 50 },
-  'gemini-cli':    { maxBytes: 180 * 1024, maxEntries: 50 },
-  'codex-cli':     { maxBytes: 180 * 1024, maxEntries: 50 },
-  'cursor-cli':    { maxBytes: 180 * 1024, maxEntries: 50 },
-  'deepseek':      { maxBytes: 100 * 1024, maxEntries: 30 },
+// Per-provider context token limits (tokens, not bytes)
+// Sources: deepseek=131072, gemini-3.1-pro=1M, sonnet=200K, opus=1M, gpt-5.4=1M, cursor=auto
+// anthropic-cli can be sonnet (200K) or opus (1M) — use model-aware routing below
+// codex-cli uses gpt-5.4 (1M context)
+const PROVIDER_TOKEN_LIMITS = {
+  'anthropic-cli': { maxTokens: 200000, maxEntries: 50 },  // default: sonnet 200K (overridden by model)
+  'gemini-cli':    { maxTokens: 1000000, maxEntries: 50 }, // gemini-3.1-pro-preview: 1M
+  'codex-cli':     { maxTokens: 1000000, maxEntries: 50 }, // gpt-5.4: 1M context
+  'cursor-cli':    { maxTokens: 200000, maxEntries: 50 },  // conservative default
+  'deepseek':      { maxTokens: 131072, maxEntries: 30 },  // deepseek-reasoner: 131072
 };
 
-function getProviderLimits(providerName) {
-  return PROVIDER_LIMITS[providerName] || {
-    maxBytes: DEFAULT_MAX_PROMPT_BYTES,
+// Model-specific overrides (when model is known at runtime)
+const MODEL_TOKEN_LIMITS = {
+  'opus': 1000000,
+  'claude-opus-4-6': 1000000,
+  'sonnet': 200000,
+  'claude-sonnet-4-6': 200000,
+  'gpt-5.4': 1000000,
+  'deepseek-reasoner': 131072,
+  'deepseek-chat': 131072,
+  'gemini-3.1-pro-preview': 1000000,
+};
+
+// Token estimation: ~4 chars per token (conservative for code/mixed content)
+function estimateTokensFromText(text) {
+  if (typeof text !== 'string') return 0;
+  // Rough estimate: characters / 4
+  return Math.ceil(text.length / 4);
+}
+
+function estimateMessageTokens(msg) {
+  let tokenCount = 0;
+  // Content tokens
+  if (msg.content && typeof msg.content === 'string') {
+    tokenCount += estimateTokensFromText(msg.content);
+  }
+  // Tool calls (estimate based on JSON string length)
+  if (msg.toolCalls && Array.isArray(msg.toolCalls)) {
+    tokenCount += estimateTokensFromText(JSON.stringify(msg.toolCalls));
+  }
+  // Name/toolCallId (minor)
+  if (msg.name && typeof msg.name === 'string') {
+    tokenCount += estimateTokensFromText(msg.name);
+  }
+  if (msg.toolCallId && typeof msg.toolCallId === 'string') {
+    tokenCount += estimateTokensFromText(msg.toolCallId);
+  }
+  // System prompt overhead (role, structure) - add 10 tokens
+  return tokenCount + 10;
+}
+
+function getProviderLimits(providerName, modelName) {
+  const limits = { ...(PROVIDER_TOKEN_LIMITS[providerName] || {
+    maxTokens: DEFAULT_MAX_PROMPT_TOKENS,
     maxEntries: DEFAULT_MAX_HISTORY_ENTRIES
+  }) };
+
+  // Model-specific override: e.g., anthropic-cli with opus gets 1M, not 200K
+  if (modelName && MODEL_TOKEN_LIMITS[modelName]) {
+    limits.maxTokens = MODEL_TOKEN_LIMITS[modelName];
+  }
+  
+  // Return both token and char limits for compatibility
+  return {
+    ...limits,
+    maxChars: limits.maxTokens * 4,      // For char-based checks
+    // Dynamic threshold: 40K token floor buffer, then 85% for larger models.
+    // deepseek 131K → 91K (70%), sonnet 200K → 160K (80%), opus/gemini/codex 1M → 850K (85%)
+    warningThreshold: Math.min(
+      Math.floor(limits.maxTokens * 0.85),
+      limits.maxTokens - 40000
+    ),
   };
 }
 const LOCK_ACQUIRE_TIMEOUT = 10000; // 10 seconds — aligned with agent-tools.ts withStoreLock
@@ -287,20 +413,94 @@ function summarizeAssistantMessage(msg) {
 }
 
 function trimMessages(messages, limits = getProviderLimits()) {
-  let totalBytes = 0;
-  for (const msg of messages) totalBytes += messageByteLength(msg);
+  // Calculate total tokens for proactive trimming
+  let totalTokens = 0;
+  const tokenEstimates = [];
+  for (const msg of messages) {
+    const tokens = estimateMessageTokens(msg);
+    tokenEstimates.push(tokens);
+    totalTokens += tokens;
+  }
 
-  if (totalBytes <= limits.maxBytes && messages.length <= limits.maxEntries + 2) {
+  // Log context size for debugging
+  bridgeLog('debug', 'Context size check', {
+    messages: messages.length,
+    totalTokens,
+    limit: limits.maxTokens,
+    warningThreshold: limits.warningThreshold,
+    provider: limits.provider || 'unknown'
+  });
+
+  // Check if we're already within limits
+  if (totalTokens <= limits.maxTokens && messages.length <= limits.maxEntries + 2) {
     return messages;
   }
 
-  // Tag each message with priority
+  // Tag each message with priority and token count
   const tagged = messages.map((msg, i) => ({
     msg,
     priority: classifyMessage(msg, i, messages.length),
     index: i,
+    tokens: tokenEstimates[i],
     bytes: messageByteLength(msg),
   }));
+
+  // Phase 0: Proactive trimming if approaching 80% of limit
+  // Remove oldest messages (except system, task, latest) to stay under warning threshold
+  if (totalTokens > limits.warningThreshold) {
+    const result = messages.slice(); // copy
+    let currentTokens = totalTokens;
+    let dropIndex = 1; // Start after system message if present
+    
+    while (currentTokens > limits.warningThreshold && dropIndex < result.length - 1) {
+      // Find oldest droppable message (not system, not task, not latest)
+      const dropCandidate = result[dropIndex];
+      const candidateTokens = tokenEstimates[dropIndex];
+      
+      // Skip protected messages
+      if (dropCandidate.role === 'system') {
+        dropIndex++;
+        continue;
+      }
+      if (dropIndex <= 1 && dropCandidate.role === 'user') {
+        dropIndex++;
+        continue;
+      }
+      if (dropIndex === result.length - 1) {
+        break; // Never drop the latest message
+      }
+      
+      // Drop this message
+      result.splice(dropIndex, 1);
+      tokenEstimates.splice(dropIndex, 1);
+      currentTokens -= candidateTokens;
+      
+      bridgeLog('info', 'Proactive message drop', {
+        index: dropIndex,
+        role: dropCandidate.role,
+        tokens: candidateTokens,
+        remainingTokens: currentTokens,
+        warningThreshold: limits.warningThreshold,
+        contentPreview: dropCandidate.content?.slice(0, 100) || ''
+      });
+      
+      // Note: don't increment dropIndex since we removed an element
+    }
+    
+    // If we successfully reduced below warning threshold, return
+    if (currentTokens <= limits.warningThreshold) {
+      bridgeLog('info', 'Proactive trimming successful', {
+        originalTokens: totalTokens,
+        finalTokens: currentTokens,
+        droppedMessages: messages.length - result.length
+      });
+      return result;
+    }
+    
+    // Continue with summarization phases if still over limit
+    messages = result;
+    totalTokens = currentTokens;
+  }
 
   // Phase 1: Summarize tool results (biggest, lowest priority) — oldest first
   const toolResults = tagged
@@ -309,14 +509,23 @@ function trimMessages(messages, limits = getProviderLimits()) {
 
   for (const entry of toolResults) {
     const summarized = summarizeToolMessage(entry.msg);
-    const savedBytes = entry.bytes - Buffer.byteLength(summarized.content, 'utf8');
+    const summarizedTokens = estimateMessageTokens(summarized);
+    const savedTokens = entry.tokens - summarizedTokens;
     entry.msg = summarized;
-    entry.bytes = Buffer.byteLength(summarized.content, 'utf8');
-    totalBytes -= savedBytes;
-    if (totalBytes <= limits.maxBytes && tagged.length <= limits.maxEntries + 2) break;
+    entry.tokens = summarizedTokens;
+    totalTokens -= savedTokens;
+    if (totalTokens <= limits.maxTokens && tagged.length <= limits.maxEntries + 2) break;
+    
+    bridgeLog('debug', 'Tool result summarized', {
+      toolName: entry.msg.name || 'unknown',
+      originalTokens: entry.tokens + savedTokens,
+      summarizedTokens,
+      savedTokens,
+      remainingTokens: totalTokens
+    });
   }
 
-  if (totalBytes <= limits.maxBytes && tagged.length <= limits.maxEntries + 2) {
+  if (totalTokens <= limits.maxTokens && tagged.length <= limits.maxEntries + 2) {
     return tagged.map(t => t.msg);
   }
 
@@ -327,20 +536,31 @@ function trimMessages(messages, limits = getProviderLimits()) {
 
   for (const entry of assistants) {
     const summarized = summarizeAssistantMessage(entry.msg);
-    const savedBytes = entry.bytes - Buffer.byteLength(summarized.content, 'utf8');
+    const summarizedTokens = estimateMessageTokens(summarized);
+    const savedTokens = entry.tokens - summarizedTokens;
     entry.msg = summarized;
-    entry.bytes = Buffer.byteLength(summarized.content, 'utf8');
-    totalBytes -= savedBytes;
-    if (totalBytes <= limits.maxBytes) break;
+    entry.tokens = summarizedTokens;
+    totalTokens -= savedTokens;
+    if (totalTokens <= limits.maxTokens) break;
+    
+    bridgeLog('debug', 'Assistant message summarized', {
+      index: entry.index,
+      originalTokens: entry.tokens + savedTokens,
+      summarizedTokens,
+      savedTokens,
+      remainingTokens: totalTokens
+    });
   }
 
-  if (totalBytes <= limits.maxBytes && tagged.length <= limits.maxEntries + 2) {
+  if (totalTokens <= limits.maxTokens && tagged.length <= limits.maxEntries + 2) {
     return tagged.map(t => t.msg);
   }
 
   // Phase 3: Drop already-summarized tool results (oldest first) — last resort
   const result = tagged.map(t => t.msg);
-  while (result.length > limits.maxEntries + 2 || totalBytes > limits.maxBytes) {
+  let currentTokens = totalTokens;
+  
+  while (result.length > limits.maxEntries + 2 || currentTokens > limits.maxTokens) {
     // Find oldest droppable message (not system, not task, not latest)
     const dropIdx = result.findIndex((msg, i) => {
       if (i === 0 && msg.role === 'system') return false;
@@ -348,10 +568,32 @@ function trimMessages(messages, limits = getProviderLimits()) {
       if (i === result.length - 1) return false;
       return true;
     });
+    
     if (dropIdx === -1) break; // nothing left to drop
-    totalBytes -= messageByteLength(result[dropIdx]);
+    
+    const droppedTokens = tokenEstimates[dropIdx] || 0;
+    currentTokens -= droppedTokens;
+    
+    bridgeLog('info', 'Last-resort message drop', {
+      index: dropIdx,
+      role: result[dropIdx].role,
+      tokens: droppedTokens,
+      remainingTokens: currentTokens,
+      contentPreview: result[dropIdx].content?.slice(0, 100) || ''
+    });
+    
     result.splice(dropIdx, 1);
+    tokenEstimates.splice(dropIdx, 1);
   }
+
+  bridgeLog('info', 'Context compaction complete', {
+    originalMessages: messages.length,
+    finalMessages: result.length,
+    originalTokens: totalTokens,
+    finalTokens: currentTokens,
+    limit: limits.maxTokens,
+    compactionApplied: messages.length !== result.length || totalTokens !== currentTokens
+  });
 
   return result;
 }
@@ -1035,7 +1277,7 @@ async function main() {
   const { store, agent, storePath, messages, providerName } = await withFileLock(lockPath, async () => {
     const { store, agent, storePath } = loadAgentState(storeDir, agentId);
     const rawMessages = buildMessages(agent, task);
-    const messages = trimMessages(rawMessages, getProviderLimits(agent.provider));
+    const messages = trimMessages(rawMessages, getProviderLimits(agent.provider, agent.resolvedModel));
     const providerName = agent.provider;
     return { store, agent, storePath, messages, providerName };
   });
@@ -1337,6 +1579,11 @@ async function main() {
           });
         }
 
+        // Re-trim messages after appending tool results to prevent context overflow
+        // across multiple tool iterations (Bug fix: single-shot trimming)
+        const limits = getProviderLimits(providerName, agent.resolvedModel);
+        request.messages = trimMessages(request.messages, limits);
+
         // Stuck detection: fingerprint + error counter
         if (response.toolCalls && response.toolCalls.length > 0) {
           const fingerprint = JSON.stringify(
@@ -1404,7 +1651,7 @@ async function main() {
 
     history.push({ role: 'assistant', content: response.content, timestamp: new Date().toISOString() });
 
-    const limits = getProviderLimits(providerName);
+    const limits = getProviderLimits(providerName, agent.resolvedModel);
     while (history.length > limits.maxEntries) {
       history.shift();
     }
@@ -1459,7 +1706,7 @@ async function main() {
 
   // Output result as JSON
   if (resultFile) {
-    const tmpResult = resultFile + '.tmp';
+    const tmpResult = resultFile + `.tmp.${process.pid}`;
     writeFileSync(tmpResult, JSON.stringify(result, null, 2) + '\n');
     renameSync(tmpResult, resultFile);
   } else {
@@ -1543,7 +1790,7 @@ main().catch(async (err) => {
   const resultFile = argvResultIdx !== -1 ? (process.argv[argvResultIdx + 1] || '') : '';
   if (resultFile) {
     try {
-      const tmpResult = resultFile + '.tmp';
+      const tmpResult = resultFile + `.tmp.${process.pid}`;
       writeFileSync(tmpResult, JSON.stringify(errorResponse, null, 2) + '\n');
       renameSync(tmpResult, resultFile);
     } catch {

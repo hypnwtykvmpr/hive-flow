@@ -142,19 +142,61 @@ function setupFsMocks(
 }
 
 /**
- * Set the agentTools array to include a mock agent_task handler.
+ * Set the agentTools array to include mock agent_task (dispatch) and
+ * agent_task_result (poll) handlers that together simulate the non-blocking
+ * dispatch + poll pattern used by hive-mind consensus execute.
+ *
+ * The `resultFactory` is called with the dispatched input to produce the
+ * completed result, exactly as the old synchronous handler would have returned.
  */
-function setMockAgentTask(handler: (input: Record<string, unknown>) => unknown) {
-  // Clear and repopulate the mocked array
+let _dispatchCallTracker: ReturnType<typeof vi.fn> | null = null;
+
+function setMockAgentTask(resultFactory: (input: Record<string, unknown>) => unknown) {
+  // Wrap resultFactory in a vi.fn so tests can assert call counts / args
+  const dispatchSpy = vi.fn();
+  _dispatchCallTracker = dispatchSpy;
+
+  // Pending completed results keyed by taskId
+  const completedResults = new Map<string, unknown>();
+  let taskCounter = 0;
+
   (agentTools as AgentToolEntry[]).length = 0;
+
+  // agent_task: non-blocking dispatch — returns immediately with taskId
   (agentTools as AgentToolEntry[]).push({
     name: 'agent_task',
-    handler,
+    handler: async (input: Record<string, unknown>) => {
+      dispatchSpy(input);
+      const taskId = `mock-task-${++taskCounter}`;
+      // Resolve the result immediately (simulates bridge completing before poll)
+      try {
+        const result = await Promise.resolve(resultFactory(input));
+        completedResults.set(taskId, result);
+      } catch (err) {
+        // Dispatch itself failed — return failure so hive-mind sees it as dispatch error
+        return { success: false, agentId: input.agentId, error: String((err as Error).message ?? err) };
+      }
+      return { success: true, taskId, agentId: input.agentId, status: 'running', pid: 99999 };
+    },
+  });
+
+  // agent_task_result: returns the pre-computed result
+  (agentTools as AgentToolEntry[]).push({
+    name: 'agent_task_result',
+    handler: async (input: Record<string, unknown>) => {
+      const taskId = input.taskId as string;
+      const result = completedResults.get(taskId);
+      if (result !== undefined) {
+        return { success: true, taskId, status: 'completed', result };
+      }
+      return { success: true, taskId, status: 'running' };
+    },
   });
 }
 
 function clearMockAgentTask() {
   (agentTools as AgentToolEntry[]).length = 0;
+  _dispatchCallTracker = null;
 }
 
 // ── Tests ────────────────────────────────────────────────────────────────
@@ -702,8 +744,7 @@ describe('Provider-Hive Compatibility', () => {
     }
 
     it('invokes agent_task for provider workers', async () => {
-      const taskHandler = vi.fn().mockResolvedValue({ success: true, content: 'I approve.' });
-      setMockAgentTask(taskHandler);
+      setMockAgentTask(async () => ({ success: true, content: 'I approve.' }));
 
       const workers = [
         { agentId: 'prov-w1', provider: 'gemini-cli', model: 'gemini-2.5-pro', role: 'worker', joinedAt: '2025-01-01T00:00:00.000Z', status: 'idle' },
@@ -715,8 +756,9 @@ describe('Provider-Hive Compatibility', () => {
         action: 'execute', proposalId: 'exec-prop-1', task: 'Review this code',
       }) as AnyResult;
 
-      expect(taskHandler).toHaveBeenCalledTimes(1);
-      expect(taskHandler).toHaveBeenCalledWith(
+      // The dispatch spy (_dispatchCallTracker) tracks agent_task calls
+      expect(_dispatchCallTracker).toHaveBeenCalledTimes(1);
+      expect(_dispatchCallTracker).toHaveBeenCalledWith(
         expect.objectContaining({ agentId: 'prov-w1' }),
       );
       expect(result.evaluated).toBe(1);
@@ -834,7 +876,7 @@ describe('Provider-Hive Compatibility', () => {
         action: 'execute', proposalId: 'exec-prop-1', task: 'Review code',
       }) as AnyResult;
 
-      expect(result.error).toContain('agent_task tool not found');
+      expect(result.error).toContain('agent_task');
     });
   });
 
@@ -1013,9 +1055,8 @@ describe('Provider-Hive Compatibility', () => {
       expect(vote).toBe(true);
     });
 
-    it('{success: false} -> false', async () => {
-      const taskHandler = vi.fn().mockResolvedValue({ success: false, error: 'Provider down' });
-      setMockAgentTask(taskHandler);
+    it('{success: false} -> failed (no vote)', async () => {
+      setMockAgentTask(async () => ({ success: false, error: 'Provider down' }));
 
       const state = makeHiveState({
         workers: [
@@ -1036,7 +1077,8 @@ describe('Provider-Hive Compatibility', () => {
       }) as AnyResult;
 
       const results = result.results as ConsensusResultEntry[];
-      expect(results[0].vote).toBe(false);
+      expect(results[0].status).toBe('failed');
+      expect(results[0].error).toContain('Provider down');
     });
   });
 

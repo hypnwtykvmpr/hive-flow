@@ -46,6 +46,8 @@ export interface HiveWorkerRecord {
   provider: string;
   status: 'spawning' | 'idle' | 'busy' | 'error' | 'terminated';
   spawnedAt: string;
+  /** ISO timestamp of when this worker was terminated (set by hive_terminate, hive-cleanup, queen-tools) */
+  terminatedAt?: string;
   budgetAllocation?: number;
   /** Task ID of the most recently dispatched task for this worker (set by queen_mission_assign spawnAndTask) */
   taskId?: string;
@@ -63,7 +65,7 @@ export interface HiveMission {
 
 export interface HiveAuditEntry {
   timestamp: string;
-  event: 'mission-assigned' | 'worker-spawned' | 'worker-tasked' | 'results-collected' | 'report-submitted' | 'hive-terminated' | 'error';
+  event: 'mission-assigned' | 'worker-spawned' | 'worker-tasked' | 'results-collected' | 'report-submitted' | 'hive-terminated' | 'watcher-spawned' | 'error';
   hiveId: string;
   detail: string;
   agentId?: string;

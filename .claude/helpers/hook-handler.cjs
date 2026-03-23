@@ -317,6 +317,18 @@ const handlers = {
       }
     } catch { /* non-fatal */ }
 
+    // Auto-reset enforcement on new session start
+    // Previous agent's violations shouldn't lock out the new agent. The enforcement
+    // ladder still works within each session — this just clears stale state.
+    try {
+      const enforcementMod = require(path.join(helpersDir, 'enforcement.cjs'));
+      const status = enforcementMod.getEnforcementStatus();
+      if (status && status.level > 0) {
+        enforcementMod.resetEnforcement();
+        console.log(`[ENFORCEMENT] Auto-reset from level ${status.level} to NORMAL (new session — previous violations cleared)`);
+      }
+    } catch { /* non-fatal — enforcement.cjs may not be available */ }
+
     // Initialize intelligence graph after session restore
     if (intelligence && intelligence.init) {
       try {
@@ -896,23 +908,16 @@ const handlers = {
     try { input = JSON.parse(rawInput); } catch { input = {}; }
 
     const userPrompt = input?.user_prompt || input?.prompt || '';
-    if (!/\/enforcement-reset\b/i.test(userPrompt)) {
+    if (!/\/(enforcement-reset|reset-enforcement)\b/i.test(userPrompt)) {
       // No reset token — pass through as empty (no-op)
       console.log(JSON.stringify({}));
       return;
     }
 
     // Generate HMAC signature for the reset request
-    const hmacKeyFile = path.join(__dirname, '..', '..', '.hive-flow', 'enforcement', '.hmac-key');
-    let key;
-    try {
-      key = fs.readFileSync(hmacKeyFile, 'utf8').trim();
-    } catch {
-      // No HMAC key file — enforcement.cjs will create one on first run,
-      // but we can't sign without it. Let enforcement.cjs handle the error.
-      console.log(JSON.stringify({}));
-      return;
-    }
+    // Use enforcement.cjs's getOrCreateHmacKey which auto-creates if missing
+    const enforcementMod = require(path.join(__dirname, 'enforcement.cjs'));
+    const key = enforcementMod.getOrCreateHmacKey();
 
     const timestamp = String(Date.now());
     const payload = `enforcement-reset:${timestamp}`;

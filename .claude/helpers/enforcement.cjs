@@ -494,6 +494,17 @@ function detectCircumvention(toolName, toolInput, state) {
       };
     }
 
+    // 2d3. enforcement-reset circumvention
+    // Agents must not invoke enforcement reset via Bash — only the UserPromptSubmit
+    // hook (human-triggered) is allowed to reset enforcement.
+    if (/enforcement-reset|reset-enforcement|enforcement\.cjs\s+--reset/i.test(command)) {
+      return {
+        circumvention: true,
+        reason: `CIRCUMVENTION: Attempted enforcement reset via Bash — resets are human-only via /enforcement-reset`,
+        severity: 'critical',
+      };
+    }
+
     // 2e. Obfuscation detection (Bug 6: reduced false positives)
     if (isObfuscated(command)) {
       return {
@@ -922,7 +933,7 @@ function processResetCheck(input) {
   const prompt = input?.user_prompt || input?.prompt || '';
 
   // HMAC-signed IPC: verify caller authentication before executing reset
-  if (/\/enforcement-reset\b/i.test(prompt)) {
+  if (/\/(enforcement-reset|reset-enforcement)\b/i.test(prompt)) {
     const signature = input?._hmac_signature;
     const timestamp = input?._hmac_timestamp;
 

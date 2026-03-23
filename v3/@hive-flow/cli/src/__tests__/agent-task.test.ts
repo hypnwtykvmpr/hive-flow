@@ -11,7 +11,7 @@ vi.mock('node:fs', () => ({
   renameSync: vi.fn(),
 }));
 
-// Mock node:child_process — controls spawn (used for bridge) and execFile (used elsewhere)
+// Mock node:child_process — controls spawn (used for bridge)
 vi.mock('node:child_process', () => ({
   execFile: vi.fn(),
   spawn: vi.fn(),
@@ -33,9 +33,8 @@ vi.mock('../ruvector/enhanced-model-router.js', () => ({
 }));
 
 import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync } from 'node:fs';
-import { execFile, spawn } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import { agentTools } from '../mcp-tools/agent-tools.js';
-import { EventEmitter } from 'node:events';
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -44,11 +43,6 @@ const agentTaskTool = agentTools.find((t) => t.name === 'agent_task')!;
 const handler = agentTaskTool.handler;
 
 /** The bridge path that the handler will compute from the mocked fileURLToPath */
-// fileURLToPath returns '/fake/dist/src/mcp-tools/agent-tools.js'
-// dirname  => '/fake/dist/src/mcp-tools'
-// join('/fake/dist/src/mcp-tools', '..', '..', '..', '..', 'providers', 'scripts', 'provider-agent-bridge.mjs')
-// resolves up 4 levels: mcp-tools -> src -> dist -> fake -> /
-// => '/providers/scripts/provider-agent-bridge.mjs'
 const EXPECTED_BRIDGE_PATH = '/providers/scripts/provider-agent-bridge.mjs';
 
 interface AgentRecord {
@@ -85,22 +79,12 @@ function makeStore(agents: Record<string, AgentRecord> = {}) {
 /**
  * Configure the fs mocks so that loadAgentStore() returns the given store
  * and saveAgentStore() is a no-op.
- *
- * loadAgentStore does:
- *   const path = join(process.cwd(), '.hive-flow', 'agents', 'store.json');
- *   if (existsSync(path)) { return JSON.parse(readFileSync(path, 'utf-8')); }
- *
- * We make existsSync return true for the store path, and readFileSync return
- * the serialised store. We use mockImplementation so each call to loadAgentStore
- * (the handler calls it multiple times) gets the latest store state.
  */
 function setupStoreMocks(initialStore: ReturnType<typeof makeStore>) {
-  // Track the "persisted" store state — saveAgentStore writes to it
   let currentStore = JSON.parse(JSON.stringify(initialStore));
 
   (existsSync as ReturnType<typeof vi.fn>).mockImplementation((p: string) => {
     if (typeof p === 'string' && p.endsWith('store.json')) return true;
-    // Bridge script existence is controlled per-test
     if (p === EXPECTED_BRIDGE_PATH) return true;
     return false;
   });
@@ -109,17 +93,15 @@ function setupStoreMocks(initialStore: ReturnType<typeof makeStore>) {
     return JSON.stringify(currentStore);
   });
 
-  // Track pending tmp file writes for atomic save (writeFileSync → renameSync)
   const tmpWrites = new Map<string, string>();
 
   (writeFileSync as ReturnType<typeof vi.fn>).mockImplementation(
     (path: string, data: string) => {
       if (typeof path === 'string' && path.includes('.tmp.')) {
-        // Atomic save: buffer the tmp write until renameSync commits it
         tmpWrites.set(path, data);
       } else {
-        // Legacy direct write (fallback)
-        currentStore = JSON.parse(data);
+        // Ignore non-JSON data (e.g. task file writes)
+        try { currentStore = JSON.parse(data); } catch { /* not the store */ }
       }
     },
   );
@@ -137,62 +119,34 @@ function setupStoreMocks(initialStore: ReturnType<typeof makeStore>) {
   (mkdirSync as ReturnType<typeof vi.fn>).mockImplementation(() => {});
 
   return {
-    /** Read the latest "persisted" store state */
     getPersistedStore: () => currentStore as ReturnType<typeof makeStore>,
   };
 }
 
-/** Union of possible shapes returned by the agent_task handler. */
+/** Union of possible shapes returned by the agent_task handler (now async/non-blocking). */
 interface AgentTaskResult {
   success: boolean;
+  taskId?: string;
   agentId?: string;
-  response?: string;
+  status?: string;
+  pid?: number;
   error?: string;
-  rawOutput?: string;
-  stderr?: string;
-  model?: string;
 }
 
 /**
- * Create a mock child process for spawn().
- * The bridge invocation now uses spawn + stdin pipe instead of execFile.
- * This helper returns a mock child with controllable stdout/stderr/stdin
- * and an emit('close', code) to simulate process completion.
+ * Mock spawn to return a detached-style child with only pid and unref()
+ * (agent_task now uses detached: true, stdio: 'ignore' — no stdin/stdout/stderr).
  */
-function createMockChild(stdoutData: string, stderrData: string, exitCode: number | null = 0) {
-  const child = new EventEmitter() as EventEmitter & {
-    stdin: { write: ReturnType<typeof vi.fn>; end: ReturnType<typeof vi.fn>; on: ReturnType<typeof vi.fn> };
-    stdout: EventEmitter;
-    stderr: EventEmitter;
-    kill: ReturnType<typeof vi.fn>;
-  };
-  child.stdin = { write: vi.fn(), end: vi.fn(), on: vi.fn() };
-  child.stdout = new EventEmitter();
-  child.stderr = new EventEmitter();
-  child.kill = vi.fn();
-
-  // Schedule data emission and close asynchronously (microtask)
-  queueMicrotask(() => {
-    if (stdoutData) child.stdout.emit('data', Buffer.from(stdoutData));
-    if (stderrData) child.stderr.emit('data', Buffer.from(stderrData));
-    child.emit('close', exitCode);
-  });
-
-  return child;
-}
-
-/**
- * Mock spawn to return a child that emits given stdout/stderr and exits with given code.
- */
-function mockSpawnSuccess(stdoutData: string = '{"success":true}', stderrData: string = '', exitCode: number | null = 0) {
-  (spawn as ReturnType<typeof vi.fn>).mockImplementation(() => {
-    return createMockChild(stdoutData, stderrData, exitCode);
-  });
+function mockDetachedSpawn(pid: number = 12345) {
+  (spawn as ReturnType<typeof vi.fn>).mockImplementation(() => ({
+    pid,
+    unref: vi.fn(),
+  }));
 }
 
 /**
  * Extract the [args, opts] pair from the first spawn call.
- * spawn is called as: spawn('node', [bridgePath, ...args], { stdio, timeout })
+ * spawn is called as: spawn('node', [bridgePath, ...args], { detached, stdio, ... })
  */
 function getSpawnCall(): { args: string[]; opts: Record<string, unknown> } {
   const calls = (spawn as ReturnType<typeof vi.fn>).mock.calls;
@@ -202,7 +156,7 @@ function getSpawnCall(): { args: string[]; opts: Record<string, unknown> } {
 
 // ── Tests ───────────────────────────────────────────────────────────────────
 
-describe('agent_task handler', () => {
+describe('agent_task handler (non-blocking)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -263,7 +217,6 @@ describe('agent_task handler', () => {
       makeStore({ [agent.agentId]: agent }),
     );
 
-    // Override existsSync to return false for the bridge path
     (existsSync as ReturnType<typeof vi.fn>).mockImplementation((p: string) => {
       if (typeof p === 'string' && p.endsWith('store.json')) return true;
       if (p === EXPECTED_BRIDGE_PATH) return false;
@@ -278,488 +231,221 @@ describe('agent_task handler', () => {
       error: expect.stringContaining('Bridge script not found'),
     });
 
-    // Agent should be reset to idle after the bridge-not-found error
     const store = getPersistedStore();
     expect(store.agents[agent.agentId].status).toBe('idle');
   });
 
   // ------------------------------------------------------------------
-  // 5. Bridge returns valid JSON result
+  // 5. Happy path: returns immediately with taskId, status:running, pid
   // ------------------------------------------------------------------
-  it('returns parsed result when bridge outputs valid JSON', async () => {
-    const agent = makeAgent();
-    const { getPersistedStore } = setupStoreMocks(
-      makeStore({ [agent.agentId]: agent }),
-    );
-
-    const bridgeOutput = JSON.stringify({
-      success: true,
-      agentId: agent.agentId,
-      response: 'Task completed successfully',
-    });
-
-    mockSpawnSuccess(bridgeOutput);
-
-    const result = await handler({ agentId: agent.agentId, task: 'write code' });
-
-    expect(result).toEqual({
-      success: true,
-      agentId: agent.agentId,
-      response: 'Task completed successfully',
-    });
-
-    // Agent should be reset to idle after successful execution
-    const store = getPersistedStore();
-    expect(store.agents[agent.agentId].status).toBe('idle');
-  });
-
-  // ------------------------------------------------------------------
-  // 6. Bridge returns error JSON (via stdout) on exec error
-  // ------------------------------------------------------------------
-  it('returns error details when bridge outputs error JSON on failure', async () => {
+  it('returns success with taskId, agentId, status:running, and pid on happy path', async () => {
     const agent = makeAgent();
     setupStoreMocks(makeStore({ [agent.agentId]: agent }));
+    mockDetachedSpawn(12345);
 
-    const errorJson = JSON.stringify({ error: 'Provider authentication failed' });
+    const result = await handler({ agentId: agent.agentId, task: 'write code' }) as AgentTaskResult;
 
-    mockSpawnSuccess(errorJson, 'some stderr', 1);
-
-    const result = await handler({ agentId: agent.agentId, task: 'do something' });
-
-    expect(result).toMatchObject({
-      success: false,
-      agentId: agent.agentId,
-      error: 'Provider authentication failed',
-      stderr: 'some stderr',
-    });
+    expect(result.success).toBe(true);
+    expect(typeof result.taskId).toBe('string');
+    expect((result.taskId as string).startsWith('task-')).toBe(true);
+    expect(result.agentId).toBe(agent.agentId);
+    expect(result.status).toBe('running');
+    expect(result.pid).toBe(12345);
   });
 
   // ------------------------------------------------------------------
-  // 7. Bridge exec error with non-JSON stdout
+  // 6. Agent is set to busy during dispatch
   // ------------------------------------------------------------------
-  it('returns exec error message when bridge stdout is not JSON on failure', async () => {
-    const agent = makeAgent();
-    const { getPersistedStore } = setupStoreMocks(
-      makeStore({ [agent.agentId]: agent }),
-    );
-
-    mockSpawnSuccess('not json', '', 1);
-
-    const result = await handler({ agentId: agent.agentId, task: 'do something' });
-
-    expect(result).toMatchObject({
-      success: false,
-      agentId: agent.agentId,
-      error: expect.stringContaining('Bridge exited with code 1'),
-    });
-
-    // Agent should be reset to idle
-    const store = getPersistedStore();
-    expect(store.agents[agent.agentId].status).toBe('idle');
-  });
-
-  // ------------------------------------------------------------------
-  // 8. Agent status set to busy during execution, idle after
-  // ------------------------------------------------------------------
-  it('sets agent status to busy before execution and idle after', async () => {
+  it('sets agent status to busy when task is dispatched', async () => {
     const agent = makeAgent({ status: 'idle' });
-    const { getPersistedStore } = setupStoreMocks(
-      makeStore({ [agent.agentId]: agent }),
-    );
+    const { getPersistedStore } = setupStoreMocks(makeStore({ [agent.agentId]: agent }));
 
-    // Track the store state at the time spawn is called
-    let statusDuringExec: string | undefined;
-
+    let statusDuringSpawn: string | undefined;
     (spawn as ReturnType<typeof vi.fn>).mockImplementation(() => {
-      // At this point, the handler has already saved the agent as 'busy'
-      statusDuringExec = getPersistedStore().agents[agent.agentId].status;
-      return createMockChild(JSON.stringify({ success: true }), '', 0);
+      statusDuringSpawn = getPersistedStore().agents[agent.agentId].status;
+      return { pid: 12345, unref: vi.fn() };
     });
 
-    await handler({ agentId: agent.agentId, task: 'write code' });
+    await handler({ agentId: agent.agentId, task: 'background work' });
 
-    // During execution, agent was busy
-    expect(statusDuringExec).toBe('busy');
-
-    // After execution, agent is idle
-    const store = getPersistedStore();
-    expect(store.agents[agent.agentId].status).toBe('idle');
+    expect(statusDuringSpawn).toBe('busy');
   });
 
   // ------------------------------------------------------------------
-  // 9. Bridge stdout not valid JSON (no exec error)
+  // 7. Creates .task file and .json tracking file
   // ------------------------------------------------------------------
-  it('returns parse error when bridge stdout is not valid JSON on success', async () => {
+  it('writes a .task file and a .json tracking file', async () => {
     const agent = makeAgent();
-    const { getPersistedStore } = setupStoreMocks(
-      makeStore({ [agent.agentId]: agent }),
-    );
+    setupStoreMocks(makeStore({ [agent.agentId]: agent }));
+    mockDetachedSpawn(99);
 
-    mockSpawnSuccess('this is not json at all', '', 0);
+    await handler({ agentId: agent.agentId, task: 'the task text' });
 
-    const result = await handler({ agentId: agent.agentId, task: 'do something' });
+    const writeCalls = (writeFileSync as ReturnType<typeof vi.fn>).mock.calls;
 
-    expect(result).toMatchObject({
-      success: false,
-      agentId: agent.agentId,
-      error: 'Failed to parse bridge output',
-    });
-    expect((result as AgentTaskResult).rawOutput).toBe('this is not json at all');
+    const taskFileCall = writeCalls.find(([p]: [string]) => typeof p === 'string' && p.endsWith('.task'));
+    expect(taskFileCall).toBeDefined();
+    expect(taskFileCall![1]).toBe('the task text');
 
-    // Agent should be reset to idle
-    const store = getPersistedStore();
-    expect(store.agents[agent.agentId].status).toBe('idle');
+    const trackingCall = writeCalls.find(([p]: [string]) => typeof p === 'string' && p.endsWith('.json') && !p.endsWith('store.json') && !p.includes('.tmp.'));
+    expect(trackingCall).toBeDefined();
+    const tracking = JSON.parse(trackingCall![1]);
+    expect(tracking.status).toBe('running');
+    expect(tracking.agentId).toBe(agent.agentId);
+    expect(typeof tracking.taskId).toBe('string');
+    expect(tracking.pid).toBe(99);
   });
 
   // ------------------------------------------------------------------
-  // 10. spawn passes correct arguments (bridge path, agent-id, --task-stdin, store-dir)
-  //     Task is piped via stdin instead of CLI args to avoid shell parsing issues.
+  // 8. spawn is called with detached:true
   // ------------------------------------------------------------------
-  it('passes correct arguments to spawn and pipes task via stdin', async () => {
+  it('invokes spawn with detached:true and calls unref() on the child', async () => {
     const agent = makeAgent();
     setupStoreMocks(makeStore({ [agent.agentId]: agent }));
 
-    mockSpawnSuccess();
+    const mockUnref = vi.fn();
+    (spawn as ReturnType<typeof vi.fn>).mockImplementation(() => ({
+      pid: 42,
+      unref: mockUnref,
+    }));
 
-    await handler({ agentId: agent.agentId, task: 'my task', timeout: 60000 });
+    await handler({ agentId: agent.agentId, task: 'detached task' });
 
-    expect(spawn).toHaveBeenCalledTimes(1);
-    const { args, opts } = getSpawnCall();
-    const [cmd] = (spawn as ReturnType<typeof vi.fn>).mock.calls[0];
-
-    expect(cmd).toBe('node');
-    expect(args[0]).toBe(EXPECTED_BRIDGE_PATH);
-    expect(args).toContain('--agent-id');
-    expect(args).toContain(agent.agentId);
-    // Task is piped via stdin, not passed as --task arg
-    expect(args).toContain('--task-stdin');
-    expect(args).not.toContain('--task');
-    expect(args).not.toContain('my task');
-    expect(args).toContain('--store-dir');
-    expect(opts.timeout).toBe(60000);
-
-    // Verify task was written to stdin
-    const child = (spawn as ReturnType<typeof vi.fn>).mock.results[0].value;
-    expect(child.stdin.write).toHaveBeenCalledWith('my task');
-    expect(child.stdin.end).toHaveBeenCalled();
+    const spawnCalls = (spawn as ReturnType<typeof vi.fn>).mock.calls;
+    expect(spawnCalls.length).toBeGreaterThan(0);
+    const opts = spawnCalls[0][2] as Record<string, unknown>;
+    expect(opts.detached).toBe(true);
+    expect(mockUnref).toHaveBeenCalledTimes(1);
   });
 
   // ------------------------------------------------------------------
-  // 11. Default timeout is 300000ms
+  // 9. Rejects agent that is already busy
   // ------------------------------------------------------------------
-  it('uses default timeout of 300000ms when not specified', async () => {
-    const agent = makeAgent();
+  it('returns error when agent is already busy', async () => {
+    const agent = makeAgent({ status: 'busy' });
     setupStoreMocks(makeStore({ [agent.agentId]: agent }));
 
-    mockSpawnSuccess();
+    const result = await handler({ agentId: agent.agentId, task: 'another task' }) as AgentTaskResult;
 
-    await handler({ agentId: agent.agentId, task: 'do something' });
-
-    const { opts } = getSpawnCall();
-    expect(opts.timeout).toBe(300000);
-  });
-
-  // ------------------------------------------------------------------
-  // 12. Child 'error' event (spawn failure)
-  // ------------------------------------------------------------------
-  it('returns error and resets status on child process spawn error', async () => {
-    const agent = makeAgent();
-    const { getPersistedStore } = setupStoreMocks(
-      makeStore({ [agent.agentId]: agent }),
-    );
-
-    // spawn returns child that emits 'error' instead of 'close'
-    (spawn as ReturnType<typeof vi.fn>).mockImplementation(() => {
-      const child = new EventEmitter() as EventEmitter & {
-        stdin: { write: ReturnType<typeof vi.fn>; end: ReturnType<typeof vi.fn>; on: ReturnType<typeof vi.fn> };
-        stdout: EventEmitter;
-        stderr: EventEmitter;
-        kill: ReturnType<typeof vi.fn>;
-      };
-      child.stdin = { write: vi.fn(), end: vi.fn(), on: vi.fn() };
-      child.stdout = new EventEmitter();
-      child.stderr = new EventEmitter();
-      child.kill = vi.fn();
-
-      queueMicrotask(() => {
-        child.emit('error', new Error('spawn ENOENT'));
-      });
-
-      return child;
-    });
-
-    const result = await handler({ agentId: agent.agentId, task: 'do something' });
-
-    expect(result).toMatchObject({
-      success: false,
-      agentId: agent.agentId,
-      error: expect.stringContaining('Failed to spawn bridge'),
-    });
-    expect((result as AgentTaskResult).error).toContain('ENOENT');
-
-    const store = getPersistedStore();
-    expect(store.agents[agent.agentId].status).toBe('idle');
-  });
-
-  // ------------------------------------------------------------------
-  // 13. Empty stderr is omitted from error response
-  // ------------------------------------------------------------------
-  it('omits stderr from error response when stderr is empty', async () => {
-    const agent = makeAgent();
-    setupStoreMocks(makeStore({ [agent.agentId]: agent }));
-
-    mockSpawnSuccess('', '', 1);
-
-    const result = await handler({ agentId: agent.agentId, task: 'do something' });
-
-    expect(result).toMatchObject({
-      success: false,
-      agentId: agent.agentId,
-      error: expect.stringContaining('Bridge exited with code 1'),
-    });
-    // stderr should be undefined when empty
-    expect((result as AgentTaskResult).stderr).toBeUndefined();
+    expect(result.success).toBe(false);
+    expect(result.agentId).toBe(agent.agentId);
+    expect(result.error).toMatch(/cannot accept tasks in current state/i);
   });
 
   // ====================================================================
-  // Timeout clamping (SEC / timeout propagation fix)
+  // Timeout clamping
   // ====================================================================
 
   describe('timeout clamping', () => {
-    // ------------------------------------------------------------------
-    // 14. Default timeout: no input.timeout → 300000
-    // ------------------------------------------------------------------
     it('uses 300000ms timeout when input.timeout is not provided', async () => {
       const agent = makeAgent();
       setupStoreMocks(makeStore({ [agent.agentId]: agent }));
-      mockSpawnSuccess();
+      mockDetachedSpawn();
 
       await handler({ agentId: agent.agentId, task: 'do something' });
 
-      const { args, opts } = getSpawnCall();
-      expect(opts.timeout).toBe(300000);
+      const { args } = getSpawnCall();
       const timeoutIdx = args.indexOf('--timeout');
       expect(timeoutIdx).not.toBe(-1);
       expect(args[timeoutIdx + 1]).toBe('300000');
     });
 
-    // ------------------------------------------------------------------
-    // 15. Custom timeout: input.timeout = 600000 → 600000 (within range)
-    // ------------------------------------------------------------------
     it('passes through a custom timeout within the valid range unchanged', async () => {
       const agent = makeAgent();
       setupStoreMocks(makeStore({ [agent.agentId]: agent }));
-      mockSpawnSuccess();
+      mockDetachedSpawn();
 
       await handler({ agentId: agent.agentId, task: 'do something', timeout: 600000 });
 
-      const { args, opts } = getSpawnCall();
-      expect(opts.timeout).toBe(600000);
+      const { args } = getSpawnCall();
       const timeoutIdx = args.indexOf('--timeout');
       expect(timeoutIdx).not.toBe(-1);
       expect(args[timeoutIdx + 1]).toBe('600000');
     });
 
-    // ------------------------------------------------------------------
-    // 16. Below minimum: input.timeout = 5000 → clamped to 10000
-    // ------------------------------------------------------------------
     it('clamps timeout to minimum 10000ms when input is below threshold', async () => {
       const agent = makeAgent();
       setupStoreMocks(makeStore({ [agent.agentId]: agent }));
-      mockSpawnSuccess();
+      mockDetachedSpawn();
 
       await handler({ agentId: agent.agentId, task: 'do something', timeout: 5000 });
 
-      const { args, opts } = getSpawnCall();
-      expect(opts.timeout).toBe(10000);
+      const { args } = getSpawnCall();
       const timeoutIdx = args.indexOf('--timeout');
       expect(timeoutIdx).not.toBe(-1);
       expect(args[timeoutIdx + 1]).toBe('10000');
     });
 
-    // ------------------------------------------------------------------
-    // 17. Above maximum: input.timeout = 7200000 → clamped to 3600000
-    // ------------------------------------------------------------------
     it('clamps timeout to maximum 3600000ms when input exceeds the ceiling', async () => {
       const agent = makeAgent();
       setupStoreMocks(makeStore({ [agent.agentId]: agent }));
-      mockSpawnSuccess();
+      mockDetachedSpawn();
 
       await handler({ agentId: agent.agentId, task: 'do something', timeout: 7200000 });
 
-      const { args, opts } = getSpawnCall();
-      expect(opts.timeout).toBe(3600000);
+      const { args } = getSpawnCall();
       const timeoutIdx = args.indexOf('--timeout');
       expect(timeoutIdx).not.toBe(-1);
       expect(args[timeoutIdx + 1]).toBe('3600000');
     });
 
-    // ------------------------------------------------------------------
-    // 18. Zero: input.timeout = 0 → fallback to 300000, then clamped
-    //     rawTimeout = (0 || 300000) = 300000 → clamped = 300000
-    // ------------------------------------------------------------------
     it('falls back to 300000ms when input.timeout is zero', async () => {
       const agent = makeAgent();
       setupStoreMocks(makeStore({ [agent.agentId]: agent }));
-      mockSpawnSuccess();
+      mockDetachedSpawn();
 
       await handler({ agentId: agent.agentId, task: 'do something', timeout: 0 });
 
-      const { args, opts } = getSpawnCall();
-      expect(opts.timeout).toBe(300000);
+      const { args } = getSpawnCall();
       const timeoutIdx = args.indexOf('--timeout');
       expect(timeoutIdx).not.toBe(-1);
       expect(args[timeoutIdx + 1]).toBe('300000');
     });
 
-    // ------------------------------------------------------------------
-    // 19. Negative: input.timeout = -1 → clamped to 10000
-    //     rawTimeout = (-1 || 300000) = 300000? No: -1 is truthy.
-    //     rawTimeout = -1, Math.max(10000, Math.min(3600000, -1)) = 10000
-    // ------------------------------------------------------------------
     it('clamps timeout to minimum 10000ms when input is negative', async () => {
       const agent = makeAgent();
       setupStoreMocks(makeStore({ [agent.agentId]: agent }));
-      mockSpawnSuccess();
+      mockDetachedSpawn();
 
       await handler({ agentId: agent.agentId, task: 'do something', timeout: -1 });
 
-      const { args, opts } = getSpawnCall();
-      expect(opts.timeout).toBe(10000);
+      const { args } = getSpawnCall();
       const timeoutIdx = args.indexOf('--timeout');
       expect(timeoutIdx).not.toBe(-1);
       expect(args[timeoutIdx + 1]).toBe('10000');
     });
 
-    // ------------------------------------------------------------------
-    // 20. NaN: input.timeout = NaN → fallback to 300000
-    //     rawTimeout = (NaN || 300000) = 300000 → clamped = 300000
-    // ------------------------------------------------------------------
     it('falls back to 300000ms when input.timeout is NaN', async () => {
       const agent = makeAgent();
       setupStoreMocks(makeStore({ [agent.agentId]: agent }));
-      mockSpawnSuccess();
+      mockDetachedSpawn();
 
       await handler({ agentId: agent.agentId, task: 'do something', timeout: NaN });
 
-      const { args, opts } = getSpawnCall();
-      expect(opts.timeout).toBe(300000);
+      const { args } = getSpawnCall();
       const timeoutIdx = args.indexOf('--timeout');
       expect(timeoutIdx).not.toBe(-1);
       expect(args[timeoutIdx + 1]).toBe('300000');
     });
 
-    // ------------------------------------------------------------------
-    // 21. Args array structure: includes --agent-id, --task-stdin, --store-dir, --timeout
-    //     Task text is piped via stdin, not passed as --task arg.
-    // ------------------------------------------------------------------
-    it('includes all required args in spawn call: --agent-id, --task-stdin, --store-dir, --timeout', async () => {
+    it('includes all required args in spawn call: --agent-id, --task-file, --result-file, --store-dir, --timeout', async () => {
       const agent = makeAgent();
       setupStoreMocks(makeStore({ [agent.agentId]: agent }));
-      mockSpawnSuccess();
+      mockDetachedSpawn();
 
       await handler({ agentId: agent.agentId, task: 'specific task', timeout: 30000 });
 
       const { args } = getSpawnCall();
 
-      // Bridge path is first
       expect(args[0]).toBe(EXPECTED_BRIDGE_PATH);
-
-      // All required named args present
       expect(args).toContain('--agent-id');
       expect(args[args.indexOf('--agent-id') + 1]).toBe(agent.agentId);
-
-      // Task is piped via stdin, signaled by --task-stdin flag
-      expect(args).toContain('--task-stdin');
-      expect(args).not.toContain('--task');
-
+      expect(args).toContain('--task-file');
+      expect(args).toContain('--result-file');
       expect(args).toContain('--store-dir');
-      // store-dir is a non-empty string
       expect(args[args.indexOf('--store-dir') + 1].length).toBeGreaterThan(0);
-
       expect(args).toContain('--timeout');
-      // timeout = 30000 (within range, no clamping)
       expect(args[args.indexOf('--timeout') + 1]).toBe('30000');
-
-      // Verify task was written to stdin
-      const child = (spawn as ReturnType<typeof vi.fn>).mock.results[0].value;
-      expect(child.stdin.write).toHaveBeenCalledWith('specific task');
-      expect(child.stdin.end).toHaveBeenCalled();
-    });
-  });
-
-  // ====================================================================
-  // Bridge createProviderConfig timeout logic (tested via handler integration)
-  // ====================================================================
-
-  describe('bridge createProviderConfig timeout propagation', () => {
-    /**
-     * These tests verify that the timeout value written into spawn opts
-     * matches what the bridge would receive via --timeout and use in
-     * createProviderConfig. The bridge sets config.timeout = timeoutMs || 300000,
-     * so the value passed in --timeout must be the clamped value.
-     */
-
-    // ------------------------------------------------------------------
-    // 22. parseArgs --timeout: bridge receives the clamped value
-    // ------------------------------------------------------------------
-    it('passes clamped timeout to bridge via --timeout arg as a string integer', async () => {
-      const agent = makeAgent();
-      setupStoreMocks(makeStore({ [agent.agentId]: agent }));
-      mockSpawnSuccess();
-
-      await handler({ agentId: agent.agentId, task: 'task', timeout: 250000 });
-
-      const { args } = getSpawnCall();
-      const idx = args.indexOf('--timeout');
-      expect(idx).not.toBe(-1);
-      // Must be a numeric string (parseInt-able)
-      const parsed = parseInt(args[idx + 1], 10);
-      expect(Number.isNaN(parsed)).toBe(false);
-      expect(parsed).toBe(250000);
-    });
-
-    // ------------------------------------------------------------------
-    // 23. createProviderConfig with timeout = 0 defaults to 300000
-    //     The handler maps timeout:0 → rawTimeout=300000 → clamped=300000.
-    //     The bridge arg is '300000'; bridge createProviderConfig: 300000 || 300000 = 300000.
-    // ------------------------------------------------------------------
-    it('bridge receives 300000 when caller provides timeout=0 (fallback chain)', async () => {
-      const agent = makeAgent();
-      setupStoreMocks(makeStore({ [agent.agentId]: agent }));
-      mockSpawnSuccess();
-
-      await handler({ agentId: agent.agentId, task: 'task', timeout: 0 });
-
-      const { args, opts } = getSpawnCall();
-
-      // spawn opts.timeout (used as process kill timeout) = 300000
-      expect(opts.timeout).toBe(300000);
-
-      // bridge --timeout arg = '300000'
-      const idx = args.indexOf('--timeout');
-      expect(idx).not.toBe(-1);
-      expect(args[idx + 1]).toBe('300000');
-    });
-
-    // ------------------------------------------------------------------
-    // 24. createProviderConfig with a valid custom timeout
-    //     timeout=45000 → rawTimeout=45000 → clamped=45000 (above min, below max)
-    //     bridge receives --timeout 45000; config.timeout = 45000 || 300000 = 45000
-    // ------------------------------------------------------------------
-    it('bridge receives exact custom timeout when within valid range', async () => {
-      const agent = makeAgent();
-      setupStoreMocks(makeStore({ [agent.agentId]: agent }));
-      mockSpawnSuccess();
-
-      await handler({ agentId: agent.agentId, task: 'task', timeout: 45000 });
-
-      const { args, opts } = getSpawnCall();
-
-      expect(opts.timeout).toBe(45000);
-      const idx = args.indexOf('--timeout');
-      expect(idx).not.toBe(-1);
-      expect(args[idx + 1]).toBe('45000');
     });
   });
 });
