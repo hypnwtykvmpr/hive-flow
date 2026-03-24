@@ -1261,6 +1261,7 @@ const hivePollWorkersTool: MCPTool = {
 
     const hive = loadHive(hiveId);
     if (!hive) {
+      console.error(`[hive_poll_workers] hive=${hiveId} not found, returning error`);
       return { success: false, error: `Hive '${hiveId}' not found.` };
     }
 
@@ -1431,6 +1432,7 @@ const hivePollWorkersTool: MCPTool = {
     // Determine if all tasked workers are done (completed or failed — not running)
     const taskedWorkers = workerStatuses.filter(w => w.status !== 'idle' && w.status !== 'terminated');
     const allComplete = taskedWorkers.length > 0 && runningCount === 0;
+    console.error(`[hive_poll_workers] hive=${hiveId} taskedWorkers=${taskedWorkers.length} runningCount=${runningCount} completedCount=${completedCount} failedCount=${failedCount} allComplete=${allComplete}`);
 
     // Auto-collect results into hive audit when all complete
     if (allComplete) {
@@ -1494,6 +1496,7 @@ const hivePollWorkersTool: MCPTool = {
         await withHiveLock(hiveId, () => {
           const freshHive = loadHive(hiveId);
           if (freshHive && freshHive.status === 'active') {
+            console.error(`[hive_poll_workers] hive=${hiveId} auto-transitioning to completed`);
             freshHive.status = 'completed';
             freshHive.completedAt = new Date().toISOString();
             appendHiveAudit(freshHive, {

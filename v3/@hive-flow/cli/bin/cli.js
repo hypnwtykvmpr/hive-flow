@@ -57,9 +57,104 @@ const isMCPMode = !process.stdin.isTTY && (process.argv.length === 2 || isExplic
 if (isMCPMode) {
   // Run MCP server mode
   const { listMCPTools, callMCPTool, hasTool } = await import('../dist/src/mcp-client.js');
+  const { loadHive, listHives } = await import('../dist/src/mcp-tools/hive-store.js');
 
   const VERSION = '3.0.0';
   const sessionId = `mcp-${Date.now()}-${randomUUID().slice(0, 8)}`;
+
+  // --- Hive completion polling ---
+  const HIVE_POLL_INTERVAL = 5000;
+  const TERMINAL_STATUSES = new Set(['completed', 'failed', 'terminated']);
+  const monitoredHiveIds = new Set();
+  const notifiedTerminalHives = new Set();
+  let pollingInterval = null;
+
+  const sendHiveNotification = (hive) => {
+    if (notifiedTerminalHives.has(hive.hiveId)) {
+      console.error(`[${new Date().toISOString()}] DEBUG [hive-flow-mcp] (${sessionId}) Suppressing duplicate notification for ${hive.hiveId}`);
+      return;
+    }
+    notifiedTerminalHives.add(hive.hiveId);
+    console.error(`[${new Date().toISOString()}] INFO [hive-flow-mcp] (${sessionId}) Emitting notification to stdout for hive ${hive.hiveId} status=${hive.status}`);
+    console.log(JSON.stringify({
+      jsonrpc: '2.0',
+      method: 'notifications/message',
+      params: {
+        level: 'info',
+        data: {
+          type: 'hive_status_update',
+          hiveId: hive.hiveId,
+          queenId: hive.queenId,
+          status: hive.status,
+          completedAt: hive.completedAt,
+        },
+      },
+    }));
+    console.error(`[${new Date().toISOString()}] INFO [hive-flow-mcp] (${sessionId}) Hive ${hive.hiveId} → ${hive.status}`);
+  };
+
+  const pollHiveStatus = async (hiveId) => {
+    try {
+      console.error(`[${new Date().toISOString()}] DEBUG [hive-flow-mcp] (${sessionId}) Polling hive ${hiveId}`);
+      let hive = loadHive(hiveId);
+      if (!hive) { console.error(`[${new Date().toISOString()}] DEBUG [hive-flow-mcp] (${sessionId}) loadHive(${hiveId}) returned null, removing from monitor`); monitoredHiveIds.delete(hiveId); return; }
+      if (TERMINAL_STATUSES.has(hive.status)) {
+        sendHiveNotification(hive);
+        monitoredHiveIds.delete(hiveId);
+        return;
+      }
+      try {
+        const pollResult = await callMCPTool('hive_poll_workers', { hiveId }, { sessionId });
+        if (pollResult && (pollResult.allWorkersSettled || pollResult.allComplete)) {
+          const freshHive = loadHive(hiveId);
+          if (freshHive && TERMINAL_STATUSES.has(freshHive.status)) {
+            console.error(`[${new Date().toISOString()}] INFO [hive-flow-mcp] (${sessionId}) Hive ${hiveId} completed — detected by internal poll`);
+            sendHiveNotification(freshHive);
+            monitoredHiveIds.delete(hiveId);
+          } else {
+            console.error(`[${new Date().toISOString()}] DEBUG [hive-flow-mcp] (${sessionId}) Hive ${hiveId} allComplete=true but freshHive.status=${freshHive?.status ?? 'null'} — not yet terminal`);
+          }
+        } else {
+          console.error(`[${new Date().toISOString()}] DEBUG [hive-flow-mcp] (${sessionId}) Hive ${hiveId} not settled: allComplete=${pollResult?.allComplete} allWorkersSettled=${pollResult?.allWorkersSettled} runningCount=${pollResult?.runningCount}`);
+        }
+      } catch (pollErr) {
+        console.error(`[${new Date().toISOString()}] WARN [hive-flow-mcp] Internal poll failed for ${hiveId}:`, pollErr?.message || pollErr);
+      }
+    } catch (e) {
+      console.error(`[${new Date().toISOString()}] WARN [hive-flow-mcp] pollHiveStatus error for ${hiveId}:`, e?.message || e);
+    }
+  };
+
+  const startHivePolling = () => {
+    if (pollingInterval) return;
+    pollingInterval = setInterval(async () => {
+      const ids = Array.from(monitoredHiveIds);
+      console.error(`[${new Date().toISOString()}] DEBUG [hive-flow-mcp] (${sessionId}) Poll tick — ${ids.length} hive(s) monitored`);
+      if (ids.length === 0) return;
+      await Promise.allSettled(ids.map(id => pollHiveStatus(id)));
+    }, HIVE_POLL_INTERVAL);
+    pollingInterval.unref();
+    console.error(`[${new Date().toISOString()}] INFO [hive-flow-mcp] (${sessionId}) Hive polling started (${monitoredHiveIds.size} hive(s))`);
+  };
+
+  const registerHiveForMonitoring = (hiveId) => {
+    if (monitoredHiveIds.has(hiveId) || notifiedTerminalHives.has(hiveId)) return;
+    monitoredHiveIds.add(hiveId);
+    console.error(`[${new Date().toISOString()}] INFO [hive-flow-mcp] (${sessionId}) Registered hive ${hiveId} for monitoring`);
+    startHivePolling();
+    void pollHiveStatus(hiveId);
+  };
+
+  // Bootstrap: monitor any already-active hives
+  try {
+    const activeHives = listHives('active');
+    for (const h of activeHives) {
+      if (!TERMINAL_STATUSES.has(h.status)) monitoredHiveIds.add(h.hiveId);
+    }
+    if (monitoredHiveIds.size > 0) startHivePolling();
+  } catch (e) {
+    console.error(`[${new Date().toISOString()}] WARN [hive-flow-mcp] Failed to bootstrap hive monitoring:`, e?.message || e);
+  }
 
   console.error(
     `[${new Date().toISOString()}] INFO [hive-flow-mcp] (${sessionId}) Starting in stdio mode`
@@ -150,6 +245,11 @@ if (isMCPMode) {
 
         try {
           const result = await callMCPTool(toolName, toolParams, { sessionId });
+          // Auto-register hive for monitoring after queen_mission_assign
+          if (toolName === 'queen_mission_assign' && result?.success && typeof result.hiveId === 'string') {
+            console.error(`[${new Date().toISOString()}] INFO [hive-flow-mcp] (${sessionId}) queen_mission_assign returned hiveId=${result.hiveId}, registering for monitoring`);
+            try { registerHiveForMonitoring(result.hiveId); } catch { /* ignore */ }
+          }
           return {
             jsonrpc: '2.0',
             id: message.id,

@@ -463,6 +463,12 @@ export class MCPServerManager extends EventEmitter {
     };
 
     const pollHiveStatus = async (hiveId: string) => {
+      // Diagnostic: write breadcrumb to confirm poll fires
+      try {
+        const diagPath = path.join(process.cwd(), '.hive-flow', 'data', 'poll-diagnostic.jsonl');
+        fs.appendFileSync(diagPath, JSON.stringify({ event: 'poll', hiveId, ts: new Date().toISOString() }) + '\n');
+      } catch { /* ignore */ }
+
       try {
         let hive = loadHive(hiveId);
 
@@ -545,6 +551,11 @@ export class MCPServerManager extends EventEmitter {
 
       pollingInterval = setInterval(async () => {
         const monitoredHiveIdsArray = Array.from(monitoredHiveIds);
+        // Diagnostic: confirm interval fires
+        try {
+          const diagPath = path.join(process.cwd(), '.hive-flow', 'data', 'poll-diagnostic.jsonl');
+          fs.appendFileSync(diagPath, JSON.stringify({ event: 'interval-tick', count: monitoredHiveIdsArray.length, ts: new Date().toISOString() }) + '\n');
+        } catch { /* ignore */ }
         if (monitoredHiveIdsArray.length === 0) {
           return;
         }
@@ -574,6 +585,12 @@ export class MCPServerManager extends EventEmitter {
       console.error(
         `[${new Date().toISOString()}] INFO [hive-flow-mcp] (${sessionId}) Registered hive ${hiveId} for monitoring`
       );
+
+      // Diagnostic: write breadcrumb to confirm registration fires
+      try {
+        const diagPath = path.join(process.cwd(), '.hive-flow', 'data', 'poll-diagnostic.jsonl');
+        fs.appendFileSync(diagPath, JSON.stringify({ event: 'register', hiveId, ts: new Date().toISOString() }) + '\n');
+      } catch { /* ignore */ }
 
       startHivePolling();
       await pollHiveStatus(hiveId);
@@ -686,6 +703,11 @@ export class MCPServerManager extends EventEmitter {
                 const hiveId = typeof (result as { hiveId?: unknown }).hiveId === 'string'
                   ? (result as { hiveId: string }).hiveId
                   : undefined;
+                // Diagnostic: confirm interception fires
+                try {
+                  const diagPath = path.join(process.cwd(), '.hive-flow', 'data', 'poll-diagnostic.jsonl');
+                  fs.appendFileSync(diagPath, JSON.stringify({ event: 'intercept', toolName, hiveId: hiveId || 'NONE', hasRegisterFn: !!this.registerHiveForMonitoring, ts: new Date().toISOString() }) + '\n');
+                } catch { /* ignore */ }
                 if (hiveId) {
                   await this.registerHiveForMonitoring?.(hiveId);
                 }

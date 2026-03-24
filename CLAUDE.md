@@ -58,7 +58,7 @@ All enforcement is deterministic, file-based, and persists across compaction. No
 
 ### Hive Composition Gate
 
-- **Every hive MUST contain at least 5 agents** (1 queen + 4 workers minimum)
+- **Every hive MUST contain at least 6 agents** (1 queen + 5 workers minimum)
 - **Solo exceptions**: Only `bug-hunter` and `debugger` roles may run as individual agents
 - **Provider agents preferred**: Use gemini-cli and codex-cli over Claude Task tool agents
 - **No task deferment**: Workers complete their assigned duties or get terminated
@@ -67,7 +67,7 @@ All enforcement is deterministic, file-based, and persists across compaction. No
 
 ### Hive Auto-Spawn Enforcement
 
-- **PostToolUse hook on `queen_mission_assign` and `queen_spawn_worker`**: After a queen tool returns, reads the hive record and counts live workers. If below 4 workers, auto-spawns the deficit via `agent_spawn` with provider cycling (gemini-cli -> codex-cli -> anthropic-cli)
+- **PostToolUse hook on `queen_mission_assign` and `queen_spawn_worker`**: After a queen tool returns, reads the hive record and counts live workers. If below 5 workers, auto-spawns the deficit via `agent_spawn` with provider cycling (gemini-cli -> codex-cli -> anthropic-cli)
 - **Skips at HALTED** (enforcement level 3) to prevent spawning during lockdown
 - **Hook**: `hive-enforcement.cjs`
 
@@ -108,7 +108,7 @@ All enforcement is deterministic, file-based, and persists across compaction. No
 
 ### Queen Report Composition Check
 
-- **`queen_report`**: Blocks if fewer than 4 live workers (`[COMPOSITION_ERROR]`). Also blocks if verified delegation rate from hive metrics is **below 0.5** (`[DELEGATION_ERROR]`) after syncing `directWorkCount` from the queen's signed `role.json`.
+- **`queen_report`**: Blocks if fewer than 5 live workers (`[COMPOSITION_ERROR]`). Also blocks if verified delegation rate from hive metrics is **below 0.5** (`[DELEGATION_ERROR]`) after syncing `directWorkCount` from the queen's signed `role.json`.
 - **`queen_collect_results`**: Verifies queen ownership of hive before returning worker results
 - **Location**: `v3/@hive-flow/cli/src/mcp-tools/queen-tools.ts`
 
@@ -116,7 +116,7 @@ All enforcement is deterministic, file-based, and persists across compaction. No
 
 - **Trigger**: Stop event and TeammateIdle event
 - **Terminates idle workers** past threshold (default 15 min), oldest-first
-- **Never terminates below 4 workers per active hive**, never terminates queens or busy workers
+- **Never terminates below 5 workers per active hive**, never terminates queens or busy workers
 - **Hook**: `hive-cleanup.cjs`
 
 ### Hive Sentinel Protocol

@@ -1210,7 +1210,7 @@ claude mcp add hive-flow \
 claude mcp list
 ```
 
-*Sources: [Claude Code MCP Docs](https://code.claude.com/docs/en/mcp)*
+*Sources: [Claude Code MCP Docs](https://code.claude.com)/docs/en/mcp)*
 
 </details>
 
