@@ -202,7 +202,7 @@ The swarm automatically:
 
 ```bash
 # Core MCP (required)
-claude mcp add hive-flow npx hive-flow@alpha mcp start
+claude mcp add hive-flow node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/mcp-server.js
 
 # Enhanced coordination (optional)
 claude mcp add ruv-swarm npx ruv-swarm mcp start
@@ -297,7 +297,7 @@ ls ~/.claude/commands/
 cat ~/.claude/settings.json
 
 # Verify MCP package
-npx hive-flow@alpha --version
+node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js --version
 
 # Reinstall if needed
 npm install -g hive-flow@alpha

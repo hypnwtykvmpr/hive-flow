@@ -173,6 +173,16 @@
             "timeout": 15000
           }
         ]
+      },
+      {
+        "matcher": "Read|Glob|Grep|Edit|Write|Bash|mcp__hive-flow__*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/hook-handler.cjs hive-check-complete",
+            "timeout": 3000
+          }
+        ]
       }
     ],
     "UserPromptSubmit": [

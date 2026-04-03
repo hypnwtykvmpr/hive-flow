@@ -50,22 +50,10 @@
   },
   "mcpServers": {
     "hive-flow": {
-      "command": "npx",
-      "args": ["hive-flow@alpha", "mcp", "start"],
+      "command": "node",
+      "args": ["/Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/mcp-server.js"],
       "description": "Core Hive Flow MCP server for swarm coordination, agent management, and task orchestration (40+ tools)",
       "optional": false
-    },
-    "ruv-swarm": {
-      "command": "npx",
-      "args": ["ruv-swarm", "mcp", "start"],
-      "description": "Enhanced swarm coordination with WASM acceleration (2.8-4.4x speed improvement)",
-      "optional": true
-    },
-    "flow-nexus": {
-      "command": "npx",
-      "args": ["flow-nexus@latest", "mcp", "start"],
-      "description": "Cloud-based orchestration platform with 70+ tools (requires authentication)",
-      "optional": true
     }
   }
 }

@@ -317,15 +317,17 @@ const handlers = {
       }
     } catch { /* non-fatal */ }
 
-    // Auto-reset enforcement on new session start
-    // Previous agent's violations shouldn't lock out the new agent. The enforcement
-    // ladder still works within each session — this just clears stale state.
+    // Auto-reset enforcement on new session start — only WARNED/RESTRICTED.
+    // HALTED (level 3) is PRESERVED across compaction/session restarts.
+    // Only a human /enforcement-reset can clear HALTED.
     try {
       const enforcementMod = require(path.join(helpersDir, 'enforcement.cjs'));
       const status = enforcementMod.getEnforcementStatus();
-      if (status && status.level > 0) {
+      if (status && status.level > 0 && status.level < 3) {
         enforcementMod.resetEnforcement();
-        console.log(`[ENFORCEMENT] Auto-reset from level ${status.level} to NORMAL (new session — previous violations cleared)`);
+        console.log(`[ENFORCEMENT] Auto-reset from level ${status.level} to NORMAL (WARNED/RESTRICTED cleared, HALTED preserved)`);
+      } else if (status && status.level >= 3) {
+        console.log(`[ENFORCEMENT] Level ${status.level} (HALTED) preserved across session restore — human /enforcement-reset required`);
       }
     } catch { /* non-fatal — enforcement.cjs may not be available */ }
 
@@ -1456,12 +1458,19 @@ const handlers = {
       }
 
       if (currentState === 'waiting-for-hive' && elapsed >= FIVE_MIN) {
-        const activityPath = path.join(projectDir, '.hive-flow', 'logs', 'activity.jsonl');
+        const activityPath = path.join(projectDir, '.hive-flow', 'enforcement', 'hive-audit.jsonl');
         let completions = [];
         if (fs.existsSync(activityPath)) {
           try {
             const lines = fs.readFileSync(activityPath, 'utf8').split('\n').filter(Boolean).slice(-50);
-            completions = lines.filter(l => { try { return JSON.parse(l).event === 'hive-all-complete'; } catch { return false; } });
+            const waitingHiveId = (stateData.description || '').replace('Hive dispatched: ', '');
+            completions = lines.filter(l => {
+              try {
+                const entry = JSON.parse(l);
+                if (entry.event !== 'watcher-hive-complete') return false;
+                return !waitingHiveId || entry.hiveId === waitingHiveId;
+              } catch { return false; }
+            });
           } catch { /* non-fatal */ }
         }
         const description = `${completions.length} hive(s) completed.`;
@@ -1493,6 +1502,7 @@ const handlers = {
       const toolResponse = input.tool_response || input.tool_result || '';
       const responseStr = typeof toolResponse === 'string' ? toolResponse : JSON.stringify(toolResponse);
       let hiveId = null;
+      let taskIds = [];
       try {
         const contentArray = JSON.parse(responseStr);
         if (Array.isArray(contentArray)) {
@@ -1500,19 +1510,43 @@ const handlers = {
             if (item && item.type === 'text' && typeof item.text === 'string') {
               try {
                 const parsed = JSON.parse(item.text);
-                if (parsed && parsed.hiveId) { hiveId = parsed.hiveId; break; }
+                if (parsed && parsed.hiveId) { hiveId = parsed.hiveId; }
+                if (parsed && Array.isArray(parsed.workers)) {
+                  for (const worker of parsed.workers) {
+                    if (worker && worker.taskId && !taskIds.includes(worker.taskId)) {
+                      taskIds.push(worker.taskId);
+                    }
+                  }
+                }
               } catch { /* skip */ }
             }
           }
         } else if (contentArray && contentArray.hiveId) {
           hiveId = contentArray.hiveId;
+          if (Array.isArray(contentArray.workers)) {
+            for (const worker of contentArray.workers) {
+              if (worker && worker.taskId && !taskIds.includes(worker.taskId)) {
+                taskIds.push(worker.taskId);
+              }
+            }
+          }
         }
       } catch { /* fall through */ }
       if (!hiveId) { console.log('{}'); return; }
       const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
       const result = updateAdvocateState(projectDir, 'waiting-for-hive', 'Hive dispatched: ' + hiveId);
       if (!result.ok) { console.log('{}'); return; }
-      process.stdout.write(JSON.stringify({ hookSpecificOutput: { additionalContext: `[ADVOCATE] Auto-transitioned to waiting-for-hive. Hive: ${hiveId}` } }));
+      const pollCommand = taskIds.length > 0
+        ? `bash scripts/hive-poll-notify.sh ${hiveId} ${taskIds.join(' ')}`
+        : `bash scripts/hive-poll-notify.sh ${hiveId}`;
+      process.stdout.write(JSON.stringify({
+        hookSpecificOutput: {
+          additionalContext: [
+            `[ADVOCATE] Auto-transitioned to waiting-for-hive. Hive: ${hiveId}`,
+            `[POLL-SCRIPT] ${pollCommand}`
+          ].join('\n')
+        }
+      }));
     } catch (e) { console.log('{}'); }
   },
 
@@ -1568,6 +1602,60 @@ const handlers = {
       if (!result.ok) { console.log('{}'); return; }
       process.stdout.write(JSON.stringify({ hookSpecificOutput: { additionalContext: `[ADVOCATE] Auto-transitioned to active. ${desc}` } }));
     } catch (e) { console.log('{}'); }
+  },
+
+  'hive-check-complete': () => {
+    try {
+      const PROJECT_DIR = path.resolve(__dirname, '..', '..');
+      const DATA_DIR = path.join(PROJECT_DIR, '.hive-flow', 'data');
+      if (!fs.existsSync(DATA_DIR)) return console.log('{}');
+
+      const entries = fs.readdirSync(DATA_DIR);
+      const unnotified = [];
+
+      for (const entry of entries) {
+        if (!entry.startsWith('hive-') || !entry.endsWith('.done')) continue;
+        const base = entry.slice(0, -5);
+        const notifiedPath = path.join(DATA_DIR, base + '.notified');
+        if (fs.existsSync(notifiedPath)) continue;
+
+        const filePath = path.join(DATA_DIR, entry);
+        let data = null;
+        try {
+          const raw = fs.readFileSync(filePath, 'utf8');
+          data = JSON.parse(raw);
+        } catch {
+          data = { hiveId: base, error: 'unreadable' };
+        }
+        const hiveId = (data && data.hiveId) || base;
+        unnotified.push({ hiveId, filePath, data, base });
+      }
+
+      if (unnotified.length === 0) return console.log('{}');
+
+      const messages = [];
+      for (const item of unnotified) {
+        const d = item.data || {};
+        const parts = [`hive=${item.hiveId}`];
+        if (d.completedAt) parts.push(`at=${d.completedAt}`);
+        if (d.summary) parts.push(d.summary);
+        if (typeof d.completedCount === 'number') parts.push(`completed=${d.completedCount}`);
+        if (typeof d.failedCount === 'number') parts.push(`failed=${d.failedCount}`);
+        if (d.error) parts.push(`(${d.error})`);
+        messages.push(`[HIVE_COMPLETE] ${parts.join(' ')}. Run hive_poll_workers or queen_collect_results to review.`);
+
+        try {
+          const markerPath = path.join(DATA_DIR, item.base + '.notified');
+          const tmpPath = markerPath + '.tmp.' + process.pid;
+          fs.writeFileSync(tmpPath, new Date().toISOString() + '\n', 'utf8');
+          fs.renameSync(tmpPath, markerPath);
+        } catch {}
+      }
+
+      console.log(JSON.stringify({
+        hookSpecificOutput: { additionalContext: messages.join('\n') }
+      }));
+    } catch { console.log('{}'); }
   },
 };
 

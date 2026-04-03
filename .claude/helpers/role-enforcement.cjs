@@ -401,28 +401,31 @@ function processSubagentStart(role) {
 
 /**
  * SEC-011: Verify spawn-origin token matches the stored value in the agent record.
- * Returns true if token is valid or if verification is not possible (fail-open for compatibility).
+ * Returns {valid: boolean, reason: string}.
+ * Fail-open ONLY for: no store file, agent not in store (Claude Task tool agents have no store entry).
+ * Fail-closed for: no stored token, no env token, caught exception.
  */
 function verifySpawnToken(agentId) {
   try {
     const storePath = path.join(PROJECT_DIR, '.hive-flow', 'agents', 'store.json');
-    if (!fs.existsSync(storePath)) return true; // No store — fail-open
+    if (!fs.existsSync(storePath)) return { valid: true, reason: 'no store file — fail-open' };
     const store = JSON.parse(fs.readFileSync(storePath, 'utf8'));
     const agents = store.agents || {};
     const agent = agents[agentId];
-    if (!agent) return true; // Agent not in store — fail-open
+    if (!agent) return { valid: true, reason: 'agent not in store — fail-open' };
     const storedToken = agent.config?._spawnToken;
-    if (!storedToken) return true; // No stored token — legacy agent, fail-open
+    if (!storedToken) return { valid: false, reason: 'no stored token — fail-closed' };
     const candidateToken = process.env.HIVE_FLOW_AGENT_TOKEN;
-    if (!candidateToken) return true; // No env token — fail-open for legacy agents
+    if (!candidateToken) return { valid: false, reason: 'no env token — fail-closed' };
 
     // Constant-time comparison to prevent timing attacks
     const envBuf = Buffer.from(String(candidateToken));
     const storedBuf = Buffer.from(String(storedToken));
-    if (envBuf.length !== storedBuf.length) return false;
-    return crypto.timingSafeEqual(envBuf, storedBuf);
-  } catch {
-    return true; // Read error — fail-open for compatibility
+    if (envBuf.length !== storedBuf.length) return { valid: false, reason: 'token length mismatch' };
+    if (!crypto.timingSafeEqual(envBuf, storedBuf)) return { valid: false, reason: 'token mismatch' };
+    return { valid: true, reason: 'token verified' };
+  } catch (err) {
+    return { valid: false, reason: `exception: ${err.message} — fail-closed` };
   }
 }
 
@@ -442,9 +445,10 @@ function processPreToolUse(input) {
   if (!agentId) return makeAllow(); // No agent ID — pass through
 
   // SEC-011: Verify spawn-origin token before trusting agent identity
-  if (!verifySpawnToken(agentId)) {
+  const tokenResult = verifySpawnToken(agentId);
+  if (!tokenResult.valid) {
     return makeDeny(
-      '[IDENTITY ENFORCEMENT] Agent token mismatch — possible env var spoofing. ' +
+      `[IDENTITY ENFORCEMENT] Agent token verification failed (${tokenResult.reason}) — possible env var spoofing. ` +
       'HIVE_FLOW_AGENT_TOKEN does not match the stored spawn-origin token.'
     );
   }

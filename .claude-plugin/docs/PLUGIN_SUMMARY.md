@@ -339,8 +339,8 @@ The plugin is configured via `.claude-plugin/plugin.json`:
   },
   "mcpServers": {
     "hive-flow": {
-      "command": "npx",
-      "args": ["hive-flow@alpha", "mcp", "start"]
+      "command": "node",
+      "args": ["/Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/mcp-server.js"]
     }
   }
 }

@@ -184,3 +184,7 @@ tests/.tmp-*/
 # Dolt database files (added by bd init)
 .dolt/
 /.knots/
+
+# Soft-deleted files (renamed with DELETE_ prefix, not deleted)
+DELETE_*
+**/DELETE_*

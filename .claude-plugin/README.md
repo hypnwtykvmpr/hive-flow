@@ -307,7 +307,7 @@ Then in Claude Code:
 
 ```bash
 # Add MCP servers to Claude Code
-claude mcp add hive-flow npx hive-flow@alpha mcp start
+claude mcp add hive-flow node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/mcp-server.js
 claude mcp add ruv-swarm npx ruv-swarm mcp start  # Optional
 claude mcp add flow-nexus npx flow-nexus@latest mcp start  # Optional
 ```
@@ -361,7 +361,7 @@ cp -r agents ~/.claude/agents/
 
 ```bash
 # Run setup via npx
-npx hive-flow@alpha init --plugin
+node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js init --plugin
 
 # This will:
 # 1. Create .claude directory
@@ -510,8 +510,8 @@ Hive Flow integrates with 3 MCP servers providing 110+ tools:
 {
   "mcpServers": {
     "hive-flow": {
-      "command": "npx",
-      "args": ["hive-flow@alpha", "mcp", "start"]
+      "command": "node",
+      "args": ["/Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/mcp-server.js"]
     }
   }
 }

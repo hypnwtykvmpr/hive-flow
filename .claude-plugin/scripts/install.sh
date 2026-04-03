@@ -136,8 +136,8 @@ if [ "$INSTALL_TYPE" = "1" ] || [ "$INSTALL_TYPE" = "4" ]; then
 {
   "mcpServers": {
     "hive-flow": {
-      "command": "npx",
-      "args": ["hive-flow@alpha", "mcp", "start"],
+      "command": "node",
+      "args": ["/Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/mcp-server.js", "mcp", "start"],
       "description": "Core Hive Flow MCP server with 40+ orchestration tools"
     }
   }
@@ -153,17 +153,19 @@ Add to ~/.claude/settings.json:
 {
   "mcpServers": {
     "hive-flow": {
-      "command": "npx",
-      "args": ["hive-flow@alpha", "mcp", "start"]
+      "command": "node",
+      "args": ["/Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/mcp-server.js", "mcp", "start"]
     },
-    "ruv-swarm": {
-      "command": "npx",
-      "args": ["ruv-swarm", "mcp", "start"]
-    },
-    "flow-nexus": {
-      "command": "npx",
-      "args": ["flow-nexus@latest", "mcp", "start"]
-    }
+    # [REMOVED] ruv-swarm and flow-nexus have no local equivalent
+    # "ruv-swarm": {
+    #   "command": "npx",
+    #   "args": ["ruv-swarm", "mcp", "start"]
+    # },
+    # [REMOVED] ruv-swarm and flow-nexus have no local equivalent
+    # "flow-nexus": {
+    #   "command": "npx",
+    #   "args": ["flow-nexus@latest", "mcp", "start"]
+    # }
   }
 }
 MCP_INSTRUCTIONS
@@ -176,22 +178,24 @@ MCP_INSTRUCTIONS
 
     if [ "$INSTALL_MCP" = "y" ]; then
         info "Installing hive-flow MCP server..."
-        npx hive-flow@alpha --version 2>/dev/null || npm install -g hive-flow@alpha
+        node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js --version 2>/dev/null || true  # Local dev: no npm install needed — using local build at /Users/jonathandirks/Development/Tools/hive-flow
         success "Hive Flow MCP server installed"
 
-        read -p "Install optional ruv-swarm MCP? (y/n) [n]: " INSTALL_RUV
-        if [ "$INSTALL_RUV" = "y" ]; then
-            info "Installing ruv-swarm MCP server..."
-            npx ruv-swarm --version 2>/dev/null || npm install -g ruv-swarm
-            success "ruv-swarm MCP server installed"
-        fi
+        # [REMOVED] ruv-swarm and flow-nexus have no local equivalent
+        # read -p "Install optional ruv-swarm MCP? (y/n) [n]: " INSTALL_RUV
+        # if [ "$INSTALL_RUV" = "y" ]; then
+        #     info "Installing ruv-swarm MCP server..."
+        #     npx ruv-swarm --version 2>/dev/null || npm install -g ruv-swarm
+        #     success "ruv-swarm MCP server installed"
+        # fi
 
-        read -p "Install optional flow-nexus MCP? (y/n) [n]: " INSTALL_NEXUS
-        if [ "$INSTALL_NEXUS" = "y" ]; then
-            info "Installing flow-nexus MCP server..."
-            npx flow-nexus@latest --version 2>/dev/null || npm install -g flow-nexus@latest
-            success "flow-nexus MCP server installed"
-        fi
+        # [REMOVED] ruv-swarm and flow-nexus have no local equivalent
+        # read -p "Install optional flow-nexus MCP? (y/n) [n]: " INSTALL_NEXUS
+        # if [ "$INSTALL_NEXUS" = "y" ]; then
+        #     info "Installing flow-nexus MCP server..."
+        #     npx flow-nexus@latest --version 2>/dev/null || npm install -g flow-nexus@latest
+        #     success "flow-nexus MCP server installed"
+        # fi
     fi
 fi
 

@@ -69,25 +69,18 @@ fi
 
 # Check MCP packages
 info "Checking MCP packages..."
-if npx hive-flow@alpha --version &> /dev/null; then
-    VERSION=$(npx hive-flow@alpha --version 2>/dev/null || echo "unknown")
+if node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js --version &> /dev/null; then
+    VERSION=$(node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js --version 2>/dev/null || echo "unknown")
     success "hive-flow MCP: $VERSION"
 else
     warning "hive-flow MCP not installed"
     ((WARNINGS++))
 fi
 
-if npx ruv-swarm --version &> /dev/null; then
-    success "ruv-swarm MCP: installed (optional)"
-else
-    info "ruv-swarm MCP: not installed (optional)"
-fi
-
-if npx flow-nexus@latest --version &> /dev/null; then
-    success "flow-nexus MCP: installed (optional)"
-else
-    info "flow-nexus MCP: not installed (optional)"
-fi
+# ruv-swarm: No local equivalent — optional package
+echo "  ruv-swarm: Not available (no local build)"
+# flow-nexus: No local equivalent — optional package
+echo "  flow-nexus: Not available (no local build)"
 
 # Summary
 echo ""
