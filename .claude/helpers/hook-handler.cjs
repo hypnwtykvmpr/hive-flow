@@ -1140,7 +1140,15 @@ const handlers = {
     const stage = (args.find((a, i) => a === '--stage' && args[i + 1]) ? args[args.indexOf('--stage') + 1] : null);
     const taskId = (args.find((a, i) => a === '--task-id' && args[i + 1]) ? args[args.indexOf('--task-id') + 1] : null);
     if (!stage) { console.error('[PIPELINE] --stage is required'); process.exit(1); }
-    const result = enforcement.completePipelineStage(taskId, stage);
+    if (!taskId) { console.error('[PIPELINE] --task-id is required'); process.exit(1); }
+    // Generate HMAC caller token (verified by completePipelineStage)
+    const crypto = require('crypto');
+    const key = enforcement.getOrCreateHmacKey();
+    const timestamp = String(Date.now());
+    const payload = `pipeline-stage-complete:${stage}:${timestamp}`;
+    const sig = crypto.createHmac('sha256', key).update(payload).digest('hex');
+    const callerToken = `${timestamp}.${sig}`;
+    const result = enforcement.completePipelineStage(taskId, stage, callerToken);
     if (result.success) {
       console.log(`[PIPELINE] Stage '${stage}' marked complete`);
     } else {
@@ -1178,7 +1186,14 @@ const handlers = {
     if (!match) return; // not a pipeline-override command
     const enforcement = require('./enforcement.cjs');
     const reason = match[1]?.trim() || 'Manual override via slash command';
-    const result = enforcement.overridePipeline(reason);
+    // Generate HMAC caller token (verified by overridePipeline — matches enforcement-reset pattern)
+    const crypto = require('crypto');
+    const key = enforcement.getOrCreateHmacKey();
+    const timestamp = String(Date.now());
+    const payload = `pipeline-override:${timestamp}`;
+    const sig = crypto.createHmac('sha256', key).update(payload).digest('hex');
+    const callerToken = `${timestamp}.${sig}`;
+    const result = enforcement.overridePipeline(reason, callerToken);
     if (result.success) {
       process.stdout.write(JSON.stringify({ hookSpecificOutput: { additionalContext: '[PIPELINE OVERRIDE] Pipeline commit gate has been overridden. Commits are now allowed. Reason: ' + reason } }));
     } else {
