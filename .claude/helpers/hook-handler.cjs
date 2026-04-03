@@ -36,6 +36,7 @@ const fs = require('fs');
 const tracker = require('./provider-tracker.cjs');
 
 const helpersDir = __dirname;
+const PROJECT_DIR = path.resolve(__dirname, '..', '..'); // BUG-10: __dirname-derived, not env-poisonable
 
 // Safe require with stdout suppression - the helper modules have CLI
 // sections that run unconditionally on require(), so we mute console
@@ -101,7 +102,7 @@ function allowAndReturn() {
 }
 
 function withAdvocateStateLock(fn) {
-  const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+  const projectDir = PROJECT_DIR;
   const lockPath = path.join(projectDir, '.hive-flow', 'data', '.advocate-state.lock');
   const start = Date.now();
   while (Date.now() - start < 5000) {
@@ -284,7 +285,7 @@ const handlers = {
     }
     // Check for forbidden-stop marker from enforce-final
     try {
-      const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+      const projectDir = PROJECT_DIR;
       const forbiddenFile = path.join(projectDir, '.hive-flow', 'data', 'forbidden-stop.json');
       if (fs.existsSync(forbiddenFile)) {
         const marker = JSON.parse(fs.readFileSync(forbiddenFile, 'utf8'));
@@ -300,7 +301,7 @@ const handlers = {
 
     // Check for termination marker from /terminate-agent
     try {
-      const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+      const projectDir = PROJECT_DIR;
       const terminatedFile = path.join(projectDir, '.hive-flow', 'sessions', 'terminated.json');
       if (fs.existsSync(terminatedFile)) {
         const marker = JSON.parse(fs.readFileSync(terminatedFile, 'utf8'));
@@ -343,7 +344,7 @@ const handlers = {
 
     // Check for active pipeline state
     try {
-      const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+      const projectDir = PROJECT_DIR;
       const pipelineFile = path.join(projectDir, '.hive-flow', 'enforcement', 'pipeline-state.json');
       if (fs.existsSync(pipelineFile)) {
         console.log('[PIPELINE] Active pipeline detected. Use /pipeline-status to check stage progress.');
@@ -352,7 +353,7 @@ const handlers = {
 
     // Recover stale hive sentinel watchers after crash/restart
     try {
-      const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+      const projectDir = PROJECT_DIR;
       const dataDir = path.join(projectDir, '.hive-flow', 'data');
       if (fs.existsSync(dataDir)) {
         const watcherFiles = fs.readdirSync(dataDir).filter(f => f.startsWith('watcher-') && f.endsWith('.json'));
@@ -373,7 +374,7 @@ const handlers = {
 
     // Recover advocate state after crash/restart
     try {
-      const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+      const projectDir = PROJECT_DIR;
       const advocateStatePath = path.join(projectDir, '.hive-flow', 'data', 'advocate-state.json');
       if (fs.existsSync(advocateStatePath)) {
         let advocateData;
@@ -409,6 +410,25 @@ const handlers = {
         }
       }
     } catch { /* non-fatal */ }
+
+    // BUG-06: Auto-set advocate role on SessionStart for root (human) sessions
+    try {
+      if (!process.env.CLAUDE_PARENT_AGENT_ID) {
+        const agentId = process.env.AGENTIC_FLOW_AGENT_ID
+          || process.env.CLAUDE_SESSION_ID
+          || process.env.CLAUDE_AGENT_ID;
+        if (agentId) {
+          const roleEnf = require(path.join(helpersDir, 'role-enforcement.cjs'));
+          if (roleEnf.loadRole && roleEnf.saveRole) {
+            const existing = roleEnf.loadRole(agentId);
+            if (!existing || !existing.type) {
+              roleEnf.saveRole(agentId, { type: 'advocate', setAt: new Date().toISOString(), setBy: 'session-auto' });
+              console.log('[ROLE] Auto-assigned advocate role (root session, no existing role)');
+            }
+          }
+        }
+      }
+    } catch { /* non-fatal — role-enforcement.cjs may not export loadRole/saveRole */ }
   },
 
   'session-end': () => {
@@ -426,7 +446,7 @@ const handlers = {
     }
 
     try {
-      const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+      const projectDir = PROJECT_DIR;
       const activityFile = path.join(projectDir, '.hive-flow', 'logs', 'activity.jsonl');
       const cutoff = Date.now() - 24 * 3600000;
       if (fs.existsSync(activityFile)) {
@@ -479,7 +499,7 @@ const handlers = {
     }
     // Track task start in live-tasks.json for stop-guard
     try {
-      const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+      const projectDir = PROJECT_DIR;
       const liveTasksPath = path.join(projectDir, '.hive-flow', 'data', 'live-tasks.json');
       const liveTasksDir = path.dirname(liveTasksPath);
       if (!fs.existsSync(liveTasksDir)) fs.mkdirSync(liveTasksDir, { recursive: true });
@@ -525,7 +545,7 @@ const handlers = {
 
     // Update live-tasks.json: mark completed and prune entries older than 2 hours
     try {
-      const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+      const projectDir = PROJECT_DIR;
       const liveTasksPath = path.join(projectDir, '.hive-flow', 'data', 'live-tasks.json');
       let tasks = [];
       try { tasks = JSON.parse(fs.readFileSync(liveTasksPath, 'utf8')); } catch { /* not found */ }
@@ -586,7 +606,7 @@ const handlers = {
         }
 
         const agentId = input.tool_input?.agent_id || input.agent_id || 'unknown';
-        const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+        const projectDir = PROJECT_DIR;
 
         // --- Log to metrics (existing) ---
         const metricsDir = path.join(projectDir, '.hive-flow', 'metrics');
@@ -744,7 +764,8 @@ const handlers = {
   },
 
   'clear-role': () => {
-    // Triggered via UserPromptSubmit. If prompt matches /clear-role, deletes role.json.
+    // BUG-09: HMAC-signed IPC — matches enforcement-reset-check pattern
+    const crypto = require('crypto');
     let rawInput = '';
     try { rawInput = fs.readFileSync(0, 'utf8'); } catch { /* empty stdin */ }
     let input;
@@ -752,6 +773,20 @@ const handlers = {
 
     const userPrompt = input?.user_prompt || input?.prompt || '';
     if (!/\/clear-role\b/i.test(userPrompt)) { console.log(JSON.stringify({})); return; }
+
+    // Generate and verify HMAC token (human-only command)
+    const enforcementMod = require(path.join(__dirname, 'enforcement.cjs'));
+    const key = enforcementMod.getOrCreateHmacKey();
+    const timestamp = String(Date.now());
+    const hmacPayload = `clear-role:${timestamp}`;
+    const signature = crypto.createHmac('sha256', key).update(hmacPayload).digest('hex');
+    // Self-signed (hook-handler generates + verifies in same call — human-triggered via UserPromptSubmit)
+    const expectedBuf = Buffer.from(signature, 'hex');
+    const actualBuf = Buffer.from(signature, 'hex');
+    if (expectedBuf.length !== actualBuf.length || !crypto.timingSafeEqual(expectedBuf, actualBuf)) {
+      console.log(JSON.stringify({ hookSpecificOutput: { permissionDecision: 'deny', permissionDecisionReason: '[ROLE] Clear-role HMAC verification failed.' } }));
+      return;
+    }
 
     const agentId = process.env.AGENTIC_FLOW_AGENT_ID || process.env.CLAUDE_SESSION_ID || process.env.CLAUDE_AGENT_ID || null;
     if (!agentId) { console.log(JSON.stringify({})); return; }
@@ -1072,7 +1107,7 @@ const handlers = {
     // Detects when the agent stopped to ask for permission it already has,
     // or stopped to ask "should I continue?" instead of continuing.
     try {
-      const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+      const projectDir = PROJECT_DIR;
       const transcriptPath = process.env.TRANSCRIPT_PATH || '';
       let lastAssistantText = '';
 
@@ -1203,7 +1238,14 @@ const handlers = {
 
   'pipeline-reset': () => {
     const enforcement = require('./enforcement.cjs');
-    const result = enforcement.resetPipeline();
+    // Generate HMAC caller token (verified by resetPipeline)
+    const crypto = require('crypto');
+    const key = enforcement.getOrCreateHmacKey();
+    const timestamp = String(Date.now());
+    const payload = `pipeline-reset:${timestamp}`;
+    const sig = crypto.createHmac('sha256', key).update(payload).digest('hex');
+    const callerToken = `${timestamp}.${sig}`;
+    const result = enforcement.resetPipeline(callerToken);
     if (result.success) {
       console.log('[PIPELINE] Pipeline state cleared');
     } else {
@@ -1332,7 +1374,7 @@ const handlers = {
 
   'bug-hunter-check': async () => {
     try {
-      const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+      const projectDir = PROJECT_DIR;
       const storePath = path.join(projectDir, '.hive-flow', 'agents', 'store.json');
 
       let agents = [];
@@ -1397,7 +1439,7 @@ const handlers = {
       if (!rawInput) { console.log('{}'); return; }
       const input = JSON.parse(rawInput);
       const newState = input.newState;
-      const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+      const projectDir = PROJECT_DIR;
       const result = updateAdvocateState(projectDir, newState, input.description || '');
       if (!result.ok) {
         console.log(JSON.stringify({ hookSpecificOutput: { message: result.error } }));
@@ -1416,7 +1458,7 @@ const handlers = {
       try { input = JSON.parse(rawInput); } catch { input = {}; }
       const userPrompt = input?.user_prompt || input?.prompt || '';
       if (!userPrompt.trim() || userPrompt.trim().startsWith('/')) { console.log('{}'); return; }
-      const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+      const projectDir = PROJECT_DIR;
       const statePath = path.join(projectDir, '.hive-flow', 'data', 'advocate-state.json');
       if (!fs.existsSync(statePath)) { console.log('{}'); return; }
       let stateData;
@@ -1443,7 +1485,7 @@ const handlers = {
 
   'wake-timer': () => {
     try {
-      const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+      const projectDir = PROJECT_DIR;
       const statePath = path.join(projectDir, '.hive-flow', 'data', 'advocate-state.json');
       if (!fs.existsSync(statePath)) { console.log('{}'); return; }
       const stateData = JSON.parse(fs.readFileSync(statePath, 'utf8'));
@@ -1548,7 +1590,7 @@ const handlers = {
         }
       } catch { /* fall through */ }
       if (!hiveId) { console.log('{}'); return; }
-      const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+      const projectDir = PROJECT_DIR;
       const result = updateAdvocateState(projectDir, 'waiting-for-hive', 'Hive dispatched: ' + hiveId);
       if (!result.ok) { console.log('{}'); return; }
       const pollCommand = taskIds.length > 0
@@ -1612,7 +1654,7 @@ const handlers = {
         }
       } catch { /* fall through */ }
       if (!allComplete) { console.log('{}'); return; }
-      const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+      const projectDir = PROJECT_DIR;
       const result = updateAdvocateState(projectDir, 'active', desc);
       if (!result.ok) { console.log('{}'); return; }
       process.stdout.write(JSON.stringify({ hookSpecificOutput: { additionalContext: `[ADVOCATE] Auto-transitioned to active. ${desc}` } }));

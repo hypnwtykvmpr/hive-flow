@@ -68,16 +68,15 @@ function readEnforcementLevel() {
     const stateFile = path.join(ENFORCEMENT_DIR, 'state.json');
     if (!fs.existsSync(stateFile)) return 0; // No state file = fresh install
     const raw = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
+    // BUG-08: Reject unsigned state — missing hmac/signature → HALTED (fail-closed)
     if (raw?.state !== undefined && typeof raw.state?.level === 'number') {
-      if (raw.hmac) {
-        if (!verifyEnforcementHmac(raw.state, raw.hmac)) return 3;
-      }
+      if (!raw.hmac) return 3; // Unsigned state rejected
+      if (!verifyEnforcementHmac(raw.state, raw.hmac)) return 3;
       return raw.state.level;
     }
     if (raw?.payload !== undefined && typeof raw.payload?.level === 'number') {
-      if (raw.signature) {
-        if (!verifyEnforcementHmac(raw.payload, raw.signature)) return 3;
-      }
+      if (!raw.signature) return 3; // Unsigned state rejected
+      if (!verifyEnforcementHmac(raw.payload, raw.signature)) return 3;
       return raw.payload.level;
     }
     return 3; // Unrecognized format — fail-closed

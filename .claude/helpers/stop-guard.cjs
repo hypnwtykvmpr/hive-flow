@@ -102,12 +102,13 @@ function isPlanActive(projectDir) {
     const hmacKeyPath = path.join(projectDir, '.hive-flow', 'enforcement', '.hmac-key');
     if (fs.existsSync(hmacKeyPath)) {
       const hmacKey = fs.readFileSync(hmacKeyPath, 'utf8').trim();
-      const payload = envelope.payload;
-      const expectedHmac = crypto.createHmac('sha256', hmacKey).update(JSON.stringify(payload)).digest('hex');
-      const sigBuf = Buffer.from(envelope.signature || '', 'hex');
+      // BUG-07: Read {state,hmac} envelope format (matching enforcement.cjs), not {payload,signature}
+      const stateData = envelope.state;
+      const expectedHmac = crypto.createHmac('sha256', hmacKey).update(JSON.stringify(stateData)).digest('hex');
+      const sigBuf = Buffer.from(envelope.hmac || '', 'hex');
       const expBuf = Buffer.from(expectedHmac, 'hex');
       if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) return false;
-      return payload?.authorized === true;
+      return stateData?.authorized === true;
     }
     // No HMAC key — conservative: treat as not authorized
     return false;
