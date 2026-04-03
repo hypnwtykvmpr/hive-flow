@@ -74,6 +74,7 @@ const PROTECTED_PATHS = [
   '.claude/helpers/',
   '.hive-flow/enforcement/',
   '.hive-flow/data/', // N5: unprotected state directory
+  '.hive-flow/workflows/', // Band 3: protect workflow/phase state from agent tampering
 ];
 
 // Protected path patterns for compiled output (12.10)
@@ -470,6 +471,22 @@ function detectCircumvention(toolName, toolInput, state) {
         reason: `CIRCUMVENTION: Environment variable manipulation targeting enforcement`,
         severity: 'critical',
       };
+    }
+
+    // 2c2. Secret exposure prevention — block commands that would print/echo API key values
+    const SECRET_ENV_VARS = ['OPENROUTER_API_KEY', 'OPENAI_API_KEY', 'DEEPSEEK_API_KEY', 'ANTHROPIC_API_KEY', 'HIVE_FLOW_AGENT_TOKEN', 'PINATA_JWT'];
+    for (const secretVar of SECRET_ENV_VARS) {
+      // Match: echo $VAR, echo ${VAR}, printf $VAR, cat with env, printenv VAR, env | grep VAR
+      if (new RegExp(`(echo|printf|cat|print)\\b.*\\$\\{?${secretVar}\\}?`, 'i').test(command) ||
+          new RegExp(`printenv\\s+${secretVar}`, 'i').test(command) ||
+          new RegExp(`\\benv\\b.*\\|.*grep.*${secretVar}`, 'i').test(command) ||
+          new RegExp(`\\$${secretVar}.*[:0-9]`, 'i').test(command)) { // ${VAR:0:N} substring
+        return {
+          circumvention: true,
+          reason: `CIRCUMVENTION: Attempted to expose secret environment variable ${secretVar}`,
+          severity: 'critical',
+        };
+      }
     }
 
     // 2d. Destructive operations (Bug 1: token-based rm parser)
