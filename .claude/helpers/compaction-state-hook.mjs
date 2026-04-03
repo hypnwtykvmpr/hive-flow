@@ -14,12 +14,15 @@
 
 import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync, readdirSync, unlinkSync } from 'node:fs';
 import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-const PROJECT_DIR = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const PROJECT_DIR = join(__dirname, '..', '..'); // BUG-10: __dirname-derived, not env-poisonable
 const STATE_DIR = join(PROJECT_DIR, '.hive-flow', 'data');
 const STATE_FILE = join(STATE_DIR, 'compaction-state.json');
 const MAX_TRANSCRIPT_LINES = 50_000;

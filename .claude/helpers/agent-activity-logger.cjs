@@ -9,9 +9,7 @@ const path = require('path');
 
 const { getRoleFilePath } = require('./role-enforcement.cjs');
 
-const PROJECT_DIR = process.env.CLAUDE_PROJECT_DIR
-  ? path.resolve(process.env.CLAUDE_PROJECT_DIR)
-  : path.resolve(__dirname, '..', '..');
+const PROJECT_DIR = path.resolve(__dirname, '..', '..'); // BUG-10: __dirname-derived, not env-poisonable
 const LOG_DIR = path.join(PROJECT_DIR, '.hive-flow', 'logs');
 const ACTIVITY_FILE = path.join(LOG_DIR, 'activity.jsonl');
 

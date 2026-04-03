@@ -20,7 +20,7 @@ const path = require('path');
 const os = require('os');
 const { fork } = require('child_process');
 
-const PROJECT_DIR = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+const PROJECT_DIR = path.resolve(__dirname, '..', '..'); // BUG-10: __dirname-derived, not env-poisonable
 const SESSION_DIR = path.join(PROJECT_DIR, '.hive-flow', 'sessions');
 const SESSION_FILE = path.join(SESSION_DIR, 'current.json');
 const MARKER_FILE = path.join(SESSION_DIR, 'terminated.json');

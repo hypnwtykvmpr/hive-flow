@@ -125,7 +125,7 @@ async function main() {
   try { ctx = JSON.parse(raw); } catch { process.exit(0); }
 
   const transcriptPath = ctx.transcript_path;
-  const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+  const projectDir = path.resolve(__dirname, '..', '..'); // BUG-10: __dirname-derived, not env-poisonable
 
   // CORRECTION 1: Only activate when a plan/permission is in effect.
   // When the user is just chatting with no active authorization, the guard is silent.

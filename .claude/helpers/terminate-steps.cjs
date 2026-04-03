@@ -18,7 +18,7 @@ const DEFAULT_TIMEOUT_MS = 300_000; // 300 seconds
 const DEFAULT_MAX_ATTEMPTS = 3; // 1 initial + 2 retries
 
 function resolveRuntime(deps = {}) {
-  const projectRoot = deps.projectRoot || process.env.CLAUDE_PROJECT_DIR || path.resolve(__dirname, '..', '..');
+  const projectRoot = deps.projectRoot || path.resolve(__dirname, '..', '..'); // BUG-10: removed env-poisonable fallback
   return {
     projectRoot,
     cliPath: deps.cliPath || path.join(projectRoot, 'v3', '@hive-flow', 'cli', 'bin', 'cli.js'),
