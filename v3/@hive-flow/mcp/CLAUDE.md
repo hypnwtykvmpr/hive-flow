@@ -29,7 +29,7 @@
 
 **Before spawning agents, get routing recommendation:**
 ```bash
-npx @hive-flow/cli@latest hooks pre-task --description "[task description]"
+node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks pre-task --description "[task description]"
 ```
 
 **When you see these recommendations:**
@@ -55,10 +55,10 @@ Task({
 **Use this to prevent agent drift:**
 ```bash
 # Small teams (6-8 agents) - use hierarchical for tight control
-npx @hive-flow/cli@latest swarm init --topology hierarchical --max-agents 8 --strategy specialized
+node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js swarm init --topology hierarchical --max-agents 8 --strategy specialized
 
 # Large teams (10-15 agents) - use hierarchical-mesh for V3 queen + peer communication
-npx @hive-flow/cli@latest swarm init --topology hierarchical-mesh --max-agents 15 --strategy specialized
+node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js swarm init --topology hierarchical-mesh --max-agents 15 --strategy specialized
 ```
 
 **Valid Topologies:**
@@ -83,7 +83,7 @@ When the user requests a complex task, **spawn agents in background and WAIT for
 
 ```javascript
 // STEP 1: Initialize swarm coordination (anti-drift config)
-Bash("npx @hive-flow/cli@latest swarm init --topology hierarchical --max-agents 8 --strategy specialized")
+Bash("node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js swarm init --topology hierarchical --max-agents 8 --strategy specialized")
 
 // STEP 2: Spawn ALL agents IN BACKGROUND in a SINGLE message
 // Use run_in_background: true so agents work concurrently
@@ -287,28 +287,28 @@ Do NOT run manual memory/hooks/neural commands after completing work. Just stop.
 
 ```bash
 # Initialize project
-npx @hive-flow/cli@latest init --wizard
+node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js init --wizard
 
 # Start daemon with background workers
-npx @hive-flow/cli@latest daemon start
+node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js daemon start
 
 # Spawn an agent
-npx @hive-flow/cli@latest agent spawn -t coder --name my-coder
+node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js agent spawn -t coder --name my-coder
 
 # Initialize swarm
-npx @hive-flow/cli@latest swarm init --v3-mode
+node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js swarm init --v3-mode
 
 # Search memory (HNSW-indexed)
-npx @hive-flow/cli@latest memory search --query "authentication patterns"
+node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory search --query "authentication patterns"
 
 # System diagnostics
-npx @hive-flow/cli@latest doctor --fix
+node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js doctor --fix
 
 # Security scan
-npx @hive-flow/cli@latest security scan --depth full
+node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js security scan --depth full
 
 # Performance benchmark
-npx @hive-flow/cli@latest performance benchmark --suite all
+node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js performance benchmark --suite all
 ```
 
 ## 🚀 Available Agents (60+ Types)
@@ -400,51 +400,51 @@ CVE remediation, input validation, path security:
 
 ```bash
 # Core hooks
-npx @hive-flow/cli@latest hooks pre-task --description "[task]"
-npx @hive-flow/cli@latest hooks post-task --task-id "[id]" --success true
-npx @hive-flow/cli@latest hooks post-edit --file "[file]" --train-neural true
+node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks pre-task --description "[task]"
+node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks post-task --task-id "[id]" --success true
+node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks post-edit --file "[file]" --train-neural true
 
 # Session management
-npx @hive-flow/cli@latest hooks session-start --session-id "[id]"
-npx @hive-flow/cli@latest hooks session-end --export-metrics true
-npx @hive-flow/cli@latest hooks session-restore --session-id "[id]"
+node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks session-start --session-id "[id]"
+node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks session-end --export-metrics true
+node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks session-restore --session-id "[id]"
 
 # Intelligence routing
-npx @hive-flow/cli@latest hooks route --task "[task]"
-npx @hive-flow/cli@latest hooks explain --topic "[topic]"
+node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks route --task "[task]"
+node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks explain --topic "[topic]"
 
 # Neural learning
-npx @hive-flow/cli@latest hooks pretrain --model-type moe --epochs 10
-npx @hive-flow/cli@latest hooks build-agents --agent-types coder,tester
+node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks pretrain --model-type moe --epochs 10
+node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks build-agents --agent-types coder,tester
 
 # Background workers
-npx @hive-flow/cli@latest hooks worker list
-npx @hive-flow/cli@latest hooks worker dispatch --trigger audit
-npx @hive-flow/cli@latest hooks worker status
+node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks worker list
+node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks worker dispatch --trigger audit
+node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks worker status
 
 # Coverage-aware routing
-npx @hive-flow/cli@latest hooks coverage-gaps --format table
-npx @hive-flow/cli@latest hooks coverage-route --task "[task]"
+node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks coverage-gaps --format table
+node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks coverage-route --task "[task]"
 
 # Statusline (for Claude Code integration)
-npx @hive-flow/cli@latest hooks statusline
-npx @hive-flow/cli@latest hooks statusline --json
+node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks statusline
+node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks statusline --json
 ```
 
 ## 🔄 Migration (V2 to V3)
 
 ```bash
 # Check migration status
-npx @hive-flow/cli@latest migrate status
+node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js migrate status
 
 # Run migration with backup
-npx @hive-flow/cli@latest migrate run --backup
+node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js migrate run --backup
 
 # Rollback if needed
-npx @hive-flow/cli@latest migrate rollback
+node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js migrate rollback
 
 # Validate migration
-npx @hive-flow/cli@latest migrate validate
+node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js migrate validate
 ```
 
 ## 🧠 Intelligence System (RuVector)
@@ -522,7 +522,7 @@ HIVE_FLOW_MEMORY_PATH=./data/memory
 
 ## 🔍 Doctor Health Checks
 
-Run `npx @hive-flow/cli@latest doctor` to check:
+Run `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js doctor` to check:
 - Node.js version (20+)
 - npm version (9+)
 - Git installation
@@ -538,15 +538,15 @@ Run `npx @hive-flow/cli@latest doctor` to check:
 
 ```bash
 # Add MCP servers (auto-detects MCP mode when stdin is piped)
-claude mcp add hive-flow -- npx -y @hive-flow/cli@latest
+claude mcp add hive-flow -- node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/mcp-server.js
 claude mcp add ruv-swarm -- npx -y ruv-swarm mcp start  # Optional
 claude mcp add flow-nexus -- npx -y flow-nexus@latest mcp start  # Optional
 
 # Start daemon
-npx @hive-flow/cli@latest daemon start
+node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js daemon start
 
 # Run doctor
-npx @hive-flow/cli@latest doctor --fix
+node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js doctor --fix
 ```
 
 ## 🎯 Claude Code vs CLI Tools
@@ -560,14 +560,14 @@ npx @hive-flow/cli@latest doctor --fix
 - Git operations
 
 ### CLI Tools Handle Coordination (via Bash):
-- **Swarm init**: `npx @hive-flow/cli@latest swarm init --topology <type>`
-- **Swarm status**: `npx @hive-flow/cli@latest swarm status`
-- **Agent spawn**: `npx @hive-flow/cli@latest agent spawn -t <type> --name <name>`
-- **Memory store**: `npx @hive-flow/cli@latest memory store --key "mykey" --value "myvalue" --namespace patterns`
-- **Memory search**: `npx @hive-flow/cli@latest memory search --query "search terms"`
-- **Memory list**: `npx @hive-flow/cli@latest memory list --namespace patterns`
-- **Memory retrieve**: `npx @hive-flow/cli@latest memory retrieve --key "mykey" --namespace patterns`
-- **Hooks**: `npx @hive-flow/cli@latest hooks <hook-name> [options]`
+- **Swarm init**: `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js swarm init --topology <type>`
+- **Swarm status**: `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js swarm status`
+- **Agent spawn**: `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js agent spawn -t <type> --name <name>`
+- **Memory store**: `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory store --key "mykey" --value "myvalue" --namespace patterns`
+- **Memory search**: `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory search --query "search terms"`
+- **Memory list**: `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory list --namespace patterns`
+- **Memory retrieve**: `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory retrieve --key "mykey" --namespace patterns`
+- **Hooks**: `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks <hook-name> [options]`
 
 ## 📝 Memory Commands Reference (IMPORTANT)
 
@@ -575,36 +575,36 @@ npx @hive-flow/cli@latest doctor --fix
 ```bash
 # REQUIRED: --key and --value
 # OPTIONAL: --namespace (default: "default"), --ttl, --tags
-npx @hive-flow/cli@latest memory store --key "pattern-auth" --value "JWT with refresh tokens" --namespace patterns
-npx @hive-flow/cli@latest memory store --key "bug-fix-123" --value "Fixed null check" --namespace solutions --tags "bugfix,auth"
+node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory store --key "pattern-auth" --value "JWT with refresh tokens" --namespace patterns
+node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory store --key "bug-fix-123" --value "Fixed null check" --namespace solutions --tags "bugfix,auth"
 ```
 
 ### Search Data (semantic vector search)
 ```bash
 # REQUIRED: --query (full flag, not -q)
 # OPTIONAL: --namespace, --limit, --threshold
-npx @hive-flow/cli@latest memory search --query "authentication patterns"
-npx @hive-flow/cli@latest memory search --query "error handling" --namespace patterns --limit 5
+node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory search --query "authentication patterns"
+node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory search --query "error handling" --namespace patterns --limit 5
 ```
 
 ### List Entries
 ```bash
 # OPTIONAL: --namespace, --limit
-npx @hive-flow/cli@latest memory list
-npx @hive-flow/cli@latest memory list --namespace patterns --limit 10
+node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory list
+node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory list --namespace patterns --limit 10
 ```
 
 ### Retrieve Specific Entry
 ```bash
 # REQUIRED: --key
 # OPTIONAL: --namespace (default: "default")
-npx @hive-flow/cli@latest memory retrieve --key "pattern-auth"
-npx @hive-flow/cli@latest memory retrieve --key "pattern-auth" --namespace patterns
+node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory retrieve --key "pattern-auth"
+node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory retrieve --key "pattern-auth" --namespace patterns
 ```
 
 ### Initialize Memory Database
 ```bash
-npx @hive-flow/cli@latest memory init --force --verbose
+node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory init --force --verbose
 ```
 
 **KEY**: CLI coordinates the strategy via Bash, Claude Code's Task tool executes with real agents.

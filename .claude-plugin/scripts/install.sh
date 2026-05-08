@@ -28,6 +28,80 @@ error() {
     echo -e "${RED}✗${NC} $1"
 }
 
+# Install hive-flow as a global Claude Code plugin
+# Called via: bash install.sh --plugin-only
+# Also called via npm postinstall
+install_global_plugin() {
+    local SCRIPT_DIR
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    local PLUGIN_SOURCE
+    PLUGIN_SOURCE="$(dirname "$SCRIPT_DIR")"  # .claude-plugin/ dir
+
+    local PLUGIN_VERSION
+    PLUGIN_VERSION=$(node -e "try{console.log(require('$PLUGIN_SOURCE/plugin.json').version)}catch(e){console.log('2.5.0')}" 2>/dev/null || echo "2.5.0")
+
+    local CACHE_DIR="$HOME/.claude/plugins/cache/local/hive-flow/$PLUGIN_VERSION"
+    mkdir -p "$CACHE_DIR/hooks"
+
+    cp "$PLUGIN_SOURCE/plugin.json" "$CACHE_DIR/plugin.json"
+    cp "$PLUGIN_SOURCE/hooks/hooks.json" "$CACHE_DIR/hooks/hooks.json"
+
+    local SETTINGS="$HOME/.claude/settings.json"
+    if [ -f "$SETTINGS" ]; then
+        PLUGIN_SOURCE="$PLUGIN_SOURCE" python3 << 'PYEOF'
+import json, os
+
+settings_path = os.path.expanduser('~/.claude/settings.json')
+plugin_source = os.environ['PLUGIN_SOURCE']
+hooks_path = os.path.join(plugin_source, 'hooks', 'hooks.json')
+
+with open(settings_path) as f:
+    settings = json.load(f)
+
+with open(hooks_path) as f:
+    plugin_hooks = json.load(f)
+
+existing = settings.setdefault('hooks', {})
+
+for event, handlers in plugin_hooks.get('hooks', {}).items():
+    if not isinstance(handlers, list):
+        handlers = [handlers]
+    existing_handlers = existing.setdefault(event, [])
+    for h in handlers:
+        inner_cmds = [hh.get('command', '') for hh in h.get('hooks', []) if isinstance(hh, dict)] if isinstance(h, dict) else []
+        already = False
+        for eh in existing_handlers:
+            eh_str = json.dumps(eh)
+            if inner_cmds:
+                if any(c in eh_str for c in inner_cmds if c):
+                    already = True
+                    break
+            elif isinstance(h, dict) and h.get('command', '') in eh_str:
+                already = True
+                break
+        if not already:
+            existing_handlers.append(h)
+
+with open(settings_path, 'w') as f:
+    json.dump(settings, f, indent=2)
+    f.write('\n')
+
+print('hive-flow hooks merged into ' + settings_path)
+PYEOF
+    fi
+
+    echo ""
+    echo "✓ hive-flow plugin installed to $CACHE_DIR"
+    echo "✓ Hooks registered in $SETTINGS"
+    echo "  Restart Claude Code to activate the plugin globally."
+}
+
+# Handle --plugin-only flag (called from npm postinstall)
+if [[ "${1:-}" == "--plugin-only" ]]; then
+    install_global_plugin
+    exit $?
+fi
+
 # Banner
 echo -e "${BLUE}"
 cat << "EOF"

@@ -188,3 +188,7 @@ tests/.tmp-*/
 # Soft-deleted files (renamed with DELETE_ prefix, not deleted)
 DELETE_*
 **/DELETE_*
+
+# Graphify pipeline output directories
+**/graphify-out/
+v4-plans/

@@ -532,12 +532,6 @@
     "commit": "gost",
     "pr": "gost"
   },
-  "env": {
-    "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "85",
-    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
-    "HIVE_FLOW_V3_ENABLED": "true",
-    "HIVE_FLOW_HOOKS_ENABLED": "true"
-  },
   "hiveFlow": {
     "version": "3.0.0",
     "enabled": true,
