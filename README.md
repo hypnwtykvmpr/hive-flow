@@ -129,7 +129,7 @@ flowchart TB
 npx ruvector
 
 # Or use via Hive Flow
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks intelligence --status
+hive-flow hooks intelligence --status
 ```
 
 </details>
@@ -138,13 +138,13 @@ node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.
 
 ```bash
 # One-line install (recommended)
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js init
+hive-flow init
 
 # Or full setup with MCP + diagnostics
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js init -s -- --full
+hive-flow init -s -- --full
 
 # Or via npx
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js init --wizard
+hive-flow init --wizard
 ```
 
 ---
@@ -422,10 +422,10 @@ claude --dangerously-skip-permissions
 
 ```bash
 # curl-style installer with progress display
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js init
+hive-flow init
 
 # Full setup (global + MCP + diagnostics)
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js init -s -- --full
+hive-flow init -s -- --full
 ```
 
 <details>
@@ -467,7 +467,7 @@ curl ... | bash -s -- --full
 
 ```bash
 # Quick start (no install needed)
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js init
+hive-flow init
 
 # Or install globally
 npm install -g hive-flow@alpha
@@ -498,13 +498,13 @@ Hive Flow supports both **Claude Code** and **OpenAI Codex CLI** via the [@hive-
 
 ```bash
 # Initialize for Codex CLI (creates AGENTS.md instead of CLAUDE.md)
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js init --codex
+hive-flow init --codex
 
 # Full Codex setup with all 137+ skills
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js init --codex --full
+hive-flow init --codex --full
 
 # Initialize for both platforms (dual mode)
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js init --dual
+hive-flow init --dual
 ```
 
 ### Platform Comparison
@@ -562,16 +562,16 @@ wait  # Wait for all to complete
 
 ```bash
 # List collaboration templates
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js-codex dual templates
+hive-flow-codex dual templates
 
 # Run feature development swarm (architect → coder → tester → reviewer)
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js-codex dual run --template feature --task "Add user auth"
+hive-flow-codex dual run --template feature --task "Add user auth"
 
 # Run security audit swarm (scanner → analyzer → fixer)
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js-codex dual run --template security --task "src/auth/"
+hive-flow-codex dual run --template security --task "src/auth/"
 
 # Run refactoring swarm (analyzer → planner → refactorer → validator)
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js-codex dual run --template refactor --task "src/legacy/"
+hive-flow-codex dual run --template refactor --task "src/legacy/"
 ```
 
 ### Pre-Built Collaboration Templates
@@ -591,7 +591,7 @@ When you run `init --codex`, the MCP server is automatically registered:
 codex mcp list
 
 # If not present, add manually:
-codex mcp add hive-flow -- node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/mcp-server.js
+codex mcp add hive-flow -- hive-flow mcp start
 ```
 
 ### Self-Learning Workflow
@@ -647,26 +647,26 @@ The **Intelligence Loop** (ADR-050) automates this cycle through hooks. Each ses
 
 ```bash
 # Initialize project
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js init
+hive-flow init
 
 # Start MCP server for Claude Code integration
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js mcp start
+hive-flow mcp start
 
 # Run a task with agents
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js --agent coder --task "Implement user authentication"
+hive-flow --agent coder --task "Implement user authentication"
 
 # List available agents
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js --list
+hive-flow --list
 ```
 
 ### Upgrading
 
 ```bash
 # Update helpers and statusline (preserves your data)
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js init upgrade
+hive-flow init upgrade
 
 # Update AND add any missing skills/agents/commands
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js init upgrade --add-missing
+hive-flow init upgrade --add-missing
 ```
 
 The `--add-missing` flag automatically detects and installs new skills, agents, and commands that were added in newer versions, without overwriting your existing customizations.
@@ -677,7 +677,7 @@ Add hive-flow as an MCP server for seamless integration:
 
 ```bash
 # Add hive-flow MCP server to Claude Code
-claude mcp add hive-flow -- node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/mcp-server.js
+claude mcp add hive-flow -- hive-flow mcp start
 
 # Verify installation
 claude mcp list
@@ -1162,7 +1162,7 @@ Hive Flow runs as an MCP (Model Context Protocol) server, allowing you to connec
 
 ```bash
 # Start Hive Flow MCP server in any environment
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js mcp start
+hive-flow mcp start
 ```
 
 <details open>
@@ -1199,12 +1199,12 @@ Restart Claude Desktop after saving. Look for the MCP indicator (hammer icon) in
 
 ```bash
 # Add via CLI (recommended)
-claude mcp add hive-flow -- node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/mcp-server.js
+claude mcp add hive-flow -- hive-flow mcp start
 
 # Or add with environment variables
 claude mcp add hive-flow \
   --env ANTHROPIC_API_KEY=sk-ant-... \
-  -- node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/mcp-server.js
+  -- hive-flow mcp start
 
 # Verify installation
 claude mcp list
@@ -1318,7 +1318,7 @@ For ChatGPT, you need a remote MCP server (not local stdio). Deploy hive-flow to
 
 ```bash
 # Start with HTTP transport
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js mcp start --transport http --port 3000
+hive-flow mcp start --transport http --port 3000
 ```
 
 Then add the server URL in ChatGPT Connectors settings.
@@ -1602,13 +1602,13 @@ The Hive Mind system implements queen-led hierarchical coordination where strate
 
 **CLI Commands:**
 ```bash
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hive-mind init                    # Initialize hive mind
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hive-mind spawn "Build API"       # Spawn with objective
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hive-mind spawn "..." --queen-type strategic --consensus byzantine
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hive-mind status                  # Check status
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hive-mind metrics                 # Performance metrics
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hive-mind memory                  # Collective memory stats
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hive-mind sessions                # List active sessions
+hive-flow hive-mind init                    # Initialize hive mind
+hive-flow hive-mind spawn "Build API"       # Spawn with objective
+hive-flow hive-mind spawn "..." --queen-type strategic --consensus byzantine
+hive-flow hive-mind status                  # Check status
+hive-flow hive-mind metrics                 # Performance metrics
+hive-flow hive-mind memory                  # Collective memory stats
+hive-flow hive-mind sessions                # List active sessions
 ```
 
 **Performance:** 10-20x faster batch spawning, 2.8-4.4x speed improvement, 84.8% SWE-Bench solve rate
@@ -1623,7 +1623,7 @@ Native integration with Claude Code's experimental Agent Teams feature for spawn
 **Enable Agent Teams:**
 ```bash
 # Automatically enabled with hive-flow init
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js init
+hive-flow init
 
 # Or manually add to .claude/settings.json
 {
@@ -1675,10 +1675,10 @@ TeamDelete()
 
 ```bash
 # Handle idle teammate
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks teammate-idle --auto-assign true
+hive-flow hooks teammate-idle --auto-assign true
 
 # Handle task completion
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks task-completed --task-id <id> --train-patterns
+hive-flow hooks task-completed --task-id <id> --train-patterns
 ```
 
 **Display Modes:** `auto` (default), `in-process`, `tmux` (split-pane)
@@ -1761,8 +1761,8 @@ Install these optional plugins to extend Hive Flow capabilities:
 |--------|---------|-------------|-----------------|
 | **@hive-flow/plugin-agentic-qe** | 3.0.0-alpha.2 | Quality Engineering with 58 AI agents across 12 DDD contexts. TDD, coverage analysis, security scanning, chaos engineering, accessibility testing. | `npm install @hive-flow/plugin-agentic-qe` |
 | **@hive-flow/plugin-prime-radiant** | 0.1.4 | Mathematical AI interpretability with 6 engines: sheaf cohomology, spectral analysis, causal inference, quantum topology, category theory, HoTT proofs. | `npm install @hive-flow/plugin-prime-radiant` |
-| **@hive-flow/plugin-gastown-bridge** | 0.1.0 | Gas Town orchestrator integration with WASM-accelerated formula parsing (352x faster), Beads sync, convoy management, and graph analysis. 20 MCP tools. | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js plugins install -n @hive-flow/plugin-gastown-bridge` |
-| **@hive-flow/teammate-plugin** | 1.0.0-alpha.1 | Native TeammateTool integration for Claude Code v2.1.19+. BMSSP WASM acceleration, rate limiting, circuit breaker, semantic routing. 21 MCP tools. | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js plugins install -n @hive-flow/teammate-plugin` |
+| **@hive-flow/plugin-gastown-bridge** | 0.1.0 | Gas Town orchestrator integration with WASM-accelerated formula parsing (352x faster), Beads sync, convoy management, and graph analysis. 20 MCP tools. | `hive-flow plugins install -n @hive-flow/plugin-gastown-bridge` |
+| **@hive-flow/teammate-plugin** | 1.0.0-alpha.1 | Native TeammateTool integration for Claude Code v2.1.19+. BMSSP WASM acceleration, rate limiting, circuit breaker, semantic routing. 21 MCP tools. | `hive-flow plugins install -n @hive-flow/teammate-plugin` |
 
 #### 🏥 Domain-Specific Plugins
 
@@ -1832,7 +1832,7 @@ npm install @hive-flow/plugin-agentic-qe
 npm install @hive-flow/plugin-prime-radiant
 
 # Install Gas Town Bridge plugin (WASM-accelerated orchestration)
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js plugins install -n @hive-flow/plugin-gastown-bridge
+hive-flow plugins install -n @hive-flow/plugin-gastown-bridge
 
 # Install domain-specific plugins
 npm install @hive-flow/plugin-healthcare-clinical
@@ -1851,7 +1851,7 @@ npm install @hive-flow/plugin-quantum-optimizer
 npm install @hive-flow/plugin-hyperbolic-reasoning
 
 # List all installed plugins
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js plugins list --installed
+hive-flow plugins list --installed
 ```
 
 </details>
@@ -2020,8 +2020,8 @@ Workers run automatically based on context, or dispatch manually via MCP tools.
 | **TestGaps** | `testgaps` | Test coverage analysis | Code changes without tests |
 
 ```bash
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js worker dispatch --trigger audit --context "./src"
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js worker status
+hive-flow worker dispatch --trigger audit --context "./src"
+hive-flow worker status
 ```
 
 </details>
@@ -2345,10 +2345,10 @@ hive-flow ruvector backup --output ./backup.sql
 
 **Quick Commands:**
 ```bash
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hive-mind init                                    # Initialize
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hive-mind spawn "Build API" --queen-type tactical # Spawn swarm
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hive-mind spawn "Research AI" --consensus byzantine --claude
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hive-mind status                                  # Check status
+hive-flow hive-mind init                                    # Initialize
+hive-flow hive-mind spawn "Build API" --queen-type tactical # Spawn swarm
+hive-flow hive-mind spawn "Research AI" --consensus byzantine --claude
+hive-flow hive-mind status                                  # Check status
 ```
 
 **Hive Flow Skill:** `/hive-mind-advanced` — Full hive mind orchestration
@@ -2491,7 +2491,7 @@ Claude Code pipes JSON session data via **stdin** to the statusline script after
 
 **Setup (Automatic):**
 
-Run `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js init` — this generates `.claude/settings.json` with the correct statusline config and creates the helper script at `.claude/helpers/statusline.cjs`.
+Run `hive-flow init` — this generates `.claude/settings.json` with the correct statusline config and creates the helper script at `.claude/helpers/statusline.cjs`.
 
 The generated config uses a **fast local script** (no `npx` cold-start):
 ```json
@@ -2509,7 +2509,7 @@ The generated config uses a **fast local script** (no `npx` cold-start):
 
 If your statusline is not updating, run the upgrade command to regenerate helpers and fix the config:
 ```bash
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js init --update --settings
+hive-flow init --update --settings
 ```
 
 This removes invalid config fields and regenerates the statusline helper with stdin support.
@@ -2559,19 +2559,19 @@ Cross-platform TypeScript-based daemon service with auto-scheduling:
 **Commands:**
 ```bash
 # Start daemon (auto-runs on SessionStart hooks)
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js daemon start
+hive-flow daemon start
 
 # Check status with worker history
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js daemon status
+hive-flow daemon status
 
 # Manually trigger a worker
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js daemon trigger map
+hive-flow daemon trigger map
 
 # Enable/disable workers
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js daemon enable map audit optimize
+hive-flow daemon enable map audit optimize
 
 # Stop daemon
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js daemon stop
+hive-flow daemon stop
 ```
 
 **Daemon Status Output:**
@@ -2687,25 +2687,25 @@ Complete command-line interface for all Hive Flow operations.
 
 ```bash
 # Initialize project with wizard
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js init --wizard
+hive-flow init --wizard
 
 # Start daemon with background workers
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js daemon start
+hive-flow daemon start
 
 # Spawn an agent with specific type
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js agent spawn -t coder --name my-coder
+hive-flow agent spawn -t coder --name my-coder
 
 # Initialize swarm with V3 mode
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js swarm init --v3-mode
+hive-flow swarm init --v3-mode
 
 # Search memory (HNSW-indexed, 150x faster)
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory search -q "authentication patterns"
+hive-flow memory search -q "authentication patterns"
 
 # Run security scan
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js security scan --depth full
+hive-flow security scan --depth full
 
 # Performance benchmark
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js performance benchmark --suite all
+hive-flow performance benchmark --suite all
 ```
 
 </details>
@@ -2713,7 +2713,7 @@ node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.
 <details>
 <summary>🩺 <strong>Doctor Health Checks</strong> — System diagnostics with auto-fix</summary>
 
-Run `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js doctor` to diagnose and fix common issues.
+Run `hive-flow doctor` to diagnose and fix common issues.
 
 **Health Checks Performed:**
 
@@ -2734,16 +2734,16 @@ Run `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin
 
 ```bash
 # Run full diagnostics
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js doctor
+hive-flow doctor
 
 # Run diagnostics with auto-fix
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js doctor --fix
+hive-flow doctor --fix
 
 # Check specific component
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js doctor --component memory
+hive-flow doctor --component memory
 
 # Verbose output
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js doctor --verbose
+hive-flow doctor --verbose
 ```
 
 **Output Example:**
@@ -2793,16 +2793,16 @@ The embeddings package (v3.0.0-alpha.12) provides high-performance vector embedd
 
 ```bash
 # Initialize embeddings system
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js embeddings init
+hive-flow embeddings init
 
 # Generate embedding for text
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js embeddings embed "authentication patterns"
+hive-flow embeddings embed "authentication patterns"
 
 # Batch embed multiple texts
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js embeddings batch --file texts.txt
+hive-flow embeddings batch --file texts.txt
 
 # Search with semantic similarity
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js embeddings search "login flow" --top-k 5
+hive-flow embeddings search "login flow" --top-k 5
 ```
 
 **Programmatic:**
@@ -2839,59 +2839,59 @@ Real-world scenarios and pre-built workflows for common tasks.
 
 | Scenario | What It Solves | How To Do It |
 |----------|----------------|--------------|
-| **Code Review** | Get thorough reviews with security, performance, and style checks | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js --agent reviewer --task "Review PR #123"` |
-| **Test Generation** | Auto-generate unit, integration, and e2e tests for existing code | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js --agent tester --task "Write tests for auth module"` |
-| **Refactoring** | Safely restructure code while maintaining behavior | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js --agent coder --task "Refactor user service to use repository pattern"` |
-| **Bug Fixing** | Diagnose and fix bugs with full context analysis | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js --agent coder --task "Fix race condition in checkout flow"` |
+| **Code Review** | Get thorough reviews with security, performance, and style checks | `hive-flow --agent reviewer --task "Review PR #123"` |
+| **Test Generation** | Auto-generate unit, integration, and e2e tests for existing code | `hive-flow --agent tester --task "Write tests for auth module"` |
+| **Refactoring** | Safely restructure code while maintaining behavior | `hive-flow --agent coder --task "Refactor user service to use repository pattern"` |
+| **Bug Fixing** | Diagnose and fix bugs with full context analysis | `hive-flow --agent coder --task "Fix race condition in checkout flow"` |
 
 ### 🔒 Security & Compliance
 
 | Scenario | What It Solves | How To Do It |
 |----------|----------------|--------------|
-| **Security Audit** | Find vulnerabilities before attackers do | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js --agent security-architect --task "Audit for OWASP Top 10"` |
-| **Dependency Scan** | Identify vulnerable packages and suggest upgrades | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js security scan --depth full` |
-| **Compliance Check** | Ensure code meets security standards | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js --agent security-architect --task "Check PCI-DSS compliance"` |
+| **Security Audit** | Find vulnerabilities before attackers do | `hive-flow --agent security-architect --task "Audit for OWASP Top 10"` |
+| **Dependency Scan** | Identify vulnerable packages and suggest upgrades | `hive-flow security scan --depth full` |
+| **Compliance Check** | Ensure code meets security standards | `hive-flow --agent security-architect --task "Check PCI-DSS compliance"` |
 
 ### 🐝 Multi-Agent Swarms
 
 | Scenario | What It Solves | How To Do It |
 |----------|----------------|--------------|
-| **Feature Development** | Coordinate multiple agents on complex features | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js swarm init --topology hierarchical && node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js task orchestrate "Build user dashboard"` |
-| **Large Refactors** | Parallel refactoring across many files without conflicts | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js swarm init --topology mesh --max-agents 8` |
-| **Codebase Migration** | Migrate frameworks, languages, or patterns systematically | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js task orchestrate "Migrate from Express to Fastify" --strategy adaptive` |
+| **Feature Development** | Coordinate multiple agents on complex features | `hive-flow swarm init --topology hierarchical && hive-flow task orchestrate "Build user dashboard"` |
+| **Large Refactors** | Parallel refactoring across many files without conflicts | `hive-flow swarm init --topology mesh --max-agents 8` |
+| **Codebase Migration** | Migrate frameworks, languages, or patterns systematically | `hive-flow task orchestrate "Migrate from Express to Fastify" --strategy adaptive` |
 
 ### 📊 Performance & Optimization
 
 | Scenario | What It Solves | How To Do It |
 |----------|----------------|--------------|
-| **Performance Profiling** | Find and fix bottlenecks in your application | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js --agent perf-analyzer --task "Profile API endpoints"` |
-| **Query Optimization** | Speed up slow database queries | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks route "Optimize database queries"` |
-| **Memory Analysis** | Reduce memory usage and fix leaks | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js --agent perf-analyzer --task "Analyze memory usage patterns"` |
+| **Performance Profiling** | Find and fix bottlenecks in your application | `hive-flow --agent perf-analyzer --task "Profile API endpoints"` |
+| **Query Optimization** | Speed up slow database queries | `hive-flow hooks route "Optimize database queries"` |
+| **Memory Analysis** | Reduce memory usage and fix leaks | `hive-flow --agent perf-analyzer --task "Analyze memory usage patterns"` |
 
 ### 🔄 GitHub & DevOps
 
 | Scenario | What It Solves | How To Do It |
 |----------|----------------|--------------|
-| **PR Management** | Review, approve, and merge PRs efficiently | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js --agent pr-manager --task "Review open PRs"` |
-| **Issue Triage** | Categorize, prioritize, and assign issues automatically | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js --agent issue-tracker --task "Triage new issues"` |
-| **Release Management** | Coordinate releases with changelogs and versioning | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js --agent release-manager --task "Prepare v2.0 release"` |
-| **CI/CD Optimization** | Speed up pipelines and reduce flaky tests | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js --agent cicd-engineer --task "Optimize GitHub Actions workflow"` |
+| **PR Management** | Review, approve, and merge PRs efficiently | `hive-flow --agent pr-manager --task "Review open PRs"` |
+| **Issue Triage** | Categorize, prioritize, and assign issues automatically | `hive-flow --agent issue-tracker --task "Triage new issues"` |
+| **Release Management** | Coordinate releases with changelogs and versioning | `hive-flow --agent release-manager --task "Prepare v2.0 release"` |
+| **CI/CD Optimization** | Speed up pipelines and reduce flaky tests | `hive-flow --agent cicd-engineer --task "Optimize GitHub Actions workflow"` |
 
 ### 📋 Spec-Driven Development
 
 | Scenario | What It Solves | How To Do It |
 |----------|----------------|--------------|
-| **Generate Specs** | Create complete specifications before coding | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js --agent architect --task "Create ADR for authentication system"` |
-| **Validate Implementation** | Ensure code matches specifications | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks progress --detailed` |
-| **Track Compliance** | Monitor spec adherence across the team | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js progress sync` |
+| **Generate Specs** | Create complete specifications before coding | `hive-flow --agent architect --task "Create ADR for authentication system"` |
+| **Validate Implementation** | Ensure code matches specifications | `hive-flow hooks progress --detailed` |
+| **Track Compliance** | Monitor spec adherence across the team | `hive-flow progress sync` |
 
 ### 🧠 Learning & Intelligence
 
 | Scenario | What It Solves | How To Do It |
 |----------|----------------|--------------|
-| **Bootstrap Intelligence** | Train the system on your codebase patterns | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks pretrain --depth deep` |
-| **Optimize Routing** | Improve task-to-agent matching over time | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks route "<task>" --include-explanation` |
-| **Transfer Learning** | Apply patterns learned from other projects | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks transfer <sourceProject>` |
+| **Bootstrap Intelligence** | Train the system on your codebase patterns | `hive-flow hooks pretrain --depth deep` |
+| **Optimize Routing** | Improve task-to-agent matching over time | `hive-flow hooks route "<task>" --include-explanation` |
+| **Transfer Learning** | Apply patterns learned from other projects | `hive-flow hooks transfer <sourceProject>` |
 
 </details>
 
@@ -3193,7 +3193,7 @@ When hooks run, they emit signals that guide routing decisions. Watch for these 
 
 **Example Hook Output:**
 ```bash
-$ node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks pre-task --description "convert var to const in utils.ts"
+$ hive-flow hooks pre-task --description "convert var to const in utils.ts"
 
 [AGENT_BOOSTER_AVAILABLE] Intent: var-to-const
 Recommendation: Use Edit tool directly
@@ -3311,8 +3311,8 @@ The stats command shows:
 
 ```bash
 # Example: Edit with pattern learning
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks pre-edit ./src/auth.ts
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks post-edit ./src/auth.ts --success true --train-patterns
+hive-flow hooks pre-edit ./src/auth.ts
+hive-flow hooks post-edit ./src/auth.ts --success true --train-patterns
 ```
 
 #### 🧠 Intelligence & Routing Hooks (8 hooks)
@@ -3330,10 +3330,10 @@ node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.
 
 ```bash
 # Route a task with explanation
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks route "refactor authentication to use JWT" --include-explanation
+hive-flow hooks route "refactor authentication to use JWT" --include-explanation
 
 # Bootstrap intelligence from your codebase
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks pretrain --depth deep --model-type moe
+hive-flow hooks pretrain --depth deep --model-type moe
 ```
 
 #### 📅 Session Management Hooks (4 hooks)
@@ -3347,10 +3347,10 @@ node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.
 
 ```bash
 # Start session with auto-daemon
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks session-start --session-id "feature-auth" --start-daemon
+hive-flow hooks session-start --session-id "feature-auth" --start-daemon
 
 # End session and export learnings
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks session-end --export-metrics --persist-patterns
+hive-flow hooks session-end --export-metrics --persist-patterns
 ```
 
 #### 🤖 Intelligence System Hooks (9 hooks)
@@ -3369,13 +3369,13 @@ node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.
 
 ```bash
 # Start trajectory for complex task
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks intelligence trajectory-start --task "implement OAuth2"
+hive-flow hooks intelligence trajectory-start --task "implement OAuth2"
 
 # Record successful action
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks intelligence trajectory-step --action "created token service" --quality 0.9
+hive-flow hooks intelligence trajectory-step --action "created token service" --quality 0.9
 
 # End trajectory and trigger learning
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks intelligence trajectory-end --success true
+hive-flow hooks intelligence trajectory-end --success true
 
 # View intelligence diagnostics and improvement trends (ADR-050)
 node .claude/helpers/hook-handler.cjs stats
@@ -3403,13 +3403,13 @@ Workers run automatically based on context, or dispatch manually.
 
 ```bash
 # List all workers
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks worker list
+hive-flow hooks worker list
 
 # Manually dispatch security audit
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks worker dispatch --trigger audit --context "./src/auth"
+hive-flow hooks worker dispatch --trigger audit --context "./src/auth"
 
 # Check worker status
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks worker status
+hive-flow hooks worker status
 ```
 
 ### Model Routing Hooks (3 hooks)
@@ -3424,10 +3424,10 @@ Automatically selects haiku/sonnet/opus based on task complexity.
 
 ```bash
 # Get model recommendation
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks model-route --task "fix typo in README"
+hive-flow hooks model-route --task "fix typo in README"
 # → Recommends: haiku (simple task, low complexity)
 
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks model-route --task "design distributed consensus system"
+hive-flow hooks model-route --task "design distributed consensus system"
 # → Recommends: opus (complex architecture, high reasoning)
 ```
 
@@ -3448,15 +3448,15 @@ node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.
 # ══════════════════════════════════════════════════════════════════
 
 # Route task to best agent (with intelligence context injection)
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks route "<task>" --include-explanation
+hive-flow hooks route "<task>" --include-explanation
 
 # Start/end session with learning
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks session-start --start-daemon
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks session-end --persist-patterns
+hive-flow hooks session-start --start-daemon
+hive-flow hooks session-end --persist-patterns
 
 # View what the system has learned
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks metrics
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks intelligence stats
+hive-flow hooks metrics
+hive-flow hooks intelligence stats
 
 # Intelligence diagnostics — see if intelligence is improving
 node .claude/helpers/hook-handler.cjs stats          # Human-readable
@@ -3464,10 +3464,10 @@ node .claude/helpers/hook-handler.cjs stats --json   # JSON for scripting
 node .claude/helpers/intelligence.cjs stats           # Direct access
 
 # Bootstrap on new project
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks pretrain --depth deep
+hive-flow hooks pretrain --depth deep
 
 # Dispatch background worker
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks worker dispatch --trigger audit
+hive-flow hooks worker dispatch --trigger audit
 ```
 
 </details>
@@ -3493,38 +3493,38 @@ Share learned patterns across projects, teams, and the community via the decentr
 
 ```bash
 # Export learned patterns to file
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory export --format json --output ./patterns.json
+hive-flow memory export --format json --output ./patterns.json
 
 # Export specific namespace
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory export --namespace "security" --output ./security-patterns.json
+hive-flow memory export --namespace "security" --output ./security-patterns.json
 
 # Export with embeddings (larger file, faster import)
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory export --include-embeddings --output ./full-export.json
+hive-flow memory export --include-embeddings --output ./full-export.json
 
 # Export agent configurations
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js config export --scope project --output ./agent-configs.json
+hive-flow config export --scope project --output ./agent-configs.json
 
 # Export session state
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js session export --session-id "my-session" --output ./session.json
+hive-flow session export --session-id "my-session" --output ./session.json
 ```
 
 ### Import Commands
 
 ```bash
 # Import patterns from file
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory import --input ./patterns.json
+hive-flow memory import --input ./patterns.json
 
 # Import and merge with existing (don't overwrite)
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory import --input ./patterns.json --merge
+hive-flow memory import --input ./patterns.json --merge
 
 # Import from another project
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks transfer --source-path ../other-project
+hive-flow hooks transfer --source-path ../other-project
 
 # Import agent configurations
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js config import --input ./agent-configs.json --scope project
+hive-flow config import --input ./agent-configs.json --scope project
 
 # Restore session
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js session restore --session-id "my-session"
+hive-flow session restore --session-id "my-session"
 ```
 
 ### Pattern Store (IPFS Marketplace)
@@ -3542,13 +3542,13 @@ Decentralized pattern marketplace for sharing and discovering community patterns
 
 ```bash
 # Search for authentication patterns
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js transfer-store search --query "authentication" --min-rating 4.0
+hive-flow transfer-store search --query "authentication" --min-rating 4.0
 
 # Download a pattern
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js transfer-store download --id "auth-jwt-patterns-v2" --verify
+hive-flow transfer-store download --id "auth-jwt-patterns-v2" --verify
 
 # Publish your patterns
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js transfer-store publish --input ./my-patterns.json --category "security"
+hive-flow transfer-store publish --input ./my-patterns.json --category "security"
 ```
 
 ### Plugin Store
@@ -3566,22 +3566,22 @@ Discover and install community plugins from the **live IPFS registry** with 19 o
 
 ```bash
 # List plugins with live ratings from Cloud Function
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js plugins list
+hive-flow plugins list
 
 # Filter by type
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js plugins list --type integration
+hive-flow plugins list --type integration
 
 # Rate a plugin
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js plugins rate --name @hive-flow/embeddings --rating 5
+hive-flow plugins rate --name @hive-flow/embeddings --rating 5
 
 # Search for MCP tool plugins
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js transfer plugin-search --type "mcp-tool" --verified
+hive-flow transfer plugin-search --type "mcp-tool" --verified
 
 # Get plugin info
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js transfer plugin-info --name "semantic-code-search"
+hive-flow transfer plugin-info --name "semantic-code-search"
 
 # List official plugins
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js transfer plugin-official
+hive-flow transfer plugin-official
 ```
 
 #### Live IPFS Plugin Registry
@@ -3614,10 +3614,10 @@ Patterns and models are distributed via IPFS for decentralization and integrity.
 
 ```bash
 # Resolve IPNS name to CID
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js transfer ipfs-resolve --name "/ipns/patterns.hive-flow.io"
+hive-flow transfer ipfs-resolve --name "/ipns/patterns.hive-flow.io"
 
 # Detect PII before publishing
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js transfer detect-pii --content "$(cat ./patterns.json)"
+hive-flow transfer detect-pii --content "$(cat ./patterns.json)"
 ```
 
 ### Model & Learning Pattern Import/Export
@@ -3682,13 +3682,13 @@ Import pre-trained learning patterns for common tasks. **90.5% average accuracy*
 curl -s "https://gateway.pinata.cloud/ipfs/QmNr1yYMKi7YBaL8JSztQyuB5ZUaTdRMLxJC1pBpGbjsTc" | jq '.models[].name'
 
 # Import all models
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js transfer import --cid QmNr1yYMKi7YBaL8JSztQyuB5ZUaTdRMLxJC1pBpGbjsTc
+hive-flow transfer import --cid QmNr1yYMKi7YBaL8JSztQyuB5ZUaTdRMLxJC1pBpGbjsTc
 
 # Import specific category
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js neural import --model security-review-patterns --source ipfs
+hive-flow neural import --model security-review-patterns --source ipfs
 
 # Use patterns in routing
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks route --task "review authentication code" --use-patterns
+hive-flow hooks route --task "review authentication code" --use-patterns
 ```
 
 #### Benefits vs Fresh Install
@@ -3713,7 +3713,7 @@ node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.
 
 ```bash
 # Install a pattern pack
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js transfer-store download --id "security-essentials" --apply
+hive-flow transfer-store download --id "security-essentials" --apply
 ```
 
 ### RuVector WASM Neural Training
@@ -3731,25 +3731,25 @@ Real WASM-accelerated neural training using `@ruvector/learning-wasm` and `@ruve
 
 ```bash
 # List available pre-trained models from IPFS registry
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js neural list
+hive-flow neural list
 
 # List models by category
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js neural list --category security
+hive-flow neural list --category security
 
 # Train with WASM acceleration
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js neural train -p coordination -e 100 --wasm --flash --contrastive
+hive-flow neural train -p coordination -e 100 --wasm --flash --contrastive
 
 # Train security patterns
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js neural train -p security --wasm --contrastive
+hive-flow neural train -p security --wasm --contrastive
 
 # Benchmark WASM performance
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js neural benchmark -d 256 -i 1000
+hive-flow neural benchmark -d 256 -i 1000
 
 # Import pre-trained models
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js neural import --cid QmNr1yYMKi7YBaL8JSztQyuB5ZUaTdRMLxJC1pBpGbjsTc
+hive-flow neural import --cid QmNr1yYMKi7YBaL8JSztQyuB5ZUaTdRMLxJC1pBpGbjsTc
 
 # Export trained patterns to IPFS
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js neural export --ipfs --sign
+hive-flow neural export --ipfs --sign
 ```
 
 #### Benchmark Results
@@ -4088,9 +4088,9 @@ Skills are **reusable workflows** that combine agents, hooks, and patterns into 
 /v3-security-overhaul
 
 # Via CLI
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js skill run github-code-review
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js skill list
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js skill info sparc-methodology
+hive-flow skill run github-code-review
+hive-flow skill list
+hive-flow skill info sparc-methodology
 ```
 
 ### Creating Custom Skills
@@ -4147,21 +4147,21 @@ The Claims system manages **who is working on what** — whether human or agent.
 
 | Command | What It Does | Example |
 |---------|--------------|---------|
-| `issues list` | See all issues and their status | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js issues list` |
-| `issues claim` | Claim an issue for yourself/agent | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js issues claim #123 --as coder-1` |
-| `issues release` | Release your claim | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js issues release #123` |
-| `issues handoff` | Hand off to another worker | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js issues handoff #123 --to reviewer` |
-| `issues status` | Update progress on claimed work | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js issues status #123 --progress 75` |
-| `issues stealable` | List abandoned/stuck issues | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js issues stealable` |
-| `issues steal` | Take over stealable issue | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js issues steal #123` |
-| `issues load` | View agent workloads | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js issues load` |
-| `issues rebalance` | Redistribute work evenly | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js issues rebalance --dry-run` |
-| `issues board` | Visual board view | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js issues board` |
+| `issues list` | See all issues and their status | `hive-flow issues list` |
+| `issues claim` | Claim an issue for yourself/agent | `hive-flow issues claim #123 --as coder-1` |
+| `issues release` | Release your claim | `hive-flow issues release #123` |
+| `issues handoff` | Hand off to another worker | `hive-flow issues handoff #123 --to reviewer` |
+| `issues status` | Update progress on claimed work | `hive-flow issues status #123 --progress 75` |
+| `issues stealable` | List abandoned/stuck issues | `hive-flow issues stealable` |
+| `issues steal` | Take over stealable issue | `hive-flow issues steal #123` |
+| `issues load` | View agent workloads | `hive-flow issues load` |
+| `issues rebalance` | Redistribute work evenly | `hive-flow issues rebalance --dry-run` |
+| `issues board` | Visual board view | `hive-flow issues board` |
 
 ### Visual Board View
 
 ```bash
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js issues board
+hive-flow issues board
 ```
 
 ```
@@ -4183,13 +4183,13 @@ When you need to pass work to someone else:
 
 ```bash
 # 1. Request handoff with context
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js issues handoff #123 \
+hive-flow issues handoff #123 \
   --to security-architect \
   --reason "Needs security review" \
   --progress 80
 
 # 2. Target accepts handoff
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js issues accept #123 --as security-architect
+hive-flow issues accept #123 --as security-architect
 
 # 3. Work continues with full context
 ```
@@ -4198,7 +4198,7 @@ node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.
 
 ```bash
 # View current load
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js issues load
+hive-flow issues load
 
 # Output:
 # Agent          | Claims | Load  | Status
@@ -4209,7 +4209,7 @@ node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.
 # security-arch  | 0      | 0%    | 🟢 Available
 
 # Auto-rebalance
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js issues rebalance
+hive-flow issues rebalance
 ```
 
 ### MCP Tools
@@ -4270,14 +4270,14 @@ The Route system uses **Q-Learning** to automatically assign tasks to the best a
 
 | Command | What It Does | Example |
 |---------|--------------|---------|
-| `route task` | Get agent recommendation | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js route task "implement OAuth2"` |
-| `route explain` | Understand routing decision | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js route explain "task"` |
-| `route coverage` | Route based on test coverage | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js route coverage` |
+| `route task` | Get agent recommendation | `hive-flow route task "implement OAuth2"` |
+| `route explain` | Understand routing decision | `hive-flow route explain "task"` |
+| `route coverage` | Route based on test coverage | `hive-flow route coverage` |
 
 ### Example: Route a Task
 
 ```bash
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js route task "refactor authentication to use JWT"
+hive-flow route task "refactor authentication to use JWT"
 
 # Output:
 # ╔══════════════════════════════════════════════════════════════╗
@@ -4304,7 +4304,7 @@ node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.
 Routes tasks to agents based on **test coverage gaps**:
 
 ```bash
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js route coverage
+hive-flow route coverage
 
 # Finds untested code and routes to tester agent:
 # • src/auth/jwt.ts - 23% coverage → tester
@@ -4316,10 +4316,10 @@ node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.
 
 ```bash
 # Route via hooks (preferred)
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks route "implement caching layer" --include-explanation
+hive-flow hooks route "implement caching layer" --include-explanation
 
 # Record outcome for learning
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks post-task --task-id "task-123" --success true --agent coder
+hive-flow hooks post-task --task-id "task-123" --success true --agent coder
 ```
 
 ### How Q-Learning Improves Over Time
@@ -4390,21 +4390,21 @@ console.log(results);
 **CLI Commands:**
 ```bash
 # Initialize memory database
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory init --force
+hive-flow memory init --force
 
 # Store patterns
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory store --key "pattern-auth" --value "JWT authentication with refresh tokens"
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory store --key "pattern-cache" --value "Redis caching for API responses"
+hive-flow memory store --key "pattern-auth" --value "JWT authentication with refresh tokens"
+hive-flow memory store --key "pattern-cache" --value "Redis caching for API responses"
 
 # Build HNSW index for 150x-12,500x faster search
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory search --query "authentication" --build-hnsw
+hive-flow memory search --query "authentication" --build-hnsw
 
 # Semantic search (uses HNSW if built)
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory search --query "how to cache data" --limit 5
+hive-flow memory search --query "how to cache data" --limit 5
 
 # List and manage entries
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory list --namespace patterns
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory stats
+hive-flow memory list --namespace patterns
+hive-flow memory stats
 ```
 
 </details>
@@ -5379,7 +5379,7 @@ const compressed = ruvector.compress(embedding, 0.3); // 30% quality threshold
 
 ```bash
 # Quick setup with CLI (recommended)
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js ruvector setup --output ./my-ruvector
+hive-flow ruvector setup --output ./my-ruvector
 cd my-ruvector && docker-compose up -d
 
 # Or pull directly from Docker Hub
@@ -5392,7 +5392,7 @@ docker run -d \
   ruvnet/ruvector-postgres
 
 # Migrate existing memory to PostgreSQL
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js ruvector import --input memory-export.json
+hive-flow ruvector import --input memory-export.json
 ```
 
 **RuVector PostgreSQL vs pgvector:**
@@ -5572,19 +5572,19 @@ const similarity = attention.attention(queries, keys, values);
 
 ```bash
 # RuVector PostgreSQL Setup (generates Docker files + SQL)
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js ruvector setup                    # Output to ./ruvector-postgres
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js ruvector setup --output ./mydir   # Custom directory
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js ruvector setup --print            # Preview files
+hive-flow ruvector setup                    # Output to ./ruvector-postgres
+hive-flow ruvector setup --output ./mydir   # Custom directory
+hive-flow ruvector setup --print            # Preview files
 
 # Import from sql.js/JSON to PostgreSQL
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js ruvector import --input data.json              # Direct import
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js ruvector import --input data.json --output sql # Dry-run (generate SQL)
+hive-flow ruvector import --input data.json              # Direct import
+hive-flow ruvector import --input data.json --output sql # Dry-run (generate SQL)
 
 # Other RuVector commands
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js ruvector status --verbose         # Check connection
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js ruvector benchmark --vectors 10000 # Performance test
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js ruvector optimize --analyze       # Optimization suggestions
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js ruvector backup --output backup.sql # Backup data
+hive-flow ruvector status --verbose         # Check connection
+hive-flow ruvector benchmark --vectors 10000 # Performance test
+hive-flow ruvector optimize --analyze       # Optimization suggestions
+hive-flow ruvector backup --output backup.sql # Backup data
 
 # Native ruvector CLI
 npx ruvector status                               # Check installation
@@ -5664,7 +5664,7 @@ Flow Nexus is a **cloud platform** for deploying and scaling Hive Flow beyond yo
 /flow-nexus-swarm
 
 # Or via CLI
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js nexus swarm deploy \
+hive-flow nexus swarm deploy \
   --topology hierarchical \
   --max-agents 50 \
   --region us-east-1
@@ -5676,13 +5676,13 @@ Isolated execution environments for running untrusted code:
 
 ```bash
 # Create sandbox
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js nexus sandbox create --language python
+hive-flow nexus sandbox create --language python
 
 # Execute code safely
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js nexus sandbox exec --code "print('Hello')"
+hive-flow nexus sandbox exec --code "print('Hello')"
 
 # Cleanup
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js nexus sandbox destroy
+hive-flow nexus sandbox destroy
 ```
 
 ### Event-Driven Workflows
@@ -5708,10 +5708,10 @@ steps:
 # 1. Sign up at flow-nexus.io
 # 2. Get API key
 # 3. Configure
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js nexus configure --api-key <key>
+hive-flow nexus configure --api-key <key>
 
 # 4. Deploy
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js nexus swarm deploy
+hive-flow nexus swarm deploy
 ```
 
 </details>
@@ -5745,7 +5745,7 @@ Stream-Chain enables **sequential processing** where the output of one agent bec
 /stream-chain
 
 # Define pipeline
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js stream-chain create \
+hive-flow stream-chain create \
   --name "feature-pipeline" \
   --stages "researcher,architect,coder,tester,reviewer"
 ```
@@ -5787,11 +5787,11 @@ stages:
 
 ```bash
 # Run the pipeline
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js stream-chain run feature-pipeline \
+hive-flow stream-chain run feature-pipeline \
   --input '{"requirements": "Add user dashboard with analytics"}'
 
 # Monitor progress
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js stream-chain status feature-pipeline
+hive-flow stream-chain status feature-pipeline
 ```
 
 ### Use Cases
@@ -5831,7 +5831,7 @@ The Pair Programming skill provides **human-AI collaborative coding** with role 
 /pair-programming --mode tdd
 
 # Via CLI
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js pair start --mode navigator
+hive-flow pair start --mode navigator
 ```
 
 ### TDD Mode Workflow
@@ -5871,16 +5871,16 @@ node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.
 
 ```bash
 # Switch roles mid-session
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js pair switch
+hive-flow pair switch
 
 # Get AI explanation
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js pair explain
+hive-flow pair explain
 
 # Run tests
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js pair test
+hive-flow pair test
 
 # End session with summary
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js pair end
+hive-flow pair end
 ```
 
 </details>
@@ -5937,22 +5937,22 @@ Detection Time: 0.04ms | 50+ Patterns | Self-Learning | HNSW Vector Search
 
 ```bash
 # Basic threat scan
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js security defend -i "ignore previous instructions"
+hive-flow security defend -i "ignore previous instructions"
 
 # Scan a file
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js security defend -f ./user-prompts.txt
+hive-flow security defend -f ./user-prompts.txt
 
 # Quick scan (faster)
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js security defend -i "some text" --quick
+hive-flow security defend -i "some text" --quick
 
 # JSON output
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js security defend -i "test" -o json
+hive-flow security defend -i "test" -o json
 
 # View statistics
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js security defend --stats
+hive-flow security defend --stats
 
 # Full security audit
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js security scan --depth full
+hive-flow security scan --depth full
 ```
 
 ### MCP Tools
@@ -6349,16 +6349,16 @@ async function release(version: string, tag: string) {
 
 ```bash
 # Prepare release
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js deployment release --version 2.0.0 --changelog --tag
+hive-flow deployment release --version 2.0.0 --changelog --tag
 
 # Publish to npm
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js deployment publish --tag latest --access public
+hive-flow deployment publish --tag latest --access public
 
 # Validate package
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js deployment validate
+hive-flow deployment validate
 
 # Dry run (no changes)
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js deployment release --version 2.0.0 --dry-run
+hive-flow deployment release --version 2.0.0 --dry-run
 ```
 
 </details>
@@ -6543,10 +6543,10 @@ npm run bench:attention
 npm run bench:startup
 
 # Performance report
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js performance report
+hive-flow performance report
 
 # Benchmark specific suite
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js performance benchmark --suite memory
+hive-flow performance benchmark --suite memory
 ```
 
 </details>
@@ -6932,21 +6932,21 @@ Environment setup, configuration options, and platform support.
 ### Windows (PowerShell)
 
 ```powershell
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js security audit --platform windows
+hive-flow security audit --platform windows
 $env:hive_FLOW_MODE = "integration"
 ```
 
 ### macOS (Bash/Zsh)
 
 ```bash
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js security audit --platform darwin
+hive-flow security audit --platform darwin
 export hive_FLOW_SECURITY_MODE="strict"
 ```
 
 ### Linux (Bash)
 
 ```bash
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js security audit --platform linux
+hive-flow security audit --platform linux
 export hive_FLOW_MEMORY_PATH="./data"
 ```
 
@@ -7324,25 +7324,25 @@ Hive Flow looks for configuration in this order:
 
 ```bash
 # View current configuration
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js config list
+hive-flow config list
 
 # Get specific value
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js config get --key memory.type
+hive-flow config get --key memory.type
 
 # Set configuration value
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js config set --key swarm.maxAgents --value 10
+hive-flow config set --key swarm.maxAgents --value 10
 
 # Export configuration
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js config export > my-config.json
+hive-flow config export > my-config.json
 
 # Import configuration
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js config import --file my-config.json
+hive-flow config import --file my-config.json
 
 # Reset to defaults
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js config reset --key swarm
+hive-flow config reset --key swarm
 
 # Initialize with wizard
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js init --wizard
+hive-flow init --wizard
 ```
 
 </details>
@@ -7366,7 +7366,7 @@ lsof -i :3000
 # Kill existing process
 kill -9 <PID>
 # Restart MCP server
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js mcp start
+hive-flow mcp start
 ```
 
 **Agent spawn failures**
@@ -7380,9 +7380,9 @@ export hive_FLOW_MAX_AGENTS=5
 **Pattern search returning no results**
 ```bash
 # Verify patterns are stored
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks metrics
+hive-flow hooks metrics
 # Re-run pretraining if empty
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks pretrain
+hive-flow hooks pretrain
 ```
 
 **Windows path issues**
@@ -7450,20 +7450,20 @@ cp -r ./data ./data-backup-v2
 cp -r ./.hive-flow ./.hive-flow-backup-v2
 
 # STEP 2: Check migration status
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js migrate status
+hive-flow migrate status
 
 # STEP 3: Run migration with dry-run first
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js migrate run --dry-run
+hive-flow migrate run --dry-run
 
 # STEP 4: Execute migration
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js migrate run --from v2
+hive-flow migrate run --from v2
 
 # STEP 5: Verify migration
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js migrate verify
+hive-flow migrate verify
 
 # STEP 6: Initialize V3 learning
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks pretrain
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js doctor --fix
+hive-flow hooks pretrain
+hive-flow doctor --fix
 ```
 
 ### Command Changes Reference
@@ -7530,10 +7530,10 @@ If migration fails, you can rollback:
 
 ```bash
 # Check rollback options
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js migrate rollback --list
+hive-flow migrate rollback --list
 
 # Rollback to V2
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js migrate rollback --to v2
+hive-flow migrate rollback --to v2
 
 # Restore backup manually if needed
 rm -rf ./data
@@ -7542,12 +7542,12 @@ cp -r ./data-backup-v2 ./data
 
 ### Post-Migration Checklist
 
-- [ ] Verify all agents spawn correctly: `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js agent list`
-- [ ] Check memory search works: `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory search -q "test"`
-- [ ] Confirm MCP server starts: `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js mcp start`
-- [ ] Run doctor diagnostics: `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js doctor`
-- [ ] Test a simple swarm: `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js swarm init --topology mesh`
-- [ ] Bootstrap learning: `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks pretrain`
+- [ ] Verify all agents spawn correctly: `hive-flow agent list`
+- [ ] Check memory search works: `hive-flow memory search -q "test"`
+- [ ] Confirm MCP server starts: `hive-flow mcp start`
+- [ ] Run doctor diagnostics: `hive-flow doctor`
+- [ ] Test a simple swarm: `hive-flow swarm init --topology mesh`
+- [ ] Bootstrap learning: `hive-flow hooks pretrain`
 
 ### Common Migration Issues
 
