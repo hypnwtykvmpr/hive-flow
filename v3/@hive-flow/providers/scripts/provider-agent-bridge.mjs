@@ -31,6 +31,12 @@ import { readFileSync, writeFileSync, appendFileSync, mkdirSync, renameSync, exi
 import { join, dirname, resolve, relative } from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 import { execFileSync } from 'child_process';
+import {
+  patternIsRejected,
+  fileGlobIsRejected,
+  buildRgArgs,
+  buildGrepArgs,
+} from './bridge-grep-validators.mjs';
 
 // Module-level limits — set once in main() after provider/model are resolved.
 // Used by BRIDGE_FILESYSTEM_TOOLS handlers for context-aware size caps.
@@ -175,34 +181,90 @@ const DEFAULT_MAX_HISTORY_ENTRIES = 50;
 const DEFAULT_MAX_PROMPT_TOKENS = 128000; // 128K tokens safe default
 
 // Per-provider context token limits (tokens, not bytes)
-// Sources: deepseek=131072, gemini-3.1-pro=1M, sonnet=200K, opus=1M, gpt-5.4=1M, cursor=auto
+// Sources: deepseek=1M (DeepSeek-V4 unified window), gemini-3.1-pro=1M, sonnet=200K, opus=1M, gpt-5.5=400K, cursor=200K
 // anthropic-cli can be sonnet (200K) or opus (1M) — use model-aware routing below
-// codex-cli uses gpt-5.4 (1M context)
+// codex-cli uses gpt-5.5 (400K context)
 const PROVIDER_TOKEN_LIMITS = {
-  'anthropic-cli': { maxTokens: 200000, maxEntries: 50 },  // default: sonnet 200K (overridden by model)
-  'gemini-cli':    { maxTokens: 1000000, maxEntries: 50 }, // gemini-3.1-pro-preview: 1M
-  'codex-cli':     { maxTokens: 1000000, maxEntries: 50 }, // gpt-5.4: 1M context
-  'cursor-cli':    { maxTokens: 200000, maxEntries: 50 },  // conservative default
-  'deepseek':      { maxTokens: 131072, maxEntries: 30 },  // deepseek-reasoner: 131072
-  'openrouter':    { maxTokens: 128000, maxEntries: 50 },  // default: varies by model
+  'anthropic-cli': { maxTokens: 1000000, maxEntries: 100 },
+  'gemini-cli':    { maxTokens: 1000000, maxEntries: 100 },
+  'codex-cli':     { maxTokens: 400000,  maxEntries: 50 },
+  'cursor-cli':    { maxTokens: 200000,  maxEntries: 50 },
+  'deepseek':      { maxTokens: 1000000, maxEntries: 100 },
+  'openrouter':    { maxTokens: 128000,  maxEntries: 30 },
 };
 
 // Model-specific overrides (when model is known at runtime)
-const MODEL_TOKEN_LIMITS = {
-  'opus': 1000000,
-  'claude-opus-4-6': 1000000,
-  'sonnet': 1000000,
-  'claude-sonnet-4-6': 1000000,
-  'gpt-5.4': 1000000,
-  'deepseek-reasoner': 131072,
-  'deepseek-chat': 131072,
-  'gemini-3.1-pro-preview': 1000000,
-  'google/gemini-2.5-flash': 1048576,
-  'meta-llama/llama-3.3-70b': 131072,
-  'deepseek/deepseek-reasoner': 131072,
-  'openai/gpt-4o-mini': 128000,
-  'mistralai/mistral-small-25': 32768,
+const MODEL_LIMITS = {
+  // Anthropic
+  'opus':                       { maxTokens: 1000000, maxEntries: 100 },
+  'claude-opus-4-7':             { maxTokens: 1000000, maxEntries: 100 },
+  'claude-opus-4-6':             { maxTokens: 1000000, maxEntries: 100 },
+  'sonnet':                      { maxTokens: 200000,  maxEntries: 50 },
+  'claude-sonnet-4-6':           { maxTokens: 200000,  maxEntries: 50 },
+  'claude-haiku-4-5-20251001':   { maxTokens: 200000,  maxEntries: 50 },
+  'claude-3-5-sonnet-20241022':  { maxTokens: 200000,  maxEntries: 50 },
+  'claude-3-5-sonnet-latest':    { maxTokens: 200000,  maxEntries: 50 },
+  'claude-3-opus-20240229':      { maxTokens: 200000,  maxEntries: 50 },
+  'claude-3-sonnet-20240229':    { maxTokens: 200000,  maxEntries: 50 },
+  'claude-3-haiku-20240307':     { maxTokens: 200000,  maxEntries: 50 },
+  // OpenAI / Codex
+  'gpt-5.5':                     { maxTokens: 400000,  maxEntries: 50 },
+  'gpt-5.3-codex':               { maxTokens: 256000,  maxEntries: 50 },
+  'gpt-5.2-codex':               { maxTokens: 256000,  maxEntries: 50 },
+  'gpt-5.1-codex-max':           { maxTokens: 256000,  maxEntries: 50 },
+  'gpt-5.1-codex':               { maxTokens: 256000,  maxEntries: 50 },
+  'gpt-5-codex':                 { maxTokens: 256000,  maxEntries: 50 },
+  'gpt-5-codex-mini':            { maxTokens: 128000,  maxEntries: 30 },
+  // Gemini
+  'gemini-3.1-pro-preview':      { maxTokens: 1000000, maxEntries: 100 },
+  'gemini-2.5-pro':              { maxTokens: 1000000, maxEntries: 100 },
+  'gemini-2.5-flash':            { maxTokens: 1000000, maxEntries: 100 },
+  'gemini-2.5-flash-lite':       { maxTokens: 1000000, maxEntries: 100 },
+  'gemini-3-flash-preview':      { maxTokens: 1000000, maxEntries: 100 },
+  // DeepSeek
+  'deepseek-v4-pro':             { maxTokens: 1000000, maxEntries: 100 },
+  'deepseek-v4-flash':           { maxTokens: 1000000, maxEntries: 100 },
+  // OpenRouter known defaults
+  'xiaomi/mimo-v2.5-pro':                       { maxTokens: 1048576, maxEntries: 100 },
+  'x-ai/grok-4.3':                              { maxTokens: 2000000, maxEntries: 100 },
+  'minimax/minimax-m2.7':                       { maxTokens: 204800,  maxEntries: 50 },
+  'moonshotai/kimi-k2.6':                       { maxTokens: 262144,  maxEntries: 50 },
+  'qwen/qwen3.6-max-preview':                   { maxTokens: 262144,  maxEntries: 50 },
+  'z-ai/glm-5.1':                               { maxTokens: 202752,  maxEntries: 50 },
+  'qwen/qwen3.6-plus':                          { maxTokens: 1000000, maxEntries: 100 },
+  'nvidia/nemotron-3-super-120b-a12b:free':     { maxTokens: 262144,  maxEntries: 50 },
+  'deepseek/deepseek-v4-flash':                 { maxTokens: 1000000, maxEntries: 100 },
 };
+
+/**
+ * Resolve a per-call entry cap from the model's token window.
+ *
+ * POLICY: Claude Sonnet-class models (anything matching `claude-*-sonnet*`
+ * or the bare alias `sonnet`) are capped at 50 entries regardless of token
+ * window. This is a project decision — the bridge intentionally trims Sonnet
+ * history more aggressively than the vendor's 1M context window would
+ * suggest, because reliable performance at full 1M context is not yet
+ * production-grade for our workload.
+ *
+ * Buckets for non-Sonnet models:
+ *  - > 500K tokens → 100 entries
+ *  - 200K–500K     → 50 entries
+ *  - <  200K       → 30 entries
+ *
+ * @param {number} maxTokens - Token window for the model
+ * @param {string} [modelName] - Optional model name for substring matching
+ * @returns {number} entry cap
+ */
+function maxEntriesForTokenWindow(maxTokens, modelName) {
+  const normalizedModel = String(modelName || '').toLowerCase();
+  // Anthropic Sonnet class: keep 50-entry cap regardless of token window
+  if (/(^|\/)claude-.*sonnet/.test(normalizedModel) || normalizedModel === 'sonnet') {
+    return 50;
+  }
+  if (maxTokens > 500000) return 100;
+  if (maxTokens >= 200000) return 50;
+  return 30;
+}
 
 // Token estimation: ~4 chars per token (conservative for code/mixed content)
 function estimateTokensFromText(text) {
@@ -248,24 +310,29 @@ function estimateMessageTokens(msg) {
 function getProviderLimits(providerName, modelName) {
   const limits = { ...(PROVIDER_TOKEN_LIMITS[providerName] || {
     maxTokens: DEFAULT_MAX_PROMPT_TOKENS,
-    maxEntries: DEFAULT_MAX_HISTORY_ENTRIES
+    maxEntries: DEFAULT_MAX_HISTORY_ENTRIES,
   }) };
 
-  // Model-specific override: e.g., anthropic-cli with opus gets 1M, not 200K
-  if (modelName && MODEL_TOKEN_LIMITS[modelName]) {
-    limits.maxTokens = MODEL_TOKEN_LIMITS[modelName];
+  const modelLimits = modelName ? MODEL_LIMITS[modelName] : undefined;
+  if (modelLimits) {
+    limits.maxTokens = modelLimits.maxTokens;
+    limits.maxEntries = modelLimits.maxEntries ??
+      maxEntriesForTokenWindow(modelLimits.maxTokens, modelName);
+  } else {
+    limits.maxEntries = limits.maxEntries ??
+      maxEntriesForTokenWindow(limits.maxTokens, modelName);
   }
-  
-  // Return both token and char limits for compatibility
+
   return {
     ...limits,
-    maxChars: limits.maxTokens * 4,      // For char-based checks
-    // Dynamic threshold: 40K token floor buffer, then 85% for larger models.
-    // deepseek 131K → 91K (70%), sonnet 200K → 160K (80%), opus/gemini/codex 1M → 850K (85%)
-    warningThreshold: Math.max(0, Math.min(
-      Math.floor(limits.maxTokens * 0.85),
-      limits.maxTokens - 40000
-    )),
+    maxChars: limits.maxTokens * 4,
+    warningThreshold: Math.max(
+      Math.floor(limits.maxTokens * 0.5),   // never less than 50%
+      Math.min(
+        Math.floor(limits.maxTokens * 0.85),
+        limits.maxTokens - 40000,
+      ),
+    ),
   };
 }
 const LOCK_ACQUIRE_TIMEOUT = 10000; // 10 seconds — aligned with agent-tools.ts withStoreLock
@@ -359,6 +426,7 @@ function buildMessages(agent, newTask) {
       ...(entry.toolCalls ? { toolCalls: entry.toolCalls } : {}),
       ...(entry.toolCallId ? { toolCallId: entry.toolCallId } : {}),
       ...(entry.name ? { name: entry.name } : {}),
+      ...(entry.reasoningContent ? { reasoningContent: entry.reasoningContent } : {}),
     });
   }
 
@@ -815,12 +883,12 @@ async function getProviderDefaults() {
 
   // Fallback — only used if providers package isn't built
   _providerDefaults = {
-    'anthropic-cli': 'claude-sonnet-4-6',
+    'anthropic-cli': 'claude-opus-4-7',
     'gemini-cli': 'gemini-3.1-pro-preview',
-    'codex-cli': undefined,
+    'codex-cli': 'gpt-5.5',
     'cursor-cli': 'auto',
-    'deepseek': 'deepseek-reasoner',
-    'openrouter': 'google/gemini-2.5-flash',
+    'deepseek': 'deepseek-v4-pro',
+    'openrouter': 'xiaomi/mimo-v2.5-pro',
   };
   return _providerDefaults;
 }
@@ -879,6 +947,62 @@ async function retryWithBackoff(fn, opts = {}) {
     }
   }
   throw lastError;
+}
+
+/**
+ * Map an agent's alias-level model to the OpenRouter tier pool to reroll from.
+ *
+ * Note: `haiku` is intentionally absent — legacy persisted state with
+ * `agent.model: 'haiku'` falls through to the `opus` tier rather than re-
+ * routing into a haiku-tier model (which would bypass the haiku ban).
+ *
+ * @param {string} model - Alias-level agent model (opus/sonnet/mini/inherit/etc.)
+ * @returns {'opus'|'sonnet'|'haiku'} OpenRouter tier name
+ */
+function openRouterTierForAgentModel(model) {
+  if (model === 'opus') return 'opus';
+  if (model === 'sonnet' || model === 'mini') return 'sonnet';
+  // Note: 'haiku' is NOT a valid alias for agent tasks per project policy.
+  // If legacy state persists haiku, treat it as unknown and fall back to opus.
+  return 'opus'; // inherit, missing, haiku-from-legacy, unknown
+}
+
+/**
+ * Pick an OpenRouter model from `pool` that the agent has not yet attempted
+ * during the current task. Returns undefined when no untried models remain
+ * (caller should throw OPENROUTER_TIER_EXHAUSTED).
+ *
+ * @param {string[]} pool - Tier pool from OpenRouter config
+ * @param {string|undefined} currentModel - Model that just failed
+ * @param {Set<string>} attemptedModels - Models already tried this task
+ * @param {(pool: string[]) => string|undefined} selectFromPool - Random picker
+ * @returns {string|undefined} next untried model, or undefined if exhausted
+ */
+function chooseUntriedOpenRouterModel(pool, currentModel, attemptedModels, selectFromPool) {
+  if (!Array.isArray(pool) || pool.length === 0) return undefined;
+  const available = pool.filter((candidate) =>
+    candidate && candidate !== currentModel && !attemptedModels.has(candidate)
+  );
+  if (available.length === 0) return undefined;
+  return selectFromPool(available) ?? available[0];
+}
+
+/**
+ * Build a non-retryable error indicating all models in a tier have been
+ * exhausted for the current task. Marked `retryable: false` so retryWithBackoff
+ * short-circuits.
+ *
+ * @param {string} tier - Tier name (opus/sonnet/haiku)
+ * @param {Set<string>} attemptedModels - Models tried during this task
+ * @returns {Error} non-retryable error with code OPENROUTER_TIER_EXHAUSTED
+ */
+function makeOpenRouterTierExhaustedError(tier, attemptedModels) {
+  const error = new Error(
+    `OpenRouter ${tier} tier exhausted after timeout rerolls; attempted models: ${Array.from(attemptedModels).join(', ')}`
+  );
+  error.code = 'OPENROUTER_TIER_EXHAUSTED';
+  error.retryable = false;
+  return error;
 }
 
 async function createProviderConfig(providerName, model, timeoutMs, agentToken) {
@@ -1124,31 +1248,53 @@ const BRIDGE_FILESYSTEM_TOOLS = {
     if (!pattern) {
       throw new Error('Missing required parameter: pattern');
     }
-    
+
+    // FIX-S2: Reject patterns and globs that begin with `-`. Without this,
+    // a prompt-injected agent calling the grep tool with
+    // `pattern = "--pre=/tmp/evil.sh"` would cause ripgrep to execute that
+    // script as a preprocessor for every file searched (arbitrary code
+    // execution). The `--` separator inserted by buildRgArgs/buildGrepArgs
+    // is defense-in-depth so ANY future positional becomes safe even if the
+    // start-check is bypassed. The validators live in
+    // ./bridge-grep-validators.mjs so the security policy can be unit-tested
+    // directly (the bridge itself is a process entry point and not
+    // module-importable as a unit).
+    if (patternIsRejected(pattern)) {
+      throw new Error('grep: pattern may not start with "-" (would be parsed as an option)');
+    }
+    if (fileGlobIsRejected(file_glob)) {
+      throw new Error('grep: file_glob may not start with "-"');
+    }
+
     const searchPath = path ? validateFilePath(path) : PROJECT_ROOT;
     const maxResults = max_results || 50;
-    
+
     try {
       // Try ripgrep (rg) first, fall back to grep -rn
       let command, args;
       try {
         execFileSync('rg', ['--version'], { stdio: 'ignore' });
         command = 'rg';
-        args = ['-n', '-H', '--color=never', pattern];
-        if (file_glob) {
-          args.push('--glob', file_glob);
-        }
-        args.push(searchPath);
+        // FIX-S2: buildRgArgs places ALL rg option flags BEFORE the `--`
+        // separator, then the separator, then positionals (pattern +
+        // searchPath). This blocks any attacker-controlled string from
+        // being interpreted as a flag (e.g. `--pre=` RCE, `--pcre2`, `-x`).
+        args = buildRgArgs(pattern, searchPath, file_glob);
       } catch {
         command = 'grep';
-        args = ['-rn', '--color=never', pattern];
         if (file_glob) {
-          // Basic glob to regex conversion for grep
-          // Note: grep doesn't support glob patterns natively, so we'll do a simple conversion
-          // For simplicity, we'll just pass the glob as part of the find command
+          // Basic glob to regex conversion for grep.
+          // Note: grep doesn't support glob patterns natively, so we'll do
+          // a simple conversion. For simplicity, we'll just reject the call
+          // and require ripgrep. Dash-prefixed file_globs were already
+          // rejected above via fileGlobIsRejected, so any value reaching
+          // here is safe-but-unsupported.
           throw new Error('grep tool with file_glob requires ripgrep (rg). Install rg or use without file_glob.');
         }
-        args.push(searchPath);
+        // FIX-S2: buildGrepArgs applies the same `--` separator policy for
+        // the grep fallback so the pattern can never be parsed as an option
+        // (defense in depth, even though grep has no preprocessor RCE flag).
+        args = buildGrepArgs(pattern, searchPath);
       }
       
       const output = execFileSync(command, args, {
@@ -1441,6 +1587,10 @@ async function parseArgs() {
 
   // When --task-file is set, read task from that file.
   if (parsed.taskFile) {
+    // FIX-S1: Defense-in-depth path validation. The path is server-generated
+    // (UUID-based, not attacker-controlled), but matches the pattern used by
+    // every other path-using bridge handler (e.g. read_file at line ~1114).
+    validateFilePath(parsed.taskFile);
     const fileTask = readFileSync(parsed.taskFile, 'utf-8');
     if (fileTask.trim()) {
       parsed.task = fileTask.trim();
@@ -1593,6 +1743,7 @@ async function main() {
         ...(m.toolCalls ? { toolCalls: m.toolCalls } : {}),
         ...(m.toolCallId ? { toolCallId: m.toolCallId } : {}),
         ...(m.name ? { name: m.name } : {}),
+        ...(m.reasoningContent ? { reasoningContent: m.reasoningContent } : {}),
       })),
       model: agent.resolvedModel || defaults[providerName],
       timeout: parsedTimeout || undefined,
@@ -1611,8 +1762,12 @@ async function main() {
             const correctedLimits = {
               ...phase1Limits,
               maxTokens: realContext,
+              maxEntries: maxEntriesForTokenWindow(realContext, agent.resolvedModel),
               maxChars: realContext * 4,
-              warningThreshold: Math.max(0, Math.min(Math.floor(realContext * 0.85), realContext - 40000)),
+              warningThreshold: Math.max(
+                Math.floor(realContext * 0.5),
+                Math.min(Math.floor(realContext * 0.85), realContext - 40000),
+              ),
             };
             // Store for reuse in the tool loop so every iteration uses the same
             // dynamic limit rather than re-calling getProviderLimits().
@@ -1624,6 +1779,12 @@ async function main() {
         stderrLogger.warn('[bridge] OpenRouter dynamic context lookup failed:', err.message);
       }
     }
+
+    const openRouterAttemptedModels = new Set();
+    if (providerName === 'openrouter' && request.model) {
+      openRouterAttemptedModels.add(request.model);
+    }
+    let successfulRerolledModel = null;
 
     // Always include built-in filesystem tools so providers know they can use them.
     // These are handled directly in the bridge (no MCP client required).
@@ -1721,14 +1882,24 @@ async function main() {
       },
     ];
 
-    if (agent.config?.tools && Array.isArray(agent.config.tools)) {
-      // Merge: built-in filesystem tools first, then agent-specific tools (deduplicated by name)
-      const agentToolNames = new Set(agent.config.tools.map((t) => t?.function?.name));
-      const deduped = builtInFilesystemTools.filter((t) => !agentToolNames.has(t.function.name));
-      request.tools = [...deduped, ...agent.config.tools];
-    } else {
-      request.tools = builtInFilesystemTools;
+    // Bash-native providers (codex-cli, cursor-cli) have built-in shell execution.
+    // They run commands directly and do NOT need structured tool definitions.
+    // Sending XML tool schemas to these providers causes them to attempt
+    // bash-based tool invocations that don't match the bridge's expectations.
+    const BASH_NATIVE_PROVIDERS = new Set(['codex-cli', 'cursor-cli']);
+    const isBashNative = BASH_NATIVE_PROVIDERS.has(providerName);
+
+    if (!isBashNative) {
+      if (agent.config?.tools && Array.isArray(agent.config.tools)) {
+        // Merge: built-in filesystem tools first, then agent-specific tools (deduplicated by name)
+        const agentToolNames = new Set(agent.config.tools.map((t) => t?.function?.name));
+        const deduped = builtInFilesystemTools.filter((t) => !agentToolNames.has(t.function.name));
+        request.tools = [...deduped, ...agent.config.tools];
+      } else {
+        request.tools = builtInFilesystemTools;
+      }
     }
+    // For bash-native providers, request.tools stays undefined — they handle execution natively.
 
     // Log the constructed CLI command / request
     bridgeLog('info', 'Provider request constructed', {
@@ -1811,14 +1982,62 @@ async function main() {
         process.exit(0);
       }
 
-      response = await retryWithBackoff(
-        () => provider.complete(request),
-        {
-          maxAttempts: (config.retryAttempts || 0) + 1,
-          initialDelay: config.retryDelay || 1000,
-          isRetryable: isRetryableError
+      const completeWithOpenRouterReroll = async () => {
+        try {
+          return await provider.complete(request);
+        } catch (error) {
+          if (providerName === 'openrouter' && classifyError(error) === 'timeout') {
+            const tier = openRouterTierForAgentModel(agent.model);
+            const configForReroll =
+              typeof providerModule.loadOpenRouterConfig === 'function'
+                ? providerModule.loadOpenRouterConfig()
+                : { tiers: {} };
+            const selectForReroll =
+              typeof providerModule.selectFromPool === 'function'
+                ? providerModule.selectFromPool
+                : (pool) => pool[Math.floor(Math.random() * pool.length)];
+            const pool = configForReroll.tiers?.[tier] || [];
+            const nextModel = chooseUntriedOpenRouterModel(
+              pool,
+              request.model,
+              openRouterAttemptedModels,
+              selectForReroll,
+            );
+            if (!nextModel) {
+              throw makeOpenRouterTierExhaustedError(tier, openRouterAttemptedModels);
+            }
+            openRouterAttemptedModels.add(nextModel);
+            bridgeLog('warn', 'OpenRouter timeout reroll selected replacement model', {
+              agentId,
+              tier,
+              previousModel: request.model,
+              nextModel,
+              attemptedModels: Array.from(openRouterAttemptedModels),
+            });
+            request.model = nextModel;
+            successfulRerolledModel = nextModel;
+            dynamicLimits = null;
+            currentBridgeLimits = getProviderLimits(providerName, nextModel);
+            request.messages = trimMessages(request.messages, currentBridgeLimits);
+          }
+          throw error;
         }
-      );
+      };
+
+      response = await retryWithBackoff(completeWithOpenRouterReroll, {
+        maxAttempts: (config.retryAttempts || 0) + 1,
+        initialDelay: config.retryDelay || 1000,
+        isRetryable: isRetryableError,
+      });
+
+      if (successfulRerolledModel && request.model === successfulRerolledModel) {
+        agent.resolvedModel = successfulRerolledModel;
+        bridgeLog('info', 'OpenRouter reroll succeeded', {
+          agentId,
+          model: successfulRerolledModel,
+          attempts: openRouterAttemptedModels.size,
+        });
+      }
       iterations++;
 
       // Log provider response (stdout equivalent)
@@ -1863,7 +2082,8 @@ async function main() {
         request.messages.push({
           role: 'assistant',
           content: response.content || '',
-          toolCalls: response.toolCalls
+          toolCalls: response.toolCalls,
+          ...(response.reasoningContent ? { reasoningContent: response.reasoningContent } : {}),
         });
 
         const toolResults = await Promise.all(
@@ -2014,7 +2234,12 @@ async function main() {
       history.push({ ...turn, timestamp: new Date().toISOString() });
     }
 
-    history.push({ role: 'assistant', content: response.content, timestamp: new Date().toISOString() });
+    history.push({
+      role: 'assistant',
+      content: response.content,
+      timestamp: new Date().toISOString(),
+      ...(response.reasoningContent ? { reasoningContent: response.reasoningContent } : {}),
+    });
 
     const limits = getProviderLimits(providerName, agent.resolvedModel);
     while (history.length > limits.maxEntries) {

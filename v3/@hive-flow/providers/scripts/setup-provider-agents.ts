@@ -28,7 +28,7 @@ const PROVIDER_AGENT_TYPES = [
     name: 'codex-researcher',
     description: 'Research agent powered by OpenAI Codex CLI',
     provider: 'codex-cli',
-    defaultModel: 'gpt-5.4',
+    defaultModel: 'gpt-5.5',
     capabilities: ['code-analysis', 'architecture-review', 'documentation', 'research'],
   },
   {
@@ -170,19 +170,30 @@ function findProjectRoot(): string {
   return process.cwd();
 }
 
-function createHookEntries(): { added: string[]; skipped: string[] } {
-  const projectRoot = findProjectRoot();
-  const settingsPath = path.join(projectRoot, '.claude', 'settings.json');
+// ===== Shared Hook Registration =====
+
+interface HookRegistrationResult {
+  added: string[];
+  skipped: string[];
+}
+
+function writeHookEntries(
+  hookConfigPath: string,
+  routeHookCommand: string,
+  statusHookCommand: string,
+  label: string
+): HookRegistrationResult {
+  const dir = path.dirname(hookConfigPath);
   const added: string[] = [];
   const skipped: string[] = [];
 
-  // Ensure .claude directory exists
-  fs.mkdirSync(path.join(projectRoot, '.claude'), { recursive: true });
+  // Ensure directory exists
+  fs.mkdirSync(dir, { recursive: true });
 
   let settings: ClaudeSettings = {};
-  if (fs.existsSync(settingsPath)) {
+  if (fs.existsSync(hookConfigPath)) {
     try {
-      settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
+      settings = JSON.parse(fs.readFileSync(hookConfigPath, 'utf-8'));
     } catch {
       settings = {};
     }
@@ -193,7 +204,6 @@ function createHookEntries(): { added: string[]; skipped: string[] } {
   }
 
   // Provider route hook — UserPromptSubmit
-  const routeHookCommand = 'node v3/@hive-flow/providers/scripts/provider-route-hook.mjs';
   const promptHooks = settings.hooks.UserPromptSubmit || [];
   const hasRouteHook = promptHooks.some((entry) =>
     entry.hooks?.some((h) => h.command === routeHookCommand)
@@ -205,13 +215,12 @@ function createHookEntries(): { added: string[]; skipped: string[] } {
       hooks: [{ type: 'command', command: routeHookCommand }],
     });
     settings.hooks.UserPromptSubmit = promptHooks;
-    added.push('UserPromptSubmit: provider-route-hook');
+    added.push(`UserPromptSubmit: provider-route-hook (${label})`);
   } else {
-    skipped.push('UserPromptSubmit: provider-route-hook (already exists)');
+    skipped.push(`UserPromptSubmit: provider-route-hook (${label}, already exists)`);
   }
 
   // Provider status hook — SessionStart
-  const statusHookCommand = 'node v3/@hive-flow/providers/scripts/provider-status-hook.mjs';
   const sessionHooks = settings.hooks.SessionStart || [];
   const hasStatusHook = sessionHooks.some((entry) =>
     entry.hooks?.some((h) => h.command === statusHookCommand)
@@ -223,17 +232,97 @@ function createHookEntries(): { added: string[]; skipped: string[] } {
       hooks: [{ type: 'command', command: statusHookCommand }],
     });
     settings.hooks.SessionStart = sessionHooks;
-    added.push('SessionStart: provider-status-hook');
+    added.push(`SessionStart: provider-status-hook (${label})`);
   } else {
-    skipped.push('SessionStart: provider-status-hook (already exists)');
+    skipped.push(`SessionStart: provider-status-hook (${label}, already exists)`);
   }
 
   // Atomic write
-  const tmpPath = settingsPath + '.tmp';
+  const tmpPath = hookConfigPath + '.tmp';
   fs.writeFileSync(tmpPath, JSON.stringify(settings, null, 2));
-  fs.renameSync(tmpPath, settingsPath);
+  fs.renameSync(tmpPath, hookConfigPath);
 
   return { added, skipped };
+}
+
+function createClaudeHookEntries(): HookRegistrationResult {
+  const projectRoot = findProjectRoot();
+  const settingsPath = path.join(projectRoot, '.claude', 'settings.json');
+
+  // Claude Code runs hooks from project root — relative paths work
+  const routeHookCommand = 'node v3/@hive-flow/providers/scripts/provider-route-hook.mjs';
+  const statusHookCommand = 'node v3/@hive-flow/providers/scripts/provider-status-hook.mjs';
+
+  return writeHookEntries(settingsPath, routeHookCommand, statusHookCommand, 'claude');
+}
+
+function shellQuote(value: string): string {
+  return `'${value.replace(/'/g, `'\\''`)}'`;
+}
+
+function createCodexHookEntries(): HookRegistrationResult {
+  const projectRoot = findProjectRoot();
+  const hooksPath = path.join(projectRoot, '.codex', 'hooks.json');
+
+  // Codex hooks run with various working directories — use absolute paths for safety
+  const routeHookCommand = `node ${shellQuote(path.join(projectRoot, 'v3/@hive-flow/providers/scripts/provider-route-hook.mjs'))}`;
+  const statusHookCommand = `node ${shellQuote(path.join(projectRoot, 'v3/@hive-flow/providers/scripts/provider-status-hook.mjs'))}`;
+
+  return writeHookEntries(hooksPath, routeHookCommand, statusHookCommand, 'codex');
+}
+
+/**
+ * Enable the hooks feature flag in ~/.codex/config.toml.
+ * Migrates the legacy `codex_hooks` key to `hooks` when found.
+ * Safe to call multiple times — idempotent.
+ */
+function enableCodexHooksFeature(): boolean {
+  const home = process.env.HOME || process.env.USERPROFILE || '/tmp';
+  const configPath = path.join(home, '.codex', 'config.toml');
+
+  if (!fs.existsSync(configPath)) {
+    // No Codex config — nothing to enable
+    return false;
+  }
+
+  let content: string;
+  try {
+    content = fs.readFileSync(configPath, 'utf-8');
+  } catch {
+    return false;
+  }
+
+  // Check if [features] section exists
+  if (!/\[features\]/.test(content)) {
+    // Append [features] section with hooks
+    content += '\n[features]\nhooks = true\n';
+    fs.writeFileSync(configPath, content);
+    return true;
+  }
+
+  // Migrate legacy codex_hooks → hooks (regardless of value)
+  if (/^\s*codex_hooks\s*=/m.test(content)) {
+    content = content.replace(/^\s*codex_hooks\s*=\s*\w+/m, 'hooks = true');
+    fs.writeFileSync(configPath, content);
+    return true;
+  }
+
+  // Already has hooks = something — ensure it's true
+  if (/^\s*hooks\s*=/m.test(content)) {
+    if (/^\s*hooks\s*=\s*true/m.test(content)) {
+      return false; // Already correctly set
+    }
+    content = content.replace(/^\s*hooks\s*=\s*\w+/m, 'hooks = true');
+    fs.writeFileSync(configPath, content);
+    return true;
+  }
+
+  // [features] exists but no hooks line — add it
+  content = content.replace(/(\[features\][^\[]*)/, (match) => {
+    return match.trimEnd() + '\nhooks = true\n';
+  });
+  fs.writeFileSync(configPath, content);
+  return true;
 }
 
 // ===== Main =====
@@ -262,22 +351,42 @@ function main(): void {
     console.log(`   [=] Already registered: ${name}`);
   }
 
-  // Step 3: Create hook entries
-  console.log('\n3. Configuring hooks...');
-  const { added, skipped: hookSkipped } = createHookEntries();
-  for (const name of added) {
+  // Step 3: Configure Claude Code hooks
+  console.log('\n3. Configuring Claude Code hooks (.claude/settings.json)...');
+  const claudeHooks = createClaudeHookEntries();
+  for (const name of claudeHooks.added) {
     console.log(`   [+] Added: ${name}`);
   }
-  for (const name of hookSkipped) {
+  for (const name of claudeHooks.skipped) {
     console.log(`   [=] ${name}`);
+  }
+
+  // Step 4: Configure Codex hooks
+  console.log('\n4. Configuring Codex/ForgeCode hooks (.codex/hooks.json)...');
+  const codexHooks = createCodexHookEntries();
+  for (const name of codexHooks.added) {
+    console.log(`   [+] Added: ${name}`);
+  }
+  for (const name of codexHooks.skipped) {
+    console.log(`   [=] ${name}`);
+  }
+
+  // Step 5: Enable hooks feature flag
+  const featureEnabled = enableCodexHooksFeature();
+  if (featureEnabled) {
+    console.log('   [+] Enabled hooks feature in ~/.codex/config.toml');
+  } else {
+    console.log('   [=] hooks feature already enabled (or no Codex config found)');
   }
 
   // Summary
   const readyCount = binaries.filter((b) => b.found).length;
+  const totalAdded = claudeHooks.added.length + codexHooks.added.length;
+  const totalSkipped = claudeHooks.skipped.length + codexHooks.skipped.length;
   console.log(`\n=== Setup Complete ===`);
   console.log(`Providers ready: ${readyCount}/${binaries.length}`);
   console.log(`Agent types: ${registered.length} new, ${typeSkipped.length} existing`);
-  console.log(`Hooks: ${added.length} new, ${hookSkipped.length} existing`);
+  console.log(`Hooks: ${totalAdded} new, ${totalSkipped} existing`);
 
   if (readyCount === 0) {
     console.log('\nNo provider binaries found. Install at least one:');

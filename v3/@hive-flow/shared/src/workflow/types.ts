@@ -109,7 +109,7 @@ export interface ModuleWorkerRole {
   /** Agent type to spawn for this role */
   agentType: string;
   /** Model preference for this worker */
-  modelPreference?: 'opus' | 'sonnet' | 'haiku';
+  modelPreference?: 'opus' | 'sonnet' | 'mini' | 'inherit';
   /** Provider preference */
   providerPreference?: string;
   /** Task description template */

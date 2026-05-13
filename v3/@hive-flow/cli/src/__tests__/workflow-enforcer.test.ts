@@ -347,11 +347,11 @@ describe('workflow-enforcer', () => {
       expect(flow.dualAgentAudit.providerPreference).toBe('codex-cli');
     });
 
-    it('COMPLEX hive-mind has no single provider (mixed)', () => {
+    it('COMPLEX hive-mind uses openrouter as provider', () => {
       const flow = mapLevelToFlow('COMPLEX');
-      // hiveMind agents use mixed providers, so no single providerPreference
+      // hiveMind dual-agent audit uses OpenRouter tier pools (config-driven)
       expect(flow.dualAgentAudit.hiveMind).toBe(true);
-      expect(flow.dualAgentAudit.providerPreference).toBeUndefined();
+      expect(flow.dualAgentAudit.providerPreference).toBe('openrouter');
     });
 
     it('no model preference is gpt-5.4-thinking', () => {

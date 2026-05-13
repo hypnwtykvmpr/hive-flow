@@ -28,7 +28,7 @@ import { dirname, join } from 'path';
 /**
  * Available Claude models for routing
  */
-export type AgentModel = 'sonnet' | 'opus' | 'inherit';
+export type AgentModel = 'sonnet' | 'opus' | 'mini' | 'inherit';
 
 /** @deprecated Use AgentModel instead */
 export type ClaudeModel = AgentModel;
@@ -53,6 +53,14 @@ export const MODEL_CAPABILITIES: Record<AgentModel, {
     costMultiplier: 1.0,    // Baseline
     speedMultiplier: 1.0,   // Baseline
     description: 'Most capable for complex reasoning',
+  },
+  mini: {
+    // mini resolves to sonnet-tier across providers; mirror sonnet defaults.
+    // The router learns from outcomes over time.
+    maxComplexity: 0.7,
+    costMultiplier: 0.2,
+    speedMultiplier: 1.5,
+    description: 'Fast efficient peer tier (sonnet-class default)',
   },
   inherit: {
     maxComplexity: 1.0,
@@ -194,6 +202,7 @@ export class ModelRouter {
   private consecutiveFailures: Record<AgentModel, number> = {
     sonnet: 0,
     opus: 0,
+    mini: 0,
     inherit: 0,
   };
 
@@ -373,6 +382,7 @@ export class ModelRouter {
     return {
       sonnet: Math.max(0, 1 - score * 1.5), // Handles low-to-medium complexity
       opus: Math.min(1, score * 1.5), // Rises with complexity
+      mini: Math.max(0, 1 - score * 1.5), // Mirror sonnet; mini is sonnet-tier
       inherit: 0.1, // Low baseline unless explicitly needed
     };
   }
@@ -405,9 +415,9 @@ export class ModelRouter {
     scores: Record<AgentModel, number>,
     complexityScore: number
   ): { model: AgentModel; confidence: number; uncertainty: number } {
-    // Get sorted models by score
+    // Get sorted models by score (exclude pseudo-aliases that aren't real selections here)
     const sorted = (Object.entries(scores) as [AgentModel, number][])
-      .filter(([m]) => m !== 'inherit')
+      .filter(([m]) => m !== 'inherit' && m !== 'mini')
       .sort((a, b) => b[1] - a[1]);
 
     const [bestModel, bestScore] = sorted[0];
@@ -541,7 +551,7 @@ export class ModelRouter {
   private loadState(): RouterState {
     const defaultState: RouterState = {
       totalDecisions: 0,
-      modelDistribution: { sonnet: 0, opus: 0, inherit: 0 },
+      modelDistribution: { sonnet: 0, opus: 0, mini: 0, inherit: 0 },
       avgComplexity: 0.5,
       avgConfidence: 0.8,
       circuitBreakerTrips: 0,
@@ -585,14 +595,14 @@ export class ModelRouter {
   reset(): void {
     this.state = {
       totalDecisions: 0,
-      modelDistribution: { sonnet: 0, opus: 0, inherit: 0 },
+      modelDistribution: { sonnet: 0, opus: 0, mini: 0, inherit: 0 },
       avgComplexity: 0.5,
       avgConfidence: 0.8,
       circuitBreakerTrips: 0,
       lastUpdated: new Date().toISOString(),
       learningHistory: [],
     };
-    this.consecutiveFailures = { sonnet: 0, opus: 0, inherit: 0 };
+    this.consecutiveFailures = { sonnet: 0, opus: 0, mini: 0, inherit: 0 };
     this.decisionCount = 0;
     this.saveState();
   }

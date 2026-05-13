@@ -295,7 +295,7 @@ describe('Delegation metrics', () => {
       const record = loadHive(hive.hiveId);
       if (!record) throw new Error('expected hive record');
       record.status = 'active';
-      record.workers = Array.from({ length: 4 }, (_, index) => ({
+      record.workers = Array.from({ length: 5 }, (_, index) => ({
         workerId: `worker-${index + 1}`,
         agentId: `agent-${index + 1}`,
         role: 'coder',

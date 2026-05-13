@@ -47,13 +47,14 @@ interface CodexErrorEvent extends CodexEvent {
 // ===== Static Data =====
 
 const CODEX_MODELS: LLMModel[] = [
-  'gpt-5.4', 'gpt-5.3-codex', 'gpt-5.2-codex', 'gpt-5.1-codex-max',
+  'gpt-5.5', 'gpt-5.4', 'gpt-5.3-codex', 'gpt-5.2-codex', 'gpt-5.1-codex-max',
   'gpt-5.1-codex', 'gpt-5-codex', 'gpt-5-codex-mini',
 ];
 
 const MODEL_INFO: Record<string, { desc: string; ctx: number; out: number }> = {
-  'gpt-5.4':           { desc: 'GPT-5.4 - Latest flagship model',                    ctx: 1000000, out: 32768 },
-  'gpt-5.3-codex':     { desc: 'GPT-5.3 Codex - Latest flagship code model',        ctx: 200000, out: 32768 },
+  'gpt-5.5':           { desc: 'GPT-5.5 - Smartest flagship, best agentic coding',   ctx: 1050000, out: 128000 },
+  'gpt-5.4':           { desc: 'GPT-5.4 - Previous flagship model',                  ctx: 1000000, out: 32768 },
+  'gpt-5.3-codex':     { desc: 'GPT-5.3 Codex - High-capability code model',         ctx: 200000, out: 32768 },
   'gpt-5.2-codex':     { desc: 'GPT-5.2 Codex - Previous-generation flagship',      ctx: 200000, out: 32768 },
   'gpt-5.1-codex-max': { desc: 'GPT-5.1 Codex Max - Extended context and reasoning', ctx: 512000, out: 65536 },
   'gpt-5.1-codex':     { desc: 'GPT-5.1 Codex - High-capability code model',        ctx: 128000, out: 16384 },
@@ -386,9 +387,15 @@ export class CodexCLIProvider extends BaseProvider {
     // Pass prompt via stdin (not CLI arg) to avoid:
     //  1. OS ARG_MAX limits for large prompts
     //  2. Prompt text leaking into process listings (ps aux)
-    const args = ['exec', '-', '--json', '--skip-git-repo-check'];
+    const args = [
+      'exec', '-', '--json',
+      '--skip-git-repo-check',
+      '--ignore-user-config',              // Don't read ~/.codex/config.toml — bridge uses isolated config
+      '--ignore-rules',                    // Don't read CLAUDE.md/AGENTS.md — prevents hive-flow circularity
+      '--sandbox', 'workspace-write',      // Allow writes within project dir — bridge enforces its own security
+    ];
     // Only include --model if explicitly set (not 'auto' or undefined)
-    // Omitting --model lets Codex use config.toml default (typically gpt-5.3-codex)
+    // Omitting --model lets Codex use config.toml default (typically gpt-5.5)
     if (model && model !== 'auto') {
       args.push('--model', String(model));
     }

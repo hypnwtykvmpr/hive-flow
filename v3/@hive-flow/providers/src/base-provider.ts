@@ -233,11 +233,18 @@ export abstract class BaseProvider extends EventEmitter implements ILLMProvider 
 
       const providerError = this.transformError(error);
 
-      this.emit('error', {
-        provider: this.name,
-        error: providerError,
-        request,
-      });
+      // Guard emit('error', ...) with a listener check. Node's EventEmitter
+      // throws synchronously when 'error' is emitted with no listener, which
+      // would wrap the typed LLMProviderError in a generic
+      // Error('Unhandled error.') and break instanceof checks in
+      // ProviderManager.completeWithFallback (disabling fallback).
+      if (this.listenerCount('error') > 0) {
+        this.emit('error', {
+          provider: this.name,
+          error: providerError,
+          request,
+        });
+      }
 
       throw providerError;
     }

@@ -192,3 +192,118 @@ DELETE_*
 # Graphify pipeline output directories
 **/graphify-out/
 v4-plans/
+v4-plans/*
+
+# ============================================================================
+# PRIVATE / LOCAL-ONLY DOCUMENTATION (NEVER COMMIT)
+# ----------------------------------------------------------------------------
+# Project policy: plans, design decisions, ideas, research notes, audit
+# reports, postmortems, and chain-of-custody artifacts stay LOCAL ONLY.
+# Only README.md, CLAUDE.md, and AGENTS.md may be tracked at the repo root.
+# Anything else under these patterns is private and must not enter origin.
+# ============================================================================
+
+# Chain-of-custody / planning / research artifacts
+/plans/
+/plans/*
+/.plans/
+/.plans/*
+
+# Design documents and improvement proposals
+/.claude/design/
+/.claude/design/*
+/v3/**/IMPROVEMENT_SUGGESTIONS.md
+/v3/**/improvement_suggestions.md
+
+# Root-level *.md files are private by default.
+# Only the three permitted instruction docs are allowed.
+/*.md
+!/README.md
+!/CLAUDE.md
+!/AGENTS.md
+!/CLAUDE.local.md
+
+# Tooling state and plugin scratch
+/.lavra/
+/.lavra/*
+/.spec-workflow/
+/.spec-workflow/*
+
+# Scratch directory — official home for one-off investigation artifacts
+/.scratch/
+/.scratch/*
+
+# ============================================================================
+# ROOT-LEVEL INVESTIGATION / SCRATCH SCRIPTS (NEVER COMMIT)
+# ----------------------------------------------------------------------------
+# One-off helpers created mid-investigation: extract/analyze/run/etc.
+# These should never enter the repo. Use `.scratch/` for staging.
+# ============================================================================
+/analyze_*
+/analyze-*
+/audit_*
+/audit-*
+/check_*
+/check-*
+/count_*
+/create_*
+/direct_*
+/do-*
+/dump_*
+/examine_*
+/examine-*
+/exec_*
+/execute_*
+/extract_*
+/extract-*
+/file_*
+/final_*
+/find_*
+/find-*
+/fix_*
+/fix-*
+/full_*
+/generate_*
+/get_*
+/get-*
+/hive_*
+/hive-watcher-full*
+/hive-check-complete-handler-patch*
+/hive_completion_*
+/manual_*
+/parse_*
+/patch-*
+/patch_*
+/process_*
+/quick_*
+/read_*
+/read-*
+/run_*
+/run-*
+/show-*
+/show_*
+/simple_*
+/simple-*
+/temp_*
+/temp-*
+/test_*
+/update_*
+/verify_*
+/view-*
+/view_*
+/_run_*
+/_rt_*
+/_regression_*
+
+# Standalone scratch files at root
+/agent-tools-content.ts
+/2026-*-dump.json
+/*.applescript
+/detect_and_send.sh
+/analysis/
+/answer.md
+
+# In-tree scratch under v3 (one-off helpers, audit dumps, read helpers)
+/v3/extract_*
+/v3/**/read_ts.js
+/v3/**/_audit_dump.txt

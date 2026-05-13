@@ -1,452 +1,624 @@
 /**
  * Provider Integration Tests
  *
- * Tests all LLM providers with actual API calls using .env credentials
+ * These tests exercise the HTTP request building, response parsing, and the
+ * cross-provider orchestration in `ProviderManager` against mocked fetch
+ * responses.
  *
- * Run with: npx vitest run src/__tests__/provider-integration.test.ts
+ * Originally these tests were `it.skipIf(!apiKey)` and required real network
+ * calls. They have been rewritten as deterministic unit tests using
+ * `vi.stubGlobal('fetch', ...)` so they exercise the same code paths
+ * (request build → fetch → response transform → manager cache/failover)
+ * without an outbound HTTP call or any provider API key.
+ *
+ * Mock dispatch is keyed by request URL so the health check probes that
+ * `BaseProvider.initialize()` always fires don't disrupt the call ordering.
  */
 
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { config } from 'dotenv';
-import { resolve } from 'path';
-
-// Load .env from project root
-config({ path: resolve(__dirname, '../../../../../.env') });
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import {
   AnthropicProvider,
   OpenAIProvider,
   GoogleProvider,
   OllamaProvider,
-  RuVectorProvider,
-  ProviderManager,
   createProviderManager,
   LLMRequest,
   LLMProviderConfig,
   ProviderManagerConfig,
 } from '../index.js';
-import { BaseProviderOptions, consoleLogger } from '../base-provider.js';
+import { ILogger } from '../base-provider.js';
 
-// Test configuration
+const silentLogger: ILogger = {
+  debug: () => {},
+  info: () => {},
+  warn: () => {},
+  error: () => {},
+};
+
 const TEST_PROMPT = 'Say "Hello from Hive Flow V3!" in exactly 5 words.';
 const TEST_MESSAGES: LLMRequest['messages'] = [
-  { role: 'user', content: TEST_PROMPT }
+  { role: 'user', content: TEST_PROMPT },
 ];
 
-// Simple test request
 const createTestRequest = (model?: string): LLMRequest => ({
   messages: TEST_MESSAGES,
-  model,
+  ...(model ? { model } : {}),
   maxTokens: 50,
   temperature: 0.1,
-  requestId: `test-${Date.now()}`,
+  requestId: 'test-static-id',
 });
 
-describe('Provider Integration Tests', () => {
+/** Build a Response object for a successful JSON body. */
+function jsonResponse(body: unknown, init: { status?: number } = {}): Response {
+  return new Response(JSON.stringify(body), {
+    status: init.status ?? 200,
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
+/** Build a streaming Response that emits the given SSE-style chunks. */
+function sseResponse(lines: string[]): Response {
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      for (const line of lines) {
+        controller.enqueue(encoder.encode(line));
+      }
+      controller.close();
+    },
+  });
+  return new Response(stream, {
+    status: 200,
+    headers: { 'Content-Type': 'text/event-stream' },
+  });
+}
+
+/**
+ * Build a fetch mock that dispatches by request URL.
+ *
+ * `BaseProvider.initialize()` always runs a health check, so each provider
+ * needs both its health-check response and its actual chat response.
+ */
+function makeFetchDispatcher(
+  handlers: Array<{ match: (url: string, init?: RequestInit) => boolean; respond: (call: number) => Response | Promise<Response> }>,
+): ReturnType<typeof vi.fn> {
+  const counters = new Map<number, number>();
+  const fn = vi.fn(async (url: string | URL, init?: RequestInit) => {
+    const u = typeof url === 'string' ? url : url.toString();
+    for (let i = 0; i < handlers.length; i++) {
+      if (handlers[i].match(u, init)) {
+        const count = (counters.get(i) ?? 0) + 1;
+        counters.set(i, count);
+        return handlers[i].respond(count);
+      }
+    }
+    throw new Error(`Unexpected fetch call: ${u}`);
+  });
+  return fn;
+}
+
+describe('Provider Integration Tests (mocked fetch)', () => {
+  let fetchMock: ReturnType<typeof vi.fn>;
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
 
   describe('Anthropic Provider', () => {
-    const apiKey = process.env.ANTHROPIC_API_KEY;
+    const anthropicBody = {
+      id: 'msg_test_001',
+      type: 'message',
+      role: 'assistant',
+      model: 'claude-3-5-sonnet-latest',
+      content: [{ type: 'text', text: 'Hello from Hive Flow V3!' }],
+      stop_reason: 'end_turn',
+      usage: { input_tokens: 12, output_tokens: 7 },
+    };
 
-    it.skipIf(!apiKey)('should complete request with Claude 3.5 Sonnet', async () => {
+    it('builds the request and parses the response for Claude 3.5 Sonnet', async () => {
+      // Anthropic does both health-check and complete via POST to /v1/messages;
+      // they differ by body. Match on URL and dispatch by call count.
+      fetchMock = makeFetchDispatcher([
+        {
+          match: (u) => u === 'https://api.anthropic.com/v1/messages',
+          respond: () => jsonResponse(anthropicBody),
+        },
+      ]);
+      vi.stubGlobal('fetch', fetchMock);
+
       const provider = new AnthropicProvider({
         config: {
           provider: 'anthropic',
-          apiKey,
+          apiKey: 'sk-test-anthropic',
           model: 'claude-3-5-sonnet-latest',
           maxTokens: 100,
         },
-        logger: consoleLogger,
+        logger: silentLogger,
       });
 
       await provider.initialize();
-
       const response = await provider.complete(createTestRequest());
 
-      console.log('Anthropic Response:', response.content);
-      console.log('Usage:', response.usage);
-      console.log('Cost:', response.cost);
+      // Find the complete() call (max_tokens > 1 — health check uses max_tokens=1)
+      const completeCall = fetchMock.mock.calls.find((call) => {
+        const init = call[1] as RequestInit | undefined;
+        if (!init?.body) return false;
+        const body = JSON.parse(String(init.body));
+        return body.max_tokens !== 1;
+      });
+      expect(completeCall).toBeDefined();
+      const init = completeCall![1] as RequestInit;
+      const headers = init.headers as Record<string, string>;
+      expect(headers['x-api-key']).toBe('sk-test-anthropic');
+      expect(headers['anthropic-version']).toBe('2023-06-01');
 
-      expect(response.content).toBeTruthy();
       expect(response.provider).toBe('anthropic');
-      expect(response.usage.totalTokens).toBeGreaterThan(0);
+      expect(response.content).toBe('Hello from Hive Flow V3!');
+      expect(response.usage.totalTokens).toBe(19);
+      expect(response.cost?.totalCost).toBeGreaterThan(0);
+      expect(response.finishReason).toBe('stop');
 
       provider.destroy();
-    }, 30000);
+    });
 
-    it.skipIf(!apiKey)('should stream response', async () => {
+    it('streams response chunks via SSE', async () => {
+      const sseLines = [
+        'data: {"type":"message_start","message":{"usage":{"input_tokens":12}}}\n\n',
+        'data: {"type":"content_block_delta","delta":{"text":"Hello"}}\n\n',
+        'data: {"type":"content_block_delta","delta":{"text":" from"}}\n\n',
+        'data: {"type":"content_block_delta","delta":{"text":" Hive!"}}\n\n',
+        'data: {"type":"message_delta","usage":{"output_tokens":3}}\n\n',
+        'data: {"type":"message_stop"}\n\n',
+      ];
+
+      fetchMock = makeFetchDispatcher([
+        {
+          match: (u, init) => {
+            if (u !== 'https://api.anthropic.com/v1/messages') return false;
+            const body = init?.body ? JSON.parse(String(init.body)) : {};
+            return body.stream === true;
+          },
+          respond: () => sseResponse(sseLines),
+        },
+        {
+          // Health check (no stream)
+          match: (u) => u === 'https://api.anthropic.com/v1/messages',
+          respond: () => jsonResponse(anthropicBody),
+        },
+      ]);
+      vi.stubGlobal('fetch', fetchMock);
+
       const provider = new AnthropicProvider({
         config: {
           provider: 'anthropic',
-          apiKey,
+          apiKey: 'sk-test-anthropic',
           model: 'claude-3-5-sonnet-latest',
           maxTokens: 100,
         },
-        logger: consoleLogger,
+        logger: silentLogger,
       });
 
       await provider.initialize();
 
       const chunks: string[] = [];
+      let doneEvent: { type: string; usage?: { totalTokens: number } } | null = null;
       for await (const event of provider.streamComplete(createTestRequest())) {
         if (event.type === 'content' && event.delta?.content) {
           chunks.push(event.delta.content);
-          process.stdout.write(event.delta.content);
+        } else if (event.type === 'done') {
+          doneEvent = event as { type: string; usage?: { totalTokens: number } };
         }
       }
-      console.log('\n');
 
-      expect(chunks.length).toBeGreaterThan(0);
+      expect(chunks).toEqual(['Hello', ' from', ' Hive!']);
+      expect(doneEvent).not.toBeNull();
+      expect(doneEvent!.usage?.totalTokens).toBe(15);
 
       provider.destroy();
-    }, 30000);
+    });
   });
 
   describe('Google Gemini Provider', () => {
-    const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
+    const geminiBody = {
+      candidates: [
+        {
+          content: {
+            parts: [{ text: 'Hello from Hive Flow V3!' }],
+            role: 'model',
+          },
+          finishReason: 'STOP',
+        },
+      ],
+      usageMetadata: {
+        promptTokenCount: 15,
+        candidatesTokenCount: 8,
+        totalTokenCount: 23,
+      },
+    };
 
-    it.skipIf(!apiKey)('should complete request with Gemini 2.0 Flash', async () => {
+    it('builds the request and parses Gemini 2.0 Flash response', async () => {
+      fetchMock = makeFetchDispatcher([
+        {
+          match: (u) => u.includes(':generateContent'),
+          respond: () => jsonResponse(geminiBody),
+        },
+        {
+          // Health check hits /models endpoint
+          match: (u) => u.includes('/models?key='),
+          respond: () => jsonResponse({ models: [] }),
+        },
+      ]);
+      vi.stubGlobal('fetch', fetchMock);
+
       const provider = new GoogleProvider({
         config: {
           provider: 'google',
-          apiKey,
+          apiKey: 'gk-test-google',
           model: 'gemini-2.0-flash',
           maxTokens: 100,
         },
-        logger: consoleLogger,
+        logger: silentLogger,
       });
 
       await provider.initialize();
-
       const response = await provider.complete(createTestRequest());
 
-      console.log('Google Response:', response.content);
-      console.log('Usage:', response.usage);
-      console.log('Cost:', response.cost);
+      // The generateContent URL was hit with the configured key
+      const generateCall = fetchMock.mock.calls.find(
+        (call) => typeof call[0] === 'string' && call[0].includes(':generateContent'),
+      );
+      expect(generateCall).toBeDefined();
+      expect(generateCall![0]).toMatch(/gemini-2\.0-flash:generateContent\?key=gk-test-google/);
 
-      expect(response.content).toBeTruthy();
       expect(response.provider).toBe('google');
+      expect(response.content).toBe('Hello from Hive Flow V3!');
 
       provider.destroy();
-    }, 30000);
+    });
   });
 
   describe('OpenRouter Provider (OpenAI Compatible)', () => {
-    const apiKey = process.env.OPENROUTER_API_KEY;
+    const openrouterBody = {
+      id: 'chatcmpl_or_test',
+      object: 'chat.completion',
+      created: 1_700_000_000,
+      model: 'openai/gpt-4o-mini',
+      choices: [
+        {
+          index: 0,
+          message: {
+            role: 'assistant',
+            content: 'Hello from Hive Flow V3!',
+          },
+          finish_reason: 'stop' as const,
+        },
+      ],
+      usage: { prompt_tokens: 10, completion_tokens: 6, total_tokens: 16 },
+    };
 
-    it.skipIf(!apiKey)('should complete request via OpenRouter', async () => {
+    it('routes through the OpenAI-compatible OpenRouter URL', async () => {
+      fetchMock = makeFetchDispatcher([
+        {
+          match: (u) => u === 'https://openrouter.ai/api/v1/chat/completions',
+          respond: () => jsonResponse(openrouterBody),
+        },
+        {
+          // OpenAI health check hits /models
+          match: (u) => u === 'https://openrouter.ai/api/v1/models',
+          respond: () => jsonResponse({ data: [] }),
+        },
+      ]);
+      vi.stubGlobal('fetch', fetchMock);
+
       const provider = new OpenAIProvider({
         config: {
           provider: 'openai',
-          apiKey,
+          apiKey: 'or-test-openrouter',
           apiUrl: 'https://openrouter.ai/api/v1',
           model: 'openai/gpt-4o-mini',
           maxTokens: 100,
-          providerOptions: {
-            headers: {
-              'HTTP-Referer': 'https://hive-flow.dev',
-              'X-Title': 'Hive Flow V3 Test',
-            },
-          },
         },
-        logger: consoleLogger,
+        logger: silentLogger,
       });
 
       await provider.initialize();
-
       const response = await provider.complete(createTestRequest('openai/gpt-4o-mini'));
 
-      console.log('OpenRouter Response:', response.content);
-      console.log('Usage:', response.usage);
+      // POST to chat/completions with bearer auth
+      const completionCall = fetchMock.mock.calls.find(
+        (call) => call[0] === 'https://openrouter.ai/api/v1/chat/completions',
+      );
+      expect(completionCall).toBeDefined();
+      const headers = (completionCall![1] as RequestInit).headers as Record<string, string>;
+      expect(headers.Authorization).toBe('Bearer or-test-openrouter');
 
-      expect(response.content).toBeTruthy();
+      expect(response.content).toBe('Hello from Hive Flow V3!');
+      expect(response.usage.totalTokens).toBe(16);
 
       provider.destroy();
-    }, 30000);
+    });
   });
 
   describe('Ollama Provider (Local)', () => {
-    const ollamaUrl = process.env.OLLAMA_URL || 'http://localhost:11434';
+    const ollamaBody = {
+      model: 'llama3.2',
+      created_at: '2024-01-01T00:00:00Z',
+      message: { role: 'assistant', content: 'Hello from Hive Flow V3!' },
+      done: true,
+      prompt_eval_count: 9,
+      eval_count: 5,
+    };
 
-    it.skipIf(!process.env.OLLAMA_AVAILABLE)('should complete request with local model', async () => {
+    it('builds the request and parses an Ollama response from a local URL', async () => {
+      fetchMock = makeFetchDispatcher([
+        {
+          match: (u) => u === 'http://localhost:11434/api/chat',
+          respond: () => jsonResponse(ollamaBody),
+        },
+        {
+          // Ollama health check hits /api/tags
+          match: (u) => u === 'http://localhost:11434/api/tags',
+          respond: () => jsonResponse({ models: [{ name: 'llama3.2' }] }),
+        },
+      ]);
+      vi.stubGlobal('fetch', fetchMock);
+
       const provider = new OllamaProvider({
         config: {
           provider: 'ollama',
-          apiUrl: ollamaUrl,
+          apiUrl: 'http://localhost:11434',
           model: 'llama3.2',
           maxTokens: 100,
         },
-        logger: consoleLogger,
+        logger: silentLogger,
       });
 
-      try {
-        await provider.initialize();
+      await provider.initialize();
+      const response = await provider.complete(createTestRequest());
 
-        const response = await provider.complete(createTestRequest());
+      const chatCall = fetchMock.mock.calls.find(
+        (call) => call[0] === 'http://localhost:11434/api/chat',
+      );
+      expect(chatCall).toBeDefined();
 
-        console.log('Ollama Response:', response.content);
-        console.log('Usage:', response.usage);
+      expect(response.provider).toBe('ollama');
+      expect(response.content).toBe('Hello from Hive Flow V3!');
+      expect(response.cost?.totalCost).toBe(0); // local model, no cost
 
-        expect(response.content).toBeTruthy();
-        expect(response.provider).toBe('ollama');
-
-        provider.destroy();
-      } catch (error) {
-        console.log('Ollama not available locally, skipping test');
-      }
-    }, 60000);
-  });
-
-  describe('RuVector Provider (ruvllm)', () => {
-
-    it('should complete request with CPU-friendly Qwen model', async () => {
-      const provider = new RuVectorProvider({
-        config: {
-          provider: 'ruvector',
-          model: 'qwen2.5:0.5b', // CPU-friendly small Qwen model
-          maxTokens: 100,
-          providerOptions: {
-            // RuVector-specific options
-            sonaEnabled: true,
-            hnswEnabled: true,
-            fastgrnnEnabled: true,
-            // Local model settings
-            localModel: 'qwen2.5:0.5b',
-            ollamaUrl: 'http://localhost:11434',
-          },
-        },
-        logger: consoleLogger,
-      });
-
-      try {
-        await provider.initialize();
-
-        const response = await provider.complete(createTestRequest('qwen2.5:0.5b'));
-
-        console.log('RuVector Response:', response.content);
-        console.log('Usage:', response.usage);
-        console.log('Cost:', response.cost);
-
-        // Check SONA metrics
-        const sonaMetrics = await provider.getSonaMetrics();
-        console.log('SONA Metrics:', sonaMetrics);
-
-        expect(response.content).toBeTruthy();
-
-        provider.destroy();
-      } catch (error) {
-        console.log('RuVector/Ollama not available, test details:', error);
-        // Don't fail - local models may not be running
-      }
-    }, 120000);
-
-    it('should search memory with HNSW', async () => {
-      const provider = new RuVectorProvider({
-        config: {
-          provider: 'ruvector',
-          model: 'qwen2.5:0.5b',
-          maxTokens: 100,
-          providerOptions: {
-            hnswEnabled: true,
-          },
-        },
-        logger: consoleLogger,
-      });
-
-      try {
-        await provider.initialize();
-
-        // Search memory
-        const results = await provider.searchMemory('test query', 5);
-        console.log('Memory search results:', results);
-
-        expect(Array.isArray(results)).toBe(true);
-
-        provider.destroy();
-      } catch (error) {
-        console.log('Memory search not available:', error);
-      }
-    }, 30000);
+      provider.destroy();
+    });
   });
 
   describe('Provider Manager', () => {
-    const anthropicKey = process.env.ANTHROPIC_API_KEY;
-    const googleKey = process.env.GOOGLE_GEMINI_API_KEY;
+    const anthropicBody = {
+      id: 'msg_mgr_001',
+      type: 'message',
+      role: 'assistant',
+      model: 'claude-3-5-sonnet-latest',
+      content: [{ type: 'text', text: 'managed-anthropic-reply' }],
+      stop_reason: 'end_turn',
+      usage: { input_tokens: 10, output_tokens: 4 },
+    };
 
-    it.skipIf(!anthropicKey && !googleKey)('should manage multiple providers with failover', async () => {
-      const providers: LLMProviderConfig[] = [];
+    const geminiBody = {
+      candidates: [
+        {
+          content: { parts: [{ text: 'managed-gemini-reply' }], role: 'model' },
+          finishReason: 'STOP',
+        },
+      ],
+      usageMetadata: { promptTokenCount: 10, candidatesTokenCount: 4, totalTokenCount: 14 },
+    };
 
-      if (anthropicKey) {
-        providers.push({
+    function mountTwoProviderMocks(options: { anthropicStatus?: number } = {}) {
+      const anthropicStatus = options.anthropicStatus ?? 200;
+      fetchMock = makeFetchDispatcher([
+        {
+          match: (u, init) => {
+            if (u !== 'https://api.anthropic.com/v1/messages') return false;
+            // Distinguish complete() (large max_tokens) from health check (1)
+            const body = init?.body ? JSON.parse(String(init.body)) : {};
+            return body.max_tokens !== 1;
+          },
+          respond: () =>
+            anthropicStatus === 200
+              ? jsonResponse(anthropicBody)
+              : new Response(JSON.stringify({ error: { message: 'server error' } }), {
+                  status: anthropicStatus,
+                  headers: { 'Content-Type': 'application/json' },
+                }),
+        },
+        {
+          // Anthropic health check (max_tokens=1) → always succeed
+          match: (u) => u === 'https://api.anthropic.com/v1/messages',
+          respond: () => jsonResponse(anthropicBody),
+        },
+        {
+          match: (u) => u.includes(':generateContent'),
+          respond: () => jsonResponse(geminiBody),
+        },
+        {
+          match: (u) => u.includes('/models?key='),
+          respond: () => jsonResponse({ models: [] }),
+        },
+      ]);
+      vi.stubGlobal('fetch', fetchMock);
+    }
+
+    it('manages multiple providers and round-robin selects one', async () => {
+      mountTwoProviderMocks();
+
+      const providers: LLMProviderConfig[] = [
+        {
           provider: 'anthropic',
-          apiKey: anthropicKey,
+          apiKey: 'sk-test',
           model: 'claude-3-5-sonnet-latest',
           maxTokens: 100,
-        });
-      }
-
-      if (googleKey) {
-        providers.push({
+        },
+        {
           provider: 'google',
-          apiKey: googleKey,
+          apiKey: 'gk-test',
           model: 'gemini-2.0-flash',
           maxTokens: 100,
-        });
-      }
+        },
+      ];
 
       const config: ProviderManagerConfig = {
         providers,
-        loadBalancing: {
-          enabled: true,
-          strategy: 'round-robin',
-        },
-        fallback: {
-          enabled: true,
-          maxAttempts: 2,
-        },
-        cache: {
-          enabled: true,
-          ttl: 60000,
-          maxSize: 100,
-        },
+        loadBalancing: { enabled: true, strategy: 'round-robin' },
+        fallback: { enabled: true, maxAttempts: 2 },
+        cache: { enabled: false, ttl: 60_000, maxSize: 100 },
       };
 
-      const manager = await createProviderManager(config, consoleLogger);
+      const manager = await createProviderManager(config, silentLogger);
 
-      // List providers
-      const providerList = manager.listProviders();
-      console.log('Active providers:', providerList);
-      expect(providerList.length).toBeGreaterThan(0);
+      const list = manager.listProviders();
+      expect(list).toContain('anthropic');
+      expect(list).toContain('google');
 
-      // Complete request
       const response = await manager.complete(createTestRequest());
-      console.log('Manager Response:', response.content);
-      console.log('Provider used:', response.provider);
+      // Round-robin starts at index 0 (anthropic)
+      expect(response.provider).toBe('anthropic');
+      expect(response.content).toBe('managed-anthropic-reply');
 
-      expect(response.content).toBeTruthy();
-
-      // Health check all
-      const health = await manager.healthCheck();
-      console.log('Health status:', Object.fromEntries(health));
-
-      // Get metrics
-      const metrics = manager.getMetrics();
-      console.log('Metrics:', Object.fromEntries(metrics));
+      // estimateCost is computed locally from token estimates → no network calls
+      const estimates = await manager.estimateCost(createTestRequest());
+      expect(estimates.has('anthropic')).toBe(true);
+      expect(estimates.has('google')).toBe(true);
 
       manager.destroy();
-    }, 60000);
+    });
 
-    it.skipIf(!anthropicKey)('should use cache for repeated requests', async () => {
-      const manager = await createProviderManager({
-        providers: [{
-          provider: 'anthropic',
-          apiKey: anthropicKey,
-          model: 'claude-3-5-sonnet-latest',
-          maxTokens: 50,
-        }],
-        cache: {
-          enabled: true,
-          ttl: 60000,
-          maxSize: 100,
+    it('falls back to a second provider when the first errors', async () => {
+      mountTwoProviderMocks({ anthropicStatus: 500 });
+
+      const config: ProviderManagerConfig = {
+        providers: [
+          {
+            provider: 'anthropic',
+            apiKey: 'sk-test',
+            model: 'claude-3-5-sonnet-latest',
+            maxTokens: 100,
+          },
+          {
+            provider: 'google',
+            apiKey: 'gk-test',
+            model: 'gemini-2.0-flash',
+            maxTokens: 100,
+          },
+        ],
+        loadBalancing: { enabled: true, strategy: 'round-robin' },
+        fallback: { enabled: true, maxAttempts: 2 },
+      };
+
+      const manager = await createProviderManager(config, silentLogger);
+
+      // Providers extend EventEmitter and emit 'error' on failure. Attach a
+      // no-op listener so the failover path doesn't crash Node's EventEmitter
+      // unhandled-error guard during the test.
+      const anthropic = manager.getProvider('anthropic');
+      expect(anthropic).toBeDefined();
+      (anthropic as { on(e: string, fn: (...args: unknown[]) => void): void }).on(
+        'error',
+        () => {},
+      );
+
+      const response = await manager.complete(createTestRequest(), 'anthropic');
+
+      expect(response.provider).toBe('google');
+      expect(response.content).toBe('managed-gemini-reply');
+
+      manager.destroy();
+    });
+
+    it('uses the cache for repeated identical requests', async () => {
+      mountTwoProviderMocks();
+
+      const manager = await createProviderManager(
+        {
+          providers: [
+            {
+              provider: 'anthropic',
+              apiKey: 'sk-test',
+              model: 'claude-3-5-sonnet-latest',
+              maxTokens: 50,
+            },
+          ],
+          cache: { enabled: true, ttl: 60_000, maxSize: 100 },
         },
-      }, consoleLogger);
+        silentLogger,
+      );
 
       const request = createTestRequest();
-
-      // First request - no cache
-      const start1 = Date.now();
       const response1 = await manager.complete(request);
-      const time1 = Date.now() - start1;
-      console.log(`First request: ${time1}ms`);
-
-      // Second request - should hit cache
-      const start2 = Date.now();
       const response2 = await manager.complete(request);
-      const time2 = Date.now() - start2;
-      console.log(`Second request (cached): ${time2}ms`);
 
       expect(response1.content).toBe(response2.content);
-      // Cache should be meaningfully faster; use generous tolerance for CI variance
-      expect(time2).toBeLessThan(Math.max(time1 * 0.9, 500));
+
+      // The complete() endpoint should only have been hit ONCE — second is cached
+      const completionCalls = fetchMock.mock.calls.filter((call) => {
+        if (call[0] !== 'https://api.anthropic.com/v1/messages') return false;
+        const body = (call[1] as RequestInit)?.body
+          ? JSON.parse(String((call[1] as RequestInit).body))
+          : {};
+        return body.max_tokens !== 1;
+      });
+      expect(completionCalls).toHaveLength(1);
 
       manager.destroy();
-    }, 60000);
+    });
   });
 
   describe('Cost Estimation', () => {
-    const apiKey = process.env.ANTHROPIC_API_KEY;
+    it('estimates cost from local pricing tables without network calls', async () => {
+      // Health check still fires from initialize(); mock both endpoints.
+      fetchMock = makeFetchDispatcher([
+        {
+          match: (u) => u === 'https://api.anthropic.com/v1/messages',
+          respond: () => jsonResponse({
+            id: 'health',
+            type: 'message',
+            role: 'assistant',
+            model: 'claude-3-5-sonnet-latest',
+            content: [{ type: 'text', text: 'ok' }],
+            stop_reason: 'end_turn',
+            usage: { input_tokens: 1, output_tokens: 1 },
+          }),
+        },
+      ]);
+      vi.stubGlobal('fetch', fetchMock);
 
-    it.skipIf(!apiKey)('should estimate costs accurately', async () => {
-      const manager = await createProviderManager({
-        providers: [{
-          provider: 'anthropic',
-          apiKey,
-          model: 'claude-3-5-sonnet-latest',
-          maxTokens: 100,
-        }],
-      }, consoleLogger);
+      const manager = await createProviderManager(
+        {
+          providers: [
+            {
+              provider: 'anthropic',
+              apiKey: 'sk-test',
+              model: 'claude-3-5-sonnet-latest',
+              maxTokens: 100,
+            },
+          ],
+        },
+        silentLogger,
+      );
 
-      const request = createTestRequest();
+      const callsBefore = fetchMock.mock.calls.length;
+      const estimates = await manager.estimateCost(createTestRequest());
+      const callsAfter = fetchMock.mock.calls.length;
 
-      // Get cost estimates
-      const estimates = await manager.estimateCost(request);
-      console.log('Cost estimates:', Object.fromEntries(estimates));
+      // estimateCost must not perform any HTTP calls of its own
+      expect(callsAfter).toBe(callsBefore);
 
-      // Make actual request
-      const response = await manager.complete(request);
-      console.log('Actual cost:', response.cost);
-
-      // Verify estimate contains meaningful values
       const estimate = estimates.get('anthropic');
       expect(estimate).toBeDefined();
-      expect(estimate!.estimatedCost.total).toBeGreaterThanOrEqual(0);
       expect(estimate!.estimatedPromptTokens).toBeGreaterThan(0);
-
-      // Compare estimate to actual
-      if (response.cost) {
-        const estimateTotal = estimate!.estimatedCost.total;
-        const actualTotal = response.cost.totalCost;
-        const accuracy = 1 - Math.abs(estimateTotal - actualTotal) / actualTotal;
-        console.log(`Estimation accuracy: ${(accuracy * 100).toFixed(1)}%`);
-      }
+      expect(estimate!.estimatedCompletionTokens).toBe(50);
+      expect(estimate!.estimatedCost.total).toBeGreaterThan(0);
+      expect(estimate!.estimatedCost.currency).toBe('USD');
 
       manager.destroy();
-    }, 30000);
+    });
   });
 });
-
-// Quick standalone test runner
-async function runQuickTest() {
-  console.log('\n=== Quick Provider Test ===\n');
-
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    console.log('No ANTHROPIC_API_KEY found in .env');
-    return;
-  }
-
-  const provider = new AnthropicProvider({
-    config: {
-      provider: 'anthropic',
-      apiKey,
-      model: 'claude-3-5-sonnet-latest',
-      maxTokens: 100,
-    },
-    logger: consoleLogger,
-  });
-
-  await provider.initialize();
-
-  const response = await provider.complete({
-    messages: [{ role: 'user', content: 'What is 2+2? Reply with just the number.' }],
-    maxTokens: 10,
-  });
-
-  console.log('Response:', response.content);
-  console.log('Tokens:', response.usage);
-  console.log('Cost:', response.cost);
-
-  provider.destroy();
-}
-
-// Export for direct execution
-export { runQuickTest };

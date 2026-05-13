@@ -31,6 +31,21 @@ vi.mock('../ruvector/enhanced-model-router.js', () => ({
     route: async () => ({ model: 'sonnet', tier: 3, canSkipLLM: false }),
   }),
 }));
+vi.mock('@hive-flow/providers', () => ({
+  resolveProviderModel: vi.fn((provider: string, model: string | undefined) => {
+    if (provider === 'openrouter') {
+      if (model === 'xiaomi/mimo-v2.5-pro') return 'xiaomi/mimo-v2.5-pro';
+      if (model === 'mini' || model === 'sonnet') return 'moonshotai/kimi-k2.6';
+      return undefined;
+    }
+    if (provider === 'codex-cli') return 'gpt-5.5';
+    if (provider === 'gemini-cli') return 'gemini-3.1-pro-preview';
+    if (provider === 'cursor-cli') return 'auto';
+    if (provider === 'deepseek') return model === 'mini' ? 'deepseek-v4-flash' : 'deepseek-v4-pro';
+    if (provider === 'anthropic-cli') return model === 'mini' || model === 'sonnet' ? 'claude-sonnet-4-6' : 'claude-opus-4-7';
+    return model;
+  }),
+}));
 
 import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync } from 'node:fs';
 import { spawn } from 'node:child_process';
@@ -39,7 +54,9 @@ import { agentTools } from '../mcp-tools/agent-tools.js';
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
 /** Find the agent_task tool handler from the exported array */
+const agentSpawnTool = agentTools.find((t) => t.name === 'agent_spawn')!;
 const agentTaskTool = agentTools.find((t) => t.name === 'agent_task')!;
+const spawnHandler = agentSpawnTool.handler;
 const handler = agentTaskTool.handler;
 
 /** The bridge path that the handler will compute from the mocked fileURLToPath */
@@ -55,6 +72,7 @@ interface AgentRecord {
   createdAt: string;
   provider?: string;
   model?: string;
+  resolvedModel?: string;
 }
 
 function makeAgent(overrides: Partial<AgentRecord> = {}): AgentRecord {
@@ -155,6 +173,48 @@ function getSpawnCall(): { args: string[]; opts: Record<string, unknown> } {
 }
 
 // ── Tests ───────────────────────────────────────────────────────────────────
+
+describe('agent_spawn handler model normalization', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('uses an OpenRouter direct model input for resolvedModel instead of routing it away', async () => {
+    const { getPersistedStore } = setupStoreMocks(makeStore());
+
+    const result = await spawnHandler({
+      agentType: 'reviewer',
+      provider: ' OpenRouter ',
+      model: ' Xiaomi/MIMO-V2.5-PRO ',
+    }) as Record<string, unknown>;
+
+    expect(result.success).toBe(true);
+    expect(result.provider).toBe('openrouter');
+    expect(result.resolvedModel).toBe('xiaomi/mimo-v2.5-pro');
+    const persisted = Object.values(getPersistedStore().agents)[0] as AgentRecord;
+    expect(persisted.provider).toBe('openrouter');
+    expect(persisted.resolvedModel).toBe('xiaomi/mimo-v2.5-pro');
+    expect(persisted.model).toBe('inherit');
+  });
+
+  it('normalizes provider and alias case before persisting runtime state', async () => {
+    const { getPersistedStore } = setupStoreMocks(makeStore());
+
+    const result = await spawnHandler({
+      agentType: 'coder',
+      provider: 'CODEX-CLI',
+      model: 'OPUS',
+    }) as Record<string, unknown>;
+
+    expect(result.success).toBe(true);
+    expect(result.provider).toBe('codex-cli');
+    expect(result.resolvedModel).toBe('gpt-5.5');
+    const persisted = Object.values(getPersistedStore().agents)[0] as AgentRecord;
+    expect(persisted.provider).toBe('codex-cli');
+    expect(persisted.model).toBe('opus');
+    expect(persisted.resolvedModel).toBe('gpt-5.5');
+  });
+});
 
 describe('agent_task handler (non-blocking)', () => {
   beforeEach(() => {

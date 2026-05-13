@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 
 // The module under test — created in Step 1
@@ -139,12 +140,12 @@ describe('OpenRouter config-driven model selection', () => {
       }
     });
 
-    it('uses sonnet pool for undefined/empty/inherit model via resolver', () => {
+    it('uses opus pool for undefined/empty/inherit model via resolver', () => {
       vi.spyOn(fs, 'existsSync').mockReturnValue(false);
       vi.spyOn(Math, 'random').mockReturnValueOnce(0.0);
 
       const result = resolveProviderModel('openrouter', undefined);
-      expect(DEFAULT_CONFIG.tiers.sonnet).toContain(result);
+      expect(DEFAULT_CONFIG.tiers.opus).toContain(result);
     });
   });
 
@@ -153,7 +154,7 @@ describe('OpenRouter config-driven model selection', () => {
       vi.spyOn(fs, 'existsSync').mockReturnValue(false);
 
       const config = loadOpenRouterConfig();
-      expect(isModelAllowed(config, 'anthropic/claude-opus-4-6')).toBe(true);
+      expect(isModelAllowed(config, 'xiaomi/mimo-v2.5-pro')).toBe(true);
     });
 
     it('blocks model NOT in allowedModels and returns undefined', () => {
@@ -167,7 +168,7 @@ describe('OpenRouter config-driven model selection', () => {
       vi.spyOn(fs, 'existsSync').mockReturnValue(false);
 
       const config = loadOpenRouterConfig();
-      expect(isModelAllowed(config, 'google/gemini-2.5-flash')).toBe(true);
+      expect(isModelAllowed(config, 'qwen/qwen3.6-max-preview')).toBe(true);
     });
   });
 
@@ -182,9 +183,21 @@ describe('OpenRouter config-driven model selection', () => {
       expect(DEFAULT_CONFIG.tiers.opus).toContain(result);
     });
 
+    it('resolveProviderModel with openrouter + mini returns model from sonnet pool (Decision 3)', () => {
+      vi.spyOn(Math, 'random').mockReturnValueOnce(0.0);
+      const result = resolveProviderModel('openrouter', 'mini');
+      expect(DEFAULT_CONFIG.tiers.sonnet).toContain(result);
+    });
+
+    it('resolveProviderModel with openrouter + sonnet returns model from sonnet pool', () => {
+      vi.spyOn(Math, 'random').mockReturnValueOnce(0.0);
+      const result = resolveProviderModel('openrouter', 'sonnet');
+      expect(DEFAULT_CONFIG.tiers.sonnet).toContain(result);
+    });
+
     it('resolveProviderModel with openrouter + direct model returns it if allowed', () => {
-      const result = resolveProviderModel('openrouter', 'google/gemini-2.5-flash');
-      expect(result).toBe('google/gemini-2.5-flash');
+      const result = resolveProviderModel('openrouter', 'qwen/qwen3.6-max-preview');
+      expect(result).toBe('qwen/qwen3.6-max-preview');
     });
 
     it('resolveProviderModel with openrouter + blocked model returns undefined', () => {
@@ -194,10 +207,10 @@ describe('OpenRouter config-driven model selection', () => {
       expect(spy).toHaveBeenCalledWith(expect.stringContaining('not in allowedModels'));
     });
 
-    it('resolveProviderModel with openrouter + no model returns sonnet pool model', () => {
+    it('resolveProviderModel with openrouter + no model returns opus pool model', () => {
       vi.spyOn(Math, 'random').mockReturnValueOnce(0.0);
       const result = resolveProviderModel('openrouter', undefined);
-      expect(DEFAULT_CONFIG.tiers.sonnet).toContain(result);
+      expect(DEFAULT_CONFIG.tiers.opus).toContain(result);
     });
 
     it('resolveProviderModel intercepts openrouter (does not passthrough)', () => {
@@ -206,6 +219,211 @@ describe('OpenRouter config-driven model selection', () => {
       // Should NOT return 'opus' unchanged — should return a pool model
       expect(result).not.toBe('opus');
       expect(result).toBeDefined();
+    });
+  });
+
+  describe('expanded coverage (real-world + edge + regression)', () => {
+    beforeEach(() => {
+      vi.spyOn(fs, 'existsSync').mockReturnValue(false);
+      resetOpenRouterConfigCache();
+    });
+
+    // ── Real-world coverage ──
+
+    it('opus alias selects from opus pool only', () => {
+      for (let i = 0; i < 30; i++) {
+        const result = resolveProviderModel('openrouter', 'opus');
+        expect(DEFAULT_CONFIG.tiers.opus).toContain(result);
+        expect(DEFAULT_CONFIG.tiers.sonnet).not.toContain(result);
+        expect(DEFAULT_CONFIG.tiers.haiku).not.toContain(result);
+      }
+    });
+
+    it('sonnet alias selects from sonnet pool only', () => {
+      for (let i = 0; i < 30; i++) {
+        const result = resolveProviderModel('openrouter', 'sonnet');
+        expect(DEFAULT_CONFIG.tiers.sonnet).toContain(result);
+        expect(DEFAULT_CONFIG.tiers.opus).not.toContain(result);
+        expect(DEFAULT_CONFIG.tiers.haiku).not.toContain(result);
+      }
+    });
+
+    it('haiku alias selects from haiku pool only', () => {
+      for (let i = 0; i < 30; i++) {
+        const result = resolveProviderModel('openrouter', 'haiku');
+        expect(DEFAULT_CONFIG.tiers.haiku).toContain(result);
+        expect(DEFAULT_CONFIG.tiers.opus).not.toContain(result);
+        expect(DEFAULT_CONFIG.tiers.sonnet).not.toContain(result);
+      }
+    });
+
+    it('mini alias selects from sonnet pool, not haiku', () => {
+      for (let i = 0; i < 30; i++) {
+        const result = resolveProviderModel('openrouter', 'mini');
+        expect(DEFAULT_CONFIG.tiers.sonnet).toContain(result);
+        expect(DEFAULT_CONFIG.tiers.haiku).not.toContain(result);
+      }
+    });
+
+    it('random distribution across opus pool over many trials', () => {
+      const seen = new Set<string>();
+      for (let i = 0; i < 100; i++) {
+        const result = resolveProviderModel('openrouter', 'opus');
+        if (result) seen.add(result);
+      }
+      // Catches hardcoded [0] regression — must see >= 2 distinct models
+      expect(seen.size).toBeGreaterThanOrEqual(2);
+    });
+
+    // ── Edge cases ──
+
+    it('direct allowed-list model passes through', () => {
+      const result = resolveProviderModel('openrouter', 'xiaomi/mimo-v2.5-pro');
+      expect(result).toBe('xiaomi/mimo-v2.5-pro');
+    });
+
+    it('direct allowed-list model is case-insensitive and returns canonical slug', () => {
+      const result = resolveProviderModel('openrouter', ' Xiaomi/MIMO-V2.5-PRO ');
+      expect(result).toBe('xiaomi/mimo-v2.5-pro');
+    });
+
+    it('tier aliases are case-insensitive and whitespace-tolerant', () => {
+      vi.spyOn(Math, 'random').mockReturnValueOnce(0.0);
+      const result = resolveProviderModel('openrouter', ' MINI ');
+      expect(DEFAULT_CONFIG.tiers.sonnet).toContain(result);
+    });
+
+    it('direct blocked model returns undefined and warns', () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const result = resolveProviderModel('openrouter', 'gpt-4o');
+      expect(result).toBeUndefined();
+      expect(warnSpy).toHaveBeenCalled();
+    });
+
+    it('empty allowedModels config blocks all direct strings', () => {
+      // Two-layer assertion:
+      //   1. `isModelAllowed` returns false for any model when the config
+      //      allowlist is empty (the predicate's documented contract).
+      //   2. `resolveProviderModel` honours that allowlist end-to-end by
+      //      reading the same on-disk config — we drop a real
+      //      `.hive-flow/config.json` into a temp dir and run the resolver
+      //      from inside that dir so `loadOpenRouterConfig` (which uses
+      //      `process.cwd()`) picks it up. This avoids module-level fs
+      //      mocking which would clash with the rest of the suite.
+      const emptyAllowConfig: OpenRouterModelConfig = {
+        tiers: { ...DEFAULT_CONFIG.tiers },
+        allowedModels: [],
+      };
+
+      // Layer 1: predicate
+      expect(isModelAllowed(emptyAllowConfig, 'xiaomi/mimo-v2.5-pro')).toBe(false);
+      expect(isModelAllowed(emptyAllowConfig, 'qwen/qwen3.6-max-preview')).toBe(false);
+      expect(isModelAllowed(emptyAllowConfig, 'unknown/blocked-model')).toBe(false);
+
+      // Layer 2: resolver via a real on-disk config in a temp working dir
+      const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-or-config-'));
+      const hiveDir = path.join(tmpRoot, '.hive-flow');
+      fs.mkdirSync(hiveDir, { recursive: true });
+      fs.writeFileSync(
+        path.join(hiveDir, 'config.json'),
+        JSON.stringify({
+          values: {
+            openrouter: {
+              allowedModels: [],
+              tiers: DEFAULT_CONFIG.tiers,
+            },
+          },
+        }),
+      );
+
+      const originalCwd = process.cwd();
+      process.chdir(tmpRoot);
+      resetOpenRouterConfigCache();
+
+      try {
+        const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+        // Direct slug normally in DEFAULT_CONFIG.allowedModels is now blocked
+        const blocked = resolveProviderModel('openrouter', 'xiaomi/mimo-v2.5-pro');
+        expect(blocked).toBeUndefined();
+        expect(warnSpy).toHaveBeenCalledWith(
+          expect.stringContaining('not in allowedModels'),
+        );
+
+        // Aliases still draw from tier pools (allowlist only gates direct slugs)
+        vi.spyOn(Math, 'random').mockReturnValue(0.0);
+        const opusPick = resolveProviderModel('openrouter', 'opus');
+        expect(DEFAULT_CONFIG.tiers.opus).toContain(opusPick);
+      } finally {
+        process.chdir(originalCwd);
+        resetOpenRouterConfigCache();
+        fs.rmSync(tmpRoot, { recursive: true, force: true });
+      }
+    });
+
+    it('config cache is scoped by project directory', () => {
+      const rootA = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-or-cache-a-'));
+      const rootB = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-or-cache-b-'));
+      for (const root of [rootA, rootB]) {
+        fs.mkdirSync(path.join(root, '.hive-flow'), { recursive: true });
+      }
+      fs.writeFileSync(path.join(rootA, '.hive-flow', 'config.json'), JSON.stringify({
+        openrouter: {
+          tiers: { opus: ['a/opus'], sonnet: ['a/sonnet'], haiku: ['a/haiku'] },
+          allowedModels: ['a/opus'],
+        },
+      }));
+      fs.writeFileSync(path.join(rootB, '.hive-flow', 'config.json'), JSON.stringify({
+        openrouter: {
+          tiers: { opus: ['b/opus'], sonnet: ['b/sonnet'], haiku: ['b/haiku'] },
+          allowedModels: ['b/opus'],
+        },
+      }));
+
+      try {
+        resetOpenRouterConfigCache();
+        expect(loadOpenRouterConfig(rootA).tiers.opus).toEqual(['a/opus']);
+        expect(loadOpenRouterConfig(rootB).tiers.opus).toEqual(['b/opus']);
+      } finally {
+        resetOpenRouterConfigCache();
+        fs.rmSync(rootA, { recursive: true, force: true });
+        fs.rmSync(rootB, { recursive: true, force: true });
+      }
+    });
+
+    // ── Regression prevention (user directive + runbook fixes) ──
+
+    it('regression: undefined model picks from opus pool (user directive — not sonnet)', () => {
+      for (let i = 0; i < 30; i++) {
+        const result = resolveProviderModel('openrouter', undefined);
+        expect(DEFAULT_CONFIG.tiers.opus).toContain(result);
+        expect(DEFAULT_CONFIG.tiers.sonnet).not.toContain(result);
+      }
+    });
+
+    it('regression: empty string model picks from opus pool', () => {
+      for (let i = 0; i < 30; i++) {
+        const result = resolveProviderModel('openrouter', '');
+        expect(DEFAULT_CONFIG.tiers.opus).toContain(result);
+        expect(DEFAULT_CONFIG.tiers.sonnet).not.toContain(result);
+      }
+    });
+
+    it('regression: inherit picks from opus pool', () => {
+      for (let i = 0; i < 30; i++) {
+        const result = resolveProviderModel('openrouter', 'inherit');
+        expect(DEFAULT_CONFIG.tiers.opus).toContain(result);
+        expect(DEFAULT_CONFIG.tiers.sonnet).not.toContain(result);
+      }
+    });
+
+    it('regression: mini-tier reuse — does not require a separate mini tier config', () => {
+      // Verify DEFAULT_CONFIG.tiers has no 'mini' key
+      expect((DEFAULT_CONFIG.tiers as Record<string, unknown>).mini).toBeUndefined();
+      // Yet 'mini' still resolves to a valid model (sonnet pool reuse)
+      const result = resolveProviderModel('openrouter', 'mini');
+      expect(result).toBeDefined();
+      expect(DEFAULT_CONFIG.tiers.sonnet).toContain(result);
     });
   });
 });

@@ -292,6 +292,36 @@ describe('agent_task_async handler', () => {
     expect(mockUnref).toHaveBeenCalledTimes(1);
   });
 
+  // ------------------------------------------------------------------
+  // AL3: Defense-in-depth — re-validate persisted agent.model at dispatch
+  // ------------------------------------------------------------------
+  it('rejects an agent with legacy persisted model "haiku" before bridge dispatch', async () => {
+    // Spec: checkModelEnforcement at agent_spawn blocks haiku, but a legacy
+    // persisted agent record with model: 'haiku' would otherwise slip through
+    // to the bridge. agent_task must re-validate at task dispatch time.
+    const agent = makeAgent({
+      status: 'idle',
+      // Cast: 'haiku' is not in the typed AgentModel union, but persisted
+      // legacy/out-of-band records can carry it.
+      model: 'haiku' as unknown as AgentRecord['model'],
+    });
+    const { getPersistedStore } = setupStoreMocks(makeStore({ [agent.agentId]: agent }));
+    mockDetachedSpawn(12345);
+
+    const result = await asyncHandler({ agentId: agent.agentId, task: 'haiku-banned' }) as Record<string, unknown>;
+
+    expect(result.success).toBe(false);
+    expect(result.agentId).toBe(agent.agentId);
+    expect(typeof result.error).toBe('string');
+    expect(result.error as string).toMatch(/legacy persisted model "haiku"/i);
+
+    // Agent must remain idle (no busy transition for a rejected task).
+    expect(getPersistedStore().agents[agent.agentId].status).toBe('idle');
+
+    // Bridge must never have been spawned.
+    expect((spawn as ReturnType<typeof vi.fn>).mock.calls.length).toBe(0);
+  });
+
   it('restores idleSince when dispatch fails before the bridge starts', async () => {
     const agent = makeAgent({ status: 'idle' });
     const { getPersistedStore } = setupStoreMocks(makeStore({ [agent.agentId]: agent }));
@@ -516,6 +546,37 @@ describe('agent_task_result handler', () => {
     killSpy.mockRestore();
   });
 
+  it('preserves the malformed result-file contents in rawOutput for diagnostics', async () => {
+    // Spec: when the bridge crashes and writes non-JSON output to the result file,
+    // agent_task_result must preserve the raw contents (truncated to 2048 bytes)
+    // so operators can triage segfaults, panics, or stack traces. Without this,
+    // bridge crashes become opaque failures.
+    const malformed = 'Segmentation fault (core dumped)\n<core trace>\n';
+    const agent = makeAgent({ agentId: AGENT_ID, status: 'busy' });
+    const tracking = { status: 'running', taskId: TASK_ID, agentId: AGENT_ID, startedAt: new Date().toISOString(), pid: LIVE_PID };
+
+    // Both tracking and result files exist; result file contains malformed (non-JSON) bytes.
+    baseExistsMock([`${TASK_ID}.json`, `${TASK_ID}.result.json`]);
+
+    (readFileSync as ReturnType<typeof vi.fn>).mockImplementation((p: string) => {
+      if (typeof p === 'string' && p.endsWith('store.json')) return JSON.stringify(makeStore({ [AGENT_ID]: agent }));
+      if (typeof p === 'string' && p.endsWith(`${TASK_ID}.result.json`)) return malformed;
+      if (typeof p === 'string' && p.endsWith(`${TASK_ID}.json`)) return JSON.stringify(tracking);
+      return JSON.stringify({});
+    });
+    baseWriteMock();
+
+    const result = await resultHandler({ taskId: TASK_ID }) as Record<string, unknown>;
+
+    expect(result.success).toBe(false);
+    expect(result.status).toBe('failed');
+    expect(result.error).toMatch(/parse result file/i);
+    expect(typeof result.rawOutput).toBe('string');
+    expect(result.rawOutput).toContain('Segmentation fault');
+    // Truncation enforced
+    expect((result.rawOutput as string).length).toBeLessThanOrEqual(2048);
+  });
+
   // ------------------------------------------------------------------
   // 12. Sanitizes taskId (path traversal prevention)
   // ------------------------------------------------------------------
@@ -628,5 +689,223 @@ describe('parallel dispatch', () => {
     for (const id of taskIds) {
       expect(id.startsWith('task-')).toBe(true);
     }
+  });
+});
+
+// ── Bridge result-file failure surfacing (migrated from bridge-tool-execution.test.ts)
+//
+// Contract: under fire-and-forget dispatch, agent_task no longer observes bridge
+// runtime failures. The bridge writes a `<taskId>.result.json` file on every
+// terminal outcome (success or failure). agent_task_result reads that file and
+// surfaces the bridge's error payload to the caller verbatim under the
+// `result` field with `status: 'completed'` (because the bridge produced a
+// result), preserving the bridge's own success/error shape.
+//
+// These tests cover the failure modes that used to live in
+// bridge-tool-execution.test.ts but are no longer observable from agent_task:
+//   - tool execution failure inside the provider call
+//   - provider initialization failure
+//   - provider authentication failure
+//   - bridge timeout (graceful, with result file written)
+//   - bridge crash producing a malformed (non-JSON) result file
+//
+// For all the above except the malformed-file case, the bridge writes a
+// well-formed `{ success: false, error, code }` JSON envelope. agent_task_result
+// passes that through to the caller without re-classifying it.
+// ────────────────────────────────────────────────────────────────────────────
+
+describe('agent_task_result: bridge result-file failure surfacing', () => {
+  const TASK_ID = 'task-1700000000001-failmode';
+  const AGENT_ID = 'failmode-agent';
+  const ALIVE_PID = 44444;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  /**
+   * Configure mocks so that:
+   *   - store.json returns a single busy agent
+   *   - <TASK_ID>.json returns the tracking record
+   *   - <TASK_ID>.result.json is either present (with `resultBody`) or absent
+   *
+   * If `resultBody === null`, the result file is treated as absent.
+   * If `resultBody` is a string, it's returned raw (allows malformed JSON).
+   * If `resultBody` is an object, it's JSON.stringify'd.
+   */
+  function setupResultFile(
+    resultBody: string | Record<string, unknown> | null,
+    overrides: { pid?: number; agentStatus?: 'busy' | 'idle' } = {},
+  ) {
+    const agent = makeAgent({
+      agentId: AGENT_ID,
+      status: overrides.agentStatus ?? 'busy',
+    });
+    let currentStore = makeStore({ [AGENT_ID]: agent });
+    const tracking = {
+      status: 'running',
+      taskId: TASK_ID,
+      agentId: AGENT_ID,
+      startedAt: new Date().toISOString(),
+      pid: overrides.pid ?? ALIVE_PID,
+    };
+
+    (existsSync as ReturnType<typeof vi.fn>).mockImplementation((p: string) => {
+      if (typeof p === 'string') {
+        if (p.endsWith('store.json')) return true;
+        if (p.endsWith(`${TASK_ID}.json`) && !p.endsWith(`${TASK_ID}.result.json`)) return true;
+        if (p.endsWith(`${TASK_ID}.result.json`)) return resultBody !== null;
+      }
+      return false;
+    });
+
+    (readFileSync as ReturnType<typeof vi.fn>).mockImplementation((p: string) => {
+      if (typeof p === 'string') {
+        if (p.endsWith('store.json')) return JSON.stringify(currentStore);
+        if (p.endsWith(`${TASK_ID}.result.json`)) {
+          if (resultBody === null) throw new Error('ENOENT');
+          if (typeof resultBody === 'string') return resultBody;
+          return JSON.stringify(resultBody);
+        }
+        if (p.endsWith(`${TASK_ID}.json`)) return JSON.stringify(tracking);
+      }
+      return JSON.stringify({});
+    });
+
+    const tmpWrites = new Map<string, string>();
+    (writeFileSync as ReturnType<typeof vi.fn>).mockImplementation((p: string, data: string) => {
+      if (typeof p === 'string' && p.includes('.tmp.')) {
+        tmpWrites.set(p, data);
+      }
+    });
+    (renameSync as ReturnType<typeof vi.fn>).mockImplementation((src: string) => {
+      const data = tmpWrites.get(src);
+      if (data) {
+        try { currentStore = JSON.parse(data); } catch { /* skip */ }
+        tmpWrites.delete(src);
+      }
+    });
+    (mkdirSync as ReturnType<typeof vi.fn>).mockImplementation(() => {});
+
+    return { getStore: () => currentStore };
+  }
+
+  it('surfaces a bridge tool-execution failure when bridge writes { success: false, error } to the result file', async () => {
+    // Was: bridge-tool-execution.test.ts "should return error when bridge reports tool execution failure"
+    // New layer: result-file polling
+    const bridgeErrorPayload = {
+      success: false,
+      error: 'Tool execution failed: read_file ENOENT /missing.txt',
+      code: 'BRIDGE_ERROR',
+    };
+    setupResultFile(bridgeErrorPayload);
+
+    const result = await resultHandler({ taskId: TASK_ID }) as Record<string, unknown>;
+
+    // The handler treats result-file presence as terminal (status: completed),
+    // and forwards the bridge's payload under `result` so the caller can
+    // inspect success === false and the error message.
+    expect(result.success).toBe(true);
+    expect(result.status).toBe('completed');
+    expect(result.taskId).toBe(TASK_ID);
+    expect(result.agentId).toBe(AGENT_ID);
+    expect(result.result).toEqual(bridgeErrorPayload);
+    // Caller-side assertion: the inner payload signals failure.
+    expect((result.result as Record<string, unknown>).success).toBe(false);
+    expect((result.result as Record<string, unknown>).error)
+      .toMatch(/Tool execution failed/i);
+  });
+
+  it('surfaces a provider initialization failure written by the bridge to the result file', async () => {
+    // Was: bridge-tool-execution.test.ts "should return error when provider initialization fails"
+    // Bridge wraps init errors as: "Provider <name> initialization failed: <msg>"
+    // (see provider-agent-bridge.mjs line 1608)
+    const initErrorPayload = {
+      success: false,
+      error: 'Provider gemini-cli initialization failed: missing API key',
+      code: 'BRIDGE_ERROR',
+    };
+    setupResultFile(initErrorPayload);
+
+    const result = await resultHandler({ taskId: TASK_ID }) as Record<string, unknown>;
+
+    expect(result.success).toBe(true);
+    expect(result.status).toBe('completed');
+    expect(result.agentId).toBe(AGENT_ID);
+    const inner = result.result as Record<string, unknown>;
+    expect(inner.success).toBe(false);
+    expect(inner.error).toMatch(/initialization failed/i);
+  });
+
+  it('surfaces a provider authentication failure written by the bridge to the result file', async () => {
+    // Was: bridge-tool-execution.test.ts "should return error when provider authentication fails"
+    // Bridge classifyError() maps 401/unauthorized/invalid API key to 'provider_api'
+    // (see provider-agent-bridge.mjs lines 155-158)
+    const authErrorPayload = {
+      success: false,
+      error: 'API authentication failed: 401 Unauthorized — invalid api key',
+      code: 'PROVIDER_AUTH_FAILED',
+    };
+    setupResultFile(authErrorPayload);
+
+    const result = await resultHandler({ taskId: TASK_ID }) as Record<string, unknown>;
+
+    expect(result.success).toBe(true);
+    expect(result.status).toBe('completed');
+    expect(result.agentId).toBe(AGENT_ID);
+    const inner = result.result as Record<string, unknown>;
+    expect(inner.success).toBe(false);
+    expect(inner.error).toMatch(/authentication|unauthorized|api key/i);
+    expect(inner.code).toBe('PROVIDER_AUTH_FAILED');
+  });
+
+  it('surfaces a bridge timeout gracefully when the bridge writes a timeout error to the result file', async () => {
+    // Was: bridge-tool-execution.test.ts "should handle bridge timeout gracefully"
+    // The bridge enforces --timeout internally and writes an error result on
+    // expiry. classifyError() maps timeout/timed out/ETIMEDOUT/SIGKILL to
+    // 'timeout' (see provider-agent-bridge.mjs lines 149-151).
+    const timeoutPayload = {
+      success: false,
+      error: 'Bridge task timed out after 30000ms (SIGKILL)',
+      code: 'BRIDGE_TIMEOUT',
+    };
+    setupResultFile(timeoutPayload);
+
+    const result = await resultHandler({ taskId: TASK_ID }) as Record<string, unknown>;
+
+    expect(result.success).toBe(true);
+    expect(result.status).toBe('completed');
+    expect(result.agentId).toBe(AGENT_ID);
+    const inner = result.result as Record<string, unknown>;
+    expect(inner.success).toBe(false);
+    expect(inner.error).toMatch(/timed out|timeout/i);
+  });
+
+  it('returns status:failed with a parse error when the result file contains non-JSON output', async () => {
+    // Was: bridge-tool-execution.test.ts "should handle bridge crash with non-JSON output gracefully"
+    // agent_task_result wraps JSON.parse in a try/catch (see agent-tools.ts
+    // lines 1071-1075) and returns:
+    //   { success:false, taskId, agentId, status:'failed', error:'Failed to parse result file' }
+    setupResultFile('not valid json at all <<<<');
+
+    const result = await resultHandler({ taskId: TASK_ID }) as Record<string, unknown>;
+
+    expect(result.success).toBe(false);
+    expect(result.status).toBe('failed');
+    expect(result.taskId).toBe(TASK_ID);
+    expect(result.agentId).toBe(AGENT_ID);
+    expect(result.error).toMatch(/parse result file/i);
+  });
+
+  it('resets a busy agent to idle when surfacing a bridge failure result', async () => {
+    // Sanity check: regardless of inner success/failure, the result file's
+    // presence means the bridge has exited, so the agent must be released
+    // back to idle. (Mirrors the happy-path "completed" test above.)
+    const failurePayload = { success: false, error: 'tool exec blew up', code: 'BRIDGE_ERROR' };
+    const { getStore } = setupResultFile(failurePayload);
+
+    await resultHandler({ taskId: TASK_ID });
+
+    expect(getStore().agents[AGENT_ID].status).toBe('idle');
   });
 });

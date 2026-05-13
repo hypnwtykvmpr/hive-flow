@@ -270,7 +270,7 @@ describe('AnthropicCLIProvider', () => {
 
   // ── Timeout ──
 
-  it('rejects on timeout (default 120s)', async () => {
+  it('rejects on timeout (default 300s)', async () => {
     mockBinaryFoundViaWhich();
     await provider.initialize();
 
@@ -283,8 +283,8 @@ describe('AnthropicCLIProvider', () => {
       messages: [{ role: 'user', content: 'slow task' }],
     });
 
-    // Advance past 120s timeout
-    vi.advanceTimersByTime(120001);
+    // Advance past the production default 300s timeout
+    vi.advanceTimersByTime(300_001);
 
     await expect(completePromise).rejects.toThrow(/timed out/i);
     expect(mockChild.kill).toHaveBeenCalledWith('SIGKILL');

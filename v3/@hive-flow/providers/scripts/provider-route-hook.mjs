@@ -33,7 +33,7 @@ const PROVIDER_PATTERNS = [
   },
   {
     provider: 'codex-cli',
-    model: 'gpt-5.4',
+    model: 'gpt-5.5',
     patterns: [
       /\buse\s+codex\b/i,
       /\bask\s+codex\b/i,

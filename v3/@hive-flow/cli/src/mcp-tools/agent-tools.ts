@@ -19,10 +19,12 @@ const AGENT_DIR = 'agents';
 const AGENT_FILE = 'store.json';
 
 // Model tier aliases — map to provider-native models via resolveProviderModel()
-type AgentModel = 'sonnet' | 'opus' | 'inherit';
+type AgentModel = 'sonnet' | 'opus' | 'mini' | 'inherit';
 
 // First-class providers: Cursor, Codex, Gemini alongside Anthropic
 export type AgentProvider = 'anthropic' | 'anthropic-cli' | 'gemini-cli' | 'codex-cli' | 'cursor-cli' | 'deepseek' | 'openrouter';
+const AGENT_PROVIDERS = new Set<AgentProvider>(['anthropic', 'anthropic-cli', 'gemini-cli', 'codex-cli', 'cursor-cli', 'deepseek', 'openrouter']);
+const AGENT_MODEL_ALIASES = new Set<AgentModel>(['sonnet', 'opus', 'mini', 'inherit']);
 
 export interface AgentRecord {
   agentId: string;
@@ -37,13 +39,35 @@ export interface AgentRecord {
   domain?: string;
   model?: AgentModel;  // Model tier assigned to this agent
   provider?: AgentProvider;  // LLM provider (anthropic, gemini-cli, codex-cli, cursor-cli)
-  resolvedModel?: string;  // Provider-native model name (e.g. gemini-3.1-pro-preview, gpt-5.4)
+  resolvedModel?: string;  // Provider-native model name (e.g. gemini-3.1-pro-preview, gpt-5.5)
   modelRoutedBy?: 'explicit' | 'router' | 'agent-booster' | 'default';  // How model was determined (ADR-026)
 }
 
 export interface AgentStore {
   agents: Record<string, AgentRecord>;
   version: string;
+}
+
+function normalizeProviderModelString(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const normalized = value
+    .normalize('NFKC')
+    .replace(/[‐‑‒–—―−﹣－]/g, '-')
+    .trim()
+    .toLowerCase();
+  return normalized.length > 0 ? normalized : '';
+}
+
+function normalizeAgentProvider(value: unknown): AgentProvider | undefined {
+  const normalized = normalizeProviderModelString(value);
+  if (!normalized) return undefined;
+  return AGENT_PROVIDERS.has(normalized as AgentProvider)
+    ? normalized as AgentProvider
+    : undefined;
+}
+
+function isAgentModelAlias(value: unknown): value is AgentModel {
+  return typeof value === 'string' && AGENT_MODEL_ALIASES.has(value as AgentModel);
 }
 
 // Valid state transitions — 'terminated' is a terminal state
@@ -191,6 +215,26 @@ async function withBridgeLock<T>(agentId: string, fn: () => T | Promise<T>): Pro
   return withStoreLock(agentId, async () => fn());
 }
 
+/**
+ * Defense-in-depth: re-validate a persisted agent.model against project policy
+ * at task dispatch time. The MCP enforcement gate (`checkModelEnforcement`) only
+ * fires at agent_spawn / queen_spawn_worker. A legacy persisted record with
+ * agent.model === 'haiku' would otherwise slip through to the provider bridge,
+ * bypassing the haiku ban via storage. This helper closes that gap.
+ */
+function validateAgentModelForTask(agent: AgentRecord): { ok: boolean; error?: string } {
+  // Cast to string for comparison: 'haiku' is not in the AgentModel union, but
+  // legacy / out-of-band-edited persisted state may contain it.
+  if ((agent.model as string | undefined) === 'haiku') {
+    return {
+      ok: false,
+      error: 'AGENT MODEL ENFORCEMENT: agent has legacy persisted model "haiku" which is prohibited. Re-spawn with sonnet/opus/mini.',
+    };
+  }
+  // Future: enforce other persisted-state policies here
+  return { ok: true };
+}
+
 // Default model mappings for agent types (can be overridden)
 const AGENT_TYPE_MODEL_DEFAULTS: Record<string, AgentModel> = {
   // Complex agents → opus
@@ -245,7 +289,7 @@ async function determineAgentModel(
   tier?: 1 | 2 | 3;
 }> {
   // 1. Explicit model in config
-  if (config.model && ['sonnet', 'opus', 'inherit'].includes(config.model as string)) {
+  if (config.model && ['sonnet', 'opus', 'mini', 'inherit'].includes(config.model as string)) {
     return { model: config.model as AgentModel, routedBy: 'explicit' };
   }
 
@@ -437,8 +481,7 @@ export const agentTools: MCPTool[] = [
         },
         model: {
           type: 'string',
-          enum: ['sonnet', 'opus', 'inherit'],
-          description: 'Model tier (maps to provider-native model via alias resolver)',
+          description: 'Model alias (opus/sonnet/mini/inherit) or provider-native model. OpenRouter direct models must be allowed by config.',
         },
         task: { type: 'string', description: 'Task description for intelligent model routing' },
       },
@@ -449,9 +492,12 @@ export const agentTools: MCPTool[] = [
       const agentType = input.agentType as string;
       const config = (input.config as Record<string, unknown>) || {};
 
-      // Add explicit model to config if provided
-      if (input.model) {
-        config.model = input.model;
+      const normalizedInputModel = normalizeProviderModelString(input.model);
+
+      // Add explicit model to config if provided. Normalize aliases/direct slugs
+      // before routing so case/whitespace variants cannot change runtime policy.
+      if (normalizedInputModel !== undefined) {
+        config.model = normalizedInputModel;
       }
 
       // Get task from either top-level or config (CLI passes it in config.task)
@@ -465,20 +511,32 @@ export const agentTools: MCPTool[] = [
       );
 
       // Resolve provider and provider-native model name
-      const provider = (input.provider as AgentProvider) || 'anthropic';
+      const normalizedProviderInput = normalizeProviderModelString(input.provider);
+      const normalizedProvider = normalizeAgentProvider(input.provider);
+      const provider = normalizedProvider || 'anthropic';
+      if (input.provider !== undefined && normalizedProviderInput !== '' && !normalizedProvider) {
+        return {
+          success: false,
+          error: `Unsupported provider '${String(input.provider)}'. Supported providers: ${Array.from(AGENT_PROVIDERS).join(', ')}`,
+        };
+      }
+      const modelForProviderResolution =
+        normalizedInputModel !== undefined && normalizedInputModel !== ''
+          ? normalizedInputModel
+          : routingResult.model;
       let resolvedModel: string | undefined;
       if (provider !== 'anthropic') {
         try {
           const { resolveProviderModel } = await import('@hive-flow/providers');
-          resolvedModel = resolveProviderModel(provider, routingResult.model);
+          resolvedModel = resolveProviderModel(provider, modelForProviderResolution);
         } catch {
           // Provider package not available — fall through without resolved model
         }
       }
 
       // OpenRouter allowlist check: undefined resolvedModel means blocked
-      if (provider === 'openrouter' && resolvedModel === undefined && input.model) {
-        return { success: false, error: `Model '${input.model}' not in OpenRouter allowedModels config.` };
+      if (provider === 'openrouter' && resolvedModel === undefined && normalizedInputModel) {
+        return { success: false, error: `Model '${normalizedInputModel}' not in OpenRouter allowedModels config.` };
       }
 
       // SEC-011: Generate spawn-origin token for identity hardening.
@@ -494,10 +552,16 @@ export const agentTools: MCPTool[] = [
         config: { ...config, _spawnToken: spawnToken },
         createdAt: new Date().toISOString(),
         domain: input.domain as string,
-        model: routingResult.model,
+        model: isAgentModelAlias(normalizedInputModel)
+          ? normalizedInputModel
+          : provider === 'openrouter' && normalizedInputModel
+            ? 'inherit'
+            : routingResult.model,
         provider,
         resolvedModel,
-        modelRoutedBy: routingResult.routedBy,
+        modelRoutedBy: normalizedInputModel !== undefined && normalizedInputModel !== ''
+          ? 'explicit'
+          : routingResult.routedBy,
       };
 
       // Transition spawning → idle (setup complete)
@@ -946,6 +1010,13 @@ export const agentTools: MCPTool[] = [
             error: "Use 'anthropic-cli' for Claude subprocess workers, not 'anthropic'. The agent_task bridge supports providers: anthropic-cli, gemini-cli, codex-cli, cursor-cli, deepseek, openrouter. Use Claude Code Task tool for native anthropic agents.",
           };
         }
+        // Defense-in-depth: re-validate persisted agent.model against project policy.
+        // The MCP enforcement gate only fires at spawn time; persisted legacy state
+        // must be rejected at task dispatch to prevent gate bypass via storage.
+        const modelCheck = validateAgentModelForTask(agent);
+        if (!modelCheck.ok) {
+          return { error: modelCheck.error };
+        }
         if (!transitionAgent(agent, 'busy')) {
           return { error: `Agent cannot accept tasks in current state: '${agent.status}'` };
         }
@@ -1068,10 +1139,20 @@ export const agentTools: MCPTool[] = [
       if (existsSync(resultFilePath)) {
         // Result file exists — task completed
         let result: Record<string, unknown>;
+        let rawContents = '';
         try {
-          result = JSON.parse(readFileSync(resultFilePath, 'utf-8'));
-        } catch {
-          return { success: false, taskId, agentId: tracking.agentId, status: 'failed', error: 'Failed to parse result file' };
+          rawContents = readFileSync(resultFilePath, 'utf-8');
+          result = JSON.parse(rawContents);
+        } catch (err) {
+          const errorDetail = err instanceof Error ? err.message : String(err);
+          return {
+            success: false,
+            taskId,
+            agentId: tracking.agentId,
+            status: 'failed',
+            error: `Failed to parse result file: ${errorDetail}`,
+            rawOutput: rawContents.slice(0, 2048),
+          };
         }
 
         // Update tracking status

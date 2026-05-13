@@ -83,13 +83,13 @@ describe('Dynamic context window lookup', () => {
         openrouter: {
           tiers: DEFAULT_CONFIG.tiers,
           allowedModels: DEFAULT_CONFIG.allowedModels,
-          contextWindows: { 'google/gemini-2.5-flash': 999999 },
+          contextWindows: { 'xiaomi/mimo-v2.5-pro': 999999 },
         },
       }, 2);
 
       const config = loadOpenRouterConfig();
-      const overrideValue = config.contextWindows?.['google/gemini-2.5-flash'];
-      const defaultValue = OR_DEFAULT_CONTEXT_WINDOWS['google/gemini-2.5-flash'];
+      const overrideValue = config.contextWindows?.['xiaomi/mimo-v2.5-pro'];
+      const defaultValue = OR_DEFAULT_CONTEXT_WINDOWS['xiaomi/mimo-v2.5-pro'];
 
       expect(overrideValue).toBe(999999);
       expect(defaultValue).toBe(1048576);
@@ -100,15 +100,15 @@ describe('Dynamic context window lookup', () => {
   describe('DEFAULT_CONTEXT_WINDOWS', () => {
     it('contains all 9 default OpenRouter models', () => {
       const orModels = [
-        'anthropic/claude-opus-4-6',
-        'anthropic/claude-sonnet-4-6',
-        'google/gemini-2.5-pro',
-        'google/gemini-2.5-flash',
-        'google/gemini-2.5-flash-lite',
-        'meta-llama/llama-3.3-70b',
-        'deepseek/deepseek-reasoner',
-        'openai/gpt-4o-mini',
-        'mistralai/mistral-small-25',
+        'xiaomi/mimo-v2.5-pro',
+        'x-ai/grok-4.3',
+        'minimax/minimax-m2.7',
+        'moonshotai/kimi-k2.6',
+        'qwen/qwen3.6-max-preview',
+        'z-ai/glm-5.1',
+        'qwen/qwen3.6-plus',
+        'nvidia/nemotron-3-super-120b-a12b:free',
+        'deepseek/deepseek-v4-flash',
       ];
 
       for (const model of orModels) {
@@ -117,12 +117,12 @@ describe('Dynamic context window lookup', () => {
       expect(Object.keys(OR_DEFAULT_CONTEXT_WINDOWS)).toHaveLength(9);
     });
 
-    it('google/gemini-2.5-flash has 1048576 context', () => {
-      expect(OR_DEFAULT_CONTEXT_WINDOWS['google/gemini-2.5-flash']).toBe(1048576);
+    it('xiaomi/mimo-v2.5-pro has 1048576 context', () => {
+      expect(OR_DEFAULT_CONTEXT_WINDOWS['xiaomi/mimo-v2.5-pro']).toBe(1048576);
     });
 
-    it('mistralai/mistral-small-25 has 32768 context', () => {
-      expect(OR_DEFAULT_CONTEXT_WINDOWS['mistralai/mistral-small-25']).toBe(32768);
+    it('x-ai/grok-4.3 has 2000000 context', () => {
+      expect(OR_DEFAULT_CONTEXT_WINDOWS['x-ai/grok-4.3']).toBe(2000000);
     });
   });
 
@@ -191,12 +191,13 @@ describe('Dynamic context window lookup', () => {
     it('returns correct value for each provider family', () => {
       // Anthropic
       expect(getModelContextLength('claude-opus-4-6')).toBe(1_000_000);
+      expect(getModelContextLength('claude-sonnet-4-6')).toBe(200_000);
       // Gemini
       expect(getModelContextLength('gemini-3.1-pro-preview')).toBe(1_000_000);
       // Codex / OpenAI
-      expect(getModelContextLength('gpt-5.4')).toBe(256_000);
+      expect(getModelContextLength('gpt-5.5')).toBe(1_050_000);
       // DeepSeek
-      expect(getModelContextLength('deepseek-reasoner')).toBe(128_000);
+      expect(getModelContextLength('deepseek-v4-pro')).toBe(1_000_000);
     });
 
     it('falls through to default when config contextWindows has non-numeric value', () => {
@@ -219,7 +220,7 @@ describe('Dynamic context window lookup', () => {
 
   describe('getModelContextLength from openrouter-model-config', () => {
     it('returns built-in default for known OpenRouter model', () => {
-      const result = getOpenRouterModelContextLength('google/gemini-2.5-flash');
+      const result = getOpenRouterModelContextLength('xiaomi/mimo-v2.5-pro');
       expect(result).toBe(1048576);
     });
 
@@ -228,12 +229,12 @@ describe('Dynamic context window lookup', () => {
         openrouter: {
           tiers: DEFAULT_CONFIG.tiers,
           allowedModels: DEFAULT_CONFIG.allowedModels,
-          contextWindows: { 'google/gemini-2.5-flash': 500000 },
+          contextWindows: { 'xiaomi/mimo-v2.5-pro': 500000 },
         },
       }, 7);
 
       const config = loadOpenRouterConfig();
-      const result = getOpenRouterModelContextLength('google/gemini-2.5-flash', config);
+      const result = getOpenRouterModelContextLength('xiaomi/mimo-v2.5-pro', config);
       expect(result).toBe(500000);
     });
 

@@ -117,11 +117,27 @@ async function readVerifiedQueenDirectWorkCount(queenId: string): Promise<number
 // ---------------------------------------------------------------------------
 
 async function callAgentSpawn(input: Record<string, unknown>): Promise<Record<string, unknown>> {
+  // FIX-C4 (G3, N1 gate): defense-in-depth — the public MCP gate enforces on
+  // top-level calls, but queen-internal callers must also be validated to
+  // prevent per-worker bypass of model policy (e.g. queen_mission_assign's
+  // workers[] array, or queen_spawn_worker invoking callAgentSpawn).
+  const { checkModelEnforcement } = await import('./mcp-enforcement-gate.js');
+  const enforcement = checkModelEnforcement(
+    'agent_spawn',
+    input as { model?: string; provider?: string },
+  );
+  if (!enforcement.allowed) {
+    return { success: false, error: enforcement.reason };
+  }
+  const effectiveInput = enforcement.correctedInput
+    ? { ...input, ...enforcement.correctedInput }
+    : input;
+
   // Lazy import to avoid circular dependency (queen-tools → agent-tools → queen-tools)
   const { agentTools } = await import('./agent-tools.js');
   const spawnTool = agentTools.find(t => t.name === 'agent_spawn');
   if (!spawnTool) throw new Error('agent_spawn tool not found');
-  return spawnTool.handler(input) as Promise<Record<string, unknown>>;
+  return spawnTool.handler(effectiveInput) as Promise<Record<string, unknown>>;
 }
 
 async function callAgentTask(input: Record<string, unknown>): Promise<Record<string, unknown>> {
@@ -178,8 +194,8 @@ const missionAssignTool: MCPTool = {
           type: 'object',
           properties: {
             role: { type: 'string', description: 'Worker role (e.g., "coder", "reviewer", "tester")' },
-            provider: { type: 'string', description: 'LLM provider (e.g., "gemini-cli", "codex-cli")' },
-            model: { type: 'string', description: 'Model tier (e.g., "sonnet", "opus", "inherit")' },
+            provider: { type: 'string', description: 'LLM provider (e.g., "gemini-cli", "codex-cli", "openrouter")' },
+            model: { type: 'string', description: 'Model alias (opus/sonnet/mini/inherit) or provider-native model. OpenRouter direct models must be allowed by config.' },
             task: { type: 'string', description: 'Task prompt to dispatch immediately after spawn' },
           },
         },
@@ -582,8 +598,7 @@ const spawnWorkerTool: MCPTool = {
       },
       model: {
         type: 'string',
-        enum: ['sonnet', 'opus', 'inherit'],
-        description: 'Model tier for the worker',
+        description: 'Model alias (opus/sonnet/mini/inherit) or provider-native model. OpenRouter direct models must be allowed by config.',
       },
       task: { type: 'string', description: 'Initial task description for model routing' },
       budgetAllocation: { type: 'number', description: 'Budget allocation for this worker' },

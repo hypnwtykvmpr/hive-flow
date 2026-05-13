@@ -264,6 +264,16 @@
             "timeout": 3000
           }
         ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/v3/@hive-flow/providers/scripts/provider-route-hook.mjs",
+            "timeout": 5000
+          }
+        ]
       }
     ],
     "SessionStart": [
@@ -311,6 +321,16 @@
             "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/sentinel-recovery.cjs",
             "timeout": 10000
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/v3/@hive-flow/providers/scripts/provider-status-hook.mjs",
+            "timeout": 5000
           }
         ]
       }
@@ -536,7 +556,7 @@
     "version": "3.0.0",
     "enabled": true,
     "modelPreferences": {
-      "default": "claude-opus-4-6",
+      "default": "claude-opus-4-7",
       "routing": "claude-sonnet-4-6"
     },
     "agentTeams": {

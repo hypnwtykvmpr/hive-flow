@@ -1072,7 +1072,7 @@ function buildProviderAlternatives(
   const cost = costByComplexity[complexity];
   return [
     { provider: 'gemini-cli', model: 'gemini-3.1-pro-preview', estimatedCost: cost, availabilityStatus: 'unchecked' },
-    { provider: 'codex-cli', model: 'gpt-5.4', estimatedCost: cost, availabilityStatus: 'unchecked' },
+    { provider: 'codex-cli', model: 'gpt-5.5', estimatedCost: cost, availabilityStatus: 'unchecked' },
     { provider: 'cursor-cli', model: 'auto', estimatedCost: cost, availabilityStatus: 'unchecked' },
   ];
 }
@@ -3153,19 +3153,19 @@ export const hooksModelOutcome: MCPTool = {
     type: 'object',
     properties: {
       task: { type: 'string', description: 'Original task' },
-      model: { type: 'string', enum: ['sonnet', 'opus', 'gemini-cli', 'codex-cli', 'cursor-cli'], description: 'Model used' },
+      model: { type: 'string', enum: ['sonnet', 'opus', 'mini', 'inherit'], description: 'Model alias used (router-level alias, not provider name)' },
       outcome: { type: 'string', enum: ['success', 'failure', 'escalated'], description: 'Task outcome' },
     },
     required: ['task', 'model', 'outcome'],
   },
   handler: async (params: Record<string, unknown>) => {
     const task = params.task as string;
-    const model = params.model as 'sonnet' | 'opus' | 'gemini-cli' | 'codex-cli' | 'cursor-cli' | string;
+    const model = params.model as 'sonnet' | 'opus' | 'mini' | 'inherit' | string;
     const outcome = params.outcome as 'success' | 'failure' | 'escalated';
 
     const router = await getModelRouterInstance();
     if (router) {
-      router.recordOutcome(task, model as 'sonnet' | 'opus' | 'inherit', outcome);
+      router.recordOutcome(task, model as 'sonnet' | 'opus' | 'mini' | 'inherit', outcome);
     }
 
     return {
@@ -3215,14 +3215,14 @@ function buildProviderSuggestions(
     // Tier 2 tasks — suggest all 3 providers
     suggestions.push(
       { provider: 'gemini-cli', model: 'gemini-3.1-pro-preview', reason: `Alternative to ${claudeModel} for low-complexity task`, confidence: 0.75, tier: 2 },
-      { provider: 'codex-cli', model: 'gpt-5.4', reason: `Code-specialized alternative for low-complexity task`, confidence: 0.7, tier: 2 },
+      { provider: 'codex-cli', model: 'gpt-5.5', reason: `Code-specialized alternative for low-complexity task`, confidence: 0.7, tier: 2 },
       { provider: 'cursor-cli', model: 'auto', reason: `IDE-integrated alternative for low-complexity task`, confidence: 0.65, tier: 2 },
     );
   } else {
     // Tier 3 tasks — suggest gemini + codex (higher capability needed)
     suggestions.push(
       { provider: 'gemini-cli', model: 'gemini-3.1-pro-preview', reason: `High-capability alternative to ${claudeModel} for complex task`, confidence: 0.7, tier: 3 },
-      { provider: 'codex-cli', model: 'gpt-5.4', reason: `Code-specialized alternative for complex task`, confidence: 0.65, tier: 3 },
+      { provider: 'codex-cli', model: 'gpt-5.5', reason: `Code-specialized alternative for complex task`, confidence: 0.65, tier: 3 },
     );
   }
 

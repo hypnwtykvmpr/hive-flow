@@ -15,6 +15,11 @@
 import { spawn, ChildProcess, execFile, execFileSync } from 'child_process';
 import { randomBytes } from 'crypto';
 import { createInterface } from 'readline';
+import { EventEmitter } from 'events';
+import os from 'os';
+import fs from 'fs';
+import path from 'path';
+import { PassThrough } from 'stream';
 import { BaseProvider, BaseProviderOptions } from './base-provider.js';
 import {
   LLMProvider, LLMModel, LLMRequest, LLMResponse, LLMStreamEvent,
@@ -24,17 +29,38 @@ import {
 import { parseToolCallsFromContent, formatToolInstructions, flushToolCallsFromBuffer } from './tool-call-utils.js';
 
 const CURSOR_MODELS: LLMModel[] = [
-  'auto', 'composer-1.5', 'composer-1',
-  'gpt-5.3-codex', 'gpt-5.2-codex', 'gpt-5.2',
+  'auto',
+  'composer-2', 'composer-2-fast', 'composer-1.5', 'composer-1',
+  'gpt-5.3-codex-xhigh', 'gpt-5.3-codex-xhigh-fast',
+  'gpt-5.3-codex-high', 'gpt-5.3-codex-high-fast',
+  'gpt-5.3-codex', 'gpt-5.3-codex-fast',
+  'gpt-5.3-codex-low', 'gpt-5.3-codex-low-fast',
+  'gpt-5.3-codex-spark-preview', 'gpt-5.3-codex-spark-preview-xhigh',
+  'gpt-5.3-codex-spark-preview-high', 'gpt-5.3-codex-spark-preview-low',
+  'gpt-5.2', 'gpt-5.2-codex', 'gpt-5.2-codex-low',
 ];
 
 const MODEL_DESC: Record<string, string> = {
   'auto': 'Auto - Cursor selects optimal model',
-  'composer-1.5': 'Composer 1.5 - Latest Cursor-native model',
-  'composer-1': 'Composer 1 - Cursor-native model',
-  'gpt-5.3-codex': 'GPT-5.3 Codex via Cursor - Flagship code model',
-  'gpt-5.2-codex': 'GPT-5.2 Codex via Cursor - Previous-gen flagship',
+  'composer-2': 'Composer 2 - Latest Cursor-native model',
+  'composer-2-fast': 'Composer 2 Fast - Fast Cursor-native model',
+  'composer-1.5': 'Composer 1.5 - Previous Cursor-native model',
+  'composer-1': 'Composer 1 - Legacy Cursor-native model',
+  'gpt-5.3-codex-xhigh': 'GPT-5.3 Codex XHigh via Cursor - Max reasoning',
+  'gpt-5.3-codex-xhigh-fast': 'GPT-5.3 Codex XHigh Fast via Cursor',
+  'gpt-5.3-codex-high': 'GPT-5.3 Codex High via Cursor - Strong reasoning',
+  'gpt-5.3-codex-high-fast': 'GPT-5.3 Codex High Fast via Cursor',
+  'gpt-5.3-codex': 'GPT-5.3 Codex via Cursor - Balanced',
+  'gpt-5.3-codex-fast': 'GPT-5.3 Codex Fast via Cursor',
+  'gpt-5.3-codex-low': 'GPT-5.3 Codex Low via Cursor - Cost-efficient',
+  'gpt-5.3-codex-low-fast': 'GPT-5.3 Codex Low Fast via Cursor',
+  'gpt-5.3-codex-spark-preview': 'GPT-5.3 Codex Spark via Cursor',
+  'gpt-5.3-codex-spark-preview-xhigh': 'GPT-5.3 Codex Spark XHigh via Cursor',
+  'gpt-5.3-codex-spark-preview-high': 'GPT-5.3 Codex Spark High via Cursor',
+  'gpt-5.3-codex-spark-preview-low': 'GPT-5.3 Codex Spark Low via Cursor',
   'gpt-5.2': 'GPT-5.2 via Cursor - General purpose',
+  'gpt-5.2-codex': 'GPT-5.2 Codex via Cursor - Code-focused',
+  'gpt-5.2-codex-low': 'GPT-5.2 Codex Low via Cursor - Lightweight',
 };
 
 const FREE = { promptCostPer1k: 0, completionCostPer1k: 0, currency: 'USD' };
@@ -69,12 +95,28 @@ export class CursorCLIProvider extends BaseProvider {
   readonly capabilities: ProviderCapabilities = {
     supportedModels: CURSOR_MODELS,
     maxContextLength: {
-      'auto': 200000, 'composer-1.5': 200000, 'composer-1': 200000,
-      'gpt-5.3-codex': 200000, 'gpt-5.2-codex': 200000, 'gpt-5.2': 200000,
+      'auto': 200000,
+      'composer-2': 200000, 'composer-2-fast': 200000,
+      'composer-1.5': 200000, 'composer-1': 200000,
+      'gpt-5.3-codex-xhigh': 200000, 'gpt-5.3-codex-xhigh-fast': 200000,
+      'gpt-5.3-codex-high': 200000, 'gpt-5.3-codex-high-fast': 200000,
+      'gpt-5.3-codex': 200000, 'gpt-5.3-codex-fast': 200000,
+      'gpt-5.3-codex-low': 200000, 'gpt-5.3-codex-low-fast': 200000,
+      'gpt-5.3-codex-spark-preview': 200000, 'gpt-5.3-codex-spark-preview-xhigh': 200000,
+      'gpt-5.3-codex-spark-preview-high': 200000, 'gpt-5.3-codex-spark-preview-low': 200000,
+      'gpt-5.2': 200000, 'gpt-5.2-codex': 200000, 'gpt-5.2-codex-low': 200000,
     },
     maxOutputTokens: {
-      'auto': 32768, 'composer-1.5': 32768, 'composer-1': 16384,
-      'gpt-5.3-codex': 32768, 'gpt-5.2-codex': 32768, 'gpt-5.2': 16384,
+      'auto': 32768,
+      'composer-2': 32768, 'composer-2-fast': 32768,
+      'composer-1.5': 32768, 'composer-1': 16384,
+      'gpt-5.3-codex-xhigh': 65536, 'gpt-5.3-codex-xhigh-fast': 65536,
+      'gpt-5.3-codex-high': 32768, 'gpt-5.3-codex-high-fast': 32768,
+      'gpt-5.3-codex': 32768, 'gpt-5.3-codex-fast': 32768,
+      'gpt-5.3-codex-low': 16384, 'gpt-5.3-codex-low-fast': 16384,
+      'gpt-5.3-codex-spark-preview': 65536, 'gpt-5.3-codex-spark-preview-xhigh': 65536,
+      'gpt-5.3-codex-spark-preview-high': 32768, 'gpt-5.3-codex-spark-preview-low': 16384,
+      'gpt-5.2': 16384, 'gpt-5.2-codex': 32768, 'gpt-5.2-codex-low': 16384,
     },
     supportsStreaming: true,
     supportsToolCalling: true,
@@ -86,8 +128,16 @@ export class CursorCLIProvider extends BaseProvider {
     supportsBatching: false,
     rateLimit: { requestsPerMinute: 60, tokensPerMinute: 1000000, concurrentRequests: 5 },
     pricing: {
-      'auto': FREE, 'composer-1.5': FREE, 'composer-1': FREE,
-      'gpt-5.3-codex': FREE, 'gpt-5.2-codex': FREE, 'gpt-5.2': FREE,
+      'auto': FREE,
+      'composer-2': FREE, 'composer-2-fast': FREE,
+      'composer-1.5': FREE, 'composer-1': FREE,
+      'gpt-5.3-codex-xhigh': FREE, 'gpt-5.3-codex-xhigh-fast': FREE,
+      'gpt-5.3-codex-high': FREE, 'gpt-5.3-codex-high-fast': FREE,
+      'gpt-5.3-codex': FREE, 'gpt-5.3-codex-fast': FREE,
+      'gpt-5.3-codex-low': FREE, 'gpt-5.3-codex-low-fast': FREE,
+      'gpt-5.3-codex-spark-preview': FREE, 'gpt-5.3-codex-spark-preview-xhigh': FREE,
+      'gpt-5.3-codex-spark-preview-high': FREE, 'gpt-5.3-codex-spark-preview-low': FREE,
+      'gpt-5.2': FREE, 'gpt-5.2-codex': FREE, 'gpt-5.2-codex-low': FREE,
     },
   };
 
@@ -454,7 +504,6 @@ export class CursorCLIProvider extends BaseProvider {
     // tmux so cursor-cli gets a pseudo-terminal to satisfy its isatty() check.
     // We wrap the original child in a proxy EventEmitter that intercepts the
     // initial close/error events and replaces streams with those from the retry.
-    const { EventEmitter } = require('events') as typeof import('events');
     const proxy = new EventEmitter() as ChildProcess;
     // Mirror the minimum ChildProcess surface used by callers.
     (proxy as unknown as Record<string, unknown>).stdout = child.stdout;
@@ -547,10 +596,6 @@ export class CursorCLIProvider extends BaseProvider {
     env: NodeJS.ProcessEnv,
     tmuxBin: string,
   ): ChildProcess {
-    const os = require('os') as typeof import('os');
-    const fs = require('fs') as typeof import('fs');
-    const path = require('path') as typeof import('path');
-
     const sessionId = `hive-cursor-${Date.now()}-${randomBytes(4).toString('hex')}`;
     const pipePath = path.join(os.tmpdir(), `${sessionId}.pipe`);
     // Write prompt to a temp file so it is never passed through any shell.
@@ -618,9 +663,6 @@ export class CursorCLIProvider extends BaseProvider {
       fifoStream.destroy(new Error(`FIFO read timed out after ${fifoTimeoutMs}ms`));
       try { execFileSync(tmuxBin, ['kill-session', '-t', sessionId], { stdio: 'ignore' }); } catch { /* already gone */ }
     }, fifoTimeoutMs);
-
-    const { PassThrough } = require('stream') as typeof import('stream');
-    const { EventEmitter } = require('events') as typeof import('events');
 
     const stderrPass = new PassThrough();
     const shim = new EventEmitter() as ChildProcess;

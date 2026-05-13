@@ -18,7 +18,7 @@ export enum ToolRisk {
 // Risk classification table
 const CRITICAL_TOOLS = new Set([
   'agent_spawn', 'agent_task',
-  'queen_spawn_worker',
+  'queen_spawn_worker', 'queen_mission_assign',
   'workflow_enforcer_override',
   'browser_eval',
   'config_import',
@@ -223,7 +223,22 @@ export interface ModelEnforcementResult {
   correctedInput?: ModelEnforcementInput;
 }
 
-const AGENT_SPAWN_TOOLS = new Set(['agent_spawn', 'queen_spawn_worker']);
+const AGENT_SPAWN_TOOLS = new Set(['agent_spawn', 'agent_task', 'queen_spawn_worker', 'queen_mission_assign']);
+
+// FIX-S5: Unicode-hyphen variants (U+2010 ‐, U+2011 ‑, U+2012 ‒, U+2013 –,
+// U+2014 —, U+2015 ―, U+2212 −, U+FE63 ﹣, U+FF0D －) lowercase to themselves,
+// not to ASCII U+002D. Without normalization, `'codex‐cli'.toLowerCase()`
+// fails the strict equality check `=== 'codex-cli'` and falls through to
+// allow. NFKC compatibility folding + an explicit replace covers both
+// canonical-equivalent and homoglyph cases.
+function normalizeProviderModel(s: unknown): unknown {
+  if (typeof s !== 'string') return s;
+  return s
+    .normalize('NFKC')
+    .replace(/[‐‑‒–—―−﹣－]/g, '-')
+    .trim()
+    .toLowerCase();
+}
 
 export function checkModelEnforcement(
   toolName: string,
@@ -238,21 +253,43 @@ export function checkModelEnforcement(
     return { allowed: true };
   }
 
-  // Rule 1: haiku is always prohibited for agent tasks
-  if (input.model === 'haiku') {
+  // FIX-C1 (G1 + G2): Normalize provider and model strings at gate entry to
+  // defeat case-folding and whitespace-padding bypasses.
+  // FIX-S5: Also normalize Unicode-hyphen variants (e.g. U+2010 ‐) to ASCII
+  // `-` so `'codex‐cli'` cannot bypass strict equality with `'codex-cli'`.
+  // The `correctedInput` returned must be based on the ORIGINAL `input` —
+  // downstream callers may rely on exact case being preserved for the actual
+  // spawn. Only gate decisions use the normalized values.
+  const providerNormalized = normalizeProviderModel(input.provider) as string | undefined;
+  const modelNormalized = normalizeProviderModel(input.model) as string | undefined;
+  const normInput: ModelEnforcementInput = {
+    ...input,
+    provider: providerNormalized,
+    model: modelNormalized,
+  };
+
+  // Rule 1: haiku alias is universally prohibited for agent tasks.
+  // Use sonnet or opus instead.
+  if (normInput.model === 'haiku') {
     return {
       allowed: false,
-      reason: 'MODEL ENFORCEMENT: haiku prohibited for agent tasks. Use sonnet or opus.',
+      reason: 'MODEL ENFORCEMENT: haiku model prohibited for agent tasks. Use sonnet, opus, or mini.',
     };
   }
 
-  // Rule 2: gemini-cli requires gemini-3.1-pro-preview (top tier)
-  // Allow alias names (opus, sonnet, inherit) — the alias resolver maps them to the correct native model
-  const CLAUDE_ALIASES = ['opus', 'sonnet', 'inherit', undefined, ''];
+  // FIX-C2 (G4): Empty string is NOT a valid alias.
+  // Empty model defaults are handled explicitly by Rules 4/5/6 below using `!input.model`,
+  // which is truthy for both `undefined` and `''`. So removing `''` from the alias
+  // set only changes the behavior of providers that lack a default rule
+  // (e.g. gemini-cli, codex-cli, cursor-cli) — for those, an empty string now
+  // correctly falls through to the per-provider top-tier check and is blocked.
+  const ALLOWED_ALIASES = new Set(['opus', 'sonnet', 'mini', 'inherit', undefined]);
+
+  // Rule 2: gemini-cli requires gemini-3.1-pro-preview (top tier) or an alias.
   if (
-    input.provider === 'gemini-cli' &&
-    input.model !== 'gemini-3.1-pro-preview' &&
-    !CLAUDE_ALIASES.includes(input.model as string)
+    normInput.provider === 'gemini-cli' &&
+    normInput.model !== 'gemini-3.1-pro-preview' &&
+    !ALLOWED_ALIASES.has(normInput.model)
   ) {
     return {
       allowed: false,
@@ -260,49 +297,50 @@ export function checkModelEnforcement(
     };
   }
 
-  // Rule 3: codex-cli requires gpt-5.4 (top tier)
+  // Rule 3: codex-cli requires gpt-5.5 (top tier) or an alias. No gpt-5.4 rollout exception.
   if (
-    input.provider === 'codex-cli' &&
-    input.model !== 'gpt-5.4' &&
-    !CLAUDE_ALIASES.includes(input.model as string)
+    normInput.provider === 'codex-cli' &&
+    normInput.model !== 'gpt-5.5' &&
+    !ALLOWED_ALIASES.has(normInput.model)
   ) {
     return {
       allowed: false,
-      reason: 'MODEL ENFORCEMENT: codex-cli requires gpt-5.4 (top tier).',
+      reason: 'MODEL ENFORCEMENT: codex-cli requires gpt-5.5 (top tier).',
     };
   }
 
-  // Rule 5: deepseek provider without explicit model → default to deepseek-reasoner
-  if (input.provider === 'deepseek' && !input.model) {
-    return { allowed: true, correctedInput: { ...input, model: 'deepseek-reasoner' } };
+  // deepseek → default (no explicit model) maps to deepseek-v4-pro via resolver
+  if (normInput.provider === 'deepseek' && !normInput.model) {
+    return { allowed: true, correctedInput: { ...input, model: 'deepseek-v4-pro' } };
   }
 
-  // Rule 6: cursor-cli provider without explicit model → default to 'auto'
-  if (input.provider === 'cursor-cli' && !input.model) {
-    return { allowed: true, correctedInput: { ...input, model: 'auto' } };
-  }
-
-  // Rule 7: openrouter requires an explicit model (no model content enforcement)
-  if (input.provider === 'openrouter') {
-    if (!input.model) {
+  // openrouter → requires an explicit model or tier alias
+  if (normInput.provider === 'openrouter') {
+    if (!normInput.model) {
       return {
         allowed: false,
-        reason: 'MODEL ENFORCEMENT: openrouter requires an explicit model or tier (opus/sonnet/haiku).',
+        reason: 'MODEL ENFORCEMENT: openrouter requires an explicit model or tier (opus/sonnet/mini/inherit).',
       };
     }
+    // Any model is allowed — the resolver checks the allowlist
     return { allowed: true };
   }
 
-  // Rule 4: Claude provider (anthropic-cli or unspecified) without explicit model → default to sonnet
+  // anthropic-cli (or unspecified provider) without explicit model → default to sonnet
   const isClaudeProvider =
-    !input.provider ||
-    input.provider === 'anthropic-cli' ||
-    input.provider === 'claude';
-  if (isClaudeProvider && !input.model) {
+    !normInput.provider ||
+    normInput.provider === 'anthropic-cli' ||
+    normInput.provider === 'claude';
+  if (isClaudeProvider && !normInput.model) {
     return {
       allowed: true,
       correctedInput: { ...input, model: 'sonnet' },
     };
+  }
+
+  // All alias names pass through — resolver handles mapping
+  if (ALLOWED_ALIASES.has(normInput.model as string)) {
+    return { allowed: true };
   }
 
   return { allowed: true };

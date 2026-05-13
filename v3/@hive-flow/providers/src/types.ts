@@ -71,6 +71,7 @@ export type LLMModel =
   | 'phi-4'
   | 'deepseek-coder'
   // Codex/OpenAI Models
+  | 'gpt-5.5'
   | 'gpt-5.4'
   | 'gpt-5.3-codex'
   | 'gpt-5.2-codex'
@@ -79,8 +80,8 @@ export type LLMModel =
   | 'gpt-5-codex'
   | 'gpt-5-codex-mini'
   // DeepSeek Models
-  | 'deepseek-reasoner'
-  | 'deepseek-chat'
+  | 'deepseek-v4-pro'
+  | 'deepseek-v4-flash'
   // Qwen Models
   | 'qwen-max'
   | 'qwen-plus'
@@ -102,6 +103,7 @@ export interface LLMMessage {
   name?: string;
   toolCallId?: string;
   toolCalls?: LLMToolCall[];
+  reasoningContent?: string;
 }
 
 export interface LLMContentPart {
@@ -214,6 +216,7 @@ export interface LLMResponse {
 
   // Content
   content: string;
+  reasoningContent?: string;
   toolCalls?: LLMToolCall[];
 
   // Usage
@@ -328,7 +331,13 @@ export class ModelNotFoundError extends LLMProviderError {
 
 export class ProviderUnavailableError extends LLMProviderError {
   constructor(provider: LLMProvider, details?: unknown) {
-    super(`Provider ${provider} is unavailable`, 'PROVIDER_UNAVAILABLE', provider, 503, true, details);
+    const detail = (details && typeof details === 'object' && 'message' in details
+      && typeof (details as { message?: unknown }).message === 'string')
+      ? (details as { message: string }).message : undefined;
+    const msg = detail
+      ? `Provider ${provider} is unavailable: ${detail}`
+      : `Provider ${provider} is unavailable`;
+    super(msg, 'PROVIDER_UNAVAILABLE', provider, 503, true, details);
     this.name = 'ProviderUnavailableError';
   }
 }

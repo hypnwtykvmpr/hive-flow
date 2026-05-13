@@ -1,5 +1,6 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { describe, it, expect, vi, beforeEach, afterEach, afterAll } from 'vitest';
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 
 // ── Module mocks (hoisted before imports) ────────────────────────────────
 
@@ -30,12 +31,19 @@ function makeRoleEnvelope(state: Record<string, unknown>) {
 // The module exports pure functions that we can test directly.
 
 // Use dynamic require path based on project structure
-const ROLE_ENFORCEMENT_PATH = require('path').resolve(
+const ROLE_ENFORCEMENT_SOURCE_PATH = require('path').resolve(
   __dirname, '..', '..', '..', '..', '..', '.claude', 'helpers', 'role-enforcement.cjs'
 );
-const AGENT_STORE_PATH = require('path').resolve(
-  __dirname, '..', '..', '..', '..', '..', '.hive-flow', 'agents', 'store.json'
+const ROLE_TEST_PROJECT_DIR = mkdtempSync(
+  require('path').join(tmpdir(), 'hive-flow-role-enforcement-cjs-')
 );
+const ROLE_TEST_PROJECT_REAL_DIR = realpathSync(ROLE_TEST_PROJECT_DIR);
+const ROLE_ENFORCEMENT_PATH = require('path').join(
+  ROLE_TEST_PROJECT_REAL_DIR, '.claude', 'helpers', 'role-enforcement.cjs'
+);
+mkdirSync(require('path').dirname(ROLE_ENFORCEMENT_PATH), { recursive: true });
+copyFileSync(ROLE_ENFORCEMENT_SOURCE_PATH, ROLE_ENFORCEMENT_PATH);
+const AGENT_STORE_PATH = require('path').join(ROLE_TEST_PROJECT_REAL_DIR, '.hive-flow', 'agents', 'store.json');
 
 // We need to use the real module since it's CJS with fs/crypto calls.
 // We'll use a fresh require for each test group and mock the fs operations
@@ -48,6 +56,10 @@ let roleEnf: typeof import('../../../../../.claude/helpers/role-enforcement.cjs'
 // ──────────────────────────────────────────────────────────────────────────
 
 describe('Role Enforcement System', () => {
+  afterAll(() => {
+    rmSync(ROLE_TEST_PROJECT_DIR, { recursive: true, force: true });
+  });
+
   beforeEach(() => {
     vi.resetModules();
     // Fresh require each time to avoid stale module state
@@ -341,14 +353,21 @@ describe('Role Enforcement System', () => {
       delete process.env.HIVE_FLOW_AGENT_TOKEN;
     });
 
-    it('falls back to reading the stored spawn token when env token is missing', () => {
-      delete process.env.HIVE_FLOW_AGENT_TOKEN;
+    it('reads the stored spawn token from disk and validates against env token', () => {
+      // SEC-011: verifySpawnToken reads the stored token from the on-disk agent
+      // store and compares it (constant-time) against HIVE_FLOW_AGENT_TOKEN.
+      // The function is fail-closed: no env token => {valid: false}, so we
+      // must set the env token to match the stored token to exercise the
+      // disk-read path and observe a valid result.
+      const sharedToken = 'spawn-token-from-store';
+      process.env.HIVE_FLOW_AGENT_TOKEN = sharedToken;
+
       mkdirSync(require('path').dirname(AGENT_STORE_PATH), { recursive: true });
       writeFileSync(AGENT_STORE_PATH, JSON.stringify({
         agents: {
           'agent-fallback': {
             config: {
-              _spawnToken: 'spawn-token-from-store',
+              _spawnToken: sharedToken,
             },
           },
         },
@@ -357,10 +376,29 @@ describe('Role Enforcement System', () => {
       const fs = require('fs');
       const spy = vi.spyOn(fs, 'readFileSync');
 
-      expect(roleEnf.verifySpawnToken('agent-fallback')).toBe(true);
+      const result = roleEnf.verifySpawnToken('agent-fallback');
+      expect(result.valid).toBe(true);
       expect(spy).toHaveBeenCalledWith(AGENT_STORE_PATH, 'utf8');
 
       spy.mockRestore();
+    });
+
+    it('fail-closes when env token is missing even if store has a token', () => {
+      delete process.env.HIVE_FLOW_AGENT_TOKEN;
+      mkdirSync(require('path').dirname(AGENT_STORE_PATH), { recursive: true });
+      writeFileSync(AGENT_STORE_PATH, JSON.stringify({
+        agents: {
+          'agent-fail-closed': {
+            config: {
+              _spawnToken: 'spawn-token-from-store',
+            },
+          },
+        },
+      }, null, 2));
+
+      const result = roleEnf.verifySpawnToken('agent-fail-closed');
+      expect(result.valid).toBe(false);
+      expect(result.reason).toContain('no env token');
     });
   });
 

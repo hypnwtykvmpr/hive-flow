@@ -230,7 +230,7 @@ describe('Provider-Hive Compatibility', () => {
     it('consensus execute finds provider metadata in canonical store', async () => {
       const state = makeHiveState({
         workers: [
-          { agentId: 'agent-gemini-1', provider: 'gemini-cli', model: 'gemini-2.5-pro', role: 'worker', joinedAt: '2025-01-01T00:00:00.000Z', status: 'idle' },
+          { agentId: 'agent-gemini-1', provider: 'gemini-cli', model: 'gemini-3.1-pro-preview', role: 'worker', joinedAt: '2025-01-01T00:00:00.000Z', status: 'idle' },
         ],
         consensus: {
           pending: [
@@ -242,7 +242,7 @@ describe('Provider-Hive Compatibility', () => {
 
       setupFsMocks(state, {
         agents: {
-          'agent-gemini-1': { agentId: 'agent-gemini-1', provider: 'gemini-cli', resolvedModel: 'gemini-2.5-pro', status: 'idle' },
+          'agent-gemini-1': { agentId: 'agent-gemini-1', provider: 'gemini-cli', resolvedModel: 'gemini-3.1-pro-preview', status: 'idle' },
         },
         version: '3.0.0',
       });
@@ -285,7 +285,7 @@ describe('Provider-Hive Compatibility', () => {
     it('preserves pure HiveWorker[] unchanged', async () => {
       const state = makeHiveState({
         workers: [
-          { agentId: 'w1', provider: 'gemini-cli', model: 'gemini-2.5-pro', role: 'specialist', joinedAt: '2025-01-01T00:00:00.000Z', status: 'idle' },
+          { agentId: 'w1', provider: 'gemini-cli', model: 'gemini-3.1-pro-preview', role: 'specialist', joinedAt: '2025-01-01T00:00:00.000Z', status: 'idle' },
           { agentId: 'w2', role: 'worker', joinedAt: '2025-01-01T00:00:00.000Z', status: 'busy' },
         ],
       });
@@ -298,7 +298,7 @@ describe('Provider-Hive Compatibility', () => {
       expect(workers).toHaveLength(2);
       expect(workers[0].id).toBe('w1');
       expect(workers[0].provider).toBe('gemini-cli');
-      expect(workers[0].model).toBe('gemini-2.5-pro');
+      expect(workers[0].model).toBe('gemini-3.1-pro-preview');
       expect(workers[1].id).toBe('w2');
     });
 
@@ -440,14 +440,14 @@ describe('Provider-Hive Compatibility', () => {
 
       const result = await spawnTool.handler({
         count: 1, agentType: 'verifier', prefix: 'gem',
-        provider: 'gemini-cli', model: 'gemini-2.5-pro',
+        provider: 'gemini-cli', model: 'gemini-3.1-pro-preview',
       }) as AnyResult;
 
       expect(result.success).toBe(true);
       const workers = result.workers as HiveWorkerView[];
       expect(workers).toHaveLength(1);
       expect(workers[0].provider).toBe('gemini-cli');
-      expect(workers[0].model).toBe('gemini-2.5-pro');
+      expect(workers[0].model).toBe('gemini-3.1-pro-preview');
     });
 
     it('spawns with codex-cli provider', async () => {
@@ -456,13 +456,13 @@ describe('Provider-Hive Compatibility', () => {
 
       const result = await spawnTool.handler({
         count: 1, agentType: 'coder', prefix: 'codex',
-        provider: 'codex-cli', model: 'o4-mini',
+        provider: 'codex-cli', model: 'gpt-5.5',
       }) as AnyResult;
 
       expect(result.success).toBe(true);
       const workers = result.workers as HiveWorkerView[];
       expect(workers[0].provider).toBe('codex-cli');
-      expect(workers[0].model).toBe('o4-mini');
+      expect(workers[0].model).toBe('gpt-5.5');
     });
 
     it('spawns with cursor-cli provider', async () => {
@@ -486,13 +486,13 @@ describe('Provider-Hive Compatibility', () => {
 
       const result = await spawnTool.handler({
         count: 1, agentType: 'reasoner', prefix: 'deepseek',
-        provider: 'deepseek', model: 'deepseek-reasoner',
+        provider: 'deepseek', model: 'deepseek-v4-pro',
       }) as AnyResult;
 
       expect(result.success).toBe(true);
       const workers = result.workers as HiveWorkerView[];
       expect(workers[0].provider).toBe('deepseek');
-      expect(workers[0].model).toBe('deepseek-reasoner');
+      expect(workers[0].model).toBe('deepseek-v4-pro');
     });
 
     it('spawns without provider (backward compat)', async () => {
@@ -522,13 +522,13 @@ describe('Provider-Hive Compatibility', () => {
       const result = await joinTool.handler({
         agentId: 'ext-agent-1',
         provider: 'gemini-cli',
-        model: 'gemini-2.5-pro',
+        model: 'gemini-3.1-pro-preview',
         role: 'specialist',
       }) as AnyResult;
 
       expect(result.success).toBe(true);
       expect(result.provider).toBe('gemini-cli');
-      expect(result.model).toBe('gemini-2.5-pro');
+      expect(result.model).toBe('gemini-3.1-pro-preview');
       expect(result.role).toBe('specialist');
     });
 
@@ -538,7 +538,7 @@ describe('Provider-Hive Compatibility', () => {
           'stored-agent': {
             agentId: 'stored-agent',
             provider: 'codex-cli',
-            resolvedModel: 'o4-mini',
+            resolvedModel: 'gpt-5.5',
             status: 'idle',
           },
         },
@@ -552,7 +552,7 @@ describe('Provider-Hive Compatibility', () => {
 
       expect(result.success).toBe(true);
       expect(result.provider).toBe('codex-cli');
-      expect(result.model).toBe('o4-mini');
+      expect(result.model).toBe('gpt-5.5');
     });
 
     it('join without provider or store record creates bare HiveWorker', async () => {
@@ -612,14 +612,14 @@ describe('Provider-Hive Compatibility', () => {
 
       const result = await spawnTool.handler({
         count: 2, agentType: 'reviewer', prefix: 'gemini-w',
-        provider: 'gemini-cli', model: 'gemini-2.5-pro',
+        provider: 'gemini-cli', model: 'gemini-3.1-pro-preview',
       }) as AnyResult;
 
       expect(result.success).toBe(true);
       expect(result.spawned).toBe(2);
       const workers = result.workers as HiveWorkerView[];
       expect(workers.every((w) => w.provider === 'gemini-cli')).toBe(true);
-      expect(workers.every((w) => w.model === 'gemini-2.5-pro')).toBe(true);
+      expect(workers.every((w) => w.model === 'gemini-3.1-pro-preview')).toBe(true);
     });
 
     it('pure Codex hive (2 workers)', async () => {
@@ -628,7 +628,7 @@ describe('Provider-Hive Compatibility', () => {
 
       const result = await spawnTool.handler({
         count: 2, agentType: 'coder', prefix: 'codex-w',
-        provider: 'codex-cli', model: 'o4-mini',
+        provider: 'codex-cli', model: 'gpt-5.5',
       }) as AnyResult;
 
       expect(result.success).toBe(true);
@@ -643,7 +643,7 @@ describe('Provider-Hive Compatibility', () => {
 
       const result = await spawnTool.handler({
         count: 2, agentType: 'reasoner', prefix: 'deepseek-w',
-        provider: 'deepseek', model: 'deepseek-reasoner',
+        provider: 'deepseek', model: 'deepseek-v4-pro',
       }) as AnyResult;
 
       expect(result.success).toBe(true);
@@ -676,7 +676,7 @@ describe('Provider-Hive Compatibility', () => {
       const spawnTool = getTool('hive-mind_spawn');
 
       await spawnTool.handler({ count: 1, prefix: 'sonnet', provider: 'anthropic', model: 'sonnet' });
-      const result = await spawnTool.handler({ count: 1, prefix: 'gemini', provider: 'gemini-cli', model: 'gemini-2.5-pro' }) as AnyResult;
+      const result = await spawnTool.handler({ count: 1, prefix: 'gemini', provider: 'gemini-cli', model: 'gemini-3.1-pro-preview' }) as AnyResult;
 
       expect(result.success).toBe(true);
       expect(result.totalWorkers).toBe(2);
@@ -687,7 +687,7 @@ describe('Provider-Hive Compatibility', () => {
       const spawnTool = getTool('hive-mind_spawn');
 
       await spawnTool.handler({ count: 1, prefix: 'sonnet', provider: 'anthropic', model: 'sonnet' });
-      const result = await spawnTool.handler({ count: 1, prefix: 'codex', provider: 'codex-cli', model: 'o4-mini' }) as AnyResult;
+      const result = await spawnTool.handler({ count: 1, prefix: 'codex', provider: 'codex-cli', model: 'gpt-5.5' }) as AnyResult;
 
       expect(result.success).toBe(true);
       expect(result.totalWorkers).toBe(2);
@@ -698,7 +698,7 @@ describe('Provider-Hive Compatibility', () => {
       const spawnTool = getTool('hive-mind_spawn');
 
       await spawnTool.handler({ count: 1, prefix: 'sonnet', provider: 'anthropic', model: 'sonnet' });
-      const result = await spawnTool.handler({ count: 1, prefix: 'deepseek', provider: 'deepseek', model: 'deepseek-reasoner' }) as AnyResult;
+      const result = await spawnTool.handler({ count: 1, prefix: 'deepseek', provider: 'deepseek', model: 'deepseek-v4-pro' }) as AnyResult;
 
       expect(result.success).toBe(true);
       expect(result.totalWorkers).toBe(2);
@@ -710,8 +710,8 @@ describe('Provider-Hive Compatibility', () => {
 
       await spawnTool.handler({ count: 1, prefix: 'anthropic', provider: 'anthropic', model: 'sonnet' });
       await spawnTool.handler({ count: 1, prefix: 'cursor', provider: 'cursor-cli', model: 'auto' });
-      await spawnTool.handler({ count: 1, prefix: 'gemini', provider: 'gemini-cli', model: 'gemini-2.5-pro' });
-      const result = await spawnTool.handler({ count: 1, prefix: 'codex', provider: 'codex-cli', model: 'o4-mini' }) as AnyResult;
+      await spawnTool.handler({ count: 1, prefix: 'gemini', provider: 'gemini-cli', model: 'gemini-3.1-pro-preview' });
+      const result = await spawnTool.handler({ count: 1, prefix: 'codex', provider: 'codex-cli', model: 'gpt-5.5' }) as AnyResult;
 
       expect(result.success).toBe(true);
       expect(result.totalWorkers).toBe(4);
@@ -747,7 +747,7 @@ describe('Provider-Hive Compatibility', () => {
       setMockAgentTask(async () => ({ success: true, content: 'I approve.' }));
 
       const workers = [
-        { agentId: 'prov-w1', provider: 'gemini-cli', model: 'gemini-2.5-pro', role: 'worker', joinedAt: '2025-01-01T00:00:00.000Z', status: 'idle' },
+        { agentId: 'prov-w1', provider: 'gemini-cli', model: 'gemini-3.1-pro-preview', role: 'worker', joinedAt: '2025-01-01T00:00:00.000Z', status: 'idle' },
       ];
       setupFsMocks(makeExecuteState(workers));
 
@@ -1090,8 +1090,8 @@ describe('Provider-Hive Compatibility', () => {
     it('status includes provider per worker', async () => {
       const state = makeHiveState({
         workers: [
-          { agentId: 'w1', provider: 'gemini-cli', model: 'gemini-2.5-pro', role: 'worker', joinedAt: '2025-01-01T00:00:00.000Z', status: 'idle' },
-          { agentId: 'w2', provider: 'codex-cli', model: 'o4-mini', role: 'specialist', joinedAt: '2025-01-01T00:00:00.000Z', status: 'busy' },
+          { agentId: 'w1', provider: 'gemini-cli', model: 'gemini-3.1-pro-preview', role: 'worker', joinedAt: '2025-01-01T00:00:00.000Z', status: 'idle' },
+          { agentId: 'w2', provider: 'codex-cli', model: 'gpt-5.5', role: 'specialist', joinedAt: '2025-01-01T00:00:00.000Z', status: 'busy' },
           { agentId: 'w3', role: 'worker', joinedAt: '2025-01-01T00:00:00.000Z', status: 'idle' },
         ],
       });
@@ -1103,9 +1103,9 @@ describe('Provider-Hive Compatibility', () => {
       const workers = result.workers as HiveWorkerView[];
       expect(workers).toHaveLength(3);
       expect(workers[0].provider).toBe('gemini-cli');
-      expect(workers[0].model).toBe('gemini-2.5-pro');
+      expect(workers[0].model).toBe('gemini-3.1-pro-preview');
       expect(workers[1].provider).toBe('codex-cli');
-      expect(workers[1].model).toBe('o4-mini');
+      expect(workers[1].model).toBe('gpt-5.5');
       expect(workers[2].provider).toBeUndefined();
     });
 

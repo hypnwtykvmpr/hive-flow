@@ -19,47 +19,47 @@ describe('DeepSeekProvider', () => {
     }
   });
 
-  it('capabilities.maxContextLength is 128000 for both models', () => {
+  it('capabilities.maxContextLength is 1M for both models', () => {
     const provider = new DeepSeekProvider({
-      config: { provider: 'deepseek', model: 'deepseek-chat' },
+      config: { provider: 'deepseek', model: 'deepseek-v4-flash' },
       logger: noopLogger,
     });
 
-    expect(provider.capabilities.maxContextLength['deepseek-chat']).toBe(128000);
-    expect(provider.capabilities.maxContextLength['deepseek-reasoner']).toBe(128000);
+    expect(provider.capabilities.maxContextLength['deepseek-v4-flash']).toBe(1000000);
+    expect(provider.capabilities.maxContextLength['deepseek-v4-pro']).toBe(1000000);
   });
 
-  it('capabilities.maxOutputTokens is 8192 for deepseek-chat', () => {
+  it('capabilities.maxOutputTokens is 384000 for deepseek-v4-flash', () => {
     const provider = new DeepSeekProvider({
-      config: { provider: 'deepseek', model: 'deepseek-chat' },
+      config: { provider: 'deepseek', model: 'deepseek-v4-flash' },
       logger: noopLogger,
     });
 
-    expect(provider.capabilities.maxOutputTokens['deepseek-chat']).toBe(8192);
+    expect(provider.capabilities.maxOutputTokens['deepseek-v4-flash']).toBe(384000);
   });
 
-  it('capabilities.maxOutputTokens is 32768 for deepseek-reasoner', () => {
+  it('capabilities.maxOutputTokens is 384000 for deepseek-v4-pro', () => {
     const provider = new DeepSeekProvider({
-      config: { provider: 'deepseek', model: 'deepseek-chat' },
+      config: { provider: 'deepseek', model: 'deepseek-v4-flash' },
       logger: noopLogger,
     });
 
-    expect(provider.capabilities.maxOutputTokens['deepseek-reasoner']).toBe(32768);
+    expect(provider.capabilities.maxOutputTokens['deepseek-v4-pro']).toBe(384000);
   });
 
-  it('supportedModels includes deepseek-chat and deepseek-reasoner', () => {
+  it('supportedModels includes deepseek-v4-flash and deepseek-v4-pro', () => {
     const provider = new DeepSeekProvider({
-      config: { provider: 'deepseek', model: 'deepseek-chat' },
+      config: { provider: 'deepseek', model: 'deepseek-v4-flash' },
       logger: noopLogger,
     });
 
-    expect(provider.capabilities.supportedModels).toContain('deepseek-chat');
-    expect(provider.capabilities.supportedModels).toContain('deepseek-reasoner');
+    expect(provider.capabilities.supportedModels).toContain('deepseek-v4-flash');
+    expect(provider.capabilities.supportedModels).toContain('deepseek-v4-pro');
   });
 
   it('name is deepseek', () => {
     const provider = new DeepSeekProvider({
-      config: { provider: 'deepseek', model: 'deepseek-chat' },
+      config: { provider: 'deepseek', model: 'deepseek-v4-flash' },
       logger: noopLogger,
     });
 
@@ -70,7 +70,7 @@ describe('DeepSeekProvider', () => {
     delete process.env.DEEPSEEK_API_KEY;
 
     const provider = new DeepSeekProvider({
-      config: { provider: 'deepseek', model: 'deepseek-chat' },
+      config: { provider: 'deepseek', model: 'deepseek-v4-flash' },
       logger: noopLogger,
     });
 

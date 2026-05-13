@@ -2,7 +2,7 @@
  * V3 DeepSeek Provider
  *
  * OpenAI-compatible HTTP provider for DeepSeek's API (api.deepseek.com/v1).
- * Supports DeepSeek-V3 (chat) and DeepSeek-V3.2 (Thinking Mode).
+ * Supports DeepSeek V4 Pro and DeepSeek V4 Flash.
  * Auth: DEEPSEEK_API_KEY environment variable. Graceful if missing.
  *
  * @module @hive-flow/providers/deepseek-provider
@@ -20,6 +20,7 @@ interface DeepSeekResponse {
   choices: Array<{
     message: {
       content: string | null;
+      reasoning_content?: string | null;
       tool_calls?: Array<{ id: string; type: 'function'; function: { name: string; arguments: string } }>;
     };
     finish_reason: string;
@@ -33,9 +34,9 @@ const p = (prompt: number, completion: number) =>
 export class DeepSeekProvider extends BaseProvider {
   readonly name: LLMProvider = 'deepseek';
   readonly capabilities: ProviderCapabilities = {
-    supportedModels: ['deepseek-reasoner', 'deepseek-chat'],
-    maxContextLength: { 'deepseek-chat': 128000, 'deepseek-reasoner': 128000 },
-    maxOutputTokens: { 'deepseek-chat': 8192, 'deepseek-reasoner': 32768 },
+    supportedModels: ['deepseek-v4-pro', 'deepseek-v4-flash'],
+    maxContextLength: { 'deepseek-v4-pro': 1000000, 'deepseek-v4-flash': 1000000 },
+    maxOutputTokens: { 'deepseek-v4-pro': 384000, 'deepseek-v4-flash': 384000 },
     supportsStreaming: true,
     supportsToolCalling: true,
     supportsSystemMessages: true,
@@ -46,8 +47,11 @@ export class DeepSeekProvider extends BaseProvider {
     supportsBatching: false,
     rateLimit: { requestsPerMinute: 60, tokensPerMinute: 1000000, concurrentRequests: 10 },
     pricing: {
-      'deepseek-chat': p(0.00014, 0.00028),
-      'deepseek-reasoner': p(0.00055, 0.0022),
+      // Public pricing per 1K tokens. The provider API exposes only one input
+      // price, so use cache-miss input pricing and recheck DeepSeek docs when
+      // temporary discounts change.
+      'deepseek-v4-pro': p(0.000435, 0.00087),
+      'deepseek-v4-flash': p(0.00014, 0.00028),
     },
   };
 
@@ -156,8 +160,8 @@ export class DeepSeekProvider extends BaseProvider {
 
   async getModelInfo(model: LLMModel): Promise<ModelInfo> {
     const desc: Record<string, string> = {
-      'deepseek-chat': 'DeepSeek-V3 - Fast general-purpose chat model',
-      'deepseek-reasoner': 'DeepSeek-V3.2 - Thinking Mode with chain-of-thought reasoning',
+      'deepseek-v4-pro': 'DeepSeek-V4 Pro - Flagship reasoning model with extended thinking',
+      'deepseek-v4-flash': 'DeepSeek-V4 Flash - Fast efficient general-purpose model',
     };
     return {
       model, name: model,
@@ -200,6 +204,7 @@ export class DeepSeekProvider extends BaseProvider {
         ...(msg.name && { name: msg.name }),
         ...(msg.toolCallId && { tool_call_id: msg.toolCallId }),
         ...(msg.toolCalls && { tool_calls: msg.toolCalls }),
+        ...(msg.reasoningContent && { reasoning_content: msg.reasoningContent }),
       })),
       stream,
     };
@@ -228,6 +233,7 @@ export class DeepSeekProvider extends BaseProvider {
     return {
       id: data.id, model: model as LLMModel, provider: 'deepseek',
       content: choice.message.content || '',
+      ...(choice.message.reasoning_content ? { reasoningContent: choice.message.reasoning_content } : {}),
       toolCalls: choice.message.tool_calls,
       usage: { promptTokens: data.usage.prompt_tokens, completionTokens: data.usage.completion_tokens, totalTokens: data.usage.total_tokens },
       cost: { promptCost, completionCost, totalCost: promptCost + completionCost, currency: 'USD' },

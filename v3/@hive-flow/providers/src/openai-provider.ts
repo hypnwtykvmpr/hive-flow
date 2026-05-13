@@ -189,6 +189,16 @@ export class OpenAIProvider extends BaseProvider {
     if (this.config.providerOptions?.organization) {
       this.headers['OpenAI-Organization'] = this.config.providerOptions.organization as string;
     }
+
+    const extraHeaders = this.config.providerOptions?.headers;
+    if (extraHeaders && typeof extraHeaders === 'object') {
+      const protectedKeys = new Set(['authorization', 'content-type']);
+      for (const [k, v] of Object.entries(extraHeaders as Record<string, unknown>)) {
+        if (typeof v === 'string' && !protectedKeys.has(k.toLowerCase())) {
+          this.headers[k] = v;
+        }
+      }
+    }
   }
 
   protected async doComplete(request: LLMRequest): Promise<LLMResponse> {

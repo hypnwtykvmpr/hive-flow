@@ -286,8 +286,8 @@ When you see these in hook output, the system is telling you how to optimize:
 → Use Edit tool directly, 352x faster than LLM
 
 # Model recommendation for Task tool
-[TASK_MODEL_RECOMMENDATION] Use model="haiku"
-→ Pass model="haiku" to Task tool for cost savings
+[TASK_MODEL_RECOMMENDATION] Use model="mini"
+→ Pass model="mini" to Task tool for cost savings
 ```
 
 **Performance:**
@@ -3179,7 +3179,7 @@ When hooks run, they emit signals that guide routing decisions. Watch for these 
 | Signal | Meaning | Action |
 |--------|---------|--------|
 | `[AGENT_BOOSTER_AVAILABLE]` | Simple transform detected, skip LLM | Use Edit tool directly (352x faster, $0) |
-| `[TASK_MODEL_RECOMMENDATION] Use model="haiku"` | Low complexity task | Pass `model: "haiku"` to Task tool |
+| `[TASK_MODEL_RECOMMENDATION] Use model="mini"` | Low complexity task | Pass `model: "mini"` to Task tool |
 | `[TASK_MODEL_RECOMMENDATION] Use model="sonnet"` | Medium complexity task | Pass `model: "sonnet"` to Task tool |
 | `[TASK_MODEL_RECOMMENDATION] Use model="opus"` | High complexity task | Pass `model: "opus"` to Task tool |
 
@@ -3414,18 +3414,18 @@ hive-flow hooks worker status
 
 ### Model Routing Hooks (3 hooks)
 
-Automatically selects haiku/sonnet/opus based on task complexity.
+Automatically selects mini/sonnet/opus based on task complexity.
 
 | Hook | Purpose | Saves Money By |
 |------|---------|----------------|
-| `model-route` | Route to optimal model | Using haiku for simple tasks |
+| `model-route` | Route to optimal model | Using mini for simple tasks |
 | `model-outcome` | Record result | Learning which model works for what |
 | `model-stats` | View routing stats | Showing cost savings |
 
 ```bash
 # Get model recommendation
 hive-flow hooks model-route --task "fix typo in README"
-# → Recommends: haiku (simple task, low complexity)
+# → Recommends: mini (simple task, low complexity)
 
 hive-flow hooks model-route --task "design distributed consensus system"
 # → Recommends: opus (complex architecture, high reasoning)
@@ -4947,7 +4947,7 @@ const result = await router.route({
   task: 'Add console.log to function',
   preferCost: true
 });
-// Returns: { model: 'haiku', reason: 'simple task, low complexity' }
+// Returns: { model: 'mini', reason: 'simple task, low complexity' }
 
 const result2 = await router.route({
   task: 'Design distributed caching architecture'
@@ -4958,9 +4958,11 @@ const result2 = await router.route({
 | Complexity | Model | Cost | Use Case |
 |------------|-------|------|----------|
 | Agent Booster intent | **Skip LLM** | $0 | var→const, add-types |
-| Low (<30%) | **Haiku** | $0.0002 | Simple fixes, docs |
+| Low (<30%) | **Mini** | $0.0002 | Simple fixes, docs |
 | Medium (30-70%) | **Sonnet** | $0.003 | Features, debugging |
 | High (>70%) | **Opus** | $0.015 | Architecture, security |
+
+> **Note on `haiku` alias:** `haiku` is permitted as a resolver alias (mapping to a fast/efficient model) for non-agent-task calls such as `provider_complete`, but is BLOCKED by the enforcement gate for agent task spawning (`agent_spawn`, `queen_spawn_worker`, `queen_mission_assign`, `agent_task`). Use `mini` for fast/efficient agent tasks.
 
 **Savings: 30-50% on LLM costs through intelligent routing**
 
@@ -5031,7 +5033,7 @@ Hive Flow automatically leverages agentic-flow for:
 |---------|---------------|
 | **Token Optimization** | ReasoningBank retrieval (-32% tokens) |
 | **Fast Edits** | Agent Booster for mechanical transforms |
-| **Intelligent Routing** | Model router for haiku/sonnet/opus selection |
+| **Intelligent Routing** | Model router for mini/sonnet/opus selection |
 | **Pattern Learning** | ReasoningBank stores successful patterns |
 | **Embedding Search** | HNSW-indexed vector search (150x faster) |
 

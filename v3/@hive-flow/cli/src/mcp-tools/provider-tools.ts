@@ -99,7 +99,7 @@ export const providerTools: MCPTool[] = [
           description: 'Provider to use',
         },
         prompt: { type: 'string', description: 'Prompt text' },
-        model: { type: 'string', description: 'Model name or Claude alias (sonnet/opus)' },
+        model: { type: 'string', description: 'Model name or Claude alias (opus/sonnet/mini/inherit). CLI providers enforce project alias policy; OpenRouter direct models must be allowed by config.' },
         systemPrompt: { type: 'string', description: 'Optional system prompt' },
         timeout: { type: 'number', description: 'Timeout in milliseconds (default: 30000 for simple prompts, use 120000+ for complex/research tasks)' },
       },
@@ -240,6 +240,13 @@ export const providerTools: MCPTool[] = [
       return {
         providers,
         claudeAliases: [...CLAUDE_ALIASES],
+        aliasNotes: {
+          opus: 'Flagship/largest model per provider. For openrouter, selects from opus tier pool.',
+          sonnet: 'Balanced mid-tier model. For openrouter, selects from sonnet tier pool.',
+          mini: 'Fast/efficient alias. For openrouter, mini selects from the sonnet tier pool (not haiku). For deepseek, mini → deepseek-v4-flash. For other CLI providers, mini → top-tier model (provider enforces).',
+          haiku: 'Resolver alias only. Agent task spawning (agent_spawn, queen_spawn_worker, queen_mission_assign) prohibits haiku; use mini for fast tasks instead.',
+          inherit: 'Use provider default. For OpenRouter, selects from opus tier pool.',
+        },
       };
     },
   },

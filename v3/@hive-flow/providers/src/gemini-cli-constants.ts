@@ -37,16 +37,16 @@ export const MAX_STDOUT_BYTES = 50 * 1024 * 1024; // 50 MB
 export const GEMINI_MODELS: LLMModel[] = [
   'auto',
   'gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.5-pro',
-  'gemini-3-flash-preview', 'gemini-3.1-pro-preview',
+  'gemini-3.1-flash-lite-preview', 'gemini-3.1-pro-preview',
 ];
 
 export const GEMINI_MODEL_DESCRIPTIONS: Record<string, string> = {
   'auto': 'Auto - Gemini CLI selects optimal model',
-  'gemini-2.5-flash': 'Gemini 2.5 Flash - Fast and cost-effective',
-  'gemini-2.5-flash-lite': 'Gemini 2.5 Flash Lite - Ultra-lightweight',
-  'gemini-2.5-pro': 'Gemini 2.5 Pro - High capability reasoning',
-  'gemini-3-flash-preview': 'Gemini 3 Flash Preview - Next-gen speed',
-  'gemini-3.1-pro-preview': 'Gemini 3.1 Pro Preview - Next-gen reasoning',
+  'gemini-2.5-flash': 'Gemini 2.5 Flash - Fast and cost-effective (GA)',
+  'gemini-2.5-flash-lite': 'Gemini 2.5 Flash Lite - Ultra-lightweight (GA)',
+  'gemini-2.5-pro': 'Gemini 2.5 Pro - High capability reasoning (GA)',
+  'gemini-3.1-flash-lite-preview': 'Gemini 3.1 Flash Lite Preview - Cost-efficient next-gen',
+  'gemini-3.1-pro-preview': 'Gemini 3.1 Pro Preview - Highest reasoning, 77.1% ARC-AGI-2',
 };
 
 function makePricing(prompt: number, completion: number) {
@@ -58,13 +58,15 @@ export const GEMINI_CAPABILITIES: ProviderCapabilities = {
   maxContextLength: {
     'auto': 1048576,
     'gemini-2.5-flash': 1048576, 'gemini-2.5-flash-lite': 1048576,
-    'gemini-2.5-pro': 1048576, 'gemini-3-flash-preview': 1048576,
-    'gemini-3.1-pro-preview': 2097152,
+    'gemini-2.5-pro': 1048576,
+    'gemini-3.1-flash-lite-preview': 1048576,
+    'gemini-3.1-pro-preview': 1048576,
   },
   maxOutputTokens: {
     'auto': 65536,
     'gemini-2.5-flash': 65536, 'gemini-2.5-flash-lite': 65536,
-    'gemini-2.5-pro': 65536, 'gemini-3-flash-preview': 65536,
+    'gemini-2.5-pro': 65536,
+    'gemini-3.1-flash-lite-preview': 65536,
     'gemini-3.1-pro-preview': 65536,
   },
   supportsStreaming: true,
@@ -81,7 +83,7 @@ export const GEMINI_CAPABILITIES: ProviderCapabilities = {
     'gemini-2.5-flash': makePricing(0.00015, 0.0006),
     'gemini-2.5-flash-lite': makePricing(0.0001, 0.0004),
     'gemini-2.5-pro': makePricing(0.00125, 0.01),
-    'gemini-3-flash-preview': makePricing(0.0005, 0.003),
+    'gemini-3.1-flash-lite-preview': makePricing(0.0003, 0.0015),
     'gemini-3.1-pro-preview': makePricing(0.002, 0.012),
   },
 };

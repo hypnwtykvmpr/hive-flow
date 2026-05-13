@@ -2,7 +2,7 @@
  * V3 OpenRouter Provider
  *
  * OpenAI-compatible provider for OpenRouter's unified API gateway.
- * Supports 200+ models via provider/model naming (e.g. google/gemini-2.5-flash).
+ * Supports 200+ models via provider/model naming (e.g. xiaomi/mimo-v2.5-pro).
  *
  * @module @hive-flow/providers/openrouter-provider
  */
@@ -50,23 +50,24 @@ interface OpenRouterResponse {
 }
 
 const DEFAULT_MODELS: LLMModel[] = [
-  'google/gemini-2.5-flash', 'meta-llama/llama-3.3-70b', 'deepseek/deepseek-reasoner',
-  'openai/gpt-4o-mini', 'mistralai/mistral-small-25',
+  'xiaomi/mimo-v2.5-pro', 'x-ai/grok-4.3', 'minimax/minimax-m2.7',
+  'moonshotai/kimi-k2.6', 'qwen/qwen3.6-max-preview', 'z-ai/glm-5.1',
+  'qwen/qwen3.6-plus', 'nvidia/nemotron-3-super-120b-a12b:free', 'deepseek/deepseek-v4-flash',
 ];
-
-const p = (prompt: number, completion: number) => ({ promptCostPer1k: prompt, completionCostPer1k: completion, currency: 'USD' });
 
 export class OpenRouterProvider extends BaseProvider {
   readonly name: LLMProvider = 'openrouter';
   readonly capabilities: ProviderCapabilities = {
     supportedModels: [...DEFAULT_MODELS],
     maxContextLength: {
-      'google/gemini-2.5-flash': 1048576, 'meta-llama/llama-3.3-70b': 131072,
-      'deepseek/deepseek-reasoner': 131072, 'openai/gpt-4o-mini': 128000, 'mistralai/mistral-small-25': 32768,
+      'xiaomi/mimo-v2.5-pro': 1048576, 'x-ai/grok-4.3': 2000000, 'minimax/minimax-m2.7': 204800,
+      'moonshotai/kimi-k2.6': 262144, 'qwen/qwen3.6-max-preview': 262144, 'z-ai/glm-5.1': 202752,
+      'qwen/qwen3.6-plus': 1000000, 'nvidia/nemotron-3-super-120b-a12b:free': 262144, 'deepseek/deepseek-v4-flash': 1000000,
     },
     maxOutputTokens: {
-      'google/gemini-2.5-flash': 65536, 'meta-llama/llama-3.3-70b': 4096,
-      'deepseek/deepseek-reasoner': 8192, 'openai/gpt-4o-mini': 16384, 'mistralai/mistral-small-25': 8192,
+      'xiaomi/mimo-v2.5-pro': 32768, 'x-ai/grok-4.3': 32768, 'minimax/minimax-m2.7': 32768,
+      'moonshotai/kimi-k2.6': 32768, 'qwen/qwen3.6-max-preview': 32768, 'z-ai/glm-5.1': 32768,
+      'qwen/qwen3.6-plus': 32768, 'nvidia/nemotron-3-super-120b-a12b:free': 32768, 'deepseek/deepseek-v4-flash': 32768,
     },
     supportsStreaming: true,
     supportsToolCalling: true,
@@ -77,13 +78,9 @@ export class OpenRouterProvider extends BaseProvider {
     supportsEmbeddings: false,
     supportsBatching: false,
     rateLimit: { requestsPerMinute: 200, tokensPerMinute: 10000000, concurrentRequests: 50 },
-    pricing: {
-      'google/gemini-2.5-flash': p(0.00015, 0.0006),
-      'meta-llama/llama-3.3-70b': p(0.00059, 0.00079),
-      'deepseek/deepseek-reasoner': p(0.0003, 0.00088),
-      'openai/gpt-4o-mini': p(0.00015, 0.0006),
-      'mistralai/mistral-small-25': p(0.0001, 0.0003),
-    },
+    // OpenRouter pricing is model/provider dynamic. Do not advertise unknown
+    // model prices as zero; callers should treat missing pricing as unavailable.
+    pricing: {},
   };
 
   private baseUrl = 'https://openrouter.ai/api/v1';
@@ -159,15 +156,16 @@ export class OpenRouterProvider extends BaseProvider {
             const promptTokens = this.estimateTokens(JSON.stringify(request.messages));
             const model = request.model || this.config.model;
             const pr = this.capabilities.pricing[model];
+            const cost = pr ? {
+              promptCost: (promptTokens / 1000) * pr.promptCostPer1k,
+              completionCost: (100 / 1000) * pr.completionCostPer1k,
+              totalCost: (promptTokens / 1000) * pr.promptCostPer1k + (100 / 1000) * pr.completionCostPer1k,
+              currency: 'USD',
+            } : undefined;
             yield {
               type: 'done',
               usage: { promptTokens, completionTokens: 100, totalTokens: promptTokens + 100 },
-              cost: {
-                promptCost: (promptTokens / 1000) * (pr?.promptCostPer1k ?? 0),
-                completionCost: (100 / 1000) * (pr?.completionCostPer1k ?? 0),
-                totalCost: (promptTokens / 1000) * (pr?.promptCostPer1k ?? 0) + (100 / 1000) * (pr?.completionCostPer1k ?? 0),
-                currency: 'USD',
-              },
+              ...(cost ? { cost } : {}),
             };
             continue;
           }
@@ -313,8 +311,13 @@ export class OpenRouterProvider extends BaseProvider {
     const choice = data.choices[0];
     const model = request.model || this.config.model;
     const pr = this.capabilities.pricing[model];
-    const promptCost = (data.usage.prompt_tokens / 1000) * (pr?.promptCostPer1k ?? 0);
-    const completionCost = (data.usage.completion_tokens / 1000) * (pr?.completionCostPer1k ?? 0);
+    const cost = pr ? {
+      promptCost: (data.usage.prompt_tokens / 1000) * pr.promptCostPer1k,
+      completionCost: (data.usage.completion_tokens / 1000) * pr.completionCostPer1k,
+      totalCost: (data.usage.prompt_tokens / 1000) * pr.promptCostPer1k +
+        (data.usage.completion_tokens / 1000) * pr.completionCostPer1k,
+      currency: 'USD',
+    } : undefined;
 
     return {
       id: data.id,
@@ -327,7 +330,7 @@ export class OpenRouterProvider extends BaseProvider {
         completionTokens: data.usage.completion_tokens,
         totalTokens: data.usage.total_tokens,
       },
-      cost: { promptCost, completionCost, totalCost: promptCost + completionCost, currency: 'USD' },
+      ...(cost ? { cost } : {}),
       finishReason: choice.finish_reason,
     };
   }

@@ -1,6 +1,7 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, afterAll } from 'vitest';
 import * as nodeCrypto from 'node:crypto';
 import * as nodePath from 'node:path';
+import * as nodeOs from 'node:os';
 
 // Real (un-mocked) fs — obtained via require BEFORE vi.mock hoisting rewrites the module.
 // This is used in Part 2 for actual filesystem operations in enforcement.cjs tests.
@@ -84,6 +85,30 @@ function computeHmac(key: string, data: unknown): string {
 function makeEnvelope(key: string, state: Record<string, unknown>) {
   const hmac = computeHmac(key, state);
   return { state, hmac };
+}
+
+// ── Caller token helpers (for resetPipeline/completePipelineStage/overridePipeline auth) ─
+//
+// Commit 760499c7b added HMAC caller authentication to these three functions.
+// Token format: "<timestamp>.<hex-hmac-of-payload>" where payload varies per function.
+// Token must be within 30s of Date.now(). HMAC key is derived from getOrCreateHmacKey().
+
+function makeStageCompleteToken(key: string, stageName: string, ts: number = Date.now()): string {
+  const payload = `pipeline-stage-complete:${stageName}:${ts}`;
+  const sig = nodeCrypto.createHmac('sha256', key).update(payload).digest('hex');
+  return `${ts}.${sig}`;
+}
+
+function makeOverrideToken(key: string, ts: number = Date.now()): string {
+  const payload = `pipeline-override:${ts}`;
+  const sig = nodeCrypto.createHmac('sha256', key).update(payload).digest('hex');
+  return `${ts}.${sig}`;
+}
+
+function makeResetToken(key: string, ts: number = Date.now()): string {
+  const payload = `pipeline-reset:${ts}`;
+  const sig = nodeCrypto.createHmac('sha256', key).update(payload).digest('hex');
+  return `${ts}.${sig}`;
 }
 
 // ── Default pipeline stages ───────────────────────────────────────────────
@@ -430,9 +455,17 @@ describe('Pipeline MCP Tools (workflow-tools.ts)', () => {
 // from __dirname. We test using the actual path the module uses, cleaning up
 // before/after each test to avoid cross-test contamination.
 
-const ENFORCEMENT_CJS_PATH = nodePath.resolve(
+const ENFORCEMENT_CJS_SOURCE_PATH = nodePath.resolve(
   __dirname, '..', '..', '..', '..', '..', '.claude', 'helpers', 'enforcement.cjs'
 );
+const ENFORCEMENT_CJS_TEST_ROOT = realFs.mkdtempSync(
+  nodePath.join(nodeOs.tmpdir(), 'hive-flow-enforcement-cjs-')
+);
+const ENFORCEMENT_CJS_PATH = nodePath.join(
+  ENFORCEMENT_CJS_TEST_ROOT, '.claude', 'helpers', 'enforcement.cjs'
+);
+realFs.mkdirSync(nodePath.dirname(ENFORCEMENT_CJS_PATH), { recursive: true });
+realFs.copyFileSync(ENFORCEMENT_CJS_SOURCE_PATH, ENFORCEMENT_CJS_PATH);
 
 // The enforcement dir as the module will use it (from __dirname)
 const ENF_DIR = nodePath.resolve(
@@ -464,6 +497,10 @@ describe('enforcement.cjs Pipeline Functions (direct require)', () => {
 
   afterEach(() => {
     cleanEnforcementPipelineState();
+  });
+
+  afterAll(() => {
+    realFs.rmSync(ENFORCEMENT_CJS_TEST_ROOT, { recursive: true, force: true });
   });
 
   // ── initPipeline ──────────────────────────────────────────────────────
@@ -502,7 +539,10 @@ describe('enforcement.cjs Pipeline Functions (direct require)', () => {
     it('test 18: completePipelineStage updates and re-signs the state file', () => {
       enf.initPipeline('task-cjs-2', ['step-a', 'step-b']);
 
-      const result = enf.completePipelineStage('task-cjs-2', 'step-a');
+      // Caller auth (commit 760499c7b): generate signed token before invoking
+      const key = enf.getOrCreateHmacKey();
+      const token = makeStageCompleteToken(key, 'step-a');
+      const result = enf.completePipelineStage('task-cjs-2', 'step-a', token);
 
       expect(result.success).toBe(true);
 
@@ -515,8 +555,11 @@ describe('enforcement.cjs Pipeline Functions (direct require)', () => {
     });
 
     it('returns no active pipeline when no file', () => {
-      // No initPipeline called
-      const result = enf.completePipelineStage('task-x', 'step-a');
+      // No initPipeline called — but the auth check is performed FIRST so we
+      // still need a valid caller token to surface the "No active pipeline" reason.
+      const key = enf.getOrCreateHmacKey();
+      const token = makeStageCompleteToken(key, 'step-a');
+      const result = enf.completePipelineStage('task-x', 'step-a', token);
       expect(result.success).toBe(false);
       expect(result.reason).toContain('No active pipeline');
     });
@@ -548,7 +591,10 @@ describe('enforcement.cjs Pipeline Functions (direct require)', () => {
     it('test 21: overridePipeline sets overrideActive to true', () => {
       enf.initPipeline('task-ov-1', ['step-x']);
 
-      const result = enf.overridePipeline('Emergency bypass for hotfix');
+      // Caller auth (commit 760499c7b): generate signed token
+      const key = enf.getOrCreateHmacKey();
+      const token = makeOverrideToken(key);
+      const result = enf.overridePipeline('Emergency bypass for hotfix', token);
 
       expect(result.success).toBe(true);
 
@@ -559,7 +605,11 @@ describe('enforcement.cjs Pipeline Functions (direct require)', () => {
     });
 
     it('returns error when no active pipeline', () => {
-      const result = enf.overridePipeline('no pipeline exists');
+      // Auth check fires before pipeline-file check; supply a valid token so
+      // we test the "No active pipeline" branch, not the auth branch.
+      const key = enf.getOrCreateHmacKey();
+      const token = makeOverrideToken(key);
+      const result = enf.overridePipeline('no pipeline exists', token);
       expect(result.success).toBe(false);
       expect(result.reason).toContain('No active pipeline');
     });
@@ -572,14 +622,20 @@ describe('enforcement.cjs Pipeline Functions (direct require)', () => {
       enf.initPipeline('task-reset-1', ['s1']);
       expect(realFs.existsSync(PIPELINE_STATE_PATH)).toBe(true);
 
-      const result = enf.resetPipeline();
+      // Caller auth (commit 760499c7b): generate signed token
+      const key = enf.getOrCreateHmacKey();
+      const token = makeResetToken(key);
+      const result = enf.resetPipeline(token);
 
       expect(result.success).toBe(true);
       expect(realFs.existsSync(PIPELINE_STATE_PATH)).toBe(false);
     });
 
     it('succeeds even when no file exists', () => {
-      const result = enf.resetPipeline();
+      // Caller auth required even when no state file exists.
+      const key = enf.getOrCreateHmacKey();
+      const token = makeResetToken(key);
+      const result = enf.resetPipeline(token);
       expect(result.success).toBe(true);
     });
   });
@@ -600,8 +656,10 @@ describe('enforcement.cjs Pipeline Functions (direct require)', () => {
 
     it('test 24: checkVerificationGate allows git commit when all stages complete', () => {
       enf.initPipeline('task-gate-2', ['implement', 'verify']);
-      enf.completePipelineStage('task-gate-2', 'implement');
-      enf.completePipelineStage('task-gate-2', 'verify');
+      // Caller auth (commit 760499c7b): each stage-complete call requires a signed token
+      const key = enf.getOrCreateHmacKey();
+      enf.completePipelineStage('task-gate-2', 'implement', makeStageCompleteToken(key, 'implement'));
+      enf.completePipelineStage('task-gate-2', 'verify', makeStageCompleteToken(key, 'verify'));
 
       const result = enf.checkVerificationGate('Bash', { command: 'git commit -m "Done"' });
 
@@ -610,7 +668,9 @@ describe('enforcement.cjs Pipeline Functions (direct require)', () => {
 
     it('test 25: checkVerificationGate allows when overrideActive is true', () => {
       enf.initPipeline('task-gate-3', ['implement', 'verify']); // stages not complete
-      enf.overridePipeline('Emergency');
+      // Caller auth (commit 760499c7b): overridePipeline requires a signed token
+      const key = enf.getOrCreateHmacKey();
+      enf.overridePipeline('Emergency', makeOverrideToken(key));
 
       const result = enf.checkVerificationGate('Bash', { command: 'git commit -m "Override"' });
 
