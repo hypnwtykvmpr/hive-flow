@@ -160,6 +160,8 @@ export {
   defaultSystemConfig,
   agentTypePresets,
   mergeWithDefaults,
+  DEFAULT_MAX_AGENTS,
+  DEFAULT_QUEUE_DEPTH,
 } from './core/index.js';
 
 export type {

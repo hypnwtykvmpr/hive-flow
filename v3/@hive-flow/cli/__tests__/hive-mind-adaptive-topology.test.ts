@@ -16,6 +16,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { existsSync, readFileSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
+import { DEFAULT_MAX_AGENTS } from '@hive-flow/shared/core/config/defaults';
 
 // Constants matching the source module
 const STORAGE_DIR = '.hive-flow';
@@ -192,7 +193,7 @@ describe('Hive-Mind Adaptive Topology', () => {
 
       expect(config.topology).toBe('adaptive');
       expect(config.consensus).toBe('byzantine');
-      expect(config.maxAgents).toBe(15);
+      expect(config.maxAgents).toBe(DEFAULT_MAX_AGENTS);
       expect(config.persist).toBe(true);
       expect(config.memoryBackend).toBe('hybrid');
     });

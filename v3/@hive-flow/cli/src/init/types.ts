@@ -5,6 +5,7 @@
 
 import os from 'os';
 import path from 'path';
+import { DEFAULT_MAX_AGENTS } from '@hive-flow/shared/core/config/defaults';
 
 /**
  * Components that can be initialized
@@ -386,7 +387,7 @@ export const DEFAULT_INIT_OPTIONS: InitOptions = {
   },
   runtime: {
     topology: 'hierarchical-mesh',
-    maxAgents: 15,
+    maxAgents: DEFAULT_MAX_AGENTS,
     memoryBackend: 'hybrid',
     enableHNSW: true,
     enableNeural: true,

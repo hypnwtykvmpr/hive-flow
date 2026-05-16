@@ -604,6 +604,10 @@ describe('Built-in Workers', () => {
   });
 
   it('should run health worker', async () => {
+    // Regression: pre-fix, this failed on sandboxed environments where
+    // os.uptime() throws "uv_uptime returned EPERM (operation not permitted)".
+    // The createHealthWorker safeProbe wrapper handles that case; on machines
+    // where the probe actually throws, this test exercises the degradation path.
     const result = await manager.runWorker('health');
 
     expect(result.success).toBe(true);

@@ -16,7 +16,7 @@ const initSwarmSchema = z.object({
     topology: z.enum(['hierarchical', 'mesh', 'adaptive', 'collective', 'hierarchical-mesh'])
         .default('hierarchical-mesh')
         .describe('Swarm coordination topology'),
-    maxAgents: z.number().int().positive().max(1000).default(15)
+    maxAgents: z.number().int().positive().max(1000).default(50) // keep in sync with @hive-flow/shared/core/config/defaults
         .describe('Maximum number of agents in the swarm'),
     config: z.object({
         communicationProtocol: z.enum(['direct', 'message-bus', 'pubsub']).optional(),
@@ -187,7 +187,7 @@ async function handleSwarmStatus(input, context) {
         status: 'stopped',
         config: {
             topology: 'hierarchical-mesh',
-            maxAgents: 15,
+            maxAgents: 50, // keep in sync with @hive-flow/shared/core/config/defaults
             currentAgents: 0,
             communicationProtocol: 'message-bus',
             consensusMechanism: 'majority',
@@ -291,7 +291,7 @@ export const initSwarmTool = {
                 description: 'Maximum number of agents in the swarm',
                 minimum: 1,
                 maximum: 1000,
-                default: 15,
+                default: 50, // keep in sync with @hive-flow/shared/core/config/defaults
             },
             config: {
                 type: 'object',

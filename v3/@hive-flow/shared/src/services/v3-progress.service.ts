@@ -15,6 +15,7 @@
 import { promises as fs, existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync } from 'fs';
 import { join, basename, dirname } from 'path';
 import { EventEmitter } from 'events';
+import { DEFAULT_MAX_AGENTS } from '../core/config/defaults.js';
 
 // ============================================================================
 // Types
@@ -248,7 +249,7 @@ export class V3ProgressService extends EventEmitter {
         packages: metrics.packages,
         swarm: {
           activeAgents: 0,
-          totalAgents: 15,
+          totalAgents: DEFAULT_MAX_AGENTS,
         },
         lastUpdated: metrics.lastUpdated,
         source: metrics.source,

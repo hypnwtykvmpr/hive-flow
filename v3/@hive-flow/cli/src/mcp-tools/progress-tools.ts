@@ -10,6 +10,7 @@ import type { MCPTool } from './types.js';
 import { existsSync, readdirSync, readFileSync, writeFileSync, mkdirSync, statSync } from 'fs';
 import { join, basename, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { DEFAULT_MAX_AGENTS } from '@hive-flow/shared';
 
 // Get project root - handles both src and dist paths
 const __filename = fileURLToPath(import.meta.url);
@@ -229,7 +230,7 @@ async function syncProgress(): Promise<V3ProgressMetrics> {
       totalFiles: metrics.codebase.totalFiles,
       totalLines: metrics.codebase.totalLines,
     },
-    swarm: { activeAgents: 0, totalAgents: 15 },
+    swarm: { activeAgents: 0, totalAgents: DEFAULT_MAX_AGENTS },
     lastUpdated: metrics.lastUpdated,
     source: 'V3ProgressService',
   }, null, 2));

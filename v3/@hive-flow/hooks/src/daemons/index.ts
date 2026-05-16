@@ -14,6 +14,7 @@ import type {
   DaemonStatus,
   DaemonManagerConfig,
 } from '../types.js';
+import { DEFAULT_MAX_AGENTS } from '@hive-flow/shared';
 
 /**
  * Daemon instance
@@ -340,7 +341,7 @@ export class SwarmMonitorDaemon {
     lastCheck: Date | null;
   } = {
     activeAgents: 0,
-    maxAgents: 15,
+    maxAgents: DEFAULT_MAX_AGENTS,
     coordinationActive: false,
     lastCheck: null,
   };

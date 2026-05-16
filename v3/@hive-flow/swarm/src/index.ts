@@ -15,8 +15,8 @@
  * - Agent pool management with workload balancing
  * - Message bus for inter-agent communication
  *
- * Performance Targets:
- * - Agent coordination: <100ms for 15 agents
+ * Performance Targets (historical benchmark; cap is now 50 working + 10 queued):
+ * - Agent coordination: <100ms across the 15-role taxonomy
  * - Consensus: <100ms
  * - Message throughput: 1000+ msgs/sec
  *
@@ -35,6 +35,8 @@
  * @module @hive-flow/swarm
  * @version 3.0.0-alpha.1
  */
+
+import { DEFAULT_MAX_AGENTS } from './types.js';
 
 // =============================================================================
 // Types
@@ -89,7 +91,7 @@ export {
   createUnifiedSwarmCoordinator,
 } from './unified-coordinator.js';
 
-// Domain types for 15-agent hierarchy
+// Domain types for multi-agent hierarchy
 export type {
   AgentDomain,
   DomainConfig,
@@ -311,7 +313,7 @@ export const VERSION = '3.0.0-alpha.1';
 
 /** Performance targets for swarm operations */
 export const PERFORMANCE_TARGETS = {
-  /** Maximum latency for coordinating 15 agents */
+  /** Maximum latency for coordinating agents at full capacity */
   COORDINATION_LATENCY_MS: 100,
   /** Maximum latency for consensus operations */
   CONSENSUS_LATENCY_MS: 100,
@@ -329,7 +331,7 @@ export const CONSENSUS_ALGORITHMS = ['raft', 'byzantine', 'gossip', 'paxos'] as 
 export const DEFAULT_CONFIG = {
   topology: {
     type: 'hierarchical' as const,
-    maxAgents: 15,
+    maxAgents: DEFAULT_MAX_AGENTS,
   },
   consensus: {
     algorithm: 'raft' as const,
@@ -342,7 +344,7 @@ export const DEFAULT_CONFIG = {
   },
   agentPool: {
     minAgents: 1,
-    maxAgents: 15,
+    maxAgents: DEFAULT_MAX_AGENTS,
     idleTimeoutMs: 300000,
   },
 } as const;

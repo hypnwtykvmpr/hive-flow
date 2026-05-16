@@ -20,8 +20,11 @@ const { execSync } = require('child_process');
 const os = require('os');
 
 // Configuration
+// keep in sync with @hive-flow/shared/core/config/defaults (DEFAULT_MAX_AGENTS=50, DEFAULT_QUEUE_DEPTH=10).
+// Long-term: replace with a runtime import once this .cjs migrates to ESM.
 const CONFIG = {
-  maxAgents: 15,
+  maxAgents: 50,
+  queueDepth: 10,
 };
 
 const CWD = process.cwd();
@@ -156,8 +159,25 @@ function getGitInfo() {
   return result;
 }
 
-// Detect model name from Claude config (pure file reads, no exec)
+// Detect model name. Stdin-first (Claude Code passes the live model); falls back to
+// version-less family names from tracked usage / settings. Version-pinning strings like
+// "Sonnet 4.6" were removed — they go stale on every model release and contradict the
+// model-display.ts contract (never emit a hardcoded fallback version).
 function getModelName() {
+  // Primary: stdin.model.display_name (always current, fresh per turn).
+  const stdin = getStdinData();
+  if (stdin?.model) {
+    const display = String(stdin.model.display_name || '').trim();
+    if (display) {
+      const id = String(stdin.model.id || '');
+      // Append " 1M" for the 1M-context variant when the id is tagged [1m] and the display
+      // doesn't already include the suffix.
+      if (/\[1m\]/i.test(id) && !/\b1M\b/.test(display)) return `${display} 1M`;
+      return display;
+    }
+  }
+
+  // Tracked usage fallback — version-less family only.
   try {
     const claudeConfig = readJSON(path.join(os.homedir(), '.claude.json'));
     if (claudeConfig?.projects) {
@@ -173,9 +193,9 @@ function getModelName() {
                 const ts = usage[id]?.lastUsedAt ? new Date(usage[id].lastUsedAt).getTime() : 0;
                 if (ts > latest) { latest = ts; modelId = id; }
               }
-              if (modelId.includes('opus')) return 'Opus 4.6';
-              if (modelId.includes('sonnet')) return 'Sonnet 4.6';
-              if (modelId.includes('haiku')) return 'Haiku 4.5';
+              if (modelId.includes('opus')) return 'Opus';
+              if (modelId.includes('sonnet')) return 'Sonnet';
+              if (modelId.includes('haiku')) return 'Haiku';
               return modelId.split('-').slice(1, 3).join(' ');
             }
           }
@@ -185,22 +205,22 @@ function getModelName() {
     }
   } catch { /* ignore */ }
 
-  // Fallback: settings.json model field
+  // settings.json model field — version-less family.
   const settings = getSettings();
   if (settings?.model) {
     const m = settings.model;
-    if (m.includes('opus')) return 'Opus 4.6';
-    if (m.includes('sonnet')) return 'Sonnet 4.6';
-    if (m.includes('haiku')) return 'Haiku 4.5';
+    if (m.includes('opus')) return 'Opus';
+    if (m.includes('sonnet')) return 'Sonnet';
+    if (m.includes('haiku')) return 'Haiku';
   }
 
-  // Fallback: project-level hiveFlow.modelPreferences.default
+  // Project-level hiveFlow.modelPreferences.default — version-less family.
   const projSettings = readJSON(path.join(CWD, '.claude', 'settings.json'));
   if (projSettings?.hiveFlow?.modelPreferences?.default) {
     const m = projSettings.hiveFlow.modelPreferences.default;
-    if (m.includes('opus')) return 'Opus 4.6';
-    if (m.includes('sonnet')) return 'Sonnet 4.6';
-    if (m.includes('haiku')) return 'Haiku 4.5';
+    if (m.includes('opus')) return 'Opus';
+    if (m.includes('sonnet')) return 'Sonnet';
+    if (m.includes('haiku')) return 'Haiku';
   }
 
   return 'Claude Code';
@@ -431,28 +451,28 @@ function getADRStatus() {
   return { count: 0, implemented: 0, compliance: 0 };
 }
 
-// Hooks status (shared settings cache)
+// Hooks status — Row 11 REPLACE: parse real category/matcher/command counts from settings.
+// Drops the hardcoded total=17. Returns { categories, matchers, commands }.
 function getHooksStatus() {
-  let enabled = 0;
-  const total = 17;
+  let categories = 0;
+  let matchers = 0;
+  let commands = 0;
   const settings = getSettings();
 
-  if (settings?.hooks) {
-    for (const category of Object.keys(settings.hooks)) {
-      const h = settings.hooks[category];
-      if (Array.isArray(h) && h.length > 0) enabled++;
+  if (settings?.hooks && typeof settings.hooks === 'object') {
+    for (const [, hookList] of Object.entries(settings.hooks)) {
+      if (!Array.isArray(hookList) || hookList.length === 0) continue;
+      categories++;
+      for (const hook of hookList) {
+        // Each hook entry is a matcher object; its commands[] holds the actual runners.
+        matchers++;
+        const cmds = hook.commands ?? hook.hooks ?? [];
+        commands += Array.isArray(cmds) ? cmds.length : 0;
+      }
     }
   }
 
-  try {
-    const hooksDir = path.join(CWD, '.claude', 'hooks');
-    if (fs.existsSync(hooksDir)) {
-      const hookFiles = fs.readdirSync(hooksDir).filter(f => f.endsWith('.js') || f.endsWith('.sh')).length;
-      enabled = Math.max(enabled, hookFiles);
-    }
-  } catch { /* ignore */ }
-
-  return { enabled, total };
+  return { categories, matchers, commands };
 }
 
 // AgentDB stats (pure stat calls)
@@ -699,6 +719,48 @@ function getAdvocateState() {
   }
 }
 
+// Daemon status — Row 24 ADD-CONDITIONAL: show `○ daemon off` only when not running.
+// Probes the PID file; if absent or PID dead, daemon is off.
+function getDaemonStatus() {
+  const pidPaths = [
+    path.join(CWD, '.hive-flow', 'daemon.pid'),
+    path.join(CWD, '.claude', 'daemon.pid'),
+  ];
+  for (const pidPath of pidPaths) {
+    try {
+      if (fs.existsSync(pidPath)) {
+        const pid = parseInt(fs.readFileSync(pidPath, 'utf-8').trim(), 10);
+        if (pid > 0) {
+          try {
+            // Signal 0 — existence check, no signal sent.
+            process.kill(pid, 0);
+            return { running: true };
+          } catch { /* PID dead */ }
+        }
+      }
+    } catch { /* file unreadable */ }
+  }
+  return { running: false };
+}
+
+// Enforcement level — Row 25 ADD-CONDITIONAL: show only when ≠ Normal (≠ 0).
+function getEnforcementLevel() {
+  const stateFile = path.join(CWD, '.hive-flow', 'enforcement', 'state.json');
+  const data = readJSON(stateFile);
+  if (!data) return { level: 0, label: 'Normal' };
+  const level = data.level ?? data.enforcementLevel ?? 0;
+  const labels = ['Normal', 'Warned', 'Restricted', 'Halted'];
+  return { level, label: labels[level] ?? String(level) };
+}
+
+// Pipeline stage — Row 26 ADD-CONDITIONAL: show only when present.
+function getPipelineStage() {
+  const stateFile = path.join(CWD, '.hive-flow', 'data', 'pipeline-state.json');
+  const data = readJSON(stateFile);
+  if (!data) return { stage: '' };
+  return { stage: data.currentStage ?? data.stage ?? '' };
+}
+
 // ─── Rendering ──────────────────────────────────────────────────
 
 function progressBar(current, total) {
@@ -766,8 +828,21 @@ function generateStatusline() {
   const advocate = getAdvocateState();
   const lines = [];
 
-  // Header
-  let header = `${c.bold}${c.brightPurple}\u258A Hive Flow V3 ${c.reset}`;
+  // Header \u2014 project name resolved from stdin \u2192 package.json \u2192 cwd basename (Codex pass-1 row 1 REPLACE).
+  // Mirrors the contract in v3/@hive-flow/cli/src/statusline/project-identity.ts.
+  const projectName = (() => {
+    const s = getStdinData();
+    if (s?.workspace?.current_dir) {
+      const base = path.basename(String(s.workspace.current_dir));
+      if (base) return base.replace(/[\s_-]+/g, ' ').replace(/\b\w/g, ch => ch.toUpperCase()).trim();
+    }
+    const pkg = readJSON(path.join(CWD, 'package.json'));
+    if (pkg?.name && typeof pkg.name === 'string') {
+      return pkg.name.replace(/^@[^/]+\//, '').replace(/[\s_-]+/g, ' ').replace(/\b\w/g, ch => ch.toUpperCase()).trim();
+    }
+    return path.basename(CWD) || 'Hive Flow';
+  })();
+  let header = `${c.bold}${c.brightPurple}\u258A ${projectName} ${c.reset}`;
   header += `${swarm.coordinationActive ? c.brightCyan : c.dim}\u25CF ${c.brightCyan}${git.name}${c.reset}`;
   if (git.gitBranch) {
     header += `  ${c.dim}\u2502${c.reset}  ${c.brightBlue}\u23C7 ${git.gitBranch}${c.reset}`;
@@ -795,10 +870,10 @@ function generateStatusline() {
   // Separator
   lines.push(`${c.dim}\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500${c.reset}`);
 
-  // Provider Usage
+  // Provider Usage — Row 6 REPLACE: only render providers with calls > 0.
   const providers = getProviderUsage();
-  const alwaysShow = ['opus', 'sonnet']; // Always visible (even at 0)
-  const conditionalClaude = ['haiku'];    // Only show if calls >= 1
+  // All Claude tiers shown only when calls >= 1 (no forced zeros).
+  const claudeNames = ['opus', 'sonnet', 'haiku'].filter(p => (providers[p]?.calls || 0) > 0);
   const externalNames = Object.keys(providers).filter(
     p => !['opus', 'sonnet', 'haiku'].includes(p) && providers[p].calls > 0
   );
@@ -813,11 +888,6 @@ function generateStatusline() {
 
   const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
-  const claudeVisible = [
-    ...alwaysShow,
-    ...conditionalClaude.filter(p => (providers[p]?.calls || 0) >= 1),
-  ];
-
   const formatFull = (name) => {
     const p = providers[name] || { calls: 0, ttfb_avg_ms: 0 };
     return `${colorFor(p)}${capitalize(name)} ${p.calls}${c.reset}`;
@@ -827,71 +897,63 @@ function generateStatusline() {
     return `${colorFor(p)}${capitalize(name).substring(0, 2)}:${p.calls}${c.reset}`;
   };
 
-  const fullClaude = claudeVisible.map(formatFull).join(`${c.dim},${c.reset} `);
-  const fullExternal = externalNames.map(formatFull).join(`${c.dim},${c.reset} `);
-  const fullLine = fullExternal
-    ? `\uD83E\uDD16 ${fullClaude} ${c.dim}|${c.reset} ${fullExternal}`
-    : `\uD83E\uDD16 ${fullClaude}`;
+  // Only render providers row when at least one provider has calls > 0.
+  const allVisible = [...claudeNames, ...externalNames];
+  if (allVisible.length > 0) {
+    const fullClaude = claudeNames.map(formatFull).join(`${c.dim},${c.reset} `);
+    const fullExternal = externalNames.map(formatFull).join(`${c.dim},${c.reset} `);
+    const fullLine = fullClaude && fullExternal
+      ? `\uD83E\uDD16 ${fullClaude} ${c.dim}|${c.reset} ${fullExternal}`
+      : `\uD83E\uDD16 ${fullClaude || fullExternal}`;
 
-  const stripAnsi = (s) => s.replace(/\x1b\[[0-9;]*m/g, '');
-  if (stripAnsi(fullLine).length <= 70) {
-    lines.push(fullLine);
-  } else {
-    const abbrClaude = claudeVisible.map(formatAbbr).join(`${c.dim},${c.reset} `);
-    const abbrExternal = externalNames.map(formatAbbr).join(`${c.dim},${c.reset} `);
-    lines.push(abbrExternal
-      ? `\uD83E\uDD16 ${abbrClaude} ${c.dim}|${c.reset} ${abbrExternal}`
-      : `\uD83E\uDD16 ${abbrClaude}`
-    );
+    const stripAnsi = (s) => s.replace(/\x1b\[[0-9;]*m/g, '');
+    if (stripAnsi(fullLine).length <= 70) {
+      lines.push(fullLine);
+    } else {
+      const abbrClaude = claudeNames.map(formatAbbr).join(`${c.dim},${c.reset} `);
+      const abbrExternal = externalNames.map(formatAbbr).join(`${c.dim},${c.reset} `);
+      const abbrLine = abbrClaude && abbrExternal
+        ? `\uD83E\uDD16 ${abbrClaude} ${c.dim}|${c.reset} ${abbrExternal}`
+        : `\uD83E\uDD16 ${abbrClaude || abbrExternal}`;
+      lines.push(abbrLine);
+    }
   }
 
-  // Line 1: DDD Domains + perf
-  const domainsColor = progress.domainsCompleted >= 3 ? c.brightGreen : progress.domainsCompleted > 0 ? c.yellow : c.red;
-  let perfIndicator;
-  if (agentdb.hasHnsw && agentdb.vectorCount > 0) {
-    const speedup = agentdb.vectorCount > 10000 ? '12500x' : agentdb.vectorCount > 1000 ? '150x' : '10x';
-    perfIndicator = `${c.brightGreen}\u26A1 HNSW ${speedup}${c.reset}`;
-  } else if (progress.patternsLearned > 0) {
-    const pk = progress.patternsLearned >= 1000 ? `${(progress.patternsLearned / 1000).toFixed(1)}k` : String(progress.patternsLearned);
-    perfIndicator = `${c.brightYellow}\uD83D\uDCDA ${pk} patterns${c.reset}`;
-  } else {
-    perfIndicator = `${c.dim}\u26A1 target: 150x-12500x${c.reset}`;
-  }
-  lines.push(
-    `${c.brightCyan}\uD83C\uDFD7\uFE0F  DDD Domains${c.reset}    ${progressBar(progress.domainsCompleted, progress.totalDomains)}  ` +
-    `${domainsColor}${progress.domainsCompleted}${c.reset}/${c.brightWhite}${progress.totalDomains}${c.reset}    ${perfIndicator}`
-  );
+  // Row 7 (DDD Domains 0/5) \u2014 OMIT: synthetic, daemon-not-running upstream cause.
+  // Row 8 (\u26A1 target: 150x-12500x) \u2014 OMIT: marketing placeholder. Both rows removed.
 
-  // Line 2: Swarm + Hooks + CVE + Memory + Intelligence
+  // Line 2: Swarm + Hooks (Row 11 REPLACE: live c/m/cmd counts) \u2014 subAgents(10)/CVE(12)/heap(13)/intelligence(14) OMITted.
   const swarmInd = swarm.coordinationActive ? `${c.brightGreen}\u25C9${c.reset}` : `${c.dim}\u25CB${c.reset}`;
   const agentsColor = swarm.activeAgents > 0 ? c.brightGreen : c.red;
-  const secIcon = security.status === 'CLEAN' ? '\uD83D\uDFE2' : security.status === 'IN_PROGRESS' ? '\uD83D\uDFE1' : '\uD83D\uDD34';
-  const secColor = security.status === 'CLEAN' ? c.brightGreen : security.status === 'IN_PROGRESS' ? c.brightYellow : c.brightRed;
-  const hooksColor = hooks.enabled > 0 ? c.brightGreen : c.dim;
-  const intellColor = system.intelligencePct >= 80 ? c.brightGreen : system.intelligencePct >= 40 ? c.brightYellow : c.dim;
+  const hooksColor = (hooks.categories > 0 || hooks.commands > 0) ? c.brightGreen : c.dim;
 
-  // Add advocate indicator after [activeAgents/maxAgents]
+  // Advocate indicator (Row 23 KEEP-CONDITIONAL \u2014 already gated by indicator non-empty)
   const advocateIndicator = advocate.indicator ? ` ${advocate.color}${advocate.indicator}${c.reset}` : '';
+
+  // Hooks display: 12c/28m/75cmd \u2014 omit zero segments gracefully.
+  let hooksDisplay = '';
+  if (hooks.categories > 0 || hooks.matchers > 0 || hooks.commands > 0) {
+    const parts = [];
+    if (hooks.categories > 0) parts.push(`${hooks.categories}c`);
+    if (hooks.matchers > 0) parts.push(`${hooks.matchers}m`);
+    if (hooks.commands > 0) parts.push(`${hooks.commands}cmd`);
+    hooksDisplay = parts.join('/') || '0';
+  } else {
+    hooksDisplay = '0';
+  }
 
   lines.push(
     `${c.brightYellow}\uD83E\uDD16 Swarm${c.reset}  ${swarmInd} [${agentsColor}${String(swarm.activeAgents).padStart(2)}${c.reset}/${c.brightWhite}${swarm.maxAgents}${c.reset}]${advocateIndicator}  ` +
-    `${c.brightPurple}\uD83D\uDC65 ${system.subAgents}${c.reset}    ` +
-    `${c.brightBlue}\uD83E\uDE9D ${hooksColor}${hooks.enabled}${c.reset}/${c.brightWhite}${hooks.total}${c.reset}    ` +
-    `${secIcon} ${secColor}CVE ${security.cvesFixed}${c.reset}/${c.brightWhite}${security.totalCves}${c.reset}    ` +
-    `${c.brightCyan}\uD83D\uDCBE ${system.memoryMB}MB${c.reset}    ` +
-    `${intellColor}\uD83E\uDDE0 ${String(system.intelligencePct).padStart(3)}%${c.reset}`
+    `${c.brightBlue}\uD83E\uDE9D ${hooksColor}${hooksDisplay}${c.reset}`
   );
 
-  // Line 3: Architecture
-  const dddColor = progress.dddProgress >= 50 ? c.brightGreen : progress.dddProgress > 0 ? c.yellow : c.red;
+  // Line 3: Architecture \u2014 ADRs only. DDD\u25CF%(16) and Security\u25CFPENDING(17) OMITted (synthetic/no live scanner).
   const adrColor = adrs.count > 0 ? (adrs.implemented === adrs.count ? c.brightGreen : c.yellow) : c.dim;
   const adrDisplay = adrs.compliance > 0 ? `${adrColor}\u25CF${adrs.compliance}%${c.reset}` : `${adrColor}\u25CF${adrs.implemented}/${adrs.count}${c.reset}`;
 
   lines.push(
     `${c.brightPurple}\uD83D\uDD27 Architecture${c.reset}    ` +
-    `${c.cyan}ADRs${c.reset} ${adrDisplay}  ${c.dim}\u2502${c.reset}  ` +
-    `${c.cyan}DDD${c.reset} ${dddColor}\u25CF${String(progress.dddProgress).padStart(3)}%${c.reset}  ${c.dim}\u2502${c.reset}  ` +
-    `${c.cyan}Security${c.reset} ${secColor}\u25CF${security.status}${c.reset}`
+    `${c.cyan}ADRs${c.reset} ${adrDisplay}`
   );
 
   // Line 4: AgentDB, Tests, Integration
@@ -914,32 +976,86 @@ function generateStatusline() {
     `${c.brightCyan}\uD83D\uDCCA AgentDB${c.reset}    ` +
     `${c.cyan}Vectors${c.reset} ${vectorColor}\u25CF${agentdb.vectorCount}${hnswInd}${c.reset}  ${c.dim}\u2502${c.reset}  ` +
     `${c.cyan}Size${c.reset} ${c.brightWhite}${sizeDisp}${c.reset}  ${c.dim}\u2502${c.reset}  ` +
-    `${c.cyan}Tests${c.reset} ${testColor}\u25CF${tests.testFiles}${c.reset} ${c.dim}(~${tests.testCases} cases)${c.reset}  ${c.dim}\u2502${c.reset}  ` +
+    `${c.cyan}Tests${c.reset} ${testColor}\u25CF${tests.testFiles}${c.reset}  ${c.dim}\u2502${c.reset}  ` +
     integStr
   );
+
+  // Row 24 ADD-CONDITIONAL: daemon status \u2014 show `\u25CB daemon off` only when not running.
+  const daemon = getDaemonStatus();
+  if (!daemon.running) {
+    lines.push(`${c.dim}\u25CB daemon off${c.reset}`);
+  }
+
+  // Row 25 ADD-CONDITIONAL: enforcement level \u2014 show only when \u2260 Normal (level \u2260 0).
+  const enforcement = getEnforcementLevel();
+  if (enforcement.level !== 0) {
+    const enfColor = enforcement.level >= 3 ? c.brightRed : enforcement.level >= 2 ? c.brightYellow : c.yellow;
+    lines.push(`${enfColor}\u26A0 Enforcement: ${enforcement.label} (L${enforcement.level})${c.reset}`);
+  }
+
+  // Row 26 ADD-CONDITIONAL: pipeline stage \u2014 show only when present.
+  const pipeline = getPipelineStage();
+  if (pipeline.stage) {
+    lines.push(`${c.cyan}\u27F3 Pipeline: ${pipeline.stage}${c.reset}`);
+  }
 
   return lines.join('\n');
 }
 
-// JSON output
+// JSON output — applies runbook §8 OMIT > FAKE: only emit a field when its
+// source is live and verifiable. Synthetic / heuristic-only fields
+// (v3Progress, intelligencePct, fake testCases derived from file-count, etc.)
+// are intentionally OMITTED rather than emitted with stale or fabricated
+// values. Real-source fields (memoryMB from process, dbSizeKB from fs.stat,
+// testFiles from fs.readdir, etc.) are kept.
 function generateJSON() {
   const git = getGitInfo();
-  return {
+  const security = getSecurityStatus();
+  const agentdb = getAgentDBStats();
+  const tests = getTestStats();
+  const system = getSystemMetrics();
+  const adrs = getADRStatus();
+
+  const json = {
     user: { name: git.name, gitBranch: git.gitBranch, modelName: getModelName() },
     providers: getProviderUsage(),
-    v3Progress: getV3Progress(),
-    security: getSecurityStatus(),
     swarm: getSwarmStatus(),
-    system: getSystemMetrics(),
-    adrs: getADRStatus(),
     hooks: getHooksStatus(),
-    agentdb: getAgentDBStats(),
-    tests: getTestStats(),
+    daemon: getDaemonStatus(),
+    enforcement: getEnforcementLevel(),
+    pipeline: getPipelineStage(),
     git: { modified: git.modified, untracked: git.untracked, staged: git.staged, ahead: git.ahead, behind: git.behind },
     context: getContextUsage(),
     advocate: getAdvocateState(),
     lastUpdated: new Date().toISOString(),
   };
+
+  // OMIT-on-no-source fields. Each block keeps only the live-derived sub-fields.
+  if (security && (security.cvesFixed > 0 || security.status === 'CLEAN')) {
+    json.security = { status: security.status, cvesFixed: security.cvesFixed, totalCves: security.totalCves };
+  }
+  if (system) {
+    const sys = {};
+    if (typeof system.memoryMB === 'number' && system.memoryMB >= 0) sys.memoryMB = system.memoryMB;
+    if (typeof system.contextPct === 'number') sys.contextPct = system.contextPct;
+    if (typeof system.subAgents === 'number' && system.subAgents > 0) sys.subAgents = system.subAgents;
+    // intelligencePct intentionally omitted — synthetic fallback, no live source.
+    if (Object.keys(sys).length > 0) json.system = sys;
+  }
+  if (adrs && adrs.count > 0) {
+    json.adrs = { count: adrs.count, implemented: adrs.implemented, compliance: adrs.compliance };
+  }
+  if (agentdb && (agentdb.dbSizeKB > 0 || agentdb.vectorCount > 0)) {
+    // vectorCount is heuristic-derived from file size; emit only dbSizeKB + hasHnsw
+    // which have real sources. Per runbook OMIT > FAKE.
+    json.agentdb = { dbSizeKB: agentdb.dbSizeKB, hasHnsw: agentdb.hasHnsw, namespaces: agentdb.namespaces };
+  }
+  if (tests && tests.testFiles > 0) {
+    // testCases (testFiles * 4) is synthetic — OMITTED. Only the real testFiles count is emitted.
+    json.tests = { testFiles: tests.testFiles };
+  }
+  // v3Progress intentionally OMITTED — synthetic with no live source.
+  return json;
 }
 
 // ─── Main ───────────────────────────────────────────────────────

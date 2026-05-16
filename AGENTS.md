@@ -162,7 +162,7 @@ node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.
 |------|---------------|
 | Init hierarchical swarm | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js swarm init --topology hierarchical --max-agents 8` |
 | Init mesh swarm | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js swarm init --topology mesh --max-agents 5` |
-| Init V3 mode (15 agents) | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js swarm init --v3-mode` |
+| Init V3 mode (50 agents) | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js swarm init --v3-mode` |
 | Spawn coder | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js agent spawn --type coder --name coder-1` |
 | Spawn tester | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js agent spawn --type tester --name tester-1` |
 | Spawn coordinator | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js agent spawn --type coordinator --name coord-1` |
@@ -295,10 +295,10 @@ node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.
 node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js swarm start --objective "Security audit" --strategy development
 ```
 
-### Recipe 5: V3 Full Coordination (15 Agents)
+### Recipe 5: V3 Full Coordination (50 Agents)
 ```bash
 node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js swarm init --v3-mode
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js swarm coordinate --agents 15
+node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js swarm coordinate --agents 50
 ```
 
 ---
@@ -745,3 +745,77 @@ For more details, see README.md and docs/QUICKSTART.md.
 - If push fails, resolve and retry until it succeeds
 
 <!-- END BEADS INTEGRATION -->
+
+
+
+
+
+
+<claude-mem-context>
+# Memory Context
+
+# [hive-flow] recent context, 2026-05-16 6:47am CDT
+
+Legend: 🎯session 🔴bugfix 🟣feature 🔄refactor ✅change 🔵discovery ⚖️decision 🚨security_alert 🔐security_note
+Format: ID TIME TYPE TITLE
+Fetch details: get_observations([IDs]) | Search: mem-search skill
+
+Stats: 50 obs (15,738t read) | 1,699,792t work | 99% savings
+
+### May 11, 2026
+107 7:53p 🟣 Codex CLI Agent File Write Verification
+108 7:54p 🔴 Codex CLI Agent Fix Verified via File Write Test
+109 8:00p 🟣 Codex CLI Bridge Confirmed Operational
+110 8:01p 🟣 Parallel Hive Worker File Creation Test
+111 " 🟣 Parallel Hive Worker File Creation Task
+112 8:03p ✅ Parallel Worker Output File Created in Hive Flow Test Directory
+115 8:08p 🟣 Claude Bridge Sanity Check File Written
+114 8:09p ✅ Claude Bridge Sanity Check File Written
+117 8:40p ✅ Hive-Flow Hooks & Codex Bridge Sanity Check Written
+118 8:51p ✅ Hive-Flow Queen-C Test Output Written
+121 " ✅ Hive-Flow Test Output: Worker B Completion Signal Written
+119 " ✅ Hive-Flow Test Output File Written
+120 8:54p 🟣 Gemini CLI Bridge Verified via Test Output File
+122 " 🟣 Gemini CLI Bridge Verified Operational in Hive-Flow
+123 8:56p ✅ Gemini CLI Bridge Test File Written to hive-flow Test Output Directory
+124 " 🔵 Gemini CLI Bridge Write Test Executed Repeatedly
+### May 12, 2026
+125 9:07a 🔵 Runbook Creation Task Initiated for hive-flow Plans
+126 9:08a 🔵 hive-flow plans/ Directory Contains Exactly Two Files
+127 " 🔵 mcp-enforcement-gate.ts Has a Local CLAUDE_ALIASES That Doesn't Import from Providers
+128 " 🔵 Plan §4 OpenRouter Re-Randomization on Timeout Is Aspirational, Not Pre-Existing
+129 " 🔵 Cross-Doc Inconsistency: codex-cli Required Model is gpt-5.4 in CLAUDE.md but gpt-5.5 in Gate and Plan
+130 " 🔵 OpenRouter 'mini' Alias Would Silently Fall Through to Default Model Without an Explicit Branch
+131 " 🔵 8 Existing Tests Will Break When Plan Is Applied — Plan Doesn't Mention Updating Them
+132 " 🔵 Runbook Format Pattern Established from vampyre/.dox and filesystem-ts/.dox/basis
+133 " ⚖️ Runbook Drafting Begins — Plan Preserved, Review Corrections Folded In, Policy Decisions Settled
+135 9:26a ✅ Runbook handoff checklist expanded with opus pool and bridge reroll details
+136 " ✅ Phase 2 sketch label reworded to paste-ready implementation instruction
+137 " 🔴 anthropic-cli bridge token limit corrected from 200K to 1M
+138 " ✅ External reference URLs updated and URL disclaimer added to Source-of-Truth section
+134 9:55a 🔵 Claude Ignored Explicitly Provided User Context in Review Task
+140 10:01a ⚖️ Multi-Model Runbook Review Pipeline Established for hive-flow Plans
+139 11:02a ✅ Substring matching policy prose clarified to explicitly state case-insensitive matching
+142 11:30a 🟣 hive-flow Runbook Changes Implemented and Server Tools Updated
+143 11:38a ⚖️ User Policy: No Second Chances for Failed Agents — Primary Session Executes Directly
+141 12:23p ✅ Test Output File Written for Enforcement Default Model Check
+144 4:43p 🟣 Comprehensive Test Suite Expansion for Model Alias Resolution System
+145 " ✅ vitest.config.ts Updated to Discover .mjs Test Files
+146 " 🟣 End-to-End CLI Enforcement Smoke Test Script Created
+147 5:04p ⚖️ Mandatory Pre-Commit Verification Pipeline Defined
+149 " 🔄 Grep Validator Extraction to Importable Module
+### May 13, 2026
+152 2:18p ✅ OpenCode Integration Issue #825 Runbook Review Initiated
+153 2:19p ✅ Runbook Review Initiated for Issue #825 OpenCode Integration
+157 " ✅ Revised OpenCode Integration Runbook Created for Issue #825
+158 3:17p ⚖️ Hard Python Validation Chosen Over Skill-Text for Semantic Fragment Size Limits
+159 " ⚖️ Platform Compatibility Audit Script to Be Created in `.audit/` Before Filing Follow-Up Issues
+161 " 🔵 Cross-Skill Audit Confirmed Bugs in Both skill-opencode.md and skill-codex.md
+162 " ✅ Issue #825 Runbook Scope Expanded to OpenCode + Codex; Python Validation Enforcement Locked In
+164 3:25p 🔵 Issue #825 Implementation Passes Tests But Has Four Pre-Commit Blockers
+165 " 🔐 Semantic Fragment Size Validation Runs Post-Parse, Not Pre-Read
+### May 16, 2026
+196 5:32a 🔵 Hive Flow Final-Gate Report-Only Bug Hunt Initiated
+
+Access 1700k tokens of past work via get_observations([IDs]) or mem-search skill.
+</claude-mem-context>

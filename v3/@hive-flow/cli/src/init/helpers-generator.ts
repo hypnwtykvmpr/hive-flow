@@ -814,7 +814,9 @@ async function doImport() {
     return;
   }
 
-  // Full implementation deferred to copied version
+  // Stub: full import logic is delivered by the upgraded helper installed via
+  // 'init --upgrade'. See AutoMemoryBridge.import() in @hive-flow/memory for the
+  // production implementation. This fallback intentionally no-ops with a hint.
   dim('Auto memory import available — run init --upgrade for full support');
 }
 

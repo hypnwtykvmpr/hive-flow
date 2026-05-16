@@ -17,13 +17,25 @@ import {
   overrideStatus,
 } from '../permission-guard/biometric-override.js';
 
+// ---------------------------------------------------------------------------
+// §7 Agent-integration setup surface (runbook §7)
+// ---------------------------------------------------------------------------
+import { resolve } from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { createRequire } from 'node:module';
+import { withSetupLock } from '../integrations/lockfile.js';
+import { writeStableLauncher, resolveLauncherPath } from '../integrations/launcher.js';
+import { statePathFor } from '../integrations/state.js';
+import { ADAPTERS, type AdapterId } from '../integrations/adapters/index.js';
+import { DEFAULT_MAX_AGENTS } from '@hive-flow/shared/core/config/defaults';
+
 /** Default global config written to ~/.hive-flow/config.json */
 function defaultGlobalConfig(): Record<string, unknown> {
   return {
     version: '3.0.0',
     mode: 'global',
     topology: 'hierarchical-mesh',
-    maxAgents: 15,
+    maxAgents: DEFAULT_MAX_AGENTS,
     memory: {
       backend: 'hybrid',
       enableHNSW: true,
@@ -102,7 +114,7 @@ const globalAction = async (ctx: CommandContext): Promise<CommandResult> => {
   try {
     const cfg = JSON.parse(readFileSync(configPath, 'utf8'));
     output.writeln(`  Topology:         ${cfg.topology ?? 'hierarchical-mesh'}`);
-    output.writeln(`  Max agents:       ${cfg.maxAgents ?? 15}`);
+    output.writeln(`  Max agents:       ${cfg.maxAgents ?? DEFAULT_MAX_AGENTS}`);
     output.writeln(`  Memory backend:   ${cfg.memory?.backend ?? 'hybrid'}`);
   } catch {
     // Config read failed — non-critical
@@ -237,19 +249,239 @@ const globalCommand: Command = {
   action: globalAction,
 };
 
-// Main setup command
+// Main setup command — also exposes the §7 agent-integration surface via
+// top-level flags (--auto, --dry-run, --verify, --uninstall, --detect).
+// Subcommands `global` and `permission-guard` retain their original behavior.
 export const setupCommand: Command = {
   name: 'setup',
-  description: 'Environment setup and configuration',
+  description: 'Environment setup and configuration (top-level flags trigger §7 agent-integration)',
   subcommands: [globalCommand, permissionGuardCommand],
+  options: [
+    { name: 'auto', description: 'Apply MCP integration to detected/specified agent CLIs', type: 'boolean', default: false },
+    { name: 'dry-run', description: 'Plan-only — no file writes', type: 'boolean', default: false },
+    { name: 'verify', description: 'Verify-only mode', type: 'boolean', default: false },
+    { name: 'uninstall', description: 'Remove Hive Flow MCP entries from agent CLIs', type: 'boolean', default: false },
+    { name: 'detect', description: 'Detect installed agent CLIs without modifying anything', type: 'boolean', default: false },
+    { name: 'scope', description: 'Config scope: user or project', type: 'string', default: 'user' },
+    { name: 'agents', description: 'Agent IDs (comma-separated) or "detected"', type: 'string', default: 'detected' },
+    { name: 'create-config', description: 'Create missing config files (opt-in)', type: 'boolean', default: false },
+    { name: 'force-adopt', description: 'Force-adopt existing entries not owned by Hive Flow', type: 'boolean', default: false },
+  ],
+  action: async (ctx: CommandContext): Promise<CommandResult> => {
+    const flags = ctx.flags as Record<string, unknown>;
+    const action: 'detect' | 'plan' | 'apply' | 'verify' | 'uninstall' | null =
+      flags.auto || flags.apply ? 'apply'
+      : flags.uninstall ? 'uninstall'
+      : flags.verify ? 'verify'
+      : flags.detect ? 'detect'
+      : flags.dryRun || flags['dry-run'] ? 'plan'
+      : null;
+    if (action === null) {
+      output.writeln();
+      output.writeln(output.bold('Hive Flow Setup'));
+      output.writeln(output.dim('Use one of: --auto, --dry-run, --verify, --uninstall, --detect'));
+      output.writeln(output.dim('Or a subcommand: global, permission-guard'));
+      return { success: true };
+    }
+    const agentsRaw = (flags.agents as string | undefined) ?? 'detected';
+    const agents: string[] | 'detected' =
+      agentsRaw === 'detected' ? 'detected' : agentsRaw.split(',').map(s => s.trim()).filter(Boolean);
+    const result = await runSetup({
+      action,
+      agents,
+      scope: (flags.scope as SetupScope | undefined) ?? undefined,
+      cwd: ctx.cwd,
+      dryRun: action === 'plan' || !!(flags.dryRun || flags['dry-run']),
+      createConfig: !!(flags.createConfig || flags['create-config']),
+      forceAdopt: !!(flags.forceAdopt || flags['force-adopt']),
+    });
+    output.writeln(JSON.stringify(result, null, 2));
+    return { success: true, data: result };
+  },
   examples: [
+    { command: 'hive-flow setup --dry-run --agents detected', description: 'Plan MCP install for detected agent CLIs' },
+    { command: 'hive-flow setup --auto', description: 'Apply MCP install to detected agent CLIs (user scope)' },
+    { command: 'hive-flow setup --verify', description: 'Verify current MCP install state' },
+    { command: 'hive-flow setup --uninstall', description: 'Remove Hive Flow MCP entries' },
     { command: 'hive-flow setup global', description: 'Create global ~/.hive-flow/ directory' },
-    { command: 'hive-flow setup global --force', description: 'Recreate global config from defaults' },
     { command: 'hive-flow setup permission-guard setup', description: 'One-time Permission Guard keypair generation' },
-    { command: 'hive-flow setup permission-guard override', description: 'Request 5-minute override window' },
-    { command: 'hive-flow setup permission-guard revoke', description: 'Revoke active override immediately' },
-    { command: 'hive-flow setup permission-guard status', description: 'Show override state' },
   ],
 };
 
 export default setupCommand;
+
+// ---------------------------------------------------------------------------
+// §7 runSetup surface — agent-integration orchestration
+// ---------------------------------------------------------------------------
+
+export type SetupScope = 'project' | 'user';
+export const DEFAULT_SETUP_SCOPE: SetupScope = 'user';
+export function resolveSetupScope(scope?: SetupScope): SetupScope {
+  return scope ?? DEFAULT_SETUP_SCOPE;
+}
+
+const AGENT_BINS: Record<AdapterId, string> = {
+  'claude-code': 'claude',
+  'codex': 'codex',
+  'forgecode': 'forge',
+  'opencode': 'opencode',
+  'cursor-cli': 'cursor-agent',
+  'qwen': 'qwen',
+  'gemini': 'gemini',
+};
+
+function commandExists(bin: string): boolean {
+  const r = spawnSync('/usr/bin/env', ['which', bin], { encoding: 'utf8', timeout: 2000 });
+  return r.status === 0 && r.stdout.trim().length > 0;
+}
+
+function chooseAgents(agents: string[] | 'detected'): AdapterId[] {
+  if (agents === 'detected') {
+    return (Object.entries(AGENT_BINS) as Array<[AdapterId, string]>)
+      .filter(([, bin]) => commandExists(bin))
+      .map(([id]) => id);
+  }
+  return agents.filter((id): id is AdapterId => id in ADAPTERS);
+}
+
+async function planAdapter(id: AdapterId, ctx: any) {
+  const a = ADAPTERS[id];
+  return a ? a.plan(ctx) : { outcome: 'failed' as const, message: `Unknown adapter: ${id}` };
+}
+
+async function applyAdapter(id: AdapterId, ctx: any) {
+  const a = ADAPTERS[id];
+  return a ? a.apply(ctx) : { outcome: 'failed' as const, message: `Unknown adapter: ${id}` };
+}
+
+async function verifyAdapter(id: AdapterId, ctx: any) {
+  const a = ADAPTERS[id];
+  return a ? a.verify(ctx) : { ok: false, output: `Unknown adapter: ${id}` };
+}
+
+async function uninstallAdapter(id: AdapterId, ctx: any) {
+  const a = ADAPTERS[id];
+  return a ? a.uninstall(ctx) : { outcome: 'failed' as const, message: `Unknown adapter: ${id}` };
+}
+
+export function resolveMcpServerEntry(projectRoot: string): string {
+  // Candidate 1: running from workspace root (e.g., repo root → v3/@hive-flow/cli/bin/)
+  const workspaceCandidate = resolve(projectRoot, 'v3', '@hive-flow', 'cli', 'bin', 'mcp-server.js');
+  if (existsSync(workspaceCandidate)) return workspaceCandidate;
+
+  // Candidate 2: relative to this source file. Walk upward looking for bin/mcp-server.js.
+  // Handles both dist/src/commands/ (tsc default preserves src as a root) and dist/commands/
+  // (flat) layouts plus npm-linked global installs.
+  const selfUrl = import.meta.url;
+  if (selfUrl.startsWith('file://')) {
+    let dir = resolve(selfUrl.slice('file://'.length), '..');
+    for (let i = 0; i < 6; i++) {
+      const candidate = resolve(dir, 'bin', 'mcp-server.js');
+      if (existsSync(candidate)) return candidate;
+      const parent = resolve(dir, '..');
+      if (parent === dir) break;
+      dir = parent;
+    }
+  }
+
+  try {
+    const req = createRequire(import.meta.url);
+    return req.resolve('@hive-flow/cli/bin/mcp-server.js');
+  } catch {
+    throw new Error(
+      `Cannot resolve @hive-flow/cli/bin/mcp-server.js. ` +
+      `Run from the workspace root or install @hive-flow/cli into the current project.`,
+    );
+  }
+}
+
+async function runReadOnly(opts: any) {
+  const projectRoot = resolve(opts.cwd);
+  const homeDir = opts.homeDir ?? homedir();
+  const launcherPath = resolveLauncherPath(opts.scope, homeDir, projectRoot);
+  const chosen = chooseAgents(opts.agents);
+  const results: any[] = [];
+  for (const id of chosen) {
+    const ctx = {
+      projectRoot, homeDir, scope: opts.scope, launcherPath, dryRun: true,
+      createConfig: opts.createConfig, forceAdopt: opts.forceAdopt,
+      statePath: statePathFor(opts.scope, homeDir, projectRoot),
+    };
+    results.push({ agent: id as AdapterId, ...(await planAdapter(id, ctx)) });
+  }
+  return { results };
+}
+
+async function runVerify(opts: any) {
+  const projectRoot = resolve(opts.cwd);
+  const homeDir = opts.homeDir ?? homedir();
+  const chosen = chooseAgents(opts.agents);
+  const results: any[] = [];
+  for (const id of chosen) {
+    results.push({ agent: id as AdapterId, ...(await verifyAdapter(id, { projectRoot, homeDir, scope: opts.scope })) });
+  }
+  return { results };
+}
+
+async function runMutating(opts: any) {
+  const lockResult = await withSetupLock(async () => {
+    const projectRoot = resolve(opts.cwd);
+    const homeDir = opts.homeDir ?? homedir();
+    const launcherPath = resolveLauncherPath(opts.scope, homeDir, projectRoot);
+    const statePath = statePathFor(opts.scope, homeDir, projectRoot);
+
+    if (!opts.dryRun && opts.action !== 'uninstall') {
+      const mcpServerEntry = resolveMcpServerEntry(projectRoot);
+      await writeStableLauncher(launcherPath, mcpServerEntry);
+    }
+
+    const chosen = chooseAgents(opts.agents);
+    const results: any[] = [];
+    for (const id of chosen) {
+      const ctx = {
+        projectRoot, homeDir, scope: opts.scope, launcherPath,
+        dryRun: opts.dryRun, createConfig: opts.createConfig, forceAdopt: opts.forceAdopt, statePath,
+      };
+      const r = opts.action === 'uninstall' ? await uninstallAdapter(id, ctx) : await applyAdapter(id, ctx);
+      results.push({ agent: id as AdapterId, ...r });
+    }
+    return { results };
+  }, { lockPath: opts.lockPath });
+
+  if (!lockResult.acquired) {
+    return { results: [{ outcome: 'busy:locked', message: 'Another hive-flow setup is in progress. Try again later.' }] };
+  }
+  return lockResult.result;
+}
+
+export async function runSetup(_rawOpts: {
+  action: 'detect' | 'plan' | 'apply' | 'verify' | 'reconcile' | 'uninstall';
+  agents: string[] | 'detected';
+  scope?: SetupScope;
+  cwd: string;
+  homeDir?: string;
+  lockPath?: string;
+  dryRun: boolean;
+  createConfig: boolean;
+  forceAdopt: boolean;
+}) {
+  // Normalize scope ONCE at entry so every downstream helper sees a defined value.
+  const opts = { ..._rawOpts, scope: resolveSetupScope(_rawOpts.scope) };
+
+  switch (opts.action) {
+    case 'detect': {
+      const rows = Object.entries(AGENT_BINS).map(([id, bin]) => ({ id, bin, installed: commandExists(bin) }));
+      return { results: rows };
+    }
+    case 'plan':
+      return runReadOnly({ ...opts, dryRun: true });
+    case 'verify':
+      return runVerify(opts);
+    case 'apply':
+    case 'reconcile':
+    case 'uninstall':
+      return runMutating(opts);
+    default:
+      return { results: [{ outcome: 'failed', message: `Unknown action: ${(opts as any).action}` }] };
+  }
+}

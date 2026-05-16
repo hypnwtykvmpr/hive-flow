@@ -212,6 +212,10 @@ v4-plans/*
 # Design documents and improvement proposals
 /.claude/design/
 /.claude/design/*
+
+# Audit reports and investigations
+/.audit/
+/.audit/*
 /v3/**/IMPROVEMENT_SUGGESTIONS.md
 /v3/**/improvement_suggestions.md
 

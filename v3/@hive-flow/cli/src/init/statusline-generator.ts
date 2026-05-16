@@ -11,6 +11,7 @@
  */
 
 import type { InitOptions } from './types.js';
+import { DEFAULT_QUEUE_DEPTH } from '@hive-flow/shared/core/config/defaults';
 
 /**
  * Generate optimized statusline script
@@ -24,6 +25,7 @@ import type { InitOptions } from './types.js';
  */
 export function generateStatuslineScript(options: InitOptions): string {
   const maxAgents = options.runtime.maxAgents;
+  const queueDepth = DEFAULT_QUEUE_DEPTH;
 
   return `#!/usr/bin/env node
 /**
@@ -49,6 +51,7 @@ const os = require('os');
 // Configuration
 const CONFIG = {
   maxAgents: ${maxAgents},
+  queueDepth: ${queueDepth},
 };
 
 const CWD = process.cwd();
@@ -579,8 +582,15 @@ function generateStatusline() {
   const integration = getIntegrationStatus();
   const lines = [];
 
-  // Header
-  let header = c.bold + c.brightPurple + '\\u258A Hive Flow V3 ' + c.reset;
+  // Header — project label is derived at runtime (basename of cwd, title-cased)
+  // so generated statuslines reflect the project they live in, not a hardcoded
+  // 'Hive Flow V3' literal. Falls back to 'Hive Flow' if basename is empty.
+  const projectLabel = (() => {
+    const base = require('path').basename(process.cwd());
+    if (!base) return 'Hive Flow';
+    return base.replace(/[\\s_-]+/g, ' ').replace(/\\b\\w/g, (ch) => ch.toUpperCase()).trim();
+  })();
+  let header = c.bold + c.brightPurple + '\\u258A ' + projectLabel + ' ' + c.reset;
   header += (swarm.coordinationActive ? c.brightCyan : c.dim) + '\\u25CF ' + c.brightCyan + git.name + c.reset;
   if (git.gitBranch) {
     header += '  ' + c.dim + '\\u2502' + c.reset + '  ' + c.brightBlue + '\\u23C7 ' + git.gitBranch + c.reset;

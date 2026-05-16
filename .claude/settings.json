@@ -585,7 +585,9 @@
     },
     "swarm": {
       "topology": "hierarchical-mesh",
-      "maxAgents": 50
+      "maxAgents": 50,
+      "queueDepth": 10,
+      "rejectAbove": true
     },
     "memory": {
       "backend": "hybrid",

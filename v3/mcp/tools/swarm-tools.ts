@@ -11,6 +11,7 @@
 
 import { z } from 'zod';
 import { MCPTool, ToolContext } from '../types.js';
+import { DEFAULT_MAX_AGENTS } from '@hive-flow/shared/core';
 
 // ============================================================================
 // Input Schemas
@@ -20,7 +21,7 @@ const initSwarmSchema = z.object({
   topology: z.enum(['hierarchical', 'mesh', 'adaptive', 'collective', 'hierarchical-mesh'])
     .default('hierarchical-mesh')
     .describe('Swarm coordination topology'),
-  maxAgents: z.number().int().positive().max(1000).default(15)
+  maxAgents: z.number().int().positive().max(1000).default(DEFAULT_MAX_AGENTS)
     .describe('Maximum number of agents in the swarm'),
   config: z.object({
     communicationProtocol: z.enum(['direct', 'message-bus', 'pubsub']).optional(),
@@ -205,7 +206,7 @@ async function handleSwarmStatus(
 
       const config: SwarmConfig = {
         topology: (status.topology?.type || 'hierarchical-mesh') as SwarmConfig['topology'],
-        maxAgents: status.topology?.maxAgents || 15,
+        maxAgents: status.topology?.maxAgents || DEFAULT_MAX_AGENTS,
         currentAgents: status.agents.length,
         communicationProtocol: 'message-bus',
         consensusMechanism: status.consensus?.algorithm === 'raft' ? 'weighted' :
@@ -277,7 +278,7 @@ async function handleSwarmStatus(
     status: 'stopped',
     config: {
       topology: 'hierarchical-mesh',
-      maxAgents: 15,
+      maxAgents: DEFAULT_MAX_AGENTS,
       currentAgents: 0,
       communicationProtocol: 'message-bus',
       consensusMechanism: 'majority',
@@ -392,7 +393,7 @@ export const initSwarmTool: MCPTool = {
         description: 'Maximum number of agents in the swarm',
         minimum: 1,
         maximum: 1000,
-        default: 15,
+        default: DEFAULT_MAX_AGENTS,
       },
       config: {
         type: 'object',

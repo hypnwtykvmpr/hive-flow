@@ -45,16 +45,17 @@ const validateConfigSchema = z.object({
 // ============================================================================
 // Default Configuration
 // ============================================================================
+// keep in sync with @hive-flow/shared/core/config/defaults
 const DEFAULT_CONFIG = {
     agents: {
-        maxConcurrent: 15,
+        maxConcurrent: 50,
         defaultPriority: 'normal',
         timeout: 300000,
         retryAttempts: 3,
     },
     swarm: {
         topology: 'hierarchical-mesh',
-        maxAgents: 15,
+        maxAgents: 50,
         communicationProtocol: 'message-bus',
         consensusMechanism: 'majority',
     },

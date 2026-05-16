@@ -22,6 +22,7 @@
  */
 
 import { MCPTool, ToolContext } from '../types.js';
+import { DEFAULT_MAX_AGENTS } from '@hive-flow/shared/core';
 
 // Import V3 tool handlers
 import { initSwarmTool, swarmStatusTool } from './swarm-tools.js';
@@ -69,7 +70,7 @@ export const swarmInitTool: MCPTool = {
   // @ts-ignore - handler input type compatibility
   handler: async (input: Record<string, unknown>, context) => {
     const topology = input.topology as string || 'mesh';
-    const maxAgents = input.maxAgents as number || 15;
+    const maxAgents = input.maxAgents as number || DEFAULT_MAX_AGENTS;
     const strategy = input.strategy as string || 'balanced';
 
     const v3Input = {

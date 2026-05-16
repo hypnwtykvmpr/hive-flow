@@ -71,6 +71,8 @@ const commandLoaders: Record<string, CommandLoader> = {
   'context-manager': () => import('./context-manager.js'),
   // Workflow Signals (pause/resume/stop)
   signal: () => import('./signal.js'),
+  // §7 Agent-integration setup surface (Hive Flow MCP install across 7 agent CLIs)
+  setup: () => import('./setup.js'),
 };
 
 // Cache for loaded commands

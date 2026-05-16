@@ -16,6 +16,7 @@ import type {
   StatuslineData,
   StatuslineConfig,
 } from '../types.js';
+import { DEFAULT_MAX_AGENTS } from '@hive-flow/shared';
 import { execSync } from 'child_process';
 import { existsSync, readFileSync, statSync, readdirSync } from 'fs';
 import { join } from 'path';
@@ -491,7 +492,7 @@ export class StatuslineGenerator {
 
     return {
       activeAgents,
-      maxAgents: 15,
+      maxAgents: DEFAULT_MAX_AGENTS,
       coordinationActive,
     };
   }
@@ -683,7 +684,7 @@ export function parseStatuslineData(json: string): StatuslineData | null {
     return {
       v3Progress: data.v3Progress ?? { domainsCompleted: 0, totalDomains: 5, dddProgress: 0, modulesCount: 0, filesCount: 0, linesCount: 0 },
       security: data.security ?? { status: 'PENDING', cvesFixed: 0, totalCves: 3 },
-      swarm: data.swarm ?? { activeAgents: 0, maxAgents: 15, coordinationActive: false },
+      swarm: data.swarm ?? { activeAgents: 0, maxAgents: DEFAULT_MAX_AGENTS, coordinationActive: false },
       hooks: data.hooks ?? { status: 'INACTIVE', patternsLearned: 0, routingAccuracy: 0, totalOperations: 0 },
       performance: data.performance ?? { flashAttentionTarget: '2.49x-7.47x', searchImprovement: '150x', memoryReduction: '50%' },
       lastUpdated: data.lastUpdated ? new Date(data.lastUpdated) : new Date(),

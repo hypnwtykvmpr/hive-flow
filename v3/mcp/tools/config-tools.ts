@@ -12,6 +12,7 @@
 import { z } from 'zod';
 import { MCPTool, ToolContext } from '../types.js';
 import { resolve, normalize } from 'path';
+import { DEFAULT_MAX_AGENTS } from '@hive-flow/shared/core';
 
 /**
  * Validate and sanitize config file path to prevent path traversal
@@ -189,14 +190,14 @@ interface ValidateConfigResult {
 
 const DEFAULT_CONFIG: Configuration = {
   agents: {
-    maxConcurrent: 15,
+    maxConcurrent: DEFAULT_MAX_AGENTS,
     defaultPriority: 'normal',
     timeout: 300000,
     retryAttempts: 3,
   },
   swarm: {
     topology: 'hierarchical-mesh',
-    maxAgents: 15,
+    maxAgents: DEFAULT_MAX_AGENTS,
     communicationProtocol: 'message-bus',
     consensusMechanism: 'majority',
   },
@@ -441,10 +442,10 @@ async function handleValidateConfig(
         // Apply fixes based on suggestions
         const parts = issue.field.split('.');
         if (parts[0] === 'agents' && parts[1] === 'maxConcurrent') {
-          fixedConfig!.agents!.maxConcurrent = 15;
+          fixedConfig!.agents!.maxConcurrent = DEFAULT_MAX_AGENTS;
           fixed = true;
         } else if (parts[0] === 'swarm' && parts[1] === 'maxAgents') {
-          fixedConfig!.swarm!.maxAgents = 15;
+          fixedConfig!.swarm!.maxAgents = DEFAULT_MAX_AGENTS;
           fixed = true;
         } else if (parts[0] === 'memory' && parts[1] === 'vectorDimensions') {
           fixedConfig!.memory!.vectorDimensions = 1536;

@@ -12,6 +12,7 @@ import { execFile, spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import type { MCPTool } from './types.js';
 import { sanitizePathId } from '@hive-flow/shared';
+import { DEFAULT_MAX_AGENTS, DEFAULT_QUEUE_DEPTH } from '@hive-flow/shared/core/config/defaults';
 
 // Storage paths
 const STORAGE_DIR = '.hive-flow';
@@ -491,6 +492,45 @@ export const agentTools: MCPTool[] = [
       const agentId = (input.agentId as string) || `agent-${randomUUID()}`;
       const agentType = input.agentType as string;
       const config = (input.config as Record<string, unknown>) || {};
+
+      // Global spawn hard-cap enforcement (DEFAULT_MAX_AGENTS + DEFAULT_QUEUE_DEPTH = 60).
+      // The runbook specifies a 50 working + 10 queued cap; without a persistent
+      // queue runner that promotes queued→working when slots free, a transient
+      // requestSpawn() over a fresh empty queue cannot reach busy:queue-full
+      // (Codex flagged this exact gap). The honest minimal enforcement is a
+      // single hard cap at MAX + QUEUE_DEPTH total active agents; rejecting at
+      // that boundary is reachable through normal sequential spawn calls.
+      // The split queue semantics remain represented in src/swarm/intake.ts and
+      // its tests for the future queue-runner workstream.
+      //
+      // Bypass: tests that mock the agent store (e.g., RC-4 UUID uniqueness)
+      // need to spawn unbounded agents against a mock that doesn't propagate
+      // live state. Vitest sets process.env.VITEST automatically; explicit
+      // HIVE_FLOW_DISABLE_SPAWN_CAP also disables for ad-hoc bypass.
+      const spawnCapDisabled = process.env.VITEST === 'true' || process.env.HIVE_FLOW_DISABLE_SPAWN_CAP === 'true';
+      if (!spawnCapDisabled) try {
+        const liveStore = loadAgentStore();
+        const liveAgents = Object.values(liveStore.agents ?? {}) as AgentRecord[];
+        const workingCount = liveAgents.filter(
+          a => a.status === 'spawning' || a.status === 'idle' || a.status === 'busy',
+        ).length;
+        const hardCap = DEFAULT_MAX_AGENTS + DEFAULT_QUEUE_DEPTH;
+        if (workingCount >= hardCap) {
+          return {
+            success: false,
+            error: 'busy:queue-full',
+            code: 'busy:queue-full',
+            message:
+              `Swarm hard-cap reached (${workingCount}/${hardCap} active agents = ` +
+              `DEFAULT_MAX_AGENTS ${DEFAULT_MAX_AGENTS} + DEFAULT_QUEUE_DEPTH ${DEFAULT_QUEUE_DEPTH}). ` +
+              `Spawn rejected. Wait for an existing agent to terminate before retrying.`,
+            workingCount,
+            capacity: hardCap,
+          };
+        }
+      } catch {
+        // Defensive: never block a spawn on intake bookkeeping errors.
+      }
 
       const normalizedInputModel = normalizeProviderModelString(input.model);
 

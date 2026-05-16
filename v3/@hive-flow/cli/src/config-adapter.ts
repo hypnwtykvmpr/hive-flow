@@ -4,6 +4,7 @@
  */
 
 import type { SystemConfig } from '@hive-flow/shared';
+import { DEFAULT_MAX_AGENTS } from '@hive-flow/shared/core/config/defaults';
 import type { V3Config } from './types.js';
 
 /**
@@ -18,7 +19,7 @@ export function systemConfigToV3Config(systemConfig: SystemConfig): V3Config {
     agents: {
       defaultType: 'coder',
       autoSpawn: false, // Not in SystemConfig
-      maxConcurrent: systemConfig.orchestrator?.lifecycle?.maxConcurrentAgents ?? 15,
+      maxConcurrent: systemConfig.orchestrator?.lifecycle?.maxConcurrentAgents ?? DEFAULT_MAX_AGENTS,
       timeout: systemConfig.orchestrator?.lifecycle?.spawnTimeout ?? 300000,
       providers: [],
     },
@@ -26,7 +27,7 @@ export function systemConfigToV3Config(systemConfig: SystemConfig): V3Config {
     // Swarm configuration
     swarm: {
       topology: normalizeTopology(systemConfig.swarm?.topology),
-      maxAgents: systemConfig.swarm?.maxAgents ?? 15,
+      maxAgents: systemConfig.swarm?.maxAgents ?? DEFAULT_MAX_AGENTS,
       autoScale: systemConfig.swarm?.autoScale?.enabled ?? false,
       coordinationStrategy: systemConfig.swarm?.coordination?.consensusRequired ? 'consensus' : 'leader',
       healthCheckInterval: systemConfig.swarm?.coordination?.timeoutMs ?? 10000,

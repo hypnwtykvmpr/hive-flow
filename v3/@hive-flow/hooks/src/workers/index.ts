@@ -9,7 +9,7 @@ import { EventEmitter } from 'events';
 import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs/promises';
-import { TimerManager } from '@hive-flow/shared';
+import { TimerManager, DEFAULT_MAX_AGENTS } from '@hive-flow/shared';
 
 // ============================================================================
 // Security Constants
@@ -1068,16 +1068,27 @@ export function createPerformanceWorker(projectRoot: string): WorkerHandler {
   };
 }
 
+// Some sandboxed environments (containers, restricted CI) deny libuv probes
+// like uv_uptime with EPERM. Catch and degrade gracefully so the health worker
+// still returns a usable snapshot instead of failing wholesale.
+function safeProbe<T>(fn: () => T, fallback: T): T {
+  try {
+    return fn();
+  } catch {
+    return fallback;
+  }
+}
+
 export function createHealthWorker(projectRoot: string): WorkerHandler {
   return async (): Promise<WorkerResult> => {
     const startTime = Date.now();
 
-    const totalMem = os.totalmem();
-    const freeMem = os.freemem();
-    const memPct = Math.round((1 - freeMem / totalMem) * 100);
+    const totalMem = safeProbe(() => os.totalmem(), 0);
+    const freeMem = safeProbe(() => os.freemem(), 0);
+    const memPct = totalMem > 0 ? Math.round((1 - freeMem / totalMem) * 100) : 0;
 
-    const uptime = os.uptime();
-    const loadAvg = os.loadavg();
+    const uptime = safeProbe(() => os.uptime(), 0);
+    const loadAvg = safeProbe(() => os.loadavg(), [0, 0, 0]);
 
     // Disk space (cross-platform approximation)
     let diskPct = 0;
@@ -1976,7 +1987,7 @@ export function createV3ProgressWorker(projectRoot: string): WorkerHandler {
       },
       swarm: {
         activeAgents: 0,
-        totalAgents: 15,
+        totalAgents: DEFAULT_MAX_AGENTS,
       },
       lastUpdated: new Date().toISOString(),
       source: 'v3progress-worker',

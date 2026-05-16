@@ -14,6 +14,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 import type { InitOptions, InitResult, PlatformInfo } from './types.js';
 import { detectPlatform, DEFAULT_INIT_OPTIONS } from './types.js';
+import { DEFAULT_MAX_AGENTS } from '@hive-flow/shared/core/config/defaults';
 import { generateSettingsJson, generateSettings } from './settings-generator.js';
 import { generateMCPJson } from './mcp-generator.js';
 import { generateStatuslineScript, generateStatuslineHook } from './statusline-generator.js';
@@ -485,7 +486,7 @@ export async function executeUpgrade(targetDir: string, upgradeSettings = false)
         initialized: new Date().toISOString(),
         domains: { completed: 0, total: 5, status: 'INITIALIZING' },
         ddd: { progress: 0, modules: 0, totalFiles: 0, totalLines: 0 },
-        swarm: { activeAgents: 0, maxAgents: 15, topology: 'hierarchical-mesh' },
+        swarm: { activeAgents: 0, maxAgents: DEFAULT_MAX_AGENTS, topology: 'hierarchical-mesh' },
         learning: { status: 'READY', patternsLearned: 0, sessionsCompleted: 0 },
         _note: 'Metrics will update as you use Hive Flow'
       };
@@ -1381,7 +1382,7 @@ async function writeCapabilitiesDoc(
 
 Hive Flow V3 is a domain-driven design architecture for multi-agent AI coordination with:
 
-- **15-Agent Swarm Coordination** with hierarchical and mesh topologies
+- **Multi-Agent Swarm Coordination** with hierarchical and mesh topologies
 - **HNSW Vector Search** - 150x-12,500x faster pattern retrieval
 - **SONA Neural Learning** - Self-optimizing with <0.05ms adaptation
 - **Byzantine Fault Tolerance** - Queen-led consensus mechanisms

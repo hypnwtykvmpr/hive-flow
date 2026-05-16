@@ -92,6 +92,7 @@
     "@hive-flow/mcp": "workspace:*",
     "@hive-flow/shared": "workspace:*",
     "@noble/ed25519": "^3.0.0",
+    "jsonc-parser": "^3.3.1",
     "semver": "^7.7.4"
   },
   "optionalDependencies": {

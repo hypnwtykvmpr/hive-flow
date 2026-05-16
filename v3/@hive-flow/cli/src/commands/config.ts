@@ -7,6 +7,7 @@ import type { Command, CommandContext, CommandResult } from '../types.js';
 import { output } from '../output.js';
 import { select, confirm, input } from '../prompt.js';
 import { callMCPTool, MCPClientError } from '../mcp-client.js';
+import { DEFAULT_MAX_AGENTS } from '@hive-flow/shared/core/config/defaults';
 
 // Init configuration
 const initCommand: Command = {
@@ -48,13 +49,13 @@ const initCommand: Command = {
       sparc: sparc,
       agents: {
         defaultType: 'coder',
-        maxConcurrent: 15,
+        maxConcurrent: DEFAULT_MAX_AGENTS,
         autoSpawn: true,
         timeout: 300
       },
       swarm: {
         topology: 'hybrid',
-        maxAgents: 15,
+        maxAgents: DEFAULT_MAX_AGENTS,
         autoScale: true,
         coordinationStrategy: 'consensus'
       },
@@ -85,7 +86,7 @@ const initCommand: Command = {
     }
 
     if (v3) {
-      output.writeln(output.dim('  Enabling V3 15-agent coordination...'));
+      output.writeln(output.dim('  Enabling V3 multi-agent coordination...'));
       output.writeln(output.dim('  Configuring AgentDB integration...'));
       output.writeln(output.dim('  Setting up Flash Attention optimization...'));
     }
@@ -139,13 +140,13 @@ const getCommand: Command = {
       'version': '3.0.0',
       'v3Mode': true,
       'swarm.topology': 'hybrid',
-      'swarm.maxAgents': 15,
+      'swarm.maxAgents': DEFAULT_MAX_AGENTS,
       'swarm.autoScale': true,
       'memory.backend': 'hybrid',
       'memory.cacheSize': 256,
       'mcp.transport': 'stdio',
       'agents.defaultType': 'coder',
-      'agents.maxConcurrent': 15
+      'agents.maxConcurrent': DEFAULT_MAX_AGENTS
     };
 
     if (!key) {
@@ -360,8 +361,8 @@ const exportCommand: Command = {
     const config = {
       version: '3.0.0',
       exportedAt: new Date().toISOString(),
-      agents: { defaultType: 'coder', maxConcurrent: 15 },
-      swarm: { topology: 'hybrid', maxAgents: 15 },
+      agents: { defaultType: 'coder', maxConcurrent: DEFAULT_MAX_AGENTS },
+      swarm: { topology: 'hybrid', maxAgents: DEFAULT_MAX_AGENTS },
       memory: { backend: 'hybrid', cacheSize: 256 },
       mcp: { transport: 'stdio', tools: 'all' }
     };

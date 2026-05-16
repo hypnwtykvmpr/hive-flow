@@ -9,11 +9,11 @@ import { confirm, select } from '../prompt.js';
 import { callMCPTool, MCPClientError } from '../mcp-client.js';
 import * as fs from 'fs';
 import * as path from 'path';
+import { DEFAULT_MAX_AGENTS } from '@hive-flow/shared/core/config/defaults';
 
 // Default configuration
 const DEFAULT_PORT = 3000;
 const DEFAULT_TOPOLOGY = 'hierarchical-mesh';
-const DEFAULT_MAX_AGENTS = 15;
 
 // Check if project is initialized
 function isInitialized(cwd: string): boolean {

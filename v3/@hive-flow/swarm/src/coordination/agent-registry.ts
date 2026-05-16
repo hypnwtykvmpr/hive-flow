@@ -1,8 +1,12 @@
 /**
  * V3 Agent Registry
- * Manages registration, lifecycle, and capabilities of all 15 agents
+ * Manages registration, lifecycle, and capabilities of the fixed 15-role
+ * agent taxonomy. Note: the role taxonomy is architectural and intentionally
+ * 15 named roles; the runtime working/queued capacity is independent and is
+ * defined by DEFAULT_MAX_AGENTS (50) + DEFAULT_QUEUE_DEPTH (10) in
+ * @hive-flow/shared/core/config/defaults.
  *
- * Based on ADR-002 (DDD) and 15-Agent Swarm Architecture
+ * Based on ADR-002 (DDD) and the 15-Agent Role Taxonomy.
  */
 
 import {
@@ -355,7 +359,7 @@ export class AgentRegistry implements IAgentRegistry {
         id: 'agent-1',
         role: 'queen-coordinator',
         domain: 'core',
-        description: 'Orchestration & GitHub Issue management for all 15 agents',
+        description: 'Orchestration & GitHub Issue management across the 15-role agent taxonomy',
         capabilities: [
           { name: 'orchestration', description: 'Coordinate all agents', supportedTaskTypes: ['architecture-design'] },
           { name: 'github-management', description: 'Manage GitHub issues and PRs', supportedTaskTypes: ['documentation'] }

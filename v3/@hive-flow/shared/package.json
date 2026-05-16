@@ -9,6 +9,10 @@
     ".": "./dist/index.js",
     "./types": "./dist/types/index.js",
     "./core": "./dist/core/index.js",
+    "./core/config/defaults": {
+      "types": "./dist/core/config/defaults.d.ts",
+      "default": "./dist/core/config/defaults.js"
+    },
     "./events": "./dist/events/index.js",
     "./hooks": "./dist/hooks/index.js",
     "./mcp": "./dist/mcp/index.js",

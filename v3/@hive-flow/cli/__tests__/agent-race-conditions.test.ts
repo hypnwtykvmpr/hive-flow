@@ -314,6 +314,83 @@ describe('Agent Race Condition Stress Tests', () => {
   });
 
   // ════════════════════════════════════════════════════════════════════════════
+  // 3.5. Spawn hard-cap enforcement (Codex Wave 7.5 B-5 follow-up)
+  // ════════════════════════════════════════════════════════════════════════════
+  describe('RC-6: agent_spawn production hard-cap (DEFAULT_MAX_AGENTS + DEFAULT_QUEUE_DEPTH = 60)', () => {
+    it('rejects with busy:queue-full when workingCount reaches the hard cap', async () => {
+      // The production hard-cap branch in agent-tools.ts:agent_spawn is bypassed
+      // when process.env.VITEST === 'true' so the surrounding 1000-spawn UUID
+      // uniqueness test can run unbounded. Re-enable enforcement for this test.
+      const originalVitest = process.env.VITEST;
+      delete process.env.VITEST;
+      try {
+        // Pre-populate the store with 60 active agents (cap = 50 + 10 = 60).
+        const agents: Record<string, AgentRecord> = {};
+        for (let i = 0; i < 60; i++) {
+          const id = `cap-test-agent-${i}`;
+          agents[id] = makeAgent({ agentId: id, status: i % 3 === 0 ? 'idle' : i % 3 === 1 ? 'busy' : 'spawning' });
+        }
+        setupStoreMocks(makeStore(agents));
+
+        const result = (await spawnHandler({ agentType: 'worker' })) as AgentHandlerResult & {
+          code?: string;
+          workingCount?: number;
+          capacity?: number;
+        };
+
+        expect(result.success).toBe(false);
+        expect(result.error).toBe('busy:queue-full');
+        expect(result.code).toBe('busy:queue-full');
+        expect(result.workingCount).toBe(60);
+        expect(result.capacity).toBe(60);
+      } finally {
+        if (originalVitest !== undefined) process.env.VITEST = originalVitest;
+      }
+    });
+
+    it('accepts spawn at workingCount = 59 (one slot remaining below the hard cap)', async () => {
+      const originalVitest = process.env.VITEST;
+      delete process.env.VITEST;
+      try {
+        const agents: Record<string, AgentRecord> = {};
+        for (let i = 0; i < 59; i++) {
+          const id = `cap-boundary-agent-${i}`;
+          agents[id] = makeAgent({ agentId: id, status: 'idle' });
+        }
+        setupStoreMocks(makeStore(agents));
+
+        const result = (await spawnHandler({ agentType: 'worker', agentId: 'boundary-spawn' })) as AgentHandlerResult;
+
+        expect(result.success).toBe(true);
+        expect(result.agentId).toBe('boundary-spawn');
+      } finally {
+        if (originalVitest !== undefined) process.env.VITEST = originalVitest;
+      }
+    });
+
+    it('does not count terminated agents toward the working set', async () => {
+      const originalVitest = process.env.VITEST;
+      delete process.env.VITEST;
+      try {
+        // 60 agents present but all 'terminated' — should NOT block new spawns.
+        const agents: Record<string, AgentRecord> = {};
+        for (let i = 0; i < 60; i++) {
+          const id = `terminated-agent-${i}`;
+          agents[id] = makeAgent({ agentId: id, status: 'terminated' });
+        }
+        setupStoreMocks(makeStore(agents));
+
+        const result = (await spawnHandler({ agentType: 'worker', agentId: 'post-termination-spawn' })) as AgentHandlerResult;
+
+        expect(result.success).toBe(true);
+        expect(result.agentId).toBe('post-termination-spawn');
+      } finally {
+        if (originalVitest !== undefined) process.env.VITEST = originalVitest;
+      }
+    });
+  });
+
+  // ════════════════════════════════════════════════════════════════════════════
   // 4. State machine transitions (RC-3)
   // ════════════════════════════════════════════════════════════════════════════
   describe('RC-3: State machine transitions', () => {

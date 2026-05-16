@@ -42,6 +42,7 @@ import {
   EventHandler,
   V3_PERFORMANCE_TARGETS
 } from '../shared/types';
+import { DEFAULT_MAX_AGENTS } from '../types';
 import {
   IEventBus,
   EventBus,
@@ -163,7 +164,7 @@ export class SwarmHub implements ISwarmHub {
 
     await this.eventBus.emit(swarmInitializedEvent('swarm-hub', {
       topology: this.coordinator.getTopology(),
-      maxAgents: 15,
+      maxAgents: DEFAULT_MAX_AGENTS,
       performanceTargets: V3_PERFORMANCE_TARGETS
     }));
 
@@ -497,7 +498,7 @@ export class SwarmHub implements ISwarmHub {
     return {
       topology: {
         type: 'hierarchical' as const,
-        maxAgents: 15,
+        maxAgents: DEFAULT_MAX_AGENTS,
         replicationFactor: 2,
         partitionStrategy: 'hash' as const,
         failoverEnabled: true,
@@ -518,7 +519,7 @@ export class SwarmHub implements ISwarmHub {
         enablePersistence: false,
         compressionEnabled: false,
       },
-      maxAgents: 15,
+      maxAgents: DEFAULT_MAX_AGENTS,
       maxTasks: 1000,
       heartbeatIntervalMs: 5000,
       healthCheckIntervalMs: 5000,

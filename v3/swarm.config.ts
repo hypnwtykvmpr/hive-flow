@@ -1,9 +1,11 @@
 /**
  * V3 Swarm Configuration
- * Configuration for the 15-agent hierarchical mesh swarm
+ * Configuration for the 50-agent hierarchical mesh swarm
  *
  * Based on the V3 Architecture Decision Records and Swarm Implementation Plan
  */
+
+import { DEFAULT_MAX_AGENTS } from '@hive-flow/shared/core/config/defaults';
 
 // Core types defined inline (./shared/types not available at this level)
 export type TopologyType = 'hierarchical-mesh' | 'mesh' | 'hierarchical' | 'centralized';
@@ -88,7 +90,7 @@ export interface LoggingConfig {
 export const defaultSwarmConfig: V3SwarmConfig = {
   // Core SwarmConfig
   topology: 'hierarchical-mesh',
-  maxAgents: 15,
+  maxAgents: DEFAULT_MAX_AGENTS,
   messageTimeout: 30000,
   retryAttempts: 3,
   healthCheckInterval: 5000,
@@ -213,7 +215,7 @@ export const agentRoleMapping = {
     name: 'Queen Coordinator',
     domain: 'core' as AgentDomain,
     responsibilities: [
-      'Orchestrate all 15 agents',
+      'Orchestrate all configured agents (up to 50 working + 10 queued)',
       'Manage GitHub issues and milestones',
       'Track overall progress',
       'Coordinate cross-domain communication'

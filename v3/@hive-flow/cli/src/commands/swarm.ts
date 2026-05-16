@@ -9,6 +9,7 @@ import { select, confirm, multiSelect } from '../prompt.js';
 import { callMCPTool, MCPClientError } from '../mcp-client.js';
 import * as fs from 'fs';
 import * as path from 'path';
+import { DEFAULT_MAX_AGENTS } from '@hive-flow/shared/core/config/defaults';
 
 // Get dynamic swarm status from memory/session files
 function getSwarmStatus(swarmId?: string) {
@@ -166,7 +167,7 @@ const TOPOLOGIES = [
   { value: 'ring', label: 'Ring', hint: 'Circular communication pattern' },
   { value: 'star', label: 'Star', hint: 'Central coordinator with spoke agents' },
   { value: 'hybrid', label: 'Hybrid', hint: 'Hierarchical mesh for maximum flexibility' },
-  { value: 'hierarchical-mesh', label: 'Hierarchical Mesh', hint: 'V3 15-agent queen + peer communication (recommended)' }
+  { value: 'hierarchical-mesh', label: 'Hierarchical Mesh', hint: 'V3 queen + peer communication (recommended)' }
 ];
 
 // Swarm strategies
@@ -200,7 +201,7 @@ const initCommand: Command = {
       short: 'm',
       description: 'Maximum number of agents',
       type: 'number',
-      default: 15
+      default: DEFAULT_MAX_AGENTS
     },
     {
       name: 'auto-scale',
@@ -217,20 +218,20 @@ const initCommand: Command = {
     },
     {
       name: 'v3-mode',
-      description: 'Enable V3 15-agent hierarchical mesh mode',
+      description: 'Enable V3 hierarchical mesh mode',
       type: 'boolean',
       default: false
     }
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     let topology = ctx.flags.topology as string;
-    const maxAgents = ctx.flags.maxAgents as number || 15;
+    const maxAgents = ctx.flags.maxAgents as number || DEFAULT_MAX_AGENTS;
     const v3Mode = ctx.flags.v3Mode as boolean;
 
     // V3 mode enables hierarchical-mesh hybrid
     if (v3Mode) {
       topology = 'hierarchical-mesh';
-      output.printInfo('V3 Mode: Using hierarchical-mesh topology with 15-agent coordination');
+      output.printInfo('V3 Mode: Using hierarchical-mesh topology');
     }
 
     // Interactive topology selection
@@ -663,13 +664,13 @@ const scaleCommand: Command = {
 // Coordinate command (V3 specific)
 const coordinateCommand: Command = {
   name: 'coordinate',
-  description: 'Execute V3 15-agent hierarchical mesh coordination',
+  description: 'Execute V3 hierarchical mesh coordination',
   options: [
     {
       name: 'agents',
       description: 'Number of agents',
       type: 'number',
-      default: 15
+      default: DEFAULT_MAX_AGENTS
     },
     {
       name: 'domains',
@@ -678,10 +679,10 @@ const coordinateCommand: Command = {
     }
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
-    const agentCount = ctx.flags.agents as number || 15;
+    const agentCount = ctx.flags.agents as number || DEFAULT_MAX_AGENTS;
 
     output.writeln();
-    output.writeln(output.bold('V3 15-Agent Hierarchical Mesh Coordination'));
+    output.writeln(output.bold('V3 Hierarchical Mesh Coordination'));
     output.writeln();
 
     // V3 agent structure
@@ -739,7 +740,7 @@ export const swarmCommand: Command = {
   examples: [
     { command: 'hive-flow swarm init --v3-mode', description: 'Initialize V3 swarm' },
     { command: 'hive-flow swarm start -o "Build API" -s development', description: 'Start development swarm' },
-    { command: 'hive-flow swarm coordinate --agents 15', description: 'V3 coordination' }
+    { command: 'hive-flow swarm coordinate --agents 50', description: 'V3 coordination at default cap' }
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     output.writeln();
@@ -754,7 +755,7 @@ export const swarmCommand: Command = {
       `${output.highlight('status')}      - Show swarm status`,
       `${output.highlight('stop')}        - Stop swarm execution`,
       `${output.highlight('scale')}       - Scale swarm agent count`,
-      `${output.highlight('coordinate')}  - V3 15-agent coordination`
+      `${output.highlight('coordinate')}  - V3 multi-agent coordination`
     ]);
 
     return { success: true };

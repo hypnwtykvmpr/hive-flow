@@ -63,7 +63,7 @@ export const swarmInitTool = {
     },
     handler: async (input, context) => {
         const topology = input.topology || 'mesh';
-        const maxAgents = input.maxAgents || 15;
+        const maxAgents = input.maxAgents || 50; // keep in sync with @hive-flow/shared/core/config/defaults
         const strategy = input.strategy || 'balanced';
         const v3Input = {
             topology,

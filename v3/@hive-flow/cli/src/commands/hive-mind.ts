@@ -13,6 +13,7 @@ import { callMCPTool, MCPClientError } from '../mcp-client.js';
 import { spawn as childSpawn, execSync } from 'child_process';
 import { mkdir, writeFile } from 'fs/promises';
 import { join } from 'path';
+import { DEFAULT_MAX_AGENTS } from '@hive-flow/shared/core/config/defaults';
 
 // Worker type definitions for prompt generation
 interface HiveWorker {
@@ -391,7 +392,7 @@ const initCommand: Command = {
       short: 'm',
       description: 'Maximum agents',
       type: 'number',
-      default: 15
+      default: DEFAULT_MAX_AGENTS
     },
     {
       name: 'persist',
@@ -434,7 +435,7 @@ const initCommand: Command = {
     const config = {
       topology: topology || 'hierarchical-mesh',
       consensus: consensus || 'byzantine',
-      maxAgents: ctx.flags.maxAgents as number || 15,
+      maxAgents: ctx.flags.maxAgents as number || DEFAULT_MAX_AGENTS,
       persist: ctx.flags.persist as boolean,
       memoryBackend: ctx.flags.memoryBackend as string || 'hybrid'
     };

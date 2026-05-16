@@ -13,6 +13,7 @@
 import { z } from 'zod';
 import * as os from 'os';
 import { MCPTool, ToolContext, AgentRecord, TaskRecord } from '../types.js';
+import { DEFAULT_MAX_AGENTS } from '@hive-flow/shared/core';
 
 // ============================================================================
 // Input Schemas
@@ -386,7 +387,7 @@ async function handleSystemMetrics(
         unit: 'count',
         current: 0,
         min: 0,
-        max: 15,
+        max: DEFAULT_MAX_AGENTS,
         avg: 5,
       },
       {

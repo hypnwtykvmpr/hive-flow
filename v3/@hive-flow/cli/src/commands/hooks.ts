@@ -8,6 +8,7 @@ import { output } from '../output.js';
 import { select, confirm, input } from '../prompt.js';
 import { callMCPTool, MCPClientError } from '../mcp-client.js';
 import { storeCommand } from './transfer-store.js';
+import { DEFAULT_MAX_AGENTS } from '@hive-flow/shared/core/config/defaults';
 import { loadAgenticFlow, loadAgenticFlowSubpath } from '@hive-flow/integration';
 
 // Hook types
@@ -3378,7 +3379,7 @@ const statuslineCommand: Command = {
     function getSwarmStatus() {
       let activeAgents = 0;
       let coordinationActive = false;
-      const maxAgents = 15;
+      const maxAgents = DEFAULT_MAX_AGENTS;
       const isWindows = process.platform === 'win32';
 
       try {
@@ -3466,7 +3467,10 @@ const statuslineCommand: Command = {
     function getUserInfo() {
       let name = 'user';
       let gitBranch = '';
-      const modelName = 'Opus 4.5';
+      // Model name: prefer env-injected display name; otherwise omit specific
+      // version. The authoritative dynamic resolution lives in
+      // .claude/helpers/statusline.cjs and src/statusline/model-display.ts.
+      const modelName = process.env.CLAUDE_MODEL_DISPLAY?.trim() || 'Claude';
       const isWindows = process.platform === 'win32';
 
       try {
@@ -3536,8 +3540,16 @@ const statuslineCommand: Command = {
       return '[' + '●'.repeat(filled) + '○'.repeat(empty) + ']';
     };
 
-    // Generate lines
-    let header = `${c.bold}${c.brightPurple}▊ Hive Flow V3 ${c.reset}`;
+    // Generate lines. Project label: derive from cwd basename — falls back
+    // to "Hive Flow" only if basename is empty. The authoritative dynamic
+    // resolution lives in .claude/helpers/statusline.cjs and
+    // src/statusline/project-identity.ts; this is a CLI-side duplicate.
+    const projectLabel = ((): string => {
+      const base = path.basename(process.cwd());
+      if (!base) return 'Hive Flow';
+      return base.replace(/[\s_-]+/g, ' ').replace(/\b\w/g, ch => ch.toUpperCase()).trim();
+    })();
+    let header = `${c.bold}${c.brightPurple}▊ ${projectLabel} ${c.reset}`;
     header += `${swarm.coordinationActive ? c.brightCyan : c.dim}● ${c.brightCyan}${user.name}${c.reset}`;
     if (user.gitBranch) {
       header += `  ${c.dim}│${c.reset}  ${c.brightBlue}⎇ ${user.gitBranch}${c.reset}`;

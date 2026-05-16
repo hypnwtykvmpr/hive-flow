@@ -8,6 +8,7 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import type { MCPTool } from './types.js';
 import { loadAgentStore, saveAgentStore, withStoreLock, agentTools } from './agent-tools.js';
+import { DEFAULT_MAX_AGENTS } from '@hive-flow/shared/core/config/defaults';
 import type { AgentProvider } from './agent-tools.js';
 
 // Storage paths
@@ -296,7 +297,7 @@ export const hiveMindTools: MCPTool[] = [
         topology: { type: 'string', enum: ['mesh', 'hierarchical', 'ring', 'star', 'adaptive', 'hierarchical-mesh'], description: 'Network topology' },
         queenId: { type: 'string', description: 'Initial queen agent ID' },
         consensus: { type: 'string', enum: ['byzantine', 'raft', 'gossip', 'crdt', 'quorum'], description: 'Consensus strategy' },
-        maxAgents: { type: 'number', description: 'Maximum agents allowed (default: 15)' },
+        maxAgents: { type: 'number', description: `Maximum agents allowed (default: ${DEFAULT_MAX_AGENTS})` },
         persist: { type: 'boolean', description: 'Persist hive state to disk (default: true)' },
         memoryBackend: { type: 'string', enum: ['hybrid', 'sqlite', 'memory'], description: 'Memory backend (default: hybrid)' },
       },
@@ -327,7 +328,7 @@ export const hiveMindTools: MCPTool[] = [
         config: {
           topology: state.topology,
           consensus: input.consensus || 'byzantine',
-          maxAgents: input.maxAgents || 15,
+          maxAgents: input.maxAgents || DEFAULT_MAX_AGENTS,
           persist: input.persist !== false,
           memoryBackend: input.memoryBackend || 'hybrid',
         },

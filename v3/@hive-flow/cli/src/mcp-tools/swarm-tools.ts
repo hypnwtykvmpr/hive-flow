@@ -5,6 +5,7 @@
  */
 
 import type { MCPTool } from './types.js';
+import { DEFAULT_MAX_AGENTS } from '@hive-flow/shared/core/config/defaults';
 
 export const swarmTools: MCPTool[] = [
   {
@@ -21,7 +22,7 @@ export const swarmTools: MCPTool[] = [
     },
     handler: async (input) => {
       const topology = input.topology || 'hierarchical-mesh';
-      const maxAgents = input.maxAgents || 15;
+      const maxAgents = input.maxAgents || DEFAULT_MAX_AGENTS;
       const config = (input.config || {}) as Record<string, unknown>;
 
       return {
