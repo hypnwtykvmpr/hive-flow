@@ -312,61 +312,122 @@ function getSecurityStatus() {
   };
 }
 
-// Read agent store and count non-terminated agents
+// Read agent store and split into workers and queens. Queens are control-plane
+// orchestrators — they do not consume worker slots, so the [N/50] bracket
+// counts workers only and queens render as a separate ♛N segment.
+//
+// Returned buckets:
+//   - activeAgents:    non-terminated/failed workers (workers only, NO queens)
+//   - executingAgents: workers currently 'running'/'busy' (drives bright-green)
+//   - activeQueens:    non-terminated/failed queens (renders separately)
+//   - executingQueens: queens currently 'running'/'busy' (drives queen color)
+//   - agents:          all live (non-terminated) records — used by provider tracking
+//
+// Shape priority (live MCP write path → legacy fallbacks):
+//   1. Modern dict: { agents: { <id>: { status, agentType, ... }, ... }, version: 1 }
+//   2. Legacy array: { agents: [...] } | { entries: [...] } | top-level array
+//   3. Top-level dict-of-records (very old): { <id>: { status, ... }, ... }
 function getAgentStoreCount() {
   try {
     const storePath = path.join(CWD, '.hive-flow', 'agents', 'store.json');
     if (fs.existsSync(storePath)) {
       const store = JSON.parse(fs.readFileSync(storePath, 'utf-8'));
-      const agents = store?.agents || store?.entries || (Array.isArray(store) ? store : []);
-      if (Array.isArray(agents) && agents.length > 0) {
-        const active = agents.filter(a => a.status !== 'terminated');
-        return { activeAgents: active.length, agents };
+      let all = [];
+
+      if (store?.agents && typeof store.agents === 'object' && !Array.isArray(store.agents)) {
+        all = Object.values(store.agents).filter(v => v && typeof v === 'object');
+      } else if (Array.isArray(store?.agents)) {
+        all = store.agents;
+      } else if (Array.isArray(store?.entries)) {
+        all = store.entries;
+      } else if (Array.isArray(store)) {
+        all = store;
+      } else if (typeof store === 'object' && store !== null) {
+        all = Object.values(store).filter(v => v && typeof v === 'object' && 'status' in v);
       }
-      // Handle object-map format { "agent-id": { status: ... }, ... }
-      if (typeof store === 'object' && !Array.isArray(store) && store !== null) {
-        const values = Object.values(store).filter(v => v && typeof v === 'object' && 'status' in v);
-        if (values.length > 0) {
-          const active = values.filter(a => a.status !== 'terminated');
-          return { activeAgents: active.length, agents: values };
-        }
+
+      if (all.length > 0) {
+        const live = all.filter(a => a.status !== 'terminated' && a.status !== 'failed');
+        const isQueen = (a) => a.agentType === 'queen';
+        const workers = live.filter(a => !isQueen(a));
+        const queens = live.filter(isQueen);
+        const workersExecuting = workers.filter(a => a.status === 'running' || a.status === 'busy');
+        const queensExecuting = queens.filter(a => a.status === 'running' || a.status === 'busy');
+        return {
+          activeAgents: workers.length,
+          executingAgents: workersExecuting.length,
+          activeQueens: queens.length,
+          executingQueens: queensExecuting.length,
+          agents: live,
+        };
       }
     }
   } catch { /* store.json doesn't exist or is invalid -- fall through */ }
-  return { activeAgents: 0, agents: [] };
+  return { activeAgents: 0, executingAgents: 0, activeQueens: 0, executingQueens: 0, agents: [] };
 }
 
-// Swarm status (pure file reads, NO ps aux)
+// Swarm status (pure file reads, NO ps aux).
+// Read order: store.json (live, no staleness window) → swarm-activity.json
+// → v3-progress.json (both gated by 10-min freshness). Previous order put the
+// stale metrics files first, so a multi-day-old v3-progress.json with
+// activeAgents:0 would short-circuit a live hive's store.json (CLAUDE-LF-002).
+const SWARM_FRESHNESS_MS = 10 * 60 * 1000;
+
 function getSwarmStatus() {
-  const activityData = readJSON(path.join(CWD, '.hive-flow', 'metrics', 'swarm-activity.json'));
-  if (activityData?.swarm) {
-    return {
-      activeAgents: activityData.swarm.agent_count || 0,
-      maxAgents: CONFIG.maxAgents,
-      coordinationActive: activityData.swarm.coordination_active || activityData.swarm.active || false,
-    };
-  }
-
-  const progressData = readJSON(path.join(CWD, '.hive-flow', 'metrics', 'v3-progress.json'));
-  if (progressData?.swarm) {
-    return {
-      activeAgents: progressData.swarm.activeAgents || progressData.swarm.agent_count || 0,
-      maxAgents: progressData.swarm.totalAgents || CONFIG.maxAgents,
-      coordinationActive: progressData.swarm.active || (progressData.swarm.activeAgents > 0),
-    };
-  }
-
-  // Fallback: read from agent store.json for MCP-spawned agents
+  // PRIMARY: live agent store. Always current — written by MCP agent_spawn /
+  // queen_mission_assign. Returns workers (active/executing) AND queens
+  // (active/executing) separately so the renderer can color and place them
+  // independently. Queens don't count against the worker cap.
   const storeData = getAgentStoreCount();
-  if (storeData.activeAgents > 0) {
+  if (storeData.activeAgents > 0 || storeData.activeQueens > 0) {
     return {
       activeAgents: storeData.activeAgents,
+      executingAgents: storeData.executingAgents,
+      activeQueens: storeData.activeQueens,
+      executingQueens: storeData.executingQueens,
       maxAgents: CONFIG.maxAgents,
       coordinationActive: true,
     };
   }
 
-  return { activeAgents: 0, maxAgents: CONFIG.maxAgents, coordinationActive: false };
+  // FALLBACK 1: swarm-activity.json — fresh-only. Legacy collector doesn't
+  // differentiate executing from active or queens from workers; treat the count
+  // as workers and assume reported agents are executing.
+  const activityData = readJSON(path.join(CWD, '.hive-flow', 'metrics', 'swarm-activity.json'));
+  if (activityData?.swarm) {
+    const updated = activityData.lastUpdated ? Date.parse(activityData.lastUpdated) : 0;
+    if (!updated || Date.now() - updated < SWARM_FRESHNESS_MS) {
+      const count = activityData.swarm.agent_count || 0;
+      return {
+        activeAgents: count,
+        executingAgents: count,
+        activeQueens: 0,
+        executingQueens: 0,
+        maxAgents: CONFIG.maxAgents,
+        coordinationActive: activityData.swarm.coordination_active || activityData.swarm.active || false,
+      };
+    }
+  }
+
+  // FALLBACK 2: v3-progress.json — fresh-only. Stale writes (older than 10 min)
+  // are ignored so they cannot mask an active live store.
+  const progressData = readJSON(path.join(CWD, '.hive-flow', 'metrics', 'v3-progress.json'));
+  if (progressData?.swarm) {
+    const updated = progressData.lastUpdated ? Date.parse(progressData.lastUpdated) : 0;
+    if (updated && Date.now() - updated < SWARM_FRESHNESS_MS) {
+      const count = progressData.swarm.activeAgents || progressData.swarm.agent_count || 0;
+      return {
+        activeAgents: count,
+        executingAgents: count,
+        activeQueens: 0,
+        executingQueens: 0,
+        maxAgents: progressData.swarm.totalAgents || CONFIG.maxAgents,
+        coordinationActive: progressData.swarm.active || (progressData.swarm.activeAgents > 0),
+      };
+    }
+  }
+
+  return { activeAgents: 0, executingAgents: 0, activeQueens: 0, executingQueens: 0, maxAgents: CONFIG.maxAgents, coordinationActive: false };
 }
 
 // System metrics (uses process.memoryUsage() — no shell spawn)
@@ -923,8 +984,30 @@ function generateStatusline() {
   // Row 8 (\u26A1 target: 150x-12500x) \u2014 OMIT: marketing placeholder. Both rows removed.
 
   // Line 2: Swarm + Hooks (Row 11 REPLACE: live c/m/cmd counts) \u2014 subAgents(10)/CVE(12)/heap(13)/intelligence(14) OMITted.
-  const swarmInd = swarm.coordinationActive ? `${c.brightGreen}\u25C9${c.reset}` : `${c.dim}\u25CB${c.reset}`;
-  const agentsColor = swarm.activeAgents > 0 ? c.brightGreen : c.red;
+  // Tri-state coloration:
+  //   bright green \u25C9  \u2014 at least one agent currently running/busy (truly executing)
+  //   bright yellow \u25CB \u2014 agents alive but all idle (swarm present, no active work)
+  //   dim \u25CB           \u2014 no non-terminated agents
+  const swarmExecuting = (swarm.executingAgents ?? 0) > 0;
+  const swarmHasAgents = swarm.activeAgents > 0;
+  const swarmInd = swarmExecuting
+    ? `${c.brightGreen}\u25C9${c.reset}`
+    : swarmHasAgents
+      ? `${c.brightYellow}\u25CB${c.reset}`
+      : `${c.dim}\u25CB${c.reset}`;
+  const agentsColor = swarmExecuting ? c.brightGreen : swarmHasAgents ? c.brightYellow : c.dim;
+
+  // Queen segment — separate from worker [N/50] because queens don't consume
+  // worker slots. Bright cyan when any queen is running/busy, dark yellow
+  // (renders as olive/brown on most terminals) when all queens are idle.
+  // Omitted entirely when no queens are present.
+  let queenSegment = '';
+  const queenCount = swarm.activeQueens ?? 0;
+  if (queenCount > 0) {
+    const queenExecuting = (swarm.executingQueens ?? 0) > 0;
+    const queenColor = queenExecuting ? c.brightCyan : c.yellow;
+    queenSegment = ` ${queenColor}♛${queenCount}${c.reset}`;
+  }
   const hooksColor = (hooks.categories > 0 || hooks.commands > 0) ? c.brightGreen : c.dim;
 
   // Advocate indicator (Row 23 KEEP-CONDITIONAL \u2014 already gated by indicator non-empty)
@@ -943,7 +1026,7 @@ function generateStatusline() {
   }
 
   lines.push(
-    `${c.brightYellow}\uD83E\uDD16 Swarm${c.reset}  ${swarmInd} [${agentsColor}${String(swarm.activeAgents).padStart(2)}${c.reset}/${c.brightWhite}${swarm.maxAgents}${c.reset}]${advocateIndicator}  ` +
+    `${c.brightYellow}\uD83E\uDD16 Swarm${c.reset}  ${swarmInd} [${agentsColor}${String(swarm.activeAgents).padStart(2)}${c.reset}/${c.brightWhite}${swarm.maxAgents}${c.reset}]${queenSegment}${advocateIndicator}  ` +
     `${c.brightBlue}\uD83E\uDE9D ${hooksColor}${hooksDisplay}${c.reset}`
   );
 
