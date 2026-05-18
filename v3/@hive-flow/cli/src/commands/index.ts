@@ -73,6 +73,8 @@ const commandLoaders: Record<string, CommandLoader> = {
   signal: () => import('./signal.js'),
   // §7 Agent-integration setup surface (Hive Flow MCP install across 7 agent CLIs)
   setup: () => import('./setup.js'),
+  // §6 Top-level statusline renderer (delegates to claude-code-renderer)
+  statusline: () => import('./statusline.js'),
 };
 
 // Cache for loaded commands
@@ -157,6 +159,7 @@ import { processCommand } from './process.js';
 import { guidanceCommand } from './guidance.js';
 import { applianceCommand } from './appliance.js';
 import { signalCommand } from './signal.js';
+import { statuslineCommand } from './statusline.js';
 
 // Pre-populate cache with core commands
 loadedCommands.set('init', initCommand);
@@ -194,6 +197,7 @@ loadedCommands.set('issues', issuesCommand);
 loadedCommands.set('update', updateCommand);
 loadedCommands.set('process', processCommand);
 loadedCommands.set('appliance', applianceCommand);
+loadedCommands.set('statusline', statuslineCommand);
 
 // =============================================================================
 // Exports (maintain backwards compatibility)
@@ -221,6 +225,7 @@ export { hiveMindCommand } from './hive-mind.js';
 export { guidanceCommand } from './guidance.js';
 export { applianceCommand } from './appliance.js';
 export { signalCommand } from './signal.js';
+export { statuslineCommand } from './statusline.js';
 
 // Lazy-loaded command re-exports (for backwards compatibility, but async-only)
 export async function getConfigCommand() { return loadCommand('config'); }
@@ -290,6 +295,7 @@ export const commands: Command[] = [
   updateCommand,
   processCommand,
   applianceCommand,
+  statuslineCommand,
 ];
 
 /**
@@ -307,6 +313,7 @@ export const commandsByCategory = {
     sessionCommand,
     mcpCommand,
     hooksCommand,
+    statuslineCommand,
   ],
   advanced: [
     neuralCommand,

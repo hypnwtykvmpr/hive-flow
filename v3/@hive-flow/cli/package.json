@@ -9,7 +9,8 @@
   "bin": {
     "cli": "./bin/cli.js",
     "hive-flow": "./bin/cli.js",
-    "hive-flow-mcp": "./bin/mcp-server.js"
+    "hive-flow-mcp": "./bin/mcp-server.js",
+    "hive-flow-statusline": "./bin/statusline.js"
   },
   "homepage": "https://github.com/hypnwtykvmpr/hive-flow#readme",
   "bugs": {

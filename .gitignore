@@ -216,6 +216,8 @@ v4-plans/*
 # Audit reports and investigations
 /.audit/
 /.audit/*
+/.dox/
+/.gemini/
 /v3/**/IMPROVEMENT_SUGGESTIONS.md
 /v3/**/improvement_suggestions.md
 

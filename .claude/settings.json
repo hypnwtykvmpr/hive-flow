@@ -531,7 +531,9 @@
   },
   "statusLine": {
     "type": "command",
-    "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/statusline.cjs"
+    "command": "node \"$CLAUDE_PROJECT_DIR\"/v3/@hive-flow/cli/bin/statusline.js",
+    "padding": 0,
+    "refreshInterval": 5
   },
   "permissions": {
     "allow": [

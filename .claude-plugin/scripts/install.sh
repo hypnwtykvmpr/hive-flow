@@ -117,10 +117,10 @@ echo ""
 # NO destructive flags: no --force-adopt, no --uninstall, no rm/rm -rf
 # (requirement 4 + critical safety)
 # ---------------------------------------------------------------------------
-info "Running: node \"${CLI_BIN}\" setup --auto --scope \"${SCOPE}\"${DRY_RUN_FLAG:+ $DRY_RUN_FLAG}"
+info "Running: node \"${CLI_BIN}\" setup --auto --scope \"${SCOPE}\" --features mcp,statusline${DRY_RUN_FLAG:+ $DRY_RUN_FLAG}"
 echo ""
 
-SETUP_OUTPUT="$(node "${CLI_BIN}" setup --auto --scope "${SCOPE}" ${DRY_RUN_FLAG:+"$DRY_RUN_FLAG"} 2>&1)" || {
+SETUP_OUTPUT="$(node "${CLI_BIN}" setup --auto --scope "${SCOPE}" --features mcp,statusline ${DRY_RUN_FLAG:+"$DRY_RUN_FLAG"} 2>&1)" || {
     EXIT_CODE=$?
     err "hive-flow setup exited with code ${EXIT_CODE}."
     echo ""
@@ -156,8 +156,28 @@ else
     fi
 fi
 
+# NOTE: setup.ts emits results as pretty-printed JSON (indent=2), so a single
+# result row spans multiple lines: `"feature": "statusline"` and
+# `"outcome": "conflict:manual-entry"` appear on adjacent lines within the same
+# `{ ... }` block. We use awk to track the current row's feature and only count
+# conflict:manual-entry outcomes that occur inside a statusline-feature block.
+STATUSLINE_CONFLICT_COUNT="$(printf "%s\n" "${SETUP_OUTPUT}" | awk '
+    /^[[:space:]]*\{[[:space:]]*$/ { feature = ""; next }
+    /"feature"[[:space:]]*:[[:space:]]*"statusline"/ { feature = "statusline"; next }
+    /"feature"[[:space:]]*:[[:space:]]*"mcp"/ { feature = "mcp"; next }
+    /"outcome"[[:space:]]*:[[:space:]]*"conflict:manual-entry"/ {
+        if (feature == "statusline") count++
+    }
+    END { print count + 0 }
+' || true)"
+if [ "${STATUSLINE_CONFLICT_COUNT}" -gt 0 ]; then
+    warning "  Existing user statusline was preserved. To adopt it intentionally:"
+    warning "  node \"${CLI_BIN}\" setup --auto --scope ${SCOPE} --agents claude-code --features statusline --force-adopt"
+fi
+
 echo ""
-info "To verify:      node \"${CLI_BIN}\" setup --verify --scope ${SCOPE}"
+info "To verify MCP:        node \"${CLI_BIN}\" setup --verify --scope ${SCOPE} --features mcp"
+info "To verify statusline: node \"${CLI_BIN}\" setup --verify --scope ${SCOPE} --agents claude-code --features statusline"
 info "To reconcile:   node \"${CLI_BIN}\" setup --auto --scope ${SCOPE}"
 info "To uninstall:   node \"${CLI_BIN}\" setup --uninstall --scope ${SCOPE}"
 echo ""

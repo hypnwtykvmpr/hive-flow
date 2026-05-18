@@ -150,3 +150,9 @@ export const ADAPTERS = {
 } satisfies Record<string, IntegrationAdapter>;
 
 export type AdapterId = keyof typeof ADAPTERS;
+
+// The Claude Code *statusline* adapter is intentionally NOT in the ADAPTERS
+// map above — that map is the MCP-style per-agent dispatch table. The
+// statusline adapter is dispatched per-feature from `commands/setup.ts`, so
+// we only need to re-export it here for setup.ts to consume.
+export { claudeCodeStatuslineAdapter } from './claude-code-statusline.js';

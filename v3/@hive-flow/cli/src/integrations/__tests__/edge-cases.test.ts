@@ -262,6 +262,9 @@ key = "value"
       dryRun: false,
       createConfig: false,
       forceAdopt: false,
+      // Wave 4: pin to mcp-only to keep byKey('agent') collapsing semantics.
+      // Default 'mcp,statusline' would add a second row that overwrites the MCP row.
+      features: 'mcp',
     } as any);
 
     expect(byKey(result.results, 'agent')['claude-code'].outcome).toBe('applied');

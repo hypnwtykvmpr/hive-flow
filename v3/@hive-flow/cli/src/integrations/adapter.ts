@@ -12,6 +12,10 @@ export interface AdapterCtx {
   homeDir: string;
   scope: 'project' | 'user';
   launcherPath: string;
+  /** Path to the on-disk statusline launcher shim (set by setup.ts when the
+   *  statusline feature is requested). Required by the Claude Code statusline
+   *  adapter; ignored by MCP adapters. */
+  statuslineLauncherPath?: string;
   dryRun: boolean;
   forceAdopt: boolean;
   createConfig: boolean;

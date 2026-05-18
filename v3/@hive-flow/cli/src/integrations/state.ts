@@ -18,6 +18,9 @@ export interface ManagedRecord {
   /** Second checksum for adapters that own a subtable (e.g., Codex's [mcp_servers.hive-flow.env]).
    *  Used by `isManaged` on the env subtable to detect user tampering separately from the main table. */
   envChecksum?: string;
+  /** Previous value replaced by Hive Flow. Used by statusline uninstall restore. */
+  previousValue?: unknown;
+  previousChecksum?: string;
   launcherPath: string;
   installedAt: string;
   version: 1;
@@ -50,7 +53,7 @@ export async function readState(p: string): Promise<IntegrationState> {
 
 export async function writeState(p: string, state: IntegrationState): Promise<void> {
   await mkdir(dirname(p), { recursive: true });
-  await atomicWrite(p, JSON.stringify(state, null, 2) + '\n');
+  await atomicWrite(p, JSON.stringify(state, null, 2) + '\n', { mode: 0o600, fsync: true });
 }
 
 export function checksumEntry(value: unknown): string {

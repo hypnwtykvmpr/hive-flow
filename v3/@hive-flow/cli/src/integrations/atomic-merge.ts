@@ -1,6 +1,7 @@
 // v3/@hive-flow/cli/src/integrations/atomic-merge.ts
 import { existsSync } from 'node:fs';
-import { mkdir, readFile, rename, writeFile, copyFile, open, realpath } from 'node:fs/promises';
+import * as fsp from 'node:fs/promises';
+import { mkdir, readFile, rename, copyFile, open, realpath } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { applyEdits, modify, parse, type JSONPath, type ParseError } from 'jsonc-parser';
 
@@ -48,28 +49,92 @@ export async function copyBackupOnce(filePath: string): Promise<string | undefin
   throw new Error(`Refusing to write ${filePath}: backup rotation exhausted (100 .bak slots used).`);
 }
 
-export async function atomicWrite(filePath: string, content: string): Promise<void> {
+export interface AtomicWriteOptions {
+  /** Mode for newly-created files. Existing files keep their existing mode. */
+  mode?: number;
+  /** fsync temp file and parent directory before returning. Use for config/state. */
+  fsync?: boolean;
+}
+
+export async function atomicWrite(
+  filePath: string,
+  content: string,
+  options: AtomicWriteOptions = {},
+): Promise<void> {
   await mkdir(dirname(filePath), { recursive: true });
-  // Preserve existing file mode (e.g., 0600 secrets); default to 0644 if file doesn't exist.
-  let mode: number | undefined;
+  // Preserve existing file mode (e.g., 0600 secrets); for new files, fall back to
+  // options.mode (default 0o600 — private by default for user-level agent configs).
+  let mode: number;
   try {
-    const { stat: fsStat } = await import('node:fs/promises');
-    const s = await fsStat(filePath);
+    const s = await fsp.stat(filePath);
     mode = s.mode & 0o777;
-  } catch { /* file may not exist yet */ }
+  } catch {
+    // File doesn't exist yet — use caller-supplied mode or secure default.
+    mode = options.mode ?? 0o600;
+  }
   const tmp = `${filePath}.tmp-${process.pid}-${Date.now()}`;
-  await writeFile(tmp, content, { encoding: 'utf8', mode: mode ?? 0o644 });
+  if (options.fsync) {
+    // fsync path: open a handle so we can flush via fh.sync() before rename.
+    // Used by state.ts writeState and any caller that needs durability.
+    const fh = await open(tmp, 'w', mode);
+    try {
+      try {
+        await fh.writeFile(content, 'utf8');
+        await fh.sync();
+      } finally {
+        await fh.close();
+      }
+    } catch (writeErr) {
+      // writeFile/sync (or close) failed before rename — unlink the partial tmp file
+      // immediately so the outer rename is never attempted on a corrupted source.
+      await fsp.unlink(tmp).catch(() => {});
+      throw writeErr;
+    }
+  } else {
+    // Non-fsync path: call through the fs/promises namespace so vitest spies
+    // on fsp.writeFile (see edge-cases.test.ts ENOSPC scenario) can intercept.
+    // The mode argument applies to a newly-created file; for existing files mode
+    // was already captured from stat above and is used identically here.
+    try {
+      await fsp.writeFile(tmp, content, { encoding: 'utf8', mode });
+    } catch (writeErr) {
+      await fsp.unlink(tmp).catch(() => {});
+      throw writeErr;
+    }
+  }
   try {
     await rename(tmp, filePath);
   } catch (e: any) {
     if (e.code === 'EXDEV') {
-      // Cross-device rename. Fallback to copy+unlink.
-      await copyFile(tmp, filePath);
-      const fsp = await import('node:fs/promises');
-      await fsp.unlink(tmp).catch(() => {});
+      // Cross-device rename. Fallback to copy+unlink. Wrap copy+fsync in try/finally
+      // so the tmp unlink always fires — including when copyFile throws (ENOSPC/EACCES).
+      try {
+        await copyFile(tmp, filePath);
+        if (options.fsync) {
+          const dir = await open(dirname(filePath), 'r');
+          try {
+            await dir.sync();
+          } finally {
+            await dir.close();
+          }
+        }
+      } finally {
+        await fsp.unlink(tmp).catch(() => {});
+      }
       return;
     }
+    // Rename failed for a non-EXDEV reason — clean up the stray tmp before throwing.
+    await fsp.unlink(tmp).catch(() => {});
     throw e;
+  }
+
+  if (options.fsync) {
+    const dir = await open(dirname(filePath), 'r');
+    try {
+      await dir.sync();
+    } finally {
+      await dir.close();
+    }
   }
 }
 
