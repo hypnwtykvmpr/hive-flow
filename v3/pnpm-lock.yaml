@@ -519,9 +519,6 @@ importers:
 
   plugins/code-intelligence:
     dependencies:
-      '@hive-flow/ruvector-upstream':
-        specifier: workspace:*
-        version: link:../ruvector-upstream
       zod:
         specifier: ^3.23.0
         version: 3.25.76
@@ -655,9 +652,6 @@ importers:
 
   plugins/legal-contracts:
     dependencies:
-      '@hive-flow/ruvector-upstream':
-        specifier: workspace:*
-        version: link:../ruvector-upstream
       zod:
         specifier: ^3.23.0
         version: 3.25.76
