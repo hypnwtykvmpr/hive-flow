@@ -102,7 +102,9 @@ lerna-debug.log*
 logs/
 mcp-server.log
 memory/backups/
+node_modules
 node_modules/
+**/node_modules
 npm-debug.log*
 out/
 output/

@@ -18,10 +18,10 @@ import { DEFAULT_QUEUE_DEPTH } from '@hive-flow/shared/core/config/defaults';
  * Output format:
  * ▊ Hive Flow V3 ● user  │  ⎇ branch  │  Opus 4.6
  * ─────────────────────────────────────────────────────
- * 🏗️  DDD Domains    [●●○○○]  2/5    ⚡ HNSW 150x
+ * 🏗️  DDD Domains    [●●○○○]  2/5    ⚡ HNSW
  * 🤖 Swarm  ◉ [ 5/15]  👥 2    🪝 10/17    🟢 CVE 3/3    💾 4MB    🧠  63%
  * 🔧 Architecture    ADRs ●71%  │  DDD ● 13%  │  Security ●CLEAN
- * 📊 AgentDB    Vectors ●3104⚡  │  Size 216KB  │  Tests ●6 (~24 cases)  │  MCP ●1/1
+ * 📊 AgentDB    Embeddings ●3104⚡  │  Size 216KB  │  Tests ●6 (~24 cases)  │  MCP ●1/1
  */
 export function generateStatuslineScript(options: InitOptions): string {
   const maxAgents = options.runtime.maxAgents;
@@ -63,13 +63,15 @@ const c = {
   dim: '\\x1b[2m',
   red: '\\x1b[0;31m',
   green: '\\x1b[0;32m',
-  yellow: '\\x1b[0;33m',
   blue: '\\x1b[0;34m',
   purple: '\\x1b[0;35m',
   cyan: '\\x1b[0;36m',
   brightRed: '\\x1b[1;31m',
   brightGreen: '\\x1b[1;32m',
-  brightYellow: '\\x1b[1;33m',
+  // Phase 12: single warning/intermediate carrier. Orange (256-color 38;5;208)
+  // mirrors the canonical claude-code-renderer palette warn slot. Legacy
+  // amber palette entries were removed in favor of this single owner.
+  warn: '\\x1b[38;5;208m',
   brightBlue: '\\x1b[1;34m',
   brightPurple: '\\x1b[1;35m',
   brightCyan: '\\x1b[1;36m',
@@ -203,38 +205,37 @@ function getModelName() {
   return 'Claude Code';
 }
 
-// Get learning stats from memory database (pure stat calls)
+// Get learning stats — REAL counts only.
+//
+// Phase 12: a memory.db file SIZE must never be converted into a pattern or
+// session count. Patterns come from the learning metrics file when it records
+// an exact count; otherwise patterns is 0. Sessions come from the metrics file
+// or the real count of session files on disk — never from a byte heuristic.
 function getLearningStats() {
-  const memoryPaths = [
-    path.join(CWD, '.swarm', 'memory.db'),
-    path.join(CWD, '.hive-flow', 'memory.db'),
-    path.join(CWD, '.claude', 'memory.db'),
-    path.join(CWD, 'data', 'memory.db'),
-    path.join(CWD, '.agentdb', 'memory.db'),
-  ];
+  const learningData = readJSON(path.join(CWD, '.hive-flow', 'metrics', 'learning.json'));
 
-  for (const dbPath of memoryPaths) {
-    const stat = safeStat(dbPath);
-    if (stat) {
-      const sizeKB = stat.size / 1024;
-      const patterns = Math.floor(sizeKB / 2);
-      return {
-        patterns,
-        sessions: Math.max(1, Math.floor(patterns / 10)),
-      };
+  let patterns = 0;
+  if (learningData) {
+    if (typeof learningData.patterns === 'number') {
+      patterns = Math.floor(learningData.patterns);
+    } else if (learningData.patterns && typeof learningData.patterns.total === 'number') {
+      patterns = Math.floor(learningData.patterns.total);
     }
   }
 
-  // Check session files count
   let sessions = 0;
-  try {
-    const sessDir = path.join(CWD, '.claude', 'sessions');
-    if (fs.existsSync(sessDir)) {
-      sessions = fs.readdirSync(sessDir).filter(f => f.endsWith('.json')).length;
-    }
-  } catch { /* ignore */ }
+  if (learningData && learningData.sessions && typeof learningData.sessions.total === 'number') {
+    sessions = Math.floor(learningData.sessions.total);
+  } else {
+    try {
+      const sessDir = path.join(CWD, '.claude', 'sessions');
+      if (fs.existsSync(sessDir)) {
+        sessions = fs.readdirSync(sessDir).filter(f => f.endsWith('.json')).length;
+      }
+    } catch { /* ignore */ }
+  }
 
-  return { patterns: 0, sessions };
+  return { patterns: Math.max(0, patterns), sessions: Math.max(0, sessions) };
 }
 
 // V3 progress from metrics files (pure file reads)
@@ -242,18 +243,12 @@ function getV3Progress() {
   const learning = getLearningStats();
   const totalDomains = 5;
 
+  // Phase 12: DDD progress comes only from the real ddd-progress.json metric.
+  // Never estimate domain completion from a pattern count — that fabricates a
+  // domain-completion claim with no trusted source.
   const dddData = readJSON(path.join(CWD, '.hive-flow', 'metrics', 'ddd-progress.json'));
-  let dddProgress = dddData ? (dddData.progress || 0) : 0;
-  let domainsCompleted = Math.min(5, Math.floor(dddProgress / 20));
-
-  if (dddProgress === 0 && learning.patterns > 0) {
-    if (learning.patterns >= 500) domainsCompleted = 5;
-    else if (learning.patterns >= 200) domainsCompleted = 4;
-    else if (learning.patterns >= 100) domainsCompleted = 3;
-    else if (learning.patterns >= 50) domainsCompleted = 2;
-    else if (learning.patterns >= 10) domainsCompleted = 1;
-    dddProgress = Math.floor((domainsCompleted / totalDomains) * 100);
-  }
+  const dddProgress = dddData ? (dddData.progress || 0) : 0;
+  const domainsCompleted = Math.min(5, Math.floor(dddProgress / 20));
 
   return {
     domainsCompleted, totalDomains, dddProgress,
@@ -359,39 +354,28 @@ function getSwarmStatus() {
 // System metrics (uses process.memoryUsage() — no shell spawn)
 function getSystemMetrics() {
   const memoryMB = Math.floor(process.memoryUsage().heapUsed / 1024 / 1024);
-  const learning = getLearningStats();
-  const agentdb = getAgentDBStats();
 
   // Intelligence from learning.json
   const learningData = readJSON(path.join(CWD, '.hive-flow', 'metrics', 'learning.json'));
   let intelligencePct = 0;
   let contextPct = 0;
 
+  // Phase 12: intelligence is a REAL score from learning.json only. Never
+  // synthesize it from pattern/vector counts or from directory-existence
+  // "maturity" heuristics — those fabricate a percentage with no trusted
+  // source. When the metric is absent, intelligencePct stays 0 (omitted).
   if (learningData && learningData.intelligence && learningData.intelligence.score !== undefined) {
     intelligencePct = Math.min(100, Math.floor(learningData.intelligence.score));
-  } else {
-    const fromPatterns = learning.patterns > 0 ? Math.min(100, Math.floor(learning.patterns / 10)) : 0;
-    const fromVectors = agentdb.vectorCount > 0 ? Math.min(100, Math.floor(agentdb.vectorCount / 100)) : 0;
-    intelligencePct = Math.max(fromPatterns, fromVectors);
   }
 
-  // Maturity fallback (pure fs checks, no git exec)
-  if (intelligencePct === 0) {
-    let score = 0;
-    if (fs.existsSync(path.join(CWD, '.claude'))) score += 15;
-    const srcDirs = ['src', 'lib', 'app', 'packages', 'v3'];
-    for (const d of srcDirs) { if (fs.existsSync(path.join(CWD, d))) { score += 15; break; } }
-    const testDirs = ['tests', 'test', '__tests__', 'spec'];
-    for (const d of testDirs) { if (fs.existsSync(path.join(CWD, d))) { score += 10; break; } }
-    const cfgFiles = ['package.json', 'tsconfig.json', 'pyproject.toml', 'Cargo.toml', 'go.mod'];
-    for (const f of cfgFiles) { if (fs.existsSync(path.join(CWD, f))) { score += 5; break; } }
-    intelligencePct = Math.min(100, score);
-  }
-
-  if (learningData && learningData.sessions && learningData.sessions.total !== undefined) {
-    contextPct = Math.min(100, learningData.sessions.total * 5);
-  } else {
-    contextPct = Math.min(100, Math.floor(learning.sessions * 5));
+  // Phase 12: context% is a REAL metric from learning.json only. Never derive
+  // it from a session count heuristic.
+  if (
+    learningData &&
+    learningData.context &&
+    typeof learningData.context.usedPct === 'number'
+  ) {
+    contextPct = Math.min(100, Math.floor(learningData.context.usedPct));
   }
 
   // Sub-agents from file metrics (no ps aux)
@@ -411,7 +395,7 @@ function getADRStatus() {
     const checks = complianceData.checks || {};
     const total = Object.keys(checks).length;
     const impl = Object.values(checks).filter(c => c.compliant).length;
-    return { count: total, implemented: impl, compliance: complianceData.compliance || 0 };
+    return { count: total, implemented: impl, compliance: complianceData.compliance || 0, source: 'compliance-data' };
   }
 
   // Fallback: just count ADR files (don't read them)
@@ -427,14 +411,15 @@ function getADRStatus() {
         const files = fs.readdirSync(adrPath).filter(f =>
           f.endsWith('.md') && (f.startsWith('ADR-') || f.startsWith('adr-') || /^\\d{4}-/.test(f))
         );
-        const implemented = Math.floor(files.length * 0.7);
-        const compliance = files.length > 0 ? Math.floor((implemented / files.length) * 100) : 0;
-        return { count: files.length, implemented, compliance };
+        // Phase 12: no trusted compliance data — report file count only.
+        // Never synthesize an "implemented" count or compliance percentage
+        // from the file count. The renderer shows the count, not a fake %.
+        return { count: files.length, implemented: 0, compliance: 0, source: 'file-count-only' };
       }
     } catch { /* ignore */ }
   }
 
-  return { count: 0, implemented: 0, compliance: 0 };
+  return { count: 0, implemented: 0, compliance: 0, source: 'none' };
 }
 
 // Hooks status (shared settings cache)
@@ -461,13 +446,34 @@ function getHooksStatus() {
   return { enabled, total };
 }
 
-// AgentDB stats (pure stat calls)
+// AgentDB stats (pure stat calls + one trusted metrics read)
 function getAgentDBStats() {
   let vectorCount = 0;
   let dbSizeKB = 0;
   let namespaces = 0;
   let hasHnsw = false;
 
+  // Phase 12: the vector/embedding count is a REAL metric, never synthesized
+  // from a database or index file size. Read the exact count from a trusted
+  // memory stats file when present; otherwise leave it 0 so the renderer omits
+  // the count rather than fabricating one from bytes-on-disk.
+  const statsPaths = [
+    path.join(CWD, '.hive-flow', 'memory', 'stats.json'),
+    path.join(CWD, '.swarm', 'memory', 'stats.json'),
+  ];
+  for (const sp of statsPaths) {
+    const stats = readJSON(sp);
+    if (stats) {
+      const exact = (stats.embeddings && typeof stats.embeddings.count === 'number')
+        ? stats.embeddings.count
+        : (typeof stats.vectorCount === 'number' ? stats.vectorCount : undefined);
+      if (typeof exact === 'number' && exact >= 0) vectorCount = Math.floor(exact);
+      break;
+    }
+  }
+
+  // dbSizeKB and namespaces are real filesystem facts (bytes on disk, db file
+  // count) — kept. Only the vector COUNT must not be derived from size.
   const dbFiles = [
     path.join(CWD, '.swarm', 'memory.db'),
     path.join(CWD, '.hive-flow', 'memory.db'),
@@ -479,13 +485,12 @@ function getAgentDBStats() {
     const stat = safeStat(f);
     if (stat) {
       dbSizeKB = stat.size / 1024;
-      vectorCount = Math.floor(dbSizeKB / 2);
       namespaces = 1;
       break;
     }
   }
 
-  if (vectorCount === 0) {
+  if (namespaces === 0) {
     const dbDirs = [
       path.join(CWD, '.hive-flow', 'agentdb'),
       path.join(CWD, '.swarm', 'agentdb'),
@@ -500,13 +505,14 @@ function getAgentDBStats() {
             const stat = safeStat(path.join(dir, file));
             if (stat && stat.isFile()) dbSizeKB += stat.size / 1024;
           }
-          vectorCount = Math.floor(dbSizeKB / 2);
           break;
         }
       } catch { /* ignore */ }
     }
   }
 
+  // hasHnsw is a real fact: the index file physically exists. No size-derived
+  // count is taken from it.
   const hnswPaths = [
     path.join(CWD, '.swarm', 'hnsw.index'),
     path.join(CWD, '.hive-flow', 'hnsw.index'),
@@ -515,7 +521,6 @@ function getAgentDBStats() {
     const stat = safeStat(p);
     if (stat) {
       hasHnsw = true;
-      vectorCount = Math.max(vectorCount, Math.floor(stat.size / 512));
       break;
     }
   }
@@ -642,7 +647,7 @@ function generateStatusline() {
     if (changes > 0) {
       let ind = '';
       if (git.staged > 0) ind += c.brightGreen + '+' + git.staged + c.reset;
-      if (git.modified > 0) ind += c.brightYellow + '~' + git.modified + c.reset;
+      if (git.modified > 0) ind += c.warn + '~' + git.modified + c.reset;
       if (git.untracked > 0) ind += c.dim + '?' + git.untracked + c.reset;
       header += ' ' + ind;
     }
@@ -655,12 +660,12 @@ function generateStatusline() {
   if (duration) header += '  ' + c.dim + '\\u2502' + c.reset + '  ' + c.cyan + '\\u23F1 ' + duration + c.reset;
   // Show context usage from Claude Code stdin if available
   if (ctxInfo && ctxInfo.usedPct > 0) {
-    const ctxColor = ctxInfo.usedPct >= 90 ? c.brightRed : ctxInfo.usedPct >= 70 ? c.brightYellow : c.brightGreen;
+    const ctxColor = ctxInfo.usedPct >= 90 ? c.brightRed : ctxInfo.usedPct >= 70 ? c.warn : c.brightGreen;
     header += '  ' + c.dim + '\\u2502' + c.reset + '  ' + ctxColor + '\\u25CF ' + ctxInfo.usedPct + '% ctx' + c.reset;
   }
   // Show cost from Claude Code stdin if available
   if (costInfo && costInfo.costUsd > 0) {
-    header += '  ' + c.dim + '\\u2502' + c.reset + '  ' + c.brightYellow + '$' + costInfo.costUsd.toFixed(2) + c.reset;
+    header += '  ' + c.dim + '\\u2502' + c.reset + '  ' + c.warn + '$' + costInfo.costUsd.toFixed(2) + c.reset;
   }
   lines.push(header);
 
@@ -668,16 +673,18 @@ function generateStatusline() {
   lines.push(c.dim + '\\u2500'.repeat(53) + c.reset);
 
   // Line 1: DDD Domains
-  const domainsColor = progress.domainsCompleted >= 3 ? c.brightGreen : progress.domainsCompleted > 0 ? c.yellow : c.red;
-  let perfIndicator;
+  const domainsColor = progress.domainsCompleted >= 3 ? c.brightGreen : progress.domainsCompleted > 0 ? c.warn : c.red;
+  // Phase 12: show "HNSW" only as a presence indicator when the index exists
+  // and a real vector count is known — never a fabricated speedup multiplier
+  // (the old 10x/150x/12500x claims were synthesized from a byte-derived count
+  // and are removed). When no trusted perf metric exists, omit the indicator
+  // rather than print an aspirational "target" string.
+  let perfIndicator = '';
   if (agentdb.hasHnsw && agentdb.vectorCount > 0) {
-    const speedup = agentdb.vectorCount > 10000 ? '12500x' : agentdb.vectorCount > 1000 ? '150x' : '10x';
-    perfIndicator = c.brightGreen + '\\u26A1 HNSW ' + speedup + c.reset;
+    perfIndicator = c.brightGreen + '\\u26A1 HNSW' + c.reset;
   } else if (progress.patternsLearned > 0) {
     const pk = progress.patternsLearned >= 1000 ? (progress.patternsLearned / 1000).toFixed(1) + 'k' : String(progress.patternsLearned);
-    perfIndicator = c.brightYellow + '\\uD83D\\uDCDA ' + pk + ' patterns' + c.reset;
-  } else {
-    perfIndicator = c.dim + '\\u26A1 target: 150x-12500x' + c.reset;
+    perfIndicator = c.warn + '\\uD83D\\uDCDA ' + pk + ' patterns' + c.reset;
   }
   lines.push(
     c.brightCyan + '\\uD83C\\uDFD7\\uFE0F  DDD Domains' + c.reset + '    ' + progressBar(progress.domainsCompleted, progress.totalDomains) + '  ' +
@@ -694,9 +701,9 @@ function generateStatusline() {
   const swarmInd = swarmExecuting
     ? c.brightGreen + '\\u25C9' + c.reset
     : swarmHasAgents
-      ? c.brightYellow + '\\u25CB' + c.reset
+      ? c.warn + '\\u25CB' + c.reset
       : c.dim + '\\u25CB' + c.reset;
-  const agentsColor = swarmExecuting ? c.brightGreen : swarmHasAgents ? c.brightYellow : c.dim;
+  const agentsColor = swarmExecuting ? c.brightGreen : swarmHasAgents ? c.warn : c.dim;
 
   // Queen segment — separate from worker [N/50] because queens don't consume
   // worker slots. Bright cyan when any queen is running/busy, dark yellow
@@ -705,16 +712,16 @@ function generateStatusline() {
   const queenCount = swarm.activeQueens || 0;
   if (queenCount > 0) {
     const queenExecuting = (swarm.executingQueens || 0) > 0;
-    const queenColor = queenExecuting ? c.brightCyan : c.yellow;
+    const queenColor = queenExecuting ? c.brightCyan : c.warn;
     queenSegment = ' ' + queenColor + '\\u265B' + queenCount + c.reset;
   }
   const secIcon = security.status === 'CLEAN' ? '\\uD83D\\uDFE2' : security.status === 'IN_PROGRESS' ? '\\uD83D\\uDFE1' : '\\uD83D\\uDD34';
-  const secColor = security.status === 'CLEAN' ? c.brightGreen : security.status === 'IN_PROGRESS' ? c.brightYellow : c.brightRed;
+  const secColor = security.status === 'CLEAN' ? c.brightGreen : security.status === 'IN_PROGRESS' ? c.warn : c.brightRed;
   const hooksColor = hooks.enabled > 0 ? c.brightGreen : c.dim;
-  const intellColor = system.intelligencePct >= 80 ? c.brightGreen : system.intelligencePct >= 40 ? c.brightYellow : c.dim;
+  const intellColor = system.intelligencePct >= 80 ? c.brightGreen : system.intelligencePct >= 40 ? c.warn : c.dim;
 
   lines.push(
-    c.brightYellow + '\\uD83E\\uDD16 Swarm' + c.reset + '  ' + swarmInd + ' [' + agentsColor + String(swarm.activeAgents).padStart(2) + c.reset + '/' + c.brightWhite + swarm.maxAgents + c.reset + ']' + queenSegment + '  ' +
+    c.warn + '\\uD83E\\uDD16 Swarm' + c.reset + '  ' + swarmInd + ' [' + agentsColor + String(swarm.activeAgents).padStart(2) + c.reset + '/' + c.brightWhite + swarm.maxAgents + c.reset + ']' + queenSegment + '  ' +
     c.brightPurple + '\\uD83D\\uDC65 ' + system.subAgents + c.reset + '    ' +
     c.brightBlue + '\\uD83E\\uDE9D ' + hooksColor + hooks.enabled + c.reset + '/' + c.brightWhite + hooks.total + c.reset + '    ' +
     secIcon + ' ' + secColor + 'CVE ' + security.cvesFixed + c.reset + '/' + c.brightWhite + security.totalCves + c.reset + '    ' +
@@ -723,9 +730,14 @@ function generateStatusline() {
   );
 
   // Line 3: Architecture
-  const dddColor = progress.dddProgress >= 50 ? c.brightGreen : progress.dddProgress > 0 ? c.yellow : c.red;
-  const adrColor = adrs.count > 0 ? (adrs.implemented === adrs.count ? c.brightGreen : c.yellow) : c.dim;
-  const adrDisplay = adrs.compliance > 0 ? adrColor + '\\u25CF' + adrs.compliance + '%' + c.reset : adrColor + '\\u25CF' + adrs.implemented + '/' + adrs.count + c.reset;
+  const dddColor = progress.dddProgress >= 50 ? c.brightGreen : progress.dddProgress > 0 ? c.warn : c.red;
+  const adrColor = adrs.count > 0 ? (adrs.implemented === adrs.count && adrs.source === 'compliance-data' ? c.brightGreen : c.warn) : c.dim;
+  // Phase 12: only show a compliance % when it comes from trusted compliance
+  // data. With file-count-only (no trusted metric) show the count, never a
+  // synthesized percentage or implemented/total ratio.
+  const adrDisplay = adrs.source === 'file-count-only'
+    ? adrColor + '\\u25CF' + adrs.count + c.reset
+    : (adrs.compliance > 0 ? adrColor + '\\u25CF' + adrs.compliance + '%' + c.reset : adrColor + '\\u25CF' + adrs.implemented + '/' + adrs.count + c.reset);
 
   lines.push(
     c.brightPurple + '\\uD83D\\uDD27 Architecture' + c.reset + '    ' +
@@ -737,13 +749,19 @@ function generateStatusline() {
   // Line 4: AgentDB, Tests, Integration
   const hnswInd = agentdb.hasHnsw ? c.brightGreen + '\\u26A1' + c.reset : '';
   const sizeDisp = agentdb.dbSizeKB >= 1024 ? (agentdb.dbSizeKB / 1024).toFixed(1) + 'MB' : agentdb.dbSizeKB + 'KB';
-  const vectorColor = agentdb.vectorCount > 0 ? c.brightGreen : c.dim;
   const testColor = tests.testFiles > 0 ? c.brightGreen : c.dim;
+  // Phase 12: the embeddings segment renders ONLY when backed by an exact
+  // count from memory/stats.json (agentdb.vectorCount > 0). The legacy
+  // byte-derived embedding label was removed; when no real count exists the
+  // segment is omitted rather than printing a fabricated number.
+  const embStr = agentdb.vectorCount > 0
+    ? c.cyan + 'Embeddings' + c.reset + ' ' + c.brightGreen + '\\u25CF' + agentdb.vectorCount + hnswInd + c.reset + '  ' + c.dim + '\\u2502' + c.reset + '  '
+    : '';
 
   let integStr = '';
   if (integration.mcpServers.total > 0) {
     const mcpCol = integration.mcpServers.enabled === integration.mcpServers.total ? c.brightGreen :
-                   integration.mcpServers.enabled > 0 ? c.brightYellow : c.red;
+                   integration.mcpServers.enabled > 0 ? c.warn : c.red;
     integStr += c.cyan + 'MCP' + c.reset + ' ' + mcpCol + '\\u25CF' + integration.mcpServers.enabled + '/' + integration.mcpServers.total + c.reset;
   }
   if (integration.hasDatabase) integStr += (integStr ? '  ' : '') + c.brightGreen + '\\u25C6' + c.reset + 'DB';
@@ -752,7 +770,7 @@ function generateStatusline() {
 
   lines.push(
     c.brightCyan + '\\uD83D\\uDCCA AgentDB' + c.reset + '    ' +
-    c.cyan + 'Vectors' + c.reset + ' ' + vectorColor + '\\u25CF' + agentdb.vectorCount + hnswInd + c.reset + '  ' + c.dim + '\\u2502' + c.reset + '  ' +
+    embStr +
     c.cyan + 'Size' + c.reset + ' ' + c.brightWhite + sizeDisp + c.reset + '  ' + c.dim + '\\u2502' + c.reset + '  ' +
     c.cyan + 'Tests' + c.reset + ' ' + testColor + '\\u25CF' + tests.testFiles + c.reset + ' ' + c.dim + '(~' + tests.testCases + ' cases)' + c.reset + '  ' + c.dim + '\\u2502' + c.reset + '  ' +
     integStr

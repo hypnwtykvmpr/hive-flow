@@ -3,7 +3,7 @@
 // §12.3 Edge cases — paste-ready integration tests.
 // §12.4 Demoted scaffolds at the bottom (it.skip).
 
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   chmodSync,
   existsSync,

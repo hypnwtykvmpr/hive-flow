@@ -75,6 +75,8 @@ const commandLoaders: Record<string, CommandLoader> = {
   setup: () => import('./setup.js'),
   // §6 Top-level statusline renderer (delegates to claude-code-renderer)
   statusline: () => import('./statusline.js'),
+  // Phase 9 top-level tests command (record + import-junit)
+  tests: () => import('./tests.js'),
 };
 
 // Cache for loaded commands
@@ -160,6 +162,7 @@ import { guidanceCommand } from './guidance.js';
 import { applianceCommand } from './appliance.js';
 import { signalCommand } from './signal.js';
 import { statuslineCommand } from './statusline.js';
+import { testsCommand } from './tests.js';
 
 // Pre-populate cache with core commands
 loadedCommands.set('init', initCommand);
@@ -198,6 +201,7 @@ loadedCommands.set('update', updateCommand);
 loadedCommands.set('process', processCommand);
 loadedCommands.set('appliance', applianceCommand);
 loadedCommands.set('statusline', statuslineCommand);
+loadedCommands.set('tests', testsCommand);
 
 // =============================================================================
 // Exports (maintain backwards compatibility)
@@ -226,6 +230,7 @@ export { guidanceCommand } from './guidance.js';
 export { applianceCommand } from './appliance.js';
 export { signalCommand } from './signal.js';
 export { statuslineCommand } from './statusline.js';
+export { testsCommand } from './tests.js';
 
 // Lazy-loaded command re-exports (for backwards compatibility, but async-only)
 export async function getConfigCommand() { return loadCommand('config'); }
@@ -296,6 +301,7 @@ export const commands: Command[] = [
   processCommand,
   applianceCommand,
   statuslineCommand,
+  testsCommand,
 ];
 
 /**
@@ -314,6 +320,7 @@ export const commandsByCategory = {
     mcpCommand,
     hooksCommand,
     statuslineCommand,
+    testsCommand,
   ],
   advanced: [
     neuralCommand,

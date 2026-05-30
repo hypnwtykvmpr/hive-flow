@@ -2,16 +2,23 @@
 //
 // §12.4 Hook-command delegation, warm-cache latency, and launcher regression.
 //
-// Three guarantees are pinned here:
+// Four guarantees are pinned here:
 //   1. `hive-flow hooks statusline` and `hive-flow statusline --agent claude-code`
 //      delegate to the same canonical renderer.
 //   2. The renderer satisfies the warm-cache latency budget after one warm-up.
 //   3. The stable statusline launcher shim execs `bin/statusline.js` directly
 //      and never regresses to the heavy CLI path (`bin/cli.js`, `hive-flow
 //      statusline`, or `npx ...`).
+//   4. `hive-flow hooks statusline` persists the last-render mirror via
+//      `writeLastRender` — same wrapper contract as `commands/statusline.ts`
+//      and `bin/statusline.js`. Codex Phase 7 Finding parity assertion: the
+//      hooks subcommand must update the current pointer (and per-project
+//      global mirror) after rendering, so cross-CLI consumers reading the
+//      pointer see the latest render regardless of which entrypoint produced
+//      it.
 //
 import { describe, expect, it } from 'vitest';
-import { existsSync, mkdtempSync, readFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { spawnSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
@@ -70,6 +77,69 @@ describe('hooks statusline delegation (§12.4)', () => {
     // either the hooks subcommand or the canonical command after Wave 2
     // consolidation removed the inline collectors.
     expect(hook.stdout).not.toContain('DDD Domains');
+  });
+
+  // Codex Phase 7 Finding parity: the hooks subcommand must persist the
+  // last-render mirror via `writeLastRender`, exactly like the top-level
+  // `commands/statusline.ts` wrapper and `bin/statusline.js`. Cross-CLI
+  // consumers rely on the current pointer being updated by EVERY entrypoint
+  // — if the hooks path skipped persistence, a hook-driven render would
+  // silently leave the pointer pointing at a stale earlier render.
+  it.skipIf(!builtDist)('hooks statusline writes the current-pointer mirror after rendering', async () => {
+    const projectCwd = makeFixture();
+    const hfHome = mkdtempSync(join(tmpdir(), 'hf-hooks-home-'));
+    try {
+      const sample = JSON.stringify({
+        workspace: { current_dir: projectCwd, project_dir: projectCwd },
+        model: { id: 'claude-opus-4-7[1m]', display_name: 'Opus 4.7' },
+        context_window: { used_percentage: 12 },
+      });
+
+      const hook = spawnSync(
+        process.execPath,
+        [CLI_PATH, 'hooks', 'statusline'],
+        {
+          cwd: projectCwd,
+          input: sample,
+          encoding: 'utf8',
+          timeout: 10_000,
+          env: { ...process.env, HIVE_FLOW_HOME: hfHome },
+        },
+      );
+
+      expect(hook.status).toBe(0);
+
+      // The current pointer is the cross-CLI handoff file: a single global
+      // pointer at `${HIVE_FLOW_HOME}/.hive-flow/statusline/current.json` that
+      // identifies the most-recently-rendered project so non-Claude consumers
+      // can find the latest render without knowing `projectKey` ahead of time.
+      const currentPointer = join(hfHome, '.hive-flow', 'statusline', 'current.json');
+      expect(existsSync(currentPointer)).toBe(true);
+
+      // Validate the pointer points at a real per-project last-render.json
+      // that also exists on disk. We re-derive the canonical mirror path
+      // (rooted under the redirected HIVE_FLOW_HOME) rather than trusting
+      // the pointer's `lastRender` field blindly. Matches the existing
+      // pattern in `last-render.test.ts` for parsing this same pointer
+      // file.
+      const pointer = JSON.parse(readFileSync(currentPointer, 'utf8'));
+      expect(pointer.version).toBe(1);
+      expect(typeof pointer.projectRoot).toBe('string');
+      // 16-char lowercase hex (matches Wave 3 `resolveProjectScope` shape).
+      expect(pointer.projectKey).toMatch(/^[0-9a-f]{16}$/);
+      const expectedLastRender = join(
+        hfHome,
+        '.hive-flow',
+        'statusline',
+        'projects',
+        pointer.projectKey,
+        'last-render.json',
+      );
+      expect(pointer.lastRender).toBe(expectedLastRender);
+      expect(existsSync(expectedLastRender)).toBe(true);
+    } finally {
+      rmSync(hfHome, { recursive: true, force: true });
+    }
   });
 
   it('renders within the warm-cache latency budget', async () => {

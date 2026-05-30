@@ -13,6 +13,12 @@ import { fileURLToPath } from 'node:url';
 import type { MCPTool } from './types.js';
 import { sanitizePathId } from '@hive-flow/shared';
 import { DEFAULT_MAX_AGENTS, DEFAULT_QUEUE_DEPTH } from '@hive-flow/shared/core/config/defaults';
+import {
+  recordMcpAgentSpawn,
+  recordMcpCallStart,
+  recordMcpCallComplete,
+  recordMcpCallFailed,
+} from './scoreboard-instrumentation.js';
 
 // Storage paths
 const STORAGE_DIR = '.hive-flow';
@@ -617,6 +623,12 @@ export const agentTools: MCPTool[] = [
       // Sub-agents start at the parent's enforcement level, not NORMAL.
       propagateEnforcementToSubAgent(agentId);
 
+      // Phase 11.1: best-effort, NON-BLOCKING agent-spawn presence event.
+      // Fire-and-forget: the recorders must never block or perturb the spawn
+      // hot path (awaiting here reorders concurrent-spawn interleaving). The
+      // wrapper swallows all errors internally, so this can never reject.
+      void recordMcpAgentSpawn({ agentId, provider: agent.provider, model: agent.model });
+
       // Include Agent Booster routing info if applicable
       const response: Record<string, unknown> = {
         success: true,
@@ -1064,7 +1076,7 @@ export const agentTools: MCPTool[] = [
           ? agent.config._spawnToken
           : undefined;
         saveAgentStore(store);
-        return { error: null, agentToken };
+        return { error: null, agentToken, provider: agent.provider, model: agent.model };
       });
 
       if (validationResult.error) {
@@ -1109,15 +1121,26 @@ export const agentTools: MCPTool[] = [
 
       child.unref();
 
-      // Write tracking metadata
+      // Write tracking metadata. `provider` is persisted so agent_task_result
+      // can emit a terminal call event correlated by the same taskId without
+      // re-reading the agent store (which may have changed by poll time).
       const trackingPath = join(tasksDir, `${taskId}.json`);
       writeFileSync(trackingPath, JSON.stringify({
         status: 'running',
         taskId,
         agentId,
+        provider: validationResult.provider,
         startedAt: new Date().toISOString(),
         pid: child.pid,
       }, null, 2), 'utf-8');
+
+      // Phase 11.1: best-effort, non-blocking call-start (eventId = taskId).
+      void recordMcpCallStart({
+        taskId,
+        agentId,
+        provider: validationResult.provider,
+        model: validationResult.model,
+      });
 
       return { success: true, taskId, agentId, status: 'running', pid: child.pid };
     },
@@ -1167,7 +1190,7 @@ export const agentTools: MCPTool[] = [
         return { success: false, error: `Task not found: ${taskId}` };
       }
 
-      let tracking: { status: string; taskId: string; agentId: string; startedAt: string; pid?: number };
+      let tracking: { status: string; taskId: string; agentId: string; startedAt: string; pid?: number; provider?: string };
       try {
         tracking = JSON.parse(readFileSync(trackingPath, 'utf-8'));
       } catch {
@@ -1232,6 +1255,15 @@ export const agentTools: MCPTool[] = [
           }
         } catch { /* best-effort hive record sync */ }
 
+        // Phase 11.1: best-effort, non-blocking terminal call-complete
+        // (eventId = taskId). Provider is captured by value here, so the
+        // tracking-file unlink below cannot race it.
+        void recordMcpCallComplete({
+          taskId,
+          agentId: tracking.agentId,
+          provider: tracking.provider,
+        });
+
         // W3: Delete task + tracking files after successfully reading completed result
         // Keep .result.json alive — agent_terminate and hive-cleanup may still reference it
         try { unlinkSync(join(tasksDir, `${taskId}.task`)); } catch { /* ignore */ }
@@ -1282,6 +1314,13 @@ export const agentTools: MCPTool[] = [
               }
             }
           } catch { /* best-effort hive record sync */ }
+
+          // Phase 11.1: best-effort, non-blocking terminal call-failed.
+          void recordMcpCallFailed({
+            taskId,
+            agentId: tracking.agentId,
+            provider: tracking.provider,
+          });
 
           return { success: false, taskId, agentId: tracking.agentId, status: 'failed', error: 'Process exited without producing a result' };
         }

@@ -33,14 +33,28 @@ import {
 } from '../integrations/launcher.js';
 import { statePathFor } from '../integrations/state.js';
 import { ADAPTERS, type AdapterId, claudeCodeStatuslineAdapter } from '../integrations/adapters/index.js';
+import { loadAdapter, isKnownTarget } from '../integrations/adapter-registry.js';
+import { diagnoseConnectors } from '../integrations/diagnose.js';
 import { DEFAULT_MAX_AGENTS } from '@hive-flow/shared/core/config/defaults';
+
+async function importConnectorAdapters(): Promise<void> {
+  await Promise.all([
+    import('../integrations/adapters/claude-code-connector.js'),
+    import('../integrations/adapters/codex-connector.js'),
+    import('../integrations/adapters/gemini-connector.js'),
+    import('../integrations/adapters/forgecode-connector.js'),
+    import('../integrations/adapters/cursor-cli-connector.js'),
+    import('../integrations/adapters/qwen-connector.js'),
+    import('../integrations/adapters/opencode-connector.js'),
+  ]);
+}
 
 // ---------------------------------------------------------------------------
 // Feature plumbing (§10 — Phase 7)
 // ---------------------------------------------------------------------------
 
 /** Setup features that can be selected via --features. */
-type SetupFeature = 'mcp' | 'statusline';
+type SetupFeature = 'mcp' | 'statusline' | 'connector';
 
 /**
  * Parse the `--features` flag into a Set of valid features.
@@ -53,7 +67,7 @@ function parseFeatures(raw: unknown): Set<SetupFeature> {
   const value = String(raw ?? 'mcp,statusline');
   const out = new Set<SetupFeature>();
   for (const part of value.split(',').map((s) => s.trim()).filter(Boolean)) {
-    if (part === 'mcp' || part === 'statusline') out.add(part);
+    if (part === 'mcp' || part === 'statusline' || part === 'connector') out.add(part);
   }
   if (out.size === 0) out.add('mcp');
   return out;
@@ -294,7 +308,7 @@ export const setupCommand: Command = {
     { name: 'detect', description: 'Detect installed agent CLIs without modifying anything', type: 'boolean', default: false },
     { name: 'scope', description: 'Config scope: user or project', type: 'string', default: 'user' },
     { name: 'agents', description: 'Agent IDs (comma-separated) or "detected"', type: 'string', default: 'detected' },
-    { name: 'features', description: 'Integration features: mcp,statusline', type: 'string', default: 'mcp,statusline' },
+    { name: 'features', description: 'Integration features: mcp,statusline,connector', type: 'string', default: 'mcp,statusline' },
     { name: 'create-config', description: 'Create missing config files (opt-in)', type: 'boolean', default: false },
     { name: 'force-adopt', description: 'Force-adopt existing entries not owned by Hive Flow', type: 'boolean', default: false },
   ],
@@ -337,6 +351,8 @@ export const setupCommand: Command = {
     { command: 'hive-flow setup --auto --features mcp', description: 'Apply only the MCP integration (legacy behavior)' },
     { command: 'hive-flow setup --verify --features statusline', description: 'Verify Claude Code statusline state' },
     { command: 'hive-flow setup --uninstall --features statusline', description: 'Remove only the Claude Code statusline integration' },
+    { command: 'hive-flow setup --dry-run --features connector --agents codex', description: 'Plan connector wrapper install for Codex CLI' },
+    { command: 'hive-flow setup --auto --features connector', description: 'Install connector wrappers for all detected CLIs' },
     { command: 'hive-flow setup global', description: 'Create global ~/.hive-flow/ directory' },
     { command: 'hive-flow setup permission-guard setup', description: 'One-time Permission Guard keypair generation' },
   ],
@@ -453,6 +469,12 @@ async function runReadOnly(opts: any) {
         ...(await claudeCodeStatuslineAdapter.plan(ctx)),
       });
     }
+    if (features.has('connector') && isKnownTarget(id)) {
+      await importConnectorAdapters();
+      const adapter = await loadAdapter(id);
+      const r = await adapter.install({ projectRoot, cliBin: launcherPath, scope: opts.scope, dryRun: true });
+      results.push({ agent: id as AdapterId, feature: 'connector' as const, outcome: 'planned', ...r });
+    }
   }
   return { results };
 }
@@ -480,6 +502,13 @@ async function runVerify(opts: any) {
         feature: 'statusline' as const,
         ...(await claudeCodeStatuslineAdapter.verify(ctx)),
       });
+    }
+    if (features.has('connector') && isKnownTarget(id)) {
+      await importConnectorAdapters();
+      const diag = await diagnoseConnectors({ projectRoot });
+      const row = diag.entries.find((d) => d.target === id);
+      const ok = row ? row.installed && row.issues.length === 0 : false;
+      results.push({ agent: id as AdapterId, feature: 'connector' as const, outcome: ok ? 'applied' : 'failed', diagnosis: row });
     }
   }
   return { results };
@@ -519,6 +548,15 @@ async function runMutating(opts: any) {
           ? await claudeCodeStatuslineAdapter.uninstall(ctx)
           : await claudeCodeStatuslineAdapter.apply(ctx);
         results.push({ agent: id as AdapterId, feature: 'statusline' as const, ...r });
+      }
+      if (features.has('connector') && isKnownTarget(id)) {
+        await importConnectorAdapters();
+        const adapter = await loadAdapter(id);
+        const connCtx = { projectRoot, cliBin: launcherPath, scope: opts.scope, dryRun: opts.dryRun };
+        const r = opts.action === 'uninstall'
+          ? await adapter.uninstall(connCtx)
+          : await adapter.install(connCtx);
+        results.push({ agent: id as AdapterId, feature: 'connector' as const, ...r });
       }
     }
     return { results };

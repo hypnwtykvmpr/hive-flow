@@ -154,6 +154,9 @@ importers:
         specifier: ^3.0.0-alpha.1
         version: 3.0.0-alpha.1
     devDependencies:
+      fast-check:
+        specifier: ^4.8.0
+        version: 4.8.0
       vitest:
         specifier: ^4.0.16
         version: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@20.19.27)
@@ -6212,6 +6215,13 @@ packages:
     resolution: {integrity: sha512-iPeeDKJSWf4IEOasVVrknXpaBV0IApz/gp7S2bb7Z4Lljbl2MGJRqInZiUrQwV16cpzw/D3S5j5Julj/gT52AA==}
     dev: false
 
+  /fast-check@4.8.0:
+    resolution: {integrity: sha512-GOJ158CUMnN6cSahsv4+ExARvIDuzzinFjkp0E9WtiBa5zcVeLozVkWaE4IzFcc+Y48Wp1EDlUZsXRyAztQcSg==}
+    engines: {node: '>=12.17.0'}
+    dependencies:
+      pure-rand: 8.4.0
+    dev: true
+
   /fastmcp@3.26.7:
     resolution: {integrity: sha512-6bXv8+8TBBvNlPBvASkzx8VYBWJk3TlojZoa20/2Gv43+LBA32c35gz0DM6Kov1XuDOheo5IAHtfEfgI5MqTww==}
     hasBin: true
@@ -8117,6 +8127,10 @@ packages:
   /pathval@2.0.1:
     resolution: {integrity: sha512-//nshmD55c46FuFw26xV/xFAaB5HF9Xdap7HJBBnrKdAd6/GxDBaNA1870O79+9ueg61cZLSVc+OaFlfmObYVQ==}
     engines: {node: '>= 14.16'}
+    dev: true
+
+  /pure-rand@8.4.0:
+    resolution: {integrity: sha512-IoM8YF/jY0hiugFo/wOWqfmarlE6J0wc6fDK1PhftMk7MGhVZl88sZimmqBBFomLOCSmcCCpsfj7wXASCpvK9A==}
     dev: true
 
   /pg-int8@1.0.1:

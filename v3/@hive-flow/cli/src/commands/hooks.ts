@@ -3293,9 +3293,26 @@ const statuslineCommand: Command = {
     // implementation. The previous inline collectors (getLearningStats,
     // getV3Progress, getSecurityStatus, getSwarmStatus, getSystemMetrics,
     // getUserInfo) lived only in this action body and have been removed.
-    const { readStatuslineStdin, renderClaudeCodeStatusline } = await import('../statusline/claude-code-renderer.js');
+    //
+    // Codex Phase 7 Finding (parity with `commands/statusline.ts` +
+    // `bin/statusline.js`): persist the last-render mirror via
+    // `writeLastRender` after rendering, using the `WithMeta` variant of
+    // the renderer. The `.catch(() => undefined)` swallows write failures
+    // so a non-writable cache cannot crash the hook output path.
+    const { readStatuslineStdin, renderClaudeCodeStatuslineWithMeta } = await import('../statusline/claude-code-renderer.js');
+    const { writeLastRender } = await import('../statusline/last-render.js');
     const stdinData = await readStatuslineStdin();
-    const rendered = await renderClaudeCodeStatusline(stdinData, process.cwd());
+    const meta = await renderClaudeCodeStatuslineWithMeta(stdinData, process.cwd());
+    const rendered = meta.rendered;
+    if (meta.projectKey && meta.projectRoot) {
+      await writeLastRender({
+        rendered: meta.rendered,
+        mode: meta.mode,
+        projectRoot: meta.projectRoot,
+        projectKey: meta.projectKey,
+        ...(meta.snapshot !== undefined ? { snapshot: meta.snapshot } : {}),
+      }).catch(() => undefined);
+    }
     if (ctx.flags.json || ctx.flags.format === 'json') {
       const data = { text: rendered, delegatedTo: 'hive-flow statusline' };
       output.printJson(data);

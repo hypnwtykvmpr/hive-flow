@@ -75,6 +75,7 @@
   "scripts": {
     "build": "tsc",
     "test": "vitest run",
+    "test:property": "vitest run src/statusline/__tests__/property-contracts.test.ts",
     "test:plugin-store": "npx tsx src/plugins/tests/standalone-test.ts",
     "test:pattern-store": "npx tsx src/transfer/store/tests/standalone-test.ts",
     "preinstall": "node bin/preinstall.cjs || true",
@@ -87,6 +88,7 @@
     "node": ">=20.0.0"
   },
   "devDependencies": {
+    "fast-check": "^4.8.0",
     "vitest": "^4.0.16"
   },
   "dependencies": {
