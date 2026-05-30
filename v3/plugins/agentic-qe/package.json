@@ -54,10 +54,10 @@
     "zod": "^3.23.0"
   },
   "peerDependencies": {
-    "@hive-flow/plugins": ">=3.0.0",
-    "@hive-flow/memory": ">=3.0.0",
-    "@hive-flow/security": ">=3.0.0",
-    "@hive-flow/embeddings": ">=3.0.0"
+    "@hive-flow/plugins": "workspace:*",
+    "@hive-flow/memory": "workspace:*",
+    "@hive-flow/security": "workspace:*",
+    "@hive-flow/embeddings": "workspace:*"
   },
   "peerDependenciesMeta": {
     "@hive-flow/plugins": {

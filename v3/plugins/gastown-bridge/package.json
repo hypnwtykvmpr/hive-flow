@@ -80,7 +80,7 @@
     "node": ">=20.0.0"
   },
   "peerDependencies": {
-    "@hive-flow/memory": ">=3.0.0-alpha.1"
+    "@hive-flow/memory": "workspace:*"
   },
   "peerDependenciesMeta": {
     "@hive-flow/memory": {
@@ -103,6 +103,5 @@
     "typescript": "^5.4.0",
     "vitest": "^1.0.0"
   },
-  "optionalDependencies": {
-  }
+  "optionalDependencies": {}
 }

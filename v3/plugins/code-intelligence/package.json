@@ -61,7 +61,6 @@
     "directory": "v3/plugins/code-intelligence"
   },
   "dependencies": {
-    "@hive-flow/ruvector-upstream": "^0.1.0",
     "zod": "^3.23.0"
   },
   "devDependencies": {
@@ -70,7 +69,7 @@
     "vitest": "^1.0.0"
   },
   "peerDependencies": {
-    "@hive-flow/plugins": "^3.0.0-alpha.1"
+    "@hive-flow/plugins": "workspace:*"
   },
   "engines": {
     "node": ">=20.0.0"

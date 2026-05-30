@@ -79,14 +79,6 @@
   "engines": {
     "node": ">=20.0.0"
   },
-  "peerDependencies": {
-    "@hive-flow/ruvector-upstream": ">=3.0.0-alpha.1"
-  },
-  "peerDependenciesMeta": {
-    "@hive-flow/ruvector-upstream": {
-      "optional": true
-    }
-  },
   "dependencies": {
     "zod": "^3.22.0"
   },

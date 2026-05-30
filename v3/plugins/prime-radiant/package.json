@@ -54,18 +54,14 @@
     "node": ">=20.0.0"
   },
   "peerDependencies": {
-    "@hive-flow/memory": ">=3.0.0",
-    "@hive-flow/security": ">=3.0.0",
-    "@hive-flow/coordination": ">=3.0.0"
+    "@hive-flow/memory": "workspace:*",
+    "@hive-flow/security": "workspace:*"
   },
   "peerDependenciesMeta": {
     "@hive-flow/memory": {
       "optional": true
     },
     "@hive-flow/security": {
-      "optional": true
-    },
-    "@hive-flow/coordination": {
       "optional": true
     }
   },

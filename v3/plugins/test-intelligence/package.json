@@ -58,14 +58,6 @@
   "dependencies": {
     "zod": "^3.22.4"
   },
-  "peerDependencies": {
-    "@hive-flow/ruvector-upstream": ">=3.0.0-alpha.1"
-  },
-  "peerDependenciesMeta": {
-    "@hive-flow/ruvector-upstream": {
-      "optional": true
-    }
-  },
   "devDependencies": {
     "@types/node": "^20.10.0",
     "rimraf": "^5.0.5",
