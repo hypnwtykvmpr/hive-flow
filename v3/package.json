@@ -59,12 +59,25 @@
   },
   "pnpm": {
     "neverBuiltDependencies": ["sharp"],
+    "peerDependencyRules": {
+      "ignoreMissing": [
+        "@hive-flow/browser",
+        "@hive-flow/coordination",
+        "@hive-flow/embeddings",
+        "@hive-flow/memory",
+        "@hive-flow/plugins",
+        "@hive-flow/ruvector-upstream",
+        "@hive-flow/security"
+      ]
+    },
     "overrides": {
       "@ruvector/gnn": "0.1.25",
       "@ruvector/gnn-linux-x64-gnu": "0.1.25",
       "tar": ">=7.6.0",
       "node-gyp": "^10.0.0",
-      "undici": ">=7.19.0",
+      "@hive-flow/ruvector-upstream": "workspace:*",
+      "undici": ">=7.26.0 <8",
+      "@anthropic-ai/sdk": ">=0.98.0",
       "@modelcontextprotocol/sdk": ">=1.26.0",
       "rollup": ">=4.59.0",
       "esbuild": ">=0.25.0",

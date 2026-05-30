@@ -720,37 +720,47 @@ For more details, see README.md and docs/QUICKSTART.md.
 
 ## Landing the Plane (Session Completion)
 
-**When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
+**When ending a work session**, complete the applicable steps below. Work is
+complete when the current state is verified and the human has a clear handoff.
 
 **MANDATORY WORKFLOW:**
 
 1. **File issues for remaining work** - Create issues for anything that needs follow-up
 2. **Run quality gates** (if code changed) - Tests, linters, builds
 3. **Update issue status** - Close finished work, update in-progress items
-4. **PUSH TO REMOTE** - This is MANDATORY:
-   ```bash
-   git pull --rebase
-   bd dolt push
-   git push
-   git status  # MUST show "up to date with origin"
-   ```
-5. **Clean up** - Clear stashes, prune remote branches
-6. **Verify** - All changes committed AND pushed
+4. **Review git state** - Report changed files and whether changes are tracked, ignored, or local-only
+5. **Clean up** - Clear temporary files you created and note any retained local artifacts
+6. **Verify** - Confirm the requested gates actually ran and report failures honestly
 7. **Hand off** - Provide context for next session
 
 **CRITICAL RULES:**
-- Work is NOT complete until `git push` succeeds
-- NEVER stop before pushing - that leaves work stranded locally
-- NEVER say "ready to push when you are" - YOU must push
-- If push fails, resolve and retry until it succeeds
+- Do NOT run `git add`, `git commit`, `git push`, or open a PR unless the human explicitly approves that exact git operation.
+- Do NOT hide public project policy files with `skip-worktree`. `AGENTS.md`, `CLAUDE.md`, `README.md`, and `.gitignore` are public tracked policy/config files.
+- If a push is explicitly approved and fails, report the failure and retry only within the approved scope.
 
-<!-- END BEADS INTEGRATION -->
+## Local-Only Artifacts
 
+These paths are local/private and must not be staged or committed:
 
+- `.audit/`
+- `.dox/`
+- `.gemini/`
+- `.codex/`
+- `.opencode/`
+- `.qwen/`
+- `.private/`
+- `.resources/`
+- `.scratch/`
+- `.claude/design/`
+- `.claude/worktrees/`
+- `.claude/settings.local.json`
+- `.claude/.context-tracker.json`
+- `.claude/memory.db*`
+- `.claude/*.db-shm`
+- `q7m4x9rz.sh`
 
-
-
-
+Use `.audit/private-guard.sh` to refresh local ignore and skip-worktree
+protections for private/runtime files. Generated context blocks such as
 <claude-mem-context>
 # Memory Context
 
