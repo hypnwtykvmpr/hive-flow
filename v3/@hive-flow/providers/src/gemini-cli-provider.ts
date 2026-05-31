@@ -4,7 +4,7 @@
  * @module @hive-flow/providers/gemini-cli-provider
  */
 
-import { spawn, ChildProcess, execFile } from 'child_process';
+import { spawn, ChildProcess, execFile, type ChildProcessWithoutNullStreams } from 'child_process';
 import { createInterface } from 'readline';
 import { BaseProvider, BaseProviderOptions } from './base-provider.js';
 import {
@@ -18,6 +18,8 @@ import {
   GEMINI_MODELS, GEMINI_MODEL_DESCRIPTIONS, GEMINI_CAPABILITIES,
   GeminiJsonOutput,
 } from './gemini-cli-constants.js';
+
+const GEMINI_STDIN_PROMPT_THRESHOLD = 24_000;
 
 export class GeminiCLIProvider extends BaseProvider {
   readonly name: LLMProvider = 'gemini-cli';
@@ -63,53 +65,73 @@ export class GeminiCLIProvider extends BaseProvider {
     const model = request.model || this.config.model;
     const prompt = this.formatMessages(request.messages, request.tools);
     const timeoutMs = request.timeout || this.config.timeout || 120000;
-    const args = ['--output-format', 'json'];
-    if (model && model !== 'auto') args.push('--model', model);
-    if (this.config.sandbox === true) args.push('--sandbox');
+    const { args, stdinPrompt } = this.buildCliArgs('json', model, prompt);
 
     return new Promise<LLMResponse>((resolve, reject) => {
       let settled = false;
-      const child = spawn(this.binaryPath!, args, {
-        stdio: ['pipe', 'pipe', 'pipe'],
-        env: this.minimalEnv(),
-      });
+      const child = this.spawnCli(args);
       this.activeChildren.add(child);
       child.stdin.on('error', (err) => {
         if ((err as NodeJS.ErrnoException).code !== 'EPIPE') {
           this.logger.warn('Gemini stdin write error', { error: err.message });
         }
       });
-      child.stdin.write(prompt);
-      child.stdin.end();
-
       let stdout = '';
       let stderr = '';
 
       const timer = setTimeout(() => {
         if (settled) return;
         settled = true;
-        child.kill('SIGKILL');
+        this.terminateChild(child);
         this.activeChildren.delete(child);
+        if (!stdout.trim() && !stderr.trim()) {
+          reject(this.authOutputToError(
+            'Gemini CLI produced no output before timeout; cached OAuth may be invalid or blocked in headless mode.',
+            null,
+          ));
+          return;
+        }
         reject(new LLMProviderError(
           `Gemini CLI timed out after ${timeoutMs}ms`, 'TIMEOUT', 'gemini-cli', undefined, true
         ));
       }, timeoutMs);
 
+      const failWithAuth = (text: string) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        this.terminateChild(child);
+        this.activeChildren.delete(child);
+        reject(this.authOutputToError(text, null));
+      };
+
       child.stdout.on('data', (d: Buffer) => {
         timer.refresh();
-        stdout += d.toString();
+        const text = d.toString();
+        if (this.isGeminiAuthOutput(text)) {
+          failWithAuth(text);
+          return;
+        }
+        stdout += text;
         if (stdout.length > MAX_STDOUT_BYTES) {
           if (settled) return;
           settled = true;
           clearTimeout(timer);
-          child.kill('SIGKILL');
+          this.terminateChild(child);
           this.activeChildren.delete(child);
           reject(new LLMProviderError(
             'Response exceeded maximum size (50MB)', 'RESPONSE_TOO_LARGE', 'gemini-cli', undefined, false
           ));
         }
       });
-      child.stderr.on('data', (d: Buffer) => { stderr += d.toString(); });
+      child.stderr.on('data', (d: Buffer) => {
+        const text = d.toString();
+        stderr += text;
+        if (this.isGeminiAuthOutput(stderr)) failWithAuth(stderr);
+      });
+
+      if (stdinPrompt !== undefined) child.stdin.write(stdinPrompt);
+      child.stdin.end();
 
       child.on('close', (code: number | null) => {
         clearTimeout(timer);
@@ -136,27 +158,22 @@ export class GeminiCLIProvider extends BaseProvider {
     const model = request.model || this.config.model;
     const prompt = this.formatMessages(request.messages, request.tools);
     const timeoutMs = (request.timeout || this.config.timeout || 120000) * 2;
-    const args = ['--output-format', 'stream-json'];
-    if (model && model !== 'auto') args.push('--model', model);
-    if (this.config.sandbox === true) args.push('--sandbox');
+    const { args, stdinPrompt } = this.buildCliArgs('stream-json', model, prompt);
 
-    const child = spawn(this.binaryPath!, args, {
-      stdio: ['pipe', 'pipe', 'pipe'],
-      env: this.minimalEnv(),
-    });
+    const child = this.spawnCli(args);
     this.activeChildren.add(child);
     child.stdin.on('error', (err) => {
       if ((err as NodeJS.ErrnoException).code !== 'EPIPE') {
         this.logger.warn('Gemini stdin write error', { error: err.message });
       }
     });
-    child.stdin.write(prompt);
+    if (stdinPrompt !== undefined) child.stdin.write(stdinPrompt);
     child.stdin.end();
 
     let timedOut = false;
     const timer = setTimeout(() => {
       timedOut = true;
-      child.kill('SIGKILL');
+      this.terminateChild(child);
       this.activeChildren.delete(child);
     }, timeoutMs);
 
@@ -164,7 +181,17 @@ export class GeminiCLIProvider extends BaseProvider {
     let promptTokens = 0;
     let completionTokens = 0;
     let stderr = '';
-    child.stderr.on('data', (d: Buffer) => { stderr += d.toString(); });
+    let authError: LLMProviderError | null = null;
+    const failStreamWithAuth = (text: string) => {
+      if (authError) return;
+      authError = this.authOutputToError(text, null);
+      this.terminateChild(child);
+      this.activeChildren.delete(child);
+    };
+    child.stderr.on('data', (d: Buffer) => {
+      stderr += d.toString();
+      if (this.isGeminiAuthOutput(stderr)) failStreamWithAuth(stderr);
+    });
 
     let contentBuffer = '';
     let streamToolCallCount = 0;
@@ -177,6 +204,10 @@ export class GeminiCLIProvider extends BaseProvider {
       for await (const line of rl) {
         timer.refresh();
         if (!line.trim()) continue;
+        if (this.isGeminiAuthOutput(line)) {
+          failStreamWithAuth(line);
+          continue;
+        }
         try {
           const evt = JSON.parse(line) as GeminiJsonOutput;
           const text = evt.response
@@ -206,7 +237,22 @@ export class GeminiCLIProvider extends BaseProvider {
         yield { type: 'content', delta: { content: contentBuffer } };
       }
 
+      if (authError) {
+        yield { type: 'error', error: authError };
+        return;
+      }
+
       if (timedOut) {
+        if (!contentBuffer.trim() && !stderr.trim() && promptTokens === 0 && completionTokens === 0) {
+          yield {
+            type: 'error',
+            error: this.authOutputToError(
+              'Gemini CLI produced no output before timeout; cached OAuth may be invalid or blocked in headless mode.',
+              null,
+            ),
+          };
+          return;
+        }
         yield {
           type: 'error',
           error: new LLMProviderError(
@@ -234,7 +280,7 @@ export class GeminiCLIProvider extends BaseProvider {
     } finally {
       clearTimeout(timer);
       rl.close();
-      if (!child.killed) child.kill('SIGKILL');
+      this.terminateChild(child);
       this.activeChildren.delete(child);
     }
   }
@@ -284,10 +330,30 @@ export class GeminiCLIProvider extends BaseProvider {
 
   destroy(): void {
     for (const child of this.activeChildren) {
-      if (!child.killed) child.kill('SIGKILL');
+      this.terminateChild(child);
     }
     this.activeChildren.clear();
     super.destroy();
+  }
+
+  private spawnCli(args: string[]): ChildProcessWithoutNullStreams {
+    return spawn(this.binaryPath!, args, {
+      stdio: ['pipe', 'pipe', 'pipe'],
+      env: this.minimalEnv(),
+      cwd: process.cwd(),
+      detached: process.platform !== 'win32',
+    });
+  }
+
+  private terminateChild(child: ChildProcess): void {
+    if (process.platform !== 'win32' && typeof child.pid === 'number') {
+      try {
+        process.kill(-child.pid, 'SIGKILL');
+      } catch {
+        // The process may already have exited; fall back to the direct handle.
+      }
+    }
+    if (!child.killed) child.kill('SIGKILL');
   }
 
   private findBinary(): Promise<string | null> {
@@ -348,6 +414,24 @@ export class GeminiCLIProvider extends BaseProvider {
         hint: 'Install: npm i -g @google/gemini-cli',
       });
     }
+  }
+
+  private buildCliArgs(
+    outputFormat: 'json' | 'stream-json',
+    model: LLMModel,
+    prompt: string
+  ): { args: string[]; stdinPrompt?: string } {
+    const args = ['--output-format', outputFormat, '--skip-trust'];
+    if (model && model !== 'auto') args.push('--model', model);
+    if (this.config.sandbox === true) args.push('--sandbox');
+
+    if (prompt.length > GEMINI_STDIN_PROMPT_THRESHOLD) {
+      args.push('--prompt', '');
+      return { args, stdinPrompt: prompt };
+    }
+
+    args.push('--prompt', prompt);
+    return { args };
   }
 
   private parseJsonOutput(stdout: string, model: LLMModel): LLMResponse {
@@ -419,6 +503,9 @@ export class GeminiCLIProvider extends BaseProvider {
     const filtered = stderr.split('\n')
       .filter(line => !line.includes('Loaded cached credentials'))
       .join('\n');
+    if (this.isGeminiAuthOutput(filtered)) {
+      return this.authOutputToError(filtered, code);
+    }
     const msg = filtered.trim() || `Gemini CLI exited with code ${code}`;
     switch (code) {
       case EXIT.Auth:
@@ -438,6 +525,32 @@ export class GeminiCLIProvider extends BaseProvider {
       default:
         return new LLMProviderError(msg, 'CLI_ERROR', 'gemini-cli', undefined, true, { exitCode: code });
     }
+  }
+
+  private isGeminiAuthOutput(text: string): boolean {
+    const relevant = text.split('\n')
+      .filter(line => !/loaded cached credentials/i.test(line))
+      .join('\n');
+    if (!relevant.trim()) return false;
+
+    return /opening authentication page/i.test(relevant)
+      || /authentication page/i.test(relevant)
+      || /\[Y\/n\]/i.test(relevant)
+      || /requires sign-?in/i.test(relevant)
+      || /not authenticated/i.test(relevant)
+      || /oauth.*(?:required|expired|invalid|failed|sign-?in|auth)/i.test(relevant);
+  }
+
+  private authOutputToError(text: string, code: number | null): AuthenticationError {
+    const filtered = text.split('\n')
+      .filter(line => !/loaded cached credentials/i.test(line))
+      .join('\n')
+      .trim();
+    return new AuthenticationError(
+      `Gemini CLI requires sign-in. Run gemini in a terminal and complete Google OAuth (or set GEMINI_API_KEY/GOOGLE_API_KEY). Details: ${filtered || `exit code ${code}`}`,
+      'gemini-cli',
+      { exitCode: code },
+    );
   }
 
   private formatMessages(messages: LLMMessage[], tools?: LLMTool[]): string {

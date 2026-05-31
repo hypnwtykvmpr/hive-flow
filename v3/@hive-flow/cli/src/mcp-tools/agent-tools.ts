@@ -546,7 +546,8 @@ export const agentTools: MCPTool[] = [
         config.model = normalizedInputModel;
       }
 
-      // Get task from either top-level or config (CLI passes it in config.task)
+      // Get task from either top-level or config. The CLI uses top-level fields;
+      // config.task remains accepted for older callers.
       const task = (input.task as string) || (config.task as string) || undefined;
 
       // Determine model using ADR-026 3-tier routing logic
@@ -1117,7 +1118,14 @@ export const agentTools: MCPTool[] = [
         '--result-file', resultFilePath,
         '--store-dir', agentDir,
         '--timeout', String(timeout),
-      ], { detached: true, stdio: 'ignore' });
+      ], {
+        detached: true,
+        stdio: 'ignore',
+        env: {
+          ...process.env,
+          ...(process.env.OPENROUTER_API_KEY ? { OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY } : {}),
+        },
+      });
 
       child.unref();
 

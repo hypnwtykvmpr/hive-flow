@@ -158,6 +158,7 @@ import { processCommand } from './process.js';
 import { guidanceCommand } from './guidance.js';
 import { applianceCommand } from './appliance.js';
 import { signalCommand } from './signal.js';
+import { setupCommand } from './setup.js';
 import { statuslineCommand } from './statusline.js';
 import { testsCommand } from './tests.js';
 
@@ -196,6 +197,7 @@ loadedCommands.set('issues', issuesCommand);
 loadedCommands.set('update', updateCommand);
 loadedCommands.set('process', processCommand);
 loadedCommands.set('appliance', applianceCommand);
+loadedCommands.set('setup', setupCommand);
 loadedCommands.set('statusline', statuslineCommand);
 loadedCommands.set('tests', testsCommand);
 
@@ -224,6 +226,7 @@ export { hiveMindCommand } from './hive-mind.js';
 export { guidanceCommand } from './guidance.js';
 export { applianceCommand } from './appliance.js';
 export { signalCommand } from './signal.js';
+export { setupCommand } from './setup.js';
 export { statuslineCommand } from './statusline.js';
 export { testsCommand } from './tests.js';
 
@@ -293,6 +296,7 @@ export const commands: Command[] = [
   updateCommand,
   processCommand,
   applianceCommand,
+  setupCommand,
   statuslineCommand,
   testsCommand,
 ];
@@ -345,6 +349,7 @@ export const commandsByCategory = {
     updateCommand,
     processCommand,
     applianceCommand,
+    setupCommand,
     signalCommand,
   ],
 };

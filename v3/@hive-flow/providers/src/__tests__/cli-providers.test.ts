@@ -299,7 +299,7 @@ describe('GeminiCLIProvider', () => {
     await completePromise;
   });
 
-  it('writes prompt to stdin and closes it', async () => {
+  it('passes small prompts through --prompt for headless execution', async () => {
     mockBinaryFound('gemini');
     await provider.initialize();
 
@@ -308,12 +308,78 @@ describe('GeminiCLIProvider', () => {
 
     provider.complete({ messages: [{ role: 'user', content: 'test' }] });
 
-    expect(mockChild.stdin.write).toHaveBeenCalledWith(expect.stringContaining('test'));
+    const spawnArgs = mockSpawn.mock.calls[0][1] as string[];
+    const spawnOptions = mockSpawn.mock.calls[0][2];
+    expect(spawnArgs).toContain('--prompt');
+    expect(spawnArgs).toContain('--skip-trust');
+    expect(spawnArgs[spawnArgs.indexOf('--prompt') + 1]).toContain('test');
+    expect(spawnOptions.detached).toBe(process.platform !== 'win32');
+    expect(mockChild.stdin.write).not.toHaveBeenCalled();
     expect(mockChild.stdin.end).toHaveBeenCalled();
 
     // Clean up
     mockChild.stdout.emit('data', Buffer.from(JSON.stringify({ response: 'ok' })));
     mockChild.emit('close', 0);
+  });
+
+  it('uses --prompt empty plus stdin for large prompts to avoid argv limits', async () => {
+    mockBinaryFound('gemini');
+    await provider.initialize();
+
+    const mockChild = createMockChild();
+    mockSpawn.mockReturnValue(mockChild);
+
+    const largePrompt = 'x'.repeat(32_000);
+    const completePromise = provider.complete({ messages: [{ role: 'user', content: largePrompt }] });
+
+    const spawnArgs = mockSpawn.mock.calls[0][1] as string[];
+    expect(spawnArgs).toContain('--prompt');
+    expect(spawnArgs[spawnArgs.indexOf('--prompt') + 1]).toBe('');
+    expect(mockChild.stdin.write).toHaveBeenCalledWith(expect.stringContaining(largePrompt));
+    expect(mockChild.stdin.end).toHaveBeenCalled();
+
+    mockChild.stdout.emit('data', Buffer.from(JSON.stringify({ response: 'ok' })));
+    mockChild.emit('close', 0);
+    await completePromise;
+  });
+
+  it('rejects immediately on interactive authentication output', async () => {
+    mockBinaryFound('gemini');
+    await provider.initialize();
+
+    const mockChild = createMockChild();
+    mockSpawn.mockReturnValue(mockChild);
+
+    const completePromise = provider.complete({
+      messages: [{ role: 'user', content: 'test' }],
+      timeout: 60_000,
+    });
+
+    mockChild.stderr.emit('data', Buffer.from('Opening authentication page. Continue? [Y/n]'));
+
+    await expect(completePromise).rejects.toMatchObject({
+      code: 'AUTHENTICATION',
+      retryable: false,
+    });
+    expect(mockChild.kill).toHaveBeenCalledWith('SIGKILL');
+  });
+
+  it('does not treat cached OAuth credential notices as authentication failure', async () => {
+    mockBinaryFound('gemini');
+    await provider.initialize();
+
+    const mockChild = createMockChild();
+    mockSpawn.mockReturnValue(mockChild);
+
+    const completePromise = provider.complete({
+      messages: [{ role: 'user', content: 'test' }],
+    });
+
+    mockChild.stderr.emit('data', Buffer.from('Loaded cached credentials from OAuth store\n'));
+    mockChild.stdout.emit('data', Buffer.from(JSON.stringify({ response: 'ok' })));
+    mockChild.emit('close', 0);
+
+    await expect(completePromise).resolves.toMatchObject({ content: 'ok' });
   });
 
   it('rejects on non-zero exit code', async () => {
@@ -2011,6 +2077,35 @@ describe('GeminiCLIProvider — streaming edge cases (PassThrough)', () => {
     expect(errorEvents.length).toBeGreaterThan(0);
   });
 
+  it('stream emits a non-retryable auth error on interactive authentication output', async () => {
+    const child = createPassThroughChild();
+    mockSpawn.mockReturnValue(child);
+
+    const events: any[] = [];
+    const streamPromise = (async () => {
+      for await (const event of provider.streamComplete({
+        messages: [{ role: 'user', content: 'Hello' }],
+      })) {
+        events.push(event);
+      }
+    })().catch(() => {});
+
+    await new Promise(r => setTimeout(r, 10));
+
+    child.stderr.emit('data', Buffer.from('Opening authentication page. Continue? [Y/n]'));
+    child.stdout.end();
+    child.emit('close', 1);
+
+    await streamPromise;
+
+    const authEvent = events.find(e => e.type === 'error');
+    expect(authEvent?.error).toMatchObject({
+      code: 'AUTHENTICATION',
+      retryable: false,
+    });
+    expect(child.kill).toHaveBeenCalledWith('SIGKILL');
+  });
+
   it('stream handles message type events with content', async () => {
     const child = createPassThroughChild();
     mockSpawn.mockReturnValue(child);
@@ -2533,9 +2628,10 @@ describe('GeminiCLIProvider — doComplete timeout (fake timers)', () => {
     vi.useRealTimers();
   });
 
-  it('rejects with timeout error when child does not respond', async () => {
+  it('rejects without retry when headless Gemini produces no output before timeout', async () => {
     const mockChild = createMockChild();
     mockSpawn.mockReturnValue(mockChild);
+    const killSpy = vi.spyOn(process, 'kill').mockImplementation(() => true);
 
     const completePromise = provider.complete({
       messages: [{ role: 'user', content: 'test' }],
@@ -2544,7 +2640,15 @@ describe('GeminiCLIProvider — doComplete timeout (fake timers)', () => {
 
     vi.advanceTimersByTime(6000);
 
-    await expect(completePromise).rejects.toThrow(/timed out/i);
+    await expect(completePromise).rejects.toMatchObject({
+      code: 'AUTHENTICATION',
+      retryable: false,
+    });
+    if (process.platform !== 'win32') {
+      expect(killSpy).toHaveBeenCalledWith(-mockChild.pid, 'SIGKILL');
+    }
+    expect(mockChild.kill).toHaveBeenCalledWith('SIGKILL');
+    killSpy.mockRestore();
   });
 });
 

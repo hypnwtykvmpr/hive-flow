@@ -7,7 +7,7 @@
 
 import type { Command, CommandContext, CommandResult } from '../types.js';
 import { output } from '../output.js';
-import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'fs';
+import { existsSync, mkdirSync, writeFileSync, readFileSync, renameSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
 import {
@@ -71,6 +71,151 @@ function parseFeatures(raw: unknown): Set<SetupFeature> {
   }
   if (out.size === 0) out.add('mcp');
   return out;
+}
+
+interface ProviderSetupStatus {
+  provider: 'openrouter' | 'gemini-cli';
+  configured: boolean;
+  checks: Record<string, boolean | string | undefined>;
+  action?: string;
+}
+
+interface ProviderSetupReport {
+  providers: {
+    openrouter: ProviderSetupStatus;
+    gemini: ProviderSetupStatus;
+  };
+}
+
+type VersionRunner = (bin: string) => { ok: boolean; version?: string };
+
+function defaultVersionRunner(bin: string): { ok: boolean; version?: string } {
+  const result = spawnSync('/usr/bin/env', [bin, '--version'], {
+    encoding: 'utf8',
+    timeout: 5000,
+    env: process.env,
+  });
+  const version = String(result.stdout || result.stderr || '').trim() || undefined;
+  return { ok: result.status === 0, version };
+}
+
+function readProjectConfig(projectRoot: string): Record<string, unknown> {
+  try {
+    const path = join(projectRoot, '.hive-flow', 'config.json');
+    if (!existsSync(path)) return { values: {}, scopes: {}, version: '3.0.0' };
+    const parsed = JSON.parse(readFileSync(path, 'utf8'));
+    return parsed && typeof parsed === 'object'
+      ? parsed as Record<string, unknown>
+      : { values: {}, scopes: {}, version: '3.0.0' };
+  } catch {
+    return { values: {}, scopes: {}, version: '3.0.0' };
+  }
+}
+
+function getObject(value: unknown): Record<string, unknown> | undefined {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : undefined;
+}
+
+function hasOpenRouterConfigReference(projectRoot: string): boolean {
+  const config = readProjectConfig(projectRoot);
+  const values = getObject(config.values);
+  const openrouter = getObject(values?.openrouter) ?? getObject(config.openrouter);
+  if (!openrouter) return false;
+  return typeof openrouter.credentialSource === 'string'
+    || typeof openrouter.apiKeyEnv === 'string'
+    || typeof openrouter.credentialEnv === 'string'
+    || typeof openrouter.apiKey === 'string';
+}
+
+export function inspectProviderSetup(opts: {
+  cwd: string;
+  homeDir?: string;
+  env?: NodeJS.ProcessEnv;
+  versionRunner?: VersionRunner;
+}): ProviderSetupReport {
+  const env = opts.env ?? process.env;
+  const homeDir = opts.homeDir ?? homedir();
+  const versionRunner = opts.versionRunner ?? defaultVersionRunner;
+  const openrouterEnv = typeof env.OPENROUTER_API_KEY === 'string' && env.OPENROUTER_API_KEY.length > 0;
+  const openrouterConfig = hasOpenRouterConfigReference(opts.cwd);
+  const geminiCli = versionRunner('gemini');
+  const geminiOauth = existsSync(join(homeDir, '.gemini', 'oauth_creds.json'));
+  const geminiApiKey = Boolean(env.GEMINI_API_KEY || env.GOOGLE_API_KEY);
+  const geminiApiKeyEnvName = env.GEMINI_API_KEY ? 'GEMINI_API_KEY' : env.GOOGLE_API_KEY ? 'GOOGLE_API_KEY' : undefined;
+
+  return {
+    providers: {
+      openrouter: {
+        provider: 'openrouter',
+        configured: openrouterEnv || openrouterConfig,
+        checks: {
+          envPresent: openrouterEnv,
+          configReferencePresent: openrouterConfig,
+        },
+        action: openrouterEnv || openrouterConfig
+          ? undefined
+          : 'Set OPENROUTER_API_KEY in the hive-flow/MCP runtime env, then restart the daemon/MCP server.',
+      },
+      gemini: {
+        provider: 'gemini-cli',
+        configured: geminiCli.ok && (geminiOauth || geminiApiKey),
+        checks: {
+          cliPresent: geminiCli.ok,
+          version: geminiCli.version,
+          oauthPresent: geminiOauth,
+          apiKeyEnvPresent: geminiApiKey,
+          apiKeyEnvName: geminiApiKeyEnvName,
+        },
+        action: geminiCli.ok && (geminiOauth || geminiApiKey)
+          ? undefined
+          : 'Run gemini in a terminal and complete Google OAuth, or set GEMINI_API_KEY/GOOGLE_API_KEY.',
+      },
+    },
+  };
+}
+
+export function writeProviderCredentialReferences(projectRoot: string, report: ProviderSetupReport): string {
+  const dir = join(projectRoot, '.hive-flow');
+  mkdirSync(dir, { recursive: true });
+  const path = join(dir, 'config.json');
+  const config = readProjectConfig(projectRoot);
+  const values = getObject(config.values) ?? {};
+
+  if (report.providers.openrouter.checks.envPresent) {
+    values.openrouter = {
+      ...(getObject(values.openrouter) ?? {}),
+      credentialSource: 'env:OPENROUTER_API_KEY',
+    };
+  }
+
+  if (report.providers.gemini.checks.oauthPresent) {
+    values.gemini = {
+      ...(getObject(values.gemini) ?? {}),
+      credentialSource: 'oauth:~/.gemini/oauth_creds.json',
+    };
+  } else if (report.providers.gemini.checks.apiKeyEnvPresent) {
+    const envName = typeof report.providers.gemini.checks.apiKeyEnvName === 'string'
+      ? report.providers.gemini.checks.apiKeyEnvName
+      : 'GEMINI_API_KEY';
+    values.gemini = {
+      ...(getObject(values.gemini) ?? {}),
+      credentialSource: `env:${envName}`,
+    };
+  }
+
+  const next = {
+    ...config,
+    values,
+    scopes: getObject(config.scopes) ?? {},
+    version: typeof config.version === 'string' ? config.version : '3.0.0',
+    updatedAt: new Date().toISOString(),
+  };
+  const tmp = `${path}.tmp.${process.pid}`;
+  writeFileSync(tmp, JSON.stringify(next, null, 2) + '\n', 'utf8');
+  renameSync(tmp, path);
+  return path;
 }
 
 /** Default global config written to ~/.hive-flow/config.json */
@@ -293,13 +438,52 @@ const globalCommand: Command = {
   action: globalAction,
 };
 
+const providersCommand: Command = {
+  name: 'providers',
+  description: 'Check provider credential setup without printing secrets',
+  options: [
+    {
+      name: 'create-config',
+      description: 'Persist non-secret credential references in .hive-flow/config.json',
+      type: 'boolean',
+      default: false,
+    },
+  ],
+  action: async (ctx: CommandContext): Promise<CommandResult> => {
+    const report = inspectProviderSetup({ cwd: ctx.cwd });
+    const wroteConfig = ctx.flags.createConfig || ctx.flags['create-config']
+      ? writeProviderCredentialReferences(ctx.cwd, report)
+      : undefined;
+    const data = { ...report, wroteConfig };
+
+    if (ctx.flags.format === 'json') {
+      output.printJson(data);
+      return { success: true, data };
+    }
+
+    output.writeln();
+    output.writeln(output.bold('Provider Setup'));
+    output.writeln(output.dim('Secrets are never printed or written by this command.'));
+    output.writeln();
+    for (const row of [report.providers.openrouter, report.providers.gemini]) {
+      output.writeln(`${row.provider}: ${row.configured ? output.success('configured') : output.warning('action needed')}`);
+      if (row.action) output.writeln(output.dim(`  ${row.action}`));
+    }
+    if (wroteConfig) {
+      output.writeln(output.success(`Wrote non-secret provider references to ${wroteConfig}`));
+    }
+
+    return { success: true, data };
+  },
+};
+
 // Main setup command — also exposes the §7 agent-integration surface via
 // top-level flags (--auto, --dry-run, --verify, --uninstall, --detect).
 // Subcommands `global` and `permission-guard` retain their original behavior.
 export const setupCommand: Command = {
   name: 'setup',
   description: 'Environment setup and configuration (top-level flags trigger §7 agent-integration)',
-  subcommands: [globalCommand, permissionGuardCommand],
+  subcommands: [globalCommand, providersCommand, permissionGuardCommand],
   options: [
     { name: 'auto', description: 'Apply selected integrations to detected/specified agent CLIs', type: 'boolean', default: false },
     { name: 'dry-run', description: 'Plan-only — no file writes', type: 'boolean', default: false },
@@ -353,6 +537,8 @@ export const setupCommand: Command = {
     { command: 'hive-flow setup --uninstall --features statusline', description: 'Remove only the Claude Code statusline integration' },
     { command: 'hive-flow setup --dry-run --features connector --agents codex', description: 'Plan connector wrapper install for Codex CLI' },
     { command: 'hive-flow setup --auto --features connector', description: 'Install connector wrappers for all detected CLIs' },
+    { command: 'hive-flow setup providers', description: 'Check OpenRouter and Gemini provider credential setup' },
+    { command: 'hive-flow setup providers --create-config', description: 'Write non-secret provider credential references' },
     { command: 'hive-flow setup global', description: 'Create global ~/.hive-flow/ directory' },
     { command: 'hive-flow setup permission-guard setup', description: 'One-time Permission Guard keypair generation' },
   ],

@@ -295,6 +295,33 @@ describe('Bridge Tool Execution (async dispatch contract)', () => {
       expect(typeof storeDirValue).toBe('string');
       expect(storeDirValue.length).toBeGreaterThan(0);
     });
+
+    it('passes OPENROUTER_API_KEY explicitly to the bridge child when present', async () => {
+      const originalKey = process.env.OPENROUTER_API_KEY;
+      process.env.OPENROUTER_API_KEY = 'or-test-redacted';
+      try {
+        const agent = makeAgent({
+          agentId: 'openrouter-agent',
+          provider: 'openrouter',
+          model: 'xiaomi/mimo-v2.5-pro',
+        });
+        setupStoreMocks(makeStore({ [agent.agentId]: agent }));
+        mockDetachedSpawn();
+
+        await handler({ agentId: agent.agentId, task: 'Use OpenRouter' });
+
+        const { opts } = getSpawnCall();
+        expect(opts.env).toMatchObject({
+          OPENROUTER_API_KEY: 'or-test-redacted',
+        });
+      } finally {
+        if (originalKey === undefined) {
+          delete process.env.OPENROUTER_API_KEY;
+        } else {
+          process.env.OPENROUTER_API_KEY = originalKey;
+        }
+      }
+    });
   });
 
   // ════════════════════════════════════════════════════════════════════════════

@@ -105,7 +105,8 @@ const spawnCommand: Command = {
     output.printInfo(`Spawning ${agentType} agent: ${output.highlight(agentName)}`);
 
     try {
-      // Call MCP tool to spawn agent
+      // Call MCP tool to spawn agent. `agent_spawn` reads provider/model/task
+      // from top-level fields; config is reserved for provider-specific knobs.
       const result = await callMCPTool<{
         agentId: string;
         agentType: string;
@@ -117,11 +118,11 @@ const spawnCommand: Command = {
         modelRoutedBy?: string;
       }>('agent_spawn', {
         agentType,
-        id: agentName,
+        agentId: agentName,
+        provider: ctx.flags.provider || 'anthropic',
+        model: ctx.flags.model,
+        task: ctx.flags.task,
         config: {
-          provider: ctx.flags.provider || 'anthropic',
-          model: ctx.flags.model,
-          task: ctx.flags.task,
           timeout: ctx.flags.timeout,
           autoTools: ctx.flags.autoTools,
         },

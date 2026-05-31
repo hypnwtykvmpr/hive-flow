@@ -37,6 +37,11 @@ import {
   buildRgArgs,
   buildGrepArgs,
 } from './bridge-grep-validators.mjs';
+import {
+  buildProviderConfig,
+  isProviderAuthError,
+  notifyProviderAuthRequired,
+} from './provider-auth-helpers.mjs';
 
 // Module-level limits — set once in main() after provider/model are resolved.
 // Used by BRIDGE_FILESYSTEM_TOOLS handlers for context-aware size caps.
@@ -1007,14 +1012,15 @@ function makeOpenRouterTierExhaustedError(tier, attemptedModels) {
 
 async function createProviderConfig(providerName, model, timeoutMs, agentToken) {
   const defaults = await getProviderDefaults();
-  return {
-    provider: providerName,
-    model: model || defaults[providerName] || 'auto',
-    timeout: timeoutMs || 300000,
-    retryAttempts: 2,
-    retryDelay: 1000,
-    ...(agentToken ? { env: { HIVE_FLOW_AGENT_TOKEN: agentToken } } : {}),
-  };
+  return buildProviderConfig({
+    providerName,
+    model,
+    timeoutMs,
+    agentToken,
+    defaults,
+    env: process.env,
+    cwd: process.cwd(),
+  });
 }
 
 // ===== MCP Tool Execution =====
@@ -1527,6 +1533,18 @@ async function executeMCPTool(toolName, toolArgs) {
   }
 }
 
+async function notifyProviderAuthFailure(providerName, reason) {
+  await notifyProviderAuthRequired({
+    providerName,
+    reason,
+    callMCPTool: async (toolName, args) => {
+      const mcpClient = await loadMCPClient();
+      if (!mcpClient || typeof mcpClient.callMCPTool !== 'function') return undefined;
+      return mcpClient.callMCPTool(toolName, args);
+    },
+  });
+}
+
 // ===== Argument Parsing =====
 
 /**
@@ -1720,10 +1738,9 @@ async function main() {
       }
       throw new Error(`Provider ${providerName} initialization failed: ${msg}`);
     }
-    if (msg.includes('auth') || msg.includes('401') || msg.includes('Unauthorized')) {
-      throw new Error(
-        `Authentication failed for ${providerName}. Check credentials.`
-      );
+    if (isProviderAuthError(initError)) {
+      await notifyProviderAuthFailure(providerName, msg);
+      throw initError;
     }
     throw initError;
   }
@@ -2024,11 +2041,18 @@ async function main() {
         }
       };
 
-      response = await retryWithBackoff(completeWithOpenRouterReroll, {
-        maxAttempts: (config.retryAttempts || 0) + 1,
-        initialDelay: config.retryDelay || 1000,
-        isRetryable: isRetryableError,
-      });
+      try {
+        response = await retryWithBackoff(completeWithOpenRouterReroll, {
+          maxAttempts: (config.retryAttempts || 0) + 1,
+          initialDelay: config.retryDelay || 1000,
+          isRetryable: isRetryableError,
+        });
+      } catch (error) {
+        if (isProviderAuthError(error)) {
+          await notifyProviderAuthFailure(providerName, error.message || String(error));
+        }
+        throw error;
+      }
 
       if (successfulRerolledModel && request.model === successfulRerolledModel) {
         agent.resolvedModel = successfulRerolledModel;

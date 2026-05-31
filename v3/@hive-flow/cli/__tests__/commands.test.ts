@@ -8,6 +8,7 @@ import { agentCommand } from '../src/commands/agent.js';
 import { swarmCommand } from '../src/commands/swarm.js';
 import { memoryCommand } from '../src/commands/memory.js';
 import { configCommand } from '../src/commands/config.js';
+import { callMCPTool } from '../src/mcp-client.js';
 import type { CommandContext } from '../src/types.js';
 
 // Mock MCP client
@@ -18,11 +19,11 @@ vi.mock('../src/mcp-client.js', () => ({
     if (toolName === 'agent_spawn') {
       const config = (input.config as Record<string, unknown>) || {};
       return {
-        agentId: input.id || 'mock-agent-123',
+        agentId: input.agentId || 'mock-agent-123',
         agentType: input.agentType,
         status: 'active',
         createdAt: new Date().toISOString(),
-        provider: (config.provider as string) || 'anthropic',
+        provider: (input.provider as string) || 'anthropic',
         model: 'sonnet',
         resolvedModel: undefined,
         modelRoutedBy: 'default',
@@ -289,13 +290,31 @@ describe('Agent Commands', () => {
 
       ctx.flags = {
         type: 'coder',
-        provider: 'anthropic',
-        model: 'claude-3-5-sonnet',
+        name: 'or-agent',
+        provider: 'openrouter',
+        model: 'opus',
+        task: 'Summarize provider routing',
+        timeout: 120,
+        autoTools: false,
         _: []
       };
       const result = await spawnCmd!.action!(ctx);
 
       expect(result.success).toBe(true);
+      expect(callMCPTool).toHaveBeenCalledWith('agent_spawn', expect.objectContaining({
+        agentType: 'coder',
+        agentId: 'or-agent',
+        provider: 'openrouter',
+        model: 'opus',
+        task: 'Summarize provider routing',
+      }));
+      const payload = (callMCPTool as ReturnType<typeof vi.fn>).mock.calls.at(-1)?.[1] as Record<string, unknown>;
+      expect(payload).toBeDefined();
+      expect(payload.id).toBeUndefined();
+      expect(payload.config).toMatchObject({ timeout: 120, autoTools: false });
+      expect(payload.config).not.toHaveProperty('provider');
+      expect(payload.config).not.toHaveProperty('model');
+      expect(payload.config).not.toHaveProperty('task');
     });
 
     it('should handle task option', async () => {
