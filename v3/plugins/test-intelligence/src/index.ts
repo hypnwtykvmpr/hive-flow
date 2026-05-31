@@ -10,8 +10,8 @@
  * - Mutation testing optimization
  * - Test case generation suggestions
  *
- * Uses RuVector WASM packages for high-performance analysis:
- * - ruvector-learning-wasm: RL-based test selection
+ * Uses local analysis kernels for high-performance analysis:
+ * - RL-based test selection
  * - SONA: Continuous pattern learning
  * - micro-hnsw-wasm: Code-to-test similarity matching
  */
@@ -57,7 +57,7 @@ export const pluginMetadata = {
     ],
     bridges: ['learning', 'sona'],
     wasmPackages: [
-      'ruvector-learning-wasm',
+      'local-test-learning-kernel',
       'micro-hnsw-wasm',
       'sona',
     ],

@@ -2,7 +2,7 @@
  * Learning Bridge for Test Intelligence
  *
  * Provides RL-based test selection and prioritization using
- * ruvector-learning-wasm for Q-Learning, PPO, and Decision Transformer.
+ * local learning kernels for Q-Learning, PPO, and Decision Transformer.
  */
 
 import type {
@@ -70,24 +70,8 @@ export class TestLearningBridge implements LearningBridgeInterface {
 
     this.status = 'loading';
 
-    try {
-      // Try to load WASM module
-      // Dynamic import of optional WASM module - use string literal to avoid type error
-      const modulePath = '@hive-flow/ruvector-upstream';
-      const wasmModule = await import(/* @vite-ignore */ modulePath).catch(() => null);
-
-      if (wasmModule) {
-        // Initialize with WASM module
-        this.status = 'ready';
-      } else {
-        // Use mock implementation
-        this.initializeMockWeights();
-        this.status = 'ready';
-      }
-    } catch (error) {
-      this.status = 'error';
-      throw error;
-    }
+    this.initializeMockWeights();
+    this.status = 'ready';
   }
 
   async destroy(): Promise<void> {

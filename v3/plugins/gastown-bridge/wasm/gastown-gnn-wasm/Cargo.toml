@@ -1,4 +1,4 @@
-# RuVector GNN WASM Module
+# Gas Town GNN WASM Module
 #
 # Ultra-optimized WASM-accelerated graph operations:
 # - DAG construction and traversal (target: <0.1ms)
@@ -15,7 +15,7 @@
 # Build with: wasm-pack build --target web --release
 
 [package]
-name = "ruvector-gnn-wasm"
+name = "gastown-gnn-wasm"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

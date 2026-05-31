@@ -2,23 +2,23 @@
 /**
  * Quick Integration Test
  *
- * Verifies @ruvector/attention integration is working correctly.
+ * Verifies the local attention integration is working correctly.
  * Run with: npx tsx v3/@hive-flow/performance/src/examples/quick-test.ts
  */
 
 import {
   createFlashAttentionOptimizer,
+  flashAttention,
   quickBenchmark,
 } from '../attention-integration.js';
-import { flashAttention } from '@ruvector/attention';
 
 async function quickTest() {
   console.log('\n🧪 Quick Integration Test\n');
   console.log('━'.repeat(60));
 
   try {
-    // Test 1: Direct @ruvector/attention usage
-    console.log('\n✓ Test 1: Direct @ruvector/attention usage');
+    // Test 1: Direct local attention kernel usage
+    console.log('\n✓ Test 1: Direct local attention kernel usage');
     const query = new Float32Array(128).fill(1.0);
     const keys = [new Float32Array(128).fill(1.0)];
     const values = [new Float32Array(128).fill(1.0)];

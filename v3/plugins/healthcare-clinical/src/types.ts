@@ -38,6 +38,8 @@ export interface MCPToolResult {
   success: boolean;
   data?: unknown;
   error?: string;
+  content?: Array<{ type: 'text'; text: string }>;
+  isError?: true;
   metadata?: {
     durationMs?: number;
     cached?: boolean;
@@ -591,7 +593,7 @@ export const LiteratureSearchInputSchema = z.object({
 export const OntologyNavigationInputSchema = z.object({
   code: z.string().max(50),
   ontology: z.enum(['icd10', 'snomed', 'loinc', 'rxnorm']),
-  direction: z.enum(['ancestors', 'descendants', 'siblings', 'related']),
+  direction: z.enum(['ancestors', 'descendants', 'siblings', 'related']).default('descendants'),
   depth: z.number().int().min(1).max(10).default(2),
 });
 
@@ -606,6 +608,7 @@ export function successResult<T>(data: T, metadata?: MCPToolResult['metadata']):
   return {
     success: true,
     data,
+    content: [{ type: 'text', text: JSON.stringify(data) }],
     metadata,
   };
 }
@@ -614,9 +617,12 @@ export function successResult<T>(data: T, metadata?: MCPToolResult['metadata']):
  * Create an error result
  */
 export function errorResult(error: string | Error, metadata?: MCPToolResult['metadata']): MCPToolResult {
+  const message = error instanceof Error ? error.message : error;
   return {
     success: false,
-    error: error instanceof Error ? error.message : error,
+    error: message,
+    isError: true,
+    content: [{ type: 'text', text: JSON.stringify({ error: true, message, timestamp: new Date().toISOString() }) }],
     metadata,
   };
 }

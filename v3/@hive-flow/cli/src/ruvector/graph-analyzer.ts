@@ -1,13 +1,13 @@
 /**
  * Graph Analyzer Module
  *
- * Provides code dependency graph analysis using ruvector's graph algorithms:
+ * Provides code dependency graph analysis using built-in graph algorithms:
  * - MinCut for code boundary detection (refactoring suggestions)
  * - Louvain for module/community detection
  * - Circular dependency detection
  * - DOT format export for visualization
  *
- * Falls back to built-in implementations when @ruvector/wasm is not available.
+ * Uses built-in implementations only.
  *
  * @module @hive-flow/cli/ruvector/graph-analyzer
  */
@@ -141,11 +141,11 @@ export interface GraphAnalysisResult {
 }
 
 // ============================================================================
-// RuVector Integration (with graceful fallback)
+// Local graph integration
 // ============================================================================
 
 /**
- * Interface for ruvector graph operations
+ * Interface for optional graph operations.
  */
 interface IRuVectorGraph {
   mincut(nodes: string[], edges: Array<[string, string, number]>): {
@@ -164,47 +164,12 @@ let ruVectorGraph: IRuVectorGraph | null = null;
 let ruVectorLoadAttempted = false;
 
 /**
- * Attempt to load ruvector graph algorithms
+ * Return null so callers use the built-in graph algorithms.
  */
 async function loadRuVector(): Promise<IRuVectorGraph | null> {
   if (ruVectorLoadAttempted) return ruVectorGraph;
   ruVectorLoadAttempted = true;
-
-  // Use dynamic module names to bypass TypeScript static analysis
-  // These modules are optional and may not be installed
-  const ruvectorModule = 'ruvector';
-  const wasmModule = '@ruvector/wasm';
-
-  try {
-    // Try to load ruvector's graph module
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const ruvector: any = await import(/* webpackIgnore: true */ ruvectorModule).catch(() => null);
-
-    if (ruvector && typeof ruvector.hooks_graph_mincut === 'function' && typeof ruvector.hooks_graph_cluster === 'function') {
-      ruVectorGraph = {
-        mincut: (nodes, edges) => ruvector.hooks_graph_mincut(nodes, edges),
-        louvain: (nodes, edges) => ruvector.hooks_graph_cluster(nodes, edges),
-      };
-      return ruVectorGraph;
-    }
-  } catch {
-    // Try alternative import paths
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const wasm: any = await import(/* webpackIgnore: true */ wasmModule).catch(() => null);
-      if (wasm && wasm.GraphAnalyzer) {
-        const analyzer = new wasm.GraphAnalyzer();
-        ruVectorGraph = {
-          mincut: (nodes, edges) => analyzer.mincut(nodes, edges),
-          louvain: (nodes, edges) => analyzer.louvain(nodes, edges),
-        };
-        return ruVectorGraph;
-      }
-    } catch {
-      // Fallback will be used
-    }
-  }
-
+  ruVectorGraph = null;
   return null;
 }
 
@@ -521,7 +486,7 @@ function estimateComplexity(content: string): number {
 // ============================================================================
 
 /**
- * Stoer-Wagner MinCut algorithm (fallback when ruvector not available)
+ * Stoer-Wagner MinCut algorithm.
  * Finds minimum cut with deterministic result
  */
 function fallbackMinCut(
@@ -643,7 +608,7 @@ function fallbackMinCut(
 // ============================================================================
 
 /**
- * Louvain community detection algorithm (fallback when ruvector not available)
+ * Louvain community detection algorithm.
  * Greedy modularity optimization
  */
 function fallbackLouvain(
@@ -895,7 +860,7 @@ export async function analyzeMinCutBoundaries(
 
   const boundaries: MinCutBoundary[] = [];
 
-  // Try to use ruvector, fallback to built-in
+  // Use optional graph implementation, fallback to built-in
   const ruVector = await loadRuVector();
 
   // Get initial partition
@@ -970,7 +935,7 @@ export async function analyzeModuleCommunities(graph: DependencyGraph): Promise<
   const nodes = Array.from(graph.nodes.keys());
   const edges: Array<[string, string, number]> = graph.edges.map(e => [e.source, e.target, e.weight]);
 
-  // Try to use ruvector, fallback to built-in
+  // Use optional graph implementation, fallback to built-in
   const ruVector = await loadRuVector();
   const result = ruVector ? ruVector.louvain(nodes, edges) : fallbackLouvain(nodes, edges);
 

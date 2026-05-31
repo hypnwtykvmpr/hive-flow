@@ -43,6 +43,8 @@ export {
   type AttentionOutput,
   type BenchmarkResult as AttentionBenchmarkResult,
   type PerformanceMetrics as AttentionMetrics,
+  flashAttention,
+  scaledDotProductAttention,
 } from './attention-integration.js';
 
 // Re-export Flash Attention benchmarks

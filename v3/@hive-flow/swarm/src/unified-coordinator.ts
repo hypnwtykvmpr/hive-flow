@@ -123,7 +123,7 @@ const DOMAIN_CONFIGS: DomainConfig[] = [
     agentNumbers: [10, 11, 12],
     priority: 3,
     capabilities: ['agentic-flow-integration', 'cli-modernization', 'neural-integration', 'hooks-system'],
-    description: 'agentic-flow integration, CLI modernization, and neural features',
+    description: 'local compatibility integration, CLI modernization, and neural features',
   },
   {
     name: 'support',
@@ -1565,12 +1565,12 @@ export class UnifiedSwarmCoordinator extends EventEmitter implements IUnifiedSwa
   }
 
   // =============================================================================
-  // MCP-Compatible API Methods (agentic-flow@alpha compatibility)
+  // MCP-Compatible API Methods (local compatibility API compatibility)
   // =============================================================================
 
   /**
    * Spawn a new agent (MCP-compatible alias for registerAgent)
-   * Compatible with agentic-flow@alpha's agent spawn API
+   * Compatible with local compatibility API's agent spawn API
    *
    * @param options - Agent spawn options
    * @returns Spawned agent ID and details
@@ -1649,7 +1649,7 @@ export class UnifiedSwarmCoordinator extends EventEmitter implements IUnifiedSwa
 
   /**
    * Terminate an agent (MCP-compatible alias for unregisterAgent)
-   * Compatible with agentic-flow@alpha's agent terminate API
+   * Compatible with local compatibility API's agent terminate API
    *
    * @param agentId - Agent ID to terminate
    * @param options - Termination options

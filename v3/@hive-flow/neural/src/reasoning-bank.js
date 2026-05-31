@@ -1,16 +1,11 @@
 /**
- * ReasoningBank Integration with AgentDB
+ * ReasoningBank with local vector-memory fallback.
  *
  * Implements the 4-step learning pipeline with real vector storage:
- * 1. RETRIEVE - Top-k memory injection with MMR diversity (using AgentDB HNSW)
+ * 1. RETRIEVE - Top-k memory injection with MMR diversity
  * 2. JUDGE - LLM-as-judge trajectory evaluation
  * 3. DISTILL - Extract strategy memories from trajectories
  * 4. CONSOLIDATE - Dedup, detect contradictions, prune old patterns
- *
- * Performance Targets:
- * - Retrieval: <10ms with AgentDB HNSW (150x faster than brute-force)
- * - Learning step: <10ms
- * - Consolidation: <100ms
  *
  * @module reasoning-bank
  */
@@ -21,16 +16,9 @@ let AgentDB;
 let agentdbImportPromise;
 async function ensureAgentDBImport() {
     if (!agentdbImportPromise) {
-        agentdbImportPromise = (async () => {
-            try {
-                const agentdbModule = await import('agentdb');
-                AgentDB = agentdbModule.AgentDB || agentdbModule.default;
-            }
-            catch {
-                // AgentDB not available - will use fallback
-                AgentDB = undefined;
-            }
-        })();
+        agentdbImportPromise = Promise.resolve().then(() => {
+            AgentDB = undefined;
+        });
     }
     return agentdbImportPromise;
 }

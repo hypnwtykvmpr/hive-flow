@@ -1,7 +1,7 @@
 /**
  * V3 ReasoningBank Adapter
  *
- * Provides agentic-flow@alpha compatible ReasoningBank interface:
+ * Provides local compatibility API compatible ReasoningBank interface:
  * - 4-step pipeline: RETRIEVE, JUDGE, DISTILL, CONSOLIDATE
  * - Trajectory tracking and verdict judgment
  * - Memory distillation from successful trajectories

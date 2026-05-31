@@ -1,6 +1,6 @@
 # SONA Integration Guide
 
-Integration of `@ruvector/sona` package (v0.1.5) into the V3 Neural Module.
+Local SONA-compatible learning integration for the V3 Neural Module.
 
 ## Overview
 
@@ -9,15 +9,7 @@ The SONA (Self-Optimizing Neural Architecture) integration provides runtime-adap
 - **Learning Performance**: <0.05ms per trajectory (target)
 - **Adaptation Performance**: <0.1ms per context
 - **Memory Efficient**: LoRA-based (1-16 rank)
-- **Platform Support**: WASM + Node.js (NAPI bindings)
-
-## Installation
-
-The package is already installed as a dependency:
-
-```bash
-npm install @ruvector/sona@0.1.5
-```
+- **Platform Support**: Pure TypeScript local runtime
 
 ## Quick Start
 
@@ -385,24 +377,22 @@ Runtime selection is automatic based on platform.
 ### Custom Configuration
 
 ```typescript
-import { SonaEngine, type JsSonaConfig } from '@ruvector/sona';
+import { createSONALearningEngine, type SONAModeConfig } from '@hive-flow/neural';
 
-const customConfig: JsSonaConfig = {
-  hiddenDim: 512,
-  embeddingDim: 512,
-  microLoraRank: 2,
-  baseLoraRank: 8,
-  microLoraLr: 0.002,
-  baseLoraLr: 0.0002,
-  ewcLambda: 1000.0,
-  patternClusters: 100,
+const customConfig: SONAModeConfig = {
+  mode: 'balanced',
+  loraRank: 8,
+  learningRate: 0.002,
+  batchSize: 32,
   trajectoryCapacity: 20000,
-  backgroundIntervalMs: 1800000,
+  patternClusters: 100,
   qualityThreshold: 0.6,
-  enableSimd: true,
+  maxLatencyMs: 18,
+  memoryBudgetMb: 50,
+  ewcLambda: 1000.0,
 };
 
-const engine = SonaEngine.withConfig(customConfig);
+const engine = createSONALearningEngine('balanced', customConfig);
 ```
 
 ### Background Learning
@@ -450,7 +440,6 @@ console.log(status);
 
 ## References
 
-- [SONA Package](https://www.npmjs.com/package/@ruvector/sona)
 - [LoRA Paper](https://arxiv.org/abs/2106.09685)
 - [EWC Paper](https://arxiv.org/abs/1612.00796)
 - [V3 Neural Module](../README.md)

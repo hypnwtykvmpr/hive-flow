@@ -1,7 +1,7 @@
 /**
  * Attention Bridge
  *
- * Bridge to ruvector-attention-wasm for multi-head attention computation.
+ * Bridge to a local multi-head attention implementation.
  * Enables agent-to-agent communication weighting and focus management.
  */
 
@@ -83,7 +83,7 @@ interface AttentionModule {
  * Attention Bridge implementation
  */
 export class AttentionBridge {
-  readonly name = 'ruvector-attention-wasm';
+  readonly name = 'local-attention-kernel';
   readonly version = '0.1.0';
 
   private _status: WasmModuleStatus = 'unloaded';
@@ -109,15 +109,7 @@ export class AttentionBridge {
     this._status = 'loading';
 
     try {
-      // @ts-expect-error — optional WASM dependency without type declarations
-      const wasmModule = await (import('@ruvector/attention-wasm') as Promise<unknown>).catch(() => null);
-
-      if (wasmModule) {
-        this._module = wasmModule as unknown as AttentionModule;
-      } else {
-        this._module = this.createMockModule();
-      }
-
+      this._module = this.createMockModule();
       this._status = 'ready';
     } catch (error) {
       this._status = 'error';

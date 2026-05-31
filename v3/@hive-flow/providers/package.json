@@ -50,14 +50,6 @@
     "tsx": "^4.19.0",
     "vitest": "^4.0.16"
   },
-  "peerDependencies": {
-    "@ruvector/ruvllm": "^0.2.3"
-  },
-  "peerDependenciesMeta": {
-    "@ruvector/ruvllm": {
-      "optional": true
-    }
-  },
   "engines": {
     "node": ">=20.0.0"
   },

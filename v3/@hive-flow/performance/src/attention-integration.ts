@@ -1,8 +1,7 @@
 /**
  * @hive-flow/performance - Flash Attention Integration
  *
- * Integrates @ruvector/attention Flash Attention capabilities into V3 performance module.
- * Provides optimized attention mechanisms with 2.49x-7.47x speedup targets.
+ * Provides local Flash Attention-compatible mechanisms for V3 performance tests.
  *
  * Features:
  * - Flash Attention for memory-efficient processing
@@ -14,12 +13,12 @@
 import {
   flashAttention,
   scaledDotProductAttention,
-} from '@ruvector/attention';
+} from './attention-kernels.js';
 
 /** Local type alias for array inputs accepted by this module */
 type ArrayInput = Float32Array | number[];
 
-/** Local wrapper providing class-based API over @ruvector/attention's flashAttention function */
+/** Local wrapper providing class-based API over the local flashAttention function */
 class FlashAttention {
   constructor(private dim: number, private blockSize: number = 64) {}
   compute(query: Float32Array, keys: Float32Array[], values: Float32Array[]): Float32Array {
@@ -27,7 +26,7 @@ class FlashAttention {
   }
 }
 
-/** Local wrapper providing class-based API over @ruvector/attention's scaledDotProductAttention function */
+/** Local wrapper providing class-based API over the local scaledDotProductAttention function */
 class DotProductAttention {
   constructor(private dim: number) {}
   compute(query: Float32Array, keys: Float32Array[], values: Float32Array[]): Float32Array {
@@ -523,5 +522,7 @@ export function quickBenchmark(dim: number = 512): BenchmarkResult {
 export {
   FlashAttention,
   DotProductAttention,
+  flashAttention,
+  scaledDotProductAttention,
   type AttentionBenchmarkResult,
 };

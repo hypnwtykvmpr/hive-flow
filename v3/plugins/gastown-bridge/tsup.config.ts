@@ -64,7 +64,7 @@ export default defineConfig([
       '@hive-flow/memory',
       // WASM modules - loaded dynamically
       'gastown-formula-wasm',
-      'ruvector-gnn-wasm',
+      'gastown-gnn-wasm',
       // Node built-ins
       'child_process',
       'util',

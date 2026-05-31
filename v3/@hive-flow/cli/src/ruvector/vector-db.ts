@@ -1,14 +1,13 @@
 /**
  * Vector Database Module
  *
- * Provides optional ruvector WASM-accelerated vector operations for:
+ * Provides local vector operations for:
  * - Semantic similarity search
  * - HNSW indexing (150x faster)
  * - Embedding generation
  *
- * Gracefully degrades when ruvector is not installed.
- *
- * Created with love by ruv.io
+ * External vector modules are intentionally detached; local fallback is the
+ * primary implementation.
  */
 
 // ============================================================================
@@ -31,7 +30,7 @@ export interface RuVectorModule {
 }
 
 // ============================================================================
-// Fallback Implementation (when ruvector not available)
+// Local Implementation
 // ============================================================================
 
 class FallbackVectorDB implements VectorDB {
@@ -95,7 +94,7 @@ function cosineSimilarity(a: Float32Array, b: Float32Array): number {
 }
 
 /**
- * Generate a simple hash-based embedding (fallback when ruvector not available)
+ * Generate a simple hash-based embedding.
  */
 function generateHashEmbedding(text: string, dimensions: number = 768): Float32Array {
   const embedding = new Float32Array(dimensions);
@@ -139,8 +138,7 @@ let isAvailable = false;
 // ============================================================================
 
 /**
- * Attempt to load the ruvector module
- * Returns true if successfully loaded, false otherwise
+ * External vector modules are intentionally detached; local fallback is primary.
  */
 export async function loadRuVector(): Promise<boolean> {
   if (loadAttempted) {
@@ -148,75 +146,20 @@ export async function loadRuVector(): Promise<boolean> {
   }
 
   loadAttempted = true;
-
-  try {
-    // Dynamic import to handle missing dependency gracefully
-    const ruvector = await import('ruvector').catch(() => null);
-
-    // ruvector exports VectorDB class, not createVectorDB function
-    if (ruvector && (typeof ruvector.VectorDB === 'function' || typeof ruvector.VectorDb === 'function')) {
-      // Create adapter module that matches our expected interface
-      const VectorDBClass = ruvector.VectorDB || ruvector.VectorDb;
-      ruvectorModule = {
-        createVectorDB: async (dimensions: number): Promise<VectorDB> => {
-          const db = new VectorDBClass({ dimensions });
-          // Wrap ruvector's VectorDB to match our interface
-          return {
-            insert: (embedding: Float32Array, id: string, metadata?: Record<string, unknown>) => {
-              db.insert({ id, vector: embedding, metadata });
-            },
-            search: async (query: Float32Array, k: number = 10) => {
-              const results = await db.search({ vector: query, k });
-              return results.map((r: any) => ({
-                id: r.id,
-                score: r.score,
-                metadata: r.metadata,
-              }));
-            },
-            remove: (id: string) => {
-              db.delete(id);
-              return true;
-            },
-            size: async () => {
-              const len = await db.len();
-              return len;
-            },
-            clear: () => {
-              // Not directly supported - would need to recreate
-            },
-          } as VectorDB;
-        },
-        generateEmbedding: (text: string, dimensions: number = 768): Float32Array => {
-          // ruvector may not have this - use fallback
-          return generateHashEmbedding(text, dimensions);
-        },
-        cosineSimilarity: (a: Float32Array, b: Float32Array): number => {
-          return cosineSimilarity(a, b);
-        },
-        isWASMAccelerated: (): boolean => {
-          return ruvector.isWasm?.() ?? false;
-        },
-      };
-      isAvailable = true;
-      return true;
-    }
-  } catch {
-    // Silently fail - ruvector is optional
-  }
-
+  ruvectorModule = null;
   isAvailable = false;
   return false;
 }
 
 /**
- * Check if ruvector is available
+ * Check if an external vector backend is available.
  */
 export function isRuVectorAvailable(): boolean {
   return isAvailable;
 }
 
 /**
- * Check if WASM acceleration is enabled
+ * Check if external WASM acceleration is enabled.
  */
 export function isWASMAccelerated(): boolean {
   if (ruvectorModule && typeof ruvectorModule.isWASMAccelerated === 'function') {
@@ -227,7 +170,7 @@ export function isWASMAccelerated(): boolean {
 
 /**
  * Create a vector database
- * Uses ruvector HNSW if available, falls back to brute-force search
+ * Uses the local brute-force implementation.
  */
 export async function createVectorDB(dimensions: number = 768): Promise<VectorDB> {
   await loadRuVector();
@@ -245,7 +188,7 @@ export async function createVectorDB(dimensions: number = 768): Promise<VectorDB
 
 /**
  * Generate an embedding for text
- * Uses ruvector if available, falls back to hash-based embedding
+ * Uses hash-based local embeddings.
  */
 export function generateEmbedding(text: string, dimensions: number = 768): Float32Array {
   if (ruvectorModule && typeof ruvectorModule.generateEmbedding === 'function') {
@@ -275,12 +218,12 @@ export function computeSimilarity(a: Float32Array, b: Float32Array): number {
 }
 
 /**
- * Get status information about the ruvector module
+ * Get status information about the local vector backend.
  */
 export function getStatus(): {
   available: boolean;
   wasmAccelerated: boolean;
-  backend: 'ruvector-wasm' | 'ruvector' | 'fallback';
+  backend: 'fallback';
 } {
   if (!isAvailable) {
     return {
@@ -289,11 +232,9 @@ export function getStatus(): {
       backend: 'fallback',
     };
   }
-
-  const wasmAccelerated = isWASMAccelerated();
   return {
-    available: true,
-    wasmAccelerated,
-    backend: wasmAccelerated ? 'ruvector-wasm' : 'ruvector',
+    available: false,
+    wasmAccelerated: false,
+    backend: 'fallback',
   };
 }

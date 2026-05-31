@@ -17,7 +17,6 @@ export type LLMProvider =
   | 'google'
   | 'cohere'
   | 'ollama'
-  | 'ruvector'
   | 'openrouter'
   | 'lm-studio'
   | 'gemini-cli'

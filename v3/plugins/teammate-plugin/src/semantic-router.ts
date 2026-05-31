@@ -17,7 +17,6 @@ async function loadNeuralBMSSP(): Promise<void> {
   if (WasmNeuralBMSSP) return;
 
   try {
-    // @ts-expect-error optional wasm package may not be installed
     const bmssp = await import('@ruvnet/bmssp');
     await bmssp.default(); // Initialize WASM
     WasmNeuralBMSSP = bmssp.WasmNeuralBMSSP;

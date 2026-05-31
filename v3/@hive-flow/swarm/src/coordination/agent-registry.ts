@@ -459,7 +459,7 @@ export class AgentRegistry implements IAgentRegistry {
         id: 'agent-10',
         role: 'integration-architect',
         domain: 'integration',
-        description: 'agentic-flow@alpha deep integration',
+        description: 'local compatibility API deep integration',
         capabilities: [
           { name: 'integration', description: 'Integrate with agentic-flow', supportedTaskTypes: ['integration', 'architecture-design'] }
         ],

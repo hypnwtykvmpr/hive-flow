@@ -251,10 +251,10 @@ describe('Financial Risk Types', () => {
       }
     });
 
-    it('should reject too few prices', () => {
+    it('should reject fewer than the local fallback minimum', () => {
       const input = {
         marketData: {
-          prices: [100, 101, 102], // Less than 10
+          prices: [100, 101],
         },
       };
 

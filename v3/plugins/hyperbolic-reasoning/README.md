@@ -260,9 +260,9 @@ interface HyperbolicReasoningConfig {
 
 ## Dependencies
 
-- `ruvector-hyperbolic-hnsw-wasm` - Hyperbolic nearest neighbor search
-- `ruvector-attention-wasm` - Hyperbolic attention mechanisms
-- `ruvector-gnn-wasm` - Hyperbolic graph neural networks
+- `local-hyperbolic-hnsw-wasm` - Hyperbolic nearest neighbor search
+- `local-attention-wasm` - Hyperbolic attention mechanisms
+- `local-gnn-wasm` - Hyperbolic graph neural networks
 - `micro-hnsw-wasm` - Tangent space approximation search
 - `sona` - Adaptive curvature learning
 

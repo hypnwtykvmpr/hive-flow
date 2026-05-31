@@ -11,7 +11,6 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { loadAgenticFlow } from '@hive-flow/integration';
 
 // ADR-053: Lazy import of AgentDB v3 bridge
 let _bridge: typeof import('./memory-bridge.js') | null | undefined;
@@ -323,8 +322,8 @@ CREATE TABLE IF NOT EXISTS metadata (
 `;
 
 // ============================================================================
-// HNSW INDEX SINGLETON (150x faster vector search)
-// Uses @ruvector/core from agentic-flow for WASM-accelerated HNSW
+// VECTOR INDEX SINGLETON
+// Uses an internal pure TypeScript vector index with AgentDB bridge fallback.
 // ============================================================================
 
 interface HNSWEntry {
@@ -334,11 +333,48 @@ interface HNSWEntry {
   content: string;
 }
 
-/** Minimal interface for @ruvector/core VectorDb used by HNSW operations */
+/** Minimal vector database interface used by HNSW-compatible operations */
 interface VectorDbLike {
   len(): Promise<number>;
   insert(entry: { id: string; vector: Float32Array }): Promise<void>;
   search(query: { vector: Float32Array; k: number }): Promise<Array<{ id: string; distance: number }>>;
+}
+
+class LocalVectorDb implements VectorDbLike {
+  private readonly vectors = new Map<string, Float32Array>();
+
+  async len(): Promise<number> {
+    return this.vectors.size;
+  }
+
+  async insert(entry: { id: string; vector: Float32Array }): Promise<void> {
+    this.vectors.set(entry.id, new Float32Array(entry.vector));
+  }
+
+  async search(query: { vector: Float32Array; k: number }): Promise<Array<{ id: string; distance: number }>> {
+    return Array.from(this.vectors.entries())
+      .map(([id, vector]) => ({ id, distance: cosineDistance(query.vector, vector) }))
+      .sort((a, b) => a.distance - b.distance)
+      .slice(0, query.k);
+  }
+}
+
+function cosineDistance(a: Float32Array, b: Float32Array): number {
+  const limit = Math.min(a.length, b.length);
+  if (limit === 0) return 1;
+
+  let dot = 0;
+  let aNorm = 0;
+  let bNorm = 0;
+  for (let i = 0; i < limit; i++) {
+    dot += a[i] * b[i];
+    aNorm += a[i] * a[i];
+    bNorm += b[i] * b[i];
+  }
+
+  const denominator = Math.sqrt(aNorm) * Math.sqrt(bNorm);
+  if (denominator === 0) return 1;
+  return 1 - dot / denominator;
 }
 
 interface HNSWIndex {
@@ -379,40 +415,17 @@ export async function getHNSWIndex(options?: {
   hnswInitializing = true;
 
   try {
-    // Import @ruvector/core dynamically
-    // Handle both ESM (default export) and CJS patterns
-    const ruvectorModule = await import('@ruvector/core').catch(() => null);
-    if (!ruvectorModule) {
-      hnswInitializing = false;
-      return null; // HNSW not available
-    }
-
-    // ESM returns { default: { VectorDb, ... } }, CJS returns { VectorDb, ... }
-    const ruvectorCore = ((ruvectorModule as Record<string, unknown>).default || ruvectorModule) as Record<string, unknown>;
-    if (!ruvectorCore?.VectorDb) {
-      hnswInitializing = false;
-      return null; // VectorDb not found
-    }
-
-    const VectorDb = ruvectorCore.VectorDb as new (opts: Record<string, unknown>) => VectorDbLike;
-
     // Persistent storage paths
     const swarmDir = path.join(process.cwd(), '.swarm');
     if (!fs.existsSync(swarmDir)) {
       fs.mkdirSync(swarmDir, { recursive: true });
     }
-    const hnswPath = path.join(swarmDir, 'hnsw.index');
     const metadataPath = path.join(swarmDir, 'hnsw.metadata.json');
     const dbPath = options?.dbPath || path.join(swarmDir, 'memory.db');
 
-    // Create HNSW index with persistent storage
-    // @ruvector/core uses string enum for distanceMetric: 'Cosine', 'Euclidean', 'DotProduct', 'Manhattan'
-    // SAFETY: VectorDb constructor accepts these options but @ruvector/core lacks published type declarations
-    const db = new VectorDb({
-      dimensions,
-      distanceMetric: 'Cosine',
-      storagePath: hnswPath  // Persistent storage!
-    }) as VectorDbLike;
+    // Create local in-memory vector index. Metadata still persists so the index
+    // can rebuild from SQLite on startup without external packages.
+    const db = new LocalVectorDb();
 
     // Load metadata (entry info) if exists
     const entries = new Map<string, HNSWEntry>();
@@ -603,8 +616,7 @@ export async function searchHNSWIndex(
         continue;
       }
 
-      // Convert cosine distance to similarity score (1 - distance)
-      // Cosine distance from @ruvector/core: 0 = identical, 2 = opposite
+      // Convert local cosine distance to similarity score (1 - distance).
       const score = 1 - (result.distance / 2);
 
       filtered.push({
@@ -1512,30 +1524,6 @@ export async function loadEmbeddingModel(options?: {
         success: true,
         dimensions: 384,
         modelName: 'all-MiniLM-L6-v2',
-        loadTime: Date.now() - startTime
-      };
-    }
-
-    // Fallback: Check for agentic-flow ONNX
-    const agenticFlow = await loadAgenticFlow();
-
-    const agenticFlowRecord = agenticFlow as Record<string, unknown> | null;
-    if (agenticFlowRecord && agenticFlowRecord.embeddings) {
-      if (verbose) {
-        console.log('Loading agentic-flow embedding model...');
-      }
-
-      embeddingModelState = {
-        loaded: true,
-        model: agenticFlowRecord.embeddings,
-        tokenizer: null,
-        dimensions: 768
-      };
-
-      return {
-        success: true,
-        dimensions: 768,
-        modelName: 'agentic-flow',
         loadTime: Date.now() - startTime
       };
     }

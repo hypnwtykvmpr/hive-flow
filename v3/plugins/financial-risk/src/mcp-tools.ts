@@ -55,7 +55,11 @@ function checkAuthorization(toolName: string, context?: ToolContext): boolean {
   if (!context?.userRoles) return true;
 
   for (const role of context.userRoles) {
-    const permissions = FinancialRolePermissions[role];
+    const rawRole = String(role).toUpperCase();
+    const normalizedRole = (
+      rawRole === 'ANALYST' ? 'ADMIN' : rawRole
+    ) as keyof typeof FinancialRolePermissions;
+    const permissions = FinancialRolePermissions[normalizedRole];
     if (permissions?.includes(toolName)) return true;
   }
 

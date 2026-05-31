@@ -101,13 +101,10 @@ pnpm add @hive-flow/aidefence
 yarn add @hive-flow/aidefence
 ```
 
-### Optional: AgentDB for HNSW Search
+### Local Search
 
-For 150x-12,500x faster pattern search:
-
-```bash
-npm install agentdb
-```
+Pattern search uses the local Hive Flow implementation. No external AgentDB
+package is required or installed.
 
 ---
 
@@ -161,18 +158,16 @@ await aidefence.learnFromDetection(input, result, {
 });
 ```
 
-### With AgentDB (HNSW Search)
+### With a Custom Local Vector Store
 
 ```typescript
 import { createAIDefence } from '@hive-flow/aidefence';
-import { AgentDB } from 'agentdb';
 
-// Initialize with AgentDB for 150x faster search
-const agentdb = new AgentDB({ path: './data/security' });
+const vectorStore = createLocalVectorStore({ path: './data/security' });
 
 const aidefence = createAIDefence({
   enableLearning: true,
-  vectorStore: agentdb
+  vectorStore
 });
 
 // Search similar known threats

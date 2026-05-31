@@ -247,12 +247,11 @@ import type {
 ## Dependencies
 
 - [@hive-flow/memory](../memory) - Memory integration
-- `@ruvector/sona` - SONA learning engine
 
 ## Related Packages
 
 - [@hive-flow/memory](../memory) - Vector memory for patterns
-- [@hive-flow/integration](../integration) - agentic-flow integration
+- [@hive-flow/integration](../integration) - local compatibility integration
 - [@hive-flow/performance](../performance) - Benchmarking
 
 ## License

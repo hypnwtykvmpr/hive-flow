@@ -316,9 +316,6 @@ export const PLUGIN_METADATA = {
     ],
     optional: [
       '@hive-flow/browser',
-      '@ruvector/attention',
-      '@ruvector/gnn',
-      '@ruvector/sona',
     ],
   },
 } as const;

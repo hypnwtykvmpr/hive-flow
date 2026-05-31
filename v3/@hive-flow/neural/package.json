@@ -14,11 +14,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@hive-flow/memory": "workspace:*",
-    "@ruvector/sona": "^0.1.5"
-  },
-  "optionalDependencies": {
-    "agentdb": "^2.0.0 || ^3.0.0-alpha.1"
+    "@hive-flow/memory": "workspace:*"
   },
   "engines": {
     "node": ">=20.0.0"

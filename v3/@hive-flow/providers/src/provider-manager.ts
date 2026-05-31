@@ -34,7 +34,6 @@ import { OpenAIProvider } from './openai-provider.js';
 import { GoogleProvider } from './google-provider.js';
 import { CohereProvider } from './cohere-provider.js';
 import { OllamaProvider } from './ollama-provider.js';
-import { RuVectorProvider } from './ruvector-provider.js';
 import { LMStudioProvider } from './lm-studio-provider.js';
 import { OpenRouterProvider } from './openrouter-provider.js';
 import { GeminiCLIProvider } from './gemini-cli-provider.js';
@@ -134,8 +133,6 @@ export class ProviderManager extends EventEmitter {
         return new CohereProvider(options);
       case 'ollama':
         return new OllamaProvider(options);
-      case 'ruvector':
-        return new RuVectorProvider(options);
       case 'lm-studio':
         return new LMStudioProvider(options);
       case 'openrouter':

@@ -2,7 +2,7 @@
  * DAG Bridge for Obligation Tracking
  *
  * Provides directed acyclic graph operations for obligation dependency
- * tracking using ruvector-dag-wasm for high-performance graph algorithms.
+ * tracking using local graph algorithms.
  *
  * Features:
  * - Obligation dependency graph construction
@@ -77,8 +77,7 @@ export class DAGBridge implements IDAGBridge {
     if (this.initialized) return;
 
     try {
-      // Dynamic import of WASM module
-      // In production, this would load from @hive-flow/ruvector-upstream
+      // Future WASM hook; current implementation intentionally uses JS fallback.
       this.wasmModule = await this.loadWasmModule();
       this.initialized = true;
     } catch {
@@ -375,8 +374,7 @@ export class DAGBridge implements IDAGBridge {
    * Load WASM module dynamically
    */
   private async loadWasmModule(): Promise<DAGWasmModule> {
-    // In production, this would load from @hive-flow/ruvector-upstream
-    // For now, throw to trigger JS fallback
+    // For now, throw to trigger JS fallback.
     throw new Error('WASM module loading not implemented');
   }
 

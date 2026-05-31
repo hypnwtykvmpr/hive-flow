@@ -87,15 +87,8 @@ export class DiffClassifier {
   }
 
   async initialize(): Promise<void> {
-    try {
-      // @ruvector/diff is optional - gracefully fallback if not installed
-      const ruvector = await import('@ruvector/diff' as string).catch(() => null);
-      if (ruvector) {
-        const factory = (ruvector as Record<string, unknown>).createDiffClassifier as ((config: Partial<DiffClassifierConfig>) => unknown) | undefined;
-        this.ruvectorEngine = factory?.(this.config) ?? null;
-        this.useNative = !!this.ruvectorEngine;
-      }
-    } catch { this.useNative = false; }
+    this.ruvectorEngine = null;
+    this.useNative = false;
   }
 
   parseDiff(diffContent: string): FileDiff[] {

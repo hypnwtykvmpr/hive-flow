@@ -87,15 +87,8 @@ export class CoverageRouter {
   }
 
   async initialize(): Promise<void> {
-    try {
-      // @ruvector/coverage is optional - gracefully fallback if not installed
-      const ruvector = await import('@ruvector/coverage' as string).catch(() => null);
-      if (ruvector) {
-        const factory = (ruvector as Record<string, unknown>).createCoverageRouter as ((config: Partial<CoverageRouterConfig>) => unknown) | undefined;
-        this.ruvectorEngine = factory?.(this.config) ?? null;
-        this.useNative = !!this.ruvectorEngine;
-      }
-    } catch { this.useNative = false; }
+    this.ruvectorEngine = null;
+    this.useNative = false;
   }
 
   parseCoverage(data: unknown, format: 'lcov' | 'istanbul' | 'cobertura' | 'json' = 'json'): CoverageReport {

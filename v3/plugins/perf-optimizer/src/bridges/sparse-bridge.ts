@@ -2,7 +2,7 @@
  * Sparse Inference Bridge for Performance Optimizer
  *
  * Provides efficient trace analysis using sparse inference techniques
- * from ruvector-sparse-inference-wasm for processing large performance traces.
+ * from local sparse kernels for processing large performance traces.
  */
 
 import type {
@@ -62,24 +62,8 @@ export class PerfSparseBridge implements SparseBridgeInterface {
 
     this.status = 'loading';
 
-    try {
-      // Try to load WASM module
-      // Dynamic import of optional WASM module - use string literal to avoid type error
-      const modulePath = '@hive-flow/ruvector-upstream';
-      const wasmModule = await import(/* @vite-ignore */ modulePath).catch(() => null);
-
-      if (wasmModule) {
-        // Initialize with WASM module
-        this.status = 'ready';
-      } else {
-        // Use mock implementation
-        this.initializeFeatureHashes();
-        this.status = 'ready';
-      }
-    } catch (error) {
-      this.status = 'error';
-      throw error;
-    }
+    this.initializeFeatureHashes();
+    this.status = 'ready';
   }
 
   async destroy(): Promise<void> {

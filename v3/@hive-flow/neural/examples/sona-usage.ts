@@ -294,7 +294,7 @@ function createMockSteps(count: number, avgReward: number): TrajectoryStep[] {
 async function main() {
   console.log('\n╔═══════════════════════════════════════════════════════════╗');
   console.log('║   SONA Integration Examples - V3 Neural Module           ║');
-  console.log('║   @ruvector/sona v0.1.5                                   ║');
+  console.log('║   Local SONA-compatible runtime                           ║');
   console.log('╚═══════════════════════════════════════════════════════════╝');
 
   try {

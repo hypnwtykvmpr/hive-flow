@@ -1,5 +1,5 @@
 /**
- * Flash Attention Implementation for RuVector Intelligence System
+ * Flash Attention implementation for the local intelligence system.
  *
  * Implements block-wise attention computation for faster similarity calculations.
  * Achieves O(N) memory instead of O(N^2) through tiling strategy.

@@ -106,15 +106,7 @@ export class CognitiveBridge {
     this._status = 'loading';
 
     try {
-      // @ts-expect-error — optional WASM dependency without type declarations
-      const wasmModule = await (import('@ruvector/cognitum-gate-kernel') as Promise<unknown>).catch(() => null);
-
-      if (wasmModule) {
-        this._module = wasmModule as unknown as CognitiveModule;
-      } else {
-        this._module = this.createMockModule();
-      }
-
+      this._module = this.createMockModule();
       this._status = 'ready';
     } catch (error) {
       this._status = 'error';

@@ -7,7 +7,7 @@
  * - sona/trajectory/context - Add context
  * - sona/trajectory/end - Complete and trigger learning
  * - sona/trajectory/list - List trajectories
- * - sona/pattern/find - Find similar patterns via HNSW
+ * - sona/pattern/find - Find similar patterns via local search
  * - sona/lora/apply-micro - Apply micro-LoRA adaptation (~0.05ms)
  * - sona/lora/apply-base - Apply base-layer LoRA
  * - sona/force-learn - Force immediate learning cycle
@@ -19,34 +19,13 @@
  *
  * Performance Targets:
  * - Micro-LoRA: <0.05ms latency
- * - Pattern Search: 150x-12,500x faster via HNSW
+ * - Pattern Search: local in-memory fallback
  *
  * Implements ADR-005: MCP-First API Design
- * Implements ADR-001: agentic-flow@alpha compatibility
  */
 
 import { z } from 'zod';
 import { MCPTool, ToolContext } from '../types.js';
-import { loadAgenticFlowSubpath } from '@hive-flow/integration';
-
-// Lazy-loaded agentic-flow imports for HNSW search optimization
-// @ts-ignore - agentic-flow is an optional dependency
-let agenticFlowCore: typeof import('agentic-flow/core') | null = null;
-let agentDBInstance: unknown | null = null;
-
-async function loadAgenticFlowCore(): Promise<boolean> {
-  try {
-    // @ts-ignore - agentic-flow is an optional dependency
-    agenticFlowCore = await loadAgenticFlowSubpath('core');
-    if (agenticFlowCore?.createFastAgentDB) {
-      agentDBInstance = agenticFlowCore.createFastAgentDB({ dimensions: 768 });
-    }
-    return agenticFlowCore != null;
-  } catch {
-    // agentic-flow not available - use fallback implementations
-    return false;
-  }
-}
 
 // ============================================================================
 // Types & Interfaces
@@ -125,7 +104,7 @@ interface SONAStats {
   };
   performance: {
     microLoraLatency: number;
-    hnswSpeedup: number;
+    searchBackend: string;
   };
 }
 
@@ -497,46 +476,16 @@ async function handlePatternFind(
     similarity: number;
   }>;
   searchLatency: string;
-  hnswSpeedup: string;
+  searchBackend: string;
 }> {
   const state = getState();
   const startTime = performance.now();
 
-  // Try agentic-flow HNSW search for 150x-12,500x speedup
-  const loaded = await loadAgenticFlowCore();
-  let patterns: Array<Pattern & { similarity: number }>;
-
-  if (loaded && agentDBInstance && agenticFlowCore) {
-    // Use agentic-flow's AgentDBFast with HNSW indexing
-    try {
-      const embedding = await agenticFlowCore.computeEmbedding?.(input.query);
-      const db = agentDBInstance as { search?: (embedding: unknown, opts: Record<string, unknown>) => Promise<Array<{ id: string; score: number }>> };
-      const results = await db.search?.(embedding, {
-        topK: input.topK,
-        threshold: input.threshold,
-        filter: input.category ? { category: input.category } : undefined,
-      });
-
-      patterns = results?.map((r: { id: string; score: number }) => ({
-        ...state.patterns.get(r.id),
-        similarity: r.score,
-      })).filter(Boolean) as Array<Pattern & { similarity: number }> || [];
-    } catch {
-      // Fall back to local search
-      patterns = performLocalPatternSearch(state, input);
-    }
-  } else {
-    // Fallback: local pattern search
-    patterns = performLocalPatternSearch(state, input);
-  }
+  const patterns = performLocalPatternSearch(state, input);
 
   const searchLatency = performance.now() - startTime;
   state.stats.patternSearches++;
   state.stats.totalSearchLatency += searchLatency;
-
-  // HNSW provides 150x-12,500x speedup over brute force
-  const estimatedBruteForce = searchLatency * 1000; // Estimated brute force baseline
-  const speedup = estimatedBruteForce / Math.max(searchLatency, 0.01);
 
   return {
     patterns: patterns.map(p => ({
@@ -546,12 +495,12 @@ async function handlePatternFind(
       similarity: p.similarity,
     })),
     searchLatency: `${searchLatency.toFixed(3)}ms`,
-    hnswSpeedup: `${speedup.toFixed(0)}x`,
+    searchBackend: 'local-in-memory',
   };
 }
 
 /**
- * Local pattern search fallback when agentic-flow is not available
+ * Local pattern search fallback.
  */
 function performLocalPatternSearch(
   state: SONAState,
@@ -749,7 +698,7 @@ async function handleGetStats(
     },
     performance: {
       microLoraLatency: 0.05, // Target: <0.05ms
-      hnswSpeedup: 150, // Minimum: 150x
+      searchBackend: 'local-in-memory',
     },
   };
 }
@@ -811,7 +760,7 @@ async function handleBenchmark(
   context?: ToolContext
 ): Promise<{
   microLoraLatency: { avg: string; p95: string; p99: string };
-  hnswSearch: { avg: string; speedup: string };
+  localSearch: { avg: string; backend: string };
   trajectoryOverhead: { avg: string };
   memoryUsage: { current: string };
 }> {
@@ -835,9 +784,9 @@ async function handleBenchmark(
       p95: `${p95Lora.toFixed(4)}ms`,
       p99: `${p99Lora.toFixed(4)}ms`,
     },
-    hnswSearch: {
+    localSearch: {
       avg: '0.5ms',
-      speedup: '150x-12,500x',
+      backend: 'local-in-memory',
     },
     trajectoryOverhead: {
       avg: '0.1ms',
@@ -940,7 +889,7 @@ export const sonaTools: MCPTool[] = [
   },
   {
     name: 'sona/pattern/find',
-    description: 'Find similar patterns using HNSW (150x-12,500x faster)',
+    description: 'Find similar patterns using local in-memory search',
     inputSchema: {
       type: 'object',
       properties: {
@@ -953,7 +902,7 @@ export const sonaTools: MCPTool[] = [
     },
     handler: async (input, ctx) => handlePatternFind(patternFindSchema.parse(input), ctx),
     category: 'sona',
-    tags: ['sona', 'pattern', 'search', 'hnsw'],
+    tags: ['sona', 'pattern', 'search', 'local'],
     version: '1.0.0',
   },
   {

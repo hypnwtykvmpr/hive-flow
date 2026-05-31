@@ -1,7 +1,7 @@
 /**
  * SONA Integration for V3 Neural Module
  *
- * Wraps @ruvector/sona package for V3 usage with:
+ * Provides local SONA-compatible learning for V3 usage with:
  * - Trajectory tracking and verdict judgment
  * - Pattern extraction and memory distillation
  * - Sub-0.05ms learning performance target
@@ -9,7 +9,6 @@
  *
  * @module sona-integration
  */
-import { type JsSonaConfig, type JsLearnedPattern } from '@ruvector/sona';
 import type { Trajectory, SONAMode, SONAModeConfig } from './types.js';
 /**
  * Context for SONA learning adaptation
@@ -50,8 +49,28 @@ export interface SONAStats {
     /** Engine enabled state */
     enabled: boolean;
 }
+export interface JsSonaConfig {
+    hiddenDim: number;
+    embeddingDim: number;
+    microLoraRank: number;
+    baseLoraRank: number;
+    microLoraLr: number;
+    baseLoraLr: number;
+    ewcLambda: number;
+    patternClusters: number;
+    trajectoryCapacity: number;
+    qualityThreshold: number;
+    enableSimd: boolean;
+    backgroundIntervalMs?: number;
+}
+export interface JsLearnedPattern {
+    patternType?: string;
+    avgQuality: number;
+    embedding: Float32Array;
+    usageCount: number;
+}
 /**
- * SONA Learning Engine - wraps @ruvector/sona for V3 usage
+ * SONA Learning Engine - local implementation for V3 usage
  *
  * Performance targets:
  * - learn(): <0.05ms
@@ -164,5 +183,4 @@ export declare class SONALearningEngine {
  * @returns SONA learning engine instance
  */
 export declare function createSONALearningEngine(mode: SONAMode, modeConfig: SONAModeConfig): SONALearningEngine;
-export type { JsLearnedPattern, JsSonaConfig };
 //# sourceMappingURL=sona-integration.d.ts.map

@@ -364,7 +364,7 @@ $performance-optimization
 |-------|--------|-------------|
 | V3 Security Overhaul | `$v3-security-overhaul` | Complete security architecture with CVE remediation |
 | V3 Memory Unification | `$v3-memory-unification` | Unify 6+ memory systems into AgentDB with HNSW |
-| V3 Integration Deep | `$v3-integration-deep` | Deep agentic-flow@alpha integration (ADR-001) |
+| V3 Integration Deep | `$v3-integration-deep` | Deep local compatibility API integration (ADR-001) |
 | V3 Performance Optimization | `$v3-performance-optimization` | Achieve 2.49x-7.47x speedup targets |
 | V3 Swarm Coordination | `$v3-swarm-coordination` | 15-agent hierarchical mesh coordination |
 | V3 DDD Architecture | `$v3-ddd-architecture` | Domain-Driven Design architecture |

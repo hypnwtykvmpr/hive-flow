@@ -151,7 +151,7 @@ statusline --help
 
 **Example Output:**
 ```
-▊ Hive Flow V3 ● agentic-flow@alpha  │  ⎇ v3
+▊ Hive Flow V3 ● local compatibility  │  ⎇ v3
 ─────────────────────────────────────────────────────
 🏗️  DDD Domains    [●●●●●]  5/5    ⚡ 1.0x → 2.49x-7.47x
 🤖 Swarm Agents    ◉ [ 5/15]      🟢 CVE 3/3    💾 156 patterns

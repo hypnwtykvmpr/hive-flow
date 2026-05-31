@@ -23,9 +23,9 @@ try {
   // Dynamic import to avoid hard dependency
   const embeddingsModule = await import('@hive-flow/embeddings');
   if (embeddingsModule.createEmbeddingService) {
-    // Try to create agentic-flow service (fastest), fall back to mock
+    // Try the local RVF service, fall back to mock
     try {
-      const service = embeddingsModule.createEmbeddingService({ provider: 'agentic-flow' });
+      const service = embeddingsModule.createEmbeddingService({ provider: 'rvf' });
       realEmbeddings = {
         embed: async (text: string) => {
           const result = await service.embed(text);
@@ -33,7 +33,7 @@ try {
           return Array.from(result.embedding);
         },
       };
-      embeddingServiceName = 'agentic-flow';
+      embeddingServiceName = 'rvf';
     } catch {
       // Fall back to mock service
       const service = embeddingsModule.createEmbeddingService({ provider: 'mock' });

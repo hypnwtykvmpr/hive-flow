@@ -25,7 +25,7 @@ import type {
   QELogger,
 } from '../interfaces.js';
 
-// V3 Router types (would be imported from @hive-flow/cli/ruvector in production)
+// V3 Router types (would be imported from @hive-flow/cli local routing in production)
 interface IEnhancedModelRouter {
   route(
     task: string,

@@ -83,10 +83,5 @@
     "@types/node": "^20.0.0",
     "typescript": "^5.4.0",
     "vitest": "^1.0.0"
-  },
-  "optionalDependencies": {
-    "@ruvector/attention-wasm": "^0.1.0",
-    "@ruvector/gnn-wasm": "^0.1.0",
-    "@ruvector/sona": "^0.1.0"
   }
 }

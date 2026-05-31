@@ -17,7 +17,7 @@
  * - SwarmHub maintained ONLY for compatibility with existing code
  * - All core logic delegated to UnifiedSwarmCoordinator
  *
- * Based on ADR-001 (agentic-flow integration), ADR-003 (Single Coordination Engine),
+ * Based on ADR-001 (local compatibility integration), ADR-003 (Single Coordination Engine),
  * and the 15-Agent Swarm Architecture
  */
 
@@ -567,11 +567,11 @@ export class SwarmHub implements ISwarmHub {
     phases.set('phase-3-integration', {
       id: 'phase-3-integration',
       name: 'Integration',
-      description: 'agentic-flow integration, CLI modernization, and neural features',
+      description: 'local compatibility integration, CLI modernization, and neural features',
       weeks: [7, 10],
       activeAgents: ['agent-1', 'agent-10', 'agent-11', 'agent-12', 'agent-13', 'agent-14'],
       goals: [
-        'Complete agentic-flow@alpha integration',
+        'Complete local compatibility API integration',
         'Modernize CLI and hooks system',
         'Integrate Neural/SONA learning',
         'Run integration tests',
@@ -657,7 +657,7 @@ export class SwarmHub implements ISwarmHub {
       {
         id: 'ms-agentic-integration',
         name: 'agentic-flow Integration Complete',
-        description: 'Deep integration with agentic-flow@alpha eliminating duplicate code',
+        description: 'Deep integration with local compatibility API eliminating duplicate code',
         criteria: [
           { description: 'Agent class extends agentic-flow', met: false, evidence: null },
           { description: 'Swarm uses agentic-flow system', met: false, evidence: null },

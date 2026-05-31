@@ -1864,7 +1864,7 @@ const sessionRestoreCommand: Command = {
 // Intelligence subcommand (SONA, MoE, HNSW)
 const intelligenceCommand: Command = {
   name: 'intelligence',
-  description: 'RuVector intelligence system (SONA, MoE, HNSW 150x faster)',
+  description: 'Local intelligence system (SONA, MoE, HNSW)',
   options: [
     {
       name: 'mode',
@@ -1888,7 +1888,7 @@ const intelligenceCommand: Command = {
     },
     {
       name: 'enable-hnsw',
-      description: 'Enable HNSW 150x faster search',
+      description: 'Enable local HNSW-compatible search',
       type: 'boolean',
       default: true
     },
@@ -1937,7 +1937,7 @@ const intelligenceCommand: Command = {
     const embeddingProvider = ctx.flags.embeddingProvider as string || 'transformers';
 
     output.writeln();
-    output.writeln(output.bold('RuVector Intelligence System'));
+    output.writeln(output.bold('Local Intelligence System'));
     output.writeln();
 
     if (reset) {
@@ -2091,7 +2091,7 @@ const intelligenceCommand: Command = {
 
       // HNSW Component
       output.writeln();
-      output.writeln(output.bold('🔍 HNSW (150x Faster Search)'));
+      output.writeln(output.bold('🔍 HNSW-Compatible Search'));
       const hnsw = result.components?.hnsw;
       if (hnsw?.enabled) {
         output.printTable({
@@ -2651,7 +2651,7 @@ function formatWorkerStatus(status: string): string {
 // Coverage route subcommand
 const coverageRouteCommand: Command = {
   name: 'coverage-route',
-  description: 'Route task to agents based on test coverage gaps (ruvector integration)',
+  description: 'Route task to agents based on test coverage gaps',
   options: [
     {
       name: 'task',
@@ -2668,7 +2668,7 @@ const coverageRouteCommand: Command = {
     },
     {
       name: 'no-ruvector',
-      description: 'Disable ruvector integration',
+      description: 'Disable enhanced local coverage routing',
       type: 'boolean',
       default: false
     }
@@ -2790,7 +2790,7 @@ const coverageRouteCommand: Command = {
 // Coverage suggest subcommand
 const coverageSuggestCommand: Command = {
   name: 'coverage-suggest',
-  description: 'Suggest coverage improvements for a path (ruvector integration)',
+  description: 'Suggest coverage improvements for a path',
   options: [
     {
       name: 'path',
@@ -2871,7 +2871,7 @@ const coverageSuggestCommand: Command = {
           `Line Coverage: ${result.summary.overallLineCoverage.toFixed(1)}%`,
           `Branch Coverage: ${result.summary.overallBranchCoverage.toFixed(1)}%`,
           `Below Threshold: ${result.summary.filesBelowThreshold} files`,
-          `RuVector: ${result.ruvectorAvailable ? output.success('Available') : output.dim('Not installed')}`
+          `Enhanced Routing: ${result.ruvectorAvailable ? output.success('Available') : output.dim('Local fallback')}`
         ].join('\n'),
         'Coverage Summary'
       );
@@ -2997,7 +2997,7 @@ const coverageGapsCommand: Command = {
           `Line Coverage: ${result.summary.overallLineCoverage.toFixed(1)}%`,
           `Branch Coverage: ${result.summary.overallBranchCoverage.toFixed(1)}%`,
           `Below ${result.summary.coverageThreshold}%: ${result.summary.filesBelowThreshold} files`,
-          `RuVector: ${result.ruvectorAvailable ? output.success('Available') : output.dim('Not installed')}`
+          `Enhanced Routing: ${result.ruvectorAvailable ? output.success('Available') : output.dim('Local fallback')}`
         ].join('\n'),
         'Coverage Gap Analysis'
       );
@@ -3393,10 +3393,10 @@ const postBashCommand: Command = {
   action: postCommandCommand.action
 };
 
-// Token Optimizer command - integrates agentic-flow Agent Booster
+// Token Optimizer command - uses local compatibility fallbacks.
 const tokenOptimizeCommand: Command = {
   name: 'token-optimize',
-  description: 'Token optimization via agentic-flow Agent Booster (30-50% savings)',
+  description: 'Token optimization via local compatibility fallbacks',
   options: [
     { name: 'query', short: 'q', type: 'string', description: 'Query for compact context retrieval' },
     { name: 'agents', short: 'A', type: 'number', description: 'Agent count for optimal config', default: '6' },
@@ -3414,7 +3414,7 @@ const tokenOptimizeCommand: Command = {
     const showReport = ctx.flags['report'] as boolean;
     const showStats = ctx.flags['stats'] as boolean;
 
-    const spinner = output.createSpinner({ text: 'Checking agentic-flow integration...', spinner: 'dots' });
+    const spinner = output.createSpinner({ text: 'Checking local compatibility integration...', spinner: 'dots' });
     spinner.start();
 
     // Inline TokenOptimizer (self-contained, no external imports)
@@ -3430,7 +3430,7 @@ const tokenOptimizeCommand: Command = {
     let reasoningBank: any = null;
 
     try {
-      // Check if agentic-flow is available
+      // Check if a compatibility delegate is registered
       const af = await loadAgenticFlow();
       if (af) {
         agenticFlowAvailable = true;
@@ -3441,7 +3441,7 @@ const tokenOptimizeCommand: Command = {
         }
       }
 
-      spinner.succeed(agenticFlowAvailable ? 'agentic-flow detected' : 'agentic-flow not available (using fallbacks)');
+      spinner.succeed(agenticFlowAvailable ? 'local compatibility delegate detected' : 'local compatibility fallback active');
       output.writeln();
 
       // Anti-drift config (hardcoded optimal values from research)
@@ -4087,7 +4087,7 @@ export const hooksCommand: Command = {
       `${output.highlight('worker')}          - Background worker management (12 workers)`,
       `${output.highlight('progress')}        - Check V3 implementation progress`,
       `${output.highlight('statusline')}      - Generate dynamic statusline display`,
-      `${output.highlight('coverage-route')}  - Route tasks based on coverage gaps (ruvector)`,
+      `${output.highlight('coverage-route')}  - Route tasks based on coverage gaps`,
       `${output.highlight('coverage-suggest')}- Suggest coverage improvements`,
       `${output.highlight('coverage-gaps')}   - List all coverage gaps with agents`,
       `${output.highlight('token-optimize')} - Token optimization (30-50% savings)`,
@@ -4105,8 +4105,8 @@ export const hooksCommand: Command = {
     output.writeln(output.bold('V3 Features:'));
     output.printList([
       '🧠 ReasoningBank adaptive learning',
-      '⚡ Flash Attention (2.49x-7.47x speedup)',
-      '🔍 AgentDB integration (150x faster search)',
+      '⚡ Local attention coordination',
+      '🔍 AgentDB-compatible local search',
       '📊 84.8% SWE-Bench solve rate',
       '🎯 32.3% token reduction',
       '🚀 2.8-4.4x speed improvement',

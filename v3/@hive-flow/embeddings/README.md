@@ -135,21 +135,22 @@ const result = await service.embed('Your text here');
 console.log('Tokens used:', result.usage?.totalTokens);
 ```
 
-### Agentic-Flow Provider (Fastest)
+### Historical Agentic-Flow Provider Alias
 
 ```typescript
 import { AgenticFlowEmbeddingService } from '@hive-flow/embeddings';
 
 const service = new AgenticFlowEmbeddingService({
   provider: 'agentic-flow',
-  modelId: 'default',     // Uses optimized ONNX model
   cacheSize: 256,
 });
 
-// 75x faster than Transformers.js (3ms vs 233ms)
 const result = await service.embed('Your text here');
-console.log(`ONNX embedding in ${result.latencyMs}ms`);
+console.log(`Local deterministic embedding in ${result.latencyMs}ms`);
 ```
+
+The provider name is retained for config compatibility, but no external
+`agentic-flow` package is installed or imported.
 
 ### Transformers.js Provider (Local)
 
@@ -507,7 +508,7 @@ Hyperbolic space has natural properties for representing hierarchical data:
 
 ## Neural Substrate Integration
 
-Access agentic-flow's neural features for advanced embedding operations:
+Access the local compatibility neural features for advanced embedding operations:
 
 ```typescript
 import {

@@ -10,10 +10,10 @@
  * - JavaScript bundle optimization
  * - Configuration tuning with SONA learning
  *
- * Uses RuVector WASM packages for high-performance analysis:
- * - ruvector-sparse-inference-wasm: Efficient trace processing
- * - ruvector-fpga-transformer-wasm: Fast configuration optimization
- * - ruvector-gnn-wasm: Dependency chain analysis
+ * Uses local analysis kernels for high-performance analysis:
+ * - Sparse trace processing
+ * - Fast configuration optimization
+ * - Dependency chain analysis
  */
 
 // Types
@@ -57,9 +57,9 @@ export const pluginMetadata = {
     ],
     bridges: ['sparse', 'fpga'],
     wasmPackages: [
-      'ruvector-sparse-inference-wasm',
-      'ruvector-fpga-transformer-wasm',
-      'ruvector-gnn-wasm',
+      'local-sparse-trace-kernel',
+      'local-configuration-optimizer',
+      'local-dependency-graph-kernel',
       'micro-hnsw-wasm',
       'sona',
     ],

@@ -1,6 +1,6 @@
 /**
  * @hive-flow/swarm/workers
- * Worker Dispatch Module (agentic-flow@alpha compatible)
+ * Worker Dispatch Module (local compatibility API compatible)
  *
  * Provides background worker functionality with 12 trigger types
  * for analysis, optimization, and automation tasks.

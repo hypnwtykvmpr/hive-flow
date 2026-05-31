@@ -130,12 +130,7 @@ export const pluginMetadata = {
     'hyperbolic_entailment_graph',
   ],
   bridges: ['hyperbolic-bridge', 'gnn-bridge'],
-  wasmPackages: [
-    '@ruvector/hyperbolic-hnsw-wasm',
-    '@ruvector/attention-wasm',
-    '@ruvector/gnn-wasm',
-    '@ruvector/sona',
-  ],
+  wasmPackages: [],
 } as const;
 
 /**

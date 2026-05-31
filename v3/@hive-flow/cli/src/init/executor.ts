@@ -1371,7 +1371,7 @@ async function writeCapabilitiesDoc(
 3. [Available Agents (60+)](#available-agents)
 4. [CLI Commands (26 Commands, 140+ Subcommands)](#cli-commands)
 5. [Hooks System (27 Hooks + 12 Workers)](#hooks-system)
-6. [Memory & Intelligence (RuVector)](#memory--intelligence)
+6. [Memory & Intelligence](#memory--intelligence)
 7. [Hive-Mind Consensus](#hive-mind-consensus)
 8. [Performance Targets](#performance-targets)
 9. [Integration Ecosystem](#integration-ecosystem)
@@ -1585,7 +1585,7 @@ npx @hive-flow/cli@latest doctor --fix
 
 ## Memory & Intelligence
 
-### RuVector Intelligence System
+### Local Intelligence System
 - **SONA**: Self-Optimizing Neural Architecture (<0.05ms)
 - **MoE**: Mixture of Experts routing
 - **HNSW**: 150x-12,500x faster search
@@ -1699,8 +1699,8 @@ npx @hive-flow/cli@latest hive-mind consensus --propose "task"
 |---------|---------|---------|
 | agentic-flow | 2.0.1-alpha | Core coordination |
 | agentdb | 2.0.0-alpha.3.4 | Vector database |
-| @ruvector/attention | 0.1.31 | Flash attention |
-| @ruvector/sona | 0.1.5 | Neural learning |
+| Local attention kernels | built-in | Flash-compatible attention |
+| Local SONA coordinator | built-in | Neural learning |
 
 ### Optional Integrations
 | Package | Command |

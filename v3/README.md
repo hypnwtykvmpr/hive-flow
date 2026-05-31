@@ -249,7 +249,7 @@ await coordinator.spawnAgent({ type: 'queen-coordinator' });
 ```
 
 ### @hive-flow/integration
-Deep integration with agentic-flow@alpha per ADR-001.
+Local compatibility adapters per ADR-001. External package delegation is detached.
 
 ```typescript
 import { AgenticFlowBridge } from '@hive-flow/integration';
@@ -475,8 +475,6 @@ pnpm test:coverage
 
 ### External
 - [GitHub Repository](https://github.com/ruvnet/hive-flow)
-- [agentic-flow Integration](https://github.com/ruvnet/agentic-flow)
-- [AgentDB](https://github.com/ruvnet/agentdb)
 
 ## Requirements
 

@@ -267,8 +267,8 @@ interface CognitiveKernelConfig {
 
 - `cognitum-gate-kernel` - Core cognitive kernel for memory gating and attention control
 - `sona` - Self-Optimizing Neural Architecture for adaptive cognition
-- `ruvector-attention-wasm` - Multi-head attention for cognitive focus
-- `ruvector-nervous-system-wasm` - Coordination between cognitive subsystems
+- `local-attention-wasm` - Multi-head attention for cognitive focus
+- `local-nervous-system-wasm` - Coordination between cognitive subsystems
 - `micro-hnsw-wasm` - Fast retrieval for episodic memory
 
 ## Use Cases

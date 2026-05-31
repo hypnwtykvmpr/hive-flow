@@ -2,7 +2,7 @@
  * Coverage Router MCP Tools
  *
  * MCP tool implementations for coverage-aware routing.
- * Integrates with hooks_coverage_route and hooks_coverage_suggest from ruvector.
+ * Uses local hooks_coverage_route and hooks_coverage_suggest implementations.
  */
 
 import type { MCPTool } from '../mcp-tools/types.js';
@@ -19,13 +19,13 @@ import {
  * Coverage-aware routing MCP tool
  *
  * Routes tasks to optimal agents based on test coverage gaps.
- * Uses ruvector's hooks_coverage_route when available.
+ * Uses local hooks_coverage_route behavior.
  */
 export const hooksCoverageRoute: MCPTool = {
   name: 'hooks/coverage-route',
-  description: 'Route task to agents based on test coverage gaps (ruvector integration)',
+  description: 'Route task to agents based on test coverage gaps',
   category: 'coverage',
-  tags: ['coverage', 'routing', 'testing', 'ruvector'],
+  tags: ['coverage', 'routing', 'testing'],
   inputSchema: {
     type: 'object',
     properties: {
@@ -43,7 +43,7 @@ export const hooksCoverageRoute: MCPTool = {
       },
       useRuvector: {
         type: 'boolean',
-        description: 'Use ruvector integration if available (default: true)',
+        description: 'Use enhanced local coverage routing if available (default: true)',
       },
     },
     required: ['task'],
@@ -66,13 +66,13 @@ export const hooksCoverageRoute: MCPTool = {
  * Coverage suggestions MCP tool
  *
  * Suggests which files need better coverage in a given path.
- * Uses ruvector's hooks_coverage_suggest when available.
+ * Uses local hooks_coverage_suggest behavior.
  */
 export const hooksCoverageSuggest: MCPTool = {
   name: 'hooks/coverage-suggest',
-  description: 'Suggest coverage improvements for a path (ruvector integration)',
+  description: 'Suggest coverage improvements for a path',
   category: 'coverage',
-  tags: ['coverage', 'suggestions', 'testing', 'ruvector'],
+  tags: ['coverage', 'suggestions', 'testing'],
   inputSchema: {
     type: 'object',
     properties: {
@@ -94,7 +94,7 @@ export const hooksCoverageSuggest: MCPTool = {
       },
       useRuvector: {
         type: 'boolean',
-        description: 'Use ruvector integration if available (default: true)',
+        description: 'Use enhanced local routing if available (default: true)',
       },
     },
     required: ['path'],
@@ -142,7 +142,7 @@ export const hooksCoverageGaps: MCPTool = {
       },
       useRuvector: {
         type: 'boolean',
-        description: 'Use ruvector integration if available (default: true)',
+        description: 'Use enhanced local routing if available (default: true)',
       },
     },
   },

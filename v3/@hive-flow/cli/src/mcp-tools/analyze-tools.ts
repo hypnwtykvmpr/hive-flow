@@ -44,7 +44,7 @@ export const analyzeDiffTool: MCPTool = {
       },
       useRuVector: {
         type: 'boolean',
-        description: 'Attempt to use ruvector for analysis (graceful fallback if unavailable)',
+        description: 'Use local analysis with graceful fallback',
         default: true,
       },
     },

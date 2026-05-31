@@ -17,7 +17,7 @@
  * - Federation sync: <500ms
  * - Auto-cleanup: Background, non-blocking
  *
- * Implements ADR-001: agentic-flow@alpha compatibility
+ * Implements ADR-001: local compatibility API compatibility
  * Implements ADR-003: Unified coordination engine
  *
  * @module @hive-flow/swarm/federation-hub

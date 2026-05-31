@@ -59,6 +59,9 @@
   },
   "pnpm": {
     "neverBuiltDependencies": ["sharp"],
+    "patchedDependencies": {
+      "agentdb@3.0.0-alpha.9": "patches/agentdb@3.0.0-alpha.9.patch"
+    },
     "peerDependencyRules": {
       "ignoreMissing": [
         "@hive-flow/browser",
@@ -66,16 +69,12 @@
         "@hive-flow/embeddings",
         "@hive-flow/memory",
         "@hive-flow/plugins",
-        "@hive-flow/ruvector-upstream",
         "@hive-flow/security"
       ]
     },
     "overrides": {
-      "@ruvector/gnn": "0.1.25",
-      "@ruvector/gnn-linux-x64-gnu": "0.1.25",
       "tar": ">=7.6.0",
       "node-gyp": "^10.0.0",
-      "@hive-flow/ruvector-upstream": "workspace:*",
       "undici": ">=7.26.0 <8",
       "@anthropic-ai/sdk": ">=0.98.0",
       "@modelcontextprotocol/sdk": ">=1.26.0",

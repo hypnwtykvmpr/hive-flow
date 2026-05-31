@@ -16,10 +16,6 @@
     "build": "tsc",
     "typecheck": "tsc --noEmit"
   },
-  "dependencies": {
-    "@ruvector/attention": "^0.1.31",
-    "@ruvector/sona": "^0.1.5"
-  },
   "engines": {
     "node": ">=20.0.0"
   },

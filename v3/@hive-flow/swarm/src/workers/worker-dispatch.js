@@ -1,7 +1,7 @@
 /**
  * Worker Dispatch Service
  *
- * Implements the 12 background worker triggers from agentic-flow@alpha:
+ * Implements the 12 background worker triggers from local compatibility API:
  * - ultralearn: Deep knowledge acquisition
  * - optimize: Performance optimization
  * - consolidate: Memory consolidation

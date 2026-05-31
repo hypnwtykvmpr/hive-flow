@@ -308,7 +308,7 @@ export const providersCommand: Command = {
       'Ollama (local models)',
       'LM Studio (local OpenAI-compatible)',
       'OpenRouter (multi-provider proxy)',
-      'RuVector (intelligence system)',
+      'Local intelligence system',
     ]);
     output.writeln();
     output.writeln(output.dim('Created with ❤️ by ruv.io'));

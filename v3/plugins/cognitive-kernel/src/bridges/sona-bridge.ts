@@ -145,14 +145,7 @@ export class SonaBridge {
     this._status = 'loading';
 
     try {
-      const wasmModule = await (import('@ruvector/sona') as Promise<unknown>).catch(() => null);
-
-      if (wasmModule) {
-        this._module = wasmModule as unknown as SonaModule;
-      } else {
-        this._module = this.createMockModule();
-      }
-
+      this._module = this.createMockModule();
       this._module.setMode(this.config.mode);
       this._status = 'ready';
     } catch (error) {

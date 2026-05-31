@@ -8,10 +8,10 @@
 import type { Command, CommandContext, CommandResult } from '../types.js';
 import { output } from '../output.js';
 
-// Train subcommand - REAL WASM training with RuVector
+// Train subcommand - local neural training with optional compatibility flags
 const trainCommand: Command = {
   name: 'train',
-  description: 'Train neural patterns with WASM SIMD acceleration (MicroLoRA + Flash Attention)',
+  description: 'Train neural patterns with local MicroLoRA and attention kernels',
   options: [
     { name: 'pattern', short: 'p', type: 'string', description: 'Pattern type: coordination, optimization, prediction, security, testing', default: 'coordination' },
     { name: 'epochs', short: 'e', type: 'number', description: 'Number of training epochs', default: '50' },
@@ -20,8 +20,8 @@ const trainCommand: Command = {
     { name: 'learning-rate', short: 'l', type: 'number', description: 'Learning rate', default: '0.01' },
     { name: 'batch-size', short: 'b', type: 'number', description: 'Batch size', default: '32' },
     { name: 'dim', type: 'number', description: 'Embedding dimension (max 256)', default: '256' },
-    { name: 'wasm', short: 'w', type: 'boolean', description: 'Use RuVector WASM acceleration', default: 'true' },
-    { name: 'flash', type: 'boolean', description: 'Enable Flash Attention (2.49x-7.47x speedup)', default: 'true' },
+    { name: 'wasm', short: 'w', type: 'boolean', description: 'Use local accelerated training path', default: 'true' },
+    { name: 'flash', type: 'boolean', description: 'Enable local Flash Attention-compatible kernel', default: 'true' },
     { name: 'moe', type: 'boolean', description: 'Enable Mixture of Experts routing', default: 'false' },
     { name: 'hyperbolic', type: 'boolean', description: 'Enable hyperbolic attention for hierarchical patterns', default: 'false' },
     { name: 'contrastive', type: 'boolean', description: 'Use contrastive learning (InfoNCE)', default: 'true' },
@@ -47,15 +47,15 @@ const trainCommand: Command = {
     const dataFile = ctx.flags.data as string | undefined;
 
     output.writeln();
-    output.writeln(output.bold('Neural Pattern Training (RuVector WASM)'));
+    output.writeln(output.bold('Neural Pattern Training (Local Kernels)'));
     output.writeln(output.dim('─'.repeat(55)));
 
-    const spinner = output.createSpinner({ text: 'Initializing RuVector training systems...', spinner: 'dots' });
+    const spinner = output.createSpinner({ text: 'Initializing local training systems...', spinner: 'dots' });
     spinner.start();
 
     try {
-      // Import RuVector training service
-      const ruvector = await import('../services/ruvector-training.js');
+      // Import local training service
+      const localTraining = await import('../services/ruvector-training.js');
       const { generateEmbedding } = await import('../memory/memory-initializer.js');
       const {
         initializeIntelligence,
@@ -66,10 +66,10 @@ const trainCommand: Command = {
         getPersistenceStatus
       } = await import('../memory/intelligence.js');
 
-      // Initialize RuVector WASM training
+      // Initialize local training
       let wasmFeatures: string[] = [];
       if (useWasm) {
-        const initResult = await ruvector.initializeTraining({
+        const initResult = await localTraining.initializeTraining({
           dim,
           learningRate,
           alpha: 0.1,
@@ -83,9 +83,9 @@ const trainCommand: Command = {
 
         if (initResult.success) {
           wasmFeatures = initResult.features;
-          spinner.setText(`RuVector initialized: ${wasmFeatures.join(', ')}`);
+          spinner.setText(`Local training initialized: ${wasmFeatures.join(', ')}`);
         } else {
-          output.writeln(output.warning(`WASM init failed: ${initResult.error} - falling back`));
+          output.writeln(output.warning(`Local training init failed: ${initResult.error} - falling back`));
         }
       }
 
@@ -97,16 +97,16 @@ const trainCommand: Command = {
 
       // Pattern type to operator mapping
       const operatorMap: Record<string, number> = {
-        coordination: ruvector.OperatorType.COORDINATION,
-        optimization: ruvector.OperatorType.OPTIMIZATION,
-        prediction: ruvector.OperatorType.ROUTING,
-        security: ruvector.OperatorType.SECURITY,
-        testing: ruvector.OperatorType.TESTING,
-        debugging: ruvector.OperatorType.DEBUGGING,
-        memory: ruvector.OperatorType.MEMORY,
-        reasoning: ruvector.OperatorType.REASONING,
+        coordination: localTraining.OperatorType.COORDINATION,
+        optimization: localTraining.OperatorType.OPTIMIZATION,
+        prediction: localTraining.OperatorType.ROUTING,
+        security: localTraining.OperatorType.SECURITY,
+        testing: localTraining.OperatorType.TESTING,
+        debugging: localTraining.OperatorType.DEBUGGING,
+        memory: localTraining.OperatorType.MEMORY,
+        reasoning: localTraining.OperatorType.REASONING,
       };
-      const operatorType = operatorMap[patternType] ?? ruvector.OperatorType.GENERAL;
+      const operatorType = operatorMap[patternType] ?? localTraining.OperatorType.GENERAL;
 
       spinner.setText(`Training ${patternType} patterns...`);
 
@@ -203,12 +203,12 @@ const trainCommand: Command = {
 
       spinner.setText(`Training with ${embeddings.length} embeddings...`);
 
-      // Main training loop with WASM acceleration
+      // Main training loop with local acceleration
       for (let epoch = 0; epoch < epochs; epoch++) {
         const epochStart = performance.now();
 
         // Get curriculum difficulty if enabled
-        const difficulty = useCurriculum ? ruvector.getCurriculumDifficulty(epoch) : 1.0;
+        const difficulty = useCurriculum ? localTraining.getCurriculumDifficulty(epoch) : 1.0;
 
         // Process batch
         const batchStart = (epoch * batchSize) % embeddings.length;
@@ -224,7 +224,7 @@ const trainCommand: Command = {
 
           try {
             // Compute contrastive loss
-            const { loss, gradient } = ruvector.computeContrastiveLoss(anchor, positives, negatives);
+            const { loss, gradient } = localTraining.computeContrastiveLoss(anchor, positives, negatives);
             totalLoss += loss;
 
             // Scale gradient by difficulty
@@ -234,15 +234,15 @@ const trainCommand: Command = {
             }
 
             // Train with MicroLoRA
-            await ruvector.trainPattern(anchor, scaledGradient, operatorType);
+            await localTraining.trainPattern(anchor, scaledGradient, operatorType);
             adaptations++;
 
             // Record trajectory for learning
             const baselineMs = 10; // Baseline execution time
             const executionMs = performance.now() - epochStart;
-            ruvector.recordTrajectory(anchor, operatorType, useFlash ? 1 : 0, executionMs, baselineMs);
+            localTraining.recordTrajectory(anchor, operatorType, useFlash ? 1 : 0, executionMs, baselineMs);
           } catch {
-            // WASM training failed, fall back to basic
+            // Local training failed, fall back to basic
           }
         }
 
@@ -277,16 +277,16 @@ const trainCommand: Command = {
 
       const totalTime = Date.now() - startTime;
 
-      // Get RuVector stats
-      const ruvectorStats = useWasm && wasmFeatures.length > 0 ? ruvector.getTrainingStats() : null;
-      const trajectoryStats = ruvectorStats?.trajectoryStats;
+      // Get local training stats
+      const localTrainingStats = useWasm && wasmFeatures.length > 0 ? localTraining.getTrainingStats() : null;
+      const trajectoryStats = localTrainingStats?.trajectoryStats;
 
-      // Benchmark if WASM was used
+      // Benchmark if local training was used
       let benchmark: Array<{ name: string; averageTimeMs: number; opsPerSecond: number }> | null = null;
       if (useWasm && wasmFeatures.length > 0) {
         try {
           spinner.setText('Running benchmark...');
-          benchmark = await ruvector.benchmarkTraining(dim, 100);
+          benchmark = await localTraining.benchmarkTraining(dim, 100);
         } catch {
           // Benchmark failed, continue
         }
@@ -316,17 +316,17 @@ const trainCommand: Command = {
         { metric: 'Avg Epoch Time', value: `${(epochTimes.reduce((a, b) => a + b, 0) / epochTimes.length).toFixed(2)}ms` },
       ];
 
-      // Add WASM-specific metrics
+      // Add local-training-specific metrics
       if (useWasm && wasmFeatures.length > 0) {
         tableData.push(
-          { metric: 'WASM Features', value: wasmFeatures.slice(0, 3).join(', ') },
+          { metric: 'Local Features', value: wasmFeatures.slice(0, 3).join(', ') },
           { metric: 'LoRA Adaptations', value: String(adaptations) },
           { metric: 'Avg Loss', value: (totalLoss / Math.max(1, epochs)).toFixed(4) }
         );
 
-        if (ruvectorStats?.microLoraStats) {
+        if (localTrainingStats?.microLoraStats) {
           tableData.push(
-            { metric: 'MicroLoRA Delta Norm', value: ruvectorStats.microLoraStats.deltaNorm.toFixed(6) }
+            { metric: 'MicroLoRA Delta Norm', value: localTrainingStats.microLoraStats.deltaNorm.toFixed(6) }
           );
         }
 
@@ -362,7 +362,7 @@ const trainCommand: Command = {
       output.writeln(output.success(`✓ ${patternsRecorded} patterns saved to ${persistence.patternsFile}`));
 
       if (useWasm && wasmFeatures.length > 0) {
-        output.writeln(output.highlight(`✓ RuVector WASM: ${wasmFeatures.join(', ')}`));
+        output.writeln(output.highlight(`Local training: ${wasmFeatures.join(', ')}`));
       }
 
       return {
@@ -373,7 +373,7 @@ const trainCommand: Command = {
           trajectoriesCompleted,
           totalTime,
           wasmFeatures,
-          ruvectorStats,
+          localTrainingStats,
           benchmark,
           stats,
           persistence
@@ -413,7 +413,7 @@ const statusCommand: Command = {
       // Import real implementations
       const { getIntelligenceStats, initializeIntelligence, benchmarkAdaptation } = await import('../memory/intelligence.js');
       const { getHNSWStatus, loadEmbeddingModel } = await import('../memory/memory-initializer.js');
-      const ruvector = await import('../services/ruvector-training.js');
+      const localTraining = await import('../services/ruvector-training.js');
 
       // Initialize if needed and get real stats
       await initializeIntelligence();
@@ -426,9 +426,9 @@ const statusCommand: Command = {
       // Check embedding model
       const modelInfo = await loadEmbeddingModel({ verbose: false });
 
-      // Check RuVector WASM status
-      const ruvectorStats = ruvector.getTrainingStats();
-      const sonaAvailable = ruvector.isSonaAvailable();
+      // Check local training status
+      const localTrainingStats = localTraining.getTrainingStats();
+      const sonaAvailable = localTraining.isSonaAvailable();
 
       spinner.succeed('Neural systems checked');
 
@@ -448,17 +448,17 @@ const statusCommand: Command = {
               : 'Not initialized',
           },
           {
-            component: 'RuVector WASM',
-            status: ruvectorStats.initialized ? output.success('Active') : output.dim('Not loaded'),
-            details: ruvectorStats.initialized
-              ? `MicroLoRA: ${ruvectorStats.totalAdaptations} adapts`
+            component: 'Local Training',
+            status: localTrainingStats.initialized ? output.success('Active') : output.dim('Not loaded'),
+            details: localTrainingStats.initialized
+              ? `MicroLoRA: ${localTrainingStats.totalAdaptations} adapts`
               : 'Call neural train to initialize',
           },
           {
             component: 'SONA Engine',
             status: sonaAvailable ? output.success('Active') : output.dim('Not loaded'),
-            details: sonaAvailable && ruvectorStats.sonaStats
-              ? `${ruvectorStats.sonaStats.totalLearns} learns, ${ruvectorStats.sonaStats.totalSearches} searches`
+            details: sonaAvailable && localTrainingStats.sonaStats
+              ? `${localTrainingStats.sonaStats.totalLearns} learns, ${localTrainingStats.sonaStats.totalSearches} searches`
               : 'Optional, enable with --sona',
           },
           {
@@ -471,7 +471,7 @@ const statusCommand: Command = {
             status: hnswStatus.available ? output.success('Ready') : output.dim('Not loaded'),
             details: hnswStatus.available
               ? `${hnswStatus.entryCount} vectors, ${hnswStatus.dimensions}-dim`
-              : '@ruvector/core not available',
+              : 'Local vector index not loaded',
           },
           {
             component: 'Embedding Model',
@@ -510,20 +510,20 @@ const statusCommand: Command = {
           },
         ];
 
-        // Add RuVector WASM metrics if initialized
-        if (ruvectorStats.initialized) {
+        // Add local training metrics if initialized
+        if (localTrainingStats.initialized) {
           detailedData.push(
-            { metric: 'RuVector Adaptations', value: String(ruvectorStats.totalAdaptations) },
-            { metric: 'RuVector Forwards', value: String(ruvectorStats.totalForwards) },
+            { metric: 'Local Adaptations', value: String(localTrainingStats.totalAdaptations) },
+            { metric: 'Local Forwards', value: String(localTrainingStats.totalForwards) },
           );
-          if (ruvectorStats.microLoraStats) {
+          if (localTrainingStats.microLoraStats) {
             detailedData.push(
-              { metric: 'MicroLoRA Delta Norm', value: ruvectorStats.microLoraStats.deltaNorm.toFixed(6) },
-              { metric: 'MicroLoRA Adapt Count', value: String(ruvectorStats.microLoraStats.adaptCount) },
+              { metric: 'MicroLoRA Delta Norm', value: localTrainingStats.microLoraStats.deltaNorm.toFixed(6) },
+              { metric: 'MicroLoRA Adapt Count', value: String(localTrainingStats.microLoraStats.adaptCount) },
             );
           }
-          if (sonaAvailable && ruvectorStats.sonaStats?.stats) {
-            const sonaStats = ruvectorStats.sonaStats.stats as Record<string, unknown>;
+          if (sonaAvailable && localTrainingStats.sonaStats?.stats) {
+            const sonaStats = localTrainingStats.sonaStats.stats as Record<string, unknown>;
             detailedData.push(
               { metric: 'SONA Patterns Stored', value: String(sonaStats.patterns_stored || 0) },
               { metric: 'SONA EWC Tasks', value: String(sonaStats.ewc_tasks || 0) },
@@ -540,7 +540,7 @@ const statusCommand: Command = {
         });
       }
 
-      return { success: true, data: { stats, hnswStatus, adaptBench, modelInfo, ruvectorStats } };
+      return { success: true, data: { stats, hnswStatus, adaptBench, modelInfo, localTrainingStats } };
     } catch (error) {
       spinner.fail('Failed to check neural systems');
       output.printError(error instanceof Error ? error.message : String(error));
@@ -1521,10 +1521,10 @@ const importCommand: Command = {
   },
 };
 
-// Benchmark subcommand - Real WASM benchmarks
+// Benchmark subcommand - local neural kernel benchmarks
 const benchmarkCommand: Command = {
   name: 'benchmark',
-  description: 'Benchmark RuVector WASM training performance',
+  description: 'Benchmark local neural training performance',
   options: [
     { name: 'dim', short: 'd', type: 'number', description: 'Embedding dimension (max 256)', default: '256' },
     { name: 'iterations', short: 'i', type: 'number', description: 'Number of iterations', default: '1000' },
@@ -1540,70 +1540,17 @@ const benchmarkCommand: Command = {
     const numKeys = parseInt(ctx.flags.keys as string || '100', 10);
 
     output.writeln();
-    output.writeln(output.bold('RuVector WASM Benchmark'));
+    output.writeln(output.bold('Local Neural Benchmark'));
     output.writeln(output.dim('─'.repeat(50)));
 
     const spinner = output.createSpinner({ text: 'Running benchmarks...', spinner: 'dots' });
     spinner.start();
 
     try {
-      // SAFETY: @ruvector/attention is optional — typed as record of constructors used below
-      type AttentionMechanism = { computeRaw: (q: Float32Array, k: Float32Array[], v: Float32Array[]) => Float32Array };
-      const attention = await import('@ruvector/attention') as unknown as Record<string, new (...args: number[]) => AttentionMechanism>;
-
-      // Manual benchmark since benchmarkAttention has a binding bug
-      const benchmarkMechanism = async (name: string, mechanism: { computeRaw: (q: Float32Array, k: Float32Array[], v: Float32Array[]) => Float32Array }) => {
-        const query = new Float32Array(dim);
-        const keys: Float32Array[] = [];
-        const values: Float32Array[] = [];
-
-        for (let i = 0; i < dim; i++) query[i] = Math.random();
-        for (let k = 0; k < numKeys; k++) {
-          const key = new Float32Array(dim);
-          const val = new Float32Array(dim);
-          for (let i = 0; i < dim; i++) {
-            key[i] = Math.random();
-            val[i] = Math.random();
-          }
-          keys.push(key);
-          values.push(val);
-        }
-
-        // Warmup
-        for (let i = 0; i < 10; i++) mechanism.computeRaw(query, keys, values);
-
-        const start = performance.now();
-        for (let i = 0; i < iterations; i++) {
-          mechanism.computeRaw(query, keys, values);
-        }
-        const elapsed = performance.now() - start;
-
-        return {
-          name,
-          averageTimeMs: elapsed / iterations,
-          opsPerSecond: Math.round((iterations / elapsed) * 1000),
-        };
-      };
-
       spinner.setText(`Benchmarking attention mechanisms (dim=${dim}, keys=${numKeys}, iter=${iterations})...`);
-
-      const results: { name: string; averageTimeMs: number; opsPerSecond: number }[] = [];
-
-      // Benchmark each mechanism
-      const dotProduct = new attention.DotProductAttention(dim);
-      results.push(await benchmarkMechanism('DotProduct', dotProduct));
-
-      const flash = new attention.FlashAttention(dim, 64);
-      results.push(await benchmarkMechanism('FlashAttention', flash));
-
-      const multiHead = new attention.MultiHeadAttention(dim, 4);
-      results.push(await benchmarkMechanism('MultiHead (4 heads)', multiHead));
-
-      const hyperbolic = new attention.HyperbolicAttention(dim, 1.0);
-      results.push(await benchmarkMechanism('Hyperbolic', hyperbolic));
-
-      const linear = new attention.LinearAttention(dim, dim);
-      results.push(await benchmarkMechanism('Linear', linear));
+      const localTraining = await import('../services/ruvector-training.js');
+      await localTraining.initializeTraining({ dim, useFlashAttention: true, useMoE: true, useHyperbolic: true });
+      const results = await localTraining.benchmarkTraining(dim, iterations, numKeys);
 
       spinner.succeed('Benchmark complete');
 
@@ -1629,37 +1576,17 @@ const benchmarkCommand: Command = {
       if (dotProductResult && flashResult) {
         const speedup = dotProductResult.averageTimeMs / flashResult.averageTimeMs;
         output.writeln();
-        output.writeln(output.highlight(`Flash Attention speedup: ${speedup.toFixed(2)}x faster than DotProduct`));
+        output.writeln(output.highlight(`Flash-compatible kernel ratio: ${speedup.toFixed(2)}x vs DotProduct`));
       }
 
       if (dotProductResult && hyperbolicResult) {
         output.writeln(output.dim(`Hyperbolic overhead: ${(hyperbolicResult.averageTimeMs / dotProductResult.averageTimeMs).toFixed(2)}x (expected for manifold ops)`));
       }
 
-      // Also benchmark MicroLoRA
       spinner.start();
       spinner.setText('Benchmarking MicroLoRA adaptation...');
 
-      // Load WASM file directly (Node.js compatible)
-      const fs = await import('fs');
-      const { createRequire } = await import('module');
-      const require = createRequire(import.meta.url);
-      const wasmPath = require.resolve('@ruvector/learning-wasm/ruvector_learning_wasm_bg.wasm');
-      const wasmBuffer = fs.readFileSync(wasmPath);
-
-      const learningWasm = await import('@ruvector/learning-wasm');
-      learningWasm.initSync({ module: wasmBuffer });
-
-      const lora = new learningWasm.WasmMicroLoRA(dim, 0.1, 0.01);
-      const gradient = new Float32Array(dim);
-      for (let i = 0; i < dim; i++) gradient[i] = Math.random() - 0.5;
-
-      const loraStart = performance.now();
-      for (let i = 0; i < iterations; i++) {
-        lora.adapt_array(gradient);
-      }
-      const loraTime = performance.now() - loraStart;
-      const loraAvg = loraTime / iterations;
+      const microLora = localTraining.benchmarkMicroLora(dim, iterations);
 
       spinner.succeed('MicroLoRA benchmark complete');
 
@@ -1672,16 +1599,16 @@ const benchmarkCommand: Command = {
         data: [
           { metric: 'Dimension', value: String(dim) },
           { metric: 'Iterations', value: iterations.toLocaleString() },
-          { metric: 'Total Time', value: `${loraTime.toFixed(2)}ms` },
-          { metric: 'Avg Adaptation', value: `${(loraAvg * 1000).toFixed(2)}μs` },
-          { metric: 'Adaptations/sec', value: Math.round(1000 / loraAvg).toLocaleString() },
-          { metric: 'Target (<100μs)', value: loraAvg * 1000 < 100 ? output.success('✓ PASS') : output.warning('✗ FAIL') },
+          { metric: 'Total Time', value: `${microLora.totalTimeMs.toFixed(2)}ms` },
+          { metric: 'Avg Adaptation', value: `${(microLora.averageTimeMs * 1000).toFixed(2)}μs` },
+          { metric: 'Adaptations/sec', value: microLora.adaptationsPerSecond.toLocaleString() },
+          { metric: 'Target (<100μs)', value: microLora.averageTimeMs * 1000 < 100 ? output.success('PASS') : output.warning('CHECK') },
         ],
       });
 
-      lora.free();
+      localTraining.cleanup();
 
-      return { success: true, data: { results, loraAvg } };
+      return { success: true, data: { results, microLora } };
     } catch (error) {
       spinner.fail('Benchmark failed');
       output.printError(error instanceof Error ? error.message : String(error));

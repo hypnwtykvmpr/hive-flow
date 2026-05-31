@@ -1,10 +1,10 @@
 /**
  * V3 Embedding Service Module
  *
- * Production embedding service aligned with agentic-flow@alpha:
+ * Production embedding service:
  * - OpenAI provider (text-embedding-3-small/large)
  * - Transformers.js provider (local ONNX models)
- * - Agentic-flow provider (optimized ONNX with SIMD)
+ * - Historical agentic-flow provider alias backed by local deterministic embeddings
  * - Mock provider (development/testing)
  *
  * Additional features:

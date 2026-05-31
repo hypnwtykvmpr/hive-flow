@@ -241,8 +241,6 @@ import type {
 
 ## Dependencies
 
-- `@ruvector/attention` - Flash Attention implementation
-- `@ruvector/sona` - SONA learning engine
 - `vitest` - Test/benchmark runner
 
 ## Related Packages

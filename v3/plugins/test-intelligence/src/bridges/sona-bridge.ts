@@ -98,24 +98,8 @@ export class TestSonaBridge implements SonaBridgeInterface {
 
     this.status = 'loading';
 
-    try {
-      // Try to load SONA WASM module
-      // Dynamic import of optional WASM module - use string literal to avoid type error
-      const modulePath = '@hive-flow/ruvector-upstream';
-      const wasmModule = await import(/* @vite-ignore */ modulePath).catch(() => null);
-
-      if (wasmModule) {
-        // Initialize with WASM module
-        this.status = 'ready';
-      } else {
-        // Use mock implementation
-        this.initializeMockLoRA();
-        this.status = 'ready';
-      }
-    } catch (error) {
-      this.status = 'error';
-      throw error;
-    }
+    this.initializeMockLoRA();
+    this.status = 'ready';
   }
 
   async destroy(): Promise<void> {

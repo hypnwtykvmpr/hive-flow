@@ -26,10 +26,6 @@
       "types": "./dist/providers/index.d.js",
       "import": "./dist/providers/index.js"
     },
-    "./examples/ruvector": {
-      "types": "./dist/examples/ruvector-plugins/index.d.js",
-      "import": "./dist/examples/ruvector-plugins/index.js"
-    },
     "./examples/plugin-creator": {
       "types": "./dist/examples/plugin-creator/index.d.js",
       "import": "./dist/examples/plugin-creator/index.js"
@@ -47,21 +43,13 @@
   "peerDependencies": {
     "@hive-flow/shared": "workspace:*",
     "@hive-flow/hooks": "workspace:*",
-    "@hive-flow/memory": "workspace:*",
-    "@ruvector/learning-wasm": "^0.1.0",
-    "@ruvector/wasm": "^0.1.0"
+    "@hive-flow/memory": "workspace:*"
   },
   "peerDependenciesMeta": {
     "@hive-flow/hooks": {
       "optional": true
     },
     "@hive-flow/memory": {
-      "optional": true
-    },
-    "@ruvector/wasm": {
-      "optional": true
-    },
-    "@ruvector/learning-wasm": {
       "optional": true
     }
   },
@@ -74,10 +62,7 @@
     "sdk",
     "workers",
     "hooks",
-    "agentic-flow",
-    "agentdb",
     "ai-agents",
-    "ruvector",
     "hnsw",
     "vector-search",
     "lora",

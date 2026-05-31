@@ -1,7 +1,7 @@
 /**
  * V3 MCP Worker Tools
  *
- * MCP tools for background worker management (agentic-flow@alpha compatible):
+ * MCP tools for background worker management (local compatibility API compatible):
  * - worker/dispatch - Spawn background worker
  * - worker/status - Get worker status
  * - worker/cancel - Cancel running worker
@@ -12,7 +12,7 @@
  * - worker/context - Get context for injection
  *
  * Implements ADR-005: MCP-First API Design
- * Implements ADR-001: agentic-flow@alpha compatibility
+ * Implements ADR-001: local compatibility API compatibility
  */
 
 import { z } from 'zod';

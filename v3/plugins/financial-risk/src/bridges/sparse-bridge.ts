@@ -2,9 +2,8 @@
  * Sparse Bridge - Financial Risk Plugin
  *
  * Provides sparse inference capabilities for efficient processing
- * of high-dimensional financial data. Integrates with
- * ruvector-sparse-inference-wasm for anomaly detection and
- * market regime classification.
+ * of high-dimensional financial data. Uses local sparse analysis kernels for
+ * anomaly detection and market regime classification.
  *
  * Features:
  * - Efficient sparse feature processing
@@ -34,7 +33,7 @@ const defaultLogger: Logger = {
 };
 
 /**
- * WASM module interface for ruvector-sparse-inference-wasm
+ * WASM module interface for local sparse inference kernels.
  */
 interface SparseWasmModule {
   create_sparse_model(inputDim: number, hiddenDim: number, sparsity: number): number;
@@ -525,12 +524,7 @@ export class FinancialSparseBridge implements SparseBridge {
   // Private methods
 
   private async resolveWasmPath(): Promise<string | null> {
-    try {
-      const module = await import(/* webpackIgnore: true */ 'ruvector-sparse-inference-wasm' as string) as { default?: string };
-      return module.default ?? null;
-    } catch {
-      return null;
-    }
+    return null;
   }
 
   private async loadWasmModule(wasmPath: string): Promise<SparseWasmModule> {

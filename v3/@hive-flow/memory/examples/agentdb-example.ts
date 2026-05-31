@@ -1,7 +1,7 @@
 /**
  * AgentDB Backend Example
  *
- * Demonstrates agentdb@2.0.0-alpha.3.4 integration with V3 memory system
+ * Demonstrates the local AgentDB-compatible V3 memory backend
  */
 
 import { AgentDBBackend, HybridBackend, createDefaultEntry } from '../src/index.js';
@@ -291,7 +291,7 @@ async function gracefulDegradationExample() {
     console.log('✓ AgentDB available - using HNSW indexing');
   } else {
     console.log('⚠ AgentDB not available - using fallback in-memory storage');
-    console.log('  (Install: npm install agentdb@2.0.0-alpha.3.4)');
+    console.log('  (External agentdb package is detached; local fallback is used)');
   }
 
   // Store entries (works either way)
@@ -320,7 +320,7 @@ async function gracefulDegradationExample() {
 async function main() {
   console.log('╔═══════════════════════════════════════════════════════════╗');
   console.log('║  AgentDB Integration Examples                             ║');
-  console.log('║  V3 Memory Module with agentdb@2.0.0-alpha.3.4            ║');
+  console.log('║  V3 Memory Module with local AgentDB-compatible backend    ║');
   console.log('╚═══════════════════════════════════════════════════════════╝');
 
   try {

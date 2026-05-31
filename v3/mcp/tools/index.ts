@@ -116,7 +116,7 @@ export {
   sessionTools,
 } from './session-tools.js';
 
-// Worker tools (agentic-flow@alpha compatible)
+// Worker tools (local compatibility API compatible)
 export {
   dispatchWorkerTool,
   workerStatusTool,

@@ -1,7 +1,7 @@
 /**
  * Attention Coordinator
  *
- * Implements attention-based coordination mechanisms from agentic-flow@alpha:
+ * Implements attention-based coordination mechanisms from local compatibility API:
  * - multi-head: Standard multi-head attention
  * - flash: 2.49x-7.47x speedup, 75% memory reduction
  * - linear: For long sequences
@@ -384,7 +384,7 @@ export class AttentionCoordinator extends EventEmitter {
     const blockSize = this.config.flashAttention.blockSize;
 
     // Flash Attention block-wise computation (memory efficient O(N) vs O(N²))
-    // For GPU acceleration, integrate with @ruvector/flash-attention-wasm
+    // Future GPU acceleration can be added behind a local adapter.
     const attentionWeights = new Array(n).fill(0);
     let memoryUsed = 0;
 

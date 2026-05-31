@@ -508,7 +508,7 @@ export const embeddingsTools: MCPTool[] = [
 
   {
     name: 'embeddings_neural',
-    description: 'Neural substrate operations (RuVector integration)',
+    description: 'Neural substrate operations (local kernels)',
     category: 'embeddings',
     inputSchema: {
       type: 'object',
@@ -567,7 +567,7 @@ export const embeddingsTools: MCPTool[] = [
             success: true,
             action: 'init',
             neural: config.neural,
-            message: 'Neural substrate initialized with RuVector integration',
+            message: 'Neural substrate initialized with local kernels',
           };
 
         case 'drift':

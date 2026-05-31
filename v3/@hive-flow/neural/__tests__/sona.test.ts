@@ -1,7 +1,7 @@
 /**
  * SONA Learning Engine Tests
  *
- * Tests for SONA integration with @ruvector/sona package.
+ * Tests for the local SONA integration.
  * Covers initialization, learning, adaptation, mode switching, and performance.
  *
  * Performance targets:
@@ -10,7 +10,7 @@
  * - Full learning cycle: <10ms
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import {
   SONALearningEngine,
   createSONALearningEngine,
@@ -18,45 +18,6 @@ import {
   type AdaptedBehavior,
 } from '../src/sona-integration.js';
 import type { Trajectory, SONAMode, SONAModeConfig } from '../src/types.js';
-
-// Create a reusable mock engine factory
-function createMockEngine() {
-  let enabled = true;
-  return {
-    beginTrajectory: vi.fn().mockReturnValue(1),
-    addTrajectoryStep: vi.fn(),
-    addTrajectoryContext: vi.fn(),
-    endTrajectory: vi.fn(),
-    flush: vi.fn(),
-    applyMicroLora: vi.fn((arr: number[]) => arr),
-    findPatterns: vi.fn().mockReturnValue([
-      {
-        patternType: 'test-pattern',
-        avgQuality: 0.85,
-        embedding: new Float32Array(768),
-        usageCount: 5,
-      },
-    ]),
-    forceLearn: vi.fn().mockReturnValue('Learning complete'),
-    tick: vi.fn().mockReturnValue(null),
-    getStats: vi.fn().mockReturnValue(JSON.stringify({
-      total_trajectories: 10,
-      patterns_learned: 5,
-      avg_quality: 0.75,
-    })),
-    isEnabled: vi.fn(() => enabled),
-    setEnabled: vi.fn((value: boolean) => { enabled = value; }),
-  };
-}
-
-// Mock @ruvector/sona
-vi.mock('@ruvector/sona', () => {
-  return {
-    SonaEngine: {
-      withConfig: vi.fn(() => createMockEngine()),
-    },
-  };
-});
 
 describe('SONALearningEngine', () => {
   let engine: SONALearningEngine;
@@ -281,6 +242,25 @@ describe('SONALearningEngine', () => {
     });
 
     it('should find similar patterns during adaptation', async () => {
+      await engine.learn({
+        trajectoryId: 'pattern-source',
+        context: 'Pattern source',
+        domain: 'code',
+        steps: [
+          {
+            stepId: 'step-1',
+            timestamp: Date.now(),
+            action: 'test',
+            stateBefore: new Float32Array(768).fill(0.7),
+            stateAfter: new Float32Array(768).fill(0.8),
+            reward: 0.7,
+          },
+        ],
+        qualityScore: 0.85,
+        isComplete: true,
+        startTime: Date.now(),
+      });
+
       const context: Context = {
         domain: 'code',
         queryEmbedding: new Float32Array(768).fill(0.7),
@@ -289,11 +269,30 @@ describe('SONALearningEngine', () => {
       const result = await engine.adapt(context);
 
       expect(result.patterns).toHaveLength(1);
-      expect(result.patterns[0].patternType).toBe('test-pattern');
+      expect(result.patterns[0].patternType).toBe('code');
       expect(result.patterns[0].avgQuality).toBeCloseTo(0.85);
     });
 
     it('should infer suggested route from patterns', async () => {
+      await engine.learn({
+        trajectoryId: 'route-source',
+        context: 'Route source',
+        domain: 'creative',
+        steps: [
+          {
+            stepId: 'step-1',
+            timestamp: Date.now(),
+            action: 'route',
+            stateBefore: new Float32Array(768).fill(0.3),
+            stateAfter: new Float32Array(768).fill(0.4),
+            reward: 0.8,
+          },
+        ],
+        qualityScore: 0.8,
+        isComplete: true,
+        startTime: Date.now(),
+      });
+
       const context: Context = {
         domain: 'creative',
         queryEmbedding: new Float32Array(768).fill(0.3),
@@ -306,28 +305,6 @@ describe('SONALearningEngine', () => {
     });
 
     it('should handle adaptation with no patterns found', async () => {
-      const { SonaEngine } = await import('@ruvector/sona');
-      // Create a complete mock with findPatterns returning empty array
-      const emptyPatternsEngine = {
-        beginTrajectory: vi.fn().mockReturnValue(1),
-        addTrajectoryStep: vi.fn(),
-        addTrajectoryContext: vi.fn(),
-        endTrajectory: vi.fn(),
-        flush: vi.fn(),
-        applyMicroLora: vi.fn((arr: number[]) => arr),
-        findPatterns: vi.fn().mockReturnValue([]),
-        forceLearn: vi.fn().mockReturnValue('Learning complete'),
-        tick: vi.fn().mockReturnValue(null),
-        getStats: vi.fn().mockReturnValue(JSON.stringify({
-          total_trajectories: 0,
-          patterns_learned: 0,
-          avg_quality: 0,
-        })),
-        isEnabled: vi.fn().mockReturnValue(true),
-        setEnabled: vi.fn(),
-      };
-      vi.mocked(SonaEngine.withConfig).mockReturnValueOnce(emptyPatternsEngine as unknown as SonaEngine);
-
       const freshEngine = new SONALearningEngine('balanced', modeConfig);
       const context: Context = {
         domain: 'code',
@@ -370,12 +347,31 @@ describe('SONALearningEngine', () => {
   });
 
   describe('Statistics and Monitoring', () => {
-    it('should return engine statistics', () => {
+    it('should return engine statistics', async () => {
+      await engine.learn({
+        trajectoryId: 'stats-test',
+        context: 'Stats test',
+        domain: 'code',
+        steps: [
+          {
+            stepId: 'step-1',
+            timestamp: Date.now(),
+            action: 'test',
+            stateBefore: new Float32Array(768).fill(0.4),
+            stateAfter: new Float32Array(768).fill(0.5),
+            reward: 0.5,
+          },
+        ],
+        qualityScore: 0.75,
+        isComplete: true,
+        startTime: Date.now(),
+      });
+
       const stats = engine.getStats();
 
       expect(stats).toBeDefined();
-      expect(stats.totalTrajectories).toBe(10);
-      expect(stats.patternsLearned).toBe(5);
+      expect(stats.totalTrajectories).toBe(1);
+      expect(stats.patternsLearned).toBe(1);
       expect(stats.avgQuality).toBeCloseTo(0.75);
       expect(stats.enabled).toBe(true);
     });

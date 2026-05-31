@@ -7,7 +7,7 @@
  * - sona/trajectory/context - Add context
  * - sona/trajectory/end - Complete and trigger learning
  * - sona/trajectory/list - List trajectories
- * - sona/pattern/find - Find similar patterns via HNSW
+ * - sona/pattern/find - Find similar patterns via local search
  * - sona/lora/apply-micro - Apply micro-LoRA adaptation (~0.05ms)
  * - sona/lora/apply-base - Apply base-layer LoRA
  * - sona/force-learn - Force immediate learning cycle
@@ -19,10 +19,9 @@
  *
  * Performance Targets:
  * - Micro-LoRA: <0.05ms latency
- * - Pattern Search: 150x-12,500x faster via HNSW
+ * - Pattern Search: local in-memory fallback
  *
  * Implements ADR-005: MCP-First API Design
- * Implements ADR-001: agentic-flow@alpha compatibility
  */
 import { z } from 'zod';
 // ============================================================================
@@ -307,12 +306,11 @@ async function handleTrajectoryList(input, context) {
 async function handlePatternFind(input, context) {
     const state = getState();
     const startTime = performance.now();
-    // Simulate HNSW search (in production, this would use actual vector search)
     const patterns = Array.from(state.patterns.values())
         .filter(p => !input.category || p.category === input.category)
         .map(p => ({
         ...p,
-        similarity: Math.random() * 0.3 + 0.7, // Simulated similarity
+        similarity: computeLocalSimilarity(input.query, p.content),
     }))
         .filter(p => p.similarity >= input.threshold)
         .sort((a, b) => b.similarity - a.similarity)
@@ -320,9 +318,6 @@ async function handlePatternFind(input, context) {
     const searchLatency = performance.now() - startTime;
     state.stats.patternSearches++;
     state.stats.totalSearchLatency += searchLatency;
-    // HNSW provides 150x-12,500x speedup over brute force
-    const estimatedBruteForce = searchLatency * 1000; // Simulated brute force time
-    const speedup = estimatedBruteForce / Math.max(searchLatency, 0.01);
     return {
         patterns: patterns.map(p => ({
             id: p.id,
@@ -331,8 +326,15 @@ async function handlePatternFind(input, context) {
             similarity: p.similarity,
         })),
         searchLatency: `${searchLatency.toFixed(3)}ms`,
-        hnswSpeedup: `${speedup.toFixed(0)}x`,
+        searchBackend: 'local-in-memory',
     };
+}
+function computeLocalSimilarity(query, content) {
+    const queryWords = new Set(query.toLowerCase().split(/\s+/));
+    const contentWords = new Set(content.toLowerCase().split(/\s+/));
+    const intersection = [...queryWords].filter(w => contentWords.has(w)).length;
+    const union = new Set([...queryWords, ...contentWords]).size;
+    return union > 0 ? (intersection / union) * 0.9 + 0.1 : 0.1;
 }
 async function handleMicroLoraApply(input, context) {
     const startTime = performance.now();
@@ -403,7 +405,7 @@ async function handleGetStats(input, context) {
         },
         performance: {
             microLoraLatency: 0.05, // Target: <0.05ms
-            hnswSpeedup: 150, // Minimum: 150x
+            searchBackend: 'local-in-memory',
         },
     };
 }
@@ -457,9 +459,9 @@ async function handleBenchmark(input, context) {
             p95: `${p95Lora.toFixed(4)}ms`,
             p99: `${p99Lora.toFixed(4)}ms`,
         },
-        hnswSearch: {
+        localSearch: {
             avg: '0.5ms',
-            speedup: '150x-12,500x',
+            backend: 'local-in-memory',
         },
         trajectoryOverhead: {
             avg: '0.1ms',
@@ -560,7 +562,7 @@ export const sonaTools = [
     },
     {
         name: 'sona/pattern/find',
-        description: 'Find similar patterns using HNSW (150x-12,500x faster)',
+        description: 'Find similar patterns using local in-memory search',
         inputSchema: {
             type: 'object',
             properties: {
@@ -573,7 +575,7 @@ export const sonaTools = [
         },
         handler: async (input, ctx) => handlePatternFind(patternFindSchema.parse(input), ctx),
         category: 'sona',
-        tags: ['sona', 'pattern', 'search', 'hnsw'],
+        tags: ['sona', 'pattern', 'search', 'local'],
         version: '1.0.0',
     },
     {

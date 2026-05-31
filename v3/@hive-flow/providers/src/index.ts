@@ -34,7 +34,6 @@ export { OpenAIProvider } from './openai-provider.js';
 export { GoogleProvider } from './google-provider.js';
 export { CohereProvider } from './cohere-provider.js';
 export { OllamaProvider } from './ollama-provider.js';
-export { RuVectorProvider } from './ruvector-provider.js';
 export { LMStudioProvider } from './lm-studio-provider.js';
 export { OpenRouterProvider } from './openrouter-provider.js';
 export { GeminiCLIProvider } from './gemini-cli-provider.js';

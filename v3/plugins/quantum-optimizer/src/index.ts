@@ -103,11 +103,7 @@ export const pluginMetadata = {
     'quantum_schedule_optimize',
   ],
   bridges: ['exotic-bridge', 'dag-bridge'],
-  wasmPackages: [
-    '@ruvector/exotic-wasm',
-    '@ruvector/dag-wasm',
-    '@ruvector/sparse-inference-wasm',
-  ],
+  wasmPackages: [],
 } as const;
 
 /**

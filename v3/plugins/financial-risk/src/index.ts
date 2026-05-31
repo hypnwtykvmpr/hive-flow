@@ -72,10 +72,10 @@ export const pluginMetadata = {
   tags: ['finance', 'risk', 'portfolio', 'var', 'anomaly-detection', 'compliance', 'basel3', 'mifid2'],
   wasmPackages: [
     'micro-hnsw-wasm',
-    'ruvector-sparse-inference-wasm',
-    'ruvector-gnn-wasm',
-    'ruvector-economy-wasm',
-    'ruvector-learning-wasm',
+    'local-sparse-risk-kernel',
+    'local-transaction-graph-kernel',
+    'local-economy-risk-kernel',
+    'local-risk-learning-kernel',
   ],
 };
 

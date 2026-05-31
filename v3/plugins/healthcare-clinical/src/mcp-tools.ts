@@ -53,7 +53,8 @@ function checkAuthorization(toolName: string, context?: ToolContext): boolean {
   if (!context?.userRoles) return true; // No roles = no RBAC enforcement
 
   for (const role of context.userRoles) {
-    const permissions = HealthcareRolePermissions[role];
+    const normalizedRole = String(role).toUpperCase() as keyof typeof HealthcareRolePermissions;
+    const permissions = HealthcareRolePermissions[normalizedRole];
     if (permissions?.includes(toolName)) return true;
   }
 

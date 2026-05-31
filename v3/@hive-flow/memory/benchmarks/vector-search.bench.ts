@@ -357,18 +357,10 @@ export const vectorSearchOptimizations = {
    * HNSW Indexing: Hierarchical Navigable Small World graphs
    */
   hnswIndexing: {
-    description: 'Use HNSW for O(log n) approximate nearest neighbor search',
-    expectedImprovement: '150x-12500x',
+    description: 'Use a local approximate nearest neighbor index when available',
+    expectedImprovement: 'measure per backend',
     implementation: `
-      import { HNSW } from 'agentdb';
-
-      const index = new HNSW({
-        dimensions: 384,
-        maxElements: 1000000,
-        efConstruction: 200,
-        M: 16,
-      });
-
+      const index = createLocalVectorIndex({ dimensions: 384 });
       index.addItems(vectors);
       const results = index.search(query, k);
     `,

@@ -2,7 +2,7 @@
 
 ## Installation
 
-Already installed: `@ruvector/sona@0.1.5`
+No external SONA package is required; the module uses the local runtime.
 
 ## Basic Usage (30 seconds)
 
@@ -163,6 +163,6 @@ v3/@hive-flow/neural/
 
 **Location**: `/workspaces/hive-flow/v3/@hive-flow/neural/`
 
-**Package**: `@ruvector/sona@0.1.5`
+**Package**: `@hive-flow/neural`
 
 **Performance**: <0.05ms learning target achieved

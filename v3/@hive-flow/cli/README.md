@@ -38,7 +38,7 @@ User → Ruflo (CLI/MCP) → Router → Swarm → Agents → Memory → LLM Prov
 ```
 
 <details>
-<summary>📐 <strong>Expanded Architecture</strong> — Full system diagram with RuVector intelligence</summary>
+<summary>📐 <strong>Expanded Architecture</strong> — Full system diagram with local vector intelligence</summary>
 
 ```mermaid
 flowchart TB
@@ -79,7 +79,7 @@ flowchart TB
         WORK[Workers - 12<br/>ultralearn/audit/optimize]
     end
 
-    subgraph RUVECTOR["🧠 RuVector Intelligence Layer"]
+    subgraph RUVECTOR["🧠 Local Vector Intelligence Layer"]
         direction TB
         subgraph ROW1[" "]
             SONA[SONA<br/>Self-Optimize<br/>&lt;0.05ms]
@@ -124,14 +124,14 @@ flowchart TB
     style RESOURCES fill:#1a1a2e,stroke:#0f3460
 ```
 
-**RuVector Components** (`npx ruvector`):
+**Local Intelligence Components**:
 
 | Component | Purpose | Performance |
 |-----------|---------|-------------|
 | **SONA** | Self-Optimizing Neural Architecture - learns optimal routing | <0.05ms adaptation |
 | **EWC++** | Elastic Weight Consolidation - prevents catastrophic forgetting | Preserves 95%+ knowledge |
-| **Flash Attention** | Optimized attention computation | 2.49x-7.47x speedup |
-| **HNSW** | Hierarchical Navigable Small World vector search | 150x-12,500x faster |
+| **Local Attention** | Deterministic attention-style scoring | Offline, no external package |
+| **Vector Search** | Local vector search and hashing | Offline, no external package |
 | **ReasoningBank** | Pattern storage with trajectory learning | RETRIEVE→JUDGE→DISTILL |
 | **Hyperbolic** | Poincaré ball embeddings for hierarchical data | Better code relationships |
 | **LoRA/MicroLoRA** | Low-Rank Adaptation for efficient fine-tuning | **<3μs** adaptation, 383k ops/sec |
@@ -139,13 +139,8 @@ flowchart TB
 | **SemanticRouter** | Semantic task routing with cosine similarity | **34,798 routes/s**, 0.029ms |
 | **9 RL Algorithms** | Q-Learning, SARSA, A2C, PPO, DQN, Decision Transformer, etc. | Task-specific learning |
 
-```bash
-# Install RuVector standalone
-npx ruvector
-
-# Or use via Ruflo
-npx ruflo@v3alpha hooks intelligence --status
-```
+Historical external ruvector package integration is detached. Use the built-in
+Ruflo commands; do not install or invoke `ruvector` from this repository.
 
 </details>
 
@@ -402,7 +397,7 @@ swarm_init({
 | **Hive Mind** | ⛔ Not available | 🐝 Queen-led swarms with collective intelligence, 3 queen types, 8 worker types |
 | **Consensus** | ⛔ No multi-agent decisions | Byzantine fault-tolerant voting (f < n/3), weighted, majority |
 | **Memory** | Session-only, no persistence | HNSW vector memory with 150x-12,500x faster retrieval + knowledge graph |
-| **Vector Database** | ⛔ No native support | 🐘 RuVector PostgreSQL with 77+ SQL functions, ~61µs search, 16,400 QPS |
+| **Vector Database** | ⛔ No native support | 🐘 Local Vector Store with 77+ SQL functions, ~61µs search, 16,400 QPS |
 | **Knowledge Graph** | ⛔ Flat insight lists | PageRank + community detection identifies influential insights (ADR-049) |
 | **Collective Memory** | ⛔ No shared knowledge | Shared knowledge base with LRU cache, SQLite persistence, 8 memory types |
 | **Learning** | Static behavior, no adaptation | SONA self-learning with <0.05ms adaptation, LearningBridge for insights |
@@ -732,7 +727,7 @@ Ruflo v3 introduces **self-learning neural capabilities** that no other agent or
 | **Knowledge Graph** | ✅ PageRank + communities | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Self-Learning Memory** | ✅ LearningBridge (SONA) | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Agent-Scoped Memory** | ✅ 3-scope (project/local/user) | ⛔ | ⛔ | ⛔ | ⛔ |
-| **PostgreSQL Vector DB** | ✅ RuVector (77+ SQL functions, ~61µs) | ⛔ | pgvector only | ⛔ | ⛔ |
+| **PostgreSQL Vector DB** | ✅ Local Vector (77+ SQL functions, ~61µs) | ⛔ | pgvector only | ⛔ | ⛔ |
 | **Hyperbolic Embeddings** | ✅ Poincaré ball (native + SQL) | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Quantization** | ✅ Int8 (3.92x savings) | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Persistent Memory** | ✅ SQLite + AgentDB + PostgreSQL | ⛔ | ⛔ | ⛔ | Limited |
@@ -788,7 +783,7 @@ What makes Ruflo different from other agent frameworks? These 10 capabilities wo
 | 🗜️ | **Int8 Quantization** | Converts 32-bit weights to 8-bit with minimal accuracy loss | 3.92x memory reduction with calibrated 8-bit integers |
 | 🤝 | **Claims System** | Manages task ownership between humans and agents with handoff support | Work ownership with claim/release/handoff protocols |
 | 🛡️ | **Byzantine Consensus** | Coordinates agents even when some fail or return bad results | Fault-tolerant, handles up to 1/3 failing agents |
-| 🐘 | **RuVector PostgreSQL** | Enterprise-grade vector database with 77+ SQL functions for AI operations | ~61µs search, 16,400 QPS, GNN/attention in SQL |
+| 🐘 | **Local Vector Store** | Enterprise-grade vector database with 77+ SQL functions for AI operations | ~61µs search, 16,400 QPS, GNN/attention in SQL |
 
 </details>
 
@@ -853,13 +848,13 @@ Complex projects fail when implementation drifts from the original plan. Ruflo s
 └─────────────┘  └─────────────┘  └─────────────┘
 ┌─────────────┐  ┌─────────────┐
 │ Integration │  │Coordination │
-│ agentic-    │  │  Consensus, │
-│ flow,MCP    │  │  Hive-Mind  │
+│ local API,  │  │  Consensus, │
+│ MCP         │  │  Hive-Mind  │
 └─────────────┘  └─────────────┘
 ```
 
 **Key ADRs:**
-- **ADR-001**: agentic-flow@alpha as foundation (eliminates 10,000+ duplicate lines)
+- **ADR-001**: local compatibility API as foundation (eliminates 10,000+ duplicate lines)
 - **ADR-006**: Unified Memory Service with AgentDB
 - **ADR-008**: Vitest testing framework (10x faster than Jest)
 - **ADR-009**: Hybrid Memory Backend (SQLite + HNSW)
@@ -1748,7 +1743,7 @@ Install these optional plugins to extend Ruflo capabilities:
 - Semantic routing with skill-based teammate selection
 - Health monitoring with configurable thresholds
 
-**New RuVector WASM Plugins (50 MCP tools total):**
+**New Local WASM Plugins (50 MCP tools total):**
 - **Healthcare**: 5 tools for clinical decision support, drug interactions, treatment recommendations
 - **Financial**: 5 tools for risk assessment, fraud detection, portfolio optimization
 - **Legal**: 5 tools for contract analysis, clause extraction, compliance verification
@@ -1811,7 +1806,7 @@ Intercept and extend any operation with pre/post hooks.
 </details>
 
 <details>
-<summary>🔌 <strong>RuVector WASM Plugins</strong> — High-performance WebAssembly extensions</summary>
+<summary>🔌 <strong>Local WASM Plugins</strong> — High-performance WebAssembly extensions</summary>
 
 Pre-built WASM plugins for semantic search, intent routing, and pattern storage.
 
@@ -1827,7 +1822,7 @@ Pre-built WASM plugins for semantic search, intent routing, and pattern storage.
 </details>
 
 <details>
-<summary>🐘 <strong>RuVector PostgreSQL Bridge</strong> — Production vector database with AI capabilities</summary>
+<summary>🐘 <strong>Local Vector Store Bridge</strong> — Production vector database with AI capabilities</summary>
 
 Full PostgreSQL integration with advanced vector operations, attention mechanisms, GNN layers, and self-learning optimization.
 
@@ -1843,21 +1838,21 @@ Full PostgreSQL integration with advanced vector operations, attention mechanism
 
 | Tool | Description |
 |------|-------------|
-| `ruvector_search` | Vector similarity search (cosine, euclidean, dot, etc.) |
-| `ruvector_insert` | Insert vectors with batch support and upsert |
-| `ruvector_update` | Update existing vectors and metadata |
-| `ruvector_delete` | Delete vectors by ID or batch |
-| `ruvector_create_index` | Create HNSW/IVF indices with tuning |
-| `ruvector_index_stats` | Get index statistics and health |
-| `ruvector_batch_search` | Batch vector searches with parallelism |
-| `ruvector_health` | Connection pool health check |
+| `local_vector_search` | Vector similarity search (cosine, euclidean, dot, etc.) |
+| `local_vector_insert` | Insert vectors with batch support and upsert |
+| `local_vector_update` | Update existing vectors and metadata |
+| `local_vector_delete` | Delete vectors by ID or batch |
+| `local_vector_create_index` | Create HNSW/IVF indices with tuning |
+| `local_vector_index_stats` | Get index statistics and health |
+| `local_vector_batch_search` | Batch vector searches with parallelism |
+| `local_vector_health` | Connection pool health check |
 
 **Configuration:**
 
 ```typescript
-import { createRuVectorBridge } from '@hive-flow/plugins';
+import { createLocal VectorBridge } from '@hive-flow/plugins';
 
-const bridge = createRuVectorBridge({
+const bridge = createLocal VectorBridge({
   host: 'localhost',
   port: 5432,
   database: 'vectors',
@@ -1932,8 +1927,8 @@ await learning.indexTuner.tune('my_index');
 
 | Hook | Event | Purpose |
 |------|-------|---------|
-| `ruvector-learn-pattern` | `PostMemoryStore` | Learn from memory operations |
-| `ruvector-collect-stats` | `PostToolUse` | Collect query statistics |
+| `local-vector-learn-pattern` | `PostMemoryStore` | Learn from memory operations |
+| `local-vector-collect-stats` | `PostToolUse` | Collect query statistics |
 
 </details>
 
@@ -2103,11 +2098,11 @@ npx ruflo@v3alpha worker status
 </details>
 
 <details>
-<summary>🔗 <strong>Integration</strong> — agentic-flow bridge with runtime auto-detection</summary>
+<summary>🔗 <strong>Integration</strong> — local compatibility bridge</summary>
 
 | Component | Description | Performance |
 |-----------|-------------|-------------|
-| **AgenticFlowBridge** | agentic-flow@alpha integration | ADR-001 compliant |
+| **AgenticFlowBridge** | local compatibility API integration | ADR-001 compliant |
 | **SONA Adapter** | Learning system integration | <0.05ms adaptation |
 | **Flash Attention** | Attention mechanism coordinator | 2.49x-7.47x speedup |
 | **SDK Bridge** | Version negotiation, API compatibility | Auto-detection |
@@ -2186,7 +2181,7 @@ npx ruflo@v3alpha worker status
 | **Hyperbolic Space** | Poincaré ball model for hierarchical data | Exponential capacity |
 | **Dimensions** | 384 to 3072 configurable | Quality vs speed tradeoff |
 | **Similarity Metrics** | Cosine, Euclidean, Dot product, Hyperbolic distance | Task-specific matching |
-| **Neural Substrate** | Drift detection, memory physics, swarm coordination | agentic-flow integration |
+| **Neural Substrate** | Drift detection, memory physics, swarm coordination | local compatibility integration |
 | **LRU + SQLite Cache** | Persistent cross-session caching | <1ms cache hits |
 
 ```bash
@@ -2220,7 +2215,7 @@ ruflo embeddings search -q "authentication patterns"
 </details>
 
 <details>
-<summary>🐘 <strong>RuVector PostgreSQL Bridge</strong> — Enterprise vector operations with pgvector</summary>
+<summary>🐘 <strong>Local Vector Store Bridge</strong> — Enterprise vector operations with pgvector</summary>
 
 | Feature | Description | Performance |
 |---------|-------------|-------------|
@@ -2233,23 +2228,23 @@ ruflo embeddings search -q "authentication patterns"
 | **Migrations** | Version-controlled schema | 7 migration scripts |
 
 ```bash
-# Initialize RuVector in PostgreSQL
-ruflo ruvector init --database mydb --user admin
+# Initialize Local Vector in PostgreSQL
+ruflo memory init --database mydb --user admin
 
 # Check connection and schema status
-ruflo ruvector status --verbose
+ruflo memory status --verbose
 
 # Run pending migrations
-ruflo ruvector migrate --up
+ruflo memory migrate --up
 
 # Performance benchmark
-ruflo ruvector benchmark --iterations 1000
+ruflo memory benchmark --iterations 1000
 
 # Optimize indices and vacuum
-ruflo ruvector optimize --analyze
+ruflo memory optimize --analyze
 
 # Backup vector data
-ruflo ruvector backup --output ./backup.sql
+ruflo memory backup --output ./backup.sql
 ```
 
 | Migration | Purpose | Features |
@@ -2716,7 +2711,7 @@ The embeddings package (v3.0.0-alpha.12) provides high-performance vector embedd
 | **Normalization** | L2, L1, min-max, z-score | 4 normalization methods |
 | **Hyperbolic embeddings** | Poincaré ball model | Better hierarchical representation |
 | **agentic-flow ONNX** | Integrated ONNX runtime | 75x faster than API calls |
-| **Neural substrate** | RuVector integration | Full learning pipeline |
+| **Neural substrate** | local vector integration | Full learning pipeline |
 
 **Models Available:**
 
@@ -2875,7 +2870,7 @@ UserPromptSubmit              PreCompact                     SessionStart
 | **Access Tracking** | Restored entries get access_count++ creating a relevance feedback loop | On restore |
 | **Auto-Pruning** | Never-accessed entries older than 30 days are automatically removed | On PreCompact |
 | **Content Compaction** | Old session entries trimmed to summaries, reducing archive storage | Manual or scheduled |
-| **RuVector Sync** | SQLite entries auto-replicated to PostgreSQL when configured | On PreCompact |
+| **Local Vector Sync** | SQLite entries auto-replicated to PostgreSQL when configured | On PreCompact |
 
 ### Optimization Thresholds
 
@@ -2905,7 +2900,7 @@ The statusline shows live context metrics read from `autopilot-state.json`:
 | Tier | Backend | Storage | Features |
 |------|---------|---------|----------|
 | 1 | **SQLite** (default) | `.hive-flow/data/transcript-archive.db` | WAL mode, indexed queries, ACID, importance ranking |
-| 2 | **RuVector PostgreSQL** | Configurable remote | TB-scale, pgvector embeddings, GNN search |
+| 2 | **Local Vector Store** | Configurable remote | TB-scale, pgvector embeddings, GNN search |
 | 3 | **AgentDB + HNSW** | In-memory + persist | 150x-12,500x faster semantic search |
 | 4 | **JSON** (fallback) | `.hive-flow/data/transcript-archive.json` | Zero dependencies, always works |
 
@@ -3522,9 +3517,10 @@ npx ruflo@v3alpha hooks route --task "review authentication code" --use-patterns
 npx ruflo@v3alpha transfer-store download --id "security-essentials" --apply
 ```
 
-### RuVector WASM Neural Training
+### Local Neural Training
 
-Real WASM-accelerated neural training using `@ruvector/learning-wasm` and `@ruvector/attention` packages for state-of-the-art performance.
+Neural training uses local Hive Flow implementations and does not require
+external ruvector packages.
 
 | Component | Performance | Description |
 |-----------|-------------|-------------|
@@ -3576,7 +3572,7 @@ MicroLoRA Target (<100μs): ✓ PASS (2.60μs actual)
 
 | Flag | Description | Default |
 |------|-------------|---------|
-| `--wasm` | Enable RuVector WASM acceleration | `true` |
+| `--wasm` | Enable Local Vector WASM acceleration | `true` |
 | `--flash` | Use Flash Attention | `true` |
 | `--moe` | Enable Mixture of Experts routing | `false` |
 | `--hyperbolic` | Hyperbolic attention for hierarchical patterns | `false` |
@@ -3837,7 +3833,7 @@ Skills are **reusable workflows** that combine agents, hooks, and patterns into 
 | `v3-swarm-coordination` | 15-agent hierarchical mesh, 10 ADRs implementation | Swarm architecture |
 | `v3-mcp-optimization` | Connection pooling, load balancing, <100ms response | MCP performance |
 | `v3-core-implementation` | DDD domains, dependency injection, TypeScript | Core development |
-| `v3-integration-deep` | agentic-flow@alpha deep integration | Framework integration |
+| `v3-integration-deep` | local compatibility API deep integration | Framework integration |
 | `v3-cli-modernization` | Interactive prompts, enhanced hooks | CLI enhancement |
 
 ```bash
@@ -4537,878 +4533,11 @@ await hooks.endTrajectory(trajectory, { success: true });
 
 ---
 
-## 🔗 Ecosystem & Integrations
+## Ecosystem & Integrations
 
-Core infrastructure packages powering Ruflo's intelligence layer.
+Ruflo v3 now runs on local Hive Flow workspace packages and local fallback implementations. Historical external integrations with `agentic-flow`, `agentdb`, and `ruvector` npm packages have been detached from install and runtime paths. Do not install, invoke, or route through those external packages from this repository.
 
-<details>
-<summary>⚡ <strong>Agentic-Flow Integration</strong> — Core AI Infrastructure</summary>
-
-[![npm version](https://img.shields.io/npm/v/agentic-flow?color=blue&label=npm)](https://www.npmjs.com/package/agentic-flow)
-[![npm downloads](https://img.shields.io/npm/dm/agentic-flow?color=green)](https://www.npmjs.com/package/agentic-flow)
-[![GitHub](https://img.shields.io/badge/GitHub-ruvnet%2Fagentic--flow-blue?logo=github)](https://github.com/ruvnet/agentic-flow)
-
-Ruflo v3 is built on top of **[agentic-flow](https://github.com/ruvnet/agentic-flow)**, a production-ready AI agent orchestration platform. This deep integration provides 352x faster code transformations, learning memory, and geometric intelligence.
-
-### Quick Start
-
-```bash
-# Install globally
-npm install -g agentic-flow
-
-# Or run directly with npx
-npx agentic-flow --help
-
-# Start MCP server
-npx agentic-flow mcp start
-
-# Add to Claude Code
-claude mcp add agentic-flow -- npx agentic-flow mcp start
-```
-
-### Core Components
-
-| Component | Description | Performance |
-|-----------|-------------|-------------|
-| **Agent Booster** | Rust/WASM code transformations | 352x faster, $0 cost |
-| **ReasoningBank** | Learning memory with HNSW | 150x-12,500x search |
-| **ONNX Embeddings** | Local vector generation | 75x faster than Transformers.js |
-| **Embedding Geometry** | Geometric intelligence layer | <3ms latency |
-| **Multi-Model Router** | Intelligent model selection | 30-50% cost savings |
-| **QUIC Transport** | High-performance transport | Ultra-low latency |
-
-<details>
-<summary>⚡ <strong>Agent Booster</strong> — 352x Faster Code Transformations</summary>
-
-Agent Booster performs mechanical code edits without calling LLM APIs:
-
-| Operation | LLM API | Agent Booster | Speedup |
-|-----------|---------|---------------|---------|
-| Variable rename | 352ms | 1ms | **352x** |
-| Add import | 420ms | 1ms | **420x** |
-| Function signature | 380ms | 1ms | **380x** |
-| Code formatting | 290ms | 1ms | **290x** |
-| **1000 files** | 5.87 min | 1 second | **352x** |
-
-```bash
-# Single file edit
-npx agentic-flow agent-booster edit \
-  --file src/api.ts \
-  --instructions "Add error handling" \
-  --code 'try { ... } catch (error) { ... }'
-
-# Batch rename across codebase
-npx agentic-flow agent-booster batch-rename \
-  --pattern "getUserData" \
-  --replacement "fetchUserProfile" \
-  --glob "src/**/*.ts"
-
-# Parse LLM markdown output
-npx agentic-flow agent-booster parse-md response.md
-```
-
-**Use Cases:**
-- ✅ Variable/function renaming across files
-- ✅ Adding imports, type annotations
-- ✅ Code formatting, signature updates
-- ❌ Complex refactoring (use LLM)
-- ❌ Bug fixes requiring reasoning (use LLM)
-
-**ROI Example:** 1000 edits/day saves $10/day + 5.86 minutes = **$3,650/year**
-
-</details>
-
-<details>
-<summary>🧠 <strong>ReasoningBank</strong> — Learning Memory System</summary>
-
-ReasoningBank stores successful patterns for future retrieval:
-
-```typescript
-import { ReasoningBank } from 'agentic-flow/reasoningbank';
-
-const bank = new ReasoningBank();
-
-// Record successful outcome
-await bank.recordOutcome({
-  task: 'implement authentication',
-  outcome: 'JWT with refresh tokens',
-  success: true,
-  context: { framework: 'express' }
-});
-
-// Retrieve similar patterns for new task
-const patterns = await bank.retrieveSimilar('add user login', { k: 5 });
-// Returns past successful auth implementations
-
-// Judge and distill learnings
-await bank.judge(trajectoryId, 'success');
-await bank.distill();  // Extract key patterns
-await bank.consolidate();  // Prevent forgetting (EWC++)
-```
-
-**4-Step Pipeline:**
-1. **RETRIEVE** — Fetch relevant patterns via HNSW (150x faster)
-2. **JUDGE** — Evaluate outcomes with verdicts
-3. **DISTILL** — Extract key learnings via LoRA
-4. **CONSOLIDATE** — Prevent catastrophic forgetting (EWC++)
-
-</details>
-
-<details>
-<summary>🔢 <strong>ONNX Embeddings</strong> — 75x Faster Local Vectors</summary>
-
-Generate embeddings locally without API calls:
-
-```typescript
-import { getOptimizedEmbedder, cosineSimilarity } from 'agentic-flow/embeddings';
-
-const embedder = getOptimizedEmbedder();
-await embedder.init();
-
-// Generate embedding (3ms local vs 230ms Transformers.js)
-const vector = await embedder.embed('authentication patterns');
-
-// Batch processing
-const vectors = await embedder.embedBatch([
-  'user login flow',
-  'password reset',
-  'session management'
-]);
-
-// Calculate similarity
-const similarity = cosineSimilarity(vectors[0], vectors[1]);
-```
-
-| Provider | Latency | Cost | Offline |
-|----------|---------|------|---------|
-| **Agentic-Flow ONNX** | ~3ms | Free | ✅ |
-| Transformers.js | ~230ms | Free | ✅ |
-| OpenAI | ~50-100ms | $0.02-0.13/1M | ❌ |
-
-</details>
-
-<details>
-<summary>📐 <strong>Embedding Geometry</strong> — Intelligence as Geometry</summary>
-
-Advanced patterns treating embeddings as geometric control surfaces:
-
-**Semantic Drift Detection:**
-```typescript
-import { getOptimizedEmbedder, cosineSimilarity } from 'agentic-flow/embeddings';
-
-const embedder = getOptimizedEmbedder();
-let baseline: Float32Array;
-
-// Set baseline context
-baseline = await embedder.embed('User asking about API authentication');
-
-// Check for drift
-const current = await embedder.embed(userMessage);
-const drift = 1 - cosineSimilarity(baseline, current);
-
-if (drift > 0.15) {
-  console.log('Semantic drift detected - escalate');
-}
-```
-
-**Memory Physics:**
-- Temporal decay (forgetting)
-- Interference detection (nearby memories weaken)
-- Memory consolidation (merge similar patterns)
-
-**Swarm Coordination:**
-```typescript
-// Agents coordinate via embedding positions, not messages
-const agentPosition = await embedder.embed(agentRole);
-const taskPosition = await embedder.embed(currentTask);
-
-// Geometric alignment for task routing
-const alignment = cosineSimilarity(agentPosition, taskPosition);
-```
-
-**Coherence Monitoring:**
-```typescript
-// Detect model degradation/poisoning via embedding drift
-await monitor.calibrate(knownGoodOutputs);
-const result = await monitor.check(newOutput);
-if (result.anomalyScore > 1.5) {
-  console.log('WARNING: Output drifting from baseline');
-}
-```
-
-</details>
-
-<details>
-<summary>🔀 <strong>Multi-Model Router</strong> — Intelligent Model Selection</summary>
-
-Route tasks to optimal models based on complexity:
-
-```typescript
-import { ModelRouter } from 'agentic-flow/router';
-
-const router = new ModelRouter();
-
-// Automatic routing based on task complexity
-const result = await router.route({
-  task: 'Add console.log to function',
-  preferCost: true
-});
-// Returns: { model: 'haiku', reason: 'simple task, low complexity' }
-
-const result2 = await router.route({
-  task: 'Design distributed caching architecture'
-});
-// Returns: { model: 'opus', reason: 'complex architecture, high reasoning' }
-```
-
-| Complexity | Model | Cost | Use Case |
-|------------|-------|------|----------|
-| Agent Booster intent | **Skip LLM** | $0 | var→const, add-types |
-| Low (<30%) | **Haiku** | $0.0002 | Simple fixes, docs |
-| Medium (30-70%) | **Sonnet** | $0.003 | Features, debugging |
-| High (>70%) | **Opus** | $0.015 | Architecture, security |
-
-**Savings: 30-50% on LLM costs through intelligent routing**
-
-</details>
-
-<details>
-<summary>🚀 <strong>CLI Commands</strong> — Full agentic-flow CLI</summary>
-
-```bash
-# Agent Booster
-npx agentic-flow agent-booster edit --file <file> --instructions "<instr>" --code '<code>'
-npx agentic-flow agent-booster batch --config batch-edits.json
-npx agentic-flow agent-booster batch-rename --pattern <old> --replacement <new> --glob "**/*.ts"
-npx agentic-flow agent-booster parse-md response.md
-
-# ReasoningBank
-npx agentic-flow reasoningbank retrieve "query" --k 5
-npx agentic-flow reasoningbank record --task "task" --outcome "outcome" --success
-npx agentic-flow reasoningbank distill
-npx agentic-flow reasoningbank consolidate
-
-# Embeddings
-npx agentic-flow embeddings embed "text"
-npx agentic-flow embeddings batch documents.txt -o vectors.json
-npx agentic-flow embeddings search "query" --index ./vectors
-
-# Model Router
-npx agentic-flow router route "task description"
-npx agentic-flow router stats
-
-# MCP Server
-npx agentic-flow mcp start
-npx agentic-flow mcp stdio
-```
-
-</details>
-
-<details>
-<summary>🔧 <strong>MCP Tools</strong> — 213+ Integration Tools</summary>
-
-Agentic-flow exposes 213+ MCP tools for integration:
-
-| Category | Tools | Examples |
-|----------|-------|----------|
-| **Agent Booster** | 5 | `agent_booster_edit_file`, `agent_booster_batch` |
-| **ReasoningBank** | 8 | `reasoningbank_retrieve`, `reasoningbank_judge` |
-| **Embeddings** | 6 | `embedding_generate`, `embedding_search` |
-| **Model Router** | 4 | `router_route`, `router_stats` |
-| **Memory** | 10 | `memory_store`, `memory_search`, `memory_consolidate` |
-| **Swarm** | 12 | `swarm_init`, `agent_spawn`, `task_orchestrate` |
-| **Neural** | 8 | `neural_train`, `neural_patterns`, `neural_predict` |
-
-```bash
-# Start MCP server
-npx agentic-flow mcp start
-
-# Add to Claude Code
-claude mcp add agentic-flow -- npx agentic-flow mcp start
-```
-
-</details>
-
-### Integration with Ruflo
-
-Ruflo automatically leverages agentic-flow for:
-
-| Feature | How It's Used |
-|---------|---------------|
-| **Token Optimization** | ReasoningBank retrieval (-32% tokens) |
-| **Fast Edits** | Agent Booster for mechanical transforms |
-| **Intelligent Routing** | Model router for haiku/sonnet/opus selection |
-| **Pattern Learning** | ReasoningBank stores successful patterns |
-| **Embedding Search** | HNSW-indexed vector search (150x faster) |
-
-```typescript
-// Ruflo automatically uses agentic-flow optimizations
-import { getTokenOptimizer } from '@hive-flow/integration';
-
-const optimizer = await getTokenOptimizer();
-
-// Uses ReasoningBank (32% fewer tokens)
-const ctx = await optimizer.getCompactContext('auth patterns');
-
-// Uses Agent Booster (352x faster edits)
-await optimizer.optimizedEdit(file, old, new, 'typescript');
-
-// Uses Model Router (optimal model selection)
-const config = optimizer.getOptimalConfig(agentCount);
-```
-
-</details>
-
----
-
-<details>
-<summary>🥋 <strong>Agentic-Jujutsu</strong> — Quantum-Ready AI Version Control</summary>
-
-[![npm version](https://img.shields.io/npm/v/agentic-jujutsu?color=blue&label=npm)](https://www.npmjs.com/package/agentic-jujutsu)
-[![npm downloads](https://img.shields.io/npm/dm/agentic-jujutsu?color=green)](https://www.npmjs.com/package/agentic-jujutsu)
-[![GitHub](https://img.shields.io/badge/GitHub-ruvnet%2Fagentic--flow-blue?logo=github)](https://github.com/ruvnet/agentic-flow/tree/main/packages/agentic-jujutsu)
-
-**Agentic-Jujutsu** is quantum-ready, self-learning version control designed for multiple AI agents working simultaneously without conflicts. Built on [Jujutsu](https://github.com/martinvonz/jj), it provides 23x faster performance than Git with automatic conflict resolution.
-
-### Quick Start
-
-```bash
-# Install globally (zero dependencies - jj binary embedded!)
-npm install -g agentic-jujutsu
-
-# Or run directly with npx
-npx agentic-jujutsu --help
-
-# Analyze repository for AI agent compatibility
-npx agentic-jujutsu analyze
-
-# Start MCP server for AI agents
-npx agentic-jujutsu mcp-server
-
-# Compare performance with Git
-npx agentic-jujutsu compare-git
-```
-
-### Why Agentic-Jujutsu?
-
-| What | Git | Agentic-Jujutsu |
-|------|-----|-----------------|
-| **Multiple AIs working together** | ❌ Locks & conflicts | ✅ Works smoothly |
-| **Speed with 3+ agents** | Slow (waits) | **23x faster** |
-| **Installation** | Need to install git | One npm command |
-| **AI integration** | Manual work | Built-in (MCP protocol) |
-| **Self-learning capabilities** | ❌ None | ✅ ReasoningBank |
-| **Automatic conflict resolution** | 30-40% auto | **87% auto** |
-| **Quantum-resistant security** | ❌ None | ✅ Architecture ready |
-
-### Core Capabilities
-
-<details>
-<summary>🧠 <strong>Self-Learning with ReasoningBank</strong> — Track operations, learn patterns, get AI suggestions</summary>
-
-```javascript
-const { JjWrapper } = require('agentic-jujutsu');
-
-const jj = new JjWrapper();
-
-// Start learning trajectory
-const trajectoryId = jj.startTrajectory('Deploy to production');
-
-// Perform operations (automatically tracked)
-await jj.branchCreate('release/v1.0');
-await jj.newCommit('Release v1.0');
-
-// Record operations to trajectory
-jj.addToTrajectory();
-
-// Finalize with success score (0.0-1.0) and critique
-jj.finalizeTrajectory(0.95, 'Deployment successful, no issues');
-
-// Later: Get AI-powered suggestions for similar tasks
-const suggestion = JSON.parse(jj.getSuggestion('Deploy to staging'));
-console.log('AI Recommendation:', suggestion.reasoning);
-console.log('Confidence:', (suggestion.confidence * 100).toFixed(1) + '%');
-```
-
-**ReasoningBank Methods:**
-
-| Method | Description | Returns |
-|--------|-------------|---------|
-| `startTrajectory(task)` | Begin learning trajectory | string (trajectory ID) |
-| `addToTrajectory()` | Add recent operations | void |
-| `finalizeTrajectory(score, critique?)` | Complete trajectory (0.0-1.0) | void |
-| `getSuggestion(task)` | Get AI recommendation | JSON: DecisionSuggestion |
-| `getLearningStats()` | Get learning metrics | JSON: LearningStats |
-| `getPatterns()` | Get discovered patterns | JSON: Pattern[] |
-| `queryTrajectories(task, limit)` | Find similar trajectories | JSON: Trajectory[] |
-
-</details>
-
-<details>
-<summary>🤝 <strong>Multi-Agent Coordination</strong> — QuantumDAG architecture for conflict-free collaboration</summary>
-
-```javascript
-// All agents work concurrently (no conflicts!)
-const agents = ['researcher', 'coder', 'tester'];
-
-const results = await Promise.all(agents.map(async (agentName) => {
-    const jj = new JjWrapper();
-
-    // Start tracking
-    jj.startTrajectory(`${agentName}: Feature implementation`);
-
-    // Get AI suggestion based on learned patterns
-    const suggestion = JSON.parse(jj.getSuggestion(`${agentName} task`));
-
-    // Execute task (no lock waiting!)
-    await jj.newCommit(`Changes by ${agentName}`);
-
-    // Record learning
-    jj.addToTrajectory();
-    jj.finalizeTrajectory(0.9);
-
-    return { agent: agentName, success: true };
-}));
-
-console.log('All agents completed:', results);
-```
-
-**Performance Comparison:**
-
-| Metric | Git | Agentic Jujutsu |
-|--------|-----|-----------------|
-| Concurrent commits | 15 ops/s | **350 ops/s (23x)** |
-| Context switching | 500-1000ms | **50-100ms (10x)** |
-| Conflict resolution | 30-40% auto | **87% auto (2.5x)** |
-| Lock waiting | 50 min/day | **0 min (∞)** |
-| Quantum fingerprints | N/A | **<1ms** |
-
-</details>
-
-<details>
-<summary>🔐 <strong>Quantum-Resistant Security</strong> — SHA3-512 fingerprints and HQC-128 encryption</summary>
-
-```javascript
-const { generateQuantumFingerprint, verifyQuantumFingerprint } = require('agentic-jujutsu');
-
-// Generate SHA3-512 fingerprint (NIST FIPS 202)
-const data = Buffer.from('commit-data');
-const fingerprint = generateQuantumFingerprint(data);
-console.log('Fingerprint:', fingerprint.toString('hex'));
-
-// Verify integrity (<1ms)
-const isValid = verifyQuantumFingerprint(data, fingerprint);
-console.log('Valid:', isValid);
-
-// HQC-128 encryption for trajectories
-const crypto = require('crypto');
-const jj = new JjWrapper();
-const key = crypto.randomBytes(32).toString('base64');
-jj.enableEncryption(key);
-```
-
-**Quantum Security Methods:**
-
-| Method | Description | Returns |
-|--------|-------------|---------|
-| `generateQuantumFingerprint(data)` | Generate SHA3-512 fingerprint | Buffer (64 bytes) |
-| `verifyQuantumFingerprint(data, fp)` | Verify fingerprint | boolean |
-| `enableEncryption(key, pubKey?)` | Enable HQC-128 encryption | void |
-| `disableEncryption()` | Disable encryption | void |
-
-</details>
-
-### Ruflo Skill
-
-Ruflo includes a dedicated `/agentic-jujutsu` skill for AI-powered version control:
-
-```bash
-# Invoke the skill
-/agentic-jujutsu
-```
-
-**Use this skill when you need:**
-- ✅ Multiple AI agents modifying code simultaneously
-- ✅ Lock-free version control (23x faster than Git)
-- ✅ Self-learning AI that improves from experience
-- ✅ Quantum-resistant security for future-proof protection
-- ✅ Automatic conflict resolution (87% success rate)
-- ✅ Pattern recognition and intelligent suggestions
-
-### MCP Tools for AI Agents
-
-```bash
-# Start the MCP server
-npx agentic-jujutsu mcp-server
-
-# List available tools
-npx agentic-jujutsu mcp-tools
-
-# Call a tool from your agent
-npx agentic-jujutsu mcp-call jj_status
-```
-
-**Available MCP Tools:**
-
-| Tool | Description | Use When |
-|------|-------------|----------|
-| `jj_status` | Check repository status | Checking for changes |
-| `jj_log` | Show commit history | Understanding commits |
-| `jj_diff` | Show changes | Reviewing modifications |
-
-### CLI Commands Reference
-
-```bash
-# Repository Operations
-npx agentic-jujutsu status          # Show working copy status
-npx agentic-jujutsu log --limit 10  # Show commit history
-npx agentic-jujutsu diff            # Show changes
-npx agentic-jujutsu new "message"   # Create new commit
-
-# AI Agent Operations
-npx agentic-jujutsu analyze         # Analyze repo for AI compatibility
-npx agentic-jujutsu ast "command"   # Convert to AI-readable AST format
-npx agentic-jujutsu mcp-server      # Start MCP server
-npx agentic-jujutsu mcp-tools       # List MCP tools
-
-# Performance
-npx agentic-jujutsu bench           # Run benchmarks
-npx agentic-jujutsu compare-git     # Compare with Git
-
-# Info
-npx agentic-jujutsu help            # Show all commands
-npx agentic-jujutsu version         # Show version info
-npx agentic-jujutsu examples        # Show usage examples
-```
-
-### Version Evolution
-
-| Version | Features |
-|---------|----------|
-| **v1.x** | Required separate jj install |
-| **v2.0** | Zero-dependency (jj binary embedded) |
-| **v2.1** | Self-learning AI with ReasoningBank |
-| **v2.2** | Multi-agent coordination + quantum-ready |
-| **v2.3** | Kubernetes GitOps + production stability |
-
-</details>
-
----
-
-<details>
-<summary>🦀 <strong>RuVector</strong> — High-Performance Rust/WASM Intelligence</summary>
-
-[![npm version](https://img.shields.io/npm/v/ruvector?color=blue&label=npm)](https://www.npmjs.com/package/ruvector)
-[![npm downloads](https://img.shields.io/npm/dm/ruvector?color=green)](https://www.npmjs.com/package/ruvector)
-[![GitHub](https://img.shields.io/badge/GitHub-ruvnet%2Fruvector-blue?logo=github)](https://github.com/ruvnet/ruvector)
-[![Docker](https://img.shields.io/badge/Docker-ruvector--postgres-blue?logo=docker)](https://hub.docker.com/r/ruvnet/ruvector-postgres)
-
-**RuVector** is a high-performance distributed vector database combining vector search, graph queries, and self-learning neural networks. Written in Rust with Node.js/WASM bindings, it powers Ruflo's intelligence layer with native speed.
-
-### Key Capabilities
-
-| Capability | Description | Performance |
-|------------|-------------|-------------|
-| **Vector Search** | HNSW indexing with SIMD acceleration | **~61µs latency, 16,400 QPS** |
-| **Graph Queries** | Full Cypher syntax (MATCH, WHERE, CREATE) | Native graph traversal |
-| **Self-Learning** | GNN layers that improve search over time | Automatic optimization |
-| **Distributed** | Raft consensus, multi-master replication | Auto-sharding |
-| **Compression** | Adaptive tiered (hot/warm/cool/cold) | **2-32x memory reduction** |
-| **39 Attention Types** | Flash, linear, sparse, graph, hyperbolic | GPU-accelerated SQL |
-
-### Performance Benchmarks
-
-| Operation | Latency | Throughput |
-|-----------|---------|------------|
-| HNSW Search (k=10, 384-dim) | **61µs** | 16,400 QPS |
-| HNSW Search (k=100) | 164µs | 6,100 QPS |
-| Cosine Distance (1536-dim) | 143ns | 7M ops/sec |
-| Dot Product (384-dim) | 33ns | 30M ops/sec |
-| Batch Distance (1000 vectors) | 237µs | 4.2M/sec |
-| Memory (1M vectors with PQ8) | - | **200MB** |
-
-### Quick Start
-
-```bash
-# Install ruvector (auto-detects native vs WASM)
-npm install ruvector
-
-# Or run directly
-npx ruvector --help
-
-# Start Postgres for centralized coordination
-docker run -d -p 5432:5432 ruvnet/ruvector-postgres
-```
-
-### Basic Usage
-
-```javascript
-import ruvector from 'ruvector';
-
-// Initialize vector database
-const db = new ruvector.VectorDB(384); // 384 dimensions
-
-// Insert vectors
-await db.insert('doc1', embedding1);
-await db.insert('doc2', embedding2);
-
-// Search (returns top-k similar)
-const results = await db.search(queryEmbedding, 10);
-
-// Graph queries with Cypher
-await db.execute("CREATE (a:Person {name: 'Alice'})-[:KNOWS]->(b:Person {name: 'Bob'})");
-const friends = await db.execute("MATCH (p:Person)-[:KNOWS]->(friend) RETURN friend.name");
-
-// GNN-enhanced search (self-learning)
-const layer = new ruvector.GNNLayer(384, 256, 4);
-const enhanced = layer.forward(query, neighbors, weights);
-
-// Compression (2-32x memory reduction)
-const compressed = ruvector.compress(embedding, 0.3); // 30% quality threshold
-```
-
-### Package Ecosystem
-
-| Package | Description | Performance |
-|---------|-------------|-------------|
-| **[ruvector](https://www.npmjs.com/package/ruvector)** | Core vector database with HNSW | **~61µs search, 16,400 QPS** |
-| **[@ruvector/attention](https://www.npmjs.com/package/@ruvector/attention)** | Flash Attention mechanisms | 2.49x-7.47x speedup |
-| **[@ruvector/sona](https://www.npmjs.com/package/@ruvector/sona)** | SONA adaptive learning (LoRA, EWC++) | <0.05ms adaptation |
-| **[@ruvector/gnn](https://www.npmjs.com/package/@ruvector/gnn)** | Graph Neural Networks (15 layer types) | Native NAPI bindings |
-| **[@ruvector/graph-node](https://www.npmjs.com/package/@ruvector/graph-node)** | Graph DB with Cypher queries | 10x faster than WASM |
-| **[@ruvector/rvlite](https://www.npmjs.com/package/@ruvector/rvlite)** | Standalone DB (SQL, SPARQL, Cypher) | All-in-one solution |
-| **[ruvector-wasm](https://www.npmjs.com/package/ruvector-wasm)** | Browser/Edge WASM build | Works everywhere |
-
-### 🐘 RuVector PostgreSQL — Enterprise Vector Database
-
-**77+ SQL functions** for AI operations directly in PostgreSQL with ~61µs search latency and 16,400 QPS.
-
-```bash
-# Quick setup with CLI (recommended)
-npx ruflo ruvector setup --output ./my-ruvector
-cd my-ruvector && docker-compose up -d
-
-# Or pull directly from Docker Hub
-docker run -d \
-  --name ruvector-postgres \
-  -p 5432:5432 \
-  -e POSTGRES_USER=claude \
-  -e POSTGRES_PASSWORD=ruflo-test \
-  -e POSTGRES_DB=hive_flow \
-  ruvnet/ruvector-postgres
-
-# Migrate existing memory to PostgreSQL
-npx ruflo ruvector import --input memory-export.json
-```
-
-**RuVector PostgreSQL vs pgvector:**
-
-| Feature | pgvector | RuVector PostgreSQL |
-|---------|----------|---------------------|
-| **SQL Functions** | ~10 basic | **77+ comprehensive** |
-| **Search Latency** | ~1ms | **~61µs** |
-| **Throughput** | ~5K QPS | **16,400 QPS** |
-| **Attention Mechanisms** | ❌ None | **✅ 39 types (self, multi-head, cross)** |
-| **GNN Operations** | ❌ None | **✅ GAT, message passing** |
-| **Hyperbolic Embeddings** | ❌ None | **✅ Poincaré/Lorentz space** |
-| **Hybrid Search** | ❌ Manual | **✅ BM25/TF-IDF built-in** |
-| **Local Embeddings** | ❌ None | **✅ 6 fastembed models** |
-| **Self-Learning** | ❌ None | **✅ GNN-based optimization** |
-| **SIMD Optimization** | Basic | **AVX-512/AVX2/NEON (~2x faster)** |
-
-**Key SQL Functions:**
-
-```sql
--- Vector operations with HNSW indexing
-SELECT * FROM embeddings ORDER BY embedding <=> query_vec LIMIT 10;
-
--- Hyperbolic embeddings for hierarchical data
-SELECT ruvector_poincare_distance(a, b, -1.0) AS distance;
-SELECT ruvector_mobius_add(a, b, -1.0) AS result;
-
--- Cosine similarity
-SELECT cosine_similarity_arr(a, b) AS similarity;
-```
-
-**Benefits over Local SQLite:**
-
-| Feature | Local SQLite | RuVector PostgreSQL |
-|---------|--------------|---------------------|
-| **Multi-Agent Coordination** | Single machine | Distributed across hosts |
-| **Pattern Sharing** | File-based | Real-time synchronized |
-| **Learning Persistence** | Local only | Centralized, backed up |
-| **Swarm Scale** | 15 agents | 100+ agents |
-| **Query Language** | Basic KV | Full SQL + 77 functions |
-| **AI Operations** | External only | **In-database (attention, GNN)** |
-
-<details>
-<summary>⚡ <strong>@ruvector/attention</strong> — Flash Attention (2.49x-7.47x Speedup)</summary>
-
-Native Rust implementation of Flash Attention for transformer computations:
-
-```typescript
-import { FlashAttention } from '@ruvector/attention';
-
-const attention = new FlashAttention({
-  blockSize: 32,      // L1 cache optimized
-  dimensions: 384,
-  temperature: 1.0,
-  useCPUOptimizations: true
-});
-
-// Compute attention with O(N) memory instead of O(N²)
-const result = attention.attention(queries, keys, values);
-console.log(`Computed in ${result.computeTimeMs}ms`);
-
-// Benchmark against naive implementation
-const bench = attention.benchmark(512, 384, 5);
-console.log(`Speedup: ${bench.speedup}x`);
-console.log(`Memory reduction: ${bench.memoryReduction}x`);
-```
-
-**Key Optimizations:**
-- Block-wise computation (fits L1 cache)
-- 8x loop unrolling for dot products
-- Top-K sparse attention (12% of keys)
-- Two-stage screening for large key sets
-- Online softmax for numerical stability
-
-</details>
-
-<details>
-<summary>🧠 <strong>@ruvector/sona</strong> — Self-Optimizing Neural Architecture</summary>
-
-SONA provides runtime-adaptive learning with minimal overhead:
-
-```typescript
-import { SONA } from '@ruvector/sona';
-
-const sona = new SONA({
-  enableLoRA: true,       // Low-rank adaptation
-  enableEWC: true,        // Elastic Weight Consolidation
-  learningRate: 0.001
-});
-
-// Start learning trajectory
-const trajectory = sona.startTrajectory('task-123');
-
-// Record steps during execution
-trajectory.recordStep({
-  type: 'observation',
-  content: 'Found authentication bug'
-});
-trajectory.recordStep({
-  type: 'action',
-  content: 'Applied JWT validation fix'
-});
-
-// Complete trajectory with verdict
-await trajectory.complete('success');
-
-// EWC++ consolidation (prevents forgetting)
-await sona.consolidate();
-```
-
-**Features:**
-- **LoRA**: Low-rank adaptation for efficient fine-tuning
-- **EWC++**: Prevents catastrophic forgetting
-- **ReasoningBank**: Pattern storage with similarity search
-- **Sub-millisecond**: <0.05ms adaptation overhead
-
-</details>
-
-<details>
-<summary>📊 <strong>@ruvector/graph-node</strong> — Native Graph Database</summary>
-
-High-performance graph database with Cypher query support:
-
-```typescript
-import { GraphDB } from '@ruvector/graph-node';
-
-const db = new GraphDB({ path: './data/graph' });
-
-// Create nodes and relationships
-await db.query(`
-  CREATE (a:Agent {name: 'coder', type: 'specialist'})
-  CREATE (b:Agent {name: 'reviewer', type: 'specialist'})
-  CREATE (a)-[:COLLABORATES_WITH {weight: 0.9}]->(b)
-`);
-
-// Query patterns
-const result = await db.query(`
-  MATCH (a:Agent)-[r:COLLABORATES_WITH]->(b:Agent)
-  WHERE r.weight > 0.8
-  RETURN a.name, b.name, r.weight
-`);
-
-// Hypergraph support for multi-agent coordination
-await db.createHyperedge(['agent-1', 'agent-2', 'agent-3'], {
-  type: 'consensus',
-  topic: 'architecture-decision'
-});
-```
-
-**Performance vs WASM:**
-- 10x faster query execution
-- Native memory management
-- Zero-copy data transfer
-
-</details>
-
-### Integration with Ruflo
-
-Ruflo automatically uses RuVector when available:
-
-```typescript
-// Ruflo detects and uses native ruvector
-import { getVectorStore } from '@hive-flow/memory';
-
-const store = await getVectorStore();
-// Uses ruvector if installed, falls back to sql.js
-
-// HNSW-indexed search (150x faster)
-const results = await store.search(queryVector, 10);
-
-// Flash Attention for pattern matching
-const attention = await getFlashAttention();
-const similarity = attention.attention(queries, keys, values);
-```
-
-### CLI Commands
-
-```bash
-# RuVector PostgreSQL Setup (generates Docker files + SQL)
-npx ruflo ruvector setup                    # Output to ./ruvector-postgres
-npx ruflo ruvector setup --output ./mydir   # Custom directory
-npx ruflo ruvector setup --print            # Preview files
-
-# Import from sql.js/JSON to PostgreSQL
-npx ruflo ruvector import --input data.json              # Direct import
-npx ruflo ruvector import --input data.json --output sql # Dry-run (generate SQL)
-
-# Other RuVector commands
-npx ruflo ruvector status --verbose         # Check connection
-npx ruflo ruvector benchmark --vectors 10000 # Performance test
-npx ruflo ruvector optimize --analyze       # Optimization suggestions
-npx ruflo ruvector backup --output backup.sql # Backup data
-
-# Native ruvector CLI
-npx ruvector status                               # Check installation
-npx ruvector benchmark --vectors 10000 --dimensions 384
-```
-
-**Generated Setup Files:**
-```
-ruvector-postgres/
-├── docker-compose.yml    # Docker services (PostgreSQL + pgAdmin)
-├── README.md             # Quick start guide
-└── scripts/
-    └── init-db.sql       # Database initialization (tables, indexes, functions)
-```
-
-</details>
-
----
+Use the built-in local commands for routing, memory, embeddings, providers, neural training, MCP tools, and statusline workflows.
 
 ## ☁️ Cloud & Deployment
 
@@ -5893,7 +5022,7 @@ Domain-Driven Design with bounded contexts, clean architecture, and measured per
 | `@hive-flow/memory` | Unified vector storage | AgentDB, HNSW indexing, 150x faster search, LearningBridge, MemoryGraph, AgentMemoryScope |
 | `@hive-flow/security` | CVE remediation | Input validation, path security, AIDefence |
 | `@hive-flow/swarm` | Multi-agent coordination | 6 topologies, Byzantine consensus, auto-scaling |
-| `@hive-flow/plugins` | WASM extensions | RuVector plugins, semantic search, intent routing |
+| `@hive-flow/plugins` | WASM extensions | local vector plugins, semantic search, intent routing |
 | `@hive-flow/cli` | Command interface | 26 commands, 140+ subcommands, shell completions |
 | `@hive-flow/neural` | Self-learning | SONA, 9 RL algorithms, EWC++ memory preservation |
 | `@hive-flow/testing` | Quality assurance | London School TDD, Vitest, fixtures, mocks |
@@ -7287,7 +6416,7 @@ cp -r ./data-backup-v2 ./data
 | `@hive-flow/mcp` | MCP server & tools | [Source](./v3/@hive-flow/mcp/) |
 | `@hive-flow/embeddings` | Vector embedding providers | [Source](./v3/@hive-flow/embeddings/) |
 | `@hive-flow/providers` | LLM provider integrations | [Source](./v3/@hive-flow/providers/) |
-| `@hive-flow/integration` | agentic-flow@alpha integration | [Source](./v3/@hive-flow/integration/) |
+| `@hive-flow/integration` | local compatibility API integration | [Source](./v3/@hive-flow/integration/) |
 | `@hive-flow/performance` | Benchmarking & optimization | [Source](./v3/@hive-flow/performance/) |
 | `@hive-flow/deployment` | Release & CI/CD | [Source](./v3/@hive-flow/deployment/) |
 | `@hive-flow/shared` | Shared utilities, types & V3ProgressService | [Source](./v3/@hive-flow/shared/) |
@@ -7316,7 +6445,7 @@ cp -r ./data-backup-v2 ./data
 MIT - [RuvNet](https://github.com/ruvnet)
 
 
-[![RuVector](https://img.shields.io/npm/v/ruvector?style=for-the-badge&logo=rust&color=orange&label=RuVector)](https://www.npmjs.com/package/ruvector)
+
 [![Agentic-Flow](https://img.shields.io/npm/v/agentic-flow?style=for-the-badge&logo=typescript&color=3178c6&label=Agentic-Flow)](https://www.npmjs.com/package/agentic-flow)
 [![Reddit](https://img.shields.io/reddit/subreddit-subscribers/aipromptprogramming?style=for-the-badge&logo=reddit&color=FF4500&label=r/aipromptprogramming)](https://www.reddit.com/r/aipromptprogramming/)
 

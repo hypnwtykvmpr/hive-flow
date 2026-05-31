@@ -7,11 +7,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { QLearningRouter, createQLearningRouter, type RouteDecision } from '../../src/ruvector/q-learning-router';
 
-// Mock the @ruvector/core module
-vi.mock('@ruvector/core', () => ({
-  createQLearning: vi.fn(() => null),
-}));
-
 describe('QLearningRouter', () => {
   let router: QLearningRouter;
 
@@ -45,16 +40,14 @@ describe('QLearningRouter', () => {
   });
 
   describe('initialize', () => {
-    it('should initialize without ruvector (fallback mode)', async () => {
+    it('should initialize in local fallback mode', async () => {
       await router.initialize();
       const stats = router.getStats();
       expect(stats.useNative).toBe(0);
     });
 
-    it('should handle ruvector import failure gracefully', async () => {
-      vi.doMock('@ruvector/core', () => {
-        throw new Error('Module not found');
-      });
+    it('should remain local on repeated initialize calls', async () => {
+      await router.initialize();
       await router.initialize();
       const stats = router.getStats();
       expect(stats.useNative).toBe(0);

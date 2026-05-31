@@ -306,7 +306,7 @@ export const agentRoleMapping = {
     name: 'Integration Architect',
     domain: 'integration' as AgentDomain,
     responsibilities: [
-      'agentic-flow@alpha integration',
+      'local compatibility integration',
       'Service layer design',
       'API surface definition'
     ]

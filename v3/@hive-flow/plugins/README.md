@@ -291,7 +291,7 @@ const result = await resourceLimiter.enforce(async () => {
 
 | Export | Description |
 |--------|-------------|
-| `AgenticFlowBridge` | agentic-flow@alpha integration |
+| `AgenticFlowBridge` | local compatibility API integration |
 | `AgentDBBridge` | AgentDB vector storage |
 
 ### Security

@@ -114,11 +114,11 @@ async function getMoERouter() {
 }
 
 // Semantic Router - lazy loaded
-// Tries native VectorDb first (16k+ routes/s HNSW), falls back to pure JS (47k routes/s cosine)
+// Uses the local pure JS semantic router.
 let semanticRouter: import('../ruvector/semantic-router.js').SemanticRouter | null = null;
 let nativeVectorDb: unknown = null;
 let semanticRouterInitialized = false;
-let routerBackend: 'native' | 'pure-js' | 'none' = 'none';
+let routerBackend: 'pure-js' | 'none' = 'none';
 
 // Pre-computed embeddings for common task patterns (cached)
 const TASK_PATTERN_EMBEDDINGS: Map<string, Float32Array> = new Map();
@@ -220,7 +220,7 @@ const TASK_PATTERNS: Record<string, { keywords: string[]; agents: string[] }> = 
 
 /**
  * Get the semantic router with environment detection.
- * Tries native VectorDb first (HNSW, 16k routes/s), falls back to pure JS (47k routes/s cosine).
+ * Uses pure JS cosine routing so no external vector package is required.
  */
 async function getSemanticRouter() {
   if (semanticRouterInitialized) {
@@ -228,45 +228,6 @@ async function getSemanticRouter() {
   }
   semanticRouterInitialized = true;
 
-  // STEP 1: Try native VectorDb from @ruvector/router (HNSW-backed)
-  // Note: Native VectorDb uses a persistent database file which can have lock issues
-  // in concurrent environments. We try it first but fall back gracefully to pure JS.
-  try {
-    // Use createRequire for ESM compatibility with native modules
-    const { createRequire } = await import('module');
-    const require = createRequire(import.meta.url);
-    const router = require('@ruvector/router');
-
-    if (router.VectorDb && router.DistanceMetric) {
-      // Try to create VectorDb - may fail with lock error in concurrent envs
-      const db = new router.VectorDb({
-        dimensions: 384,
-        distanceMetric: router.DistanceMetric.Cosine,
-        hnswM: 16,
-        hnswEfConstruction: 200,
-        hnswEfSearch: 100,
-      });
-
-      // Initialize with task patterns
-      for (const [patternName, { keywords }] of Object.entries(TASK_PATTERNS)) {
-        for (const keyword of keywords) {
-          const embedding = generateSimpleEmbedding(keyword);
-          db.insert(`${patternName}:${keyword}`, embedding);
-          TASK_PATTERN_EMBEDDINGS.set(`${patternName}:${keyword}`, embedding);
-        }
-      }
-
-      nativeVectorDb = db;
-      routerBackend = 'native';
-      return { router: null, backend: routerBackend, native: nativeVectorDb };
-    }
-  } catch (err) {
-    // Native not available or database locked - fall back to pure JS
-    // Common errors: "Database already open. Cannot acquire lock." or "MODULE_NOT_FOUND"
-    // This is expected in concurrent environments or when binary isn't installed
-  }
-
-  // STEP 2: Fall back to pure JS SemanticRouter
   try {
     const { SemanticRouter } = await import('../ruvector/semantic-router.js');
     semanticRouter = new SemanticRouter({ dimension: 384 });
@@ -295,8 +256,6 @@ async function getSemanticRouter() {
  */
 function getRouterBackendInfo(): { backend: string; speed: string } {
   switch (routerBackend) {
-    case 'native':
-      return { backend: 'native VectorDb (HNSW)', speed: '16k+ routes/s' };
     case 'pure-js':
       return { backend: 'pure JS (cosine)', speed: '47k routes/s' };
     default:
@@ -772,7 +731,7 @@ export const hooksRoute: MCPTool = {
       }
     }
 
-    // Get router (tries native VectorDb first, falls back to pure JS)
+    // Get local semantic router
     const { router, backend, native } = useSemanticRouter
       ? await getSemanticRouter()
       : { router: null, backend: 'none' as const, native: null };
@@ -785,31 +744,9 @@ export const hooksRoute: MCPTool = {
     const queryText = context ? `${task} ${context}` : task;
     const queryEmbedding = generateSimpleEmbedding(queryText);
 
-    // Try native VectorDb (HNSW-backed)
-    if (native && backend === 'native') {
-      const routeStart = performance.now();
-      try {
-        const results = (native as unknown as { search: (q: Float32Array, k: number) => unknown[] }).search(queryEmbedding, 5);
-        routingLatencyMs = performance.now() - routeStart;
-        routingMethod = 'semantic-native';
-        backendInfo = 'native VectorDb (HNSW)';
+    void native;
 
-        // Convert results to semantic format
-        semanticResult = (results as Array<{ id: string; score: number }>).map((r) => {
-          const [patternName] = r.id.split(':');
-          const pattern = TASK_PATTERNS[patternName];
-          return {
-            intent: patternName,
-            score: 1 - r.score, // Native uses distance (lower is better), convert to similarity
-            metadata: { agents: pattern?.agents || ['coder'] },
-          };
-        });
-      } catch {
-        // Native failed, try pure JS fallback
-      }
-    }
-
-    // Try pure JS SemanticRouter fallback
+    // Try pure JS SemanticRouter
     if (router && backend === 'pure-js' && semanticResult.length === 0) {
       const routeStart = performance.now();
       semanticResult = router.routeWithEmbedding(queryEmbedding, 3);
@@ -1658,10 +1595,10 @@ export const hooksInit: MCPTool = {
   },
 };
 
-// Intelligence hook - RuVector intelligence system
+// Intelligence hook - local intelligence system
 export const hooksIntelligence: MCPTool = {
   name: 'hooks_intelligence',
-  description: 'RuVector intelligence system status (shows REAL metrics from memory store)',
+  description: 'Local intelligence system status (shows real metrics from memory store)',
   inputSchema: {
     type: 'object',
     properties: {
@@ -2190,7 +2127,7 @@ export const hooksPatternSearch: MCPTool = {
 // Intelligence stats hook
 export const hooksIntelligenceStats: MCPTool = {
   name: 'hooks_intelligence_stats',
-  description: 'Get RuVector intelligence layer statistics',
+  description: 'Get local intelligence layer statistics',
   inputSchema: {
     type: 'object',
     properties: {
@@ -2565,7 +2502,7 @@ export const hooksIntelligenceAttention: MCPTool = {
 // =============================================================================
 
 /**
- * Worker trigger types matching agentic-flow@alpha
+ * Worker trigger types matching local compatibility API
  */
 type WorkerTrigger =
   | 'ultralearn'    // Deep knowledge acquisition

@@ -130,7 +130,7 @@ The coordinator manages 5 domains with specific agent assignments:
 | **Queen** | 1 | Top-level coordination, consensus, planning |
 | **Security** | 2-4 | Security architecture, CVE fixes, threat modeling |
 | **Core** | 5-9 | DDD design, memory unification, type modernization |
-| **Integration** | 10-12 | agentic-flow integration, CLI, neural features |
+| **Integration** | 10-12 | local compatibility integration, CLI, neural features |
 | **Support** | 13-15 | TDD testing, performance, deployment |
 
 ### Domain-Based Task Routing
@@ -563,22 +563,23 @@ coordinator.on('swarm.initialized', (event) => {
 - `getPerformanceReport(): PerformanceReport` - Get performance stats
 - `getStatus(): {swarmId, status, domains, metrics}` - Get comprehensive status
 
-## Integration with agentic-flow@alpha
+## Integration with local compatibility API
 
-This module can integrate with agentic-flow@alpha for enhanced capabilities:
+This module exposes compatibility extension points backed by local Hive Flow
+implementations. It does not require external local compatibility delegates or services:
 
 ```typescript
 import { createUnifiedSwarmCoordinator } from '@hive-flow/swarm';
 import { AgenticFlowBridge } from '@hive-flow/integration';
 
-// Connect to agentic-flow for enhanced features
+// Connect local compatibility features through the Hive Flow bridge
 const bridge = new AgenticFlowBridge({
   agenticFlow: { version: 'alpha' },
 });
 
 const coordinator = createUnifiedSwarmCoordinator({
   topology: { type: 'hierarchical', maxAgents: 15 },
-  // Enable agentic-flow features via bridge
+  // Enable local compatibility features via bridge
   extensions: {
     transport: bridge.getQuicTransport(),     // QUIC 0-RTT
     learning: bridge.getSwarmLearningOptimizer(),
@@ -586,7 +587,7 @@ const coordinator = createUnifiedSwarmCoordinator({
 });
 ```
 
-### Available from agentic-flow@alpha
+### Available from local compatibility API
 
 | Feature | Status | Description |
 |---------|--------|-------------|
@@ -598,7 +599,7 @@ const coordinator = createUnifiedSwarmCoordinator({
 
 ## Roadmap: Future Enhancements
 
-Based on agentic-flow@alpha capabilities that could be integrated:
+Potential local enhancements:
 
 ### Priority 1 (High Impact)
 - [ ] Native QUIC transport with HTTP/2 fallback

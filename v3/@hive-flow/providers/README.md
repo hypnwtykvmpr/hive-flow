@@ -49,9 +49,6 @@
 - `codellama`, `phi-4`
 - `deepseek-coder`
 
-### RuVector
-- Custom models via @ruvector/ruvllm
-
 ## Installation
 
 ```bash
@@ -177,7 +174,6 @@ import {
   GoogleProvider,
   CohereProvider,
   OllamaProvider,
-  RuVectorProvider,
 } from '@hive-flow/providers';
 
 // Create provider directly

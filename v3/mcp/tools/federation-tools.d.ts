@@ -12,7 +12,7 @@
  * - federation/vote - Vote on consensus proposal
  *
  * Implements ADR-005: MCP-First API Design
- * Implements ADR-001: agentic-flow@alpha compatibility
+ * Implements ADR-001: local compatibility API compatibility
  */
 import { MCPTool } from '../types.js';
 export declare const federationStatusTool: MCPTool;

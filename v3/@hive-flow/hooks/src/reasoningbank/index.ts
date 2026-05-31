@@ -961,45 +961,21 @@ class RealEmbeddingService implements IEmbeddingService {
 /**
  * Fallback embedding service (hash-based)
  *
- * When useMockEmbeddings is true the npx/agentic-flow call is skipped entirely
- * so that tests do not incur I/O wait or process-spawn overhead.
+ * Embeddings are generated locally. This service intentionally never shells
+ * out to external packages.
  */
 class FallbackEmbeddingService implements IEmbeddingService {
   private dimensions: number;
-  private useMockEmbeddings: boolean;
   private cache: Map<string, Float32Array> = new Map();
 
-  constructor(dimensions: number = 384, useMockEmbeddings: boolean = false) {
+  constructor(dimensions: number = 384, _useMockEmbeddings: boolean = false) {
     this.dimensions = dimensions;
-    this.useMockEmbeddings = useMockEmbeddings;
   }
 
   async embed(text: string): Promise<Float32Array> {
     const cacheKey = text.slice(0, 200);
     if (this.cache.has(cacheKey)) {
       return this.cache.get(cacheKey)!;
-    }
-
-    // Skip the npx call when useMockEmbeddings is set (e.g. in tests)
-    if (!this.useMockEmbeddings) {
-      // Try agentic-flow ONNX embeddings first
-      try {
-        const { execFileSync } = await import('child_process');
-        // Use execFileSync with shell: false to prevent command injection
-        // Pass text as argument array to avoid shell interpolation
-        const safeText = text.slice(0, 500).replace(/[\x00-\x1f]/g, ''); // Remove control chars
-        const result = execFileSync(
-          'npx',
-          ['agentic-flow@alpha', 'embeddings', 'generate', safeText, '--format', 'json'],
-          { encoding: 'utf-8', timeout: 10000, shell: false, stdio: ['pipe', 'pipe', 'pipe'] }
-        );
-        const parsed = JSON.parse(result);
-        const embedding = new Float32Array(parsed.embedding || parsed);
-        this.cache.set(cacheKey, embedding);
-        return embedding;
-      } catch {
-        // Fallback to hash-based embedding
-      }
     }
 
     return this.hashEmbed(text);

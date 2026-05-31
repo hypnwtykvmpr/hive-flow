@@ -14,7 +14,7 @@
  * import { HNSWIndex } from '@hive-flow/memory';
  *
  * Complete reimagining based on 10 ADRs:
- * - ADR-001: Adopt agentic-flow as core foundation
+ * - ADR-001: Local compatibility foundation
  * - ADR-002: Domain-Driven Design structure
  * - ADR-003: Single coordination engine
  * - ADR-004: Plugin-based architecture
@@ -59,7 +59,7 @@ export * as memory from './@hive-flow/memory/src/index.js';
 export * as swarm from './@hive-flow/swarm/src/index.js';
 
 /**
- * Integration module - agentic-flow@alpha integration, ADR-001 compliance
+ * Integration module - local compatibility adapters, ADR alignment
  * @see {@link @hive-flow/integration}
  */
 export * as integration from './@hive-flow/integration/src/index.js';

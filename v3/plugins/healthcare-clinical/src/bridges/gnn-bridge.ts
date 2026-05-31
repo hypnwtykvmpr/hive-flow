@@ -2,8 +2,8 @@
  * GNN Bridge - Healthcare Clinical Plugin
  *
  * Provides Graph Neural Network capabilities for clinical pathway
- * analysis and drug interaction detection. Integrates with
- * ruvector-gnn-wasm for efficient graph-based reasoning.
+ * analysis and drug interaction detection. Uses local graph kernels for
+ * efficient graph-based reasoning.
  *
  * Use Cases:
  * - Clinical pathway recommendations
@@ -36,7 +36,7 @@ const defaultLogger: Logger = {
 };
 
 /**
- * WASM module interface for ruvector-gnn-wasm
+ * WASM module interface for local clinical graph kernels.
  */
 interface GNNWasmModule {
   create_graph(numNodes: number, numEdges: number, featureDim: number): number;
@@ -536,13 +536,7 @@ export class HealthcareGNNBridge implements GNNBridge {
   // Private methods
 
   private async resolveWasmPath(): Promise<string | null> {
-    try {
-      // Dynamic import with type assertion for optional WASM package
-      const module = await import(/* webpackIgnore: true */ 'ruvector-gnn-wasm' as string) as { default?: string };
-      return module.default ?? null;
-    } catch {
-      return null;
-    }
+    return null;
   }
 
   private async loadWasmModule(wasmPath: string): Promise<GNNWasmModule> {

@@ -2,7 +2,7 @@
  * MinCut Bridge for Module Splitting
  *
  * Provides graph min-cut operations for optimal module boundary detection
- * using ruvector-mincut-wasm for high-performance graph partitioning.
+ * using local graph partitioning kernels.
  *
  * Features:
  * - Optimal module boundary detection

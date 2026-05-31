@@ -74,15 +74,6 @@
     },
     "@hive-flow/browser": {
       "optional": true
-    },
-    "@ruvector/attention": {
-      "optional": true
-    },
-    "@ruvector/gnn": {
-      "optional": true
-    },
-    "@ruvector/sona": {
-      "optional": true
     }
   },
   "devDependencies": {

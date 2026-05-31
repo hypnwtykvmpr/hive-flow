@@ -34,11 +34,11 @@ describe('GuidanceProvider', () => {
       expect(context).toContain('Performance Targets');
     });
 
-    it('should include HNSW performance targets', async () => {
+    it('should include local search performance guidance', async () => {
       const context = await provider.generateSessionContext();
 
-      expect(context).toContain('HNSW search');
-      expect(context).toContain('150x');
+      expect(context).toContain('Vector search');
+      expect(context).toContain('measure the local backend');
     });
 
     it('should include code quality rules', async () => {

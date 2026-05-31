@@ -1,7 +1,7 @@
 /**
  * GNN Bridge - Graph Neural Network Operations
  *
- * Bridge to @ruvector/gnn-wasm for graph-based reasoning,
+ * Local bridge for graph-based reasoning,
  * node classification, link prediction, and graph embeddings.
  */
 
@@ -162,15 +162,7 @@ export class GnnBridge {
     this._status = 'loading';
 
     try {
-      // Dynamic import - module may not be installed
-      const wasmModule = await import(/* webpackIgnore: true */ '@ruvector/gnn-wasm' as string).catch(() => null);
-
-      if (wasmModule) {
-        this._module = wasmModule as unknown as GnnWasmModule;
-      } else {
-        this._module = this.createMockModule();
-      }
-
+      this._module = this.createMockModule();
       this._status = 'ready';
     } catch (error) {
       this._status = 'error';

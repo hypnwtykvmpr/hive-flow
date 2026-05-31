@@ -2,8 +2,8 @@
  * Economy Bridge - Financial Risk Plugin
  *
  * Provides token economics and portfolio risk calculation
- * capabilities. Integrates with ruvector-economy-wasm for
- * high-performance VaR, CVaR, and Monte Carlo simulations.
+ * capabilities. Uses local economy kernels for VaR, CVaR, and Monte Carlo
+ * simulations.
  *
  * Compliance Features:
  * - Deterministic execution for audit reproducibility
@@ -32,7 +32,7 @@ const defaultLogger: Logger = {
 };
 
 /**
- * WASM module interface for ruvector-economy-wasm
+ * WASM module interface for local economy kernels.
  */
 interface EconomyWasmModule {
   calculate_var(returns: Float32Array, confidence: number): number;
@@ -471,12 +471,7 @@ export class FinancialEconomyBridge implements EconomyBridge {
   // Private methods
 
   private async resolveWasmPath(): Promise<string | null> {
-    try {
-      const module = await import(/* webpackIgnore: true */ 'ruvector-economy-wasm' as string) as { default?: string };
-      return module.default ?? null;
-    } catch {
-      return null;
-    }
+    return null;
   }
 
   private async loadWasmModule(wasmPath: string): Promise<EconomyWasmModule> {

@@ -3,7 +3,7 @@
  * Code analysis, diff classification, AST analysis, and change risk assessment
  *
  * Features:
- * - AST analysis using ruvector (tree-sitter) with graceful fallback
+ * - AST analysis using local parsers with graceful fallback
  * - Symbol extraction (functions, classes, variables, types)
  * - Cyclomatic complexity scoring
  * - Diff classification and risk assessment
@@ -342,7 +342,7 @@ const codeCommand: Command = {
 };
 
 // ============================================================================
-// AST Analysis Subcommands (using ruvector tree-sitter with fallback)
+// AST Analysis Subcommands (using local parser fallback)
 // ============================================================================
 
 /**
@@ -391,7 +391,7 @@ function getComplexityRatingAst(value: number): string {
  */
 const astCommand: Command = {
   name: 'ast',
-  description: 'Analyze code using AST parsing (tree-sitter via ruvector)',
+  description: 'Analyze code using local AST parsing',
   options: [
     {
       name: 'complexity',
@@ -1197,7 +1197,7 @@ async function scanSourceFiles(dir: string, maxDepth: number = 10): Promise<stri
 }
 
 /**
- * Fallback analysis when ruvector is not available
+ * Fallback analysis when a structured parser is not available.
  */
 function fallbackAnalyze(code: string, filePath: string) {
   const lines = code.split('\n');

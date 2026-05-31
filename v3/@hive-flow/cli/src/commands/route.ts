@@ -328,14 +328,14 @@ const statsCommand: Command = {
       const stats = router.getStats();
       const ruvectorAvailable = await isRuvectorAvailable();
 
-      const ruvectorStatus = {
+      const routerBackendStatus = {
         available: ruvectorAvailable,
         wasmAccelerated: stats.useNative === 1,
-        backend: stats.useNative === 1 ? 'ruvector-native' : 'fallback',
+        backend: stats.useNative === 1 ? 'external-native' : 'local-fallback',
       };
 
       if (jsonOutput) {
-        output.printJson({ stats, ruvector: ruvectorStatus });
+        output.printJson({ stats, routerBackend: routerBackendStatus });
       } else {
         output.writeln();
         output.writeln(output.bold('Q-Learning Router Statistics'));
@@ -357,15 +357,15 @@ const statsCommand: Command = {
         });
 
         output.writeln();
-        output.writeln(output.bold('RuVector Status'));
+        output.writeln(output.bold('Router Backend Status'));
         output.printList([
-          `Available: ${ruvectorStatus.available ? output.success('Yes') : output.warning('No (using fallback)')}`,
-          `WASM Accelerated: ${ruvectorStatus.wasmAccelerated ? output.success('Yes') : 'No'}`,
-          `Backend: ${ruvectorStatus.backend}`,
+          `External Backend: ${routerBackendStatus.available ? output.success('Available') : output.warning('Detached')}`,
+          `WASM Accelerated: ${routerBackendStatus.wasmAccelerated ? output.success('Yes') : 'No'}`,
+          `Backend: ${routerBackendStatus.backend}`,
         ]);
       }
 
-      return { success: true, data: { stats, ruvector: ruvectorStatus } };
+      return { success: true, data: { stats, routerBackend: routerBackendStatus } };
     } catch (error) {
       output.printError(error instanceof Error ? error.message : String(error));
       return { success: false, exitCode: 1 };
@@ -891,8 +891,8 @@ export const routeCommand: Command = {
 
     output.writeln(output.bold('Backend Status:'));
     output.printList([
-      `RuVector: ${ruvectorAvailable ? output.success('Available') : output.warning('Fallback mode')}`,
-      `Backend: ${ruvectorAvailable ? 'ruvector-native' : 'JavaScript fallback'}`,
+      `External Backend: ${ruvectorAvailable ? output.success('Available') : output.warning('Detached')}`,
+      `Backend: ${ruvectorAvailable ? 'external-native' : 'JavaScript fallback'}`,
     ]);
     output.writeln();
 

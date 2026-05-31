@@ -1273,17 +1273,10 @@ export function createADRWorker(projectRoot: string): WorkerHandler {
       adr011Result,
       adr012Result,
     ] = await Promise.all([
-      // ADR-001: agentic-flow integration
-      fs.readFile(path.join(v3Path, 'package.json'), 'utf-8')
-        .then(content => {
-          const pkg = safeJsonParse<Record<string, unknown>>(content);
-          return {
-            compliant: pkg.dependencies?.['agentic-flow'] !== undefined ||
-                       pkg.devDependencies?.['agentic-flow'] !== undefined,
-            reason: 'agentic-flow dependency',
-          };
-        })
-        .catch(() => ({ compliant: false, reason: 'Package not found' })),
+      // ADR-001: local compatibility integration
+      fs.access(path.join(v3Path, '@hive-flow', 'integration'))
+        .then(() => ({ compliant: true, reason: 'local integration module' }))
+        .catch(() => ({ compliant: false, reason: 'Integration module not found' })),
 
       // ADR-002: DDD domains (parallel check)
       Promise.allSettled(

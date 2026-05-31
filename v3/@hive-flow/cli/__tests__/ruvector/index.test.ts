@@ -1,7 +1,7 @@
 /**
- * RuVector Integration Tests
+ * Local vector integration tests
  *
- * Tests for the main ruvector module exports and integration.
+ * Tests for the main local vector module exports and integration.
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
@@ -29,29 +29,6 @@ import {
 } from '../../src/ruvector/index.js';
 import type { DependencyGraph, GraphAnalysisResult, GraphNode, GraphEdge } from '../../src/ruvector/index.js';
 
-// Mock all ruvector modules
-vi.mock('@ruvector/core', () => ({
-  createQLearning: vi.fn(() => null),
-  version: '1.0.0',
-}));
-
-vi.mock('@ruvector/ast', () => ({
-  createASTAnalyzer: vi.fn(() => null),
-}));
-
-vi.mock('@ruvector/diff', () => ({
-  createDiffClassifier: vi.fn(() => null),
-}));
-
-vi.mock('@ruvector/coverage', () => ({
-  createCoverageRouter: vi.fn(() => null),
-}));
-
-vi.mock('@ruvector/wasm', () => ({
-  minCut: vi.fn(() => null),
-  louvain: vi.fn(() => null),
-}));
-
 describe('RuVector Module Exports', () => {
   afterEach(() => {
     vi.clearAllMocks();
@@ -63,11 +40,7 @@ describe('RuVector Module Exports', () => {
       expect(typeof result).toBe('boolean');
     });
 
-    it('should return false when ruvector is not installed', async () => {
-      vi.doMock('@ruvector/core', () => {
-        throw new Error('Module not found');
-      });
-      
+    it('should return false because external packages are detached', async () => {
       const result = await isRuvectorAvailable();
       expect(result).toBe(false);
     });

@@ -1,6 +1,6 @@
 /**
  * @hive-flow/browser - ReasoningBank Integration
- * Connects browser trajectories to agentic-flow's learning system
+ * Connects browser trajectories to the local compatibility learning system
  */
 
 import type { BrowserTrajectory, BrowserTrajectoryStep, Snapshot } from '../domain/types.js';

@@ -30,7 +30,6 @@ const COMPATIBILITY_MATRIX: Record<string, Record<string, PackageCompatibility>>
   },
   '@hive-flow/integration': {
     '@hive-flow/cli': { minVersion: '3.0.0-alpha.70' },
-    'agentic-flow': { minVersion: '0.1.0' },
   },
 };
 

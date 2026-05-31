@@ -2,7 +2,7 @@
  * FPGA Transformer Bridge for Performance Optimizer
  *
  * Provides fast configuration optimization using FPGA-accelerated
- * transformer inference from ruvector-fpga-transformer-wasm.
+ * transformer-style local inference for configuration search.
  */
 
 import type {
@@ -65,24 +65,8 @@ export class PerfFpgaBridge implements FpgaBridgeInterface {
 
     this.status = 'loading';
 
-    try {
-      // Try to load WASM module
-      // Dynamic import of optional WASM module - use string literal to avoid type error
-      const modulePath = '@hive-flow/ruvector-upstream';
-      const wasmModule = await import(/* @vite-ignore */ modulePath).catch(() => null);
-
-      if (wasmModule) {
-        // Initialize with WASM module
-        this.status = 'ready';
-      } else {
-        // Use mock implementation
-        this.initializePerformanceModel();
-        this.status = 'ready';
-      }
-    } catch (error) {
-      this.status = 'error';
-      throw error;
-    }
+    this.initializePerformanceModel();
+    this.status = 'ready';
   }
 
   async destroy(): Promise<void> {

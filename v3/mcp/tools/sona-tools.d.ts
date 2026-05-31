@@ -22,7 +22,7 @@
  * - Pattern Search: 150x-12,500x faster via HNSW
  *
  * Implements ADR-005: MCP-First API Design
- * Implements ADR-001: agentic-flow@alpha compatibility
+ * Implements ADR-001: local compatibility API compatibility
  */
 import { MCPTool } from '../types.js';
 export declare const sonaTools: MCPTool[];

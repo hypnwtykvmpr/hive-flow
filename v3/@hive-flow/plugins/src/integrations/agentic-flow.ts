@@ -1,16 +1,14 @@
 /**
- * Agentic Flow Integration
+ * Agentic Flow Compatibility Integration
  *
- * Provides integration with agentic-flow@alpha for:
+ * Provides a historical compatibility surface for:
  * - Swarm coordination
  * - Agent spawning
  * - Task orchestration
  * - Memory management
  *
- * Uses agentic-flow's optimized implementations:
- * - AgentDBFast: 150x-12,500x faster vector search
- * - AttentionCoordinator: Attention-based agent consensus
- * - HybridReasoningBank: Trajectory-based learning
+ * External agentic-flow loading is detached; the bridge uses local maps,
+ * events, and fallback implementations.
  */
 
 import { EventEmitter } from 'node:events';
@@ -21,25 +19,17 @@ import type {
   IEventBus,
 } from '../types/index.js';
 
-// Lazy-loaded agentic-flow imports (optional dependency)
-// Using 'any' types since agentic-flow is an optional peer dependency
+// Historical agentic-flow bridge state. External loading is detached; these
+// remain null so the bridge consistently uses local fallback implementations.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let agenticFlowCore: any | null = null;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let agenticFlowAgents: any | null = null;
 
 async function loadAgenticFlow(): Promise<boolean> {
-  try {
-    // Use dynamic string to bypass TypeScript module resolution
-    const corePath = 'agentic-flow/core';
-    const agentsPath = 'agentic-flow';
-    agenticFlowCore = await import(/* @vite-ignore */ corePath);
-    agenticFlowAgents = await import(/* @vite-ignore */ agentsPath);
-    return true;
-  } catch {
-    // agentic-flow not available - use fallback implementations
-    return false;
-  }
+  agenticFlowCore = null;
+  agenticFlowAgents = null;
+  return false;
 }
 
 // ============================================================================
@@ -123,7 +113,7 @@ export type AgenticFlowEvent = typeof AGENTIC_FLOW_EVENTS[keyof typeof AGENTIC_F
 // ============================================================================
 
 /**
- * Bridge to agentic-flow@alpha functionality.
+ * Bridge to local compatibility API functionality.
  * Provides a unified interface for swarm coordination, agent spawning, and task orchestration.
  */
 export class AgenticFlowBridge extends EventEmitter {
@@ -385,23 +375,24 @@ export class AgenticFlowBridge extends EventEmitter {
     options: TaskOrchestrationOptions,
     timeout: number
   ): Promise<void> {
-    // Task execution via agentic-flow when available
+    // Task execution via a local compatibility reference when registered
     return new Promise(async (resolve, reject) => {
       const timer = setTimeout(() => {
         reject(new Error(`Task ${taskId} timed out after ${timeout}ms`));
       }, timeout);
 
       try {
-        // Attempt agentic-flow execution
+        // Attempt compatibility delegate execution. The detached loader returns
+        // false by default, so local completion remains the normal path.
         const loaded = await loadAgenticFlow();
         if (loaded && agenticFlowAgents) {
-          // Use agentic-flow's MCP command handler for task execution
+          // Use the local compatibility MCP command handler for task execution
           await agenticFlowAgents.handleMCPCommand?.({
             command: 'task/execute',
             params: { taskId, taskType: options.taskType, input: options.input }
           });
         }
-        // Task completed (either via agentic-flow or fallback)
+        // Task completed via delegate or local fallback.
         clearTimeout(timer);
         resolve();
       } catch (error) {
@@ -504,16 +495,13 @@ export interface VectorSearchResult {
 // ============================================================================
 
 /**
- * Bridge to AgentDB for vector storage and similarity search.
- * Provides 150x-12,500x faster search compared to traditional methods.
- *
- * Uses agentic-flow's AgentDBFast when available for optimal performance.
+ * Bridge to local AgentDB-compatible vector storage and similarity search.
  */
 export class AgentDBBridge extends EventEmitter {
   private readonly config: AgentDBConfig;
   private readonly vectors = new Map<string, VectorEntry>();
   private initialized = false;
-  private agentDB: unknown | null = null; // agentic-flow AgentDBFast instance
+  private agentDB: unknown | null = null; // Optional local compatibility delegate
 
   constructor(config?: AgentDBConfig) {
     super();
@@ -528,12 +516,13 @@ export class AgentDBBridge extends EventEmitter {
   }
 
   /**
-   * Initialize AgentDB using agentic-flow's optimized implementation.
+   * Initialize AgentDB using local storage unless a compatibility delegate is registered.
    */
   async initialize(): Promise<void> {
     if (this.initialized) return;
 
-    // Try to use agentic-flow's AgentDBFast for 150x-12,500x speedup
+    // The detached loader normally returns false; this branch exists only for
+    // tests or explicit in-process delegate injection.
     const loaded = await loadAgenticFlow();
     if (loaded && agenticFlowCore) {
       try {

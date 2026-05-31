@@ -225,19 +225,11 @@ export class QLearningRouter {
   }
 
   /**
-   * Initialize the router, attempting to load ruvector native module
-   * and restore persisted model if available
+   * Initialize the router and restore persisted model if available.
    */
   async initialize(): Promise<void> {
-    try {
-      const ruvector = await import('@ruvector/core');
-      const factory = (ruvector as Record<string, unknown>).createQLearning as ((config: Partial<QLearningRouterConfig>) => unknown) | undefined;
-      this.ruvectorEngine = factory?.(this.config) ?? null;
-      this.useNative = !!this.ruvectorEngine;
-    } catch {
-      // Fallback to JS implementation
-      this.useNative = false;
-    }
+    this.ruvectorEngine = null;
+    this.useNative = false;
 
     // Try to load persisted model
     await this.loadModel();

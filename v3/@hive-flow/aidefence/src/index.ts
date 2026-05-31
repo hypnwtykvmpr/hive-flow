@@ -162,12 +162,11 @@ export interface AIDefence {
  * // With learning enabled
  * const learning = createAIDefence({ enableLearning: true });
  *
- * // With AgentDB for HNSW search (150x-12,500x faster)
- * import { AgentDB } from 'agentdb';
- * const agentdb = new AgentDB({ path: './data/aidefence' });
+ * // With a custom local vector store
+ * const localVectorStore = createLocalVectorStore({ path: './data/aidefence' });
  * const fast = createAIDefence({
  *   enableLearning: true,
- *   vectorStore: agentdb
+ *   vectorStore: localVectorStore
  * });
  * ```
  */

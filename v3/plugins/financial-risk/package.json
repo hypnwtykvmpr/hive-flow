@@ -1,7 +1,7 @@
 {
   "name": "@hive-flow/plugin-financial-risk",
   "version": "3.0.0-alpha.1",
-  "description": "High-performance financial risk analysis plugin with portfolio risk scoring, anomaly detection, market regime classification, and compliance reporting using RuVector WASM packages.",
+  "description": "High-performance financial risk analysis plugin with portfolio risk scoring, anomaly detection, market regime classification, and compliance reporting using local analysis kernels.",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",

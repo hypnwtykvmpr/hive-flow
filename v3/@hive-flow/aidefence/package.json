@@ -30,14 +30,6 @@
     "test:unit": "vitest run src",
     "typecheck": "tsc --noEmit"
   },
-  "peerDependencies": {
-    "agentdb": ">=2.0.0-alpha.1"
-  },
-  "peerDependenciesMeta": {
-    "agentdb": {
-      "optional": true
-    }
-  },
   "devDependencies": {
     "vitest": "^1.1.0"
   },

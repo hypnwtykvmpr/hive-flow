@@ -48,7 +48,7 @@ async function getRegistry(dbPath?: string): Promise<any | null> {
         // Suppress noisy console.log during init using a scoped flag
         // instead of replacing the global console.log (avoids race condition
         // with concurrent async code that also uses console.log).
-        const suppressPatterns = ['Transformers.js', 'better-sqlite3', '[AgentDB]', '[HNSWLibBackend]', 'RuVector graph'];
+        const suppressPatterns = ['Transformers.js', 'better-sqlite3', '[AgentDB]', '[HNSWLibBackend]', 'local graph'];
         let suppressInit = true;
         const origLog = console.log;
         const scopedLog = (...args: unknown[]) => {
@@ -1449,7 +1449,7 @@ export async function bridgeSessionEnd(options: {
 
 /**
  * Route a task via AgentDB's SemanticRouter.
- * Returns null to fall back to local ruvector router.
+ * Returns null to fall back to the local router.
  */
 export async function bridgeRouteTask(options: {
   task: string;
@@ -1610,11 +1610,22 @@ export async function bridgeContextSynthesize(params: { query: string; maxEntrie
   const registry = await getRegistry();
   if (!registry) return null;
   try {
-    const agentdbModule: any = await import('agentdb');
-    const ContextSynthesizer = agentdbModule.ContextSynthesizer;
-    if (!ContextSynthesizer) return { success: false, error: 'ContextSynthesizer not available' };
-    const result = ContextSynthesizer.synthesize(params.query, []);
-    return { success: true, synthesis: result };
+    const maxEntries = Math.max(1, Math.min(params.maxEntries ?? 5, 50));
+    const summary = params.query
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, maxEntries)
+      .join(' ');
+    return {
+      success: true,
+      synthesis: {
+        query: params.query,
+        summary,
+        entries: [],
+        source: 'local-context-synthesizer',
+      },
+    };
   } catch (e: any) { return { success: false, error: e.message }; }
 }
 

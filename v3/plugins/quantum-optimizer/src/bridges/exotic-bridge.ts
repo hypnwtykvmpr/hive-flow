@@ -1,7 +1,7 @@
 /**
  * Exotic Bridge - Quantum-Inspired Optimization Algorithms
  *
- * Bridge to @ruvector/exotic-wasm for quantum-inspired optimization
+ * Local bridge for quantum-inspired optimization
  * including simulated quantum annealing, QAOA emulation, and Grover search.
  */
 
@@ -103,16 +103,7 @@ export class ExoticBridge {
     this._status = 'loading';
 
     try {
-      // Dynamic import - module may not be installed
-      const wasmModule = await import(/* webpackIgnore: true */ '@ruvector/exotic-wasm' as string).catch(() => null);
-
-      if (wasmModule) {
-        this._module = wasmModule as unknown as ExoticWasmModule;
-      } else {
-        // Use mock module for development/testing
-        this._module = this.createMockModule();
-      }
-
+      this._module = this.createMockModule();
       this._status = 'ready';
     } catch (error) {
       this._status = 'error';

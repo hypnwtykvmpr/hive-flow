@@ -1,14 +1,10 @@
 /**
- * ruvLLM Bridge -- Local Language Model Inference from RuVector
+ * ruvLLM Bridge -- local language model inference
  *
- * Extends @ruvector/core with on-device GGUF model inference.
  * Provides 3-tier routing:
- *   Tier 1: Agent Booster (WASM, <1ms) -- simple transforms
+ *   Tier 1: Agent Booster (<1ms) -- simple transforms
  *   Tier 2: Local model via ruvLLM (~200ms) -- routing, classification
  *   Tier 3: Cloud API (2-5s) -- complex reasoning
- *
- * All @ruvector/* packages are optional peer dependencies.
- * The bridge degrades gracefully when they are absent.
  *
  * @module @hive-flow/cli/appliance/ruvllm-bridge
  */
@@ -72,6 +68,7 @@ export interface TierRouting {
 
 export interface BridgeStatus {
   available: boolean;
+  ggufEngine: boolean;
   ruvectorCore: boolean;
   ruvectorRouter: boolean;
   ruvectorSona: boolean;
@@ -126,9 +123,6 @@ export class RuvllmBridge {
   private models: Map<string, ModelInfo> = new Map();
   private activeModel: string | null = null;
   private kvCacheEntries = 0;
-  private ruvectorCore: any = null;
-  private ruvectorRouter: any = null;
-  private ruvectorSona: any = null;
   private ggufEngine: GgufEngineType | null = null;
 
   constructor(config: RuvllmConfig) {
@@ -136,12 +130,8 @@ export class RuvllmBridge {
     this.config = { ...DEFAULT_CONFIG, ...config };
   }
 
-  /** Probe optional @ruvector packages, initialize GGUF engine, and scan modelsDir. */
+  /** Initialize GGUF engine and scan modelsDir. */
   async initialize(): Promise<void> {
-    this.ruvectorCore = await this.tryImport('@ruvector/core');
-    this.ruvectorRouter = await this.tryImport('@ruvector/router');
-    this.ruvectorSona = await this.tryImport('@ruvector/sona');
-
     // Initialize GGUF engine for local model inference
     try {
       const { GgufEngine } = await import('./gguf-engine.js');
@@ -160,12 +150,7 @@ export class RuvllmBridge {
     await this.scanModelsDir();
 
     if (this.config.verbose) {
-      const pkgs = [
-        this.ruvectorCore && '@ruvector/core',
-        this.ruvectorRouter && '@ruvector/router',
-        this.ruvectorSona && '@ruvector/sona',
-        this.ggufEngine && 'gguf-engine',
-      ].filter(Boolean);
+      const pkgs = [this.ggufEngine && 'gguf-engine'].filter(Boolean);
       if (pkgs.length) console.log(`[ruvLLM] Loaded: ${pkgs.join(', ')}`);
       console.log(`[ruvLLM] ${this.models.size} model(s) in ${this.config.modelsDir}`);
     }
@@ -176,7 +161,7 @@ export class RuvllmBridge {
     return Array.from(this.models.values());
   }
 
-  /** Load a model into memory (delegates to GGUF engine or @ruvector/core). */
+  /** Load a model into memory through the local GGUF engine when available. */
   async loadModel(name: string): Promise<void> {
     const info = this.models.get(name);
     if (!info) throw new Error(`Model "${name}" not found. Available: ${[...this.models.keys()].join(', ')}`);
@@ -186,8 +171,6 @@ export class RuvllmBridge {
       const meta = await this.ggufEngine.loadModel(info.path);
       if (meta.architecture) info.parameters = meta.architecture;
       if (meta.quantization) info.quantization = meta.quantization;
-    } else if (this.ruvectorCore?.loadModel) {
-      await this.ruvectorCore.loadModel(info.path, { contextSize: this.config.contextSize });
     }
     info.loaded = true;
     this.activeModel = name;
@@ -196,7 +179,7 @@ export class RuvllmBridge {
   /**
    * Generate text from a prompt. Routes through tiers:
    * 1. Agent Booster (trivial transforms, no LLM).
-   * 2. Local GGUF model via @ruvector/core.
+   * 2. Local GGUF model.
    * 3. Cloud fallback (empty response -- caller handles upstream).
    */
   async generate(request: GenerateRequest): Promise<GenerateResponse> {
@@ -209,7 +192,7 @@ export class RuvllmBridge {
       return { text: booster, model: 'agent-booster', tokensUsed: 0, latencyMs: performance.now() - start, tier: 1, cached: false };
     }
 
-    // Tier 2: Local model (GGUF engine preferred, then @ruvector/core)
+    // Tier 2: Local GGUF model
     const info = this.models.get(modelName);
     if (info?.loaded) {
       try {
@@ -221,14 +204,6 @@ export class RuvllmBridge {
             stopSequences: request.stopSequences,
           });
           return { text: r.text, model: modelName, tokensUsed: r.tokensUsed, latencyMs: performance.now() - start, tier: 2, cached: false };
-        } else if (this.ruvectorCore?.generate) {
-          const r = await this.ruvectorCore.generate({
-            model: info.path, prompt: request.prompt,
-            maxTokens: request.maxTokens ?? this.config.maxTokens,
-            temperature: request.temperature ?? this.config.temperature,
-            stopSequences: request.stopSequences,
-          });
-          return { text: r.text ?? '', model: modelName, tokensUsed: r.tokensUsed ?? 0, latencyMs: performance.now() - start, tier: 2, cached: false };
         }
       } catch (err) {
         if (this.config.verbose) console.warn('[ruvLLM] Local generation failed, tier 3 fallback:', err);
@@ -239,15 +214,8 @@ export class RuvllmBridge {
     return { text: '', model: 'cloud-fallback', tokensUsed: 0, latencyMs: performance.now() - start, tier: 3, cached: false };
   }
 
-  /** Route a task description to the optimal tier. Uses @ruvector/router when available. */
+  /** Route a task description to the optimal tier using local heuristics. */
   async routeTask(description: string): Promise<TierRouting> {
-    if (this.ruvectorRouter?.route) {
-      try {
-        const r = await this.ruvectorRouter.route(description);
-        return { tier: r.tier ?? 3, model: r.model ?? 'cloud', confidence: r.confidence ?? 0.5 };
-      } catch { /* fall through */ }
-    }
-
     const complexity = estimateComplexity(description);
     const words = description.split(/\s+/).length;
 
@@ -259,10 +227,11 @@ export class RuvllmBridge {
   /** Return current bridge status. */
   async getStatus(): Promise<BridgeStatus> {
     return {
-      available: this.models.size > 0 || this.ruvectorCore !== null,
-      ruvectorCore: this.ruvectorCore !== null,
-      ruvectorRouter: this.ruvectorRouter !== null,
-      ruvectorSona: this.ruvectorSona !== null,
+      available: this.models.size > 0 || this.ggufEngine !== null,
+      ggufEngine: this.ggufEngine !== null,
+      ruvectorCore: false,
+      ruvectorRouter: false,
+      ruvectorSona: false,
       modelsLoaded: [...this.models.values()].filter((m) => m.loaded).map((m) => m.name),
       kvCacheSize: this.kvCacheEntries,
     };
@@ -274,11 +243,6 @@ export class RuvllmBridge {
       await this.ggufEngine.shutdown();
       this.ggufEngine = null;
     }
-    if (this.config.kvCachePath && this.ruvectorCore?.persistKvCache) {
-      try { await this.ruvectorCore.persistKvCache(this.config.kvCachePath); }
-      catch (e) { if (this.config.verbose) console.warn('[ruvLLM] KV-cache persist failed:', e); }
-    }
-    if (this.ruvectorCore?.unloadAll) await this.ruvectorCore.unloadAll();
     for (const info of this.models.values()) info.loaded = false;
     this.activeModel = null;
     this.kvCacheEntries = 0;
@@ -304,10 +268,6 @@ export class RuvllmBridge {
     } catch {
       // modelsDir may not exist -- tier 1 and tier 3 still work
     }
-  }
-
-  private async tryImport(pkg: string): Promise<any> {
-    try { return await import(pkg); } catch { return null; }
   }
 
   /** Tier-1 Agent Booster: handle trivial transforms without any LLM. */
@@ -339,7 +299,7 @@ export function getRuvllmBridge(config?: RuvllmConfig): RuvllmBridge {
 /** Reset the singleton (useful for tests). */
 export function resetRuvllmBridge(): void { instance = null; }
 
-/** Check whether @ruvector/core is importable without loading the bridge. */
+/** Check whether the local GGUF engine module is importable without loading the bridge. */
 export async function isRuvllmAvailable(): Promise<boolean> {
-  try { await import('@ruvector/core'); return true; } catch { return false; }
+  try { await import('./gguf-engine.js'); return true; } catch { return false; }
 }

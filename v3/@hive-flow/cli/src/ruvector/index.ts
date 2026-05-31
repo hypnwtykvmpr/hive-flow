@@ -1,7 +1,7 @@
 /**
- * RuVector Integration Module for Hive Flow CLI
+ * Local vector intelligence module for Hive Flow CLI
  *
- * Provides integration with @ruvector packages for:
+ * Provides local implementations for:
  * - Q-Learning based task routing
  * - Mixture of Experts (MoE) routing
  * - AST code analysis
@@ -155,25 +155,15 @@ export {
 } from './semantic-router.js';
 
 /**
- * Check if ruvector packages are available
+ * External vector packages are intentionally detached.
  */
 export async function isRuvectorAvailable(): Promise<boolean> {
-  try {
-    await import('@ruvector/core');
-    return true;
-  } catch {
-    return false;
-  }
+  return false;
 }
 
 /**
- * Get ruvector version if available
+ * Get external vector package version if available.
  */
 export async function getRuvectorVersion(): Promise<string | null> {
-  try {
-    const ruvector = await import('@ruvector/core');
-    return (ruvector as Record<string, unknown>).version as string || '1.0.0';
-  } catch {
-    return null;
-  }
+  return null;
 }

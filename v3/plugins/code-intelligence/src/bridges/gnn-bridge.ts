@@ -2,7 +2,7 @@
  * GNN Bridge for Code Graph Analysis
  *
  * Provides graph neural network operations for code structure analysis
- * using ruvector-gnn-wasm for high-performance graph algorithms.
+ * using local graph analysis kernels.
  *
  * Features:
  * - Code graph construction

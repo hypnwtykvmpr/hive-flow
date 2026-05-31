@@ -1,6 +1,6 @@
 # Flash Attention Integration
 
-Integration of `@ruvector/attention` Flash Attention capabilities into the V3 performance module.
+Local Flash Attention-compatible capabilities for the V3 performance module.
 
 ## Overview
 
@@ -12,14 +12,6 @@ This module provides high-performance attention mechanisms optimized for V3's 2.
 - **Comprehensive Benchmarking**: Validate performance against V3 targets
 - **Memory Profiling**: Track memory usage and reduction metrics
 - **Performance Metrics**: Continuous tracking of speedup and efficiency
-
-## Installation
-
-The `@ruvector/attention` package is already installed as a dependency:
-
-```bash
-npm install @ruvector/attention@latest
-```
 
 ## Quick Start
 
@@ -274,4 +266,4 @@ When adding new attention mechanisms or optimizations:
 
 ## License
 
-MIT OR Apache-2.0 (follows @ruvector/attention license)
+MIT OR Apache-2.0

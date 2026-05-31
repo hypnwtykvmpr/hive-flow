@@ -7,11 +7,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ASTAnalyzer, createASTAnalyzer, type ASTAnalysis } from '../../src/ruvector/ast-analyzer';
 
-// Mock the @ruvector/ast module
-vi.mock('@ruvector/ast', () => ({
-  createASTAnalyzer: vi.fn(() => null),
-}));
-
 describe('ASTAnalyzer', () => {
   let analyzer: ASTAnalyzer;
 
@@ -41,7 +36,7 @@ describe('ASTAnalyzer', () => {
   });
 
   describe('initialize', () => {
-    it('should initialize without ruvector (fallback mode)', async () => {
+    it('should initialize in local fallback mode', async () => {
       await analyzer.initialize();
       const stats = analyzer.getStats();
       expect(stats.useNative).toBe(0);

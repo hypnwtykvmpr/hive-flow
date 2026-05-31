@@ -239,10 +239,10 @@ interface NeuralCoordinationConfig {
 ## Dependencies
 
 - `sona` - Self-Optimizing Neural Architecture for agent adaptation
-- `ruvector-gnn-wasm` - Communication graph optimization and message routing
-- `ruvector-nervous-system-wasm` - Neural coordination layer for collective behavior
-- `ruvector-attention-wasm` - Multi-head attention for agent-to-agent communication
-- `ruvector-learning-wasm` - Multi-agent reinforcement learning (MARL)
+- `local-gnn-wasm` - Communication graph optimization and message routing
+- `local-nervous-system-wasm` - Neural coordination layer for collective behavior
+- `local-attention-wasm` - Multi-head attention for agent-to-agent communication
+- `local-learning-wasm` - Multi-agent reinforcement learning (MARL)
 
 ## Use Cases
 

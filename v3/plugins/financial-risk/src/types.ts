@@ -38,6 +38,8 @@ export interface MCPToolResult {
   success: boolean;
   data?: unknown;
   error?: string;
+  content?: Array<{ type: 'text'; text: string }>;
+  isError?: true;
   metadata?: {
     durationMs?: number;
     cached?: boolean;
@@ -584,7 +586,7 @@ export const AnomalyDetectInputSchema = z.object({
     id: z.string().uuid(),
     amount: z.number().finite().min(-1e12).max(1e12),
     timestamp: z.string().datetime(),
-    parties: z.array(z.string().max(200)).max(10),
+    parties: z.array(z.string().max(200)).max(10).default([]),
     type: z.string().max(50).optional(),
     currency: z.string().max(3).optional(),
     metadata: z.record(z.string(), z.unknown()).optional(),
@@ -598,12 +600,12 @@ export const AnomalyDetectInputSchema = z.object({
  */
 export const MarketRegimeInputSchema = z.object({
   marketData: z.object({
-    prices: z.array(z.number().finite()).min(10).max(10000),
+    prices: z.array(z.number().finite()).min(3).max(10000),
     volumes: z.array(z.number().finite().min(0)).optional(),
     volatility: z.array(z.number().finite().min(0)).optional(),
     timestamps: z.array(z.string()).optional(),
   }),
-  lookbackPeriod: z.number().int().min(10).max(1000).default(252),
+  lookbackPeriod: z.number().int().min(1).max(1000).default(252),
   regimeTypes: z.array(z.enum(['bull', 'bear', 'sideways', 'high_vol', 'crisis', 'recovery'])).optional(),
 });
 
@@ -613,7 +615,8 @@ export const MarketRegimeInputSchema = z.object({
 export const ComplianceCheckInputSchema = z.object({
   entity: z.string().max(200),
   regulations: z.array(z.enum(['basel3', 'mifid2', 'dodd_frank', 'aml', 'kyc', 'fatca', 'gdpr'])).min(1),
-  scope: z.enum(['positions', 'transactions', 'capital', 'reporting', 'all']).default('all'),
+  scope: z.enum(['positions', 'transactions', 'capital', 'reporting', 'all', 'full']).default('all')
+    .transform(scope => scope === 'full' ? 'all' : scope),
   asOfDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
 });
 
@@ -657,6 +660,7 @@ export function successResult<T>(data: T, metadata?: MCPToolResult['metadata']):
   return {
     success: true,
     data,
+    content: [{ type: 'text', text: JSON.stringify(data) }],
     metadata,
   };
 }
@@ -665,9 +669,12 @@ export function successResult<T>(data: T, metadata?: MCPToolResult['metadata']):
  * Create an error result
  */
 export function errorResult(error: string | Error, metadata?: MCPToolResult['metadata']): MCPToolResult {
+  const message = error instanceof Error ? error.message : error;
   return {
     success: false,
-    error: error instanceof Error ? error.message : error,
+    error: message,
+    isError: true,
+    content: [{ type: 'text', text: JSON.stringify({ error: true, message }) }],
     metadata,
   };
 }

@@ -370,9 +370,9 @@ Execution History --> SONA Learning --> RL Policy
 ## Dependencies
 
 - `micro-hnsw-wasm`: Fast code-to-test similarity matching
-- `ruvector-learning-wasm`: RL-based test selection and prioritization
-- `ruvector-gnn-wasm`: Code-test dependency graphs for impact analysis
-- `ruvector-sparse-inference-wasm`: Efficient flaky test pattern detection
+- `local-learning-wasm`: RL-based test selection and prioritization
+- `local-gnn-wasm`: Code-test dependency graphs for impact analysis
+- `local-sparse-inference-wasm`: Efficient flaky test pattern detection
 - `sona`: Continuous learning from test execution history
 - `istanbul-lib-coverage`: Coverage report parsing
 

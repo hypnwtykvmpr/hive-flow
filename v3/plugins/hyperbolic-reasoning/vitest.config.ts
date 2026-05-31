@@ -19,10 +19,4 @@ export default defineConfig({
     },
     testTimeout: 10000,
   },
-  resolve: {
-    alias: {
-      // Mock unavailable WASM dependencies
-      '@ruvector/gnn-wasm': '/workspaces/hive-flow/v3/plugins/hyperbolic-reasoning/tests/__mocks__/gnn-wasm.ts',
-    },
-  },
 });

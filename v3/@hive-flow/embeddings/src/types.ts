@@ -1,7 +1,7 @@
 /**
  * V3 Embedding Service Types
  *
- * Type definitions for embedding service aligned with agentic-flow@alpha:
+ * Type definitions for embedding service:
  * - OpenAI provider
  * - Transformers.js provider
  * - Mock provider
@@ -118,12 +118,10 @@ export interface MockEmbeddingConfig extends EmbeddingBaseConfig {
 }
 
 /**
- * Agentic-flow provider configuration
- * Uses optimized ONNX embeddings with:
- * - Float32Array with flattened matrices
- * - 256-entry LRU cache with FNV-1a hash
- * - SIMD-friendly loop unrolling (4x)
- * - Pre-allocated buffers (no GC pressure)
+ * Historical agentic-flow provider configuration.
+ *
+ * The provider name is retained for config compatibility, but it is backed by
+ * local deterministic embeddings and never imports the external package.
  */
 export interface AgenticFlowEmbeddingConfig extends EmbeddingBaseConfig {
   provider: 'agentic-flow';

@@ -124,7 +124,6 @@ class PrimeRadiantBridge implements IPrimeRadiantBridge {
   private async loadWasmModule(): Promise<unknown> {
     // Attempt to load the actual WASM module
     try {
-      // @ts-expect-error optional wasm package may not be installed
       const module = await import('prime-radiant-advanced-wasm');
       if (module.default) {
         await module.default();

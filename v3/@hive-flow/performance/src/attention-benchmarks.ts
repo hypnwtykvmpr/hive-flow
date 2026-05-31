@@ -14,9 +14,9 @@ import {
 import {
   flashAttention,
   scaledDotProductAttention,
-} from '@ruvector/attention';
+} from './attention-kernels.js';
 
-/** Local wrapper providing class-based API over @ruvector/attention's flashAttention function */
+/** Local wrapper providing class-based API over the local flashAttention function */
 class FlashAttention {
   constructor(private dim: number, private blockSize: number = 64) {}
   compute(query: Float32Array, keys: Float32Array[], values: Float32Array[]): Float32Array {
@@ -24,7 +24,7 @@ class FlashAttention {
   }
 }
 
-/** Local wrapper providing class-based API over @ruvector/attention's scaledDotProductAttention function */
+/** Local wrapper providing class-based API over the local scaledDotProductAttention function */
 class DotProductAttention {
   constructor(private dim: number) {}
   compute(query: Float32Array, keys: Float32Array[], values: Float32Array[]): Float32Array {
