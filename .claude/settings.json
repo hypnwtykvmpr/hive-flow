@@ -183,6 +183,17 @@
             "timeout": 3000
           }
         ]
+      },
+      {
+        "matcher": "mcp__hive-flow__agent_task|mcp__hive-flow__agent_task_async",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/agent-task-rewake.cjs",
+            "async": true,
+            "timeout": 1800000
+          }
+        ]
       }
     ],
     "UserPromptSubmit": [
@@ -261,6 +272,11 @@
           {
             "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/hook-handler.cjs pipeline-override",
+            "timeout": 3000
+          },
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/drain-notifications.cjs",
             "timeout": 3000
           }
         ]
