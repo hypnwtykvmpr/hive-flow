@@ -10,6 +10,7 @@
  */
 
 import { EventEmitter } from 'events';
+import { loadAgenticFlow, loadAgenticFlowSubpath } from './agentic-flow-loader.js';
 
 // Types for agentic-flow integration
 interface TokenStats {
@@ -30,15 +31,6 @@ interface EditOptimization {
   speedupFactor: number;
   executionMs: number;
   method: 'agent-booster' | 'traditional';
-}
-
-// Dynamic import helper to handle module resolution
-async function safeImport<T>(modulePath: string): Promise<T | null> {
-  try {
-    return await import(modulePath);
-  } catch {
-    return null;
-  }
 }
 
 /**
@@ -62,19 +54,19 @@ export class TokenOptimizer extends EventEmitter {
   async initialize(): Promise<void> {
     try {
       // Dynamic import of agentic-flow main module
-      const af = await safeImport<any>('agentic-flow');
+      const af = await loadAgenticFlow();
 
       if (af) {
         this.agenticFlowAvailable = true;
 
         // Load ReasoningBank (exported path)
-        const rb = await safeImport<any>('agentic-flow/reasoningbank');
+        const rb = await loadAgenticFlowSubpath('reasoningbank');
         if (rb && rb.retrieveMemories) {
           this.reasoningBank = rb;
         }
 
         // Load Agent Booster (exported path)
-        const ab = await safeImport<any>('agentic-flow/agent-booster');
+        const ab = await loadAgenticFlowSubpath('agent-booster');
         if (ab) {
           // Agent booster may export different API
           this.agentBooster = ab.agentBooster || ab.AgentBooster || ab;

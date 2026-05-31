@@ -11,11 +11,41 @@
  * pattern applies everywhere.
  */
 
+import { createRequire } from 'node:module';
+import { sep } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let _mainModulePromise: Promise<any | null> | null = null;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const _subpathCache = new Map<string, Promise<any | null>>();
+
+const require = createRequire(import.meta.url);
+const moduleFile = fileURLToPath(import.meta.url);
+const localV3Root = findLocalV3Root(moduleFile);
+
+function findLocalV3Root(filePath: string): string | null {
+  const marker = `${sep}v3${sep}@hive-flow${sep}integration${sep}`;
+  const index = filePath.indexOf(marker);
+  return index === -1 ? null : filePath.slice(0, index + `${sep}v3`.length);
+}
+
+function canUseResolvedPath(resolvedPath: string): boolean {
+  if (!localV3Root) return true;
+  return resolvedPath === localV3Root || resolvedPath.startsWith(localV3Root + sep);
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function importOptionalAgenticFlow(specifier: string): Promise<any | null> {
+  try {
+    const resolved = require.resolve(specifier);
+    if (!canUseResolvedPath(resolved)) return null;
+    return await import(pathToFileURL(resolved).href);
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Dynamically import the root `agentic-flow` package.
@@ -28,7 +58,7 @@ const _subpathCache = new Map<string, Promise<any | null>>();
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function loadAgenticFlow(): Promise<any | null> {
   if (!_mainModulePromise) {
-    _mainModulePromise = import('agentic-flow').catch(() => null);
+    _mainModulePromise = importOptionalAgenticFlow('agentic-flow');
   }
   return _mainModulePromise;
 }
@@ -46,12 +76,7 @@ export function loadAgenticFlow(): Promise<any | null> {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function loadAgenticFlowSubpath(subpath: string): Promise<any | null> {
   if (!_subpathCache.has(subpath)) {
-    // Dynamic specifier must be a template literal for bundlers to keep it
-    // as-is (non-statically-analysable).
-    _subpathCache.set(
-      subpath,
-      import(`agentic-flow/${subpath}`).catch(() => null),
-    );
+    _subpathCache.set(subpath, importOptionalAgenticFlow(`agentic-flow/${subpath}`));
   }
   return _subpathCache.get(subpath)!;
 }
