@@ -112,16 +112,33 @@ describe('Step 1: hook-handler.cjs Bug B fix (async IIFE)', () => {
     // await on their return value (undefined) resolves immediately
     const syncHandlers = ['route', 'pre-bash', 'post-edit', 'session-restore', 'session-end', 'pre-task', 'post-task'];
     for (const handler of syncHandlers) {
-      // These handlers should exist and NOT be marked async
+      // These handlers should exist (sync or async — both are awaited safely)
       const pattern = new RegExp(`'${handler}':\\s*(?:async\\s*)?\\(`);
       expect(hookHandlerSource).toMatch(pattern);
     }
 
-    // Specifically, route/pre-bash/post-edit should NOT be async
-    for (const handler of ['route', 'pre-bash', 'post-edit']) {
+    // route/post-edit remain sync (no stdin to read).
+    for (const handler of ['route', 'post-edit']) {
       const asyncPattern = new RegExp(`'${handler}':\\s*async\\s*\\(`);
       expect(hookHandlerSource).not.toMatch(asyncPattern);
     }
+  });
+
+  it('pre-bash handler is async and reads stdin (emits valid JSON permissionDecision)', () => {
+    // pre-bash is a PreToolUse Bash hook: it must read the tool payload from
+    // stdin and emit valid JSON with an explicit permissionDecision. Reading
+    // stdin requires async (same justification as permission-guard). It must
+    // never emit plain text or exit non-zero, which Claude Code treats as a
+    // hard block.
+    expect(hookHandlerSource).toMatch(/'pre-bash':\s*async/);
+    const pbStart = hookHandlerSource.indexOf("'pre-bash':");
+    expect(pbStart).toBeGreaterThan(-1);
+    const pbSection = hookHandlerSource.slice(pbStart, pbStart + 2500);
+    // Emits a valid JSON allow decision for normal commands
+    expect(pbSection).toMatch(/permissionDecision:\s*'allow'/);
+    // Preserves the DENY path but as a valid JSON deny decision (not exit(1))
+    expect(pbSection).toMatch(/permissionDecision:\s*'deny'/);
+    expect(pbSection).not.toContain('process.exit(1)');
   });
 
   it('error handling catches errors from both sync and async handlers', () => {

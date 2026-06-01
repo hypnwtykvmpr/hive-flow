@@ -105,16 +105,37 @@ const handlers = {
   },
 
   'pre-bash': () => {
-    // Basic command safety check
-    const cmd = prompt.toLowerCase();
+    // PreToolUse Bash hook — MUST emit valid JSON with an explicit
+    // permissionDecision. Non-JSON stdout is treated as a hard block by
+    // Claude Code / the cursor bridge. Read the command from the tool
+    // payload on stdin (synchronously, since this dispatcher is sync),
+    // falling back to env/args for direct CLI invocations.
+    let cmdRaw = '';
+    try {
+      const raw = fs.readFileSync(0, 'utf8').trim();
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && parsed.tool_input && typeof parsed.tool_input.command === 'string') {
+          cmdRaw = parsed.tool_input.command;
+        }
+      }
+    } catch { /* no stdin / not JSON — fall back to env/args */ }
+    if (!cmdRaw) cmdRaw = prompt;
+    const cmd = String(cmdRaw).toLowerCase();
+
     const dangerous = ['rm -rf /', 'format c:', 'del /s /q c:\\', ':(){:|:&};:'];
     for (const d of dangerous) {
       if (cmd.includes(d)) {
-        console.error(`[BLOCKED] Dangerous command detected: ${d}`);
-        process.exit(1);
+        console.log(JSON.stringify({
+          hookSpecificOutput: {
+            permissionDecision: 'deny',
+            permissionDecisionReason: `[BLOCKED] Dangerous command detected: ${d}`,
+          },
+        }));
+        return;
       }
     }
-    console.log('[OK] Command validated');
+    console.log(JSON.stringify({ hookSpecificOutput: { permissionDecision: 'allow' } }));
   },
 
   'post-edit': () => {

@@ -10,6 +10,10 @@ process.on('uncaughtException', () => {
   else if (process.argv[2] === 'enforce-plan') {
     process.stdout.write(JSON.stringify({ hookSpecificOutput: { permissionDecision: 'deny', permissionDecisionReason: '[ENFORCEMENT ERROR] Hook crashed. Tool blocked for safety.' } }));
   }
+  // pre-bash: fail-open (basic safety net; real enforcement runs earlier)
+  else if (process.argv[2] === 'pre-bash') {
+    process.stdout.write(JSON.stringify({ hookSpecificOutput: { permissionDecision: 'allow' } }));
+  }
   // All other commands: emit empty JSON so Claude Code sees valid output
   else {
     process.stdout.write(JSON.stringify({}));
@@ -219,17 +223,53 @@ const handlers = {
     }
   },
 
-  'pre-bash': () => {
-    // Basic command safety check
-    const cmd = prompt.toLowerCase();
+  'pre-bash': async () => {
+    // PreToolUse Bash hook — MUST emit valid JSON with an explicit
+    // permissionDecision. Claude Code (and the cursor bridge) treat any
+    // non-JSON stdout as a hard block, which silently rejected every shell
+    // command. Read the command from the tool payload on stdin (how Claude
+    // Code invokes PreToolUse), falling back to env vars / args for direct
+    // CLI invocations.
+    let cmdRaw = '';
+    try {
+      const chunks = [];
+      const stdinJson = await new Promise((resolve) => {
+        let settled = false;
+        const finish = (val) => { if (!settled) { settled = true; resolve(val); } };
+        // 2s guard so direct (no-stdin) invocations don't hang the hook.
+        const timer = setTimeout(() => { try { process.stdin.destroy(); } catch {} finish(null); }, 2000);
+        process.stdin.on('data', (chunk) => chunks.push(chunk));
+        process.stdin.on('end', () => {
+          clearTimeout(timer);
+          const raw = Buffer.concat(chunks).toString().trim();
+          if (!raw) return finish(null);
+          try { finish(JSON.parse(raw)); } catch { finish(null); }
+        });
+        process.stdin.on('error', () => { clearTimeout(timer); finish(null); });
+      });
+      if (stdinJson && stdinJson.tool_input && typeof stdinJson.tool_input.command === 'string') {
+        cmdRaw = stdinJson.tool_input.command;
+      }
+    } catch { /* fall through to env/args */ }
+
+    if (!cmdRaw) cmdRaw = prompt;
+    const cmd = String(cmdRaw).toLowerCase();
+
+    // Preserve DENY logic — but emit it as a valid JSON deny decision
+    // (never plain text / non-zero exit, which Claude Code can't parse).
     const dangerous = ['rm -rf /', 'format c:', 'del /s /q c:\\', ':(){:|:&};:'];
     for (const d of dangerous) {
       if (cmd.includes(d)) {
-        console.error(`[BLOCKED] Dangerous command detected: ${d}`);
-        process.exit(1);
+        console.log(JSON.stringify({
+          hookSpecificOutput: {
+            permissionDecision: 'deny',
+            permissionDecisionReason: `[BLOCKED] Dangerous command detected: ${d}`,
+          },
+        }));
+        return;
       }
     }
-    console.log('[OK] Command validated');
+    console.log(JSON.stringify({ hookSpecificOutput: { permissionDecision: 'allow' } }));
   },
 
   'post-edit': () => {
@@ -1728,6 +1768,13 @@ const handlers = {
       }
       if (command === 'enforce-plan') {
         console.log(JSON.stringify({ hookSpecificOutput: { permissionDecision: 'deny', permissionDecisionReason: '[ENFORCEMENT ERROR] Hook crashed. Tool blocked for safety.' } }));
+      }
+      // pre-bash is a basic safety net (not the primary enforcement gate);
+      // on internal error emit a valid JSON allow so the bash hook never
+      // blocks with non-JSON output. Real enforcement lives in
+      // enforcement.cjs / permission-guard which run earlier in the chain.
+      if (command === 'pre-bash') {
+        console.log(JSON.stringify({ hookSpecificOutput: { permissionDecision: 'allow' } }));
       }
       // For non-permission-guard hooks, silence the error — no output needed
     }
