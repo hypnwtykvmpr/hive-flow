@@ -23,7 +23,7 @@ User → Hive Flow (CLI/MCP) → Router → Swarm → Agents → Memory → LLM 
 ```
 
 <details>
-<summary>📐 <strong>Expanded Architecture</strong> — Full system diagram with RuVector intelligence</summary>
+<summary>📐 <strong>Expanded Architecture</strong> — Full system diagram with learning loop</summary>
 
 ```mermaid
 flowchart TB
@@ -64,25 +64,6 @@ flowchart TB
         WORK[Workers - 12<br/>ultralearn/audit/optimize]
     end
 
-    subgraph RUVECTOR["🧠 RuVector Intelligence Layer"]
-        direction TB
-        subgraph ROW1[" "]
-            SONA[SONA<br/>Self-Optimize<br/>&lt;0.05ms]
-            EWC[EWC++<br/>No Forgetting]
-            FLASH[Flash Attention<br/>2.49-7.47x]
-        end
-        subgraph ROW2[" "]
-            HNSW[HNSW<br/>150x-12,500x faster]
-            RB[ReasoningBank<br/>Pattern Store]
-            HYP[Hyperbolic<br/>Poincaré]
-        end
-        subgraph ROW3[" "]
-            LORA[LoRA/Micro<br/>128x compress]
-            QUANT[Int8 Quant<br/>3.92x memory]
-            RL[9 RL Algos<br/>Q/SARSA/PPO/DQN]
-        end
-    end
-
     subgraph LEARNING["🔄 Learning Loop"]
         L1[RETRIEVE] --> L2[JUDGE] --> L3[DISTILL] --> L4[CONSOLIDATE] --> L5[ROUTE]
     end
@@ -93,13 +74,9 @@ flowchart TB
     QL & MOE & SK & HK --> TOPO & CONS & CLM
     TOPO & CONS & CLM --> AG1 & AG2 & AG3 & AG4 & AG5 & AG6
     AG1 & AG2 & AG3 & AG4 & AG5 & AG6 --> MEM & PROV & WORK
-    MEM --> SONA & EWC & FLASH
-    SONA & EWC & FLASH --> HNSW & RB & HYP
-    HNSW & RB & HYP --> LORA & QUANT & RL
-    LORA & QUANT & RL --> L1
+    MEM & WORK --> L1
     L5 -.->|loops back| QL
 
-    style RUVECTOR fill:#1a1a2e,stroke:#e94560,stroke-width:2px
     style LEARNING fill:#0f3460,stroke:#e94560,stroke-width:2px
     style USER fill:#16213e,stroke:#0f3460
     style ENTRY fill:#1a1a2e,stroke:#0f3460
@@ -107,29 +84,6 @@ flowchart TB
     style SWARM fill:#1a1a2e,stroke:#0f3460
     style AGENTS fill:#1a1a2e,stroke:#0f3460
     style RESOURCES fill:#1a1a2e,stroke:#0f3460
-```
-
-**RuVector Components** (`npx ruvector`):
-
-| Component | Purpose | Performance |
-|-----------|---------|-------------|
-| **SONA** | Self-Optimizing Neural Architecture - learns optimal routing | <0.05ms adaptation |
-| **EWC++** | Elastic Weight Consolidation - prevents catastrophic forgetting | Preserves 95%+ knowledge |
-| **Flash Attention** | Optimized attention computation | 2.49x-7.47x speedup |
-| **HNSW** | Hierarchical Navigable Small World vector search | 150x-12,500x faster |
-| **ReasoningBank** | Pattern storage with trajectory learning | RETRIEVE→JUDGE→DISTILL |
-| **Hyperbolic** | Poincaré ball embeddings for hierarchical data | Better code relationships |
-| **LoRA/MicroLoRA** | Low-Rank Adaptation for efficient fine-tuning | **<3μs** adaptation, 383k ops/sec |
-| **Int8 Quantization** | Memory-efficient weight storage | 3.92x memory reduction |
-| **SemanticRouter** | Semantic task routing with cosine similarity | **34,798 routes/s**, 0.029ms |
-| **9 RL Algorithms** | Q-Learning, SARSA, A2C, PPO, DQN, Decision Transformer, etc. | Task-specific learning |
-
-```bash
-# Install RuVector standalone
-npx ruvector
-
-# Or use via Hive Flow
-hive-flow hooks intelligence --status
 ```
 
 </details>
@@ -210,12 +164,12 @@ The system stores successful patterns in vector memory, builds a knowledge graph
 
 | Layer | Components | What It Does |
 |-------|------------|--------------|
-| Memory | HNSW, AgentDB, Cache | Stores and retrieves patterns 150x faster |
+| Memory | HNSW, AgentDB, Cache | Stores and retrieves patterns with vector search |
 | Knowledge Graph | MemoryGraph, PageRank, Communities | Identifies influential insights, detects clusters (ADR-049) |
 | Self-Learning | LearningBridge, SONA, ReasoningBank | Triggers learning from insights, confidence lifecycle (ADR-049) |
 | Agent Scopes | AgentMemoryScope, 3-scope dirs | Per-agent isolation + cross-agent knowledge transfer (ADR-049) |
 | Embeddings | ONNX Runtime, MiniLM | Local vectors without API calls (75x faster) |
-| Learning | SONA, MoE, ReasoningBank | Self-improves from results (<0.05ms adaptation) |
+| Learning | SONA, MoE, ReasoningBank | Self-improves from results with low-latency adaptation |
 | Fine-tuning | MicroLoRA, EWC++ | Lightweight adaptation without full retraining |
 
 </details>
@@ -227,7 +181,7 @@ Skip expensive LLM calls for simple tasks using WebAssembly transforms, and comp
 
 | Layer | Components | What It Does |
 |-------|------------|--------------|
-| Agent Booster | WASM, AST analysis | Skips LLM for simple edits (<1ms) |
+| Agent Booster | WASM, AST analysis | Skips LLM for simple edits when available |
 | Token Optimizer | Compression, Caching | Reduces token usage 30-50% |
 
 </details>
@@ -248,20 +202,20 @@ Background daemons handle security audits, performance optimization, and session
 </details>
 
 <details>
-<summary>🎯 <strong>Task Routing</strong> — Extend your Claude Code subscription by 250%</summary>
+<summary>🎯 <strong>Task Routing</strong> — Reduce avoidable LLM calls</summary>
 
-Smart routing skips expensive LLM calls when possible. Simple edits use WASM (free), medium tasks use cheaper models. This can extend your Claude Code usage by 250% or save significantly on direct API costs.
+Smart routing skips expensive LLM calls when possible. Simple edits can use WASM (free), medium tasks use cheaper models, and complex tasks stay on higher-capability models.
 
 | Complexity | Handler | Speed |
 |------------|---------|-------|
-| Simple | Agent Booster (WASM) | <1ms |
+| Simple | Agent Booster (WASM) | LLM skipped when available |
 | Medium | Haiku/Sonnet | ~500ms |
 | Complex | Opus + Swarm | 2-5s |
 
 </details>
 
 <details>
-<summary>⚡ <strong>Agent Booster (WASM)</strong> — 352x faster code transforms, skip LLM entirely</summary>
+<summary>⚡ <strong>Agent Booster (WASM)</strong> — Skip LLM for simple code transforms</summary>
 
 Agent Booster uses WebAssembly to handle simple code transformations without calling the LLM at all. When the hooks system detects a simple task, it routes directly to Agent Booster for instant results.
 
@@ -283,7 +237,7 @@ When you see these in hook output, the system is telling you how to optimize:
 ```bash
 # Agent Booster available - skip LLM entirely
 [AGENT_BOOSTER_AVAILABLE] Intent: var-to-const
-→ Use Edit tool directly, 352x faster than LLM
+→ Use Edit tool directly and avoid an LLM call
 
 # Model recommendation for Task tool
 [TASK_MODEL_RECOMMENDATION] Use model="mini"
@@ -294,16 +248,16 @@ When you see these in hook output, the system is telling you how to optimize:
 
 | Metric | Agent Booster | LLM Call |
 |--------|---------------|----------|
-| Latency | <1ms | 2-5s |
+| Latency | local transform path | 2-5s |
 | Cost | $0 | $0.0002-$0.015 |
-| Speedup | **352x faster** | baseline |
+| Tokens | 0 | billed tokens |
 
 </details>
 
 <details>
 <summary>💰 <strong>Token Optimizer</strong> — 30-50% token reduction</summary>
 
-The Token Optimizer integrates agentic-flow optimizations to reduce API costs by compressing context and caching results.
+The Token Optimizer can use optional agentic-flow optimizations to reduce API costs by compressing context and caching results.
 
 **Savings Breakdown:**
 
@@ -324,7 +278,7 @@ const optimizer = await getTokenOptimizer();
 // Get compact context (32% fewer tokens)
 const ctx = await optimizer.getCompactContext("auth patterns");
 
-// Optimized edit (352x faster for simple transforms)
+// Optimized edit path for simple transforms when Agent Booster is available
 await optimizer.optimizedEdit(file, oldStr, newStr, "typescript");
 
 // Optimal config for swarm (100% success rate)
@@ -386,11 +340,11 @@ swarm_init({
 | **Coordination** | Manual orchestration between tasks | Queen-led hierarchy with 5 consensus algorithms (Raft, Byzantine, Gossip) |
 | **Hive Mind** | ⛔ Not available | 🐝 Queen-led swarms with collective intelligence, 3 queen types, 8 worker types |
 | **Consensus** | ⛔ No multi-agent decisions | Byzantine fault-tolerant voting (f < n/3), weighted, majority |
-| **Memory** | Session-only, no persistence | HNSW vector memory with 150x-12,500x faster retrieval + knowledge graph |
-| **Vector Database** | ⛔ No native support | 🐘 RuVector PostgreSQL with 77+ SQL functions, ~61µs search, 16,400 QPS |
+| **Memory** | Session-only, no persistence | AgentDB vector memory with HNSW support + knowledge graph |
+| **Vector Database** | ⛔ No native support | ⛔ No native vector DB |
 | **Knowledge Graph** | ⛔ Flat insight lists | PageRank + community detection identifies influential insights (ADR-049) |
 | **Collective Memory** | ⛔ No shared knowledge | Shared knowledge base with LRU cache, SQLite persistence, 8 memory types |
-| **Learning** | Static behavior, no adaptation | SONA self-learning with <0.05ms adaptation, LearningBridge for insights |
+| **Learning** | Static behavior, no adaptation | SONA self-learning with LearningBridge for insights |
 | **Agent Scoping** | Single project scope | 3-scope agent memory (project/local/user) with cross-agent transfer |
 | **Task Routing** | You decide which agent to use | Intelligent routing based on learned patterns (89% accuracy) |
 | **Complex Tasks** | Manual breakdown required | Automatic decomposition across 5 domains (Security, Core, Integration, Support) |
@@ -635,7 +589,7 @@ The **Intelligence Loop** (ADR-050) automates this cycle through hooks. Each ses
 ### Vector Search Details
 
 - **Embedding Dimensions**: 384
-- **Search Algorithm**: HNSW (150x-12,500x faster)
+- **Search Algorithm**: Vector search with HNSW support where available
 - **Similarity Scoring**: 0-1 (higher = better)
   - Score > 0.7: Strong match, use pattern
   - Score 0.5-0.7: Partial match, adapt
@@ -686,7 +640,7 @@ claude mcp list
 Once added, Claude Code can use all 175+ hive-flow MCP tools directly:
 - `swarm_init` - Initialize agent swarms
 - `agent_spawn` - Spawn specialized agents
-- `memory_search` - Search patterns with HNSW (150x faster)
+- `memory_search` - Search patterns with vector search
 - `hooks_route` - Intelligent task routing
 - And 170+ more tools...
 
@@ -713,11 +667,11 @@ Hive Flow v3 introduces **self-learning neural capabilities** that no other agen
 
 | Feature | Hive Flow v3 | CrewAI | LangGraph | AutoGen | Manus |
 |---------|----------------|--------|-----------|---------|-------|
-| **Vector Memory** | ✅ HNSW (150x faster) | ⛔ | Via plugins | ⛔ | ⛔ |
+| **Vector Memory** | ✅ AgentDB + HNSW support | ⛔ | Via plugins | ⛔ | ⛔ |
 | **Knowledge Graph** | ✅ PageRank + communities | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Self-Learning Memory** | ✅ LearningBridge (SONA) | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Agent-Scoped Memory** | ✅ 3-scope (project/local/user) | ⛔ | ⛔ | ⛔ | ⛔ |
-| **PostgreSQL Vector DB** | ✅ RuVector (77+ SQL functions, ~61µs) | ⛔ | pgvector only | ⛔ | ⛔ |
+| **PostgreSQL Vector DB** | ⛔ | ⛔ | pgvector only | ⛔ | ⛔ |
 | **Hyperbolic Embeddings** | ✅ Poincaré ball (native + SQL) | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Quantization** | ✅ Int8 (3.92x savings) | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Persistent Memory** | ✅ SQLite + AgentDB + PostgreSQL | ⛔ | ⛔ | ⛔ | Limited |
@@ -750,7 +704,7 @@ Hive Flow v3 introduces **self-learning neural capabilities** that no other agen
 |---------|----------------|--------|-----------|---------|-------|
 | **Threat Detection** | ✅ AIDefence (<10ms) | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Cloud Platform** | ✅ Flow Nexus | ⛔ | ⛔ | ⛔ | ⛔ |
-| **Code Transforms** | ✅ Agent Booster (352x) | ⛔ | ⛔ | ⛔ | ⛔ |
+| **Code Transforms** | ✅ Agent Booster routing | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Input Validation** | ✅ Zod + Path security | ⛔ | ⛔ | ⛔ | ⛔ |
 
 <sub>*Comparison updated January 23, 2026*</sub>
@@ -764,21 +718,20 @@ What makes Hive Flow different from other agent frameworks? These 10 capabilitie
 
 | | Feature | What It Does | Technical Details |
 |---|---------|--------------|-------------------|
-| 🧠 | **SONA** | Learns which agents perform best for each task type and routes work accordingly | Self-Optimizing Neural Architecture, <0.05ms adaptation |
+| 🧠 | **SONA** | Learns which agents perform best for each task type and routes work accordingly | Self-Optimizing Neural Architecture with low-latency adaptation |
 | 🔒 | **EWC++** | Preserves learned patterns when training on new ones — no forgetting | Elastic Weight Consolidation prevents catastrophic forgetting |
 | 🎯 | **MoE** | Routes tasks through 8 specialized expert networks based on task type | Mixture of 8 Experts with dynamic gating |
-| ⚡ | **Flash Attention** | Accelerates attention computation 2-7x for faster agent responses | 2.49x-7.47x speedup for attention computations |
+| ⚡ | **Flash Attention** | Provides local attention-compatible computation for performance tests | Local attention coordinator |
 | 🌐 | **Hyperbolic Embeddings** | Represents hierarchical code relationships in compact vector space | Poincaré ball model for hierarchical code relationships |
 | 📦 | **LoRA** | Compresses model weights 128x so agents fit in limited memory | 128x memory compression via Low-Rank Adaptation |
 | 🗜️ | **Int8 Quantization** | Converts 32-bit weights to 8-bit with minimal accuracy loss | 3.92x memory reduction with calibrated 8-bit integers |
 | 🤝 | **Claims System** | Manages task ownership between humans and agents with handoff support | Work ownership with claim/release/handoff protocols |
 | 🛡️ | **Byzantine Consensus** | Coordinates agents even when some fail or return bad results | Fault-tolerant, handles up to 1/3 failing agents |
-| 🐘 | **RuVector PostgreSQL** | Enterprise-grade vector database with 77+ SQL functions for AI operations | ~61µs search, 16,400 QPS, GNN/attention in SQL |
 
 </details>
 
 <details>
-<summary>💰 <strong>Intelligent 3-Tier Model Routing</strong> — Save 75% on API costs, extend Claude Max 2.5x</summary>
+<summary>💰 <strong>Intelligent 3-Tier Model Routing</strong> — Reduce API costs with right-sized routing</summary>
 
 Not every task needs the most powerful (and expensive) model. Hive Flow analyzes each request and automatically routes it to the cheapest handler that can do the job well. Simple code transforms skip the LLM entirely using WebAssembly. Medium tasks use faster, cheaper models. Only complex architecture decisions use Opus.
 
@@ -787,15 +740,15 @@ Not every task needs the most powerful (and expensive) model. Hive Flow analyzes
 | Benefit | Impact |
 |---------|--------|
 | 💵 **API Cost Reduction** | 75% lower costs by using right-sized models |
-| ⏱️ **Claude Max Extension** | 2.5x more tasks within your quota limits |
-| 🚀 **Faster Simple Tasks** | <1ms for transforms vs 2-5s with LLM |
+| ⏱️ **Claude Max Usage** | Fewer LLM calls for tasks that can skip model inference |
+| 🚀 **Simple Tasks** | Local transform path instead of 2-5s LLM calls when available |
 | 🎯 **Zero Wasted Tokens** | Simple edits use 0 tokens (WASM handles them) |
 
 **Routing Tiers:**
 
 | Tier | Handler | Latency | Cost | Use Cases |
 |------|---------|---------|------|-----------|
-| **1** | Agent Booster (WASM) | <1ms | $0 | Simple transforms: var→const, add-types, remove-console |
+| **1** | Agent Booster (WASM) | local | $0 | Simple transforms: var→const, add-types, remove-console |
 | **2** | Haiku/Sonnet | 500ms-2s | $0.0002-$0.003 | Bug fixes, refactoring, feature implementation |
 | **3** | Opus | 2-5s | $0.015 | Architecture, security design, distributed systems |
 
@@ -844,7 +797,7 @@ Complex projects fail when implementation drifts from the original plan. Hive Fl
 ```
 
 **Key ADRs:**
-- **ADR-001**: agentic-flow@alpha as foundation (eliminates 10,000+ duplicate lines)
+- **ADR-001**: optional agentic-flow@alpha integration (avoids duplicating shared capabilities)
 - **ADR-006**: Unified Memory Service with AgentDB
 - **ADR-008**: Vitest testing framework (10x faster than Jest)
 - **ADR-009**: Hybrid Memory Backend (SQLite + HNSW)
@@ -924,7 +877,7 @@ sequenceDiagram
 
     alt Simple Task
         H->>A: Agent Booster (WASM)
-        A-->>U: Result (<1ms)
+        A-->>U: Result (LLM skipped)
     else Medium Task
         H->>A: Spawn Haiku Agent
         A->>M: Check patterns
@@ -963,7 +916,7 @@ flowchart LR
     end
 
     subgraph Storage["💾 Storage"]
-        HNSW[(HNSW Index<br/>150x faster)]
+        HNSW[(HNSW Index<br/>vector search)]
         SQLite[(SQLite Cache)]
         AgentDB[(AgentDB)]
         Graph[MemoryGraph<br/>PageRank + Communities]
@@ -1728,7 +1681,7 @@ Production-ready features for high availability and continuous learning.
 |---------|-------------|---------|
 | **Automatic Topology Selection** | AI-driven topology choice based on task complexity | Optimal resource utilization |
 | **Parallel Execution** | Concurrent agent operation with load balancing | 2.8-4.4x speed improvement |
-| **Neural Training** | 27+ model support with continuous learning | Adaptive intelligence |
+| **Neural Training** | Continuous learning and adaptive routing support | Adaptive intelligence |
 | **Bottleneck Analysis** | Real-time performance monitoring and optimization | Proactive issue detection |
 | **Smart Auto-Spawning** | Dynamic agent creation based on workload | Elastic scaling |
 | **Self-Healing Workflows** | Automatic error recovery and task retry | High availability |
@@ -1749,7 +1702,7 @@ Build custom plugins with the fluent builder API. Create MCP tools, hooks, worke
 | **HookBuilder** | Build hooks with conditions and transformers | Priorities, conditional execution |
 | **WorkerPool** | Managed worker pool with auto-scaling | Min/max workers, task queuing |
 | **ProviderRegistry** | LLM provider management with fallback | Cost optimization, automatic failover |
-| **AgentDBBridge** | Vector storage with HNSW indexing | 150x faster search, batch operations |
+| **AgentDBBridge** | Vector storage with HNSW indexing | Vector search, batch operations |
 
 **Plugin Performance:** Load <20ms, Hook execution <0.5ms, Worker spawn <50ms
 
@@ -1761,7 +1714,7 @@ Install these optional plugins to extend Hive Flow capabilities:
 |--------|---------|-------------|-----------------|
 | **@hive-flow/plugin-agentic-qe** | 3.0.0-alpha.2 | Quality Engineering with 58 AI agents across 12 DDD contexts. TDD, coverage analysis, security scanning, chaos engineering, accessibility testing. | `npm install @hive-flow/plugin-agentic-qe` |
 | **@hive-flow/plugin-prime-radiant** | 0.1.4 | Mathematical AI interpretability with 6 engines: sheaf cohomology, spectral analysis, causal inference, quantum topology, category theory, HoTT proofs. | `npm install @hive-flow/plugin-prime-radiant` |
-| **@hive-flow/plugin-gastown-bridge** | 0.1.0 | Gas Town orchestrator integration with WASM-accelerated formula parsing (352x faster), Beads sync, convoy management, and graph analysis. 20 MCP tools. | `hive-flow plugins install -n @hive-flow/plugin-gastown-bridge` |
+| **@hive-flow/plugin-gastown-bridge** | 0.1.0 | Gas Town orchestrator integration with WASM-accelerated formula parsing, Beads sync, convoy management, and graph analysis. 20 MCP tools. | `hive-flow plugins install -n @hive-flow/plugin-gastown-bridge` |
 | **@hive-flow/teammate-plugin** | 1.0.0-alpha.1 | Native TeammateTool integration for Claude Code v2.1.19+. BMSSP WASM acceleration, rate limiting, circuit breaker, semantic routing. 21 MCP tools. | `hive-flow plugins install -n @hive-flow/teammate-plugin` |
 
 #### 🏥 Domain-Specific Plugins
@@ -1806,23 +1759,11 @@ Install these optional plugins to extend Hive Flow capabilities:
 **Teammate Plugin Features:**
 - Native TeammateTool integration for Claude Code v2.1.19+
 - 21 MCP tools: `teammate/spawn`, `teammate/coordinate`, `teammate/broadcast`, `teammate/discover-teams`, `teammate/route-task`, etc.
-- BMSSP WASM acceleration for topology optimization (352x faster)
+- BMSSP WASM acceleration for topology optimization
 - Rate limiting with sliding window (configurable limits)
 - Circuit breaker for fault tolerance (closed/open/half-open states)
 - Semantic routing with skill-based teammate selection
 - Health monitoring with configurable thresholds
-
-**New RuVector WASM Plugins (50 MCP tools total):**
-- **Healthcare**: 5 tools for clinical decision support, drug interactions, treatment recommendations
-- **Financial**: 5 tools for risk assessment, fraud detection, portfolio optimization
-- **Legal**: 5 tools for contract analysis, clause extraction, compliance verification
-- **Code Intelligence**: 5 tools for code analysis, security scanning, architecture mapping
-- **Test Intelligence**: 5 tools for test generation, coverage optimization, mutation testing
-- **Performance**: 5 tools for profiling, bottleneck detection, optimization suggestions
-- **Neural Coordination**: 5 tools for multi-agent learning, knowledge transfer, consensus
-- **Cognitive Kernel**: 5 tools for working memory, attention control, meta-cognition
-- **Quantum Optimizer**: 5 tools for QAOA, VQE, quantum annealing, Grover search
-- **Hyperbolic Reasoning**: 5 tools for Poincaré embeddings, tree inference, taxonomic analysis
 
 ```bash
 # Install Quality Engineering plugin
@@ -1871,133 +1812,6 @@ Intercept and extend any operation with pre/post hooks.
 | **Swarm** | `swarm:initialized`, `swarm:shutdown`, `swarm:consensus-reached` | Swarm coordination hooks |
 | **File** | `file:pre-read`, `file:post-read`, `file:pre-write` | File operation hooks |
 | **Learning** | `learning:pattern-learned`, `learning:pattern-applied` | Pattern learning hooks |
-
-</details>
-
-<details>
-<summary>🔌 <strong>RuVector WASM Plugins</strong> — High-performance WebAssembly extensions</summary>
-
-Pre-built WASM plugins for semantic search, intent routing, and pattern storage.
-
-| Plugin | Description | Performance |
-|--------|-------------|-------------|
-| **SemanticCodeSearchPlugin** | Semantic code search with vector embeddings | Real-time indexing |
-| **IntentRouterPlugin** | Routes user intents to optimal handlers | 95%+ accuracy |
-| **HookPatternLibraryPlugin** | Pre-built patterns for common tasks | Security, testing, performance |
-| **MCPToolOptimizerPlugin** | Optimizes MCP tool selection | Context-aware suggestions |
-| **ReasoningBankPlugin** | Vector-backed pattern storage with HNSW | 150x faster search |
-| **AgentConfigGeneratorPlugin** | Generates optimized agent configurations | From pretrain data |
-
-</details>
-
-<details>
-<summary>🐘 <strong>RuVector PostgreSQL Bridge</strong> — Production vector database with AI capabilities</summary>
-
-Full PostgreSQL integration with advanced vector operations, attention mechanisms, GNN layers, and self-learning optimization.
-
-| Feature | Description | Performance |
-|---------|-------------|-------------|
-| **Vector Search** | HNSW/IVF indexing with 12+ distance metrics | 52,000+ inserts/sec, sub-ms queries |
-| **39 Attention Mechanisms** | Multi-head, Flash, Sparse, Linear, Graph, Temporal | GPU-accelerated SQL functions |
-| **15 GNN Layer Types** | GCN, GAT, GraphSAGE, MPNN, Transformer, PNA | Graph-aware vector queries |
-| **Hyperbolic Embeddings** | Poincare, Lorentz, Klein models for hierarchical data | Native manifold operations |
-| **Self-Learning** | Query optimizer, index tuner with EWC++ | Continuous improvement |
-
-**MCP Tools (8 tools):**
-
-| Tool | Description |
-|------|-------------|
-| `ruvector_search` | Vector similarity search (cosine, euclidean, dot, etc.) |
-| `ruvector_insert` | Insert vectors with batch support and upsert |
-| `ruvector_update` | Update existing vectors and metadata |
-| `ruvector_delete` | Delete vectors by ID or batch |
-| `ruvector_create_index` | Create HNSW/IVF indices with tuning |
-| `ruvector_index_stats` | Get index statistics and health |
-| `ruvector_batch_search` | Batch vector searches with parallelism |
-| `ruvector_health` | Connection pool health check |
-
-**Configuration:**
-
-```typescript
-import { createRuVectorBridge } from '@hive-flow/plugins';
-
-const bridge = createRuVectorBridge({
-  host: 'localhost',
-  port: 5432,
-  database: 'vectors',
-  user: 'postgres',
-  password: 'secret',
-  pool: { min: 2, max: 10 },
-  ssl: true
-});
-
-// Enable the plugin
-await registry.register(bridge);
-await registry.loadAll();
-```
-
-**Attention Mechanisms (39 types):**
-
-| Category | Mechanisms |
-|----------|------------|
-| **Core** | `multi_head`, `self_attention`, `cross_attention`, `causal`, `bidirectional` |
-| **Efficient** | `flash_attention`, `flash_attention_v2`, `memory_efficient`, `chunk_attention` |
-| **Sparse** | `sparse_attention`, `block_sparse`, `bigbird`, `longformer`, `local`, `global` |
-| **Linear** | `linear_attention`, `performer`, `linformer`, `nystrom`, `reformer` |
-| **Positional** | `relative_position`, `rotary_position`, `alibi`, `axial` |
-| **Graph** | `graph_attention`, `hyperbolic_attention`, `spherical_attention` |
-| **Temporal** | `temporal_attention`, `recurrent_attention`, `state_space` |
-| **Multimodal** | `cross_modal`, `perceiver`, `flamingo` |
-| **Retrieval** | `retrieval_attention`, `knn_attention`, `memory_augmented` |
-
-**GNN Layers (15 types):**
-
-| Layer | Use Case |
-|-------|----------|
-| `gcn` | General graph convolution |
-| `gat` / `gatv2` | Attention-weighted aggregation |
-| `sage` | Inductive learning on large graphs |
-| `gin` | Maximally expressive GNN |
-| `mpnn` | Message passing with edge features |
-| `edge_conv` | Point cloud processing |
-| `transformer` | Full attention on graphs |
-| `pna` | Principal neighborhood aggregation |
-| `rgcn` / `hgt` / `han` | Heterogeneous graphs |
-
-**Hyperbolic Operations:**
-
-```typescript
-import { createHyperbolicSpace } from '@hive-flow/plugins';
-
-const space = createHyperbolicSpace('poincare', { curvature: -1.0 });
-
-// Embed hierarchical data (trees, taxonomies)
-const embedding = await space.embed(vector);
-const distance = await space.distance(v1, v2);  // Geodesic distance
-const midpoint = await space.geodesicMidpoint(v1, v2);
-```
-
-**Self-Learning System:**
-
-```typescript
-import { createSelfLearningSystem } from '@hive-flow/plugins';
-
-const learning = createSelfLearningSystem(bridge);
-
-// Automatic optimization
-await learning.startLearningLoop();  // Runs in background
-
-// Manual optimization
-const suggestions = await learning.queryOptimizer.analyze(query);
-await learning.indexTuner.tune('my_index');
-```
-
-**Hooks (auto-triggered):**
-
-| Hook | Event | Purpose |
-|------|-------|---------|
-| `ruvector-learn-pattern` | `PostMemoryStore` | Learn from memory operations |
-| `ruvector-collect-stats` | `PostToolUse` | Collect query statistics |
 
 </details>
 
@@ -2062,8 +1876,8 @@ hive-flow worker status
 
 | Feature | Description | Performance |
 |---------|-------------|-------------|
-| **Auto-Install** | `provider: 'auto'` installs agentic-flow automatically | Zero config |
-| **Smart Fallback** | agentic-flow → transformers → mock chain | Always works |
+| **Optional Provider** | `provider: 'auto'` uses agentic-flow when available | Zero config |
+| **Smart Fallback** | agentic-flow → transformers → mock chain | Works without agentic-flow |
 | **75x Faster** | Agentic-flow ONNX vs Transformers.js | 3ms vs 230ms |
 | **LRU Caching** | Intelligent cache with hit rate tracking | <1ms cache hits |
 | **Batch Processing** | Efficient batch embedding with partial cache | 10 items <100ms |
@@ -2167,13 +1981,13 @@ hive-flow worker status
 </details>
 
 <details>
-<summary>🔗 <strong>Integration</strong> — agentic-flow bridge with runtime auto-detection</summary>
+<summary>🔗 <strong>Integration</strong> — optional agentic-flow bridge with runtime auto-detection</summary>
 
 | Component | Description | Performance |
 |-----------|-------------|-------------|
-| **AgenticFlowBridge** | agentic-flow@alpha integration | ADR-001 compliant |
-| **SONA Adapter** | Learning system integration | <0.05ms adaptation |
-| **Flash Attention** | Attention mechanism coordinator | 2.49x-7.47x speedup |
+| **AgenticFlowBridge** | Optional agentic-flow@alpha integration | ADR-001 compliant |
+| **SONA Adapter** | Learning system integration | Low-latency adaptation |
+| **Flash Attention** | Attention mechanism coordinator | Local attention path |
 | **SDK Bridge** | Version negotiation, API compatibility | Auto-detection |
 | **Feature Flags** | Dynamic feature management | 9 configurable flags |
 | **Runtime Detection** | NAPI, WASM, JS auto-selection | Optimal performance |
@@ -2211,7 +2025,7 @@ hive-flow worker status
 | **Memory** | Memory write | <5ms |
 | **Swarm** | Agent coordination | <50ms |
 | **Swarm** | Consensus latency | <100ms |
-| **Neural** | SONA adaptation | <0.05ms |
+| **Neural** | SONA adaptation | Low latency |
 
 </details>
 
@@ -2220,7 +2034,7 @@ hive-flow worker status
 
 | Feature | Description | Performance |
 |---------|-------------|-------------|
-| **SONA Learning** | Self-Optimizing Neural Architecture | <0.05ms adaptation |
+| **SONA Learning** | Self-Optimizing Neural Architecture | Low-latency adaptation |
 | **5 Learning Modes** | real-time, balanced, research, edge, batch | Mode-specific optimization |
 | **9 RL Algorithms** | PPO, A2C, DQN, Q-Learning, SARSA, Decision Transformer, etc. | Comprehensive RL |
 | **LoRA Integration** | Low-Rank Adaptation for efficient fine-tuning | Minimal memory overhead |
@@ -2232,7 +2046,7 @@ hive-flow worker status
 |---------|-------------|-------------|
 | **Scalar Quantization** | Reduce vector precision for memory savings | 4x memory reduction |
 | **Product Quantization** | Compress vectors into codebooks | 8-32x memory reduction |
-| **HNSW Indexing** | Hierarchical Navigable Small World graphs | 150x-12,500x faster search |
+| **HNSW Indexing** | Hierarchical Navigable Small World graphs | Approximate nearest-neighbor search |
 | **LRU Caching** | Intelligent embedding cache with TTL | <1ms cache hits |
 | **Batch Processing** | Process multiple embeddings in single call | 10x throughput |
 | **Memory Compression** | Pattern distillation and pruning | 50-75% reduction |
@@ -2250,7 +2064,7 @@ hive-flow worker status
 | **Hyperbolic Space** | Poincaré ball model for hierarchical data | Exponential capacity |
 | **Dimensions** | 384 to 3072 configurable | Quality vs speed tradeoff |
 | **Similarity Metrics** | Cosine, Euclidean, Dot product, Hyperbolic distance | Task-specific matching |
-| **Neural Substrate** | Drift detection, memory physics, swarm coordination | agentic-flow integration |
+| **Neural Substrate** | Drift detection, memory physics, swarm coordination | optional agentic-flow integration |
 | **LRU + SQLite Cache** | Persistent cross-session caching | <1ms cache hits |
 
 ```bash
@@ -2284,51 +2098,6 @@ hive-flow embeddings search -q "authentication patterns"
 </details>
 
 <details>
-<summary>🐘 <strong>RuVector PostgreSQL Bridge</strong> — Enterprise vector operations with pgvector</summary>
-
-| Feature | Description | Performance |
-|---------|-------------|-------------|
-| **pgvector Integration** | Native PostgreSQL vector operations | 150x faster than in-memory |
-| **Attention Mechanisms** | Self, multi-head, cross-attention in SQL | GPU-accelerated |
-| **Graph Neural Networks** | GNN operations via SQL functions | Message passing, aggregation |
-| **Hyperbolic Embeddings** | Poincaré ball model in PostgreSQL | Better hierarchy representation |
-| **Quantization** | Int8/Float16 compression | 3.92x memory reduction |
-| **Streaming** | Large dataset processing | Batch + async support |
-| **Migrations** | Version-controlled schema | 7 migration scripts |
-
-```bash
-# Initialize RuVector in PostgreSQL
-hive-flow ruvector init --database mydb --user admin
-
-# Check connection and schema status
-hive-flow ruvector status --verbose
-
-# Run pending migrations
-hive-flow ruvector migrate --up
-
-# Performance benchmark
-hive-flow ruvector benchmark --iterations 1000
-
-# Optimize indices and vacuum
-hive-flow ruvector optimize --analyze
-
-# Backup vector data
-hive-flow ruvector backup --output ./backup.sql
-```
-
-| Migration | Purpose | Features |
-|-----------|---------|----------|
-| `001_create_extension` | Enable pgvector | Vector type, operators |
-| `002_create_vector_tables` | Core tables | embeddings, patterns, agents |
-| `003_create_indices` | HNSW indices | 150x faster search |
-| `004_create_functions` | Vector functions | Similarity, clustering |
-| `005_create_attention_functions` | Attention ops | Self/multi-head attention |
-| `006_create_gnn_functions` | GNN operations | Message passing, aggregation |
-| `007_create_hyperbolic_functions` | Hyperbolic geometry | Poincaré operations |
-
-</details>
-
-<details>
 <summary>👑 <strong>Hive-Mind Coordination</strong> — Queen-led topology with Byzantine consensus</summary>
 
 | Feature | Description | Capability |
@@ -2358,15 +2127,15 @@ hive-flow hive-mind status                                  # Check status
 </details>
 
 <details>
-<summary>🔌 <strong>agentic-flow Integration</strong> — ADR-001 compliant core foundation</summary>
+<summary>🔌 <strong>agentic-flow Integration</strong> — optional ADR-001 bridge</summary>
 
 | Feature | Description | Benefit |
 |---------|-------------|---------|
-| **ADR-001 Compliance** | Build on agentic-flow, don't duplicate | Eliminates 10,000+ duplicate lines |
-| **Core Foundation** | Use agentic-flow as the base layer | Unified architecture |
-| **SONA Integration** | Seamless learning system connection | <0.05ms adaptation |
-| **Flash Attention** | Optimized attention mechanisms | 2.49x-7.47x speedup |
-| **AgentDB Bridge** | Vector storage integration | 150x-12,500x faster search |
+| **ADR-001 Compliance** | Reuse agentic-flow when available | Avoids duplicating shared capabilities |
+| **Optional Bridge** | Use agentic-flow as an optional layer | Local fallback remains available |
+| **SONA Integration** | Seamless learning system connection | Low-latency adaptation |
+| **Flash Attention** | Optimized attention mechanisms | Local attention support |
+| **AgentDB Bridge** | Vector storage integration | Vector search |
 | **Feature Flags** | Dynamic capability management | 9 configurable features |
 | **Runtime Detection** | NAPI/WASM/JS auto-selection | Optimal performance per platform |
 | **Graceful Fallback** | Works with or without agentic-flow | Always functional |
@@ -2436,7 +2205,7 @@ hive-flow hive-mind status                                  # Check status
 
 | Component | Description | Performance |
 |-----------|-------------|-------------|
-| **ReasoningBank** | Pattern storage with HNSW indexing | 150x faster retrieval |
+| **ReasoningBank** | Pattern storage with HNSW indexing | Vector retrieval |
 | **GuidanceProvider** | Context-aware development guidance | Real-time suggestions |
 | **PatternLearning** | Automatic strategy extraction | Continuous improvement |
 | **QualityTracking** | Success/failure rate per pattern | Performance metrics |
@@ -2468,7 +2237,7 @@ Claude Code pipes JSON session data via **stdin** to the statusline script after
 **Output Format:**
 ```
 ▊ Hive Flow V3 ● hive-flow  │  ⎇ main  │  Opus 4.6  | ●42% ctx  | $0.15
-🏗️ DDD [●●●●○] 4/5  ⚡ HNSW 150x  🤖 ◉ [12/8]  👥 3  🟢 CVE 3/3  💾 512MB  🧠 15%  📦 AgentDB ●1.2K vectors
+🏗️ DDD [●●●●○] 4/5  ⚡ Vector search  🤖 ◉ [12/8]  👥 3  🟢 CVE 3/3  💾 512MB  🧠 15%  📦 AgentDB ●1.2K vectors
 ```
 
 | Indicator | Description | Source |
@@ -2480,7 +2249,7 @@ Claude Code pipes JSON session data via **stdin** to the statusline script after
 | `●42% ctx` | Context window usage | Stdin JSON `context_window.used_percentage` |
 | `$0.15` | Session cost | Stdin JSON `cost.total_cost_usd` |
 | `[●●●●○]` | DDD domain progress bar | `.hive-flow/metrics/v3-progress.json` |
-| `⚡ HNSW 150x` | HNSW search speedup | AgentDB file stats |
+| `⚡ Vector search` | Vector search status | AgentDB file stats |
 | `◉/○` | Swarm coordination status | Process detection |
 | `[12/8]` | Active agents / max agents | `ps aux` process count |
 | `👥 3` | Sub-agents spawned | Task tool agent count |
@@ -2654,7 +2423,7 @@ Complete command-line interface for all Hive Flow operations.
 | `init` | 4 | Project initialization with wizard, presets, skills, hooks |
 | `agent` | 8 | Agent lifecycle (spawn, list, status, stop, metrics, pool, health, logs) |
 | `swarm` | 6 | Multi-agent swarm coordination and orchestration |
-| `memory` | 11 | AgentDB memory with vector search (150x-12,500x faster) |
+| `memory` | 11 | AgentDB memory with vector search |
 | `mcp` | 9 | MCP server management and tool execution |
 | `task` | 6 | Task creation, assignment, and lifecycle |
 | `session` | 7 | Session state management and persistence |
@@ -2676,7 +2445,7 @@ Complete command-line interface for all Hive Flow operations.
 | `providers` | 5 | AI providers (list, add, remove, test, configure) |
 | `plugins` | 5 | Plugin management (list, install, uninstall, enable, disable) |
 | `deployment` | 5 | Deployment management (deploy, rollback, status, environments, release) |
-| `embeddings` | 4 | Vector embeddings (embed, batch, search, init) - 75x faster with agentic-flow |
+| `embeddings` | 4 | Vector embeddings (embed, batch, search, init) with optional agentic-flow provider |
 | `claims` | 4 | Claims-based authorization (check, grant, revoke, list) |
 | `migrate` | 5 | V2 to V3 migration with rollback support |
 | `process` | 4 | Background process management |
@@ -2698,7 +2467,7 @@ hive-flow agent spawn -t coder --name my-coder
 # Initialize swarm with V3 mode
 hive-flow swarm init --v3-mode
 
-# Search memory (HNSW-indexed, 150x faster)
+# Search memory with vector search
 hive-flow memory search -q "authentication patterns"
 
 # Run security scan
@@ -2779,8 +2548,8 @@ The embeddings package (v3.0.0-alpha.12) provides high-performance vector embedd
 | **Document chunking** | Configurable overlap and size | Handles large documents |
 | **Normalization** | L2, L1, min-max, z-score | 4 normalization methods |
 | **Hyperbolic embeddings** | Poincaré ball model | Better hierarchical representation |
-| **agentic-flow ONNX** | Integrated ONNX runtime | 75x faster than API calls |
-| **Neural substrate** | RuVector integration | Full learning pipeline |
+| **agentic-flow ONNX** | Optional ONNX runtime | Faster local embeddings when available |
+| **Neural substrate** | Local TypeScript learning services | Full learning pipeline |
 
 **Models Available:**
 
@@ -2939,7 +2708,7 @@ UserPromptSubmit              PreCompact                     SessionStart
 | **Access Tracking** | Restored entries get access_count++ creating a relevance feedback loop | On restore |
 | **Auto-Pruning** | Never-accessed entries older than 30 days are automatically removed | On PreCompact |
 | **Content Compaction** | Old session entries trimmed to summaries, reducing archive storage | Manual or scheduled |
-| **RuVector Sync** | SQLite entries auto-replicated to PostgreSQL when configured | On PreCompact |
+| **Local Archive Sync** | SQLite entries indexed for local restore and pruning | On PreCompact |
 
 ### Optimization Thresholds
 
@@ -2969,9 +2738,8 @@ The statusline shows live context metrics read from `autopilot-state.json`:
 | Tier | Backend | Storage | Features |
 |------|---------|---------|----------|
 | 1 | **SQLite** (default) | `.hive-flow/data/transcript-archive.db` | WAL mode, indexed queries, ACID, importance ranking |
-| 2 | **RuVector PostgreSQL** | Configurable remote | TB-scale, pgvector embeddings, GNN search |
-| 3 | **AgentDB + HNSW** | In-memory + persist | 150x-12,500x faster semantic search |
-| 4 | **JSON** (fallback) | `.hive-flow/data/transcript-archive.json` | Zero dependencies, always works |
+| 2 | **AgentDB + HNSW** | In-memory + persist | Semantic search and learning memory |
+| 3 | **JSON** (fallback) | `.hive-flow/data/transcript-archive.json` | Zero dependencies, always works |
 
 ### Configuration
 
@@ -3011,7 +2779,7 @@ sqlite3 .hive-flow/data/transcript-archive.db \
 
 ---
 
-## 💾 Storage: RVF (RuVector Format)
+## 💾 Storage: RVF Binary Storage
 
 Hive Flow uses RVF — a compact binary storage format that replaces the 18MB sql.js WASM dependency with pure TypeScript. No native compilation, no WASM downloads, works everywhere Node.js runs.
 
@@ -3169,7 +2937,7 @@ Hooks intercept operations (file edits, commands, tasks) and learn from outcomes
 │ past patterns│   │ successful? │    │ learnings   │    │ forgetting  │
 └─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
      HNSW              Verdict            LoRA              EWC++
-   150x faster        success/fail      compression       memory lock
+  vector search      success/fail      compression       memory lock
 ```
 
 ### Hook Signals (ADR-026 Model Routing)
@@ -3178,7 +2946,7 @@ When hooks run, they emit signals that guide routing decisions. Watch for these 
 
 | Signal | Meaning | Action |
 |--------|---------|--------|
-| `[AGENT_BOOSTER_AVAILABLE]` | Simple transform detected, skip LLM | Use Edit tool directly (352x faster, $0) |
+| `[AGENT_BOOSTER_AVAILABLE]` | Simple transform detected, skip LLM | Use Edit tool directly ($0 API cost) |
 | `[TASK_MODEL_RECOMMENDATION] Use model="mini"` | Low complexity task | Pass `model: "mini"` to Task tool |
 | `[TASK_MODEL_RECOMMENDATION] Use model="sonnet"` | Medium complexity task | Pass `model: "sonnet"` to Task tool |
 | `[TASK_MODEL_RECOMMENDATION] Use model="opus"` | High complexity task | Pass `model: "opus"` to Task tool |
@@ -3197,7 +2965,7 @@ $ hive-flow hooks pre-task --description "convert var to const in utils.ts"
 
 [AGENT_BOOSTER_AVAILABLE] Intent: var-to-const
 Recommendation: Use Edit tool directly
-Performance: <1ms (352x faster than LLM)
+Performance: local transform path, no LLM call
 Cost: $0
 ```
 
@@ -3219,7 +2987,7 @@ UserPrompt:
     → Inject top-5 patterns into Claude's context:
 
     [INTELLIGENCE] Relevant patterns for this task:
-      * (0.95) HNSW gives 150x-12,500x speedup [rank #1, 12x accessed]
+      * (0.95) Vector search improves memory retrieval [rank #1, 12x accessed]
       * (0.88) London School TDD preferred [rank #3, 8x accessed]
 
 PostEdit:
@@ -3281,7 +3049,7 @@ The stats command shows:
     Never accessed:     3
 
   Top Patterns (by composite score)
-    #1  HNSW gives 150x-12,500x speedup
+    #1  Vector search improves memory retrieval
          conf=0.600  pr=0.2099  score=0.3659  accessed=2x
     #2  London School TDD preferred
          conf=0.600  pr=0.1995  score=0.3597  accessed=2x
@@ -3363,7 +3131,7 @@ hive-flow hooks session-end --export-metrics --persist-patterns
 | `trajectory-step` | RL | Record an action with reward signal |
 | `trajectory-end` | RL | Finish recording, trigger learning |
 | `pattern-store` | Memory | Store a pattern with HNSW indexing |
-| `pattern-search` | Memory | Find similar patterns (150x faster) |
+| `pattern-search` | Memory | Find similar patterns with vector search |
 | `stats` | Analytics | Intelligence diagnostics, confidence trends, improvement tracking |
 | `attention` | Focus | Compute attention-weighted similarity |
 
@@ -3716,9 +3484,9 @@ hive-flow hooks route --task "review authentication code" --use-patterns
 hive-flow transfer-store download --id "security-essentials" --apply
 ```
 
-### RuVector WASM Neural Training
+### Local TypeScript Neural Training
 
-Real WASM-accelerated neural training using `@ruvector/learning-wasm` and `@ruvector/attention` packages for state-of-the-art performance.
+Local TypeScript neural training for pattern learning, contrastive scoring, and attention-style ranking without external WASM packages.
 
 | Component | Performance | Description |
 |-----------|-------------|-------------|
@@ -3736,13 +3504,13 @@ hive-flow neural list
 # List models by category
 hive-flow neural list --category security
 
-# Train with WASM acceleration
-hive-flow neural train -p coordination -e 100 --wasm --flash --contrastive
+# Train with local TypeScript acceleration
+hive-flow neural train -p coordination -e 100 --flash --contrastive
 
 # Train security patterns
-hive-flow neural train -p security --wasm --contrastive
+hive-flow neural train -p security --contrastive
 
-# Benchmark WASM performance
+# Benchmark local training performance
 hive-flow neural benchmark -d 256 -i 1000
 
 # Import pre-trained models
@@ -3770,7 +3538,6 @@ MicroLoRA Target (<100μs): ✓ PASS (2.60μs actual)
 
 | Flag | Description | Default |
 |------|-------------|---------|
-| `--wasm` | Enable RuVector WASM acceleration | `true` |
 | `--flash` | Use Flash Attention | `true` |
 | `--moe` | Enable Mixture of Experts routing | `false` |
 | `--hyperbolic` | Hyperbolic attention for hierarchical patterns | `false` |
@@ -3956,7 +3723,7 @@ Skills are **reusable workflows** that combine agents, hooks, and patterns into 
 
 | Skill | What It Does | When To Use |
 |-------|--------------|-------------|
-| `agentdb-vector-search` | Semantic search with 150x faster retrieval | Building RAG systems, knowledge bases |
+| `agentdb-vector-search` | Semantic vector search | Building RAG systems, knowledge bases |
 | `agentdb-memory-patterns` | Session memory, long-term storage, context management | Stateful agents, chat systems |
 | `agentdb-learning` | 9 RL algorithms (PPO, DQN, SARSA, etc.) | Self-learning agents, behavior optimization |
 | `agentdb-optimization` | Quantization (4-32x memory reduction), HNSW indexing | Scaling to millions of vectors |
@@ -4026,8 +3793,8 @@ Skills are **reusable workflows** that combine agents, hooks, and patterns into 
 |-------|--------------|-------------|
 | `v3-ddd-architecture` | Bounded contexts, modular design, clean architecture | Large-scale refactoring |
 | `v3-security-overhaul` | CVE fixes, secure-by-default patterns | Security hardening |
-| `v3-memory-unification` | AgentDB unification, 150x-12,500x search improvements | Memory optimization |
-| `v3-performance-optimization` | 2.49x-7.47x speedup, memory reduction | Performance tuning |
+| `v3-memory-unification` | AgentDB unification and vector search improvements | Memory optimization |
+| `v3-performance-optimization` | Attention, memory, and benchmark optimization | Performance tuning |
 | `v3-swarm-coordination` | 15-agent hierarchical mesh, 10 ADRs implementation | Swarm architecture |
 | `v3-mcp-optimization` | Connection pooling, load balancing, <100ms response | MCP performance |
 | `v3-core-implementation` | DDD domains, dependency injection, TypeScript | Core development |
@@ -4364,7 +4131,7 @@ npm install hive-flow@v3alpha
 ```typescript
 import { AgentDB } from '@hive-flow/memory';
 
-// Initialize with HNSW indexing (150x faster)
+// Initialize with HNSW indexing
 const db = new AgentDB({
   path: './data/memory',
   hnsw: { m: 16, efConstruction: 200 }
@@ -4396,7 +4163,7 @@ hive-flow memory init --force
 hive-flow memory store --key "pattern-auth" --value "JWT authentication with refresh tokens"
 hive-flow memory store --key "pattern-cache" --value "Redis caching for API responses"
 
-# Build HNSW index for 150x-12,500x faster search
+# Build or refresh the vector index
 hive-flow memory search --query "authentication" --build-hnsw
 
 # Semantic search (uses HNSW if built)
@@ -4487,10 +4254,10 @@ await aidefence.learnFromDetection(userInput, analysis, {
 ```typescript
 import { createEmbeddingService, cosineSimilarity } from '@hive-flow/embeddings';
 
-// Auto-selects best provider (agentic-flow ONNX preferred)
+// Auto-selects best available provider (agentic-flow ONNX if installed)
 const embeddings = await createEmbeddingService({
   provider: 'auto',        // agentic-flow → transformers → mock
-  autoInstall: true,       // Auto-install agentic-flow if missing
+  autoInstall: false,      // Do not require agentic-flow
   dimensions: 384,
   cache: { enabled: true, maxSize: 10000 }
 });
@@ -4727,6 +4494,8 @@ await hooks.endTrajectory(trajectory, { success: true });
 | `@hive-flow/providers` | LLM providers | `ProviderRegistry`, `createProvider` |
 | `@hive-flow/plugins` | Plugin SDK | `PluginBuilder`, `createPlugin` |
 
+AgentDB may retain internal `@ruvector/*` transitive dependencies, but Hive Flow no longer exposes standalone `ruvector` CLI, MCP, or PostgreSQL surfaces.
+
 </details>
 
 ---
@@ -4736,13 +4505,13 @@ await hooks.endTrajectory(trajectory, { success: true });
 Core infrastructure packages powering Hive Flow's intelligence layer.
 
 <details>
-<summary>⚡ <strong>Agentic-Flow Integration</strong> — Core AI Infrastructure</summary>
+<summary>⚡ <strong>Agentic-Flow Integration</strong> — Optional AI Infrastructure</summary>
 
 [![npm version](https://img.shields.io/npm/v/agentic-flow?color=blue&label=npm)](https://www.npmjs.com/package/agentic-flow)
 [![npm downloads](https://img.shields.io/npm/dm/agentic-flow?color=green)](https://www.npmjs.com/package/agentic-flow)
 [![GitHub](https://img.shields.io/badge/GitHub-ruvnet%2Fagentic--flow-blue?logo=github)](https://github.com/ruvnet/agentic-flow)
 
-Hive Flow v3 is built on top of **[agentic-flow](https://github.com/ruvnet/agentic-flow)**, a production-ready AI agent orchestration platform. This deep integration provides 352x faster code transformations, learning memory, and geometric intelligence.
+Hive Flow v3 can optionally interoperate with **[agentic-flow](https://github.com/ruvnet/agentic-flow)** when it is installed. Local Hive Flow services remain the fallback path when the integration is unavailable.
 
 ### Quick Start
 
@@ -4764,25 +4533,25 @@ claude mcp add agentic-flow -- npx agentic-flow mcp start
 
 | Component | Description | Performance |
 |-----------|-------------|-------------|
-| **Agent Booster** | Rust/WASM code transformations | 352x faster, $0 cost |
-| **ReasoningBank** | Learning memory with HNSW | 150x-12,500x search |
+| **Agent Booster** | Rust/WASM code transformations | $0 API cost when LLM is skipped |
+| **ReasoningBank** | Learning memory with HNSW | Vector search |
 | **ONNX Embeddings** | Local vector generation | 75x faster than Transformers.js |
 | **Embedding Geometry** | Geometric intelligence layer | <3ms latency |
 | **Multi-Model Router** | Intelligent model selection | 30-50% cost savings |
 | **QUIC Transport** | High-performance transport | Ultra-low latency |
 
 <details>
-<summary>⚡ <strong>Agent Booster</strong> — 352x Faster Code Transformations</summary>
+<summary>⚡ <strong>Agent Booster</strong> — LLM-Free Code Transform Routing</summary>
 
 Agent Booster performs mechanical code edits without calling LLM APIs:
 
-| Operation | LLM API | Agent Booster | Speedup |
-|-----------|---------|---------------|---------|
-| Variable rename | 352ms | 1ms | **352x** |
-| Add import | 420ms | 1ms | **420x** |
-| Function signature | 380ms | 1ms | **380x** |
-| Code formatting | 290ms | 1ms | **290x** |
-| **1000 files** | 5.87 min | 1 second | **352x** |
+| Operation | LLM API | Agent Booster | API Cost |
+|-----------|---------|---------------|----------|
+| Variable rename | Required | Local transform | $0 |
+| Add import | Required | Local transform | $0 |
+| Function signature | Required | Local transform | $0 |
+| Code formatting | Required | Local transform | $0 |
+| Batch edits | Required | Local transform | $0 |
 
 ```bash
 # Single file edit
@@ -4841,7 +4610,7 @@ await bank.consolidate();  // Prevent forgetting (EWC++)
 ```
 
 **4-Step Pipeline:**
-1. **RETRIEVE** — Fetch relevant patterns via HNSW (150x faster)
+1. **RETRIEVE** — Fetch relevant patterns via vector search
 2. **JUDGE** — Evaluate outcomes with verdicts
 3. **DISTILL** — Extract key learnings via LoRA
 4. **CONSOLIDATE** — Prevent catastrophic forgetting (EWC++)
@@ -5027,7 +4796,7 @@ claude mcp add agentic-flow -- npx agentic-flow mcp start
 
 ### Integration with Hive Flow
 
-Hive Flow automatically leverages agentic-flow for:
+When configured, Hive Flow can leverage agentic-flow for:
 
 | Feature | How It's Used |
 |---------|---------------|
@@ -5035,10 +4804,10 @@ Hive Flow automatically leverages agentic-flow for:
 | **Fast Edits** | Agent Booster for mechanical transforms |
 | **Intelligent Routing** | Model router for mini/sonnet/opus selection |
 | **Pattern Learning** | ReasoningBank stores successful patterns |
-| **Embedding Search** | HNSW-indexed vector search (150x faster) |
+| **Embedding Search** | HNSW-indexed vector search |
 
 ```typescript
-// Hive Flow automatically uses agentic-flow optimizations
+// Hive Flow can use agentic-flow optimizations when configured
 import { getTokenOptimizer } from '@hive-flow/integration';
 
 const optimizer = await getTokenOptimizer();
@@ -5046,7 +4815,7 @@ const optimizer = await getTokenOptimizer();
 // Uses ReasoningBank (32% fewer tokens)
 const ctx = await optimizer.getCompactContext('auth patterns');
 
-// Uses Agent Booster (352x faster edits)
+// Uses Agent Booster when available for LLM-free edits
 await optimizer.optimizedEdit(file, old, new, 'typescript');
 
 // Uses Model Router (optimal model selection)
@@ -5286,321 +5055,6 @@ npx agentic-jujutsu examples        # Show usage examples
 | **v2.1** | Self-learning AI with ReasoningBank |
 | **v2.2** | Multi-agent coordination + quantum-ready |
 | **v2.3** | Kubernetes GitOps + production stability |
-
-</details>
-
----
-
-<details>
-<summary>🦀 <strong>RuVector</strong> — High-Performance Rust/WASM Intelligence</summary>
-
-[![npm version](https://img.shields.io/npm/v/ruvector?color=blue&label=npm)](https://www.npmjs.com/package/ruvector)
-[![npm downloads](https://img.shields.io/npm/dm/ruvector?color=green)](https://www.npmjs.com/package/ruvector)
-[![GitHub](https://img.shields.io/badge/GitHub-ruvnet%2Fruvector-blue?logo=github)](https://github.com/ruvnet/ruvector)
-[![Docker](https://img.shields.io/badge/Docker-ruvector--postgres-blue?logo=docker)](https://hub.docker.com/r/ruvnet/ruvector-postgres)
-
-**RuVector** is a high-performance distributed vector database combining vector search, graph queries, and self-learning neural networks. Written in Rust with Node.js/WASM bindings, it powers Hive Flow's intelligence layer with native speed.
-
-### Key Capabilities
-
-| Capability | Description | Performance |
-|------------|-------------|-------------|
-| **Vector Search** | HNSW indexing with SIMD acceleration | **~61µs latency, 16,400 QPS** |
-| **Graph Queries** | Full Cypher syntax (MATCH, WHERE, CREATE) | Native graph traversal |
-| **Self-Learning** | GNN layers that improve search over time | Automatic optimization |
-| **Distributed** | Raft consensus, multi-master replication | Auto-sharding |
-| **Compression** | Adaptive tiered (hot/warm/cool/cold) | **2-32x memory reduction** |
-| **39 Attention Types** | Flash, linear, sparse, graph, hyperbolic | GPU-accelerated SQL |
-
-### Performance Benchmarks
-
-| Operation | Latency | Throughput |
-|-----------|---------|------------|
-| HNSW Search (k=10, 384-dim) | **61µs** | 16,400 QPS |
-| HNSW Search (k=100) | 164µs | 6,100 QPS |
-| Cosine Distance (1536-dim) | 143ns | 7M ops/sec |
-| Dot Product (384-dim) | 33ns | 30M ops/sec |
-| Batch Distance (1000 vectors) | 237µs | 4.2M/sec |
-| Memory (1M vectors with PQ8) | - | **200MB** |
-
-### Quick Start
-
-```bash
-# Install ruvector (auto-detects native vs WASM)
-npm install ruvector
-
-# Or run directly
-npx ruvector --help
-
-# Start Postgres for centralized coordination
-docker run -d -p 5432:5432 ruvnet/ruvector-postgres
-```
-
-### Basic Usage
-
-```javascript
-import ruvector from 'ruvector';
-
-// Initialize vector database
-const db = new ruvector.VectorDB(384); // 384 dimensions
-
-// Insert vectors
-await db.insert('doc1', embedding1);
-await db.insert('doc2', embedding2);
-
-// Search (returns top-k similar)
-const results = await db.search(queryEmbedding, 10);
-
-// Graph queries with Cypher
-await db.execute("CREATE (a:Person {name: 'Alice'})-[:KNOWS]->(b:Person {name: 'Bob'})");
-const friends = await db.execute("MATCH (p:Person)-[:KNOWS]->(friend) RETURN friend.name");
-
-// GNN-enhanced search (self-learning)
-const layer = new ruvector.GNNLayer(384, 256, 4);
-const enhanced = layer.forward(query, neighbors, weights);
-
-// Compression (2-32x memory reduction)
-const compressed = ruvector.compress(embedding, 0.3); // 30% quality threshold
-```
-
-### Package Ecosystem
-
-| Package | Description | Performance |
-|---------|-------------|-------------|
-| **[ruvector](https://www.npmjs.com/package/ruvector)** | Core vector database with HNSW | **~61µs search, 16,400 QPS** |
-| **[@ruvector/attention](https://www.npmjs.com/package/@ruvector/attention)** | Flash Attention mechanisms | 2.49x-7.47x speedup |
-| **[@ruvector/sona](https://www.npmjs.com/package/@ruvector/sona)** | SONA adaptive learning (LoRA, EWC++) | <0.05ms adaptation |
-| **[@ruvector/gnn](https://www.npmjs.com/package/@ruvector/gnn)** | Graph Neural Networks (15 layer types) | Native NAPI bindings |
-| **[@ruvector/graph-node](https://www.npmjs.com/package/@ruvector/graph-node)** | Graph DB with Cypher queries | 10x faster than WASM |
-| **[@ruvector/rvlite](https://www.npmjs.com/package/@ruvector/rvlite)** | Standalone DB (SQL, SPARQL, Cypher) | All-in-one solution |
-| **[ruvector-wasm](https://www.npmjs.com/package/ruvector-wasm)** | Browser/Edge WASM build | Works everywhere |
-
-### 🐘 RuVector PostgreSQL — Enterprise Vector Database
-
-**77+ SQL functions** for AI operations directly in PostgreSQL with ~61µs search latency and 16,400 QPS.
-
-```bash
-# Quick setup with CLI (recommended)
-hive-flow ruvector setup --output ./my-ruvector
-cd my-ruvector && docker-compose up -d
-
-# Or pull directly from Docker Hub
-docker run -d \
-  --name ruvector-postgres \
-  -p 5432:5432 \
-  -e POSTGRES_USER=claude \
-  -e POSTGRES_PASSWORD=hive-flow-test \
-  -e POSTGRES_DB=hive_flow \
-  ruvnet/ruvector-postgres
-
-# Migrate existing memory to PostgreSQL
-hive-flow ruvector import --input memory-export.json
-```
-
-**RuVector PostgreSQL vs pgvector:**
-
-| Feature | pgvector | RuVector PostgreSQL |
-|---------|----------|---------------------|
-| **SQL Functions** | ~10 basic | **77+ comprehensive** |
-| **Search Latency** | ~1ms | **~61µs** |
-| **Throughput** | ~5K QPS | **16,400 QPS** |
-| **Attention Mechanisms** | ❌ None | **✅ 39 types (self, multi-head, cross)** |
-| **GNN Operations** | ❌ None | **✅ GAT, message passing** |
-| **Hyperbolic Embeddings** | ❌ None | **✅ Poincaré/Lorentz space** |
-| **Hybrid Search** | ❌ Manual | **✅ BM25/TF-IDF built-in** |
-| **Local Embeddings** | ❌ None | **✅ 6 fastembed models** |
-| **Self-Learning** | ❌ None | **✅ GNN-based optimization** |
-| **SIMD Optimization** | Basic | **AVX-512/AVX2/NEON (~2x faster)** |
-
-**Key SQL Functions:**
-
-```sql
--- Vector operations with HNSW indexing
-SELECT * FROM embeddings ORDER BY embedding <=> query_vec LIMIT 10;
-
--- Hyperbolic embeddings for hierarchical data
-SELECT ruvector_poincare_distance(a, b, -1.0) AS distance;
-SELECT ruvector_mobius_add(a, b, -1.0) AS result;
-
--- Cosine similarity
-SELECT cosine_similarity_arr(a, b) AS similarity;
-```
-
-**Benefits over Local SQLite:**
-
-| Feature | Local SQLite | RuVector PostgreSQL |
-|---------|--------------|---------------------|
-| **Multi-Agent Coordination** | Single machine | Distributed across hosts |
-| **Pattern Sharing** | File-based | Real-time synchronized |
-| **Learning Persistence** | Local only | Centralized, backed up |
-| **Swarm Scale** | 15 agents | 100+ agents |
-| **Query Language** | Basic KV | Full SQL + 77 functions |
-| **AI Operations** | External only | **In-database (attention, GNN)** |
-
-<details>
-<summary>⚡ <strong>@ruvector/attention</strong> — Flash Attention (2.49x-7.47x Speedup)</summary>
-
-Native Rust implementation of Flash Attention for transformer computations:
-
-```typescript
-import { FlashAttention } from '@ruvector/attention';
-
-const attention = new FlashAttention({
-  blockSize: 32,      // L1 cache optimized
-  dimensions: 384,
-  temperature: 1.0,
-  useCPUOptimizations: true
-});
-
-// Compute attention with O(N) memory instead of O(N²)
-const result = attention.attention(queries, keys, values);
-console.log(`Computed in ${result.computeTimeMs}ms`);
-
-// Benchmark against naive implementation
-const bench = attention.benchmark(512, 384, 5);
-console.log(`Speedup: ${bench.speedup}x`);
-console.log(`Memory reduction: ${bench.memoryReduction}x`);
-```
-
-**Key Optimizations:**
-- Block-wise computation (fits L1 cache)
-- 8x loop unrolling for dot products
-- Top-K sparse attention (12% of keys)
-- Two-stage screening for large key sets
-- Online softmax for numerical stability
-
-</details>
-
-<details>
-<summary>🧠 <strong>@ruvector/sona</strong> — Self-Optimizing Neural Architecture</summary>
-
-SONA provides runtime-adaptive learning with minimal overhead:
-
-```typescript
-import { SONA } from '@ruvector/sona';
-
-const sona = new SONA({
-  enableLoRA: true,       // Low-rank adaptation
-  enableEWC: true,        // Elastic Weight Consolidation
-  learningRate: 0.001
-});
-
-// Start learning trajectory
-const trajectory = sona.startTrajectory('task-123');
-
-// Record steps during execution
-trajectory.recordStep({
-  type: 'observation',
-  content: 'Found authentication bug'
-});
-trajectory.recordStep({
-  type: 'action',
-  content: 'Applied JWT validation fix'
-});
-
-// Complete trajectory with verdict
-await trajectory.complete('success');
-
-// EWC++ consolidation (prevents forgetting)
-await sona.consolidate();
-```
-
-**Features:**
-- **LoRA**: Low-rank adaptation for efficient fine-tuning
-- **EWC++**: Prevents catastrophic forgetting
-- **ReasoningBank**: Pattern storage with similarity search
-- **Sub-millisecond**: <0.05ms adaptation overhead
-
-</details>
-
-<details>
-<summary>📊 <strong>@ruvector/graph-node</strong> — Native Graph Database</summary>
-
-High-performance graph database with Cypher query support:
-
-```typescript
-import { GraphDB } from '@ruvector/graph-node';
-
-const db = new GraphDB({ path: './data/graph' });
-
-// Create nodes and relationships
-await db.query(`
-  CREATE (a:Agent {name: 'coder', type: 'specialist'})
-  CREATE (b:Agent {name: 'reviewer', type: 'specialist'})
-  CREATE (a)-[:COLLABORATES_WITH {weight: 0.9}]->(b)
-`);
-
-// Query patterns
-const result = await db.query(`
-  MATCH (a:Agent)-[r:COLLABORATES_WITH]->(b:Agent)
-  WHERE r.weight > 0.8
-  RETURN a.name, b.name, r.weight
-`);
-
-// Hypergraph support for multi-agent coordination
-await db.createHyperedge(['agent-1', 'agent-2', 'agent-3'], {
-  type: 'consensus',
-  topic: 'architecture-decision'
-});
-```
-
-**Performance vs WASM:**
-- 10x faster query execution
-- Native memory management
-- Zero-copy data transfer
-
-</details>
-
-### Integration with Hive Flow
-
-Hive Flow automatically uses RuVector when available:
-
-```typescript
-// Hive Flow detects and uses native ruvector
-import { getVectorStore } from '@hive-flow/memory';
-
-const store = await getVectorStore();
-// Uses ruvector if installed, falls back to sql.js
-
-// HNSW-indexed search (150x faster)
-const results = await store.search(queryVector, 10);
-
-// Flash Attention for pattern matching
-const attention = await getFlashAttention();
-const similarity = attention.attention(queries, keys, values);
-```
-
-### CLI Commands
-
-```bash
-# RuVector PostgreSQL Setup (generates Docker files + SQL)
-hive-flow ruvector setup                    # Output to ./ruvector-postgres
-hive-flow ruvector setup --output ./mydir   # Custom directory
-hive-flow ruvector setup --print            # Preview files
-
-# Import from sql.js/JSON to PostgreSQL
-hive-flow ruvector import --input data.json              # Direct import
-hive-flow ruvector import --input data.json --output sql # Dry-run (generate SQL)
-
-# Other RuVector commands
-hive-flow ruvector status --verbose         # Check connection
-hive-flow ruvector benchmark --vectors 10000 # Performance test
-hive-flow ruvector optimize --analyze       # Optimization suggestions
-hive-flow ruvector backup --output backup.sql # Backup data
-
-# Native ruvector CLI
-npx ruvector status                               # Check installation
-npx ruvector benchmark --vectors 10000 --dimensions 384
-```
-
-**Generated Setup Files:**
-```
-ruvector-postgres/
-├── docker-compose.yml    # Docker services (PostgreSQL + pgAdmin)
-├── README.md             # Quick start guide
-└── scripts/
-    └── init-db.sql       # Database initialization (tables, indexes, functions)
-```
 
 </details>
 
@@ -5931,7 +5385,7 @@ Detection Time: 0.04ms | 50+ Patterns | Self-Learning | HNSW Vector Search
 | **Threat Detection** | <10ms | **0.04ms** | 250x faster |
 | **Quick Scan** | <5ms | **0.02ms** | Pattern-only |
 | **PII Detection** | <3ms | **0.01ms** | Regex-based |
-| **HNSW Search** | <1ms | **0.1ms** | With AgentDB |
+| **Vector Search** | indexed lookup | AgentDB-backed | With HNSW support |
 | **Single-threaded** | - | - | >12,000 req/s |
 | **With Learning** | - | - | >8,000 req/s |
 
@@ -6089,7 +5543,7 @@ Domain-Driven Design with bounded contexts, clean architecture, and measured per
 | `@hive-flow/memory` | Unified vector storage | AgentDB, RVF binary format, HnswLite, RvfMigrator, SONA persistence, LearningBridge, MemoryGraph |
 | `@hive-flow/security` | CVE remediation | Input validation, path security, AIDefence |
 | `@hive-flow/swarm` | Multi-agent coordination | 6 topologies, Byzantine consensus, auto-scaling |
-| `@hive-flow/plugins` | WASM extensions | RuVector plugins, semantic search, intent routing |
+| `@hive-flow/plugins` | Plugin SDK | Semantic search, intent routing, lifecycle extensions |
 | `@hive-flow/cli` | Command interface | 26 commands, 140+ subcommands, shell completions |
 | `@hive-flow/neural` | Self-learning | SONA, 9 RL algorithms, EWC++ memory preservation |
 | `@hive-flow/testing` | Quality assurance | London School TDD, Vitest, fixtures, mocks |
@@ -6117,7 +5571,7 @@ Domain-Driven Design with bounded contexts, clean architecture, and measured per
 | **Memory** | Pattern retrieval | <10ms | ✅ 6ms |
 | **Swarm** | Agent spawn | <200ms | ✅ 150ms |
 | **Swarm** | Consensus latency | <100ms | ✅ 75ms |
-| **Neural** | SONA adaptation | <0.05ms | ✅ 0.03ms |
+| **Neural** | SONA adaptation | Low latency | Target tracked |
 | **Graph** | Build (1k nodes) | <200ms | ✅ 2.78ms (71.9x headroom) |
 | **Graph** | PageRank (1k nodes) | <100ms | ✅ 12.21ms (8.2x headroom) |
 | **Learning** | Insight recording | <5ms | ✅ 0.12ms (41x headroom) |
@@ -6381,7 +5835,7 @@ Statistical benchmarking, memory tracking, regression detection, and V3 performa
 | **Auto-Calibration** | Adjusts iterations for statistical significance | Automatic |
 | **Regression Detection** | Compare against baselines with significance testing | <10ms |
 | **V3 Targets** | Built-in targets for all performance metrics | Preconfigured |
-| **Flash Attention** | Validate 2.49x-7.47x speedup targets | Integrated |
+| **Flash Attention** | Validate local attention benchmark targets | Integrated |
 
 ### Quick Start
 
@@ -6415,7 +5869,7 @@ V3_PERFORMANCE_TARGETS = {
   'agent-spawn': 200,           // <200ms (4x faster)
 
   // Memory Operations
-  'vector-search': 1,           // <1ms (150x faster)
+  'vector-search': 1,           // <1ms target
   'hnsw-indexing': 10,          // <10ms
   'memory-write': 5,            // <5ms (10x faster)
   'cache-hit': 0.1,             // <0.1ms
@@ -6427,7 +5881,7 @@ V3_PERFORMANCE_TARGETS = {
   'message-throughput': 0.1,    // <0.1ms per message
 
   // SONA Learning
-  'sona-adaptation': 0.05       // <0.05ms
+  'sona-adaptation': 0.05       // low-latency target
 };
 
 // Check if target is met
@@ -6803,9 +6257,9 @@ const duration = perf.endMeasurement('search');
 const stats = perf.getStats('search');
 console.log(`Avg: ${stats.avg}ms, P95: ${stats.p95}ms`);
 
-// V3 targets
-console.log(TEST_CONFIG.FLASH_ATTENTION_SPEEDUP_MIN); // 2.49
-console.log(TEST_CONFIG.AGENTDB_SEARCH_IMPROVEMENT_MAX); // 12500
+// Reuse shared timeout thresholds in benchmark-style tests
+const withinIntegrationBudget = stats.p95 <= TEST_CONFIG.INTEGRATION_TIMEOUT;
+console.log(`Within integration budget: ${withinIntegrationBudget}`);
 ```
 
 ### Best Practices
@@ -7424,7 +6878,7 @@ export hive_FLOW_HNSW_EF=100
 ┌─────────────────────────────────────────────────────────────┐
 │                    V2 → V3 IMPROVEMENTS                     │
 ├───────────────────────┬─────────────────────────────────────┤
-│ Memory Search         │ 150x - 12,500x faster (HNSW)        │
+│ Memory Search         │ AgentDB vector search with HNSW     │
 │ Pattern Matching      │ Self-learning (ReasoningBank)       │
 │ Security              │ CVE remediation + strict validation │
 │ Modular Architecture  │ 18 @hive-flow/* packages          │
@@ -7584,7 +7038,7 @@ cp -r ./data-backup-v2 ./data
 | `@hive-flow/mcp` | MCP server & tools | [Source](./v3/@hive-flow/mcp/) |
 | `@hive-flow/embeddings` | Vector embedding providers | [Source](./v3/@hive-flow/embeddings/) |
 | `@hive-flow/providers` | LLM provider integrations | [Source](./v3/@hive-flow/providers/) |
-| `@hive-flow/integration` | agentic-flow@alpha integration | [Source](./v3/@hive-flow/integration/) |
+| `@hive-flow/integration` | Optional agentic-flow@alpha integration | [Source](./v3/@hive-flow/integration/) |
 | `@hive-flow/performance` | Benchmarking & optimization | [Source](./v3/@hive-flow/performance/) |
 | `@hive-flow/deployment` | Release & CI/CD | [Source](./v3/@hive-flow/deployment/) |
 | `@hive-flow/shared` | Shared utilities, types & V3ProgressService | [Source](./v3/@hive-flow/shared/) |
