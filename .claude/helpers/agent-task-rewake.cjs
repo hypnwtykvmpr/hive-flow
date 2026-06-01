@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 //
-// Agent Task Rewake — PostToolUse(async) hook on mcp__hive-flow__agent_task
+// Agent Task Rewake — PostToolUse(asyncRewake) hook on mcp__hive-flow__agent_task
 //
 // PURPOSE
 //   Fixes the Sentinel Protocol gap where MCP `agent_task` completion never
@@ -18,7 +18,7 @@
 //      drained into additionalContext by the UserPromptSubmit `drain-notifications`
 //      hook on the human's next message).
 //   3. It then exits with code 2 and a `[TASK COMPLETE: <taskId>]` summary on
-//      stderr — the documented async-rewake path that wakes Claude immediately
+//      stderr — the documented asyncRewake path that wakes Claude immediately
 //      on platforms that support it. Where it isn't supported, layer 2 still
 //      delivers, so this is never worse than the prior manual-poll-only state.
 //
@@ -26,8 +26,8 @@
 //   - Fail-open: every error path exits 0 with no output (never blocks/breaks).
 //   - Idempotent: a `.hive-flow/data/task-<id>.notified` sentinel prevents
 //     double-notifying the same task.
-//   - Bounded: gives up after MAX_WAIT_MS so a never-finishing task can't leak
-//     a hung hook process.
+//   - Bounded: wakes Claude at MAX_WAIT_MS to check progress, then relies on
+//     agent_task_result PostToolUse to restart the monitor if still running.
 //   - tmux-free: no tmux dependency anywhere in this path.
 
 'use strict';
@@ -35,8 +35,16 @@
 const fs = require('fs');
 const path = require('path');
 
-const MAX_WAIT_MS = 30 * 60 * 1000; // 30 min cap; abandon quietly after this
-const POLL_MS = 1500;
+const DEFAULT_MAX_WAIT_MS = 30 * 60 * 1000;
+const DEFAULT_POLL_MS = 1500;
+
+function positiveIntFromEnv(name, fallback) {
+  const n = Number(process.env[name]);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : fallback;
+}
+
+const MAX_WAIT_MS = positiveIntFromEnv('HIVE_FLOW_REWAKE_MAX_WAIT_MS', DEFAULT_MAX_WAIT_MS);
+const POLL_MS = positiveIntFromEnv('HIVE_FLOW_REWAKE_POLL_MS', DEFAULT_POLL_MS);
 
 function projectDir() {
   return process.env.CLAUDE_PROJECT_DIR || process.cwd();
@@ -59,6 +67,8 @@ function extractTaskId(raw) {
   try {
     const obj = JSON.parse(raw);
     const candidates = [
+      obj?.tool_input,
+      obj?.toolInput,
       obj?.tool_response,
       obj?.toolResponse,
       obj?.tool_result,
@@ -107,6 +117,10 @@ function appendPending(dataDir, line) {
   }
 }
 
+function timeoutSummary(taskId) {
+  return `[TASK CHECK DUE: ${taskId}] Background agent task is still pending after ${Math.round(MAX_WAIT_MS / 60000)} minute(s). Call agent_task_result({taskId:"${taskId}"}). If status is running, continue waiting; the PostToolUse hook will restart this monitor.`;
+}
+
 async function main() {
   const raw = readStdin();
   const taskId = extractTaskId(raw);
@@ -153,8 +167,13 @@ async function main() {
     }
     await new Promise((res) => setTimeout(res, POLL_MS));
   }
-  // Timed out waiting; give up quietly (fail-open).
-  process.exit(0);
+  const summary = timeoutSummary(taskId);
+  appendPending(
+    dataDir,
+    JSON.stringify({ kind: 'task-check', taskId, ts: new Date().toISOString(), summary }),
+  );
+  process.stderr.write(summary + '\n');
+  process.exit(2);
 }
 
 main().catch(() => process.exit(0));

@@ -97,6 +97,88 @@ const DEFAULT_OPTIONS: Required<MCPServerOptions> = {
   timeout: 30000,
 };
 
+export type MCPClientKind = 'claude' | 'codex' | 'unknown';
+
+type HiveStatusNotificationInput = Pick<HiveRecord, 'hiveId' | 'queenId' | 'status' | 'updatedAt' | 'completedAt' | 'error'>;
+
+function readNestedString(value: unknown, keys: readonly string[]): string | undefined {
+  let current = value;
+  for (const key of keys) {
+    if (!current || typeof current !== 'object' || !(key in current)) {
+      return undefined;
+    }
+    current = (current as Record<string, unknown>)[key];
+  }
+  return typeof current === 'string' ? current : undefined;
+}
+
+function classifyClientText(text: string): MCPClientKind {
+  const normalized = text.toLowerCase();
+  if (normalized.includes('codex')) return 'codex';
+  if (normalized.includes('claude')) return 'claude';
+  return 'unknown';
+}
+
+export function classifyMCPClient(
+  params: unknown,
+  env: Record<string, string | undefined> = process.env,
+): MCPClientKind {
+  const clientInfoText = [
+    readNestedString(params, ['clientInfo', 'name']),
+    readNestedString(params, ['clientInfo', 'title']),
+    readNestedString(params, ['clientInfo', 'version']),
+  ]
+    .filter((value): value is string => Boolean(value))
+    .join(' ');
+
+  const clientInfoKind = classifyClientText(clientInfoText);
+  if (clientInfoKind !== 'unknown') return clientInfoKind;
+
+  const envText = [
+    env.CODEX_HOME ? `CODEX_HOME ${env.CODEX_HOME}` : undefined,
+    env.CODEX_SANDBOX ? `CODEX_SANDBOX ${env.CODEX_SANDBOX}` : undefined,
+    env.CLAUDE_PROJECT_DIR ? `CLAUDE_PROJECT_DIR ${env.CLAUDE_PROJECT_DIR}` : undefined,
+    env.CLAUDECODE ? `CLAUDECODE ${env.CLAUDECODE}` : undefined,
+    env.CLAUDE_CODE ? `CLAUDE_CODE ${env.CLAUDE_CODE}` : undefined,
+  ]
+    .filter((value): value is string => Boolean(value))
+    .join(' ');
+
+  return classifyClientText(envText);
+}
+
+export function buildHiveStatusNotification(
+  hive: HiveStatusNotificationInput,
+  clientKind: MCPClientKind = 'unknown',
+) {
+  const failed = hive.status === 'failed' || hive.status === 'terminated';
+  const reviewAction = clientKind === 'codex'
+    ? 'Codex should call hive_poll_workers or queen_collect_results to pick up the finished hive.'
+    : clientKind === 'claude'
+      ? 'Claude may also receive an asyncRewake hook; call hive_poll_workers or queen_collect_results to review.'
+      : 'Call hive_poll_workers or queen_collect_results to review.';
+
+  return {
+    jsonrpc: '2.0' as const,
+    method: 'notifications/message' as const,
+    params: {
+      level: failed ? 'error' as const : 'info' as const,
+      logger: 'hive-flow',
+      data: {
+        type: 'hive_status_update',
+        clientKind,
+        message: `Hive ${hive.hiveId} ${hive.status}. ${reviewAction}`,
+        hiveId: hive.hiveId,
+        queenId: hive.queenId,
+        status: hive.status,
+        completedAt: hive.completedAt,
+        updatedAt: hive.updatedAt,
+        error: hive.error,
+      },
+    },
+  };
+}
+
 /**
  * Stdout write queue/mutex to prevent race conditions
  */
@@ -371,6 +453,8 @@ export class MCPServerManager extends EventEmitter {
       version: VERSION,
     }));
 
+    let clientKind: MCPClientKind = 'unknown';
+
     // Handle stdin messages
     let buffer = '';
 
@@ -385,6 +469,9 @@ export class MCPServerManager extends EventEmitter {
         if (line.trim()) {
           try {
             const message = JSON.parse(line);
+            if (message && typeof message === 'object' && message.method === 'initialize') {
+              clientKind = classifyMCPClient(message.params);
+            }
             const response = await this.handleMCPMessage(message, sessionId);
             if (response) {
               this.stdoutQueue.write(JSON.stringify(response));
@@ -434,28 +521,14 @@ export class MCPServerManager extends EventEmitter {
     const HIVE_POLL_INTERVAL = 5000;
     const TERMINAL_HIVE_STATUSES = new Set<HiveStatus>(['completed', 'failed', 'terminated']);
 
-    const sendHiveStatusNotification = (hive: Pick<HiveRecord, 'hiveId' | 'queenId' | 'status' | 'updatedAt' | 'completedAt' | 'error'>) => {
+    const sendHiveStatusNotification = (hive: HiveStatusNotificationInput) => {
       if (notifiedTerminalHives.has(hive.hiveId)) {
         return;
       }
 
       notifiedTerminalHives.add(hive.hiveId);
 
-      this.stdoutQueue.write(JSON.stringify({
-        jsonrpc: '2.0',
-        method: 'notifications/message',
-        params: {
-          message: {
-            type: 'hive_status_update',
-            hiveId: hive.hiveId,
-            queenId: hive.queenId,
-            status: hive.status,
-            completedAt: hive.completedAt,
-            updatedAt: hive.updatedAt,
-            error: hive.error,
-          },
-        },
-      }));
+      this.stdoutQueue.write(JSON.stringify(buildHiveStatusNotification(hive, clientKind)));
 
       console.error(
         `[${new Date().toISOString()}] INFO [hive-flow-mcp] (${sessionId}) Hive status update: ${hive.hiveId} - ${hive.status}`

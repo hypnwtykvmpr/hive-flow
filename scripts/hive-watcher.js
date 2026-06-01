@@ -8,8 +8,9 @@
  *
  * Mechanisms:
  *   1. tmux send-keys — writes to advocate pty stdin when in tmux
- *   2. MCP logging notification — emits via stdout pipe to MCP server
- *   3. Progress file — writes .hive-flow/data/watcher-{hiveId}.json every cycle
+ *   2. Pending notification drain — writes the next-prompt fallback queue
+ *   3. MCP logging notification — emits via stdout pipe to MCP server
+ *   4. Progress file — writes .hive-flow/data/watcher-{hiveId}.json every cycle
  *
  * Stale detection: If no worker transitions (completed/failed count) change
  * across 3 consecutive cycles (each cycle = POLL_INTERVAL_MS), the hive is
@@ -348,6 +349,31 @@ function writeDoneMarker(paths, hiveId, status) {
   } catch { /* best-effort */ }
 }
 
+function appendPendingCompletion(paths, hiveId, status, summary) {
+  try {
+    const sanitized = sanitizeHiveId(hiveId);
+    if (!sanitized) return;
+    fs.mkdirSync(paths.dataDir, { recursive: true });
+    const markerPath = path.join(paths.dataDir, `hive-${sanitized}.pending-notified`);
+    if (fs.existsSync(markerPath)) return;
+
+    const line = JSON.stringify({
+      kind: 'hive',
+      hiveId,
+      ts: new Date().toISOString(),
+      summary: `[HIVE COMPLETE: ${hiveId}] All workers finished. ${summary}. Run hive_poll_workers or queen_collect_results to review.`,
+      completedCount: status.completedCount,
+      failedCount: status.failedCount,
+      idleCount: status.idleCount,
+      terminatedCount: status.terminatedCount,
+    });
+    fs.appendFileSync(path.join(paths.dataDir, 'pending-notifications.jsonl'), line + '\n');
+    const tmpPath = `${markerPath}.tmp.${process.pid}`;
+    fs.writeFileSync(tmpPath, new Date().toISOString() + '\n', 'utf8');
+    fs.renameSync(tmpPath, markerPath);
+  } catch { /* best-effort */ }
+}
+
 // ---------------------------------------------------------------------------
 // Audit log (mirrors hive-enforcement.cjs pattern)
 // ---------------------------------------------------------------------------
@@ -497,6 +523,7 @@ async function main() {
         terminatedCount: status.terminatedCount,
       });
       writeDoneMarker(paths, hiveId, status);
+      appendPendingCompletion(paths, hiveId, status, summary);
 
       // Wake advocate via tmux
       if (hasTmux) {

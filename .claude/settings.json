@@ -185,12 +185,23 @@
         ]
       },
       {
-        "matcher": "mcp__hive-flow__agent_task|mcp__hive-flow__agent_task_async",
+        "matcher": "mcp__hive-flow__agent_task|mcp__hive-flow__agent_task_async|mcp__hive-flow__agent_task_result",
         "hooks": [
           {
             "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/agent-task-rewake.cjs",
-            "async": true,
+            "asyncRewake": true,
+            "timeout": 1800000
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__hive-flow__queen_mission_assign|mcp__hive-flow__hive_poll_workers",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/hive-completion-rewake.cjs",
+            "asyncRewake": true,
             "timeout": 1800000
           }
         ]
