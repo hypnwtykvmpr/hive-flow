@@ -112,13 +112,65 @@ function appendPending(dataDir, line) {
   try {
     fs.mkdirSync(dataDir, { recursive: true });
     fs.appendFileSync(path.join(dataDir, 'pending-notifications.jsonl'), line + '\n');
+    return true;
   } catch {
     /* fail-open */
+    return false;
   }
 }
 
 function timeoutSummary(taskId) {
   return `[TASK CHECK DUE: ${taskId}] Background agent task is still pending after ${Math.round(MAX_WAIT_MS / 60000)} minute(s). Call agent_task_result({taskId:"${taskId}"}). If status is running, continue waiting; the PostToolUse hook will restart this monitor.`;
+}
+
+function claimNotifiedMarker(notifiedMarker) {
+  let fd = null;
+  try {
+    fs.mkdirSync(path.dirname(notifiedMarker), { recursive: true });
+    fd = fs.openSync(notifiedMarker, 'wx');
+    fs.writeFileSync(fd, String(Date.now()));
+    return true;
+  } catch {
+    return false;
+  } finally {
+    if (fd !== null) {
+      try { fs.closeSync(fd); } catch { /* noop */ }
+    }
+  }
+}
+
+function releaseNotifiedMarker(notifiedMarker) {
+  try { fs.unlinkSync(notifiedMarker); } catch { /* noop */ }
+}
+
+function notifyCompletedTaskIfReady(projectRoot, taskId) {
+  const dataDir = path.join(projectRoot, '.hive-flow', 'data');
+  const resultPath = path.join(projectRoot, '.hive-flow', 'tasks', `${taskId}.result.json`);
+  const notifiedMarker = path.join(dataDir, `task-${taskId}.notified`);
+
+  let done = false;
+  try {
+    done = fs.existsSync(resultPath);
+  } catch {
+    done = false;
+  }
+  if (!done) return { notified: false, reason: 'pending' };
+
+  if (!claimNotifiedMarker(notifiedMarker)) {
+    return { notified: false, reason: 'already-notified' };
+  }
+
+  const summary = summarizeResult(resultPath, taskId);
+  const appended = appendPending(
+    dataDir,
+    JSON.stringify({ taskId, ts: new Date().toISOString(), summary }),
+  );
+  if (!appended) {
+    releaseNotifiedMarker(notifiedMarker);
+    return { notified: false, reason: 'append-failed' };
+  }
+
+  return { notified: true, summary };
 }
 
 async function main() {
@@ -127,12 +179,9 @@ async function main() {
   if (!taskId) process.exit(0); // not an agent_task dispatch we can track
 
   const dir = projectDir();
-  const dataDir = path.join(dir, '.hive-flow', 'data');
-  const resultPath = path.join(dir, '.hive-flow', 'tasks', `${taskId}.result.json`);
-  const notifiedMarker = path.join(dataDir, `task-${taskId}.notified`);
-
   // Idempotency: never notify the same task twice.
   try {
+    const notifiedMarker = path.join(dir, '.hive-flow', 'data', `task-${taskId}.notified`);
     if (fs.existsSync(notifiedMarker)) process.exit(0);
   } catch {
     process.exit(0);
@@ -140,40 +189,37 @@ async function main() {
 
   const deadline = Date.now() + MAX_WAIT_MS;
   while (Date.now() < deadline) {
-    let done = false;
-    try {
-      done = fs.existsSync(resultPath);
-    } catch {
-      done = false;
-    }
-    if (done) {
-      const summary = summarizeResult(resultPath, taskId);
-      // Layer 2: guaranteed-delivery marker (drained on next user prompt).
-      appendPending(
-        dataDir,
-        JSON.stringify({ taskId, ts: new Date().toISOString(), summary }),
-      );
-      // Mark notified (atomic-ish: write tmp + rename).
-      try {
-        const tmp = notifiedMarker + '.tmp';
-        fs.writeFileSync(tmp, String(Date.now()));
-        fs.renameSync(tmp, notifiedMarker);
-      } catch {
-        /* fail-open */
-      }
+    const result = notifyCompletedTaskIfReady(dir, taskId);
+    if (result.notified) {
       // Layer 3: async-rewake attempt — stderr summary + exit 2.
-      process.stderr.write(summary + '\n');
+      process.stderr.write(result.summary + '\n');
       process.exit(2);
     }
+    if (result.reason === 'already-notified') process.exit(0);
     await new Promise((res) => setTimeout(res, POLL_MS));
   }
   const summary = timeoutSummary(taskId);
   appendPending(
-    dataDir,
+    path.join(dir, '.hive-flow', 'data'),
     JSON.stringify({ kind: 'task-check', taskId, ts: new Date().toISOString(), summary }),
   );
   process.stderr.write(summary + '\n');
   process.exit(2);
 }
 
-main().catch(() => process.exit(0));
+if (require.main === module) {
+  main().catch(() => process.exit(0));
+}
+
+module.exports = {
+  positiveIntFromEnv,
+  projectDir,
+  extractTaskId,
+  summarizeResult,
+  appendPending,
+  timeoutSummary,
+  claimNotifiedMarker,
+  releaseNotifiedMarker,
+  notifyCompletedTaskIfReady,
+  main,
+};

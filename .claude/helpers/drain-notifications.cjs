@@ -22,52 +22,110 @@ function projectDir() {
   return process.env.CLAUDE_PROJECT_DIR || process.cwd();
 }
 
-try {
-  const file = path.join(projectDir(), '.hive-flow', 'data', 'pending-notifications.jsonl');
-  if (!fs.existsSync(file)) {
-    process.stdout.write('{}');
-    process.exit(0);
-  }
-  const raw = fs.readFileSync(file, 'utf8');
-  const lines = raw.split('\n').map((l) => l.trim()).filter(Boolean);
-  if (lines.length === 0) {
-    process.stdout.write('{}');
-    process.exit(0);
+function emptyOutput() {
+  return {};
+}
+
+function pendingFile(projectRoot) {
+  return path.join(projectRoot, '.hive-flow', 'data', 'pending-notifications.jsonl');
+}
+
+function collectDrainFiles(file) {
+  const dir = path.dirname(file);
+  const base = path.basename(file);
+  const files = [];
+
+  try {
+    if (fs.existsSync(dir)) {
+      for (const entry of fs.readdirSync(dir)) {
+        if (entry.startsWith(`${base}.draining-`)) {
+          files.push(path.join(dir, entry));
+        }
+      }
+    }
+  } catch {
+    return files;
   }
 
-  const summaries = [];
+  try {
+    if (fs.existsSync(file)) {
+      const draining = `${file}.draining-${process.pid}-${Date.now()}`;
+      fs.renameSync(file, draining);
+      files.push(draining);
+    }
+  } catch {
+    // If another hook is draining concurrently, let that owner finish.
+  }
+
+  return files;
+}
+
+function parseSummariesFromLines(lines) {
+  const summaries = new Map();
   for (const line of lines) {
     try {
       const obj = JSON.parse(line);
-      if (obj && obj.summary) summaries.push(`- ${obj.summary}`);
+      if (obj && obj.summary) {
+        const key = obj.taskId || obj.hiveId || obj.summary;
+        if (!summaries.has(key)) summaries.set(key, `- ${obj.summary}`);
+      }
     } catch {
       /* skip corrupt line */
     }
   }
+  return [...summaries.values()];
+}
 
-  // Truncate so these surface exactly once (atomic-ish: write empty via tmp+rename).
-  try {
-    const tmp = file + '.tmp';
-    fs.writeFileSync(tmp, '');
-    fs.renameSync(tmp, file);
-  } catch {
-    /* fail-open: if we can't truncate, better to risk a repeat than to drop */
+function drainNotifications(projectRoot = projectDir()) {
+  const file = pendingFile(projectRoot);
+  const drainFiles = collectDrainFiles(file);
+  if (drainFiles.length === 0) return emptyOutput();
+
+  const lines = [];
+  for (const drainFile of drainFiles) {
+    try {
+      const raw = fs.readFileSync(drainFile, 'utf8');
+      lines.push(...raw.split('\n').map((l) => l.trim()).filter(Boolean));
+    } catch {
+      // Leave unread files in place so a future prompt can retry.
+      continue;
+    }
+  }
+
+  const summaries = parseSummariesFromLines(lines);
+
+  // Remove only after parsing; an interruption before this point leaves a
+  // .draining-* file that the next run recovers.
+  for (const drainFile of drainFiles) {
+    try { fs.unlinkSync(drainFile); } catch { /* retry on a future run */ }
   }
 
   if (summaries.length === 0) {
-    process.stdout.write('{}');
-    process.exit(0);
+    return emptyOutput();
   }
 
   const context = `Hive Flow — background agent task(s) completed since your last message:\n${summaries.join('\n')}`;
-  process.stdout.write(
-    JSON.stringify({
-      hookSpecificOutput: {
-        hookEventName: 'UserPromptSubmit',
-        additionalContext: context,
-      },
-    }),
-  );
-} catch {
-  try { process.stdout.write('{}'); } catch { /* noop */ }
+  return {
+    hookSpecificOutput: {
+      hookEventName: 'UserPromptSubmit',
+      additionalContext: context,
+    },
+  };
 }
+
+if (require.main === module) {
+  try {
+    process.stdout.write(JSON.stringify(drainNotifications()));
+  } catch {
+    try { process.stdout.write('{}'); } catch { /* noop */ }
+  }
+}
+
+module.exports = {
+  projectDir,
+  emptyOutput,
+  pendingFile,
+  collectDrainFiles,
+  parseSummariesFromLines,
+  drainNotifications,
+};
