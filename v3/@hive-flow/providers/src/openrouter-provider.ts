@@ -50,8 +50,8 @@ interface OpenRouterResponse {
 }
 
 const DEFAULT_MODELS: LLMModel[] = [
-  'xiaomi/mimo-v2.5-pro', 'x-ai/grok-4.3', 'minimax/minimax-m2.7',
-  'moonshotai/kimi-k2.6', 'qwen/qwen3.6-max-preview', 'z-ai/glm-5.1',
+  'xiaomi/mimo-v2.5-pro', 'x-ai/grok-4.3', 'minimax/minimax-m3',
+  'moonshotai/kimi-k2.6', 'qwen/qwen3.7-max', 'z-ai/glm-5.1',
   'qwen/qwen3.6-plus', 'nvidia/nemotron-3-super-120b-a12b:free', 'deepseek/deepseek-v4-flash',
 ];
 
@@ -60,13 +60,13 @@ export class OpenRouterProvider extends BaseProvider {
   readonly capabilities: ProviderCapabilities = {
     supportedModels: [...DEFAULT_MODELS],
     maxContextLength: {
-      'xiaomi/mimo-v2.5-pro': 1048576, 'x-ai/grok-4.3': 2000000, 'minimax/minimax-m2.7': 204800,
-      'moonshotai/kimi-k2.6': 262144, 'qwen/qwen3.6-max-preview': 262144, 'z-ai/glm-5.1': 202752,
+      'xiaomi/mimo-v2.5-pro': 1048576, 'x-ai/grok-4.3': 2000000, 'minimax/minimax-m3': 204800,
+      'moonshotai/kimi-k2.6': 262144, 'qwen/qwen3.7-max': 262144, 'z-ai/glm-5.1': 202752,
       'qwen/qwen3.6-plus': 1000000, 'nvidia/nemotron-3-super-120b-a12b:free': 262144, 'deepseek/deepseek-v4-flash': 1000000,
     },
     maxOutputTokens: {
-      'xiaomi/mimo-v2.5-pro': 32768, 'x-ai/grok-4.3': 32768, 'minimax/minimax-m2.7': 32768,
-      'moonshotai/kimi-k2.6': 32768, 'qwen/qwen3.6-max-preview': 32768, 'z-ai/glm-5.1': 32768,
+      'xiaomi/mimo-v2.5-pro': 32768, 'x-ai/grok-4.3': 32768, 'minimax/minimax-m3': 32768,
+      'moonshotai/kimi-k2.6': 32768, 'qwen/qwen3.7-max': 32768, 'z-ai/glm-5.1': 32768,
       'qwen/qwen3.6-plus': 32768, 'nvidia/nemotron-3-super-120b-a12b:free': 32768, 'deepseek/deepseek-v4-flash': 32768,
     },
     supportsStreaming: true,

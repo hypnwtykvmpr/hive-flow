@@ -52,7 +52,7 @@ describe('hooks statusline delegation (§12.4)', () => {
     const projectCwd = makeFixture();
     const sample = JSON.stringify({
       workspace: { current_dir: projectCwd, project_dir: projectCwd },
-      model: { id: 'claude-opus-4-7[1m]', display_name: 'Opus 4.7' },
+      model: { id: 'claude-opus-4-8[1m]', display_name: 'Opus 4.8' },
       context_window: { used_percentage: 12 },
     });
 
@@ -69,10 +69,10 @@ describe('hooks statusline delegation (§12.4)', () => {
 
     expect(top.status).toBe(0);
     expect(hook.status).toBe(0);
-    // The renderer emits "Opus 4.7" from stdin's display_name and appends " 1M"
+    // The renderer emits "Opus 4.8" from stdin's display_name and appends " 1M"
     // when the id matches [1m] (case-insensitive). Both transports should
     // contain the model display.
-    expect(hook.stdout).toContain('Opus 4.7');
+    expect(hook.stdout).toContain('Opus 4.8');
     // Regression fence: legacy fake "DDD Domains" row must not surface from
     // either the hooks subcommand or the canonical command after Wave 2
     // consolidation removed the inline collectors.
@@ -91,7 +91,7 @@ describe('hooks statusline delegation (§12.4)', () => {
     try {
       const sample = JSON.stringify({
         workspace: { current_dir: projectCwd, project_dir: projectCwd },
-        model: { id: 'claude-opus-4-7[1m]', display_name: 'Opus 4.7' },
+        model: { id: 'claude-opus-4-8[1m]', display_name: 'Opus 4.8' },
         context_window: { used_percentage: 12 },
       });
 
@@ -146,7 +146,7 @@ describe('hooks statusline delegation (§12.4)', () => {
     const cwd = makeFixture();
     const stdinData = {
       workspace: { current_dir: cwd, project_dir: cwd },
-      model: { display_name: 'Opus 4.7' },
+      model: { display_name: 'Opus 4.8' },
     };
 
     // Warm any per-cwd caches (e.g., the tmpdir-keyed spawn cache used by

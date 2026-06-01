@@ -32,18 +32,18 @@ export type CLIProviderName = 'anthropic-cli' | 'gemini-cli' | 'codex-cli' | 'cu
  */
 export const PROVIDER_ALIAS_MAP: Record<CLIProviderName, Record<string, string | undefined>> = {
   'anthropic-cli': {
-    'opus': 'claude-opus-4-7',
+    'opus': 'claude-opus-4-8',
     'sonnet': 'claude-sonnet-4-6',
     'haiku': 'claude-sonnet-4-6',
     'mini': 'claude-sonnet-4-6',
     'inherit': undefined,  // Let claude -p use its default
   },
   'gemini-cli': {
-    'opus': 'gemini-3.1-pro-preview',
-    'sonnet': 'gemini-3.1-pro-preview',
-    'haiku': 'gemini-3.1-pro-preview',  // haiku alias → same as sonnet
-    'mini': 'gemini-3.1-pro-preview',   // mini alias → same as sonnet
-    'inherit': 'gemini-3.1-pro-preview',
+    'opus': 'gemini-3.5-flash',
+    'sonnet': 'gemini-3.5-flash',
+    'haiku': 'gemini-3.5-flash',  // haiku alias → same as sonnet
+    'mini': 'gemini-3.5-flash',   // mini alias → same as sonnet
+    'inherit': 'gemini-3.5-flash',
   },
   'codex-cli': {
     'opus': 'gpt-5.5',
@@ -77,8 +77,8 @@ export const PROVIDER_ALIAS_MAP: Record<CLIProviderName, Record<string, string |
 
 /** Default models when no model is specified at all */
 export const PROVIDER_DEFAULTS: Record<CLIProviderName, string | undefined> = {
-  'anthropic-cli': 'claude-opus-4-7',
-  'gemini-cli': 'gemini-3.1-pro-preview',
+  'anthropic-cli': 'claude-opus-4-8',
+  'gemini-cli': 'gemini-3.5-flash',
   'codex-cli': 'gpt-5.5',
   'cursor-cli': 'auto',
   'deepseek': 'deepseek-v4-pro',
@@ -94,14 +94,14 @@ export const PROVIDER_DEFAULTS: Record<CLIProviderName, string | undefined> = {
  */
 export const KNOWN_PROVIDER_MODELS: Record<CLIProviderName, Set<string>> = {
   'anthropic-cli': new Set([
-    'claude-sonnet-4-6', 'claude-opus-4-7', 'claude-opus-4-6', 'claude-haiku-4-5-20251001',
+    'claude-sonnet-4-6', 'claude-opus-4-8', 'claude-opus-4-6', 'claude-haiku-4-5-20251001',
     'claude-3-5-sonnet-20241022', 'claude-3-5-sonnet-latest',
     'claude-3-opus-20240229', 'claude-3-sonnet-20240229',
     'claude-3-haiku-20240307',
   ]),
   'gemini-cli': new Set([
     'auto', 'gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.5-pro',
-    'gemini-3.1-flash-lite-preview', 'gemini-3.1-pro-preview',
+    'gemini-3.1-flash-lite-preview', 'gemini-3.5-flash',
   ]),
   'codex-cli': new Set([
     'gpt-5.5', 'gpt-5.4', 'gpt-5.3-codex', 'gpt-5.2-codex', 'gpt-5.1-codex-max',
@@ -122,8 +122,8 @@ export const KNOWN_PROVIDER_MODELS: Record<CLIProviderName, Set<string>> = {
     'deepseek-v4-pro', 'deepseek-v4-flash',
   ]),
   'openrouter': new Set([
-    'xiaomi/mimo-v2.5-pro', 'x-ai/grok-4.3', 'minimax/minimax-m2.7',
-    'moonshotai/kimi-k2.6', 'qwen/qwen3.6-max-preview', 'z-ai/glm-5.1',
+    'xiaomi/mimo-v2.5-pro', 'x-ai/grok-4.3', 'minimax/minimax-m3',
+    'moonshotai/kimi-k2.6', 'qwen/qwen3.7-max', 'z-ai/glm-5.1',
     'qwen/qwen3.6-plus', 'nvidia/nemotron-3-super-120b-a12b:free', 'deepseek/deepseek-v4-flash',
   ]),
 };
@@ -191,7 +191,7 @@ export function resolveProviderModel(
     return 'auto';
   }
   if (cliProvider === 'gemini-cli') {
-    return 'gemini-3.1-pro-preview';
+    return 'gemini-3.5-flash';
   }
   if (cliProvider === 'codex-cli') {
     return 'gpt-5.5';
@@ -201,7 +201,7 @@ export function resolveProviderModel(
   // Tightened to block cross-provider leaks (e.g. 'gpt-5-codex-mini') while still
   // mapping canonical aliases and legacy Anthropic names to the sonnet tier.
   if (cliProvider === 'anthropic-cli') {
-    if (!userModel || userModel === '') return 'claude-opus-4-7'; // default
+    if (!userModel || userModel === '') return 'claude-opus-4-8'; // default
     const lower = userModel.toLowerCase();
     // Exact alias match
     if (lower === 'sonnet' || lower === 'haiku' || lower === 'mini') {
@@ -211,7 +211,7 @@ export function resolveProviderModel(
     if (lower.startsWith('claude-') && (lower.includes('sonnet') || lower.includes('haiku'))) {
       return 'claude-sonnet-4-6';
     }
-    return 'claude-opus-4-7';  // default
+    return 'claude-opus-4-8';  // default
   }
 
   // deepseek → token-anchored alias / legacy-name resolution
@@ -245,7 +245,7 @@ export function resolveProviderModel(
  */
 export const DEFAULT_CONTEXT_WINDOWS: Record<string, number> = {
   // Anthropic
-  'claude-opus-4-7': 1_000_000,
+  'claude-opus-4-8': 1_000_000,
   'claude-opus-4-6': 1_000_000,
   'claude-sonnet-4-6': 200_000,
   'claude-haiku-4-5-20251001': 200_000,
@@ -255,7 +255,7 @@ export const DEFAULT_CONTEXT_WINDOWS: Record<string, number> = {
   'claude-3-sonnet-20240229': 200_000,
   'claude-3-haiku-20240307': 200_000,
   // Gemini
-  'gemini-3.1-pro-preview': 1_000_000,
+  'gemini-3.5-flash': 1_000_000,
   'gemini-2.5-pro': 1_000_000,
   'gemini-2.5-flash': 1_000_000,
   'gemini-2.5-flash-lite': 1_000_000,

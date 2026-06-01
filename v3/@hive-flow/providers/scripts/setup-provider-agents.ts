@@ -21,7 +21,7 @@ const PROVIDER_AGENT_TYPES = [
     name: 'gemini-researcher',
     description: 'Research agent powered by Google Gemini CLI',
     provider: 'gemini-cli',
-    defaultModel: 'gemini-3.1-pro-preview',
+    defaultModel: 'gemini-3.5-flash',
     capabilities: ['code-analysis', 'architecture-review', 'documentation', 'research'],
   },
   {

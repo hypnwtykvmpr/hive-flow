@@ -167,7 +167,7 @@ function writeSnapshot(projectRoot: string, overrides: Partial<StatuslineSnapsho
 function stdinPayload(extra: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     workspace: { current_dir: '', project_dir: '' },
-    model: { id: 'claude-opus-4-7[1m]', display_name: 'Opus 4.7' },
+    model: { id: 'claude-opus-4-8[1m]', display_name: 'Opus 4.8' },
     context_window: {
       used_percentage: 45,
       total_input_tokens: 82_000,
@@ -252,7 +252,7 @@ describe('claude-code statusline renderer (Phase 12)', () => {
     const plain = stripAnsi(output);
     expect(plain).toContain('fixture-project');
     expect(plain).toContain('main');
-    expect(plain).toContain('Opus 4.7');
+    expect(plain).toContain('Opus 4.8');
     expect(plain).toContain('45% ctx');
     expect(plain).toContain('Swarm');
     expect(plain).toMatch(/\[\s*7\/50\]/);
@@ -307,7 +307,7 @@ describe('claude-code statusline renderer (Phase 12)', () => {
     const plain = stripAnsi(rendered);
     // The inline-collector populates swarm; we expect it to render.
     expect(plain).toContain('Swarm');
-    expect(plain).toContain('Opus 4.7');
+    expect(plain).toContain('Opus 4.8');
 
     // Mode must be `inline-collector` in the last-render record.
     // We don't know the projectKey ahead of time (project scope derives it).
@@ -325,7 +325,7 @@ describe('claude-code statusline renderer (Phase 12)', () => {
     // Wrapper-contract path: pure renderer + writeLastRender persistence.
     const { rendered } = await renderAndPersist(stdinPayload(), fix.projectRoot);
     const plain = stripAnsi(rendered);
-    expect(plain).toContain('Opus 4.7');
+    expect(plain).toContain('Opus 4.8');
     expect(plain).toContain('45% ctx');
     // No swarm / memory / scoreboard rows.
     expect(plain).not.toContain('Swarm');
@@ -543,7 +543,7 @@ describe('claude-code statusline renderer (Phase 12)', () => {
     // eslint-disable-next-line no-control-regex
     expect(output.match(/\x1b\[/g)).toBeNull();
     expect(output).toContain('main');
-    expect(output).toContain('Opus 4.7');
+    expect(output).toContain('Opus 4.8');
   });
 
   // -------------------------------------------------------------------------

@@ -712,7 +712,7 @@ export function convertSettingsToToml(settings: Record<string, unknown>): string
   if (settings.model) {
     lines.push(`model = "${settings.model}"`);
   } else {
-    lines.push('model = "gpt-5.4"');
+    lines.push('model = "gpt-5.5"');
   }
   lines.push('');
 
@@ -814,7 +814,7 @@ export function generateConfigTomlFromParsed(parsed: ParsedClaudeMd): string {
   lines.push('');
 
   // Model
-  lines.push(`model = "${parsed.settings.model || 'gpt-5.4'}"`);
+  lines.push(`model = "${parsed.settings.model || 'gpt-5.5'}"`);
   lines.push('');
 
   // Approval policy

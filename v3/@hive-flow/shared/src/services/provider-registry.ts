@@ -118,7 +118,7 @@ const BUILTIN_PROVIDERS: ProviderModule[] = [
       version: '1.0.0',
       description: 'Anthropic Claude models (Opus, Sonnet, Haiku)',
       priority: 1,
-      models: ['claude-opus-4-7', 'claude-sonnet-4-6', 'claude-haiku-4-5-20251001'],
+      models: ['claude-opus-4-8', 'claude-sonnet-4-6', 'claude-haiku-4-5-20251001'],
       capabilities: {
         streaming: true,
         toolUse: true,
@@ -244,8 +244,8 @@ const BUILTIN_PROVIDERS: ProviderModule[] = [
       description: 'OpenRouter API gateway — 200+ models from multiple providers',
       priority: 6,
       models: [
-        'xiaomi/mimo-v2.5-pro', 'x-ai/grok-4.3', 'minimax/minimax-m2.7',
-        'moonshotai/kimi-k2.6', 'qwen/qwen3.6-max-preview', 'z-ai/glm-5.1',
+        'xiaomi/mimo-v2.5-pro', 'x-ai/grok-4.3', 'minimax/minimax-m3',
+        'moonshotai/kimi-k2.6', 'qwen/qwen3.7-max', 'z-ai/glm-5.1',
         'qwen/qwen3.6-plus', 'nvidia/nemotron-3-super-120b-a12b:free', 'deepseek/deepseek-v4-flash',
       ],
       capabilities: {

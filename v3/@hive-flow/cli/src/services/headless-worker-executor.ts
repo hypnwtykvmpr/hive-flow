@@ -275,8 +275,8 @@ export const LOCAL_WORKER_TYPES: LocalWorkerType[] = [
  * Model ID mapping
  */
 const MODEL_IDS: Record<ModelType, string> = {
-  sonnet: 'claude-sonnet-4-5-20250929',
-  opus: 'claude-opus-4-6',
+  sonnet: 'claude-sonnet-4-6',
+  opus: 'claude-opus-4-8',
 };
 
 /**

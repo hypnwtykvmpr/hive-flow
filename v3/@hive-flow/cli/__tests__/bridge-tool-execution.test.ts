@@ -92,7 +92,7 @@ function makeAgent(overrides: Partial<AgentRecord> = {}): AgentRecord {
     config: {},
     createdAt: new Date().toISOString(),
     provider: 'gemini-cli',
-    model: 'gemini-3.1-pro-preview',
+    model: 'gemini-3.5-flash',
     ...overrides,
   };
 }
@@ -650,7 +650,7 @@ describe('Bridge Tool Execution (async dispatch contract)', () => {
       const agent = makeAgent({
         agentId: 'codex-agent',
         provider: 'codex-cli',
-        model: 'gpt-5.3-codex',
+        model: 'gpt-5.5',
       });
       setupStoreMocks(makeStore({ [agent.agentId]: agent }));
       mockDetachedSpawn(55555);

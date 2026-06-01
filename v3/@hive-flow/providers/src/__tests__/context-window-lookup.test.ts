@@ -102,9 +102,9 @@ describe('Dynamic context window lookup', () => {
       const orModels = [
         'xiaomi/mimo-v2.5-pro',
         'x-ai/grok-4.3',
-        'minimax/minimax-m2.7',
+        'minimax/minimax-m3',
         'moonshotai/kimi-k2.6',
-        'qwen/qwen3.6-max-preview',
+        'qwen/qwen3.7-max',
         'z-ai/glm-5.1',
         'qwen/qwen3.6-plus',
         'nvidia/nemotron-3-super-120b-a12b:free',
@@ -193,7 +193,7 @@ describe('Dynamic context window lookup', () => {
       expect(getModelContextLength('claude-opus-4-6')).toBe(1_000_000);
       expect(getModelContextLength('claude-sonnet-4-6')).toBe(200_000);
       // Gemini
-      expect(getModelContextLength('gemini-3.1-pro-preview')).toBe(1_000_000);
+      expect(getModelContextLength('gemini-3.5-flash')).toBe(1_000_000);
       // Codex / OpenAI
       expect(getModelContextLength('gpt-5.5')).toBe(1_050_000);
       // DeepSeek

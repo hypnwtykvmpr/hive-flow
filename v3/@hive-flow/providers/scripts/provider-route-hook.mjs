@@ -22,7 +22,7 @@ import { join } from 'path';
 const PROVIDER_PATTERNS = [
   {
     provider: 'gemini-cli',
-    model: 'gemini-3.1-pro-preview',
+    model: 'gemini-3.5-flash',
     patterns: [
       /\buse\s+gemini\b/i,
       /\bask\s+gemini\b/i,

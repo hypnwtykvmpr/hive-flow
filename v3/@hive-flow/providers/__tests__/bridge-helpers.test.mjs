@@ -118,7 +118,7 @@ describe('maxEntriesForTokenWindow', () => {
   });
 
   it('returns 100 for >500K non-sonnet', () => {
-    expect(maxEntriesForTokenWindow(1_000_000, 'claude-opus-4-7')).toBe(100);
+    expect(maxEntriesForTokenWindow(1_000_000, 'claude-opus-4-8')).toBe(100);
     expect(maxEntriesForTokenWindow(600_000, 'deepseek-v4-pro')).toBe(100);
   });
 

@@ -200,7 +200,7 @@ const modelsCommand: Command = {
         { model: 'o3-mini', provider: 'OpenAI', capability: 'Chat', context: '200K', cost: '$0.0011/$0.0044' },
         { model: 'gemini-2.5-flash', provider: 'Google', capability: 'Chat', context: '1M', cost: '$0.00015/$0.0006' },
         { model: 'gemini-2.5-pro', provider: 'Google', capability: 'Chat', context: '1M', cost: '$0.00125/$0.01' },
-        { model: 'gemini-3.1-pro-preview', provider: 'Gemini CLI', capability: 'Chat', context: '1M', cost: output.success('Free tier') },
+        { model: 'gemini-3.5-flash', provider: 'Gemini CLI', capability: 'Chat', context: '1M', cost: output.success('Free tier') },
         { model: 'gpt-5.5', provider: 'Codex CLI', capability: 'Chat', context: '1.05M', cost: output.success('ChatGPT sub') },
         { model: 'command-r-plus', provider: 'Cohere', capability: 'Chat', context: '128K', cost: '$0.003/$0.015' },
         { model: 'llama3.2', provider: 'Ollama', capability: 'Chat', context: '128K', cost: output.success('Free') },

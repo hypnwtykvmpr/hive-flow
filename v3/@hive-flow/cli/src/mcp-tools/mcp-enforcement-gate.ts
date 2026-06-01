@@ -285,15 +285,15 @@ export function checkModelEnforcement(
   // correctly falls through to the per-provider top-tier check and is blocked.
   const ALLOWED_ALIASES = new Set(['opus', 'sonnet', 'mini', 'inherit', undefined]);
 
-  // Rule 2: gemini-cli requires gemini-3.1-pro-preview (top tier) or an alias.
+  // Rule 2: gemini-cli requires gemini-3.5-flash (top tier) or an alias.
   if (
     normInput.provider === 'gemini-cli' &&
-    normInput.model !== 'gemini-3.1-pro-preview' &&
+    normInput.model !== 'gemini-3.5-flash' &&
     !ALLOWED_ALIASES.has(normInput.model)
   ) {
     return {
       allowed: false,
-      reason: 'MODEL ENFORCEMENT: gemini-cli requires gemini-3.1-pro-preview (top tier).',
+      reason: 'MODEL ENFORCEMENT: gemini-cli requires gemini-3.5-flash (top tier).',
     };
   }
 

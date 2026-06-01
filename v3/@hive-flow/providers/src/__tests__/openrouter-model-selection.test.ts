@@ -168,7 +168,7 @@ describe('OpenRouter config-driven model selection', () => {
       vi.spyOn(fs, 'existsSync').mockReturnValue(false);
 
       const config = loadOpenRouterConfig();
-      expect(isModelAllowed(config, 'qwen/qwen3.6-max-preview')).toBe(true);
+      expect(isModelAllowed(config, 'qwen/qwen3.7-max')).toBe(true);
     });
   });
 
@@ -196,8 +196,8 @@ describe('OpenRouter config-driven model selection', () => {
     });
 
     it('resolveProviderModel with openrouter + direct model returns it if allowed', () => {
-      const result = resolveProviderModel('openrouter', 'qwen/qwen3.6-max-preview');
-      expect(result).toBe('qwen/qwen3.6-max-preview');
+      const result = resolveProviderModel('openrouter', 'qwen/qwen3.7-max');
+      expect(result).toBe('qwen/qwen3.7-max');
     });
 
     it('resolveProviderModel with openrouter + blocked model returns undefined', () => {
@@ -317,7 +317,7 @@ describe('OpenRouter config-driven model selection', () => {
 
       // Layer 1: predicate
       expect(isModelAllowed(emptyAllowConfig, 'xiaomi/mimo-v2.5-pro')).toBe(false);
-      expect(isModelAllowed(emptyAllowConfig, 'qwen/qwen3.6-max-preview')).toBe(false);
+      expect(isModelAllowed(emptyAllowConfig, 'qwen/qwen3.7-max')).toBe(false);
       expect(isModelAllowed(emptyAllowConfig, 'unknown/blocked-model')).toBe(false);
 
       // Layer 2: resolver via a real on-disk config in a temp working dir

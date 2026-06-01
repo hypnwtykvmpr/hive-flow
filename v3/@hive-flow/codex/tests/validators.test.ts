@@ -523,7 +523,7 @@ describe('validateConfigToml', () => {
     it('should pass for a complete config.toml', async () => {
       const content = `# Codex Configuration
 
-model = "gpt-5.3-codex"
+model = "gpt-5.5"
 approval_policy = "on-request"
 sandbox_mode = "workspace-write"
 
@@ -555,7 +555,7 @@ sandbox_mode = "workspace-write"
     });
 
     it('should pass with minimal required fields', async () => {
-      const content = `model = "gpt-5.3-codex"
+      const content = `model = "gpt-5.5"
 approval_policy = "on-request"
 sandbox_mode = "workspace-write"
 
@@ -572,7 +572,7 @@ command = "npx"
       const policies = ['untrusted', 'on-failure', 'on-request', 'never'];
 
       for (const policy of policies) {
-        const content = `model = "gpt-5.3-codex"
+        const content = `model = "gpt-5.5"
 approval_policy = "${policy}"
 sandbox_mode = "workspace-write"
 
@@ -589,7 +589,7 @@ command = "test"
       const modes = ['read-only', 'workspace-write', 'danger-full-access'];
 
       for (const mode of modes) {
-        const content = `model = "gpt-5.3-codex"
+        const content = `model = "gpt-5.5"
 approval_policy = "on-request"
 sandbox_mode = "${mode}"
 
@@ -616,7 +616,7 @@ sandbox_mode = "workspace-write"
     });
 
     it('should fail when approval_policy is missing', async () => {
-      const content = `model = "gpt-5.3-codex"
+      const content = `model = "gpt-5.5"
 sandbox_mode = "workspace-write"
 `;
 
@@ -627,7 +627,7 @@ sandbox_mode = "workspace-write"
     });
 
     it('should fail when sandbox_mode is missing', async () => {
-      const content = `model = "gpt-5.3-codex"
+      const content = `model = "gpt-5.5"
 approval_policy = "on-request"
 `;
 
@@ -638,7 +638,7 @@ approval_policy = "on-request"
     });
 
     it('should fail with invalid approval_policy value', async () => {
-      const content = `model = "gpt-5.3-codex"
+      const content = `model = "gpt-5.5"
 approval_policy = "invalid-policy"
 sandbox_mode = "workspace-write"
 `;
@@ -650,7 +650,7 @@ sandbox_mode = "workspace-write"
     });
 
     it('should fail with invalid sandbox_mode value', async () => {
-      const content = `model = "gpt-5.3-codex"
+      const content = `model = "gpt-5.5"
 approval_policy = "on-request"
 sandbox_mode = "invalid-mode"
 `;
@@ -664,7 +664,7 @@ sandbox_mode = "invalid-mode"
 
   describe('warnings', () => {
     it('should warn when no MCP servers configured', async () => {
-      const content = `model = "gpt-5.3-codex"
+      const content = `model = "gpt-5.5"
 approval_policy = "on-request"
 sandbox_mode = "workspace-write"
 `;
@@ -675,7 +675,7 @@ sandbox_mode = "workspace-write"
     });
 
     it('should warn about never approval policy without profiles', async () => {
-      const content = `model = "gpt-5.3-codex"
+      const content = `model = "gpt-5.5"
 approval_policy = "never"
 sandbox_mode = "workspace-write"
 
@@ -691,7 +691,7 @@ command = "test"
     });
 
     it('should not warn about never policy when profiles section exists', async () => {
-      const content = `model = "gpt-5.3-codex"
+      const content = `model = "gpt-5.5"
 approval_policy = "never"
 sandbox_mode = "workspace-write"
 
@@ -711,7 +711,7 @@ approval_policy = "never"
     });
 
     it('should warn about danger-full-access sandbox mode', async () => {
-      const content = `model = "gpt-5.3-codex"
+      const content = `model = "gpt-5.5"
 approval_policy = "on-request"
 sandbox_mode = "danger-full-access"
 
@@ -728,7 +728,7 @@ command = "test"
     });
 
     it('should provide suggestions for all warnings', async () => {
-      const content = `model = "gpt-5.3-codex"
+      const content = `model = "gpt-5.5"
 approval_policy = "never"
 sandbox_mode = "danger-full-access"
 `;
@@ -762,7 +762,7 @@ sandbox_mode = "danger-full-access"
     });
 
     it('should handle multiline values', async () => {
-      const content = `model = "gpt-5.3-codex"
+      const content = `model = "gpt-5.5"
 approval_policy = "on-request"
 sandbox_mode = "workspace-write"
 
@@ -851,7 +851,7 @@ npm test
 \`\`\`
 `;
 
-    const configToml = `model = "gpt-5.3-codex"
+    const configToml = `model = "gpt-5.5"
 approval_policy = "on-request"
 sandbox_mode = "workspace-write"
 

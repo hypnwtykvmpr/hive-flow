@@ -170,7 +170,7 @@ describe('GeminiCLIProvider', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     provider = new GeminiCLIProvider({
-      config: { provider: 'gemini-cli', model: 'gemini-3.1-pro-preview' },
+      config: { provider: 'gemini-cli', model: 'gemini-3.5-flash' },
       logger: noopLogger,
     });
   });
@@ -207,7 +207,7 @@ describe('GeminiCLIProvider', () => {
       response: 'Hello! How can I help?',
       stats: {
         models: {
-          'gemini-3.1-pro-preview': {
+          'gemini-3.5-flash': {
             tokens: { prompt: 10, candidates: 20, total: 30 },
           },
         },
@@ -277,7 +277,7 @@ describe('GeminiCLIProvider', () => {
     provider = new GeminiCLIProvider({
       config: {
         provider: 'gemini-cli',
-        model: 'gemini-3.1-pro-preview',
+        model: 'gemini-3.5-flash',
         env: { HIVE_FLOW_AGENT_TOKEN: 'agent-token-123' },
       },
       logger: noopLogger,
@@ -889,7 +889,7 @@ describe('GeminiCLIProvider — tool calling', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     provider = new GeminiCLIProvider({
-      config: { provider: 'gemini-cli', model: 'gemini-3.1-pro-preview' },
+      config: { provider: 'gemini-cli', model: 'gemini-3.5-flash' },
       logger: noopLogger,
     });
   });
@@ -1153,7 +1153,7 @@ describe('GeminiCLIProvider — error handling', () => {
     vi.clearAllMocks();
     mockBinaryFound('gemini');
     provider = new GeminiCLIProvider({
-      config: { provider: 'gemini-cli', model: 'gemini-3.1-pro-preview' },
+      config: { provider: 'gemini-cli', model: 'gemini-3.5-flash' },
       logger: noopLogger,
     });
     await provider.initialize();
@@ -1938,7 +1938,7 @@ describe('GeminiCLIProvider — health check', () => {
   it('doHealthCheck returns healthy when binary and version ok', async () => {
     mockBinaryFound('gemini', '1.5.0');
     const provider = new GeminiCLIProvider({
-      config: { provider: 'gemini-cli', model: 'gemini-3.1-pro-preview' },
+      config: { provider: 'gemini-cli', model: 'gemini-3.5-flash' },
       logger: noopLogger,
     });
     await provider.initialize();
@@ -1962,7 +1962,7 @@ describe('GeminiCLIProvider — health check', () => {
   it('doHealthCheck returns unhealthy when --version fails', async () => {
     mockBinaryFound('gemini');
     const provider = new GeminiCLIProvider({
-      config: { provider: 'gemini-cli', model: 'gemini-3.1-pro-preview' },
+      config: { provider: 'gemini-cli', model: 'gemini-3.5-flash' },
       logger: noopLogger,
     });
     await provider.initialize();
@@ -1989,7 +1989,7 @@ describe('GeminiCLIProvider — findBinary & ensureBinary', () => {
   it('findBinary returns null when which fails', async () => {
     mockBinaryNotFound();
     const provider = new GeminiCLIProvider({
-      config: { provider: 'gemini-cli', model: 'gemini-3.1-pro-preview' },
+      config: { provider: 'gemini-cli', model: 'gemini-3.5-flash' },
       logger: noopLogger,
     });
     const result = await (provider as PrivateAccess).findBinary();
@@ -1999,7 +1999,7 @@ describe('GeminiCLIProvider — findBinary & ensureBinary', () => {
 
   it('ensureBinary throws when binaryPath is null', () => {
     const provider = new GeminiCLIProvider({
-      config: { provider: 'gemini-cli', model: 'gemini-3.1-pro-preview' },
+      config: { provider: 'gemini-cli', model: 'gemini-3.5-flash' },
       logger: noopLogger,
     });
     expect(() => (provider as PrivateAccess).ensureBinary()).toThrow(/unavailable/i);
@@ -2017,7 +2017,7 @@ describe('GeminiCLIProvider — streaming edge cases (PassThrough)', () => {
     vi.clearAllMocks();
     mockBinaryFound('gemini');
     provider = new GeminiCLIProvider({
-      config: { provider: 'gemini-cli', model: 'gemini-3.1-pro-preview' },
+      config: { provider: 'gemini-cli', model: 'gemini-3.5-flash' },
       logger: noopLogger,
     });
     await provider.initialize();
@@ -2532,7 +2532,7 @@ describe('CursorCLIProvider — getModelInfo unknown', () => {
 describe('GeminiCLIProvider — listModels & getModelInfo', () => {
   it('listModels returns supported models', async () => {
     const provider = new GeminiCLIProvider({
-      config: { provider: 'gemini-cli', model: 'gemini-3.1-pro-preview' },
+      config: { provider: 'gemini-cli', model: 'gemini-3.5-flash' },
       logger: noopLogger,
     });
     const models = await provider.listModels();
@@ -2542,11 +2542,11 @@ describe('GeminiCLIProvider — listModels & getModelInfo', () => {
 
   it('getModelInfo returns info for known model', async () => {
     const provider = new GeminiCLIProvider({
-      config: { provider: 'gemini-cli', model: 'gemini-3.1-pro-preview' },
+      config: { provider: 'gemini-cli', model: 'gemini-3.5-flash' },
       logger: noopLogger,
     });
-    const info = await provider.getModelInfo('gemini-3.1-pro-preview');
-    expect(info.model).toBe('gemini-3.1-pro-preview');
+    const info = await provider.getModelInfo('gemini-3.5-flash');
+    expect(info.model).toBe('gemini-3.5-flash');
     expect(info.contextLength).toBeGreaterThan(0);
     expect(info.supportedFeatures).toContain('tool_calling');
     provider.destroy();
@@ -2554,7 +2554,7 @@ describe('GeminiCLIProvider — listModels & getModelInfo', () => {
 
   it('getModelInfo returns fallback for unknown model', async () => {
     const provider = new GeminiCLIProvider({
-      config: { provider: 'gemini-cli', model: 'gemini-3.1-pro-preview' },
+      config: { provider: 'gemini-cli', model: 'gemini-3.5-flash' },
       logger: noopLogger,
     });
     const info = await provider.getModelInfo('unknown-model');
@@ -2569,7 +2569,7 @@ describe('GeminiCLIProvider — listModels & getModelInfo', () => {
 // ============================================================
 
 describe('GeminiCLIProvider — validateConfig', () => {
-  it('sets model to gemini-3.1-pro-preview when model is not provided', async () => {
+  it('sets model to gemini-3.5-flash when model is not provided', async () => {
     vi.clearAllMocks();
     mockBinaryFound('gemini');
     const provider = new GeminiCLIProvider({
@@ -2577,7 +2577,7 @@ describe('GeminiCLIProvider — validateConfig', () => {
       logger: noopLogger,
     });
     await provider.initialize();
-    expect(provider.config.model).toBe('gemini-3.1-pro-preview');
+    expect(provider.config.model).toBe('gemini-3.5-flash');
     provider.destroy();
   });
 
@@ -2597,7 +2597,7 @@ describe('GeminiCLIProvider — validateConfig', () => {
   it('throws on invalid temperature', () => {
     expect(() => {
       const provider = new GeminiCLIProvider({
-        config: { provider: 'gemini-cli', model: 'gemini-3.1-pro-preview', temperature: 3 },
+        config: { provider: 'gemini-cli', model: 'gemini-3.5-flash', temperature: 3 },
         logger: noopLogger,
       });
       (provider as PrivateAccess).validateConfig();
@@ -2617,7 +2617,7 @@ describe('GeminiCLIProvider — doComplete timeout (fake timers)', () => {
     vi.useFakeTimers();
     mockBinaryFound('gemini');
     provider = new GeminiCLIProvider({
-      config: { provider: 'gemini-cli', model: 'gemini-3.1-pro-preview' },
+      config: { provider: 'gemini-cli', model: 'gemini-3.5-flash' },
       logger: noopLogger,
     });
     await provider.initialize();
@@ -2663,7 +2663,7 @@ describe('GeminiCLIProvider — parseJsonOutput malformed JSON with tool calls',
     vi.clearAllMocks();
     mockBinaryFound('gemini');
     provider = new GeminiCLIProvider({
-      config: { provider: 'gemini-cli', model: 'gemini-3.1-pro-preview' },
+      config: { provider: 'gemini-cli', model: 'gemini-3.5-flash' },
       logger: noopLogger,
     });
     await provider.initialize();
@@ -2702,7 +2702,7 @@ describe('GeminiCLIProvider — stdin EPIPE handling', () => {
     vi.clearAllMocks();
     mockBinaryFound('gemini');
     provider = new GeminiCLIProvider({
-      config: { provider: 'gemini-cli', model: 'gemini-3.1-pro-preview' },
+      config: { provider: 'gemini-cli', model: 'gemini-3.5-flash' },
       logger: noopLogger,
     });
     await provider.initialize();
@@ -2734,7 +2734,7 @@ describe('GeminiCLIProvider — stdin EPIPE handling', () => {
   it('logs non-EPIPE stdin errors', async () => {
     const warnLogger = { ...noopLogger, warn: vi.fn() };
     const provider2 = new GeminiCLIProvider({
-      config: { provider: 'gemini-cli', model: 'gemini-3.1-pro-preview' },
+      config: { provider: 'gemini-cli', model: 'gemini-3.5-flash' },
       logger: warnLogger,
     });
     vi.clearAllMocks();

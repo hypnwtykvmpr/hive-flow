@@ -356,11 +356,11 @@ key = "value"
 
   it('model display reads stdin first, ignores hardcoded fallback', () => {
     const r = resolveModelDisplay(
-      { model: { display_name: 'Opus 4.7', id: 'claude-opus-4-7[1m]' } },
+      { model: { display_name: 'Opus 4.8', id: 'claude-opus-4-8[1m]' } },
       'claude-code',
       new Date().toISOString(),
     );
-    expect(r.value.modelDisplay).toBe('Opus 4.7 1M');
+    expect(r.value.modelDisplay).toBe('Opus 4.8 1M');
     expect(r.freshness).toBe('live');
   });
 

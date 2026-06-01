@@ -32,9 +32,9 @@ export interface OpenRouterModelConfig {
 export const DEFAULT_CONTEXT_WINDOWS: Record<string, number> = {
   'xiaomi/mimo-v2.5-pro': 1048576,
   'x-ai/grok-4.3': 2000000,
-  'minimax/minimax-m2.7': 204800,
+  'minimax/minimax-m3': 204800,
   'moonshotai/kimi-k2.6': 262144,
-  'qwen/qwen3.6-max-preview': 262144,
+  'qwen/qwen3.7-max': 262144,
   'z-ai/glm-5.1': 202752,
   'qwen/qwen3.6-plus': 1000000,
   'nvidia/nemotron-3-super-120b-a12b:free': 262144,
@@ -44,13 +44,13 @@ export const DEFAULT_CONTEXT_WINDOWS: Record<string, number> = {
 /** Default config used when no `.hive-flow/config.json` exists or is malformed */
 export const DEFAULT_CONFIG: OpenRouterModelConfig = {
   tiers: {
-    opus: ['xiaomi/mimo-v2.5-pro', 'x-ai/grok-4.3', 'minimax/minimax-m2.7'],
-    sonnet: ['moonshotai/kimi-k2.6', 'qwen/qwen3.6-max-preview', 'z-ai/glm-5.1'],
+    opus: ['xiaomi/mimo-v2.5-pro', 'x-ai/grok-4.3', 'minimax/minimax-m3'],
+    sonnet: ['moonshotai/kimi-k2.6', 'qwen/qwen3.7-max', 'z-ai/glm-5.1'],
     haiku: ['qwen/qwen3.6-plus', 'nvidia/nemotron-3-super-120b-a12b:free', 'deepseek/deepseek-v4-flash'],
   },
   allowedModels: [
-    'xiaomi/mimo-v2.5-pro', 'x-ai/grok-4.3', 'minimax/minimax-m2.7',
-    'moonshotai/kimi-k2.6', 'qwen/qwen3.6-max-preview', 'z-ai/glm-5.1',
+    'xiaomi/mimo-v2.5-pro', 'x-ai/grok-4.3', 'minimax/minimax-m3',
+    'moonshotai/kimi-k2.6', 'qwen/qwen3.7-max', 'z-ai/glm-5.1',
     'qwen/qwen3.6-plus', 'nvidia/nemotron-3-super-120b-a12b:free', 'deepseek/deepseek-v4-flash',
   ],
 };

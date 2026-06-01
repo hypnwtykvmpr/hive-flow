@@ -534,7 +534,7 @@ export class ProviderFactory {
       displayName: options?.displayName ?? 'Anthropic Claude',
       models: options?.models ?? [
         'claude-opus-4-5-20251101',
-        'claude-sonnet-4-20250514',
+        'claude-sonnet-4-6',
         'claude-3-5-haiku-20241022',
       ],
       capabilities: [

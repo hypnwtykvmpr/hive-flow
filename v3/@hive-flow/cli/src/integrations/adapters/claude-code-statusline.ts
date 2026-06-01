@@ -297,7 +297,7 @@ async function verify(ctx: AdapterCtx): Promise<{ ok: boolean; output: string }>
   const sample = JSON.stringify({
     cwd: ctx.projectRoot,
     workspace: { current_dir: ctx.projectRoot, project_dir: ctx.projectRoot },
-    model: { id: 'claude-opus-4-7[1m]', display_name: 'Opus 4.7' },
+    model: { id: 'claude-opus-4-8[1m]', display_name: 'Opus 4.8' },
     context_window: {
       used_percentage: 12,
       total_input_tokens: 1000,

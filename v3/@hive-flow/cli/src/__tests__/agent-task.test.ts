@@ -39,10 +39,10 @@ vi.mock('@hive-flow/providers', () => ({
       return undefined;
     }
     if (provider === 'codex-cli') return 'gpt-5.5';
-    if (provider === 'gemini-cli') return 'gemini-3.1-pro-preview';
+    if (provider === 'gemini-cli') return 'gemini-3.5-flash';
     if (provider === 'cursor-cli') return 'auto';
     if (provider === 'deepseek') return model === 'mini' ? 'deepseek-v4-flash' : 'deepseek-v4-pro';
-    if (provider === 'anthropic-cli') return model === 'mini' || model === 'sonnet' ? 'claude-sonnet-4-6' : 'claude-opus-4-7';
+    if (provider === 'anthropic-cli') return model === 'mini' || model === 'sonnet' ? 'claude-sonnet-4-6' : 'claude-opus-4-8';
     return model;
   }),
 }));

@@ -275,7 +275,7 @@ export interface CostTracker {
 const DEFAULT_MODELS: ModelConfig[] = [
   // Anthropic (prices updated March 2026)
   {
-    id: 'claude-sonnet-4-20250514',
+    id: 'claude-sonnet-4-6',
     name: 'Claude Sonnet 4',
     provider: 'anthropic',
     costPer1kInputTokens: 0.003,

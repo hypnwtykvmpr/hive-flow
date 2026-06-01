@@ -1,7 +1,7 @@
 name: codex-researcher
 description: Research agent powered by OpenAI Codex CLI
 provider: codex-cli
-defaultModel: gpt-5.3-codex
+defaultModel: gpt-5.5
 capabilities:
   - code-analysis
   - architecture-review

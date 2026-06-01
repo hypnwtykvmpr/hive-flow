@@ -35,7 +35,7 @@ function readIfExists(filePath: string): string | undefined {
 function stdinPayload(projectRoot: string): Record<string, unknown> {
   return {
     workspace: { current_dir: projectRoot, project_dir: projectRoot },
-    model: { id: 'claude-opus-4-7[1m]', display_name: 'Opus 4.7' },
+    model: { id: 'claude-opus-4-8[1m]', display_name: 'Opus 4.8' },
     context_window: {
       used_percentage: 42,
       total_input_tokens: 42_000,
@@ -197,7 +197,7 @@ describe('statusline E2E recorder -> refresh -> render', () => {
     const plain = stripAnsi(rendered);
 
     expect(plain).toContain(scope.displayName);
-    expect(plain).toContain('Opus 4.7');
+    expect(plain).toContain('Opus 4.8');
     expect(plain).toContain('42% ctx');
     expect(plain).toMatch(/Codex\s+1/);
     expect(plain).toMatch(/Tests\s+3/);

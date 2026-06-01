@@ -26,13 +26,13 @@ const MAX_STDOUT_BYTES = 50 * 1024 * 1024; // 50MB
 /** Supported Claude models with pricing per 1K tokens */
 const ANTHROPIC_CLI_MODELS: LLMModel[] = [
   'claude-sonnet-4-6',
-  'claude-opus-4-7',
+  'claude-opus-4-8',
   'claude-haiku-4-5-20251001',
 ];
 
 const ANTHROPIC_CLI_MODEL_DESCRIPTIONS: Record<string, string> = {
   'claude-sonnet-4-6': 'Claude Sonnet 4.6 (current)',
-  'claude-opus-4-7': 'Claude Opus 4.7 (current — best agentic coding)',
+  'claude-opus-4-8': 'Claude Opus 4.8 (current — best agentic coding)',
   'claude-haiku-4-5-20251001': 'Claude Haiku 4.5 (current)',
 };
 
@@ -40,12 +40,12 @@ const ANTHROPIC_CLI_CAPABILITIES: ProviderCapabilities = {
   supportedModels: ANTHROPIC_CLI_MODELS,
   maxContextLength: {
     'claude-sonnet-4-6': 200000,
-    'claude-opus-4-7': 1000000,
+    'claude-opus-4-8': 1000000,
     'claude-haiku-4-5-20251001': 200000,
   },
   maxOutputTokens: {
     'claude-sonnet-4-6': 65536,   // 64K
-    'claude-opus-4-7': 131072,    // 128K
+    'claude-opus-4-8': 131072,    // 128K
     'claude-haiku-4-5-20251001': 65536,   // 64K
   },
   supportsStreaming: false,
@@ -58,7 +58,7 @@ const ANTHROPIC_CLI_CAPABILITIES: ProviderCapabilities = {
   supportsBatching: false,
   pricing: {
     'claude-sonnet-4-6': { promptCostPer1k: 0.003, completionCostPer1k: 0.015, currency: 'USD' },
-    'claude-opus-4-7': { promptCostPer1k: 0.005, completionCostPer1k: 0.025, currency: 'USD' },
+    'claude-opus-4-8': { promptCostPer1k: 0.005, completionCostPer1k: 0.025, currency: 'USD' },
     'claude-haiku-4-5-20251001': { promptCostPer1k: 0.001, completionCostPer1k: 0.005, currency: 'USD' },
   },
 };
@@ -91,7 +91,7 @@ export class AnthropicCLIProvider extends BaseProvider {
 
   protected validateConfig(): void {
     if (!this.config.model) {
-      this.config.model = 'claude-opus-4-7';
+      this.config.model = 'claude-opus-4-8';
     }
     if (!this.validateModel(this.config.model)) {
       this.logger.warn(`Model ${this.config.model} may not be supported by ${this.name}`);

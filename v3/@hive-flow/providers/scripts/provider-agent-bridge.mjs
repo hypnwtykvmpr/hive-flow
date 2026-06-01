@@ -202,7 +202,7 @@ const PROVIDER_TOKEN_LIMITS = {
 const MODEL_LIMITS = {
   // Anthropic
   'opus':                       { maxTokens: 1000000, maxEntries: 100 },
-  'claude-opus-4-7':             { maxTokens: 1000000, maxEntries: 100 },
+  'claude-opus-4-8':             { maxTokens: 1000000, maxEntries: 100 },
   'claude-opus-4-6':             { maxTokens: 1000000, maxEntries: 100 },
   'sonnet':                      { maxTokens: 200000,  maxEntries: 50 },
   'claude-sonnet-4-6':           { maxTokens: 200000,  maxEntries: 50 },
@@ -221,7 +221,7 @@ const MODEL_LIMITS = {
   'gpt-5-codex':                 { maxTokens: 256000,  maxEntries: 50 },
   'gpt-5-codex-mini':            { maxTokens: 128000,  maxEntries: 30 },
   // Gemini
-  'gemini-3.1-pro-preview':      { maxTokens: 1000000, maxEntries: 100 },
+  'gemini-3.5-flash':            { maxTokens: 1000000, maxEntries: 100 },
   'gemini-2.5-pro':              { maxTokens: 1000000, maxEntries: 100 },
   'gemini-2.5-flash':            { maxTokens: 1000000, maxEntries: 100 },
   'gemini-2.5-flash-lite':       { maxTokens: 1000000, maxEntries: 100 },
@@ -232,9 +232,9 @@ const MODEL_LIMITS = {
   // OpenRouter known defaults
   'xiaomi/mimo-v2.5-pro':                       { maxTokens: 1048576, maxEntries: 100 },
   'x-ai/grok-4.3':                              { maxTokens: 2000000, maxEntries: 100 },
-  'minimax/minimax-m2.7':                       { maxTokens: 204800,  maxEntries: 50 },
+  'minimax/minimax-m3':                         { maxTokens: 204800,  maxEntries: 50 },
   'moonshotai/kimi-k2.6':                       { maxTokens: 262144,  maxEntries: 50 },
-  'qwen/qwen3.6-max-preview':                   { maxTokens: 262144,  maxEntries: 50 },
+  'qwen/qwen3.7-max':                           { maxTokens: 262144,  maxEntries: 50 },
   'z-ai/glm-5.1':                               { maxTokens: 202752,  maxEntries: 50 },
   'qwen/qwen3.6-plus':                          { maxTokens: 1000000, maxEntries: 100 },
   'nvidia/nemotron-3-super-120b-a12b:free':     { maxTokens: 262144,  maxEntries: 50 },
@@ -888,8 +888,8 @@ async function getProviderDefaults() {
 
   // Fallback — only used if providers package isn't built
   _providerDefaults = {
-    'anthropic-cli': 'claude-opus-4-7',
-    'gemini-cli': 'gemini-3.1-pro-preview',
+    'anthropic-cli': 'claude-opus-4-8',
+    'gemini-cli': 'gemini-3.5-flash',
     'codex-cli': 'gpt-5.5',
     'cursor-cli': 'auto',
     'deepseek': 'deepseek-v4-pro',

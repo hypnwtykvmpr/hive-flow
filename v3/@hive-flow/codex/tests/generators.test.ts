@@ -620,7 +620,7 @@ describe('generateConfigToml', () => {
       const result = await generateConfigToml();
 
       expect(result).toContain('# Core Settings');
-      expect(result).toContain('model = "gpt-5.3-codex"');
+      expect(result).toContain('model = "gpt-5.5"');
       expect(result).toContain('approval_policy = "on-request"');
       expect(result).toContain('sandbox_mode = "workspace-write"');
       expect(result).toContain('web_search = "cached"');
@@ -878,7 +878,7 @@ describe('generateMinimalConfigToml', () => {
     const result = await generateMinimalConfigToml();
 
     expect(result).toContain('# Hive Flow V3 - Minimal Codex Configuration');
-    expect(result).toContain('model = "gpt-5.3-codex"');
+    expect(result).toContain('model = "gpt-5.5"');
     expect(result).toContain('approval_policy = "on-request"');
     expect(result).toContain('sandbox_mode = "workspace-write"');
     expect(result).toContain('[mcp_servers.hive-flow]');
