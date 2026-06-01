@@ -97,11 +97,15 @@ const PER_SPAWN_CAP_MS = 90;
 const MIN_BUDGET_FOR_SPAWN_MS = 25;
 
 /**
- * Maximum size (in bytes) for a bounded JSON read in this module. Matches
- * the runbook's "256KB-capped" inline-read directive for the agent store
- * and daemon-state file. Larger files are dropped via the storage guard.
+ * Maximum size (in bytes) for a bounded JSON read in this module. The agent
+ * store embeds each agent's `conversationHistory`, so a live multi-hive
+ * session pushes `store.json` into the multi-megabyte range; the prior 256KB
+ * cap silently dropped it and left the swarm row empty. Raised to 16MB so the
+ * swarm row populates with real counts (the read stays async + bounded; the
+ * storage guard still rejects anything above this ceiling). Counts are never
+ * derived from byte size.
  */
-const MAX_INLINE_JSON_BYTES = 256 * 1024;
+const MAX_INLINE_JSON_BYTES = 16 * 1024 * 1024;
 
 /**
  * Probe `.hive-flow/` cheaply and return whatever can be collected before

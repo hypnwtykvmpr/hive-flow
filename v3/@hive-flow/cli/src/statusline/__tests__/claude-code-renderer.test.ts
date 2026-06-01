@@ -562,9 +562,13 @@ describe('claude-code statusline renderer (Phase 12)', () => {
   });
 
   // -------------------------------------------------------------------------
-  // 12. Render output is ONE LINE (no embedded newlines)
+  // 12. Render output is a MULTI-ROW box (documented layout) — header /
+  //     separator rule / body rows (scoreboard / swarm / memory / attention) /
+  //     separator rule / footer, joined by '\n'.
+  //     Source of truth: .audit/research-line-color/
+  //     Claude-statusline-design-final-2026-05-20.md §2-§3.
   // -------------------------------------------------------------------------
-  it('render output is exactly one line — no embedded newlines', async () => {
+  it('render output is the documented multi-row box (newlines + separator rules + ordered rows)', async () => {
     writeSnapshot(fix.projectRoot, {
       git: { branch: 'main', staged: 0, modified: 0, untracked: 0, ahead: 0, behind: 0 },
       scoreboard: {
@@ -590,8 +594,57 @@ describe('claude-code statusline renderer (Phase 12)', () => {
       daemon: { running: true, health: 'healthy', observedAt: new Date().toISOString() },
     });
     const output = await renderClaudeCodeStatusline(stdinPayload(), fix.projectRoot);
-    expect(output.includes('\n')).toBe(false);
+
+    // Multi-line output (no longer collapsed to a single line).
+    expect(output.includes('\n')).toBe(true);
+    // No carriage returns — rows are joined by '\n' only.
     expect(output.includes('\r')).toBe(false);
+
+    const plainLines = stripAnsi(output).split('\n');
+    // Header + 2 separator rules + 4 body rows + footer = 8 rows for this
+    // fully-populated fixture.
+    expect(plainLines.length).toBe(8);
+
+    // Row 0 = header (project anchor + branch + model + ctx).
+    expect(plainLines[0]).toContain('fixture-project');
+    expect(plainLines[0]).toContain('main');
+    expect(plainLines[0]).toContain('Opus 4.8');
+
+    // Two full-width separator rules (box-drawing '─') are present, one after
+    // the header and one before the footer.
+    const ruleLines = plainLines.filter((l) => /^─+$/.test(l));
+    expect(ruleLines.length).toBe(2);
+
+    // Body rows appear in the documented order: scoreboard -> swarm ->
+    // memory -> attention.
+    const scoreboardIdx = plainLines.findIndex((l) => l.includes('🤖'));
+    const swarmIdx = plainLines.findIndex((l) => l.includes('Swarm'));
+    const memoryIdx = plainLines.findIndex((l) => l.includes('Memory'));
+    const attentionIdx = plainLines.findIndex((l) => l.includes('attention'));
+    const footerIdx = plainLines.findIndex((l) => l.includes('daemon on'));
+    expect(scoreboardIdx).toBeGreaterThan(0);
+    expect(swarmIdx).toBeGreaterThan(scoreboardIdx);
+    expect(memoryIdx).toBeGreaterThan(swarmIdx);
+    expect(attentionIdx).toBeGreaterThan(memoryIdx);
+    // Footer is the last row, after the second separator rule.
+    expect(footerIdx).toBe(plainLines.length - 1);
+  });
+
+  it('header-only project renders a single header row (no body, no separator rules)', async () => {
+    // No .hive-flow/ -> header-only mode. The collapse rule: no body rows ->
+    // no separator rules. Footer is omitted in header-only mode (no daemon
+    // signal), so the output is a lone header line.
+    const cleanProj = mkdtempSync(join(tmpdir(), 'hf-render-header-only-'));
+    try {
+      const output = await renderClaudeCodeStatusline(stdinPayload(), cleanProj);
+      const plainLines = stripAnsi(output).split('\n');
+      expect(plainLines.length).toBe(1);
+      expect(plainLines[0]).toContain('Opus 4.8');
+      // No separator rules when there are no body rows.
+      expect(output).not.toMatch(/─+/);
+    } finally {
+      rmSync(cleanProj, { recursive: true, force: true });
+    }
   });
 
   // -------------------------------------------------------------------------

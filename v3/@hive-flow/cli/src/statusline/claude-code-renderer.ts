@@ -44,8 +44,14 @@
 //     using `.catch(() => undefined)` so a cache-write hiccup never crashes
 //     the wrapper.
 //   - Visual design (locked): see `Claude-statusline-design-final-2026-05-20.md`.
-//     We collapse the multi-row design into ONE LINE per spec test #12;
-//     section delimiters are space-pipe-space in the palette `separator` color.
+//     The board is a MULTI-ROW box: header / separator rule / scoreboard /
+//     swarm / memory / attention / separator rule / footer. Rows are joined
+//     by `\n` (Claude Code statusLine supports multi-line stdout natively).
+//     Within a row, cells are delimited by a space-pipe-space in the palette
+//     `separator` color; between rows a full-width `─` rule renders whenever
+//     at least one body row is present (per the design doc's row table). Each
+//     row is independently omitted when its backing data is absent
+//     (OMIT > FAKE).
 
 import { existsSync } from 'node:fs';
 import { basename, join } from 'node:path';
@@ -133,7 +139,7 @@ export async function readStatuslineStdin(): Promise<Record<string, unknown> | u
  * `commands/statusline.ts`) which calls this function and then `writeLastRender`.
  */
 export interface RenderClaudeCodeStatuslineResult {
-  /** Single-line ANSI-decorated statusline output (no embedded newlines). */
+  /** Multi-row ANSI-decorated statusline output (rows joined by `\n`). */
   readonly rendered: string;
   /** Which rendering path produced this output. */
   readonly mode: LastRenderMode;
@@ -179,9 +185,9 @@ export async function renderClaudeCodeStatuslineWithMeta(
 }
 
 /**
- * Render the Claude Code statusline. Returns a single ANSI-decorated line
- * (or the empty string when the color depth is 0 / NO_COLOR is set AND the
- * render also failed every mode).
+ * Render the Claude Code statusline. Returns a multi-row ANSI-decorated box
+ * (rows joined by `\n`) — or the empty string when the render failed every
+ * mode.
  *
  * Thin string-returning wrapper around {@link renderClaudeCodeStatuslineWithMeta}.
  * The string form is intentionally side-effect-free; callers that need to
@@ -197,7 +203,7 @@ export async function renderClaudeCodeStatuslineWithMeta(
  * @param projectRoot Optional explicit project root. When omitted, falls back
  *                   to `stdinData.workspace.current_dir` or `process.cwd()`.
  *
- * Returns ONE line of text (no embedded newlines). On internal failure
+ * Returns a multi-row box (rows joined by `\n`). On internal failure
  * collapses to the empty string — never throws.
  */
 export async function renderClaudeCodeStatusline(
@@ -249,8 +255,9 @@ async function renderInternal(
   const deadlineMs = startTime + renderBudgetMs;
   const resolved = await resolveModeForRender(scope, stdin, snapshotMaxAgeMs, deadlineMs);
 
-  // 6) Render rows per locked visual design — composed onto ONE line per
-  // spec test #12 (no embedded newlines).
+  // 6) Render rows per locked visual design — composed into a MULTI-ROW box
+  // (rows joined by `\n`, with full-width `─` separator rules between the
+  // header / body / footer groups when ≥1 body row is present).
   const rendered = composeStatusline({
     snapshot: resolved.snapshot,
     mode: resolved.mode,
@@ -259,15 +266,11 @@ async function renderInternal(
     stdin,
   });
 
-  // Strip any accidental embedded newlines — defence-in-depth against a
-  // future row format regression. The spec requires ONE LINE output.
-  const normalized = rendered.replace(/[\r\n]+/g, ' ');
-
   // 7) Return meta for the COMMAND WRAPPER to persist the last-render mirror.
   // The pure renderer never writes mirrors itself; the wrapper invokes
   // `writeLastRender` after rendering.
   return {
-    rendered: normalized,
+    rendered,
     mode: resolved.mode,
     projectRoot: scope.projectRoot,
     projectKey: scope.projectKey,
@@ -516,48 +519,74 @@ interface ComposeContext {
 }
 
 /**
- * Produce the single-line statusline output. Order matches the locked
- * visual design (header -> scoreboard -> swarm -> memory/tests -> attention
- * -> footer) but every section is omitted when its backing data is absent
- * (OMIT > FAKE rule).
+ * Width (in box-drawing `─` characters) of the inter-row separator rules.
+ * Matches the design doc's example board (~65 columns).
+ */
+const SEPARATOR_RULE_WIDTH = 65;
+
+/**
+ * Render a full-width horizontal `─` rule in the palette `separator` colour.
+ * Used between the header / body / footer groups per the design doc's row
+ * table ("Separator | When ≥1 body row").
+ */
+function renderSeparatorRule(p: PaletteCodes): string {
+  return `${p.separator}${'─'.repeat(SEPARATOR_RULE_WIDTH)}${p.reset}`;
+}
+
+/**
+ * Produce the multi-row statusline box. Order matches the locked visual
+ * design (header -> [rule] -> scoreboard -> swarm -> memory/tests ->
+ * attention -> [rule] -> footer) but every row is omitted when its backing
+ * data is absent (OMIT > FAKE rule).
  *
- * Sections are joined by a palette-coloured space-pipe-space delimiter so
- * the output stays on a single line.
+ * Rows are joined by `\n` (Claude Code statusLine renders multi-line stdout
+ * natively). Within a row, cells stay delimited by a palette-coloured
+ * space-pipe-space. Full-width `─` rules separate the header / body / footer
+ * groups whenever at least one body row is present.
  */
 function composeStatusline(ctx: ComposeContext): string {
-  const sections: string[] = [];
+  const p = ctx.palette;
+  const rows: string[] = [];
 
   // 1) Header — always rendered. Project anchor + git + model + context.
   const header = renderHeader(ctx);
-  if (header.length > 0) sections.push(header);
+  if (header.length > 0) rows.push(header);
 
   // 2) Scoreboard / Swarm / Memory / Attention rows render only when there
   // is backing snapshot data. Header-only mode falls through this block and
-  // emits just the header.
+  // emits just the header (+ footer when a signal exists).
+  const bodyRows: string[] = [];
   const snapshot = ctx.snapshot;
   if (snapshot !== undefined && ctx.mode !== 'header-only') {
-    const scoreboard = renderScoreboard(snapshot, ctx.palette);
-    if (scoreboard !== undefined) sections.push(scoreboard);
+    const scoreboard = renderScoreboard(snapshot, p);
+    if (scoreboard !== undefined) bodyRows.push(scoreboard);
 
-    const swarm = renderSwarm(snapshot, ctx.palette);
-    if (swarm !== undefined) sections.push(swarm);
+    const swarm = renderSwarm(snapshot, p);
+    if (swarm !== undefined) bodyRows.push(swarm);
 
-    const memory = renderMemoryRow(snapshot, ctx.palette);
-    if (memory !== undefined) sections.push(memory);
+    const memory = renderMemoryRow(snapshot, p);
+    if (memory !== undefined) bodyRows.push(memory);
 
-    const attention = renderAttention(snapshot.attention, ctx.palette);
-    if (attention !== undefined) sections.push(attention);
+    const attention = renderAttention(snapshot.attention, p);
+    if (attention !== undefined) bodyRows.push(attention);
   }
 
   // 3) Footer — daemon + freshness summary. Rendered for all modes when
   // there's a daemon signal or a generatedAt timestamp.
   const footer = renderFooter(ctx);
-  if (footer !== undefined) sections.push(footer);
 
-  // Join with palette-coloured separator. Even when palette is empty (no
-  // color), the literal `│` separator still renders correctly.
-  const joiner = `  ${ctx.palette.separator}│${ctx.palette.reset}  `;
-  return sections.filter((s) => s.length > 0).join(joiner);
+  // Assemble the box. A `─` rule precedes the first body row (when present)
+  // and another precedes the footer (when ≥1 body row was rendered), exactly
+  // as the design doc's row table specifies ("Separator | When ≥1 body row").
+  const hasBody = bodyRows.length > 0;
+  if (hasBody) {
+    rows.push(renderSeparatorRule(p));
+    rows.push(...bodyRows);
+    rows.push(renderSeparatorRule(p));
+  }
+  if (footer !== undefined && footer.length > 0) rows.push(footer);
+
+  return rows.filter((s) => s.length > 0).join('\n');
 }
 
 // ---------------------------------------------------------------------------
