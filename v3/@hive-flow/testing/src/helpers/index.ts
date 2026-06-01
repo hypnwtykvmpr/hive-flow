@@ -180,3 +180,20 @@ export {
   type PerformanceTestHelper,
   type V3TestConfig,
 } from './setup-teardown.js';
+
+export {
+  propertyRunsFromEnv,
+  seededPropertyConfig,
+  assertSeededProperty,
+  createTempProject,
+  runProcess,
+  createFakeHttpServer,
+  findSecretLeak,
+  assertNoSecretLeak,
+  type SeededPropertyOptions,
+  type TempProject,
+  type RunProcessOptions,
+  type RunProcessResult,
+  type FakeHttpHandler,
+  type FakeHttpServer,
+} from './hardening.js';

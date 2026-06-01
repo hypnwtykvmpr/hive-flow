@@ -23,6 +23,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:integration": "vitest run src/__tests__/provider-integration.test.ts",
+    "test:provider-hardening": "vitest run src/__tests__/openrouter-hardening.test.ts",
     "test:coverage": "vitest run --coverage",
     "test:quick": "npx tsx src/__tests__/quick-test.ts",
     "lint": "eslint src/",
@@ -46,6 +47,7 @@
   "license": "MIT",
   "dependencies": {},
   "devDependencies": {
+    "@hive-flow/testing": "workspace:*",
     "dotenv": "^16.4.5",
     "tsx": "^4.19.0",
     "vitest": "^4.0.16"

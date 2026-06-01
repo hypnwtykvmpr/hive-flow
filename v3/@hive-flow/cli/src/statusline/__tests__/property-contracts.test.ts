@@ -18,8 +18,9 @@ import {
   type NormalizedAgentStatus,
   type StatuslineSource,
 } from '../types.js';
+import { propertyRunsFromEnv } from '../../__tests__/property-runs.js';
 
-const PROPERTY_RUNS = 100;
+const PROPERTY_RUNS = propertyRunsFromEnv(100);
 
 const finiteNumber = fc.double({ noNaN: true, noDefaultInfinity: true });
 

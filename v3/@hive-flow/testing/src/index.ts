@@ -196,6 +196,24 @@ export {
   type V3TestConfig,
 } from './helpers/setup-teardown.js';
 
+export {
+  // hardening.js
+  propertyRunsFromEnv,
+  seededPropertyConfig,
+  assertSeededProperty,
+  createTempProject,
+  runProcess,
+  createFakeHttpServer,
+  findSecretLeak,
+  assertNoSecretLeak,
+  type SeededPropertyOptions,
+  type TempProject,
+  type RunProcessOptions,
+  type RunProcessResult,
+  type FakeHttpHandler,
+  type FakeHttpServer,
+} from './helpers/hardening.js';
+
 // Fixtures - Pre-defined test data (canonical source for shared types)
 export * from './fixtures/index.js';
 

@@ -7,23 +7,23 @@
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.js",
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
     "./helpers": {
-      "types": "./dist/helpers/index.d.js",
+      "types": "./dist/helpers/index.d.ts",
       "import": "./dist/helpers/index.js"
     },
     "./fixtures": {
-      "types": "./dist/fixtures/index.d.js",
+      "types": "./dist/fixtures/index.d.ts",
       "import": "./dist/fixtures/index.js"
     },
     "./mocks": {
-      "types": "./dist/mocks/index.d.js",
+      "types": "./dist/mocks/index.d.ts",
       "import": "./dist/mocks/index.js"
     },
     "./setup": {
-      "types": "./dist/setup.d.js",
+      "types": "./dist/setup.d.ts",
       "import": "./dist/setup.js"
     }
   },
@@ -45,6 +45,7 @@
     "@hive-flow/memory": "workspace:*",
     "@hive-flow/shared": "workspace:*",
     "@hive-flow/swarm": "workspace:*",
+    "fast-check": ">=4.0.0",
     "vitest": ">=1.0.0"
   },
   "engines": {
@@ -54,6 +55,7 @@
     "@hive-flow/memory": "workspace:*",
     "@hive-flow/shared": "workspace:*",
     "@hive-flow/swarm": "workspace:*",
+    "fast-check": "^4.8.0",
     "vitest": "^4.0.16"
   },
   "publishConfig": {

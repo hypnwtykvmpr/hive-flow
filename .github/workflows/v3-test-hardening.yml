@@ -1,0 +1,126 @@
+name: V3 Test Hardening
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'v3/**'
+      - '.claude/helpers/**'
+      - '.github/workflows/v3-test-hardening.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'v3/**'
+      - '.claude/helpers/**'
+      - '.github/workflows/v3-test-hardening.yml'
+  schedule:
+    - cron: '17 8 * * *'
+  workflow_dispatch:
+    inputs:
+      lane:
+        description: 'Hardening lane to run'
+        required: true
+        default: pr
+        type: choice
+        options:
+          - pr
+          - deep
+          - mutation
+
+env:
+  NODE_VERSION: '20'
+  PNPM_VERSION: '8.15.9'
+  COREPACK_ENABLE_STRICT: '0'
+
+jobs:
+  pr-hardening:
+    name: PR hardening
+    if: github.event_name != 'workflow_dispatch' || inputs.lane == 'pr'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: v3/pnpm-lock.yaml
+
+      - name: Install
+        working-directory: v3
+        run: pnpm install --frozen-lockfile --config.confirm-modules-purge=false
+
+      - name: Typecheck
+        working-directory: v3
+        run: pnpm typecheck
+
+      - name: Build
+        working-directory: v3
+        run: pnpm build
+
+      - name: Hardening PR lane
+        working-directory: v3
+        run: pnpm test:hardening:pr
+
+      - name: Install bats-core
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bats
+
+      - name: Hook subprocess contracts
+        working-directory: v3
+        run: pnpm test:bats
+
+  deep-hardening:
+    name: Nightly deep hardening
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.lane == 'deep')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: v3/pnpm-lock.yaml
+
+      - name: Install
+        working-directory: v3
+        run: pnpm install --frozen-lockfile --config.confirm-modules-purge=false
+
+      - name: Deep hardening lane
+        working-directory: v3
+        run: pnpm test:hardening:deep
+
+  mutation-critical:
+    name: Critical mutation audit
+    if: github.event_name == 'workflow_dispatch' && inputs.lane == 'mutation'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: v3/pnpm-lock.yaml
+
+      - name: Install
+        working-directory: v3
+        run: pnpm install --frozen-lockfile --config.confirm-modules-purge=false
+
+      - name: Critical mutation audit
+        working-directory: v3
+        run: pnpm mutation:critical
