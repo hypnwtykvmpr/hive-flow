@@ -92,6 +92,7 @@
     "vitest": "^4.0.16"
   },
   "dependencies": {
+    "@ast-grep/napi": "^0.43.0",
     "@hive-flow/mcp": "workspace:*",
     "@hive-flow/shared": "workspace:*",
     "@noble/ed25519": "^3.0.0",
