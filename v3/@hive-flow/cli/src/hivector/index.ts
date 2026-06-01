@@ -10,7 +10,7 @@
  * - Graph boundary analysis
  * - Flash Attention for faster similarity computations
  *
- * @module @hive-flow/cli/ruvector
+ * @module @hive-flow/cli/hivector
  */
 
 export { QLearningRouter, createQLearningRouter, type QLearningRouterConfig, type RouteDecision } from './q-learning-router.js';
@@ -86,6 +86,7 @@ export {
   analyzeModuleCommunities,
   detectCircularDependencies,
   exportToDot,
+  loadHivectorGraph,
   loadRuVector,
   fallbackMinCut,
   fallbackLouvain,
@@ -157,13 +158,19 @@ export {
 /**
  * External vector packages are intentionally detached.
  */
-export async function isRuvectorAvailable(): Promise<boolean> {
+export async function isHivectorAvailable(): Promise<boolean> {
   return false;
 }
+
+/** @deprecated Use isHivectorAvailable. */
+export const isRuvectorAvailable = isHivectorAvailable;
 
 /**
  * Get external vector package version if available.
  */
-export async function getRuvectorVersion(): Promise<string | null> {
+export async function getHivectorVersion(): Promise<string | null> {
   return null;
 }
+
+/** @deprecated Use getHivectorVersion. */
+export const getRuvectorVersion = getHivectorVersion;

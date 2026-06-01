@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { QLearningRouter, createQLearningRouter, type RouteDecision } from '../../src/ruvector/q-learning-router';
+import { QLearningRouter, createQLearningRouter, type RouteDecision } from '../../src/hivector/q-learning-router';
 
 describe('QLearningRouter', () => {
   let router: QLearningRouter;

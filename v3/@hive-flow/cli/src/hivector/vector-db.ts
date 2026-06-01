@@ -22,7 +22,7 @@ export interface VectorDB {
   clear(): void | Promise<void>;
 }
 
-export interface RuVectorModule {
+export interface HivectorModule {
   createVectorDB(dimensions: number): Promise<VectorDB>;
   generateEmbedding(text: string, dimensions?: number): Float32Array;
   cosineSimilarity(a: Float32Array, b: Float32Array): number;
@@ -129,7 +129,7 @@ function generateHashEmbedding(text: string, dimensions: number = 768): Float32A
 // Module State
 // ============================================================================
 
-let ruvectorModule: RuVectorModule | null = null;
+let hivectorModule: HivectorModule | null = null;
 let loadAttempted = false;
 let isAvailable = false;
 
@@ -140,30 +140,36 @@ let isAvailable = false;
 /**
  * External vector modules are intentionally detached; local fallback is primary.
  */
-export async function loadRuVector(): Promise<boolean> {
+export async function loadHivector(): Promise<boolean> {
   if (loadAttempted) {
     return isAvailable;
   }
 
   loadAttempted = true;
-  ruvectorModule = null;
+  hivectorModule = null;
   isAvailable = false;
   return false;
 }
 
+/** @deprecated Use loadHivector. */
+export const loadRuVector = loadHivector;
+
 /**
  * Check if an external vector backend is available.
  */
-export function isRuVectorAvailable(): boolean {
+export function isHivectorAvailable(): boolean {
   return isAvailable;
 }
+
+/** @deprecated Use isHivectorAvailable. */
+export const isRuVectorAvailable = isHivectorAvailable;
 
 /**
  * Check if external WASM acceleration is enabled.
  */
 export function isWASMAccelerated(): boolean {
-  if (ruvectorModule && typeof ruvectorModule.isWASMAccelerated === 'function') {
-    return ruvectorModule.isWASMAccelerated();
+  if (hivectorModule && typeof hivectorModule.isWASMAccelerated === 'function') {
+    return hivectorModule.isWASMAccelerated();
   }
   return false;
 }
@@ -173,11 +179,11 @@ export function isWASMAccelerated(): boolean {
  * Uses the local brute-force implementation.
  */
 export async function createVectorDB(dimensions: number = 768): Promise<VectorDB> {
-  await loadRuVector();
+  await loadHivector();
 
-  if (ruvectorModule && typeof ruvectorModule.createVectorDB === 'function') {
+  if (hivectorModule && typeof hivectorModule.createVectorDB === 'function') {
     try {
-      return await ruvectorModule.createVectorDB(dimensions);
+      return await hivectorModule.createVectorDB(dimensions);
     } catch {
       // Fall back to simple implementation
     }
@@ -191,9 +197,9 @@ export async function createVectorDB(dimensions: number = 768): Promise<VectorDB
  * Uses hash-based local embeddings.
  */
 export function generateEmbedding(text: string, dimensions: number = 768): Float32Array {
-  if (ruvectorModule && typeof ruvectorModule.generateEmbedding === 'function') {
+  if (hivectorModule && typeof hivectorModule.generateEmbedding === 'function') {
     try {
-      return ruvectorModule.generateEmbedding(text, dimensions);
+      return hivectorModule.generateEmbedding(text, dimensions);
     } catch {
       // Fall back to hash-based embedding
     }
@@ -206,9 +212,9 @@ export function generateEmbedding(text: string, dimensions: number = 768): Float
  * Compute cosine similarity between two vectors
  */
 export function computeSimilarity(a: Float32Array, b: Float32Array): number {
-  if (ruvectorModule && typeof ruvectorModule.cosineSimilarity === 'function') {
+  if (hivectorModule && typeof hivectorModule.cosineSimilarity === 'function') {
     try {
-      return ruvectorModule.cosineSimilarity(a, b);
+      return hivectorModule.cosineSimilarity(a, b);
     } catch {
       // Fall back to JS implementation
     }

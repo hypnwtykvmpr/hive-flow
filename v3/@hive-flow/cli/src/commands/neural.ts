@@ -55,7 +55,7 @@ const trainCommand: Command = {
 
     try {
       // Import local training service
-      const localTraining = await import('../services/ruvector-training.js');
+      const localTraining = await import('../services/hivector-training.js');
       const { generateEmbedding } = await import('../memory/memory-initializer.js');
       const {
         initializeIntelligence,
@@ -413,7 +413,7 @@ const statusCommand: Command = {
       // Import real implementations
       const { getIntelligenceStats, initializeIntelligence, benchmarkAdaptation } = await import('../memory/intelligence.js');
       const { getHNSWStatus, loadEmbeddingModel } = await import('../memory/memory-initializer.js');
-      const localTraining = await import('../services/ruvector-training.js');
+      const localTraining = await import('../services/hivector-training.js');
 
       // Initialize if needed and get real stats
       await initializeIntelligence();
@@ -1548,7 +1548,7 @@ const benchmarkCommand: Command = {
 
     try {
       spinner.setText(`Benchmarking attention mechanisms (dim=${dim}, keys=${numKeys}, iter=${iterations})...`);
-      const localTraining = await import('../services/ruvector-training.js');
+      const localTraining = await import('../services/hivector-training.js');
       await localTraining.initializeTraining({ dim, useFlashAttention: true, useMoE: true, useHyperbolic: true });
       const results = await localTraining.benchmarkTraining(dim, iterations, numKeys);
 

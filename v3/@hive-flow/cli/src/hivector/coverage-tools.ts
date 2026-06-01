@@ -41,9 +41,13 @@ export const hooksCoverageRoute: MCPTool = {
         type: 'number',
         description: 'Coverage threshold percentage (default: 80)',
       },
-      useRuvector: {
+      useHivector: {
         type: 'boolean',
         description: 'Use enhanced local coverage routing if available (default: true)',
+      },
+      useRuvector: {
+        type: 'boolean',
+        description: 'Deprecated alias for useHivector',
       },
     },
     required: ['task'],
@@ -52,12 +56,12 @@ export const hooksCoverageRoute: MCPTool = {
     const task = params.task as string;
     const projectRoot = params.projectRoot as string | undefined;
     const threshold = params.threshold as number | undefined;
-    const useRuvector = params.useRuvector as boolean | undefined;
+    const useHivector = (params.useHivector ?? params.useRuvector) as boolean | undefined;
 
     return coverageRoute(task, {
       projectRoot,
       threshold,
-      useRuvector,
+      useHivector,
     });
   },
 };
@@ -92,9 +96,13 @@ export const hooksCoverageSuggest: MCPTool = {
         type: 'number',
         description: 'Maximum number of suggestions to return (default: 20)',
       },
-      useRuvector: {
+      useHivector: {
         type: 'boolean',
         description: 'Use enhanced local routing if available (default: true)',
+      },
+      useRuvector: {
+        type: 'boolean',
+        description: 'Deprecated alias for useHivector',
       },
     },
     required: ['path'],
@@ -104,13 +112,13 @@ export const hooksCoverageSuggest: MCPTool = {
     const projectRoot = params.projectRoot as string | undefined;
     const threshold = params.threshold as number | undefined;
     const limit = params.limit as number | undefined;
-    const useRuvector = params.useRuvector as boolean | undefined;
+    const useHivector = (params.useHivector ?? params.useRuvector) as boolean | undefined;
 
     return coverageSuggest(path, {
       projectRoot,
       threshold,
       limit,
-      useRuvector,
+      useHivector,
     });
   },
 };
@@ -140,9 +148,13 @@ export const hooksCoverageGaps: MCPTool = {
         type: 'boolean',
         description: 'Group gaps by suggested agent (default: true)',
       },
-      useRuvector: {
+      useHivector: {
         type: 'boolean',
         description: 'Use enhanced local routing if available (default: true)',
+      },
+      useRuvector: {
+        type: 'boolean',
+        description: 'Deprecated alias for useHivector',
       },
     },
   },
@@ -150,13 +162,13 @@ export const hooksCoverageGaps: MCPTool = {
     const projectRoot = params.projectRoot as string | undefined;
     const threshold = params.threshold as number | undefined;
     const groupByAgent = params.groupByAgent as boolean | undefined;
-    const useRuvector = params.useRuvector as boolean | undefined;
+    const useHivector = (params.useHivector ?? params.useRuvector) as boolean | undefined;
 
     return coverageGaps({
       projectRoot,
       threshold,
       groupByAgent,
-      useRuvector,
+      useHivector,
     });
   },
 };

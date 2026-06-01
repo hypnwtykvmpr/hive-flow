@@ -6,8 +6,8 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
-  isRuvectorAvailable,
-  getRuvectorVersion,
+  isHivectorAvailable,
+  getHivectorVersion,
   createQLearningRouter,
   createASTAnalyzer,
   createDiffClassifier,
@@ -23,32 +23,32 @@ import {
   analyzeModuleCommunities,
   detectCircularDependencies,
   exportToDot,
-  loadRuVector,
+  loadHivectorGraph,
   fallbackMinCut,
   fallbackLouvain,
-} from '../../src/ruvector/index.js';
-import type { DependencyGraph, GraphAnalysisResult, GraphNode, GraphEdge } from '../../src/ruvector/index.js';
+} from '../../src/hivector/index.js';
+import type { DependencyGraph, GraphAnalysisResult, GraphNode, GraphEdge } from '../../src/hivector/index.js';
 
-describe('RuVector Module Exports', () => {
+describe('Hivector Module Exports', () => {
   afterEach(() => {
     vi.clearAllMocks();
   });
 
-  describe('isRuvectorAvailable', () => {
+  describe('isHivectorAvailable', () => {
     it('should return boolean', async () => {
-      const result = await isRuvectorAvailable();
+      const result = await isHivectorAvailable();
       expect(typeof result).toBe('boolean');
     });
 
     it('should return false because external packages are detached', async () => {
-      const result = await isRuvectorAvailable();
+      const result = await isHivectorAvailable();
       expect(result).toBe(false);
     });
   });
 
-  describe('getRuvectorVersion', () => {
+  describe('getHivectorVersion', () => {
     it('should return version string or null', async () => {
-      const version = await getRuvectorVersion();
+      const version = await getHivectorVersion();
       expect(version === null || typeof version === 'string').toBe(true);
     });
   });
@@ -104,8 +104,8 @@ describe('RuVector Module Exports', () => {
       expect(typeof exportToDot).toBe('function');
     });
 
-    it('should export loadRuVector', () => {
-      expect(typeof loadRuVector).toBe('function');
+    it('should export loadHivectorGraph', () => {
+      expect(typeof loadHivectorGraph).toBe('function');
     });
 
     it('should export fallbackMinCut', () => {
@@ -144,7 +144,7 @@ describe('RuVector Module Exports', () => {
   });
 });
 
-describe('RuVector Integration Scenarios', () => {
+describe('Hivector Integration Scenarios', () => {
   describe('Code Analysis Workflow', () => {
     it('should analyze TypeScript code and extract information', () => {
       const analyzer = createASTAnalyzer();

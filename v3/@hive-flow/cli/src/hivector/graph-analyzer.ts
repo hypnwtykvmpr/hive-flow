@@ -9,7 +9,7 @@
  *
  * Uses built-in implementations only.
  *
- * @module @hive-flow/cli/ruvector/graph-analyzer
+ * @module @hive-flow/cli/hivector/graph-analyzer
  */
 
 import { readFile, readdir, stat } from 'fs/promises';
@@ -147,7 +147,7 @@ export interface GraphAnalysisResult {
 /**
  * Interface for optional graph operations.
  */
-interface IRuVectorGraph {
+interface IHivectorGraph {
   mincut(nodes: string[], edges: Array<[string, string, number]>): {
     cutValue: number;
     partition1: string[];
@@ -160,18 +160,21 @@ interface IRuVectorGraph {
   };
 }
 
-let ruVectorGraph: IRuVectorGraph | null = null;
-let ruVectorLoadAttempted = false;
+let hivectorGraph: IHivectorGraph | null = null;
+let hivectorLoadAttempted = false;
 
 /**
  * Return null so callers use the built-in graph algorithms.
  */
-async function loadRuVector(): Promise<IRuVectorGraph | null> {
-  if (ruVectorLoadAttempted) return ruVectorGraph;
-  ruVectorLoadAttempted = true;
-  ruVectorGraph = null;
+async function loadHivectorGraph(): Promise<IHivectorGraph | null> {
+  if (hivectorLoadAttempted) return hivectorGraph;
+  hivectorLoadAttempted = true;
+  hivectorGraph = null;
   return null;
 }
+
+/** @deprecated Use loadHivectorGraph. */
+const loadRuVector = loadHivectorGraph;
 
 // ============================================================================
 // Import/Require Parser
@@ -861,12 +864,12 @@ export async function analyzeMinCutBoundaries(
   const boundaries: MinCutBoundary[] = [];
 
   // Use optional graph implementation, fallback to built-in
-  const ruVector = await loadRuVector();
+  const hivector = await loadHivectorGraph();
 
   // Get initial partition
   let result: ReturnType<typeof fallbackMinCut>;
-  if (ruVector) {
-    result = ruVector.mincut(nodes, edges);
+  if (hivector) {
+    result = hivector.mincut(nodes, edges);
   } else {
     result = fallbackMinCut(nodes, edges);
   }
@@ -887,8 +890,8 @@ export async function analyzeMinCutBoundaries(
     const subEdges: Array<[string, string, number]> = edges.filter(
       ([u, v]) => result.partition1.includes(u) && result.partition1.includes(v)
     );
-    const subResult = ruVector
-      ? ruVector.mincut(result.partition1, subEdges)
+    const subResult = hivector
+      ? hivector.mincut(result.partition1, subEdges)
       : fallbackMinCut(result.partition1, subEdges);
 
     if (subResult.cutValue > 0) {
@@ -936,8 +939,8 @@ export async function analyzeModuleCommunities(graph: DependencyGraph): Promise<
   const edges: Array<[string, string, number]> = graph.edges.map(e => [e.source, e.target, e.weight]);
 
   // Use optional graph implementation, fallback to built-in
-  const ruVector = await loadRuVector();
-  const result = ruVector ? ruVector.louvain(nodes, edges) : fallbackLouvain(nodes, edges);
+  const hivector = await loadHivectorGraph();
+  const result = hivector ? hivector.louvain(nodes, edges) : fallbackLouvain(nodes, edges);
 
   return result.communities.map(comm => {
     // Find the most connected node as central
@@ -1207,6 +1210,7 @@ export function exportToDot(
 // ============================================================================
 
 export {
+  loadHivectorGraph,
   loadRuVector,
   fallbackMinCut,
   fallbackLouvain,

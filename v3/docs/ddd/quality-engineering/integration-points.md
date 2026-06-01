@@ -597,7 +597,7 @@ TinyDancer model routing is aligned with V3's ADR-026 Agent Booster routing.
 ```typescript
 // v3/plugins/agentic-qe/src/infrastructure/model-routing-adapter.ts
 
-import type { EnhancedModelRouter, EnhancedRouteResult } from '@hive-flow/cli/ruvector';
+import type { EnhancedModelRouter, EnhancedRouteResult } from '@hive-flow/cli/hivector';
 
 export class QEModelRoutingAdapter {
   constructor(private v3Router: EnhancedModelRouter) {}

@@ -67,7 +67,7 @@ const LANGUAGE_PATTERNS: Record<string, RegExp[]> = {
 
 export class ASTAnalyzer {
   private config: ASTAnalyzerConfig;
-  private ruvectorEngine: unknown = null;
+  private localEngine: unknown = null;
   private useNative = false;
   private analysisCache: Map<string, ASTAnalysis> = new Map();
 
@@ -76,7 +76,7 @@ export class ASTAnalyzer {
   }
 
   async initialize(): Promise<void> {
-    this.ruvectorEngine = null;
+    this.localEngine = null;
     this.useNative = false;
   }
 

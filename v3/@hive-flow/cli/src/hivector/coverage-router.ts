@@ -78,7 +78,7 @@ const DEFAULT_CONFIG: CoverageRouterConfig = {
 
 export class CoverageRouter {
   private config: CoverageRouterConfig;
-  private ruvectorEngine: unknown = null;
+  private localEngine: unknown = null;
   private useNative = false;
   private coverageHistory: CoverageReport[] = [];
 
@@ -87,7 +87,7 @@ export class CoverageRouter {
   }
 
   async initialize(): Promise<void> {
-    this.ruvectorEngine = null;
+    this.localEngine = null;
     this.useNative = false;
   }
 
@@ -342,6 +342,8 @@ export interface CoverageGapsResult {
 export interface CoverageRouteOptions {
   projectRoot?: string;
   threshold?: number;
+  useHivector?: boolean;
+  /** @deprecated Use useHivector. */
   useRuvector?: boolean;
 }
 

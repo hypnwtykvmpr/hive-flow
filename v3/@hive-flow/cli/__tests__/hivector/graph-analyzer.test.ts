@@ -13,7 +13,7 @@ import {
   analyzeModuleCommunities,
   detectCircularDependencies,
   exportToDot,
-  loadRuVector,
+  loadHivectorGraph,
   fallbackMinCut,
   fallbackLouvain,
   clearGraphCaches,
@@ -24,7 +24,7 @@ import {
   type ModuleCommunity,
   type CircularDependency,
   type GraphAnalysisResult,
-} from '../../src/ruvector/graph-analyzer.js';
+} from '../../src/hivector/graph-analyzer.js';
 import { mkdir, writeFile, rm } from 'fs/promises';
 import { join } from 'path';
 import { tmpdir } from 'os';
@@ -47,10 +47,10 @@ describe('Graph Analyzer', () => {
     }
   });
 
-  describe('loadRuVector', () => {
-    it('should return null when ruvector is not installed', async () => {
-      const result = await loadRuVector();
-      // Returns null or IRuVectorGraph interface
+  describe('loadHivectorGraph', () => {
+    it('should return null when external graph backend is detached', async () => {
+      const result = await loadHivectorGraph();
+      // Returns null or IHivectorGraph interface
       expect(result === null || typeof result === 'object').toBe(true);
     });
   });

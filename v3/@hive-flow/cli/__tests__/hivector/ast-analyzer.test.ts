@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { ASTAnalyzer, createASTAnalyzer, type ASTAnalysis } from '../../src/ruvector/ast-analyzer';
+import { ASTAnalyzer, createASTAnalyzer, type ASTAnalysis } from '../../src/hivector/ast-analyzer';
 
 describe('ASTAnalyzer', () => {
   let analyzer: ASTAnalyzer;

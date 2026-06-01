@@ -202,7 +202,7 @@ export class QLearningRouter {
   private stepCount = 0;
   private updateCount = 0;
   private avgTDError = 0;
-  private ruvectorEngine: unknown = null;
+  private localEngine: unknown = null;
   private useNative = false;
 
   // Experience replay buffer (circular buffer)
@@ -228,7 +228,7 @@ export class QLearningRouter {
    * Initialize the router and restore persisted model if available.
    */
   async initialize(): Promise<void> {
-    this.ruvectorEngine = null;
+    this.localEngine = null;
     this.useNative = false;
 
     // Try to load persisted model

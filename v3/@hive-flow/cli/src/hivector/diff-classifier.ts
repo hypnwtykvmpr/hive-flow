@@ -78,7 +78,7 @@ const IMPACT_KEYWORDS: Record<string, number> = {
 
 export class DiffClassifier {
   private config: DiffClassifierConfig;
-  private ruvectorEngine: unknown = null;
+  private localEngine: unknown = null;
   private useNative = false;
   private classificationCache: Map<string, DiffClassification> = new Map();
 
@@ -87,7 +87,7 @@ export class DiffClassifier {
   }
 
   async initialize(): Promise<void> {
-    this.ruvectorEngine = null;
+    this.localEngine = null;
     this.useNative = false;
   }
 
@@ -684,6 +684,8 @@ const ANALYSIS_CACHE_TTL_MS = 3000; // 3 seconds
  */
 export async function analyzeDiff(options: {
   ref?: string;
+  useHivector?: boolean;
+  /** @deprecated Use useHivector. */
   useRuVector?: boolean;
   skipCache?: boolean;
 }): Promise<DiffAnalysisResult> {
@@ -734,6 +736,8 @@ export async function analyzeDiff(options: {
  */
 export function analyzeDiffSync(options: {
   ref?: string;
+  useHivector?: boolean;
+  /** @deprecated Use useHivector. */
   useRuVector?: boolean;
 }): DiffAnalysisResult {
   const ref = options.ref || 'HEAD';

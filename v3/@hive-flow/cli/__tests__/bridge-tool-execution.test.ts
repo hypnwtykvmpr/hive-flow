@@ -47,11 +47,11 @@ vi.mock('node:url', () => ({
   fileURLToPath: vi.fn(() => '/fake/dist/src/mcp-tools/agent-tools.js'),
 }));
 
-vi.mock('../src/ruvector/model-router.js', () => ({
+vi.mock('../src/hivector/model-router.js', () => ({
   getModelRouter: () => null,
 }));
 
-vi.mock('../src/ruvector/enhanced-model-router.js', () => ({
+vi.mock('../src/hivector/enhanced-model-router.js', () => ({
   getEnhancedModelRouter: () => ({
     route: async () => ({ model: 'sonnet', tier: 3, canSkipLLM: false }),
   }),

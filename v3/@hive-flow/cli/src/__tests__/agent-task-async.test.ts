@@ -23,10 +23,10 @@ vi.mock('node:url', () => ({
 }));
 
 // Stub out the model-router dynamic imports so agent_spawn doesn't break
-vi.mock('../ruvector/model-router.js', () => ({
+vi.mock('../hivector/model-router.js', () => ({
   getModelRouter: () => null,
 }));
-vi.mock('../ruvector/enhanced-model-router.js', () => ({
+vi.mock('../hivector/enhanced-model-router.js', () => ({
   getEnhancedModelRouter: () => ({
     route: async () => ({ model: 'sonnet', tier: 3, canSkipLLM: false }),
   }),

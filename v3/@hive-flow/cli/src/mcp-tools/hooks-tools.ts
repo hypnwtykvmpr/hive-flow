@@ -100,11 +100,11 @@ async function getEWCConsolidator() {
 }
 
 // MoE Router - lazy loaded
-let moeRouter: Awaited<ReturnType<typeof import('../ruvector/moe-router.js').getMoERouter>> | null = null;
+let moeRouter: Awaited<ReturnType<typeof import('../hivector/moe-router.js').getMoERouter>> | null = null;
 async function getMoERouter() {
   if (!moeRouter) {
     try {
-      const { getMoERouter: getMoE } = await import('../ruvector/moe-router.js');
+      const { getMoERouter: getMoE } = await import('../hivector/moe-router.js');
       moeRouter = await getMoE();
     } catch {
       moeRouter = null;
@@ -115,7 +115,7 @@ async function getMoERouter() {
 
 // Semantic Router - lazy loaded
 // Uses the local pure JS semantic router.
-let semanticRouter: import('../ruvector/semantic-router.js').SemanticRouter | null = null;
+let semanticRouter: import('../hivector/semantic-router.js').SemanticRouter | null = null;
 let nativeVectorDb: unknown = null;
 let semanticRouterInitialized = false;
 let routerBackend: 'pure-js' | 'none' = 'none';
@@ -229,7 +229,7 @@ async function getSemanticRouter() {
   semanticRouterInitialized = true;
 
   try {
-    const { SemanticRouter } = await import('../ruvector/semantic-router.js');
+    const { SemanticRouter } = await import('../hivector/semantic-router.js');
     semanticRouter = new SemanticRouter({ dimension: 384 });
 
     for (const [patternName, { keywords, agents }] of Object.entries(TASK_PATTERNS)) {
@@ -264,11 +264,11 @@ function getRouterBackendInfo(): { backend: string; speed: string } {
 }
 
 // Flash Attention - lazy loaded
-let flashAttention: Awaited<ReturnType<typeof import('../ruvector/flash-attention.js').getFlashAttention>> | null = null;
+let flashAttention: Awaited<ReturnType<typeof import('../hivector/flash-attention.js').getFlashAttention>> | null = null;
 async function getFlashAttention() {
   if (!flashAttention) {
     try {
-      const { getFlashAttention: getFlash } = await import('../ruvector/flash-attention.js');
+      const { getFlashAttention: getFlash } = await import('../hivector/flash-attention.js');
       flashAttention = await getFlash();
     } catch {
       flashAttention = null;
@@ -278,11 +278,11 @@ async function getFlashAttention() {
 }
 
 // LoRA Adapter - lazy loaded
-let loraAdapter: Awaited<ReturnType<typeof import('../ruvector/lora-adapter.js').getLoRAAdapter>> | null = null;
+let loraAdapter: Awaited<ReturnType<typeof import('../hivector/lora-adapter.js').getLoRAAdapter>> | null = null;
 async function getLoRAAdapter() {
   if (!loraAdapter) {
     try {
-      const { getLoRAAdapter: getLora } = await import('../ruvector/lora-adapter.js');
+      const { getLoRAAdapter: getLora } = await import('../hivector/lora-adapter.js');
       loraAdapter = await getLora();
     } catch {
       loraAdapter = null;
@@ -943,7 +943,7 @@ export const hooksPreTask: MCPTool = {
     // Enhanced model routing with Agent Booster AST (ADR-026)
     let modelRouting: Record<string, unknown> | undefined;
     try {
-      const { getEnhancedModelRouter } = await import('../ruvector/enhanced-model-router.js');
+      const { getEnhancedModelRouter } = await import('../hivector/enhanced-model-router.js');
       const router = getEnhancedModelRouter();
       const routeResult = await router.route(description, { filePath });
 
@@ -3021,11 +3021,11 @@ export const hooksWorkerDetect: MCPTool = {
 };
 
 // Model router - lazy loaded
-let modelRouterInstance: Awaited<ReturnType<typeof import('../ruvector/model-router.js').getModelRouter>> | null = null;
+let modelRouterInstance: Awaited<ReturnType<typeof import('../hivector/model-router.js').getModelRouter>> | null = null;
 async function getModelRouterInstance() {
   if (!modelRouterInstance) {
     try {
-      const { getModelRouter } = await import('../ruvector/model-router.js');
+      const { getModelRouter } = await import('../hivector/model-router.js');
       modelRouterInstance = getModelRouter();
     } catch {
       modelRouterInstance = null;

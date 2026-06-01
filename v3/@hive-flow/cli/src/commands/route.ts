@@ -15,10 +15,10 @@ import type { Command, CommandContext, CommandResult } from '../types.js';
 import { output } from '../output.js';
 import {
   createQLearningRouter,
-  isRuvectorAvailable,
+  isHivectorAvailable,
   type QLearningRouter,
   type RouteDecision,
-} from '../ruvector/index.js';
+} from '../hivector/index.js';
 
 // ============================================================================
 // Agent Type Definitions
@@ -326,10 +326,10 @@ const statsCommand: Command = {
     try {
       const router = await getRouter();
       const stats = router.getStats();
-      const ruvectorAvailable = await isRuvectorAvailable();
+      const hivectorAvailable = await isHivectorAvailable();
 
       const routerBackendStatus = {
-        available: ruvectorAvailable,
+        available: hivectorAvailable,
         wasmAccelerated: stats.useNative === 1,
         backend: stats.useNative === 1 ? 'external-native' : 'local-fallback',
       };
@@ -643,7 +643,7 @@ const coverageRouteCommand: Command = {
 
     try {
       // Lazy load coverage router
-      const { coverageRoute, coverageSuggest, coverageGaps } = await import('../ruvector/coverage-router.js');
+      const { coverageRoute, coverageSuggest, coverageGaps } = await import('../hivector/coverage-router.js');
 
       if (gapsMode) {
         // List coverage gaps with agent assignments
@@ -887,12 +887,12 @@ export const routeCommand: Command = {
     output.writeln();
 
     // Show quick status
-    const ruvectorAvailable = await isRuvectorAvailable();
+    const hivectorAvailable = await isHivectorAvailable();
 
     output.writeln(output.bold('Backend Status:'));
     output.printList([
-      `External Backend: ${ruvectorAvailable ? output.success('Available') : output.warning('Detached')}`,
-      `Backend: ${ruvectorAvailable ? 'external-native' : 'JavaScript fallback'}`,
+      `External Backend: ${hivectorAvailable ? output.success('Available') : output.warning('Detached')}`,
+      `Backend: ${hivectorAvailable ? 'external-native' : 'JavaScript fallback'}`,
     ]);
     output.writeln();
 

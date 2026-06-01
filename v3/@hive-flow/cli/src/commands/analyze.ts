@@ -25,7 +25,7 @@ import { resolve } from 'path';
 // Dynamic import for AST analyzer
 async function getASTAnalyzer() {
   try {
-    return await import('../ruvector/ast-analyzer.js');
+    return await import('../hivector/ast-analyzer.js');
   } catch {
     return null;
   }
@@ -34,7 +34,7 @@ async function getASTAnalyzer() {
 // Dynamic import for graph analyzer
 async function getGraphAnalyzer() {
   try {
-    return await import('../ruvector/graph-analyzer.js');
+    return await import('../hivector/graph-analyzer.js');
   } catch {
     return null;
   }

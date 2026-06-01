@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { DiffClassifier, createDiffClassifier, type DiffAnalysis, type FileDiff } from '../../src/ruvector/diff-classifier';
+import { DiffClassifier, createDiffClassifier, type DiffAnalysis, type FileDiff } from '../../src/hivector/diff-classifier';
 
 describe('DiffClassifier', () => {
   let classifier: DiffClassifier;
@@ -37,7 +37,7 @@ describe('DiffClassifier', () => {
   });
 
   describe('initialize', () => {
-    it('should initialize without ruvector (fallback mode)', async () => {
+    it('should initialize with local fallback (fallback mode)', async () => {
       await classifier.initialize();
       const stats = classifier.getStats();
       expect(stats.useNative).toBe(false);

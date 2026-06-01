@@ -35,30 +35,30 @@ vi.mock('../memory/ewc-consolidation.js', () => ({
   getEWCConsolidator: vi.fn().mockResolvedValue(null),
 }));
 
-vi.mock('../ruvector/moe-router.js', () => ({
+vi.mock('../hivector/moe-router.js', () => ({
   getMoERouter: vi.fn().mockResolvedValue(null),
 }));
 
-vi.mock('../ruvector/semantic-router.js', () => ({
+vi.mock('../hivector/semantic-router.js', () => ({
   SemanticRouter: vi.fn().mockImplementation(() => ({
     addIntentWithEmbeddings: vi.fn(),
     routeWithEmbedding: vi.fn().mockReturnValue([]),
   })),
 }));
 
-vi.mock('../ruvector/flash-attention.js', () => ({
+vi.mock('../hivector/flash-attention.js', () => ({
   getFlashAttention: vi.fn().mockResolvedValue(null),
 }));
 
-vi.mock('../ruvector/lora-adapter.js', () => ({
+vi.mock('../hivector/lora-adapter.js', () => ({
   getLoRAAdapter: vi.fn().mockResolvedValue(null),
 }));
 
-vi.mock('../ruvector/model-router.js', () => ({
+vi.mock('../hivector/model-router.js', () => ({
   getModelRouter: vi.fn().mockReturnValue(null),
 }));
 
-vi.mock('../ruvector/enhanced-model-router.js', () => ({
+vi.mock('../hivector/enhanced-model-router.js', () => ({
   getEnhancedModelRouter: vi.fn().mockReturnValue(null),
 }));
 

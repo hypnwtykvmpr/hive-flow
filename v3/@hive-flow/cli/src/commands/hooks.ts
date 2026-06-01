@@ -1529,7 +1529,7 @@ const preTaskCommand: Command = {
 
       // Enhanced model routing with Agent Booster AST (ADR-026)
       try {
-        const { getEnhancedModelRouter } = await import('../ruvector/enhanced-model-router.js');
+        const { getEnhancedModelRouter } = await import('../hivector/enhanced-model-router.js');
         const router = getEnhancedModelRouter();
         const routeResult = await router.route(description, { filePath: ctx.flags.file as string });
 
@@ -2667,8 +2667,14 @@ const coverageRouteCommand: Command = {
       default: 80
     },
     {
-      name: 'no-ruvector',
+      name: 'no-hivector',
       description: 'Disable enhanced local coverage routing',
+      type: 'boolean',
+      default: false
+    },
+    {
+      name: 'no-ruvector',
+      description: 'Deprecated alias for --no-hivector',
       type: 'boolean',
       default: false
     }
@@ -2680,7 +2686,7 @@ const coverageRouteCommand: Command = {
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     const task = ctx.args[0] || ctx.flags.task as string;
     const threshold = ctx.flags.threshold as number || 80;
-    const useRuvector = !ctx.flags['no-ruvector'];
+    const useHivector = !ctx.flags['no-hivector'] && !ctx.flags['no-ruvector'];
 
     if (!task) {
       output.printError('Task description is required. Use --task or -t flag.');
@@ -2719,7 +2725,7 @@ const coverageRouteCommand: Command = {
       }>('hooks_coverage-route', {
         task,
         threshold,
-        useRuvector,
+        useHivector,
       });
 
       spinner.stop();
@@ -2849,7 +2855,7 @@ const coverageSuggestCommand: Command = {
           filesBelowThreshold: number;
         };
         prioritizedFiles: string[];
-        ruvectorAvailable: boolean;
+        hivectorAvailable: boolean;
       }>('hooks_coverage-suggest', {
         path,
         threshold,
@@ -2871,7 +2877,7 @@ const coverageSuggestCommand: Command = {
           `Line Coverage: ${result.summary.overallLineCoverage.toFixed(1)}%`,
           `Branch Coverage: ${result.summary.overallBranchCoverage.toFixed(1)}%`,
           `Below Threshold: ${result.summary.filesBelowThreshold} files`,
-          `Enhanced Routing: ${result.ruvectorAvailable ? output.success('Available') : output.dim('Local fallback')}`
+          `Enhanced Routing: ${result.hivectorAvailable ? output.success('Available') : output.dim('Local fallback')}`
         ].join('\n'),
         'Coverage Summary'
       );
@@ -2972,7 +2978,7 @@ const coverageGapsCommand: Command = {
           coverageThreshold: number;
         };
         agentAssignments: Record<string, string[]>;
-        ruvectorAvailable: boolean;
+        hivectorAvailable: boolean;
       }>('hooks_coverage-gaps', {
         threshold,
         groupByAgent,
@@ -2997,7 +3003,7 @@ const coverageGapsCommand: Command = {
           `Line Coverage: ${result.summary.overallLineCoverage.toFixed(1)}%`,
           `Branch Coverage: ${result.summary.overallBranchCoverage.toFixed(1)}%`,
           `Below ${result.summary.coverageThreshold}%: ${result.summary.filesBelowThreshold} files`,
-          `Enhanced Routing: ${result.ruvectorAvailable ? output.success('Available') : output.dim('Local fallback')}`
+          `Enhanced Routing: ${result.hivectorAvailable ? output.success('Available') : output.dim('Local fallback')}`
         ].join('\n'),
         'Coverage Gap Analysis'
       );

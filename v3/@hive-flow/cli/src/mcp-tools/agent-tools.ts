@@ -262,12 +262,12 @@ const AGENT_TYPE_MODEL_DEFAULTS: Record<string, AgentModel> = {
 };
 
 // Lazy-loaded model router
-let modelRouterInstance: Awaited<ReturnType<typeof import('../ruvector/model-router.js').getModelRouter>> | null = null;
+let modelRouterInstance: Awaited<ReturnType<typeof import('../hivector/model-router.js').getModelRouter>> | null = null;
 
 async function getModelRouter() {
   if (!modelRouterInstance) {
     try {
-      const { getModelRouter } = await import('../ruvector/model-router.js');
+      const { getModelRouter } = await import('../hivector/model-router.js');
       modelRouterInstance = getModelRouter();
     } catch (e) {
       // Log but don't fail - model router is optional
@@ -304,7 +304,7 @@ async function determineAgentModel(
   if (task) {
     try {
       // Try enhanced router first (includes Agent Booster detection)
-      const { getEnhancedModelRouter } = await import('../ruvector/enhanced-model-router.js');
+      const { getEnhancedModelRouter } = await import('../hivector/enhanced-model-router.js');
       const enhancedRouter = getEnhancedModelRouter();
       const routeResult = await enhancedRouter.route(task, { filePath: config.filePath as string });
 

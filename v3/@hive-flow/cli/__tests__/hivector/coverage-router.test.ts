@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { CoverageRouter, createCoverageRouter, type CoverageReport, type FileCoverage } from '../../src/ruvector/coverage-router';
+import { CoverageRouter, createCoverageRouter, type CoverageReport, type FileCoverage } from '../../src/hivector/coverage-router';
 
 describe('CoverageRouter', () => {
   let router: CoverageRouter;
@@ -38,7 +38,7 @@ describe('CoverageRouter', () => {
   });
 
   describe('initialize', () => {
-    it('should initialize without ruvector (fallback mode)', async () => {
+    it('should initialize with local fallback (fallback mode)', async () => {
       await router.initialize();
       const stats = router.getStats();
       expect(stats.useNative).toBe(false);
