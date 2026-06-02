@@ -556,6 +556,55 @@ describe('CodexCLIProvider', () => {
     mockChild.emit('close', 0);
   });
 
+  it('spawns Codex CLI detached on non-Windows so descendants share a process group', async () => {
+    mockBinaryFound('codex');
+    await provider.initialize();
+
+    const mockChild = createMockChild();
+    mockSpawn.mockReturnValue(mockChild);
+
+    const completePromise = provider.complete({ messages: [{ role: 'user', content: 'test' }] });
+
+    expect(mockSpawn.mock.calls[0][2]).toMatchObject({
+      detached: process.platform !== 'win32',
+    });
+
+    mockChild.stdout.emit('data', Buffer.from(
+      JSON.stringify({ type: 'item.completed', item: { type: 'agent_message', text: 'ok' } }) + '\n',
+    ));
+    mockChild.stdout.emit('data', Buffer.from(
+      JSON.stringify({ type: 'turn.completed' }) + '\n',
+    ));
+    mockChild.emit('close', 0);
+    await completePromise;
+  });
+
+  it('kills the Codex process group on complete timeout', async () => {
+    mockBinaryFound('codex');
+    provider = new CodexCLIProvider({
+      config: { provider: 'codex-cli', model: 'gpt-5.3-codex', timeout: 5000 },
+      logger: noopLogger,
+    });
+    await provider.initialize();
+
+    const mockChild = createMockChild();
+    mockSpawn.mockReturnValue(mockChild);
+    const killSpy = vi.spyOn(process, 'kill').mockImplementation(() => true);
+    vi.useFakeTimers();
+
+    const completePromise = provider.complete({ messages: [{ role: 'user', content: 'slow task' }] });
+    vi.advanceTimersByTime(5001);
+
+    await expect(completePromise).rejects.toThrow(/timed out/i);
+    if (process.platform !== 'win32') {
+      expect(killSpy).toHaveBeenCalledWith(-mockChild.pid, 'SIGKILL');
+    }
+    expect(mockChild.kill).toHaveBeenCalledWith('SIGKILL');
+
+    vi.useRealTimers();
+    killSpy.mockRestore();
+  });
+
   it('passes request-scoped env vars to the spawned CLI process', async () => {
     mockBinaryFound('codex');
     provider = new CodexCLIProvider({
@@ -1696,6 +1745,7 @@ describe('CodexCLIProvider — streaming edge cases', () => {
     const errorEvents = events.filter(e => e.type === 'error');
     expect(errorEvents.length).toBeGreaterThan(0);
   });
+
 });
 
 describe('CursorCLIProvider — error handling', () => {

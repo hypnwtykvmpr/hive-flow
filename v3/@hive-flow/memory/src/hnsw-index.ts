@@ -223,7 +223,6 @@ export class HNSWIndex extends EventEmitter {
   private nodes: Map<string, HNSWNode> = new Map();
   private entryPoint: string | null = null;
   private maxLevel: number = 0;
-  private levelMult: number;
 
   // Product quantization state
   private pqCodebook: Float32Array[][] | null = null;
@@ -257,7 +256,6 @@ export class HNSWIndex extends EventEmitter {
     super();
     this.config = this.mergeConfig(config);
     if (this.config.M && this.config.M < 2) this.config.M = 2;
-    this.levelMult = 1 / Math.log(this.config.M);
 
     if (this.config.quantization) {
       const q = this.config.quantization;
@@ -617,11 +615,9 @@ export class HNSWIndex extends EventEmitter {
   }
 
   private getRandomLevel(): number {
-    let level = 0;
-    while (Math.random() < 0.5 && level < 16) {
-      level++;
-    }
-    return level;
+    const random = Math.max(Math.random(), Number.MIN_VALUE);
+    const level = Math.floor(-Math.log(random) * (1 / Math.log(this.config.M)));
+    return Math.max(0, Math.min(level, 16));
   }
 
   private async insertNode(node: HNSWNode): Promise<void> {

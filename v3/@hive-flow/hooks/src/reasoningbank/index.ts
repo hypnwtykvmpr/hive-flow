@@ -14,6 +14,7 @@
  */
 
 import { EventEmitter } from 'node:events';
+import { generateSecureId } from '@hive-flow/shared';
 import type { HookContext, HookEvent } from '../types.js';
 
 // Dynamic imports for optional dependencies
@@ -336,7 +337,7 @@ export class ReasoningBank extends EventEmitter {
 
     // Create new pattern
     const pattern: GuidancePattern = {
-      id: `pat_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      id: generateSecureId('pat'),
       strategy,
       domain,
       embedding,

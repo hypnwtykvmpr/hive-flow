@@ -244,6 +244,24 @@ describe('AnthropicCLIProvider', () => {
     mockChild.emit('close', 0);
   });
 
+  it('spawns Claude CLI detached on non-Windows so descendants share a process group', async () => {
+    mockBinaryFoundViaWhich();
+    await provider.initialize();
+
+    const mockChild = createMockChild();
+    mockSpawn.mockReturnValue(mockChild);
+
+    const completePromise = provider.complete({ messages: [{ role: 'user', content: 'test' }] });
+
+    expect(mockSpawn.mock.calls[0][2]).toMatchObject({
+      detached: process.platform !== 'win32',
+    });
+
+    mockChild.stdout.emit('data', Buffer.from(JSON.stringify({ result: 'ok' })));
+    mockChild.emit('close', 0);
+    await completePromise;
+  });
+
   it('passes request-scoped env vars to the spawned CLI process', async () => {
     mockBinaryFoundViaWhich();
     provider = new AnthropicCLIProvider({
@@ -276,6 +294,7 @@ describe('AnthropicCLIProvider', () => {
 
     const mockChild = createMockChild();
     mockSpawn.mockReturnValue(mockChild);
+    const killSpy = vi.spyOn(process, 'kill').mockImplementation(() => true);
 
     vi.useFakeTimers();
 
@@ -287,8 +306,12 @@ describe('AnthropicCLIProvider', () => {
     vi.advanceTimersByTime(300_001);
 
     await expect(completePromise).rejects.toThrow(/timed out/i);
+    if (process.platform !== 'win32') {
+      expect(killSpy).toHaveBeenCalledWith(-mockChild.pid, 'SIGKILL');
+    }
     expect(mockChild.kill).toHaveBeenCalledWith('SIGKILL');
 
+    killSpy.mockRestore();
     vi.useRealTimers();
   });
 

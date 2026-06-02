@@ -15,6 +15,7 @@
  * `BaseProvider.initialize()` always fires don't disrupt the call ordering.
  */
 
+import { EventEmitter } from 'node:events';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import {
@@ -23,9 +24,11 @@ import {
   GoogleProvider,
   OllamaProvider,
   createProviderManager,
+  ProviderManager,
   LLMRequest,
   LLMProviderConfig,
   ProviderManagerConfig,
+  ILLMProvider,
 } from '../index.js';
 import { ILogger } from '../base-provider.js';
 
@@ -392,6 +395,63 @@ describe('Provider Integration Tests (mocked fetch)', () => {
   });
 
   describe('Provider Manager', () => {
+    it('fails fast instead of routing to a known-bad provider when all providers are unavailable', async () => {
+      const knownBadProvider = Object.assign(new EventEmitter(), {
+        name: 'openrouter',
+        capabilities: {
+          supportedModels: ['test/model'],
+          maxContextLength: { 'test/model': 4096 },
+          maxOutputTokens: { 'test/model': 1024 },
+          supportsStreaming: false,
+          supportsToolCalling: false,
+          supportsSystemMessages: true,
+          supportsVision: false,
+          supportsAudio: false,
+          supportsFineTuning: false,
+          supportsEmbeddings: false,
+          supportsBatching: false,
+          pricing: {},
+        },
+        config: { provider: 'openrouter', model: 'test/model' },
+        initialize: vi.fn(),
+        complete: vi.fn(async () => ({
+          id: 'known-bad',
+          model: 'test/model',
+          provider: 'openrouter',
+          content: 'should not route here',
+          usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+        })),
+        streamComplete: vi.fn(),
+        listModels: vi.fn(),
+        getModelInfo: vi.fn(),
+        validateModel: vi.fn(),
+        healthCheck: vi.fn(),
+        getStatus: vi.fn(() => ({
+          available: false,
+          currentLoad: 0,
+          queueLength: 0,
+          activeRequests: 0,
+        })),
+        estimateCost: vi.fn(),
+        getUsage: vi.fn(),
+        destroy: vi.fn(),
+      }) as unknown as ILLMProvider;
+
+      const manager = new ProviderManager({
+        providers: [],
+        loadBalancing: { enabled: true, strategy: 'round-robin' },
+      }, silentLogger);
+      const internals = manager as unknown as {
+        providers: Map<string, ILLMProvider>;
+        metrics: Map<string, unknown>;
+      };
+      internals.providers.set('openrouter', knownBadProvider);
+      internals.metrics.set('openrouter', { latency: 0, errorRate: 0, cost: 0, lastUsed: 0 });
+
+      await expect(manager.complete(createTestRequest())).rejects.toThrow(/No available providers/i);
+      expect(knownBadProvider.complete).not.toHaveBeenCalled();
+    });
+
     const anthropicBody = {
       id: 'msg_mgr_001',
       type: 'message',

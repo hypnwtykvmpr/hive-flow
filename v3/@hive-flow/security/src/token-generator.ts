@@ -197,11 +197,18 @@ export class TokenGenerator {
     expirationMinutes = 10,
     maxAttempts = 3
   ): VerificationCode {
-    const buffer = randomBytes(length);
     let code = '';
+    const maxValidValue = 256 - (256 % 10);
 
-    for (let i = 0; i < length; i++) {
-      code += (buffer[i] % 10).toString();
+    while (code.length < length) {
+      const buffer = randomBytes(length - code.length);
+
+      for (let i = 0; i < buffer.length && code.length < length; i++) {
+        const randomValue = buffer[i];
+        if (randomValue < maxValidValue) {
+          code += (randomValue % 10).toString();
+        }
+      }
     }
 
     const now = new Date();

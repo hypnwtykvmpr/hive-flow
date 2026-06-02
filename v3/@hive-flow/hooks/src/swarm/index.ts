@@ -8,6 +8,7 @@
  */
 
 import { EventEmitter } from 'node:events';
+import { generateSecureId } from '@hive-flow/shared';
 import { reasoningBank, type GuidancePattern } from '../reasoningbank/index.js';
 
 // ============================================================================
@@ -115,15 +116,17 @@ export interface SwarmConfig {
   patternBroadcastThreshold: number;
 }
 
-const DEFAULT_CONFIG: SwarmConfig = {
-  agentId: `agent_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-  agentName: 'anonymous',
-  messageRetention: 3600000, // 1 hour
-  consensusTimeout: 30000, // 30 seconds
-  autoAcknowledge: true,
-  autoBroadcastPatterns: true,
-  patternBroadcastThreshold: 0.7,
-};
+function createDefaultConfig(): SwarmConfig {
+  return {
+    agentId: generateSecureId('agent'),
+    agentName: 'anonymous',
+    messageRetention: 3600000, // 1 hour
+    consensusTimeout: 30000, // 30 seconds
+    autoAcknowledge: true,
+    autoBroadcastPatterns: true,
+    patternBroadcastThreshold: 0.7,
+  };
+}
 
 // ============================================================================
 // SwarmCommunication Class
@@ -157,7 +160,7 @@ export class SwarmCommunication extends EventEmitter {
 
   constructor(config: Partial<SwarmConfig> = {}) {
     super();
-    this.config = { ...DEFAULT_CONFIG, ...config };
+    this.config = { ...createDefaultConfig(), ...config };
   }
 
   /**
@@ -238,7 +241,7 @@ export class SwarmCommunication extends EventEmitter {
     await this.ensureInitialized();
 
     const message: SwarmMessage = {
-      id: `msg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      id: generateSecureId('msg'),
       from: this.config.agentId,
       to,
       type: options.type || 'context',
@@ -338,7 +341,7 @@ export class SwarmCommunication extends EventEmitter {
     await this.ensureInitialized();
 
     const broadcast: PatternBroadcast = {
-      id: `bc_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      id: generateSecureId('bc'),
       sourceAgent: this.config.agentId,
       pattern,
       broadcastTime: Date.now(),
@@ -450,7 +453,7 @@ export class SwarmCommunication extends EventEmitter {
     await this.ensureInitialized();
 
     const request: ConsensusRequest = {
-      id: `cons_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      id: generateSecureId('cons'),
       initiator: this.config.agentId,
       question,
       options,
@@ -605,7 +608,7 @@ export class SwarmCommunication extends EventEmitter {
     await this.ensureInitialized();
 
     const handoff: TaskHandoff = {
-      id: `ho_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      id: generateSecureId('ho'),
       taskId: `task_${Date.now()}`,
       description: taskDescription,
       fromAgent: this.config.agentId,

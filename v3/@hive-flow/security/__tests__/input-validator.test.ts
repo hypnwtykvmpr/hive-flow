@@ -324,6 +324,11 @@ describe('InputValidator', () => {
       it('should remove leading slash', () => {
         expect(sanitizePath('/absolute/path')).toBe('absolute/path');
       });
+
+      it('should neutralize encoded and expanded traversal variants', () => {
+        expect(sanitizePath('safe/%2e%2e/secret.txt')).toBe('safe/secret.txt');
+        expect(sanitizePath('safe/....//secret.txt')).toBe('safe/secret.txt');
+      });
     });
   });
 

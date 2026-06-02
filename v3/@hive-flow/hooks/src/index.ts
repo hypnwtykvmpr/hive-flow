@@ -222,16 +222,16 @@ export async function runHook(
 /**
  * Register a new hook with simplified API
  */
-export function addHook(
+export async function addHook(
   event: import('./types.js').HookEvent,
   handler: import('./types.js').HookHandler,
   options?: {
     priority?: import('./types.js').HookPriority;
     name?: string;
   }
-): string {
-  const { registerHook: register } = require('./registry/index.js');
-  const { HookPriority } = require('./types.js');
+): Promise<string> {
+  const { registerHook: register } = await import('./registry/index.js');
+  const { HookPriority } = await import('./types.js');
 
   return register(
     event,

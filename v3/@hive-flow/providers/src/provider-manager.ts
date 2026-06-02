@@ -241,8 +241,11 @@ export class ProviderManager extends EventEmitter {
     );
 
     if (availableProviders.length === 0) {
-      // Try to use any provider
-      return this.providers.values().next().value;
+      throw new Error(
+        this.providers.size === 0
+          ? 'No providers configured'
+          : 'No available providers: all configured providers are unavailable'
+      );
     }
 
     const strategy = this.config.loadBalancing?.strategy || 'round-robin';

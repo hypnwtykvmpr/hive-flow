@@ -1,6 +1,11 @@
-import { describe, it, expect } from 'vitest';
+import { beforeEach, describe, it, expect } from 'vitest';
+import { addHook, defaultRegistry, HookEvent, HookPriority } from '../src/index.js';
 
 describe('@hive-flow/hooks', () => {
+  beforeEach(() => {
+    defaultRegistry.clear();
+  });
+
   it('should export hook types', () => {
     // Placeholder test - hooks module exports types and utilities
     expect(true).toBe(true);
@@ -24,5 +29,19 @@ describe('@hive-flow/hooks', () => {
       hook();
     }
     expect(results).toEqual([1, 2]);
+  });
+
+  it('addHook registers hooks through ESM-safe imports', async () => {
+    const id = await addHook(
+      HookEvent.PreEdit,
+      () => ({ success: true }),
+      { name: 'esm-safe-hook' }
+    );
+
+    const entry = defaultRegistry.get(id);
+    expect(entry).toBeDefined();
+    expect(entry?.event).toBe(HookEvent.PreEdit);
+    expect(entry?.priority).toBe(HookPriority.Normal);
+    expect(entry?.name).toBe('esm-safe-hook');
   });
 });

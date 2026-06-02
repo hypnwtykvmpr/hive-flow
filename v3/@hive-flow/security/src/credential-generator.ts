@@ -311,6 +311,13 @@ export class CredentialGenerator {
   }
 
   /**
+   * Escapes a value as a POSIX shell single-quoted string.
+   */
+  private shellQuote(value: string): string {
+    return `'${value.replace(/'/g, `'\\''`)}'`;
+  }
+
+  /**
    * Creates a setup script output for secure credential deployment.
    *
    * @param credentials - Generated credentials
@@ -321,11 +328,11 @@ export class CredentialGenerator {
 # Generated: ${credentials.generatedAt.toISOString()}
 # IMPORTANT: Store these securely and delete this file after use
 
-export HIVE_FLOW_ADMIN_PASSWORD="${credentials.adminPassword}"
-export HIVE_FLOW_SERVICE_PASSWORD="${credentials.servicePassword}"
-export HIVE_FLOW_JWT_SECRET="${credentials.jwtSecret}"
-export HIVE_FLOW_SESSION_SECRET="${credentials.sessionSecret}"
-export HIVE_FLOW_ENCRYPTION_KEY="${credentials.encryptionKey}"
+export HIVE_FLOW_ADMIN_PASSWORD=${this.shellQuote(credentials.adminPassword)}
+export HIVE_FLOW_SERVICE_PASSWORD=${this.shellQuote(credentials.servicePassword)}
+export HIVE_FLOW_JWT_SECRET=${this.shellQuote(credentials.jwtSecret)}
+export HIVE_FLOW_SESSION_SECRET=${this.shellQuote(credentials.sessionSecret)}
+export HIVE_FLOW_ENCRYPTION_KEY=${this.shellQuote(credentials.encryptionKey)}
 `;
   }
 

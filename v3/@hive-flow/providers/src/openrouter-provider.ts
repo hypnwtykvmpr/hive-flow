@@ -10,9 +10,10 @@
 import { BaseProvider, BaseProviderOptions } from './base-provider.js';
 import {
   LLMProvider, LLMModel, LLMRequest, LLMResponse, LLMStreamEvent,
-  ModelInfo, ProviderCapabilities, HealthCheckResult,
+  ModelInfo, ProviderCapabilities, HealthCheckResult, CostEstimate,
   AuthenticationError, RateLimitError, ModelNotFoundError, LLMProviderError,
 } from './types.js';
+import { resolveProviderModel } from './model-alias-resolver.js';
 
 interface OpenRouterMessage {
   role: 'system' | 'user' | 'assistant' | 'tool';
@@ -32,6 +33,7 @@ interface OpenRouterRequest {
   presence_penalty?: number;
   stop?: string[];
   stream?: boolean;
+  stream_options?: { include_usage: boolean };
   tools?: Array<{ type: 'function'; function: { name: string; description: string; parameters: unknown } }>;
   tool_choice?: 'auto' | 'none' | 'required' | { type: 'function'; function: { name: string } };
 }
@@ -47,6 +49,16 @@ interface OpenRouterResponse {
     finish_reason: 'stop' | 'length' | 'tool_calls' | 'content_filter';
   }>;
   usage: { prompt_tokens: number; completion_tokens: number; total_tokens: number };
+}
+
+interface OpenRouterStreamChunk {
+  choices?: Array<{
+    delta?: {
+      content?: string;
+      tool_calls?: Array<{ id: string; type: 'function'; function: { name: string; arguments: string } }>;
+    };
+  }>;
+  usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number } | null;
 }
 
 const DEFAULT_MODELS: LLMModel[] = [
@@ -141,6 +153,8 @@ export class OpenRouterProvider extends BaseProvider {
       const reader = response.body!.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
+      let streamedContent = '';
+      let usageFromStream: OpenRouterStreamChunk['usage'] | null = null;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -153,25 +167,32 @@ export class OpenRouterProvider extends BaseProvider {
           if (!line.startsWith('data: ')) continue;
           const data = line.slice(6);
           if (data === '[DONE]') {
-            const promptTokens = this.estimateTokens(JSON.stringify(request.messages));
-            const model = request.model || this.config.model;
+            const promptTokens = usageFromStream?.prompt_tokens ?? this.estimateTokens(JSON.stringify(request.messages));
+            const completionTokens = usageFromStream?.completion_tokens ?? this.estimateTokens(streamedContent);
+            const totalTokens = usageFromStream?.total_tokens ?? promptTokens + completionTokens;
+            const model = this.resolveRequestModel(request);
             const pr = this.capabilities.pricing[model];
             const cost = pr ? {
               promptCost: (promptTokens / 1000) * pr.promptCostPer1k,
-              completionCost: (100 / 1000) * pr.completionCostPer1k,
-              totalCost: (promptTokens / 1000) * pr.promptCostPer1k + (100 / 1000) * pr.completionCostPer1k,
+              completionCost: (completionTokens / 1000) * pr.completionCostPer1k,
+              totalCost: (promptTokens / 1000) * pr.promptCostPer1k + (completionTokens / 1000) * pr.completionCostPer1k,
               currency: 'USD',
             } : undefined;
             yield {
               type: 'done',
-              usage: { promptTokens, completionTokens: 100, totalTokens: promptTokens + 100 },
+              usage: { promptTokens, completionTokens, totalTokens },
               ...(cost ? { cost } : {}),
             };
             continue;
           }
           try {
-            const delta = JSON.parse(data).choices?.[0]?.delta;
-            if (delta?.content) yield { type: 'content', delta: { content: delta.content } };
+            const chunk = JSON.parse(data) as OpenRouterStreamChunk;
+            if (chunk.usage) usageFromStream = chunk.usage;
+            const delta = chunk.choices?.[0]?.delta;
+            if (delta?.content) {
+              streamedContent += delta.content;
+              yield { type: 'content', delta: { content: delta.content } };
+            }
             if (delta?.tool_calls) {
               for (const tc of delta.tool_calls) {
                 yield { type: 'tool_call', delta: { toolCall: { id: tc.id, type: 'function', function: tc.function } } };
@@ -212,13 +233,47 @@ export class OpenRouterProvider extends BaseProvider {
   }
 
   async getModelInfo(model: LLMModel): Promise<ModelInfo> {
+    const resolvedModel = this.resolveModel(model);
     return {
-      model, name: model,
-      description: `OpenRouter model: ${model}`,
-      contextLength: this.capabilities.maxContextLength[model] || 128000,
-      maxOutputTokens: this.capabilities.maxOutputTokens[model] || 4096,
+      model: resolvedModel as LLMModel, name: resolvedModel,
+      description: `OpenRouter model: ${resolvedModel}`,
+      contextLength: this.capabilities.maxContextLength[resolvedModel] || 128000,
+      maxOutputTokens: this.capabilities.maxOutputTokens[resolvedModel] || 4096,
       supportedFeatures: ['chat', 'completion', 'tool_calling'],
-      pricing: this.capabilities.pricing[model],
+      pricing: this.capabilities.pricing[resolvedModel],
+    };
+  }
+
+  async estimateCost(request: LLMRequest): Promise<CostEstimate> {
+    const model = this.resolveRequestModel(request);
+    const pricing = this.capabilities.pricing?.[model];
+
+    if (!pricing) {
+      return {
+        estimatedPromptTokens: 0,
+        estimatedCompletionTokens: 0,
+        estimatedTotalTokens: 0,
+        estimatedCost: { prompt: 0, completion: 0, total: 0, currency: 'USD' },
+        confidence: 0,
+      };
+    }
+
+    const promptTokens = this.estimateTokens(JSON.stringify(request.messages));
+    const completionTokens = request.maxTokens || this.config.maxTokens || 1000;
+    const promptCost = (promptTokens / 1000) * pricing.promptCostPer1k;
+    const completionCost = (completionTokens / 1000) * pricing.completionCostPer1k;
+
+    return {
+      estimatedPromptTokens: promptTokens,
+      estimatedCompletionTokens: completionTokens,
+      estimatedTotalTokens: promptTokens + completionTokens,
+      estimatedCost: {
+        prompt: promptCost,
+        completion: completionCost,
+        total: promptCost + completionCost,
+        currency: pricing.currency,
+      },
+      confidence: 0.7,
     };
   }
 
@@ -278,7 +333,7 @@ export class OpenRouterProvider extends BaseProvider {
 
   private buildRequest(request: LLMRequest, stream = false): OpenRouterRequest {
     const req: OpenRouterRequest = {
-      model: request.model || this.config.model,
+      model: this.resolveRequestModel(request),
       messages: request.messages.map((msg) => ({
         role: msg.role,
         content: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content),
@@ -288,6 +343,7 @@ export class OpenRouterProvider extends BaseProvider {
       })),
       stream,
     };
+    if (stream) req.stream_options = { include_usage: true };
     if (request.temperature !== undefined || this.config.temperature !== undefined)
       req.temperature = request.temperature ?? this.config.temperature;
     if (request.maxTokens || this.config.maxTokens)
@@ -309,7 +365,7 @@ export class OpenRouterProvider extends BaseProvider {
 
   private transformResponse(data: OpenRouterResponse, request: LLMRequest): LLMResponse {
     const choice = data.choices[0];
-    const model = request.model || this.config.model;
+    const model = this.resolveRequestModel(request);
     const pr = this.capabilities.pricing[model];
     const cost = pr ? {
       promptCost: (data.usage.prompt_tokens / 1000) * pr.promptCostPer1k,
@@ -353,5 +409,17 @@ export class OpenRouterProvider extends BaseProvider {
       default:
         throw new LLMProviderError(message, `OPENROUTER_${response.status}`, 'openrouter', response.status, response.status >= 500, errorData);
     }
+  }
+
+  private resolveRequestModel(request: LLMRequest): string {
+    return this.resolveModel(request.model || this.config.model);
+  }
+
+  private resolveModel(model: LLMModel | undefined): string {
+    const resolved = resolveProviderModel('openrouter', model);
+    if (!resolved) {
+      throw new ModelNotFoundError(String(model || 'undefined'), 'openrouter');
+    }
+    return resolved;
   }
 }

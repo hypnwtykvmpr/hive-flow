@@ -14,6 +14,7 @@
 
 import { z } from 'zod';
 import Ajv from 'ajv';
+import * as path from 'path';
 
 /**
  * Custom error map for security-focused messages
@@ -39,9 +40,6 @@ const securityErrorMap: z.ZodErrorMap = (issue, ctx) => {
       return { message: ctx.defaultError };
   }
 };
-
-// Apply custom error map globally for this module
-z.setErrorMap(securityErrorMap);
 
 /**
  * Common validation patterns as reusable regex
@@ -375,24 +373,42 @@ export function sanitizeHtml(input: string): string {
  *   traversal vectors that cannot be safely stripped.
  */
 export function sanitizePath(input: string): string {
-  const result = input
-    .replace(/\0/g, '')           // Remove null bytes
-    .replace(/\.\./g, '')         // Remove traversal patterns
-    .replace(/\/+/g, '/')         // Normalize slashes
-    .replace(/^\//, '')           // Remove leading slash
+  let decoded = input.replace(/\0/g, '').trim();
+
+  for (let i = 0; i < 5; i++) {
+    try {
+      const next = decodeURIComponent(decoded);
+      if (next === decoded) {
+        break;
+      }
+      decoded = next;
+    } catch {
+      break;
+    }
+  }
+
+  decoded = decoded
+    .replace(/\0/g, '')
+    .replace(/\\/g, '/')
     .trim();
 
   // Reject home-directory traversal via tilde.
-  if (result.startsWith('~')) {
+  if (decoded.startsWith('~')) {
     throw new Error('Path contains home directory traversal (~)');
   }
 
   // Reject Windows drive letter references (e.g. C:\, d:/).
-  if (/^[a-zA-Z]:[/\\]/.test(result)) {
+  if (/^[a-zA-Z]:\//.test(decoded)) {
     throw new Error('Path contains Windows drive letter traversal');
   }
 
-  return result;
+  const safeParts = decoded
+    .split('/')
+    .filter((part) => part !== '' && part !== '.' && !part.includes('..'));
+
+  const normalized = path.posix.normalize(safeParts.join('/'));
+
+  return normalized === '.' ? '' : normalized.replace(/^\/+/, '');
 }
 
 // ============================================================================
@@ -405,71 +421,74 @@ export class InputValidator {
   /**
    * Validates input against a schema
    */
-  static validate<T>(schema: z.ZodSchema<T>, input: unknown): T {
-    return schema.parse(input);
+  static validate<TSchema extends z.ZodTypeAny>(schema: TSchema, input: unknown): z.output<TSchema> {
+    return schema.parse(input, { errorMap: securityErrorMap });
   }
 
   /**
    * Safely validates input, returning result
    */
-  static safeParse<T>(schema: z.ZodSchema<T>, input: unknown): z.SafeParseReturnType<unknown, T> {
-    return schema.safeParse(input);
+  static safeParse<TSchema extends z.ZodTypeAny>(
+    schema: TSchema,
+    input: unknown,
+  ): z.SafeParseReturnType<z.input<TSchema>, z.output<TSchema>> {
+    return schema.safeParse(input, { errorMap: securityErrorMap });
   }
 
   /**
    * Validates email
    */
   static validateEmail(email: string): string {
-    return EmailSchema.parse(email);
+    return InputValidator.validate(EmailSchema, email);
   }
 
   /**
    * Validates password
    */
   static validatePassword(password: string): string {
-    return PasswordSchema.parse(password);
+    return InputValidator.validate(PasswordSchema, password);
   }
 
   /**
    * Validates identifier
    */
   static validateIdentifier(id: string): string {
-    return IdentifierSchema.parse(id);
+    return InputValidator.validate(IdentifierSchema, id);
   }
 
   /**
    * Validates path
    */
   static validatePath(path: string): string {
-    return PathSchema.parse(path);
+    return InputValidator.validate(PathSchema, path);
   }
 
   /**
    * Validates command argument
    */
   static validateCommandArg(arg: string): string {
-    return CommandArgumentSchema.parse(arg);
+    return InputValidator.validate(CommandArgumentSchema, arg);
   }
 
   /**
    * Validates login request
    */
   static validateLoginRequest(data: unknown): z.infer<typeof LoginRequestSchema> {
-    return LoginRequestSchema.parse(data);
+    return InputValidator.validate(LoginRequestSchema, data);
   }
 
   /**
    * Validates user creation request
    */
   static validateCreateUser(data: unknown): z.infer<typeof CreateUserSchema> {
-    return CreateUserSchema.parse(data);
+    return InputValidator.validate(CreateUserSchema, data);
   }
 
   /**
    * Validates task input
    */
   static validateTaskInput(data: unknown): z.infer<typeof TaskInputSchema> {
-    return TaskInputSchema.parse(data);
+    return InputValidator.validate(TaskInputSchema, data);
   }
 
   /**

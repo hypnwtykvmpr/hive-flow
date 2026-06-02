@@ -133,6 +133,7 @@ export class AnthropicCLIProvider extends BaseProvider {
       const child = spawn(this.binaryPath!, args, {
         stdio: ['pipe', 'pipe', 'pipe'],
         env: this.minimalEnv(),
+        detached: process.platform !== 'win32',
       });
       this.activeChildren.add(child);
       child.stdin.on('error', (err) => {
@@ -149,7 +150,7 @@ export class AnthropicCLIProvider extends BaseProvider {
       const timer = setTimeout(() => {
         if (settled) return;
         settled = true;
-        child.kill('SIGKILL');
+        this.terminateChild(child);
         this.activeChildren.delete(child);
         reject(new LLMProviderError(
           `Claude CLI timed out after ${timeoutMs}ms`, 'TIMEOUT', 'anthropic-cli', undefined, true
@@ -164,7 +165,7 @@ export class AnthropicCLIProvider extends BaseProvider {
           if (settled) return;
           settled = true;
           clearTimeout(timer);
-          child.kill('SIGKILL');
+          this.terminateChild(child);
           this.activeChildren.delete(child);
           reject(new LLMProviderError(
             'Response exceeded maximum size (50MB)', 'RESPONSE_TOO_LARGE', 'anthropic-cli', undefined, false
@@ -251,7 +252,7 @@ export class AnthropicCLIProvider extends BaseProvider {
 
   destroy(): void {
     for (const child of this.activeChildren) {
-      if (!child.killed) child.kill('SIGKILL');
+      this.terminateChild(child);
     }
     this.activeChildren.clear();
     super.destroy();
@@ -307,6 +308,17 @@ export class AnthropicCLIProvider extends BaseProvider {
         resolve((out || serr).trim() || 'unknown');
       });
     });
+  }
+
+  private terminateChild(child: ChildProcess): void {
+    if (process.platform !== 'win32' && typeof child.pid === 'number') {
+      try {
+        process.kill(-child.pid, 'SIGKILL');
+      } catch {
+        // The process may already have exited; fall back to the direct handle.
+      }
+    }
+    if (!child.killed) child.kill('SIGKILL');
   }
 
   private minimalEnv(): Record<string, string | undefined> {

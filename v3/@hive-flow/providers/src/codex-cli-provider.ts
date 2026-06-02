@@ -148,7 +148,7 @@ export class CodexCLIProvider extends BaseProvider {
       const timer = setTimeout(() => {
         if (settled) return;
         settled = true;
-        child.kill('SIGKILL');
+        this.terminateChild(child);
         this.activeProcesses.delete(child);
         reject(new LLMProviderError(`Request timed out after ${timeoutMs}ms`, 'TIMEOUT', 'codex-cli', undefined, true));
       }, timeoutMs);
@@ -251,7 +251,7 @@ export class CodexCLIProvider extends BaseProvider {
     child.on('error', (err) => { spawnError = err; done = true; this.activeProcesses.delete(child); rl.close(); wake(); });
 
     const streamTimeoutMs = request.timeout || this.defaultTimeout;
-    const timer = setTimeout(() => { child.kill('SIGKILL'); this.activeProcesses.delete(child); done = true; wake(); }, streamTimeoutMs);
+    const timer = setTimeout(() => { this.terminateChild(child); this.activeProcesses.delete(child); done = true; wake(); }, streamTimeoutMs);
 
     // Buffer for tool_call detection: emit content and tool_call events as complete blocks appear
     let contentBuffer = '';
@@ -311,7 +311,7 @@ export class CodexCLIProvider extends BaseProvider {
     } finally {
       clearTimeout(timer);
       rl.close();
-      if (!done) { child.kill('SIGKILL'); this.activeProcesses.delete(child); }
+      if (!done) { this.terminateChild(child); this.activeProcesses.delete(child); }
     }
   }
 
@@ -359,7 +359,7 @@ export class CodexCLIProvider extends BaseProvider {
   }
 
   destroy(): void {
-    for (const p of this.activeProcesses) { try { p.kill('SIGKILL'); } catch { /* already dead */ } }
+    for (const p of this.activeProcesses) this.terminateChild(p);
     this.activeProcesses.clear();
     super.destroy();
   }
@@ -431,7 +431,11 @@ export class CodexCLIProvider extends BaseProvider {
       env.LOCALAPPDATA = process.env.LOCALAPPDATA;
     }
 
-    const child = spawn(this.binaryPath!, args, { stdio: ['pipe', 'pipe', 'pipe'], env });
+    const child = spawn(this.binaryPath!, args, {
+      stdio: ['pipe', 'pipe', 'pipe'],
+      env,
+      detached: process.platform !== 'win32',
+    });
     this.activeProcesses.add(child);
     child.stdin.on('error', (err) => {
       if ((err as NodeJS.ErrnoException).code !== 'EPIPE') {
@@ -441,6 +445,17 @@ export class CodexCLIProvider extends BaseProvider {
     child.stdin.write(prompt);
     child.stdin.end();
     return child;
+  }
+
+  private terminateChild(child: ChildProcess): void {
+    if (process.platform !== 'win32' && typeof child.pid === 'number') {
+      try {
+        process.kill(-child.pid, 'SIGKILL');
+      } catch {
+        // The process may already have exited; fall back to the direct handle.
+      }
+    }
+    if (!child.killed) child.kill('SIGKILL');
   }
 
   private buildResponse(

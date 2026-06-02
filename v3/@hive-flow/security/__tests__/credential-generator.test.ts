@@ -9,6 +9,10 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
+import { mkdtemp, writeFile, rm } from 'fs/promises';
+import { execFileSync } from 'child_process';
+import * as os from 'os';
+import * as path from 'path';
 import {
   CredentialGenerator,
   CredentialGeneratorError,
@@ -209,6 +213,35 @@ describe('CredentialGenerator', () => {
       const script = generator.createEnvScript(credentials);
 
       expect(script).toContain('Store these securely');
+    });
+
+    it('should preserve shell-significant credential characters when sourced', async () => {
+      const tempDir = await mkdtemp(path.join(os.tmpdir(), 'hive-flow-env-'));
+      const scriptPath = path.join(tempDir, 'credentials.env');
+      const shellSignificantPassword = 'pa$HOME`printf hacked`word\'!\\(x)';
+
+      try {
+        const script = generator.createEnvScript({
+          adminPassword: shellSignificantPassword,
+          servicePassword: 'service',
+          jwtSecret: 'jwt',
+          sessionSecret: 'session',
+          encryptionKey: 'key',
+          generatedAt: new Date('2026-01-01T00:00:00.000Z'),
+        });
+
+        await writeFile(scriptPath, script, { mode: 0o600 });
+
+        const sourcedValue = execFileSync(
+          'bash',
+          ['-c', 'source "$1"; printf "%s" "$HIVE_FLOW_ADMIN_PASSWORD"', 'bash', scriptPath],
+          { encoding: 'utf8' }
+        );
+
+        expect(sourcedValue).toBe(shellSignificantPassword);
+      } finally {
+        await rm(tempDir, { recursive: true, force: true });
+      }
     });
   });
 

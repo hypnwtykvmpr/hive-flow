@@ -11,16 +11,29 @@ import { unlinkSync, existsSync } from 'node:fs';
 
 describe('DatabaseProvider', () => {
   const testDbPath = './test-database-provider.db';
+  const testArtifactPaths = [
+    testDbPath,
+    './test-database-provider.rvf',
+  ];
 
-  afterEach(() => {
-    // Cleanup test database
-    if (existsSync(testDbPath)) {
+  const cleanupTestDatabases = () => {
+    for (const path of testArtifactPaths) {
+      if (!existsSync(path)) continue;
+
       try {
-        unlinkSync(testDbPath);
+        unlinkSync(path);
       } catch (error) {
         // Ignore cleanup errors
       }
     }
+  };
+
+  beforeEach(() => {
+    cleanupTestDatabases();
+  });
+
+  afterEach(() => {
+    cleanupTestDatabases();
   });
 
   describe('Platform Detection', () => {

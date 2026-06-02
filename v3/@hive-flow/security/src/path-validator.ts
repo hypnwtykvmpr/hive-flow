@@ -180,6 +180,35 @@ export class PathValidator {
   }
 
   /**
+   * Resolves the deepest existing parent and appends any missing child path.
+   * This catches symlinked existing parents even when the final target does
+   * not exist yet.
+   */
+  private async resolveThroughExistingParent(resolvedPath: string): Promise<string> {
+    const missingParts: string[] = [];
+    let currentPath = resolvedPath;
+
+    while (true) {
+      try {
+        const realParent = await fs.realpath(currentPath);
+        return path.join(realParent, ...missingParts.reverse());
+      } catch (error: any) {
+        if (error.code !== 'ENOENT') {
+          throw error;
+        }
+
+        const parent = path.dirname(currentPath);
+        if (parent === currentPath) {
+          return path.join(currentPath, ...missingParts.reverse());
+        }
+
+        missingParts.push(path.basename(currentPath));
+        currentPath = parent;
+      }
+    }
+  }
+
+  /**
    * Validates a path against security rules.
    *
    * @param inputPath - The path to validate
@@ -233,8 +262,9 @@ export class PathValidator {
         try {
           resolvedPath = await fs.realpath(resolvedPath);
         } catch (error: any) {
-          // Path doesn't exist yet - use resolved path
-          if (error.code !== 'ENOENT' || !this.config.allowNonExistent) {
+          if (error.code === 'ENOENT' && this.config.allowNonExistent) {
+            resolvedPath = await this.resolveThroughExistingParent(resolvedPath);
+          } else {
             if (error.code === 'ENOENT') {
               errors.push('Path does not exist');
             } else {

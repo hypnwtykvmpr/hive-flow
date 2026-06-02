@@ -10,6 +10,8 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import * as path from 'path';
+import { mkdtemp, rm, symlink, writeFile, mkdir } from 'fs/promises';
+import * as os from 'os';
 import {
   PathValidator,
   PathValidatorError,
@@ -297,6 +299,38 @@ describe('PathValidator', () => {
       // Path starts with project root but escapes via traversal
       const result = await validator.validate('/workspaces/project/../../etc/passwd');
       expect(result.isValid).toBe(false);
+    });
+
+    it('should reject non-existent paths under symlinked directories that point outside allowed prefixes', async () => {
+      const tempDir = await mkdtemp(path.join(os.tmpdir(), 'hive-flow-path-'));
+      const allowedDir = path.join(tempDir, 'allowed');
+      const outsideDir = path.join(tempDir, 'outside');
+      const linkPath = path.join(allowedDir, 'linked-outside');
+
+      try {
+        await mkdir(allowedDir);
+        await mkdir(outsideDir);
+        await writeFile(path.join(outsideDir, 'existing.txt'), 'outside');
+        await symlink(outsideDir, linkPath);
+
+        const symlinkValidator = new PathValidator({
+          allowedPrefixes: [allowedDir],
+          allowNonExistent: true,
+          allowHidden: true,
+          blockedExtensions: [],
+          blockedNames: [],
+        });
+
+        // A true race between validation and later file open remains possible;
+        // this regression covers the safe hardening path for already-existing
+        // symlinked parents with a not-yet-created child.
+        const result = await symlinkValidator.validate(path.join(linkPath, 'new-file.txt'));
+
+        expect(result.isValid).toBe(false);
+        expect(result.errors).toContain('Path is outside allowed directories');
+      } finally {
+        await rm(tempDir, { recursive: true, force: true });
+      }
     });
   });
 });
