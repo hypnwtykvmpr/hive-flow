@@ -611,7 +611,7 @@ async function probeScoreboard(path: string): Promise<ScoreboardSummary | undefi
  * when none of embeddings / memories / dbSize carries data, so the renderer
  * omits the memory row (unless tests/MCP populate it separately upstream).
  */
-async function probeMemory(path: string): Promise<MemorySummary | undefined> {
+export async function probeMemory(path: string): Promise<MemorySummary | undefined> {
   const raw = await readJsonFile<unknown>(path, MAX_INLINE_SUMMARY_BYTES).catch(() => undefined);
   if (!isPlainObject(raw)) return undefined;
   const out: MemorySummary = {
@@ -670,7 +670,7 @@ async function probeAttention(path: string): Promise<AttentionSummary | undefine
  * no MCP servers are configured (`total <= 0`) so the renderer omits the MCP
  * cell rather than rendering `MCP 0/0`.
  */
-async function probeMcp(path: string): Promise<McpSummary | undefined> {
+export async function probeMcp(path: string): Promise<McpSummary | undefined> {
   const raw = await readJsonFile<unknown>(path, MAX_INLINE_SUMMARY_BYTES).catch(() => undefined);
   if (!isPlainObject(raw)) return undefined;
   const total = typeof raw.total === 'number' ? raw.total : 0;

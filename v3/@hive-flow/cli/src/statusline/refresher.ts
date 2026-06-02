@@ -49,6 +49,8 @@ import { collectSessions } from './collectors/sessions.js';
 import { collectSwarm } from './collectors/swarm.js';
 import { collectTests } from './collectors/tests.js';
 import { collectInlineSnapshot } from './inline-collectors.js';
+import { updateMemoryStats } from './recorders/memory.js';
+import { updateMcpHealth } from './recorders/mcp.js';
 import type {
   AdrSummary,
   AttentionSummary,
@@ -94,6 +96,7 @@ const HISTORY_TAIL = 32;
 
 /** Bounded cap for materialized current snapshots read by the refresher. */
 const MATERIALIZED_CURRENT_MAX_BYTES = 256 * 1024;
+const MATERIALIZED_PRODUCER_DEBOUNCE_MS = 1_000;
 
 const HOST_CLI_VALUES: ReadonlySet<string> = new Set<HostCli>([
   'claude-code',
@@ -115,6 +118,8 @@ const MCP_STATES: ReadonlySet<string> = new Set<McpAggregateState>([
   'down',
   'not-configured',
 ]);
+
+const materializedProducerLastRunMs = new Map<string, number>();
 
 interface MaterializedSummaries {
   readonly adrs?: AdrSummary;
@@ -191,7 +196,7 @@ export async function refreshStatuslineSnapshot(
   const stdinContext = contextFromStdin(stdinObject, generatedAt);
   const autopilotContext = await readAutopilotContext(scope.projectRoot, generatedAt);
   const context = mergeContext(stdinContext, autopilotContext);
-  const materialized = await collectMaterializedSummaries(paths, generatedAt, config);
+  const materialized = await collectMaterializedSummaries(scope.projectRoot, paths, generatedAt, config);
 
   // Step 5: run every collector in parallel via Promise.all. Each collector
   // is wrapped in a try/catch so a single thrown error becomes a per-source
@@ -484,6 +489,7 @@ function withReason(freshness: SourceFreshness, reason: string | undefined): Sou
 // ---------------------------------------------------------------------------
 
 async function collectMaterializedSummaries(
+  projectRoot: string,
   paths: ReturnType<typeof statuslinePaths>,
   generatedAt: string,
   config: StatuslineConfig,
@@ -494,9 +500,11 @@ async function collectMaterializedSummaries(
     readJsonFile<unknown>(paths.hooksInventory, MATERIALIZED_CURRENT_MAX_BYTES),
     readJsonFile<unknown>(paths.adrsCurrent, MATERIALIZED_CURRENT_MAX_BYTES),
   ]);
+  kickMaterializedProducers(projectRoot);
 
   const memory = parseMemorySummary(memoryRaw);
-  const mcp = parseMcpSummary(mcpRaw);
+  const parsedMcp = parseMcpSummary(mcpRaw);
+  const mcp = parsedMcp !== undefined && parsedMcp.total > 0 ? parsedMcp : undefined;
   const hooks = parseHooksSummary(hooksRaw);
   const adrs = parseAdrSummary(adrsRaw);
   const sources: Partial<Record<StatuslineSource, SourceFreshness>> = {};
@@ -549,6 +557,17 @@ async function collectMaterializedSummaries(
   };
 }
 
+function kickMaterializedProducers(projectRoot: string): void {
+  const now = Date.now();
+  const last = materializedProducerLastRunMs.get(projectRoot);
+  if (last !== undefined && now - last < MATERIALIZED_PRODUCER_DEBOUNCE_MS) return;
+  materializedProducerLastRunMs.set(projectRoot, now);
+  void Promise.all([
+    updateMemoryStats(projectRoot).catch(() => undefined),
+    updateMcpHealth(projectRoot).catch(() => undefined),
+  ]).catch(() => undefined);
+}
+
 function asRecord(value: unknown): Record<string, unknown> | undefined {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
     ? value as Record<string, unknown>
@@ -574,7 +593,7 @@ function parseMemoryStat(value: unknown): MemoryStatRow | undefined {
   return { count, source, observedAt };
 }
 
-function parseMemorySummary(value: unknown): MemorySummary | undefined {
+export function parseMemorySummary(value: unknown): MemorySummary | undefined {
   const raw = asRecord(value);
   if (raw === undefined) return undefined;
   const memories = parseMemoryStat(raw.memories);
@@ -591,7 +610,7 @@ function parseMemorySummary(value: unknown): MemorySummary | undefined {
   };
 }
 
-function parseMcpSummary(value: unknown): McpSummary | undefined {
+export function parseMcpSummary(value: unknown): McpSummary | undefined {
   const raw = asRecord(value);
   if (raw === undefined) return undefined;
   if (raw.version !== 1 || raw.probeVersion !== 1 || raw.source !== 'setup-verify-json-rpc') return undefined;
