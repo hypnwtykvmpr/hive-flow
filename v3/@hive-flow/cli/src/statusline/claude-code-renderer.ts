@@ -483,10 +483,14 @@ function materializeInlineSnapshot(
 }
 
 /**
- * Merge `inline` into `cached` so the renderer sees the cached scoreboard /
- * memory / etc. plus the inline-collector's fresh git/daemon/swarm. Identity
- * fields come from the cached snapshot since the cache was authored by the
- * full refresher (which has worktree-aware identity).
+ * Merge `inline` into `cached` so the renderer prefers the inline-collector's
+ * freshly-probed sources over the stale cache, while keeping the cached
+ * identity fields (the cache was authored by the full refresher, which has
+ * worktree-aware identity). Every probe-derived source the inline collector
+ * read off the materialized roll-ups (git / swarm / daemon / scoreboard /
+ * memory / tests / attention / mcp) overrides its stale cached counterpart
+ * ONLY when the inline probe actually populated it; absent inline fields fall
+ * back to the cache so a transient probe miss never blanks a populated row.
  */
 function mergeSnapshots(cached: StatuslineSnapshotV1, inline: StatuslineSnapshotV1): StatuslineSnapshotV1 {
   return {
@@ -494,6 +498,11 @@ function mergeSnapshots(cached: StatuslineSnapshotV1, inline: StatuslineSnapshot
     ...(inline.git !== undefined ? { git: inline.git } : {}),
     ...(inline.swarm !== undefined ? { swarm: inline.swarm } : {}),
     ...(inline.daemon !== undefined ? { daemon: inline.daemon } : {}),
+    ...(inline.scoreboard !== undefined ? { scoreboard: inline.scoreboard } : {}),
+    ...(inline.memory !== undefined ? { memory: inline.memory } : {}),
+    ...(inline.tests !== undefined ? { tests: inline.tests } : {}),
+    ...(inline.attention !== undefined ? { attention: inline.attention } : {}),
+    ...(inline.mcp !== undefined ? { mcp: inline.mcp } : {}),
     generatedAt: inline.generatedAt ?? cached.generatedAt,
   };
 }

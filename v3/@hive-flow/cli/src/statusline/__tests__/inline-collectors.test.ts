@@ -475,3 +475,186 @@ describe('collectInlineSnapshot (Wave 8 inline-collector mode)', () => {
     }
   });
 });
+
+// ---------------------------------------------------------------------------
+// Materialized-summary probes (scoreboard / memory / tests / attention / mcp)
+//
+// The inline collector reads the SMALL atomic roll-up files the recorders
+// maintain WITHOUT a running daemon so the scoreboard / memory / tests /
+// attention / MCP rows populate even when no fresh `state/cache.json` exists.
+// These tests lock that behaviour + the OMIT > FAKE gating per probe.
+// ---------------------------------------------------------------------------
+
+describe('collectInlineSnapshot — materialized-summary probes', () => {
+  function setupRoot(): string {
+    const projectRoot = mkdtempSync(join(tmpdir(), 'hf-inline-mat-'));
+    mkdirSync(join(projectRoot, '.hive-flow'), { recursive: true });
+    return projectRoot;
+  }
+  function writeSummary(projectRoot: string, area: string, file: string, value: unknown): void {
+    mkdirSync(join(projectRoot, '.hive-flow', area), { recursive: true });
+    writeFileSync(join(projectRoot, '.hive-flow', area, file), JSON.stringify(value), {
+      mode: 0o600,
+    });
+  }
+
+  it('populates scoreboard from scoreboard/current.json', async () => {
+    const root = setupRoot();
+    try {
+      writeSummary(root, 'scoreboard', 'current.json', {
+        agentsByProvider: { claude: { activeAgents: 1, idleAgents: 0, staleAgents: 5, models: { sonnet: 6 } } },
+        callsByProvider: { codex: { calls: 1, models: { opus: 1 } } },
+        stale: true,
+        lastUpdatedAt: '2026-06-01T22:29:26.662Z',
+      });
+      const snap = await collectInlineSnapshot({ projectRoot: root, deadlineMs: 500 });
+      expect(snap.scoreboard).toBeDefined();
+      expect(snap.scoreboard?.agentsByProvider.claude?.activeAgents).toBe(1);
+      expect(snap.scoreboard?.callsByProvider.codex?.calls).toBe(1);
+      expect(snap.scoreboard?.stale).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('omits scoreboard when no provider has presence or calls (OMIT > FAKE)', async () => {
+    const root = setupRoot();
+    try {
+      writeSummary(root, 'scoreboard', 'current.json', {
+        agentsByProvider: {},
+        callsByProvider: {},
+        stale: false,
+      });
+      const snap = await collectInlineSnapshot({ projectRoot: root, deadlineMs: 500 });
+      expect(snap.scoreboard).toBeUndefined();
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('populates memory from memory/stats.json', async () => {
+    const root = setupRoot();
+    try {
+      writeSummary(root, 'memory', 'stats.json', {
+        embeddings: { count: 290, source: 'agentdb', observedAt: '2026-06-01T00:00:00Z' },
+        memories: { count: 41_100, source: 'agentdb', observedAt: '2026-06-01T00:00:00Z' },
+        dbSizeBytes: 340_000,
+        sourceDescription: 'agentdb',
+      });
+      const snap = await collectInlineSnapshot({ projectRoot: root, deadlineMs: 500 });
+      expect(snap.memory?.embeddings?.count).toBe(290);
+      expect(snap.memory?.memories?.count).toBe(41_100);
+      expect(snap.memory?.dbSizeBytes).toBe(340_000);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('omits memory when all counters are absent (OMIT > FAKE)', async () => {
+    const root = setupRoot();
+    try {
+      writeSummary(root, 'memory', 'stats.json', { sourceDescription: 'agentdb' });
+      const snap = await collectInlineSnapshot({ projectRoot: root, deadlineMs: 500 });
+      expect(snap.memory).toBeUndefined();
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('populates tests suite from tests/current.json', async () => {
+    const root = setupRoot();
+    try {
+      writeSummary(root, 'tests', 'current.json', {
+        suite: {
+          version: 1, eventId: 'e1', ts: '2026-06-01T00:00:00Z', repoRoot: root,
+          projectKey: 'k', runner: 'vitest', kind: 'suite',
+          passed: 142, failed: 0, skipped: 0, total: 142,
+          producerKind: 'wrapper', producerId: 'p',
+        },
+      });
+      const snap = await collectInlineSnapshot({ projectRoot: root, deadlineMs: 500 });
+      expect(snap.tests?.suite?.total).toBe(142);
+      expect(snap.tests?.suite?.passed).toBe(142);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('omits tests when there is no canonical suite record (OMIT > FAKE)', async () => {
+    const root = setupRoot();
+    try {
+      writeSummary(root, 'tests', 'current.json', {});
+      const snap = await collectInlineSnapshot({ projectRoot: root, deadlineMs: 500 });
+      expect(snap.tests).toBeUndefined();
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('populates attention from attention/current.json', async () => {
+    const root = setupRoot();
+    try {
+      writeSummary(root, 'attention', 'current.json', {
+        unresolved: [
+          { id: 'a1', ts: '2026-06-01T00:00:00Z', severity: 'critical', source: 'gate', message: 'permission required', redacted: false, ageSeconds: 3 },
+        ],
+      });
+      const snap = await collectInlineSnapshot({ projectRoot: root, deadlineMs: 500 });
+      expect(snap.attention?.unresolved.length).toBe(1);
+      expect(snap.attention?.unresolved[0].message).toBe('permission required');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('omits attention when there are no unresolved entries (OMIT > FAKE)', async () => {
+    const root = setupRoot();
+    try {
+      writeSummary(root, 'attention', 'current.json', { unresolved: [] });
+      const snap = await collectInlineSnapshot({ projectRoot: root, deadlineMs: 500 });
+      expect(snap.attention).toBeUndefined();
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('populates mcp from mcp/health.json and omits when total is zero', async () => {
+    const root = setupRoot();
+    try {
+      writeSummary(root, 'mcp', 'health.json', {
+        version: 1, observedAt: '2026-06-01T00:00:00Z', probeVersion: 1,
+        source: 'setup-verify-json-rpc', total: 7, configured: 7, runtimeUp: 5, state: 'config-present',
+      });
+      let snap = await collectInlineSnapshot({ projectRoot: root, deadlineMs: 500 });
+      expect(snap.mcp?.total).toBe(7);
+      expect(snap.mcp?.runtimeUp).toBe(5);
+
+      writeSummary(root, 'mcp', 'health.json', {
+        version: 1, observedAt: '2026-06-01T00:00:00Z', probeVersion: 1,
+        source: 'setup-verify-json-rpc', total: 0, configured: 0, runtimeUp: 0, state: 'not-configured',
+      });
+      snap = await collectInlineSnapshot({ projectRoot: root, deadlineMs: 500 });
+      expect(snap.mcp).toBeUndefined();
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('a single corrupt summary file never aborts the other probes', async () => {
+    const root = setupRoot();
+    try {
+      // Corrupt scoreboard, valid memory — memory must still populate.
+      mkdirSync(join(root, '.hive-flow', 'scoreboard'), { recursive: true });
+      writeFileSync(join(root, '.hive-flow', 'scoreboard', 'current.json'), '{not json', { mode: 0o600 });
+      writeSummary(root, 'memory', 'stats.json', {
+        embeddings: { count: 5, source: 's', observedAt: '2026-06-01T00:00:00Z' },
+        sourceDescription: 's',
+      });
+      const snap = await collectInlineSnapshot({ projectRoot: root, deadlineMs: 500 });
+      expect(snap.scoreboard).toBeUndefined();
+      expect(snap.memory?.embeddings?.count).toBe(5);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});

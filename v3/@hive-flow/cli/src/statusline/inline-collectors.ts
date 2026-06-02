@@ -41,14 +41,20 @@ import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { basename, join } from 'node:path';
 
+import { statuslinePaths } from './paths.js';
 import { readJsonFile } from './storage.js';
 import {
   normalizeAgentStatus,
+  type AttentionSummary,
   type DaemonSummary,
   type GitSummary,
+  type McpSummary,
+  type MemorySummary,
   type NormalizedAgentRow,
+  type ScoreboardSummary,
   type StatuslineSnapshotV1,
   type SwarmSummary,
+  type TestsSummary,
 } from './types.js';
 
 // ---------------------------------------------------------------------------
@@ -106,6 +112,16 @@ const MIN_BUDGET_FOR_SPAWN_MS = 25;
  * derived from byte size.
  */
 const MAX_INLINE_JSON_BYTES = 16 * 1024 * 1024;
+
+/**
+ * Bounded read cap for the small materialized summary files
+ * (`scoreboard/current.json`, `memory/stats.json`, `tests/current.json`,
+ * `attention/current.json`, `mcp/health.json`). These are atomic JSON
+ * roll-ups the recorders maintain WITHOUT a running daemon — each is a
+ * compact summary, never an event log, so 256KB is comfortably above their
+ * worst case while keeping the inline read cheap and bounded.
+ */
+const MAX_INLINE_SUMMARY_BYTES = 256 * 1024;
 
 /**
  * Probe `.hive-flow/` cheaply and return whatever can be collected before
@@ -174,6 +190,58 @@ export async function collectInlineSnapshot(
     daemon = undefined;
   }
 
+  // Materialized-summary probes. These read the SMALL atomic roll-up files the
+  // recorders maintain without a running daemon (scoreboard / memory / tests /
+  // attention / mcp). Each is independently budget-gated and try/catch isolated
+  // so a single bad file never aborts the others — the renderer omits any row
+  // whose probe returned undefined (OMIT > FAKE).
+  const paths = statuslinePaths(projectRoot);
+
+  let scoreboard: ScoreboardSummary | undefined;
+  try {
+    if (remainingBudget() > 0) {
+      scoreboard = await probeScoreboard(paths.scoreboardCurrent);
+    }
+  } catch {
+    scoreboard = undefined;
+  }
+
+  let memory: MemorySummary | undefined;
+  try {
+    if (remainingBudget() > 0) {
+      memory = await probeMemory(paths.memoryStats);
+    }
+  } catch {
+    memory = undefined;
+  }
+
+  let tests: TestsSummary | undefined;
+  try {
+    if (remainingBudget() > 0) {
+      tests = await probeTests(paths.testsCurrent);
+    }
+  } catch {
+    tests = undefined;
+  }
+
+  let attention: AttentionSummary | undefined;
+  try {
+    if (remainingBudget() > 0) {
+      attention = await probeAttention(paths.attentionCurrent);
+    }
+  } catch {
+    attention = undefined;
+  }
+
+  let mcp: McpSummary | undefined;
+  try {
+    if (remainingBudget() > 0) {
+      mcp = await probeMcp(paths.mcpHealth);
+    }
+  } catch {
+    mcp = undefined;
+  }
+
   // Assemble. Any field that the probe declined to populate stays undefined
   // so the renderer's "omit unavailable data" rule (runbook NN-Req #1) holds.
   //
@@ -193,6 +261,11 @@ export async function collectInlineSnapshot(
     ...(git !== undefined ? { git } : {}),
     ...(swarm !== undefined ? { swarm } : {}),
     ...(daemon !== undefined ? { daemon } : {}),
+    ...(scoreboard !== undefined ? { scoreboard } : {}),
+    ...(memory !== undefined ? { memory } : {}),
+    ...(tests !== undefined ? { tests } : {}),
+    ...(attention !== undefined ? { attention } : {}),
+    ...(mcp !== undefined ? { mcp } : {}),
   };
 }
 
@@ -489,4 +562,125 @@ async function probeDaemon(
     (summary as { pid?: number }).pid = pid;
   }
   return summary;
+}
+
+// ---------------------------------------------------------------------------
+// Materialized-summary probes (scoreboard / memory / tests / attention / mcp)
+// ---------------------------------------------------------------------------
+//
+// The refresher materializes these compact roll-ups into `.hive-flow/<area>/`
+// WITHOUT requiring a running daemon (the recorders write them on every
+// scoreboard / test / attention event). The inline collector reads them so the
+// scoreboard / memory / tests / attention / MCP rows populate even when no
+// fresh `state/cache.json` exists. Each probe:
+//   * uses the bounded, symlink-safe `readJsonFile` with the small-summary cap,
+//   * validates the shape loosely (plain object) and returns the typed summary,
+//   * returns `undefined` when the file is absent / unreadable / empty so the
+//     renderer omits the row entirely (OMIT > FAKE).
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+/**
+ * Bounded read of `scoreboard/current.json` (`ScoreboardSummary`). Returns
+ * `undefined` when no provider has any presence/calls, so the renderer omits
+ * the scoreboard row rather than emitting a bare `🤖` label.
+ */
+async function probeScoreboard(path: string): Promise<ScoreboardSummary | undefined> {
+  const raw = await readJsonFile<unknown>(path, MAX_INLINE_SUMMARY_BYTES).catch(() => undefined);
+  if (!isPlainObject(raw)) return undefined;
+  const agents = isPlainObject(raw.agentsByProvider) ? raw.agentsByProvider : {};
+  const calls = isPlainObject(raw.callsByProvider) ? raw.callsByProvider : {};
+  if (Object.keys(agents).length === 0 && Object.keys(calls).length === 0) return undefined;
+  return {
+    agentsByProvider: agents as ScoreboardSummary['agentsByProvider'],
+    callsByProvider: calls as ScoreboardSummary['callsByProvider'],
+    stale: raw.stale === true,
+    ...(typeof raw.lastUpdatedAt === 'string' ? { lastUpdatedAt: raw.lastUpdatedAt } : {}),
+  };
+}
+
+/**
+ * Bounded read of `memory/stats.json` (`MemorySummary`). Returns `undefined`
+ * when none of embeddings / memories / dbSize carries data, so the renderer
+ * omits the memory row (unless tests/MCP populate it separately upstream).
+ */
+async function probeMemory(path: string): Promise<MemorySummary | undefined> {
+  const raw = await readJsonFile<unknown>(path, MAX_INLINE_SUMMARY_BYTES).catch(() => undefined);
+  if (!isPlainObject(raw)) return undefined;
+  const out: MemorySummary = {
+    sourceDescription:
+      typeof raw.sourceDescription === 'string' ? raw.sourceDescription : 'inline',
+  };
+  if (isPlainObject(raw.embeddings) && typeof raw.embeddings.count === 'number') {
+    out.embeddings = raw.embeddings as unknown as MemorySummary['embeddings'];
+  }
+  if (isPlainObject(raw.memories) && typeof raw.memories.count === 'number') {
+    out.memories = raw.memories as unknown as MemorySummary['memories'];
+  }
+  if (typeof raw.dbSizeBytes === 'number' && Number.isFinite(raw.dbSizeBytes)) {
+    out.dbSizeBytes = raw.dbSizeBytes;
+  }
+  if (out.embeddings === undefined && out.memories === undefined && out.dbSizeBytes === undefined) {
+    return undefined;
+  }
+  return out;
+}
+
+/**
+ * Bounded read of `tests/current.json` (`TestsSummary`). Returns `undefined`
+ * when no canonical suite record is present (the renderer's tests cell gates on
+ * `suite`), so a partial-only file does not surface a bare cell.
+ */
+async function probeTests(path: string): Promise<TestsSummary | undefined> {
+  const raw = await readJsonFile<unknown>(path, MAX_INLINE_SUMMARY_BYTES).catch(() => undefined);
+  if (!isPlainObject(raw)) return undefined;
+  const out: TestsSummary = {};
+  if (isPlainObject(raw.suite) && typeof raw.suite.total === 'number') {
+    out.suite = raw.suite as unknown as TestsSummary['suite'];
+  }
+  if (isPlainObject(raw.latestPartial)) {
+    out.latestPartial = raw.latestPartial as unknown as TestsSummary['latestPartial'];
+  }
+  if (out.suite === undefined && out.latestPartial === undefined) return undefined;
+  return out;
+}
+
+/**
+ * Bounded read of `attention/current.json` (`AttentionSummary`). Returns
+ * `undefined` when there are no unresolved entries so the renderer omits the
+ * attention row (OMIT > FAKE — never an empty `📌` label).
+ */
+async function probeAttention(path: string): Promise<AttentionSummary | undefined> {
+  const raw = await readJsonFile<unknown>(path, MAX_INLINE_SUMMARY_BYTES).catch(() => undefined);
+  if (!isPlainObject(raw)) return undefined;
+  const unresolved = Array.isArray(raw.unresolved) ? raw.unresolved : [];
+  if (unresolved.length === 0) return undefined;
+  return { unresolved: unresolved as AttentionSummary['unresolved'] };
+}
+
+/**
+ * Bounded read of `mcp/health.json` (`McpSummary`). Returns `undefined` when
+ * no MCP servers are configured (`total <= 0`) so the renderer omits the MCP
+ * cell rather than rendering `MCP 0/0`.
+ */
+async function probeMcp(path: string): Promise<McpSummary | undefined> {
+  const raw = await readJsonFile<unknown>(path, MAX_INLINE_SUMMARY_BYTES).catch(() => undefined);
+  if (!isPlainObject(raw)) return undefined;
+  const total = typeof raw.total === 'number' ? raw.total : 0;
+  if (!Number.isFinite(total) || total <= 0) return undefined;
+  const configured = typeof raw.configured === 'number' ? raw.configured : 0;
+  const runtimeUp = typeof raw.runtimeUp === 'number' ? raw.runtimeUp : 0;
+  return {
+    version: 1,
+    observedAt: typeof raw.observedAt === 'string' ? raw.observedAt : new Date().toISOString(),
+    probeVersion: 1,
+    source: 'setup-verify-json-rpc',
+    total,
+    configured,
+    runtimeUp,
+    state: typeof raw.state === 'string' ? (raw.state as McpSummary['state']) : 'config-present',
+    ...(Array.isArray(raw.details) ? { details: raw.details as McpSummary['details'] } : {}),
+  };
 }
