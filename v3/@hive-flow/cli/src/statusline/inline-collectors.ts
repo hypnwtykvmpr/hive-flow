@@ -519,7 +519,7 @@ async function probeSwarm(projectRoot: string): Promise<SwarmSummary | undefined
 }
 
 // ---------------------------------------------------------------------------
-// Daemon probe (bounded read of .hive-flow/data/daemon-state.json)
+// Daemon probe (bounded read of .hive-flow/daemon-state.json)
 // ---------------------------------------------------------------------------
 
 interface RawDaemonState {
@@ -538,7 +538,12 @@ async function probeDaemon(
   projectRoot: string,
   now: () => number,
 ): Promise<DaemonSummary | undefined> {
-  const statePath = join(projectRoot, '.hive-flow', 'data', 'daemon-state.json');
+  // The worker daemon (`services/worker-daemon.ts` `saveState()`) persists its
+  // state to `<projectRoot>/.hive-flow/daemon-state.json` (the `.hive-flow`
+  // root — NOT a `data/` subdir). The probe MUST read the producer's actual
+  // path or the footer silently reports `daemon unknown` while a running
+  // daemon exists. (Schema: `{ running: boolean, ... }`.)
+  const statePath = join(projectRoot, '.hive-flow', 'daemon-state.json');
   const raw = await readJsonFile<RawDaemonState>(statePath, MAX_INLINE_JSON_BYTES).catch(
     () => undefined,
   );

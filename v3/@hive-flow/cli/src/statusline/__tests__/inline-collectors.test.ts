@@ -53,7 +53,11 @@ function setupFixture(): Fixture {
   return {
     projectRoot,
     storePath: join(projectRoot, '.hive-flow', 'agents', 'store.json'),
-    daemonStatePath: join(projectRoot, '.hive-flow', 'data', 'daemon-state.json'),
+    // Must match the worker daemon's actual write path
+    // (`services/worker-daemon.ts` `saveState()` →
+    // `<projectRoot>/.hive-flow/daemon-state.json`). A `data/` subdir here would
+    // codify the producer/probe path mismatch the footer silently hides.
+    daemonStatePath: join(projectRoot, '.hive-flow', 'daemon-state.json'),
   };
 }
 
@@ -428,6 +432,34 @@ describe('collectInlineSnapshot (Wave 8 inline-collector mode)', () => {
     expect(corrupt.daemon).toBeDefined();
     expect(corrupt.daemon?.running).toBe(false);
     expect(corrupt.daemon?.health).toBe('unknown');
+  });
+
+  // -------------------------------------------------------------------------
+  // 7d. Producer-path wiring: the probe MUST read the worker daemon's actual
+  // write path (`.hive-flow/daemon-state.json`), NOT a `data/` subdir. A file
+  // placed only in `.hive-flow/data/` must NOT populate the daemon row — that
+  // would silently report `daemon unknown` while a running daemon exists.
+  // -------------------------------------------------------------------------
+  it('reads daemon state from the producer path, not .hive-flow/data/', async () => {
+    // Write a running daemon ONLY at the legacy/wrong `data/` path.
+    const wrongPath = join(fix.projectRoot, '.hive-flow', 'data', 'daemon-state.json');
+    writeFileSync(wrongPath, JSON.stringify({ running: true, pid: 9999 }), { mode: 0o600 });
+    const fromWrong = await collectInlineSnapshot({
+      projectRoot: fix.projectRoot,
+      deadlineMs: 500,
+    });
+    // The probe ignores `data/daemon-state.json`, so the daemon does not read
+    // as running.
+    expect(fromWrong.daemon?.running).toBe(false);
+
+    // Now write at the producer's real path; the daemon must read as running.
+    writeFileSync(fix.daemonStatePath, JSON.stringify({ running: true }), { mode: 0o600 });
+    const fromRight = await collectInlineSnapshot({
+      projectRoot: fix.projectRoot,
+      deadlineMs: 500,
+    });
+    expect(fromRight.daemon?.running).toBe(true);
+    expect(fromRight.daemon?.health).toBe('healthy');
   });
 
   // -------------------------------------------------------------------------
