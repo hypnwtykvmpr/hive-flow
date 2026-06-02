@@ -745,6 +745,7 @@ async function processPostToolUse(input) {
       .join(', ');
     return {
       hookSpecificOutput: {
+        hookEventName: 'PostToolUse',
         additionalContext: '[HIVE_ENFORCEMENT] Auto-spawned ' + spawnedWorkers.length + ' worker(s) for hive ' + sanitizedId + ' (deficit was ' + deficit + '): ' + workerSummary + '. Workers are registered in hive.json. Use queen_task_worker to assign tasks.',
       },
     };

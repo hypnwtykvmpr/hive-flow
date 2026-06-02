@@ -206,6 +206,7 @@ function processPostToolUse(input) {
   if (!isSpawnSuccess(input)) {
     return {
       hookSpecificOutput: {
+        hookEventName: 'PostToolUse',
         additionalContext: '[HIVE_SPAWN_FAILED] Task tool call did not succeed. Spawn not counted.',
       },
     };
@@ -301,6 +302,7 @@ function processPostToolUse(input) {
 
   return {
     hookSpecificOutput: {
+      hookEventName: 'PostToolUse',
       additionalContext: contextMsg,
     },
   };

@@ -5,7 +5,7 @@
  * Includes model routing integration for intelligent model selection.
  */
 
-import { randomUUID, createHmac, timingSafeEqual } from 'node:crypto';
+import { randomUUID, createHmac, timingSafeEqual, createHash } from 'node:crypto';
 import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync, rmdirSync, rmSync, unlinkSync, statSync, readdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { execFile, spawn } from 'node:child_process';
@@ -356,11 +356,11 @@ async function determineAgentModel(
 // ---------------------------------------------------------------------------
 
 const ENFORCEMENT_DIR = join(process.cwd(), '.hive-flow', 'enforcement');
+const PROJECT_ENFORCEMENT_ID = `project-${createHash('sha256').update(process.cwd()).digest('hex').slice(0, 16)}`;
 
-function readParentEnforcementLevel(): number {
+function readSignedEnforcementLevel(stateFile: string): number | undefined {
   try {
-    const stateFile = join(ENFORCEMENT_DIR, 'state.json');
-    if (!existsSync(stateFile)) return 0; // NORMAL — no state means unrestricted
+    if (!existsSync(stateFile)) return undefined;
     const raw = JSON.parse(readFileSync(stateFile, 'utf8'));
 
     // A4: Read HMAC key for signature verification
@@ -384,7 +384,7 @@ function readParentEnforcementLevel(): number {
       if (!timingSafeEqual(expectedBuf, actualBuf)) return 1; // WARNED — tampered
       return typeof (raw.state as Record<string, unknown>)?.level === 'number'
         ? (raw.state as Record<string, unknown>).level as number
-        : 0;
+        : undefined;
     }
     // Handles { payload, signature } envelope (workflow-enforcer.ts)
     if (raw?.payload !== undefined && typeof raw?.signature === 'string') {
@@ -398,12 +398,41 @@ function readParentEnforcementLevel(): number {
       if (!timingSafeEqual(expectedBuf, actualBuf)) return 1;
       return typeof (raw.payload as Record<string, unknown>)?.level === 'number'
         ? (raw.payload as Record<string, unknown>).level as number
-        : 0;
+        : undefined;
     }
     // Unsigned envelope — fail-closed (A4: reject unsigned state)
     return 1; // WARNED
   } catch {
     return 1; // A4: Fail-closed: can't read parent state, treat as WARNED (not NORMAL)
+  }
+}
+
+function readParentEnforcementLevel(): number {
+  const globalLevel = readSignedEnforcementLevel(join(ENFORCEMENT_DIR, 'state.json')) ?? 0;
+  const projectLevel = readSignedEnforcementLevel(join(ENFORCEMENT_DIR, 'projects', PROJECT_ENFORCEMENT_ID, 'state.json')) ?? 0;
+  return Math.max(globalLevel, projectLevel);
+}
+
+function readVerifiedAgentRole(agentId: string): { type?: string; hiveId?: string } | null {
+  try {
+    const sanitized = sanitizePathId(agentId, 64);
+    if (!sanitized) return null;
+    const roleFile = join(ENFORCEMENT_DIR, 'agents', sanitized, 'role.json');
+    const keyFile = join(ENFORCEMENT_DIR, '.hmac-key');
+    if (!existsSync(roleFile) || !existsSync(keyFile)) return null;
+    const raw = JSON.parse(readFileSync(roleFile, 'utf8')) as { state?: Record<string, unknown>; hmac?: string };
+    if (!raw?.state || typeof raw.hmac !== 'string') return null;
+    const key = readFileSync(keyFile, 'utf8').trim();
+    const expected = createHmac('sha256', key).update(JSON.stringify(raw.state)).digest('hex');
+    const expectedBuf = Buffer.from(expected, 'hex');
+    const actualBuf = Buffer.from(raw.hmac, 'hex');
+    if (expectedBuf.length !== actualBuf.length || !timingSafeEqual(expectedBuf, actualBuf)) return null;
+    return {
+      type: typeof raw.state.type === 'string' ? raw.state.type : undefined,
+      hiveId: typeof raw.state.hiveId === 'string' ? raw.state.hiveId : undefined,
+    };
+  } catch {
+    return null;
   }
 }
 
@@ -1110,6 +1139,7 @@ export const agentTools: MCPTool[] = [
       writeFileSync(taskFilePath, task, 'utf-8');
 
       const agentDir = getAgentDir();
+      const agentRole = readVerifiedAgentRole(agentId);
       const child = spawn('node', [
         bridgePath,
         '--agent-id', agentId,
@@ -1123,6 +1153,11 @@ export const agentTools: MCPTool[] = [
         stdio: 'ignore',
         env: {
           ...process.env,
+          AGENTIC_FLOW_AGENT_ID: agentId,
+          CLAUDE_AGENT_ID: agentId,
+          ...(validationResult.agentToken ? { HIVE_FLOW_AGENT_TOKEN: validationResult.agentToken } : {}),
+          ...(agentRole?.hiveId ? { HIVE_FLOW_HIVE_ID: agentRole.hiveId } : {}),
+          ...(agentRole?.type ? { HIVE_FLOW_ROLE: agentRole.type } : {}),
           ...(process.env.OPENROUTER_API_KEY ? { OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY } : {}),
         },
       });

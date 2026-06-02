@@ -19,7 +19,7 @@
  * HMAC-signed using same key as enforcement.cjs (.hive-flow/enforcement/.hmac-key)
  *
  * Output format: Claude Code PreToolUse protocol
- *   { hookSpecificOutput: { permissionDecision: 'allow'|'deny', ... } }
+ *   { hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'allow'|'deny', ... } }
  */
 const fs = require('fs');
 const path = require('path');
@@ -275,24 +275,26 @@ function incrementDirectWorkCount(agentId, role) {
 // Output Formatting (mirrors enforcement.cjs)
 // ============================================================================
 
-function makeAllow(additionalContext) {
+function makeHookOutput(hookEventName, fields) {
+  return { hookSpecificOutput: { hookEventName: hookEventName, ...fields } };
+}
+
+function makeAllow(additionalContext, hookEventName = 'PreToolUse') {
   const result = {};
   if (additionalContext) {
     // Sanitize context — strip XML tags, limit length
     let sanitized = additionalContext.replace(/<[^>]+>/g, '');
     if (sanitized.length > 2000) sanitized = sanitized.slice(0, 2000) + '... [truncated]';
-    result.hookSpecificOutput = { permissionDecision: 'allow', additionalContext: sanitized };
+    result.hookSpecificOutput = { hookEventName: hookEventName, permissionDecision: 'allow', additionalContext: sanitized };
   }
   return result;
 }
 
-function makeDeny(reason) {
-  return {
-    hookSpecificOutput: {
-      permissionDecision: 'deny',
-      permissionDecisionReason: reason,
-    },
-  };
+function makeDeny(reason, hookEventName = 'PreToolUse') {
+  return makeHookOutput(hookEventName, {
+    permissionDecision: 'deny',
+    permissionDecisionReason: reason,
+  });
 }
 
 // ============================================================================
@@ -383,14 +385,14 @@ function enforceEnforcerRole(toolName) {
 
 function processSubagentStart(role) {
   if (role.type === 'advocate') {
-    return { hookSpecificOutput: { additionalContext: ADVOCATE_IDENTITY_TEXT } };
+    return makeHookOutput('SubagentStart', { additionalContext: ADVOCATE_IDENTITY_TEXT });
   }
   if (role.type === 'queen') {
     const text = QUEEN_IDENTITY_TEXT.replace(/\{\{HIVE_ID\}\}/g, role.hiveId || 'unassigned');
-    return { hookSpecificOutput: { additionalContext: text } };
+    return makeHookOutput('SubagentStart', { additionalContext: text });
   }
   if (role.type === 'enforcer') {
-    return { hookSpecificOutput: { additionalContext: ENFORCER_IDENTITY_TEXT } };
+    return makeHookOutput('SubagentStart', { additionalContext: ENFORCER_IDENTITY_TEXT });
   }
   return {};
 }
@@ -589,6 +591,7 @@ module.exports = {
   verifySpawnToken,
   makeAllow,
   makeDeny,
+  makeHookOutput,
   enforceAdvocateRole,
   enforceEnforcerRole,
   enforceQueenRole,

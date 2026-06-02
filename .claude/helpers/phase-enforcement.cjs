@@ -10,7 +10,7 @@
  * Fail-closed on corrupt/tampered state.
  *
  * Output format: Claude Code PreToolUse protocol
- *   { hookSpecificOutput: { permissionDecision: 'allow'|'deny', ... } }
+ *   { hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'allow'|'deny', ... } }
  */
 const fs = require('fs');
 const path = require('path');
@@ -133,13 +133,13 @@ function readWorkflowState() {
 
 function makeAllow(additionalContext) {
   if (additionalContext) {
-    return { hookSpecificOutput: { permissionDecision: 'allow', additionalContext } };
+    return { hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'allow', additionalContext } };
   }
   return {};
 }
 
 function makeDeny(reason) {
-  return { hookSpecificOutput: { permissionDecision: 'deny', permissionDecisionReason: reason } };
+  return { hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: reason } };
 }
 
 function processPreToolUse(input) {

@@ -13,10 +13,13 @@ const PROPERTY_RUNS = propertyRunsFromEnv(100);
 const require = createRequire(import.meta.url);
 const here = dirname(fileURLToPath(import.meta.url));
 const source = resolve(here, '../../../../../.claude/helpers/enforcement.cjs');
+const settingsSource = resolve(here, '../../../../../.claude/settings.json');
 const root = mkdtempSync(join(tmpdir(), 'hive-flow-enforcement-security-'));
 const helperPath = join(root, '.claude', 'helpers', 'enforcement.cjs');
 mkdirSync(dirname(helperPath), { recursive: true });
 copyFileSync(source, helperPath);
+mkdirSync(join(root, '.claude'), { recursive: true });
+copyFileSync(settingsSource, join(root, '.claude', 'settings.json'));
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let enf: any;
@@ -30,8 +33,30 @@ function statePath(): string {
   return enf.getStateFile();
 }
 
+function scopedStatePath(scopeType: string, scopeId: string): string {
+  return join(root, '.hive-flow', 'enforcement', `${scopeType}s`, scopeId, 'state.json');
+}
+
+function readScopedState(scopeType: string, scopeId: string): Record<string, unknown> | null {
+  const file = scopeType === 'global' ? statePath() : scopedStatePath(scopeType, scopeId);
+  try {
+    return JSON.parse(readFileSync(file, 'utf8')).state;
+  } catch {
+    return null;
+  }
+}
+
+function clearAgentEnv(): void {
+  delete process.env.AGENTIC_FLOW_AGENT_ID;
+  delete process.env.CLAUDE_AGENT_ID;
+  delete process.env.CLAUDE_SESSION_ID;
+  delete process.env.HIVE_FLOW_AGENT_TOKEN;
+  delete process.env.HIVE_FLOW_HIVE_ID;
+}
+
 describe('enforcement security property contracts', () => {
   beforeEach(() => {
+    clearAgentEnv();
     resetModule();
     rmSync(join(root, '.hive-flow', 'enforcement'), { recursive: true, force: true });
     mkdirSync(dirname(statePath()), { recursive: true });
@@ -104,5 +129,78 @@ describe('enforcement security property contracts', () => {
       }),
       { seed: 20_622, numRuns: PROPERTY_RUNS },
     );
+  });
+
+  it('does not classify normal hive data writes as protected path circumvention', () => {
+    expect(enf.isProtectedPath(join(root, '.hive-flow', 'data', 'watcher-hive.json'))).toBe(false);
+    expect(enf.isProtectedPath(join(root, '.hive-flow', 'data', 'hive.done'))).toBe(false);
+    expect(enf.isGlobalProtectedPath(join(root, '.claude', 'helpers', 'enforcement.cjs'))).toBe(true);
+  });
+
+  it('scopes ordinary agent violations to the agent and leaves global untouched', () => {
+    process.env.AGENTIC_FLOW_AGENT_ID = 'agent-a';
+
+    const result = enf.processPreToolUse({
+      tool_name: 'Write',
+      tool_input: { file_path: '.hive-flow/workflows/state.json' },
+    });
+
+    expect(result.hookSpecificOutput.hookEventName).toBe('PreToolUse');
+    expect(result.hookSpecificOutput.permissionDecision).toBe('deny');
+    expect(readScopedState('agent', 'agent-a')?.level).toBe(enf.LEVELS.RESTRICTED);
+    expect(readScopedState('global', 'global')).toBeNull();
+  });
+
+  it('scopes unknown ordinary violations to project state instead of global', () => {
+    const result = enf.processPreToolUse({
+      tool_name: 'Bash',
+      tool_input: { command: "bash -c 'eval $(echo echo hi)'" },
+    });
+
+    const projectId = enf.resolveScopeContext().projectId;
+    expect(result.hookSpecificOutput.hookEventName).toBe('PreToolUse');
+    expect(result.hookSpecificOutput.permissionDecision).toBe('deny');
+    expect(readScopedState('project', projectId)?.level).toBe(enf.LEVELS.WARNED);
+    expect(readScopedState('global', 'global')).toBeNull();
+  });
+
+  it('still escalates enforcement-file attacks globally', () => {
+    process.env.AGENTIC_FLOW_AGENT_ID = 'agent-b';
+
+    const result = enf.processPreToolUse({
+      tool_name: 'Write',
+      tool_input: { file_path: '.claude/helpers/enforcement.cjs' },
+    });
+
+    expect(result.hookSpecificOutput.hookEventName).toBe('PreToolUse');
+    expect(result.hookSpecificOutput.permissionDecision).toBe('deny');
+    expect(readScopedState('global', 'global')?.level).toBe(enf.LEVELS.RESTRICTED);
+  });
+
+  it('allows canonical hook invocations while restricted but blocks arbitrary scripts', () => {
+    const restricted = { restrictedGroups: ['write'] };
+
+    expect(enf.detectCircumvention(
+      'Bash',
+      { command: 'node "$CLAUDE_PROJECT_DIR"/.claude/helpers/hook-handler.cjs permission-guard' },
+      restricted,
+    ).circumvention).toBe(false);
+
+    expect(enf.detectCircumvention(
+      'Bash',
+      { command: 'node ./random-script.js' },
+      restricted,
+    ).circumvention).toBe(true);
+
+    expect(enf.detectCircumvention(
+      'Bash',
+      { command: 'node "$CLAUDE_PROJECT_DIR"/.claude/helpers/hook-handler.cjs permission-guard; node ./random-script.js' },
+      restricted,
+    ).circumvention).toBe(true);
+  });
+
+  it('does not flag inert eval text but still blocks shell eval execution', () => {
+    expect(enf.isObfuscated(`node -e "console.log('eval(')"`)).toBe(false);
+    expect(enf.isObfuscated("bash -c 'eval $(echo echo hi)'")).toBe(true);
   });
 });

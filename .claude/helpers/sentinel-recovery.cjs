@@ -240,6 +240,7 @@ function main() {
 
   process.stdout.write(JSON.stringify({
     hookSpecificOutput: {
+      hookEventName: 'SessionStart',
       additionalContext: context,
     },
   }));

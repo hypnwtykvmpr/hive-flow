@@ -144,6 +144,7 @@ async function main() {
 
     process.stdout.write(JSON.stringify({
       hookSpecificOutput: {
+        hookEventName: 'SubagentStart',
         additionalContext:
           `[ENFORCER ACTIVE] Enforcer ${agentId} spawned. Monitors delegation metrics and governance. Coordinates with queen_task_worker / queen_report gates.`,
       },

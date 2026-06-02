@@ -132,6 +132,7 @@ function handleTeammateIdle() {
 
   process.stdout.write(JSON.stringify({
     hookSpecificOutput: {
+      hookEventName: 'TeammateIdle',
       additionalContext: context,
     },
   }));
@@ -160,6 +161,7 @@ function handleStopNotify() {
 
   process.stdout.write(JSON.stringify({
     hookSpecificOutput: {
+      hookEventName: 'Stop',
       additionalContext: context,
     },
   }));

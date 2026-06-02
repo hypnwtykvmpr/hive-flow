@@ -12,7 +12,7 @@
  * - Tracker updates are protected by mkdirSync directory locking
  *
  * Output format: Claude Code PreToolUse protocol
- *   { hookSpecificOutput: { permissionDecision: 'allow'|'deny', ... } }
+ *   { hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'allow'|'deny', ... } }
  */
 const fs = require('fs');
 const path = require('path');
@@ -42,6 +42,7 @@ function makeAllow(additionalContext) {
   const result = {};
   if (additionalContext) {
     result.hookSpecificOutput = {
+      hookEventName: 'PreToolUse',
       permissionDecision: 'allow',
       additionalContext: sanitizeContext(additionalContext),
     };
@@ -52,6 +53,7 @@ function makeAllow(additionalContext) {
 function makeDeny(reason) {
   return {
     hookSpecificOutput: {
+      hookEventName: 'PreToolUse',
       permissionDecision: 'deny',
       permissionDecisionReason: reason,
     },

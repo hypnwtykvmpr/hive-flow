@@ -4,15 +4,15 @@
 process.on('uncaughtException', () => {
   // permission-guard: fail-open (don't block user work on internal errors)
   if (process.argv[2] === 'permission-guard') {
-    process.stdout.write(JSON.stringify({ hookSpecificOutput: { permissionDecision: 'allow' } }));
+    process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'allow' } }));
   }
   // enforce-plan: fail-closed (enforcement errors must block, not allow)
   else if (process.argv[2] === 'enforce-plan') {
-    process.stdout.write(JSON.stringify({ hookSpecificOutput: { permissionDecision: 'deny', permissionDecisionReason: '[ENFORCEMENT ERROR] Hook crashed. Tool blocked for safety.' } }));
+    process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: '[ENFORCEMENT ERROR] Hook crashed. Tool blocked for safety.' } }));
   }
   // pre-bash: fail-open (basic safety net; real enforcement runs earlier)
   else if (process.argv[2] === 'pre-bash') {
-    process.stdout.write(JSON.stringify({ hookSpecificOutput: { permissionDecision: 'allow' } }));
+    process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'allow' } }));
   }
   // All other commands: emit empty JSON so Claude Code sees valid output
   else {
@@ -102,7 +102,7 @@ function loadEnforcerModule() {
 
 // Shared helper: emit a JSON allow decision for permission-style hooks.
 function allowAndReturn() {
-  console.log(JSON.stringify({ hookSpecificOutput: { permissionDecision: 'allow' } }));
+  console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'allow' } }));
 }
 
 function withAdvocateStateLock(fn) {
@@ -262,6 +262,7 @@ const handlers = {
       if (cmd.includes(d)) {
         console.log(JSON.stringify({
           hookSpecificOutput: {
+            hookEventName: 'PreToolUse',
             permissionDecision: 'deny',
             permissionDecisionReason: `[BLOCKED] Dangerous command detected: ${d}`,
           },
@@ -269,7 +270,7 @@ const handlers = {
         return;
       }
     }
-    console.log(JSON.stringify({ hookSpecificOutput: { permissionDecision: 'allow' } }));
+    console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'allow' } }));
   },
 
   'post-edit': () => {
@@ -687,6 +688,7 @@ const handlers = {
 
         process.stdout.write(JSON.stringify({
           hookSpecificOutput: {
+            hookEventName: 'PostToolUse',
             additionalContext: guidance
           }
         }));
@@ -746,7 +748,7 @@ const handlers = {
       if (roleData.state?.type === 'advocate') text = '[ADVOCATE ROLE ACTIVE] You orchestrate — you do not execute. Delegate via hives. Bash/Write/Edit are blocked.';
       else if (roleData.state?.type === 'queen') text = `[QUEEN ROLE ACTIVE — Hive ${roleData.state?.hiveId || 'unassigned'}] Prefer delegation via queen_task_worker. Direct work is tracked.`;
       else if (roleData.state?.type === 'enforcer') text = '[ENFORCER ROLE ACTIVE] Governance proxy — observe and escalate. Bash/Write/Edit/WebFetch are blocked.';
-      if (text) console.log(JSON.stringify({ hookSpecificOutput: { additionalContext: text } }));
+      if (text) console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: text } }));
       else console.log(JSON.stringify({}));
     } catch (e) { console.log(JSON.stringify({})); }
   },
@@ -797,6 +799,7 @@ const handlers = {
 
       console.log(JSON.stringify({
         hookSpecificOutput: {
+          hookEventName: 'UserPromptSubmit',
           additionalContext: `[ROLE SET] Agent role set to '${roleType}'. Enforcement is now active.`,
         },
       }));
@@ -824,7 +827,7 @@ const handlers = {
     const expectedBuf = Buffer.from(signature, 'hex');
     const actualBuf = Buffer.from(signature, 'hex');
     if (expectedBuf.length !== actualBuf.length || !crypto.timingSafeEqual(expectedBuf, actualBuf)) {
-      console.log(JSON.stringify({ hookSpecificOutput: { permissionDecision: 'deny', permissionDecisionReason: '[ROLE] Clear-role HMAC verification failed.' } }));
+      console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', permissionDecision: 'deny', permissionDecisionReason: '[ROLE] Clear-role HMAC verification failed.' } }));
       return;
     }
 
@@ -838,12 +841,14 @@ const handlers = {
         fs.unlinkSync(roleFile);
         console.log(JSON.stringify({
           hookSpecificOutput: {
+            hookEventName: 'UserPromptSubmit',
             additionalContext: '[ROLE CLEARED] Agent role removed. Role enforcement is now inactive.',
           },
         }));
       } else {
         console.log(JSON.stringify({
           hookSpecificOutput: {
+            hookEventName: 'UserPromptSubmit',
             additionalContext: '[ROLE CLEAR] No role was assigned to this agent.',
           },
         }));
@@ -892,6 +897,7 @@ const handlers = {
       if (state.assessment.level === 'COMPLEX' && state.planRequired && !state.planCreated) {
         console.log(JSON.stringify({
           hookSpecificOutput: {
+            hookEventName: 'PreToolUse',
             permissionDecision: 'deny',
             permissionDecisionReason: 'ENFORCEMENT: Complex task (score: ' + state.assessment.score + ') requires planning subflow before implementation. Call planning_subflow_execute first.',
           },
@@ -925,6 +931,7 @@ const handlers = {
         // Soft deny
         console.log(JSON.stringify({
           hookSpecificOutput: {
+            hookEventName: 'PreToolUse',
             permissionDecision: 'deny',
             permissionDecisionReason: 'ENFORCEMENT: Moderate task (score: ' + state.assessment.score + ') requires planning subflow before implementation. Call planning_subflow_execute first.',
           },
@@ -938,6 +945,7 @@ const handlers = {
       // fail-closed: errors in enforce-plan block the tool for safety
       console.log(JSON.stringify({
         hookSpecificOutput: {
+          hookEventName: 'PreToolUse',
           permissionDecision: 'deny',
           permissionDecisionReason: '[ENFORCEMENT ERROR] enforce-plan hook failed. Tool blocked for safety.',
         },
@@ -1270,7 +1278,7 @@ const handlers = {
     const callerToken = `${timestamp}.${sig}`;
     const result = enforcement.overridePipeline(reason, callerToken);
     if (result.success) {
-      process.stdout.write(JSON.stringify({ hookSpecificOutput: { additionalContext: '[PIPELINE OVERRIDE] Pipeline commit gate has been overridden. Commits are now allowed. Reason: ' + reason } }));
+      process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: '[PIPELINE OVERRIDE] Pipeline commit gate has been overridden. Commits are now allowed. Reason: ' + reason } }));
     } else {
       console.error(`[PIPELINE] Override failed: ${result.reason}`);
     }
@@ -1294,7 +1302,7 @@ const handlers = {
   },
 
   'permission-guard': async () => {
-    const ALLOW_JSON = JSON.stringify({ hookSpecificOutput: { permissionDecision: 'allow' } });
+    const ALLOW_JSON = JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'allow' } });
 
     // Suppress ALL stderr — Claude Code treats any stderr as hook error
     const origStderrWrite = process.stderr.write;
@@ -1380,6 +1388,7 @@ const handlers = {
         if (result.decision === 'deny') {
           const output = {
             hookSpecificOutput: {
+              hookEventName: 'PreToolUse',
               permissionDecision: 'deny',
               permissionDecisionReason: result.reason || 'Denied by Permission Guard',
             }
@@ -1394,6 +1403,7 @@ const handlers = {
         if (result.reason || result.additionalContext) {
           console.log(JSON.stringify({
             hookSpecificOutput: {
+              hookEventName: 'PreToolUse',
               permissionDecision: 'allow',
               additionalContext: result.additionalContext || result.reason,
             }
@@ -1465,6 +1475,7 @@ const handlers = {
 
       process.stdout.write(JSON.stringify({
         hookSpecificOutput: {
+          hookEventName: 'SubagentStart',
           additionalContext: `[BUG HUNTER ACTIVE] Bug hunter ${bugHunterId} spawned under COORDINATOR (not inside any hive).\nCOORDINATOR: Assign bug_hunter_scan tasks to ${bugHunterId} during all dev stages.\nBug hunter finds bugs but NEVER fixes them — forward reports to debugger hive.`
         }
       }));
@@ -1482,11 +1493,11 @@ const handlers = {
       const projectDir = PROJECT_DIR;
       const result = updateAdvocateState(projectDir, newState, input.description || '');
       if (!result.ok) {
-        console.log(JSON.stringify({ hookSpecificOutput: { message: result.error } }));
+        console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', message: result.error } }));
         return;
       }
       const description = result.state.description;
-      process.stdout.write(JSON.stringify({ hookSpecificOutput: { message: `Advocate state: ${newState}${description ? ': ' + description : ''}` } }));
+      process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', message: `Advocate state: ${newState}${description ? ': ' + description : ''}` } }));
     } catch (e) { console.log('{}'); }
   },
 
@@ -1506,7 +1517,7 @@ const handlers = {
       if (stateData.state === 'waiting-for-human') {
         const result = updateAdvocateState(projectDir, 'active', 'Human prompt received');
         if (result.ok) {
-          process.stdout.write(JSON.stringify({ hookSpecificOutput: { additionalContext: '[ADVOCATE] Auto-transitioned to active on human prompt.' } }));
+          process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: '[ADVOCATE] Auto-transitioned to active on human prompt.' } }));
         } else { console.log('{}'); }
         return;
       }
@@ -1550,7 +1561,7 @@ const handlers = {
             hiveInfo = hiveEvents.length > 0 ? ` ${hiveEvents.length} recent hive events.` : '';
           } catch { /* non-fatal */ }
         }
-        process.stdout.write(JSON.stringify({ hookSpecificOutput: { additionalContext: `[WAKE-TIMER] 5min idle.${hiveInfo}` } }));
+        process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: `[WAKE-TIMER] 5min idle.${hiveInfo}` } }));
         return;
       }
 
@@ -1577,12 +1588,12 @@ const handlers = {
         const msg = completions.length > 0
           ? `[WAKE-TIMER] ${description}`
           : '[WAKE-TIMER] Waiting for hive. No completions yet.';
-        process.stdout.write(JSON.stringify({ hookSpecificOutput: { additionalContext: msg } }));
+        process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: msg } }));
         return;
       }
 
       if (currentState === 'waiting-for-human' && elapsed >= THIRTY_MIN) {
-        process.stdout.write(JSON.stringify({ hookSpecificOutput: { additionalContext: '[30m auto-hook]' } }));
+        process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: '[30m auto-hook]' } }));
         return;
       }
 
@@ -1638,6 +1649,7 @@ const handlers = {
         : `bash scripts/hive-poll-notify.sh ${hiveId}`;
       process.stdout.write(JSON.stringify({
         hookSpecificOutput: {
+          hookEventName: 'PostToolUse',
           additionalContext: [
             `[ADVOCATE] Auto-transitioned to waiting-for-hive. Hive: ${hiveId}`,
             `[POLL-SCRIPT] ${pollCommand}`
@@ -1697,7 +1709,7 @@ const handlers = {
       const projectDir = PROJECT_DIR;
       const result = updateAdvocateState(projectDir, 'active', desc);
       if (!result.ok) { console.log('{}'); return; }
-      process.stdout.write(JSON.stringify({ hookSpecificOutput: { additionalContext: `[ADVOCATE] Auto-transitioned to active. ${desc}` } }));
+      process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PostToolUse', additionalContext: `[ADVOCATE] Auto-transitioned to active. ${desc}` } }));
     } catch (e) { console.log('{}'); }
   },
 
@@ -1750,7 +1762,7 @@ const handlers = {
       }
 
       console.log(JSON.stringify({
-        hookSpecificOutput: { additionalContext: messages.join('\n') }
+        hookSpecificOutput: { hookEventName: 'PostToolUse', additionalContext: messages.join('\n') }
       }));
     } catch { console.log('{}'); }
   },
@@ -1764,17 +1776,17 @@ const handlers = {
     } catch (e) {
       // Output valid JSON so Claude Code doesn't flag as hook error
       if (command === 'permission-guard') {
-        console.log(JSON.stringify({ hookSpecificOutput: { permissionDecision: 'allow' } }));
+        console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'allow' } }));
       }
       if (command === 'enforce-plan') {
-        console.log(JSON.stringify({ hookSpecificOutput: { permissionDecision: 'deny', permissionDecisionReason: '[ENFORCEMENT ERROR] Hook crashed. Tool blocked for safety.' } }));
+        console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: '[ENFORCEMENT ERROR] Hook crashed. Tool blocked for safety.' } }));
       }
       // pre-bash is a basic safety net (not the primary enforcement gate);
       // on internal error emit a valid JSON allow so the bash hook never
       // blocks with non-JSON output. Real enforcement lives in
       // enforcement.cjs / permission-guard which run earlier in the chain.
       if (command === 'pre-bash') {
-        console.log(JSON.stringify({ hookSpecificOutput: { permissionDecision: 'allow' } }));
+        console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'allow' } }));
       }
       // For non-permission-guard hooks, silence the error — no output needed
     }

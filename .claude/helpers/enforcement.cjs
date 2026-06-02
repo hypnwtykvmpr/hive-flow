@@ -21,7 +21,7 @@
  *   .hive-flow/enforcement/.hmac-key             — per-installation HMAC secret (mode 0o600)
  *
  * Output format: Claude Code PreToolUse protocol
- *   { hookSpecificOutput: { permissionDecision: 'allow'|'deny', permissionDecisionReason: '...' } }
+ *   { hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'allow'|'deny', permissionDecisionReason: '...' } }
  */
 const fs = require('fs');
 const path = require('path');
@@ -73,7 +73,6 @@ const PROTECTED_PATHS = [
   '.claude/settings.json',
   '.claude/helpers/',
   '.hive-flow/enforcement/',
-  '.hive-flow/data/', // N5: unprotected state directory
   '.hive-flow/workflows/', // Band 3: protect workflow/phase state from agent tampering
 ];
 
@@ -148,6 +147,16 @@ function ensureDir(dir) {
   try { fs.mkdirSync(dir || ENFORCEMENT_DIR, { recursive: true }); } catch {}
 }
 
+function sanitizeScopeId(id, fallback = '') {
+  if (!id || typeof id !== 'string') return fallback;
+  const sanitized = id.replace(/[\/\\\.]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 64);
+  return sanitized || fallback;
+}
+
+function getProjectScopeId() {
+  return `project-${crypto.createHash('sha256').update(PROJECT_DIR).digest('hex').slice(0, 16)}`;
+}
+
 // Per-agent state isolation (WP-60)
 function getAgentId() {
   return process.env.AGENTIC_FLOW_AGENT_ID
@@ -159,9 +168,20 @@ function getAgentId() {
 function getStateFile(agentId) {
   if (!agentId) return STATE_FILE;
   // Sanitize agentId: reject path traversal attempts
-  const sanitized = agentId.replace(/[\/\\\.]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 64);
+  const sanitized = sanitizeScopeId(agentId);
   if (!sanitized) return STATE_FILE;
   return path.join(ENFORCEMENT_DIR, 'agents', sanitized, 'state.json');
+}
+
+function getScopedStateFile(scopeType, scopeId) {
+  if (scopeType === 'global') return STATE_FILE;
+  const fallback = scopeType === 'project' ? getProjectScopeId() : '';
+  const sanitized = sanitizeScopeId(scopeId, fallback);
+  if (!sanitized) return STATE_FILE;
+  if (scopeType === 'agent') return path.join(ENFORCEMENT_DIR, 'agents', sanitized, 'state.json');
+  if (scopeType === 'hive') return path.join(ENFORCEMENT_DIR, 'hives', sanitized, 'state.json');
+  if (scopeType === 'project') return path.join(ENFORCEMENT_DIR, 'projects', sanitized, 'state.json');
+  return STATE_FILE;
 }
 
 function readJson(filePath) {
@@ -202,9 +222,12 @@ function freshState() {
   };
 }
 
-function getState(agentId) {
-  const stateFile = getStateFile(agentId);
+function getScopedState(scopeType = 'global', scopeId = null) {
+  const stateFile = getScopedStateFile(scopeType, scopeId);
   ensureDir(path.dirname(stateFile));
+  if (!fs.existsSync(stateFile)) {
+    return { state: freshState(), scopeType, scopeId, tampered: false };
+  }
   const raw = readJson(stateFile);
 
   if (raw === null) {
@@ -215,10 +238,10 @@ function getState(agentId) {
       state.level = LEVELS.WARNED;
       state.integrityCompromised = true;
       _readErrorCount = 0;
-      saveState(state, agentId);
-      return state;
+      saveScopedState(scopeType, scopeId, state);
+      return { state, scopeType, scopeId, tampered: true };
     }
-    return freshState();
+    return { state: freshState(), scopeType, scopeId, tampered: false };
   }
 
   _readErrorCount = 0;
@@ -226,7 +249,7 @@ function getState(agentId) {
   const { valid, state } = verifyState(raw);
 
   if (valid && state) {
-    return state;
+    return { state, scopeType, scopeId, tampered: false };
   }
 
   // HMAC verification failed — state was tampered
@@ -249,19 +272,40 @@ function getState(agentId) {
   appendViolation({
     type: 'reconciliation',
     reason: 'state-replaced',
-    agentId: agentId || 'global',
+    scopeType,
+    scopeId: scopeId || scopeType,
     action: 'fresh-state-created',
   });
-  saveState(tampered, agentId);
-  return tampered;
+  saveScopedState(scopeType, scopeId, tampered);
+  if (scopeType !== 'global') {
+    const globalState = getScopedState('global').state;
+    escalateState(globalState, `Scoped ${scopeType} state integrity check failed (HMAC mismatch)`, 'critical', {
+      scopeType: 'global',
+      scopeId: 'global',
+      cascadedFrom: `${scopeType}/${scopeId || ''}`,
+      integrityAttack: true,
+    });
+    saveScopedState('global', 'global', globalState);
+  }
+  return { state: tampered, scopeType, scopeId, tampered: true };
 }
 
-function saveState(state, agentId) {
-  const stateFile = getStateFile(agentId);
+function saveScopedState(scopeType = 'global', scopeId = null, state) {
+  const stateFile = getScopedStateFile(scopeType, scopeId);
   ensureDir(path.dirname(stateFile));
   state.lastActivity = new Date().toISOString();
   const envelope = signState(state);
   writeJsonAtomic(stateFile, envelope);
+}
+
+function getState(agentId) {
+  if (agentId) return getScopedState('agent', agentId).state;
+  return getScopedState('global', 'global').state;
+}
+
+function saveState(state, agentId) {
+  if (agentId) return saveScopedState('agent', agentId, state);
+  return saveScopedState('global', 'global', state);
 }
 
 function rotateJSONL(filePath) {
@@ -291,7 +335,12 @@ function appendViolation(violation) {
 // Escalation Logic
 // ============================================================================
 
-function escalate(state, reason, severity) {
+function escalationScopeLabel(scopeType, scopeId) {
+  if (!scopeType || scopeType === 'global') return 'global';
+  return `${scopeType}/${scopeId || 'unknown'}`;
+}
+
+function escalateState(state, reason, severity, metadata = {}) {
   const prevLevel = state.level;
 
   if (severity === 'critical') {
@@ -334,9 +383,204 @@ function escalate(state, reason, severity) {
     to: state.level,
     reason,
     severity,
+    ...metadata,
   });
 
   return state;
+}
+
+function escalate(state, reason, severity) {
+  return escalateState(state, reason, severity, { scopeType: 'legacy', scopeId: 'legacy' });
+}
+
+function loadRoleForAgent(agentId) {
+  const safeAgentId = sanitizeScopeId(agentId);
+  if (!safeAgentId) return null;
+  try {
+    const roleFile = path.join(ENFORCEMENT_DIR, 'agents', safeAgentId, 'role.json');
+    if (!fs.existsSync(roleFile)) return null;
+    const raw = readJson(roleFile);
+    if (!raw) return null;
+    const { valid, state } = verifyState(raw);
+    return valid && state ? state : null;
+  } catch {
+    return null;
+  }
+}
+
+function verifySpawnToken(agentId) {
+  try {
+    const storePath = path.join(PROJECT_DIR, '.hive-flow', 'agents', 'store.json');
+    if (!fs.existsSync(storePath)) return { valid: true, reason: 'no store file' };
+    const store = JSON.parse(fs.readFileSync(storePath, 'utf8'));
+    const agent = store?.agents?.[agentId];
+    if (!agent) return { valid: true, reason: 'agent not in store' };
+    const storedToken = agent?.config?._spawnToken;
+    if (!storedToken) return { valid: false, reason: 'missing stored token' };
+    const candidateToken = process.env.HIVE_FLOW_AGENT_TOKEN;
+    if (!candidateToken) return { valid: false, reason: 'missing env token' };
+    const storedBuf = Buffer.from(String(storedToken));
+    const candidateBuf = Buffer.from(String(candidateToken));
+    if (storedBuf.length !== candidateBuf.length) return { valid: false, reason: 'token length mismatch' };
+    if (!crypto.timingSafeEqual(storedBuf, candidateBuf)) return { valid: false, reason: 'token mismatch' };
+    return { valid: true, reason: 'token verified' };
+  } catch (err) {
+    return { valid: false, reason: `token check exception: ${err.message}` };
+  }
+}
+
+function resolveScopeContext() {
+  const agentId = getAgentId();
+  const tokenResult = agentId ? verifySpawnToken(agentId) : { valid: true, reason: 'no agent id' };
+  const identityTrusted = Boolean(agentId && tokenResult.valid);
+  const role = identityTrusted ? loadRoleForAgent(agentId) : null;
+  const envHiveId = sanitizeScopeId(process.env.HIVE_FLOW_HIVE_ID || '');
+  const roleHiveId = sanitizeScopeId(role?.hiveId || '');
+  const hiveId = identityTrusted ? (envHiveId || roleHiveId || null) : null;
+
+  return {
+    agentId: agentId || null,
+    hiveId,
+    projectId: getProjectScopeId(),
+    actorKind: identityTrusted ? 'agent' : (agentId ? 'unknown' : 'coordinator'),
+    identityTrusted,
+    identityReason: tokenResult.reason,
+    role,
+  };
+}
+
+function loadEffectiveState(ctx) {
+  const scopes = [];
+  if (ctx.identityTrusted && ctx.agentId) {
+    scopes.push({ scopeType: 'agent', scopeId: ctx.agentId });
+  }
+  if (ctx.hiveId) {
+    scopes.push({ scopeType: 'hive', scopeId: ctx.hiveId });
+  }
+  scopes.push({ scopeType: 'project', scopeId: ctx.projectId });
+  scopes.push({ scopeType: 'global', scopeId: 'global' });
+
+  const loaded = scopes.map(scope => {
+    const result = getScopedState(scope.scopeType, scope.scopeId);
+    return { ...scope, state: result.state, tampered: result.tampered };
+  });
+
+  let effective = loaded[0];
+  for (const candidate of loaded.slice(1)) {
+    if (candidate.state.level > effective.state.level) {
+      effective = candidate;
+    }
+  }
+
+  return { scopes: loaded, effective };
+}
+
+function countRestrictedAgentsForHive(hiveId) {
+  const safeHiveId = sanitizeScopeId(hiveId);
+  if (!safeHiveId) return 0;
+  const agentsDir = path.join(ENFORCEMENT_DIR, 'agents');
+  let count = 0;
+  try {
+    for (const agentDir of fs.readdirSync(agentsDir)) {
+      const role = loadRoleForAgent(agentDir);
+      if (!role || sanitizeScopeId(role.hiveId || '') !== safeHiveId) continue;
+      const state = getScopedState('agent', agentDir).state;
+      if (state.level >= LEVELS.RESTRICTED) count++;
+    }
+  } catch {}
+  return count;
+}
+
+function countRestrictedHives() {
+  const hivesDir = path.join(ENFORCEMENT_DIR, 'hives');
+  let count = 0;
+  try {
+    for (const hiveDir of fs.readdirSync(hivesDir)) {
+      const state = getScopedState('hive', hiveDir).state;
+      if (state.level >= LEVELS.RESTRICTED) count++;
+    }
+  } catch {}
+  return count;
+}
+
+function forceRestricted(state, reason, metadata = {}) {
+  const prevLevel = state.level;
+  state.level = Math.max(state.level, LEVELS.RESTRICTED);
+  if (state.level >= LEVELS.RESTRICTED && (!state.restrictedGroups || state.restrictedGroups.length === 0)) {
+    state.restrictedGroups = ['exec', 'write'];
+  }
+  state.violations++;
+  state.history.push({
+    ts: new Date().toISOString(),
+    from: prevLevel,
+    to: state.level,
+    reason,
+    severity: 'critical',
+  });
+  if (state.history.length > MAX_HISTORY) state.history = state.history.slice(-MAX_HISTORY);
+  appendViolation({ type: 'cascade', from: prevLevel, to: state.level, reason, ...metadata });
+  return state;
+}
+
+function chooseEscalationScope(ctx, violation) {
+  if (violation.protectedEnforcementAttack || violation.integrityAttack || violation.systemic) {
+    return { scopeType: 'global', scopeId: 'global' };
+  }
+  if (ctx.identityTrusted && ctx.agentId) {
+    return { scopeType: 'agent', scopeId: ctx.agentId };
+  }
+  if (ctx.hiveId) {
+    return { scopeType: 'hive', scopeId: ctx.hiveId };
+  }
+  return { scopeType: 'project', scopeId: ctx.projectId };
+}
+
+function escalateScoped(ctx, violation) {
+  const target = chooseEscalationScope(ctx, violation);
+  const targetState = getScopedState(target.scopeType, target.scopeId).state;
+  escalateState(targetState, violation.reason, violation.severity || 'normal', {
+    scopeType: target.scopeType,
+    scopeId: target.scopeId,
+    agentId: ctx.agentId,
+    hiveId: ctx.hiveId,
+    projectId: ctx.projectId,
+    protectedEnforcementAttack: violation.protectedEnforcementAttack === true,
+    integrityAttack: violation.integrityAttack === true,
+    systemic: violation.systemic === true,
+  });
+  targetState.restrictedGroups = [...new Set([
+    ...(targetState.restrictedGroups || []),
+    ...(violation.restrictionGroups || []),
+  ])];
+  saveScopedState(target.scopeType, target.scopeId, targetState);
+
+  if (target.scopeType === 'agent' && ctx.hiveId && targetState.level >= LEVELS.RESTRICTED) {
+    const restrictedAgents = countRestrictedAgentsForHive(ctx.hiveId);
+    if (restrictedAgents >= 2) {
+      const hiveState = getScopedState('hive', ctx.hiveId).state;
+      forceRestricted(hiveState, `Hive cascade: ${restrictedAgents} restricted agents in hive ${ctx.hiveId}`, {
+        scopeType: 'hive',
+        scopeId: ctx.hiveId,
+        cascadedFrom: `agent/${target.scopeId}`,
+        restrictedAgents,
+      });
+      saveScopedState('hive', ctx.hiveId, hiveState);
+    }
+  }
+
+  if ((target.scopeType === 'agent' || target.scopeType === 'hive') && countRestrictedHives() >= 2) {
+    const restrictedHives = countRestrictedHives();
+    const projectState = getScopedState('project', ctx.projectId).state;
+    forceRestricted(projectState, `Project cascade: ${restrictedHives} restricted hives`, {
+      scopeType: 'project',
+      scopeId: ctx.projectId,
+      cascadedFrom: `${target.scopeType}/${target.scopeId}`,
+      restrictedHives,
+    });
+    saveScopedState('project', ctx.projectId, projectState);
+  }
+
+  return { state: targetState, scopeType: target.scopeType, scopeId: target.scopeId };
 }
 
 // ============================================================================
@@ -367,26 +611,83 @@ function resolveFilePath(filePath) {
   }
 }
 
-function isProtectedPath(filePath) {
+function projectRelativePath(filePath) {
   const resolved = resolveFilePath(filePath);
-  const relativePath = resolved.startsWith(PROJECT_DIR)
+  return resolved.startsWith(PROJECT_DIR)
     ? resolved.slice(PROJECT_DIR.length + 1)
     : filePath;
+}
+
+function getProtectedPathScope(filePath) {
+  const relativePath = projectRelativePath(filePath);
 
   for (const protectedPath of PROTECTED_PATHS) {
     if (relativePath.startsWith(protectedPath) || relativePath === protectedPath.replace(/\/$/, '')) {
-      return true;
+      if (
+        protectedPath === '.claude/settings.json' ||
+        protectedPath === '.claude/helpers/' ||
+        protectedPath === '.hive-flow/enforcement/'
+      ) {
+        return 'global';
+      }
+      return 'project';
     }
   }
 
   // Check compiled output patterns (12.10)
   for (const pattern of PROTECTED_PATH_PATTERNS) {
     if (pattern.test(relativePath)) {
-      return true;
+      return 'global';
     }
   }
 
-  return false;
+  return null;
+}
+
+function isProtectedPath(filePath) {
+  return getProtectedPathScope(filePath) !== null;
+}
+
+function isGlobalProtectedPath(filePath) {
+  return getProtectedPathScope(filePath) === 'global';
+}
+
+let _canonicalHookScripts = null;
+function getCanonicalHookScripts() {
+  if (_canonicalHookScripts) return _canonicalHookScripts;
+  const scripts = new Set();
+  try {
+    const settingsPath = path.join(PROJECT_DIR, '.claude', 'settings.json');
+    const raw = fs.readFileSync(settingsPath, 'utf8');
+    const helperPattern = /\.claude\/helpers\/([^"'\s]+?\.(?:cjs|mjs))/g;
+    let match;
+    while ((match = helperPattern.exec(raw))) {
+      scripts.add(match[1]);
+    }
+  } catch {}
+  _canonicalHookScripts = scripts;
+  return scripts;
+}
+
+function isCanonicalHookInvocation(command) {
+  if (!command || /(?:pipeline-reset|enforcement-reset|reset-enforcement|enforcement\.cjs\s+--reset)/i.test(command)) {
+    return false;
+  }
+  if (/[;&|<>`]/.test(command)) {
+    return false;
+  }
+  const match = /(?:^|\s)node\s+((?:"[^"]+"\s*)?[^ \t\n;|&]*\.claude\/helpers\/[^ \t\n;|&]+?\.(?:cjs|mjs))/i.exec(command);
+  if (!match) return false;
+  const scriptToken = match[1] || '';
+  const scriptName = path.basename(scriptToken);
+  if (!getCanonicalHookScripts().has(scriptName)) return false;
+  const normalized = scriptToken
+    .replace(/\$CLAUDE_PROJECT_DIR|\$\{CLAUDE_PROJECT_DIR\}/g, PROJECT_DIR)
+    .replace(/["']/g, '')
+    .replace(/\s+/g, '');
+  const resolved = path.resolve(normalized);
+  const helpersDir = path.join(PROJECT_DIR, '.claude', 'helpers');
+  return resolved === path.join(helpersDir, scriptName) || resolved.startsWith(helpersDir + path.sep);
 }
 
 // ============================================================================
@@ -398,10 +699,13 @@ function detectCircumvention(toolName, toolInput, state) {
   if (['Write', 'Edit', 'MultiEdit', 'NotebookEdit', 'mcp__filesystem__write_file', 'mcp__filesystem__edit_file', 'mcp__filesystem__move_file', 'mcp__filesystem__delete_file'].includes(toolName)) {
     const filePath = toolInput?.file_path || toolInput?.path || toolInput?.destination || '';
     if (filePath && isProtectedPath(filePath)) {
+      const globalProtected = isGlobalProtectedPath(filePath);
       return {
         circumvention: true,
         reason: `CIRCUMVENTION: Attempted write to protected path: ${filePath}`,
         severity: 'critical',
+        protectedEnforcementAttack: globalProtected,
+        systemic: globalProtected,
       };
     }
   }
@@ -410,10 +714,13 @@ function detectCircumvention(toolName, toolInput, state) {
   if (toolName === 'mcp__filesystem__move_file') {
     const sourcePath = toolInput?.source || '';
     if (sourcePath && isProtectedPath(sourcePath)) {
+      const globalProtected = isGlobalProtectedPath(sourcePath);
       return {
         circumvention: true,
         reason: `CIRCUMVENTION: Attempted to move file FROM protected path via MCP filesystem: ${sourcePath}`,
         severity: 'critical',
+        protectedEnforcementAttack: globalProtected,
+        systemic: globalProtected,
       };
     }
   }
@@ -422,10 +729,13 @@ function detectCircumvention(toolName, toolInput, state) {
   if (toolName === 'mcp__filesystem__create_directory') {
     const dirPath = toolInput?.path || '';
     if (dirPath && isProtectedPath(dirPath)) {
+      const globalProtected = isGlobalProtectedPath(dirPath);
       return {
         circumvention: true,
         reason: `CIRCUMVENTION: Attempted directory creation in protected path via MCP filesystem: ${dirPath}`,
         severity: 'critical',
+        protectedEnforcementAttack: globalProtected,
+        systemic: globalProtected,
       };
     }
   }
@@ -446,10 +756,13 @@ function detectCircumvention(toolName, toolInput, state) {
     ];
     for (const pattern of redirectPatterns) {
       if (pattern.test(command)) {
+        const globalProtected = /\.hive-flow\/enforcement\/|\.claude\/helpers\/|\.claude\/settings\.json/i.test(command);
         return {
           circumvention: true,
           reason: `CIRCUMVENTION: Bash redirect to protected path detected`,
           severity: 'critical',
+          protectedEnforcementAttack: globalProtected,
+          systemic: globalProtected,
         };
       }
     }
@@ -460,6 +773,8 @@ function detectCircumvention(toolName, toolInput, state) {
         circumvention: true,
         reason: `CIRCUMVENTION: Git operation targeting enforcement/hook files`,
         severity: 'critical',
+        protectedEnforcementAttack: true,
+        systemic: true,
       };
     }
 
@@ -470,6 +785,7 @@ function detectCircumvention(toolName, toolInput, state) {
         circumvention: true,
         reason: `CIRCUMVENTION: Environment variable manipulation targeting enforcement`,
         severity: 'critical',
+        systemic: true,
       };
     }
 
@@ -485,6 +801,7 @@ function detectCircumvention(toolName, toolInput, state) {
           circumvention: true,
           reason: `CIRCUMVENTION: Attempted to expose secret environment variable ${secretVar}`,
           severity: 'critical',
+          systemic: true,
         };
       }
     }
@@ -497,6 +814,7 @@ function detectCircumvention(toolName, toolInput, state) {
         circumvention: true,
         reason: `CIRCUMVENTION: Egregiously destructive command detected`,
         severity: 'critical',
+        systemic: true,
       };
     }
 
@@ -508,6 +826,8 @@ function detectCircumvention(toolName, toolInput, state) {
         circumvention: true,
         reason: `CIRCUMVENTION: Attempted to call hook-handler.cjs pipeline-reset directly — this bypasses the pipeline commit gate`,
         severity: 'critical',
+        protectedEnforcementAttack: true,
+        systemic: true,
       };
     }
 
@@ -519,6 +839,8 @@ function detectCircumvention(toolName, toolInput, state) {
         circumvention: true,
         reason: `CIRCUMVENTION: Attempted enforcement reset via Bash — resets are human-only via /enforcement-reset`,
         severity: 'critical',
+        protectedEnforcementAttack: true,
+        systemic: true,
       };
     }
 
@@ -534,6 +856,9 @@ function detectCircumvention(toolName, toolInput, state) {
     // 2f. Script execution while write-restricted
     if (state.restrictedGroups.includes('write')) {
       if (/\.(sh|bash|cjs|mjs|js)\b/.test(command) && /^(bash|sh|node|\.\/)/i.test(command.trim())) {
+        if (isCanonicalHookInvocation(command)) {
+          return { circumvention: false };
+        }
         return {
           circumvention: true,
           reason: 'CIRCUMVENTION: Bash execution of script while write-restricted',
@@ -585,8 +910,12 @@ function isDestructiveRm(command) {
  * ANSI escapes (\\x1b) are NOT flagged by themselves.
  */
 function isObfuscated(command) {
-  // Code execution wrapping is always suspicious
-  if (/\beval\s*\(/i.test(command)) return true;
+  // Code execution wrapping is suspicious when eval is executed by a shell or
+  // consumes dynamic/decoded content. Do not flag inert source text like
+  // `node -e "console.log('eval(')"`.
+  if (/\b(?:bash|sh)\s+-c\s+["'][^"']*\beval\b/i.test(command)) return true;
+  if (/\beval\s+["']?(?:\$\(.*\)|`.*`)/i.test(command)) return true;
+  if (/\beval\s+.*\b(?:base64|curl|wget)\b/i.test(command)) return true;
 
   // base64 piped to shell
   if (/base64\s.*\|\s*(sh|bash|node)/i.test(command)) return true;
@@ -630,7 +959,8 @@ function isGitCommitCommand(command) {
 // Tool Restriction
 // ============================================================================
 
-function checkToolRestriction(toolName, state) {
+function checkToolRestriction(toolName, state, scope = null) {
+  const scopeSuffix = scope ? `: ${escalationScopeLabel(scope.scopeType, scope.scopeId)}` : '';
   // Unrestricted tools are always allowed
   if (UNRESTRICTED_TOOLS.has(toolName)) {
     return { allowed: true };
@@ -640,7 +970,7 @@ function checkToolRestriction(toolName, state) {
   if (state.level >= LEVELS.HALTED) {
     return {
       allowed: false,
-      reason: `[ENFORCEMENT HALT] All tools blocked. ${state.violations} violation(s). Contact the human operator — use /enforcement-reset or /terminate-agent to restore access.`,
+      reason: `[ENFORCEMENT HALT${scopeSuffix}] All tools blocked. ${state.violations} violation(s). Contact the human operator — use /enforcement-reset or /terminate-agent to restore access.`,
     };
   }
 
@@ -651,7 +981,7 @@ function checkToolRestriction(toolName, state) {
       if (tools.includes(toolName)) {
         return {
           allowed: false,
-          reason: `[ENFORCEMENT RESTRICTED] Tool '${toolName}' blocked (group: ${group}). ${state.violations} violation(s). Use allowed tools (Read, Grep, Glob) or ask the human for help.`,
+          reason: `[ENFORCEMENT RESTRICTED${scopeSuffix}] Tool '${toolName}' blocked (group: ${group}). ${state.violations} violation(s). Use allowed tools (Read, Grep, Glob) or ask the human for help.`,
         };
       }
     }
@@ -800,24 +1130,30 @@ function updateActivityTracking(state, denied) {
 // Output Formatting (12.1: CORRECT Claude Code PreToolUse protocol)
 // ============================================================================
 
-function makeAllow(additionalContext) {
+function makeHookOutput(hookEventName, fields) {
+  return { hookSpecificOutput: { hookEventName: hookEventName, ...fields } };
+}
+
+function makeAllow(additionalContext, hookEventName = 'PreToolUse') {
   const result = {};
   if (additionalContext) {
     // N2: Sanitize context — strip XML tags, limit length
     const sanitized = sanitizeContext(additionalContext);
-    result.hookSpecificOutput = { permissionDecision: 'allow', additionalContext: sanitized };
+    result.hookSpecificOutput = {
+      hookEventName: hookEventName,
+      permissionDecision: 'allow',
+      additionalContext: sanitized,
+    };
   }
   // No hookSpecificOutput needed for allow without context — empty JSON = allow
   return result;
 }
 
-function makeDeny(reason) {
-  return {
-    hookSpecificOutput: {
-      permissionDecision: 'deny',
-      permissionDecisionReason: reason,
-    },
-  };
+function makeDeny(reason, hookEventName = 'PreToolUse') {
+  return makeHookOutput(hookEventName, {
+    permissionDecision: 'deny',
+    permissionDecisionReason: reason,
+  });
 }
 
 function sanitizeContext(text) {
@@ -843,29 +1179,42 @@ function processPreToolUse(input) {
     return makeAllow();
   }
   const toolInput = input?.tool_input || input?.input || {};
-  const agentId = getAgentId();
-  const state = getState(agentId);
+  const ctx = resolveScopeContext();
+  const effective = loadEffectiveState(ctx).effective;
+
+  if (ctx.agentId && !ctx.identityTrusted) {
+    const violation = {
+      reason: `[IDENTITY ENFORCEMENT] Agent token verification failed (${ctx.identityReason}) — possible env var spoofing.`,
+      severity: 'critical',
+      restrictionGroups: getRestrictionGroups(toolName),
+      systemic: true,
+    };
+    const escalation = escalateScoped(ctx, violation);
+    const hangCheck = updateActivityTracking(escalation.state, true);
+    saveScopedState(escalation.scopeType, escalation.scopeId, escalation.state);
+    return makeDeny(`${violation.reason} Escalated ${escalationScopeLabel(escalation.scopeType, escalation.scopeId)} to level ${escalation.state.level}.${hangCheck.hung ? ' ' + hangCheck.message : ''}`);
+  }
 
   // Step 1: Check circumvention
-  const circ = detectCircumvention(toolName, toolInput, state);
+  const circ = detectCircumvention(toolName, toolInput, effective.state);
   if (circ.circumvention) {
-    escalate(state, circ.reason, circ.severity || 'normal');
-    state.restrictedGroups = [...new Set([
-      ...(state.restrictedGroups || []),
-      ...getRestrictionGroups(toolName),
-    ])];
-    const hangCheck = updateActivityTracking(state, true);
-    saveState(state, agentId);
+    const escalation = escalateScoped(ctx, {
+      ...circ,
+      restrictionGroups: getRestrictionGroups(toolName),
+    });
+    const hangCheck = updateActivityTracking(escalation.state, true);
+    saveScopedState(escalation.scopeType, escalation.scopeId, escalation.state);
 
-    const reason = `${circ.reason}. Escalated to level ${state.level}.${hangCheck.hung ? ' ' + hangCheck.message : ''}`;
+    const reason = `${circ.reason}. Escalated ${escalationScopeLabel(escalation.scopeType, escalation.scopeId)} to level ${escalation.state.level}.${hangCheck.hung ? ' ' + hangCheck.message : ''}`;
     return makeDeny(reason);
   }
 
   // Step 2: Check tool restriction
-  const restriction = checkToolRestriction(toolName, state);
+  const refreshedEffective = loadEffectiveState(ctx).effective;
+  const restriction = checkToolRestriction(toolName, refreshedEffective.state, refreshedEffective);
   if (!restriction.allowed) {
-    const hangCheck = updateActivityTracking(state, true);
-    saveState(state, agentId);
+    const hangCheck = updateActivityTracking(refreshedEffective.state, true);
+    saveScopedState(refreshedEffective.scopeType, refreshedEffective.scopeId, refreshedEffective.state);
 
     const reason = restriction.reason + (hangCheck.hung ? ' ' + hangCheck.message : '');
     return makeDeny(reason);
@@ -886,8 +1235,8 @@ function processPreToolUse(input) {
   if (toolName === 'Bash') {
     const bashCmd = toolInput?.command || '';
     if (/\bclaude\s+(-p|--print)\b/i.test(bashCmd)) {
-      updateActivityTracking(state, false);
-      saveState(state, agentId);
+      updateActivityTracking(refreshedEffective.state, false);
+      saveScopedState(refreshedEffective.scopeType, refreshedEffective.scopeId, refreshedEffective.state);
       return makeAllow(
         '[ENFORCEMENT] Headless `claude -p` detected. WARNING: Headless workers bypass hook enforcement, verification gates, and hive composition tracking. Consider using Task tool or MCP agent_spawn instead for governed execution.'
       );
@@ -895,9 +1244,9 @@ function processPreToolUse(input) {
   }
 
   // Step 4: SendMessage at HALTED — append enforcement warning (12.14)
-  if (toolName === 'SendMessage' && state.level >= LEVELS.HALTED) {
-    updateActivityTracking(state, false);
-    saveState(state, agentId);
+  if (toolName === 'SendMessage' && refreshedEffective.state.level >= LEVELS.HALTED) {
+    updateActivityTracking(refreshedEffective.state, false);
+    saveScopedState(refreshedEffective.scopeType, refreshedEffective.scopeId, refreshedEffective.state);
     return makeAllow(
       '[ENFORCEMENT] This agent is under enforcement restrictions (HALTED). Do not execute tool operations on its behalf.'
     );
@@ -909,17 +1258,17 @@ function processPreToolUse(input) {
   // uses "last writer wins" when merging multiple hook outputs. Enforcement.cjs
   // runs AFTER role-enforcement.cjs in settings.json SubagentStart hooks.
   // If ordering changes, role identity text may be lost at WARNED level.
-  if (state.level === LEVELS.WARNED) {
-    updateActivityTracking(state, false);
-    saveState(state, agentId);
+  if (refreshedEffective.state.level === LEVELS.WARNED) {
+    updateActivityTracking(refreshedEffective.state, false);
+    saveScopedState(refreshedEffective.scopeType, refreshedEffective.scopeId, refreshedEffective.state);
     return makeAllow(
-      `[ENFORCEMENT WARNING] You have ${state.violations} violation(s). Further circumvention will restrict tool access. Follow the plan exactly.`
+      `[ENFORCEMENT WARNING: ${escalationScopeLabel(refreshedEffective.scopeType, refreshedEffective.scopeId)}] You have ${refreshedEffective.state.violations} violation(s). Further circumvention will restrict tool access. Follow the plan exactly.`
     );
   }
 
   // Step 6: Normal pass-through
-  updateActivityTracking(state, false);
-  saveState(state, agentId);
+  updateActivityTracking(refreshedEffective.state, false);
+  saveScopedState(refreshedEffective.scopeType, refreshedEffective.scopeId, refreshedEffective.state);
   return makeAllow();
 }
 
@@ -927,7 +1276,32 @@ function processPreToolUse(input) {
 // Human Reset (Bug 4 + 12.7)
 // ============================================================================
 
-function resetEnforcement() {
+function resetStateScope(scopeType, scopeId) {
+  const state = {
+    level: LEVELS.NORMAL,
+    violations: 0,
+    consecutiveDenials: 0,
+    lastActivity: new Date().toISOString(),
+    restrictedGroups: [],
+    history: [],
+    resetAt: new Date().toISOString(),
+    integrityCompromised: false,
+  };
+  saveScopedState(scopeType, scopeId, state);
+  appendViolation({
+    type: 'reset',
+    scopeType,
+    scopeId: scopeId || scopeType,
+    reason: `Human-initiated scoped enforcement reset (${escalationScopeLabel(scopeType, scopeId)})`,
+  });
+  return state;
+}
+
+function resetEnforcement(scope = {}) {
+  if (scope.agentId) return resetStateScope('agent', scope.agentId);
+  if (scope.hiveId) return resetStateScope('hive', scope.hiveId);
+  if (scope.project === true || scope.projectId) return resetStateScope('project', scope.projectId || getProjectScopeId());
+
   ensureDir();
   // Clear pipeline state
   try { if (fs.existsSync(PIPELINE_STATE_FILE)) fs.unlinkSync(PIPELINE_STATE_FILE); } catch {}
@@ -952,18 +1326,20 @@ function resetEnforcement() {
     }
   } catch {}
   // Clear per-agent state files
-  try {
-    const agentsDir = path.join(ENFORCEMENT_DIR, 'agents');
-    if (fs.existsSync(agentsDir)) {
-      const agentDirs = fs.readdirSync(agentsDir);
-      for (const agentId of agentDirs) {
-        try {
-          const agentStateFile = path.join(agentsDir, agentId, 'state.json');
-          if (fs.existsSync(agentStateFile)) fs.unlinkSync(agentStateFile);
-        } catch {}
+  for (const scopeDirName of ['agents', 'hives', 'projects']) {
+    try {
+      const scopeDir = path.join(ENFORCEMENT_DIR, scopeDirName);
+      if (fs.existsSync(scopeDir)) {
+        const scopeDirs = fs.readdirSync(scopeDir);
+        for (const scopeId of scopeDirs) {
+          try {
+            const scopedStateFile = path.join(scopeDir, scopeId, 'state.json');
+            if (fs.existsSync(scopedStateFile)) fs.unlinkSync(scopedStateFile);
+          } catch {}
+        }
       }
-    }
-  } catch {}
+    } catch {}
+  }
   const state = {
     level: LEVELS.NORMAL,
     violations: 0,
@@ -980,6 +1356,15 @@ function resetEnforcement() {
     reason: 'Human-initiated enforcement reset (full scope: all state files cleared)',
   });
   return state;
+}
+
+function parseResetScope(prompt) {
+  const agentMatch = /--agent(?:=|\s+)([A-Za-z0-9_.:-]+)/i.exec(prompt);
+  if (agentMatch) return { agentId: agentMatch[1] };
+  const hiveMatch = /--hive(?:=|\s+)([A-Za-z0-9_.:-]+)/i.exec(prompt);
+  if (hiveMatch) return { hiveId: hiveMatch[1] };
+  if (/\s--project\b/i.test(prompt)) return { project: true };
+  return {};
 }
 
 /**
@@ -1001,12 +1386,7 @@ function processResetCheck(input) {
         reason: 'Reset request without HMAC signature — possible circumvention',
         severity: 'critical',
       });
-      return {
-        hookSpecificOutput: {
-          permissionDecision: 'deny',
-          permissionDecisionReason: '[ENFORCEMENT] Reset denied: unsigned request. Resets must be routed through the hook system.',
-        },
-      };
+      return makeDeny('[ENFORCEMENT] Reset denied: unsigned request. Resets must be routed through the hook system.', 'UserPromptSubmit');
     }
 
     // Verify timestamp freshness (30s window)
@@ -1017,12 +1397,7 @@ function processResetCheck(input) {
         reason: `Reset request with expired timestamp (${timestamp})`,
         severity: 'critical',
       });
-      return {
-        hookSpecificOutput: {
-          permissionDecision: 'deny',
-          permissionDecisionReason: '[ENFORCEMENT] Reset denied: expired timestamp. Resets must be recent (within 30s).',
-        },
-      };
+      return makeDeny('[ENFORCEMENT] Reset denied: expired timestamp. Resets must be recent (within 30s).', 'UserPromptSubmit');
     }
 
     // Verify HMAC signature
@@ -1045,20 +1420,24 @@ function processResetCheck(input) {
         reason: 'Reset request with invalid HMAC signature — possible circumvention',
         severity: 'critical',
       });
-      return {
-        hookSpecificOutput: {
-          permissionDecision: 'deny',
-          permissionDecisionReason: '[ENFORCEMENT] Reset denied: invalid signature. Resets must be routed through the hook system.',
-        },
-      };
+      return makeDeny('[ENFORCEMENT] Reset denied: invalid signature. Resets must be routed through the hook system.', 'UserPromptSubmit');
     }
 
     // Signature valid — execute reset
-    resetEnforcement();
+    const resetScope = parseResetScope(prompt);
+    resetEnforcement(resetScope);
+    const scopeLabel = resetScope.agentId
+      ? `agent/${resetScope.agentId}`
+      : resetScope.hiveId
+        ? `hive/${resetScope.hiveId}`
+        : resetScope.project
+          ? `project/${getProjectScopeId()}`
+          : 'global';
     return {
       hookSpecificOutput: {
+        hookEventName: 'UserPromptSubmit',
         permissionDecision: 'allow',
-        additionalContext: '[ENFORCEMENT] Reset complete. All restrictions cleared. Enforcement level: NORMAL.',
+        additionalContext: `[ENFORCEMENT] Reset complete for ${scopeLabel}. Enforcement level: NORMAL.`,
       },
     };
   }
@@ -1298,9 +1677,12 @@ module.exports = {
   UNRESTRICTED_TOOLS,
   PROTECTED_PATHS,
   getState,
+  getScopedState,
   saveState,
+  saveScopedState,
   appendViolation,
   escalate,
+  escalateScoped,
   detectCircumvention,
   checkToolRestriction,
   getRestrictionGroups,
@@ -1316,9 +1698,15 @@ module.exports = {
   isProtectedPath,
   getAgentId,
   getStateFile,
+  getScopedStateFile,
+  resolveScopeContext,
+  loadEffectiveState,
+  getProtectedPathScope,
+  isGlobalProtectedPath,
   isDestructiveRm,
   isObfuscated,
   isGitCommitCommand,
+  makeHookOutput,
   makeAllow,
   makeDeny,
   sanitizeContext,
