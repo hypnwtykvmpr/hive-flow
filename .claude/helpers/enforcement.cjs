@@ -624,14 +624,21 @@ function projectRelativePath(filePath) {
 }
 
 function getProtectedPathScope(filePath) {
-  const relativePath = projectRelativePath(filePath);
+  const relativePath = projectRelativePath(filePath).replace(/\\/g, '/');
 
   for (const protectedPath of PROTECTED_PATHS) {
-    if (relativePath.startsWith(protectedPath) || relativePath === protectedPath.replace(/\/$/, '')) {
+    const normalizedProtectedPath = protectedPath.replace(/\\/g, '/');
+    const protectedDir = normalizedProtectedPath.endsWith('/');
+    const protectedPathWithoutSlash = normalizedProtectedPath.replace(/\/$/, '');
+    const matchesProtectedPath = protectedDir
+      ? (relativePath === protectedPathWithoutSlash || relativePath.startsWith(normalizedProtectedPath))
+      : relativePath === normalizedProtectedPath;
+
+    if (matchesProtectedPath) {
       if (
-        protectedPath === '.claude/settings.json' ||
-        protectedPath === '.claude/helpers/' ||
-        protectedPath === '.hive-flow/enforcement/'
+        normalizedProtectedPath === '.claude/settings.json' ||
+        normalizedProtectedPath === '.claude/helpers/' ||
+        normalizedProtectedPath === '.hive-flow/enforcement/'
       ) {
         return 'global';
       }

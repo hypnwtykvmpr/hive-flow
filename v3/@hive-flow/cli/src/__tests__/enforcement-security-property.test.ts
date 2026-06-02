@@ -1,7 +1,7 @@
 import { describe, expect, it, afterAll, beforeEach } from 'vitest';
 import fc from 'fast-check';
 import { createRequire } from 'node:module';
-import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -14,7 +14,7 @@ const require = createRequire(import.meta.url);
 const here = dirname(fileURLToPath(import.meta.url));
 const source = resolve(here, '../../../../../.claude/helpers/enforcement.cjs');
 const settingsSource = resolve(here, '../../../../../.claude/settings.json');
-const root = mkdtempSync(join(tmpdir(), 'hive-flow-enforcement-security-'));
+const root = realpathSync(mkdtempSync(join(tmpdir(), 'hive-flow-enforcement-security-')));
 const helperPath = join(root, '.claude', 'helpers', 'enforcement.cjs');
 mkdirSync(dirname(helperPath), { recursive: true });
 copyFileSync(source, helperPath);
@@ -135,6 +135,20 @@ describe('enforcement security property contracts', () => {
     expect(enf.isProtectedPath(join(root, '.hive-flow', 'data', 'watcher-hive.json'))).toBe(false);
     expect(enf.isProtectedPath(join(root, '.hive-flow', 'data', 'hive.done'))).toBe(false);
     expect(enf.isGlobalProtectedPath(join(root, '.claude', 'helpers', 'enforcement.cjs'))).toBe(true);
+  });
+
+  it('matches protected paths on path boundaries rather than raw prefixes', () => {
+    expect(enf.isProtectedPath(join(root, '.claude', 'settings.json'))).toBe(true);
+    expect(enf.isProtectedPath(join(root, '.claude', 'settings.json.bak'))).toBe(false);
+    expect(enf.isProtectedPath(join(root, '.claude', 'settings.json.d', 'note.md'))).toBe(false);
+
+    expect(enf.isProtectedPath(join(root, '.claude', 'helpers'))).toBe(true);
+    expect(enf.isProtectedPath(join(root, '.claude', 'helpers', 'enforcement.cjs'))).toBe(true);
+    expect(enf.isProtectedPath(join(root, '.claude', 'helpers-old', 'enforcement.cjs'))).toBe(false);
+
+    expect(enf.isProtectedPath(join(root, '.hive-flow', 'workflows'))).toBe(true);
+    expect(enf.isProtectedPath(join(root, '.hive-flow', 'workflows', 'state.json'))).toBe(true);
+    expect(enf.isProtectedPath(join(root, '.hive-flow', 'workflows-old', 'state.json'))).toBe(false);
   });
 
   it('scopes ordinary agent violations to the agent and leaves global untouched', () => {
