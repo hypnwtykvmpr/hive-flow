@@ -130,6 +130,19 @@ function getHmacKey() {
   return null;
 }
 
+function getOrCreateHmacKey() {
+  const existing = getHmacKey();
+  if (existing) return existing;
+  try {
+    fs.mkdirSync(ENFORCEMENT_DIR, { recursive: true });
+    const key = crypto.randomBytes(32).toString('hex');
+    fs.writeFileSync(HMAC_KEY_FILE, key, { mode: 0o600 });
+    return key;
+  } catch {
+    return null;
+  }
+}
+
 function computeHmac(data, key) {
   return crypto.createHmac('sha256', key).update(JSON.stringify(data)).digest('hex');
 }
@@ -159,6 +172,18 @@ function sanitizeId(agentId) {
   // Replace non-alphanumeric (except hyphen) with hyphen, truncate to 64 chars
   const sanitized = agentId.replace(/[\/\\\.]+/g, '_').replace(/^_+|_+$/g, '');
   return sanitized.slice(0, 64) || '';
+}
+
+function getHookAgentId(input) {
+  return sanitizeId(input?.agent_id || input?.agentId || '');
+}
+
+function getAgentId(input = null) {
+  return sanitizeId(process.env.AGENTIC_FLOW_AGENT_ID || '')
+    || getHookAgentId(input)
+    || sanitizeId(process.env.CLAUDE_AGENT_ID || '')
+    || sanitizeId(process.env.CLAUDE_SESSION_ID || '')
+    || null;
 }
 
 function getRoleFilePath(agentId) {
@@ -235,7 +260,7 @@ function analyzeHiveDelegation(hive) {
  */
 function saveRole(agentId, roleState) {
   try {
-    const key = getHmacKey();
+    const key = getOrCreateHmacKey();
     if (!key || !roleState || typeof roleState !== 'object') return false;
     const id = sanitizeId(agentId);
     if (!id) return false;
@@ -438,11 +463,7 @@ function verifySpawnToken(agentId) {
 function processPreToolUse(input) {
   const toolName = input?.tool_name || input?.toolName || '';
 
-  // C2: Use ALL three env var sources
-  const agentId = process.env.AGENTIC_FLOW_AGENT_ID
-    || process.env.CLAUDE_SESSION_ID
-    || process.env.CLAUDE_AGENT_ID
-    || null;
+  const agentId = getAgentId(input);
 
   if (!agentId) return makeAllow(); // No agent ID — pass through
 
@@ -474,16 +495,35 @@ function processPreToolUse(input) {
   return makeAllow();
 }
 
-function processSubagentStartHook() {
-  // C2: Use ALL three env var sources
-  const agentId = process.env.AGENTIC_FLOW_AGENT_ID
-    || process.env.CLAUDE_SESSION_ID
-    || process.env.CLAUDE_AGENT_ID
-    || null;
+function nativeTaskRoleFromInput(input, agentId) {
+  if (!agentId) return null;
+  const hookName = input?.hook_event_name || input?.hookEventName || '';
+  const agentType = input?.agent_type || input?.agentType || '';
+  if (hookName !== 'SubagentStart' && !agentType) return null;
+  return {
+    type: 'native-task',
+    assignedAt: new Date().toISOString(),
+    assignedBy: 'subagent-start',
+    hiveId: null,
+    agentType: agentType || 'unknown',
+    sessionId: input?.session_id || null,
+    transcriptPath: input?.transcript_path || null,
+    native: true,
+  };
+}
+
+function processSubagentStartHook(input = {}) {
+  const agentId = getAgentId(input);
 
   if (!agentId) return {};
 
-  const role = loadRole(agentId);
+  let role = loadRole(agentId);
+  if (!role) {
+    const nativeRole = nativeTaskRoleFromInput(input, agentId);
+    if (nativeRole && saveRole(agentId, nativeRole)) {
+      role = nativeRole;
+    }
+  }
   if (!role) return {};
 
   return processSubagentStart(role);
@@ -518,15 +558,12 @@ if (require.main === module) {
       process.stdout.write(JSON.stringify(result));
     } else {
       // SubagentStart context (or empty input) — inject identity
-      const result = processSubagentStartHook();
+      const result = processSubagentStartHook(input);
       process.stdout.write(JSON.stringify(result));
     }
 
     // Determine role for exit-code logic
-    const agentId = process.env.AGENTIC_FLOW_AGENT_ID
-      || process.env.CLAUDE_SESSION_ID
-      || process.env.CLAUDE_AGENT_ID
-      || null;
+    const agentId = getAgentId(input);
     if (agentId) {
       const role = loadRole(agentId);
       roleType = role?.type || null;
@@ -535,10 +572,7 @@ if (require.main === module) {
     // Error handling is role-aware:
     // - Advocate: fail-closed (deny)
     // - Queen/other: fail-open (allow)
-    const agentId = process.env.AGENTIC_FLOW_AGENT_ID
-      || process.env.CLAUDE_SESSION_ID
-      || process.env.CLAUDE_AGENT_ID
-      || null;
+    const agentId = getAgentId(input);
     if (agentId) {
       try {
         const roleFile = getRoleFilePath(agentId);
@@ -581,12 +615,16 @@ module.exports = {
   QUEEN_IDENTITY_TEXT,
   ENFORCER_IDENTITY_TEXT,
   sanitizeId,
+  getHookAgentId,
+  getAgentId,
   getRoleFilePath,
   loadRole,
   loadQueenHive,
   analyzeHiveDelegation,
   saveRole,
+  nativeTaskRoleFromInput,
   incrementDirectWorkCount,
+  getOrCreateHmacKey,
   verifyRoleHmac,
   verifySpawnToken,
   makeAllow,

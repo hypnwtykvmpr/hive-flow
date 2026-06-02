@@ -151,7 +151,28 @@ describe('enforcement security property contracts', () => {
     expect(readScopedState('global', 'global')).toBeNull();
   });
 
+  it('scopes native Task hook agent_id violations to the agent and ignores session ids', () => {
+    process.env.CLAUDE_SESSION_ID = 'coordinator-session';
+
+    const result = enf.processPreToolUse({
+      hook_event_name: 'PreToolUse',
+      agent_id: 'native-task-agent',
+      session_id: 'coordinator-session',
+      tool_name: 'Write',
+      tool_input: { file_path: '.hive-flow/workflows/native-state.json' },
+    });
+
+    expect(enf.getAgentId({ agent_id: 'native-task-agent' })).toBe('native-task-agent');
+    expect(result.hookSpecificOutput.hookEventName).toBe('PreToolUse');
+    expect(result.hookSpecificOutput.permissionDecision).toBe('deny');
+    expect(readScopedState('agent', 'native-task-agent')?.level).toBe(enf.LEVELS.RESTRICTED);
+    expect(readScopedState('agent', 'coordinator-session')).toBeNull();
+    expect(readScopedState('global', 'global')).toBeNull();
+  });
+
   it('scopes unknown ordinary violations to project state instead of global', () => {
+    process.env.CLAUDE_SESSION_ID = 'coordinator-session-only';
+
     const result = enf.processPreToolUse({
       tool_name: 'Bash',
       tool_input: { command: "bash -c 'eval $(echo echo hi)'" },
@@ -160,7 +181,9 @@ describe('enforcement security property contracts', () => {
     const projectId = enf.resolveScopeContext().projectId;
     expect(result.hookSpecificOutput.hookEventName).toBe('PreToolUse');
     expect(result.hookSpecificOutput.permissionDecision).toBe('deny');
+    expect(enf.getAgentId({})).toBeNull();
     expect(readScopedState('project', projectId)?.level).toBe(enf.LEVELS.WARNED);
+    expect(readScopedState('agent', 'coordinator-session-only')).toBeNull();
     expect(readScopedState('global', 'global')).toBeNull();
   });
 

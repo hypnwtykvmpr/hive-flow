@@ -64,6 +64,7 @@ describe('Role Enforcement System', () => {
     vi.resetModules();
     // Fresh require each time to avoid stale module state
     roleEnf = require(ROLE_ENFORCEMENT_PATH);
+    rmSync(require('path').join(ROLE_TEST_PROJECT_REAL_DIR, '.hive-flow'), { recursive: true, force: true });
   });
 
   afterEach(() => {
@@ -451,6 +452,27 @@ describe('Role Enforcement System', () => {
       const result = roleEnf.processSubagentStartHook();
       expect(result).toEqual({});
     });
+
+    it('persists a native Task identity from SubagentStart hook input without injecting role context', () => {
+      const result = roleEnf.processSubagentStartHook({
+        hook_event_name: 'SubagentStart',
+        agent_id: 'native-agent-123',
+        agent_type: 'researcher',
+        session_id: 'session-abc',
+        transcript_path: '/tmp/native-agent.jsonl',
+      });
+
+      expect(result).toEqual({});
+      const role = roleEnf.loadRole('native-agent-123');
+      expect(role).toMatchObject({
+        type: 'native-task',
+        assignedBy: 'subagent-start',
+        agentType: 'researcher',
+        sessionId: 'session-abc',
+        transcriptPath: '/tmp/native-agent.jsonl',
+        native: true,
+      });
+    });
   });
 
   // ── Identity text constants ──
@@ -531,15 +553,27 @@ describe('Role Enforcement System', () => {
       // The key test is that it tries agent-1 first.
       const result = roleEnf.processPreToolUse({ tool_name: 'Read' });
       expect(result).toEqual({});
+      expect(roleEnf.getAgentId({ agent_id: 'hook-agent' })).toBe('agent-1');
     });
 
-    it('falls back to CLAUDE_SESSION_ID when AGENTIC_FLOW_AGENT_ID unset', () => {
+    it('uses hook agent_id for native Task agents before CLAUDE_AGENT_ID', () => {
       delete process.env.AGENTIC_FLOW_AGENT_ID;
       process.env.CLAUDE_SESSION_ID = 'session-agent';
       process.env.CLAUDE_AGENT_ID = 'claude-agent';
 
+      const result = roleEnf.processPreToolUse({ tool_name: 'Read', agent_id: 'native-hook-agent' });
+      expect(result).toEqual({});
+      expect(roleEnf.getAgentId({ agent_id: 'native-hook-agent' })).toBe('native-hook-agent');
+    });
+
+    it('falls back to CLAUDE_SESSION_ID for legacy/root role enforcement', () => {
+      delete process.env.AGENTIC_FLOW_AGENT_ID;
+      process.env.CLAUDE_SESSION_ID = 'session-agent';
+      delete process.env.CLAUDE_AGENT_ID;
+
       const result = roleEnf.processPreToolUse({ tool_name: 'Read' });
       expect(result).toEqual({});
+      expect(roleEnf.getAgentId({})).toBe('session-agent');
     });
 
     it('falls back to CLAUDE_AGENT_ID as last resort', () => {

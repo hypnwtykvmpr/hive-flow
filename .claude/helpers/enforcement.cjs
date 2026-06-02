@@ -157,11 +157,16 @@ function getProjectScopeId() {
   return `project-${crypto.createHash('sha256').update(PROJECT_DIR).digest('hex').slice(0, 16)}`;
 }
 
+function getHookAgentId(input) {
+  const hookAgentId = input?.agent_id || input?.agentId || null;
+  return sanitizeScopeId(hookAgentId);
+}
+
 // Per-agent state isolation (WP-60)
-function getAgentId() {
-  return process.env.AGENTIC_FLOW_AGENT_ID
-    || process.env.CLAUDE_SESSION_ID
-    || process.env.CLAUDE_AGENT_ID
+function getAgentId(input = null) {
+  return sanitizeScopeId(process.env.AGENTIC_FLOW_AGENT_ID || '')
+    || getHookAgentId(input)
+    || sanitizeScopeId(process.env.CLAUDE_AGENT_ID || '')
     || null;
 }
 
@@ -429,8 +434,8 @@ function verifySpawnToken(agentId) {
   }
 }
 
-function resolveScopeContext() {
-  const agentId = getAgentId();
+function resolveScopeContext(input = null) {
+  const agentId = getAgentId(input);
   const tokenResult = agentId ? verifySpawnToken(agentId) : { valid: true, reason: 'no agent id' };
   const identityTrusted = Boolean(agentId && tokenResult.valid);
   const role = identityTrusted ? loadRoleForAgent(agentId) : null;
@@ -1179,7 +1184,7 @@ function processPreToolUse(input) {
     return makeAllow();
   }
   const toolInput = input?.tool_input || input?.input || {};
-  const ctx = resolveScopeContext();
+  const ctx = resolveScopeContext(input);
   const effective = loadEffectiveState(ctx).effective;
 
   if (ctx.agentId && !ctx.identityTrusted) {
@@ -1697,6 +1702,7 @@ module.exports = {
   verifyState,
   isProtectedPath,
   getAgentId,
+  getHookAgentId,
   getStateFile,
   getScopedStateFile,
   resolveScopeContext,
