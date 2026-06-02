@@ -16,6 +16,7 @@
 // avoid colliding with any future `tests` collector test file under
 // `__tests__/` per the task brief.
 
+import fc from 'fast-check';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   existsSync,
@@ -40,6 +41,7 @@ import {
 import { readJsonl } from '../../storage.js';
 import { statuslinePaths } from '../../paths.js';
 import type { TestRunEventV1 } from '../../types.js';
+import { propertyRunsFromEnv } from '../../../__tests__/property-runs.js';
 
 // ---------------------------------------------------------------------------
 // Fixture helpers
@@ -53,6 +55,8 @@ import type { TestRunEventV1 } from '../../types.js';
 
 type SuiteOverrides = Partial<Omit<SuiteTestRunRecorderInput, 'kind'>>;
 type PartialOverrides = Partial<Omit<PartialTestRunRecorderInput, 'kind'>>;
+
+const PROPERTY_RUNS = propertyRunsFromEnv(100);
 
 function makeSuiteInput(overrides: SuiteOverrides = {}): SuiteTestRunRecorderInput {
   return {
@@ -213,7 +217,7 @@ describe('statusline recorders/tests', () => {
       expect(outcome.event.total).toBe(0);
     });
 
-    it('stamps `now` when no timestamps are supplied', async () => {
+    it('resolves timestamps when neither timestamp is supplied', async () => {
       const before = Date.now();
       const outcome = await recordTestRun({ projectRoot, input: makeSuiteInput() });
       const after = Date.now();
@@ -221,6 +225,50 @@ describe('statusline recorders/tests', () => {
       expect(ts).toBeGreaterThanOrEqual(before);
       expect(ts).toBeLessThanOrEqual(after);
       expect(outcome.startedAt).toBe(outcome.finishedAt);
+      expect(outcome.event.durationMs).toBe(0);
+    });
+
+    it('resolves timestamps when only startedAt is supplied', async () => {
+      const startedAt = '2026-05-21T00:00:00.000Z';
+      const before = Date.now();
+      const outcome = await recordTestRun({
+        projectRoot,
+        input: makeSuiteInput({ startedAt }),
+      });
+      const after = Date.now();
+
+      expect(outcome.startedAt).toBe(startedAt);
+      expect(outcome.finishedAt).toBe(outcome.event.ts);
+      expect(Date.parse(outcome.finishedAt)).toBeGreaterThanOrEqual(before);
+      expect(Date.parse(outcome.finishedAt)).toBeLessThanOrEqual(after);
+      expect(outcome.event.durationMs).toBeGreaterThanOrEqual(0);
+    });
+
+    it('resolves timestamps when only finishedAt is supplied', async () => {
+      const finishedAt = '2026-05-21T00:00:10.000Z';
+      const outcome = await recordTestRun({
+        projectRoot,
+        input: makeSuiteInput({ finishedAt }),
+      });
+
+      expect(outcome.startedAt).toBe(finishedAt);
+      expect(outcome.finishedAt).toBe(finishedAt);
+      expect(outcome.event.ts).toBe(finishedAt);
+      expect(outcome.event.durationMs).toBeUndefined();
+    });
+
+    it('resolves timestamps when startedAt and finishedAt are supplied', async () => {
+      const startedAt = '2026-05-21T00:00:00.000Z';
+      const finishedAt = '2026-05-21T00:00:10.000Z';
+      const outcome = await recordTestRun({
+        projectRoot,
+        input: makeSuiteInput({ startedAt, finishedAt }),
+      });
+
+      expect(outcome.startedAt).toBe(startedAt);
+      expect(outcome.finishedAt).toBe(finishedAt);
+      expect(outcome.event.ts).toBe(finishedAt);
+      expect(outcome.event.durationMs).toBe(10_000);
     });
   });
 
@@ -269,13 +317,107 @@ describe('statusline recorders/tests', () => {
       await expect(promise).rejects.toBeInstanceOf(TestRunArithmeticError);
     });
 
-    it('rejects negative count values with a typed count error', async () => {
-      // `passed` set to -1: structural rejection BEFORE arithmetic.
-      const promise = recordTestRun({
-        projectRoot,
-        input: makeSuiteInput({ passed: -1, failed: 1, skipped: 1, total: 1 }),
-      });
-      await expect(promise).rejects.toBeInstanceOf(TestRunCountError);
+    it('throws TestRunArithmeticError for every generated arithmetic invariant violation', async () => {
+      await fc.assert(
+        fc.asyncProperty(
+          fc.record({
+            passed: fc.integer({ min: 0, max: 1_000 }),
+            failed: fc.integer({ min: 0, max: 1_000 }),
+            skipped: fc.integer({ min: 0, max: 1_000 }),
+            total: fc.integer({ min: 0, max: 3_500 }),
+          }).filter(({ passed, failed, skipped, total }) => passed + failed + skipped !== total),
+          async ({ passed, failed, skipped, total }) => {
+            try {
+              await recordTestRun({
+                projectRoot,
+                input: makeSuiteInput({ passed, failed, skipped, total }),
+              });
+              expect.fail('expected TestRunArithmeticError');
+            } catch (err) {
+              expect(err).toBeInstanceOf(TestRunArithmeticError);
+              if (err instanceof TestRunArithmeticError) {
+                expect(err.code).toBe('STATUSLINE_TEST_RUN_ARITHMETIC');
+                expect(err.passed).toBe(passed);
+                expect(err.failed).toBe(failed);
+                expect(err.skipped).toBe(skipped);
+                expect(err.total).toBe(total);
+              }
+            }
+            const paths = statuslinePaths(projectRoot);
+            expect(existsSync(paths.testsLedger)).toBe(false);
+          },
+        ),
+        { numRuns: PROPERTY_RUNS, seed: 21_001 },
+      );
+    });
+
+    it.each([
+      ['framework', ''],
+      ['framework', '   '],
+      ['projectKey', ''],
+      ['projectKey', '\t\n'],
+      ['repoRoot', ''],
+      ['repoRoot', '   '],
+      ['producerId', ''],
+      ['producerId', '\r\n'],
+      ['scope', ''],
+      ['scope', '   '],
+      ['command', ''],
+      ['command', '   '],
+      ['sourceFingerprint', ''],
+      ['sourceFingerprint', '   '],
+    ] as const)('rejects empty/whitespace %s with TestRunFieldError', async (field, value) => {
+      try {
+        await recordTestRun({
+          projectRoot,
+          input: makeSuiteInput({ [field]: value } as SuiteOverrides),
+        });
+        expect.fail('expected TestRunFieldError');
+      } catch (err) {
+        expect(err).toBeInstanceOf(TestRunFieldError);
+        if (err instanceof TestRunFieldError) {
+          expect(err.code).toBe('STATUSLINE_TEST_RUN_FIELD');
+          expect(err.field).toBe(field);
+        }
+      }
+    });
+
+    it.each([
+      ['passed', Number.NaN],
+      ['passed', Number.POSITIVE_INFINITY],
+      ['passed', Number.NEGATIVE_INFINITY],
+      ['passed', -1],
+      ['failed', Number.NaN],
+      ['failed', Number.POSITIVE_INFINITY],
+      ['failed', Number.NEGATIVE_INFINITY],
+      ['failed', -1],
+      ['skipped', Number.NaN],
+      ['skipped', Number.POSITIVE_INFINITY],
+      ['skipped', Number.NEGATIVE_INFINITY],
+      ['skipped', -1],
+      ['total', Number.NaN],
+      ['total', Number.POSITIVE_INFINITY],
+      ['total', Number.NEGATIVE_INFINITY],
+      ['total', -1],
+    ] as const)('rejects invalid count %s=%s with TestRunCountError', async (field, value) => {
+      try {
+        await recordTestRun({
+          projectRoot,
+          input: makeSuiteInput({ [field]: value } as SuiteOverrides),
+        });
+        expect.fail('expected TestRunCountError');
+      } catch (err) {
+        expect(err).toBeInstanceOf(TestRunCountError);
+        if (err instanceof TestRunCountError) {
+          expect(err.code).toBe('STATUSLINE_TEST_RUN_COUNT');
+          expect(err.field).toBe(field);
+          if (Number.isNaN(value)) {
+            expect(Number.isNaN(err.value)).toBe(true);
+          } else {
+            expect(err.value).toBe(value);
+          }
+        }
+      }
     });
 
     it('rejects fractional count values with a typed count error', async () => {
@@ -286,76 +428,30 @@ describe('statusline recorders/tests', () => {
       await expect(promise).rejects.toBeInstanceOf(TestRunCountError);
     });
 
-    it('rejects NaN counts (which would otherwise slip through `===`)', async () => {
-      const promise = recordTestRun({
-        projectRoot,
-        input: makeSuiteInput({ passed: Number.NaN, failed: 0, skipped: 0, total: 0 }),
-      });
-      await expect(promise).rejects.toBeInstanceOf(TestRunCountError);
-    });
-
-    it('rejects Infinity counts', async () => {
-      const promise = recordTestRun({
-        projectRoot,
-        input: makeSuiteInput({
-          passed: Number.POSITIVE_INFINITY,
-          failed: 0,
-          skipped: 0,
-          total: Number.POSITIVE_INFINITY,
-        }),
-      });
-      await expect(promise).rejects.toBeInstanceOf(TestRunCountError);
-    });
-
-    it('rejects empty framework with a typed field error', async () => {
-      const promise = recordTestRun({
-        projectRoot,
-        input: makeSuiteInput({ framework: '' }),
-      });
-      await expect(promise).rejects.toBeInstanceOf(TestRunFieldError);
-    });
-
-    it('rejects whitespace-only framework', async () => {
-      const promise = recordTestRun({
-        projectRoot,
-        input: makeSuiteInput({ framework: '   ' }),
-      });
-      await expect(promise).rejects.toBeInstanceOf(TestRunFieldError);
-    });
-
-    it('TestRunFieldError names the offending field', async () => {
+    it.each([
+      ['startedAt', { startedAt: 'not-a-timestamp' }],
+      ['startedAt', { startedAt: '2026-05-21' }],
+      ['startedAt', { startedAt: 'not-a-timestamp', finishedAt: '2026-05-21T00:00:10.000Z' }],
+      ['finishedAt', { finishedAt: 'not-a-timestamp' }],
+      ['finishedAt', { finishedAt: '2026-05-21' }],
+      ['finishedAt', { startedAt: '2026-05-21T00:00:00.000Z', finishedAt: 'not-a-timestamp' }],
+      ['finishedAt', { startedAt: '2026-05-21T00:00:10.000Z', finishedAt: '2026-05-21T00:00:00.000Z' }],
+      ['startedAt', { startedAt: '2026-02-31T00:00:00.000Z' }],
+      ['finishedAt', { finishedAt: '2026-02-31T00:00:00.000Z' }],
+    ] as const)('rejects bad timestamp input for %s with TestRunTimestampError', async (field, overrides) => {
       try {
         await recordTestRun({
           projectRoot,
-          input: makeSuiteInput({ producerId: '' }),
+          input: makeSuiteInput(overrides),
         });
-        expect.fail('expected throw');
+        expect.fail('expected TestRunTimestampError');
       } catch (err) {
-        expect(err).toBeInstanceOf(TestRunFieldError);
-        if (err instanceof TestRunFieldError) {
-          expect(err.field).toBe('producerId');
-          expect(err.code).toBe('STATUSLINE_TEST_RUN_FIELD');
+        expect(err).toBeInstanceOf(TestRunTimestampError);
+        if (err instanceof TestRunTimestampError) {
+          expect(err.code).toBe('STATUSLINE_TEST_RUN_TIMESTAMP');
+          expect(err.field).toBe(field);
         }
       }
-    });
-
-    it('rejects unparseable startedAt with a typed timestamp error', async () => {
-      const promise = recordTestRun({
-        projectRoot,
-        input: makeSuiteInput({ startedAt: 'not-a-timestamp', finishedAt: '2026-05-21T00:00:10.000Z' }),
-      });
-      await expect(promise).rejects.toBeInstanceOf(TestRunTimestampError);
-    });
-
-    it('rejects finishedAt before startedAt with a typed timestamp error', async () => {
-      const promise = recordTestRun({
-        projectRoot,
-        input: makeSuiteInput({
-          startedAt: '2026-05-21T00:00:10.000Z',
-          finishedAt: '2026-05-21T00:00:00.000Z',
-        }),
-      });
-      await expect(promise).rejects.toBeInstanceOf(TestRunTimestampError);
     });
   });
 

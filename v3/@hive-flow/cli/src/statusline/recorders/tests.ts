@@ -382,11 +382,46 @@ function assertNonNegativeInteger(value: unknown, field: string): asserts value 
 }
 
 function parseIsoTimestamp(field: string, value: string): number {
+  const isoTimestampPattern =
+    /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(Z|[+-]\d{2}:\d{2})$/;
+  const match = isoTimestampPattern.exec(value);
+  if (match === null) {
+    throw new TestRunTimestampError(field, `not an ISO 8601 timestamp: ${value}`);
+  }
+  const [, rawYear, rawMonth, rawDay, rawHour, rawMinute, rawSecond, rawZone] = match;
+  const year = Number(rawYear);
+  const month = Number(rawMonth);
+  const day = Number(rawDay);
+  const hour = Number(rawHour);
+  const minute = Number(rawMinute);
+  const second = Number(rawSecond);
+  if (
+    month < 1 ||
+    month > 12 ||
+    day < 1 ||
+    day > daysInMonth(year, month) ||
+    hour > 23 ||
+    minute > 59 ||
+    second > 59
+  ) {
+    throw new TestRunTimestampError(field, `not a valid ISO 8601 timestamp: ${value}`);
+  }
+  if (rawZone !== 'Z') {
+    const offsetHour = Number(rawZone.slice(1, 3));
+    const offsetMinute = Number(rawZone.slice(4, 6));
+    if (offsetHour > 23 || offsetMinute > 59) {
+      throw new TestRunTimestampError(field, `not a valid ISO 8601 timestamp: ${value}`);
+    }
+  }
   const parsed = Date.parse(value);
   if (!Number.isFinite(parsed)) {
     throw new TestRunTimestampError(field, `not a parseable ISO 8601 timestamp: ${value}`);
   }
   return parsed;
+}
+
+function daysInMonth(year: number, month: number): number {
+  return new Date(Date.UTC(year, month, 0)).getUTCDate();
 }
 
 interface ResolvedTimestamps {
