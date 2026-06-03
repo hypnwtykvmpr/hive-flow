@@ -67,13 +67,23 @@ function parseSummariesFromLines(lines) {
       const obj = JSON.parse(line);
       if (obj && obj.summary) {
         const key = obj.taskId || obj.hiveId || obj.summary;
-        if (!summaries.has(key)) summaries.set(key, `- ${obj.summary}`);
+        const kind = typeof obj.kind === 'string' ? obj.kind : '';
+        const existing = summaries.get(key);
+        const entry = { kind, summary: `- ${obj.summary}` };
+        if (!existing || supersedesCheckDue(existing.kind, kind)) summaries.set(key, entry);
       }
     } catch {
       /* skip corrupt line */
     }
   }
-  return [...summaries.values()];
+  return [...summaries.values()].map((entry) => entry.summary);
+}
+
+function supersedesCheckDue(existingKind, nextKind) {
+  return (
+    (existingKind === 'hive-check' && nextKind === 'hive') ||
+    (existingKind === 'task-check' && nextKind === 'task')
+  );
 }
 
 function drainNotifications(projectRoot = projectDir()) {
@@ -127,5 +137,6 @@ module.exports = {
   pendingFile,
   collectDrainFiles,
   parseSummariesFromLines,
+  supersedesCheckDue,
   drainNotifications,
 };

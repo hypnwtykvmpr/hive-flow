@@ -75,6 +75,7 @@ describe('sentinel agent task rewake', () => {
         .trim()
         .split('\n');
       expect(pending).toHaveLength(1);
+      expect(JSON.parse(pending[0])).toMatchObject({ kind: 'task', taskId });
       expect(existsSync(join(root, '.hive-flow', 'data', 'task-task-demo-123.notified'))).toBe(true);
     } finally {
       rmSync(root, { recursive: true, force: true });
@@ -106,6 +107,84 @@ describe('sentinel agent task rewake', () => {
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
+  });
+
+  it('lets hive completion supersede an earlier same-key check-due notification', () => {
+    const summaries = drain.parseSummariesFromLines([
+      JSON.stringify({
+        kind: 'hive-check',
+        hiveId: 'hive-supersede',
+        summary: '[HIVE CHECK DUE: hive-supersede] poll',
+      }),
+      JSON.stringify({
+        kind: 'hive',
+        hiveId: 'hive-supersede',
+        summary: '[HIVE COMPLETE: hive-supersede] done',
+      }),
+    ]);
+
+    expect(summaries).toEqual(['- [HIVE COMPLETE: hive-supersede] done']);
+  });
+
+  it('keeps first same-key hive completion when check-due arrives after completion', () => {
+    const summaries = drain.parseSummariesFromLines([
+      JSON.stringify({
+        kind: 'hive',
+        hiveId: 'hive-reverse',
+        summary: '[HIVE COMPLETE: hive-reverse] done',
+      }),
+      JSON.stringify({
+        kind: 'hive-check',
+        hiveId: 'hive-reverse',
+        summary: '[HIVE CHECK DUE: hive-reverse] poll',
+      }),
+    ]);
+
+    expect(summaries).toEqual(['- [HIVE COMPLETE: hive-reverse] done']);
+  });
+
+  it('lets task completion supersede an earlier same-key task check-due notification', () => {
+    const summaries = drain.parseSummariesFromLines([
+      JSON.stringify({
+        kind: 'task-check',
+        taskId: 'task-supersede',
+        summary: '[TASK CHECK DUE: task-supersede] poll',
+      }),
+      JSON.stringify({
+        kind: 'task',
+        taskId: 'task-supersede',
+        summary: '[TASK COMPLETE: task-supersede] done',
+      }),
+    ]);
+
+    expect(summaries).toEqual(['- [TASK COMPLETE: task-supersede] done']);
+  });
+
+  it('keeps first same-key notification for same-type and missing-kind lines', () => {
+    expect(drain.parseSummariesFromLines([
+      JSON.stringify({
+        kind: 'hive',
+        hiveId: 'hive-same-kind',
+        summary: '[HIVE COMPLETE: hive-same-kind] first',
+      }),
+      JSON.stringify({
+        kind: 'hive',
+        hiveId: 'hive-same-kind',
+        summary: '[HIVE COMPLETE: hive-same-kind] second',
+      }),
+    ])).toEqual(['- [HIVE COMPLETE: hive-same-kind] first']);
+
+    expect(drain.parseSummariesFromLines([
+      JSON.stringify({
+        taskId: 'task-missing-kind',
+        summary: '[TASK COMPLETE: task-missing-kind] first',
+      }),
+      JSON.stringify({
+        kind: 'task',
+        taskId: 'task-missing-kind',
+        summary: '[TASK COMPLETE: task-missing-kind] second',
+      }),
+    ])).toEqual(['- [TASK COMPLETE: task-missing-kind] first']);
   });
 
   it('claims hive timeout rewake once per polling interval without suppressing later completion', () => {
@@ -399,7 +478,7 @@ describe('sentinel agent task rewake', () => {
         .trim()
         .split('\n');
       expect(pending).toHaveLength(3);
-      expect(JSON.parse(pending[2])).toMatchObject({ taskId: 'task-timeout-dedupe' });
+      expect(JSON.parse(pending[2])).toMatchObject({ kind: 'task', taskId: 'task-timeout-dedupe' });
       expect(existsSync(join(dataDir, 'task-task-timeout-dedupe.notified'))).toBe(true);
     } finally {
       rmSync(root, { recursive: true, force: true });

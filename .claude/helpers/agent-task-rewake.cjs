@@ -216,7 +216,7 @@ function notifyCompletedTaskIfReady(projectRoot, taskId) {
   const summary = summarizeResult(resultPath, taskId);
   const appended = appendPending(
     dataDir,
-    JSON.stringify({ taskId, ts: new Date().toISOString(), summary }),
+    JSON.stringify({ kind: 'task', taskId, ts: new Date().toISOString(), summary }),
   );
   if (!appended) {
     releaseNotifiedMarker(notifiedMarker);
