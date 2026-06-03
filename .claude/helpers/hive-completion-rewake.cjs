@@ -251,17 +251,12 @@ function appendTimeoutCheckOnce(dataDir, sanitizedHiveId, line) {
       return false;
     }
     if (fs.existsSync(markerPath)) return false;
+    fs.appendFileSync(path.join(dataDir, 'pending-notifications.jsonl'), line + '\n');
     fs.writeFileSync(markerPath, JSON.stringify({
       claimedAt: new Date().toISOString(),
       pid: process.pid,
       source: 'hive-completion-rewake:timeout',
     }, null, 2) + '\n', 'utf8');
-    try {
-      fs.appendFileSync(path.join(dataDir, 'pending-notifications.jsonl'), line + '\n');
-    } catch (err) {
-      try { fs.unlinkSync(markerPath); } catch { /* preserve original failure */ }
-      throw err;
-    }
     return true;
   } catch {
     return false;
@@ -350,4 +345,26 @@ async function main() {
   process.exit(2);
 }
 
-main().catch(() => process.exit(0));
+if (require.main === module) {
+  main().catch(() => process.exit(0));
+}
+
+module.exports = {
+  positiveIntFromEnv,
+  projectDir,
+  extractHiveId,
+  extractCompletion,
+  extractHiveIdFromText,
+  sanitizeHiveId,
+  summarizeDone,
+  summarizeStatus,
+  summarizeHiveRecord,
+  appendPendingOnce,
+  appendPending,
+  timeoutSummary,
+  timeoutCheckPath,
+  clearTimeoutCheck,
+  isHivePollWorkersPayload,
+  appendTimeoutCheckOnce,
+  main,
+};

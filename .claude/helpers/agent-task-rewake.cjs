@@ -159,17 +159,12 @@ function appendTimeoutCheckOnce(dataDir, taskId, line) {
       return false;
     }
     if (fs.existsSync(markerPath)) return false;
+    fs.appendFileSync(path.join(dataDir, 'pending-notifications.jsonl'), line + '\n');
     fs.writeFileSync(markerPath, JSON.stringify({
       claimedAt: new Date().toISOString(),
       pid: process.pid,
       source: 'agent-task-rewake:timeout',
     }, null, 2) + '\n', 'utf8');
-    try {
-      fs.appendFileSync(path.join(dataDir, 'pending-notifications.jsonl'), line + '\n');
-    } catch (err) {
-      try { fs.unlinkSync(markerPath); } catch { /* preserve original failure */ }
-      throw err;
-    }
     return true;
   } catch {
     return false;

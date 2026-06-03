@@ -17,6 +17,7 @@ const agentRewakeScript = resolve(here, '../../../../../.claude/helpers/agent-ta
 const agentRewake = require(agentRewakeScript);
 const drain = require(resolve(here, '../../../../../.claude/helpers/drain-notifications.cjs'));
 const hiveRewakeScript = resolve(here, '../../../../../.claude/helpers/hive-completion-rewake.cjs');
+const hiveRewake = require(hiveRewakeScript);
 const dedup = require(resolve(here, '../../../../../.claude/helpers/dedup-marker.cjs'));
 const mutableFs = require('node:fs');
 
@@ -213,44 +214,54 @@ describe('sentinel agent task rewake', () => {
     }
   });
 
-  it('rolls back a pending notification line when the ack claim loses a race', () => {
+  it('keeps pending notification lines when the ack claim loses a race', () => {
     const root = makeTempProject();
     const realAppend = mutableFs.appendFileSync;
     try {
       const dataDir = join(root, '.hive-flow', 'data');
       mkdirSync(dataDir, { recursive: true });
-      const line = JSON.stringify({ kind: 'hive', hiveId: 'hive-claim-race' });
+      const line = JSON.stringify({
+        kind: 'hive',
+        hiveId: 'hive-claim-race',
+        summary: '[HIVE COMPLETE: hive-claim-race] done',
+      });
+      const concurrentLine = JSON.stringify({
+        kind: 'hive',
+        hiveId: 'hive-concurrent',
+        summary: '[HIVE COMPLETE: hive-concurrent] done',
+      });
       const ackPath = dedup.ackedPath(dataDir, 'hive-claim-race');
       let injected = false;
       mutableFs.appendFileSync = ((...args: unknown[]) => {
         Reflect.apply(realAppend, mutableFs, args);
         if (!injected) {
           injected = true;
+          realAppend(join(dataDir, 'pending-notifications.jsonl'), `${concurrentLine}\n`);
           writeFileSync(ackPath, JSON.stringify({ source: 'competing-winner' }));
         }
       }) as typeof realAppend;
 
       const lost = dedup.appendPendingWithAck(dataDir, 'hive-claim-race', line, { source: 'test' });
       expect(lost).toBe(false);
-      expect(existsSync(join(dataDir, 'pending-notifications.jsonl'))).toBe(false);
-
-      mutableFs.appendFileSync = realAppend;
-      rmSync(ackPath, { force: true });
-      const retry = dedup.appendPendingWithAck(dataDir, 'hive-claim-race', line, { source: 'test' });
-      expect(retry).toBe(true);
       const pending = readFileSync(join(dataDir, 'pending-notifications.jsonl'), 'utf8')
         .trim()
         .split('\n');
-      expect(pending).toHaveLength(1);
-      expect(JSON.parse(pending[0])).toEqual({ kind: 'hive', hiveId: 'hive-claim-race' });
+      expect(pending).toHaveLength(2);
+      expect(JSON.parse(pending[0])).toMatchObject({ kind: 'hive', hiveId: 'hive-claim-race' });
+      expect(JSON.parse(pending[1])).toMatchObject({ kind: 'hive', hiveId: 'hive-concurrent' });
       expect(existsSync(ackPath)).toBe(true);
+
+      mutableFs.appendFileSync = realAppend;
+      const context = drain.drainNotifications(root).hookSpecificOutput.additionalContext;
+      expect(context.match(/hive-claim-race/g)).toHaveLength(1);
+      expect(context.match(/hive-concurrent/g)).toHaveLength(1);
     } finally {
       mutableFs.appendFileSync = realAppend;
       rmSync(root, { recursive: true, force: true });
     }
   });
 
-  it('migrates legacy hive completion markers into the shared ack marker', () => {
+  it('does not let legacy hive completion markers suppress fresh notifications', () => {
     const root = makeTempProject();
     try {
       const dataDir = join(root, '.hive-flow', 'data');
@@ -265,18 +276,57 @@ describe('sentinel agent task rewake', () => {
         const hiveId = `legacy-${index}`;
         writeFileSync(join(dataDir, `hive-${hiveId}.${suffix}`), 'legacy');
 
-        expect(dedup.isAlreadyAcked(dataDir, hiveId)).toBe(true);
+        expect(dedup.isAlreadyAcked(dataDir, hiveId)).toBe(false);
         const ackPath = dedup.ackedPath(dataDir, hiveId);
-        const ack = readFileSync(ackPath, 'utf8');
-        expect(ack).toContain('legacy-marker-migration');
         expect(dedup.appendPendingWithAck(
           dataDir,
           hiveId,
-          JSON.stringify({ kind: 'hive', hiveId }),
+          JSON.stringify({ kind: 'hive', hiveId, summary: `[HIVE COMPLETE: ${hiveId}] done` }),
           { source: 'test' },
-        )).toBe(false);
+        )).toBe(true);
+        const ack = readFileSync(ackPath, 'utf8');
+        expect(ack).not.toContain('legacy-marker-migration');
       }
     } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('keeps timeout nudges retryable when marker writes fail after append', () => {
+    const root = makeTempProject();
+    const realWrite = mutableFs.writeFileSync;
+    try {
+      const dataDir = join(root, '.hive-flow', 'data');
+      mkdirSync(dataDir, { recursive: true });
+      mutableFs.writeFileSync = ((...args: unknown[]) => {
+        const target = String(args[0]);
+        if (target.endsWith('.check-due')) throw new Error('injected marker failure');
+        return Reflect.apply(realWrite, mutableFs, args);
+      }) as typeof realWrite;
+
+      const hiveLine = JSON.stringify({
+        kind: 'hive-check',
+        hiveId: 'hive-marker-crash',
+        summary: '[HIVE CHECK DUE: hive-marker-crash] poll',
+      });
+      const taskLine = JSON.stringify({
+        kind: 'task-check',
+        taskId: 'task-marker-crash',
+        summary: '[TASK CHECK DUE: task-marker-crash] poll',
+      });
+
+      expect(hiveRewake.appendTimeoutCheckOnce(dataDir, 'hive-marker-crash', hiveLine)).toBe(false);
+      expect(agentRewake.appendTimeoutCheckOnce(dataDir, 'task-marker-crash', taskLine)).toBe(false);
+      const pending = readFileSync(join(dataDir, 'pending-notifications.jsonl'), 'utf8')
+        .trim()
+        .split('\n');
+      expect(pending).toHaveLength(2);
+      expect(JSON.parse(pending[0])).toMatchObject({ kind: 'hive-check', hiveId: 'hive-marker-crash' });
+      expect(JSON.parse(pending[1])).toMatchObject({ kind: 'task-check', taskId: 'task-marker-crash' });
+      expect(existsSync(join(dataDir, 'hive-hive-marker-crash.check-due'))).toBe(false);
+      expect(existsSync(join(dataDir, 'task-task-marker-crash.check-due'))).toBe(false);
+    } finally {
+      mutableFs.writeFileSync = realWrite;
       rmSync(root, { recursive: true, force: true });
     }
   });

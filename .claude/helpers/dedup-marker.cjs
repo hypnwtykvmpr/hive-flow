@@ -4,7 +4,9 @@
 //
 // Completion notifications can be delivered by several independent hooks and
 // watcher processes. This helper gives them one atomic claim point so exactly
-// one delivery path wins while legacy .notified markers remain respected.
+// one delivery path wins. Losing paths may leave duplicate pending JSONL lines;
+// the drain collapses those by notification key, and duplicates are safer than
+// silently dropping a completion wake.
 //
 
 'use strict';
@@ -56,23 +58,10 @@ function writeAckMarker(markerPath, detail = {}) {
   }
 }
 
-function migrateLegacyAck(dataDir, hiveId, legacyPath) {
-  const current = ackedPath(dataDir, hiveId);
-  if (!current) return false;
-  writeAckMarker(current, {
-    source: 'legacy-marker-migration',
-    legacyMarker: path.basename(legacyPath),
-  });
-  return true;
-}
-
 function isAlreadyAcked(dataDir, hiveId) {
   const current = ackedPath(dataDir, hiveId);
   try {
     if (current && fs.existsSync(current)) return true;
-    for (const legacy of legacyMarkerPaths(dataDir, hiveId)) {
-      if (fs.existsSync(legacy)) return migrateLegacyAck(dataDir, hiveId, legacy);
-    }
     return false;
   } catch {
     return true;
@@ -105,24 +94,6 @@ function acquireLock(lockPath) {
   }
 }
 
-function rollbackPendingLine(dataDir, line) {
-  const pendingPath = path.join(dataDir, PENDING_FILE);
-  try {
-    const raw = fs.readFileSync(pendingPath, 'utf8');
-    const rows = raw.endsWith('\n') ? raw.slice(0, -1).split('\n') : raw.split('\n');
-    const index = rows.lastIndexOf(line);
-    if (index === -1) return;
-    rows.splice(index, 1);
-    if (rows.length === 0 || (rows.length === 1 && rows[0] === '')) {
-      try { fs.unlinkSync(pendingPath); } catch { fs.writeFileSync(pendingPath, '', 'utf8'); }
-      return;
-    }
-    fs.writeFileSync(pendingPath, rows.join('\n') + '\n', 'utf8');
-  } catch {
-    /* best effort: drain still deduplicates if rollback fails */
-  }
-}
-
 function appendPendingWithAck(dataDir, hiveId, line, detail = {}) {
   const markerPath = ackedPath(dataDir, hiveId);
   if (!markerPath) return false;
@@ -137,9 +108,7 @@ function appendPendingWithAck(dataDir, hiveId, line, detail = {}) {
     if (isAlreadyAcked(dataDir, hiveId)) return false;
 
     fs.appendFileSync(path.join(dataDir, PENDING_FILE), line + '\n');
-    const claimed = claimAcked(dataDir, hiveId, detail);
-    if (!claimed) rollbackPendingLine(dataDir, line);
-    return claimed;
+    return claimAcked(dataDir, hiveId, detail);
   } catch {
     return false;
   } finally {
@@ -157,5 +126,4 @@ module.exports = {
   isAlreadyAcked,
   claimAcked,
   appendPendingWithAck,
-  rollbackPendingLine,
 };
