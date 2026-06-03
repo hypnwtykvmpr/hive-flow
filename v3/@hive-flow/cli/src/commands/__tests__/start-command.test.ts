@@ -1,4 +1,5 @@
 import { execFileSync, spawnSync } from 'node:child_process';
+import { createHmac } from 'node:crypto';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -8,6 +9,25 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 const cliPackageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 const v3Root = resolve(cliPackageRoot, '../..');
 const cliBin = join(cliPackageRoot, 'bin', 'cli.js');
+const TEST_HMAC_KEY = 'start-command-test-hmac-key';
+
+function writeNormalEnforcementState(projectRoot: string): void {
+  const enforcementDir = join(projectRoot, '.hive-flow', 'enforcement');
+  mkdirSync(enforcementDir, { recursive: true });
+  const state = {
+    level: 0,
+    violations: 0,
+    consecutiveDenials: 0,
+    lastActivity: new Date(0).toISOString(),
+    restrictedGroups: [],
+    history: [],
+    resetAt: null,
+    integrityCompromised: false,
+  };
+  const hmac = createHmac('sha256', TEST_HMAC_KEY).update(JSON.stringify(state)).digest('hex');
+  writeFileSync(join(enforcementDir, '.hmac-key'), TEST_HMAC_KEY, 'utf8');
+  writeFileSync(join(enforcementDir, 'state.json'), JSON.stringify({ state, hmac }), 'utf8');
+}
 
 function writeConfig(path: string, overrides = ''): void {
   mkdirSync(dirname(path), { recursive: true });
@@ -30,6 +50,7 @@ describe('hive-flow start CLI entry point', () => {
 
   beforeEach(() => {
     cwd = mkdtempSync(join(tmpdir(), 'hive-flow-start-e2e-'));
+    writeNormalEnforcementState(cwd);
   });
 
   afterEach(() => {
@@ -50,6 +71,7 @@ describe('hive-flow start CLI entry point', () => {
       [cliBin, 'start', '--config', configPath, '--skip-mcp', '--no-color', '--no-update'],
       {
         cwd,
+        env: { ...process.env, CLAUDE_PROJECT_DIR: cwd },
         encoding: 'utf8',
       },
     );
@@ -69,6 +91,7 @@ describe('hive-flow start CLI entry point', () => {
       [cliBin, 'start', '--config', missingPath, '--skip-mcp', '--no-color', '--no-update'],
       {
         cwd,
+        env: { ...process.env, CLAUDE_PROJECT_DIR: cwd },
         encoding: 'utf8',
       },
     );
@@ -88,6 +111,7 @@ describe('hive-flow start CLI entry point', () => {
       [cliBin, 'start', '--config', configPath, '--skip-mcp', '--no-color', '--no-update'],
       {
         cwd,
+        env: { ...process.env, CLAUDE_PROJECT_DIR: cwd },
         encoding: 'utf8',
       },
     );

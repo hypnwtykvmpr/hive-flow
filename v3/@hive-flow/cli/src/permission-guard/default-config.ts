@@ -91,8 +91,10 @@ const DEFAULT_DENY_BASH: BashPatternEntry[] = [
   { pattern: '^wget\\b.*\\|.*\\bsh\\b', feedback: 'Cannot pipe wget to shell' },
 
   // --- FORBIDDEN patterns (no automated override, no escalation path) ---
-  { pattern: '^rm\\b', feedback: 'DENIED: File deletion is not available. Use `npm run clean` or `make clean` for build artifacts.' },
-  { pattern: '^chmod\\b', feedback: 'DENIED: Permission changes are not available. Configure execute permissions in your build system.' },
+  { pattern: '^rm\\s+.*(?:-[A-Za-z]*r[A-Za-z]*f|-[A-Za-z]*f[A-Za-z]*r|--recursive\\b.*--force\\b|--force\\b.*--recursive\\b)', feedback: 'DENIED: Recursive forced deletion is not available. Use the project clean command for build artifacts.' },
+  { pattern: '^sudo\\s+rm\\b', feedback: 'DENIED: Sudo rm is not available.' },
+  { pattern: '^chmod\\s+777\\b', feedback: 'DENIED: World-writable permissions are not available.' },
+  { pattern: '^chmod\\s+-R\\b', feedback: 'DENIED: Recursive chmod is not available.' },
   { pattern: '^chown\\b', feedback: 'DENIED: Ownership changes are not available.' },
   { pattern: '^killall\\b', feedback: 'DENIED: Bulk process termination is not available. Use the application\'s own stop/restart command.' },
   { pattern: '^docker\\s+rm\\b', feedback: 'DENIED: Container removal is not available. Use `docker-compose down` for managed containers.' },

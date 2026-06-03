@@ -1717,6 +1717,7 @@ const handlers = {
     try {
       const PROJECT_DIR = path.resolve(__dirname, '..', '..');
       const DATA_DIR = path.join(PROJECT_DIR, '.hive-flow', 'data');
+      const { isAlreadyAcked, claimAcked } = require('./dedup-marker.cjs');
       if (!fs.existsSync(DATA_DIR)) return console.log('{}');
 
       const entries = fs.readdirSync(DATA_DIR);
@@ -1725,8 +1726,9 @@ const handlers = {
       for (const entry of entries) {
         if (!entry.startsWith('hive-') || !entry.endsWith('.done')) continue;
         const base = entry.slice(0, -5);
-        const notifiedPath = path.join(DATA_DIR, base + '.notified');
-        if (fs.existsSync(notifiedPath)) continue;
+        const sanitized = base.slice('hive-'.length);
+        if (!sanitized) continue;
+        if (isAlreadyAcked(DATA_DIR, sanitized)) continue;
 
         const filePath = path.join(DATA_DIR, entry);
         let data = null;
@@ -1737,13 +1739,14 @@ const handlers = {
           data = { hiveId: base, error: 'unreadable' };
         }
         const hiveId = (data && data.hiveId) || base;
-        unnotified.push({ hiveId, filePath, data, base });
+        unnotified.push({ hiveId, filePath, data, base, sanitized });
       }
 
       if (unnotified.length === 0) return console.log('{}');
 
       const messages = [];
       for (const item of unnotified) {
+        if (!claimAcked(DATA_DIR, item.sanitized, { source: 'hook-handler:hive-check-complete' })) continue;
         const d = item.data || {};
         const parts = [`hive=${item.hiveId}`];
         if (d.completedAt) parts.push(`at=${d.completedAt}`);
@@ -1752,14 +1755,9 @@ const handlers = {
         if (typeof d.failedCount === 'number') parts.push(`failed=${d.failedCount}`);
         if (d.error) parts.push(`(${d.error})`);
         messages.push(`[HIVE_COMPLETE] ${parts.join(' ')}. Run hive_poll_workers or queen_collect_results to review.`);
-
-        try {
-          const markerPath = path.join(DATA_DIR, item.base + '.notified');
-          const tmpPath = markerPath + '.tmp.' + process.pid;
-          fs.writeFileSync(tmpPath, new Date().toISOString() + '\n', 'utf8');
-          fs.renameSync(tmpPath, markerPath);
-        } catch {}
       }
+
+      if (messages.length === 0) return console.log('{}');
 
       console.log(JSON.stringify({
         hookSpecificOutput: { hookEventName: 'PostToolUse', additionalContext: messages.join('\n') }

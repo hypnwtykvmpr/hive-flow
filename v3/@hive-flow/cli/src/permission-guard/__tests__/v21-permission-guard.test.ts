@@ -2,7 +2,7 @@
  * Permission Guard v2.1 Tests
  *
  * Covers:
- * 1. FORBIDDEN patterns: All 8 patterns denied with no override path
+ * 1. FORBIDDEN patterns: All 8 unsafe patterns denied with no override path
  * 2. Post-jury safeguard: FORBIDDEN_PATTERNS catches accidental allow
  * 3. Jury-assessable: sudo, kill, pkill, git checkout trigger jury evaluation
  * 4. git checkout removed from auto-allow
@@ -45,15 +45,15 @@ beforeEach(() => {
 });
 
 // ---------------------------------------------------------------------------
-// 1. FORBIDDEN patterns — All 8 denied with NO override path
+// 1. FORBIDDEN patterns — All 8 unsafe classes denied with NO override path
 // ---------------------------------------------------------------------------
 
-describe('FORBIDDEN patterns (8 patterns, no override)', () => {
+describe('FORBIDDEN patterns (8 unsafe patterns, no override)', () => {
   const config = makeConfig();
 
   const forbiddenCommands: Array<{ pattern: string; command: string }> = [
     { pattern: 'rm *', command: 'rm -rf ./build' },
-    { pattern: 'chmod *', command: 'chmod 755 script.sh' },
+    { pattern: 'chmod 777*', command: 'chmod 777 script.sh' },
     { pattern: 'chown *', command: 'chown user:group file.txt' },
     { pattern: 'killall *', command: 'killall node' },
     { pattern: 'docker rm*', command: 'docker rm my-container' },
@@ -69,7 +69,7 @@ describe('FORBIDDEN patterns (8 patterns, no override)', () => {
     });
   }
 
-  it('denies all 8 FORBIDDEN patterns regardless of config overrides', async () => {
+  it('denies all 8 unsafe FORBIDDEN patterns regardless of config overrides', async () => {
     for (const { command } of forbiddenCommands) {
       const result = await evaluate(bashInput(command), config);
       expect(result.decision).toBe('deny');
@@ -93,7 +93,7 @@ describe('FORBIDDEN patterns (8 patterns, no override)', () => {
 
 describe('Post-jury safeguard (FORBIDDEN_PATTERNS)', () => {
   const FORBIDDEN_PATTERNS = [
-    'rm *', 'chmod *', 'chown *', 'killall *',
+    'rm *', 'chmod 777*', 'chown *', 'killall *',
     'docker rm*', 'docker rmi*',
     'git push --force*', 'git reset --hard*',
   ];
@@ -108,7 +108,8 @@ describe('Post-jury safeguard (FORBIDDEN_PATTERNS)', () => {
 
   const testCases = [
     { cmd: 'rm -rf node_modules', pattern: 'rm *', shouldMatch: true },
-    { cmd: 'chmod +x deploy.sh', pattern: 'chmod *', shouldMatch: true },
+    { cmd: 'chmod +x deploy.sh', pattern: 'chmod 777*', shouldMatch: false },
+    { cmd: 'chmod 777 deploy.sh', pattern: 'chmod 777*', shouldMatch: true },
     { cmd: 'chown root:root /etc/config', pattern: 'chown *', shouldMatch: true },
     { cmd: 'killall node', pattern: 'killall *', shouldMatch: true },
     { cmd: 'docker rm container1', pattern: 'docker rm*', shouldMatch: true },
@@ -492,7 +493,6 @@ describe('Feedback strings', () => {
     // Commands caught by deep-inspect get a different message, which is fine --
     // the deep-inspect layer is a stronger pre-filter.
     const forbiddenWithDenyPatternFeedback: Array<{ command: string; expectedFragment: string }> = [
-      { command: 'chmod 755 script.sh', expectedFragment: 'not available' },
       { command: 'chown user:group file.txt', expectedFragment: 'not available' },
       { command: 'docker rm my-container', expectedFragment: 'not available' },
       { command: 'docker rmi image:latest', expectedFragment: 'not available' },
@@ -509,7 +509,7 @@ describe('Feedback strings', () => {
     }
 
     // Commands caught by deep-inspect are still DENIED
-    const forbiddenCaughtByDeepInspect = ['rm -rf ./build', 'killall node'];
+    const forbiddenCaughtByDeepInspect = ['rm -rf ./build', 'chmod 777 script.sh', 'killall node'];
     for (const command of forbiddenCaughtByDeepInspect) {
       it(`"${command}" is denied (caught by deep-inspect pre-filter)`, async () => {
         const result = await evaluate(bashInput(command), config);
@@ -521,7 +521,7 @@ describe('Feedback strings', () => {
 
     // Verify the deny-pattern feedback itself says "not available"
     it('deny-pattern feedback for rm contains "not available"', () => {
-      const matched = checkBashPatterns('rm something', config.always_deny_bash_patterns);
+      const matched = checkBashPatterns('rm -rf build', config.always_deny_bash_patterns);
       expect(matched).not.toBeNull();
       expect(matched!.toLowerCase()).toContain('not available');
     });
@@ -534,7 +534,7 @@ describe('Feedback strings', () => {
 
     it('FORBIDDEN feedback does NOT mention jury or re-submit', async () => {
       const forbiddenCmds = [
-        'rm -rf ./build', 'chmod 755 script.sh', 'chown user:group file.txt',
+        'rm -rf ./build', 'chmod 777 script.sh', 'chown user:group file.txt',
         'killall node', 'docker rm container1', 'docker rmi image:tag',
         'git push --force origin main', 'git reset --hard HEAD',
       ];
@@ -569,7 +569,7 @@ describe('Feedback strings', () => {
     it('rm deny-pattern feedback suggests npm run clean or make clean', () => {
       // rm -rf is caught by deep-inspect before deny patterns at runtime,
       // but we verify the deny-pattern feedback itself contains alternatives.
-      const feedback = checkBashPatterns('rm something', config.always_deny_bash_patterns);
+      const feedback = checkBashPatterns('rm -rf build', config.always_deny_bash_patterns);
       expect(feedback).not.toBeNull();
       expect(feedback!.toLowerCase()).toMatch(/clean|build/);
     });
@@ -632,10 +632,10 @@ describe('No regressions in safe commands', () => {
 });
 
 describe('FORBIDDEN vs jury-assessable separation is complete', () => {
-  it('all 8 FORBIDDEN commands match always_deny_bash_patterns', () => {
+  it('all 8 unsafe FORBIDDEN commands match always_deny_bash_patterns', () => {
     const config = makeConfig();
     const forbiddenCmds = [
-      'rm -rf node_modules', 'chmod 644 file', 'chown root file',
+      'rm -rf node_modules', 'chmod 777 file', 'chown root file',
       'killall firefox', 'docker rm c1', 'docker rmi img',
       'git push --force origin main', 'git reset --hard HEAD',
     ];

@@ -123,6 +123,64 @@ function timeoutSummary(taskId) {
   return `[TASK CHECK DUE: ${taskId}] Background agent task is still pending after ${Math.round(MAX_WAIT_MS / 60000)} minute(s). Call agent_task_result({taskId:"${taskId}"}). If status is running, continue waiting; the PostToolUse hook will restart this monitor.`;
 }
 
+function timeoutCheckPath(dataDir, taskId) {
+  return path.join(dataDir, `task-${taskId}.check-due`);
+}
+
+function clearTimeoutCheck(dataDir, taskId) {
+  try {
+    fs.unlinkSync(timeoutCheckPath(dataDir, taskId));
+  } catch {
+    /* absent or already removed */
+  }
+}
+
+function isAgentTaskResultPayload(raw) {
+  try {
+    const parsed = JSON.parse(raw);
+    const toolName = parsed?.tool_name || parsed?.toolName || '';
+    return toolName === 'agent_task_result' || toolName === 'mcp__hive-flow__agent_task_result';
+  } catch {
+    return false;
+  }
+}
+
+function appendTimeoutCheckOnce(dataDir, taskId, line) {
+  const markerPath = timeoutCheckPath(dataDir, taskId);
+  const lockPath = `${markerPath}.lock`;
+  let lockFd = null;
+  try {
+    fs.mkdirSync(dataDir, { recursive: true });
+    if (fs.existsSync(markerPath)) return false;
+    try {
+      lockFd = fs.openSync(lockPath, 'wx', 0o600);
+    } catch (err) {
+      if (!err || err.code !== 'EEXIST') return false;
+      return false;
+    }
+    if (fs.existsSync(markerPath)) return false;
+    fs.writeFileSync(markerPath, JSON.stringify({
+      claimedAt: new Date().toISOString(),
+      pid: process.pid,
+      source: 'agent-task-rewake:timeout',
+    }, null, 2) + '\n', 'utf8');
+    try {
+      fs.appendFileSync(path.join(dataDir, 'pending-notifications.jsonl'), line + '\n');
+    } catch (err) {
+      try { fs.unlinkSync(markerPath); } catch { /* preserve original failure */ }
+      throw err;
+    }
+    return true;
+  } catch {
+    return false;
+  } finally {
+    if (lockFd !== null) {
+      try { fs.closeSync(lockFd); } catch { /* ignore */ }
+      try { fs.unlinkSync(lockPath); } catch { /* ignore */ }
+    }
+  }
+}
+
 function claimNotifiedMarker(notifiedMarker) {
   let fd = null;
   try {
@@ -186,6 +244,10 @@ async function main() {
   } catch {
     process.exit(0);
   }
+  const dataDir = path.join(dir, '.hive-flow', 'data');
+  if (isAgentTaskResultPayload(raw)) {
+    clearTimeoutCheck(dataDir, taskId);
+  }
 
   const deadline = Date.now() + MAX_WAIT_MS;
   while (Date.now() < deadline) {
@@ -199,10 +261,12 @@ async function main() {
     await new Promise((res) => setTimeout(res, POLL_MS));
   }
   const summary = timeoutSummary(taskId);
-  appendPending(
-    path.join(dir, '.hive-flow', 'data'),
+  const won = appendTimeoutCheckOnce(
+    dataDir,
+    taskId,
     JSON.stringify({ kind: 'task-check', taskId, ts: new Date().toISOString(), summary }),
   );
+  if (!won) process.exit(0);
   process.stderr.write(summary + '\n');
   process.exit(2);
 }
@@ -218,6 +282,10 @@ module.exports = {
   summarizeResult,
   appendPending,
   timeoutSummary,
+  timeoutCheckPath,
+  clearTimeoutCheck,
+  isAgentTaskResultPayload,
+  appendTimeoutCheckOnce,
   claimNotifiedMarker,
   releaseNotifiedMarker,
   notifyCompletedTaskIfReady,

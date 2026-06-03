@@ -14,6 +14,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { isAlreadyAcked, appendPendingWithAck } = require('./dedup-marker.cjs');
 
 const DEFAULT_MAX_WAIT_MS = 30 * 60 * 1000;
 const DEFAULT_POLL_MS = 1500;
@@ -198,17 +199,7 @@ function summarizeHiveRecord(dir, sanitizedHiveId, hiveId) {
 }
 
 function appendPendingOnce(dataDir, sanitizedHiveId, line) {
-  try {
-    fs.mkdirSync(dataDir, { recursive: true });
-    const marker = path.join(dataDir, `hive-${sanitizedHiveId}.pending-notified`);
-    if (fs.existsSync(marker)) return;
-    fs.appendFileSync(path.join(dataDir, 'pending-notifications.jsonl'), line + '\n');
-    const tmp = `${marker}.tmp.${process.pid}`;
-    fs.writeFileSync(tmp, new Date().toISOString() + '\n', 'utf8');
-    fs.renameSync(tmp, marker);
-  } catch {
-    /* fail-open */
-  }
+  return appendPendingWithAck(dataDir, sanitizedHiveId, line, { source: 'hive-completion-rewake' });
 }
 
 function appendPending(dataDir, line) {
@@ -224,6 +215,64 @@ function timeoutSummary(hiveId) {
   return `[HIVE CHECK DUE: ${hiveId}] Hive workers are still pending after ${Math.round(MAX_WAIT_MS / 60000)} minute(s). Call hive_poll_workers({hiveId:"${hiveId}"}). If workers are still running, continue waiting; the PostToolUse hook will restart this monitor.`;
 }
 
+function timeoutCheckPath(dataDir, sanitizedHiveId) {
+  return path.join(dataDir, `hive-${sanitizedHiveId}.check-due`);
+}
+
+function clearTimeoutCheck(dataDir, sanitizedHiveId) {
+  try {
+    fs.unlinkSync(timeoutCheckPath(dataDir, sanitizedHiveId));
+  } catch {
+    /* absent or already removed */
+  }
+}
+
+function isHivePollWorkersPayload(raw) {
+  try {
+    const parsed = JSON.parse(raw);
+    const toolName = parsed?.tool_name || parsed?.toolName || '';
+    return toolName === 'hive_poll_workers' || toolName === 'mcp__hive-flow__hive_poll_workers';
+  } catch {
+    return false;
+  }
+}
+
+function appendTimeoutCheckOnce(dataDir, sanitizedHiveId, line) {
+  const markerPath = timeoutCheckPath(dataDir, sanitizedHiveId);
+  const lockPath = `${markerPath}.lock`;
+  let lockFd = null;
+  try {
+    fs.mkdirSync(dataDir, { recursive: true });
+    if (fs.existsSync(markerPath)) return false;
+    try {
+      lockFd = fs.openSync(lockPath, 'wx', 0o600);
+    } catch (err) {
+      if (!err || err.code !== 'EEXIST') return false;
+      return false;
+    }
+    if (fs.existsSync(markerPath)) return false;
+    fs.writeFileSync(markerPath, JSON.stringify({
+      claimedAt: new Date().toISOString(),
+      pid: process.pid,
+      source: 'hive-completion-rewake:timeout',
+    }, null, 2) + '\n', 'utf8');
+    try {
+      fs.appendFileSync(path.join(dataDir, 'pending-notifications.jsonl'), line + '\n');
+    } catch (err) {
+      try { fs.unlinkSync(markerPath); } catch { /* preserve original failure */ }
+      throw err;
+    }
+    return true;
+  } catch {
+    return false;
+  } finally {
+    if (lockFd !== null) {
+      try { fs.closeSync(lockFd); } catch { /* ignore */ }
+      try { fs.unlinkSync(lockPath); } catch { /* ignore */ }
+    }
+  }
+}
+
 async function main() {
   const raw = readStdin();
   const hiveId = extractHiveId(raw);
@@ -233,29 +282,26 @@ async function main() {
   const dir = projectDir();
   const dataDir = path.join(dir, '.hive-flow', 'data');
   const donePath = path.join(dataDir, `hive-${sanitized}.done`);
-  const rewakeMarker = path.join(dataDir, `hive-${sanitized}.rewake-notified`);
 
   try {
-    if (fs.existsSync(rewakeMarker)) process.exit(0);
+    if (isAlreadyAcked(dataDir, sanitized)) process.exit(0);
   } catch {
     process.exit(0);
+  }
+
+  if (isHivePollWorkersPayload(raw)) {
+    clearTimeoutCheck(dataDir, sanitized);
   }
 
   const immediateCompletion = extractCompletion(raw);
   if (immediateCompletion) {
     const summary = summarizeStatus(immediateCompletion, hiveId);
-    appendPendingOnce(
+    const won = appendPendingOnce(
       dataDir,
       sanitized,
       JSON.stringify({ kind: 'hive', hiveId, ts: new Date().toISOString(), summary }),
     );
-    try {
-      const tmp = `${rewakeMarker}.tmp.${process.pid}`;
-      fs.writeFileSync(tmp, new Date().toISOString() + '\n', 'utf8');
-      fs.renameSync(tmp, rewakeMarker);
-    } catch {
-      /* fail-open */
-    }
+    if (!won) process.exit(0);
     process.stderr.write(summary + '\n');
     process.exit(2);
   }
@@ -270,35 +316,23 @@ async function main() {
     }
     if (done) {
       const summary = summarizeDone(donePath, hiveId);
-      appendPendingOnce(
+      const won = appendPendingOnce(
         dataDir,
         sanitized,
         JSON.stringify({ kind: 'hive', hiveId, ts: new Date().toISOString(), summary }),
       );
-      try {
-        const tmp = `${rewakeMarker}.tmp.${process.pid}`;
-        fs.writeFileSync(tmp, new Date().toISOString() + '\n', 'utf8');
-        fs.renameSync(tmp, rewakeMarker);
-      } catch {
-        /* fail-open */
-      }
+      if (!won) process.exit(0);
       process.stderr.write(summary + '\n');
       process.exit(2);
     }
     const recordSummary = summarizeHiveRecord(dir, sanitized, hiveId);
     if (recordSummary) {
-      appendPendingOnce(
+      const won = appendPendingOnce(
         dataDir,
         sanitized,
         JSON.stringify({ kind: 'hive', hiveId, ts: new Date().toISOString(), summary: recordSummary }),
       );
-      try {
-        const tmp = `${rewakeMarker}.tmp.${process.pid}`;
-        fs.writeFileSync(tmp, new Date().toISOString() + '\n', 'utf8');
-        fs.renameSync(tmp, rewakeMarker);
-      } catch {
-        /* fail-open */
-      }
+      if (!won) process.exit(0);
       process.stderr.write(recordSummary + '\n');
       process.exit(2);
     }
@@ -306,10 +340,12 @@ async function main() {
   }
 
   const summary = timeoutSummary(hiveId);
-  appendPending(
+  const won = appendTimeoutCheckOnce(
     dataDir,
+    sanitized,
     JSON.stringify({ kind: 'hive-check', hiveId, ts: new Date().toISOString(), summary }),
   );
+  if (!won) process.exit(0);
   process.stderr.write(summary + '\n');
   process.exit(2);
 }

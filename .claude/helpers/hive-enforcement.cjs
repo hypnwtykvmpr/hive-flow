@@ -440,7 +440,7 @@ function ensureHiveWatcherLaunched(toolName, sanitizedId) {
   }
 
   try {
-    const watcherScript = path.join(PROJECT_DIR, 'scripts', 'hive-watcher.js');
+    const watcherScript = path.join(PROJECT_DIR, 'scripts', 'hive-watcher.cjs');
     if (!fs.existsSync(watcherScript)) return;
 
     const progressFile = path.join(HIVE_FLOW_DIR, 'data', `watcher-${sanitizedId}.json`);
@@ -449,7 +449,16 @@ function ensureHiveWatcherLaunched(toolName, sanitizedId) {
       if (fs.existsSync(progressFile)) {
         const prog = JSON.parse(fs.readFileSync(progressFile, 'utf8'));
         const age = Date.now() - new Date(prog.updatedAt || 0).getTime();
-        watcherAlive = age < 60000;
+        let pidAlive = false;
+        if (Number.isInteger(prog.watcherPid) && prog.watcherPid > 0) {
+          try {
+            process.kill(prog.watcherPid, 0);
+            pidAlive = true;
+          } catch {
+            pidAlive = false;
+          }
+        }
+        watcherAlive = age < 60000 && pidAlive;
       }
     } catch { /* treat as dead */ }
 

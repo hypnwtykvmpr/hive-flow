@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process';
 import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
 import { createRequire } from 'node:module';
@@ -12,8 +13,12 @@ const PROPERTY_RUNS = propertyRunsFromEnv(200);
 
 const require = createRequire(import.meta.url);
 const here = dirname(fileURLToPath(import.meta.url));
-const agentRewake = require(resolve(here, '../../../../../.claude/helpers/agent-task-rewake.cjs'));
+const agentRewakeScript = resolve(here, '../../../../../.claude/helpers/agent-task-rewake.cjs');
+const agentRewake = require(agentRewakeScript);
 const drain = require(resolve(here, '../../../../../.claude/helpers/drain-notifications.cjs'));
+const hiveRewakeScript = resolve(here, '../../../../../.claude/helpers/hive-completion-rewake.cjs');
+const dedup = require(resolve(here, '../../../../../.claude/helpers/dedup-marker.cjs'));
+const mutableFs = require('node:fs');
 
 function makeTempProject(): string {
   return mkdtempSync(join(tmpdir(), 'hive-flow-sentinel-'));
@@ -97,6 +102,255 @@ describe('sentinel agent task rewake', () => {
       expect(context).toContain('task-b');
 
       expect(drain.drainNotifications(root)).toEqual({});
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('claims hive timeout rewake once per polling interval without suppressing later completion', () => {
+    const root = makeTempProject();
+    try {
+      const payload = JSON.stringify({ tool_input: { hiveId: 'hive-timeout-dedupe' } });
+      const pollPayload = JSON.stringify({
+        tool_name: 'mcp__hive-flow__hive_poll_workers',
+        tool_input: { hiveId: 'hive-timeout-dedupe' },
+        tool_response: { allWorkersSettled: false, runningCount: 1 },
+      });
+      const env = {
+        ...process.env,
+        CLAUDE_PROJECT_DIR: root,
+        HIVE_FLOW_REWAKE_MAX_WAIT_MS: '1',
+        HIVE_FLOW_REWAKE_POLL_MS: '1',
+      };
+
+      const first = spawnSync(process.execPath, [hiveRewakeScript], {
+        input: payload,
+        env,
+        encoding: 'utf8',
+      });
+      const second = spawnSync(process.execPath, [hiveRewakeScript], {
+        input: payload,
+        env,
+        encoding: 'utf8',
+      });
+
+      expect(first.status).toBe(2);
+      expect(first.stderr).toContain('[HIVE CHECK DUE: hive-timeout-dedupe]');
+      expect(second.status).toBe(0);
+      expect(second.stderr).toBe('');
+
+      const dataDir = join(root, '.hive-flow', 'data');
+      let pending = readFileSync(join(dataDir, 'pending-notifications.jsonl'), 'utf8')
+        .trim()
+        .split('\n');
+      expect(pending).toHaveLength(1);
+      expect(JSON.parse(pending[0])).toMatchObject({
+        kind: 'hive-check',
+        hiveId: 'hive-timeout-dedupe',
+      });
+      expect(existsSync(join(dataDir, 'hive-hive-timeout-dedupe.check-due'))).toBe(true);
+      expect(existsSync(join(dataDir, 'hive-hive-timeout-dedupe.acked'))).toBe(false);
+
+      const restarted = spawnSync(process.execPath, [hiveRewakeScript], {
+        input: pollPayload,
+        env,
+        encoding: 'utf8',
+      });
+      expect(restarted.status).toBe(2);
+      expect(restarted.stderr).toContain('[HIVE CHECK DUE: hive-timeout-dedupe]');
+      pending = readFileSync(join(dataDir, 'pending-notifications.jsonl'), 'utf8')
+        .trim()
+        .split('\n');
+      expect(pending).toHaveLength(2);
+
+      writeFileSync(
+        join(dataDir, 'hive-hive-timeout-dedupe.done'),
+        JSON.stringify({ hiveId: 'hive-timeout-dedupe', completedCount: 1, failedCount: 0 }),
+      );
+      const completed = spawnSync(process.execPath, [hiveRewakeScript], {
+        input: payload,
+        env,
+        encoding: 'utf8',
+      });
+      expect(completed.status).toBe(2);
+      expect(completed.stderr).toContain('[HIVE COMPLETE: hive-timeout-dedupe]');
+      pending = readFileSync(join(dataDir, 'pending-notifications.jsonl'), 'utf8')
+        .trim()
+        .split('\n');
+      expect(pending).toHaveLength(3);
+      expect(JSON.parse(pending[2])).toMatchObject({
+        kind: 'hive',
+        hiveId: 'hive-timeout-dedupe',
+      });
+      expect(existsSync(join(dataDir, 'hive-hive-timeout-dedupe.acked'))).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('does not leave an ack marker behind when pending notification append fails', () => {
+    const root = makeTempProject();
+    const realAppend = mutableFs.appendFileSync;
+    try {
+      const dataDir = join(root, '.hive-flow', 'data');
+      mkdirSync(dataDir, { recursive: true });
+      mutableFs.appendFileSync = () => {
+        throw new Error('injected append failure');
+      };
+
+      const claimed = dedup.appendPendingWithAck(
+        dataDir,
+        'hive-crash-window',
+        JSON.stringify({ kind: 'hive', hiveId: 'hive-crash-window' }),
+        { source: 'test' },
+      );
+
+      expect(claimed).toBe(false);
+      expect(existsSync(join(dataDir, 'hive-hive-crash-window.acked'))).toBe(false);
+    } finally {
+      mutableFs.appendFileSync = realAppend;
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('rolls back a pending notification line when the ack claim loses a race', () => {
+    const root = makeTempProject();
+    const realAppend = mutableFs.appendFileSync;
+    try {
+      const dataDir = join(root, '.hive-flow', 'data');
+      mkdirSync(dataDir, { recursive: true });
+      const line = JSON.stringify({ kind: 'hive', hiveId: 'hive-claim-race' });
+      const ackPath = dedup.ackedPath(dataDir, 'hive-claim-race');
+      let injected = false;
+      mutableFs.appendFileSync = ((...args: unknown[]) => {
+        Reflect.apply(realAppend, mutableFs, args);
+        if (!injected) {
+          injected = true;
+          writeFileSync(ackPath, JSON.stringify({ source: 'competing-winner' }));
+        }
+      }) as typeof realAppend;
+
+      const lost = dedup.appendPendingWithAck(dataDir, 'hive-claim-race', line, { source: 'test' });
+      expect(lost).toBe(false);
+      expect(existsSync(join(dataDir, 'pending-notifications.jsonl'))).toBe(false);
+
+      mutableFs.appendFileSync = realAppend;
+      rmSync(ackPath, { force: true });
+      const retry = dedup.appendPendingWithAck(dataDir, 'hive-claim-race', line, { source: 'test' });
+      expect(retry).toBe(true);
+      const pending = readFileSync(join(dataDir, 'pending-notifications.jsonl'), 'utf8')
+        .trim()
+        .split('\n');
+      expect(pending).toHaveLength(1);
+      expect(JSON.parse(pending[0])).toEqual({ kind: 'hive', hiveId: 'hive-claim-race' });
+      expect(existsSync(ackPath)).toBe(true);
+    } finally {
+      mutableFs.appendFileSync = realAppend;
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('migrates legacy hive completion markers into the shared ack marker', () => {
+    const root = makeTempProject();
+    try {
+      const dataDir = join(root, '.hive-flow', 'data');
+      mkdirSync(dataDir, { recursive: true });
+      const legacySuffixes = [
+        'notified',
+        ['rewake', 'notified'].join('-'),
+        ['pending', 'notified'].join('-'),
+      ];
+
+      for (const [index, suffix] of legacySuffixes.entries()) {
+        const hiveId = `legacy-${index}`;
+        writeFileSync(join(dataDir, `hive-${hiveId}.${suffix}`), 'legacy');
+
+        expect(dedup.isAlreadyAcked(dataDir, hiveId)).toBe(true);
+        const ackPath = dedup.ackedPath(dataDir, hiveId);
+        const ack = readFileSync(ackPath, 'utf8');
+        expect(ack).toContain('legacy-marker-migration');
+        expect(dedup.appendPendingWithAck(
+          dataDir,
+          hiveId,
+          JSON.stringify({ kind: 'hive', hiveId }),
+          { source: 'test' },
+        )).toBe(false);
+      }
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('claims agent-task timeout rewake once per polling interval without suppressing later completion', () => {
+    const root = makeTempProject();
+    try {
+      const payload = JSON.stringify({ tool_response: { taskId: 'task-timeout-dedupe', status: 'running' } });
+      const pollPayload = JSON.stringify({
+        tool_name: 'mcp__hive-flow__agent_task_result',
+        tool_input: { taskId: 'task-timeout-dedupe' },
+        tool_response: { status: 'running' },
+      });
+      const env = {
+        ...process.env,
+        CLAUDE_PROJECT_DIR: root,
+        HIVE_FLOW_REWAKE_MAX_WAIT_MS: '1',
+        HIVE_FLOW_REWAKE_POLL_MS: '1',
+      };
+
+      const first = spawnSync(process.execPath, [agentRewakeScript], {
+        input: payload,
+        env,
+        encoding: 'utf8',
+      });
+      const second = spawnSync(process.execPath, [agentRewakeScript], {
+        input: payload,
+        env,
+        encoding: 'utf8',
+      });
+
+      expect(first.status).toBe(2);
+      expect(first.stderr).toContain('[TASK CHECK DUE: task-timeout-dedupe]');
+      expect(second.status).toBe(0);
+      expect(second.stderr).toBe('');
+
+      const dataDir = join(root, '.hive-flow', 'data');
+      let pending = readFileSync(join(dataDir, 'pending-notifications.jsonl'), 'utf8')
+        .trim()
+        .split('\n');
+      expect(pending).toHaveLength(1);
+      expect(JSON.parse(pending[0])).toMatchObject({
+        kind: 'task-check',
+        taskId: 'task-timeout-dedupe',
+      });
+      expect(existsSync(join(dataDir, 'task-task-timeout-dedupe.check-due'))).toBe(true);
+      expect(existsSync(join(dataDir, 'task-task-timeout-dedupe.notified'))).toBe(false);
+
+      const restarted = spawnSync(process.execPath, [agentRewakeScript], {
+        input: pollPayload,
+        env,
+        encoding: 'utf8',
+      });
+      expect(restarted.status).toBe(2);
+      expect(restarted.stderr).toContain('[TASK CHECK DUE: task-timeout-dedupe]');
+      pending = readFileSync(join(dataDir, 'pending-notifications.jsonl'), 'utf8')
+        .trim()
+        .split('\n');
+      expect(pending).toHaveLength(2);
+
+      writeResult(root, 'task-timeout-dedupe', { success: true, result: { agentId: 'agent-a', content: 'done' } });
+      const completed = spawnSync(process.execPath, [agentRewakeScript], {
+        input: payload,
+        env,
+        encoding: 'utf8',
+      });
+      expect(completed.status).toBe(2);
+      expect(completed.stderr).toContain('[TASK COMPLETE: task-timeout-dedupe]');
+      pending = readFileSync(join(dataDir, 'pending-notifications.jsonl'), 'utf8')
+        .trim()
+        .split('\n');
+      expect(pending).toHaveLength(3);
+      expect(JSON.parse(pending[2])).toMatchObject({ taskId: 'task-timeout-dedupe' });
+      expect(existsSync(join(dataDir, 'task-task-timeout-dedupe.notified'))).toBe(true);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

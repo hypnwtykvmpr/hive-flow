@@ -17,7 +17,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, '..');
-const SCRIPT = join(REPO_ROOT, 'scripts', 'hive-watcher.js');
+const SCRIPT = join(REPO_ROOT, 'scripts', 'hive-watcher.cjs');
 
 function loadWatcherModule() {
   const source = readFileSync(SCRIPT, 'utf8').replace(/\nmain\(\)\.catch\([\s\S]*$/, '\n');

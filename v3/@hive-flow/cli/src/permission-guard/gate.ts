@@ -40,7 +40,12 @@ import { evaluateSelfProtection } from './self-protection.js';
  * overrides to deny.
  */
 const FORBIDDEN_PATTERNS = [
-  '^rm\\b', '^chmod\\b', '^chown\\b', '^killall\\b',
+  '^rm\\s+.*(?:-[A-Za-z]*r[A-Za-z]*f|-[A-Za-z]*f[A-Za-z]*r|--recursive\\b.*--force\\b|--force\\b.*--recursive\\b)',
+  '^sudo\\s+rm\\b',
+  '^chmod\\s+777\\b',
+  '^chmod\\s+-R\\b',
+  '^chown\\b',
+  '^killall\\b',
   '^docker\\s+rm\\b', '^docker\\s+rmi\\b',
   '^git\\s+push\\s+--force', '^git\\s+push\\s+-f\\b',
   '^git\\s+reset\\s+--hard',

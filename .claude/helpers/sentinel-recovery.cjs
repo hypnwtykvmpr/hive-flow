@@ -4,16 +4,15 @@
 //
 // On session start, scans for dead hive watchers that were monitoring active
 // hives. If a watcher's heartbeat is stale (updatedAt > 2 minutes ago) and
-// the hive is still active, alerts the advocate to re-spawn. When running
-// inside tmux (reads tmux-pane.txt), auto-respawns the watcher as a detached
-// process.
+// the hive is still active, auto-respawns the watcher as a detached process
+// and alerts the advocate.
 //
 // Watcher progress files: .hive-flow/data/watcher-{hiveId}.json
 //   Format: { hiveId, watcherPid, updatedAt, completedCount, runningCount, ... }
 //
 // Safety:
 //   - Fail-open: all errors produce {} (never blocks session start)
-//   - Only respawns in tmux (reads .hive-flow/data/tmux-pane.txt)
+//   - Respawns with tmux targeting when available
 //   - Detached spawn (stdio: 'ignore', detached: true, unref'd)
 //   - Validates hive is still active before recommending respawn
 //
@@ -33,7 +32,7 @@ const HIVE_FLOW_DIR = path.join(PROJECT_DIR, '.hive-flow');
 const DATA_DIR = path.join(HIVE_FLOW_DIR, 'data');
 const HIVES_DIR = path.join(HIVE_FLOW_DIR, 'hives');
 const TMUX_PANE_FILE = path.join(DATA_DIR, 'tmux-pane.txt');
-const WATCHER_SCRIPT = path.join(PROJECT_DIR, 'scripts', 'hive-watcher.js');
+const WATCHER_SCRIPT = path.join(PROJECT_DIR, 'scripts', 'hive-watcher.cjs');
 
 const HEARTBEAT_STALE_MS = 2 * 60 * 1000; // 2 minutes
 
@@ -58,7 +57,7 @@ function readJson(filePath) {
  */
 function isHiveActive(hiveId) {
   if (!hiveId) return false;
-  // Sanitize hive ID (same as hive-watcher.js)
+  // Sanitize hive ID (same as hive-watcher.cjs)
   const sanitized = String(hiveId).replace(/[/\\.]+/g, '_').replace(/^_+|_+$/g, '');
   if (!sanitized) return false;
   const hivePath = path.join(HIVES_DIR, sanitized, 'hive.json');
@@ -135,6 +134,7 @@ function spawnDetachedWatcher(hiveId, tmuxPane) {
     const child = spawn(process.execPath, args, {
       detached: true,
       stdio: 'ignore',
+      cwd: PROJECT_DIR,
       env: { ...process.env, CLAUDE_PROJECT_DIR: PROJECT_DIR },
     });
 
@@ -158,8 +158,6 @@ function main() {
 
   const now = Date.now();
   const tmuxPane = readTmuxPane();
-  const hasTmux = !!tmuxPane;
-
   const deadWatchers = [];   // { hiveId, reason, respawned, newPid }
   const aliveWatchers = [];  // { hiveId }
 
@@ -197,15 +195,12 @@ function main() {
       newPid: null,
     };
 
-    // Auto-respawn if in tmux
-    if (hasTmux) {
-      const newPid = spawnDetachedWatcher(hiveId, tmuxPane);
-      if (newPid) {
-        entry.respawned = true;
-        entry.newPid = newPid;
-        // Clean up old progress file (new watcher will create its own)
-        try { fs.unlinkSync(filePath); } catch { /* best-effort */ }
-      }
+    const newPid = spawnDetachedWatcher(hiveId, tmuxPane);
+    if (newPid) {
+      entry.respawned = true;
+      entry.newPid = newPid;
+      // Clean up old progress file (new watcher will create its own)
+      try { fs.unlinkSync(filePath); } catch { /* best-effort */ }
     }
 
     deadWatchers.push(entry);
@@ -230,7 +225,9 @@ function main() {
   let context = `[SENTINEL RECOVERY] ${deadWatchers.length} dead watcher(s) found for active hives.\n${lines.join('\n')}`;
 
   if (respawnedCount > 0) {
-    context += `\n${respawnedCount} auto-respawned in tmux.`;
+    context += tmuxPane
+      ? `\n${respawnedCount} auto-respawned with tmux targeting.`
+      : `\n${respawnedCount} auto-respawned detached.`;
   }
 
   if (needsManual.length > 0) {

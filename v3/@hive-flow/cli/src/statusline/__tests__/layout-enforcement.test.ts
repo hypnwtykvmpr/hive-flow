@@ -61,6 +61,7 @@ interface Fixture {
   projectRoot: string;
   origNoColor?: string;
   origForce?: string;
+  origTerm?: string;
   origHome?: string;
 }
 
@@ -68,16 +69,19 @@ function makeFixture(): Fixture {
   const projectRoot = mkdtempSync(join(tmpdir(), 'hf-layout-'));
   const origNoColor = process.env.NO_COLOR;
   const origForce = process.env.FORCE_COLOR;
+  const origTerm = process.env.TERM;
   const origHome = process.env.HIVE_FLOW_HOME;
   // 256-color so palette codes appear; redirect HOME so the suite never writes
   // into the real user cache.
   process.env.FORCE_COLOR = '3';
+  process.env.TERM = 'xterm-256color';
   delete process.env.NO_COLOR;
   process.env.HIVE_FLOW_HOME = mkdtempSync(join(tmpdir(), 'hf-layout-home-'));
   return {
     projectRoot,
     ...(origNoColor !== undefined ? { origNoColor } : {}),
     ...(origForce !== undefined ? { origForce } : {}),
+    ...(origTerm !== undefined ? { origTerm } : {}),
     ...(origHome !== undefined ? { origHome } : {}),
   };
 }
@@ -99,6 +103,8 @@ function cleanupFixture(fix: Fixture): void {
   else delete process.env.NO_COLOR;
   if (fix.origForce !== undefined) process.env.FORCE_COLOR = fix.origForce;
   else delete process.env.FORCE_COLOR;
+  if (fix.origTerm !== undefined) process.env.TERM = fix.origTerm;
+  else delete process.env.TERM;
   if (fix.origHome !== undefined) process.env.HIVE_FLOW_HOME = fix.origHome;
   else delete process.env.HIVE_FLOW_HOME;
 }

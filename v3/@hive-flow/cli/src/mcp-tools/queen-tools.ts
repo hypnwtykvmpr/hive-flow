@@ -12,8 +12,6 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import { dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import type { MCPTool } from './types.js';
 import type { AgentProvider } from './agent-tools.js';
 import { sanitizePathId } from '@hive-flow/shared';
@@ -41,8 +39,6 @@ import {
   recomputeDelegationMetrics,
 } from './hive-store.js';
 import { getWorkflowHookDispatcher } from './workflow-executor.js';
-
-const MODULE_DIR = dirname(fileURLToPath(import.meta.url));
 
 // ---------------------------------------------------------------------------
 // Workflow hooks (fire-and-forget)
@@ -481,78 +477,6 @@ const missionAssignTool: MCPTool = {
           workerResults.push({ role: 'unknown', error: `Promise rejected: ${result.reason}` });
         }
       }
-    }
-
-    // -----------------------------------------------------------------------
-    // Spawn hive-watcher process for session persistence and recovery
-    // -----------------------------------------------------------------------
-    try {
-      const { spawn } = await import('node:child_process');
-      const { join } = await import('node:path');
-      const { existsSync, mkdirSync, writeFileSync } = await import('node:fs');
-
-      // Generate a unique session ID for this watcher instance
-      const sessionId = `session-${randomUUID()}`;
-      
-      const candidates = [
-        join(process.cwd(), 'scripts', 'hive-watcher.js'),
-        join(process.cwd(), 'node_modules', '@hive-flow', 'cli', 'scripts', 'hive-watcher.js'),
-        join(MODULE_DIR, '..', '..', 'scripts', 'hive-watcher.js'),
-      ];
-      const watcherScript = candidates.find(c => existsSync(c));
-      if (!watcherScript) throw new Error('hive-watcher.js not found');
-      
-      // Spawn detached Node.js process
-      const watcherProcess = spawn(
-        'node',
-        [
-          watcherScript,
-          '--hiveId', hive.hiveId,
-          '--sessionId', sessionId,
-          '--queenId', queenId
-        ],
-        {
-          detached: true,
-          stdio: 'ignore',
-          // Ensure the process survives parent exit
-          env: { ...process.env, HIVE_FLOW_WATCHER: '1' }
-        }
-      );
-      
-      // Unreference to allow parent to exit independently
-      watcherProcess.unref();
-
-      // Persist watcher config for session restart recovery
-      const configDir = join(process.cwd(), '.hive-flow', 'watchers');
-      mkdirSync(configDir, { recursive: true });
-      
-      const configPath = join(configDir, `${hive.hiveId}.json`);
-      const watcherConfig = {
-        hiveId: hive.hiveId,
-        sessionId,
-        queenId,
-        pid: watcherProcess.pid,
-        startedAt: new Date().toISOString(),
-        scriptPath: watcherScript,
-        command: ['node', watcherScript, '--hiveId', hive.hiveId, '--sessionId', sessionId, '--queenId', queenId]
-      };
-      
-      writeFileSync(configPath, JSON.stringify(watcherConfig, null, 2), 'utf8');
-
-      // Log watcher spawn in hive audit
-      await withHiveLock(hive.hiveId, () => {
-        const freshHive = loadHive(hive.hiveId);
-        if (freshHive) {
-          appendHiveAudit(freshHive, {
-            event: 'watcher-spawned',
-            detail: `Hive watcher spawned (PID: ${watcherProcess.pid})`,
-          });
-          saveHive(hive.hiveId, freshHive);
-        }
-      });
-    } catch (error) {
-      // Non-fatal: log but don't block mission assignment
-      console.warn(`Failed to spawn hive watcher: ${(error as Error).message}`);
     }
 
     return {

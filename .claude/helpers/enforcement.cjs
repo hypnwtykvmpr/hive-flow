@@ -706,6 +706,138 @@ function isCanonicalHookInvocation(command) {
 // Circumvention Detection
 // ============================================================================
 
+function stripShellQuotes(token) {
+  const trimmed = String(token || '').trim();
+  if (trimmed.length >= 2) {
+    const first = trimmed[0];
+    const last = trimmed[trimmed.length - 1];
+    if ((first === '"' && last === '"') || (first === "'" && last === "'")) {
+      return trimmed.slice(1, -1);
+    }
+  }
+  return trimmed;
+}
+
+function readShellToken(command, startIndex) {
+  let i = startIndex;
+  while (i < command.length && /\s/.test(command[i])) i++;
+  let token = '';
+  let quote = null;
+  while (i < command.length) {
+    const ch = command[i];
+    if (quote) {
+      token += ch;
+      if (ch === '\\' && quote === '"' && i + 1 < command.length) {
+        token += command[i + 1];
+        i += 2;
+        continue;
+      }
+      if (ch === quote) quote = null;
+      i++;
+      continue;
+    }
+    if (ch === '"' || ch === "'") {
+      quote = ch;
+      token += ch;
+      i++;
+      continue;
+    }
+    if (ch === '\\' && i + 1 < command.length) {
+      token += ch + command[i + 1];
+      i += 2;
+      continue;
+    }
+    if (/\s/.test(ch) || ch === '|' || ch === ';' || ch === '&' || ch === '<' || ch === '>') {
+      break;
+    }
+    token += ch;
+    i++;
+  }
+  return { token: stripShellQuotes(token), end: i };
+}
+
+function shellWords(command) {
+  const words = [];
+  let i = 0;
+  while (i < command.length) {
+    while (i < command.length && /\s/.test(command[i])) i++;
+    if (i >= command.length) break;
+    const ch = command[i];
+    if (ch === '|' || ch === ';' || ch === '&') {
+      words.push(ch);
+      i++;
+      continue;
+    }
+    const read = readShellToken(command, i);
+    if (read.token) words.push(read.token);
+    i = read.end > i ? read.end : i + 1;
+  }
+  return words;
+}
+
+function extractRedirectTargets(command) {
+  const targets = [];
+  let quote = null;
+  for (let i = 0; i < command.length; i++) {
+    const ch = command[i];
+    if (quote) {
+      if (ch === '\\' && quote === '"') {
+        i++;
+        continue;
+      }
+      if (ch === quote) quote = null;
+      continue;
+    }
+    if (ch === '"' || ch === "'") {
+      quote = ch;
+      continue;
+    }
+    if (ch === '<' && command[i + 1] === '<') {
+      const delimiter = readShellToken(command, i + 2);
+      i = delimiter.end;
+      continue;
+    }
+    if (ch !== '>' && !(ch === '&' && command[i + 1] === '>')) {
+      continue;
+    }
+
+    let targetStart = i + 1;
+    if (ch === '&') targetStart = i + 2;
+    if (command[targetStart] === '>') targetStart++;
+
+    const target = readShellToken(command, targetStart).token;
+    if (!target || target.startsWith('&')) {
+      i = targetStart;
+      continue;
+    }
+    targets.push(target);
+    i = targetStart;
+  }
+  return targets;
+}
+
+function extractTeeTargets(command) {
+  const targets = [];
+  const words = shellWords(command);
+  for (let i = 0; i < words.length; i++) {
+    if (words[i] !== 'tee') continue;
+    for (let j = i + 1; j < words.length; j++) {
+      const word = words[j];
+      if (word === '|' || word === ';' || word === '&') break;
+      if (!word || word.startsWith('-')) continue;
+      targets.push(word);
+    }
+  }
+  return targets;
+}
+
+function findProtectedRedirectTarget(command) {
+  for (const target of [...extractRedirectTargets(command), ...extractTeeTargets(command)]) {
+    if (isProtectedPath(target)) return target;
+  }
+  return null;
+}
+
 function detectCircumvention(toolName, toolInput, state) {
   // 1. Protected path writes via Write/Edit/MultiEdit/NotebookEdit
   if (['Write', 'Edit', 'MultiEdit', 'NotebookEdit', 'mcp__filesystem__write_file', 'mcp__filesystem__edit_file', 'mcp__filesystem__move_file', 'mcp__filesystem__delete_file'].includes(toolName)) {
@@ -757,26 +889,17 @@ function detectCircumvention(toolName, toolInput, state) {
     const command = toolInput?.command || '';
 
     // 2a. Bash redirects to protected paths (12.2: CRITICAL)
-    const redirectPatterns = [
-      /(?:echo|printf|cat|tee|cp|mv|dd|python|node|perl|ruby)\s+.*>\s*.*\.hive-flow\/enforcement\//i,
-      /(?:echo|printf|cat|tee|cp|mv|dd|python|node|perl|ruby)\s+.*>\s*.*\.claude\//i,
-      /sed\s+-i.*\.hive-flow\/enforcement\//i,
-      /sed\s+-i.*\.claude\//i,
-      />\s*.*\.hive-flow\/enforcement\//i,
-      />\s*.*\.claude\/helpers\//i,
-      />\s*.*\.claude\/settings\.json/i,
-    ];
-    for (const pattern of redirectPatterns) {
-      if (pattern.test(command)) {
-        const globalProtected = /\.hive-flow\/enforcement\/|\.claude\/helpers\/|\.claude\/settings\.json/i.test(command);
-        return {
-          circumvention: true,
-          reason: `CIRCUMVENTION: Bash redirect to protected path detected`,
-          severity: 'critical',
-          protectedEnforcementAttack: globalProtected,
-          systemic: globalProtected,
-        };
-      }
+    const protectedRedirectTarget = findProtectedRedirectTarget(command);
+    if (protectedRedirectTarget || /sed\s+-i.*(?:\.hive-flow\/enforcement\/|\.claude\/helpers\/|\.claude\/settings\.json)/i.test(command)) {
+      const target = protectedRedirectTarget || command;
+      const globalProtected = isGlobalProtectedPath(target) || /\.hive-flow\/enforcement\/|\.claude\/helpers\/|\.claude\/settings\.json/i.test(target);
+      return {
+        circumvention: true,
+        reason: `CIRCUMVENTION: Bash redirect to protected path detected`,
+        severity: 'critical',
+        protectedEnforcementAttack: globalProtected,
+        systemic: globalProtected,
+      };
     }
 
     // 2b. Git operations targeting protected paths (N3)

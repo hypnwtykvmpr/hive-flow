@@ -12,11 +12,11 @@
 //   'post-tool-use' — injects additionalContext when unnotified .done markers exist
 //
 // .done file format (JSON): { hiveId, completedAt, summary }
-// .notified marker: .hive-flow/data/hive-{id}.notified (empty sentinel file)
+// .acked marker: .hive-flow/data/hive-{id}.acked (shared atomic sentinel file)
 //
 // Safety:
 //   - Fail-open: all errors produce {} (never blocks)
-//   - Atomic writes for .notified markers (tmp + rename)
+//   - Atomic O_EXCL writes for .acked markers
 //   - Handles missing files, corrupt JSON, multiple hives
 //
 
@@ -24,6 +24,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { isAlreadyAcked, claimAcked } = require('../.claude/helpers/dedup-marker.cjs');
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -38,7 +39,7 @@ const DATA_DIR = path.join(PROJECT_DIR, '.hive-flow', 'data');
 
 /**
  * Scan DATA_DIR for hive-*.done files that do NOT have a corresponding
- * hive-*.notified marker. Returns array of { hiveId, filePath, data }.
+ * hive-*.acked marker. Returns array of { hiveId, filePath, data, sanitized }.
  */
 function findUnnotifiedDoneFiles() {
   const results = [];
@@ -56,10 +57,11 @@ function findUnnotifiedDoneFiles() {
 
     // Extract base: hive-{uuid}.done -> hive-{uuid}
     const base = entry.slice(0, -5); // strip '.done'
-    const notifiedPath = path.join(DATA_DIR, base + '.notified');
+    const sanitized = base.slice('hive-'.length);
+    if (!sanitized) continue;
 
-    // Already notified — skip
-    if (fs.existsSync(notifiedPath)) continue;
+    // Already notified by any delivery path — skip
+    if (isAlreadyAcked(DATA_DIR, sanitized)) continue;
 
     const filePath = path.join(DATA_DIR, entry);
     let data = null;
@@ -72,25 +74,10 @@ function findUnnotifiedDoneFiles() {
     }
 
     const hiveId = (data && data.hiveId) || base;
-    results.push({ hiveId, filePath, data });
+    results.push({ hiveId, filePath, data, sanitized });
   }
 
   return results;
-}
-
-/**
- * Write .notified marker atomically. Best-effort — failure does not block.
- */
-function writeNotifiedMarker(hiveBase) {
-  try {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-    const markerPath = path.join(DATA_DIR, hiveBase + '.notified');
-    const tmpPath = markerPath + '.tmp.' + process.pid;
-    fs.writeFileSync(tmpPath, new Date().toISOString() + '\n', 'utf8');
-    fs.renameSync(tmpPath, markerPath);
-  } catch {
-    // Best-effort — next run will retry
-  }
 }
 
 /**
@@ -118,22 +105,25 @@ function handlePostToolUse() {
     return;
   }
 
-  // Build notification context
-  const lines = unnotified.map(item => buildSummaryLine(item));
-  const hiveIds = unnotified.map(item => item.hiveId);
-
-  // Mark as notified (before output — atomic writes are best-effort)
-  for (const item of unnotified) {
-    const base = path.basename(item.filePath, '.done');
-    writeNotifiedMarker(base);
+  const claimed = unnotified.filter(item =>
+    claimAcked(DATA_DIR, item.sanitized, { source: 'hive-check-complete' }),
+  );
+  if (claimed.length === 0) {
+    process.stdout.write(JSON.stringify({}));
+    return;
   }
 
-  const context = unnotified.length === 1
+  // Build notification context
+  const lines = claimed.map(item => buildSummaryLine(item));
+  const hiveIds = claimed.map(item => item.hiveId);
+
+  const context = claimed.length === 1
     ? `[HIVE COMPLETE: ${hiveIds[0]}] ${lines[0]}. Run hive_poll_workers or queen_collect_results to review.`
-    : `[${unnotified.length} HIVES COMPLETE] ${hiveIds.join(', ')}.\n${lines.join('\n')}\nRun hive_poll_workers or queen_collect_results for each.`;
+    : `[${claimed.length} HIVES COMPLETE] ${hiveIds.join(', ')}.\n${lines.join('\n')}\nRun hive_poll_workers or queen_collect_results for each.`;
 
   process.stdout.write(JSON.stringify({
     hookSpecificOutput: {
+      hookEventName: 'PostToolUse',
       additionalContext: context,
     },
   }));

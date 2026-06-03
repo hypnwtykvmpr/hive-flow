@@ -7,6 +7,7 @@ import type { Command, CommandContext, CommandResult } from '../types.js';
 import { output } from '../output.js';
 import { confirm, select } from '../prompt.js';
 import { callMCPTool, MCPClientError } from '../mcp-client.js';
+import { loadSentinelConfig, SentinelConfigError } from '../sentinel/config.js';
 import * as fs from 'fs';
 import * as path from 'path';
 import { DEFAULT_MAX_AGENTS } from '@hive-flow/shared/core/config/defaults';
@@ -15,101 +16,34 @@ import { DEFAULT_MAX_AGENTS } from '@hive-flow/shared/core/config/defaults';
 const DEFAULT_PORT = 3000;
 const DEFAULT_TOPOLOGY = 'hierarchical-mesh';
 
-// Check if project is initialized
-function isInitialized(cwd: string): boolean {
-  const configPath = path.join(cwd, '.hive-flow', 'config.yaml');
-  return fs.existsSync(configPath);
-}
-
-// Simple YAML parser for config (basic implementation)
-function parseSimpleYaml(content: string): Record<string, unknown> {
-  const result: Record<string, unknown> = {};
-  const lines = content.split('\n');
-  const stack: Array<{ indent: number; obj: Record<string, unknown>; key?: string }> = [
-    { indent: -1, obj: result }
-  ];
-
-  for (const line of lines) {
-    // Skip comments and empty lines
-    if (line.trim().startsWith('#') || line.trim() === '') continue;
-
-    const match = line.match(/^(\s*)(\w+):\s*(.*)$/);
-    if (!match) continue;
-
-    const indent = match[1].length;
-    const key = match[2];
-    let value: unknown = match[3].trim();
-
-    // Parse value
-    if (value === '' || value === undefined) {
-      value = {};
-    } else if (value === 'true') {
-      value = true;
-    } else if (value === 'false') {
-      value = false;
-    } else if (value === 'null') {
-      value = null;
-    } else if (!isNaN(Number(value as string)) && value !== '') {
-      value = Number(value);
-    } else if (typeof value === 'string' && value.startsWith('"') && value.endsWith('"')) {
-      value = value.slice(1, -1);
-    }
-
-    // Find parent based on indentation
-    while (stack.length > 1 && stack[stack.length - 1].indent >= indent) {
-      stack.pop();
-    }
-
-    const parent = stack[stack.length - 1].obj;
-
-    if (typeof value === 'object' && value !== null) {
-      parent[key] = value;
-      stack.push({ indent, obj: value as Record<string, unknown>, key });
-    } else {
-      parent[key] = value;
-    }
-  }
-
-  return result;
-}
-
-// Load configuration
-function loadConfig(cwd: string): Record<string, unknown> | null {
-  const configPath = path.join(cwd, '.hive-flow', 'config.yaml');
-  if (!fs.existsSync(configPath)) return null;
-
-  try {
-    const content = fs.readFileSync(configPath, 'utf-8');
-    return parseSimpleYaml(content);
-  } catch {
-    return null;
-  }
-}
-
 // Main start action
 const startAction = async (ctx: CommandContext): Promise<CommandResult> => {
   const daemon = ctx.flags.daemon as boolean;
-  const port = (ctx.flags.port as number) || DEFAULT_PORT;
-  const topology = (ctx.flags.topology as string) || DEFAULT_TOPOLOGY;
-  const skipMcp = ctx.flags['skip-mcp'] as boolean;
+  const portFlag = ctx.flags.port as number | undefined;
+  const topologyFlag = ctx.flags.topology as string | undefined;
+  const skipMcp = (ctx.flags.skipMcp ?? ctx.flags['skip-mcp']) as boolean;
+  const explicitConfigPath = ctx.flags.config as string | undefined;
   const cwd = ctx.cwd;
 
-  // Check initialization
-  if (!isInitialized(cwd)) {
-    output.printError('Hive Flow is not initialized in this directory');
-    output.printInfo('Run "hive-flow init" first to initialize');
+  let config: Record<string, unknown>;
+  try {
+    config = loadSentinelConfig(cwd, explicitConfigPath).config;
+  } catch (error) {
+    if (error instanceof SentinelConfigError) {
+      output.printError(error.message);
+    } else {
+      output.printError(`Unable to load Hive Flow config: ${error instanceof Error ? error.message : String(error)}`);
+    }
     return { success: false, exitCode: 1 };
   }
 
-  // Load configuration
-  const config = loadConfig(cwd);
   const swarmConfig = (config?.swarm as Record<string, unknown>) || {};
   const mcpConfig = (config?.mcp as Record<string, unknown>) || {};
 
-  const finalTopology = topology || (swarmConfig.topology as string) || DEFAULT_TOPOLOGY;
+  const finalTopology = topologyFlag || (swarmConfig.topology as string) || DEFAULT_TOPOLOGY;
   const maxAgents = (swarmConfig.maxAgents as number) || DEFAULT_MAX_AGENTS;
   const autoStartMcp = (mcpConfig.autoStart as boolean) !== false && !skipMcp;
-  const mcpPort = port || (mcpConfig.serverPort as number) || DEFAULT_PORT;
+  const mcpPort = portFlag || (mcpConfig.serverPort as number) || DEFAULT_PORT;
 
   output.writeln();
   output.writeln(output.bold('Starting Hive Flow V3'));
@@ -407,7 +341,7 @@ const quickCommand: Command = {
   description: 'Quick start with default settings',
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     // Initialize if needed
-    if (!isInitialized(ctx.cwd)) {
+    if (!fs.existsSync(path.join(ctx.cwd, '.hive-flow', 'config.yaml'))) {
       output.printInfo('Project not initialized, running init first...');
       output.writeln();
 

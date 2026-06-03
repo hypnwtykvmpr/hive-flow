@@ -149,6 +149,24 @@ describe('FORBIDDEN_PATTERNS covers git push short flags', () => {
   });
 });
 
+describe('safe rm/chmod are not blanket-denied', () => {
+  it('allows a non-recursive single-file rm through the full guard stack', async () => {
+    const result = await evaluateHookInput(bashInput('rm stale-output.txt'));
+    expect(result.decision).toBe('allow');
+  });
+
+  it('allows ordinary executable-bit chmod through the full guard stack', async () => {
+    const result = await evaluateHookInput(bashInput('chmod +x scripts/run-local.sh'));
+    expect(result.decision).toBe('allow');
+  });
+
+  it('still blocks root and sudo destructive rm commands', async () => {
+    await expect(evaluateHookInput(bashInput('rm -rf /'))).resolves.toMatchObject({ decision: 'deny' });
+    await expect(evaluateHookInput(bashInput('rm -rf /*'))).resolves.toMatchObject({ decision: 'deny' });
+    await expect(evaluateHookInput(bashInput('sudo rm stale-output.txt'))).resolves.toMatchObject({ decision: 'deny' });
+  });
+});
+
 // ---------------------------------------------------------------------------
 // 3. checkForbiddenSafeguard — chained command detection
 // ---------------------------------------------------------------------------

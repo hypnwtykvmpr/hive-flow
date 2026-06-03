@@ -240,4 +240,50 @@ describe('enforcement security property contracts', () => {
     expect(enf.isObfuscated(`node -e "console.log('eval(')"`)).toBe(false);
     expect(enf.isObfuscated("bash -c 'eval $(echo echo hi)'")).toBe(true);
   });
+
+  it('only blocks Bash redirects when the redirect target is protected', () => {
+    const state = {
+      level: 0,
+      violations: 0,
+      restrictedGroups: [],
+      history: [],
+      integrityCompromised: false,
+    };
+
+    expect(enf.detectCircumvention(
+      'Bash',
+      { command: 'grep x .hive-flow/enforcement/audit.jsonl 2>/dev/null' },
+      state,
+    ).circumvention).toBe(false);
+
+    expect(enf.detectCircumvention(
+      'Bash',
+      { command: "cat > v3/docs/x.md <<'EOF'\n.claude/helpers/enforcement.cjs\nEOF" },
+      state,
+    ).circumvention).toBe(false);
+
+    expect(enf.detectCircumvention(
+      'Bash',
+      { command: 'echo x > .claude/settings.json.d/note.md' },
+      state,
+    ).circumvention).toBe(false);
+
+    expect(enf.detectCircumvention(
+      'Bash',
+      { command: 'echo x > .hive-flow/enforcement-old/state.json' },
+      state,
+    ).circumvention).toBe(false);
+
+    expect(enf.detectCircumvention(
+      'Bash',
+      { command: 'echo x > .claude/helpers/enforcement.cjs' },
+      state,
+    ).circumvention).toBe(true);
+
+    expect(enf.detectCircumvention(
+      'Bash',
+      { command: 'printf x | tee .hive-flow/enforcement/state.json' },
+      state,
+    ).circumvention).toBe(true);
+  });
 });

@@ -36,7 +36,7 @@ function installHookAndWatcher(root: string): void {
   mkdirSync(scriptsDir, { recursive: true });
   writeFileSync(join(helperDir, 'hive-enforcement.cjs'), readFileSync(sourceHook, 'utf8'), 'utf8');
   writeFileSync(
-    join(scriptsDir, 'hive-watcher.js'),
+    join(scriptsDir, 'hive-watcher.cjs'),
     `#!/usr/bin/env node
 const fs = require('fs');
 const path = require('path');
@@ -134,7 +134,7 @@ describe('hive enforcement watcher launch', () => {
       mkdirSync(dataDir, { recursive: true });
       writeFileSync(
         join(dataDir, `watcher-${hiveId}.json`),
-        JSON.stringify({ hiveId, updatedAt: new Date().toISOString() }),
+        JSON.stringify({ hiveId, watcherPid: process.pid, updatedAt: new Date().toISOString() }),
         'utf8',
       );
 

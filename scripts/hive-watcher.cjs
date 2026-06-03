@@ -9,15 +9,14 @@
  * Mechanisms:
  *   1. tmux send-keys — writes to advocate pty stdin when in tmux
  *   2. Pending notification drain — writes the next-prompt fallback queue
- *   3. MCP logging notification — emits via stdout pipe to MCP server
- *   4. Progress file — writes .hive-flow/data/watcher-{hiveId}.json every cycle
+ *   3. Progress file — writes .hive-flow/data/watcher-{hiveId}.json every cycle
  *
  * Stale detection: If no worker transitions (completed/failed count) change
  * across 3 consecutive cycles (each cycle = POLL_INTERVAL_MS), the hive is
  * considered stale. No hard timeout cap — purely progress-based.
  *
  * Usage:
- *   node scripts/hive-watcher.js <hiveId> [--tmux-pane <pane>] [--project-dir <dir>]
+ *   node scripts/hive-watcher.cjs <hiveId> [--tmux-pane <pane>] [--project-dir <dir>]
  *
  * @module scripts/hive-watcher
  */
@@ -27,6 +26,7 @@
 const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
+const { appendPendingWithAck } = require('../.claude/helpers/dedup-marker.cjs');
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -263,38 +263,6 @@ function tmuxSendKeys(tmuxBin, pane, message) {
 }
 
 // ---------------------------------------------------------------------------
-// MCP notification emitter
-// ---------------------------------------------------------------------------
-
-/**
- * Emit an MCP logging notification by writing to the MCP server's
- * notification channel file. The MCP server picks this up and forwards
- * to the client.
- *
- * File format: one JSON line per notification in .hive-flow/data/mcp-notifications.jsonl
- */
-function emitMcpNotification(paths, level, message, data) {
-  try {
-    fs.mkdirSync(paths.dataDir, { recursive: true });
-    const notifPath = path.join(paths.dataDir, 'mcp-notifications.jsonl');
-    const entry = {
-      jsonrpc: '2.0',
-      method: 'notifications/message',
-      params: {
-        level: level || 'info',
-        logger: 'hive-watcher',
-        data: {
-          message,
-          ...data,
-          timestamp: new Date().toISOString(),
-        },
-      },
-    };
-    fs.appendFileSync(notifPath, JSON.stringify(entry) + '\n', 'utf8');
-  } catch { /* best-effort */ }
-}
-
-// ---------------------------------------------------------------------------
 // Progress file writer
 // ---------------------------------------------------------------------------
 
@@ -354,8 +322,6 @@ function appendPendingCompletion(paths, hiveId, status, summary) {
     const sanitized = sanitizeHiveId(hiveId);
     if (!sanitized) return;
     fs.mkdirSync(paths.dataDir, { recursive: true });
-    const markerPath = path.join(paths.dataDir, `hive-${sanitized}.pending-notified`);
-    if (fs.existsSync(markerPath)) return;
 
     const line = JSON.stringify({
       kind: 'hive',
@@ -367,10 +333,7 @@ function appendPendingCompletion(paths, hiveId, status, summary) {
       idleCount: status.idleCount,
       terminatedCount: status.terminatedCount,
     });
-    fs.appendFileSync(path.join(paths.dataDir, 'pending-notifications.jsonl'), line + '\n');
-    const tmpPath = `${markerPath}.tmp.${process.pid}`;
-    fs.writeFileSync(tmpPath, new Date().toISOString() + '\n', 'utf8');
-    fs.renameSync(tmpPath, markerPath);
+    appendPendingWithAck(paths.dataDir, sanitized, line, { source: 'hive-watcher' });
   } catch { /* best-effort */ }
 }
 
@@ -477,7 +440,6 @@ async function main() {
         tmuxSendKeys(tmuxBin, tmuxPane,
           `[HIVE TIMEOUT: ${hiveId}] Watcher reached ${MAX_RUNTIME_MS / 3600000}h safety cap. Check hive_status manually.`);
       }
-      emitMcpNotification(paths, 'warning', `Hive watcher timeout: ${hiveId}`, { hiveId, reason: 'max-runtime-exceeded' });
       break;
     }
 
@@ -531,15 +493,6 @@ async function main() {
           `[HIVE COMPLETE: ${hiveId}] All workers finished. ${summary}. Run hive_poll_workers or queen_collect_results to review.`);
       }
 
-      // Emit MCP notification
-      emitMcpNotification(paths, 'info', `Hive complete: ${hiveId}`, {
-        hiveId,
-        completedCount: status.completedCount,
-        failedCount: status.failedCount,
-        idleCount: status.idleCount,
-        terminatedCount: status.terminatedCount,
-      });
-
       break;
     }
 
@@ -568,12 +521,6 @@ async function main() {
         tmuxSendKeys(tmuxBin, tmuxPane,
           `[HIVE STALE: ${hiveId}] No progress for ${unchangedCycles} cycles (${unchangedCycles * POLL_INTERVAL_MS / 1000}s). ${status.runningCount} workers still running. Check hive_poll_workers.`);
       }
-
-      emitMcpNotification(paths, 'warning', `Hive stale: ${hiveId}`, {
-        hiveId,
-        unchangedCycles,
-        runningCount: status.runningCount,
-      });
 
       // Reset stale counter — allow continued monitoring (don't exit on stale, just notify)
       unchangedCycles = 0;
