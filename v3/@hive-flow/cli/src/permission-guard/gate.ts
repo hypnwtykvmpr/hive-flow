@@ -165,6 +165,10 @@ function resolvePolicyRoot(hookInput: Partial<HookInput>, cwd: string): string {
   return resolve(cwd);
 }
 
+function casefoldPath(filePath: string): string {
+  return filePath.replace(/\\/g, '/').toLowerCase();
+}
+
 function resolvePathVar(pattern: string, cwd: string, projectRoot: string = cwd): string {
   return pattern
     .replace('${HOME}', HOME)
@@ -177,7 +181,7 @@ function isEnforcementHmacKeyPath(filePath: string, projectRoot: string): boolea
   try {
     const target = resolve(projectRoot, filePath);
     const hmacKeyPath = resolve(projectRoot, '.hive-flow', 'enforcement', '.hmac-key');
-    return target === hmacKeyPath;
+    return casefoldPath(target) === casefoldPath(hmacKeyPath);
   } catch {
     return false;
   }

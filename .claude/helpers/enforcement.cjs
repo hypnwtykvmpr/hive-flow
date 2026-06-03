@@ -620,18 +620,26 @@ function resolveFilePath(filePath) {
   }
 }
 
+function casefoldPath(filePath) {
+  return String(filePath || '').replace(/\\/g, '/').toLowerCase();
+}
+
 function projectRelativePath(filePath) {
   const resolved = resolveFilePath(filePath);
-  return resolved.startsWith(PROJECT_DIR)
+  const resolvedFolded = casefoldPath(resolved);
+  const projectFolded = casefoldPath(PROJECT_DIR);
+  return resolvedFolded === projectFolded
+    ? ''
+    : resolvedFolded.startsWith(projectFolded + '/')
     ? resolved.slice(PROJECT_DIR.length + 1)
     : filePath;
 }
 
 function getProtectedPathScope(filePath) {
-  const relativePath = projectRelativePath(filePath).replace(/\\/g, '/');
+  const relativePath = casefoldPath(projectRelativePath(filePath));
 
   for (const protectedPath of PROTECTED_PATHS) {
-    const normalizedProtectedPath = protectedPath.replace(/\\/g, '/');
+    const normalizedProtectedPath = casefoldPath(protectedPath);
     const protectedDir = normalizedProtectedPath.endsWith('/');
     const protectedPathWithoutSlash = normalizedProtectedPath.replace(/\/$/, '');
     const matchesProtectedPath = protectedDir
@@ -670,7 +678,7 @@ function isGlobalProtectedPath(filePath) {
 
 function isEnforcementHmacKeyPath(filePath) {
   if (!filePath) return false;
-  return resolveFilePath(filePath) === HMAC_KEY_FILE;
+  return casefoldPath(resolveFilePath(filePath)) === casefoldPath(HMAC_KEY_FILE);
 }
 
 function findEnforcementHmacKeyReadTarget(toolName, toolInput) {

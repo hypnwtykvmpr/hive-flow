@@ -126,6 +126,17 @@ describe('filesystem read tools sensitive-path guard', () => {
     expect(result.reason).toContain('HMAC key');
   });
 
+  it('blocks mixed-case reads of the enforcement HMAC key on case-insensitive filesystems', async () => {
+    const result = await evaluate(
+      makeHookInput('mcp__filesystem__read_text_file', {
+        path: `${CWD}/.HIVE-FLOW/ENFORCEMENT/.hmac-key`,
+      }),
+      ALLOW_ALL_CONFIG,
+    );
+    expect(result.decision).toBe('deny');
+    expect(result.reason).toContain('HMAC key');
+  });
+
   it('allows read_file for non-sensitive project files', async () => {
     const result = await evaluate(
       makeHookInput('mcp__filesystem__read_file', {
@@ -298,10 +309,34 @@ describe('mcp__filesystem__rename_file normalization', () => {
     expect(result.reason).toContain('Permission Guard');
   });
 
+  it('blocks renaming over mixed-case .claude/settings.json through MCP filesystem', async () => {
+    const result = await evaluate(
+      makeHookInput('mcp__filesystem__rename_file', {
+        source: `${CWD}/tmp/new-settings.json`,
+        destination: `${CWD}/.CLAUDE/settings.json`,
+      }),
+      SELF_PROTECTION_CONFIG,
+    );
+    expect(result.decision).toBe('deny');
+    expect(result.reason).toContain('Permission Guard');
+  });
+
   it('blocks renaming Permission Guard source through MCP filesystem', async () => {
     const result = await evaluate(
       makeHookInput('mcp__filesystem__rename_file', {
         source: `${CWD}/v3/@hive-flow/cli/src/permission-guard/gate.ts`,
+        destination: `${CWD}/tmp/gate.ts`,
+      }),
+      SELF_PROTECTION_CONFIG,
+    );
+    expect(result.decision).toBe('deny');
+    expect(result.reason).toContain('Permission Guard');
+  });
+
+  it('blocks renaming mixed-case Permission Guard source through MCP filesystem', async () => {
+    const result = await evaluate(
+      makeHookInput('mcp__filesystem__rename_file', {
+        source: `${CWD}/v3/@hive-flow/cli/src/PERMISSION-GUARD/gate.ts`,
         destination: `${CWD}/tmp/gate.ts`,
       }),
       SELF_PROTECTION_CONFIG,

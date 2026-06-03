@@ -112,11 +112,11 @@ function normalizePath(filePath: string): string {
     const abs = resolve(filePath);
     // Remove trailing separator unless it IS the root
     if (abs.length > 1 && abs.endsWith(sep)) {
-      return abs.slice(0, -1);
+      return abs.slice(0, -1).toLowerCase();
     }
-    return abs;
+    return abs.toLowerCase();
   } catch {
-    return filePath;
+    return filePath.toLowerCase();
   }
 }
 

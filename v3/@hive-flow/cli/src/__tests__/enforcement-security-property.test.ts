@@ -177,22 +177,28 @@ describe('enforcement security property contracts', () => {
       integrityCompromised: false,
     };
 
-    for (const toolName of [
-      'Read',
-      'mcp__filesystem__read_file',
-      'mcp__filesystem__read_text_file',
-      'mcp__filesystem__read_media_file',
+    for (const filePath of [
+      '.hive-flow/enforcement/.hmac-key',
+      '.HIVE-FLOW/enforcement/.hmac-key',
+      '.hive-flow/ENFORCEMENT/.hmac-key',
     ]) {
-      const result = enf.detectCircumvention(toolName, {
-        file_path: '.hive-flow/enforcement/.hmac-key',
-        path: '.hive-flow/enforcement/.hmac-key',
-      }, state);
+      for (const toolName of [
+        'Read',
+        'mcp__filesystem__read_file',
+        'mcp__filesystem__read_text_file',
+        'mcp__filesystem__read_media_file',
+      ]) {
+        const result = enf.detectCircumvention(toolName, {
+          file_path: filePath,
+          path: filePath,
+        }, state);
 
-      expect(result.circumvention).toBe(true);
+        expect(result.circumvention, `${toolName} ${filePath}`).toBe(true);
+      }
     }
 
     expect(enf.detectCircumvention('mcp__filesystem__read_multiple_files', {
-      paths: ['src/app.ts', '.hive-flow/enforcement/.hmac-key'],
+      paths: ['src/app.ts', '.HIVE-FLOW/enforcement/.hmac-key'],
     }, state).circumvention).toBe(true);
   });
 
@@ -204,18 +210,22 @@ describe('enforcement security property contracts', () => {
 
   it('matches protected paths on path boundaries rather than raw prefixes', () => {
     expect(enf.isProtectedPath(join(root, '.claude', 'settings.json'))).toBe(true);
+    expect(enf.isProtectedPath(join(root, '.CLAUDE', 'settings.json'))).toBe(true);
     expect(enf.isProtectedPath(join(root, '.claude', 'settings.json.bak'))).toBe(false);
     expect(enf.isProtectedPath(join(root, '.claude', 'settings.json.d', 'note.md'))).toBe(false);
 
     expect(enf.isProtectedPath(join(root, '.claude', 'helpers'))).toBe(true);
     expect(enf.isProtectedPath(join(root, '.claude', 'helpers', 'enforcement.cjs'))).toBe(true);
+    expect(enf.isProtectedPath(join(root, '.CLAUDE', 'HELPERS', 'enforcement.cjs'))).toBe(true);
     expect(enf.isProtectedPath(join(root, '.claude', 'helpers-old', 'enforcement.cjs'))).toBe(false);
 
     expect(enf.isProtectedPath(join(root, '.hive-flow', 'workflows'))).toBe(true);
     expect(enf.isProtectedPath(join(root, '.hive-flow', 'workflows', 'state.json'))).toBe(true);
+    expect(enf.isProtectedPath(join(root, '.HIVE-FLOW', 'WORKFLOWS', 'state.json'))).toBe(true);
     expect(enf.isProtectedPath(join(root, '.hive-flow', 'workflows-old', 'state.json'))).toBe(false);
 
     expect(enf.isProtectedPath(join(root, 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'gate.ts'))).toBe(true);
+    expect(enf.isProtectedPath(join(root, 'v3', '@hive-flow', 'cli', 'src', 'PERMISSION-GUARD', 'gate.ts'))).toBe(true);
     expect(enf.isProtectedPath(join(root, 'scripts', 'permission-guard-setup.mjs'))).toBe(true);
     expect(enf.isProtectedPath(join(process.env.HOME || '/tmp', '.hive-flow', 'permission-guard', 'config.json'))).toBe(true);
   });
