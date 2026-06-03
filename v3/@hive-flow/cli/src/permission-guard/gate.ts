@@ -154,8 +154,58 @@ function atomicWriteJson(filePath: string, data: unknown): void {
 // Path helpers
 // ---------------------------------------------------------------------------
 
-function resolvePathVar(pattern: string, cwd: string): string {
-  return pattern.replace('${HOME}', HOME).replace('${CWD}', cwd);
+function resolvePolicyRoot(hookInput: Partial<HookInput>, cwd: string): string {
+  void hookInput;
+  const explicit = process.env.HIVE_FLOW_PROJECT_ROOT
+    || process.env.CLAUDE_PROJECT_DIR
+    || '';
+  if (typeof explicit === 'string' && explicit.trim()) {
+    return resolve(explicit);
+  }
+  return resolve(cwd);
+}
+
+function resolvePathVar(pattern: string, cwd: string, projectRoot: string = cwd): string {
+  return pattern
+    .replace('${HOME}', HOME)
+    .replace('${PROJECT_ROOT}', projectRoot)
+    .replace('${CWD}', cwd);
+}
+
+function isEnforcementHmacKeyPath(filePath: string, projectRoot: string): boolean {
+  if (!filePath) return false;
+  try {
+    const target = resolve(projectRoot, filePath);
+    const hmacKeyPath = resolve(projectRoot, '.hive-flow', 'enforcement', '.hmac-key');
+    return target === hmacKeyPath;
+  } catch {
+    return false;
+  }
+}
+
+function findSensitiveReadPath(toolName: string, toolInput: Record<string, unknown>, projectRoot: string): string | null {
+  if (toolName === 'mcp__filesystem__read_multiple_files') {
+    const paths = Array.isArray(toolInput.paths) ? toolInput.paths : [];
+    for (const entry of paths) {
+      const filePath = typeof entry === 'string' ? entry : '';
+      if (isEnforcementHmacKeyPath(filePath, projectRoot)) return filePath;
+    }
+    return null;
+  }
+
+  const readPath = (toolInput.file_path as string)
+    || (toolInput.path as string)
+    || (toolInput.notebook_path as string)
+    || '';
+  const readTools = new Set([
+    'Read',
+    'NotebookRead',
+    'mcp__filesystem__read_file',
+    'mcp__filesystem__read_text_file',
+    'mcp__filesystem__read_media_file',
+  ]);
+  if (!readTools.has(toolName)) return null;
+  return isEnforcementHmacKeyPath(readPath, projectRoot) ? readPath : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -499,18 +549,18 @@ export function hasChainedDestructive(cmd: string): boolean {
 // Write/Edit path analysis
 // ---------------------------------------------------------------------------
 
-export function isPathAllowed(filePath: string, allowedPaths: string[], cwd: string): boolean {
+export function isPathAllowed(filePath: string, allowedPaths: string[], cwd: string, projectRoot: string = cwd): boolean {
   if (!filePath) return false;
 
   let target: string;
   try {
-    target = resolve(filePath);
+    target = resolve(projectRoot, filePath);
   } catch {
     return false;
   }
 
   for (const pattern of allowedPaths) {
-    const resolved = resolvePathVar(pattern, cwd);
+    const resolved = resolvePathVar(pattern, cwd, projectRoot);
     try {
       const allowedDir = resolve(resolved);
       // Check if target is within or equal to the allowed directory
@@ -619,12 +669,41 @@ function normalizeMcpTool(
     };
   }
 
+  // mcp__filesystem__rename_file → Bash (mv)
+  if (mcpToolName === 'mcp__filesystem__rename_file') {
+    const source = (toolInput.source as string) || '';
+    const dest = (toolInput.destination as string) || '';
+    return {
+      toolName: 'Bash',
+      toolInput: { command: `mv "${source}" "${dest}"` },
+    };
+  }
+
+  // mcp__filesystem__copy_file → Bash (cp)
+  if (mcpToolName === 'mcp__filesystem__copy_file') {
+    const source = (toolInput.source as string) || '';
+    const dest = (toolInput.destination as string) || '';
+    return {
+      toolName: 'Bash',
+      toolInput: { command: `cp "${source}" "${dest}"` },
+    };
+  }
+
   // mcp__filesystem__create_directory → Bash (mkdir -p)
   if (mcpToolName === 'mcp__filesystem__create_directory') {
     const dirPath = (toolInput.path as string) || '';
     return {
       toolName: 'Bash',
       toolInput: { command: `mkdir -p "${dirPath}"` },
+    };
+  }
+
+  // mcp__filesystem__delete_file → Bash (rm)
+  if (mcpToolName === 'mcp__filesystem__delete_file') {
+    const filePath = (toolInput.path as string) || (toolInput.file_path as string) || '';
+    return {
+      toolName: 'Bash',
+      toolInput: { command: `rm "${filePath}"` },
     };
   }
 
@@ -692,12 +771,13 @@ export async function evaluate(hookInput: HookInput, config: Partial<PermissionC
   let toolName = hookInput.tool_name || '';
   const toolInput = hookInput.tool_input || {};
   const cwd = hookInput.cwd || process.cwd();
+  const policyRoot = resolvePolicyRoot(hookInput, cwd);
 
   // -- MCP tool normalization --
   // Normalize MCP tool calls to their native Claude Code equivalents so they
   // flow through the same permission pipeline (self-protection, path checks, etc.)
   if (toolName.startsWith('mcp__')) {
-    const normalized = normalizeMcpTool(toolName, toolInput, cwd);
+    const normalized = normalizeMcpTool(toolName, toolInput, policyRoot);
     if (normalized) {
       toolName = normalized.toolName;
       hookInput.tool_name = normalized.toolName;
@@ -717,12 +797,19 @@ export async function evaluate(hookInput: HookInput, config: Partial<PermissionC
 
   // -- Self-protection check (highest priority after normalization) --
   // Must run before any allow-list checks to prevent bypass via always_allow_tools
-  if (toolName === 'Write' || toolName === 'Edit' || toolName === 'MultiEdit' || toolName === 'Bash') {
-    const selfProtection = evaluateSelfProtection(toolName, toolInput, cwd);
+  if (toolName === 'Write' || toolName === 'Edit' || toolName === 'MultiEdit' || toolName === 'NotebookEdit' || toolName === 'Bash') {
+    const selfProtection = evaluateSelfProtection(toolName, toolInput, policyRoot);
     if (selfProtection && selfProtection.blocked) {
       logDecision(config, toolName, inputSummary, 'deny', 'self-protection', selfProtection.reason);
       return { decision: 'deny', reason: selfProtection.reason };
     }
+  }
+
+  const sensitiveReadPath = findSensitiveReadPath(toolName, toolInput, policyRoot);
+  if (sensitiveReadPath) {
+    const reason = 'DENIED: The enforcement HMAC key is secret state and cannot be read by agents.';
+    logDecision(config, toolName, sensitiveReadPath, 'deny', 'sensitive-read', reason);
+    return { decision: 'deny', reason };
   }
 
   // -- Always-allow tools (non-Bash) --
@@ -756,7 +843,7 @@ export async function evaluate(hookInput: HookInput, config: Partial<PermissionC
         const juryCtx = {
           toolName: hookInput.tool_name,
           toolInput: Object.fromEntries(Object.entries(hookInput.tool_input).map(([k, v]) => [k, String(v)])),
-          cwd: hookInput.cwd || process.cwd(),
+          cwd: policyRoot,
           filePath: String(hookInput.tool_input.file_path || hookInput.tool_input.filePath || ''),
         };
         const juryResult = evaluateInlineJury(juryCtx);
@@ -782,7 +869,7 @@ export async function evaluate(hookInput: HookInput, config: Partial<PermissionC
       const juryCtx = {
         toolName: hookInput.tool_name,
         toolInput: Object.fromEntries(Object.entries(hookInput.tool_input).map(([k, v]) => [k, String(v)])),
-        cwd: hookInput.cwd || process.cwd(),
+        cwd: policyRoot,
         filePath: String(hookInput.tool_input.file_path || hookInput.tool_input.filePath || ''),
       };
       const juryResult = evaluateInlineJury(juryCtx);
@@ -798,8 +885,11 @@ export async function evaluate(hookInput: HookInput, config: Partial<PermissionC
   // -- Write/Edit path check --
   if (toolName === 'Write' || toolName === 'Edit') {
     const filePath = (toolInput.file_path as string) || '';
-    const allowedPaths = config.allowed_write_paths || ['${CWD}', '${HOME}/.claude/'];
-    if (isPathAllowed(filePath, allowedPaths, cwd)) {
+    const configuredAllowedPaths = config.allowed_write_paths || [];
+    const allowedPaths = configuredAllowedPaths.length > 0
+      ? configuredAllowedPaths
+      : ['${PROJECT_ROOT}', '${CWD}', '${HOME}/.claude/'];
+    if (isPathAllowed(filePath, allowedPaths, cwd, policyRoot)) {
       logDecision(config, toolName, inputSummary, 'allow', 'deterministic', 'within allowed write path');
       return { decision: 'allow' };
     } else if (config.allow_paths_outside_working_directory) {
@@ -807,7 +897,7 @@ export async function evaluate(hookInput: HookInput, config: Partial<PermissionC
       const juryCtx = {
         toolName: hookInput.tool_name,
         toolInput: Object.fromEntries(Object.entries(hookInput.tool_input).map(([k, v]) => [k, String(v)])),
-        cwd: hookInput.cwd || process.cwd(),
+        cwd: policyRoot,
         filePath,
       };
       const juryResult = evaluateInlineJury(juryCtx);
@@ -894,7 +984,7 @@ export async function evaluate(hookInput: HookInput, config: Partial<PermissionC
       const juryCtx = {
         toolName: hookInput.tool_name,
         toolInput: Object.fromEntries(Object.entries(hookInput.tool_input).map(([k, v]) => [k, String(v)])),
-        cwd: hookInput.cwd || process.cwd(),
+        cwd: policyRoot,
         filePath: String(hookInput.tool_input.file_path || hookInput.tool_input.filePath || ''),
       };
       const juryResult = evaluateInlineJury(juryCtx);
@@ -912,7 +1002,7 @@ export async function evaluate(hookInput: HookInput, config: Partial<PermissionC
     const juryCtx = {
       toolName: hookInput.tool_name,
       toolInput: Object.fromEntries(Object.entries(hookInput.tool_input).map(([k, v]) => [k, String(v)])),
-      cwd: hookInput.cwd || process.cwd(),
+      cwd: policyRoot,
       filePath: String(hookInput.tool_input.file_path || hookInput.tool_input.filePath || ''),
     };
     const juryResult = evaluateInlineJury(juryCtx);

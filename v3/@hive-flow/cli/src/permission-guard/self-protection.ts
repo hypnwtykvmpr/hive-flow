@@ -208,6 +208,24 @@ const FILE_MODIFYING_COMMANDS: Array<{
   name: string;
   extractTargets: (match: RegExpMatchArray, fullCmd: string) => string[];
 }> = [
+  // rm — deleting protected files/directories disables or corrupts the guard.
+  {
+    pattern: /\brm\s+(?:-[a-zA-Z]+\s+)*(.+)/,
+    name: 'rm',
+    extractTargets: (_m, fullCmd) => {
+      const args = extractArguments(fullCmd, 'rm');
+      return args.length >= 1 ? args : [];
+    },
+  },
+  // mkdir — creating inside protected helper/config directories can plant code/config.
+  {
+    pattern: /\bmkdir\s+(?:-[a-zA-Z]+\s+)*(.+)/,
+    name: 'mkdir',
+    extractTargets: (_m, fullCmd) => {
+      const args = extractArguments(fullCmd, 'mkdir');
+      return args.length >= 1 ? args : [];
+    },
+  },
   // mv — check ALL arguments (source AND destination): `mv .claude/settings.json /tmp/` must be caught
   // even if /tmp/ is not a protected path, because the SOURCE is protected.
   {
@@ -652,9 +670,12 @@ export function evaluateSelfProtection(
     return null;
   }
 
-  // Level 1: Write/Edit/MultiEdit path check
-  if (toolName === 'Write' || toolName === 'Edit' || toolName === 'MultiEdit') {
-    const filePath = (toolInput.file_path as string) || '';
+  // Level 1: Write/Edit/MultiEdit/NotebookEdit path check
+  if (toolName === 'Write' || toolName === 'Edit' || toolName === 'MultiEdit' || toolName === 'NotebookEdit') {
+    const filePath = (toolInput.file_path as string)
+      || (toolInput.notebook_path as string)
+      || (toolInput.path as string)
+      || '';
     if (!filePath) return null;
 
     const protection = isProtectedPath(filePath, cwd);

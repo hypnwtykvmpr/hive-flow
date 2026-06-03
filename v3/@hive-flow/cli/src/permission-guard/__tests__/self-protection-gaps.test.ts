@@ -168,28 +168,17 @@ describe('chmod on protected paths', () => {
       { command: `chmod 000 ${CWD}/.claude/settings.json` },
       CWD,
     );
-    // chmod removes access, effectively breaking the guard — must be blocked
-    // NOTE: chmod is not in FILE_MODIFYING_COMMANDS but may be caught by
-    // chain analysis if the command path includes it; test the direct API.
-    // If the implementation does not yet block chmod via self-protection,
-    // we document that here — the test still exercises the code path.
-    // Acceptable outcomes: blocked OR null (gap exists)
-    if (result !== null) {
-      expect(result.blocked).toBe(true);
-    }
-    // If result is null, the chmod gap is documented by this test existing
+    expect(result).not.toBeNull();
+    expect(result!.blocked).toBe(true);
   });
 
   it('blocks chmod on hook-handler.cjs via checkBashSelfProtection when matched', () => {
-    // This tests the lower-level function to see if chmod is caught
     const result = checkBashSelfProtection(
       `chmod 000 ${CWD}/.claude/helpers/hook-handler.cjs`,
       CWD,
     );
-    // Document result: null means this is a known gap; non-null means it's caught
-    if (result !== null) {
-      expect(result.blocked).toBe(true);
-    }
+    expect(result).not.toBeNull();
+    expect(result!.blocked).toBe(true);
   });
 });
 
@@ -204,10 +193,49 @@ describe('chown on protected paths', () => {
       { command: `chown root ${CWD}/.claude/helpers/hook-handler.cjs` },
       CWD,
     );
-    // Same as chmod — document whether this gap exists
-    if (result !== null) {
-      expect(result.blocked).toBe(true);
-    }
+    expect(result).not.toBeNull();
+    expect(result!.blocked).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 6b. rm and mkdir must not bypass self-protection
+// ---------------------------------------------------------------------------
+
+describe('rm and mkdir on protected paths', () => {
+  it('blocks rm targeting Permission Guard source', () => {
+    const result = checkBashSelfProtection(
+      `rm ${CWD}/v3/@hive-flow/cli/src/permission-guard/gate.ts`,
+      CWD,
+    );
+    expect(result).not.toBeNull();
+    expect(result!.blocked).toBe(true);
+  });
+
+  it('blocks rm -rf targeting the helper directory', () => {
+    const result = checkBashSelfProtection(
+      `rm -rf ${CWD}/.claude/helpers`,
+      CWD,
+    );
+    expect(result).not.toBeNull();
+    expect(result!.blocked).toBe(true);
+  });
+
+  it('blocks mkdir inside the helper directory', () => {
+    const result = checkBashSelfProtection(
+      `mkdir -p ${CWD}/.claude/helpers/generated`,
+      CWD,
+    );
+    expect(result).not.toBeNull();
+    expect(result!.blocked).toBe(true);
+  });
+
+  it('allows mkdir under a non-protected project directory', () => {
+    const result = checkBashSelfProtection(
+      `mkdir -p ${CWD}/src/generated`,
+      CWD,
+    );
+    expect(result).toBeNull();
   });
 });
 
@@ -325,11 +353,8 @@ describe('NotebookEdit to protected paths via gate.evaluate', () => {
       },
       SELF_PROTECTION_ONLY_CONFIG,
     );
-    // NotebookEdit is NOT a tool that evaluateSelfProtection checks by name
-    // (it checks Write, Edit, MultiEdit, Bash). So the result will likely
-    // be an inline-jury decision. Document the current behaviour.
-    // If the guard has been extended to cover NotebookEdit, expect deny.
-    expect(['allow', 'deny']).toContain(result.decision);
+    expect(result.decision).toBe('deny');
+    expect(result.reason).toContain('Permission Guard');
   });
 
   it('blocks Write targeting a notebook path that is a protected file', async () => {

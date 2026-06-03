@@ -57,7 +57,7 @@ const LEVELS = {
 // Tool restriction groups
 const TOOL_GROUPS = {
   exec: ['Bash'],
-  write: ['Write', 'Edit', 'MultiEdit', 'NotebookEdit', 'mcp__filesystem__write_file', 'mcp__filesystem__edit_file', 'mcp__filesystem__move_file', 'mcp__filesystem__create_directory', 'mcp__filesystem__delete_file'], // 12.6: NotebookEdit added, create_directory + delete_file added
+  write: ['Write', 'Edit', 'MultiEdit', 'NotebookEdit', 'mcp__filesystem__write_file', 'mcp__filesystem__edit_file', 'mcp__filesystem__move_file', 'mcp__filesystem__rename_file', 'mcp__filesystem__copy_file', 'mcp__filesystem__create_directory', 'mcp__filesystem__delete_file'], // 12.6: NotebookEdit added, create_directory + delete_file added
   fetch: ['WebFetch'],
 };
 
@@ -78,8 +78,11 @@ const PROTECTED_PATHS = [
 
 // Protected path patterns for compiled output (12.10)
 const PROTECTED_PATH_PATTERNS = [
+  /v3\/@hive-flow\/cli\/src\/permission-guard\//,
   /v3\/@hive-flow\/cli\/dist\/src\/permission-guard\//,
   /v3\/@hive-flow\/cli\/dist\/src\/mcp-tools\//,
+  /(?:^|\/)\.hive-flow\/permission-guard\//,
+  /(?:^|\/)scripts\/permission-guard-setup\.mjs$/,
 ];
 
 // ============================================================================
@@ -185,6 +188,7 @@ function getScopedStateFile(scopeType, scopeId) {
   if (!sanitized) return STATE_FILE;
   if (scopeType === 'agent') return path.join(ENFORCEMENT_DIR, 'agents', sanitized, 'state.json');
   if (scopeType === 'hive') return path.join(ENFORCEMENT_DIR, 'hives', sanitized, 'state.json');
+  if (scopeType === 'session') return path.join(ENFORCEMENT_DIR, 'sessions', sanitized, 'state.json');
   if (scopeType === 'project') return path.join(ENFORCEMENT_DIR, 'projects', sanitized, 'state.json');
   return STATE_FILE;
 }
@@ -664,6 +668,27 @@ function isGlobalProtectedPath(filePath) {
   return getProtectedPathScope(filePath) === 'global';
 }
 
+function isEnforcementHmacKeyPath(filePath) {
+  if (!filePath) return false;
+  return resolveFilePath(filePath) === HMAC_KEY_FILE;
+}
+
+function findEnforcementHmacKeyReadTarget(toolName, toolInput) {
+  if (toolName === 'mcp__filesystem__read_multiple_files') {
+    const paths = Array.isArray(toolInput?.paths) ? toolInput.paths : [];
+    for (const entry of paths) {
+      if (typeof entry === 'string' && isEnforcementHmacKeyPath(entry)) return entry;
+    }
+    return null;
+  }
+
+  if (!['Read', 'NotebookRead', 'mcp__filesystem__read_file', 'mcp__filesystem__read_text_file', 'mcp__filesystem__read_media_file'].includes(toolName)) {
+    return null;
+  }
+  const filePath = toolInput?.file_path || toolInput?.notebook_path || toolInput?.path || '';
+  return isEnforcementHmacKeyPath(filePath) ? filePath : null;
+}
+
 let _canonicalHookScripts = null;
 function getCanonicalHookScripts() {
   if (_canonicalHookScripts) return _canonicalHookScripts;
@@ -840,8 +865,8 @@ function findProtectedRedirectTarget(command) {
 
 function detectCircumvention(toolName, toolInput, state) {
   // 1. Protected path writes via Write/Edit/MultiEdit/NotebookEdit
-  if (['Write', 'Edit', 'MultiEdit', 'NotebookEdit', 'mcp__filesystem__write_file', 'mcp__filesystem__edit_file', 'mcp__filesystem__move_file', 'mcp__filesystem__delete_file'].includes(toolName)) {
-    const filePath = toolInput?.file_path || toolInput?.path || toolInput?.destination || '';
+  if (['Write', 'Edit', 'MultiEdit', 'NotebookEdit', 'mcp__filesystem__write_file', 'mcp__filesystem__edit_file', 'mcp__filesystem__move_file', 'mcp__filesystem__rename_file', 'mcp__filesystem__copy_file', 'mcp__filesystem__delete_file'].includes(toolName)) {
+    const filePath = toolInput?.file_path || toolInput?.notebook_path || toolInput?.path || toolInput?.destination || '';
     if (filePath && isProtectedPath(filePath)) {
       const globalProtected = isGlobalProtectedPath(filePath);
       return {
@@ -854,14 +879,25 @@ function detectCircumvention(toolName, toolInput, state) {
     }
   }
 
-  // MCP filesystem move_file — also check source (prevents exfiltration/destruction of protected files)
-  if (toolName === 'mcp__filesystem__move_file') {
+  const hmacKeyReadTarget = findEnforcementHmacKeyReadTarget(toolName, toolInput);
+  if (hmacKeyReadTarget) {
+    return {
+      circumvention: true,
+      reason: `CIRCUMVENTION: Attempted to read enforcement HMAC key: ${hmacKeyReadTarget}`,
+      severity: 'critical',
+      protectedEnforcementAttack: true,
+      systemic: true,
+    };
+  }
+
+  // MCP filesystem move/rename/copy — also check source (prevents exfiltration/destruction of protected files)
+  if (['mcp__filesystem__move_file', 'mcp__filesystem__rename_file', 'mcp__filesystem__copy_file'].includes(toolName)) {
     const sourcePath = toolInput?.source || '';
     if (sourcePath && isProtectedPath(sourcePath)) {
       const globalProtected = isGlobalProtectedPath(sourcePath);
       return {
         circumvention: true,
-        reason: `CIRCUMVENTION: Attempted to move file FROM protected path via MCP filesystem: ${sourcePath}`,
+        reason: `CIRCUMVENTION: Attempted to mutate file FROM protected path via MCP filesystem: ${sourcePath}`,
         severity: 'critical',
         protectedEnforcementAttack: globalProtected,
         systemic: globalProtected,
@@ -914,8 +950,8 @@ function detectCircumvention(toolName, toolInput, state) {
     }
 
     // 2c. Environment variable manipulation (N13, N14)
-    if (/export\s+(CLAUDE_PROJECT_DIR|CF_WF_7D|HIVE_FLOW_ENFORCEMENT_DISABLED|HIVE_FLOW_PIPELINE_OVERRIDE)\s*=/i.test(command) ||
-        /\b(CLAUDE_PROJECT_DIR|CF_WF_7D|HIVE_FLOW_ENFORCEMENT_DISABLED|HIVE_FLOW_PIPELINE_OVERRIDE)\s*=\s*\S/i.test(command)) {
+    if (/export\s+(CLAUDE_PROJECT_DIR|HIVE_FLOW_PROJECT_ROOT|CF_WF_7D|HIVE_FLOW_ENFORCEMENT_DISABLED|HIVE_FLOW_PIPELINE_OVERRIDE)\s*=/i.test(command) ||
+        /\b(CLAUDE_PROJECT_DIR|HIVE_FLOW_PROJECT_ROOT|CF_WF_7D|HIVE_FLOW_ENFORCEMENT_DISABLED|HIVE_FLOW_PIPELINE_OVERRIDE)\s*=\s*\S/i.test(command)) {
       return {
         circumvention: true,
         reason: `CIRCUMVENTION: Environment variable manipulation targeting enforcement`,
@@ -969,7 +1005,7 @@ function detectCircumvention(toolName, toolInput, state) {
     // 2d3. enforcement-reset circumvention
     // Agents must not invoke enforcement reset via Bash — only the UserPromptSubmit
     // hook (human-triggered) is allowed to reset enforcement.
-    if (/enforcement-reset|reset-enforcement|enforcement\.cjs\s+--reset/i.test(command)) {
+    if (/enforcement-reset|reset-enforcement|enforcement\.cjs\s+--reset/i.test(command) && !isResetCheckHookInvocation(command)) {
       return {
         circumvention: true,
         reason: `CIRCUMVENTION: Attempted enforcement reset via Bash — resets are human-only via /enforcement-reset`,
@@ -1004,6 +1040,14 @@ function detectCircumvention(toolName, toolInput, state) {
   }
 
   return { circumvention: false };
+}
+
+function isResetCheckHookInvocation(command) {
+  if (!command || /[;&|<>`]/.test(command)) return false;
+  const normalized = String(command).replace(/\s+/g, ' ').trim();
+  const hookHandlerReset = /(?:^|\s)node\s+(?:"[^"]*\.claude\/helpers\/hook-handler\.cjs"|[^ \t\n|&;`]*\.claude\/helpers\/hook-handler\.cjs)\s+enforcement-reset-check(?:\s|$)/i;
+  if (!hookHandlerReset.test(normalized)) return false;
+  return !/enforcement\.cjs\s+--reset/i.test(normalized);
 }
 
 /**
@@ -1132,7 +1176,7 @@ function getRestrictionGroups(toolName) {
   if (['Write', 'Edit', 'MultiEdit', 'NotebookEdit'].includes(toolName)) {
     return ['write', 'exec'];
   }
-  if (['mcp__filesystem__write_file', 'mcp__filesystem__edit_file', 'mcp__filesystem__move_file', 'mcp__filesystem__create_directory', 'mcp__filesystem__delete_file'].includes(toolName)) {
+  if (['mcp__filesystem__write_file', 'mcp__filesystem__edit_file', 'mcp__filesystem__move_file', 'mcp__filesystem__rename_file', 'mcp__filesystem__copy_file', 'mcp__filesystem__create_directory', 'mcp__filesystem__delete_file'].includes(toolName)) {
     return ['write', 'exec'];
   }
   if (['WebFetch'].includes(toolName)) {
@@ -1433,9 +1477,21 @@ function resetStateScope(scopeType, scopeId) {
 }
 
 function resetEnforcement(scope = {}) {
-  if (scope.agentId) return resetStateScope('agent', scope.agentId);
-  if (scope.hiveId) return resetStateScope('hive', scope.hiveId);
-  if (scope.project === true || scope.projectId) return resetStateScope('project', scope.projectId || getProjectScopeId());
+  const requestedScope = scope.scope || (
+    scope.agentId ? 'agent' :
+    scope.hiveId ? 'hive' :
+    scope.sessionId ? 'session' :
+    (scope.project === true || scope.projectId) ? 'project' :
+    'all'
+  );
+  if (requestedScope === 'global') return resetStateScope('global', null);
+  if (requestedScope === 'agent' && scope.agentId) {
+    clearAgentRole(scope.agentId);
+    return resetStateScope('agent', scope.agentId);
+  }
+  if (requestedScope === 'hive' && scope.hiveId) return resetStateScope('hive', scope.hiveId);
+  if (requestedScope === 'session' && scope.sessionId) return resetStateScope('session', scope.sessionId);
+  if (requestedScope === 'project' || scope.project === true || scope.projectId) return resetStateScope('project', scope.projectId || getProjectScopeId());
 
   ensureDir();
   // Clear pipeline state
@@ -1461,7 +1517,7 @@ function resetEnforcement(scope = {}) {
     }
   } catch {}
   // Clear per-agent state files
-  for (const scopeDirName of ['agents', 'hives', 'projects']) {
+  for (const scopeDirName of ['agents', 'hives', 'projects', 'sessions']) {
     try {
       const scopeDir = path.join(ENFORCEMENT_DIR, scopeDirName);
       if (fs.existsSync(scopeDir)) {
@@ -1470,6 +1526,10 @@ function resetEnforcement(scope = {}) {
           try {
             const scopedStateFile = path.join(scopeDir, scopeId, 'state.json');
             if (fs.existsSync(scopedStateFile)) fs.unlinkSync(scopedStateFile);
+            if (scopeDirName === 'agents') {
+              const roleFile = path.join(scopeDir, scopeId, 'role.json');
+              if (fs.existsSync(roleFile)) fs.unlinkSync(roleFile);
+            }
           } catch {}
         }
       }
@@ -1494,12 +1554,29 @@ function resetEnforcement(scope = {}) {
 }
 
 function parseResetScope(prompt) {
+  const scopeMatch = /--scope(?:=|\s+)(all|global|agent|hive|session|project)\b/i.exec(prompt);
+  const requestedScope = scopeMatch ? scopeMatch[1].toLowerCase() : null;
   const agentMatch = /--agent(?:=|\s+)([A-Za-z0-9_.:-]+)/i.exec(prompt);
-  if (agentMatch) return { agentId: agentMatch[1] };
+  if (agentMatch) return { scope: requestedScope || 'agent', agentId: agentMatch[1] };
   const hiveMatch = /--hive(?:=|\s+)([A-Za-z0-9_.:-]+)/i.exec(prompt);
-  if (hiveMatch) return { hiveId: hiveMatch[1] };
-  if (/\s--project\b/i.test(prompt)) return { project: true };
-  return {};
+  if (hiveMatch) return { scope: requestedScope || 'hive', hiveId: hiveMatch[1] };
+  const sessionMatch = /--session(?:=|\s+)([A-Za-z0-9_.:-]+)/i.exec(prompt);
+  if (sessionMatch) return { scope: requestedScope || 'session', sessionId: sessionMatch[1] };
+  if (/\s--project\b/i.test(prompt)) return { scope: requestedScope || 'project', project: true };
+  if (requestedScope) return { scope: requestedScope };
+  return { scope: 'all' };
+}
+
+function clearAgentRole(agentId) {
+  const sanitized = sanitizeScopeId(agentId);
+  if (!sanitized) return false;
+  try {
+    const roleFile = path.join(ENFORCEMENT_DIR, 'agents', sanitized, 'role.json');
+    if (fs.existsSync(roleFile)) fs.unlinkSync(roleFile);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -1561,13 +1638,19 @@ function processResetCheck(input) {
     // Signature valid — execute reset
     const resetScope = parseResetScope(prompt);
     resetEnforcement(resetScope);
-    const scopeLabel = resetScope.agentId
+    const scopeLabel = resetScope.scope === 'all'
+      ? 'all'
+      : resetScope.scope === 'global'
+        ? 'global'
+        : resetScope.agentId
       ? `agent/${resetScope.agentId}`
       : resetScope.hiveId
         ? `hive/${resetScope.hiveId}`
+        : resetScope.sessionId
+          ? `session/${resetScope.sessionId}`
         : resetScope.project
           ? `project/${getProjectScopeId()}`
-          : 'global';
+          : resetScope.scope || 'all';
     return {
       hookSpecificOutput: {
         hookEventName: 'UserPromptSubmit',
@@ -1825,6 +1908,7 @@ module.exports = {
   updateActivityTracking,
   processPreToolUse,
   resetEnforcement,
+  parseResetScope,
   processResetCheck,
   getEnforcementStatus,
   setVerificationGate,
@@ -1841,6 +1925,7 @@ module.exports = {
   isGlobalProtectedPath,
   isDestructiveRm,
   isObfuscated,
+  isResetCheckHookInvocation,
   isGitCommitCommand,
   makeHookOutput,
   makeAllow,
