@@ -211,6 +211,42 @@ describe('checkBashSelfProtection', () => {
     expect(result!.blocked).toBe(true);
   });
 
+  it('blocks node literal writes to protected paths', () => {
+    const result = checkBashSelfProtection(
+      `node --eval "fs.writeFileSync('${CWD}/.claude/settings.json', '{}')"`,
+      CWD,
+    );
+    expect(result).not.toBeNull();
+    expect(result!.blocked).toBe(true);
+    expect(result!.reason).toContain('node filesystem');
+  });
+
+  it('allows node literal writes to normal project paths', () => {
+    const result = checkBashSelfProtection(
+      `node --eval "fs.writeFileSync('src/generated.ts', 'ok')"`,
+      CWD,
+    );
+    expect(result).toBeNull();
+  });
+
+  it('blocks python literal writes to protected paths', () => {
+    const result = checkBashSelfProtection(
+      `python3 -c "open('${CWD}/.claude/settings.json', 'w').write('{}')"`,
+      CWD,
+    );
+    expect(result).not.toBeNull();
+    expect(result!.blocked).toBe(true);
+    expect(result!.reason).toContain('python filesystem');
+  });
+
+  it('allows python literal writes to normal project paths', () => {
+    const result = checkBashSelfProtection(
+      `python3 -c "open('src/generated.ts', 'w').write('ok')"`,
+      CWD,
+    );
+    expect(result).toBeNull();
+  });
+
   it('blocks tee to protected helper', () => {
     const result = checkBashSelfProtection(
       `echo "evil" | tee ${CWD}/.claude/helpers/router.js`,

@@ -21,6 +21,9 @@ describe('deepInspect', () => {
   describe('python3 -c evasion', () => {
     it('blocks: python3 -c "import os; os.remove(x)"', () => { expect(deepInspect('python3 -c "import os; os.remove(x)"').blocked).toBe(true); });
     it('blocks: python -c "import shutil; shutil.rmtree(x)"', () => { expect(deepInspect('python -c "import shutil; shutil.rmtree(x)"').blocked).toBe(true); });
+    it('allows literal file writes for path-aware self-protection', () => {
+      expect(deepInspect('python3 -c "open(\'src/generated.ts\', \'w\').write(\'x\')"').blocked).toBe(false);
+    });
     it('blocks: python3 -c "import subprocess; subprocess.call(x)"', () => { expect(deepInspect('python3 -c "import subprocess; subprocess.call(x)"').blocked).toBe(true); });
   });
 
@@ -33,6 +36,9 @@ describe('deepInspect', () => {
       expect(deepInspect(`node -e "require('${cpModule}').exec('x')"`).blocked).toBe(true);
     });
     it('blocks: node --eval "fs.unlinkSync(x)"', () => { expect(deepInspect('node --eval "fs.unlinkSync(x)"').blocked).toBe(true); });
+    it('allows literal file writes for path-aware self-protection', () => {
+      expect(deepInspect('node --eval "fs.writeFileSync(\'src/generated.ts\', \'x\')"').blocked).toBe(false);
+    });
   });
 
   // Variable expansion

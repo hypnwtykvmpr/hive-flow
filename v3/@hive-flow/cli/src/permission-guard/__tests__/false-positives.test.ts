@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { deepInspect } from '../deep-inspect.js';
+import { evaluate } from '../gate.js';
 import { evaluateInlineJury } from '../jury-evaluator.js';
+import { mergeWithDefaults } from '../default-config.js';
 import type { JuryContext } from '../types.js';
 
 function bashCtx(command: string): JuryContext {
@@ -48,6 +50,57 @@ describe('False Positive Prevention', () => {
         expect(deepInspect(cmd).blocked).toBe(false);
       });
     }
+  });
+
+  describe('literal interpreter writes are path-aware, not blanket-denied', () => {
+    it('allows node literal writes to normal project files', () => {
+      expect(deepInspect('node --eval "fs.writeFileSync(\'src/generated.ts\', \'ok\')"').blocked).toBe(false);
+    });
+
+    it('allows python literal writes to normal project files', () => {
+      expect(deepInspect('python3 -c "open(\'src/generated.ts\', \'w\').write(\'ok\')"').blocked).toBe(false);
+    });
+
+    it('keeps dynamic node writes fail-closed', () => {
+      expect(deepInspect('node --eval "fs.writeFileSync(target, data)"').blocked).toBe(true);
+    });
+
+    it('keeps dynamic python writes fail-closed', () => {
+      expect(deepInspect('python3 -c "open(target, \'w\').write(data)"').blocked).toBe(true);
+    });
+
+    it('allows a normal literal node write through the full gate', async () => {
+      const result = await evaluate(
+        {
+          tool_name: 'Bash',
+          tool_input: { command: 'node --eval "fs.writeFileSync(\'src/generated.ts\', \'ok\')"' },
+          cwd: '/project',
+        },
+        mergeWithDefaults({
+          always_allow_bash_patterns: ['.*'],
+          always_deny_bash_patterns: [],
+          jury_escalation_bash_patterns: [],
+        }),
+      );
+      expect(result.decision).toBe('allow');
+    });
+
+    it('denies a dynamic node write through the full gate', async () => {
+      const result = await evaluate(
+        {
+          tool_name: 'Bash',
+          tool_input: { command: 'node --eval "fs.writeFileSync(target, data)"' },
+          cwd: '/project',
+        },
+        mergeWithDefaults({
+          always_allow_bash_patterns: ['.*'],
+          always_deny_bash_patterns: [],
+          jury_escalation_bash_patterns: [],
+        }),
+      );
+      expect(result.decision).toBe('deny');
+      expect(result.reason).toContain('Deep Inspect');
+    });
   });
 
   describe('inline jury approves legitimate commands', () => {

@@ -612,5 +612,17 @@ describe('enforcement security property contracts', () => {
       { command: 'printf x | tee .hive-flow/enforcement/state.json' },
       state,
     ).circumvention).toBe(true);
+
+    expect(enf.detectCircumvention(
+      'Bash',
+      { command: "sed -i 's/.claude\\/settings.json/.claude\\/settings.local.json/g' v3/docs/notes.md && echo ok" },
+      state,
+    ).circumvention).toBe(false);
+
+    expect(enf.detectCircumvention(
+      'Bash',
+      { command: "sed -i 's/permission-guard/noop/g' .claude/settings.json && echo ok" },
+      state,
+    ).circumvention).toBe(true);
   });
 });

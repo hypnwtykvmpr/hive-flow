@@ -759,8 +759,8 @@ function collectProtectedMutationPaths(toolName, toolInput) {
   } else if (toolName === 'mcp__filesystem__create_directory') {
     pushIfProtected('write', toolInput?.path || '');
   } else if (toolName === 'Bash') {
-    const redirectTarget = findProtectedRedirectTarget(toolInput?.command || '');
-    pushIfProtected('write', redirectTarget);
+    const bashMutationTarget = findProtectedBashMutationTarget(toolInput?.command || '');
+    pushIfProtected('write', bashMutationTarget);
   }
 
   return entries;
@@ -964,8 +964,62 @@ function extractTeeTargets(command) {
   return targets;
 }
 
-function findProtectedRedirectTarget(command) {
-  for (const target of [...extractRedirectTargets(command), ...extractTeeTargets(command)]) {
+function splitShellSubcommands(command) {
+  const subCommands = [];
+  let current = '';
+  let quote = null;
+  let escaped = false;
+  for (let i = 0; i < command.length; i++) {
+    const ch = command[i];
+    if (escaped) {
+      current += ch;
+      escaped = false;
+      continue;
+    }
+    if (ch === '\\') {
+      current += ch;
+      escaped = true;
+      continue;
+    }
+    if (quote) {
+      current += ch;
+      if (ch === quote) quote = null;
+      continue;
+    }
+    if (ch === '"' || ch === "'") {
+      quote = ch;
+      current += ch;
+      continue;
+    }
+    if (ch === ';') {
+      subCommands.push(current);
+      current = '';
+      continue;
+    }
+    if ((ch === '&' || ch === '|') && command[i + 1] === ch) {
+      subCommands.push(current);
+      current = '';
+      i++;
+      continue;
+    }
+    current += ch;
+  }
+  if (current.trim()) subCommands.push(current);
+  return subCommands;
+}
+
+function extractSedInPlaceTargets(command) {
+  const targets = [];
+  for (const subCommand of splitShellSubcommands(command)) {
+    const match = subCommand.trim().match(/\bsed\s+(?:--in-place\b|-i(?:[^\s]*)?)\b.*?(?:\s+)([^\s;|&]+)\s*$/);
+    if (!match) continue;
+    targets.push(stripShellQuotes(match[1]));
+  }
+  return targets;
+}
+
+function findProtectedBashMutationTarget(command) {
+  for (const target of [...extractRedirectTargets(command), ...extractTeeTargets(command), ...extractSedInPlaceTargets(command)]) {
     if (isProtectedPath(target)) return target;
   }
   return null;
@@ -1033,13 +1087,12 @@ function detectCircumvention(toolName, toolInput, state) {
     const command = toolInput?.command || '';
 
     // 2a. Bash redirects to protected paths (12.2: CRITICAL)
-    const protectedRedirectTarget = findProtectedRedirectTarget(command);
-    if (protectedRedirectTarget || /sed\s+-i.*(?:\.hive-flow\/enforcement\/|\.claude\/helpers\/|\.claude\/settings(?:\.local)?\.json)/i.test(command)) {
-      const target = protectedRedirectTarget || command;
-      const globalProtected = isGlobalProtectedPath(target) || /\.hive-flow\/enforcement\/|\.claude\/helpers\/|\.claude\/settings(?:\.local)?\.json/i.test(target);
+    const protectedMutationTarget = findProtectedBashMutationTarget(command);
+    if (protectedMutationTarget) {
+      const globalProtected = isGlobalProtectedPath(protectedMutationTarget);
       return {
         circumvention: true,
-        reason: `CIRCUMVENTION: Bash redirect to protected path detected`,
+        reason: `CIRCUMVENTION: Bash mutation of protected path detected`,
         severity: 'critical',
         protectedEnforcementAttack: globalProtected,
         systemic: globalProtected,

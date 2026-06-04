@@ -91,17 +91,12 @@ const BASH_DANGEROUS: RegExp[] = [
 // NOTE: These regexes DETECT dangerous patterns in code strings.
 // They do not invoke any dangerous operations themselves.
 const PYTHON_DANGEROUS: RegExp[] = [
-  /\bos\.(?:remove|unlink|rmdir|removedirs|rename)\b/,
-  /\bshutil\.(?:rmtree|move)\b/,
   /\bsubprocess\.(?:call|run|Popen|check_output|check_call)\b/,
   /\bos\.system\s*\(/, /\b__import__\s*\(\s*['"](?:os|subprocess|shutil)['"]/,
   /\bexec\s*\(/, /\beval\s*\(/,
-  /\bopen\s*\([^)]*,\s*['"]w/,
 ];
 
 const NODE_DANGEROUS: RegExp[] = [
-  /\bfs\.(?:unlinkSync|rmSync|rmdirSync|renameSync|writeFileSync)\b/,
-  /\bfs\.promises\.(?:unlink|rm|rmdir|rename|writeFile)\b/,
   /\bchild_process\.(?:exec|execSync|spawn|spawnSync)\b/,
   /\brequire\s*\(\s*['"]child_process['"]\)/,
   /\brequire\s*\(\s*['"]child_['"].*['"]process['"]\)/, // string concatenation evasion
@@ -124,6 +119,115 @@ const LANG_PATTERNS: Record<string, RegExp[]> = {
   ruby: RUBY_DANGEROUS,
   perl: PERL_DANGEROUS,
 };
+
+const NODE_FS_MUTATION_CALL = /\bfs(?:\.promises)?\.(writeFileSync|writeFile|unlinkSync|unlink|rmSync|rm|rmdirSync|rmdir|renameSync|rename)\s*\(([^)]*)\)/g;
+const PYTHON_OS_MUTATION_CALL = /\bos\.(remove|unlink|rmdir|removedirs|rename)\s*\(([^)]*)\)/g;
+const PYTHON_SHUTIL_MUTATION_CALL = /\bshutil\.(rmtree|move)\s*\(([^)]*)\)/g;
+const PYTHON_OPEN_CALL = /\bopen\s*\(([^)]*)\)/g;
+
+function leadingStringLiteral(value: string): { matched: boolean; end: number } {
+  const trimmed = value.trimStart();
+  const leadingWhitespace = value.length - trimmed.length;
+  const quote = trimmed[0];
+  if (quote !== '"' && quote !== "'") return { matched: false, end: 0 };
+  let escaped = false;
+  for (let i = 1; i < trimmed.length; i++) {
+    const ch = trimmed[i];
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (ch === '\\') {
+      escaped = true;
+      continue;
+    }
+    if (ch === quote) {
+      return { matched: true, end: leadingWhitespace + i + 1 };
+    }
+  }
+  return { matched: false, end: 0 };
+}
+
+function literalArgAt(value: string, index: number): boolean {
+  let rest = value;
+  for (let i = 0; i <= index; i++) {
+    const literal = leadingStringLiteral(rest);
+    if (!literal.matched) return false;
+    if (i === index) return true;
+    rest = rest.slice(literal.end).trimStart();
+    if (!rest.startsWith(',')) return false;
+    rest = rest.slice(1);
+  }
+  return false;
+}
+
+function writeModeLiteral(value: string): boolean {
+  const restStart = value.indexOf(',');
+  if (restStart < 0) return false;
+  const rest = value.slice(restStart + 1).trimStart();
+  const literal = leadingStringLiteral(rest);
+  if (!literal.matched) return false;
+  const mode = rest.slice(0, literal.end);
+  return /[wax+]/.test(mode);
+}
+
+function inspectNodeFilesystemMutation(inner: string): DeepInspectResult | null {
+  let matched = false;
+  for (const match of inner.matchAll(NODE_FS_MUTATION_CALL)) {
+    matched = true;
+    const operation = match[1];
+    const args = match[2] || '';
+    const requiresTwoLiteralTargets = operation === 'rename' || operation === 'renameSync';
+    const hasLiteralTargets = requiresTwoLiteralTargets
+      ? literalArgAt(args, 0) && literalArgAt(args, 1)
+      : literalArgAt(args, 0);
+    if (!hasLiteralTargets) {
+      return block('Node filesystem mutation has dynamic or non-literal target', 'node-filesystem-dynamic', 'critical', [inner]);
+    }
+  }
+  return matched ? ok([inner]) : null;
+}
+
+function inspectPythonFilesystemMutation(inner: string): DeepInspectResult | null {
+  let matched = false;
+
+  for (const match of inner.matchAll(PYTHON_OPEN_CALL)) {
+    const args = match[1] || '';
+    if (!writeModeLiteral(args)) continue;
+    matched = true;
+    if (!literalArgAt(args, 0)) {
+      return block('Python file write has dynamic or non-literal target', 'python-filesystem-dynamic', 'critical', [inner]);
+    }
+  }
+
+  for (const match of inner.matchAll(PYTHON_OS_MUTATION_CALL)) {
+    matched = true;
+    const operation = match[1];
+    const args = match[2] || '';
+    const requiresTwoLiteralTargets = operation === 'rename';
+    const hasLiteralTargets = requiresTwoLiteralTargets
+      ? literalArgAt(args, 0) && literalArgAt(args, 1)
+      : literalArgAt(args, 0);
+    if (!hasLiteralTargets) {
+      return block('Python os mutation has dynamic or non-literal target', 'python-filesystem-dynamic', 'critical', [inner]);
+    }
+  }
+
+  for (const match of inner.matchAll(PYTHON_SHUTIL_MUTATION_CALL)) {
+    matched = true;
+    const operation = match[1];
+    const args = match[2] || '';
+    const requiresTwoLiteralTargets = operation === 'move';
+    const hasLiteralTargets = requiresTwoLiteralTargets
+      ? literalArgAt(args, 0) && literalArgAt(args, 1)
+      : literalArgAt(args, 0);
+    if (!hasLiteralTargets) {
+      return block('Python shutil mutation has dynamic or non-literal target', 'python-filesystem-dynamic', 'critical', [inner]);
+    }
+  }
+
+  return matched ? ok([inner]) : null;
+}
 
 // Layer A2: AWK/SED dangerous patterns (must run before ALWAYS_SAFE)
 const AWK_DANGEROUS: RegExp[] = [
@@ -212,6 +316,22 @@ export function deepInspect(command: string, depth: number = 0): DeepInspectResu
           return { ...innerResult, extractedCommands: [...extracted, ...innerResult.extractedCommands], depth };
         }
         extracted.push(...innerResult.extractedCommands);
+      }
+
+      if (wrapper.lang === 'node') {
+        const fsResult = inspectNodeFilesystemMutation(inner);
+        if (fsResult?.blocked) {
+          return { ...fsResult, extractedCommands: [...extracted, ...fsResult.extractedCommands], depth };
+        }
+        if (fsResult) extracted.push(...fsResult.extractedCommands);
+      }
+
+      if (wrapper.lang === 'python') {
+        const fsResult = inspectPythonFilesystemMutation(inner);
+        if (fsResult?.blocked) {
+          return { ...fsResult, extractedCommands: [...extracted, ...fsResult.extractedCommands], depth };
+        }
+        if (fsResult) extracted.push(...fsResult.extractedCommands);
       }
 
       // Check language-specific patterns

@@ -475,6 +475,18 @@ const FILE_MODIFYING_COMMANDS: Array<{
       return [target];
     },
   },
+  // node -e/--eval filesystem writes/deletes with literal targets.
+  {
+    pattern: /\bnode\s+(?:-e|--eval)\s+(.+)$/s,
+    name: 'node filesystem',
+    extractTargets: (m) => extractNodeLiteralMutationTargets(m[1]),
+  },
+  // python -c filesystem writes/deletes with literal targets.
+  {
+    pattern: /\b(?:python3?|python3\.\d+)\s+-c\s+(.+)$/s,
+    name: 'python filesystem',
+    extractTargets: (m) => extractPythonLiteralMutationTargets(m[1]),
+  },
   // chmod — target is the last argument
   {
     pattern: /\bchmod\s+(?:-[a-zA-Z]+\s+)*(.+)/,
@@ -533,6 +545,53 @@ function extractArguments(cmd: string, cmdName: string): string[] {
 
   // Filter out flags (arguments starting with -)
   return args.filter(a => !a.startsWith('-'));
+}
+
+function stripOuterShellQuotes(value: string): string {
+  const trimmed = value.trim();
+  if (trimmed.length < 2) return trimmed;
+  if ((trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+      (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
+    return trimmed.slice(1, -1);
+  }
+  return trimmed;
+}
+
+function extractNodeLiteralMutationTargets(code: string): string[] {
+  const targets: string[] = [];
+  const inner = stripOuterShellQuotes(code);
+
+  for (const match of inner.matchAll(/\bfs(?:\.promises)?\.(?:writeFileSync|writeFile|unlinkSync|unlink|rmSync|rm|rmdirSync|rmdir)\s*\(\s*(['"])([^'"]+)\1/g)) {
+    targets.push(match[2]);
+  }
+  for (const match of inner.matchAll(/\bfs(?:\.promises)?\.(?:renameSync|rename)\s*\(\s*(['"])([^'"]+)\1\s*,\s*(['"])([^'"]+)\3/g)) {
+    targets.push(match[2], match[4]);
+  }
+
+  return targets;
+}
+
+function extractPythonLiteralMutationTargets(code: string): string[] {
+  const targets: string[] = [];
+  const inner = stripOuterShellQuotes(code);
+
+  for (const match of inner.matchAll(/\bopen\s*\(\s*(['"])([^'"]+)\1\s*,\s*(['"])[^'"]*[wax+][^'"]*\3/g)) {
+    targets.push(match[2]);
+  }
+  for (const match of inner.matchAll(/\bos\.(?:remove|unlink|rmdir|removedirs)\s*\(\s*(['"])([^'"]+)\1/g)) {
+    targets.push(match[2]);
+  }
+  for (const match of inner.matchAll(/\bos\.rename\s*\(\s*(['"])([^'"]+)\1\s*,\s*(['"])([^'"]+)\3/g)) {
+    targets.push(match[2], match[4]);
+  }
+  for (const match of inner.matchAll(/\bshutil\.rmtree\s*\(\s*(['"])([^'"]+)\1/g)) {
+    targets.push(match[2]);
+  }
+  for (const match of inner.matchAll(/\bshutil\.move\s*\(\s*(['"])([^'"]+)\1\s*,\s*(['"])([^'"]+)\3/g)) {
+    targets.push(match[2], match[4]);
+  }
+
+  return targets;
 }
 
 /**
