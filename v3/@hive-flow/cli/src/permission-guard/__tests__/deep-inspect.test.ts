@@ -25,6 +25,16 @@ describe('deepInspect', () => {
       expect(deepInspect('python3 -c "open(\'src/generated.ts\', \'w\').write(\'x\')"').blocked).toBe(false);
     });
     it('blocks: python3 -c "import subprocess; subprocess.call(x)"', () => { expect(deepInspect('python3 -c "import subprocess; subprocess.call(x)"').blocked).toBe(true); });
+    it('blocks dynamic os mutation through __import__ alias', () => {
+      const result = deepInspect('python3 -c "__import__(\'os\').remove(target)"');
+      expect(result.blocked).toBe(true);
+      expect(result.technique).toBe('python-filesystem-dynamic');
+    });
+    it('blocks dynamic shutil mutation through __import__ alias', () => {
+      const result = deepInspect('python3 -c "__import__(\'shutil\').move(src, dest)"');
+      expect(result.blocked).toBe(true);
+      expect(result.technique).toBe('python-filesystem-dynamic');
+    });
   });
 
   // node -e evasion
@@ -38,6 +48,16 @@ describe('deepInspect', () => {
     it('blocks: node --eval "fs.unlinkSync(x)"', () => { expect(deepInspect('node --eval "fs.unlinkSync(x)"').blocked).toBe(true); });
     it('allows literal file writes for path-aware self-protection', () => {
       expect(deepInspect('node --eval "fs.writeFileSync(\'src/generated.ts\', \'x\')"').blocked).toBe(false);
+    });
+    it('blocks dynamic filesystem mutation through require fs alias', () => {
+      const result = deepInspect('node --eval "require(\'fs\').writeFileSync(target, data)"');
+      expect(result.blocked).toBe(true);
+      expect(result.technique).toBe('node-filesystem-dynamic');
+    });
+    it('blocks dynamic filesystem mutation through require node:fs alias', () => {
+      const result = deepInspect('node --eval "require(\'node:fs\').renameSync(src, dest)"');
+      expect(result.blocked).toBe(true);
+      expect(result.technique).toBe('node-filesystem-dynamic');
     });
   });
 

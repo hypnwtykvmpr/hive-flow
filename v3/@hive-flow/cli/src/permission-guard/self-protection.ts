@@ -489,9 +489,15 @@ function stripOuterShellQuotes(value: string): string {
   return trimmed;
 }
 
+function normalizeInlineFilesystemAliases(code: string): string {
+  return code
+    .replace(/\brequire\s*\(\s*(['"])(?:node:)?fs\1\s*\)\s*\./g, 'fs.')
+    .replace(/\b__import__\s*\(\s*(['"])(os|shutil)\1\s*\)\s*\./g, (_match, _quote, moduleName: string) => `${moduleName}.`);
+}
+
 function extractNodeLiteralMutationTargets(code: string): string[] {
   const targets: string[] = [];
-  const inner = stripOuterShellQuotes(code);
+  const inner = normalizeInlineFilesystemAliases(stripOuterShellQuotes(code));
 
   for (const match of inner.matchAll(/\bfs(?:\.promises)?\.(?:writeFileSync|writeFile|unlinkSync|unlink|rmSync|rm|rmdirSync|rmdir)\s*\(\s*(['"])([^'"]+)\1/g)) {
     targets.push(match[2]);
@@ -505,7 +511,7 @@ function extractNodeLiteralMutationTargets(code: string): string[] {
 
 function extractPythonLiteralMutationTargets(code: string): string[] {
   const targets: string[] = [];
-  const inner = stripOuterShellQuotes(code);
+  const inner = normalizeInlineFilesystemAliases(stripOuterShellQuotes(code));
 
   for (const match of inner.matchAll(/\bopen\s*\(\s*(['"])([^'"]+)\1\s*,\s*(['"])[^'"]*[wax+][^'"]*\3/g)) {
     targets.push(match[2]);

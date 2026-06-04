@@ -221,9 +221,37 @@ describe('checkBashSelfProtection', () => {
     expect(result!.reason).toContain('node filesystem');
   });
 
+  it('blocks node require fs literal writes to protected paths', () => {
+    const result = checkBashSelfProtection(
+      `node --eval "require('fs').writeFileSync('${CWD}/.claude/settings.json', '{}')"`,
+      CWD,
+    );
+    expect(result).not.toBeNull();
+    expect(result!.blocked).toBe(true);
+    expect(result!.reason).toContain('node filesystem');
+  });
+
+  it('blocks node require node:fs literal writes to protected paths', () => {
+    const result = checkBashSelfProtection(
+      `node --eval "require('node:fs').writeFileSync('${CWD}/.claude/settings.json', '{}')"`,
+      CWD,
+    );
+    expect(result).not.toBeNull();
+    expect(result!.blocked).toBe(true);
+    expect(result!.reason).toContain('node filesystem');
+  });
+
   it('allows node literal writes to normal project paths', () => {
     const result = checkBashSelfProtection(
       `node --eval "fs.writeFileSync('src/generated.ts', 'ok')"`,
+      CWD,
+    );
+    expect(result).toBeNull();
+  });
+
+  it('allows node require fs literal writes to normal project paths', () => {
+    const result = checkBashSelfProtection(
+      `node --eval "require('fs').writeFileSync('src/generated.ts', 'ok')"`,
       CWD,
     );
     expect(result).toBeNull();
@@ -239,9 +267,27 @@ describe('checkBashSelfProtection', () => {
     expect(result!.reason).toContain('python filesystem');
   });
 
+  it('blocks python __import__ os literal deletes to protected paths', () => {
+    const result = checkBashSelfProtection(
+      `python3 -c "__import__('os').remove('${CWD}/.claude/settings.json')"`,
+      CWD,
+    );
+    expect(result).not.toBeNull();
+    expect(result!.blocked).toBe(true);
+    expect(result!.reason).toContain('python filesystem');
+  });
+
   it('allows python literal writes to normal project paths', () => {
     const result = checkBashSelfProtection(
       `python3 -c "open('src/generated.ts', 'w').write('ok')"`,
+      CWD,
+    );
+    expect(result).toBeNull();
+  });
+
+  it('allows python __import__ os literal deletes to normal project paths', () => {
+    const result = checkBashSelfProtection(
+      `python3 -c "__import__('os').remove('src/generated.ts')"`,
       CWD,
     );
     expect(result).toBeNull();

@@ -125,6 +125,12 @@ const PYTHON_OS_MUTATION_CALL = /\bos\.(remove|unlink|rmdir|removedirs|rename)\s
 const PYTHON_SHUTIL_MUTATION_CALL = /\bshutil\.(rmtree|move)\s*\(([^)]*)\)/g;
 const PYTHON_OPEN_CALL = /\bopen\s*\(([^)]*)\)/g;
 
+function normalizeInlineFilesystemAliases(code: string): string {
+  return code
+    .replace(/\brequire\s*\(\s*(['"])(?:node:)?fs\1\s*\)\s*\./g, 'fs.')
+    .replace(/\b__import__\s*\(\s*(['"])(os|shutil)\1\s*\)\s*\./g, (_match, _quote, moduleName: string) => `${moduleName}.`);
+}
+
 function leadingStringLiteral(value: string): { matched: boolean; end: number } {
   const trimmed = value.trimStart();
   const leadingWhitespace = value.length - trimmed.length;
@@ -173,7 +179,8 @@ function writeModeLiteral(value: string): boolean {
 
 function inspectNodeFilesystemMutation(inner: string): DeepInspectResult | null {
   let matched = false;
-  for (const match of inner.matchAll(NODE_FS_MUTATION_CALL)) {
+  const normalized = normalizeInlineFilesystemAliases(inner);
+  for (const match of normalized.matchAll(NODE_FS_MUTATION_CALL)) {
     matched = true;
     const operation = match[1];
     const args = match[2] || '';
@@ -190,8 +197,9 @@ function inspectNodeFilesystemMutation(inner: string): DeepInspectResult | null 
 
 function inspectPythonFilesystemMutation(inner: string): DeepInspectResult | null {
   let matched = false;
+  const normalized = normalizeInlineFilesystemAliases(inner);
 
-  for (const match of inner.matchAll(PYTHON_OPEN_CALL)) {
+  for (const match of normalized.matchAll(PYTHON_OPEN_CALL)) {
     const args = match[1] || '';
     if (!writeModeLiteral(args)) continue;
     matched = true;
@@ -200,7 +208,7 @@ function inspectPythonFilesystemMutation(inner: string): DeepInspectResult | nul
     }
   }
 
-  for (const match of inner.matchAll(PYTHON_OS_MUTATION_CALL)) {
+  for (const match of normalized.matchAll(PYTHON_OS_MUTATION_CALL)) {
     matched = true;
     const operation = match[1];
     const args = match[2] || '';
@@ -213,7 +221,7 @@ function inspectPythonFilesystemMutation(inner: string): DeepInspectResult | nul
     }
   }
 
-  for (const match of inner.matchAll(PYTHON_SHUTIL_MUTATION_CALL)) {
+  for (const match of normalized.matchAll(PYTHON_SHUTIL_MUTATION_CALL)) {
     matched = true;
     const operation = match[1];
     const args = match[2] || '';
