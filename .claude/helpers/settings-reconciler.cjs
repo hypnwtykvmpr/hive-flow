@@ -42,6 +42,7 @@ const ENFORCEMENT_DIR = path.join(PROJECT_DIR, '.hive-flow', 'enforcement');
 const HMAC_KEY_FILE = path.join(ENFORCEMENT_DIR, '.hmac-key');
 const SETTINGS_PRESETS_FILE = path.join(ENFORCEMENT_DIR, 'settings-presets.json');
 const VIOLATIONS_FILE = path.join(ENFORCEMENT_DIR, 'violations.jsonl');
+const SETTINGS_PRESET_VERSION = 2;
 
 const GUARDED_TOOL_MATCHER = [
   'Bash',
@@ -65,8 +66,10 @@ const GUARDED_TOOL_MATCHER = [
   'mcp__filesystem__read_multiple_files',
 ].join('|');
 
+const RELOCATED_ENFORCEMENT_BIN = '$HOME/.hive-flow/enforcement/bin';
+
 function helperCommand(helper, args = '') {
-  return `node "$CLAUDE_PROJECT_DIR"/.claude/helpers/${helper}${args ? ` ${args}` : ''}`;
+  return `node "${RELOCATED_ENFORCEMENT_BIN}/${helper}"${args ? ` ${args}` : ''}`;
 }
 
 const CANONICAL_PRESETS = [
@@ -138,14 +141,20 @@ function normalizeCommand(command) {
 function loadPresets(settings) {
   const existing = readJson(SETTINGS_PRESETS_FILE);
   const verified = verifyState(existing);
-  if (verified.valid && verified.state && Array.isArray(verified.state.entries) && verified.state.entries.length > 0) {
+  if (
+    verified.valid &&
+    verified.state &&
+    verified.state.version === SETTINGS_PRESET_VERSION &&
+    Array.isArray(verified.state.entries) &&
+    verified.state.entries.length > 0
+  ) {
     return verified.state;
   }
 
   const baselineAllow = Array.isArray(settings?.permissions?.allow)
     ? settings.permissions.allow.map(entry => String(entry))
     : [];
-  const state = { version: 1, entries: CANONICAL_PRESETS, baselineAllow };
+  const state = { version: SETTINGS_PRESET_VERSION, entries: CANONICAL_PRESETS, baselineAllow };
   writeJsonAtomic(SETTINGS_PRESETS_FILE, signState(state));
   return state;
 }

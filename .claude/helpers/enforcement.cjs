@@ -63,6 +63,7 @@ const VIOLATIONS_FILE = path.join(ENFORCEMENT_DIR, 'violations.jsonl');
 const VERIFICATION_GATE_FILE = path.join(ENFORCEMENT_DIR, 'verification-gate.json');
 const HMAC_KEY_FILE = path.join(ENFORCEMENT_DIR, '.hmac-key');
 const SETTINGS_PRESETS_FILE = path.join(ENFORCEMENT_DIR, 'settings-presets.json');
+const SETTINGS_PRESET_VERSION = 2;
 const COMPACTION_LOCK_FILE = path.join(ENFORCEMENT_DIR, 'compaction-lock.json');
 const PIPELINE_STATE_FILE = path.join(ENFORCEMENT_DIR, 'pipeline-state.json');
 const MAX_STATE_SIZE = 10240; // 10KB — larger = likely corrupt/attack (12.12)
@@ -812,8 +813,9 @@ function loadSignedSettingsPresets() {
     if (!valid || !state || typeof state !== 'object') return null;
     const entries = Array.isArray(state.entries) ? state.entries : [];
     if (entries.length === 0) return null;
+    if (state.version !== SETTINGS_PRESET_VERSION) return null;
     return {
-      version: state.version || 1,
+      version: state.version,
       entries,
       baselineAllow: Array.isArray(state.baselineAllow) ? state.baselineAllow : [],
     };

@@ -3,6 +3,7 @@ import { createRequire } from 'node:module';
 import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { homedir } from 'node:os';
 import { platform } from 'node:process';
 import {
   findProtectedReadPath,
@@ -49,10 +50,40 @@ describe('shared protected-path policy matcher', () => {
     const root = tmpProject();
     try {
       const policy = loadPolicy();
-      for (const entry of ['.claude/settings.json', '.claude/settings.local.json']) {
+      for (const entry of [
+        '.claude/settings.json',
+        '.claude/settings.local.json',
+        '${HOME}/.claude/settings.json',
+        '${HOME}/.claude/settings.local.json',
+      ]) {
         expect(policy.guardedSettings).toContain(entry);
-        expect(isGuardedSettingsPath(join(root, entry), root)).toBe(true);
-        expect(cjsPolicy.isGuardedSettingsPath(join(root, entry), root)).toBe(true);
+      }
+      for (const target of [
+        join(root, '.claude', 'settings.json'),
+        join(root, '.claude', 'settings.local.json'),
+        join(homedir(), '.claude', 'settings.json'),
+        join(homedir(), '.claude', 'settings.local.json'),
+      ]) {
+        expect(isGuardedSettingsPath(target, root)).toBe(true);
+        expect(cjsPolicy.isGuardedSettingsPath(target, root)).toBe(true);
+      }
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('protects relocated user-level enforcement bin and Claude trigger paths', () => {
+    const root = tmpProject();
+    try {
+      for (const target of [
+        join(homedir(), '.claude', 'settings.json'),
+        join(homedir(), '.claude', 'settings.local.json'),
+        join(homedir(), '.hive-flow', 'enforcement', 'bin', 'enforcement.cjs'),
+      ]) {
+        expect(isProtectedWritePath(target, root)).toBe(true);
+        expect(cjsPolicy.isProtectedWritePath(target, root)).toBe(true);
+        expect(getProtectedWriteScope(target, root)).toBe('global');
+        expect(cjsPolicy.getProtectedWriteScope(target, root)).toBe('global');
       }
     } finally {
       rmSync(root, { recursive: true, force: true });

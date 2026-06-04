@@ -38,8 +38,10 @@ const GUARDED_TOOL_MATCHER = [
   'mcp__filesystem__read_multiple_files',
 ].join('|');
 
+const RELOCATED_ENFORCEMENT_BIN = '$HOME/.hive-flow/enforcement/bin';
+
 function helperCommand(helper: string, args = ''): string {
-  return `node "$CLAUDE_PROJECT_DIR"/.claude/helpers/${helper}${args ? ` ${args}` : ''}`;
+  return `node "${RELOCATED_ENFORCEMENT_BIN}/${helper}"${args ? ` ${args}` : ''}`;
 }
 
 function commandHook(command: string, timeout: number): HookCommand {

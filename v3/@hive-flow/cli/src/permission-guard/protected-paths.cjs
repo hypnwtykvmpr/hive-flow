@@ -7,6 +7,8 @@ const DEFAULT_POLICY = {
   protectedWrite: [
     '.claude/settings.json',
     '.claude/settings.local.json',
+    '${HOME}/.claude/settings.json',
+    '${HOME}/.claude/settings.local.json',
     '.claude/helpers/',
     '.env',
     '.git/',
@@ -17,11 +19,14 @@ const DEFAULT_POLICY = {
     'v3/@hive-flow/cli/dist/src/permission-guard/',
     'v3/@hive-flow/cli/dist/src/mcp-tools/',
     '${HOME}/.hive-flow/permission-guard/',
+    '${HOME}/.hive-flow/enforcement/bin/',
     'scripts/permission-guard-setup.mjs',
   ],
   protectedWriteGlobal: [
     '.claude/settings.json',
     '.claude/settings.local.json',
+    '${HOME}/.claude/settings.json',
+    '${HOME}/.claude/settings.local.json',
     '.claude/helpers/',
     '.env',
     '.git/',
@@ -29,6 +34,7 @@ const DEFAULT_POLICY = {
     'v3/@hive-flow/cli/src/permission-guard/',
     'v3/@hive-flow/cli/dist/src/permission-guard/',
     'v3/@hive-flow/cli/dist/src/mcp-tools/',
+    '${HOME}/.hive-flow/enforcement/bin/',
     'scripts/permission-guard-setup.mjs',
   ],
   protectedRead: [
@@ -54,6 +60,8 @@ const DEFAULT_POLICY = {
   guardedSettings: [
     '.claude/settings.json',
     '.claude/settings.local.json',
+    '${HOME}/.claude/settings.json',
+    '${HOME}/.claude/settings.local.json',
   ],
 };
 

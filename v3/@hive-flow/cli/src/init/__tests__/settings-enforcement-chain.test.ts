@@ -42,6 +42,10 @@ const guardedMatcherTools = [
   'mcp__filesystem__read_multiple_files',
 ];
 
+function relocatedHelperCommand(helper: string, args = ''): string {
+  return `node "$HOME/.hive-flow/enforcement/bin/${helper}"${args ? ` ${args}` : ''}`;
+}
+
 function testOptions(targetDir: string): InitOptions {
   return {
     ...DEFAULT_INIT_OPTIONS,
@@ -86,26 +90,26 @@ function expectFullPreToolUseChain(settings: GeneratedSettings): void {
   expect(preToolUse.length).toBeGreaterThanOrEqual(3);
 
   const taskEntry = findEntry(preToolUse, 'hive-composition-gate.cjs', 'Task');
-  expect(taskEntry.hooks?.[0]?.command).toBe('node "$CLAUDE_PROJECT_DIR"/.claude/helpers/hive-composition-gate.cjs');
+  expect(taskEntry.hooks?.[0]?.command).toBe(relocatedHelperCommand('hive-composition-gate.cjs'));
 
   const spawnEntry = findEntry(preToolUse, 'role-enforcement.cjs', 'mcp__hive-flow__agent_spawn');
   expect(spawnEntry.hooks?.map((hook) => hook.command)).toEqual([
-    'node "$CLAUDE_PROJECT_DIR"/.claude/helpers/role-enforcement.cjs',
-    'node "$CLAUDE_PROJECT_DIR"/.claude/helpers/enforcement.cjs',
+    relocatedHelperCommand('role-enforcement.cjs'),
+    relocatedHelperCommand('enforcement.cjs'),
   ]);
 
-  const guardEntry = findEntry(preToolUse, 'hook-handler.cjs permission-guard');
+  const guardEntry = findEntry(preToolUse, 'hook-handler.cjs', 'Bash');
   const tokens = matcherTokens(guardEntry);
   for (const required of guardedMatcherTools) {
     expect(tokens.has(required), `PreToolUse guard matcher missing ${required}`).toBe(true);
   }
 
   expect(guardEntry.hooks?.map((hook) => hook.command)).toEqual([
-    'node "$CLAUDE_PROJECT_DIR"/.claude/helpers/role-enforcement.cjs',
-    'node "$CLAUDE_PROJECT_DIR"/.claude/helpers/enforcement.cjs',
-    'node "$CLAUDE_PROJECT_DIR"/.claude/helpers/hook-handler.cjs permission-guard',
-    'node "$CLAUDE_PROJECT_DIR"/.claude/helpers/hook-handler.cjs enforce-plan',
-    'node "$CLAUDE_PROJECT_DIR"/.claude/helpers/hook-handler.cjs pre-bash',
+    relocatedHelperCommand('role-enforcement.cjs'),
+    relocatedHelperCommand('enforcement.cjs'),
+    relocatedHelperCommand('hook-handler.cjs', 'permission-guard'),
+    relocatedHelperCommand('hook-handler.cjs', 'enforce-plan'),
+    relocatedHelperCommand('hook-handler.cjs', 'pre-bash'),
   ]);
 }
 
@@ -120,8 +124,10 @@ function expectSettingsReconciler(settings: GeneratedSettings): void {
     expect(postTokens.has(required), `settings reconciler PostToolUse matcher missing ${required}`).toBe(true);
   }
 
-  findEntry(sessionStart, 'settings-reconciler.cjs');
-  findEntry(stop, 'settings-reconciler.cjs');
+  const reconcilerCommand = relocatedHelperCommand('settings-reconciler.cjs');
+  expect(postEntry.hooks?.[0]?.command).toBe(reconcilerCommand);
+  expect(findEntry(sessionStart, 'settings-reconciler.cjs').hooks?.some((hook) => hook.command === reconcilerCommand)).toBe(true);
+  expect(findEntry(stop, 'settings-reconciler.cjs').hooks?.some((hook) => hook.command === reconcilerCommand)).toBe(true);
 }
 
 describe('init settings enforcement chain', () => {
