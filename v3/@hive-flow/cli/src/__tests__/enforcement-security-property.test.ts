@@ -387,7 +387,7 @@ describe('enforcement security property contracts', () => {
     expect(enf.isProtectedPath(join(process.env.HOME || '/tmp', '.hive-flow', 'permission-guard', 'config.json'))).toBe(true);
   });
 
-  it('scopes ordinary agent violations to the agent and leaves global untouched', () => {
+  it('denies ordinary agent protected-workflow writes without escalation', () => {
     process.env.AGENTIC_FLOW_AGENT_ID = 'agent-a';
 
     const result = enf.processPreToolUse({
@@ -397,11 +397,12 @@ describe('enforcement security property contracts', () => {
 
     expect(result.hookSpecificOutput.hookEventName).toBe('PreToolUse');
     expect(result.hookSpecificOutput.permissionDecision).toBe('deny');
-    expect(readScopedState('agent', 'agent-a')?.level).toBe(enf.LEVELS.RESTRICTED);
+    expect(result.hookSpecificOutput.permissionDecisionReason).toContain('Use the gated project workflow');
+    expect(readScopedState('agent', 'agent-a')?.level).not.toBe(enf.LEVELS.RESTRICTED);
     expect(readScopedState('global', 'global')).toBeNull();
   });
 
-  it('scopes native Task hook agent_id violations to the agent and ignores session ids', () => {
+  it('denies native Task protected-workflow writes without poisoning session/global scopes', () => {
     process.env.CLAUDE_SESSION_ID = 'coordinator-session';
 
     const result = enf.processPreToolUse({
@@ -415,7 +416,8 @@ describe('enforcement security property contracts', () => {
     expect(enf.getAgentId({ agent_id: 'native-task-agent' })).toBe('native-task-agent');
     expect(result.hookSpecificOutput.hookEventName).toBe('PreToolUse');
     expect(result.hookSpecificOutput.permissionDecision).toBe('deny');
-    expect(readScopedState('agent', 'native-task-agent')?.level).toBe(enf.LEVELS.RESTRICTED);
+    expect(result.hookSpecificOutput.permissionDecisionReason).toContain('Use the gated project workflow');
+    expect(readScopedState('agent', 'native-task-agent')?.level).not.toBe(enf.LEVELS.RESTRICTED);
     expect(readScopedState('agent', 'coordinator-session')).toBeNull();
     expect(readScopedState('global', 'global')).toBeNull();
   });
@@ -499,7 +501,7 @@ describe('enforcement security property contracts', () => {
     expect(result.hookSpecificOutput.permissionDecisionReason).toContain('All tools blocked');
   });
 
-  it('E2E: subagent reset-term grep escalates only the offending agent and leaves coordinator benign writes allowed', () => {
+  it('E2E: subagent reset-term grep does not escalate and leaves coordinator benign writes allowed', () => {
     process.env.AGENTIC_FLOW_AGENT_ID = 'grep-worker';
 
     const agentTrip = enf.processPreToolUse({
@@ -507,8 +509,8 @@ describe('enforcement security property contracts', () => {
       tool_input: { command: "grep 'enforcement-reset' v3/docs/design/ENFORCEMENT-OVERBLOCK-HANDOFF.md" },
     });
 
-    expect(agentTrip.hookSpecificOutput.permissionDecision).toBe('deny');
-    expect(readScopedState('agent', 'grep-worker')?.level).toBe(enf.LEVELS.RESTRICTED);
+    expect(agentTrip).toEqual({});
+    expect(readScopedState('agent', 'grep-worker')?.level).not.toBe(enf.LEVELS.RESTRICTED);
     expect(readScopedState('global', 'global')).toBeNull();
 
     clearAgentEnv();
@@ -577,13 +579,29 @@ describe('enforcement security property contracts', () => {
       'Bash',
       { command: 'node ./random-script.js' },
       restricted,
-    ).circumvention).toBe(true);
+    )).toMatchObject({ circumvention: true, denyOnly: true });
 
     expect(enf.detectCircumvention(
       'Bash',
       { command: 'node "$CLAUDE_PROJECT_DIR"/.claude/helpers/hook-handler.cjs permission-guard; node ./random-script.js' },
       restricted,
-    ).circumvention).toBe(true);
+    )).toMatchObject({ circumvention: true, denyOnly: true });
+  });
+
+  it('allows verification-style script commands while write-restricted', () => {
+    const restricted = { restrictedGroups: ['write'] };
+
+    expect(enf.detectCircumvention(
+      'Bash',
+      { command: 'node --check .claude/helpers/enforcement.cjs' },
+      restricted,
+    ).circumvention).toBe(false);
+
+    expect(enf.detectCircumvention(
+      'Bash',
+      { command: 'node --test v3/@hive-flow/cli/src/__tests__/enforcement-security-property.test.ts' },
+      restricted,
+    ).circumvention).toBe(false);
   });
 
   it('does not classify the signed reset hook path as Bash reset circumvention', () => {
@@ -644,6 +662,18 @@ describe('enforcement security property contracts', () => {
     expect(enf.detectCircumvention(
       'Bash',
       { command: 'git add docs/enforcement-reset-notes.md' },
+      state,
+    ).circumvention).toBe(false);
+
+    expect(enf.detectCircumvention(
+      'Bash',
+      { command: "grep 'enforcement-reset' v3/docs/design" },
+      state,
+    ).circumvention).toBe(false);
+
+    expect(enf.detectCircumvention(
+      'Bash',
+      { command: "rg 'install-enforcement.mjs' v3/docs/design" },
       state,
     ).circumvention).toBe(false);
   });
@@ -976,7 +1006,7 @@ describe('enforcement security property contracts', () => {
     );
   });
 
-  it('never escalates trusted subagent protected-workflow trips to the global scope', () => {
+  it('denies trusted subagent protected-workflow trips without escalating any scope', () => {
     const first = fc.constantFrom(...'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'.split(''));
     const rest = fc.array(
       fc.constantFrom(...'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-'.split('')),
@@ -998,7 +1028,7 @@ describe('enforcement security property contracts', () => {
         });
 
         expect(result.hookSpecificOutput.permissionDecision).toBe('deny');
-        expect(readScopedState('agent', scopedAgentId)?.level).toBe(enf.LEVELS.RESTRICTED);
+        expect(readScopedState('agent', scopedAgentId)).toBeNull();
         expect(readScopedState('global', 'global')).toBeNull();
       }),
       { seed: 20_645, numRuns: PROPERTY_RUNS },
@@ -1024,7 +1054,7 @@ describe('enforcement security property contracts', () => {
     );
   });
 
-  it('classifies HIVE_FLOW_PROJECT_ROOT manipulation as enforcement circumvention', () => {
+  it('allows one-shot project-root env prefixes but escalates exported spoof and gate-bypass env vars', () => {
     const state = {
       level: 0,
       violations: 0,
@@ -1037,13 +1067,19 @@ describe('enforcement security property contracts', () => {
       'Bash',
       { command: 'HIVE_FLOW_PROJECT_ROOT=/tmp/spoofed node v3/@hive-flow/cli/bin/cli.js status' },
       state,
-    ).circumvention).toBe(true);
+    ).circumvention).toBe(false);
 
     expect(enf.detectCircumvention(
       'Bash',
       { command: 'export HIVE_FLOW_PROJECT_ROOT=/tmp/spoofed' },
       state,
     ).circumvention).toBe(true);
+
+    expect(enf.detectCircumvention(
+      'Bash',
+      { command: 'HIVE_FLOW_ENFORCEMENT_DISABLED=1 node .claude/helpers/hook-handler.cjs permission-guard' },
+      state,
+    )).toMatchObject({ circumvention: true, systemic: true });
   });
 
   it('default reset clears global, scoped state, and per-agent role files', () => {

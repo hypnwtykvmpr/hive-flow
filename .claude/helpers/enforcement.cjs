@@ -677,6 +677,30 @@ function isGlobalProtectedPath(filePath) {
   return getProtectedPathScope(filePath) === 'global';
 }
 
+function isEnforcementSubstratePath(filePath) {
+  if (!filePath) return false;
+  if (isEnforcementHmacKeyPath(filePath)) return true;
+  if (isDevOverrideFloorPath(filePath)) return true;
+  if (protectedPathPolicy.isGuardedSettingsPath(filePath, PROJECT_DIR)) return true;
+  const relative = projectRelativePath(filePath);
+  return /^\.claude\/helpers\/.*\.(?:cjs|mjs)$/i.test(casefoldPath(relative));
+}
+
+function protectedMutationDecision(filePath, action = 'write to protected path') {
+  const substrate = isEnforcementSubstratePath(filePath);
+  const guidance = substrate
+    ? 'This targets the enforcement substrate and requires direct human/Codex control-plane approval.'
+    : 'Use the gated project workflow for this file or ask the human to approve the protected-path change.';
+  return {
+    circumvention: true,
+    denyOnly: !substrate,
+    reason: `CIRCUMVENTION: Attempted ${action}: ${filePath}. ${guidance}`,
+    severity: substrate ? 'critical' : 'normal',
+    protectedEnforcementAttack: substrate,
+    systemic: substrate,
+  };
+}
+
 function isEnforcementHmacKeyPath(filePath) {
   return protectedPathPolicy.isHmacKeyPath(filePath, PROJECT_DIR);
 }
@@ -1161,6 +1185,13 @@ function commandBasename(command) {
   return String(command || '').replace(/\\/g, '/').split('/').pop() || String(command || '');
 }
 
+function isScriptInvocation(execution, scriptName) {
+  if (!execution) return false;
+  if (commandBasename(execution.command) === scriptName) return true;
+  if (commandBasename(execution.command) !== 'node') return false;
+  return execution.args.some(arg => commandBasename(arg) === scriptName);
+}
+
 function hasAnyArg(args, names) {
   return args.some(arg => names.includes(arg));
 }
@@ -1192,6 +1223,51 @@ function isInlineEvalExecution(execution) {
 
 function findInlineEvalInvocation(command) {
   return collectShellCommandExecutions(command).find(isInlineEvalExecution) || null;
+}
+
+const ROOT_SPOOF_ENV_VARS = new Set(['CLAUDE_PROJECT_DIR', 'HIVE_FLOW_PROJECT_ROOT']);
+const GATE_BYPASS_ENV_VARS = new Set(['CF_WF_7D', 'HIVE_FLOW_ENFORCEMENT_DISABLED', 'HIVE_FLOW_PIPELINE_OVERRIDE']);
+
+function assignmentName(token) {
+  const match = String(token?.text || '').match(/^([A-Za-z_][A-Za-z0-9_]*)=/);
+  return match ? match[1] : null;
+}
+
+function findEnforcementEnvManipulation(command) {
+  for (const subCommand of splitShellSubcommands(String(command || ''))) {
+    for (const segment of splitTokenSegments(shellTokens(subCommand))) {
+      if (!segment.length) continue;
+
+      if (segment[0].text === 'export') {
+        for (const token of segment.slice(1)) {
+          const name = assignmentName(token);
+          if (name && (ROOT_SPOOF_ENV_VARS.has(name) || GATE_BYPASS_ENV_VARS.has(name))) {
+            return { name, kind: 'export' };
+          }
+        }
+      }
+
+      let index = 0;
+      if (segment[index]?.text === 'env') index++;
+      while (index < segment.length) {
+        const token = segment[index];
+        if (!token || token.quoted) break;
+        if (token.text === '--') {
+          index++;
+          break;
+        }
+        if (token.text.startsWith('-')) {
+          index++;
+          continue;
+        }
+        const name = assignmentName(token);
+        if (!name) break;
+        if (GATE_BYPASS_ENV_VARS.has(name)) return { name, kind: 'inline' };
+        index++;
+      }
+    }
+  }
+  return null;
 }
 
 function extractRedirectTargets(command) {
@@ -1312,23 +1388,14 @@ function findProtectedBashMutationTarget(command) {
 }
 
 function hasMintDevOverrideInvocation(command) {
-  for (const subCommand of splitShellSubcommands(String(command || ''))) {
-    const normalized = subCommand.trim();
-    if (!normalized) continue;
-    const invokesSetup = /(?:^|\s)(?:node(?:\s+[^\s;&|]+)*\s+)?(?:"[^"]*permission-guard-setup\.mjs"|'[^']*permission-guard-setup\.mjs'|[^\s;&|]*permission-guard-setup\.mjs)(?:\s|$)/.test(normalized);
-    if (invokesSetup && /\bmint-dev-override\b/.test(normalized)) return true;
-  }
-  return false;
+  return hasCommandPositionInvocation(command, execution => {
+    if (!isScriptInvocation(execution, 'permission-guard-setup.mjs')) return false;
+    return execution.args.includes('mint-dev-override');
+  });
 }
 
 function hasInstallEnforcementInvocation(command) {
-  for (const subCommand of splitShellSubcommands(String(command || ''))) {
-    const normalized = subCommand.trim();
-    if (!normalized) continue;
-    const invokesInstaller = /(?:^|\s)(?:node(?:\s+[^\s;&|]+)*\s+)?(?:"[^"]*install-enforcement\.mjs"|'[^']*install-enforcement\.mjs'|[^\s;&|]*install-enforcement\.mjs)(?:\s|$)/.test(normalized);
-    if (invokesInstaller) return true;
-  }
-  return false;
+  return hasCommandPositionInvocation(command, execution => isScriptInvocation(execution, 'install-enforcement.mjs'));
 }
 
 function detectCircumvention(toolName, toolInput, state) {
@@ -1336,14 +1403,7 @@ function detectCircumvention(toolName, toolInput, state) {
   if (['Write', 'Edit', 'MultiEdit', 'NotebookEdit', 'mcp__filesystem__write_file', 'mcp__filesystem__edit_file', 'mcp__filesystem__move_file', 'mcp__filesystem__rename_file', 'mcp__filesystem__copy_file', 'mcp__filesystem__delete_file'].includes(toolName)) {
     const filePath = toolInput?.file_path || toolInput?.notebook_path || toolInput?.path || getMcpDestinationPath(toolInput);
     if (filePath && isProtectedPath(filePath)) {
-      const globalProtected = isGlobalProtectedPath(filePath);
-      return {
-        circumvention: true,
-        reason: `CIRCUMVENTION: Attempted write to protected path: ${filePath}`,
-        severity: 'critical',
-        protectedEnforcementAttack: globalProtected,
-        systemic: globalProtected,
-      };
+      return protectedMutationDecision(filePath);
     }
   }
 
@@ -1362,14 +1422,7 @@ function detectCircumvention(toolName, toolInput, state) {
   if (['mcp__filesystem__move_file', 'mcp__filesystem__rename_file', 'mcp__filesystem__copy_file'].includes(toolName)) {
     const sourcePath = toolInput?.source || '';
     if (sourcePath && isProtectedPath(sourcePath)) {
-      const globalProtected = isGlobalProtectedPath(sourcePath);
-      return {
-        circumvention: true,
-        reason: `CIRCUMVENTION: Attempted to mutate file FROM protected path via MCP filesystem: ${sourcePath}`,
-        severity: 'critical',
-        protectedEnforcementAttack: globalProtected,
-        systemic: globalProtected,
-      };
+      return protectedMutationDecision(sourcePath, 'to mutate file FROM protected path via MCP filesystem');
     }
   }
 
@@ -1377,14 +1430,7 @@ function detectCircumvention(toolName, toolInput, state) {
   if (toolName === 'mcp__filesystem__create_directory') {
     const dirPath = toolInput?.path || '';
     if (dirPath && isProtectedPath(dirPath)) {
-      const globalProtected = isGlobalProtectedPath(dirPath);
-      return {
-        circumvention: true,
-        reason: `CIRCUMVENTION: Attempted directory creation in protected path via MCP filesystem: ${dirPath}`,
-        severity: 'critical',
-        protectedEnforcementAttack: globalProtected,
-        systemic: globalProtected,
-      };
+      return protectedMutationDecision(dirPath, 'directory creation in protected path via MCP filesystem');
     }
   }
 
@@ -1416,14 +1462,7 @@ function detectCircumvention(toolName, toolInput, state) {
     // 2a. Bash redirects to protected paths (12.2: CRITICAL)
     const protectedMutationTarget = findProtectedBashMutationTarget(command);
     if (protectedMutationTarget) {
-      const globalProtected = isGlobalProtectedPath(protectedMutationTarget);
-      return {
-        circumvention: true,
-        reason: `CIRCUMVENTION: Bash mutation of protected path detected`,
-        severity: 'critical',
-        protectedEnforcementAttack: globalProtected,
-        systemic: globalProtected,
-      };
+      return protectedMutationDecision(protectedMutationTarget, 'Bash mutation of protected path');
     }
 
     // 2b. Git operations targeting protected paths (N3)
@@ -1438,11 +1477,11 @@ function detectCircumvention(toolName, toolInput, state) {
     }
 
     // 2c. Environment variable manipulation (N13, N14)
-    if (/export\s+(CLAUDE_PROJECT_DIR|HIVE_FLOW_PROJECT_ROOT|CF_WF_7D|HIVE_FLOW_ENFORCEMENT_DISABLED|HIVE_FLOW_PIPELINE_OVERRIDE)\s*=/i.test(command) ||
-        /\b(CLAUDE_PROJECT_DIR|HIVE_FLOW_PROJECT_ROOT|CF_WF_7D|HIVE_FLOW_ENFORCEMENT_DISABLED|HIVE_FLOW_PIPELINE_OVERRIDE)\s*=\s*\S/i.test(command)) {
+    const envAttempt = findEnforcementEnvManipulation(command);
+    if (envAttempt) {
       return {
         circumvention: true,
-        reason: `CIRCUMVENTION: Environment variable manipulation targeting enforcement`,
+        reason: `CIRCUMVENTION: Environment variable manipulation targeting enforcement (${envAttempt.name})`,
         severity: 'critical',
         systemic: true,
       };
@@ -1524,13 +1563,17 @@ function detectCircumvention(toolName, toolInput, state) {
 
     // 2f. Script execution while write-restricted
     if (state.restrictedGroups.includes('write')) {
-      if (/\.(sh|bash|cjs|mjs|js)\b/.test(command) && /^(bash|sh|node|\.\/)/i.test(command.trim())) {
+      if (findRestrictedScriptExecution(command)) {
         if (isCanonicalHookInvocation(command)) {
+          return { circumvention: false };
+        }
+        if (isAllowedRestrictedScriptExecution(command)) {
           return { circumvention: false };
         }
         return {
           circumvention: true,
-          reason: 'CIRCUMVENTION: Bash execution of script while write-restricted',
+          denyOnly: true,
+          reason: 'Script execution is blocked while write-restricted because its file effects cannot be verified. Instead: run verification commands such as node --check/node --test, or use Read/Write/Edit with human-approved protected-path changes.',
           severity: 'normal',
         };
       }
@@ -1551,11 +1594,19 @@ function isResetCheckHookInvocation(command) {
 function isResetInvocationAttempt(command) {
   if (!command) return false;
   if (isResetCheckHookInvocation(command)) return false;
-  const normalized = String(command).replace(/\s+/g, ' ').trim();
-  return /(?:^|\s)node\s+[^ \t\n|&;`]*\.claude\/helpers\/hook-handler\.cjs\s+enforcement-reset-check(?:\s|$)/i.test(normalized)
-    || /(?:^|\s)node\s+[^ \t\n|&;`]*\.claude\/helpers\/enforcement\.cjs\s+--reset(?:\s|$)/i.test(normalized)
-    || /(?:^|[\s;&|'"(])\/(?:enforcement-reset|reset-enforcement)(?:[\s;&|)'"]|$)/i.test(normalized)
-    || /(?:^|[\s;&|'"(])(?:enforcement-reset|reset-enforcement)(?:[\s;&|)'"]|$)/i.test(normalized);
+  return hasCommandPositionInvocation(command, execution => {
+    const base = commandBasename(execution.command);
+    if (base === 'enforcement-reset' || base === 'reset-enforcement') return true;
+    if (base !== 'node') return false;
+    const script = execution.args.find(arg => {
+      const scriptBase = commandBasename(arg);
+      return scriptBase === 'hook-handler.cjs' || scriptBase === 'enforcement.cjs';
+    });
+    if (!script) return false;
+    const scriptBase = commandBasename(script);
+    if (scriptBase === 'hook-handler.cjs') return execution.args.includes('enforcement-reset-check');
+    return scriptBase === 'enforcement.cjs' && execution.args.includes('--reset');
+  });
 }
 
 /**
@@ -1564,31 +1615,71 @@ function isResetInvocationAttempt(command) {
  * Does NOT flag: rm -rf /tmp/test-dir (non-root targets)
  */
 function isDestructiveRm(command) {
-  const tokens = command.trim().split(/\s+/);
-  if (tokens[0] !== 'rm') return false;
+  return hasCommandPositionInvocation(command, execution => {
+    if (commandBasename(execution.command) !== 'rm') return false;
+    let hasRecursive = false;
+    let hasForce = false;
 
-  let hasRecursive = false;
-  let hasForce = false;
+    for (const t of execution.args) {
+      if (t === '--') break;
+      if (t.startsWith('--')) {
+        if (t === '--recursive') hasRecursive = true;
+        if (t === '--force') hasForce = true;
+        continue;
+      }
+      if (t.startsWith('-') && !t.startsWith('--')) {
+        if (t.includes('r') || t.includes('R')) hasRecursive = true;
+        if (t.includes('f')) hasForce = true;
+        continue;
+      }
+      if (hasRecursive && hasForce && (t === '/' || t === '/*')) {
+        return true;
+      }
+    }
+    return false;
+  });
+}
 
-  for (let i = 1; i < tokens.length; i++) {
-    const t = tokens[i];
-    if (t === '--') break;
-    if (t.startsWith('--')) {
-      if (t === '--recursive') hasRecursive = true;
-      if (t === '--force') hasForce = true;
-      continue;
+function isAllowedRestrictedScriptExecution(command) {
+  const executions = collectShellCommandExecutions(command);
+  if (!executions.length) return false;
+  return executions.every(execution => {
+    const base = commandBasename(execution.command);
+    const args = execution.args || [];
+
+    if (base === 'node') {
+      return args.includes('--check') || args.includes('--test');
     }
-    if (t.startsWith('-') && !t.startsWith('--')) {
-      if (t.includes('r') || t.includes('R')) hasRecursive = true;
-      if (t.includes('f')) hasForce = true;
-      continue;
+
+    if (base === 'pnpm') {
+      return args.includes('test') || args.includes('exec') || args.includes('--filter') || args.includes('--dir');
     }
-    // This is a path argument — check if it targets root
-    if (hasRecursive && hasForce && (t === '/' || t === '/*')) {
+
+    if (base === 'npm' || base === 'yarn') {
+      return args.includes('test') || args.includes('run');
+    }
+
+    if (base === 'vitest' || base === 'tsc' || base === 'bats') {
       return true;
     }
+
+    return false;
+  });
+}
+
+function isScriptExecution(execution) {
+  const base = commandBasename(execution?.command || '');
+  if (/^(?:bash|sh|zsh|dash|ksh)$/.test(base)) {
+    return (execution.args || []).some(arg => /\.(?:sh|bash)\b/i.test(arg));
   }
-  return false;
+  if (base === 'node' || base === 'bun' || base === 'deno') {
+    return (execution.args || []).some(arg => /\.(?:cjs|mjs|js|ts)\b/i.test(arg));
+  }
+  return /^\.\//.test(execution?.command || '') || /\.(?:sh|bash|cjs|mjs|js)\b/i.test(execution?.command || '');
+}
+
+function findRestrictedScriptExecution(command) {
+  return collectShellCommandExecutions(command).find(isScriptExecution) || null;
 }
 
 /**
