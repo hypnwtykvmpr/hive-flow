@@ -3,6 +3,8 @@
     ".claude/settings.json",
     ".claude/settings.local.json",
     ".claude/helpers/",
+    ".env",
+    ".git/",
     ".git/info/exclude",
     ".hive-flow/enforcement/",
     ".hive-flow/workflows/",
@@ -16,6 +18,8 @@
     ".claude/settings.json",
     ".claude/settings.local.json",
     ".claude/helpers/",
+    ".env",
+    ".git/",
     ".hive-flow/enforcement/",
     "v3/@hive-flow/cli/src/permission-guard/",
     "v3/@hive-flow/cli/dist/src/permission-guard/",
@@ -41,5 +45,9 @@
     ".claude/helpers/enforcement.cjs",
     ".claude/helpers/role-enforcement.cjs",
     ".claude/helpers/hook-handler.cjs"
+  ],
+  "guardedSettings": [
+    ".claude/settings.json",
+    ".claude/settings.local.json"
   ]
 }

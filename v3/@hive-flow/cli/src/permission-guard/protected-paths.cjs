@@ -8,6 +8,8 @@ const DEFAULT_POLICY = {
     '.claude/settings.json',
     '.claude/settings.local.json',
     '.claude/helpers/',
+    '.env',
+    '.git/',
     '.git/info/exclude',
     '.hive-flow/enforcement/',
     '.hive-flow/workflows/',
@@ -21,6 +23,8 @@ const DEFAULT_POLICY = {
     '.claude/settings.json',
     '.claude/settings.local.json',
     '.claude/helpers/',
+    '.env',
+    '.git/',
     '.hive-flow/enforcement/',
     'v3/@hive-flow/cli/src/permission-guard/',
     'v3/@hive-flow/cli/dist/src/permission-guard/',
@@ -46,6 +50,10 @@ const DEFAULT_POLICY = {
     '.claude/helpers/enforcement.cjs',
     '.claude/helpers/role-enforcement.cjs',
     '.claude/helpers/hook-handler.cjs',
+  ],
+  guardedSettings: [
+    '.claude/settings.json',
+    '.claude/settings.local.json',
   ],
 };
 
@@ -83,6 +91,7 @@ function loadPolicy(policyPath) {
         hmacKeyPath: typeof raw.hmacKeyPath === 'string' ? raw.hmacKeyPath : DEFAULT_POLICY.hmacKeyPath,
         signedStateNames: coerceStringArray(raw.signedStateNames, DEFAULT_POLICY.signedStateNames),
         devOverrideFloor: coerceStringArray(raw.devOverrideFloor, DEFAULT_POLICY.devOverrideFloor),
+        guardedSettings: coerceStringArray(raw.guardedSettings, DEFAULT_POLICY.guardedSettings),
       };
       if (!policyPath) cachedPolicy = policy;
       return policy;
@@ -262,6 +271,10 @@ function isDevOverrideFloorPath(filePath, projectRoot, policy = loadPolicy()) {
   return findPolicyMatch(policy.devOverrideFloor, filePath, projectRoot, new Set(policy.devOverrideFloor)) !== null;
 }
 
+function isGuardedSettingsPath(filePath, projectRoot, policy = loadPolicy()) {
+  return findPolicyMatch(policy.guardedSettings, filePath, projectRoot, new Set(policy.guardedSettings)) !== null;
+}
+
 function readDevOverrideConfig(projectRoot) {
   try {
     const overridePath = path.resolve(projectRoot, '.hive-flow', 'enforcement', 'dev-override.conf');
@@ -386,6 +399,7 @@ module.exports = {
   isHmacKeyPath,
   isSignedStatePath,
   isDevOverrideFloorPath,
+  isGuardedSettingsPath,
   readDevOverrideConfig,
   isDevOverrideActive,
   readDevOverrideConfigToken,

@@ -9,8 +9,10 @@ import {
   findProtectedWritePath,
   getProtectedWriteScope,
   isDevOverrideFloorPath,
+  isGuardedSettingsPath,
   isProtectedReadPath,
   isProtectedWritePath,
+  loadPolicy,
   sanitizeScopeId,
 } from '../protected-paths.js';
 
@@ -38,6 +40,20 @@ describe('shared protected-path policy matcher', () => {
       expect(cjsPolicy.isProtectedWritePath(target, root)).toBe(true);
       expect(getProtectedWriteScope(target, root)).toBe('global');
       expect(cjsPolicy.getProtectedWriteScope(target, root)).toBe('global');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('tracks guarded settings paths in both the embedded and on-disk policies', () => {
+    const root = tmpProject();
+    try {
+      const policy = loadPolicy();
+      for (const entry of ['.claude/settings.json', '.claude/settings.local.json']) {
+        expect(policy.guardedSettings).toContain(entry);
+        expect(isGuardedSettingsPath(join(root, entry), root)).toBe(true);
+        expect(cjsPolicy.isGuardedSettingsPath(join(root, entry), root)).toBe(true);
+      }
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

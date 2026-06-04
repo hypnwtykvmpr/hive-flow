@@ -15,7 +15,7 @@ const __dirname = dirname(__filename);
 import type { InitOptions, InitResult, PlatformInfo } from './types.js';
 import { detectPlatform, DEFAULT_INIT_OPTIONS } from './types.js';
 import { DEFAULT_MAX_AGENTS } from '@hive-flow/shared/core/config/defaults';
-import { ensureEnforcementPreToolUseHooks, generateSettingsJson, generateSettings } from './settings-generator.js';
+import { ensureEnforcementPreToolUseHooks, ensureSettingsReconcilerHooks, generateSettingsJson, generateSettings } from './settings-generator.js';
 import { generateMCPJson } from './mcp-generator.js';
 import { generateStatuslineScript, generateStatuslineHook } from './statusline-generator.js';
 import {
@@ -286,6 +286,7 @@ function mergeSettingsForUpgrade(existing: Record<string, unknown>): Record<stri
   const existingHooks = (existing.hooks as Record<string, unknown[]>) || {};
   merged.hooks = { ...existingHooks };
   ensureEnforcementPreToolUseHooks(merged.hooks as Record<string, unknown[]>, DEFAULT_INIT_OPTIONS.hooks.timeout);
+  ensureSettingsReconcilerHooks(merged.hooks as Record<string, unknown[]>);
 
   // Platform-specific auto-memory hook commands
   const autoMemoryImportCmd = isWindows

@@ -29,6 +29,7 @@ export interface ProtectedPathPolicy {
   hmacKeyPath: string;
   signedStateNames: string[];
   devOverrideFloor: string[];
+  guardedSettings: string[];
 }
 
 export interface ProtectedPathMatch {
@@ -42,6 +43,8 @@ const DEFAULT_POLICY: ProtectedPathPolicy = {
     '.claude/settings.json',
     '.claude/settings.local.json',
     '.claude/helpers/',
+    '.env',
+    '.git/',
     '.git/info/exclude',
     '.hive-flow/enforcement/',
     '.hive-flow/workflows/',
@@ -55,6 +58,8 @@ const DEFAULT_POLICY: ProtectedPathPolicy = {
     '.claude/settings.json',
     '.claude/settings.local.json',
     '.claude/helpers/',
+    '.env',
+    '.git/',
     '.hive-flow/enforcement/',
     'v3/@hive-flow/cli/src/permission-guard/',
     'v3/@hive-flow/cli/dist/src/permission-guard/',
@@ -80,6 +85,10 @@ const DEFAULT_POLICY: ProtectedPathPolicy = {
     '.claude/helpers/enforcement.cjs',
     '.claude/helpers/role-enforcement.cjs',
     '.claude/helpers/hook-handler.cjs',
+  ],
+  guardedSettings: [
+    '.claude/settings.json',
+    '.claude/settings.local.json',
   ],
 };
 
@@ -118,6 +127,7 @@ export function loadPolicy(policyPath?: string): ProtectedPathPolicy {
         hmacKeyPath: typeof raw.hmacKeyPath === 'string' ? raw.hmacKeyPath : DEFAULT_POLICY.hmacKeyPath,
         signedStateNames: coerceStringArray(raw.signedStateNames, DEFAULT_POLICY.signedStateNames),
         devOverrideFloor: coerceStringArray(raw.devOverrideFloor, DEFAULT_POLICY.devOverrideFloor),
+        guardedSettings: coerceStringArray(raw.guardedSettings, DEFAULT_POLICY.guardedSettings),
       };
       if (!policyPath) cachedPolicy = policy;
       return policy;
@@ -294,6 +304,10 @@ export function isSignedStatePath(filePath: string, projectRoot: string, policy 
 
 export function isDevOverrideFloorPath(filePath: string, projectRoot: string, policy = loadPolicy()): boolean {
   return findPolicyMatch(policy.devOverrideFloor, filePath, projectRoot, new Set(policy.devOverrideFloor)) !== null;
+}
+
+export function isGuardedSettingsPath(filePath: string, projectRoot: string, policy = loadPolicy()): boolean {
+  return findPolicyMatch(policy.guardedSettings, filePath, projectRoot, new Set(policy.guardedSettings)) !== null;
 }
 
 export function readDevOverrideConfig(projectRoot: string): string | null {

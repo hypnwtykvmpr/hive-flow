@@ -46,6 +46,10 @@ function commandHook(command: string, timeout: number): HookCommand {
   return { type: 'command', command, timeout };
 }
 
+function settingsReconcilerHook(): HookCommand {
+  return commandHook(helperCommand('settings-reconciler.cjs'), 5000);
+}
+
 export function generateEnforcementPreToolUseHooks(timeout: number): HookGroup[] {
   return [
     {
@@ -92,6 +96,46 @@ export function ensureEnforcementPreToolUseHooks(hooks: Record<string, unknown[]
     ...generateEnforcementPreToolUseHooks(timeout),
     ...preserved,
   ];
+}
+
+function hasHookCommand(group: HookGroup, needle: string): boolean {
+  return Boolean(group.hooks?.some((hook) => hook.command.includes(needle)));
+}
+
+function ensureCommandInFirstGroup(hooks: Record<string, unknown[]>, event: string, hook: HookCommand): void {
+  const groups = (hooks[event] as HookGroup[] | undefined) || [];
+  const alreadyPresent = groups.some((group) => hasHookCommand(group, hook.command));
+  if (alreadyPresent) {
+    hooks[event] = groups;
+    return;
+  }
+  if (groups.length === 0) {
+    hooks[event] = [{ hooks: [hook] }];
+    return;
+  }
+  const [first, ...rest] = groups;
+  first.hooks = [...(first.hooks || []), hook];
+  hooks[event] = [first, ...rest];
+}
+
+export function ensureSettingsReconcilerHooks(hooks: Record<string, unknown[]>): void {
+  const hook = settingsReconcilerHook();
+  const postGroups = (hooks.PostToolUse as HookGroup[] | undefined) || [];
+  const postMatcher = 'Write|Edit|MultiEdit|mcp__filesystem__write_file|mcp__filesystem__edit_file';
+  if (!postGroups.some((group) => hasHookCommand(group, hook.command))) {
+    hooks.PostToolUse = [
+      {
+        matcher: postMatcher,
+        hooks: [hook],
+      },
+      ...postGroups,
+    ];
+  } else {
+    hooks.PostToolUse = postGroups;
+  }
+
+  ensureCommandInFirstGroup(hooks, 'SessionStart', hook);
+  ensureCommandInFirstGroup(hooks, 'Stop', hook);
 }
 
 /**
@@ -354,6 +398,8 @@ function generateHooksConfig(config: HooksConfig): object {
       },
     ];
   }
+
+  ensureSettingsReconcilerHooks(hooks);
 
   // PreCompact — preserve context before compaction
   if (config.preCompact) {

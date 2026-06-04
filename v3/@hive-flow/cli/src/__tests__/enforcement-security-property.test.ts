@@ -562,7 +562,7 @@ describe('enforcement security property contracts', () => {
     expect(result.hookSpecificOutput.permissionDecisionReason).toContain('protected path');
   });
 
-  it('allows signed-root protected config writes when dev override is active', () => {
+  it('denies signed-root protected config writes when settings content is not verifiable', () => {
     enableDevOverride();
     issueRootOverrideToken();
 
@@ -571,10 +571,11 @@ describe('enforcement security property contracts', () => {
       tool_input: { file_path: '.claude/settings.json' },
     });
 
-    expect(result).toEqual({});
+    expect(result.hookSpecificOutput.permissionDecision).toBe('deny');
+    expect(result.hookSpecificOutput.permissionDecisionReason).toContain('protected path');
   });
 
-  it('allows signed-root protected config writes when the signed token is in the override file', () => {
+  it('denies signed-root protected config writes from override file when settings content is not verifiable', () => {
     writeRootOverrideTokenToConfig();
 
     const result = enf.processPreToolUse({
@@ -582,7 +583,8 @@ describe('enforcement security property contracts', () => {
       tool_input: { file_path: '.claude/settings.json' },
     });
 
-    expect(result).toEqual({});
+    expect(result.hookSpecificOutput.permissionDecision).toBe('deny');
+    expect(result.hookSpecificOutput.permissionDecisionReason).toContain('protected path');
   });
 
   it('keeps subagent protected config writes blocked when dev override is active', () => {

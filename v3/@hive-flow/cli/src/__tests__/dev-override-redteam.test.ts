@@ -246,13 +246,23 @@ describe('dev override self-red-team probes', () => {
     }
   });
 
-  it('allows Bash redirects to grantable config paths but not floor paths', () => {
+  it('denies settings wipes under the root override but still blocks floor paths', () => {
     const settingsWrite = enf.processPreToolUse({
       tool_name: 'Bash',
       tool_input: { command: 'printf "{}" > .claude/settings.json' },
     });
-    expect(settingsWrite).toEqual({});
+    expect(settingsWrite.hookSpecificOutput.permissionDecision).toBe('deny');
+    expect(settingsWrite.hookSpecificOutput.permissionDecisionReason).toContain('protected path');
 
+    resetRootOverrideState();
+    const localSettingsWrite = enf.processPreToolUse({
+      tool_name: 'Write',
+      tool_input: { file_path: '.claude/settings.local.json', content: '{"disableAllHooks":true}' },
+    });
+    expect(localSettingsWrite.hookSpecificOutput.permissionDecision).toBe('deny');
+    expect(localSettingsWrite.hookSpecificOutput.permissionDecisionReason).toContain('protected path');
+
+    resetRootOverrideState();
     const coreWrite = enf.processPreToolUse({
       tool_name: 'Bash',
       tool_input: { command: 'printf "x" > .claude/helpers/enforcement.cjs' },

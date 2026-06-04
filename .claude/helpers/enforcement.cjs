@@ -62,6 +62,7 @@ const STATE_FILE = path.join(ENFORCEMENT_DIR, 'state.json');
 const VIOLATIONS_FILE = path.join(ENFORCEMENT_DIR, 'violations.jsonl');
 const VERIFICATION_GATE_FILE = path.join(ENFORCEMENT_DIR, 'verification-gate.json');
 const HMAC_KEY_FILE = path.join(ENFORCEMENT_DIR, '.hmac-key');
+const SETTINGS_PRESETS_FILE = path.join(ENFORCEMENT_DIR, 'settings-presets.json');
 const COMPACTION_LOCK_FILE = path.join(ENFORCEMENT_DIR, 'compaction-lock.json');
 const PIPELINE_STATE_FILE = path.join(ENFORCEMENT_DIR, 'pipeline-state.json');
 const MAX_STATE_SIZE = 10240; // 10KB — larger = likely corrupt/attack (12.12)
@@ -788,7 +789,145 @@ function canDevOverrideBypassCircumvention(input, toolName, toolInput, violation
   const protectedPaths = collectProtectedMutationPaths(toolName, toolInput);
   if (protectedPaths.length === 0) return false;
   if (protectedPaths.some(entry => entry.kind !== 'write')) return false;
+  for (const entry of protectedPaths) {
+    if (isGuardedSettingsPath(entry.filePath)) {
+      const projected = projectedContentAfterWrite(toolName, toolInput, entry.filePath);
+      if (!guardSettingsContent(projected)) return false;
+    }
+  }
   return protectedPaths.every(entry => !isDevOverrideFloorPath(entry.filePath));
+}
+
+function isGuardedSettingsPath(filePath) {
+  return protectedPathPolicy.isGuardedSettingsPath(filePath, PROJECT_DIR);
+}
+
+function loadSignedSettingsPresets() {
+  try {
+    if (!fs.existsSync(SETTINGS_PRESETS_FILE)) return null;
+    const stats = fs.statSync(SETTINGS_PRESETS_FILE);
+    if (stats.size > 256 * 1024) return null;
+    const raw = JSON.parse(fs.readFileSync(SETTINGS_PRESETS_FILE, 'utf8'));
+    const { valid, state } = verifyState(raw);
+    if (!valid || !state || typeof state !== 'object') return null;
+    const entries = Array.isArray(state.entries) ? state.entries : [];
+    if (entries.length === 0) return null;
+    return {
+      version: state.version || 1,
+      entries,
+      baselineAllow: Array.isArray(state.baselineAllow) ? state.baselineAllow : [],
+    };
+  } catch {
+    return null;
+  }
+}
+
+function projectedContentAfterWrite(toolName, toolInput, filePath) {
+  const content = toolInput?.content;
+  if (['Write', 'mcp__filesystem__write_file'].includes(toolName)) {
+    return typeof content === 'string' ? content : null;
+  }
+
+  if (['Edit', 'mcp__filesystem__edit_file'].includes(toolName)) {
+    const oldText = typeof toolInput?.old_string === 'string' ? toolInput.old_string : toolInput?.old_text;
+    const newText = typeof toolInput?.new_string === 'string' ? toolInput.new_string : toolInput?.new_text;
+    if (typeof oldText !== 'string' || typeof newText !== 'string') return null;
+    try {
+      const current = fs.readFileSync(resolveFilePath(filePath), 'utf8');
+      if (!current.includes(oldText)) return null;
+      return current.replace(oldText, newText);
+    } catch {
+      return null;
+    }
+  }
+
+  if (toolName === 'MultiEdit') {
+    const edits = Array.isArray(toolInput?.edits) ? toolInput.edits : [];
+    if (edits.length === 0) return null;
+    try {
+      let current = fs.readFileSync(resolveFilePath(filePath), 'utf8');
+      for (const edit of edits) {
+        const oldText = edit?.old_string;
+        const newText = edit?.new_string;
+        if (typeof oldText !== 'string' || typeof newText !== 'string') return null;
+        if (!current.includes(oldText)) return null;
+        current = current.replace(oldText, newText);
+      }
+      return current;
+    } catch {
+      return null;
+    }
+  }
+
+  return null;
+}
+
+function normalizeHookCommand(command) {
+  return String(command || '')
+    .replace(/\$CLAUDE_PROJECT_DIR|\$\{CLAUDE_PROJECT_DIR\}/g, PROJECT_DIR)
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function collectHookEntries(settings) {
+  const entries = new Set();
+  const hooks = settings && typeof settings === 'object' ? settings.hooks : null;
+  if (!hooks || typeof hooks !== 'object') return entries;
+  for (const [event, groups] of Object.entries(hooks)) {
+    if (!Array.isArray(groups)) continue;
+    for (const group of groups) {
+      const matcher = typeof group?.matcher === 'string' ? group.matcher : '';
+      const commands = Array.isArray(group?.hooks) ? group.hooks : [];
+      for (const hook of commands) {
+        if (hook?.type === 'command' && typeof hook.command === 'string') {
+          entries.add(`${event}\0${matcher}\0${normalizeHookCommand(hook.command)}`);
+        }
+      }
+    }
+  }
+  return entries;
+}
+
+function containsAllPresetEntries(settings, presets) {
+  const actual = collectHookEntries(settings);
+  for (const entry of presets.entries) {
+    const event = typeof entry?.event === 'string' ? entry.event : 'PreToolUse';
+    const matcher = typeof entry?.matcher === 'string' ? entry.matcher : '';
+    const command = typeof entry?.command === 'string' ? entry.command : '';
+    if (!command) return false;
+    if (!actual.has(`${event}\0${matcher}\0${normalizeHookCommand(command)}`)) return false;
+  }
+  return true;
+}
+
+function widensGovernanceAllow(settings, baselineAllow = []) {
+  const allow = settings?.permissions && Array.isArray(settings.permissions.allow)
+    ? settings.permissions.allow
+    : [];
+  const baseline = new Set(baselineAllow.map(entry => String(entry)));
+  for (const entry of allow) {
+    const value = String(entry);
+    if (baseline.has(value)) continue;
+    if (/^(Bash|Write|Edit|MultiEdit|NotebookEdit)(?:\(|$)/.test(value)) return true;
+    if (/\.claude|\.hive-flow|\.git|\.env|permission-guard|hook-handler|enforcement\.cjs|role-enforcement\.cjs/i.test(value)) return true;
+  }
+  return false;
+}
+
+function guardSettingsContent(projected) {
+  if (typeof projected !== 'string') return false;
+  const presets = loadSignedSettingsPresets();
+  if (!presets) return false;
+  try {
+    const parsed = JSON.parse(projected);
+    if (!parsed || typeof parsed !== 'object') return false;
+    if (parsed.disableAllHooks === true) return false;
+    if (!containsAllPresetEntries(parsed, presets)) return false;
+    if (widensGovernanceAllow(parsed, presets.baselineAllow)) return false;
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function findEnforcementHmacKeyReadTarget(toolName, toolInput) {

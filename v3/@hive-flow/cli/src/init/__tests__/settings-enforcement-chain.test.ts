@@ -109,10 +109,26 @@ function expectFullPreToolUseChain(settings: GeneratedSettings): void {
   ]);
 }
 
+function expectSettingsReconciler(settings: GeneratedSettings): void {
+  const postToolUse = settings.hooks?.PostToolUse || [];
+  const sessionStart = settings.hooks?.SessionStart || [];
+  const stop = settings.hooks?.Stop || [];
+
+  const postEntry = findEntry(postToolUse, 'settings-reconciler.cjs', 'Write|Edit|MultiEdit');
+  const postTokens = matcherTokens(postEntry);
+  for (const required of ['Write', 'Edit', 'MultiEdit', 'mcp__filesystem__write_file', 'mcp__filesystem__edit_file']) {
+    expect(postTokens.has(required), `settings reconciler PostToolUse matcher missing ${required}`).toBe(true);
+  }
+
+  findEntry(sessionStart, 'settings-reconciler.cjs');
+  findEntry(stop, 'settings-reconciler.cjs');
+}
+
 describe('init settings enforcement chain', () => {
   it('fresh settings generation emits the full PreToolUse enforcement chain', () => {
     const settings = generateSettings(testOptions('/tmp/hf-init-test')) as GeneratedSettings;
     expectFullPreToolUseChain(settings);
+    expectSettingsReconciler(settings);
   });
 
   it('fresh init writes a governed settings.json to disk', async () => {
@@ -123,6 +139,7 @@ describe('init settings enforcement chain', () => {
 
       const settings = JSON.parse(readFileSync(join(root, '.claude', 'settings.json'), 'utf8')) as GeneratedSettings;
       expectFullPreToolUseChain(settings);
+      expectSettingsReconciler(settings);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -152,6 +169,7 @@ describe('init settings enforcement chain', () => {
 
       const settings = JSON.parse(readFileSync(join(root, '.claude', 'settings.json'), 'utf8')) as GeneratedSettings;
       expectFullPreToolUseChain(settings);
+      expectSettingsReconciler(settings);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
