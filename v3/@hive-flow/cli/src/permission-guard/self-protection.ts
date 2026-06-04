@@ -16,6 +16,11 @@ import { existsSync, readFileSync, readlinkSync, realpathSync } from 'node:fs';
 import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 import { homedir } from 'node:os';
 import { hasActiveOverride } from './biometric-override.js';
+import {
+  findProtectedWritePath,
+  getProtectedWritePaths,
+  isDevOverrideFloorPath as isPolicyDevOverrideFloorPath,
+} from './protected-paths.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -198,26 +203,13 @@ export function isProtectedPath(filePath: string, cwd: string): ProtectionResult
     return { blocked: false, reason: '' };
   }
 
-  // Resolve the target to an absolute path
-  const absoluteTarget = resolve(cwd, filePath);
-  const realTarget = resolveRealPathForPolicy(filePath, cwd);
-
-  for (const template of PROTECTED_PATH_TEMPLATES) {
-    const resolved = resolveTemplate(template, cwd);
-    const realResolved = resolveRealPathForPolicy(resolved, cwd);
-    const realPattern = template.endsWith('/') ? `${realResolved}${sep}` : realResolved;
-    if (
-      matchesProtectedPattern(absoluteTarget, resolved)
-      || matchesProtectedPattern(realTarget, resolved)
-      || matchesProtectedPattern(absoluteTarget, realPattern)
-      || matchesProtectedPattern(realTarget, realPattern)
-    ) {
-      return {
-        blocked: true,
-        reason: `DENIED: This file is part of the Permission Guard security system and cannot be modified by agents. Request human assistance if changes are needed. To grant a temporary override, run: node scripts/permission-guard-setup.mjs override`,
-        protectedPath: resolved,
-      };
-    }
+  const match = findProtectedWritePath(filePath, cwd);
+  if (match) {
+    return {
+      blocked: true,
+      reason: `DENIED: This file is part of the Permission Guard security system and cannot be modified by agents. Request human assistance if changes are needed. To grant a temporary override, run: node scripts/permission-guard-setup.mjs override`,
+      protectedPath: match.absolutePath,
+    };
   }
 
   return { blocked: false, reason: '' };
@@ -310,17 +302,7 @@ function hasSignedRootSession(cwd: string, context?: DevOverrideContext, nowMs =
 }
 
 function isDevOverrideFloorPath(filePath: string, cwd: string): boolean {
-  if (!filePath) return false;
-  const target = normalizePath(resolveRealPathForPolicy(filePath, cwd));
-  const enforcementDir = normalizePath(resolveRealPathForPolicy(resolve(cwd, '.hive-flow/enforcement'), cwd));
-  const helperCore = [
-    resolve(cwd, '.claude/helpers/enforcement.cjs'),
-    resolve(cwd, '.claude/helpers/role-enforcement.cjs'),
-    resolve(cwd, '.claude/helpers/hook-handler.cjs'),
-  ].map(file => normalizePath(resolveRealPathForPolicy(file, cwd)));
-  if (helperCore.includes(target)) return true;
-  const rel = relative(enforcementDir, target);
-  return rel === '' || (!rel.startsWith('..') && !rel.startsWith(sep));
+  return isPolicyDevOverrideFloorPath(filePath, cwd);
 }
 
 function shouldBypassForDevOverride(filePath: string, cwd: string, context?: DevOverrideContext): boolean {
@@ -733,11 +715,11 @@ function hashFile(filePath: string): string | null {
 export function captureIntegritySnapshot(cwd: string): IntegritySnapshot {
   const hashes: Record<string, string> = {};
 
-  for (const template of PROTECTED_PATH_TEMPLATES) {
-    const resolved = resolveTemplate(template, cwd);
+  for (const protectedPath of getProtectedWritePaths(cwd)) {
+    const resolved = protectedPath.absolutePath;
 
     // For directory templates, hash all files found inside
-    if (template.endsWith('/')) {
+    if (protectedPath.entry.endsWith('/')) {
       try {
         const { readdirSync } = require('node:fs');
         const entries = readdirSync(resolved, { recursive: true, withFileTypes: true });

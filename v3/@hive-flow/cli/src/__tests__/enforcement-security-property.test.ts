@@ -15,10 +15,16 @@ const require = createRequire(import.meta.url);
 const here = dirname(fileURLToPath(import.meta.url));
 const source = resolve(here, '../../../../../.claude/helpers/enforcement.cjs');
 const settingsSource = resolve(here, '../../../../../.claude/settings.json');
+const policySource = resolve(here, '../permission-guard/protected-paths.cjs');
+const policyJsonSource = resolve(here, '../permission-guard/protected-paths.policy.json');
 const root = realpathSync(mkdtempSync(join(tmpdir(), 'hive-flow-enforcement-security-')));
 const helperPath = join(root, '.claude', 'helpers', 'enforcement.cjs');
 mkdirSync(dirname(helperPath), { recursive: true });
 copyFileSync(source, helperPath);
+const policyPath = join(root, 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs');
+mkdirSync(dirname(policyPath), { recursive: true });
+copyFileSync(policySource, policyPath);
+copyFileSync(policyJsonSource, join(dirname(policyPath), 'protected-paths.policy.json'));
 mkdirSync(join(root, '.claude'), { recursive: true });
 copyFileSync(settingsSource, join(root, '.claude', 'settings.json'));
 
@@ -142,6 +148,7 @@ describe('enforcement security property contracts', () => {
   it('treats generated protected write destinations as circumvention', () => {
     const protectedLeaves = fc.constantFrom(
       '.claude/settings.json',
+      '.claude/settings.local.json',
       '.claude/helpers/enforcement.cjs',
       '.claude/helpers/role-enforcement.cjs',
       '.hive-flow/enforcement/state.json',
@@ -200,7 +207,7 @@ describe('enforcement security property contracts', () => {
     }
   });
 
-  it('treats enforcement HMAC key reads as circumvention', () => {
+  it('treats protected read-policy targets as circumvention', () => {
     const state = {
       level: 0,
       violations: 0,
@@ -213,6 +220,10 @@ describe('enforcement security property contracts', () => {
       '.hive-flow/enforcement/.hmac-key',
       '.HIVE-FLOW/enforcement/.hmac-key',
       '.hive-flow/ENFORCEMENT/.hmac-key',
+      '.hive-flow/enforcement/state.json',
+      '.env',
+      '.claude/settings.json',
+      '.claude/settings.local.json',
     ]) {
       for (const toolName of [
         'Read',
@@ -230,7 +241,7 @@ describe('enforcement security property contracts', () => {
     }
 
     expect(enf.detectCircumvention('mcp__filesystem__read_multiple_files', {
-      paths: ['src/app.ts', '.HIVE-FLOW/enforcement/.hmac-key'],
+      paths: ['src/app.ts', '.claude/settings.local.json'],
     }, state).circumvention).toBe(true);
   });
 
@@ -243,7 +254,10 @@ describe('enforcement security property contracts', () => {
   it('matches protected paths on path boundaries rather than raw prefixes', () => {
     expect(enf.isProtectedPath(join(root, '.claude', 'settings.json'))).toBe(true);
     expect(enf.isProtectedPath(join(root, '.CLAUDE', 'settings.json'))).toBe(true);
+    expect(enf.isProtectedPath(join(root, '.claude', 'settings.local.json'))).toBe(true);
+    expect(enf.isProtectedPath(join(root, '.CLAUDE', 'settings.LOCAL.json'))).toBe(true);
     expect(enf.isProtectedPath(join(root, '.claude', 'settings.json.bak'))).toBe(false);
+    expect(enf.isProtectedPath(join(root, '.claude', 'settings.local.json.bak'))).toBe(false);
     expect(enf.isProtectedPath(join(root, '.claude', 'settings.json.d', 'note.md'))).toBe(false);
 
     expect(enf.isProtectedPath(join(root, '.claude', 'helpers'))).toBe(true);
@@ -482,7 +496,7 @@ describe('enforcement security property contracts', () => {
     });
 
     expect(readKey.hookSpecificOutput.permissionDecision).toBe('deny');
-    expect(readKey.hookSpecificOutput.permissionDecisionReason).toContain('HMAC key');
+    expect(readKey.hookSpecificOutput.permissionDecisionReason).toContain('protected enforcement');
   });
 
   it('classifies HIVE_FLOW_PROJECT_ROOT manipulation as enforcement circumvention', () => {

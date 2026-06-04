@@ -13,10 +13,16 @@ const PROPERTY_RUNS = propertyRunsFromEnv(100);
 const here = dirname(fileURLToPath(import.meta.url));
 const source = resolve(here, '../../../../../.claude/helpers/enforcement.cjs');
 const settingsSource = resolve(here, '../../../../../.claude/settings.json');
+const policySource = resolve(here, '../permission-guard/protected-paths.cjs');
+const policyJsonSource = resolve(here, '../permission-guard/protected-paths.policy.json');
 const root = realpathSync(mkdtempSync(join(tmpdir(), 'hive-flow-dev-override-redteam-')));
 const helperPath = join(root, '.claude', 'helpers', 'enforcement.cjs');
 mkdirSync(dirname(helperPath), { recursive: true });
 copyFileSync(source, helperPath);
+const policyPath = join(root, 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs');
+mkdirSync(dirname(policyPath), { recursive: true });
+copyFileSync(policySource, policyPath);
+copyFileSync(policyJsonSource, join(dirname(policyPath), 'protected-paths.policy.json'));
 mkdirSync(join(root, '.claude'), { recursive: true });
 copyFileSync(settingsSource, join(root, '.claude', 'settings.json'));
 
@@ -262,7 +268,7 @@ describe('dev override self-red-team probes', () => {
     });
 
     expect(result.hookSpecificOutput.permissionDecision).toBe('deny');
-    expect(result.hookSpecificOutput.permissionDecisionReason).toContain('HMAC key');
+    expect(result.hookSpecificOutput.permissionDecisionReason).toContain('protected enforcement');
   });
 
   it('does not allow the root override to edit the override toggle itself', () => {

@@ -458,6 +458,12 @@ describe('Pipeline MCP Tools (workflow-tools.ts)', () => {
 const ENFORCEMENT_CJS_SOURCE_PATH = nodePath.resolve(
   __dirname, '..', '..', '..', '..', '..', '.claude', 'helpers', 'enforcement.cjs'
 );
+const ENFORCEMENT_POLICY_SOURCE_PATH = nodePath.resolve(
+  __dirname, '..', 'permission-guard', 'protected-paths.cjs'
+);
+const ENFORCEMENT_POLICY_JSON_SOURCE_PATH = nodePath.resolve(
+  __dirname, '..', 'permission-guard', 'protected-paths.policy.json'
+);
 const ENFORCEMENT_CJS_TEST_ROOT = realFs.mkdtempSync(
   nodePath.join(nodeOs.tmpdir(), 'hive-flow-enforcement-cjs-')
 );
@@ -466,6 +472,15 @@ const ENFORCEMENT_CJS_PATH = nodePath.join(
 );
 realFs.mkdirSync(nodePath.dirname(ENFORCEMENT_CJS_PATH), { recursive: true });
 realFs.copyFileSync(ENFORCEMENT_CJS_SOURCE_PATH, ENFORCEMENT_CJS_PATH);
+const ENFORCEMENT_POLICY_TEST_PATH = nodePath.join(
+  ENFORCEMENT_CJS_TEST_ROOT, 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs'
+);
+realFs.mkdirSync(nodePath.dirname(ENFORCEMENT_POLICY_TEST_PATH), { recursive: true });
+realFs.copyFileSync(ENFORCEMENT_POLICY_SOURCE_PATH, ENFORCEMENT_POLICY_TEST_PATH);
+realFs.copyFileSync(
+  ENFORCEMENT_POLICY_JSON_SOURCE_PATH,
+  nodePath.join(nodePath.dirname(ENFORCEMENT_POLICY_TEST_PATH), 'protected-paths.policy.json'),
+);
 
 // The enforcement dir as the module will use it (from __dirname)
 const ENF_DIR = nodePath.resolve(

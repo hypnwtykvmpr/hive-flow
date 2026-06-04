@@ -67,13 +67,13 @@ describe('Task A: MCP filesystem enforcement gap', () => {
     expect(result.circumvention).toBe(true);
   });
 
-  it('5. mcp__filesystem__read_file to .claude/settings.json is NOT circumvention (reads are safe)', () => {
+  it('5. mcp__filesystem__read_file to .claude/settings.json is circumvention (governance reads are protected)', () => {
     const result = enf.detectCircumvention(
       'mcp__filesystem__read_file',
       { path: '.claude/settings.json' },
       freshState(),
     );
-    expect(result.circumvention).toBe(false);
+    expect(result.circumvention).toBe(true);
   });
 
   it('6. getRestrictionGroups for mcp__filesystem__write_file returns [write, exec]', () => {

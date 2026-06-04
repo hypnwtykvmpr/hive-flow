@@ -63,7 +63,7 @@ function makeWorkerRecord(overrides: Partial<HiveWorkerRecord> = {}): HiveWorker
 //   v3/@hive-flow/cli/src/mcp-tools/queen-tools.ts (mission_assign role file)
 //   v3/@hive-flow/cli/src/mcp-tools/agent-tools.ts (propagateEnforcementToSubAgent)
 function canonicalSanitize(id: string): string {
-  return id.replace(/[/\\.]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 64);
+  return id.replace(/[^A-Za-z0-9_-]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 64);
 }
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -216,10 +216,10 @@ describe('Queen & Hive Store — Phase 2 additions', () => {
       expect(result).toBe('etc_passwd');
     });
 
-    it('unicode characters are preserved (not path separators)', () => {
+    it('unicode characters are neutralized by the whitelist sanitizer', () => {
       const input = 'agent-\u00e9\u00e8\u00ea';
       const result = canonicalSanitize(input);
-      expect(result).toBe('agent-\u00e9\u00e8\u00ea');
+      expect(result).toBe('agent-');
     });
 
     it('empty input returns empty string', () => {

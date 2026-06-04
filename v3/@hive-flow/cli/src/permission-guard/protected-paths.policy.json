@@ -1,0 +1,45 @@
+{
+  "protectedWrite": [
+    ".claude/settings.json",
+    ".claude/settings.local.json",
+    ".claude/helpers/",
+    ".git/info/exclude",
+    ".hive-flow/enforcement/",
+    ".hive-flow/workflows/",
+    "v3/@hive-flow/cli/src/permission-guard/",
+    "v3/@hive-flow/cli/dist/src/permission-guard/",
+    "v3/@hive-flow/cli/dist/src/mcp-tools/",
+    "${HOME}/.hive-flow/permission-guard/",
+    "scripts/permission-guard-setup.mjs"
+  ],
+  "protectedWriteGlobal": [
+    ".claude/settings.json",
+    ".claude/settings.local.json",
+    ".claude/helpers/",
+    ".hive-flow/enforcement/",
+    "v3/@hive-flow/cli/src/permission-guard/",
+    "v3/@hive-flow/cli/dist/src/permission-guard/",
+    "v3/@hive-flow/cli/dist/src/mcp-tools/",
+    "scripts/permission-guard-setup.mjs"
+  ],
+  "protectedRead": [
+    ".hive-flow/enforcement/",
+    ".env",
+    ".claude/settings.json",
+    ".claude/settings.local.json"
+  ],
+  "hmacKeyPath": ".hive-flow/enforcement/.hmac-key",
+  "signedStateNames": [
+    "state.json",
+    "role.json",
+    "pipeline-state.json",
+    "verification-gate.json",
+    "dev-override.conf"
+  ],
+  "devOverrideFloor": [
+    ".hive-flow/enforcement/",
+    ".claude/helpers/enforcement.cjs",
+    ".claude/helpers/role-enforcement.cjs",
+    ".claude/helpers/hook-handler.cjs"
+  ]
+}

@@ -43,6 +43,12 @@ describe('isProtectedPath', () => {
     expect(result.reason).toContain('Permission Guard');
   });
 
+  it('blocks writes to .claude/settings.local.json', () => {
+    const result = isProtectedPath(`${CWD}/.claude/settings.local.json`, CWD);
+    expect(result.blocked).toBe(true);
+    expect(result.reason).toContain('Permission Guard');
+  });
+
   it('blocks writes to .claude/helpers/hook-handler.cjs', () => {
     const result = isProtectedPath(`${CWD}/.claude/helpers/hook-handler.cjs`, CWD);
     expect(result.blocked).toBe(true);

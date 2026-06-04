@@ -27,6 +27,7 @@ import { evaluateInlineJury } from './jury-evaluator.js';
 import { classifyCommand } from './risk-classifier.js';
 import { mergeWithDefaults } from './default-config.js';
 import { evaluateSelfProtection } from './self-protection.js';
+import { findProtectedReadPath } from './protected-paths.js';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -165,10 +166,6 @@ function resolvePolicyRoot(hookInput: Partial<HookInput>, cwd: string): string {
   return resolve(cwd);
 }
 
-function casefoldPath(filePath: string): string {
-  return filePath.replace(/\\/g, '/').toLowerCase();
-}
-
 function hasSubagentIdentity(hookInput: Partial<HookInput>): boolean {
   if (process.env.CLAUDE_PARENT_AGENT_ID) return true;
   if (process.env.AGENTIC_FLOW_AGENT_ID || process.env.CLAUDE_AGENT_ID) return true;
@@ -184,23 +181,12 @@ function resolvePathVar(pattern: string, cwd: string, projectRoot: string = cwd)
     .replace('${CWD}', cwd);
 }
 
-function isEnforcementHmacKeyPath(filePath: string, projectRoot: string): boolean {
-  if (!filePath) return false;
-  try {
-    const target = resolve(projectRoot, filePath);
-    const hmacKeyPath = resolve(projectRoot, '.hive-flow', 'enforcement', '.hmac-key');
-    return casefoldPath(target) === casefoldPath(hmacKeyPath);
-  } catch {
-    return false;
-  }
-}
-
 function findSensitiveReadPath(toolName: string, toolInput: Record<string, unknown>, projectRoot: string): string | null {
   if (toolName === 'mcp__filesystem__read_multiple_files') {
     const paths = Array.isArray(toolInput.paths) ? toolInput.paths : [];
     for (const entry of paths) {
       const filePath = typeof entry === 'string' ? entry : '';
-      if (isEnforcementHmacKeyPath(filePath, projectRoot)) return filePath;
+      if (findProtectedReadPath(filePath, projectRoot)) return filePath;
     }
     return null;
   }
@@ -217,7 +203,7 @@ function findSensitiveReadPath(toolName: string, toolInput: Record<string, unkno
     'mcp__filesystem__read_media_file',
   ]);
   if (!readTools.has(toolName)) return null;
-  return isEnforcementHmacKeyPath(readPath, projectRoot) ? readPath : null;
+  return findProtectedReadPath(readPath, projectRoot) ? readPath : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -822,7 +808,7 @@ export async function evaluate(hookInput: HookInput, config: Partial<PermissionC
 
   const sensitiveReadPath = findSensitiveReadPath(toolName, toolInput, policyRoot);
   if (sensitiveReadPath) {
-    const reason = 'DENIED: The enforcement HMAC key is secret state and cannot be read by agents.';
+    const reason = 'DENIED: This path contains protected enforcement, credential, or hook-governance state and cannot be read by agents.';
     logDecision(config, toolName, sensitiveReadPath, 'deny', 'sensitive-read', reason);
     return { decision: 'deny', reason };
   }

@@ -33,6 +33,7 @@ const DEV_OVERRIDE_FILE = path.join(ENFORCEMENT_DIR, 'dev-override.conf');
 const DEV_OVERRIDE_TOKEN_ENV = 'HIVE_FLOW_DEV_OVERRIDE_TOKEN';
 const DEV_OVERRIDE_TOKEN_KIND = 'hive-flow-dev-override-root';
 const MAX_DEV_OVERRIDE_TOKEN_TTL_MS = 12 * 60 * 60 * 1000;
+const protectedPathPolicy = require(path.join(PROJECT_DIR, 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs'));
 
 // ============================================================================
 // Identity Text Constants
@@ -100,20 +101,23 @@ STRUCTURAL RULES (enforced by hooks — violation = tool denial):
 const ADVOCATE_DENIED = new Set([
   'Bash', 'Write', 'Edit', 'MultiEdit', 'NotebookEdit', 'WebFetch',
   'mcp__filesystem__write_file', 'mcp__filesystem__edit_file',
-  'mcp__filesystem__move_file', 'mcp__filesystem__create_directory',
+  'mcp__filesystem__move_file', 'mcp__filesystem__rename_file',
+  'mcp__filesystem__copy_file', 'mcp__filesystem__create_directory',
   'mcp__filesystem__delete_file',
 ]);
 /** Same structural denial as advocate — execution/fetch tools only. */
 const ENFORCER_DENIED = new Set([
   'Bash', 'Write', 'Edit', 'MultiEdit', 'NotebookEdit', 'WebFetch',
   'mcp__filesystem__write_file', 'mcp__filesystem__edit_file',
-  'mcp__filesystem__move_file', 'mcp__filesystem__create_directory',
+  'mcp__filesystem__move_file', 'mcp__filesystem__rename_file',
+  'mcp__filesystem__copy_file', 'mcp__filesystem__create_directory',
   'mcp__filesystem__delete_file',
 ]);
 const WORK_TOOLS = new Set(['Bash', 'Write', 'Edit', 'MultiEdit', 'NotebookEdit']);
 const MCP_FS_WRITE_TOOLS = [
   'mcp__filesystem__write_file', 'mcp__filesystem__edit_file',
-  'mcp__filesystem__move_file', 'mcp__filesystem__create_directory',
+  'mcp__filesystem__move_file', 'mcp__filesystem__rename_file',
+  'mcp__filesystem__copy_file', 'mcp__filesystem__create_directory',
   'mcp__filesystem__delete_file',
 ];
 /** Tools that count as queen "direct work" for delegation gate (matches PreToolUse matchers). */
@@ -172,10 +176,7 @@ function verifyRoleHmac(envelope) {
 // ============================================================================
 
 function sanitizeId(agentId) {
-  if (!agentId || typeof agentId !== 'string') return '';
-  // Replace non-alphanumeric (except hyphen) with hyphen, truncate to 64 chars
-  const sanitized = agentId.replace(/[\/\\\.]+/g, '_').replace(/^_+|_+$/g, '');
-  return sanitized.slice(0, 64) || '';
+  return protectedPathPolicy.sanitizeScopeId(agentId, '', 64);
 }
 
 function getHookAgentId(input) {
@@ -317,7 +318,7 @@ function loadRole(agentId) {
 function loadQueenHive(hiveId) {
   if (!hiveId) return null;
   // Sanitize hiveId to prevent path traversal
-  const safeHiveId = String(hiveId).replace(/[\/\\\.]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 64);
+  const safeHiveId = sanitizeId(String(hiveId));
   if (!safeHiveId || safeHiveId !== hiveId) return null;
   try {
     const hiveFile = path.join(PROJECT_DIR, '.hive-flow', 'hives', safeHiveId, 'hive.json');

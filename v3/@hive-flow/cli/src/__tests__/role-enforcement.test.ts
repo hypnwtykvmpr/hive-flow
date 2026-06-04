@@ -35,6 +35,12 @@ function makeRoleEnvelope(state: Record<string, unknown>) {
 const ROLE_ENFORCEMENT_SOURCE_PATH = require('path').resolve(
   __dirname, '..', '..', '..', '..', '..', '.claude', 'helpers', 'role-enforcement.cjs'
 );
+const ROLE_POLICY_SOURCE_PATH = require('path').resolve(
+  __dirname, '..', 'permission-guard', 'protected-paths.cjs'
+);
+const ROLE_POLICY_JSON_SOURCE_PATH = require('path').resolve(
+  __dirname, '..', 'permission-guard', 'protected-paths.policy.json'
+);
 const ROLE_TEST_PROJECT_DIR = mkdtempSync(
   require('path').join(tmpdir(), 'hive-flow-role-enforcement-cjs-')
 );
@@ -44,6 +50,15 @@ const ROLE_ENFORCEMENT_PATH = require('path').join(
 );
 mkdirSync(require('path').dirname(ROLE_ENFORCEMENT_PATH), { recursive: true });
 copyFileSync(ROLE_ENFORCEMENT_SOURCE_PATH, ROLE_ENFORCEMENT_PATH);
+const ROLE_POLICY_PATH = require('path').join(
+  ROLE_TEST_PROJECT_REAL_DIR, 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs'
+);
+mkdirSync(require('path').dirname(ROLE_POLICY_PATH), { recursive: true });
+copyFileSync(ROLE_POLICY_SOURCE_PATH, ROLE_POLICY_PATH);
+copyFileSync(
+  ROLE_POLICY_JSON_SOURCE_PATH,
+  require('path').join(require('path').dirname(ROLE_POLICY_PATH), 'protected-paths.policy.json'),
+);
 const AGENT_STORE_PATH = require('path').join(ROLE_TEST_PROJECT_REAL_DIR, '.hive-flow', 'agents', 'store.json');
 
 // We need to use the real module since it's CJS with fs/crypto calls.
@@ -92,9 +107,8 @@ describe('Role Enforcement System', () => {
   // ── sanitizeId ──
 
   describe('sanitizeId', () => {
-    it('replaces path separators and dots with underscores', () => {
-      // Implementation replaces /\. with underscores; @ is preserved
-      expect(roleEnf.sanitizeId('agent@foo/bar')).toBe('agent@foo_bar');
+    it('replaces non-whitelisted characters with underscores', () => {
+      expect(roleEnf.sanitizeId('agent@foo/bar')).toBe('agent_foo_bar');
     });
 
     it('truncates to 64 characters', () => {

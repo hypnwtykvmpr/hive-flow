@@ -40,6 +40,7 @@ const DEV_OVERRIDE_FILE = path.join(ENFORCEMENT_DIR, 'dev-override.conf');
 const DEV_OVERRIDE_TOKEN_ENV = 'HIVE_FLOW_DEV_OVERRIDE_TOKEN';
 const DEV_OVERRIDE_TOKEN_KIND = 'hive-flow-dev-override-root';
 const MAX_DEV_OVERRIDE_TOKEN_TTL_MS = 12 * 60 * 60 * 1000;
+const protectedPathPolicy = require(path.join(PROJECT_DIR, 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs'));
 
 const MAX_STATE_SIZE = 10240; // 10KB — larger = likely corrupt/attack (12.12)
 const MAX_HISTORY = 50;
@@ -75,6 +76,7 @@ const UNRESTRICTED_TOOLS = new Set([
 // Protected paths — writes to these are circumvention attempts
 const PROTECTED_PATHS = [
   '.claude/settings.json',
+  '.claude/settings.local.json',
   '.claude/helpers/',
   '.git/info/exclude',
   '.hive-flow/enforcement/',
@@ -156,9 +158,7 @@ function ensureDir(dir) {
 }
 
 function sanitizeScopeId(id, fallback = '') {
-  if (!id || typeof id !== 'string') return fallback;
-  const sanitized = id.replace(/[\/\\\.]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 64);
-  return sanitized || fallback;
+  return protectedPathPolicy.sanitizeScopeId(id, fallback, 64);
 }
 
 function getProjectScopeId() {
@@ -641,36 +641,7 @@ function projectRelativePath(filePath) {
 }
 
 function getProtectedPathScope(filePath) {
-  const relativePath = casefoldPath(projectRelativePath(filePath));
-
-  for (const protectedPath of PROTECTED_PATHS) {
-    const normalizedProtectedPath = casefoldPath(protectedPath);
-    const protectedDir = normalizedProtectedPath.endsWith('/');
-    const protectedPathWithoutSlash = normalizedProtectedPath.replace(/\/$/, '');
-    const matchesProtectedPath = protectedDir
-      ? (relativePath === protectedPathWithoutSlash || relativePath.startsWith(normalizedProtectedPath))
-      : relativePath === normalizedProtectedPath;
-
-    if (matchesProtectedPath) {
-      if (
-        normalizedProtectedPath === '.claude/settings.json' ||
-        normalizedProtectedPath === '.claude/helpers/' ||
-        normalizedProtectedPath === '.hive-flow/enforcement/'
-      ) {
-        return 'global';
-      }
-      return 'project';
-    }
-  }
-
-  // Check compiled output patterns (12.10)
-  for (const pattern of PROTECTED_PATH_PATTERNS) {
-    if (pattern.test(relativePath)) {
-      return 'global';
-    }
-  }
-
-  return null;
+  return protectedPathPolicy.getProtectedWriteScope(filePath, PROJECT_DIR);
 }
 
 function isProtectedPath(filePath) {
@@ -682,8 +653,7 @@ function isGlobalProtectedPath(filePath) {
 }
 
 function isEnforcementHmacKeyPath(filePath) {
-  if (!filePath) return false;
-  return casefoldPath(resolveFilePath(filePath)) === casefoldPath(HMAC_KEY_FILE);
+  return protectedPathPolicy.isHmacKeyPath(filePath, PROJECT_DIR);
 }
 
 function isDevOverrideActive() {
@@ -772,17 +742,7 @@ function isRootSessionForDevOverride(input = null) {
 }
 
 function isDevOverrideFloorPath(filePath) {
-  if (!filePath) return false;
-  const resolved = casefoldPath(resolveFilePath(filePath));
-  const helpersDir = path.join(PROJECT_DIR, '.claude', 'helpers');
-  const floorHelperFiles = new Set([
-    path.join(helpersDir, 'enforcement.cjs'),
-    path.join(helpersDir, 'role-enforcement.cjs'),
-    path.join(helpersDir, 'hook-handler.cjs'),
-  ].map(file => casefoldPath(resolveFilePath(file))));
-  if (floorHelperFiles.has(resolved)) return true;
-  const enforcementDir = casefoldPath(resolveFilePath(ENFORCEMENT_DIR));
-  return resolved === casefoldPath(resolveFilePath(DEV_OVERRIDE_FILE)) || resolved.startsWith(enforcementDir + '/');
+  return protectedPathPolicy.isDevOverrideFloorPath(filePath, PROJECT_DIR);
 }
 
 function collectProtectedMutationPaths(toolName, toolInput) {
@@ -825,7 +785,7 @@ function findEnforcementHmacKeyReadTarget(toolName, toolInput) {
   if (toolName === 'mcp__filesystem__read_multiple_files') {
     const paths = Array.isArray(toolInput?.paths) ? toolInput.paths : [];
     for (const entry of paths) {
-      if (typeof entry === 'string' && isEnforcementHmacKeyPath(entry)) return entry;
+      if (typeof entry === 'string' && protectedPathPolicy.findProtectedReadPath(entry, PROJECT_DIR)) return entry;
     }
     return null;
   }
@@ -834,7 +794,7 @@ function findEnforcementHmacKeyReadTarget(toolName, toolInput) {
     return null;
   }
   const filePath = toolInput?.file_path || toolInput?.notebook_path || toolInput?.path || '';
-  return isEnforcementHmacKeyPath(filePath) ? filePath : null;
+  return protectedPathPolicy.findProtectedReadPath(filePath, PROJECT_DIR) ? filePath : null;
 }
 
 let _canonicalHookScripts = null;
@@ -1031,7 +991,7 @@ function detectCircumvention(toolName, toolInput, state) {
   if (hmacKeyReadTarget) {
     return {
       circumvention: true,
-      reason: `CIRCUMVENTION: Attempted to read enforcement HMAC key: ${hmacKeyReadTarget}`,
+      reason: `CIRCUMVENTION: Attempted to read protected enforcement, credential, or hook-governance state: ${hmacKeyReadTarget}`,
       severity: 'critical',
       protectedEnforcementAttack: true,
       systemic: true,
@@ -1074,9 +1034,9 @@ function detectCircumvention(toolName, toolInput, state) {
 
     // 2a. Bash redirects to protected paths (12.2: CRITICAL)
     const protectedRedirectTarget = findProtectedRedirectTarget(command);
-    if (protectedRedirectTarget || /sed\s+-i.*(?:\.hive-flow\/enforcement\/|\.claude\/helpers\/|\.claude\/settings\.json)/i.test(command)) {
+    if (protectedRedirectTarget || /sed\s+-i.*(?:\.hive-flow\/enforcement\/|\.claude\/helpers\/|\.claude\/settings(?:\.local)?\.json)/i.test(command)) {
       const target = protectedRedirectTarget || command;
-      const globalProtected = isGlobalProtectedPath(target) || /\.hive-flow\/enforcement\/|\.claude\/helpers\/|\.claude\/settings\.json/i.test(target);
+      const globalProtected = isGlobalProtectedPath(target) || /\.hive-flow\/enforcement\/|\.claude\/helpers\/|\.claude\/settings(?:\.local)?\.json/i.test(target);
       return {
         circumvention: true,
         reason: `CIRCUMVENTION: Bash redirect to protected path detected`,

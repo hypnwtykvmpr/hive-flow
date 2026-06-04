@@ -98,7 +98,7 @@ describe('filesystem read tools sensitive-path guard', () => {
       ALLOW_ALL_CONFIG,
     );
     expect(result.decision).toBe('deny');
-    expect(result.reason).toContain('HMAC key');
+    expect(result.reason).toContain('protected enforcement');
   });
 
   it('blocks mcp__filesystem__read_multiple_files when any path is the enforcement HMAC key', async () => {
@@ -112,7 +112,7 @@ describe('filesystem read tools sensitive-path guard', () => {
       ALLOW_ALL_CONFIG,
     );
     expect(result.decision).toBe('deny');
-    expect(result.reason).toContain('HMAC key');
+    expect(result.reason).toContain('protected enforcement');
   });
 
   it('blocks native Read from reading .hive-flow/enforcement/.hmac-key before always-allow tools', async () => {
@@ -123,7 +123,7 @@ describe('filesystem read tools sensitive-path guard', () => {
       ALLOW_ALL_CONFIG,
     );
     expect(result.decision).toBe('deny');
-    expect(result.reason).toContain('HMAC key');
+    expect(result.reason).toContain('protected enforcement');
   });
 
   it('blocks mixed-case reads of the enforcement HMAC key on case-insensitive filesystems', async () => {
@@ -134,7 +134,23 @@ describe('filesystem read tools sensitive-path guard', () => {
       ALLOW_ALL_CONFIG,
     );
     expect(result.decision).toBe('deny');
-    expect(result.reason).toContain('HMAC key');
+    expect(result.reason).toContain('protected enforcement');
+  });
+
+  it.each([
+    ['.env'],
+    ['.hive-flow/enforcement/state.json'],
+    ['.claude/settings.json'],
+    ['.claude/settings.local.json'],
+  ])('blocks mcp__filesystem__read_file from reading protected policy path %s', async (filePath) => {
+    const result = await evaluate(
+      makeHookInput('mcp__filesystem__read_file', {
+        path: `${CWD}/${filePath}`,
+      }),
+      ALLOW_ALL_CONFIG,
+    );
+    expect(result.decision).toBe('deny');
+    expect(result.reason).toContain('protected enforcement');
   });
 
   it('allows read_file for non-sensitive project files', async () => {
