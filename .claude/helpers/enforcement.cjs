@@ -27,8 +27,36 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
-// Derive PROJECT_DIR from script location, NOT from env (N1: env poisoning defense)
-const PROJECT_DIR = path.resolve(__dirname, '..', '..');
+function loadProtectedPathPolicyModule() {
+  const envProjectRoot = process.env.HIVE_FLOW_PROJECT_ROOT || process.env.CLAUDE_PROJECT_DIR || '';
+  const candidates = [
+    envProjectRoot && path.join(path.resolve(envProjectRoot), 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs'),
+    path.join(path.resolve(process.cwd()), 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs'),
+    path.join(path.resolve(__dirname, '..', '..'), 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs'),
+    path.join(__dirname, 'protected-paths.cjs'),
+  ].filter(Boolean);
+
+  for (const candidate of candidates) {
+    try {
+      if (fs.existsSync(candidate)) return require(candidate);
+    } catch {
+      // Try the next candidate.
+    }
+  }
+
+  return require(path.join(path.resolve(__dirname, '..', '..'), 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs'));
+}
+
+const protectedPathPolicy = loadProtectedPathPolicyModule();
+
+// Resolve PROJECT_DIR from the shared policy resolver. Hook-child env is trusted
+// because agent Bash exports do not mutate Claude Code's hook process env; the
+// lexical export detector below still blocks attempts to spoof it in commands.
+const PROJECT_DIR = protectedPathPolicy.resolveProjectRoot({
+  env: process.env,
+  cwd: path.resolve(__dirname, '..', '..'),
+  fallbackRoot: process.cwd(),
+});
 const ENFORCEMENT_DIR = path.join(PROJECT_DIR, '.hive-flow', 'enforcement');
 const STATE_FILE = path.join(ENFORCEMENT_DIR, 'state.json');
 const VIOLATIONS_FILE = path.join(ENFORCEMENT_DIR, 'violations.jsonl');
@@ -40,8 +68,6 @@ const DEV_OVERRIDE_FILE = path.join(ENFORCEMENT_DIR, 'dev-override.conf');
 const DEV_OVERRIDE_TOKEN_ENV = 'HIVE_FLOW_DEV_OVERRIDE_TOKEN';
 const DEV_OVERRIDE_TOKEN_KIND = 'hive-flow-dev-override-root';
 const MAX_DEV_OVERRIDE_TOKEN_TTL_MS = 12 * 60 * 60 * 1000;
-const protectedPathPolicy = require(path.join(PROJECT_DIR, 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs'));
-
 const MAX_STATE_SIZE = 10240; // 10KB — larger = likely corrupt/attack (12.12)
 const MAX_HISTORY = 50;
 const HUNG_THRESHOLD = 5;
@@ -2160,6 +2186,7 @@ module.exports = {
   getHookAgentId,
   getStateFile,
   getScopedStateFile,
+  getProjectScopeId,
   resolveScopeContext,
   loadEffectiveState,
   getProtectedPathScope,

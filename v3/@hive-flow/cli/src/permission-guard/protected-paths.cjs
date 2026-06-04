@@ -129,6 +129,33 @@ function resolveRealPathForPolicy(filePath, projectRoot) {
   }
 }
 
+function normalizeProjectRootCandidate(candidate) {
+  if (typeof candidate !== 'string' || !candidate.trim()) return null;
+  const absolute = path.resolve(candidate);
+  try {
+    return fs.realpathSync.native(absolute);
+  } catch {
+    return absolute;
+  }
+}
+
+function resolveProjectRoot(options = {}) {
+  const env = options.env || process.env;
+  const candidates = [
+    env.HIVE_FLOW_PROJECT_ROOT,
+    env.CLAUDE_PROJECT_DIR,
+    options.cwd,
+    options.fallbackRoot,
+  ];
+
+  for (const candidate of candidates) {
+    const resolved = normalizeProjectRootCandidate(candidate);
+    if (resolved) return resolved;
+  }
+
+  return path.resolve(process.cwd());
+}
+
 function normalizeForPolicy(filePath, projectRoot) {
   return casefoldPath(resolveRealPathForPolicy(filePath, projectRoot));
 }
@@ -241,6 +268,7 @@ module.exports = {
   expandPolicyPath,
   casefoldPath,
   resolveRealPathForPolicy,
+  resolveProjectRoot,
   normalizeForPolicy,
   getProtectedWritePaths,
   findProtectedWritePath,

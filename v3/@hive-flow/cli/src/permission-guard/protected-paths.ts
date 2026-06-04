@@ -5,6 +5,12 @@ import { fileURLToPath } from 'node:url';
 
 export type ProtectedPathScope = 'global' | 'project';
 
+export interface ProjectRootResolutionOptions {
+  env?: Record<string, string | undefined>;
+  cwd?: string;
+  fallbackRoot?: string;
+}
+
 export interface ProtectedPathPolicy {
   protectedWrite: string[];
   protectedWriteGlobal: string[];
@@ -146,6 +152,33 @@ export function resolveRealPathForPolicy(filePath: string, projectRoot: string):
       }
     }
   }
+}
+
+function normalizeProjectRootCandidate(candidate: unknown): string | null {
+  if (typeof candidate !== 'string' || !candidate.trim()) return null;
+  const absolute = resolve(candidate);
+  try {
+    return realpathSync.native(absolute);
+  } catch {
+    return absolute;
+  }
+}
+
+export function resolveProjectRoot(options: ProjectRootResolutionOptions = {}): string {
+  const env = options.env ?? process.env;
+  const candidates = [
+    env.HIVE_FLOW_PROJECT_ROOT,
+    env.CLAUDE_PROJECT_DIR,
+    options.cwd,
+    options.fallbackRoot,
+  ];
+
+  for (const candidate of candidates) {
+    const resolved = normalizeProjectRootCandidate(candidate);
+    if (resolved) return resolved;
+  }
+
+  return resolve(process.cwd());
 }
 
 export function normalizeForPolicy(filePath: string, projectRoot: string): string {

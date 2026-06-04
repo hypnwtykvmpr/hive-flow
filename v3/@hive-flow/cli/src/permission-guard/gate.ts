@@ -27,7 +27,7 @@ import { evaluateInlineJury } from './jury-evaluator.js';
 import { classifyCommand } from './risk-classifier.js';
 import { mergeWithDefaults } from './default-config.js';
 import { evaluateSelfProtection } from './self-protection.js';
-import { findProtectedReadPath } from './protected-paths.js';
+import { findProtectedReadPath, resolveProjectRoot as resolveProtectedProjectRoot } from './protected-paths.js';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -159,13 +159,7 @@ function atomicWriteJson(filePath: string, data: unknown): void {
 
 function resolvePolicyRoot(hookInput: Partial<HookInput>, cwd: string): string {
   void hookInput;
-  const explicit = process.env.HIVE_FLOW_PROJECT_ROOT
-    || process.env.CLAUDE_PROJECT_DIR
-    || '';
-  if (typeof explicit === 'string' && explicit.trim()) {
-    return resolve(explicit);
-  }
-  return resolve(cwd);
+  return resolveProtectedProjectRoot({ env: process.env, cwd });
 }
 
 function hasSubagentIdentity(hookInput: Partial<HookInput>): boolean {
