@@ -27,10 +27,12 @@
  * @module @hive-flow/providers/scripts/provider-agent-bridge
  */
 
-import { readFileSync, writeFileSync, appendFileSync, mkdirSync, renameSync, existsSync, rmdirSync, statSync, unlinkSync, readdirSync, openSync, readSync, closeSync } from 'fs';
-import { join, dirname, resolve, relative } from 'path';
+import { readFileSync, writeFileSync, appendFileSync, mkdirSync, renameSync, existsSync, rmdirSync, statSync, unlinkSync, readdirSync, openSync, readSync, closeSync, realpathSync, readlinkSync } from 'fs';
+import { join, dirname, basename, isAbsolute, resolve, relative, sep } from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 import { execFileSync } from 'child_process';
+import { createHmac, timingSafeEqual } from 'crypto';
+import { createRequire } from 'module';
 import {
   patternIsRejected,
   fileGlobIsRejected,
@@ -42,6 +44,14 @@ import {
   isProviderAuthError,
   notifyProviderAuthRequired,
 } from './provider-auth-helpers.mjs';
+
+const require = createRequire(import.meta.url);
+const protectedPathPolicy = require('../../cli/src/permission-guard/protected-paths.cjs');
+
+// The bridge runs provider-controlled tool loops. Root override tokens are only
+// meaningful to the human's top-level session, never to detached providers.
+delete process.env.HIVE_FLOW_DEV_OVERRIDE_TOKEN;
+delete process.env.HIVE_FLOW_DEV_OVERRIDE;
 
 // Module-level limits — set once in main() after provider/model are resolved.
 // Used by BRIDGE_FILESYSTEM_TOOLS handlers for context-aware size caps.
@@ -1090,8 +1100,12 @@ async function loadMCPClient() {
 // ===== Bridge Filesystem Security Guardrails =====
 
 const PROJECT_ROOT = resolve(process.cwd());
+const FAIL_CLOSED_ENFORCEMENT_LEVEL = 2;
 
 function validateFilePath(filePath) {
+  if (typeof filePath !== 'string' || filePath.trim() === '') {
+    throw new Error('Missing required file path');
+  }
   const resolved = resolve(filePath);
   if (!resolved.startsWith(PROJECT_ROOT + '/') && resolved !== PROJECT_ROOT) {
     throw new Error(`Path traversal blocked: ${filePath} resolves outside project root`);
@@ -1099,29 +1113,125 @@ function validateFilePath(filePath) {
   return resolved;
 }
 
-const PROTECTED_WRITE_PATHS = [
-  '.hive-flow/enforcement/',
-  '.claude/helpers/',
-  '.claude/settings.json',
-  '.env',
-  'state.json',
-  'role.json',
-  '.hive-flow/data/advocate-state.json',
-];
-
 function isProtectedPath(filePath) {
-  const rel = resolve(filePath).replace(PROJECT_ROOT + '/', '');
-  return PROTECTED_WRITE_PATHS.some(p => rel.includes(p));
+  return protectedPathPolicy.isProtectedWritePath(filePath, PROJECT_ROOT);
+}
+
+function isProtectedReadPath(filePath) {
+  return protectedPathPolicy.isProtectedReadPath(filePath, PROJECT_ROOT);
+}
+
+function assertReadableByBridge(filePath, operation) {
+  if (isProtectedReadPath(filePath)) {
+    const match = protectedPathPolicy.findProtectedReadPath(filePath, PROJECT_ROOT);
+    throw new Error(`${operation} blocked: ${filePath} is a protected read path (${match?.entry || 'policy'})`);
+  }
+}
+
+function readBridgeHmacKey() {
+  try {
+    const key = readFileSync(resolve(PROJECT_ROOT, '.hive-flow', 'enforcement', '.hmac-key'), 'utf8').trim();
+    return key || null;
+  } catch {
+    return null;
+  }
+}
+
+function readVerifiedEnforcementLevel(statePath, missingLevel = 0) {
+  try {
+    if (!existsSync(statePath)) return missingLevel;
+    const key = readBridgeHmacKey();
+    if (!key) return FAIL_CLOSED_ENFORCEMENT_LEVEL;
+    const envelope = JSON.parse(readFileSync(statePath, 'utf-8'));
+    if (!envelope?.state || typeof envelope.hmac !== 'string') {
+      return FAIL_CLOSED_ENFORCEMENT_LEVEL;
+    }
+
+    const expected = createHmac('sha256', key).update(JSON.stringify(envelope.state)).digest('hex');
+    const expectedBuf = Buffer.from(expected, 'hex');
+    const actualBuf = Buffer.from(envelope.hmac, 'hex');
+    if (expectedBuf.length !== actualBuf.length || !timingSafeEqual(expectedBuf, actualBuf)) {
+      return FAIL_CLOSED_ENFORCEMENT_LEVEL;
+    }
+
+    const level = Number(envelope.state.level);
+    return Number.isFinite(level) ? level : FAIL_CLOSED_ENFORCEMENT_LEVEL;
+  } catch {
+    return FAIL_CLOSED_ENFORCEMENT_LEVEL;
+  }
+}
+
+function scopedStatePath(scopeType, scopeId) {
+  const sanitized = protectedPathPolicy.sanitizeScopeId(scopeId, '', 64);
+  if (!sanitized) return null;
+  if (scopeType === 'agent') return resolve(PROJECT_ROOT, '.hive-flow', 'enforcement', 'agents', sanitized, 'state.json');
+  if (scopeType === 'hive') return resolve(PROJECT_ROOT, '.hive-flow', 'enforcement', 'hives', sanitized, 'state.json');
+  return null;
 }
 
 function checkEnforcementLevel() {
+  const levels = [
+    readVerifiedEnforcementLevel(resolve(PROJECT_ROOT, '.hive-flow', 'enforcement', 'state.json'), FAIL_CLOSED_ENFORCEMENT_LEVEL),
+  ];
+
+  const agentId = process.env.AGENTIC_FLOW_AGENT_ID || process.env.CLAUDE_AGENT_ID || '';
+  const agentState = scopedStatePath('agent', agentId);
+  if (agentState) levels.push(readVerifiedEnforcementLevel(agentState, 0));
+
+  const hiveState = scopedStatePath('hive', process.env.HIVE_FLOW_HIVE_ID || '');
+  if (hiveState) levels.push(readVerifiedEnforcementLevel(hiveState, 0));
+
+  return Math.max(...levels);
+}
+
+function casefoldPath(filePath) {
+  return String(filePath || '').replace(/\\/g, '/').toLowerCase();
+}
+
+function resolveRealPathForBridge(filePath) {
+  const absolute = isAbsolute(filePath) ? resolve(filePath) : resolve(PROJECT_ROOT, filePath);
   try {
-    const statePath = resolve(PROJECT_ROOT, '.hive-flow', 'enforcement', 'state.json');
-    const raw = readFileSync(statePath, 'utf-8');
-    const state = JSON.parse(raw);
-    const level = state?.payload ? JSON.parse(state.payload).level : (state.level || 0);
-    return level;
-  } catch { return 0; }
+    return realpathSync.native(absolute);
+  } catch {
+    const missingSegments = [];
+    let current = absolute;
+    while (true) {
+      try {
+        const linkTarget = readlinkSync(current);
+        const targetAbsolute = isAbsolute(linkTarget) ? linkTarget : resolve(dirname(current), linkTarget);
+        return resolve(targetAbsolute, ...missingSegments.reverse());
+      } catch {
+        // Not a symlink at this segment.
+      }
+      try {
+        return resolve(realpathSync.native(current), ...missingSegments.reverse());
+      } catch {
+        const parent = dirname(current);
+        if (parent === current) return absolute;
+        missingSegments.push(basename(current));
+        current = parent;
+      }
+    }
+  }
+}
+
+function searchMayIncludeProtectedReadPath(searchPath) {
+  const searchRoot = casefoldPath(resolveRealPathForBridge(searchPath));
+  return protectedPathPolicy.getProtectedReadPaths(PROJECT_ROOT).some((entry) => {
+    const protectedTarget = casefoldPath(resolveRealPathForBridge(entry.absolutePath));
+    const rel = relative(searchRoot, protectedTarget);
+    return rel === '' || (!rel.startsWith('..') && !rel.startsWith(sep));
+  });
+}
+
+function protectedReadRgGlobs() {
+  const args = [];
+  for (const entry of protectedPathPolicy.loadPolicy().protectedRead) {
+    if (entry.includes('${HOME}')) continue;
+    const clean = entry.replace(/^\.\//, '').replace(/\/$/, '');
+    args.push('--glob', entry.endsWith('/') ? `!${clean}/**` : `!${clean}`);
+  }
+  return args;
 }
 
 // SEC-002/HIGH-003: Bridge tool blocklist — provider agents are restricted to operational tools.
@@ -1170,6 +1280,21 @@ const BRIDGE_BLOCKED_TOOLS = new Set([
   'memory_delete',
   // Agent spawning (prevent provider agents from spawning other agents)
   'agent_spawn',
+  // MCP filesystem tools must not bypass the bridge's built-in read/write gates.
+  'mcp__filesystem__write_file',
+  'mcp__filesystem__edit_file',
+  'mcp__filesystem__move_file',
+  'mcp__filesystem__rename_file',
+  'mcp__filesystem__copy_file',
+  'mcp__filesystem__create_directory',
+  'mcp__filesystem__delete_file',
+  'mcp__filesystem__read_file',
+  'mcp__filesystem__read_text_file',
+  'mcp__filesystem__read_media_file',
+  'mcp__filesystem__read_multiple_files',
+  'mcp__filesystem__list_directory',
+  'mcp__filesystem__directory_tree',
+  'mcp__filesystem__search_files',
 ]);
 
 // Built-in filesystem tool handlers — always available to provider agents.
@@ -1178,6 +1303,7 @@ const BRIDGE_BLOCKED_TOOLS = new Set([
 const BRIDGE_FILESYSTEM_TOOLS = {
   'read_file': ({ path: filePath }) => {
     const safePath = validateFilePath(filePath);
+    assertReadableByBridge(safePath, 'read_file');
     const stats = statSync(safePath);
     const threshold = getToolResultThreshold(currentBridgeLimits);
     const maxReadBytes = threshold === Infinity ? 500 * 1024 : threshold;
@@ -1200,27 +1326,25 @@ const BRIDGE_FILESYSTEM_TOOLS = {
     return readFileSync(safePath, 'utf-8');
   },
   'write_file': ({ path: filePath, content }) => {
-    validateFilePath(filePath);
-    if (isProtectedPath(filePath)) {
+    const safePath = validateFilePath(filePath);
+    if (isProtectedPath(safePath)) {
       throw new Error(`Write blocked: ${filePath} is a protected path`);
     }
     if (checkEnforcementLevel() >= 2) {
       throw new Error(`Writes blocked at enforcement level RESTRICTED+`);
     }
-    const safePath = resolve(filePath);
     mkdirSync(dirname(safePath), { recursive: true });
     writeFileSync(safePath, content, 'utf-8');
     return `File written: ${safePath}`;
   },
   'edit_file': ({ path: filePath, old_string, new_string }) => {
-    validateFilePath(filePath);
-    if (isProtectedPath(filePath)) {
+    const safePath = validateFilePath(filePath);
+    if (isProtectedPath(safePath)) {
       throw new Error(`Write blocked: ${filePath} is a protected path`);
     }
     if (checkEnforcementLevel() >= 2) {
       throw new Error(`Writes blocked at enforcement level RESTRICTED+`);
     }
-    const safePath = resolve(filePath);
     const content = readFileSync(safePath, 'utf-8');
     if (old_string === '') {
       return `Error: old_string must be non-empty for ${safePath}`;
@@ -1244,6 +1368,7 @@ const BRIDGE_FILESYSTEM_TOOLS = {
   },
   'list_directory': ({ path: dirPath }) => {
     const safePath = validateFilePath(dirPath || '.');
+    assertReadableByBridge(safePath, 'list_directory');
     const entries = readdirSync(safePath);
     if (entries.length > 500) {
       return entries.slice(0, 500).join('\n') + `\n\n[TRUNCATED: showing 500 of ${entries.length} entries]`;
@@ -1273,6 +1398,10 @@ const BRIDGE_FILESYSTEM_TOOLS = {
     }
 
     const searchPath = path ? validateFilePath(path) : PROJECT_ROOT;
+    if (isProtectedReadPath(searchPath)) {
+      throw new Error(`grep blocked: ${searchPath} is a protected read path`);
+    }
+    const needsProtectedFilter = searchMayIncludeProtectedReadPath(searchPath);
     const maxResults = max_results || 50;
 
     try {
@@ -1286,8 +1415,14 @@ const BRIDGE_FILESYSTEM_TOOLS = {
         // searchPath). This blocks any attacker-controlled string from
         // being interpreted as a flag (e.g. `--pre=` RCE, `--pcre2`, `-x`).
         args = buildRgArgs(pattern, searchPath, file_glob);
+        if (needsProtectedFilter) {
+          args.splice(args.length - 2, 0, ...protectedReadRgGlobs());
+        }
       } catch {
         command = 'grep';
+        if (needsProtectedFilter) {
+          throw new Error('grep fallback cannot safely exclude protected read paths; install ripgrep (rg)');
+        }
         if (file_glob) {
           // Basic glob to regex conversion for grep.
           // Note: grep doesn't support glob patterns natively, so we'll do
@@ -1335,6 +1470,9 @@ const BRIDGE_FILESYSTEM_TOOLS = {
     }
     
     const basePath = validateFilePath(searchPath || '.');
+    if (isProtectedReadPath(basePath)) {
+      throw new Error(`find_file blocked: ${basePath} is a protected read path`);
+    }
     
     // Simple glob pattern matching function
     function matchesPattern(filename, pattern) {
@@ -1427,6 +1565,7 @@ const BRIDGE_FILESYSTEM_TOOLS = {
     // Recursive directory search
     function findFiles(dir, pattern, gitignorePatterns = [], results = []) {
       if (results.length >= 50) return results; // Limit to 50 files
+      if (isProtectedReadPath(dir)) return results;
       
       // Read .gitignore for this directory
       const dirGitignorePatterns = readGitignorePatterns(dir);
@@ -1447,12 +1586,18 @@ const BRIDGE_FILESYSTEM_TOOLS = {
           
           // Skip common ignored directories even without .gitignore
           if (entry.isDirectory()) {
+            if (isProtectedReadPath(fullPath)) {
+              continue;
+            }
             if (entry.name === 'node_modules' || entry.name === '.git' || 
                 entry.name === '.hg' || entry.name === '.svn') {
               continue;
             }
             findFiles(fullPath, pattern, allPatterns, results);
           } else if (entry.isFile()) {
+            if (isProtectedReadPath(fullPath)) {
+              continue;
+            }
             const relativePath = relative(basePath, fullPath);
             if (matchesPattern(entry.name, pattern) || matchesPattern(relativePath, pattern)) {
               results.push(resolve(fullPath));

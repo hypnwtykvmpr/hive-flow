@@ -410,7 +410,92 @@ function readSignedEnforcementLevel(stateFile: string): number | undefined {
 function readParentEnforcementLevel(): number {
   const globalLevel = readSignedEnforcementLevel(join(ENFORCEMENT_DIR, 'state.json')) ?? 0;
   const projectLevel = readSignedEnforcementLevel(join(ENFORCEMENT_DIR, 'projects', PROJECT_ENFORCEMENT_ID, 'state.json')) ?? 0;
-  return Math.max(globalLevel, projectLevel);
+  const callerAgentId = sanitizePathId(process.env.AGENTIC_FLOW_AGENT_ID || process.env.CLAUDE_AGENT_ID || '', 64);
+  const agentLevel = callerAgentId
+    ? (readSignedEnforcementLevel(join(ENFORCEMENT_DIR, 'agents', callerAgentId, 'state.json')) ?? 0)
+    : 0;
+  const hiveId = sanitizePathId(process.env.HIVE_FLOW_HIVE_ID || '', 64);
+  const hiveLevel = hiveId
+    ? (readSignedEnforcementLevel(join(ENFORCEMENT_DIR, 'hives', hiveId, 'state.json')) ?? 0)
+    : 0;
+  return Math.max(globalLevel, projectLevel, agentLevel, hiveLevel);
+}
+
+const BRIDGE_BASE_ENV_KEYS = new Set([
+  'PATH',
+  'HOME',
+  'USER',
+  'LOGNAME',
+  'SHELL',
+  'TMPDIR',
+  'TEMP',
+  'TMP',
+  'LANG',
+  'LC_ALL',
+  'LC_CTYPE',
+  'TERM',
+  'COLORTERM',
+  'NODE_OPTIONS',
+  'NPM_CONFIG_CACHE',
+  'XDG_CONFIG_HOME',
+  'XDG_CACHE_HOME',
+  'CLAUDE_PROJECT_DIR',
+  'HIVE_FLOW_CONFIG',
+  'HIVE_FLOW_LOG_LEVEL',
+]);
+
+function isDeniedBridgeEnvKey(key: string): boolean {
+  return key === 'HIVE_FLOW_DEV_OVERRIDE_TOKEN'
+    || key === 'HIVE_FLOW_DEV_OVERRIDE'
+    || key === 'HIVE_FLOW_ENFORCEMENT_DISABLED'
+    || key === 'HIVE_FLOW_PIPELINE_OVERRIDE';
+}
+
+function isProviderEnvKey(provider: AgentProvider, key: string): boolean {
+  const upper = key.toUpperCase();
+  switch (provider) {
+    case 'openrouter':
+      return upper.includes('OPENROUTER');
+    case 'deepseek':
+      return upper.includes('DEEPSEEK');
+    case 'gemini-cli':
+      return upper.includes('GEMINI')
+        || upper === 'GOOGLE_API_KEY'
+        || upper === 'GOOGLE_APPLICATION_CREDENTIALS';
+    case 'codex-cli':
+      return upper.includes('CODEX')
+        || upper.includes('OPENAI');
+    case 'cursor-cli':
+      return upper.includes('CURSOR');
+    case 'anthropic-cli':
+      return upper.includes('ANTHROPIC')
+        || upper.includes('CLAUDE');
+    default:
+      return false;
+  }
+}
+
+function buildProviderBridgeEnv(
+  provider: AgentProvider,
+  agentId: string,
+  agentToken: string | undefined,
+  agentRole: { type?: string; hiveId?: string } | null,
+): Record<string, string> {
+  const childEnv: Record<string, string> = {};
+  for (const [key, value] of Object.entries(process.env)) {
+    if (typeof value !== 'string') continue;
+    if (isDeniedBridgeEnvKey(key)) continue;
+    if (BRIDGE_BASE_ENV_KEYS.has(key) || isProviderEnvKey(provider, key)) {
+      childEnv[key] = value;
+    }
+  }
+
+  childEnv.AGENTIC_FLOW_AGENT_ID = agentId;
+  childEnv.CLAUDE_AGENT_ID = agentId;
+  if (agentToken) childEnv.HIVE_FLOW_AGENT_TOKEN = agentToken;
+  if (agentRole?.hiveId) childEnv.HIVE_FLOW_HIVE_ID = agentRole.hiveId;
+  if (agentRole?.type) childEnv.HIVE_FLOW_ROLE = agentRole.type;
+  return childEnv;
 }
 
 function readVerifiedAgentRole(agentId: string): { type?: string; hiveId?: string } | null {
@@ -1140,6 +1225,12 @@ export const agentTools: MCPTool[] = [
 
       const agentDir = getAgentDir();
       const agentRole = readVerifiedAgentRole(agentId);
+      const childEnv = buildProviderBridgeEnv(
+        validationResult.provider as AgentProvider,
+        agentId,
+        validationResult.agentToken,
+        agentRole,
+      );
       const child = spawn('node', [
         bridgePath,
         '--agent-id', agentId,
@@ -1151,15 +1242,7 @@ export const agentTools: MCPTool[] = [
       ], {
         detached: true,
         stdio: 'ignore',
-        env: {
-          ...process.env,
-          AGENTIC_FLOW_AGENT_ID: agentId,
-          CLAUDE_AGENT_ID: agentId,
-          ...(validationResult.agentToken ? { HIVE_FLOW_AGENT_TOKEN: validationResult.agentToken } : {}),
-          ...(agentRole?.hiveId ? { HIVE_FLOW_HIVE_ID: agentRole.hiveId } : {}),
-          ...(agentRole?.type ? { HIVE_FLOW_ROLE: agentRole.type } : {}),
-          ...(process.env.OPENROUTER_API_KEY ? { OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY } : {}),
-        },
+        env: childEnv,
       });
 
       child.unref();
