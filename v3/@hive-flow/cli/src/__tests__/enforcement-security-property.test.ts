@@ -1156,18 +1156,44 @@ describe('enforcement security property contracts', () => {
   it('denies inline interpreter eval without escalating the effective scope', () => {
     process.env.AGENTIC_FLOW_AGENT_ID = 'inline-eval-worker';
 
-    const result = enf.processPreToolUse({
-      tool_name: 'Bash',
-      tool_input: {
-        command: 'bash -c "node --eval \\"console.log(1)\\""',
-      },
-    });
+    for (const command of [
+      'bash -c "node --eval \\"console.log(1)\\""',
+      'npx node -e "console.log(1)"',
+      'pnpm --dir v3 --filter @hive-flow/cli exec node -e "console.log(1)"',
+      'npm exec -- node -e "console.log(1)"',
+      'yarn node -e "console.log(1)"',
+    ]) {
+      const result = enf.processPreToolUse({
+        tool_name: 'Bash',
+        tool_input: { command },
+      });
 
-    expect(result.hookSpecificOutput.permissionDecision).toBe('deny');
-    expect(result.hookSpecificOutput.permissionDecisionReason).toContain('Inline code execution is blocked');
-    expect(result.hookSpecificOutput.permissionDecisionReason).toContain('use Read, Write, or Edit');
-    expect(readScopedState('agent', 'inline-eval-worker')).toBeNull();
-    expect(readScopedState('global', 'global')).toBeNull();
+      expect(result.hookSpecificOutput.permissionDecision, command).toBe('deny');
+      expect(result.hookSpecificOutput.permissionDecisionReason).toContain('Inline code execution is blocked');
+      expect(result.hookSpecificOutput.permissionDecisionReason).toContain('use Read, Write, or Edit');
+      expect(result.hookSpecificOutput.permissionDecisionReason).toContain('write a script file');
+      expect(readScopedState('agent', 'inline-eval-worker')).toBeNull();
+      expect(readScopedState('global', 'global')).toBeNull();
+    }
+  });
+
+  it('allows normal package-runner verification commands', () => {
+    const state = {
+      level: 0,
+      violations: 0,
+      restrictedGroups: [],
+      history: [],
+      integrityCompromised: false,
+    };
+
+    for (const command of [
+      'pnpm --dir v3 --filter @hive-flow/cli exec vitest run src/__tests__/enforcement-security-property.test.ts',
+      'npx tsc --noEmit',
+      'npm exec eslint -- src/index.ts',
+      'yarn vitest run src/__tests__/enforcement-security-property.test.ts',
+    ]) {
+      expect(enf.detectCircumvention('Bash', { command }, state).circumvention, command).toBe(false);
+    }
   });
 
   it('only blocks Bash redirects when the redirect target is protected', () => {

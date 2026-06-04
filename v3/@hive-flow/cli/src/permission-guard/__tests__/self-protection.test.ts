@@ -310,6 +310,21 @@ describe('checkBashSelfProtection', () => {
     expect(result!.blocked).toBe(true);
     expect(result!.reason).toContain('Inline code execution is blocked');
     expect(result!.reason).toContain('use Read, Write, or Edit');
+    expect(result!.reason).toContain('write a script file');
+  });
+
+  it.each([
+    'npx node -e "console.log(1)"',
+    'pnpm --dir v3 --filter @hive-flow/cli exec node -e "console.log(1)"',
+    'npm exec -- node -e "console.log(1)"',
+    'yarn node -e "console.log(1)"',
+  ])('blocks package-runner inline eval with the same guided denial: %s', (command) => {
+    const result = checkBashSelfProtection(command, CWD);
+    expect(result).not.toBeNull();
+    expect(result!.blocked).toBe(true);
+    expect(result!.reason).toContain('Inline code execution is blocked');
+    expect(result!.reason).toContain('use Read, Write, or Edit');
+    expect(result!.reason).toContain('write a script file');
   });
 
   it('blocks python literal writes to protected paths', () => {

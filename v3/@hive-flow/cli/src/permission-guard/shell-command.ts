@@ -245,29 +245,129 @@ function hasAnyArg(args: string[], names: string[]): boolean {
   return args.some(arg => names.includes(arg));
 }
 
+function hasNodeEvalArg(args: string[]): boolean {
+  return args.some(arg =>
+    arg === '-e' ||
+    arg === '--eval' ||
+    arg === '-p' ||
+    arg === '--print' ||
+    (/^-[^-]/.test(arg) && arg.includes('e')) ||
+    (/^-[^-]/.test(arg) && arg.includes('p'))
+  );
+}
+
+function unseparatedArgs(args: string[]): string[] {
+  return args[0] === '--' ? args.slice(1) : args;
+}
+
+function isInlineEvalCommand(command: string, args: string[]): boolean {
+  const base = commandBasename(command);
+  const effectiveArgs = unseparatedArgs(args);
+
+  if (base === 'node') return hasNodeEvalArg(effectiveArgs);
+  if (/^(?:python|python3|python3\.\d+)$/.test(base)) return hasAnyArg(effectiveArgs, ['-c']);
+  if (base === 'ruby') return hasAnyArg(effectiveArgs, ['-e', '-E']);
+  if (base === 'perl') return hasAnyArg(effectiveArgs, ['-e', '-E']);
+  if (base === 'deno') return effectiveArgs[0] === 'eval';
+  if (base === 'bun') return hasAnyArg(effectiveArgs, ['-e']);
+  if (base === 'php') return hasAnyArg(effectiveArgs, ['-r', '-R']);
+
+  return false;
+}
+
+const RUNNER_OPTION_VALUE_FLAGS = new Set([
+  '-C',
+  '-p',
+  '--cache',
+  '--cwd',
+  '--dir',
+  '--filter',
+  '--package',
+  '--prefix',
+  '--registry',
+  '--userconfig',
+  '--workspace',
+]);
+
+function skipRunnerOptions(args: string[], startIndex: number): number {
+  let index = startIndex;
+  while (index < args.length) {
+    const arg = args[index];
+    if (arg === '--') {
+      return index + 1;
+    }
+    if (RUNNER_OPTION_VALUE_FLAGS.has(arg)) {
+      index += 2;
+      continue;
+    }
+    if ([...RUNNER_OPTION_VALUE_FLAGS].some(flag => arg.startsWith(`${flag}=`))) {
+      index++;
+      continue;
+    }
+    if (arg.startsWith('-')) {
+      index++;
+      continue;
+    }
+    break;
+  }
+  return index;
+}
+
+function firstRunnerCommand(args: string[], startIndex: number): { command: string; args: string[] } | null {
+  const index = skipRunnerOptions(args, startIndex);
+  if (!args[index]) return null;
+  return { command: args[index], args: args.slice(index + 1) };
+}
+
+function findRunnerSubcommand(args: string[], subcommands: Set<string>): number | null {
+  let index = 0;
+  while (index < args.length) {
+    index = skipRunnerOptions(args, index);
+    const arg = args[index];
+    if (!arg) return null;
+    if (subcommands.has(arg)) return index;
+    if (arg.startsWith('-')) {
+      index++;
+      continue;
+    }
+    return null;
+  }
+  return null;
+}
+
+function isPackageRunnerInlineEval(command: string, args: string[]): boolean {
+  const base = commandBasename(command);
+
+  if (base === 'npx') {
+    const target = firstRunnerCommand(args, 0);
+    return target ? isInlineEvalCommand(target.command, target.args) : false;
+  }
+
+  if (base === 'pnpm') {
+    const subcommand = findRunnerSubcommand(args, new Set(['exec', 'dlx']));
+    const target = subcommand === null ? null : firstRunnerCommand(args, subcommand + 1);
+    return target ? isInlineEvalCommand(target.command, target.args) : false;
+  }
+
+  if (base === 'npm') {
+    const subcommand = findRunnerSubcommand(args, new Set(['exec']));
+    const target = subcommand === null ? null : firstRunnerCommand(args, subcommand + 1);
+    return target ? isInlineEvalCommand(target.command, target.args) : false;
+  }
+
+  if (base === 'yarn') {
+    const target = firstRunnerCommand(args, 0);
+    return target ? isInlineEvalCommand(target.command, target.args) : false;
+  }
+
+  return false;
+}
+
 export function isInlineEvalExecution(execution: ShellExecution): boolean {
   const command = commandBasename(execution.command);
   const args = execution.args;
 
-  if (command === 'node') {
-    return args.some(arg =>
-      arg === '-e' ||
-      arg === '--eval' ||
-      arg === '-p' ||
-      arg === '--print' ||
-      (/^-[^-]/.test(arg) && arg.includes('e')) ||
-      (/^-[^-]/.test(arg) && arg.includes('p'))
-    );
-  }
-
-  if (/^(?:python|python3|python3\.\d+)$/.test(command)) return hasAnyArg(args, ['-c']);
-  if (command === 'ruby') return hasAnyArg(args, ['-e', '-E']);
-  if (command === 'perl') return hasAnyArg(args, ['-e', '-E']);
-  if (command === 'deno') return args[0] === 'eval';
-  if (command === 'bun') return hasAnyArg(args, ['-e']);
-  if (command === 'php') return hasAnyArg(args, ['-r', '-R']);
-
-  return false;
+  return isInlineEvalCommand(command, args) || isPackageRunnerInlineEval(command, args);
 }
 
 export function findInlineEvalInvocation(command: string): ShellExecution | null {
