@@ -1093,6 +1093,30 @@ describe('enforcement security property contracts', () => {
     expect(enf.isObfuscated("bash -c 'eval $(echo echo hi)'")).toBe(true);
   });
 
+  it('tokenizes command positions without treating quoted mentions as invocations', () => {
+    const tokens = enf.shellTokens("grep 'reset-enforcement' v3/docs/design && bash -c 'node --eval \"console.log(1)\"'");
+    expect(tokens).toContainEqual(expect.objectContaining({ text: 'grep', quoted: false }));
+    expect(tokens).toContainEqual(expect.objectContaining({ text: 'reset-enforcement', quoted: true }));
+
+    const executions = enf.collectShellCommandExecutions(
+      "grep 'reset-enforcement' v3/docs/design && bash -c 'node --eval \"console.log(1)\"'",
+    );
+
+    expect(executions.map((execution: { command: string }) => execution.command)).toEqual([
+      'grep',
+      'bash',
+      'node',
+    ]);
+    expect(enf.hasCommandPositionInvocation(
+      "grep 'reset-enforcement' v3/docs/design",
+      (execution: { command: string }) => /^(?:reset-enforcement|enforcement-reset)$/.test(execution.command),
+    )).toBe(false);
+    expect(enf.hasCommandPositionInvocation(
+      "bash -c 'reset-enforcement'",
+      (execution: { command: string }) => execution.command === 'reset-enforcement',
+    )).toBe(true);
+  });
+
   it('only blocks Bash redirects when the redirect target is protected', () => {
     const state = {
       level: 0,

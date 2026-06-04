@@ -1008,6 +1008,7 @@ function readShellToken(command, startIndex) {
   while (i < command.length && /\s/.test(command[i])) i++;
   let token = '';
   let quote = null;
+  let quoted = false;
   while (i < command.length) {
     const ch = command[i];
     if (quote) {
@@ -1023,6 +1024,7 @@ function readShellToken(command, startIndex) {
     }
     if (ch === '"' || ch === "'") {
       quote = ch;
+      quoted = true;
       token += ch;
       i++;
       continue;
@@ -1038,26 +1040,118 @@ function readShellToken(command, startIndex) {
     token += ch;
     i++;
   }
-  return { token: stripShellQuotes(token), end: i };
+  const stripped = stripShellQuotes(token);
+  return { token: stripped, text: stripped, raw: token, quoted, end: i };
 }
 
-function shellWords(command) {
-  const words = [];
+function shellTokens(command) {
+  const tokens = [];
   let i = 0;
   while (i < command.length) {
     while (i < command.length && /\s/.test(command[i])) i++;
     if (i >= command.length) break;
     const ch = command[i];
     if (ch === '|' || ch === ';' || ch === '&') {
-      words.push(ch);
-      i++;
+      const pair = command[i + 1] === ch ? ch + ch : ch;
+      tokens.push({ text: pair, token: pair, raw: pair, quoted: false, operator: true });
+      i += pair.length;
       continue;
     }
     const read = readShellToken(command, i);
-    if (read.token) words.push(read.token);
+    if (read.token) tokens.push({ text: read.token, token: read.token, raw: read.raw, quoted: read.quoted, operator: false });
     i = read.end > i ? read.end : i + 1;
   }
-  return words;
+  return tokens;
+}
+
+function shellWords(command) {
+  return shellTokens(command).map(token => token.text);
+}
+
+function isShellAssignmentToken(token) {
+  return /^[A-Za-z_][A-Za-z0-9_]*=/.test(token?.text || '');
+}
+
+function splitTokenSegments(tokens) {
+  const segments = [];
+  let current = [];
+  for (const token of tokens) {
+    if (token.operator) {
+      if (current.length) segments.push(current);
+      current = [];
+      continue;
+    }
+    current.push(token);
+  }
+  if (current.length) segments.push(current);
+  return segments;
+}
+
+function commandExecutionFromTokens(tokens) {
+  let index = 0;
+  while (index < tokens.length && !tokens[index].quoted && isShellAssignmentToken(tokens[index])) index++;
+  if (!tokens[index]) return null;
+
+  if (tokens[index].text === 'env') {
+    index++;
+    while (index < tokens.length) {
+      const word = tokens[index].text || '';
+      if (word === '--') {
+        index++;
+        break;
+      }
+      if (word.startsWith('-')) {
+        index++;
+        continue;
+      }
+      if (!tokens[index].quoted && isShellAssignmentToken(tokens[index])) {
+        index++;
+        continue;
+      }
+      break;
+    }
+  }
+
+  if (tokens[index]?.text === 'command') index++;
+  if (!tokens[index]) return null;
+  return {
+    command: tokens[index].text,
+    commandToken: tokens[index],
+    args: tokens.slice(index + 1).map(token => token.text),
+    argTokens: tokens.slice(index + 1),
+    tokens,
+  };
+}
+
+function shellCommandBody(execution) {
+  if (!execution || !/^(?:bash|sh|zsh|dash|ksh)$/.test(execution.command)) return null;
+  for (let i = 0; i < execution.argTokens.length; i++) {
+    const arg = execution.argTokens[i].text || '';
+    if (arg === '-c' || (/^-[A-Za-z]+$/.test(arg) && arg.includes('c'))) {
+      return execution.argTokens[i + 1]?.text || null;
+    }
+  }
+  return null;
+}
+
+function collectShellCommandExecutions(command, depth = 0) {
+  if (depth > 4) return [];
+  const executions = [];
+  for (const subCommand of splitShellSubcommands(String(command || ''))) {
+    const tokens = shellTokens(subCommand);
+    for (const segment of splitTokenSegments(tokens)) {
+      const execution = commandExecutionFromTokens(segment);
+      if (!execution) continue;
+      executions.push({ ...execution, depth, subCommand: segment.map(token => token.raw).join(' ') });
+      const body = shellCommandBody(execution);
+      if (body) executions.push(...collectShellCommandExecutions(body, depth + 1));
+    }
+  }
+  return executions;
+}
+
+function hasCommandPositionInvocation(command, predicate) {
+  return collectShellCommandExecutions(command).some(execution => predicate(execution));
 }
 
 function extractRedirectTargets(command) {
@@ -2314,6 +2408,11 @@ module.exports = {
   canDevOverrideBypassCircumvention,
   isDestructiveRm,
   isObfuscated,
+  shellTokens,
+  shellWords,
+  splitShellSubcommands,
+  collectShellCommandExecutions,
+  hasCommandPositionInvocation,
   isResetCheckHookInvocation,
   isResetInvocationAttempt,
   isGitCommitCommand,
