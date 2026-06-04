@@ -375,6 +375,30 @@ describe('dev override self-red-team probes', () => {
     expect(result).toEqual({});
   });
 
+  it('blocks Bash attempts to invoke the relocated enforcement installer', () => {
+    for (const command of [
+      'node scripts/install-enforcement.mjs',
+      `node "${resolve(root, 'scripts', 'install-enforcement.mjs')}" --dry-run`,
+    ]) {
+      const result = enf.processPreToolUse({
+        tool_name: 'Bash',
+        tool_input: { command },
+      });
+
+      expect(result.hookSpecificOutput.permissionDecision).toBe('deny');
+      expect(result.hookSpecificOutput.permissionDecisionReason).toContain('enforcement installer');
+    }
+  });
+
+  it('does not classify installer-looking filenames as installer invocations', () => {
+    const result = enf.processPreToolUse({
+      tool_name: 'Bash',
+      tool_input: { command: 'git add docs/install-enforcement-notes.md' },
+    });
+
+    expect(result).toEqual({});
+  });
+
   it('refuses to mint a dev override from a subagent environment', () => {
     const overridePath = join(root, '.hive-flow', 'enforcement', 'dev-override.conf');
     rmSync(overridePath, { force: true });

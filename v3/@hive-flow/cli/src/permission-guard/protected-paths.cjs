@@ -21,6 +21,7 @@ const DEFAULT_POLICY = {
     '${HOME}/.hive-flow/permission-guard/',
     '${HOME}/.hive-flow/enforcement/bin/',
     'scripts/permission-guard-setup.mjs',
+    'scripts/install-enforcement.mjs',
   ],
   protectedWriteGlobal: [
     '.claude/settings.json',
@@ -36,6 +37,7 @@ const DEFAULT_POLICY = {
     'v3/@hive-flow/cli/dist/src/mcp-tools/',
     '${HOME}/.hive-flow/enforcement/bin/',
     'scripts/permission-guard-setup.mjs',
+    'scripts/install-enforcement.mjs',
   ],
   protectedRead: [
     '.hive-flow/enforcement/',

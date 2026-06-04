@@ -339,6 +339,37 @@ describe('scripts/permission-guard-setup.mjs is protected', () => {
   });
 });
 
+describe('relocated enforcement control plane paths are protected', () => {
+  it('blocks Write to scripts/install-enforcement.mjs', () => {
+    const result = evaluateSelfProtection(
+      'Write',
+      { file_path: `${CWD}/scripts/install-enforcement.mjs` },
+      CWD,
+    );
+    expect(result).not.toBeNull();
+    expect(result!.blocked).toBe(true);
+  });
+
+  it('blocks Write to the user-level Claude trigger', () => {
+    const result = evaluateSelfProtection(
+      'Write',
+      { file_path: `${HOME}/.claude/settings.json` },
+      CWD,
+    );
+    expect(result).not.toBeNull();
+    expect(result!.blocked).toBe(true);
+  });
+
+  it('blocks Bash writes to the relocated engine bin', () => {
+    const result = checkBashSelfProtection(
+      `printf x > ${HOME}/.hive-flow/enforcement/bin/enforcement.cjs`,
+      CWD,
+    );
+    expect(result).not.toBeNull();
+    expect(result!.blocked).toBe(true);
+  });
+});
+
 // ---------------------------------------------------------------------------
 // 10. NotebookEdit with notebook_path targeting a protected path → blocked
 // ---------------------------------------------------------------------------

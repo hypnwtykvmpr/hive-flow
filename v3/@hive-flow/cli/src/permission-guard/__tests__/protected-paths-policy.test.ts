@@ -90,6 +90,19 @@ describe('shared protected-path policy matcher', () => {
     }
   });
 
+  it('protects the relocation installer script itself', () => {
+    const root = tmpProject();
+    try {
+      const target = join(root, 'scripts', 'install-enforcement.mjs');
+      expect(isProtectedWritePath(target, root)).toBe(true);
+      expect(cjsPolicy.isProtectedWritePath(target, root)).toBe(true);
+      expect(getProtectedWriteScope(target, root)).toBe('global');
+      expect(cjsPolicy.getProtectedWriteScope(target, root)).toBe('global');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it('uses exact and directory-boundary matching, not substring matching', () => {
     const root = tmpProject();
     try {

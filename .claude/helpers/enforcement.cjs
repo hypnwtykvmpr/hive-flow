@@ -114,6 +114,7 @@ const PROTECTED_PATH_PATTERNS = [
   /v3\/@hive-flow\/cli\/dist\/src\/mcp-tools\//,
   /(?:^|\/)\.hive-flow\/permission-guard\//,
   /(?:^|\/)scripts\/permission-guard-setup\.mjs$/,
+  /(?:^|\/)scripts\/install-enforcement\.mjs$/,
 ];
 
 // ============================================================================
@@ -1186,6 +1187,16 @@ function hasMintDevOverrideInvocation(command) {
   return false;
 }
 
+function hasInstallEnforcementInvocation(command) {
+  for (const subCommand of splitShellSubcommands(String(command || ''))) {
+    const normalized = subCommand.trim();
+    if (!normalized) continue;
+    const invokesInstaller = /(?:^|\s)(?:node(?:\s+[^\s;&|]+)*\s+)?(?:"[^"]*install-enforcement\.mjs"|'[^']*install-enforcement\.mjs'|[^\s;&|]*install-enforcement\.mjs)(?:\s|$)/.test(normalized);
+    if (invokesInstaller) return true;
+  }
+  return false;
+}
+
 function detectCircumvention(toolName, toolInput, state) {
   // 1. Protected path writes via Write/Edit/MultiEdit/NotebookEdit
   if (['Write', 'Edit', 'MultiEdit', 'NotebookEdit', 'mcp__filesystem__write_file', 'mcp__filesystem__edit_file', 'mcp__filesystem__move_file', 'mcp__filesystem__rename_file', 'mcp__filesystem__copy_file', 'mcp__filesystem__delete_file'].includes(toolName)) {
@@ -1252,6 +1263,16 @@ function detectCircumvention(toolName, toolInput, state) {
       return {
         circumvention: true,
         reason: 'CIRCUMVENTION: Attempted to invoke dev-override minter from Bash',
+        severity: 'critical',
+        protectedEnforcementAttack: true,
+        systemic: true,
+      };
+    }
+
+    if (hasInstallEnforcementInvocation(command)) {
+      return {
+        circumvention: true,
+        reason: 'CIRCUMVENTION: Attempted to invoke enforcement installer from Bash',
         severity: 'critical',
         protectedEnforcementAttack: true,
         systemic: true,

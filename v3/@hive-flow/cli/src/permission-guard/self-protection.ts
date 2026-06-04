@@ -56,6 +56,9 @@ const HOME = homedir();
 const PROTECTED_PATH_TEMPLATES: string[] = [
   // Hook configuration — disabling hooks disables the entire guard
   '${CWD}/.claude/settings.json',
+  '${CWD}/.claude/settings.local.json',
+  '${HOME}/.claude/settings.json',
+  '${HOME}/.claude/settings.local.json',
 
   // Local git exclude controls what can be hidden from commits.
   '${CWD}/.git/info/exclude',
@@ -74,12 +77,14 @@ const PROTECTED_PATH_TEMPLATES: string[] = [
 
   // Guard runtime config — weakening patterns or disabling features
   '${HOME}/.hive-flow/permission-guard/',
+  '${HOME}/.hive-flow/enforcement/bin/',
 
   // Enforcement state/signing store — never agent-writable.
   '${CWD}/.hive-flow/enforcement/',
 
   // Standalone setup script — modifying it could weaken initial guard installation
   '${CWD}/scripts/permission-guard-setup.mjs',
+  '${CWD}/scripts/install-enforcement.mjs',
 ];
 
 interface DevOverrideContext {
