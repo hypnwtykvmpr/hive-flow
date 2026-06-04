@@ -174,6 +174,22 @@ describe('isProtectedPath', () => {
 // ---------------------------------------------------------------------------
 
 describe('checkBashSelfProtection', () => {
+  const f1ProtectedTarget = `${CWD}/.git/info/exclude`;
+  const f1BenignTarget = 'src/generated.ts';
+  const f1InlineMutationVariants: Array<{ name: string; command: (target: string) => string }> = [
+    { name: 'fs/promises direct writeFile', command: target => `node --eval "require('fs/promises').writeFile('${target}', 'x')"` },
+    { name: 'node:fs/promises direct writeFile', command: target => `node --eval "require('node:fs/promises').writeFile('${target}', 'x')"` },
+    { name: 'aliased fs writeFileSync', command: target => `node --eval "const f=require('fs'); f.writeFileSync('${target}', 'x')"` },
+    { name: 'destructured fs writeFileSync', command: target => `node --eval "const {writeFileSync}=require('fs'); writeFileSync('${target}', 'x')"` },
+    { name: 'appendFileSync sink', command: target => `node --eval "require('fs').appendFileSync('${target}', 'x')"` },
+    { name: 'appendFile sink', command: target => `node --eval "require('fs').appendFile('${target}', 'x', () => {})"` },
+    { name: 'createWriteStream sink', command: target => `node --eval "require('fs').createWriteStream('${target}').write('x')"` },
+    { name: 'destructured fs/promises appendFile', command: target => `node --eval "const {appendFile}=require('fs/promises'); appendFile('${target}', 'x')"` },
+    { name: 'python import os as alias', command: target => `python3 -c "import os as o; o.remove('${target}')"` },
+    { name: 'python from os import remove', command: target => `python3 -c "from os import remove; remove('${target}')"` },
+    { name: 'python import shutil as alias', command: target => `python3 -c "import shutil as sh; sh.move('tmp/source', '${target}')"` },
+  ];
+
   it('blocks mv targeting settings.json', () => {
     const result = checkBashSelfProtection(
       `mv /tmp/evil.json ${CWD}/.claude/settings.json`,
@@ -292,6 +308,20 @@ describe('checkBashSelfProtection', () => {
     );
     expect(result).toBeNull();
   });
+
+  for (const variant of f1InlineMutationVariants) {
+    it(`blocks F1 inline alias variant targeting protected path: ${variant.name}`, () => {
+      const command = variant.command(f1ProtectedTarget);
+      const result = checkBashSelfProtection(command, CWD);
+      expect(result, command).not.toBeNull();
+      expect(result!.blocked).toBe(true);
+    });
+
+    it(`allows F1 inline alias variant targeting normal path: ${variant.name}`, () => {
+      const result = checkBashSelfProtection(variant.command(f1BenignTarget), CWD);
+      expect(result).toBeNull();
+    });
+  }
 
   it('blocks tee to protected helper', () => {
     const result = checkBashSelfProtection(

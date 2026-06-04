@@ -19,6 +19,14 @@ describe('deepInspect', () => {
 
   // python3 -c evasion
   describe('python3 -c evasion', () => {
+    const pythonDynamicAliasCases = [
+      { name: 'import os as alias', cmd: 'python3 -c "import os as o; o.remove(target)"' },
+      { name: 'from os import remove', cmd: 'python3 -c "from os import remove; remove(target)"' },
+      { name: 'from os import rename as alias', cmd: 'python3 -c "from os import rename as mv; mv(src, dest)"' },
+      { name: 'import shutil as alias', cmd: 'python3 -c "import shutil as sh; sh.move(src, dest)"' },
+      { name: 'from shutil import rmtree', cmd: 'python3 -c "from shutil import rmtree; rmtree(target)"' },
+    ];
+
     it('blocks: python3 -c "import os; os.remove(x)"', () => { expect(deepInspect('python3 -c "import os; os.remove(x)"').blocked).toBe(true); });
     it('blocks: python -c "import shutil; shutil.rmtree(x)"', () => { expect(deepInspect('python -c "import shutil; shutil.rmtree(x)"').blocked).toBe(true); });
     it('allows literal file writes for path-aware self-protection', () => {
@@ -35,10 +43,28 @@ describe('deepInspect', () => {
       expect(result.blocked).toBe(true);
       expect(result.technique).toBe('python-filesystem-dynamic');
     });
+    for (const variant of pythonDynamicAliasCases) {
+      it(`blocks dynamic python filesystem mutation via ${variant.name}`, () => {
+        const result = deepInspect(variant.cmd);
+        expect(result.blocked).toBe(true);
+        expect(result.technique).toBe('python-filesystem-dynamic');
+      });
+    }
   });
 
   // node -e evasion
   describe('node -e evasion', () => {
+    const nodeDynamicAliasCases = [
+      { name: 'fs/promises direct writeFile', cmd: 'node --eval "require(\'fs/promises\').writeFile(target, data)"' },
+      { name: 'node:fs/promises direct appendFile', cmd: 'node --eval "require(\'node:fs/promises\').appendFile(target, data)"' },
+      { name: 'aliased fs writeFileSync', cmd: 'node --eval "const f=require(\'fs\'); f.writeFileSync(target, data)"' },
+      { name: 'destructured fs writeFileSync', cmd: 'node --eval "const {writeFileSync}=require(\'fs\'); writeFileSync(target, data)"' },
+      { name: 'appendFileSync sink', cmd: 'node --eval "require(\'fs\').appendFileSync(target, data)"' },
+      { name: 'appendFile sink', cmd: 'node --eval "require(\'fs\').appendFile(target, data, () => {})"' },
+      { name: 'createWriteStream sink', cmd: 'node --eval "require(\'fs\').createWriteStream(target)"' },
+      { name: 'destructured fs/promises appendFile', cmd: 'node --eval "const {appendFile}=require(\'fs/promises\'); appendFile(target, data)"' },
+    ];
+
     // NOTE: These test strings contain module names used as detection targets
     // by the deep inspector. They are NOT executing any dangerous operations.
     const cpModule = 'child_' + 'process'; // avoid security hook false positive
@@ -59,6 +85,13 @@ describe('deepInspect', () => {
       expect(result.blocked).toBe(true);
       expect(result.technique).toBe('node-filesystem-dynamic');
     });
+    for (const variant of nodeDynamicAliasCases) {
+      it(`blocks dynamic node filesystem mutation via ${variant.name}`, () => {
+        const result = deepInspect(variant.cmd);
+        expect(result.blocked).toBe(true);
+        expect(result.technique).toBe('node-filesystem-dynamic');
+      });
+    }
   });
 
   // Variable expansion

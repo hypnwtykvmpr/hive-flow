@@ -120,15 +120,77 @@ const LANG_PATTERNS: Record<string, RegExp[]> = {
   perl: PERL_DANGEROUS,
 };
 
-const NODE_FS_MUTATION_CALL = /\bfs(?:\.promises)?\.(writeFileSync|writeFile|unlinkSync|unlink|rmSync|rm|rmdirSync|rmdir|renameSync|rename)\s*\(([^)]*)\)/g;
+const NODE_FS_MUTATION_CALL = /\bfs(?:\.promises)?\.(writeFileSync|writeFile|appendFileSync|appendFile|createWriteStream|unlinkSync|unlink|rmSync|rm|rmdirSync|rmdir|renameSync|rename)\s*\(([^)]*)\)/g;
 const PYTHON_OS_MUTATION_CALL = /\bos\.(remove|unlink|rmdir|removedirs|rename)\s*\(([^)]*)\)/g;
 const PYTHON_SHUTIL_MUTATION_CALL = /\bshutil\.(rmtree|move)\s*\(([^)]*)\)/g;
 const PYTHON_OPEN_CALL = /\bopen\s*\(([^)]*)\)/g;
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function replaceObjectAlias(code: string, alias: string, canonical: string): string {
+  const escaped = escapeRegExp(alias);
+  return code.replace(new RegExp(`(^|[^\\w$])${escaped}\\s*\\.`, 'g'), `$1${canonical}.`);
+}
+
+function replaceCallAlias(code: string, alias: string, canonical: string): string {
+  const escaped = escapeRegExp(alias);
+  return code.replace(new RegExp(`(^|[^\\w$.])${escaped}\\s*\\(`, 'g'), `$1${canonical}(`);
+}
+
 function normalizeInlineFilesystemAliases(code: string): string {
-  return code
+  const jsIdent = '[A-Za-z_$][\\w$]*';
+  const pyIdent = '[A-Za-z_]\\w*';
+  let normalized = code;
+  const objectAliases: Array<{ alias: string; canonical: string }> = [];
+  const callAliases: Array<{ alias: string; canonical: string }> = [];
+
+  for (const match of normalized.matchAll(new RegExp(`\\b(?:const|let|var)\\s+(${jsIdent})\\s*=\\s*require\\s*\\(\\s*(['"])(?:node:)?fs(\\/promises)?\\2\\s*\\)`, 'g'))) {
+    objectAliases.push({ alias: match[1], canonical: match[3] ? 'fs.promises' : 'fs' });
+  }
+
+  for (const match of normalized.matchAll(new RegExp(`\\b(?:const|let|var)\\s*\\{([^}]+)\\}\\s*=\\s*require\\s*\\(\\s*(['"])(?:node:)?fs(\\/promises)?\\2\\s*\\)`, 'g'))) {
+    const canonicalRoot = match[3] ? 'fs.promises' : 'fs';
+    for (const rawPart of match[1].split(',')) {
+      const part = rawPart.trim();
+      const binding = part.match(new RegExp(`^(${jsIdent})(?:\\s*:\\s*(${jsIdent}))?$`));
+      if (!binding) continue;
+      const imported = binding[1];
+      const local = binding[2] || imported;
+      callAliases.push({ alias: local, canonical: `${canonicalRoot}.${imported}` });
+    }
+  }
+
+  normalized = normalized
+    .replace(/\brequire\s*\(\s*(['"])(?:node:)?fs\/promises\1\s*\)\s*\./g, 'fs.promises.')
     .replace(/\brequire\s*\(\s*(['"])(?:node:)?fs\1\s*\)\s*\./g, 'fs.')
     .replace(/\b__import__\s*\(\s*(['"])(os|shutil)\1\s*\)\s*\./g, (_match, _quote, moduleName: string) => `${moduleName}.`);
+
+  for (const match of normalized.matchAll(new RegExp(`\\bimport\\s+(os|shutil)\\s+as\\s+(${pyIdent})`, 'g'))) {
+    objectAliases.push({ alias: match[2], canonical: match[1] });
+  }
+
+  for (const match of normalized.matchAll(new RegExp(`\\bfrom\\s+(os|shutil)\\s+import\\s+([^;\\n]+)`, 'g'))) {
+    const moduleName = match[1];
+    for (const rawPart of match[2].split(',')) {
+      const part = rawPart.trim();
+      const binding = part.match(new RegExp(`^(${pyIdent})(?:\\s+as\\s+(${pyIdent}))?$`));
+      if (!binding) continue;
+      const imported = binding[1];
+      const local = binding[2] || imported;
+      callAliases.push({ alias: local, canonical: `${moduleName}.${imported}` });
+    }
+  }
+
+  for (const { alias, canonical } of objectAliases) {
+    normalized = replaceObjectAlias(normalized, alias, canonical);
+  }
+  for (const { alias, canonical } of callAliases) {
+    normalized = replaceCallAlias(normalized, alias, canonical);
+  }
+
+  return normalized;
 }
 
 function leadingStringLiteral(value: string): { matched: boolean; end: number } {

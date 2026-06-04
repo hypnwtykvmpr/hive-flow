@@ -9,6 +9,7 @@
  * patterns, jury, FORBIDDEN safeguard, and self-protection all participate.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import fc from 'fast-check';
 
 // Mock @hive-flow/shared before any imports
 vi.mock('@hive-flow/shared', () => ({
@@ -33,8 +34,72 @@ function makeConfig(overrides: Partial<PermissionConfig> = {}): PermissionConfig
   return mergeWithDefaults(overrides);
 }
 
+const F1_PROTECTED_TARGETS = [
+  '/project/.git/info/exclude',
+  '/project/.hive-flow/workflows/phase-state.json',
+];
+
+function f1InlineMutationCommands(target: string): Array<{ name: string; cmd: string }> {
+  return [
+    { name: 'fs/promises direct writeFile', cmd: `node -e "require('fs/promises').writeFile('${target}', 'x')"` },
+    { name: 'node:fs/promises direct writeFile', cmd: `node -e "require('node:fs/promises').writeFile('${target}', 'x')"` },
+    { name: 'aliased fs writeFileSync', cmd: `node -e "const f=require('fs'); f.writeFileSync('${target}', 'x')"` },
+    { name: 'destructured fs writeFileSync', cmd: `node -e "const {writeFileSync}=require('fs'); writeFileSync('${target}', 'x')"` },
+    { name: 'appendFileSync sink', cmd: `node -e "require('fs').appendFileSync('${target}', 'x')"` },
+    { name: 'appendFile sink', cmd: `node -e "require('fs').appendFile('${target}', 'x', () => {})"` },
+    { name: 'createWriteStream sink', cmd: `node -e "require('fs').createWriteStream('${target}').write('x')"` },
+    { name: 'destructured fs/promises appendFile', cmd: `node -e "const {appendFile}=require('fs/promises'); appendFile('${target}', 'x')"` },
+    { name: 'python import os as alias', cmd: `python3 -c "import os as o; o.remove('${target}')"` },
+    { name: 'python from os import remove', cmd: `python3 -c "from os import remove; remove('${target}')"` },
+    { name: 'python import shutil as alias', cmd: `python3 -c "import shutil as sh; sh.move('tmp/source', '${target}')"` },
+  ];
+}
+
 beforeEach(() => {
   resetConfigCache();
+});
+
+// =========================================================================
+// F1 loopback: inline filesystem alias bypass — full gate
+// =========================================================================
+
+describe('F1 inline filesystem alias bypass — full gate', () => {
+  const protectedCases = F1_PROTECTED_TARGETS.flatMap(target =>
+    f1InlineMutationCommands(target).map(variant => ({
+      name: `${variant.name} -> ${target}`,
+      cmd: variant.cmd,
+    })),
+  );
+  const benignCases = f1InlineMutationCommands('src/generated.txt');
+
+  for (const variant of protectedCases) {
+    it(`denies protected inline mutation: ${variant.name}`, async () => {
+      const result = await evaluateHookInput(bashInput(variant.cmd));
+      expect(result.decision).toBe('deny');
+    });
+  }
+
+  for (const variant of benignCases) {
+    it(`allows benign inline mutation: ${variant.name}`, async () => {
+      const result = await evaluateHookInput(bashInput(variant.cmd));
+      expect(result.decision).toBe('allow');
+    });
+  }
+
+  it('property-checks the inline alias matrix against path-deny-only protected targets', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.constantFrom(...F1_PROTECTED_TARGETS),
+        fc.integer({ min: 0, max: f1InlineMutationCommands(F1_PROTECTED_TARGETS[0]).length - 1 }),
+        async (target, variantIndex) => {
+          const variant = f1InlineMutationCommands(target)[variantIndex];
+          const result = await evaluateHookInput(bashInput(variant.cmd));
+          expect(result.decision, `${variant.name} -> ${target}`).toBe('deny');
+        },
+      ),
+      { seed: 20_647, numRuns: 64 },
+    );
+  });
 });
 
 // =========================================================================

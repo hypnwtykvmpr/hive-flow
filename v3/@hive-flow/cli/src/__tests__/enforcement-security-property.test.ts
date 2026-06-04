@@ -138,6 +138,7 @@ const SETTINGS_PRESET_ENTRIES = [
 ];
 
 const SETTINGS_BASELINE_ALLOW = ['mcp__hive-flow__*'];
+type SettingsMutation = 'valid' | 'drop-preset' | 'disable-all' | 'allow-widen' | 'bare-governance-allow' | 'junk';
 
 function writeSignedSettingsPresets(): void {
   const presetsPath = join(root, '.hive-flow', 'enforcement', 'settings-presets.json');
@@ -149,7 +150,7 @@ function writeSignedSettingsPresets(): void {
   })));
 }
 
-function settingsContent(mutation: 'valid' | 'drop-preset' | 'disable-all' | 'allow-widen' | 'junk'): string {
+function settingsContent(mutation: SettingsMutation): string {
   if (mutation === 'junk') return '{"hooks":';
   const entries = mutation === 'drop-preset'
     ? SETTINGS_PRESET_ENTRIES.slice(1)
@@ -170,7 +171,22 @@ function settingsContent(mutation: 'valid' | 'drop-preset' | 'disable-all' | 'al
   if (mutation === 'allow-widen') {
     settings.permissions = { allow: [...SETTINGS_BASELINE_ALLOW, 'Write(.claude/settings.json)'] };
   }
+  if (mutation === 'bare-governance-allow') {
+    settings.permissions = { allow: [...SETTINGS_BASELINE_ALLOW, 'v3/@hive-flow/cli/src/permission-guard/gate.ts'] };
+  }
   return JSON.stringify(settings);
+}
+
+function prepareSignedOverrideSettings(filePath = '.claude/settings.json'): void {
+  clearAgentEnv();
+  resetModule();
+  rmSync(join(root, '.hive-flow', 'enforcement'), { recursive: true, force: true });
+  enableDevOverride();
+  issueRootOverrideToken();
+  writeSignedSettingsPresets();
+  const absolute = join(root, filePath);
+  mkdirSync(dirname(absolute), { recursive: true });
+  writeFileSync(absolute, settingsContent('valid'));
 }
 
 function baseRootOverrideClaims(nowMs = Date.now()): Record<string, unknown> {
@@ -712,11 +728,12 @@ describe('enforcement security property contracts', () => {
 
   it('allows settings writes under dev override iff projected content preserves the signed guard contract', () => {
     const target = fc.constantFrom('.claude/settings.json', '.claude/settings.local.json');
-    const mutation = fc.constantFrom<'valid' | 'drop-preset' | 'disable-all' | 'allow-widen' | 'junk'>(
+    const mutation = fc.constantFrom<SettingsMutation>(
       'valid',
       'drop-preset',
       'disable-all',
       'allow-widen',
+      'bare-governance-allow',
       'junk',
     );
 
@@ -743,6 +760,99 @@ describe('enforcement security property contracts', () => {
       }),
       { seed: 20_641, numRuns: PROPERTY_RUNS },
     );
+  });
+
+  it('content-guards Edit projected settings including missing old_string', () => {
+    const filePath = '.claude/settings.json';
+
+    prepareSignedOverrideSettings(filePath);
+    const valid = enf.processPreToolUse({
+      tool_name: 'Edit',
+      tool_input: {
+        file_path: filePath,
+        old_string: SETTINGS_BASELINE_ALLOW[0],
+        new_string: SETTINGS_BASELINE_ALLOW[0],
+      },
+    });
+    expect(valid).toEqual({});
+
+    prepareSignedOverrideSettings(filePath);
+    const allowWiden = enf.processPreToolUse({
+      tool_name: 'Edit',
+      tool_input: {
+        file_path: filePath,
+        old_string: SETTINGS_BASELINE_ALLOW[0],
+        new_string: `${SETTINGS_BASELINE_ALLOW[0]}","Write(.claude/settings.json)`,
+      },
+    });
+    expect(allowWiden.hookSpecificOutput.permissionDecision).toBe('deny');
+    expect(allowWiden.hookSpecificOutput.permissionDecisionReason).toContain('protected path');
+
+    prepareSignedOverrideSettings(filePath);
+    const bareGovernanceAllow = enf.processPreToolUse({
+      tool_name: 'Edit',
+      tool_input: {
+        file_path: filePath,
+        old_string: SETTINGS_BASELINE_ALLOW[0],
+        new_string: `${SETTINGS_BASELINE_ALLOW[0]}","v3/@hive-flow/cli/src/permission-guard/gate.ts`,
+      },
+    });
+    expect(bareGovernanceAllow.hookSpecificOutput.permissionDecision).toBe('deny');
+    expect(bareGovernanceAllow.hookSpecificOutput.permissionDecisionReason).toContain('protected path');
+
+    prepareSignedOverrideSettings(filePath);
+    const missingOldString = enf.processPreToolUse({
+      tool_name: 'Edit',
+      tool_input: {
+        file_path: filePath,
+        old_string: 'missing-signed-settings-substring',
+        new_string: 'replacement',
+      },
+    });
+    expect(missingOldString.hookSpecificOutput.permissionDecision).toBe('deny');
+    expect(missingOldString.hookSpecificOutput.permissionDecisionReason).toContain('protected path');
+  });
+
+  it('content-guards MultiEdit projected settings including allow widening', () => {
+    const filePath = '.claude/settings.local.json';
+
+    prepareSignedOverrideSettings(filePath);
+    const valid = enf.processPreToolUse({
+      tool_name: 'MultiEdit',
+      tool_input: {
+        file_path: filePath,
+        edits: [
+          { old_string: SETTINGS_BASELINE_ALLOW[0], new_string: SETTINGS_BASELINE_ALLOW[0] },
+        ],
+      },
+    });
+    expect(valid).toEqual({});
+
+    prepareSignedOverrideSettings(filePath);
+    const allowWiden = enf.processPreToolUse({
+      tool_name: 'MultiEdit',
+      tool_input: {
+        file_path: filePath,
+        edits: [
+          { old_string: SETTINGS_BASELINE_ALLOW[0], new_string: `${SETTINGS_BASELINE_ALLOW[0]}","Write(.claude/settings.json)` },
+        ],
+      },
+    });
+    expect(allowWiden.hookSpecificOutput.permissionDecision).toBe('deny');
+    expect(allowWiden.hookSpecificOutput.permissionDecisionReason).toContain('protected path');
+
+    prepareSignedOverrideSettings(filePath);
+    const missingOldString = enf.processPreToolUse({
+      tool_name: 'MultiEdit',
+      tool_input: {
+        file_path: filePath,
+        edits: [
+          { old_string: 'missing-signed-settings-substring', new_string: 'replacement' },
+        ],
+      },
+    });
+    expect(missingOldString.hookSpecificOutput.permissionDecision).toBe('deny');
+    expect(missingOldString.hookSpecificOutput.permissionDecisionReason).toContain('protected path');
   });
 
   it('rejects malformed, tampered, expired, overlong, wrong-project, and incomplete root override tokens', () => {
