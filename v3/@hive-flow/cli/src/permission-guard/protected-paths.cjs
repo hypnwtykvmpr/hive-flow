@@ -1,6 +1,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
+const crypto = require('node:crypto');
 
 const DEFAULT_POLICY = {
   protectedWrite: [
@@ -47,6 +48,10 @@ const DEFAULT_POLICY = {
     '.claude/helpers/hook-handler.cjs',
   ],
 };
+
+const DEV_OVERRIDE_TOKEN_ENV = 'HIVE_FLOW_DEV_OVERRIDE_TOKEN';
+const DEV_OVERRIDE_TOKEN_KIND = 'hive-flow-dev-override-root';
+const MAX_DEV_OVERRIDE_TOKEN_TTL_MS = 12 * 60 * 60 * 1000;
 
 let cachedPolicy = null;
 
@@ -257,6 +262,107 @@ function isDevOverrideFloorPath(filePath, projectRoot, policy = loadPolicy()) {
   return findPolicyMatch(policy.devOverrideFloor, filePath, projectRoot, new Set(policy.devOverrideFloor)) !== null;
 }
 
+function readDevOverrideConfig(projectRoot) {
+  try {
+    const overridePath = path.resolve(projectRoot, '.hive-flow', 'enforcement', 'dev-override.conf');
+    if (!fs.existsSync(overridePath)) return null;
+    return fs.readFileSync(overridePath, 'utf8');
+  } catch {
+    return null;
+  }
+}
+
+function isDevOverrideActive(projectRoot) {
+  const raw = readDevOverrideConfig(projectRoot);
+  if (!raw) return false;
+  return raw.split(/\r?\n/).some(line => line.trim() === 'HIVE_FLOW_DEV_OVERRIDE=on');
+}
+
+function readDevOverrideConfigToken(projectRoot) {
+  const raw = readDevOverrideConfig(projectRoot);
+  if (!raw) return null;
+  for (const line of raw.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith(`${DEV_OVERRIDE_TOKEN_ENV}=`)) {
+      const token = trimmed.slice(DEV_OVERRIDE_TOKEN_ENV.length + 1).trim();
+      return token || null;
+    }
+  }
+  return null;
+}
+
+function hasSubagentIdentity(input = null, env = process.env) {
+  if (env.CLAUDE_PARENT_AGENT_ID) return true;
+  if (env.AGENTIC_FLOW_AGENT_ID || env.CLAUDE_AGENT_ID) return true;
+  const hookAgentId = (input && (input.agent_id || input.agentId)) || '';
+  return typeof hookAgentId === 'string' && hookAgentId.trim().length > 0;
+}
+
+function readHmacKey(projectRoot) {
+  try {
+    const key = fs.readFileSync(path.resolve(projectRoot, '.hive-flow', 'enforcement', '.hmac-key'), 'utf8').trim();
+    return key || null;
+  } catch {
+    return null;
+  }
+}
+
+function verifyDevOverrideTokenHmac(body, signature, hmacKeyProvider) {
+  if (!body || !signature || !/^[a-f0-9]{64}$/i.test(signature)) return false;
+  const key = hmacKeyProvider();
+  if (!key) return false;
+  const expected = crypto.createHmac('sha256', key).update(body).digest('hex');
+  const expectedBuf = Buffer.from(expected, 'hex');
+  const actualBuf = Buffer.from(signature, 'hex');
+  return expectedBuf.length === actualBuf.length && crypto.timingSafeEqual(expectedBuf, actualBuf);
+}
+
+function parseDevOverrideRootToken(token, hmacKeyProvider) {
+  if (!token || typeof token !== 'string') return null;
+  const parts = token.split('.');
+  if (parts.length !== 2) return null;
+  const [body, signature] = parts;
+  if (!/^[A-Za-z0-9_-]+$/.test(body)) return null;
+  if (!verifyDevOverrideTokenHmac(body, signature, hmacKeyProvider)) return null;
+
+  try {
+    const payload = JSON.parse(Buffer.from(body, 'base64url').toString('utf8'));
+    return payload && typeof payload === 'object' ? payload : null;
+  } catch {
+    return null;
+  }
+}
+
+function verifyDevOverrideRootToken(options) {
+  const env = options.env || process.env;
+  const nowMs = options.nowMs == null ? Date.now() : options.nowMs;
+  if (options.hasSubagentIdentity === true || hasSubagentIdentity(options.input || null, env)) return false;
+
+  const hmacKeyProvider = options.hmacKeyProvider || (() => readHmacKey(options.projectRoot));
+  const token = options.rootToken
+    || env[DEV_OVERRIDE_TOKEN_ENV]
+    || readDevOverrideConfigToken(options.projectRoot)
+    || null;
+  const payload = parseDevOverrideRootToken(token, hmacKeyProvider);
+  if (!payload) return false;
+
+  if (payload.kind !== DEV_OVERRIDE_TOKEN_KIND) return false;
+  if (typeof payload.projectDir !== 'string') return false;
+  if (casefoldPath(resolveRealPathForPolicy(payload.projectDir, payload.projectDir)) !== casefoldPath(resolveRealPathForPolicy(options.projectRoot, options.projectRoot))) {
+    return false;
+  }
+
+  const issuedAt = Number(payload.issuedAt);
+  const expiresAt = Number(payload.expiresAt);
+  if (!Number.isFinite(issuedAt) || !Number.isFinite(expiresAt)) return false;
+  if (issuedAt > nowMs + 5 * 60 * 1000) return false;
+  if (expiresAt <= nowMs) return false;
+  if (expiresAt - issuedAt > MAX_DEV_OVERRIDE_TOKEN_TTL_MS) return false;
+
+  if (typeof payload.nonce !== 'string' || payload.nonce.length < 8 || payload.nonce.length > 128) return false;
+  return true;
+}
+
 function sanitizeScopeId(id, fallback = '', maxLen = 64) {
   if (typeof id !== 'string' || !id.trim()) return fallback;
   const sanitized = id.replace(/[^A-Za-z0-9_-]+/g, '_').replace(/^_+|_+$/g, '').slice(0, maxLen);
@@ -280,5 +386,11 @@ module.exports = {
   isHmacKeyPath,
   isSignedStatePath,
   isDevOverrideFloorPath,
+  readDevOverrideConfig,
+  isDevOverrideActive,
+  readDevOverrideConfigToken,
+  hasSubagentIdentity,
+  parseDevOverrideRootToken,
+  verifyDevOverrideRootToken,
   sanitizeScopeId,
 };

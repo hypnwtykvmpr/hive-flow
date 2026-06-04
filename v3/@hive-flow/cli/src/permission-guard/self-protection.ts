@@ -13,13 +13,15 @@
 
 import { resolve, relative, normalize, sep, dirname, basename } from 'node:path';
 import { existsSync, readFileSync, readlinkSync, realpathSync } from 'node:fs';
-import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
+import { createHash } from 'node:crypto';
 import { homedir } from 'node:os';
 import { hasActiveOverride } from './biometric-override.js';
 import {
   findProtectedWritePath,
   getProtectedWritePaths,
   isDevOverrideFloorPath as isPolicyDevOverrideFloorPath,
+  isDevOverrideActive as isPolicyDevOverrideActive,
+  verifyDevOverrideRootToken as verifyPolicyDevOverrideRootToken,
 } from './protected-paths.js';
 
 // ---------------------------------------------------------------------------
@@ -84,9 +86,6 @@ interface DevOverrideContext {
   rootToken?: string;
   hasSubagentIdentity?: boolean;
 }
-
-const DEV_OVERRIDE_TOKEN_KIND = 'hive-flow-dev-override-root';
-const MAX_DEV_OVERRIDE_TOKEN_TTL_MS = 12 * 60 * 60 * 1000;
 
 /**
  * Files that the build system must be allowed to write. These are
@@ -216,89 +215,17 @@ export function isProtectedPath(filePath: string, cwd: string): ProtectionResult
 }
 
 function isDevOverrideActive(cwd: string): boolean {
-  try {
-    const overridePath = resolve(cwd, '.hive-flow/enforcement/dev-override.conf');
-    if (!existsSync(overridePath)) return false;
-    const raw = readFileSync(overridePath, 'utf8');
-    return raw.split(/\r?\n/).some(line => line.trim() === 'HIVE_FLOW_DEV_OVERRIDE=on');
-  } catch {
-    return false;
-  }
-}
-
-function readDevOverrideConfigToken(cwd: string): string | null {
-  try {
-    const overridePath = resolve(cwd, '.hive-flow/enforcement/dev-override.conf');
-    if (!existsSync(overridePath)) return null;
-    const raw = readFileSync(overridePath, 'utf8');
-    for (const line of raw.split(/\r?\n/)) {
-      const trimmed = line.trim();
-      if (trimmed.startsWith('HIVE_FLOW_DEV_OVERRIDE_TOKEN=')) {
-        return trimmed.slice('HIVE_FLOW_DEV_OVERRIDE_TOKEN='.length).trim() || null;
-      }
-    }
-  } catch {
-    return null;
-  }
-  return null;
-}
-
-function readHmacKey(cwd: string): string | null {
-  try {
-    const key = readFileSync(resolve(cwd, '.hive-flow/enforcement/.hmac-key'), 'utf8').trim();
-    return key || null;
-  } catch {
-    return null;
-  }
-}
-
-function verifyTokenHmac(cwd: string, body: string, signature: string): boolean {
-  if (!body || !signature || !/^[a-f0-9]{64}$/i.test(signature)) return false;
-  const key = readHmacKey(cwd);
-  if (!key) return false;
-  const expected = createHmac('sha256', key).update(body).digest('hex');
-  const expectedBuf = Buffer.from(expected, 'hex');
-  const actualBuf = Buffer.from(signature, 'hex');
-  return expectedBuf.length === actualBuf.length && timingSafeEqual(expectedBuf, actualBuf);
-}
-
-function parseDevOverrideRootToken(cwd: string, token?: string): Record<string, unknown> | null {
-  if (!token || typeof token !== 'string') return null;
-  const parts = token.split('.');
-  if (parts.length !== 2) return null;
-  const [body, signature] = parts;
-  if (!/^[A-Za-z0-9_-]+$/.test(body)) return null;
-  if (!verifyTokenHmac(cwd, body, signature)) return null;
-
-  try {
-    const payload = JSON.parse(Buffer.from(body, 'base64url').toString('utf8')) as Record<string, unknown>;
-    return payload && typeof payload === 'object' ? payload : null;
-  } catch {
-    return null;
-  }
+  return isPolicyDevOverrideActive(cwd);
 }
 
 function hasSignedRootSession(cwd: string, context?: DevOverrideContext, nowMs = Date.now()): boolean {
-  if (context?.hasSubagentIdentity === true) return false;
-  const payload = parseDevOverrideRootToken(
-    cwd,
-    context?.rootToken ?? process.env.HIVE_FLOW_DEV_OVERRIDE_TOKEN ?? readDevOverrideConfigToken(cwd) ?? undefined,
-  );
-  if (!payload) return false;
-
-  if (payload.kind !== DEV_OVERRIDE_TOKEN_KIND) return false;
-  if (typeof payload.projectDir !== 'string') return false;
-  if (normalizePath(resolveRealPathForPolicy(payload.projectDir, String(payload.projectDir))) !== normalizePath(resolveRealPathForPolicy(cwd, cwd))) return false;
-
-  const issuedAt = Number(payload.issuedAt);
-  const expiresAt = Number(payload.expiresAt);
-  if (!Number.isFinite(issuedAt) || !Number.isFinite(expiresAt)) return false;
-  if (issuedAt > nowMs + 5 * 60 * 1000) return false;
-  if (expiresAt <= nowMs) return false;
-  if (expiresAt - issuedAt > MAX_DEV_OVERRIDE_TOKEN_TTL_MS) return false;
-
-  if (typeof payload.nonce !== 'string' || payload.nonce.length < 8 || payload.nonce.length > 128) return false;
-  return true;
+  return verifyPolicyDevOverrideRootToken({
+    projectRoot: cwd,
+    nowMs,
+    env: process.env,
+    rootToken: context?.rootToken ?? null,
+    hasSubagentIdentity: context?.hasSubagentIdentity === true,
+  });
 }
 
 function isDevOverrideFloorPath(filePath: string, cwd: string): boolean {

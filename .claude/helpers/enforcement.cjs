@@ -64,10 +64,6 @@ const VERIFICATION_GATE_FILE = path.join(ENFORCEMENT_DIR, 'verification-gate.jso
 const HMAC_KEY_FILE = path.join(ENFORCEMENT_DIR, '.hmac-key');
 const COMPACTION_LOCK_FILE = path.join(ENFORCEMENT_DIR, 'compaction-lock.json');
 const PIPELINE_STATE_FILE = path.join(ENFORCEMENT_DIR, 'pipeline-state.json');
-const DEV_OVERRIDE_FILE = path.join(ENFORCEMENT_DIR, 'dev-override.conf');
-const DEV_OVERRIDE_TOKEN_ENV = 'HIVE_FLOW_DEV_OVERRIDE_TOKEN';
-const DEV_OVERRIDE_TOKEN_KIND = 'hive-flow-dev-override-root';
-const MAX_DEV_OVERRIDE_TOKEN_TTL_MS = 12 * 60 * 60 * 1000;
 const MAX_STATE_SIZE = 10240; // 10KB — larger = likely corrupt/attack (12.12)
 const MAX_HISTORY = 50;
 const HUNG_THRESHOLD = 5;
@@ -690,84 +686,21 @@ function isInProjectPath(filePath) {
 }
 
 function isDevOverrideActive() {
-  try {
-    if (!fs.existsSync(DEV_OVERRIDE_FILE)) return false;
-    const raw = fs.readFileSync(DEV_OVERRIDE_FILE, 'utf8');
-    return raw.split(/\r?\n/).some(line => {
-      const trimmed = line.trim();
-      return trimmed === 'HIVE_FLOW_DEV_OVERRIDE=on';
-    });
-  } catch {
-    return false;
-  }
-}
-
-function getDevOverrideConfigToken() {
-  try {
-    if (!fs.existsSync(DEV_OVERRIDE_FILE)) return null;
-    const raw = fs.readFileSync(DEV_OVERRIDE_FILE, 'utf8');
-    for (const line of raw.split(/\r?\n/)) {
-      const trimmed = line.trim();
-      if (trimmed.startsWith(`${DEV_OVERRIDE_TOKEN_ENV}=`)) {
-        const token = trimmed.slice(DEV_OVERRIDE_TOKEN_ENV.length + 1).trim();
-        return token || null;
-      }
-    }
-  } catch {
-    return null;
-  }
-  return null;
+  return protectedPathPolicy.isDevOverrideActive(PROJECT_DIR);
 }
 
 function hasSubagentIdentity(input = null) {
-  if (process.env.CLAUDE_PARENT_AGENT_ID) return true;
-  if (process.env.AGENTIC_FLOW_AGENT_ID || process.env.CLAUDE_AGENT_ID) return true;
-  return Boolean(getHookAgentId(input));
-}
-
-function verifyDevOverrideTokenHmac(body, signature) {
-  if (!body || !signature || !/^[a-f0-9]{64}$/i.test(signature)) return false;
-  const expected = crypto.createHmac('sha256', getOrCreateHmacKey()).update(body).digest('hex');
-  const expectedBuf = Buffer.from(expected, 'hex');
-  const actualBuf = Buffer.from(signature, 'hex');
-  return expectedBuf.length === actualBuf.length && crypto.timingSafeEqual(expectedBuf, actualBuf);
-}
-
-function parseDevOverrideRootToken(token) {
-  if (!token || typeof token !== 'string') return null;
-  const parts = token.split('.');
-  if (parts.length !== 2) return null;
-  const [body, signature] = parts;
-  if (!/^[A-Za-z0-9_-]+$/.test(body)) return null;
-  if (!verifyDevOverrideTokenHmac(body, signature)) return null;
-
-  try {
-    const payload = JSON.parse(Buffer.from(body, 'base64url').toString('utf8'));
-    if (!payload || typeof payload !== 'object') return null;
-    return payload;
-  } catch {
-    return null;
-  }
+  return protectedPathPolicy.hasSubagentIdentity(input, process.env);
 }
 
 function verifyDevOverrideRootToken(input = null, nowMs = Date.now()) {
-  if (hasSubagentIdentity(input)) return false;
-  const payload = parseDevOverrideRootToken(process.env[DEV_OVERRIDE_TOKEN_ENV] || getDevOverrideConfigToken());
-  if (!payload) return false;
-
-  if (payload.kind !== DEV_OVERRIDE_TOKEN_KIND) return false;
-  if (typeof payload.projectDir !== 'string') return false;
-  if (casefoldPath(resolveFilePath(payload.projectDir)) !== casefoldPath(PROJECT_DIR)) return false;
-
-  const issuedAt = Number(payload.issuedAt);
-  const expiresAt = Number(payload.expiresAt);
-  if (!Number.isFinite(issuedAt) || !Number.isFinite(expiresAt)) return false;
-  if (issuedAt > nowMs + 5 * 60 * 1000) return false;
-  if (expiresAt <= nowMs) return false;
-  if (expiresAt - issuedAt > MAX_DEV_OVERRIDE_TOKEN_TTL_MS) return false;
-
-  if (typeof payload.nonce !== 'string' || payload.nonce.length < 8 || payload.nonce.length > 128) return false;
-  return true;
+  return protectedPathPolicy.verifyDevOverrideRootToken({
+    input,
+    projectRoot: PROJECT_DIR,
+    nowMs,
+    env: process.env,
+    hmacKeyProvider: getOrCreateHmacKey,
+  });
 }
 
 function isRootSessionForDevOverride(input = null) {
