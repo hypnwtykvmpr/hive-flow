@@ -537,11 +537,11 @@ function forceRestricted(state, reason, metadata = {}) {
 }
 
 function chooseEscalationScope(ctx, violation) {
-  if (violation.protectedEnforcementAttack || violation.integrityAttack || violation.systemic) {
-    return { scopeType: 'global', scopeId: 'global' };
-  }
   if (ctx.identityTrusted && ctx.agentId) {
     return { scopeType: 'agent', scopeId: ctx.agentId };
+  }
+  if (violation.protectedEnforcementAttack || violation.integrityAttack || violation.systemic) {
+    return { scopeType: 'global', scopeId: 'global' };
   }
   if (ctx.hiveId) {
     return { scopeType: 'hive', scopeId: ctx.hiveId };
@@ -656,6 +656,13 @@ function isEnforcementHmacKeyPath(filePath) {
   return protectedPathPolicy.isHmacKeyPath(filePath, PROJECT_DIR);
 }
 
+function isInProjectPath(filePath) {
+  if (!filePath) return false;
+  const resolvedFolded = casefoldPath(resolveFilePath(filePath));
+  const projectFolded = casefoldPath(PROJECT_DIR);
+  return resolvedFolded === projectFolded || resolvedFolded.startsWith(projectFolded + '/');
+}
+
 function isDevOverrideActive() {
   try {
     if (!fs.existsSync(DEV_OVERRIDE_FILE)) return false;
@@ -768,6 +775,50 @@ function collectProtectedMutationPaths(toolName, toolInput) {
 
 function getMcpDestinationPath(toolInput) {
   return toolInput?.destination || toolInput?.dest || toolInput?.target || '';
+}
+
+function getWriteRestrictionTargets(toolName, toolInput) {
+  if (['Write', 'Edit', 'MultiEdit'].includes(toolName)) {
+    return [toolInput?.file_path || ''];
+  }
+  if (toolName === 'NotebookEdit') {
+    return [toolInput?.notebook_path || toolInput?.file_path || ''];
+  }
+  if (['mcp__filesystem__write_file', 'mcp__filesystem__edit_file', 'mcp__filesystem__delete_file', 'mcp__filesystem__create_directory'].includes(toolName)) {
+    return [toolInput?.path || ''];
+  }
+  if (['mcp__filesystem__move_file', 'mcp__filesystem__rename_file', 'mcp__filesystem__copy_file'].includes(toolName)) {
+    return [getMcpDestinationPath(toolInput)];
+  }
+  return [];
+}
+
+function evaluateRestrictedWriteTarget(filePath) {
+  if (!filePath) {
+    return { allowed: false, reason: 'write target is missing or ambiguous' };
+  }
+  if (isProtectedPath(filePath)) {
+    return { allowed: false, reason: `write target is a protected path: ${projectRelativePath(filePath)}` };
+  }
+  if (!isInProjectPath(filePath)) {
+    return { allowed: false, reason: `write target is outside project: ${filePath}` };
+  }
+  return { allowed: true };
+}
+
+function restrictedWriteAllowed(toolName, toolInput, scope) {
+  if (!scope || scope.scopeType === 'agent') {
+    return { allowed: false, reason: null };
+  }
+  const targets = getWriteRestrictionTargets(toolName, toolInput);
+  if (targets.length === 0) {
+    return { allowed: false, reason: null };
+  }
+  for (const target of targets) {
+    const result = evaluateRestrictedWriteTarget(target);
+    if (!result.allowed) return result;
+  }
+  return { allowed: true };
 }
 
 function canDevOverrideBypassCircumvention(input, toolName, toolInput, violation) {
@@ -1309,7 +1360,7 @@ function isGitCommitCommand(command) {
 // Tool Restriction
 // ============================================================================
 
-function checkToolRestriction(toolName, state, scope = null) {
+function checkToolRestriction(toolName, state, scope = null, toolInput = {}) {
   const scopeSuffix = scope ? `: ${escalationScopeLabel(scope.scopeType, scope.scopeId)}` : '';
   // Unrestricted tools are always allowed
   if (UNRESTRICTED_TOOLS.has(toolName)) {
@@ -1329,6 +1380,16 @@ function checkToolRestriction(toolName, state, scope = null) {
     for (const group of state.restrictedGroups) {
       const tools = TOOL_GROUPS[group] || [];
       if (tools.includes(toolName)) {
+        if (group === 'write') {
+          const writeCheck = restrictedWriteAllowed(toolName, toolInput, scope);
+          if (writeCheck.allowed) continue;
+          if (writeCheck.reason) {
+            return {
+              allowed: false,
+              reason: `[ENFORCEMENT RESTRICTED${scopeSuffix}] Tool '${toolName}' blocked (group: ${group}); ${writeCheck.reason}. ${state.violations} violation(s).`,
+            };
+          }
+        }
         return {
           allowed: false,
           reason: `[ENFORCEMENT RESTRICTED${scopeSuffix}] Tool '${toolName}' blocked (group: ${group}). ${state.violations} violation(s). Use allowed tools (Read, Grep, Glob) or ask the human for help.`,
@@ -1570,7 +1631,7 @@ function processPreToolUse(input) {
 
   // Step 2: Check tool restriction
   const refreshedEffective = loadEffectiveState(ctx).effective;
-  const restriction = checkToolRestriction(toolName, refreshedEffective.state, refreshedEffective);
+  const restriction = checkToolRestriction(toolName, refreshedEffective.state, refreshedEffective, toolInput);
   if (!restriction.allowed) {
     const hangCheck = updateActivityTracking(refreshedEffective.state, true);
     saveScopedState(refreshedEffective.scopeType, refreshedEffective.scopeId, refreshedEffective.state);

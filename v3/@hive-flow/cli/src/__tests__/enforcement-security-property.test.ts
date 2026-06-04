@@ -339,7 +339,18 @@ describe('enforcement security property contracts', () => {
     expect(readScopedState('global', 'global')).toBeNull();
   });
 
-  it('still escalates enforcement-file attacks globally', () => {
+  it('still escalates coordinator enforcement-file attacks globally', () => {
+    const result = enf.processPreToolUse({
+      tool_name: 'Write',
+      tool_input: { file_path: '.claude/helpers/enforcement.cjs' },
+    });
+
+    expect(result.hookSpecificOutput.hookEventName).toBe('PreToolUse');
+    expect(result.hookSpecificOutput.permissionDecision).toBe('deny');
+    expect(readScopedState('global', 'global')?.level).toBe(enf.LEVELS.RESTRICTED);
+  });
+
+  it('keeps subagent enforcement-file attacks denied and scoped to the offending agent', () => {
     process.env.AGENTIC_FLOW_AGENT_ID = 'agent-b';
 
     const result = enf.processPreToolUse({
@@ -349,7 +360,8 @@ describe('enforcement security property contracts', () => {
 
     expect(result.hookSpecificOutput.hookEventName).toBe('PreToolUse');
     expect(result.hookSpecificOutput.permissionDecision).toBe('deny');
-    expect(readScopedState('global', 'global')?.level).toBe(enf.LEVELS.RESTRICTED);
+    expect(readScopedState('agent', 'agent-b')?.level).toBe(enf.LEVELS.RESTRICTED);
+    expect(readScopedState('global', 'global')).toBeNull();
   });
 
   it('E2E: RESTRICTED scoped state blocks write tools before execution', () => {
@@ -387,6 +399,71 @@ describe('enforcement security property contracts', () => {
     expect(result.hookSpecificOutput.permissionDecision).toBe('deny');
     expect(result.hookSpecificOutput.permissionDecisionReason).toContain('[ENFORCEMENT HALT');
     expect(result.hookSpecificOutput.permissionDecisionReason).toContain('All tools blocked');
+  });
+
+  it('E2E: subagent reset-term grep escalates only the offending agent and leaves coordinator benign writes allowed', () => {
+    process.env.AGENTIC_FLOW_AGENT_ID = 'grep-worker';
+
+    const agentTrip = enf.processPreToolUse({
+      tool_name: 'Bash',
+      tool_input: { command: "grep 'enforcement-reset' v3/docs/design/ENFORCEMENT-OVERBLOCK-HANDOFF.md" },
+    });
+
+    expect(agentTrip.hookSpecificOutput.permissionDecision).toBe('deny');
+    expect(readScopedState('agent', 'grep-worker')?.level).toBe(enf.LEVELS.RESTRICTED);
+    expect(readScopedState('global', 'global')).toBeNull();
+
+    clearAgentEnv();
+    const coordinatorWrite = enf.processPreToolUse({
+      tool_name: 'Write',
+      tool_input: { file_path: 'v3/docs/design/overblock-followup.md' },
+    });
+
+    expect(coordinatorWrite).toEqual({});
+  });
+
+  it('E2E: RESTRICTED coordinator write gate is path-aware', () => {
+    writeScopedState('global', 'global', {
+      level: enf.LEVELS.RESTRICTED,
+      violations: 2,
+      restrictedGroups: ['write'],
+    });
+
+    expect(enf.processPreToolUse({
+      tool_name: 'Write',
+      tool_input: { file_path: 'v3/docs/design/benign-plan.md' },
+    })).toEqual({});
+
+    const outOfProjectWrite = enf.processPreToolUse({
+      tool_name: 'Write',
+      tool_input: { file_path: join(tmpdir(), 'hive-flow-overblock-outside.md') },
+    });
+    expect(outOfProjectWrite.hookSpecificOutput.permissionDecision).toBe('deny');
+    expect(outOfProjectWrite.hookSpecificOutput.permissionDecisionReason).toContain('outside project');
+
+    const protectedWrite = enf.processPreToolUse({
+      tool_name: 'Write',
+      tool_input: { file_path: '.claude/settings.json' },
+    });
+    expect(protectedWrite.hookSpecificOutput.permissionDecision).toBe('deny');
+    expect(protectedWrite.hookSpecificOutput.permissionDecisionReason).toMatch(/protected path|CIRCUMVENTION/);
+  });
+
+  it('E2E: RESTRICTED offending agent remains fail-closed for writes', () => {
+    process.env.AGENTIC_FLOW_AGENT_ID = 'restricted-writer';
+    writeScopedState('agent', 'restricted-writer', {
+      level: enf.LEVELS.RESTRICTED,
+      violations: 2,
+      restrictedGroups: ['write'],
+    });
+
+    const result = enf.processPreToolUse({
+      tool_name: 'Write',
+      tool_input: { file_path: 'v3/docs/design/agent-owned-note.md' },
+    });
+
+    expect(result.hookSpecificOutput.permissionDecision).toBe('deny');
+    expect(result.hookSpecificOutput.permissionDecisionReason).toContain('[ENFORCEMENT RESTRICTED');
   });
 
   it('allows canonical hook invocations while restricted but blocks arbitrary scripts', () => {
