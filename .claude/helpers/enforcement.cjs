@@ -1675,7 +1675,6 @@ function detectCircumvention(toolName, toolInput, state) {
         }
         return {
           circumvention: true,
-          denyOnly: true,
           reason: 'Script execution is blocked while write-restricted because its file effects cannot be verified. Instead: run verification commands such as node --check/node --test, or use Read/Write/Edit with human-approved protected-path changes.',
           severity: 'normal',
         };

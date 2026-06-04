@@ -619,13 +619,38 @@ describe('enforcement security property contracts', () => {
       'Bash',
       { command: 'node ./random-script.js' },
       restricted,
-    )).toMatchObject({ circumvention: true, denyOnly: true });
+    )).toMatchObject({ circumvention: true });
+    expect(enf.detectCircumvention(
+      'Bash',
+      { command: 'node ./random-script.js' },
+      restricted,
+    ).denyOnly).toBeUndefined();
 
     expect(enf.detectCircumvention(
       'Bash',
       { command: 'node "$CLAUDE_PROJECT_DIR"/.claude/helpers/hook-handler.cjs permission-guard; node ./random-script.js' },
       restricted,
-    )).toMatchObject({ circumvention: true, denyOnly: true });
+    )).toMatchObject({ circumvention: true });
+    expect(enf.detectCircumvention(
+      'Bash',
+      { command: 'node "$CLAUDE_PROJECT_DIR"/.claude/helpers/hook-handler.cjs permission-guard; node ./random-script.js' },
+      restricted,
+    ).denyOnly).toBeUndefined();
+
+    process.env.AGENTIC_FLOW_AGENT_ID = 'restricted-script-agent';
+    writeScopedState('agent', 'restricted-script-agent', {
+      level: enf.LEVELS.RESTRICTED,
+      violations: 2,
+      restrictedGroups: ['write'],
+    });
+
+    const result = enf.processPreToolUse({
+      tool_name: 'Bash',
+      tool_input: { command: 'node ./random-script.js' },
+    });
+
+    expect(result.hookSpecificOutput.permissionDecision).toBe('deny');
+    expect(readScopedState('agent', 'restricted-script-agent')?.level).toBe(enf.LEVELS.HALTED);
   });
 
   it('allows verification-style script commands while write-restricted', () => {
