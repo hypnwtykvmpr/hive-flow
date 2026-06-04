@@ -68,6 +68,7 @@ async function promptViaTTY(question) {
       };
       ttyIn.on('error', () => finish(''));
       ttyOut.on('error', () => finish(''));
+      rl.on('error', () => finish(''));
       rl.question(question, finish);
     });
   } catch {

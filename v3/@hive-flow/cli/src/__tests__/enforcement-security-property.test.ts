@@ -1,7 +1,7 @@
 import { describe, expect, it, afterAll, beforeEach } from 'vitest';
 import fc from 'fast-check';
 import { createRequire } from 'node:module';
-import { copyFileSync, existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -106,6 +106,12 @@ function createRootOverrideToken(nonce = 'enforcement-security-property'): strin
   return `${body}.${hmac}`;
 }
 
+function createRootOverrideTokenFromClaims(claims: Record<string, unknown>, signingKey = enf.getOrCreateHmacKey()): string {
+  const body = Buffer.from(JSON.stringify(claims)).toString('base64url');
+  const hmac = createHmac('sha256', signingKey).update(body).digest('hex');
+  return `${body}.${hmac}`;
+}
+
 function issueRootOverrideToken(): void {
   process.env.HIVE_FLOW_DEV_OVERRIDE_TOKEN = createRootOverrideToken();
 }
@@ -114,6 +120,75 @@ function writeRootOverrideTokenToConfig(): void {
   const overridePath = join(root, '.hive-flow', 'enforcement', 'dev-override.conf');
   mkdirSync(dirname(overridePath), { recursive: true });
   writeFileSync(overridePath, `HIVE_FLOW_DEV_OVERRIDE=on\nHIVE_FLOW_DEV_OVERRIDE_TOKEN=${createRootOverrideToken('enforcement-config-token')}\n`);
+}
+
+const SETTINGS_PRESET_ENTRIES = [
+  {
+    event: 'PreToolUse',
+    matcher: 'Bash|Write|Edit|MultiEdit',
+    command: 'node "$CLAUDE_PROJECT_DIR"/.claude/helpers/hook-handler.cjs permission-guard',
+    timeout: 5000,
+  },
+  {
+    event: 'PostToolUse',
+    matcher: 'Write|Edit|MultiEdit',
+    command: 'node "$CLAUDE_PROJECT_DIR"/.claude/helpers/settings-reconciler.cjs',
+    timeout: 5000,
+  },
+];
+
+const SETTINGS_BASELINE_ALLOW = ['mcp__hive-flow__*'];
+
+function writeSignedSettingsPresets(): void {
+  const presetsPath = join(root, '.hive-flow', 'enforcement', 'settings-presets.json');
+  mkdirSync(dirname(presetsPath), { recursive: true });
+  writeFileSync(presetsPath, JSON.stringify(enf.signState({
+    version: 2,
+    entries: SETTINGS_PRESET_ENTRIES,
+    baselineAllow: SETTINGS_BASELINE_ALLOW,
+  })));
+}
+
+function settingsContent(mutation: 'valid' | 'drop-preset' | 'disable-all' | 'allow-widen' | 'junk'): string {
+  if (mutation === 'junk') return '{"hooks":';
+  const entries = mutation === 'drop-preset'
+    ? SETTINGS_PRESET_ENTRIES.slice(1)
+    : SETTINGS_PRESET_ENTRIES;
+  const settings: Record<string, unknown> = {
+    hooks: {},
+    permissions: { allow: [...SETTINGS_BASELINE_ALLOW] },
+  };
+  for (const entry of entries) {
+    const hooks = settings.hooks as Record<string, Array<Record<string, unknown>>>;
+    hooks[entry.event] = hooks[entry.event] || [];
+    hooks[entry.event].push({
+      matcher: entry.matcher,
+      hooks: [{ type: 'command', command: entry.command, timeout: entry.timeout }],
+    });
+  }
+  if (mutation === 'disable-all') settings.disableAllHooks = true;
+  if (mutation === 'allow-widen') {
+    settings.permissions = { allow: [...SETTINGS_BASELINE_ALLOW, 'Write(.claude/settings.json)'] };
+  }
+  return JSON.stringify(settings);
+}
+
+function baseRootOverrideClaims(nowMs = Date.now()): Record<string, unknown> {
+  const key = enf.getOrCreateHmacKey();
+  const keyId = createHash('sha256')
+    .update('hive-flow-dev-override-key-id\0')
+    .update(key)
+    .digest('hex')
+    .slice(0, 16);
+  return {
+    kind: 'hive-flow-dev-override-root',
+    version: 1,
+    keyId,
+    projectDir: root,
+    issuedAt: nowMs,
+    expiresAt: nowMs + 60_000,
+    nonce: `nonce-${nowMs}`,
+  };
 }
 
 describe('enforcement security property contracts', () => {
@@ -633,6 +708,210 @@ describe('enforcement security property contracts', () => {
 
     expect(readKey.hookSpecificOutput.permissionDecision).toBe('deny');
     expect(readKey.hookSpecificOutput.permissionDecisionReason).toContain('protected enforcement');
+  });
+
+  it('allows settings writes under dev override iff projected content preserves the signed guard contract', () => {
+    const target = fc.constantFrom('.claude/settings.json', '.claude/settings.local.json');
+    const mutation = fc.constantFrom<'valid' | 'drop-preset' | 'disable-all' | 'allow-widen' | 'junk'>(
+      'valid',
+      'drop-preset',
+      'disable-all',
+      'allow-widen',
+      'junk',
+    );
+
+    fc.assert(
+      fc.property(target, mutation, (filePath, mutationKind) => {
+        clearAgentEnv();
+        resetModule();
+        rmSync(join(root, '.hive-flow', 'enforcement'), { recursive: true, force: true });
+        enableDevOverride();
+        issueRootOverrideToken();
+        writeSignedSettingsPresets();
+
+        const result = enf.processPreToolUse({
+          tool_name: 'Write',
+          tool_input: { file_path: filePath, content: settingsContent(mutationKind) },
+        });
+
+        if (mutationKind === 'valid') {
+          expect(result).toEqual({});
+        } else {
+          expect(result.hookSpecificOutput.permissionDecision).toBe('deny');
+          expect(result.hookSpecificOutput.permissionDecisionReason).toContain('protected path');
+        }
+      }),
+      { seed: 20_641, numRuns: PROPERTY_RUNS },
+    );
+  });
+
+  it('rejects malformed, tampered, expired, overlong, wrong-project, and incomplete root override tokens', () => {
+    const nowMs = Date.now();
+    const invalidCase = fc.constantFrom(
+      'tampered-signature',
+      'expired',
+      'overlong-ttl',
+      'wrong-project',
+      'missing-version',
+      'missing-key-id',
+      'short-nonce',
+      'wrong-key',
+    );
+
+    fc.assert(
+      fc.property(invalidCase, (kind) => {
+        clearAgentEnv();
+        resetModule();
+        rmSync(join(root, '.hive-flow', 'enforcement'), { recursive: true, force: true });
+        enableDevOverride();
+
+        const claims = baseRootOverrideClaims(nowMs);
+        let token = createRootOverrideTokenFromClaims(claims);
+        if (kind === 'tampered-signature') {
+          token = `${token.slice(0, -1)}${token.endsWith('0') ? '1' : '0'}`;
+        } else if (kind === 'expired') {
+          token = createRootOverrideTokenFromClaims({ ...claims, issuedAt: nowMs - 120_000, expiresAt: nowMs - 60_000 });
+        } else if (kind === 'overlong-ttl') {
+          token = createRootOverrideTokenFromClaims({ ...claims, expiresAt: nowMs + 13 * 60 * 60 * 1000 });
+        } else if (kind === 'wrong-project') {
+          token = createRootOverrideTokenFromClaims({ ...claims, projectDir: join(tmpdir(), 'hive-flow-wrong-project') });
+        } else if (kind === 'missing-version') {
+          const { version: _version, ...withoutVersion } = claims;
+          token = createRootOverrideTokenFromClaims(withoutVersion);
+        } else if (kind === 'missing-key-id') {
+          const { keyId: _keyId, ...withoutKeyId } = claims;
+          token = createRootOverrideTokenFromClaims(withoutKeyId);
+        } else if (kind === 'short-nonce') {
+          token = createRootOverrideTokenFromClaims({ ...claims, nonce: 'short' });
+        } else if (kind === 'wrong-key') {
+          token = createRootOverrideTokenFromClaims(claims, 'wrong-hmac-key');
+        }
+        process.env.HIVE_FLOW_DEV_OVERRIDE_TOKEN = token;
+
+        expect(enf.verifyDevOverrideRootToken(null, nowMs)).toBe(false);
+        const result = enf.processPreToolUse({
+          tool_name: 'Write',
+          tool_input: { file_path: '.git/info/exclude' },
+        });
+        expect(result.hookSpecificOutput.permissionDecision).toBe('deny');
+      }),
+      { seed: 20_642, numRuns: PROPERTY_RUNS },
+    );
+  });
+
+  it('accepts a valid root override token only when no subagent identity is present', () => {
+    const envField = fc.option(
+      fc.constantFrom('AGENTIC_FLOW_AGENT_ID', 'CLAUDE_AGENT_ID', 'CLAUDE_PARENT_AGENT_ID'),
+      { nil: null },
+    );
+    const hookField = fc.option(fc.constantFrom('agent_id', 'agentId'), { nil: null });
+
+    fc.assert(
+      fc.property(envField, hookField, (envName, hookName) => {
+        clearAgentEnv();
+        resetModule();
+        rmSync(join(root, '.hive-flow', 'enforcement'), { recursive: true, force: true });
+        enableDevOverride();
+        issueRootOverrideToken();
+        if (envName) process.env[envName] = `${envName.toLowerCase()}-worker`;
+        const input = hookName ? { [hookName]: 'native-task-worker' } : null;
+
+        expect(enf.verifyDevOverrideRootToken(input)).toBe(!envName && !hookName);
+      }),
+      { seed: 20_643, numRuns: PROPERTY_RUNS },
+    );
+  });
+
+  it('keeps RESTRICTED write decisions path-aware across project, protected, outside, traversal, symlink, and casefold targets', () => {
+    mkdirSync(join(root, 'tmp'), { recursive: true });
+    try {
+      symlinkSync(join(root, '.claude', 'settings.json'), join(root, 'tmp', 'settings-link'));
+    } catch {
+      // The symlink may already exist from a shrunk/replayed property case.
+    }
+
+    const writeCase = fc.constantFrom(
+      { filePath: 'v3/docs/design/benign-note.md', allowed: true },
+      { filePath: '.claude/settings.json', allowed: false },
+      { filePath: '.CLAUDE/settings.json', allowed: false },
+      { filePath: join(tmpdir(), 'hive-flow-restricted-outside.md'), allowed: false },
+      { filePath: '../hive-flow-restricted-traversal.md', allowed: false },
+      { filePath: 'tmp/settings-link', allowed: false },
+      { filePath: '.HIVE-FLOW/enforcement/state.json', allowed: false },
+    );
+
+    fc.assert(
+      fc.property(writeCase, (candidate) => {
+        clearAgentEnv();
+        resetModule();
+        rmSync(join(root, '.hive-flow', 'enforcement'), { recursive: true, force: true });
+        writeScopedState('global', 'global', {
+          level: enf.LEVELS.RESTRICTED,
+          violations: 2,
+          restrictedGroups: ['write'],
+        });
+
+        const result = enf.processPreToolUse({
+          tool_name: 'Write',
+          tool_input: { file_path: candidate.filePath },
+        });
+
+        if (candidate.allowed) {
+          expect(result).toEqual({});
+        } else {
+          expect(result.hookSpecificOutput.permissionDecision).toBe('deny');
+        }
+      }),
+      { seed: 20_644, numRuns: PROPERTY_RUNS },
+    );
+  });
+
+  it('never escalates trusted subagent protected-workflow trips to the global scope', () => {
+    const first = fc.constantFrom(...'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'.split(''));
+    const rest = fc.array(
+      fc.constantFrom(...'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-'.split('')),
+      { minLength: 0, maxLength: 24 },
+    ).map(chars => chars.join(''));
+    const agentIdArb = fc.tuple(first, rest).map(([head, tail]) => `${head}${tail}`);
+
+    fc.assert(
+      fc.property(agentIdArb, (agentId) => {
+        clearAgentEnv();
+        resetModule();
+        rmSync(join(root, '.hive-flow', 'enforcement'), { recursive: true, force: true });
+        process.env.AGENTIC_FLOW_AGENT_ID = agentId;
+        const scopedAgentId = enf.getAgentId({});
+
+        const result = enf.processPreToolUse({
+          tool_name: 'Write',
+          tool_input: { file_path: `.hive-flow/workflows/${agentId}.json` },
+        });
+
+        expect(result.hookSpecificOutput.permissionDecision).toBe('deny');
+        expect(readScopedState('agent', scopedAgentId)?.level).toBe(enf.LEVELS.RESTRICTED);
+        expect(readScopedState('global', 'global')).toBeNull();
+      }),
+      { seed: 20_645, numRuns: PROPERTY_RUNS },
+    );
+  });
+
+  it('matches protected paths on boundaries with casefolding without treating sibling prefixes as protected', () => {
+    const protectedCase = fc.constantFrom(
+      { protectedPath: '.claude/settings.json', siblingPath: '.claude/settings.json.bak' },
+      { protectedPath: '.claude/settings.local.json', siblingPath: '.claude/settings.local.json.bak' },
+      { protectedPath: '.env', siblingPath: '.env.example' },
+      { protectedPath: '.hive-flow/enforcement/state.json', siblingPath: '.hive-flow/enforcement-old/state.json' },
+      { protectedPath: 'v3/@hive-flow/cli/src/permission-guard/gate.ts', siblingPath: 'v3/@hive-flow/cli/src/permission-guard-old/gate.ts' },
+    );
+
+    fc.assert(
+      fc.property(protectedCase, ({ protectedPath, siblingPath }) => {
+        expect(enf.isProtectedPath(protectedPath)).toBe(true);
+        expect(enf.isProtectedPath(protectedPath.toUpperCase())).toBe(true);
+        expect(enf.isProtectedPath(siblingPath)).toBe(false);
+      }),
+      { seed: 20_646, numRuns: PROPERTY_RUNS },
+    );
   });
 
   it('classifies HIVE_FLOW_PROJECT_ROOT manipulation as enforcement circumvention', () => {
