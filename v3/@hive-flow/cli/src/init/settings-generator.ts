@@ -5,6 +5,95 @@
 
 import type { InitOptions, HooksConfig } from './types.js';
 
+interface HookCommand {
+  type: 'command';
+  command: string;
+  timeout?: number;
+}
+
+interface HookGroup {
+  matcher?: string;
+  hooks?: HookCommand[];
+}
+
+const GUARDED_TOOL_MATCHER = [
+  'Bash',
+  'Write',
+  'Edit',
+  'MultiEdit',
+  'Read',
+  'NotebookRead',
+  'WebFetch',
+  'NotebookEdit',
+  'mcp__filesystem__write_file',
+  'mcp__filesystem__edit_file',
+  'mcp__filesystem__move_file',
+  'mcp__filesystem__rename_file',
+  'mcp__filesystem__copy_file',
+  'mcp__filesystem__create_directory',
+  'mcp__filesystem__delete_file',
+  'mcp__filesystem__read_file',
+  'mcp__filesystem__read_text_file',
+  'mcp__filesystem__read_media_file',
+  'mcp__filesystem__read_multiple_files',
+].join('|');
+
+function helperCommand(helper: string, args = ''): string {
+  return `node "$CLAUDE_PROJECT_DIR"/.claude/helpers/${helper}${args ? ` ${args}` : ''}`;
+}
+
+function commandHook(command: string, timeout: number): HookCommand {
+  return { type: 'command', command, timeout };
+}
+
+export function generateEnforcementPreToolUseHooks(timeout: number): HookGroup[] {
+  return [
+    {
+      matcher: 'Task',
+      hooks: [
+        commandHook(helperCommand('hive-composition-gate.cjs'), 5000),
+      ],
+    },
+    {
+      matcher: 'mcp__hive-flow__agent_spawn|mcp__hive-flow__queen_spawn_worker',
+      hooks: [
+        commandHook(helperCommand('role-enforcement.cjs'), 3000),
+        commandHook(helperCommand('enforcement.cjs'), 5000),
+      ],
+    },
+    {
+      matcher: GUARDED_TOOL_MATCHER,
+      hooks: [
+        commandHook(helperCommand('role-enforcement.cjs'), 3000),
+        commandHook(helperCommand('enforcement.cjs'), 5000),
+        commandHook(helperCommand('hook-handler.cjs', 'permission-guard'), 15000),
+        commandHook(helperCommand('hook-handler.cjs', 'enforce-plan'), 5000),
+        commandHook(helperCommand('hook-handler.cjs', 'pre-bash'), timeout),
+      ],
+    },
+  ];
+}
+
+function isGeneratedEnforcementPreToolUseGroup(group: HookGroup): boolean {
+  return Boolean(group.hooks?.some((hook) =>
+    hook.command.includes('hive-composition-gate.cjs') ||
+    hook.command.includes('role-enforcement.cjs') ||
+    hook.command.includes('enforcement.cjs') ||
+    hook.command.includes('hook-handler.cjs permission-guard') ||
+    hook.command.includes('hook-handler.cjs enforce-plan') ||
+    hook.command.includes('hook-handler.cjs pre-bash')
+  ));
+}
+
+export function ensureEnforcementPreToolUseHooks(hooks: Record<string, unknown[]>, timeout: number): void {
+  const existing = (hooks.PreToolUse as HookGroup[] | undefined) || [];
+  const preserved = existing.filter((group) => !isGeneratedEnforcementPreToolUseGroup(group));
+  hooks.PreToolUse = [
+    ...generateEnforcementPreToolUseHooks(timeout),
+    ...preserved,
+  ];
+}
+
 /**
  * Generate the complete settings.json content
  */
@@ -182,18 +271,7 @@ function generateHooksConfig(config: HooksConfig): object {
 
   // PreToolUse — validate commands before execution
   if (config.preToolUse) {
-    hooks.PreToolUse = [
-      {
-        matcher: 'Bash',
-        hooks: [
-          {
-            type: 'command',
-            command: 'node .claude/helpers/hook-handler.cjs pre-bash',
-            timeout: config.timeout,
-          },
-        ],
-      },
-    ];
+    hooks.PreToolUse = generateEnforcementPreToolUseHooks(config.timeout);
   }
 
   // PostToolUse — record edits for session metrics / learning

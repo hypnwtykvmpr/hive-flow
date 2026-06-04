@@ -15,7 +15,7 @@ const __dirname = dirname(__filename);
 import type { InitOptions, InitResult, PlatformInfo } from './types.js';
 import { detectPlatform, DEFAULT_INIT_OPTIONS } from './types.js';
 import { DEFAULT_MAX_AGENTS } from '@hive-flow/shared/core/config/defaults';
-import { generateSettingsJson, generateSettings } from './settings-generator.js';
+import { ensureEnforcementPreToolUseHooks, generateSettingsJson, generateSettings } from './settings-generator.js';
 import { generateMCPJson } from './mcp-generator.js';
 import { generateStatuslineScript, generateStatuslineHook } from './statusline-generator.js';
 import {
@@ -285,6 +285,7 @@ function mergeSettingsForUpgrade(existing: Record<string, unknown>): Record<stri
   // 2. Merge hooks (preserve existing, add new Agent Teams + auto-memory hooks)
   const existingHooks = (existing.hooks as Record<string, unknown[]>) || {};
   merged.hooks = { ...existingHooks };
+  ensureEnforcementPreToolUseHooks(merged.hooks as Record<string, unknown[]>, DEFAULT_INIT_OPTIONS.hooks.timeout);
 
   // Platform-specific auto-memory hook commands
   const autoMemoryImportCmd = isWindows

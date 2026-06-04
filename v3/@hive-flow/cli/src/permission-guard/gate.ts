@@ -64,6 +64,8 @@ const TOOL_INPUT_VALUE_MAX = 500;
 const DEFAULT_INPUT_SUMMARY_MAX = 100;
 const SANITIZE_MAX_LENGTH = 500;
 
+export const PERMISSION_GUARD_BUILD_STAMP = 'm2-c1-2026-06-04';
+
 // ---------------------------------------------------------------------------
 // Config cache (mtime-based)
 // ---------------------------------------------------------------------------

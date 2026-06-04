@@ -42,6 +42,34 @@ const tracker = require('./provider-tracker.cjs');
 const helpersDir = __dirname;
 const PROJECT_DIR = path.resolve(__dirname, '..', '..'); // BUG-10: __dirname-derived, not env-poisonable
 
+function preToolUseDecision(decision, reason) {
+  const hookSpecificOutput = {
+    hookEventName: 'PreToolUse',
+    permissionDecision: decision,
+  };
+  if (reason) hookSpecificOutput.permissionDecisionReason = reason;
+  return JSON.stringify({ hookSpecificOutput });
+}
+
+function permissionGuardDeny(reason) {
+  return preToolUseDecision('deny', reason);
+}
+
+function readPermissionGuardSourceStamp() {
+  const sourcePath = path.join(PROJECT_DIR, 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'gate.ts');
+  const source = fs.readFileSync(sourcePath, 'utf8');
+  const match = source.match(/PERMISSION_GUARD_BUILD_STAMP\s*=\s*['"]([^'"]+)['"]/);
+  return match ? match[1] : null;
+}
+
+function assertPermissionGuardBuildFresh(gate) {
+  const sourceStamp = readPermissionGuardSourceStamp();
+  const compiledStamp = gate?.PERMISSION_GUARD_BUILD_STAMP || null;
+  if (!sourceStamp || !compiledStamp || sourceStamp !== compiledStamp) {
+    throw new Error('permission guard compiled gate failed build freshness check');
+  }
+}
+
 // Safe require with stdout suppression - the helper modules have CLI
 // sections that run unconditionally on require(), so we mute console
 // during the require to prevent noisy output.
@@ -1302,7 +1330,7 @@ const handlers = {
   },
 
   'permission-guard': async () => {
-    const ALLOW_JSON = JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'allow' } });
+    const ALLOW_JSON = preToolUseDecision('allow');
 
     // Suppress ALL stderr — Claude Code treats any stderr as hook error
     const origStderrWrite = process.stderr.write;
@@ -1381,9 +1409,14 @@ const handlers = {
       });
 
       const gatePath = require('path').join(__dirname, '..', '..', 'v3', '@hive-flow', 'cli', 'dist', 'src', 'permission-guard', 'gate.js');
+      if (!fs.existsSync(gatePath)) {
+        console.log(ALLOW_JSON);
+        return;
+      }
       try {
         const { pathToFileURL } = require('url');
         const gate = await import(pathToFileURL(gatePath).href);
+        assertPermissionGuardBuildFresh(gate);
         const result = gate.evaluateHookInput ? await gate.evaluateHookInput(input) : { decision: 'allow' };
         if (result.decision === 'deny') {
           const output = {
@@ -1411,8 +1444,10 @@ const handlers = {
           return;
         }
       } catch (gateErr) {
-        // Gate module not compiled or input issue — silently fall through to allow
+        // Compiled gate exists but is stale or broken: fail closed with valid JSON.
         // NOTE: Do NOT write to stderr — Claude Code treats any stderr as hook error
+        console.log(permissionGuardDeny('[PERMISSION GUARD] Compiled gate is stale or failed to load. Tool blocked for safety; run npm run build in v3/@hive-flow/cli.'));
+        process.exit(0);
       }
 
       console.log(ALLOW_JSON);

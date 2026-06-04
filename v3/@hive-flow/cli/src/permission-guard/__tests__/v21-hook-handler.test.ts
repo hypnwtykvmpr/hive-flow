@@ -157,18 +157,20 @@ describe('Step 1: hook-handler.cjs Bug B fix (async IIFE)', () => {
 // ---------------------------------------------------------------------------
 
 describe('Step 1: Gate not compiled fallback', () => {
-  it('permission-guard handler has catch block for gate load failure', () => {
-    // When gate.js cannot be loaded, the catch block should fall through
-    // to a default allow decision. Check the full source since the handler
-    // has deeply nested braces.
+  it('permission-guard handler distinguishes missing gate from stale or broken compiled gate', () => {
+    // When gate.js does not exist, the handler keeps the intentional
+    // never-built fail-open. Once gate.js exists, load/freshness failures
+    // are fail-closed. Behavioral coverage lives in
+    // hook-handler-build-freshness.test.ts; this keeps the structure visible.
     const pgStart = hookHandlerSource.indexOf("'permission-guard':");
     expect(pgStart).toBeGreaterThan(-1);
 
-    // The handler body (after the start marker) should contain catch blocks
-    const handlerSection = hookHandlerSource.slice(pgStart, pgStart + 2000);
+    const handlerSection = hookHandlerSource.slice(pgStart, pgStart + 6000);
     expect(handlerSection).toContain('catch');
-    // Should have a fallback JSON output with permissionDecision allow
-    expect(handlerSection).toContain("permissionDecision: 'allow'");
+    expect(handlerSection).toContain('fs.existsSync(gatePath)');
+    expect(handlerSection).toContain("preToolUseDecision('allow')");
+    expect(handlerSection).toContain('assertPermissionGuardBuildFresh');
+    expect(handlerSection).toContain('permissionGuardDeny');
   });
 
   it('fallback outputs valid JSON with permissionDecision allow', () => {
