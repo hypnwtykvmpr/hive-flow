@@ -409,7 +409,7 @@ const FILE_MODIFYING_COMMANDS: Array<{
   },
   // node -e/--eval filesystem writes/deletes with literal targets.
   {
-    pattern: /\bnode\s+(?:-e|--eval)\s+(.+)$/s,
+    pattern: /\bnode\s+(?:(?:--input-type=\S+|--no-warnings|--experimental-\S+)\s+)*(?:-e|--eval)\s+(.+)$/s,
     name: 'node filesystem',
     extractTargets: (m) => extractNodeLiteralMutationTargets(m[1]),
   },
@@ -493,9 +493,101 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+function parseStaticStringConcat(expression: string): string | null {
+  let rest = expression.trim();
+  if (!rest) return null;
+  let value = '';
+
+  while (rest) {
+    const quote = rest[0];
+    if (quote !== '"' && quote !== "'") return null;
+    let escaped = false;
+    let piece = '';
+    let end = -1;
+    for (let i = 1; i < rest.length; i++) {
+      const ch = rest[i];
+      if (escaped) {
+        piece += ch;
+        escaped = false;
+        continue;
+      }
+      if (ch === '\\') {
+        escaped = true;
+        continue;
+      }
+      if (ch === quote) {
+        end = i;
+        break;
+      }
+      piece += ch;
+    }
+    if (end < 0) return null;
+    value += piece;
+    rest = rest.slice(end + 1).trim();
+    if (!rest) return value;
+    if (!rest.startsWith('+')) return null;
+    rest = rest.slice(1).trim();
+  }
+
+  return value;
+}
+
+function canonicalNodeFilesystemModule(expression: string): string | null {
+  const value = parseStaticStringConcat(expression);
+  if (value === 'fs' || value === 'node:fs') return 'fs';
+  if (value === 'fs/promises' || value === 'node:fs/promises') return 'fs.promises';
+  return null;
+}
+
+function canonicalPythonFilesystemModule(expression: string): string | null {
+  const value = parseStaticStringConcat(expression);
+  if (value === 'os' || value === 'shutil') return value;
+  return null;
+}
+
+function canonicalPythonFilesystemFactory(expression: string, importlibAliases: string[] = []): string | null {
+  const trimmed = expression.trim();
+  const factoryPatterns = [
+    /^\b__import__\s*\(\s*([^)]*?)\s*\)$/,
+    /^\bimportlib\.import_module\s*\(\s*([^)]*?)\s*\)$/,
+  ];
+  for (const pattern of factoryPatterns) {
+    const match = trimmed.match(pattern);
+    if (!match) continue;
+    return canonicalPythonFilesystemModule(match[1]);
+  }
+  for (const alias of importlibAliases) {
+    const escaped = escapeRegExp(alias);
+    const match = trimmed.match(new RegExp(`^\\b${escaped}\\.import_module\\s*\\(\\s*([^)]*?)\\s*\\)$`));
+    if (!match) continue;
+    return canonicalPythonFilesystemModule(match[1]);
+  }
+  return null;
+}
+
+function canonicalNodeFilesystemFactory(expression: string): string | null {
+  const trimmed = expression.trim();
+  const factoryPatterns = [
+    /^\brequire\s*\(\s*([^)]*?)\s*\)$/,
+    /^\bprocess\.getBuiltinModule\s*\(\s*([^)]*?)\s*\)$/,
+    /^\bprocess\.binding\s*\(\s*([^)]*?)\s*\)$/,
+    /^\bmodule\.constructor\._load\s*\(\s*([^)]*?)\s*\)$/,
+    /^\bcreateRequire\s*\([^)]*\)\s*\(\s*([^)]*?)\s*\)$/,
+    /^\(?\s*await\s+import\s*\(\s*([^)]*?)\s*\)\s*\)?$/,
+  ];
+  for (const pattern of factoryPatterns) {
+    const match = trimmed.match(pattern);
+    if (!match) continue;
+    return canonicalNodeFilesystemModule(match[1]);
+  }
+  return null;
+}
+
 function replaceObjectAlias(code: string, alias: string, canonical: string): string {
   const escaped = escapeRegExp(alias);
-  return code.replace(new RegExp(`(^|[^\\w$])${escaped}\\s*\\.`, 'g'), `$1${canonical}.`);
+  return code
+    .replace(new RegExp(`(^|[^\\w$])${escaped}\\s*\\.`, 'g'), `$1${canonical}.`)
+    .replace(new RegExp(`(^|[^\\w$])${escaped}\\s*\\[\\s*(['"])(${JS_IDENT})\\2\\s*\\]`, 'g'), `$1${canonical}.$3`);
 }
 
 function replaceCallAlias(code: string, alias: string, canonical: string): string {
@@ -503,58 +595,206 @@ function replaceCallAlias(code: string, alias: string, canonical: string): strin
   return code.replace(new RegExp(`(^|[^\\w$.])${escaped}\\s*\\(`, 'g'), `$1${canonical}(`);
 }
 
+const JS_IDENT = '[A-Za-z_$][\\w$]*';
+const PY_IDENT = '[A-Za-z_]\\w*';
+
+function replaceFactoryAccess(
+  code: string,
+  calleePattern: string,
+  canonicalize: (expression: string) => string | null,
+): string {
+  let normalized = code.replace(new RegExp(`${calleePattern}\\s*\\(\\s*([^)]*?)\\s*\\)\\s*\\.`, 'g'), (match, spec: string) => {
+    const canonical = canonicalize(spec);
+    return canonical ? `${canonical}.` : match;
+  });
+  normalized = normalized.replace(new RegExp(`${calleePattern}\\s*\\(\\s*([^)]*?)\\s*\\)\\s*\\[\\s*(['"])(${JS_IDENT})\\2\\s*\\]`, 'g'), (match, spec: string, _quote: string, member: string) => {
+    const canonical = canonicalize(spec);
+    return canonical ? `${canonical}.${member}` : match;
+  });
+  return normalized;
+}
+
+function replaceNamedFactoryAccess(
+  code: string,
+  factoryName: string,
+  canonicalize: (expression: string) => string | null,
+): string {
+  const escaped = escapeRegExp(factoryName);
+  let normalized = code.replace(new RegExp(`(^|[^\\w$.])${escaped}\\s*\\(\\s*([^)]*?)\\s*\\)\\s*\\.`, 'g'), (match, prefix: string, spec: string) => {
+    const canonical = canonicalize(spec);
+    return canonical ? `${prefix}${canonical}.` : match;
+  });
+  normalized = normalized.replace(new RegExp(`(^|[^\\w$.])${escaped}\\s*\\(\\s*([^)]*?)\\s*\\)\\s*\\[\\s*(['"])(${JS_IDENT})\\3\\s*\\]`, 'g'), (match, prefix: string, spec: string, _quote: string, member: string) => {
+    const canonical = canonicalize(spec);
+    return canonical ? `${prefix}${canonical}.${member}` : match;
+  });
+  return normalized;
+}
+
+function replaceAwaitImportAccess(code: string): string {
+  let normalized = code.replace(/\(\s*await\s+import\s*\(\s*([^)]*?)\s*\)\s*\)\s*\./g, (match, spec: string) => {
+    const canonical = canonicalNodeFilesystemModule(spec);
+    return canonical ? `${canonical}.` : match;
+  });
+  normalized = normalized.replace(new RegExp(`\\(\\s*await\\s+import\\s*\\(\\s*([^)]*?)\\s*\\)\\s*\\)\\s*\\[\\s*(['"])(${JS_IDENT})\\2\\s*\\]`, 'g'), (match, spec: string, _quote: string, member: string) => {
+    const canonical = canonicalNodeFilesystemModule(spec);
+    return canonical ? `${canonical}.${member}` : match;
+  });
+  return normalized;
+}
+
+function replaceRequireCacheExportsAccess(code: string): string {
+  let normalized = code.replace(/\brequire\.cache\s*\[\s*require\.resolve\s*\(\s*([^)]*?)\s*\)\s*\]\s*\??\.\s*exports\s*\./g, (match, spec: string) => {
+    const canonical = canonicalNodeFilesystemModule(spec);
+    return canonical ? `${canonical}.` : match;
+  });
+  normalized = normalized.replace(new RegExp(`\\brequire\\.cache\\s*\\[\\s*require\\.resolve\\s*\\(\\s*([^)]*?)\\s*\\)\\s*\\]\\s*\\??\\.\\s*exports\\s*\\[\\s*(['"])(${JS_IDENT})\\2\\s*\\]`, 'g'), (match, spec: string, _quote: string, member: string) => {
+    const canonical = canonicalNodeFilesystemModule(spec);
+    return canonical ? `${canonical}.${member}` : match;
+  });
+  return normalized;
+}
+
+function normalizeCanonicalBracketAccess(code: string): string {
+  return code.replace(new RegExp(`\\b(fs(?:\\.promises)?|os|shutil)\\s*\\[\\s*(['"])(${JS_IDENT})\\2\\s*\\]`, 'g'), '$1.$3');
+}
+
 function normalizeInlineFilesystemAliases(code: string): string {
-  const jsIdent = '[A-Za-z_$][\\w$]*';
-  const pyIdent = '[A-Za-z_]\\w*';
   let normalized = code;
   const objectAliases: Array<{ alias: string; canonical: string }> = [];
   const callAliases: Array<{ alias: string; canonical: string }> = [];
+  const requireFactoryAliases: string[] = [];
+  const importlibModuleAliases: string[] = [];
+  const importlibFactoryAliases: string[] = [];
 
-  for (const match of normalized.matchAll(new RegExp(`\\b(?:const|let|var)\\s+(${jsIdent})\\s*=\\s*require\\s*\\(\\s*(['"])(?:node:)?fs(\\/promises)?\\2\\s*\\)`, 'g'))) {
-    objectAliases.push({ alias: match[1], canonical: match[3] ? 'fs.promises' : 'fs' });
-  }
-
-  for (const match of normalized.matchAll(new RegExp(`\\b(?:const|let|var)\\s*\\{([^}]+)\\}\\s*=\\s*require\\s*\\(\\s*(['"])(?:node:)?fs(\\/promises)?\\2\\s*\\)`, 'g'))) {
-    const canonicalRoot = match[3] ? 'fs.promises' : 'fs';
-    for (const rawPart of match[1].split(',')) {
-      const part = rawPart.trim();
-      const binding = part.match(new RegExp(`^(${jsIdent})(?:\\s*:\\s*(${jsIdent}))?$`));
-      if (!binding) continue;
-      const imported = binding[1];
-      const local = binding[2] || imported;
-      callAliases.push({ alias: local, canonical: `${canonicalRoot}.${imported}` });
+  for (const match of normalized.matchAll(new RegExp(`\\b(?:const|let|var)\\s+(${JS_IDENT})\\s*=\\s*([^;\\n]+)`, 'g'))) {
+    const rhs = match[2].trim();
+    const canonical = canonicalNodeFilesystemFactory(rhs);
+    if (canonical) {
+      objectAliases.push({ alias: match[1], canonical });
+    } else if (/^createRequire\s*\(/.test(rhs)) {
+      requireFactoryAliases.push(match[1]);
     }
   }
 
-  normalized = normalized
-    .replace(/\brequire\s*\(\s*(['"])(?:node:)?fs\/promises\1\s*\)\s*\./g, 'fs.promises.')
-    .replace(/\brequire\s*\(\s*(['"])(?:node:)?fs\1\s*\)\s*\./g, 'fs.')
-    .replace(/\b__import__\s*\(\s*(['"])(os|shutil)\1\s*\)\s*\./g, (_match, _quote, moduleName: string) => `${moduleName}.`);
+  for (const match of normalized.matchAll(new RegExp(`\\b(?:const|let|var)\\s*\\{([^}]+)\\}\\s*=\\s*([^;\\n]+)`, 'g'))) {
+    const canonicalRoot = canonicalNodeFilesystemFactory(match[2]);
+    if (!canonicalRoot) continue;
+    for (const rawPart of match[1].split(',')) {
+      const part = rawPart.trim();
+      const binding = part.match(new RegExp(`^(${JS_IDENT})(?:\\s*:\\s*(${JS_IDENT}))?$`));
+      if (!binding) continue;
+      const imported = binding[1];
+      const local = binding[2] || imported;
+      if (canonicalRoot === 'fs' && imported === 'promises') {
+        objectAliases.push({ alias: local, canonical: 'fs.promises' });
+      } else {
+        callAliases.push({ alias: local, canonical: `${canonicalRoot}.${imported}` });
+      }
+    }
+  }
 
-  for (const match of normalized.matchAll(new RegExp(`\\bimport\\s+(os|shutil)\\s+as\\s+(${pyIdent})`, 'g'))) {
+  for (const match of normalized.matchAll(new RegExp(`\\bimport\\s+(${JS_IDENT})\\s+from\\s+((?:['"][^'"]*['"]))`, 'g'))) {
+    const canonical = canonicalNodeFilesystemModule(match[2]);
+    if (canonical) objectAliases.push({ alias: match[1], canonical });
+  }
+  for (const match of normalized.matchAll(new RegExp(`\\bimport\\s+\\*\\s+as\\s+(${JS_IDENT})\\s+from\\s+((?:['"][^'"]*['"]))`, 'g'))) {
+    const canonical = canonicalNodeFilesystemModule(match[2]);
+    if (canonical) objectAliases.push({ alias: match[1], canonical });
+  }
+  for (const match of normalized.matchAll(new RegExp(`\\bimport\\s*\\{([^}]+)\\}\\s*from\\s+((?:['"][^'"]*['"]))`, 'g'))) {
+    const canonicalRoot = canonicalNodeFilesystemModule(match[2]);
+    if (!canonicalRoot) continue;
+    for (const rawPart of match[1].split(',')) {
+      const part = rawPart.trim();
+      const binding = part.match(new RegExp(`^(${JS_IDENT})(?:\\s+as\\s+(${JS_IDENT}))?$`));
+      if (!binding) continue;
+      const imported = binding[1];
+      const local = binding[2] || imported;
+      if (canonicalRoot === 'fs' && imported === 'promises') {
+        objectAliases.push({ alias: local, canonical: 'fs.promises' });
+      } else {
+        callAliases.push({ alias: local, canonical: `${canonicalRoot}.${imported}` });
+      }
+    }
+  }
+
+  normalized = replaceFactoryAccess(normalized, '\\brequire', canonicalNodeFilesystemModule);
+  normalized = replaceFactoryAccess(normalized, '\\bprocess\\.getBuiltinModule', canonicalNodeFilesystemModule);
+  normalized = replaceFactoryAccess(normalized, '\\bprocess\\.binding', canonicalNodeFilesystemModule);
+  normalized = replaceFactoryAccess(normalized, '\\bmodule\\.constructor\\._load', canonicalNodeFilesystemModule);
+  normalized = replaceFactoryAccess(normalized, '\\bcreateRequire\\s*\\([^)]*\\)', canonicalNodeFilesystemModule);
+  normalized = replaceAwaitImportAccess(normalized);
+  normalized = replaceRequireCacheExportsAccess(normalized);
+  normalized = replaceFactoryAccess(normalized, '\\b__import__', canonicalPythonFilesystemModule);
+  normalized = replaceFactoryAccess(normalized, '\\bimportlib\\.import_module', canonicalPythonFilesystemModule);
+
+  for (const alias of requireFactoryAliases) {
+    normalized = replaceNamedFactoryAccess(normalized, alias, canonicalNodeFilesystemModule);
+    const escaped = escapeRegExp(alias);
+    for (const match of normalized.matchAll(new RegExp(`\\b(?:const|let|var)\\s+(${JS_IDENT})\\s*=\\s*${escaped}\\s*\\(\\s*([^)]*?)\\s*\\)`, 'g'))) {
+      const canonical = canonicalNodeFilesystemModule(match[2]);
+      if (canonical) objectAliases.push({ alias: match[1], canonical });
+    }
+  }
+
+  for (const match of normalized.matchAll(new RegExp(`\\bimport\\s+(os|shutil)\\s+as\\s+(${PY_IDENT})`, 'g'))) {
     objectAliases.push({ alias: match[2], canonical: match[1] });
+  }
+  for (const match of normalized.matchAll(new RegExp(`\\bimport\\s+importlib\\s+as\\s+(${PY_IDENT})`, 'g'))) {
+    importlibModuleAliases.push(match[1]);
   }
 
   for (const match of normalized.matchAll(new RegExp(`\\bfrom\\s+(os|shutil)\\s+import\\s+([^;\\n]+)`, 'g'))) {
     const moduleName = match[1];
     for (const rawPart of match[2].split(',')) {
       const part = rawPart.trim();
-      const binding = part.match(new RegExp(`^(${pyIdent})(?:\\s+as\\s+(${pyIdent}))?$`));
+      const binding = part.match(new RegExp(`^(${PY_IDENT})(?:\\s+as\\s+(${PY_IDENT}))?$`));
       if (!binding) continue;
       const imported = binding[1];
       const local = binding[2] || imported;
       callAliases.push({ alias: local, canonical: `${moduleName}.${imported}` });
     }
   }
+  for (const match of normalized.matchAll(new RegExp(`\\bfrom\\s+importlib\\s+import\\s+([^;\\n]+)`, 'g'))) {
+    for (const rawPart of match[1].split(',')) {
+      const part = rawPart.trim();
+      const binding = part.match(new RegExp(`^(import_module)(?:\\s+as\\s+(${PY_IDENT}))?$`));
+      if (!binding) continue;
+      importlibFactoryAliases.push(binding[2] || binding[1]);
+    }
+  }
+
+  for (const alias of importlibFactoryAliases) {
+    normalized = replaceNamedFactoryAccess(normalized, `${alias}`, canonicalPythonFilesystemModule);
+  }
+  for (const alias of importlibModuleAliases) {
+    normalized = replaceFactoryAccess(normalized, `\\b${escapeRegExp(alias)}\\.import_module`, canonicalPythonFilesystemModule);
+  }
 
   for (const { alias, canonical } of objectAliases) {
     normalized = replaceObjectAlias(normalized, alias, canonical);
   }
+
+  for (const match of normalized.matchAll(new RegExp(`\\b(?:const|let|var)\\s+(${JS_IDENT})\\s*=\\s*(fs(?:\\.promises)?)\\.(${JS_IDENT})`, 'g'))) {
+    callAliases.push({ alias: match[1], canonical: `${match[2]}.${match[3]}` });
+  }
+  for (const match of normalized.matchAll(new RegExp(`(?:^|[;\\n])\\s*(${PY_IDENT})\\s*=\\s*([^;\\n]+)`, 'g'))) {
+    const canonical = canonicalPythonFilesystemFactory(match[2], importlibModuleAliases);
+    if (canonical) objectAliases.push({ alias: match[1], canonical });
+  }
+  for (const { alias, canonical } of objectAliases) {
+    normalized = replaceObjectAlias(normalized, alias, canonical);
+  }
+  for (const match of normalized.matchAll(new RegExp(`(?:^|[;\\n])\\s*(${PY_IDENT})\\s*=\\s*(os|shutil)\\.(${PY_IDENT})`, 'g'))) {
+    callAliases.push({ alias: match[1], canonical: `${match[2]}.${match[3]}` });
+  }
+
   for (const { alias, canonical } of callAliases) {
     normalized = replaceCallAlias(normalized, alias, canonical);
   }
 
-  return normalized;
+  return normalizeCanonicalBracketAccess(normalized);
 }
 
 function extractNodeLiteralMutationTargets(code: string): string[] {

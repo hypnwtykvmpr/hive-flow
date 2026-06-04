@@ -52,6 +52,32 @@ function f1InlineMutationCommands(target: string): Array<{ name: string; cmd: st
     { name: 'python import os as alias', cmd: `python3 -c "import os as o; o.remove('${target}')"` },
     { name: 'python from os import remove', cmd: `python3 -c "from os import remove; remove('${target}')"` },
     { name: 'python import shutil as alias', cmd: `python3 -c "import shutil as sh; sh.move('tmp/source', '${target}')"` },
+    { name: 'R4 bracket fs writeFileSync', cmd: `node -e "require('fs')['writeFileSync']('${target}', 'x')"` },
+    { name: 'R5 concatenated require fs', cmd: `node -e "require('f'+'s').writeFileSync('${target}', 'x')"` },
+    { name: 'R5 empty-concat require fs', cmd: `node -e "require('fs'+'').appendFileSync('${target}', 'x')"` },
+    { name: 'R3 createRequire direct fs', cmd: `node --input-type=module --eval "import { createRequire } from 'module'; createRequire(import.meta.url)('fs').writeFileSync('${target}', 'x')"` },
+    { name: 'R3 createRequire alias fs', cmd: `node --input-type=module --eval "import { createRequire } from 'module'; const rq=createRequire(import.meta.url); rq('fs').appendFileSync('${target}', 'x')"` },
+    { name: 'R1 dynamic import fs', cmd: `node --input-type=module --eval "(await import('fs')).writeFileSync('${target}', 'x')"` },
+    { name: 'R1 dynamic import node fs promises', cmd: `node --input-type=module --eval "(await import('node:fs/promises')).appendFile('${target}', 'x')"` },
+    { name: 'R2 process getBuiltinModule fs', cmd: `node -e "process.getBuiltinModule('fs').writeFileSync('${target}', 'x')"` },
+    { name: 'R2 process binding fs', cmd: `node -e "process.binding('fs').writeFileSync('${target}', 'x')"` },
+    { name: 'R2 module constructor load fs', cmd: `node -e "module.constructor._load('fs').appendFileSync('${target}', 'x')"` },
+    { name: 'R2 require cache exports fs', cmd: `node -e "require.cache[require.resolve('fs')].exports.writeFileSync('${target}', 'x')"` },
+    { name: 'R7 importlib os remove', cmd: `python3 -c "import importlib; importlib.import_module('os').remove('${target}')"` },
+    { name: 'R7 importlib alias shutil move', cmd: `python3 -c "import importlib as il; il.import_module('shutil').move('tmp/source', '${target}')"` },
+    { name: 'R7 from importlib alias os remove', cmd: `python3 -c "from importlib import import_module as im; im('o'+'s').remove('${target}')"` },
+    { name: 'R7 dynamic __import__ os remove', cmd: `python3 -c "__import__('o'+'s').remove('${target}')"` },
+    { name: 'redteam method alias fs writeFileSync', cmd: `node -e "const w=require('fs').writeFileSync; w('${target}', 'x')"` },
+    { name: 'redteam object alias then method alias fs', cmd: `node -e "const f=require('fs'); const w=f.writeFileSync; w('${target}', 'x')"` },
+    { name: 'redteam destructured promises alias', cmd: `node -e "const {promises:p}=require('fs'); p.writeFile('${target}', 'x')"` },
+    { name: 'redteam static default import fs', cmd: `node --input-type=module --eval "import fs from 'fs'; fs.writeFileSync('${target}', 'x')"` },
+    { name: 'redteam static namespace import node fs', cmd: `node --input-type=module --eval "import * as fs from 'node:fs'; fs.appendFileSync('${target}', 'x')"` },
+    { name: 'redteam static named import fs', cmd: `node --input-type=module --eval "import { writeFileSync as w } from 'fs'; w('${target}', 'x')"` },
+    { name: 'redteam static named import fs promises', cmd: `node --input-type=module --eval "import { appendFile } from 'fs/promises'; appendFile('${target}', 'x')"` },
+    { name: 'redteam python import_module assigned os', cmd: `python3 -c "import importlib; m=importlib.import_module('os'); m.remove('${target}')"` },
+    { name: 'redteam python import_module method alias', cmd: `python3 -c "import importlib; removeFile=importlib.import_module('os').remove; removeFile('${target}')"` },
+    { name: 'redteam createRequire alias assigned fs', cmd: `node --input-type=module --eval "import { createRequire } from 'module'; const rq=createRequire(import.meta.url); const f=rq('fs'); f.writeFileSync('${target}', 'x')"` },
+    { name: 'redteam importlib alias assigned os', cmd: `python3 -c "import importlib as il; m=il.import_module('os'); m.remove('${target}')"` },
   ];
 }
 
@@ -99,6 +125,13 @@ describe('F1 inline filesystem alias bypass — full gate', () => {
       ),
       { seed: 20_647, numRuns: 64 },
     );
+  });
+
+  it('keeps R6 child_process exec redirect closed', async () => {
+    const result = await evaluateHookInput(bashInput(
+      `node -e "require('child_process').exec('printf x > /project/.git/info/exclude')"`,
+    ));
+    expect(result.decision).toBe('deny');
   });
 });
 
