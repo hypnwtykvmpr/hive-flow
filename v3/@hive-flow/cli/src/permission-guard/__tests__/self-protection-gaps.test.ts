@@ -12,7 +12,8 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import fc from 'fast-check';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createHash, createHmac } from 'node:crypto';
@@ -529,6 +530,56 @@ function createRootOverrideToken(root: string): string {
   return `${body}.${createHmac('sha256', key).update(body).digest('hex')}`;
 }
 
+const SETTINGS_HOOK_COMMAND = 'node "$CLAUDE_PROJECT_DIR"/.claude/helpers/enforcement.cjs';
+const SETTINGS_BASELINE_ALLOW = ['Read', 'Grep'];
+
+function validGuardedSettings(): string {
+  return JSON.stringify({
+    hooks: {
+      PreToolUse: [
+        {
+          matcher: 'Write|Edit|MultiEdit|Bash',
+          hooks: [{ type: 'command', command: SETTINGS_HOOK_COMMAND }],
+        },
+      ],
+    },
+    permissions: { allow: SETTINGS_BASELINE_ALLOW },
+  });
+}
+
+type GuardedSettingsMutation = 'valid' | 'drop-preset' | 'disable-all' | 'allow-widen' | 'junk';
+
+function guardedSettingsContent(kind: GuardedSettingsMutation): string {
+  if (kind === 'junk') return '{not-json';
+  const parsed = JSON.parse(validGuardedSettings());
+  if (kind === 'drop-preset') parsed.hooks = {};
+  if (kind === 'disable-all') parsed.disableAllHooks = true;
+  if (kind === 'allow-widen') parsed.permissions.allow = [...SETTINGS_BASELINE_ALLOW, 'Write(.claude/settings.json)'];
+  return JSON.stringify(parsed);
+}
+
+function signState(root: string, state: unknown): { state: unknown; hmac: string } {
+  const key = readFileSync(join(root, '.hive-flow', 'enforcement', '.hmac-key'), 'utf8').trim();
+  return { state, hmac: createHmac('sha256', key).update(JSON.stringify(state)).digest('hex') };
+}
+
+function writeSignedSettingsPresets(root: string): void {
+  writeFileSync(
+    join(root, '.hive-flow', 'enforcement', 'settings-presets.json'),
+    JSON.stringify(signState(root, {
+      version: 2,
+      entries: [
+        {
+          event: 'PreToolUse',
+          matcher: 'Write|Edit|MultiEdit|Bash',
+          command: SETTINGS_HOOK_COMMAND,
+        },
+      ],
+      baselineAllow: SETTINGS_BASELINE_ALLOW,
+    })),
+  );
+}
+
 async function withDevOverrideRoot(enabled: boolean, fn: (root: string, rootToken: string) => void | Promise<void>): Promise<void> {
   const root = mkdtempSync(join(tmpdir(), 'hive-flow-dev-override-'));
   try {
@@ -588,7 +639,7 @@ describe('dev override self-protection gate', () => {
     });
   });
 
-  it('allows protected config writes while the toggle is on with a signed root token', () => {
+  it('blocks protected config writes while the toggle is on with a signed root token but unverifiable settings content', () => {
     return withDevOverrideRoot(true, (root, rootToken) => {
       const result = evaluateSelfProtection(
         'Write',
@@ -598,12 +649,141 @@ describe('dev override self-protection gate', () => {
         { rootToken },
       );
 
-      expect(result).toBeNull();
+      expect(result).not.toBeNull();
+      expect(result!.blocked).toBe(true);
+      expect(result!.reason).toContain('settings content');
     });
   });
 
-  it('allows protected config writes when the signed root token is in the toggle file', () => {
+  it('allows protected config writes only when signed guard settings content is preserved', () => {
     return withDevOverrideRoot(true, (root, rootToken) => {
+      writeSignedSettingsPresets(root);
+      const valid = evaluateSelfProtection(
+        'Write',
+        { file_path: join(root, '.claude', 'settings.json'), content: validGuardedSettings() },
+        root,
+        undefined,
+        { rootToken },
+      );
+      expect(valid).toBeNull();
+
+      const disablesHooks = evaluateSelfProtection(
+        'Write',
+        {
+          file_path: join(root, '.claude', 'settings.local.json'),
+          content: JSON.stringify({ ...JSON.parse(validGuardedSettings()), disableAllHooks: true }),
+        },
+        root,
+        undefined,
+        { rootToken },
+      );
+      expect(disablesHooks).not.toBeNull();
+      expect(disablesHooks!.blocked).toBe(true);
+
+      const widensAllow = evaluateSelfProtection(
+        'Write',
+        {
+          file_path: join(root, '.claude', 'settings.json'),
+          content: JSON.stringify({
+            ...JSON.parse(validGuardedSettings()),
+            permissions: { allow: [...SETTINGS_BASELINE_ALLOW, 'Write(.claude/settings.json)'] },
+          }),
+        },
+        root,
+        undefined,
+        { rootToken },
+      );
+      expect(widensAllow).not.toBeNull();
+      expect(widensAllow!.blocked).toBe(true);
+    });
+  });
+
+  it('property: dev override permits guarded settings writes iff projected content preserves the signed contract', () => {
+    return withDevOverrideRoot(true, (root, rootToken) => {
+      writeSignedSettingsPresets(root);
+
+      fc.assert(
+        fc.property(
+          fc.constantFrom('settings.json', 'settings.local.json'),
+          fc.constantFrom<GuardedSettingsMutation>('valid', 'drop-preset', 'disable-all', 'allow-widen', 'junk'),
+          (settingsFile, mutation) => {
+            const result = evaluateSelfProtection(
+              'Write',
+              {
+                file_path: join(root, '.claude', settingsFile),
+                content: guardedSettingsContent(mutation),
+              },
+              root,
+              undefined,
+              { rootToken },
+            );
+
+            if (mutation === 'valid') {
+              expect(result).toBeNull();
+            } else {
+              expect(result).not.toBeNull();
+              expect(result!.blocked).toBe(true);
+            }
+          },
+        ),
+        { seed: 20_646, numRuns: 40 },
+      );
+    });
+  });
+
+  it('content-guards Edit and MultiEdit projected settings under dev override', () => {
+    return withDevOverrideRoot(true, (root, rootToken) => {
+      writeSignedSettingsPresets(root);
+      const settingsPath = join(root, '.claude', 'settings.json');
+      writeFileSync(settingsPath, validGuardedSettings());
+
+      const validEdit = evaluateSelfProtection(
+        'Edit',
+        { file_path: settingsPath, old_string: 'Read', new_string: 'Read' },
+        root,
+        undefined,
+        { rootToken },
+      );
+      expect(validEdit).toBeNull();
+
+      const wideningEdit = evaluateSelfProtection(
+        'Edit',
+        {
+          file_path: settingsPath,
+          old_string: '"Grep"]',
+          new_string: '"Grep","Write(.claude/settings.json)"]',
+        },
+        root,
+        undefined,
+        { rootToken },
+      );
+      expect(wideningEdit).not.toBeNull();
+      expect(wideningEdit!.blocked).toBe(true);
+
+      writeFileSync(settingsPath, validGuardedSettings());
+      const disableAllHooksMultiEdit = evaluateSelfProtection(
+        'MultiEdit',
+        {
+          file_path: settingsPath,
+          edits: [
+            {
+              old_string: '{"hooks":',
+              new_string: '{"disableAllHooks":true,"hooks":',
+            },
+          ],
+        },
+        root,
+        undefined,
+        { rootToken },
+      );
+      expect(disableAllHooksMultiEdit).not.toBeNull();
+      expect(disableAllHooksMultiEdit!.blocked).toBe(true);
+    });
+  });
+
+  it('allows protected config writes when the signed root token is in the toggle file and content is valid', () => {
+    return withDevOverrideRoot(true, (root, rootToken) => {
+      writeSignedSettingsPresets(root);
       writeFileSync(
         join(root, '.hive-flow', 'enforcement', 'dev-override.conf'),
         `HIVE_FLOW_DEV_OVERRIDE=on\nHIVE_FLOW_DEV_OVERRIDE_TOKEN=${rootToken}\n`,
@@ -611,7 +791,7 @@ describe('dev override self-protection gate', () => {
 
       const result = evaluateSelfProtection(
         'Write',
-        { file_path: join(root, '.claude', 'settings.json') },
+        { file_path: join(root, '.claude', 'settings.json'), content: validGuardedSettings() },
         root,
       );
 
@@ -637,7 +817,7 @@ describe('dev override self-protection gate', () => {
     });
   });
 
-  it('allows protected config Bash redirects while the toggle is on for the root session', () => {
+  it('blocks protected config Bash redirects while the toggle is on because projected content is not verifiable', () => {
     return withDevOverrideRoot(true, (root, rootToken) => {
       const result = evaluateSelfProtection(
         'Bash',
@@ -647,7 +827,9 @@ describe('dev override self-protection gate', () => {
         { rootToken },
       );
 
-      expect(result).toBeNull();
+      expect(result).not.toBeNull();
+      expect(result!.blocked).toBe(true);
+      expect(result!.reason).toContain('settings content');
     });
   });
 
@@ -703,6 +885,7 @@ describe('dev override self-protection gate', () => {
 
   it('allows protected config writes through evaluate for the root session', async () => {
     await withDevOverrideRoot(true, async (root) => {
+      writeSignedSettingsPresets(root);
       process.env.HIVE_FLOW_DEV_OVERRIDE_TOKEN = createRootOverrideToken(root);
       delete process.env.CLAUDE_SESSION_ID;
       delete process.env.AGENTIC_FLOW_AGENT_ID;
@@ -714,7 +897,7 @@ describe('dev override self-protection gate', () => {
             tool_name: 'Write',
             tool_input: {
               file_path: join(root, '.claude', 'settings.json'),
-              content: '{}',
+              content: validGuardedSettings(),
             },
             cwd: root,
           },

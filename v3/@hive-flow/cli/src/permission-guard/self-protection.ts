@@ -13,7 +13,7 @@
 
 import { resolve, relative, normalize, sep, dirname, basename } from 'node:path';
 import { existsSync, readFileSync, readlinkSync, realpathSync } from 'node:fs';
-import { createHash } from 'node:crypto';
+import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 import { homedir } from 'node:os';
 import { hasActiveOverride } from './biometric-override.js';
 import {
@@ -21,6 +21,7 @@ import {
   getProtectedWritePaths,
   isDevOverrideFloorPath as isPolicyDevOverrideFloorPath,
   isDevOverrideActive as isPolicyDevOverrideActive,
+  isGuardedSettingsPath as isPolicyGuardedSettingsPath,
   verifyDevOverrideRootToken as verifyPolicyDevOverrideRootToken,
 } from './protected-paths.js';
 import {
@@ -95,6 +96,22 @@ interface DevOverrideContext {
   rootToken?: string;
   hasSubagentIdentity?: boolean;
 }
+
+interface SettingsPresetEntry {
+  event?: string;
+  matcher?: string;
+  command?: string;
+}
+
+interface SignedSettingsPresets {
+  version: number;
+  entries: SettingsPresetEntry[];
+  baselineAllow: string[];
+}
+
+const SETTINGS_PRESET_VERSION = 2;
+const DEV_OVERRIDE_SETTINGS_DENIAL =
+  'DENIED: dev override cannot bypass guarded settings without verifiable settings content. Use Write/Edit/MultiEdit with content that preserves the signed hook presets and does not set disableAllHooks or widen governance permissions.';
 
 /**
  * Files that the build system must be allowed to write. These are
@@ -245,6 +262,184 @@ function shouldBypassForDevOverride(filePath: string, cwd: string, context?: Dev
   return hasSignedRootSession(cwd, context)
     && isDevOverrideActive(cwd)
     && !isDevOverrideFloorPath(filePath, cwd);
+}
+
+function readHmacKey(cwd: string): string | null {
+  try {
+    return readFileSync(resolve(cwd, '.hive-flow', 'enforcement', '.hmac-key'), 'utf8').trim();
+  } catch {
+    return null;
+  }
+}
+
+function verifySignedStateEnvelope(envelope: unknown, cwd: string): unknown | null {
+  if (!envelope || typeof envelope !== 'object') return null;
+  const wrapped = envelope as { state?: unknown; hmac?: unknown };
+  if (!wrapped.state || typeof wrapped.hmac !== 'string') return null;
+  if (!/^[a-f0-9]{64}$/i.test(wrapped.hmac)) return null;
+  const key = readHmacKey(cwd);
+  if (!key) return null;
+  const expected = createHmac('sha256', key).update(JSON.stringify(wrapped.state)).digest('hex');
+  const expectedBuf = Buffer.from(expected, 'hex');
+  const actualBuf = Buffer.from(wrapped.hmac, 'hex');
+  if (expectedBuf.length !== actualBuf.length) return null;
+  return timingSafeEqual(expectedBuf, actualBuf) ? wrapped.state : null;
+}
+
+function loadSignedSettingsPresets(cwd: string): SignedSettingsPresets | null {
+  try {
+    const raw = JSON.parse(readFileSync(resolve(cwd, '.hive-flow', 'enforcement', 'settings-presets.json'), 'utf8'));
+    const state = verifySignedStateEnvelope(raw, cwd);
+    if (!state || typeof state !== 'object') return null;
+    const parsed = state as Partial<SignedSettingsPresets>;
+    if (parsed.version !== SETTINGS_PRESET_VERSION) return null;
+    if (!Array.isArray(parsed.entries) || parsed.entries.length === 0) return null;
+    return {
+      version: parsed.version,
+      entries: parsed.entries,
+      baselineAllow: Array.isArray(parsed.baselineAllow) ? parsed.baselineAllow.map(String) : [],
+    };
+  } catch {
+    return null;
+  }
+}
+
+function normalizeHookCommand(command: string, cwd: string): string {
+  return String(command || '')
+    .replace(/\$CLAUDE_PROJECT_DIR|\$\{CLAUDE_PROJECT_DIR\}/g, cwd)
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function collectHookEntries(settings: unknown, cwd: string): Set<string> {
+  const entries = new Set<string>();
+  if (!settings || typeof settings !== 'object') return entries;
+  const hooks = (settings as { hooks?: unknown }).hooks;
+  if (!hooks || typeof hooks !== 'object') return entries;
+  for (const [event, groups] of Object.entries(hooks)) {
+    if (!Array.isArray(groups)) continue;
+    for (const group of groups) {
+      const matcher = typeof group?.matcher === 'string' ? group.matcher : '';
+      const commands = Array.isArray(group?.hooks) ? group.hooks : [];
+      for (const hook of commands) {
+        if (hook?.type === 'command' && typeof hook.command === 'string') {
+          entries.add(`${event}\0${matcher}\0${normalizeHookCommand(hook.command, cwd)}`);
+        }
+      }
+    }
+  }
+  return entries;
+}
+
+function containsAllPresetEntries(settings: unknown, presets: SignedSettingsPresets, cwd: string): boolean {
+  const actual = collectHookEntries(settings, cwd);
+  for (const entry of presets.entries) {
+    const event = typeof entry?.event === 'string' ? entry.event : 'PreToolUse';
+    const matcher = typeof entry?.matcher === 'string' ? entry.matcher : '';
+    const command = typeof entry?.command === 'string' ? entry.command : '';
+    if (!command) return false;
+    if (!actual.has(`${event}\0${matcher}\0${normalizeHookCommand(command, cwd)}`)) return false;
+  }
+  return true;
+}
+
+function widensGovernanceAllow(settings: unknown, baselineAllow: string[]): boolean {
+  const parsed = settings && typeof settings === 'object'
+    ? settings as { permissions?: { allow?: unknown } }
+    : {};
+  const allow = Array.isArray(parsed.permissions?.allow) ? parsed.permissions.allow : [];
+  const baseline = new Set(baselineAllow.map(String));
+  for (const entry of allow) {
+    const value = String(entry);
+    if (baseline.has(value)) continue;
+    if (/^(Bash|Write|Edit|MultiEdit|NotebookEdit)(?:\(|$)/.test(value)) return true;
+    if (/\.claude|\.hive-flow|\.git|\.env|permission-guard|hook-handler|enforcement\.cjs|role-enforcement\.cjs/i.test(value)) return true;
+  }
+  return false;
+}
+
+function guardSettingsContent(projected: string | null, cwd: string): boolean {
+  if (typeof projected !== 'string') return false;
+  const presets = loadSignedSettingsPresets(cwd);
+  if (!presets) return false;
+  try {
+    const parsed = JSON.parse(projected) as { disableAllHooks?: unknown };
+    if (!parsed || typeof parsed !== 'object') return false;
+    if (parsed.disableAllHooks === true) return false;
+    if (!containsAllPresetEntries(parsed, presets, cwd)) return false;
+    if (widensGovernanceAllow(parsed, presets.baselineAllow)) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function projectedContentAfterWrite(toolName: string, toolInput: Record<string, unknown>, filePath: string, cwd: string): string | null {
+  if (toolName === 'Write') {
+    return typeof toolInput.content === 'string' ? toolInput.content : null;
+  }
+
+  if (toolName === 'Edit') {
+    const oldText = typeof toolInput.old_string === 'string' ? toolInput.old_string : toolInput.old_text;
+    const newText = typeof toolInput.new_string === 'string' ? toolInput.new_string : toolInput.new_text;
+    if (typeof oldText !== 'string' || typeof newText !== 'string') return null;
+    try {
+      const current = readFileSync(resolveRealPathForPolicy(filePath, cwd), 'utf8');
+      if (!current.includes(oldText)) return null;
+      return current.replace(oldText, newText);
+    } catch {
+      return null;
+    }
+  }
+
+  if (toolName === 'MultiEdit') {
+    const edits = Array.isArray(toolInput.edits) ? toolInput.edits : [];
+    if (edits.length === 0) return null;
+    try {
+      let current = readFileSync(resolveRealPathForPolicy(filePath, cwd), 'utf8');
+      for (const edit of edits) {
+        const oldText = edit?.old_string;
+        const newText = edit?.new_string;
+        if (typeof oldText !== 'string' || typeof newText !== 'string') return null;
+        if (!current.includes(oldText)) return null;
+        current = current.replace(oldText, newText);
+      }
+      return current;
+    } catch {
+      return null;
+    }
+  }
+
+  return null;
+}
+
+function canBypassForDevOverride(
+  toolName: string,
+  toolInput: Record<string, unknown>,
+  filePath: string,
+  cwd: string,
+  context?: DevOverrideContext,
+): boolean {
+  if (!shouldBypassForDevOverride(filePath, cwd, context)) return false;
+  if (!isPolicyGuardedSettingsPath(filePath, cwd)) return true;
+  return guardSettingsContent(projectedContentAfterWrite(toolName, toolInput, filePath, cwd), cwd);
+}
+
+function devOverrideSettingsDenial(
+  filePath: string,
+  cwd: string,
+  context?: DevOverrideContext,
+): ProtectionResult | null {
+  if (!hasSignedRootSession(cwd, context)) return null;
+  if (!isDevOverrideActive(cwd)) return null;
+  if (isDevOverrideFloorPath(filePath, cwd)) return null;
+  if (!isPolicyGuardedSettingsPath(filePath, cwd)) return null;
+  return {
+    blocked: true,
+    reason: DEV_OVERRIDE_SETTINGS_DENIAL,
+    protectedPath: filePath,
+    targetPath: filePath,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -766,7 +961,9 @@ export function evaluateSelfProtection(
 
     const protection = isProtectedPath(filePath, cwd);
     if (protection.blocked) {
-      if (shouldBypassForDevOverride(filePath, cwd, context)) return null;
+      if (canBypassForDevOverride(toolName, toolInput, filePath, cwd, context)) return null;
+      const contentDenial = devOverrideSettingsDenial(filePath, cwd, context);
+      if (contentDenial) return contentDenial;
       return protection;
     }
   }
@@ -779,7 +976,11 @@ export function evaluateSelfProtection(
     const bashResult = checkBashSelfProtection(cmd, cwd);
     if (bashResult) {
       const targetPath = bashResult.targetPath || bashResult.protectedPath;
-      if (targetPath && shouldBypassForDevOverride(targetPath, cwd, context)) return null;
+      if (targetPath && canBypassForDevOverride(toolName, toolInput, targetPath, cwd, context)) return null;
+      if (targetPath) {
+        const contentDenial = devOverrideSettingsDenial(targetPath, cwd, context);
+        if (contentDenial) return contentDenial;
+      }
       return bashResult;
     }
   }
