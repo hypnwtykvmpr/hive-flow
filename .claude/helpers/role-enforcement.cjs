@@ -29,6 +29,10 @@ const crypto = require('crypto');
 const PROJECT_DIR = path.resolve(__dirname, '..', '..');
 const ENFORCEMENT_DIR = path.join(PROJECT_DIR, '.hive-flow', 'enforcement');
 const HMAC_KEY_FILE = path.join(ENFORCEMENT_DIR, '.hmac-key');
+const DEV_OVERRIDE_FILE = path.join(ENFORCEMENT_DIR, 'dev-override.conf');
+const DEV_OVERRIDE_TOKEN_ENV = 'HIVE_FLOW_DEV_OVERRIDE_TOKEN';
+const DEV_OVERRIDE_TOKEN_KIND = 'hive-flow-dev-override-root';
+const MAX_DEV_OVERRIDE_TOKEN_TTL_MS = 12 * 60 * 60 * 1000;
 
 // ============================================================================
 // Identity Text Constants
@@ -186,6 +190,101 @@ function getAgentId(input = null) {
     || null;
 }
 
+function isDevOverrideActive() {
+  try {
+    if (!fs.existsSync(DEV_OVERRIDE_FILE)) return false;
+    const raw = fs.readFileSync(DEV_OVERRIDE_FILE, 'utf8');
+    return raw.split(/\r?\n/).some(line => line.trim() === 'HIVE_FLOW_DEV_OVERRIDE=on');
+  } catch {
+    return false;
+  }
+}
+
+function getDevOverrideConfigToken() {
+  try {
+    if (!fs.existsSync(DEV_OVERRIDE_FILE)) return null;
+    const raw = fs.readFileSync(DEV_OVERRIDE_FILE, 'utf8');
+    for (const line of raw.split(/\r?\n/)) {
+      const trimmed = line.trim();
+      if (trimmed.startsWith(`${DEV_OVERRIDE_TOKEN_ENV}=`)) {
+        const token = trimmed.slice(DEV_OVERRIDE_TOKEN_ENV.length + 1).trim();
+        return token || null;
+      }
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+function casefoldPath(filePath) {
+  return String(filePath || '').replace(/\\/g, '/').toLowerCase();
+}
+
+function realpathForCompare(filePath) {
+  try {
+    return fs.realpathSync(path.resolve(filePath));
+  } catch {
+    return path.resolve(filePath);
+  }
+}
+
+function hasSubagentIdentity(input = null) {
+  if (process.env.CLAUDE_PARENT_AGENT_ID) return true;
+  if (process.env.AGENTIC_FLOW_AGENT_ID || process.env.CLAUDE_AGENT_ID) return true;
+  return Boolean(getHookAgentId(input));
+}
+
+function verifyDevOverrideTokenHmac(body, signature) {
+  if (!body || !signature || !/^[a-f0-9]{64}$/i.test(signature)) return false;
+  const key = getHmacKey();
+  if (!key) return false;
+  const expected = crypto.createHmac('sha256', key).update(body).digest('hex');
+  const expectedBuf = Buffer.from(expected, 'hex');
+  const actualBuf = Buffer.from(signature, 'hex');
+  return expectedBuf.length === actualBuf.length && crypto.timingSafeEqual(expectedBuf, actualBuf);
+}
+
+function parseDevOverrideRootToken(token) {
+  if (!token || typeof token !== 'string') return null;
+  const parts = token.split('.');
+  if (parts.length !== 2) return null;
+  const [body, signature] = parts;
+  if (!/^[A-Za-z0-9_-]+$/.test(body)) return null;
+  if (!verifyDevOverrideTokenHmac(body, signature)) return null;
+  try {
+    const payload = JSON.parse(Buffer.from(body, 'base64url').toString('utf8'));
+    if (!payload || typeof payload !== 'object') return null;
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+function verifyDevOverrideRootToken(input = null, nowMs = Date.now()) {
+  if (hasSubagentIdentity(input)) return false;
+  const payload = parseDevOverrideRootToken(process.env[DEV_OVERRIDE_TOKEN_ENV] || getDevOverrideConfigToken());
+  if (!payload) return false;
+
+  if (payload.kind !== DEV_OVERRIDE_TOKEN_KIND) return false;
+  if (typeof payload.projectDir !== 'string') return false;
+  if (casefoldPath(realpathForCompare(payload.projectDir)) !== casefoldPath(PROJECT_DIR)) return false;
+
+  const issuedAt = Number(payload.issuedAt);
+  const expiresAt = Number(payload.expiresAt);
+  if (!Number.isFinite(issuedAt) || !Number.isFinite(expiresAt)) return false;
+  if (issuedAt > nowMs + 5 * 60 * 1000) return false;
+  if (expiresAt <= nowMs) return false;
+  if (expiresAt - issuedAt > MAX_DEV_OVERRIDE_TOKEN_TTL_MS) return false;
+
+  if (typeof payload.nonce !== 'string' || payload.nonce.length < 8 || payload.nonce.length > 128) return false;
+  return true;
+}
+
+function isRootSessionForDevOverride(input = null) {
+  return verifyDevOverrideRootToken(input);
+}
+
 function getRoleFilePath(agentId) {
   const id = sanitizeId(agentId);
   if (!id) return null;
@@ -326,8 +425,11 @@ function makeDeny(reason, hookEventName = 'PreToolUse') {
 // Advocate Enforcement (HARD BLOCK)
 // ============================================================================
 
-function enforceAdvocateRole(toolName) {
+function enforceAdvocateRole(toolName, input = null) {
   if (ADVOCATE_DENIED.has(toolName)) {
+    if (isRootSessionForDevOverride(input) && isDevOverrideActive()) {
+      return makeAllow();
+    }
     return makeDeny(
       `[ADVOCATE ENFORCEMENT] Tool '${toolName}' is structurally blocked for advocate role. ` +
       `Delegate this work to a hive via queen_mission_assign + queen_spawn_worker. ` +
@@ -480,7 +582,7 @@ function processPreToolUse(input) {
   if (!role) return makeAllow(); // No role assigned — pass through
 
   if (role.type === 'advocate') {
-    return enforceAdvocateRole(toolName);
+    return enforceAdvocateRole(toolName, input);
   }
 
   if (role.type === 'enforcer') {
@@ -617,6 +719,9 @@ module.exports = {
   sanitizeId,
   getHookAgentId,
   getAgentId,
+  isDevOverrideActive,
+  isRootSessionForDevOverride,
+  verifyDevOverrideRootToken,
   getRoleFilePath,
   loadRole,
   loadQueenHive,

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach, afterAll } from 'vitest';
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
+import { createHmac } from 'node:crypto';
 
 // ── Module mocks (hoisted before imports) ────────────────────────────────
 
@@ -51,6 +52,19 @@ const AGENT_STORE_PATH = require('path').join(ROLE_TEST_PROJECT_REAL_DIR, '.hive
 
 let roleEnf: typeof import('../../../../../.claude/helpers/role-enforcement.cjs');
 
+function issueRootOverrideToken(): void {
+  const key = roleEnf.getOrCreateHmacKey();
+  const body = Buffer.from(JSON.stringify({
+    kind: 'hive-flow-dev-override-root',
+    projectDir: ROLE_TEST_PROJECT_REAL_DIR,
+    issuedAt: Date.now(),
+    expiresAt: Date.now() + 60_000,
+    nonce: 'role-enforcement',
+  })).toString('base64url');
+  const hmac = createHmac('sha256', key).update(body).digest('hex');
+  process.env.HIVE_FLOW_DEV_OVERRIDE_TOKEN = `${body}.${hmac}`;
+}
+
 // ──────────────────────────────────────────────────────────────────────────
 // Tests
 // ──────────────────────────────────────────────────────────────────────────
@@ -71,6 +85,8 @@ describe('Role Enforcement System', () => {
     delete process.env.AGENTIC_FLOW_AGENT_ID;
     delete process.env.CLAUDE_SESSION_ID;
     delete process.env.CLAUDE_AGENT_ID;
+    delete process.env.CLAUDE_PARENT_AGENT_ID;
+    delete process.env.HIVE_FLOW_DEV_OVERRIDE_TOKEN;
   });
 
   // ── sanitizeId ──
@@ -330,6 +346,59 @@ describe('Role Enforcement System', () => {
       delete process.env.AGENTIC_FLOW_AGENT_ID;
       const result = roleEnf.processPreToolUse({ tool_name: 'Bash' });
       expect(result).toEqual({});
+    });
+
+    it('denies advocate work tools when only the dev override toggle is active', () => {
+      const overridePath = require('path').join(
+        ROLE_TEST_PROJECT_REAL_DIR,
+        '.hive-flow',
+        'enforcement',
+        'dev-override.conf',
+      );
+      mkdirSync(require('path').dirname(overridePath), { recursive: true });
+      writeFileSync(overridePath, 'HIVE_FLOW_DEV_OVERRIDE=on\n');
+      roleEnf.saveRole('root-advocate', { type: 'advocate', setAt: new Date().toISOString(), setBy: 'test' });
+
+      const result = roleEnf.processPreToolUse({ tool_name: 'Write', agent_id: 'root-advocate' });
+
+      expect(result.hookSpecificOutput.permissionDecision).toBe('deny');
+      expect(result.hookSpecificOutput.permissionDecisionReason).toContain('ADVOCATE ENFORCEMENT');
+    });
+
+    it('allows signed root advocate work tools while dev override is active', () => {
+      const overridePath = require('path').join(
+        ROLE_TEST_PROJECT_REAL_DIR,
+        '.hive-flow',
+        'enforcement',
+        'dev-override.conf',
+      );
+      mkdirSync(require('path').dirname(overridePath), { recursive: true });
+      writeFileSync(overridePath, 'HIVE_FLOW_DEV_OVERRIDE=on\n');
+      issueRootOverrideToken();
+      process.env.CLAUDE_SESSION_ID = 'root-session';
+      roleEnf.saveRole('root-session', { type: 'advocate', setAt: new Date().toISOString(), setBy: 'test' });
+
+      const result = roleEnf.processPreToolUse({ tool_name: 'Write' });
+
+      expect(result).toEqual({});
+    });
+
+    it('keeps subagent advocate work tools blocked while dev override is active', () => {
+      process.env.AGENTIC_FLOW_AGENT_ID = 'worker-agent';
+      const overridePath = require('path').join(
+        ROLE_TEST_PROJECT_REAL_DIR,
+        '.hive-flow',
+        'enforcement',
+        'dev-override.conf',
+      );
+      mkdirSync(require('path').dirname(overridePath), { recursive: true });
+      writeFileSync(overridePath, 'HIVE_FLOW_DEV_OVERRIDE=on\n');
+      roleEnf.saveRole('worker-agent', { type: 'advocate', setAt: new Date().toISOString(), setBy: 'test' });
+
+      const result = roleEnf.processPreToolUse({ tool_name: 'Write' });
+
+      expect(result.hookSpecificOutput.permissionDecision).toBe('deny');
+      expect(result.hookSpecificOutput.permissionDecisionReason).toContain('ADVOCATE ENFORCEMENT');
     });
   });
 

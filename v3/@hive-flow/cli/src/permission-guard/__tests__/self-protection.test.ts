@@ -13,9 +13,10 @@ import {
   overrideStatus,
   requestOverride,
 } from '../biometric-override.js';
-import { writeFileSync, mkdirSync, rmSync } from 'node:fs';
+import { writeFileSync, mkdirSync, rmSync, symlinkSync, realpathSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { platform } from 'node:process';
 import { randomUUID } from 'node:crypto';
 
 // ---------------------------------------------------------------------------
@@ -110,6 +111,55 @@ describe('isProtectedPath', () => {
       CWD,
     );
     expect(result.blocked).toBe(true);
+  });
+
+  it('blocks a symlink leaf that resolves to a protected file', () => {
+    if (platform === 'win32') return;
+    const root = tmpDir();
+    try {
+      mkdirSync(join(root, '.claude'), { recursive: true });
+      mkdirSync(join(root, 'tmp'), { recursive: true });
+      writeFileSync(join(root, '.claude', 'settings.json'), '{}');
+      symlinkSync(join(root, '.claude', 'settings.json'), join(root, 'tmp', 'settings-link.json'));
+
+      const result = isProtectedPath(join(root, 'tmp', 'settings-link.json'), root);
+
+      expect(result.blocked).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('blocks a missing child under a symlinked protected directory', () => {
+    if (platform === 'win32') return;
+    const root = tmpDir();
+    try {
+      mkdirSync(join(root, '.claude', 'helpers'), { recursive: true });
+      mkdirSync(join(root, 'tmp'), { recursive: true });
+      symlinkSync(join(root, '.claude', 'helpers'), join(root, 'tmp', 'helpers-link'));
+
+      const result = isProtectedPath(join(root, 'tmp', 'helpers-link', 'new-helper.cjs'), root);
+
+      expect(result.blocked).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('blocks a child under a symlink to a realpathed protected directory', () => {
+    if (platform === 'win32') return;
+    const root = tmpDir();
+    try {
+      mkdirSync(join(root, '.claude', 'helpers'), { recursive: true });
+      mkdirSync(join(root, 'tmp'), { recursive: true });
+      symlinkSync(realpathSync(join(root, '.claude', 'helpers')), join(root, 'tmp', 'real-helpers-link'));
+
+      const result = isProtectedPath(join(root, 'tmp', 'real-helpers-link', 'new-helper.cjs'), root);
+
+      expect(result.blocked).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });
 

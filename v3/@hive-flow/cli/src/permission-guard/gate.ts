@@ -169,6 +169,14 @@ function casefoldPath(filePath: string): string {
   return filePath.replace(/\\/g, '/').toLowerCase();
 }
 
+function hasSubagentIdentity(hookInput: Partial<HookInput>): boolean {
+  if (process.env.CLAUDE_PARENT_AGENT_ID) return true;
+  if (process.env.AGENTIC_FLOW_AGENT_ID || process.env.CLAUDE_AGENT_ID) return true;
+  const hookAgentId = (hookInput as Record<string, unknown>).agent_id
+    || (hookInput as Record<string, unknown>).agentId;
+  return typeof hookAgentId === 'string' && hookAgentId.trim().length > 0;
+}
+
 function resolvePathVar(pattern: string, cwd: string, projectRoot: string = cwd): string {
   return pattern
     .replace('${HOME}', HOME)
@@ -802,7 +810,10 @@ export async function evaluate(hookInput: HookInput, config: Partial<PermissionC
   // -- Self-protection check (highest priority after normalization) --
   // Must run before any allow-list checks to prevent bypass via always_allow_tools
   if (toolName === 'Write' || toolName === 'Edit' || toolName === 'MultiEdit' || toolName === 'NotebookEdit' || toolName === 'Bash') {
-    const selfProtection = evaluateSelfProtection(toolName, toolInput, policyRoot);
+    const selfProtection = evaluateSelfProtection(toolName, toolInput, policyRoot, undefined, {
+      rootToken: process.env.HIVE_FLOW_DEV_OVERRIDE_TOKEN,
+      hasSubagentIdentity: hasSubagentIdentity(hookInput),
+    });
     if (selfProtection && selfProtection.blocked) {
       logDecision(config, toolName, inputSummary, 'deny', 'self-protection', selfProtection.reason);
       return { decision: 'deny', reason: selfProtection.reason };

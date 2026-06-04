@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { mkdtempSync } from 'node:fs';
+import { createHmac } from 'node:crypto';
 import { propertyRunsFromEnv } from './property-runs.js';
 
 const PROPERTY_RUNS = propertyRunsFromEnv(100);
@@ -56,6 +57,37 @@ function clearAgentEnv(): void {
   delete process.env.CLAUDE_SESSION_ID;
   delete process.env.HIVE_FLOW_AGENT_TOKEN;
   delete process.env.HIVE_FLOW_HIVE_ID;
+  delete process.env.CLAUDE_PARENT_AGENT_ID;
+  delete process.env.HIVE_FLOW_DEV_OVERRIDE_TOKEN;
+}
+
+function enableDevOverride(): void {
+  const overridePath = join(root, '.hive-flow', 'enforcement', 'dev-override.conf');
+  mkdirSync(dirname(overridePath), { recursive: true });
+  writeFileSync(overridePath, 'HIVE_FLOW_DEV_OVERRIDE=on\n');
+}
+
+function createRootOverrideToken(nonce = 'enforcement-security-property'): string {
+  const key = enf.getOrCreateHmacKey();
+  const body = Buffer.from(JSON.stringify({
+    kind: 'hive-flow-dev-override-root',
+    projectDir: root,
+    issuedAt: Date.now(),
+    expiresAt: Date.now() + 60_000,
+    nonce,
+  })).toString('base64url');
+  const hmac = createHmac('sha256', key).update(body).digest('hex');
+  return `${body}.${hmac}`;
+}
+
+function issueRootOverrideToken(): void {
+  process.env.HIVE_FLOW_DEV_OVERRIDE_TOKEN = createRootOverrideToken();
+}
+
+function writeRootOverrideTokenToConfig(): void {
+  const overridePath = join(root, '.hive-flow', 'enforcement', 'dev-override.conf');
+  mkdirSync(dirname(overridePath), { recursive: true });
+  writeFileSync(overridePath, `HIVE_FLOW_DEV_OVERRIDE=on\nHIVE_FLOW_DEV_OVERRIDE_TOKEN=${createRootOverrideToken('enforcement-config-token')}\n`);
 }
 
 describe('enforcement security property contracts', () => {
@@ -353,6 +385,104 @@ describe('enforcement security property contracts', () => {
       { command: 'node .claude/helpers/enforcement.cjs --reset' },
       state,
     ).circumvention).toBe(true);
+  });
+
+  it('does not classify filenames containing reset-enforcement as reset invocations', () => {
+    const state = {
+      level: 0,
+      violations: 0,
+      restrictedGroups: [],
+      history: [],
+      integrityCompromised: false,
+    };
+
+    expect(enf.detectCircumvention(
+      'Bash',
+      { command: 'git add .claude/commands/reset-enforcement.md' },
+      state,
+    ).circumvention).toBe(false);
+
+    expect(enf.detectCircumvention(
+      'Bash',
+      { command: 'git add docs/enforcement-reset-notes.md' },
+      state,
+    ).circumvention).toBe(false);
+  });
+
+  it('denies protected config writes when only the dev override toggle is active', () => {
+    enableDevOverride();
+
+    const result = enf.processPreToolUse({
+      tool_name: 'Write',
+      tool_input: { file_path: '.claude/settings.json' },
+    });
+
+    expect(result.hookSpecificOutput.permissionDecision).toBe('deny');
+    expect(result.hookSpecificOutput.permissionDecisionReason).toContain('protected path');
+  });
+
+  it('allows signed-root protected config writes when dev override is active', () => {
+    enableDevOverride();
+    issueRootOverrideToken();
+
+    const result = enf.processPreToolUse({
+      tool_name: 'Write',
+      tool_input: { file_path: '.claude/settings.json' },
+    });
+
+    expect(result).toEqual({});
+  });
+
+  it('allows signed-root protected config writes when the signed token is in the override file', () => {
+    writeRootOverrideTokenToConfig();
+
+    const result = enf.processPreToolUse({
+      tool_name: 'Write',
+      tool_input: { file_path: '.claude/settings.json' },
+    });
+
+    expect(result).toEqual({});
+  });
+
+  it('keeps subagent protected config writes blocked when dev override is active', () => {
+    process.env.AGENTIC_FLOW_AGENT_ID = 'worker-agent';
+    enableDevOverride();
+
+    const result = enf.processPreToolUse({
+      tool_name: 'Write',
+      tool_input: { file_path: '.claude/settings.json' },
+    });
+
+    expect(result.hookSpecificOutput.permissionDecision).toBe('deny');
+    expect(result.hookSpecificOutput.permissionDecisionReason).toContain('protected path');
+  });
+
+  it('keeps the dev override toggle and enforcement secret state above the grant', () => {
+    enableDevOverride();
+    issueRootOverrideToken();
+
+    for (const filePath of [
+      '.hive-flow/enforcement/dev-override.conf',
+      '.hive-flow/enforcement/.hmac-key',
+      '.hive-flow/enforcement/state.json',
+      '.claude/helpers/enforcement.cjs',
+    ]) {
+      const result = enf.processPreToolUse({
+        tool_name: 'Write',
+        tool_input: { file_path: filePath },
+      });
+
+      expect(result.hookSpecificOutput.permissionDecision).toBe('deny');
+      expect(result.hookSpecificOutput.permissionDecisionReason).toContain('CIRCUMVENTION');
+    }
+
+    const readKey = enf.processPreToolUse({
+      tool_name: 'Read',
+      tool_input: { file_path: '.hive-flow/enforcement/.hmac-key' },
+    });
+
+    expect(readKey.hookSpecificOutput.permissionDecision).toBe('deny');
+    expect(readKey.hookSpecificOutput.permissionDecisionReason).toContain('HMAC key');
   });
 
   it('classifies HIVE_FLOW_PROJECT_ROOT manipulation as enforcement circumvention', () => {

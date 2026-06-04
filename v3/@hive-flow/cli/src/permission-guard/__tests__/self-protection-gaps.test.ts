@@ -12,6 +12,10 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { createHmac } from 'node:crypto';
 import {
   checkBashSelfProtection,
   evaluateSelfProtection,
@@ -467,5 +471,250 @@ describe('tee to protected paths', () => {
     );
     expect(result).not.toBeNull();
     expect(result!.blocked).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Dev override: human-toggled root session grant, with floor paths above it
+// ---------------------------------------------------------------------------
+
+function createRootOverrideToken(root: string): string {
+  const key = 'self-protection-dev-override-key';
+  writeFileSync(join(root, '.hive-flow', 'enforcement', '.hmac-key'), key);
+  const body = Buffer.from(JSON.stringify({
+    kind: 'hive-flow-dev-override-root',
+    projectDir: root,
+    issuedAt: Date.now(),
+    expiresAt: Date.now() + 60_000,
+    nonce: 'self-protection',
+  })).toString('base64url');
+  return `${body}.${createHmac('sha256', key).update(body).digest('hex')}`;
+}
+
+async function withDevOverrideRoot(enabled: boolean, fn: (root: string, rootToken: string) => void | Promise<void>): Promise<void> {
+  const root = mkdtempSync(join(tmpdir(), 'hive-flow-dev-override-'));
+  try {
+    const overridePath = join(root, '.hive-flow', 'enforcement', 'dev-override.conf');
+    mkdirSync(join(root, '.hive-flow', 'enforcement'), { recursive: true });
+    mkdirSync(join(root, '.claude'), { recursive: true });
+    writeFileSync(overridePath, enabled ? 'HIVE_FLOW_DEV_OVERRIDE=on\n' : '# HIVE_FLOW_DEV_OVERRIDE=on\n');
+    await fn(root, createRootOverrideToken(root));
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+}
+
+describe('dev override self-protection gate', () => {
+  const originalSession = process.env.CLAUDE_SESSION_ID;
+  const originalAgent = process.env.AGENTIC_FLOW_AGENT_ID;
+  const originalClaudeAgent = process.env.CLAUDE_AGENT_ID;
+  const originalParent = process.env.CLAUDE_PARENT_AGENT_ID;
+  const originalDevOverrideToken = process.env.HIVE_FLOW_DEV_OVERRIDE_TOKEN;
+
+  function restoreIdentityEnv(): void {
+    if (originalSession === undefined) delete process.env.CLAUDE_SESSION_ID;
+    else process.env.CLAUDE_SESSION_ID = originalSession;
+    if (originalAgent === undefined) delete process.env.AGENTIC_FLOW_AGENT_ID;
+    else process.env.AGENTIC_FLOW_AGENT_ID = originalAgent;
+    if (originalClaudeAgent === undefined) delete process.env.CLAUDE_AGENT_ID;
+    else process.env.CLAUDE_AGENT_ID = originalClaudeAgent;
+    if (originalParent === undefined) delete process.env.CLAUDE_PARENT_AGENT_ID;
+    else process.env.CLAUDE_PARENT_AGENT_ID = originalParent;
+    if (originalDevOverrideToken === undefined) delete process.env.HIVE_FLOW_DEV_OVERRIDE_TOKEN;
+    else process.env.HIVE_FLOW_DEV_OVERRIDE_TOKEN = originalDevOverrideToken;
+  }
+
+  it('keeps protected config writes blocked while the toggle is off', () => {
+    return withDevOverrideRoot(false, (root) => {
+      const result = evaluateSelfProtection(
+        'Write',
+        { file_path: join(root, '.claude', 'settings.json') },
+        root,
+      );
+
+      expect(result).not.toBeNull();
+      expect(result!.blocked).toBe(true);
+    });
+  });
+
+  it('keeps protected config writes blocked when the toggle is on but no signed root token is provided', () => {
+    return withDevOverrideRoot(true, (root) => {
+      const result = evaluateSelfProtection(
+        'Write',
+        { file_path: join(root, '.claude', 'settings.json') },
+        root,
+      );
+
+      expect(result).not.toBeNull();
+      expect(result!.blocked).toBe(true);
+    });
+  });
+
+  it('allows protected config writes while the toggle is on with a signed root token', () => {
+    return withDevOverrideRoot(true, (root, rootToken) => {
+      const result = evaluateSelfProtection(
+        'Write',
+        { file_path: join(root, '.claude', 'settings.json') },
+        root,
+        undefined,
+        { rootToken },
+      );
+
+      expect(result).toBeNull();
+    });
+  });
+
+  it('allows protected config writes when the signed root token is in the toggle file', () => {
+    return withDevOverrideRoot(true, (root, rootToken) => {
+      writeFileSync(
+        join(root, '.hive-flow', 'enforcement', 'dev-override.conf'),
+        `HIVE_FLOW_DEV_OVERRIDE=on\nHIVE_FLOW_DEV_OVERRIDE_TOKEN=${rootToken}\n`,
+      );
+
+      const result = evaluateSelfProtection(
+        'Write',
+        { file_path: join(root, '.claude', 'settings.json') },
+        root,
+      );
+
+      expect(result).toBeNull();
+    });
+  });
+
+  it('keeps protected config writes blocked when the toggle-file token is invalid', () => {
+    return withDevOverrideRoot(true, (root) => {
+      writeFileSync(
+        join(root, '.hive-flow', 'enforcement', 'dev-override.conf'),
+        'HIVE_FLOW_DEV_OVERRIDE=on\nHIVE_FLOW_DEV_OVERRIDE_TOKEN=not-a-valid-token\n',
+      );
+
+      const result = evaluateSelfProtection(
+        'Write',
+        { file_path: join(root, '.claude', 'settings.json') },
+        root,
+      );
+
+      expect(result).not.toBeNull();
+      expect(result!.blocked).toBe(true);
+    });
+  });
+
+  it('allows protected config Bash redirects while the toggle is on for the root session', () => {
+    return withDevOverrideRoot(true, (root, rootToken) => {
+      const result = evaluateSelfProtection(
+        'Bash',
+        { command: `printf '{}' > ${join(root, '.claude', 'settings.json')}` },
+        root,
+        undefined,
+        { rootToken },
+      );
+
+      expect(result).toBeNull();
+    });
+  });
+
+  it('keeps floor-path Bash redirects blocked while the toggle is on', () => {
+    return withDevOverrideRoot(true, (root, rootToken) => {
+      const result = evaluateSelfProtection(
+        'Bash',
+        { command: `printf 'x' > ${join(root, '.claude', 'helpers', 'enforcement.cjs')}` },
+        root,
+        undefined,
+        { rootToken },
+      );
+
+      expect(result).not.toBeNull();
+      expect(result!.blocked).toBe(true);
+    });
+  });
+
+  it('keeps override toggle and HMAC key writes blocked while the toggle is on', () => {
+    return withDevOverrideRoot(true, (root, rootToken) => {
+      for (const filePath of [
+        join(root, '.hive-flow', 'enforcement', 'dev-override.conf'),
+        join(root, '.hive-flow', 'enforcement', '.hmac-key'),
+      ]) {
+        const result = evaluateSelfProtection(
+          'Write',
+          { file_path: filePath },
+          root,
+          undefined,
+          { rootToken },
+        );
+
+        expect(result).not.toBeNull();
+        expect(result!.blocked).toBe(true);
+      }
+    });
+  });
+
+  it('keeps protected config writes blocked for subagents while the toggle is on', () => {
+    return withDevOverrideRoot(true, (root, rootToken) => {
+      const result = evaluateSelfProtection(
+        'Write',
+        { file_path: join(root, '.claude', 'settings.json') },
+        root,
+        undefined,
+        { rootToken, hasSubagentIdentity: true },
+      );
+
+      expect(result).not.toBeNull();
+      expect(result!.blocked).toBe(true);
+    });
+  });
+
+  it('allows protected config writes through evaluate for the root session', async () => {
+    await withDevOverrideRoot(true, async (root) => {
+      process.env.HIVE_FLOW_DEV_OVERRIDE_TOKEN = createRootOverrideToken(root);
+      delete process.env.CLAUDE_SESSION_ID;
+      delete process.env.AGENTIC_FLOW_AGENT_ID;
+      delete process.env.CLAUDE_AGENT_ID;
+      delete process.env.CLAUDE_PARENT_AGENT_ID;
+      try {
+        const result = await evaluate(
+          {
+            tool_name: 'Write',
+            tool_input: {
+              file_path: join(root, '.claude', 'settings.json'),
+              content: '{}',
+            },
+            cwd: root,
+          },
+          SELF_PROTECTION_ONLY_CONFIG,
+        );
+
+        expect(result.decision).toBe('allow');
+      } finally {
+        restoreIdentityEnv();
+      }
+    });
+  });
+
+  it('blocks protected config writes through evaluate for hook-identified subagents', async () => {
+    await withDevOverrideRoot(true, async (root) => {
+      process.env.HIVE_FLOW_DEV_OVERRIDE_TOKEN = createRootOverrideToken(root);
+      delete process.env.CLAUDE_SESSION_ID;
+      delete process.env.AGENTIC_FLOW_AGENT_ID;
+      delete process.env.CLAUDE_AGENT_ID;
+      delete process.env.CLAUDE_PARENT_AGENT_ID;
+      try {
+        const result = await evaluate(
+          {
+            tool_name: 'Write',
+            agent_id: 'native-task-agent',
+            tool_input: {
+              file_path: join(root, '.claude', 'settings.json'),
+              content: '{}',
+            },
+            cwd: root,
+          },
+          SELF_PROTECTION_ONLY_CONFIG,
+        );
+
+        expect(result.decision).toBe('deny');
+      } finally {
+        restoreIdentityEnv();
+      }
+    });
   });
 });

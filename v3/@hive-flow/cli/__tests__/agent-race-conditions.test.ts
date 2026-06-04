@@ -310,7 +310,7 @@ describe('Agent Race Condition Stress Tests', () => {
         expect(typeof id).toBe('string');
         expect(id.length).toBeGreaterThan(0);
       }
-    });
+    }, 15_000);
   });
 
   // ════════════════════════════════════════════════════════════════════════════

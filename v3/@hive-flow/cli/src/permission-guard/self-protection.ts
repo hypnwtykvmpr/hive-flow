@@ -11,9 +11,9 @@
  * human operator to temporarily bypass protection. See biometric-override.ts.
  */
 
-import { resolve, relative, normalize, sep } from 'node:path';
-import { readFileSync } from 'node:fs';
-import { createHash } from 'node:crypto';
+import { resolve, relative, normalize, sep, dirname, basename } from 'node:path';
+import { existsSync, readFileSync, readlinkSync, realpathSync } from 'node:fs';
+import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 import { homedir } from 'node:os';
 import { hasActiveOverride } from './biometric-override.js';
 
@@ -25,6 +25,7 @@ export interface ProtectionResult {
   blocked: boolean;
   reason: string;
   protectedPath?: string;
+  targetPath?: string;
 }
 
 export interface IntegritySnapshot {
@@ -49,6 +50,9 @@ const PROTECTED_PATH_TEMPLATES: string[] = [
   // Hook configuration — disabling hooks disables the entire guard
   '${CWD}/.claude/settings.json',
 
+  // Local git exclude controls what can be hidden from commits.
+  '${CWD}/.git/info/exclude',
+
   // Hook dispatcher — replacing the handler bypasses permission checks
   '${CWD}/.claude/helpers/hook-handler.cjs',
 
@@ -64,9 +68,20 @@ const PROTECTED_PATH_TEMPLATES: string[] = [
   // Guard runtime config — weakening patterns or disabling features
   '${HOME}/.hive-flow/permission-guard/',
 
+  // Enforcement state/signing store — never agent-writable.
+  '${CWD}/.hive-flow/enforcement/',
+
   // Standalone setup script — modifying it could weaken initial guard installation
   '${CWD}/scripts/permission-guard-setup.mjs',
 ];
+
+interface DevOverrideContext {
+  rootToken?: string;
+  hasSubagentIdentity?: boolean;
+}
+
+const DEV_OVERRIDE_TOKEN_KIND = 'hive-flow-dev-override-root';
+const MAX_DEV_OVERRIDE_TOKEN_TTL_MS = 12 * 60 * 60 * 1000;
 
 /**
  * Files that the build system must be allowed to write. These are
@@ -120,6 +135,35 @@ function normalizePath(filePath: string): string {
   }
 }
 
+function resolveRealPathForPolicy(filePath: string, cwd: string): string {
+  const absolute = resolve(cwd, filePath);
+  try {
+    return realpathSync.native(absolute);
+  } catch {
+    const missingSegments: string[] = [];
+    let current = absolute;
+
+    while (true) {
+      try {
+        const linkTarget = readlinkSync(current);
+        const targetAbsolute = resolve(dirname(current), linkTarget);
+        return resolve(targetAbsolute, ...missingSegments.reverse());
+      } catch {
+        // Not a symlink at this segment; continue toward an existing ancestor.
+      }
+
+      try {
+        return resolve(realpathSync.native(current), ...missingSegments.reverse());
+      } catch {
+        const parent = dirname(current);
+        if (parent === current) return absolute;
+        missingSegments.push(basename(current));
+        current = parent;
+      }
+    }
+  }
+}
+
 /**
  * Check if a target path falls within or matches a protected path.
  * - If the protected path ends with '/', it is a directory prefix:
@@ -156,10 +200,18 @@ export function isProtectedPath(filePath: string, cwd: string): ProtectionResult
 
   // Resolve the target to an absolute path
   const absoluteTarget = resolve(cwd, filePath);
+  const realTarget = resolveRealPathForPolicy(filePath, cwd);
 
   for (const template of PROTECTED_PATH_TEMPLATES) {
     const resolved = resolveTemplate(template, cwd);
-    if (matchesProtectedPattern(absoluteTarget, resolved)) {
+    const realResolved = resolveRealPathForPolicy(resolved, cwd);
+    const realPattern = template.endsWith('/') ? `${realResolved}${sep}` : realResolved;
+    if (
+      matchesProtectedPattern(absoluteTarget, resolved)
+      || matchesProtectedPattern(realTarget, resolved)
+      || matchesProtectedPattern(absoluteTarget, realPattern)
+      || matchesProtectedPattern(realTarget, realPattern)
+    ) {
       return {
         blocked: true,
         reason: `DENIED: This file is part of the Permission Guard security system and cannot be modified by agents. Request human assistance if changes are needed. To grant a temporary override, run: node scripts/permission-guard-setup.mjs override`,
@@ -169,6 +221,112 @@ export function isProtectedPath(filePath: string, cwd: string): ProtectionResult
   }
 
   return { blocked: false, reason: '' };
+}
+
+function isDevOverrideActive(cwd: string): boolean {
+  try {
+    const overridePath = resolve(cwd, '.hive-flow/enforcement/dev-override.conf');
+    if (!existsSync(overridePath)) return false;
+    const raw = readFileSync(overridePath, 'utf8');
+    return raw.split(/\r?\n/).some(line => line.trim() === 'HIVE_FLOW_DEV_OVERRIDE=on');
+  } catch {
+    return false;
+  }
+}
+
+function readDevOverrideConfigToken(cwd: string): string | null {
+  try {
+    const overridePath = resolve(cwd, '.hive-flow/enforcement/dev-override.conf');
+    if (!existsSync(overridePath)) return null;
+    const raw = readFileSync(overridePath, 'utf8');
+    for (const line of raw.split(/\r?\n/)) {
+      const trimmed = line.trim();
+      if (trimmed.startsWith('HIVE_FLOW_DEV_OVERRIDE_TOKEN=')) {
+        return trimmed.slice('HIVE_FLOW_DEV_OVERRIDE_TOKEN='.length).trim() || null;
+      }
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+function readHmacKey(cwd: string): string | null {
+  try {
+    const key = readFileSync(resolve(cwd, '.hive-flow/enforcement/.hmac-key'), 'utf8').trim();
+    return key || null;
+  } catch {
+    return null;
+  }
+}
+
+function verifyTokenHmac(cwd: string, body: string, signature: string): boolean {
+  if (!body || !signature || !/^[a-f0-9]{64}$/i.test(signature)) return false;
+  const key = readHmacKey(cwd);
+  if (!key) return false;
+  const expected = createHmac('sha256', key).update(body).digest('hex');
+  const expectedBuf = Buffer.from(expected, 'hex');
+  const actualBuf = Buffer.from(signature, 'hex');
+  return expectedBuf.length === actualBuf.length && timingSafeEqual(expectedBuf, actualBuf);
+}
+
+function parseDevOverrideRootToken(cwd: string, token?: string): Record<string, unknown> | null {
+  if (!token || typeof token !== 'string') return null;
+  const parts = token.split('.');
+  if (parts.length !== 2) return null;
+  const [body, signature] = parts;
+  if (!/^[A-Za-z0-9_-]+$/.test(body)) return null;
+  if (!verifyTokenHmac(cwd, body, signature)) return null;
+
+  try {
+    const payload = JSON.parse(Buffer.from(body, 'base64url').toString('utf8')) as Record<string, unknown>;
+    return payload && typeof payload === 'object' ? payload : null;
+  } catch {
+    return null;
+  }
+}
+
+function hasSignedRootSession(cwd: string, context?: DevOverrideContext, nowMs = Date.now()): boolean {
+  if (context?.hasSubagentIdentity === true) return false;
+  const payload = parseDevOverrideRootToken(
+    cwd,
+    context?.rootToken ?? process.env.HIVE_FLOW_DEV_OVERRIDE_TOKEN ?? readDevOverrideConfigToken(cwd) ?? undefined,
+  );
+  if (!payload) return false;
+
+  if (payload.kind !== DEV_OVERRIDE_TOKEN_KIND) return false;
+  if (typeof payload.projectDir !== 'string') return false;
+  if (normalizePath(resolveRealPathForPolicy(payload.projectDir, String(payload.projectDir))) !== normalizePath(resolveRealPathForPolicy(cwd, cwd))) return false;
+
+  const issuedAt = Number(payload.issuedAt);
+  const expiresAt = Number(payload.expiresAt);
+  if (!Number.isFinite(issuedAt) || !Number.isFinite(expiresAt)) return false;
+  if (issuedAt > nowMs + 5 * 60 * 1000) return false;
+  if (expiresAt <= nowMs) return false;
+  if (expiresAt - issuedAt > MAX_DEV_OVERRIDE_TOKEN_TTL_MS) return false;
+
+  if (typeof payload.nonce !== 'string' || payload.nonce.length < 8 || payload.nonce.length > 128) return false;
+  return true;
+}
+
+function isDevOverrideFloorPath(filePath: string, cwd: string): boolean {
+  if (!filePath) return false;
+  const target = normalizePath(resolveRealPathForPolicy(filePath, cwd));
+  const enforcementDir = normalizePath(resolveRealPathForPolicy(resolve(cwd, '.hive-flow/enforcement'), cwd));
+  const helperCore = [
+    resolve(cwd, '.claude/helpers/enforcement.cjs'),
+    resolve(cwd, '.claude/helpers/role-enforcement.cjs'),
+    resolve(cwd, '.claude/helpers/hook-handler.cjs'),
+  ].map(file => normalizePath(resolveRealPathForPolicy(file, cwd)));
+  if (helperCore.includes(target)) return true;
+  const rel = relative(enforcementDir, target);
+  return rel === '' || (!rel.startsWith('..') && !rel.startsWith(sep));
+}
+
+function shouldBypassForDevOverride(filePath: string, cwd: string, context?: DevOverrideContext): boolean {
+  return hasSignedRootSession(cwd, context)
+    && isDevOverrideActive(cwd)
+    && !isDevOverrideFloorPath(filePath, cwd);
 }
 
 // ---------------------------------------------------------------------------
@@ -451,6 +609,7 @@ export function checkBashSelfProtection(
             blocked: true,
             reason: `DENIED: Bash command '${modifier.name}' targets protected Permission Guard file. ${protection.reason}`,
             protectedPath: protection.protectedPath,
+            targetPath: target,
           };
         }
       }
@@ -662,6 +821,7 @@ export function evaluateSelfProtection(
   toolInput: Record<string, unknown>,
   cwd: string,
   sessionId?: string,
+  context?: DevOverrideContext,
 ): ProtectionResult | null {
   void sessionId; // retained for API compatibility
 
@@ -680,6 +840,7 @@ export function evaluateSelfProtection(
 
     const protection = isProtectedPath(filePath, cwd);
     if (protection.blocked) {
+      if (shouldBypassForDevOverride(filePath, cwd, context)) return null;
       return protection;
     }
   }
@@ -691,6 +852,8 @@ export function evaluateSelfProtection(
 
     const bashResult = checkBashSelfProtection(cmd, cwd);
     if (bashResult) {
+      const targetPath = bashResult.targetPath || bashResult.protectedPath;
+      if (targetPath && shouldBypassForDevOverride(targetPath, cwd, context)) return null;
       return bashResult;
     }
   }

@@ -764,68 +764,73 @@ protections for private/runtime files. Generated context blocks such as
 <claude-mem-context>
 # Memory Context
 
-# [hive-flow] recent context, 2026-05-16 6:47am CDT
+# [hive-flow] recent context, 2026-06-03 7:00pm CDT
 
 Legend: 🎯session 🔴bugfix 🟣feature 🔄refactor ✅change 🔵discovery ⚖️decision 🚨security_alert 🔐security_note
 Format: ID TIME TYPE TITLE
 Fetch details: get_observations([IDs]) | Search: mem-search skill
 
-Stats: 50 obs (15,738t read) | 1,699,792t work | 99% savings
+Stats: 50 obs (23,035t read) | 1,902,394t work | 99% savings
 
-### May 11, 2026
-107 7:53p 🟣 Codex CLI Agent File Write Verification
-108 7:54p 🔴 Codex CLI Agent Fix Verified via File Write Test
-109 8:00p 🟣 Codex CLI Bridge Confirmed Operational
-110 8:01p 🟣 Parallel Hive Worker File Creation Test
-111 " 🟣 Parallel Hive Worker File Creation Task
-112 8:03p ✅ Parallel Worker Output File Created in Hive Flow Test Directory
-115 8:08p 🟣 Claude Bridge Sanity Check File Written
-114 8:09p ✅ Claude Bridge Sanity Check File Written
-117 8:40p ✅ Hive-Flow Hooks & Codex Bridge Sanity Check Written
-118 8:51p ✅ Hive-Flow Queen-C Test Output Written
-121 " ✅ Hive-Flow Test Output: Worker B Completion Signal Written
-119 " ✅ Hive-Flow Test Output File Written
-120 8:54p 🟣 Gemini CLI Bridge Verified via Test Output File
-122 " 🟣 Gemini CLI Bridge Verified Operational in Hive-Flow
-123 8:56p ✅ Gemini CLI Bridge Test File Written to hive-flow Test Output Directory
-124 " 🔵 Gemini CLI Bridge Write Test Executed Repeatedly
-### May 12, 2026
-125 9:07a 🔵 Runbook Creation Task Initiated for hive-flow Plans
-126 9:08a 🔵 hive-flow plans/ Directory Contains Exactly Two Files
-127 " 🔵 mcp-enforcement-gate.ts Has a Local CLAUDE_ALIASES That Doesn't Import from Providers
-128 " 🔵 Plan §4 OpenRouter Re-Randomization on Timeout Is Aspirational, Not Pre-Existing
-129 " 🔵 Cross-Doc Inconsistency: codex-cli Required Model is gpt-5.4 in CLAUDE.md but gpt-5.5 in Gate and Plan
-130 " 🔵 OpenRouter 'mini' Alias Would Silently Fall Through to Default Model Without an Explicit Branch
-131 " 🔵 8 Existing Tests Will Break When Plan Is Applied — Plan Doesn't Mention Updating Them
-132 " 🔵 Runbook Format Pattern Established from vampyre/.dox and filesystem-ts/.dox/basis
-133 " ⚖️ Runbook Drafting Begins — Plan Preserved, Review Corrections Folded In, Policy Decisions Settled
-135 9:26a ✅ Runbook handoff checklist expanded with opus pool and bridge reroll details
-136 " ✅ Phase 2 sketch label reworded to paste-ready implementation instruction
-137 " 🔴 anthropic-cli bridge token limit corrected from 200K to 1M
-138 " ✅ External reference URLs updated and URL disclaimer added to Source-of-Truth section
-134 9:55a 🔵 Claude Ignored Explicitly Provided User Context in Review Task
-140 10:01a ⚖️ Multi-Model Runbook Review Pipeline Established for hive-flow Plans
-139 11:02a ✅ Substring matching policy prose clarified to explicitly state case-insensitive matching
-142 11:30a 🟣 hive-flow Runbook Changes Implemented and Server Tools Updated
-143 11:38a ⚖️ User Policy: No Second Chances for Failed Agents — Primary Session Executes Directly
-141 12:23p ✅ Test Output File Written for Enforcement Default Model Check
-144 4:43p 🟣 Comprehensive Test Suite Expansion for Model Alias Resolution System
-145 " ✅ vitest.config.ts Updated to Discover .mjs Test Files
-146 " 🟣 End-to-End CLI Enforcement Smoke Test Script Created
-147 5:04p ⚖️ Mandatory Pre-Commit Verification Pipeline Defined
-149 " 🔄 Grep Validator Extraction to Importable Module
-### May 13, 2026
-152 2:18p ✅ OpenCode Integration Issue #825 Runbook Review Initiated
-153 2:19p ✅ Runbook Review Initiated for Issue #825 OpenCode Integration
-157 " ✅ Revised OpenCode Integration Runbook Created for Issue #825
-158 3:17p ⚖️ Hard Python Validation Chosen Over Skill-Text for Semantic Fragment Size Limits
-159 " ⚖️ Platform Compatibility Audit Script to Be Created in `.audit/` Before Filing Follow-Up Issues
-161 " 🔵 Cross-Skill Audit Confirmed Bugs in Both skill-opencode.md and skill-codex.md
-162 " ✅ Issue #825 Runbook Scope Expanded to OpenCode + Codex; Python Validation Enforcement Locked In
-164 3:25p 🔵 Issue #825 Implementation Passes Tests But Has Four Pre-Commit Blockers
-165 " 🔐 Semantic Fragment Size Validation Runs Post-Parse, Not Pre-Read
-### May 16, 2026
-196 5:32a 🔵 Hive Flow Final-Gate Report-Only Bug Hunt Initiated
+### May 20, 2026
+S2 Wave 1 PR 0B implementation complete + git state investigation (force-push origin/v8 + pre-existing test failures) (May 20 at 8:26 AM)
+S1 Three consecutive deliverables completed: (1) design synthesis review, (2) implementation order plan — both written to .dox/mult/design/ in vampyre repo (May 20 at 8:26 AM)
+S3 Fix all 5 PR2 blockers in Graphify's schema-aware loader and stable edge identity module, then prepare PR2 for push (May 20 at 2:32 PM)
+### May 31, 2026
+583 1:57p 🔵 OpenRouter API Key Present in Parent Env But Not Forwarded to Bridge Child Process
+588 1:58p 🔵 OSS-Gate Mutation Proof Reproduction Request
+587 " 🔵 oss-gate Implementation-Gate Spec-Alignment Verification Scope
+589 2:18p 🔵 oss-gate pre-commit readiness verification initiated for 2026-05-31 spec amendment
+592 2:57p 🔵 oss-gate Repo: Clean-Env Gate Verification Methodology
+593 " 🔵 oss-gate: Independent Mutation Verification of HIGH-1 and HIGH-2 Security Fixes
+594 3:42p 🔵 oss-gate Clean-Env Full Gate Verification Scope
+596 4:34p 🔵 hive-flow Sentinel Protocol Never Delivers Notifications via MCP Agent Path
+597 " ⚖️ tmux Must Be Optional-Only for hive-flow Sentinel Notifications
+598 4:40p 🟣 hive-flow provider-auth Phase 2 fixes implemented on branch codex-provider-auth-fixes
+599 " 🔵 Phase 2 provider-auth verification: all 6 fixes confirmed real and correct
+600 " 🔵 OpenRouter negative path live probe: AUTHENTICATION error + hooks_notify escalation confirmed, no secret leaked
+601 " 🔵 Gemini CLI 0.42.0 auth gap: --prompt/--skip-trust flags are correct but cached OAuth is expired/invalid in headless mode
+602 " 🔵 Full regression gate passed: cli 3611, providers 420, mcp 65, integration 42 — all matching Codex claims
+603 4:54p 🔵 Independent Verification Initiated for hive-flow Provider Auth Fixes
+604 " 🔵 Independent Verification Task: Provider-Auth Fixes in hive-flow
+605 6:01p 🔵 Sentinel Protocol Live-Test for Agent-Task-Rewake Hook
+### Jun 1, 2026
+606 12:53a ✅ hive-flow README Accuracy Edits: Remove Stale RuVector Product References
+608 1:10a 🔵 hive-flow README Contains Multiple Verified Stale Performance Claims
+614 1:01p ✅ Graphify Fork Rebased and Published onto Upstream v8
+615 " 🔵 Hive Flow Tools Require Execution from Hive Flow Repo
+617 " 🔵 Vampyre Repo Has Two Pending Stashes and Unpruned Remote Branches
+621 2:16p 🚨 CLAUDE.md, AGENTS.md, and .AUDIT/copilot-local-review.sh Publicly Exposed on origin
+622 " 🔴 History Rewrite: Scrubbed CLAUDE.md, AGENTS.md, .AUDIT/copilot-local-review.sh from All Refs
+623 " 🟣 pre-push Hook Added to Block Publishing of Private-Listed Files
+624 " ✅ 9 Stale Local pr10-* and Archive Branches Deleted
+S5 Vampyre repo housekeeping + privacy scrub: remove stale branches, audit/fix private file exposure on public GitHub origin (Jun 1 at 3:22 PM)
+638 9:52p 🔵 BUG-6: Collision-Prone ID Generation in @hive-flow/hooks
+639 " 🔵 BUG-14: addHook() Uses CJS require() for ESM Modules in @hive-flow/hooks
+640 10:01p 🔵 Four Bug Classes Identified in @hive-flow/providers Package
+643 10:34p 🔴 14 Bug Fixes Applied to hive-flow v3 Working Tree
+646 10:59p 🔴 TypeScript Type Error in input-validator.ts After Security Bug Fixes
+647 " 🔴 14 Verified Bug Fixes Committed Across hive-flow v3 Monorepo
+### Jun 2, 2026
+653 10:25a 🔵 claim-service.ts State Machine Identified as Untested — Test Suite Initiated
+654 " 🔵 Sentinel module directory did not exist — config parsing was inlined in start.ts
+655 " 🟣 Created sentinel config module: loadSentinelConfig, resolveSentinelConfigPath, SentinelConfigError
+656 " 🔄 Refactored start.ts: replaced inline config logic with loadSentinelConfig, surfaces actionable errors
+657 " 🟣 Added unit tests for sentinel config parsing and path resolution (6 tests, all green)
+658 " 🟣 Added E2E tests for hive-flow start CLI entry point (3 tests, all green)
+659 " 🔵 Full @hive-flow/cli test suite: 117 test files, 3713 tests, all passing after changes
+660 10:39a 🟣 E2E + Unit Tests Planned for @hive-flow/cli Entry Points
+662 10:46a 🟣 MCP Recorder Test Suite Planned for statusline
+663 10:51a 🟣 Test Suite Planned for memory.ts Recorder
+664 11:10a 🟣 Upstream 0.8.28 Fixes Integrated: Community-ID Determinism and tree-sitter-dm Optional
+667 " 🔵 Copilot Pre-commit Gate Blocked Upstream Fix Three Times — Required Test Guard Evidence
+668 " 🔴 DM Test Suite Guarded with pytest.importorskip for Optional tree-sitter-dm
+665 11:24a 🟣 Comprehensive test suite planned for ClaimService state machine
+679 9:23p 🔴 drain-notifications: COMPLETION supersedes CHECK-DUE dedup logic
+682 10:15p 🟣 parseSummariesFromLines: Completion-Supersedes-Check Dedup Logic
+### Jun 3, 2026
+685 3:19a ⚖️ ~/.hive-flow/ Promoted to Primary Global Home (Human-Approved 2026-06-03)
+686 " 🔵 Phase 2 Verification Hive Confirms Codex Current-State Map (~20/22 Claims)
 
-Access 1700k tokens of past work via get_observations([IDs]) or mem-search skill.
+Access 1902k tokens of past work via get_observations([IDs]) or mem-search skill.
 </claude-mem-context>

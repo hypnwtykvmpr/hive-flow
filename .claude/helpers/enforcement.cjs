@@ -36,6 +36,10 @@ const VERIFICATION_GATE_FILE = path.join(ENFORCEMENT_DIR, 'verification-gate.jso
 const HMAC_KEY_FILE = path.join(ENFORCEMENT_DIR, '.hmac-key');
 const COMPACTION_LOCK_FILE = path.join(ENFORCEMENT_DIR, 'compaction-lock.json');
 const PIPELINE_STATE_FILE = path.join(ENFORCEMENT_DIR, 'pipeline-state.json');
+const DEV_OVERRIDE_FILE = path.join(ENFORCEMENT_DIR, 'dev-override.conf');
+const DEV_OVERRIDE_TOKEN_ENV = 'HIVE_FLOW_DEV_OVERRIDE_TOKEN';
+const DEV_OVERRIDE_TOKEN_KIND = 'hive-flow-dev-override-root';
+const MAX_DEV_OVERRIDE_TOKEN_TTL_MS = 12 * 60 * 60 * 1000;
 
 const MAX_STATE_SIZE = 10240; // 10KB — larger = likely corrupt/attack (12.12)
 const MAX_HISTORY = 50;
@@ -72,6 +76,7 @@ const UNRESTRICTED_TOOLS = new Set([
 const PROTECTED_PATHS = [
   '.claude/settings.json',
   '.claude/helpers/',
+  '.git/info/exclude',
   '.hive-flow/enforcement/',
   '.hive-flow/workflows/', // Band 3: protect workflow/phase state from agent tampering
 ];
@@ -681,6 +686,141 @@ function isEnforcementHmacKeyPath(filePath) {
   return casefoldPath(resolveFilePath(filePath)) === casefoldPath(HMAC_KEY_FILE);
 }
 
+function isDevOverrideActive() {
+  try {
+    if (!fs.existsSync(DEV_OVERRIDE_FILE)) return false;
+    const raw = fs.readFileSync(DEV_OVERRIDE_FILE, 'utf8');
+    return raw.split(/\r?\n/).some(line => {
+      const trimmed = line.trim();
+      return trimmed === 'HIVE_FLOW_DEV_OVERRIDE=on';
+    });
+  } catch {
+    return false;
+  }
+}
+
+function getDevOverrideConfigToken() {
+  try {
+    if (!fs.existsSync(DEV_OVERRIDE_FILE)) return null;
+    const raw = fs.readFileSync(DEV_OVERRIDE_FILE, 'utf8');
+    for (const line of raw.split(/\r?\n/)) {
+      const trimmed = line.trim();
+      if (trimmed.startsWith(`${DEV_OVERRIDE_TOKEN_ENV}=`)) {
+        const token = trimmed.slice(DEV_OVERRIDE_TOKEN_ENV.length + 1).trim();
+        return token || null;
+      }
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+function hasSubagentIdentity(input = null) {
+  if (process.env.CLAUDE_PARENT_AGENT_ID) return true;
+  if (process.env.AGENTIC_FLOW_AGENT_ID || process.env.CLAUDE_AGENT_ID) return true;
+  return Boolean(getHookAgentId(input));
+}
+
+function verifyDevOverrideTokenHmac(body, signature) {
+  if (!body || !signature || !/^[a-f0-9]{64}$/i.test(signature)) return false;
+  const expected = crypto.createHmac('sha256', getOrCreateHmacKey()).update(body).digest('hex');
+  const expectedBuf = Buffer.from(expected, 'hex');
+  const actualBuf = Buffer.from(signature, 'hex');
+  return expectedBuf.length === actualBuf.length && crypto.timingSafeEqual(expectedBuf, actualBuf);
+}
+
+function parseDevOverrideRootToken(token) {
+  if (!token || typeof token !== 'string') return null;
+  const parts = token.split('.');
+  if (parts.length !== 2) return null;
+  const [body, signature] = parts;
+  if (!/^[A-Za-z0-9_-]+$/.test(body)) return null;
+  if (!verifyDevOverrideTokenHmac(body, signature)) return null;
+
+  try {
+    const payload = JSON.parse(Buffer.from(body, 'base64url').toString('utf8'));
+    if (!payload || typeof payload !== 'object') return null;
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+function verifyDevOverrideRootToken(input = null, nowMs = Date.now()) {
+  if (hasSubagentIdentity(input)) return false;
+  const payload = parseDevOverrideRootToken(process.env[DEV_OVERRIDE_TOKEN_ENV] || getDevOverrideConfigToken());
+  if (!payload) return false;
+
+  if (payload.kind !== DEV_OVERRIDE_TOKEN_KIND) return false;
+  if (typeof payload.projectDir !== 'string') return false;
+  if (casefoldPath(resolveFilePath(payload.projectDir)) !== casefoldPath(PROJECT_DIR)) return false;
+
+  const issuedAt = Number(payload.issuedAt);
+  const expiresAt = Number(payload.expiresAt);
+  if (!Number.isFinite(issuedAt) || !Number.isFinite(expiresAt)) return false;
+  if (issuedAt > nowMs + 5 * 60 * 1000) return false;
+  if (expiresAt <= nowMs) return false;
+  if (expiresAt - issuedAt > MAX_DEV_OVERRIDE_TOKEN_TTL_MS) return false;
+
+  if (typeof payload.nonce !== 'string' || payload.nonce.length < 8 || payload.nonce.length > 128) return false;
+  return true;
+}
+
+function isRootSessionForDevOverride(input = null) {
+  return verifyDevOverrideRootToken(input);
+}
+
+function isDevOverrideFloorPath(filePath) {
+  if (!filePath) return false;
+  const resolved = casefoldPath(resolveFilePath(filePath));
+  const helpersDir = path.join(PROJECT_DIR, '.claude', 'helpers');
+  const floorHelperFiles = new Set([
+    path.join(helpersDir, 'enforcement.cjs'),
+    path.join(helpersDir, 'role-enforcement.cjs'),
+    path.join(helpersDir, 'hook-handler.cjs'),
+  ].map(file => casefoldPath(resolveFilePath(file))));
+  if (floorHelperFiles.has(resolved)) return true;
+  const enforcementDir = casefoldPath(resolveFilePath(ENFORCEMENT_DIR));
+  return resolved === casefoldPath(resolveFilePath(DEV_OVERRIDE_FILE)) || resolved.startsWith(enforcementDir + '/');
+}
+
+function collectProtectedMutationPaths(toolName, toolInput) {
+  const entries = [];
+  const pushIfProtected = (kind, filePath) => {
+    if (filePath && isProtectedPath(filePath)) entries.push({ kind, filePath });
+  };
+
+  if (['Write', 'Edit', 'MultiEdit', 'NotebookEdit', 'mcp__filesystem__write_file', 'mcp__filesystem__edit_file', 'mcp__filesystem__delete_file'].includes(toolName)) {
+    pushIfProtected('write', toolInput?.file_path || toolInput?.notebook_path || toolInput?.path || toolInput?.destination || '');
+  } else if (['mcp__filesystem__move_file', 'mcp__filesystem__rename_file', 'mcp__filesystem__copy_file'].includes(toolName)) {
+    pushIfProtected('source', toolInput?.source || '');
+    pushIfProtected('write', toolInput?.destination || toolInput?.dest || toolInput?.target || '');
+  } else if (toolName === 'mcp__filesystem__create_directory') {
+    pushIfProtected('write', toolInput?.path || '');
+  } else if (toolName === 'Bash') {
+    const redirectTarget = findProtectedRedirectTarget(toolInput?.command || '');
+    pushIfProtected('write', redirectTarget);
+  }
+
+  return entries;
+}
+
+function getMcpDestinationPath(toolInput) {
+  return toolInput?.destination || toolInput?.dest || toolInput?.target || '';
+}
+
+function canDevOverrideBypassCircumvention(input, toolName, toolInput, violation) {
+  if (!violation?.circumvention) return false;
+  if (!isRootSessionForDevOverride(input) || !isDevOverrideActive()) return false;
+  if (findEnforcementHmacKeyReadTarget(toolName, toolInput)) return false;
+
+  const protectedPaths = collectProtectedMutationPaths(toolName, toolInput);
+  if (protectedPaths.length === 0) return false;
+  if (protectedPaths.some(entry => entry.kind !== 'write')) return false;
+  return protectedPaths.every(entry => !isDevOverrideFloorPath(entry.filePath));
+}
+
 function findEnforcementHmacKeyReadTarget(toolName, toolInput) {
   if (toolName === 'mcp__filesystem__read_multiple_files') {
     const paths = Array.isArray(toolInput?.paths) ? toolInput.paths : [];
@@ -874,7 +1014,7 @@ function findProtectedRedirectTarget(command) {
 function detectCircumvention(toolName, toolInput, state) {
   // 1. Protected path writes via Write/Edit/MultiEdit/NotebookEdit
   if (['Write', 'Edit', 'MultiEdit', 'NotebookEdit', 'mcp__filesystem__write_file', 'mcp__filesystem__edit_file', 'mcp__filesystem__move_file', 'mcp__filesystem__rename_file', 'mcp__filesystem__copy_file', 'mcp__filesystem__delete_file'].includes(toolName)) {
-    const filePath = toolInput?.file_path || toolInput?.notebook_path || toolInput?.path || toolInput?.destination || '';
+    const filePath = toolInput?.file_path || toolInput?.notebook_path || toolInput?.path || getMcpDestinationPath(toolInput);
     if (filePath && isProtectedPath(filePath)) {
       const globalProtected = isGlobalProtectedPath(filePath);
       return {
@@ -1013,7 +1153,7 @@ function detectCircumvention(toolName, toolInput, state) {
     // 2d3. enforcement-reset circumvention
     // Agents must not invoke enforcement reset via Bash — only the UserPromptSubmit
     // hook (human-triggered) is allowed to reset enforcement.
-    if (/enforcement-reset|reset-enforcement|enforcement\.cjs\s+--reset/i.test(command) && !isResetCheckHookInvocation(command)) {
+    if (isResetInvocationAttempt(command)) {
       return {
         circumvention: true,
         reason: `CIRCUMVENTION: Attempted enforcement reset via Bash — resets are human-only via /enforcement-reset`,
@@ -1056,6 +1196,16 @@ function isResetCheckHookInvocation(command) {
   const hookHandlerReset = /(?:^|\s)node\s+(?:"[^"]*\.claude\/helpers\/hook-handler\.cjs"|[^ \t\n|&;`]*\.claude\/helpers\/hook-handler\.cjs)\s+enforcement-reset-check(?:\s|$)/i;
   if (!hookHandlerReset.test(normalized)) return false;
   return !/enforcement\.cjs\s+--reset/i.test(normalized);
+}
+
+function isResetInvocationAttempt(command) {
+  if (!command) return false;
+  if (isResetCheckHookInvocation(command)) return false;
+  const normalized = String(command).replace(/\s+/g, ' ').trim();
+  return /(?:^|\s)node\s+[^ \t\n|&;`]*\.claude\/helpers\/hook-handler\.cjs\s+enforcement-reset-check(?:\s|$)/i.test(normalized)
+    || /(?:^|\s)node\s+[^ \t\n|&;`]*\.claude\/helpers\/enforcement\.cjs\s+--reset(?:\s|$)/i.test(normalized)
+    || /(?:^|[\s;&|'"(])\/(?:enforcement-reset|reset-enforcement)(?:[\s;&|)'"]|$)/i.test(normalized)
+    || /(?:^|[\s;&|'"(])(?:enforcement-reset|reset-enforcement)(?:[\s;&|)'"]|$)/i.test(normalized);
 }
 
 /**
@@ -1385,15 +1535,24 @@ function processPreToolUse(input) {
   // Step 1: Check circumvention
   const circ = detectCircumvention(toolName, toolInput, effective.state);
   if (circ.circumvention) {
-    const escalation = escalateScoped(ctx, {
-      ...circ,
-      restrictionGroups: getRestrictionGroups(toolName),
-    });
-    const hangCheck = updateActivityTracking(escalation.state, true);
-    saveScopedState(escalation.scopeType, escalation.scopeId, escalation.state);
+    if (canDevOverrideBypassCircumvention(input, toolName, toolInput, circ)) {
+      appendViolation({
+        type: 'dev-override-used',
+        tool: toolName,
+        projectId: ctx.projectId,
+        timestamp: new Date().toISOString(),
+      });
+    } else {
+      const escalation = escalateScoped(ctx, {
+        ...circ,
+        restrictionGroups: getRestrictionGroups(toolName),
+      });
+      const hangCheck = updateActivityTracking(escalation.state, true);
+      saveScopedState(escalation.scopeType, escalation.scopeId, escalation.state);
 
-    const reason = `${circ.reason}. Escalated ${escalationScopeLabel(escalation.scopeType, escalation.scopeId)} to level ${escalation.state.level}.${hangCheck.hung ? ' ' + hangCheck.message : ''}`;
-    return makeDeny(reason);
+      const reason = `${circ.reason}. Escalated ${escalationScopeLabel(escalation.scopeType, escalation.scopeId)} to level ${escalation.state.level}.${hangCheck.hung ? ' ' + hangCheck.message : ''}`;
+      return makeDeny(reason);
+    }
   }
 
   // Step 2: Check tool restriction
@@ -1931,9 +2090,15 @@ module.exports = {
   loadEffectiveState,
   getProtectedPathScope,
   isGlobalProtectedPath,
+  isDevOverrideActive,
+  isRootSessionForDevOverride,
+  verifyDevOverrideRootToken,
+  isDevOverrideFloorPath,
+  canDevOverrideBypassCircumvention,
   isDestructiveRm,
   isObfuscated,
   isResetCheckHookInvocation,
+  isResetInvocationAttempt,
   isGitCommitCommand,
   makeHookOutput,
   makeAllow,
