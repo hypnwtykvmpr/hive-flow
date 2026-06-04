@@ -464,6 +464,46 @@ describe('enforcement security property contracts', () => {
     expect(readScopedState('global', 'global')).toBeNull();
   });
 
+  it('escalates non-substrate global protected writes while leaving project protected workflows deny-only', () => {
+    const globalProtectedTargets = [
+      'v3/@hive-flow/cli/src/permission-guard/gate.ts',
+      'v3/@hive-flow/cli/dist/src/mcp-tools/index.js',
+      'scripts/install-enforcement.mjs',
+      '.env',
+    ];
+
+    for (const [index, filePath] of globalProtectedTargets.entries()) {
+      clearAgentEnv();
+      resetModule();
+      rmSync(join(root, '.hive-flow', 'enforcement'), { recursive: true, force: true });
+      const agentId = `global-protected-agent-${index}`;
+      process.env.AGENTIC_FLOW_AGENT_ID = agentId;
+
+      const result = enf.processPreToolUse({
+        tool_name: 'Write',
+        tool_input: { file_path: filePath },
+      });
+
+      expect(result.hookSpecificOutput.permissionDecision, filePath).toBe('deny');
+      expect(readScopedState('agent', agentId)?.level, filePath).toBe(enf.LEVELS.RESTRICTED);
+      expect(readScopedState('global', 'global'), filePath).toBeNull();
+    }
+
+    clearAgentEnv();
+    resetModule();
+    rmSync(join(root, '.hive-flow', 'enforcement'), { recursive: true, force: true });
+    process.env.AGENTIC_FLOW_AGENT_ID = 'project-workflow-agent';
+
+    const workflowResult = enf.processPreToolUse({
+      tool_name: 'Write',
+      tool_input: { file_path: '.hive-flow/workflows/state.json' },
+    });
+
+    expect(workflowResult.hookSpecificOutput.permissionDecision).toBe('deny');
+    expect(readScopedState('agent', 'project-workflow-agent')).toBeNull();
+    expect(readScopedState('global', 'global')).toBeNull();
+  });
+
   it('E2E: RESTRICTED scoped state blocks write tools before execution', () => {
     process.env.AGENTIC_FLOW_AGENT_ID = 'restricted-agent';
     writeScopedState('agent', 'restricted-agent', {

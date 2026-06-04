@@ -688,14 +688,18 @@ function isEnforcementSubstratePath(filePath) {
 
 function protectedMutationDecision(filePath, action = 'write to protected path') {
   const substrate = isEnforcementSubstratePath(filePath);
+  const globalProtected = isGlobalProtectedPath(filePath);
+  const escalates = substrate || globalProtected;
   const guidance = substrate
     ? 'This targets the enforcement substrate and requires direct human/Codex control-plane approval.'
+    : globalProtected
+    ? 'This targets a global enforcement-protected path and requires direct human/Codex control-plane approval.'
     : 'Use the gated project workflow for this file or ask the human to approve the protected-path change.';
   return {
     circumvention: true,
-    denyOnly: !substrate,
+    denyOnly: !escalates,
     reason: `CIRCUMVENTION: Attempted ${action}: ${filePath}. ${guidance}`,
-    severity: substrate ? 'critical' : 'normal',
+    severity: escalates ? 'critical' : 'normal',
     protectedEnforcementAttack: substrate,
     systemic: substrate,
   };
