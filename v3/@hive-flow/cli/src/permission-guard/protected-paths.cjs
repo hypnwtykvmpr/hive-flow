@@ -59,6 +59,7 @@ const DEFAULT_POLICY = {
 
 const DEV_OVERRIDE_TOKEN_ENV = 'HIVE_FLOW_DEV_OVERRIDE_TOKEN';
 const DEV_OVERRIDE_TOKEN_KIND = 'hive-flow-dev-override-root';
+const DEV_OVERRIDE_TOKEN_VERSION = 1;
 const MAX_DEV_OVERRIDE_TOKEN_TTL_MS = 12 * 60 * 60 * 1000;
 
 let cachedPolicy = null;
@@ -320,6 +321,15 @@ function readHmacKey(projectRoot) {
   }
 }
 
+function devOverrideKeyIdForHmacKey(hmacKey) {
+  if (!hmacKey || typeof hmacKey !== 'string') return null;
+  return crypto.createHash('sha256')
+    .update('hive-flow-dev-override-key-id\0')
+    .update(hmacKey)
+    .digest('hex')
+    .slice(0, 16);
+}
+
 function verifyDevOverrideTokenHmac(body, signature, hmacKeyProvider) {
   if (!body || !signature || !/^[a-f0-9]{64}$/i.test(signature)) return false;
   const key = hmacKeyProvider();
@@ -352,14 +362,18 @@ function verifyDevOverrideRootToken(options) {
   if (options.hasSubagentIdentity === true || hasSubagentIdentity(options.input || null, env)) return false;
 
   const hmacKeyProvider = options.hmacKeyProvider || (() => readHmacKey(options.projectRoot));
+  const hmacKey = hmacKeyProvider();
+  if (!hmacKey) return false;
   const token = options.rootToken
     || env[DEV_OVERRIDE_TOKEN_ENV]
     || readDevOverrideConfigToken(options.projectRoot)
     || null;
-  const payload = parseDevOverrideRootToken(token, hmacKeyProvider);
+  const payload = parseDevOverrideRootToken(token, () => hmacKey);
   if (!payload) return false;
 
   if (payload.kind !== DEV_OVERRIDE_TOKEN_KIND) return false;
+  if (payload.version !== DEV_OVERRIDE_TOKEN_VERSION) return false;
+  if (payload.keyId !== devOverrideKeyIdForHmacKey(hmacKey)) return false;
   if (typeof payload.projectDir !== 'string') return false;
   if (casefoldPath(resolveRealPathForPolicy(payload.projectDir, payload.projectDir)) !== casefoldPath(resolveRealPathForPolicy(options.projectRoot, options.projectRoot))) {
     return false;
@@ -404,7 +418,12 @@ module.exports = {
   isDevOverrideActive,
   readDevOverrideConfigToken,
   hasSubagentIdentity,
+  devOverrideKeyIdForHmacKey,
   parseDevOverrideRootToken,
   verifyDevOverrideRootToken,
   sanitizeScopeId,
+  DEV_OVERRIDE_TOKEN_ENV,
+  DEV_OVERRIDE_TOKEN_KIND,
+  DEV_OVERRIDE_TOKEN_VERSION,
+  MAX_DEV_OVERRIDE_TOKEN_TTL_MS,
 };

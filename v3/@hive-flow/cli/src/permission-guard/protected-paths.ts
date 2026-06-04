@@ -2,7 +2,7 @@ import { existsSync, readFileSync, readlinkSync, realpathSync } from 'node:fs';
 import { basename, dirname, isAbsolute, relative, resolve, sep } from 'node:path';
 import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
-import { createHmac, timingSafeEqual } from 'node:crypto';
+import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 
 export type ProtectedPathScope = 'global' | 'project';
 
@@ -94,6 +94,7 @@ const DEFAULT_POLICY: ProtectedPathPolicy = {
 
 export const DEV_OVERRIDE_TOKEN_ENV = 'HIVE_FLOW_DEV_OVERRIDE_TOKEN';
 export const DEV_OVERRIDE_TOKEN_KIND = 'hive-flow-dev-override-root';
+export const DEV_OVERRIDE_TOKEN_VERSION = 1;
 export const MAX_DEV_OVERRIDE_TOKEN_TTL_MS = 12 * 60 * 60 * 1000;
 
 let cachedPolicy: ProtectedPathPolicy | null = null;
@@ -355,6 +356,15 @@ function readHmacKey(projectRoot: string): string | null {
   }
 }
 
+export function devOverrideKeyIdForHmacKey(hmacKey: string | null | undefined): string | null {
+  if (!hmacKey || typeof hmacKey !== 'string') return null;
+  return createHash('sha256')
+    .update('hive-flow-dev-override-key-id\0')
+    .update(hmacKey)
+    .digest('hex')
+    .slice(0, 16);
+}
+
 function verifyDevOverrideTokenHmac(body: string, signature: string, hmacKeyProvider: () => string | null): boolean {
   if (!body || !signature || !/^[a-f0-9]{64}$/i.test(signature)) return false;
   const key = hmacKeyProvider();
@@ -387,14 +397,18 @@ export function verifyDevOverrideRootToken(options: DevOverrideVerifyOptions): b
   if (options.hasSubagentIdentity === true || hasSubagentIdentity(options.input ?? null, env)) return false;
 
   const hmacKeyProvider = options.hmacKeyProvider ?? (() => readHmacKey(options.projectRoot));
+  const hmacKey = hmacKeyProvider();
+  if (!hmacKey) return false;
   const token = options.rootToken
     ?? env[DEV_OVERRIDE_TOKEN_ENV]
     ?? readDevOverrideConfigToken(options.projectRoot)
     ?? null;
-  const payload = parseDevOverrideRootToken(token, hmacKeyProvider);
+  const payload = parseDevOverrideRootToken(token, () => hmacKey);
   if (!payload) return false;
 
   if (payload.kind !== DEV_OVERRIDE_TOKEN_KIND) return false;
+  if (payload.version !== DEV_OVERRIDE_TOKEN_VERSION) return false;
+  if (payload.keyId !== devOverrideKeyIdForHmacKey(hmacKey)) return false;
   if (typeof payload.projectDir !== 'string') return false;
   if (casefoldPath(resolveRealPathForPolicy(payload.projectDir, payload.projectDir)) !== casefoldPath(resolveRealPathForPolicy(options.projectRoot, options.projectRoot))) {
     return false;

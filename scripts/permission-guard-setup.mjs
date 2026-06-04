@@ -8,6 +8,7 @@
  * Usage:
  *   node scripts/permission-guard-setup.mjs setup    # One-time keypair generation
  *   node scripts/permission-guard-setup.mjs override  # Request 15-min override window
+ *   node scripts/permission-guard-setup.mjs mint-dev-override --ttl 1h
  *   node scripts/permission-guard-setup.mjs revoke    # Revoke active override
  *   node scripts/permission-guard-setup.mjs status    # Show override state
  */
@@ -16,10 +17,10 @@ import crypto from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import {
   readFileSync, writeFileSync, unlinkSync, mkdirSync, existsSync,
-  createReadStream, createWriteStream,
+  createReadStream, createWriteStream, realpathSync,
 } from 'node:fs';
 import { homedir, hostname } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import readline from 'node:readline';
 
 // ---------------------------------------------------------------------------
@@ -36,6 +37,9 @@ const DARWIN_SERVICE_NAME = 'claude-pg-privkey';
 const DARWIN_ACCOUNT_NAME = process.env['USER'] || 'user';
 
 const OVERRIDE_TTL_MS = 15 * 60 * 1000; // 15 minutes
+const DEV_OVERRIDE_TOKEN_KIND = 'hive-flow-dev-override-root';
+const DEV_OVERRIDE_TOKEN_VERSION = 1;
+const MAX_DEV_OVERRIDE_TOKEN_TTL_MS = 12 * 60 * 60 * 1000;
 
 // ---------------------------------------------------------------------------
 // /dev/tty prompt — unforgeable human verification channel
@@ -47,18 +51,29 @@ async function promptViaTTY(question) {
     return '';
   }
 
-  const ttyIn = createReadStream('/dev/tty');
-  const ttyOut = createWriteStream('/dev/tty');
-  const rl = readline.createInterface({ input: ttyIn, output: ttyOut });
+  try {
+    const ttyIn = createReadStream('/dev/tty');
+    const ttyOut = createWriteStream('/dev/tty');
+    const rl = readline.createInterface({ input: ttyIn, output: ttyOut });
 
-  return new Promise((resolve) => {
-    rl.question(question, (answer) => {
-      rl.close();
-      ttyIn.destroy();
-      ttyOut.destroy();
-      resolve(answer);
+    return new Promise((resolveAnswer) => {
+      let settled = false;
+      const finish = (answer = '') => {
+        if (settled) return;
+        settled = true;
+        rl.close();
+        ttyIn.destroy();
+        ttyOut.destroy();
+        resolveAnswer(answer);
+      };
+      ttyIn.on('error', () => finish(''));
+      ttyOut.on('error', () => finish(''));
+      rl.question(question, finish);
     });
-  });
+  } catch {
+    process.stderr.write('[permission-guard] /dev/tty not available — override denied\n');
+    return '';
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -289,6 +304,117 @@ function hasActiveOverride() {
   } catch { return false; }
 }
 
+function hasSubagentIdentity(env = process.env) {
+  return Boolean(
+    env.CLAUDE_PARENT_AGENT_ID ||
+    env.AGENTIC_FLOW_AGENT_ID ||
+    env.CLAUDE_AGENT_ID,
+  );
+}
+
+function parseDurationMs(raw, fallbackMs = OVERRIDE_TTL_MS) {
+  if (!raw) return fallbackMs;
+  const value = String(raw).trim();
+  const match = value.match(/^(\d+)(ms|s|m|h)?$/i);
+  if (!match) throw new Error(`Invalid --ttl value: ${raw}`);
+  const amount = Number(match[1]);
+  const unit = (match[2] || 'ms').toLowerCase();
+  const multiplier = unit === 'h' ? 60 * 60 * 1000
+    : unit === 'm' ? 60 * 1000
+      : unit === 's' ? 1000
+        : 1;
+  const ttlMs = amount * multiplier;
+  if (!Number.isFinite(ttlMs) || ttlMs <= 0) throw new Error(`Invalid --ttl value: ${raw}`);
+  if (ttlMs > MAX_DEV_OVERRIDE_TOKEN_TTL_MS) {
+    throw new Error(`--ttl exceeds maximum ${Math.floor(MAX_DEV_OVERRIDE_TOKEN_TTL_MS / 3600000)}h window`);
+  }
+  return ttlMs;
+}
+
+function argValue(argv, name) {
+  const index = argv.indexOf(name);
+  return index >= 0 ? argv[index + 1] : undefined;
+}
+
+function resolveProjectRootForMint(argv, env = process.env) {
+  const raw = argValue(argv, '--project-root') || env.HIVE_FLOW_PROJECT_ROOT || env.CLAUDE_PROJECT_DIR || process.cwd();
+  const absolute = resolve(raw);
+  try {
+    return realpathSync.native(absolute);
+  } catch {
+    return absolute;
+  }
+}
+
+function devOverrideKeyIdForHmacKey(hmacKey) {
+  return crypto.createHash('sha256')
+    .update('hive-flow-dev-override-key-id\0')
+    .update(hmacKey)
+    .digest('hex')
+    .slice(0, 16);
+}
+
+function readOrCreateProjectHmacKey(projectRoot) {
+  const keyPath = join(projectRoot, '.hive-flow', 'enforcement', '.hmac-key');
+  mkdirSync(dirname(keyPath), { recursive: true });
+  if (existsSync(keyPath)) {
+    const key = readFileSync(keyPath, 'utf8').trim();
+    if (key) return key;
+  }
+  const key = crypto.randomBytes(32).toString('hex');
+  writeFileSync(keyPath, key, { mode: 0o600 });
+  return key;
+}
+
+function createDevOverrideRootToken(projectRoot, hmacKey, ttlMs, nowMs = Date.now()) {
+  const body = Buffer.from(JSON.stringify({
+    kind: DEV_OVERRIDE_TOKEN_KIND,
+    version: DEV_OVERRIDE_TOKEN_VERSION,
+    keyId: devOverrideKeyIdForHmacKey(hmacKey),
+    projectDir: projectRoot,
+    issuedAt: nowMs,
+    expiresAt: nowMs + ttlMs,
+    nonce: crypto.randomBytes(32).toString('hex'),
+  })).toString('base64url');
+  const hmac = crypto.createHmac('sha256', hmacKey).update(body).digest('hex');
+  return `${body}.${hmac}`;
+}
+
+async function mintDevOverride(argv = process.argv.slice(3), env = process.env) {
+  if (hasSubagentIdentity(env)) {
+    console.error('\x1b[31mRefusing to mint dev override from a subagent environment.\x1b[0m');
+    process.exitCode = 1;
+    return;
+  }
+
+  const projectRoot = resolveProjectRootForMint(argv, env);
+  const ttlMs = parseDurationMs(argValue(argv, '--ttl'), OVERRIDE_TTL_MS);
+
+  console.log('\n\x1b[1mMinting Hive Flow Dev Override\x1b[0m');
+  console.log(`\x1b[2mProject: ${projectRoot}\x1b[0m`);
+  console.log('\x1b[2mThis authorizes the top-level human session only; subagents remain blocked.\x1b[0m\n');
+
+  const confirmation = await promptViaTTY(`Type MINT DEV OVERRIDE to authorize ${Math.ceil(ttlMs / 60000)}m: `);
+  if (confirmation !== 'MINT DEV OVERRIDE') {
+    console.error('\x1b[31mDev override mint cancelled.\x1b[0m');
+    process.exitCode = 1;
+    return;
+  }
+
+  const hmacKey = readOrCreateProjectHmacKey(projectRoot);
+  const token = createDevOverrideRootToken(projectRoot, hmacKey, ttlMs);
+  const expiresAt = Date.now() + ttlMs;
+  const overridePath = join(projectRoot, '.hive-flow', 'enforcement', 'dev-override.conf');
+  writeFileSync(
+    overridePath,
+    `HIVE_FLOW_DEV_OVERRIDE=on\nHIVE_FLOW_DEV_OVERRIDE_TOKEN=${token}\n`,
+    { mode: 0o600 },
+  );
+
+  console.log(`\x1b[32m✓ Dev override minted\x1b[0m — active until ${new Date(expiresAt).toLocaleTimeString()}`);
+  console.log(`  Wrote: ${overridePath}`);
+}
+
 function revokeOverride() {
   if (existsSync(OVERRIDE_PATH)) {
     unlinkSync(OVERRIDE_PATH);
@@ -397,6 +523,9 @@ switch (command) {
   case 'override':
     await requestOverride();
     break;
+  case 'mint-dev-override':
+    await mintDevOverride();
+    break;
   case 'revoke':
     revokeOverride();
     break;
@@ -416,6 +545,8 @@ Usage:
 Commands:
   setup      One-time Ed25519 keypair generation (run as human, not LLM)
   override   Request a 15-minute permission override window
+  mint-dev-override
+             Mint a signed root-session dev override for this project
   revoke     Immediately revoke any active override
   reset      Delete all enrollment data (requires /dev/tty confirmation)
   status     Show current override state

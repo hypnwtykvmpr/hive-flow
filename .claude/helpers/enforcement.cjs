@@ -1174,6 +1174,16 @@ function findProtectedBashMutationTarget(command) {
   return null;
 }
 
+function hasMintDevOverrideInvocation(command) {
+  for (const subCommand of splitShellSubcommands(String(command || ''))) {
+    const normalized = subCommand.trim();
+    if (!normalized) continue;
+    const invokesSetup = /(?:^|\s)(?:node(?:\s+[^\s;&|]+)*\s+)?(?:"[^"]*permission-guard-setup\.mjs"|'[^']*permission-guard-setup\.mjs'|[^\s;&|]*permission-guard-setup\.mjs)(?:\s|$)/.test(normalized);
+    if (invokesSetup && /\bmint-dev-override\b/.test(normalized)) return true;
+  }
+  return false;
+}
+
 function detectCircumvention(toolName, toolInput, state) {
   // 1. Protected path writes via Write/Edit/MultiEdit/NotebookEdit
   if (['Write', 'Edit', 'MultiEdit', 'NotebookEdit', 'mcp__filesystem__write_file', 'mcp__filesystem__edit_file', 'mcp__filesystem__move_file', 'mcp__filesystem__rename_file', 'mcp__filesystem__copy_file', 'mcp__filesystem__delete_file'].includes(toolName)) {
@@ -1234,6 +1244,17 @@ function detectCircumvention(toolName, toolInput, state) {
   // 2. Bash analysis
   if (toolName === 'Bash') {
     const command = toolInput?.command || '';
+
+    // 2a. Dev-override minter is human/Codex-only; agents cannot invoke it as a signing oracle.
+    if (hasMintDevOverrideInvocation(command)) {
+      return {
+        circumvention: true,
+        reason: 'CIRCUMVENTION: Attempted to invoke dev-override minter from Bash',
+        severity: 'critical',
+        protectedEnforcementAttack: true,
+        systemic: true,
+      };
+    }
 
     // 2a. Bash redirects to protected paths (12.2: CRITICAL)
     const protectedMutationTarget = findProtectedBashMutationTarget(command);

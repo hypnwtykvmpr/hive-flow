@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach, afterAll } from 'vitest';
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { createHmac } from 'node:crypto';
+import { createHash, createHmac } from 'node:crypto';
 
 // ── Module mocks (hoisted before imports) ────────────────────────────────
 
@@ -69,8 +69,15 @@ let roleEnf: typeof import('../../../../../.claude/helpers/role-enforcement.cjs'
 
 function issueRootOverrideToken(): void {
   const key = roleEnf.getOrCreateHmacKey();
+  const keyId = createHash('sha256')
+    .update('hive-flow-dev-override-key-id\0')
+    .update(key)
+    .digest('hex')
+    .slice(0, 16);
   const body = Buffer.from(JSON.stringify({
     kind: 'hive-flow-dev-override-root',
+    version: 1,
+    keyId,
     projectDir: ROLE_TEST_PROJECT_REAL_DIR,
     issuedAt: Date.now(),
     expiresAt: Date.now() + 60_000,

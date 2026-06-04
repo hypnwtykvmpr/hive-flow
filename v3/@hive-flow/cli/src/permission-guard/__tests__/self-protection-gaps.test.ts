@@ -15,7 +15,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { createHmac } from 'node:crypto';
+import { createHash, createHmac } from 'node:crypto';
 import {
   checkBashSelfProtection,
   evaluateSelfProtection,
@@ -481,8 +481,15 @@ describe('tee to protected paths', () => {
 function createRootOverrideToken(root: string): string {
   const key = 'self-protection-dev-override-key';
   writeFileSync(join(root, '.hive-flow', 'enforcement', '.hmac-key'), key);
+  const keyId = createHash('sha256')
+    .update('hive-flow-dev-override-key-id\0')
+    .update(key)
+    .digest('hex')
+    .slice(0, 16);
   const body = Buffer.from(JSON.stringify({
     kind: 'hive-flow-dev-override-root',
+    version: 1,
+    keyId,
     projectDir: root,
     issuedAt: Date.now(),
     expiresAt: Date.now() + 60_000,

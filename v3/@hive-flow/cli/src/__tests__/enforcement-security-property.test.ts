@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { mkdtempSync } from 'node:fs';
-import { createHmac } from 'node:crypto';
+import { createHash, createHmac } from 'node:crypto';
 import { propertyRunsFromEnv } from './property-runs.js';
 
 const PROPERTY_RUNS = propertyRunsFromEnv(100);
@@ -88,8 +88,15 @@ function enableDevOverride(): void {
 
 function createRootOverrideToken(nonce = 'enforcement-security-property'): string {
   const key = enf.getOrCreateHmacKey();
+  const keyId = createHash('sha256')
+    .update('hive-flow-dev-override-key-id\0')
+    .update(key)
+    .digest('hex')
+    .slice(0, 16);
   const body = Buffer.from(JSON.stringify({
     kind: 'hive-flow-dev-override-root',
+    version: 1,
+    keyId,
     projectDir: root,
     issuedAt: Date.now(),
     expiresAt: Date.now() + 60_000,

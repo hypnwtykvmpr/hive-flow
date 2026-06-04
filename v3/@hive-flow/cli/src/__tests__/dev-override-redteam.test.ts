@@ -1,11 +1,12 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import fc from 'fast-check';
-import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
-import { createHmac } from 'node:crypto';
+import { createHash, createHmac } from 'node:crypto';
+import { spawnSync } from 'node:child_process';
 import { propertyRunsFromEnv } from './property-runs.js';
 
 const require = createRequire(import.meta.url);
@@ -15,6 +16,7 @@ const source = resolve(here, '../../../../../.claude/helpers/enforcement.cjs');
 const settingsSource = resolve(here, '../../../../../.claude/settings.json');
 const policySource = resolve(here, '../permission-guard/protected-paths.cjs');
 const policyJsonSource = resolve(here, '../permission-guard/protected-paths.policy.json');
+const setupScript = resolve(here, '../../../../../scripts/permission-guard-setup.mjs');
 const root = realpathSync(mkdtempSync(join(tmpdir(), 'hive-flow-dev-override-redteam-')));
 const helperPath = join(root, '.claude', 'helpers', 'enforcement.cjs');
 mkdirSync(dirname(helperPath), { recursive: true });
@@ -51,6 +53,26 @@ function enableDevOverride(): void {
 }
 
 function createRootOverrideToken(nonce = 'dev-override-redteam'): string {
+  const key = enf.getOrCreateHmacKey();
+  const keyId = createHash('sha256')
+    .update('hive-flow-dev-override-key-id\0')
+    .update(key)
+    .digest('hex')
+    .slice(0, 16);
+  const body = Buffer.from(JSON.stringify({
+    kind: 'hive-flow-dev-override-root',
+    version: 1,
+    keyId,
+    projectDir: root,
+    issuedAt: Date.now(),
+    expiresAt: Date.now() + 60_000,
+    nonce,
+  })).toString('base64url');
+  const hmac = createHmac('sha256', key).update(body).digest('hex');
+  return `${body}.${hmac}`;
+}
+
+function createLegacyRootOverrideToken(nonce = 'legacy-dev-override-redteam'): string {
   const key = enf.getOrCreateHmacKey();
   const body = Buffer.from(JSON.stringify({
     kind: 'hive-flow-dev-override-root',
@@ -138,6 +160,18 @@ describe('dev override self-red-team probes', () => {
     const result = enf.processPreToolUse({
       tool_name: 'Write',
       tool_input: { file_path: '.claude/settings.json' },
+    });
+
+    expect(result.hookSpecificOutput.permissionDecision).toBe('deny');
+    expect(result.hookSpecificOutput.permissionDecisionReason).toContain('protected path');
+  });
+
+  it('does not accept legacy root tokens without version and keyId claims', () => {
+    process.env.HIVE_FLOW_DEV_OVERRIDE_TOKEN = createLegacyRootOverrideToken();
+
+    const result = enf.processPreToolUse({
+      tool_name: 'Write',
+      tool_input: { file_path: '.git/info/exclude' },
     });
 
     expect(result.hookSpecificOutput.permissionDecision).toBe('deny');
@@ -315,6 +349,55 @@ describe('dev override self-red-team probes', () => {
     });
 
     expect(result).toEqual({});
+  });
+
+  it('blocks Bash attempts to invoke the dev-override minter as a signing oracle', () => {
+    for (const command of [
+      'node scripts/permission-guard-setup.mjs mint-dev-override --ttl 1h',
+      `node "${resolve(root, 'scripts', 'permission-guard-setup.mjs')}" mint-dev-override`,
+    ]) {
+      const result = enf.processPreToolUse({
+        tool_name: 'Bash',
+        tool_input: { command },
+      });
+
+      expect(result.hookSpecificOutput.permissionDecision).toBe('deny');
+      expect(result.hookSpecificOutput.permissionDecisionReason).toContain('dev-override minter');
+    }
+  });
+
+  it('does not classify minter-looking filenames as minter invocations', () => {
+    const result = enf.processPreToolUse({
+      tool_name: 'Bash',
+      tool_input: { command: 'git add docs/mint-dev-override-notes.md' },
+    });
+
+    expect(result).toEqual({});
+  });
+
+  it('refuses to mint a dev override from a subagent environment', () => {
+    const overridePath = join(root, '.hive-flow', 'enforcement', 'dev-override.conf');
+    rmSync(overridePath, { force: true });
+
+    const result = spawnSync(process.execPath, [
+      setupScript,
+      'mint-dev-override',
+      '--project-root',
+      root,
+      '--ttl',
+      '15m',
+    ], {
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        CLAUDE_AGENT_ID: 'worker-from-test',
+        HIVE_FLOW_PROJECT_ROOT: root,
+      },
+    });
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('Refusing to mint dev override from a subagent environment');
+    expect(existsSync(overridePath)).toBe(false);
   });
 
   it('still blocks actual reset invocation attempts', () => {

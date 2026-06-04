@@ -36,8 +36,15 @@ const keyPath = path.join(projectDir, '.hive-flow', 'enforcement', '.hmac-key');
 fs.mkdirSync(path.dirname(keyPath), { recursive: true });
 const key = 'bats-dev-override-root-key';
 fs.writeFileSync(keyPath, key);
+const keyId = crypto.createHash('sha256')
+  .update('hive-flow-dev-override-key-id\0')
+  .update(key)
+  .digest('hex')
+  .slice(0, 16);
 const body = Buffer.from(JSON.stringify({
   kind: 'hive-flow-dev-override-root',
+  version: 1,
+  keyId,
   projectDir,
   issuedAt: Date.now(),
   expiresAt: Date.now() + 60000,
@@ -75,7 +82,7 @@ JSON
   issue_root_override_token
 
   run node "$SCRIPT" <<'JSON'
-{"tool_name":"Write","tool_input":{"file_path":".claude/settings.json"}}
+{"tool_name":"Write","tool_input":{"file_path":".git/info/exclude"}}
 JSON
 
   [ "$status" -eq 0 ]
@@ -87,7 +94,7 @@ JSON
   unset HIVE_FLOW_DEV_OVERRIDE_TOKEN
 
   run node "$SCRIPT" <<'JSON'
-{"tool_name":"Write","tool_input":{"file_path":".claude/settings.json"}}
+{"tool_name":"Write","tool_input":{"file_path":".git/info/exclude"}}
 JSON
 
   [ "$status" -eq 0 ]
