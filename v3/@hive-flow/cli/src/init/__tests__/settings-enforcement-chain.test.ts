@@ -3,7 +3,7 @@ import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { generateSettings } from '../settings-generator.js';
-import { executeUpgrade } from '../executor.js';
+import { executeInit, executeUpgrade } from '../executor.js';
 import { DEFAULT_INIT_OPTIONS, type InitOptions } from '../types.js';
 
 interface HookCommand {
@@ -113,6 +113,19 @@ describe('init settings enforcement chain', () => {
   it('fresh settings generation emits the full PreToolUse enforcement chain', () => {
     const settings = generateSettings(testOptions('/tmp/hf-init-test')) as GeneratedSettings;
     expectFullPreToolUseChain(settings);
+  });
+
+  it('fresh init writes a governed settings.json to disk', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'hf-settings-init-'));
+    try {
+      const result = await executeInit(testOptions(root));
+      expect(result.success).toBe(true);
+
+      const settings = JSON.parse(readFileSync(join(root, '.claude', 'settings.json'), 'utf8')) as GeneratedSettings;
+      expectFullPreToolUseChain(settings);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 
   it('upgrade settings merge installs the same chain for existing projects', async () => {

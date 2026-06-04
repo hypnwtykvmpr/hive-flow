@@ -57,6 +57,19 @@ function readScopedState(scopeType: string, scopeId: string): Record<string, unk
   }
 }
 
+function writeScopedState(scopeType: string, scopeId: string, state: Record<string, unknown>): void {
+  const file = scopeType === 'global' ? statePath() : scopedStatePath(scopeType, scopeId);
+  mkdirSync(dirname(file), { recursive: true });
+  writeFileSync(file, JSON.stringify(enf.signState({
+    consecutiveDenials: 0,
+    lastActivity: new Date(0).toISOString(),
+    history: [],
+    resetAt: null,
+    integrityCompromised: false,
+    ...state,
+  })));
+}
+
 function clearAgentEnv(): void {
   delete process.env.AGENTIC_FLOW_AGENT_ID;
   delete process.env.CLAUDE_AGENT_ID;
@@ -337,6 +350,43 @@ describe('enforcement security property contracts', () => {
     expect(result.hookSpecificOutput.hookEventName).toBe('PreToolUse');
     expect(result.hookSpecificOutput.permissionDecision).toBe('deny');
     expect(readScopedState('global', 'global')?.level).toBe(enf.LEVELS.RESTRICTED);
+  });
+
+  it('E2E: RESTRICTED scoped state blocks write tools before execution', () => {
+    process.env.AGENTIC_FLOW_AGENT_ID = 'restricted-agent';
+    writeScopedState('agent', 'restricted-agent', {
+      level: enf.LEVELS.RESTRICTED,
+      violations: 2,
+      restrictedGroups: ['write'],
+    });
+
+    const result = enf.processPreToolUse({
+      tool_name: 'Write',
+      tool_input: { file_path: 'src/generated.ts' },
+    });
+
+    expect(result.hookSpecificOutput.hookEventName).toBe('PreToolUse');
+    expect(result.hookSpecificOutput.permissionDecision).toBe('deny');
+    expect(result.hookSpecificOutput.permissionDecisionReason).toContain('[ENFORCEMENT RESTRICTED');
+    expect(result.hookSpecificOutput.permissionDecisionReason).toContain("Tool 'Write' blocked");
+  });
+
+  it('E2E: HALTED global state blocks hive-flow agent spawn before execution', () => {
+    writeScopedState('global', 'global', {
+      level: enf.LEVELS.HALTED,
+      violations: 4,
+      restrictedGroups: ['exec', 'write'],
+    });
+
+    const result = enf.processPreToolUse({
+      tool_name: 'mcp__hive-flow__agent_spawn',
+      tool_input: { agentType: 'coder', name: 'blocked-worker' },
+    });
+
+    expect(result.hookSpecificOutput.hookEventName).toBe('PreToolUse');
+    expect(result.hookSpecificOutput.permissionDecision).toBe('deny');
+    expect(result.hookSpecificOutput.permissionDecisionReason).toContain('[ENFORCEMENT HALT');
+    expect(result.hookSpecificOutput.permissionDecisionReason).toContain('All tools blocked');
   });
 
   it('allows canonical hook invocations while restricted but blocks arbitrary scripts', () => {
