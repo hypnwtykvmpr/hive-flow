@@ -260,7 +260,7 @@ describe('checkBashSelfProtection', () => {
     );
     expect(result).not.toBeNull();
     expect(result!.blocked).toBe(true);
-    expect(result!.reason).toContain('node filesystem');
+    expect(result!.reason).toContain('Inline code execution is blocked');
   });
 
   it('blocks node require fs literal writes to protected paths', () => {
@@ -270,7 +270,7 @@ describe('checkBashSelfProtection', () => {
     );
     expect(result).not.toBeNull();
     expect(result!.blocked).toBe(true);
-    expect(result!.reason).toContain('node filesystem');
+    expect(result!.reason).toContain('Inline code execution is blocked');
   });
 
   it('blocks node require node:fs literal writes to protected paths', () => {
@@ -280,23 +280,36 @@ describe('checkBashSelfProtection', () => {
     );
     expect(result).not.toBeNull();
     expect(result!.blocked).toBe(true);
-    expect(result!.reason).toContain('node filesystem');
+    expect(result!.reason).toContain('Inline code execution is blocked');
   });
 
-  it('allows node literal writes to normal project paths', () => {
+  it('blocks node literal writes to normal project paths with a guided denial', () => {
     const result = checkBashSelfProtection(
       `node --eval "fs.writeFileSync('src/generated.ts', 'ok')"`,
       CWD,
     );
-    expect(result).toBeNull();
+    expect(result).not.toBeNull();
+    expect(result!.reason).toContain('use Read, Write, or Edit');
   });
 
-  it('allows node require fs literal writes to normal project paths', () => {
+  it('blocks node require fs literal writes to normal project paths with a guided denial', () => {
     const result = checkBashSelfProtection(
       `node --eval "require('fs').writeFileSync('src/generated.ts', 'ok')"`,
       CWD,
     );
-    expect(result).toBeNull();
+    expect(result).not.toBeNull();
+    expect(result!.reason).toContain('use Read, Write, or Edit');
+  });
+
+  it('blocks inline eval normal-path writes with a guided denial instead of parsing file effects', () => {
+    const result = checkBashSelfProtection(
+      `node --eval "fs.writeFileSync('src/generated.ts', 'ok')"`,
+      CWD,
+    );
+    expect(result).not.toBeNull();
+    expect(result!.blocked).toBe(true);
+    expect(result!.reason).toContain('Inline code execution is blocked');
+    expect(result!.reason).toContain('use Read, Write, or Edit');
   });
 
   it('blocks python literal writes to protected paths', () => {
@@ -306,7 +319,7 @@ describe('checkBashSelfProtection', () => {
     );
     expect(result).not.toBeNull();
     expect(result!.blocked).toBe(true);
-    expect(result!.reason).toContain('python filesystem');
+    expect(result!.reason).toContain('Inline code execution is blocked');
   });
 
   it('blocks python __import__ os literal deletes to protected paths', () => {
@@ -316,23 +329,25 @@ describe('checkBashSelfProtection', () => {
     );
     expect(result).not.toBeNull();
     expect(result!.blocked).toBe(true);
-    expect(result!.reason).toContain('python filesystem');
+    expect(result!.reason).toContain('Inline code execution is blocked');
   });
 
-  it('allows python literal writes to normal project paths', () => {
+  it('blocks python literal writes to normal project paths with a guided denial', () => {
     const result = checkBashSelfProtection(
       `python3 -c "open('src/generated.ts', 'w').write('ok')"`,
       CWD,
     );
-    expect(result).toBeNull();
+    expect(result).not.toBeNull();
+    expect(result!.reason).toContain('use Read, Write, or Edit');
   });
 
-  it('allows python __import__ os literal deletes to normal project paths', () => {
+  it('blocks python __import__ os literal deletes to normal project paths with a guided denial', () => {
     const result = checkBashSelfProtection(
       `python3 -c "__import__('os').remove('src/generated.ts')"`,
       CWD,
     );
-    expect(result).toBeNull();
+    expect(result).not.toBeNull();
+    expect(result!.reason).toContain('use Read, Write, or Edit');
   });
 
   for (const variant of f1InlineMutationVariants) {
@@ -343,9 +358,10 @@ describe('checkBashSelfProtection', () => {
       expect(result!.blocked).toBe(true);
     });
 
-    it(`allows F1 inline alias variant targeting normal path: ${variant.name}`, () => {
+    it(`denies F1 inline alias variant targeting normal path: ${variant.name}`, () => {
       const result = checkBashSelfProtection(variant.command(f1BenignTarget), CWD);
-      expect(result).toBeNull();
+      expect(result).not.toBeNull();
+      expect(result!.reason).toContain('Inline code execution is blocked');
     });
   }
 

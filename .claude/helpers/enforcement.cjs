@@ -1154,6 +1154,46 @@ function hasCommandPositionInvocation(command, predicate) {
   return collectShellCommandExecutions(command).some(execution => predicate(execution));
 }
 
+const INLINE_EVAL_DENIAL =
+  'Inline code execution is blocked because file effects cannot be verified reliably. Instead: use Read, Write, or Edit for files; write a script file in the project and run it normally for programs.';
+
+function commandBasename(command) {
+  return String(command || '').replace(/\\/g, '/').split('/').pop() || String(command || '');
+}
+
+function hasAnyArg(args, names) {
+  return args.some(arg => names.includes(arg));
+}
+
+function isInlineEvalExecution(execution) {
+  const command = commandBasename(execution?.command || '');
+  const args = execution?.args || [];
+
+  if (command === 'node') {
+    return args.some(arg =>
+      arg === '-e' ||
+      arg === '--eval' ||
+      arg === '-p' ||
+      arg === '--print' ||
+      (/^-[^-]/.test(arg) && arg.includes('e')) ||
+      (/^-[^-]/.test(arg) && arg.includes('p'))
+    );
+  }
+
+  if (/^(?:python|python3|python3\.\d+)$/.test(command)) return hasAnyArg(args, ['-c']);
+  if (command === 'ruby') return hasAnyArg(args, ['-e', '-E']);
+  if (command === 'perl') return hasAnyArg(args, ['-e', '-E']);
+  if (command === 'deno') return args[0] === 'eval';
+  if (command === 'bun') return hasAnyArg(args, ['-e']);
+  if (command === 'php') return hasAnyArg(args, ['-r', '-R']);
+
+  return false;
+}
+
+function findInlineEvalInvocation(command) {
+  return collectShellCommandExecutions(command).find(isInlineEvalExecution) || null;
+}
+
 function extractRedirectTargets(command) {
   const targets = [];
   let quote = null;
@@ -1460,6 +1500,16 @@ function detectCircumvention(toolName, toolInput, state) {
         severity: 'critical',
         protectedEnforcementAttack: true,
         systemic: true,
+      };
+    }
+
+    const inlineEval = findInlineEvalInvocation(command);
+    if (inlineEval) {
+      return {
+        circumvention: true,
+        denyOnly: true,
+        reason: INLINE_EVAL_DENIAL,
+        severity: 'normal',
       };
     }
 
@@ -1852,6 +1902,15 @@ function processPreToolUse(input) {
         projectId: ctx.projectId,
         timestamp: new Date().toISOString(),
       });
+    } else if (circ.denyOnly) {
+      appendViolation({
+        type: 'deny-only',
+        reason: circ.reason,
+        tool: toolName,
+        projectId: ctx.projectId,
+        timestamp: new Date().toISOString(),
+      });
+      return makeDeny(circ.reason);
     } else {
       const escalation = escalateScoped(ctx, {
         ...circ,
@@ -2413,6 +2472,8 @@ module.exports = {
   splitShellSubcommands,
   collectShellCommandExecutions,
   hasCommandPositionInvocation,
+  isInlineEvalExecution,
+  findInlineEvalInvocation,
   isResetCheckHookInvocation,
   isResetInvocationAttempt,
   isGitCommitCommand,

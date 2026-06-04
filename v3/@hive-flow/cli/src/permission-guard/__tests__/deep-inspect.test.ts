@@ -36,25 +36,28 @@ describe('deepInspect', () => {
 
     it('blocks: python3 -c "import os; os.remove(x)"', () => { expect(deepInspect('python3 -c "import os; os.remove(x)"').blocked).toBe(true); });
     it('blocks: python -c "import shutil; shutil.rmtree(x)"', () => { expect(deepInspect('python -c "import shutil; shutil.rmtree(x)"').blocked).toBe(true); });
-    it('allows literal file writes for path-aware self-protection', () => {
-      expect(deepInspect('python3 -c "open(\'src/generated.ts\', \'w\').write(\'x\')"').blocked).toBe(false);
+    it('blocks literal file writes and redirects to permission-gated file tools', () => {
+      const result = deepInspect('python3 -c "open(\'src/generated.ts\', \'w\').write(\'x\')"');
+      expect(result.blocked).toBe(true);
+      expect(result.technique).toBe('inline-eval');
+      expect(result.reason).toContain('use Read, Write, or Edit');
     });
     it('blocks: python3 -c "import subprocess; subprocess.call(x)"', () => { expect(deepInspect('python3 -c "import subprocess; subprocess.call(x)"').blocked).toBe(true); });
     it('blocks dynamic os mutation through __import__ alias', () => {
       const result = deepInspect('python3 -c "__import__(\'os\').remove(target)"');
       expect(result.blocked).toBe(true);
-      expect(result.technique).toBe('python-filesystem-dynamic');
+      expect(result.technique).toBe('inline-eval');
     });
     it('blocks dynamic shutil mutation through __import__ alias', () => {
       const result = deepInspect('python3 -c "__import__(\'shutil\').move(src, dest)"');
       expect(result.blocked).toBe(true);
-      expect(result.technique).toBe('python-filesystem-dynamic');
+      expect(result.technique).toBe('inline-eval');
     });
     for (const variant of pythonDynamicAliasCases) {
       it(`blocks dynamic python filesystem mutation via ${variant.name}`, () => {
         const result = deepInspect(variant.cmd);
         expect(result.blocked).toBe(true);
-        expect(result.technique).toBe('python-filesystem-dynamic');
+        expect(result.technique).toBe('inline-eval');
       });
     }
   });
@@ -97,25 +100,34 @@ describe('deepInspect', () => {
     it('blocks: node -e with exec', () => {
       expect(deepInspect(`node -e "require('${cpModule}').exec('x')"`).blocked).toBe(true);
     });
+    it('blocks inline eval even when the script would write only to a normal project file', () => {
+      const result = deepInspect('node --eval "fs.writeFileSync(\'src/generated.ts\', \'x\')"');
+      expect(result.blocked).toBe(true);
+      expect(result.technique).toBe('inline-eval');
+      expect(result.reason).toContain('use Read, Write, or Edit');
+    });
     it('blocks: node --eval "fs.unlinkSync(x)"', () => { expect(deepInspect('node --eval "fs.unlinkSync(x)"').blocked).toBe(true); });
-    it('allows literal file writes for path-aware self-protection', () => {
-      expect(deepInspect('node --eval "fs.writeFileSync(\'src/generated.ts\', \'x\')"').blocked).toBe(false);
+    it('blocks literal file writes for path-aware self-protection', () => {
+      const result = deepInspect('node --eval "fs.writeFileSync(\'src/generated.ts\', \'x\')"');
+      expect(result.blocked).toBe(true);
+      expect(result.technique).toBe('inline-eval');
+      expect(result.reason).toContain('use Read, Write, or Edit');
     });
     it('blocks dynamic filesystem mutation through require fs alias', () => {
       const result = deepInspect('node --eval "require(\'fs\').writeFileSync(target, data)"');
       expect(result.blocked).toBe(true);
-      expect(result.technique).toBe('node-filesystem-dynamic');
+      expect(result.technique).toBe('inline-eval');
     });
     it('blocks dynamic filesystem mutation through require node:fs alias', () => {
       const result = deepInspect('node --eval "require(\'node:fs\').renameSync(src, dest)"');
       expect(result.blocked).toBe(true);
-      expect(result.technique).toBe('node-filesystem-dynamic');
+      expect(result.technique).toBe('inline-eval');
     });
     for (const variant of nodeDynamicAliasCases) {
       it(`blocks dynamic node filesystem mutation via ${variant.name}`, () => {
         const result = deepInspect(variant.cmd);
         expect(result.blocked).toBe(true);
-        expect(result.technique).toBe('node-filesystem-dynamic');
+        expect(result.technique).toBe('inline-eval');
       });
     }
   });

@@ -106,13 +106,14 @@ describe('F1 inline filesystem alias bypass — full gate', () => {
   }
 
   for (const variant of benignCases) {
-    it(`allows benign inline mutation: ${variant.name}`, async () => {
+    it(`denies benign inline mutation with guided inline-eval policy: ${variant.name}`, async () => {
       const result = await evaluateHookInput(bashInput(variant.cmd));
-      expect(result.decision).toBe('allow');
+      expect(result.decision).toBe('deny');
+      expect(result.reason).toContain('Inline code execution is blocked');
     });
   }
 
-  it('property-checks the inline alias matrix against path-deny-only protected targets', async () => {
+  it('property-checks the inline alias matrix as deny-only regardless of target path', async () => {
     await fc.assert(
       fc.asyncProperty(
         fc.constantFrom(...F1_PROTECTED_TARGETS),

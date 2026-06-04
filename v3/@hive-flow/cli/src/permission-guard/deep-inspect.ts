@@ -5,6 +5,10 @@
  */
 
 import type { DeepInspectResult, RiskLevel } from './types.js';
+import {
+  findInlineEvalInvocation,
+  INLINE_EVAL_DENIAL,
+} from './shell-command.js';
 
 const MAX_DEPTH = 3;
 
@@ -14,7 +18,7 @@ const ALWAYS_SAFE: RegExp[] = [
   /^echo\s/, /^printf\s/, /^pwd$/, /^whoami$/, /^date$/,
   /^git\s+(status|log|diff|branch|show|remote|tag|describe|rev-parse|ls-files)\b/,
   /^npm\s+(list|ls|view|info|outdated|audit|pack|run\s+(lint|test|build|check|format|typecheck))\b/,
-  /^npx\s/, /^node\s+(--version|-p\s)/, /^tsc(\s|$)/, /^eslint\s/, /^prettier\s/,
+  /^npx\s/, /^node\s+--version\b/, /^tsc(\s|$)/, /^eslint\s/, /^prettier\s/,
   /^jest(\s|$)/, /^vitest(\s|$)/, /^cargo\s+(build|test|check|clippy|fmt|doc)\b/,
   /^go\s+(build|test|vet|fmt|mod)\b/, /^make(\s|$)/, /^cmake\s/,
   /^grep\s/, /^rg\s/, /^find\s/, /^sort\s/, /^uniq\s/, /^cut\s/, /^tr\s/,
@@ -39,10 +43,6 @@ function unquote(s: string): string {
 // Layer B: Shell runtime wrappers
 const SHELL_WRAPPERS: Array<{ pattern: RegExp; lang: string; extractor: (m: RegExpMatchArray) => string }> = [
   { pattern: /^(?:bash|sh|zsh|dash|ksh)\s+-c\s+(.+)$/s, lang: 'bash', extractor: (m) => unquote(m[1]) },
-  { pattern: /^(?:python3?|python3\.\d+)\s+-c\s+(.+)$/s, lang: 'python', extractor: (m) => unquote(m[1]) },
-  { pattern: /^node\s+(?:(?:--input-type=\S+|--no-warnings|--experimental-\S+)\s+)*(?:-e|--eval)\s+(.+)$/s, lang: 'node', extractor: (m) => unquote(m[1]) },
-  { pattern: /^ruby\s+-e\s+(.+)$/s, lang: 'ruby', extractor: (m) => unquote(m[1]) },
-  { pattern: /^perl\s+-e\s+(.+)$/s, lang: 'perl', extractor: (m) => unquote(m[1]) },
   { pattern: /^env\s+(?:\S+=\S+\s+)*(?:bash|sh|zsh)\s+-c\s+(.+)$/s, lang: 'bash', extractor: (m) => unquote(m[1]) },
 ];
 
@@ -120,425 +120,6 @@ const LANG_PATTERNS: Record<string, RegExp[]> = {
   perl: PERL_DANGEROUS,
 };
 
-const NODE_FS_MUTATION_CALL = /\bfs(?:\.promises)?\.(writeFileSync|writeFile|appendFileSync|appendFile|createWriteStream|unlinkSync|unlink|rmSync|rm|rmdirSync|rmdir|renameSync|rename)\s*\(([^)]*)\)/g;
-const PYTHON_OS_MUTATION_CALL = /\bos\.(remove|unlink|rmdir|removedirs|rename)\s*\(([^)]*)\)/g;
-const PYTHON_SHUTIL_MUTATION_CALL = /\bshutil\.(rmtree|move)\s*\(([^)]*)\)/g;
-const PYTHON_OPEN_CALL = /\bopen\s*\(([^)]*)\)/g;
-
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-function parseStaticStringConcat(expression: string): string | null {
-  let rest = expression.trim();
-  if (!rest) return null;
-  let value = '';
-
-  while (rest) {
-    const quote = rest[0];
-    if (quote !== '"' && quote !== "'") return null;
-    let escaped = false;
-    let piece = '';
-    let end = -1;
-    for (let i = 1; i < rest.length; i++) {
-      const ch = rest[i];
-      if (escaped) {
-        piece += ch;
-        escaped = false;
-        continue;
-      }
-      if (ch === '\\') {
-        escaped = true;
-        continue;
-      }
-      if (ch === quote) {
-        end = i;
-        break;
-      }
-      piece += ch;
-    }
-    if (end < 0) return null;
-    value += piece;
-    rest = rest.slice(end + 1).trim();
-    if (!rest) return value;
-    if (!rest.startsWith('+')) return null;
-    rest = rest.slice(1).trim();
-  }
-
-  return value;
-}
-
-function canonicalNodeFilesystemModule(expression: string): string | null {
-  const value = parseStaticStringConcat(expression);
-  if (value === 'fs' || value === 'node:fs') return 'fs';
-  if (value === 'fs/promises' || value === 'node:fs/promises') return 'fs.promises';
-  return null;
-}
-
-function canonicalPythonFilesystemModule(expression: string): string | null {
-  const value = parseStaticStringConcat(expression);
-  if (value === 'os' || value === 'shutil') return value;
-  return null;
-}
-
-function canonicalPythonFilesystemFactory(expression: string, importlibAliases: string[] = []): string | null {
-  const trimmed = expression.trim();
-  const factoryPatterns = [
-    /^\b__import__\s*\(\s*([^)]*?)\s*\)$/,
-    /^\bimportlib\.import_module\s*\(\s*([^)]*?)\s*\)$/,
-  ];
-  for (const pattern of factoryPatterns) {
-    const match = trimmed.match(pattern);
-    if (!match) continue;
-    return canonicalPythonFilesystemModule(match[1]);
-  }
-  for (const alias of importlibAliases) {
-    const escaped = escapeRegExp(alias);
-    const match = trimmed.match(new RegExp(`^\\b${escaped}\\.import_module\\s*\\(\\s*([^)]*?)\\s*\\)$`));
-    if (!match) continue;
-    return canonicalPythonFilesystemModule(match[1]);
-  }
-  return null;
-}
-
-function canonicalNodeFilesystemFactory(expression: string): string | null {
-  const trimmed = expression.trim();
-  const factoryPatterns = [
-    /^\brequire\s*\(\s*([^)]*?)\s*\)$/,
-    /^\bprocess\.getBuiltinModule\s*\(\s*([^)]*?)\s*\)$/,
-    /^\bprocess\.binding\s*\(\s*([^)]*?)\s*\)$/,
-    /^\bmodule\.constructor\._load\s*\(\s*([^)]*?)\s*\)$/,
-    /^\bcreateRequire\s*\([^)]*\)\s*\(\s*([^)]*?)\s*\)$/,
-    /^\(?\s*await\s+import\s*\(\s*([^)]*?)\s*\)\s*\)?$/,
-  ];
-  for (const pattern of factoryPatterns) {
-    const match = trimmed.match(pattern);
-    if (!match) continue;
-    return canonicalNodeFilesystemModule(match[1]);
-  }
-  return null;
-}
-
-function replaceObjectAlias(code: string, alias: string, canonical: string): string {
-  const escaped = escapeRegExp(alias);
-  return code
-    .replace(new RegExp(`(^|[^\\w$])${escaped}\\s*\\.`, 'g'), `$1${canonical}.`)
-    .replace(new RegExp(`(^|[^\\w$])${escaped}\\s*\\[\\s*(['"])(${JS_IDENT})\\2\\s*\\]`, 'g'), `$1${canonical}.$3`);
-}
-
-function replaceCallAlias(code: string, alias: string, canonical: string): string {
-  const escaped = escapeRegExp(alias);
-  return code.replace(new RegExp(`(^|[^\\w$.])${escaped}\\s*\\(`, 'g'), `$1${canonical}(`);
-}
-
-const JS_IDENT = '[A-Za-z_$][\\w$]*';
-const PY_IDENT = '[A-Za-z_]\\w*';
-
-function replaceFactoryAccess(
-  code: string,
-  calleePattern: string,
-  canonicalize: (expression: string) => string | null,
-): string {
-  let normalized = code.replace(new RegExp(`${calleePattern}\\s*\\(\\s*([^)]*?)\\s*\\)\\s*\\.`, 'g'), (match, spec: string) => {
-    const canonical = canonicalize(spec);
-    return canonical ? `${canonical}.` : match;
-  });
-  normalized = normalized.replace(new RegExp(`${calleePattern}\\s*\\(\\s*([^)]*?)\\s*\\)\\s*\\[\\s*(['"])(${JS_IDENT})\\2\\s*\\]`, 'g'), (match, spec: string, _quote: string, member: string) => {
-    const canonical = canonicalize(spec);
-    return canonical ? `${canonical}.${member}` : match;
-  });
-  return normalized;
-}
-
-function replaceNamedFactoryAccess(
-  code: string,
-  factoryName: string,
-  canonicalize: (expression: string) => string | null,
-): string {
-  const escaped = escapeRegExp(factoryName);
-  let normalized = code.replace(new RegExp(`(^|[^\\w$.])${escaped}\\s*\\(\\s*([^)]*?)\\s*\\)\\s*\\.`, 'g'), (match, prefix: string, spec: string) => {
-    const canonical = canonicalize(spec);
-    return canonical ? `${prefix}${canonical}.` : match;
-  });
-  normalized = normalized.replace(new RegExp(`(^|[^\\w$.])${escaped}\\s*\\(\\s*([^)]*?)\\s*\\)\\s*\\[\\s*(['"])(${JS_IDENT})\\3\\s*\\]`, 'g'), (match, prefix: string, spec: string, _quote: string, member: string) => {
-    const canonical = canonicalize(spec);
-    return canonical ? `${prefix}${canonical}.${member}` : match;
-  });
-  return normalized;
-}
-
-function replaceAwaitImportAccess(code: string): string {
-  let normalized = code.replace(/\(\s*await\s+import\s*\(\s*([^)]*?)\s*\)\s*\)\s*\./g, (match, spec: string) => {
-    const canonical = canonicalNodeFilesystemModule(spec);
-    return canonical ? `${canonical}.` : match;
-  });
-  normalized = normalized.replace(new RegExp(`\\(\\s*await\\s+import\\s*\\(\\s*([^)]*?)\\s*\\)\\s*\\)\\s*\\[\\s*(['"])(${JS_IDENT})\\2\\s*\\]`, 'g'), (match, spec: string, _quote: string, member: string) => {
-    const canonical = canonicalNodeFilesystemModule(spec);
-    return canonical ? `${canonical}.${member}` : match;
-  });
-  return normalized;
-}
-
-function replaceRequireCacheExportsAccess(code: string): string {
-  let normalized = code.replace(/\brequire\.cache\s*\[\s*require\.resolve\s*\(\s*([^)]*?)\s*\)\s*\]\s*\??\.\s*exports\s*\./g, (match, spec: string) => {
-    const canonical = canonicalNodeFilesystemModule(spec);
-    return canonical ? `${canonical}.` : match;
-  });
-  normalized = normalized.replace(new RegExp(`\\brequire\\.cache\\s*\\[\\s*require\\.resolve\\s*\\(\\s*([^)]*?)\\s*\\)\\s*\\]\\s*\\??\\.\\s*exports\\s*\\[\\s*(['"])(${JS_IDENT})\\2\\s*\\]`, 'g'), (match, spec: string, _quote: string, member: string) => {
-    const canonical = canonicalNodeFilesystemModule(spec);
-    return canonical ? `${canonical}.${member}` : match;
-  });
-  return normalized;
-}
-
-function normalizeCanonicalBracketAccess(code: string): string {
-  return code.replace(new RegExp(`\\b(fs(?:\\.promises)?|os|shutil)\\s*\\[\\s*(['"])(${JS_IDENT})\\2\\s*\\]`, 'g'), '$1.$3');
-}
-
-function normalizeInlineFilesystemAliases(code: string): string {
-  let normalized = code;
-  const objectAliases: Array<{ alias: string; canonical: string }> = [];
-  const callAliases: Array<{ alias: string; canonical: string }> = [];
-  const requireFactoryAliases: string[] = [];
-  const importlibModuleAliases: string[] = [];
-  const importlibFactoryAliases: string[] = [];
-
-  for (const match of normalized.matchAll(new RegExp(`\\b(?:const|let|var)\\s+(${JS_IDENT})\\s*=\\s*([^;\\n]+)`, 'g'))) {
-    const rhs = match[2].trim();
-    const canonical = canonicalNodeFilesystemFactory(rhs);
-    if (canonical) {
-      objectAliases.push({ alias: match[1], canonical });
-    } else if (/^createRequire\s*\(/.test(rhs)) {
-      requireFactoryAliases.push(match[1]);
-    }
-  }
-
-  for (const match of normalized.matchAll(new RegExp(`\\b(?:const|let|var)\\s*\\{([^}]+)\\}\\s*=\\s*([^;\\n]+)`, 'g'))) {
-    const canonicalRoot = canonicalNodeFilesystemFactory(match[2]);
-    if (!canonicalRoot) continue;
-    for (const rawPart of match[1].split(',')) {
-      const part = rawPart.trim();
-      const binding = part.match(new RegExp(`^(${JS_IDENT})(?:\\s*:\\s*(${JS_IDENT}))?$`));
-      if (!binding) continue;
-      const imported = binding[1];
-      const local = binding[2] || imported;
-      if (canonicalRoot === 'fs' && imported === 'promises') {
-        objectAliases.push({ alias: local, canonical: 'fs.promises' });
-      } else {
-        callAliases.push({ alias: local, canonical: `${canonicalRoot}.${imported}` });
-      }
-    }
-  }
-
-  for (const match of normalized.matchAll(new RegExp(`\\bimport\\s+(${JS_IDENT})\\s+from\\s+((?:['"][^'"]*['"]))`, 'g'))) {
-    const canonical = canonicalNodeFilesystemModule(match[2]);
-    if (canonical) objectAliases.push({ alias: match[1], canonical });
-  }
-  for (const match of normalized.matchAll(new RegExp(`\\bimport\\s+\\*\\s+as\\s+(${JS_IDENT})\\s+from\\s+((?:['"][^'"]*['"]))`, 'g'))) {
-    const canonical = canonicalNodeFilesystemModule(match[2]);
-    if (canonical) objectAliases.push({ alias: match[1], canonical });
-  }
-  for (const match of normalized.matchAll(new RegExp(`\\bimport\\s*\\{([^}]+)\\}\\s*from\\s+((?:['"][^'"]*['"]))`, 'g'))) {
-    const canonicalRoot = canonicalNodeFilesystemModule(match[2]);
-    if (!canonicalRoot) continue;
-    for (const rawPart of match[1].split(',')) {
-      const part = rawPart.trim();
-      const binding = part.match(new RegExp(`^(${JS_IDENT})(?:\\s+as\\s+(${JS_IDENT}))?$`));
-      if (!binding) continue;
-      const imported = binding[1];
-      const local = binding[2] || imported;
-      if (canonicalRoot === 'fs' && imported === 'promises') {
-        objectAliases.push({ alias: local, canonical: 'fs.promises' });
-      } else {
-        callAliases.push({ alias: local, canonical: `${canonicalRoot}.${imported}` });
-      }
-    }
-  }
-
-  normalized = replaceFactoryAccess(normalized, '\\brequire', canonicalNodeFilesystemModule);
-  normalized = replaceFactoryAccess(normalized, '\\bprocess\\.getBuiltinModule', canonicalNodeFilesystemModule);
-  normalized = replaceFactoryAccess(normalized, '\\bprocess\\.binding', canonicalNodeFilesystemModule);
-  normalized = replaceFactoryAccess(normalized, '\\bmodule\\.constructor\\._load', canonicalNodeFilesystemModule);
-  normalized = replaceFactoryAccess(normalized, '\\bcreateRequire\\s*\\([^)]*\\)', canonicalNodeFilesystemModule);
-  normalized = replaceAwaitImportAccess(normalized);
-  normalized = replaceRequireCacheExportsAccess(normalized);
-  normalized = replaceFactoryAccess(normalized, '\\b__import__', canonicalPythonFilesystemModule);
-  normalized = replaceFactoryAccess(normalized, '\\bimportlib\\.import_module', canonicalPythonFilesystemModule);
-
-  for (const alias of requireFactoryAliases) {
-    normalized = replaceNamedFactoryAccess(normalized, alias, canonicalNodeFilesystemModule);
-    const escaped = escapeRegExp(alias);
-    for (const match of normalized.matchAll(new RegExp(`\\b(?:const|let|var)\\s+(${JS_IDENT})\\s*=\\s*${escaped}\\s*\\(\\s*([^)]*?)\\s*\\)`, 'g'))) {
-      const canonical = canonicalNodeFilesystemModule(match[2]);
-      if (canonical) objectAliases.push({ alias: match[1], canonical });
-    }
-  }
-
-  for (const match of normalized.matchAll(new RegExp(`\\bimport\\s+(os|shutil)\\s+as\\s+(${PY_IDENT})`, 'g'))) {
-    objectAliases.push({ alias: match[2], canonical: match[1] });
-  }
-  for (const match of normalized.matchAll(new RegExp(`\\bimport\\s+importlib\\s+as\\s+(${PY_IDENT})`, 'g'))) {
-    importlibModuleAliases.push(match[1]);
-  }
-
-  for (const match of normalized.matchAll(new RegExp(`\\bfrom\\s+(os|shutil)\\s+import\\s+([^;\\n]+)`, 'g'))) {
-    const moduleName = match[1];
-    for (const rawPart of match[2].split(',')) {
-      const part = rawPart.trim();
-      const binding = part.match(new RegExp(`^(${PY_IDENT})(?:\\s+as\\s+(${PY_IDENT}))?$`));
-      if (!binding) continue;
-      const imported = binding[1];
-      const local = binding[2] || imported;
-      callAliases.push({ alias: local, canonical: `${moduleName}.${imported}` });
-    }
-  }
-  for (const match of normalized.matchAll(new RegExp(`\\bfrom\\s+importlib\\s+import\\s+([^;\\n]+)`, 'g'))) {
-    for (const rawPart of match[1].split(',')) {
-      const part = rawPart.trim();
-      const binding = part.match(new RegExp(`^(import_module)(?:\\s+as\\s+(${PY_IDENT}))?$`));
-      if (!binding) continue;
-      importlibFactoryAliases.push(binding[2] || binding[1]);
-    }
-  }
-
-  for (const alias of importlibFactoryAliases) {
-    normalized = replaceNamedFactoryAccess(normalized, `${alias}`, canonicalPythonFilesystemModule);
-  }
-  for (const alias of importlibModuleAliases) {
-    normalized = replaceFactoryAccess(normalized, `\\b${escapeRegExp(alias)}\\.import_module`, canonicalPythonFilesystemModule);
-  }
-
-  for (const { alias, canonical } of objectAliases) {
-    normalized = replaceObjectAlias(normalized, alias, canonical);
-  }
-
-  for (const match of normalized.matchAll(new RegExp(`\\b(?:const|let|var)\\s+(${JS_IDENT})\\s*=\\s*(fs(?:\\.promises)?)\\.(${JS_IDENT})`, 'g'))) {
-    callAliases.push({ alias: match[1], canonical: `${match[2]}.${match[3]}` });
-  }
-  for (const match of normalized.matchAll(new RegExp(`(?:^|[;\\n])\\s*(${PY_IDENT})\\s*=\\s*([^;\\n]+)`, 'g'))) {
-    const canonical = canonicalPythonFilesystemFactory(match[2], importlibModuleAliases);
-    if (canonical) objectAliases.push({ alias: match[1], canonical });
-  }
-  for (const { alias, canonical } of objectAliases) {
-    normalized = replaceObjectAlias(normalized, alias, canonical);
-  }
-  for (const match of normalized.matchAll(new RegExp(`(?:^|[;\\n])\\s*(${PY_IDENT})\\s*=\\s*(os|shutil)\\.(${PY_IDENT})`, 'g'))) {
-    callAliases.push({ alias: match[1], canonical: `${match[2]}.${match[3]}` });
-  }
-
-  for (const { alias, canonical } of callAliases) {
-    normalized = replaceCallAlias(normalized, alias, canonical);
-  }
-
-  return normalizeCanonicalBracketAccess(normalized);
-}
-
-function leadingStringLiteral(value: string): { matched: boolean; end: number } {
-  const trimmed = value.trimStart();
-  const leadingWhitespace = value.length - trimmed.length;
-  const quote = trimmed[0];
-  if (quote !== '"' && quote !== "'") return { matched: false, end: 0 };
-  let escaped = false;
-  for (let i = 1; i < trimmed.length; i++) {
-    const ch = trimmed[i];
-    if (escaped) {
-      escaped = false;
-      continue;
-    }
-    if (ch === '\\') {
-      escaped = true;
-      continue;
-    }
-    if (ch === quote) {
-      return { matched: true, end: leadingWhitespace + i + 1 };
-    }
-  }
-  return { matched: false, end: 0 };
-}
-
-function literalArgAt(value: string, index: number): boolean {
-  let rest = value;
-  for (let i = 0; i <= index; i++) {
-    const literal = leadingStringLiteral(rest);
-    if (!literal.matched) return false;
-    if (i === index) return true;
-    rest = rest.slice(literal.end).trimStart();
-    if (!rest.startsWith(',')) return false;
-    rest = rest.slice(1);
-  }
-  return false;
-}
-
-function writeModeLiteral(value: string): boolean {
-  const restStart = value.indexOf(',');
-  if (restStart < 0) return false;
-  const rest = value.slice(restStart + 1).trimStart();
-  const literal = leadingStringLiteral(rest);
-  if (!literal.matched) return false;
-  const mode = rest.slice(0, literal.end);
-  return /[wax+]/.test(mode);
-}
-
-function inspectNodeFilesystemMutation(inner: string): DeepInspectResult | null {
-  let matched = false;
-  const normalized = normalizeInlineFilesystemAliases(inner);
-  for (const match of normalized.matchAll(NODE_FS_MUTATION_CALL)) {
-    matched = true;
-    const operation = match[1];
-    const args = match[2] || '';
-    const requiresTwoLiteralTargets = operation === 'rename' || operation === 'renameSync';
-    const hasLiteralTargets = requiresTwoLiteralTargets
-      ? literalArgAt(args, 0) && literalArgAt(args, 1)
-      : literalArgAt(args, 0);
-    if (!hasLiteralTargets) {
-      return block('Node filesystem mutation has dynamic or non-literal target', 'node-filesystem-dynamic', 'critical', [inner]);
-    }
-  }
-  return matched ? ok([inner]) : null;
-}
-
-function inspectPythonFilesystemMutation(inner: string): DeepInspectResult | null {
-  let matched = false;
-  const normalized = normalizeInlineFilesystemAliases(inner);
-
-  for (const match of normalized.matchAll(PYTHON_OPEN_CALL)) {
-    const args = match[1] || '';
-    if (!writeModeLiteral(args)) continue;
-    matched = true;
-    if (!literalArgAt(args, 0)) {
-      return block('Python file write has dynamic or non-literal target', 'python-filesystem-dynamic', 'critical', [inner]);
-    }
-  }
-
-  for (const match of normalized.matchAll(PYTHON_OS_MUTATION_CALL)) {
-    matched = true;
-    const operation = match[1];
-    const args = match[2] || '';
-    const requiresTwoLiteralTargets = operation === 'rename';
-    const hasLiteralTargets = requiresTwoLiteralTargets
-      ? literalArgAt(args, 0) && literalArgAt(args, 1)
-      : literalArgAt(args, 0);
-    if (!hasLiteralTargets) {
-      return block('Python os mutation has dynamic or non-literal target', 'python-filesystem-dynamic', 'critical', [inner]);
-    }
-  }
-
-  for (const match of normalized.matchAll(PYTHON_SHUTIL_MUTATION_CALL)) {
-    matched = true;
-    const operation = match[1];
-    const args = match[2] || '';
-    const requiresTwoLiteralTargets = operation === 'move';
-    const hasLiteralTargets = requiresTwoLiteralTargets
-      ? literalArgAt(args, 0) && literalArgAt(args, 1)
-      : literalArgAt(args, 0);
-    if (!hasLiteralTargets) {
-      return block('Python shutil mutation has dynamic or non-literal target', 'python-filesystem-dynamic', 'critical', [inner]);
-    }
-  }
-
-  return matched ? ok([inner]) : null;
-}
-
 // Layer A2: AWK/SED dangerous patterns (must run before ALWAYS_SAFE)
 const AWK_DANGEROUS: RegExp[] = [
   /\bawk\b.*\bsystem\s*\(/, // awk with system() call
@@ -605,6 +186,11 @@ export function deepInspect(command: string, depth: number = 0): DeepInspectResu
   const netMatch = matchFirst(cmd, NETWORK_ATTACK_TOOLS);
   if (netMatch) return block(`Network attack/exfiltration tool: ${netMatch.source}`, 'network-attack', 'critical', [cmd], depth);
 
+  const inlineEval = findInlineEvalInvocation(cmd);
+  if (inlineEval) {
+    return block(INLINE_EVAL_DENIAL, 'inline-eval', 'high', [inlineEval.subCommand || cmd], depth);
+  }
+
   // Layer A: Always-safe short-circuit
   if (matchFirst(cmd, ALWAYS_SAFE)) return ok([], depth);
 
@@ -626,22 +212,6 @@ export function deepInspect(command: string, depth: number = 0): DeepInspectResu
           return { ...innerResult, extractedCommands: [...extracted, ...innerResult.extractedCommands], depth };
         }
         extracted.push(...innerResult.extractedCommands);
-      }
-
-      if (wrapper.lang === 'node') {
-        const fsResult = inspectNodeFilesystemMutation(inner);
-        if (fsResult?.blocked) {
-          return { ...fsResult, extractedCommands: [...extracted, ...fsResult.extractedCommands], depth };
-        }
-        if (fsResult) extracted.push(...fsResult.extractedCommands);
-      }
-
-      if (wrapper.lang === 'python') {
-        const fsResult = inspectPythonFilesystemMutation(inner);
-        if (fsResult?.blocked) {
-          return { ...fsResult, extractedCommands: [...extracted, ...fsResult.extractedCommands], depth };
-        }
-        if (fsResult) extracted.push(...fsResult.extractedCommands);
       }
 
       // Check language-specific patterns
@@ -727,6 +297,7 @@ export function classifyCommandRisk(command: string): RiskLevel {
   if (!cmd) return 'none';
   if (PIPE_TO_SHELL.test(cmd)) return 'high';
   if (XARGS_DANGEROUS.test(cmd)) return 'critical';
+  if (findInlineEvalInvocation(cmd)) return 'high';
   if (matchFirst(cmd, ALWAYS_SAFE)) return 'none';
   if (matchFirst(cmd, BASH_DANGEROUS) || matchFirst(cmd, OBFUSCATION)) return 'critical';
   if (matchFirst(cmd, EVAL_PATTERNS) || PROCESS_SUB.test(cmd)) return 'high';

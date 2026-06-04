@@ -1117,6 +1117,23 @@ describe('enforcement security property contracts', () => {
     )).toBe(true);
   });
 
+  it('denies inline interpreter eval without escalating the effective scope', () => {
+    process.env.AGENTIC_FLOW_AGENT_ID = 'inline-eval-worker';
+
+    const result = enf.processPreToolUse({
+      tool_name: 'Bash',
+      tool_input: {
+        command: 'bash -c "node --eval \\"console.log(1)\\""',
+      },
+    });
+
+    expect(result.hookSpecificOutput.permissionDecision).toBe('deny');
+    expect(result.hookSpecificOutput.permissionDecisionReason).toContain('Inline code execution is blocked');
+    expect(result.hookSpecificOutput.permissionDecisionReason).toContain('use Read, Write, or Edit');
+    expect(readScopedState('agent', 'inline-eval-worker')).toBeNull();
+    expect(readScopedState('global', 'global')).toBeNull();
+  });
+
   it('only blocks Bash redirects when the redirect target is protected', () => {
     const state = {
       level: 0,

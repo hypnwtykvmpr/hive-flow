@@ -21,7 +21,7 @@ describe('False Positive Prevention', () => {
     'npm run build', 'npm test', 'npm run lint', 'npm install express',
     'npm audit', 'npm outdated', 'npm list --depth=0',
     'npx tsc --noEmit', 'npx vitest run', 'npx eslint src/',
-    'node src/index.js', 'node --version', 'node -e "console.log(1+1)"',
+    'node src/index.js', 'node --version',
     // File operations
     'cat package.json', 'head -20 src/index.ts', 'tail -f logs/app.log',
     'ls -la src/', 'find . -name "*.ts" -type f', 'wc -l src/**/*.ts',
@@ -52,24 +52,32 @@ describe('False Positive Prevention', () => {
     }
   });
 
-  describe('literal interpreter writes are path-aware, not blanket-denied', () => {
-    it('allows node literal writes to normal project files', () => {
-      expect(deepInspect('node --eval "fs.writeFileSync(\'src/generated.ts\', \'ok\')"').blocked).toBe(false);
+  describe('inline interpreter execution redirects to explicit file/script workflows', () => {
+    it('blocks node literal writes to normal project files with guidance', () => {
+      const result = deepInspect('node --eval "fs.writeFileSync(\'src/generated.ts\', \'ok\')"');
+      expect(result.blocked).toBe(true);
+      expect(result.reason).toContain('use Read, Write, or Edit');
     });
 
-    it('allows python literal writes to normal project files', () => {
-      expect(deepInspect('python3 -c "open(\'src/generated.ts\', \'w\').write(\'ok\')"').blocked).toBe(false);
+    it('blocks python literal writes to normal project files with guidance', () => {
+      const result = deepInspect('python3 -c "open(\'src/generated.ts\', \'w\').write(\'ok\')"');
+      expect(result.blocked).toBe(true);
+      expect(result.reason).toContain('use Read, Write, or Edit');
     });
 
-    it('keeps dynamic node writes fail-closed', () => {
-      expect(deepInspect('node --eval "fs.writeFileSync(target, data)"').blocked).toBe(true);
+    it('keeps dynamic node writes fail-closed via the same inline-eval policy', () => {
+      const result = deepInspect('node --eval "fs.writeFileSync(target, data)"');
+      expect(result.blocked).toBe(true);
+      expect(result.technique).toBe('inline-eval');
     });
 
-    it('keeps dynamic python writes fail-closed', () => {
-      expect(deepInspect('python3 -c "open(target, \'w\').write(data)"').blocked).toBe(true);
+    it('keeps dynamic python writes fail-closed via the same inline-eval policy', () => {
+      const result = deepInspect('python3 -c "open(target, \'w\').write(data)"');
+      expect(result.blocked).toBe(true);
+      expect(result.technique).toBe('inline-eval');
     });
 
-    it('allows a normal literal node write through the full gate', async () => {
+    it('denies a normal literal node write through the full gate with guidance', async () => {
       const result = await evaluate(
         {
           tool_name: 'Bash',
@@ -82,7 +90,8 @@ describe('False Positive Prevention', () => {
           jury_escalation_bash_patterns: [],
         }),
       );
-      expect(result.decision).toBe('allow');
+      expect(result.decision).toBe('deny');
+      expect(result.reason).toContain('Inline code execution is blocked');
     });
 
     it('denies a dynamic node write through the full gate', async () => {
@@ -99,7 +108,7 @@ describe('False Positive Prevention', () => {
         }),
       );
       expect(result.decision).toBe('deny');
-      expect(result.reason).toContain('Deep Inspect');
+      expect(result.reason).toContain('Inline code execution is blocked');
     });
   });
 
