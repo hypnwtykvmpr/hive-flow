@@ -266,21 +266,26 @@ JSON
   [[ "$output" == *"protected path"* ]]
 }
 
-@test "inline require fs protected write is denied while benign project write is allowed" {
+@test "inline require fs writes are denied with guided remediation" {
   run node "$SCRIPT" <<'JSON'
 {"tool_name":"Bash","tool_input":{"command":"node -e \"require('fs').writeFileSync('.claude/settings.json','{}')\""}}
 JSON
 
   [ "$status" -eq 0 ]
   [[ "$output" == *'"permissionDecision":"deny"'* ]]
-  [[ "$output" == *"protected path"* ]]
+  [[ "$output" == *"Inline code execution is blocked"* ]]
+  [[ "$output" == *"use Read, Write, or Edit"* ]]
+  [[ "$output" == *"write a script file"* ]]
 
   run node "$SCRIPT" <<'JSON'
 {"tool_name":"Bash","tool_input":{"command":"node -e \"require('fs').writeFileSync('src/generated.txt','ok')\""}}
 JSON
 
   [ "$status" -eq 0 ]
-  [ "$output" = "{}" ]
+  [[ "$output" == *'"permissionDecision":"deny"'* ]]
+  [[ "$output" == *"Inline code execution is blocked"* ]]
+  [[ "$output" == *"use Read, Write, or Edit"* ]]
+  [[ "$output" == *"write a script file"* ]]
 }
 
 @test "subagent trip leaves coordinator benign in-project writes allowed" {
