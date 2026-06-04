@@ -1224,14 +1224,35 @@ function searchMayIncludeProtectedReadPath(searchPath) {
   });
 }
 
-function protectedReadRgGlobs() {
-  const args = [];
+function toRgGlobPath(filePath) {
+  return String(filePath || '').replace(/\\/g, '/').replace(/^\/+/, '');
+}
+
+function addProtectedReadRgGlob(globs, value, isDirectory) {
+  const clean = toRgGlobPath(value).replace(/\/+$/, '');
+  if (!clean || clean === '.') return;
+  globs.add(`!${clean}`);
+  if (isDirectory) {
+    globs.add(`!${clean}/**`);
+  }
+}
+
+function protectedReadRgGlobs(searchPath = PROJECT_ROOT) {
+  const globs = new Set();
+  const searchRoot = resolveRealPathForBridge(searchPath);
   for (const entry of protectedPathPolicy.loadPolicy().protectedRead) {
     if (entry.includes('${HOME}')) continue;
-    const clean = entry.replace(/^\.\//, '').replace(/\/$/, '');
-    args.push('--glob', entry.endsWith('/') ? `!${clean}/**` : `!${clean}`);
+    const isDirectory = entry.endsWith('/');
+    const cleanEntry = entry.replace(/^\.\//, '').replace(/\/+$/, '');
+    addProtectedReadRgGlob(globs, cleanEntry, isDirectory);
+
+    const protectedAbsolute = resolveRealPathForBridge(protectedPathPolicy.expandPolicyPath(entry, PROJECT_ROOT));
+    const relativeToSearch = relative(searchRoot, protectedAbsolute);
+    if (relativeToSearch === '' || (!relativeToSearch.startsWith('..') && !relativeToSearch.startsWith(sep))) {
+      addProtectedReadRgGlob(globs, relativeToSearch || basename(protectedAbsolute), isDirectory);
+    }
   }
-  return args;
+  return [...globs];
 }
 
 // SEC-002/HIGH-003: Bridge tool blocklist — provider agents are restricted to operational tools.
@@ -1414,10 +1435,12 @@ const BRIDGE_FILESYSTEM_TOOLS = {
         // separator, then the separator, then positionals (pattern +
         // searchPath). This blocks any attacker-controlled string from
         // being interpreted as a flag (e.g. `--pre=` RCE, `--pcre2`, `-x`).
-        args = buildRgArgs(pattern, searchPath, file_glob);
-        if (needsProtectedFilter) {
-          args.splice(args.length - 2, 0, ...protectedReadRgGlobs());
-        }
+        args = buildRgArgs(
+          pattern,
+          searchPath,
+          file_glob,
+          needsProtectedFilter ? protectedReadRgGlobs(searchPath) : [],
+        );
       } catch {
         command = 'grep';
         if (needsProtectedFilter) {
@@ -1676,6 +1699,13 @@ async function executeMCPTool(toolName, toolArgs) {
       tool: toolName,
     };
   }
+}
+
+export async function executeBridgeFilesystemTool(toolName, toolArgs) {
+  if (!BRIDGE_FILESYSTEM_TOOLS[toolName]) {
+    throw new Error(`Unknown bridge filesystem tool: ${toolName}`);
+  }
+  return executeMCPTool(toolName, toolArgs);
 }
 
 async function notifyProviderAuthFailure(providerName, reason) {
@@ -2503,7 +2533,7 @@ async function main() {
   }
 }
 
-main().catch(async (err) => {
+async function handleMainError(err) {
   // Log failure with error classification
   const classification = classifyError(err);
   // Attempt to extract agentId from argv for the log entry
@@ -2577,4 +2607,12 @@ main().catch(async (err) => {
   }
 
   process.exit(1);
-});
+}
+
+const isDirectRun = process.argv[1]
+  ? import.meta.url === pathToFileURL(resolve(process.argv[1])).href
+  : false;
+
+if (isDirectRun) {
+  main().catch(handleMainError);
+}

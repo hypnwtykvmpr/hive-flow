@@ -34,16 +34,22 @@ export function fileGlobIsRejected(fileGlob) {
  * Options (-n, -H, --color=never, optional --glob) come BEFORE `--`.
  * Positionals (pattern, searchPath) come AFTER `--`.
  */
-export function buildRgArgs(pattern, searchPath, fileGlob) {
+export function buildRgArgs(pattern, searchPath, fileGlob, extraGlobs = []) {
   if (patternIsRejected(pattern)) {
     throw new Error('grep: pattern may not start with "-" (would be parsed as an option)');
   }
   if (fileGlobIsRejected(fileGlob)) {
     throw new Error('grep: file_glob may not start with "-"');
   }
+  if (!Array.isArray(extraGlobs) || extraGlobs.some((glob) => typeof glob !== 'string' || glob.length === 0)) {
+    throw new Error('grep: extra_globs must be non-empty strings');
+  }
   const args = ['-n', '-H', '--color=never'];
   if (fileGlob) {
     args.push('--glob', fileGlob);
+  }
+  for (const glob of extraGlobs) {
+    args.push('--glob', glob);
   }
   args.push('--', pattern, searchPath);
   return args;

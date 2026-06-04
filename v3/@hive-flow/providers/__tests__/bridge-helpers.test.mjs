@@ -318,6 +318,15 @@ describe('grep tool validators (security regression for RCE via rg --pre=)', () 
       expect(globIdx).toBeGreaterThan(-1);
       expect(globIdx).toBeLessThan(dashDashIdx);
     });
+    it('places extra protected --glob exclusions BEFORE --', () => {
+      const args = buildRgArgs('error', '/tmp', undefined, ['!.hive-flow/enforcement/**']);
+      const dashDashIdx = args.indexOf('--');
+      const globIdx = args.indexOf('--glob');
+      const exclusionIdx = args.indexOf('!.hive-flow/enforcement/**');
+      expect(globIdx).toBeGreaterThan(-1);
+      expect(exclusionIdx).toBeGreaterThan(globIdx);
+      expect(exclusionIdx).toBeLessThan(dashDashIdx);
+    });
     it('throws on dash-pattern (RCE block)', () => {
       expect(() => buildRgArgs('--pre=/tmp/evil.sh', '/tmp', undefined)).toThrow(/may not start with "-"/);
     });
