@@ -1227,12 +1227,33 @@ describe('enforcement security property contracts', () => {
       'pnpm --dir v3 --filter @hive-flow/cli exec node -e "console.log(1)"',
       'npm exec -- node -e "console.log(1)"',
       'yarn node -e "console.log(1)"',
+      'nice node -e "console.log(1)"',
+      'nohup node --eval=console.log(1)',
+      'timeout 1 node -p "1"',
+      'xargs node -e "console.log(1)"',
+      'find . -exec node -e "console.log(1)" {} \\;',
+      'osascript -e "do shell script \\"touch src/generated.ts\\""',
+      'tsx -e "console.log(1)"',
+      'deno run -',
+      'python -m runpy src/generated.py',
+      'echo "console.log(1)" | node',
+      'node /dev/stdin',
+      'node -r ./loader.js src/app.js',
+      'NODE_OPTIONS="--require ./loader.js" node src/app.js',
+      'fish -c "node -e \\"console.log(1)\\""',
+      'busybox sh -c "node -e \\"console.log(1)\\""',
+      'yarn dlx node -e "console.log(1)"',
+      'bunx node -e "console.log(1)"',
+      'n"o"de -e "console.log(1)"',
+      'node <(echo "console.log(1)")',
+      'node <<EOF\nconsole.log(1)\nEOF',
     ]) {
       const result = enf.processPreToolUse({
         tool_name: 'Bash',
         tool_input: { command },
       });
 
+      expect(result.hookSpecificOutput, command).toBeDefined();
       expect(result.hookSpecificOutput.permissionDecision, command).toBe('deny');
       expect(result.hookSpecificOutput.permissionDecisionReason).toContain('Inline code execution is blocked');
       expect(result.hookSpecificOutput.permissionDecisionReason).toContain('use Read, Write, or Edit');
@@ -1256,6 +1277,10 @@ describe('enforcement security property contracts', () => {
       'npx tsc --noEmit',
       'npm exec eslint -- src/index.ts',
       'yarn vitest run src/__tests__/enforcement-security-property.test.ts',
+      'timeout 30 node scripts/check-project.js',
+      'nice node scripts/check-project.js',
+      'find . -name "*.ts" -exec echo {} \\;',
+      'printf "%s\\n" src/index.ts | xargs echo',
     ]) {
       expect(enf.detectCircumvention('Bash', { command }, state).circumvention, command).toBe(false);
     }

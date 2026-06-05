@@ -167,6 +167,11 @@ export function deepInspect(command: string, depth: number = 0): DeepInspectResu
   if (!cmd) return ok([], depth);
 
   // Layer C: Pipe-to-shell (must run before ALWAYS_SAFE to catch e.g. `curl ... | bash`)
+  const inlineEval = findInlineEvalInvocation(cmd);
+  if (inlineEval) {
+    return block(INLINE_EVAL_DENIAL, 'inline-eval', 'high', [inlineEval.subCommand || cmd], depth);
+  }
+
   if (PIPE_TO_SHELL.test(cmd)) {
     return block('Command pipes output to shell interpreter', 'pipe-to-shell', 'high', [cmd], depth);
   }
@@ -185,11 +190,6 @@ export function deepInspect(command: string, depth: number = 0): DeepInspectResu
   // Layer A3: Network exfiltration tools (before ALWAYS_SAFE)
   const netMatch = matchFirst(cmd, NETWORK_ATTACK_TOOLS);
   if (netMatch) return block(`Network attack/exfiltration tool: ${netMatch.source}`, 'network-attack', 'critical', [cmd], depth);
-
-  const inlineEval = findInlineEvalInvocation(cmd);
-  if (inlineEval) {
-    return block(INLINE_EVAL_DENIAL, 'inline-eval', 'high', [inlineEval.subCommand || cmd], depth);
-  }
 
   // Layer A: Always-safe short-circuit
   if (matchFirst(cmd, ALWAYS_SAFE)) return ok([], depth);

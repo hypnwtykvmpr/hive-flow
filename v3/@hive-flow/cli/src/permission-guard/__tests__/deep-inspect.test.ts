@@ -119,6 +119,42 @@ describe('deepInspect', () => {
       expect(result.reason).toContain('use Read, Write, or Edit');
       expect(result.reason).toContain('write a script file');
     });
+    it.each([
+      'nice node -e "console.log(1)"',
+      'nohup node --eval=console.log(1)',
+      'timeout 1 node -p "1"',
+      'xargs node -e "console.log(1)"',
+      'find . -exec node -e "console.log(1)" {} \\;',
+      'osascript -e "do shell script \\"touch src/generated.ts\\""',
+      'tsx -e "console.log(1)"',
+      'deno run -',
+      'python -m runpy src/generated.py',
+      'echo "console.log(1)" | node',
+      'node /dev/stdin',
+      'node -r ./loader.js src/app.js',
+      'NODE_OPTIONS="--require ./loader.js" node src/app.js',
+      'fish -c "node -e \\"console.log(1)\\""',
+      'busybox sh -c "node -e \\"console.log(1)\\""',
+      'yarn dlx node -e "console.log(1)"',
+      'bunx node -e "console.log(1)"',
+      'n"o"de -e "console.log(1)"',
+      'node <(echo "console.log(1)")',
+      'node <<EOF\nconsole.log(1)\nEOF',
+    ])('blocks effective inline eval launch through wrappers/stdin: %s', (command) => {
+      const result = deepInspect(command);
+      expect(result.blocked).toBe(true);
+      expect(result.technique).toBe('inline-eval');
+      expect(result.reason).toContain('use Read, Write, or Edit');
+      expect(result.reason).toContain('write a script file');
+    });
+    it.each([
+      'timeout 30 node scripts/check-project.js',
+      'nice node scripts/check-project.js',
+      'find . -name "*.ts" -exec echo {} \\;',
+      'printf "%s\\n" src/index.ts | xargs echo',
+    ])('allows wrapped non-inline commands: %s', (command) => {
+      expect(deepInspect(command).blocked).toBe(false);
+    });
     it('blocks: node --eval "fs.unlinkSync(x)"', () => { expect(deepInspect('node --eval "fs.unlinkSync(x)"').blocked).toBe(true); });
     it('blocks literal file writes for path-aware self-protection', () => {
       const result = deepInspect('node --eval "fs.writeFileSync(\'src/generated.ts\', \'x\')"');

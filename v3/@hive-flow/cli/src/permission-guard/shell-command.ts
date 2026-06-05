@@ -13,6 +13,7 @@ export interface ShellExecution {
   tokens: ShellToken[];
   depth: number;
   subCommand: string;
+  envAssignments: Record<string, string>;
 }
 
 export const INLINE_EVAL_DENIAL =
@@ -28,6 +29,38 @@ function stripShellQuotes(token: string): string {
     }
   }
   return trimmed;
+}
+
+function normalizeShellWord(token: string): string {
+  const trimmed = stripShellQuotes(token);
+  let normalized = '';
+  let quote: string | null = null;
+  let escaped = false;
+
+  for (const ch of trimmed) {
+    if (escaped) {
+      normalized += ch;
+      escaped = false;
+      continue;
+    }
+    if (ch === '\\') {
+      escaped = true;
+      continue;
+    }
+    if (quote) {
+      if (ch === quote) quote = null;
+      else normalized += ch;
+      continue;
+    }
+    if (ch === '"' || ch === "'") {
+      quote = ch;
+      continue;
+    }
+    normalized += ch;
+  }
+
+  if (escaped) normalized += '\\';
+  return normalized;
 }
 
 function readShellToken(command: string, startIndex: number): { token: string; raw: string; quoted: boolean; end: number } {
@@ -69,7 +102,7 @@ function readShellToken(command: string, startIndex: number): { token: string; r
     i++;
   }
 
-  return { token: stripShellQuotes(token), raw: token, quoted, end: i };
+  return { token: normalizeShellWord(token), raw: token, quoted, end: i };
 }
 
 export function shellTokens(command: string): ShellToken[] {
@@ -142,8 +175,13 @@ export function splitShellSubcommands(command: string): string[] {
   return subCommands;
 }
 
+function assignmentParts(token: ShellToken | undefined): { name: string; value: string } | null {
+  const match = String(token?.text || '').match(/^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
+  return match ? { name: match[1], value: match[2] } : null;
+}
+
 function isShellAssignmentToken(token: ShellToken | undefined): boolean {
-  return /^[A-Za-z_][A-Za-z0-9_]*=/.test(token?.text || '');
+  return assignmentParts(token) !== null;
 }
 
 function splitTokenSegments(tokens: ShellToken[]): ShellToken[][] {
@@ -163,32 +201,102 @@ function splitTokenSegments(tokens: ShellToken[]): ShellToken[][] {
   return segments;
 }
 
-function commandExecutionFromTokens(tokens: ShellToken[]): Omit<ShellExecution, 'depth' | 'subCommand'> | null {
-  let index = 0;
-  while (index < tokens.length && !tokens[index].quoted && isShellAssignmentToken(tokens[index])) index++;
-  if (!tokens[index]) return null;
+function commandBasename(command: string): string {
+  const normalized = normalizeShellWord(command).replace(/\\/g, '/');
+  return normalized.split('/').pop() || normalized;
+}
 
-  if (tokens[index].text === 'env') {
-    index++;
-    while (index < tokens.length) {
-      const word = tokens[index].text || '';
-      if (word === '--') {
-        index++;
-        break;
-      }
-      if (word.startsWith('-')) {
-        index++;
-        continue;
-      }
-      if (!tokens[index].quoted && isShellAssignmentToken(tokens[index])) {
-        index++;
-        continue;
-      }
-      break;
+const LAUNCHER_VALUE_FLAGS = new Map<string, Set<string>>([
+  ['nice', new Set(['-n', '--adjustment'])],
+  ['timeout', new Set(['-k', '--kill-after'])],
+  ['time', new Set(['-f', '-o', '--format', '--output'])],
+  ['ionice', new Set(['-c', '-n', '-p'])],
+]);
+
+function skipSimpleOptions(tokens: ShellToken[], index: number, valueFlags = new Set<string>()): number {
+  while (index < tokens.length) {
+    const word = tokens[index].text || '';
+    if (word === '--') return index + 1;
+    if (!word.startsWith('-')) break;
+    const flagName = word.split('=', 1)[0];
+    if (valueFlags.has(word) || valueFlags.has(flagName)) {
+      index += word.includes('=') ? 1 : 2;
+      continue;
     }
+    index++;
+  }
+  return index;
+}
+
+function skipTransparentLauncher(tokens: ShellToken[], index: number): number {
+  const base = commandBasename(tokens[index]?.text || '').toLowerCase();
+  let next = index + 1;
+
+  if (['command', 'builtin', 'exec', 'nohup', 'setsid'].includes(base)) {
+    return skipSimpleOptions(tokens, next);
   }
 
-  if (tokens[index]?.text === 'command') index++;
+  if (['nice', 'time', 'stdbuf', 'ionice'].includes(base)) {
+    return skipSimpleOptions(tokens, next, LAUNCHER_VALUE_FLAGS.get(base) || new Set());
+  }
+
+  if (base === 'timeout') {
+    next = skipSimpleOptions(tokens, next, LAUNCHER_VALUE_FLAGS.get(base) || new Set());
+    return tokens[next] ? next + 1 : next;
+  }
+
+  if (base === 'taskset') {
+    next = skipSimpleOptions(tokens, next, new Set(['-p', '--pid']));
+    return tokens[next] ? next + 1 : next;
+  }
+
+  return index;
+}
+
+function commandExecutionFromTokens(tokens: ShellToken[]): Omit<ShellExecution, 'depth' | 'subCommand'> | null {
+  let index = 0;
+  const envAssignments: Record<string, string> = {};
+
+  while (index < tokens.length) {
+    while (index < tokens.length && isShellAssignmentToken(tokens[index])) {
+      const assignment = assignmentParts(tokens[index]);
+      if (assignment) envAssignments[assignment.name] = assignment.value;
+      index++;
+    }
+    if (!tokens[index]) return null;
+
+    if (commandBasename(tokens[index].text).toLowerCase() === 'env') {
+      index++;
+      while (index < tokens.length) {
+        const word = tokens[index].text || '';
+        if (word === '--') {
+          index++;
+          break;
+        }
+        if (word.startsWith('-')) {
+          index++;
+          continue;
+        }
+        if (isShellAssignmentToken(tokens[index])) {
+          const assignment = assignmentParts(tokens[index]);
+          if (assignment) envAssignments[assignment.name] = assignment.value;
+          index++;
+          continue;
+        }
+        break;
+      }
+      continue;
+    }
+
+    const launcherIndex = skipTransparentLauncher(tokens, index);
+    if (launcherIndex !== index) {
+      index = launcherIndex;
+      continue;
+    }
+
+    break;
+  }
+
   if (!tokens[index]) return null;
 
   return {
@@ -197,20 +305,70 @@ function commandExecutionFromTokens(tokens: ShellToken[]): Omit<ShellExecution, 
     args: tokens.slice(index + 1).map(token => token.text),
     argTokens: tokens.slice(index + 1),
     tokens,
+    envAssignments,
   };
 }
 
 function shellCommandBody(execution: ShellExecution): string | null {
-  if (!/^(?:bash|sh|zsh|dash|ksh)$/.test(execution.command)) return null;
+  const base = commandBasename(execution.command).toLowerCase();
+  let args = execution.argTokens;
 
-  for (let i = 0; i < execution.argTokens.length; i++) {
-    const arg = execution.argTokens[i].text || '';
+  if (base === 'busybox' && /^(?:bash|sh|zsh|dash|ksh|fish|csh|tcsh)$/.test(args[0]?.text || '')) {
+    args = args.slice(1);
+  } else if (!/^(?:bash|sh|zsh|dash|ksh|fish|csh|tcsh)$/.test(base)) {
+    return null;
+  }
+
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i].text || '';
     if (arg === '-c' || (/^-[A-Za-z]+$/.test(arg) && arg.includes('c'))) {
-      return execution.argTokens[i + 1]?.text || null;
+      return args[i + 1]?.text || null;
     }
   }
 
   return null;
+}
+
+function xargsCommandBody(execution: ShellExecution): string | null {
+  if (commandBasename(execution.command).toLowerCase() !== 'xargs') return null;
+  let index = 0;
+  const valueFlags = new Set(['-a', '--arg-file', '-d', '--delimiter', '-E', '-I', '-i', '-L', '-l', '-n', '--max-args', '-P', '--max-procs', '-s', '--max-chars']);
+  while (index < execution.argTokens.length) {
+    const word = execution.argTokens[index].text || '';
+    if (word === '--') {
+      index++;
+      break;
+    }
+    if (word.startsWith('-')) {
+      const flagName = word.split('=', 1)[0];
+      index += valueFlags.has(word) || valueFlags.has(flagName) ? (word.includes('=') ? 1 : 2) : 1;
+      continue;
+    }
+    break;
+  }
+  return execution.argTokens[index]
+    ? execution.argTokens.slice(index).map(token => token.raw).join(' ')
+    : null;
+}
+
+function findExecCommandBodies(execution: ShellExecution): string[] {
+  if (commandBasename(execution.command).toLowerCase() !== 'find') return [];
+  const bodies: string[] = [];
+  for (let i = 0; i < execution.argTokens.length; i++) {
+    const word = execution.argTokens[i].text || '';
+    if (word !== '-exec' && word !== '-execdir') continue;
+    const parts: ShellToken[] = [];
+    for (let j = i + 1; j < execution.argTokens.length; j++) {
+      const part = execution.argTokens[j];
+      if (part.text === ';' || part.text === '+') {
+        i = j;
+        break;
+      }
+      parts.push(part);
+    }
+    if (parts.length) bodies.push(parts.map(token => token.raw).join(' '));
+  }
+  return bodies;
 }
 
 export function collectShellCommandExecutions(command: string, depth = 0): ShellExecution[] {
@@ -232,28 +390,31 @@ export function collectShellCommandExecutions(command: string, depth = 0): Shell
 
       const body = shellCommandBody(fullExecution);
       if (body) executions.push(...collectShellCommandExecutions(body, depth + 1));
+      const xargsBody = xargsCommandBody(fullExecution);
+      if (xargsBody) executions.push(...collectShellCommandExecutions(xargsBody, depth + 1));
+      for (const execBody of findExecCommandBodies(fullExecution)) {
+        executions.push(...collectShellCommandExecutions(execBody, depth + 1));
+      }
     }
   }
   return executions;
-}
-
-function commandBasename(command: string): string {
-  return command.replace(/\\/g, '/').split('/').pop() || command;
 }
 
 function hasAnyArg(args: string[], names: string[]): boolean {
   return args.some(arg => names.includes(arg));
 }
 
+function hasFlagArg(args: string[], names: string[]): boolean {
+  return args.some(arg => names.some(name => arg === name || arg.startsWith(`${name}=`)));
+}
+
+function hasShortFlagArg(args: string[], flags: string[]): boolean {
+  return args.some(arg => flags.some(flag => arg === flag || (arg.startsWith(flag) && !arg.startsWith('--'))));
+}
+
 function hasNodeEvalArg(args: string[]): boolean {
-  return args.some(arg =>
-    arg === '-e' ||
-    arg === '--eval' ||
-    arg === '-p' ||
-    arg === '--print' ||
-    (/^-[^-]/.test(arg) && arg.includes('e')) ||
-    (/^-[^-]/.test(arg) && arg.includes('p'))
-  );
+  return hasFlagArg(args, ['--eval', '--print', '--require', '--import', '--loader', '--experimental-loader']) ||
+    hasShortFlagArg(args, ['-e', '-p', '-r']);
 }
 
 function unseparatedArgs(args: string[]): string[] {
@@ -261,16 +422,20 @@ function unseparatedArgs(args: string[]): string[] {
 }
 
 function isInlineEvalCommand(command: string, args: string[]): boolean {
-  const base = commandBasename(command);
+  const base = commandBasename(command).toLowerCase();
   const effectiveArgs = unseparatedArgs(args);
 
   if (base === 'node') return hasNodeEvalArg(effectiveArgs);
-  if (/^(?:python|python3|python3\.\d+)$/.test(base)) return hasAnyArg(effectiveArgs, ['-c']);
-  if (base === 'ruby') return hasAnyArg(effectiveArgs, ['-e', '-E']);
-  if (base === 'perl') return hasAnyArg(effectiveArgs, ['-e', '-E']);
-  if (base === 'deno') return effectiveArgs[0] === 'eval';
-  if (base === 'bun') return hasAnyArg(effectiveArgs, ['-e']);
+  if (/^(?:python|python3|python3\.\d+)$/.test(base)) return hasAnyArg(effectiveArgs, ['-c', '-m']);
+  if (base === 'ruby') return hasAnyArg(effectiveArgs, ['-e', '-E']) || hasShortFlagArg(effectiveArgs, ['-r']);
+  if (base === 'perl') return hasAnyArg(effectiveArgs, ['-e', '-E']) || hasFlagArg(effectiveArgs, ['-M']);
+  if (base === 'deno') return effectiveArgs[0] === 'eval' || (effectiveArgs[0] === 'run' && effectiveArgs.some(arg => arg === '-' || arg === '/dev/stdin'));
+  if (base === 'bun') return hasAnyArg(effectiveArgs, ['-e']) || hasFlagArg(effectiveArgs, ['--eval']);
   if (base === 'php') return hasAnyArg(effectiveArgs, ['-r', '-R']);
+  if (base === 'osascript') return hasAnyArg(effectiveArgs, ['-e']);
+  if (/^(?:tsx|ts-node|ts-node-esm|zx)$/.test(base)) return hasAnyArg(effectiveArgs, ['-e']) || hasFlagArg(effectiveArgs, ['--eval']);
+  if (/^(?:lua|lua\d+(?:\.\d+)?)$/.test(base)) return hasAnyArg(effectiveArgs, ['-e']);
+  if (/^(?:r|rscript)$/i.test(base)) return hasAnyArg(effectiveArgs, ['-e']);
 
   return false;
 }
@@ -336,42 +501,97 @@ function findRunnerSubcommand(args: string[], subcommands: Set<string>): number 
 }
 
 function isPackageRunnerInlineEval(command: string, args: string[]): boolean {
-  const base = commandBasename(command);
+  const base = commandBasename(command).toLowerCase();
 
-  if (base === 'npx') {
+  if (base === 'npx' || base === 'bunx') {
     const target = firstRunnerCommand(args, 0);
-    return target ? isInlineEvalCommand(target.command, target.args) : false;
+    return target ? isInlineEvalCommand(target.command, target.args) || isPackageRunnerInlineEval(target.command, target.args) : false;
   }
 
   if (base === 'pnpm') {
     const subcommand = findRunnerSubcommand(args, new Set(['exec', 'dlx']));
     const target = subcommand === null ? null : firstRunnerCommand(args, subcommand + 1);
-    return target ? isInlineEvalCommand(target.command, target.args) : false;
+    return target ? isInlineEvalCommand(target.command, target.args) || isPackageRunnerInlineEval(target.command, target.args) : false;
   }
 
   if (base === 'npm') {
     const subcommand = findRunnerSubcommand(args, new Set(['exec']));
     const target = subcommand === null ? null : firstRunnerCommand(args, subcommand + 1);
-    return target ? isInlineEvalCommand(target.command, target.args) : false;
+    return target ? isInlineEvalCommand(target.command, target.args) || isPackageRunnerInlineEval(target.command, target.args) : false;
   }
 
   if (base === 'yarn') {
+    const subcommand = findRunnerSubcommand(args, new Set(['dlx', 'exec']));
+    const target = subcommand === null ? firstRunnerCommand(args, 0) : firstRunnerCommand(args, subcommand + 1);
+    return target ? isInlineEvalCommand(target.command, target.args) || isPackageRunnerInlineEval(target.command, target.args) : false;
+  }
+
+  if (base === 'corepack') {
     const target = firstRunnerCommand(args, 0);
-    return target ? isInlineEvalCommand(target.command, target.args) : false;
+    return target ? isPackageRunnerInlineEval(target.command, target.args) || isInlineEvalCommand(target.command, target.args) : false;
   }
 
   return false;
+}
+
+function hasInlineEvalEnvAssignment(execution: ShellExecution): boolean {
+  const env = execution.envAssignments || {};
+  if (/(?:^|\s)(?:--require|-r\b|--import|--loader|--experimental-loader|--eval|--print)(?:\b|=|\s)/.test(env.NODE_OPTIONS || '')) return true;
+  if (env.PYTHONSTARTUP || env.PYTHONINSPECT) return true;
+  if (/\B-r|\B-e|--enable/.test(env.RUBYOPT || '')) return true;
+  if (env.PERL5OPT) return true;
+  return false;
+}
+
+function isInterpreterCommand(command: string): boolean {
+  const base = commandBasename(command).toLowerCase();
+  return base === 'node' ||
+    /^(?:python|python3|python3\.\d+)$/.test(base) ||
+    ['ruby', 'perl', 'deno', 'bun', 'php', 'osascript', 'tsx', 'ts-node', 'ts-node-esm', 'zx'].includes(base) ||
+    /^(?:lua|lua\d+(?:\.\d+)?)$/.test(base) ||
+    /^(?:r|rscript)$/i.test(base);
+}
+
+function hasStdinArg(args: string[]): boolean {
+  return args.some(arg => arg === '-' || arg === '/dev/stdin');
+}
+
+function commandPipesIntoExecution(command: string, execution: ShellExecution): boolean {
+  const sub = execution.subCommand.trim();
+  return sub.length > 0 && (command.includes(`| ${sub}`) || command.includes(`|\t${sub}`) || command.includes(`|${sub}`));
+}
+
+function commandRedirectsIntoExecution(command: string, execution: ShellExecution): boolean {
+  const index = command.indexOf(execution.subCommand.trim());
+  if (index < 0) return false;
+  const after = command.slice(index + execution.subCommand.trim().length);
+  return /^\s*(?:<<|<\(|<\s*\/dev\/stdin\b)/.test(after);
+}
+
+function isInlineStdinExecution(command: string, execution: ShellExecution): boolean {
+  if (!isInterpreterCommand(execution.command)) return false;
+  if (hasStdinArg(execution.args)) return true;
+  return commandPipesIntoExecution(command, execution) || commandRedirectsIntoExecution(command, execution);
+}
+
+function commandHasInterpreterInputRedirect(command: string): boolean {
+  const interpreter = String.raw`(?:node|python|python3(?:\.\d+)?|ruby|perl|deno|bun|php|osascript|tsx|ts-node|ts-node-esm|zx|lua\d*(?:\.\d+)?|R|Rscript)`;
+  return new RegExp(String.raw`\b${interpreter}\b[^;&|]*(?:<<|<\(|<\s*/dev/stdin\b)`, 'i').test(command);
 }
 
 export function isInlineEvalExecution(execution: ShellExecution): boolean {
   const command = commandBasename(execution.command);
   const args = execution.args;
 
-  return isInlineEvalCommand(command, args) || isPackageRunnerInlineEval(command, args);
+  return hasInlineEvalEnvAssignment(execution) || isInlineEvalCommand(command, args) || isPackageRunnerInlineEval(command, args);
 }
 
 export function findInlineEvalInvocation(command: string): ShellExecution | null {
-  return collectShellCommandExecutions(command).find(isInlineEvalExecution) || null;
+  const executions = collectShellCommandExecutions(command);
+  const redirectExecution = commandHasInterpreterInputRedirect(command)
+    ? executions.find(execution => isInterpreterCommand(execution.command))
+    : null;
+  return executions.find(isInlineEvalExecution) || executions.find(execution => isInlineStdinExecution(command, execution)) || redirectExecution || null;
 }
 
 export function hasInlineEvalInvocation(command: string): boolean {

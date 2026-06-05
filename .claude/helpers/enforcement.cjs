@@ -1031,6 +1031,36 @@ function stripShellQuotes(token) {
   return trimmed;
 }
 
+function normalizeShellWord(token) {
+  const trimmed = stripShellQuotes(token);
+  let normalized = '';
+  let quote = null;
+  let escaped = false;
+  for (const ch of trimmed) {
+    if (escaped) {
+      normalized += ch;
+      escaped = false;
+      continue;
+    }
+    if (ch === '\\') {
+      escaped = true;
+      continue;
+    }
+    if (quote) {
+      if (ch === quote) quote = null;
+      else normalized += ch;
+      continue;
+    }
+    if (ch === '"' || ch === "'") {
+      quote = ch;
+      continue;
+    }
+    normalized += ch;
+  }
+  if (escaped) normalized += '\\';
+  return normalized;
+}
+
 function readShellToken(command, startIndex) {
   let i = startIndex;
   while (i < command.length && /\s/.test(command[i])) i++;
@@ -1068,7 +1098,7 @@ function readShellToken(command, startIndex) {
     token += ch;
     i++;
   }
-  const stripped = stripShellQuotes(token);
+  const stripped = normalizeShellWord(token);
   return { token: stripped, text: stripped, raw: token, quoted, end: i };
 }
 
@@ -1096,8 +1126,13 @@ function shellWords(command) {
   return shellTokens(command).map(token => token.text);
 }
 
+function assignmentParts(token) {
+  const match = String(token?.text || '').match(/^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
+  return match ? { name: match[1], value: match[2] } : null;
+}
+
 function isShellAssignmentToken(token) {
-  return /^[A-Za-z_][A-Za-z0-9_]*=/.test(token?.text || '');
+  return assignmentParts(token) !== null;
 }
 
 function splitTokenSegments(tokens) {
@@ -1115,32 +1150,97 @@ function splitTokenSegments(tokens) {
   return segments;
 }
 
+function commandBasename(command) {
+  const normalized = normalizeShellWord(String(command || '')).replace(/\\/g, '/');
+  return normalized.split('/').pop() || normalized;
+}
+
+const LAUNCHER_VALUE_FLAGS = new Map([
+  ['nice', new Set(['-n', '--adjustment'])],
+  ['timeout', new Set(['-k', '--kill-after'])],
+  ['time', new Set(['-f', '-o', '--format', '--output'])],
+  ['ionice', new Set(['-c', '-n', '-p'])],
+]);
+
+function skipSimpleOptions(tokens, index, valueFlags = new Set()) {
+  while (index < tokens.length) {
+    const word = tokens[index].text || '';
+    if (word === '--') return index + 1;
+    if (!word.startsWith('-')) break;
+    const flagName = word.split('=', 1)[0];
+    if (valueFlags.has(word) || valueFlags.has(flagName)) {
+      index += word.includes('=') ? 1 : 2;
+      continue;
+    }
+    index++;
+  }
+  return index;
+}
+
+function skipTransparentLauncher(tokens, index) {
+  const base = commandBasename(tokens[index]?.text || '').toLowerCase();
+  let next = index + 1;
+  if (['command', 'builtin', 'exec', 'nohup', 'setsid'].includes(base)) {
+    return skipSimpleOptions(tokens, next);
+  }
+  if (['nice', 'time', 'stdbuf', 'ionice'].includes(base)) {
+    return skipSimpleOptions(tokens, next, LAUNCHER_VALUE_FLAGS.get(base) || new Set());
+  }
+  if (base === 'timeout') {
+    next = skipSimpleOptions(tokens, next, LAUNCHER_VALUE_FLAGS.get(base) || new Set());
+    return tokens[next] ? next + 1 : next;
+  }
+  if (base === 'taskset') {
+    next = skipSimpleOptions(tokens, next, new Set(['-p', '--pid']));
+    return tokens[next] ? next + 1 : next;
+  }
+  return index;
+}
+
 function commandExecutionFromTokens(tokens) {
   let index = 0;
-  while (index < tokens.length && !tokens[index].quoted && isShellAssignmentToken(tokens[index])) index++;
-  if (!tokens[index]) return null;
+  const envAssignments = {};
 
-  if (tokens[index].text === 'env') {
-    index++;
-    while (index < tokens.length) {
-      const word = tokens[index].text || '';
-      if (word === '--') {
-        index++;
+  while (index < tokens.length) {
+    while (index < tokens.length && isShellAssignmentToken(tokens[index])) {
+      const assignment = assignmentParts(tokens[index]);
+      if (assignment) envAssignments[assignment.name] = assignment.value;
+      index++;
+    }
+    if (!tokens[index]) return null;
+
+    if (commandBasename(tokens[index].text).toLowerCase() === 'env') {
+      index++;
+      while (index < tokens.length) {
+        const word = tokens[index].text || '';
+        if (word === '--') {
+          index++;
+          break;
+        }
+        if (word.startsWith('-')) {
+          index++;
+          continue;
+        }
+        if (isShellAssignmentToken(tokens[index])) {
+          const assignment = assignmentParts(tokens[index]);
+          if (assignment) envAssignments[assignment.name] = assignment.value;
+          index++;
+          continue;
+        }
         break;
       }
-      if (word.startsWith('-')) {
-        index++;
-        continue;
-      }
-      if (!tokens[index].quoted && isShellAssignmentToken(tokens[index])) {
-        index++;
-        continue;
-      }
-      break;
+      continue;
     }
+
+    const launcherIndex = skipTransparentLauncher(tokens, index);
+    if (launcherIndex !== index) {
+      index = launcherIndex;
+      continue;
+    }
+
+    break;
   }
 
-  if (tokens[index]?.text === 'command') index++;
   if (!tokens[index]) return null;
   return {
     command: tokens[index].text,
@@ -1148,18 +1248,68 @@ function commandExecutionFromTokens(tokens) {
     args: tokens.slice(index + 1).map(token => token.text),
     argTokens: tokens.slice(index + 1),
     tokens,
+    envAssignments,
   };
 }
 
 function shellCommandBody(execution) {
-  if (!execution || !/^(?:bash|sh|zsh|dash|ksh)$/.test(execution.command)) return null;
-  for (let i = 0; i < execution.argTokens.length; i++) {
-    const arg = execution.argTokens[i].text || '';
+  if (!execution) return null;
+  const base = commandBasename(execution.command).toLowerCase();
+  let args = execution.argTokens;
+  if (base === 'busybox' && /^(?:bash|sh|zsh|dash|ksh|fish|csh|tcsh)$/.test(args[0]?.text || '')) {
+    args = args.slice(1);
+  } else if (!/^(?:bash|sh|zsh|dash|ksh|fish|csh|tcsh)$/.test(base)) {
+    return null;
+  }
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i].text || '';
     if (arg === '-c' || (/^-[A-Za-z]+$/.test(arg) && arg.includes('c'))) {
-      return execution.argTokens[i + 1]?.text || null;
+      return args[i + 1]?.text || null;
     }
   }
   return null;
+}
+
+function xargsCommandBody(execution) {
+  if (commandBasename(execution?.command || '').toLowerCase() !== 'xargs') return null;
+  let index = 0;
+  const valueFlags = new Set(['-a', '--arg-file', '-d', '--delimiter', '-E', '-I', '-i', '-L', '-l', '-n', '--max-args', '-P', '--max-procs', '-s', '--max-chars']);
+  while (index < execution.argTokens.length) {
+    const word = execution.argTokens[index].text || '';
+    if (word === '--') {
+      index++;
+      break;
+    }
+    if (word.startsWith('-')) {
+      const flagName = word.split('=', 1)[0];
+      index += valueFlags.has(word) || valueFlags.has(flagName) ? (word.includes('=') ? 1 : 2) : 1;
+      continue;
+    }
+    break;
+  }
+  return execution.argTokens[index]
+    ? execution.argTokens.slice(index).map(token => token.raw).join(' ')
+    : null;
+}
+
+function findExecCommandBodies(execution) {
+  if (commandBasename(execution?.command || '').toLowerCase() !== 'find') return [];
+  const bodies = [];
+  for (let i = 0; i < execution.argTokens.length; i++) {
+    const word = execution.argTokens[i].text || '';
+    if (word !== '-exec' && word !== '-execdir') continue;
+    const parts = [];
+    for (let j = i + 1; j < execution.argTokens.length; j++) {
+      const part = execution.argTokens[j];
+      if (part.text === ';' || part.text === '+') {
+        i = j;
+        break;
+      }
+      parts.push(part);
+    }
+    if (parts.length) bodies.push(parts.map(token => token.raw).join(' '));
+  }
+  return bodies;
 }
 
 function collectShellCommandExecutions(command, depth = 0) {
@@ -1170,9 +1320,15 @@ function collectShellCommandExecutions(command, depth = 0) {
     for (const segment of splitTokenSegments(tokens)) {
       const execution = commandExecutionFromTokens(segment);
       if (!execution) continue;
-      executions.push({ ...execution, depth, subCommand: segment.map(token => token.raw).join(' ') });
-      const body = shellCommandBody(execution);
+      const fullExecution = { ...execution, depth, subCommand: segment.map(token => token.raw).join(' ') };
+      executions.push(fullExecution);
+      const body = shellCommandBody(fullExecution);
       if (body) executions.push(...collectShellCommandExecutions(body, depth + 1));
+      const xargsBody = xargsCommandBody(fullExecution);
+      if (xargsBody) executions.push(...collectShellCommandExecutions(xargsBody, depth + 1));
+      for (const execBody of findExecCommandBodies(fullExecution)) {
+        executions.push(...collectShellCommandExecutions(execBody, depth + 1));
+      }
     }
   }
   return executions;
@@ -1185,10 +1341,6 @@ function hasCommandPositionInvocation(command, predicate) {
 const INLINE_EVAL_DENIAL =
   'Inline code execution is blocked because file effects cannot be verified reliably. Instead: use Read, Write, or Edit for files; write a script file in the project and run it normally for programs.';
 
-function commandBasename(command) {
-  return String(command || '').replace(/\\/g, '/').split('/').pop() || String(command || '');
-}
-
 function isScriptInvocation(execution, scriptName) {
   if (!execution) return false;
   if (commandBasename(execution.command) === scriptName) return true;
@@ -1200,15 +1352,17 @@ function hasAnyArg(args, names) {
   return args.some(arg => names.includes(arg));
 }
 
+function hasFlagArg(args, names) {
+  return args.some(arg => names.some(name => arg === name || arg.startsWith(`${name}=`)));
+}
+
+function hasShortFlagArg(args, flags) {
+  return args.some(arg => flags.some(flag => arg === flag || (arg.startsWith(flag) && !arg.startsWith('--'))));
+}
+
 function hasNodeEvalArg(args) {
-  return args.some(arg =>
-    arg === '-e' ||
-    arg === '--eval' ||
-    arg === '-p' ||
-    arg === '--print' ||
-    (/^-[^-]/.test(arg) && arg.includes('e')) ||
-    (/^-[^-]/.test(arg) && arg.includes('p'))
-  );
+  return hasFlagArg(args, ['--eval', '--print', '--require', '--import', '--loader', '--experimental-loader']) ||
+    hasShortFlagArg(args, ['-e', '-p', '-r']);
 }
 
 function unseparatedArgs(args) {
@@ -1216,16 +1370,20 @@ function unseparatedArgs(args) {
 }
 
 function isInlineEvalCommand(command, args) {
-  const base = commandBasename(command);
+  const base = commandBasename(command).toLowerCase();
   const effectiveArgs = unseparatedArgs(args || []);
 
   if (base === 'node') return hasNodeEvalArg(effectiveArgs);
-  if (/^(?:python|python3|python3\.\d+)$/.test(base)) return hasAnyArg(effectiveArgs, ['-c']);
-  if (base === 'ruby') return hasAnyArg(effectiveArgs, ['-e', '-E']);
-  if (base === 'perl') return hasAnyArg(effectiveArgs, ['-e', '-E']);
-  if (base === 'deno') return effectiveArgs[0] === 'eval';
-  if (base === 'bun') return hasAnyArg(effectiveArgs, ['-e']);
+  if (/^(?:python|python3|python3\.\d+)$/.test(base)) return hasAnyArg(effectiveArgs, ['-c', '-m']);
+  if (base === 'ruby') return hasAnyArg(effectiveArgs, ['-e', '-E']) || hasShortFlagArg(effectiveArgs, ['-r']);
+  if (base === 'perl') return hasAnyArg(effectiveArgs, ['-e', '-E']) || hasFlagArg(effectiveArgs, ['-M']);
+  if (base === 'deno') return effectiveArgs[0] === 'eval' || (effectiveArgs[0] === 'run' && effectiveArgs.some(arg => arg === '-' || arg === '/dev/stdin'));
+  if (base === 'bun') return hasAnyArg(effectiveArgs, ['-e']) || hasFlagArg(effectiveArgs, ['--eval']);
   if (base === 'php') return hasAnyArg(effectiveArgs, ['-r', '-R']);
+  if (base === 'osascript') return hasAnyArg(effectiveArgs, ['-e']);
+  if (/^(?:tsx|ts-node|ts-node-esm|zx)$/.test(base)) return hasAnyArg(effectiveArgs, ['-e']) || hasFlagArg(effectiveArgs, ['--eval']);
+  if (/^(?:lua|lua\d+(?:\.\d+)?)$/.test(base)) return hasAnyArg(effectiveArgs, ['-e']);
+  if (/^(?:r|rscript)$/i.test(base)) return hasAnyArg(effectiveArgs, ['-e']);
 
   return false;
 }
@@ -1291,41 +1449,110 @@ function findRunnerSubcommand(args, subcommands) {
 }
 
 function isPackageRunnerInlineEval(command, args) {
-  const base = commandBasename(command);
+  const base = commandBasename(command).toLowerCase();
 
-  if (base === 'npx') {
+  if (base === 'npx' || base === 'bunx') {
     const target = firstRunnerCommand(args || [], 0);
-    return target ? isInlineEvalCommand(target.command, target.args) : false;
+    return target ? isInlineEvalCommand(target.command, target.args) || isPackageRunnerInlineEval(target.command, target.args) : false;
   }
 
   if (base === 'pnpm') {
     const subcommand = findRunnerSubcommand(args, new Set(['exec', 'dlx']));
     const target = subcommand === null ? null : firstRunnerCommand(args, subcommand + 1);
-    return target ? isInlineEvalCommand(target.command, target.args) : false;
+    return target ? isInlineEvalCommand(target.command, target.args) || isPackageRunnerInlineEval(target.command, target.args) : false;
   }
 
   if (base === 'npm') {
     const subcommand = findRunnerSubcommand(args, new Set(['exec']));
     const target = subcommand === null ? null : firstRunnerCommand(args, subcommand + 1);
-    return target ? isInlineEvalCommand(target.command, target.args) : false;
+    return target ? isInlineEvalCommand(target.command, target.args) || isPackageRunnerInlineEval(target.command, target.args) : false;
   }
 
   if (base === 'yarn') {
+    const subcommand = findRunnerSubcommand(args || [], new Set(['dlx', 'exec']));
+    const target = subcommand === null ? firstRunnerCommand(args || [], 0) : firstRunnerCommand(args || [], subcommand + 1);
+    return target ? isInlineEvalCommand(target.command, target.args) || isPackageRunnerInlineEval(target.command, target.args) : false;
+  }
+
+  if (base === 'corepack') {
     const target = firstRunnerCommand(args || [], 0);
-    return target ? isInlineEvalCommand(target.command, target.args) : false;
+    return target ? isPackageRunnerInlineEval(target.command, target.args) || isInlineEvalCommand(target.command, target.args) : false;
   }
 
   return false;
 }
 
+function hasInlineEvalEnvAssignment(execution) {
+  const env = execution?.envAssignments || {};
+  if (/(?:^|\s)(?:--require|-r\b|--import|--loader|--experimental-loader|--eval|--print)(?:\b|=|\s)/.test(env.NODE_OPTIONS || '')) return true;
+  if (env.PYTHONSTARTUP || env.PYTHONINSPECT) return true;
+  if (/\B-r|\B-e|--enable/.test(env.RUBYOPT || '')) return true;
+  if (env.PERL5OPT) return true;
+  return false;
+}
+
+function isInterpreterCommand(command) {
+  const base = commandBasename(command).toLowerCase();
+  return base === 'node' ||
+    /^(?:python|python3|python3\.\d+)$/.test(base) ||
+    ['ruby', 'perl', 'deno', 'bun', 'php', 'osascript', 'tsx', 'ts-node', 'ts-node-esm', 'zx'].includes(base) ||
+    /^(?:lua|lua\d+(?:\.\d+)?)$/.test(base) ||
+    /^(?:r|rscript)$/i.test(base);
+}
+
+function hasStdinArg(args) {
+  return args.some(arg => arg === '-' || arg === '/dev/stdin');
+}
+
+function commandPipesIntoExecution(command, execution) {
+  const sub = String(execution?.subCommand || '').trim();
+  return sub.length > 0 && (command.includes(`| ${sub}`) || command.includes(`|\t${sub}`) || command.includes(`|${sub}`));
+}
+
+function commandRedirectsIntoExecution(command, execution) {
+  const sub = String(execution?.subCommand || '').trim();
+  const index = command.indexOf(sub);
+  if (index < 0) return false;
+  const after = command.slice(index + sub.length);
+  return /^\s*(?:<<|<\(|<\s*\/dev\/stdin\b)/.test(after);
+}
+
+function isInlineStdinExecution(command, execution) {
+  if (!isInterpreterCommand(execution?.command || '')) return false;
+  if (hasStdinArg(execution.args || [])) return true;
+  return commandPipesIntoExecution(command, execution) || commandRedirectsIntoExecution(command, execution);
+}
+
+function commandHasInterpreterInputRedirect(command) {
+  const interpreter = String.raw`(?:node|python|python3(?:\.\d+)?|ruby|perl|deno|bun|php|osascript|tsx|ts-node|ts-node-esm|zx|lua\d*(?:\.\d+)?|R|Rscript)`;
+  return new RegExp(String.raw`\b${interpreter}\b[^;&|]*(?:<<|<\(|<\s*/dev/stdin\b)`, 'i').test(command);
+}
+
 function isInlineEvalExecution(execution) {
   const command = commandBasename(execution?.command || '');
   const args = execution?.args || [];
-  return isInlineEvalCommand(command, args) || isPackageRunnerInlineEval(command, args);
+  return hasInlineEvalEnvAssignment(execution) || isInlineEvalCommand(command, args) || isPackageRunnerInlineEval(command, args);
 }
 
 function findInlineEvalInvocation(command) {
-  return collectShellCommandExecutions(command).find(isInlineEvalExecution) || null;
+  const executions = collectShellCommandExecutions(command);
+  const redirectExecution = commandHasInterpreterInputRedirect(command)
+    ? executions.find(execution => isInterpreterCommand(execution.command))
+    : null;
+  return executions.find(isInlineEvalExecution) || executions.find(execution => isInlineStdinExecution(command, execution)) || redirectExecution || null;
+}
+
+function deepInspectBashCommand(command) {
+  const inlineEval = findInlineEvalInvocation(command);
+  if (inlineEval) {
+    return {
+      blocked: true,
+      technique: 'inline-eval',
+      reason: INLINE_EVAL_DENIAL,
+      evidence: inlineEval.subCommand || command,
+    };
+  }
+  return null;
 }
 
 const ROOT_SPOOF_ENV_VARS = new Set(['CLAUDE_PROJECT_DIR', 'HIVE_FLOW_PROJECT_ROOT']);
@@ -1354,7 +1581,7 @@ function findEnforcementEnvManipulation(command) {
       if (segment[index]?.text === 'env') index++;
       while (index < segment.length) {
         const token = segment[index];
-        if (!token || token.quoted) break;
+        if (!token) break;
         if (token.text === '--') {
           index++;
           break;
@@ -1364,6 +1591,7 @@ function findEnforcementEnvManipulation(command) {
           continue;
         }
         const name = assignmentName(token);
+        if (token.quoted && !name) break;
         if (!name) break;
         if (GATE_BYPASS_ENV_VARS.has(name)) return { name, kind: 'inline' };
         index++;
@@ -1645,12 +1873,12 @@ function detectCircumvention(toolName, toolInput, state) {
       };
     }
 
-    const inlineEval = findInlineEvalInvocation(command);
-    if (inlineEval) {
+    const deepInspection = deepInspectBashCommand(command);
+    if (deepInspection?.technique === 'inline-eval') {
       return {
         circumvention: true,
         denyOnly: true,
-        reason: INLINE_EVAL_DENIAL,
+        reason: deepInspection.reason,
         severity: 'normal',
       };
     }
