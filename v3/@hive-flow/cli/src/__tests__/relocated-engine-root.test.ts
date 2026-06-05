@@ -88,6 +88,7 @@ function runRelocatedHook(root: string, bin: string, payload: unknown) {
   });
 
   expect(result.status).toBe(0);
+  expect(result.stderr).toBe('');
   const lines = result.stdout.trim().split(/\r?\n/).filter(Boolean);
   expect(lines.length).toBeGreaterThan(0);
   return JSON.parse(lines.at(-1) ?? '{}') as {

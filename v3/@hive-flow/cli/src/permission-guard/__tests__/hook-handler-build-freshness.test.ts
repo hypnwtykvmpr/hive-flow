@@ -36,6 +36,23 @@ function writeDistGate(root: string, body: string): void {
   writeFileSync(join(distDir, 'gate.js'), body, 'utf8');
 }
 
+function forcePermissionGuardAsyncRejection(root: string): void {
+  const handlerPath = join(root, '.claude', 'helpers', 'hook-handler.cjs');
+  const source = readFileSync(handlerPath, 'utf8');
+  const replacement = source.replace(
+    /  'permission-guard': async \(\) => \{[\s\S]*?\n  \},\n\n  'bug-hunter-check':/,
+    [
+      "  'permission-guard': async () => {",
+      "    throw new Error('forced async permission-guard rejection');",
+      '  },',
+      '',
+      "  'bug-hunter-check':",
+    ].join('\n'),
+  );
+  if (replacement === source) throw new Error('failed to force permission-guard async rejection');
+  writeFileSync(handlerPath, replacement, 'utf8');
+}
+
 function runPermissionGuard(root: string): { status: number | null; stdout: string; stderr: string } {
   const result = spawnSync(process.execPath, [join(root, '.claude', 'helpers', 'hook-handler.cjs'), 'permission-guard'], {
     cwd: root,
@@ -88,6 +105,25 @@ describe('hook-handler permission-guard build freshness', () => {
     }
   });
 
+  it('allows normal in-repo compiled permission guard subprocess execution', () => {
+    const root = makeHookProject();
+    try {
+      writeSourceStamp(root, 'source-stamp');
+      writeDistGate(root, [
+        "export const PERMISSION_GUARD_BUILD_STAMP = 'source-stamp';",
+        "export async function evaluateHookInput() { return { decision: 'allow', reason: 'NORMAL-ALLOW' }; }",
+      ].join('\n'));
+
+      const result = runPermissionGuard(root);
+      const parsed = parseDecision(result.stdout);
+      expect(result.status).toBe(0);
+      expect(result.stderr).toBe('');
+      expect(parsed.hookSpecificOutput?.permissionDecision).toBe('allow');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it('fails closed with valid JSON when compiled gate exists but throws on load', () => {
     const root = makeHookProject();
     try {
@@ -100,6 +136,22 @@ describe('hook-handler permission-guard build freshness', () => {
       expect(result.stderr).toBe('');
       expect(parsed.hookSpecificOutput?.permissionDecision).toBe('deny');
       expect(parsed.hookSpecificOutput?.permissionDecisionReason).toMatch(/permission guard|compiled|failed/i);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('fails closed with valid JSON when permission-guard rejects at the async handler boundary', () => {
+    const root = makeHookProject();
+    try {
+      forcePermissionGuardAsyncRejection(root);
+
+      const result = runPermissionGuard(root);
+      const parsed = parseDecision(result.stdout);
+      expect(result.status).toBe(0);
+      expect(result.stderr).toBe('');
+      expect(parsed.hookSpecificOutput?.permissionDecision).toBe('deny');
+      expect(parsed.hookSpecificOutput?.permissionDecisionReason).toMatch(/permission guard|failed|safety/i);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

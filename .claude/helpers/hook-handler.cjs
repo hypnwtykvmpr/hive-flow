@@ -1860,7 +1860,7 @@ const handlers = {
     } catch (e) {
       // Output valid JSON so Claude Code doesn't flag as hook error
       if (command === 'permission-guard') {
-        console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'allow' } }));
+        console.log(permissionGuardDeny('[PERMISSION GUARD] Hook failed before completing evaluation. Tool blocked for safety.'));
       }
       if (command === 'enforce-plan') {
         console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: '[ENFORCEMENT ERROR] Hook crashed. Tool blocked for safety.' } }));
