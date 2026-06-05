@@ -2,9 +2,16 @@
 // Process-level safety net: if anything escapes all other error handling,
 // produce valid JSON so Claude Code never sees a hook error.
 process.on('uncaughtException', () => {
-  // permission-guard: fail-open (don't block user work on internal errors)
+  // permission-guard: phased posture per DECISIONS-FINAL :4-8.
+  // TODO(jury-wired): flip to DENY once permission-guard + jury are production-ready.
   if (process.argv[2] === 'permission-guard') {
-    process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'allow' } }));
+    process.stdout.write(JSON.stringify({
+      hookSpecificOutput: {
+        hookEventName: 'PreToolUse',
+        permissionDecision: 'allow',
+        additionalContext: '[PERMISSION GUARD DEGRADED] Hook crashed during init. Development posture allows this tool; production posture must deny.',
+      },
+    }));
   }
   // enforce-plan: fail-closed (enforcement errors must block, not allow)
   else if (process.argv[2] === 'enforce-plan') {
@@ -37,10 +44,35 @@ process.on('uncaughtException', () => {
 
 const path = require('path');
 const fs = require('fs');
-const tracker = require('./provider-tracker.cjs');
 
 const helpersDir = __dirname;
-const PROJECT_DIR = path.resolve(__dirname, '..', '..'); // BUG-10: __dirname-derived, not env-poisonable
+
+function loadProtectedPathPolicyModule() {
+  const envProjectRoot = process.env.HIVE_FLOW_PROJECT_ROOT || process.env.CLAUDE_PROJECT_DIR || '';
+  const candidates = [
+    envProjectRoot && path.join(path.resolve(envProjectRoot), 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs'),
+    path.join(path.resolve(process.cwd()), 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs'),
+    path.join(path.resolve(__dirname, '..', '..'), 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs'),
+    path.join(__dirname, 'protected-paths.cjs'),
+  ].filter(Boolean);
+
+  for (const candidate of candidates) {
+    try {
+      if (fs.existsSync(candidate)) return require(candidate);
+    } catch {
+      // Try the next candidate.
+    }
+  }
+
+  return require(path.join(path.resolve(__dirname, '..', '..'), 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs'));
+}
+
+const protectedPathPolicy = loadProtectedPathPolicyModule();
+const PROJECT_DIR = protectedPathPolicy.resolveProjectRoot({
+  env: process.env,
+  cwd: path.resolve(__dirname, '..', '..'),
+  fallbackRoot: process.cwd(),
+});
 
 function preToolUseDecision(decision, reason) {
   const hookSpecificOutput = {
@@ -53,6 +85,23 @@ function preToolUseDecision(decision, reason) {
 
 function permissionGuardDeny(reason) {
   return preToolUseDecision('deny', reason);
+}
+
+function permissionGuardAllow(additionalContext) {
+  const hookSpecificOutput = {
+    hookEventName: 'PreToolUse',
+    permissionDecision: 'allow',
+  };
+  if (additionalContext) hookSpecificOutput.additionalContext = additionalContext;
+  return JSON.stringify({ hookSpecificOutput });
+}
+
+function permissionGuardGateMissingDecision(projectDir) {
+  const sourcePath = path.join(projectDir, 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'gate.ts');
+  if (fs.existsSync(sourcePath)) {
+    return permissionGuardAllow('[PERMISSION GUARD] Compiled gate not built — run npm run build in v3/@hive-flow/cli. Degraded (allow) for first-run.');
+  }
+  return permissionGuardDeny('[PERMISSION GUARD] Compiled gate not found at relocated root. Tool blocked for safety.');
 }
 
 function readPermissionGuardSourceStamp() {
@@ -94,6 +143,7 @@ function safeRequire(modulePath) {
   return null;
 }
 
+const tracker = safeRequire(path.join(helpersDir, 'provider-tracker.cjs'));
 const router = safeRequire(path.join(helpersDir, 'router.cjs'));
 const session = safeRequire(path.join(helpersDir, 'session.cjs'));
 const memory = safeRequire(path.join(helpersDir, 'memory.cjs'));
@@ -120,7 +170,7 @@ function providerSummaryLine() {
 // Returns null if the module is not compiled or cannot be loaded (fail-open).
 function loadEnforcerModule() {
   try {
-    const enforcerPath = path.join(__dirname, '..', '..', 'v3', '@hive-flow', 'cli', 'dist', 'src', 'mcp-tools', 'workflow-enforcer.js');
+    const enforcerPath = path.join(PROJECT_DIR, 'v3', '@hive-flow', 'cli', 'dist', 'src', 'mcp-tools', 'workflow-enforcer.js');
     if (!fs.existsSync(enforcerPath)) return null;
     const { pathToFileURL } = require('url');
     // Note: dynamic import returns a promise, caller must await
@@ -319,7 +369,8 @@ const handlers = {
   'session-restore': () => {
     // Reset context tracker for new session
     try {
-      const ctxFile = path.join(helpersDir, '..', '.context-tracker.json');
+      const ctxFile = path.join(PROJECT_DIR, '.claude', '.context-tracker.json');
+      fs.mkdirSync(path.dirname(ctxFile), { recursive: true });
       fs.writeFileSync(ctxFile, JSON.stringify({ calls: 0, startedAt: Date.now() }));
     } catch { /* ignore */ }
 
@@ -327,7 +378,7 @@ const handlers = {
     let sessionId;
     try {
       sessionId = `session-${Date.now()}`;
-      tracker.resetSession(sessionId);
+      if (tracker && tracker.resetSession) tracker.resetSession(sessionId);
     } catch { /* ignore */ }
 
     if (session) {
@@ -803,7 +854,7 @@ const handlers = {
       if (!sanitized) { console.log(JSON.stringify({})); return; }
 
       // Read HMAC key (same as enforcement.cjs)
-      const hmacKeyFile = path.join(__dirname, '..', '..', '.hive-flow', 'enforcement', '.hmac-key');
+      const hmacKeyFile = path.join(PROJECT_DIR, '.hive-flow', 'enforcement', '.hmac-key');
       let key;
       try {
         key = fs.readFileSync(hmacKeyFile, 'utf8').trim();
@@ -813,7 +864,7 @@ const handlers = {
         return;
       }
 
-      const roleDir = path.join(__dirname, '..', '..', '.hive-flow', 'enforcement', 'agents', sanitized);
+      const roleDir = path.join(PROJECT_DIR, '.hive-flow', 'enforcement', 'agents', sanitized);
       if (!fs.existsSync(roleDir)) fs.mkdirSync(roleDir, { recursive: true });
 
       const roleState = {
@@ -1338,7 +1389,8 @@ const handlers = {
 
     // Context tracking: increment tool call counter (fire-and-forget, never blocks)
     try {
-      const ctxFile = path.join(helpersDir, '..', '.context-tracker.json');
+      const ctxFile = path.join(PROJECT_DIR, '.claude', '.context-tracker.json');
+      fs.mkdirSync(path.dirname(ctxFile), { recursive: true });
       let ctx = { calls: 0, startedAt: Date.now() };
       try { ctx = JSON.parse(fs.readFileSync(ctxFile, 'utf-8')); } catch { /* new session */ }
       ctx.calls = (ctx.calls || 0) + 1;
@@ -1408,9 +1460,9 @@ const handlers = {
         });
       });
 
-      const gatePath = require('path').join(__dirname, '..', '..', 'v3', '@hive-flow', 'cli', 'dist', 'src', 'permission-guard', 'gate.js');
+      const gatePath = path.join(PROJECT_DIR, 'v3', '@hive-flow', 'cli', 'dist', 'src', 'permission-guard', 'gate.js');
       if (!fs.existsSync(gatePath)) {
-        console.log(ALLOW_JSON);
+        console.log(permissionGuardGateMissingDecision(PROJECT_DIR));
         return;
       }
       try {
@@ -1452,8 +1504,8 @@ const handlers = {
 
       console.log(ALLOW_JSON);
     } catch (outerErr) {
-      // Silently fall through — do NOT write to stderr
-      console.log(ALLOW_JSON);
+      // Silently fail closed — do NOT write to stderr.
+      console.log(permissionGuardDeny('[PERMISSION GUARD] Hook failed before completing evaluation. Tool blocked for safety.'));
     }
   },
 
@@ -1750,7 +1802,6 @@ const handlers = {
 
   'hive-check-complete': () => {
     try {
-      const PROJECT_DIR = path.resolve(__dirname, '..', '..');
       const DATA_DIR = path.join(PROJECT_DIR, '.hive-flow', 'data');
       const { isAlreadyAcked, claimAcked } = require('./dedup-marker.cjs');
       if (!fs.existsSync(DATA_DIR)) return console.log('{}');

@@ -85,7 +85,7 @@
     "test": "vitest run",
     "test:property": "vitest run src/statusline/__tests__/property-contracts.test.ts",
     "test:sentinel": "vitest run src/__tests__/sentinel-rewake.test.ts src/__tests__/mcp-server-notifications.test.ts",
-    "test:enforcement": "vitest run src/__tests__/band1-enforcement.test.ts src/__tests__/role-enforcement.test.ts src/__tests__/pipeline-enforcement.test.ts src/__tests__/enforcement-security-property.test.ts",
+    "test:enforcement": "vitest run src/__tests__/band1-enforcement.test.ts src/__tests__/role-enforcement.test.ts src/__tests__/pipeline-enforcement.test.ts src/__tests__/enforcement-security-property.test.ts src/__tests__/relocated-engine-root.test.ts",
     "test:plugin-store": "npx tsx src/plugins/tests/standalone-test.ts",
     "test:pattern-store": "npx tsx src/transfer/store/tests/standalone-test.ts",
     "mutation:critical": "stryker run stryker.critical.conf.json",

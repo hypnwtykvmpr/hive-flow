@@ -153,6 +153,7 @@ const RELOCATED_HELPER_FILES = [
   'role-enforcement.cjs',
   'enforcement.cjs',
   'hook-handler.cjs',
+  'provider-tracker.cjs',
   'settings-reconciler.cjs',
 ];
 

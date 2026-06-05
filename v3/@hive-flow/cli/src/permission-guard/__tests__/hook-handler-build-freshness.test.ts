@@ -6,6 +6,8 @@ import { spawnSync } from 'node:child_process';
 
 const repoRoot = resolve(__dirname, '..', '..', '..', '..', '..', '..');
 const hookHandlerSource = join(repoRoot, '.claude', 'helpers', 'hook-handler.cjs');
+const protectedPathsSource = join(repoRoot, 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs');
+const protectedPathsPolicySource = join(repoRoot, 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.policy.json');
 
 function makeHookProject(): string {
   const root = mkdtempSync(join(tmpdir(), 'hf-hook-freshness-'));
@@ -14,6 +16,8 @@ function makeHookProject(): string {
   mkdirSync(helperDir, { recursive: true });
   mkdirSync(sourceDir, { recursive: true });
   copyFileSync(hookHandlerSource, join(helperDir, 'hook-handler.cjs'));
+  copyFileSync(protectedPathsSource, join(sourceDir, 'protected-paths.cjs'));
+  copyFileSync(protectedPathsPolicySource, join(sourceDir, 'protected-paths.policy.json'));
   writeFileSync(join(helperDir, 'provider-tracker.cjs'), 'module.exports = { track() {} };\n', 'utf8');
   return root;
 }
