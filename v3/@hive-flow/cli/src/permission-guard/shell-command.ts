@@ -417,6 +417,17 @@ function hasNodeEvalArg(args: string[]): boolean {
     hasShortFlagArg(args, ['-e', '-p', '-r']);
 }
 
+const PYTHON_INLINE_MODULES = new Set(['runpy']);
+
+function hasPythonInlineArg(args: string[]): boolean {
+  if (hasAnyArg(args, ['-c'])) return true;
+  const moduleIndex = args.indexOf('-m');
+  if (moduleIndex === -1) return false;
+  const moduleName = args[moduleIndex + 1];
+  if (!moduleName) return true;
+  return PYTHON_INLINE_MODULES.has(moduleName.toLowerCase());
+}
+
 function unseparatedArgs(args: string[]): string[] {
   return args[0] === '--' ? args.slice(1) : args;
 }
@@ -426,7 +437,7 @@ function isInlineEvalCommand(command: string, args: string[]): boolean {
   const effectiveArgs = unseparatedArgs(args);
 
   if (base === 'node') return hasNodeEvalArg(effectiveArgs);
-  if (/^(?:python|python3|python3\.\d+)$/.test(base)) return hasAnyArg(effectiveArgs, ['-c', '-m']);
+  if (/^(?:python|python3|python3\.\d+)$/.test(base)) return hasPythonInlineArg(effectiveArgs);
   if (base === 'ruby') return hasAnyArg(effectiveArgs, ['-e', '-E']) || hasShortFlagArg(effectiveArgs, ['-r']);
   if (base === 'perl') return hasAnyArg(effectiveArgs, ['-e', '-E']) || hasFlagArg(effectiveArgs, ['-M']);
   if (base === 'deno') return effectiveArgs[0] === 'eval' || (effectiveArgs[0] === 'run' && effectiveArgs.some(arg => arg === '-' || arg === '/dev/stdin'));
