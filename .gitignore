@@ -310,6 +310,7 @@ v4-plans/*
 /detect_and_send.sh
 /analysis/
 /answer.md
+/.verify-scratch/
 
 # In-tree scratch under v3 (one-off helpers, audit dumps, read helpers)
 /v3/extract_*

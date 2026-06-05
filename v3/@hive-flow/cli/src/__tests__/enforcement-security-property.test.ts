@@ -450,7 +450,7 @@ describe('enforcement security property contracts', () => {
     expect(readScopedState('global', 'global')?.level).toBe(enf.LEVELS.RESTRICTED);
   });
 
-  it('keeps subagent enforcement-file attacks denied and scoped to the offending agent', () => {
+  it('keeps substrate attacks global even for trusted subagents', () => {
     process.env.AGENTIC_FLOW_AGENT_ID = 'agent-b';
 
     const result = enf.processPreToolUse({
@@ -460,8 +460,118 @@ describe('enforcement security property contracts', () => {
 
     expect(result.hookSpecificOutput.hookEventName).toBe('PreToolUse');
     expect(result.hookSpecificOutput.permissionDecision).toBe('deny');
-    expect(readScopedState('agent', 'agent-b')?.level).toBe(enf.LEVELS.RESTRICTED);
-    expect(readScopedState('global', 'global')).toBeNull();
+    expect(readScopedState('agent', 'agent-b')).toBeNull();
+    expect(readScopedState('global', 'global')?.level).toBe(enf.LEVELS.RESTRICTED);
+  });
+
+  it('denies coordinator protected configuration reads without escalating any scope', () => {
+    for (const [toolName, filePath] of [
+      ['Read', '.claude/settings.json'],
+      ['Read', '.env'],
+      ['mcp__filesystem__read_text_file', '.claude/settings.local.json'],
+    ]) {
+      clearAgentEnv();
+      resetModule();
+      rmSync(join(root, '.hive-flow', 'enforcement'), { recursive: true, force: true });
+      const projectId = enf.resolveScopeContext().projectId;
+
+      const result = enf.processPreToolUse({
+        tool_name: toolName,
+        tool_input: { file_path: filePath, path: filePath },
+      });
+
+      expect(result.hookSpecificOutput.permissionDecision, `${toolName} ${filePath}`).toBe('deny');
+      expect(result.hookSpecificOutput.permissionDecisionReason, `${toolName} ${filePath}`).toContain('Reading protected configuration is denied');
+      expect(readScopedState('global', 'global'), `${toolName} ${filePath}`).toBeNull();
+      expect(readScopedState('project', projectId), `${toolName} ${filePath}`).toBeNull();
+    }
+  });
+
+  it('still escalates coordinator key and signed-state reads globally', () => {
+    for (const [toolName, filePath] of [
+      ['Read', '.hive-flow/enforcement/.hmac-key'],
+      ['Read', '.hive-flow/enforcement/state.json'],
+      ['mcp__filesystem__read_multiple_files', '.hive-flow/enforcement/verification-gate.json'],
+    ]) {
+      clearAgentEnv();
+      resetModule();
+      rmSync(join(root, '.hive-flow', 'enforcement'), { recursive: true, force: true });
+
+      const toolInput = toolName === 'mcp__filesystem__read_multiple_files'
+        ? { paths: ['src/index.ts', filePath] }
+        : { file_path: filePath, path: filePath };
+      const result = enf.processPreToolUse({
+        tool_name: toolName,
+        tool_input: toolInput,
+      });
+
+      expect(result.hookSpecificOutput.permissionDecision, `${toolName} ${filePath}`).toBe('deny');
+      expect(readScopedState('global', 'global')?.level, `${toolName} ${filePath}`).toBe(enf.LEVELS.RESTRICTED);
+    }
+  });
+
+  it('keeps coordinator gate-bypass environment variables globally escalated in any form', () => {
+    for (const command of [
+      'export HIVE_FLOW_ENFORCEMENT_DISABLED=1',
+      'HIVE_FLOW_PIPELINE_OVERRIDE=1 node .claude/helpers/hook-handler.cjs permission-guard',
+      'CF_WF_7D=1 pnpm --dir v3 --filter @hive-flow/cli test:enforcement',
+    ]) {
+      clearAgentEnv();
+      resetModule();
+      rmSync(join(root, '.hive-flow', 'enforcement'), { recursive: true, force: true });
+
+      const result = enf.processPreToolUse({
+        tool_name: 'Bash',
+        tool_input: { command },
+      });
+
+      expect(result.hookSpecificOutput.permissionDecision, command).toBe('deny');
+      expect(readScopedState('global', 'global')?.level, command).toBe(enf.LEVELS.RESTRICTED);
+    }
+  });
+
+  it('keeps token-spoofed unknown actors globally escalated', () => {
+    const storePath = join(root, '.hive-flow', 'agents', 'store.json');
+    mkdirSync(dirname(storePath), { recursive: true });
+    writeFileSync(storePath, JSON.stringify({
+      agents: {
+        'spoofed-agent': { config: { _spawnToken: 'stored-token' } },
+      },
+    }));
+    process.env.AGENTIC_FLOW_AGENT_ID = 'spoofed-agent';
+
+    const result = enf.processPreToolUse({
+      tool_name: 'Write',
+      tool_input: { file_path: '.claude/helpers/enforcement.cjs' },
+    });
+
+    expect(result.hookSpecificOutput.permissionDecision).toBe('deny');
+    expect(result.hookSpecificOutput.permissionDecisionReason).toContain('Agent token verification failed');
+    expect(readScopedState('agent', 'spoofed-agent')).toBeNull();
+    expect(readScopedState('global', 'global')?.level).toBe(enf.LEVELS.RESTRICTED);
+  });
+
+  it('escalates coordinator non-substrate attacks to project scope without global halt', () => {
+    for (const command of [
+      'HIVE_FLOW_PROJECT_ROOT=/tmp/spoofed node v3/@hive-flow/cli/bin/cli.js status',
+      'export CLAUDE_PROJECT_DIR=/tmp/spoofed',
+      'echo $OPENAI_API_KEY',
+      'rm -rf /',
+    ]) {
+      clearAgentEnv();
+      resetModule();
+      rmSync(join(root, '.hive-flow', 'enforcement'), { recursive: true, force: true });
+      const projectId = enf.resolveScopeContext().projectId;
+
+      const result = enf.processPreToolUse({
+        tool_name: 'Bash',
+        tool_input: { command },
+      });
+
+      expect(result.hookSpecificOutput.permissionDecision, command).toBe('deny');
+      expect(readScopedState('project', projectId)?.level, command).toBe(enf.LEVELS.WARNED);
+      expect(readScopedState('global', 'global'), command).toBeNull();
+    }
   });
 
   it('escalates non-substrate global protected writes while leaving project protected workflows deny-only', () => {
@@ -1119,7 +1229,7 @@ describe('enforcement security property contracts', () => {
     );
   });
 
-  it('escalates inline and exported project-root spoof and gate-bypass env vars', () => {
+  it('classifies root-spoof env vars separately from gate-bypass env vars', () => {
     const state = {
       level: 0,
       violations: 0,
@@ -1128,23 +1238,29 @@ describe('enforcement security property contracts', () => {
       integrityCompromised: false,
     };
 
-    expect(enf.detectCircumvention(
+    const rootSpoofInline = enf.detectCircumvention(
       'Bash',
       { command: 'HIVE_FLOW_PROJECT_ROOT=/tmp/spoofed node v3/@hive-flow/cli/bin/cli.js status' },
       state,
-    )).toMatchObject({ circumvention: true, systemic: true });
+    );
+    expect(rootSpoofInline).toMatchObject({ circumvention: true });
+    expect(rootSpoofInline).not.toHaveProperty('systemic');
+    expect(rootSpoofInline).not.toHaveProperty('protectedEnforcementAttack');
 
-    expect(enf.detectCircumvention(
+    const rootSpoofExport = enf.detectCircumvention(
       'Bash',
       { command: 'export HIVE_FLOW_PROJECT_ROOT=/tmp/spoofed' },
       state,
-    ).circumvention).toBe(true);
+    );
+    expect(rootSpoofExport).toMatchObject({ circumvention: true });
+    expect(rootSpoofExport).not.toHaveProperty('systemic');
+    expect(rootSpoofExport).not.toHaveProperty('protectedEnforcementAttack');
 
     expect(enf.detectCircumvention(
       'Bash',
       { command: 'HIVE_FLOW_ENFORCEMENT_DISABLED=1 node .claude/helpers/hook-handler.cjs permission-guard' },
       state,
-    )).toMatchObject({ circumvention: true, systemic: true });
+    )).toMatchObject({ circumvention: true, substrateAttack: true, protectedEnforcementAttack: true, systemic: true });
   });
 
   it('default reset clears global, scoped state, and per-agent role files', () => {

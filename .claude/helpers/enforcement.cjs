@@ -561,11 +561,29 @@ function forceRestricted(state, reason, metadata = {}) {
   return state;
 }
 
+function isSubstrateAttack(violation) {
+  return Boolean(
+    violation?.substrateAttack ||
+    violation?.integrityAttack ||
+    violation?.protectedEnforcementAttack
+  );
+}
+
+function isImmuneCoordinator(ctx) {
+  return ctx?.actorKind === 'coordinator' && !ctx.agentId;
+}
+
 function chooseEscalationScope(ctx, violation) {
+  if (isSubstrateAttack(violation)) {
+    return { scopeType: 'global', scopeId: 'global' };
+  }
   if (ctx.identityTrusted && ctx.agentId) {
     return { scopeType: 'agent', scopeId: ctx.agentId };
   }
-  if (violation.protectedEnforcementAttack || violation.integrityAttack || violation.systemic) {
+  if (isImmuneCoordinator(ctx)) {
+    return { scopeType: 'project', scopeId: ctx.projectId };
+  }
+  if (violation.systemic) {
     return { scopeType: 'global', scopeId: 'global' };
   }
   if (ctx.hiveId) {
@@ -583,6 +601,7 @@ function escalateScoped(ctx, violation) {
     agentId: ctx.agentId,
     hiveId: ctx.hiveId,
     projectId: ctx.projectId,
+    substrateAttack: violation.substrateAttack === true,
     protectedEnforcementAttack: violation.protectedEnforcementAttack === true,
     integrityAttack: violation.integrityAttack === true,
     systemic: violation.systemic === true,
@@ -700,6 +719,7 @@ function protectedMutationDecision(filePath, action = 'write to protected path')
     denyOnly: !escalates,
     reason: `CIRCUMVENTION: Attempted ${action}: ${filePath}. ${guidance}`,
     severity: escalates ? 'critical' : 'normal',
+    substrateAttack: substrate,
     protectedEnforcementAttack: substrate,
     systemic: substrate,
   };
@@ -2016,10 +2036,22 @@ function detectCircumvention(toolName, toolInput, state) {
 
   const hmacKeyReadTarget = findEnforcementHmacKeyReadTarget(toolName, toolInput);
   if (hmacKeyReadTarget) {
+    const keyOrStateRead =
+      protectedPathPolicy.isHmacKeyPath(hmacKeyReadTarget, PROJECT_DIR) ||
+      protectedPathPolicy.isSignedStatePath(hmacKeyReadTarget, PROJECT_DIR);
+    if (!keyOrStateRead) {
+      return {
+        circumvention: true,
+        denyOnly: true,
+        reason: `Reading protected configuration is denied: ${hmacKeyReadTarget}. This file is policy-protected; ask the human if you need its contents.`,
+        severity: 'normal',
+      };
+    }
     return {
       circumvention: true,
-      reason: `CIRCUMVENTION: Attempted to read protected enforcement, credential, or hook-governance state: ${hmacKeyReadTarget}`,
+      reason: `CIRCUMVENTION: Attempted to read protected enforcement key/state material: ${hmacKeyReadTarget}`,
       severity: 'critical',
+      substrateAttack: true,
       protectedEnforcementAttack: true,
       systemic: true,
     };
@@ -2051,6 +2083,7 @@ function detectCircumvention(toolName, toolInput, state) {
         circumvention: true,
         reason: 'CIRCUMVENTION: Attempted to invoke dev-override minter from Bash',
         severity: 'critical',
+        substrateAttack: true,
         protectedEnforcementAttack: true,
         systemic: true,
       };
@@ -2061,6 +2094,7 @@ function detectCircumvention(toolName, toolInput, state) {
         circumvention: true,
         reason: 'CIRCUMVENTION: Attempted to invoke enforcement installer from Bash',
         severity: 'critical',
+        substrateAttack: true,
         protectedEnforcementAttack: true,
         systemic: true,
       };
@@ -2078,6 +2112,7 @@ function detectCircumvention(toolName, toolInput, state) {
         circumvention: true,
         reason: `CIRCUMVENTION: Git operation targeting enforcement/hook files`,
         severity: 'critical',
+        substrateAttack: true,
         protectedEnforcementAttack: true,
         systemic: true,
       };
@@ -2086,11 +2121,20 @@ function detectCircumvention(toolName, toolInput, state) {
     // 2c. Environment variable manipulation (N13, N14)
     const envAttempt = findEnforcementEnvManipulation(command);
     if (envAttempt) {
+      if (GATE_BYPASS_ENV_VARS.has(envAttempt.name)) {
+        return {
+          circumvention: true,
+          reason: `CIRCUMVENTION: Gate-bypass environment variable targeting enforcement (${envAttempt.name})`,
+          severity: 'critical',
+          substrateAttack: true,
+          protectedEnforcementAttack: true,
+          systemic: true,
+        };
+      }
       return {
         circumvention: true,
         reason: `CIRCUMVENTION: Environment variable manipulation targeting enforcement (${envAttempt.name})`,
-        severity: 'critical',
-        systemic: true,
+        severity: 'normal',
       };
     }
 
@@ -2105,8 +2149,7 @@ function detectCircumvention(toolName, toolInput, state) {
         return {
           circumvention: true,
           reason: `CIRCUMVENTION: Attempted to expose secret environment variable ${secretVar}`,
-          severity: 'critical',
-          systemic: true,
+          severity: 'normal',
         };
       }
     }
@@ -2118,8 +2161,7 @@ function detectCircumvention(toolName, toolInput, state) {
       return {
         circumvention: true,
         reason: `CIRCUMVENTION: Egregiously destructive command detected`,
-        severity: 'critical',
-        systemic: true,
+        severity: 'normal',
       };
     }
 
@@ -2131,6 +2173,7 @@ function detectCircumvention(toolName, toolInput, state) {
         circumvention: true,
         reason: `CIRCUMVENTION: Attempted to call hook-handler.cjs pipeline-reset directly — this bypasses the pipeline commit gate`,
         severity: 'critical',
+        substrateAttack: true,
         protectedEnforcementAttack: true,
         systemic: true,
       };
@@ -2144,6 +2187,7 @@ function detectCircumvention(toolName, toolInput, state) {
         circumvention: true,
         reason: `CIRCUMVENTION: Attempted enforcement reset via Bash — resets are human-only via /enforcement-reset`,
         severity: 'critical',
+        substrateAttack: true,
         protectedEnforcementAttack: true,
         systemic: true,
       };
@@ -2581,6 +2625,7 @@ function processPreToolUse(input) {
       reason: `[IDENTITY ENFORCEMENT] Agent token verification failed (${ctx.identityReason}) — possible env var spoofing.`,
       severity: 'critical',
       restrictionGroups: getRestrictionGroups(toolName),
+      substrateAttack: true,
       systemic: true,
     };
     const escalation = escalateScoped(ctx, violation);
