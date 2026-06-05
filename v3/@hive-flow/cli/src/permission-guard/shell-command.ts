@@ -323,9 +323,32 @@ function skipSimpleOptions(tokens: ShellToken[], index: number, valueFlags = new
   return index;
 }
 
+function isCoprocNameToken(token?: ShellToken): boolean {
+  return Boolean(token && !token.operator && /^[A-Za-z_]\w*$/.test(token.text || ''));
+}
+
+function isCoprocCommandToken(token?: ShellToken): boolean {
+  return Boolean(token && !token.operator && token.text !== '{' && token.text !== '(' && !(token.text || '').startsWith('-'));
+}
+
+function skipCoprocLauncher(tokens: ShellToken[], index: number): number {
+  let next = index + 1;
+  if (!tokens[next]) return next;
+
+  if (isCoprocNameToken(tokens[next]) && isCoprocCommandToken(tokens[next + 1])) {
+    next++;
+  }
+
+  return next;
+}
+
 function skipTransparentLauncher(tokens: ShellToken[], index: number): number {
   const base = commandBasename(tokens[index]?.text || '').toLowerCase();
   let next = index + 1;
+
+  if (base === 'coproc') {
+    return skipCoprocLauncher(tokens, index);
+  }
 
   if (['command', 'builtin', 'nohup', 'setsid'].includes(base)) {
     return skipSimpleOptions(tokens, next);

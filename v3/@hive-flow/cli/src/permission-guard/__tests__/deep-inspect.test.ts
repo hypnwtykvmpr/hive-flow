@@ -172,6 +172,11 @@ describe('deepInspect', () => {
       'node22 -e "1"',
       'pypy3 -c "1"',
       'exec -a fakebin node -e "console.log(1)"',
+      'coproc node -e "1"',
+      'coproc node -p "1"',
+      'coproc python3 -c "1"',
+      'coproc COPROC node -e "1"',
+      'coproc MYPROC { node -e "1"; }',
       'ruby -rfileutils -e "1"',
     ])('blocks command-position inline eval through compound/substitution/alias forms: %s', (command) => {
       const result = deepInspect(command);
@@ -186,6 +191,9 @@ describe('deepInspect', () => {
       'files=$(ls *.ts)',
       'node22 scripts/x.js',
       'exec node scripts/x.js',
+      'coproc node scripts/x.js',
+      'coproc tail -f app.log',
+      'coproc { echo hi; }',
       'ruby -rubygems app.rb',
       'ruby -run -e httpd',
     ])('allows benign command-position wrappers and aliases: %s', (command) => {
@@ -259,6 +267,8 @@ describe('deepInspect', () => {
         payload => `echo ok\n${payload}`,
         payload => `echo ok \\\n ${payload}`,
         payload => `exec -a fakebin ${payload}`,
+        payload => `coproc ${payload}`,
+        payload => `coproc COPROC ${payload}`,
       );
 
       fc.assert(

@@ -1309,9 +1309,29 @@ function skipSimpleOptions(tokens, index, valueFlags = new Set()) {
   return index;
 }
 
+function isCoprocNameToken(token) {
+  return Boolean(token && !token.operator && /^[A-Za-z_]\w*$/.test(token.text || ''));
+}
+
+function isCoprocCommandToken(token) {
+  return Boolean(token && !token.operator && token.text !== '{' && token.text !== '(' && !(token.text || '').startsWith('-'));
+}
+
+function skipCoprocLauncher(tokens, index) {
+  let next = index + 1;
+  if (!tokens[next]) return next;
+  if (isCoprocNameToken(tokens[next]) && isCoprocCommandToken(tokens[next + 1])) {
+    next++;
+  }
+  return next;
+}
+
 function skipTransparentLauncher(tokens, index) {
   const base = commandBasename(tokens[index]?.text || '').toLowerCase();
   let next = index + 1;
+  if (base === 'coproc') {
+    return skipCoprocLauncher(tokens, index);
+  }
   if (['command', 'builtin', 'nohup', 'setsid'].includes(base)) {
     return skipSimpleOptions(tokens, next);
   }
