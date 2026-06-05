@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { generateSettings } from '../settings-generator.js';
@@ -139,15 +139,32 @@ describe('init settings enforcement chain', () => {
 
   it('fresh init writes a governed settings.json to disk', async () => {
     const root = mkdtempSync(join(tmpdir(), 'hf-settings-init-'));
+    const homeRoot = mkdtempSync(join(tmpdir(), 'hf-settings-home-'));
     try {
-      const result = await executeInit(testOptions(root));
+      const result = await executeInit({
+        ...testOptions(root),
+        enforcementHomeDir: homeRoot,
+      } as InitOptions & { enforcementHomeDir: string });
+      expect(result.errors, result.errors.join('\n')).toEqual([]);
       expect(result.success).toBe(true);
 
       const settings = JSON.parse(readFileSync(join(root, '.claude', 'settings.json'), 'utf8')) as GeneratedSettings;
       expectFullPreToolUseChain(settings);
       expectSettingsReconciler(settings);
+      for (const helper of [
+        'hive-composition-gate.cjs',
+        'role-enforcement.cjs',
+        'enforcement.cjs',
+        'hook-handler.cjs',
+        'settings-reconciler.cjs',
+        'protected-paths.cjs',
+        'protected-paths.policy.json',
+      ]) {
+        expect(existsSync(join(homeRoot, '.hive-flow', 'enforcement', 'bin', helper)), helper).toBe(true);
+      }
     } finally {
       rmSync(root, { recursive: true, force: true });
+      rmSync(homeRoot, { recursive: true, force: true });
     }
   });
 

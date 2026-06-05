@@ -148,6 +148,19 @@ const DIRECTORIES = {
   ],
 };
 
+const RELOCATED_HELPER_FILES = [
+  'hive-composition-gate.cjs',
+  'role-enforcement.cjs',
+  'enforcement.cjs',
+  'hook-handler.cjs',
+  'settings-reconciler.cjs',
+];
+
+const RELOCATED_POLICY_FILES = [
+  'protected-paths.cjs',
+  'protected-paths.policy.json',
+];
+
 /**
  * Execute initialization
  */
@@ -177,6 +190,10 @@ export async function executeInit(options: InitOptions): Promise<InitResult> {
   try {
     // Create directory structure
     await createDirectories(targetDir, options, result);
+
+    if (options.components.settings) {
+      await populateRelocatedEnforcementBin(options, platform, result);
+    }
 
     // Generate and write settings.json
     if (options.components.settings) {
@@ -717,6 +734,92 @@ async function createDirectories(
   }
 }
 
+function findEnforcementHelpersDir(options: InitOptions): string {
+  const helpersDir = findSourceHelpersDir(options.sourceBaseDir, RELOCATED_HELPER_FILES);
+  if (!helpersDir) {
+    throw new Error('Relocated enforcement install failed: could not find complete source .claude/helpers directory');
+  }
+  return helpersDir;
+}
+
+function findPermissionGuardSourceDir(options: InitOptions, helpersDir: string): string | null {
+  const candidateRoots: string[] = [];
+  if (options.sourceBaseDir) {
+    candidateRoots.push(options.sourceBaseDir);
+  }
+
+  candidateRoots.push(
+    path.resolve(__dirname, '..', 'permission-guard'),
+    path.resolve(__dirname, '..', '..', 'src', 'permission-guard'),
+    path.resolve(helpersDir, '..', '..'),
+    process.cwd()
+  );
+
+  let currentDir = __dirname;
+  for (let i = 0; i < 10; i++) {
+    candidateRoots.push(currentDir);
+    const parentDir = path.dirname(currentDir);
+    if (parentDir === currentDir) break;
+    currentDir = parentDir;
+  }
+
+  const possiblePaths = new Set<string>();
+  for (const root of candidateRoots) {
+    possiblePaths.add(root);
+    possiblePaths.add(path.join(root, 'src', 'permission-guard'));
+    possiblePaths.add(path.join(root, 'dist', 'src', 'permission-guard'));
+    possiblePaths.add(path.join(root, 'v3', '@hive-flow', 'cli', 'src', 'permission-guard'));
+    possiblePaths.add(path.join(root, 'v3', '@hive-flow', 'cli', 'dist', 'src', 'permission-guard'));
+  }
+
+  for (const candidate of possiblePaths) {
+    if (RELOCATED_POLICY_FILES.every((file) => fs.existsSync(path.join(candidate, file)))) {
+      return candidate;
+    }
+  }
+
+  return null;
+}
+
+async function populateRelocatedEnforcementBin(
+  options: InitOptions,
+  platform: PlatformInfo,
+  result: InitResult
+): Promise<void> {
+  const helpersDir = findEnforcementHelpersDir(options);
+  const policyDir = findPermissionGuardSourceDir(options, helpersDir);
+  if (!policyDir) {
+    throw new Error('Relocated enforcement install failed: could not find permission-guard protected-paths sources');
+  }
+  const homeDir = options.enforcementHomeDir || platform.homeDir;
+  const binDir = path.join(homeDir, '.hive-flow', 'enforcement', 'bin');
+  fs.mkdirSync(binDir, { recursive: true });
+
+  const filesToCopy = [
+    ...RELOCATED_HELPER_FILES.map((file) => [path.join(helpersDir, file), file] as const),
+    ...RELOCATED_POLICY_FILES.map((file) => [path.join(policyDir, file), file] as const),
+  ];
+
+  for (const [sourcePath, targetName] of filesToCopy) {
+    if (!fs.existsSync(sourcePath)) {
+      throw new Error(`Relocated enforcement install failed: missing engine source ${targetName}`);
+    }
+    const targetPath = path.join(binDir, targetName);
+    fs.copyFileSync(sourcePath, targetPath);
+    try {
+      fs.chmodSync(targetPath, targetName.endsWith('.json') ? 0o600 : 0o700);
+    } catch {}
+    result.created.files.push(`~/.hive-flow/enforcement/bin/${targetName}`);
+  }
+
+  fs.writeFileSync(path.join(binDir, '.version'), JSON.stringify({
+    installedAt: new Date().toISOString(),
+    helpersSource: helpersDir,
+    policySource: policyDir,
+    files: filesToCopy.map(([, targetName]) => targetName),
+  }, null, 2) + '\n', { mode: 0o600 });
+}
+
 /**
  * Write settings.json
  */
@@ -924,12 +1027,14 @@ async function copyAgents(
 
 /**
  * Find source helpers directory.
- * Validates that the directory contains hook-handler.cjs to avoid
+ * Validates that the directory contains the required helper files to avoid
  * returning the target directory or an incomplete source.
  */
-function findSourceHelpersDir(sourceBaseDir?: string): string | null {
+function findSourceHelpersDir(
+  sourceBaseDir?: string,
+  requiredFiles: readonly string[] = ['hook-handler.cjs']
+): string | null {
   const possiblePaths: string[] = [];
-  const SENTINEL_FILE = 'hook-handler.cjs'; // Must exist in valid source
 
   // If explicit source base directory is provided, check it first
   if (sourceBaseDir) {
@@ -971,7 +1076,7 @@ function findSourceHelpersDir(sourceBaseDir?: string): string | null {
 
   // Return first path that exists AND contains the sentinel file
   for (const p of possiblePaths) {
-    if (fs.existsSync(p) && fs.existsSync(path.join(p, SENTINEL_FILE))) {
+    if (fs.existsSync(p) && requiredFiles.every((file) => fs.existsSync(path.join(p, file)))) {
       return p;
     }
   }

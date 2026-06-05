@@ -279,6 +279,8 @@ export function detectPlatform(): PlatformInfo {
 export interface InitOptions {
   /** Target directory */
   targetDir: string;
+  /** Override home directory for relocated enforcement engine installation */
+  enforcementHomeDir?: string;
   /** Source base directory for skills/commands/agents (optional) */
   sourceBaseDir?: string;
   /** Force overwrite existing files */
