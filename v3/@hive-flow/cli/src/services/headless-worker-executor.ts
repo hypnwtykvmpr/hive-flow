@@ -24,6 +24,7 @@ import { EventEmitter } from 'events';
 import { existsSync, readFileSync, readdirSync, mkdirSync, writeFileSync } from 'fs';
 import { join, relative } from 'path';
 import type { WorkerType } from './worker-daemon.js';
+import { assertSubagentIdentityMarker } from '../mcp-tools/subagent-markers.js';
 
 // ============================================
 // Type Definitions
@@ -1128,9 +1129,13 @@ Analyze the above codebase context and provide your response following the forma
         CLAUDE_CODE_HEADLESS: 'true',
         CLAUDE_CODE_SANDBOX_MODE: options.sandbox,
       };
+      const workerAgentId = `headless-${options.workerType}-${options.executionId}`;
+      env.AGENTIC_FLOW_AGENT_ID = workerAgentId;
+      env.CLAUDE_AGENT_ID = workerAgentId;
 
       // Set model
       env.ANTHROPIC_MODEL = MODEL_IDS[options.model];
+      assertSubagentIdentityMarker(env, `headless worker ${options.executionId}`);
 
       // Spawn claude CLI process
       const child = spawn('claude', ['--print', prompt], {

@@ -19,6 +19,7 @@ import {
   recordMcpCallComplete,
   recordMcpCallFailed,
 } from './scoreboard-instrumentation.js';
+import { assertSubagentIdentityMarker } from './subagent-markers.js';
 
 // Storage paths
 const STORAGE_DIR = '.hive-flow';
@@ -495,6 +496,7 @@ function buildProviderBridgeEnv(
   if (agentToken) childEnv.HIVE_FLOW_AGENT_TOKEN = agentToken;
   if (agentRole?.hiveId) childEnv.HIVE_FLOW_HIVE_ID = agentRole.hiveId;
   if (agentRole?.type) childEnv.HIVE_FLOW_ROLE = agentRole.type;
+  assertSubagentIdentityMarker(childEnv, `provider bridge agent ${agentId}`);
   return childEnv;
 }
 

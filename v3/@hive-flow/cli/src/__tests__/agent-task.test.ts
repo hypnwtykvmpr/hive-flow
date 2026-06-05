@@ -378,6 +378,19 @@ describe('agent_task handler (non-blocking)', () => {
     expect(mockUnref).toHaveBeenCalledTimes(1);
   });
 
+  it('passes subagent identity markers to the provider bridge child env', async () => {
+    const agent = makeAgent();
+    setupStoreMocks(makeStore({ [agent.agentId]: agent }));
+    mockDetachedSpawn();
+
+    await handler({ agentId: agent.agentId, task: 'marked task' });
+
+    const { opts } = getSpawnCall();
+    const env = opts.env as Record<string, string>;
+    expect(env.AGENTIC_FLOW_AGENT_ID).toBe(agent.agentId);
+    expect(env.CLAUDE_AGENT_ID).toBe(agent.agentId);
+  });
+
   // ------------------------------------------------------------------
   // 9. Rejects agent that is already busy
   // ------------------------------------------------------------------
