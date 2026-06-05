@@ -1247,6 +1247,32 @@ describe('enforcement security property contracts', () => {
       'n"o"de -e "console.log(1)"',
       'node <(echo "console.log(1)")',
       'node <<EOF\nconsole.log(1)\nEOF',
+      '( node -e "console.log(1)" )',
+      '{ node -e "console.log(1)"; }',
+      '( ( node -e "console.log(1)" ) )',
+      'true && ( node -e "console.log(1)" )',
+      'if true; then node -e "console.log(1)"; fi',
+      'for i in 1; do node -e "console.log(1)"; done',
+      'while false; do python3 -c "import os"; done',
+      'until true; do node -e "console.log(1)"; done',
+      'case x in y) node -e "console.log(1)";; esac',
+      '( python3 -c "import os" )',
+      'echo a\nnode -e "console.log(1)"',
+      'echo a\r\nnode -e "console.log(1)"',
+      'cd /tmp\n\nnode -e "console.log(1)"',
+      `echo a ${'\\'}\n node -e "console.log(1)"`,
+      '$(node -e "console.log(1)")',
+      'x=$(node -e "console.log(1)")',
+      'echo $(node -e "console.log(1)")',
+      '`node -e "console.log(1)"`',
+      'python2 -c "1"',
+      'nodejs -e "1"',
+      'node22 -e "1"',
+      'pypy3 -c "1"',
+      'exec -a fakebin node -e "console.log(1)"',
+      'ruby -rfileutils -e "1"',
+      'python -m runpy mod',
+      'python -m',
     ]) {
       const result = enf.processPreToolUse({
         tool_name: 'Bash',
@@ -1281,8 +1307,53 @@ describe('enforcement security property contracts', () => {
       'nice node scripts/check-project.js',
       'find . -name "*.ts" -exec echo {} \\;',
       'printf "%s\\n" src/index.ts | xargs echo',
+      '( node scripts/check-project.js )',
+      '{ node scripts/check-project.js; }',
+      'echo done\nnode build.js',
+      'tag=$(git rev-parse HEAD)',
+      'files=$(ls *.ts)',
+      'node22 scripts/x.js',
+      'exec node scripts/x.js',
+      'ruby -rubygems app.rb',
+      'ruby -run -e httpd',
+      'cat data.json | node process.js',
+      'curl -s https://example.test/x | node ingest.js',
+      'git log | node report.js arg1',
+      'cat input.txt | python3 myscript.py',
+      'seq 1 100 | node sum.js',
+      'cat fixture.json | python3 -m mypkg.cli',
+      'cat log | ruby filter.rb',
+      'node process.js < input.txt',
+      "grep 'node -e' README.md",
+      "grep '| node' README.md",
+      "awk '/pipe/ { print }' README.md",
+      'cat <<EOF\nthis is data mentioning | node and node -e, not a command\nEOF',
+      'python -m pytest',
+      'python3 -m pip install flask',
+      'python3 -m venv env',
+      'python3 -m http.server',
     ]) {
       expect(enf.detectCircumvention('Bash', { command }, state).circumvention, command).toBe(false);
+    }
+  });
+
+  it('continues denying bare interpreter program stdin through the .cjs gate', () => {
+    process.env.AGENTIC_FLOW_AGENT_ID = 'bare-stdin-inline-worker';
+
+    for (const command of [
+      'echo "console.log(1)" | node',
+      'node /dev/stdin',
+      'node -',
+      'cat prog.js | node',
+      'node <<EOF\nconsole.log(1)\nEOF',
+    ]) {
+      const result = enf.processPreToolUse({
+        tool_name: 'Bash',
+        tool_input: { command },
+      });
+
+      expect(result.hookSpecificOutput?.permissionDecision, command).toBe('deny');
+      expect(result.hookSpecificOutput?.permissionDecisionReason, command).toContain('Inline code execution is blocked');
     }
   });
 

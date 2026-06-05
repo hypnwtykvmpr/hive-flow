@@ -19,6 +19,76 @@ export interface ShellExecution {
 export const INLINE_EVAL_DENIAL =
   'Inline code execution is blocked because file effects cannot be verified reliably. Instead: use Read, Write, or Edit for files; write a script file in the project and run it normally for programs.';
 
+function normalizeLineContinuations(command: string): string {
+  let normalized = '';
+  let quote: string | null = null;
+  let escaped = false;
+
+  for (let i = 0; i < command.length; i++) {
+    const ch = command[i];
+    if (escaped) {
+      if (!quote && ch === '\r' && command[i + 1] === '\n') {
+        normalized += '\n';
+        i++;
+      } else if (!quote && ch === '\n') {
+        normalized += '\n';
+      } else {
+        normalized += `\\${ch}`;
+      }
+      escaped = false;
+      continue;
+    }
+    if (ch === '\\') {
+      escaped = true;
+      continue;
+    }
+    if (quote) {
+      normalized += ch;
+      if (ch === quote) quote = null;
+      continue;
+    }
+    if (ch === '"' || ch === "'") {
+      quote = ch;
+      normalized += ch;
+      continue;
+    }
+    normalized += ch;
+  }
+
+  if (escaped) normalized += '\\';
+  return normalized;
+}
+
+function stripHeredocBodies(command: string): string {
+  const lines = String(command || '').split(/\r?\n/);
+  const output: string[] = [];
+  const markers: string[] = [];
+
+  for (const line of lines) {
+    if (markers.length) {
+      if (line.trim() === markers[0]) {
+        markers.shift();
+      }
+      continue;
+    }
+
+    output.push(line);
+    const heredoc = line.match(/<<-?\s*(['"]?)([A-Za-z_][A-Za-z0-9_]*)\1/);
+    if (heredoc) markers.push(heredoc[2]);
+  }
+
+  return output.join('\n');
+}
+
+function isHorizontalWhitespace(ch: string | undefined): boolean {
+  return ch === ' ' || ch === '\t' || ch === '\v' || ch === '\f';
+}
+
+function isCommandBoundary(ch: string | undefined): boolean {
+  return ch === '\n' || ch === '\r' || ch === '|' || ch === ';' || ch === '&' ||
+    ch === '<' || ch === '>' || ch === '(' || ch === ')' || ch === '{' || ch === '}';
+}
+
 function stripShellQuotes(token: string): string {
   const trimmed = String(token || '').trim();
   if (trimmed.length >= 2) {
@@ -65,7 +135,7 @@ function normalizeShellWord(token: string): string {
 
 function readShellToken(command: string, startIndex: number): { token: string; raw: string; quoted: boolean; end: number } {
   let i = startIndex;
-  while (i < command.length && /\s/.test(command[i])) i++;
+  while (i < command.length && isHorizontalWhitespace(command[i])) i++;
   let token = '';
   let quote: string | null = null;
   let quoted = false;
@@ -95,7 +165,7 @@ function readShellToken(command: string, startIndex: number): { token: string; r
       i += 2;
       continue;
     }
-    if (/\s/.test(ch) || ch === '|' || ch === ';' || ch === '&' || ch === '<' || ch === '>') {
+    if (/\s/.test(ch) || isCommandBoundary(ch)) {
       break;
     }
     token += ch;
@@ -106,13 +176,31 @@ function readShellToken(command: string, startIndex: number): { token: string; r
 }
 
 export function shellTokens(command: string): ShellToken[] {
+  command = normalizeLineContinuations(command);
   const tokens: ShellToken[] = [];
   let i = 0;
   while (i < command.length) {
-    while (i < command.length && /\s/.test(command[i])) i++;
+    while (i < command.length && isHorizontalWhitespace(command[i])) i++;
     if (i >= command.length) break;
 
     const ch = command[i];
+    if (ch === '\r' || ch === '\n') {
+      const raw = ch === '\r' && command[i + 1] === '\n' ? '\r\n' : ch;
+      tokens.push({ text: '\n', raw, quoted: false, operator: true });
+      i += raw.length;
+      continue;
+    }
+    if (ch === '(' || ch === ')' || ch === '{' || ch === '}') {
+      tokens.push({ text: ch, raw: ch, quoted: false, operator: true });
+      i++;
+      continue;
+    }
+    if (ch === '<' || ch === '>') {
+      const pair = command[i + 1] === ch ? ch + ch : ch;
+      tokens.push({ text: pair, raw: pair, quoted: false, operator: true });
+      i += pair.length;
+      continue;
+    }
     if (ch === '|' || ch === ';' || ch === '&') {
       const pair = command[i + 1] === ch ? ch + ch : ch;
       tokens.push({ text: pair, raw: pair, quoted: false, operator: true });
@@ -130,6 +218,7 @@ export function shellTokens(command: string): ShellToken[] {
 }
 
 export function splitShellSubcommands(command: string): string[] {
+  command = normalizeLineContinuations(command);
   const subCommands: string[] = [];
   let current = '';
   let quote: string | null = null;
@@ -157,9 +246,10 @@ export function splitShellSubcommands(command: string): string[] {
       current += ch;
       continue;
     }
-    if (ch === ';') {
+    if (ch === ';' || ch === '\n' || ch === '\r') {
       if (current.trim()) subCommands.push(current);
       current = '';
+      if (ch === '\r' && command[i + 1] === '\n') i++;
       continue;
     }
     if ((ch === '&' || ch === '|') && command[i + 1] === ch) {
@@ -187,9 +277,13 @@ function isShellAssignmentToken(token: ShellToken | undefined): boolean {
 function splitTokenSegments(tokens: ShellToken[]): ShellToken[][] {
   const segments: ShellToken[][] = [];
   let current: ShellToken[] = [];
+  const reservedWords = new Set([
+    'if', 'then', 'elif', 'else', 'fi', 'for', 'while', 'until', 'do', 'done',
+    'case', 'esac', 'in', '!', 'select',
+  ]);
 
   for (const token of tokens) {
-    if (token.operator) {
+    if (token.operator || (!token.quoted && reservedWords.has(token.text))) {
       if (current.length) segments.push(current);
       current = [];
       continue;
@@ -207,6 +301,7 @@ function commandBasename(command: string): string {
 }
 
 const LAUNCHER_VALUE_FLAGS = new Map<string, Set<string>>([
+  ['exec', new Set(['-a'])],
   ['nice', new Set(['-n', '--adjustment'])],
   ['timeout', new Set(['-k', '--kill-after'])],
   ['time', new Set(['-f', '-o', '--format', '--output'])],
@@ -232,11 +327,11 @@ function skipTransparentLauncher(tokens: ShellToken[], index: number): number {
   const base = commandBasename(tokens[index]?.text || '').toLowerCase();
   let next = index + 1;
 
-  if (['command', 'builtin', 'exec', 'nohup', 'setsid'].includes(base)) {
+  if (['command', 'builtin', 'nohup', 'setsid'].includes(base)) {
     return skipSimpleOptions(tokens, next);
   }
 
-  if (['nice', 'time', 'stdbuf', 'ionice'].includes(base)) {
+  if (['exec', 'nice', 'time', 'stdbuf', 'ionice'].includes(base)) {
     return skipSimpleOptions(tokens, next, LAUNCHER_VALUE_FLAGS.get(base) || new Set());
   }
 
@@ -322,7 +417,8 @@ function shellCommandBody(execution: ShellExecution): string | null {
   for (let i = 0; i < args.length; i++) {
     const arg = args[i].text || '';
     if (arg === '-c' || (/^-[A-Za-z]+$/.test(arg) && arg.includes('c'))) {
-      return args[i + 1]?.text || null;
+      const body = args[i + 1];
+      return body ? stripShellQuotes(body.raw || body.text) : null;
     }
   }
 
@@ -371,11 +467,112 @@ function findExecCommandBodies(execution: ShellExecution): string[] {
   return bodies;
 }
 
+function findMatchingParen(command: string, startIndex: number): number {
+  let quote: string | null = null;
+  let escaped = false;
+  let depth = 1;
+
+  for (let i = startIndex; i < command.length; i++) {
+    const ch = command[i];
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (ch === '\\') {
+      escaped = true;
+      continue;
+    }
+    if (quote) {
+      if (ch === quote) quote = null;
+      continue;
+    }
+    if (ch === '"' || ch === "'") {
+      quote = ch;
+      continue;
+    }
+    if (ch === '(') depth++;
+    if (ch === ')') {
+      depth--;
+      if (depth === 0) return i;
+    }
+  }
+
+  return -1;
+}
+
+function findMatchingBacktick(command: string, startIndex: number): number {
+  let escaped = false;
+  for (let i = startIndex; i < command.length; i++) {
+    const ch = command[i];
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (ch === '\\') {
+      escaped = true;
+      continue;
+    }
+    if (ch === '`') return i;
+  }
+  return -1;
+}
+
+function extractCommandSubstitutions(command: string): string[] {
+  const bodies: string[] = [];
+  let quote: string | null = null;
+  let escaped = false;
+
+  for (let i = 0; i < command.length; i++) {
+    const ch = command[i];
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (ch === '\\') {
+      escaped = true;
+      continue;
+    }
+    if (quote) {
+      if (ch === quote) quote = null;
+      continue;
+    }
+    if (ch === "'") {
+      quote = ch;
+      continue;
+    }
+    if (ch === '"') {
+      quote = ch;
+      continue;
+    }
+    if (ch === '$' && command[i + 1] === '(') {
+      const end = findMatchingParen(command, i + 2);
+      if (end !== -1) {
+        bodies.push(command.slice(i + 2, end));
+        i = end;
+      }
+      continue;
+    }
+    if (ch === '`') {
+      const end = findMatchingBacktick(command, i + 1);
+      if (end !== -1) {
+        bodies.push(command.slice(i + 1, end));
+        i = end;
+      }
+    }
+  }
+
+  return bodies;
+}
+
 export function collectShellCommandExecutions(command: string, depth = 0): ShellExecution[] {
   if (depth > 4) return [];
 
   const executions: ShellExecution[] = [];
-  for (const subCommand of splitShellSubcommands(String(command || ''))) {
+  const normalizedCommand = normalizeLineContinuations(stripHeredocBodies(String(command || '')));
+  for (const substitution of extractCommandSubstitutions(normalizedCommand)) {
+    executions.push(...collectShellCommandExecutions(substitution, depth + 1));
+  }
+  for (const subCommand of splitShellSubcommands(normalizedCommand)) {
     const tokens = shellTokens(subCommand);
     for (const segment of splitTokenSegments(tokens)) {
       const execution = commandExecutionFromTokens(segment);
@@ -417,6 +614,14 @@ function hasNodeEvalArg(args: string[]): boolean {
     hasShortFlagArg(args, ['-e', '-p', '-r']);
 }
 
+function isNodeCommand(base: string): boolean {
+  return /^node(?:js|\d+)?$/.test(base);
+}
+
+function isPythonCommand(base: string): boolean {
+  return /^(?:python|pypy)(?:\d+(?:\.\d+)?)?$/.test(base);
+}
+
 const PYTHON_INLINE_MODULES = new Set(['runpy']);
 
 function hasPythonInlineArg(args: string[]): boolean {
@@ -428,6 +633,19 @@ function hasPythonInlineArg(args: string[]): boolean {
   return PYTHON_INLINE_MODULES.has(moduleName.toLowerCase());
 }
 
+function hasRubyInlineArg(args: string[]): boolean {
+  const hasRunStartup = args.includes('-run');
+  for (const arg of args) {
+    if (arg === '-e') {
+      if (hasRunStartup) continue;
+      return true;
+    }
+    if (arg === '-r') return true;
+    if (arg.startsWith('-r') && arg !== '-run' && arg !== '-rubygems') return true;
+  }
+  return false;
+}
+
 function unseparatedArgs(args: string[]): string[] {
   return args[0] === '--' ? args.slice(1) : args;
 }
@@ -436,9 +654,9 @@ function isInlineEvalCommand(command: string, args: string[]): boolean {
   const base = commandBasename(command).toLowerCase();
   const effectiveArgs = unseparatedArgs(args);
 
-  if (base === 'node') return hasNodeEvalArg(effectiveArgs);
-  if (/^(?:python|python3|python3\.\d+)$/.test(base)) return hasPythonInlineArg(effectiveArgs);
-  if (base === 'ruby') return hasAnyArg(effectiveArgs, ['-e', '-E']) || hasShortFlagArg(effectiveArgs, ['-r']);
+  if (isNodeCommand(base)) return hasNodeEvalArg(effectiveArgs);
+  if (isPythonCommand(base)) return hasPythonInlineArg(effectiveArgs);
+  if (base === 'ruby') return hasRubyInlineArg(effectiveArgs);
   if (base === 'perl') return hasAnyArg(effectiveArgs, ['-e', '-E']) || hasFlagArg(effectiveArgs, ['-M']);
   if (base === 'deno') return effectiveArgs[0] === 'eval' || (effectiveArgs[0] === 'run' && effectiveArgs.some(arg => arg === '-' || arg === '/dev/stdin'));
   if (base === 'bun') return hasAnyArg(effectiveArgs, ['-e']) || hasFlagArg(effectiveArgs, ['--eval']);
@@ -556,8 +774,8 @@ function hasInlineEvalEnvAssignment(execution: ShellExecution): boolean {
 
 function isInterpreterCommand(command: string): boolean {
   const base = commandBasename(command).toLowerCase();
-  return base === 'node' ||
-    /^(?:python|python3|python3\.\d+)$/.test(base) ||
+  return isNodeCommand(base) ||
+    isPythonCommand(base) ||
     ['ruby', 'perl', 'deno', 'bun', 'php', 'osascript', 'tsx', 'ts-node', 'ts-node-esm', 'zx'].includes(base) ||
     /^(?:lua|lua\d+(?:\.\d+)?)$/.test(base) ||
     /^(?:r|rscript)$/i.test(base);
@@ -565,6 +783,42 @@ function isInterpreterCommand(command: string): boolean {
 
 function hasStdinArg(args: string[]): boolean {
   return args.some(arg => arg === '-' || arg === '/dev/stdin');
+}
+
+const SCRIPT_VALUE_FLAGS = new Set([
+  '-e',
+  '-p',
+  '-r',
+  '-c',
+  '-m',
+  '--eval',
+  '--print',
+  '--require',
+  '--import',
+  '--loader',
+  '--experimental-loader',
+]);
+
+function hasScriptFileArg(execution: ShellExecution): boolean {
+  const base = commandBasename(execution.command).toLowerCase();
+  const args = unseparatedArgs(execution.args || []);
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (!arg || arg === '-' || arg === '/dev/stdin') return false;
+    if (arg === '--') continue;
+    if (arg === '-m' && isPythonCommand(base)) {
+      const moduleName = args[i + 1];
+      return Boolean(moduleName && !PYTHON_INLINE_MODULES.has(moduleName.toLowerCase()));
+    }
+    const flagName = arg.split('=', 1)[0];
+    if (SCRIPT_VALUE_FLAGS.has(arg) || SCRIPT_VALUE_FLAGS.has(flagName)) {
+      i += arg.includes('=') ? 0 : 1;
+      continue;
+    }
+    if (arg.startsWith('-')) continue;
+    return true;
+  }
+  return false;
 }
 
 function commandPipesIntoExecution(command: string, execution: ShellExecution): boolean {
@@ -582,11 +836,12 @@ function commandRedirectsIntoExecution(command: string, execution: ShellExecutio
 function isInlineStdinExecution(command: string, execution: ShellExecution): boolean {
   if (!isInterpreterCommand(execution.command)) return false;
   if (hasStdinArg(execution.args)) return true;
+  if (hasScriptFileArg(execution)) return false;
   return commandPipesIntoExecution(command, execution) || commandRedirectsIntoExecution(command, execution);
 }
 
 function commandHasInterpreterInputRedirect(command: string): boolean {
-  const interpreter = String.raw`(?:node|python|python3(?:\.\d+)?|ruby|perl|deno|bun|php|osascript|tsx|ts-node|ts-node-esm|zx|lua\d*(?:\.\d+)?|R|Rscript)`;
+  const interpreter = String.raw`(?:node(?:js|\d+)?|(?:python|pypy)\d*(?:\.\d+)?|ruby|perl|deno|bun|php|osascript|tsx|ts-node|ts-node-esm|zx|lua\d*(?:\.\d+)?|R|Rscript)`;
   return new RegExp(String.raw`\b${interpreter}\b[^;&|]*(?:<<|<\(|<\s*/dev/stdin\b)`, 'i').test(command);
 }
 
@@ -598,11 +853,12 @@ export function isInlineEvalExecution(execution: ShellExecution): boolean {
 }
 
 export function findInlineEvalInvocation(command: string): ShellExecution | null {
-  const executions = collectShellCommandExecutions(command);
-  const redirectExecution = commandHasInterpreterInputRedirect(command)
-    ? executions.find(execution => isInterpreterCommand(execution.command))
+  const commandStream = stripHeredocBodies(command);
+  const executions = collectShellCommandExecutions(commandStream);
+  const redirectExecution = commandHasInterpreterInputRedirect(commandStream)
+    ? executions.find(execution => isInterpreterCommand(execution.command) && !hasScriptFileArg(execution))
     : null;
-  return executions.find(isInlineEvalExecution) || executions.find(execution => isInlineStdinExecution(command, execution)) || redirectExecution || null;
+  return executions.find(isInlineEvalExecution) || executions.find(execution => isInlineStdinExecution(commandStream, execution)) || redirectExecution || null;
 }
 
 export function hasInlineEvalInvocation(command: string): boolean {

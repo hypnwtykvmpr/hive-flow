@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import fc from 'fast-check';
 import { deepInspect, extractAllCommands, classifyCommandRisk } from '../deep-inspect.js';
 
 describe('deepInspect', () => {
@@ -146,6 +147,154 @@ describe('deepInspect', () => {
       expect(result.technique).toBe('inline-eval');
       expect(result.reason).toContain('use Read, Write, or Edit');
       expect(result.reason).toContain('write a script file');
+    });
+    it.each([
+      '( node -e "console.log(1)" )',
+      '{ node -e "console.log(1)"; }',
+      '( ( node -e "console.log(1)" ) )',
+      'true && ( node -e "console.log(1)" )',
+      'if true; then node -e "console.log(1)"; fi',
+      'for i in 1; do node -e "console.log(1)"; done',
+      'while false; do python3 -c "import os"; done',
+      'until true; do node -e "console.log(1)"; done',
+      'case x in y) node -e "console.log(1)";; esac',
+      '( python3 -c "import os" )',
+      'echo a\nnode -e "console.log(1)"',
+      'echo a\r\nnode -e "console.log(1)"',
+      'cd /tmp\n\nnode -e "console.log(1)"',
+      `echo a ${'\\'}\n node -e "console.log(1)"`,
+      '$(node -e "console.log(1)")',
+      'x=$(node -e "console.log(1)")',
+      'echo $(node -e "console.log(1)")',
+      '`node -e "console.log(1)"`',
+      'python2 -c "1"',
+      'nodejs -e "1"',
+      'node22 -e "1"',
+      'pypy3 -c "1"',
+      'exec -a fakebin node -e "console.log(1)"',
+      'ruby -rfileutils -e "1"',
+    ])('blocks command-position inline eval through compound/substitution/alias forms: %s', (command) => {
+      const result = deepInspect(command);
+      expect(result.blocked).toBe(true);
+      expect(result.technique).toBe('inline-eval');
+    });
+    it.each([
+      '( node scripts/check-project.js )',
+      '{ node scripts/check-project.js; }',
+      'echo done\nnode build.js',
+      'tag=$(git rev-parse HEAD)',
+      'files=$(ls *.ts)',
+      'node22 scripts/x.js',
+      'exec node scripts/x.js',
+      'ruby -rubygems app.rb',
+      'ruby -run -e httpd',
+    ])('allows benign command-position wrappers and aliases: %s', (command) => {
+      expect(deepInspect(command).blocked).toBe(false);
+    });
+    it.each([
+      'cat data.json | node process.js',
+      'curl -s https://example.test/x | node ingest.js',
+      'git log | node report.js arg1',
+      'cat input.txt | python3 myscript.py',
+      'seq 1 100 | node sum.js',
+      'cat fixture.json | python3 -m mypkg.cli',
+      'cat log | ruby filter.rb',
+      'node process.js < input.txt',
+    ])('allows stdin data into script files: %s', (command) => {
+      expect(deepInspect(command).blocked).toBe(false);
+    });
+    it.each([
+      'echo "console.log(1)" | node',
+      'node /dev/stdin',
+      'node -',
+      'cat prog.js | node',
+      'node <<EOF\nconsole.log(1)\nEOF',
+    ])('continues blocking bare interpreter program stdin: %s', (command) => {
+      const result = deepInspect(command);
+      expect(result.blocked).toBe(true);
+      expect(result.technique).toBe('inline-eval');
+    });
+    it.each([
+      "grep 'node -e' README.md",
+      "grep '| node' README.md",
+      "awk '/pipe/ { print }' README.md",
+      'cat <<EOF\nthis is data mentioning | node and node -e, not a command\nEOF',
+    ])('allows command-looking quoted/heredoc data: %s', (command) => {
+      expect(deepInspect(command).blocked).toBe(false);
+    });
+    it.each([
+      'python -m pytest',
+      'python3 -m pip install flask',
+      'python3 -m venv env',
+      'python3 -m http.server',
+    ])('allows benign python -m module commands: %s', (command) => {
+      expect(deepInspect(command).blocked).toBe(false);
+    });
+    it.each([
+      'python -m runpy mod',
+      'python -m',
+    ])('blocks python -m inline/bare module cases: %s', (command) => {
+      const result = deepInspect(command);
+      expect(result.blocked).toBe(true);
+      expect(result.technique).toBe('inline-eval');
+    });
+    it('property-blocks inline eval across command-position wrappers and substitutions', () => {
+      const inlinePayload = fc.constantFrom(
+        'node -e "console.log(1)"',
+        'nodejs --eval=console.log(1)',
+        'python2 -c "1"',
+        'pypy3 -c "1"',
+        'ruby -rfileutils -e "1"',
+      );
+      const wrapper = fc.constantFrom<(payload: string) => string>(
+        payload => payload,
+        payload => `( ${payload} )`,
+        payload => `{ ${payload}; }`,
+        payload => `true && ${payload}`,
+        payload => `if true; then ${payload}; fi`,
+        payload => `for i in 1; do ${payload}; done`,
+        payload => `x=$(${payload})`,
+        payload => `echo $(${payload})`,
+        payload => `\`${payload}\``,
+        payload => `echo ok\n${payload}`,
+        payload => `echo ok \\\n ${payload}`,
+        payload => `exec -a fakebin ${payload}`,
+      );
+
+      fc.assert(
+        fc.property(inlinePayload, wrapper, (payload, wrap) => {
+          const command = wrap(payload);
+          const result = deepInspect(command);
+          expect(result.blocked, command).toBe(true);
+          expect(result.technique, command).toBe('inline-eval');
+        }),
+        { numRuns: 100 },
+      );
+    });
+    it('property-allows stdin data when the interpreter has a script target', () => {
+      const producer = fc.constantFrom(
+        'cat data.json',
+        'git log',
+        'seq 1 100',
+        'curl -s https://example.test/input',
+      );
+      const scriptConsumer = fc.constantFrom(
+        'node process.js',
+        'node22 process.js',
+        'nodejs process.js arg1',
+        'python3 myscript.py',
+        'python3 -m mypkg.cli',
+        'pypy3 myscript.py',
+        'ruby filter.rb',
+      );
+
+      fc.assert(
+        fc.property(producer, scriptConsumer, (left, right) => {
+          const command = `${left} | ${right}`;
+          expect(deepInspect(command).blocked, command).toBe(false);
+        }),
+        { numRuns: 100 },
+      );
     });
     it.each([
       'timeout 30 node scripts/check-project.js',

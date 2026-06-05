@@ -40,6 +40,61 @@ function unquote(s: string): string {
   return trimmed;
 }
 
+function stripHeredocBodies(command: string): string {
+  const lines = String(command || '').split(/\r?\n/);
+  const output: string[] = [];
+  const markers: string[] = [];
+
+  for (const line of lines) {
+    if (markers.length) {
+      if (line.trim() === markers[0]) markers.shift();
+      continue;
+    }
+
+    output.push(line);
+    const heredoc = line.match(/<<-?\s*(['"]?)([A-Za-z_][A-Za-z0-9_]*)\1/);
+    if (heredoc) markers.push(heredoc[2]);
+  }
+
+  return output.join('\n');
+}
+
+function stripQuotedArgumentData(command: string): string {
+  let output = '';
+  let quote: string | null = null;
+  let escaped = false;
+
+  for (const ch of String(command || '')) {
+    if (escaped) {
+      output += quote ? ' ' : ch;
+      escaped = false;
+      continue;
+    }
+    if (ch === '\\') {
+      escaped = true;
+      output += quote ? ' ' : ch;
+      continue;
+    }
+    if (quote) {
+      if (ch === quote) {
+        quote = null;
+        output += ch;
+      } else {
+        output += ' ';
+      }
+      continue;
+    }
+    if (ch === '"' || ch === "'") {
+      quote = ch;
+      output += ch;
+      continue;
+    }
+    output += ch;
+  }
+
+  return output;
+}
+
 // Layer B: Shell runtime wrappers
 const SHELL_WRAPPERS: Array<{ pattern: RegExp; lang: string; extractor: (m: RegExpMatchArray) => string }> = [
   { pattern: /^(?:bash|sh|zsh|dash|ksh)\s+-c\s+(.+)$/s, lang: 'bash', extractor: (m) => unquote(m[1]) },
@@ -47,7 +102,7 @@ const SHELL_WRAPPERS: Array<{ pattern: RegExp; lang: string; extractor: (m: RegE
 ];
 
 // Layer C: Pipe-to-shell
-const PIPE_TO_SHELL = /\|\s*(?:bash|sh|zsh|python3?|node|ruby|perl)(?:\s|$)/;
+const PIPE_TO_SHELL = /\|\s*(?:bash|sh|zsh)(?:\s|$)/;
 
 // Layer D: Process substitution
 const PROCESS_SUB = /(?:source|\.)\s+<\(|bash\s+<\s+<\(/;
@@ -124,7 +179,7 @@ const LANG_PATTERNS: Record<string, RegExp[]> = {
 const AWK_DANGEROUS: RegExp[] = [
   /\bawk\b.*\bsystem\s*\(/, // awk with system() call
   /\bawk\b.*\bgetline\b/, // awk with getline (can read files)
-  /\bawk\b.*\"|.*\bpipe\b/, // awk piping to commands
+  /\bawk\b.*\|\s*['"]/, // awk piping to commands
 ];
 
 const SED_DANGEROUS: RegExp[] = [
@@ -165,14 +220,16 @@ export function deepInspect(command: string, depth: number = 0): DeepInspectResu
 
   const cmd = command.trim();
   if (!cmd) return ok([], depth);
+  const commandStream = stripHeredocBodies(cmd);
+  const structuralCmd = stripQuotedArgumentData(commandStream);
 
   // Layer C: Pipe-to-shell (must run before ALWAYS_SAFE to catch e.g. `curl ... | bash`)
-  const inlineEval = findInlineEvalInvocation(cmd);
+  const inlineEval = findInlineEvalInvocation(commandStream);
   if (inlineEval) {
     return block(INLINE_EVAL_DENIAL, 'inline-eval', 'high', [inlineEval.subCommand || cmd], depth);
   }
 
-  if (PIPE_TO_SHELL.test(cmd)) {
+  if (PIPE_TO_SHELL.test(structuralCmd)) {
     return block('Command pipes output to shell interpreter', 'pipe-to-shell', 'high', [cmd], depth);
   }
 
@@ -182,9 +239,9 @@ export function deepInspect(command: string, depth: number = 0): DeepInspectResu
   }
 
   // Layer A2: AWK/SED dangerous patterns (before ALWAYS_SAFE to catch dangerous variants)
-  const awkMatch = matchFirst(cmd, AWK_DANGEROUS);
+  const awkMatch = matchFirst(commandStream, AWK_DANGEROUS);
   if (awkMatch) return block(`Dangerous awk usage: ${awkMatch.source}`, 'awk-dangerous', 'critical', [cmd], depth);
-  const sedMatch = matchFirst(cmd, SED_DANGEROUS);
+  const sedMatch = matchFirst(commandStream, SED_DANGEROUS);
   if (sedMatch) return block(`Dangerous sed usage: ${sedMatch.source}`, 'sed-dangerous', 'critical', [cmd], depth);
 
   // Layer A3: Network exfiltration tools (before ALWAYS_SAFE)
