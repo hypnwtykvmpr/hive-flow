@@ -1119,7 +1119,7 @@ describe('enforcement security property contracts', () => {
     );
   });
 
-  it('allows one-shot project-root env prefixes but escalates exported spoof and gate-bypass env vars', () => {
+  it('escalates inline and exported project-root spoof and gate-bypass env vars', () => {
     const state = {
       level: 0,
       violations: 0,
@@ -1132,7 +1132,7 @@ describe('enforcement security property contracts', () => {
       'Bash',
       { command: 'HIVE_FLOW_PROJECT_ROOT=/tmp/spoofed node v3/@hive-flow/cli/bin/cli.js status' },
       state,
-    ).circumvention).toBe(false);
+    )).toMatchObject({ circumvention: true, systemic: true });
 
     expect(enf.detectCircumvention(
       'Bash',

@@ -1593,7 +1593,7 @@ function findEnforcementEnvManipulation(command) {
         const name = assignmentName(token);
         if (token.quoted && !name) break;
         if (!name) break;
-        if (GATE_BYPASS_ENV_VARS.has(name)) return { name, kind: 'inline' };
+        if (ROOT_SPOOF_ENV_VARS.has(name) || GATE_BYPASS_ENV_VARS.has(name)) return { name, kind: 'inline' };
         index++;
       }
     }
