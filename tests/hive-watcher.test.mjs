@@ -59,7 +59,11 @@ function makeProjectDir() {
   return mkdtempSync(join(tmpdir(), 'hive-watcher-test-'));
 }
 
-function makeHive(projectDir, hiveId, workers) {
+function isoMsAgo(ms) {
+  return new Date(Date.now() - ms).toISOString();
+}
+
+function makeHive(projectDir, hiveId, workers, audit = []) {
   const mod = loadWatcherModule();
   const sanitized = mod.sanitizeHiveId(hiveId);
   const hiveDir = join(projectDir, '.hive-flow', 'hives', sanitized);
@@ -69,6 +73,7 @@ function makeHive(projectDir, hiveId, workers) {
     queenId: 'queen-1',
     status: 'active',
     workers,
+    audit,
   }, null, 2));
 }
 
@@ -97,10 +102,20 @@ describe('hive-watcher regressions', () => {
   it('treats a hive as complete once nothing is running even if some workers are idle', () => {
     const projectDir = makeProjectDir();
     tempDirs.push(projectDir);
+    const spawnedAt = isoMsAgo(10 * 60_000);
 
     makeHive(projectDir, 'demo/hive', [
-      { agentId: 'worker-1', status: 'active' },
-      { agentId: 'worker-2', status: 'active' },
+      { workerId: 'w1', agentId: 'worker-1', role: 'coder', status: 'idle', spawnedAt },
+      { workerId: 'w2', agentId: 'worker-2', role: 'tester', status: 'idle', spawnedAt },
+    ], [
+      {
+        timestamp: spawnedAt,
+        event: 'worker-tasked',
+        hiveId: 'demo/hive',
+        workerId: 'w1',
+        agentId: 'worker-1',
+        detail: 'worker-1 was tasked',
+      },
     ]);
 
     writeTracking(projectDir, 'task-one.json', {
@@ -123,6 +138,59 @@ describe('hive-watcher regressions', () => {
     assert.equal(status.idleCount, 1);
     assert.equal(status.runningCount, 0);
     assert.equal(status.allComplete, true);
+  });
+
+  it('settles a never-tasked hive once the startup grace window has elapsed', () => {
+    const projectDir = makeProjectDir();
+    tempDirs.push(projectDir);
+
+    makeHive(projectDir, 'demo/never-tasked', [
+      {
+        workerId: 'w1',
+        agentId: 'worker-1',
+        role: 'coder',
+        status: 'idle',
+        spawnedAt: isoMsAgo(10 * 60_000),
+      },
+    ]);
+
+    const mod = loadWatcherModule();
+    const status = mod.pollWorkers(
+      join(projectDir, '.hive-flow', 'hives'),
+      join(projectDir, '.hive-flow', 'tasks'),
+      'demo/never-tasked'
+    );
+
+    assert.equal(status.completedCount, 0);
+    assert.equal(status.idleCount, 1);
+    assert.equal(status.runningCount, 0);
+    assert.equal(status.allComplete, true);
+  });
+
+  it('does not settle a freshly-spawned hive inside the startup grace window', () => {
+    const projectDir = makeProjectDir();
+    tempDirs.push(projectDir);
+
+    makeHive(projectDir, 'demo/fresh', [
+      {
+        workerId: 'w1',
+        agentId: 'worker-1',
+        role: 'coder',
+        status: 'idle',
+        spawnedAt: isoMsAgo(2_000),
+      },
+    ]);
+
+    const mod = loadWatcherModule();
+    const status = mod.pollWorkers(
+      join(projectDir, '.hive-flow', 'hives'),
+      join(projectDir, '.hive-flow', 'tasks'),
+      'demo/fresh'
+    );
+
+    assert.equal(status.runningCount, 0);
+    assert.equal(status.idleCount, 1);
+    assert.equal(status.allComplete, false);
   });
 
   it('does not write watcher progress files for null-like hive ids', () => {
@@ -223,7 +291,7 @@ describe('hive-watcher regressions', () => {
 
     assert.match(source, /const sorted = tasks\.slice\(\)\.sort\(/);
     assert.doesNotMatch(source, /tasks\.sort\(/);
-    assert.match(source, /const allComplete = taskedCount > 0 && runningCount === 0;/);
+    assert.match(source, /const allComplete = runningCount === 0 && !startupWindowOpen;/);
     assert.doesNotMatch(source, /const allComplete = taskedCount > 0 && runningCount === 0 && idleCount === 0;/);
     assert.doesNotMatch(source, /if \(latest\.tracking\.pid\) \{/);
     assert.match(

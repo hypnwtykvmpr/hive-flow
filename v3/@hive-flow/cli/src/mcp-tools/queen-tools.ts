@@ -1397,10 +1397,29 @@ const hivePollWorkersTool: MCPTool = {
       else runningCount++;
     }
 
-    // Determine if all tasked workers are done (completed or failed — not running)
-    const taskedWorkers = workerStatuses.filter(w => w.status !== 'idle' && w.status !== 'terminated');
-    const allComplete = taskedWorkers.length > 0 && runningCount === 0;
-    console.error(`[hive_poll_workers] hive=${hiveId} taskedWorkers=${taskedWorkers.length} runningCount=${runningCount} completedCount=${completedCount} failedCount=${failedCount} allComplete=${allComplete}`);
+    // Ground truth for "tasked": worker-tasked audit entries (mirrors role-enforcement.cjs).
+    const tasked = new Set<string>();
+    for (const e of hive.audit ?? []) {
+      if (e && e.event === 'worker-tasked' && e.workerId) tasked.add(e.workerId);
+    }
+    const STARTUP_GRACE_MS = Number(process.env.HIVE_FLOW_SETTLE_GRACE_MS) > 0
+      ? Number(process.env.HIVE_FLOW_SETTLE_GRACE_MS) : 120_000;
+    const now = Date.now();
+    const startupWindowOpen = hive.workers.some(w => {
+      if (w.status === 'terminated') return false;
+      if (tasked.has(w.workerId)) return false;
+      const isIdleish = (() => {
+        const ws = workerStatuses.find(s => s.workerId === w.workerId);
+        return !ws || ws.status === 'idle';
+      })();
+      if (!isIdleish) return false;
+      const spawnedAt = new Date(w.spawnedAt).getTime();
+      return Number.isFinite(spawnedAt) && (now - spawnedAt) < STARTUP_GRACE_MS;
+    });
+
+    const taskedCount = completedCount + runningCount + failedCount;
+    const allComplete = runningCount === 0 && !startupWindowOpen;
+    console.error(`[hive_poll_workers] hive=${hiveId} taskedCount=${taskedCount} startupWindowOpen=${startupWindowOpen} runningCount=${runningCount} completedCount=${completedCount} failedCount=${failedCount} allComplete=${allComplete}`);
 
     // Auto-collect results into hive audit when all complete
     if (allComplete) {
@@ -1461,15 +1480,19 @@ const hivePollWorkersTool: MCPTool = {
     // This enables the MCP server polling to detect completion and fire notifications
     if (allComplete) {
       try {
+        const outcomeStatus: 'completed' | 'failed' = completedCount > 0 ? 'completed' : 'failed';
         await withHiveLock(hiveId, () => {
           const freshHive = loadHive(hiveId);
           if (freshHive && freshHive.status === 'active') {
-            console.error(`[hive_poll_workers] hive=${hiveId} auto-transitioning to completed`);
-            freshHive.status = 'completed';
+            console.error(`[hive_poll_workers] hive=${hiveId} auto-transitioning to ${outcomeStatus}`);
+            freshHive.status = outcomeStatus;
+            if (outcomeStatus === 'failed' && !freshHive.error) {
+              freshHive.error = `Hive settled with no completed workers (completed=${completedCount}, failed=${failedCount}, tasked=${taskedCount})`;
+            }
             freshHive.completedAt = new Date().toISOString();
             appendHiveAudit(freshHive, {
               event: 'results-collected',
-              detail: `Auto-completed: ${completedCount} completed, ${failedCount} failed, ${idleCount} idle`,
+              detail: `Auto-${outcomeStatus}: ${completedCount} completed, ${failedCount} failed, ${idleCount} idle`,
             });
             saveHive(hiveId, freshHive);
           }

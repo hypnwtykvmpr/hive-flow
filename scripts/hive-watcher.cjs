@@ -193,8 +193,26 @@ function pollWorkers(hivesDir, tasksDir, hiveId) {
 
   }
 
+  // Ground truth for "tasked": worker-tasked audit entries (identical to queen-tools.ts).
+  const tasked = new Set();
+  for (const e of (hive.audit || [])) {
+    if (e && e.event === 'worker-tasked' && e.workerId) tasked.add(e.workerId);
+  }
+  const STARTUP_GRACE_MS = Number(process.env.HIVE_FLOW_SETTLE_GRACE_MS) > 0
+    ? Number(process.env.HIVE_FLOW_SETTLE_GRACE_MS) : 120_000;
+  const nowMs = Date.now();
+  const startupWindowOpen = hive.workers.some((w) => {
+    if (w.status === 'terminated') return false;
+    if (tasked.has(w.workerId)) return false;
+    const t = agentTaskMap.get(w.agentId);
+    const idleish = !t || t.length === 0;
+    if (!idleish) return false;
+    const spawnedAt = new Date(w.spawnedAt).getTime();
+    return Number.isFinite(spawnedAt) && (nowMs - spawnedAt) < STARTUP_GRACE_MS;
+  });
+
   const taskedCount = completedCount + runningCount + failedCount;
-  const allComplete = taskedCount > 0 && runningCount === 0;
+  const allComplete = runningCount === 0 && !startupWindowOpen;
 
   return {
     hiveStatus: hive.status,
