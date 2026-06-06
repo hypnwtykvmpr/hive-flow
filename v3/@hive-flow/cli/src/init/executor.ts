@@ -154,6 +154,7 @@ const RELOCATED_HELPER_FILES = [
   'enforcement.cjs',
   'hook-handler.cjs',
   'settings-reconciler.cjs',
+  'provider-tracker.cjs',
 ];
 
 const RELOCATED_POLICY_FILES = [

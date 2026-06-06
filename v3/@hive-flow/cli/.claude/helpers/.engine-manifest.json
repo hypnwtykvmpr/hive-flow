@@ -1,0 +1,38 @@
+{
+  "syncedAt": "2026-06-06T08:32:15.721Z",
+  "version": "3.1.0-alpha.52",
+  "files": [
+    {
+      "name": "enforcement.cjs",
+      "sha256": "f865a743b94e67904e937cef1ef0b156f5dd90e23a4a24150434cf206ae07fb8"
+    },
+    {
+      "name": "role-enforcement.cjs",
+      "sha256": "182dbd79c58ff9b5efd6e6e9e03fc7d71e0747f1083fa941dc656b61fd14bd6b"
+    },
+    {
+      "name": "hive-composition-gate.cjs",
+      "sha256": "6beed382cf67267d5e4b5fb7e15740387c3d9ba12c35c56133203e2e834e8017"
+    },
+    {
+      "name": "hook-handler.cjs",
+      "sha256": "915875d24ef8a2a41f020623a8f4b8488ec6ecec3f92f3cc247b262cb404a509"
+    },
+    {
+      "name": "settings-reconciler.cjs",
+      "sha256": "9351c63f9af04a5e4e62661c97737e7ea2ff63b5e23c91cf578ab5b7753860af"
+    },
+    {
+      "name": "provider-tracker.cjs",
+      "sha256": "41ce7aba580572e5357f1fd4d6335f0af637136618ff70ecf4fe8b819c68f949"
+    },
+    {
+      "name": "protected-paths.cjs",
+      "sha256": "69d465a7b310efff2d56985cf4a596d3f2a4e7145eff8721ed405a0c9fc1a56b"
+    },
+    {
+      "name": "protected-paths.policy.json",
+      "sha256": "65a278ea60046af8c70c7057310acee7c21bfa2db6ba0fae8bb0669ec8632bdd"
+    }
+  ]
+}

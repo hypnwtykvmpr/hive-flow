@@ -2,9 +2,9 @@
 // Process-level safety net: if anything escapes all other error handling,
 // produce valid JSON so Claude Code never sees a hook error.
 process.on('uncaughtException', () => {
-  // permission-guard: fail-open (don't block user work on internal errors)
+  // permission-guard: fail-closed (hook crashes must not silently grant writes)
   if (process.argv[2] === 'permission-guard') {
-    process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'allow' } }));
+    process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: '[ENFORCEMENT ERROR] Hook crashed. Tool blocked for safety.' } }));
   }
   // enforce-plan: fail-closed (enforcement errors must block, not allow)
   else if (process.argv[2] === 'enforce-plan') {
@@ -37,10 +37,19 @@ process.on('uncaughtException', () => {
 
 const path = require('path');
 const fs = require('fs');
-const tracker = require('./provider-tracker.cjs');
 
 const helpersDir = __dirname;
-const PROJECT_DIR = path.resolve(__dirname, '..', '..'); // BUG-10: __dirname-derived, not env-poisonable
+
+function resolveProjectRoot() {
+  for (const candidate of [process.env.HIVE_FLOW_PROJECT_ROOT, process.env.CLAUDE_PROJECT_DIR]) {
+    if (candidate && typeof candidate === 'string') {
+      return path.resolve(candidate);
+    }
+  }
+  return path.resolve(helpersDir, '..', '..');
+}
+
+const PROJECT_DIR = resolveProjectRoot();
 
 function preToolUseDecision(decision, reason) {
   const hookSpecificOutput = {
@@ -98,6 +107,7 @@ const router = safeRequire(path.join(helpersDir, 'router.cjs'));
 const session = safeRequire(path.join(helpersDir, 'session.cjs'));
 const memory = safeRequire(path.join(helpersDir, 'memory.cjs'));
 const intelligence = safeRequire(path.join(helpersDir, 'intelligence.cjs'));
+const tracker = safeRequire(path.join(helpersDir, 'provider-tracker.cjs')) || { track() {} };
 
 // Get the command from argv
 const [,, command, ...args] = process.argv;
@@ -1408,7 +1418,7 @@ const handlers = {
         });
       });
 
-      const gatePath = require('path').join(__dirname, '..', '..', 'v3', '@hive-flow', 'cli', 'dist', 'src', 'permission-guard', 'gate.js');
+      const gatePath = path.join(PROJECT_DIR, 'v3', '@hive-flow', 'cli', 'dist', 'src', 'permission-guard', 'gate.js');
       if (!fs.existsSync(gatePath)) {
         console.log(ALLOW_JSON);
         return;
@@ -1452,8 +1462,8 @@ const handlers = {
 
       console.log(ALLOW_JSON);
     } catch (outerErr) {
-      // Silently fall through — do NOT write to stderr
-      console.log(ALLOW_JSON);
+      // Silently fail closed — do NOT write to stderr
+      console.log(permissionGuardDeny('[ENFORCEMENT ERROR] Hook crashed. Tool blocked for safety.'));
     }
   },
 
@@ -1750,8 +1760,8 @@ const handlers = {
 
   'hive-check-complete': () => {
     try {
-      const PROJECT_DIR = path.resolve(__dirname, '..', '..');
-      const DATA_DIR = path.join(PROJECT_DIR, '.hive-flow', 'data');
+      const projectDir = PROJECT_DIR;
+      const DATA_DIR = path.join(projectDir, '.hive-flow', 'data');
       const { isAlreadyAcked, claimAcked } = require('./dedup-marker.cjs');
       if (!fs.existsSync(DATA_DIR)) return console.log('{}');
 
@@ -1809,7 +1819,7 @@ const handlers = {
     } catch (e) {
       // Output valid JSON so Claude Code doesn't flag as hook error
       if (command === 'permission-guard') {
-        console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'allow' } }));
+        console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: '[ENFORCEMENT ERROR] Hook crashed. Tool blocked for safety.' } }));
       }
       if (command === 'enforce-plan') {
         console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: '[ENFORCEMENT ERROR] Hook crashed. Tool blocked for safety.' } }));

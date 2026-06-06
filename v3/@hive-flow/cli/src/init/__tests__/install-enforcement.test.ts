@@ -58,6 +58,7 @@ describe('relocated enforcement installer helpers', () => {
         '.claude/helpers/enforcement.cjs',
         '.claude/helpers/hook-handler.cjs',
         '.claude/helpers/settings-reconciler.cjs',
+        '.claude/helpers/provider-tracker.cjs',
         'v3/@hive-flow/cli/src/permission-guard/protected-paths.cjs',
         'v3/@hive-flow/cli/src/permission-guard/protected-paths.policy.json',
       ]) {
@@ -74,6 +75,7 @@ describe('relocated enforcement installer helpers', () => {
         'enforcement.cjs',
         'hook-handler.cjs',
         'settings-reconciler.cjs',
+        'provider-tracker.cjs',
         'protected-paths.cjs',
         'protected-paths.policy.json',
       ]) {
