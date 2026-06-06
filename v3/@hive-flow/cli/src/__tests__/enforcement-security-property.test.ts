@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { mkdtempSync } from 'node:fs';
 import { createHash, createHmac } from 'node:crypto';
 import { propertyRunsFromEnv } from './property-runs.js';
+import { checkMCPEnforcement, ToolRisk as McpToolRisk } from '../mcp-tools/mcp-enforcement-gate.js';
 
 const PROPERTY_RUNS = propertyRunsFromEnv(100);
 
@@ -422,6 +423,38 @@ describe('enforcement security property contracts', () => {
     expect(readScopedState('agent', 'native-task-agent')?.level).not.toBe(enf.LEVELS.RESTRICTED);
     expect(readScopedState('agent', 'coordinator-session')).toBeNull();
     expect(readScopedState('global', 'global')).toBeNull();
+  });
+
+  it('blocks agent_task_async at RESTRICTED with agent_task parity', () => {
+    resetModule();
+    rmSync(join(root, '.hive-flow', 'enforcement'), { recursive: true, force: true });
+    writeScopedState('global', 'global', {
+      level: enf.LEVELS.RESTRICTED,
+      violations: 0,
+      restrictedGroups: [],
+      history: [],
+      integrityCompromised: false,
+    });
+
+    const previousProjectDir = process.env.CLAUDE_PROJECT_DIR;
+    process.env.CLAUDE_PROJECT_DIR = root;
+    try {
+      const asyncResult = checkMCPEnforcement('mcp__hive-flow__agent_task_async');
+      const syncResult = checkMCPEnforcement('mcp__hive-flow__agent_task');
+
+      expect(asyncResult.allowed).toBe(false);
+      expect(syncResult.allowed).toBe(false);
+      expect(asyncResult.risk).toBe(McpToolRisk.CRITICAL);
+      expect(syncResult.risk).toBe(McpToolRisk.CRITICAL);
+      expect(asyncResult.reason).toContain('CRITICAL risk');
+      expect(syncResult.reason).toContain('CRITICAL risk');
+    } finally {
+      if (previousProjectDir === undefined) {
+        delete process.env.CLAUDE_PROJECT_DIR;
+      } else {
+        process.env.CLAUDE_PROJECT_DIR = previousProjectDir;
+      }
+    }
   });
 
   it('scopes unknown ordinary violations to project state instead of global', () => {

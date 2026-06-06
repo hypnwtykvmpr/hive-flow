@@ -17,7 +17,7 @@ export enum ToolRisk {
 
 // Risk classification table
 const CRITICAL_TOOLS = new Set([
-  'agent_spawn', 'agent_task',
+  'agent_spawn', 'agent_task', 'agent_task_async',
   'queen_spawn_worker', 'queen_mission_assign',
   'workflow_enforcer_override',
   'browser_eval',
@@ -236,7 +236,7 @@ export interface ModelEnforcementResult {
   correctedInput?: ModelEnforcementInput;
 }
 
-const AGENT_SPAWN_TOOLS = new Set(['agent_spawn', 'agent_task', 'queen_spawn_worker', 'queen_mission_assign']);
+const AGENT_SPAWN_TOOLS = new Set(['agent_spawn', 'agent_task', 'agent_task_async', 'queen_spawn_worker', 'queen_mission_assign']);
 
 // FIX-S5: Unicode-hyphen variants (U+2010 ‐, U+2011 ‑, U+2012 ‒, U+2013 –,
 // U+2014 —, U+2015 ―, U+2212 −, U+FE63 ﹣, U+FF0D －) lowercase to themselves,
