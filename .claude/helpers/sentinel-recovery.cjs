@@ -21,7 +21,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { spawn } = require('child_process');
+const childProcess = require('child_process');
 
 function loadProtectedPathPolicyModule() {
   const envProjectRoot = process.env.HIVE_FLOW_PROJECT_ROOT || process.env.CLAUDE_PROJECT_DIR || '';
@@ -117,6 +117,10 @@ function readTmuxPane() {
   }
 }
 
+function sanitizeHiveId(hiveId) {
+  return String(hiveId || '').replace(/[/\\.]+/g, '_').replace(/^_+|_+$/g, '');
+}
+
 /**
  * Scan DATA_DIR for watcher-*.json progress files.
  * Returns array of { filePath, data }.
@@ -151,13 +155,44 @@ function findWatcherFiles() {
 function spawnDetachedWatcher(hiveId, tmuxPane) {
   if (!fs.existsSync(WATCHER_SCRIPT)) return null;
 
+  const sanitized = sanitizeHiveId(hiveId);
+  if (!sanitized) return null;
+  const pidLockDir = path.join(DATA_DIR, `watcher-${sanitized}.lock`);
+  let lockAcquired = false;
+
   try {
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        fs.mkdirSync(pidLockDir);
+        lockAcquired = true;
+        break;
+      } catch (err) {
+        if (!err || err.code !== 'EEXIST') return null;
+
+        let stat;
+        try {
+          stat = fs.statSync(pidLockDir);
+        } catch {
+          return null;
+        }
+
+        if (Date.now() - stat.mtimeMs < 30_000) return null;
+
+        try {
+          fs.rmdirSync(pidLockDir);
+        } catch {
+          return null;
+        }
+      }
+    }
+    if (!lockAcquired) return null;
+
     const args = [WATCHER_SCRIPT, hiveId, '--project-dir', PROJECT_DIR];
     if (tmuxPane) {
       args.push('--tmux-pane', tmuxPane);
     }
 
-    const child = spawn(process.execPath, args, {
+    const child = childProcess.spawn(process.execPath, args, {
       detached: true,
       stdio: 'ignore',
       cwd: PROJECT_DIR,
@@ -168,6 +203,10 @@ function spawnDetachedWatcher(hiveId, tmuxPane) {
     return child.pid || null;
   } catch {
     return null;
+  } finally {
+    if (lockAcquired) {
+      try { fs.rmdirSync(pidLockDir); } catch { /* best-effort */ }
+    }
   }
 }
 
@@ -269,9 +308,15 @@ function main() {
   }));
 }
 
-try {
-  main();
-} catch {
-  // Fail-open: never block session start on internal errors
-  process.stdout.write(JSON.stringify({}));
+module.exports = {
+  spawnDetachedWatcher,
+};
+
+if (require.main === module) {
+  try {
+    main();
+  } catch {
+    // Fail-open: never block session start on internal errors
+    process.stdout.write(JSON.stringify({}));
+  }
 }
