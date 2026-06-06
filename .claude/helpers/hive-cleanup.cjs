@@ -32,9 +32,11 @@ const IDLE_TIMEOUT_MS = parseInt(process.env.HIVE_FLOW_IDLE_TIMEOUT_MS, 10) || 9
 const MIN_WORKERS_PER_HIVE = 5; // queen is separate; keep at least 5 workers alive
 const PROJECT_DIR = path.resolve(__dirname, '..', '..');
 const HIVES_DIR = path.join(PROJECT_DIR, '.hive-flow', 'hives');
+const TASKS_DIR = path.join(PROJECT_DIR, '.hive-flow', 'tasks');
 const LOCK_MAX_WAIT = parseInt(process.env.HIVE_FLOW_CLEANUP_LOCK_MAX_WAIT_MS, 10) || 1500;
 const LOCK_STALE_THRESHOLD = 30000; // 30s
 const CLEANUP_MAX_RUNTIME_MS = parseInt(process.env.HIVE_FLOW_CLEANUP_MAX_RUNTIME_MS, 10) || 4000;
+const WAIT_SIGTERM_MS = parseInt(process.env.HIVE_FLOW_REAP_WAIT_MS, 10) || 3000;
 
 // ---------------------------------------------------------------------------
 // Locking — mkdirSync-based (mirrors hive-store.ts withHiveLock)
@@ -167,6 +169,75 @@ async function getTerminateHandler() {
 }
 
 // ---------------------------------------------------------------------------
+// OS reaper — resolve worker PIDs from task tracking files
+// ---------------------------------------------------------------------------
+
+function resolveWorkerPid(agentId) {
+  try {
+    if (!agentId || !fs.existsSync(TASKS_DIR)) return null;
+    const files = fs.readdirSync(TASKS_DIR)
+      .filter(f => f.endsWith('.json') && !f.endsWith('.result.json'));
+    let best = null;
+    for (const file of files) {
+      let tracking;
+      try {
+        tracking = JSON.parse(fs.readFileSync(path.join(TASKS_DIR, file), 'utf-8'));
+      } catch {
+        continue;
+      }
+      if (!tracking || tracking.agentId !== agentId) continue;
+      if (!Number.isInteger(tracking.pid) || tracking.pid <= 1) continue;
+      const startedAt = new Date(tracking.startedAt).getTime();
+      const ts = Number.isFinite(startedAt) ? startedAt : 0;
+      if (!best || ts > best.ts) best = { pid: tracking.pid, ts };
+    }
+    return best ? best.pid : null;
+  } catch {
+    return null;
+  }
+}
+
+async function reapWithEscalation(pid) {
+  if (!Number.isInteger(pid) || pid <= 1) return 'unsafe-pid';
+  if (pid === process.pid) return 'self';
+  try {
+    process.kill(pid, 'SIGTERM');
+  } catch {
+    return 'gone';
+  }
+
+  await new Promise(resolve => setTimeout(resolve, WAIT_SIGTERM_MS));
+
+  try {
+    process.kill(pid, 0);
+  } catch {
+    return 'terminated';
+  }
+
+  try {
+    process.kill(pid, 'SIGKILL');
+    return 'killed';
+  } catch {
+    return 'killed-race';
+  }
+}
+
+async function reapWorkerProcess(agentId) {
+  const pid = resolveWorkerPid(agentId);
+  if (!pid) return { agentId, signalled: false, reason: 'no-tracking-pid' };
+  if (pid === process.pid || pid <= 1) {
+    return { agentId, pid, signalled: false, reason: 'self-or-init' };
+  }
+  const outcome = await reapWithEscalation(pid);
+  return {
+    agentId,
+    pid,
+    signalled: outcome === 'terminated' || outcome === 'killed' || outcome === 'killed-race',
+    reason: outcome,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Core cleanup logic
 // ---------------------------------------------------------------------------
 
@@ -289,6 +360,8 @@ async function cleanupIdleAgents(deadline = Date.now() + CLEANUP_MAX_RUNTIME_MS)
             if (terminateHandler) {
               await terminateHandler({ agentId: entry.agentId });
             }
+            const reap = await reapWorkerProcess(entry.agentId);
+            entry.reap = reap;
             summary.workersTerminated++;
             summary.terminated.push(entry);
           } catch (err) {
@@ -343,8 +416,9 @@ async function cleanupOrphanedAgents(deadline = Date.now() + CLEANUP_MAX_RUNTIME
       try {
         const terminateHandler = await getTerminateHandler();
         if (terminateHandler) await terminateHandler({ agentId: id });
+        const reap = await reapWorkerProcess(id);
         summary.orphansTerminated++;
-        summary.terminated.push({ agentId: id, reason: 'orphaned-idle' });
+        summary.terminated.push({ agentId: id, reason: 'orphaned-idle', reap });
       } catch (err) {
         summary.errors.push({ agentId: id, error: err?.message || String(err) });
       }
@@ -435,9 +509,85 @@ function pruneTerminatedAgents() {
 // ---------------------------------------------------------------------------
 
 const TASK_TTL_MS = 3600000; // 1 hour
+const RESULT_TTL_MS = parseInt(process.env.HIVE_FLOW_RESULT_TTL_MS, 10) || 14400000; // 4 hours
+const STUCK_ACTIVE_THRESHOLD_MS = parseInt(process.env.HIVE_FLOW_STUCK_ACTIVE_THRESHOLD_MS, 10) || (12 * 60 * 60_000);
+const LEGACY_WATCHER_TTL_MS = parseInt(process.env.HIVE_FLOW_LEGACY_WATCHER_TTL_MS, 10) || 14400000; // 4 hours
+
+function findHiveByTaskTracking(tracking) {
+  if (tracking && tracking.hiveId) return loadHive(String(tracking.hiveId));
+  if (!fs.existsSync(HIVES_DIR)) return null;
+  try {
+    const entries = fs.readdirSync(HIVES_DIR, { withFileTypes: true });
+    for (const entry of entries) {
+      if (!entry.isDirectory() || entry.name.startsWith('.')) continue;
+      const hive = loadHive(entry.name);
+      if (!hive || !Array.isArray(hive.workers)) continue;
+      if (hive.workers.some(w => w.agentId === tracking?.agentId || w.taskId === tracking?.taskId)) {
+        return hive;
+      }
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+async function autoFailStuckActiveHives(deadline = Date.now() + CLEANUP_MAX_RUNTIME_MS) {
+  const summary = { hivesScanned: 0, autoFailed: 0, failed: [], errors: [] };
+  const activeHives = listActiveHives();
+  summary.hivesScanned = activeHives.length;
+  const now = Date.now();
+
+  for (const hive of activeHives) {
+    if (deadlineExceeded(deadline)) {
+      summary.errors.push({ error: 'Cleanup runtime budget exceeded while auto-failing stuck active hives' });
+      break;
+    }
+    const updatedAt = new Date(hive.updatedAt || hive.createdAt || 0).getTime();
+    if (!Number.isFinite(updatedAt) || now - updatedAt < STUCK_ACTIVE_THRESHOLD_MS) continue;
+
+    const workersToReap = [];
+    try {
+      withHiveLockSync(hive.hiveId, () => {
+        const freshHive = loadHive(hive.hiveId);
+        if (!freshHive || freshHive.status !== 'active') return;
+        const freshUpdatedAt = new Date(freshHive.updatedAt || freshHive.createdAt || 0).getTime();
+        if (!Number.isFinite(freshUpdatedAt) || now - freshUpdatedAt < STUCK_ACTIVE_THRESHOLD_MS) return;
+
+        freshHive.status = 'failed';
+        if (!freshHive.error) freshHive.error = 'stuck-active-timeout';
+        freshHive.completedAt = new Date().toISOString();
+        if (!freshHive.audit) freshHive.audit = [];
+        freshHive.audit.push({
+          timestamp: new Date().toISOString(),
+          event: 'error',
+          hiveId: freshHive.hiveId,
+          detail: 'Auto-failed stuck active hive during cleanup',
+        });
+        for (const w of freshHive.workers || []) {
+          if (w.role === 'queen' || w.status === 'terminated') continue;
+          if (w.agentId) workersToReap.push(w.agentId);
+        }
+        saveHive(freshHive.hiveId, freshHive);
+      });
+
+      if (workersToReap.length === 0 && loadHive(hive.hiveId)?.status !== 'failed') continue;
+
+      const reaped = [];
+      for (const agentId of workersToReap) {
+        reaped.push(await reapWorkerProcess(agentId));
+      }
+      summary.autoFailed++;
+      summary.failed.push({ hiveId: hive.hiveId, reaped });
+    } catch (err) {
+      summary.errors.push({ hiveId: hive.hiveId, error: err?.message || String(err) });
+    }
+  }
+  return summary;
+}
 
 function cleanupOrphanedTasks(deadline = Date.now() + CLEANUP_MAX_RUNTIME_MS) {
-  const summary = { tasksCleaned: 0, cleaned: [], errors: [] };
+  const summary = { tasksCleaned: 0, completedResultsCleaned: 0, cleaned: [], errors: [] };
   const tasksDir = path.join(PROJECT_DIR, '.hive-flow', 'tasks');
   if (!fs.existsSync(tasksDir)) return summary;
   const now = Date.now();
@@ -458,7 +608,25 @@ function cleanupOrphanedTasks(deadline = Date.now() + CLEANUP_MAX_RUNTIME_MS) {
     const resultPath = path.join(tasksDir, `${taskId}.result.json`);
     const taskFilePath = path.join(tasksDir, `${taskId}.task`);
     // Skip if result exists (completed task)
-    if (fs.existsSync(resultPath)) continue;
+    if (fs.existsSync(resultPath)) {
+      try {
+        const tracking = fs.existsSync(jsonPath)
+          ? JSON.parse(fs.readFileSync(jsonPath, 'utf-8'))
+          : { taskId };
+        const resultStat = fs.statSync(resultPath);
+        if (now - resultStat.mtimeMs < RESULT_TTL_MS) continue;
+        const hive = findHiveByTaskTracking(tracking);
+        if (!hive || (hive.status !== 'completed' && hive.status !== 'failed' && hive.status !== 'terminated')) continue;
+        try { fs.unlinkSync(jsonPath); } catch { /* ignore */ }
+        try { fs.unlinkSync(resultPath); } catch { /* ignore */ }
+        try { fs.unlinkSync(taskFilePath); } catch { /* ignore */ }
+        summary.completedResultsCleaned++;
+        summary.cleaned.push(taskId);
+      } catch (err) {
+        summary.errors.push({ taskId, error: err?.message || String(err) });
+      }
+      continue;
+    }
     // Check age of tracking file
     try {
       const stat = fs.statSync(jsonPath);
@@ -482,6 +650,41 @@ function cleanupOrphanedTasks(deadline = Date.now() + CLEANUP_MAX_RUNTIME_MS) {
   return summary;
 }
 
+function cleanupLegacyWatchersDir(deadline = Date.now() + CLEANUP_MAX_RUNTIME_MS) {
+  const summary = { watchersPruned: 0, pruned: [], errors: [] };
+  const legacyWatchersDir = path.join(PROJECT_DIR, '.hive-flow', 'watchers');
+  const liveDataDir = path.join(PROJECT_DIR, '.hive-flow', 'data');
+  if (legacyWatchersDir === liveDataDir || legacyWatchersDir.startsWith(liveDataDir + path.sep)) {
+    summary.errors.push({ error: 'Legacy watcher path overlaps live data watcher path' });
+    return summary;
+  }
+  if (!fs.existsSync(legacyWatchersDir)) return summary;
+  let entries;
+  try { entries = fs.readdirSync(legacyWatchersDir, { withFileTypes: true }); } catch { return summary; }
+  const now = Date.now();
+  for (const entry of entries) {
+    if (deadlineExceeded(deadline)) {
+      summary.errors.push({ error: 'Cleanup runtime budget exceeded while pruning legacy watchers' });
+      break;
+    }
+    if (!entry.isFile() || !entry.name.endsWith('.json')) continue;
+    const filePath = path.join(legacyWatchersDir, entry.name);
+    try {
+      const stat = fs.statSync(filePath);
+      if (now - stat.mtimeMs < LEGACY_WATCHER_TTL_MS) continue;
+      fs.unlinkSync(filePath);
+      summary.watchersPruned++;
+      summary.pruned.push(entry.name);
+    } catch (err) {
+      summary.errors.push({ file: entry.name, error: err?.message || String(err) });
+    }
+  }
+  try {
+    if (fs.readdirSync(legacyWatchersDir).length === 0) fs.rmdirSync(legacyWatchersDir);
+  } catch { /* ignore */ }
+  return summary;
+}
+
 // ---------------------------------------------------------------------------
 // Main — run all cleanup and output JSON to stdout
 // ---------------------------------------------------------------------------
@@ -491,17 +694,22 @@ function cleanupOrphanedTasks(deadline = Date.now() + CLEANUP_MAX_RUNTIME_MS) {
     const deadline = Date.now() + CLEANUP_MAX_RUNTIME_MS;
     const hiveResult = await cleanupIdleAgents(deadline);
     const orphanResult = await cleanupOrphanedAgents(deadline);
+    const autoFailResult = await autoFailStuckActiveHives(deadline);
     const hiveDirResult = cleanupStaleHiveDirs(deadline);
     const pruneResult = pruneTerminatedAgents();
     const taskResult = cleanupOrphanedTasks(deadline);
+    const watcherResult = cleanupLegacyWatchersDir(deadline);
 
     const combined = {
       ...hiveResult,
       orphansFound: orphanResult.orphansFound,
       orphansTerminated: orphanResult.orphansTerminated,
+      hivesAutoFailed: autoFailResult.autoFailed,
       hivesArchived: hiveDirResult.hivesArchived,
       agentsPruned: pruneResult.agentsPruned,
       tasksCleaned: taskResult.tasksCleaned,
+      completedResultsCleaned: taskResult.completedResultsCleaned,
+      legacyWatchersPruned: watcherResult.watchersPruned,
     };
     if (orphanResult.terminated.length > 0) {
       combined.terminated = (combined.terminated || []).concat(orphanResult.terminated);
@@ -509,17 +717,26 @@ function cleanupOrphanedTasks(deadline = Date.now() + CLEANUP_MAX_RUNTIME_MS) {
     if (hiveDirResult.archived?.length > 0) {
       combined.archived = hiveDirResult.archived;
     }
+    if (autoFailResult.failed?.length > 0) {
+      combined.autoFailed = autoFailResult.failed;
+    }
+    if (watcherResult.pruned?.length > 0) {
+      combined.legacyWatchers = watcherResult.pruned;
+    }
     const allErrors = [
       ...(hiveResult.errors || []),
       ...(orphanResult.errors || []),
+      ...(autoFailResult.errors || []),
       ...(hiveDirResult.errors || []),
       ...(pruneResult.errors || []),
       ...(taskResult.errors || []),
+      ...(watcherResult.errors || []),
     ];
     if (allErrors.length > 0) combined.errors = allErrors;
 
     const totalWork = (combined.workersTerminated || 0) + (combined.orphansTerminated || 0)
-      + (combined.hivesArchived || 0) + (combined.agentsPruned || 0) + (combined.tasksCleaned || 0);
+      + (combined.hivesAutoFailed || 0) + (combined.hivesArchived || 0) + (combined.agentsPruned || 0)
+      + (combined.tasksCleaned || 0) + (combined.completedResultsCleaned || 0) + (combined.legacyWatchersPruned || 0);
     if (totalWork === 0 && allErrors.length === 0) {
       process.stdout.write(JSON.stringify({}));
     } else {
