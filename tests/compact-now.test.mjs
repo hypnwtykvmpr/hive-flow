@@ -5,10 +5,12 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { tmpdir } from 'os';
 import { spawnSync } from 'child_process';
+import fc from 'fast-check';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(__dirname, '..');
 const helperPath = join(repoRoot, '.claude', 'helpers', 'compact-now.cjs');
+const PROPERTY_RUNS = Number(process.env.HIVE_FLOW_PROPERTY_RUNS || process.env.HF_PROPERTY_RUNS || 25);
 
 describe('compact-now helper', () => {
   it('writes a durable recovery note before arming a valid compact request', () => {
@@ -103,5 +105,64 @@ describe('compact-now helper', () => {
     } finally {
       rmSync(projectRoot, { recursive: true, force: true });
     }
+  });
+
+  it('property: headless requests preserve sanitized operator intent and invoke /compact exactly once', () => {
+    const textChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 _-/"\'$;|&\\\n\t'.split('');
+    const text = fc.array(fc.constantFrom(...textChars), { maxLength: 80 }).map(parts => parts.join(''));
+    const sessionChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-'.split('');
+    const resumeId = fc.array(fc.constantFrom(...sessionChars), { minLength: 1, maxLength: 40 }).map(parts => parts.join(''));
+    fc.assert(
+      fc.property(text, resumeId, text, (reason, resume, nextStep) => {
+        const projectRoot = mkdtempSync(join(tmpdir(), 'hf-compact-now-property-'));
+        const dataDir = join(projectRoot, '.hive-flow', 'data');
+        const handoffPath = join(dataDir, 'compaction-handoff.md');
+        const requestPath = join(dataDir, 'compact-request.json');
+        const fakeClaude = join(projectRoot, 'fake-claude.cjs');
+        const argsPath = join(dataDir, 'fake-claude-args.json');
+        mkdirSync(dataDir, { recursive: true });
+
+        try {
+          writeFileSync(fakeClaude, [
+            '#!/usr/bin/env node',
+            "const fs = require('fs');",
+            "fs.writeFileSync(process.env.HF_FAKE_CLAUDE_ARGS, JSON.stringify(process.argv.slice(2)));",
+          ].join('\n'));
+          chmodSync(fakeClaude, 0o755);
+
+          const result = spawnSync(process.execPath, [
+            helperPath,
+            '--reason', reason,
+            '--mode', 'headless',
+            '--resume', resume,
+            '--next-step', nextStep,
+          ], {
+            cwd: projectRoot,
+            env: {
+              ...process.env,
+              CLAUDE_PROJECT_DIR: projectRoot,
+              CLAUDE_BIN: fakeClaude,
+              HF_FAKE_CLAUDE_ARGS: argsPath,
+              HIVE_FLOW_COMPACT_HEADLESS_SYNC: '1',
+            },
+            encoding: 'utf8',
+          });
+
+          assert.equal(result.status, 0, result.stderr || result.stdout);
+          const request = JSON.parse(readFileSync(requestPath, 'utf8'));
+          const args = JSON.parse(readFileSync(argsPath, 'utf8'));
+          assert.equal(existsSync(handoffPath), true);
+          assert.equal(request.mode, 'headless');
+          assert.equal(request.type, 'hive-flow.compact-request');
+          assert.match(request.preservationPrompt, /Preserve the active task state/);
+          assert.doesNotMatch(request.preservationPrompt, /[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/);
+          assert.deepEqual(args, ['-p', `/compact ${request.preservationPrompt}`, '--resume', request.resume]);
+          assert.ok(new Date(request.handoffWrittenAt).getTime() <= new Date(request.requestedAt).getTime());
+        } finally {
+          rmSync(projectRoot, { recursive: true, force: true });
+        }
+      }),
+      { numRuns: PROPERTY_RUNS }
+    );
   });
 });
