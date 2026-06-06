@@ -18,6 +18,7 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 const os = require('os');
+const crypto = require('crypto');
 
 // Configuration
 // keep in sync with @hive-flow/shared/core/config/defaults (DEFAULT_MAX_AGENTS=50, DEFAULT_QUEUE_DEPTH=10).
@@ -805,11 +806,46 @@ function getDaemonStatus() {
 }
 
 // Enforcement level — Row 25 ADD-CONDITIONAL: show only when ≠ Normal (≠ 0).
-function getEnforcementLevel() {
-  const stateFile = path.join(CWD, '.hive-flow', 'enforcement', 'state.json');
+function readEnforcementLevelFile(stateFile) {
   const data = readJSON(stateFile);
-  if (!data) return { level: 0, label: 'Normal' };
-  const level = data.level ?? data.enforcementLevel ?? 0;
+  if (!data || typeof data !== 'object') return 0;
+  const rawLevel = data.state?.level
+    ?? data.payload?.level
+    ?? data.level
+    ?? data.enforcementLevel
+    ?? 0;
+  const level = Number(rawLevel);
+  return Number.isFinite(level) && level >= 0 ? level : 0;
+}
+
+function sanitizeScopeId(id) {
+  return String(id || '')
+    .replace(/[^A-Za-z0-9_.:-]/g, '_')
+    .slice(0, 64);
+}
+
+function getProjectScopeId() {
+  return `project-${crypto.createHash('sha256').update(CWD).digest('hex').slice(0, 16)}`;
+}
+
+function getEnforcementStateFiles() {
+  const enforcementDir = path.join(CWD, '.hive-flow', 'enforcement');
+  const stdin = getStdinData();
+  const sessionId = sanitizeScopeId(stdin?.session_id || stdin?.sessionId || process.env.CLAUDE_SESSION_ID);
+  const agentId = sanitizeScopeId(process.env.AGENTIC_FLOW_AGENT_ID || process.env.CLAUDE_AGENT_ID);
+  const hiveId = sanitizeScopeId(process.env.HIVE_FLOW_HIVE_ID);
+  const files = [
+    path.join(enforcementDir, 'state.json'),
+    path.join(enforcementDir, 'projects', getProjectScopeId(), 'state.json'),
+  ];
+  if (sessionId) files.push(path.join(enforcementDir, 'sessions', sessionId, 'state.json'));
+  if (agentId) files.push(path.join(enforcementDir, 'agents', agentId, 'state.json'));
+  if (hiveId) files.push(path.join(enforcementDir, 'hives', hiveId, 'state.json'));
+  return files;
+}
+
+function getEnforcementLevel() {
+  const level = Math.max(0, ...getEnforcementStateFiles().map(readEnforcementLevelFile));
   const labels = ['Normal', 'Warned', 'Restricted', 'Halted'];
   return { level, label: labels[level] ?? String(level) };
 }
