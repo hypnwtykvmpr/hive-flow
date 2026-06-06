@@ -64,6 +64,23 @@ function permissionGuardDeny(reason) {
   return preToolUseDecision('deny', reason);
 }
 
+function permissionGuardAllow(additionalContext) {
+  const hookSpecificOutput = {
+    hookEventName: 'PreToolUse',
+    permissionDecision: 'allow',
+  };
+  if (additionalContext) hookSpecificOutput.additionalContext = additionalContext;
+  return JSON.stringify({ hookSpecificOutput });
+}
+
+function permissionGuardGateMissingDecision(projectDir) {
+  const sourcePath = path.join(projectDir, 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'gate.ts');
+  if (fs.existsSync(sourcePath)) {
+    return permissionGuardAllow('[PERMISSION GUARD] Compiled gate not built — run npm run build in v3/@hive-flow/cli. Degraded (allow) for first-run.');
+  }
+  return permissionGuardDeny('[PERMISSION GUARD] Compiled gate not found at relocated root. Tool blocked for safety.');
+}
+
 function readPermissionGuardSourceStamp() {
   const sourcePath = path.join(PROJECT_DIR, 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'gate.ts');
   const source = fs.readFileSync(sourcePath, 'utf8');
@@ -1420,14 +1437,16 @@ const handlers = {
 
       const gatePath = path.join(PROJECT_DIR, 'v3', '@hive-flow', 'cli', 'dist', 'src', 'permission-guard', 'gate.js');
       if (!fs.existsSync(gatePath)) {
-        console.log(ALLOW_JSON);
+        console.log(permissionGuardGateMissingDecision(PROJECT_DIR));
         return;
       }
       try {
         const { pathToFileURL } = require('url');
         const gate = await import(pathToFileURL(gatePath).href);
         assertPermissionGuardBuildFresh(gate);
-        const result = gate.evaluateHookInput ? await gate.evaluateHookInput(input) : { decision: 'allow' };
+        const result = gate.evaluateHookInput
+          ? await gate.evaluateHookInput(input)
+          : { decision: 'deny', reason: '[PERMISSION GUARD] Compiled gate did not export evaluateHookInput. Tool blocked for safety.' };
         if (result.decision === 'deny') {
           const output = {
             hookSpecificOutput: {

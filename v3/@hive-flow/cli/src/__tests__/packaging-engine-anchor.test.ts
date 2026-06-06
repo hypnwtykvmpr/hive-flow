@@ -163,4 +163,39 @@ describe('P1 engine packaging anchor', () => {
       rmSync(home, { recursive: true, force: true });
     }
   });
+
+  it('relocated synced hook-handler denies when the compiled gate is missing from an install root', () => {
+    const root = mkdtempSync(join(tmpdir(), 'hf-p1-missing-gate-root-'));
+    const home = mkdtempSync(join(tmpdir(), 'hf-p1-missing-gate-home-'));
+    try {
+      const binDir = join(home, '.hive-flow', 'enforcement', 'bin');
+      copyAnchorToBin(binDir);
+
+      const result = spawnSync(process.execPath, [join(binDir, 'hook-handler.cjs'), 'permission-guard'], {
+        cwd: root,
+        env: {
+          ...process.env,
+          CLAUDE_PROJECT_DIR: root,
+          HIVE_FLOW_PROJECT_ROOT: root,
+        },
+        input: JSON.stringify({
+          tool_name: 'Write',
+          tool_input: { file_path: join(root, '.claude', 'settings.json') },
+          cwd: root,
+        }),
+        encoding: 'utf8',
+      });
+      const parsed = JSON.parse(result.stdout.trim() || '{}') as {
+        hookSpecificOutput?: { permissionDecision?: string; permissionDecisionReason?: string };
+      };
+
+      expect(result.status).toBe(0);
+      expect(result.stderr.trim()).toBe('');
+      expect(parsed.hookSpecificOutput?.permissionDecision).toBe('deny');
+      expect(parsed.hookSpecificOutput?.permissionDecisionReason).toContain('Compiled gate not found');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
 });
