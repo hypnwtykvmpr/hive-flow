@@ -10,7 +10,7 @@
  */
 
 import { readFileSync, writeFileSync, appendFileSync, mkdirSync, statSync, renameSync, unlinkSync } from 'node:fs';
-import { dirname, resolve, relative, join } from 'node:path';
+import { basename, dirname, resolve, relative, join } from 'node:path';
 import { homedir } from 'node:os';
 import { randomUUID } from 'node:crypto';
 import type {
@@ -28,6 +28,7 @@ import { classifyCommand } from './risk-classifier.js';
 import { mergeWithDefaults } from './default-config.js';
 import { evaluateSelfProtection } from './self-protection.js';
 import { findProtectedReadPath, resolveProjectRoot as resolveProtectedProjectRoot } from './protected-paths.js';
+import { isSecretPath } from './secret-paths.js';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -200,6 +201,35 @@ function findSensitiveReadPath(toolName: string, toolInput: Record<string, unkno
   ]);
   if (!readTools.has(toolName)) return null;
   return findProtectedReadPath(readPath, projectRoot) ? readPath : null;
+}
+
+function findSecretReadPath(toolName: string, toolInput: Record<string, unknown>): string | null {
+  try {
+    if (toolName === 'mcp__filesystem__read_multiple_files') {
+      const paths = Array.isArray(toolInput.paths) ? toolInput.paths : [];
+      for (const entry of paths) {
+        const filePath = typeof entry === 'string' ? entry : '';
+        if (filePath && isSecretPath(filePath)) return filePath;
+      }
+      return null;
+    }
+
+    const readPath = (toolInput.file_path as string)
+      || (toolInput.path as string)
+      || (toolInput.notebook_path as string)
+      || '';
+    const readTools = new Set([
+      'Read',
+      'NotebookRead',
+      'mcp__filesystem__read_file',
+      'mcp__filesystem__read_text_file',
+      'mcp__filesystem__read_media_file',
+    ]);
+    if (!readTools.has(toolName)) return null;
+    return readPath && isSecretPath(readPath) ? readPath : null;
+  } catch {
+    return null;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -427,6 +457,262 @@ export function splitShellCommands(cmd: string): string[] {
   if (trimmed) segments.push(trimmed);
 
   return segments;
+}
+
+function shellWords(segment: string): string[] | null {
+  const words: string[] = [];
+  let current = '';
+  let inSingle = false;
+  let inDouble = false;
+  let inDollarQuote = false;
+  let escaped = false;
+
+  for (let i = 0; i < segment.length; i += 1) {
+    const ch = segment[i];
+
+    if (escaped) {
+      current += ch;
+      escaped = false;
+      continue;
+    }
+
+    if (ch === '\\' && !inSingle) {
+      escaped = true;
+      continue;
+    }
+
+    if (ch === '$' && !inSingle && !inDouble && !inDollarQuote && segment[i + 1] === "'") {
+      inDollarQuote = true;
+      i += 1;
+      continue;
+    }
+
+    if (ch === "'" && inDollarQuote) {
+      inDollarQuote = false;
+      continue;
+    }
+
+    if (ch === "'" && !inDouble && !inDollarQuote) {
+      inSingle = !inSingle;
+      continue;
+    }
+
+    if (ch === '"' && !inSingle && !inDollarQuote) {
+      inDouble = !inDouble;
+      continue;
+    }
+
+    if (/\s/.test(ch) && !inSingle && !inDouble && !inDollarQuote) {
+      if (current) {
+        words.push(current);
+        current = '';
+      }
+      continue;
+    }
+
+    current += ch;
+  }
+
+  if (escaped || inSingle || inDouble || inDollarQuote) return null;
+  if (current) words.push(current);
+  return words;
+}
+
+const READ_COMMANDS = new Set([
+  'cat',
+  'head',
+  'tail',
+  'less',
+  'more',
+  'bat',
+  'grep',
+  'rg',
+  'strings',
+  'xxd',
+  'hexdump',
+  'od',
+  'readlink',
+  'nl',
+  'tac',
+]);
+
+function commandBasename(command: string): string {
+  return basename(command).toLowerCase();
+}
+
+function isReadCommand(command: string): boolean {
+  const name = commandBasename(command);
+  return READ_COMMANDS.has(name) || name.endsWith('sum');
+}
+
+function isEnvAssignment(token: string): boolean {
+  return /^[A-Za-z_][A-Za-z0-9_]*=/.test(token);
+}
+
+interface OptionHandling {
+  consumeNext: boolean;
+  nextIsPattern?: boolean;
+  nextIsPath?: boolean;
+  selfIsPattern?: boolean;
+}
+
+function optionHandling(command: string, option: string): OptionHandling {
+  const grepLike = command === 'grep' || command === 'rg';
+  if (grepLike) {
+    if (/^(?:-e.+|--regexp=.+)$/.test(option)) return { consumeNext: false, selfIsPattern: true };
+    if (option === '-e' || option === '--regexp') return { consumeNext: true, nextIsPattern: true };
+    if (option === '-f' || option === '--file') return { consumeNext: true, nextIsPath: true };
+    if (/^(?:--type|--glob|--max-count|--context|--after-context|--before-context|--include|--exclude|--exclude-dir|--binary-files|--devices|--directories)=/.test(option)) {
+      return { consumeNext: false };
+    }
+    if ([
+      '--type',
+      '--glob',
+      '--max-count',
+      '--context',
+      '--after-context',
+      '--before-context',
+      '--include',
+      '--exclude',
+      '--exclude-dir',
+      '--binary-files',
+      '--devices',
+      '--directories',
+      '-g',
+      '-m',
+      '-A',
+      '-B',
+      '-C',
+    ].includes(option)) {
+      return { consumeNext: true };
+    }
+  }
+
+  if ((command === 'head' || command === 'tail') && [
+    '-n',
+    '-c',
+    '--lines',
+    '--bytes',
+  ].includes(option)) {
+    return { consumeNext: true };
+  }
+
+  if (command === 'od' && [
+    '-A',
+    '-j',
+    '-N',
+    '-t',
+    '-w',
+    '--address-radix',
+    '--skip-bytes',
+    '--read-bytes',
+    '--format',
+    '--width',
+  ].includes(option)) {
+    return { consumeNext: true };
+  }
+
+  if (command === 'xxd' && [
+    '-c',
+    '-g',
+    '-l',
+    '-s',
+  ].includes(option)) {
+    return { consumeNext: true };
+  }
+
+  return { consumeNext: false };
+}
+
+function isSecretEnvName(name: string): boolean {
+  return /(?:secret|token|credential|password|passwd|api[_-]?key|private|openrouter|anthropic|aws|gcp|azure|github|npm|pypi|ssh)/i.test(name);
+}
+
+function tokenHasSecretEnvExpansion(token: string): boolean {
+  const envRefs = token.matchAll(/\$(?:\{([A-Za-z_][A-Za-z0-9_]*)\}|([A-Za-z_][A-Za-z0-9_]*))/g);
+  for (const match of envRefs) {
+    const name = match[1] || match[2] || '';
+    if (isSecretEnvName(name)) return true;
+  }
+  return false;
+}
+
+function findEnvDumpSecret(tokens: string[]): string | null {
+  const command = commandBasename(tokens[0] || '');
+  if (command === 'env') {
+    let index = 1;
+    while (index < tokens.length && tokens[index].startsWith('-')) index += 1;
+    while (index < tokens.length && isEnvAssignment(tokens[index])) index += 1;
+    return index >= tokens.length ? 'env' : null;
+  }
+
+  if (command === 'printenv') {
+    if (tokens.length === 1) return 'printenv';
+    for (const token of tokens.slice(1)) {
+      if (!token.startsWith('-') && isSecretEnvName(token)) return token;
+    }
+    return null;
+  }
+
+  if (command === 'echo' || command === 'printf') {
+    for (const token of tokens.slice(1)) {
+      if (tokenHasSecretEnvExpansion(token)) return token;
+    }
+  }
+
+  return null;
+}
+
+function findSecretPathArg(tokens: string[]): string | null {
+  const command = commandBasename(tokens[0] || '');
+  const grepLike = command === 'grep' || command === 'rg';
+  let patternSkipped = !grepLike;
+  let parseOptions = true;
+
+  for (let index = 1; index < tokens.length; index += 1) {
+    const token = tokens[index];
+    if (!token) continue;
+    if (parseOptions && token === '--') {
+      parseOptions = false;
+      continue;
+    }
+    if (parseOptions && token.startsWith('-') && token !== '-') {
+      const handling = optionHandling(command, token);
+      if (handling.selfIsPattern) patternSkipped = true;
+      if (handling.consumeNext && index + 1 < tokens.length) {
+        const next = tokens[index + 1];
+        if (handling.nextIsPath && next && isSecretPath(next)) return next;
+        if (handling.nextIsPattern) patternSkipped = true;
+        index += 1;
+      }
+      continue;
+    }
+    if (grepLike && !patternSkipped) {
+      patternSkipped = true;
+      continue;
+    }
+    if (isSecretPath(token)) return token;
+  }
+
+  return null;
+}
+
+function findSecretBashReadArg(cmd: string): string | null {
+  try {
+    for (const segment of splitShellCommands(cmd)) {
+      const tokens = shellWords(stripCommand(segment));
+      if (!tokens || tokens.length === 0) continue;
+      const envDump = findEnvDumpSecret(tokens);
+      if (envDump) return envDump;
+      if (isReadCommand(tokens[0])) {
+        const secretArg = findSecretPathArg(tokens);
+        if (secretArg) return secretArg;
+      }
+    }
+  } catch {
+    return null;
+  }
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -809,6 +1095,13 @@ export async function evaluate(hookInput: HookInput, config: Partial<PermissionC
     return { decision: 'deny', reason };
   }
 
+  const secretReadPath = findSecretReadPath(toolName, toolInput);
+  if (secretReadPath) {
+    const reason = 'DENIED: This path matches a secret/credential class (private key, dotenv, credentials, etc.) and cannot be read by agents.';
+    logDecision(config, toolName, secretReadPath, 'deny', 'secret-read', reason);
+    return { decision: 'deny', reason };
+  }
+
   // -- Always-allow tools (non-Bash) --
   const alwaysAllowTools = config.always_allow_tools || [];
   if (alwaysAllowTools.includes(toolName)) {
@@ -954,6 +1247,14 @@ export async function evaluate(hookInput: HookInput, config: Partial<PermissionC
     if (escalationFeedback) {
       logDecision(config, toolName, inputSummary, 'deny', 'auto-deny', 'matched dangerous-command pattern');
       return { decision: 'deny', reason: escalationFeedback };
+    }
+
+    // 4b) Secret-file reads must be denied before Bash known-good allow patterns.
+    const secretArg = findSecretBashReadArg(cmd);
+    if (secretArg) {
+      const reason = `DENIED: command reads or exposes a secret/credential path ('${secretArg}'). Secret files, dotenv values, credentials, and key material cannot be read by agents.`;
+      logDecision(config, toolName, inputSummary, 'deny', 'secret-read-bash', reason);
+      return { decision: 'deny', reason };
     }
 
     // 5) Allow patterns
