@@ -36,6 +36,7 @@ const HIGH_TOOLS = new Set([
   'session_delete',
   'memory_delete',
   'workflow_create', 'workflow_execute',
+  'hooks_worker-dispatch', 'hooks_worker-detect',
   'daa_agent_create', 'daa_workflow_execute',
   // 12.8: filesystem tools that can write to protected paths
   'filesystem__write_file', 'filesystem__edit_file', 'filesystem__move_file',

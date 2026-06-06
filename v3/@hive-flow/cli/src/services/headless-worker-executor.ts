@@ -25,6 +25,7 @@ import { existsSync, readFileSync, readdirSync, mkdirSync, writeFileSync } from 
 import { join, relative } from 'path';
 import type { WorkerType } from './worker-daemon.js';
 import { assertSubagentIdentityMarker } from '../mcp-tools/subagent-markers.js';
+import { assertDispatchAllowed } from '../mcp-tools/mcp-enforcement-gate.js';
 
 // ============================================
 // Type Definitions
@@ -1136,6 +1137,16 @@ Analyze the above codebase context and provide your response following the forma
       // Set model
       env.ANTHROPIC_MODEL = MODEL_IDS[options.model];
       assertSubagentIdentityMarker(env, `headless worker ${options.executionId}`);
+
+      const dispatchGate = assertDispatchAllowed('hooks_worker-dispatch');
+      if (!dispatchGate.allowed) {
+        resolve({
+          success: false,
+          output: '',
+          error: dispatchGate.reason ?? '[MCP ENFORCEMENT] Headless worker dispatch blocked.',
+        });
+        return;
+      }
 
       // Spawn claude CLI process
       const child = spawn('claude', ['--print', prompt], {

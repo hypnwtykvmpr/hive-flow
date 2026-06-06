@@ -103,6 +103,7 @@ vi.mock('../agent-tools.js', () => {
 import { queenTools } from '../queen-tools.js';
 import { hiveMindTools } from '../hive-mind-tools.js';
 import { createHive, saveHive } from '../hive-store.js';
+import { checkMCPEnforcement, classifyTool, ToolRisk } from '../mcp-enforcement-gate.js';
 
 const originalCwd = process.cwd();
 const originalProjectDir = process.env.CLAUDE_PROJECT_DIR;
@@ -311,11 +312,31 @@ describe('D-32: queen in-process dispatch gate', () => {
   it('statically keeps every in-process dispatch sink behind assertDispatchAllowed', () => {
     const queenSource = readFileSync(join(originalCwd, 'src/mcp-tools/queen-tools.ts'), 'utf8');
     const hiveMindSource = readFileSync(join(originalCwd, 'src/mcp-tools/hive-mind-tools.ts'), 'utf8');
+    const headlessWorkerSource = readFileSync(join(originalCwd, 'src/services/headless-worker-executor.ts'), 'utf8');
 
     expect(queenSource).toMatch(/function callAgentSpawn[\s\S]*assertDispatchAllowed\('agent_spawn'\)[\s\S]*spawnTool\.handler/);
     expect(queenSource).toMatch(/function callAgentTask[\s\S]*assertDispatchAllowed\('agent_task'\)[\s\S]*taskTool\.handler/);
     expect(queenSource).toMatch(/function callAgentTaskAsync[\s\S]*assertDispatchAllowed\('agent_task'\)[\s\S]*asyncTool\.handler/);
     expect(queenSource).toMatch(/function callAgentTerminate[\s\S]*assertDispatchAllowed\('agent_terminate'\)[\s\S]*terminateTool\.handler/);
     expect(hiveMindSource).toMatch(/assertDispatchAllowed\('agent_task'\)[\s\S]*Promise\.allSettled/);
+    expect(headlessWorkerSource).toMatch(/assertDispatchAllowed\('hooks_worker-dispatch'\)[\s\S]*spawn\('claude'/);
+  });
+
+  it('classifies headless worker dispatch as HIGH and blocks it at RESTRICTED+', () => {
+    expect(classifyTool('hooks_worker-dispatch')).toBe(ToolRisk.HIGH);
+    expect(classifyTool('hooks_worker-detect')).toBe(ToolRisk.HIGH);
+
+    writeSignedState(1);
+    expect(checkMCPEnforcement('hooks_worker-dispatch').allowed).toBe(true);
+
+    writeSignedState(2);
+    const restricted = checkMCPEnforcement('hooks_worker-dispatch');
+    expect(restricted.allowed).toBe(false);
+    expectMcpDeny(restricted.reason);
+
+    writeSignedState(3);
+    const halted = checkMCPEnforcement('hooks_worker-dispatch');
+    expect(halted.allowed).toBe(false);
+    expectMcpDeny(halted.reason);
   });
 });
