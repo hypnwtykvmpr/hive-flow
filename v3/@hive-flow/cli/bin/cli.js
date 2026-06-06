@@ -285,8 +285,11 @@ if (isMCPMode) {
   // Run normal CLI mode
   const { CLI } = await import('../dist/src/index.js');
   const cli = new CLI();
-  cli.run().catch((error) => {
+  try {
+    await cli.run();
+  } catch (error) {
     console.error('Fatal error:', error.message);
     process.exit(1);
-  });
+  }
+  process.exit(0);
 }
