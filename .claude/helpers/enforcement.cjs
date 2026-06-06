@@ -571,7 +571,7 @@ function isSubstrateAttack(violation) {
 }
 
 function isImmuneCoordinator(ctx) {
-  return ctx?.actorKind === 'coordinator' && !ctx.agentId;
+  return ctx?.actorKind === 'coordinator' && !ctx.agentId && !ctx.identityTrusted;
 }
 
 function chooseEscalationScope(ctx, violation) {
@@ -581,11 +581,11 @@ function chooseEscalationScope(ctx, violation) {
   if (ctx.identityTrusted && ctx.agentId) {
     return { scopeType: 'agent', scopeId: ctx.agentId };
   }
-  if (isImmuneCoordinator(ctx)) {
-    return { scopeType: 'project', scopeId: ctx.projectId };
-  }
   if (violation.systemic) {
     return { scopeType: 'global', scopeId: 'global' };
+  }
+  if (isImmuneCoordinator(ctx)) {
+    return { scopeType: 'project', scopeId: ctx.projectId };
   }
   if (ctx.hiveId) {
     return { scopeType: 'hive', scopeId: ctx.hiveId };
