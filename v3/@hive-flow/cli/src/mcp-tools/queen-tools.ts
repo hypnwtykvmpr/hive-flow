@@ -117,7 +117,7 @@ async function callAgentSpawn(input: Record<string, unknown>): Promise<Record<st
   // top-level calls, but queen-internal callers must also be validated to
   // prevent per-worker bypass of model policy (e.g. queen_mission_assign's
   // workers[] array, or queen_spawn_worker invoking callAgentSpawn).
-  const { checkModelEnforcement } = await import('./mcp-enforcement-gate.js');
+  const { checkModelEnforcement, assertDispatchAllowed } = await import('./mcp-enforcement-gate.js');
   const enforcement = checkModelEnforcement(
     'agent_spawn',
     input as { model?: string; provider?: string },
@@ -128,6 +128,10 @@ async function callAgentSpawn(input: Record<string, unknown>): Promise<Record<st
   const effectiveInput = enforcement.correctedInput
     ? { ...input, ...enforcement.correctedInput }
     : input;
+  const dispatchGate = assertDispatchAllowed('agent_spawn');
+  if (!dispatchGate.allowed) {
+    return { success: false, error: dispatchGate.reason };
+  }
 
   // Lazy import to avoid circular dependency (queen-tools → agent-tools → queen-tools)
   const { agentTools } = await import('./agent-tools.js');
@@ -137,6 +141,9 @@ async function callAgentSpawn(input: Record<string, unknown>): Promise<Record<st
 }
 
 async function callAgentTask(input: Record<string, unknown>): Promise<Record<string, unknown>> {
+  const { assertDispatchAllowed } = await import('./mcp-enforcement-gate.js');
+  const gate = assertDispatchAllowed('agent_task');
+  if (!gate.allowed) return { success: false, error: gate.reason };
   const { agentTools } = await import('./agent-tools.js');
   const taskTool = agentTools.find(t => t.name === 'agent_task');
   if (!taskTool) throw new Error('agent_task tool not found');
@@ -144,6 +151,9 @@ async function callAgentTask(input: Record<string, unknown>): Promise<Record<str
 }
 
 async function callAgentTerminate(input: Record<string, unknown>): Promise<Record<string, unknown>> {
+  const { assertDispatchAllowed } = await import('./mcp-enforcement-gate.js');
+  const gate = assertDispatchAllowed('agent_terminate');
+  if (!gate.allowed) return { success: false, error: gate.reason };
   const { agentTools } = await import('./agent-tools.js');
   const terminateTool = agentTools.find(t => t.name === 'agent_terminate');
   if (!terminateTool) throw new Error('agent_terminate tool not found');
@@ -151,6 +161,9 @@ async function callAgentTerminate(input: Record<string, unknown>): Promise<Recor
 }
 
 async function callAgentTaskAsync(input: Record<string, unknown>): Promise<Record<string, unknown>> {
+  const { assertDispatchAllowed } = await import('./mcp-enforcement-gate.js');
+  const gate = assertDispatchAllowed('agent_task');
+  if (!gate.allowed) return { success: false, error: gate.reason };
   const { agentTools } = await import('./agent-tools.js');
   const asyncTool = agentTools.find(t => t.name === 'agent_task_async');
   if (!asyncTool) throw new Error('agent_task_async tool not found');
@@ -1057,7 +1070,15 @@ const hiveTerminateTool: MCPTool = {
       for (const worker of hive.workers) {
         if (worker.status !== 'terminated') {
           try {
-            await callAgentTerminate({ agentId: worker.agentId, force: true });
+            const terminateResult = await callAgentTerminate({ agentId: worker.agentId, force: true });
+            if (!terminateResult.success) {
+              const error = String(terminateResult.error || 'agent_terminate failed');
+              if (error.includes('[MCP ENFORCEMENT]')) {
+                return { success: false, hiveId, error, status: hive.status };
+              }
+              errors.push(`Failed to terminate worker ${worker.workerId}: ${error}`);
+              continue;
+            }
             worker.status = 'terminated';
             worker.terminatedAt = new Date().toISOString();
             terminated.push(worker.workerId);
@@ -1071,8 +1092,16 @@ const hiveTerminateTool: MCPTool = {
       // Queens do NOT have config.hiveId at spawn time — they only get linked
       // to a hive after queen_mission_assign. So we use hive.queenId directly.
       try {
-        await callAgentTerminate({ agentId: hive.queenId, force: true });
-        terminated.push(hive.queenId);
+        const queenTerminateResult = await callAgentTerminate({ agentId: hive.queenId, force: true });
+        if (!queenTerminateResult.success) {
+          const error = String(queenTerminateResult.error || 'agent_terminate failed');
+          if (error.includes('[MCP ENFORCEMENT]')) {
+            return { success: false, hiveId, error, status: hive.status };
+          }
+          errors.push(`Failed to terminate queen ${hive.queenId}: ${error}`);
+        } else {
+          terminated.push(hive.queenId);
+        }
       } catch (e) {
         errors.push(`Failed to terminate queen ${hive.queenId}: ${(e as Error).message}`);
       }

@@ -205,6 +205,18 @@ export function checkMCPEnforcement(toolName: string): EnforcementResult {
 }
 
 /**
+ * In-process dispatch level gate.
+ *
+ * Top-level MCP calls pass through callMCPTool(), but queen and hive-mind code
+ * can dispatch by calling sibling tool handlers directly. Reuse the canonical
+ * MCP enforcement policy here so those in-process dispatch paths obey the same
+ * live signed enforcement state.
+ */
+export function assertDispatchAllowed(toolName: string): EnforcementResult {
+  return checkMCPEnforcement(toolName);
+}
+
+/**
  * Model enforcement for agent spawning tools (PreToolUse gate).
  *
  * Blocks haiku for all agent tasks, enforces top-tier models for external

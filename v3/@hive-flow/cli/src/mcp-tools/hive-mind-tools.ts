@@ -651,6 +651,11 @@ export const hiveMindTools: MCPTool[] = [
 
         // Phase 1: Dispatch all tasks in parallel (non-blocking)
         const taskTimeout = (input.timeout as number) ?? 30000;
+        const { assertDispatchAllowed } = await import('./mcp-enforcement-gate.js');
+        const consensusGate = assertDispatchAllowed('agent_task');
+        if (!consensusGate.allowed) {
+          return { action, error: consensusGate.reason };
+        }
         const dispatched = await Promise.allSettled(
           providerWorkers.map(async (worker) => {
             const dispatchResult = await agentTaskTool!.handler({
