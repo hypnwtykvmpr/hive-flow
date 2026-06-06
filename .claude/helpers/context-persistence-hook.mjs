@@ -27,7 +27,7 @@
  */
 
 import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'fs';
-import { spawn, spawnSync } from 'child_process';
+import { spawnSync } from 'child_process';
 import { createHash } from 'crypto';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -1740,14 +1740,23 @@ function consumeCompactSignalAdvisory(projectRoot = PROJECT_ROOT) {
       const prompt = String(signal.preservationPrompt || signal.prompt || '').replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, '').slice(0, 1600);
       const mode = signal.mode === 'headless' ? 'headless' : 'inplace';
       if (process.env.HIVE_FLOW_SELF_COMPACT) {
+        let headlessOutcome = null;
         if (mode === 'headless') {
-          launchHeadlessCompact(signal, prompt);
+          headlessOutcome = launchHeadlessCompact(signal, prompt);
         }
-        return [
+        const lines = [
           `[COMPACT_TRIGGER] Manual compaction request accepted (reason: ${safeReason}; mode: ${mode}).`,
-          `This hook cannot fire an in-place slash command by itself; the active Claude session or headless fork must run /compact.`,
+          mode === 'headless'
+            ? (headlessOutcome?.compacted
+              ? `Headless Claude Code /compact completed and emitted compact_boundary.`
+              : `Headless Claude Code /compact did not confirm compact_boundary; run the correct command below.`)
+            : `This hook cannot inject an in-place slash command; use the correct command below or run /compact with the preservation prompt.`,
           prompt ? `Preservation prompt: ${prompt}` : `Preservation prompt: preserve the active objective, constraints, files changed, tests, blockers, and exact next step.`,
-        ].join(' ');
+        ];
+        if (mode !== 'headless' || !headlessOutcome?.compacted) {
+          lines.push(correctSelfCompactCommand());
+        }
+        return lines.join(' ');
       }
       return [
         `[COMPACT_ADVISORY] Fresh manual request found (reason: ${safeReason}), but HIVE_FLOW_SELF_COMPACT is not set.`,
@@ -1769,30 +1778,60 @@ function consumeCompactSignalAdvisory(projectRoot = PROJECT_ROOT) {
   return '';
 }
 
+function correctSelfCompactCommand() {
+  return 'Correct self-compaction command: node .claude/helpers/compact-now.cjs --mode headless --reason "<why compaction is needed>" --resume "$CLAUDE_SESSION_ID" --next-step "<exact next step after compact>"';
+}
+
 function launchHeadlessCompact(signal, prompt) {
   try {
     const claudeBin = process.env.CLAUDE_BIN || 'claude';
-    const args = ['-p', `/compact ${prompt || 'Preserve current task state, constraints, verification evidence, and exact next step.'}`];
+    const args = [
+      '--output-format',
+      'stream-json',
+      '--verbose',
+      '-p',
+      `/compact ${prompt || 'Preserve current task state, constraints, verification evidence, and exact next step.'}`,
+    ];
     const resume = signal.resume || process.env.CLAUDE_SESSION_ID;
     if (resume) args.push('--resume', String(resume));
-    if (process.env.HIVE_FLOW_COMPACT_HEADLESS_SYNC === '1') {
-      spawnSync(claudeBin, args, {
-        cwd: PROJECT_ROOT,
-        stdio: 'ignore',
-        env: process.env,
-      });
-      return;
-    }
-    const child = spawn(claudeBin, args, {
+
+    const result = spawnSync(claudeBin, args, {
       cwd: PROJECT_ROOT,
-      detached: true,
-      stdio: 'ignore',
+      encoding: 'utf8',
+      maxBuffer: 10 * 1024 * 1024,
       env: process.env,
     });
-    child.unref();
+    if (result.error) throw result.error;
+    if (typeof result.status === 'number' && result.status !== 0) {
+      const detail = (result.stderr || result.stdout || '').trim().slice(0, 1000);
+      throw new Error(`Headless Claude compact exited with status ${result.status}${detail ? `: ${detail}` : ''}`);
+    }
+
+    const compactBoundary = findCompactBoundary(result.stdout);
+    if (!compactBoundary) {
+      throw new Error('Headless Claude compact completed without a compact_boundary event');
+    }
+    return { compacted: true, compactBoundary };
   } catch {
     // Headless launch is best-effort; the advisory text still tells Claude what to do.
+    return { compacted: false };
   }
+}
+
+function findCompactBoundary(output) {
+  for (const line of String(output || '').split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (parsed.type === 'system' && parsed.subtype === 'compact_boundary') {
+        return parsed;
+      }
+    } catch {
+      // Ignore wrapper diagnostics; Claude stream-json events remain JSONL.
+    }
+  }
+  return null;
 }
 
 // ============================================================================

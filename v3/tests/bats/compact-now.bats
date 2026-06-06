@@ -12,12 +12,16 @@ setup() {
 #!/usr/bin/env node
 const fs = require('fs');
 fs.writeFileSync(process.env.HF_FAKE_CLAUDE_ARGS, JSON.stringify(process.argv.slice(2)));
+process.stdout.write(JSON.stringify({
+  type: 'system',
+  subtype: 'compact_boundary',
+  compact_metadata: { pre_tokens: 4321, trigger: 'manual' },
+}) + '\n');
 NODE
   chmod +x "$FAKE_CLAUDE"
   export CLAUDE_PROJECT_DIR="$PROJECT_DIR"
   export CLAUDE_BIN="$FAKE_CLAUDE"
   export HF_FAKE_CLAUDE_ARGS="$FAKE_ARGS"
-  export HIVE_FLOW_COMPACT_HEADLESS_SYNC=1
 }
 
 teardown() {
@@ -25,7 +29,6 @@ teardown() {
   unset CLAUDE_PROJECT_DIR
   unset CLAUDE_BIN
   unset HF_FAKE_CLAUDE_ARGS
-  unset HIVE_FLOW_COMPACT_HEADLESS_SYNC
 }
 
 @test "compact-now headless writes handoff and invokes claude compact prompt with resume" {
@@ -36,18 +39,29 @@ teardown() {
   [ -f "$DATA_DIR/compact-request.json" ]
   [ -f "$FAKE_ARGS" ]
 
-  PROJECT_DIR="$PROJECT_DIR" FAKE_ARGS="$FAKE_ARGS" node <<'NODE'
+  PROJECT_DIR="$PROJECT_DIR" FAKE_ARGS="$FAKE_ARGS" BATS_HELPER_OUTPUT="$output" node <<'NODE'
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const dataDir = path.join(process.env.PROJECT_DIR, '.hive-flow', 'data');
 const request = JSON.parse(fs.readFileSync(path.join(dataDir, 'compact-request.json'), 'utf8'));
 const args = JSON.parse(fs.readFileSync(process.env.FAKE_ARGS, 'utf8'));
+const output = JSON.parse(process.env.BATS_HELPER_OUTPUT);
 assert.equal(request.mode, 'headless');
 assert.equal(request.reason, 'bats compaction');
 assert.equal(request.resume, 'bats-session');
 assert.match(request.preservationPrompt, /continue after compact/);
-assert.deepEqual(args, ['-p', `/compact ${request.preservationPrompt}`, '--resume', 'bats-session']);
+assert.deepEqual(args, [
+  '--output-format',
+  'stream-json',
+  '--verbose',
+  '-p',
+  `/compact ${request.preservationPrompt}`,
+  '--resume',
+  'bats-session',
+]);
+assert.equal(output.headless.compacted, true);
+assert.equal(output.headless.compactBoundary.compact_metadata.pre_tokens, 4321);
 assert.ok(Date.parse(request.handoffWrittenAt) <= Date.parse(request.requestedAt));
 NODE
 }

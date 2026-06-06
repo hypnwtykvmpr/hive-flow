@@ -935,6 +935,7 @@ describe('compact advisory signal', () => {
       '#!/usr/bin/env node',
       "const fs = require('fs');",
       "fs.writeFileSync(process.env.HF_FAKE_CLAUDE_ARGS, JSON.stringify(process.argv.slice(2)));",
+      "process.stdout.write(JSON.stringify({ type: 'system', subtype: 'compact_boundary', compact_metadata: { pre_tokens: 9876, trigger: 'manual' } }) + '\\n');",
     ].join('\n'));
     chmodSync(fakeClaude, 0o755);
     writeFileSync(signalPath, JSON.stringify({
@@ -948,7 +949,6 @@ describe('compact advisory signal', () => {
       HIVE_FLOW_SELF_COMPACT: '1',
       CLAUDE_BIN: fakeClaude,
       HF_FAKE_CLAUDE_ARGS: argsPath,
-      HIVE_FLOW_COMPACT_HEADLESS_SYNC: '1',
     });
 
     const advisory = consumeCompactSignalAdvisory(projectRoot);
@@ -959,8 +959,9 @@ describe('compact advisory signal', () => {
     }
     assert.equal(existsSync(argsPath), true);
     const args = JSON.parse(readFileSync(argsPath, 'utf8'));
-    assert.deepEqual(args.slice(0, 2), ['-p', '/compact Preserve the current handoff details.']);
-    assert.deepEqual(args.slice(2), ['--resume', 'session-headless']);
+    assert.deepEqual(args.slice(0, 4), ['--output-format', 'stream-json', '--verbose', '-p']);
+    assert.equal(args[4], '/compact Preserve the current handoff details.');
+    assert.deepEqual(args.slice(5), ['--resume', 'session-headless']);
     assert.equal(existsSync(signalPath), false);
   });
 

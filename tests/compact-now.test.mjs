@@ -72,6 +72,7 @@ describe('compact-now helper', () => {
         '#!/usr/bin/env node',
         "const fs = require('fs');",
         "fs.writeFileSync(process.env.HF_FAKE_CLAUDE_ARGS, JSON.stringify(process.argv.slice(2)));",
+        "process.stdout.write(JSON.stringify({ type: 'system', subtype: 'compact_boundary', compact_metadata: { pre_tokens: 12345, trigger: 'manual' } }) + '\\n');",
       ].join('\n'));
       chmodSync(fakeClaude, 0o755);
 
@@ -88,7 +89,6 @@ describe('compact-now helper', () => {
           CLAUDE_PROJECT_DIR: projectRoot,
           CLAUDE_BIN: fakeClaude,
           HF_FAKE_CLAUDE_ARGS: argsPath,
-          HIVE_FLOW_COMPACT_HEADLESS_SYNC: '1',
         },
         encoding: 'utf8',
       });
@@ -98,10 +98,13 @@ describe('compact-now helper', () => {
       assert.equal(existsSync(requestPath), true);
       assert.equal(existsSync(argsPath), true);
       const args = JSON.parse(readFileSync(argsPath, 'utf8'));
-      assert.equal(args[0], '-p');
-      assert.match(args[1], /^\/compact /);
-      assert.match(args[1], /resume from the handoff after compacting/);
-      assert.deepEqual(args.slice(2), ['--resume', 'session-headless']);
+      assert.deepEqual(args.slice(0, 4), ['--output-format', 'stream-json', '--verbose', '-p']);
+      assert.match(args[4], /^\/compact /);
+      assert.match(args[4], /resume from the handoff after compacting/);
+      assert.deepEqual(args.slice(5), ['--resume', 'session-headless']);
+      const output = JSON.parse(result.stdout);
+      assert.equal(output.headless.compacted, true);
+      assert.equal(output.headless.compactBoundary.compact_metadata.pre_tokens, 12345);
     } finally {
       rmSync(projectRoot, { recursive: true, force: true });
     }
@@ -127,6 +130,7 @@ describe('compact-now helper', () => {
             '#!/usr/bin/env node',
             "const fs = require('fs');",
             "fs.writeFileSync(process.env.HF_FAKE_CLAUDE_ARGS, JSON.stringify(process.argv.slice(2)));",
+            "process.stdout.write(JSON.stringify({ type: 'system', subtype: 'compact_boundary', compact_metadata: { pre_tokens: 555, trigger: 'manual' } }) + '\\n');",
           ].join('\n'));
           chmodSync(fakeClaude, 0o755);
 
@@ -143,7 +147,6 @@ describe('compact-now helper', () => {
               CLAUDE_PROJECT_DIR: projectRoot,
               CLAUDE_BIN: fakeClaude,
               HF_FAKE_CLAUDE_ARGS: argsPath,
-              HIVE_FLOW_COMPACT_HEADLESS_SYNC: '1',
             },
             encoding: 'utf8',
           });
@@ -156,7 +159,15 @@ describe('compact-now helper', () => {
           assert.equal(request.type, 'hive-flow.compact-request');
           assert.match(request.preservationPrompt, /Preserve the active task state/);
           assert.doesNotMatch(request.preservationPrompt, /[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/);
-          assert.deepEqual(args, ['-p', `/compact ${request.preservationPrompt}`, '--resume', request.resume]);
+          assert.deepEqual(args, [
+            '--output-format',
+            'stream-json',
+            '--verbose',
+            '-p',
+            `/compact ${request.preservationPrompt}`,
+            '--resume',
+            request.resume,
+          ]);
           assert.ok(new Date(request.handoffWrittenAt).getTime() <= new Date(request.requestedAt).getTime());
         } finally {
           rmSync(projectRoot, { recursive: true, force: true });
@@ -164,5 +175,74 @@ describe('compact-now helper', () => {
       }),
       { numRuns: PROPERTY_RUNS }
     );
+  });
+
+  it('redirects malformed requests to the correct self-compaction command', () => {
+    const projectRoot = mkdtempSync(join(tmpdir(), 'hf-compact-now-malformed-'));
+
+    try {
+      const result = spawnSync(process.execPath, [
+        helperPath,
+        '--reason', 'bad mode',
+        '--mode', 'automatic',
+      ], {
+        cwd: projectRoot,
+        env: {
+          ...process.env,
+          CLAUDE_PROJECT_DIR: projectRoot,
+          CLAUDE_SESSION_ID: 'session-malformed',
+        },
+        encoding: 'utf8',
+      });
+
+      assert.equal(result.status, 1);
+      assert.match(result.stderr, /Invalid --mode/);
+      assert.match(result.stderr, /Correct self-compaction command:/);
+      assert.match(result.stderr, /node \.claude\/helpers\/compact-now\.cjs --mode headless/);
+      assert.match(result.stderr, /--resume "\$CLAUDE_SESSION_ID"/);
+    } finally {
+      rmSync(projectRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('redirects headless Claude failures when no compact boundary is emitted', () => {
+    const projectRoot = mkdtempSync(join(tmpdir(), 'hf-compact-now-no-boundary-'));
+    const dataDir = join(projectRoot, '.hive-flow', 'data');
+    const fakeClaude = join(projectRoot, 'fake-claude.cjs');
+    const argsPath = join(dataDir, 'fake-claude-args.json');
+    mkdirSync(dataDir, { recursive: true });
+
+    try {
+      writeFileSync(fakeClaude, [
+        '#!/usr/bin/env node',
+        "const fs = require('fs');",
+        "fs.writeFileSync(process.env.HF_FAKE_CLAUDE_ARGS, JSON.stringify(process.argv.slice(2)));",
+        "process.stdout.write(JSON.stringify({ type: 'result', subtype: 'success' }) + '\\n');",
+      ].join('\n'));
+      chmodSync(fakeClaude, 0o755);
+
+      const result = spawnSync(process.execPath, [
+        helperPath,
+        '--reason', 'needs compaction',
+        '--mode', 'headless',
+        '--resume', 'session-no-boundary',
+      ], {
+        cwd: projectRoot,
+        env: {
+          ...process.env,
+          CLAUDE_PROJECT_DIR: projectRoot,
+          CLAUDE_BIN: fakeClaude,
+          HF_FAKE_CLAUDE_ARGS: argsPath,
+        },
+        encoding: 'utf8',
+      });
+
+      assert.equal(result.status, 1);
+      assert.match(result.stderr, /compact_boundary/);
+      assert.match(result.stderr, /Correct self-compaction command:/);
+      assert.match(result.stderr, /Do not git checkout or edit \.claude\/helpers/);
+    } finally {
+      rmSync(projectRoot, { recursive: true, force: true });
+    }
   });
 });

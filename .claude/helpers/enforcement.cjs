@@ -2146,7 +2146,7 @@ function detectCircumvention(toolName, toolInput, state) {
       return {
         circumvention: true,
         denyOnly: true,
-        reason: 'compact-now is not activated by checking out protected hook files from inside a governed Claude session. Run the already-installed helper directly, or have the human/Codex merge the branch outside the governed hook path.',
+        reason: 'compact-now is not activated by checking out protected hook files from inside a governed Claude session. Correct self-compaction command: node .claude/helpers/compact-now.cjs --mode headless --reason "<why compaction is needed>" --resume "$CLAUDE_SESSION_ID" --next-step "<exact next step after compact>". Do not git checkout or edit .claude/helpers to activate compaction.',
         severity: 'normal',
       };
     }
