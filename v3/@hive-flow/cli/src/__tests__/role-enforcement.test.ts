@@ -214,6 +214,22 @@ describe('Role Enforcement System', () => {
       expect(result.hookSpecificOutput.permissionDecisionReason).toContain('ADVOCATE ENFORCEMENT');
     });
 
+    it('allows only the post-compact recovery helper ack for advocate Bash', () => {
+      const allowed = roleEnf.enforceAdvocateRole('Bash', {
+        tool_input: {
+          command: 'node .claude/helpers/compaction-recovery.cjs ack --session compact-session --nonce nonce-proof --handoff-reviewed --state-reviewed --git-status-reviewed --objective "Resume compaction recovery" --next-step "Run focused gates" --summary "Read the handoff and checked live repo state."',
+        },
+      });
+      expect(allowed).toEqual({});
+
+      const chained = roleEnf.enforceAdvocateRole('Bash', {
+        tool_input: {
+          command: 'node .claude/helpers/compaction-recovery.cjs ack --session compact-session --nonce nonce-proof --handoff-reviewed --state-reviewed --git-status-reviewed --objective "Resume compaction recovery" --next-step "Run focused gates" --summary "Read handoff"; git status',
+        },
+      });
+      expect(chained.hookSpecificOutput.permissionDecision).toBe('deny');
+    });
+
     it('denies Write for advocate', () => {
       const result = roleEnf.enforceAdvocateRole('Write');
       expect(result.hookSpecificOutput.permissionDecision).toBe('deny');

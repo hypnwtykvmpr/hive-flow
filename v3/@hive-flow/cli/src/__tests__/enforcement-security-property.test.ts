@@ -212,6 +212,8 @@ describe('enforcement security property contracts', () => {
     clearAgentEnv();
     resetModule();
     rmSync(join(root, '.hive-flow', 'enforcement'), { recursive: true, force: true });
+    rmSync(join(root, '.hive-flow', 'data', 'compaction-recovery-required.json'), { force: true });
+    rmSync(join(root, '.hive-flow', 'data', 'compaction-recovery-ack.json'), { force: true });
     mkdirSync(dirname(statePath()), { recursive: true });
   });
 
@@ -561,6 +563,104 @@ describe('enforcement security property contracts', () => {
     expect(result.hookSpecificOutput.permissionDecisionReason).toContain('node .claude/helpers/compact-now.cjs --mode headless');
     expect(result.hookSpecificOutput.permissionDecisionReason).toContain('--resume "$CLAUDE_SESSION_ID"');
     expect(readScopedState('global', 'global')).toBeNull();
+  });
+
+  it('blocks mutating work after compact until recovery is acknowledged', () => {
+    const recoveryPath = join(root, '.hive-flow', 'data', 'compaction-recovery-required.json');
+    mkdirSync(dirname(recoveryPath), { recursive: true });
+    writeFileSync(recoveryPath, JSON.stringify({
+      type: 'hive-flow.compaction-recovery-required',
+      sessionId: 'compact-session-1',
+      recoveryNonce: 'nonce-one',
+      source: 'compact',
+      requiredActions: ['read-compaction-handoff', 'inspect-live-git-state', 'acknowledge-recovery'],
+      createdAt: new Date().toISOString(),
+    }));
+
+    const result = enf.processPreToolUse({
+      session_id: 'compact-session-1',
+      tool_name: 'Write',
+      tool_input: { file_path: join(root, 'v3', 'docs', 'design', 'safe.md'), content: 'safe' },
+    });
+
+    expect(result.hookSpecificOutput.permissionDecision).toBe('deny');
+    expect(result.hookSpecificOutput.permissionDecisionReason).toContain('POST-COMPACT RECOVERY REQUIRED');
+    expect(result.hookSpecificOutput.permissionDecisionReason).toContain('compaction-recovery.cjs ack');
+    expect(readScopedState('global', 'global')).toBeNull();
+  });
+
+  it('allows post-compact reorientation commands while recovery is required', () => {
+    const recoveryPath = join(root, '.hive-flow', 'data', 'compaction-recovery-required.json');
+    mkdirSync(dirname(recoveryPath), { recursive: true });
+    writeFileSync(recoveryPath, JSON.stringify({
+      type: 'hive-flow.compaction-recovery-required',
+      sessionId: 'compact-session-2',
+      recoveryNonce: 'nonce-two',
+      source: 'compact',
+      requiredActions: ['read-compaction-handoff', 'inspect-live-git-state', 'acknowledge-recovery'],
+      createdAt: new Date().toISOString(),
+    }));
+
+    for (const input of [
+      { tool_name: 'Read', tool_input: { file_path: join(root, '.hive-flow', 'data', 'compaction-handoff.md') } },
+      { tool_name: 'Bash', tool_input: { command: 'git status --short --branch' } },
+      { tool_name: 'Bash', tool_input: { command: 'git diff -- .claude/helpers/context-persistence-hook.mjs' } },
+      { tool_name: 'Bash', tool_input: { command: 'node .claude/helpers/compaction-recovery.cjs status' } },
+      {
+        tool_name: 'Bash',
+        tool_input: {
+          command: 'node .claude/helpers/compaction-recovery.cjs ack --session compact-session-2 --nonce nonce-two --handoff-missing --state-missing --git-status-reviewed --objective null --next-step null --summary "Read the handoff, checked git status, and confirmed the next implementation step."',
+        },
+      },
+    ]) {
+      const result = enf.processPreToolUse({
+        session_id: 'compact-session-2',
+        ...input,
+      });
+      expect(result.hookSpecificOutput?.permissionDecision ?? 'allow', JSON.stringify(input)).toBe('allow');
+    }
+
+    const otherSessionResult = enf.processPreToolUse({
+      session_id: 'other-session',
+      tool_name: 'Write',
+      tool_input: { file_path: join(root, 'src', 'other.ts'), content: 'ok' },
+    });
+    expect(otherSessionResult.hookSpecificOutput?.permissionDecision ?? 'allow').toBe('allow');
+  });
+
+  it('allows post-compact delegation tools without allowing direct mutation', () => {
+    const recoveryPath = join(root, '.hive-flow', 'data', 'compaction-recovery-required.json');
+    mkdirSync(dirname(recoveryPath), { recursive: true });
+    writeFileSync(recoveryPath, JSON.stringify({
+      type: 'hive-flow.compaction-recovery-required',
+      sessionId: 'compact-delegate-session',
+      recoveryNonce: 'nonce-delegate',
+      source: 'compact',
+      requiredActions: ['read-compaction-handoff', 'inspect-live-git-state', 'acknowledge-recovery'],
+      createdAt: new Date().toISOString(),
+    }));
+
+    for (const toolName of [
+      'Task',
+      'mcp__hive-flow__agent_spawn',
+      'mcp__hive-flow__queen_mission_assign',
+      'mcp__hive-flow__hive_status',
+    ]) {
+      const result = enf.processPreToolUse({
+        session_id: 'compact-delegate-session',
+        tool_name: toolName,
+        tool_input: {},
+      });
+      expect(result.hookSpecificOutput?.permissionDecision ?? 'allow', toolName).toBe('allow');
+    }
+
+    const write = enf.processPreToolUse({
+      session_id: 'compact-delegate-session',
+      tool_name: 'Write',
+      tool_input: { file_path: join(root, 'src', 'blocked.ts'), content: 'blocked' },
+    });
+    expect(write.hookSpecificOutput.permissionDecision).toBe('deny');
+    expect(write.hookSpecificOutput.permissionDecisionReason).toContain('POST-COMPACT RECOVERY REQUIRED');
   });
 
   it('keeps token-spoofed unknown actors globally escalated', () => {

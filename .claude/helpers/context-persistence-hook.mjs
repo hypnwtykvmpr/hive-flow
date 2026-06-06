@@ -26,9 +26,9 @@
  *   node context-persistence-hook.mjs status              # Show archive stats
  */
 
-import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'fs';
 import { spawnSync } from 'child_process';
-import { createHash } from 'crypto';
+import { createHash, randomBytes } from 'crypto';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
@@ -39,6 +39,7 @@ const PROJECT_ROOT = join(__dirname, '../..');
 const DATA_DIR = join(PROJECT_ROOT, '.hive-flow', 'data');
 const ARCHIVE_JSON_PATH = join(DATA_DIR, 'transcript-archive.json');
 const ARCHIVE_DB_PATH = join(DATA_DIR, 'transcript-archive.db');
+const COMPACTION_RECOVERY_REQUIRED_PATH = join(DATA_DIR, 'compaction-recovery-required.json');
 
 const NAMESPACE = 'transcript-archive';
 const RESTORE_BUDGET = parseInt(process.env.HIVE_FLOW_COMPACT_RESTORE_BUDGET || '4000', 10);
@@ -1466,6 +1467,7 @@ function estimateContextTokens(transcriptPath) {
   let lastCacheCreate = 0;
   let turns = 0;
   let lastPreTokens = 0;
+  let compactBoundaryCount = 0;
   let totalChars = 0;
 
   for (let i = 0; i < lines.length; i++) {
@@ -1474,6 +1476,7 @@ function estimateContextTokens(transcriptPath) {
 
       // Check for compact_boundary
       if (parsed.type === 'system' && parsed.subtype === 'compact_boundary') {
+        if (isRecoveryEligibleCompactBoundary(parsed)) compactBoundaryCount++;
         lastPreTokens = parsed.compactMetadata?.preTokens
           || parsed.compact_metadata?.pre_tokens || 0;
         // Reset after compaction — new context starts here
@@ -1533,6 +1536,7 @@ function estimateContextTokens(transcriptPath) {
       turns,
       method: 'api-usage',
       lastPreTokens,
+      compactBoundaryCount,
       breakdown: {
         input: lastInputTokens,
         cacheRead: lastCacheRead,
@@ -1550,10 +1554,11 @@ function estimateContextTokens(transcriptPath) {
       turns,
       method: 'post-compact-char-estimate',
       lastPreTokens,
+      compactBoundaryCount,
     };
   }
 
-  return { tokens: estimatedTokens, turns, method: 'char-estimate' };
+  return { tokens: estimatedTokens, turns, method: 'char-estimate', compactBoundaryCount };
 }
 
 /**
@@ -1660,10 +1665,11 @@ async function runAutopilot(transcriptPath, sessionId, backend, backendType, opt
     state.pruneCount = 0;
     state.warningIssued = false;
     state.history = [];
+    state.lastRecoveryCompactBoundaryCount = 0;
   }
 
   // Estimate current context usage
-  const { tokens, turns, method, lastPreTokens } = estimateContextTokens(transcriptPath);
+  const { tokens, turns, method, lastPreTokens, compactBoundaryCount = 0 } = estimateContextTokens(transcriptPath);
   const percentage = Math.min(tokens / CONTEXT_WINDOW_TOKENS, 1.0);
 
   // Track history (keep last 50 data points)
@@ -1677,6 +1683,19 @@ async function runAutopilot(transcriptPath, sessionId, backend, backendType, opt
   state.detectedModel = process.env.CLAUDE_MODEL || 'unknown';
 
   let optimizationMessage = '';
+
+  if (compactBoundaryCount > 0 && state.lastRecoveryCompactBoundaryCount !== compactBoundaryCount) {
+    try {
+      const recovery = armCompactionRecoveryRequired(options.projectRoot || PROJECT_ROOT, {
+        sessionId,
+        source: 'compact_boundary',
+      });
+      optimizationMessage += `\n${buildCompactionRecoveryInstructions(recovery)}`;
+      state.lastRecoveryCompactBoundaryCount = compactBoundaryCount;
+    } catch {
+      optimizationMessage += '\n[POST-COMPACT RECOVERY REQUIRED] A compact_boundary was observed, but Hive Flow could not persist the recovery flag. Read .hive-flow/data/compaction-handoff.md, run git status --short --branch, state the objective and next step, then ask the human to inspect the recovery hook.';
+    }
+  }
 
   // Phase 1: Warning zone (70-85%) — advise concise responses
   if (percentage >= AUTOPILOT_WARN_PCT && percentage < AUTOPILOT_PRUNE_PCT) {
@@ -1834,6 +1853,101 @@ function findCompactBoundary(output) {
   return null;
 }
 
+function compactBoundaryMetadata(parsed) {
+  const meta = parsed?.compactMetadata || parsed?.compact_metadata || parsed?.compact || {};
+  return {
+    ...meta,
+    trigger: meta.trigger || parsed?.trigger || parsed?.source || '',
+    source: meta.source || parsed?.source || '',
+  };
+}
+
+function isRecoveryEligibleCompactBoundary(parsed) {
+  if (!parsed || parsed.type !== 'system' || parsed.subtype !== 'compact_boundary') return false;
+  const meta = compactBoundaryMetadata(parsed);
+  const labels = [
+    meta.trigger,
+    meta.source,
+    meta.compactSource,
+    meta.compact_source,
+    meta.compactionSource,
+    meta.compaction_source,
+  ].map(value => String(value || '').toLowerCase());
+  if (labels.some(value => value.includes('micro') || value.includes('partial'))) return false;
+  if (meta.headless || meta.hive_flow_headless || meta.hiveFlowHeadless || meta.detached || meta.detachedHeadless) return false;
+  return true;
+}
+
+function compactionRecoveryPath(projectRoot = PROJECT_ROOT) {
+  return join(projectRoot, '.hive-flow', 'data', 'compaction-recovery-required.json');
+}
+
+function sanitizeRecoveryValue(value, max = 200) {
+  return String(value || '')
+    .replace(/[\x00-\x1f\x7f]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, max);
+}
+
+function shellSafeSession(sessionId) {
+  const safe = sanitizeRecoveryValue(sessionId, 120).replace(/[^A-Za-z0-9_.:-]/g, '');
+  return safe || '$CLAUDE_SESSION_ID';
+}
+
+function armCompactionRecoveryRequired(projectRoot = PROJECT_ROOT, details = {}) {
+  const dataDir = join(projectRoot, '.hive-flow', 'data');
+  const flagPath = compactionRecoveryPath(projectRoot);
+  const handoffPath = join(dataDir, 'compaction-handoff.md');
+  const statePath = join(dataDir, 'compaction-state.json');
+  const flag = {
+    type: 'hive-flow.compaction-recovery-required',
+    version: 1,
+    sessionId: sanitizeRecoveryValue(details.sessionId || details.session_id || process.env.CLAUDE_SESSION_ID || '', 120),
+    source: sanitizeRecoveryValue(details.source || 'compact', 40) || 'compact',
+    recoveryNonce: randomBytes(12).toString('hex'),
+    createdAt: new Date().toISOString(),
+    handoffPath,
+    statePath,
+    handoffExists: existsSync(handoffPath),
+    stateExists: existsSync(statePath),
+    requiredActions: [
+      'read-compaction-handoff',
+      'inspect-live-git-state',
+      'state-next-step',
+      'acknowledge-recovery',
+    ],
+    restoredContext: Boolean(details.restoredContext),
+  };
+
+  mkdirSync(dataDir, { recursive: true });
+  const tmpPath = `${flagPath}.${process.pid}.${Date.now()}.tmp`;
+  writeFileSync(tmpPath, JSON.stringify(flag, null, 2));
+  renameSync(tmpPath, flagPath);
+  return flag;
+}
+
+function buildCompactionRecoveryInstructions(flag = {}) {
+  const sessionArg = shellSafeSession(flag.sessionId);
+  const nonceArg = sanitizeRecoveryValue(flag.recoveryNonce || '<nonce-from-recovery-flag>', 80).replace(/[^A-Za-z0-9_.:-]/g, '') || '<nonce-from-recovery-flag>';
+  const handoffPath = flag.handoffPath || '.hive-flow/data/compaction-handoff.md';
+  const statePath = flag.statePath || '.hive-flow/data/compaction-state.json';
+  const handoffFlag = flag.handoffExists === false ? '--handoff-missing' : '--handoff-reviewed';
+  const stateFlag = flag.stateExists === false ? '--state-missing' : '--state-reviewed';
+  const objective = flag.handoffExists === false && flag.stateExists === false ? 'null' : '<active objective>';
+  const nextStep = flag.handoffExists === false && flag.stateExists === false ? 'null' : '<exact next step>';
+  return [
+    '[POST-COMPACT RECOVERY REQUIRED]',
+    'Before mutating files or running build/test commands, re-orient from durable state and live repo truth.',
+    `1. Read ${handoffPath} and ${statePath} if they exist.`,
+    '2. Run git status --short --branch and inspect any relevant git diff before continuing.',
+    '3. State the active objective, constraints, changed files, verification status, and exact next action.',
+    '4. If a recovery file is absent, use the matching --handoff-missing or --state-missing flag; do not pretend it was reviewed.',
+    `5. Then acknowledge recovery with: node .claude/helpers/compaction-recovery.cjs ack --session ${sessionArg} --nonce ${nonceArg} ${handoffFlag} ${stateFlag} --git-status-reviewed --objective "${objective}" --next-step "${nextStep}" --summary "<what you recovered>"`,
+    'Until that ack succeeds, Hive Flow will deny mutating tools and allow only recovery/read-only commands.',
+  ].join('\n');
+}
+
 // ============================================================================
 // Commands
 // ============================================================================
@@ -1971,6 +2085,15 @@ async function doSessionStart() {
   const sessionId = input.session_id;
   if (!sessionId) return;
 
+  let recoveryContext = '';
+  if (input.source === 'compact') {
+    const recovery = armCompactionRecoveryRequired(PROJECT_ROOT, {
+      sessionId,
+      source: input.source,
+    });
+    recoveryContext = buildCompactionRecoveryInstructions(recovery);
+  }
+
   const { backend, type } = await resolveBackend();
 
   // Use smart retrieval (importance-ranked) when auto-optimize is on
@@ -1996,6 +2119,12 @@ async function doSessionStart() {
   }
 
   await backend.shutdown();
+
+  if (recoveryContext && additionalContext) {
+    additionalContext = `${recoveryContext}\n\n${additionalContext}`;
+  } else if (recoveryContext) {
+    additionalContext = recoveryContext;
+  }
 
   if (!additionalContext) return;
 
@@ -2207,6 +2336,9 @@ export {
   formatTokens,
   buildAutopilotReport,
   consumeCompactSignalAdvisory,
+  armCompactionRecoveryRequired,
+  buildCompactionRecoveryInstructions,
+  compactionRecoveryPath,
   detectContextWindowTokens,
   modelIdToWindowSize,
   MODEL_CONTEXT_WINDOWS,
@@ -2214,6 +2346,7 @@ export {
   NAMESPACE,
   ARCHIVE_DB_PATH,
   ARCHIVE_JSON_PATH,
+  COMPACTION_RECOVERY_REQUIRED_PATH,
   COMPACT_INSTRUCTION_BUDGET,
   RETENTION_DAYS,
   AUTO_OPTIMIZE,

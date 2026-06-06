@@ -31,6 +31,8 @@ const {
   retrieveContext,
   runAutopilot,
   consumeCompactSignalAdvisory,
+  armCompactionRecoveryRequired,
+  buildCompactionRecoveryInstructions,
   detectContextWindowTokens,
   modelIdToWindowSize,
   MODEL_CONTEXT_WINDOWS,
@@ -881,6 +883,38 @@ describe('proactive archiving (UserPromptSubmit)', () => {
 });
 
 describe('compact advisory signal', () => {
+  it('should arm deterministic post-compact recovery instructions', () => {
+    const projectRoot = join(TMP_DIR, 'compact-recovery-arm');
+    const dataDir = join(projectRoot, '.hive-flow', 'data');
+    const flagPath = join(dataDir, 'compaction-recovery-required.json');
+
+    const recovery = armCompactionRecoveryRequired(projectRoot, {
+      sessionId: 'compact-session-1',
+      source: 'compact',
+      restoredContext: 'restored archived turns',
+    });
+    const instructions = buildCompactionRecoveryInstructions(recovery);
+
+    assert.equal(existsSync(flagPath), true);
+    const flag = JSON.parse(readFileSync(flagPath, 'utf8'));
+    assert.equal(flag.type, 'hive-flow.compaction-recovery-required');
+    assert.equal(flag.sessionId, 'compact-session-1');
+    assert.equal(flag.source, 'compact');
+    assert.match(flag.recoveryNonce, /^[0-9a-f]{24}$/);
+    assert.ok(Array.isArray(flag.requiredActions));
+    assert.ok(flag.requiredActions.includes('read-compaction-handoff'));
+    assert.equal(flag.handoffExists, false);
+    assert.equal(flag.stateExists, false);
+    assert.match(instructions, /POST-COMPACT RECOVERY REQUIRED/);
+    assert.match(instructions, /compaction-handoff\.md/);
+    assert.match(instructions, /git status --short --branch/);
+    assert.match(instructions, /--nonce [0-9a-f]{24}/);
+    assert.match(instructions, /--handoff-missing --state-missing --git-status-reviewed/);
+    assert.match(instructions, /--objective "null" --next-step "null"/);
+    assert.match(instructions, /--handoff-missing or --state-missing/);
+    assert.match(instructions, /compaction-recovery\.cjs ack/);
+  });
+
   it('should surface a fresh compact advisory and remove the signal file', () => {
     const projectRoot = join(TMP_DIR, 'compact-signal-fresh');
     const dataDir = join(projectRoot, '.hive-flow', 'data');
@@ -1014,6 +1048,86 @@ describe('compact advisory signal', () => {
     assert.ok(autopilot.percentage >= 0.85);
     assert.match(autopilot.additionalContext, /Configured action threshold/);
     assert.equal(existsSync(signalPath), false);
+  });
+
+  it('should arm post-compact recovery when autopilot observes a compact boundary', async () => {
+    const projectRoot = join(TMP_DIR, 'compact-boundary-recovery');
+    const dataDir = join(projectRoot, '.hive-flow', 'data');
+    const statePath = join(dataDir, 'autopilot-state.json');
+    const recoveryPath = join(dataDir, 'compaction-recovery-required.json');
+    const transcriptPath = join(projectRoot, 'transcript.jsonl');
+
+    mkdirSync(dataDir, { recursive: true });
+    writeFileSync(transcriptPath, [
+      JSON.stringify({
+        type: 'system',
+        subtype: 'compact_boundary',
+        compact_metadata: { pre_tokens: 123456, trigger: 'manual' },
+      }),
+      JSON.stringify({
+        type: 'assistant',
+        message: {
+          role: 'assistant',
+          content: [{ type: 'text', text: 'post compact summary' }],
+          usage: { input_tokens: 2048 },
+        },
+      }),
+    ].join('\n') + '\n');
+
+    const autopilot = await runAutopilot(
+      transcriptPath,
+      'boundary-session',
+      { pruneStale: () => 0 },
+      'json',
+      { statePath, projectRoot }
+    );
+
+    assert.equal(existsSync(recoveryPath), true);
+    assert.match(autopilot.additionalContext, /POST-COMPACT RECOVERY REQUIRED/);
+    const flag = JSON.parse(readFileSync(recoveryPath, 'utf8'));
+    assert.equal(flag.sessionId, 'boundary-session');
+    assert.equal(flag.source, 'compact_boundary');
+  });
+
+  it('should not arm recovery for microcompaction or detached headless compact boundaries', async () => {
+    for (const [name, compactMetadata] of [
+      ['micro', { pre_tokens: 123456, trigger: 'compact_partial' }],
+      ['headless', { pre_tokens: 123456, trigger: 'manual', hive_flow_headless: true }],
+    ]) {
+      const projectRoot = join(TMP_DIR, `compact-boundary-ignore-${name}`);
+      const dataDir = join(projectRoot, '.hive-flow', 'data');
+      const statePath = join(dataDir, 'autopilot-state.json');
+      const recoveryPath = join(dataDir, 'compaction-recovery-required.json');
+      const transcriptPath = join(projectRoot, 'transcript.jsonl');
+
+      mkdirSync(dataDir, { recursive: true });
+      writeFileSync(transcriptPath, [
+        JSON.stringify({
+          type: 'system',
+          subtype: 'compact_boundary',
+          compact_metadata: compactMetadata,
+        }),
+        JSON.stringify({
+          type: 'assistant',
+          message: {
+            role: 'assistant',
+            content: [{ type: 'text', text: 'post boundary summary' }],
+            usage: { input_tokens: 2048 },
+          },
+        }),
+      ].join('\n') + '\n');
+
+      const autopilot = await runAutopilot(
+        transcriptPath,
+        `${name}-boundary-session`,
+        { pruneStale: () => 0 },
+        'json',
+        { statePath, projectRoot }
+      );
+
+      assert.equal(existsSync(recoveryPath), false, name);
+      assert.doesNotMatch(autopilot.additionalContext, /POST-COMPACT RECOVERY REQUIRED/, name);
+    }
   });
 });
 

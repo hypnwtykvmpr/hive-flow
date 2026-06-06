@@ -66,6 +66,7 @@ const SETTINGS_PRESETS_FILE = path.join(ENFORCEMENT_DIR, 'settings-presets.json'
 const SETTINGS_PRESET_VERSION = 2;
 const COMPACTION_LOCK_FILE = path.join(ENFORCEMENT_DIR, 'compaction-lock.json');
 const PIPELINE_STATE_FILE = path.join(ENFORCEMENT_DIR, 'pipeline-state.json');
+const COMPACTION_RECOVERY_REQUIRED_FILE = path.join(PROJECT_DIR, '.hive-flow', 'data', 'compaction-recovery-required.json');
 const MAX_STATE_SIZE = 10240; // 10KB — larger = likely corrupt/attack (12.12)
 const MAX_HISTORY = 50;
 const HUNG_THRESHOLD = 5;
@@ -2060,6 +2061,119 @@ function isCompactNowProtectedGitActivation(command) {
   return foundCompactNowCheckout;
 }
 
+function loadCompactionRecoveryRequirement(input = {}) {
+  let flag = null;
+  try {
+    if (!fs.existsSync(COMPACTION_RECOVERY_REQUIRED_FILE)) return null;
+    flag = JSON.parse(fs.readFileSync(COMPACTION_RECOVERY_REQUIRED_FILE, 'utf8'));
+  } catch {
+    return {
+      type: 'hive-flow.compaction-recovery-required',
+      sessionId: '',
+      invalid: true,
+    };
+  }
+  if (!flag || flag.type !== 'hive-flow.compaction-recovery-required') return null;
+
+  const currentSession = String(input?.session_id || input?.sessionId || process.env.CLAUDE_SESSION_ID || '').trim();
+  const flagSession = String(flag.sessionId || '').trim();
+  if (flagSession && currentSession && flagSession !== currentSession) return null;
+  return flag;
+}
+
+function isCompactionRecoveryHelperExecution(execution) {
+  if (commandBasename(execution?.command || '') !== 'node') return false;
+  const args = execution.args || [];
+  const scriptIndex = args.findIndex(arg => commandBasename(arg) === 'compaction-recovery.cjs');
+  if (scriptIndex < 0) return false;
+  const action = args[scriptIndex + 1] || 'status';
+  return action === 'status' || action === 'ack' || action === '--help' || action === 'help';
+}
+
+function isAllowedRecoveryBashCommand(command) {
+  const executions = collectShellCommandExecutions(command || '');
+  if (!executions.length) return false;
+
+  return executions.every(execution => {
+    const base = commandBasename(execution.command);
+    const args = execution.args || [];
+    if (isCompactionRecoveryHelperExecution(execution)) return true;
+    if (base === 'pwd') return true;
+    if (base === 'ls') return true;
+    if (base === 'git') {
+      const subcommand = args.find(arg => !arg.startsWith('-')) || '';
+      return ['status', 'diff', 'log', 'show', 'rev-parse', 'branch'].includes(subcommand);
+    }
+    return false;
+  });
+}
+
+const RECOVERY_COORDINATION_TOOLS = new Set([
+  'Task',
+  'agent_spawn',
+  'agent_task',
+  'agent_status',
+  'agent_list',
+  'task_orchestrate',
+  'task_status',
+  'task_list',
+  'swarm_status',
+  'hive_status',
+  'queen_mission_assign',
+  'queen_spawn_worker',
+  'queen_task_worker',
+  'queen_collect_results',
+  'queen_report',
+]);
+
+function isAllowedRecoveryCoordinationTool(toolName) {
+  if (RECOVERY_COORDINATION_TOOLS.has(toolName)) return true;
+  const match = /^mcp__hive-flow__(?:__)?(.+)$/.exec(toolName || '');
+  return Boolean(match && RECOVERY_COORDINATION_TOOLS.has(match[1]));
+}
+
+function isAllowedCompactionRecoveryTool(toolName, toolInput) {
+  if (UNRESTRICTED_TOOLS.has(toolName)) return true;
+  if (isAllowedRecoveryCoordinationTool(toolName)) return true;
+  if (['NotebookRead', 'LS', 'mcp__filesystem__read_file', 'mcp__filesystem__read_text_file', 'mcp__filesystem__read_media_file', 'mcp__filesystem__read_multiple_files'].includes(toolName)) {
+    return true;
+  }
+  if (toolName === 'Bash') {
+    return isAllowedRecoveryBashCommand(toolInput?.command || '');
+  }
+  return false;
+}
+
+function compactionRecoveryDenyReason(flag) {
+  const session = String(flag?.sessionId || '$CLAUDE_SESSION_ID').replace(/[^A-Za-z0-9_.:$-]/g, '') || '$CLAUDE_SESSION_ID';
+  const nonce = String(flag?.recoveryNonce || '<nonce-from-recovery-flag>').replace(/[^A-Za-z0-9_.:$-]/g, '') || '<nonce-from-recovery-flag>';
+  const handoffPath = String(flag?.handoffPath || path.join(PROJECT_DIR, '.hive-flow', 'data', 'compaction-handoff.md'));
+  const statePath = String(flag?.statePath || path.join(PROJECT_DIR, '.hive-flow', 'data', 'compaction-state.json'));
+  const handoffExists = fs.existsSync(handoffPath);
+  const stateExists = fs.existsSync(statePath);
+  const handoffFlag = handoffExists ? '--handoff-reviewed' : '--handoff-missing';
+  const stateFlag = stateExists ? '--state-reviewed' : '--state-missing';
+  const objective = !handoffExists && !stateExists ? 'null' : '<active objective>';
+  const nextStep = !handoffExists && !stateExists ? 'null' : '<exact next step>';
+  return [
+    '[POST-COMPACT RECOVERY REQUIRED] Mutating work is paused until Claude re-orients from durable state and live repo state.',
+    'Allowed now: Read/Grep/Glob/LS, delegation/coordination tools, git status --short --branch, git diff, git log/show/rev-parse/branch, and the recovery helper.',
+    'Required recovery:',
+    `1. Read ${handoffPath} and ${statePath} if present.`,
+    '2. Run git status --short --branch and inspect relevant git diff.',
+    '3. State the active objective, constraints, changed files, verification status, and exact next action.',
+    '4. If a recovery file is absent, use --handoff-missing or --state-missing; do not claim review of an absent file.',
+    `5. Acknowledge with: node .claude/helpers/compaction-recovery.cjs ack --session ${session} --nonce ${nonce} ${handoffFlag} ${stateFlag} --git-status-reviewed --objective "${objective}" --next-step "${nextStep}" --summary "<what you recovered>"`,
+  ].join(' ');
+}
+
+function checkCompactionRecoveryGate(input, toolName, toolInput) {
+  const flag = loadCompactionRecoveryRequirement(input);
+  if (!flag) return { blocked: false };
+  if (isAllowedCompactionRecoveryTool(toolName, toolInput)) return { blocked: false };
+  return { blocked: true, reason: compactionRecoveryDenyReason(flag) };
+}
+
 function detectCircumvention(toolName, toolInput, state) {
   // 1. Protected path writes via Write/Edit/MultiEdit/NotebookEdit
   if (['Write', 'Edit', 'MultiEdit', 'NotebookEdit', 'mcp__filesystem__write_file', 'mcp__filesystem__edit_file', 'mcp__filesystem__move_file', 'mcp__filesystem__rename_file', 'mcp__filesystem__copy_file', 'mcp__filesystem__delete_file'].includes(toolName)) {
@@ -2710,6 +2824,18 @@ function processPreToolUse(input) {
     }
   }
 
+  const recoveryGate = checkCompactionRecoveryGate(input, toolName, toolInput);
+  if (recoveryGate.blocked) {
+    appendViolation({
+      type: 'post-compact-recovery-blocked',
+      reason: recoveryGate.reason,
+      tool: toolName,
+      projectId: ctx.projectId,
+      timestamp: new Date().toISOString(),
+    });
+    return makeDeny(recoveryGate.reason);
+  }
+
   // Step 2: Check tool restriction
   const refreshedEffective = loadEffectiveState(ctx).effective;
   const restriction = checkToolRestriction(toolName, refreshedEffective.state, refreshedEffective, toolInput);
@@ -3263,6 +3389,9 @@ module.exports = {
   isResetCheckHookInvocation,
   isResetInvocationAttempt,
   isGitCommitCommand,
+  loadCompactionRecoveryRequirement,
+  isAllowedRecoveryBashCommand,
+  checkCompactionRecoveryGate,
   makeHookOutput,
   makeAllow,
   makeDeny,

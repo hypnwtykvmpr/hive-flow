@@ -369,12 +369,31 @@ function makeDeny(reason, hookEventName = 'PreToolUse') {
   });
 }
 
+function commandBasename(value) {
+  const normalized = String(value || '').replace(/^["']|["']$/g, '');
+  return path.basename(normalized);
+}
+
+function isCompactionRecoveryAckCommand(command) {
+  const text = String(command || '').trim();
+  if (!text || /[;&|<>`]/.test(text)) return false;
+  const parts = text.match(/"[^"]*"|'[^']*'|\S+/g) || [];
+  if (parts.length < 4) return false;
+  if (commandBasename(parts[0]) !== 'node') return false;
+  const scriptIndex = parts.findIndex(part => commandBasename(part) === 'compaction-recovery.cjs');
+  if (scriptIndex < 1) return false;
+  return parts[scriptIndex + 1] === 'ack';
+}
+
 // ============================================================================
 // Advocate Enforcement (HARD BLOCK)
 // ============================================================================
 
 function enforceAdvocateRole(toolName, input = null) {
   if (ADVOCATE_DENIED.has(toolName)) {
+    if (toolName === 'Bash' && isCompactionRecoveryAckCommand(input?.tool_input?.command || input?.input?.command || '')) {
+      return makeAllow();
+    }
     if (isRootSessionForDevOverride(input) && isDevOverrideActive()) {
       return makeAllow();
     }
@@ -683,6 +702,7 @@ module.exports = {
   makeAllow,
   makeDeny,
   makeHookOutput,
+  isCompactionRecoveryAckCommand,
   enforceAdvocateRole,
   enforceEnforcerRole,
   enforceQueenRole,
