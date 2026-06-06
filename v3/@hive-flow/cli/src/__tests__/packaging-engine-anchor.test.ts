@@ -122,9 +122,12 @@ describe('P1 engine packaging anchor', () => {
   it('syncs the relocation-safe hook-handler marker into the anchor', () => {
     const source = readFileSync(join(anchorDir, 'hook-handler.cjs'), 'utf8');
 
-    expect(source).toContain('function resolveProjectRoot');
+    expect(source).toContain('const protectedPathPolicy = loadProtectedPathPolicyModule();');
+    expect(source).toContain('protectedPathPolicy.resolveProjectRoot({');
+    expect(source).toContain("cwd: path.resolve(helpersDir, '..', '..')");
     expect(source).toContain('[ENFORCEMENT ERROR] Hook crashed. Tool blocked for safety.');
     expect(source).not.toMatch(/const\s+PROJECT_DIR\s*=\s*path\.resolve\(__dirname,\s*['"]\.\.['"],\s*['"]\.\.['"]\)/);
+    expect(source).not.toContain('function resolveProjectRoot');
     expect(source).not.toContain("const tracker = require('./provider-tracker.cjs');");
   });
 

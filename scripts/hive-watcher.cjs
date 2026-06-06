@@ -37,6 +37,43 @@ const PROGRESS_INTERVAL_MS = 30 * 60_000; // 30min between tmux progress pings
 const STALE_THRESHOLD = 3;              // 3 consecutive unchanged polls = stale
 const MAX_RUNTIME_MS = 12 * 60 * 60_000; // 12h hard safety cap (prevent zombie)
 
+function loadProtectedPathPolicyModule() {
+  const envProjectRoot = process.env.HIVE_FLOW_PROJECT_ROOT || process.env.CLAUDE_PROJECT_DIR || '';
+  const candidates = [
+    envProjectRoot && path.join(path.resolve(envProjectRoot), 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs'),
+    path.join(path.resolve(process.cwd()), 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs'),
+    path.join(path.resolve(__dirname, '..'), 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs'),
+  ].filter(Boolean);
+
+  for (const candidate of candidates) {
+    try {
+      if (fs.existsSync(candidate)) return require(candidate);
+    } catch {
+      // Try the next candidate.
+    }
+  }
+
+  return require(path.join(path.resolve(__dirname, '..'), 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs'));
+}
+
+const protectedPathPolicy = loadProtectedPathPolicyModule();
+
+function defaultProjectRoot() {
+  return protectedPathPolicy.resolveProjectRoot({
+    env: process.env,
+    cwd: path.resolve(__dirname, '..'),
+    fallbackRoot: process.cwd(),
+  });
+}
+
+function resolveExplicitProjectRoot(projectDir) {
+  return protectedPathPolicy.resolveProjectRoot({
+    env: {},
+    cwd: projectDir,
+    fallbackRoot: process.cwd(),
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Argument parsing
 // ---------------------------------------------------------------------------
@@ -46,14 +83,14 @@ function parseArgs() {
   const result = {
     hiveId: null,
     tmuxPane: null,
-    projectDir: process.env.CLAUDE_PROJECT_DIR || process.cwd(),
+    projectDir: defaultProjectRoot(),
   };
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--tmux-pane' && args[i + 1]) {
       result.tmuxPane = args[++i];
     } else if (args[i] === '--project-dir' && args[i + 1]) {
-      result.projectDir = args[++i];
+      result.projectDir = resolveExplicitProjectRoot(args[++i]);
     } else if (args[i] === '--hiveId' && args[i + 1]) {
       result.hiveId = args[++i];
     } else if (args[i] === '--sessionId' && args[i + 1]) {

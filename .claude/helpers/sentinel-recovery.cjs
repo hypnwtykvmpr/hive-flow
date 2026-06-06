@@ -23,11 +23,37 @@ const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
 
+function loadProtectedPathPolicyModule() {
+  const envProjectRoot = process.env.HIVE_FLOW_PROJECT_ROOT || process.env.CLAUDE_PROJECT_DIR || '';
+  const candidates = [
+    envProjectRoot && path.join(path.resolve(envProjectRoot), 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs'),
+    path.join(path.resolve(process.cwd()), 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs'),
+    path.join(path.resolve(__dirname, '..', '..'), 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs'),
+    path.join(__dirname, 'protected-paths.cjs'),
+  ].filter(Boolean);
+
+  for (const candidate of candidates) {
+    try {
+      if (fs.existsSync(candidate)) return require(candidate);
+    } catch {
+      // Try the next candidate.
+    }
+  }
+
+  return require(path.join(path.resolve(__dirname, '..', '..'), 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs'));
+}
+
+const protectedPathPolicy = loadProtectedPathPolicyModule();
+
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-const PROJECT_DIR = path.resolve(__dirname, '..', '..');
+const PROJECT_DIR = protectedPathPolicy.resolveProjectRoot({
+  env: process.env,
+  cwd: path.resolve(__dirname, '..', '..'),
+  fallbackRoot: process.cwd(),
+});
 const HIVE_FLOW_DIR = path.join(PROJECT_DIR, '.hive-flow');
 const DATA_DIR = path.join(HIVE_FLOW_DIR, 'data');
 const HIVES_DIR = path.join(HIVE_FLOW_DIR, 'hives');

@@ -40,16 +40,33 @@ const fs = require('fs');
 
 const helpersDir = __dirname;
 
-function resolveProjectRoot() {
-  for (const candidate of [process.env.HIVE_FLOW_PROJECT_ROOT, process.env.CLAUDE_PROJECT_DIR]) {
-    if (candidate && typeof candidate === 'string') {
-      return path.resolve(candidate);
+function loadProtectedPathPolicyModule() {
+  const envProjectRoot = process.env.HIVE_FLOW_PROJECT_ROOT || process.env.CLAUDE_PROJECT_DIR || '';
+  const candidates = [
+    envProjectRoot && path.join(path.resolve(envProjectRoot), 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs'),
+    path.join(path.resolve(process.cwd()), 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs'),
+    path.join(path.resolve(__dirname, '..', '..'), 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs'),
+    path.join(__dirname, 'protected-paths.cjs'),
+  ].filter(Boolean);
+
+  for (const candidate of candidates) {
+    try {
+      if (fs.existsSync(candidate)) return require(candidate);
+    } catch {
+      // Try the next candidate.
     }
   }
-  return path.resolve(helpersDir, '..', '..');
+
+  return require(path.join(path.resolve(__dirname, '..', '..'), 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs'));
 }
 
-const PROJECT_DIR = resolveProjectRoot();
+const protectedPathPolicy = loadProtectedPathPolicyModule();
+
+const PROJECT_DIR = protectedPathPolicy.resolveProjectRoot({
+  env: process.env,
+  cwd: path.resolve(helpersDir, '..', '..'),
+  fallbackRoot: process.cwd(),
+});
 
 function preToolUseDecision(decision, reason) {
   const hookSpecificOutput = {
