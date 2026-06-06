@@ -10,6 +10,8 @@ import { callMCPTool, MCPClientError } from '../mcp-client.js';
 import { storeCommand } from './transfer-store.js';
 import { DEFAULT_MAX_AGENTS } from '@hive-flow/shared/core/config/defaults';
 import { loadAgenticFlow, loadAgenticFlowSubpath } from '@hive-flow/integration';
+import { spawnSync } from 'node:child_process';
+import { join, resolve } from 'node:path';
 
 // Hook types
 const HOOK_TYPES = [
@@ -3329,6 +3331,104 @@ const statuslineCommand: Command = {
   }
 };
 
+const compactNowCommand: Command = {
+  name: 'compact-now',
+  description: 'Write a compaction handoff and arm a one-shot manual compact request',
+  options: [
+    {
+      name: 'reason',
+      short: 'r',
+      description: 'Why compaction is being requested',
+      type: 'string',
+      required: true,
+    },
+    {
+      name: 'mode',
+      short: 'm',
+      description: 'Compaction mode: inplace or headless',
+      type: 'string',
+      default: 'inplace',
+    },
+    {
+      name: 'resume',
+      description: 'Claude session id to resume for the headless compact path',
+      type: 'string',
+    },
+    {
+      name: 'goal',
+      description: 'Current goal to preserve in the recovery note',
+      type: 'string',
+    },
+    {
+      name: 'next-step',
+      description: 'Exact next step to preserve in the recovery note',
+      type: 'string',
+    },
+    {
+      name: 'json',
+      description: 'Output helper response as JSON',
+      type: 'boolean',
+      default: false,
+    },
+  ],
+  examples: [
+    { command: 'hive-flow hooks compact-now --reason "context is high" --next-step "run tests then commit"', description: 'Arm a manual in-place compaction request' },
+    { command: 'hive-flow hooks compact-now --reason "handoff" --mode headless --resume "$CLAUDE_SESSION_ID"', description: 'Arm a headless compaction request' },
+  ],
+  action: async (ctx: CommandContext): Promise<CommandResult> => {
+    const projectRoot = resolve(
+      process.env.CLAUDE_PROJECT_DIR
+        || process.env.HIVE_FLOW_PROJECT_ROOT
+        || process.cwd()
+    );
+    const helperPath = join(projectRoot, '.claude', 'helpers', 'compact-now.cjs');
+    const args = [helperPath];
+    const reason = String(ctx.flags.reason || '').trim();
+    if (!reason) {
+      output.printError('hooks compact-now requires --reason');
+      return { success: false, message: '--reason is required', exitCode: 2 };
+    }
+    args.push('--reason', reason);
+    args.push('--mode', String(ctx.flags.mode || 'inplace'));
+    if (ctx.flags.resume) args.push('--resume', String(ctx.flags.resume));
+    if (ctx.flags.goal) args.push('--goal', String(ctx.flags.goal));
+    if (ctx.flags['next-step']) args.push('--next-step', String(ctx.flags['next-step']));
+
+    const result = spawnSync(process.execPath, args, {
+      cwd: projectRoot,
+      env: process.env,
+      encoding: 'utf8',
+    });
+
+    if (result.status !== 0) {
+      const err = (result.stderr || result.stdout || 'compact-now helper failed').trim();
+      output.printError(err);
+      return { success: false, message: err, exitCode: result.status || 1 };
+    }
+
+    const stdout = result.stdout.trim();
+    let data = {};
+    try {
+      data = stdout ? JSON.parse(stdout) : {};
+    } catch {
+      data = { output: stdout };
+    }
+
+    if (ctx.flags.json || ctx.flags.format === 'json') {
+      output.printJson(data);
+    } else {
+      output.printSuccess('Compaction request armed');
+      if (data && typeof data === 'object') {
+        const response = data as { handoffPath?: string; requestPath?: string; mode?: string };
+        if (response.handoffPath) output.writeln(`Handoff: ${response.handoffPath}`);
+        if (response.requestPath) output.writeln(`Request: ${response.requestPath}`);
+        if (response.mode) output.writeln(`Mode: ${response.mode}`);
+      }
+    }
+    return { success: true, data };
+  },
+};
+
 // Backward-compatible aliases for v2 hooks
 // These ensure old settings.json files continue to work
 const routeTaskCommand: Command = {
@@ -4039,6 +4139,7 @@ export const hooksCommand: Command = {
     workerCommand,
     progressHookCommand,
     statuslineCommand,
+    compactNowCommand,
     // Coverage-aware routing commands
     coverageRouteCommand,
     coverageSuggestCommand,
@@ -4093,6 +4194,7 @@ export const hooksCommand: Command = {
       `${output.highlight('worker')}          - Background worker management (12 workers)`,
       `${output.highlight('progress')}        - Check V3 implementation progress`,
       `${output.highlight('statusline')}      - Generate dynamic statusline display`,
+      `${output.highlight('compact-now')}     - Write a compaction handoff and arm a manual compact request`,
       `${output.highlight('coverage-route')}  - Route tasks based on coverage gaps`,
       `${output.highlight('coverage-suggest')}- Suggest coverage improvements`,
       `${output.highlight('coverage-gaps')}   - List all coverage gaps with agents`,

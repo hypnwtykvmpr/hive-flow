@@ -12,6 +12,7 @@
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { spawn } from 'child_process';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -20,6 +21,7 @@ const __dirname = dirname(__filename);
 const PROJECT_ROOT = join(__dirname, '../..');
 const DATA_DIR = join(PROJECT_ROOT, '.hive-flow', 'data');
 const STORE_PATH = join(DATA_DIR, 'auto-memory-store.json');
+const SYNC_TIMEOUT_MS = parseInt(process.env.HIVE_FLOW_AUTO_MEMORY_SYNC_TIMEOUT_MS || '2500', 10);
 
 // Colors
 const GREEN = '\x1b[0;32m';
@@ -30,6 +32,32 @@ const RESET = '\x1b[0m';
 const log = (msg) => console.log(`${CYAN}[AutoMemory] ${msg}${RESET}`);
 const success = (msg) => console.log(`${GREEN}[AutoMemory] ✓ ${msg}${RESET}`);
 const dim = (msg) => console.log(`  ${DIM}${msg}${RESET}`);
+
+function startHookTimeout(label, timeoutMs) {
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) return null;
+  return setTimeout(() => {
+    console.error(`[AutoMemory] ${label} exceeded ${timeoutMs}ms; skipping remaining work so Claude Code Stop can continue.`);
+    process.exit(0);
+  }, timeoutMs);
+}
+
+function queueBackgroundSync() {
+  try {
+    const child = spawn(process.execPath, [__filename, 'sync-worker'], {
+      cwd: PROJECT_ROOT,
+      detached: true,
+      stdio: 'ignore',
+      env: {
+        ...process.env,
+        HIVE_FLOW_AUTO_MEMORY_SYNC_FOREGROUND: '1',
+      },
+    });
+    child.unref();
+    success('Queued auto-memory sync in background');
+  } catch (err) {
+    dim(`Could not queue background sync (non-critical): ${err.message}`);
+  }
+}
 
 // Ensure data dir
 if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
@@ -250,62 +278,72 @@ async function doImport() {
 }
 
 async function doSync() {
+  if (process.env.HIVE_FLOW_AUTO_MEMORY_SYNC_FOREGROUND !== '1') {
+    queueBackgroundSync();
+    return;
+  }
+
+  const timeout = startHookTimeout('sync', SYNC_TIMEOUT_MS);
   log('Syncing insights to auto memory files...');
 
-  const memPkg = await loadMemoryPackage();
-  if (!memPkg || !memPkg.AutoMemoryBridge) {
-    dim('Memory package not available — skipping sync');
-    return;
-  }
-
-  const config = readConfig();
-  const backend = new JsonFileBackend(STORE_PATH);
-  await backend.initialize();
-
-  const entryCount = await backend.count();
-  if (entryCount === 0) {
-    dim('No entries to sync');
-    await backend.shutdown();
-    return;
-  }
-
-  const bridgeConfig = {
-    workingDir: PROJECT_ROOT,
-    syncMode: 'on-session-end',
-  };
-
-  if (config.learningBridge.enabled && memPkg.LearningBridge) {
-    bridgeConfig.learning = {
-      sonaMode: config.learningBridge.sonaMode,
-      confidenceDecayRate: config.learningBridge.confidenceDecayRate,
-      consolidationThreshold: config.learningBridge.consolidationThreshold,
-    };
-  }
-
-  if (config.memoryGraph.enabled && memPkg.MemoryGraph) {
-    bridgeConfig.graph = {
-      pageRankDamping: config.memoryGraph.pageRankDamping,
-      maxNodes: config.memoryGraph.maxNodes,
-    };
-  }
-
-  const bridge = new memPkg.AutoMemoryBridge(backend, bridgeConfig);
-
   try {
-    const syncResult = await bridge.syncToAutoMemory();
-    success(`Synced ${syncResult.synced} entries to auto memory`);
-    dim(`├─ Categories updated: ${syncResult.categories?.join(', ') || 'none'}`);
-    dim(`└─ Backend entries: ${entryCount}`);
+    const memPkg = await loadMemoryPackage();
+    if (!memPkg || !memPkg.AutoMemoryBridge) {
+      dim('Memory package not available — skipping sync');
+      return;
+    }
 
-    // Curate MEMORY.md index with graph-aware ordering
-    await bridge.curateIndex();
-    success('Curated MEMORY.md index');
-  } catch (err) {
-    dim(`Sync failed (non-critical): ${err.message}`);
+    const config = readConfig();
+    const backend = new JsonFileBackend(STORE_PATH);
+    await backend.initialize();
+
+    const entryCount = await backend.count();
+    if (entryCount === 0) {
+      dim('No entries to sync');
+      await backend.shutdown();
+      return;
+    }
+
+    const bridgeConfig = {
+      workingDir: PROJECT_ROOT,
+      syncMode: 'on-session-end',
+    };
+
+    if (config.learningBridge.enabled && memPkg.LearningBridge) {
+      bridgeConfig.learning = {
+        sonaMode: config.learningBridge.sonaMode,
+        confidenceDecayRate: config.learningBridge.confidenceDecayRate,
+        consolidationThreshold: config.learningBridge.consolidationThreshold,
+      };
+    }
+
+    if (config.memoryGraph.enabled && memPkg.MemoryGraph) {
+      bridgeConfig.graph = {
+        pageRankDamping: config.memoryGraph.pageRankDamping,
+        maxNodes: config.memoryGraph.maxNodes,
+      };
+    }
+
+    const bridge = new memPkg.AutoMemoryBridge(backend, bridgeConfig);
+
+    try {
+      const syncResult = await bridge.syncToAutoMemory();
+      success(`Synced ${syncResult.synced} entries to auto memory`);
+      dim(`├─ Categories updated: ${syncResult.categories?.join(', ') || 'none'}`);
+      dim(`└─ Backend entries: ${entryCount}`);
+
+      // Curate MEMORY.md index with graph-aware ordering
+      await bridge.curateIndex();
+      success('Curated MEMORY.md index');
+    } catch (err) {
+      dim(`Sync failed (non-critical): ${err.message}`);
+    }
+
+    if (bridge.destroy) bridge.destroy();
+    await backend.shutdown();
+  } finally {
+    if (timeout) clearTimeout(timeout);
   }
-
-  if (bridge.destroy) bridge.destroy();
-  await backend.shutdown();
 }
 
 async function doStatus() {
@@ -339,9 +377,13 @@ try {
   switch (command) {
     case 'import': await doImport(); break;
     case 'sync': await doSync(); break;
+    case 'sync-worker':
+      process.env.HIVE_FLOW_AUTO_MEMORY_SYNC_FOREGROUND = '1';
+      await doSync();
+      break;
     case 'status': await doStatus(); break;
     default:
-      console.log('Usage: auto-memory-hook.mjs <import|sync|status>');
+      console.log('Usage: auto-memory-hook.mjs <import|sync|sync-worker|status>');
       process.exit(1);
   }
 } catch (err) {

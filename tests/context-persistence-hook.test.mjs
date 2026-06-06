@@ -1,6 +1,6 @@
 import { describe, it, before, after, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, writeFileSync, rmSync } from 'fs';
+import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -29,11 +29,13 @@ const {
   autoOptimize,
   storeChunks,
   retrieveContext,
+  runAutopilot,
   consumeCompactSignalAdvisory,
   detectContextWindowTokens,
   modelIdToWindowSize,
   MODEL_CONTEXT_WINDOWS,
   DEFAULT_CONTEXT_WINDOW_TOKENS,
+  CONTEXT_WINDOW_TOKENS,
   NAMESPACE,
   COMPACT_INSTRUCTION_BUDGET,
   RETENTION_DAYS,
@@ -894,7 +896,71 @@ describe('compact advisory signal', () => {
 
     assert.match(advisory, /\[COMPACT_ADVISORY\]/);
     assert.match(advisory, /token pressure/);
-    assert.match(advisory, /85%/);
+    assert.match(advisory, /manual request/);
+    assert.match(advisory, /HIVE_FLOW_SELF_COMPACT is not set/);
+    assert.equal(existsSync(signalPath), false);
+  });
+
+  it('should act on a fresh compact request only when the self-compact env opt-in is set', () => {
+    const projectRoot = join(TMP_DIR, 'compact-signal-trigger');
+    const dataDir = join(projectRoot, '.hive-flow', 'data');
+    const signalPath = join(dataDir, 'compact-request.json');
+
+    mkdirSync(dataDir, { recursive: true });
+    writeFileSync(signalPath, JSON.stringify({
+      requestedAt: new Date().toISOString(),
+      reason: 'human requested compaction',
+      mode: 'inplace',
+      preservationPrompt: 'Preserve the current task, constraints, tests, and next action.',
+    }));
+    setEnv({ HIVE_FLOW_SELF_COMPACT: '1' });
+
+    const advisory = consumeCompactSignalAdvisory(projectRoot);
+
+    assert.match(advisory, /\[COMPACT_TRIGGER\]/);
+    assert.match(advisory, /human requested compaction/);
+    assert.match(advisory, /Preserve the current task/);
+    assert.equal(existsSync(signalPath), false);
+  });
+
+  it('should launch headless compaction through the configured Claude binary without firing a live compact', async () => {
+    const projectRoot = join(TMP_DIR, 'compact-signal-headless');
+    const dataDir = join(projectRoot, '.hive-flow', 'data');
+    const signalPath = join(dataDir, 'compact-request.json');
+    const fakeClaude = join(projectRoot, 'fake-claude.cjs');
+    const argsPath = join(dataDir, 'fake-claude-args.json');
+
+    mkdirSync(dataDir, { recursive: true });
+    writeFileSync(fakeClaude, [
+      '#!/usr/bin/env node',
+      "const fs = require('fs');",
+      "fs.writeFileSync(process.env.HF_FAKE_CLAUDE_ARGS, JSON.stringify(process.argv.slice(2)));",
+    ].join('\n'));
+    chmodSync(fakeClaude, 0o755);
+    writeFileSync(signalPath, JSON.stringify({
+      requestedAt: new Date().toISOString(),
+      reason: 'headless request',
+      mode: 'headless',
+      resume: 'session-headless',
+      preservationPrompt: 'Preserve the current handoff details.',
+    }));
+    setEnv({
+      HIVE_FLOW_SELF_COMPACT: '1',
+      CLAUDE_BIN: fakeClaude,
+      HF_FAKE_CLAUDE_ARGS: argsPath,
+      HIVE_FLOW_COMPACT_HEADLESS_SYNC: '1',
+    });
+
+    const advisory = consumeCompactSignalAdvisory(projectRoot);
+
+    assert.match(advisory, /\[COMPACT_TRIGGER\]/);
+    for (let i = 0; i < 20 && !existsSync(argsPath); i++) {
+      await new Promise(resolve => setTimeout(resolve, 25));
+    }
+    assert.equal(existsSync(argsPath), true);
+    const args = JSON.parse(readFileSync(argsPath, 'utf8'));
+    assert.deepEqual(args.slice(0, 2), ['-p', '/compact Preserve the current handoff details.']);
+    assert.deepEqual(args.slice(2), ['--resume', 'session-headless']);
     assert.equal(existsSync(signalPath), false);
   });
 
@@ -912,6 +978,40 @@ describe('compact advisory signal', () => {
     const advisory = consumeCompactSignalAdvisory(projectRoot);
 
     assert.equal(advisory, '');
+    assert.equal(existsSync(signalPath), false);
+  });
+
+  it('should not auto-arm a compact request when autopilot crosses the prune threshold', async () => {
+    const projectRoot = join(TMP_DIR, 'compact-autopilot-no-auto-arm');
+    const dataDir = join(projectRoot, '.hive-flow', 'data');
+    const signalPath = join(dataDir, 'compact-request.json');
+    const statePath = join(dataDir, 'autopilot-state.json');
+    const transcriptPath = join(projectRoot, 'transcript.jsonl');
+
+    mkdirSync(dataDir, { recursive: true });
+    writeFileSync(transcriptPath, JSON.stringify({
+      type: 'assistant',
+      message: {
+        role: 'assistant',
+        content: [{ type: 'text', text: 'high usage sample' }],
+        usage: {
+          input_tokens: Math.ceil(CONTEXT_WINDOW_TOKENS * 0.91),
+          cache_read_input_tokens: 0,
+          cache_creation_input_tokens: 0,
+        },
+      },
+    }) + '\n');
+
+    const autopilot = await runAutopilot(
+      transcriptPath,
+      'autopilot-no-auto-arm-session',
+      { pruneStale: () => 0 },
+      'json',
+      { statePath }
+    );
+
+    assert.ok(autopilot.percentage >= 0.85);
+    assert.match(autopilot.additionalContext, /Configured action threshold/);
     assert.equal(existsSync(signalPath), false);
   });
 });

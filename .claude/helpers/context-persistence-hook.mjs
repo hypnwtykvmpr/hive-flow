@@ -27,6 +27,7 @@
  */
 
 import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'fs';
+import { spawn, spawnSync } from 'child_process';
 import { createHash } from 'crypto';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -1558,10 +1559,10 @@ function estimateContextTokens(transcriptPath) {
 /**
  * Load autopilot state (persisted across hook invocations).
  */
-function loadAutopilotState() {
+function loadAutopilotState(statePath = AUTOPILOT_STATE_PATH) {
   try {
-    if (existsSync(AUTOPILOT_STATE_PATH)) {
-      return JSON.parse(readFileSync(AUTOPILOT_STATE_PATH, 'utf-8'));
+    if (existsSync(statePath)) {
+      return JSON.parse(readFileSync(statePath, 'utf-8'));
     }
   } catch { /* fresh state */ }
   return {
@@ -1578,9 +1579,9 @@ function loadAutopilotState() {
 /**
  * Save autopilot state.
  */
-function saveAutopilotState(state) {
+function saveAutopilotState(state, statePath = AUTOPILOT_STATE_PATH) {
   try {
-    writeFileSync(AUTOPILOT_STATE_PATH, JSON.stringify(state, null, 2), 'utf-8');
+    writeFileSync(statePath, JSON.stringify(state, null, 2), 'utf-8');
   } catch { /* best effort */ }
 }
 
@@ -1647,8 +1648,9 @@ function formatTokens(n) {
  * Context Autopilot: run on every UserPromptSubmit.
  * Returns { additionalContext, shouldBlock } for the hook output.
  */
-async function runAutopilot(transcriptPath, sessionId, backend, backendType) {
-  const state = loadAutopilotState();
+async function runAutopilot(transcriptPath, sessionId, backend, backendType, options = {}) {
+  const statePath = options.statePath || AUTOPILOT_STATE_PATH;
+  const state = loadAutopilotState(statePath);
 
   // Reset state if session changed
   if (state.sessionId !== sessionId) {
@@ -1699,11 +1701,17 @@ async function runAutopilot(transcriptPath, sessionId, backend, backendType) {
     }
 
     const turnsLeft = Math.max(0, Math.ceil((1.0 - percentage) / 0.03));
-    optimizationMessage += ` | CRITICAL: ${(percentage * 100).toFixed(0)}% context used (~${turnsLeft} turns left). All ${turns} turns archived. Auto-compaction will handle context management — continue working normally.`;
+    optimizationMessage += [
+      ` | Configured action threshold reached: ${(percentage * 100).toFixed(0)}% of the configured ${formatTokens(CONTEXT_WINDOW_TOKENS)} heuristic window.`,
+      `This is not a model hard limit.`,
+      `Estimated runway at current growth: ~${turnsLeft} turns.`,
+      `Archived turns available: ${turns}.`,
+      `If continuity is at risk, run compact-now or /compact with a preservation prompt; do not assume an automatic compaction will fire.`,
+    ].join(' ');
   }
 
   const report = buildAutopilotReport(percentage, tokens, CONTEXT_WINDOW_TOKENS, turns, state);
-  saveAutopilotState(state);
+  saveAutopilotState(state, statePath);
 
   return {
     additionalContext: report + optimizationMessage,
@@ -1729,7 +1737,23 @@ function consumeCompactSignalAdvisory(projectRoot = PROJECT_ROOT) {
 
     if (age >= 0 && age < 300000) {
       const safeReason = String(signal.reason || 'unknown').replace(/[\x00-\x1f\x7f]/g, '').slice(0, 200);
-      return `[COMPACT_ADVISORY] High context detected (reason: ${safeReason}). Auto-compaction configured at ${process.env.CLAUDE_AUTOCOMPACT_PCT_OVERRIDE || '85'}%. Compaction will trigger automatically - continue working normally.`;
+      const prompt = String(signal.preservationPrompt || signal.prompt || '').replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, '').slice(0, 1600);
+      const mode = signal.mode === 'headless' ? 'headless' : 'inplace';
+      if (process.env.HIVE_FLOW_SELF_COMPACT) {
+        if (mode === 'headless') {
+          launchHeadlessCompact(signal, prompt);
+        }
+        return [
+          `[COMPACT_TRIGGER] Manual compaction request accepted (reason: ${safeReason}; mode: ${mode}).`,
+          `This hook cannot fire an in-place slash command by itself; the active Claude session or headless fork must run /compact.`,
+          prompt ? `Preservation prompt: ${prompt}` : `Preservation prompt: preserve the active objective, constraints, files changed, tests, blockers, and exact next step.`,
+        ].join(' ');
+      }
+      return [
+        `[COMPACT_ADVISORY] Fresh manual request found (reason: ${safeReason}), but HIVE_FLOW_SELF_COMPACT is not set.`,
+        `No compaction was attempted; request was consumed to avoid repeated prompts.`,
+        prompt ? `Suggested preservation prompt: ${prompt}` : `Suggested next step: run /compact after writing a recovery note.`,
+      ].join(' ');
     }
   } catch {
     // Signal file check is advisory — never block on failure.
@@ -1743,6 +1767,32 @@ function consumeCompactSignalAdvisory(projectRoot = PROJECT_ROOT) {
   }
 
   return '';
+}
+
+function launchHeadlessCompact(signal, prompt) {
+  try {
+    const claudeBin = process.env.CLAUDE_BIN || 'claude';
+    const args = ['-p', `/compact ${prompt || 'Preserve current task state, constraints, verification evidence, and exact next step.'}`];
+    const resume = signal.resume || process.env.CLAUDE_SESSION_ID;
+    if (resume) args.push('--resume', String(resume));
+    if (process.env.HIVE_FLOW_COMPACT_HEADLESS_SYNC === '1') {
+      spawnSync(claudeBin, args, {
+        cwd: PROJECT_ROOT,
+        stdio: 'ignore',
+        env: process.env,
+      });
+      return;
+    }
+    const child = spawn(claudeBin, args, {
+      cwd: PROJECT_ROOT,
+      detached: true,
+      stdio: 'ignore',
+      env: process.env,
+    });
+    child.unref();
+  } catch {
+    // Headless launch is best-effort; the advisory text still tells Claude what to do.
+  }
 }
 
 // ============================================================================

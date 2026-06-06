@@ -32,8 +32,9 @@ const IDLE_TIMEOUT_MS = parseInt(process.env.HIVE_FLOW_IDLE_TIMEOUT_MS, 10) || 9
 const MIN_WORKERS_PER_HIVE = 5; // queen is separate; keep at least 5 workers alive
 const PROJECT_DIR = path.resolve(__dirname, '..', '..');
 const HIVES_DIR = path.join(PROJECT_DIR, '.hive-flow', 'hives');
-const LOCK_MAX_WAIT = 10000; // 10s
+const LOCK_MAX_WAIT = parseInt(process.env.HIVE_FLOW_CLEANUP_LOCK_MAX_WAIT_MS, 10) || 1500;
 const LOCK_STALE_THRESHOLD = 30000; // 30s
+const CLEANUP_MAX_RUNTIME_MS = parseInt(process.env.HIVE_FLOW_CLEANUP_MAX_RUNTIME_MS, 10) || 4000;
 
 // ---------------------------------------------------------------------------
 // Locking — mkdirSync-based (mirrors hive-store.ts withHiveLock)
@@ -58,11 +59,19 @@ function acquireLockSync(lockPath) {
         continue;
       }
       // Busy-wait with small sleep (sync context)
-      const waitUntil = Date.now() + 50 + Math.random() * 100;
-      while (Date.now() < waitUntil) { /* spin */ }
+      sleepSync(50 + Math.random() * 100);
     }
   }
   return false;
+}
+
+function sleepSync(ms) {
+  const shared = new Int32Array(new SharedArrayBuffer(4));
+  Atomics.wait(shared, 0, 0, Math.max(1, Math.floor(ms)));
+}
+
+function deadlineExceeded(deadline) {
+  return Date.now() > deadline;
 }
 
 function releaseLock(lockPath) {
@@ -161,7 +170,7 @@ async function getTerminateHandler() {
 // Core cleanup logic
 // ---------------------------------------------------------------------------
 
-async function cleanupIdleAgents() {
+async function cleanupIdleAgents(deadline = Date.now() + CLEANUP_MAX_RUNTIME_MS) {
   const summary = {
     hivesScanned: 0,
     hivesWithCleanup: 0,
@@ -182,6 +191,10 @@ async function cleanupIdleAgents() {
   const now = Date.now();
 
   for (const hive of activeHives) {
+    if (deadlineExceeded(deadline)) {
+      summary.errors.push({ error: `Cleanup runtime budget exceeded after scanning ${summary.hivesScanned} hives` });
+      break;
+    }
     try {
       const terminatedInHive = [];
 
@@ -301,7 +314,7 @@ async function cleanupIdleAgents() {
 // C1: Orphaned agent cleanup — idle agents not in any active hive
 // ---------------------------------------------------------------------------
 
-async function cleanupOrphanedAgents() {
+async function cleanupOrphanedAgents(deadline = Date.now() + CLEANUP_MAX_RUNTIME_MS) {
   const summary = { orphansFound: 0, orphansTerminated: 0, terminated: [], errors: [] };
   const activeHives = listActiveHives();
   const activeAgentIds = new Set();
@@ -318,6 +331,10 @@ async function cleanupOrphanedAgents() {
   } catch { return summary; }
   const now = Date.now();
   for (const [id, agent] of Object.entries(store.agents || {})) {
+    if (deadlineExceeded(deadline)) {
+      summary.errors.push({ error: 'Cleanup runtime budget exceeded while scanning orphaned agents' });
+      break;
+    }
     if (agent.status !== 'idle') continue;
     if (activeAgentIds.has(id)) continue;
     const createdAt = new Date(agent.createdAt).getTime();
@@ -342,7 +359,7 @@ async function cleanupOrphanedAgents() {
 
 const STALE_HIVE_THRESHOLD_MS = 14400000; // 4 hours
 
-function cleanupStaleHiveDirs() {
+function cleanupStaleHiveDirs(deadline = Date.now() + CLEANUP_MAX_RUNTIME_MS) {
   const summary = { hivesArchived: 0, archived: [], errors: [] };
   const hivesDir = path.join(PROJECT_DIR, '.hive-flow', 'hives');
   if (!fs.existsSync(hivesDir)) return summary;
@@ -350,6 +367,10 @@ function cleanupStaleHiveDirs() {
   let entries;
   try { entries = fs.readdirSync(hivesDir, { withFileTypes: true }); } catch { return summary; }
   for (const entry of entries) {
+    if (deadlineExceeded(deadline)) {
+      summary.errors.push({ error: 'Cleanup runtime budget exceeded while scanning stale hive dirs' });
+      break;
+    }
     if (!entry.isDirectory() || entry.name.startsWith('.')) continue;
     const hivePath = path.join(hivesDir, entry.name, 'hive.json');
     let record;
@@ -415,7 +436,7 @@ function pruneTerminatedAgents() {
 
 const TASK_TTL_MS = 3600000; // 1 hour
 
-function cleanupOrphanedTasks() {
+function cleanupOrphanedTasks(deadline = Date.now() + CLEANUP_MAX_RUNTIME_MS) {
   const summary = { tasksCleaned: 0, cleaned: [], errors: [] };
   const tasksDir = path.join(PROJECT_DIR, '.hive-flow', 'tasks');
   if (!fs.existsSync(tasksDir)) return summary;
@@ -429,6 +450,10 @@ function cleanupOrphanedTasks() {
     if (match) taskIds.add(match[1]);
   }
   for (const taskId of taskIds) {
+    if (deadlineExceeded(deadline)) {
+      summary.errors.push({ error: 'Cleanup runtime budget exceeded while scanning orphaned tasks' });
+      break;
+    }
     const jsonPath = path.join(tasksDir, `${taskId}.json`);
     const resultPath = path.join(tasksDir, `${taskId}.result.json`);
     const taskFilePath = path.join(tasksDir, `${taskId}.task`);
@@ -463,11 +488,12 @@ function cleanupOrphanedTasks() {
 
 (async () => {
   try {
-    const hiveResult = await cleanupIdleAgents();
-    const orphanResult = await cleanupOrphanedAgents();
-    const hiveDirResult = cleanupStaleHiveDirs();
+    const deadline = Date.now() + CLEANUP_MAX_RUNTIME_MS;
+    const hiveResult = await cleanupIdleAgents(deadline);
+    const orphanResult = await cleanupOrphanedAgents(deadline);
+    const hiveDirResult = cleanupStaleHiveDirs(deadline);
     const pruneResult = pruneTerminatedAgents();
-    const taskResult = cleanupOrphanedTasks();
+    const taskResult = cleanupOrphanedTasks(deadline);
 
     const combined = {
       ...hiveResult,
