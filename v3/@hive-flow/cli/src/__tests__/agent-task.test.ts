@@ -180,21 +180,28 @@ describe('agent_spawn handler model normalization', () => {
   });
 
   it('uses an OpenRouter direct model input for resolvedModel instead of routing it away', async () => {
+    const originalOpenRouterKey = process.env.OPENROUTER_API_KEY;
+    process.env.OPENROUTER_API_KEY = 'test-openrouter-key';
     const { getPersistedStore } = setupStoreMocks(makeStore());
 
-    const result = await spawnHandler({
-      agentType: 'reviewer',
-      provider: ' OpenRouter ',
-      model: ' Xiaomi/MIMO-V2.5-PRO ',
-    }) as Record<string, unknown>;
+    try {
+      const result = await spawnHandler({
+        agentType: 'reviewer',
+        provider: ' OpenRouter ',
+        model: ' Xiaomi/MIMO-V2.5-PRO ',
+      }) as Record<string, unknown>;
 
-    expect(result.success).toBe(true);
-    expect(result.provider).toBe('openrouter');
-    expect(result.resolvedModel).toBe('xiaomi/mimo-v2.5-pro');
-    const persisted = Object.values(getPersistedStore().agents)[0] as AgentRecord;
-    expect(persisted.provider).toBe('openrouter');
-    expect(persisted.resolvedModel).toBe('xiaomi/mimo-v2.5-pro');
-    expect(persisted.model).toBe('inherit');
+      expect(result.success).toBe(true);
+      expect(result.provider).toBe('openrouter');
+      expect(result.resolvedModel).toBe('xiaomi/mimo-v2.5-pro');
+      const persisted = Object.values(getPersistedStore().agents)[0] as AgentRecord;
+      expect(persisted.provider).toBe('openrouter');
+      expect(persisted.resolvedModel).toBe('xiaomi/mimo-v2.5-pro');
+      expect(persisted.model).toBe('inherit');
+    } finally {
+      if (originalOpenRouterKey === undefined) delete process.env.OPENROUTER_API_KEY;
+      else process.env.OPENROUTER_API_KEY = originalOpenRouterKey;
+    }
   });
 
   it('normalizes provider and alias case before persisting runtime state', async () => {

@@ -20,6 +20,7 @@ import {
   recordMcpCallFailed,
 } from './scoreboard-instrumentation.js';
 import { assertSubagentIdentityMarker } from './subagent-markers.js';
+import { providerKeyPreflight } from './provider-key-preflight.js';
 
 // Storage paths
 const STORAGE_DIR = '.hive-flow';
@@ -683,6 +684,10 @@ export const agentTools: MCPTool[] = [
           error: `Unsupported provider '${String(input.provider)}'. Supported providers: ${Array.from(AGENT_PROVIDERS).join(', ')}`,
         };
       }
+      const keyPreflight = providerKeyPreflight(provider, process.env);
+      if (!keyPreflight.ok) {
+        return { success: false, error: keyPreflight.reason };
+      }
       const modelForProviderResolution =
         normalizedInputModel !== undefined && normalizedInputModel !== ''
           ? normalizedInputModel
@@ -767,6 +772,9 @@ export const agentTools: MCPTool[] = [
         response.note = `Agent Booster can handle "${routingResult.agentBoosterIntent}" - use agent_booster_edit_file MCP tool`;
       } else if (routingResult.tier) {
         response.tier = routingResult.tier;
+      }
+      if (keyPreflight.degraded) {
+        response.warning = keyPreflight.warning;
       }
 
       // Cursor-CLI sanity guard: warn if only IDE launcher exists (no headless binary)
@@ -1178,6 +1186,10 @@ export const agentTools: MCPTool[] = [
           return {
             error: "Use 'anthropic-cli' for Claude subprocess workers, not 'anthropic'. The agent_task bridge supports providers: anthropic-cli, gemini-cli, codex-cli, cursor-cli, deepseek, openrouter. Use Claude Code Task tool for native anthropic agents.",
           };
+        }
+        const keyPreflight = providerKeyPreflight(agent.provider, process.env);
+        if (!keyPreflight.ok) {
+          return { error: keyPreflight.reason };
         }
         // Defense-in-depth: re-validate persisted agent.model against project policy.
         // The MCP enforcement gate only fires at spawn time; persisted legacy state
