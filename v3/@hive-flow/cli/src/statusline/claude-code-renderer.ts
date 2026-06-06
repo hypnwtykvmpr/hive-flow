@@ -58,6 +58,7 @@ import { basename, join } from 'node:path';
 
 import { parseStatuslineConfig, type StatuslineConfig } from './config.js';
 import { collectInlineSnapshot } from './inline-collectors.js';
+import { collectEnforcementInstalled } from './enforcement-installed.js';
 import {
   type LastRenderMode,
 } from './last-render.js';
@@ -1031,6 +1032,9 @@ function renderFooter(ctx: ComposeContext): string | undefined {
   const snapshot = ctx.snapshot;
   const p = ctx.palette;
   const tokens: string[] = [];
+  if (!collectEnforcementInstalled()) {
+    tokens.push(`${p.fail}⛔ ENFORCEMENT OFF${p.reset}`);
+  }
   // Daemon state — header-only mode omits this since we have no signal.
   const daemon: DaemonSummary | undefined = snapshot?.daemon;
   if (daemon !== undefined) {

@@ -12,6 +12,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { execSync, exec } from 'child_process';
 import { promisify } from 'util';
+import { isEnforcementEngineInstalled, type EnforcementMarkerOptions } from '../install/enforcement-marker.js';
 
 // Promisified exec with proper shell and env inheritance for cross-platform support
 const execAsync = promisify(exec);
@@ -36,6 +37,22 @@ interface HealthCheck {
   status: 'pass' | 'warn' | 'fail';
   message: string;
   fix?: string;
+}
+
+export async function checkEnforcementEngine(options: EnforcementMarkerOptions = {}): Promise<HealthCheck> {
+  if (isEnforcementEngineInstalled(options)) {
+    return {
+      name: 'Enforcement Engine',
+      status: 'pass',
+      message: 'Installed',
+    };
+  }
+  return {
+    name: 'Enforcement Engine',
+    status: 'fail',
+    message: 'ENFORCEMENT NOT INSTALLED',
+    fix: 'hive-flow install --global',
+  };
 }
 
 // Check Node.js version
@@ -414,7 +431,7 @@ export const doctorCommand: Command = {
     {
       name: 'component',
       short: 'c',
-      description: 'Check specific component (version, node, npm, config, daemon, memory, api, git, mcp, claude, disk, typescript)',
+      description: 'Check specific component (version, enforcement, node, npm, config, daemon, memory, api, git, mcp, claude, disk, typescript)',
       type: 'string'
     },
     {
@@ -448,6 +465,7 @@ export const doctorCommand: Command = {
       checkVersionFreshness,
       checkNodeVersion,
       checkNpmVersion,
+      checkEnforcementEngine,
       checkClaudeCode,
       checkGit,
       checkGitRepo,
@@ -463,6 +481,7 @@ export const doctorCommand: Command = {
     const componentMap: Record<string, () => Promise<HealthCheck>> = {
       'version': checkVersionFreshness,
       'freshness': checkVersionFreshness,
+      'enforcement': checkEnforcementEngine,
       'node': checkNodeVersion,
       'npm': checkNpmVersion,
       'claude': checkClaudeCode,
