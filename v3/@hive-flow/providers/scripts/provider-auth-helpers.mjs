@@ -41,6 +41,19 @@ function resolveEnvReference(source, env) {
     ?? (/^[A-Za-z_][A-Za-z0-9_]*$/.test(value) ? stringValue(env[value]) : undefined);
 }
 
+function providerEnvPrefix(providerName) {
+  return String(providerName || '')
+    .replace(/[^A-Za-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .toUpperCase();
+}
+
+function resolveProviderApiUrl(providerName, env) {
+  const prefix = providerEnvPrefix(providerName);
+  return stringValue(env[`${prefix}_API_URL`])
+    ?? stringValue(env[`${prefix}_BASE_URL`]);
+}
+
 export function readOpenRouterCredentialFromConfig({
   cwd = process.cwd(),
   env = process.env,
@@ -75,6 +88,9 @@ export function buildProviderConfig({
     retryDelay: 1000,
     ...(childEnv ? { env: childEnv } : {}),
   };
+
+  const apiUrl = resolveProviderApiUrl(providerName, env);
+  if (apiUrl) config.apiUrl = apiUrl;
 
   if (providerName === 'openrouter') {
     const openRouterKey =
