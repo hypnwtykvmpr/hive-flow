@@ -2,16 +2,9 @@
 // Process-level safety net: if anything escapes all other error handling,
 // produce valid JSON so Claude Code never sees a hook error.
 process.on('uncaughtException', () => {
-  // permission-guard: phased posture per DECISIONS-FINAL :4-8.
-  // TODO(jury-wired): flip to DENY once permission-guard + jury are production-ready.
+  // permission-guard: fail closed on any unhandled process-level crash.
   if (process.argv[2] === 'permission-guard') {
-    process.stdout.write(JSON.stringify({
-      hookSpecificOutput: {
-        hookEventName: 'PreToolUse',
-        permissionDecision: 'allow',
-        additionalContext: '[PERMISSION GUARD DEGRADED] Hook crashed during init. Development posture allows this tool; production posture must deny.',
-      },
-    }));
+    process.stdout.write(permissionGuardDeny('[PERMISSION GUARD] Hook crashed during initialization. Tool blocked for safety.'));
   }
   // enforce-plan: fail-closed (enforcement errors must block, not allow)
   else if (process.argv[2] === 'enforce-plan') {
@@ -46,6 +39,11 @@ const path = require('path');
 const fs = require('fs');
 
 const helpersDir = __dirname;
+let protectedPathPolicyLoadError = null;
+
+function fallbackProjectRoot() {
+  return path.resolve(process.env.HIVE_FLOW_PROJECT_ROOT || process.env.CLAUDE_PROJECT_DIR || process.cwd());
+}
 
 function loadProtectedPathPolicyModule() {
   const envProjectRoot = process.env.HIVE_FLOW_PROJECT_ROOT || process.env.CLAUDE_PROJECT_DIR || '';
@@ -64,15 +62,29 @@ function loadProtectedPathPolicyModule() {
     }
   }
 
-  return require(path.join(path.resolve(__dirname, '..', '..'), 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs'));
+  try {
+    return require(path.join(path.resolve(__dirname, '..', '..'), 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs'));
+  } catch (err) {
+    protectedPathPolicyLoadError = err;
+    return {
+      resolveProjectRoot: fallbackProjectRoot,
+    };
+  }
 }
 
 const protectedPathPolicy = loadProtectedPathPolicyModule();
-const PROJECT_DIR = protectedPathPolicy.resolveProjectRoot({
-  env: process.env,
-  cwd: path.resolve(__dirname, '..', '..'),
-  fallbackRoot: process.cwd(),
-});
+const PROJECT_DIR = (() => {
+  try {
+    return protectedPathPolicy.resolveProjectRoot({
+      env: process.env,
+      cwd: path.resolve(__dirname, '..', '..'),
+      fallbackRoot: process.cwd(),
+    });
+  } catch (err) {
+    protectedPathPolicyLoadError = protectedPathPolicyLoadError || err;
+    return fallbackProjectRoot();
+  }
+})();
 
 function preToolUseDecision(decision, reason) {
   const hookSpecificOutput = {
@@ -1387,6 +1399,11 @@ const handlers = {
     const origStderrWrite = process.stderr.write;
     process.stderr.write = () => true;
 
+    if (protectedPathPolicyLoadError) {
+      console.log(permissionGuardDeny('[PERMISSION GUARD] Protected path policy failed to load. Tool blocked for safety.'));
+      return;
+    }
+
     // Context tracking: increment tool call counter (fire-and-forget, never blocks)
     try {
       const ctxFile = path.join(PROJECT_DIR, '.claude', '.context-tracker.json');
@@ -1469,7 +1486,9 @@ const handlers = {
         const { pathToFileURL } = require('url');
         const gate = await import(pathToFileURL(gatePath).href);
         assertPermissionGuardBuildFresh(gate);
-        const result = gate.evaluateHookInput ? await gate.evaluateHookInput(input) : { decision: 'allow' };
+        const result = gate.evaluateHookInput
+          ? await gate.evaluateHookInput(input)
+          : { decision: 'deny', reason: '[PERMISSION GUARD] Compiled gate did not export evaluateHookInput. Tool blocked for safety.' };
         if (result.decision === 'deny') {
           const output = {
             hookSpecificOutput: {
