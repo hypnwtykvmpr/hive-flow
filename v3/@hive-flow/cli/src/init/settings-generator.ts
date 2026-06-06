@@ -4,6 +4,7 @@
  */
 
 import type { InitOptions, HooksConfig } from './types.js';
+import { buildRelocatedCommand } from '../install/enforcement-installer.js';
 
 interface HookCommand {
   type: 'command';
@@ -38,43 +39,41 @@ const GUARDED_TOOL_MATCHER = [
   'mcp__filesystem__read_multiple_files',
 ].join('|');
 
-const RELOCATED_ENFORCEMENT_BIN = '$HOME/.hive-flow/enforcement/bin';
-
-function helperCommand(helper: string, args = ''): string {
-  return `node "${RELOCATED_ENFORCEMENT_BIN}/${helper}"${args ? ` ${args}` : ''}`;
+function helperCommand(helper: string, args = '', homeDir?: string): string {
+  return buildRelocatedCommand(helper, { homeDir, args });
 }
 
 function commandHook(command: string, timeout: number): HookCommand {
   return { type: 'command', command, timeout };
 }
 
-function settingsReconcilerHook(): HookCommand {
-  return commandHook(helperCommand('settings-reconciler.cjs'), 5000);
+function settingsReconcilerHook(homeDir?: string): HookCommand {
+  return commandHook(helperCommand('settings-reconciler.cjs', '', homeDir), 5000);
 }
 
-export function generateEnforcementPreToolUseHooks(timeout: number): HookGroup[] {
+export function generateEnforcementPreToolUseHooks(timeout: number, homeDir?: string): HookGroup[] {
   return [
     {
       matcher: 'Task',
       hooks: [
-        commandHook(helperCommand('hive-composition-gate.cjs'), 5000),
+        commandHook(helperCommand('hive-composition-gate.cjs', '', homeDir), 5000),
       ],
     },
     {
       matcher: 'mcp__hive-flow__agent_spawn|mcp__hive-flow__queen_spawn_worker',
       hooks: [
-        commandHook(helperCommand('role-enforcement.cjs'), 3000),
-        commandHook(helperCommand('enforcement.cjs'), 5000),
+        commandHook(helperCommand('role-enforcement.cjs', '', homeDir), 3000),
+        commandHook(helperCommand('enforcement.cjs', '', homeDir), 5000),
       ],
     },
     {
       matcher: GUARDED_TOOL_MATCHER,
       hooks: [
-        commandHook(helperCommand('role-enforcement.cjs'), 3000),
-        commandHook(helperCommand('enforcement.cjs'), 5000),
-        commandHook(helperCommand('hook-handler.cjs', 'permission-guard'), 15000),
-        commandHook(helperCommand('hook-handler.cjs', 'enforce-plan'), 5000),
-        commandHook(helperCommand('hook-handler.cjs', 'pre-bash'), timeout),
+        commandHook(helperCommand('role-enforcement.cjs', '', homeDir), 3000),
+        commandHook(helperCommand('enforcement.cjs', '', homeDir), 5000),
+        commandHook(helperCommand('hook-handler.cjs', 'permission-guard', homeDir), 15000),
+        commandHook(helperCommand('hook-handler.cjs', 'enforce-plan', homeDir), 5000),
+        commandHook(helperCommand('hook-handler.cjs', 'pre-bash', homeDir), timeout),
       ],
     },
   ];
@@ -91,11 +90,11 @@ function isGeneratedEnforcementPreToolUseGroup(group: HookGroup): boolean {
   ));
 }
 
-export function ensureEnforcementPreToolUseHooks(hooks: Record<string, unknown[]>, timeout: number): void {
+export function ensureEnforcementPreToolUseHooks(hooks: Record<string, unknown[]>, timeout: number, homeDir?: string): void {
   const existing = (hooks.PreToolUse as HookGroup[] | undefined) || [];
   const preserved = existing.filter((group) => !isGeneratedEnforcementPreToolUseGroup(group));
   hooks.PreToolUse = [
-    ...generateEnforcementPreToolUseHooks(timeout),
+    ...generateEnforcementPreToolUseHooks(timeout, homeDir),
     ...preserved,
   ];
 }
@@ -120,8 +119,8 @@ function ensureCommandInFirstGroup(hooks: Record<string, unknown[]>, event: stri
   hooks[event] = [first, ...rest];
 }
 
-export function ensureSettingsReconcilerHooks(hooks: Record<string, unknown[]>): void {
-  const hook = settingsReconcilerHook();
+export function ensureSettingsReconcilerHooks(hooks: Record<string, unknown[]>, homeDir?: string): void {
+  const hook = settingsReconcilerHook(homeDir);
   const postGroups = (hooks.PostToolUse as HookGroup[] | undefined) || [];
   const postMatcher = 'Write|Edit|MultiEdit|mcp__filesystem__write_file|mcp__filesystem__edit_file';
   if (!postGroups.some((group) => hasHookCommand(group, hook.command))) {
@@ -148,7 +147,7 @@ export function generateSettings(options: InitOptions): object {
 
   // Add hooks if enabled
   if (options.components.settings) {
-    settings.hooks = generateHooksConfig(options.hooks);
+    settings.hooks = generateHooksConfig(options.hooks, options.enforcementHomeDir);
   }
 
   // Add statusLine configuration if enabled
@@ -309,7 +308,7 @@ function generateStatusLineConfig(_options: InitOptions): object {
  * which works identically on Windows, macOS, and Linux without
  * shell-specific syntax (no bash 2>/dev/null, no PowerShell 2>$null).
  */
-function generateHooksConfig(config: HooksConfig): object {
+function generateHooksConfig(config: HooksConfig, homeDir?: string): object {
   const hooks: Record<string, unknown[]> = {};
 
   // Node.js scripts handle errors internally via try/catch.
@@ -317,7 +316,7 @@ function generateHooksConfig(config: HooksConfig): object {
 
   // PreToolUse — validate commands before execution
   if (config.preToolUse) {
-    hooks.PreToolUse = generateEnforcementPreToolUseHooks(config.timeout);
+    hooks.PreToolUse = generateEnforcementPreToolUseHooks(config.timeout, homeDir);
   }
 
   // PostToolUse — record edits for session metrics / learning
@@ -401,7 +400,7 @@ function generateHooksConfig(config: HooksConfig): object {
     ];
   }
 
-  ensureSettingsReconcilerHooks(hooks);
+  ensureSettingsReconcilerHooks(hooks, homeDir);
 
   // PreCompact — preserve context before compaction
   if (config.preCompact) {

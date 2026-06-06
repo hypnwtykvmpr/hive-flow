@@ -21,6 +21,7 @@ type CommandLoader = () => Promise<{ default?: Command; [key: string]: Command |
 const commandLoaders: Record<string, CommandLoader> = {
   // P1 Core Commands (frequently used - load first)
   init: () => import('./init.js'),
+  install: () => import('./install.js'),
   start: () => import('./start.js'),
   status: () => import('./status.js'),
   task: () => import('./task.js'),
@@ -124,6 +125,7 @@ export function getFailedCommands(): string[] {
 // =============================================================================
 
 import { initCommand } from './init.js';
+import { installCommand } from './install.js';
 import { startCommand } from './start.js';
 import { statusCommand } from './status.js';
 import { taskCommand } from './task.js';
@@ -164,6 +166,7 @@ import { testsCommand } from './tests.js';
 
 // Pre-populate cache with core commands
 loadedCommands.set('init', initCommand);
+loadedCommands.set('install', installCommand);
 loadedCommands.set('start', startCommand);
 loadedCommands.set('status', statusCommand);
 loadedCommands.set('task', taskCommand);
@@ -207,6 +210,7 @@ loadedCommands.set('tests', testsCommand);
 
 // Export synchronously loaded commands
 export { initCommand } from './init.js';
+export { installCommand } from './install.js';
 export { startCommand } from './start.js';
 export { statusCommand } from './status.js';
 export { taskCommand } from './task.js';

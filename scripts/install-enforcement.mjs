@@ -17,7 +17,6 @@ import { homedir } from 'node:os';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import readline from 'node:readline';
 
-const RELOCATED_ENFORCEMENT_BIN = '$HOME/.hive-flow/enforcement/bin';
 const GUARDED_TOOL_MATCHER = [
   'Bash',
   'Write',
@@ -55,40 +54,53 @@ function repoRoot() {
   return resolve(dirname(fileURLToPath(import.meta.url)), '..');
 }
 
-function relocatedCommand(helper, args = '') {
-  return `node "${RELOCATED_ENFORCEMENT_BIN}/${helper}"${args ? ` ${args}` : ''}`;
+function relocatedEnforcementBin(homeDir = homedir()) {
+  return join(homeDir, '.hive-flow', 'enforcement', 'bin');
 }
 
-export function relocatedPreToolUseHooks(timeout = 5000) {
+function relocatedCommand(helper, args = '', homeDir = homedir()) {
+  return `node "${join(relocatedEnforcementBin(homeDir), helper)}"${args ? ` ${args}` : ''}`;
+}
+
+function installerOptions(value = {}) {
+  if (typeof value === 'number') return { timeout: value };
+  return value && typeof value === 'object' ? value : {};
+}
+
+export function relocatedPreToolUseHooks(options = {}) {
+  const opts = installerOptions(options);
+  const timeout = Number.isFinite(opts.timeout) ? Number(opts.timeout) : 5000;
+  const homeDir = opts.homeDir || homedir();
   return [
     {
       matcher: 'Task',
       hooks: [
-        { type: 'command', command: relocatedCommand('hive-composition-gate.cjs'), timeout: 5000 },
+        { type: 'command', command: relocatedCommand('hive-composition-gate.cjs', '', homeDir), timeout: 5000 },
       ],
     },
     {
       matcher: 'mcp__hive-flow__agent_spawn|mcp__hive-flow__queen_spawn_worker',
       hooks: [
-        { type: 'command', command: relocatedCommand('role-enforcement.cjs'), timeout: 3000 },
-        { type: 'command', command: relocatedCommand('enforcement.cjs'), timeout: 5000 },
+        { type: 'command', command: relocatedCommand('role-enforcement.cjs', '', homeDir), timeout: 3000 },
+        { type: 'command', command: relocatedCommand('enforcement.cjs', '', homeDir), timeout: 5000 },
       ],
     },
     {
       matcher: GUARDED_TOOL_MATCHER,
       hooks: [
-        { type: 'command', command: relocatedCommand('role-enforcement.cjs'), timeout: 3000 },
-        { type: 'command', command: relocatedCommand('enforcement.cjs'), timeout: 5000 },
-        { type: 'command', command: relocatedCommand('hook-handler.cjs', 'permission-guard'), timeout: 15000 },
-        { type: 'command', command: relocatedCommand('hook-handler.cjs', 'enforce-plan'), timeout: 5000 },
-        { type: 'command', command: relocatedCommand('hook-handler.cjs', 'pre-bash'), timeout },
+        { type: 'command', command: relocatedCommand('role-enforcement.cjs', '', homeDir), timeout: 3000 },
+        { type: 'command', command: relocatedCommand('enforcement.cjs', '', homeDir), timeout: 5000 },
+        { type: 'command', command: relocatedCommand('hook-handler.cjs', 'permission-guard', homeDir), timeout: 15000 },
+        { type: 'command', command: relocatedCommand('hook-handler.cjs', 'enforce-plan', homeDir), timeout: 5000 },
+        { type: 'command', command: relocatedCommand('hook-handler.cjs', 'pre-bash', homeDir), timeout },
       ],
     },
   ];
 }
 
-function settingsReconcilerHook() {
-  return { type: 'command', command: relocatedCommand('settings-reconciler.cjs'), timeout: 5000 };
+function settingsReconcilerHook(options = {}) {
+  const opts = installerOptions(options);
+  return { type: 'command', command: relocatedCommand('settings-reconciler.cjs', '', opts.homeDir || homedir()), timeout: 5000 };
 }
 
 function isGeneratedEnforcementGroup(group) {
@@ -122,7 +134,10 @@ function ensureCommandInFirstGroup(hooks, event, hook) {
   hooks[event] = [first, ...rest];
 }
 
-export function mergeUserSettings(settings, timeout = 5000) {
+export function mergeUserSettings(settings, options = {}) {
+  const opts = installerOptions(options);
+  const timeout = Number.isFinite(opts.timeout) ? Number(opts.timeout) : 5000;
+  const homeDir = opts.homeDir || homedir();
   const next = settings && typeof settings === 'object' && !Array.isArray(settings)
     ? structuredClone(settings)
     : {};
@@ -133,11 +148,11 @@ export function mergeUserSettings(settings, timeout = 5000) {
 
   const existingPre = Array.isArray(next.hooks.PreToolUse) ? next.hooks.PreToolUse : [];
   next.hooks.PreToolUse = [
-    ...relocatedPreToolUseHooks(timeout),
+    ...relocatedPreToolUseHooks({ timeout, homeDir }),
     ...existingPre.filter((group) => !isGeneratedEnforcementGroup(group)),
   ];
 
-  const reconciler = settingsReconcilerHook();
+  const reconciler = settingsReconcilerHook({ homeDir });
   const postMatcher = 'Write|Edit|MultiEdit|mcp__filesystem__write_file|mcp__filesystem__edit_file';
   const postGroups = Array.isArray(next.hooks.PostToolUse) ? next.hooks.PostToolUse : [];
   if (!postGroups.some((group) => hasHookCommand(group, reconciler.command))) {
@@ -165,36 +180,35 @@ function writeJsonAtomic(filePath, data) {
   renameSync(tmp, filePath);
 }
 
-export async function copyEngineFiles(projectRoot, binDir) {
+export async function copyEngineFiles(projectRoot, binDir, options = {}) {
+  const platform = options.platform || process.platform;
+  const chmodFile = options.chmodFile || chmod;
   mkdirSync(binDir, { recursive: true });
   for (const [sourceRel, targetName] of ENGINE_FILES) {
     const source = join(projectRoot, sourceRel);
     if (!existsSync(source)) throw new Error(`Missing engine source: ${sourceRel}`);
     const target = join(binDir, targetName);
     copyFileSync(source, target);
-    await chmod(target, targetName.endsWith('.json') ? 0o600 : 0o700);
+    if (platform !== 'win32') {
+      await chmodFile(target, targetName.endsWith('.json') ? 0o600 : 0o700);
+    }
   }
-  writeFileSync(join(binDir, '.version'), JSON.stringify({
+  const versionPath = join(binDir, '.version');
+  writeFileSync(versionPath, JSON.stringify({
     installedAt: new Date().toISOString(),
     source: projectRoot,
     files: ENGINE_FILES.map(([, target]) => target),
   }, null, 2) + '\n', { mode: 0o600 });
+  if (platform !== 'win32') await chmodFile(versionPath, 0o600);
 }
 
-async function promptViaTTY(question) {
-  if (!existsSync('/dev/tty')) {
-    process.stderr.write('[hive-flow] /dev/tty not available — enforcement install denied\n');
-    return '';
-  }
-  try {
+async function askReadline(question, source) {
+  if (source === 'tty') {
     const ttyIn = createReadStream('/dev/tty');
     const ttyOut = createWriteStream('/dev/tty');
     const rl = readline.createInterface({ input: ttyIn, output: ttyOut });
     return new Promise((resolveAnswer) => {
-      let settled = false;
       const finish = (answer = '') => {
-        if (settled) return;
-        settled = true;
         rl.close();
         ttyIn.destroy();
         ttyOut.destroy();
@@ -204,10 +218,37 @@ async function promptViaTTY(question) {
       ttyOut.on('error', () => finish(''));
       rl.question(question, finish);
     });
-  } catch {
-    process.stderr.write('[hive-flow] /dev/tty not available — enforcement install denied\n');
-    return '';
   }
+
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  return new Promise((resolveAnswer) => {
+    rl.question(question, (answer) => {
+      rl.close();
+      resolveAnswer(answer);
+    });
+  });
+}
+
+export async function portableConfirm(question, options = {}) {
+  if (options.yes === true) return true;
+  const platform = options.platform || process.platform;
+  const ttyAvailable = options.ttyAvailable ?? (platform !== 'win32' && existsSync('/dev/tty'));
+  const stdinIsTTY = options.stdinIsTTY ?? Boolean(process.stdin.isTTY);
+  const ask = options.ask || askReadline;
+  const confirmText = options.confirmText || /^(y|yes)$/i;
+
+  if (platform !== 'win32' && ttyAvailable) {
+    const answer = (await ask(question, 'tty')).trim();
+    return confirmText instanceof RegExp ? confirmText.test(answer) : answer === confirmText;
+  }
+
+  if (stdinIsTTY) {
+    const answer = (await ask(question, 'stdin')).trim();
+    return confirmText instanceof RegExp ? confirmText.test(answer) : answer === confirmText;
+  }
+
+  process.stderr.write('[hive-flow] No interactive TTY available — rerun with --yes for non-interactive install.\n');
+  return false;
 }
 
 function argValue(argv, name) {
@@ -221,16 +262,24 @@ export async function installRelocatedEnforcement(options = {}) {
   const binDir = resolve(options.binDir || join(homeDir, '.hive-flow', 'enforcement', 'bin'));
   const userSettingsPath = resolve(options.userSettingsPath || join(homeDir, '.claude', 'settings.json'));
   const timeout = Number.isFinite(options.timeout) ? Number(options.timeout) : 5000;
+  const shouldCopyEngine = options.hooksOnly !== true;
+  const shouldWriteHooks = options.engineOnly !== true;
 
-  await copyEngineFiles(projectRoot, binDir);
-  const current = readJson(userSettingsPath);
-  const merged = mergeUserSettings(current, timeout);
-  writeJsonAtomic(userSettingsPath, merged);
+  if (shouldCopyEngine) await copyEngineFiles(projectRoot, binDir, options);
+  if (shouldWriteHooks) {
+    const current = readJson(userSettingsPath);
+    const merged = mergeUserSettings(current, { timeout, homeDir });
+    writeJsonAtomic(userSettingsPath, merged);
+  }
   return { projectRoot, binDir, userSettingsPath };
 }
 
 async function main(argv = process.argv.slice(2)) {
   const dryRun = argv.includes('--dry-run');
+  const yes = argv.includes('--yes');
+  const engineOnly = argv.includes('--engine-only');
+  const hooksOnly = argv.includes('--hooks-only');
+  const keypairOnly = argv.includes('--keypair-only');
   const projectRoot = argValue(argv, '--project-root') || process.env.HIVE_FLOW_PROJECT_ROOT || process.env.CLAUDE_PROJECT_DIR || repoRoot();
   const homeDir = argValue(argv, '--home') || homedir();
   const userSettingsPath = argValue(argv, '--user-settings') || join(homeDir, '.claude', 'settings.json');
@@ -238,18 +287,30 @@ async function main(argv = process.argv.slice(2)) {
 
   if (dryRun) {
     const current = readJson(userSettingsPath);
-    process.stdout.write(JSON.stringify(mergeUserSettings(current), null, 2) + '\n');
+    process.stdout.write(JSON.stringify(mergeUserSettings(current, { homeDir }), null, 2) + '\n');
     return;
   }
 
-  const confirmation = await promptViaTTY(`Type INSTALL HIVE FLOW ENFORCEMENT to install user-level hooks for ${resolve(projectRoot)}: `);
-  if (confirmation !== 'INSTALL HIVE FLOW ENFORCEMENT') {
+  const confirmed = await portableConfirm(`Type INSTALL HIVE FLOW ENFORCEMENT to install user-level hooks for ${resolve(projectRoot)}: `, {
+    yes,
+    confirmText: 'INSTALL HIVE FLOW ENFORCEMENT',
+  });
+  if (!confirmed) {
     process.stderr.write('[hive-flow] Enforcement install cancelled.\n');
     process.exitCode = 1;
     return;
   }
 
-  const result = await installRelocatedEnforcement({ projectRoot, homeDir, userSettingsPath, binDir });
+  if (keypairOnly) {
+    process.stdout.write('[hive-flow] Keypair enrollment is handled by the compiled Permission Guard setup. Run: hive-flow setup permission-guard setup\n');
+    return;
+  }
+
+  if (yes) {
+    process.stdout.write('[hive-flow] Override keypair not enrolled in --yes mode. Run: hive-flow install --keypair-only\n');
+  }
+
+  const result = await installRelocatedEnforcement({ projectRoot, homeDir, userSettingsPath, binDir, engineOnly, hooksOnly });
   process.stdout.write(`[hive-flow] Installed enforcement engine: ${result.binDir}\n`);
   process.stdout.write(`[hive-flow] Updated user trigger: ${result.userSettingsPath}\n`);
   process.stdout.write('[hive-flow] Project hooks were not removed; verify user-level enforcement before cleanup.\n');

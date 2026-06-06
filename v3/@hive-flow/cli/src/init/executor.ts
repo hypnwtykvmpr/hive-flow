@@ -807,9 +807,11 @@ async function populateRelocatedEnforcementBin(
     }
     const targetPath = path.join(binDir, targetName);
     fs.copyFileSync(sourcePath, targetPath);
-    try {
-      fs.chmodSync(targetPath, targetName.endsWith('.json') ? 0o600 : 0o700);
-    } catch {}
+    if (platform.os !== 'windows') {
+      try {
+        fs.chmodSync(targetPath, targetName.endsWith('.json') ? 0o600 : 0o700);
+      } catch {}
+    }
     result.created.files.push(`~/.hive-flow/enforcement/bin/${targetName}`);
   }
 

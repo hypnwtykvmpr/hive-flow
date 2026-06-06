@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { tmpdir } from 'node:os';
+import { homedir, tmpdir } from 'node:os';
 import { generateSettings } from '../settings-generator.js';
 import { executeInit, executeUpgrade } from '../executor.js';
 import { DEFAULT_INIT_OPTIONS, type InitOptions } from '../types.js';
@@ -42,8 +42,8 @@ const guardedMatcherTools = [
   'mcp__filesystem__read_multiple_files',
 ];
 
-function relocatedHelperCommand(helper: string, args = ''): string {
-  return `node "$HOME/.hive-flow/enforcement/bin/${helper}"${args ? ` ${args}` : ''}`;
+function relocatedHelperCommand(helper: string, args = '', homeDir = homedir()): string {
+  return `node "${join(homeDir, '.hive-flow', 'enforcement', 'bin', helper)}"${args ? ` ${args}` : ''}`;
 }
 
 function testOptions(targetDir: string): InitOptions {
@@ -85,17 +85,17 @@ function findEntry(entries: HookEntry[], commandNeedle: string, matcherNeedle?: 
   return entry!;
 }
 
-function expectFullPreToolUseChain(settings: GeneratedSettings): void {
+function expectFullPreToolUseChain(settings: GeneratedSettings, homeDir = homedir()): void {
   const preToolUse = settings.hooks?.PreToolUse || [];
   expect(preToolUse.length).toBeGreaterThanOrEqual(3);
 
   const taskEntry = findEntry(preToolUse, 'hive-composition-gate.cjs', 'Task');
-  expect(taskEntry.hooks?.[0]?.command).toBe(relocatedHelperCommand('hive-composition-gate.cjs'));
+  expect(taskEntry.hooks?.[0]?.command).toBe(relocatedHelperCommand('hive-composition-gate.cjs', '', homeDir));
 
   const spawnEntry = findEntry(preToolUse, 'role-enforcement.cjs', 'mcp__hive-flow__agent_spawn');
   expect(spawnEntry.hooks?.map((hook) => hook.command)).toEqual([
-    relocatedHelperCommand('role-enforcement.cjs'),
-    relocatedHelperCommand('enforcement.cjs'),
+    relocatedHelperCommand('role-enforcement.cjs', '', homeDir),
+    relocatedHelperCommand('enforcement.cjs', '', homeDir),
   ]);
 
   const guardEntry = findEntry(preToolUse, 'hook-handler.cjs', 'Bash');
@@ -105,15 +105,15 @@ function expectFullPreToolUseChain(settings: GeneratedSettings): void {
   }
 
   expect(guardEntry.hooks?.map((hook) => hook.command)).toEqual([
-    relocatedHelperCommand('role-enforcement.cjs'),
-    relocatedHelperCommand('enforcement.cjs'),
-    relocatedHelperCommand('hook-handler.cjs', 'permission-guard'),
-    relocatedHelperCommand('hook-handler.cjs', 'enforce-plan'),
-    relocatedHelperCommand('hook-handler.cjs', 'pre-bash'),
+    relocatedHelperCommand('role-enforcement.cjs', '', homeDir),
+    relocatedHelperCommand('enforcement.cjs', '', homeDir),
+    relocatedHelperCommand('hook-handler.cjs', 'permission-guard', homeDir),
+    relocatedHelperCommand('hook-handler.cjs', 'enforce-plan', homeDir),
+    relocatedHelperCommand('hook-handler.cjs', 'pre-bash', homeDir),
   ]);
 }
 
-function expectSettingsReconciler(settings: GeneratedSettings): void {
+function expectSettingsReconciler(settings: GeneratedSettings, homeDir = homedir()): void {
   const postToolUse = settings.hooks?.PostToolUse || [];
   const sessionStart = settings.hooks?.SessionStart || [];
   const stop = settings.hooks?.Stop || [];
@@ -124,7 +124,7 @@ function expectSettingsReconciler(settings: GeneratedSettings): void {
     expect(postTokens.has(required), `settings reconciler PostToolUse matcher missing ${required}`).toBe(true);
   }
 
-  const reconcilerCommand = relocatedHelperCommand('settings-reconciler.cjs');
+  const reconcilerCommand = relocatedHelperCommand('settings-reconciler.cjs', '', homeDir);
   expect(postEntry.hooks?.[0]?.command).toBe(reconcilerCommand);
   expect(findEntry(sessionStart, 'settings-reconciler.cjs').hooks?.some((hook) => hook.command === reconcilerCommand)).toBe(true);
   expect(findEntry(stop, 'settings-reconciler.cjs').hooks?.some((hook) => hook.command === reconcilerCommand)).toBe(true);
@@ -135,6 +135,8 @@ describe('init settings enforcement chain', () => {
     const settings = generateSettings(testOptions('/tmp/hf-init-test')) as GeneratedSettings;
     expectFullPreToolUseChain(settings);
     expectSettingsReconciler(settings);
+    expect(JSON.stringify(settings)).not.toContain('$HOME');
+    expect(JSON.stringify(settings)).not.toContain('%USERPROFILE%');
   });
 
   it('fresh init writes a governed settings.json to disk', async () => {
@@ -149,8 +151,8 @@ describe('init settings enforcement chain', () => {
       expect(result.success).toBe(true);
 
       const settings = JSON.parse(readFileSync(join(root, '.claude', 'settings.json'), 'utf8')) as GeneratedSettings;
-      expectFullPreToolUseChain(settings);
-      expectSettingsReconciler(settings);
+      expectFullPreToolUseChain(settings, homeRoot);
+      expectSettingsReconciler(settings, homeRoot);
       for (const helper of [
         'hive-composition-gate.cjs',
         'role-enforcement.cjs',
@@ -194,6 +196,7 @@ describe('init settings enforcement chain', () => {
       const settings = JSON.parse(readFileSync(join(root, '.claude', 'settings.json'), 'utf8')) as GeneratedSettings;
       expectFullPreToolUseChain(settings);
       expectSettingsReconciler(settings);
+      expect(JSON.stringify(settings)).not.toContain('$HOME');
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

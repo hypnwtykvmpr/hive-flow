@@ -19,8 +19,7 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync, unlinkSync, mkdirSync, existsSync } from 'node:fs';
 import { homedir, hostname } from 'node:os';
 import { join } from 'node:path';
-import readline from 'node:readline';
-import { createReadStream, createWriteStream } from 'node:fs';
+import { readSecret } from '../install/portable-prompt.js';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -58,40 +57,11 @@ interface OverrideFile {
  * Each implementation stores and retrieves the Ed25519 private key PEM
  * in a locked, hardware-backed or password-protected store.
  */
-interface PlatformAuthProvider {
+export interface PlatformAuthProvider {
   name: string;
   isAvailable(): boolean;
   storePrivateKey(privPem: string, password: string): void;
-  retrievePrivateKey(): string | null;
-}
-
-// ---------------------------------------------------------------------------
-// /dev/tty prompt — the unforgeable human verification channel
-//
-// Opens /dev/tty DIRECTLY — bypasses stdin/stdout that LLM tools use.
-// An LLM's Bash tool has stdin piped from Claude Code, NOT connected to /dev/tty.
-// ---------------------------------------------------------------------------
-
-async function promptViaTTY(question: string): Promise<string> {
-  // Fail-closed: if /dev/tty is unavailable (headless CI), return empty string
-  if (!existsSync('/dev/tty')) {
-    process.stderr.write('[permission-guard] /dev/tty not available (headless) — override denied\n');
-    return '';
-  }
-
-  const ttyIn = createReadStream('/dev/tty');
-  const ttyOut = createWriteStream('/dev/tty');
-
-  const rl = readline.createInterface({ input: ttyIn, output: ttyOut });
-
-  return new Promise((resolve) => {
-    rl.question(question, (answer) => {
-      rl.close();
-      ttyIn.destroy();
-      ttyOut.destroy();
-      resolve(answer);
-    });
-  });
+  retrievePrivateKey(): string | null | Promise<string | null>;
 }
 
 // ---------------------------------------------------------------------------
@@ -259,20 +229,11 @@ class LinuxAuthProvider implements PlatformAuthProvider {
     writeFileSync(PRIVKEY_ENC_PATH, JSON.stringify(stored), { mode: 0o600 });
   }
 
-  retrievePrivateKey(): string | null {
+  async retrievePrivateKey(): Promise<string | null> {
     if (!existsSync(PRIVKEY_ENC_PATH)) return null;
 
-    // Get password via /dev/tty — LLM cannot interact with this
-    // We must use the async promptViaTTY but need sync here;
-    // fall back to reading from /dev/tty synchronously via execFileSync
     try {
-      // Use bash to read password from /dev/tty without echo
-      // execFileSync with /bin/bash and no shell-injectable args
-      const password = execFileSync('/bin/bash', [
-        '-c',
-        'read -rs -p "Permission Guard keychain password: " PW </dev/tty && echo "$PW"',
-      ], { stdio: ['pipe', 'pipe', 'inherit'] }).toString().trim();
-
+      const password = await readSecret('Permission Guard keychain password: ');
       if (!password) return null;
 
       const stored = JSON.parse(readFileSync(PRIVKEY_ENC_PATH, 'utf8'));
@@ -320,20 +281,11 @@ class WindowsAuthProvider implements PlatformAuthProvider {
     writeFileSync(PRIVKEY_ENC_PATH, JSON.stringify(stored), { mode: 0o600 });
   }
 
-  retrievePrivateKey(): string | null {
+  async retrievePrivateKey(): Promise<string | null> {
     if (!existsSync(PRIVKEY_ENC_PATH)) return null;
 
     try {
-      // Prompt for password via PowerShell (uses CON device, not stdin)
-      // The script is a fixed literal string — no user data interpolated
-      const password = execFileSync('powershell.exe', [
-        '-NoProfile', '-Command',
-        '[Console]::Error.WriteLine("Permission Guard password required"); ' +
-        '$p = Read-Host -AsSecureString -Prompt "Password"; ' +
-        '[Runtime.InteropServices.Marshal]::PtrToStringAuto(' +
-        '[Runtime.InteropServices.Marshal]::SecureStringToBSTR($p))',
-      ], { stdio: 'pipe' }).toString().trim();
-
+      const password = await readSecret('Permission Guard keychain password: ');
       if (!password) return null;
 
       const stored = JSON.parse(readFileSync(PRIVKEY_ENC_PATH, 'utf8'));
@@ -356,12 +308,16 @@ class WindowsAuthProvider implements PlatformAuthProvider {
 // Provider selection
 // ---------------------------------------------------------------------------
 
-function getPlatformProvider(): PlatformAuthProvider {
-  switch (process.platform) {
+export function getPlatformProviderForPlatform(platform: NodeJS.Platform = process.platform): PlatformAuthProvider {
+  switch (platform) {
     case 'darwin': return new DarwinAuthProvider();
     case 'win32': return new WindowsAuthProvider();
     default: return new LinuxAuthProvider(); // linux and any other platform
   }
+}
+
+function getPlatformProvider(): PlatformAuthProvider {
+  return getPlatformProviderForPlatform();
 }
 
 // ---------------------------------------------------------------------------
@@ -380,7 +336,7 @@ export async function setupOverride(): Promise<void> {
 
   if (existsSync(PUBKEY_PATH)) {
     process.stderr.write('\nEnrollment already exists.\n');
-    process.stderr.write('To re-enroll, first run: node scripts/permission-guard-setup.mjs reset\n\n');
+    process.stderr.write('To re-enroll, first reset the existing Permission Guard override enrollment.\n\n');
     return;
   }
 
@@ -399,7 +355,7 @@ export async function setupOverride(): Promise<void> {
   writeFileSync(PUBKEY_PATH, pubPem, { mode: 0o444 });
 
   // Prompt user for keychain password via /dev/tty
-  const password = await promptViaTTY(
+  const password = await readSecret(
     'Create a password for the Permission Guard credential store: '
   );
 
@@ -432,7 +388,7 @@ export async function requestOverride(): Promise<{ granted: boolean; expiresAt: 
   const provider = getPlatformProvider();
 
   // Retrieve private key — triggers system auth dialog or /dev/tty prompt
-  const privPem = provider.retrievePrivateKey();
+  const privPem = await provider.retrievePrivateKey();
   if (!privPem) {
     process.stderr.write('[permission-guard] Failed to retrieve private key — authentication failed or cancelled\n');
     return { granted: false, expiresAt: 0 };

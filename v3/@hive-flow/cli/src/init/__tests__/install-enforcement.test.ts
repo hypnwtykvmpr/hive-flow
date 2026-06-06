@@ -10,6 +10,7 @@ const installerUrl = pathToFileURL(installerPath).href;
 describe('relocated enforcement installer helpers', () => {
   it('merges the user-level trigger without preserving generated project-local hook groups', async () => {
     const { mergeUserSettings } = await import(installerUrl);
+    const homeDir = join(tmpdir(), 'hf-install-home-with spaces');
     const settings = mergeUserSettings({
       disableAllHooks: true,
       hooks: {
@@ -28,23 +29,26 @@ describe('relocated enforcement installer helpers', () => {
           },
         ],
       },
-    });
+    }, { homeDir });
+    const binDir = join(homeDir, '.hive-flow', 'enforcement', 'bin');
 
     expect(settings.disableAllHooks).toBeUndefined();
     const preToolUse = settings.hooks.PreToolUse;
     const preCommands = preToolUse.flatMap((group: { hooks?: Array<{ command?: string }> }) =>
       (group.hooks || []).map((hook) => hook.command || '')
     );
-    expect(preCommands).toContain('node "$HOME/.hive-flow/enforcement/bin/enforcement.cjs"');
-    expect(preCommands).toContain('node "$HOME/.hive-flow/enforcement/bin/hook-handler.cjs" permission-guard');
+    expect(preCommands).toContain(`node "${join(binDir, 'enforcement.cjs')}"`);
+    expect(preCommands).toContain(`node "${join(binDir, 'hook-handler.cjs')}" permission-guard`);
     expect(preCommands).not.toContain('node "$CLAUDE_PROJECT_DIR"/.claude/helpers/enforcement.cjs');
     expect(preCommands).toContain('node .claude/helpers/custom-hook-handler.cjs custom');
+    expect(preCommands.join('\n')).not.toContain('$HOME');
+    expect(preCommands.join('\n')).not.toContain('%USERPROFILE%');
 
     const commandsFor = (event: string) => (settings.hooks[event] || [])
       .flatMap((group: { hooks?: Array<{ command?: string }> }) => (group.hooks || []).map((hook) => hook.command || ''));
-    expect(commandsFor('PostToolUse')).toContain('node "$HOME/.hive-flow/enforcement/bin/settings-reconciler.cjs"');
-    expect(commandsFor('SessionStart')).toContain('node "$HOME/.hive-flow/enforcement/bin/settings-reconciler.cjs"');
-    expect(commandsFor('Stop')).toContain('node "$HOME/.hive-flow/enforcement/bin/settings-reconciler.cjs"');
+    expect(commandsFor('PostToolUse')).toContain(`node "${join(binDir, 'settings-reconciler.cjs')}"`);
+    expect(commandsFor('SessionStart')).toContain(`node "${join(binDir, 'settings-reconciler.cjs')}"`);
+    expect(commandsFor('Stop')).toContain(`node "${join(binDir, 'settings-reconciler.cjs')}"`);
   });
 
   it('copies relocated engine files and local policy into the target bin', async () => {
