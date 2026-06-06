@@ -530,6 +530,37 @@ describe('enforcement security property contracts', () => {
     }
   });
 
+  it('allows the committed compact-now helper while write-restricted without escalating', () => {
+    writeScopedState('project', enf.resolveScopeContext().projectId, {
+      level: enf.LEVELS.RESTRICTED,
+      violations: 1,
+      restrictedGroups: ['write'],
+    });
+
+    const result = enf.processPreToolUse({
+      tool_name: 'Bash',
+      tool_input: {
+        command: `node ${join(root, '.claude', 'helpers', 'compact-now.cjs')} --reason "manual handoff" --mode inplace`,
+      },
+    });
+
+    expect(result.hookSpecificOutput?.permissionDecision ?? 'allow').toBe('allow');
+    expect(readScopedState('global', 'global')).toBeNull();
+  });
+
+  it('redirects mistaken compact-now checkout activation without escalating global state', () => {
+    const result = enf.processPreToolUse({
+      tool_name: 'Bash',
+      tool_input: {
+        command: 'git checkout feat/self-compaction -- .claude/helpers/compact-now.cjs',
+      },
+    });
+
+    expect(result.hookSpecificOutput.permissionDecision).toBe('deny');
+    expect(result.hookSpecificOutput.permissionDecisionReason).toContain('compact-now is not activated by checking out protected hook files');
+    expect(readScopedState('global', 'global')).toBeNull();
+  });
+
   it('keeps token-spoofed unknown actors globally escalated', () => {
     const storePath = join(root, '.hive-flow', 'agents', 'store.json');
     mkdirSync(dirname(storePath), { recursive: true });

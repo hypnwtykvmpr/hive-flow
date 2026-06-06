@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { tmpdir } from 'os';
@@ -51,6 +51,55 @@ describe('compact-now helper', () => {
       assert.equal(request.handoffPath, handoffPath);
       assert.match(request.preservationPrompt, /finish the focused tests, then commit/);
       assert.ok(new Date(request.handoffWrittenAt).getTime() <= new Date(request.requestedAt).getTime());
+    } finally {
+      rmSync(projectRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('launches headless compaction through the configured Claude binary after writing the recovery note', () => {
+    const projectRoot = mkdtempSync(join(tmpdir(), 'hf-compact-now-headless-'));
+    const dataDir = join(projectRoot, '.hive-flow', 'data');
+    const handoffPath = join(dataDir, 'compaction-handoff.md');
+    const requestPath = join(dataDir, 'compact-request.json');
+    const fakeClaude = join(projectRoot, 'fake-claude.cjs');
+    const argsPath = join(dataDir, 'fake-claude-args.json');
+    mkdirSync(dataDir, { recursive: true });
+
+    try {
+      writeFileSync(fakeClaude, [
+        '#!/usr/bin/env node',
+        "const fs = require('fs');",
+        "fs.writeFileSync(process.env.HF_FAKE_CLAUDE_ARGS, JSON.stringify(process.argv.slice(2)));",
+      ].join('\n'));
+      chmodSync(fakeClaude, 0o755);
+
+      const result = spawnSync(process.execPath, [
+        helperPath,
+        '--reason', 'headless compaction requested',
+        '--mode', 'headless',
+        '--resume', 'session-headless',
+        '--next-step', 'resume from the handoff after compacting',
+      ], {
+        cwd: projectRoot,
+        env: {
+          ...process.env,
+          CLAUDE_PROJECT_DIR: projectRoot,
+          CLAUDE_BIN: fakeClaude,
+          HF_FAKE_CLAUDE_ARGS: argsPath,
+          HIVE_FLOW_COMPACT_HEADLESS_SYNC: '1',
+        },
+        encoding: 'utf8',
+      });
+
+      assert.equal(result.status, 0, result.stderr || result.stdout);
+      assert.equal(existsSync(handoffPath), true);
+      assert.equal(existsSync(requestPath), true);
+      assert.equal(existsSync(argsPath), true);
+      const args = JSON.parse(readFileSync(argsPath, 'utf8'));
+      assert.equal(args[0], '-p');
+      assert.match(args[1], /^\/compact /);
+      assert.match(args[1], /resume from the handoff after compacting/);
+      assert.deepEqual(args.slice(2), ['--resume', 'session-headless']);
     } finally {
       rmSync(projectRoot, { recursive: true, force: true });
     }

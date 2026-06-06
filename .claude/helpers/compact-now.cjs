@@ -11,6 +11,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { spawn, spawnSync } = require('child_process');
 
 const VALID_MODES = new Set(['inplace', 'headless']);
 
@@ -107,6 +108,34 @@ function writeJsonAtomic(filePath, value) {
   fs.renameSync(tmpPath, filePath);
 }
 
+function launchHeadlessCompact(request) {
+  const claudeBin = process.env.CLAUDE_BIN || 'claude';
+  const args = ['-p', `/compact ${request.preservationPrompt}`];
+  if (request.resume) args.push('--resume', request.resume);
+
+  if (process.env.HIVE_FLOW_COMPACT_HEADLESS_SYNC === '1') {
+    const result = spawnSync(claudeBin, args, {
+      cwd: request.projectRoot,
+      env: process.env,
+      stdio: 'ignore',
+    });
+    if (result.error) throw result.error;
+    if (typeof result.status === 'number' && result.status !== 0) {
+      throw new Error(`Headless Claude compact exited with status ${result.status}`);
+    }
+    return { launched: true, mode: 'sync' };
+  }
+
+  const child = spawn(claudeBin, args, {
+    cwd: request.projectRoot,
+    env: process.env,
+    detached: true,
+    stdio: 'ignore',
+  });
+  child.unref();
+  return { launched: true, mode: 'detached' };
+}
+
 function main() {
   const args = parseArgs(process.argv.slice(2));
   if (args.help) {
@@ -144,12 +173,17 @@ function main() {
   request.requestedAt = new Date().toISOString();
   writeJsonAtomic(requestPath, request);
 
+  const headless = request.mode === 'headless'
+    ? launchHeadlessCompact(request)
+    : { launched: false, mode: 'inplace' };
+
   process.stdout.write(JSON.stringify({
     ok: true,
     requestPath,
     handoffPath,
     mode: request.mode,
     reason: request.reason,
+    headless,
   }, null, 2) + '\n');
   return 0;
 }

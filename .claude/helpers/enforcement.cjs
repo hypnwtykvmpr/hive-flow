@@ -2025,6 +2025,41 @@ function hasInstallEnforcementInvocation(command) {
   return hasCommandPositionInvocation(command, execution => isScriptInvocation(execution, 'install-enforcement.mjs'));
 }
 
+function normalizedCommandPath(value) {
+  const normalized = normalizeShellWord(stripShellQuotes(String(value || '')))
+    .replace(/\$CLAUDE_PROJECT_DIR|\$\{CLAUDE_PROJECT_DIR\}/g, PROJECT_DIR)
+    .replace(/\$HIVE_FLOW_PROJECT_ROOT|\$\{HIVE_FLOW_PROJECT_ROOT\}/g, PROJECT_DIR);
+  return path.isAbsolute(normalized) ? path.resolve(normalized) : path.resolve(PROJECT_DIR, normalized);
+}
+
+function isCompactNowScriptPath(value) {
+  if (commandBasename(value) !== 'compact-now.cjs') return false;
+  return normalizedCommandPath(value) === path.join(PROJECT_DIR, '.claude', 'helpers', 'compact-now.cjs');
+}
+
+function isCompactNowExecution(execution) {
+  if (commandBasename(execution?.command || '') !== 'node') return false;
+  return (execution.args || []).some(isCompactNowScriptPath);
+}
+
+function isCompactNowProtectedGitActivation(command) {
+  const executions = collectShellCommandExecutions(command);
+  if (!executions.length) return false;
+  let foundCompactNowCheckout = false;
+  for (const execution of executions) {
+    const base = commandBasename(execution.command);
+    if (base === 'cd' || base === 'tail' || base === 'pwd') continue;
+    if (base !== 'git') return false;
+
+    const args = execution.args || [];
+    const subcommand = args[0];
+    if (subcommand !== 'checkout' && subcommand !== 'restore') return false;
+    if (!args.some(isCompactNowScriptPath)) return false;
+    foundCompactNowCheckout = true;
+  }
+  return foundCompactNowCheckout;
+}
+
 function detectCircumvention(toolName, toolInput, state) {
   // 1. Protected path writes via Write/Edit/MultiEdit/NotebookEdit
   if (['Write', 'Edit', 'MultiEdit', 'NotebookEdit', 'mcp__filesystem__write_file', 'mcp__filesystem__edit_file', 'mcp__filesystem__move_file', 'mcp__filesystem__rename_file', 'mcp__filesystem__copy_file', 'mcp__filesystem__delete_file'].includes(toolName)) {
@@ -2107,6 +2142,15 @@ function detectCircumvention(toolName, toolInput, state) {
     }
 
     // 2b. Git operations targeting protected paths (N3)
+    if (isCompactNowProtectedGitActivation(command)) {
+      return {
+        circumvention: true,
+        denyOnly: true,
+        reason: 'compact-now is not activated by checking out protected hook files from inside a governed Claude session. Run the already-installed helper directly, or have the human/Codex merge the branch outside the governed hook path.',
+        severity: 'normal',
+      };
+    }
+
     if (/git\s+(checkout|restore|revert)\s+.*\.(hive-flow\/enforcement|claude\/)/i.test(command)) {
       return {
         circumvention: true,
@@ -2298,7 +2342,7 @@ function isAllowedRestrictedScriptExecution(command) {
     const args = execution.args || [];
 
     if (base === 'node') {
-      return args.includes('--check') || args.includes('--test');
+      return args.includes('--check') || args.includes('--test') || isCompactNowExecution(execution);
     }
 
     if (base === 'pnpm') {
