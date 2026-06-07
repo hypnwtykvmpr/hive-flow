@@ -18,11 +18,11 @@ export const URL_AND_INSTALL_PROHIBITED: readonly ProhibitedPattern[] = [
   {
     label: 'cosmetic URL',
     pattern:
-      /https?:\/\/(?!(?:localhost|127\.0\.0\.1|YOUR_NODE|test-server|registry\.npmjs\.org|gateway\.pinata\.cloud|api\.pinata\.cloud|api\.web3\.storage|web3\.storage|w3s\.link|dweb\.link|ipfs\.io|cloudflare-ipfs\.com|storage\.googleapis\.com|api\.openai\.com|api\.anthropic\.com|api\.cohere\.ai|generativelanguage\.googleapis\.com|api\.deepseek\.com|openrouter\.ai|dashscope-intl\.aliyuncs\.com|accounts\.google\.com|oauth2\.googleapis\.com|github\.com\/login\/oauth)[/:?#]|(?:localhost|127\.0\.0\.1|YOUR_NODE|test-server)\b)[^\s)"'<>]+/i,
+      /https?:\/\/(?![^\s)"'<>]*\$)(?!(?:localhost|127\.0\.0\.1|YOUR_NODE|test-server|registry\.npmjs\.org|(?:[a-z0-9-]+\.)*example\.(?:com|org|net)|gateway\.pinata\.cloud|api\.pinata\.cloud|api\.web3\.storage|web3\.storage|w3s\.link|dweb\.link|ipfs\.io|cloudflare-ipfs\.com|storage\.googleapis\.com|api\.openai\.com|api\.anthropic\.com|api\.cohere\.ai|generativelanguage\.googleapis\.com|api\.deepseek\.com|openrouter\.ai|dashscope-intl\.aliyuncs\.com|accounts\.google\.com|oauth2\.googleapis\.com|github\.com\/login\/oauth)[/:?#]|(?:localhost|127\.0\.0\.1|YOUR_NODE|test-server|registry\.npmjs\.org|(?:[a-z0-9-]+\.)*example\.(?:com|org|net))\b)[^\s)"'<>]+/i,
   },
   {
     label: 'GitHub URL',
-    pattern: /https?:\/\/github\.com\/(?!login\/oauth\/)[^\s)"'<>]+/i,
+    pattern: /https?:\/\/github\.com\/(?!login\/oauth\/)(?![^\s)"'<>]*\$)[^\s)"'<>]+/i,
   },
   { label: 'npm registry or package URL', pattern: /https?:\/\/(?:www\.)?npmjs\.com\/[^\s)"'<>]+/i },
   { label: 'npm shield badge', pattern: /https?:\/\/img\.shields\.io\/npm\/[^\s)"'<>]+/i },

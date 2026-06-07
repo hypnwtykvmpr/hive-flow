@@ -521,18 +521,18 @@ Send metrics to external monitoring systems:
 ```bash
 # Export to Prometheus
 hive-flow truth --format json | \
-  curl -X POST https:/$pushgateway.example.com$metrics$job$hive-flow \
+  curl -X POST https://pushgateway.example.com/metrics/job/hive-flow \
   -d @-
 
 # Send to DataDog
 hive-flow verify report --format json | \
-  curl -X POST "https:/$api.datadoghq.com$api$v1$series?api_key=${DD_API_KEY}" \
+  curl -X POST "https://api.example.com/api/v1/series?api_key=${DD_API_KEY}" \
   -H "Content-Type: application$json" \
   -d @-
 
 # Custom webhook
 hive-flow truth --format json | \
-  curl -X POST https:/$metrics.example.com$api$truth \
+  curl -X POST https://metrics.example.com/api/truth \
   -H "Content-Type: application$json" \
   -d @-
 ```

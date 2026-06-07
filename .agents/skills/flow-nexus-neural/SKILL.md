@@ -726,13 +726,6 @@ await mcp__flow-nexus__neural_cluster_terminate({
 - `flow-nexus-swarm` - AI swarm orchestration
 - `flow-nexus-workflow` - Workflow automation
 
-## Resources
-
-- Flow Nexus Docs: https:/$flow-nexus.hive-flow.invalid$docs
-- Neural Network Guide: https:/$flow-nexus.hive-flow.invalid$docs$neural
-- Template Marketplace: https:/$flow-nexus.hive-flow.invalid$templates
-- API Reference: https:/$flow-nexus.hive-flow.invalid$api
-
 ---
 
-**Note**: Distributed training requires authentication. Register at https:/$flow-nexus.hive-flow.invalid or use `flow-nexus register`.
+**Note**: Distributed training requires authentication. Use `flow-nexus register` to authenticate.

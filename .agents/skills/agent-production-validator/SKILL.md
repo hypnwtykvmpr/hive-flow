@@ -129,7 +129,7 @@ describe('External API Validation', () => {
   it('should integrate with real payment service', async () => {
     const paymentService = new PaymentService({
       apiKey: process.env.STRIPE_TEST_KEY, // Real test API
-      baseUrl: 'https:/$api.stripe.com$v1'
+      baseUrl: 'https://api.example.com/v1'
     });
     
     // Test actual API call
@@ -147,7 +147,7 @@ describe('External API Validation', () => {
   it('should handle real API errors gracefully', async () => {
     const paymentService = new PaymentService({
       apiKey: 'invalid_key',
-      baseUrl: 'https:/$api.stripe.com$v1'
+      baseUrl: 'https://api.example.com/v1'
     });
     
     await expect(paymentService.createPaymentIntent({

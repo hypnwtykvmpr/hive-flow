@@ -955,13 +955,6 @@ mcp__hive-flow__swarm_init({ topology: "mesh", maxAgents: 4 })
 - `neural-patterns` - AI-powered coordination optimization
 - `memory-management` - Cross-session state persistence
 
-## References
-
-- [Hive Flow Documentation](https:/$github.com$hypnwtykvmpr$hive-flow)
-- [Swarm Orchestration Guide](https:/$github.com$hypnwtykvmpr$hive-flow$wiki$swarm)
-- [MCP Tools Reference](https:/$github.com$hypnwtykvmpr$hive-flow$wiki$mcp)
-- [Performance Optimization](https:/$github.com$hypnwtykvmpr$hive-flow$wiki$performance)
-
 ---
 
 **Version**: 2.0.0

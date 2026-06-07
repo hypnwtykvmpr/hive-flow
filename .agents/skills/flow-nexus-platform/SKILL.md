@@ -162,7 +162,7 @@ mcp__flow-nexus__sandbox_execute({
   sandbox_id: "sandbox_id",
   code: `
     console.log('Hello from sandbox!');
-    const result = await fetch('https:/$api.example.com$data');
+    const result = await fetch('https://api.example.com/data');
     const data = await result.json();
     return data;
   `,
@@ -357,8 +357,8 @@ mcp__flow-nexus__app_store_publish_app({
     author: "Your Name",
     license: "MIT",
     repository: "github.com$username$repo",
-    homepage: "https:/$yourapp.com",
-    documentation: "https:/$docs.yourapp.com"
+    homepage: "https://app.example.com",
+    documentation: "https://docs.example.com"
   }
 })
 ```
@@ -1028,12 +1028,6 @@ mcp__flow-nexus__challenge_submit({
 
 ## Support & Resources
 
-- **Documentation**: https:/$docs.flow-nexus.hive-flow.invalid
-- **API Reference**: https:/$api.flow-nexus.hive-flow.invalid$docs
-- **Status Page**: https:/$status.flow-nexus.hive-flow.invalid
-- **Community Forum**: https:/$community.flow-nexus.hive-flow.invalid
-- **GitHub Issues**: https:/$github.com$hypnwtykvmpr$flow-nexus$issues
-- **Discord**: https:/$discord.gg$flow-nexus
 - **Email Support**: support@flow-nexus.hive-flow.invalid (Pro/Enterprise only)
 
 ---
@@ -1051,7 +1045,7 @@ mcp__flow-nexus__sandbox_create({
   startup_script: `
     apt-get update
     apt-get install -y custom-package
-    git clone https:/$github.com$user$repo
+    git clone <repository-url>
   `
 })
 ```

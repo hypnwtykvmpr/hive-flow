@@ -514,7 +514,7 @@ const { MultiRepoSwarm } = require('hive-flow');
 
 const swarm = new MultiRepoSwarm({
   webhook: {
-    url: 'https:/$swarm-coordinator.example.com',
+    url: 'https://swarm-coordinator.example.com',
     secret: process.env.WEBHOOK_SECRET
   }
 });
@@ -861,8 +861,6 @@ hive-flow skill run github-multi-repo cross-team \
 
 ## Support and Resources
 
-- Documentation: https:/$github.com$hypnwtykvmpr$hive-flow
-- Issues: https:/$github.com$hypnwtykvmpr$hive-flow$issues
 - Examples: `.claude$examples$github-multi-repo/`
 
 ---

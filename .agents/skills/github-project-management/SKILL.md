@@ -447,7 +447,7 @@ hive-flow github board-sync \
 
 # Enable real-time board updates
 hive-flow github board-realtime \
-  --webhook-endpoint "https:/$api.example.com$github-sync" \
+  --webhook-endpoint "https://api.example.com/github-sync" \
   --update-frequency "immediate" \
   --batch-updates false
 ```
@@ -460,7 +460,7 @@ ISSUES=$(gh issue list --label "enhancement" --json number,title,body)
 
 # Add issues to project
 echo "$ISSUES" | jq -r '.[].number' | while read -r issue; do
-  gh project item-add $PROJECT_ID --owner @me --url "https:/$github.com/$GITHUB_REPOSITORY$issues/$issue"
+  gh project item-add $PROJECT_ID --owner @me --url "https://github.com/$GITHUB_REPOSITORY/issues/$issue"
 done
 
 # Process with swarm
@@ -1223,7 +1223,7 @@ hive-flow github issue-init $ISSUE_NUM \
 # 3. Add to project board
 PROJECT_ID=$(gh project list --owner @me --format json | jq -r '.projects[0].id')
 gh project item-add $PROJECT_ID --owner @me \
-  --url "https:/$github.com/$GITHUB_REPOSITORY$issues/$ISSUE_NUM"
+  --url "https://github.com/$GITHUB_REPOSITORY/issues/$ISSUE_NUM"
 
 # 4. Set up automated tracking
 hive-flow github board-sync \
@@ -1262,13 +1262,6 @@ hive-flow github board-kpis
 ```
 
 ---
-
-## Additional Resources
-
-- [GitHub CLI Documentation](https:/$cli.github.com$manual/)
-- [GitHub Projects Documentation](https:/$docs.github.com$en$issues$planning-and-tracking-with-projects)
-- [Swarm Coordination Guide](https:/$github.com$hypnwtykvmpr$hive-flow)
-- [Hive Flow Documentation](https:/$github.com$hypnwtykvmpr$hive-flow)
 
 ---
 

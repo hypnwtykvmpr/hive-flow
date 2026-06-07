@@ -268,7 +268,7 @@ const { MultiRepoSwarm } = require('hive-flow');
 
 const swarm = new MultiRepoSwarm({
   webhook: {
-    url: 'https:/$swarm-coordinator.example.com',
+    url: 'https://swarm-coordinator.example.com',
     secret: process.env.WEBHOOK_SECRET
   }
 });

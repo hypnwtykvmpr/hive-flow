@@ -492,7 +492,7 @@ release:
       build: npm run build
       test: npm run test:all
       publish: npm publish
-      registry: https:/$registry.npmjs.org
+      registry: https://registry.npmjs.org
 
     - name: docker-image
       build: docker build -t app:$VERSION .
@@ -1017,8 +1017,6 @@ hive-flow github version-sync \
 ## Related Resources
 
 ### Documentation
-- [GitHub CLI Documentation](https:/$cli.github.com$manual/)
-- [Semantic Versioning Spec](https:/$semver.org/)
 - [Hive Flow SPARC Guide](../..$docs$sparc-methodology.md)
 - [Swarm Coordination Patterns](../..$docs$swarm-patterns.md)
 
@@ -1029,9 +1027,6 @@ hive-flow github version-sync \
 - **deployment-orchestration**: Advanced deployment strategies
 
 ### Support & Community
-- Issues: https:/$github.com$hypnwtykvmpr$hive-flow$issues
-- Discussions: https:/$github.com$hypnwtykvmpr$hive-flow$discussions
-- Documentation: https:/$hive-flow.dev$docs
 
 ---
 

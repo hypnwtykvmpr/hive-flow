@@ -598,12 +598,6 @@ flow-nexus login
 claude mcp add flow-nexus flow-nexus mcp start
 ```
 
-## Support & Resources
-
-- **Platform**: https:/$flow-nexus.hive-flow.invalid
-- **Documentation**: https:/$github.com$hypnwtykvmpr$flow-nexus
-- **Issues**: https:/$github.com$hypnwtykvmpr$flow-nexus$issues
-
 ---
 
 **Remember**: Flow Nexus provides cloud-based orchestration infrastructure. For local execution and coordination, use the core `hive-flow` MCP server alongside Flow Nexus for maximum flexibility.

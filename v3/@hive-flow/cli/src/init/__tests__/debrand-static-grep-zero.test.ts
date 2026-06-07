@@ -73,6 +73,18 @@ describe('DB-5 static prohibited debrand sweep', () => {
 
     expect(deadLinks, '[DB-5 docs] remove or repair dead relative documentation links').toEqual([]);
   });
+
+  it('does not ship malformed single-slash URL tokens in scanned surfaces', () => {
+    const malformedUrls = collectMalformedUrlFindings();
+
+    expect(malformedUrls, '[DB-5 docs] repair or remove malformed single-slash URLs').toEqual([]);
+  });
+
+  it('ships valid JSON for generated Claude settings templates', () => {
+    const parseFailures = collectGeneratedSettingsJsonParseFailures();
+
+    expect(parseFailures, '[DB-5 docs] generated Claude settings templates must parse as JSON').toEqual([]);
+  });
 });
 
 function collectStaticFindings(): Array<{ key: string; message: string }> {
@@ -121,7 +133,7 @@ function collectCosmeticUrlFindings(relativePath: string, content: string): Arra
 function collectGitHubUrlFindings(relativePath: string, content: string): Array<{ key: string; message: string }> {
   return collectUrlLiterals(content)
     .filter(({ url }) => /^https?:\/\/github\.com\//i.test(url))
-    .filter(({ url }) => !url.includes('${'))
+    .filter(({ url }) => !url.includes('$'))
     .filter(({ url }) => !/^https?:\/\/github\.com\/login\/oauth\//i.test(url))
     .map(({ lineNumber, url }) => ({
       key: `${relativePath}:line:${lineNumber}:GitHub URL:${url}`,
@@ -137,6 +149,36 @@ function collectUrlLiterals(content: string): Array<{ lineNumber: number; url: s
       url: match[0],
     }));
   });
+}
+
+function collectMalformedUrlFindings(): string[] {
+  const malformedUrlPattern = /https?:\/(?:$|[^/])/gi;
+  return trackedFilesForShippedSurfaces()
+    .filter(isScannedTextFile)
+    .flatMap((relativePath) => {
+      const absolutePath = resolve(REPO_ROOT, relativePath);
+      const content = readFileSync(absolutePath, 'utf8');
+      return content.split('\n').flatMap((line, index) => {
+        return [...line.matchAll(malformedUrlPattern)].map(
+          (match) => `${relativePath}:${index + 1}: malformed URL token: ${match[0]}`,
+        );
+      });
+    });
+}
+
+function collectGeneratedSettingsJsonParseFailures(): string[] {
+  return trackedFilesForShippedSurfaces()
+    .filter((relativePath) => relativePath.endsWith('/.claude/settings.json'))
+    .filter(isScannedTextFile)
+    .flatMap((relativePath) => {
+      const absolutePath = resolve(REPO_ROOT, relativePath);
+      try {
+        JSON.parse(readFileSync(absolutePath, 'utf8'));
+        return [];
+      } catch (error) {
+        return [`${relativePath}: ${error instanceof Error ? error.message : String(error)}`];
+      }
+    });
 }
 
 function isAllowedRuntimeUrl(rawUrl: string): boolean {
@@ -155,6 +197,12 @@ function isAllowedRuntimeUrl(rawUrl: string): boolean {
     host === '127.0.0.1' ||
     host === 'your_node' ||
     host === 'test-server' ||
+    host === 'example.com' ||
+    host === 'example.org' ||
+    host === 'example.net' ||
+    host.endsWith('.example.com') ||
+    host.endsWith('.example.org') ||
+    host.endsWith('.example.net') ||
     host === 'registry.npmjs.org' ||
     host === 'gateway.pinata.cloud' ||
     host === 'api.pinata.cloud' ||

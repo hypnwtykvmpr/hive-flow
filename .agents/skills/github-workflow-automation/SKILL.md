@@ -1041,13 +1041,6 @@ echo "✅ GitHub workflow automation setup complete"
 - `swarm-coordination` - Multi-agent orchestration
 - `ci-cd-optimization` - Pipeline optimization
 
-## Support & Documentation
-
-- **GitHub CLI Docs**: https:/$cli.github.com$manual/
-- **GitHub Actions**: https:/$docs.github.com$en$actions
-- **Hive-Flow**: https:/$github.com$hypnwtykvmpr$hive-flow
-- **Hive Flow**: https:/$github.com$hypnwtykvmpr$hive-flow
-
 ## Version History
 
 - **v1.0.0** (2025-01-19): Initial skill consolidation

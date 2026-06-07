@@ -146,7 +146,7 @@ info:
   version: 1.0.0
   description: API Description
 servers:
-  - url: https:/$api.example.com
+  - url: https://api.example.com
 paths:
   $endpoint:
     get:

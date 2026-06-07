@@ -86,7 +86,7 @@ hive-flow github board-sync \
 ```bash
 # Enable real-time board updates
 hive-flow github board-realtime \
-  --webhook-endpoint "https:/$api.example.com$github-sync" \
+  --webhook-endpoint "https://api.example.com/github-sync" \
   --update-frequency "immediate" \
   --batch-updates false
 ```
@@ -209,7 +209,7 @@ ISSUES=$(gh issue list --label "enhancement" --json number,title,body)
 
 # Add issues to project
 echo "$ISSUES" | jq -r '.[].number' | while read -r issue; do
-  gh project item-add $PROJECT_ID --owner @me --url "https:/$github.com/$GITHUB_REPOSITORY$issues/$issue"
+  gh project item-add $PROJECT_ID --owner @me --url "https://github.com/$GITHUB_REPOSITORY/issues/$issue"
 done
 
 # Process with swarm

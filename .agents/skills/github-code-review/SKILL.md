@@ -1116,11 +1116,6 @@ hive-flow github review-init --pr 123 --parallel --cache-results
 - `github-workflow-automation` - Automate GitHub workflows
 - `swarm-coordination` - Advanced swarm orchestration
 
-### Documentation
-- [GitHub CLI Documentation](https:/$cli.github.com$manual/)
-- [Hive Flow Guide](https:/$github.com$hypnwtykvmpr$hive-flow)
-- [Hive Flow Integration](https:/$github.com$hypnwtykvmpr$hive-flow)
-
 ### Support
 - GitHub Issues: Report bugs and request features
 - Community: Join discussions and share experiences

@@ -215,9 +215,9 @@ info:
   description: Authentication and authorization service
 
 servers:
-  - url: https:/$api.example.com$v1
+  - url: https://api.example.com/v1
     description: Production
-  - url: https:/$staging-api.example.com$v1
+  - url: https://staging-api.example.com/v1
     description: Staging
 
 components:

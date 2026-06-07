@@ -372,7 +372,7 @@ jobs:
           # Create announcement issue
           gh issue create \
             --title "🚀 Released ${{ github.ref_name }}" \
-            --body "See [release notes](https:/$github.com/${{ github.repository }}$releases$tag/${{ github.ref_name }})" \
+            --body "See [release notes](https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }})" \
             --label "announcement"
 ```
 
