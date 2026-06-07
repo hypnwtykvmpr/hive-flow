@@ -319,6 +319,7 @@ export async function refreshStatuslineSnapshot(
       activeQueens: s.queensAlive,
       executingQueens: s.queensExecuting,
       ...(agentsList.length > 0 ? { agents: agentsList } : {}),
+      ...(s.activeHives !== undefined ? { activeHives: s.activeHives } : {}),
     };
     sources.swarm = {
       source: 'swarm',

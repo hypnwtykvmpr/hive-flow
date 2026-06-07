@@ -41,6 +41,7 @@ import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { basename, join } from 'node:path';
 
+import { collectActiveHiveOwnership } from './hive-ownership.js';
 import { statuslinePaths } from './paths.js';
 import { readJsonFile } from './storage.js';
 import {
@@ -433,9 +434,12 @@ interface RawAgentRecord {
  */
 async function probeSwarm(projectRoot: string): Promise<SwarmSummary | undefined> {
   const storePath = join(projectRoot, '.hive-flow', 'agents', 'store.json');
-  const raw = await readJsonFile<RawStoreShape>(storePath, MAX_INLINE_JSON_BYTES).catch(
-    () => undefined,
-  );
+  const [raw, activeHives] = await Promise.all([
+    readJsonFile<RawStoreShape>(storePath, MAX_INLINE_JSON_BYTES).catch(
+      () => undefined,
+    ),
+    collectActiveHiveOwnership(projectRoot).catch(() => undefined),
+  ]);
   if (raw === undefined || raw === null || typeof raw !== 'object') return undefined;
 
   // Extract records: dict shape (canonical) OR array shape (legacy). Drop
@@ -515,6 +519,7 @@ async function probeSwarm(projectRoot: string): Promise<SwarmSummary | undefined
     activeQueens,
     executingQueens,
     agents: rows,
+    ...(activeHives !== undefined ? { activeHives } : {}),
   };
 }
 

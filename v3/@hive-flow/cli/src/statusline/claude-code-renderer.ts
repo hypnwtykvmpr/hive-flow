@@ -56,6 +56,7 @@
 import { existsSync } from 'node:fs';
 import { basename, join } from 'node:path';
 
+import { resolveSessionId } from '../mcp-tools/session-id.js';
 import { parseStatuslineConfig, type StatuslineConfig } from './config.js';
 import { collectInlineSnapshot } from './inline-collectors.js';
 import { collectEnforcementInstalled } from './enforcement-installed.js';
@@ -347,6 +348,10 @@ function numberAt(value: unknown, path: ReadonlyArray<string>): number | undefin
   return undefined;
 }
 
+function resolveStatuslineSessionId(stdin: Record<string, unknown> | undefined): string | undefined {
+  return resolveSessionId(stdin ?? null, process.env) ?? undefined;
+}
+
 // ---------------------------------------------------------------------------
 // Mode resolution
 // ---------------------------------------------------------------------------
@@ -571,7 +576,7 @@ function composeStatusline(ctx: ComposeContext): string {
     const scoreboard = renderScoreboard(snapshot, p);
     if (scoreboard !== undefined) bodyRows.push(scoreboard);
 
-    const swarm = renderSwarm(snapshot, p);
+    const swarm = renderSwarm(snapshot, p, resolveStatuslineSessionId(ctx.stdin));
     if (swarm !== undefined) bodyRows.push(swarm);
 
     const memory = renderMemoryRow(snapshot, p);
@@ -859,7 +864,11 @@ function providerColor(provider: ScoreProvider, p: PaletteCodes): string {
 // Swarm
 // ---------------------------------------------------------------------------
 
-function renderSwarm(snapshot: StatuslineSnapshotV1, p: PaletteCodes): string | undefined {
+function renderSwarm(
+  snapshot: StatuslineSnapshotV1,
+  p: PaletteCodes,
+  currentSessionId: string | undefined,
+): string | undefined {
   const swarm: SwarmSummary | undefined = snapshot.swarm;
   if (swarm === undefined) return undefined;
   const total = swarm.activeAgents + swarm.idleAgents + swarm.queuedAgents;
@@ -880,7 +889,9 @@ function renderSwarm(snapshot: StatuslineSnapshotV1, p: PaletteCodes): string | 
     ? `  ${swarm.executingQueens > 0 ? p.queen : p.queenIdle}♛${swarm.activeQueens}${p.reset}`
     : '';
 
-  const swarmCore = `🪪 Swarm ${indicator} ${slot}${queenPart}`;
+  const hiveTag = maybeRenderHiveSessionTag(swarm, currentSessionId, p);
+  const hivePart = hiveTag !== undefined ? `  ${p.separator}·${p.reset}  ${hiveTag}` : '';
+  const swarmCore = `🪪 Swarm ${indicator} ${slot}${queenPart}${hivePart}`;
 
   // Active agents row collapses into the same section when role-icons toggle
   // is on (visual design 3.5). Default is `off` per config.
@@ -889,6 +900,25 @@ function renderSwarm(snapshot: StatuslineSnapshotV1, p: PaletteCodes): string | 
     return `${swarmCore}  ${p.separator}·${p.reset}  ${active}`;
   }
   return swarmCore;
+}
+
+function maybeRenderHiveSessionTag(
+  swarm: SwarmSummary,
+  currentSessionId: string | undefined,
+  p: PaletteCodes,
+): string | undefined {
+  if (currentSessionId === undefined) return undefined;
+  const activeHives = swarm.activeHives;
+  if (activeHives === undefined) return undefined;
+
+  const current = activeHives.byOwnerSessionId[currentSessionId] ?? 0;
+  let other = 0;
+  for (const [ownerSessionId, count] of Object.entries(activeHives.byOwnerSessionId)) {
+    if (ownerSessionId !== currentSessionId) other += count;
+  }
+  if (other <= 0) return undefined;
+
+  return `${p.gray}hives ${p.reset}${p.number}${current}${p.reset}${p.gray} this/${p.reset}${p.number}${other}${p.reset}${p.gray} other${p.reset}`;
 }
 
 function maybeRenderActive(

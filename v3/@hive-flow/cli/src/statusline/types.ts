@@ -454,6 +454,12 @@ export interface NormalizedAgentRow {
   status: NormalizedAgentStatus;
 }
 
+export interface ActiveHiveOwnershipSummary {
+  active: number;
+  unknownOwner: number;
+  byOwnerSessionId: Record<string, number>;
+}
+
 export interface SwarmSummary {
   activeAgents: number;
   idleAgents: number;
@@ -462,6 +468,7 @@ export interface SwarmSummary {
   activeQueens: number;
   executingQueens: number;
   agents?: NormalizedAgentRow[];
+  activeHives?: ActiveHiveOwnershipSummary;
 }
 
 /** Aliases used by renderer/refresher modules in later waves. */

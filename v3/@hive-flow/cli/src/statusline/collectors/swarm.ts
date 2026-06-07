@@ -33,8 +33,10 @@
 import { lstat } from 'node:fs/promises';
 import { join } from 'node:path';
 
+import { collectActiveHiveOwnership } from '../hive-ownership.js';
 import { readJsonFile } from '../storage.js';
 import {
+  type ActiveHiveOwnershipSummary,
   normalizeAgentStatus,
   type NormalizedAgentRow,
   type NormalizedAgentStatus,
@@ -85,6 +87,8 @@ export interface SwarmCollectorSummary {
   advocateState: string;
   /** Per-row normalized agent rows surviving the terminal-status filter. */
   agents: ReadonlyArray<NormalizedAgentRow>;
+  /** Active hives partitioned by owner session id. */
+  activeHives?: ActiveHiveOwnershipSummary;
   /** Source freshness derived from `store.json` mtime (or absence). */
   freshness: SwarmFreshness;
 }
@@ -257,6 +261,7 @@ function emptySummary(
   cap: number,
   freshness: SwarmFreshness,
   advocateState: string,
+  activeHives?: ActiveHiveOwnershipSummary,
 ): SwarmCollectorSummary {
   return {
     workersAlive: 0,
@@ -266,6 +271,7 @@ function emptySummary(
     cap,
     advocateState,
     agents: [],
+    ...(activeHives !== undefined ? { activeHives } : {}),
     freshness,
   };
 }
@@ -311,10 +317,11 @@ export async function collectSwarm(opts: CollectSwarmOptions): Promise<SwarmColl
   // Stat first so we can classify even when `readJsonFile` succeeds. Reading
   // the advocate state in parallel keeps the collector cheap (two small JSON
   // files, both bounded by storage.ts caps).
-  const [freshnessClass, advocateState, rawStore] = await Promise.all([
+  const [freshnessClass, advocateState, rawStore, activeHives] = await Promise.all([
     classifyFreshness(storePath, now),
     readAdvocateState(projectRoot),
     readJsonFile<unknown>(storePath).catch(() => undefined),
+    collectActiveHiveOwnership(projectRoot).catch(() => undefined),
   ]);
 
   if (freshnessClass === undefined && rawStore === undefined) {
@@ -322,6 +329,7 @@ export async function collectSwarm(opts: CollectSwarmOptions): Promise<SwarmColl
       cap,
       { state: 'absent', observedAt, reason: 'store.json missing' },
       advocateState,
+      activeHives,
     );
   }
 
@@ -338,6 +346,7 @@ export async function collectSwarm(opts: CollectSwarmOptions): Promise<SwarmColl
         reason: 'store.json unreadable or corrupt',
       },
       advocateState,
+      activeHives,
     );
   }
 
@@ -374,6 +383,7 @@ export async function collectSwarm(opts: CollectSwarmOptions): Promise<SwarmColl
     cap,
     advocateState,
     agents,
+    ...(activeHives !== undefined ? { activeHives } : {}),
     freshness,
   };
 }
