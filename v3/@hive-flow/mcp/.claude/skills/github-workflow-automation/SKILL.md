@@ -36,7 +36,7 @@ This skill provides comprehensive GitHub Actions automation with AI swarm coordi
 ### Initialize GitHub Workflow Automation
 ```bash
 # Start with a simple workflow
-npx ruv-swarm actions generate-workflow \
+npx hive-flow actions generate-workflow \
   --analyze-codebase \
   --detect-languages \
   --create-optimal-pipeline
@@ -45,13 +45,13 @@ npx ruv-swarm actions generate-workflow \
 ### Common Commands
 ```bash
 # Optimize existing workflow
-npx ruv-swarm actions optimize \
+npx hive-flow actions optimize \
   --workflow ".github/workflows/ci.yml" \
   --suggest-parallelization
 
 # Analyze failed runs
 gh run view <run-id> --json jobs,conclusion | \
-  npx ruv-swarm actions analyze-failure \
+  npx hive-flow actions analyze-failure \
     --suggest-fixes
 ```
 
@@ -87,7 +87,7 @@ npx hive-flow@alpha github gh-coordinator \
 # Create PR with automated review
 gh pr create --title "Feature: New capability" \
   --body "Automated PR with swarm review" | \
-  npx ruv-swarm actions pr-validate \
+  npx hive-flow actions pr-validate \
     --spawn-agents "linter,tester,security,docs"
 ```
 
@@ -136,7 +136,7 @@ npx hive-flow@alpha github repo-architect \
 ```bash
 # Automated code review
 gh pr view 123 --json files | \
-  npx ruv-swarm actions pr-validate \
+  npx hive-flow actions pr-validate \
     --deep-review \
     --security-scan
 ```
@@ -161,7 +161,7 @@ npx hive-flow@alpha github ci-orchestrator \
 
 ```bash
 # Security audit
-npx ruv-swarm actions security \
+npx hive-flow actions security \
   --deep-scan \
   --compliance-check \
   --create-issues
@@ -194,7 +194,7 @@ jobs:
 
       - name: Analyze Changes
         run: |
-          npx ruv-swarm actions analyze \
+          npx hive-flow actions analyze \
             --commit ${{ github.sha }} \
             --suggest-tests \
             --optimize-pipeline
@@ -215,12 +215,12 @@ jobs:
       - name: Detect Languages
         id: detect
         run: |
-          npx ruv-swarm actions detect-stack \
+          npx hive-flow actions detect-stack \
             --output json > stack.json
 
       - name: Dynamic Build Matrix
         run: |
-          npx ruv-swarm actions create-matrix \
+          npx hive-flow actions create-matrix \
             --from stack.json \
             --parallel-builds
 ```
@@ -240,7 +240,7 @@ jobs:
     steps:
       - name: Security Analysis Swarm
         run: |
-          SECURITY_ISSUES=$(npx ruv-swarm actions security \
+          SECURITY_ISSUES=$(npx hive-flow actions security \
             --deep-scan \
             --format json)
 
@@ -268,7 +268,7 @@ jobs:
     steps:
       - name: Diagnose and Fix
         run: |
-          npx ruv-swarm actions self-heal \
+          npx hive-flow actions self-heal \
             --run-id ${{ github.event.workflow_run.id }} \
             --auto-fix-common \
             --create-pr-complex
@@ -289,13 +289,13 @@ jobs:
       - name: Analyze Risk
         id: risk
         run: |
-          npx ruv-swarm actions deploy-risk \
+          npx hive-flow actions deploy-risk \
             --changes ${{ github.sha }} \
             --history 30d
 
       - name: Choose Strategy
         run: |
-          npx ruv-swarm actions deploy-strategy \
+          npx hive-flow actions deploy-strategy \
             --risk ${{ steps.risk.outputs.level }} \
             --auto-execute
 ```
@@ -312,7 +312,7 @@ jobs:
     steps:
       - name: Performance Analysis
         run: |
-          npx ruv-swarm actions perf-test \
+          npx hive-flow actions perf-test \
             --baseline main \
             --threshold 10% \
             --auto-profile-regression
@@ -332,7 +332,7 @@ jobs:
         run: |
           PR_DATA=$(gh pr view ${{ github.event.pull_request.number }} --json files,labels)
 
-          RESULTS=$(npx ruv-swarm actions pr-validate \
+          RESULTS=$(npx hive-flow actions pr-validate \
             --spawn-agents "linter,tester,security,docs" \
             --parallel \
             --pr-data "$PR_DATA")
@@ -355,7 +355,7 @@ jobs:
     steps:
       - name: Release Swarm
         run: |
-          npx ruv-swarm actions release \
+          npx hive-flow actions release \
             --analyze-changes \
             --generate-notes \
             --create-artifacts \
@@ -372,7 +372,7 @@ jobs:
 #### Workflow Analytics
 ```bash
 # Analyze workflow performance
-npx ruv-swarm actions analytics \
+npx hive-flow actions analytics \
   --workflow "ci.yml" \
   --period 30d \
   --identify-bottlenecks \
@@ -382,7 +382,7 @@ npx ruv-swarm actions analytics \
 #### Cost Optimization
 ```bash
 # Optimize GitHub Actions costs
-npx ruv-swarm actions cost-optimize \
+npx hive-flow actions cost-optimize \
   --analyze-usage \
   --suggest-caching \
   --recommend-self-hosted
@@ -391,7 +391,7 @@ npx ruv-swarm actions cost-optimize \
 #### Failure Pattern Analysis
 ```bash
 # Identify failure patterns
-npx ruv-swarm actions failure-patterns \
+npx hive-flow actions failure-patterns \
   --period 90d \
   --classify-failures \
   --suggest-preventions
@@ -400,7 +400,7 @@ npx ruv-swarm actions failure-patterns \
 #### Resource Management
 ```bash
 # Optimize resource usage
-npx ruv-swarm actions resources \
+npx hive-flow actions resources \
   --analyze-usage \
   --suggest-runners \
   --cost-optimize
@@ -420,7 +420,7 @@ npx ruv-swarm actions resources \
 # Automatically select relevant tests
 - name: Swarm Test Selection
   run: |
-    npx ruv-swarm actions smart-test \
+    npx hive-flow actions smart-test \
       --changed-files ${{ steps.files.outputs.all }} \
       --impact-analysis \
       --parallel-safe
@@ -436,7 +436,7 @@ jobs:
     steps:
       - id: set-matrix
         run: |
-          MATRIX=$(npx ruv-swarm actions test-matrix \
+          MATRIX=$(npx hive-flow actions test-matrix \
             --detect-frameworks \
             --optimize-coverage)
           echo "matrix=${MATRIX}" >> $GITHUB_OUTPUT
@@ -450,7 +450,7 @@ jobs:
 #### Intelligent Parallelization
 ```bash
 # Determine optimal parallelization
-npx ruv-swarm actions parallel-strategy \
+npx hive-flow actions parallel-strategy \
   --analyze-dependencies \
   --time-estimates \
   --cost-aware
@@ -466,7 +466,7 @@ npx ruv-swarm actions parallel-strategy \
 #### Predictive Failures
 ```bash
 # Predict potential failures
-npx ruv-swarm actions predict \
+npx hive-flow actions predict \
   --analyze-history \
   --identify-risks \
   --suggest-preventive
@@ -475,7 +475,7 @@ npx ruv-swarm actions predict \
 #### Workflow Recommendations
 ```bash
 # Get workflow recommendations
-npx ruv-swarm actions recommend \
+npx hive-flow actions recommend \
   --analyze-repo \
   --suggest-workflows \
   --industry-best-practices
@@ -484,7 +484,7 @@ npx ruv-swarm actions recommend \
 #### Automated Optimization
 ```bash
 # Continuously optimize workflows
-npx ruv-swarm actions auto-optimize \
+npx hive-flow actions auto-optimize \
   --monitor-performance \
   --apply-improvements \
   --track-savings
@@ -511,7 +511,7 @@ runs:
   main: 'dist/index.js'
 
 // index.js
-const { SwarmAction } = require('ruv-swarm');
+const { SwarmAction } = require('hive-flow');
 
 async function run() {
   const swarm = new SwarmAction({
@@ -623,7 +623,7 @@ jobs:
     steps:
       - name: Initialize Swarm
         run: |
-          npx ruv-swarm init --topology ${{ inputs.topology }}
+          npx hive-flow init --topology ${{ inputs.topology }}
 ```
 
 #### 2. Implement Proper Caching
@@ -674,7 +674,7 @@ jobs:
     SWARM_CONFIG: ${{ secrets.SWARM_CONFIG }}
     API_KEY: ${{ secrets.API_KEY }}
   run: |
-    npx ruv-swarm init --config "$SWARM_CONFIG"
+    npx hive-flow init --config "$SWARM_CONFIG"
 ```
 
 #### 2. Use OIDC Authentication
@@ -702,7 +702,7 @@ permissions:
 ```yaml
 - name: Audit Swarm Actions
   run: |
-    npx ruv-swarm actions audit \
+    npx hive-flow actions audit \
       --export-logs \
       --compliance-report
 ```
@@ -737,7 +737,7 @@ jobs:
 ```yaml
 - name: Quick Fail Check
   run: |
-    if ! npx ruv-swarm actions pre-check; then
+    if ! npx hive-flow actions pre-check; then
       echo "Pre-check failed, terminating early"
       exit 1
     fi
@@ -770,7 +770,7 @@ strategy:
 ```yaml
 - name: Debug Swarm
   run: |
-    npx ruv-swarm actions debug \
+    npx hive-flow actions debug \
       --verbose \
       --trace-agents \
       --export-logs
@@ -781,7 +781,7 @@ strategy:
 #### Performance Profiling
 ```bash
 # Profile workflow performance
-npx ruv-swarm actions profile \
+npx hive-flow actions profile \
   --workflow "ci.yml" \
   --identify-slow-steps \
   --suggest-optimizations
@@ -791,7 +791,7 @@ npx ruv-swarm actions profile \
 ```bash
 # Analyze failed runs
 gh run view <run-id> --json jobs,conclusion | \
-  npx ruv-swarm actions analyze-failure \
+  npx hive-flow actions analyze-failure \
     --suggest-fixes \
     --auto-retry-flaky
 ```
@@ -800,7 +800,7 @@ gh run view <run-id> --json jobs,conclusion | \
 ```bash
 # Download and analyze logs
 gh run download <run-id>
-npx ruv-swarm actions analyze-logs \
+npx hive-flow actions analyze-logs \
   --directory ./logs \
   --identify-errors
 ```
@@ -830,7 +830,7 @@ jobs:
     steps:
       - id: init
         run: |
-          SWARM_ID=$(npx ruv-swarm init --topology mesh --output json | jq -r '.id')
+          SWARM_ID=$(npx hive-flow init --topology mesh --output json | jq -r '.id')
           echo "swarm-id=${SWARM_ID}" >> $GITHUB_OUTPUT
 
   backend:
@@ -840,7 +840,7 @@ jobs:
       - uses: actions/checkout@v3
       - name: Backend Tests
         run: |
-          npx ruv-swarm agents spawn --type tester \
+          npx hive-flow agents spawn --type tester \
             --task "Run backend test suite" \
             --swarm-id ${{ needs.initialize.outputs.swarm-id }}
 
@@ -851,7 +851,7 @@ jobs:
       - uses: actions/checkout@v3
       - name: Frontend Tests
         run: |
-          npx ruv-swarm agents spawn --type tester \
+          npx hive-flow agents spawn --type tester \
             --task "Run frontend test suite" \
             --swarm-id ${{ needs.initialize.outputs.swarm-id }}
 
@@ -862,7 +862,7 @@ jobs:
       - uses: actions/checkout@v3
       - name: Security Scan
         run: |
-          npx ruv-swarm agents spawn --type security \
+          npx hive-flow agents spawn --type security \
             --task "Security audit" \
             --swarm-id ${{ needs.initialize.outputs.swarm-id }}
 
@@ -873,7 +873,7 @@ jobs:
     steps:
       - name: Deploy
         run: |
-          npx ruv-swarm actions deploy \
+          npx hive-flow actions deploy \
             --strategy progressive \
             --swarm-id ${{ needs.initialize.outputs.swarm-id }}
 ```
@@ -895,7 +895,7 @@ jobs:
 
       - id: detect
         run: |
-          PACKAGES=$(npx ruv-swarm actions detect-changes \
+          PACKAGES=$(npx hive-flow actions detect-changes \
             --monorepo \
             --output json)
           echo "packages=${PACKAGES}" >> $GITHUB_OUTPUT
@@ -909,7 +909,7 @@ jobs:
     steps:
       - name: Build Package
         run: |
-          npx ruv-swarm actions build \
+          npx hive-flow actions build \
             --package ${{ matrix.package }} \
             --parallel-deps
 ```
@@ -937,7 +937,7 @@ npx hive-flow@alpha github sync-coordinator \
 
 #### Workflow Generation
 ```bash
-npx ruv-swarm actions generate-workflow [options]
+npx hive-flow actions generate-workflow [options]
   --analyze-codebase       Analyze repository structure
   --detect-languages       Detect programming languages
   --create-optimal-pipeline Generate optimized workflow
@@ -945,7 +945,7 @@ npx ruv-swarm actions generate-workflow [options]
 
 #### Optimization
 ```bash
-npx ruv-swarm actions optimize [options]
+npx hive-flow actions optimize [options]
   --workflow <path>        Path to workflow file
   --suggest-parallelization Suggest parallel execution
   --reduce-redundancy      Remove redundant steps
@@ -954,7 +954,7 @@ npx ruv-swarm actions optimize [options]
 
 #### Analysis
 ```bash
-npx ruv-swarm actions analyze [options]
+npx hive-flow actions analyze [options]
   --commit <sha>           Analyze specific commit
   --suggest-tests          Suggest test improvements
   --optimize-pipeline      Optimize pipeline structure
@@ -962,7 +962,7 @@ npx ruv-swarm actions analyze [options]
 
 #### Testing
 ```bash
-npx ruv-swarm actions smart-test [options]
+npx hive-flow actions smart-test [options]
   --changed-files <files>  Files that changed
   --impact-analysis        Analyze test impact
   --parallel-safe          Only parallel-safe tests
@@ -970,7 +970,7 @@ npx ruv-swarm actions smart-test [options]
 
 #### Security
 ```bash
-npx ruv-swarm actions security [options]
+npx hive-flow actions security [options]
   --deep-scan             Deep security analysis
   --format <format>       Output format (json/text)
   --create-issues         Auto-create GitHub issues
@@ -978,7 +978,7 @@ npx ruv-swarm actions security [options]
 
 #### Deployment
 ```bash
-npx ruv-swarm actions deploy [options]
+npx hive-flow actions deploy [options]
   --strategy <type>       Deployment strategy
   --risk <level>          Risk assessment level
   --auto-execute          Execute automatically
@@ -986,7 +986,7 @@ npx ruv-swarm actions deploy [options]
 
 #### Monitoring
 ```bash
-npx ruv-swarm actions analytics [options]
+npx hive-flow actions analytics [options]
   --workflow <name>       Workflow to analyze
   --period <duration>     Analysis period
   --identify-bottlenecks  Find bottlenecks
@@ -1026,7 +1026,7 @@ gh auth status || gh auth login
 mkdir -p .github/workflows
 
 # Generate initial workflow
-npx ruv-swarm actions generate-workflow \
+npx hive-flow actions generate-workflow \
   --analyze-codebase \
   --create-optimal-pipeline > .github/workflows/ci.yml
 
@@ -1047,7 +1047,7 @@ echo "✅ GitHub workflow automation setup complete"
 - **GitHub CLI Docs**: https://cli.github.com/manual/
 - **GitHub Actions**: https://docs.github.com/en/actions
 - **Hive-Flow**: https://github.com/hypnwtykvmpr/hive-flow
-- **Ruv-Swarm**: https://github.com/ruvnet/ruv-swarm
+- **Hive Flow**: https://github.com/hypnwtykvmpr/hive-flow
 
 ## Version History
 

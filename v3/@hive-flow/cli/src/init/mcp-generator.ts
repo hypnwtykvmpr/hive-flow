@@ -85,15 +85,6 @@ export function generateMCPConfig(options: InitOptions): object {
     );
   }
 
-  // Ruv-Swarm MCP server (enhanced coordination)
-  if (config.ruvSwarm) {
-    mcpServers['ruv-swarm'] = createMCPServerEntry(
-      ['ruv-swarm', 'mcp', 'start'],
-      { ...npmCacheEnv },
-      { optional: true }
-    );
-  }
-
   // Flow Nexus MCP server (cloud features)
   if (config.flowNexus) {
     mcpServers['flow-nexus'] = createMCPServerEntry(
@@ -127,9 +118,6 @@ export function generateMCPCommands(options: InitOptions): string[] {
     if (config.hiveFlow) {
       commands.push('claude mcp add hive-flow -- cmd /c npx -y @hive-flow/cli@latest mcp start');
     }
-    if (config.ruvSwarm) {
-      commands.push('claude mcp add ruv-swarm -- cmd /c npx -y ruv-swarm mcp start');
-    }
     if (config.flowNexus) {
       commands.push('claude mcp add flow-nexus -- cmd /c npx -y flow-nexus@latest mcp start');
     }
@@ -137,9 +125,6 @@ export function generateMCPCommands(options: InitOptions): string[] {
     // Unix: wrap with retry-on-failure for cache corruption resilience
     if (config.hiveFlow) {
       commands.push("claude mcp add hive-flow -- npx -y @hive-flow/cli@latest mcp start");
-    }
-    if (config.ruvSwarm) {
-      commands.push("claude mcp add ruv-swarm -- npx -y ruv-swarm mcp start");
     }
     if (config.flowNexus) {
       commands.push("claude mcp add flow-nexus -- npx -y flow-nexus@latest mcp start");

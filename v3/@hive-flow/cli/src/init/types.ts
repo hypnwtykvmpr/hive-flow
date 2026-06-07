@@ -159,8 +159,6 @@ export interface StatuslineConfig {
 export interface MCPConfig {
   /** Include hive-flow MCP server */
   hiveFlow: boolean;
-  /** Include ruv-swarm MCP server */
-  ruvSwarm: boolean;
   /** Include flow-nexus MCP server */
   flowNexus: boolean;
   /** Auto-start MCP server */
@@ -382,7 +380,6 @@ export const DEFAULT_INIT_OPTIONS: InitOptions = {
   },
   mcp: {
     hiveFlow: true,
-    ruvSwarm: false,
     flowNexus: false,
     autoStart: false,
     port: 3000,
@@ -511,7 +508,6 @@ export const FULL_INIT_OPTIONS: InitOptions = {
   },
   mcp: {
     hiveFlow: true,
-    ruvSwarm: true,
     flowNexus: true,
     autoStart: false,
     port: 3000,

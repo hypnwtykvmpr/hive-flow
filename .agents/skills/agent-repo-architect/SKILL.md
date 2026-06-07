@@ -5,7 +5,7 @@ description: Agent skill for repo-architect - invoke with $agent-repo-architect
 
 ---
 name: repo-architect
-description: Repository structure optimization and multi-repo management with ruv-swarm coordination for scalable project architecture and development workflows
+description: Repository structure optimization and multi-repo management with hive-flow coordination for scalable project architecture and development workflows
 type: architecture
 color: "#9B59B6"
 tools:
@@ -31,22 +31,22 @@ tools:
 hooks:
   pre_task: |
     echo "🏗️ Initializing repository architecture analysis..."
-    npx ruv-swarm hook pre-task --mode repo-architect --analyze-structure
+    npx hive-flow hook pre-task --mode repo-architect --analyze-structure
   post_edit: |
     echo "📐 Validating architecture changes and updating structure documentation..."
-    npx ruv-swarm hook post-edit --mode repo-architect --validate-structure
+    npx hive-flow hook post-edit --mode repo-architect --validate-structure
   post_task: |
     echo "🏛️ Architecture task completed. Generating structure recommendations..."
-    npx ruv-swarm hook post-task --mode repo-architect --generate-recommendations
+    npx hive-flow hook post-task --mode repo-architect --generate-recommendations
   notification: |
     echo "📋 Notifying stakeholders of architecture improvements..."
-    npx ruv-swarm hook notification --mode repo-architect
+    npx hive-flow hook notification --mode repo-architect
 ---
 
 # GitHub Repository Architect
 
 ## Purpose
-Repository structure optimization and multi-repo management with ruv-swarm coordination for scalable project architecture and development workflows.
+Repository structure optimization and multi-repo management with hive-flow coordination for scalable project architecture and development workflows.
 
 ## Capabilities
 - **Repository structure optimization** with best practices
@@ -68,7 +68,7 @@ mcp__hive-flow__agent_spawn { type: "coordinator", name: "Multi-Repo Coordinator
 
 // Analyze current repository structure
 LS("$workspaces$ruv-FANN$claude-code-flow$claude-code-flow")
-LS("$workspaces$ruv-FANN$ruv-swarm$npm")
+LS("$workspaces$ruv-FANN$hive-flow$npm")
 
 // Search for related repositories
 mcp__github__search_repositories {
@@ -90,7 +90,7 @@ mcp__hive-flow__task_orchestrate {
 // Create standardized repository template
 mcp__github__create_repository {
   name: "claude-project-template",
-  description: "Standardized template for Claude Code projects with ruv-swarm integration",
+  description: "Standardized template for Claude Code projects with hive-flow integration",
   private: false,
   autoInit: true
 }
@@ -106,7 +106,7 @@ mcp__github__push_files {
       content: "[GitHub modes template]"
     },
     {
-      path: ".claude$commands$sparc$sparc-modes.md", 
+      path: ".claude$commands$sparc$sparc-modes.md",
       content: "[SPARC modes template]"
     },
     {
@@ -114,16 +114,16 @@ mcp__github__push_files {
       content: JSON.stringify({
         version: "1.0",
         mcp_servers: {
-          "ruv-swarm": {
+          "hive-flow": {
             command: "npx",
-            args: ["ruv-swarm", "mcp", "start"],
+            args: ["hive-flow", "mcp", "start"],
             stdio: true
           }
         },
         hooks: {
-          pre_task: "npx ruv-swarm hook pre-task",
-          post_edit: "npx ruv-swarm hook post-edit", 
-          notification: "npx ruv-swarm hook notification"
+          pre_task: "npx hive-flow hook pre-task",
+          post_edit: "npx hive-flow hook post-edit",
+          notification: "npx hive-flow hook notification"
         }
       }, null, 2)
     },
@@ -136,10 +136,10 @@ mcp__github__push_files {
       content: JSON.stringify({
         name: "claude-project-template",
         version: "1.0.0",
-        description: "Claude Code project with ruv-swarm integration",
+        description: "Claude Code project with hive-flow integration",
         engines: { node: ">=20.0.0" },
         dependencies: {
-          "ruv-swarm": "^1.0.11"
+          "hive-flow": "^1.0.11"
         }
       }, null, 2)
     },
@@ -155,8 +155,8 @@ npx hive-flow start --ui
 \`\`\`
 
 ## Features
-- 🧠 ruv-swarm integration
-- 🎯 SPARC development modes  
+- 🧠 hive-flow integration
+- 🎯 SPARC development modes
 - 🔧 GitHub workflow automation
 - 📊 Advanced coordination capabilities
 
@@ -164,7 +164,7 @@ npx hive-flow start --ui
 See CLAUDE.md for complete integration instructions.`
     }
   ],
-  message: "feat: Create standardized Claude project template with ruv-swarm integration"
+  message: "feat: Create standardized Claude project template with hive-flow integration"
 }
 ```
 
@@ -172,8 +172,8 @@ See CLAUDE.md for complete integration instructions.`
 ```javascript
 // Synchronize structure across related repositories
 const repositories = [
-  "claude-code-flow", 
-  "ruv-swarm",
+  "claude-code-flow",
+  "hive-flow",
   "claude-extensions"
 ]
 
@@ -211,20 +211,20 @@ jobs:
   mcp__hive-flow__agent_spawn { type: "optimizer", name: "Performance Optimizer" }
   mcp__hive-flow__agent_spawn { type: "researcher", name: "Best Practices Researcher" }
   mcp__hive-flow__agent_spawn { type: "coordinator", name: "Multi-Repo Coordinator" }
-  
+
   // Analyze current repository structures
   LS("$workspaces$ruv-FANN$claude-code-flow$claude-code-flow")
-  LS("$workspaces$ruv-FANN$ruv-swarm$npm") 
+  LS("$workspaces$ruv-FANN$hive-flow$npm")
   Read("$workspaces$ruv-FANN$claude-code-flow$claude-code-flow$package.json")
-  Read("$workspaces$ruv-FANN$ruv-swarm$npm$package.json")
-  
+  Read("$workspaces$ruv-FANN$hive-flow$npm$package.json")
+
   // Search for architectural patterns using gh CLI
   ARCH_PATTERNS=$(Bash(`gh search repos "language:javascript template architecture" \
     --limit 10 \
     --json fullName,description,stargazersCount \
     --sort stars \
     --order desc`))
-  
+
   // Create optimized structure files
   mcp__github__push_files {
     branch: "architecture$optimization",
@@ -242,13 +242,13 @@ jobs:
         content: "[Architecture documentation]"
       },
       {
-        path: "ruv-swarm$npm/.github$workflows$cross-package-test.yml",
+        path: "hive-flow$npm/.github$workflows$cross-package-test.yml",
         content: "[Cross-package testing workflow]"
       }
     ],
     message: "feat: Optimize repository architecture for scalability and maintainability"
   }
-  
+
   // Track architecture improvements
   TodoWrite { todos: [
     { id: "arch-analysis", content: "Analyze current repository structure", status: "completed", priority: "high" },
@@ -257,14 +257,14 @@ jobs:
     { id: "arch-workflows", content: "Implement improved workflows", status: "completed", priority: "medium" },
     { id: "arch-docs", content: "Document architecture decisions", status: "pending", priority: "medium" }
   ]}
-  
+
   // Store architecture analysis
   mcp__hive-flow__memory_usage {
     action: "store",
     key: "architecture$analysis$results",
     value: {
       timestamp: Date.now(),
-      repositories_analyzed: ["claude-code-flow", "ruv-swarm"],
+      repositories_analyzed: ["claude-code-flow", "hive-flow"],
       optimization_areas: ["structure", "workflows", "templates", "documentation"],
       recommendations: ["standardize_structure", "improve_workflows", "enhance_templates"],
       implementation_status: "in_progress"
@@ -282,7 +282,7 @@ ruv-FANN/
 │   │   ├── src/
 │   │   ├── .claude/
 │   │   └── package.json
-│   ├── ruv-swarm/
+│   ├── hive-flow/
 │   │   ├── src/
 │   │   ├── wasm/
 │   │   └── package.json
@@ -333,11 +333,11 @@ const integrationPattern = {
   packages: {
     "claude-code-flow": {
       role: "orchestration_layer",
-      dependencies: ["ruv-swarm"],
+      dependencies: ["hive-flow"],
       provides: ["CLI", "workflows", "commands"]
     },
-    "ruv-swarm": {
-      role: "coordination_engine", 
+    "hive-flow": {
+      role: "coordination_engine",
       dependencies: [],
       provides: ["MCP_tools", "neural_networks", "memory"]
     }

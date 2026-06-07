@@ -64,8 +64,8 @@ mcp__hive-flow__agent_spawn { type: "coordinator", name: "PR Coordinator" }
 mcp__github__create_pull_request {
   owner: "ruvnet",
   repo: "ruv-FANN",
-  title: "Integration: claude-code-flow and ruv-swarm",
-  head: "integration$claude-code-flow-ruv-swarm",
+  title: "Integration: claude-code-flow and hive-flow",
+  head: "integration$claude-code-flow-hive-flow",
   base: "main",
   body: "Comprehensive integration between packages..."
 }
@@ -86,7 +86,7 @@ mcp__github__get_pull_request_files { owner: "ruvnet", repo: "ruv-FANN", pull_nu
 // Create coordinated reviews
 mcp__github__create_pull_request_review {
   owner: "ruvnet",
-  repo: "ruv-FANN", 
+  repo: "ruv-FANN",
   pull_number: 54,
   body: "Automated swarm review with comprehensive analysis",
   event: "APPROVE",
@@ -108,7 +108,7 @@ mcp__github__merge_pull_request {
   repo: "ruv-FANN",
   pull_number: 54,
   merge_method: "squash",
-  commit_title: "feat: Complete claude-code-flow and ruv-swarm integration",
+  commit_title: "feat: Complete claude-code-flow and hive-flow integration",
   commit_message: "Comprehensive integration with swarm coordination"
 }
 
@@ -130,18 +130,18 @@ mcp__hive-flow__memory_usage {
   mcp__hive-flow__agent_spawn { type: "reviewer", name: "Senior Reviewer" }
   mcp__hive-flow__agent_spawn { type: "tester", name: "QA Engineer" }
   mcp__hive-flow__agent_spawn { type: "coordinator", name: "Merge Coordinator" }
-  
+
   // Create and manage PR using gh CLI
   Bash("gh pr create --repo :owner/:repo --title '...' --head '...' --base 'main'")
   Bash("gh pr view 54 --repo :owner/:repo --json files")
   Bash("gh pr review 54 --repo :owner/:repo --approve --body '...'")
-  
-  
+
+
   // Execute tests and validation
   Bash("npm test")
   Bash("npm run lint")
   Bash("npm run build")
-  
+
   // Track progress
   TodoWrite { todos: [
     { id: "review", content: "Complete code review", status: "completed" },

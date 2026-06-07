@@ -18,7 +18,14 @@ export const PERF_CLAIM_PROHIBITED: readonly ProhibitedPattern[] = [
   { label: 'old RuVector intelligence label', pattern: /RuVector Intelligence System/ },
 ];
 
+const droppedIntegrationPattern = new RegExp(`ruv[-_]swarm|ruv${'Swarm'}`, 'i');
+
+export const DROPPED_INTEGRATION_PROHIBITED: readonly ProhibitedPattern[] = [
+  { label: 'dropped legacy swarm integration', pattern: droppedIntegrationPattern },
+];
+
 export const DEBRAND_ASSERT_ZERO_PROHIBITED: readonly ProhibitedPattern[] = [
   ...CORE_PROHIBITED,
   ...PERF_CLAIM_PROHIBITED,
+  ...DROPPED_INTEGRATION_PROHIBITED,
 ];

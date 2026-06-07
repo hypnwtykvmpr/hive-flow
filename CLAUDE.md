@@ -268,7 +268,7 @@ mcp__hive-flow__agent_task({ agentId: "agent-id", task: "Review the error handli
 - Keep task cycles short with verification gates
 
 ```javascript
-mcp__ruv-swarm__swarm_init({
+mcp__hive-flow__swarm_init({
   topology: "hierarchical",
   maxAgents: 8,
   strategy: "specialized"
@@ -294,7 +294,7 @@ For complex tasks, spawn both Claude and Codex workers in parallel:
 
 ```javascript
 // STEP 1: Initialize dual-mode swarm
-mcp__ruv-swarm__swarm_init({
+mcp__hive-flow__swarm_init({
   topology: "hierarchical",
   maxAgents: 8,
   strategy: "specialized"
@@ -429,7 +429,7 @@ When the user requests a complex task (multi-file changes, feature implementatio
 
 ```javascript
 // STEP 1: Initialize swarm coordination via MCP (in parallel with agent spawning)
-mcp__ruv-swarm__swarm_init({
+mcp__hive-flow__swarm_init({
   topology: "hierarchical",
   maxAgents: 8,
   strategy: "specialized"
@@ -813,7 +813,7 @@ The 4-step intelligence pipeline:
 ```bash
 # Add MCP servers
 claude mcp add hive-flow -- node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/mcp-server.js
-claude mcp add ruv-swarm npx ruv-swarm mcp start  # Optional
+claude mcp add hive-flow npx hive-flow mcp start  # Optional
 claude mcp add flow-nexus npx flow-nexus@latest mcp start  # Optional
 
 # Start daemon

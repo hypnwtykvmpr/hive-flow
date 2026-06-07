@@ -1826,7 +1826,6 @@ npx @hive-flow/cli@latest hive-mind consensus --propose "task"
 ### Optional Integrations
 | Package | Command |
 |---------|---------|
-| ruv-swarm | \`npx ruv-swarm mcp start\` |
 | flow-nexus | \`npx flow-nexus@latest mcp start\` |
 | agentic-jujutsu | \`npx agentic-jujutsu@latest\` |
 
@@ -1836,7 +1835,6 @@ npx @hive-flow/cli@latest hive-mind consensus --propose "task"
 claude mcp add hive-flow -- npx -y @hive-flow/cli@latest
 
 # Optional servers
-claude mcp add ruv-swarm -- npx -y ruv-swarm mcp start
 claude mcp add flow-nexus -- npx -y flow-nexus@latest mcp start
 \`\`\`
 

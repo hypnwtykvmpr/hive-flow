@@ -6,7 +6,7 @@ category: github-integration
 tags: [multi-repo, synchronization, architecture, coordination, github]
 author: Hive Flow Team
 requires:
-  - ruv-swarm@^1.0.11
+  - hive-flow@^1.0.11
   - gh-cli@^2.0.0
 capabilities:
   - cross-repository coordination
@@ -57,7 +57,7 @@ npx hive-flow skill run github-multi-repo init \
 ```bash
 # Synchronize package versions and dependencies
 npx hive-flow skill run github-multi-repo sync \
-  --packages "claude-code-flow,ruv-swarm" \
+  --packages "claude-code-flow,hive-flow" \
   --align-versions \
   --update-docs
 ```
@@ -154,7 +154,7 @@ mcp__hive-flow__swarm_init({
 
   // Read package states
   Read("/workspaces/ruv-FANN/claude-code-flow/claude-code-flow/package.json")
-  Read("/workspaces/ruv-FANN/ruv-swarm/npm/package.json")
+  Read("/workspaces/ruv-FANN/hive-flow/npm/package.json")
 
   // Align versions using gh CLI
   Bash(`gh api repos/:owner/:repo/git/refs \
@@ -174,7 +174,7 @@ mcp__hive-flow__swarm_init({
     key: "sync/packages/status",
     value: {
       timestamp: Date.now(),
-      packages_synced: ["claude-code-flow", "ruv-swarm"],
+      packages_synced: ["claude-code-flow", "hive-flow"],
       status: "synchronized"
     }
   })
@@ -185,7 +185,7 @@ mcp__hive-flow__swarm_init({
 // Synchronize CLAUDE.md files across packages
 [Documentation Sync]:
   // Get source documentation
-  Bash(`gh api repos/:owner/:repo/contents/ruv-swarm/docs/CLAUDE.md \
+  Bash(`gh api repos/:owner/:repo/contents/hive-flow/docs/CLAUDE.md \
     --jq '.content' | base64 -d > /tmp/claude-source.md`)
 
   // Update target documentation
@@ -216,7 +216,7 @@ mcp__hive-flow__swarm_init({
         content: "[GitHub modes documentation]"
       },
       {
-        path: "ruv-swarm/src/github-coordinator/hooks.js",
+        path: "hive-flow/src/github-coordinator/hooks.js",
         content: "[GitHub coordination hooks]"
       }
     ],
@@ -256,7 +256,7 @@ mcp__hive-flow__swarm_init({
 
   // Analyze current structures
   LS("/workspaces/ruv-FANN/claude-code-flow/claude-code-flow")
-  LS("/workspaces/ruv-FANN/ruv-swarm/npm")
+  LS("/workspaces/ruv-FANN/hive-flow/npm")
 
   // Search for best practices
   Bash(`gh search repos "language:javascript template architecture" \
@@ -270,7 +270,7 @@ mcp__hive-flow__swarm_init({
     action: "store",
     key: "architecture/analysis/results",
     value: {
-      repositories_analyzed: ["claude-code-flow", "ruv-swarm"],
+      repositories_analyzed: ["claude-code-flow", "hive-flow"],
       optimization_areas: ["structure", "workflows", "templates"],
       recommendations: ["standardize_structure", "improve_workflows"]
     }
@@ -302,9 +302,9 @@ mcp__hive-flow__swarm_init({
         content: JSON.stringify({
           version: "1.0",
           mcp_servers: {
-            "ruv-swarm": {
+            "hive-flow": {
               command: "npx",
-              args: ["ruv-swarm", "mcp", "start"]
+              args: ["hive-flow", "mcp", "start"]
             }
           }
         })
@@ -318,7 +318,7 @@ mcp__hive-flow__swarm_init({
         content: JSON.stringify({
           name: "claude-project-template",
           engines: { node: ">=20.0.0" },
-          dependencies: { "ruv-swarm": "^1.0.11" }
+          dependencies: { "hive-flow": "^1.0.11" }
         })
       }
     ],
@@ -330,7 +330,7 @@ mcp__hive-flow__swarm_init({
 ```javascript
 // Synchronize structure across repositories
 [Structure Standardization]:
-  const repositories = ["claude-code-flow", "ruv-swarm", "claude-extensions"]
+  const repositories = ["claude-code-flow", "hive-flow", "claude-extensions"]
 
   // Update common files across all repositories
   repositories.forEach(repo => {
@@ -512,7 +512,7 @@ dependencies:
 
 ### 1. Webhook-Based Coordination
 ```javascript
-const { MultiRepoSwarm } = require('ruv-swarm');
+const { MultiRepoSwarm } = require('hive-flow');
 
 const swarm = new MultiRepoSwarm({
   webhook: {
@@ -625,7 +625,7 @@ ruv-FANN/
 │   │   ├── src/
 │   │   ├── .claude/
 │   │   └── package.json
-│   ├── ruv-swarm/
+│   ├── hive-flow/
 │   │   ├── src/
 │   │   ├── wasm/
 │   │   └── package.json

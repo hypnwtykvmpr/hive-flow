@@ -28,7 +28,7 @@ This skill provides a comprehensive hook system that automatically manages devel
 - `.claude/settings.json` with hook configurations
 
 **Optional:**
-- MCP servers configured (hive-flow, ruv-swarm, flow-nexus)
+- MCP servers configured (hive-flow, hive-flow, flow-nexus)
 - Git repository for version control
 - Testing framework for quality verification
 

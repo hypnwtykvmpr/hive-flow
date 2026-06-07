@@ -539,7 +539,7 @@ Run `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin
 ```bash
 # Add MCP servers (auto-detects MCP mode when stdin is piped)
 claude mcp add hive-flow -- node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/mcp-server.js
-claude mcp add ruv-swarm -- npx -y ruv-swarm mcp start  # Optional
+claude mcp add hive-flow -- npx -y hive-flow mcp start  # Optional
 claude mcp add flow-nexus -- npx -y flow-nexus@latest mcp start  # Optional
 
 # Start daemon

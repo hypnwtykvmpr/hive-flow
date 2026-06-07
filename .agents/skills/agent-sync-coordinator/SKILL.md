@@ -42,7 +42,7 @@ hooks:
 # GitHub Sync Coordinator
 
 ## Purpose
-Multi-package synchronization and version alignment with ruv-swarm coordination for seamless integration between claude-code-flow and ruv-swarm packages through intelligent multi-agent orchestration.
+Multi-package synchronization and version alignment with hive-flow coordination for seamless integration between claude-code-flow and hive-flow packages through intelligent multi-agent orchestration.
 
 ## Capabilities
 - **Package synchronization** with intelligent dependency resolution
@@ -73,7 +73,7 @@ mcp__hive-flow__agent_spawn { type: "tester", name: "Validation Engineer" }
 
 // Analyze current package states
 Read("$workspaces$ruv-FANN$claude-code-flow$claude-code-flow$package.json")
-Read("$workspaces$ruv-FANN$ruv-swarm$npm$package.json")
+Read("$workspaces$ruv-FANN$hive-flow$npm$package.json")
 
 // Synchronize versions and dependencies using gh CLI
 // First create branch
@@ -99,7 +99,7 @@ mcp__hive-flow__task_orchestrate {
 ```javascript
 // Synchronize CLAUDE.md files across packages using gh CLI
 // Get file contents
-CLAUDE_CONTENT=$(Bash("gh api repos/:owner/:repo$contents$ruv-swarm$docs/CLAUDE.md --jq '.content' | base64 -d"))
+CLAUDE_CONTENT=$(Bash("gh api repos/:owner/:repo$contents$hive-flow$docs/CLAUDE.md --jq '.content' | base64 -d"))
 
 // Update claude-code-flow CLAUDE.md to match using gh CLI
 // Create or update branch
@@ -108,9 +108,9 @@ Bash("gh api repos/:owner/:repo$git$refs -f ref='refs$heads$sync$documentation' 
 // Update file
 Bash(`gh api repos/:owner/:repo$contents$claude-code-flow$claude-code-flow/CLAUDE.md \
   --method PUT \
-  -f message="docs: Synchronize CLAUDE.md with ruv-swarm integration patterns" \
+  -f message="docs: Synchronize CLAUDE.md with hive-flow integration patterns" \
   -f branch="sync$documentation" \
-  -f content="$(echo '# Claude Code Configuration for ruv-swarm\n\n[synchronized content]' | base64)" \
+  -f content="$(echo '# Claude Code Configuration for hive-flow\n\n[synchronized content]' | base64)" \
   -f sha="$(gh api repos/:owner/:repo$contents$claude-code-flow$claude-code-flow/CLAUDE.md?ref=sync$documentation --jq '.sha' 2>$dev$null || echo '')")`)
 
 // Store sync state in memory
@@ -134,11 +134,11 @@ mcp__github__push_files {
       content: "[GitHub modes documentation]"
     },
     {
-      path: "claude-code-flow$claude-code-flow/.claude$commands$github$pr-manager.md", 
+      path: "claude-code-flow$claude-code-flow/.claude$commands$github$pr-manager.md",
       content: "[PR manager documentation]"
     },
     {
-      path: "ruv-swarm$npm$src$github-coordinator$claude-hooks.js",
+      path: "hive-flow$npm$src$github-coordinator$claude-hooks.js",
       content: "[GitHub coordination hooks]"
     }
   ],
@@ -155,13 +155,13 @@ Bash(`gh pr create \
 
 ### Features Added
 - ✅ Comprehensive GitHub command modes
-- ✅ Swarm-coordinated PR management  
+- ✅ Swarm-coordinated PR management
 - ✅ Automated issue tracking
 - ✅ Cross-package synchronization
 
 ### Integration Points
 - Claude-code-flow: GitHub command modes in .claude$commands$github/
-- ruv-swarm: GitHub coordination hooks and utilities
+- hive-flow: GitHub coordination hooks and utilities
 - Documentation: Synchronized CLAUDE.md instructions
 
 ### Testing
@@ -171,14 +171,14 @@ Bash(`gh pr create \
 - [x] Cross-package compatibility
 
 ### Swarm Coordination
-This integration uses ruv-swarm agents for:
+This integration uses hive-flow agents for:
 - Multi-agent GitHub workflow management
 - Automated testing and validation
 - Progress tracking and coordination
 - Memory-based state management
 
 ---
-🤖 Generated with Claude Code using ruv-swarm coordination`
+🤖 Generated with Claude Code using hive-flow coordination`
 }
 ```
 
@@ -194,13 +194,13 @@ This integration uses ruv-swarm agents for:
   mcp__hive-flow__agent_spawn { type: "coder", name: "Integration Coder" }
   mcp__hive-flow__agent_spawn { type: "tester", name: "Validation Tester" }
   mcp__hive-flow__agent_spawn { type: "reviewer", name: "Quality Reviewer" }
-  
+
   // Read current state of both packages
   Read("$workspaces$ruv-FANN$claude-code-flow$claude-code-flow$package.json")
-  Read("$workspaces$ruv-FANN$ruv-swarm$npm$package.json")
+  Read("$workspaces$ruv-FANN$hive-flow$npm$package.json")
   Read("$workspaces$ruv-FANN$claude-code-flow$claude-code-flow/CLAUDE.md")
-  Read("$workspaces$ruv-FANN$ruv-swarm$docs/CLAUDE.md")
-  
+  Read("$workspaces$ruv-FANN$hive-flow$docs/CLAUDE.md")
+
   // Synchronize multiple files simultaneously
   mcp__github__push_files {
     branch: "sync$complete-integration",
@@ -211,12 +211,12 @@ This integration uses ruv-swarm agents for:
     ],
     message: "feat: Complete package synchronization with GitHub integration"
   }
-  
+
   // Run validation tests
   Bash("cd $workspaces$ruv-FANN$claude-code-flow$claude-code-flow && npm install")
   Bash("cd $workspaces$ruv-FANN$claude-code-flow$claude-code-flow && npm test")
-  Bash("cd $workspaces$ruv-FANN$ruv-swarm$npm && npm test")
-  
+  Bash("cd $workspaces$ruv-FANN$hive-flow$npm && npm test")
+
   // Track synchronization progress
   TodoWrite { todos: [
     { id: "sync-deps", content: "Synchronize package dependencies", status: "completed", priority: "high" },
@@ -225,14 +225,14 @@ This integration uses ruv-swarm agents for:
     { id: "sync-test", content: "Validate synchronization", status: "completed", priority: "medium" },
     { id: "sync-pr", content: "Create integration PR", status: "pending", priority: "high" }
   ]}
-  
+
   // Store comprehensive sync state
   mcp__hive-flow__memory_usage {
     action: "store",
     key: "sync$complete$status",
     value: {
       timestamp: Date.now(),
-      packages_synced: ["claude-code-flow", "ruv-swarm"],
+      packages_synced: ["claude-code-flow", "hive-flow"],
       version_alignment: "completed",
       documentation_sync: "completed",
       github_integration: "completed",
@@ -263,14 +263,14 @@ const syncStrategy = {
 ```javascript
 // Keep documentation consistent across packages
 const docSyncPattern = {
-  sourceOfTruth: "ruv-swarm$docs/CLAUDE.md",
+  sourceOfTruth: "hive-flow$docs/CLAUDE.md",
   targets: [
     "claude-code-flow$claude-code-flow/CLAUDE.md",
     "CLAUDE.md"  // Root level
   ],
   customSections: {
     "claude-code-flow": "GitHub Commands Integration",
-    "ruv-swarm": "MCP Tools Reference"
+    "hive-flow": "MCP Tools Reference"
   }
 }
 ```
@@ -279,10 +279,10 @@ const docSyncPattern = {
 ```javascript
 // Comprehensive testing across synchronized packages
 const testMatrix = {
-  packages: ["claude-code-flow", "ruv-swarm"],
+  packages: ["claude-code-flow", "hive-flow"],
   tests: [
     "unit_tests",
-    "integration_tests", 
+    "integration_tests",
     "cross_package_tests",
     "mcp_integration_tests",
     "github_workflow_tests"
@@ -353,7 +353,7 @@ mcp__hive-flow__load_balance {
   swarmId: "sync-coordination-swarm",
   tasks: [
     "package_json_sync",
-    "documentation_alignment", 
+    "documentation_alignment",
     "version_compatibility_check",
     "integration_test_execution"
   ]
@@ -366,12 +366,12 @@ mcp__hive-flow__load_balance {
 const syncConflictResolver = async (conflicts) => {
   // Initialize conflict resolution swarm
   await mcp__hive_flow__swarm_init({ topology: "mesh", maxAgents: 6 });
-  
+
   // Spawn specialized conflict resolution agents
   await mcp__hive_flow__agent_spawn({ type: "analyst", name: "Conflict Analyzer" });
   await mcp__hive_flow__agent_spawn({ type: "coder", name: "Resolution Developer" });
   await mcp__hive_flow__agent_spawn({ type: "reviewer", name: "Solution Validator" });
-  
+
   // Store conflict context in swarm memory
   await mcp__hive_flow__memory_usage({
     action: "store",
@@ -382,7 +382,7 @@ const syncConflictResolver = async (conflicts) => {
       priority_order: conflicts.sort((a, b) => b.impact - a.impact)
     }
   });
-  
+
   // Coordinate conflict resolution workflow
   return await mcp__hive_flow__task_orchestrate({
     task: "Resolve synchronization conflicts with multi-agent validation",
@@ -399,7 +399,7 @@ mcp__hive-flow__memory_usage {
   action: "store",
   key: "sync$metrics$session",
   value: {
-    packages_synchronized: ["claude-code-flow", "ruv-swarm"],
+    packages_synchronized: ["claude-code-flow", "hive-flow"],
     version_alignment_score: 98.5,
     dependency_conflicts_resolved: 12,
     documentation_sync_percentage: 100,
