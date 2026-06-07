@@ -542,7 +542,7 @@ Skills are invoked using \`$skill-name\` syntax. Each skill has:
 
 - Main instructions: \`AGENTS.md\` (project root)
 - Local overrides: \`.codex/AGENTS.override.md\` (gitignored)
-- Hive Flow: https://github.com/ruvnet/hive-flow
+- Hive Flow: https://github.com/hypnwtykvmpr/hive-flow
 `;
   }
 

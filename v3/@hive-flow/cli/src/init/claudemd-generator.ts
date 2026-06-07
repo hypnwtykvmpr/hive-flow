@@ -376,8 +376,8 @@ npx @hive-flow/cli@latest doctor --fix
 
 ## Support
 
-- Documentation: https://github.com/ruvnet/hive-flow
-- Issues: https://github.com/ruvnet/hive-flow/issues`;
+- Documentation: https://github.com/hypnwtykvmpr/hive-flow
+- Issues: https://github.com/hypnwtykvmpr/hive-flow/issues`;
 }
 
 // --- Template Composers ---

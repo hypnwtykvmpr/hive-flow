@@ -85,7 +85,7 @@ ${testCommand}
 
 ## Links
 
-- Documentation: https://github.com/ruvnet/hive-flow
+- Documentation: https://github.com/hypnwtykvmpr/hive-flow
 `;
 }
 
@@ -252,8 +252,8 @@ npx @hive-flow/cli memory search \\
 
 ## Links
 
-- Documentation: https://github.com/ruvnet/hive-flow
-- Issues: https://github.com/ruvnet/hive-flow/issues
+- Documentation: https://github.com/hypnwtykvmpr/hive-flow
+- Issues: https://github.com/hypnwtykvmpr/hive-flow/issues
 `;
 }
 
@@ -268,7 +268,7 @@ function generateFull(options: AgentsMdOptions): string {
 
 | Metric | Target | Notes |
 |--------|--------|-------|
-| HNSW Search | 150x-12,500x faster | Vector operations |
+| HNSW Search | Fast vector retrieval | Vector operations |
 | Memory Reduction | 50-75% | Int8 quantization |
 | MCP Response | <100ms | API latency |
 | CLI Startup | <500ms | Cold start |
@@ -410,7 +410,7 @@ npx @hive-flow/cli hooks worker status
 
 ## Intelligence System
 
-The RuVector Intelligence System provides neural learning:
+The Hive Flow intelligence system provides neural learning:
 
 ### Components
 - **SONA**: Self-Optimizing Neural Architecture (<0.05ms adaptation)

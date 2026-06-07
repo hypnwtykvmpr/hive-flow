@@ -1483,7 +1483,7 @@ async function writeCapabilitiesDoc(
 
   const capabilities = `# Hive Flow V3 - Complete Capabilities Reference
 > Generated: ${new Date().toISOString()}
-> Full documentation: https://github.com/ruvnet/hive-flow
+> Full documentation: https://github.com/hypnwtykvmpr/hive-flow
 
 ## 📋 Table of Contents
 
@@ -1819,7 +1819,7 @@ npx @hive-flow/cli@latest hive-mind consensus --propose "task"
 | Package | Version | Purpose |
 |---------|---------|---------|
 | agentic-flow | 2.0.1-alpha | Core coordination |
-| agentdb | 2.0.0-alpha.3.4 | Vector database |
+| agentdb | 3.0.0-alpha.9 | Vector database |
 | Local attention kernels | built-in | Flash-compatible attention |
 | Local SONA coordinator | built-in | Neural learning |
 
@@ -1882,8 +1882,8 @@ npx @hive-flow/cli@latest hooks worker dispatch --trigger optimize
 
 ---
 
-**Full Documentation**: https://github.com/ruvnet/hive-flow
-**Issues**: https://github.com/ruvnet/hive-flow/issues
+**Full Documentation**: https://github.com/hypnwtykvmpr/hive-flow
+**Issues**: https://github.com/hypnwtykvmpr/hive-flow/issues
 `;
 
   fs.writeFileSync(capabilitiesPath, capabilities, 'utf-8');

@@ -226,7 +226,7 @@ export async function generateBuiltInSkill(
     },
     'memory-management': {
       name: 'memory-management',
-      description: 'AgentDB memory system with HNSW vector search. Provides 150x-12,500x faster pattern retrieval, persistent storage, and semantic search capabilities for learning and knowledge management.',
+      description: 'AgentDB memory system with HNSW vector search. Provides fast pattern retrieval, persistent storage, and semantic search capabilities for learning and knowledge management.',
       triggers: [
         'need to store successful patterns',
         'searching for similar solutions',

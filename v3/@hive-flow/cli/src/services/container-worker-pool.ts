@@ -123,7 +123,7 @@ export interface ContainerPoolStatus {
 const DEFAULT_CONFIG: ContainerPoolConfig = {
   maxContainers: 3,
   minContainers: 1,
-  image: 'ghcr.io/ruvnet/hive-flow-headless:latest',
+  image: 'ghcr.io/hypnwtykvmpr/hive-flow-headless:latest',
   resources: {
     cpus: '2',
     memory: '4g',

@@ -172,7 +172,7 @@ export function generateSettings(options: InitOptions): object {
   // Add hive-flow attribution for git commits and PRs
   settings.attribution = {
     commit: 'Co-Authored-By: hive-flow <ruv@ruv.net>',
-    pr: '🤖 Generated with [hive-flow](https://github.com/ruvnet/hive-flow)',
+    pr: '🤖 Generated with [hive-flow](https://github.com/hypnwtykvmpr/hive-flow)',
   };
 
   // Note: Claude Code expects 'model' to be a string, not an object
