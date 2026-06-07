@@ -5,11 +5,20 @@ on:
     branches: [main, develop, v3]
     paths:
       - 'v3/**'
+      - '.agents/skills/**'
+      - '.claude/**'
+      - 'CLAUDE.md'
+      - 'README.md'
       - '.github/workflows/v3-ci.yml'
   pull_request:
     branches: [main]
     paths:
       - 'v3/**'
+      - '.agents/skills/**'
+      - '.claude/**'
+      - 'CLAUDE.md'
+      - 'README.md'
+      - '.github/workflows/v3-ci.yml'
 
 env:
   NODE_VERSION: '20'
@@ -39,6 +48,10 @@ jobs:
       - name: Install dependencies
         working-directory: v3
         run: pnpm install --frozen-lockfile
+
+      - name: Debrand assert zero
+        working-directory: v3
+        run: pnpm --filter @hive-flow/cli test:debrand-assert-zero
 
       - name: Run tests
         working-directory: v3

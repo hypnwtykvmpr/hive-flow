@@ -960,10 +960,10 @@ mcp__hive-flow__swarm_init({ topology: "mesh", maxAgents: 4 })
 
 ## References
 
-- [Hive Flow Documentation](https://github.com/ruvnet/hive-flow)
-- [Swarm Orchestration Guide](https://github.com/ruvnet/hive-flow/wiki/swarm)
-- [MCP Tools Reference](https://github.com/ruvnet/hive-flow/wiki/mcp)
-- [Performance Optimization](https://github.com/ruvnet/hive-flow/wiki/performance)
+- [Hive Flow Documentation](https://github.com/hypnwtykvmpr/hive-flow)
+- [Swarm Orchestration Guide](https://github.com/hypnwtykvmpr/hive-flow/wiki/swarm)
+- [MCP Tools Reference](https://github.com/hypnwtykvmpr/hive-flow/wiki/mcp)
+- [Performance Optimization](https://github.com/hypnwtykvmpr/hive-flow/wiki/performance)
 
 ---
 

@@ -1,6 +1,6 @@
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { Dirent, mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { extname, join, relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { initializeCodexProject } from '../../../../codex/src/initializer.js';
@@ -8,31 +8,22 @@ import { PACKAGE_INFO } from '../../../../codex/src/index.js';
 import { generateBuiltInSkill } from '../../../../codex/src/generators/skill-md.js';
 import { executeInit } from '../executor.js';
 import { DEFAULT_INIT_OPTIONS, type InitOptions } from '../types.js';
+import { DEBRAND_ASSERT_ZERO_PROHIBITED, type ProhibitedPattern } from './debrand-prohibited-patterns.js';
 
-interface ProhibitedPattern {
-  readonly label: string;
-  readonly pattern: RegExp;
-}
-
-const CORE_PROHIBITED: ProhibitedPattern[] = [
-  { label: 'old GitHub org', pattern: /ruvnet\/hive-flow/i },
-  { label: 'old container registry org', pattern: /ghcr\.io\/ruvnet\/hive-flow/i },
-  { label: 'stale agentdb version', pattern: /2\.0\.0-alpha\.3\.4/ },
-  { label: 'old RuVector brand', pattern: /\bRuVector\b/ },
-];
-
-const PERF_CLAIM_PROHIBITED: ProhibitedPattern[] = [
-  { label: 'fictional HNSW speed multiplier', pattern: /\b(?:150\s*x|12,?500\s*x|150\s*x\s*(?:-|–|to|and)\s*12,?500\s*x)\b/i },
-  { label: 'fictional Flash Attention speed range', pattern: /\b2\.49\s*x\s*(?:-|–|to)\s*7\.47\s*x\b/i },
-  { label: 'fictional SWE-Bench solve rate', pattern: /\b84\.8\s*%/ },
-  { label: 'fictional SONA adaptation latency', pattern: /(?:<\s*)?0\.05\s*ms/i },
-  { label: 'old RuVector intelligence label', pattern: /RuVector Intelligence System/ },
-];
-
-const CODEX_GENERATOR_PROHIBITED: ProhibitedPattern[] = [
-  ...CORE_PROHIBITED,
-  ...PERF_CLAIM_PROHIBITED,
-];
+const GENERATED_TEXT_EXTENSIONS = new Set([
+  '',
+  '.cjs',
+  '.js',
+  '.json',
+  '.md',
+  '.mjs',
+  '.ps1',
+  '.sh',
+  '.toml',
+  '.ts',
+  '.yaml',
+  '.yml',
+]);
 
 function fullInitOptions(targetDir: string): InitOptions {
   return {
@@ -43,19 +34,44 @@ function fullInitOptions(targetDir: string): InitOptions {
   };
 }
 
-function collectFiles(root: string, relativePaths: string[]): string {
-  return relativePaths
-    .map((relativePath) => {
-      const absolutePath = join(root, relativePath);
-      return `\n--- ${relativePath} ---\n${readFileSync(absolutePath, 'utf8')}`;
-    })
-    .join('\n');
+function generatedTextArtifacts(root: string): string {
+  const chunks: string[] = [];
+
+  function visit(directory: string): void {
+    const entries: Dirent[] = readdirSync(directory, { withFileTypes: true });
+    for (const entry of entries) {
+      const absolutePath = join(directory, entry.name);
+      if (entry.isDirectory()) {
+        visit(absolutePath);
+        continue;
+      }
+      if (!entry.isFile()) continue;
+      if (!GENERATED_TEXT_EXTENSIONS.has(extname(entry.name))) continue;
+      if (!statSync(absolutePath).isFile()) continue;
+      const relativePath = relative(root, absolutePath);
+      chunks.push(`\n--- ${relativePath} ---\n${readFileSync(absolutePath, 'utf8')}`);
+    }
+  }
+
+  visit(root);
+  return chunks.join('\n');
 }
 
 function assertNoProhibitedStrings(label: string, text: string, patterns: ProhibitedPattern[]): void {
-  const hits = patterns
-    .filter(({ pattern }) => pattern.test(text))
-    .map(({ label: patternLabel, pattern }) => `${patternLabel}: ${pattern}`);
+  const hits: string[] = [];
+  let artifact = '<inline>';
+  text.split('\n').forEach((line, index) => {
+    const section = line.match(/^---\s+(.+)\s+---$/);
+    if (section) {
+      artifact = section[1] ?? artifact;
+      return;
+    }
+    for (const { label: patternLabel, pattern } of patterns) {
+      if (pattern.test(line)) {
+        hits.push(`${artifact}:${index + 1}: ${patternLabel}: ${pattern}: ${line.trim()}`);
+      }
+    }
+  });
 
   expect(hits, `[debrand-assert-zero][${label}] prohibited generated output`).toEqual([]);
 }
@@ -70,8 +86,8 @@ async function withCodexCliUnavailable<T>(fn: () => Promise<T>): Promise<T> {
   }
 }
 
-describe('debrand generator output', () => {
-  it('emits zero prohibited brand and stale-version strings from CLI init and Codex init outputs', async () => {
+describe('debrand-assert-zero generated output gate', () => {
+  it('fails if either CLI init or Codex init generated output contains prohibited strings', async () => {
     const cliRoot = mkdtempSync(join(tmpdir(), 'hf-cli-debrand-'));
     const cliHome = mkdtempSync(join(tmpdir(), 'hf-cli-debrand-home-'));
     const codexRoot = mkdtempSync(join(tmpdir(), 'hf-codex-debrand-'));
@@ -94,26 +110,30 @@ describe('debrand generator output', () => {
       });
 
       assertNoProhibitedStrings(
-        'cli-init',
-        collectFiles(cliRoot, ['CLAUDE.md', '.claude/settings.json', '.hive-flow/CAPABILITIES.md']),
-        [...CORE_PROHIBITED, ...PERF_CLAIM_PROHIBITED],
+        'pass-a-cli-init-generated-artifacts',
+        generatedTextArtifacts(cliRoot),
+        DEBRAND_ASSERT_ZERO_PROHIBITED,
       );
       const generatedMemorySkill = await generateBuiltInSkill('memory-management');
       assertNoProhibitedStrings(
-        'codex-init',
-        [
-          collectFiles(codexRoot, [
-            'AGENTS.md',
-            '.agents/config.toml',
-            '.agents/README.md',
-            '.codex/AGENTS.override.md',
-            '.codex/config.toml',
-          ]),
-          generatedMemorySkill.skillMd,
-        ].join('\n'),
-        CODEX_GENERATOR_PROHIBITED,
+        'pass-b-codex-init-generated-artifacts',
+        generatedTextArtifacts(codexRoot),
+        DEBRAND_ASSERT_ZERO_PROHIBITED,
       );
-      assertNoProhibitedStrings('codex-package-info', JSON.stringify(PACKAGE_INFO), CORE_PROHIBITED);
+      assertNoProhibitedStrings(
+        'pass-b-codex-generated-memory-management-skill',
+        [
+          generatedMemorySkill.skillMd,
+          ...Object.entries(generatedMemorySkill.scripts).map(([path, content]) => `\n--- ${path} ---\n${content}`),
+          ...Object.entries(generatedMemorySkill.references).map(([path, content]) => `\n--- ${path} ---\n${content}`),
+        ].join('\n'),
+        DEBRAND_ASSERT_ZERO_PROHIBITED,
+      );
+      assertNoProhibitedStrings(
+        'pass-b-codex-package-info',
+        JSON.stringify(PACKAGE_INFO),
+        DEBRAND_ASSERT_ZERO_PROHIBITED,
+      );
     } finally {
       rmSync(cliRoot, { recursive: true, force: true });
       rmSync(cliHome, { recursive: true, force: true });

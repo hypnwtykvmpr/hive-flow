@@ -1066,8 +1066,8 @@ mcp__hive-flow__token_usage {
 
 ## Support and Resources
 
-- **Documentation**: https://github.com/ruvnet/hive-flow
-- **Issues**: https://github.com/ruvnet/hive-flow/issues
+- **Documentation**: https://github.com/hypnwtykvmpr/hive-flow
+- **Issues**: https://github.com/hypnwtykvmpr/hive-flow/issues
 - **NPM Package**: https://www.npmjs.com/package/hive-flow
 - **Community**: Discord server (link in repository)
 

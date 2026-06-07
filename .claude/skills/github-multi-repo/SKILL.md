@@ -863,8 +863,8 @@ npx hive-flow skill run github-multi-repo cross-team \
 
 ## Support and Resources
 
-- Documentation: https://github.com/ruvnet/hive-flow
-- Issues: https://github.com/ruvnet/hive-flow/issues
+- Documentation: https://github.com/hypnwtykvmpr/hive-flow
+- Issues: https://github.com/hypnwtykvmpr/hive-flow/issues
 - Examples: `.claude/examples/github-multi-repo/`
 
 ---

@@ -699,10 +699,10 @@ npx hive-flow hive-mind spawn "Review PR #456" \
 
 ## References
 
-- [Hive Mind Documentation](https://github.com/ruvnet/hive-flow/docs/hive-mind)
-- [Collective Intelligence Patterns](https://github.com/ruvnet/hive-flow/docs/patterns)
-- [Byzantine Consensus](https://github.com/ruvnet/hive-flow/docs/consensus)
-- [Memory Optimization](https://github.com/ruvnet/hive-flow/docs/memory)
+- [Hive Mind Documentation](https://github.com/hypnwtykvmpr/hive-flow/docs/hive-mind)
+- [Collective Intelligence Patterns](https://github.com/hypnwtykvmpr/hive-flow/docs/patterns)
+- [Byzantine Consensus](https://github.com/hypnwtykvmpr/hive-flow/docs/consensus)
+- [Memory Optimization](https://github.com/hypnwtykvmpr/hive-flow/docs/memory)
 
 ---
 

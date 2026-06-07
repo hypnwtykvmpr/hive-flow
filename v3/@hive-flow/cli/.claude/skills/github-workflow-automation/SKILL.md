@@ -1046,7 +1046,7 @@ echo "✅ GitHub workflow automation setup complete"
 
 - **GitHub CLI Docs**: https://cli.github.com/manual/
 - **GitHub Actions**: https://docs.github.com/en/actions
-- **Hive-Flow**: https://github.com/ruvnet/hive-flow
+- **Hive-Flow**: https://github.com/hypnwtykvmpr/hive-flow
 - **Ruv-Swarm**: https://github.com/ruvnet/ruv-swarm
 
 ## Version History

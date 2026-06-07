@@ -2,11 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { extname, resolve, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
-
-interface ProhibitedPattern {
-  readonly label: string;
-  readonly pattern: RegExp;
-}
+import { PERF_CLAIM_PROHIBITED } from './debrand-prohibited-patterns.js';
 
 const REPO_ROOT = resolve(__dirname, '../../../../../..');
 
@@ -60,29 +56,6 @@ const TEXT_EXTENSIONS = new Set([
   '.yml',
 ]);
 
-const PROHIBITED_PERF_CLAIMS: ProhibitedPattern[] = [
-  {
-    label: 'fictional HNSW speed multiplier',
-    pattern: /\b(?:150\s*x|12,?500\s*x|150\s*x\s*(?:-|–|to|and)\s*12,?500\s*x)\b/i,
-  },
-  {
-    label: 'fictional Flash Attention speed range',
-    pattern: /\b2\.49\s*x\s*(?:-|–|to)\s*7\.47\s*x\b/i,
-  },
-  {
-    label: 'fictional SWE-Bench solve rate',
-    pattern: /\b84\.8\s*%/,
-  },
-  {
-    label: 'fictional SONA adaptation latency',
-    pattern: /(?:<\s*)?0\.05\s*ms/i,
-  },
-  {
-    label: 'old RuVector intelligence label',
-    pattern: /RuVector Intelligence System/,
-  },
-];
-
 function trackedFilesForShippedSurfaces(): string[] {
   const args = ['ls-files', '--', ...SHIPPED_SURFACE_ROOTS];
   return execFileSync('git', args, { cwd: REPO_ROOT, encoding: 'utf8' })
@@ -106,7 +79,7 @@ describe('DB-2 prohibited performance claims', () => {
       .flatMap((relativePath) => {
         const absolutePath = resolve(REPO_ROOT, relativePath);
         const content = readFileSync(absolutePath, 'utf8');
-        return PROHIBITED_PERF_CLAIMS
+        return PERF_CLAIM_PROHIBITED
           .filter(({ pattern }) => pattern.test(content))
           .map(({ label, pattern }) => `${relativePath.split(sep).join('/')}: ${label}: ${pattern}`);
       });
