@@ -630,16 +630,17 @@ describe('claude-code statusline renderer (Phase 12)', () => {
     expect(footerIdx).toBe(plainLines.length - 1);
   });
 
-  it('header-only project renders a single header row (no body, no separator rules)', async () => {
+  it('header-only project renders header plus enforcement-off footer when the engine is missing', async () => {
     // No .hive-flow/ -> header-only mode. The collapse rule: no body rows ->
-    // no separator rules. Footer is omitted in header-only mode (no daemon
-    // signal), so the output is a lone header line.
+    // no separator rules. The persistent enforcement-installed signal still
+    // renders a loud footer when the relocated engine is missing.
     const cleanProj = mkdtempSync(join(tmpdir(), 'hf-render-header-only-'));
     try {
       const output = await renderClaudeCodeStatusline(stdinPayload(), cleanProj);
       const plainLines = stripAnsi(output).split('\n');
-      expect(plainLines.length).toBe(1);
+      expect(plainLines.length).toBe(2);
       expect(plainLines[0]).toContain('Opus 4.8');
+      expect(plainLines[1]).toContain('ENFORCEMENT OFF');
       // No separator rules when there are no body rows.
       expect(output).not.toMatch(/─+/);
     } finally {
