@@ -281,7 +281,7 @@ See `github-workflows-optimization-strategy.md` for all ADRs with full context.
 | rollback-manager.yml | ❌ Failing | Dangerous automation | CRITICAL |
 | truth-scoring.yml | ⚠️ Slow | 667 lines of duplication | HIGH |
 | verification-pipeline.yml | ⚠️ Complex | Unnecessary matrix | MEDIUM |
-| status-badges.yml | ✅ Working | Well-designed | KEEP |
+| Status badge workflow | ❌ Removed | No GitHub Actions CI for the JS version | REMOVE |
 
 ### Failure Analysis
 

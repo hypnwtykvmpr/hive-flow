@@ -250,19 +250,6 @@ Intelligent automated rollback system that detects failures and can automaticall
 - Post-rollback monitoring (90 days)
 - Stakeholder notifications (GitHub issues)
 
-## 📊 Status Badges
-
-**File:** `.github/workflows/status-badges.yml`
-
-Dynamic status badges that update based on workflow results:
-
-```markdown
-[![Verification Pipeline](https://img.shields.io/github/actions/workflow/status/ruvnet/claude-code-flow/verification-pipeline.yml?branch=main&label=verification&style=flat-square)](https://github.com/ruvnet/claude-code-flow/actions/workflows/verification-pipeline.yml)
-[![Truth Scoring](https://img.shields.io/github/actions/workflow/status/ruvnet/claude-code-flow/truth-scoring.yml?branch=main&label=truth%20score&style=flat-square)](https://github.com/ruvnet/claude-code-flow/actions/workflows/truth-scoring.yml)
-[![Integration Tests](https://img.shields.io/github/actions/workflow/status/ruvnet/claude-code-flow/integration-tests.yml?branch=main&label=integration&style=flat-square)](https://github.com/ruvnet/claude-code-flow/actions/workflows/integration-tests.yml)
-[![Rollback Manager](https://img.shields.io/github/actions/workflow/status/ruvnet/claude-code-flow/rollback-manager.yml?branch=main&label=rollback&style=flat-square)](https://github.com/ruvnet/claude-code-flow/actions/workflows/rollback-manager.yml)
-```
-
 ## ⚙️ Configuration Files
 
 ### `.audit-ci.json`

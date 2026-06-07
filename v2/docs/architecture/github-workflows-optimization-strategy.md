@@ -566,13 +566,13 @@ rm .github/workflows/test.yml
 
 ---
 
-## 7. Status Badges Optimization (status-badges.yml)
+## 7. Status Badge Workflow
 
 ### Current Status
 
 **Current Performance:** ✅ 100% success rate
 
-**Assessment:** This workflow is well-designed and doesn't need optimization
+**Assessment:** This workflow is removed under the no-GitHub-Actions-CI ruling for the JS version.
 
 **Recommendations:** Keep as-is, no changes needed
 
@@ -863,7 +863,7 @@ This optimization strategy will transform the claude-code-flow GitHub Actions wo
 | rollback-manager.yml | ❌ Dangerous | ci-failure-notify.yml | ✅ Designed |
 | truth-scoring.yml | ⚠️ Redundant | *Merged into CI* | ✅ Simplified |
 | verification-pipeline.yml | ⚠️ Slow | verification-simple.yml | ✅ Designed |
-| status-badges.yml | ✅ Working | *Keep as-is* | ✅ No change |
+| Status badge workflow | ❌ Removed | *Deleted* | ✅ No CI |
 
 ---
 
