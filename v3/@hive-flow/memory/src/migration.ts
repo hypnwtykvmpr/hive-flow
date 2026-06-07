@@ -2,7 +2,7 @@
  * V3 Memory Migration Utility
  *
  * Migrates data from legacy memory systems (SQLite, Markdown, JSON, etc.)
- * to the unified AgentDB-backed memory system with HNSW indexing.
+ * to the unified local HNSW-backed memory system.
  *
  * @module v3/memory/migration
  */
@@ -22,7 +22,7 @@ import {
   EmbeddingGenerator,
   createDefaultEntry,
 } from './types.js';
-import { AgentDBAdapter } from './agentdb-adapter.js';
+import { LocalVectorBackend } from './local-vector-backend.js';
 
 /**
  * Default migration configuration
@@ -64,12 +64,12 @@ interface LegacyEntry {
  */
 export class MemoryMigrator extends EventEmitter {
   private config: MigrationConfig;
-  private target: AgentDBAdapter;
+  private target: LocalVectorBackend;
   private embeddingGenerator?: EmbeddingGenerator;
   private progress: MigrationProgress;
 
   constructor(
-    target: AgentDBAdapter,
+    target: LocalVectorBackend,
     config: Partial<MigrationConfig>,
     embeddingGenerator?: EmbeddingGenerator
   ) {
@@ -627,7 +627,7 @@ export class MemoryMigrator extends EventEmitter {
  * Convenience function to create a migrator
  */
 export function createMigrator(
-  target: AgentDBAdapter,
+  target: LocalVectorBackend,
   source: MigrationSource,
   sourcePath: string,
   options: Partial<MigrationConfig> = {},
@@ -644,7 +644,7 @@ export function createMigrator(
  * Migrate from multiple sources
  */
 export async function migrateMultipleSources(
-  target: AgentDBAdapter,
+  target: LocalVectorBackend,
   sources: Array<{ source: MigrationSource; path: string }>,
   options: Partial<MigrationConfig> = {},
   embeddingGenerator?: EmbeddingGenerator

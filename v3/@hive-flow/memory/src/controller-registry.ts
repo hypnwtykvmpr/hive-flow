@@ -1,11 +1,11 @@
 /**
- * ControllerRegistry - Central controller lifecycle management for AgentDB v3
+ * ControllerRegistry - Central controller lifecycle management
  *
- * Wraps the AgentDB class and adds CLI-specific controllers from @hive-flow/memory.
+ * Manages local Hive Flow controllers from @hive-flow/memory.
  * Manages initialization (level-based ordering), health checks, and graceful shutdown.
  *
- * Per ADR-053: Replaces memory-initializer.js's raw sql.js usage with a unified
- * controller ecosystem routing all memory operations through AgentDB v3.
+ * Controller surfaces that require the deferred Rust memory layer return
+ * unavailable instead of importing rejected placeholder backends.
  *
  * @module @hive-flow/memory/controller-registry
  */
@@ -29,9 +29,9 @@ import type { CacheConfig } from './types.js';
 // ===== Types =====
 
 /**
- * Controllers accessible via AgentDB.getController()
+ * Controllers planned for the future external memory layer.
  */
-export type AgentDBControllerName =
+export type ExternalControllerName =
   | 'reasoningBank'
   | 'skills'
   | 'reflexion'
@@ -70,7 +70,7 @@ export type CLIControllerName =
 /**
  * All controller names
  */
-export type ControllerName = AgentDBControllerName | CLIControllerName;
+export type ControllerName = ExternalControllerName | CLIControllerName;
 
 /**
  * Initialization level for dependency ordering
@@ -96,7 +96,7 @@ export interface ControllerHealth {
 export interface RegistryHealthReport {
   status: 'healthy' | 'degraded' | 'unhealthy';
   controllers: ControllerHealth[];
-  agentdbAvailable: boolean;
+  externalControllersAvailable: boolean;
   initTimeMs: number;
   timestamp: number;
   activeControllers: number;
@@ -107,7 +107,7 @@ export interface RegistryHealthReport {
  * Runtime configuration for controller activation
  */
 export interface RuntimeConfig {
-  /** Database path for AgentDB */
+  /** Database path for local/runtime backends */
   dbPath?: string;
 
   /** Vector dimension (default: 384 for MiniLM) */
@@ -177,7 +177,7 @@ export const INIT_LEVELS: InitLevel[] = [
 // ===== ControllerRegistry =====
 
 /**
- * Central registry for AgentDB v3 controller lifecycle management.
+ * Central registry for memory controller lifecycle management.
  *
  * Handles:
  * - Level-based initialization ordering (levels 0-6)
@@ -207,7 +207,6 @@ export const INIT_LEVELS: InitLevel[] = [
  */
 export class ControllerRegistry extends EventEmitter {
   private controllers: Map<ControllerName, ControllerEntry> = new Map();
-  private agentdb: any = null;
   private backend: IMemoryBackend | null = null;
   private config: RuntimeConfig = {};
   private initialized = false;
@@ -226,13 +225,10 @@ export class ControllerRegistry extends EventEmitter {
     this.config = config;
     const startTime = performance.now();
 
-    // Step 1: Initialize AgentDB (the core)
-    await this.initAgentDB(config);
-
-    // Step 2: Set up the backend
+    // Step 1: Set up the backend
     this.backend = config.backend || null;
 
-    // Step 3: Initialize controllers level by level
+    // Step 2: Initialize controllers level by level
     for (const level of INIT_LEVELS) {
       const controllersToInit = level.controllers.filter(
         (name) => this.isControllerEnabled(name),
@@ -299,18 +295,6 @@ export class ControllerRegistry extends EventEmitter {
       );
     }
 
-    // Shutdown AgentDB
-    if (this.agentdb) {
-      try {
-        if (typeof this.agentdb.close === 'function') {
-          await this.agentdb.close();
-        }
-      } catch {
-        // Best-effort cleanup
-      }
-      this.agentdb = null;
-    }
-
     this.controllers.clear();
     this.initialized = false;
     this.emit('shutdown');
@@ -327,16 +311,6 @@ export class ControllerRegistry extends EventEmitter {
       return entry.instance as T;
     }
 
-    // Fall back to AgentDB internal controllers
-    if (this.agentdb && typeof this.agentdb.getController === 'function') {
-      try {
-        const controller = this.agentdb.getController(name);
-        if (controller) return controller as T;
-      } catch {
-        // Controller not available in AgentDB
-      }
-    }
-
     return null;
   }
 
@@ -346,15 +320,6 @@ export class ControllerRegistry extends EventEmitter {
   isEnabled(name: ControllerName): boolean {
     const entry = this.controllers.get(name);
     if (entry?.enabled) return true;
-
-    // Check AgentDB internal controllers
-    if (this.agentdb && typeof this.agentdb.getController === 'function') {
-      try {
-        return this.agentdb.getController(name) !== null;
-      } catch {
-        return false;
-      }
-    }
 
     return false;
   }
@@ -378,15 +343,7 @@ export class ControllerRegistry extends EventEmitter {
       });
     }
 
-    // Check AgentDB health
-    let agentdbAvailable = false;
-    if (this.agentdb) {
-      try {
-        agentdbAvailable = typeof this.agentdb.getController === 'function';
-      } catch {
-        agentdbAvailable = false;
-      }
-    }
+    const externalControllersAvailable = false;
 
     const active = controllerHealth.filter((c) => c.status === 'healthy').length;
     const unavailable = controllerHealth.filter((c) => c.status === 'unavailable').length;
@@ -401,7 +358,7 @@ export class ControllerRegistry extends EventEmitter {
     return {
       status,
       controllers: controllerHealth,
-      agentdbAvailable,
+      externalControllersAvailable,
       initTimeMs: this.initTimeMs,
       timestamp: Date.now(),
       activeControllers: active,
@@ -410,10 +367,10 @@ export class ControllerRegistry extends EventEmitter {
   }
 
   /**
-   * Get the underlying AgentDB instance.
+   * Future external controller backend placeholder.
    */
-  getAgentDB(): any {
-    return this.agentdb;
+  getExternalControllerBackend(): null {
+    return null;
   }
 
   /**
@@ -455,46 +412,6 @@ export class ControllerRegistry extends EventEmitter {
   // ===== Private Methods =====
 
   /**
-   * Initialize AgentDB instance with dynamic import and fallback chain.
-   */
-  private async initAgentDB(config: RuntimeConfig): Promise<void> {
-    try {
-      const agentdbModule: any = await import('agentdb');
-      const AgentDBClass = agentdbModule.AgentDB || agentdbModule.default;
-
-      if (!AgentDBClass) {
-        this.emit('agentdb:unavailable', { reason: 'No AgentDB class found' });
-        return;
-      }
-
-      this.agentdb = new AgentDBClass({
-        dbPath: config.dbPath || ':memory:',
-      });
-
-      // Suppress agentdb's info-level console.log during init
-      const origLog = console.log;
-      console.log = (...args: unknown[]) => {
-        const msg = String(args[0] ?? '');
-        if (msg.includes('Transformers.js') ||
-            msg.includes('better-sqlite3') ||
-            msg.includes('[AgentDB]')) return;
-        origLog.apply(console, args);
-      };
-      try {
-        await this.agentdb.initialize();
-      } finally {
-        console.log = origLog;
-      }
-      this.emit('agentdb:initialized');
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
-      this.emit('agentdb:unavailable', { reason: msg });
-      // AgentDB not available — CLI-layer controllers can still work
-      this.agentdb = null;
-    }
-  }
-
-  /**
    * Check whether a controller should be initialized based on config.
    */
   private isControllerEnabled(name: ControllerName): boolean {
@@ -506,25 +423,21 @@ export class ControllerRegistry extends EventEmitter {
 
     // Default behavior: enable based on category
     switch (name) {
-      // Core intelligence — enabled by default
-      case 'reasoningBank':
       case 'learningBridge':
       case 'tieredCache':
-      case 'hierarchicalMemory':
         return true;
 
       // Graph — enabled if backend available
       case 'memoryGraph':
         return !!(this.config.memory?.memoryGraph || this.backend);
 
-      // Security — enabled if AgentDB available
+      // Deferred external controllers — unavailable until curia-memory lands.
+      case 'reasoningBank':
+      case 'hierarchicalMemory':
       case 'mutationGuard':
       case 'attestationLog':
       case 'vectorBackend':
       case 'guardedVectorBackend':
-        return this.agentdb !== null;
-
-      // AgentDB-internal controllers — only if AgentDB available
       case 'skills':
       case 'reflexion':
       case 'causalGraph':
@@ -540,7 +453,7 @@ export class ControllerRegistry extends EventEmitter {
       case 'contextSynthesizer':
       case 'rvfOptimizer':
       case 'mmrDiversityRanker':
-        return this.agentdb !== null;
+        return false;
 
       // Optional controllers
       case 'hybridSearch':
@@ -597,8 +510,8 @@ export class ControllerRegistry extends EventEmitter {
 
   /**
    * Factory method to create a controller instance.
-   * Handles CLI-layer controllers; AgentDB-internal controllers are
-   * accessed via agentdb.getController().
+   * Handles local CLI-layer controllers. Deferred external controllers return
+   * null until the Rust memory layer provides real implementations.
    */
   private async createController(name: ControllerName): Promise<unknown> {
     switch (name) {
@@ -656,56 +569,22 @@ export class ControllerRegistry extends EventEmitter {
         return null;
 
       case 'semanticRouter':
-        // Delegate to AgentDB's SemanticRouter if available
-        if (this.agentdb && typeof this.agentdb.getController === 'function') {
-          try {
-            return this.agentdb.getController('semanticRouter');
-          } catch {
-            return null;
-          }
-        }
         return null;
 
       case 'sonaTrajectory':
-        // Delegate to AgentDB's SonaTrajectoryService if available
-        if (this.agentdb && typeof this.agentdb.getController === 'function') {
-          try {
-            return this.agentdb.getController('sonaTrajectory');
-          } catch {
-            return null;
-          }
-        }
         return null;
 
-      case 'hierarchicalMemory': {
-        try {
-          const agentdbModule: any = await import('agentdb');
-          const HierarchicalMemoryClass = agentdbModule.HierarchicalMemory;
-          if (!HierarchicalMemoryClass) return null;
-          const hm = new HierarchicalMemoryClass(this.agentdb?.database);
-          await hm.initializeDatabase();
-          return hm;
-        } catch { return null; }
-      }
+      case 'hierarchicalMemory':
+        return null;
 
-      case 'memoryConsolidation': {
-        try {
-          const agentdbModule: any = await import('agentdb');
-          const MemConsolidation = agentdbModule.MemoryConsolidation;
-          if (!MemConsolidation) return null;
-          const mc = new MemConsolidation(this.agentdb?.database);
-          await mc.initializeDatabase();
-          return mc;
-        } catch { return null; }
-      }
+      case 'memoryConsolidation':
+        return null;
 
       case 'federatedSession':
         // Federated session — placeholder for Phase 4
         return null;
 
-      // ----- AgentDB-internal controllers -----
-      // These are accessed via agentdb.getController() and registered
-      // here for health tracking and lifecycle management.
+      // ----- Deferred external controllers -----
 
       case 'reasoningBank':
       case 'skills':
@@ -726,15 +605,7 @@ export class ControllerRegistry extends EventEmitter {
       case 'rvfOptimizer':
       case 'mmrDiversityRanker':
       case 'guardedVectorBackend': {
-        if (!this.agentdb || typeof this.agentdb.getController !== 'function') {
-          return null;
-        }
-        try {
-          const controller = this.agentdb.getController(name);
-          return controller ?? null;
-        } catch {
-          return null;
-        }
+        return null;
       }
 
       default:

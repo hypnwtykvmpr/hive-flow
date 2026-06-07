@@ -1,10 +1,10 @@
 /**
- * V3 AgentDB Adapter
+ * V3 Local Vector Backend
  *
- * Unified memory backend implementation using AgentDB with HNSW indexing
+ * Unified memory backend implementation using local HNSW indexing
  * for fast HNSW-indexed vector search. Implements IMemoryBackend interface.
  *
- * @module v3/memory/agentdb-adapter
+ * @module v3/memory/local-vector-backend
  */
 
 import { EventEmitter } from 'node:events';
@@ -31,9 +31,9 @@ import { HNSWIndex } from './hnsw-index.js';
 import { CacheManager } from './cache-manager.js';
 
 /**
- * Configuration for AgentDB Adapter
+ * Configuration for Local Vector Backend
  */
-export interface AgentDBAdapterConfig {
+export interface LocalVectorBackendConfig {
   /** Vector dimensions for embeddings (default: 1536 for OpenAI) */
   dimensions: number;
 
@@ -74,7 +74,7 @@ export interface AgentDBAdapterConfig {
 /**
  * Default configuration values
  */
-const DEFAULT_CONFIG: AgentDBAdapterConfig = {
+const DEFAULT_CONFIG: LocalVectorBackendConfig = {
   dimensions: 1536,
   maxEntries: 1000000,
   cacheEnabled: true,
@@ -87,7 +87,7 @@ const DEFAULT_CONFIG: AgentDBAdapterConfig = {
 };
 
 /**
- * AgentDB Memory Backend Adapter
+ * Local Vector Memory Backend
  *
  * Provides unified memory storage with:
  * - HNSW-based vector search (HNSW-indexed rather than brute force)
@@ -96,8 +96,8 @@ const DEFAULT_CONFIG: AgentDBAdapterConfig = {
  * - Full-text and metadata filtering
  * - Event-driven architecture
  */
-export class AgentDBAdapter extends EventEmitter implements IMemoryBackend {
-  private config: AgentDBAdapterConfig;
+export class LocalVectorBackend extends EventEmitter implements IMemoryBackend {
+  private config: LocalVectorBackendConfig;
   private entries: Map<string, MemoryEntry> = new Map();
   private index: HNSWIndex;
   private cache: CacheManager<MemoryEntry>;
@@ -116,7 +116,7 @@ export class AgentDBAdapter extends EventEmitter implements IMemoryBackend {
     totalWriteTime: 0,
   };
 
-  constructor(config: Partial<AgentDBAdapterConfig> = {}) {
+  constructor(config: Partial<LocalVectorBackendConfig> = {}) {
     super();
     this.config = { ...DEFAULT_CONFIG, ...config };
 
@@ -1013,8 +1013,9 @@ export class AgentDBAdapter extends EventEmitter implements IMemoryBackend {
     recommendations: string[]
   ): ComponentHealth {
     const stats = this.cache.getStats();
+    const totalAccesses = stats.hits + stats.misses;
 
-    if (stats.hitRate < 0.5) {
+    if (totalAccesses > 0 && stats.hitRate < 0.5) {
       issues.push('Cache hit rate low (<50%)');
       recommendations.push('Consider increasing cache size');
       return {
@@ -1039,4 +1040,4 @@ export class AgentDBAdapter extends EventEmitter implements IMemoryBackend {
   }
 }
 
-export default AgentDBAdapter;
+export default LocalVectorBackend;

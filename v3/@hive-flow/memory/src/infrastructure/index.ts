@@ -18,8 +18,8 @@ export { DeterministicIdGenerator } from './DeterministicIdGenerator.js';
 export { SyncManager, type SyncResult } from './SyncManager.js';
 
 // Re-export existing adapters
-export { AgentDBAdapter } from '../agentdb-adapter.js';
-export type { AgentDBAdapterConfig } from '../agentdb-adapter.js';
+export { LocalVectorBackend } from '../local-vector-backend.js';
+export type { LocalVectorBackendConfig } from '../local-vector-backend.js';
 export { HNSWIndex } from '../hnsw-index.js';
 export type { HNSWConfig } from '../types.js';
 export { CacheManager } from '../cache-manager.js';

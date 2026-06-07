@@ -327,7 +327,7 @@ export class BinaryBackend implements IMemoryBackend {
     if (!this.initialized) issues.push('Backend not initialized');
     if (!this.hnswIndex) {
       issues.push('No vector index available');
-      recommendations.push('Enable the pure-TS vector index or AgentDB bridge');
+      recommendations.push('Enable the pure-TS vector index or HybridBackend');
     }
 
     const status = issues.length === 0

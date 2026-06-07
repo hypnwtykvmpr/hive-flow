@@ -3,7 +3,6 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { HNSWIndex } from './hnsw-index.js';
-import * as agentdbBackend from './agentdb-backend.js';
 import type { IVectorIndex } from './vector-index.js';
 
 type VectorIndexFactory = () => IVectorIndex;
@@ -26,12 +25,6 @@ function expectVectorIndexSurface(index: unknown): asserts index is IVectorIndex
   }
 }
 
-function createAgentDBVectorIndex(): IVectorIndex {
-  const Adapter = (agentdbBackend as Record<string, unknown>).AgentDBVectorIndex;
-  expect(Adapter, 'AgentDBVectorIndex export').toBeTypeOf('function');
-  return new (Adapter as new () => IVectorIndex)();
-}
-
 function recallAtK(results: Array<{ id: string }>, expectedIds: string[]): number {
   const resultIds = new Set(results.map((result) => result.id));
   const hits = expectedIds.filter((id) => resultIds.has(id)).length;
@@ -42,10 +35,6 @@ const implementations: Array<{ name: string; create: VectorIndexFactory }> = [
   {
     name: 'js-hnsw',
     create: () => new HNSWIndex(),
-  },
-  {
-    name: 'agentdb-hnsw',
-    create: createAgentDBVectorIndex,
   },
 ];
 

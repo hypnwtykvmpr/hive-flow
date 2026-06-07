@@ -1,9 +1,8 @@
 /**
- * HybridBackend - Combines SQLite (structured queries) + AgentDB (vector search)
+ * HybridBackend - Combines SQLite (structured queries) + local HNSW vector search
  *
- * Per ADR-009: "HybridBackend (SQLite + AgentDB) as default"
  * - SQLite for: Structured queries, ACID transactions, exact matches
- * - AgentDB for: Semantic search, vector similarity, RAG
+ * - LocalVectorBackend for: Semantic search, vector similarity, RAG bootstrap
  *
  * @module v3/memory/hybrid-backend
  */
@@ -26,7 +25,7 @@ import {
   MemoryType,
 } from './types.js';
 import { SQLiteBackend, SQLiteBackendConfig } from './sqlite-backend.js';
-import { AgentDBBackend, AgentDBBackendConfig } from './agentdb-backend.js';
+import { LocalVectorBackend, LocalVectorBackendConfig } from './local-vector-backend.js';
 
 /**
  * Configuration for HybridBackend
@@ -35,8 +34,8 @@ export interface HybridBackendConfig {
   /** SQLite configuration */
   sqlite?: Partial<SQLiteBackendConfig>;
 
-  /** AgentDB configuration */
-  agentdb?: Partial<AgentDBBackendConfig>;
+  /** Local vector backend configuration */
+  localVector?: Partial<LocalVectorBackendConfig>;
 
   /** Default namespace */
   defaultNamespace?: string;
@@ -45,7 +44,7 @@ export interface HybridBackendConfig {
   embeddingGenerator?: EmbeddingGenerator;
 
   /** Query routing strategy */
-  routingStrategy?: 'auto' | 'sqlite-first' | 'agentdb-first';
+  routingStrategy?: 'auto' | 'sqlite-first' | 'localVector-first';
 
   /** Enable dual-write (write to both backends) */
   dualWrite?: boolean;
@@ -62,7 +61,7 @@ export interface HybridBackendConfig {
  */
 const DEFAULT_CONFIG: Required<HybridBackendConfig> = {
   sqlite: {},
-  agentdb: {},
+  localVector: {},
   defaultNamespace: 'default',
   embeddingGenerator: undefined as unknown as EmbeddingGenerator, // SAFETY: Required<> makes field mandatory but default is undefined
   routingStrategy: 'auto',
@@ -104,7 +103,7 @@ export interface StructuredQuery {
 
 /**
  * Semantic Query Interface
- * Optimized for AgentDB's vector search
+ * Optimized for local HNSW vector search
  */
 export interface SemanticQuery {
   /** Content to search for (will be embedded) */
@@ -147,21 +146,21 @@ export interface HybridQuery {
 /**
  * HybridBackend Implementation
  *
- * Intelligently routes queries between SQLite and AgentDB:
+ * Intelligently routes queries between SQLite and local vector search:
  * - Exact matches, prefix queries → SQLite
- * - Semantic search, similarity → AgentDB
+ * - Semantic search, similarity → LocalVectorBackend
  * - Complex hybrid queries → Both backends with intelligent merging
  */
 export class HybridBackend extends EventEmitter implements IMemoryBackend {
   private sqlite: SQLiteBackend;
-  private agentdb: AgentDBBackend;
+  private localVector: LocalVectorBackend;
   private config: Required<HybridBackendConfig>;
   private initialized: boolean = false;
 
   // Performance tracking
   private stats = {
     sqliteQueries: 0,
-    agentdbQueries: 0,
+    localVectorQueries: 0,
     hybridQueries: 0,
     totalQueryTime: 0,
   };
@@ -177,10 +176,10 @@ export class HybridBackend extends EventEmitter implements IMemoryBackend {
       embeddingGenerator: this.config.embeddingGenerator,
     });
 
-    // Initialize AgentDB backend
-    this.agentdb = new AgentDBBackend({
-      ...this.config.agentdb,
-      namespace: this.config.defaultNamespace,
+    // Initialize local HNSW-backed vector backend
+    this.localVector = new LocalVectorBackend({
+      ...this.config.localVector,
+      defaultNamespace: this.config.defaultNamespace,
       embeddingGenerator: this.config.embeddingGenerator,
     });
 
@@ -189,11 +188,11 @@ export class HybridBackend extends EventEmitter implements IMemoryBackend {
     this.sqlite.on('entry:updated', (data) => this.emit('sqlite:updated', data));
     this.sqlite.on('entry:deleted', (data) => this.emit('sqlite:deleted', data));
 
-    this.agentdb.on('entry:stored', (data) => this.emit('agentdb:stored', data));
-    this.agentdb.on('entry:updated', (data) => this.emit('agentdb:updated', data));
-    this.agentdb.on('entry:deleted', (data) => this.emit('agentdb:deleted', data));
-    this.agentdb.on('cache:hit', (data) => this.emit('cache:hit', data));
-    this.agentdb.on('cache:miss', (data) => this.emit('cache:miss', data));
+    this.localVector.on('entry:stored', (data) => this.emit('localVector:stored', data));
+    this.localVector.on('entry:updated', (data) => this.emit('localVector:updated', data));
+    this.localVector.on('entry:deleted', (data) => this.emit('localVector:deleted', data));
+    this.localVector.on('cache:hit', (data) => this.emit('cache:hit', data));
+    this.localVector.on('cache:miss', (data) => this.emit('cache:miss', data));
   }
 
   /**
@@ -202,7 +201,7 @@ export class HybridBackend extends EventEmitter implements IMemoryBackend {
   async initialize(): Promise<void> {
     if (this.initialized) return;
 
-    await Promise.all([this.sqlite.initialize(), this.agentdb.initialize()]);
+    await Promise.all([this.sqlite.initialize(), this.localVector.initialize()]);
 
     this.initialized = true;
     this.emit('initialized');
@@ -214,7 +213,7 @@ export class HybridBackend extends EventEmitter implements IMemoryBackend {
   async shutdown(): Promise<void> {
     if (!this.initialized) return;
 
-    await Promise.all([this.sqlite.shutdown(), this.agentdb.shutdown()]);
+    await Promise.all([this.sqlite.shutdown(), this.localVector.shutdown()]);
 
     this.initialized = false;
     this.emit('shutdown');
@@ -226,20 +225,20 @@ export class HybridBackend extends EventEmitter implements IMemoryBackend {
   async store(entry: MemoryEntry): Promise<void> {
     if (this.config.dualWrite) {
       // Write to both backends in parallel
-      await Promise.all([this.sqlite.store(entry), this.agentdb.store(entry)]);
+      await Promise.all([this.sqlite.store(entry), this.localVector.store(entry)]);
     } else {
-      // Write to primary backend only (AgentDB has vector search)
-      await this.agentdb.store(entry);
+      // Write to primary backend only (local vector backend has vector search)
+      await this.localVector.store(entry);
     }
 
     this.emit('entry:stored', { id: entry.id });
   }
 
   /**
-   * Get from AgentDB (has caching enabled)
+   * Get from local vector backend (has caching enabled)
    */
   async get(id: string): Promise<MemoryEntry | null> {
-    return this.agentdb.get(id);
+    return this.localVector.get(id);
   }
 
   /**
@@ -255,13 +254,13 @@ export class HybridBackend extends EventEmitter implements IMemoryBackend {
   async update(id: string, update: MemoryEntryUpdate): Promise<MemoryEntry | null> {
     if (this.config.dualWrite) {
       // Update both backends
-      const [sqliteResult, agentdbResult] = await Promise.all([
+      const [sqliteResult, localVectorResult] = await Promise.all([
         this.sqlite.update(id, update),
-        this.agentdb.update(id, update),
+        this.localVector.update(id, update),
       ]);
-      return agentdbResult || sqliteResult;
+      return localVectorResult || sqliteResult;
     } else {
-      return this.agentdb.update(id, update);
+      return this.localVector.update(id, update);
     }
   }
 
@@ -270,18 +269,18 @@ export class HybridBackend extends EventEmitter implements IMemoryBackend {
    */
   async delete(id: string): Promise<boolean> {
     if (this.config.dualWrite) {
-      const [sqliteResult, agentdbResult] = await Promise.all([
+      const [sqliteResult, localVectorResult] = await Promise.all([
         this.sqlite.delete(id),
-        this.agentdb.delete(id),
+        this.localVector.delete(id),
       ]);
-      return sqliteResult || agentdbResult;
+      return sqliteResult || localVectorResult;
     } else {
-      return this.agentdb.delete(id);
+      return this.localVector.delete(id);
     }
   }
 
   /**
-   * Query routing - semantic goes to AgentDB, structured to SQLite
+   * Query routing - semantic goes to local vector backend, structured to SQLite
    */
   async query(query: MemoryQuery): Promise<MemoryEntry[]> {
     const startTime = performance.now();
@@ -309,9 +308,9 @@ export class HybridBackend extends EventEmitter implements IMemoryBackend {
         break;
 
       case 'semantic':
-        // AgentDB optimized for semantic search
-        this.stats.agentdbQueries++;
-        results = await this.agentdb.query(query);
+        // Local vector backend optimized for semantic search
+        this.stats.localVectorQueries++;
+        results = await this.localVector.query(query);
         break;
 
       case 'hybrid':
@@ -359,10 +358,10 @@ export class HybridBackend extends EventEmitter implements IMemoryBackend {
 
   /**
    * Semantic queries (vector)
-   * Routes to AgentDB for HNSW-based vector search
+   * Routes to local HNSW-based vector search
    */
   async querySemantic(query: SemanticQuery): Promise<MemoryEntry[]> {
-    this.stats.agentdbQueries++;
+    this.stats.localVectorQueries++;
 
     let embedding = query.embedding;
 
@@ -375,7 +374,7 @@ export class HybridBackend extends EventEmitter implements IMemoryBackend {
       throw new Error('SemanticQuery requires either content or embedding');
     }
 
-    const searchResults = await this.agentdb.search(embedding, {
+    const searchResults = await this.localVector.search(embedding, {
       k: (query.k || 10) * 2, // Over-fetch to account for post-filtering
       threshold: query.threshold || this.config.semanticThreshold,
       filters: query.filters as MemoryQuery | undefined,
@@ -383,7 +382,7 @@ export class HybridBackend extends EventEmitter implements IMemoryBackend {
 
     let entries = searchResults.map((r) => r.entry);
 
-    // Apply tag/namespace/type filters that AgentDB may not enforce
+    // Apply tag/namespace/type filters defensively after semantic search
     if (query.filters) {
       const f = query.filters as Record<string, unknown>;
       if (f.tags && Array.isArray(f.tags)) {
@@ -439,11 +438,11 @@ export class HybridBackend extends EventEmitter implements IMemoryBackend {
   }
 
   /**
-   * Semantic vector search (routes to AgentDB)
+   * Semantic vector search (routes to local vector backend)
    */
   async search(embedding: Float32Array, options: SearchOptions): Promise<SearchResult[]> {
-    this.stats.agentdbQueries++;
-    return this.agentdb.search(embedding, options);
+    this.stats.localVectorQueries++;
+    return this.localVector.search(embedding, options);
   }
 
   /**
@@ -451,9 +450,9 @@ export class HybridBackend extends EventEmitter implements IMemoryBackend {
    */
   async bulkInsert(entries: MemoryEntry[]): Promise<void> {
     if (this.config.dualWrite) {
-      await Promise.all([this.sqlite.bulkInsert(entries), this.agentdb.bulkInsert(entries)]);
+      await Promise.all([this.sqlite.bulkInsert(entries), this.localVector.bulkInsert(entries)]);
     } else {
-      await this.agentdb.bulkInsert(entries);
+      await this.localVector.bulkInsert(entries);
     }
   }
 
@@ -462,13 +461,13 @@ export class HybridBackend extends EventEmitter implements IMemoryBackend {
    */
   async bulkDelete(ids: string[]): Promise<number> {
     if (this.config.dualWrite) {
-      const [sqliteCount, agentdbCount] = await Promise.all([
+      const [sqliteCount, localVectorCount] = await Promise.all([
         this.sqlite.bulkDelete(ids),
-        this.agentdb.bulkDelete(ids),
+        this.localVector.bulkDelete(ids),
       ]);
-      return Math.max(sqliteCount, agentdbCount);
+      return Math.max(sqliteCount, localVectorCount);
     } else {
-      return this.agentdb.bulkDelete(ids);
+      return this.localVector.bulkDelete(ids);
     }
   }
 
@@ -491,13 +490,13 @@ export class HybridBackend extends EventEmitter implements IMemoryBackend {
    */
   async clearNamespace(namespace: string): Promise<number> {
     if (this.config.dualWrite) {
-      const [sqliteCount, agentdbCount] = await Promise.all([
+      const [sqliteCount, localVectorCount] = await Promise.all([
         this.sqlite.clearNamespace(namespace),
-        this.agentdb.clearNamespace(namespace),
+        this.localVector.clearNamespace(namespace),
       ]);
-      return Math.max(sqliteCount, agentdbCount);
+      return Math.max(sqliteCount, localVectorCount);
     } else {
-      return this.agentdb.clearNamespace(namespace);
+      return this.localVector.clearNamespace(namespace);
     }
   }
 
@@ -505,24 +504,24 @@ export class HybridBackend extends EventEmitter implements IMemoryBackend {
    * Get combined statistics from both backends
    */
   async getStats(): Promise<BackendStats> {
-    const [sqliteStats, agentdbStats] = await Promise.all([
+    const [sqliteStats, localVectorStats] = await Promise.all([
       this.sqlite.getStats(),
-      this.agentdb.getStats(),
+      this.localVector.getStats(),
     ]);
 
     return {
-      totalEntries: Math.max(sqliteStats.totalEntries, agentdbStats.totalEntries),
-      entriesByNamespace: agentdbStats.entriesByNamespace,
-      entriesByType: agentdbStats.entriesByType,
-      memoryUsage: sqliteStats.memoryUsage + agentdbStats.memoryUsage,
-      hnswStats: agentdbStats.hnswStats ?? {
-        vectorCount: agentdbStats.totalEntries,
+      totalEntries: Math.max(sqliteStats.totalEntries, localVectorStats.totalEntries),
+      entriesByNamespace: localVectorStats.entriesByNamespace,
+      entriesByType: localVectorStats.entriesByType,
+      memoryUsage: sqliteStats.memoryUsage + localVectorStats.memoryUsage,
+      hnswStats: localVectorStats.hnswStats ?? {
+        vectorCount: localVectorStats.totalEntries,
         memoryUsage: 0,
-        avgSearchTime: agentdbStats.avgSearchTime,
+        avgSearchTime: localVectorStats.avgSearchTime,
         buildTime: 0,
         compressionRatio: 1.0,
       },
-      cacheStats: agentdbStats.cacheStats ?? {
+      cacheStats: localVectorStats.cacheStats ?? {
         hitRate: 0,
         size: 0,
         hits: 0,
@@ -531,11 +530,11 @@ export class HybridBackend extends EventEmitter implements IMemoryBackend {
         memoryUsage: 0,
       },
       avgQueryTime:
-        this.stats.hybridQueries + this.stats.sqliteQueries + this.stats.agentdbQueries > 0
+        this.stats.hybridQueries + this.stats.sqliteQueries + this.stats.localVectorQueries > 0
           ? this.stats.totalQueryTime /
-            (this.stats.hybridQueries + this.stats.sqliteQueries + this.stats.agentdbQueries)
+            (this.stats.hybridQueries + this.stats.sqliteQueries + this.stats.localVectorQueries)
           : 0,
-      avgSearchTime: agentdbStats.avgSearchTime,
+      avgSearchTime: localVectorStats.avgSearchTime,
     };
   }
 
@@ -543,27 +542,27 @@ export class HybridBackend extends EventEmitter implements IMemoryBackend {
    * Health check for both backends
    */
   async healthCheck(): Promise<HealthCheckResult> {
-    const [sqliteHealth, agentdbHealth] = await Promise.all([
+    const [sqliteHealth, localVectorHealth] = await Promise.all([
       this.sqlite.healthCheck(),
-      this.agentdb.healthCheck(),
+      this.localVector.healthCheck(),
     ]);
 
-    const allIssues = [...sqliteHealth.issues, ...agentdbHealth.issues];
+    const allIssues = [...sqliteHealth.issues, ...localVectorHealth.issues];
     const allRecommendations = [
       ...sqliteHealth.recommendations,
-      ...agentdbHealth.recommendations,
+      ...localVectorHealth.recommendations,
     ];
 
     // Determine overall status
     let status: 'healthy' | 'degraded' | 'unhealthy' = 'healthy';
     if (
       sqliteHealth.status === 'unhealthy' ||
-      agentdbHealth.status === 'unhealthy'
+      localVectorHealth.status === 'unhealthy'
     ) {
       status = 'unhealthy';
     } else if (
       sqliteHealth.status === 'degraded' ||
-      agentdbHealth.status === 'degraded'
+      localVectorHealth.status === 'degraded'
     ) {
       status = 'degraded';
     }
@@ -572,8 +571,8 @@ export class HybridBackend extends EventEmitter implements IMemoryBackend {
       status,
       components: {
         storage: sqliteHealth.components.storage,
-        index: agentdbHealth.components.index,
-        cache: agentdbHealth.components.cache,
+        index: localVectorHealth.components.index,
+        cache: localVectorHealth.components.cache,
       },
       timestamp: Date.now(),
       issues: allIssues,
@@ -587,11 +586,11 @@ export class HybridBackend extends EventEmitter implements IMemoryBackend {
    * Auto-route queries based on properties
    */
   private async autoRoute(query: MemoryQuery): Promise<MemoryEntry[]> {
-    // If has embedding or content, use semantic search (AgentDB)
+    // If has embedding or content, use semantic search.
     const hasEmbeddingGenerator = typeof this.config.embeddingGenerator === 'function';
     if (query.embedding || (query.content && hasEmbeddingGenerator)) {
-      this.stats.agentdbQueries++;
-      return this.agentdb.query(query);
+      this.stats.localVectorQueries++;
+      return this.localVector.query(query);
     }
 
     // If has exact key or prefix, use structured search (SQLite)
@@ -606,15 +605,15 @@ export class HybridBackend extends EventEmitter implements IMemoryBackend {
         this.stats.sqliteQueries++;
         return this.sqlite.query(query);
 
-      case 'agentdb-first':
-        this.stats.agentdbQueries++;
-        return this.agentdb.query(query);
+      case 'localVector-first':
+        this.stats.localVectorQueries++;
+        return this.localVector.query(query);
 
       case 'auto':
       default:
-        // Default to AgentDB (has caching)
-        this.stats.agentdbQueries++;
-        return this.agentdb.query(query);
+        // Default to local vector backend (has caching)
+        this.stats.localVectorQueries++;
+        return this.localVector.query(query);
     }
   }
 
@@ -712,67 +711,44 @@ export class HybridBackend extends EventEmitter implements IMemoryBackend {
     return [...structuredResults, ...additional];
   }
 
-  // ===== Proxy Methods for AgentDB v3 Controllers (ADR-053 #1212) =====
+  // ===== Controller-only capabilities not provided by the JS bootstrap =====
 
   /**
    * Record feedback for a memory entry.
-   * Delegates to AgentDB's recordFeedback when available.
-   * Gracefully degrades to a no-op when AgentDB is unavailable.
+   * The JS bootstrap does not provide learning-feedback controllers.
    */
   async recordFeedback(
-    entryId: string,
-    feedback: { score: number; label?: string; context?: Record<string, unknown> },
+    _entryId: string,
+    _feedback: { score: number; label?: string; context?: Record<string, unknown> },
   ): Promise<boolean> {
-    const agentdbInstance = this.agentdb.getAgentDB?.();
-    if (agentdbInstance && typeof agentdbInstance.recordFeedback === 'function') {
-      try {
-        await agentdbInstance.recordFeedback(entryId, feedback);
-        this.emit('feedback:recorded', { entryId, score: feedback.score });
-        return true;
-      } catch {
-        // AgentDB feedback recording failed — degrade silently
-      }
-    }
     return false;
   }
 
   /**
    * Verify a witness chain for a memory entry.
-   * Delegates to AgentDB's verifyWitnessChain when available.
+   * Witness chains are unavailable until the future Rust memory layer provides them.
    */
-  async verifyWitnessChain(entryId: string): Promise<{
+  async verifyWitnessChain(_entryId: string): Promise<{
     valid: boolean;
     chainLength: number;
     errors: string[];
   }> {
-    const agentdbInstance = this.agentdb.getAgentDB?.();
-    if (agentdbInstance && typeof agentdbInstance.verifyWitnessChain === 'function') {
-      try {
-        return await agentdbInstance.verifyWitnessChain(entryId);
-      } catch {
-        // Verification failed — return degraded result
-      }
-    }
-    return { valid: false, chainLength: 0, errors: ['AgentDB not available'] };
+    return {
+      valid: false,
+      chainLength: 0,
+      errors: ['Witness chains are unavailable in the JS HNSW bootstrap'],
+    };
   }
 
   /**
    * Get the witness chain for a memory entry.
-   * Delegates to AgentDB's getWitnessChain when available.
+   * Witness chains are unavailable until the future Rust memory layer provides them.
    */
-  async getWitnessChain(entryId: string): Promise<Array<{
+  async getWitnessChain(_entryId: string): Promise<Array<{
     hash: string;
     timestamp: number;
     operation: string;
   }>> {
-    const agentdbInstance = this.agentdb.getAgentDB?.();
-    if (agentdbInstance && typeof agentdbInstance.getWitnessChain === 'function') {
-      try {
-        return await agentdbInstance.getWitnessChain(entryId);
-      } catch {
-        // Chain retrieval failed
-      }
-    }
     return [];
   }
 
@@ -785,8 +761,8 @@ export class HybridBackend extends EventEmitter implements IMemoryBackend {
     return this.sqlite;
   }
 
-  getAgentDBBackend(): AgentDBBackend {
-    return this.agentdb;
+  getLocalVectorBackend(): LocalVectorBackend {
+    return this.localVector;
   }
 }
 

@@ -112,8 +112,7 @@
     "@hive-flow/memory": "workspace:*",
     "@hive-flow/integration": "workspace:*",
     "@hive-flow/neural": "workspace:*",
-    "@hive-flow/plugin-gastown-bridge": "workspace:*",
-    "agentic-flow": "^3.0.0-alpha.1"
+    "@hive-flow/plugin-gastown-bridge": "workspace:*"
   },
   "publishConfig": {
     "access": "public",

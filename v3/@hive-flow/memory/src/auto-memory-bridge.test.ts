@@ -2,7 +2,7 @@
  * Tests for AutoMemoryBridge
  *
  * TDD London School (mock-first) tests for the bidirectional bridge
- * between Claude Code auto memory and AgentDB.
+ * between Claude Code auto memory and local backend storage.
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vitest';
@@ -370,7 +370,7 @@ describe('AutoMemoryBridge', () => {
   });
 
   describe('recordInsight', () => {
-    it('should store insight in AgentDB', async () => {
+    it('should store insight in backend storage', async () => {
       const insight = createTestInsight();
       await bridge.recordInsight(insight);
 
@@ -479,11 +479,11 @@ describe('AutoMemoryBridge', () => {
       expect(bridge.getStatus().bufferedInsights).toBe(0);
     });
 
-    it('should skip AgentDB entries already synced from the buffer', async () => {
-      // Record an insight (stored in buffer AND AgentDB)
+    it('should skip backend entries already synced from the buffer', async () => {
+      // Record an insight (stored in buffer AND backend storage)
       await bridge.recordInsight(createTestInsight());
 
-      // Mock backend.query to return the same insight from AgentDB
+      // Mock backend.query to return the same insight from backend storage
       const mockEntry: Partial<MemoryEntry> = {
         id: 'test-1',
         key: 'insight:debugging:12345',
@@ -524,7 +524,7 @@ describe('AutoMemoryBridge', () => {
       expect(backend.bulkInsert).toHaveBeenCalled();
     });
 
-    it('should skip entries already in AgentDB', async () => {
+    it('should skip entries already in backend storage', async () => {
       const topicContent = `# Test
 
 ## Existing

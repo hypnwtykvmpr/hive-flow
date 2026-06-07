@@ -1,7 +1,7 @@
 /**
  * @hive-flow/memory - V3 Unified Memory System
  *
- * Provides a unified memory interface backed by AgentDB with HNSW indexing
+ * Provides a unified memory interface backed by local HNSW indexing
  * for fast HNSW-indexed vector search compared to brute-force approaches.
  *
  * @module @hive-flow/memory
@@ -157,7 +157,7 @@ export type {
 // ===== Controller Registry (ADR-053) =====
 export { ControllerRegistry, INIT_LEVELS } from './controller-registry.js';
 export type {
-  AgentDBControllerName,
+  ExternalControllerName,
   CLIControllerName,
   ControllerName,
   InitLevel,
@@ -167,10 +167,8 @@ export type {
 } from './controller-registry.js';
 
 // ===== Core Components =====
-export { AgentDBAdapter } from './agentdb-adapter.js';
-export type { AgentDBAdapterConfig } from './agentdb-adapter.js';
-export { AgentDBBackend, AgentDBVectorIndex } from './agentdb-backend.js';
-export type { AgentDBBackendConfig } from './agentdb-backend.js';
+export { LocalVectorBackend } from './local-vector-backend.js';
+export type { LocalVectorBackendConfig } from './local-vector-backend.js';
 export { SQLiteBackend } from './sqlite-backend.js';
 export type { SQLiteBackendConfig } from './sqlite-backend.js';
 export { SqlJsBackend } from './sqljs-backend.js';
@@ -210,7 +208,7 @@ import {
   MigrationConfig,
   MigrationResult,
 } from './types.js';
-import { AgentDBAdapter, AgentDBAdapterConfig } from './agentdb-adapter.js';
+import { LocalVectorBackend, LocalVectorBackendConfig } from './local-vector-backend.js';
 import { MemoryMigrator } from './migration.js';
 import { HybridMemoryRepository } from './infrastructure/repositories/hybrid-memory-repository.js';
 import type { IMemoryRepository } from './domain/repositories/memory-repository.interface.js';
@@ -218,7 +216,7 @@ import type { IMemoryRepository } from './domain/repositories/memory-repository.
 /**
  * Configuration for UnifiedMemoryService
  */
-export interface UnifiedMemoryServiceConfig extends Partial<AgentDBAdapterConfig> {
+export interface UnifiedMemoryServiceConfig extends Partial<LocalVectorBackendConfig> {
   /** Enable automatic embedding generation */
   autoEmbed?: boolean;
 
@@ -241,7 +239,7 @@ export interface UnifiedMemoryServiceConfig extends Partial<AgentDBAdapterConfig
  * - Performance monitoring
  */
 export class UnifiedMemoryService extends EventEmitter implements IMemoryBackend {
-  private adapter: AgentDBAdapter;
+  private adapter: LocalVectorBackend;
   private config: UnifiedMemoryServiceConfig;
   private initialized: boolean = false;
   private memoryRepository: IMemoryRepository;
@@ -255,7 +253,7 @@ export class UnifiedMemoryService extends EventEmitter implements IMemoryBackend
       ...config,
     };
 
-    this.adapter = new AgentDBAdapter({
+    this.adapter = new LocalVectorBackend({
       dimensions: this.config.dimensions,
       cacheEnabled: this.config.cacheEnabled,
       cacheSize: this.config.cacheSize,
@@ -505,7 +503,7 @@ export class UnifiedMemoryService extends EventEmitter implements IMemoryBackend
   /**
    * Get the underlying adapter for advanced operations
    */
-  getAdapter(): AgentDBAdapter {
+  getAdapter(): LocalVectorBackend {
     return this.adapter;
   }
 

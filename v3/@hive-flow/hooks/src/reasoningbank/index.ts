@@ -1,13 +1,13 @@
 /**
- * V3 ReasoningBank - Pattern Learning with AgentDB
+ * V3 ReasoningBank - Pattern Learning with Local HNSW
  *
- * Connects hooks to persistent vector storage using AgentDB adapter.
+ * Connects hooks to persistent vector storage using the local vector backend.
  * No JSON - all patterns stored as vectors in memory.db
  *
  * Features:
  * - Real HNSW indexing (M=16, efConstruction=200) for HNSW-indexed+ faster search
  * - ONNX embeddings via @hive-flow/embeddings (MiniLM-L6 384-dim)
- * - AgentDB backend for persistence
+ * - Local vector backend for persistence
  * - Pattern promotion from short-term to long-term memory
  *
  * @module @hive-flow/hooks/reasoningbank
@@ -18,12 +18,12 @@ import { generateSecureId } from '@hive-flow/shared';
 import type { HookContext, HookEvent } from '../types.js';
 
 // Dynamic imports for optional dependencies
-let AgentDBAdapter: any = null;
+let LocalVectorBackend: any = null;
 let HNSWIndex: any = null;
 let EmbeddingServiceImpl: any = null;
 
 /**
- * Pattern stored in AgentDB
+ * Pattern stored in local vector storage
  */
 export interface GuidancePattern {
   id: string;
@@ -135,7 +135,7 @@ const AGENT_PATTERNS: Record<string, RegExp> = {
   'performance-engineer': /perf|optim|fast|memory|cache|speed|slow/i,
   'core-architect': /architect|design|ddd|domain|refactor|struct/i,
   'swarm-specialist': /swarm|agent|coordinate|orchestrat|parallel/i,
-  'memory-specialist': /memory|agentdb|hnsw|vector|embedding/i,
+  'memory-specialist': /memory|hnsw|vector|embedding/i,
   'coder': /fix|bug|implement|create|add|build|error|code/i,
   'reviewer': /review|quality|lint|check|audit/i,
 };
@@ -184,12 +184,12 @@ const DOMAIN_GUIDANCE: Record<string, string[]> = {
 /**
  * ReasoningBank - Vector-based pattern storage and retrieval
  *
- * Uses AgentDB adapter for HNSW-indexed pattern storage.
+ * Uses the local vector backend for HNSW-indexed pattern storage.
  * Provides guidance generation from learned patterns.
  */
 export class ReasoningBank extends EventEmitter {
   private config: ReasoningBankConfig;
-  private agentDB: any = null;
+  private localVectorBackend: any = null;
   private hnswIndex: any = null;
   private embeddingService: IEmbeddingService;
   private initialized = false;
@@ -220,7 +220,7 @@ export class ReasoningBank extends EventEmitter {
   }
 
   /**
-   * Initialize ReasoningBank with AgentDB backend and real HNSW
+   * Initialize ReasoningBank with local vector backend and real HNSW
    */
   async initialize(): Promise<void> {
     if (this.initialized) return;
@@ -229,7 +229,7 @@ export class ReasoningBank extends EventEmitter {
       // Try to load real implementations
       await this.loadDependencies();
 
-      if (AgentDBAdapter && HNSWIndex) {
+      if (LocalVectorBackend && HNSWIndex) {
         // Initialize real HNSW index
         this.hnswIndex = new HNSWIndex({
           dimensions: this.config.dimensions,
@@ -239,8 +239,8 @@ export class ReasoningBank extends EventEmitter {
           metric: 'cosine',
         });
 
-        // Initialize AgentDB adapter
-        this.agentDB = new AgentDBAdapter({
+        // Initialize local vector backend
+        this.localVectorBackend = new LocalVectorBackend({
           dimensions: this.config.dimensions,
           hnswM: this.config.hnswM,
           hnswEfConstruction: this.config.hnswEfConstruction,
@@ -250,7 +250,7 @@ export class ReasoningBank extends EventEmitter {
           embeddingGenerator: (text: string) => this.embeddingService.embed(text),
         });
 
-        await this.agentDB.initialize();
+        await this.localVectorBackend.initialize();
         this.useRealBackend = true;
 
         // Try to use real embedding service
@@ -264,7 +264,7 @@ export class ReasoningBank extends EventEmitter {
         }
 
         await this.loadPatterns();
-        console.log(`[ReasoningBank] Initialized with AgentDB + HNSW (M=${this.config.hnswM}, efConstruction=${this.config.hnswEfConstruction})`);
+        console.log(`[ReasoningBank] Initialized with local HNSW (M=${this.config.hnswM}, efConstruction=${this.config.hnswEfConstruction})`);
       } else {
         throw new Error('Dependencies not available');
       }
@@ -277,7 +277,7 @@ export class ReasoningBank extends EventEmitter {
       });
     } catch (error) {
       // Fallback to in-memory only mode
-      console.warn('[ReasoningBank] AgentDB not available, using in-memory mode');
+      console.warn('[ReasoningBank] Local vector backend not available, using in-memory mode');
       this.useRealBackend = false;
       this.initialized = true;
     }
@@ -298,7 +298,7 @@ export class ReasoningBank extends EventEmitter {
 
     const memoryModule = await dynamicImport('@hive-flow/memory');
     if (memoryModule) {
-      AgentDBAdapter = memoryModule.AgentDBAdapter;
+      LocalVectorBackend = memoryModule.LocalVectorBackend;
       HNSWIndex = memoryModule.HNSWIndex;
     }
 
@@ -356,7 +356,7 @@ export class ReasoningBank extends EventEmitter {
       await this.hnswIndex.addPoint(pattern.id, embedding);
     }
 
-    await this.storeInAgentDB(pattern, 'short_term');
+    await this.storeInLocalVectorBackend(pattern, 'short_term');
 
     this.metrics.patternsStored++;
     this.emit('pattern:stored', { id: pattern.id, domain });
@@ -672,7 +672,7 @@ export class ReasoningBank extends EventEmitter {
         if (this.hnswIndex) {
           await this.hnswIndex.addPoint(pattern.id, pattern.embedding);
         }
-        await this.storeInAgentDB(pattern, 'short_term');
+        await this.storeInLocalVectorBackend(pattern, 'short_term');
         imported++;
       }
     }
@@ -683,7 +683,7 @@ export class ReasoningBank extends EventEmitter {
         if (this.hnswIndex) {
           await this.hnswIndex.addPoint(pattern.id, pattern.embedding);
         }
-        await this.storeInAgentDB(pattern, 'long_term');
+        await this.storeInLocalVectorBackend(pattern, 'long_term');
         imported++;
       }
     }
@@ -700,11 +700,11 @@ export class ReasoningBank extends EventEmitter {
   }
 
   private async loadPatterns(): Promise<void> {
-    if (!this.agentDB) return;
+    if (!this.localVectorBackend) return;
 
     try {
-      // Load from AgentDB namespaces
-      const shortTermEntries = await this.agentDB.query({
+      // Load from local vector namespaces
+      const shortTermEntries = await this.localVectorBackend.query({
         namespace: 'patterns:short_term',
         limit: this.config.maxShortTerm,
       });
@@ -717,7 +717,7 @@ export class ReasoningBank extends EventEmitter {
         }
       }
 
-      const longTermEntries = await this.agentDB.query({
+      const longTermEntries = await this.localVectorBackend.query({
         namespace: 'patterns:long_term',
         limit: this.config.maxLongTerm,
       });
@@ -734,11 +734,11 @@ export class ReasoningBank extends EventEmitter {
     }
   }
 
-  private async storeInAgentDB(pattern: GuidancePattern, type: 'short_term' | 'long_term'): Promise<void> {
-    if (!this.agentDB) return;
+  private async storeInLocalVectorBackend(pattern: GuidancePattern, type: 'short_term' | 'long_term'): Promise<void> {
+    if (!this.localVectorBackend) return;
 
     try {
-      await this.agentDB.store({
+      await this.localVectorBackend.store({
         key: pattern.id,
         namespace: `patterns:${type}`,
         content: pattern.strategy,
@@ -759,10 +759,10 @@ export class ReasoningBank extends EventEmitter {
   }
 
   private async updateInStorage(pattern: GuidancePattern): Promise<void> {
-    if (!this.agentDB) return;
+    if (!this.localVectorBackend) return;
 
     try {
-      await this.agentDB.update(pattern.id, {
+      await this.localVectorBackend.update(pattern.id, {
         metadata: {
           quality: pattern.quality,
           usageCount: pattern.usageCount,
@@ -776,10 +776,10 @@ export class ReasoningBank extends EventEmitter {
   }
 
   private async deleteFromStorage(id: string): Promise<void> {
-    if (!this.agentDB) return;
+    if (!this.localVectorBackend) return;
 
     try {
-      await this.agentDB.delete(id);
+      await this.localVectorBackend.delete(id);
     } catch (error) {
       console.warn('[ReasoningBank] Failed to delete pattern:', error);
     }
@@ -891,7 +891,7 @@ export class ReasoningBank extends EventEmitter {
 
     // Update storage
     await this.deleteFromStorage(pattern.id);
-    await this.storeInAgentDB(pattern, 'long_term');
+    await this.storeInLocalVectorBackend(pattern, 'long_term');
 
     this.metrics.promotions++;
     this.emit('pattern:promoted', { id: pattern.id });
@@ -1018,7 +1018,7 @@ export const reasoningBank = new ReasoningBank();
 
 /**
  * Hook handler: session-start → import auto memory, build graph.
- * Called by the session-start hook to hydrate AgentDB with previous learnings.
+ * Called by the session-start hook to hydrate local vector storage with previous learnings.
  *
  * @param bridge - An initialized AutoMemoryBridge instance
  */

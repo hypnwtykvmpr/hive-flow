@@ -67,9 +67,6 @@
   },
   "pnpm": {
     "neverBuiltDependencies": ["sharp"],
-    "patchedDependencies": {
-      "agentdb@3.0.0-alpha.9": "patches/agentdb@3.0.0-alpha.9.patch"
-    },
     "peerDependencyRules": {
       "ignoreMissing": [
         "@hive-flow/browser",

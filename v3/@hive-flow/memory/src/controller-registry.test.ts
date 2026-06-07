@@ -8,7 +8,7 @@
  * - Health check aggregation
  * - Shutdown ordering
  * - Cross-platform path handling (Linux/Mac/Windows)
- * - AgentDB unavailable scenarios
+ * - Deferred external controller scenarios
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -260,8 +260,8 @@ describe('ControllerRegistry', () => {
   // ----- Graceful Degradation -----
 
   describe('graceful degradation', () => {
-    it('should continue when AgentDB is unavailable', async () => {
-      // No AgentDB module available — should still init CLI-layer controllers
+    it('should continue when external controllers are unavailable', async () => {
+      // Deferred external controllers are unavailable, but CLI-layer controllers still init.
       await registry.initialize({ backend: mockBackend });
       expect(registry.isInitialized()).toBe(true);
     });
@@ -270,7 +270,7 @@ describe('ControllerRegistry', () => {
       await registry.initialize({ backend: mockBackend });
       const report = await registry.healthCheck();
 
-      // Some controllers should be unavailable (no AgentDB)
+      // Some controllers should be unavailable (deferred external controllers)
       // but the registry itself should be functional
       expect(report.status).not.toBe('unhealthy');
     });
@@ -279,14 +279,13 @@ describe('ControllerRegistry', () => {
       const handler = vi.fn();
       registry.on('controller:failed', handler);
 
-      // Enable a controller that requires AgentDB (which is unavailable)
+      // Enable a deferred external controller.
       await registry.initialize({
         backend: mockBackend,
         controllers: { reasoningBank: true },
       });
 
-      // ReasoningBank requires AgentDB, so it should fail or be unavailable
-      // The exact behavior depends on whether agentdb is importable
+      expect(registry.isEnabled('reasoningBank')).toBe(false);
     });
 
     it('should handle null backend gracefully', async () => {
@@ -426,10 +425,10 @@ describe('ControllerRegistry', () => {
       expect(report.totalControllers).toBeGreaterThanOrEqual(report.activeControllers);
     });
 
-    it('should report agentdb availability', async () => {
+    it('should report external controller availability', async () => {
       await registry.initialize({ backend: mockBackend });
       const report = await registry.healthCheck();
-      expect(typeof report.agentdbAvailable).toBe('boolean');
+      expect(report.externalControllersAvailable).toBe(false);
     });
 
     it('should classify status correctly', async () => {
@@ -515,21 +514,17 @@ describe('ControllerRegistry', () => {
     });
   });
 
-  // ----- AgentDB Integration -----
+  // ----- Deferred External Controllers -----
 
-  describe('AgentDB integration', () => {
-    it('should handle missing agentdb module', async () => {
-      // With no agentdb installed, should still work
+  describe('deferred external controllers', () => {
+    it('should handle missing external controller backend', async () => {
       await registry.initialize({ backend: mockBackend });
       expect(registry.isInitialized()).toBe(true);
     });
 
-    it('should return null AgentDB when unavailable', async () => {
+    it('should return null external controller backend', async () => {
       await registry.initialize({ backend: mockBackend });
-      // May or may not be available depending on test environment
-      const agentdb = registry.getAgentDB();
-      // Just ensure it doesn't throw
-      expect(agentdb === null || agentdb !== null).toBe(true);
+      expect(registry.getExternalControllerBackend()).toBeNull();
     });
   });
 
@@ -656,12 +651,11 @@ describe('ControllerRegistry', () => {
   // ----- Event Emission -----
 
   describe('events', () => {
-    it('should emit agentdb:unavailable when module missing', async () => {
+    it('should not emit an external-backend failure during normal init', async () => {
       const handler = vi.fn();
-      registry.on('agentdb:unavailable', handler);
+      registry.on('external-controller:unavailable', handler);
       await registry.initialize({ backend: mockBackend });
-      // AgentDB may or may not be available in test environment
-      // Just verify the listener doesn't break anything
+      expect(handler).not.toHaveBeenCalled();
     });
 
     it('should emit all lifecycle events', async () => {
@@ -740,7 +734,7 @@ describe('HybridBackend proxy methods', () => {
     expect(typeof backend.getWitnessChain).toBe('function');
   });
 
-  it('should return false for recordFeedback when AgentDB unavailable', async () => {
+  it('should return false for recordFeedback when witness feedback is unavailable', async () => {
     const { HybridBackend } = await import('./hybrid-backend.js');
     const backend = new HybridBackend();
     await backend.initialize();
@@ -751,19 +745,19 @@ describe('HybridBackend proxy methods', () => {
     await backend.shutdown();
   });
 
-  it('should return invalid for verifyWitnessChain when AgentDB unavailable', async () => {
+  it('should return invalid for verifyWitnessChain when witness chains are unavailable', async () => {
     const { HybridBackend } = await import('./hybrid-backend.js');
     const backend = new HybridBackend();
     await backend.initialize();
 
     const result = await backend.verifyWitnessChain('entry-1');
     expect(result.valid).toBe(false);
-    expect(result.errors).toContain('AgentDB not available');
+    expect(result.errors).toContain('Witness chains are unavailable in the JS HNSW bootstrap');
 
     await backend.shutdown();
   });
 
-  it('should return empty array for getWitnessChain when AgentDB unavailable', async () => {
+  it('should return empty array for getWitnessChain when witness chains are unavailable', async () => {
     const { HybridBackend } = await import('./hybrid-backend.js');
     const backend = new HybridBackend();
     await backend.initialize();
