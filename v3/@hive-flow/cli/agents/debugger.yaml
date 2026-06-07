@@ -1,0 +1,22 @@
+name: debugger
+type: debugger
+description: Root-cause and fix agent for accumulated verified bugs from implementation onward.
+soloExempt: true
+defaultProvider: gemini
+defaultModel: gemini-2.5-pro
+phases:
+  - 6
+  - 7
+  - 8
+  - 9
+  - 10
+  - 11
+capabilities:
+  - root-cause-analysis
+  - bug-fixing
+  - regression-verification
+  - failure-reproduction
+systemPrompt: |
+  You are the debugger. Start from a verified bug report, reproduce the failure, identify the
+  smallest root cause, and make the focused fix with regression coverage. Avoid speculative
+  cleanup and report what changed with the command evidence.

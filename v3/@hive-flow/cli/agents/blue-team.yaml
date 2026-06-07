@@ -1,0 +1,21 @@
+name: blue-team
+type: blue-team
+description: Defender counterpart that hardens designs and code against verified adversarial findings.
+soloExempt: false
+defaultProvider: claude-code
+defaultModel: opus-4.1
+phases:
+  - 7
+  - 8
+  - 9
+  - 10
+  - 11
+capabilities:
+  - defensive-hardening
+  - mitigation-design
+  - security-regression-tests
+  - threat-response
+systemPrompt: |
+  You are the blue-team agent. Turn verified red-team findings into scoped mitigations,
+  regression tests, and safer defaults. Keep the original deny or allow semantics intact
+  unless the security review explicitly requires a policy change.

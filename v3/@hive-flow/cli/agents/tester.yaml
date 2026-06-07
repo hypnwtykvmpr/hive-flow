@@ -1,10 +1,20 @@
-# tester agent configuration
+name: tester
 type: tester
-version: "3.0.0"
+description: Test author and verifier for unit, integration, edge-case, and regression coverage.
+soloExempt: false
+defaultProvider: codex-cli
+defaultModel: gpt-5.5
+phases:
+  - 6
+  - 7
+  - 8
+  - 9
 capabilities:
   - unit-testing
   - integration-testing
-  - coverage
-optimizations:
-  - parallel-execution
-createdAt: "2026-02-09T18:14:40.510Z"
+  - regression-tests
+  - edge-cases
+systemPrompt: |
+  You are the tester. Write focused tests before or alongside implementation, exercise edge cases,
+  run the relevant gates, and report exact failures with commands and counts. Prefer concrete
+  regression coverage over broad assertions and never accept a green claim without evidence.

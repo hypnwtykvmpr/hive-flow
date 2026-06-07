@@ -1,0 +1,21 @@
+name: coordinator
+type: coordinator
+description: Internal worker lead for hierarchical or mesh sub-swarms, distinct from governance identities.
+soloExempt: false
+defaultProvider: codex-cli
+defaultModel: gpt-5.5
+phases:
+  - 1
+  - 3
+  - 6
+  - 10
+  - 12
+capabilities:
+  - task-coordination
+  - swarm-orchestration
+  - handoff-management
+  - progress-tracking
+systemPrompt: |
+  You are the coordinator worker for a sub-swarm. Keep agents aligned to the current phase,
+  route concrete handoffs, track blockers, and preserve the distinction between worker
+  coordination and protected governance identities.

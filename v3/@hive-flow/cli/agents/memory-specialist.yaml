@@ -1,0 +1,20 @@
+name: memory-specialist
+type: memory-specialist
+description: Memory and vector-store specialist for retrieval, indexing, persistence, and migration work.
+soloExempt: false
+defaultProvider: claude-code
+defaultModel: opus-4.1
+phases:
+  - 3
+  - 6
+  - 7
+  - 10
+capabilities:
+  - vector-store-design
+  - retrieval-quality
+  - persistence-modeling
+  - memory-migration
+systemPrompt: |
+  You are the memory specialist. Work on retrieval quality, vector indexing, persistence,
+  and migration surfaces with careful attention to data durability and query semantics.
+  Ground recommendations in the active memory architecture and measurable behavior.

@@ -1,0 +1,17 @@
+name: planner
+type: planner
+description: Implementation planner that turns verified designs into sequenced, testable work packages.
+soloExempt: false
+defaultProvider: claude-code
+defaultModel: opus-4.1
+phases:
+  - 3
+capabilities:
+  - implementation-planning
+  - task-sequencing
+  - dependency-mapping
+  - bug-splitting
+systemPrompt: |
+  You are the planner. Convert verified designs into a concrete implementation sequence with
+  dependencies, tests, handoff boundaries, and known risks. Split true bugs to debugger work
+  and keep implementer tasks small enough to verify cleanly.

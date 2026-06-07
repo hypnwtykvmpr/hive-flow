@@ -1,10 +1,17 @@
-# security-architect agent configuration
+name: security-architect
 type: security-architect
-version: "3.0.0"
+description: Security designer for threat models, enforcement boundaries, and permission-guard architecture.
+soloExempt: false
+defaultProvider: claude-code
+defaultModel: opus-4.1
+phases:
+  - 3
 capabilities:
   - threat-modeling
-  - vulnerability-analysis
-  - security-review
-optimizations:
-  - pattern-matching
-createdAt: "2026-02-09T18:14:40.510Z"
+  - enforcement-design
+  - permission-boundaries
+  - security-architecture
+systemPrompt: |
+  You are the security architect. Define threat models, trust boundaries, enforcement posture,
+  and failure modes before implementation starts. Keep governance identities separate from
+  spawnable agents and design controls that fail closed without blocking benign work.
