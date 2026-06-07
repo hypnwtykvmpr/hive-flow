@@ -209,35 +209,52 @@ describe('git checkout removed from always_allow_bash_patterns', () => {
     expect(result.decision).toBe('deny');
   });
 
-  it('git switch is still auto-allowed', () => {
+  it('git switch is not auto-allowed after known-good tightening', () => {
     const config = makeConfig();
     const allowPatterns = config.always_allow_bash_patterns;
 
     const switchAllowed = checkBashAllow('git switch main', allowPatterns);
-    expect(switchAllowed).toBe(true);
+    expect(switchAllowed).toBe(false);
   });
 
-  it('git stash is still auto-allowed', () => {
+  it('bare git stash is not auto-allowed but stash list remains known-good', () => {
     const config = makeConfig();
     const allowPatterns = config.always_allow_bash_patterns;
 
     const stashAllowed = checkBashAllow('git stash', allowPatterns);
-    expect(stashAllowed).toBe(true);
+    const stashListAllowed = checkBashAllow('git stash list', allowPatterns);
+    expect(stashAllowed).toBe(false);
+    expect(stashListAllowed).toBe(true);
   });
 
-  it('other git commands remain auto-allowed', () => {
+  it('read-only git commands remain auto-allowed', () => {
     const config = makeConfig();
     const allowPatterns = config.always_allow_bash_patterns;
 
     const stillAllowed = [
       'git status', 'git log --oneline', 'git diff HEAD',
-      'git add src/file.ts', 'git commit -m "test"',
-      'git push origin feature', 'git pull origin main',
-      'git fetch --all', 'git branch -a',
+      'git show HEAD', 'git branch -a', 'git remote -v',
+      'git stash list', 'git config --list', 'git blame file.ts',
     ];
 
     for (const cmd of stillAllowed) {
       expect(checkBashAllow(cmd, allowPatterns)).toBe(true);
+    }
+  });
+
+  it('state-changing git commands are not auto-allowed', () => {
+    const config = makeConfig();
+    const allowPatterns = config.always_allow_bash_patterns;
+
+    const demoted = [
+      'git add src/file.ts', 'git commit -m "test"',
+      'git merge feature', 'git rebase main',
+      'git push origin feature', 'git pull origin main',
+      'git fetch --all', 'git cherry-pick abc123',
+    ];
+
+    for (const cmd of demoted) {
+      expect(checkBashAllow(cmd, allowPatterns)).toBe(false);
     }
   });
 });

@@ -38,13 +38,13 @@ describe('AUDIT 1: Glob-to-regex allow patterns', () => {
     expect(true).toBe(true); // acknowledged
   });
 
-  it('git push * matches git push origin main', () => {
-    expect(checkBashAllow('git push origin main', config.always_allow_bash_patterns)).toBe(true);
+  it('git push is demoted from known-good to the jury seam', () => {
+    expect(checkBashAllow('git push origin main', config.always_allow_bash_patterns)).toBe(false);
   });
 
-  it('sed * matches sed commands', () => {
+  it('sed matches read-only commands but not in-place writes', () => {
     expect(checkBashAllow("sed 's/old/new/g' file.ts", config.always_allow_bash_patterns)).toBe(true);
-    expect(checkBashAllow("sed -i 's/foo/bar/' file.ts", config.always_allow_bash_patterns)).toBe(true);
+    expect(checkBashAllow("sed -i 's/foo/bar/' file.ts", config.always_allow_bash_patterns)).toBe(false);
   });
 
   it('awk * matches awk commands', () => {
@@ -109,15 +109,17 @@ describe('AUDIT 3: Quoted command separators NOT falsely split', () => {
 // AUDIT 4: awk/sed not blocked
 // ============================================================================
 describe('AUDIT 4: awk/sed NOT blocked', () => {
-  const awkSed = [
+  const readOnlyAwkSed = [
     "awk '{print $1}'",
     "sed 's/old/new/g'",
-    "sed -i 's/foo/bar/' file.ts",
     "awk -F: '{print $1}' /etc/hosts",
     "sed -n '1,10p' file.ts",
   ];
+  const writeAwkSed = [
+    "sed -i 's/foo/bar/' file.ts",
+  ];
 
-  for (const cmd of awkSed) {
+  for (const cmd of readOnlyAwkSed) {
     it(`deepInspect allows: ${cmd}`, () => {
       expect(deepInspect(cmd).blocked).toBe(false);
     });
@@ -126,6 +128,18 @@ describe('AUDIT 4: awk/sed NOT blocked', () => {
     });
     it(`in allow patterns: ${cmd}`, () => {
       expect(checkBashAllow(cmd, config.always_allow_bash_patterns)).toBe(true);
+    });
+  }
+
+  for (const cmd of writeAwkSed) {
+    it(`deepInspect allows jury assessment for: ${cmd}`, () => {
+      expect(deepInspect(cmd).blocked).toBe(false);
+    });
+    it(`not in deny patterns: ${cmd}`, () => {
+      expect(checkBashPatterns(cmd, config.always_deny_bash_patterns)).toBeNull();
+    });
+    it(`not in known-good allow patterns: ${cmd}`, () => {
+      expect(checkBashAllow(cmd, config.always_allow_bash_patterns)).toBe(false);
     });
   }
 });
